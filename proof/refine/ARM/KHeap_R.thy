@@ -10,6 +10,35 @@ imports
   Machine_R
 begin
 
+primrec
+  same_caps' :: "Structures_H.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
+where
+  "same_caps' val (KOTCB tcb) = (\<exists>tcb'. val = KOTCB tcb' \<and>
+                                        (\<forall>(getF, t) \<in> ran tcb_cte_cases. getF tcb' = getF tcb))"
+| "same_caps' val (KOCTE cte) = (val = KOCTE cte)"
+| "same_caps' val (KOEndpoint ep) = (\<exists>ep'. val = KOEndpoint ep')"
+| "same_caps' val (KONotification ntfn) = (\<exists>ntfn'. val = KONotification ntfn')"
+| "same_caps' val (KOKernelData) = (val = KOKernelData)"
+| "same_caps' val (KOUserData) = (val = KOUserData)"
+| "same_caps' val (KOUserDataDevice) = (val = KOUserDataDevice)"
+| "same_caps' val (KOArch ao) = (\<exists>ao'. val = KOArch ao')"
+| "same_caps' val (KOSchedContext sc) = (\<exists>sc'. val = KOSchedContext sc')"
+| "same_caps' val (KOReply r) = (\<exists>r'. val = KOReply r')"
+
+lemma same_caps'_more_simps[simp]:
+  "same_caps' (KOTCB tcb) val = (\<exists>tcb'. val = KOTCB tcb' \<and>
+                                        (\<forall>(getF, t) \<in> ran tcb_cte_cases. getF tcb' = getF tcb))"
+  "same_caps' (KOCTE cte) val = (val = KOCTE cte)"
+  "same_caps' (KOEndpoint ep) val = (\<exists>ep'. val = KOEndpoint ep')"
+  "same_caps' (KONotification ntfn) val = (\<exists>ntfn'. val = KONotification ntfn')"
+  "same_caps' (KOKernelData) val = (val = KOKernelData)"
+  "same_caps' (KOUserData) val = (val = KOUserData)"
+  "same_caps' (KOUserDataDevice) val = (val = KOUserDataDevice)"
+  "same_caps' (KOArch ao) val = (\<exists>ao'. val = KOArch ao')"
+  "same_caps' (KOSchedContext sc) val = (\<exists>sc'. val = KOSchedContext sc')"
+  "same_caps' (KOReply r) val = (\<exists>r'. val = KOReply r')"
+  by (cases val; fastforce)+
+
 lemma lookupAround2_known1:
   "m x = Some y \<Longrightarrow> fst (lookupAround2 x m) = Some (x, y)"
   by (fastforce simp: lookupAround2_char1)
@@ -819,6 +848,25 @@ lemma cte_wp_at_ctes_of:
   apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
                         word_bw_assocs field_simps)
   done
+
+lemma ctes_of'_after_update:
+  "ko_wp_at' (same_caps' val) p s \<Longrightarrow> ctes_of (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> val)\<rparr>) x = ctes_of s x"
+  apply (clarsimp simp only: ko_wp_at'_def map_to_ctes_def Let_def)
+  apply (rule if_cong)
+    apply (cases val; fastforce split: if_splits)
+   apply (cases val; fastforce split: if_splits)
+  apply (rule if_cong)
+    apply (cases val; clarsimp; fastforce)
+   apply (cases val; clarsimp simp: tcb_cte_cases_def)
+  apply simp
+  done
+
+lemma ex_cap_to'_after_update:
+  "\<lbrakk> ex_nonz_cap_to' p s; ko_wp_at' (same_caps' val) p' s \<rbrakk>
+     \<Longrightarrow> ex_nonz_cap_to' p (s\<lparr>ksPSpace := ksPSpace s(p' \<mapsto> val)\<rparr>)"
+  unfolding ex_nonz_cap_to'_def cte_wp_at_ctes_of
+  using ctes_of'_after_update
+  by fastforce
 
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>

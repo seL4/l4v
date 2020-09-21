@@ -2640,6 +2640,97 @@ crunches cancelSignal, cancelAllIPC
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   (wp: sts_bound_tcb_at' crunch_wps getObject_inv loadObject_default_inv)
 
+lemma setSchedContext_pde_mappings'[wp]:
+  "setSchedContext p sc \<lbrace>valid_pde_mappings'\<rbrace>"
+  by (wp valid_pde_mappings_lift')
+
+lemma setSchedContext_urz[wp]:
+  "setSchedContext p sc \<lbrace> untyped_ranges_zero' \<rbrace>"
+  by (wp untyped_ranges_zero_lift)
+
+lemma threadSet_valid_queues_no_state:
+  "\<lbrace>Invariants_H.valid_queues and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+  apply (simp add: threadSet_def)
+  apply wp
+   apply (simp add: valid_queues_def valid_queues_no_bitmap_def' pred_tcb_at'_def)
+   apply (wp hoare_Ball_helper
+             hoare_vcg_all_lift
+             setObject_tcb_strongest)[1]
+  apply (wp getObject_tcb_wp)
+  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def' pred_tcb_at'_def)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma threadSet_valid_queues'_no_state:
+  "(\<And>tcb. tcbQueued tcb = tcbQueued (f tcb)) \<Longrightarrow>
+   \<lbrace>valid_queues' and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
+  apply (simp add: valid_queues'_def threadSet_def obj_at'_real_def
+                split del: if_split)
+  apply (simp only: imp_conv_disj)
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
+     apply (wp setObject_ko_wp_at | simp add: objBits_simps')+
+    apply (wp getObject_tcb_wp updateObject_default_inv
+               | simp split del: if_split)+
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
+                        objBits_simps addToQs_def
+             split del: if_split cong: if_cong)
+  apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
+  done
+
+lemma schedContextUnbindTCB_invs'_helper:
+  "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr
+                \<and> ko_at' sc scPtr s
+                \<and> scTCB sc = Some tcbPtr
+                \<and> bound_sc_tcb_at' ((=) (Some scPtr)) tcbPtr s
+                \<and> (\<forall>a b. tcbPtr \<notin> set (ksReadyQueues s (a, b)))\<rbrace>
+   do threadSet (tcbSchedContext_update (\<lambda>_. Nothing)) tcbPtr;
+      setSchedContext scPtr $ scTCB_update (\<lambda>_. Nothing) sc
+   od
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding schedContextUnbindTCB_def invs'_def valid_state'_def
+  apply (wp threadSet_valid_queues_no_state threadSet_valid_queues'_no_state
+            threadSet_valid_release_queue threadSet_valid_release_queue'
+            threadSet_not_inQ threadSet_idle' threadSet_iflive' threadSet_ifunsafe'T
+            threadSet_valid_pspace'T threadSet_sch_actT_P[where P=False, simplified]
+            threadSet_ctes_ofT threadSet_ct_idle_or_in_cur_domain' threadSet_cur
+            threadSet_global_refsT irqs_masked_lift untyped_ranges_zero_lift
+            valid_irq_node_lift valid_irq_handlers_lift''
+         | (rule hoare_vcg_conj_lift, rule threadSet_wp)
+         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
+  apply (frule ko_at_valid_objs'_pre[where p=scPtr], clarsimp)
+  (* slow 60s *)
+  apply (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
+               elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size'] ps_clear_domE
+              split: option.splits
+               simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def objBits_def objBitsKO_def
+                     projectKO_eq projectKO_tcb projectKO_ntfn projectKO_reply projectKO_sc
+                     tcb_cte_cases_def valid_sched_context'_def valid_sched_context_size'_def
+                     valid_bound_obj'_def valid_obj'_def valid_obj_size'_def valid_idle'_def
+                     valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
+                     idle_tcb'_def state_refs_of'_def comp_def)
+  done
+
+crunches tcbReleaseRemove, tcbSchedDequeue, rescheduleRequired
+  for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
+  (wp: crunch_wps)
+
+lemma schedContextUnbindTCB_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding schedContextUnbindTCB_def
+  apply (rule schedContextUnbindTCB_invs'_helper[simplified] hoare_seq_ext | clarsimp)+
+        apply (wp tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
+                  tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
+  apply (clarsimp simp: if_distribR split del: if_split)
+  apply (fastforce dest: sym_refs_obj_atD'
+                   simp: invs_queues invs_weak_sch_act_wf invs_valid_objs' invs'_valid_tcbs'
+                         sym_refs_asrt_def if_cancel_eq_True ko_wp_at'_def refs_of_rev'
+                         pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb)
+  done
+
 (* FIXME RT: bound_tcb_at' is an outdated name? *)
 lemma threadSet_sc_bound_tcb_at'[wp]:
   "threadSet (tcbSchedContext_update f) t' \<lbrace>bound_tcb_at' P t\<rbrace>"
