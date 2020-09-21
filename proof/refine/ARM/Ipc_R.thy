@@ -1653,10 +1653,6 @@ lemma dit_corres:
     apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
   done
 
-lemma setSchedContext_pde_mappings':
-  "setSchedContext p sc \<lbrace>valid_pde_mappings'\<rbrace>"
-  by (wp valid_pde_mappings_lift')
-
 lemma live_sc'_scConsumed_update[simp]:
   "live_sc' (scConsumed_update f koc) = live_sc' koc"
   by (clarsimp simp: live_sc'_def)
@@ -3322,13 +3318,6 @@ lemma completeSignal_invs:
   done *)
 
 lemmas threadSet_urz = untyped_ranges_zero_lift[where f="cteCaps_of", OF _ threadSet_cteCaps_of]
-
-lemma setSchedContext_urz[wp]:
-  "setSchedContext p sc \<lbrace> untyped_ranges_zero' \<rbrace>"
-  apply (simp add: cteCaps_of_def)
-  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
-  apply (simp add: o_def)
-  done
 
 crunches doIPCTransfer
   for urz[wp]: "untyped_ranges_zero'"

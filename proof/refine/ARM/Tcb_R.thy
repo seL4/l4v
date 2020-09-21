@@ -506,37 +506,6 @@ lemma copyreg_invs':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (rule hoare_strengthen_post, rule copyreg_invs'', simp)
 
-lemma threadSet_valid_queues_no_state:
-  "\<lbrace>Invariants_H.valid_queues and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
-     threadSet f t \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: threadSet_def)
-  apply wp
-   apply (simp add: valid_queues_def valid_queues_no_bitmap_def' pred_tcb_at'_def)
-   apply (wp hoare_Ball_helper
-             hoare_vcg_all_lift
-             setObject_tcb_strongest)[1]
-  apply (wp getObject_tcb_wp)
-  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def' pred_tcb_at'_def)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
-lemma threadSet_valid_queues'_no_state:
-  "(\<And>tcb. tcbQueued tcb = tcbQueued (f tcb))
-  \<Longrightarrow> \<lbrace>valid_queues' and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
-     threadSet f t \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  apply (simp add: valid_queues'_def threadSet_def obj_at'_real_def
-                split del: if_split)
-  apply (simp only: imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-     apply (wp setObject_ko_wp_at | simp add: objBits_simps')+
-    apply (wp getObject_tcb_wp updateObject_default_inv
-               | simp split del: if_split)+
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
-                        objBits_simps addToQs_def
-             split del: if_split cong: if_cong)
-  apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
-  done
-
 lemma gts_isRunnable_corres:
   "corres (\<lambda>ts runn. runnable ts = runn) (tcb_at t) (tcb_at' t)
      (get_thread_state t) (isRunnable t)"
