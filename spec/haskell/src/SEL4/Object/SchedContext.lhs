@@ -98,9 +98,8 @@ This module uses the C preprocessor to select a target architecture.
 > scReleased :: PPtr SchedContext -> Kernel Bool
 > scReleased scPtr = do
 >     active <- scActive scPtr
->     if active
->       then refillReady scPtr
->       else return False
+>     ready <- refillReady scPtr
+>     return $ active && ready
 
 > refillTl :: SchedContext -> Refill
 > refillTl sc = scRefills sc !! refillTailIndex sc
