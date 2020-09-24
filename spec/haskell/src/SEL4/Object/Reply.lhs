@@ -110,23 +110,21 @@ This module specifies the behavior of reply objects.
 
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     prevReplyPtrOpt <- return $ replyPrev reply
->     if nextReplyPtrOpt /= Nothing
->        then
->            if isHead nextReplyPtrOpt
->               then replyPop replyPtr tcbPtr
->               else do
->                   nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
->                   nextReply <- getReply nextReplyPtr
->                   setReply nextReplyPtr (nextReply { replyPrev = Nothing })
->                   replyUnlink replyPtr tcbPtr
->         else replyUnlink replyPtr tcbPtr
+>     if nextReplyPtrOpt /= Nothing && isHead nextReplyPtrOpt
+>        then replyPop replyPtr tcbPtr
+>        else do
+>            when (nextReplyPtrOpt /= Nothing) $ do
+>                nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
+>                nextReply <- getReply nextReplyPtr
+>                setReply nextReplyPtr (nextReply { replyPrev = Nothing })
 
->     when (prevReplyPtrOpt /= Nothing) $ do
->         prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->         prevReply <- getReply prevReplyPtr
->         setReply prevReplyPtr (prevReply { replyNext = Nothing })
+>            when (prevReplyPtrOpt /= Nothing) $ do
+>                prevReplyPtr <- return $ fromJust prevReplyPtrOpt
+>                prevReply <- getReply prevReplyPtr
+>                setReply prevReplyPtr (prevReply { replyNext = Nothing })
 
->     cleanReply replyPtr
+>            cleanReply replyPtr
+>            replyUnlink replyPtr tcbPtr
 
 
 > replyRemoveTCB :: PPtr TCB -> Kernel ()
