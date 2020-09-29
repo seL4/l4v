@@ -25,8 +25,9 @@ This module uses the C preprocessor to select a target architecture.
 >         refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
->         schedContextCompleteYieldTo, schedContextCancelYieldTo, refillAbsoluteMax,
->         schedContextUpdateConsumed, scReleased, setConsumed, refillResetRR
+>         schedContextCompleteYieldTo, unbindFromSC, schedContextCancelYieldTo,
+>         refillAbsoluteMax, schedContextUpdateConsumed, scReleased, setConsumed,
+>         refillResetRR
 >     ) where
 
 \begin{impdetails}
@@ -465,6 +466,15 @@ This module uses the C preprocessor to select a target architecture.
 >             Just buffer -> do
 >                 setConsumed scPtr buffer
 >                 schedContextCancelYieldTo tptr
+
+> unbindFromSC :: PPtr TCB -> Kernel ()
+> unbindFromSC tptr = do
+>     tcb <- getObject tptr
+>     when (tcbSchedContext tcb /= Nothing) $ do
+>         let scPtr = fromJust $ tcbSchedContext tcb
+>         schedContextUnbindTCB scPtr
+>         sc <- getSchedContext scPtr
+>         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 
 > postpone :: PPtr SchedContext -> Kernel ()
 > postpone scPtr = do
