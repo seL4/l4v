@@ -1380,22 +1380,6 @@ lemma no_overflow_length2:
                         \<and> unat (r_time b) + unat (r_amount b) \<le> unat max_time)"
   using no_overflow_Cons no_overflow_Nil by fastforce
 
-lemma window_length1:
-  "window [a] l = (unat (r_amount a) \<le> unat l)"
-  by (clarsimp simp: window_def)
-
-lemma window_length2:
-  "window [a, b] l = (unat (r_time b) + unat (r_amount b) \<le> unat (r_time a) + unat l)"
-  by (clarsimp simp: window_def)
-
-\<comment> \<open>by transitivity, MIN_BUDGET is bounded whenever MIN_SC_BUDGET is bounded\<close>
-lemma MIN_BUDGET_bounded_trans:
-  "unat MIN_SC_BUDGET \<le> unat k
-   \<Longrightarrow> unat MIN_BUDGET \<le> unat k"
-    apply (rule order_trans[where y="unat MIN_SC_BUDGET"])
-  using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
-  by simp
-
 (* FIXME RT: move to WordLib *)
 lemmas unat_plus_gt_trans = order_trans[OF unat_plus_gt]
 

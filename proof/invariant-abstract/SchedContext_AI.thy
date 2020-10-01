@@ -32,13 +32,12 @@ lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_
   done
 
 (* RT: sc_and_timer invs *)
-
 lemma set_refills_valid_objs:
-  "\<lbrace>valid_objs and K (refills \<noteq> [])\<rbrace>
-    set_refills sc_ptr refills \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "set_refills sc_ptr refills \<lbrace>valid_objs\<rbrace>"
   apply (wpsimp simp: set_refills_def set_object_def
-                 wp: get_object_wp update_sched_context_valid_objs_same)
-  by (clarsimp simp: valid_sched_context_def )
+                  wp: get_object_wp update_sched_context_valid_objs_same)
+  apply (clarsimp simp: valid_sched_context_def)
+  done
 
 crunches commit_domain_time,set_next_interrupt,set_refills,refill_budget_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
@@ -59,11 +58,6 @@ crunches refill_unblock_check
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   (wp: crunch_wps hoare_vcg_if_lift2)
-
-lemma valid_sc_non_empty_refills:
-  "\<lbrakk> valid_objs s; kheap s sc_ptr = Some (SchedContext sc n); 0 < sc_refill_max sc \<rbrakk>
-   \<Longrightarrow> sc_refills sc \<noteq> []"
-  by (fastforce simp: valid_objs_def valid_obj_def valid_sched_context_def)
 
 (* FIXME: rename to is_round_robin_inv *)
 lemma round_robin_inv[wp]: "\<lbrace>\<lambda>s. P s\<rbrace> is_round_robin x \<lbrace> \<lambda>_ s. P s\<rbrace>"
@@ -97,15 +91,16 @@ lemma refill_unblock_check_valid_objs[wp]:
 
 lemma schedule_used_non_nil:
   "schedule_used b ls u \<noteq> []"
-  by (induction ls; clarsimp simp: Let_def)
+  by (induction ls; clarsimp simp: Let_def schedule_used_def)
 
 lemma refill_budget_check_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> refill_budget_check usage \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
   unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_valid_objs hoare_vcg_imp_lift' get_refills_wp hoare_vcg_all_lift
+  apply (wpsimp wp: set_refills_valid_objs hoare_vcg_imp_lift'
+                    get_refills_wp hoare_vcg_all_lift
               simp: Let_def is_round_robin_def
          | intro conjI)+
-  using schedule_used_non_nil by clarsimp
+  done
 
 (* FIXME RT: move to Invariants_AI *)
 lemma valid_irq_states_consumed_time_update[iff]:
@@ -356,7 +351,7 @@ lemma sc_refills_update_valid_idle [wp]:
                    pred_tcb_at_def)
 
 lemma set_refills_valid_state [wp]:
-  "\<lbrace>valid_state and K (refills \<noteq> [])\<rbrace> set_refills sc_ptr refills
+  "\<lbrace>valid_state\<rbrace> set_refills sc_ptr refills
    \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: set_refills_def valid_state_def valid_pspace_def valid_sched_context_def
                wp: update_sched_context_valid_objs_same valid_irq_node_typ)
@@ -375,7 +370,7 @@ lemma set_refills_fault_tcbs_valid_states[wp]:
   by (wpsimp simp: set_refills_def)
 
 lemma set_refills_invs[wp]:
-  "\<lbrace>invs and K (refills \<noteq> [])\<rbrace> set_refills ptr refills \<lbrace>\<lambda>_. invs\<rbrace>"
+  "set_refills ptr refills \<lbrace>invs\<rbrace>"
   by (wpsimp simp: invs_def)
 
 lemma set_refills_valid_idle[wp]:
@@ -383,9 +378,18 @@ lemma set_refills_valid_idle[wp]:
   by (wpsimp simp: set_refills_def)
 
 crunches refill_budget_check
+  for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma refill_budget_check_if_live_then_nonz_cap[wp]:
+  "refill_budget_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  apply (clarsimp simp: refill_budget_check_def is_round_robin_def)
+  apply wpsimp
+  done
+
+crunches refill_budget_check
  for aligned[wp]: pspace_aligned
  and distinct[wp]: pspace_distinct
- and iflive[wp]: if_live_then_nonz_cap
  and sc_at[wp]: "sc_at sc_ptr"
  and cte_wp_at[wp]: "cte_wp_at P c"
  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -445,15 +449,16 @@ lemma refill_budget_check_round_robin_invs[wp]:
                wp: hoare_drop_imp)
 
 lemma refill_budget_check_invs[wp]:
-  "\<lbrace>invs\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. invs\<rbrace>"
+  "refill_budget_check usage \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: refill_budget_check_def Let_def
                   wp: hoare_drop_imp get_sched_context_wp)
-   using schedule_used_non_nil by clarsimp
+  done
 
 lemma refill_budget_check_valid_sc[wp]:
-   "\<lbrace>valid_sched_context sc\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. valid_sched_context sc\<rbrace>"
- by (wpsimp simp: refill_budget_check_def
-            wp: hoare_drop_imp)
+  "refill_budget_check usage \<lbrace>valid_sched_context sc\<rbrace>"
+  apply (wpsimp simp: refill_budget_check_def
+                  wp: hoare_drop_imp)
+  done
 
 lemma update_sched_context_valid_irq_node [wp]:
   "\<lbrace>valid_irq_node\<rbrace> update_sched_context p sc  \<lbrace>\<lambda>r. valid_irq_node\<rbrace>"
@@ -703,9 +708,7 @@ lemma set_refills_bound_sc_tcb_at [wp]:
                    pred_tcb_at_def obj_at_def)
 
 lemma refill_budget_check_bound_sc_tcb_at [wp]:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
-   refill_budget_check usage
-   \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
+  "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
   unfolding refill_budget_check_def is_round_robin_def
   by wpsimp
 
@@ -845,6 +848,7 @@ lemma sc_and_timer_activatable:
 
 crunches refill_new, refill_update
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps)
 
 lemma sched_context_resume_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_resume sc_ptr
@@ -1378,12 +1382,7 @@ lemma set_sc_obj_ref_invs_no_change:
      \<forall>sc. sc_tcb (f (\<lambda>_. x) sc) = sc_tcb sc;
      \<forall>sc. sc_ntfn (f (\<lambda>_. x) sc) = sc_ntfn sc;
      \<forall>sc. sc_yield_from (f (\<lambda>_. x) sc) = sc_yield_from sc \<rbrakk>
-   \<Longrightarrow> \<lbrace>invs
-        and (\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) p s \<longrightarrow>
-                          (0 < sc_refill_max sc \<longrightarrow> sc_refills sc \<noteq> []) \<longrightarrow>
-                          0 < sc_refill_max (f (\<lambda>_. x) sc) \<longrightarrow>
-                          sc_refills (f (\<lambda>_. x) sc) \<noteq> [])
-        and K (p \<noteq> idle_sc_ptr) \<rbrace>
+   \<Longrightarrow> \<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
        set_sc_obj_ref f p x
        \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def

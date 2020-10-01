@@ -1474,14 +1474,7 @@ lemmas is_refill_ready_lift =
 definition
   window :: "refill list \<Rightarrow> ticks \<Rightarrow> bool"
 where
-  "window refills period \<equiv>
-      unat (r_time (last refills)) + unat (r_amount (last refills))
-       \<le> unat (r_time (hd refills)) + unat period"
-
-lemma period_window_single:
-  "\<lbrakk>refills = [a]\<rbrakk>
-   \<Longrightarrow> window refills period = (unat (r_amount a) \<le> unat period)"
-  unfolding window_def by fastforce
+  "window refills period \<equiv> unat (r_time (last refills)) \<le> unat (r_time (hd refills)) + unat period"
 
 definition rr_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> bool" where
   "rr_valid_refills refills refill_max budget \<equiv>
@@ -1489,7 +1482,7 @@ definition rr_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> tick
       \<and> (MIN_BUDGET \<le> r_amount (hd refills))
       \<and> (unat (r_amount (hd refills)) + unat (r_amount (last refills)) \<le> unat max_time)
       \<and> length refills = 2
-      \<and> MIN_SC_BUDGET \<le> budget
+      \<and> MIN_BUDGET \<le> budget
       \<and> refill_max = MIN_REFILLS
       \<and> budget \<le> MAX_SC_PERIOD)"
 
@@ -1498,11 +1491,11 @@ definition sp_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> tick
       (refills_sum refills = budget
       \<and> ordered_disjoint refills
       \<and> no_overflow refills
-      \<and> (\<forall>refill \<in> set refills. MIN_BUDGET \<le> r_amount refill)
       \<and> window refills period
+      \<and> MIN_BUDGET \<le> r_amount (hd refills)
       \<and> 0 < length refills
       \<and> length refills \<le> refill_max
-      \<and> MIN_SC_BUDGET \<le> budget
+      \<and> MIN_BUDGET \<le> budget
       \<and> budget \<le> period
       \<and> MIN_REFILLS \<le> refill_max
       \<and> period \<le> MAX_SC_PERIOD)"
