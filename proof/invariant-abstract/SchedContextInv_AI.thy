@@ -596,8 +596,8 @@ where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
-        and K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET)
-        and K (period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET)
+        and K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET)
+        and K (period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET)
         and K (budget \<le> period))"
 
 
@@ -672,16 +672,6 @@ lemma ordered_disjoint_non_adjacent:
     apply (rule_tac y="unat (r_time (list ! 0))" in order_trans)
     apply (fastforce simp: ordered_disjoint_def)+
   done
-
-lemma ordered_disjoint_no_overflow_implies_sorted:
-  "\<lbrakk>ordered_disjoint refills;
-    no_overflow refills;
-    k < length refills;
-    l < length refills;
-    k < l\<rbrakk>
-   \<Longrightarrow> unat (r_time (refills ! k)) \<le> unat (r_time (refills ! l))"
-  apply (frule ordered_disjoint_non_adjacent[where refills=refills and k=k and l=l]; assumption?)
-  by linarith
 
 (* FIXME maybe move? *)
 lemma refills_sum_cons[simp]: "refills_sum (a#rs) =  r_amount a + refills_sum rs"
@@ -797,25 +787,6 @@ lemma MIN_BUDGET_no_overflow:
                                       and upper_bound=max_word, simplified])
   using kernelWCET_ticks_no_overflow max_word_def by simp
 
-lemma unat_MIN_BUDGET_MIN_SC_BUDGET:
-  "unat MIN_BUDGET + unat MIN_BUDGET = unat MIN_SC_BUDGET"
-  apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def kernelWCET_ticks_def)
-  apply (prop_tac "4 * us_to_ticks kernelWCET_us
-                   = 2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us", simp)
-  apply (erule_tac s="2 * us_to_ticks kernelWCET_us + 2 * us_to_ticks kernelWCET_us"
-               and t="4 * us_to_ticks kernelWCET_us"
-         in ssubst)
-  apply (rule unat_add_lem'[symmetric])
-   using kernelWCET_ticks_no_overflow apply (simp add: max_word_def)
-  using MIN_BUDGET_no_overflow[symmetric] MIN_BUDGET_def kernelWCET_ticks_def by simp
-
-lemma MIN_BUDGET_le_MIN_SC_BUDGET:
-  "MIN_BUDGET \<le> MIN_SC_BUDGET"
-  apply (simp add: MIN_BUDGET_def MIN_SC_BUDGET_def kernelWCET_ticks_def word_le_nat_alt)
-  using unat_MIN_BUDGET_MIN_SC_BUDGET[simplified MIN_BUDGET_def MIN_SC_BUDGET_def
-                                                 kernelWCET_ticks_def]
-  by simp
-
 \<comment> \<open>Function definitions and lemmas for showing that the unat sum of the r_amounts of a refill list
     does not overflow, and is equal to the budget of the scheduling context\<close>
 
@@ -829,6 +800,21 @@ where
 lemma refill_list_to_intervals_length:
   "length (refill_list_to_intervals refills) = length refills"
   by (induction refills; simp)
+
+lemma refill_list_to_intervals_index:
+  "l < length refills \<Longrightarrow>
+   (refill_list_to_intervals refills) ! l
+   = {unat (r_time (refills ! l)) ..< unat (r_time (refills ! l)) + unat (r_amount (refills ! l))}"
+  apply (induct refills arbitrary: l rule: length_induct)
+  apply (rename_tac xs l)
+  apply (case_tac xs; clarsimp?)
+  apply (case_tac "l=0"; simp)
+  done
+
+lemma refill_list_to_intervals_index_nonempty_imp_r_amount_nonzero:
+  "\<lbrakk>l < length refills; (refill_list_to_intervals refills) ! l \<noteq> {}\<rbrakk>
+   \<Longrightarrow> unat (r_amount (refills ! l)) \<noteq> 0"
+  by (fastforce dest: refill_list_to_intervals_index)
 
 lemma max_closed_open_interval:
   "\<lbrakk>0 < b; {a ..< b} \<noteq> {}\<rbrakk> \<Longrightarrow> Max {a ..< b} = (b :: nat) - Suc 0"
@@ -848,60 +834,31 @@ lemma less_le_nonzero_helper:
 lemma refill_list_to_intervals_finite:
   "l < length (refill_list_to_intervals refills) \<Longrightarrow> finite (refill_list_to_intervals refills ! l)"
   apply (induct refills arbitrary: l rule: length_induct)
+  apply (rename_tac xs l)
   apply (case_tac xs, simp)
   by (case_tac "l=0") auto
 
 lemma min_refill_list_to_intervals:
-  "\<lbrakk>\<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
+  "\<lbrakk>refills \<noteq> []; unat (r_amount (refills ! l)) \<noteq> 0;
     l < length (refill_list_to_intervals refills)\<rbrakk>
    \<Longrightarrow> Min (refill_list_to_intervals refills ! l) = unat (r_time (refills ! l))"
-  apply (induct refills arbitrary: l rule: length_induct)
-  apply (case_tac xs, simp)
-  apply (case_tac "l=0")
-   by (fastforce simp add: unat_eq_1(1) unat_gt_0 Min_eq_iff)+
+  apply (simp add: refill_list_to_intervals_length)
+  apply (fastforce simp: refill_list_to_intervals_index unat_gt_0 Min_eq_iff)
+  done
 
 lemma disjoint_refill_list_to_intervals:
-  "\<lbrakk>no_overflow refills;
-    ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
-    l < length (refill_list_to_intervals refills);
-    k < l\<rbrakk>
+  "\<lbrakk>no_overflow refills; ordered_disjoint refills;
+    l < length (refill_list_to_intervals refills);  k < l\<rbrakk>
    \<Longrightarrow> disjnt (refill_list_to_intervals refills ! k) (refill_list_to_intervals refills ! l)"
-  apply (induct refills arbitrary: k l rule: length_induct)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply simp
-  apply (frule no_overflow_def[atomized, THEN iffD1])
-  apply (frule ordered_disjoint_def[atomized, THEN iffD1])
-  apply (simp add: disjnt_def)
-  apply (case_tac "k = 0")
-   apply clarsimp
-   apply (frule_tac x=list in spec)
-   apply (rule disjnt_max_min)
-     apply blast
-    apply (simp add: refill_list_to_intervals_finite)
-   apply (subst min_refill_list_to_intervals)
-     apply force
-    apply simp
-   apply (rule_tac y="unat (r_time a) + unat (r_amount a) - Suc 0" in le_less_trans)
-    apply (rule preorder_class.eq_refl)
-    apply (rule Max_eqI)
-      apply force
-     apply force
-    apply simp
-   apply (rule less_le_nonzero_helper)
-    apply force
-   apply (frule_tac refills="a # list" and k=0 and l="l" in ordered_disjoint_non_adjacent
-          ; (fastforce simp: refill_list_to_intervals_length)?)
-  apply clarsimp
-  apply (drule_tac x=list in spec)
-  apply (elim impE)
-      apply blast
-     apply (clarsimp simp: no_overflow_tail)
-    apply (clarsimp simp: ordered_disjoint_tail)
-   apply force
-  by simp
+  apply (case_tac "refill_list_to_intervals refills ! k = {}"; clarsimp?)
+  apply (case_tac "refill_list_to_intervals refills ! l = {}"; clarsimp?)
+  apply (simp add: refill_list_to_intervals_length)
+  apply (subst refill_list_to_intervals_index; fastforce?)+
+  apply (simp only: disjnt_def)
+  apply (rule disjnt_max_min; fastforce?)
+  apply (frule_tac k=k and l=l in ordered_disjoint_non_adjacent; fastforce?)
+  apply (simp add: refill_list_to_intervals_index_nonempty_imp_r_amount_nonzero)
+  done
 
 lemma refills_sum_unat_intervals:
   "sum_list (map unat (map r_amount refills))
@@ -916,102 +873,97 @@ where
 | "refill_list_to_subset (r # rs) = {unat (r_time r) ..< unat (r_time r) + unat (r_amount r)}
                                     \<union> (refill_list_to_subset rs)"
 
-lemma non_empty_intervals_implies_refill_list_to_subset_non_empty:
-  "\<lbrakk>refills \<noteq> [];
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
-   \<Longrightarrow> refill_list_to_subset refills \<noteq> {}"
-  apply (case_tac refills)
-  by (fastforce simp add: unat_eq_1(1))+
+lemma refill_list_to_subset_empty_imp_all_r_amounts_zero:
+  "refill_list_to_subset refills = {} \<Longrightarrow> \<forall>refill \<in> set refills. r_amount refill = 0"
+  apply (induct refills rule: length_induct)
+  apply (rename_tac xs)
+  apply (case_tac xs; clarsimp?)
+  apply (fastforce simp: unat_eq_1)
+  done
+
+lemma all_r_amounts_zero_imp_card_zero:
+  "\<lbrakk>\<forall>refill \<in> set refills. r_amount refill = 0; l < length refills\<rbrakk>
+   \<Longrightarrow> card ((refill_list_to_intervals refills)! l) = 0"
+  apply (induct refills rule: length_induct)
+  apply (rename_tac xs)
+  apply (case_tac xs; clarsimp?)
+  apply (case_tac "l=0"; clarsimp?)
+  apply (fastforce simp: refill_list_to_intervals_index)
+  done
 
 lemma no_overflow_refill_list_to_subset_finite:
   "no_overflow refills \<Longrightarrow> finite (refill_list_to_subset refills)"
   apply (induct refills rule: length_induct)
   apply (rename_tac xs)
-  apply (case_tac xs)
-   using no_overflow_tail by fastforce+
+  apply (case_tac xs; fastforce dest: no_overflow_tail)
+  done
 
 lemma min_refill_list_to_subset:
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
     ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
-   \<Longrightarrow> Min (refill_list_to_subset refills) = unat (r_time (hd refills))"
+    refill_list_to_subset refills \<noteq> {}\<rbrakk>
+   \<Longrightarrow> Min (refill_list_to_subset refills) \<ge> unat (r_time (hd refills))"
   apply (induct refills rule: length_induct)
   apply (rename_tac xs)
   apply (case_tac xs)
    apply simp
+  apply simp
+  apply (frule no_overflow_tail)
+  apply (frule ordered_disjoint_tail)
   apply (rename_tac a list)
-  apply (frule_tac x=list in spec)
-  apply clarsimp
-  apply (case_tac list)
+  apply (case_tac "refill_list_to_subset list = {}"; clarsimp?)
+  apply (case_tac "unat (r_amount a) = 0")
+   apply clarsimp
+   apply (rule_tac j="unat (r_time (hd list))" in le_trans)
+    apply (clarsimp simp: ordered_disjoint_def)
+    apply (metis Groups.add_ac(2) add_leD2 hd_conv_nth length_greater_0_conv nth_Cons_0
+                 refill_list_to_subset.simps(1))
+   apply fastforce
+  apply (subst Min_Un; fastforce?)
+   using no_overflow_refill_list_to_subset_finite apply presburger
+  apply (prop_tac "Min {unat (r_time a)..<unat (r_time a) + unat (r_amount a)} = unat (r_time a)")
    apply (subst Min_eq_iff; fastforce?)
   apply (drule_tac x=list in spec)
   apply (elim impE; fastforce?)
-    apply (clarsimp simp: no_overflow_tail)
-   apply (clarsimp simp: ordered_disjoint_tail)
-  apply (subst Min_Un; fastforce?)
-    apply (rule no_overflow_refill_list_to_subset_finite)
-   apply (clarsimp simp: no_overflow_tail)
-  apply (subgoal_tac "Min {unat (r_time a)..<unat (r_time a) + unat (r_amount a)}
-                       = unat (r_time a)")
-   apply (frule_tac k=0 and l=1 in ordered_disjoint_no_overflow_implies_sorted; fastforce?)
-  apply (subst Min_eq_iff)
-    by fastforce+
+  apply (clarsimp simp: ordered_disjoint_def)
+  apply (rule_tac j="unat (r_time (hd list))" in le_trans; fastforce?)
+  apply (metis (no_types, hide_lams) add.commute hd_conv_nth le_trans
+               length_greater_0_conv nat_iffs(2) nth_Cons_0 refill_list_to_subset.simps(1))
+  done
 
 lemma disjoint_interval_list_implies_sum_is_bounded:
-  "\<lbrakk>no_overflow refills;
-    ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
+  "\<lbrakk>no_overflow refills; ordered_disjoint refills\<rbrakk>
    \<Longrightarrow> sum_list (map card (refill_list_to_intervals refills))
        = card (refill_list_to_subset refills)"
   apply (induct refills rule: length_induct)
   apply (rename_tac xs)
   apply (case_tac xs)
    apply simp
-  apply (rename_tac a list)
-  apply (subgoal_tac "card ({unat (r_time a)..<unat (r_time a) + unat (r_amount a)})
-                      = unat (r_amount a)")
-   prefer 2
-   apply force
-  apply (drule_tac x=list in spec)
-  apply clarsimp
-  apply (elim impE; fastforce?)
-    apply (clarsimp simp: no_overflow_tail)
-   apply (clarsimp simp: ordered_disjoint_tail)
-  apply (case_tac list, simp)
-  apply (rename_tac aa lista)
-  apply (subgoal_tac "card ({unat (r_time a)..<unat (r_time a) + unat (r_amount a)}
-                            \<union> refill_list_to_subset list)
-                      = card ({unat (r_time a)..<unat (r_time a) + unat (r_amount a)})
-                        + card (refill_list_to_subset list)")
-   apply simp
-  apply (rule card_Un_disjoint)
-    apply blast
-   using no_overflow_refill_list_to_subset_finite apply fastforce
   apply simp
-  apply (rule disjnt_max_min)
-    apply blast
-   using no_overflow_refill_list_to_subset_finite apply fastforce
-  apply (subgoal_tac "Min ({unat (r_time aa)..<unat (r_time aa) + unat (r_amount aa)}
-                            \<union> refill_list_to_subset lista)
-                      = unat (r_time aa)")
-   apply (simp add: ordered_disjoint_def)
-   apply (drule_tac x=0 in spec)
-   apply clarsimp
-  apply (subgoal_tac "{unat (r_time aa)..<unat (r_time aa) + unat (r_amount aa)}
-                         \<union> refill_list_to_subset lista
-                       = refill_list_to_subset (aa # lista)")
-   prefer 2
-   apply force
-  apply (rule_tac s="refill_list_to_subset (aa # lista)" and P="\<lambda>t. Min t = unat (r_time aa)"
-               in subst)
-   apply presburger
-  apply (subst min_refill_list_to_subset)
-      apply force
-     using no_overflow_tail apply presburger
-    using ordered_disjoint_tail apply presburger
-   apply (metis not_less_zero set_ConsD)
- by (metis list.sel(1))
+  apply (rename_tac a list)
+  apply (frule no_overflow_tail)
+  apply (frule ordered_disjoint_tail)
+  apply (case_tac "r_amount a = 0"; clarsimp?)
+  apply (case_tac "refill_list_to_subset list = {}"; clarsimp?)
+  apply (prop_tac "Max {unat (r_time a)..<unat (r_time a) + unat (r_amount a)}
+                   = unat (r_time a) + unat (r_amount a) - Suc 0")
+   apply (rule max_closed_open_interval; simp add: unat_gt_0)
+  apply (subst card_Un_disjoint; fastforce?)
+   apply (rule no_overflow_refill_list_to_subset_finite)
+   apply (fastforce dest: no_overflow_tail)
+  apply (rule disjnt_max_min; fastforce?)
+   apply (fastforce dest: no_overflow_tail
+                   intro: no_overflow_refill_list_to_subset_finite
+                    simp: unat_gt_0)
+  apply (simp add: unat_gt_0)
+  apply (subst less_le_nonzero_helper; fastforce?)
+   apply (simp add: unat_gt_0)
+  apply (rule_tac j="unat (r_time (hd list))" in le_trans)
+   apply (clarsimp simp: ordered_disjoint_def)
+   apply (metis hd_conv_nth length_greater_0_conv nth_Cons_0 refill_list_to_subset.simps(1))
+  apply (rule min_refill_list_to_subset; fastforce?)
+  done
 
 (* FIXME RT: move *)
 lemma max_union:
@@ -1024,10 +976,8 @@ lemma max_union:
   by simp
 
 lemma no_overflow_implies_refill_list_to_subset_max_bounded:
-  "\<lbrakk>refills \<noteq> [];
-    no_overflow refills;
-    ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
+  "\<lbrakk>refills \<noteq> []; no_overflow refills; ordered_disjoint refills;
+    refill_list_to_subset refills \<noteq> {}\<rbrakk>
    \<Longrightarrow> Max (refill_list_to_subset refills) \<le> unat (max_word :: time)"
   apply (induct refills rule: length_induct)
   apply (rename_tac xs)
@@ -1035,37 +985,26 @@ lemma no_overflow_implies_refill_list_to_subset_max_bounded:
    apply simp
   apply (rename_tac a list)
   apply simp
-  \<comment> \<open>we introduce a couple facts which will be useful below\<close>
-  apply (subgoal_tac "no_overflow list")
-   prefer 2
-   apply (clarsimp simp: no_overflow_tail)
-  apply (subgoal_tac "ordered_disjoint list")
-   prefer 2
-   apply (clarsimp simp: ordered_disjoint_tail)
-  apply (drule_tac x=list in spec)
-  apply (erule impE)
-   apply blast
-  apply (case_tac list)
-   apply (subgoal_tac "refill_list_to_subset list = {}")
-    prefer 2
-    apply force
-   apply (clarsimp simp: no_overflow_def)
-  apply (subst max_union)
-      apply blast
-     apply (clarsimp dest!: no_overflow_tail simp: no_overflow_refill_list_to_subset_finite)
-    apply (fastforce intro: non_empty_intervals_implies_refill_list_to_subset_non_empty)
-   apply (subst max_closed_open_interval; (fastforce simp: unat_eq_zero)?)
-   apply (rule less_le_nonzero_helper, fastforce)
-   apply (subst min_refill_list_to_subset; fastforce?)
-   apply (simp add: hd_conv_nth ordered_disjoint_def)
-   by fastforce+
+  apply (frule no_overflow_tail)
+  apply (frule ordered_disjoint_tail)
+  apply (case_tac "refill_list_to_subset list = {}"; clarsimp?)
+  apply (clarsimp simp: no_overflow_def)
+  apply (case_tac "unat (r_amount a) = 0"; fastforce?)
+  apply (subst max_union; fastforce?)
+   apply (rule no_overflow_refill_list_to_subset_finite)
+   apply (fastforce dest: no_overflow_tail)
+  apply (subst max_closed_open_interval; fastforce?)
+  apply (subst less_le_nonzero_helper; fastforce?)
+  apply (rule_tac j="unat (r_time (hd list))" in le_trans)
+   apply (clarsimp simp: ordered_disjoint_def)
+   apply (metis hd_conv_nth length_greater_0_conv nth_Cons_0 refill_list_to_subset.simps(1))
+  apply (rule min_refill_list_to_subset; fastforce?)
+  done
 
 lemma no_overflow_implies_refill_list_to_subset_card_bounded:
-  "\<lbrakk>refills \<noteq> [];
-    no_overflow refills;
-    ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
+  "\<lbrakk>refills \<noteq> []; no_overflow refills; ordered_disjoint refills\<rbrakk>
    \<Longrightarrow> card (refill_list_to_subset refills) \<le> Suc (unat (max_word :: time))"
+  apply (case_tac "refill_list_to_subset refills = {}"; clarsimp?)
   apply (frule no_overflow_implies_refill_list_to_subset_max_bounded; fastforce?)
   apply (rule subset_eq_atLeast0_lessThan_card)
   apply (clarsimp simp: atLeastLessThanSuc_atLeastAtMost)
@@ -1077,8 +1016,7 @@ lemma no_overflow_implies_refill_list_to_subset_card_bounded:
 lemma no_overflow_ordered_disjoint_implies_refills_sum_unat_no_overflow:
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
-    ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0\<rbrakk>
+    ordered_disjoint refills\<rbrakk>
    \<Longrightarrow> sum_list (map unat (map r_amount refills)) \<le> Suc (unat (max_word :: time))"
   apply (subst refills_sum_unat_intervals)
   apply (subst disjoint_interval_list_implies_sum_is_bounded; fastforce?)
@@ -1122,7 +1060,6 @@ lemma sum_exact_overflow:
 lemma exactly_max_word_plus_one_implies_unat_refills_sum_is_zero:
   "\<lbrakk>no_overflow refills;
     ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
     refill_list_to_subset refills = {0..unat (max_word :: time)}\<rbrakk>
    \<Longrightarrow> unat (refills_sum refills) = 0"
   supply map_map[simp del]
@@ -1156,13 +1093,11 @@ lemma no_overflow_ordered_disjoint_non_zero_refills_implies_card_not_equal_to_su
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
     ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
     MIN_BUDGET \<le> refills_sum refills\<rbrakk>
    \<Longrightarrow> \<not>card (refill_list_to_subset refills) = Suc (unat (max_word :: time))"
   apply (rule ccontr)
   apply simp
   apply (frule exactly_max_word_plus_one_implies_unat_refills_sum_is_zero; assumption?)
-    apply blast
    apply (rule max_interval_helper; fastforce?)
     apply (erule no_overflow_refill_list_to_subset_finite)
    apply (rule no_overflow_implies_refill_list_to_subset_max_bounded; fastforce?)
@@ -1173,7 +1108,6 @@ lemma unat_sum_list_at_most_unat_max_word:
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
     ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
     MIN_BUDGET \<le> refills_sum refills\<rbrakk>
    \<Longrightarrow> sum_list (map unat (map r_amount refills)) \<le> unat (max_word :: time)"
   supply map_map[simp del]
@@ -1194,13 +1128,11 @@ lemma unat_sum_list_equals_budget:
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
     ordered_disjoint refills;
-    \<forall>refill \<in> set refills. unat (r_amount refill) \<noteq> 0;
     MIN_BUDGET \<le> refills_sum refills\<rbrakk>
    \<Longrightarrow> sum_list (map unat (map r_amount refills)) = unat (refills_sum refills)"
   supply map_map[simp del]
   apply (frule unat_sum_list_at_most_unat_max_word; assumption?)
   by (fastforce simp: refills_sum_def intro: sum_list_bounded_le)
-
 
 (* FIXME move *)
 lemma sorted_wrt_last_append:
@@ -1228,16 +1160,9 @@ lemma refill_word_proof_helper:
   apply (rule unat_add_lem', simp add: max_word_def)
   done
 
-
-
-(* schedule_used lemmas *)
-lemma schedule_used_non_nil:
-  "Suc 0 \<le> length (schedule_used b x new)"
-  by (induct x; clarsimp simp: Let_def)
-
 lemma schedule_used_length':
   "length (schedule_used b x new) = length x \<or> length (schedule_used b x new) = length x + 1"
-  by (induct x; clarsimp simp: Let_def)
+  by (induct x; clarsimp simp: Let_def schedule_used_def)
 
 lemma schedule_used_length_max:
   "length (schedule_used full x new) \<le> Suc (length x)"
@@ -1245,7 +1170,7 @@ lemma schedule_used_length_max:
 
 lemma schedule_used_length_full:
   "list \<noteq> [] \<longrightarrow> length (schedule_used True list new) = length list"
-  by (case_tac list; fastforce simp: Let_def)
+  by (case_tac list; fastforce simp: Let_def schedule_used_def)
 
 lemma ordered_disjoint_append:
   "\<lbrakk>left \<noteq> [] \<longrightarrow> ordered_disjoint left;
@@ -1277,263 +1202,139 @@ lemma butlast_nonempty_length:
   by (cases list, simp, force)
 
 lemma schedule_used_ordered_disjoint:
-  "\<lbrakk>ordered_disjoint list;
-    \<forall>refill \<in> set list. MIN_BUDGET \<le> r_amount refill;
-    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) + unat (r_amount (last list)) \<le> unat (r_time new)\<rbrakk>
+  "\<lbrakk>ordered_disjoint list; no_overflow list;
+    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) \<le> unat (r_time new)\<rbrakk>
    \<Longrightarrow> ordered_disjoint (schedule_used full list new)"
-  apply (case_tac list)
-   apply (simp add: ordered_disjoint_def)
+  apply (cases list)
+   apply (clarsimp simp: schedule_used_def Let_def ordered_disjoint_def)
   apply (rename_tac a lista)
-
-  \<comment> \<open>first branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<and> \<not>full
-                   \<and> 2 * MIN_BUDGET \<le> r_amount (last list) + r_amount new")
-   apply simp
-   apply (elim conjE)
-
-   \<comment> \<open>we introduce some useful facts\<close>
-   apply (prop_tac "MIN_BUDGET \<le> r_time new")
-    apply (clarsimp split: if_splits)
-     apply (simp add: word_le_nat_alt)
-  apply (meson add_leE dual_order.trans last_in_set word_le_nat_alt)
-   apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_time new")
-    prefer 2
-    apply (fastforce intro: order_trans[where y=MIN_BUDGET]
-                      simp: word_sub_le_iff)
-   apply (subgoal_tac "unat (r_time new - (MIN_BUDGET - r_amount new))
-                       = unat (r_time new) - unat MIN_BUDGET + unat (r_amount new)")
-    prefer 2
-    apply (simp add: unat_sub word_le_nat_alt less_imp_le_nat unat_mono)
-   \<comment> \<open>end of the proof of the useful facts\<close>
-
-   apply (intro conjI impI allI)
-
-    \<comment> \<open>list is of length one\<close>
-    apply (clarsimp simp: Let_def split: if_split_asm)
-    apply (simp add: ordered_disjoint_def)
-    apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
-                        = unat (r_amount a) - unat (MIN_BUDGET) + unat (r_amount new)")
-     apply clarsimp
-     apply (subgoal_tac "unat MIN_BUDGET \<le> unat (r_amount a)")
-      apply clarsimp
-      using diff_le_mono apply blast
-     using word_le_nat_alt apply fastforce
-    apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
-                        = unat (r_amount a) - unat (MIN_BUDGET - r_amount new)")
-     apply (frule order.strict_implies_order)
-     apply (clarsimp simp: unat_sub word_le_nat_alt)
-    apply (meson unat_sub word_le_imp_diff_le word_le_less_eq)
-
-   \<comment> \<open>list is of length greater than one\<close>
-
-   \<comment> \<open>another useful fact\<close>
-   apply (subgoal_tac "unat MIN_BUDGET \<le> unat (r_amount (last lista))")
-    prefer 2
-    apply (simp add: word_le_nat_alt)
-  \<comment> \<open>end of the proof of the useful fact\<close>
-
-   apply (clarsimp simp: Let_def)
-   apply (rule_tac left="a # butlast lista"
-              and right="[last lista\<lparr>r_amount := r_amount (last lista) - (MIN_BUDGET - r_amount new)\<rparr>,
-                                    \<lparr>r_time = r_time new - (MIN_BUDGET - r_amount new), r_amount = MIN_BUDGET\<rparr>]"
-               in ordered_disjoint_append)
-      apply clarsimp
-      apply (rule ordered_disjoint_sublist; assumption?)
-      apply (metis butlast.simps(2) sublist_butlast)
-     apply (clarsimp simp: ordered_disjoint_def)
-     apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_amount (last lista)")
-      apply (simp only: unat_sub)
-     apply (rule order_trans[where y=MIN_BUDGET])
-      apply (frule order.strict_implies_order)
-      using word_sub_le_iff apply blast
-     apply (simp add: word_le_nat_alt)
-    apply (intro conjI impI)
-    apply clarsimp
-    apply (intro conjI impI)
-     apply (frule_tac k=0 and l="length (a#lista) - Suc 0" in ordered_disjoint_non_adjacent
-            ; fastforce?)
-     using hd_conv_nth last_conv_nth apply force
-    apply (simp add: last_butlast_list)
-    apply (simp add: last_conv_nth)
-    apply (simp add: ordered_disjoint_def)
-    apply (drule_tac x="length (a # lista) - Suc (Suc 0)" in spec)
-    apply (elim impE)
-     apply force
-    apply (subgoal_tac "Suc 0 < length lista \<longrightarrow> (a # lista) ! (length lista - Suc 0)
-                                                  = lista ! (length lista - Suc (Suc 0))")
-     apply (erule impE)
-      apply (fastforce simp: butlast_nonempty_length)+
-
-  \<comment> \<open>second branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<or> full")
-   apply clarsimp
+  apply (case_tac "can_merge_refill (last list) new")
+   apply (clarsimp simp: schedule_used_def Let_def)
    apply (intro conjI impI)
-      apply argo
-     apply (simp add: ordered_disjoint_def)
-    apply argo
-   apply (clarsimp simp: Let_def)
+    apply (clarsimp simp: ordered_disjoint_def)
    apply (rule_tac left="a # butlast lista"
-               and right="[\<lparr>r_time = r_time new - r_amount (last lista),
-                            r_amount = r_amount (last lista) + r_amount new\<rparr>]"
-                in ordered_disjoint_append)
-      apply clarsimp
+              and right="[\<lparr>r_time = r_time (last lista),
+                           r_amount = r_amount (last lista) + r_amount new\<rparr>]"
+               in ordered_disjoint_append)
+      apply (intro impI)
       apply (rule ordered_disjoint_sublist; assumption?)
-      apply (metis butlast.simps(2) sublist_butlast)
-     apply clarsimp
-     apply (simp add: ordered_disjoint_def)
-    apply (intro conjI impI)
+      using sublist_butlast apply (metis butlast.simps(2))
+     apply (clarsimp simp: ordered_disjoint_def)
+    apply (intro impI)
     apply clarsimp
     apply (intro conjI impI)
-     apply (subgoal_tac "r_amount (last lista) \<le> r_time new")
-      apply (simp add: unat_sub)
-      apply (rule_tac y="unat (r_time (last lista))" in order_trans)
-       apply (frule_tac refills="a # lista" and k=0 and l="length (a # lista) - Suc 0"
-                     in ordered_disjoint_non_adjacent; fastforce?)
-      using hd_conv_nth last_conv_nth apply force
-      apply linarith
-     using word_le_nat_alt apply fastforce
-    apply (subgoal_tac "r_amount (last lista) \<le> r_time new")
-     apply (simp add: unat_sub)
-     apply (rule_tac y="unat (r_time (last lista))" in order_trans)
-      apply (simp add: last_butlast_list)
-      apply (simp add: last_conv_nth)
-      apply (simp add: ordered_disjoint_def)
-      apply (drule_tac x="length (a # lista) - Suc (Suc 0)" in spec)
-      apply clarsimp
-      apply (subgoal_tac "Suc 0 < length lista \<longrightarrow> (a # lista) ! (length lista - Suc 0)
-                                                    = lista ! (length lista - Suc (Suc 0))")
-       apply (subgoal_tac "Suc 0 < length lista")
-        apply (fastforce simp: butlast_nonempty_length word_le_nat_alt unat_sub)+
-
-  \<comment> \<open>last branch of schedule_used\<close>
-  apply clarsimp
-  apply (rule_tac left="a # lista" and right="[new]" in ordered_disjoint_append
-         ; (fastforce simp: ordered_disjoint_def)?)
+     apply (rule_tac j="unat (r_time (hd lista))" in le_trans)
+      apply (fastforce simp: ordered_disjoint_def hd_conv_nth)
+     apply (subst last_conv_nth; fastforce?)
+     apply (metis Nat.add_0_right hd_conv_nth length_butlast list.size(3) nat_le_iff_add)
+    apply (clarsimp simp: last_butlast_list)
+    apply (subst last_conv_nth; fastforce?)
+    apply (metis ordered_disjoint_def One_nat_def Suc_diff_Suc butlast_nonempty_length lessI
+                 ordered_disjoint_tail)
+   apply (fastforce simp: word_le_nat_alt)
+  apply (clarsimp simp: schedule_used_def)
+  apply (intro conjI impI)
+     apply (rule_tac left="[a]" and right="[new]" in ordered_disjoint_append)
+        apply (clarsimp simp: ordered_disjoint_def)
+       apply (clarsimp simp: ordered_disjoint_def)
+      apply (clarsimp simp: can_merge_refill_def)
+      apply (metis no_overflow_def list.set_intros(1) nat_le_linear unat_arith_simps(1)
+                   unat_plus_simple unat_sum_bound_equiv)
+     apply simp
+    apply (clarsimp simp: ordered_disjoint_def)
+   apply (rule_tac left="a # lista" and right="[new]" in ordered_disjoint_append)
+      apply simp
+     apply (clarsimp simp: ordered_disjoint_def)
+    apply (clarsimp simp: can_merge_refill_def)
+    apply (metis no_overflow_def last_in_set nat_le_linear no_overflow_tail unat_arith_simps(1)
+                 unat_plus_simple unat_sum_bound_equiv)
+   apply simp
+  apply (rule_tac left="a # butlast lista"
+              and right="[\<lparr>r_time = r_time new - r_amount (last lista),
+                           r_amount = r_amount (last lista) + r_amount new\<rparr>]"
+               in ordered_disjoint_append
+         ; fastforce?)
+    apply (metis ordered_disjoint_sublist butlast.simps(2) sublist_butlast)
+   apply (clarsimp simp: ordered_disjoint_def)
+  apply (clarsimp simp: can_merge_refill_def)
+  apply (prop_tac "unat (r_time (last lista) + r_amount (last lista))
+                   = unat (r_time (last lista)) + unat (r_amount (last lista))")
+   apply (subst unat_add_lem'; fastforce?)
+   apply (metis no_overflow_def Groups.add_ac(2) last_in_set le_simps(3) linorder_not_less
+                no_overflow_tail power_two_max_word_fold)
+  apply (clarsimp simp: word_le_nat_alt)
+  apply (intro conjI impI)
+   apply (subst unat_sub)
+    apply (clarsimp simp: word_le_nat_alt)
+   apply (prop_tac "unat (r_time a) + unat (r_amount a) \<le> unat (r_time (hd lista))")
+    apply (metis ordered_disjoint_def One_nat_def butlast.simps(2) hd_conv_nth length_butlast lessI
+                 list.size(3) list.size(4) nth_Cons_0 nth_Cons_Suc semiring_norm(175))
+   apply (rule_tac j="unat (r_time (hd lista))" in le_trans; blast?)
+   apply (prop_tac "hd lista = last lista")
+    apply (metis hd_conv_nth last_conv_nth length_butlast list.size(3))
+   apply simp
+  apply (subst unat_sub)
+   apply (clarsimp simp: word_le_nat_alt)
+  apply (prop_tac "unat (r_time (last (butlast lista))) + unat (r_amount (last (butlast lista)))
+                   \<le> unat (r_time (last lista))")
+   apply (metis ordered_disjoint_def One_nat_def Suc_diff_Suc butlast_nonempty_length
+                last_butlast_list last_conv_nth lessI ordered_disjoint_tail)
+  apply simp
   done
 
 lemma schedule_used_no_overflow:
-  "\<lbrakk>no_overflow list;
-    no_overflow [new];
-    \<forall>refill \<in> set list. MIN_BUDGET \<le> r_amount refill;
-    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) + unat (r_amount (last list)) \<le> unat (r_time new)\<rbrakk>
+  "\<lbrakk>no_overflow list; no_overflow [new];
+    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) + unat (r_amount (last list)) + unat (r_amount new)
+                   \<le> unat (max_word :: time)\<rbrakk>
    \<Longrightarrow> no_overflow (schedule_used full list new)"
-  apply (case_tac list)
-   apply simp
+  apply (cases list)
+   apply (clarsimp simp: schedule_used_def Let_def ordered_disjoint_def)
   apply (rename_tac a lista)
-
-  \<comment> \<open>we introduce a useful fact\<close>
-  apply (subgoal_tac "MIN_BUDGET \<le> r_time new")
-   prefer 2
-   apply (clarsimp simp: word_le_nat_alt split: if_splits)
-  using add_leD2 dual_order.trans last_in_set apply blast
-  \<comment> \<open>end of the proof of the useful fact\<close>
-
-  \<comment> \<open>first branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<and> \<not>full
-                   \<and> 2 * MIN_BUDGET \<le> r_amount (last list) + r_amount new")
-   apply (elim conjE)
-
-   \<comment> \<open>we introduce a useful fact\<close>
-   apply (subgoal_tac "unat (r_time new - (MIN_BUDGET - r_amount new))
-                       = unat (r_time new) - unat MIN_BUDGET + unat (r_amount new)")
-    prefer 2
-    apply (subgoal_tac "unat (r_time new - (MIN_BUDGET - r_amount new))
-                        = unat (r_time new) - unat (MIN_BUDGET - r_amount new)")
-     apply (clarsimp simp: word_le_nat_alt)
-     apply (simp add: unat_sub)
-     apply (frule order.strict_implies_order)
-     using Nat.diff_diff_right word_le_nat_alt apply blast
-    apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_time new")
-     apply (simp add: unat_sub)
-    apply (rule_tac y=MIN_BUDGET in order_trans)
-     using word_le_less_eq word_sub_le_iff apply blast
-    apply blast
-   \<comment> \<open>end of the proof of the useful fact\<close>
-
-   apply simp
+  apply (case_tac "can_merge_refill (last list) new")
+   apply (clarsimp simp: schedule_used_def Let_def can_merge_refill_def)
    apply (intro conjI impI)
-
-    \<comment> \<open>list of length one\<close>
-
-    \<comment> \<open>another useful fact\<close>
-    apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_amount a")
-     prefer 2
-     apply (rule_tac y=MIN_BUDGET in order_trans)
-      using word_le_less_eq word_sub_le_iff apply blast
-     apply simp
-    \<comment> \<open>end of the proof of the useful fact\<close>
-
-    apply (simp add: no_overflow_def)
-    apply (clarsimp simp: Let_def)
-    apply (intro conjI)
-     apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
-                         = unat (r_amount a) - unat (MIN_BUDGET - r_amount new)")
-      apply linarith
-     apply (simp add: unat_sub)
-    apply (clarsimp simp: word_le_nat_alt)
-
-   \<comment> \<open>list is of length greater than one\<close>
-
-   \<comment> \<open>yet another useful fact\<close>
-   apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_amount (last lista)")
-    prefer 2
-    apply (rule_tac y=MIN_BUDGET in order_trans)
-     using word_le_less_eq word_sub_le_iff apply blast
-    using last_conv_nth apply fastforce
-   \<comment> \<open>end of the proof of the useful fact\<close>
-
-   apply (clarsimp simp: Let_def)
+    apply (clarsimp simp: no_overflow_def)
+    apply (subst unat_add_lem'; fastforce?)
+    apply (clarsimp simp: max_word_def)
    apply (rule_tac left="a # butlast lista"
-              and right="[last lista\<lparr>r_amount := r_amount (last lista) - (MIN_BUDGET - r_amount new)\<rparr>,
-                                    \<lparr>r_time = r_time new - (MIN_BUDGET - r_amount new), r_amount = MIN_BUDGET\<rparr>]"
-               in no_overflow_append)
-      apply (rule no_overflow_sublist; assumption?)
-      apply (metis butlast.simps(2) sublist_butlast)
-    apply (simp add: no_overflow_def)
-    apply clarsimp
-    apply (intro conjI)
-     apply (subgoal_tac "unat (r_amount (last lista) - (MIN_BUDGET - r_amount new))
-                         = unat (r_amount (last lista)) - unat (MIN_BUDGET - r_amount new)")
-      apply linarith
-     apply (fastforce simp: unat_sub word_le_nat_alt)+
-
-  \<comment> \<open>second branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<or> full")
+               and right="[\<lparr>r_time = r_time (last lista),
+                            r_amount = r_amount (last lista) + r_amount new\<rparr>]"
+                in no_overflow_append)
+     apply (metis no_overflow_sublist butlast.simps(2) sublist_butlast)
+    apply (clarsimp simp: no_overflow_def)
+    apply (subst unat_add_lem', simp add: max_word_def)
+    apply presburger
    apply simp
-   apply (intro conjI impI)
-
-      apply (clarsimp simp: Let_def split: if_splits)
-     apply (simp add: no_overflow_def)
-     apply (subgoal_tac "unat (r_time new - r_amount a) = unat (r_time new) - unat (r_amount a)")
-      apply (subgoal_tac "unat (r_amount a + r_amount new)
-                          = unat (r_amount a) + unat (r_amount new)")
-       apply (subgoal_tac "unat (r_amount a) \<le> unat (r_time new)")
-        apply force
-       apply force
-      apply (rule unat_add_lem', simp add: max_word_def)
-     apply (subgoal_tac "r_amount a \<le> r_time new")
-      apply (blast intro: unat_sub)
-     apply (simp add: word_le_nat_alt)
-
-  \<comment> \<open>list of length greater than two\<close>
-    apply (clarsimp simp: Let_def split: if_splits)
-   apply (simp add: no_overflow_def)
-   apply (clarsimp simp: Let_def)
-   apply (intro conjI)
-    prefer 2
-    apply (clarsimp simp: Let_def)
-    apply (meson in_set_butlastD)
-   apply (subgoal_tac "unat (r_amount (last lista) + r_amount new)
-                       = unat (r_amount (last lista)) + unat (r_amount new)")
-    apply clarsimp
-    apply (subgoal_tac "r_amount (last lista) \<le> r_time new")
-     apply (simp add: unat_sub)
-    apply (simp add: unat_arith_simps(1))
-   apply (rule unat_add_lem', simp add: max_word_def)
-
-  \<comment> \<open>\<not> (r_amount new < MIN_BUDGET \<or> b)\<close>
-  apply (simp add: no_overflow_def)
-
+  apply (clarsimp simp: schedule_used_def)
+  apply (intro conjI impI)
+     apply (rule_tac left="[a]" and right="[new]" in no_overflow_append; fastforce?)
+    apply (clarsimp simp: no_overflow_def can_merge_refill_def)
+    apply (subst unat_add_lem')
+     apply (clarsimp simp: max_word_def)
+    apply (clarsimp simp: word_le_nat_alt not_le)
+    apply (subst unat_sub)
+     apply (clarsimp simp: max_word_def word_le_nat_alt)
+     apply (prop_tac "unat (r_time a + r_amount a) = unat (r_time a) + unat (r_amount a)")
+      apply (subst unat_add_lem', clarsimp simp: max_word_def)
+      apply blast
+     apply linarith
+    apply fastforce
+   apply (rule_tac left="a # lista" and right="[new]" in no_overflow_append; fastforce?)
+  apply (rule_tac left="a # butlast lista"
+              and right=" [\<lparr>r_time = r_time new - r_amount (last lista),
+                            r_amount = r_amount (last lista) + r_amount new\<rparr>]"
+               in no_overflow_append
+         ; fastforce?)
+   apply (metis no_overflow_sublist butlast.simps(2) sublist_butlast)
+  apply (clarsimp simp: no_overflow_def can_merge_refill_def)
+  apply (subst unat_add_lem', clarsimp simp: max_word_def)
+  apply (subst unat_sub)
+   apply (prop_tac "unat (r_time (last lista) + r_amount (last lista))
+                    = unat (r_time (last lista)) + unat (r_amount (last lista))")
+    apply (subst unat_add_lem', clarsimp simp: max_word_def)
+    apply blast
+   apply (simp add: unat_arith_simps)
+  apply linarith
   done
 
 (* FIXME remove *)
@@ -1541,115 +1342,10 @@ abbreviation "sc_at_period \<equiv> sc_period_sc_at"
 
 lemmas sc_at_period_def = sc_period_sc_at_def
 
-lemma schedule_used_MIN_BUDGET:
-  "\<lbrakk>unat MIN_SC_BUDGET \<le> sum_list (map unat (map r_amount (list @ [new])));
-    sum_list (map unat (map r_amount (list @ [new]))) \<le> unat (max_word :: time);
-    \<forall>refill \<in> set list. MIN_BUDGET \<le> r_amount (refill)\<rbrakk>
-   \<Longrightarrow> \<forall>refill \<in> set (schedule_used full list new).
-              MIN_BUDGET \<le> r_amount (refill)"
-  supply map_map[simp del]
-  apply (case_tac list)
-   apply simp
-   using word_le_nat_alt MIN_BUDGET_le_MIN_SC_BUDGET basic_trans_rules(23) apply blast
-  apply (rename_tac a lista)
-
-  \<comment> \<open>first branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<and> \<not>full
-                   \<and> 2 * MIN_BUDGET \<le> r_amount (last list) + r_amount new")
-   apply simp
-   apply (intro conjI impI)
-    apply (clarsimp simp: Let_def)
-     apply (simp add: word_le_nat_alt)
-     apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
-                         = unat (r_amount a) - unat MIN_BUDGET + unat (r_amount new)")
-      prefer 2
-      apply (subgoal_tac "unat (r_amount a - (MIN_BUDGET - r_amount new))
-                          = unat (r_amount a) - unat (MIN_BUDGET - r_amount new)")
-       apply clarsimp
-       apply (simp add: unat_sub)
-       apply (clarsimp simp: unat_arith_simps(2))
-      apply (subgoal_tac "MIN_BUDGET - r_amount new \<le> r_amount a")
-       apply (simp add: unat_sub)
-      apply (rule_tac y=MIN_BUDGET in order_trans)
-       using word_le_less_eq word_sub_le_iff apply fastforce
-      using MIN_BUDGET_le_MIN_SC_BUDGET word_le_nat_alt apply fast
-     apply clarsimp
-     apply (frule order.strict_implies_order)
-     apply (simp add: add_le_imp_le_diff unat_MIN_BUDGET_MIN_SC_BUDGET)
-    apply (clarsimp simp: Let_def)
-  apply (intro conjI)
-    apply (simp add: diff_diff_eq2)
-    apply (rule word_l_diffs(4), clarsimp)
-  using MIN_BUDGET_le_MIN_SC_BUDGET MIN_SC_BUDGET_def apply fastforce
-   apply (clarsimp simp: Let_def)
-  apply (simp add: in_set_butlastD)
-
-  \<comment> \<open>second branch of schedule_used\<close>
-  apply (case_tac "r_amount new < MIN_BUDGET \<or> full")
-   apply simp
-   apply (intro conjI impI)
-
-      \<comment> \<open>list of length one\<close>
-      apply (clarsimp simp: Let_def split: if_splits)
-     apply (simp add: word_le_nat_alt)
-     apply (subgoal_tac "unat (r_amount a + r_amount new)
-                         = unat (r_amount a) + unat (r_amount new)")
-      using word_le_nat_alt MIN_BUDGET_le_MIN_SC_BUDGET apply linarith
-     apply (rule unat_add_lem', simp add: max_word_def)
-    apply (clarsimp simp: Let_def split: if_splits)
-   apply (clarsimp simp: Let_def split: if_splits)
-   apply (intro conjI)
-    apply (rule_tac y="r_amount (last lista)" in order_trans[rotated])
-     apply (simp add: no_olen_add_nat)
-     apply (rule_tac b="sum_list (map unat (map r_amount list)) + unat (r_amount new)" in  dual_order.strict_trans2)
-      apply (clarsimp simp: max_word_def)
-     apply (clarsimp )
-     apply (subgoal_tac "last (map unat (map r_amount list)) \<le> sum_list (map unat (map r_amount list))")
-      apply (clarsimp simp: last_map)
-     apply (meson last_in_set list.distinct(2) map_is_Nil_conv member_le_sum_list)
-    apply fastforce
-   apply (clarsimp simp: nth_butlast)
-  apply (simp add: in_set_butlastD)
-
-   \<comment> \<open>list of length greater than one\<close>
-   apply (clarsimp simp: Let_def)
-   apply fastforce
-  done
-
-lemma refill_word_proof_helper2:
-  "\<lbrakk>usage \<le> r_amount (hd refills);
-    ordered_disjoint refills;
-    unat (r_amount (hd refills)) + unat (r_amount (hd (tl refills))) \<le> unat (max_word :: time);
-    Suc 0 < length refills\<rbrakk>
-   \<Longrightarrow> unat (r_time (hd (tl refills)) - (r_amount (hd refills) - usage))
-       = unat (r_time (hd (tl refills))) - unat (r_amount (hd refills)) + unat usage
-       \<and>
-       unat (r_amount (hd (tl refills)) + (r_amount (hd refills) - usage))
-       = unat (r_amount (hd (tl refills))) + unat (r_amount (hd refills)) - unat usage
-       \<and> unat (r_amount (hd refills)) \<le> unat (r_time (hd (tl refills)))
-       \<and> unat usage \<le> unat (r_amount (hd refills))"
-  apply (intro conjI)
-     apply (subgoal_tac "unat (r_amount (hd refills)) \<le> unat (r_time (hd (tl refills)))")
-      apply (subgoal_tac "unat (r_time (hd (tl refills)) - (r_amount (hd refills) - usage))
-                          = unat (r_time (hd (tl refills))) - unat (r_amount (hd refills) - usage)")
-       apply (simp add: unat_sub word_le_nat_alt)
-     apply (simp add: unat_arith_simps(1) unat_sub)
-     apply (simp add: ordered_disjoint_def)
-     apply (drule_tac x=0 in spec)
-     apply (erule impE)
-      apply fastforce
-     apply (case_tac refills; force simp: hd_conv_nth)
-    apply (subgoal_tac "unat (r_amount (hd (tl refills)) + (r_amount (hd refills) - usage))
-                        = unat (r_amount (hd (tl refills))) + unat (r_amount (hd refills) - usage)")
-     apply (metis Nat.diff_add_assoc2 add.commute unat_sub word_le_nat_alt)
-    apply (rule unat_add_lem', simp add: unat_sub max_word_def)
-   apply (simp add: ordered_disjoint_def)
-   apply (drule_tac x=0 in spec)
-   apply (erule impE)
-    apply fastforce
-   apply (case_tac refills; force simp: hd_conv_nth)
-  apply (simp add: word_le_nat_alt)
-  done
+lemma schedule_used_r_amount_head:
+  "\<lbrakk>list \<noteq> []; sum_list (map unat (map r_amount (list @ [new]))) \<le> unat (max_word :: time)\<rbrakk>
+   \<Longrightarrow> r_amount (hd list) \<le> r_amount (hd (schedule_used full list new))"
+  by (cases list; fastforce simp: schedule_used_def unat_sum_bound_equiv)
 
 lemma tail_nonempty_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 < length list"
@@ -1883,10 +1579,6 @@ lemma end_timeslice_invs:
           wp: handle_timeout_Timeout_invs hoare_drop_imp hoare_vcg_if_lift2)
   done
 
-lemma invs_non_empty_refills:
-  "\<lbrakk> invs s; ko_at (SchedContext sc n) scptr s; 0 < sc_refill_max sc\<rbrakk> \<Longrightarrow> sc_refills sc \<noteq> []"
-  by (clarsimp dest!: invs_valid_objs elim!: obj_at_valid_objsE simp: valid_obj_def valid_sched_context_def)
-
 (* move to SchedContext_AI *)
 lemma set_sc_refills_cur_sc_tcb[wp]:
   "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
@@ -1941,14 +1633,37 @@ abbreviation active_sc_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Righta
 
 lemmas active_sc_at_def = obj_at_def
 
+lemma set_refills_active_sc_at[wp]:
+  "set_refills sc_ptr refills \<lbrace>active_sc_at sc_ptr\<rbrace>"
+  apply (clarsimp simp: set_refills_def)
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: active_sc_at_def)
+  done
+
+lemma refill_unblock_check_active_sc_at[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>active_sc_at sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def set_refills_def)
+  apply (wpsimp wp: update_sched_context_wp get_refills_wp
+              simp: is_round_robin_def)
+  apply (clarsimp simp: active_sc_at_def)
+  done
+
+lemma refill_unblock_check_not_active_sc_at[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>not (active_sc_at sc_ptr)\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def set_refills_def)
+  apply (wpsimp wp: update_sched_context_wp get_refills_wp
+              simp: is_round_robin_def)
+  apply (clarsimp simp: active_sc_at_def pred_neg_def)
+  done
+
 lemma refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr \<and> active_sc_at sc_ptr s\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding refill_update_def
-  by (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
-                 hoare_vcg_disj_lift)
-     (clarsimp simp: obj_at_def active_sc_def)
+  apply (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
+                    hoare_vcg_disj_lift)
+  done
 
 lemma set_refills_bound_sc:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
@@ -2141,7 +1856,7 @@ lemma decode_sched_control_inv_wf:
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
    decode_sched_control_invocation label args excaps
    \<lbrace>valid_sched_control_inv\<rbrace>, -"
-  apply_trace (wpsimp simp: decode_sched_control_invocation_def whenE_def unlessE_def assertE_def
+  apply (wpsimp simp: decode_sched_control_invocation_def whenE_def unlessE_def assertE_def
            split_del: if_split)
   apply (erule ballE[where x="hd excaps"])
    prefer 2
@@ -2152,8 +1867,7 @@ lemma decode_sched_control_inv_wf:
   apply (clarsimp simp add: valid_cap_def obj_at_def is_sc_obj_def split: cap.split_asm)
   apply (case_tac ko; simp)
   apply (clarsimp simp: valid_refills_number_def max_refills_cap_def
-                        us_to_ticks_mono[simplified mono_def] MIN_SC_BUDGET_def
-                        MIN_SC_BUDGET_US_def MIN_BUDGET_def MIN_BUDGET_US_def
+                        us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def MIN_BUDGET_US_def
                         ARM.kernelWCET_ticks_def not_less)
   done
 

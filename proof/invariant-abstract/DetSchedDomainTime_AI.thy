@@ -490,8 +490,9 @@ crunches sched_context_bind_tcb, restart
   for domain_time_inv[wp]: "\<lambda>s::det_state. P (domain_time s)"
   (wp: hoare_drop_imp maybeM_inv)
 
-crunches refill_update,refill_new
+crunches refill_update, refill_new
   for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps)
 
 crunches set_extra_badge, schedule_tcb
   for domain_consumed_time_inv[wp]: "\<lambda>s. P (domain_time s)(consumed_time s)"

@@ -895,7 +895,7 @@ lemma sc_refill_max_update_cur_sc_tcb[wp]:
   done
 
 lemma reset_sc_refill_max_invs[wp]:
-  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update p 0 \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update p n \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
