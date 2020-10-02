@@ -591,7 +591,7 @@ lemma schedContextUnbindTCB_ctes_of[wp]:
      apply (clarsimp simp: ran_def tcb_cte_cases_def split: if_splits)
   by wpsimp+
 
-crunches setConsumed, schedContextCompleteYieldTo, unbindNotification
+crunches setConsumed, schedContextCompleteYieldTo, unbindNotification, unbindFromSC
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -611,11 +611,15 @@ lemma unbindNotification_ctes_of_thread:
   "unbindNotification t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by wp
 
+lemma unbindFromSC_ctes_of_thread:
+  "unbindFromSC t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
+  by wp
+
 lemma prepareThreadDelete_ctes_of_thread:
   "prepareThreadDelete t' \<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   by (wpsimp simp: prepareThreadDelete_def)
 
-crunches schedContextCancelYieldTo, tcbReleaseRemove, tcbSchedDequeue
+crunches schedContextCancelYieldTo, tcbReleaseRemove, tcbSchedDequeue, unbindFromSC
   for cteCaps_of[wp]: "\<lambda>s. P (cteCaps_of s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -633,7 +637,8 @@ lemma suspend_not_recursive_ctes:
   apply (auto simp: isCap_simps finaliseCap_def Let_def)
   done
 
-crunches schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification, prepareThreadDelete
+crunches schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification,
+         prepareThreadDelete, unbindFromSC
   for not_recursive_ctes[wp]: "\<lambda>s. P (not_recursive_ctes s)"
   (simp: not_recursive_ctes_def cteCaps_of_def wp: threadSet_ctes_of)
 
@@ -730,32 +735,16 @@ termination finaliseSlot'
       apply simp
      apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad
                            getThreadCSpaceRoot_def locateSlot_conv)
-     apply (frule tcb_inv_state_eq, simp)
-
      apply (intro conjI)
       apply (erule use_valid [OF _ prepareThreadDelete_not_recursive_ctes])
       apply (erule use_valid [OF _ suspend_not_recursive_ctes])
-      apply (case_tac "tcbSchedContext tcb"; simp)
-       apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes], simp)
-      apply clarsimp
-      apply (erule use_valid [OF _ schedContextUnbindTCB_not_recursive_ctes])
-      apply (erule use_valid [OF _ schedContextCompleteYieldTo_not_recursive_ctes])
-      apply (erule use_valid [OF _ get_sc_inv'])
+      apply (erule use_valid [OF _ unbindFromSC_not_recursive_ctes])
       apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes], simp)
-
      apply (frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
-     apply (case_tac "tcbSchedContext tcb"; simp)
-      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
-      apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])
-      apply clarsimp
-     apply clarsimp
-     apply (frule(1) use_valid [OF _ getSchedContext_ctes_of_thread, OF _ exI])
-     apply (frule(1) use_valid [OF _ schedContextCompleteYieldTo_ctes_of_thread])
-     apply (frule(1) use_valid [OF _ schedContextUnbindTCB_ctes_of_thread])
+     apply (frule(1) use_valid [OF _ unbindFromSC_ctes_of_thread])
      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
      apply (frule(1) use_valid [OF _ prepareThreadDelete_ctes_of_thread])
      apply clarsimp
-
     apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
    apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
   apply (clarsimp simp: in_monad Let_def locateSlot_conv
