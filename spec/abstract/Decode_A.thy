@@ -486,13 +486,15 @@ section "Scheduling Contexts"
 text \<open>The following definitions decode system calls related to scheduling contexts
 and scheduling control.\<close>
 
+find_consts "_ list \<Rightarrow> _ option"
+
 definition
   decode_sched_context_invocation ::
-  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> data list \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
+  "data \<Rightarrow> obj_ref \<Rightarrow> cap list \<Rightarrow> obj_ref option \<Rightarrow> (sched_context_invocation, 'z::state_ext) se_monad"
 where
-  "decode_sched_context_invocation label sc_ptr excaps args \<equiv>
+  "decode_sched_context_invocation label sc_ptr excaps buffer \<equiv>
   case gen_invocation_type label of
-    SchedContextConsumed \<Rightarrow> returnOk $ InvokeSchedContextConsumed sc_ptr args
+    SchedContextConsumed \<Rightarrow> returnOk $ InvokeSchedContextConsumed sc_ptr buffer
   | SchedContextBind \<Rightarrow> doE
       whenE (length excaps = 0) $ throwError TruncatedMessage;
       cap \<leftarrow> returnOk $ hd excaps;
@@ -552,7 +554,7 @@ where
       ct_ptr \<leftarrow> liftE $ gets cur_thread;
       yt_ptr \<leftarrow> liftE $ thread_get tcb_yield_to ct_ptr;
       whenE (yt_ptr \<noteq> None) $ throwError IllegalOperation;
-      returnOk $ InvokeSchedContextYieldTo sc_ptr args
+      returnOk $ InvokeSchedContextYieldTo sc_ptr buffer
    odE
   | _ \<Rightarrow> throwError $ IllegalOperation"
 
@@ -755,9 +757,9 @@ invocation is allowed.
 definition
   decode_invocation ::
   "bool \<Rightarrow> data \<Rightarrow> data list \<Rightarrow> cap_ref \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow>
-   (cap \<times> cslot_ptr) list \<Rightarrow> (invocation, 'z::state_ext) se_monad"
+   (cap \<times> cslot_ptr) list \<Rightarrow> obj_ref option \<Rightarrow> (invocation, 'z::state_ext) se_monad"
 where
-  "decode_invocation first_phase label args cap_index slot cap excaps \<equiv>
+  "decode_invocation first_phase label args cap_index slot cap excaps buffer \<equiv>
   case cap of
     EndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
@@ -786,7 +788,7 @@ where
   | SchedContextCap sc sz \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0
-      else liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) args
+      else liftME InvokeSchedContext $ decode_sched_context_invocation label sc (map fst excaps) buffer
   | SchedControlCap \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0

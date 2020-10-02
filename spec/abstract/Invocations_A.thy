@@ -57,11 +57,11 @@ datatype tcb_invocation =
   | SetTLSBase obj_ref machine_word
 
 datatype sched_context_invocation =
-    InvokeSchedContextConsumed obj_ref "data list"
+    InvokeSchedContextConsumed obj_ref "obj_ref option"
   | InvokeSchedContextBind obj_ref cap
   | InvokeSchedContextUnbindObject obj_ref cap
   | InvokeSchedContextUnbind obj_ref cap
-  | InvokeSchedContextYieldTo obj_ref "data list"
+  | InvokeSchedContextYieldTo obj_ref "obj_ref option"
 
 datatype sched_control_invocation =
     InvokeSchedControlConfigure obj_ref ticks ticks nat badge

@@ -320,27 +320,25 @@ definition
    od"
 
 definition
-  set_consumed :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  set_consumed :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "set_consumed sc_ptr args \<equiv>do
+  "set_consumed sc_ptr buf \<equiv> do
       consumed \<leftarrow> sched_context_update_consumed sc_ptr;
       ct \<leftarrow> gets cur_thread;
-      buffer \<leftarrow> return $ data_to_oref $ args ! 0;
-      sent \<leftarrow> set_mrs ct (Some buffer) ((ucast consumed) # [ucast (consumed >> 32)]);
+      sent \<leftarrow> set_mrs ct buf ((ucast consumed) # [ucast (consumed >> 32)]);
       set_message_info ct $ MI sent 0 0 0 \<comment> \<open>FIXME RT: is this correct?\<close>
     od"
 
 text \<open>yield\_to related functions\<close>
-term maybeM
+
 definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "complete_yield_to tcb_ptr \<equiv> do
      yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to tcb_ptr;
      maybeM (\<lambda>sc_ptr. do
-         args \<leftarrow> lookup_ipc_buffer True tcb_ptr;
-         buf \<leftarrow> assert_opt args;
-         set_consumed sc_ptr [buf];
+         buf \<leftarrow> lookup_ipc_buffer True tcb_ptr;
+         set_consumed sc_ptr buf;
          set_tcb_obj_ref tcb_yield_to_update tcb_ptr None;
          set_sc_obj_ref sc_yield_from_update sc_ptr None
        od) yt_opt
