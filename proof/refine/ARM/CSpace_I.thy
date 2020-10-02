@@ -14,8 +14,8 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemmas capUntypedPtr_simps[simp] = capUntypedPtr_def[split_simps capability.split]
-lemmas arch_capUntypedPtr_simps[simp] = ARM_H.capUntypedPtr_def[split_simps arch_capability.split]
+lemmas capUntypedPtr_simps[simp] = capUntypedPtr_def[split_simps capability.split, simplified PPtr_def id_def]
+lemmas arch_capUntypedPtr_simps[simp] = ARM_H.capUntypedPtr_def[split_simps arch_capability.split, simplified PPtr_def id_def]
 
 lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
