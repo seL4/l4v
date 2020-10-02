@@ -25,9 +25,10 @@ This module uses the C preprocessor to select a target architecture.
 >         refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
->         schedContextCompleteYieldTo, unbindFromSC, schedContextCancelYieldTo,
->         refillAbsoluteMax, schedContextUpdateConsumed, scReleased, setConsumed,
->         refillResetRR
+>         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
+>         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
+>         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
+>         scReleased, setConsumed, refillResetRR
 >     ) where
 
 \begin{impdetails}
@@ -468,6 +469,29 @@ This module uses the C preprocessor to select a target architecture.
 >             Just buffer -> do
 >                 setConsumed scPtr buffer
 >                 schedContextCancelYieldTo tptr
+
+> schedContextUnbindYieldFrom :: PPtr SchedContext -> Kernel ()
+> schedContextUnbindYieldFrom scPtr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     sc <- getSchedContext scPtr
+>     when (scYieldFrom sc /= Nothing) $
+>         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+
+> schedContextUnbindReply :: PPtr SchedContext -> Kernel ()
+> schedContextUnbindReply scPtr = do
+>     sc <- getSchedContext scPtr
+>     replyPtrOpt <- return $ scReply sc
+>     when (replyPtrOpt /= Nothing) $ do
+>         replyPtr <- return $ fromJust replyPtrOpt
+>         reply <- getReply replyPtr
+>         setReply replyPtr (reply { replyNext = Nothing })
+>         setSchedContext scPtr (sc { scReply = Nothing })
+
+> schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
+> schedContextZeroRefillMax scPtr = do
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr $ sc { scRefillMax = 0 }
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
