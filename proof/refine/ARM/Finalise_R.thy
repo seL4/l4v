@@ -1731,7 +1731,9 @@ where
  "final_matters' cap \<equiv> case cap of
     EndpointCap ref bdg s r g gr \<Rightarrow> True
   | NotificationCap ref bdg s r \<Rightarrow> True
+  | ReplyCap ref gr \<Rightarrow> True
   | ThreadCap ref \<Rightarrow> True
+  | SchedContextCap ref sz \<Rightarrow> True
   | CNodeCap ref bits gd gs \<Rightarrow> True
   | Zombie ptr zb n \<Rightarrow> True
   | IRQHandlerCap irq \<Rightarrow> True
@@ -2244,15 +2246,14 @@ lemma unbindNotification_invs[wp]:
   done
 
 lemma ntfn_bound_tcb_at':
-  "\<lbrakk>sym_refs (state_refs_of' s); valid_objs' s; ko_at' ntfn ntfnptr s;
+  "\<lbrakk>sym_refs (state_refs_of' s); ko_at' ntfn ntfnptr s;
     ntfnBoundTCB ntfn = Some tcbptr; P (Some ntfnptr)\<rbrakk>
   \<Longrightarrow> bound_tcb_at' P tcbptr s"
   apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (clarsimp simp: obj_at'_def projectKOs)
    apply (fastforce simp: state_refs_of'_def)
-  apply (auto simp: pred_tcb_at'_def obj_at'_def valid_obj'_def valid_ntfn'_def
-                    state_refs_of'_def refs_of_rev' projectKOs
-          simp del: refs_of_simps
+  apply (auto simp: state_refs_of'_def pred_tcb_at'_def obj_at'_def
+                    refs_of_rev' projectKOs
              split: option.splits if_split_asm)
   done
 
@@ -2864,38 +2865,27 @@ crunches schedContextCompleteYieldTo
   and sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps)
 
-lemma schedContextCompleteYieldTo_valid_objs'[wp]:
-  "schedContextCompleteYieldTo tptr \<lbrace>valid_objs'\<rbrace>"
-  unfolding schedContextCompleteYieldTo_def
-  apply wpsimp
-  sorry
-
 lemma bound_sc_tcb_at'_sym_refsD:
-  "\<lbrakk>bound_sc_tcb_at' (\<lambda>scPtr'. scPtr' = Some scPtr) tcbPtr s; sym_refs (state_refs_of' s);
-    valid_objs' s\<rbrakk>
+  "\<lbrakk>bound_sc_tcb_at' (\<lambda>scPtr'. scPtr' = Some scPtr) tcbPtr s; sym_refs (state_refs_of' s)\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
-  apply (simp add: pred_tcb_at'_def)
-  apply (frule obj_at_valid_objs', assumption)
-  apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  apply (frule_tac p=scPtr in obj_at_valid_objs', assumption)
-  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def projectKOs)
-  apply (frule_tac p=tcbPtr in sym_refs_obj_atD', assumption)
-  apply (frule_tac p=scPtr in sym_refs_obj_atD', assumption)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs get_refs_def2)
+  apply (clarsimp simp: pred_tcb_at'_def)
+  apply (drule (1) sym_refs_obj_atD')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def
+                    refs_of_rev' projectKOs)
   done
 
 lemma schedContextUnbindTCB_bound_sc_tcb_at'_None:
-  "\<lbrace>bound_sc_tcb_at' (\<lambda>sc_opt. sc_opt = (Some sc)) t and valid_objs'\<rbrace>
+  "\<lbrace>bound_sc_tcb_at' (\<lambda>sc_opt. sc_opt = (Some sc)) t\<rbrace>
    schedContextUnbindTCB sc
    \<lbrace>\<lambda>rv. bound_sc_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: schedContextUnbindTCB_def sym_refs_asrt_def)
   apply (wpsimp wp: threadSet_pred_tcb_at_state hoare_vcg_imp_lift)
-  apply (drule (2) bound_sc_tcb_at'_sym_refsD)
+  apply (drule (1) bound_sc_tcb_at'_sym_refsD)
   apply (auto simp: obj_at'_def)
   done
 
 lemma unbindFromSC_bound_sc_tcb_at'_None:
-  "\<lbrace>valid_objs'\<rbrace>
+  "\<lbrace>\<top>\<rbrace>
    unbindFromSC t
    \<lbrace>\<lambda>rv. bound_sc_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: unbindFromSC_def)
@@ -2935,20 +2925,15 @@ crunch invs[wp]: prepareThreadDelete "invs'"
 end
 
 lemma ntfnSc_sym_refsD:
-  "\<lbrakk>obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr s;
-    valid_objs' s; sym_refs (state_refs_of' s)\<rbrakk>
+  "\<lbrakk>obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr s; sym_refs (state_refs_of' s)\<rbrakk>
     \<Longrightarrow> obj_at' (\<lambda>sc. scNtfn sc = Some ntfnPtr) scPtr s"
-  apply (frule obj_at_valid_objs', assumption)
-  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def projectKOs)
-  apply (frule_tac p=scPtr in obj_at_valid_objs', assumption)
-  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def projectKOs)
-  apply (frule_tac p=ntfnPtr in sym_refs_obj_atD', assumption)
-  apply (frule_tac p=scPtr in sym_refs_obj_atD', assumption)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs get_refs_def2)
+  apply (drule (1) sym_refs_obj_atD')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def
+                    refs_of_rev' projectKOs)
   done
 
 lemma schedContextUnbindNtfn_obj_at'_ntfnSc:
-  "\<lbrace>valid_objs' and obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr\<rbrace>
+  "\<lbrace>obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr\<rbrace>
    schedContextUnbindNtfn scPtr
    \<lbrace>\<lambda>_ s. obj_at' (\<lambda>ntfn. ntfnSc ntfn = None) ntfnPtr s\<rbrace>"
   apply (simp add: schedContextUnbindNtfn_def sym_refs_asrt_def)
@@ -2959,7 +2944,7 @@ lemma schedContextUnbindNtfn_obj_at'_ntfnSc:
   done
 
 lemma schedContextMaybeUnbindNtfn_obj_at'_ntfnSc:
-  "\<lbrace>valid_objs'\<rbrace>
+  "\<lbrace>\<top>\<rbrace>
    schedContextMaybeUnbindNtfn ntfnPtr
    \<lbrace>\<lambda>_ s. obj_at' (\<lambda>ntfn. ntfnSc ntfn = None) ntfnPtr s\<rbrace>"
   apply (simp add: schedContextMaybeUnbindNtfn_def)
@@ -3032,6 +3017,118 @@ crunches schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotificatio
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps rule: sch_act_simple_lift)
 
+lemma schedContextZeroRefillMax_unlive[wp]:
+  "schedContextZeroRefillMax scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
+  unfolding schedContextZeroRefillMax_def
+  apply (wpsimp wp: set_sc'.set_wp)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
+                        ps_clear_upd' objBits_simps)
+  done
+
+crunches setMessageInfo, setMRs
+  for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma schedContextUpdateConsumed_obj_at'_not_consumed:
+  "(\<And>ko f. P (scConsumed_update f ko) = P ko)
+   \<Longrightarrow> schedContextUpdateConsumed scPtr \<lbrace>obj_at' P t\<rbrace>"
+  apply (simp add: schedContextUpdateConsumed_def)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest)
+  by (auto simp: obj_at'_def)
+
+lemma setConsumed_obj_at'_not_consumed:
+  "(\<And>ko f. P (scConsumed_update f ko) = P ko)
+   \<Longrightarrow> setConsumed scPtr buffer \<lbrace>obj_at' P t\<rbrace>"
+  apply (clarsimp simp: setConsumed_def)
+  apply (wpsimp wp: schedContextUpdateConsumed_obj_at'_not_consumed)
+  done
+
+crunches setConsumed
+  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma schedContextCancelYieldTo_makes_unlive:
+  "\<lbrace>obj_at' (\<lambda>sc. scTCB sc = None) scPtr and obj_at' (\<lambda>sc. scNtfn sc = None) scPtr and
+    obj_at' (\<lambda>sc. scReply sc = None) scPtr and bound_yt_tcb_at' (\<lambda>yieldTo. yieldTo = Some scPtr) tptr\<rbrace>
+   schedContextCancelYieldTo tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') scPtr\<rbrace>"
+  unfolding schedContextCancelYieldTo_def
+  apply (wpsimp wp: threadSet_unlive_other set_sc'.ko_wp_at threadGet_wp)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live_sc'_def)
+  done
+
+lemma schedContextCompleteYieldTo_makes_unlive:
+  "\<lbrace>obj_at' (\<lambda>sc. scTCB sc = None) scPtr and obj_at' (\<lambda>sc. scNtfn sc = None) scPtr and
+    obj_at' (\<lambda>sc. scReply sc = None) scPtr and bound_yt_tcb_at' ((=) (Some scPtr)) tptr\<rbrace>
+   schedContextCompleteYieldTo tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') scPtr\<rbrace>"
+  unfolding schedContextCompleteYieldTo_def
+  apply (wpsimp wp: schedContextCancelYieldTo_makes_unlive haskell_fail_wp
+                    setConsumed_obj_at'_not_consumed hoare_drop_imps threadGet_wp)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def)
+  done
+
+lemma sym_ref_scYieldFrom:
+  "\<lbrakk>ko_at' sc scp s; scYieldFrom sc = Some tp; sym_refs (state_refs_of' s)\<rbrakk>
+  \<Longrightarrow> \<exists>tcb. ko_at' tcb tp s \<and> tcbYieldTo tcb = Some scp"
+  apply (drule (1) sym_refs_ko_atD')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def
+                    refs_of_rev' projectKOs)
+  done
+
+lemma schedContextUnbindYieldFrom_makes_unlive:
+  "\<lbrace>obj_at' (\<lambda>sc. scTCB sc = None) scPtr and obj_at' (\<lambda>sc. scNtfn sc = None) scPtr and
+    obj_at' (\<lambda>sc. scReply sc = None) scPtr\<rbrace>
+   schedContextUnbindYieldFrom scPtr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') scPtr\<rbrace>"
+  unfolding schedContextUnbindYieldFrom_def sym_refs_asrt_def
+  apply (wpsimp wp: schedContextCompleteYieldTo_makes_unlive)
+  apply (rule conjI; clarsimp)
+   apply (drule (2) sym_ref_scYieldFrom)
+   apply (auto simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live_sc'_def)
+  done
+
+lemma schedContextUnbindReply_obj_at'_not_reply:
+  "(\<And>ko f. P (scReply_update f ko) = P ko)
+   \<Longrightarrow> schedContextUnbindReply scPtr \<lbrace>obj_at' P p\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindReply_def)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest set_reply'.set_wp)
+  by (auto simp: obj_at'_def projectKOs)
+
+lemma schedContextUnbindReply_obj_at'_reply_None:
+  "\<lbrace>\<top>\<rbrace> schedContextUnbindReply scPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>sc. scReply sc = None) scPtr\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindReply_def)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest)
+  by (auto simp: obj_at'_def)
+
+lemma schedContextUnbindNtfn_obj_at'_not_ntfn:
+  "(\<And>ko f. P (scNtfn_update f ko) = P ko)
+   \<Longrightarrow> schedContextUnbindNtfn scPtr \<lbrace>obj_at' P p\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindNtfn_def)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest set_reply'.set_wp)
+  by (auto simp: obj_at'_def projectKOs)
+
+lemma schedContextUnbindNtfn_obj_at'_ntfn_None:
+  "\<lbrace>\<top>\<rbrace> schedContextUnbindNtfn scPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>sc. scNtfn sc = None) scPtr\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindNtfn_def)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest)
+  by (auto simp: obj_at'_def)
+
+lemma schedContextUnbindTCB_obj_at'_tcb_None:
+  "\<lbrace>\<top>\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>sc. scTCB sc = None) scPtr\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindTCB_def)
+  by (wpsimp wp: set_sc'.obj_at'_strongest)
+
+lemma schedContextUnbindAllTCBs_obj_at'_tcb_None:
+  "\<lbrace>\<top>\<rbrace> schedContextUnbindAllTCBs scPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>sc. scTCB sc = None) scPtr\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindAllTCBs_def)
+  apply (wpsimp wp: schedContextUnbindTCB_obj_at'_tcb_None)
+  by (auto simp: obj_at'_def)
+
+lemmas schedContextZeroRefillMax_removeable'
+  = prepares_delete_helper'' [OF schedContextZeroRefillMax_unlive
+                                   [where p=scPtr and scPtr=scPtr for scPtr]]
+
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
        \<and> (final_matters' cap \<longrightarrow> (final = isFinal cap slot (cteCaps_of s)))
@@ -3060,12 +3157,13 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
    apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
              prepares_delete_helper'' [OF cancelAllSignals_unlive]
              prepares_delete_helper'' [OF replyClear_makes_unlive]
+             schedContextZeroRefillMax_removeable'
              prepareThreadDelete_unqueued prepareThreadDelete_nonq
              prepareThreadDelete_inactive
              suspend_makes_inactive suspend_nonq
              suspend_bound_yt_tcb_at'_None
              deletingIRQHandler_removeable'
-             deletingIRQHandler_final[where slot=slot ]
+             deletingIRQHandler_final[where slot=slot]
              unbindMaybeNotification_obj_at'_ntfnBound
              getNotification_wp
              suspend_bound_tcb_at'
@@ -3074,27 +3172,32 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
              schedContextMaybeUnbindNtfn_obj_at'_ntfnSc
              unbindFromSC_bound_sc_tcb_at'_None
              getReplyTCB_wp hoare_vcg_if_lift_strong
+             schedContextUnbindYieldFrom_makes_unlive
+             schedContextUnbindReply_obj_at'_reply_None
+             schedContextUnbindReply_obj_at'_not_reply
+             schedContextUnbindNtfn_obj_at'_ntfn_None
+             schedContextUnbindNtfn_obj_at'_not_ntfn
+             schedContextUnbindAllTCBs_obj_at'_tcb_None
            | simp add: isZombie_Null isThreadCap_threadCapRefs_tcbptr
                        isArchObjectCap_Cap_capCap not_obj_at'
            | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
                   clarsimp simp: isCap_simps)
            | wpc
            | strengthen invs_valid_objs' invs_sch_act_wf')+
-  sorry (*
   apply clarsimp
-  apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
+  apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp)
   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
                        final_matters'_def objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
      (* thread *)
-     apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
-     apply (clarsimp simp: valid_cap'_def)
-     apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
-     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-    apply (clarsimp simp: obj_at'_def | rule conjI)+
-  done *)
+    apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
+    apply (clarsimp simp: valid_cap'_def)
+    apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
+    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+   apply (clarsimp simp: obj_at'_def | rule conjI)
+  sorry
 
 lemma cteDeleteOne_cte_wp_at_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"

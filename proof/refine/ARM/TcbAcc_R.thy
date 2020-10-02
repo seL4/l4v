@@ -1585,7 +1585,7 @@ lemma setObject_valid_tcbs':
    apply clarsimp
    apply (erule (1) use_valid[OF _ setObject_valid_tcb'])
   apply (drule spec, erule mp)
-  apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1 ARM_H.fromPPtr_def)
+  apply (clarsimp simp: setObject_def in_monad split_def lookupAround2_char1)
   apply (rename_tac s ptr' new_tcb' ptr'' old_tcb_ko' s' f)
   apply (case_tac "ptr'' = ptr'"; clarsimp)
   apply (prop_tac "\<exists>old_tcb' :: tcb. projectKO_opt old_tcb_ko' = Some old_tcb'")

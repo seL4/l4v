@@ -6454,7 +6454,8 @@ crunches "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunches schedContextDonate, replyUnlink, schedContextUnbindAllTCBs, unbindFromSC
+crunches schedContextDonate, replyUnlink, schedContextUnbindAllTCBs, unbindFromSC,
+         schedContextZeroRefillMax, schedContextUnbindYieldFrom, schedContextUnbindReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 
