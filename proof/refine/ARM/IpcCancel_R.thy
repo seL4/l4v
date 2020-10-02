@@ -530,7 +530,7 @@ end
 
 locale delete_one_conc = delete_one_conc_pre +
   assumes delete_one_invs:
-    "\<And>p. \<lbrace>invs'\<rbrace> cteDeleteOne p \<lbrace>\<lambda>rv. invs'\<rbrace>"
+    "\<And>p. \<lbrace>invs' and sch_act_simple\<rbrace> cteDeleteOne p \<lbrace>\<lambda>rv. invs'\<rbrace>"
 
 locale delete_one = delete_one_conc + delete_one_abs +
   assumes delete_one_corres:
@@ -1114,7 +1114,7 @@ lemma sbn_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
    setBoundNotification ntfn t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp weak_sch_act_wf_lift sbn_st_tcb')
+  by (wp weak_sch_act_wf_lift)
 
 
 lemma set_ep_weak_sch_act_wf[wp]:
@@ -2062,7 +2062,8 @@ lemma cancelIPC_queues[wp]:
 (* FIXME: move to Schedule_R *)
 lemma tcbSchedDequeue_nonq[wp]:
   "\<lbrace>Invariants_H.valid_queues and tcb_at' t and K (t = t')\<rbrace>
-    tcbSchedDequeue t \<lbrace>\<lambda>_ s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
+   tcbSchedDequeue t
+   \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: tcbSchedDequeue_def)
   apply (wp threadGet_wp|simp)+
@@ -2214,6 +2215,7 @@ crunches replyUnlink
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and sch_act_not[wp]: "sch_act_not t"
+  and ct_not_inQ[wp]: ct_not_inQ
   (wp: crunch_wps)
 
 lemmas replyUnlink_typ_ats[wp] = typ_at_lifts[OF replyUnlink_typ_at']

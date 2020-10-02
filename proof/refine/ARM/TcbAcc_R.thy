@@ -4595,19 +4595,22 @@ lemma sts_st_tcb':
   by (cases "t = t'"
       ; wpsimp wp: threadSet_pred_tcb_at_state simp: setThreadState_def)
 
-lemma sts_bound_tcb_at':
-  "\<lbrace>bound_tcb_at' P t\<rbrace>
-  setThreadState st t'
-  \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
+lemma sts_bound_tcb_at'[wp]:
+  "setThreadState st t' \<lbrace>bound_tcb_at' P t\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   by (cases "t = t'"
       ; wpsimp wp: threadSet_pred_tcb_at_state
              simp: pred_tcb_at'_def)+
 
-lemma sbn_st_tcb':
-  "\<lbrace>st_tcb_at' P t\<rbrace>
-  setBoundNotification ntfn t'
-  \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+lemma sts_bound_sc_tcb_at'[wp]:
+  "setThreadState st t' \<lbrace>bound_sc_tcb_at' P t\<rbrace>"
+  apply (clarsimp simp: setThreadState_def)
+  by (cases "t = t'"
+      ; wpsimp wp: threadSet_pred_tcb_at_state
+             simp: pred_tcb_at'_def)+
+
+lemma sbn_st_tcb'[wp]:
+  "setBoundNotification ntfn t' \<lbrace>st_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setBoundNotification_def
                   split del: if_split)

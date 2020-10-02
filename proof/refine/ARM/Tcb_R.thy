@@ -537,10 +537,6 @@ lemma tcbSchedDequeue_not_in_queue:
    apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def projectKOs inQ_def )
   apply (wp tcbSchedDequeue_not_queued tcbSchedDequeue_valid_queues |
          simp add: valid_objs'_maxDomain valid_objs'_maxPriority)+
-  apply (clarsimp)
-  apply (frule (1) valid_objs'_maxDomain)
-  apply (frule (1) valid_objs'_maxPriority)
-  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma threadSet_ct_in_state':

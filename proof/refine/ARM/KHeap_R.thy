@@ -2440,6 +2440,9 @@ interpretation threadSet: pspace_only' "threadSet f p"
   apply (fastforce dest: set_tcb'.pspace)
   done
 
+lemmas getReplyTCB_wp =
+  set_reply'.get_wp[THEN liftM_wp, where f=replyTCB, folded getReplyTCB_def]
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* aliases for compatibility with master *)
@@ -2731,7 +2734,8 @@ lemma doMachineOp_invs_bits[wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   "\<lbrace>cur_tcb'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   "\<lbrace>if_unsafe_then_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  by (simp add: doMachineOp_def split_def
+  "\<lbrace>sch_act_simple\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
+  by (simp add: doMachineOp_def split_def sch_act_simple_def
                 valid_pspace'_def valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
        | wp cur_tcb_lift sch_act_wf_lift tcb_in_cur_domain'_lift
        | fastforce elim: state_refs_of'_pspaceI)+
@@ -2944,6 +2948,19 @@ lemma sym_ref_Receive_or_Reply_replyTCB':
          simp add: get_refs_def2 ep_q_refs_of'_def ntfn_q_refs_of'_def
                    tcb_st_refs_of'_def tcb_bound_refs'_def
             split: endpoint.split_asm ntfn.split_asm thread_state.split_asm if_split_asm)+
+  done
+
+lemma sym_ref_replyTCB_Receive_or_Reply:
+  "\<lbrakk> ko_at' reply rp s; sym_refs (state_refs_of' s); replyTCB reply = Some tp \<rbrakk>
+   \<Longrightarrow> st_tcb_at' (\<lambda>st. (\<exists>ep pl. st = BlockedOnReceive ep pl (Some rp))
+                        \<or> st = BlockedOnReply (Some rp)) tp s"
+  apply (drule (1) sym_refs_obj_atD'[rotated, where p=rp])
+  apply (clarsimp simp: state_refs_of'_def projectKOs pred_tcb_at'_def obj_at'_def)
+  apply (clarsimp simp: ko_wp_at'_def)
+  apply (rename_tac tcb; case_tac tcb;
+         simp add: get_refs_def2 ntfn_q_refs_of'_def
+                   tcb_st_refs_of'_def tcb_bound_refs'_def
+            split: ntfn.split_asm thread_state.split_asm)+
   done
 
 lemma sym_ref_BlockedOnSend_SendEP':

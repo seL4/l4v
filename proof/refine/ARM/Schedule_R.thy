@@ -232,7 +232,8 @@ lemma tcbSchedDequeue_valid_queues_weak:
   "\<lbrace> valid_queues_no_bitmap_except t and valid_bitmapQ and
      bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
      correct_queue t and
-     (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority) \<rbrace>
+     (\<lambda>s. tcb_at' t s
+          \<longrightarrow> obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority) t s) \<rbrace>
    tcbSchedDequeue t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
 proof -
@@ -254,7 +255,8 @@ qed
 
 lemma tcbSchedDequeue_valid_queues:
   "\<lbrace>Invariants_H.valid_queues and
-    (\<lambda>s. \<forall>tcb. ko_at' tcb t s \<longrightarrow> tcbDomain tcb \<le> maxDomain \<and> tcbPriority tcb \<le> maxPriority)\<rbrace>
+    (\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (\<lambda>tcb. tcbDomain tcb \<le> maxDomain) t s
+                         \<and> obj_at' (\<lambda>tcb. tcbPriority tcb \<le> maxPriority) t s)\<rbrace>
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   apply (rule hoare_pre, rule tcbSchedDequeue_valid_queues_weak)
@@ -1113,8 +1115,8 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
             tcbSchedDequeue_valid_queues_weak
             untyped_ranges_zero_lift
         | simp add: cteCaps_of_def o_def)+
-  apply (auto simp: valid_pspace'_def valid_queues_def obj_at'_def
-              dest: valid_objs'_maxDomain[where t=t] valid_objs'_maxPriority[where t=t])
+  apply (fastforce simp: valid_pspace'_def valid_queues_def
+                   elim: valid_objs'_maxDomain valid_objs'_maxPriority intro: obj_at'_conjI)
   done
 
 lemma switchToThread_invs'_helper:

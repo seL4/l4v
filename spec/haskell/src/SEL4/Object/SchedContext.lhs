@@ -25,8 +25,9 @@ This module uses the C preprocessor to select a target architecture.
 >         refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
->         schedContextCompleteYieldTo, schedContextCancelYieldTo, refillAbsoluteMax,
->         schedContextUpdateConsumed, scReleased, setConsumed, refillResetRR
+>         schedContextCompleteYieldTo, unbindFromSC, schedContextCancelYieldTo,
+>         refillAbsoluteMax, schedContextUpdateConsumed, scReleased, setConsumed,
+>         refillResetRR
 >     ) where
 
 \begin{impdetails}
@@ -98,9 +99,8 @@ This module uses the C preprocessor to select a target architecture.
 > scReleased :: PPtr SchedContext -> Kernel Bool
 > scReleased scPtr = do
 >     active <- scActive scPtr
->     if active
->       then refillReady scPtr
->       else return False
+>     ready <- refillReady scPtr
+>     return $ active && ready
 
 > refillTl :: SchedContext -> Refill
 > refillTl sc = scRefills sc !! refillTailIndex sc
@@ -426,6 +426,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextUnbindNtfn :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindNtfn scPtr = do
+>     stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >     sc <- getSchedContext scPtr
 >     case scNtfn sc of
 >         Nothing -> return ()
@@ -466,6 +468,15 @@ This module uses the C preprocessor to select a target architecture.
 >             Just buffer -> do
 >                 setConsumed scPtr buffer
 >                 schedContextCancelYieldTo tptr
+
+> unbindFromSC :: PPtr TCB -> Kernel ()
+> unbindFromSC tptr = do
+>     tcb <- getObject tptr
+>     when (tcbSchedContext tcb /= Nothing) $ do
+>         let scPtr = fromJust $ tcbSchedContext tcb
+>         schedContextUnbindTCB scPtr
+>         sc <- getSchedContext scPtr
+>         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 
 > postpone :: PPtr SchedContext -> Kernel ()
 > postpone scPtr = do

@@ -132,6 +132,8 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 
 > finaliseCap (ReplyCap { capReplyPtr = ptr }) final _ = do
 >     when final $ do
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         tptrOpt <- getReplyTCB ptr
 >         when (tptrOpt /= Nothing) $ do
 >             replyClear ptr (fromJust tptrOpt)
@@ -156,12 +158,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 > finaliseCap (ThreadCap { capTCBPtr = tptr}) True _ = do
 >     cte_ptr <- getThreadCSpaceRoot tptr
 >     unbindNotification tptr
->     tcb <- getObject tptr
->     when (tcbSchedContext tcb /= Nothing) $ do
->         let scPtr = fromJust $ tcbSchedContext tcb
->         sc <- getSchedContext scPtr
->         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
->         schedContextUnbindTCB scPtr
+>     unbindFromSC tptr
 >     suspend tptr
 >     Arch.prepareThreadDelete tptr
 >     return (Zombie cte_ptr ZombieTCB 5, NullCap)

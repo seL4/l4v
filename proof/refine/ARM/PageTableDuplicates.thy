@@ -1704,8 +1704,8 @@ crunch valid_duplicates'[wp]:
  deleteASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunches deleteASIDPool, unbindNotification, prepareThreadDelete, schedContextUnbindTCB,
-         schedContextCompleteYieldTo, schedContextUnbindAllTCBs
+crunches deleteASIDPool, unbindNotification, prepareThreadDelete, unbindFromSC,
+         schedContextUnbindAllTCBs
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
