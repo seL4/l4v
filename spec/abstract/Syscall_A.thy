@@ -244,7 +244,7 @@ where
       (\<lambda>fault. when blocking $ handle_fault thread fault)
       (\<lambda>(slot,cap,extracaps,buffer). doE
             args \<leftarrow> liftE $ get_mrs thread buffer info;
-            decode_invocation first_phase (mi_label info) args cptr slot cap extracaps
+            decode_invocation first_phase (mi_label info) args cptr slot cap extracaps buffer
        odE)
       (\<lambda>err. when calling $
             reply_from_kernel thread $ msg_from_syscall_error err)

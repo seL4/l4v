@@ -262,7 +262,7 @@ where
   "parse_time_arg i args \<equiv> (ucast (args!(i+1)) << 32) + ucast (args!i)"
 
 definition
-  sched_context_yield_to :: "obj_ref \<Rightarrow> data list \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  sched_context_yield_to :: "obj_ref \<Rightarrow> data option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_yield_to sc_ptr args \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
