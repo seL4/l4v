@@ -509,7 +509,7 @@ crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
          invokeSchedContext, invokeSchedControlConfigure
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps
-   wp: crunch_wps checkCap_inv_typ_at' hoare_vcg_all_lift
+   wp: crunch_wps checkCap_inv_typ_at' hoare_vcg_all_lift whileM_inv
    ignore: checkCapAt)
 
 lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
