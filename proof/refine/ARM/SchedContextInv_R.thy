@@ -48,8 +48,8 @@ primrec valid_sc_ctrl_inv' :: "sched_control_invocation \<Rightarrow> kernel_sta
   "valid_sc_ctrl_inv' (InvokeSchedControlConfigure scptr budget period mrefills badge) =
      ((\<lambda>s. \<exists>n. sc_at'_n n scptr s \<and> valid_refills_number mrefills n) and
       ex_nonz_cap_to' scptr and K (MIN_REFILLS \<le> mrefills) and
-      K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET \<and>
-         period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_SC_BUDGET \<and>
+      K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
+         period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
          budget \<le> period))"
 
 primrec sc_inv_rel :: "Invocations_A.sched_context_invocation \<Rightarrow> sched_context_invocation \<Rightarrow> bool"
