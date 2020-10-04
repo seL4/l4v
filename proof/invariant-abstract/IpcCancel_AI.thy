@@ -2579,7 +2579,6 @@ lemma complete_yield_to_invs:
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   apply (rule hoare_seq_ext[rotated])
    apply (rule_tac Q="K (yt_opt = Some a) and
          (bound_yt_tcb_at ((=) (Some a)) tcb_ptr and

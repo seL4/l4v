@@ -226,7 +226,6 @@ lemma complete_yield_to_only_idle[wp]:
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   by (wpsimp wp: sts_only_idle)
 
 
@@ -237,7 +236,6 @@ lemma complete_yield_to_iflive[wp]:
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   by wpsimp
 
 lemma complete_yield_to_ex_nonz[wp]:
@@ -247,7 +245,6 @@ lemma complete_yield_to_ex_nonz[wp]:
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   by wpsimp
 
 crunches complete_yield_to
@@ -478,7 +475,6 @@ lemma complete_yield_to_ex_nonz_ct[wp]:
   apply (case_tac yt_opt; simp)
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (rule hoare_seq_ext[OF _ assert_opt_inv])
   by wpsimp
 
 lemma set_yf_sc_yf_sc_at:
