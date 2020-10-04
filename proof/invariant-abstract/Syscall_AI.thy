@@ -678,7 +678,7 @@ lemma sts_Restart_stay_simple:
 lemma decode_inv_inv[wp]:
   notes if_split [split del]
   shows
-  "\<lbrace>P\<rbrace> decode_invocation first_phase label args cap_index slot cap excaps \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> decode_invocation first_phase label args cap_index slot cap excaps buffer \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (case_tac cap, simp_all add: decode_invocation_def)
           apply (wp decode_tcb_inv_inv decode_domain_inv_inv
                     decode_sched_context_inv_inv decode_sched_control_inv_inv
@@ -714,7 +714,7 @@ lemma decode_inv_wf[wp]:
            and (\<lambda>s. \<forall>x \<in> set excaps. \<forall>r\<in>zobj_refs (fst x). ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)
            and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to is_cnode_cap (snd x) s)\<rbrace>
-     decode_invocation first_phase label args cap_index slot cap excaps
+     decode_invocation first_phase label args cap_index slot cap excaps buffer
    \<lbrace>valid_invocation\<rbrace>,-"
   apply (simp add: decode_invocation_def cong: cap.case_cong if_cong split del: if_split)
   apply (wpsimp wp: decode_tcb_inv_wf decode_domain_inv_wf[simplified split_def]
@@ -1583,7 +1583,7 @@ lemma perform_invocation_not_blocking_not_calling_ct_active[wp]:
 
 lemma decode_invocation_safe_invocation[wp]:
   "\<lbrace>\<top>\<rbrace>
-     decode_invocation True label args cap_index slot cap excaps
+     decode_invocation True label args cap_index slot cap excaps buffer
    \<lbrace>\<lambda>i _. safe_invocation i\<rbrace>,-"
   apply (simp add: decode_invocation_def)
   by (wpsimp simp: o_def split_def)
