@@ -218,7 +218,8 @@ lemma restart_invs':
   apply (wp setThreadState_nonqueued_state_update
             cancelIPC_simple setThreadState_st_tcb
        | wp (once) sch_act_simple_lift)+
-  sorry (*
+  sorry (* restart_invs' *)
+  (*
        apply (wp hoare_convert_imp)
       apply (wp setThreadState_nonqueued_state_update
                 setThreadState_st_tcb)
@@ -333,7 +334,8 @@ lemma writereg_corres:
                             dest!: global'_no_ex_cap idle_no_ex_cap)+)[2]
          apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and ex_nonz_cap_to dest" in hoare_strengthen_post[rotated])
           apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def dest!: idle_no_ex_cap)
-  sorry (*
+  sorry (* depends on restart *)
+  (*
          prefer 2
          apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest and ex_nonz_cap_to' dest" in hoare_strengthen_post[rotated])
           apply (fastforce simp: sch_act_wf_weak invs'_def valid_state'_def dest!: global'_no_ex_cap)
@@ -372,10 +374,33 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
 
+(* FIXME RT: move *)
+lemma asUser_valid_tcbs' [wp]:
+  "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadSet_valid_tcbs' hoare_drop_imps
+             | simp add: valid_tcb'_def tcb_cte_cases_def)+
+  done
+
+lemma asUser_valid_release_queue[wp]:
+  "asUser t m \<lbrace>valid_release_queue\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp hoare_drop_imps | simp)+
+  apply (wp threadSet_valid_release_queue hoare_drop_imps | simp)+
+  done
+
+lemma asUser_valid_release_queue'[wp]:
+  "asUser t m \<lbrace>valid_release_queue'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp hoare_drop_imps | simp)+
+  apply (wp threadSet_valid_release_queue' threadGet_wp | simp)+
+  apply (clarsimp simp: valid_release_queue'_def obj_at'_real_def ko_wp_at'_def)
+  done
+
 lemma copyreg_corres:
   "corres (intr \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
-          ex_nonz_cap_to dest)
+          ex_nonz_cap_to dest and current_time_bounded 1)
         (invs' and sch_act_simple and tcb_at' dest and tcb_at' src
           and ex_nonz_cap_to' src and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch))
@@ -437,15 +462,15 @@ proof -
                       apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                       apply simp
                      apply (wp static_imp_wp)+
-               sorry (*
                apply (rule corres_when[OF refl])
                apply (rule R[OF refl refl])
                apply (simp add: gpRegisters_def)
               apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
-               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def)
+               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
+                                     valid_pspace_def)
               prefer 2
               apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
-               apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf)
+               apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
               apply (wp mapM_x_wp' | simp)+
             apply (rule corres_when[OF refl])
             apply (rule corres_split_nor)
@@ -454,13 +479,21 @@ proof -
               apply (rule R[OF refl refl])
               apply (simp add: frame_registers_def frameRegisters_def)
              apply ((wp mapM_x_wp' static_imp_wp | simp)+)[2]
-            apply (wp mapM_x_wp' static_imp_wp | simp)+
+            apply (wp mapM_x_wp' static_imp_wp restart_valid_sched | simp)+
          apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp add: if_apply_def2)+)[2]
-       apply (wp suspend_nonz_cap_to_tcb static_imp_wp | simp add: if_apply_def2)+
-     apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                      dest!: idle_no_ex_cap)
+       apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
+                              and simple_sched_action and current_time_bounded 1"
+              in hoare_strengthen_post[rotated])
+        apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
+                              valid_pspace_def valid_idle_def
+                       dest!: idle_no_ex_cap )
+       apply (wp suspend_nonz_cap_to_tcb static_imp_wp suspend_invs suspend_cap_to'
+                 suspend_valid_sched
+              | simp add: if_apply_def2)+
+     apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_idle_def
+                     dest!: idle_no_ex_cap)
     apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
-  done *)
+    done
 qed
 
 lemma readreg_invs':
@@ -492,12 +525,10 @@ lemma copyreg_invs'':
   "\<lbrace>invs' and sch_act_simple and tcb_at' src and tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs' and tcb_at' dest\<rbrace>"
-  sorry (*
-  apply (simp add: invokeTCB_def performTransfer_def if_apply_def2)
-  apply (wp mapM_x_wp' restart_invs' | simp)+
-   apply (rule conjI)
-    apply (wp | clarsimp)+
-  by (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap) *)
+  supply if_split [split del]
+  unfolding invokeTCB_def performTransfer_def
+  apply (wpsimp wp: mapM_x_wp' restart_invs' hoare_vcg_if_lift2 hoare_drop_imp suspend_cap_to')
+  by (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap split: if_split)
 
 lemma copyreg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' src and
@@ -1160,8 +1191,8 @@ lemma threadSet_invs_trivialT2:
         \<and> tcb_at' t s
         \<and> (\<forall>d p. (\<exists>tcb. inQ d p tcb \<and> \<not> inQ d p (F tcb)) \<longrightarrow> t \<notin> set (ksReadyQueues s (d, p)))
         \<and> (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))
-        \<and> (\<forall>d p. (\<exists>tcb. inQ d p tcb \<and> \<not> inQ d p (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s))
-        \<and> (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReleaseQueue s))
+        \<and> ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s))
+        \<and> (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko \<longrightarrow> t \<in> set (ksReleaseQueue s))
         \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)
         \<and> (\<forall>tcb. tcbQueued (F tcb) \<and> ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> tcbQueued tcb \<or> t \<noteq> ksCurThread s)\<rbrace>
         threadSet F t
@@ -1179,7 +1210,7 @@ proof -
      apply (wp x v u b
                threadSet_valid_pspace'T
                threadSet_sch_actT_P[where P=False, simplified]
-               threadSet_valid_queues
+               threadSet_valid_queues threadSet_valid_release_queue
                threadSet_state_refs_of'T[where f'=id]
                threadSet_iflive'T
                threadSet_ifunsafe'T
@@ -1192,14 +1223,13 @@ proof -
                threadSet_not_inQ
                threadSet_ct_idle_or_in_cur_domain'
                threadSet_valid_dom_schedule'
-               threadSet_valid_queues'
+               threadSet_valid_queues' threadSet_valid_release_queue'
                threadSet_cur
                untyped_ranges_zero_lift
-            |clarsimp simp: r y z a s domains cteCaps_of_def |rule refl)+
-  sorry (*
-   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
-   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
-   by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a) *)
+            | clarsimp simp: r y z a s domains cteCaps_of_def | rule refl)+
+   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def valid_release_queue'_def)
+   apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def  o_def)
+   by (intro conjI; fastforce)
 qed
 
 lemma threadSet_valid_queues'_no_state2:
@@ -2207,7 +2237,7 @@ lemma setSchedulerAction_invs'[wp]:
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (intr \<oplus> (=))
-         (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti)
+         (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and current_time_bounded 1)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
