@@ -386,11 +386,11 @@ This module uses the C preprocessor to select a target architecture.
 >             setSchedContext scPtr $ sc { scConsumed = 0 }
 >             return $ ticksToUs consumed
 
-> setConsumed :: PPtr SchedContext -> PPtr Word -> Kernel ()
+> setConsumed :: PPtr SchedContext -> Maybe (PPtr Word) -> Kernel ()
 > setConsumed scPtr buffer = do
 >     consumed <- schedContextUpdateConsumed scPtr
 >     tptr <- getCurThread
->     sent <- setMRs tptr (Just buffer) (setTimeArg consumed)
+>     sent <- setMRs tptr buffer (setTimeArg consumed)
 >     setMessageInfo tptr $ MI sent 0 0 0
 
 > schedContextBindTCB :: PPtr SchedContext -> PPtr TCB -> Kernel ()
@@ -464,11 +464,8 @@ This module uses the C preprocessor to select a target architecture.
 >     when (scPtrOpt /= Nothing) $ do
 >         scPtr <- return $ fromJust scPtrOpt
 >         bufferOpt <- lookupIPCBuffer True tptr
->         case bufferOpt of
->             Nothing -> fail "schedContextCompleteYieldTo: buffer must not be Nothing"
->             Just buffer -> do
->                 setConsumed scPtr buffer
->                 schedContextCancelYieldTo tptr
+>         setConsumed scPtr bufferOpt
+>         schedContextCancelYieldTo tptr
 
 > schedContextUnbindYieldFrom :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindYieldFrom scPtr = do
@@ -548,7 +545,7 @@ This module uses the C preprocessor to select a target architecture.
 >                     return False
 >         else return True
 
-> schedContextYieldTo :: PPtr SchedContext -> [Word] -> Kernel ()
+> schedContextYieldTo :: PPtr SchedContext -> Maybe (PPtr Word) -> Kernel ()
 > schedContextYieldTo scPtr buffer = do
 >     sc <- getSchedContext scPtr
 >     scYieldFromOpt <- return $ scYieldFrom sc
@@ -556,11 +553,11 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextCompleteYieldTo $ fromJust scYieldFromOpt
 >     schedContextResume scPtr
 >     return_now <- contextYieldToUpdateQueues scPtr
->     when return_now $ setConsumed scPtr (PPtr (head buffer))
+>     when return_now $ setConsumed scPtr buffer
 
 > invokeSchedContext :: SchedContextInvocation -> Kernel ()
 > invokeSchedContext iv = case iv of
->     InvokeSchedContextConsumed scPtr buffer -> setConsumed scPtr (PPtr (head buffer))
+>     InvokeSchedContextConsumed scPtr buffer -> setConsumed scPtr buffer
 >     InvokeSchedContextBind scPtr cap -> case cap of
 >         ThreadCap tcbPtr -> schedContextBindTCB scPtr tcbPtr
 >         NotificationCap ntfnPtr _ _ _ -> schedContextBindNtfn scPtr ntfnPtr

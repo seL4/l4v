@@ -416,55 +416,55 @@ The following functions are used to handle messages that are sent to kernel obje
 The "decodeInvocation" function parses the message, determines the operation that is being performed, and checks for any error conditions. If it returns successfully, the invocation is guaranteed to complete without any errors.
 
 > decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
->         Capability -> [(Capability, PPtr CTE)] -> Bool ->
+>         Capability -> [(Capability, PPtr CTE)] -> Bool -> Maybe (PPtr Word) ->
 >         KernelF SyscallError Invocation
 >
-> decodeInvocation _ _ _ _ cap@(EndpointCap {capEPCanSend=True}) _ _ = do
+> decodeInvocation _ _ _ _ cap@(EndpointCap {capEPCanSend=True}) _ _ _ = do
 >     return $ InvokeEndpoint
 >         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap) (capEPCanGrantReply cap)
 >
-> decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ _ = do
+> decodeInvocation _ _ _ _ cap@(NotificationCap {capNtfnCanSend=True}) _ _ _ = do
 >     return $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
 >
-> decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ _ = do
+> decodeInvocation _ _ _ _ cap@(ReplyCap {}) _ _ _ = do
 >     return $ InvokeReply (capReplyPtr cap) (capReplyCanGrant cap)
 >
 > decodeInvocation
->         label args _ slot cap@(ThreadCap {}) extraCaps False =
+>         label args _ slot cap@(ThreadCap {}) extraCaps False _ =
 >     liftM InvokeTCB $ decodeTCBInvocation label args cap slot extraCaps
 >
-> decodeInvocation label args _ _ DomainCap extraCaps False =
+> decodeInvocation label args _ _ DomainCap extraCaps False _ =
 >     liftM (uncurry InvokeDomain) $ decodeDomainInvocation label args extraCaps
 >
-> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps False =
->     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps) args
+> decodeInvocation label args _ _ (SchedContextCap {capSchedContextPtr=sc}) extraCaps False buffer =
+>     liftM InvokeSchedContext $ decodeSchedContextInvocation label sc (map fst extraCaps) buffer
 >
-> decodeInvocation label args _ _ SchedControlCap extraCaps False =
+> decodeInvocation label args _ _ SchedControlCap extraCaps False _ =
 >     liftM InvokeSchedControl $ decodeSchedControlInvocation label args (map fst extraCaps)
 >
-> decodeInvocation label args _ _ cap@(CNodeCap {}) extraCaps False =
+> decodeInvocation label args _ _ cap@(CNodeCap {}) extraCaps False _ =
 >     liftM InvokeCNode $
 >         decodeCNodeInvocation label args cap $ map fst extraCaps
 >
-> decodeInvocation label args _ slot cap@(UntypedCap {}) extraCaps _ =
+> decodeInvocation label args _ slot cap@(UntypedCap {}) extraCaps _ _ =
 >     liftM InvokeUntyped $
 >         decodeUntypedInvocation label args slot cap $ map fst extraCaps
 >
-> decodeInvocation label args _ slot IRQControlCap extraCaps _ =
+> decodeInvocation label args _ slot IRQControlCap extraCaps _ _ =
 >     liftM InvokeIRQControl $
 >         decodeIRQControlInvocation label args slot $ map fst extraCaps
 >
-> decodeInvocation label _ _ _ (IRQHandlerCap { capIRQ = irq }) extraCaps _ =
+> decodeInvocation label _ _ _ (IRQHandlerCap { capIRQ = irq }) extraCaps _ _ =
 >     liftM InvokeIRQHandler $
 >         decodeIRQHandlerInvocation label irq extraCaps
 >
-> decodeInvocation label args capIndex slot (ArchObjectCap cap) extraCaps _ =
+> decodeInvocation label args capIndex slot (ArchObjectCap cap) extraCaps _ _ =
 >     liftM InvokeArchObject $
 >         Arch.decodeInvocation label args capIndex slot cap extraCaps
 
 If the capability cannot be invoked, because it is null or does not have a required right, then the operation returns "InvalidCapability".
 
-> decodeInvocation _ _ _ _ _ _ _ = throw $ InvalidCapability 0
+> decodeInvocation _ _ _ _ _ _ _ _ = throw $ InvalidCapability 0
 
 The "invoke" function performs the operation itself. It cannot throw faults, but it may be pre-empted. If it returns a list of words, they will be sent as a reply message with label 0; this is optional because the kernel does not generate replies from endpoint invocations.
 

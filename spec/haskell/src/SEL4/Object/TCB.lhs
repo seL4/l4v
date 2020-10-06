@@ -696,9 +696,9 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         _ -> throw (InvalidCapability 1)
 >     return $ InvokeSchedContextUnbindObject scPtr cap
 
-> decodeSchedContext_YieldTo :: PPtr SchedContext -> [Word] ->
+> decodeSchedContext_YieldTo :: PPtr SchedContext -> Maybe (PPtr Word) ->
 >     KernelF SyscallError SchedContextInvocation
-> decodeSchedContext_YieldTo scPtr args = do
+> decodeSchedContext_YieldTo scPtr buffer = do
 >     sc <- withoutFailure $ getSchedContext scPtr
 >     when (scTCB sc == Nothing) $ throw IllegalOperation
 >     ctPtr <- withoutFailure $ getCurThread
@@ -706,14 +706,14 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     ct <- withoutFailure $ getObject ctPtr
 >     priority <- withoutFailure $ threadGet tcbPriority $ fromJust $ scTCB sc
 >     when (priority > tcbMCP ct) $ throw IllegalOperation
->     return $ InvokeSchedContextYieldTo scPtr args
+>     return $ InvokeSchedContextYieldTo scPtr buffer
 
-> decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] -> [Word] ->
+> decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] -> Maybe (PPtr Word) ->
 >     KernelF SyscallError SchedContextInvocation
-> decodeSchedContextInvocation label scPtr excaps args = do
+> decodeSchedContextInvocation label scPtr excaps buffer = do
 >     case genInvocationType label of
 >         SchedContextConsumed -> do
->             return $ InvokeSchedContextConsumed scPtr args
+>             return $ InvokeSchedContextConsumed scPtr buffer
 >         SchedContextBind -> decodeSchedContext_Bind scPtr excaps
 >         SchedContextUnbindObject -> decodeSchedContext_UnbindObject scPtr excaps
 >         SchedContextUnbind -> do
@@ -721,7 +721,7 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >             sc <- withoutFailure $ getSchedContext scPtr
 >             when (fromJust (scTCB sc) == ctPtr) $ throw IllegalOperation
 >             return $ InvokeSchedContextUnbind scPtr
->         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr args
+>         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr buffer
 >         _ -> throw IllegalOperation
 
 > decodeSchedControl_Configure :: [Capability] -> [Word] ->

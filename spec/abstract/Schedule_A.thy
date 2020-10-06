@@ -264,7 +264,7 @@ where
 definition
   sched_context_yield_to :: "obj_ref \<Rightarrow> data option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "sched_context_yield_to sc_ptr args \<equiv> do
+  "sched_context_yield_to sc_ptr buffer \<equiv> do
     sc_yf_opt \<leftarrow> get_sc_obj_ref sc_yield_from sc_ptr;
     when (sc_yf_opt \<noteq> None) $ do
       complete_yield_to (the sc_yf_opt); \<comment> \<open>@{text \<open>sc_yield_from = None\<close>}\<close>
@@ -289,7 +289,7 @@ where
       then do
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
         tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
-        set_consumed sc_ptr args
+        set_consumed sc_ptr buffer
       od
       else do
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
@@ -300,7 +300,7 @@ where
         reschedule_required
       od
     od
-    else set_consumed sc_ptr args
+    else set_consumed sc_ptr buffer
   od"
 
 
