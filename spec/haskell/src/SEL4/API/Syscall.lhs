@@ -250,7 +250,7 @@ If there was no fault, then the capability, message registers and message label 
 
 >         (\(slot, cap, extracaps, buffer) -> do
 >             args <- withoutFailure $ getMRs thread buffer info
->             decodeInvocation (msgLabel info) args cptr slot cap extracaps firstPhase)
+>             decodeInvocation (msgLabel info) args cptr slot cap extracaps firstPhase buffer)
 
 If a system call error was encountered while decoding the operation, and the user is waiting for a reply, then generate an error message.
 
