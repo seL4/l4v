@@ -38,7 +38,6 @@ lemma replyRemoveTCB_st_tcb_at'_Inactive':
    \<lbrace>\<lambda>_. st_tcb_at' ((=) Inactive) tptr\<rbrace>"
   unfolding replyRemoveTCB_def
   apply (wpsimp wp: replyUnlink_st_tcb_at')
-  apply (clarsimp simp: pred_tcb_at'_def)
   done
 
 lemma replyRemoveTCB_st_tcb_at'[wp]:

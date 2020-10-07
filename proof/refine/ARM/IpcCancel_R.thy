@@ -1008,15 +1008,6 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
 crunch ksCurDomain[wp]: cancelSignal "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps)
 
-lemma (in delete_one_conc_pre) cancelIPC_ksCurDomain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> cancelIPC t \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def)
-  apply (wp hoare_vcg_conj_lift delete_one_ksCurDomain
-       | wpc
-       | rule hoare_drop_imps
-       | simp add: o_def if_fun_split)+
-  sorry
-
 (* FIXME move *)
 lemma setBoundNotification_not_ntfn:
   "(\<And>tcb ntfn. P (tcb\<lparr>tcbBoundNotification := ntfn\<rparr>) \<longleftrightarrow> P tcb)
@@ -1042,24 +1033,6 @@ lemma cancelSignal_tcb_obj_at':
      \<Longrightarrow> cancelSignal t word \<lbrace>obj_at' P t'\<rbrace>"
   apply (simp add: cancelSignal_def)
   apply (wpsimp wp: setThreadState_not_st getNotification_wp)
-  done
-
-lemma (in delete_one_conc_pre) cancelIPC_tcbDomain_obj_at':
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def)
-  apply (wp hoare_vcg_conj_lift
-            setThreadState_not_st delete_one_tcbDomain_obj_at' cancelSignal_tcb_obj_at'
-       | wpc
-       | rule hoare_drop_imps
-       | simp add: o_def if_fun_split)+
-  sorry
-
-lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
-  apply (simp add: tcb_in_cur_domain'_def)
-  apply (rule hoare_pre)
-   apply wps
-   apply (wp cancelIPC_tcbDomain_obj_at' | simp)+
   done
 
 (* FIXME RT: not true any more
@@ -1355,13 +1328,6 @@ lemma replyRemoveTCB_valid_inQ_queues[wp]:
   apply (clarsimp simp: replyRemoveTCB_def)
   apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp\<close>)?)+
   apply wpsimp
-  done
-
-lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
-  "\<lbrace>valid_inQ_queues\<rbrace> cancelIPC t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def)
-  apply (wpsimp wp: hoare_drop_imps delete_one_inQ_queues threadSet_valid_inQ_queues)
-  apply (clarsimp simp: valid_inQ_queues_def inQ_def)
   done
 
 lemma valid_queues_inQ_queues:

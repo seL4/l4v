@@ -3301,6 +3301,10 @@ lemma pred_tcb_at' [elim!]:
   "pred_tcb_at' proj P t s \<Longrightarrow> tcb_at' t s"
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
+lemma pred_tcb_at'_True[simp]:
+  "pred_tcb_at' proj \<top> p s = tcb_at' p s"
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+
 lemma valid_pspace_mdb' [elim!]:
   "valid_pspace' s \<Longrightarrow> valid_mdb' s"
   by (simp add: valid_pspace'_def)

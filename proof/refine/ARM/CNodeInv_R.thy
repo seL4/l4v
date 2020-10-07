@@ -631,10 +631,8 @@ lemma suspend_not_recursive_ctes:
   unfolding updateRestartPC_def
   apply (wp threadSet_ctes_of | simp add: unless_def del: o_apply)+
          apply (fold cteCaps_of_def)
-         apply (wp cancelIPC_cteCaps_of gts_wp' stateAssert_wp hoare_vcg_all_lift hoare_drop_imps)+
+         apply (wp gts_wp' stateAssert_wp hoare_vcg_all_lift hoare_drop_imps)+
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
-  apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
-  apply (auto simp: isCap_simps finaliseCap_def Let_def)
   done
 
 crunches schedContextUnbindTCB, schedContextCompleteYieldTo, unbindNotification,
@@ -6477,7 +6475,7 @@ lemma replyClear_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
   shows "replyClear a b \<lbrace>st_tcb_at' P t\<rbrace>"
   unfolding replyClear_def
-  by (wpsimp wp: replyUnlink_st_tcb_at' replyRemove_sc_tcb_at' hoare_drop_imp)
+  by (wpsimp wp: replyUnlink_st_tcb_at' replyRemove_sc_tcb_at' cancelIPC_st_tcb_at hoare_drop_imp)
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
