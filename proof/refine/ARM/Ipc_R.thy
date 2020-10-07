@@ -1890,21 +1890,41 @@ crunches replyUnlink
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps wp: crunch_wps)
 
-(* FIXME RT: below is wrong; need to use replyUnlink_weak_sch_act_wf in IpcCancel_R instead *)
-lemma replyUnlink_weak_sch_act_wf:
-  "replyUnlink p r \<lbrace> \<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
-  unfolding replyUnlink_def
-  apply wpsimp
-  apply (wp weak_sch_act_wf_lift)
-  sorry
-
-crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability
+crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability,
+         cleanReply
   for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches finaliseCapTrue_standin
+crunches replyRemove, replyRemoveTCB
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (simp: crunch_simps wp: crunch_wps)
+
+lemma cancelSignal_weak_sch_act_wf[wp]:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not threadPtr s\<rbrace>
+   cancelSignal threadPtr ntfnPtr
+   \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding cancelSignal_def Let_def
+  by (wpsimp wp: gts_wp' | wp (once) hoare_drop_imp)+
+
+lemma cancelIPC_weak_sch_act_wf[wp]:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not tptr s\<rbrace>
+   cancelIPC tptr
+   \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding cancelIPC_def Let_def
+  by (wpsimp wp: gts_wp' threadSet_weak_sch_act_wf | wp (once) hoare_drop_imp)+
+
+lemma replyClear_weak_sch_act_wf[wp]:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   replyClear rptr tptr
+   \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding replyClear_def
+  apply (wpsimp wp: gts_wp')
+  apply (auto simp: pred_tcb_at'_def obj_at'_def weak_sch_act_wf_def)
+  done
+
+crunches finaliseCapTrue_standin
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (simp: crunch_simps wp: crunch_wps getReplyTCB_wp)
 
 lemma cteDeleteOne_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -1976,28 +1996,6 @@ crunches cteDeleteOne
   (simp: crunch_simps inQ_def
      wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
          threadSet_valid_queues')
-
-lemma cancelSignal_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: cancelSignal_def)
-  apply (rule hoare_pre)
-   apply (wp getNotification_wp| wpc | simp)+
-  done
-
-lemma cancelIPC_valid_queues'[wp]:
-  "\<lbrace>valid_queues' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) \<rbrace> cancelIPC t \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def locateSlot_conv liftM_def)
-  sorry (*
-  apply (rule hoare_seq_ext[OF _ gts_sp'])
-  apply (case_tac state, simp_all) defer 2
-  apply (rule hoare_pre)
-   apply ((wp getEndpoint_wp getCTE_wp | wpc | simp)+)[8]
-  apply (wp cteDeleteOne_valid_queues')
-  apply (rule_tac Q="\<lambda>_. valid_queues' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
-  apply (clarsimp simp: capHasProperty_def cte_wp_at_ctes_of)
-   apply (wp threadSet_valid_queues' threadSet_sch_act| simp)+
-  apply (clarsimp simp: inQ_def)
-  done *)
 
 crunches handleFaultReply
   for valid_objs'[wp]: valid_objs'
@@ -2546,11 +2544,6 @@ crunches possibleSwitchTo
   and irq_states'[wp]: valid_irq_states'
   and pde_mappigns'[wp]: valid_pde_mappings'
   (wp: crunch_wps simp: unless_def tcb_cte_cases_def)
-
-lemma replyRemoveTCB_ct'[wp]:
-  "replyRemoveTCB t \<lbrace> \<lambda>s. P (ksCurThread s) \<rbrace>"
-  unfolding replyRemoveTCB_def
-  by (wpsimp wp: hoare_drop_imps gts_wp'|rule conjI)+
 
 crunches replyUnlink, cleanReply
   for irqs_masked'[wp]: "irqs_masked'"

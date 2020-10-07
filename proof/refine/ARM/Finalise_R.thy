@@ -2791,6 +2791,10 @@ lemma threadSet_sc_bound_tcb_at'[wp]:
   "threadSet (tcbSchedContext_update f) t' \<lbrace>bound_tcb_at' P t\<rbrace>"
   by (wpsimp wp: threadSet_pred_tcb_no_state)
 
+lemma threadSet_fault_bound_tcb_at'[wp]:
+  "threadSet (tcbFault_update f) t' \<lbrace>bound_tcb_at' P t\<rbrace>"
+  by (wpsimp wp: threadSet_pred_tcb_no_state)
+
 crunches replyClear
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   (wp: crunch_wps simp: crunch_simps ignore: threadSet)
@@ -2814,17 +2818,6 @@ lemma capDeleteOne_bound_tcb_at':
                  split: option.splits)
   apply (case_tac "cteCap cte", simp_all)
   done
-
-lemma replyRemoveTCB_bound_tcb_at'[wp]:
-  "replyRemoveTCB t \<lbrace>bound_tcb_at' P tptr\<rbrace>"
-  unfolding replyRemoveTCB_def
-  by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift threadSet_pred_tcb_no_state)
-
-lemma cancelIPC_bound_tcb_at'[wp]:
-  "\<lbrace>bound_tcb_at' P tptr\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. bound_tcb_at' P tptr\<rbrace>"
-  unfolding cancelIPC_def
-  by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift threadSet_pred_tcb_no_state
-           simp: Let_def)
 
 crunches cleanReply
   for bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
@@ -3212,17 +3205,13 @@ lemma cteDeleteOne_cte_wp_at_preserved:
 crunch ctes_of[wp]: cancelSignal "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma cancelIPC_cteCaps_of:
-  "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
-          P (cteCaps_of s(p \<mapsto> NullCap))) \<and>
-     P (cteCaps_of s)\<rbrace>
-     cancelIPC t
-   \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
+lemma cancelIPC_cteCaps_of[wp]:
+  "cancelIPC t \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_pre)
-   apply (wp cteDeleteOne_cteCaps_of getCTE_wp' | wpcw
+   apply (wp getCTE_wp' | wpcw
           | simp add: cte_wp_at_ctes_of
           | wp (once) hoare_drop_imps ctes_of_cteCaps_of_lift)+
           apply (wp hoare_convert_imp hoare_vcg_all_lift
@@ -3230,14 +3219,10 @@ lemma cancelIPC_cteCaps_of:
                | clarsimp)+
   done
 
-lemma cancelIPC_cte_wp_at':
-  assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
-  shows "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p s\<rbrace>
-           cancelIPC t
-         \<lbrace>\<lambda>rv s. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p s\<rbrace>"
+lemma cancelIPC_cte_wp_at'[wp]:
+  "cancelIPC t \<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p s\<rbrace>"
   apply (simp add: tree_cte_cteCap_eq[unfolded o_def])
-  apply (rule hoare_pre, wp cancelIPC_cteCaps_of)
-  apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of x)
+  apply wpsimp
   done
 
 crunch cte_wp_at'[wp]: tcbSchedDequeue "cte_wp_at' P p"
@@ -3247,11 +3232,9 @@ crunches schedContextCancelYieldTo, tcbReleaseRemove
   (wp: crunch_wps simp: crunch_simps)
 
 lemma suspend_cte_wp_at':
-  assumes [simp]: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
-  shows "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
+  "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   unfolding updateRestartPC_def suspend_def
-  apply (wpsimp wp: threadSet_cte_wp_at' cancelIPC_cte_wp_at' hoare_vcg_imp_lift
-                    cancelIPC_st_tcb_at hoare_disjI2[where Q="\<lambda>_. cte_wp_at' a b" for a b])
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where Q="\<lambda>_. cte_wp_at' a b" for a b])
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -3272,9 +3255,22 @@ lemma deleteASID_cte_wp_at'[wp]:
           | wpc)+
   done
 
-crunches unmapPageTable, unmapPage, unbindNotification, finaliseCapTrue_standin
+crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllSignals,
+         unbindMaybeNotification, schedContextMaybeUnbindNtfn, replyRemove,
+         unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
+         schedContextUnbindReply, schedContextUnbindAllTCBs
   for cte_wp_at'[wp]: "cte_wp_at' P p"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+
+lemma replyClear_standin_cte_preserved[wp]:
+  "replyClear rptr tptr \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
+  unfolding replyClear_def
+  by (wpsimp wp: gts_wp')
+
+lemma finaliseCapTrue_standin_cte_preserved[wp]:
+  "finaliseCapTrue_standin cap fin \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
+  unfolding finaliseCapTrue_standin_def Let_def
+  by (wpsimp wp: replyClear_standin_cte_preserved simp:)
 
 lemma arch_finaliseCap_cte_wp_at[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> Arch.finaliseCap cap fin \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
@@ -3285,7 +3281,7 @@ lemma arch_finaliseCap_cte_wp_at[wp]:
 lemma deletingIRQHandler_cte_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
-           deletingIRQHandler irq
+         deletingIRQHandler irq
          \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   apply (simp add: deletingIRQHandler_def getSlotCap_def
                    getIRQSlot_def locateSlot_conv getInterruptState_def)
@@ -3295,17 +3291,14 @@ lemma deletingIRQHandler_cte_preserved:
 
 lemma finaliseCap_equal_cap[wp]:
   "\<lbrace>cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>
-     finaliseCap cap fin flag
+   finaliseCap cap fin flag
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp suspend_cte_wp_at' deletingIRQHandler_cte_preserved
-        | clarsimp simp: finaliseCap_def | wpc)+
-  sorry (*
-  apply (case_tac cap)
+  apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved
+              simp: finaliseCap_def)+
   apply auto
-  done *)
+  done
 
 lemma setThreadState_st_tcb_at_simplish':
   "simple' st \<Longrightarrow>
@@ -3818,8 +3811,9 @@ lemma finaliseCapTrue_standin_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues and valid_objs'\<rbrace>
    finaliseCapTrue_standin cap final
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  apply (simp add: finaliseCapTrue_standin_def Let_def)
-  apply (intro conjI impI allI; wpsimp simp: getReplyTCB_def)
+  unfolding finaliseCapTrue_standin_def Let_def
+  apply (wpsimp wp: getReplyTCB_wp)
+  apply (simp add: obj_at'_def inQ_def)
   done
 
 crunches isFinalCapability
