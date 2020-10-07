@@ -294,59 +294,130 @@ lemma setCTE_weak_sch_act_wf[wp]:
   apply (wp hoare_vcg_all_lift hoare_convert_imp setCTE_pred_tcb_at' setCTE_tcb_in_cur_domain')
   done
 
+(* FIXME RT: Already proved by Ryan. *)
+lemma schedContextResume_corres:
+  "a = b \<Longrightarrow>
+   corres dc \<top> \<top> (sched_context_resume a) (schedContextResume b)"
+  unfolding sched_context_resume_def schedContextResume_def
+  sorry
+
+(* FIXME RT: Already proved by Ryan. *)
+lemma schedContextResume_invs'[wp]:
+  "schedContextResume scp \<lbrace>invs'\<rbrace>"
+  unfolding schedContextResume_def
+  apply wpsimp
+  sorry
+
+crunches schedContextResume
+  for tcb_at'[wp]: "tcb_at' t"
+  (wp: crunch_wps)
+
+lemma valid_Restart'[simp]:
+  "valid_tcb_state' Restart = \<top>"
+  by (rule ext, simp add: valid_tcb_state'_def)
+
+lemma setThreadState_Restart_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s\<rbrace>
+   setThreadState Restart t
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: invs'_def valid_state'_def)
+  apply (wp setThreadState_ct_not_inQ)
+  apply (fastforce dest: global'_no_ex_cap)
+  done
+
+crunches cancel_ipc
+  for valid_sched_action[wp]: valid_sched_action
+  (wp: crunch_wps ignore: set_object thread_set update_sched_context)
+
 lemma restart_corres:
-  "corres dc (einvs  and tcb_at t) (invs' and tcb_at' t)
+  "corres dc (einvs and tcb_at t and ex_nonz_cap_to t) (invs' and tcb_at' t and ex_nonz_cap_to' t)
           (Tcb_A.restart t) (ThreadDecls_H.restart t)"
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
                    get_tcb_obj_ref_def)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
-     apply (rule corres_split [OF _ threadget_corres])
-    prefer 2 apply assumption
-      apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
-(*
-      apply (rule corres_split_nor [OF _ cancel_ipc_corres])
-        apply (rule corres_split_nor [OF _ setup_reply_master_corres])
-          apply (rule corres_split_nor [OF _ sts_corres])
-             apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
-              apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
-       apply (rule_tac Q="\<lambda>rv. valid_sched and cur_tcb" in hoare_strengthen_post)
-        apply wp
-       apply (simp add: valid_sched_def valid_sched_action_def)
-      apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t" in hoare_strengthen_post)
-       apply wp
-      apply (clarsimp simp: invs'_def valid_state'_def sch_act_wf_weak valid_pspace'_def)
-     apply wp+
-   apply (simp add: valid_sched_def invs_def tcb_at_is_etcb_at)
-  apply (clarsimp simp add: invs'_def valid_state'_def sch_act_wf_weak)
-  done *)
-  sorry (* restart_corres -- spec change required? *)
+      apply (rule corres_split [OF _ threadget_corres[where r="(=)"]])
+         apply (rule corres_when2)
+          apply (simp add: idle_tsr runnable_tsr)
+         apply (rule corres_split_nor [OF _ cancel_ipc_corres])
+           apply (rule corres_split_nor [OF _ sts_corres])
+              apply (simp add: maybeM_when)
+              apply (rule corres_split [OF _ corres_when2])
+                  apply (rule corres_split [OF _ isSchedulable_corres])
+                    apply (rule corres_when2 [OF _ possible_switch_to_corres], simp)
+                   prefer 4
+                   apply (rule schedContextResume_corres[OF refl])
+                  apply (wpsimp wp: is_schedulable_wp isSchedulable_wp)+
+               apply (rule_tac Q="\<lambda>rv. invs and valid_sched_action and tcb_at t" in hoare_strengthen_post)
+                apply (wpsimp wp: sched_context_resume_valid_sched_action)
+               apply fastforce
+              apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t" in hoare_strengthen_post)
+               apply wpsimp
+              apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak valid_pspace'_def)
+             apply clarsimp
+            apply (rule_tac Q="\<lambda>rv. invs and valid_sched_action and tcb_at t
+                                    and scheduler_act_not t
+                                    and bound_sc_tcb_at ((=) sc_opt) t" in hoare_strengthen_post)
+             apply (wpsimp wp: sts_invs_minor set_thread_state_valid_sched_action)
+            apply (case_tac scOpt; clarsimp)
+             apply fastforce
+            apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute refl])
+             apply fastforce
+            apply (fastforce simp: sc_at_pred_n_def obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF eq_commute refl])
+           apply (wpsimp wp: setThreadState_Restart_invs')
+          apply clarsimp
+          apply (rule_tac Q="\<lambda>rv. invs and valid_sched_action and tcb_at t
+                   and fault_tcb_at ((=) None) t and st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = {}) t
+                   and scheduler_act_not t and bound_sc_tcb_at ((=) scOpt) t
+                   and ex_nonz_cap_to t" in hoare_strengthen_post)
+           apply (wpsimp wp: cancel_ipc_no_refs cancel_ipc_ex_nonz_cap_to_tcb)
+          apply (fastforce simp: invs_def valid_state_def idle_no_ex_cap valid_pspace_def
+                           elim: valid_objs_valid_tcbs)
+         apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t and ex_nonz_cap_to' t" in hoare_strengthen_post)
+          apply wpsimp
+         apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak valid_pspace'_def)[1]
+        apply (clarsimp simp: tcb_relation_def)
+       apply (wpsimp wp: gts_wp gts_wp' thread_get_wp')+
+   apply (fastforce elim: valid_sched_scheduler_act_not simp: pred_tcb_at_def obj_at_def)
+  apply clarsimp
+  done
+
+crunches schedContextResume
+  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  (wp: crunch_wps)
 
 lemma restart_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.restart t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: restart_def isStopped_def2)
-  apply (wp setThreadState_nonqueued_state_update
-            cancelIPC_simple setThreadState_st_tcb
-       | wp (once) sch_act_simple_lift)+
-  sorry (* restart_invs' *)
-  (*
-       apply (wp hoare_convert_imp)
-      apply (wp setThreadState_nonqueued_state_update
-                setThreadState_st_tcb)
-     apply (clarsimp)
-     apply (wp hoare_convert_imp)[1]
-    apply (clarsimp)
-    apply (wp)+
+  unfolding restart_def
+  apply (simp add: isStopped_def2)
+  apply (wp setThreadState_nonqueued_state_update isSchedulable_wp
+            cancelIPC_simple setThreadState_st_tcb sch_act_simple_lift)
+       apply (rule_tac Q="\<lambda>_. invs' and
+                          (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)"
+              in hoare_strengthen_post[rotated])
+        apply wpsimp
+        apply (clarsimp simp: isSchedulable_bool_def pred_map_pred_conj[simplified pred_conj_def]
+                              projectKO_opt_tcb pred_map_def tcb_of'_Some pred_tcb_at'_def
+                              obj_at'_real_def ko_wp_at'_def)
+       apply (wpsimp wp: hoare_vcg_imp_lift')
+      apply (rule_tac Q="\<lambda>_. invs' and
+                         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)"
+             in hoare_strengthen_post[rotated])
+       apply (fastforce elim: isSchedulable_bool_runnableE)
+      apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
+                        hoare_vcg_if_lift2)
+     apply clarsimp
+     apply wp+
    apply (clarsimp simp: comp_def)
-   apply (rule hoare_strengthen_post, rule gts_sp')
+   apply (rule hoare_strengthen_post[OF gts_sp'])
    prefer 2
    apply assumption
   apply (clarsimp simp: pred_tcb_at' invs'_def valid_state'_def
                         ct_in_state'_def)
   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
-  done *)
+  done
 
 crunches "ThreadDecls_H.restart"
   for tcb'[wp]: "tcb_at' t"
