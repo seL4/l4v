@@ -212,7 +212,7 @@ lemma complete_yield_to_valid_idle[wp]:
    apply wpsimp
   apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
   apply (wpsimp wp: update_sched_context_valid_idle)
-  apply (rule conjI)
+  apply (rule conjI[rotated])
    apply (clarsimp simp: obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp: sym_refs_def)
   apply (erule_tac x = tcb_ptr in allE)

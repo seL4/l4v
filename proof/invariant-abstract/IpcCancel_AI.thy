@@ -2608,7 +2608,7 @@ lemma complete_yield_to_invs:
     apply (clarsimp split: if_split_asm simp:  split del: if_split)
         apply ((fastforce simp: state_refs_of_def get_refs_def2 dest!: symreftype_inverse')+)[4]
    apply (fastforce dest!: sym_ref_tcb_yt)
-  apply (intro conjI)
+  apply (rule conjI[rotated])
    apply (clarsimp dest!: idle_no_ex_cap)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def sym_refs_def)
   apply (erule_tac x = tcb_ptr in allE)
