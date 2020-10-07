@@ -573,3 +573,10 @@ The following two functions returns the base and size of the object a capability
 > capUntypedSize (IRQHandlerCap {})
 >     = 1 -- error in haskell
 
+> replyClear :: PPtr Reply -> PPtr TCB -> Kernel ()
+> replyClear rptr tptr = do
+>     state <- getThreadState $ tptr
+>     case state of
+>         BlockedOnReply _ -> replyRemove rptr tptr
+>         BlockedOnReceive {} -> cancelIPC tptr
+>         _ -> fail "replyClear: invalid state of replyTCB"
