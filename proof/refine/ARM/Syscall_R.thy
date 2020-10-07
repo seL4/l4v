@@ -176,8 +176,8 @@ lemma decode_invocation_corres:
            (invs' and valid_cap' cap' and cte_at' slot'
             and (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s)
             and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
-      (decode_invocation first_phase (mi_label mi) args cptr slot cap excaps)
-      (RetypeDecls_H.decodeInvocation (mi_label mi) args' cptr' slot' cap' excaps' first_phase)"
+      (decode_invocation first_phase (mi_label mi) args cptr slot cap excaps buffer)
+      (RetypeDecls_H.decodeInvocation (mi_label mi) args' cptr' slot' cap' excaps' first_phase buffer)"
   apply (rule corres_gen_asm)
   apply (unfold decode_invocation_def decodeInvocation_def)
   apply (case_tac cap, simp_all only: cap.simps)
@@ -583,7 +583,7 @@ crunches decodeDomainInvocation, decodeSchedContextInvocation, decodeSchedContro
   (wp: crunch_wps simp: crunch_simps)
 
 lemma decode_inv_inv'[wp]:
-  "\<lbrace>P\<rbrace> decodeInvocation label args cap_index slot cap excaps first_phase \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> decodeInvocation label args cap_index slot cap excaps first_phase buffer \<lbrace>\<lambda>rv. P\<rbrace>"
   unfolding decodeInvocation_def Let_def
   by (wpsimp split: capability.split_asm simp: isCap_defs)
 
@@ -618,7 +618,7 @@ lemma decode_inv_wf'[wp]:
           and (\<lambda>s. \<forall>x \<in> set excaps. ex_cte_cap_wp_to' isCNodeCap (snd x) s)
           and (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at' (badge_derived' (fst x) \<circ> cteCap) (snd x) s)
           and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
-     decodeInvocation label args cap_index slot cap excaps first_phase
+     decodeInvocation label args cap_index slot cap excaps first_phase buffer
    \<lbrace>valid_invocation'\<rbrace>,-"
   apply (case_tac cap,
          simp_all add: decodeInvocation_def Let_def isCap_defs uncurry_def split_def
