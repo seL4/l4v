@@ -339,8 +339,8 @@ where
      maybeM (\<lambda>sc_ptr. do
          buf \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          set_consumed sc_ptr buf;
-         set_tcb_obj_ref tcb_yield_to_update tcb_ptr None;
-         set_sc_obj_ref sc_yield_from_update sc_ptr None
+         set_sc_obj_ref sc_yield_from_update sc_ptr None;
+         set_tcb_obj_ref tcb_yield_to_update tcb_ptr None
        od) yt_opt
     od"
 
