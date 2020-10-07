@@ -21,7 +21,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 > import SEL4.API.Types
 > import SEL4.Machine
 > import SEL4.Model
-> import SEL4.Object.Reply(getReplyTCB, replyClear, replyPush, replyRemove, replyUnlink, replyRemoveTCB, setReplyTCB)
+> import SEL4.Object.Reply(getReplyTCB, replyPush, replyRemove, replyUnlink, replyRemoveTCB, setReplyTCB)
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()

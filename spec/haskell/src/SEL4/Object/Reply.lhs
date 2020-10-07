@@ -7,14 +7,14 @@
 This module specifies the behavior of reply objects.
 
 > module SEL4.Object.Reply (
->         replyClear, replyRemove, replyPush, replyUnlink, getReply, setReply, getReplyTCB,
+>         replyRemove, replyPush, replyUnlink, getReply, setReply, getReplyTCB,
 >         replyRemoveTCB, setReplyTCB
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
-% {-# BOOT-EXPORTS: replyClear replyRemove replyRemoveTCB replyPush replyUnlink getReply setReply getReplyTCB #-}
+% {-# BOOT-EXPORTS: replyRemove replyRemoveTCB replyPush replyUnlink getReply setReply getReplyTCB #-}
 
 > import {-# SOURCE #-} SEL4.Kernel.Thread(getThreadState, setThreadState)
 > import SEL4.Machine.RegisterSet(PPtr)
@@ -191,11 +191,3 @@ on the thread state of the replyTCB of the replyPtr
 > setReplyTCB tptrOpt rptr = do
 >     r <- getReply rptr
 >     setReply rptr (r { replyTCB = tptrOpt})
-
-> replyClear :: PPtr Reply -> PPtr TCB -> Kernel ()
-> replyClear rptr tptr = do
->     state <- getThreadState $ tptr
->     case state of
->         BlockedOnReply _ -> replyRemove rptr tptr
->         BlockedOnReceive {} -> replyUnlink rptr tptr
->         _ -> fail "replyClear: invalid state of replyTCB"
