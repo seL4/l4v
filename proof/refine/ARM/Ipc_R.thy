@@ -2020,7 +2020,7 @@ crunches replyUnlink
   (simp: crunch_simps wp: crunch_wps)
 
 crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability,
-         cleanReply
+         cleanReply, schedContextDonate
   for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps simp: crunch_simps)
 
