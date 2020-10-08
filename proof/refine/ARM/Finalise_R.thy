@@ -2298,11 +2298,10 @@ lemma setSchedContext_utr[wp]:
 lemma schedContextUnbindNtfn_valid_objs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>valid_objs'\<rbrace>"
   unfolding schedContextUnbindNtfn_def
-  apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    typ_at_lifts valid_ntfn_lift' valid_pde_mappings_lift')
+  apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply normalise_obj_at'
   apply (rename_tac ntfnPtr ntfn sc)
-  apply (frule_tac k=ntfn in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def)
+  apply (frule_tac k=ntfn in ko_at_valid_objs'; clarsimp simp: projectKOs)
   apply (frule_tac k=sc in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def)
   by (auto simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
                  valid_ntfn'_def
@@ -3454,9 +3453,7 @@ lemma schedContextDonate_valid_queues:
 
 lemma removeFromBitmap_valid_sched_context'[wp]:
   "removeFromBitmap tdom prio \<lbrace>valid_sched_context' sc\<rbrace>"
-  apply (wpsimp simp: bitmap_fun_defs)
-  apply (clarsimp simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
-  done
+  by (wpsimp simp: bitmap_fun_defs)
 
 lemma setQueue_valid_sched_context'[wp]:
   "setQueue tdom prio q \<lbrace>valid_sched_context' sc\<rbrace>"

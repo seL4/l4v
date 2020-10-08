@@ -1586,9 +1586,7 @@ lemma typ_at'_valid_obj'_lift:
      apply (wpsimp simp: valid_cte'_def sz)
     apply (rename_tac arch_kernel_object)
     apply (case_tac arch_kernel_object; wpsimp wp: sz)
-   apply (wpsimp simp: valid_sched_context'_def,
-          clarsimp simp: valid_bound_ntfn'_def split: option.splits,
-           wpsimp)
+   apply wp
   apply (wpsimp simp: valid_reply'_def)
   done
 
