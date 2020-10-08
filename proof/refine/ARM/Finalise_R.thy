@@ -3605,7 +3605,7 @@ lemma replyPop_valid_objs'[wp]:
                in hoare_weaken_pre[rotated])
    apply (fastforce intro!: reply_ko_at_valid_objs_valid_reply')
   apply (intro hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_valid_objs')
+  apply (rule hoare_seq_ext, wpsimp wp: replyUnlink_valid_objs')
   apply (rule hoare_when_cases, clarsimp)
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule hoare_seq_ext_skip; wp)
@@ -3802,11 +3802,13 @@ lemma replyPop_valid_inQ_queues[wp]:
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: replyPop_def)
+  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
   apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
                        \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
   apply (rule_tac Q="?pre and tcb_at' tcbPtr" in hoare_weaken_pre[rotated])
    apply fastforce
-  apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_valid_objs')+
+  apply (intro hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext, wpsimp wp: replyUnlink_valid_objs')
   apply (rule hoare_when_cases, clarsimp)
   apply (wpsimp wp: set_sc'.valid_inQ_queues hoare_drop_imps schedContextDonate_valid_inQ_queues
                     threadGet_wp

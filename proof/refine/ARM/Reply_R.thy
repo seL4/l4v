@@ -43,12 +43,20 @@ lemma replyUnlink_st_tcb_at'_sym_ref:
   apply (fastforce simp: obj_at'_def projectKOs)
   done
 
+crunches cleanReply
+  for st_tcb_at'[wp]: "st_tcb_at' P t"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps weak_sch_act_wf_lift simp: crunch_simps ignore: threadSet)
+
+lemmas cleanReply_typ_ats[wp] = typ_at_lifts[OF cleanReply_typ_at']
+
 lemma replyRemoveTCB_st_tcb_at'_Inactive':
   "\<lbrace>\<top>\<rbrace>
    replyRemoveTCB tptr
    \<lbrace>\<lambda>_. st_tcb_at' ((=) Inactive) tptr\<rbrace>"
   unfolding replyRemoveTCB_def
-  apply (wpsimp wp: replyUnlink_st_tcb_at')
+  apply (wpsimp wp: replyUnlink_st_tcb_at' hoare_vcg_if_lift split_del: if_split)
   done
 
 lemma replyRemoveTCB_st_tcb_at'[wp]:
@@ -102,10 +110,7 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
        apply wp
       apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
              clarsimp)
-      apply wpsimp
-     apply wpsimp
-    apply (wpsimp wp: haskell_assert_wp)
-   apply (wpsimp wp: gts_wp')
+      apply (wpsimp wp: gts_wp')+
   apply (clarsimp simp: obj_at'_def pred_tcb_at'_def)
   done
 
