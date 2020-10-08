@@ -573,13 +573,13 @@ lemma reply_remove_tcb_corres:
           apply (case_tac sc_ptr_opt; simp split del: if_split)
            apply (case_tac "replyNext rv"; simp split del: if_split)
             apply (rule corres_symb_exec_r)
-               apply (rule corres_symb_exec_r)
+(*                apply (rule corres_symb_exec_r)
                   apply (fold dc_def)
                   apply (rule corres_guard_imp)
                     apply (rule reply_unlink_tcb_corres)
                     apply (rule disjI2)
                     apply fastforce
-                   apply simp+
+                   apply simp+ *)
   sorry
 
 lemma cancel_ipc_corres:

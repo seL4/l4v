@@ -1898,7 +1898,8 @@ lemma replyUnlink_weak_sch_act_wf:
   apply (wp weak_sch_act_wf_lift)
   sorry
 
-crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability
+crunches unbindMaybeNotification, schedContextMaybeUnbindNtfn, isFinalCapability,
+         cleanReply, schedContextDonate
   for sch_act_not[wp]: "sch_act_not t"
   (wp: crunch_wps simp: crunch_simps)
 

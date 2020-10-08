@@ -82,8 +82,6 @@ This module specifies the behavior of reply objects.
 >     assert (isReply state) "replyPop: thread state must be BlockedOnReply"
 >     assert (replyObject state == Just replyPtr) "replyPop: thread state must have replyPtr as its reply"
 
->     replyUnlink replyPtr tcbPtr
-
 >     prevReplyPtrOpt <- return $ replyPrev reply
 >     nextReplyPtrOpt <- return $ replyNext reply
 >     when (nextReplyPtrOpt /= Nothing) $ do
@@ -97,7 +95,8 @@ This module specifies the behavior of reply objects.
 >             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
 >             prevReply <- getReply prevReplyPtr
 >             setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
->         cleanReply replyPtr
+>     replyUnlink replyPtr tcbPtr
+>     cleanReply replyPtr
 
 > replyRemove :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyRemove replyPtr tcbPtr = do
@@ -123,8 +122,8 @@ This module specifies the behavior of reply objects.
 >                prevReply <- getReply prevReplyPtr
 >                setReply prevReplyPtr (prevReply { replyNext = Nothing })
 
->            cleanReply replyPtr
 >            replyUnlink replyPtr tcbPtr
+>            cleanReply replyPtr
 
 
 > replyRemoveTCB :: PPtr TCB -> Kernel ()
@@ -153,8 +152,8 @@ This module specifies the behavior of reply objects.
 >         prevReply <- getReply prevReplyPtr
 >         setReply prevReplyPtr (prevReply { replyNext = Nothing })
 
->     cleanReply rptr
 >     replyUnlink rptr tptr
+>     cleanReply rptr
 
 > replyUnlink :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyUnlink replyPtr tcbPtr = do
