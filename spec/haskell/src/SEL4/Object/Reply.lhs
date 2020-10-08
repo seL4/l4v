@@ -36,6 +36,8 @@ This module specifies the behavior of reply objects.
 
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     tptrOpt <- getReplyTCB replyPtr
 >     assert (tptrOpt == Nothing) "Reply object shouldn't have unexecuted reply!"
@@ -51,7 +53,7 @@ This module specifies the behavior of reply objects.
 >     assert (replyObject tsCaller == Nothing) "tcb caller should not be in a existing call stack"
 
 >     tsCallee <- getThreadState calleePtr
->     setThreadState (tsCallee { replyObject = Nothing }) calleePtr
+>     assert (replyObject tsCallee == Nothing) "tcb callee should not be in a existing call stack"
 
 >     setReplyTCB (Just callerPtr) replyPtr
 >     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr

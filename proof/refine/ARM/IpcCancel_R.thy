@@ -2742,6 +2742,59 @@ proof -
   done
 qed
 
+lemma replyUnlink_sch_act[wp]:
+  "replyUnlink r t \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (simp only: replyUnlink_def setReplyTCB_def getReplyTCB_def liftM_def)
+  apply (wpsimp wp: sts_sch_act' gts_wp')
+  apply (fastforce simp: replyUnlink_assertion_def st_tcb_at'_def obj_at'_def)
+  done
+
+lemma replyUnlink_list_refs_of_replies'[wp]:
+  "replyUnlink r t \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
+  unfolding replyUnlink_def setReplyTCB_def updateReply_def getReplyTCB_def
+  apply (wpsimp simp: updateObject_default_def setObject_def split_def wp: gts_wp')
+  apply (erule arg_cong[where f=P, THEN iffD1, rotated])
+  apply (rule ext)
+  apply (clarsimp simp: opt_map_def sym_refs_def fun_upd_def list_refs_of_reply'_def
+                        map_set_def projectKO_opt_reply obj_at'_real_def ko_wp_at'_def
+                 split: option.split)
+  done
+
+lemma replyUnlink_valid_pspace'[wp]:
+  "\<lbrace>\<lambda>s. valid_pspace' s\<rbrace>
+   replyUnlink r t
+   \<lbrace>\<lambda>_ s. valid_pspace' s\<rbrace>"
+  unfolding replyUnlink_def setReplyTCB_def updateReply_def getReplyTCB_def
+  apply (wpsimp wp: gts_wp' simp: valid_tcb_state'_def)
+  apply (frule valid_pspace_valid_objs')
+  apply (frule(1) reply_ko_at_valid_objs_valid_reply')
+  apply (drule(1) ko_at'_inj)
+  apply (clarsimp simp: valid_reply'_def)
+  done
+
+lemma replyUnlink_if_live_then_nonz_cap'[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
+   replyUnlink r t
+   \<lbrace>\<lambda>_ s. if_live_then_nonz_cap' s\<rbrace>"
+  unfolding replyUnlink_def setReplyTCB_def updateReply_def getReplyTCB_def
+  apply (wpsimp wp: gts_wp')
+  apply (erule if_live_then_nonz_capE')
+  apply normalise_obj_at'
+  apply (clarsimp simp: live_reply'_def)
+  done
+
+lemma replyUnlink_valid_idle'[wp]:
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> valid_pspace' s \<and> t \<noteq> ksIdleThread s\<rbrace>
+   replyUnlink r t
+   \<lbrace>\<lambda>_ s. valid_idle' s\<rbrace>"
+  unfolding replyUnlink_def setReplyTCB_def updateReply_def getReplyTCB_def
+  apply (wpsimp wp: gts_wp' simp: valid_reply'_def)
+  apply (frule valid_pspace_valid_objs')
+  apply (frule(1) reply_ko_at_valid_objs_valid_reply')
+  apply (drule(1) ko_at'_inj)
+  apply (clarsimp simp: valid_reply'_def)
+  done
+
 lemma replyUnlink_valid_irq_node'[wp]:
   "replyUnlink r t \<lbrace>\<lambda> s. valid_irq_node' (irq_node' s) s\<rbrace>"
   unfolding replyUnlink_def setReplyTCB_def getReplyTCB_def
