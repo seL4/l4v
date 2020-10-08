@@ -1686,6 +1686,8 @@ lemma refs_of_rev':
     (\<exists>sc. ko = KOSchedContext sc \<and> scReply sc = Some x)"
   "(x, ReplySchedContext) \<in> refs_of' ko =
     (\<exists>reply. ko = KOReply reply \<and> replySc reply = Some x)"
+  "(x, ReplyTCB) \<in> refs_of' ko =
+    (\<exists>reply. ko = KOReply reply \<and> replyTCB reply = Some x)"
   "(x, TCBYieldTo) \<in> refs_of' ko =
     (\<exists>tcb. ko = KOTCB tcb \<and> tcbYieldTo tcb = Some x)"
   "(x, SCYieldFrom) \<in> refs_of' ko =

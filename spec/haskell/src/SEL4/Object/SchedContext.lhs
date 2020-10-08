@@ -595,6 +595,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextDonate :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextDonate scPtr tcbPtr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     sc <- getSchedContext scPtr
 >     fromOpt <- return $ scTCB sc
 >     when (fromOpt /= Nothing) $ do
