@@ -2612,16 +2612,6 @@ lemma valid_Running'[simp]:
   "valid_tcb_state' Running = \<top>"
   by (rule ext, simp add: valid_tcb_state'_def)
 
-lemma possibleSwitchTo_sch_act[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-     possibleSwitchTo t
-   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs inReleaseQueue_def)
-  apply (wp static_imp_wp threadSet_sch_act setQueue_sch_act threadGet_wp
-       | simp add: unless_def | wpc)+
-  apply (auto simp: obj_at'_def projectKOs tcb_in_cur_domain'_def)
-  done
-
 lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
      possibleSwitchTo t
@@ -2632,16 +2622,6 @@ lemma possibleSwitchTo_ksQ':
          | simp split del: if_split)+
   apply (auto simp: obj_at'_def)
   done
-
-crunch st_refs_of'[wp]: possibleSwitchTo "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps)
-
-crunch cap_to'[wp]: possibleSwitchTo "ex_nonz_cap_to' p"
-  (wp: crunch_wps)
-crunch objs'[wp]: possibleSwitchTo valid_objs'
-  (wp: crunch_wps)
-crunch ct[wp]: possibleSwitchTo cur_tcb'
-  (wp: cur_tcb_lift crunch_wps)
 
 lemma possibleSwitchTo_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' t
@@ -2663,6 +2643,11 @@ crunches possibleSwitchTo
   and irq_states'[wp]: valid_irq_states'
   and pde_mappigns'[wp]: valid_pde_mappings'
   (wp: crunch_wps simp: unless_def tcb_cte_cases_def)
+
+lemma replyRemoveTCB_ct'[wp]:
+  "replyRemoveTCB t \<lbrace> \<lambda>s. P (ksCurThread s) \<rbrace>"
+  unfolding replyRemoveTCB_def
+  by (wpsimp wp: hoare_drop_imps gts_wp'|rule conjI)+
 
 crunches replyUnlink, cleanReply
   for irqs_masked'[wp]: "irqs_masked'"
@@ -2723,22 +2708,15 @@ crunches possibleSwitchTo, asUser, doIPCTransfer
   for vms'[wp]: "valid_machine_state'"
   (wp: crunch_wps simp: zipWithM_x_mapM_x)
 
-crunches cancelSignal
+crunches cancelSignal, blockedCancelIPC
   for nonz_cap_to'[wp]: "ex_nonz_cap_to' p"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma cancelIPC_nonz_cap_to'[wp]:
   "cancelIPC t \<lbrace>ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def
-                   capHasProperty_def)
-  sorry (*
-  apply (wp threadSet_cap_to'
-       | wpc
-       | simp
-       | clarsimp elim!: cte_wp_at_weakenE'
-       | rule hoare_post_imp[where Q="\<lambda>rv. ex_nonz_cap_to' p"])+
-  done *)
-
+  unfolding cancelIPC_def
+  apply (wpsimp wp: replyRemoveTCB_cap_to' hoare_vcg_imp_lift threadSet_cap_to' gts_wp')
+  done
 
 crunches activateIdleThread, isFinalCapability
   for nosch[wp]:  "\<lambda>s. P (ksSchedulerAction s)"
