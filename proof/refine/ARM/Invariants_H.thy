@@ -2768,19 +2768,20 @@ lemma valid_asid_pool_lift':
   by (cases ap) (simp|wp x typ_at_lifts_strong[where P=id] hoare_vcg_const_Ball_lift)+
 
 lemma valid_bound_tcb_lift:
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
-  \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_tcb' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
 
 lemma valid_bound_sc_lift:
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
-  \<lbrace>valid_bound_sc' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_sc' tcb\<rbrace>"
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_sc' tcb\<rbrace>"
   by (auto simp: valid_bound_obj'_def valid_def typ_ats'[symmetric] split: option.splits)
 
 lemma valid_bound_reply_lift:
-  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
-  \<lbrace>valid_bound_reply' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_reply' tcb\<rbrace>"
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_reply' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
+
+lemma valid_bound_ntfn_lift:
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_ntfn' ntfn\<rbrace>"
+  by (auto simp: valid_bound_obj'_def valid_def typ_ats'[symmetric] split: option.splits)
 
 lemma valid_ntfn_lift':
   "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_ntfn' ntfn\<rbrace>"
@@ -2792,6 +2793,11 @@ lemma valid_ntfn_lift':
    apply (wpsimp wp: valid_bound_tcb_lift valid_bound_sc_lift)
   apply simp
   done
+
+lemma valid_sc_lift':
+  "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_sched_context' sc\<rbrace>"
+  unfolding valid_sched_context'_def
+  by (wpsimp wp: valid_bound_ntfn_lift valid_bound_tcb_lift valid_bound_reply_lift)
 
 context begin
 \<comment>\<open>
@@ -2843,7 +2849,9 @@ lemmas typ_at_lifts = typ_at_lifts_internal
                       valid_bound_tcb_lift
                       valid_bound_reply_lift
                       valid_bound_sc_lift
+                      valid_bound_ntfn_lift
                       valid_ntfn_lift'
+                      valid_sc_lift'
 end
 
 lemma mdb_next_unfold:

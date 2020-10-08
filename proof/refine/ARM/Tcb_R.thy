@@ -2296,13 +2296,6 @@ lemma tcbBoundNotification_caps_safe[simp]:
      getF (tcbBoundNotification_update (\<lambda>_. Some ntfnptr) tcb) = getF tcb"
   by (case_tac tcb, simp add: tcb_cte_cases_def)
 
-lemma valid_bound_ntfn_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_bound_ntfn' a s\<rbrace> f \<lbrace>\<lambda>rv s. valid_bound_ntfn' a s\<rbrace>"
-  apply (simp add: valid_bound_ntfn'_def, case_tac a, simp_all)
-  apply (wp typ_at_lifts[OF P])+
-  done
-
 lemma bindNotification_invs':
   "\<lbrace>bound_tcb_at' ((=) None) tcbptr
        and ex_nonz_cap_to' ntfnptr
