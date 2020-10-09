@@ -4069,15 +4069,6 @@ lemma setThreadState_Running_invs':
   apply (fastforce dest: global'_no_ex_cap)
   done
 
-lemma setThreadState_Inactive_invs':
-  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s \<and> sch_act_not t s\<rbrace>
-   setThreadState Inactive t
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (wp sts_sch_act' setThreadState_ct_not_inQ)
-  apply (fastforce simp: valid_tcb_state'_def dest: global'_no_ex_cap)
-  done
-
 lemma setThreadState_bound_sc_tcb_at'[wp]:
   "setThreadState st t' \<lbrace>bound_sc_tcb_at' P t\<rbrace>"
   apply (simp add: setThreadState_def)
@@ -4146,9 +4137,10 @@ lemma si_invs'_helper:
               | (Some aa, True, Some reply) \<Rightarrow> replyPush t d reply cd
               | (Some aa, False, b) \<Rightarrow> setThreadState Structures_H.thread_state.Inactive t
   \<lbrace>\<lambda>b s. invs' s \<and> tcb_at' d s \<and> ex_nonz_cap_to' d s\<rbrace>"
-  by (wpsimp simp: pred_tcb_at'_def obj_at'_def projectKO_eq
-               wp: ex_nonz_cap_to_pres' schedContextDonate_invs'
-                   replyPush_invs' setThreadState_Inactive_invs')
+  apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs' sts_invs_minor')
+  apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s \<and> t \<noteq> ksIdleThread s")
+   apply (auto simp: invs'_def valid_state'_def pred_tcb_at'_def obj_at'_def dest: global'_no_ex_cap)
+  done
 
 lemma si_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' t
@@ -4224,32 +4216,26 @@ lemma si_invs'[wp]:
   done
 
 lemma sfi_invs_plus':
-  "\<lbrace>invs' and st_tcb_at' simple' t
+  "\<lbrace>invs' and st_tcb_at' active' t
           and sch_act_not t
-          and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))
-          and ex_nonz_cap_to' t\<rbrace>
+          and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
+          and ex_nonz_cap_to' t
+          and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. \<exists>cte. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>
       sendFaultIPC t cap f canDonate
-   \<lbrace>\<lambda>rv. invs'\<rbrace>, \<lbrace>\<lambda>rv. invs' and st_tcb_at' simple' t
-                      and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))
-                      and sch_act_not t and (\<lambda>s. ksIdleThread s \<noteq> t)\<rbrace>"
+   \<lbrace>\<lambda>_. invs'\<rbrace>,
+   \<lbrace>\<lambda>_. invs' and st_tcb_at' active' t
+              and sch_act_not t
+              and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
+              and ex_nonz_cap_to' t
+              and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>"
   apply (simp add: sendFaultIPC_def)
   apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
             threadSet_cap_to'
            | wpc | simp)+
-  sorry (*
-   apply (rule_tac Q'="\<lambda>rv s. invs' s \<and> sch_act_not t s
-                             \<and> st_tcb_at' simple' t s
-                             \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p))
-                             \<and> ex_nonz_cap_to' t s
-                             \<and> t \<noteq> ksIdleThread s
-                             \<and> (\<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)"
-                 in hoare_post_imp_R)
-    apply wp
-   apply (clarsimp simp: inQ_def pred_tcb_at')
-  apply (wp | simp)+
-  apply (clarsimp simp: eq_commute)
-  apply (subst(asm) global'_no_ex_cap, auto)
-  done *)
+  apply (intro conjI impI allI; (fastforce simp: inQ_def)?)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_release_queue'_def obj_at'_def)
+  apply (fastforce simp: ex_nonz_cap_to'_def cte_wp_at'_def)
+  done
 
 lemma hf_corres:
   "fr f f' \<Longrightarrow>
@@ -4282,20 +4268,27 @@ lemma hf_corres:
 
 lemma hf_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
-          and (\<lambda>s. \<forall>p. t \<notin> set(ksReadyQueues s p))
-          and st_tcb_at' simple' t
-          and ex_nonz_cap_to' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
+          and st_tcb_at' active' t
+          and ex_nonz_cap_to' t\<rbrace>
    handleFault t f \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: handleFault_def handleNoFaultHandler_def)
-  apply wp
-  sorry (*
-   apply (simp)
-   apply (wp sts_invs_minor'' dmo_invs')+
-  apply (rule hoare_post_impErr, rule sfi_invs_plus',
-         simp_all)
-  apply (strengthen no_refs_simple_strg')
-  apply clarsimp
-  done *)
+  apply (simp add: handleFault_def handleNoFaultHandler_def sendFaultIPC_def)
+  apply (wpsimp wp: sts_invs_minor' threadSet_invs_trivialT threadSet_pred_tcb_no_state getTCB_wp
+                    threadGet_wp threadSet_cap_to' hoare_vcg_all_lift hoare_vcg_imp_lift'
+        | fastforce simp: tcb_cte_cases_def)+
+  apply (clarsimp simp: invs'_def valid_state'_def inQ_def)
+  apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s \<and> t \<noteq> ksIdleThread s")
+   apply (rule_tac x=ko in exI)
+   apply (intro conjI impI allI; fastforce?)
+     apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+   apply (clarsimp simp: ex_nonz_cap_to'_def pred_tcb_at'_def return_def
+                         fail_def obj_at'_def projectKO_def projectKO_tcb
+                  split: option.splits)
+   apply (rule_tac x="t+0x30" in exI)
+   apply (fastforce elim: cte_wp_at_tcbI' simp: objBitsKO_def)
+  apply (fastforce simp: pred_tcb_at'_def obj_at'_def valid_idle'_def idle_tcb'_def)
+  done
+
 
 declare zipWithM_x_mapM [simp del]
 

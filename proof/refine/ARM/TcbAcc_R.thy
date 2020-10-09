@@ -5236,20 +5236,19 @@ lemma sts_invs_minor':
                    \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
                       st' \<noteq> Inactive \<and> \<not> idle' st')) t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
-      and sch_act_simple
+      and sch_act_not t
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
+  apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
-  apply (clarsimp simp: sch_act_simple_def)
-  apply (intro conjI)
+  apply (intro conjI impI)
     apply clarsimp
-   defer
-   apply (clarsimp elim!: st_tcb_ex_cap'')
-  apply (frule tcb_in_valid_state', clarsimp+)
-  apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
+   apply (frule tcb_in_valid_state', clarsimp+)
+   apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
+  apply (erule if_live_then_nonz_capE')
+  apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
 
 lemma sts_cap_to'[wp]:
