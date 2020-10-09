@@ -881,21 +881,22 @@ lemma cancelSignal_st_tcb_at:
    apply clarsimp+
   done
 
+lemma blockedCancelIPC_st_tcb_at:
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P Inactive) \<and> (t \<noteq> t' \<longrightarrow> st_tcb_at' P t s)\<rbrace>
+   blockedCancelIPC st t' rptr
+   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+  unfolding blockedCancelIPC_def Let_def getBlockingObject_def
+  apply (wpsimp wp: setThreadState_st_tcb_at'_cases replyUnlink_st_tcb_at' hoare_vcg_imp_lift'
+                    getEndpoint_wp)
+  done
+
 lemma cancelIPC_st_tcb_at:
   assumes [simp]: "\<And>st. simple' st \<longrightarrow> P st" shows
-  "\<lbrace>st_tcb_at' P t\<rbrace>
-     cancelIPC t'
-   \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def
-             cong: if_cong Structures_H.thread_state.case_cong)
-  sorry (*
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
-  apply (case_tac x, simp_all add: isTS_defs list_case_If)
-         apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
-                   threadSet_pred_tcb_no_state
-                   cancelSignal_st_tcb_at hoare_drop_imps
-                | clarsimp simp: o_def if_fun_split)+
-  done *)
+  "cancelIPC t' \<lbrace>st_tcb_at' P t\<rbrace>"
+  unfolding cancelIPC_def
+  apply (wpsimp wp: blockedCancelIPC_st_tcb_at replyRemoveTCB_st_tcb_at'_cases
+                    cancelSignal_st_tcb_at threadSet_pred_tcb_no_state gts_wp')
+  done
 
 lemma weak_sch_act_wf_lift_linear:
   "\<lbrakk> \<And>t. \<lbrace>\<lambda>s. sa s \<noteq> SwitchToThread t\<rbrace> f \<lbrace>\<lambda>rv s. sa s \<noteq> SwitchToThread t\<rbrace>;
@@ -905,12 +906,6 @@ lemma weak_sch_act_wf_lift_linear:
   apply (simp only: weak_sch_act_wf_def imp_conv_disj)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_conj_lift)
   apply simp_all
-  done
-
-lemma sts_sch_act_not[wp]:
-  "\<lbrace>sch_act_not t\<rbrace> setThreadState st t' \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
-  unfolding setThreadState_def rescheduleRequired_def scheduleTCB_def
-  apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp isSchedulable_inv)
   done
 
 crunches cancelSignal, setBoundNotification
