@@ -55,7 +55,9 @@ requalify_consts
   kernelWCET_us
   kernelWCET_ticks
   maxTimer_us
+  max_ticks_to_us
   us_to_ticks
+  ticks_to_us
   setDeadline
   timerPrecision
 requalify_facts
