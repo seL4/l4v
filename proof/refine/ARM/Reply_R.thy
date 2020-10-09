@@ -52,6 +52,15 @@ lemma replyRemoveTCB_st_tcb_at'[wp]:
   apply (clarsimp elim!: pred_tcb'_weakenE)
   done
 
+lemma replyRemoveTCB_st_tcb_at'_cases:
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P Inactive) \<and> (t \<noteq> t' \<longrightarrow> st_tcb_at' P t s)\<rbrace>
+   replyRemoveTCB t'
+   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+  unfolding replyRemoveTCB_def cleanReply_def
+  apply (wpsimp wp: replyUnlink_st_tcb_at' hoare_vcg_imp_lift' gts_wp')
+  apply (case_tac "t = t'"; clarsimp simp: pred_tcb_at'_def)
+  done
+
 lemma replyUnlink_tcb_obj_at'_no_change:
   "\<lbrace>(\<lambda>s. P (obj_at' Q tptr s)) and
     K (\<forall>tcb st. (Q (tcbState_update (\<lambda>_. Inactive) tcb) = Q tcb) \<and>
