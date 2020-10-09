@@ -1126,8 +1126,8 @@ lemma sched_context_update_consumed_if_live[wp]:
      sched_context_update_consumed param_a
    \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
-     wp: get_sched_context_wp get_object_wp)
-  by (clarsimp simp: if_live_then_nonz_cap_def obj_at_def live_def live_sc_def)
+                  wp: get_sched_context_wp get_object_wp)
+  done
 
 crunches
   set_irq_state, set_simple_ko
