@@ -381,7 +381,7 @@ This module uses the C preprocessor to select a target architecture.
 >     if consumed >= maxTicksToUs
 >         then do
 >             setSchedContext scPtr $ sc { scConsumed = scConsumed sc - maxTicksToUs }
->             return maxTicksToUs
+>             return $ ticksToUs maxTicksToUs
 >         else do
 >             setSchedContext scPtr $ sc { scConsumed = 0 }
 >             return $ ticksToUs consumed
