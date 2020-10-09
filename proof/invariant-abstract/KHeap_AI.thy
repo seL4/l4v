@@ -2442,12 +2442,13 @@ lemma set_tcb_obj_ref_obj_at_trivial:
 
 lemma sched_context_update_consumed_obj_at_trivial:
   "\<lbrace>obj_at P t' and
-    K (\<forall>sc n. P (SchedContext sc n) \<longrightarrow> P (SchedContext (sc_consumed_update (K 0) sc) n))\<rbrace>
-     sched_context_update_consumed t
+    K (\<forall>sc n f. P (SchedContext sc n) \<longrightarrow> P (SchedContext (sc_consumed_update f sc) n))\<rbrace>
+   sched_context_update_consumed t
    \<lbrace>\<lambda>_. obj_at P t'\<rbrace>"
-  by (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
-                   set_object_def get_sched_context_def obj_at_def
-               wp: get_object_wp)
+  apply (wpsimp simp: sched_context_update_consumed_def update_sched_context_def
+                      set_object_def get_sched_context_def obj_at_def
+                  wp: get_object_wp)
+  done
 
 lemma set_mrs_obj_at_trivial:
   "\<lbrace>obj_at P t' and

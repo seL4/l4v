@@ -316,8 +316,8 @@ lemma sched_context_update_consumed_pred_tcb_at_ct[wp]:
     sched_context_update_consumed sc_ptr \<lbrace>\<lambda>_ s. pred_tcb_at proj P (cur_thread s) s\<rbrace>"
   apply (clarsimp simp: sched_context_update_consumed_def)
   apply (wpsimp wp: get_object_wp hoare_drop_imp get_sched_context_wp
-            simp: split_def update_sched_context_def set_object_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def)
+              simp: split_def update_sched_context_def set_object_def)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def)
   done
 
 lemma set_consumed_pred_tcb_at_ct[wp]:
