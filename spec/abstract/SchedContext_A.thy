@@ -309,8 +309,14 @@ definition
   sched_context_update_consumed :: "obj_ref \<Rightarrow> (time,'z::state_ext) s_monad" where
   "sched_context_update_consumed sc_ptr \<equiv> do
     sc \<leftarrow> get_sched_context sc_ptr;
-    set_sc_obj_ref sc_consumed_update sc_ptr 0;
-    return (sc_consumed sc)
+    consumed \<leftarrow> return (sc_consumed sc);
+    if max_ticks_to_us \<le> consumed
+    then do set_sc_obj_ref sc_consumed_update sc_ptr (consumed - max_ticks_to_us);
+            return (ticks_to_us (max_ticks_to_us))
+         od
+    else do set_sc_obj_ref sc_consumed_update sc_ptr 0;
+            return (ticks_to_us (sc_consumed sc))
+         od
    od"
 
 definition
