@@ -2201,6 +2201,7 @@ crunches finaliseCap
   (wp: crunch_wps getObject_ap_inv hoare_vcg_all_lift simp: crunch_simps)
 
 lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
+lemmas schedContexUpdateConsumed_typ_ats[wp] = typ_at_lifts[OF schedContextUpdateConsumed_typ_at']
 
 lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"

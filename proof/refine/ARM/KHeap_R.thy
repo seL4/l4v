@@ -1351,7 +1351,7 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
   qed
 
 lemma setSchedContext_no_stack_update_corres:
-  "\<lbrakk> \<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
+  "\<lbrakk>sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
      \<forall>sc. sc_replies sc = sc_replies (f sc); \<forall>sc'. objBits sc' = objBits (f' sc');
      scReply sc' = scReply (f' sc')\<rbrakk>
     \<Longrightarrow> corres dc
@@ -1367,7 +1367,7 @@ lemma setSchedContext_no_stack_update_corres:
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
                 split: kernel_object.splits arch_kernel_object.splits)
-  assume R': "\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
+  assume R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
   and    r : "\<forall>sc. sc_replies sc = sc_replies (f sc)" "scReply sc' = scReply (f' sc')"
   and    s : "\<forall>sc'. objBits sc' = objBits (f' sc')"
   show ?thesis
@@ -2641,9 +2641,6 @@ lemma set_ntfn_valid_pde_mappings'[wp]:
 
 lemma set_ntfn_minor_invs':
   "\<lbrace>invs'
-      and obj_at'
-            (\<lambda>ntfn. refs_of_ntfn' ntfn = refs_of_ntfn' val)
-            ptr
       and valid_ntfn' val
       and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)
       and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
