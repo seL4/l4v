@@ -996,6 +996,12 @@ definition "vs_valid_duplicates' \<equiv> \<lambda>h.
               x && ~~ mask (vs_ptr_align ko) = y && ~~ mask (vs_ptr_align ko) \<longrightarrow>
               h x = h y"
 
+definition valid_replies' :: "kernel_state \<Rightarrow> bool" where
+  "valid_replies' s \<equiv>
+     (\<forall>rptr rp. ko_at' rp rptr s \<and> (replyNext rp \<noteq> None \<or> replyPrev rp \<noteq> None)
+              \<longrightarrow> (\<exists>tptr. replyTCB rp = Some tptr
+                         \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
+
 definition
   valid_pspace' :: "kernel_state \<Rightarrow> bool"
 where
@@ -3681,6 +3687,10 @@ lemma invs_mdb' [elim!]:
   "invs' s \<Longrightarrow> valid_mdb' s"
   by (simp add: invs'_def valid_state'_def valid_pspace'_def)
 
+lemma invs_valid_replies'[elim!]:
+  "invs' s \<Longrightarrow> valid_replies' s"
+  sorry
+
 lemma valid_mdb_no_loops [elim!]:
   "valid_mdb_ctes m \<Longrightarrow> no_loops m"
   by (auto intro: mdb_chain_0_no_loops)
@@ -3912,6 +3922,24 @@ method normalise_obj_at' =
   normalise_obj_at'_step, normalise_obj_at'_step?
 
 end
+
+lemma valid_replies'_no_tcb:
+  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = None) rptr s; valid_replies' s\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
+  apply normalise_obj_at'
+  apply (clarsimp simp: valid_replies'_def)
+  apply (auto dest!: spec)
+  done
+
+lemma valid_replies'_other_state:
+  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s;
+    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr));
+    valid_replies' s\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
+  apply normalise_obj_at'
+  apply (clarsimp simp: valid_replies'_def)
+  apply (auto dest!: spec simp: pred_tcb_at'_def obj_at'_def )
+  done
 
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)

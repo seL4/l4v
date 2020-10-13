@@ -47,7 +47,7 @@ crunches cleanReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  (wp: crunch_wps weak_sch_act_wf_lift simp: crunch_simps ignore: threadSet)
+  (rule: weak_sch_act_wf_lift)
 
 lemmas cleanReply_typ_ats[wp] = typ_at_lifts[OF cleanReply_typ_at']
 

@@ -2896,8 +2896,9 @@ crunches unbindNotification, unbindMaybeNotification
   for valid_queues[wp]: "Invariants_H.valid_queues"
   (wp: sbn_valid_queues)
 
-crunches unbindNotification, unbindMaybeNotification
+crunches unbindNotification, unbindMaybeNotification, setSchedContext
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+  (wp: weak_sch_act_wf_lift)
 
 lemma unbindNotification_tcb_at'[wp]:
   "\<lbrace>tcb_at' t'\<rbrace> unbindNotification t \<lbrace>\<lambda>rv. tcb_at' t'\<rbrace>"
@@ -2916,6 +2917,15 @@ crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
 crunch invs[wp]: prepareThreadDelete "invs'"
 
 end
+
+lemma schedContextDonate_weak_sch_act_wf[wp]:
+  "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (simp only: schedContextDonate_def)
+  apply (wpsimp wp: threadSet_weak_sch_act_wf setSchedContext_weak_sch_act_wf rescheduleRequired_weak_sch_act_wf)
+        apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
+        apply (wpsimp wp: threadSet_weak_sch_act_wf)
+       apply wpsimp+
+  done
 
 lemma ntfnSc_sym_refsD:
   "\<lbrakk>obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr s; sym_refs (state_refs_of' s)\<rbrakk>
@@ -2959,33 +2969,99 @@ lemma schedContextMaybeUnbindNtfn_obj_at'_ntfnSc:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma replyUnlink_makes_unlive:
-  "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. \<not> bound (replyNext reply) \<and> \<not> bound (replyPrev reply)) rptr s
-        \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+lemma replyUnlink_obj_at_tcb_none:
+  "\<lbrace>K (rptr' = rptr)\<rbrace>
    replyUnlink rptr tptr
-   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
-  apply (simp add: replyUnlink_def setReplyTCB_def updateReply_def)
-  apply (wpsimp wp: setThreadState_Inactive_unlive set_reply'.set_wp gts_wp' getReplyTCB_wp)
+   \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. replyTCB reply = None) rptr'\<rbrace>"
+  apply (simp add: replyUnlink_def setReplyTCB_def)
+  apply (wpsimp wp: updateReply_wp_all gts_wp' getReplyTCB_wp)
+  by (auto simp: obj_at'_def projectKOs objBitsKO_def)
+
+lemma replyUnlink_makes_unlive:
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. \<not> bound (replyNext reply) \<and> \<not> bound (replyPrev reply)) rptr' s
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> rptr' = rptr\<rbrace>
+   replyUnlink rptr tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr'\<rbrace>"
+  apply (simp add: replyUnlink_def setReplyTCB_def)
+  apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp' getReplyTCB_wp)
   by (auto simp: ko_wp_at'_def obj_at'_def projectKOs is_aligned_def ps_clear_def
                  objBitsKO_def live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def)
 
-lemma cleanReply_makes_unlive:
-  "\<lbrace>obj_at' (\<lambda>reply. replyTCB reply = None) rptr\<rbrace>
+lemma cleanReply_obj_at_next_prev_none:
+  "\<lbrace>K (rptr' = rptr)\<rbrace>
    cleanReply rptr
+   \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. \<not> bound (replyNext reply) \<and> \<not> bound (replyPrev reply)) rptr'\<rbrace>"
+  apply (simp add: cleanReply_def )
+  apply (wpsimp wp: updateReply_wp_all)
+  apply (auto simp: obj_at'_def projectKOs objBitsKO_def)
+  done
+
+lemma replyPop_makes_unlive:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   replyPop rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
-  apply (simp add: cleanReply_def updateReply_def)
-  apply (wpsimp wp: set_reply'.set_wp)
-  apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs objBitsKO_def live_reply'_def
-                    ps_clear_upd'[simplified fun_upd_def])
+  apply (simp add: replyPop_def)
+  apply (wpsimp wp: replyUnlink_makes_unlive cleanReply_obj_at_next_prev_none
+                    hoare_vcg_if_lift threadGet_wp
+         | wp (once) hoare_drop_imps)+
+  by (clarsimp simp: obj_at'_def)
+
+lemma replyRemove_makes_unlive:
+  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   replyRemove rptr tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
+  apply (simp add: replyRemove_def)
+  by (wpsimp wp: replyPop_makes_unlive replyUnlink_makes_unlive cleanReply_obj_at_next_prev_none
+                 hoare_vcg_if_lift threadGet_wp gts_wp' hoare_drop_imps)
+
+lemma replyRemoveTCB_makes_unlive:
+  "\<lbrace>\<lambda>s. st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tptr s
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   replyRemoveTCB tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
+  apply (simp add: replyRemoveTCB_def)
+  apply (wpsimp wp: replyUnlink_makes_unlive cleanReply_obj_at_next_prev_none
+                    hoare_vcg_if_lift threadGet_wp gts_wp' hoare_drop_imps)
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+
+method cancelIPC_makes_unlive_hammer =
+  (normalise_obj_at',
+   frule (2) sym_ref_replyTCB_Receive_or_Reply,
+   fastforce simp: weak_sch_act_wf_def pred_tcb_at'_def obj_at'_def projectKOs)
+
+lemma cancelIPC_makes_unlive:
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s\<rbrace>
+   cancelIPC  tptr
+   \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
+  unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def sym_refs_asrt_def
+  apply simp
+  apply (intro hoare_seq_ext[OF _ stateAssert_sp] hoare_seq_ext[OF _ gts_sp'])+
+  apply (case_tac state; clarsimp)
+         (* BlockedOnReceive*)
+         apply (rename_tac ep pl rp)
+         apply (case_tac rp; clarsimp)
+          apply (wpsimp wp: hoare_pre_cont, cancelIPC_makes_unlive_hammer)
+         apply (wpsimp wp: setThreadState_unlive_other replyUnlink_makes_unlive
+                           hoare_vcg_all_lift hoare_drop_imps threadSet_weak_sch_act_wf)
+         apply (frule (1) valid_replies'_other_state; clarsimp)
+         apply cancelIPC_makes_unlive_hammer
+        (* BlockedOnReply*)
+        apply (wpsimp wp: replyRemoveTCB_makes_unlive threadSet_pred_tcb_no_state
+                          threadSet_weak_sch_act_wf)
+        apply cancelIPC_makes_unlive_hammer
+       (* All other states are impossible *)
+       apply (wpsimp wp: hoare_pre_cont, cancelIPC_makes_unlive_hammer)+
   done
 
 lemma replyClear_makes_unlive:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s\<rbrace>
    replyClear rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   apply (simp add: replyClear_def)
-  apply (wpsimp wp: replyUnlink_makes_unlive )
-sorry
+  apply (wpsimp wp: replyRemove_makes_unlive cancelIPC_makes_unlive gts_wp' haskell_fail_wp)
+  done
 
 crunches unbindFromSC
   for bound_tcb_at'[wp]: "bound_tcb_at' P p"
@@ -3199,13 +3275,20 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                        final_matters'_def objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
-     (* thread *)
+    (* ThreadCap *)
     apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
     apply (clarsimp simp: valid_cap'_def)
     apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-   apply (clarsimp simp: obj_at'_def | rule conjI)
-  sorry
+   (* ArchObjectCap *)
+   apply (clarsimp simp: obj_at'_def)
+  (* ReplyCap *)
+  apply clarsimp
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: obj_at'_def)
+  apply (frule (1) valid_replies'_no_tcb[OF ko_at_obj_at', simplified], clarsimp)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def projectKOs)
+  done
 
 lemma cteDeleteOne_cte_wp_at_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
