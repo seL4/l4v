@@ -432,17 +432,17 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     case scNtfn sc of
 >         Nothing -> return ()
->         Just ntfnPtr -> (\ntfn -> do
+>         Just ntfnPtr -> do
+>             ntfn <- getNotification ntfnPtr
+>             setNotification ntfnPtr (ntfn { ntfnSc = Nothing })
 >             setSchedContext scPtr (sc { scNtfn = Nothing })
->             n <- getNotification ntfn
->             setNotification ntfn (n { ntfnSc = Nothing })) ntfnPtr
 
 > schedContextMaybeUnbindNtfn :: PPtr Notification -> Kernel ()
 > schedContextMaybeUnbindNtfn ntfnPtr = do
 >     scOpt <- liftM ntfnSc $ getNotification ntfnPtr
 >     case scOpt of
 >         Nothing -> return ()
->         Just sc -> schedContextUnbindNtfn sc
+>         Just scPtr -> schedContextUnbindNtfn scPtr
 
 > schedContextUnbindAllTCBs :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindAllTCBs scPtr = do
