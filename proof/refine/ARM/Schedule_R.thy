@@ -1565,6 +1565,12 @@ lemma sc_at'_cross_rel:
   apply clarsimp
   by (erule (3) sc_at_cross)
 
+lemma ntfn_at'_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and ntfn_at t) (ntfn_at' t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  by (erule (3) ntfn_at_cross)
+
 lemma runnable_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and st_tcb_at runnable t)
              (\<lambda>s'. pred_map (\<lambda>tcb. runnable' (tcbState tcb)) (tcbs_of' s') t)"

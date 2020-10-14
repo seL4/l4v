@@ -3547,6 +3547,38 @@ lemma ko_at'_cross:
               split: Structures_A.kernel_object.split_asm if_split_asm
                      ARM_A.arch_kernel_obj.split_asm)
 
+lemma update_sc_no_reply_stack_update_ko_at'_corres:
+  "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
+    \<forall>sc. sc_replies sc = sc_replies (f sc); \<forall>sc'. objBits sc' = objBits (f' sc');
+    \<forall>sc'. scReply (f' sc') = scReply sc'\<rbrakk> \<Longrightarrow>
+   corres dc
+     (sc_at ptr and pspace_aligned and pspace_distinct)
+     (ko_at' sc' ptr)
+     (update_sched_context ptr f)
+     (setSchedContext ptr (f' sc'))"
+  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
+   apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
+  apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
+   apply (fastforce dest!: state_relationD ko_at'_cross)
+  apply (rule corres_guard_imp)
+    apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
+               and n1="objBits sc' - minSchedContextBits"
+                         in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+    apply (rule corres_symb_exec_l)
+       apply (rule corres_guard_imp)
+         apply (rule_tac P="\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc' - minSchedContextBits))"
+                     and P'="ko_at' sc' ptr"  in corres_inst)
+         apply (rule_tac n="objBits sc' - minSchedContextBits" in setSchedContext_no_stack_update_corres)
+            apply simp+
+      apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
+       apply (rename_tac ko; case_tac ko; simp)
+      apply simp
+     apply (wpsimp simp: obj_at_def is_sc_obj_def)+
+    apply (wpsimp wp: get_sched_context_no_fail)
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+  apply simp
+  done
+
 lemma update_sc_no_reply_stack_update_corres:
   "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
     \<forall>sc. sc_replies sc = sc_replies (f sc); \<forall>sc'. objBits sc' = objBits (f' sc');
@@ -3560,30 +3592,10 @@ lemma update_sc_no_reply_stack_update_corres:
    apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
   apply (rule corres_symb_exec_r)
      apply (rename_tac sc')
-     apply (rule_tac P'="ko_at' sc' ptr" in corres_inst)
-     apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
-      apply (fastforce dest!: state_relationD ko_at'_cross)
-     apply (rule corres_guard_imp)
-       apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
-                  and n1="objBits sc' - minSchedContextBits"
-                            in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
-       apply (rule corres_symb_exec_l)
-          apply (rename_tac sc' sc)
-          apply (rule corres_guard_imp)
-            apply (rule_tac P="\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc' - minSchedContextBits))"
-                        and P'="ko_at' sc' ptr"  in corres_inst)
-            apply (rule_tac n="objBits sc' - minSchedContextBits" in setSchedContext_no_stack_update_corres)
-               apply simp+
-         apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
-          apply (rename_tac ko; case_tac ko; simp)
-         apply simp
-        apply (wpsimp simp: obj_at_def is_sc_obj_def)+
-       apply (wpsimp wp: get_sched_context_no_fail)
-      apply (clarsimp simp: obj_at_def is_sc_obj_def)
-     apply simp
-    apply wpsimp
-   apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
-  apply (wpsimp wp: get_sched_context_no_fail)
+     apply (erule update_sc_no_reply_stack_update_ko_at'_corres; simp)
+    apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
+   apply (rename_tac ko; case_tac ko; simp)
+   apply (wpsimp simp: obj_at_def is_sc_obj_def)+
   done
 
 end
