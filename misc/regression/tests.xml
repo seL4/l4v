@@ -58,7 +58,7 @@
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../" cpu-timeout="60">
-        find . -name tests.xml -print0 | xargs -0 python misc/regression/testspec.py
+        find . -name tests.xml -print0 | xargs -0 misc/regression/testspec.py
     </test>
 
 </testsuite>
