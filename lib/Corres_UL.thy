@@ -505,6 +505,10 @@ lemma corres_if3:
                                     (if G then a else b) (if G' then c else d)"
   by simp
 
+lemmas corres_when2 =
+    corres_if3[where b="return ()" and d="return ()"
+                and Q="\<top>" and Q'="\<top>" and r=dc, unfolded if_apply_def2, simplified,
+                folded when_def]
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
