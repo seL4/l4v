@@ -2824,6 +2824,7 @@ crunches unbindNotification, unbindMaybeNotification
   for isFinal[wp]: "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
        loadObject_default_inv
+   simp: setBoundNotification_def
    ignore: threadSet)
 
 crunches cancelSignal, cancelAllIPC
@@ -3132,15 +3133,16 @@ lemma cteDeleteOne_reply_pred_tcb_at:
   apply (intro impI conjI, (wp | simp)+)
   done
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunches cteDeleteOne, unbindNotification
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps ssa_sch_act_simple sts_sch_act_simple getObject_inv
        loadObject_default_inv
    simp: crunch_simps unless_def
    rule: sch_act_simple_lift)
-
-crunch valid_queues[wp]: setSchedulerAction "Invariants_H.valid_queues"
-  (simp: Invariants_H.valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def)
+end
 
 lemma rescheduleRequired_sch_act_not[wp]:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"
@@ -3512,7 +3514,11 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
   apply fastforce
   done
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch valid_cap'[wp]: unbindNotification "valid_cap' cap"
+end
 
 lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
@@ -3640,6 +3646,7 @@ lemma unbind_notification_corres:
       (invs' and tcb_at' t)
       (unbind_notification t)
       (unbindNotification t)"
+  supply option.case_cong_weak[cong]
   apply (simp add: unbind_notification_def unbindNotification_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gbn_corres])
@@ -3674,7 +3681,6 @@ lemma unbind_maybe_notification_corres:
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)
-      apply simp
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)

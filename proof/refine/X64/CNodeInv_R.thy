@@ -6767,12 +6767,16 @@ lemmas storePML4E_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePML4E_ctes]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
    ignore: setCTE threadSet)
+end
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]

@@ -504,10 +504,8 @@ lemma copyreg_invs'':
   "\<lbrace>invs' and sch_act_simple and tcb_at' src and tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs' and tcb_at' dest\<rbrace>"
-  apply (simp add: invokeTCB_def performTransfer_def if_apply_def2)
-  apply (wp mapM_x_wp' restart_invs' | simp)+
-   apply (rule conjI)
-    apply (wp | clarsimp)+
+  apply (simp add: invokeTCB_def performTransfer_def)
+  apply (wp mapM_x_wp' restart_invs' hoare_vcg_imp_lift | wps | simp add: if_apply_def2)+
   by (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
 
 lemma copyreg_invs':
@@ -946,6 +944,7 @@ lemma checked_insert_tcb_invs'[wp]:
      checkCapAt new_cap src_slot
       (checkCapAt (ThreadCap target) slot'
        (assertDerived src_slot new_cap (cteInsert new_cap src_slot slot))) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  supply o_apply[simp del]
   apply (simp add: checkCapAt_def liftM_def assertDerived_def stateAssert_def)
   apply (wp getCTE_cteCap_wp cteInsert_invs)
   apply (clarsimp split: option.splits)
@@ -963,7 +962,7 @@ lemma checked_insert_tcb_invs'[wp]:
   apply (rule conjI)
    apply (rule_tac x=slot' in exI)
    subgoal by (clarsimp simp: isCap_simps)
-  apply (clarsimp simp: isCap_simps cteCaps_of_def)
+  apply (clarsimp simp: isCap_simps cteCaps_of_def o_apply)
   apply (erule(1) valid_irq_handlers_ctes_ofD)
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
