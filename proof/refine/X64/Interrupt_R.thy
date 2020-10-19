@@ -718,6 +718,7 @@ lemma timerTick_corres:
   "corres dc (cur_tcb and valid_sched)
              invs'
              timer_tick timerTick"
+  supply if_weak_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
@@ -810,18 +811,17 @@ lemma handle_interrupt_corres:
   apply (simp add: handle_interrupt_def handleInterrupt_def )
   apply (rule conjI[rotated]; rule impI)
 
-  apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_irq_state_corres,
-                              where R="\<lambda>rv. einvs"
-                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
-      defer
-      apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
-      apply (rule corres_guard_imp)
-apply (rule corres_split)
-    apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
-    apply ((wp | simp)+)[4]
-    apply (rule corres_gen_asm2)
-
+   apply (rule corres_guard_imp)
+     apply (rule corres_split [OF _ get_irq_state_corres,
+                               where R="\<lambda>rv. einvs"
+                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+       defer
+       apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
+        apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+      apply ((wp | simp)+)[4]
+  apply (rule corres_gen_asm2)
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
    apply (simp add: getSlotCap_def bind_assoc)
    apply (rule corres_guard_imp)
