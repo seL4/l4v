@@ -1031,7 +1031,7 @@ proof -
      apply (rule kernel_state.fold_congs[OF refl refl], simp only:)
      apply (rule machine_state.fold_congs[OF refl refl], simp only:)
      apply (cut_tac p=ptr in unat_mask_3_less_8)
-     apply (simp del: list_update.simps split del: if_split
+     apply (simp del: list_update.simps
                  add: word_rsplit_rcat_size word_size nth_list_update
                       horrible_helper)
      apply (subgoal_tac "(ptr && ~~ mask 3) + (ptr && mask 3) = ptr")
@@ -1112,8 +1112,8 @@ lemma storeWord_ccorres':
      (doMachineOp $ storeWord ptr val)
      (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (val' s)))) s))"
-  apply (clarsimp simp: storeWordUser_def simp del: Collect_const
-             split del: if_split)
+  supply if_cong[cong]
+  apply (clarsimp simp: storeWordUser_def)
   apply (rule ccorres_from_vcg_nofail)
   apply (rule allI)
   apply (rule conseqPre, vcg)

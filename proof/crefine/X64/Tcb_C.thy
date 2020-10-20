@@ -1141,7 +1141,7 @@ lemma frame_gp_registers_convs:
                        frameRegistersC_def gpRegistersC_def msgRegisters_unfold
                        fupdate_def Arrays.update_def toEnum_def
                        upto_enum_def fromEnum_def enum_register)
-  apply (auto simp: less_Suc_eq fcp_beta)
+  apply (auto simp: less_Suc_eq)
   done
 
 
@@ -1151,6 +1151,7 @@ lemma postModifyRegisters_ccorres:
       \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr dest\<rbrace> hs
       (asUser dest (postModifyRegisters ct dest))
       (Call Arch_postModifyRegisters_'proc)"
+  supply if_cong[cong]
   apply (cinit' lift: tptr_')
    apply (rule_tac xf'' = xfdc and
                       A = "(\<lambda>s. ct = ksCurThread s)" and

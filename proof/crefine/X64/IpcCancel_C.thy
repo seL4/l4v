@@ -2313,8 +2313,8 @@ lemma possibleSwitchTo_ccorres:
   supply dc_simp [simp del]
   supply prio_and_dom_limit_helpers[simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-         ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+         ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: target_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_curDomain, rename_tac curDom)

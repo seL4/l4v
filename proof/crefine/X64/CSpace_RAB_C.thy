@@ -431,14 +431,14 @@ next
       apply (simp add: cap_simps)
       done
 
-    note if_cong[cong]
+    note if_cong[cong] option.case_cong[cong]
     show ?case
       using ind.prems
       apply -
       apply (rule iffD1 [OF ccorres_expand_while_iff])
       apply (subst resolveAddressBits.simps)
       apply (unfold case_into_if)
-      apply (simp add: Let_def ccorres_cond_iffs split del: if_split)
+      apply (simp add: Let_def ccorres_cond_iffs)
       apply (rule ccorres_rhs_assoc)+
       apply (cinitlift nodeCap_' n_bits_')
       apply (erule_tac t = nodeCapa in ssubst)

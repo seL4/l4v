@@ -273,6 +273,7 @@ lemma handleVMFault_ccorres:
            []
            (handleVMFault thread vm_fault)
            (Call handleVMFault_'proc)"
+  supply if_cong[cong]
   (* FIXME x64: make this a real ac_init *)
   apply (rule corres_to_ccorres_rv_spec_errglobals[OF _ _ refl],
          rule handleVMFault'_ac_corres[simplified o_def])
@@ -884,6 +885,7 @@ lemma findVSpaceForASID_ccorres:
        []
        (findVSpaceForASID asid)
        (Call findVSpaceForASID_'proc)"
+  supply if_cong[cong]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_')
    apply (rule ccorres_assertE)+
@@ -1200,7 +1202,7 @@ lemma setVMRoot_ccorres:
       (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
       (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) hs
       (setVMRoot thread) (Call setVMRoot_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] if_cong[cong]
   apply (cinit lift: tcb_')
    apply (rule ccorres_move_array_assertion_tcb_ctes)
    apply (rule ccorres_move_c_guard_tcb_ctes)
