@@ -554,7 +554,7 @@ lemma hasCancelSendRights_spec:
   done
 
 lemma decodeCNodeInvocation_ccorres:
-  notes gen_invocation_type_eq[simp]
+  notes gen_invocation_type_eq[simp] if_cong[cong]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -1816,6 +1816,7 @@ lemma resetUntypedCap_ccorres:
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
   using [[ceqv_simpl_sequence = true]]
+  supply if_cong[cong]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
                     Collect_True extra_sle_sless_unfolds)
@@ -1983,8 +1984,7 @@ lemma resetUntypedCap_ccorres:
                                     invs_urz
                                     getFreeIndex_def isCap_simps
                                     invs_pspace_aligned'
-                                    invs_pspace_distinct'
-                          simp del: )
+                                    invs_pspace_distinct')
               apply (frule valid_global_refsD_with_objSize, clarsimp)
               apply (clarsimp simp: conj_comms in_set_conv_nth
                                     length_upto_enum_step upto_enum_step_nth
@@ -2696,6 +2696,7 @@ lemma checkFreeIndex_ccorres:
       \<acute>reset :== scast false)
     (\<acute>freeIndex :== 0
         ;; \<acute>reset :== scast true)))"
+  supply if_cong[cong]
   apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_split_nothrow_case_sum)
@@ -2862,6 +2863,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2
@@ -2873,7 +2875,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
     apply (simp add: syscall_error_to_H_cases)
    apply (simp del: Collect_const cong: call_ignore_cong)
    apply csymbr
-   apply (simp add: if_1_0_0 word_less_nat_alt
+   apply (simp add: word_less_nat_alt
                del: Collect_const cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply simp

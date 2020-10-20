@@ -2290,7 +2290,7 @@ lemma canonical_address_cap_frame_cap:
   done
 
 lemma decodeX64FrameInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
+  notes if_cong[cong] option.case_cong[cong] Collect_const[simp del]
   defines "does_not_throw args extraCaps maptype pg_sz mapdata \<equiv>
            (mapdata = None \<longrightarrow> \<not> (unat user_vtop < unat (hd args)
                                   \<or> unat user_vtop < unat (hd args + 2 ^ pageBitsForSize pg_sz)))
@@ -4503,6 +4503,7 @@ lemma invokeX86PortIn8_ccorres:
        (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn8));
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeX86PortIn_'proc)"
+  supply if_cong[cong]
   apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
                         Let_def replyOnRestart_def)
   apply (cinit' lift: invLabel_' port_' call_')
@@ -4568,6 +4569,7 @@ lemma invokeX86PortIn16_ccorres:
        (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn16));
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeX86PortIn_'proc)"
+  supply if_cong[cong]
   apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
                         Let_def replyOnRestart_def)
   apply (cinit' lift: invLabel_' port_' call_')
@@ -4633,6 +4635,7 @@ lemma invokeX86PortIn32_ccorres:
        (doE reply \<leftarrow> performX64PortInvocation (InvokeIOPort (IOPortInvocation port IOPortIn32));
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeX86PortIn_'proc)"
+  supply if_cong[cong]
   apply (clarsimp simp: performX64PortInvocation_def portIn_def liftE_bindE bind_assoc
                         Let_def replyOnRestart_def)
   apply (cinit' lift: invLabel_' port_' call_')
@@ -5152,7 +5155,7 @@ proof -
      apply (clarsimp simp: invocation_eq_use_types)
      apply csymbr
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: if_1_0_0 word_less_nat_alt throwError_bind invocationCatch_def)
+      apply (simp add: word_less_nat_alt throwError_bind invocationCatch_def)
       apply (rule ccorres_cond_true_seq)
       apply (rule ccorres_equals_throwError)
        apply (simp add: throwError_bind split: list.split)
@@ -5160,7 +5163,7 @@ proof -
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
      apply csymbr
-     apply (simp add: if_1_0_0 interpret_excaps_test_null excaps_map_def)
+     apply (simp add: interpret_excaps_test_null excaps_map_def)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: throwError_bind invocationCatch_def)
       apply (rule ccorres_equals_throwError)

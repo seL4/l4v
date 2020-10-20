@@ -1874,7 +1874,7 @@ lemma heap_list_zero_Ball_intvl:
 lemma untypedZeroRange_not_device:
   "untypedZeroRange cap = Some r
     \<Longrightarrow> \<not> capIsDevice cap"
-  by (clarsimp simp: untypedZeroRange_def)
+  by (clarsimp simp: untypedZeroRange_def cong: if_cong)
 
 lemma updateTrackedFreeIndex_noop_ccorres:
   "ccorres dc xfdc (cte_wp_at' ((\<lambda>cap. isUntypedCap cap
@@ -2287,7 +2287,7 @@ lemma heap_modify_Array_element:
 
 lemma fupdate_word_set_or_clear_max_word:
   "fupdate i (word_set_or_clear b max_word) arr = Arrays.update arr i (if b then max_word else 0)"
-  by (simp add: fupdate_def word_set_or_clear_def)
+  by (simp add: fupdate_def word_set_or_clear_def cong: if_cong)
 
 lemma h_t_valid_Array_element':
   "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < CARD('b) \<rbrakk>
@@ -2395,7 +2395,7 @@ lemma setIOPortMask_spec:
   done
 
 lemma setIOPortMask_ccorres:
-  notes Collect_const[simp del]
+  notes Collect_const[simp del] if_cong[cong]
   shows
   "ccorres dc xfdc
      (\<lambda>_. f \<le> l)
@@ -2519,6 +2519,7 @@ lemma emptySlot_ccorres:
           []
           (emptySlot slot info)
           (Call emptySlot_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: slot_' cleanupInfo_' simp: case_Null_If)
 
   \<comment> \<open>--- handle the clearUntypedFreeIndex\<close>
@@ -2741,6 +2742,7 @@ done
 
 lemma Arch_sameRegionAs_spec:
   notes cap_get_tag = ccap_rel_cap_get_tag_cases_arch'
+  notes if_cong[cong]
   shows
     "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                    ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
@@ -2822,6 +2824,7 @@ lemma cap_get_capSizeBits_spec:
                         cap_lift_domain_cap cap_get_tag_scast
                         objBits_defs wordRadix_def
                         c_valid_cap_def cl_valid_cap_def
+                 cong: option.case_cong[cong]
                  dest!: sym [where t = "ucast (cap_get_tag cap)" for cap])
   apply (clarsimp split: option.splits cap_CL.splits dest!: cap_lift_Some_CapD)
   done
@@ -2829,6 +2832,7 @@ lemma cap_get_capSizeBits_spec:
 lemma ccap_relation_get_capSizeBits_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass; capAligned hcap \<rbrakk>
    \<Longrightarrow> 2 ^ get_capSizeBits_CL (cap_lift ccap) = capUntypedSize hcap"
+  supply if_cong[cong]
   apply (cases hcap;
          (match premises in "hcap = ArchObjectCap c" for c \<Rightarrow> \<open>cases c\<close>)?;
          (frule (1) ccap_rel_cap_get_tag_cases_generic)?;
@@ -3217,7 +3221,7 @@ lemma framesize_to_H_eq:
 lemma capFSize_range:
   "\<And>cap. cap_get_tag cap = scast cap_frame_cap \<Longrightarrow> c_valid_cap cap \<Longrightarrow>
    capFSize_CL (cap_frame_cap_lift cap) \<le> 2"
-  apply (simp add: cap_frame_cap_lift_def c_valid_cap_def cl_valid_cap_def)
+  apply (simp add: cap_frame_cap_lift_def c_valid_cap_def cl_valid_cap_def cong: option.case_cong)
   apply (clarsimp simp: cap_frame_cap_lift)
   apply (drule word_less_sub_1, simp)
   done
@@ -3379,7 +3383,7 @@ lemma sameRegionAs_NotificationCap:
   done
 
 lemma isMDBParentOf_spec:
-  notes option.case_cong_weak [cong]
+  notes option.case_cong_weak[cong] if_cong[cong]
   shows "\<forall>ctea cte_a cteb cte_b.
    \<Gamma> \<turnstile> {s. cslift s (cte_a_' s) = Some cte_a \<and>
             ccte_relation ctea cte_a \<and>
@@ -3436,7 +3440,7 @@ lemma isMDBParentOf_spec:
     prefer 2
     apply (rule sameRegionAs_EndpointCap, assumption+)
 
-   apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def case_bool_If)
+   apply (clarsimp simp: typ_heap_simps' Let_def case_bool_If)
    apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_EndpointCap)
    apply (clarsimp split: if_split_asm simp: if_distrib [where f=scast])
 
@@ -3470,9 +3474,10 @@ lemma updateCapData_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation cap \<acute>cap \<and> preserve = to_bool (\<acute>preserve) \<and> newData = \<acute>newData\<rbrace>
   Call updateCapData_'proc
   \<lbrace>  ccap_relation (updateCapData preserve newData cap) \<acute>ret__struct_cap_C \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre)
   apply vcg
-  apply (clarsimp simp: if_1_0_0)
+  apply (clarsimp)
 
   apply (simp add: updateCapData_def)
 
