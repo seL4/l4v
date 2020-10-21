@@ -1227,7 +1227,7 @@ lemma handlePreemption_if_valid_domain_time:
   "\<lbrace>\<top>\<rbrace>
    handlePreemption_if tc
    \<lbrace>\<lambda>_ s. (ksDomainTime s = 0 \<longrightarrow> ksSchedulerAction s = ChooseNewThread) \<and> valid_domain_list' s\<rbrace>"
-  unfolding handlePreemption_if_def by wpsimp
+  unfolding handlePreemption_if_def by (wpsimp cong: if_cong)
 
 lemma schedule'_if_valid_domain_time:
   "\<lbrace>\<top>\<rbrace> schedule'_if tc \<lbrace>\<lambda>_ s. 0 < ksDomainTime s\<rbrace>"
