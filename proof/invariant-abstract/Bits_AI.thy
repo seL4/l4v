@@ -17,14 +17,6 @@ lemma in_set_object:
   "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := kheap s (ptr \<mapsto> obj) \<rparr>"
   by (clarsimp simp: set_object_def get_object_def in_monad)
 
-definition
-  intr :: "ExceptionTypes_A.interrupt \<Rightarrow> irq \<Rightarrow> bool" where
- "intr x y \<equiv> (x = Interrupted y)"
-
-lemma intr_simp[simp]:
- "intr (Interrupted x) y = (x = y)"
-  by (simp add: intr_def)
-
 lemma cap_fault_injection:
  "cap_fault_on_failure addr b = injection_handler (ExceptionTypes_A.CapFault addr b)"
   apply (rule ext)

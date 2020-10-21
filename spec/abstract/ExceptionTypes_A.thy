@@ -52,10 +52,6 @@ datatype syscall_error
          | RevokeFirst
          | NotEnoughMemory data
 
-text \<open>Preemption in the system is caused by the arrival of hardware interrupts
-which are tagged with their hardware IRQ.\<close>
-datatype interrupt = Interrupted irq
-
 text \<open>Create a message from a system-call failure to be returned to the
 thread attempting the operation that failed.\<close>
 primrec
