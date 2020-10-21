@@ -38,7 +38,7 @@ the current thread or to its fault handler.
 type_synonym ('a,'z) lf_monad = "(lookup_failure + 'a,'z) s_monad"
 
 text \<open>The preemption monad. May throw an interrupt exception.\<close>
-type_synonym ('a,'z) p_monad = "(interrupt + 'a,'z) s_monad"
+type_synonym ('a,'z) p_monad = "(unit + 'a,'z) s_monad"
 
 
 text \<open>
@@ -49,7 +49,7 @@ translations
   (type) "'a f_monad" <= (type) "(fault + 'a) s_monad"
   (type) "'a se_monad" <= (type) "(syscall_error + 'a) s_monad"
   (type) "'a lf_monad" <= (type) "(lookup_failure + 'a) s_monad"
-  (type) "'a p_monad" <=(type) "(interrupt + 'a) s_monad"
+  (type) "'a p_monad" <=(type) "(unit + 'a) s_monad"
 
 text \<open>Perform non-preemptible operations within preemptible blocks.\<close>
 definition
@@ -64,7 +64,7 @@ definition
                          OR_choiceE (work_units_limit_reached)
                            (doE liftE $ do_extended_op reset_work_units;
                                 irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
-                                case_option (returnOk ()) (throwError \<circ> Interrupted) irq_opt
+                                case_option (returnOk ()) (K (throwError $ ())) irq_opt
                            odE) (returnOk ())
                      odE"
 
