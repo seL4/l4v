@@ -94,7 +94,7 @@ lemma work_units_and_irq_state_state_relationI [intro!]:
   by (simp add: state_relation_def swp_def)
 
 lemma preemption_corres:
-  "corres (intr \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
+  "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
   apply (simp add: preemption_point_def preemptionPoint_def)
   by (auto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
                  corres_underlying_def select_def bind_def get_def bindE_def select_f_def modify_def

@@ -4197,7 +4197,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma reset_untyped_cap_corres:
   "untypinv_relation ui ui'
-    \<Longrightarrow> corres (intr \<oplus> dc)
+    \<Longrightarrow> corres (dc \<oplus> dc)
     (invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv_wcap ui
       (Some (cap.UntypedCap dev ptr sz idx))
          and ct_active and einvs
@@ -4625,7 +4625,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> (=))
+   corres (dc \<oplus> (=))
      (einvs and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
@@ -4853,7 +4853,7 @@ lemma inv_untyped_corres':
 
     note msimp[simp add] = neg_mask_add_mask
     note if_split[split del]
-    show " corres (intr \<oplus> (=)) ((=) s) ((=) s')
+    show " corres (dc \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
       apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
