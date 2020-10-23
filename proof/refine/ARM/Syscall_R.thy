@@ -42,7 +42,7 @@ lemma syscall_corres:
      \<Longrightarrow> corres r (P_err rv err)
             (P'_err rv' err') (h_err err) (h_err' err')"
     "\<And>rvf rvf' rve rve'. \<lbrakk>r_flt_rel rvf rvf'; r_err_rel rvf rvf' rve rve'\<rbrakk>
-     \<Longrightarrow> corres (intr \<oplus> r)
+     \<Longrightarrow> corres (dc \<oplus> r)
            (P_no_err rvf rve) (P'_no_err rvf' rve')
            (m_fin rve) (m_fin' rve')"
 
@@ -52,7 +52,7 @@ lemma syscall_corres:
     "\<lbrace>Q\<rbrace> m_flt \<lbrace>\<lambda>rv. P_no_flt rv and Q_no_flt rv\<rbrace>, \<lbrace>P_flt\<rbrace>"
     "\<lbrace>Q'\<rbrace> m_flt' \<lbrace>\<lambda>rv. P'_no_flt rv and Q'_no_flt rv\<rbrace>, \<lbrace>P'_flt\<rbrace>"
 
-  shows "corres (intr \<oplus> r) (P and Q) (P' and Q')
+  shows "corres (dc \<oplus> r) (P and Q) (P' and Q')
            (Syscall_A.syscall m_flt  h_flt m_err h_err m_fin)
            (Syscall_H.syscall m_flt' h_flt' m_err' h_err' m_fin')"
   apply (simp add: Syscall_A.syscall_def Syscall_H.syscall_def liftE_bindE)
@@ -394,7 +394,7 @@ lemma set_domain_setDomain_corres:
 
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> (=))
+   corres (dc \<oplus> (=))
      (einvs and valid_invocation i
             and simple_sched_action
             and ct_active
@@ -1211,7 +1211,7 @@ crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma hinv_corres:
   "c \<longrightarrow> b \<Longrightarrow>
-   corres (intr \<oplus> dc)
+   corres (dc \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
@@ -1371,7 +1371,7 @@ crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
 lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma hs_corres:
-  "corres (intr \<oplus> dc)
+  "corres (dc \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
@@ -1810,7 +1810,7 @@ lemma hr_ct_active'[wp]:
   done
 
 lemma hc_corres:
-  "corres (intr \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
+  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
@@ -1997,7 +1997,7 @@ lemma hh_corres:
 
 (* FIXME: move *)
 lemma he_corres:
-  "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+  "corres (dc \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                        (\<lambda>s. scheduler_action s = resume_cur_thread))
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
                        (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
