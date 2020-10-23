@@ -659,7 +659,7 @@ lemma preemption_point_def2:
            if rv then doE
              liftE reset_work_units;
              liftE (do_machine_op (getActiveIRQ True)) >>=E
-             case_option (returnOk ()) (throwError \<circ> Interrupted)
+             case_option (returnOk ()) (K (throwError $ ()))
            odE else returnOk()
        odE"
   apply (rule ext)

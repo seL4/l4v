@@ -27,7 +27,7 @@ crunch (empty_fail) empty_fail: kernelEntry_if
 definition prod_lift where "prod_lift R r r' \<equiv> R (fst r) (fst r') \<and> (snd r) = (snd r')"
 
 lemma kernel_entry_if_corres:
-  "corres (prod_lift (intr \<oplus> dc)) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
+  "corres (prod_lift (dc \<oplus> dc)) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                        (\<lambda>s. scheduler_action s = resume_cur_thread) and
                        (\<lambda>s. 0 < domain_time s) and valid_domain_list)
                       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
@@ -1145,8 +1145,9 @@ lemma abstract_invs:
   apply (unfold_locales)
                apply (simp add: ADT_A_if_def)
               apply (simp_all add: check_active_irq_A_if_def do_user_op_A_if_def
-                                    kernel_call_A_if_def kernel_handle_preemption_if_def
-                                    kernel_schedule_if_def kernel_exit_A_if_def split del: if_split)[12]
+                                   kernel_call_A_if_def kernel_handle_preemption_if_def
+                                   kernel_schedule_if_def kernel_exit_A_if_def
+                              del: unit_Inl_or_Inr(2) split del: if_split)[12]
               apply (rule preserves_lifts |
                      wp check_active_irq_if_wp do_user_op_if_invs
                     | clarsimp simp add: full_invs_if_def)+
@@ -1671,7 +1672,7 @@ lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine
          apply (fastforce simp: full_invs_if_def uop_nonempty_def)
         apply (simp add: full_invs_if'_def uop_nonempty_def)
        apply (rule doUserOp_if_empty_fail)
-      apply (simp add: kernelCall_H_if_def kernel_call_A_if_def)
+      apply (simp add: kernelCall_H_if_def kernel_call_A_if_def del: unit_Inl_or_Inr(2))
       apply (rule step_corres_lifts)
        apply (rule corres_rel_imp)
         apply (rule corres_guard_imp)
