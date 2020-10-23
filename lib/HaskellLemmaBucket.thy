@@ -119,19 +119,35 @@ lemma distinct_prop_breakD:
   apply fastforce
   done
 
-lemma stateAssert_wp:
+lemma stateAssert_wp[wp]:
   "\<lbrace>\<lambda>s. P s \<longrightarrow> Q () s\<rbrace> stateAssert P e \<lbrace>Q\<rbrace>"
   by (clarsimp simp: stateAssert_def) wp
 
-lemma haskell_assert_wp:
+lemma stateAssert_inv:
+  "\<lbrace>P\<rbrace> stateAssert Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
+
+lemma haskell_assert_wp[wp]:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
-  by simp wp
+  by wpsimp
+
+lemma haskell_assert_inv:
+  "\<lbrace>P\<rbrace> haskell_assert Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
+
+lemma maybeToMonad_wp[wp]:
+  "\<lbrace>\<lambda>s. x \<noteq> None \<longrightarrow> Q (the x) s\<rbrace> maybeToMonad x \<lbrace>Q\<rbrace>"
+  by wpsimp
+
+lemma maybeToMonad_inv:
+  "\<lbrace>P\<rbrace> maybeToMonad x \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
 
 lemma stateAssertE_sp:
   "\<lbrace>P\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P and Q\<rbrace>, \<lbrace>\<lambda>_. R\<rbrace>"
   by (clarsimp simp: valid_def validE_def stateAssertE_def stateAssert_def in_monad)
 
-lemma stateAssertE_wp:
+lemma stateAssertE_wp[wp]:
   "\<lbrace>\<lambda>s. Q () \<longrightarrow> P s\<rbrace> stateAssertE Q l \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: stateAssertE_def stateAssert_def)
 

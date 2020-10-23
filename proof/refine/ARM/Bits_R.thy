@@ -21,7 +21,7 @@ crunch_ignore (add:
   debugPrint setNextPC maskInterrupt clearMemory throw_on_false
   unifyFailure ignoreFailure empty_on_failure emptyOnFailure clearMemoryVM null_cap_on_failure
   setNextPC getRestartPC assertDerived throw_on_false getObject setObject updateObject loadObject
-  ifM andM orM whenM whileM)
+  ifM andM orM whenM whileM haskell_assert)
 
 context Arch begin (*FIXME: arch_split*)
 

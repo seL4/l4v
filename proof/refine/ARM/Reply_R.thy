@@ -71,7 +71,7 @@ lemma replyRemoveTCB_st_tcb_at'_cases:
    replyRemoveTCB t'
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   unfolding replyRemoveTCB_def cleanReply_def
-  apply (wpsimp wp: replyUnlink_st_tcb_at' hoare_vcg_imp_lift' gts_wp')
+  apply (wpsimp wp: replyUnlink_st_tcb_at' hoare_vcg_imp_lift' gts_wp' haskell_assert_inv)
   apply (case_tac "t = t'"; clarsimp simp: pred_tcb_at'_def)
   done
 
@@ -103,7 +103,7 @@ lemma replyRemoveTCB_st_tcb_at'_sym_ref:
                                                               (replyPrev_update Map.empty r))"]
                     set_reply'.set_no_update[where upd="\<lambda>r. (replyNext_update Map.empty r)"]
                     set_reply'.set_no_update[where upd="\<lambda>r. (replyPrev_update Map.empty r)"]
-                    hoare_vcg_imp_lift set_reply'.get_ko_at'
+                    hoare_vcg_imp_lift set_reply'.get_ko_at' haskell_assert_inv
               simp: disj_imp)
        apply (rule_tac Q="\<lambda>_. obj_at' (\<lambda>r. replyTCB r = Some tptr) rptr" in hoare_post_imp,
               clarsimp)
@@ -286,7 +286,7 @@ lemma replyRemoveTCB_valid_pspace'[wp]:
   unfolding replyRemoveTCB_def valid_pspace'_def cleanReply_def
   supply set_reply'.set_wp[wp del] if_split[split del]
   apply (wpsimp wp: valid_mdb'_lift updateReply_valid_objs'_preserved hoare_vcg_if_lift
-                    hoare_vcg_imp_lift gts_wp')
+                    hoare_vcg_imp_lift gts_wp' haskell_assert_inv)
   apply (clarsimp simp: valid_reply'_def if_bool_eq_conj if_distribR)
   apply (case_tac "replyPrev ko = None"; clarsimp)
    apply (drule(1) sc_ko_at_valid_objs_valid_sc'

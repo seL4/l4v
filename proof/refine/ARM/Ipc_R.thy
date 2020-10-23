@@ -2040,7 +2040,8 @@ lemma cancelIPC_weak_sch_act_wf[wp]:
    cancelIPC tptr
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def
-  apply (wpsimp wp: gts_wp' threadSet_weak_sch_act_wf | wp (once) hoare_drop_imp)+
+  apply (wpsimp wp: gts_wp' threadSet_weak_sch_act_wf hoare_vcg_all_lift
+         | wp (once) hoare_drop_imps)+
   done
 
 lemma replyClear_weak_sch_act_wf[wp]:
@@ -3271,8 +3272,6 @@ lemma getSlotCap_cte_wp_at:
   done
 
 crunch no_0_obj'[wp]: setThreadState no_0_obj'
-
-declare haskell_assert_inv[wp del]
 
 lemma cteInsert_cap_to':
   "\<lbrace>ex_nonz_cap_to' p and cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest\<rbrace>

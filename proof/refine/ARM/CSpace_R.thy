@@ -3344,7 +3344,7 @@ lemma lookupSlotForCNodeOp_inv'[wp]:
 lemma loadWordUser_inv [wp]:
   "\<lbrace>P\<rbrace> loadWordUser p \<lbrace>\<lambda>rv. P\<rbrace>"
   unfolding loadWordUser_def
-  by (wp dmo_inv' loadWord_inv)
+  by (wpsimp wp: dmo_inv' loadWord_inv)
 
 lemma capTransferFromWords_inv:
   "\<lbrace>P\<rbrace> capTransferFromWords buffer \<lbrace>\<lambda>_. P\<rbrace>"
