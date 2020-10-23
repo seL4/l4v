@@ -593,47 +593,47 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (simp add: caps isCap_defs Let_def whenE_bindE_throwError_to_if)
         apply (subst cnode_cap_case_if)
         apply (corressimp search: getSlotCap_corres IH
-                              wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
-                            simp: locateSlot_conv)
+                              wp: get_cap_wp getSlotCap_valid hoare_drop_imps
+                            simp: locateSlot_conv stateAssert_def)
         apply (simp add: drop_postfix_eq)
         apply clarsimp
         apply (prove "is_aligned ptr (cte_level_bits + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
-        apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
+         apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
         subgoal premises prems for s s' x
           apply (insert prems)
           apply (rule context_conjI)
-            apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
-            apply (simp add: caps lookup_failure_map_def)
-            apply (rule conjI)
-            apply (clarsimp split: if_splits)
-            apply (intro conjI impI allI;clarsimp?)
-            apply (subst \<open>to_bl _ = _\<close>[symmetric])
-            apply (drule postfix_dropD)
-            apply clarsimp
-            apply (prove "32 + (cbits + length guard) - length cref =
-                         (cbits + length guard) + (32 - length cref)")
-             apply (drule len_drop_lemma, simp, arith)
-            apply simp
-            apply (subst drop_drop [symmetric])
-           subgoal by simp
-              apply (erule (2) valid_CNodeCapE)
-              apply (rule cap_table_at_cte_at[OF _ refl])
-              apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
-             apply (frule (2) cte_wp_valid_cap)
+           apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
+          apply (simp add: caps lookup_failure_map_def)
+          apply (rule conjI)
+           apply (clarsimp split: if_splits)
+           apply (intro conjI impI allI;clarsimp?)
+             apply (subst \<open>to_bl _ = _\<close>[symmetric])
+             apply (drule postfix_dropD)
+             apply clarsimp
+             apply (prove "32 + (cbits + length guard) - length cref =
+                          (cbits + length guard) + (32 - length cref)")
+              apply (drule len_drop_lemma, simp, arith)
+             apply simp
+             apply (subst drop_drop [symmetric])
+             subgoal by simp
+            apply (erule (2) valid_CNodeCapE)
+            apply (rule cap_table_at_cte_at[OF _ refl])
+            apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
+           apply (frule (2) cte_wp_valid_cap)
            apply (rule context_conjI)
            apply (intro conjI impI allI;clarsimp?)
             apply (erule (2) valid_CNodeCapE)
             apply (erule (3) cte_map_shift')
             apply simp
-              apply (erule (1) cte_map_shift; assumption?)
-              subgoal by simp
-              apply (clarsimp simp: cte_level_bits_def)
-           apply (rule conjI)
-             apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
-             apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
-           apply (clarsimp split: if_splits)
-           done
-         done
+           apply (erule (1) cte_map_shift; assumption?)
+           subgoal by simp
+          apply (clarsimp simp: cte_level_bits_def)
+          apply (rule conjI)
+           apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
+          apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
+          apply (clarsimp split: if_splits)
+          done
+        done
     }
     ultimately
     show ?thesis by fast

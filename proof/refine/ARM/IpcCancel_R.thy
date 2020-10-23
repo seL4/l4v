@@ -895,6 +895,7 @@ lemma blockedCancelIPC_st_tcb_at:
   unfolding blockedCancelIPC_def Let_def getBlockingObject_def
   apply (wpsimp wp: setThreadState_st_tcb_at'_cases replyUnlink_st_tcb_at' hoare_vcg_imp_lift'
                     getEndpoint_wp)
+  apply fastforce
   done
 
 lemma cancelIPC_st_tcb_at:

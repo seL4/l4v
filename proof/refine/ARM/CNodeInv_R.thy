@@ -6531,18 +6531,18 @@ lemma replyPop_st_tcb_at':
   by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected replyUnlink_st_tcb_at'
                  hoare_drop_imp hoare_vcg_if_lift2  )
 
-lemma replyRemove_sc_tcb_at':
+lemma replyRemove_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
   shows "replyRemove a b \<lbrace>st_tcb_at' P t\<rbrace>"
   unfolding replyRemove_def
-  by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected replyPop_st_tcb_at' hoare_drop_imp hoare_vcg_if_lift2
-                 replyUnlink_st_tcb_at')
+  by (wpsimp wp: setThreadState_st_tcb_at'_test_unaffected replyPop_st_tcb_at'
+                 hoare_drop_imps hoare_vcg_if_lift2 replyUnlink_st_tcb_at')
 
 lemma replyClear_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
   shows "replyClear a b \<lbrace>st_tcb_at' P t\<rbrace>"
   unfolding replyClear_def
-  by (wpsimp wp: replyUnlink_st_tcb_at' replyRemove_sc_tcb_at' cancelIPC_st_tcb_at hoare_drop_imp)
+  by (wpsimp wp: replyUnlink_st_tcb_at' replyRemove_st_tcb_at' cancelIPC_st_tcb_at hoare_drop_imp)
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -8541,7 +8541,7 @@ lemma cteMove_invs' [wp]:
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
       apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift haskell_assert_inv
+      apply (wp cur_tcb_lift valid_queues_lift hoare_drop_imps
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
   apply (clarsimp simp: o_def)
   done
