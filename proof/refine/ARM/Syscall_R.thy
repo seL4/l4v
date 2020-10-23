@@ -501,28 +501,35 @@ crunches sendSignal, setDomain
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T t s)"
   (simp: crunch_simps wp: crunch_wps whileM_inv)
 
-lemmas checkCap_inv_typ_at'
-  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for P T p]
-
 crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
-         performIRQControl, invokeIRQHandler, sendIPC,
-         invokeSchedContext, invokeSchedControlConfigure
+         performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC,
+         invokeSchedContext, invokeSchedControlConfigure, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps
-   wp: crunch_wps checkCap_inv_typ_at' hoare_vcg_all_lift whileM_inv
+   wp: crunch_wps checkCap_inv hoare_vcg_all_lift whileM_inv
    ignore: checkCapAt)
 
-lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
-lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
-lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF performIRQControl_typ_at']
-lemmas invokeIRQHandler_typ_ats[wp] = typ_at_lifts [OF invokeIRQHandler_typ_at']
-lemmas sendIPC_typ_ats[wp] = typ_at_lifts [OF sendIPC_typ_at']
-lemmas invokeSchedContext_typ_ats[wp] = typ_at_lifts [OF invokeSchedContext_typ_at']
-lemmas invokeSchedControlConfigure_typ_ats[wp] = typ_at_lifts [OF invokeSchedControlConfigure_typ_at']
+end
 
-lemma invokeIRQHandler_Decls_H[wp]:
-  "InterruptDecls_H.invokeIRQHandler i \<lbrace>tcb_at' tptr\<rbrace>"
-  unfolding Interrupt_H.invokeIRQHandler_def by wpsimp
+global_interpretation invokeTCB: typ_at_all_props' "invokeTCB i"
+  by typ_at_props'
+global_interpretation doReplyTransfer: typ_at_all_props' "doReplyTransfer s r g"
+  by typ_at_props'
+global_interpretation performIRQControl: typ_at_all_props' "performIRQControl i"
+  by typ_at_props'
+sublocale Arch < arch_invokeIRQHandler: typ_at_all_props' "invokeIRQHandler i"
+  by typ_at_props'
+global_interpretation invokeIRQHandler: typ_at_all_props' "InterruptDecls_H.invokeIRQHandler i"
+  by typ_at_props'
+global_interpretation sendIPC: typ_at_all_props' "sendIPC bl call bdg cg cgr cd t' ep"
+  by typ_at_props'
+global_interpretation invokeSchedContext: typ_at_all_props' "invokeSchedContext i"
+  by typ_at_props'
+global_interpretation invokeSchedControlConfigure: typ_at_all_props' "invokeSchedControlConfigure i"
+  by typ_at_props'
+global_interpretation handleFault: typ_at_all_props' "handleFault t ex"
+  by typ_at_props'
 
 lemma pinv_tcb'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' tptr
@@ -548,6 +555,8 @@ lemma sts_mcpriority_tcb_at'[wp]:
    apply (wp threadSet_obj_at'_really_strongest
                | simp add: pred_tcb_at'_def)+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
@@ -1332,10 +1341,6 @@ lemma hinv_invs'[wp]:
                        elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                         dest: st_tcb_at_idle_thread')+
   done
-
-crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
-
-lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
 lemma hs_corres:
   "corres (dc \<oplus> dc)

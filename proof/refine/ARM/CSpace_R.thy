@@ -1044,6 +1044,8 @@ lemma cap_move_corres:
   apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
   by(clarsimp simp: cte_map_inj_eq valid_pspace_def split: if_split_asm)
 
+end
+
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
@@ -1117,8 +1119,8 @@ lemma setCTE_norq [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
-lemma setCTE_release_queue [wp]:
-  "\<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReleaseQueue s) \<rbrace>"
+lemma setCTE_ksReleaseQueue[wp]:
+  "setCTE ptr cte \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
 lemma setCTE_norqL1 [wp]:
@@ -1129,10 +1131,6 @@ lemma setCTE_norqL2 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL2Bitmap s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
-lemma setCTE_no_ksReleaseQueue[wp]:
-  "setCTE ptr cte \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
-  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
-
 crunches cteInsert
   for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and norq[wp]:  "\<lambda>s. P (ksReadyQueues s)"
@@ -1140,11 +1138,17 @@ crunches cteInsert
   and norqL2[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   and norlq[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: updateObject_cte_inv crunch_wps ignore_del: setObject)
 
-lemmas updateMDB_typ_ats [wp] = typ_at_lifts [OF updateMDB_typ_at']
-lemmas updateCap_typ_ats [wp] = typ_at_lifts [OF updateCap_typ_at']
-lemmas cteInsert_typ_ats [wp] = typ_at_lifts [OF cteInsert_typ_at']
+global_interpretation updateMDB: typ_at_all_props' "updateMDB slot f"
+  by typ_at_props'
+
+global_interpretation updateCap: typ_at_all_props' "updateCap slot newCap"
+  by typ_at_props'
+
+global_interpretation cteInsert: typ_at_all_props' "cteInsert newCap srcSlot destSlot"
+  by typ_at_props'
 
 lemma setObject_cte_ct:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject t (v::cte) \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
@@ -1152,7 +1156,7 @@ lemma setObject_cte_ct:
 
 crunch ct[wp]: cteInsert "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_cte_ct hoare_drop_imps)
-end
+
 context mdb_insert
 begin
 interpretation Arch . (*FIXME: arch_split*)
@@ -5553,7 +5557,7 @@ lemma setCTE_set_cap_release_queue_relation_valid_corres:
       and step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
   shows "release_queue_relation (release_queue t)(ksReleaseQueue t')"
   apply (rule use_valid[OF step_abs set_cap.valid_sched_pred])
-  apply (rule use_valid[OF step_conc setCTE_no_ksReleaseQueue])
+  apply (rule use_valid[OF step_conc setCTE_ksReleaseQueue])
   apply (rule pre)
   done
 

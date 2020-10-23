@@ -2699,58 +2699,6 @@ lemma koType_obj_range':
             split: kernel_object.splits arch_kernel_object.splits)
   done
 
-lemma typ_at_lift_valid_untyped':
-  assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
-  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
-  apply (clarsimp simp: valid_untyped'_def split del:if_split)
-  apply (rule hoare_vcg_all_lift)
-  apply (clarsimp simp: valid_def split del:if_split)
-  apply (frule ko_wp_typ_at')
-  apply clarsimp
-  apply (cut_tac T=T and p=ptr' in P)
-  apply (simp add: valid_def)
-  apply (erule_tac x=s in allE)
-  apply (erule impE)
-   prefer 2
-   apply (drule (1) bspec)
-   apply simp
-  apply (clarsimp simp: typ_at'_def ko_wp_at'_def simp del:atLeastAtMost_iff)
-  apply (elim disjE)
-    apply (clarsimp simp:psubset_eq simp del:atLeastAtMost_iff)
-   apply (frule_tac p=ptr' in koType_obj_range', clarsimp)
-    apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
-   apply simp
-  apply (frule_tac p = ptr' in koType_obj_range', clarsimp)
-   apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
-  apply simp
-  done
-
-lemma typ_at_lift_valid_cap':
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
-  including no_pre
-  apply (simp add: valid_cap'_def)
-  apply wp
-  apply (case_tac cap;
-         wpsimp wp: valid_cap'_def P typ_at_lifts_strong
-                    hoare_vcg_prop  typ_at_lift_cte_at'
-                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at']
-                    hoare_vcg_conj_lift)
-     apply (rename_tac zombie_type nat)
-     apply (case_tac zombie_type; simp)
-      apply (wp typ_at_lifts_strong[where P=id, simplified] P
-                hoare_vcg_all_lift)+
-    apply (rename_tac arch_capability)
-    apply (case_tac arch_capability,
-           simp_all add: P [where P=id, simplified] page_table_at'_def
-                         hoare_vcg_prop page_directory_at'_def All_less_Ball
-              split del: if_split)
-       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped' sz
-                 hoare_vcg_all_lift typ_at_lifts_strong)+
-  done
-
 lemma typ_at_lift_valid_irq_node':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>valid_irq_node' p\<rbrace> f \<lbrace>\<lambda>_. valid_irq_node' p\<rbrace>"
@@ -2847,8 +2795,6 @@ private ML_goal typ_at_lifts_internal:
 
 lemmas typ_at_lifts = typ_at_lifts_internal
                       typ_at_lift_cte_at'
-                      typ_at_lift_valid_untyped'
-                      typ_at_lift_valid_cap'
                       valid_pde_lift'
                       valid_pte_lift'
                       valid_asid_pool_lift'
@@ -2859,6 +2805,117 @@ lemmas typ_at_lifts = typ_at_lifts_internal
                       valid_ntfn_lift'
                       valid_sc_lift'
 end
+
+lemma typ_at_lift_valid_untyped':
+  assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
+  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
+  apply (clarsimp simp: valid_untyped'_def split del:if_split)
+  apply (rule hoare_vcg_all_lift)
+  apply (clarsimp simp: valid_def split del:if_split)
+  apply (frule ko_wp_typ_at')
+  apply clarsimp
+  apply (cut_tac T=T and p=ptr' in P)
+  apply (simp add: valid_def)
+  apply (erule_tac x=s in allE)
+  apply (erule impE)
+   prefer 2
+   apply (drule (1) bspec)
+   apply simp
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def simp del:atLeastAtMost_iff)
+  apply (elim disjE)
+    apply (clarsimp simp:psubset_eq simp del:atLeastAtMost_iff)
+   apply (frule_tac p=ptr' in koType_obj_range', clarsimp)
+    apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
+   apply simp
+  apply (frule_tac p = ptr' in koType_obj_range', clarsimp)
+   apply (fastforce simp: ko_wp_at'_def dest!: use_valid [OF _ sz])
+  apply simp
+  done
+
+lemma typ_at_lift_valid_cap':
+  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  assumes sz: "\<And>p n. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
+  including no_pre
+  apply (simp add: valid_cap'_def)
+  apply wp
+  apply (case_tac cap;
+         wpsimp wp: valid_cap'_def P typ_at_lifts_strong
+                    hoare_vcg_prop  typ_at_lift_cte_at'
+                    hoare_vcg_conj_lift [OF typ_at_lift_cte_at']
+                    hoare_vcg_conj_lift)
+     apply (rename_tac zombie_type nat)
+     apply (case_tac zombie_type; simp)
+      apply (wp typ_at_lifts_strong[where P=id, simplified] P
+                hoare_vcg_all_lift)+
+    apply (rename_tac arch_capability)
+    apply (case_tac arch_capability,
+           simp_all add: P [where P=id, simplified] page_table_at'_def
+                         hoare_vcg_prop page_directory_at'_def All_less_Ball
+              split del: if_split)
+       apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped' sz
+                 hoare_vcg_all_lift typ_at_lifts_strong)+
+  done
+
+lemma typ_at'_valid_obj'_lift:
+  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift
+               typ_at_lifts[OF P] typ_at_lift_valid_cap'[OF P]
+  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
+  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
+        apply (rename_tac endpoint)
+        apply (case_tac endpoint; simp add: valid_ep'_def, wp)
+       apply (rename_tac notification)
+       apply (case_tac "ntfnObj notification";
+               simp add: valid_ntfn'_def split: option.splits;
+               (wpsimp|rule conjI)+)
+      apply (rename_tac tcb)
+      apply (case_tac "tcbState tcb";
+             simp add: valid_tcb'_def valid_tcb_state'_def split_def;
+             wpsimp wp: sz)
+     apply (wpsimp simp: valid_cte'_def sz)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac arch_kernel_object; wpsimp wp: sz)
+   apply wpsimp
+  apply (wpsimp simp: valid_reply'_def)
+  done
+
+lemmas typ_at_sc_at'_n_lifts =
+  typ_at_lift_valid_untyped' typ_at_lift_valid_cap' typ_at'_valid_obj'_lift
+
+lemmas typ_at_lifts_all = typ_at_lifts typ_at_sc_at'_n_lifts
+
+end
+
+locale typ_at_props' =
+  fixes f :: "'a kernel"
+  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
+begin
+
+lemmas typ_at_lifts'[wp] = typ_at_lifts[REPEAT [OF typ']]
+
+end
+
+locale typ_at_all_props' = typ_at_props' +
+  assumes scs: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
+begin
+
+lemmas typ_at_sc_at'_n_lifts'[wp] = typ_at_sc_at'_n_lifts[OF typ' scs]
+
+context begin
+(* We want to enforce that typ_at_sc_at'_n_lifts' only contains lemmas that have no
+   assumptions. The following thm statements should fail if this is not true. *)
+private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
+thm typ_at_lifts'[atomized, THEN check_valid_internal]
+thm typ_at_sc_at'_n_lifts'[atomized, THEN check_valid_internal]
+end
+
+end
+
+(* we expect typ_at' and sc_at'_n lemmas to be [wp], so this should be easy: *)
+method typ_at_props' = unfold_locales; wp?
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
@@ -3022,23 +3079,6 @@ lemma valid_mdb_ctesI [intro]:
     class_links m; distinct_zombies m; irq_control m \<rbrakk>
   \<Longrightarrow> valid_mdb_ctes m"
   unfolding valid_mdb_ctes_def by auto
-
-end
-
-locale typ_at_props' =
-  fixes f :: "'a kernel"
-  assumes typ': "f \<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace>"
-begin
-
-lemmas typ_ats'[wp] = typ_at_lifts[OF typ']
-
-end
-
-locale typ_at_ctes_of_props' = typ_at_props' +
-  assumes ctes: "f \<lbrace>\<lambda>s. Q (cte_wp_at' P ps)\<rbrace>"
-
-(* we expect typ_at' lemmas to be [wp], so this should be easy: *)
-method typ_at_props' = unfold_locales, wp
 
 locale PSpace_update_eq =
   fixes f :: "kernel_state \<Rightarrow> kernel_state"

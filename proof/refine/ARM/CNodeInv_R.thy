@@ -1186,11 +1186,6 @@ lemma ctes_of_strng:
   \<longrightarrow> (\<exists>cte. cte_wp_at' ((=) cte) ptr s \<and> P cte)"
   by (clarsimp simp: cte_wp_at_ctes_of)
 
-lemma updateCap_valid_cap [wp]:
-  "\<lbrace>valid_cap' cap\<rbrace> updateCap ptr cap' \<lbrace>\<lambda>r. valid_cap' cap\<rbrace>"
-  unfolding updateCap_def
-  by (wp setCTE_valid_cap getCTE_wp) (clarsimp dest!: cte_at_cte_wp_atD)
-
 lemma mdb_chain_0_trancl:
   assumes chain: "mdb_chain_0 m"
   and   n0: "no_0 m"
@@ -6116,7 +6111,7 @@ lemma finaliseCap_True_sch_act_simple[wp]:
 lemma cteDeleteOne_sch_act_simple[wp]:
   "cteDeleteOne cte_ptr \<lbrace>sch_act_simple\<rbrace>"
   unfolding cteDeleteOne_def finaliseCapTrue_standin_simple_def
-  apply (wpsimp comb: sch_act_simple_lift)
+  apply (wpsimp wp: haskell_assert_inv comb: sch_act_simple_lift)
   done
 
 crunches deletingIRQHandler, unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
@@ -6407,14 +6402,19 @@ lemma cteDelete_invs':
 
 declare cases_simp_conj[simp]
 
-crunch typ_at'[wp]: capSwapForDelete "\<lambda>s. P (typ_at' T p s)"
+end
+crunches capSwapForDelete
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps)
 
-lemma cteDelete_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> cteDelete slot exposed \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wp cteDelete_preservation | simp | fastforce)+
+crunches cteDelete
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (rule: cteDelete_preservation)
 
-lemmas cteDelete_typ_at'_lifts [wp] = typ_at_lifts [OF cteDelete_typ_at']
+global_interpretation cteDelete: typ_at_all_props' "cteDelete slot exposed"
+  by typ_at_props'
 
 lemma cteDelete_cte_at:
   "\<lbrace>\<top>\<rbrace> cteDelete slot bool \<lbrace>\<lambda>rv. cte_at' slot\<rbrace>"
@@ -6513,6 +6513,8 @@ lemma cteDelete_sch_act_simple:
     apply (wp finaliseSlot_sch_act_simple)
     apply simp+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
          schedContextMaybeUnbindNtfn, cleanReply
@@ -6909,10 +6911,15 @@ lemma spec_corres_gen_asm2:
   unfolding spec_corres_def
   by (auto intro: corres_gen_asm2)
 
-crunch typ_at'[wp]: reduceZombie "\<lambda>s. P (typ_at' T p s)"
+end
+
+crunches reduceZombie
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-lemmas reduceZombie_typ_ats[wp] = typ_at_lifts [OF reduceZombie_typ_at']
+global_interpretation reduceZombie: typ_at_all_props' "reduceZombie cap slot x"
+  by typ_at_props'
 
 lemma spec_corres_if:
   "\<lbrakk> G = G'; G \<Longrightarrow> spec_corres s r P P' a c; \<not> G \<Longrightarrow> spec_corres s r Q Q' b d\<rbrakk>
@@ -6935,6 +6942,8 @@ lemmas finaliseSlot_typ_ats[wp] = typ_at_lifts[OF finaliseSlot_typ_at']
 
 lemmas rec_del_valid_list_irq_state_independent[wp] =
   rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list preemption_point_valid_list]
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
@@ -7408,9 +7417,10 @@ qed
 lemmas cteRevoke_preservation =
        validE_valid [OF use_spec(2) [OF cteRevoke_preservation']]
 
-lemma cteRevoke_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (wp cteRevoke_preservation | clarsimp)+
+crunches cteRevoke
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (rule: cteRevoke_preservation)
 
 lemma cteRevoke_invs':
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -7722,13 +7732,18 @@ qed
 
 lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
 
-crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
+end
+
+crunches invokeCNode
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (ignore: filterM finaliseSlot
      simp: crunch_simps filterM_mapM unless_def
            arch_recycleCap_improve_cases
        wp: crunch_wps undefined_valid finaliseSlot_preservation)
 
-lemmas invokeCNode_typ_ats [wp] = typ_at_lifts [OF invokeCNode_typ_at']
+global_interpretation invokeCNode: typ_at_all_props' "invokeCNode i"
+  by typ_at_props'
 
 crunch st_tcb_at'[wp]: cteMove "st_tcb_at' P t"
   (wp: crunch_wps)
@@ -7772,8 +7787,6 @@ lemma updateCap_valid_objs [wp]:
   apply clarsimp
   apply (erule cte_at_cte_wp_atD)
   done
-
-end
 
 lemma (in mdb_move) [intro!]:
   shows "mdb_chain_0 m" using valid
@@ -8576,13 +8589,18 @@ lemma cteMove_ex:
   apply clarsimp
   done
 
-lemmas cteMove_typ_at_lifts [wp] = typ_at_lifts [OF cteMove_typ_at']
+end
+
+global_interpretation cteMove: typ_at_all_props' "cteMove cap src dest"
+  by typ_at_props'
 
 lemmas finalise_slot_corres'
     = rec_del_corres[where args="FinaliseSlotCall slot exp",
                      simplified rec_del_concrete.simps,
                      simplified, folded finalise_slot_def] for slot exp
 lemmas finalise_slot_corres = use_spec_corres [OF finalise_slot_corres']
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cap_relation_same:
   "\<lbrakk> cap_relation cap cap'; cap_relation cap cap'' \<rbrakk>

@@ -69,8 +69,10 @@ locale delete_one_conc_pre =
   assumes delete_one_st_tcb_at:
     "\<And>P. (\<And>st. simple' st \<longrightarrow> P st) \<Longrightarrow>
      \<lbrace>st_tcb_at' P t\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  assumes delete_one_typ_at:
+  assumes delete_one_typ_at[wp]:
     "\<And>P. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  assumes delete_one_sc_at'_n[wp]:
+    "\<And>P. cteDeleteOne slot \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace>"
   assumes delete_one_aligned:
     "\<lbrace>pspace_aligned'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   assumes delete_one_distinct:
@@ -126,12 +128,8 @@ context begin interpretation Arch .
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
 end
 
-context delete_one_conc_pre
-begin
-
-lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
-
-end
+sublocale delete_one_conc_pre < delete_one: typ_at_all_props' "cteDeleteOne slot"
+  by typ_at_props'
 
 declare if_weak_cong [cong]
 declare delete_remove1 [simp]
@@ -2102,8 +2100,6 @@ lemma restart_thread_if_no_fault_corres:
   apply (fastforce simp: obj_at'_def projectKOs valid_tcb_state'_def)
   done
 
-lemmas replyUnlink_typ_ats[wp] = typ_at_lifts[OF replyUnlink_typ_at']
-
 (* FIXME RT: move to AInvs *)
 lemma restart_thread_if_no_fault_tcb_sts_of_other:
   "\<lbrace>\<lambda>s. Q (pred_map P (tcb_sts_of s) t') \<and> t \<noteq> t'\<rbrace>
@@ -2149,6 +2145,7 @@ crunches possibleSwitchTo
   and valid_arch'[wp]: valid_arch_state'
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and irq_states' [wp]: valid_irq_states'
@@ -2165,7 +2162,8 @@ crunches possibleSwitchTo
   and valid_irq_handlers'[wp]: valid_irq_handlers'
   (wp: crunch_wps cur_tcb_lift valid_irq_handlers_lift'' simp: crunch_simps)
 
-lemmas possibleSwitchTo_typ_ats[wp] = typ_at_lifts[OF possibleSwitchTo_typ_at']
+global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
+  by typ_at_props'
 
 lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
@@ -2312,9 +2310,11 @@ crunches cancelAllIPC_loop_body
   and valid_tcbs'[wp]: valid_tcbs'
   and tcb_at'[wp]: "\<lambda>s. tcb_at' threadPtr s"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: valid_tcb_state'_def)
 
-lemmas cancelAllIPC_loop_body_typ_ats[wp] = typ_at_lifts[OF cancelAllIPC_loop_body_typ_at']
+global_interpretation cancelAllIPC_loop_body: typ_at_all_props' "cancelAllIPC_loop_body t"
+  by typ_at_props'
 
 lemma cancelAllIPC_loop_body_valid_queues:
   "\<lbrace>\<lambda>s. valid_queues s \<and> valid_tcbs' s\<rbrace>

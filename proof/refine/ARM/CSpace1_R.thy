@@ -437,6 +437,7 @@ proof -
   done
 qed
 
+end
 
 lemma cte_map_shift:
   assumes bl: "to_bl cref' = zs @ cref"
@@ -768,15 +769,12 @@ lemma setObject_cte_obj_at_tcb':
                         Structures_H.kernel_object.split_asm)
   done
 
-lemma setCTE_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setCTE c cte \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
-  by (wpsimp simp: setCTE_def wp: setObject_typ_at')
+crunches setCTE
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-lemma setCTE_typ_at [wp]:
-  "\<lbrace>typ_at' T p\<rbrace> setCTE c cte \<lbrace>\<lambda>_. typ_at' T p\<rbrace>"
-  by (wpsimp simp: setCTE_def wp: setObject_typ_at')
-
-lemmas setCTE_typ_ats [wp] = typ_at_lifts [OF setCTE_typ_at']
+global_interpretation setCTE: typ_at_all_props' "setCTE p v"
+  by typ_at_props'
 
 lemma setObject_cte_ksCurDomain[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> setObject ptr (cte::cte) \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
@@ -876,18 +874,7 @@ lemma cap_insert_objs' [wp]:
    cteInsert cap src dest \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   including no_pre
   apply (simp add: cteInsert_def updateCap_def setUntypedCapAsFull_def bind_assoc split del: if_split)
-  apply (wp setCTE_valid_objs)
-      apply simp
-      apply wp+
-      apply (clarsimp simp: updateCap_def)
-        apply (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
-                              ko_wp_at'_def ps_clear_upd' lookupAround2_char1)
-        apply (case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
-       apply (wpsimp simp: updateObject_cte in_monad typeError_def
-                    split: kernel_object.split_asm)
-      apply (wp|simp)+
-    apply (rule hoare_drop_imp)+
-    apply wp+
+  apply (wpsimp wp: setCTE_valid_objs | rule hoare_drop_imp)+
   apply (rule hoare_strengthen_post[OF getCTE_sp])
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                  dest!: ctes_of_valid_cap'')
@@ -903,14 +890,7 @@ lemma cteInsert_weak_cte_wp_at:
   apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at static_imp_wp | simp)+
    apply (wp getCTE_ctes_wp)+
    apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
-done
-
-lemma setCTE_valid_cap:
-  "\<lbrace>valid_cap' c\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r. valid_cap' c\<rbrace>"
-  by (rule typ_at_lifts, rule setCTE_typ_at')
-     (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
-                              ko_wp_at'_def ps_clear_upd' lookupAround2_char1,
-      case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
+  done
 
 lemma set_is_modify:
   "m p = Some cte \<Longrightarrow>
@@ -951,6 +931,8 @@ abbreviation
 
 abbreviation
   "revokable' a b \<equiv> global.isCapRevocable b a"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare arch_is_cap_revocable_def[simp] ARM_H.isCapRevocable_def[simp]
 
@@ -4829,15 +4811,9 @@ lemma setUntypedCapAsFull_valid_cap:
   "\<lbrace>valid_cap' cap and cte_wp_at' ((=) srcCTE) slot\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) c slot
    \<lbrace>\<lambda>r. valid_cap' cap\<rbrace>"
-  apply (clarsimp simp:setUntypedCapAsFull_def split:if_splits)
+  apply (clarsimp simp:setUntypedCapAsFull_def updateCap_def split:if_splits)
   apply (intro conjI impI)
-    apply (clarsimp simp:updateCap_def)
-  apply (wp|clarsimp)+
-     apply (clarsimp simp: valid_def setObject_def setCTE_def in_monad split_def
-                           ko_wp_at'_def ps_clear_upd' lookupAround2_char1
-                    split: if_splits)
-     apply (case_tac ko; clarsimp simp: updateObject_cte in_fail typeError_def)
-    apply (wp|clarsimp)+
+   apply wpsimp+
   done
 
 lemma cteCap_update_simps:

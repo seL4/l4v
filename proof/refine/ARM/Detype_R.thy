@@ -2035,7 +2035,7 @@ qed
 lemmas pspace_no_overlap'_lift2 = pspace_no_overlap'_lift[where Q=\<top>, simplified]
 
 crunches setCTE, insertNewCap
-  for sc_at'_n[wp]: "sc_at'_n n p"
+  for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma setCTE_pspace_no_overlap':

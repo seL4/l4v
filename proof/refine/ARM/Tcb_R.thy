@@ -939,16 +939,17 @@ lemma setP_invs':
   apply clarsimp
   done *)
 
+end
+
 crunches setPriority, setMCPriority
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  (simp: crunch_simps wp: crunch_wps)
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps)
 
-lemmas setPriority_typ_ats [wp] = typ_at_lifts [OF setPriority_typ_at']
-
-crunches setPriority, setMCPriority
-  for valid_cap[wp]: "valid_cap' c"
-  (wp: getObject_tcb_inv crunch_wps)
-
+global_interpretation setPriority: typ_at_all_props' "setPriority t prio"
+  by typ_at_props'
+global_interpretation setMCPriority: typ_at_all_props' "setMCPriority t prio"
+  by typ_at_props'
 
 definition
   newroot_rel :: "(cap \<times> cslot_ptr) option \<Rightarrow> (capability \<times> machine_word) option \<Rightarrow> bool"
@@ -968,6 +969,8 @@ termination recursive
    apply (rule wf_measure [where f=fst])
   apply simp
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma cte_map_tcb_0:
   "cte_map (t, tcb_cnode_index 0) = t"
@@ -1374,15 +1377,15 @@ lemma getThreadBufferSlot_dom_tcb_cte_cases:
 
 lemma tcb_at'_cteInsert[wp]:
   "\<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace> cteInsert t x y \<lbrace>\<lambda>_ s. tcb_at' (ksCurThread s) s\<rbrace>"
-  by (rule hoare_weaken_pre, wps cteInsert_ct, wp, simp)
+  by (rule hoare_weaken_pre, wps, wp, simp)
 
 lemma tcb_at'_asUser[wp]:
   "\<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace> asUser a f \<lbrace>\<lambda>_ s. tcb_at' (ksCurThread s) s\<rbrace>"
-  by (rule hoare_weaken_pre, wps asUser_typ_ats(1), wp, simp)
+  by (rule hoare_weaken_pre, wps, wp, simp)
 
 lemma tcb_at'_threadSet[wp]:
   "\<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. b)) a \<lbrace>\<lambda>_ s. tcb_at' (ksCurThread s) s\<rbrace>"
-  by (rule hoare_weaken_pre, wps threadSet_tcb', wp, simp)
+  by (rule hoare_weaken_pre, wps, wp, simp)
 
 lemma cteDelete_it [wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> cteDelete slot e \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
@@ -1836,8 +1839,6 @@ proof -
             apply (wp add: stuff hoare_vcg_all_lift_R hoare_vcg_all_lift
                                  hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift setMCPriority_invs'
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
-                                 typ_at_lifts [OF setPriority_typ_at']
-                                 typ_at_lifts [OF setMCPriority_typ_at']
                                  threadSet_cap_to' out_pred_tcb_at_preserved assertDerived_wp
                       del: cteInsert_invs
                    | simp add: ran_tcb_cap_cases split_def U V
@@ -2208,8 +2209,6 @@ proof -
             apply (wp add: stuff hoare_vcg_all_lift_R hoare_vcg_all_lift
                                  hoare_vcg_const_imp_lift_R hoare_vcg_const_imp_lift setMCPriority_invs'
                                  threadSet_valid_objs' thread_set_not_state_valid_sched setP_invs'
-                                 typ_at_lifts [OF setPriority_typ_at']
-                                 typ_at_lifts [OF setMCPriority_typ_at']
                                  threadSet_cap_to' out_pred_tcb_at_preserved assertDerived_wp
                       del: cteInsert_invs
                    | simp add: ran_tcb_cap_cases split_def U V
@@ -2262,7 +2261,6 @@ lemma tc_caps_invs':
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
-               typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (wp add: setP_invs' static_imp_wp hoare_vcg_all_lift)+
       apply (rule case_option_wp_None_return[OF setP_invs'[simplified pred_conj_assoc]])
@@ -2304,7 +2302,6 @@ lemma tc_sched_invs':
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
-               typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (wp add: setP_invs' static_imp_wp hoare_vcg_all_lift)+
       apply (rule case_option_wp_None_return[OF setP_invs'[simplified pred_conj_assoc]])
