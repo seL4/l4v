@@ -2711,7 +2711,12 @@ lemma no_default_zombie:
   "cap_relation (default_cap tp p sz d) cap \<Longrightarrow> \<not>isZombie cap"
   by (cases tp, auto simp: isCap_simps)
 
-lemmas updateNewFreeIndex_typ_ats[wp] = typ_at_lifts[OF updateNewFreeIndex_typ_at']
+end
+
+global_interpretation updateNewFreeIndex: typ_at_all_props' "updateNewFreeIndex slot"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma updateNewFreeIndex_valid_objs[wp]:
   "\<lbrace>valid_objs'\<rbrace> updateNewFreeIndex slot \<lbrace>\<lambda>_. valid_objs'\<rbrace>"

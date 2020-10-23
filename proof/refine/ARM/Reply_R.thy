@@ -46,10 +46,12 @@ lemma replyUnlink_st_tcb_at'_sym_ref:
 crunches cleanReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (rule: weak_sch_act_wf_lift)
 
-lemmas cleanReply_typ_ats[wp] = typ_at_lifts[OF cleanReply_typ_at']
+global_interpretation cleanReply: typ_at_all_props' "cleanReply p"
+  by typ_at_props'
 
 lemma replyRemoveTCB_st_tcb_at'_Inactive':
   "\<lbrace>\<top>\<rbrace>
@@ -255,6 +257,7 @@ crunches replyRemoveTCB
   and global_refs'[wp]: "valid_global_refs'"
   and valid_arch'[wp]: "valid_arch_state'"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n T p s)"
   and vms'[wp]: "valid_machine_state'"
   and valid_queues'[wp]: valid_queues'
   and valid_queues[wp]: valid_queues
@@ -264,6 +267,9 @@ crunches replyRemoveTCB
   and pspace_domain_valid[wp]: pspace_domain_valid
   (wp: crunch_wps hoare_vcg_if_lift
    simp: pred_tcb_at'_def if_distribR if_bool_eq_conj)
+
+global_interpretation replyUnlink: typ_at_all_props' "replyUnlink replyPtr tcbPtr"
+  by typ_at_props'
 
 (* FIXME RT: move to...? *)
 lemma valid_mdb'_lift:

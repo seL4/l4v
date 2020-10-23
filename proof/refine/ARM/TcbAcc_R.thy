@@ -1723,11 +1723,15 @@ lemma user_getreg_inv'[wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   by (wp asUser_inv)
 
-lemma asUser_typ_at' [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> asUser t' f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: asUser_def bind_assoc split_def, wp select_f_inv)
+end
 
-lemmas asUser_typ_ats[wp] = typ_at_lifts [OF asUser_typ_at']
+crunches asUser
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps)
+
+global_interpretation asUser: typ_at_all_props' "asUser tptr f"
+  by typ_at_props'
 
 lemma inQ_context[simp]:
   "inQ d p (tcbArch_update f tcb) = inQ d p tcb"
@@ -1886,6 +1890,8 @@ lemma no_fail_asUser [wp]:
   apply simp
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma user_setreg_corres:
   "corres dc (tcb_at t)
              (tcb_at' t)
@@ -1895,6 +1901,8 @@ lemma user_setreg_corres:
   apply (rule corres_as_user')
   apply (rule corres_modify'; simp)
   done
+
+end
 
 lemma gts_corres:
   "corres thread_state_relation (tcb_at t) (tcb_at' t)
@@ -2047,7 +2055,6 @@ lemma setQueue_corres:
   apply (fastforce simp: state_relation_def ready_queues_relation_def swp_def)
   done
 
-
 lemma getQueue_corres: "corres (=) \<top> \<top> (get_tcb_queue qdom prio) (getQueue qdom prio)"
   apply (clarsimp simp add: getQueue_def state_relation_def ready_queues_relation_def get_tcb_queue_def gets_def)
   apply (fold gets_def)
@@ -2075,14 +2082,15 @@ lemma removeFromBitmap_corres_noop:
   by (rule corres_noop)
      (wp | simp add: bitmap_fun_defs state_relation_def | rule no_fail_pre)+
 
-crunch typ_at'[wp]: addToBitmap "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps setCTE_typ_at')
+crunches addToBitmap, removeFromBitmap
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-crunch typ_at'[wp]: removeFromBitmap "\<lambda>s. P (typ_at' T p s)"
-  (wp: hoare_drop_imps setCTE_typ_at')
+global_interpretation addToBitmap: typ_at_all_props' "addToBitmap tdom prio"
+  by typ_at_props'
 
-lemmas addToBitmap_typ_ats [wp] = typ_at_lifts [OF addToBitmap_typ_at']
-lemmas removeFromBitmap_typ_ats [wp] = typ_at_lifts [OF removeFromBitmap_typ_at']
+global_interpretation removeFromBitmap: typ_at_all_props' "removeFromBitmap tdom prio"
+  by typ_at_props'
 
 lemma pspace_relation_tcb_domain_priority:
   "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); kheap s t = Some (TCB tcb);
@@ -3145,6 +3153,8 @@ lemma threadGet_const:
   apply (wp getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 schematic_goal l2BitmapSize_def': (* arch specific consequence *)
   "l2BitmapSize = numeral ?X"
@@ -4456,8 +4466,10 @@ lemma lipcb_corres:
   using lipcb_corres'
   by (rule corres_guard_imp, auto simp: invs'_def valid_state'_def)
 
-
 crunch inv[wp]: lookupIPCBuffer P
+  (wp: crunch_wps)
+
+end
 
 crunches scheduleTCB, possibleSwitchTo
   for pred_tcb_at'[wp]: "\<lambda>s. P' (pred_tcb_at' proj P t s)"
@@ -4637,27 +4649,24 @@ lemma sbn_st_tcb'[wp]:
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification, scheduleTCB
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
 
-lemmas rescheduleRequired_typ_ats[wp] = typ_at_lifts[OF rescheduleRequired_typ_at']
-lemmas tcbSchedDequeue_typ_ats[wp] = typ_at_lifts[OF tcbSchedDequeue_typ_at']
+global_interpretation rescheduleRequired: typ_at_all_props' "rescheduleRequired"
+  by typ_at_props'
 
-lemma setThreadState_ctes_of[wp]:
-  "setThreadState st t \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  apply (clarsimp simp: setThreadState_def)
-  by (wpsimp wp: threadSet_ctes_of)
+global_interpretation tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
+  by typ_at_props'
 
-end
+global_interpretation threadSet: typ_at_all_props' "threadSet f p"
+  by typ_at_props'
 
-lemmas threadSet_typ_at_lifts[wp] = typ_at_lifts [OF threadSet_typ_at']
+global_interpretation setThreadState: typ_at_all_props' "setThreadState st p"
+  by typ_at_props'
 
-interpretation setThreadState: typ_at_ctes_of_props' "setThreadState st p"
-  by (unfold_locales) (wpsimp wp: setThreadState_typ_at')+
-
-interpretation setBoundNotification: typ_at_props' "setBoundNotification v p"
-  by (unfold_locales) (rule setBoundNotification_typ_at')
-
-
+global_interpretation setBoundNotification: typ_at_all_props' "setBoundNotification v p"
+  by typ_at_props'
 
 context begin interpretation Arch .
 

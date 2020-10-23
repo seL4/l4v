@@ -252,11 +252,17 @@ lemma corres_set_extra_badge:
                    add.commute add.left_commute)
   done
 
-crunch typ_at': setExtraBadge "\<lambda>s. P (typ_at' T p s)"
-lemmas setExtraBadge_typ_ats' [wp] = typ_at_lifts [OF setExtraBadge_typ_at']
-crunch valid_pspace' [wp]: setExtraBadge valid_pspace'
-crunch cte_wp_at' [wp]: setExtraBadge "cte_wp_at' P p"
-crunch ipc_buffer' [wp]: setExtraBadge "valid_ipc_buffer_ptr' buffer"
+end
+
+crunches setExtraBadge
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and valid_pspace'[wp]: valid_pspace'
+  and cte_wp_at'[wp]: "cte_wp_at' P p"
+  and ipc_buffer'[wp]: "valid_ipc_buffer_ptr' buffer"
+
+global_interpretation setExtraBadge: typ_at_all_props' "setExtraBadge buffer badge n"
+  by typ_at_props'
 
 crunch inv'[wp]: getExtraCPtr P (wp: dmo_inv' loadWord_inv)
 
@@ -362,6 +368,8 @@ lemma maskedAsFull_null_cap[simp]:
   "(capability.NullCap  = maskedAsFull x y) = (x = capability.NullCap)"
   by (case_tac x, auto simp:maskedAsFull_def isCap_simps )
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma maskCapRights_eq_null:
   "(RetypeDecls_H.maskCapRights r xa = capability.NullCap) =
    (xa = capability.NullCap)"
@@ -377,10 +385,6 @@ lemma cte_refs'_maskedAsFull[simp]:
   apply (case_tac a)
    apply (clarsimp simp:maskedAsFull_def isCap_simps)+
  done
-
-crunches setExtraBadge, cteInsert
-  for sc_at'_n[wp]: "sc_at'_n n p"
-  (simp: crunch_simps wp: crunch_wps)
 
 lemma tc_loop_corres:
   "\<lbrakk> list_all2 (\<lambda>(cap, slot) (cap', slot'). cap_relation cap cap'
@@ -1058,9 +1062,16 @@ lemma tc_corres:
   apply (fastforce simp:valid_cap'_def)
   done
 
-crunch typ_at'[wp]: transferCaps "\<lambda>s. P (typ_at' T p s)"
+end
 
-lemmas transferCaps_typ_ats[wp] = typ_at_lifts [OF transferCaps_typ_at']
+crunches transferCaps
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+
+global_interpretation transferCaps: typ_at_all_props' "transferCaps info caps endpoint receiver receiveBuffer"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare maskCapRights_Reply [simp]
 
@@ -1129,12 +1140,17 @@ lemma get_mrs_inv'[wp]:
           | wp dmo_inv' loadWord_inv mapM_wp'
             asUser_inv det_mapM[where S=UNIV] | wpc)+
 
+end
 
-lemma copyMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: copyMRs_def | wp mapM_wp [where S=UNIV, simplified] | wpc)+
+crunches copyMRs
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps)
 
-lemmas copyMRs_typ_at_lifts[wp] = typ_at_lifts [OF copyMRs_typ_at']
+global_interpretation copyMRs: typ_at_all_props' "copyMRs s sb r rb n"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma copy_mrs_invs'[wp]:
   "\<lbrace> invs' and tcb_at' s and tcb_at' r \<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv. invs' \<rbrace>"
@@ -1411,9 +1427,15 @@ lemmas corres_ipc_info_helper =
   corres_split_maprE [where f = message_info_map, OF _
                                 corres_liftE_lift [OF get_mi_corres]]
 
-crunch typ_at'[wp]: doNormalTransfer "\<lambda>s. P (typ_at' T p s)"
+end
 
-lemmas doNormal_lifts[wp] = typ_at_lifts [OF doNormalTransfer_typ_at']
+crunches doNormalTransfer
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps)
+
+global_interpretation doNormalTransfer: typ_at_all_props' "doNormalTransfer s sb e b g r rb"
+  by typ_at_props'
 
 lemma doNormal_invs'[wp]:
   "\<lbrace>tcb_at' sender and tcb_at' receiver and invs'\<rbrace>
@@ -1453,6 +1475,8 @@ lemma msgFromLookupFailure_map[simp]:
   "msgFromLookupFailure (lookup_failure_map lf)
      = msg_from_lookup_failure lf"
   by (cases lf, simp_all add: lookup_failure_map_def msgFromLookupFailure_def)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma getRestartPCs_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
@@ -1565,13 +1589,19 @@ lemma mk_ft_msg_corres:
 
 crunches makeFaultMessage
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-lemmas makeFaultMessage_typ_ats'[wp] = typ_at_lifts[OF makeFaultMessage_typ_at']
+end
+
+global_interpretation makeFaultMessage: typ_at_all_props' "makeFaultMessage x t"
+  by typ_at_props'
 
 lemmas threadget_fault_corres =
           threadget_corres [where r = fault_rel_optionation
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches make_fault_msg
   for in_user_Frame[wp]: "in_user_frame buffer"
@@ -1818,12 +1848,19 @@ crunches doIPCTransfer
   and ct[wp]: "cur_tcb'"
   and idle'[wp]: "valid_idle'"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
   and valid_arch_state'[wp]: "valid_arch_state'"
   (wp: crunch_wps
    simp: zipWithM_x_mapM ball_conj_distrib )
 
-lemmas dit'_typ_ats[wp] = typ_at_lifts [OF doIPCTransfer_typ_at']
+end
+
+global_interpretation doIPCTransfer: typ_at_all_props' "doIPCTransfer s e b g r"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemmas dit_irq_node'[wp] = valid_irq_node_lift [OF doIPCTransfer_irq_node' doIPCTransfer_typ_at']
 
 declare asUser_global_refs' [wp]
@@ -1842,8 +1879,7 @@ lemma lec_valid_cap' [wp]:
 declare asUser_irq_handlers'[wp]
 
 crunches doIPCTransfer
-  for sc_at'_n[wp]: "sc_at'_n n p"
-  and objs'[wp]: "valid_objs'"
+  for objs'[wp]: "valid_objs'"
   and global_refs'[wp]: "valid_global_refs'"
   and irq_handlers'[wp]: "valid_irq_handlers'"
   and irq_states'[wp]: "valid_irq_states'"
@@ -1902,9 +1938,14 @@ lemma handle_fault_reply_corres:
 
 crunches handleFaultReply
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and ct'[wp]: "\<lambda>s. P (ksCurThread s)"
+  and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
-lemmas hfr_typ_ats[wp] = typ_at_lifts [OF handleFaultReply_typ_at']
+end
+
+global_interpretation handleFaultReply: typ_at_all_props' "handleFaultReply x t l m"
+  by typ_at_props'
 
 lemma doIPCTransfer_sch_act_simple [wp]:
   "\<lbrace>sch_act_simple\<rbrace> doIPCTransfer sender endpoint badge grant receiver \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
@@ -1979,9 +2020,6 @@ lemma replyRemove_valid_objs'[wp]:
                     simp: valid_reply'_def)
   apply (wpsimp wp: replyUnlink_valid_objs')
   done
-
-crunches handleFaultReply
-  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma emptySlot_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -2066,6 +2104,8 @@ lemma cteDeleteOne_weak_sch_act[wp]:
   apply (wp hoare_drop_imps finaliseCapTrue_standin_cur' isFinalCapability_cur'
          | simp add: split_def)+
   oops
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches handleFaultReply
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
@@ -2471,7 +2511,12 @@ proof -
   done *)
 qed
 
-lemmas setMessageInfo_typ_ats[wp] = typ_at_lifts [OF setMessageInfo_typ_at']
+end
+
+global_interpretation setMessageInfo: typ_at_all_props' "setMessageInfo t info"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* Annotation added by Simon Winwood (Thu Jul  1 20:54:41 2010) using taint-mode *)
 declare tl_drop_1[simp]
@@ -3249,13 +3294,19 @@ lemma tcbEPFindIndex_inv[wp]:
   apply (induct i; subst tcbEPFindIndex.simps; wpsimp)
   by simp+ wpsimp+
 
+end
+
 crunches sendFaultIPC, receiveIPC, receiveSignal
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps hoare_vcg_all_lift whileM_inv simp: crunch_simps)
 
-lemmas sendFaultIPC_typ_ats[wp] = typ_at_lifts [OF sendFaultIPC_typ_at']
-lemmas receiveIPC_typ_ats[wp] = typ_at_lifts [OF receiveIPC_typ_at']
-lemmas receiveAIPC_typ_ats[wp] = typ_at_lifts [OF receiveSignal_typ_at']
+global_interpretation sendFaultIPC: typ_at_all_props' "sendFaultIPC t cap f d"
+  by typ_at_props'
+global_interpretation receiveIPC: typ_at_all_props' "receiveIPC t cap b r"
+  by typ_at_props'
+global_interpretation receiveSignal: typ_at_all_props' "receiveSignal t cap b"
+  by typ_at_props'
 
 lemma setCTE_valid_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> setCTE ptr val \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
@@ -3291,6 +3342,8 @@ lemma cteInsert_cap_to':
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of)+
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches setExtraBadge, doIPCTransfer
   for cap_to'[wp]: "ex_nonz_cap_to' p"

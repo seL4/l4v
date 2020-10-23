@@ -35,6 +35,8 @@ lemma updateCap_cte_wp_at_cases:
 crunches postCapDeletion, updateTrackedFreeIndex
   for cte_wp_at'[wp]: "cte_wp_at' P p"
 
+end
+
 lemma updateFreeIndex_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_at' p s \<and> P (cte_wp_at' (if p = p' then P'
       o (cteCap_update (capFreeIndex_update (K idx))) else P') p' s)\<rbrace>
@@ -62,8 +64,13 @@ lemma emptySlot_cte_wp_cap_other:
               | wp (once) hoare_drop_imps)+
   done
 
-lemmas clearUntypedFreeIndex_typ_ats[wp]
-    = typ_at_lifts[OF clearUntypedFreeIndex_typ_at']
+crunches clearUntypedFreeIndex
+  for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+
+global_interpretation clearUntypedFreeIndex: typ_at_all_props' "clearUntypedFreeIndex slot"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch tcb_at'[wp]: postCapDeletion "tcb_at' t"
 crunch ct[wp]: emptySlot "\<lambda>s. P (ksCurThread s)"
@@ -122,10 +129,6 @@ lemma updateFreeIndex_valid_objs' [wp]:
   apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
   apply (wp getCTE_wp' | wpc | simp add: updateTrackedFreeIndex_def)+
   done
-
-crunches clearUntypedFreeIndex, updateMDB
-  for sc_at'_n[wp]: "sc_at'_n n p"
-  (simp: crunch_simps wp: crunch_wps)
 
 crunch valid_objs'[wp]: emptySlot "valid_objs'"
 
@@ -2126,10 +2129,6 @@ definition
   finaliseCapTrue_standin_simple_def:
   "finaliseCapTrue_standin cap fin \<equiv> finaliseCap cap fin True"
 
-context
-notes if_cong [cong]
-begin
-
 lemmas finaliseCapTrue_standin_def
     = finaliseCapTrue_standin_simple_def
         [unfolded finaliseCap_def, simplified]
@@ -2141,14 +2140,15 @@ lemmas cteDeleteOne_def
 
 crunches cteDeleteOne, suspend, prepareThreadDelete
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: crunch_wps  hoare_vcg_if_lift2 hoare_vcg_all_lift
    simp: crunch_simps unless_def o_def)
 
 end
 
-interpretation cancelAllIPC: typ_at_props' "cancelAllIPC x" by typ_at_props'
-interpretation cancelAllSignals: typ_at_props' "cancelAllSignals x" by typ_at_props'
-interpretation suspend: typ_at_props' "suspend x" by typ_at_props'
+global_interpretation cancelAllIPC: typ_at_all_props' "cancelAllIPC x" by typ_at_props'
+global_interpretation cancelAllSignals: typ_at_all_props' "cancelAllSignals x" by typ_at_props'
+global_interpretation suspend: typ_at_all_props' "suspend x" by typ_at_props'
 
 definition
   arch_cap_has_cleanup' :: "arch_capability \<Rightarrow> bool"
@@ -2186,22 +2186,24 @@ lemma finaliseCap_cases[wp]:
   apply (auto simp add: isCap_simps cap_has_cleanup'_def)
   done
 
-(* FIXME RT: move to ArchAcc *)
-lemma getObject_ap_inv: "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>rv::asidpool. P\<rbrace>"
-  apply (rule getObject_inv)
-  apply (simp add: loadObject_default_inv)
-  done
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches finaliseCap
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  (wp: crunch_wps getObject_ap_inv hoare_vcg_all_lift simp: crunch_simps)
+  (wp: crunch_wps setObject_asidpool.getObject_inv hoare_vcg_all_lift simp: crunch_simps)
 
-lemmas finaliseCap_typ_ats[wp] = typ_at_lifts[OF finaliseCap_typ_at']
-lemmas schedContexUpdateConsumed_typ_ats[wp] = typ_at_lifts[OF schedContextUpdateConsumed_typ_at']
+end
+
+global_interpretation finaliseCap: typ_at_all_props' "finaliseCap cap final x"
+  by typ_at_props'
+
+global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
+  by typ_at_props'
 
 lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
@@ -2350,6 +2352,8 @@ lemma finaliseCap_True_invs'[wp]:
                 simp: projectKOs pred_tcb_at'_def obj_at'_def ko_wp_at'_def)[1]
   done
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
 
 lemma ct_not_inQ_ksArchState_update[simp]:
@@ -2414,7 +2418,12 @@ lemma invalidateASIDEntry_valid_ap' [wp]:
   apply (clarsimp simp del: fun_upd_apply)
   done
 
-lemmas flushSpace_typ_ats' [wp] = typ_at_lifts [OF flushSpace_typ_at']
+end
+
+sublocale Arch < flushSpace: typ_at_all_props' "flushSpace asid"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma deleteASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> deleteASID asid pd \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2594,31 +2603,6 @@ lemma unbindNotification_valid_objs'_helper':
   "valid_ntfn' tcb s \<longrightarrow> valid_ntfn' (ntfnBoundTCB_update (\<lambda>_. None) tcb) s "
   by (clarsimp simp: valid_bound_tcb'_def valid_ntfn'_def
                   split: option.splits ntfn.splits)
-
-(* FIXME RT: move up, together with locale instance below *)
-lemma typ_at'_valid_tcb'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes Q: "\<And>P n p. \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (sc_at'_n n p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb' tcb s\<rbrace>"
-  including no_pre
-  apply (simp add: valid_tcb'_def)
-  apply (case_tac "tcbState tcb"; simp add: valid_tcb_state'_def split_def valid_bound_ntfn'_def)
-         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts[OF P] Q valid_case_option_post_wp)+
-  done
-
-end
-
-locale typ_at_sc_at'_n_props' = typ_at_props' +
-  assumes scs: "f \<lbrace>\<lambda>s. Q (sc_at'_n n p s)\<rbrace>"
-begin
-
-lemma valid_tcb'[wp]:
-  "f \<lbrace>valid_tcb' tcb\<rbrace>"
-  by (rule typ_at'_valid_tcb'_lift, rule typ', rule scs)
-
-end
-
-context begin interpretation Arch .
 
 lemma unbindNotification_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace>
@@ -3376,6 +3360,8 @@ lemma arch_finaliseCap_cte_wp_at[wp]:
   apply (safe ; wpsimp wp: unmapPage_cte_wp_at')
   done
 
+end
+
 lemma deletingIRQHandler_cte_preserved:
   assumes x: "\<And>cap final. P cap \<Longrightarrow> finaliseCap cap final True = fail"
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
@@ -3584,7 +3570,8 @@ lemma rescheduleRequired_valid_sched_context'[wp]:
                split: option.splits)
   done
 
-lemmas schedContextDonate_typ_ats[wp] = typ_at_lifts[OF schedContextDonate_typ_at']
+global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
+  by typ_at_props'
 
 lemma schedContextDonate_valid_objs':
   "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
@@ -3755,18 +3742,6 @@ lemma emptySlot_valid_inQ_queues [wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
   unfolding emptySlot_def
   by (wp opt_return_pres_lift | wpcw | wp valid_inQ_queues_lift | simp)+
-
-end
-
-context simple_non_tcb_ko'
-begin
-
-(* FIXME RT: move to KHeap *)
-lemma valid_inQ_queues[wp]:
-  "f p v \<lbrace>valid_inQ_queues\<rbrace>"
-  by (rule valid_inQ_queues_lift; wp)
-
-end
 
 context begin interpretation Arch .
 
@@ -4474,15 +4449,17 @@ lemma threadSet_ct_idle_or_in_cur_domain':
   done
 
 crunch valid_arch_state'[wp]: invalidateTLBByASID "valid_arch_state'"
-lemmas invalidateTLBByASID_typ_ats[wp] = typ_at_lifts [OF invalidateTLBByASID_typ_at']
+
+end
+
+sublocale Arch < invalidateTLBByASID: typ_at_all_props' "invalidateTLBByASID asid"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch cteCaps_of: invalidateTLBByASID "\<lambda>s. P (cteCaps_of s)"
 
 lemmas final_matters'_simps = final_matters'_def [split_simps capability.split arch_capability.split]
-
-end
-
-context begin interpretation Arch .
 
 lemma cancelAll_ct_not_ksQ_helper:
   "\<lbrace>(\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p)) and (\<lambda>s. ksCurThread s \<notin> set q) \<rbrace>

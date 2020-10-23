@@ -1434,9 +1434,9 @@ lemma setCurThread_const:
 
 
 
-crunch it[wp]: switchToIdleThread "\<lambda>s. P (ksIdleThread s)"
-crunch it[wp]: switchToThread "\<lambda>s. P (ksIdleThread s)"
-    (ignore: clearExMonitor)
+crunches switchToIdleThread, switchToThread, chooseThread
+  for it[wp]: "\<lambda>s. P (ksIdleThread s)"
+  (wp: crunch_wps)
 
 lemma switchToIdleThread_curr_is_idle:
   "\<lbrace>\<top>\<rbrace> switchToIdleThread \<lbrace>\<lambda>rv s. ksCurThread s = ksIdleThread s\<rbrace>"
@@ -1446,15 +1446,6 @@ lemma switchToIdleThread_curr_is_idle:
    apply (wp setCurThread_const)
   apply (simp)
  done
-
-lemma chooseThread_it[wp]:
-  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> chooseThread \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  by (wp|clarsimp simp: chooseThread_def curDomain_def numDomains_def bitmap_fun_defs|assumption)+
-
-lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: threadGet_def)
-  apply (wp | simp)+
-  done
 
 lemma corres_split_sched_act:
   "\<lbrakk>sched_act_relation act act';

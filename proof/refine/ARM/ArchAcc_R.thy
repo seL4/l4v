@@ -1173,10 +1173,16 @@ lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
 
 declare in_set_zip_refl[simp]
 
-crunch typ_at'[wp]: copyGlobalMappings "\<lambda>s. P (typ_at' T p s)"
+crunches copyGlobalMappings
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (wp: mapM_x_wp')
+end
 
-lemmas copyGlobalMappings_typ_ats[wp] = typ_at_lifts [OF copyGlobalMappings_typ_at']
+sublocale Arch < copyGlobalMappings: typ_at_all_props' "copyGlobalMappings newPD"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>

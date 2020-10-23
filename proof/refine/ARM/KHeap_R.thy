@@ -210,10 +210,9 @@ lemma ps_clear_upd':
 lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
 
 lemma setObject_sc_at'_n[wp]:
-  "\<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
+  "setObject ptr val \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace>"
   by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def updateObject_size
                        ps_clear_upd' lookupAround2_char1 updateObject_type)
-
 
 lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
@@ -498,6 +497,8 @@ lemmas set_distinct_types_preserves_pred_tcb_at'[wp] =
                                              simplified o_def, folded pred_tcb_at'_def,
                                              rule_format]]
 
+end
+
 lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
   by (clarsimp simp: setObject_def split_def valid_def typ_at'_def ko_wp_at'_def in_monad
@@ -517,7 +518,10 @@ lemma setObject_typ_at'[wp]:
   "\<lbrace>\<lambda>s. P (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. P (typ_at' T p' s)\<rbrace>"
   by (blast intro: P_bool_lift setObject_typ_at_inv setObject_typ_at_not)
 
-lemmas setObject_typ_ats [wp] = typ_at_lifts [OF setObject_typ_at']
+global_interpretation setObject: typ_at_all_props' "setObject p v"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setObject_cte_wp_at2':
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); Q s;
@@ -1567,31 +1571,6 @@ lemma setObject_ko_wp_at:
                  split: if_split_asm)
   done
 
-lemma typ_at'_valid_obj'_lift:
-  assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  assumes sz: "\<And>n p. \<lbrace>\<lambda>s. sc_at'_n n p s\<rbrace> f \<lbrace>\<lambda>rv s. sc_at'_n n p s\<rbrace>"
-  notes [wp] = hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
-  shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def hoare_TrueI)
-        apply (rename_tac endpoint)
-        apply (case_tac endpoint; simp add: valid_ep'_def, wp)
-       apply (rename_tac notification)
-       apply (case_tac "ntfnObj notification";
-               simp add: valid_ntfn'_def valid_bound_tcb'_def split: option.splits,
-               (wpsimp|rule conjI)+)
-      apply (rename_tac tcb)
-      apply (case_tac "tcbState tcb";
-             simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def
-                split: option.splits; wpsimp wp: sz)
-     apply (wpsimp simp: valid_cte'_def sz)
-    apply (rename_tac arch_kernel_object)
-    apply (case_tac arch_kernel_object; wpsimp wp: sz)
-   apply wp
-  apply (wpsimp simp: valid_reply'_def)
-  done
-
-lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at' setObject_sc_at'_n]
-
 lemma setObject_valid_objs':
   assumes x: "\<And>x n ko s ko' s'.
        \<lbrakk> (ko', s') \<in> fst (updateObject val ko ptr x n s); P s;
@@ -1602,7 +1581,7 @@ lemma setObject_valid_objs':
   apply (subgoal_tac "\<forall>ko. valid_obj' ko s \<longrightarrow> valid_obj' ko b")
    defer
    apply clarsimp
-   apply (erule (1) use_valid [OF _ setObject_valid_obj])
+   apply (erule (1) use_valid [OF _ setObject.typ_at_sc_at'_n_lifts'(3)])
   apply (clarsimp simp: setObject_def split_def in_monad
                         lookupAround2_char1)
   apply (simp add: valid_objs'_def)
@@ -1978,13 +1957,6 @@ lemma obj_at'_ignoring_obj:
 
 end
 
-context typ_at_props'
-begin
-
-lemmas valid_obj'[wp] = typ_at'_valid_obj'_lift[OF typ']
-
-end
-
 locale pspace_only' =
   fixes f :: "'a kernel"
   assumes pspace: "(rv, s') \<in> fst (f s) \<Longrightarrow> \<exists>g. s' = ksPSpace_update g s"
@@ -2055,12 +2027,12 @@ lemma typ_at'[wp]:
   unfolding f_def
   by (rule setObject_typ_at')
 
-lemma sc_at'_n[wp]: "\<lbrace>sc_at'_n n p'\<rbrace> f p v \<lbrace>\<lambda>_. sc_at'_n n p'\<rbrace>"
+lemma sc_at'_n[wp]: "f p v \<lbrace>\<lambda>s. P (sc_at'_n n p' s)\<rbrace>"
   unfolding f_def
   by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd'
                      updateObject_size lookupAround2_char1 updateObject_type)
 
-sublocale typ_at_props' "f p v" for p v by typ_at_props'
+sublocale typ_at_all_props' "f p v" for p v by typ_at_props'
 
 sublocale pspace_only' "f p v" for p v
   unfolding f_def
@@ -2687,6 +2659,8 @@ lemma set_ntfn_valid_pde_mappings'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
+end
+
 lemma set_ntfn_minor_invs':
   "\<lbrace>invs'
       and valid_ntfn' val
@@ -2761,11 +2735,13 @@ lemma dmo_inv':
   apply simp
   done
 
-crunch cte_wp_at'2[wp]: doMachineOp "\<lambda>s. P (cte_wp_at' P' p s)"
+crunches doMachineOp
+  for cte_wp_at'2[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
-crunch typ_at'[wp]: doMachineOp "\<lambda>s. P (typ_at' T p s)"
-
-lemmas doMachineOp_typ_ats[wp] = typ_at_lifts [OF doMachineOp_typ_at']
+global_interpretation doMachineOp: typ_at_all_props' "doMachineOp mop"
+  by typ_at_props'
 
 lemma doMachineOp_invs_bits[wp]:
   "\<lbrace>valid_pspace'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
@@ -2791,6 +2767,8 @@ crunches doMachineOp
   and idle'[wp]: "valid_idle'"
   and pde_mappings'[wp]: "valid_pde_mappings'"
   and ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' T p s)"
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asid_low_bits_def
                     asid_high_bits_def minSchedContextBits_def
