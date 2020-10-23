@@ -16,6 +16,7 @@ imports
   TSubst
   Time_Methods_Cmd
   Try_Attribute
+  Repeat_Attribute
   Trace_Schematic_Insts
   Insulin
   ShowTypes
