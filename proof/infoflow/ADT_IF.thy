@@ -912,7 +912,7 @@ text \<open>
   while we are still in kernel mode.
 \<close>
 definition kernel_entry_if
-  :: "event \<Rightarrow> user_context \<Rightarrow> (((interrupt + unit) \<times> user_context),det_ext) s_monad"
+  :: "event \<Rightarrow> user_context \<Rightarrow> (((unit + unit) \<times> user_context),det_ext) s_monad"
 where
   "kernel_entry_if e tc \<equiv> do
     t \<leftarrow> gets cur_thread;
@@ -2319,7 +2319,6 @@ lemma invs_if_Step_ADT_A_if:
        | clarify )+
   apply (elim disjE)
            apply(clarsimp simp: kernel_call_A_if_def)
-           apply(case_tac r, simp_all)[1]
            apply (frule kernel_entry_if_was_not_Interrupt)
            apply (frule use_valid[OF _ kernel_entry_if_det_inv])
             apply simp
@@ -3557,7 +3556,6 @@ lemma ADT_A_if_Step_measure_if'':
                 apply(clarsimp split: if_splits)
 
                apply(clarsimp simp: kernel_call_A_if_def in_monad)
-               apply (case_tac r ; simp)
                apply (rule kernel_entry_if_next_irq_state_of_state_next,assumption+)
                   prefer 4
                   apply fastforce
