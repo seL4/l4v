@@ -542,9 +542,9 @@ lemma kernel_corres':
            apply (rule_tac x=irqa in option_corres)
             apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
             apply (simp add: when_def)
-           apply (rule corres_when, simp)
+           apply (rule corres_when[simplified dc_def], simp)
            apply simp
-           apply (rule handle_interrupt_corres)
+           apply (rule handle_interrupt_corres[simplified dc_def])
           apply simp
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply simp

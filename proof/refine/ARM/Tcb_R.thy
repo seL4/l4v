@@ -260,7 +260,7 @@ lemma no_fail_getRegister[wp]: "no_fail \<top> (getRegister r)"
   by (simp add: getRegister_def)
 
 lemma readreg_corres:
-  "corres (intr \<oplus> (=))
+  "corres (dc \<oplus> (=))
         (einvs  and tcb_at src and ex_nonz_cap_to src)
         (invs' and sch_act_simple and tcb_at' src and ex_nonz_cap_to' src)
         (invoke_tcb (tcb_invocation.ReadRegisters src susp n arch))
@@ -303,7 +303,7 @@ lemma arch_post_modify_registers_corres:
    by simp+
 
 lemma writereg_corres:
-  "corres (intr \<oplus> (=)) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
+  "corres (dc \<oplus> (=)) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
         (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
@@ -398,7 +398,7 @@ lemma asUser_valid_release_queue'[wp]:
   done
 
 lemma copyreg_corres:
-  "corres (intr \<oplus> (=))
+  "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
           ex_nonz_cap_to dest and current_time_bounded 1)
         (invs' and sch_act_simple and tcb_at' dest and tcb_at' src
@@ -1376,7 +1376,7 @@ lemma tc_corres_caps:
                           case_option \<top> (cte_at o snd) c and
                           case_option \<top> (no_cap_to_obj_dr_emp o fst) c"
   shows
-    "corres (intr \<oplus> (=))
+    "corres (dc \<oplus> (=))
     (einvs and simple_sched_action and tcb_at t and
      (\<lambda>s. {fault_h, time_h, croot, vroot, option_map undefined ipcb} \<noteq> {None} \<longrightarrow> cte_at slot s) and
      valid_tcap fault_h and
@@ -1431,7 +1431,7 @@ proof -
   have T: "\<And>x x' ref getfn target.
       \<lbrakk> newroot_rel x x'; getfn = return (cte_map (target, ref));
              x \<noteq> None \<longrightarrow> {e, f, option_map undefined g} \<noteq> {None} \<rbrakk> \<Longrightarrow>
-      corres (intr \<oplus> dc)
+      corres (dc \<oplus> dc)
 
              (einvs and simple_sched_action and cte_at (target, ref) and emptyable (target, ref) and
               (\<lambda>s. \<forall>(sl, c) \<in> (case x of None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {(sl, c), (slot, c)}).
@@ -1477,7 +1477,7 @@ proof -
     by (simp add: getThreadBufferSlot_def locateSlot_conv
                   cte_map_def tcb_cnode_index_def tcbIPCBufferSlot_def
                   cte_level_bits_def)
-  have T2: "corres (intr \<oplus> dc)
+  have T2: "corres (dc \<oplus> dc)
      (einvs and simple_sched_action and tcb_at a and
          (\<lambda>s. \<forall>(sl, c) \<in> (case g of None \<Rightarrow> {} | Some (x, v) \<Rightarrow> {(slot, cap.NullCap)} \<union>
              (case v of None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {(sl, c), (slot, c)})).
@@ -2236,7 +2236,7 @@ lemma setSchedulerAction_invs'[wp]:
 
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
-  corres (intr \<oplus> (=))
+  corres (dc \<oplus> (=))
          (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and current_time_bounded 1)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"

@@ -6871,7 +6871,7 @@ lemmas rec_del_valid_list_irq_state_independent[wp] =
 
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
-   spec_corres s (intr \<oplus> (case args of
+   spec_corres s (dc \<oplus> (case args of
                             FinaliseSlotCall _ _ \<Rightarrow> (\<lambda>r r'. fst r = fst r'
                                                            \<and> cap_relation (snd r) (snd r') )
                           | _ \<Rightarrow> dc))
@@ -6900,7 +6900,7 @@ proof (induct rule: rec_del.induct,
                           split_def)
     apply (rule spec_corres_guard_imp)
       apply (rule spec_corres_splitE)
-         apply (rule "1.hyps"[simplified rec_del_concrete_unfold])
+         apply (rule "1.hyps"[simplified rec_del_concrete_unfold dc_def])
         apply (rule drop_spec_corres)
         apply (simp(no_asm) add: dc_def[symmetric] liftME_def[symmetric]
                                  whenE_liftE)
@@ -7273,7 +7273,7 @@ next
 qed
 
 lemma cap_delete_corres:
-  "corres (intr \<oplus> dc)
+  "corres (dc \<oplus> dc)
       (einvs and simple_sched_action and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_delete ptr) (cteDelete (cte_map ptr) True)"
@@ -7512,7 +7512,7 @@ lemma cap_revoke_mdb_stuff4:
        done
 
 lemma cap_revoke_corres':
-  "spec_corres s (intr \<oplus> dc)
+  "spec_corres s (dc \<oplus> dc)
       (einvs and simple_sched_action and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_revoke ptr) (\<lambda>s. cteRevoke (cte_map ptr) s)"
@@ -8526,7 +8526,7 @@ declare corres_False' [simp]
 
 lemma inv_cnode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
-   corres (intr \<oplus> dc)
+   corres (dc \<oplus> dc)
      (einvs and simple_sched_action and valid_cnode_inv ci)
      (invs' and sch_act_simple and valid_cnode_inv' ci')
      (invoke_cnode ci) (invokeCNode ci')"
