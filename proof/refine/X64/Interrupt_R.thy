@@ -500,7 +500,7 @@ crunches X64_H.updateIRQState
   (simp: ex_cte_cap_wp_to'_def valid_mdb'_def)
 
 lemma arch_invoke_irq_control_corres:
-  "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (intr \<oplus> dc)
+  "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
           (invs' and arch_irq_control_inv_valid' ivk')
           (arch_invoke_irq_control x2)
@@ -543,7 +543,7 @@ lemma arch_invoke_irq_control_corres:
 
 lemma invoke_irq_control_corres:
   "irq_control_inv_relation i i' \<Longrightarrow>
-   corres (intr \<oplus> dc) (einvs and irq_control_inv_valid i)
+   corres (dc \<oplus> dc) (einvs and irq_control_inv_valid i)
              (invs' and irq_control_inv_valid' i')
      (invoke_irq_control i)
      (performIRQControl i')"
