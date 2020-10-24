@@ -1336,7 +1336,7 @@ lemma port_out_corres[@lift_corres_args, corres]:
 
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
-  \<Longrightarrow> corres (intr \<oplus> (=))
+  \<Longrightarrow> corres (dc \<oplus> (=))
         (einvs and ct_active and valid_arch_inv ai)
         (invs' and ct_active' and valid_arch_inv' ai')
         (liftE (perform_io_port_invocation x))
@@ -1370,7 +1370,7 @@ lemma valid_ioports_issuedD':
 
 lemma perform_ioport_control_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPortControl x\<rbrakk> \<Longrightarrow>
-   corres (intr \<oplus> (=))
+   corres (dc \<oplus> (=))
       (einvs and ct_active and valid_arch_inv ai)
       (invs' and ct_active' and valid_arch_inv' ai')
       (liftE (do perform_ioport_control_invocation x; return [] od))
@@ -1422,7 +1422,7 @@ lemma arch_ioport_inv_case_simp:
 
 lemma inv_arch_corres:
   "archinv_relation ai ai' \<Longrightarrow>
-   corres (intr \<oplus> (=))
+   corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)
      (invs' and ct_active' and valid_arch_inv' ai')
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
