@@ -11,7 +11,7 @@ Formalisation of interrupt handling.
 chapter "Arch-specific Interrupts"
 
 theory ArchInterrupt_A
-imports "../Ipc_A"
+imports "../InvocationFuns_A"
 begin
 
 context Arch begin global_naming ARM_A

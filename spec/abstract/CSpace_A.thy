@@ -580,118 +580,10 @@ definition
          Zombie slot' bits n \<Rightarrow> (slot', replicate (zombie_cte_bits bits) False) = slot
        | _ \<Rightarrow> False"
 
-text \<open>The complete recursive delete operation.\<close>
-function (sequential)
-  rec_del :: "rec_del_call \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
-where
-  "rec_del (CTEDeleteCall slot exposed) s =
- (doE
-    (success, cleanup_info) \<leftarrow> rec_del (FinaliseSlotCall slot exposed);
-    without_preemption $ when (exposed \<or> success) $ empty_slot slot cleanup_info;
-    returnOk undefined
-  odE) s"
-|
-  "rec_del (FinaliseSlotCall slot exposed) s =
- (doE
-    cap \<leftarrow> without_preemption $ get_cap slot;
-    if cap = NullCap
-    then returnOk (True, NullCap)
-    else (doE
-      is_final \<leftarrow> without_preemption $ is_final_cap cap;
-      (remainder, cleanup_info) \<leftarrow> without_preemption $ finalise_cap cap is_final;
-      if cap_removeable remainder slot
-      then returnOk (True, cleanup_info)
-      else if cap_cyclic_zombie remainder slot \<and> \<not> exposed
-      then doE
-        without_preemption $ set_cap remainder slot;
-        returnOk (False, NullCap)
-      odE
-      else doE
-        without_preemption $ set_cap remainder slot;
-        rec_del (ReduceZombieCall remainder slot exposed);
-        preemption_point;
-        rec_del (FinaliseSlotCall slot exposed)
-      odE
-    odE)
-  odE) s"
 
-| "rec_del (ReduceZombieCall (Zombie ptr bits (Suc n)) slot False) s =
- (doE
-    cn \<leftarrow> returnOk $ first_cslot_of (Zombie ptr bits (Suc n));
-    assertE (cn \<noteq> slot);
-    without_preemption $ cap_swap_for_delete cn slot;
-    returnOk undefined
-  odE) s"
-|
- "rec_del (ReduceZombieCall (Zombie ptr bits (Suc n)) slot True) s =
- (doE
-    end_slot \<leftarrow> returnOk (ptr, nat_to_cref (zombie_cte_bits bits) n);
-    rec_del (CTEDeleteCall end_slot False);
-    new_cap \<leftarrow> without_preemption $ get_cap slot;
-    if new_cap = Zombie ptr bits (Suc n)
-    then without_preemption $ set_cap (Zombie ptr bits n) slot
-    else assertE (new_cap = NullCap \<or>
-                  is_zombie new_cap \<and> first_cslot_of new_cap = slot
-                   \<and> first_cslot_of (Zombie ptr bits (Suc n)) \<noteq> slot);
-    returnOk undefined
-  odE) s"
-|
- "rec_del (ReduceZombieCall cap slot exposed) s =
-  fail s"
-  by pat_completeness auto
+text \<open>For MCS, rec\_del, cap\_delete, finalise\_slot, cap\_revoke and some other helper definitions are
+moved to InvocationFuns\_A.thy\<close>
 
-text \<open>Delete a capability by calling the recursive delete operation.\<close>
-definition
-  cap_delete :: "cslot_ptr \<Rightarrow> (unit, 'z::state_ext) p_monad" where
- "cap_delete slot \<equiv> doE rec_del (CTEDeleteCall slot True); returnOk () odE"
-
-text \<open>Prepare the capability in a slot for deletion but do not delete it.\<close>
-definition
-  finalise_slot :: "cslot_ptr \<Rightarrow> bool \<Rightarrow> (bool * cap,'z::state_ext) p_monad"
-where
-  "finalise_slot p e \<equiv> rec_del (FinaliseSlotCall p e)"
-
-text \<open>Helper functions for the type of recursive delete calls.\<close>
-primrec
-  exposed_rdcall :: "rec_del_call \<Rightarrow> bool"
-where
-  "exposed_rdcall (CTEDeleteCall slot exposed) = exposed"
-| "exposed_rdcall (FinaliseSlotCall slot exposed) = exposed"
-| "exposed_rdcall (ReduceZombieCall cap slot exposed) = exposed"
-
-primrec
-  isCTEDeleteCall :: "rec_del_call \<Rightarrow> bool"
-where
-  "isCTEDeleteCall (CTEDeleteCall slot exposed) = True"
-| "isCTEDeleteCall (FinaliseSlotCall slot exposed) = False"
-| "isCTEDeleteCall (ReduceZombieCall cap slot exposed) = False"
-
-primrec
-  slot_rdcall :: "rec_del_call \<Rightarrow> cslot_ptr"
-where
-  "slot_rdcall (CTEDeleteCall slot exposed) = slot"
-| "slot_rdcall (FinaliseSlotCall slot exposed) = slot"
-| "slot_rdcall (ReduceZombieCall cap slot exposed) = slot"
-
-text \<open>Revoke the derived capabilities of a given capability, deleting them
-all.\<close>
-
-function cap_revoke :: "cslot_ptr \<Rightarrow> (unit, 'z::state_ext) p_monad"
-where
-"cap_revoke slot s = (doE
-    cap \<leftarrow> without_preemption $ get_cap slot;
-    cdt \<leftarrow> without_preemption $ gets cdt;
-    descendants \<leftarrow> returnOk $ descendants_of slot cdt;
-    whenE (cap \<noteq> NullCap \<and> descendants \<noteq> {}) (doE
-      child \<leftarrow> without_preemption $ select_ext (next_revoke_cap slot) descendants;
-      cap \<leftarrow> without_preemption $ get_cap child;
-      assertE (cap \<noteq> NullCap);
-      cap_delete child;
-      preemption_point;
-      cap_revoke slot
-    odE)
-odE) s"
-by auto
 
 section \<open>Inserting and moving capabilities\<close>
 
@@ -877,35 +769,12 @@ where
            tcb_vtable := tcb_vtable captcb,
            tcb_ipcframe := tcb_ipcframe captcb \<rparr>"
 
-section \<open>Invoking CNode capabilities\<close>
 
-text \<open>The CNode capability confers authority to various methods
-which act on CNodes and the capabilities within them. Copies of
-capabilities may be inserted in empty CNode slots by
-Insert. Capabilities may be moved to empty slots with Move or swapped
-with others in a three way rotate by Rotate. A Reply capability stored
-in a thread's last-caller slot may be saved into a regular CNode slot
-with Save.  The Revoke, Delete and Recycle methods may also be
-invoked on the capabilities stored in the CNode.\<close>
-
-definition
-  invoke_cnode :: "cnode_invocation \<Rightarrow> (unit, 'z::state_ext) p_monad" where
-  "invoke_cnode i \<equiv> case i of
-    RevokeCall dest_slot \<Rightarrow> cap_revoke dest_slot
-  | DeleteCall dest_slot \<Rightarrow> cap_delete dest_slot
-  | InsertCall cap src_slot dest_slot \<Rightarrow>
-       without_preemption $ cap_insert cap src_slot dest_slot
-  | MoveCall cap src_slot dest_slot \<Rightarrow>
-       without_preemption $ cap_move cap src_slot dest_slot
-  | RotateCall cap1 cap2 slot1 slot2 slot3 \<Rightarrow>
-       without_preemption $
-       if slot1 = slot3 then
-         cap_swap cap1 slot1 cap2 slot2
-       else
-         do cap_move cap2 slot2 slot3; cap_move cap1 slot1 slot2 od
-  | CancelBadgedSendsCall (EndpointCap ep b R) \<Rightarrow>
-    without_preemption $ when (b \<noteq> 0) $ cancel_badged_sends ep b
-  | CancelBadgedSendsCall _ \<Rightarrow> fail"
+text \<open>The definition of invoke\_cnode is moved to InvocationFuns\_A.thy;
+for MCS, the function preemption\_point is defined in InvocationFuns\_A.thy which imports Ipc\_R.
+This is because of the dependency on update\_time\_stamp and check\_budget. Some invocation functions
+that call preemption\_point, namely, invoke\_untyped, invoke\_cnode, and invoke\_tcb, are also
+defined in InvocationFuns\_A.thy\<close>
 
 
 section "Cap classification used to define invariants"

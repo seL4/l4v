@@ -148,62 +148,11 @@ primrec(nonexhaustive) is_device_untyped_cap
 where
   "is_device_untyped_cap (UntypedCap isdev _ _ _) = isdev"
 
-text \<open>Untyped capabilities note a currently free region. Sometimes this
-region is reset during a Retype operation. This progressively clears the
-underlying memory and also the object level representation, moving the free
-region pointer back to the start of the newly cleared region each time.\<close>
-definition
-  reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
-where
-  "reset_untyped_cap src_slot = doE
-  cap \<leftarrow> liftE $ get_cap src_slot;
-  sz \<leftarrow> returnOk $ bits_of cap;
-  base \<leftarrow> returnOk $ obj_ref_of cap;
-  if free_index_of cap = 0
-    then returnOk ()
-  else doE
-    liftE $ delete_objects base sz;
-  dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
+text \<open>The definitions of reset\_untyped\_cap and invoke\_untyped are moved to InvocationFuns\_A.thy;
+for MCS, the function preemption\_point is defined in InvocationFuns\_A.thy which imports Ipc\_R.
+This is because of the dependency on update\_time\_stamp and check\_budget. Some invocation functions
+that call preemption\_point, namely, invoke\_untyped, invoke\_cnode, and invoke\_tcb, are also
+defined in InvocationFuns\_A.thy\<close>
 
-  if dev \<or> sz < reset_chunk_bits
-      then liftE $ do
-        unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
-        set_cap (UntypedCap dev base sz 0) src_slot
-      od
-    else mapME_x (\<lambda>i. doE
-          liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
-              (2 ^ reset_chunk_bits);
-          liftE $ set_cap (UntypedCap dev base sz
-              (i * 2 ^ reset_chunk_bits)) src_slot;
-          preemption_point
-        odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].
-            i * 2 ^ reset_chunk_bits < free_index_of cap])
-    odE
-  odE"
-
-text \<open>Untyped capabilities confer authority to the Retype method. This
-clears existing objects from a region, creates new objects of the requested type,
-initialises them and installs new capabilities to them.\<close>
-definition
-  invoke_untyped :: "untyped_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
-where
-"invoke_untyped ui \<equiv> case ui
-    of Retype src_slot reset base retype_base new_type obj_sz slots is_device \<Rightarrow>
-doE
-  whenE reset $ reset_untyped_cap src_slot;
-  liftE $ do
-
-  cap \<leftarrow> get_cap src_slot;
-
-  \<comment> \<open>Update the untyped cap to track the amount of space used.\<close>
-  total_object_size \<leftarrow> return $ (of_nat (length slots) << (obj_bits_api new_type obj_sz));
-  free_ref \<leftarrow> return $ retype_base + total_object_size;
-  set_cap (UntypedCap is_device base (bits_of cap) (unat (free_ref - base))) src_slot;
-
-  \<comment> \<open>Create new objects.\<close>
-  orefs \<leftarrow> retype_region retype_base (length slots) obj_sz new_type is_device;
-  init_arch_objects new_type retype_base (length slots) obj_sz orefs;
-  mapM_x (create_cap new_type obj_sz src_slot is_device) (zip slots orefs)
-od odE"
 
 end
