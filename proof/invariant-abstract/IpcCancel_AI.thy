@@ -894,15 +894,15 @@ lemma replies_blocked_inj:
   by (fastforce simp: state_refs_of_def refs_of_rev split: option.splits)
 
 lemma replies_blocked_upd_tcb_st_valid_replies:
-  assumes "valid_replies' with_sc blocked"
+  assumes "valid_replies_2 with_sc blocked"
   assumes "\<forall>r. r \<in> fst ` with_sc \<and> (r,t) \<in> blocked \<longrightarrow> st = BlockedOnReply r"
-  shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
+  shows "valid_replies_2 with_sc (replies_blocked_upd_tcb_st st t blocked)"
   using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
 
 lemma replies_blocked_upd_tcb_st_valid_replies_not_blocked:
-  assumes "valid_replies' with_sc blocked"
+  assumes "valid_replies_2 with_sc blocked"
   assumes "\<forall>r. (r,t) \<notin> blocked"
-  shows "valid_replies' with_sc (replies_blocked_upd_tcb_st st t blocked)"
+  shows "valid_replies_2 with_sc (replies_blocked_upd_tcb_st st t blocked)"
   using assms by (fastforce simp: valid_replies_defs replies_blocked_upd_tcb_st_def image_def)
 
 lemma reply_unlink_tcb_assume_asserts:
@@ -961,7 +961,7 @@ lemma reply_unlink_sc_valid_replies:
   apply (wpsimp simp: reply_unlink_sc_def
                   wp: set_sc_replies_valid_replies update_sc_replies_valid_replies get_simple_ko_wp)
   apply (intro conjI impI allI
-         ; erule replies_with_sc_upd_replies_subset_valid_replies'
+         ; erule replies_with_sc_upd_replies_subset_valid_replies_2
          ; clarsimp simp: sc_replies_sc_at_def obj_at_def dest!: set_takeWhileD)
   by (case_tac "sc_replies sc"; fastforce)
 
@@ -1124,7 +1124,7 @@ lemma sc_replies_update_fst_replies_with_sc:
    \<lbrace>\<lambda>rv s. r \<notin> fst ` replies_with_sc s\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: if_splits)
-  apply (clarsimp simp: valid_replies'_def inj_on_def)
+  apply (clarsimp simp: valid_replies_2_def inj_on_def)
   done
 
 lemma update_sched_context_sc_replies_fst_replies_with_sc:
@@ -1133,7 +1133,7 @@ lemma update_sched_context_sc_replies_fst_replies_with_sc:
    \<lbrace>\<lambda>rv s. r \<notin> fst ` replies_with_sc s\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: if_splits)
-  apply (clarsimp simp: valid_replies'_def inj_on_def)
+  apply (clarsimp simp: valid_replies_2_def inj_on_def)
   done
 
 lemma reply_unlink_sc_fst_replies_with_sc:
@@ -1238,7 +1238,7 @@ lemma sc_replies_update_valid_replies_cons:
    set_sc_obj_ref sc_replies_update sc_ptr (r_ptr # sc_replies')
    \<lbrace>\<lambda>r. valid_replies \<rbrace>"
   apply (wpsimp wp: set_sc_replies_valid_replies)
-  apply (clarsimp simp: replies_with_sc_upd_replies_def valid_replies'_def)
+  apply (clarsimp simp: replies_with_sc_upd_replies_def valid_replies_2_def)
   apply (intro conjI, clarsimp simp:)
    apply safe
        apply ((fastforce simp: image_def)+)[3]
@@ -1280,7 +1280,7 @@ lemma sc_replies_update_take_While_valid_replies:
    set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> r') replies)
    \<lbrace>\<lambda>rv. valid_replies\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
-  apply (clarsimp simp: valid_replies'_def)
+  apply (clarsimp simp: valid_replies_2_def)
   apply (intro conjI)
    apply (simp add: replies_blocked_takeWhile_eq)
    apply (rule subset_trans, erule replies_with_sc_takeWhile_subset[THEN image_mono], assumption, assumption)
@@ -1294,11 +1294,11 @@ lemma sc_replies_update_takeWhile_not_fst_replies_with_sc:
    apply (wpsimp wp: update_sched_context_wp)
    apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: option.splits if_splits)
   apply (fastforce dest: set_takeWhileD)
-  apply (clarsimp simp: valid_replies'_def inj_on_def)
+  apply (clarsimp simp: valid_replies_2_def inj_on_def)
   done
 
-lemma valid_replies'_in_replies_with_sc_upd_replies:
-  assumes rs: "valid_replies' with_sc blocked"
+lemma valid_replies_2_in_replies_with_sc_upd_replies:
+  assumes rs: "valid_replies_2 with_sc blocked"
   assumes up: "(r,sc') \<in> replies_with_sc_upd_replies rs sc with_sc"
   assumes sc: "(r,sc) \<in> with_sc"
   shows "r \<in> set rs"
@@ -1337,13 +1337,13 @@ lemma reply_remove_tcb_invs:
   apply (clarsimp simp: valid_obj_def valid_sched_context_def list_all_takeWhile)
   apply (intro conjI; (intro allI impI)?)
       apply (clarsimp split: option.splits)
-     apply (erule replies_with_sc_upd_replies_subset_valid_replies'
+     apply (erule replies_with_sc_upd_replies_subset_valid_replies_2
             , fastforce simp: sc_replies_sc_at_def obj_at_def dest!: set_takeWhileD)
     defer
     apply (fastforce simp: valid_idle_def obj_at_def)
    apply (extract_conjunct \<open>match conclusion in \<open>r \<in> fst ` replies_blocked _\<close> \<Rightarrow> \<open>-\<close>\<close>
           , fastforce simp: in_replies_blockedI''[where t=t, OF refl] pred_tcb_at_def obj_at_def)
-   apply (fastforce dest!: valid_replies'_in_replies_with_sc_upd_replies set_takeWhileD
+   apply (fastforce dest!: valid_replies_2_in_replies_with_sc_upd_replies set_takeWhileD
                        simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
 
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def if_bool_simps cong: if_cong)
@@ -1515,7 +1515,7 @@ lemma suspend_invs_helper:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def update_restart_pc_def
                   wp: sts_only_idle valid_irq_node_typ maybeM_wp sts_fault_tcbs_valid_states
                       sts_valid_replies update_sched_context_valid_idle hoare_vcg_if_lift2 gbn_inv)
-  apply (rule_tac V="valid_replies' (replies_with_sc s)
+  apply (rule_tac V="valid_replies_2 (replies_with_sc s)
            (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
          , clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, clarsimp+)

@@ -594,7 +594,7 @@ lemma valid_repliesD1_simp:
   "(r, p) \<in> replies_with_sc s \<Longrightarrow> \<exists>t. (r, t) \<in> replies_blocked s"
   apply (rule fst_subset[rotated], assumption)
   using valid_replies
-  by (simp add: valid_replies'_def)
+  by (simp add: valid_replies_2_def)
 
 lemma valid_obj: "\<And>p obj. \<lbrakk> valid_obj p obj s; ko_at obj p s \<rbrakk>
                              \<Longrightarrow> valid_obj p obj (detype (untyped_range cap) s)"

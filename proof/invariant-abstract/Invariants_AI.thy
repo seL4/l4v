@@ -1053,14 +1053,14 @@ abbreviation (input) valid_replies_pred ::
 text \<open>For every Reply object with an associated scheduling context, there must be
       a thread which is BlockedOnReply with that Reply.
       A Reply object can be in at most one scheduling context's reply queue.\<close>
-definition valid_replies' ::
+definition valid_replies_2 ::
   "(obj_ref \<times> obj_ref) set \<Rightarrow> (obj_ref \<times> obj_ref) set \<Rightarrow> bool"
   where
-  "valid_replies' with_sc blocked \<equiv> fst ` with_sc \<subseteq> fst ` blocked \<and> inj_on fst with_sc"
+  "valid_replies_2 with_sc blocked \<equiv> fst ` with_sc \<subseteq> fst ` blocked \<and> inj_on fst with_sc"
 
-abbreviation "valid_replies \<equiv> valid_replies_pred valid_replies'"
+abbreviation "valid_replies \<equiv> valid_replies_pred valid_replies_2"
 
-lemmas valid_replies_defs = valid_replies'_def replies_with_sc_def replies_blocked_def
+lemmas valid_replies_defs = valid_replies_2_def replies_with_sc_def replies_blocked_def
 
 abbreviation
   "fault_tcb_states st \<equiv>
@@ -4302,9 +4302,9 @@ lemma in_state_refs_of_iff:
   "r \<in> state_refs_of s p \<longleftrightarrow> (\<exists>ko. kheap s p = Some ko \<and> r \<in> refs_of ko)"
   by (auto simp: state_refs_of_def split: option.splits)
 
-lemma valid_replies'D1:
-  "valid_replies' S T \<Longrightarrow> (fst ` S  \<subseteq> fst ` T)"
-  by (clarsimp simp: valid_replies'_def)
+lemma valid_replies_2D1:
+  "valid_replies_2 S T \<Longrightarrow> (fst ` S  \<subseteq> fst ` T)"
+  by (clarsimp simp: valid_replies_2_def)
 
 lemma sc_reftypes:
   "(y, reft) \<in> state_refs_of s sc \<Longrightarrow>
@@ -4354,7 +4354,7 @@ lemma reftypes_reply_at:
   done
 
 lemma valid_repliesD2:
-  "valid_replies' with_sc blocked \<Longrightarrow> (r,sc) \<in> with_sc \<Longrightarrow> (r,sc') \<in> with_sc \<Longrightarrow> sc = sc'"
+  "valid_replies_2 with_sc blocked \<Longrightarrow> (r,sc) \<in> with_sc \<Longrightarrow> (r,sc') \<in> with_sc \<Longrightarrow> sc = sc'"
   by (fastforce simp: valid_replies_defs inj_on_def)
 
 lemma sc_at_pred_n_eq_commute:
@@ -4393,8 +4393,8 @@ lemma sc_with_reply_replies_with_sc:
                elim: the_pred_option_SomeD)
 
 lemma valid_repliesD1_simp:
-  "valid_replies' T S \<Longrightarrow> (r, p) \<in> T \<Longrightarrow> \<exists>t. (r, t) \<in> S"
-  by (rule fst_subset[rotated], assumption, simp add: valid_replies'_def)
+  "valid_replies_2 T S \<Longrightarrow> (r, p) \<in> T \<Longrightarrow> \<exists>t. (r, t) \<in> S"
+  by (rule fst_subset[rotated], assumption, simp add: valid_replies_2_def)
 
 lemma valid_repliesE1:
   "valid_replies s
@@ -4488,7 +4488,7 @@ proof -
   have h1: "reply_at rp s" using st vo st_tcb_at_valid_st2[OF st vo]
     by (clarsimp simp: valid_tcb_state_def)
   have "\<forall>scp. (rp, scp) \<notin> replies_with_sc s" using vr st sr
-    apply (clarsimp simp: valid_replies'_def)
+    apply (clarsimp simp: valid_replies_2_def)
     apply (drule_tac c=rp in contra_subsetD)
      apply (rule ccontr)
      apply (clarsimp simp: replies_blocked_def)
