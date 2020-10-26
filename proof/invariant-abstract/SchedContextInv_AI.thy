@@ -2022,7 +2022,7 @@ lemma update_sc_badge_invs':
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
                       update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
-                      update_sc_but_not_sc_replies_valid_replies'
+                      update_sc_but_not_sc_replies_valid_replies_2
                       update_sched_context_valid_idle
                       update_sc_badge_cur_sc_tcb'
             simp_del: fun_upd_apply)

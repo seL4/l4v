@@ -1778,7 +1778,7 @@ lemma replies_blocked_subset:
 lemma valid_replies:
   "valid_replies s'"
   apply (rule valid_pspaceE[OF vp])
-  apply (clarsimp simp: valid_replies'_def)
+  apply (clarsimp simp: valid_replies_2_def)
   apply (rule conjI)
    apply (rule subset_trans[OF image_mono[OF replies_with_sc_subset]])
    apply (erule subset_trans[OF _ image_mono[OF replies_blocked_subset]])

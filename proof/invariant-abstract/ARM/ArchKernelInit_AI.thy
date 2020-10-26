@@ -352,7 +352,7 @@ lemma invs_A:
     apply (clarsimp simp: zombies_final_def cte_wp_at_cases state_defs
                           tcb_cap_cases_def is_zombie_def)
    apply (rule conjI)
-    apply (clarsimp simp: valid_replies'_def replies_with_sc_init_A_st)
+    apply (clarsimp simp: valid_replies_2_def replies_with_sc_init_A_st)
    apply (rule conjI)
     apply (clarsimp simp: fault_tcbs_valid_states_def pred_tcb_at_def obj_at_def
                           init_A_st_def init_kheap_def)

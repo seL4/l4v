@@ -2322,7 +2322,7 @@ lemma set_thread_state_not_BOReply_valid_replies:
    set_thread_state t st
    \<lbrace>\<lambda>r. valid_replies\<rbrace>"
   apply (wpsimp wp: sts_valid_replies)
-  apply (clarsimp simp: valid_replies'_def replies_blocked_upd_tcb_st_def image_def)
+  apply (clarsimp simp: valid_replies_2_def replies_blocked_upd_tcb_st_def image_def)
   apply (subgoal_tac "a \<in> {y. \<exists>x\<in>replies_blocked s. y = fst x}"; clarsimp)
    apply (subgoal_tac "ba \<noteq> t";
           fastforce simp: replies_blocked_def pred_tcb_at_def obj_at_def)

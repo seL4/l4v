@@ -846,12 +846,12 @@ lemma replies_blocked_list_all_reply_at:
   done
 
 lemma replies_with_sc_upd_replies_valid_replies_add_one:
-  "valid_replies' (replies_with_sc s) (replies_blocked s)
+  "valid_replies_2 (replies_with_sc s) (replies_blocked s)
    \<Longrightarrow> r \<in> fst ` replies_blocked s
    \<Longrightarrow> r \<notin> fst ` replies_with_sc s
    \<Longrightarrow> sc_replies_sc_at ((=) list) sc_ptr s
-   \<Longrightarrow> valid_replies' (replies_with_sc_upd_replies (r # list) sc_ptr (replies_with_sc s)) (replies_blocked s)"
-  unfolding valid_replies'_def replies_with_sc_upd_replies_def
+   \<Longrightarrow> valid_replies_2 (replies_with_sc_upd_replies (r # list) sc_ptr (replies_with_sc s)) (replies_blocked s)"
+  unfolding valid_replies_2_def replies_with_sc_upd_replies_def
   apply (intro conjI; clarsimp)
    apply (case_tac "ba = sc_ptr"; simp;
           fastforce simp: image_def replies_with_sc_def sc_replies_sc_at_def obj_at_def)
@@ -918,7 +918,7 @@ lemma reply_push_sender_sc_Some_invs:
         valid_asid_map s \<and> valid_ioports s \<and> valid_global_vspace_mappings s \<and>
         pspace_in_kernel_window s \<and> cap_refs_in_kernel_window s \<and>
         pspace_respects_device_region s \<and> cap_refs_respects_device_region s \<and>
-        valid_replies' (replies_with_sc s) (replies_blocked s) \<and>
+        valid_replies_2 (replies_with_sc s) (replies_blocked s) \<and>
         fault_tcbs_valid_states s \<and> cur_tcb s \<and> cur_sc_tcb s\<rbrace>
    reply_push sender thread reply_ptr ((\<exists>y. sender_sc = Some y) \<and>
              \<not> (case fault of None \<Rightarrow> False
@@ -1010,7 +1010,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule conjI, clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def)
   apply (rule conjI, clarsimp simp:  obj_at_def is_reply_def)
   apply (rule conjI, rule replies_blocked_list_all_reply_at, assumption)
-   apply (drule valid_replies'D1)
+   apply (drule valid_replies_2D1)
    apply (rule_tac B="fst ` replies_with_sc s" in subset_trans; simp?)
    apply (drule sc_replies_sc_at_subset_fst_replies_with_sc)
    apply fastforce
@@ -1465,9 +1465,9 @@ lemma reply_push_st_tcb_at_Inactive:
                  sts_st_tcb_at_cases
      | wp (once) hoare_drop_imp)+
 
-lemma valid_replies'_inj_onD:
-  "valid_replies' S T \<Longrightarrow> \<forall>x y a. (a,x) \<in> S \<longrightarrow> (a,y) \<in> S \<longrightarrow> x=y"
-  by (fastforce simp: valid_replies'_def inj_on_def)
+lemma valid_replies_2_inj_onD:
+  "valid_replies_2 S T \<Longrightarrow> \<forall>x y a. (a,x) \<in> S \<longrightarrow> (a,y) \<in> S \<longrightarrow> x=y"
+  by (fastforce simp: valid_replies_2_def inj_on_def)
 
 lemma sym_refs_reply_sc_reply_at:
   "sym_refs (state_refs_of s) \<Longrightarrow>
@@ -1574,7 +1574,7 @@ lemma reply_push_invs_helper:
     apply (safe; clarsimp?)
    apply (safe; clarsimp?)
    apply (subgoal_tac "(a,y) \<in> replies_with_sc s \<and> (a,sc_ptr) \<in> replies_with_sc s")
-    apply (clarsimp dest!: valid_replies'_inj_onD )
+    apply (clarsimp dest!: valid_replies_2_inj_onD )
    apply (intro conjI)
     apply (subgoal_tac "valid_reply reply s")
      apply (clarsimp simp: valid_reply_def refs_of_def obj_at_def is_sc_obj_def
@@ -1725,10 +1725,10 @@ lemma reply_tcb_None_imp_not_in_sc_replies:
   done
 
 lemma si_invs'_helper_no_reply_sts_helper:
-  "\<lbrace>\<lambda>s. valid_replies' (replies_with_sc s)
+  "\<lbrace>\<lambda>s. valid_replies_2 (replies_with_sc s)
          (replies_blocked_upd_tcb_st Running dest (replies_blocked s)) \<and> st_tcb_at active tptr s\<rbrace>
     set_thread_state tptr Inactive
-   \<lbrace>\<lambda>rv s. valid_replies' (replies_with_sc s)
+   \<lbrace>\<lambda>rv s. valid_replies_2 (replies_with_sc s)
          (replies_blocked_upd_tcb_st Running dest (replies_blocked s))\<rbrace>"
   apply (wpsimp wp: sts_valid_replies)
   apply (clarsimp simp: replies_blocked_upd_tcb_st_def pred_tcb_at_def obj_at_def cong: conj_cong)
