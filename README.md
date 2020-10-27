@@ -229,7 +229,7 @@ These commands perform the following steps:
  * build basic Isabelle images, including `HOL-Word` to ensure that
    the installation works. This may take a few minutes.
 
-Alternatively, it is possible to use the official Isabelle2019 release
+Alternatively, it is possible to use the official Isabelle2020 release
 bundle for your platform from the [Isabelle website][2]. In this case, the
 installation steps above can be skipped, and you would replace the directory
 `verification/isabelle/` with a symbolic link to the Isabelle home directory
