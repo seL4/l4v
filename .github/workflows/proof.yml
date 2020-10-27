@@ -50,6 +50,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: ExecSpec ASpecDoc AInvs
 
   refine:
@@ -71,6 +72,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: Refine
 
   cspec:
@@ -91,6 +93,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: CSpec
 
   drefine:
@@ -112,6 +115,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: DRefine
 
   security:
@@ -133,6 +137,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: Access InfoFlow Bisim
 
   simplexp:
@@ -154,6 +159,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: SimplExportAndRefine
 
   autocorres:
@@ -174,6 +180,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: CParserTest CParserTools AutoCorresDoc AutoCorresTest
 
   asmrefine:
@@ -195,4 +202,5 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2020
         session: AsmRefine
