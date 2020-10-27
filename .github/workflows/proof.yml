@@ -50,6 +50,7 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2019
         session: ExecSpec ASpecDoc AInvs
 
   refine:
@@ -71,4 +72,5 @@ jobs:
       uses: seL4/ci-actions/run-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        isa_branch: ts-2019
         session: Refine
