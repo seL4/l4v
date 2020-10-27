@@ -308,7 +308,7 @@ lemma set_sc_replies_valid_replies:
 (* Avoid using this directly. Use one of the following instead:
    - update_sc_but_not_sc_replies_valid_replies[wp]
    - update_sc_replies_valid_replies *)
-lemma update_sc_but_not_sc_replies_valid_replies':
+lemma update_sc_but_not_sc_replies_valid_replies_2:
   assumes "\<And>sc. sc_replies (f sc) = sc_replies sc"
   shows "update_sched_context sc_ptr f \<lbrace> valid_replies_pred P \<rbrace>"
   by (wpsimp wp: update_sched_context_valid_replies)
@@ -327,7 +327,7 @@ lemma update_sc_but_not_sc_replies_valid_replies[wp]:
   "\<And>f. update_sched_context sc_ptr (sc_refill_max_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   "\<And>f. update_sched_context sc_ptr (sc_badge_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   "\<And>f. update_sched_context sc_ptr (sc_yield_from_update f) \<lbrace> valid_replies_pred P \<rbrace>"
-  by (rule update_sc_but_not_sc_replies_valid_replies', simp)+
+  by (rule update_sc_but_not_sc_replies_valid_replies_2, simp)+
 
 lemma update_sc_no_tcb_update[wp]:
   "update_sched_context scp f \<lbrace>ko_at (TCB tcb) t\<rbrace>"
@@ -1280,9 +1280,9 @@ lemma replies_with_sc_upd_replies_subset:
   using assms by (auto simp: replies_with_sc_upd_replies_def)
 
 lemma replies_with_sc_upd_replies_subset_valid_replies:
-  assumes rep: "valid_replies' rs_with_sc rs_blocked"
+  assumes rep: "valid_replies_2 rs_with_sc rs_blocked"
   assumes sub: "set rs \<subseteq> {r. (r,sc_ptr) \<in> rs_with_sc}"
-  shows "valid_replies' (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
+  shows "valid_replies_2 (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
 proof -
   note subs = replies_with_sc_upd_replies_subset[OF sub]
   note subf = subs[THEN image_mono[where f=fst], THEN subset_trans]
@@ -1290,11 +1290,11 @@ proof -
 qed
 
 lemma replies_with_sc_upd_replies_new_valid_replies:
-  "valid_replies' rs_with_sc rs_blocked
+  "valid_replies_2 rs_with_sc rs_blocked
    \<Longrightarrow> set rs \<subseteq> fst ` rs_blocked
    \<Longrightarrow> \<forall>x\<in>(set rs). x \<notin> fst ` rs_with_sc
-   \<Longrightarrow> valid_replies' (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
-  unfolding valid_replies'_def replies_with_sc_upd_replies_def
+   \<Longrightarrow> valid_replies_2 (replies_with_sc_upd_replies rs sc_ptr rs_with_sc) rs_blocked"
+  unfolding valid_replies_2_def replies_with_sc_upd_replies_def
   apply safe
    apply (clarsimp split: if_splits)
     apply (clarsimp simp: in_mono)
@@ -1313,7 +1313,7 @@ lemma sc_replies_sc_at_subset_replies_with_sc:
 lemmas replies_with_sc_upd_replies_subset' =
   replies_with_sc_upd_replies_subset[OF sc_replies_sc_at_subset_replies_with_sc]
 
-lemmas replies_with_sc_upd_replies_subset_valid_replies' =
+lemmas replies_with_sc_upd_replies_subset_valid_replies_2 =
   replies_with_sc_upd_replies_subset_valid_replies[OF _ sc_replies_sc_at_subset_replies_with_sc]
 
 lemmas replies_with_sc_upd_replies_nil =
@@ -1390,7 +1390,7 @@ lemma set_sc_obj_ref_invs_no_change:
                   wp: update_sched_context_valid_objs_update valid_irq_node_typ
                       update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
-                      update_sc_but_not_sc_replies_valid_replies'
+                      update_sc_but_not_sc_replies_valid_replies_2
                       update_sched_context_valid_idle
                       update_sched_context_cur_sc_tcb_no_change
             simp_del: fun_upd_apply)

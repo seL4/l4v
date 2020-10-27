@@ -2576,16 +2576,19 @@ lemma checkPrio_lt_ct_weak:
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   by (rule le_ucast_ucast_le) simp
 
+crunches checkPrio
+  for tcb_at'[wp]: "tcb_at' t"
+  and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' t"
+
 lemma decodeSetPriority_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t \<rbrace>
-    decodeSetPriority args (ThreadCap t) extras \<lbrace>tcb_inv_wf'\<rbrace>,-"
+   decodeSetPriority args (ThreadCap t) extras
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetPriority_def
-  apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
+  apply (wpsimp wp: checkPrio_lt_ct_weak simp: emptyTCSched_def)
   apply (clarsimp simp: maxPriority_def numPriorities_def emptyTCSched_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
-  sorry (* FIXME RT: seems to be missing mcpriority_tcb_at' *)
+  by simp
 
 lemma decodeSetPriority_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetPriority args cap extras \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2598,14 +2601,13 @@ lemma decodeSetPriority_inv[wp]:
 
 lemma decodeSetMCPriority_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t \<rbrace>
-    decodeSetMCPriority args (ThreadCap t) extras \<lbrace>tcb_inv_wf'\<rbrace>,-"
+   decodeSetMCPriority args (ThreadCap t) extras
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
   unfolding decodeSetMCPriority_def Let_def
-  apply (rule hoare_pre)
-  apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
+  apply (wpsimp wp: checkPrio_lt_ct_weak simp: emptyTCSched_def)
   apply (clarsimp simp: maxPriority_def numPriorities_def emptyTCSched_def)
   apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
-  sorry (* FIXME RT: seems to be missing mcpriority_tcb_at' *)
+  by simp
 
 lemma decodeSetMCPriority_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetMCPriority args cap extras \<lbrace>\<lambda>rv. P\<rbrace>"
