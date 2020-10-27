@@ -23,9 +23,15 @@ definition
                                 irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
                                 case_option (do
                                                update_time_stamp;
-                                               result \<leftarrow> check_budget;
-                                               if (\<not> result)
-                                               then returnOk ()
+                                               cur_sc \<leftarrow> gets cur_sc;
+                                               sc \<leftarrow> get_sched_context cur_sc;
+                                               if 0 < sc_refill_max sc
+                                               then do
+                                                 result \<leftarrow> check_budget;
+                                                 if result
+                                                 then returnOk ()
+                                                 else (throwError $ ())
+                                               od
                                                else (throwError $ ())
                                              od)
                                             (K (throwError $ ())) irq_opt
