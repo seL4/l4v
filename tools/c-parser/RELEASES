@@ -109,3 +109,10 @@
 
 1.16.1
 - Correct license for shorten_names.ML. No code changes.
+
+1.17
+- Builds with Isabelle2020
+- Faster automation for proving packed_type class instances
+- Remove unused assumptions from field_lookup rules
+- Use python3 in scripts
+- Use SPDX identifiers for licensing information
