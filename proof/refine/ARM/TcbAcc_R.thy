@@ -2910,7 +2910,7 @@ where
       \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcb_scs_of' s') tcbPtr"
 
 lemma isSchedulable_wp:
-  "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
   apply (clarsimp simp: isSchedulable_def)
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb inReleaseQueue_def wp: threadGet_wp)
@@ -4754,16 +4754,12 @@ lemma tcbSchedEnqueue_iflive'[wp]:
   done
 
 lemma rescheduleRequired_iflive'[wp]:
-  "\<lbrace>if_live_then_nonz_cap'
-        and (\<lambda>s. \<forall>t. ksSchedulerAction s = SwitchToThread t
-                \<longrightarrow> st_tcb_at' runnable' t s)\<rbrace>
-      rescheduleRequired
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
+  "rescheduleRequired \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: rescheduleRequired_def)
-  apply (wpsimp wp: isSchedulable_inv hoare_vcg_if_lift2 hoare_drop_imps)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def)
-  apply (erule(1) if_live_then_nonz_capD')
-  apply (fastforce simp: projectKOs)
+  apply (wpsimp wp: isSchedulable_wp)
+  apply (erule if_live_then_nonz_capE')
+  apply (fastforce simp: isSchedulable_bool_def pred_map_def tcb_of'_def
+                         ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
 
 crunches scheduleTCB
@@ -5240,20 +5236,19 @@ lemma sts_invs_minor':
                    \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
                       st' \<noteq> Inactive \<and> \<not> idle' st')) t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
-      and sch_act_simple
+      and sch_act_not t
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wpsimp wp: valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
+  apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
-  apply (clarsimp simp: sch_act_simple_def)
-  apply (intro conjI)
+  apply (intro conjI impI)
     apply clarsimp
-   defer
-   apply (clarsimp elim!: st_tcb_ex_cap'')
-  apply (frule tcb_in_valid_state', clarsimp+)
-  apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
+   apply (frule tcb_in_valid_state', clarsimp+)
+   apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
+  apply (erule if_live_then_nonz_capE')
+  apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
 
 lemma sts_cap_to'[wp]:

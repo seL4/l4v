@@ -2298,11 +2298,10 @@ lemma setSchedContext_utr[wp]:
 lemma schedContextUnbindNtfn_valid_objs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>valid_objs'\<rbrace>"
   unfolding schedContextUnbindNtfn_def
-  apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    typ_at_lifts valid_ntfn_lift' valid_pde_mappings_lift')
+  apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply normalise_obj_at'
   apply (rename_tac ntfnPtr ntfn sc)
-  apply (frule_tac k=ntfn in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def)
+  apply (frule_tac k=ntfn in ko_at_valid_objs'; clarsimp simp: projectKOs)
   apply (frule_tac k=sc in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def)
   by (auto simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
                  valid_ntfn'_def
@@ -2926,6 +2925,20 @@ lemma ntfnSc_sym_refsD:
                     refs_of_rev' projectKOs)
   done
 
+lemma scNtfn_sym_refsD:
+  "\<lbrakk>obj_at' (\<lambda>sc. scNtfn sc = Some ntfnPtr) scPtr s;
+    valid_objs' s; sym_refs (state_refs_of' s)\<rbrakk>
+    \<Longrightarrow> obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr s"
+  apply (frule obj_at_valid_objs', assumption)
+  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def projectKOs)
+  apply (frule_tac p=ntfnPtr in obj_at_valid_objs', assumption)
+  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def projectKOs)
+  apply (frule_tac p=scPtr in sym_refs_obj_atD', assumption)
+  apply (frule_tac p=ntfnPtr in sym_refs_obj_atD', assumption)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs get_refs_def2 ntfn_q_refs_of'_def
+                 split: Structures_H.ntfn.splits)
+  done
+
 lemma schedContextUnbindNtfn_obj_at'_ntfnSc:
   "\<lbrace>obj_at' (\<lambda>ntfn. ntfnSc ntfn = Some scPtr) ntfnPtr\<rbrace>
    schedContextUnbindNtfn scPtr
@@ -3100,7 +3113,7 @@ lemma schedContextUnbindNtfn_obj_at'_not_ntfn:
   "(\<And>ko f. P (scNtfn_update f ko) = P ko)
    \<Longrightarrow> schedContextUnbindNtfn scPtr \<lbrace>obj_at' P p\<rbrace>"
   apply (clarsimp simp: schedContextUnbindNtfn_def)
-  apply (wpsimp wp: set_sc'.obj_at'_strongest set_reply'.set_wp)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest set_ntfn'.set_wp getNotification_wp)
   by (auto simp: obj_at'_def projectKOs)
 
 lemma schedContextUnbindNtfn_obj_at'_ntfn_None:
@@ -3436,6 +3449,7 @@ lemma schedContextDonate_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
    apply (rule hoare_when_cases, clarsimp)
@@ -3453,9 +3467,7 @@ lemma schedContextDonate_valid_queues:
 
 lemma removeFromBitmap_valid_sched_context'[wp]:
   "removeFromBitmap tdom prio \<lbrace>valid_sched_context' sc\<rbrace>"
-  apply (wpsimp simp: bitmap_fun_defs)
-  apply (clarsimp simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
-  done
+  by (wpsimp simp: bitmap_fun_defs)
 
 lemma setQueue_valid_sched_context'[wp]:
   "setQueue tdom prio q \<lbrace>valid_sched_context' sc\<rbrace>"
@@ -3492,22 +3504,23 @@ lemma rescheduleRequired_valid_sched_context'[wp]:
 lemmas schedContextDonate_typ_ats[wp] = typ_at_lifts[OF schedContextDonate_typ_at']
 
 lemma schedContextDonate_valid_objs':
-  "\<lbrace>valid_objs' and tcb_at' tcbPtr and sc_at' scPtr\<rbrace>
+  "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc)"
+  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
                in hoare_weaken_pre[rotated])
-   apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc')
+   apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
   apply (rule hoare_seq_ext_skip)
    apply (rule hoare_when_cases, clarsimp)
    apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
    apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
     apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
    apply wpsimp
-  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+  apply (rule_tac B="\<lambda>_. ?pre and sc_at' scPtr" in hoare_seq_ext[rotated])
    apply (wpsimp wp: set_sc_valid_objs')
    apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
                          sc_size_bounds_def objBits_def objBitsKO_def)
@@ -3595,19 +3608,14 @@ lemma replyPop_valid_objs'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_valid_objs')
   apply (rule hoare_when_cases, clarsimp)
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext_skip, wpsimp wp: schedContextDonate_valid_objs')+
-   apply (clarsimp simp: valid_reply'_def isHead_def
-                  split: reply_next.splits)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> valid_reply' reply s"
-               in hoare_seq_ext[rotated])
-   apply wpsimp
-   apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
-                     simp: valid_sched_context'_def valid_reply'_def
-                           valid_sched_context_size'_def objBits_def objBitsKO_def)
-  apply wpsimp
-  apply (fastforce dest: reply_ko_at_valid_objs_valid_reply'
-                   simp: valid_reply'_def)
+  apply (rule hoare_seq_ext_skip; wp)
+     apply (wp hoare_vcg_if_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
+    apply (rule getSchedContext_wp)
+   apply (rule_tac Q="\<lambda>_. valid_objs' and valid_reply' reply" in hoare_strengthen_post[rotated])
+    apply (fastforce dest: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
+                     simp: valid_reply'_def valid_sched_context_size'_def
+                           valid_sched_context'_def objBits_def objBitsKO_def)
+   apply (wpsimp wp: schedContextDonate_valid_objs')+
   done
 
 lemma replyRemove_valid_queues:
@@ -3773,6 +3781,7 @@ lemma schedContextDonate_valid_inQ_queues:
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
    apply (rule hoare_when_cases, clarsimp)
@@ -4056,11 +4065,13 @@ lemma arch_finalise_cap_corres:
 
 lemma unbind_notification_corres:
   "corres dc
-      (invs and tcb_at t)
-      (invs' and tcb_at' t)
-      (unbind_notification t)
-      (unbindNotification t)"
+     (invs and tcb_at t)
+     invs'
+     (unbind_notification t)
+     (unbindNotification t)"
   apply (simp add: unbind_notification_def unbindNotification_def)
+  apply (rule corres_cross[where Q' = "tcb_at' t", OF tcb_at'_cross_rel])
+   apply (simp add: invs_psp_aligned invs_distinct)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gbn_corres])
       apply (simp add: maybeM_def)
@@ -4086,10 +4097,13 @@ lemma unbind_notification_corres:
 
 lemma unbind_maybe_notification_corres:
   "corres dc
-      (valid_objs and ntfn_at ntfnptr) (valid_objs' and ntfn_at' ntfnptr)
+      (invs and ntfn_at ntfnptr)
+      invs'
       (unbind_maybe_notification ntfnptr)
       (unbindMaybeNotification ntfnptr)"
   apply (simp add: unbind_maybe_notification_def unbindMaybeNotification_def)
+  apply (rule corres_cross[where Q' = "ntfn_at' ntfnptr", OF ntfn_at'_cross_rel])
+   apply (simp add: invs_psp_aligned invs_distinct)
   apply (rule corres_guard_imp)
     apply (clarsimp simp: maybeM_def get_sk_obj_ref_def)
     apply (rule corres_split[OF _ get_ntfn_corres])
@@ -4107,11 +4121,96 @@ lemma unbind_maybe_notification_corres:
            apply (rule set_ntfn_corres)
            apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
           apply (wpsimp simp: obj_at_def is_ntfn wp: get_simple_ko_wp getNotification_wp)+
+   apply (frule invs_valid_objs)
    apply (erule (1) pspace_valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def split: option.splits)
   apply clarsimp
+  apply (frule invs_valid_objs')
   apply (frule (1) ko_at_valid_objs'_pre)
   apply (clarsimp simp: valid_obj'_def valid_ntfn'_def split: option.splits)
+  done
+
+lemma sc_maybe_unbind_ntfn_corres:
+  "corres dc
+     (invs and sc_at sc)
+     invs'
+     (sched_context_unbind_ntfn sc)
+     (schedContextUnbindNtfn sc)"
+  apply (simp add: sched_context_unbind_ntfn_def schedContextUnbindNtfn_def)
+  apply (clarsimp simp: maybeM_def get_sk_obj_ref_def liftM_def)
+  apply (rule corres_cross[where Q' = "sc_at' sc", OF sc_at'_cross_rel])
+   apply (simp add: invs_psp_aligned invs_distinct)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (simp add: get_sc_obj_ref_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF _ get_sc_corres])
+       apply (rule corres_option_split)
+         apply (simp add: sc_relation_def)
+        apply (rule corres_return_trivial)
+       apply (simp add: update_sk_obj_ref_def bind_assoc)
+       apply (rule corres_split[OF _ get_ntfn_corres])
+         apply (rule corres_split[OF _ set_ntfn_corres])
+            apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
+                     in update_sc_no_reply_stack_update_ko_at'_corres)
+               apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+           apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+          apply wpsimp+
+    apply (frule invs_valid_objs)
+    apply (frule (1) valid_objs_ko_at)
+    apply (clarsimp simp: invs_psp_aligned valid_obj_def valid_sched_context_def
+                   split: option.splits)
+   apply (clarsimp split: option.splits)
+   apply (frule (1) scNtfn_sym_refsD[OF ko_at_obj_at', simplified])
+     apply clarsimp+
+   apply normalise_obj_at'
+  apply (clarsimp simp: sym_refs_asrt_def)
+  done
+
+lemma sched_context_maybe_unbind_ntfn_corres:
+  "corres dc
+     (invs and ntfn_at ntfn_ptr)
+     invs'
+     (sched_context_maybe_unbind_ntfn ntfn_ptr)
+     (schedContextMaybeUnbindNtfn ntfn_ptr)"
+  apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def schedContextMaybeUnbindNtfn_def)
+  apply (clarsimp simp: maybeM_def get_sk_obj_ref_def liftM_def)
+  apply (rule corres_cross[where Q' = "ntfn_at' ntfn_ptr", OF ntfn_at'_cross_rel])
+   apply (simp add: invs_psp_aligned invs_distinct)
+  apply add_sym_refs
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ get_ntfn_corres])
+      apply (rename_tac ntfnA ntfnH)
+      apply (rule corres_option_split)
+        apply (simp add: ntfn_relation_def)
+       apply (rule corres_return_trivial)
+      apply (rename_tac scAPtr)
+      apply (clarsimp simp: schedContextUnbindNtfn_def update_sk_obj_ref_def bind_assoc)
+      apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+       apply (rule_tac P="invs and ko_at (Notification ntfnA) ntfn_ptr"
+                and P'="invs' and ko_at' ntfnH ntfn_ptr and (\<lambda>s. sym_refs (state_refs_of' s))"
+                and Q'1=\<top>
+                in corres_symb_exec_r'[THEN corres_guard_imp])
+            apply (rule_tac F="scNtfn rv = Some ntfn_ptr" in corres_gen_asm2)
+            apply clarsimp
+            apply (rule corres_split[OF _ get_ntfn_corres])
+              apply (rule corres_split[OF _ set_ntfn_corres])
+                 apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
+                          in update_sc_no_reply_stack_update_ko_at'_corres)
+                    apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+                apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+               apply wpsimp+
+        apply (frule invs_valid_objs)
+        apply (frule (1) valid_objs_ko_at)
+        apply (clarsimp simp: invs_psp_aligned valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def)
+       apply (clarsimp simp: valid_ntfn'_def ntfn_relation_def split: option.splits)
+       apply (drule_tac s="Some scAPtr" in sym)
+       apply (clarsimp simp: valid_ntfn'_def ntfn_relation_def sym_refs_asrt_def)
+       apply (frule (1) ntfnSc_sym_refsD[OF ko_at_obj_at', simplified])
+         apply clarsimp+
+       apply normalise_obj_at'
+      apply (clarsimp simp: sym_refs_asrt_def)
+     apply (wpsimp wp: get_simple_ko_wp getNotification_wp split: option.splits)+
   done
 
 lemma fast_finalise_corres:
