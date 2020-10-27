@@ -493,7 +493,7 @@ where
                                     and is_arch_cap and is_cnode_or_valid_arch)
                                               o fst) (snd v)) buf)
                         and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
-                        and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
+                        and (\<lambda>s. {fh, th, croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf' (tcb_invocation.ThreadControlSched t sl fh mcp pr sc)
@@ -512,6 +512,7 @@ where
                                                   \<longrightarrow> sc_at_pred (sc_released (cur_time s))
                                                                  scptr s)))
                               sc
+                        and (\<lambda>s. fh \<noteq> None \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf' (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"
@@ -1121,6 +1122,7 @@ begin
 
 lemma decode_set_sched_params_wf[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t and
+    cte_at slot and ex_cte_cap_to slot and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> fst x \<and> real_cte_at (snd x) s
                           \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> (\<forall>y \<in> zobj_refs (fst x). ex_nonz_cap_to y s)
@@ -1447,8 +1449,8 @@ lemma decode_unbind_notification_wf:
 
 lemma decode_set_timeout_ep_tc_inv[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>_)
-          and tcb_at t
-          and ex_nonz_cap_to t
+          and tcb_at t and ex_nonz_cap_to t
+          and cte_at slot and ex_cte_cap_to slot
           and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
                           \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> ex_cte_cap_to (snd x) s
