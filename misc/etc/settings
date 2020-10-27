@@ -13,7 +13,7 @@ init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/
 if [ -n "$ML_HOME" ]
 then
     # For Isabelle2018 and earlier, select the 64 bit ML runtime.
-    # Note: you also need this for Isabelle2019, if your proof session
+    # Note: you also need this for later versions, if your proof session
     # runs into the 16GB memory limit for the default runtime.
     if echo "$ML_SYSTEM" | grep -q 'polyml-5\.7.*'
     then
