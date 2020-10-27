@@ -51,7 +51,7 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         isa_branch: ts-2020
-        session: ExecSpec ASpecDoc AInvs
+        session: ExecSpec ASpec AInvs
 
   refine:
     name: Refine
