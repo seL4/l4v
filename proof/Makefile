@@ -19,7 +19,7 @@ report-regression:
 #
 
 # Refine heaps.
-HEAPS += AInvs BaseRefine BaseRefine2 Refine RefineOrphanage
+HEAPS += AInvs BaseRefine Refine RefineOrphanage
 
 # CRefine heaps.
 HEAPS += CKernel CSpec CBaseRefine CRefine
@@ -45,7 +45,9 @@ BaseRefine Refine DBaseRefine DRefine: design-spec
 
 # CKernel uses the `machinety=machine_state` option for `install_C_file`,
 # and therefore depends on `design-spec`.
-CKernel CSpec CBaseRefine CRefine SimplExportAndRefine: c-kernel design-spec
+CKernel CSpec : c-kernel design-spec
+
+CBaseRefine CRefine SimplExportAndRefine : c-kernel design-spec ASpec-files
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
@@ -56,6 +58,10 @@ c-kernel: .FORCE
 design-spec: .FORCE
 	cd ../spec && $(ISABELLE_TOOL) env make design-spec
 .PHONY: design-spec
+
+ASpec-files: .FORCE
+	cd ../spec && make ASpec-files
+.PHONY: ASpec-files
 
 include ../misc/isa-common.mk
 
