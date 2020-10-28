@@ -111,7 +111,21 @@ cp -v --parents -t "$outputdir/src" \
 echo "Creating ROOTS file"
 cat >"$outputdir/src/ROOTS" <<EOF
 lib/Word_Lib
+lib
 c-parser
+EOF
+
+echo "Adding ROOT file for Lib session"
+cat > "$outputdir/src/lib/ROOT" <<EOF
+(*
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+session Lib = HOL +
+  directories "ml-helpers"
+  theories "MLUtils"
 EOF
 
 echo "Rearranging directories"
@@ -124,13 +138,13 @@ echo "Removing files"
 
 echo "Executing gen_isabelle_root to generate testfiles/\$L4V_ARCH/ROOT."
 for L4V_ARCH in $RELEASE_ARCHS; do
-    python misc/scripts/gen_isabelle_root.py -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" -o "$outputdir/src/c-parser/testfiles/$L4V_ARCH/ROOT" -s CParserTest -b CParser ||
+    python3 misc/scripts/gen_isabelle_root.py -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" -o "$outputdir/src/c-parser/testfiles/$L4V_ARCH/ROOT" -s CParserTest -b CParser --dir ".." --dir "imports" ||
         die "gen_isabelle_root failed."
 done
 
 echo "Executing gen_isabelle_root to generate testfiles/all_tests_\$L4V_ARCH.thy."
 for L4V_ARCH in $RELEASE_ARCHS; do
-    python misc/scripts/gen_isabelle_root.py -T -o "$outputdir/src/c-parser/all_tests_${L4V_ARCH}.thy" -b CParser -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" ||
+    python3 misc/scripts/gen_isabelle_root.py -T -o "$outputdir/src/c-parser/all_tests_${L4V_ARCH}.thy" -b CParser -i "$outputdir/src/c-parser/testfiles" -i "$outputdir/src/c-parser/testfiles/${L4V_ARCH}" ||
         die "gen_isabelle_root failed."
 done
 
