@@ -6,7 +6,7 @@
 
 theory TestSEL4
 imports
-  AutoCorres
+  "AutoCorres.AutoCorres"
   "CSpec.KernelInc_C"
 begin
 

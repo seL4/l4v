@@ -24,5 +24,6 @@ session AutoCorresSEL4 in "test-seL4" = CBaseRefine +
     Lib
     CLib
     CParser
+    AutoCorres
   theories
     "TestSEL4"
