@@ -38,7 +38,9 @@ ASPEC_GITREV_FILE=abstract/document/gitrev.tex
 GIT_ROOT_FILE=abstract/document/git-root.tex
 
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
-ASpec: $(ASPEC_VERSION_FILE) $(GIT_ROOT_FILE) $(ASPEC_GITREV_FILE) design-spec
+ASpec: ASpec-files design-spec
+
+ASpec-files: $(ASPEC_VERSION_FILE) $(GIT_ROOT_FILE) $(ASPEC_GITREV_FILE)
 
 $(ASPEC_VERSION_FILE): $(SEL4_VERSION)
 	cp $< $@
