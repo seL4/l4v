@@ -1,5 +1,12 @@
-AutoCorres 1.6.1 (3 October 2019)
+AutoCorres 1.7 (2 November 2020)
 --------------
+
+	* Isabelle2020 edition of both AutoCorres and the C parser.
+
+	* Slight updates to wp: use "wp (once)" instead of "wp_once"
+
+AutoCorres 1.6.1 (3 October 2019)
+----------------
 	* Correct license for a C parser file. No code changes.
 
 AutoCorres 1.6 (5 September 2019)
