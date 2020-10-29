@@ -124,7 +124,7 @@ parser.add_argument('--no-cleanup', action='store_true',
 parser.add_argument('-r', '--repository', metavar='REPO',
                     type=str, help='Path to the L4.verified repository base.', default=None)
 parser.add_argument('--archs', metavar='ARCH,...',
-                    type=str, default='ARM,ARM_HYP,X64',
+                    type=str, default='ARM,ARM_HYP,X64,RISCV64',
                     help='L4V_ARCHs to include (comma-separated)')
 args = parser.parse_args()
 
