@@ -83,6 +83,7 @@ session Lib (lib) = Word_Lib +
     DetWPLib
     Guess_ExI
     GenericTag
+    ML_Goal_Test
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
