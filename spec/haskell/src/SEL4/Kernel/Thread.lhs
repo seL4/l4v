@@ -39,7 +39,7 @@ We use the C preprocessor to select a target architecture.
 > import Data.Bits hiding (countLeadingZeros)
 > import Data.Array
 > import Data.WordLib
-> import Data.Maybe(fromJust)
+> import Data.Maybe(fromJust, isJust)
 > import Data.Set(fromList, member)
 
 \end{impdetails}
@@ -154,7 +154,7 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
->         schedContextResume (fromJust scOpt)
+>         when (isJust scOpt) $ schedContextResume (fromJust scOpt)
 >         schedulable <- isSchedulable target
 >         when schedulable $ possibleSwitchTo target
 
