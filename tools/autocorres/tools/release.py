@@ -215,12 +215,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         os.path.join(target_dir, "autocorres", "CONTRIBUTORS"))
 
     # License files.
-    shutil.copyfile(
-        os.path.join(args.repository, "LICENSE_BSD2.txt"),
-        os.path.join(target_dir, "LICENSE_BSD2.txt"))
-    shutil.copyfile(
-        os.path.join(args.repository, "LICENSE_GPLv2.txt"),
-        os.path.join(target_dir, "LICENSE_GPLv2.txt"))
+    shutil.copytree(
+        os.path.join(args.repository, "LICENSES"),
+        os.path.join(target_dir, "LICENSES"))
 
     # Extract dependent sessions in lib. FIXME: rather kludgy
     print('Extracting sessions from lib/ROOT...')
