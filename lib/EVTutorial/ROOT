@@ -1,0 +1,15 @@
+(*
+ * Copyright 2020, The University of Melbourne (ABN 84 002 705 224)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+chapter Lib
+
+session EVTutorial = Lib +
+  options [document = pdf]
+  theories
+    EquivValidTutorial
+  document_files
+    "root.bib"
+    "root.tex"
