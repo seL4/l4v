@@ -267,6 +267,30 @@ lemma modify_ev2:
   apply(clarsimp simp: equiv_valid_2_def in_monad)
   using assms by auto
 
+lemma modify_ev:
+  "equiv_valid I A B
+     (\<lambda> s. \<forall> s t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  by auto
+
+lemma modify_ev':
+  "equiv_valid I A B
+     (\<lambda> s. \<forall> t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  by auto
+
+lemma modify_ev'':
+  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P t\<rbrakk> \<Longrightarrow> I (f s) (f t) \<and> B (f s) (f t)"
+  shows "equiv_valid I A B P (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  using assms by auto
+
+
 lemma put_ev2:
   assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I x x' \<and> B x x'"
   shows
