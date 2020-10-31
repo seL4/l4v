@@ -10,7 +10,7 @@
 
 theory Eisbach_Methods
 imports
-  "subgoal_focus/Subgoal_Methods"
+  Subgoal_Methods
   "HOL-Eisbach.Eisbach_Tools"
   Rule_By_Method
   Local_Method

@@ -5,7 +5,7 @@
  *)
 theory Plus2_Prefix
 imports
-  "../Prefix_Refinement"
+  Prefix_Refinement
 begin
 
 section \<open>The plus2 example.\<close>

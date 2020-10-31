@@ -5,7 +5,7 @@
  *)
 
 theory ArchAInvsPre
-imports "../AInvsPre"
+imports AInvsPre
 begin
 
 context Arch begin

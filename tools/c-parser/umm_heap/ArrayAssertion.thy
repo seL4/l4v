@@ -9,7 +9,7 @@
 theory ArrayAssertion
 
 imports
-  "$L4V_ARCH/ArchArraysMemInstance"
+  ArchArraysMemInstance
   "StructSupport"
 
 begin

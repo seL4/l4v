@@ -9,7 +9,7 @@ CSpace invariants
 *)
 
 theory ArchCSpaceInv_AI
-imports "../CSpaceInv_AI"
+imports CSpaceInv_AI
 begin
 
 context Arch begin global_naming X64

@@ -6,10 +6,10 @@
 
 theory WP
 imports
-  "WP_Pre"
-  "WPFix"
-  "../../Apply_Debug"
-  "../../ml-helpers/MLUtils"
+  WP_Pre
+  WPFix
+  Apply_Debug
+  MLUtils
 begin
 
 definition

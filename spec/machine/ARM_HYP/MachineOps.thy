@@ -8,7 +8,7 @@ chapter "Machine Operations"
 
 theory MachineOps
 imports
-  "../MachineMonad"
+  MachineMonad
 begin
 
 section "Wrapping and Lifting Machine Operations"

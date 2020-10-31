@@ -11,7 +11,7 @@
 theory VSpace_H
 imports
   CNode_H
-  "./$L4V_ARCH/ArchVSpace_H"
+  ArchVSpace_H
   KernelInitMonad_H
 begin
 

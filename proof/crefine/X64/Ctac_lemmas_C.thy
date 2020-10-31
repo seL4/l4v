@@ -8,7 +8,7 @@
 
 theory Ctac_lemmas_C
 imports
-  "../lib/Ctac"
+  Ctac
 begin
 
 context kernel

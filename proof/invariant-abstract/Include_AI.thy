@@ -6,7 +6,7 @@
 
 theory Include_AI
 imports
-  "./$L4V_ARCH/ArchCrunchSetup_AI"
+  ArchCrunchSetup_AI
   "Lib.Eisbach_WP"
   "ASpec.Syscall_A"
   "Lib.LemmaBucket"

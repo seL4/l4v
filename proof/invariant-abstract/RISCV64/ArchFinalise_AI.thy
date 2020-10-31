@@ -5,7 +5,7 @@
  *)
 
 theory ArchFinalise_AI
-imports "../Finalise_AI"
+imports Finalise_AI
 begin
 
 (* FIXME: MOVE *)

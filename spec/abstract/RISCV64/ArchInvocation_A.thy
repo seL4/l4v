@@ -7,7 +7,7 @@
 chapter "RISCV64 Object Invocations"
 
 theory ArchInvocation_A
-imports "../Structures_A"
+imports Structures_A
 begin
 
 context Arch begin global_naming RISCV64_A

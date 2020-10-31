@@ -6,9 +6,9 @@
 
 theory NonDetMonadLemmaBucket
 imports
-  "Monad_WP/NonDetMonadVCG"
-  "MonadEq"
-  "Monad_WP/WhileLoopRulesCompleteness"
+  NonDetMonadVCG
+  MonadEq
+  WhileLoopRulesCompleteness
   "Word_Lib.Distinct_Prop"
 begin
 setup \<open>AutoLevity_Base.add_attribute_test "wp" WeakestPre.is_wp_rule\<close>

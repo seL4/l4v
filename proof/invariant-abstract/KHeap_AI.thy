@@ -5,7 +5,7 @@
  *)
 
 theory KHeap_AI
-imports "./$L4V_ARCH/ArchKHeap_AI"
+imports ArchKHeap_AI
 begin
 
 context begin interpretation Arch .

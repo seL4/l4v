@@ -14,7 +14,7 @@ imports
   Invocations_H
   InvocationLabels_H
   Config_H
-  "../machine/MachineExports"
+  MachineExports
 begin
 
 context begin interpretation Arch .

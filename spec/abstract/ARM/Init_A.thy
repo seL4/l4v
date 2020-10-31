@@ -11,7 +11,7 @@ Dummy initial kernel state. Real kernel boot up is more complex.
 chapter "An Initial Kernel State"
 
 theory Init_A
-imports "../Retype_A"
+imports Retype_A
 begin
 
 context Arch begin global_naming ARM_A

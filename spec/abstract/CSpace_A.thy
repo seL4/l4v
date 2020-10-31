@@ -12,9 +12,9 @@ chapter "CSpace"
 
 theory CSpace_A
 imports
-  "./$L4V_ARCH/ArchVSpace_A"
+  ArchVSpace_A
   IpcCancel_A
-  "./$L4V_ARCH/ArchCSpace_A"
+  ArchCSpace_A
   "Lib.NonDetMonadLemmas"
   "HOL-Library.Prefix_Order"
 begin

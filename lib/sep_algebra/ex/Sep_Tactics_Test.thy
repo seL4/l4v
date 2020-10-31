@@ -10,7 +10,7 @@
 *)
 
 theory Sep_Tactics_Test
-imports "../Sep_Tactics"
+imports Sep_Tactics
 begin
 
 text \<open>Substitution and forward/backward reasoning\<close>

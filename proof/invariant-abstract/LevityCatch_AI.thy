@@ -6,7 +6,7 @@
 
 theory LevityCatch_AI
 imports
-  "./$L4V_ARCH/ArchLevityCatch_AI"
+  ArchLevityCatch_AI
 begin
 
 context begin interpretation Arch .

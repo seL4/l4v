@@ -7,7 +7,7 @@
 chapter "Kernel Events"
 
 theory Event_H
-imports "../machine/MachineExports"
+imports MachineExports
 begin
 
 text \<open>

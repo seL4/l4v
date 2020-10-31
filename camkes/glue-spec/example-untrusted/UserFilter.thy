@@ -5,7 +5,7 @@
  *)
 (*<*)
 theory UserFilter
-imports "../UserStubs" GenFilterBase
+imports "UserStubs" GenFilterBase
 begin
 
 (* Stub to expose existing static UserStubs.thy. This is to avoid having to

@@ -7,7 +7,8 @@
 (* Proofs about untyped invocations. *)
 
 theory Untyped_AI
-imports "./$L4V_ARCH/ArchDetype_AI"
+imports
+  ArchDetype_AI
   "Lib.MonadicRewrite"
 begin
 

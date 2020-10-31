@@ -7,7 +7,7 @@
 chapter "Retyping Objects"
 
 theory ArchVSpaceDecls_H
-imports ArchRetypeDecls_H "../InvocationLabels_H"
+imports ArchRetypeDecls_H InvocationLabels_H
 begin
 
 context Arch begin global_naming RISCV64_H

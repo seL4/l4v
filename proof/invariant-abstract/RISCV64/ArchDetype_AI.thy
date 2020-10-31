@@ -5,7 +5,7 @@
  *)
 
 theory ArchDetype_AI
-imports "../Detype_AI"
+imports Detype_AI
 begin
 
 context Arch begin global_naming RISCV64

@@ -5,7 +5,7 @@
  *)
 
 theory ArchArch_AI
-imports "../Arch_AI"
+imports Arch_AI
 begin
 
 context Arch begin global_naming ARM

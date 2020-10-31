@@ -5,7 +5,7 @@
  *)
 
 theory ArchDeterministic_AI
-imports "../Deterministic_AI"
+imports Deterministic_AI
 begin
 
 context Arch begin global_naming ARM

@@ -9,7 +9,7 @@ CSpace refinement
 *)
 
 theory CSpace_AI
-imports "./$L4V_ARCH/ArchCSpacePre_AI"
+imports ArchCSpacePre_AI
 begin
 
 context begin interpretation Arch .

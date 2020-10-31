@@ -9,7 +9,7 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports Main "../../../spec/machine/Setup_Locale"
+imports Main Setup_Locale
 begin
 
 context Arch begin global_naming X64_H

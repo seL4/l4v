@@ -6,7 +6,7 @@
 
 
 theory MachineMonad
-imports "./$L4V_ARCH/MachineTypes"
+imports MachineTypes
 begin
 
 context begin interpretation Arch .

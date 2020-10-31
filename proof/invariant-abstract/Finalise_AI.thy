@@ -6,9 +6,9 @@
 
 theory Finalise_AI
 imports
-  "./$L4V_ARCH/ArchIpcCancel_AI"
-  "./$L4V_ARCH/ArchInterruptAcc_AI"
-  "./$L4V_ARCH/ArchRetype_AI"
+  ArchIpcCancel_AI
+  ArchInterruptAcc_AI
+  ArchRetype_AI
 begin
 
 definition

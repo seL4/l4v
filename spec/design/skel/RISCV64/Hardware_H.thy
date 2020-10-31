@@ -6,7 +6,7 @@
 
 theory Hardware_H
 imports
-  "../../machine/RISCV64/MachineOps"
+  MachineOps
   State_H
 begin
 

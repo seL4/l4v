@@ -11,7 +11,7 @@ imports
   "Lib.Defs"
   "Lib.Lib"
   "Word_Lib.WordSetup"
-  "../Setup_Locale"
+  Setup_Locale
 begin
 
 context Arch begin global_naming ARM_HYP

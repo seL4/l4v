@@ -20,7 +20,7 @@
  * are added to the "monad_eq" set.
  *)
 theory MonadEq
-imports "Monad_WP/NonDetMonadVCG"
+imports NonDetMonadVCG
 begin
 
 (* Setup "monad_eq" attributes. *)

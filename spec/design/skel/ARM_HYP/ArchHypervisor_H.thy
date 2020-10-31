@@ -10,9 +10,9 @@
 
 theory ArchHypervisor_H
 imports
-  "../CNode_H"
-  "../FaultHandlerDecls_H"
-  "../InterruptDecls_H"
+  CNode_H
+  FaultHandlerDecls_H
+  InterruptDecls_H
 begin
 context Arch begin global_naming ARM_HYP_H
 

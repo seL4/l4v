@@ -7,7 +7,7 @@
 chapter "Intermediate"
 
 theory ArchIntermediate_H
-imports "../Intermediate_H"
+imports Intermediate_H
 begin
 
 context Arch begin

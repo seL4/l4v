@@ -11,7 +11,7 @@ Higher level functions for manipulating virtual address spaces
 chapter "x64 VSpace Functions"
 
 theory ArchVSpace_A
-imports "../Retype_A"
+imports Retype_A
 begin
 
 context Arch begin global_naming X64_A

@@ -5,7 +5,7 @@
  *)
 theory Peterson_Atomicity
 imports
-  "../Atomicity_Lib"
+  Atomicity_Lib
 begin
 
 text \<open>

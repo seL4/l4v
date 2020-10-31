@@ -11,7 +11,7 @@
 chapter "Nondeterministic State Monad with Failure"
 
 theory NonDetMonad
-imports "../Lib"
+imports Lib
 begin
 
 text \<open>

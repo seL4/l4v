@@ -8,7 +8,7 @@
 
 theory MonadicRewrite
 imports
-  "Monad_WP/NonDetMonadVCG"
+  NonDetMonadVCG
   Corres_UL
   EmptyFailLib
   LemmaBucket

@@ -9,7 +9,7 @@
 *)
 
 theory ArchRetype_AI
-imports "../Retype_AI"
+imports Retype_AI
 begin
 
 context Arch begin global_naming ARM

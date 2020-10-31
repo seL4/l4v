@@ -9,7 +9,7 @@
 chapter "Common, Architecture-Specific Data Types"
 
 theory Arch_Structs_B
-imports "../../../spec/machine/Setup_Locale"
+imports Setup_Locale
 begin
 
 context Arch begin global_naming RISCV64_H

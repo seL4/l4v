@@ -11,7 +11,7 @@ Specification of Inter-Process Communication.
 chapter "IPC"
 
 theory Ipc_A
-imports Tcb_A "./$L4V_ARCH/ArchFault_A"
+imports Tcb_A ArchFault_A
 begin
 
 context begin interpretation Arch .

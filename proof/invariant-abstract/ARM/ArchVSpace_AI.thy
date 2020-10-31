@@ -9,7 +9,7 @@ ARM-specific VSpace invariants
 *)
 
 theory ArchVSpace_AI
-imports "../VSpacePre_AI"
+imports VSpacePre_AI
 begin
 
 context Arch begin global_naming ARM

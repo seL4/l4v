@@ -7,7 +7,7 @@
 (* License: BSD, terms see file ./LICENSE *)
 
 theory Vanilla32
-imports "./$L4V_ARCH/Word_Mem_Encoding" "Word_Lib.Word_Lib" CTypes
+imports Word_Mem_Encoding "Word_Lib.Word_Lib" CTypes
 begin
 
 

@@ -5,7 +5,7 @@
  *)
 
 theory ArchKHeap_AI
-imports "../KHeapPre_AI"
+imports KHeapPre_AI
 begin
 
 context Arch begin global_naming RISCV64

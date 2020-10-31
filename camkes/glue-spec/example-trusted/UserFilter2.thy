@@ -5,7 +5,7 @@
  *)
 (*<*)
 theory UserFilter2
-imports GenFilter2Base "../UserStubs"
+imports GenFilter2Base "UserStubs"
 begin
 (*>*)
 

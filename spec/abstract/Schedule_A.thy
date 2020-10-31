@@ -11,7 +11,7 @@ Non-deterministic scheduler functionality.
 chapter "Scheduler"
 
 theory Schedule_A
-imports "./$L4V_ARCH/Arch_A"
+imports Arch_A
 begin
 
 context begin interpretation Arch .

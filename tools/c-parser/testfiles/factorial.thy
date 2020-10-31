@@ -5,7 +5,7 @@
  *)
 
 theory factorial
-imports "CParser.CTranslation" "$L4V_ARCH/imports/MachineWords"
+imports "CParser.CTranslation" MachineWords
 begin
 
 declare hrs_simps [simp add]

@@ -28,7 +28,7 @@ USA
 
 section \<open>Examples using the Verification Environment\<close>
 
-theory VcgEx imports "../HeapList" "../Vcg" begin
+theory VcgEx imports HeapList Vcg begin
 
 text \<open>Some examples, especially the single-step Isar proofs are taken from
 \texttt{HOL/Isar\_examples/HoareEx.thy}.

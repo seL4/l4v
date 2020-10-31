@@ -9,7 +9,8 @@ Lemmas on arch get/set object etc
 *)
 
 theory ArchAcc_AI
-imports "../SubMonad_AI" "ArchVSpaceLookup_AI" "Lib.Crunch_Instances_NonDet"
+imports
+  SubMonad_AI ArchVSpaceLookup_AI "Lib.Crunch_Instances_NonDet"
 begin
 
 

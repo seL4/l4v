@@ -5,7 +5,7 @@
  *)
 
 theory CSpaceInvPre_AI
-imports "./$L4V_ARCH/ArchAcc_AI"
+imports ArchAcc_AI
 begin
 
 context begin interpretation Arch .

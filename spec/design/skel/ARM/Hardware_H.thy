@@ -6,7 +6,7 @@
 
 theory Hardware_H
 imports
-  "../../machine/ARM/MachineOps"
+  MachineOps
   State_H
 begin
 context Arch begin global_naming ARM_H

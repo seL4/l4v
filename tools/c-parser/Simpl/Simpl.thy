@@ -30,15 +30,15 @@ imports
   StateSpace
   AlternativeSmallStep
   SyntaxTest
-  "ex/VcgEx"
-  "ex/VcgExSP"
-  "ex/VcgExTotal"
-  "ex/Quicksort"
-  "ex/XVcgEx"
-  "ex/ProcParEx"
-  "ex/ProcParExSP"
-  "ex/ClosureEx"
-  "ex/ComposeEx"
+  "VcgEx"
+  "VcgExSP"
+  "VcgExTotal"
+  "Quicksort"
+  "XVcgEx"
+  "ProcParEx"
+  "ProcParExSP"
+  "ClosureEx"
+  "ComposeEx"
   UserGuide
 begin
 end

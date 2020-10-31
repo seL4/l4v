@@ -5,7 +5,7 @@
  *)
 
 theory ArchTCB_H
-imports "../TCBDecls_H"
+imports TCBDecls_H
 begin
 
 context Arch begin global_naming RISCV64_H

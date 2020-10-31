@@ -7,7 +7,7 @@
 chapter \<open>Architecture-specific Fault-handling Functions\<close>
 
 theory ArchFault_A
-imports "../Structures_A" "../Tcb_A"
+imports Structures_A Tcb_A
 begin
 
 context Arch begin global_naming RISCV64_A

@@ -6,7 +6,7 @@
 
 
 theory MachineExports
-imports "./$L4V_ARCH/MachineOps"
+imports MachineOps
 begin
 
 context begin interpretation Arch .

@@ -5,8 +5,8 @@
  *)
 theory TraceMonad
 imports
-  "../Lib"
-  "Strengthen"
+  Lib
+  Strengthen
 begin
 
 text \<open>

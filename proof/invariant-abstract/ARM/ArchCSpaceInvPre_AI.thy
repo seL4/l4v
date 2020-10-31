@@ -9,7 +9,7 @@ CSpace invariants
 *)
 
 theory ArchCSpaceInvPre_AI
-imports "../CSpaceInvPre_AI"
+imports CSpaceInvPre_AI
 begin
 context Arch begin global_naming ARM
 

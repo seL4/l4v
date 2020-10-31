@@ -5,7 +5,7 @@
  *)
 
 theory DetSchedSchedule_AI
-imports "$L4V_ARCH/ArchDetSchedDomainTime_AI"
+imports ArchDetSchedDomainTime_AI
 begin
 
 crunch ct_not_in_q[wp]: do_machine_op "ct_not_in_q"

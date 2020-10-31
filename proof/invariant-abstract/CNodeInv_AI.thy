@@ -10,7 +10,7 @@ recursive revoke and delete operations.
 *)
 
 theory CNodeInv_AI
-imports "./$L4V_ARCH/ArchIpc_AI"
+imports ArchIpc_AI
 begin
 
 

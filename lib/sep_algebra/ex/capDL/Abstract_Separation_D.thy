@@ -13,9 +13,9 @@ chapter "Instantiating capDL as a separation algebra."
 
 theory Abstract_Separation_D
 imports
-  "../../Sep_Tactics"
+  Sep_Tactics
   Types_D
-  "../../Map_Extra"
+  Map_Extra
 begin
 
 (**************************************

@@ -6,9 +6,9 @@
 
 theory ArchInterrupt_H
 imports
-  "../RetypeDecls_H"
-  "../CNode_H"
-  "../InterruptDecls_H"
+  RetypeDecls_H
+  CNode_H
+  InterruptDecls_H
   ArchInterruptDecls_H
   ArchHypervisor_H
 begin

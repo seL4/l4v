@@ -5,7 +5,7 @@
  *)
 
 theory ArchVSpaceEntries_AI
-imports "../VSpaceEntries_AI"
+imports VSpaceEntries_AI
 begin
 
 context Arch begin global_naming X64 (*FIXME: arch_split*)

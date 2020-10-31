@@ -11,9 +11,8 @@ Entry point for architecture dependent definitions.
 chapter "Toplevel ARM Definitions"
 
 theory Arch_A
-imports "../TcbAcc_A" "VCPU_A"
+imports TcbAcc_A VCPU_A
 begin
-
 
 context Arch begin global_naming ARM_A
 

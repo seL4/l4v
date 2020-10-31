@@ -11,7 +11,7 @@ Entry point for architecture dependent definitions.
 chapter "Toplevel x64 Definitions"
 
 theory Arch_A
-imports "../TcbAcc_A"
+imports TcbAcc_A
 begin
 
 context Arch begin global_naming X64_A
