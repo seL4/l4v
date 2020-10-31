@@ -6,8 +6,8 @@
 theory WPFix
 
 imports
-  "../Datatype_Schematic"
-  "../Strengthen"
+  Datatype_Schematic
+  Strengthen
 
 begin
 

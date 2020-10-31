@@ -9,7 +9,7 @@
 theory TypHeap
 imports
   Vanilla32
-  "$L4V_ARCH/ArchArraysMemInstance"
+  ArchArraysMemInstance
   HeapRawState
   MapExtraTrans
 begin

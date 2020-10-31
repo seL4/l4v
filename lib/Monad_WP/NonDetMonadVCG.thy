@@ -7,8 +7,8 @@
 theory NonDetMonadVCG
 imports
   NonDetMonadLemmas
-  "wp/WPSimp"
-  "Strengthen"
+  WPSimp
+  Strengthen
 begin
 
 declare K_def [simp]

@@ -27,7 +27,7 @@ USA
 *)
 
 section "Examples for Procedures as Parameters using Statespaces"
-theory ProcParExSP imports "../Vcg" begin
+theory ProcParExSP imports Vcg begin
 
 
 lemma DynProcProcPar':

@@ -29,7 +29,7 @@ USA
 section "Example: Quicksort on Heap Lists"
 
 theory Quicksort
-imports "../Vcg" "../HeapList" "HOL-Library.Permutation"
+imports Vcg HeapList "HOL-Library.Permutation"
 begin
 
 record globals_heap =

@@ -5,7 +5,7 @@
  *)
 
 theory Detype_AI
-imports "./$L4V_ARCH/ArchRetype_AI"
+imports ArchRetype_AI
 begin
 
 context begin interpretation Arch .

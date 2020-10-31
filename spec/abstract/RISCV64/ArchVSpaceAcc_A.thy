@@ -7,7 +7,7 @@
 chapter "Accessing the RISCV64 VSpace"
 
 theory ArchVSpaceAcc_A
-imports "../KHeap_A"
+imports KHeap_A
 begin
 
 context Arch begin global_naming RISCV64_A

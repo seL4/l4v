@@ -13,7 +13,7 @@
 
 theory CTypesBase
 imports
-  "./$L4V_ARCH/Addr_Type"
+  Addr_Type
   "HOL-Library.Prefix_Order"
   "Word_Lib.Signed_Words"
 begin

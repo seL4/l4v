@@ -12,8 +12,8 @@ chapter "Decoding Architecture-specific System Calls"
 
 theory ArchDecode_A
 imports
-  "../Interrupt_A"
-  "../InvocationLabels_A"
+  Interrupt_A
+  InvocationLabels_A
   "Word_Lib.Word_Lib"
   "ExecSpec.InvocationLabels_H"
 begin

@@ -7,7 +7,7 @@
 (* Arch specific lemmas that should be moved into theory files before CRefine *)
 
 theory ArchMove_C
-imports "../Move_C"
+imports Move_C
 begin
 
 

@@ -5,7 +5,7 @@
  *)
 
 theory ArchSchedule_AI
-imports "../Schedule_AI"
+imports Schedule_AI
 begin
 
 context Arch begin global_naming RISCV64

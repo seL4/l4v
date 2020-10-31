@@ -9,7 +9,7 @@
 *)
 
 theory ArchFault_H
-imports "../Types_H"
+imports Types_H
 begin
 
 context Arch begin global_naming RISCV64_H

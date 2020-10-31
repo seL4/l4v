@@ -5,7 +5,7 @@
  *)
 
 theory ArchIpcCancel_AI
-imports "../IpcCancel_AI"
+imports IpcCancel_AI
 begin
 
 context Arch begin global_naming X64

@@ -9,7 +9,7 @@ RISCV-specific VSpace invariants
 *)
 
 theory ArchVSpace_AI
-imports "../VSpacePre_AI"
+imports VSpacePre_AI
 begin
 
 (* FIXME: move to lib *)

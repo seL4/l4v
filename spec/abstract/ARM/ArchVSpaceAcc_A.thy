@@ -11,7 +11,7 @@ Accessor functions for architecture specific parts of the specification.
 chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
-imports "../KHeap_A"
+imports KHeap_A
 begin
 
 context Arch begin global_naming ARM_A

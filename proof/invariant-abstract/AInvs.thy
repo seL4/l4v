@@ -9,7 +9,7 @@ The main theorem
 *)
 
 theory AInvs
-imports "./$L4V_ARCH/ArchAInvsPre"
+imports ArchAInvsPre
 begin
 
 lemma st_tcb_at_nostate_upd:

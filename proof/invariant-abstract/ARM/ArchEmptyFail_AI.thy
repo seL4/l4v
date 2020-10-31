@@ -5,7 +5,7 @@
  *)
 
 theory ArchEmptyFail_AI
-imports "../EmptyFail_AI"
+imports EmptyFail_AI
 begin
 
 context Arch begin global_naming ARM

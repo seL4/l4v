@@ -5,7 +5,7 @@
  *)
 
 theory TcbAcc_AI
-imports "$L4V_ARCH/ArchCSpace_AI"
+imports ArchCSpace_AI
 begin
 
 context begin interpretation Arch .

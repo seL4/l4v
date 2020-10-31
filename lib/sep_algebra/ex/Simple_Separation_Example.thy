@@ -15,8 +15,8 @@ chapter "Example from HOL/Hoare/Separation"
 theory Simple_Separation_Example
 imports
   "HOL-Hoare.Hoare_Logic_Abort"
-  "../Sep_Heap_Instance"
-  "../Sep_Tactics"
+  Sep_Heap_Instance
+  Sep_Tactics
 begin
 
 declare [[syntax_ambiguity_warning = false]]

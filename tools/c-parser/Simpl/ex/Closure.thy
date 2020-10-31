@@ -29,7 +29,7 @@ USA
 section "Experiments with Closures"
 
 theory Closure
-imports "../Hoare"
+imports Hoare
 begin
 
 

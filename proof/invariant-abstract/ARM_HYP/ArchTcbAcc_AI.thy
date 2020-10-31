@@ -5,7 +5,7 @@
  *)
 
 theory ArchTcbAcc_AI
-imports "../TcbAcc_AI"
+imports TcbAcc_AI
 begin
 
 context Arch begin global_naming ARM_HYP

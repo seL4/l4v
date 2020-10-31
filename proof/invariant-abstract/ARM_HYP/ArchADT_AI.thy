@@ -9,7 +9,7 @@ chapter \<open>ARM_HYP-specific definitions for abstract datatype for the abstra
 theory ArchADT_AI
 imports
   "Lib.Simulation"
-  "../Invariants_AI"
+  Invariants_AI
 begin
 context Arch begin global_naming ARM_HYP
 

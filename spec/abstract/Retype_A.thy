@@ -13,9 +13,9 @@ chapter "Retyping and Untyped Invocations"
 theory Retype_A
 imports
   CSpaceAcc_A
-  "./$L4V_ARCH/ArchVSpaceAcc_A"
+  ArchVSpaceAcc_A
   Invocations_A
-  "./$L4V_ARCH/ArchRetype_A"
+  ArchRetype_A
 begin
 
 context begin interpretation Arch .

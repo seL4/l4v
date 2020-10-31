@@ -11,7 +11,7 @@ Formalisation of interrupt handling.
 chapter "Interrupts"
 
 theory Interrupt_A
-imports "./$L4V_ARCH/ArchInterrupt_A"
+imports ArchInterrupt_A
 begin
 
 context begin interpretation Arch .

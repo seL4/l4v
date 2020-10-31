@@ -7,7 +7,7 @@
 chapter "Handle Hypervisor Fault Event"
 
 theory Hypervisor_A
-imports "../Ipc_A"
+imports Ipc_A
 begin
 
 context Arch begin global_naming ARM_A

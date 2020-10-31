@@ -28,7 +28,7 @@ USA
 
 section \<open>Examples for Total Correctness\<close>
 
-theory VcgExTotal imports "../HeapList" "../Vcg" begin
+theory VcgExTotal imports HeapList Vcg begin
 
 record 'g vars = "'g state" +
   A_' :: nat

@@ -11,7 +11,7 @@ imports
   ArchRetypeDecls_H
   ArchVSpaceDecls_H
   Hardware_H
-  "../KI_Decls_H"
+  KI_Decls_H
 begin
 
 context Arch begin global_naming RISCV64_H

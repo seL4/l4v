@@ -5,7 +5,7 @@
  *)
 
 theory Invariants_AI
-imports "./$L4V_ARCH/ArchInvariants_AI"
+imports ArchInvariants_AI
 begin
 
 context begin interpretation Arch .

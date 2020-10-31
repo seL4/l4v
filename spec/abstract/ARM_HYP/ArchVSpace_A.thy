@@ -12,8 +12,8 @@ chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
 imports
-  "../Retype_A"
-  "ArchTcb_A"
+  Retype_A
+  ArchTcb_A
 begin
 
 context Arch begin global_naming ARM_A

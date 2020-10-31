@@ -7,7 +7,7 @@
 chapter "Toplevel Refinement Statement"
 
 theory Refine_C
-imports Init_C Fastpath_C "../lib/CToCRefine"
+imports Init_C Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

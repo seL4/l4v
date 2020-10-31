@@ -12,7 +12,7 @@ imports
   TCBDecls_H
   CNode_H
   VSpace_H
-  "./$L4V_ARCH/ArchTCB_H"
+  ArchTCB_H
 begin
 
 context begin interpretation Arch .

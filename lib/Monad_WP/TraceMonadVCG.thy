@@ -6,8 +6,8 @@
 theory TraceMonadVCG
 imports
   TraceMonad
-  "wp/WPSimp"
-  "Strengthen"
+  WPSimp
+  Strengthen
 begin
 
 lemma trace_steps_append:

@@ -7,7 +7,7 @@
 theory KernelInit_A (* FIXME: unused, out of date *)
 imports
   Tcb_A
-  "./$L4V_ARCH/ArchVSpace_A"
+  ArchVSpace_A
 begin
 
 section \<open>Generic stuff\<close>

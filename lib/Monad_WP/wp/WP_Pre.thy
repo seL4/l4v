@@ -7,7 +7,7 @@
 theory WP_Pre
 imports
   Main
-  "../../Trace_Schematic_Insts"
+  Trace_Schematic_Insts
   "HOL-Eisbach.Eisbach_Tools"
 begin
 

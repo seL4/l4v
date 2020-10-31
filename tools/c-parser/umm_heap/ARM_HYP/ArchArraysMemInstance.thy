@@ -5,7 +5,7 @@
  *)
 
 theory ArchArraysMemInstance
-imports "../ArraysMemInstance"
+imports ArraysMemInstance
 begin
 
 (* Showing arrays are in mem_type requires maximum sizes for objects,

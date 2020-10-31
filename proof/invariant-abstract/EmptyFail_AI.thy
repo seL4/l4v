@@ -5,7 +5,7 @@
  *)
 
 theory EmptyFail_AI
-imports "./$L4V_ARCH/ArchTcb_AI"
+imports ArchTcb_AI
 begin
 
 context begin interpretation Arch .

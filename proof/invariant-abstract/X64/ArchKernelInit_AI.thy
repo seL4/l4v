@@ -9,9 +9,9 @@
 
 theory ArchKernelInit_AI
 imports
-  "../ADT_AI"
-  "../Tcb_AI"
-  "../Arch_AI"
+  ADT_AI
+  Tcb_AI
+  Arch_AI
 begin
 
 context Arch begin global_naming X64 (*FIXME: arch_split*)

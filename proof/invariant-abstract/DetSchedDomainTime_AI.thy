@@ -5,7 +5,7 @@
  *)
 
 theory DetSchedDomainTime_AI
-imports "$L4V_ARCH/ArchDetSchedAux_AI"
+imports ArchDetSchedAux_AI
 begin
 
 text \<open>

@@ -5,7 +5,7 @@
  *)
 
 theory ArchVSpaceEntries_AI
-imports "../VSpaceEntries_AI"
+imports VSpaceEntries_AI
 begin
 
 

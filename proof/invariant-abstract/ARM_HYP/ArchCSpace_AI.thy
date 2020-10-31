@@ -9,7 +9,7 @@ ARM_HYP-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
-imports "../CSpace_AI"
+imports CSpace_AI
 begin
 
 context Arch begin global_naming ARM_HYP

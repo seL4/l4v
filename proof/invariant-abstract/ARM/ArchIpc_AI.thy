@@ -5,7 +5,7 @@
  *)
 
 theory ArchIpc_AI
-imports "../Ipc_AI"
+imports Ipc_AI
 begin
 
 context Arch begin global_naming ARM

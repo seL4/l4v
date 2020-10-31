@@ -9,7 +9,7 @@ CSpace invariants preamble
 *)
 
 theory CSpacePre_AI
-imports "./$L4V_ARCH/ArchCSpaceInv_AI"
+imports ArchCSpaceInv_AI
 begin
 
 context begin interpretation Arch .

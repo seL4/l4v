@@ -5,7 +5,7 @@
  *)
 
 theory IpcCancel_AI
-imports "./$L4V_ARCH/ArchSchedule_AI"
+imports ArchSchedule_AI
 begin
 
 context begin interpretation Arch .

@@ -5,7 +5,7 @@
  *)
 
 theory ArchUntyped_AI
-imports "../Untyped_AI"
+imports Untyped_AI
 begin
 
 context Arch begin global_naming RISCV64

@@ -5,7 +5,7 @@
  *)
 
 theory ArchInvariants_AI
-imports "../InvariantsPre_AI"
+imports InvariantsPre_AI
 begin
 
 \<comment> \<open>---------------------------------------------------------------------------\<close>

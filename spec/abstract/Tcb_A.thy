@@ -11,7 +11,7 @@ The TCB and thread related specifications.
 chapter "Threads and TCBs"
 
 theory Tcb_A
-imports TcbAcc_A Schedule_A "$L4V_ARCH/ArchTcb_A"
+imports TcbAcc_A Schedule_A ArchTcb_A
 begin
 
 context begin interpretation Arch .

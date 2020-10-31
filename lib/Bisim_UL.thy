@@ -8,7 +8,7 @@
 
 theory Bisim_UL
 imports
-  "Monad_WP/NonDetMonadVCG"
+  NonDetMonadVCG
   Corres_UL
   EmptyFailLib
 begin

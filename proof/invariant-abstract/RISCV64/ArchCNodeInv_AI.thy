@@ -5,7 +5,7 @@
  *)
 
 theory ArchCNodeInv_AI
-imports "../CNodeInv_AI"
+imports CNodeInv_AI
 begin
 
 context Arch begin global_naming RISCV64

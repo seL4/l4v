@@ -5,7 +5,7 @@
  *)
 (*<*)
 theory UserEvent
-imports "../UserStubs" GenEventBase
+imports "UserStubs" GenEventBase
 begin
 
 (* Stub to expose existing static UserStubs.thy. This is to avoid having to

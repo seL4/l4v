@@ -5,7 +5,7 @@
  *)
 
 theory ArchBits_AI
-imports "../Invariants_AI"
+imports Invariants_AI
 begin
 
 context Arch begin global_naming ARM_HYP

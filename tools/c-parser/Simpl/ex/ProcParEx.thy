@@ -28,7 +28,7 @@ USA
 
 section "Examples for Procedures as Parameters"
 
-theory ProcParEx imports "../Vcg" begin
+theory ProcParEx imports Vcg begin
 
 
 lemma DynProcProcPar':

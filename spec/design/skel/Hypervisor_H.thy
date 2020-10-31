@@ -11,7 +11,7 @@
 theory Hypervisor_H
 imports
   CNode_H
-  "./$L4V_ARCH/ArchHypervisor_H"
+  ArchHypervisor_H
   KernelInitMonad_H
 begin
 

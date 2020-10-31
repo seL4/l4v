@@ -7,7 +7,7 @@
 chapter "Kernel Invocation Labels"
 
 theory InvocationLabels_H
-imports "$L4V_ARCH/ArchInvocationLabels_H"
+imports ArchInvocationLabels_H
 begin
 
 context begin interpretation Arch .

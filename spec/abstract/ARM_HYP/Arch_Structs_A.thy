@@ -13,8 +13,8 @@ chapter "ARM-Specific Data Types"
 theory Arch_Structs_A
 imports
   "ExecSpec.Arch_Structs_B"
-  "../ExceptionTypes_A"
-  "../VMRights_A"
+  ExceptionTypes_A
+  VMRights_A
 begin
 
 context Arch begin global_naming ARM_A

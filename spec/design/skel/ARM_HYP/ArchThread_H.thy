@@ -9,7 +9,7 @@ chapter "Threads"
 theory ArchThread_H
 imports
   ArchThreadDecls_H
-  "../TCBDecls_H"
+  TCBDecls_H
   ArchVSpaceDecls_H
   ArchHypervisor_H
 begin

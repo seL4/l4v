@@ -14,8 +14,8 @@ chapter "Separation Algebra for Virtual Memory"
 
 theory VM_Example
 imports
-  "../Sep_Tactics"
-  "../Map_Extra"
+  Sep_Tactics
+  Map_Extra
 begin
 
 text \<open>

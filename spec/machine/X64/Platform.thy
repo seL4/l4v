@@ -11,7 +11,7 @@ imports
   "Lib.Lib"
   "Word_Lib.Word_Enum"
   "Lib.Defs"
-  "../Setup_Locale"
+  Setup_Locale
 begin
 
 context Arch begin global_naming X64

@@ -6,10 +6,10 @@
 
 theory CProof
 imports
-  "umm_heap/SepFrame"
+  SepFrame
   "Simpl-VCG.Vcg"
-  "umm_heap/StructSupport"
-  "umm_heap/ArrayAssertion"
+  StructSupport
+  ArrayAssertion
 begin
 
 (* name generation is the only thing this theory wants, but that

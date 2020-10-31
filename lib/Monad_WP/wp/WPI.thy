@@ -32,9 +32,9 @@
 
 theory WPI
 imports
-  "../../Eisbach_Methods"
-  "../NonDetMonadLemmas"
-  "WPEx"
+  Eisbach_Methods
+  NonDetMonadLemmas
+  WPEx
 begin
 
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>

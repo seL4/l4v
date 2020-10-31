@@ -9,7 +9,7 @@ chapter \<open>X64-specific definitions for abstract datatype for the abstract s
 theory ArchADT_AI
 imports
   "Lib.Simulation"
-  "../Invariants_AI"
+  Invariants_AI
 begin
 context Arch begin global_naming X64
 

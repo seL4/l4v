@@ -5,7 +5,7 @@
  *)
 
 theory Bits_AI
-imports "./$L4V_ARCH/ArchBits_AI"
+imports ArchBits_AI
 begin
 
 lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'

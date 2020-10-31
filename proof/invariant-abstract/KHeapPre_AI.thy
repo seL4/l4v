@@ -5,7 +5,7 @@
  *)
 
 theory KHeapPre_AI
-imports "./$L4V_ARCH/Machine_AI"
+imports Machine_AI
 begin
 
 primrec

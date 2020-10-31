@@ -9,7 +9,7 @@ Architecture-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
-imports "../CSpace_AI"
+imports CSpace_AI
 begin
 
 context Arch begin global_naming RISCV64

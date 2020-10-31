@@ -9,7 +9,7 @@ Properties of machine operations.
 *)
 
 theory Machine_AI
-imports "../Bits_AI"
+imports Bits_AI
 begin
 
 

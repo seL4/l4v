@@ -7,8 +7,8 @@
 theory Trace_Schematic_Insts
 imports
   Main
-  "ml-helpers/MLUtils"
-  "ml-helpers/TermPatternAntiquote"
+  MLUtils
+  TermPatternAntiquote
 begin
 
 text \<open>

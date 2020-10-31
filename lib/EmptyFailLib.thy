@@ -6,7 +6,7 @@
 
 theory EmptyFailLib
 imports
-  "Monad_WP/NonDetMonad"
+  NonDetMonad
   HaskellLib_H
 begin
 

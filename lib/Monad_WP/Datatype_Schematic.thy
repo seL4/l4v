@@ -6,8 +6,8 @@
 theory Datatype_Schematic
 
 imports
-  "../ml-helpers/MLUtils"
-  "../ml-helpers/TermPatternAntiquote"
+  MLUtils
+  TermPatternAntiquote
 begin
 
 text \<open>

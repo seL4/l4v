@@ -7,9 +7,11 @@
 chapter "VCPU"
 
 theory VCPU_H
-imports Hardware_H "../Structures_H"
-  "../Invocations_H"
-  "../TCB_H"
+imports
+  Hardware_H
+  Structures_H
+  Invocations_H
+  TCB_H
 begin
 context Arch begin global_naming ARM_HYP_H
 

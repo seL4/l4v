@@ -11,7 +11,7 @@ Arch specific object invocations
 chapter "ARM Object Invocations"
 
 theory ArchInvocation_A
-imports "../Structures_A"
+imports Structures_A
 begin
 
 context Arch begin global_naming ARM_A

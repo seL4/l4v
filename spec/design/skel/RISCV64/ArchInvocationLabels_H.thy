@@ -9,7 +9,7 @@ chapter "Architecture-specific Invocation Labels"
 theory ArchInvocationLabels_H
 imports
   "Word_Lib.Enumeration"
-  "../../machine/Setup_Locale"
+  Setup_Locale
 begin
 context Arch begin global_naming RISCV64_H
 

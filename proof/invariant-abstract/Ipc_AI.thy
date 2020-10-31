@@ -5,7 +5,8 @@
  *)
 
 theory Ipc_AI
-imports "./$L4V_ARCH/ArchFinalise_AI"
+imports
+  ArchFinalise_AI
   "Lib.WPBang"
 begin
 

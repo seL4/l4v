@@ -6,7 +6,7 @@
 
 theory BCorres2_AI
 imports
-  "./$L4V_ARCH/ArchEmptyFail_AI"
+  ArchEmptyFail_AI
 begin
 
 locale BCorres2_AI =

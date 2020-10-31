@@ -13,8 +13,8 @@ chapter "Storable Arch Object Instances"
 theory ArchObjInsts_H
 imports
   ArchTypes_H
-  "../PSpaceStorable_H"
-  "../ObjectInstances_H"
+  PSpaceStorable_H
+  ObjectInstances_H
 begin
 
 qualify RISCV64_H (in Arch)

@@ -10,8 +10,8 @@
 
 theory ArchVSpace_H
 imports
-  "../CNode_H"
-  "../KI_Decls_H"
+  CNode_H
+  KI_Decls_H
   ArchVSpaceDecls_H
   ArchHypervisor_H
 begin

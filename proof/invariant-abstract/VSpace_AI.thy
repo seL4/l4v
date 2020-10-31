@@ -9,7 +9,7 @@ Architecture-independent VSpace invariant proofs
 *)
 
 theory VSpace_AI
-imports "./$L4V_ARCH/ArchVSpace_AI"
+imports ArchVSpace_AI
 begin
 context begin interpretation Arch .
 

@@ -17,7 +17,7 @@ imports
   "Refine.RAB_FN"
   "CLib.MonadicRewrite_C"
 
-  "../lib/CToCRefine"
+  CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

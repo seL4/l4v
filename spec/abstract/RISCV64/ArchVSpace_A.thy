@@ -7,7 +7,7 @@
 chapter "RISCV64 VSpace Functions"
 
 theory ArchVSpace_A
-imports "../Retype_A"
+imports Retype_A
 begin
 
 context Arch begin global_naming RISCV64_A

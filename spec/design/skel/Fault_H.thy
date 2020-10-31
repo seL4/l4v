@@ -11,7 +11,7 @@
 chapter "Fault Structures"
 
 theory Fault_H
-imports "$L4V_ARCH/ArchFault_H"
+imports ArchFault_H
 begin
 
 context begin interpretation Arch .

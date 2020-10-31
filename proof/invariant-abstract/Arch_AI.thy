@@ -9,7 +9,7 @@ Top level architecture related proofs.
 *)
 
 theory Arch_AI
-imports "./$L4V_ARCH/ArchUntyped_AI" "./$L4V_ARCH/ArchFinalise_AI"
+imports ArchUntyped_AI ArchFinalise_AI
 begin
 
 declare detype_arch_state[simp]

@@ -9,7 +9,7 @@
 theory Apply_Trace
 imports
   Main
-  "ml-helpers/MLUtils"
+  "MLUtils"
 begin
 
 

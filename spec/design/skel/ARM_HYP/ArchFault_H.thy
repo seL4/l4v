@@ -9,9 +9,7 @@
 *)
 
 theory ArchFault_H
-imports "../Types_H"
-(*  "../KI_Decls_H"
-  ArchVSpaceDecls_H *)
+imports Types_H
 begin
 context Arch begin global_naming ARM_HYP_H
 

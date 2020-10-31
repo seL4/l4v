@@ -7,8 +7,8 @@
 theory Invocations_H
 imports
   Structures_H
-  "./$L4V_ARCH/ArchRetypeDecls_H"
-  "./$L4V_ARCH/ArchLabelFuns_H"
+  ArchRetypeDecls_H
+  ArchLabelFuns_H
 begin
 requalify_types (in Arch)
   copy_register_sets irqcontrol_invocation

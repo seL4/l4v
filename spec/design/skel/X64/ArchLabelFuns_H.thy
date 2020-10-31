@@ -7,7 +7,7 @@
 chapter "Architecture-specific Invocation Label Functions"
 
 theory ArchLabelFuns_H
-imports "../InvocationLabels_H"
+imports InvocationLabels_H
 begin
 
 text \<open>
