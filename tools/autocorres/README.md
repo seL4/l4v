@@ -35,12 +35,12 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2019:
+AutoCorres is packaged as a theory for Isabelle2020:
 
     https://isabelle.in.tum.de
 
-AutoCorres currently supports two platforms: ARM and X64. The platform
-determines the sizes of C integral and pointer types.
+AutoCorres currently supports three platforms: ARM, X64, and RISCV64.
+The platform determines the sizes of C integral and pointer types.
 
 For ARM, the sizes are:
   - 64 bits: long long
@@ -48,6 +48,11 @@ For ARM, the sizes are:
   - 16 bits: short
 
 For X64:
+  - 64 bits: pointers, long long, long
+  - 32 bits: int
+  - 16 bits: short
+
+For RISCV64:
   - 64 bits: pointers, long long, long
   - 32 bits: int
   - 16 bits: short
