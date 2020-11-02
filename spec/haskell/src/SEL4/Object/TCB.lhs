@@ -108,8 +108,8 @@ There are eleven types of invocation for a thread control block. All require wri
 >     tcSchedTarget = target,
 >     tcSchedSlot = 0,
 >     tcSchedFaultHandler = Nothing,
->     tcSchedPriority = Nothing,
 >     tcSchedMCPriority = Nothing,
+>     tcSchedPriority = Nothing,
 >     tcSchedSchedContext = Nothing }
 
 > mapTCBPtr :: PPtr TCB -> (TCB -> a) -> Kernel a
@@ -284,8 +284,8 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         tcSchedTarget = tcbPtr,
 >         tcSchedSlot = slot,
 >         tcSchedFaultHandler = Just (fhCap, fhSlot),
->         tcSchedPriority = Just (fromIntegral newPrio, authTCB),
 >         tcSchedMCPriority = Just (fromIntegral newMCP, authTCB),
+>         tcSchedPriority = Just (fromIntegral newPrio, authTCB),
 >         tcSchedSchedContext = scPtr }
 > decodeSetSchedParams _ _ _ _ = throw TruncatedMessage
 
