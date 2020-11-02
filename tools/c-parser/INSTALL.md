@@ -9,13 +9,14 @@
 NB: These instructions apply to the stand-alone release of the C parser.
 If this is in an L4.verified checkout, see the top-level README.md instead.
 
-This code requires Isabelle2019 and the MLton SML compiler.
+This code requires Isabelle2020 and the MLton SML compiler.
 
 The C parser supports multiple target architectures:
 
     - ARM
     - ARM_HYP
     - X64
+    - RISCV64
 
 These platforms differ in integer sizes and various other details.
 Choose your desired architecture using the L4V_ARCH environment variable:
