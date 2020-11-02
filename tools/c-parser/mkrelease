@@ -198,7 +198,7 @@ else
     echo "No @LICENSEs remain unexpanded - good."
 fi
 
-lookformichaeln=$(find "$outputdir" \! -name RELEASES \! -type d -exec grep -q /michaeln \{\} \; -print)
+lookformichaeln=$(find "$outputdir" \! -name RELEASES.md \! -type d -exec grep -q /michaeln \{\} \; -print)
 if [ -n "$lookformichaeln" ]
 then
     die "### /michaeln detected in file(s) $lookformichaeln"
