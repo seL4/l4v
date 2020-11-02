@@ -2411,35 +2411,17 @@ lemma bindNotification_invs':
        and invs'\<rbrace>
     bindNotification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  including no_pre
-  apply (simp add: bindNotification_def invs'_def valid_state'_def)
+  unfolding bindNotification_def invs'_def valid_state'_def
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
-  apply (rule hoare_pre)
-   apply (wp set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift
-             setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
-             untyped_ranges_zero_lift
-          | clarsimp dest!: global'_no_ex_cap simp: cteCaps_of_def)+
-  sorry (*
-  apply (clarsimp simp: valid_pspace'_def)
-  apply (cases "tcbptr = ntfnptr")
-   apply (clarsimp dest!: pred_tcb_at' simp: obj_at'_def projectKOs)
-  apply (clarsimp simp: pred_tcb_at' conj_comms o_def)
-  apply (subst delta_sym_refs, assumption)
-    apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs
-                    dest!: symreftype_inverse'
-                    split: ntfn.splits if_split_asm)
-   apply (clarsimp split: if_split_asm)
-    apply (fastforce simp: tcb_st_refs_of'_def
-                    dest!: bound_tcb_at_state_refs_ofD'
-                    split: if_split_asm thread_state.splits)
-   apply (fastforce simp: obj_at'_def projectKOs state_refs_of'_def
-                   dest!: symreftype_inverse')
-  apply (clarsimp simp: valid_pspace'_def)
-  apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
-  apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
-                    dest!: pred_tcb_at'
-                    split: ntfn.splits)
-  done *)
+  apply (wpsimp wp: set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift
+                    setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
+                    untyped_ranges_zero_lift irqs_masked_lift
+              simp: cteCaps_of_def)
+  apply (frule(1) ntfn_ko_at_valid_objs_valid_ntfn'[OF _ valid_pspace_valid_objs'])
+  apply (clarsimp simp: obj_at'_def pred_tcb_at'_def valid_ntfn'_def projectKOs o_def
+                        global'_no_ex_cap
+                 split: ntfn.splits)
+  done
 
 lemma tcbntfn_invs':
   "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.NotificationControl tcb ntfnptr)\<rbrace>
