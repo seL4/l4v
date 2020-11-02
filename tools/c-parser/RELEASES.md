@@ -18,7 +18,7 @@
 
 0.5:
 - The types of C arrays now have size types that are numerals rather
-  than ugly "tycopy<n>" names.  Unfortunately, the size 8192 has to be
+  than ugly `tycopy<n>` names.  Unfortunately, the size 8192 has to be
   an exception to this; the corresponding type is called "ty8192".
 
 0.6:
