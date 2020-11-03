@@ -685,7 +685,7 @@ This module uses the C preprocessor to select a target architecture.
 > maybeReturnSc ntfnPtr tcbPtr = do
 >     nscOpt <- liftM ntfnSc $ getNotification ntfnPtr
 >     tscOpt <- threadGet tcbSchedContext tcbPtr
->     when (nscOpt == tscOpt) $ do
+>     when (nscOpt == tscOpt && nscOpt /= Nothing) $ do
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) tcbPtr
 >         scPtr <- return $ fromJust nscOpt
 >         sc <- getSchedContext scPtr
