@@ -3014,6 +3014,148 @@ lemma do_nbrecv_failed_transfer_corres:
   unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
   by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
 
+lemma ntfn_relation_par_inj:
+  "ntfn_relation ntfn ntfn' \<Longrightarrow> ntfn_sc ntfn = ntfnSc ntfn'"
+  by (simp add: ntfn_relation_def)
+
+lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def pred_neg_def
+               wp: get_object_wp)
+
+lemma set_sc_obj_ref_valid_tcb[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  by (wpsimp wp: get_object_wp simp: update_sched_context_def)
+
+lemma set_sc_obj_ref_valid_tcbs[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+
+lemma thread_set_ko_not_tcb_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s \<and> (t = tptr \<longrightarrow> obj_at (\<lambda>ko. \<exists>tcb'. ko = TCB tcb' \<and> f tcb' \<noteq> tcb) tptr s)\<rbrace>
+  thread_set f tptr
+  \<lbrace>\<lambda>_ s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  apply (wpsimp simp: thread_set_def set_object_def obj_at_def pred_neg_def
+                  wp: get_object_wp)+
+  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  done
+
+lemma thread_set_valid_tcb[wp]:
+  "thread_set f tptr \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  by (wpsimp wp: get_object_wp simp: thread_set_def)
+
+lemma thread_set_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and tcb_at tptr and
+    (\<lambda>s. \<forall>tcb. valid_tcb tptr tcb s \<longrightarrow> valid_tcb tptr (f tcb) s)\<rbrace>
+   thread_set f tptr
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  by (clarsimp simp: obj_at_def is_tcb)
+
+lemma valid_tcbs_valid_tcbE:
+  assumes "tcb_at t s"
+          "valid_tcbs s"
+          "\<And>tcb. ko_at (TCB tcb) t s \<Longrightarrow> valid_tcb t tcb s \<Longrightarrow> R s (TCB tcb)"
+  shows "obj_at (R s) t s"
+  using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; clarsimp simp: is_tcb_def)
+  apply (rename_tac tcb)
+  apply (prop_tac "valid_tcb t tcb s")
+   apply (clarsimp simp: valid_tcbs_def)
+   apply (drule_tac x=t in spec)
+   apply (drule_tac x=tcb in spec)
+   apply (clarsimp simp: obj_at_def)
+  apply clarsimp
+  done
+
+lemma thread_set_weak_valid_sched_action2:
+  "\<lbrace>weak_valid_sched_action and scheduler_act_not tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
+  apply (wpsimp wp: thread_set_wp simp: obj_at_kh_kheap_simps vs_all_heap_simps fun_upd_def
+                    weak_valid_sched_action_def)
+  apply (clarsimp simp: weak_valid_sched_action_def scheduler_act_not_def)
+  apply (rule_tac x=ref' in exI; clarsimp)
+  done
+
+lemma notQueued_cross_rel:
+  "cross_rel (not_queued t) (notQueued t)"
+  unfolding cross_rel_def state_relation_def
+  by (clarsimp simp: notQueued_def ready_queues_relation_def not_queued_def)
+
+lemma valid_tcb_sched_context_update_empty[elim!]:
+  "valid_tcb tp tcb s \<Longrightarrow> valid_tcb tp (tcb_sched_context_update Map.empty tcb) s"
+  by (auto simp: valid_tcb_def tcb_cap_cases_def)
+
+lemma valid_tcb'_SchedContext_update_empty[elim!]:
+  "valid_tcb' tcb s' \<Longrightarrow> valid_tcb' (tcbSchedContext_update Map.empty tcb) s'"
+  by (auto simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def)
+
+lemma maybeReturnSc_corres:
+  "corres dc
+   (ntfn_at ntfnPtr and tcb_at thread and valid_tcbs and pspace_aligned
+      and scheduler_act_not thread
+      and pspace_distinct and weak_valid_sched_action
+      and not_queued thread and not_in_release_q thread)
+   (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
+   (maybe_return_sc ntfnPtr thread)
+   (maybeReturnSc ntfnPtr thread)"
+  unfolding maybe_return_sc_def maybeReturnSc_def
+  apply (clarsimp simp: liftM_def get_sk_obj_ref_def get_tcb_obj_ref_def
+                        set_tcb_obj_ref_thread_set)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split [OF _ get_ntfn_corres])
+      apply (frule ntfn_relation_par_inj[symmetric], simp)
+      apply (rule corres_split [OF _ threadget_corres[where r="(=)"]])
+         apply (rule corres_when2, simp)
+         apply (rule corres_assert_opt_assume_l)
+         apply (rule corres_split [OF _ threadset_corresT])
+              apply (rule_tac Q'="\<top>" in corres_symb_exec_r')
+                 apply (rule corres_split)
+                    prefer 2
+                    apply (rule update_sc_no_reply_stack_update_ko_at'_corres
+                                [where f'="scTCB_update (\<lambda>_. None)"])
+                       apply ((clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+)[4]
+                   apply (rule corres_split [OF _ gct_corres])
+                     apply (rule corres_when [OF _ rescheduleRequired_corres], simp)
+                    apply (wpsimp wp: hoare_vcg_imp_lift')+
+             apply (clarsimp simp: tcb_relation_def)
+            apply (rule ball_tcb_cap_casesI; simp)
+           apply (clarsimp simp: tcb_cte_cases_def)
+          apply (wpsimp wp: hoare_vcg_imp_lift' thread_set_weak_valid_sched_action2)
+         apply (wpsimp wp: hoare_drop_imp threadSet_valid_queues_no_state
+                           threadSet_valid_queues' threadSet_valid_release_queue
+                           threadSet_valid_tcbs'
+                           threadSet_valid_release_queue')
+        apply (clarsimp simp: tcb_relation_def)
+       apply (wpsimp wp: thread_get_wp threadGet_wp)+
+      apply (frule ntfn_relation_par_inj, simp)
+     apply (wpsimp wp: get_simple_ko_wp getNotification_wp)+
+   apply (rule valid_tcbs_valid_tcbE, simp, simp)
+   apply clarsimp
+   apply (intro conjI)
+     apply (clarsimp simp: valid_tcb_def valid_bound_obj_def split: option.splits)
+    apply clarsimp
+   apply clarsimp
+  apply (rule cross_rel_srE [OF tcb_at'_cross_rel [where t=thread]]; simp)
+  apply (rule cross_rel_srE [OF ntfn_at'_cross_rel [where t=ntfnPtr]], simp)
+  apply (rule cross_rel_srE [OF notQueued_cross_rel [where t=thread]], simp)
+  apply clarsimp
+  apply (subgoal_tac "\<exists>tcb. ko_at' (tcb :: tcb) thread s'", clarsimp)
+   apply (rule_tac x=tcb in exI, clarsimp)
+   apply (clarsimp simp: notQueued_def)
+   apply (clarsimp simp: valid_release_queue'_def inQ_def)
+   apply (intro conjI)
+     apply clarsimp
+    apply (clarsimp simp: obj_at'_def valid_release_queue'_def)
+   apply (subgoal_tac "valid_tcb' tcb s'")
+    apply (clarsimp simp: valid_tcb'_def valid_bound_obj'_def split: option.splits)
+   apply (clarsimp simp: valid_tcbs'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
 lemma receive_ipc_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'" and "cap_relation reply_cap replyCap"
   shows "

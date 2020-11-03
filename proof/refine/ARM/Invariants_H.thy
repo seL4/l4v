@@ -1067,6 +1067,9 @@ where
 defs ready_qs_runnable_def:
   "ready_qs_runnable \<equiv> \<lambda>s. \<forall>d p. \<forall>t \<in> set (ksReadyQueues s (d, p)). st_tcb_at' runnable' t s"
 
+definition notQueued :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "notQueued t s \<equiv> (\<forall>a b. t \<notin> set (ksReadyQueues s (a, b)))"
+
 definition
   (* A priority is used as a two-part key into the bitmap structure. If an L2 bitmap entry
      is set without an L1 entry, updating the L1 entry (shared by many priorities) may make

@@ -123,6 +123,12 @@ lemma cross_relE:
   "\<lbrakk> cross_rel_ul sr P Q; \<forall>s s'. P s \<longrightarrow> (s, s') \<in> sr \<longrightarrow> Q s' \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (simp add: cross_rel_ul_def)
 
+(* This elimination rule is slightly more practical because in many cases we already have the
+   state relation holding on two known states. *)
+lemma cross_rel_srE:
+  "\<lbrakk> cross_rel_ul sr P Q; (s, s') \<in> sr; P s \<longrightarrow> Q s' \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  by (simp add: cross_rel_ul_def)
+
 lemma cross_rel_True_right[simp,intro!]:
   "cross_rel_ul sr P \<top>"
   by (blast intro: cross_relI)
