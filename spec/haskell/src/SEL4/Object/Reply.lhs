@@ -39,39 +39,16 @@ This module specifies the behavior of reply objects.
 >     stateAssert sym_refs_asrt
 >         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
->     tptrOpt <- getReplyTCB replyPtr
->     assert (tptrOpt == Nothing) "Reply object shouldn't have unexecuted reply!"
-
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
->     canDonate <- return (if scPtrOptCallee /= Nothing then False else canDonate)
-
->     reply <- getReply replyPtr
->     assert (replyPrev reply == Nothing) "replyPush: replyPrev must be Nothing"
->     assert (replyNext reply == Nothing) "replyPush: replyNext must be Nothing"
-
->     tsCaller <- getThreadState callerPtr
->     assert (replyObject tsCaller == Nothing) "tcb caller should not be in a existing call stack"
-
->     tsCallee <- getThreadState calleePtr
->     assert (replyObject tsCallee == Nothing) "tcb callee should not be in a existing call stack"
 
 >     setReplyTCB (Just callerPtr) replyPtr
 >     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr
 
->     when (scPtrOptDonated /= Nothing && canDonate) $ do
->         assert (scPtrOptCallee == Nothing) "replyPush: callee must not have a scheduling context"
-
+>     when (scPtrOptDonated /= Nothing && scPtrOptCallee == Nothing && canDonate) $ do
 >         scDonated <- getSchedContext (fromJust scPtrOptDonated)
 >         oldReplyPtrOpt <- return $ scReply scDonated
-
->         when (oldReplyPtrOpt /= Nothing) $ do
->             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
->             oldReply <- getReply oldReplyPtr
->             assert (replyNext oldReply == Just (Head $ fromJust scPtrOptDonated))
->                 "replyPush: scheduling context and reply must have reference to each other"
-
->         reply' <- getReply replyPtr
->         setReply replyPtr (reply' { replyPrev = oldReplyPtrOpt, replyNext = Just (Head $ fromJust scPtrOptDonated) })
+>         reply <- getReply replyPtr
+>         setReply replyPtr (reply { replyPrev = oldReplyPtrOpt, replyNext = Just (Head $ fromJust scPtrOptDonated) })
 >         when (oldReplyPtrOpt /= Nothing) $ do
 >             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
 >             oldReply <- getReply oldReplyPtr
