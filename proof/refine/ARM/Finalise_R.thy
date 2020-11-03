@@ -2754,7 +2754,7 @@ lemma schedContextUnbindTCB_invs'_helper:
   done
 
 crunches tcbReleaseRemove, tcbSchedDequeue, rescheduleRequired
-  for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
+  for obj_at'_sc[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) p s)"
   (wp: crunch_wps)
 
 lemma schedContextUnbindTCB_invs':
