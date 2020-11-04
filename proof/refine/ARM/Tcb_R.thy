@@ -2591,21 +2591,21 @@ lemma decode_set_priority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation)
-       (cur_tcb and valid_etcbs and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x)))
+       (cur_tcb and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x)))
        (invs' and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' (fst x)))
        (decode_set_priority args cap slot extras)
        (decodeSetPriority args cap' extras')"
   apply (cases args; cases extras; cases extras';
-         clarsimp simp: decode_set_priority_def decodeSetPriority_def)
+         clarsimp simp: decode_set_priority_def decodeSetPriority_def emptyTCSched_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
      apply (rule corres_splitEE[OF _ check_prio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
-  sorry (*
       apply wpsimp+
-    apply (corressimp simp: valid_cap_def valid_cap'_def)+
-  done *)
+    apply (case_tac auth_cap; clarsimp simp: corres_returnOk)
+   apply (wpsimp simp: valid_cap_def valid_cap'_def)+
+  done
 
 lemma decode_set_mcpriority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
@@ -2622,10 +2622,10 @@ lemma decode_set_mcpriority_corres:
      apply (rule corres_splitEE[OF _ check_prio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
-  sorry (* FIXME RT: needs spec update, slot seems to be 0
       apply wpsimp+
-    apply (corressimp simp: valid_cap_def valid_cap'_def)+
-  done *)
+    apply (case_tac auth_cap; clarsimp simp: corres_returnOk)
+   apply (wpsimp simp: valid_cap_def valid_cap'_def)+
+  done
 
 lemma getMCP_sp:
   "\<lbrace>P\<rbrace> threadGet tcbMCP t \<lbrace>\<lambda>rv. mcpriority_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
