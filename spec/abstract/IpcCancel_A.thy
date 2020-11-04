@@ -247,22 +247,6 @@ where
     sc_caller \<leftarrow> get_tcb_obj_ref tcb_sched_context caller;
     sc_callee \<leftarrow> get_tcb_obj_ref tcb_sched_context callee;
 
-    reply_tcb_opt \<leftarrow> get_reply_tcb reply_ptr;
-    assert (reply_tcb_opt = None);
-
-    \<comment> \<open>The caller thread is either active (if we came via @{text send_ipc}),
-        or was @{const BlockedOnSend} (if we came via @{text receive_ipc}).
-        Either way, it can't have a reply object.\<close>
-    ts_reply_caller \<leftarrow> no_reply_in_ts caller;
-    assert ts_reply_caller;
-
-    \<comment> \<open>The callee thread is either active (if we came via @{text receive_ipc}),
-        or was @{const BlockedOnReceive} (if we came via @{text send_ipc}).
-        In the latter case, the reply was already removed via @{text reply_unlink_tcb}
-        in @{text send_ipc}.\<close>
-    ts_reply_callee \<leftarrow> no_reply_in_ts caller;
-    assert ts_reply_callee;
-
     \<comment> \<open>link reply and tcb\<close>
     set_reply_obj_ref reply_tcb_update reply_ptr (Some caller);
     set_thread_state caller (BlockedOnReply reply_ptr);
@@ -271,15 +255,13 @@ where
       \<comment> \<open>FIXME RT: maybe define a function to add a reply to the queue?\<close>
       sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller);
       case sc_replies of
-          [] \<Rightarrow> assert True
-        | (r#_) \<Rightarrow> do reply \<leftarrow> get_reply r;
-                      assert (reply_sc reply = sc_caller);
-                      \<comment> \<open>unlink head reply and sc before pushing\<close>
-                      set_reply_obj_ref reply_sc_update r None
-                   od;
+          [] \<Rightarrow> return ()
+        | (r#_) \<Rightarrow> \<comment> \<open>unlink head reply and sc before pushing\<close>
+                   set_reply_obj_ref reply_sc_update r None;
       set_sc_obj_ref sc_replies_update (the sc_caller) (reply_ptr#sc_replies);
       \<comment> \<open>only the head reply is linked to the sc\<close>
       set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
+
       sched_context_donate (the sc_caller) callee
     od
   od"
