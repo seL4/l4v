@@ -16994,12 +16994,6 @@ lemma reply_push_released_if_bound_not_callee:
   apply (simp add: reply_push_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_seq_ext[OF _ grt_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
-  apply (rule hoare_seq_ext[OF _ no_reply_in_ts_inv])
-  apply (rule hoare_seq_ext[OF _ assert_inv])
   apply (case_tac sc_caller; simp)
    apply wpsimp
   apply (wpsimp wp: sched_context_donate_released_if_bound_not_callee
@@ -18491,25 +18485,16 @@ lemma reply_push_ct_ready_if_schedulable:
   supply if_split [split del]
   unfolding reply_push_def
   apply (wpsimp wp: sched_context_donate_ct_ready_if_schedulable)
-              apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
-                                hoare_vcg_imp_lift' hoare_vcg_all_lift get_simple_ko_wp)
-             apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
-                               hoare_vcg_imp_lift' hoare_vcg_all_lift)
-            apply (rule_tac Q="\<lambda>_ s. caller = cur_thread s
-                                     \<and> ct_ready_if_schedulable s
-                                     \<and> bound_sc_tcb_at ((=) sc_caller) caller s
-                                     \<and> bound_sc_tcb_at ((=) sc_callee) callee s"
-                   in hoare_post_imp)
-             apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise split: if_split)
-             apply (fastforce simp: tcb_at_kh_simps vs_all_heap_simps)
-            apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise split: if_split)
-            apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
-                              hoare_vcg_imp_lift' hoare_vcg_all_lift get_simple_ko_wp)
-           apply (clarsimp cong: conj_cong)
-           apply (wpsimp wp: hoare_drop_imp)+
-    apply (wpsimp wp: get_tcb_obj_ref_wp)
-   apply (wpsimp wp: get_tcb_obj_ref_wp)
-  apply (auto simp: tcb_at_kh_simps vs_all_heap_simps obj_at_def)[1]
+      apply (rule_tac Q="\<lambda>_ s. caller = cur_thread s
+                               \<and> ct_ready_if_schedulable s
+                               \<and> bound_sc_tcb_at ((=) sc_caller) caller s
+                               \<and> bound_sc_tcb_at ((=) sc_callee) callee s"
+             in hoare_post_imp)
+       apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise split: if_split)
+       apply (fastforce simp: vs_all_heap_simps obj_at_def)
+      apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong)
+     apply (wpsimp wp: get_tcb_obj_ref_wp)+
+  apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps obj_at_def)
   done
 
 lemma reply_unlink_tcb_fault_tcb_at_ct[wp]:
@@ -21903,10 +21888,6 @@ lemma reply_push_ct_ready_if_schedulable_callee:
              apply (fastforce split: if_split simp: obj_at_def)
             apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
                               hoare_vcg_all_lift hoare_vcg_imp_lift)
-           apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
-                             hoare_vcg_all_lift)
-          apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong assert_inv hoare_vcg_if_lift2
-                            hoare_vcg_all_lift)
          apply (rule_tac
                   Q="\<lambda>_ s. ct_ready_if_schedulable s
                            \<and> (can_donate \<longrightarrow>
