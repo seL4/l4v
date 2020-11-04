@@ -239,6 +239,21 @@ where
                | _ \<Rightarrow> return True
   od"
 
+definition
+  bind_sc_reply :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "bind_sc_reply sc_ptr reply_ptr = do
+      sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (sc_ptr);
+      \<comment> \<open>unlink head reply and sc before pushing\<close>
+      case sc_replies of
+          [] \<Rightarrow> return ()
+        | r#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r None;
+      \<comment> \<open>push new head reply\<close>
+      set_sc_obj_ref sc_replies_update sc_ptr (reply_ptr#sc_replies);
+      \<comment> \<open>link new head reply to sc\<close>
+      set_reply_obj_ref reply_sc_update reply_ptr (Some sc_ptr)
+  od"
+
 text \<open>Push a reply object to the call stack.\<close>
 definition
   reply_push :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -252,16 +267,7 @@ where
     set_thread_state caller (BlockedOnReply reply_ptr);
 
     when (sc_caller \<noteq> None \<and> sc_callee = None \<and> can_donate) $ do
-      \<comment> \<open>FIXME RT: maybe define a function to add a reply to the queue?\<close>
-      sc_replies \<leftarrow> liftM sc_replies $ get_sched_context (the sc_caller);
-      case sc_replies of
-          [] \<Rightarrow> return ()
-        | (r#_) \<Rightarrow> \<comment> \<open>unlink head reply and sc before pushing\<close>
-                   set_reply_obj_ref reply_sc_update r None;
-      set_sc_obj_ref sc_replies_update (the sc_caller) (reply_ptr#sc_replies);
-      \<comment> \<open>only the head reply is linked to the sc\<close>
-      set_reply_obj_ref reply_sc_update reply_ptr sc_caller;
-
+      bind_sc_reply (the sc_caller) reply_ptr;
       sched_context_donate (the sc_caller) callee
     od
   od"
