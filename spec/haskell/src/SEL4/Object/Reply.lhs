@@ -34,10 +34,23 @@ This module specifies the behavior of reply objects.
 >     reply <- getReply replyPtr
 >     setReply replyPtr (upd reply)
 
+> bindScReply :: PPtr SchedContext -> PPtr Reply -> Kernel ()
+> bindScReply scPtr replyPtr = do
+>     sc <- getSchedContext scPtr
+>     scReplyOpt <- return $ scReply sc
+>     when (scReplyOpt /= Nothing) $ do
+>         scReplyPtr <- return $ fromJust scReplyOpt
+>         updateReply scReplyPtr (\reply -> reply { replyNext = Just (Next replyPtr) })
+>     updateReply replyPtr (\reply -> reply { replyPrev = scReplyOpt })
+>     setSchedContext scPtr (sc { scReply = Just replyPtr })
+>     updateReply replyPtr (\reply -> reply { replyNext = Just (Head $ scPtr) })
+
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
 >     stateAssert sym_refs_asrt
->         "Assert that `sym_refs (state_refs_of' s)` holds"
+>         "replyPush: `sym_refs (state_refs_of' s)` must hold"
+>     stateAssert (valid_replies'_sc_asrt replyPtr)
+>         "replyPush: valid_replies'_sc holds for replyPtr"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
 
@@ -45,17 +58,7 @@ This module specifies the behavior of reply objects.
 >     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr
 
 >     when (scPtrOptDonated /= Nothing && scPtrOptCallee == Nothing && canDonate) $ do
->         scDonated <- getSchedContext (fromJust scPtrOptDonated)
->         oldReplyPtrOpt <- return $ scReply scDonated
->         reply <- getReply replyPtr
->         setReply replyPtr (reply { replyPrev = oldReplyPtrOpt, replyNext = Just (Head $ fromJust scPtrOptDonated) })
->         when (oldReplyPtrOpt /= Nothing) $ do
->             oldReplyPtr <- return $ fromJust oldReplyPtrOpt
->             oldReply <- getReply oldReplyPtr
->             setReply oldReplyPtr (oldReply { replyNext = Just (Next replyPtr) })
->         scDonated <- getSchedContext (fromJust scPtrOptDonated)
->         setSchedContext (fromJust scPtrOptDonated) (scDonated { scReply = Just replyPtr })
-
+>         bindScReply (fromJust scPtrOptDonated) replyPtr
 >         schedContextDonate (fromJust scPtrOptDonated) calleePtr
 
 > replyPop :: PPtr Reply -> PPtr TCB -> Kernel ()
