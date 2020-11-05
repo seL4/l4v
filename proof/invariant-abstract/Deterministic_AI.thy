@@ -4047,7 +4047,7 @@ crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 lemma reply_push_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> reply_push caller callee reply_ptr can_donate \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  by (wpsimp simp: reply_push_def
+  by (wpsimp simp: reply_push_def bind_sc_reply_def
     wp: get_simple_ko_wp hoare_drop_imp get_sched_context_wp hoare_vcg_all_lift hoare_vcg_if_lift2)
 
 lemma copy_mrs_valid_list[wp]:
