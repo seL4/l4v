@@ -222,7 +222,7 @@ crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s::det_state. P (domain_li
 
 lemma reply_push_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> reply_push param_a param_b param_c param_d \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
-  by (wpsimp simp: reply_push_def split_del: if_split
+  by (wpsimp simp: reply_push_def bind_sc_reply_def split_del: if_split
     wp: hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_drop_imp get_sched_context_wp)
 
 lemma send_ipc_domain_list_inv[wp]:

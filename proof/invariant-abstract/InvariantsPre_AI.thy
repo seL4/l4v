@@ -280,6 +280,18 @@ lemma delta_sym_refs:
   apply (erule(1) y)
   done
 
+lemma delta_sym_refs_insert_only:
+  assumes x: "sym_refs rfs'"
+      and diff: "p2 \<noteq> p1"
+      and y: "p1refs = rfs' p1"
+      and z: "p2refs = rfs' p2"
+      and symrefrel: "tp' = symreftype tp"
+  shows "sym_refs (\<lambda>p. if p = p1 then (insert (p2, tp) p1refs)
+                  else if p = p2 then (insert (p1, tp') p2refs)
+                  else rfs' p)"
+  apply (rule delta_sym_refs[OF x])
+  using diff by (auto simp: y z symrefrel split: if_splits)
+
 abbreviation (input)
   "bound a \<equiv> a \<noteq> None"
 
