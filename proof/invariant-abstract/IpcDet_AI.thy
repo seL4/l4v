@@ -924,7 +924,7 @@ lemma reply_push_sender_sc_Some_invs:
              \<not> (case fault of None \<Rightarrow> False
                  | Some x \<Rightarrow> is_timeout_fault x))
    \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (clarsimp simp: reply_push_def)
+  apply (clarsimp simp: reply_push_def bind_sc_reply_def bind_assoc)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
@@ -1000,6 +1000,7 @@ lemma reply_push_sender_sc_Some_invs:
                          sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at)
                        (* sc_caller has non-empty sc_replies *)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
+  apply (rename_tac sc_caller s x xa)
   apply (prop_tac "reply_at reply_ptr s",
          clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def, simp)
   apply (prop_tac "reply_at x s",
@@ -1054,7 +1055,7 @@ lemma reply_push_sender_sc_Some_invs:
          apply (fastforce dest: reply_reftypes reply_at_ppred_reply_at)
         apply (fastforce dest: SCReply_ref_fst_replies_with_sc)
        apply (case_tac "sc_caller = x"; clarsimp)
-        apply_trace (fastforce dest: SCReply_ref_fst_replies_with_sc)
+        apply (fastforce dest: SCReply_ref_fst_replies_with_sc)
        apply (case_tac "y = x"; clarsimp)
         apply (fastforce dest: SCReply_ref_fst_replies_with_sc)
        apply (fastforce dest: SCReply_ref_fst_replies_with_sc)
@@ -1455,7 +1456,7 @@ lemma reply_push_st_tcb_at_Inactive:
   "\<lbrace>st_tcb_at ((=) Inactive) callee and K (callee \<noteq> caller)\<rbrace>
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. st_tcb_at ((=) Inactive) callee\<rbrace>"
-  unfolding reply_push_def update_sk_obj_ref_def comp_def
+  unfolding reply_push_def bind_sc_reply_def update_sk_obj_ref_def comp_def
   by (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp hoare_vcg_if_lift hoare_vcg_all_lift
                  sts_st_tcb_at_cases
      | wp (once) hoare_drop_imp)+
@@ -1613,7 +1614,7 @@ lemma reply_push_invs':
    reply_push caller callee reply_ptr can_donate
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_weak_cong[cong del]
-  apply (simp add: reply_push_def)
+  apply (simp add: reply_push_def bind_sc_reply_def bind_assoc)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_caller; simp)
@@ -1636,7 +1637,6 @@ lemma reply_push_invs':
                           tcb_st_refs_of_def reply_tcb_reply_at_def
                    split: if_splits thread_state.splits)
    apply (clarsimp simp: idle_no_ex_cap)
-
   apply (wpsimp wp: reply_push_invs_helper)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_only_idle valid_irq_node_typ sts_valid_replies
