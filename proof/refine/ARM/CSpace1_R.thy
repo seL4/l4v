@@ -526,8 +526,6 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
-declare resolve_address_bits'.simps[simp del]
-
 lemma getSlotCap_valid:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> (cte_wp_at' (\<lambda>_. True) p s \<longrightarrow> (\<forall>cap. valid_cap' cap s \<longrightarrow> Q cap s))\<rbrace>
   getSlotCap p \<lbrace>Q\<rbrace>"
