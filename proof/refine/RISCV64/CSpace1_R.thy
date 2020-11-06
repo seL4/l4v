@@ -523,8 +523,6 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
-declare resolve_address_bits'.simps[simp del]
-
 lemma rab_corres':
   "\<lbrakk> cap_relation (fst a) c'; drop (64-bits) (to_bl cref') = snd a;
      bits = length (snd a) \<rbrakk> \<Longrightarrow>

@@ -200,6 +200,8 @@ termination
   apply (auto simp: whenE_def returnOk_def return_def rab_termination)
   done
 
+declare resolve_address_bits'.simps[simp del]
+
 definition resolve_address_bits where
 "resolve_address_bits \<equiv> resolve_address_bits' TYPE('z::state_ext)"
 
