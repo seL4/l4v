@@ -141,8 +141,6 @@ where
   | CancelBadgedSendsCall cap \<Rightarrow> pas_cap_cur_auth aag cap
   | RevokeCall ptr \<Rightarrow> is_subject aag (fst ptr))"
 
-declare resolve_address_bits'.simps[simp del]
-
 lemma resolve_address_bits_authorised_aux:
   "s \<turnstile> \<lbrace>pas_refined aag and K (is_cnode_cap (fst (cap, cref))
                                \<longrightarrow> (\<forall>x \<in> obj_refs (fst (cap, cref)). is_subject aag x))\<rbrace>

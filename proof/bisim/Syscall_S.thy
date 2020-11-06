@@ -97,6 +97,7 @@ lemma bisim_rab:
                                 | _ \<Rightarrow> throwError undefined
                         odE)
                       (resolve_address_bits (cap, cref))"
+  using resolve_address_bits'.simps[simp]
   unfolding resolve_address_bits_def
   apply (cases "length cref < word_bits")
    apply (auto intro!: bisim_underlyingI
