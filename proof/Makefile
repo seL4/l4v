@@ -65,7 +65,7 @@ ASpec-files: .FORCE
 
 include ../misc/isa-common.mk
 
-# SimplExportOnly is treated specially, to not save an image.
-SimplExportOnly: c-kernel design-spec
+# SimplExport is treated specially, to not save an image.
+SimplExport: c-kernel design-spec
 	$(ISABELLE_TOOL) build -v -c -d $(ROOT_PATH) $@
-.PHONY: SimplExportOnly
+.PHONY: SimplExport
