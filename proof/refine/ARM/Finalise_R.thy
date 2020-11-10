@@ -3015,8 +3015,9 @@ method cancelIPC_makes_unlive_hammer =
 
 lemma cancelIPC_makes_unlive:
   "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s
-        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s\<rbrace>
-   cancelIPC  tptr
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s
+        \<and> valid_replies'_sc_asrt rptr s\<rbrace>
+   cancelIPC tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   unfolding cancelIPC_def blockedCancelIPC_def Let_def getBlockingObject_def sym_refs_asrt_def
   apply simp
@@ -3028,7 +3029,8 @@ lemma cancelIPC_makes_unlive:
           apply (wpsimp wp: hoare_pre_cont, cancelIPC_makes_unlive_hammer)
          apply (wpsimp wp: setThreadState_unlive_other replyUnlink_makes_unlive
                            hoare_vcg_all_lift hoare_drop_imps threadSet_weak_sch_act_wf)
-         apply (frule (1) valid_replies'_other_state; clarsimp)
+         apply (frule (1) valid_replies'_other_state;
+                clarsimp simp: valid_replies'_sc_asrt_replySc_None)
          apply cancelIPC_makes_unlive_hammer
         (* BlockedOnReply*)
         apply (wpsimp wp: replyRemoveTCB_makes_unlive threadSet_pred_tcb_no_state
@@ -3040,7 +3042,8 @@ lemma cancelIPC_makes_unlive:
 
 lemma replyClear_makes_unlive:
   "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s
-        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s\<rbrace>
+        \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_replies' s
+        \<and> valid_replies'_sc_asrt rptr s\<rbrace>
    replyClear rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   apply (simp add: replyClear_def)
@@ -3271,6 +3274,8 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: obj_at'_def)
   apply (frule (1) valid_replies'_no_tcb[OF ko_at_obj_at', simplified], clarsimp)
+   apply (clarsimp simp: valid_replies'_sc_asrt_def obj_at'_def projectKOs
+                         getHeadScPtr_None_iff)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def projectKOs)
   done
 

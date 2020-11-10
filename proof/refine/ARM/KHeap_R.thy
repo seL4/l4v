@@ -10,6 +10,72 @@ imports
   Machine_R
 begin
 
+lemma valid_replies'_no_tcb:
+  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = None) rptr s; valid_replies' s;
+    obj_at' (\<lambda>reply. replySc reply = None) rptr s\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
+  apply normalise_obj_at'
+  apply (clarsimp simp: valid_replies'_def)
+  apply (auto simp: opt_map_def obj_at'_def projectKOs getHeadScPtr_def
+             split: option.splits reply_next.splits dest!: spec)
+  done
+
+lemma valid_replies'_other_state:
+  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s;
+    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr));
+    valid_replies' s; obj_at' (\<lambda>reply. replySc reply = None) rptr s\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
+  apply normalise_obj_at'
+  apply (clarsimp simp: valid_replies'_def)
+  apply (drule_tac x=rptr in spec)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (auto simp: obj_at'_def opt_map_def getHeadScPtr_def
+             split: reply_next.splits)
+  done
+
+lemma valid_replies'_sc_asrt_replySc_None:
+  "\<lbrakk>valid_replies'_sc_asrt rptr s; obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s;
+    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>reply. replySc reply = None) rptr s"
+  by (force simp: valid_replies'_sc_asrt_def obj_at'_def pred_tcb_at'_def projectKOs)
+
+lemma valid_replies'_def2:
+  "pspace_distinct' s \<Longrightarrow> pspace_aligned' s \<Longrightarrow>
+   valid_replies' s =
+     (\<forall>rptr rp. ko_at' rp rptr s \<and> ((\<exists>rp'. replyNext rp = Some (Next rp')) \<or> replyPrev rp \<noteq> None)
+                \<longrightarrow> (\<exists>tptr. replyTCB rp = Some tptr
+                            \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
+  unfolding valid_replies'_def
+  apply (rule iffI; clarsimp simp: obj_at'_def projectKOs)
+   apply (drule_tac x=rptr in spec, clarsimp simp: opt_map_def)
+  apply (clarsimp simp: pspace_alignedD' pspace_distinctD' opt_map_def projectKOs
+                  split: option.splits)
+  done
+
+lemma valid_replies'_lift:
+  assumes rNext: "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
+  and rPrev: "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
+  and rTCB: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
+  and st: "\<And>P p. f \<lbrace>st_tcb_at' P p\<rbrace>"
+  shows "\<lbrace>valid_replies'\<rbrace> f \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  unfolding valid_def valid_replies'_def
+  apply (clarsimp simp del: imp_disjL)
+  subgoal for s a b rptr
+    apply (drule_tac x=rptr in spec)
+    apply (prop_tac "replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None")
+     apply (rule ccontr)
+     apply clarsimp
+     apply (frule use_valid[OF _ rNext[where P="\<lambda>nexts. nexts rptr = None"]], force)
+     apply (frule use_valid[OF _ rPrev[where P="\<lambda>prevs. prevs rptr = None"]], force)
+     apply force
+    apply (drule mp; clarsimp)
+    apply (frule use_valid[OF _ rTCB[where P="\<lambda>tcbs. tcbs rptr = Some tcb" for tcb]])
+     apply (force simp: opt_map_def)
+    apply (frule use_valid[OF _ st], assumption)
+    apply clarsimp
+    done
+  done
+
 primrec
   same_caps' :: "Structures_H.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 where
@@ -3374,6 +3440,53 @@ method add_ready_qs_runnable =
   , (clarsimp simp: pred_conj_def)?
   , (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?
   , fastforce dest: ready_qs_runnable_cross
+
+lemma replyTCBs_of_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; reply_tcb_reply_at P rptr s\<rbrakk>
+   \<Longrightarrow> P (replyTCBs_of s' rptr)"
+  apply (clarsimp simp: reply_at_ppred_def obj_at_def is_tcb state_relation_def)
+  apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
+  apply (case_tac z; simp)
+  apply (clarsimp simp: opt_map_def reply_relation_def)
+  done
+
+lemma replySCs_of_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; reply_sc_reply_at P rptr s\<rbrakk>
+   \<Longrightarrow> P (replySCs_of s' rptr)"
+  apply (clarsimp simp: reply_at_ppred_def obj_at_def is_tcb state_relation_def)
+  apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
+  apply (case_tac z; simp)
+  apply (clarsimp simp: opt_map_def reply_relation_def)
+  done
+
+lemma valid_replies_sc_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; valid_replies s; sym_refs (state_refs_of s);
+    pspace_aligned s; pspace_distinct s; reply_at rptr s\<rbrakk>
+   \<Longrightarrow> valid_replies'_sc_asrt rptr s'"
+  apply (clarsimp simp: valid_replies_defs valid_replies'_sc_asrt_def)
+  apply normalise_obj_at'
+  apply (rename_tac rp scptr)
+  apply (prop_tac "sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) scptr s")
+   apply (frule_tac sc_ptr=scptr and reply_ptr=rptr in sym_refs_sc_replies_sc_at)
+    apply (rule ccontr)
+    apply (drule not_sk_obj_at_pred)
+     apply (fastforce simp: sk_obj_at_pred_def obj_at_def is_obj_defs)
+    apply (frule (1) replySCs_of_cross)
+    apply (clarsimp simp: obj_at'_def projectKOs opt_map_def)
+   apply (clarsimp simp: sc_at_pred_n_eq_commute sc_at_ppred_def obj_at_def)
+  apply (drule subsetD, force)
+  apply (clarsimp simp: pred_tcb_at_eq_commute[symmetric])
+  apply (frule (1) st_tcb_reply_state_refs)
+  apply clarsimp
+  apply (drule (3) st_tcb_at_coerce_concrete)
+  apply (drule replyTCBs_of_cross[where P="\<lambda>rtcb. rtcb = (Some tptr)" for tptr])
+   apply (fastforce simp: sk_obj_at_pred_def2)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
+
+method add_valid_replies for rptr uses simp =
+  rule_tac Q="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard
+  , fastforce elim: valid_replies_sc_cross simp: simp
 
 lemma tcb_of'_Some:
   "(tcb_of' ko = Some y) = (ko = KOTCB y)"

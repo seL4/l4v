@@ -134,6 +134,8 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 >     when final $ do
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert (valid_replies'_sc_asrt ptr)
+>             "Assert that `valid_replies'` holds"
 >         tptrOpt <- getReplyTCB ptr
 >         when (tptrOpt /= Nothing) $ do
 >             replyClear ptr (fromJust tptrOpt)
