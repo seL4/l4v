@@ -1119,12 +1119,13 @@ lemma ball_filterM_scheme:
 
 (* FIXME: Move *)
 lemma st_tcb_reply_state_refs:
-  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReply rp)) thread s\<rbrakk>
-  \<Longrightarrow> \<exists>reply. (kheap s rp = Some (Reply reply) \<and> reply_tcb reply = Some thread)"
-  apply (frule (1) st_tcb_at_valid_st2)
-  apply (drule (1) sym_refs_st_tcb_atD[rotated])
-  apply (clarsimp simp: get_refs_def2 obj_at_def valid_tcb_state_def is_reply
-                  split: thread_state.splits if_splits)
+  "\<lbrakk>st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReply rp)) thread s; sym_refs (state_refs_of s)\<rbrakk>
+  \<Longrightarrow> \<exists>reply. (kheap s rp = Some (kernel_object.Reply reply) \<and> reply_tcb reply = Some thread)"
+  apply (clarsimp simp: pred_tcb_at_def)
+  apply (drule (1) sym_refs_obj_atD[where p=thread])
+  apply (clarsimp simp: state_refs_of_def obj_at_def tcb_st_refs_of_def
+                 split: Structures_A.thread_state.splits)
+  apply (rename_tac ko; case_tac ko; clarsimp simp: get_refs_def2)
   done
 
 (* FIXME move *)

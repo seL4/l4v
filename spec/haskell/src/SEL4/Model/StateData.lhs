@@ -380,4 +380,10 @@ using the rule `state_refs_of_cross_eq`.
 > sym_refs_asrt :: KernelState -> Bool
 > sym_refs_asrt _ = True
 
+We would also like to use the fact that `valid_replies'` holds for replies linked to an SC. We
+does this by adding an assertion and proving it True by using .
+
+> valid_replies'_sc_asrt :: PPtr Reply -> KernelState -> Bool
+> valid_replies'_sc_asrt _ _ = True
+
 
