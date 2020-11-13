@@ -1065,8 +1065,6 @@ lemma pml4e_relation_must_pml4e:
   apply clarsimp
   done
 
-declare X64_H.pptrBase_def[simp]
-
 lemma page_table_at_state_relation:
   "\<lbrakk>page_table_at (ptrFromPAddr ptr) s; pspace_aligned s;
      (s, sa) \<in> state_relation;pspace_distinct' sa\<rbrakk>

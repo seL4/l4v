@@ -2489,7 +2489,7 @@ lemma decodeX64FrameInvocation_ccorres:
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
               (* frame cap not mapped, check mapping *)
-              (* disallow mappings above kernelBase *)
+              (* disallow mappings above pptrBase *)
               apply clarsimp
               apply (prop_tac "mapdata = None")
                apply (simp add: asidInvalid_def ccap_relation_mapped_asid_0)
