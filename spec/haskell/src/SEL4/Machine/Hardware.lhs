@@ -50,6 +50,7 @@ Depending on the architecture, real physical addresses may be the same as the ad
 > type PAddr = Arch.PAddr
 > fromPAddr = Arch.fromPAddr
 
+> pptrBaseOffset :: Word
 > pptrBaseOffset = (fromVPtr Arch.pptrBase) - (fromPAddr Arch.paddrBase)
 
 > ptrFromPAddr :: PAddr -> PPtr a
