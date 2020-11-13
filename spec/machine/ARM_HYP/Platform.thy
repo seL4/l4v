@@ -50,6 +50,8 @@ definition
   physBase :: word32 where
   "physBase \<equiv> 0x80000000"
 
+abbreviation (input) "paddrBase \<equiv> physBase"
+
 definition
   pptrTop :: "32 word" where
   "pptrTop \<equiv> 0xfff00000"
