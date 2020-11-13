@@ -709,8 +709,8 @@ lemma ptrFromPAddr_spec:
   Call ptrFromPAddr_'proc
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
-  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply (simp add: ARM.ptrFromPAddr_def pptrBaseOffset_def
+                   pptrBase_def physBase_def ARM.physBase_def)
   done
 
 lemma addrFromPPtr_spec:
@@ -719,8 +719,8 @@ lemma addrFromPPtr_spec:
   \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
   apply vcg
   apply (simp add: addrFromPPtr_def
-                   ARM.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+                   ARM.addrFromPPtr_def pptrBaseOffset_def
+                   pptrBase_def physBase_def ARM.physBase_def)
   done
 
 
@@ -2136,7 +2136,7 @@ lemmas ccorres_move_array_assertion_pde_16
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
                           and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
-                                           \<and> vptr < kernelBase))
+                                           \<and> vptr < pptrBase))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
@@ -2366,7 +2366,7 @@ lemma unmapPage_ccorres:
                      apply (simp add: vmsz_aligned'_def vmsz_aligned_def)
                      apply (clarsimp simp: lookup_pd_slot_def Let_def
                                         mask_add_aligned field_simps)
-                     apply (erule less_kernelBase_valid_pde_offset')
+                     apply (erule less_pptrBase_valid_pde_offset')
                       apply (simp add: vmsz_aligned'_def)
                      apply (simp add: word_le_nat_alt unat_of_nat)
                     apply (simp add: upto_enum_step_def)

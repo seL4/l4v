@@ -2590,8 +2590,8 @@ lemma is_aligned_addrFromPPtr_n:
   "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) n"
   apply (simp add: Platform.ARM.addrFromPPtr_def)
   apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: physMappingOffset_def physBase_def
-                   kernelBase_addr_def pageBits_def)
+  apply (simp add: pptrBaseOffset_def physBase_def
+                   pptrBase_def pageBits_def)
   apply (erule is_aligned_weaken[rotated])
   apply (simp add: is_aligned_def)
   done
@@ -2603,8 +2603,8 @@ lemma is_aligned_addrFromPPtr:
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
   \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add:ptrFromPAddr_def physMappingOffset_def
-    kernelBase_addr_def physBase_def)
+  apply (simp add:ptrFromPAddr_def pptrBaseOffset_def
+    pptrBase_def physBase_def)
   apply (erule aligned_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    apply (simp add:is_aligned_def)

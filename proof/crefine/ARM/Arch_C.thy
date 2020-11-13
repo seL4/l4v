@@ -731,7 +731,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: if_to_top_of_bind del: Collect_const)
          apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
-           apply (simp add: kernelBase_def ARM.kernelBase_def hd_conv_nth length_ineq_not_Nil)
+           apply (simp add: pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
           apply (simp add: throwError_bind invocationCatch_def)
           apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
@@ -830,7 +830,7 @@ lemma decodeARMPageTableInvocation_ccorres:
     apply (clarsimp | drule length_le_helper)+
     apply (clarsimp simp: valid_cap'_def neq_Nil_conv
                           mask_add_aligned page_directory_at'_def
-                          less_kernelBase_valid_pde_offset''
+                          less_pptrBase_valid_pde_offset''
                           pageBits_def pteBits_def pdeBits_def ptBits_def
                           word_le_nat_alt[symmetric])
     apply (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
@@ -1189,9 +1189,9 @@ lemma lookupPTSlot_le_0x3C:
      apply clarsimp
     apply (simp add: word_bits_def)
    apply simp
-  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def)
+  apply (simp add: ARM.ptrFromPAddr_def pptrBaseOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: kernelBase_addr_def ARM.physBase_def
+   apply (simp add: pptrBase_def ARM.physBase_def
      physBase_def is_aligned_def)
   apply (simp add: word_bits_def pteBits_def)
   done
@@ -1438,8 +1438,8 @@ lemma valid_pde_slots_lift2:
 
 lemma addrFromPPtr_mask_5:
   "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def physMappingOffset_def
-    kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply (simp add:addrFromPPtr_def pptrBaseOffset_def
+    pptrBase_def physBase_def ARM.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -1683,7 +1683,7 @@ lemma createMappingEntries_valid_pte_slots'2:
 
 (* replay of proof in Arch_R with stronger validity result *)
 lemma createMappingEntries_valid_pde_slots'2:
-  "\<lbrace>page_directory_at' pd and K (vmsz_aligned' vptr sz \<and> vptr < kernelBase)\<rbrace>
+  "\<lbrace>page_directory_at' pd and K (vmsz_aligned' vptr sz \<and> vptr < pptrBase)\<rbrace>
      createMappingEntries base vptr sz vm_rights attrib pd
    \<lbrace>\<lambda>rv. valid_pde_slots'2 rv\<rbrace>,-"
   apply (simp add: createMappingEntries_def valid_pde_slots'2_def)
@@ -1693,7 +1693,7 @@ lemma createMappingEntries_valid_pde_slots'2:
                          lookup_pd_slot_eq[unfolded pd_bits_def, folded pdBits_def])
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned)
    apply (rule conjI)
-    apply (erule less_kernelBase_valid_pde_offset'')
+    apply (erule less_pptrBase_valid_pde_offset'')
     apply (rule conjI)
     apply (clarsimp simp: vaddr_segment_nonsense6)
     apply (rule_tac x= 0 in exI)
@@ -1710,7 +1710,7 @@ lemma createMappingEntries_valid_pde_slots'2:
      apply (clarsimp simp: superSectionPDEOffsets_def length_upto_enum_step pdeBits_def)
      apply (clarsimp simp: upto_enum_step_def upto_enum_def comp_def)
      apply (clarsimp simp: linorder_not_less field_simps mask_add_aligned)
-     apply (erule less_kernelBase_valid_pde_offset', simp+)
+     apply (erule less_pptrBase_valid_pde_offset', simp+)
      apply (rule word_of_nat_le, simp)
      done
   apply (rule conjI)
@@ -1893,14 +1893,14 @@ lemma vmsz_aligned_addrFromPPtr':
        = vmsz_aligned' p sz"
   apply (simp add: vmsz_aligned'_def addrFromPPtr_def
                    ARM.addrFromPPtr_def)
-  apply (subgoal_tac "is_aligned physMappingOffset (pageBitsForSize sz)")
+  apply (subgoal_tac "is_aligned pptrBaseOffset (pageBitsForSize sz)")
    apply (rule iffI)
     apply (drule(1) aligned_add_aligned)
       apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
      apply simp
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-  apply (simp add: pageBitsForSize_def physMappingOffset_def kernelBase_addr_def
+  apply (simp add: pageBitsForSize_def pptrBaseOffset_def pptrBase_def
                    physBase_def ARM.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
@@ -2191,7 +2191,7 @@ lemma decodeARMFrameInvocation_ccorres:
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
   defines "does_not_throw args extraCaps pg_sz mapdata \<equiv>
-           (mapdata = None \<longrightarrow> \<not> (ARM_H.kernelBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
+           (mapdata = None \<longrightarrow> \<not> (ARM_H.pptrBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
            (mapdata \<noteq> None \<longrightarrow> (fst (the mapdata) = (the (capPDMappedASID (capCap (fst (extraCaps ! 0)))))
                            \<and> snd (the mapdata) = hd args))"
   shows
@@ -2472,7 +2472,7 @@ lemma decodeARMFrameInvocation_ccorres:
              apply (rule syscall_error_throwError_ccorres_n)
              apply (simp add: syscall_error_to_H_cases)
             (* frame cap not mapped, check mapping *)
-            (* disallow mappings above kernelBase *)
+            (* disallow mappings above pptrBase *)
             apply clarsimp
             apply (prop_tac "mapdata = None")
              apply (simp add: ccap_relation_mapped_asid_0)
@@ -2484,7 +2484,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply clarsimp
             apply ccorres_rewrite
             apply csymbr
-            apply (simp add: ARM_H.kernelBase_def ARM.kernelBase_def hd_conv_nth length_ineq_not_Nil)
+            apply (simp add: ARM_H.pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
             apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
             apply (simp add: syscall_error_to_H_cases)
@@ -2510,7 +2510,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  apply (rule ccorres_rhs_assoc)+
                  apply (csymbr, clarsimp, ccorres_rewrite)
                  apply (csymbr,
-                        simp add: ARM_H.kernelBase_def ARM.kernelBase_def
+                        simp add: ARM_H.pptrBase_def ARM.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
                  apply (fold dc_def)
@@ -2678,7 +2678,7 @@ lemma decodeARMFrameInvocation_ccorres:
                          framesize_from_H_eq_eqs of_bool_nth[simplified of_bool_from_bool]
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
                          length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
-                         kernelBase_def ARM.kernelBase_def)
+                         pptrBase_def ARM.pptrBase_def)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
@@ -2887,7 +2887,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add: syscall_error_to_H_cases)
         apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
            apply vcg
-          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil kernelBase_def ARM.kernelBase_def)
+          apply (clarsimp simp: hd_conv_nth length_ineq_not_Nil pptrBase_def ARM.pptrBase_def)
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)

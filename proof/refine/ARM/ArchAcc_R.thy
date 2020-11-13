@@ -946,10 +946,10 @@ lemma page_table_at_state_relation:
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
   apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-  apply (subgoal_tac "(ptr + physMappingOffset + (y << 2)) \<in> dom (ksPSpace sa)")
+  apply (subgoal_tac "(ptr + pptrBaseOffset + (y << 2)) \<in> dom (ksPSpace sa)")
    prefer 2
    apply (clarsimp simp: pspace_dom_def)
-   apply (rule_tac x = "ptr + physMappingOffset" in bexI[where A = "dom (kheap s)"])
+   apply (rule_tac x = "ptr + pptrBaseOffset" in bexI[where A = "dom (kheap s)"])
     apply (simp add:image_def)
     apply (rule_tac x = "ucast y" in exI)
     apply (simp add:ucast_ucast_len)

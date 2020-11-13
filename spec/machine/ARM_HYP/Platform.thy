@@ -41,14 +41,10 @@ definition
   cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
-definition
-  kernelBase_addr :: word32 where
-  "kernelBase_addr \<equiv> 0xe0000000"
-
 (* Arch specific kernel base address used for haskell spec *)
 definition
-  kernelBase :: word32 where
-  "kernelBase \<equiv> 0xe0000000"
+  pptrBase :: word32 where
+  "pptrBase \<equiv> 0xe0000000"
 
 definition
   physBase :: word32 where
@@ -60,19 +56,19 @@ definition
 
 definition
   paddrTop :: "32 word" where
-  "paddrTop \<equiv> pptrTop - (kernelBase - physBase)"
+  "paddrTop \<equiv> pptrTop - (pptrBase - physBase)"
 
 definition
-  physMappingOffset :: word32 where
-  "physMappingOffset \<equiv> kernelBase_addr - physBase"
+  pptrBaseOffset :: word32 where
+  "pptrBaseOffset \<equiv> pptrBase - physBase"
 
 definition
   ptrFromPAddr :: "paddr \<Rightarrow> word32" where
-  "ptrFromPAddr paddr \<equiv> paddr + physMappingOffset"
+  "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
 
 definition
   addrFromPPtr :: "word32 \<Rightarrow> paddr" where
-  "addrFromPPtr pptr \<equiv> pptr - physMappingOffset"
+  "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
 
 definition
   minIRQ :: "irq" where

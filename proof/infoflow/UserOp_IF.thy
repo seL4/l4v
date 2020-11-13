@@ -429,7 +429,7 @@ lemma ptrFromPAddr_mask_simp:
  "(ptrFromPAddr z && ~~ mask (pageBitsForSize l)) =
    (ptrFromPAddr (z && ~~ mask (pageBitsForSize l)))"
   apply (simp add: ptrFromPAddr_def field_simps)
-  apply (subst mask_out_add_aligned[OF is_aligned_physMappingOffset])
+  apply (subst mask_out_add_aligned[OF is_aligned_pptrBaseOffset])
   apply simp
   done
 

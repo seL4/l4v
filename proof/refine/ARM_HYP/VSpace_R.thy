@@ -5128,7 +5128,7 @@ lemma in_set_zip_singleton[simp]:
 lemma valid_pte'_offset:
   "\<lbrakk> valid_pte' pte s; x \<le> 15; pte = LargePagePTE p a b c; vmsz_aligned' p ARMLargePage \<rbrakk>
   \<Longrightarrow> valid_pte' (addPTEOffset pte x) s"
-  using is_aligned_mult_triv2[of x 12, simplified] is_aligned_physMappingOffset [of ARMLargePage]
+  using is_aligned_mult_triv2[of x 12, simplified] is_aligned_pptrBaseOffset [of ARMLargePage]
   apply (clarsimp simp: addPTEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
   apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
   apply (drule aligned_offset_non_zero[rotated -1, where n=16 and y="x * 0x1000"])
@@ -5159,7 +5159,7 @@ lemma mapM_x_storePTE_invs:
 lemma valid_pde'_offset:
   "\<lbrakk> valid_pde' pde s; x \<le> 15; pde = SuperSectionPDE p a b c; vmsz_aligned' p ARMSuperSection \<rbrakk>
   \<Longrightarrow> valid_pde' (addPDEOffset pde x) s"
-  using is_aligned_mult_triv2[of x 21, simplified] is_aligned_physMappingOffset [of ARMSuperSection]
+  using is_aligned_mult_triv2[of x 21, simplified] is_aligned_pptrBaseOffset [of ARMSuperSection]
   apply (clarsimp simp: addPDEOffset_def valid_mapping'_def addPAddr_def fromPAddr_def is_aligned_add)
   apply (clarsimp simp: ptrFromPAddr_def vmsz_aligned'_def)
   apply (drule aligned_offset_non_zero[rotated -1, where n=25 and y="x * 0x200000"])

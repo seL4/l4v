@@ -1519,7 +1519,7 @@ lemma pspace_no_overlap_underlying_zero_update:
 lemma addrFromPPtr_mask:
   "n \<le> 28
     \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def
                    ARM.physBase_def)
   apply word_bitwise
   apply simp
