@@ -22,13 +22,14 @@ type_synonym paddr = word64
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-(* Address space layout:
+(* Address space layout (from seL4/include/arch/riscv/arch/64/mode/hardware.h):
+
 The top half of the address space is reserved for the kernel. This means that 256 top level
 entries are for the user, and 256 are for the kernel. This will be further split into the
 'regular' kernel window, which contains mappings to physical memory, a small (1GiB) higher
 kernel image window that we use for running the actual kernel from and a top 1GiB window for
 kernel device mappings. This means that between PPTR_BASE and
-KERNEL_BASE there are 254 entries remaining, which represents how much physical memory
+KERNEL_ELF_BASE there are 254 entries remaining, which represents how much physical memory
 can be used.
 
 Almost all of the top 256 kernel entries will contain 1GiB page mappings. The only 2 entries
@@ -43,15 +44,15 @@ alignment.
                   |        Kernel Devices       |
                -> +-------------------KDEV_BASE-+ 2^64 - 1GiB
                |  |         Kernel ELF          |
-           ----|  +-------------KERNEL_ELF_BASE-+ --+ 2^64 - 2GiB + (PADDR_LOAD % 1GiB)
+           ----|  +-------------KERNEL_ELF_BASE-+ --+ 2^64 - 2GiB + (KERNEL_ELF_PADDR_BASE % 1GiB)
            |   |  |                             |
-           |   -> +-----------------KERNEL_BASE-+ --+ 2^64 - 2GiB
+           |   -> +-----------------------------+ --+ 2^64 - 2GiB = (KERNEL_ELF_BASE % 1GiB)
 Shared 1GiB|      |                             |   |
 table entry|      |           PSpace            |   |
            |      |  (direct kernel mappings)   |   +----+
            ------>|                             |   |    |
                   |                             |   |    |
-                  +-------------------PPTR_BASE-+ --+ 2^64 - 2^c
+                  +-------------------PPTR_BASE-+ --+ 2^64 - 2^b
                   |                             |        |         +-------------------------+
                   |                             |        |         |                         |
                   |                             |        |         |                         |
@@ -59,29 +60,37 @@ table entry|      |           PSpace            |   |
                   |                             |        |         |           not           |
                   |                             |        |         |         kernel          |
                   |                             |        |         |       addressable       |
-                  +-----------------------------+  2^c   |         |                         |
+                  +--------------------USER_TOP-+  2^c   |         |                         |
                   |                             |        |         |                         |
                   |                             |        |         |                         |
                   |                             |        |      +- --------------------------+  PADDR_TOP =
-                  |                             |        |      |  |                         |    KERNEL_BASE - PPTR_BASE
+                  |                             |        |      |  |                         |    PPTR_TOP - PPTR_BASE
                   |                             |        |      |  |                         |
                   |                             |        |      |  |                         |
                   |            User             |        |      |  |                         |
                   |                             |        |      |  |                         |
-                  |                             |        +------+  +-------------------------+  PADDR_HIGH_TOP =
-                  |                             |     kernel    |  |        Kernel ELF       |    (KDEV_BASE - KERNEL_ELF_BASE + PADDR_LOAD)
-                  |                             |   addressable |  +-------------------------+  PADDR_LOAD
+                  |                             |        +------+  +-------------------------+  KDEV_BASE - KERNEL_ELF_BASE + PADDR_LOAD
+                  |                             |     kernel    |  |        Kernel ELF       |
+                  |                             |   addressable |  +-------------------------+  KERNEL_ELF_PADDR_BASE
                   |                             |               |  |                         |
                   |                             |               |  |                         |
                   +-----------------------------+  0            +- +-------------------------+  0 PADDR_BASE
 
                      virtual address space                          physical address space
 
+ c = one less than number of bits the page tables can translate
+   = sign extension bit for canonical addresses
+   (= 47 on x64, 38 on RISCV64 sv39, 47 on RISCV64 sv48)
+ b = The number of bits used by kernel mapping.
+   = 38 (half of the 1 level page table) on RISCV64 sc39
+   = 39 (entire second level page table) on aarch64 / X64 / sv48
+*)
 
-c = one less than number of bits the page tables can translate
-  = sign extension bit for canonical addresses
-  (= 47 on x64, 38 on RISCV64 sv39, 47 on RISCV64 sv48)
-
+(* NOTE: a number of these constants appear in the Haskell, but are shadowed
+   here due to more convenient formulation.
+   Examples: kernelELFBase, kernelELFBaseOffset, kernelELFAddressBase, pptrBase
+   Ideally and in future, we should converge on a single authoritative source
+   of these constants.
 *)
 
 definition canonical_bit :: nat
@@ -102,13 +111,13 @@ definition kernelELFBase :: word64
 lemma "kernelELFBase = 0xFFFFFFFF84000000" (* Sanity check with C *)
   by (simp add: kernelELFBase_def)
 
-definition paddrLoad :: word64
+definition kernelELFPAddrBase :: word64
   where
-  "paddrLoad = 0x84000000"
+  "kernelELFPAddrBase = 0x84000000"
 
-definition kernelBaseOffset :: word64
+definition kernelELFBaseOffset :: word64
   where
-  "kernelBaseOffset = kernelELFBase - paddrLoad"
+  "kernelELFBaseOffset = kernelELFBase - kernelELFPAddrBase"
 
 definition pptrBase :: word64
   where
@@ -128,25 +137,25 @@ schematic_goal pptrUserTop_def': (* direct constant definition *)
   "RISCV64.pptrUserTop = numeral ?x"
   by (simp add: RISCV64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
 
-definition pAddr_base :: word64
+definition paddrBase :: word64
   where
-  "pAddr_base \<equiv> 0"
+  "paddrBase \<equiv> 0"
 
-definition baseOffset :: word64
+definition pptrBaseOffset :: word64
   where
-  "baseOffset = pptrBase - pAddr_base"
+  "pptrBaseOffset = pptrBase - paddrBase"
 
 definition ptrFromPAddr :: "paddr \<Rightarrow> word64"
   where
-  "ptrFromPAddr paddr \<equiv> paddr + baseOffset"
+  "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
 
 definition addrFromPPtr :: "word64 \<Rightarrow> paddr"
   where
-  "addrFromPPtr pptr \<equiv> pptr - baseOffset"
+  "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
 
 definition addrFromKPPtr :: "word64 \<Rightarrow> paddr"
   where
-  "addrFromKPPtr pptr \<equiv> pptr - kernelBaseOffset"
+  "addrFromKPPtr pptr \<equiv> pptr - kernelELFBaseOffset"
 
 definition minIRQ :: "irq"
   where
