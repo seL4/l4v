@@ -480,8 +480,6 @@ lemma pte_relation_must_pte:
   apply clarsimp
   done
 
-declare RISCV64_H.pptrBase_def[simp]
-
 lemma page_table_at_cross:
   "\<lbrakk> pt_at p s; pspace_aligned s; pspace_distinct s; pspace_relation (kheap s) (ksPSpace s') \<rbrakk> \<Longrightarrow>
    page_table_at' p s'"

@@ -327,7 +327,7 @@ lemma ptrFromPAddr_spec:
   Call ptrFromPAddr_'proc
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
-  apply (simp add: RISCV64.ptrFromPAddr_def RISCV64.pptrBase_def baseOffset_def pAddr_base_def
+  apply (simp add: RISCV64.ptrFromPAddr_def RISCV64.pptrBase_def pptrBaseOffset_def paddrBase_def
                    canonical_bit_def)
   done
 
@@ -336,7 +336,7 @@ lemma addrFromPPtr_spec:
   Call addrFromPPtr_'proc
   \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def baseOffset_def pAddr_base_def
+  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def pptrBaseOffset_def paddrBase_def
                    canonical_bit_def)
   done
 
@@ -880,10 +880,11 @@ lemma ccorres_name_pre_C:
 lemma kpptr_to_paddr_spec:
   "\<forall>s. \<Gamma> \<turnstile>  {s}
   Call kpptr_to_paddr_'proc
-  \<lbrace> \<acute>ret__unsigned_long = RISCV64_H.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+  \<lbrace> \<acute>ret__unsigned_long = RISCV64.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
   apply vcg
-  apply (simp add: RISCV64_H.addrFromKPPtr_def RISCV64.addrFromKPPtr_def RISCV64.kernelBaseOffset_def
-                   RISCV64.kernelELFBase_def RISCV64.paddrLoad_def)
+  apply (simp add: RISCV64.addrFromKPPtr_def RISCV64.addrFromKPPtr_def pptrBaseOffset_def
+                   RISCV64.kernelELFBase_def RISCV64.kernelELFPAddrBase_def
+                   RISCV64.kernelELFBaseOffset_def)
   done
 
 lemma isValidVTableRoot_def2:
@@ -993,8 +994,8 @@ lemma ccorres_seq_IF_False:
 (* FIXME x64: needed? *)
 lemma ptrFromPAddr_mask6_simp[simp]:
   "ptrFromPAddr ps && mask 6 = ps && mask 6"
-  unfolding ptrFromPAddr_def pptrBase_def baseOffset_def RISCV64.pptrBase_def canonical_bit_def
-             pAddr_base_def
+  unfolding ptrFromPAddr_def pptrBase_def pptrBaseOffset_def RISCV64.pptrBase_def canonical_bit_def
+             paddrBase_def
   by (subst add.commute, subst mask_add_aligned ; simp add: is_aligned_def)
 
 (* FIXME: move *)

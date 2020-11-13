@@ -725,7 +725,7 @@ lemma lookupPTSlot_bitsLeft_less_64:
 lemma addrFromPPtr_in_user_region:
   "p \<in> kernel_mappings \<Longrightarrow> addrFromPPtr p \<in> user_region"
   supply if_cong[cong]
-  apply (simp add: kernel_mappings_def addrFromPPtr_def baseOffset_def pAddr_base_def
+  apply (simp add: kernel_mappings_def addrFromPPtr_def pptrBaseOffset_def paddrBase_def
                    user_region_def pptr_base_def RISCV64.pptrBase_def canonical_user_def)
   apply (clarsimp simp: canonical_bit_def mask_def)
   apply (subst diff_minus_eq_add[symmetric])
@@ -969,7 +969,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
        apply csymbr
      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
         apply vcg
-       apply (solves \<open>clarsimp simp: isCap_simps hd_conv_nth RISCV64_H.pptrUserTop_def
+       apply (solves \<open>clarsimp simp: isCap_simps hd_conv_nth RISCV64.pptrUserTop_def'
                                      pptrUserTop_def' not_less length_le_helper\<close>)
         apply (fold not_None_def) (* avoid expanding capPTMappedAddress  *)
         apply clarsimp
@@ -1243,8 +1243,8 @@ lemma obj_at_pte_aligned:
 
 lemma addrFromPPtr_mask_6:
   "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
-  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def baseOffset_def canonical_bit_def
-                   pAddr_base_def)
+  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def pptrBaseOffset_def canonical_bit_def
+                   paddrBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -1333,7 +1333,7 @@ lemma vaddr_segment_nonsense3_folded:
 lemma vmsz_aligned_addrFromPPtr':
   "vmsz_aligned (addrFromPPtr p) sz
        = vmsz_aligned p sz"
-  apply (simp add: vmsz_aligned_def RISCV64.addrFromPPtr_def baseOffset_def pAddr_base_def)
+  apply (simp add: vmsz_aligned_def RISCV64.addrFromPPtr_def pptrBaseOffset_def paddrBase_def)
   apply (subgoal_tac "is_aligned RISCV64.pptrBase (pageBitsForSize sz)")
    apply (rule iffI)
     apply (drule(1) aligned_add_aligned)
@@ -1729,7 +1729,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
               apply (clarsimp simp: ccap_relation_FrameCap_Size framesize_from_to_H)
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
-                apply (solves \<open>clarsimp simp: RISCV64_H.pptrUserTop_def pptrUserTop_def' p_assoc_help\<close>)
+                apply (solves \<open>clarsimp simp: pptrUserTop_def' p_assoc_help\<close>)
                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                apply (simp add: syscall_error_to_H_cases)
               (* check vaddr alignment *)

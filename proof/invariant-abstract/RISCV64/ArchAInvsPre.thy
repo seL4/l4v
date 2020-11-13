@@ -157,7 +157,7 @@ lemma data_at_aligned:
 lemma is_aligned_ptrFromPAddr_n_eq:
   "sz \<le> canonical_bit \<Longrightarrow> is_aligned (ptrFromPAddr x) sz = is_aligned x sz"
   apply (rule iffI)
-   apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+   apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
    apply (drule is_aligned_addD2)
     apply (erule is_aligned_weaken[rotated])
     apply (simp add: is_aligned_def)
@@ -243,13 +243,13 @@ lemma ptable_rights_imp_frame[AInvsPre_asms]:
   apply (frule is_aligned_add_helper[OF _ and_mask_less', THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
   apply (clarsimp simp: data_at_def ptrFromPAddr_def addrFromPPtr_def field_simps)
-  apply (subgoal_tac "p_addr + (baseOffset + (x && mask (pageBitsForSize sz)))
-                        && ~~ mask (pageBitsForSize sz) = p_addr + baseOffset")
+  apply (subgoal_tac "p_addr + (pptrBaseOffset + (x && mask (pageBitsForSize sz)))
+                        && ~~ mask (pageBitsForSize sz) = p_addr + pptrBaseOffset")
    apply simp
   apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
-     apply (case_tac sz; simp add: is_aligned_def baseOffset_def pptrBase_def pAddr_base_def
+     apply (case_tac sz; simp add: is_aligned_def pptrBaseOffset_def pptrBase_def paddrBase_def
                                    canonical_bit_def bit_simps)
     apply simp
    apply (rule and_mask_less')

@@ -503,7 +503,7 @@ lemma below_user_vtop_in_user_region:
   by (word_bitwise, clarsimp simp: word_size)
 
 lemma vmsz_aligned_user_region:
-  "\<lbrakk> vmsz_aligned p sz;  p + (2 ^ pageBitsForSize sz - 1) < RISCV64_H.pptrUserTop \<rbrakk>
+  "\<lbrakk> vmsz_aligned p sz;  p + (2 ^ pageBitsForSize sz - 1) < pptrUserTop \<rbrakk>
    \<Longrightarrow> p \<in> user_region"
   using pbfs_atleast_pageBits[of sz]
   apply (simp flip: mask_2pm1 add: vmsz_aligned_def)
@@ -594,11 +594,11 @@ lemma decode_page_inv_corres:
      apply (rule exI)+
      apply (rule conjI, erule vspace_for_asid_vs_lookup, simp)
     apply (rule conjI)
-     apply (simp add: not_le vmsz_aligned_user_region[unfolded pptrUserTop_def] mask_def user_vtop_def)
+     apply (simp add: not_le vmsz_aligned_user_region mask_def user_vtop_def)
     apply clarsimp
     apply (drule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
     apply (erule vs_lookup_slot_pte_at; assumption?)
-    apply (simp add: not_le vmsz_aligned_user_region[unfolded pptrUserTop_def] mask_def user_vtop_def)
+    apply (simp add: not_le vmsz_aligned_user_region mask_def user_vtop_def)
    apply fastforce
   \<comment> \<open>PageUnmap\<close>
   apply (simp split del: if_split)
@@ -1105,7 +1105,7 @@ lemma decode_page_inv_wf[wp]:
   done
 
 lemma below_pptrUserTop_in_user_region:
-  "p < RISCV64_H.pptrUserTop \<Longrightarrow> p \<in> user_region"
+  "p < pptrUserTop \<Longrightarrow> p \<in> user_region"
   apply (simp add: user_region_def canonical_user_def pptrUserTop_def RISCV64.pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def)
   by (word_bitwise, clarsimp simp: word_size)
