@@ -104,10 +104,10 @@ pptrUserTop = pptrBase
 pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
 
 ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (Platform.PAddr addr) = PPtr $ addr + pptrBaseOffset
+ptrFromPAddr addr = PPtr $ fromPAddr addr + pptrBaseOffset
 
 addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr addr) = toPAddr $ addr - pptrBaseOffset
+addrFromPPtr addr = toPAddr $ fromPPtr addr - pptrBaseOffset
 
 kernelELFBaseOffset = (fromVPtr kernelELFBase) - (fromPAddr kernelELFPAddrBase)
 
