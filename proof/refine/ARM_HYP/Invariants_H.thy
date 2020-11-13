@@ -509,12 +509,12 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase) \<and>
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase) \<and>
     rghts \<noteq> VMNoAccess
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata

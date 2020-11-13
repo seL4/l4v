@@ -3714,7 +3714,7 @@ lemma copyGlobalMappings_ccorres:
   apply (cinit lift: newPD_' simp: ARMSectionBits_def pdeBits_def)
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
    apply csymbr
-   apply (simp add: kernelBase_def ARM.kernelBase_def objBits_simps archObjSize_def
+   apply (simp add: pptrBase_def ARM.pptrBase_def objBits_simps archObjSize_def
                     whileAnno_def word_sle_def word_sless_def
                     Collect_True              del: Collect_const)
    apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)

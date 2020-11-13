@@ -1363,7 +1363,7 @@ lemma pageTableMapped_pd:
   done
 
 lemma unmapPageTable_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < kernelBase))
+  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr_' s = vaddr} \<inter> {s. pt_' s = Ptr ptPtr}) []
       (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1393,7 +1393,7 @@ lemma unmapPageTable_ccorres:
    apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
              in hoare_post_imp)
     apply (clarsimp simp: lookup_pd_slot_def Let_def
-                          mask_add_aligned less_kernelBase_valid_pde_offset''
+                          mask_add_aligned less_pptrBase_valid_pde_offset''
                           page_directory_at'_def)
    apply (wp pageTableMapped_pd)
   apply (clarsimp simp: word_sle_def lookup_pd_slot_def
@@ -1414,7 +1414,7 @@ lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capab
   apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                             case_option_over_if gen_framesize_to_H_def
-                            ARM_H.kernelBase_def
+                            ARM_H.pptrBase_def
                             framesize_to_H_def valid_cap'_def
                      elim!: ccap_relationE simp del: Collect_const)
   apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap) \<noteq> scast Kernel_C.ARMSmallPage")
@@ -1726,7 +1726,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if gen_framesize_to_H_def
-                              Kernel_C.ARMSmallPage_def ARM_H.kernelBase_def
+                              Kernel_C.ARMSmallPage_def ARM_H.pptrBase_def
                               if_split
                        elim!: ccap_relationE simp del: Collect_const)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def

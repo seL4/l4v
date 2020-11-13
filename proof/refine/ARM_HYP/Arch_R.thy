@@ -1082,12 +1082,12 @@ shows
                              \<or> (\<exists>asid' vaddr'. map_data = Some (asid', vaddr') \<and> (asid',vaddr') \<noteq> (asid,vaddr))"
                    in corres_symmetric_bool_cases[where Q=\<top> and Q'=\<top>, OF refl])
            apply (erule disjE
-                  ; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM_HYP.kernelBase_def
+                  ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM_HYP.pptrBase_def
                             split: option.splits)
           apply clarsimp
           apply (rule corres_splitEE'[where r'=dc and P=\<top> and P'=\<top>])
              apply (case_tac map_data
-                    ; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM_HYP.kernelBase_def
+                    ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM_HYP.pptrBase_def
                                      corres_returnOkTT)
             \<comment> \<open>pd=undefined as vspace_at_asid not used in find_pd_for_asid_corres and avoid unresolved schematics\<close>
             apply (rule corres_splitEE'[
@@ -1143,7 +1143,7 @@ shows
      apply (simp split: cap.split arch_cap.split option.split,
             intro conjI allI impI, simp_all)[1]
      apply (rule whenE_throwError_corres_initial, simp)
-      apply (simp add: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
+      apply (simp add: kernel_base_def ARM_HYP.pptrBase_def pptrBase_def)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE)
           prefer 2
@@ -1210,7 +1210,7 @@ shows
       apply (rule whenE_throwError_corres, simp)
        apply clarsimp
       apply (rule whenE_throwError_corres, simp)
-       apply (clarsimp simp: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
+       apply (clarsimp simp: kernel_base_def ARM_HYP.pptrBase_def pptrBase_def)
       apply (rule case_option_corresE)
        apply (rule corres_trivial)
        apply clarsimp
@@ -1559,10 +1559,10 @@ lemma sts_valid_arch_inv':
   apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
   done
 
-lemma less_kernelBase_valid_pde_offset':
-  "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
+lemma less_pptrBase_valid_pde_offset':
+  "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 8) + (vptr >> 21 << 3)) && mask pdBits)"
-  apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: ARM_HYP.pptrBase_def pptrBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def pt_index_bits_def
                         vspace_bits_defs)
   apply (drule word_le_minus_one_leq, simp)
@@ -1581,26 +1581,26 @@ lemma less_kernelBase_valid_pde_offset':
   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   done
 
-lemmas less_kernelBase_valid_pde_offset''
-    = less_kernelBase_valid_pde_offset'[where x=0, simplified pd_bits_def pdBits_def pdeBits_def, simplified]
+lemmas less_pptrBase_valid_pde_offset''
+    = less_pptrBase_valid_pde_offset'[where x=0, simplified pd_bits_def pdBits_def pdeBits_def, simplified]
 
 lemma createMappingEntries_valid_pde_slots':
   "\<lbrace>K (vmsz_aligned' vptr sz \<and> is_aligned pd pdBits
-                \<and> vptr < kernelBase)\<rbrace>
+                \<and> vptr < pptrBase)\<rbrace>
      createMappingEntries base vptr sz vm_rights attrib pd
    \<lbrace>\<lambda>rv s. valid_pde_slots' rv\<rbrace>,-"
   apply (simp add: createMappingEntries_def valid_pde_slots'_def)
   apply (cases sz, simp_all)
      apply (wp | simp)+
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned vspace_bits_defs)
-   apply (erule less_kernelBase_valid_pde_offset'')
+   apply (erule less_pptrBase_valid_pde_offset'')
   apply (rule hoare_pre, wp)
   apply (clarsimp simp: vmsz_aligned'_def superSectionPDEOffsets_def vspace_bits_defs del: ballI)
   apply (simp add: lookup_pd_slot_def Let_def vspace_bits_defs)
   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
                         lookup_pd_slot_def Let_def field_simps
                         mask_add_aligned)
-  apply (erule less_kernelBase_valid_pde_offset' [simplified pdBits_def pdeBits_def, simplified])
+  apply (erule less_pptrBase_valid_pde_offset' [simplified pdBits_def pdeBits_def, simplified])
    apply simp
   apply simp
   done
@@ -1626,12 +1626,12 @@ lemma findPDForASID_aligned[wp]:
   done
 
 lemma findPDForASID_valid_offset'[wp]:
-  "\<lbrace>valid_objs' and K (vptr < kernelBase)\<rbrace> findPDForASID p
+  "\<lbrace>valid_objs' and K (vptr < pptrBase)\<rbrace> findPDForASID p
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 21 << 3) && mask pd_bits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
   apply (simp add: mask_add_aligned vspace_bits_defs)
-  apply (erule less_kernelBase_valid_pde_offset'')
+  apply (erule less_pptrBase_valid_pde_offset'')
   done
 
 lemma eq_arch_update':
@@ -1735,7 +1735,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:ptrFromPAddr_def is_aligned_mask
-    physMappingOffset_def kernelBase_addr_def ARM_HYP.physBase_def physBase_def)
+    pptrBaseOffset_def pptrBase_def ARM_HYP.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])
