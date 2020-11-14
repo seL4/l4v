@@ -1101,18 +1101,18 @@ abbreviation heap_ref_eq :: "'a \<Rightarrow> 'b \<Rightarrow> ('b \<rightharpoo
   "heap_ref_eq r p heap \<equiv> pred_map_eq (Some r) heap p"
 
 definition heap_refs_retract_at :: "('a \<rightharpoonup> 'b option) \<Rightarrow> ('b \<rightharpoonup> 'a option) \<Rightarrow> 'a \<Rightarrow> bool" where
-  "heap_refs_retract_at heap sym_heap p \<equiv> \<forall>r. heap_ref_eq r p heap \<longrightarrow> heap_ref_eq p r sym_heap"
+  "heap_refs_retract_at heap symheap p \<equiv> \<forall>r. heap_ref_eq r p heap \<longrightarrow> heap_ref_eq p r symheap"
 
 definition heap_refs_retract :: "('a \<rightharpoonup> 'b option) \<Rightarrow> ('b \<rightharpoonup> 'a option) \<Rightarrow> bool" where
-  "heap_refs_retract heap sym_heap \<equiv> \<forall>p. heap_refs_retract_at heap sym_heap p"
+  "heap_refs_retract heap symheap \<equiv> \<forall>p. heap_refs_retract_at heap symheap p"
 
 definition heap_refs_inv :: "('a \<rightharpoonup> 'b option) \<Rightarrow> ('b \<rightharpoonup> 'a option) \<Rightarrow> bool" where
-  "heap_refs_inv heap sym_heap \<equiv> heap_refs_retract heap sym_heap \<and> heap_refs_retract sym_heap heap"
+  "heap_refs_inv heap symheap \<equiv> heap_refs_retract heap symheap \<and> heap_refs_retract symheap heap"
 
 lemmas heap_refs_inv_defs = heap_refs_inv_def heap_refs_retract_def heap_refs_retract_at_def
 
 lemma heap_refs_inv_def2:
-  "heap_refs_inv heap sym_heap \<equiv> \<forall>p q. heap_ref_eq q p heap \<longleftrightarrow> heap_ref_eq p q sym_heap"
+  "heap_refs_inv heap symheap \<equiv> \<forall>p q. heap_ref_eq q p heap \<longleftrightarrow> heap_ref_eq p q symheap"
   by (auto simp: atomize_eq heap_refs_inv_defs)
 
 definition heap_refs_inj_at_ref :: "'a \<Rightarrow> 'b \<Rightarrow> ('a \<rightharpoonup> 'b option) \<Rightarrow> bool" where
@@ -1127,39 +1127,39 @@ definition heap_refs_inj :: "('a \<rightharpoonup> 'b option) \<Rightarrow> bool
 lemmas heap_ref_inj_defs = heap_refs_inj_def heap_refs_inj_at_def heap_refs_inj_at_ref_def
 
 lemma heap_refs_retract_atD:
-  assumes "heap_refs_retract_at heap sym_heap p"
+  assumes "heap_refs_retract_at heap symheap p"
   assumes "heap_ref_eq r p heap"
-  shows "heap_ref_eq p r sym_heap"
+  shows "heap_ref_eq p r symheap"
   using assms by (auto simp: heap_refs_retract_at_def)
 
 lemma heap_refs_retract_heap_refs_retract_at[simp, elim!]:
-  "heap_refs_retract heap sym_heap \<Longrightarrow> heap_refs_retract_at heap sym_heap p"
+  "heap_refs_retract heap symheap \<Longrightarrow> heap_refs_retract_at heap symheap p"
   by (auto simp: heap_refs_retract_def)
 
 lemmas heap_refs_retractD = heap_refs_retract_atD[OF heap_refs_retract_heap_refs_retract_at]
 
 lemma heap_refs_retractE:
-  assumes "heap_refs_retract heap sym_heap"
+  assumes "heap_refs_retract heap symheap"
   assumes "\<And>p r. heap_ref_eq r p heap'
-                  \<longrightarrow> (heap_ref_eq r p heap \<longrightarrow> heap_ref_eq p r sym_heap)
+                  \<longrightarrow> (heap_ref_eq r p heap \<longrightarrow> heap_ref_eq p r symheap)
                   \<longrightarrow> heap_ref_eq p r sym_heap'"
   shows "heap_refs_retract heap' sym_heap'"
   using assms by (simp add: heap_refs_inv_defs)
 
 lemma heap_refs_inv_retractD:
-  "heap_refs_inv heap sym_heap \<Longrightarrow> heap_refs_retract heap sym_heap"
+  "heap_refs_inv heap symheap \<Longrightarrow> heap_refs_retract heap symheap"
   by (simp add: heap_refs_inv_def)
 
 lemma heap_refs_inv_retract_symD:
-  "heap_refs_inv heap sym_heap \<Longrightarrow> heap_refs_retract sym_heap heap"
+  "heap_refs_inv heap symheap \<Longrightarrow> heap_refs_retract symheap heap"
   by (simp add: heap_refs_inv_def)
 
 lemma heap_refs_inv_inv:
-  "heap_refs_inv heap sym_heap \<Longrightarrow> heap_refs_inv sym_heap heap"
+  "heap_refs_inv heap symheap \<Longrightarrow> heap_refs_inv symheap heap"
   by (simp add: heap_refs_inv_def)
 
 lemma heap_refs_retract_heap_ref_inj:
-  assumes "heap_refs_retract heap sym_heap"
+  assumes "heap_refs_retract heap symheap"
   shows "heap_refs_inj heap"
   using assms
   apply (clarsimp simp: heap_ref_inj_defs)
@@ -1187,9 +1187,9 @@ lemmas heap_refs_inj_eq = heap_refs_inj_at_eq[OF heap_refs_injD]
 lemmas heap_refs_retract_inj_eq = heap_refs_inj_eq[OF heap_refs_retract_heap_ref_inj]
 
 lemma heap_refs_retract_at_eq:
-  "heap_refs_retract_at heap sym_heap p
+  "heap_refs_retract_at heap symheap p
    \<Longrightarrow> heap_ref_eq r p heap
-   \<Longrightarrow> heap_ref_eq p' r sym_heap
+   \<Longrightarrow> heap_ref_eq p' r symheap
    \<Longrightarrow> p' = p"
   by (auto simp: pred_map_simps dest!: heap_refs_retract_atD)
 
