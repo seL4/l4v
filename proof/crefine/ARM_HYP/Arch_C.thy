@@ -2568,7 +2568,7 @@ lemma throwError_invocationCatch:
 lemma decodeARMFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   defines "does_not_throw args extraCaps pg_sz mapdata \<equiv>
-           (mapdata = None \<longrightarrow> \<not> (ARM_HYP_H.pptrBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
+           (mapdata = None \<longrightarrow> \<not> (ARM_HYP.pptrBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
            (mapdata \<noteq> None \<longrightarrow> (fst (the mapdata) = (the (capPDMappedASID (capCap (fst (extraCaps ! 0)))))
                            \<and> snd (the mapdata) = hd args))"
   shows
@@ -2879,7 +2879,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply clarsimp
             apply ccorres_rewrite
             apply csymbr
-            apply (simp add: ARM_HYP_H.pptrBase_def ARM_HYP.pptrBase_def hd_conv_nth length_ineq_not_Nil)
+            apply (simp add: ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
             apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
             apply (simp add: syscall_error_to_H_cases)
@@ -2904,7 +2904,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  apply (rule ccorres_rhs_assoc)+
                  apply (csymbr, clarsimp, ccorres_rewrite)
                  apply (csymbr,
-                        simp add: ARM_HYP_H.pptrBase_def ARM_HYP.pptrBase_def
+                        simp add: ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
                  apply (fold dc_def)
@@ -3073,7 +3073,7 @@ lemma decodeARMFrameInvocation_ccorres:
                          framesize_from_H_eq_eqs of_bool_nth[simplified of_bool_from_bool]
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
                          length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
-                         ARM_HYP_H.pptrBase_def ARM_HYP.pptrBase_def)
+                         ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)

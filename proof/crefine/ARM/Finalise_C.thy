@@ -1414,7 +1414,7 @@ lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capab
   apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                             case_option_over_if gen_framesize_to_H_def
-                            ARM_H.pptrBase_def
+                            ARM.pptrBase_def
                             framesize_to_H_def valid_cap'_def
                      elim!: ccap_relationE simp del: Collect_const)
   apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap) \<noteq> scast Kernel_C.ARMSmallPage")
@@ -1726,7 +1726,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if gen_framesize_to_H_def
-                              Kernel_C.ARMSmallPage_def ARM_H.pptrBase_def
+                              Kernel_C.ARMSmallPage_def ARM.pptrBase_def
                               if_split
                        elim!: ccap_relationE simp del: Collect_const)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def

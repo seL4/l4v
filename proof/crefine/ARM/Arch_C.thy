@@ -2191,7 +2191,7 @@ lemma decodeARMFrameInvocation_ccorres:
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
   defines "does_not_throw args extraCaps pg_sz mapdata \<equiv>
-           (mapdata = None \<longrightarrow> \<not> (ARM_H.pptrBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
+           (mapdata = None \<longrightarrow> \<not> (ARM.pptrBase \<le> hd args + 2 ^ pageBitsForSize pg_sz - 1)) \<and>
            (mapdata \<noteq> None \<longrightarrow> (fst (the mapdata) = (the (capPDMappedASID (capCap (fst (extraCaps ! 0)))))
                            \<and> snd (the mapdata) = hd args))"
   shows
@@ -2484,7 +2484,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply clarsimp
             apply ccorres_rewrite
             apply csymbr
-            apply (simp add: ARM_H.pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
+            apply (simp add: ARM.pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
             apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
             apply (simp add: syscall_error_to_H_cases)
@@ -2510,7 +2510,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  apply (rule ccorres_rhs_assoc)+
                  apply (csymbr, clarsimp, ccorres_rewrite)
                  apply (csymbr,
-                        simp add: ARM_H.pptrBase_def ARM.pptrBase_def
+                        simp add: ARM.pptrBase_def ARM.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
                  apply (fold dc_def)
