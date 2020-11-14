@@ -20,7 +20,6 @@ imports
   Eval_Bool
   NICTATools
   Heap_List
-  "HOL-Library.Prefix_Order"
   "HOL-Word.Word"
 begin
 
@@ -2630,6 +2629,15 @@ lemma hd_opt_rev_simps[simp]:
   "hd_opt xs = None \<longleftrightarrow> xs = []"
   "hd_opt xs = Some x \<longleftrightarrow> (\<exists>xs'. xs = x # xs')"
   by (cases xs; simp)+
+
+lemma hd_opt_append[simp]:
+  "xs \<noteq> [] \<Longrightarrow> hd_opt (xs @ ys) = Some (hd xs)"
+  "xs = [] \<Longrightarrow> hd_opt (xs @ ys) = hd_opt ys"
+  by (induct xs; simp) simp
+
+lemma hd_opt_rev[simp]:
+  "hd_opt (rev xs) = (if xs = [] then None else Some (last xs))"
+  by (metis Nil_is_rev_conv hd_opt_simps(1) hd_opt_simps(2) last_rev list.exhaust list.sel(1) rev_rev_ident)
 
 lemma distinct_hd_not_in_tl:
   "distinct xs \<Longrightarrow> hd xs \<notin> set (tl xs)"
