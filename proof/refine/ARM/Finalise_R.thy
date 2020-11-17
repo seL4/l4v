@@ -3958,12 +3958,12 @@ lemma deletingIRQHandler_invs' [wp]:
 lemma finaliseCap_invs:
   "\<lbrace>invs' and sch_act_simple and valid_cap' cap
          and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>
-     finaliseCap cap fin flag
+   finaliseCap cap fin flag
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getReplyTCB_wp | simp only: o_def | wpc)+
+   apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift getReplyTCB_wp | simp only: o_def)+
   sorry (* finaliseCap_invs *) (*
   apply clarsimp
   apply (intro conjI impI)
@@ -3976,20 +3976,16 @@ lemma finaliseCap_invs:
   done *)
 
 lemma finaliseCap_zombie_cap[wp]:
-  "\<lbrace>cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)) sl\<rbrace>
-     finaliseCap cap fin flag
-   \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)) sl\<rbrace>"
+  "finaliseCap cap fin flag \<lbrace>cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)) sl\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp suspend_cte_wp_at'
-             deletingIRQHandler_cte_preserved
-                 | clarsimp simp: finaliseCap_def isCap_simps | wpc)+
-  sorry (* finaliseCap_zombie_cap *)
+  apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved
+              simp: finaliseCap_def isCap_simps)
+  done
 
 lemma finaliseCap_zombie_cap':
   "\<lbrace>cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)) sl\<rbrace>
-     finaliseCap cap fin flag
+   finaliseCap cap fin flag
    \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) sl\<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (rule finaliseCap_zombie_cap)
@@ -3997,22 +3993,24 @@ lemma finaliseCap_zombie_cap':
   done
 
 lemma finaliseCap_cte_cap_wp_to[wp]:
-  "\<lbrace>ex_cte_cap_wp_to' P sl\<rbrace> finaliseCap cap fin flag \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P sl\<rbrace>"
+  "finaliseCap cap fin flag \<lbrace>ex_cte_cap_wp_to' P sl\<rbrace>"
   apply (simp add: ex_cte_cap_to'_def)
   apply (rule hoare_pre, rule hoare_use_eq_irq_node' [OF finaliseCap_irq_node'])
    apply (simp add: finaliseCap_def Let_def
               cong: if_cong split del: if_split)
-   apply (wp suspend_cte_wp_at'
-             deletingIRQHandler_cte_preserved
-             hoare_vcg_ex_lift
-                 | clarsimp simp: finaliseCap_def isCap_simps
-                 | rule conjI
-                 | wpc)+
-  sorry (* finaliseCap_cte_cap_wp_to *) (*
+   apply (wpsimp wp: suspend_cte_wp_at' deletingIRQHandler_cte_preserved
+                     hoare_vcg_ex_lift
+               simp: finaliseCap_def isCap_simps
+          | rule conjI)+
   apply fastforce
-  done *)
+  done
 
-crunch valid_cap'[wp]: unbindNotification "valid_cap' cap"
+global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcb"
+  by typ_at_props'
+global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC tcb"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma finaliseCap_valid_cap[wp]:
   "\<lbrace>valid_cap' cap\<rbrace> finaliseCap cap final flag \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>"
@@ -4020,17 +4018,8 @@ lemma finaliseCap_valid_cap[wp]:
                    getThreadCSpaceRoot
                    ARM_H.finaliseCap_def
              cong: if_cong split del: if_split)
-  apply (rule hoare_pre)
-   apply (wp | simp only: valid_NullCap o_def fst_conv | wpc)+
-  sorry (* finaliseCap_valid_cap *) (*
-  apply simp
-  apply (intro conjI impI)
-   apply (clarsimp simp: valid_cap'_def isCap_simps capAligned_def
-                         objBits_simps shiftL_nat)+
-  done &*)
-
-
-context begin interpretation Arch . (*FIXME: arch_split*)
+  apply wpsimp
+  by (auto simp: valid_cap'_def isCap_simps capAligned_def objBits_simps shiftL_nat)
 
 crunch nosch[wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def)
@@ -4042,7 +4031,6 @@ crunch sch_act_simple[wp]: finaliseCap sch_act_simple
    wp: getObject_inv loadObject_default_inv crunch_wps) *)
 
 end
-
 
 lemma interrupt_cap_null_or_ntfn:
   "invs s
