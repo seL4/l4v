@@ -41,7 +41,7 @@ AARCH64: build-aarch64
 sandbox: .stack-work
 
 build-arm: sandbox $(BOOT_FILES)
-	$(CABAL_CONFIGURE) --configure-option="arm-kzm" \
+	$(CABAL_CONFIGURE) --configure-option="arm-imx8" \
 	    --flags="ArchArm" \
 	    --builddir="dist/arm"
 	$(RM_BACKUP)
