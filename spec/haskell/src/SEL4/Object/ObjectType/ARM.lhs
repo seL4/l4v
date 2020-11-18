@@ -383,6 +383,10 @@ Create an architecture-specific object.
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits
 #endif
 
+> fpuThreadDelete :: PPtr TCB -> Kernel ()
+> fpuThreadDelete threadPtr = do
+>     usingFpu <- doMachineOp $ nativeThreadUsingFPU (fromPPtr threadPtr)
+>     when usingFpu $ doMachineOp (switchFpuOwner 0 0)
 
 A function called from finaliseCap in ObjectType.lhs to prepare a tcb for deletion:
 
@@ -394,6 +398,6 @@ A function called from finaliseCap in ObjectType.lhs to prepare a tcb for deleti
 >       Just ptr -> dissociateVCPUTCB ptr thread
 >       _ -> return ()
 #else
-> prepareThreadDelete _ = return ()
+> prepareThreadDelete thread = fpuThreadDelete thread
 #endif
 

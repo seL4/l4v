@@ -878,6 +878,18 @@ Note that InvalidIOPDE and InvalidPTE do not exist in C, as there is no valid bi
 
 #endif
 
+\subsection{FPU Operations}
+
+> nativeThreadUsingFPU :: Word -> MachineMonad Bool
+> nativeThreadUsingFPU threadPtr = do
+>     cbptr <- ask
+>     liftIO $ Platform.nativeThreadUsingFPU threadPtr
+
+> switchFpuOwner :: Word -> Word -> MachineMonad ()
+> switchFpuOwner newOwner cpu = do
+>     cbptr <- ask
+>     liftIO $ Platform.switchFpuOwner newOwner cpu
+
 \subsection{Constants}
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
