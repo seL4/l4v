@@ -105,6 +105,7 @@ Library
                             SEL4.Machine.Hardware.ARM.KZM
                             SEL4.Machine.Hardware.ARM.Exynos4210
                             SEL4.Machine.Hardware.ARM.Sabre
+                            SEL4.Machine.Hardware.ARM.IMX8
                             SEL4.Machine.Hardware.ARM.Callbacks
                             SEL4.Machine.Hardware.GICInterface
                             SEL4.Machine.Hardware.MCTInterface
