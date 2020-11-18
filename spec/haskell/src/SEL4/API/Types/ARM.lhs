@@ -88,7 +88,7 @@ I/O MMU additions add IO page table objects. Note that there is only one IO page
 > pageType = SmallPageObject
 
 > tcbBlockSizeBits :: Int
-> tcbBlockSizeBits = 9
+> tcbBlockSizeBits = 10
 
 > apiGetObjectSize :: APIObjectType -> Int -> Int
 > apiGetObjectSize Untyped size = size
