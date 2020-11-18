@@ -29,7 +29,7 @@ The following is the definition of the five object types that are always availab
 >         deriving (Enum, Bounded, Eq, Show)
 
 > tcbBlockSizeBits :: Int
-> tcbBlockSizeBits = wordSizeCase 9 11
+> tcbBlockSizeBits = wordSizeCase 10 11
 
 > epSizeBits :: Int
 > epSizeBits = 4

@@ -40,7 +40,7 @@ sandbox: .stack-work
 	$(CABAL_INSTALL) --dependencies-only
 
 build-arm: sandbox $(BOOT_FILES)
-	$(CABAL_CONFIGURE) --configure-option="arm-kzm" \
+	$(CABAL_CONFIGURE) --configure-option="arm-imx8" \
 	    --flags="ArchArm" \
 	    --builddir="dist/arm"
 	$(CABAL_BUILD) --builddir="dist/arm"
