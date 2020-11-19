@@ -48,7 +48,7 @@ fun tcbEPFindIndex where
 
 declare tcbEPFindIndex.simps[simp del]
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key tcbEPFindIndex
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch= bodies_only NOT liftFnMaybe assertDerived archThreadGet archThreadSet asUser sanitiseRegister getSanitiseRegisterInfo takeWhileM sort_key tcbEPFindIndex awaken
 
 defs asUser_def:
 "asUser tptr f\<equiv> (do

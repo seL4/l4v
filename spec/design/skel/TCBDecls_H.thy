@@ -15,6 +15,6 @@ requalify_types
   user_monad
 end
 
-#INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only NOT archThreadGet archThreadSet takeWhileM sort_key tcbEPFindIndex
+#INCLUDE_HASKELL SEL4/Object/TCB.lhs decls_only NOT archThreadGet archThreadSet takeWhileM sort_key tcbEPFindIndex awaken
 
 end
