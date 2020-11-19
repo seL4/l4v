@@ -241,9 +241,19 @@ where
   "cregs_relation Hregs Cregs \<equiv>  \<forall>r. Hregs r = Cregs.[unat (register_from_H r)]"
 
 definition
+  fpu_relation :: "fpu_state \<Rightarrow> user_fpu_state_C \<Rightarrow> bool"
+where
+  "fpu_relation fpu_H fpu_C \<equiv>
+    case fpu_H of FPUState fpregs exc scr \<Rightarrow>
+      (\<forall>r < CARD(fpu_regs). fpregs (finite_index r) = (fpregs_C fpu_C).[r])
+                            \<and> exc = fpexc_C fpu_C
+                            \<and> scr = fpscr_C fpu_C"
+
+definition
   ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
 where
-  "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C)"
+  "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C) \<and>
+                                  fpu_relation (fpu_state uc_H) (fpuState_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>
