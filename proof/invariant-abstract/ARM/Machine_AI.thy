@@ -615,6 +615,15 @@ lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
   apply (wp no_irq_mapM_x no_irq_storeWord no_irq_cleanCacheRange_PoU)
   done
 
+lemma no_irq_nativeThreadUsingFPU: "no_irq (nativeThreadUsingFPU thread)"
+  by (wp | clarsimp simp: nativeThreadUsingFPU_def)+
+
+lemma no_irq_switchFpuOwner: "no_irq (switchFpuOwner thread cpu)"
+  by (wp | clarsimp simp: switchFpuOwner_def)+
+
+lemmas nativeThreadUsingFPU_irq_masks = no_irq[OF no_irq_nativeThreadUsingFPU]
+lemmas switchFpuOwner_irq_masks = no_irq[OF no_irq_switchFpuOwner]
+
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
