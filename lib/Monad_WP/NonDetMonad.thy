@@ -236,6 +236,12 @@ definition
   gets_map :: "('s \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('s, 'b) nondet_monad" where
   "gets_map f p \<equiv> gets f >>= (\<lambda>m. assert_opt (m p))"
 
+definition
+  fun_of_m :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a option"
+where
+  "fun_of_m m \<equiv> \<lambda>s. if \<exists>x s'. m s = ({(x,s')}, False)
+                    then Some (THE x. \<exists>s'. m s = ({(x,s')}, False))
+                    else None"
 
 subsection \<open>The Monad Laws\<close>
 
