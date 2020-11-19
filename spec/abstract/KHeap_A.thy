@@ -446,12 +446,6 @@ definition
   "tcb_sched_dequeue thread queue \<equiv> filter ((\<noteq>) thread) queue"
 
 definition
-  tcb_release_dequeue :: "(unit, 'z::state_ext) s_monad"
-where
-  "tcb_release_dequeue =
-    modify (\<lambda>s. s\<lparr> release_queue := tl (release_queue s), reprogram_timer := True \<rparr>)"
-
-definition
   tcb_release_remove :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "tcb_release_remove tcb_ptr \<equiv> do

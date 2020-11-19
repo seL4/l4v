@@ -130,13 +130,6 @@ where
   od"
 
 definition
-  fun_of_m :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a option"
-where
-  "fun_of_m m \<equiv> \<lambda>s. if \<exists>x s'. m s = ({(x,s')}, False)
-                    then Some (THE x. \<exists>s'. m s = ({(x,s')}, False))
-                    else None"
-
-definition
   get_tcb_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
 where
   "get_tcb_refill_ready t = do
@@ -146,25 +139,33 @@ where
      return ready
    od"
 
-definition
-  awaken :: "(unit, 'z::state_ext) s_monad"
+definition release_q_non_empty_and_ready :: "(bool, 'z::state_ext) s_monad"
 where
-  "awaken \<equiv> do
-    rq \<leftarrow> gets release_queue;
-    s \<leftarrow> get;
-    rq1 \<leftarrow> return $ takeWhile (\<lambda>t. the (fun_of_m (get_tcb_refill_ready t) s)) rq;
-    rq2 \<leftarrow> return $ drop (length rq1) rq;
-    modify $ release_queue_update (K rq2);
-    mapM_x (\<lambda>t. do
-      consumed \<leftarrow> gets consumed_time;
-      sc_opt \<leftarrow> thread_get tcb_sched_context t;
-      scp \<leftarrow> assert_opt sc_opt;
-      sufficient \<leftarrow> get_sc_refill_sufficient scp consumed;
-      assert sufficient;
-      possible_switch_to t;
-      modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
-    od) rq1
-  od"
+  "release_q_non_empty_and_ready \<equiv> do
+     rq \<leftarrow> gets release_queue;
+     if rq = []
+     then return False
+     else get_tcb_refill_ready (hd rq)
+   od"
+
+definition tcb_release_dequeue :: "(obj_ref, 'z::state_ext) s_monad"
+where
+  "tcb_release_dequeue = do
+     rq \<leftarrow> gets release_queue;
+     tcb_release_remove (hd rq);
+     return (hd rq)
+   od"
+
+definition awaken_body :: "(unit, 'z::state_ext) s_monad"
+where
+  "awaken_body = do
+     awakened \<leftarrow> tcb_release_dequeue;
+     possible_switch_to awakened
+   od"
+
+definition awaken :: "(unit, 'z::state_ext) s_monad"
+where
+  "awaken \<equiv> whileLoop (\<lambda>r s. the (fun_of_m release_q_non_empty_and_ready s)) (\<lambda>_. awaken_body) ()"
 
 definition max_non_empty_queue :: "(priority \<Rightarrow> ready_queue) \<Rightarrow> ready_queue" where
   "max_non_empty_queue queues \<equiv> queues (Max {prio. queues prio \<noteq> []})"
