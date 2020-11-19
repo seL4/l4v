@@ -1267,10 +1267,37 @@ lemma (in delete_one) suspend_corres:
    apply fastforce+
   done
 
+lemma no_fail_switchFpuOwner[wp]:
+  "no_fail \<top> (ARM.switchFpuOwner thread cpu)"
+  by (simp add: ARM.switchFpuOwner_def Arch.no_fail_machine_op_lift)
+
+lemma no_fail_nativeThreadUsingFPU[wp]:
+  "no_fail \<top> (ARM.nativeThreadUsingFPU thread)"
+  unfolding ARM.nativeThreadUsingFPU_def
+  by (wpsimp wp: no_fail_bind Arch.no_fail_machine_op_lift)
+
 lemma (in delete_one) prepareThreadDelete_corres:
   "corres dc (tcb_at t) (tcb_at' t)
         (prepare_thread_delete t) (ArchRetypeDecls_H.ARM_H.prepareThreadDelete t)"
-  by (simp add: ArchVSpace_A.ARM_A.prepare_thread_delete_def ArchRetype_H.ARM_H.prepareThreadDelete_def)
+ apply (simp add: ArchVSpace_A.ARM_A.prepare_thread_delete_def ArchRetype_H.ARM_H.prepareThreadDelete_def
+                   ArchVSpace_A.ARM_A.fpu_thread_delete_def ArchRetype_H.ARM_H.fpuThreadDelete_def
+                   ARM_H.fromPPtr_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule corres_machine_op)
+       apply (rule corres_Id, rule refl, simp)
+       apply wpsimp
+      apply (rule corres_when)
+       apply clarsimp
+      apply wpsimp
+      apply (rule corres_machine_op)
+      apply (rule corres_Id, rule refl, simp)
+      apply wpsimp
+     apply clarsimp
+     apply wpsimp
+    apply wpsimp
+   apply auto
+  done
 
 lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
@@ -2222,6 +2249,9 @@ lemma suspend_unqueued:
   unfolding suspend_def
   by (wpsimp simp: comp_def wp: tcbSchedDequeue_not_tcbQueued)
 
+crunch fpuThreadDelete
+  for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
+  (simp: comp_def)
 crunch prepareThreadDelete
   for unqueued: "obj_at' (Not \<circ> tcbQueued) t"
 crunch prepareThreadDelete
