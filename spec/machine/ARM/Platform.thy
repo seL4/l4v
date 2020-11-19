@@ -113,9 +113,6 @@ lemma pptrBase_top_neq_0: (* 20 = size of ARMSectionBits *)
   "pptrBase >> 20 \<noteq> 0"
   by (simp add: pptrBase_def)
 
-definition physBase :: word32 where
-  "physBase \<equiv> 0x40000000"
-
 abbreviation (input) "paddrBase \<equiv> physBase"
 
 definition pptrBaseOffset :: word32 where

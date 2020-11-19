@@ -591,12 +591,18 @@ where
   od
   | _ \<Rightarrow> return (NullCap, NullCap)"
 
+definition
+  fpu_thread_delete :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "fpu_thread_delete thread_ptr \<equiv> do
+    using_fpu \<leftarrow> do_machine_op (nativeThreadUsingFPU thread_ptr);
+    when using_fpu $ do_machine_op (switchFpuOwner 0 0)
+  od"
 
-definition (* prepares a thread for deletion; nothing to do for ARM *)
+definition
   prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "prepare_thread_delete p \<equiv> return ()"
-
+  "prepare_thread_delete thread_ptr \<equiv> fpu_thread_delete thread_ptr"
 
 text \<open>A thread's virtual address space capability must be to a page directory
 to be valid on the ARM architecture.\<close>

@@ -373,13 +373,44 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_assms]:
    apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
-crunch arch_finalise_cap,prepare_thread_delete
+crunch arch_finalise_cap, prepare_thread_delete
   for typ_at_arch[wp,Finalise_AI_assms]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def assertE_def
         ignore: maskInterrupt )
 
 crunch prepare_thread_delete
-  for tcb_at[wp]: "\<lambda>s. tcb_at p s"
+  for valid_cap[wp]: "valid_cap cap"
+  and tcb_at[wp]: "tcb_at p"
+  and cte_wp_at[wp, Finalise_AI_assms]: "\<lambda>s. P (cte_wp_at P' p s)"
+  and irq_node[wp, Finalise_AI_assms]: "\<lambda>s. P (interrupt_irq_node s)"
+  and caps_of_state[wp, Finalise_AI_assms]: "\<lambda>s. P (caps_of_state s)"
+
+crunch nativeThreadUsingFPU, switchFpuOwner
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_nativeThreadUsingFPU[wp]: "\<lbrace>invs\<rbrace> do_machine_op (nativeThreadUsingFPU thread) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: nativeThreadUsingFPU_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply (erule (1) use_valid[OF _ nativeThreadUsingFPU_irq_masks])
+  done
+
+lemma dmo_switchFpuOwner[wp]: "\<lbrace>invs\<rbrace> do_machine_op (switchFpuOwner thread cpu) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: switchFpuOwner_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
+  apply (erule (1) use_valid[OF _ switchFpuOwner_irq_masks])
+  done
+
+crunch prepare_thread_delete
+  for invs[wp]: invs
+  (ignore: do_machine_op)
 
 lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_assms]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
@@ -519,6 +550,15 @@ lemma prepare_thread_delete_unlive[wp]:
   apply (wpsimp simp: prepare_thread_delete_def)
   apply (clarsimp simp: obj_at_def, case_tac ko; clarsimp simp: live_def hyp_live_def arch_tcb_live_def)
   done
+
+crunch fpu_thread_delete
+  for obj_at[wp]: "\<lambda>s. P' (obj_at P p s)"
+
+lemma (* fpu_thread_delete_no_cap_to_obj_ref *)[wp,Finalise_AI_assms]:
+  "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
+     fpu_thread_delete thread
+   \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
+  by (wpsimp simp: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
 
 lemma finalise_cap_replaceable [Finalise_AI_assms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s

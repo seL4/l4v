@@ -119,7 +119,7 @@ where
 | "arch_cap_is_device _ = False"
 
 definition tcb_bits :: nat where
-  "tcb_bits \<equiv> 9"
+  "tcb_bits \<equiv> 10"
 
 definition endpoint_bits :: nat where
   "endpoint_bits \<equiv> 4"
@@ -316,7 +316,8 @@ text \<open>
 definition
   arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Rightarrow> arch_tcb \<Rightarrow> arch_tcb"
 where
-  "arch_tcb_set_registers regs a_tcb \<equiv> a_tcb \<lparr> tcb_context := UserContext regs \<rparr>"
+  "arch_tcb_set_registers regs a_tcb \<equiv>
+    a_tcb \<lparr> tcb_context := UserContext (fpu_state (tcb_context a_tcb)) regs \<rparr>"
 
 definition
   arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
