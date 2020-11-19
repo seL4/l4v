@@ -248,7 +248,7 @@ lemma ctes_of_Some_cte_wp_at:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma user_getreg_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
@@ -1071,7 +1071,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                  setEndpoint_typ_at'[where T="koType TYPE(cte)", unfolded typ_at_to_obj_at']
                      | simp)+
       apply (rule_tac P="\<lambda>s. epat = ep_at' p s \<and> cteat = real_cte_at' slot s
-                           \<and> tcbat = (tcb_at' (slot && ~~ mask 9) and (%y. slot && mask 9 : dom tcb_cte_cases)) s"
+                           \<and> tcbat = (tcb_at' (slot && ~~ mask 10) and (%y. slot && mask 10 : dom tcb_cte_cases)) s"
                    in monadic_rewrite_pre_imp_eq)
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
@@ -1161,7 +1161,7 @@ lemma set_setCTE[unfolded K_bind_def]:
    apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
           rule monadic_rewrite_bind_tail)
     apply (rule monadic_rewrite_trans,
-           rule_tac f="tcb_at' (p && ~~ mask 9) and K (p && mask 9 \<in> dom tcb_cte_cases)"
+           rule_tac f="tcb_at' (p && ~~ mask 10) and K (p && mask 10 \<in> dom tcb_cte_cases)"
                   in monadic_rewrite_add_gets)
     apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
            rule monadic_rewrite_bind_tail)
@@ -1178,7 +1178,7 @@ lemma set_setCTE[unfolded K_bind_def]:
      apply (rule monadic_rewrite_bind_tail)+
        apply (rule_tac P="c = cteat \<and> t = tcbat
                            \<and> (tcbat \<longrightarrow>
-                                 (\<exists> getF setF. tcb_cte_cases (p && mask 9) = Some (getF, setF)
+                                 (\<exists> getF setF. tcb_cte_cases (p && mask 10) = Some (getF, setF)
                                         \<and> (\<forall> f g tcb. setF f (setF g tcb) = setF (f o g) tcb)))"
                    in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_is_refl[OF ext])
