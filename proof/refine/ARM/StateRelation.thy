@@ -723,6 +723,7 @@ lemma state_relationD:
   shows "pspace_relation (kheap s) (ksPSpace s') \<and>
   sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
   ready_queues_relation (ready_queues s) (ksReadyQueues s') \<and>
+  release_queue_relation (release_queue s) (ksReleaseQueue s') \<and>
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
   cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
   cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>

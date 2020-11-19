@@ -212,6 +212,8 @@ context begin interpretation Arch .
 lemma update_valid_tcb:
   "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>)"
   "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>)"
+  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>release_queue := c\<rparr>)"
+  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>reprogram_timer := d\<rparr>)"
   by (auto simp: valid_tcb_def valid_tcb_state_def obj_at_def is_reply_def valid_bound_obj_def
                  valid_arch_tcb_def
           split: Structures_A.thread_state.splits option.splits)
@@ -220,6 +222,8 @@ end
 lemma update_valid_tcbs:
   "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>ready_queues := a\<rparr>)"
   "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>scheduler_action := b\<rparr>)"
+  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>release_queue := c\<rparr>)"
+  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>reprogram_timer := d\<rparr>)"
   apply (simp_all add: valid_tcbs_def)
   apply (auto intro: update_valid_tcb)
   done
@@ -3824,6 +3828,7 @@ lemma update_valid_tcb':
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueues := c\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReleaseQueue := d\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksSchedulerAction := e\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReprogramTimer := f\<rparr>)"
   apply (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def obj_at'_def projectKOs
                     ps_clear_def
              split: option.splits thread_state.splits)
