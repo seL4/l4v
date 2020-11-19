@@ -3331,6 +3331,18 @@ lemmas msgRegisters_unfold
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
 
+lemma thread_get_registers:
+  "thread_get (arch_tcb_get_registers \<circ> tcb_arch) t = as_user t (gets user_regs)"
+  apply (simp add: thread_get_def as_user_def arch_tcb_get_registers_def
+                   arch_tcb_context_get_def arch_tcb_context_set_def)
+  apply (rule bind_cong [OF refl])
+  apply (clarsimp simp: gets_the_member)
+  apply (simp add: get_def the_run_state_def set_object_def get_object_def
+                   put_def bind_def return_def gets_def)
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: map_upd_triv select_f_def image_def return_def)
+  done
+
 lemma get_mrs_corres:
   "corres (=) (tcb_at t)
               (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
@@ -3340,8 +3352,7 @@ lemma get_mrs_corres:
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
      (thread_get (arch_tcb_get_registers o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
-    unfolding arch_tcb_get_registers_def
-    apply (subst thread_get_as_user)
+    apply (subst thread_get_registers)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
@@ -3420,6 +3431,28 @@ lemma storeWordUser_valid_ipc_buffer_ptr' [wp]:
   unfolding valid_ipc_buffer_ptr'_def2
   by (wp hoare_vcg_all_lift storeWordUser_typ_at')
 
+lemma thread_set_as_user_registers:
+  "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_set_registers (f (arch_tcb_get_registers (tcb_arch tcb)))
+                          (tcb_arch tcb) \<rparr>) t
+    = as_user t (modify (modify_registers f))"
+proof -
+  have P: "\<And>f. det (modify f)"
+    by (simp add: modify_def)
+  thus ?thesis
+    apply (simp add: as_user_def P thread_set_def)
+    apply (clarsimp simp: select_f_def simpler_modify_def bind_def image_def modify_registers_def
+                          arch_tcb_set_registers_def arch_tcb_get_registers_def
+                          arch_tcb_context_set_def arch_tcb_context_get_def)
+    done
+qed
+
+lemma UserContext_fold:
+  "UserContext (fpu_state s) (foldl (\<lambda>s (x, y). s(x := y)) (user_regs s) xs) =
+   foldl (\<lambda>s (r, v). UserContext (fpu_state s) ((user_regs s)(r := v))) s xs"
+  apply (induct xs arbitrary: s; simp)
+  apply (clarsimp split: prod.splits)
+  by (metis user_context.sel(1) user_context.sel(2))
+
 lemma set_mrs_corres:
   assumes m: "mrs' = mrs"
   shows
@@ -3427,7 +3460,8 @@ lemma set_mrs_corres:
               (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (set_mrs t buf mrs) (setMRs t buf mrs')"
 proof -
-  have setRegister_def2: "setRegister = (\<lambda>r v. modify (\<lambda>s. s ( r := v )))"
+  have setRegister_def2:
+    "setRegister = (\<lambda>r v.  modify (\<lambda>s. UserContext (fpu_state s) ((user_regs s)(r := v))))"
     by ((rule ext)+, simp add: setRegister_def)
 
   have S: "\<And>xs ys n m. m - n \<ge> length xs \<Longrightarrow> (zip xs (drop n (take m ys))) = zip xs (drop n ys)"
@@ -3441,19 +3475,18 @@ proof -
 
   show ?thesis using m
     unfolding setMRs_def set_mrs_def
-    apply (clarsimp simp: arch_tcb_set_registers_def arch_tcb_get_registers_def cong: option.case_cong split del: if_split)
+    apply (clarsimp  cong: option.case_cong split del: if_split)
     apply (subst bind_assoc[symmetric])
     apply (fold thread_set_def[simplified])
-    apply (subst thread_set_as_user[where f="\<lambda>context. \<lambda>reg.
-                      if reg \<in> set (take (length mrs) msg_registers)
-                      then mrs ! (the_index msg_registers reg) else context reg",simplified])
+    apply (subst thread_set_as_user_registers)
     apply (cases buf)
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
      apply (rule corres_guard_imp)
        apply (rule corres_split_nor [OF _ corres_as_user'], rule corres_trivial, simp)
          apply (rule corres_modify')
-          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
+          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold UserContext_fold
+                                 modify_registers_def
                            cong: if_cong simp del: the_index.simps)
          apply ((wp |simp)+)[5]
     \<comment> \<open>buf = Some a\<close>
@@ -3476,7 +3509,7 @@ proof -
           apply wp+
          apply (rule corres_modify')
           apply (simp only: msgRegisters_unfold cong: if_cong)
-          apply (fastforce simp: fold_fun_upd[symmetric])
+          apply (fastforce simp: fold_fun_upd[symmetric] modify_registers_def UserContext_fold)
           apply (wp | clarsimp simp: valid_ipc_buffer_ptr'_def)+
      done
 qed

@@ -2439,7 +2439,7 @@ lemma other_objs_default_relation:
                         default_ep_def makeObject_endpoint default_notification_def
                         makeObject_notification default_ntfn_def
                         fault_rel_optionation_def
-                        initContext_def
+                        initContext_def newFPUState_def
                         arch_tcb_context_get_def atcbContextGet_def
                         default_arch_tcb_def newArchTCB_def
                         arch_tcb_relation_def

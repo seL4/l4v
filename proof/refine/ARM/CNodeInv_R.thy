@@ -630,7 +630,7 @@ lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def)
+  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def)
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -658,9 +658,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: prepareThreadDelete_def cteCaps_of_def)
-  apply wp
-  done
+  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
 
 definition
   finaliseSlot_recset :: "((word32 \<times> bool \<times> kernel_state) \<times> (word32 \<times> bool \<times> kernel_state)) set"
@@ -5259,6 +5257,11 @@ lemma invalid_Thread_CNode:
   apply (clarsimp simp: obj_at'_def projectKOs)
   done
 
+(* FIXME MOVE *)
+lemma all_Not_False[simp]:
+  "All Not = False"
+  by blast
+
 lemma Final_notUntyped_capRange_disjoint:
   "\<lbrakk> isFinal cap sl (cteCaps_of s); cteCaps_of s sl' = Some cap';
       sl \<noteq> sl'; capUntypedPtr cap = capUntypedPtr cap'; capBits cap = capBits cap';
@@ -5273,22 +5276,12 @@ lemma Final_notUntyped_capRange_disjoint:
   apply (elim disjE isCapDs[elim_format])
    apply (clarsimp simp: valid_cap'_def
                          obj_at'_def projectKOs objBits_simps'
-                         typ_at'_def ko_wp_at'_def
+                         typ_at'_def ko_wp_at'_def 
+                         page_table_at'_def page_directory_at'_def
+                         sameObjectAs_def3 isCap_simps
                   split: capability.split_asm zombie_type.split_asm
-                         arch_capability.split_asm
-                  dest!: spec[where x=0])
-     apply (clarsimp simp: sameObjectAs_def3 isCap_simps)
-    apply (simp add: isCap_simps)
-   apply (simp add: isCap_simps)
-  apply (clarsimp simp: valid_cap'_def
-                        obj_at'_def projectKOs objBits_simps
-                        typ_at'_def ko_wp_at'_def
-                        page_table_at'_def page_directory_at'_def
-                 split: capability.split_asm zombie_type.split_asm
-                        arch_capability.split_asm
-                 dest!: spec[where x=0])
-    apply fastforce+
-  apply (clarsimp simp: isCap_simps sameObjectAs_def3)
+                         arch_capability.split_asm option.split_asm
+                  dest!: spec[where x=0])+
   done
 
 lemma capBits_capUntyped_capRange:
@@ -8821,6 +8814,7 @@ crunch irq_states' [wp]: finaliseCap valid_irq_states'
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU
+       no_irq_switchFpuOwner no_irq_nativeThreadUsingFPU
    simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs
    ignore: getObject setObject)
 
