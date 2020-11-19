@@ -13,10 +13,13 @@ imports
 begin
 context Arch begin global_naming ARM_H
 
+definition newFPUState :: "fpu_state" where
+  "newFPUState \<equiv> FPUState (K 0) 0 0 "
+
 definition
   newContext :: "user_context"
 where
- "newContext \<equiv> UserContext ((K 0) aLU initContext)"
+ "newContext \<equiv> UserContext newFPUState ((K 0) aLU initContext)"
 
 end
 end
