@@ -13,14 +13,17 @@ chapter "Register Set"
 theory RegisterSet_H
 imports
   "Lib.HaskellLib_H"
-  "../../machine/ARM/MachineTypes"
+  "../../machine/ARM/MachineOps"
 begin
 context Arch begin global_naming ARM_H
 
+definition newFPUState :: "fpu_state" where
+  "newFPUState \<equiv> FPUState (K 0) 0 0 "
+
 definition
-  newContext :: "register => machine_word"
+  newContext :: "user_context"
 where
- "newContext \<equiv> (K 0) aLU initContext"
+ "newContext \<equiv> UserContext newFPUState ((K 0) aLU initContext)"
 
 end
 end
