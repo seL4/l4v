@@ -253,8 +253,8 @@ lemma wp_from_corres_unit:
 
 lemma corres_whileLoop_results_helper:
   assumes cond: "\<And>r r' s s'. \<lbrakk>rrel r r'; (s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> C r s = C' r' s'"
-  assumes body_corres: 
-           "\<And>r r'. rrel r r' 
+  assumes body_corres:
+           "\<And>r r'. rrel r r'
                     \<Longrightarrow> corres_underlying srel False nf' rrel (P and C r) (P' and C' r') (B r) (B' r')"
   assumes body_inv: "\<And>r. \<lbrace>P and C r\<rbrace> B r \<lbrace>\<lambda>_. P\<rbrace>" "\<And>r'. \<lbrace>P' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
   shows "(rv', t') \<in> fst (whileLoop C' B' r' s')
@@ -278,7 +278,7 @@ lemma corres_whileLoop_results_helper:
   apply (prop_tac "C r_abs s")
    apply (fastforce dest: cond)
   apply (prop_tac "\<exists>rv t. (rv,t) \<in> fst (B r_abs s) \<and> rrel rv r' \<and> (t,t') \<in> srel")
-   apply (fastforce simp: corres_underlying_def) 
+   apply (fastforce simp: corres_underlying_def)
   apply clarsimp
   apply (rename_tac rv t)
   apply (clarsimp simp: pred_conj_def)
@@ -316,8 +316,8 @@ lemma corres_whileLoop_no_fail_helper:
 
 lemma corres_whileLoop:
   assumes cond: "\<And>r r' s s'. \<lbrakk>rrel r r'; (s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> C r s = C' r' s'"
-  assumes body_corres: 
-           "\<And>r r'. rrel r r' 
+  assumes body_corres:
+           "\<And>r r'. rrel r r'
                     \<Longrightarrow> corres_underlying srel False nf' rrel (P and C r) (P' and C' r') (B r) (B' r')"
   assumes body_guard: "\<And>r. \<lbrace>P and C r\<rbrace> B r \<lbrace>\<lambda>_. P\<rbrace>" "\<And>r'. \<lbrace>P' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
   assumes rel: "rrel r r'"
