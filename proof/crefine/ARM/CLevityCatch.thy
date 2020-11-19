@@ -106,7 +106,7 @@ lemma asUser_mapM_x:
 lemma asUser_get_registers:
   "\<lbrace>tcb_at' target\<rbrace>
      asUser target (mapM getRegister xs)
-   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) xs = rv) target s\<rbrace>"
+   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. map ((user_regs \<circ> atcbContextGet \<circ> tcbArch) tcb) xs = rv) target s\<rbrace>"
   apply (induct xs)
    apply (simp add: mapM_empty asUser_return)
    apply wp

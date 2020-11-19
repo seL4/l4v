@@ -240,9 +240,24 @@ fun
   | "register_from_H ARM.FaultIP = scast Kernel_C.FaultIP"
 
 definition
-  ccontext_relation :: "(MachineTypes.register \<Rightarrow> word32) \<Rightarrow> user_context_C \<Rightarrow> bool"
+  cregs_relation :: "(MachineTypes.register \<Rightarrow> machine_word) \<Rightarrow> machine_word[19] \<Rightarrow> bool"
 where
-  "ccontext_relation regs uc \<equiv>  \<forall>r. regs r = index (registers_C uc) (unat (register_from_H r))"
+  "cregs_relation Hregs Cregs \<equiv>  \<forall>r. Hregs r = Cregs.[unat (register_from_H r)]"
+
+definition
+  fpu_relation :: "fpu_state \<Rightarrow> user_fpu_state_C \<Rightarrow> bool"
+where
+  "fpu_relation fpu_H fpu_C \<equiv>
+    case fpu_H of FPUState fpregs exc scr \<Rightarrow>
+      (\<forall>r < CARD(fpu_regs). fpregs (finite_index r) = (fpregs_C fpu_C).[r])
+                            \<and> exc = fpexc_C fpu_C
+                            \<and> scr = fpscr_C fpu_C"
+
+definition
+  ccontext_relation :: "user_context \<Rightarrow> user_context_C \<Rightarrow> bool"
+where
+  "ccontext_relation uc_H uc_C \<equiv> cregs_relation (user_regs uc_H) (registers_C uc_C) \<and>
+                                  fpu_relation (fpu_state uc_H) (fpuState_C uc_C)"
 
 primrec
   cthread_state_relation_lifted :: "Structures_H.thread_state \<Rightarrow>
@@ -601,7 +616,7 @@ fun
   | "irqstate_to_C irqstate.IRQReserved = scast Kernel_C.IRQReserved"
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> 'a ptr \<Rightarrow> (word32[161]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>

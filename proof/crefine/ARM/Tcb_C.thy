@@ -520,7 +520,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                del: Collect_const cong: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
-                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFE00 = target"
+                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFC00 = target"
                 in ccorres_gen_asm)
    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
        apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
@@ -1763,7 +1763,7 @@ shows
                                = min (unat n) (unat n_frameRegisters + unat n_gpRegisters)"
                                 in ccorres_gen_asm)
                     apply (rule ccorres_split_nothrow_novcg)
-                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                        apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                      (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                               = reply) target s"
                                    in ccorres_mapM_x_while)
@@ -1829,7 +1829,7 @@ shows
                                  in ccorres_split_nothrow_novcg)
                           apply (rule ccorres_Cond_rhs)
                            apply (rule ccorres_rel_imp,
-                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                                  rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                       (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                = reply) target s
                                                  \<and> valid_ipc_buffer_ptr' (the rva) s
@@ -1943,7 +1943,7 @@ shows
                             apply (simp add: drop_zip del: Collect_const)
                             apply (rule ccorres_Cond_rhs)
                              apply (simp del: Collect_const)
-                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((atcbContextGet o tcbArch) tcb) (genericTake n
+                             apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map ((user_regs o atcbContextGet o tcbArch) tcb) (genericTake n
                                                        (ARM_H.frameRegisters @ ARM_H.gpRegisters))
                                                                 = reply) target s
                                                   \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"

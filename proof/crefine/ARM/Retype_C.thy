@@ -890,6 +890,11 @@ lemma update_ti_t_word32_0s:
   "word_rcat [0, 0, 0, (0 :: word8)] = (0 :: word32)"
   by (simp_all add: typ_info_word word_rcat_def bin_rcat_def)
 
+lemma update_ti_t_word64_0s:
+  "update_ti_t (typ_info_t TYPE(word64)) [0,0,0,0,0,0,0,0] X = 0"
+  "word_rcat [0,0,0,0, 0,0,0,(0 :: word8)] = (0 :: word64)"
+  by (simp_all add: typ_info_word word_rcat_def bin_rcat_def)
+
 lemma is_aligned_ptr_aligned:
   fixes p :: "'a :: c_type ptr"
   assumes al: "is_aligned (ptr_val p) n"
@@ -2609,6 +2614,16 @@ lemma update_ti_t_array_rep_word0:
   apply (simp add: update_ti_t_word32_0s)
   done
 
+lemma update_ti_t_array_rep_word64_0:
+  "bs = replicate ((card (UNIV :: 'b :: finite set)) * 8) 0 \<Longrightarrow>
+  update_ti_t (typ_info_t TYPE(word64['b :: finite])) bs x =
+  foldr (\<lambda>n arr. Arrays.update arr n 0)
+        [0..<(card (UNIV :: 'b :: finite set))] x"
+  apply (subst update_ti_t_array_rep)
+   apply simp
+  apply (simp add: update_ti_t_word64_0s)
+  done
+
 lemma tcb_queue_update_other:
   "\<lbrakk> ctcb_ptr_to_tcb_ptr p \<notin> set tcbs \<rbrakk> \<Longrightarrow>
   tcb_queue_relation next prev (mp(p \<mapsto> v)) tcbs qe qh =
@@ -2644,7 +2659,8 @@ lemma c_guard_tcb:
 proof (rule conjI)
   show "ptr_aligned p" using al
     apply -
-    apply (rule is_aligned_ptr_aligned [where n = word_size_bits])
+    (* TCB starts with 64-bit FPU registers *)
+    apply (rule is_aligned_ptr_aligned [where n="word_size_bits + 1"])
      apply (rule is_aligned_weaken)
       apply (erule ctcb_ptr_to_tcb_ptr_aligned)
      by (auto simp: align_of_def word_size_bits_def ctcb_size_bits_def)
@@ -2661,7 +2677,7 @@ qed
 
 
 lemma tcb_ptr_orth_cte_ptrs':
-  "ptr_span (tcb_Ptr (regionBase + 0x100)) \<inter> ptr_span (Ptr regionBase :: (cte_C[5]) ptr) = {}"
+  "ptr_span (tcb_Ptr (regionBase + 0x200)) \<inter> ptr_span (Ptr regionBase :: (cte_C[5]) ptr) = {}"
   apply (rule disjointI)
   apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def size_td_array
                         intvl_def field_simps size_of_def ctcb_offset_def)
@@ -2949,9 +2965,16 @@ proof -
   let ?tcb = "undefined
     \<lparr>tcbArch_C := tcbArch_C undefined
      \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
-       \<lparr>registers_C :=
+       \<lparr>fpuState_C := fpuState_C (tcbContext_C (tcbArch_C undefined))
+         \<lparr> fpregs_C := foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<32]
+                        (fpregs_C (fpuState_C (tcbContext_C (tcbArch_C undefined)))),
+           fpexc_C := 0,
+           fpscr_C := 0
+         \<rparr>,
+        registers_C :=
           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
-           (registers_C (tcbContext_C (tcbArch_C undefined)))\<rparr>\<rparr>,
+           (registers_C (tcbContext_C (tcbArch_C undefined)))\<rparr>
+       \<rparr>,
        tcbState_C :=
          thread_state_C.words_C_update
           (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<3]
@@ -2972,20 +2995,22 @@ proof -
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
        tcbBoundNotification_C := ntfn_Ptr 0\<rparr>"
+
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def)
     apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)(* takes ages *)
-    apply (simp add: update_ti_adjust_ti update_ti_t_word32_0s
+    apply (simp add: update_ti_adjust_ti update_ti_t_word32_0s update_ti_t_word64_0s
       typ_info_simps
       user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
       lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
       ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-      align_of_def padup_def
+      ti_typ_combine_empty_ti ti_typ_combine_td
+      align_of_def padup_def user_fpu_state_C_tag_def user_context_C_tag_def
       final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
       align_td_array' size_td_array)
-    apply (simp add: update_ti_t_array_rep_word0)
+    apply (simp add: update_ti_t_array_rep_word0 update_ti_t_array_rep_word64_0)
     done
 
   have tcb_rel:
@@ -2993,17 +3018,24 @@ proof -
     unfolding ctcb_relation_def makeObject_tcb
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-    apply (simp add: cthread_state_relation_def thread_state_lift_def
-      eval_nat_numeral ThreadState_Inactive_def)
-    apply (simp add: ccontext_relation_def carch_tcb_relation_def)
-    apply rule
-    apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] \<comment> \<open>takes ages\<close>
-    apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
-    apply (simp add: timeSlice_def)
-    apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-      eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-      split: if_split)+
+         apply (simp add: cthread_state_relation_def thread_state_lift_def
+                          eval_nat_numeral ThreadState_Inactive_def)
+        apply (clarsimp simp: ccontext_relation_def carch_tcb_relation_def)
+        apply (rule conjI)
+         (* C regs relation *)
+         apply (clarsimp simp: ccontext_relation_def carch_tcb_relation_def
+                               newArchTCB_def cregs_relation_def atcbContextGet_def)
+         apply (case_tac r, simp_all add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def newArchTCB_def newContext_def initContext_def)[1] \<comment> \<open>takes ages\<close>
+        (* FPU state relation *)
+        apply (clarsimp simp: ccontext_relation_def carch_tcb_relation_def
+                              newArchTCB_def atcbContextGet_def fpu_relation_def
+                              newContext_def newFPUState_def index_foldr_update)
+       apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
+      apply (simp add: timeSlice_def)
+     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
+                      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+                      eval_nat_numeral seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+                 split: if_split)+
     done
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -4068,7 +4100,7 @@ lemma ccorres_placeNewObject_tcb:
    ({s. region_actually_is_zero_bytes regionBase (2^tcbBlockSizeBits) s})
     hs
    (placeNewObject regionBase (makeObject :: tcb) 0)
-   (\<acute>tcb :== tcb_Ptr (regionBase + 0x100);;
+   (\<acute>tcb :== tcb_Ptr (regionBase + 0x200);;
         (global_htd_update (\<lambda>s. ptr_retyp (Ptr (ptr_val (tcb_' s) - ctcb_offset) :: (cte_C[5]) ptr)
             \<circ> ptr_retyp (tcb_' s)));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace>
@@ -4081,10 +4113,10 @@ lemma ccorres_placeNewObject_tcb:
   apply (rule conseqPre)
    apply vcg
   apply (clarsimp simp: rf_sr_htd_safe ctcb_offset_defs)
-  apply (subgoal_tac "c_guard (tcb_Ptr (regionBase + 0x100))")
+  apply (subgoal_tac "c_guard (tcb_Ptr (regionBase + 0x200))")
    apply (subgoal_tac "hrs_htd (hrs_htd_update (ptr_retyp (Ptr regionBase :: (cte_C[5]) ptr)
-                                 \<circ> ptr_retyp (tcb_Ptr (regionBase + 0x100)))
-                  (t_hrs_' (globals x))) \<Turnstile>\<^sub>t tcb_Ptr (regionBase + 0x100)")
+                                 \<circ> ptr_retyp (tcb_Ptr (regionBase + 0x200)))
+                  (t_hrs_' (globals x))) \<Turnstile>\<^sub>t tcb_Ptr (regionBase + 0x200)")
     prefer 2
     apply (clarsimp simp: hrs_htd_update)
     apply (rule h_t_valid_ptr_retyps_gen_disjoint[where n=1 and arr=False,
@@ -4110,7 +4142,7 @@ lemma ccorres_placeNewObject_tcb:
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac \<sigma>=\<sigma> and x=x
-                   and ks="ksPSpace \<sigma>" and p="tcb_Ptr (regionBase + 0x100)" in cnc_tcb_helper)
+                   and ks="ksPSpace \<sigma>" and p="tcb_Ptr (regionBase + 0x200)" in cnc_tcb_helper)
                     apply clarsimp
                    apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
                                          objBitsKO_def range_cover.aligned)

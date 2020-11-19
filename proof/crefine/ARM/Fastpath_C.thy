@@ -1719,7 +1719,7 @@ lemma ctes_of_Some_cte_wp_at:
   by (clarsimp simp: cte_wp_at_ctes_of)
 
 lemma user_getreg_wp:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
+  "\<lbrace>\<lambda>s. tcb_at' t s \<and> (\<forall>rv. obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb r = rv) t s \<longrightarrow> Q rv s)\<rbrace>
       asUser t (getRegister r) \<lbrace>Q\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'. rv' = rv \<and> Q rv' s" in hoare_post_imp)
    apply simp
@@ -1839,8 +1839,8 @@ lemma fastpath_call_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-                  \<and> obj_at' (\<lambda>tcb. (atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
-                                 \<and>  (atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msginfo)
+                  \<and> obj_at' (\<lambda>tcb. (user_regs o atcbContextGet o tcbArch) tcb ARM_H.capRegister = cptr
+                                 \<and>  (user_regs o atcbContextGet o tcbArch) tcb ARM_H.msgInfoRegister = msginfo)
                         (ksCurThread s) s)
      (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
      (fastpaths SysCall) (Call fastpath_call_'proc)"
@@ -2653,8 +2653,8 @@ lemma fastpath_reply_recv_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> ct_in_state' ((=) Running) s
-               \<and> obj_at' (\<lambda>tcb.  (atcbContextGet o tcbArch) tcb capRegister = cptr
-                              \<and>  (atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
+               \<and> obj_at' (\<lambda>tcb.  (user_regs o atcbContextGet o tcbArch) tcb capRegister = cptr
+                              \<and>  (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msginfo)
                      (ksCurThread s) s)
        (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
        (fastpaths SysReplyRecv) (Call fastpath_reply_recv_'proc)"
@@ -4151,7 +4151,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                  setEndpoint_typ_at'[where T="koType TYPE(cte)", unfolded typ_at_to_obj_at']
                      | simp)+
       apply (rule_tac P="\<lambda>s. epat = ep_at' p s \<and> cteat = real_cte_at' slot s
-                           \<and> tcbat = (tcb_at' (slot && ~~ mask 9) and (%y. slot && mask 9 : dom tcb_cte_cases)) s"
+                           \<and> tcbat = (tcb_at' (slot && ~~ mask 10) and (%y. slot && mask 10 : dom tcb_cte_cases)) s"
                    in monadic_rewrite_refl3)
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
@@ -4247,7 +4247,7 @@ lemma set_setCTE[unfolded K_bind_def]:
    apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
           rule monadic_rewrite_bind_tail)
     apply (rule monadic_rewrite_trans,
-           rule_tac f="tcb_at' (p && ~~ mask 9) and K (p && mask 9 \<in> dom tcb_cte_cases)"
+           rule_tac f="tcb_at' (p && ~~ mask 10) and K (p && mask 10 \<in> dom tcb_cte_cases)"
                   in monadic_rewrite_add_gets)
     apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
            rule monadic_rewrite_bind_tail)
@@ -4264,7 +4264,7 @@ lemma set_setCTE[unfolded K_bind_def]:
      apply (rule monadic_rewrite_bind_tail)+
        apply (rule_tac P="c = cteat \<and> t = tcbat
                            \<and> (tcbat \<longrightarrow>
-                                 (\<exists> getF setF. tcb_cte_cases (p && mask 9) = Some (getF, setF)
+                                 (\<exists> getF setF. tcb_cte_cases (p && mask 10) = Some (getF, setF)
                                         \<and> (\<forall> f g tcb. setF f (setF g tcb) = setF (f o g) tcb)))"
                    in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_refl2)
@@ -4448,6 +4448,15 @@ crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer 
 crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
     simp: zipWithM_x_mapM ignore: sequenceE mapME getObject setObject)
+
+lemma setCTE_obj_at'_user_regs:
+  "setCTE p v \<lbrace> obj_at' (\<lambda>tcb. P (user_regs (atcbContextGet (tcbArch tcb)))) t\<rbrace>"
+  unfolding setCTE_def
+  by (rule setObject_cte_obj_at_tcb', simp+)
+
+crunches emptySlot
+  for obj_at'_user_regs: "obj_at' (\<lambda>tcb. P (user_regs (atcbContextGet (tcbArch tcb)))) p"
+  (wp: setCTE_obj_at'_user_regs)
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
@@ -4689,6 +4698,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                     setThreadState_obj_at_unchanged
                                     sts_st_tcb_at'_cases sts_bound_tcb_at'
                                     emptySlot_obj_at'_not_queued
+                                    emptySlot_obj_at'_user_regs
                                     emptySlot_cte_wp_at_cteCap
                                     emptySlot_cnode_caps
                                     user_getreg_inv asUser_typ_ats

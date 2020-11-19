@@ -1398,7 +1398,7 @@ lemma ccorres_add_getRegister:
   done
 
 lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadGet_wp)
   apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
@@ -1429,7 +1429,7 @@ lemma exceptionMessage_length_aux :
 lemma copyMRsFault_ccorres_exception:
   "ccorres dc xfdc
            (valid_pspace'
-             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.exceptionMessage = msg) sender
+             and obj_at' (\<lambda>tcb. map (user_regs (atcbContext (tcbArch tcb))) ARM_H.exceptionMessage = msg) sender
              and K (length msg = 3)
              and K (recvBuffer \<noteq> Some 0)
              and K (sender \<noteq> receiver))
@@ -1451,7 +1451,7 @@ lemma copyMRsFault_ccorres_exception:
                                          for as bs, simplified] bind_assoc)
    apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
 
-       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.exceptionMessage = msg) sender"
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.exceptionMessage = msg) sender"
                      in ccorres_mapM_x_while)
            apply (clarsimp simp: n_msgRegisters_def)
            apply (rule ccorres_guard_imp2)
@@ -1497,7 +1497,7 @@ lemma mapM_cong: "\<lbrakk> \<forall>x. elem x xs \<longrightarrow> f x = g x \<
 lemma copyMRsFault_ccorres_syscall:
   "ccorres dc xfdc
            (valid_pspace'
-             and obj_at' (\<lambda>tcb. map (atcbContext (tcbArch tcb)) ARM_H.syscallMessage = msg) sender
+             and obj_at' (\<lambda>tcb. map (user_regs (atcbContext (tcbArch tcb))) ARM_H.syscallMessage = msg) sender
              and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
              and K (length msg = 12)
              and K (recvBuffer \<noteq> Some 0)
@@ -1534,7 +1534,7 @@ proof -
                                          and ys="drop (unat n_msgRegisters) (zip as bs)"
                                          for as bs, simplified] bind_assoc)
    apply (rule ccorres_rhs_assoc2, rule ccorres_split_nothrow_novcg)
-       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg) sender"
+       apply (rule_tac F="K $ obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg) sender"
                      in ccorres_mapM_x_while)
            apply (clarsimp simp: n_msgRegisters_def)
            apply (rule ccorres_guard_imp2)
@@ -1563,7 +1563,7 @@ proof -
      apply (rule ccorres_Cond_rhs)
       apply (simp del: Collect_const)
       apply (rule ccorres_rel_imp[where r = "\<lambda>rv rv'. True", simplified])
-      apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg)
+      apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) ARM_H.syscallMessage = msg)
                                        sender and valid_pspace'
                                        and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
                            in ccorres_mapM_x_while'[where i="unat n_msgRegisters"])

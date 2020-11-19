@@ -1459,6 +1459,14 @@ lemma addrFromPPtr_mask_5:
   apply (simp add:mask_def)
   done
 
+lemma addrFromPPtr_mask_6:
+  "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
+  apply (simp add:addrFromPPtr_def physMappingOffset_def
+    kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply word_bitwise
+  apply (simp add:mask_def)
+  done
+
 lemma pteCheckIfMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top>
     (UNIV \<inter> {s. pte___ptr_to_struct_pte_C_' s = Ptr slot}) []
@@ -1623,7 +1631,7 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def
-                            addrFromPPtr_mask_5)
+                            addrFromPPtr_mask_6)
        apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
       apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps archObjSize_def)
@@ -1896,7 +1904,7 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def
-                             valid_pde_slots'2_def addrFromPPtr_mask_5)
+                             valid_pde_slots'2_def addrFromPPtr_mask_6)
        apply (auto simp: upt_conv_Cons[where i=0])[1]
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth)
       apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def pdeBits_def)
@@ -3073,7 +3081,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
               apply (simp add:linorder_not_le)
               apply (erule word_less_sub_1)
              apply (simp add:mask_add_aligned mask_twice)
-            apply (subgoal_tac "5 \<le> pageBitsForSize a")
+            apply (subgoal_tac "6 \<le> pageBitsForSize a")
              apply (frule(1) is_aligned_weaken)
              apply (simp add:mask_add_aligned mask_twice)
              apply (erule order_trans[rotated])

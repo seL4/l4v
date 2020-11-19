@@ -124,26 +124,29 @@ end
 definition
   "register_to_H \<equiv> inv register_from_H"
 
+context state_rel begin
+
 definition
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
-  "to_user_context_C uc \<equiv> user_context_C (FCP (\<lambda>r. uc (register_to_H (of_nat r))))"
-
-context kernel_m begin
-
-lemma ccontext_rel_to_C:
-  "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def fcp_beta)
-  apply (rule arg_cong [where f=uc])
-  apply (simp add: register_to_H_def inv_def)
-  done
-
-end
+  "to_user_context_C uc \<equiv>
+    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))
+                   (user_fpu_state_C ((ARRAY r. fpuRegs (fpu_state uc) (finite_index r)))
+                      (fpuExc (fpu_state uc)) (fpuScr (fpu_state uc)))"
 
 definition
   from_user_context_C :: "user_context_C \<Rightarrow> user_context"
 where
-  "from_user_context_C uc \<equiv> \<lambda>r. index (registers_C uc) (unat (register_from_H r))"
+  "from_user_context_C uc \<equiv>
+  UserContext (FPUState (Rep_array (fpregs_C (fpuState_C uc)))
+                        (fpexc_C (fpuState_C uc))
+                        (fpscr_C (fpuState_C uc)))
+              (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
+
+lemma (in kernel_m) ccontext_rel_to_C:
+  "ccontext_relation uc (to_user_context_C uc)"
+  unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def fpu_relation_def
+  by (clarsimp simp: register_to_H_def inv_def split: fpu_state.splits)
 
 definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
@@ -151,9 +154,23 @@ where
   "getContext_C thread \<equiv>
    \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
+lemma fpu_relation_Rep:
+  "fpu_relation fH fC \<Longrightarrow> Rep_array (fpregs_C fC) = fpuRegs fH"
+  unfolding fpu_relation_def index_def
+  apply (clarsimp split: fpu_state.splits)
+  apply (subst (asm) forall_finite_index[where 'a=fpu_regs, symmetric, simplified])
+  by auto
+
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def intro: ext)
+  unfolding ccontext_relation_def cregs_relation_def
+  apply clarsimp
+  apply (frule fpu_relation_Rep)
+  apply (cases uc)
+  apply (auto simp: from_user_context_C_def fpu_relation_def split: fpu_state.splits)
+  done
+
+end
 
 context kernel_m begin
 
@@ -772,9 +789,23 @@ lemma cpspace_cte_relation_unique:
 lemma inj_tcb_ptr_to_ctcb_ptr: "inj tcb_ptr_to_ctcb_ptr"
   by (simp add: inj_on_def tcb_ptr_to_ctcb_ptr_def)
 
+lemma cregs_relation_imp_eq:
+  "cregs_relation f x \<Longrightarrow> cregs_relation g x \<Longrightarrow> f=g"
+  by (auto simp: cregs_relation_def)
+
+lemma fpu_relation_imp_eq:
+  "fpu_relation f x \<Longrightarrow> fpu_relation g x \<Longrightarrow> f=g"
+  unfolding fpu_relation_def index_def
+  apply (clarsimp split: fpu_state.splits)
+  apply (subst (asm) forall_finite_index[where 'a=fpu_regs, symmetric, simplified])+
+  by auto
+
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
-  by (rule ext) (simp add: ccontext_relation_def)
+  unfolding ccontext_relation_def
+  apply (cases f, cases g)
+  apply (auto dest: fpu_relation_imp_eq cregs_relation_imp_eq)
+  done
 
 lemma carch_tcb_relation_imp_eq:
   "carch_tcb_relation f x \<Longrightarrow> carch_tcb_relation g x \<Longrightarrow> f = g"
@@ -849,7 +880,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_16)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x10", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
@@ -859,7 +890,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x20", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x20", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
@@ -869,7 +900,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(2))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x30", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x30", simplified]
                     split_def objBits_simps')
   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
   apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
@@ -878,7 +909,7 @@ lemma map_to_ctes_tcb_ctes:
   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
          assumption, simp add: objBits_simps')
   apply (drule (1) ps_clear_is_aligned_ctes_None(3))+
-  apply (simp add: is_aligned_add_helper[of _ 9 "0x40", simplified]
+  apply (simp add: is_aligned_add_helper[of _ 10 "0x40", simplified]
                    split_def objBits_simps')
   done
 
@@ -929,7 +960,7 @@ lemma cpspace_tcb_relation_unique:
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
-   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
+   apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x200)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
    apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_imp_eq

@@ -1985,6 +1985,7 @@ lemma resetUntypedCap_ccorres:
              apply (simp add: is_aligned_def addr_card_def card_word)
              apply clarsimp
 
+thm preemptionPoint_modifies
             apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_preserves_bytes
               exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
