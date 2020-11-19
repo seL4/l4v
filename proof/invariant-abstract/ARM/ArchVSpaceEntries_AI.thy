@@ -1640,8 +1640,12 @@ crunch valid_pdpt[wp]: activate_thread,switch_to_thread,
   (simp: crunch_simps
    wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp)
 
-crunch valid_pdpt[wp]: awaken "valid_pdpt_objs"
-  (wp: hoare_drop_imp mapM_x_wp')
+lemma awaken_valid_pdpt[wp]:
+  "awaken \<lbrace>valid_pdpt_objs\<rbrace>"
+  apply (clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (rule whileLoop_wp)
+   apply wpsimp+
+  done
 
 crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
  handle_interrupt, handle_vm_fault, handle_hypervisor_fault

@@ -52,7 +52,10 @@ lemma next_domain_scheduler_action[wp]:
 
 lemma awaken_invs[wp]:
   "awaken \<lbrace> invs \<rbrace>"
-  unfolding awaken_def by (wpsimp wp: mapM_x_wp' hoare_drop_imp)
+  unfolding awaken_def awaken_body_def tcb_release_dequeue_def
+  apply (rule whileLoop_wp)
+   apply wpsimp+
+  done
 
 lemma set_scheduler_action_valid_state_cur_tcb [wp]:
   "\<lbrace>invs\<rbrace> set_scheduler_action action \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"
@@ -156,12 +159,17 @@ declare sc_and_timer_activatable[wp]
 
 lemma awaken_schact_not_rct[wp]:
   "awaken \<lbrace>\<lambda>s. scheduler_action s \<noteq> resume_cur_thread\<rbrace>"
-  unfolding awaken_def possible_switch_to_def
-  by (wpsimp wp: mapM_x_wp_inv hoare_drop_imp simp: set_scheduler_action_def)
+  unfolding awaken_def awaken_body_def tcb_release_dequeue_def possible_switch_to_def
+  apply (rule whileLoop_wp)
+   apply (wpsimp wp: hoare_drop_imps simp: set_scheduler_action_def)+
+  done
 
-crunches awaken
-  for ct_in_state[wp]: "ct_in_state P"
-  (wp: crunch_wps)
+lemma awaken_ct_in_state[wp]:
+  "awaken \<lbrace>ct_in_state P\<rbrace>"
+  apply (clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def possible_switch_to_def)
+  apply (rule whileLoop_wp)
+   apply (wpsimp wp: hoare_drop_imps)+
+  done
 
 lemma get_tcb_None:
   "(get_tcb t s = None) = (\<forall>x. \<not>kheap s t = Some (TCB x))"

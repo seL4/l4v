@@ -3316,14 +3316,14 @@ lemma possible_switch_to_valid_sched_strong:
   by (auto simp: obj_at_kh_kheap_simps valid_sched_valid_sched_except_blocked vs_all_heap_simps
                  in_cur_domain_def etcb_at_def valid_sched_def not_cur_thread_def ct_in_cur_domain_def)
 
-crunch etcb_at[wp]: awaken "etcb_at P t"
-  (wp: hoare_drop_imps mapM_x_wp')
-
-crunches awaken
-  for valid_idle_etcb[wp]: "valid_idle_etcb"
-  and valid_idle[wp]: valid_idle
-  and in_cur_domain[wp]: "in_cur_domain t"
-  (wp: hoare_drop_imps mapM_x_wp')
+lemma awaken_tcb_etc[wp]:
+  "awaken \<lbrace>etcb_at P t\<rbrace>"
+  "awaken \<lbrace>valid_idle_etcb\<rbrace>"
+  "awaken \<lbrace>valid_idle\<rbrace>"
+  "awaken \<lbrace>in_cur_domain t\<rbrace>"
+  apply (all \<open>clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def, rule whileLoop_wp
+              , wpsimp+\<close>)
+  done
 
 (* FIXME RT: replace possible_switch_to_valid_ready_qs with this. *)
 lemma possible_switch_to_valid_ready_qs'':
@@ -6865,81 +6865,6 @@ lemma possible_switch_to_ready_or_release[wp]:
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   done
 
-lemma awaken_valid_sched_helper:
-  shows
-  "\<lbrace>valid_sched_except_blocked and K (distinct queue) and (\<lambda>s. idle_thread s \<notin> set queue)
-   and valid_blocked_except_set (set queue)
-   and (\<lambda>s. \<forall>target \<in> set queue. ((st_tcb_at runnable target
-                and active_sc_tcb_at target and not_in_release_q target and
-                budget_ready target and budget_sufficient target) s ))\<rbrace>
-                      mapM_x (\<lambda>t. do consumed <- gets consumed_time;
-                             sc_opt <- thread_get tcb_sched_context t;
-                             scp <- assert_opt sc_opt;
-                             sufficient <- get_sc_refill_sufficient scp consumed;
-                             assert sufficient;
-                             possible_switch_to t;
-                             modify (reprogram_timer_update (\<lambda>_. True))
-                          od) queue
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  supply possible_switch_to_not_it_ct_not_in_q[wp]
-  apply (induct queue; clarsimp simp: mapM_append_single mapM_x_Nil mapM_x_Cons bind_assoc)
-   apply (wpsimp simp: valid_sched_def)
-  apply (wpsimp simp: valid_sched_def thread_get_def
-                  wp: possible_switch_to_valid_ready_qs assert_inv
-                      possible_switch_to_valid_blocked
-                      hoare_vcg_ball_lift)
-  apply (clarsimp simp: valid_sched_def released_sc_tcb_at_def)
-  apply (fastforce simp: tcb_at_kh_simps(2))
-  done
-
-lemma dropWhile_takeWhile_distinct:
-  "distinct xs \<Longrightarrow> a \<in> set (dropWhile P xs) \<Longrightarrow> a \<in> set (takeWhile P xs) \<Longrightarrow> False"
-  apply (subst (asm) takeWhile_dropWhile_id[symmetric, where P=P])
-  apply (subst (asm) distinct_append)
-  by fastforce
-
-lemma sorted_wrt_sublist:
-  "\<lbrakk>sorted_wrt P ls; sublist xs ls\<rbrakk> \<Longrightarrow> sorted_wrt P xs"
-  apply (subst sorted_wrt_iff_nth_less)
-  by (clarsimp simp: sorted_wrt_append sorted_wrt_nth_less sublist_def)
-
-lemma dropWhile_sublist:
-  "sublist (dropWhile P xs) xs"
-  by (induct xs rule: list.induct; simp add: sublist_Cons_right)+
-
-lemma valid_release_q_2_dropWhile:
-  "valid_release_q_2 rq1 states scps refills
-   \<Longrightarrow> valid_release_q_2 (dropWhile P rq1) states scps refills"
-  unfolding valid_release_q_def
-  apply simp
-  apply (intro conjI)
-  apply (clarsimp dest!: set_dropWhileD)
-  apply (simp add: sorted_release_q_def)
-  apply (elim conjE)
-  using sorted_wrt_sublist dropWhile_sublist by fast
-
-lemma valid_sched_action_2_subset_eq:
-  "set (rlq') \<subseteq> set (rlq)
-   \<Longrightarrow> valid_sched_action_2 wk_vsa except curtime sa ct cdom rlq etcbs tcb_sts tcb_scps sc_refill_cfgs
-   \<Longrightarrow> valid_sched_action_2 wk_vsa except curtime sa ct cdom rlq' etcbs tcb_sts tcb_scps sc_refill_cfgs"
-  unfolding valid_sched_action_def
-  by (fastforce simp: weak_valid_sched_action_def)
-
-lemma valid_blocked_except_set_dropWhile_rlq:
-  "distinct rlq
-   \<Longrightarrow> valid_blocked_except_set_2 except queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs
-   \<Longrightarrow> valid_blocked_except_set_2 (except \<union> set (takeWhile P rlq)) queues (dropWhile P rlq) sa ct tcb_sts tcb_scps sc_refill_cfgs"
-  unfolding valid_blocked_except_set_2_def
-  apply (clarsimp simp: valid_blocked_thread_def)
-  apply (drule_tac x=t in spec, clarsimp)
-  apply (clarsimp simp: not_in_release_q_2_def in_queue_2_def)
-  apply (subgoal_tac "t \<in> set (takeWhile P rlq @ dropWhile P rlq)")
-   apply (subst (asm) set_append, clarsimp)
-  apply clarsimp
-  done
-
-lemmas valid_blocked_dropWhile_rlq = valid_blocked_except_set_dropWhile_rlq[where except="{}", simplified]
-
 lemma valid_refills_refills_sum:
   "valid_refills scp s \<Longrightarrow>
     obj_at (\<lambda>ko. \<exists>sc n. ko= SchedContext sc n
@@ -8855,52 +8780,98 @@ lemma active_sc_tcb_at_budget_sufficient:
   by (fastforce simp: budget_sufficient_def2 active_sc_tcb_at_def2 is_sc_active_kh_simp
                 dest: valid_refills_refill_sufficient active_implies_valid_refills)
 
+lemma awaken_body_valid_ready_qs:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> valid_release_q s \<and> active_sc_valid_refills s
+        \<and> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s\<rbrace>
+   awaken_body
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  apply (clarsimp simp: awaken_body_def tcb_release_dequeue_def bind_assoc)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac rq)
+  apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> st_tcb_at runnable (hd rq) s
+                           \<and> released_sc_tcb_at (hd rq) s"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+    apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps)
+   apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps released_sc_tcb_at_def)
+   apply (fastforce intro!: active_sc_tcb_at_budget_sufficient
+                      simp: valid_release_q_def obj_at_kh_kheap_simps)
+  apply (wpsimp wp: possible_switch_to_valid_ready_qs
+              simp: released_sc_tcb_at_def)
+  done
+
+lemma awaken_body_valid_sched_action:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> valid_release_q s \<and> active_sc_valid_refills s
+        \<and> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s\<rbrace>
+   awaken_body
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  apply (clarsimp simp: awaken_body_def tcb_release_dequeue_def bind_assoc)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac rq)
+  apply (rule_tac B="\<lambda>_ s. valid_sched_action s \<and> st_tcb_at runnable (hd rq) s
+                           \<and> released_sc_tcb_at (hd rq) s"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+    apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps)
+   apply wpsimp
+   apply (fastforce intro: active_sc_tcb_at_budget_sufficient
+                     simp: released_sc_tcb_at_def valid_release_q_def)
+  apply (wpsimp simp: obj_at_kh_kheap_simps)
+  done
+
+lemma fun_of_m_get_tcb_refill_budget_ready_valid_release_q:
+  "\<lbrakk>valid_release_q s; t \<in> set (release_queue s)\<rbrakk>
+   \<Longrightarrow> budget_ready t s = the (fun_of_m (get_tcb_refill_ready t) s)"
+  apply (fastforce simp: fun_of_m_get_tcb_refill_budget_ready valid_release_q_def vs_all_heap_simps)
+  done
+
+lemma release_q_non_empty_and_ready_fun_of_m:
+  "\<lbrakk>valid_release_q s; the (fun_of_m release_q_non_empty_and_ready s)\<rbrakk>
+   \<Longrightarrow> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s"
+  apply (clarsimp simp: release_q_non_empty_and_ready_def)
+  apply (case_tac "release_queue s = []")
+   apply (clarsimp simp: fun_of_m_def gets_def bind_def return_def get_def)
+   apply (smt the_equality)
+  apply clarsimp
+  apply (subst fun_of_m_get_tcb_refill_budget_ready_valid_release_q; fastforce?)
+  apply (clarsimp simp: fun_of_m_def gets_def bind_def return_def get_def)
+  done
+
 lemma awaken_valid_sched:
   "\<lbrace>valid_sched and valid_idle\<rbrace>
    awaken
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  unfolding awaken_def
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (wpsimp wp: awaken_valid_sched_helper simp: valid_sched_def)
-  apply (simp only: dropWhile_eq_drop[symmetric])
-  apply (strengthen distinct_takeWhile valid_release_q_2_dropWhile)
-  apply (intro conjI)
-         apply (clarsimp)
-        apply (clarsimp simp: ready_or_release_2_def in_queue_2_def in_ready_q_def
-                       dest!: set_dropWhileD
-               , blast)
-       apply (erule valid_sched_action_2_subset_eq[rotated], clarsimp dest!: set_dropWhileD)
-      apply (clarsimp)
-     apply (rule set_takeWhileD_contrap)
-     apply (clarsimp simp: not_in_release_q_def valid_release_q_def)
-     apply (drule_tac x="idle_thread s" in bspec, simp, clarsimp)
-     apply (drule st_tcb_at_idle_thread[simplified tcb_at_kh_simps], simp, simp)
-    apply (rule valid_blocked_dropWhile_rlq; clarsimp)
-  apply (intro allI ballI)
-  apply (clarsimp simp: valid_release_q_def)
-  apply (drule_tac x=target in bspec)
-   apply (clarsimp dest!: set_takeWhileD)
-  apply (intro conjI)
-      apply (clarsimp simp: tcb_at_kh_simps)
-     apply simp
-    apply (clarsimp simp: not_in_release_q_def in_queue_2_def)
-    apply (fastforce dest: dropWhile_takeWhile_distinct)
-   apply (clarsimp dest!: set_takeWhileD)
-   apply (subst (asm) fun_of_m_get_tcb_refill_budget_ready; clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
-  apply (clarsimp elim!: active_sc_tcb_at_budget_sufficient)
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: awaken_def)
+  apply (rule_tac I="\<lambda>_ s. ?pre s" in valid_whileLoop; (solves simp)?)
+  apply (clarsimp simp: valid_sched_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix
+         ; (solves \<open>wpsimp simp: awaken_body_def tcb_release_dequeue_def\<close>)?)
+     apply (wpsimp wp: awaken_body_valid_ready_qs)
+     apply (fastforce intro!: release_q_non_empty_and_ready_fun_of_m)
+    apply (wpsimp wp: possible_switch_to_not_it_ct_not_in_q simp: awaken_body_def tcb_release_dequeue_def)
+    apply (clarsimp simp: valid_release_q_def valid_idle_def vs_all_heap_simps pred_tcb_at_def
+                          obj_at_def)
+    apply (prop_tac "release_queue s \<noteq> []")
+     using release_q_non_empty_and_ready_fun_of_m apply force
+    apply (fastforce dest: hd_in_set)
+   apply (wpsimp wp: awaken_body_valid_sched_action)
+   apply (fastforce intro!: release_q_non_empty_and_ready_fun_of_m)
+  apply (wpsimp wp: possible_switch_to_valid_blocked tcb_release_remove_valid_blocked_except
+              simp: awaken_body_def tcb_release_dequeue_def)
   done
 
 end
 
-crunches awaken
-for cur_tcb[wp]: cur_tcb
-and budget_ready: "\<lambda>s. P (budget_ready t s)"
-and budget_sufficient: "\<lambda>s. P (budget_sufficient t s)"
-and budget_ready_ct: "\<lambda>s. P (budget_ready (cur_thread s) s)"
-and budget_sufficient_ct: "\<lambda>s. P (budget_sufficient (cur_thread s) s)"
-and active_sc_tcb_at'[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
-and active_sc_tcb_at_ct[wp]: "\<lambda>s. P (active_sc_tcb_at(cur_thread s) s)"
-  (wp: hoare_drop_imps mapM_x_wp')
+lemma awaken_budget[wp]:
+  "awaken \<lbrace>cur_tcb\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (budget_ready t s)\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (budget_sufficient t s)\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (budget_ready (cur_thread s) s)\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (budget_sufficient (cur_thread s) s)\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. P (active_sc_tcb_at (cur_thread s) s)\<rbrace>"
+  apply (all \<open>clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def, rule whileLoop_wp
+              , wpsimp+\<close>)
+  done
 
 (* commit_time *)
 
@@ -9885,12 +9856,22 @@ lemma not_schedulable_in_release_q_case:
 lemma awaken_valid_sched_misc[wp]:
   "awaken \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (cur_time s) (cur_domain s)
                  (cur_thread s) (idle_thread s) (kheap s) \<rbrace>"
-  by (wpsimp simp: awaken_def wp: mapM_x_wp_inv hoare_drop_imp)
+  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (rule whileLoop_wp)
+   apply wpsimp+
+  done
 
-crunches awaken
+crunches possible_switch_to, tcb_release_remove
   for sc_at_period[wp]: "sc_at_period P p :: 'state_ext state \<Rightarrow> _"
   and sc_at_period_cur[wp]: "\<lambda>s. sc_at_period P (cur_sc s) s"
     (simp: crunch_simps wp: crunch_wps)
+
+lemma awaken_sc_at_period[wp]:
+  "awaken \<lbrace>sc_at_period P p :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  "awaken \<lbrace>\<lambda>s. sc_at_period P (cur_sc s) s\<rbrace>"
+  apply (all \<open>clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def, rule whileLoop_wp
+              , (wpsimp simp: sc_at_pred_n_def obj_at_def)+\<close>)
+  done
 
 (* FIXME move *)
 lemma valid_release_q_sorted: "valid_release_q s \<Longrightarrow> sorted_release_q s"
@@ -9967,13 +9948,12 @@ lemma possible_switch_to_scheduler_act_sane'':
   by (wpsimp wp: tcb_sched_action_scheduler_action hoare_drop_imp simp: set_scheduler_action_def)
      (clarsimp simp: scheduler_act_sane_def)
 
-lemma awaken_ct_cur_sc_in_release_q_imp_zero_consumed[wp]:
+lemma awaken_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "awaken \<lbrace>cur_sc_in_release_q_imp_zero_consumed ::'state_ext state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
+  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
   apply (clarsimp simp: cur_sc_in_release_q_imp_zero_consumed_def)
-  apply (drule_tac x=t in spec, clarsimp simp: not_in_release_q_def)
-  apply (clarsimp simp: in_queue_2_def dropWhile_eq_drop[symmetric] pred_tcb_at_def obj_at_def)
-  apply (drule set_dropWhileD, clarsimp)
+  apply (rule whileLoop_wp)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
   done
 
 lemma awaken_ready_or_release_helper:
@@ -10007,22 +9987,16 @@ lemma notdropWhile_takeWhile:
   by fastforce
 
 lemma awaken_in_release_q:
-  "\<lbrace>in_release_q t
-    and valid_release_q
-    and (\<lambda>s. bound_sc_tcb_at (\<lambda>scpo. scpo \<noteq> None \<longrightarrow> (\<not>is_refill_ready (the scpo) s)) t s)\<rbrace>
+  "\<lbrace>in_release_q t and valid_release_q and (not budget_ready t)\<rbrace>
    awaken
    \<lbrace>\<lambda>rv s. in_release_q t s\<rbrace>"
-  supply takeWhile_dropWhile_id [simp del]
-  apply (wpsimp simp: awaken_def wp: mapM_x_wp' hoare_drop_imp)
-  apply (clarsimp simp: not_in_release_q_def in_queue_2_def dropWhile_eq_drop[symmetric])
-  apply (subst (asm) takeWhile_dropWhile_id[symmetric])
-  apply clarsimp
-  apply (erule disjE[OF Meson.disj_comm], assumption)
-  apply (drule set_takeWhileD, clarsimp)
-  apply (subst (asm) fun_of_m_get_tcb_refill_budget_ready)
-   apply (clarsimp simp: valid_release_q_def)
-   apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps, fastforce)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+   (is "valid ?pre _ _")
+  apply (wpsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (rule_tac I="\<lambda>r s. ?pre s" in valid_whileLoop; (solves simp)?)
+  apply (clarsimp simp: pred_conj_def pred_neg_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp wp: hoare_drop_imps\<close>)?)
+  apply (wpsimp wp: tcb_release_remove_in_release_q_neq)
+  apply (fastforce dest!: release_q_non_empty_and_ready_fun_of_m)
   done
 
 lemma it_not_in_release_qI:
@@ -10298,11 +10272,19 @@ lemma awaken_ct_ready_if_schedulable[wp]:
   apply (wps)
   apply (wpsimp wp: awaken_in_release_q)
   apply (wpsimp)
-  by (auto simp: tcb_at_kh_simps vs_all_heap_simps)
+  apply (auto simp: tcb_at_kh_simps vs_all_heap_simps pred_neg_def)
+  done
 
-crunches awaken
+crunches possible_switch_to, tcb_release_remove
   for machine_times[wp]: "\<lambda>s. P (last_machine_time_of s) (cur_time s)"
   (wp: crunch_wps)
+
+lemma awaken_machine_times[wp]:
+  "awaken \<lbrace>\<lambda>s. P (last_machine_time_of s) (cur_time s)\<rbrace>"
+  apply (clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (rule whileLoop_wp)
+   apply wpsimp+
+  done
 
 lemma schedule_valid_sched:
   "\<lbrace> valid_sched
@@ -17701,9 +17683,16 @@ lemma handle_event_valid_sched:
   apply (fastforce elim!: valid_sched_ct_not_queued ct_in_state_weaken simp: ct_in_state_def valid_fault_def)
   done
 
-crunches activate_thread, schedule_choose_new_thread, awaken
+crunches activate_thread, schedule_choose_new_thread
   for valid_list[wp]: valid_list
   (wp: crunch_wps)
+
+lemma awaken_valid_list[wp]:
+  "awaken \<lbrace>valid_list\<rbrace>"
+  apply (clarsimp simp: awaken_def awaken_body_def tcb_release_dequeue_def)
+  apply (rule whileLoop_wp)
+   apply wpsimp+
+  done
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
@@ -22383,4 +22372,3 @@ lemma schedule_ct_activateable:
 end
 
 end
-
