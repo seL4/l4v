@@ -1941,7 +1941,7 @@ lemma resetUntypedCap_ccorres:
              apply (simp add: is_aligned_def addr_card_def card_word)
              apply clarsimp
 
-            apply (rule conseqPre, vcg exspec=cleanCacheRange_RAM_preserves_bytes
+            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoC_preserves_bytes exspec=cleanCacheRange_RAM_preserves_bytes
               exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
@@ -1964,7 +1964,6 @@ lemma resetUntypedCap_ccorres:
                                   is_aligned_add_multI conj_comms
                                   region_actually_is_bytes_def)
             apply (simp add: Kernel_Config.resetChunkBits_def is_aligned_def)
-
            apply (rule hoare_pre)
             apply (wp updateFreeIndex_cte_wp_at updateFreeIndex_clear_invs'
                       updateFreeIndex_pspace_no_overlap'
