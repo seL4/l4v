@@ -86,11 +86,11 @@ type_synonym paddr = machine_word
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition pageColourBits :: nat where
-  "pageColourBits \<equiv> 2"
-
 definition cacheLineBits :: nat where
   "cacheLineBits = CONFIG_L1_CACHE_LINE_SIZE_BITS"
+
+definition pageColourBits :: nat where
+  "pageColourBits = undefined" \<comment> \<open> unused \<close>
 
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
@@ -112,6 +112,9 @@ schematic_goal pptrBase_val:
 lemma pptrBase_top_neq_0: (* 20 = size of ARMSectionBits *)
   "pptrBase >> 20 \<noteq> 0"
   by (simp add: pptrBase_def)
+
+definition physBase :: word32 where
+  "physBase \<equiv> 0x40000000"
 
 abbreviation (input) "paddrBase \<equiv> physBase"
 
