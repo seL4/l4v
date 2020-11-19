@@ -43,6 +43,9 @@ requalify_consts
 
 end
 
+definition awaken_def:
+"awaken \<equiv> whileLoop (\<lambda>_ s. the (fun_of_m releaseQNonEmptyAndReady s)) (\<lambda>_. awaken_body) ()"
+
 #INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch bodies_only NOT doNormalTransfer doIPCTransfer doReplyTransfer doNormalTransfer transferCaps transferCapsToSlots
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread.lhs Arch=Arch ONLY transferCapsToSlots
