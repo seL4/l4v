@@ -1563,7 +1563,7 @@ definition
   | ARM_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma doFlush_ccorres:
-  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
@@ -1626,7 +1626,7 @@ context kernel_m begin
 lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
@@ -1757,7 +1757,7 @@ lemma setMessageInfo_ccorres:
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter>
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
@@ -1949,7 +1949,7 @@ lemma ccorres_return_void_C':
 
 lemma is_aligned_cache_preconds:
   "\<lbrakk>is_aligned rva n; n \<ge> 6\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x3F \<and>
-          addrFromPPtr rva \<le> addrFromPPtr rva + 0x3F \<and> rva && mask 5 = addrFromPPtr rva && mask 5"
+          addrFromPPtr rva \<le> addrFromPPtr rva + 0x3F \<and> rva && mask 6 = addrFromPPtr rva && mask 6"
   supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
@@ -1958,7 +1958,6 @@ lemma is_aligned_cache_preconds:
    apply (drule is_aligned_addrFromPPtr_n, simp)
    apply (drule is_aligned_no_overflow, unat_arith)
   apply (frule is_aligned_addrFromPPtr_n, simp)
-  apply (drule_tac x=6 and y=5 in is_aligned_weaken, simp)+
   apply (simp add: is_aligned_mask)
   done
 
