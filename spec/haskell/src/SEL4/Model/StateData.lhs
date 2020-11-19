@@ -354,13 +354,13 @@ The function "whileM" allows writing while loops where the loop body and the con
 The function "whileLoop" emulates the definition whileLoop from NonDetMonad.thy in lib.
 
 > funOfM :: MonadState s m => m a -> s -> a
-> funOfM f s = let (rv,s') = runState f s in rv
+> funOfM f state = let (rv,state') = runState f state in rv
 
 > condition :: MonadState s m => (s -> Bool) -> m a -> m a -> m a
 > condition cond left right = get >>= \s -> if (cond s) then left else right
 
-> whileLoop :: Monad m => (a -> b -> bool) -> (a -> m b) -> a -> m b
-> whileLoop cond body r = (condition (cond r) (body r) (return r)) >> whileLoop C B
+> whileLoop :: Monad m => (a -> b -> Bool) -> (a -> m b) -> a -> m b
+> whileLoop cond body r = (condition (cond r) (body r) (return r)) >> whileLoop cond body
 
 The functions "orM" and "andM" allow composing conditions that run in a monad. These are "short-circuiting", in that if a monad doesn't need to be evaluated to return a result, it won't be.
 

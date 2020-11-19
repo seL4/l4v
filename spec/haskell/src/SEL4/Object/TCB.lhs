@@ -1088,7 +1088,7 @@ On some architectures, the thread context may include registers that may be modi
 >     rq <- getReleaseQueue
 >     if rq == []
 >       then return False
->       else getTCBRefillReady (hd rq)
+>       else getTCBRefillReady (head rq)
 
 > awaken_body :: Kernel ()
 > awaken_body = do
@@ -1100,8 +1100,7 @@ On some architectures, the thread context may include registers that may be modi
 >     possibleSwitchTo awakened
 
 > awaken :: Kernel ()
-> awaken = do
->     whileLoop (\r s -> funOfM releaseQNonEmptyAndReady s) (\r -> awaken_body) ()
+> awaken = whileLoop (\r s -> funOfM releaseQNonEmptyAndReady) (\r -> awaken_body) ()
 
 > tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
 > tcbEPFindIndex tptr queue curIndex = do
