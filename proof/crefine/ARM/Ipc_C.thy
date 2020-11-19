@@ -1269,6 +1269,13 @@ lemma ccorres_add_getRegister:
   apply fastforce
   done
 
+lemma user_getreg_rv:
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadGet_wp)
+  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
+  done
+
 lemma exceptionMessage_ccorres:
   "n < unat n_exceptionMessage
       \<Longrightarrow> register_from_H (ARM_H.exceptionMessage ! n)
