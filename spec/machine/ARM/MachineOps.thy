@@ -495,9 +495,18 @@ definition
 
 section "User Monad"
 
+text \<open> There are 32 general FPU registers saved. \<close>
+type_synonym fpu_regs = 32
+
+text \<open> We use Haskell naming convention here, as we translate the Haskell FPUState directly
+  to this one for use in the abstract and executable specs.\<close>
+datatype fpu_state = FPUState (fpuRegs : "fpu_regs \<Rightarrow> 64 word")
+                              (fpuExc : "32 word")
+                              (fpuScr : "32 word")
+
 type_synonym user_regs = "register \<Rightarrow> machine_word"
 
-datatype user_context = UserContext (user_regs : user_regs)
+datatype user_context = UserContext (fpu_state : fpu_state) (user_regs : user_regs)
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
@@ -505,10 +514,10 @@ definition getRegister :: "register \<Rightarrow> machine_word user_monad" where
   "getRegister r \<equiv> gets (\<lambda>s. user_regs s r)"
 
 definition modify_registers :: "(user_regs \<Rightarrow> user_regs) \<Rightarrow> user_context \<Rightarrow> user_context" where
-  "modify_registers f uc \<equiv> UserContext (f (user_regs uc))"
+  "modify_registers f uc \<equiv> UserContext (fpu_state uc) (f (user_regs uc))"
 
 definition setRegister :: "register \<Rightarrow> machine_word \<Rightarrow> unit user_monad" where
-  "setRegister r v \<equiv> modify (\<lambda>s. UserContext ((user_regs s) (r := v)))"
+  "setRegister r v \<equiv> modify (\<lambda>s. UserContext (fpu_state s) ((user_regs s) (r := v)))"
 
 definition
   "getRestartPC \<equiv> getRegister FaultIP"
@@ -516,10 +525,38 @@ definition
 definition
   "setNextPC \<equiv> setRegister NextIP"
 
+
+definition
+  getFPUState :: "fpu_state user_monad"
+where
+  "getFPUState \<equiv> gets fpu_state"
+
+definition
+  setFPUState :: "fpu_state \<Rightarrow> unit user_monad"
+where
+  "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
+
+consts'
+  nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
+definition
+  nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad"
+where
+  "nativeThreadUsingFPU thread_ptr \<equiv> do
+       machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
+       gets nativeThreadUsingFPU_val
+  od"
+
+consts'
+  switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition
+  switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
+where
+  "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
+
 end
 
 translations
   (type) "'a ARM.user_monad" <= (type) "(ARM.register \<Rightarrow> machine_word, 'a) nondet_monad"
-
 
 end
