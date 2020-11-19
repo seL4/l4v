@@ -3765,6 +3765,12 @@ lemma get_sched_context_no_fail:
                      gets_def obj_at_def is_sc_obj_def
               split: Structures_A.kernel_object.splits)
 
+lemma get_sched_context_no_fail_stronger:
+  "no_fail (\<lambda>s. \<exists>sc n. kheap s ptr = Some (Structures_A.SchedContext sc n)) (get_sched_context ptr)"
+  by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
+                     gets_def obj_at_def is_sc_obj_def
+              split: Structures_A.kernel_object.splits)
+
 (* this let us cross the sc size information from concrete to abstract *)
 lemma ko_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"

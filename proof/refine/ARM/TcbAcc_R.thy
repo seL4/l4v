@@ -3879,6 +3879,7 @@ lemma update_valid_tcb'2:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueues := c\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReleaseQueue := d\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksSchedulerAction := e\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReprogramTimer := f\<rparr>)"
   apply (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def obj_at'_def projectKOs
                     ps_clear_def
              split: option.splits thread_state.splits)

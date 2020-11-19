@@ -117,10 +117,6 @@ lemma empty_fail_getObject_reply [intro!, wp, simp]:
   "empty_fail (getObject p :: reply kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_sc [intro!, wp, simp]:
-  "empty_fail (getObject p :: sched_context kernel)"
-  by (simp add: empty_fail_getObject)
-
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
   "empty_fail (getEndpoint ep)"
   by (simp add: getEndpoint_def)
@@ -285,8 +281,16 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
   (wp: empty_fail_catch empty_fail_setDeadline)
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "TCBDecls_H.awaken"
-  (ignore_del: ThreadDecls_H.suspend)
+crunch (empty_fail) empty_fail[intro!, wp, simp]:
+  tcbReleaseDequeue
+  (wp: empty_fail_catch empty_fail_setDeadline)
+
+lemma awaken_empty_fail[intro!, wp, simp]:
+  "empty_fail awaken"
+  apply (clarsimp simp: awaken_def awaken_body_def)
+  apply (rule empty_fail_whileLoop)
+  apply wpsimp
+  done
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"

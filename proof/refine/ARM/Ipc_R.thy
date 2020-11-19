@@ -1955,17 +1955,6 @@ lemma doIPCTransfer_sch_act_simple [wp]:
   "\<lbrace>sch_act_simple\<rbrace> doIPCTransfer sender endpoint badge grant receiver \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   by (simp add: sch_act_simple_def, wp)
 
-lemma possibleSwitchTo_invs'[wp]:
-  "\<lbrace>invs' and st_tcb_at' runnable' tptr\<rbrace>
-   possibleSwitchTo tptr
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: possibleSwitchTo_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift threadGet_wp inReleaseQueue_wp ssa_invs')
-  apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def
-                        idle_tcb'_def pred_tcb_at'_def obj_at'_def
-                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  done
-
 crunches isFinalCapability
   for cur' [wp]: "\<lambda>s. P (cur_tcb' s)"
   (simp: crunch_simps unless_when
