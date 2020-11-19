@@ -1210,6 +1210,10 @@ lemma hoare_vcg_conj_lift:
   apply (rule hoare_pre_imp [OF _ y], simp)
   done
 
+\<comment> \<open>A variant which works nicely with subgoals that do not contain schematics\<close>
+lemmas hoare_vcg_conj_lift_pre_fix
+  = hoare_vcg_conj_lift[where P=R and P'=R for R, simplified]
+
 lemma hoare_vcg_conj_liftE1:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace>,\<lbrace>E\<rbrace>"
