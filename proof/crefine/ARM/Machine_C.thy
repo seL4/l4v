@@ -20,8 +20,28 @@ assumes resetTimer_ccorres:
            (doMachineOp resetTimer)
            (Call resetTimer_'proc)"
 
+(* ARM: Lazy FPU switching takes place outside of verified code. The remaining invocation within
+   verified code only clears out some global FPU state. We therefore do not verify the lazy FPU
+   switching at this time, as it would require a number of C changes, same as for X64 (see VER-951)
+   *)
+assumes nativeThreadUsingFPU_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
+     (tcb_at' thread)
+     (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>)
+     []
+     (doMachineOp (nativeThreadUsingFPU thread))
+     (Call nativeThreadUsingFPU_'proc)"
+
+assumes switchFpuOwner_ccorres:
+  "ccorres dc xfdc \<top>
+     (UNIV \<inter> \<lbrace>\<acute>new_owner = Ptr new_owner\<rbrace>
+           \<inter> \<lbrace>\<acute>cpu = cpu\<rbrace>)
+     []
+     (doMachineOp (switchFpuOwner new_owner cpu))
+     (Call switchFpuOwner_'proc)"
+
 assumes writeTTBR0_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = pd\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_long = pd\<rbrace>) []
            (doMachineOp (writeTTBR0 pd))
            (Call writeTTBR0_'proc)"
 
