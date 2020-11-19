@@ -2578,7 +2578,7 @@ lemma other_objs_default_relation:
                         default_ep_def makeObject_endpoint default_notification_def
                         makeObject_notification default_ntfn_def
                         fault_rel_optionation_def
-                        initContext_def
+                        initContext_def newFPUState_def
                         arch_tcb_context_get_def atcbContextGet_def
                         default_arch_tcb_def newArchTCB_def
                         arch_tcb_relation_def
@@ -2588,7 +2588,7 @@ lemma other_objs_default_relation:
 lemma tcb_relation_retype:
   "obj_relation_retype (default_object Structures_A.TCBObject dev n) (KOTCB makeObject)"
   by (clarsimp simp: default_object_def obj_relation_retype_def tcb_relation_def default_tcb_def
-                     makeObject_tcb makeObject_cte new_context_def newContext_def
+                     makeObject_tcb makeObject_cte new_context_def newContext_def newFPUState_def
                      fault_rel_optionation_def initContext_def default_arch_tcb_def newArchTCB_def
                      arch_tcb_relation_def objBits_simps' tcb_relation_cut_def)
 
