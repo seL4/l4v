@@ -628,7 +628,7 @@ lemma prepareThreadDelete_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
-  by (wpsimp simp: prepareThreadDelete_def)
+  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def)
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -656,9 +656,7 @@ lemma prepareThreadDelete_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
      prepareThreadDelete t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
-  apply (simp only: prepareThreadDelete_def cteCaps_of_def)
-  apply wp
-  done
+  by (wpsimp simp: prepareThreadDelete_def fpuThreadDelete_def not_recursive_ctes_def cteCaps_of_def)
 
 definition
   finaliseSlot_recset :: "((word32 \<times> bool \<times> kernel_state) \<times> (word32 \<times> bool \<times> kernel_state)) set"
@@ -8980,6 +8978,7 @@ crunch finaliseCap
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU
+       no_irq_switchFpuOwner no_irq_nativeThreadUsingFPU
    simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs)
 
 lemma finaliseSlot_IRQInactive':
