@@ -122,18 +122,23 @@ definition
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
   "to_user_context_C uc \<equiv>
-    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))"
+    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))
+                   (user_fpu_state_C ((ARRAY r. fpuRegs (fpu_state uc) (finite_index r)))
+                      (fpuExc (fpu_state uc)) (fpuScr (fpu_state uc)))"
 
 definition
   from_user_context_C :: "user_context_C \<Rightarrow> user_context"
 where
   "from_user_context_C uc \<equiv>
-     UserContext (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
+    UserContext (FPUState (Rep_array (fpregs_C (fpuState_C uc)))
+                          (fpexc_C (fpuState_C uc))
+                          (fpscr_C (fpuState_C uc)))
+                (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
 
 lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
-  unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def
-  by (clarsimp simp: register_to_H_def inv_def)
+  unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def fpu_relation_def
+  by (clarsimp simp: register_to_H_def inv_def split: fpu_state.splits)
 
 definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
@@ -141,11 +146,20 @@ where
   "getContext_C thread \<equiv>
    \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
+lemma fpu_relation_Rep:
+  "fpu_relation fH fC \<Longrightarrow> Rep_array (fpregs_C fC) = fpuRegs fH"
+  unfolding fpu_relation_def index_def
+  apply (clarsimp split: fpu_state.splits)
+  apply (subst (asm) forall_finite_index[where 'a=fpu_regs, symmetric, simplified])
+  by auto
+
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
   unfolding ccontext_relation_def cregs_relation_def
+  apply clarsimp
+  apply (frule fpu_relation_Rep)
   apply (cases uc)
-  apply (auto simp: from_user_context_C_def)
+  apply (auto simp: from_user_context_C_def fpu_relation_def split: fpu_state.splits)
   done
 
 end
@@ -726,11 +740,18 @@ lemma cregs_relation_imp_eq:
   "cregs_relation f x \<Longrightarrow> cregs_relation g x \<Longrightarrow> f=g"
   by (auto simp: cregs_relation_def)
 
+lemma fpu_relation_imp_eq:
+  "fpu_relation f x \<Longrightarrow> fpu_relation g x \<Longrightarrow> f=g"
+  unfolding fpu_relation_def index_def
+  apply (clarsimp split: fpu_state.splits)
+  apply (subst (asm) forall_finite_index[where 'a=fpu_regs, symmetric, simplified])+
+  by auto
+
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
   unfolding ccontext_relation_def
   apply (cases f, cases g)
-  apply (auto dest: cregs_relation_imp_eq)
+  apply (auto dest: fpu_relation_imp_eq cregs_relation_imp_eq)
   done
 
 lemma carch_tcb_relation_imp_eq:
@@ -766,7 +787,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_16)+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x10", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x10", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
@@ -776,7 +797,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(1))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x20", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x20", simplified]
                     split_def objBits_simps')
   apply (rule conjI)
    apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
@@ -786,7 +807,7 @@ lemma map_to_ctes_tcb_ctes:
    apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
           assumption, simp add: objBits_simps')
    apply (drule (1) ps_clear_is_aligned_ctes_None(2))+
-   apply (simp add: is_aligned_add_helper[of _ 9 "0x30", simplified]
+   apply (simp add: is_aligned_add_helper[of _ 10 "0x30", simplified]
                     split_def objBits_simps')
   apply (clarsimp simp: map_to_ctes_def Let_def fun_eq_iff)
   apply (drule_tac x="p+0x40" in spec, simp add: objBitsKO_def)
@@ -795,7 +816,7 @@ lemma map_to_ctes_tcb_ctes:
   apply (frule_tac s1=s' in ps_clear_def3[THEN iffD1,rotated 2],
          assumption, simp add: objBits_simps')
   apply (drule (1) ps_clear_is_aligned_ctes_None(3))+
-  apply (simp add: is_aligned_add_helper[of _ 9 "0x40", simplified]
+  apply (simp add: is_aligned_add_helper[of _ 10 "0x40", simplified]
                    split_def objBits_simps')
   done
 
