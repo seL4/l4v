@@ -20,8 +20,28 @@ assumes resetTimer_ccorres:
            (doMachineOp resetTimer)
            (Call resetTimer_'proc)"
 
+(* ARM: Lazy FPU switching takes place outside of verified code. The remaining invocation within
+   verified code only clears out some global FPU state. We therefore do not verify the lazy FPU
+   switching at this time, as it would require a number of C changes, same as for X64 (see VER-951)
+   *)
+assumes nativeThreadUsingFPU_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
+     (tcb_at' thread)
+     (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>)
+     []
+     (doMachineOp (nativeThreadUsingFPU thread))
+     (Call nativeThreadUsingFPU_'proc)"
+
+assumes switchFpuOwner_ccorres:
+  "ccorres dc xfdc \<top>
+     (UNIV \<inter> \<lbrace>\<acute>new_owner = Ptr new_owner\<rbrace>
+           \<inter> \<lbrace>\<acute>cpu = cpu\<rbrace>)
+     []
+     (doMachineOp (switchFpuOwner new_owner cpu))
+     (Call switchFpuOwner_'proc)"
+
 assumes writeTTBR0_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val = pd\<rbrace>) []
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>val___unsigned_long = pd\<rbrace>) []
            (doMachineOp (writeTTBR0 pd))
            (Call writeTTBR0_'proc)"
 
@@ -263,7 +283,7 @@ lemma lineStart_le_mono:
   by (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1 neg_mask_mono_le)
 
 lemma lineStart_sub:
-  "\<lbrakk> x && mask 5 = y && mask 5\<rbrakk> \<Longrightarrow> lineStart (x - y) = lineStart x - lineStart y"
+  "\<lbrakk> x && mask 6 = y && mask 6\<rbrakk> \<Longrightarrow> lineStart (x - y) = lineStart x - lineStart y"
   apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1)
   apply (clarsimp simp: mask_out_sub_mask)
   apply (clarsimp simp: mask_eqs(8)[symmetric])
@@ -271,22 +291,22 @@ lemma lineStart_sub:
 
 
 lemma lineStart_mask:
-  "lineStart x && mask 5 = 0"
+  "lineStart x && mask 6 = 0"
   by (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1 mask_AND_NOT_mask)
 
 lemma cachRangeOp_corres_helper:
-  "\<lbrakk>w1 \<le> w2; w3 \<le> w3 + (w2 - w1); w1 && mask 5 = w3 && mask 5\<rbrakk>
-   \<Longrightarrow> unat (lineStart w2 - lineStart w1) div 32 =
-           unat (lineStart (w3 + (w2 - w1)) - lineStart w3) div 32"
+  "\<lbrakk>w1 \<le> w2; w3 \<le> w3 + (w2 - w1); w1 && mask 6 = w3 && mask 6\<rbrakk>
+   \<Longrightarrow> unat (lineStart w2 - lineStart w1) div 64 =
+           unat (lineStart (w3 + (w2 - w1)) - lineStart w3) div 64"
   apply (subst dvd_div_div_eq_mult, simp)
-    apply (clarsimp simp: and_mask_dvd_nat[where n=5, simplified])
+    apply (clarsimp simp: and_mask_dvd_nat[where n=6, simplified])
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1)
     apply (subst mask_eqs(8)[symmetric])
     apply (clarsimp simp: mask_AND_NOT_mask)
-   apply (clarsimp simp: and_mask_dvd_nat[where n=5, simplified])
+   apply (clarsimp simp: and_mask_dvd_nat[where n=6, simplified])
    apply (subst mask_eqs(8)[symmetric])
    apply (clarsimp simp: lineStart_mask)
-  apply (subgoal_tac "w3 + (w2 - w1) && mask 5 = w2 && mask 5")
+  apply (subgoal_tac "w3 + (w2 - w1) && mask 6 = w2 && mask 6")
    apply clarsimp
    apply (rule_tac x=w1 and y=w3 in linorder_le_cases)
     apply (subgoal_tac "lineStart (w3 + (w2 - w1)) - lineStart w2 = lineStart w3 - lineStart w1")
@@ -335,8 +355,8 @@ lemma lineIndex_le_mono:
   by (clarsimp simp: lineIndex_def2 cacheLineBits_def le_shiftr)
 
 lemma lineIndex_lineStart_diff:
-  "w1 \<le> w2 \<Longrightarrow> (unat (lineStart w2 - lineStart w1) div 32) = unat (lineIndex w2 - lineIndex w1)"
-  apply (subst shiftr_div_2n'[symmetric, where n=5, simplified])
+  "w1 \<le> w2 \<Longrightarrow> (unat (lineStart w2 - lineStart w1) div 64) = unat (lineIndex w2 - lineIndex w1)"
+  apply (subst shiftr_div_2n'[symmetric, where n=6, simplified])
   apply (drule lineStart_le_mono)
   apply (drule sub_right_shift[OF lineStart_mask lineStart_mask])
   apply (simp add: lineIndex_def cacheLineBits_def)
@@ -345,15 +365,15 @@ lemma lineIndex_lineStart_diff:
 lemma cacheRangeOp_ccorres:
   "\<lbrakk>\<And>x y. empty_fail (oper x y);
     \<forall>n. ccorres dc xfdc \<top> (\<lbrace>\<acute>index = lineIndex w1 + of_nat n\<rbrace>) hs
-                (doMachineOp (oper (lineStart w1 + of_nat n * 0x20)
-                                   (lineStart w3 + of_nat n * 0x20)))
+                (doMachineOp (oper (lineStart w1 + of_nat n * 0x40)
+                                   (lineStart w3 + of_nat n * 0x40)))
                 f;
    \<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} f ({t. index_' t = index_' s}) \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
-                   (\<lbrace>\<acute>index = w1 >> 5\<rbrace>) hs
+                      \<and> w1 && mask 6 = w3 && mask 6)
+                   (\<lbrace>\<acute>index = w1 >> 6\<rbrace>) hs
            (doMachineOp (cacheRangeOp oper w1 w2 w3))
-           (While \<lbrace>\<acute>index < (w2 >> 5) + 1\<rbrace>
+           (While \<lbrace>\<acute>index < (w2 >> 6) + 1\<rbrace>
              (f;; \<acute>index :== \<acute>index + 1))"
   apply (clarsimp simp: cacheRangeOp_def doMachineOp_mapM_x split_def
                         cacheLine_def cacheLineBits_def)
@@ -387,7 +407,7 @@ lemma cacheRangeOp_ccorres:
 
 
 lemma lineStart_eq_minus_mask:
-  "lineStart w1 = w1 - (w1 && mask 5)"
+  "lineStart w1 = w1 - (w1 && mask 6)"
   by (simp add: lineStart_def cacheLineBits_def mask_out_sub_mask[symmetric] and_not_mask)
 
 lemma lineStart_idem[simp]:
@@ -396,7 +416,7 @@ lemma lineStart_idem[simp]:
 
 
 lemma cache_range_lineIndex_helper:
-  "lineIndex w1 + of_nat n << 5 = w1 - (w1 && mask 5) + of_nat n * 0x20"
+  "lineIndex w1 + of_nat n << 6 = w1 - (w1 && mask 6) + of_nat n * 0x40"
   apply (clarsimp simp: lineIndex_def cacheLineBits_def word_shiftl_add_distrib lineStart_def[symmetric, unfolded cacheLineBits_def] lineStart_eq_minus_mask[symmetric])
   apply (simp add: shiftl_t2n)
   done
@@ -404,7 +424,7 @@ lemma cache_range_lineIndex_helper:
 
 lemma cleanCacheRange_PoC_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+                      \<and> w1 && mask 6 = w3 && mask 6)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_PoC w1 w2 w3))
            (Call cleanCacheRange_PoC_'proc)"
@@ -422,7 +442,7 @@ lemma cleanCacheRange_PoC_ccorres:
      apply (ctac add: cleanByVA_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
-    apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+    apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
    apply (vcg exspec=cleanByVA_modifies)
   apply clarsimp
   done
@@ -430,7 +450,7 @@ lemma cleanCacheRange_PoC_ccorres:
 lemma cleanInvalidateCacheRange_RAM_ccorres:
   "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
                       and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5 \<and> unat (w2 - w2) \<le> gsMaxObjectSize s))
+                      \<and> w1 && mask 6 = w3 && mask 6 \<and> unat (w2 - w2) \<le> gsMaxObjectSize s))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanInvalidateCacheRange_RAM w1 w2 w3))
            (Call cleanInvalidateCacheRange_RAM_'proc)"
@@ -457,7 +477,7 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
               apply (ctac add: cleanInvalByVA_ccorres)
              apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                                    mask_out_sub_mask)
-             apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+             apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
             apply (vcg exspec=cleanInvalByVA_modifies)
            apply (rule ceqv_refl)
           apply (ctac (no_vcg) add: dsb_ccorres)
@@ -468,7 +488,7 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
 
 lemma cleanCacheRange_RAM_ccorres:
   "ccorres dc xfdc (\<lambda>s. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5
+                      \<and> w1 && mask 6 = w3 && mask 6
                       \<and> unat (w2 - w1) \<le> gsMaxObjectSize s)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
@@ -493,7 +513,7 @@ lemma cleanCacheRange_RAM_ccorres:
 lemma cleanCacheRange_PoU_ccorres:
   "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
                     and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5))
+                      \<and> w1 && mask 6 = w3 && mask 6))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_PoU w1 w2 w3))
            (Call cleanCacheRange_PoU_'proc)"
@@ -514,7 +534,7 @@ lemma cleanCacheRange_PoU_ccorres:
      apply (ctac add: cleanByVA_PoU_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
-    apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+    apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
    apply (vcg exspec=cleanByVA_PoU_modifies)
   apply clarsimp
   apply (frule(1) ghost_assertion_size_logic)
@@ -528,7 +548,7 @@ lemma dmo_if:
 lemma invalidateCacheRange_RAM_ccorres:
   "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
                     and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5))
+                      \<and> w1 && mask 6 = w3 && mask 6))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (invalidateCacheRange_RAM w1 w2 w3))
            (Call invalidateCacheRange_RAM_'proc)"
@@ -571,7 +591,7 @@ lemma invalidateCacheRange_RAM_ccorres:
                apply (ctac add: invalidateByVA_ccorres)
               apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
-              apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+              apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
              apply (vcg exspec=invalidateByVA_modifies)
             apply ceqv
            apply (ctac add: dsb_ccorres)
@@ -592,7 +612,7 @@ lemma invalidateCacheRange_RAM_ccorres:
 
 lemma invalidateCacheRange_I_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+                      \<and> w1 && mask 6 = w3 && mask 6)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (invalidateCacheRange_I w1 w2 w3))
            (Call invalidateCacheRange_I_'proc)"
@@ -611,14 +631,14 @@ lemma invalidateCacheRange_I_ccorres:
      apply (ctac add: invalidateByVA_I_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
-    apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+    apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
    apply (vcg exspec=invalidateByVA_I_modifies)
   apply clarsimp
   done
 
 lemma branchFlushRange_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+                      \<and> w1 && mask 6 = w3 && mask 6)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (branchFlushRange w1 w2 w3))
            (Call branchFlushRange_'proc)"
@@ -637,7 +657,7 @@ lemma branchFlushRange_ccorres:
      apply (ctac add: branchFlush_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
-    apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
+    apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
    apply (vcg exspec=branchFlush_modifies)
   apply clarsimp
   done

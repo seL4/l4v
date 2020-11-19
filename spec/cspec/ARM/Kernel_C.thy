@@ -79,7 +79,7 @@ end
 definition
   ctcb_size_bits :: nat
 where
-  "ctcb_size_bits \<equiv> 8"
+  "ctcb_size_bits \<equiv> 9"
 
 definition
   ctcb_offset :: "32 word"

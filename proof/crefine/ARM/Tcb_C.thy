@@ -502,7 +502,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                del: Collect_const cong: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
-                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFE00 = target"
+                        \<and> ptr_val (tcb_ptr_to_ctcb_ptr target) && 0xFFFFFC00 = target"
                 in ccorres_gen_asm)
    apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow_novcg)
        apply (rule ccorres_cond_both'[where Q=\<top> and Q'=\<top>])
