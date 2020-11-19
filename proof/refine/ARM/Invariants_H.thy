@@ -2223,7 +2223,7 @@ lemma cte_wp_at_cases':
    apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
-  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 511")
+  apply (subgoal_tac "(p - n) + n \<le> (p - n) + 0x3FF")
    apply (simp add: field_simps)
   apply (rule word_plus_mono_right)
    apply (simp add: tcb_cte_cases_def split: if_split_asm)
