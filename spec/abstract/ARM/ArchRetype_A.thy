@@ -38,7 +38,7 @@ where
 
 definition
   empty_context :: user_context where
-  "empty_context \<equiv> UserContext (\<lambda>_. 0)"
+  "empty_context \<equiv> UserContext (FPUState (K 0) 0 0) (\<lambda>_. 0)"
 
 definition init_arch_tcb :: arch_tcb where
   "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context \<rparr>"

@@ -109,7 +109,7 @@ definition
 
 definition
   new_context :: "user_context" where
-  "new_context \<equiv> UserContext ((\<lambda>r. 0) (CPSR := 0x150))"
+  "new_context \<equiv> UserContext (FPUState (K 0) 0 0) ((\<lambda>r. 0) (CPSR := 0x150))"
 
 text \<open>The lowest virtual address in the kernel window. The kernel reserves the
 virtual addresses from here up in every virtual address space.\<close>
