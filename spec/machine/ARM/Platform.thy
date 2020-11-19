@@ -39,11 +39,11 @@ type_synonym paddr = word32
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition pageColourBits :: nat where
-  "pageColourBits \<equiv> 2"
-
 definition cacheLineBits :: nat where
-  "cacheLineBits = 5"
+  "cacheLineBits = 6"
+
+definition pageColourBits :: nat where
+  "pageColourBits = undefined" \<comment> \<open> unused \<close>
 
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
@@ -51,6 +51,9 @@ definition cacheLine :: nat where
 (* The first virtual address of the kernel's physical memory window *)
 definition pptrBase :: word32 where
   "pptrBase \<equiv> 0xe0000000"
+
+definition physBase :: word32 where
+  "physBase \<equiv> 0x40000000"
 
 abbreviation (input) "paddrBase \<equiv> physBase"
 
