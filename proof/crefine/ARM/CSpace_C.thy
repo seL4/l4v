@@ -2556,7 +2556,7 @@ definition
     | Some (Cap_endpoint_cap c) \<Rightarrow> 4
     | Some (Cap_notification_cap c) \<Rightarrow> 4
     | Some (Cap_cnode_cap c) \<Rightarrow> unat (capCNodeRadix_CL c) + 4
-    | Some (Cap_thread_cap c) \<Rightarrow> 9
+    | Some (Cap_thread_cap c) \<Rightarrow> 10
     | Some (Cap_small_frame_cap c) \<Rightarrow> 12
     | Some (Cap_frame_cap c) \<Rightarrow> pageBitsForSize (gen_framesize_to_H $ generic_frame_cap_get_capFSize_CL cap)
     | Some (Cap_page_table_cap c) \<Rightarrow> 10
@@ -2564,7 +2564,7 @@ definition
     | Some (Cap_asid_pool_cap c) \<Rightarrow> asidLowBits + 2
     | Some (Cap_zombie_cap c) \<Rightarrow>
         let type = cap_zombie_cap_CL.capZombieType_CL c in
-        if isZombieTCB_C type then 9 else unat (type && mask 5) + 4
+        if isZombieTCB_C type then 10 else unat (type && mask 5) + 4
     | _ \<Rightarrow> 0"
 
 lemma generic_frame_cap_size[simp]:

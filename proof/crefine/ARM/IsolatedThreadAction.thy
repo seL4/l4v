@@ -30,7 +30,7 @@ where
  "put_tcb_state_regs_tcb tsr tcb \<equiv> case tsr of
      TCBStateRegs st regs \<Rightarrow>
         tcb \<lparr> tcbState := st,
-              tcbArch := atcbContextSet (UserContext regs)
+              tcbArch := atcbContextSet (UserContext (fpu_state (atcbContext (tcbArch tcb))) regs)
                          (tcbArch tcb) \<rparr>"
 
 definition
@@ -65,6 +65,10 @@ definition
     return rv
   od"
 
+lemma UserContextGet[simp]:
+  "UserContext (fpu_state (atcbContext t)) (user_regs (atcbContextGet t)) = atcbContextGet t"
+  by (cases t, simp add: atcbContextGet_def)
+
 lemma put_tcb_state_regs_twice[simp]:
   "put_tcb_state_regs tsr (put_tcb_state_regs tsr' tcb)
     = put_tcb_state_regs tsr tcb"
@@ -73,15 +77,6 @@ lemma put_tcb_state_regs_twice[simp]:
                    Structures_H.kernel_object.split)
   using atcbContextSet_def atcbContext_set_set
   apply (intro all_tcbI impI allI conjI; simp)
-  done
-
-lemma partial_overwrite_twice[simp]:
-  "partial_overwrite idx f (partial_overwrite idx g ps)
-       = partial_overwrite idx f ps"
-  by (rule ext, simp add: partial_overwrite_def)
-
-lemma get_tcb_state_regs_partial_overwrite[simp]:
-  "inj idx \<Longrightarrow>
    get_tcb_state_regs (partial_overwrite idx tcbs f (idx x))
       = tcbs x"
   apply (simp add: partial_overwrite_def)
@@ -167,8 +162,9 @@ lemma get_tcb_state_regs_ko_at':
 lemma put_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> put_tcb_state_regs tsr (ksPSpace s p)
        = Some (KOTCB (ko \<lparr> tcbState := tsrState tsr
-                         , tcbArch := atcbContextSet (UserContext (tsrContext tsr)) (tcbArch ko)\<rparr>))"
-  by (clarsimp simp: obj_at'_def put_tcb_state_regs_defs projectKOs
+                         , tcbArch := atcbContextSet (UserContext (fpu_state (atcbContext (tcbArch ko))) (tsrContext tsr)) (tcbArch ko)\<rparr>))"
+  by (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
+                     put_tcb_state_regs_tcb_def
               split: tcb_state_regs.split)
 
 lemma partial_overwrite_get_tcb_state_regs:
@@ -196,7 +192,7 @@ lemma ksPSpace_update_partial_id:
   done
 
 lemma isolate_thread_actions_asUser:
-  "\<lbrakk> idx t' = t; inj idx; f = (\<lambda>s. ({(v, modify_registers g s)}, False)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> idx t' = t; inj idx; f = (\<lambda>s. ({(v, UserContext (fpu_state s) (g (user_regs s)))}, False)) \<rbrakk> \<Longrightarrow>
    monadic_rewrite False True (\<lambda>s. \<forall>x. tcb_at' (idx x) s)
       (asUser t f)
       (isolate_thread_actions idx (return v)
@@ -234,13 +230,14 @@ lemma mapM_getRegister_simple:
   done
 
 lemma setRegister_simple:
-  "setRegister r v = (\<lambda>con. ({((), UserContext ((user_regs con)(r := v)))}, False))"
+  "setRegister r v = (\<lambda>con. ({((), UserContext (fpu_state con) ((user_regs con)(r := v)))}, False))"
   by (simp add: setRegister_def simpler_modify_def)
 
 lemma zipWithM_setRegister_simple:
   "zipWithM_x setRegister rs vs
       = (\<lambda>con. ({((),
-                  UserContext (foldl (\<lambda>regs (r, v). ((regs)(r := v))) (user_regs con) (zip rs vs)))}, False))"
+                  UserContext (fpu_state con)
+                              (foldl (\<lambda>regs (r, v). ((regs)(r := v))) (user_regs con) (zip rs vs)))}, False))"
   supply if_split[split del]
   apply (simp add: zipWithM_x_mapM_x)
   apply (induct ("zip rs vs"))
@@ -248,18 +245,6 @@ lemma zipWithM_setRegister_simple:
   apply (clarsimp simp add: mapM_x_Cons bind_def setRegister_def
                             simpler_modify_def fun_upd_def[symmetric])
   done
-
-(* this variant used in fastpath rewrite proof *)
-lemma setRegister_simple_modify_registers:
-  "setRegister r v = (\<lambda>con. ({((), modify_registers (\<lambda>f. f(r := v)) con)}, False))"
-  by (simp add: modify_registers_def setRegister_simple)
-
-(* this variant used in fastpath rewrite proof *)
-lemma zipWithM_setRegister_simple_modify_registers:
-  "zipWithM_x setRegister rs vs
-   = (\<lambda>con. ({((), modify_registers (\<lambda>regs. foldl (\<lambda>f (r,v). f(r := v)) regs (zip rs vs)) con)},
-              False))"
-  by (simp add: modify_registers_def zipWithM_setRegister_simple)
 
 lemma dom_partial_overwrite:
   "\<forall>x. tcb_at' (idx x) s \<Longrightarrow> dom (partial_overwrite idx tsrs (ksPSpace s))
@@ -636,7 +621,6 @@ lemma findPDForASID_isolatable:
 lemma getHWASID_isolatable:
   "thread_actions_isolatable idx (getHWASID asid)"
   apply (simp add: getHWASID_def loadHWASID_def
-                   findFreeHWASID_def
                    case_option_If2 findPDForASIDAssert_def
                    checkPDAt_def checkPDUniqueToASID_def
                    checkPDASIDMapMembership_def
@@ -716,6 +700,13 @@ lemma lookupIPC_inv: "\<lbrace>P\<rbrace> lookupIPCBuffer f t \<lbrace>\<lambda>
 
 (* FIXME move *)
 lemmas empty_fail_user_getreg[intro!, wp, simp] = empty_fail_asUser[OF empty_fail_getRegister]
+
+lemma user_getreg_rv:
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadGet_wp)
+  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
+  done
 
 lemma copyMRs_simple:
   "msglen \<le> of_nat (length msgRegisters) \<longrightarrow>
@@ -1067,7 +1058,9 @@ lemma partial_overwrite_fun_upd2:
   by (simp add: fun_eq_iff partial_overwrite_def split: if_split)
 
 lemma atcbContextSetSetGet_eq[simp]:
-  "atcbContextSet (UserContext (user_regs (atcbContextGet t))) t = t"
+  "atcbContextSet (UserContext (fpu_state (atcbContext
+     (atcbContextSet (UserContext (fpu_state (atcbContext t)) r) t)))
+        (user_regs (atcbContextGet t))) t = t"
   by (cases t, simp add: atcbContextSet_def atcbContextGet_def)
 
 lemma setCTE_isolatable:

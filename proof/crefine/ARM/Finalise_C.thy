@@ -2130,13 +2130,32 @@ lemma ccap_relation_IRQHandler_mask:
   apply (simp add: c_valid_cap_def cap_irq_handler_cap_lift cl_valid_cap_def)
   done
 
+lemma fpuThreadDelete_ccorres:
+  "ccorres dc xfdc
+     (invs' and tcb_at' thread)
+     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
+   (fpuThreadDelete thread) (Call fpuThreadDelete_'proc)"
+  supply Collect_const[simp del] dc_simp[simp del]
+  apply (cinit lift: thread_')
+   apply clarsimp
+   apply (ctac (no_vcg) add: nativeThreadUsingFPU_ccorres)
+    apply clarsimp
+    apply (rule ccorres_when[where R=\<top>])
+     apply fastforce
+    apply (ctac add: switchFpuOwner_ccorres)
+   apply wpsimp
+  apply fastforce
+  done
+
 lemma prepareThreadDelete_ccorres:
-  "ccorres dc xfdc \<top> UNIV []
+  "ccorres dc xfdc
+     (invs' and tcb_at' thread)
+     (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
-  unfolding prepareThreadDelete_def
-  apply (rule ccorres_Call)
-  apply (rule Arch_prepareThreadDelete_impl[unfolded Arch_prepareThreadDelete_body_def])
-  apply (rule ccorres_return_Skip)
+  supply dc_simp[simp del]
+  apply (cinit lift: thread_', rename_tac cthread)
+   apply (ctac add: fpuThreadDelete_ccorres)
+  apply fastforce
   done
 
 lemma finaliseCap_ccorres:
@@ -2309,14 +2328,15 @@ lemma finaliseCap_ccorres:
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem)
   apply (intro impI conjI)
-             apply (clarsimp split: bool.splits)
-            apply (clarsimp split: bool.splits)
-           apply (clarsimp simp: valid_cap'_def isCap_simps)
+               apply (clarsimp split: bool.splits)
+              apply (clarsimp split: bool.splits)
+             apply (clarsimp simp: valid_cap'_def isCap_simps)
+            apply (clarsimp simp: isCap_simps capRange_def capAligned_def)
+           apply (clarsimp simp: isCap_simps valid_cap'_def)
           apply (clarsimp simp: isCap_simps capRange_def capAligned_def)
-         apply (clarsimp simp: isCap_simps valid_cap'_def)
-        apply (clarsimp simp: isCap_simps valid_cap'_def)
-       apply (clarsimp simp: isCap_simps valid_cap'_def)
-      apply (clarsimp simp: isCap_simps valid_cap'_def )
+         apply (clarsimp simp: isCap_simps valid_cap'_def )
+        apply clarsimp
+       apply (clarsimp simp: isCap_simps valid_cap'_def )
       apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def ccap_relation_def isCap_simps
                             c_valid_cap_def cap_thread_cap_lift_def cap_to_H_def
                             ctcb_ptr_to_tcb_ptr_def Let_def

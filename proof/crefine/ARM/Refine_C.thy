@@ -544,7 +544,7 @@ lemma ccorres_get_registers:
   apply (erule ccorres_guard_imp2)
   apply (clarsimp simp: rf_sr_ksCurThread)
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
+  apply (clarsimp simp: ctcb_relation_def ccontext_relation_def cregs_relation_def
                         ARM_H.msgInfoRegister_def ARM_H.capRegister_def
                         ARM.msgInfoRegister_def ARM.capRegister_def
                         carch_tcb_relation_def cregs_relation_def
