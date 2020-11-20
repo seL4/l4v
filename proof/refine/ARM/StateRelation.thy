@@ -721,8 +721,10 @@ lemma state_relation_sched_act_relation[elim!]:
 lemma state_relationD:
   assumes sr:  "(s, s') \<in> state_relation"
   shows "pspace_relation (kheap s) (ksPSpace s') \<and>
+  sc_replies_relation s s' \<and>
   sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
   ready_queues_relation (ready_queues s) (ksReadyQueues s') \<and>
+  release_queue_relation (release_queue s) (ksReleaseQueue s') \<and>
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
   cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
   cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
@@ -746,8 +748,10 @@ lemma state_relationD:
 lemma state_relationE [elim?]:
   assumes sr:  "(s, s') \<in> state_relation"
   and rl: "\<lbrakk>pspace_relation (kheap s) (ksPSpace s');
+  sc_replies_relation s s';
   sched_act_relation (scheduler_action s) (ksSchedulerAction s');
   ready_queues_relation (ready_queues s) (ksReadyQueues s');
+  release_queue_relation (release_queue s) (ksReleaseQueue s');
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
   cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
   revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
