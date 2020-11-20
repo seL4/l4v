@@ -426,12 +426,21 @@ lemma asm_specE:
 
 lemmas state_eqE = arg_cong[where f="\<lambda>s. (globals s, state.more s)", elim_format]
 
-lemmas asm_store_eq_helper
-    = arg_cong2[where f="(=)" and a="asm_store f v s"]
-      arg_cong2[where f="(=)" and c="asm_store f v s"] for f v s
-
 definition asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool" where
   "asm_semantics_ok_to_ignore ti volatile specifier
     = (\<forall>xs gl. snd ` asm_semantics specifier xs (gl :: (heap_mem \<times> 'a)) = {gl})"
+
+lemma asm_spec_preserves:
+  assumes spec: "\<And>t v' (gl'::heap_mem \<times> 'a).
+                 \<lbrakk> gdata (asm_store gdata gl' (globals \<sigma>)) = gdata (globals \<sigma>);
+                   globals t = globals (lhs v' (globals_update (asm_store gdata gl') \<sigma>)) \<rbrakk>
+                 \<Longrightarrow> t \<in> Q"
+  shows "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Spec (asm_spec (ti::'a itself) gdata vol spec lhs vs) Q, A"
+  apply (rule HoarePartial.Spec, simp)
+  apply (intro conjI allI impI asm_spec_enabled)
+  apply (elim asm_specE state_eqE)
+  apply clarsimp
+  apply (erule (1) spec)
+  done
 
 end
