@@ -34,7 +34,7 @@ text \<open>
   Our C function \texttt{mult\_by\_add} implements a multiply operation
   by successive additions:
 
-\lstinputlisting[language=C, firstline=15]{../../mult_by_add.c}
+\lstinputlisting[language=C, firstline=11]{../../mult_by_add.c}
 
   We start by translating the program using the C parser and AutoCorres,
   and entering the generated locale \texttt{mult\_by\_add}.
