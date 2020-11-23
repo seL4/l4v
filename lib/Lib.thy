@@ -1997,15 +1997,15 @@ lemma dom_eqD:
   "\<lbrakk> f x = Some v; dom f = S \<rbrakk> \<Longrightarrow> x \<in> S"
   by clarsimp
 
-lemma exception_set_finite_1:
+lemma exception_set_finite1:
   "finite {x. P x} \<Longrightarrow> finite {x. (x = y \<longrightarrow> Q x) \<and> P x}"
   by (simp add: Collect_conj_eq)
 
-lemma exception_set_finite_2:
+lemma exception_set_finite2:
   "finite {x. P x} \<Longrightarrow> finite {x. x \<noteq> y \<longrightarrow> P x}"
   by (simp add: imp_conv_disj)
 
-lemmas exception_set_finite = exception_set_finite_1 exception_set_finite_2
+lemmas exception_set_finite = exception_set_finite1 exception_set_finite2
 
 lemma exfEI:
   "\<lbrakk> \<exists>x. P x; \<And>x. P x \<Longrightarrow> Q (f x) \<rbrakk> \<Longrightarrow> \<exists>x. Q x"
