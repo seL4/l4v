@@ -17,7 +17,7 @@ a [separation logic defined for capDL](../proof/sep-capDL/).
 The system initialiser and the proof are described in the
 [ICFEM '13 paper][Boyton_13] and Andrew Boyton's PhD thesis.
 
-  [Boyton_13]: http://www.nicta.com.au/pub?id=7047 "Formally Verified System Initialisation"
+  [Boyton_13]: https://ts.data61.csiro.au/publications/nictaabstracts/Boyton_ABFGGKLS_13.abstract.pml "Formally Verified System Initialisation"
 
 Building
 --------
