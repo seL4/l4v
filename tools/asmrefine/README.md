@@ -22,7 +22,7 @@ An overview of the full proof is given with the [SydTV tool](
 https://github.com/seL4proj/graph-refine). It is also described in the
 PLDI '13 [paper][1].
 
-  [1]: http://www.nicta.com.au/pub?id=6449  "Translation Validation for a Verified OS Kernel"
+  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Sewell_MK_13.abstract.pml "Translation Validation for a Verified OS Kernel"
 
 Important Theories
 ------------------

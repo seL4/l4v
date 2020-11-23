@@ -23,8 +23,8 @@ and the [system initialiser](../../sys-init/) specification.
 This separation logic is described in the [ICFEM '13 paper][Boyton_13]
 and Andrew Boyton's PhD thesis.
 
-  [Boyton_13]: http://www.nicta.com.au/pub?id=7047        "Formally Verified System Initialisation"
-  [Klein_KB_12]: http://www.nicta.com.au/pub?id=5676      "Mechanised separation algebra"
+  [Boyton_13]: https://ts.data61.csiro.au/publications/nictaabstracts/Boyton_ABFGGKLS_13.abstract.pml "Formally Verified System Initialisation"
+  [Klein_KB_12]: https://ts.data61.csiro.au/publications/nictaabstracts/Klein_KB_12.abstract.pml "Mechanised separation algebra"
 
 
 Building
