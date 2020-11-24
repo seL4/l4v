@@ -6650,13 +6650,13 @@ lemma set_mcpriority_bound_sc_tcb_at_cur_thread[wp]:
 
 lemma reorder_ntfn_bound_sc_tcb_at_cur_thread[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   reorder_ntfn a
+   reorder_ntfn ntfn_ptr tptr
    \<lbrace>\<lambda>_. \<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   by (rule_tac f="cur_thread" in hoare_lift_Pf; wpsimp)
 
 lemma reorder_ep_bound_sc_tcb_at_cur_thread[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   reorder_ep a
+   reorder_ep ep_ptr tptr
    \<lbrace>\<lambda>_. \<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   by (rule_tac f="cur_thread" in hoare_lift_Pf; wpsimp)
 

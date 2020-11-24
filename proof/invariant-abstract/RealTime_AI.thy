@@ -1100,12 +1100,6 @@ lemma charge_budget_inv[wp]: "(\<And>s f. P (trans_state f s) = P s)
 *)
 
 
-
-lemma sort_queue_notin_inv: "\<lbrace>K (t \<notin> set ls) and P t\<rbrace> sort_queue ls \<lbrace>\<lambda>rv. P t\<rbrace>"
-  apply (wpsimp simp: sort_queue_def wp: mapM_wp)
-  apply auto
-  done
-
 crunches sched_context_donate
   for st_tcb_at[wp]: "\<lambda>s. Q (st_tcb_at P t s)"
   and fault_tcb_at[wp]: "\<lambda>s. Q (fault_tcb_at P t s)"

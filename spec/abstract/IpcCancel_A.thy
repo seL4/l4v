@@ -316,28 +316,47 @@ where
     BlockedOnNotification r \<Rightarrow> Some r
   | _ \<Rightarrow> None"
 
-text \<open>
-  Sort a list of TCB refs by priority, otherwise keeping order stable.
-  In the implementation, there will only ever be one element out of order
-  or be inserted. Here, we just require a sorted result.
-\<close>
-definition
-  sort_queue :: "obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
+fun
+  tcb_ep_find_index :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> nat \<Rightarrow> (nat, 'z::state_ext) s_monad"
 where
-  "sort_queue qs = do
-     prios \<leftarrow> mapM (thread_get tcb_priority) qs;
-     return $ map snd $ sort_key (\<lambda>x. 255 - (fst x)) (zip prios qs) \<comment> \<open>@{text \<open>0 \<le> priority < 256\<close>}\<close>
+  "tcb_ep_find_index tptr qs curindex = do
+     prio \<leftarrow> thread_get tcb_priority tptr;
+     curprio \<leftarrow> thread_get tcb_priority (qs ! curindex);
+     if prio > curprio then
+       if curindex = 0 then return 0
+       else tcb_ep_find_index tptr qs (curindex - 1)
+     else return (curindex + 1)
    od"
+
+declare tcb_ep_find_index.simps[simp del]
+
+definition
+  tcb_ep_dequeue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
+where
+  "tcb_ep_dequeue tptr qs = do
+     index \<leftarrow> return $ the $ findIndex (\<lambda>x. x = tptr) qs;
+     return $ take index qs @ drop (index + 1) qs
+   od"
+
+definition
+  tcb_ep_append :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref list, 'z::state_ext) s_monad"
+where
+  "tcb_ep_append tptr qs \<equiv>
+     if qs = [] then return [tptr]
+     else do index \<leftarrow> tcb_ep_find_index tptr qs (length qs - 1);
+             return $ take index qs @ tptr # drop index qs
+     od"
 
 text \<open>Bring endpoint queue back into priority order\<close>
 definition
-  reorder_ep :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  reorder_ep :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "reorder_ep ep_ptr = do
+  "reorder_ep ep_ptr tptr = do
     ep \<leftarrow> get_endpoint ep_ptr;
     qs \<leftarrow> get_ep_queue ep;
-    qs' \<leftarrow> sort_queue qs;
-    set_endpoint ep_ptr (update_ep_queue ep qs')
+    qs' \<leftarrow> tcb_ep_dequeue tptr qs;
+    qs'' \<leftarrow> tcb_ep_append tptr qs';
+    set_endpoint ep_ptr (update_ep_queue ep qs'')
   od"
 
 text \<open>Extract list of TCBs waiting on this notification\<close>
@@ -350,13 +369,14 @@ where
 
 text \<open>Bring notification queue back into priority order\<close>
 definition
-  reorder_ntfn :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  reorder_ntfn :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "reorder_ntfn ntfn_ptr = do
+  "reorder_ntfn ntfn_ptr tptr = do
     ntfn \<leftarrow> get_notification ntfn_ptr;
     qs \<leftarrow> assert_opt $ get_ntfn_queue ntfn;
-    qs' \<leftarrow> sort_queue qs;
-    set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs' \<rparr>)
+    qs' \<leftarrow> tcb_ep_dequeue tptr qs;
+    qs'' \<leftarrow> tcb_ep_append tptr qs';
+    set_notification ntfn_ptr (ntfn \<lparr> ntfn_obj := WaitingNtfn qs'' \<rparr>)
   od"
 
 text \<open>Set new priority for a TCB\<close>
@@ -380,8 +400,8 @@ definition
        od
      else do
        thread_set_priority tptr prio;
-       maybeM (reorder_ep) (ep_blocked ts);
-       maybeM (reorder_ntfn) (ntfn_blocked ts)
+       maybeM (\<lambda>ep. reorder_ep ep tptr) (ep_blocked ts);
+       maybeM (\<lambda>ntfn. reorder_ntfn ntfn tptr) (ntfn_blocked ts)
      od
    od"
 
