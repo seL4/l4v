@@ -615,7 +615,6 @@ crunch domain_time_inv[wp]: cancel_badged_sends "\<lambda>s::det_state. P (domai
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
 
-crunch domain_time_inv[wp]: sort_queue "\<lambda>s. P (domain_time s)" (wp: mapM_wp')
 crunch domain_time_inv[wp]: update_time_stamp "\<lambda>s. P (domain_time s)"
 
 context DetSchedDomainTime_AI_2 begin

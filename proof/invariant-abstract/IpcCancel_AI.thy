@@ -2641,7 +2641,7 @@ lemma reply_unlink_tcb_ct_active[wp]:
 
 crunches
   tcb_sched_action, reschedule_required, tcb_sched_action, tcb_release_remove,
-  test_reschedule, tcb_release_enqueue, sort_queue, sched_context_unbind_reply,
+  test_reschedule, tcb_release_enqueue, sched_context_unbind_reply,
   sched_context_unbind_ntfn
   for ct_in_state[wp]: "ct_in_state P"
   (wp: crunch_wps simp: crunch_simps)

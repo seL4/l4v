@@ -2729,4 +2729,28 @@ text \<open>Prevent clarsimp and others from creating Some from not None by fold
 definition
   "not_None x = (x \<noteq> None)"
 
+primrec findIndex' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
+  "findIndex' _ _ [] = None"
+| "findIndex' n P (x#xs) = (if P x then Some n else findIndex' (Suc n) P xs)"
+
+definition
+  findIndex :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
+  "findIndex = findIndex' 0"
+
+lemma findIndex'_app:
+  "findIndex' n P (xs @ ys) = (if \<exists>x \<in> set xs. P x then findIndex' n P xs
+                                                   else findIndex' (n + length xs) P ys)"
+  by (induct xs arbitrary: n; clarsimp)
+
+lemma findIndex_member:
+  "tptr \<in> set xs \<Longrightarrow>
+   \<exists>ys zs. xs = ys @ tptr # zs \<and> tptr \<notin> set ys \<and> findIndex (\<lambda>x. x = tptr) xs = Some (length ys)"
+  apply (induct xs; clarsimp)
+  apply (case_tac "tptr=a"; clarsimp)
+   apply (rule_tac x="[]" in exI)
+   apply (clarsimp simp: findIndex_def)
+  apply (rule_tac x="a#ys" in exI)
+  apply (clarsimp simp: findIndex_def findIndex'_app)
+  done
+
 end

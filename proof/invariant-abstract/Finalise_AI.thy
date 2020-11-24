@@ -1579,4 +1579,11 @@ crunches test_reschedule, tcb_release_remove
   and obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma tcb_ep_find_index_inv[wp]:
+  "tcb_ep_find_index tptr qs curindex \<lbrace>P\<rbrace>"
+  by (induct curindex) (wpsimp | simp add: tcb_ep_find_index.simps)+
+
+crunches tcb_ep_dequeue, tcb_ep_append
+  for inv[wp]: P
+
 end

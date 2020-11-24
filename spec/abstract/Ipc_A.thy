@@ -280,7 +280,7 @@ where
                                      sender_can_grant = can_grant,
                                      sender_can_grant_reply = can_grant_reply,
                                      sender_is_call = call\<rparr>);
-               qs' \<leftarrow> sort_queue (queue @ [thread]);
+               qs' \<leftarrow> tcb_ep_append thread queue;
                set_endpoint epptr $ SendEP qs'
              od
        | (IdleEP, False) \<Rightarrow> return ()
@@ -393,7 +393,7 @@ where
                                                             \<lparr>receiver_can_grant = (AllowGrant \<in> rights)\<rparr>);
                   when (reply \<noteq> None) $ set_reply_obj_ref reply_tcb_update (the reply) (Some thread);
                   \<^cancel>\<open>FIXME RT: schedule_tcb?\<close>
-                  qs' \<leftarrow> sort_queue (queue @ [thread]);
+                  qs' \<leftarrow> tcb_ep_append thread queue;
                   set_endpoint epptr (RecvEP qs')
                 od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread)
@@ -515,7 +515,7 @@ where
                    (case is_blocking of
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnNotification ntfnptr);
-                          qs' \<leftarrow> sort_queue (queue @ [thread]);
+                          qs' \<leftarrow> tcb_ep_append thread queue;
                           set_notification ntfnptr $ ntfn_obj_update (K (WaitingNtfn qs')) ntfn;
                           maybe_return_sc ntfnptr thread;
                           schedule_tcb thread
