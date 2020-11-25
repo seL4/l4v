@@ -53,27 +53,31 @@ jobs:
         isa_branch: ts-2020
         session: ExecSpec ASpec AInvs EVTutorial
 
-  refine:
-    name: Refine
-    needs: ainvs
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ARM, ARM_HYP, RISCV64, X64]
-    steps:
-    - name: Cache Isabelle Images
-      uses: actions/cache@v2
-      with:
-        path: cache/
-        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
-        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
-    - name: Run Proofs
-      uses: seL4/ci-actions/run-proofs@master
-      with:
-        L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2020
-        session: Refine
+#  With Isabelle2020 the Refine session is now too close to resource
+#  boundaries on github runners -- it runs out of memory from time
+#  to time.
+#
+#  refine:
+#    name: Refine
+#    needs: ainvs
+#    runs-on: ubuntu-latest
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        arch: [ARM, ARM_HYP, RISCV64, X64]
+#    steps:
+#    - name: Cache Isabelle Images
+#      uses: actions/cache@v2
+#      with:
+#        path: cache/
+#        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
+#        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
+#    - name: Run Proofs
+#      uses: seL4/ci-actions/run-proofs@master
+#      with:
+#        L4V_ARCH: ${{ matrix.arch }}
+#        isa_branch: ts-2020
+#        session: Refine
 
   cspec:
     name: CSpec
