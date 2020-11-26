@@ -808,6 +808,21 @@ lemma corres_initial_splitE:
   apply simp
   done
 
+lemma corres_split_liftEE:
+  assumes "corres_underlying sr nf nf' r' P P' a c"
+          "\<And>rv rv'. r' rv rv' \<Longrightarrow>
+                     corres_underlying sr nf nf' (r \<oplus> s) (R rv) (R' rv') (b rv) (d rv')"
+          "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>"
+          "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
+  shows "corres_underlying sr nf nf' (r \<oplus> s) (P and Q) (P' and Q')
+             (liftE a >>=E b) (liftE c >>=E d)"
+  apply (insert assms)
+  apply (rule corres_initial_splitE; clarsimp?)
+     apply (erule corres_guard_imp; clarsimp)
+    apply fastforce
+   apply (rule hoare_weaken_pre; fastforce)+
+  done
+
 lemma corres_assert_assume:
   "\<lbrakk> P' \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()); \<And>s. Q s \<Longrightarrow> P' \<rbrakk> \<Longrightarrow>
   corres_underlying sr nf nf' r P Q f (assert P' >>= g)"
