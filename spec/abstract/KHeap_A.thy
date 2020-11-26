@@ -429,6 +429,11 @@ where
    od"
 
 definition
+  is_blocked :: "obj_ref \<Rightarrow> (bool,'z::state_ext) s_monad"
+where
+  "is_blocked thread = (liftM ipc_queued_thread_state $ get_thread_state thread)"
+
+definition
   tcb_sched_enqueue :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref list" where
   "tcb_sched_enqueue thread queue \<equiv> if thread \<notin> set queue then thread # queue else queue"
 

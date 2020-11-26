@@ -1115,7 +1115,7 @@ lemma check_handler_ep_wpE[wp]:
 
 lemma decode_update_sc_inv[wp]:
   "\<lbrace>P\<rbrace> decode_update_sc cap slot sc_cap \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding decode_update_sc_def by (wpsimp wp: hoare_drop_imps)
+  unfolding decode_update_sc_def is_blocked_def by (wpsimp wp: hoare_drop_imps)
 
 context Tcb_AI
 begin
@@ -1130,7 +1130,7 @@ lemma decode_set_sched_params_wf[wp]:
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
    decode_set_sched_params args (ThreadCap t) slot excaps
    \<lbrace>tcb_inv_wf\<rbrace>, -"
-  unfolding decode_set_sched_params_def decode_update_sc_def
+  unfolding decode_set_sched_params_def decode_update_sc_def is_blocked_def
   apply (wpsimp simp: get_tcb_obj_ref_def
                 wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
                 split_del: if_split)
