@@ -268,11 +268,11 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         SchedContextCap { capSchedContextPtr = scPtr } -> do
 >             tcbSc <- withoutFailure $ threadGet tcbSchedContext tcbPtr
 >             when (tcbSc /= Nothing) $ throw IllegalOperation
->             scTcb <- withoutFailure $ mapScPtr scPtr scTCB
->             when (scTcb /= Nothing) $ throw IllegalOperation
->             blockedAndUnreleased <- withoutFailure $
->                 (isBlocked tcbPtr) `andM` (liftM not $ scReleased scPtr)
->             when blockedAndUnreleased $ throw IllegalOperation
+>             sc <- withoutFailure $ getSchedContext scPtr
+>             when (scTCB sc /= Nothing) $ throw IllegalOperation
+>             blocked <- withoutFailure $ isBlocked tcbPtr
+>             released <- withoutFailure $ scReleased scPtr
+>             when (blocked && not released) $ throw IllegalOperation
 >             return $ Just scPtr
 >         NullCap -> do
 >             curTcbPtr <- withoutFailure getCurThread
