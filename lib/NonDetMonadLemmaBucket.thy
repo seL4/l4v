@@ -658,6 +658,18 @@ lemma liftE_bind:
   "(liftE m >>= m') = (m >>= (\<lambda>rv. m' (Inr rv)))"
   by (simp add: liftE_def)
 
+lemma liftE_bindE_bind:
+  "doE x <- liftE (f >>= g);
+       h x
+   odE =
+   doE x <- liftE f;
+       y <- liftE (g x);
+       h y
+   odE"
+  unfolding liftE_def bindE_def lift_def
+  apply (clarsimp simp: bind_assoc)
+  done
+
 lemma catch_throwError: "catch (throwError ft) g = g ft"
   by (simp add: catch_def throwError_bind)
 

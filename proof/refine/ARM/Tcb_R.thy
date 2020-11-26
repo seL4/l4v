@@ -2791,29 +2791,163 @@ lemma decodeSetSchedParams_wf[wp]:
          simp)
   done *)
 
+(* FIXME RT: move to...? *)
+lemma is_blocked_corres:
+  "corres (=) (tcb_at tcb_ptr) (tcb_at' tcb_ptr) (is_blocked tcb_ptr) (isBlocked tcb_ptr)"
+  unfolding is_blocked_def isBlocked_def
+  apply clarsimp
+  apply (rule corres_underlying_split[where b=return and P="\<top>\<top>" and P'="\<top>\<top>", simplified,
+                                      OF gts_corres ])
+    apply wpsimp+
+  apply (rename_tac st st' s s')
+  apply (case_tac st; clarsimp)
+  done
+
+(* FIXME RT: remove. Introduced by MichaelM in l4v#147. *)
+lemma refills_heads_equal_active:
+  "\<lbrakk>sc_active sc; valid_sched_context' sc' s'; sc_relation sc n sc'\<rbrakk>
+   \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc) \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
+  sorry
+
+(* FIXME RT: move to...? *)
+lemma get_sc_released_corres:
+  "corres (=) (active_sc_valid_refills and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
+          (get_sc_released sc_ptr) (scReleased sc_ptr)"
+  unfolding get_sc_released_def scReleased_def scActive_def refillReady_def sc_released_def
+            getCurTime_def
+  apply (clarsimp simp: bind_assoc)
+  apply (rule corres_split[OF _ get_sc_corres, THEN corres_guard_imp])
+      apply clarsimp
+      apply (rule corres_split[OF _ corres_gets_trivial, simplified])
+         apply (rule corres_symb_exec_r[OF _ get_sc_sp'])
+           apply (rename_tac sc sc' n cur_time cur_time' sc2')
+           apply (rule_tac P="active_sc_valid_refills and sc_at_pred ((=) sc) sc_ptr"
+                           and P'="valid_objs' and ko_at' sc' sc_ptr and ko_at' sc2' sc_ptr"
+                           in corres_return[THEN iffD2, rule_format])
+           apply (clarsimp simp: refill_sufficient_def refill_capacity_def refill_ready_def
+                                 kernelWCETTicks_def)
+           apply normalise_obj_at'
+           apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+           apply clarsimp
+           apply (rule iffI; clarsimp)
+            apply (frule (2) refills_heads_equal_active)
+            apply (clarsimp simp: sc_relation_def active_sc_def)
+           apply (prop_tac "sc_active sc")
+            apply (clarsimp simp: sc_relation_def active_sc_def)
+           apply clarsimp
+           apply (intro conjI)
+            apply (frule (2) refills_heads_equal_active)
+            apply (clarsimp simp: sc_relation_def)
+           apply (frule active_sc_valid_refillsE[OF is_sc_active_kh_simp[THEN iffD1],
+                                                 OF is_sc_active_def2[THEN iffD2],
+                                                 rotated])
+            apply (fastforce simp: sc_at_pred_def obj_at_def)
+           apply (prop_tac "cfg_valid_refills (sc_refill_cfg_of sc)")
+            apply (clarsimp simp: sc_at_pred_def obj_at_def valid_refills_def pred_map_def
+                                  sc_refill_cfgs_of_scs_def map_project_def scs_of_kh_def sc_of_def)
+           apply (clarsimp simp: sc_refill_cfg_of_def cfg_valid_refills_def rr_valid_refills_def
+                                 sp_valid_refills_def split: if_splits)
+          apply wpsimp+
+         apply (clarsimp simp: obj_at'_def)
+        apply (clarsimp simp: state_relation_def)
+       apply wpsimp+
+   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+  apply clarsimp
+  done
+
+(* FIXME RT: move to...? *)
+crunches scReleased
+  for inv: P
+
+(* FIXME RT: There's probably a way to avoid this using cap.case_eq_if and corres_if, but it
+             doesn't seem easy to do in a nice way. This lemma is used to "keep" the cap type
+             information all the way through to the final WP proofs. *)
+lemma corres_case_cap_null_sc:
+  assumes "cap_relation cp cp'"
+          "cp = cap.NullCap \<Longrightarrow> corres_underlying sr nf nf' rr Pnul Pnul' case_nul case_nul'"
+          "\<And>sc_ptr n. cp = cap.SchedContextCap sc_ptr n \<Longrightarrow>
+               corres_underlying sr nf nf' rr (Psc sc_ptr n) (Psc' sc_ptr n) (case_sc sc_ptr n)
+                   (case_sc' sc_ptr (min_sched_context_bits + n))"
+          "\<lbrakk>cp \<noteq> cap.NullCap; \<not>cap.is_SchedContextCap cp\<rbrakk> \<Longrightarrow>
+               corres_underlying sr nf nf' rr Pother Pother' case_other case_other'"
+  shows "corres_underlying sr nf nf' rr
+             (\<lambda>s. (cp = cap.NullCap \<longrightarrow> Pnul s)
+                  \<and> (\<forall>sc_ptr n. cp = cap.SchedContextCap sc_ptr n \<longrightarrow> Psc sc_ptr n s)
+                  \<and> (\<not>cap.is_SchedContextCap cp \<and> cp \<noteq> cap.NullCap \<longrightarrow> Pother s))
+             (\<lambda>s. (cp' = NullCap \<longrightarrow> Pnul' s)
+                  \<and> (\<forall>sc_ptr n. cp = cap.SchedContextCap sc_ptr n \<longrightarrow> Psc' sc_ptr n s)
+                  \<and> (\<not>cap.is_SchedContextCap cp \<and> cp \<noteq> cap.NullCap \<longrightarrow> Pother' s))
+             (case cp of cap.NullCap \<Rightarrow> case_nul
+              | cap.SchedContextCap sc_ptr n \<Rightarrow> case_sc sc_ptr n
+              | _ \<Rightarrow> case_other)
+             (case cp' of capability.NullCap \<Rightarrow> case_nul'
+              | capability.SchedContextCap sc_ptr n \<Rightarrow> case_sc' sc_ptr n
+              | _ \<Rightarrow> case_other')"
+  apply (insert assms)
+  apply (case_tac cp; clarsimp)
+  done
+
 lemma decode_set_sched_params_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap; slot' = cte_map slot;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation)
-       (cur_tcb and valid_etcbs and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x)))
-       (invs' and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' (fst x)))
+       (invs and valid_sched and (\<lambda>s. s \<turnstile> cap \<and> (\<forall>x \<in> set extras. s \<turnstile> (fst x))))
+       (invs' and (\<lambda>s. s \<turnstile>' cap' \<and> (\<forall>x \<in> set extras'. s \<turnstile>' (fst x))))
        (decode_set_sched_params args cap slot extras)
        (decodeSetSchedParams args cap' slot' extras')"
-  apply (simp add: decode_set_sched_params_def decodeSetSchedParams_def)
+  apply (simp add: decode_set_sched_params_def decodeSetSchedParams_def decode_update_sc_def
+                   check_handler_ep_def unlessE_whenE)
   apply (cases "length args < 2")
    apply (clarsimp split: list.split)
-  apply (cases "length extras < 1")
+  apply (cases "length extras < 3")
    apply (clarsimp split: list.split simp: list_all2_Cons2)
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
-  sorry (*
-  apply (rule corres_split_eqrE)
-     apply (rule corres_split_norE[OF _ check_prio_corres])
-       apply (rule corres_splitEE[OF _ check_prio_corres])
-         apply (rule corres_returnOkTT)
-         apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
-        apply (wpsimp wp: check_prio_inv checkPrio_inv)+
-    apply (corressimp simp: valid_cap_def valid_cap'_def)+
-  done *)
+  apply (case_tac cap; clarsimp)
+  apply (rule corres_split_eqrE[THEN corres_guard_imp])
+       apply (rule corres_split_norE[OF _ check_prio_corres])
+         apply (rule corres_split_norE[OF _ check_prio_corres])
+           apply (rule corres_split_eqrE)
+              apply (clarsimp simp: liftE_bindE_bind bindE_assoc)
+              apply (rule whenE_throwError_corres; simp add: cap_rel_valid_fh)
+              apply (rule corres_returnOkTT)
+              apply (clarsimp simp: newroot_rel_def)
+             apply (rule corres_case_cap_null_sc[where Pother=\<top> and Pother'=\<top>]
+                    ; clarsimp
+                    ; (wpfix add: capability.sel)?)
+              apply (clarsimp simp: getCurThread_def)
+              apply (rule corres_split_liftEE[OF corres_gets_trivial])
+                 apply (clarsimp simp: state_relation_def)
+                apply (rule whenE_throwError_corres; clarsimp)
+                apply (rule corres_returnOkTT, simp)
+               apply wpsimp
+              apply wpsimp
+             apply (clarsimp simp: get_tcb_obj_ref_def)
+             apply (rule corres_split_eqrE)
+                apply (rule whenE_throwError_corres; clarsimp)
+                apply (rule corres_split_liftEE[OF get_sc_corres])
+                  apply (rule whenE_throwError_corres; clarsimp simp: sc_relation_def)
+                  apply (rule corres_split_liftEE[OF is_blocked_corres])
+                    apply (rule corres_split_liftEE[OF get_sc_released_corres])
+                      apply (rule whenE_throwError_corres; clarsimp)
+                      apply (rule corres_returnOkTT, simp)
+                     apply (wpsimp simp: is_blocked_def)+
+               apply (rule threadget_corres)
+               apply (clarsimp simp: tcb_relation_def)
+              apply (wpsimp wp: thread_get_wp' threadGet_wp check_prio_inv checkPrio_inv)+
+      apply (clarsimp split: cap.splits
+             ; intro conjI impI allI
+             ; fastforce intro: corres_returnOkTT)
+     apply wpsimp+
+   apply (clarsimp simp: valid_cap_def)
+  apply (clarsimp simp: valid_cap_simps')
+  apply normalise_obj_at'
+  apply (intro exI impI conjI allI)
+    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+    apply (rename_tac obj)
+    apply (case_tac obj; clarsimp)
+   apply (erule invs_valid_objs')
+  apply (clarsimp simp: obj_at'_def)
+  done
 
 lemma check_valid_ipc_corres:
   "cap_relation cap cap' \<Longrightarrow>

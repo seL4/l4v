@@ -791,6 +791,15 @@ lemma isCNodeCap_cap_map [simp]:
    apply clarsimp+
   done
 
+lemma cap_rel_valid_fh:
+  "cap_relation a b \<Longrightarrow> valid_fault_handler a = isValidFaultHandler b"
+  apply (case_tac a
+         ; case_tac b
+         ; simp add: valid_fault_handler_def isValidFaultHandler_def)
+  apply (rule iffI
+         ; clarsimp simp: has_handler_rights_def split: bool.split_asm)
+  done
+
 lemma sts_rel_idle :
   "thread_state_relation st IdleThreadState = (st = Structures_A.IdleThreadState)"
   by (cases st, auto)
