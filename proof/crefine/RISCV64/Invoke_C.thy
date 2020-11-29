@@ -2348,10 +2348,6 @@ lemma invokeUntyped_Retype_ccorres:
          rule_tac P="ptr_fetch = ptr_base" in ccorres_gen_asm2)
        apply csymbr
        apply csymbr
-       apply (rule ccorres_move_c_guard_cte)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
-       apply csymbr
        apply (simp add: from_bool_0 del: Collect_const)
        apply (rule_tac xf'=xfdc and r'=dc in ccorres_splitE)
            apply (rule ccorres_Cond_rhs)
@@ -2390,7 +2386,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (cut_tac some_range_cover_arithmetic)
              apply (case_tac cte', clarsimp simp: modify_map_def fun_eq_iff split: if_split)
-             apply (simp add: mex_def meq_def ptr_base_eq del: split_paired_Ex)
+             apply (simp add: mex_def meq_def ptr_base_eq)
              apply (rule exI, strengthen refl, simp)
              apply (strengthen globals.fold_congs, simp add: field_simps)
             apply ceqv
