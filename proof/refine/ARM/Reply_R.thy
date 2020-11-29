@@ -19,6 +19,7 @@ crunches setReplyTCB
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and valid_queues[wp]: "valid_queues"
+  and reply_at'[wp]: "\<lambda>s. P (reply_at' rp s)"
 
 crunches getReplyTCB
   for inv: "P"
@@ -439,23 +440,53 @@ lemma isHead_to_head:
   apply (case_tac y; clarsimp)
   done
 
-(* FIXME RT: remove. proved by MikiT *)
-lemma sym_refs_replyNext_replyPrev_proj:
+(* sym_heap *)
+
+lemma sym_refs_replyNext_replyPrev_sym:
   "sym_refs (list_refs_of_replies' s') \<Longrightarrow>
     replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
-  sorry
+  apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
+   apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
+    apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+   apply (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+                  split: option.split_asm)
+  apply (drule_tac tp=ReplyPrev and y=rp and x=rp' in sym_refsD[rotated])
+   apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+  by (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+              split: option.split_asm)
 
-(* FIXME RT: remove. proved by MikiT *)
-lemma sym_refs_replyNext_None:
-  "\<lbrakk>sym_refs (list_refs_of_replies' s');
-    replyNexts_of s' rp = None \<rbrakk> \<Longrightarrow> \<forall>rp'. replyPrevs_of s' rp' \<noteq> Some rp"
-  sorry
+lemma reply_sym_heap_Next_Prev:
+  "sym_refs (list_refs_of_replies' s') \<Longrightarrow> sym_heap (replyNexts_of s') (replyPrevs_of s')"
+  using sym_refs_replyNext_replyPrev_sym by clarsimp
 
-(* FIXME RT: remove. proved by MikiT *)
-lemma sym_refs_replyPrev_None:
-  "\<lbrakk>sym_refs (list_refs_of_replies' s');
-    replyPrevs_of s' rp = None \<rbrakk> \<Longrightarrow> \<forall>rp'. replyNexts_of s' rp' \<noteq> Some rp"
-  sorry
+lemmas reply_sym_heap_Prev_Next
+  = sym_heap_symmetric[THEN iffD1, OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyNext_None
+  = sym_heap_None[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_None
+  = sym_heap_None[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Prevs_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Nexts_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_list_Cons
+  = sym_heap_list_rev_Cons[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_list_Cons
+  = sym_heap_list_rev_Cons[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_list
+  = sym_heap_list_rev[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_list
+  = sym_heap_list_rev[OF reply_sym_heap_Prev_Next]
+
+(* end: sym_heap *)
 
 lemma ks_reply_at'_repliesD:
   "\<lbrakk>replies_of' s rptr = Some reply; sym_refs (list_refs_of_replies' s)\<rbrakk>
@@ -473,7 +504,7 @@ lemma ks_reply_at'_repliesD:
   apply (case_tac "replyNext_of reply"
          ; case_tac "replyPrev reply"
          ; clarsimp simp: sym_refs_replyNext_None sym_refs_replyPrev_None
-                          sym_refs_replyNext_replyPrev_proj)
+                          sym_refs_replyNext_replyPrev_sym)
   done
 
 \<comment>\<open> Used to "hide" @{term "sym_refs o list_refs_of_replies'"} from simplification. \<close>
@@ -505,7 +536,7 @@ lemma replyRemoveTCB_sym_refs_list_refs_of_replies':
            @{term "(replyNexts_of, replyPrevs_of)"} facts that we can throw it all at metis. \<close>
        apply (clarsimp simp: sym_refs_def split_paired_Ball in_get_refs
               , intro conjI impI allI
-              ; metis sym_refs_replyNext_replyPrev_proj[folded protected_sym_refs_def] option.sel
+              ; metis sym_refs_replyNext_replyPrev_sym[folded protected_sym_refs_def] option.sel
                       option.inject)+
   done
 
