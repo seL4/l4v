@@ -206,6 +206,8 @@ session SimplExportAndRefine in "asmrefine" = SimplExport +
     "SEL4GraphRefine"
 
 session SimplExport in "asmrefine/export" = CSpec +
+  directories
+    "$L4V_ARCH"
   theories
     "SEL4SimplExport"
 
