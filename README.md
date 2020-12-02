@@ -38,7 +38,7 @@ Dependencies
 ------------
 
 For software dependencies and Isabelle setup, see the
-[setup.md][docs/setup.md] file in `docs` directory.
+[setup.md](docs/setup.md) file in the `docs` directory.
 
 
 Contributing
