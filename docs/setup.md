@@ -71,11 +71,11 @@ to that on Ubuntu. To set up a cross-compiler, try the following:
   of the command line tools.
 * Install the seL4 Python dependencies, for instance using `sudo easy_install
   sel4-deps`.  `easy_install` is part of Python's [`setuptools`][setuptools].
-* Install the [`misc/scripts/cpp`][ccp-script] wrapper for clang, by
+* Install the [`misc/scripts/cpp`][ccpscript] wrapper for clang, by
   putting it in `~/bin`, or somewhere else in your `PATH`.
 
 [setuptools]: https://pypi.python.org/pypi/setuptools "python package installer"
-[cpp-script]: https://github.com/seL4/l4v/blob/master/misc/scripts/cpp "cpp wrapper script"
+[cppscript]: https://github.com/seL4/l4v/blob/master/misc/scripts/cpp "cpp wrapper script"
 
 ## Isabelle Setup
 
