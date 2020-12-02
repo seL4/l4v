@@ -507,7 +507,7 @@ The following function is used to alter the priority of a thread.
 > threadSetPriority_onRunning tptr prio = do
 >     queued <- threadGet tcbQueued tptr
 >     curThread <- getCurThread
->     if queued && tptr == curThread
+>     if queued || tptr == curThread
 >         then do
 >              tcbSchedDequeue tptr
 >              threadSetPriority tptr prio
@@ -526,28 +526,14 @@ The following function is used to alter the priority of a thread.
 >     case ts of
 >          Running -> threadSetPriority_onRunning tptr prio
 >          Restart -> threadSetPriority_onRunning tptr prio
->          BlockedOnSend ep _ _ _ _ -> threadSetPriority_onEp tptr prio ep
->          BlockedOnReceive ep _ _ -> threadSetPriority_onEp tptr prio ep
->          BlockedOnNotification ntfn -> do
->               threadSetPriority tptr prio
->               reorderNtfn ntfn tptr
->          _ -> threadSetPriority tptr prio
->     tcbSchedDequeue tptr
->     threadSetPriority tptr prio
->     ts <- getThreadState tptr
->     runnable <- isRunnable tptr
->     when runnable $ do
->         schedulable <- isSchedulable tptr
->         when schedulable $ do
->             tcbSchedEnqueue tptr
->             cur <- getCurThread
->             when (tptr == cur) rescheduleRequired
->     case (epBlocked ts) of
->         Just ep -> reorderEp ep tptr
->         _ -> return ()
->     case (ntfnBlocked ts) of
->         Just ntfn -> reorderNtfn ntfn tptr
->         _ -> return ()
+>          _ -> do
+>              threadSetPriority tptr prio
+>              case (epBlocked ts) of
+>                  Just ep -> reorderEp ep tptr
+>                  _ -> return ()
+>              case (ntfnBlocked ts) of
+>                  Just ntfn -> reorderNtfn ntfn tptr
+>                  _ -> return ()
 
 \subsubsection{Switching to Woken Threads}
 
