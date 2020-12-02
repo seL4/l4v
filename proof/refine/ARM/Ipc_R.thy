@@ -2719,7 +2719,7 @@ lemma ct_in_state_activatable_imp_simple'[simp]:
 
 lemma setThreadState_nonqueued_state_update:
   "\<lbrace>\<lambda>s. invs' s \<and> st_tcb_at' simple' t s
-               \<and> st \<in> {Inactive, Running, Restart, IdleThreadState}
+               \<and> simple' st
                \<and> (st \<noteq> Inactive \<longrightarrow> ex_nonz_cap_to' t s)
                \<and> (t = ksIdleThread s \<longrightarrow> idle' st)
                \<and> (\<not> runnable' st \<longrightarrow> sch_act_simple s)\<rbrace>

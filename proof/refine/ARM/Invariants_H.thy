@@ -1457,7 +1457,7 @@ abbreviation
   "simple' st \<equiv> st = Structures_H.Inactive \<or>
                 st = Structures_H.Running \<or>
                 st = Structures_H.Restart \<or>
-                idle' st \<or> awaiting_reply' st"
+                idle' st"
 
 abbreviation
   "ct_active' \<equiv> ct_in_state' active'"

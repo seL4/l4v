@@ -105,10 +105,10 @@ lemma cancelSignal_st_tcb_at':
                     hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
   done
 
-lemma cancelIPC_simple'_not_awaiting_reply:
+lemma cancelIPC_simple':
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
    cancelIPC t
-   \<lbrace>\<lambda>_. st_tcb_at' ((=) Running or (=) Inactive or (=) Restart or (=) IdleThreadState) t\<rbrace>"
+   \<lbrace>\<lambda>_. st_tcb_at' simple' t\<rbrace>"
   unfolding cancelIPC_def Let_def getBlockingObject_def blockedCancelIPC_def
   apply (wpsimp wp: sts_st_tcb_at'_cases hoare_vcg_all_lift hoare_vcg_imp_lift
                     hoare_pre_cont[where a="getEndpoint x" and P="\<lambda>rv _. P rv" for x P]
@@ -1900,10 +1900,9 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>" (is "valid ?pre _ _")
   apply (simp add: suspend_def updateRestartPC_def getThreadState_def)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Running or (=) Inactive or (=) Restart
-                                               or (=) IdleThreadState) t"
+  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' simple' t"
                in hoare_seq_ext[rotated])
-   apply (wpsimp wp: cancelIPC_simple'_not_awaiting_reply)
+   apply (wpsimp wp: cancelIPC_simple')
    apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip)
