@@ -349,6 +349,8 @@ The following two functions are specialisations of "getObject" and
 
 > reorderEp :: PPtr Endpoint -> PPtr TCB -> Kernel ()
 > reorderEp epPtr tptr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     ep <- getEndpoint epPtr
 >     qs <- getEpQueue ep
 >     qs' <- tcbEPDequeue tptr qs

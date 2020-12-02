@@ -239,6 +239,8 @@ The following functions are specialisations of the "getObject" and "setObject" f
 
 > reorderNtfn :: PPtr Notification -> PPtr TCB -> Kernel ()
 > reorderNtfn ntfnPtr tptr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     ntfn <- getNotification ntfnPtr
 >     qsOpt <- return $ getntfnQueue ntfn
 >     assert (qsOpt /= Nothing) "reorder_ntfn: the notification queue must not be Nothing"

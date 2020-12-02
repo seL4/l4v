@@ -386,8 +386,8 @@ definition
      ts \<leftarrow> get_thread_state tptr;
      if runnable ts then do
        d \<leftarrow> thread_get tcb_domain tptr;
-       prio \<leftarrow> thread_get tcb_priority tptr;
-       queue \<leftarrow> get_tcb_queue d prio;
+       p \<leftarrow> thread_get tcb_priority tptr;
+       queue \<leftarrow> get_tcb_queue d p;
        cur \<leftarrow> gets cur_thread;
        if tptr \<in> set queue \<or> tptr = cur then do
            tcb_sched_action tcb_sched_dequeue tptr;
