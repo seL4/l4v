@@ -515,11 +515,6 @@ The following function is used to alter the priority of a thread.
 >              rescheduleRequired
 >         else threadSetPriority tptr prio
 
-> threadSetPriority_onEp :: PPtr TCB -> Priority -> PPtr Endpoint -> Kernel ()
-> threadSetPriority_onEp tptr prio ep = do
->     threadSetPriority tptr prio
->     reorderEp ep tptr
-
 > setPriority :: PPtr TCB -> Priority -> Kernel ()
 > setPriority tptr prio = do
 >     ts <- getThreadState tptr

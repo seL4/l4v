@@ -490,12 +490,10 @@ lemma tcbSchedEnqueue_invs'[wp]:
      tcbSchedEnqueue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (rule hoare_pre)
-   apply (wp tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
-        | simp add: cteCaps_of_def o_def
-        | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
+  apply (wpsimp wp: tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift
+                    valid_irq_handlers_lift' cur_tcb_lift untyped_ranges_zero_lift
+              simp: cteCaps_of_def o_def)
+  apply (auto elim!: st_tcb_ex_cap'')
   done
 
 crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
