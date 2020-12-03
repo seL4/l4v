@@ -4440,21 +4440,42 @@ crunches doIPCTransfer
   for pred_tcb_at''[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
   (wp: setCTE_pred_tcb_at' getCTE_wp mapM_wp' simp: cte_wp_at'_def)
 
+lemma tcbEPFindIndex_wp:
+  "\<lbrace>\<lambda>s. (\<forall>i j. 0 \<le> i \<and> i \<le> Suc sz \<longrightarrow>
+               (\<forall>tcb tcba. ko_at' tcb tptr s \<and> ko_at' tcba (queue ! j) s \<longrightarrow>
+                           (Suc j = i \<longrightarrow> tcbPriority tcba \<ge> tcbPriority tcb) \<longrightarrow>
+                           (i < j \<and> j \<le> sz \<longrightarrow> tcbPriority tcba < tcbPriority tcb) \<longrightarrow> Q i s))\<rbrace>
+   tcbEPFindIndex tptr queue sz \<lbrace>Q\<rbrace>"
+  apply (induct sz; subst tcbEPFindIndex.simps)
+   apply (wpsimp wp: threadGet_wp)
+   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
+  apply (wpsimp wp: threadGet_wp | assumption)+
+  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
+  done
+
 crunch inv[wp]: tcbEPAppend P
 
-lemma tcbEPAppend_valid_ep':
-  "\<lbrace>\<lambda>s. valid_ep' (Structures_H.endpoint.SendEP q) s \<and> tcb_at' t s \<and> t \<notin> set q\<rbrace>
-   tcbEPAppend t q
-   \<lbrace>\<lambda>rv s. valid_ep' (Structures_H.endpoint.SendEP rv) s\<rbrace>"
+lemma tcbEPAppend_valid_SendEP:
+  "\<lbrace>valid_ep' (SendEP (t#q)) and K (t \<notin> set q)\<rbrace> tcbEPAppend t q \<lbrace>\<lambda>q'. valid_ep' (SendEP q')\<rbrace>"
   apply (simp only: tcbEPAppend_def)
-  apply wpsimp
-   apply (rule_tac Q="\<lambda>_ s. valid_ep' (SendEP q) s \<and> tcb_at' t s \<and> t \<notin> set q"
-                in hoare_strengthen_post[rotated])
-    apply (fastforce simp: valid_ep'_def
-                     dest: in_set_takeD in_set_dropD
-                    elim!: set_take_disj_set_drop_if_distinct)
-   apply (wpsimp simp: valid_ep'_def)+
+  apply (case_tac q; wpsimp wp: tcbEPFindIndex_wp)
+  apply (fastforce simp: valid_ep'_def set_take_disj_set_drop_if_distinct
+                   dest: in_set_takeD in_set_dropD)
   done
+
+lemma tcbEPAppend_valid_RecvEP:
+  "\<lbrace>valid_ep' (RecvEP (t#q)) and K (t \<notin> set q)\<rbrace> tcbEPAppend t q \<lbrace>\<lambda>q'. valid_ep' (RecvEP q')\<rbrace>"
+  apply (simp only: tcbEPAppend_def)
+  apply (case_tac q; wpsimp wp: tcbEPFindIndex_wp)
+  apply (fastforce simp: valid_ep'_def set_take_disj_set_drop_if_distinct
+                   dest: in_set_takeD in_set_dropD)
+  done
+
+lemma tcbEPAppend_valid_ep':
+  "\<lbrace>valid_ep' (updateEpQueue ep (t#q)) and K (ep \<noteq> IdleEP \<and> t \<notin> set q)\<rbrace>
+   tcbEPAppend t q
+   \<lbrace>\<lambda>q'. valid_ep' (updateEpQueue ep q')\<rbrace>"
+  by (cases ep) (wpsimp wp: tcbEPAppend_valid_SendEP tcbEPAppend_valid_RecvEP simp: updateEpQueue_def)+
 
 lemma si_invs'_helper:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not t s \<and> st_tcb_at' active' t s \<and> tcb_at' d s \<and>
@@ -4543,7 +4564,7 @@ lemma si_invs'[wp]:
    apply wpsimp
   \<comment> \<open>epa = SendEP\<close>
   apply (cases bl)
-   apply (wpsimp wp: tcbEPAppend_valid_ep' sts_sch_act' sts_valid_queues setThreadState_ct_not_inQ
+   apply (wpsimp wp: tcbEPAppend_valid_SendEP sts_sch_act' sts_valid_queues setThreadState_ct_not_inQ
                simp: invs'_def valid_state'_def valid_pspace'_def valid_ep'_def sym_refs_asrt_def)
    apply (erule valid_objsE'[where x=ep], fastforce simp: obj_at'_def projectKO_eq projectKO_ep)
    apply (drule_tac ko="SendEP xa" in sym_refs_ko_atD'[rotated])
