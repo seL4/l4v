@@ -1509,13 +1509,13 @@ lemma corres_assert_assume_l:
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_assert_assume_r:
-  "corres_underlying sr nf nf' dc P Q f (g ())
-  \<Longrightarrow> corres_underlying sr nf nf' dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
+  "corres_underlying sr nf nf' rrel P Q f (g ())
+  \<Longrightarrow> corres_underlying sr nf nf' rrel P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"
   by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_assert_opt_assume_l:
-  "corres_underlying sr nf nf' dc P Q (f (the X)) g
-  \<Longrightarrow> corres_underlying sr nf nf' dc (P and K (X \<noteq> None)) Q (assert_opt X >>= f) g"
+  "corres_underlying sr nf nf' rrel P Q (f (the X)) g
+  \<Longrightarrow> corres_underlying sr nf nf' rrel (P and K (X \<noteq> None)) Q (assert_opt X >>= f) g"
   by (force simp: corres_underlying_def assert_opt_def return_def bind_def fail_def)
 
 end

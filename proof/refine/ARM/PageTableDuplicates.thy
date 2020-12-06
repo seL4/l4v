@@ -2052,8 +2052,7 @@ crunches setPriority, setMCPriority
        wp: setObject_ksInterrupt updateObject_default_inv crunch_wps
      simp: crunch_simps)
 
-crunches installFaultHandler, installThreadBuffer, installVRoot, installCRoot,
-         installTimeoutHandler
+crunches installTCBCap, installThreadBuffer
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (wp:  crunch_wps checkCap_inv
    simp: crunch_simps getThreadVSpaceRoot_def getThreadFaultHandlerSlot_def

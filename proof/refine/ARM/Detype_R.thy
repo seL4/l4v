@@ -2288,10 +2288,10 @@ proof -
   apply (drule(1) src_in_range)+
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_bounded[unfolded word_bits_def,simplified])
   apply (drule base_member_set[OF pspace_alignedD'])
     apply simp
-   apply (simp add:objBitsKO_bounded2[unfolded word_bits_def,simplified])
+   apply (simp add: objBitsKO_bounded[unfolded word_bits_def,simplified])
   apply (clarsimp simp:field_simps)
   apply blast
   done

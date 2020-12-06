@@ -69,7 +69,7 @@ The following data type defines the set of possible TCB invocation operations. T
 >             tcSchedFaultHandler :: Maybe (Capability, PPtr CTE),
 >             tcSchedMCPriority :: Maybe (Priority, PPtr TCB),
 >             tcSchedPriority :: Maybe (Priority, PPtr TCB),
->             tcSchedSchedContext :: Maybe (PPtr SchedContext) }
+>             tcSchedSchedContext :: Maybe (Maybe (PPtr SchedContext)) }
 >         | NotificationControl {
 >             notificationTCB :: PPtr TCB,
 >             notificationPtr :: Maybe (PPtr Notification) }

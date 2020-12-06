@@ -2633,6 +2633,9 @@ lemma tcb_at_cte_at_3:
   "tcb_at tcb s \<Longrightarrow> cte_at (tcb, tcb_cnode_index 3) s"
   by (auto simp: obj_at_def cte_at_cases is_tcb)
 
+lemma tcb_at_cte_at_4:
+  "tcb_at tcb s \<Longrightarrow> cte_at (tcb, tcb_cnode_index 4) s"
+  by (auto simp: obj_at_def cte_at_cases is_tcb)
 
 context Ipc_AI begin
 crunch valid_irq_states[wp]: do_ipc_transfer "valid_irq_states :: 'state_ext state \<Rightarrow> bool"

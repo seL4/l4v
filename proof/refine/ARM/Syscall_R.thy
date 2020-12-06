@@ -403,6 +403,8 @@ lemma pinv_corres:
             and (\<lambda>s. schact_is_rct s)
             and current_time_bounded 1
             and ct_active
+            and ct_released
+            and ct_not_in_release_q
             and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call can_donate i) (performInvocation block call can_donate i')"
