@@ -232,8 +232,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillReady :: PPtr SchedContext -> Kernel Bool
 > refillReady scPtr = do
->     curTime <- getCurTime
 >     sc <- getSchedContext scPtr
+>     curTime <- getCurTime
 >     return $ rTime (refillHd sc) <= curTime + kernelWCETTicks
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()

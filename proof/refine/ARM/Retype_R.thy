@@ -56,12 +56,6 @@ lemma createObjects_ret:
                         shiftl_t2n power_add)
   done
 
-lemma objBitsKO_bounded2[simp]:
-  "objBitsKO ko < word_bits"
-  using scBits_max
-  by (simp add: objBits_simps' word_bits_def pageBits_def archObjSize_def pdeBits_def pteBits_def
-           split: Structures_H.kernel_object.split arch_kernel_object.split)
-
 declare select_singleton_is_return[simp]
 
 definition

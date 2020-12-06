@@ -286,7 +286,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         tcSchedFaultHandler = Just (fhCap, fhSlot),
 >         tcSchedMCPriority = Just (fromIntegral newMCP, authTCB),
 >         tcSchedPriority = Just (fromIntegral newPrio, authTCB),
->         tcSchedSchedContext = scPtr }
+>         tcSchedSchedContext = Just scPtr }
 > decodeSetSchedParams _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{The Set IPC Buffer Call}
@@ -416,50 +416,37 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         setTLSBaseNewBase = tls_base }
 > decodeSetTLSBase _ _ = throw TruncatedMessage
 
-> installTCBCap :: PPtr TCB -> Capability -> PPtr CTE -> Int -> Maybe (Capability, PPtr CTE) -> KernelP ()
-> installTCBCap _ _ _ _ Nothing = return ()
-> installTCBCap target tcap slot n (Just (newCap, srcSlot)) = do
-
-Using case instead of if-then-else will make the code compact, but we prefer the latter due to the current Haskell translator.
-
->     rootSlot <-
->         if n == 0
->             then withoutPreemption $ getThreadCSpaceRoot target
->             else if n == 1
->                  then withoutPreemption $ getThreadVSpaceRoot target
->                  else if n == 3
->                       then withoutPreemption $ getThreadFaultHandlerSlot target
->                       else if n == 4
->                            then withoutPreemption $ getThreadTimeoutHandlerSlot target
->                            else fail "installTCBCap: improper index"
->     cteDelete rootSlot True
->     unless (isNullCap newCap) $
->         withoutPreemption $ checkCapAt newCap srcSlot
->                           $ checkCapAt tcap slot
->                           $ assertDerived srcSlot newCap
->                           $ cteInsert newCap srcSlot rootSlot
-
-> installFaultHandler :: PPtr TCB -> PPtr CTE -> Maybe (Capability, PPtr CTE) -> KernelP ()
-> installFaultHandler target slot fh = installTCBCap target (ThreadCap target) slot 3 fh
-
-> installTimeoutHandler :: PPtr TCB -> PPtr CTE -> Maybe (Capability, PPtr CTE) -> KernelP ()
-> installTimeoutHandler target slot th = installTCBCap target (ThreadCap target) slot 4 th
-
-> installCRoot :: PPtr TCB -> PPtr CTE -> Maybe (Capability, PPtr CTE) -> KernelP ()
-> installCRoot target slot croot = installTCBCap target (ThreadCap target) slot 0 croot
-
-> installVRoot :: PPtr TCB -> PPtr CTE -> Maybe (Capability, PPtr CTE) -> KernelP ()
-> installVRoot target slot vroot = installTCBCap target (ThreadCap target) slot 1 vroot
+> installTCBCap :: PPtr TCB -> PPtr CTE -> Int -> Maybe (Capability, PPtr CTE) -> KernelP ()
+> installTCBCap target slot n slot_opt =
+>     maybe (return ()) (\(newCap, srcSlot) -> do
+>         let tCap = ThreadCap { capTCBPtr = target }
+>         rootSlot <-
+>             if n == 0
+>                 then withoutPreemption $ getThreadCSpaceRoot target
+>                 else if n == 1
+>                      then withoutPreemption $ getThreadVSpaceRoot target
+>                      else if n == 3
+>                           then withoutPreemption $ getThreadFaultHandlerSlot target
+>                           else if n == 4
+>                                then withoutPreemption $ getThreadTimeoutHandlerSlot target
+>                                else fail "installTCBCap: improper index"
+>         cteDelete rootSlot True
+>         unless (isNullCap newCap) $
+>             withoutPreemption $ checkCapAt newCap srcSlot
+>                               $ checkCapAt tCap slot
+>                               $ assertDerived srcSlot newCap
+>                               $ cteInsert newCap srcSlot rootSlot)
+>       slot_opt
 
 > installThreadBuffer :: PPtr TCB -> PPtr CTE -> Maybe (VPtr, Maybe (Capability, PPtr CTE)) -> KernelP ()
 > installThreadBuffer target slot tb
 >   = maybe (return ())
 >       (\(ptr, frame) -> do
+>           let tCap = ThreadCap { capTCBPtr = target }
 >           bufferSlot <- withoutPreemption $ getThreadBufferSlot target
 >           cteDelete bufferSlot True
 >           withoutPreemption $ do
 >               threadSet (\t -> t {tcbIPCBuffer = ptr}) target
->               let tCap = ThreadCap { capTCBPtr = target }
 >               maybe (return ())
 >                   (\(newCap, srcSlot) ->
 >                       checkCapAt newCap srcSlot
@@ -496,16 +483,16 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 
 > invokeTCB (ThreadControlCaps target slot faultHandler timeoutHandler cRoot vRoot buffer)
 >   = do
->         installFaultHandler target slot faultHandler
->         installTimeoutHandler target slot timeoutHandler
->         installCRoot target slot cRoot
->         installVRoot target slot vRoot
+>         installTCBCap target slot 3 faultHandler
+>         installTCBCap target slot 4 timeoutHandler
+>         installTCBCap target slot 0 cRoot
+>         installTCBCap target slot 1 vRoot
 >         installThreadBuffer target slot buffer
 >         return []
 
-> invokeTCB (ThreadControlSched target slot faultHandler priority mcPriority sc)
+> invokeTCB (ThreadControlSched target slot faultHandler mcPriority priority sc)
 >   = do
->         installFaultHandler target slot faultHandler
+>         installTCBCap target slot 3 faultHandler
 >         withoutPreemption $ do
 >             let mcPriority' = mapMaybe fst mcPriority
 >             maybe (return ()) (setMCPriority target) mcPriority'
@@ -513,10 +500,12 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 >             maybe (return ()) (setPriority target) priority'
 >             targetScOpt <- mapTCBPtr target tcbSchedContext
 >             case sc of
->                 Just scPtr -> when (sc /= targetScOpt) $ schedContextBindTCB scPtr target
->                 Nothing -> case targetScOpt of
->                     Just targetSc -> schedContextUnbindTCB targetSc
->                     Nothing -> return ()
+>                 Nothing -> return ()
+>                 Just Nothing -> case targetScOpt of
+>                                     Nothing -> return ()
+>                                     Just targetSc -> schedContextUnbindTCB targetSc
+>                 Just (Just scPtr) ->
+>                     when (sc /= Just targetScOpt) $ schedContextBindTCB scPtr target
 >         return []
 
 \subsubsection{Register State}

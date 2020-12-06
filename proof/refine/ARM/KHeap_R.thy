@@ -134,6 +134,31 @@ lemma no_fail_getObject_tcb [wp]:
   apply (fastforce split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
+lemma lookupAround2_same1[simp]:
+  "(fst (lookupAround2 x s) = Some (x, y)) = (s x = Some y)"
+  apply (rule iffI)
+   apply (simp add: lookupAround2_char1)
+  apply (simp add: lookupAround2_known1)
+  done
+
+lemma objBitsKO_bounded[simp]:
+  "objBitsKO ko < word_bits"
+  using scBits_max
+  by (simp add: objBits_simps' word_bits_def pageBits_def archObjSize_def pdeBits_def pteBits_def
+           split: Structures_H.kernel_object.split arch_kernel_object.split)
+
+lemma no_fail_getObject_sc[wp]:
+  "no_fail (sc_at' t) (getObject t :: sched_context kernel)"
+  apply (simp add: getObject_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp: obj_at'_def projectKOs cong: conj_cong)
+  apply (rule ps_clear_lookupAround2, simp+)
+   apply (simp add: p_assoc_help)
+   apply (erule is_aligned_no_wrap'[OF _ word32_power_less_1[OF objBitsKO_bounded]])
+  apply (clarsimp simp: objBits_simps' simp del: lookupAround2_same1 split: option.splits)
+  done
+
 lemma typ_at_to_obj_at':
   "typ_at' (koType (TYPE ('a :: pspace_storable))) p s
      = obj_at' (\<top> :: 'a \<Rightarrow> bool) p s"
@@ -159,7 +184,7 @@ lemma corres_get_tcb [corres]:
   apply (clarsimp simp add: obj_at_def is_tcb obj_at'_def projectKO_def
                             projectKO_opt_tcb split_def
                             getObject_def loadObject_default_def in_monad)
-  apply (case_tac koa)
+  apply (case_tac obj)
    apply (simp_all add: fail_def return_def)
   apply (case_tac bb)
    apply (simp_all add: fail_def return_def)
@@ -169,13 +194,6 @@ lemma corres_get_tcb [corres]:
    apply blast
   apply (clarsimp simp add: other_obj_relation_def
                             lookupAround2_known1)
-  done
-
-lemma lookupAround2_same1[simp]:
-  "(fst (lookupAround2 x s) = Some (x, y)) = (s x = Some y)"
-  apply (rule iffI)
-   apply (simp add: lookupAround2_char1)
-  apply (simp add: lookupAround2_known1)
   done
 
 lemma getObject_tcb_at':
