@@ -441,7 +441,8 @@ where
 definition
   invalidateCacheRange_I :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where
-  "invalidateCacheRange_I vstart vend pstart \<equiv> cacheRangeOp invalidateByVA_I vstart vend pstart"
+  "invalidateCacheRange_I vstart vend pstart \<equiv> invalidate_I_PoU"
+  (* for other than A53 and A35: "cacheRangeOp invalidateByVA_I vstart vend pstart" *)
 
 definition
   branchFlushRange :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"

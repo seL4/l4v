@@ -724,21 +724,9 @@ lemma invalidateCacheRange_I_ccorres:
            (Call invalidateCacheRange_I_'proc)"
   apply (rule ccorres_gen_asm[where G=\<top>, simplified])
   apply (cinit' lift: start_' end_' pstart_')
-   apply (clarsimp simp: word_sle_def whileAnno_def)
-   apply (simp add: invalidateCacheRange_I_def)
-   apply csymbr
-   apply (rule cacheRangeOp_ccorres[simplified dc_def])
-     apply (rule empty_fail_invalidateByVA_I)
-    apply clarsimp
-    apply (cinitlift index_')
-    apply (rule ccorres_guard_imp2)
-     apply csymbr
-     apply (ctac add: invalidateByVA_I_ccorres[unfolded dc_def])
-    apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
-                          mask_out_sub_mask)
-    apply (drule_tac s="w1 && mask 6" in sym, simp add: cache_range_lineIndex_helper)
-   apply (vcg exspec=invalidateByVA_I_modifies)
-  apply clarsimp
+   apply (unfold invalidateCacheRange_I_def)
+   apply (ctac add: invalidate_I_PoU_ccorres)
+  apply simp
   done
 
 lemma branchFlushRange_ccorres:
