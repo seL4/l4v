@@ -2791,10 +2791,6 @@ crunches complete_signal, do_nbrecv_failed_transfer, reply_push, receive_signal
 crunches get_endpoint
   for inv[wp]: "P"
 
-lemma sort_queue_inv:
-  "\<lbrace> P \<rbrace> sort_queue ls \<lbrace> \<lambda>rv. P \<rbrace>"
-  by (wpsimp simp: sort_queue_def wp: mapM_wp) auto
-
 context Ipc_AI begin
 
 lemma hoare_drop_imp_under_All:
@@ -2805,8 +2801,7 @@ lemma receive_ipc_cap_to[wp]:
   "receive_ipc thread cap is_blocking reply_cap \<lbrace>ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   supply if_cong[cong]
   by (wpsimp simp: receive_ipc_def
-               wp: hoare_drop_imps sort_queue_inv fail_wp cancel_ipc_cap_to
-                   hoare_drop_imp_under_All)
+               wp: hoare_drop_imps fail_wp cancel_ipc_cap_to hoare_drop_imp_under_All)
 
 end
 
@@ -2881,9 +2876,6 @@ lemma maybe_donate_sc_pred_tcb_at:
   apply wpsimp
   done
 
-lemmas sort_queue_pred_tcb_at =
-  sort_queue_inv[where P="pred_tcb_at proj P t" and ls=q for proj P t q]
-
 lemma rai_pred_tcb_neq:
   "\<lbrace>pred_tcb_at proj P t' and K (t \<noteq> t')\<rbrace> receive_signal t cap is_blocking
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
@@ -2895,8 +2887,7 @@ lemma rai_pred_tcb_neq:
      apply (wpsimp wp: schedule_tcb_pred_tcb_at maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq)
     apply (wpsimp simp: do_nbrecv_failed_transfer_def)
    apply (case_tac is_blocking; simp)
-    apply (wpsimp wp: schedule_tcb_pred_tcb_at maybe_return_sc_pred_tcb_at sort_queue_pred_tcb_at
-                      sts_st_tcb_at_neq)
+    apply (wpsimp wp: schedule_tcb_pred_tcb_at maybe_return_sc_pred_tcb_at sts_st_tcb_at_neq)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def)
   apply (wpsimp wp: maybe_donate_sc_pred_tcb_at)
   done

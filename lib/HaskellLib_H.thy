@@ -539,14 +539,6 @@ syntax (input)
 
 lemma "[(x,1) . x \<leftarrow> [0..10]] = [(x,1) | x \<leftarrow> [0..10]]" by (rule refl)
 
-primrec findIndex' :: "nat \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
-  "findIndex' _ _ [] = None"
-| "findIndex' n P (x#xs) = (if P x then Some n else findIndex' (Suc n) P xs)"
-
-definition
-  findIndex :: "('a \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> nat option" where
-  "findIndex = findIndex' 0"
-
 definition
   whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whileM C B \<equiv> do
