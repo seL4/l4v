@@ -150,7 +150,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt }) thread
 >                     when (replyOpt /= Nothing) $
->                         updateReply (fromJust replyOpt)) (\reply -> reply { replyTCB = Just thread })
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
 >                     setEndpoint epptr $ RecvEP [thread]
 >                 False -> doNBRecvFailedTransfer thread
 >               RecvEP queue -> case isBlocking of
@@ -160,7 +160,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt}) thread
 >                     when (replyOpt /= Nothing) $
->                         updateReply (fromJust replyOpt)) (\reply -> reply { replyTCB = Just thread })
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
 >                     qs' <- tcbEPAppend thread queue
 >                     setEndpoint epptr $ RecvEP $ qs'
 >                 False -> doNBRecvFailedTransfer thread
