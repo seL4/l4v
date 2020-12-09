@@ -2654,9 +2654,12 @@ lemma send_signal_corres:
   apply (simp add: invs'_def valid_state'_def valid_ntfn'_def)
   done *)
 
-lemma valid_Running'[simp]:
+lemma valid_simple'[simp]:
   "valid_tcb_state' Running = \<top>"
-  by (rule ext, simp add: valid_tcb_state'_def)
+  "valid_tcb_state' Inactive = \<top>"
+  "valid_tcb_state' Restart = \<top>"
+  "valid_tcb_state' IdleThreadState = \<top>"
+  by (rule ext, simp add: valid_tcb_state'_def)+
 
 lemma possibleSwitchTo_ksQ':
   "\<lbrace>(\<lambda>s. t' \<notin> set (ksReadyQueues s p) \<and> sch_act_not t' s) and K(t' \<noteq> t)\<rbrace>
@@ -4310,8 +4313,9 @@ lemma si_invs'_helper:
               | (Some aa, False, b) \<Rightarrow> setThreadState Structures_H.thread_state.Inactive t
   \<lbrace>\<lambda>b s. invs' s \<and> tcb_at' d s \<and> ex_nonz_cap_to' d s\<rbrace>"
   apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs' sts_invs_minor')
-  apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s \<and> t \<noteq> ksIdleThread s")
-   apply (auto simp: invs'_def valid_state'_def pred_tcb_at'_def obj_at'_def dest: global'_no_ex_cap)
+  apply (subgoal_tac "t \<noteq> ksIdleThread s")
+   apply (auto simp: invs'_def valid_state'_def pred_tcb_at'_def obj_at'_def valid_tcb_state'_def
+               dest: global'_no_ex_cap)
   done
 
 lemma si_invs'[wp]:

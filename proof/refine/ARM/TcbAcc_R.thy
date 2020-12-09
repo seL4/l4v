@@ -5241,11 +5241,11 @@ lemma valid_tcb_state'_same_tcb_st_refs_of':
   by (metis pair_inject reftype.distinct prod.inject)
 
 lemma sts_invs_minor':
-  "\<lbrace>st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st
-                   \<and> (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
+  "\<lbrace>st_tcb_at' (\<lambda>st'. (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
                       st' \<noteq> Inactive \<and> \<not> idle' st')) t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and sch_act_not t
+      and valid_tcb_state' st
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -5254,8 +5254,6 @@ lemma sts_invs_minor':
               simp: cteCaps_of_def o_def)
   apply (intro conjI impI)
     apply clarsimp
-   apply (frule tcb_in_valid_state', clarsimp+)
-   apply (erule (1) valid_tcb_state'_same_tcb_st_refs_of')
   apply (erule if_live_then_nonz_capE')
   apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done

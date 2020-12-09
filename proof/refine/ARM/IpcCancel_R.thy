@@ -1911,7 +1911,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) t"
                in hoare_seq_ext[rotated])
    apply (wpsimp wp: sts_invs_minor' sts_st_tcb_at'_cases)
-   apply (fastforce simp: st_tcb_at'_def obj_at'_def)
+   apply (fastforce simp: valid_tcb_state'_def)
   apply (wpsimp wp: tcbReleaseRemove_invs' schedContextCancelYieldTo_invs')
   done
 
