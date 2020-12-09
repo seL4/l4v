@@ -8,7 +8,7 @@ This module specifies the behavior of reply objects.
 
 > module SEL4.Object.Reply (
 >         replyRemove, replyPush, replyUnlink, getReply, setReply, getReplyTCB,
->         replyRemoveTCB, setReplyTCB, updateReply
+>         replyRemoveTCB, updateReply
 >     ) where
 
 \begin{impdetails}
@@ -55,7 +55,7 @@ This module specifies the behavior of reply objects.
 >     tsCallee <- getThreadState calleePtr
 >     assert (replyObject tsCallee == Nothing) "tcb callee should not be in a existing call stack"
 
->     setReplyTCB (Just callerPtr) replyPtr
+>     updateReply replyPtr (\reply -> reply { replyTCB = Just callerPtr })
 >     setThreadState (BlockedOnReply (Just replyPtr)) callerPtr
 
 >     when (scPtrOptDonated /= Nothing && canDonate) $ do
@@ -168,7 +168,7 @@ This module specifies the behavior of reply objects.
 >     state <- getThreadState tcbPtr
 >     stateAssert (replyUnlink_assertion replyPtr state)
 >             "Relation between the thread state of the replyTCB and replyPtr"
->     setReplyTCB Nothing replyPtr
+>     updateReply replyPtr (\reply -> reply { replyTCB = Nothing })
 >     setThreadState Inactive tcbPtr
 
 In "replyUnlink" above, as in the abstract specification,  we make an assertion
@@ -190,6 +190,3 @@ on the thread state of the replyTCB of the replyPtr
 
 > getReplyTCB :: PPtr Reply -> Kernel (Maybe (PPtr TCB))
 > getReplyTCB r = liftM replyTCB (getReply r)
-
-> setReplyTCB :: Maybe (PPtr TCB) -> PPtr Reply -> Kernel ()
-> setReplyTCB tptrOpt rptr = updateReply rptr (\reply -> reply { replyTCB = tptrOpt })
