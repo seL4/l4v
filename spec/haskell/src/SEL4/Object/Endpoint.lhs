@@ -21,7 +21,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 > import SEL4.API.Types
 > import SEL4.Machine
 > import SEL4.Model
-> import SEL4.Object.Reply(getReplyTCB, replyPush, replyRemove, replyUnlink, replyRemoveTCB, setReplyTCB)
+> import SEL4.Object.Reply(updateReply, getReply, replyPush, replyRemove, replyUnlink, replyRemoveTCB)
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import SEL4.Object.Instances()
@@ -129,7 +129,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             NullCap -> return Nothing
 >             _ -> fail "receiveIPC: replyCap must be ReplyCap or NullCap")
 >         when (replyOpt /= Nothing) $ do
->             tptrOpt <- getReplyTCB $ fromJust replyOpt
+>             tptrOpt <- liftM replyTCB (getReply (fromJust replyOpt))
 >             when (tptrOpt /= Nothing && tptrOpt /= Just thread) $ do
 >                 cancelIPC $ fromJust tptrOpt
 >         let recvCanGrant = capEPCanGrant cap
@@ -150,7 +150,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt }) thread
 >                     when (replyOpt /= Nothing) $
->                         setReplyTCB (Just thread) $ fromJust replyOpt
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
 >                     setEndpoint epptr $ RecvEP [thread]
 >                 False -> doNBRecvFailedTransfer thread
 >               RecvEP queue -> case isBlocking of
@@ -160,7 +160,7 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                         blockingIPCCanGrant = recvCanGrant,
 >                         replyObject = replyOpt}) thread
 >                     when (replyOpt /= Nothing) $
->                         setReplyTCB (Just thread) $ fromJust replyOpt
+>                         updateReply (fromJust replyOpt) (\reply -> reply { replyTCB = Just thread })
 >                     qs' <- tcbEPAppend thread queue
 >                     setEndpoint epptr $ RecvEP $ qs'
 >                 False -> doNBRecvFailedTransfer thread

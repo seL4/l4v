@@ -190,7 +190,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 
 > doReplyTransfer :: PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > doReplyTransfer sender reply grant = do
->     receiverOpt <- getReplyTCB reply
+>     receiverOpt <- liftM replyTCB (getReply reply)
 >     case receiverOpt of
 >         Nothing -> return ()
 >         Just receiver -> do
