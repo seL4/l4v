@@ -272,7 +272,7 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (simp add: send_signal_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
-  apply (wp gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
+  apply (wp gts_wp hoare_vcg_all_lift thread_get_wp hoare_drop_imps | wpc | simp)+
   done
 
 

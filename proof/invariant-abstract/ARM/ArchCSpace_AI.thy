@@ -558,6 +558,7 @@ lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
 crunches arch_post_cap_deletion
   for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and sc_at_pred_n[wp]: "\<lambda>s. Q (sc_at_pred_n N proj P p s)"
   and valid_objs[wp]: valid_objs
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"

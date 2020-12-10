@@ -441,32 +441,59 @@ locale Systemcall_AI_Pre2 = Systemcall_AI_Pre itcb_state state_ext_t +
   for state_ext_t :: "'state_ext::state_ext itself"
 begin
 
-lemma do_reply_invs[wp]:
+crunches reply_remove
+  for fault_tcb_at[wp]: "fault_tcb_at P t"
+  (wp: crunch_wps)
+
+(* FIXME RT Michael: remove once awaken PR has been merged *)
+lemmas hoare_vcg_conj_lift_pre_fix
+  = hoare_vcg_conj_lift[where P=R and P'=R for R, simplified]
+
+lemma thread_set_tcb_fault_update_ex_nonz_cap_to[wp]:
+  "thread_set (tcb_fault_update u) t \<lbrace>ex_nonz_cap_to a\<rbrace>"
+  by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def) auto
+
+lemma do_reply_transfer_invs[wp]:
   "\<lbrace>tcb_at t and reply_at r and invs\<rbrace>
    do_reply_transfer t r g
-   \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
+   \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  apply (wpsimp wp: handle_timeout_Timeout_invs hoare_vcg_all_lift hoare_drop_imps
-                    refill_unblock_check_invs get_tcb_obj_ref_wp)
-           apply (wpsimp wp: gts_wp)
-          apply (rule_tac Q = "\<lambda>_ s. invs s" in hoare_strengthen_post[rotated])
-           apply (clarsimp simp: pred_tcb_at_def obj_at_def runnable_eq)
-          apply (wpsimp wp: sts_invs_minor2)+
-              apply (intro conjI impI)
-               apply (wpsimp wp: thread_set_cap_to
-                                 thread_set_no_change_tcb_state
-                                 thread_set_pred_tcb_at_sets_true gts_wp
-                                 get_simple_ko_wp thread_get_fault_wp
-                                 hoare_vcg_all_lift
-                           simp: ran_tcb_cap_cases)+
-        apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
-        apply (wpsimp wp: hoare_drop_imps reply_remove_invs)
-       apply (clarsimp cong: conj_cong)
-       apply (wpsimp wp: gts_wp get_simple_ko_wp)+
-  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def is_tcb is_reply)
-  apply (frule invs_valid_idle)
-  apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def live_def
-                 intro!: if_live_then_nonz_cap_invs)
+  apply (rule hoare_seq_ext[OF _ grt_sp], rename_tac recv_opt)
+  apply (clarsimp simp: maybeM_def)
+  apply (case_tac recv_opt; clarsimp?, (solves wpsimp)?)
+  apply (rename_tac receiver)
+  apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac state)
+  apply (case_tac state; clarsimp?, (solves wpsimp)?)
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule_tac B="\<lambda>_. tcb_at t and invs and st_tcb_at ((=) Inactive) receiver
+                         and ex_nonz_cap_to receiver"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: reply_remove_invs reply_remove_ex_nonz_cap_to)
+   apply (fastforce intro!: if_live_then_nonz_cap_invs st_tcb_ex_cap)
+  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ thread_get_sp], rename_tac fault\<close>
+                       \<open>rule hoare_seq_ext[OF _ gsc_sp]
+                        | rule hoare_seq_ext_skip, solves wpsimp, clarsimp?\<close>)
+  apply (rule_tac B="\<lambda>_. invs" in hoare_seq_ext[rotated])
+   apply (case_tac fault; clarsimp?)
+    apply (wpsimp wp: sts_invs_minor2)
+    apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb
+                     dest: invs_valid_idle)
+   apply (rule_tac B="\<lambda>_. st_tcb_at ((=) Inactive) receiver and invs and ex_nonz_cap_to receiver"
+                in hoare_seq_ext[rotated])
+    apply wpsimp
+   apply (rule hoare_seq_ext_skip, solves wpsimp)+
+   apply (rule_tac B="\<lambda>_. st_tcb_at ((=) Inactive) receiver and invs and ex_nonz_cap_to receiver
+                          and (fault_tcb_at ((=) None) receiver)"
+                in hoare_seq_ext[rotated])
+    apply (clarsimp simp: pred_conj_def)
+    apply (intro hoare_vcg_conj_lift_pre_fix; ((solves wpsimp) | wp thread_set_wp))
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+   apply (wpsimp wp: sts_invs_minor2)
+   apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def
+                    dest: invs_valid_idle)
+  apply (wpsimp wp: handle_timeout_Timeout_invs get_tcb_obj_ref_wp gts_wp)
+  apply (fastforce intro: st_tcb_weakenE simp: runnable_eq_active)
   done
 
 lemma pinv_invs[wp]:
@@ -1469,15 +1496,12 @@ lemma do_reply_transfer_ct_active[wp]:
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: set_thread_state_ct_st hoare_vcg_all_lift hoare_drop_imps
-                    get_tcb_obj_ref_wp gts_wp | rule conjI)+
+                    get_tcb_obj_ref_wp gts_wp
+         | rule conjI)+
               apply (wpsimp wp: thread_set_ct_in_state hoare_vcg_all_lift gts_wp
-                                get_simple_ko_wp)+
+                                get_simple_ko_wp | wp hoare_drop_imps)+
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
-
-crunches reply_unlink_tcb, do_ipc_transfer
-  for fault_tcb_at[wp]: "fault_tcb_at P t :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps set_thread_state_pred_tcb_at)
 
 lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
   "\<lbrace>ct_active and fault_tcb_at ((=) None) t\<rbrace>
@@ -1626,10 +1650,10 @@ end
 context notes if_cong[cong] begin
 
 lemma complete_signal_state_refs_of:
-  "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> complete_signal ntfnc t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<rbrace> complete_signal ntfnc t \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s) \<rbrace>"
   unfolding complete_signal_def
   apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp | wpc | simp)+
+   apply (wp get_simple_ko_wp maybe_donate_sc_sym_refs hoare_drop_imps | wpc | simp)+
   apply clarsimp
   apply (subgoal_tac " get_refs NTFNBound (ntfn_bound_tcb ntfn) \<union>
                        get_refs NTFNSchedContext (ntfn_sc ntfn) = state_refs_of s ntfnc")

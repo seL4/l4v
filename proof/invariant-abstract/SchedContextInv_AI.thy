@@ -1384,7 +1384,7 @@ text \<open>invocation related lemmas\<close>
 lemma sched_context_bind_tcb_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
       sched_context_bind_tcb sc tcb \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp simp: sched_context_bind_tcb_def)
+  by (wpsimp simp: sched_context_bind_tcb_def wp: hoare_drop_imps)
 
 lemma sched_context_yield_to_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>

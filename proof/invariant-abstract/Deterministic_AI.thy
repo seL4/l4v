@@ -3960,7 +3960,7 @@ crunches
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
   for valid_list[wp]: valid_list
-  (wp: mapM_x_wp' hoare_drop_imp)
+  (wp: mapM_x_wp' hoare_drop_imp hoare_vcg_if_lift2)
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
@@ -4156,27 +4156,11 @@ crunches cap_delete_one, restart
   (wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv simp: crunch_simps)
 
 context notes if_cong[cong] begin
-
-crunch valid_list[wp]: update_time_stamp "valid_list"
-  (wp: get_object_wp)
-
-crunch valid_list[wp]: reply_from_kernel "valid_list"
-  (wp: get_object_wp)
-
-crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
-  (wp: get_object_wp hoare_drop_imp maybeM_inv)
-
-crunch valid_list[wp]: sched_context_bind_ntfn valid_list
-crunch valid_list[wp]: sched_context_yield_to valid_list
-  (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
-crunch valid_list[wp]: invoke_sched_context valid_list
-
-crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
-
-
-crunch valid_list[wp]: commit_time valid_list
+crunches update_time_stamp, reply_from_kernel, sched_context_resume, suspend,
+         sched_context_bind_ntfn, sched_context_yield_to, invoke_sched_context,
+         refill_update, refill_new, commit_time, maybe_donate_sc
+  for valid_list[wp]: valid_list
   (wp: crunch_wps)
-
 end
 
 context Deterministic_AI_1 begin
@@ -4192,8 +4176,6 @@ lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_object
   done
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
-
-crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +
   assumes arch_invoke_irq_handler_valid_list[wp]:

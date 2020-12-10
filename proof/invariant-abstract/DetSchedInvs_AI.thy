@@ -1225,8 +1225,10 @@ lemma sym_refs_inv_sc_tcbs[simp, elim!]:
   by (simp add: heap_refs_inv_def)
 
 (* FIXME RT: generate these with a locale *)
-lemmas invs_retract_tcb_scps = sym_refs_retract_tcb_scps[OF invs_sym_refs]
-lemmas invs_retract_sc_tcbs = sym_refs_retract_sc_tcbs[OF invs_sym_refs]
+lemmas invs_retract_tcb_scps[simp, elim!] = sym_refs_retract_tcb_scps[OF invs_sym_refs]
+lemmas invs_retract_sc_tcbs[simp, elim!] = sym_refs_retract_sc_tcbs[OF invs_sym_refs]
+lemmas invs_heap_refs_inv_tcb_scps[simp, elim!] = sym_refs_inv_tcb_scps[OF invs_sym_refs]
+lemmas invs_heap_refs_inv_sc_tcbs[simp, elim!] = sym_refs_inv_sc_tcbs[OF invs_sym_refs]
 lemmas sym_refs_inj_tcb_scps = sym_refs_retract_tcb_scps[THEN heap_refs_retract_heap_ref_inj]
 lemmas sym_refs_inj_sc_tcbs = sym_refs_retract_sc_tcbs[THEN heap_refs_retract_heap_ref_inj]
 lemmas invs_inj_tcb_scps = sym_refs_inj_tcb_scps[OF invs_sym_refs]
@@ -1580,6 +1582,13 @@ lemma released_sc_tcb_at_lift:
 
 abbreviation released_sc_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "released_sc_at scptr s \<equiv> pred_map (released_sc (cur_time s)) (sc_refill_cfgs_of s) scptr"
+
+lemma released_sc_at_conj:
+  "released_sc_at sc_ptr s \<longleftrightarrow> is_active_sc sc_ptr s
+                               \<and> is_refill_ready sc_ptr s
+                               \<and> is_refill_sufficient 0 sc_ptr s"
+  apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  done
 
 lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
   assumes "\<And>sc. P sc = P' (sc_refill_cfg_of sc)"
@@ -3276,15 +3285,34 @@ abbreviation sc_with_tcb_prop ::
   where
   "sc_with_tcb_prop scp P s \<equiv> \<forall>t. heap_ref_eq scp t (tcb_scps_of s) \<longrightarrow> P t s"
 
-abbreviation sc_not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+definition sc_not_in_release_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "sc_not_in_release_q scp s \<equiv> sc_with_tcb_prop scp not_in_release_q s"
+
+lemma sc_not_in_release_q_tcb_ptr_not_in_release_q:
+  "\<lbrakk>not_in_release_q tcb_ptr s; heap_ref_eq sc_ptr tcb_ptr (tcb_scps_of s);
+    heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrakk>
+    \<Longrightarrow> sc_not_in_release_q sc_ptr s"
+  apply (clarsimp simp: in_release_q_def heap_refs_retract_def heap_refs_retract_at_def
+                        vs_all_heap_simps sc_not_in_release_q_def)
+  apply (metis kernel_object.simps(5) option.inject)
+  done
+
+lemma sc_not_in_release_q_sc_tcbs_of_None:
+  "\<lbrakk>valid_release_q s; pred_map_eq None (sc_tcbs_of s) sc;
+    heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrakk>
+    \<Longrightarrow> sc_not_in_release_q sc s"
+  apply (clarsimp simp: sc_not_in_release_q_def valid_release_q_def in_release_q_def)
+  apply (fastforce simp: vs_all_heap_simps heap_refs_inv_def heap_refs_retract_def
+                         heap_refs_retract_at_def)
+  done
 
 abbreviation release_q_not_linked :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "release_q_not_linked scp s \<equiv> \<forall>t\<in>set (release_queue s). pred_map (\<lambda>p. p \<noteq> Some scp) (tcb_scps_of s) t"
 
 lemma sc_not_in_release_q_imp_not_linked:
   "\<lbrakk>valid_release_q s; sc_not_in_release_q scp s\<rbrakk> \<Longrightarrow> release_q_not_linked scp s"
-  by (fastforce simp:  not_in_release_q_def valid_release_q_def vs_all_heap_simps)
+  by (fastforce simp: not_in_release_q_def valid_release_q_def vs_all_heap_simps
+                      sc_not_in_release_q_def)
 
 abbreviation sc_not_in_ready_q :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "sc_not_in_ready_q scp s \<equiv> sc_with_tcb_prop scp not_queued s"

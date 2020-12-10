@@ -63,7 +63,7 @@ crunch valid_list[wp]: do_reply_transfer valid_list
   wp: maybeM_inv get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp hoare_drop_imps)
 
 lemma send_signal_valid_list[wp]: "\<lbrace>valid_list\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  by (wpsimp simp: send_signal_def wp: get_simple_ko_wp)
+  by (wpsimp simp: send_signal_def wp: get_simple_ko_wp hoare_drop_imps)
 
 crunch valid_list[wp]: arch_perform_invocation, perform_invocation valid_list
   (wp: hoare_drop_imp)

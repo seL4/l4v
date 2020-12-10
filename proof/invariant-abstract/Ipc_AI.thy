@@ -2163,8 +2163,8 @@ lemma maybe_donate_sc_valid_idle[wp]:
    apply (rule hoare_seq_ext[OF _ gsc_ntfn_sp])
    apply (wpsimp simp: get_sc_obj_ref_def get_sched_context_def get_object_def sc_tcb_sc_at_def
                        obj_at_def
-                   wp: maybeM_wp)
-  apply wpsimp
+                   wp: maybeM_wp
+          | wp hoare_drop_imps)+
   done
 
 lemma maybe_donate_sc_valid_objs[wp]:
@@ -2287,14 +2287,12 @@ lemma maybe_donate_sc_sym_refs:
     apply (clarsimp simp: sched_context_donate_def bind_assoc)
     apply (rule hoare_seq_ext[OF _ gsct_sp])
     apply (case_tac x)
-     apply wpsimp
+     apply (wpsimp wp: hoare_drop_imps)
      apply (fastforce simp: state_refs_of_def obj_at_def get_refs_def2 pred_tcb_at_def
                             sc_tcb_sc_at_def
                      elim!: delta_sym_refs
                      split: if_splits)
-    apply (wpsimp simp: sc_tcb_sc_at_def obj_at_def)
-   apply wpsimp
-  apply wpsimp
+    apply (wpsimp simp: sc_tcb_sc_at_def obj_at_def wp: hoare_drop_imps)+
   done
 
 crunches maybe_donate_sc
@@ -2341,7 +2339,8 @@ lemma update_waiting_invs:
   apply wpsimp
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                     wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states)
-   apply (wpsimp wp: valid_ioports_lift)
+      apply wpsimp
+     apply (wpsimp wp: valid_ioports_lift)+
   apply (simp add: invs_def valid_state_def valid_pspace_def obj_at_def)
   apply (clarsimp simp: not_idle_tcb_in_waitingntfn ex_nonz_cap_to_tcb_in_waitingntfn cong: conj_cong)
   apply (cases q; simp)
@@ -2486,7 +2485,9 @@ lemma sai_invs[wp]:
     apply (case_tac "receive_blocked st"; simp)
      apply (clarsimp simp: receive_blocked_def)
      apply (case_tac st; simp)
-     apply (wpsimp wp: sts_invs_minor2)
+     apply (wpsimp wp: sts_invs_minor2 is_schedulable_wp hoare_drop_imps hoare_vcg_all_lift
+            | intro conjI
+            | clarsimp cong: conj_cong)+
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_strengthen_post[OF cancel_ipc_simpler])
        apply (clarsimp simp: st_tcb_at_def obj_at_def)
@@ -2681,23 +2682,32 @@ locale Ipc_AI_cont = Ipc_AI state_ext_t
     do_ipc_transfer t ep bg grt r
     \<lbrace>\<lambda>_ s::'state_ext state. P (state_hyp_refs_of s)\<rbrace>"
 
+(* FIXME RT: move to Lib *)
+\<comment> \<open>For forward reasoning in Hoare proofs, these lemmas allow skipping over the
+    left-hand-side of monadic bind, while keeping the same precondition.\<close>
+lemmas hoare_seq_ext_skip
+  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
 
 lemma complete_signal_invs:
-  "\<lbrace>invs and tcb_at tcb\<rbrace> complete_signal ntfnptr tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and tcb_at tcb and ex_nonz_cap_to tcb\<rbrace> complete_signal ntfnptr tcb \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: complete_signal_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
-  apply (wpsimp simp: as_user_def set_object_def get_object_def wp: set_ntfn_minor_invs)
-  apply safe
-    apply (clarsimp simp: obj_at_def is_tcb)
-   apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_bound_obj_def
-                          valid_obj_def valid_ntfn_def is_tcb obj_at_def is_sc_obj_def
-                   elim!: valid_objsE
-                   split: option.splits)
-  apply (fastforce simp: invs_def valid_state_def valid_pspace_def live_def live_ntfn_def
-                         tcb_cap_cases_def is_tcb obj_at_def
-                 intro!: ex_cap_to_after_update
-                  elim!: if_live_then_nonz_capD)
+  apply (subst bind_assoc[symmetric])
+  apply (rule_tac B="\<lambda>_. invs and ex_nonz_cap_to tcb" in hoare_seq_ext[rotated])
+   apply (wpsimp simp: as_user_def set_object_def get_object_def wp: set_ntfn_minor_invs)
+   apply safe
+      apply (clarsimp simp: obj_at_def is_tcb)
+     apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_bound_obj_def
+                            valid_obj_def valid_ntfn_def is_tcb obj_at_def is_sc_obj_def
+                     elim!: valid_objsE
+                     split: option.splits)
+    apply (fastforce simp: invs_def valid_state_def valid_pspace_def live_def live_ntfn_def
+                           tcb_cap_cases_def
+                   intro!: ex_cap_to_after_update
+                    elim!: if_live_then_nonz_capD)+
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply wpsimp
   done
 
 crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
@@ -2866,14 +2876,14 @@ lemma maybe_donate_sc_pred_tcb_at:
    apply (rule hoare_seq_ext[OF _ gsct_sp])
    apply (rename_tac sc_tcb_opt)
    apply (case_tac sc_tcb_opt; simp)
-    apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def tcb_release_remove_def
-                        update_sched_context_def get_object_def get_tcb_def
-                        pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
-                        tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
-                    wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
-    apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
-   apply wpsimp
-  apply wpsimp
+    apply (rule_tac B="\<lambda>_. pred_tcb_at proj P tcb_ptr'" in hoare_seq_ext[rotated])
+     apply (wpsimp simp: sched_context_donate_def set_tcb_obj_ref_def set_object_def
+                         tcb_release_remove_def update_sched_context_def get_object_def get_tcb_def
+                         pred_tcb_at_def obj_at_def get_sc_obj_ref_def get_sched_context_def
+                         tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def
+                     wp: hoare_vcg_imp_lift hoare_vcg_all_lift hoare_drop_imps)
+     apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
+    apply wpsimp+
   done
 
 lemma rai_pred_tcb_neq:
@@ -2938,7 +2948,7 @@ lemma ep_ntfn_cap_case_helper:
       R)"
   by (cases x, simp_all)
 
-crunches complete_signal, update_sk_obj_ref, do_nbrecv_failed_transfer
+crunches update_sk_obj_ref, do_nbrecv_failed_transfer
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
 
 lemmas thread_set_Pmdb = thread_set_no_cdt

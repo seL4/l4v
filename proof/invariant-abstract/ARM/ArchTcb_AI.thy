@@ -373,14 +373,10 @@ lemma tcc_invs[Tcb_AI_asms]:
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by (auto simp: valid_ipc_buffer_cap valid_fault_handler_def)
 
-crunches empty_slot
-  for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P target"
-  (wp: crunch_wps)
-
-lemma install_tcb_cap_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P d and invs and tcb_at target\<rbrace>
+lemma install_tcb_cap_bound_sc_tcb_at[wp]:
+  "\<lbrace>bound_sc_tcb_at P d and invs and tcb_at target\<rbrace>
    install_tcb_cap target slot 3 slot_opt
-   \<lbrace>\<lambda>_. sc_tcb_sc_at P d\<rbrace>"
+   \<lbrace>\<lambda>_. bound_sc_tcb_at P d\<rbrace>"
   unfolding install_tcb_cap_def
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
 

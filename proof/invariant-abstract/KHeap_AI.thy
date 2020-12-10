@@ -2283,6 +2283,16 @@ lemma get_sched_context_sp:
   apply (wpsimp, fastforce)
   done
 
+lemma get_sc_refill_ready_sp:
+  "\<lbrace>P\<rbrace>
+   get_sc_refill_ready sc_ptr
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = sc_refill_ready (cur_time s) sc)\<rbrace>"
+  apply (simp add: get_sc_refill_ready_def)
+  apply (wp hoare_return_sp)
+  apply clarsimp
+  apply (rule_tac x=sc in exI, auto)
+  done
+
 lemma assert_get_tcb_ko':
   shows "\<lbrace> P \<rbrace> gets_the (get_tcb thread) \<lbrace>\<lambda>t. P and ko_at (TCB t) thread \<rbrace>"
   by (clarsimp simp: valid_def in_monad gets_the_def get_tcb_def
