@@ -2957,7 +2957,7 @@ lemma replyUnlink_obj_at_tcb_none:
   "\<lbrace>K (rptr' = rptr)\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. replyTCB reply = None) rptr'\<rbrace>"
-  apply (simp add: replyUnlink_def setReplyTCB_def)
+  apply (simp add: replyUnlink_def)
   apply (wpsimp wp: updateReply_wp_all gts_wp' getReplyTCB_wp)
   by (auto simp: obj_at'_def projectKOs objBitsKO_def)
 
@@ -2966,7 +2966,7 @@ lemma replyUnlink_makes_unlive:
         \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> rptr' = rptr\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr'\<rbrace>"
-  apply (simp add: replyUnlink_def setReplyTCB_def)
+  apply (simp add: replyUnlink_def)
   apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp' getReplyTCB_wp)
   by (auto simp: ko_wp_at'_def obj_at'_def projectKOs is_aligned_def ps_clear_def
                  objBitsKO_def live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def)
@@ -3655,7 +3655,7 @@ crunches setThreadState
 
 lemma replyUnlink_valid_reply'[wp]:
   "replyUnlink replyPtr tcbPtr \<lbrace>valid_reply' reply\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def liftM_def setReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def getReplyTCB_def liftM_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   by (auto simp: valid_reply'_def obj_at'_def projectKOs objBitsKO_def valid_bound_obj'_def
           split: option.splits)
