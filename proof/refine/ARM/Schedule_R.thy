@@ -2833,6 +2833,68 @@ lemma whileM_wp_gen:
   using termin
   by (wpsimp wp: whileLoop_wp[where I=I])
 
+crunches refillUnblockCheck
+  for valid_queues[wp]: valid_queues
+  and cap_to'[wp]: "ex_nonz_cap_to' p"
+  and ifunsafe'[wp]: "if_unsafe_then_cap'"
+  and global_refs'[wp]: valid_global_refs'
+  and valid_queues'[wp]: valid_queues'
+  and valid_release_queue[wp]: valid_release_queue
+  and valid_release_queue'[wp]: valid_release_queue'
+  and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  and valid_arch'[wp]: valid_arch_state'
+  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
+  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and irq_states' [wp]: valid_irq_states'
+  and pde_mappings' [wp]: valid_pde_mappings'
+  and pspace_domain_valid[wp]: "pspace_domain_valid"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
+  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
+  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
+  and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and valid_irq_handlers'[wp]: valid_irq_handlers'
+  (wp: crunch_wps whileM_inv cur_tcb_lift valid_irq_handlers_lift'' simp: crunch_simps)
+
+crunches setReprogramTimer
+  for valid_objs'[wp]: valid_objs'
+
+lemma refillUnblockCheck_weak_sch_act_wf[wp]:
+  "refillUnblockCheck scPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  sorry \<comment> \<open>Michael\<close>
+
+lemma refillUnblockCheck_valid_objs'[wp]:
+  "refillUnblockCheck scPtr \<lbrace>valid_objs'\<rbrace>"
+  apply (clarsimp simp: refillUnblockCheck_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp simp: scActive_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp simp: isRoundRobin_def)
+    apply (rule hoare_seq_ext_skip, wpsimp simp: refillReady_def)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp simp: updateRefillHd_def)
+apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+(* apply (intro conjI impI)
+
+              apply (frule scRefills_length_replaceAt_Hd)
+              apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
+                                    valid_sched_context_size'_def objBits_def objBitsKO_def
+intro!: scRefills_length_replaceAt_Hd)
+apply (intro conjI impI)
+apply (subst scRefills_length_replaceAt_Hd)
+              apply (fastforce simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
+                                    valid_sched_context_size'_def objBits_def objBitsKO_def) *)
+sorry \<comment> \<open>Michael\<close>
+
+find_theorems setObject valid_objs'
+thm refillHeadOverlapping_def
 lemma refillUnblockCheck_invs':
   "refillUnblockCheck scPtr \<lbrace>invs'\<rbrace>"
   unfolding refillUnblockCheck_def

@@ -212,6 +212,7 @@ context begin interpretation Arch .
 lemma update_valid_tcb:
   "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>)"
   "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>)"
+  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>reprogram_timer := c\<rparr>)"
   by (auto simp: valid_tcb_def valid_tcb_state_def obj_at_def is_reply_def valid_bound_obj_def
                  valid_arch_tcb_def
           split: Structures_A.thread_state.splits option.splits)
@@ -220,6 +221,7 @@ end
 lemma update_valid_tcbs:
   "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>ready_queues := a\<rparr>)"
   "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>scheduler_action := b\<rparr>)"
+  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>reprogram_timer := c\<rparr>)"
   apply (simp_all add: valid_tcbs_def)
   apply (auto intro: update_valid_tcb)
   done
@@ -287,8 +289,26 @@ lemma possible_switch_to_valid_tcbs[wp]:
               simp: set_scheduler_action_def get_tcb_obj_ref_def)+
   done
 
+crunches refill_unblock_check
+  for valid_tcb[wp]: "valid_tcb tcb tcb_ptr"
+  (rule: valid_tcb_typ )
+
+lemma refill_unblock_check_no_CB_at[wp]:
+  "refill_unblock_check sc_pr \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) ptr s\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (wpsimp wp: whileM_inv set_refills_wp get_refills_wp is_round_robin_wp)
+  apply (clarsimp simp: obj_at_def split: if_splits)
+  done
+
+lemma refill_unblock_check_valid_tcbs[wp]:
+  "refill_unblock_check sc_pr \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+  done
+
 crunches restart_thread_if_no_fault
   for valid_tcbs[wp]: valid_tcbs
+  (wp: crunch_wps)
 
 definition valid_tcbs' :: "kernel_state \<Rightarrow> bool" where
   "valid_tcbs' s' \<equiv> \<forall>ptr tcb. ksPSpace s' ptr = Some (KOTCB tcb) \<longrightarrow> valid_tcb' tcb s'"
@@ -3824,6 +3844,7 @@ lemma update_valid_tcb':
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueues := c\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReleaseQueue := d\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksSchedulerAction := e\<rparr>)"
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReprogramTimer := f\<rparr>)"
   apply (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def obj_at'_def projectKOs
                     ps_clear_def
              split: option.splits thread_state.splits)

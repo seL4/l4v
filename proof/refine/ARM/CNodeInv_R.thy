@@ -6951,7 +6951,7 @@ lemma rec_del_corres:
                             FinaliseSlotCall _ _ \<Rightarrow> (\<lambda>r r'. fst r = fst r'
                                                            \<and> cap_relation (snd r) (snd r') )
                           | _ \<Rightarrow> dc))
-      (einvs and simple_sched_action
+      (einvs and simple_sched_action and current_time_bounded 1
             and valid_rec_del_call args
             and cte_at (slot_rdcall args)
             and (\<lambda>s. \<not> exposed_rdcall args \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
@@ -7079,7 +7079,7 @@ next
             apply (clarsimp simp: conj_comms)
            apply (wp | simp)+
            apply (rule hoare_strengthen_post)
-            apply (rule_tac Q="\<lambda>fin s. einvs s \<and> simple_sched_action s
+            apply (rule_tac Q="\<lambda>fin s. einvs s \<and> simple_sched_action s \<and> current_time_bounded 1 s
                                       \<and> replaceable s slot (fst fin) rv
                                       \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> fst fin
                                       \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
@@ -7356,7 +7356,7 @@ qed
 
 lemma cap_delete_corres:
   "corres (dc \<oplus> dc)
-      (einvs and simple_sched_action and cte_at ptr)
+      (einvs and simple_sched_action  and current_time_bounded 1 and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_delete ptr) (cteDelete (cte_map ptr) True)"
   unfolding cap_delete_def
@@ -7596,7 +7596,7 @@ lemma cap_revoke_mdb_stuff4:
 
 lemma cap_revoke_corres':
   "spec_corres s (dc \<oplus> dc)
-      (einvs and simple_sched_action and cte_at ptr)
+      (einvs and simple_sched_action and current_time_bounded 1 and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_revoke ptr) (\<lambda>s. cteRevoke (cte_map ptr) s)"
 proof (induct rule: cap_revoke.induct)
@@ -8618,7 +8618,7 @@ declare corres_False' [simp]
 lemma inv_cnode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
    corres (dc \<oplus> dc)
-     (einvs and simple_sched_action and valid_cnode_inv ci)
+     (einvs and simple_sched_action and current_time_bounded 1 and valid_cnode_inv ci)
      (invs' and sch_act_simple and valid_cnode_inv' ci')
      (invoke_cnode ci) (invokeCNode ci')"
   apply (simp add: invoke_cnode_def invokeCNode_def)
@@ -8634,9 +8634,9 @@ lemma inv_cnode_corres:
        apply (rule corres_guard_imp)
          apply (erule cap_move_corres)
         apply (clarsimp simp: cte_wp_at_caps_of_state real_cte_tcb_valid)
-       apply (clarsimp simp: cte_wp_at_ctes_of)
-       apply (rule cap_revoke_corres)
-     apply (rule corres_guard_imp [OF cap_delete_corres])
+      apply (clarsimp simp: cte_wp_at_ctes_of)
+     using cap_revoke_corres apply fastforce
+    apply (rule corres_guard_imp [OF cap_delete_corres])
       apply (clarsimp simp: cte_at_typ cap_table_at_typ)
      apply simp
     apply (rename_tac cap1 cap2 p1 p2 p3)
@@ -8774,7 +8774,7 @@ crunches capSwapForDelete
 
 crunches finaliseCap
   for irq_states' [wp]: valid_irq_states'
-  (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
+  (wp: crunch_wps whileM_inv hoare_unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU hoare_vcg_all_lift

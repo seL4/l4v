@@ -2195,7 +2195,7 @@ crunches finaliseCap
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  (wp: crunch_wps setObject_asidpool.getObject_inv hoare_vcg_all_lift simp: crunch_simps)
+  (wp: crunch_wps whileM_inv setObject_asidpool.getObject_inv hoare_vcg_all_lift simp: crunch_simps)
 
 end
 
@@ -2485,7 +2485,7 @@ lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift
 
 crunches finaliseCapTrue_standin, unbindNotification
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps)
+  (wp: crunch_wps whileM_inv getObject_inv loadObject_default_inv simp: crunch_simps)
 
 lemma cteDeleteOne_cteCaps_of:
   "\<lbrace>\<lambda>s. (cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
@@ -2681,7 +2681,7 @@ crunches unbindNotification, unbindMaybeNotification
 crunches cancelSignal, cancelAllIPC
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   and bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
-  (wp: crunch_wps)
+  (wp: crunch_wps whileM_inv)
 
 lemma setSchedContext_pde_mappings'[wp]:
   "setSchedContext p sc \<lbrace>valid_pde_mappings'\<rbrace>"
@@ -3347,7 +3347,7 @@ crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllS
          unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
          schedContextUnbindReply, schedContextUnbindAllTCBs
   for cte_wp_at'[wp]: "cte_wp_at' P p"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps whileM_inv getObject_inv loadObject_default_inv)
 
 lemma replyClear_standin_cte_preserved[wp]:
   "replyClear rptr tptr \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
@@ -3455,7 +3455,7 @@ lemma rescheduleRequired_oa_queued':
 
 crunches cancelAllIPC, cancelAllSignals, unbindMaybeNotification
   for tcbDomain_obj_at': "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  (wp: crunch_wps)
+  (wp: crunch_wps whileM_inv)
 
 lemma cancelAllIPC_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_tcbs'\<rbrace>
@@ -3464,7 +3464,7 @@ lemma cancelAllIPC_valid_queues[wp]:
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
   apply (wpsimp wp: mapM_x_wp' getEndpoint_wp
               simp: valid_tcb_state'_def)
-  done
+sorry \<comment> \<open>Michael\<close>
 
 lemma cancelAllSignals_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_tcbs'\<rbrace>
@@ -3473,7 +3473,7 @@ lemma cancelAllSignals_valid_queues[wp]:
   apply (simp add: cancelAllSignals_def)
   apply (wpsimp wp: mapM_x_wp' getNotification_wp
               simp: valid_tcb_state'_def)
-  done
+  sorry \<comment> \<open>Michael\<close>
 
 lemma setBoundNotification_valid_tcbs'[wp]:
   "\<lbrace>valid_tcbs' and valid_bound_ntfn' ntfn\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. valid_tcbs'\<rbrace>"
@@ -3750,6 +3750,17 @@ lemma emptySlot_valid_inQ_queues [wp]:
 
 context begin interpretation Arch .
 
+lemma setReprogramTimer_valid_inQ_queues[wp]:
+  "setReprogramTimer a \<lbrace>valid_inQ_queues\<rbrace>"
+  apply (clarsimp simp: setReprogramTimer_def)
+  apply wpsimp
+  apply (clarsimp simp: valid_inQ_queues_def)
+  done
+
+crunches refillUnblockCheck
+  for valid_inQ_queues[wp]: "valid_inQ_queues"
+  (wp: crunch_wps whileM_inv simp: crunch_simps)
+
 crunches cancelAllIPC, cancelAllSignals, unbindNotification, unbindMaybeNotification,
          schedContextMaybeUnbindNtfn, isFinalCapability
   for valid_inQ_queues[wp]: "valid_inQ_queues"
@@ -3906,7 +3917,7 @@ lemma cteDeleteOne_valid_inQ_queues[wp]:
 crunches cteDeleteOne
   for ksCurDomain[wp]:  "\<lambda>s. P (ksCurDomain s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  (wp: crunch_wps simp: crunch_simps unless_def)
+  (wp: crunch_wps whileM_inv simp: crunch_simps unless_def)
 
 end
 
@@ -4270,7 +4281,7 @@ lemma fast_finalise_corres:
   "\<lbrakk> final_matters' cap' \<longrightarrow> final = final'; cap_relation cap cap';
      can_fast_finalise cap \<rbrakk>
    \<Longrightarrow> corres dc
-           (\<lambda>s. invs s \<and> valid_sched s \<and> s \<turnstile> cap
+           (\<lambda>s. invs s \<and> valid_sched s \<and> current_time_bounded 1 s \<and> s \<turnstile> cap
                        \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
@@ -4343,8 +4354,8 @@ lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
      \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> cap_relation (snd x) (snd y))
-           (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
-                       \<and> cte_wp_at ((=) cap) sl s)
+           (\<lambda>s. einvs s \<and> current_time_bounded 1 s \<and> s \<turnstile> cap
+                \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s) \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and>
                  (final_matters' cap' \<longrightarrow>
                       final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
