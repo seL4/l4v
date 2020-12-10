@@ -340,9 +340,9 @@ lemma updateReply_valid_pspace':
   done
 
 lemma updateReply_iflive'_strong:
-  "\<lbrace>if_live_then_nonz_cap' and 
-    (\<lambda>s. \<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko)\<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace> 
-   updateReply rptr f 
+  "\<lbrace>if_live_then_nonz_cap' and
+    (\<lambda>s. \<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko)\<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace>
+   updateReply rptr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding if_live_then_nonz_cap'_def
   apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)

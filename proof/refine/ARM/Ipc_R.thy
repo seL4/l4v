@@ -4045,7 +4045,7 @@ crunches replyPush'
 
 lemma updateReply_obj_at'[wp]:
   "\<lbrace>if r = replyPtr then obj_at' (P \<circ> f) replyPtr else obj_at' P replyPtr\<rbrace>
-   updateReply r f 
+   updateReply r f
    \<lbrace>\<lambda>_. obj_at' (P :: reply \<Rightarrow> bool) replyPtr\<rbrace>"
   unfolding updateReply_def
   apply (wpsimp wp: setReply_obj_at')
@@ -4057,7 +4057,7 @@ lemma replyPush'_valid_objs'[wp]:
   unfolding replyPush'_def getReplyTCB_def
   apply wpsimp
                      apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
-                                              tcb_at' calleePtr s" 
+                                              tcb_at' calleePtr s"
                             in hoare_strengthen_post[rotated])
                       apply clarsimp
                       apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -4074,7 +4074,7 @@ lemma replyPush'_valid_objs'[wp]:
                   apply (frule Some_to_the, simp)
                   apply wpsimp+
             apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
-                                     tcb_at' calleePtr s" 
+                                     tcb_at' calleePtr s"
                    in hoare_strengthen_post[rotated])
              apply (clarsimp simp: split: if_split)
              apply (intro conjI; intro allI impI)
@@ -4095,7 +4095,7 @@ lemma replyPush_valid_objs'[wp]:
                            apply (wpsimp wp: schedContextDonate_valid_objs')
                           apply wpsimp+
                           apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
-                                                   tcb_at' calleePtr s" 
+                                                   tcb_at' calleePtr s"
                                  in hoare_strengthen_post[rotated])
                            apply clarsimp
                            apply (frule (1) sc_ko_at_valid_objs_valid_sc')
@@ -4111,7 +4111,7 @@ lemma replyPush_valid_objs'[wp]:
                         apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
                        apply wpsimp+
                  apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
-                                          tcb_at' calleePtr s" 
+                                          tcb_at' calleePtr s"
                         in hoare_strengthen_post[rotated])
                   apply (clarsimp simp: split: if_split)
                   apply (intro conjI; intro allI impI)
@@ -4167,8 +4167,8 @@ lemma replyPush_sym_refs_list_refs_of_replies'[wp]:
               hoare_fun_app_wp hoare_when_wp hoare_seq_ext hoare_K_bind)+
                       apply wpsimp+
                 apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_if_lift hoare_vcg_imp_lift')
-               apply (rule_tac Q="\<lambda>_ s. sym_refs (list_refs_of_replies' s) \<and> 
-                        obj_at' (\<lambda>a. replyPrev a = None \<and> replyNext a = None) replyPtr s" 
+               apply (rule_tac Q="\<lambda>_ s. sym_refs (list_refs_of_replies' s) \<and>
+                        obj_at' (\<lambda>a. replyPrev a = None \<and> replyNext a = None) replyPtr s"
                       in hoare_strengthen_post[rotated])
                 apply (clarsimp simp del: comp_apply simp: obj_at'_real_def ko_wp_at'_def)
                apply (wpsimp wp: updateReply_list_refs_of_replies'_inv)
