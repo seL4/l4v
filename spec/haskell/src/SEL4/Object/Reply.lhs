@@ -7,14 +7,14 @@
 This module specifies the behavior of reply objects.
 
 > module SEL4.Object.Reply (
->         replyRemove, replyPush, replyUnlink, getReply, setReply, getReplyTCB,
+>         replyRemove, replyPush, replyUnlink, getReply, setReply,
 >         replyRemoveTCB, updateReply
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
-% {-# BOOT-EXPORTS: replyRemove replyRemoveTCB replyPush replyUnlink getReply setReply getReplyTCB #-}
+% {-# BOOT-EXPORTS: replyRemove replyRemoveTCB replyPush replyUnlink getReply setReply #-}
 
 > import {-# SOURCE #-} SEL4.Kernel.Thread(getThreadState, setThreadState)
 > import SEL4.Machine.RegisterSet(PPtr)
@@ -39,7 +39,7 @@ This module specifies the behavior of reply objects.
 >     stateAssert sym_refs_asrt
 >         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
->     tptrOpt <- getReplyTCB replyPtr
+>     tptrOpt <- liftM replyTCB (getReply replyPtr)
 >     assert (tptrOpt == Nothing) "Reply object shouldn't have unexecuted reply!"
 
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
@@ -162,7 +162,7 @@ This module specifies the behavior of reply objects.
 
 > replyUnlink :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyUnlink replyPtr tcbPtr = do
->     tptrOpt <- getReplyTCB replyPtr
+>     tptrOpt <- liftM replyTCB (getReply replyPtr)
 >     tptr <- maybeToMonad tptrOpt
 >     assert (tptr == tcbPtr) "replyTCB must be equal to tcbPtr"
 >     state <- getThreadState tcbPtr
@@ -188,5 +188,3 @@ on the thread state of the replyTCB of the replyPtr
 > setReply :: PPtr Reply -> Reply -> Kernel ()
 > setReply rptr r = setObject rptr r
 
-> getReplyTCB :: PPtr Reply -> Kernel (Maybe (PPtr TCB))
-> getReplyTCB r = liftM replyTCB (getReply r)
