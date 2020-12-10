@@ -582,11 +582,12 @@ This module uses the C preprocessor to select a target architecture.
 >     when (fromOpt /= Nothing) $ do
 >         from <- return $ fromJust fromOpt
 >         tcbSchedDequeue from
+>         tcbReleaseRemove from
 >         threadSet (\tcb -> tcb { tcbSchedContext = Nothing }) from
 >         cur <- getCurThread
 >         action <- getSchedulerAction
 >         case action of
->             SwitchToThread candidate -> when (candidate == from) rescheduleRequired
+>             SwitchToThread candidate -> when (candidate == from || from == cur) rescheduleRequired
 >             _ -> when (from == cur) rescheduleRequired
 >     setSchedContext scPtr (sc { scTCB = Just tcbPtr })
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
