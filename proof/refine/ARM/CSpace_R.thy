@@ -12,10 +12,8 @@ theory CSpace_R
 imports CSpace1_R
 begin
 
-lemma setCTE_pred_tcb_at':
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace>
-     setCTE c cte
-   \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+lemma setCTE_pred_tcb_at'[wp]:
+  "setCTE c cte \<lbrace>pred_tcb_at' proj P t\<rbrace>"
   unfolding pred_tcb_at'_def setCTE_def
   apply (rule setObject_cte_obj_at_tcb')
    apply (simp add: tcb_to_itcb'_def)+
@@ -2493,8 +2491,11 @@ crunches cteInsert
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
-  and no_0_obj' [wp]: no_0_obj'
-    (wp: crunch_wps)
+  and no_0_obj'[wp]: no_0_obj'
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
+  and valid_replies' [wp]: valid_replies'
+  (wp: crunch_wps valid_replies'_lift)
 
 lemma cteInsert_valid_pspace:
   "\<lbrace>valid_pspace' and valid_cap' cap and (\<lambda>s. src \<noteq> dest) and valid_objs' and
@@ -4076,7 +4077,7 @@ lemma arch_update_setCTE_invs:
             arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
             valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
             valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
-            setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift
+            setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift valid_replies'_lift
           | simp add: pred_tcb_at'_def)+
   apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
@@ -5779,9 +5780,14 @@ lemma updateFreeIndex_forward_valid_objs':
   apply (rule usableUntypedRange_mono1, simp_all)
   done
 
-crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
-crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
-crunch no_0_obj[wp]: updateFreeIndex "no_0_obj'"
+crunches updateFreeIndex
+  for pspace_aligned'[wp]: "pspace_aligned'"
+  and pspace_distinct'[wp]: "pspace_distinct'"
+  and no_0_obj[wp]: "no_0_obj'"
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
+  and valid_replies'[wp]: "valid_replies'"
+  (wp: valid_replies'_lift)
 
 lemma updateFreeIndex_forward_valid_mdb':
   "\<lbrace>\<lambda>s. valid_mdb' s \<and> valid_objs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap
@@ -5795,7 +5801,7 @@ lemma updateFreeIndex_forward_valid_mdb':
   apply (frule(1) CSpace1_R.ctes_of_valid)
   apply (clarsimp simp: cte_wp_at_ctes_of del: subsetI)
   apply (rule usableUntypedRange_mono2,
-    auto simp add: isCap_simps valid_cap_simps' capAligned_def)
+         auto simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
 
 lemma updateFreeIndex_forward_invs':

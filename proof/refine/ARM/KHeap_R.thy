@@ -2065,6 +2065,12 @@ lemma ct_idle_or_in_cur_domain'_lift:
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
+lemma valid_mdb'_lift:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>) \<Longrightarrow> f \<lbrace>valid_mdb'\<rbrace>"
+  unfolding valid_mdb'_def
+  apply simp
+  done
+
 lemma setObject_state_refs_of':
   assumes x: "updateObject val = updateObject_default val"
   assumes y: "(1 :: word32) < 2 ^ objBits val"
@@ -2517,10 +2523,6 @@ lemma ctes_of[wp]: "f p v \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
 lemma valid_mdb'[wp]: "f p v \<lbrace>valid_mdb'\<rbrace>"
   unfolding valid_mdb'_def by wp
 
-lemma valid_pspace':
-  "\<lbrace>valid_pspace' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
-  unfolding valid_pspace'_def by (wpsimp wp: valid_objs')
-
 lemma obj_at_tcb'[wp]:
   "f p v \<lbrace>\<lambda>s. P (obj_at' (Q :: tcb \<Rightarrow> bool) p' s)\<rbrace>"
   unfolding f_def obj_at'_real_def
@@ -2611,6 +2613,53 @@ lemma untyped_ranges_zero'[wp]:
 
 end
 
+locale simple_non_reply_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+                                         "g:: obj_ref \<Rightarrow> 'a kernel" for f g +
+  assumes not_reply: "projectKO_opt (KOReply reply) = (None :: 'a option)"
+begin
+
+lemma updateObject_reply[simp]:
+  "fst (updateObject (v::'a) (KOReply c) p x n s) = {}"
+  by (clarsimp simp: default_update updateObject_default_def in_monad projectKOs not_reply bind_def)
+
+lemma not_inject_reply[simp]:
+  "injectKO (v::'a) \<noteq> KOReply sc"
+  by (simp flip: project_inject add: projectKOs not_reply)
+
+lemma typeOf_not_reply[simp]:
+  "koTypeOf (injectKO (v::'a)) \<noteq> ReplyT"
+  by (cases "injectKO v"; simp)
+
+end
+
+locale simple_non_tcb_non_reply_ko' =
+   simple_non_reply_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+                        "g:: obj_ref \<Rightarrow> 'a kernel" +
+   simple_non_tcb_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+                      "g:: obj_ref \<Rightarrow> 'a kernel" for f g
+begin
+
+\<comment>\<open>
+  preservation of valid_replies' requires us to not be touching either of a Reply or a TCB
+\<close>
+
+lemma valid_replies'[wp]:
+  "\<lbrace>valid_replies' and pspace_distinct' and pspace_aligned'\<rbrace>
+   f p v
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+   (is "\<lbrace>?pre valid_replies'\<rbrace> _ \<lbrace>?post\<rbrace>")
+  apply (rule_tac Q="\<lambda>_. ?pre valid_replies'_alt" in hoare_post_imp;
+         clarsimp simp: valid_replies'_def2)
+  unfolding obj_at'_real_def
+  apply_trace (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift ko_wp_at hoare_vcg_ex_lift)
+  by (fastforce simp: valid_replies'_def2 obj_at'_def ko_wp_at'_def projectKOs)
+
+lemma valid_pspace':
+  "\<lbrace>valid_pspace' and valid_obj' (injectKO v) \<rbrace> f p v \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def by (wpsimp wp: valid_objs')
+
+end
+
 locale simple_non_sc_ko' = simple_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
                                       "g:: obj_ref \<Rightarrow> 'a kernel" for f g +
   assumes not_sc: "projectKO_opt (KOSchedContext sc) = (None :: 'a option)"
@@ -2652,19 +2701,25 @@ lemma idle'[wp]:
 
 end
 
+locale simple_non_tcb_non_sc_non_reply_ko' =
+   simple_non_tcb_non_sc_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+                             "g:: obj_ref \<Rightarrow> 'a kernel" +
+   simple_non_tcb_non_reply_ko' "f:: obj_ref \<Rightarrow> 'a::pspace_storable \<Rightarrow> unit kernel"
+                             "g:: obj_ref \<Rightarrow> 'a kernel" for f g
+
 (* FIXME: should these be in Arch + sublocale instead? *)
-interpretation set_ep': simple_non_tcb_non_sc_ko' setEndpoint getEndpoint
+interpretation set_ep': simple_non_tcb_non_sc_non_reply_ko' setEndpoint getEndpoint
   by unfold_locales (simp_all add: setEndpoint_def getEndpoint_def projectKO_opts_defs
                                    objBits_simps')
 
-interpretation set_ntfn': simple_non_tcb_non_sc_ko' setNotification getNotification
+interpretation set_ntfn': simple_non_tcb_non_sc_non_reply_ko' setNotification getNotification
   by unfold_locales (simp_all add: setNotification_def getNotification_def projectKO_opts_defs
                                    objBits_simps')
 
 interpretation set_reply': simple_non_tcb_non_sc_ko' setReply getReply
   by unfold_locales (simp_all add: setReply_def getReply_def projectKO_opts_defs objBits_simps')
 
-interpretation set_sc': simple_non_tcb_ko' setSchedContext getSchedContext
+interpretation set_sc': simple_non_tcb_non_reply_ko' setSchedContext getSchedContext
   by unfold_locales (simp_all add: setSchedContext_def getSchedContext_def projectKO_opts_defs
                                    objBits_simps' scBits_pos_power2)
 
@@ -2733,8 +2788,6 @@ lemmas set_ntfn_valid_pspace'[wp] =
 
 lemmas set_reply_valid_objs'[wp] =
   set_reply'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
-lemmas set_reply_valid_pspace'[wp] =
-  set_reply'.valid_pspace'[simplified valid_obj'_def pred_conj_def, simplified]
 
 lemmas set_sc_valid_objs'[wp] =
   set_sc'.valid_objs'[simplified valid_obj'_def pred_conj_def, simplified]
@@ -2997,7 +3050,6 @@ lemma doMachineOp_invs_bits[wp]:
   "\<lbrace>if_unsafe_then_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   "\<lbrace>sch_act_simple\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   by (simp add: doMachineOp_def split_def sch_act_simple_def
-                valid_pspace'_def valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
        | wp cur_tcb_lift sch_act_wf_lift tcb_in_cur_domain'_lift
        | fastforce elim: state_refs_of'_pspaceI)+
 

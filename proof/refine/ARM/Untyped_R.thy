@@ -3582,15 +3582,14 @@ lemma updateFreeIndex_valid_pspace_no_overlap':
         descendants_of' src (ctes_of s) = {}\<rbrace>
      updateFreeIndex src idx
    \<lbrace>\<lambda>r s. valid_pspace' s\<rbrace>"
-
    apply (clarsimp simp:valid_pspace'_def updateFreeIndex_def
      updateTrackedFreeIndex_def)
    apply (rule hoare_pre)
     apply (rule hoare_vcg_conj_lift)
      apply (clarsimp simp:updateCap_def getSlotCap_def)
      apply (wp getCTE_wp | simp)+
-    apply (wp updateFreeIndex_mdb_simple' getCTE_wp'
-       | simp add: getSlotCap_def)+
+    apply (wpsimp wp: updateFreeIndex_mdb_simple' getCTE_wp' valid_replies'_lift
+                simp: getSlotCap_def)+
   apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace'_def)
   apply (case_tac cte,simp add:isCap_simps)
   apply (frule(1) ctes_of_valid_cap')
@@ -5077,8 +5076,11 @@ crunch nosch[wp]: invokeUntyped "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
      wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
-crunch no_0_obj'[wp]: insertNewCap no_0_obj'
-  (wp: crunch_wps)
+crunches insertNewCap
+  for no_0_obj'[wp]: no_0_obj'
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and valid_replies' [wp]: valid_replies'
+  (wp: crunch_wps valid_replies'_lift)
 
 lemma insertNewCap_valid_pspace':
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> s \<turnstile>' cap
@@ -5089,8 +5091,7 @@ lemma insertNewCap_valid_pspace':
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
-  apply (wp insertNewCap_valid_mdb)
-     apply simp_all
+  apply (wpsimp wp: insertNewCap_valid_mdb)
   done
 
 crunch tcb'[wp]: insertNewCap "tcb_at' t"

@@ -624,10 +624,6 @@ lemma threadSet_corres_noop_splitT:
 lemmas threadSet_corres_noop_split =
     threadSet_corres_noop_splitT [OF _ all_tcbI, OF _ ball_tcb_cte_casesI]
 
-lemma threadSet_tcb' [wp]:
-  "threadSet f t' \<lbrace>\<lambda>s. P (tcb_at' t s)\<rbrace>"
-  by (wpsimp simp: threadSet_def)
-
 (* The function "thread_set f p" updates a TCB at p using function f.
    It should not be used to change capabilities, though. *)
 lemma setObject_tcb_valid_objs:
@@ -790,11 +786,30 @@ lemma threadSet_global_refsT:
 lemmas threadSet_global_refs[wp] =
     threadSet_global_refsT [OF all_tcbI, OF ball_tcb_cte_casesI]
 
+lemma setObject_tcb_valid_replies':
+  "\<lbrace>\<lambda>s. valid_replies' s \<and>
+        (\<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s
+                  \<longrightarrow> tcbState v = BlockedOnReply (Some rptr)
+                      \<or> \<not> is_reply_linked rptr s)\<rbrace>
+   setObject t (v :: tcb)
+   \<lbrace>\<lambda>rv. valid_replies'\<rbrace>"
+  unfolding valid_replies'_def pred_tcb_at'_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_ex_lift
+                    set_tcb'.setObject_obj_at'_strongest)
+  apply (rename_tac rptr)
+  apply (rule ccontr, clarsimp simp flip: imp_disjL)
+  apply (drule_tac x=rptr in spec, drule mp, assumption)
+  apply (auto simp: opt_map_def)
+  done
+
 lemma threadSet_valid_pspace'T_P:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   assumes z: "\<forall>tcb. (P \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
                      (\<forall>s. valid_tcb_state' (tcbState tcb) s
                               \<longrightarrow> valid_tcb_state' (tcbState (F tcb)) s)"
+  assumes z': "\<forall>tcb. (P \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
+                      (\<forall>rptr. (tcbState tcb = BlockedOnReply rptr)
+                                 \<longrightarrow> (tcbState (F tcb) = BlockedOnReply rptr))"
   assumes v1: "\<forall>tcb. (P \<longrightarrow> Q' (tcbBoundNotification tcb)) \<longrightarrow>
                       (\<forall>s. valid_bound_ntfn' (tcbBoundNotification tcb) s
                               \<longrightarrow> valid_bound_ntfn' (tcbBoundNotification (F tcb)) s)"
@@ -813,16 +828,18 @@ lemma threadSet_valid_pspace'T_P:
   shows
   "\<lbrace>valid_pspace' and (\<lambda>s. P \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s \<and>
                                  bound_sc_tcb_at' Q'' t s \<and> bound_yt_tcb_at' Q''' t s)\<rbrace>
-     threadSet F t
+   threadSet F t
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def threadSet_def)
   apply (rule hoare_pre,
-         wpsimp wp: setObject_tcb_valid_objs getObject_tcb_wp)
+         wpsimp wp: setObject_tcb_valid_objs setObject_tcb_valid_replies'
+                    getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
   apply (erule(1) valid_objsE')
   apply (clarsimp simp add: valid_obj'_def valid_tcb'_def
                             bspec_split [OF spec [OF x]] z
                             split_paired_Ball y u w v1 v2 v3 w')
+  apply (drule sym, fastforce simp: z')
   done
 
 lemmas threadSet_valid_pspace'T =
@@ -2737,8 +2754,32 @@ lemma sbn_corres:
   done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
-  for tcb'[wp]: "\<lambda>s. P (tcb_at' addr s)"
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
+
+global_interpretation rescheduleRequired: typ_at_all_props' "rescheduleRequired"
+  by typ_at_props'
+
+global_interpretation tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
+  by typ_at_props'
+
+global_interpretation threadSet: typ_at_all_props' "threadSet f p"
+  by typ_at_props'
+
+global_interpretation setThreadState: typ_at_all_props' "setThreadState st p"
+  by typ_at_props'
+
+global_interpretation setBoundNotification: typ_at_all_props' "setBoundNotification v p"
+  by typ_at_props'
+
+global_interpretation scheduleTCB: typ_at_all_props' "scheduleTCB tcbPtr"
+  by typ_at_props'
+
+lemma sts'_valid_mdb'[wp]:
+  "setThreadState st t \<lbrace>valid_mdb'\<rbrace>"
+  by (wpsimp simp: valid_mdb'_def)
 
 crunches rescheduleRequired, removeFromBitmap, scheduleTCB
   for valid_objs'[wp]: valid_objs'
@@ -2768,24 +2809,98 @@ lemma sbn_valid_objs':
   apply (wpsimp simp: setBoundNotification_def wp: threadSet_valid_objs')
   by (simp add: valid_tcb'_def tcb_cte_cases_def)
 
+crunches setBoundNotification
+  for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and st_tcb_at'[wp]: "st_tcb_at' P p"
+  and valid_replies' [wp]: valid_replies'
+  (wp: valid_replies'_lift threadSet_pred_tcb_no_state)
+
 lemma ssa_wp[wp]:
   "\<lbrace>\<lambda>s. P (s \<lparr>ksSchedulerAction := sa\<rparr>)\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: setSchedulerAction_def)
 
 crunches rescheduleRequired, tcbSchedDequeue, scheduleTCB
+  for st_tcb_at'[wp]: "st_tcb_at' P p"
+  and valid_replies' [wp]: valid_replies'
+  (wp: crunch_wps threadSet_pred_tcb_no_state valid_replies'_lift)
+
+crunches rescheduleRequired, tcbSchedDequeue, setThreadState
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]: "pspace_distinct'"
-  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and no_0_obj'[wp]: "no_0_obj'"
   (wp: crunch_wps)
 
+lemma threadSet_valid_replies':
+  "\<lbrace>\<lambda>s. valid_replies' s \<and>
+        (\<forall>tcb. ko_at' tcb t s
+           \<longrightarrow> (\<forall>rptr. BlockedOnReply (Some rptr) = tcbState tcb
+                        \<longrightarrow> BlockedOnReply (Some rptr) = tcbState (f tcb)
+                            \<or> \<not> is_reply_linked rptr s))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  apply (clarsimp simp: threadSet_def)
+  apply (wpsimp wp: setObject_tcb_valid_replies' getObject_tcb_wp)
+  by (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
+
+lemma sts'_valid_replies':
+  "\<lbrace>\<lambda>s. valid_replies' s \<and>
+        (\<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s
+                  \<longrightarrow> BlockedOnReply (Some rptr) = st \<or> \<not> is_reply_linked rptr s)\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  apply (clarsimp simp: setThreadState_def)
+  apply (wpsimp wp: threadSet_valid_replies')
+  by (auto simp: pred_tcb_at'_def obj_at'_def projectKOs opt_map_def)
+
 lemma sts'_valid_pspace'_inv[wp]:
-  "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>
-  setThreadState st t
-  \<lbrace> \<lambda>rv. valid_pspace' \<rbrace>"
+  "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st
+     and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s
+                      \<longrightarrow> st = BlockedOnReply (Some rptr) \<or> \<not> is_reply_linked rptr s)\<rbrace>
+   setThreadState st t
+   \<lbrace> \<lambda>rv. valid_pspace' \<rbrace>"
   apply (simp add: valid_pspace'_def)
-  by (wpsimp wp: sts_valid_objs' getObject_obj_at_tcb
-           simp: setThreadState_def threadSet_def valid_mdb'_def tcb_cte_cases_def)
+  apply (wpsimp wp: sts_valid_objs' sts'_valid_replies')
+  by (auto simp: opt_map_def)
+
+abbreviation
+  "is_replyState st \<equiv> is_BlockedOnReply st \<or> is_BlockedOnReceive st"
+
+lemma setObject_tcb_valid_replies'_except_Blocked:
+  "\<lbrace>\<lambda>s. valid_replies'_except {rptr} s \<and> replyTCBs_of s rptr = Some t
+        \<and> st_tcb_at' (\<lambda>st. is_replyState st \<longrightarrow> replyObject st = None) t s
+        \<and> (tcbState v = BlockedOnReply (Some rptr))\<rbrace>
+   setObject t (v :: tcb)
+   \<lbrace>\<lambda>rv. valid_replies'\<rbrace>"
+  unfolding valid_replies'_def valid_replies'_except_def
+  apply (subst pred_tcb_at'_eq_commute)+
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ex_lift
+                    set_tcb'.setObject_obj_at'_strongest
+                simp: pred_tcb_at'_def simp_del: imp_disjL)
+  apply (rename_tac rptr' rp obj)
+  apply (case_tac "rptr' = rptr")
+   apply (fastforce simp: opt_map_def)
+  apply (drule_tac x=rptr' in spec, drule mp, clarsimp)
+  apply (auto simp: opt_map_def obj_at'_def)
+  done
+
+lemma threadSet_valid_replies'_except_Blocked:
+  "\<lbrace>\<lambda>s. valid_replies'_except {rptr} s \<and> replyTCBs_of s rptr = Some t
+        \<and> st_tcb_at' (\<lambda>st. is_replyState st \<longrightarrow> replyObject st = None) t s
+        \<and> (\<forall>tcb. tcbState (f tcb) = BlockedOnReply (Some rptr))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  apply (clarsimp simp: threadSet_def)
+  apply (wpsimp wp: setObject_tcb_valid_replies'_except_Blocked[where rptr=rptr] getObject_tcb_wp)
+  by (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
+
+lemma sts'_valid_replies'_except_Blocked:
+  "\<lbrace>\<lambda>s. valid_replies'_except {rptr} s \<and> replyTCBs_of s rptr = Some t
+        \<and> st_tcb_at' (\<lambda>st. is_replyState st \<longrightarrow> replyObject st = None) t s\<rbrace>
+   setThreadState (BlockedOnReply (Some rptr)) t
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  apply (clarsimp simp: setThreadState_def)
+  apply (wpsimp wp: threadSet_valid_replies'_except_Blocked)
+  by (auto simp: pred_tcb_at'_def obj_at'_def projectKOs opt_map_def)
 
 crunch ct[wp]: setQueue "\<lambda>s. P (ksCurThread s)"
 
@@ -4539,16 +4654,14 @@ crunches setQueue, scheduleTCB, tcbSchedDequeue
   (simp: crunch_simps wp: crunch_wps)
 
 lemma sts_valid_idle'[wp]:
-  "\<lbrace>valid_idle' and
-    (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' ts)\<rbrace>
+  "\<lbrace>valid_idle' and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' ts)\<rbrace>
    setThreadState ts t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: setThreadState_def)
   by (wpsimp wp: threadSet_idle' simp: idle_tcb'_def)
 
 lemma sbn_valid_idle'[wp]:
-  "\<lbrace>valid_idle' and valid_pspace' and
-    (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not>bound ntfn)\<rbrace>
+  "\<lbrace>valid_idle' and (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not>bound ntfn)\<rbrace>
    setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: setBoundNotification_def)
@@ -4661,27 +4774,6 @@ lemma sbn_st_tcb'[wp]:
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
   apply (wp threadSet_obj_at'_really_strongest | simp add: pred_tcb_at'_def)+
   done
-
-crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification, scheduleTCB
-  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps)
-
-global_interpretation rescheduleRequired: typ_at_all_props' "rescheduleRequired"
-  by typ_at_props'
-
-global_interpretation tcbSchedDequeue: typ_at_all_props' "tcbSchedDequeue thread"
-  by typ_at_props'
-
-global_interpretation threadSet: typ_at_all_props' "threadSet f p"
-  by typ_at_props'
-
-global_interpretation setThreadState: typ_at_all_props' "setThreadState st p"
-  by typ_at_props'
-
-global_interpretation setBoundNotification: typ_at_all_props' "setBoundNotification v p"
-  by typ_at_props'
 
 context begin interpretation Arch .
 
@@ -5252,7 +5344,9 @@ lemma valid_tcb_state'_same_tcb_st_refs_of':
 
 lemma sts_invs_minor':
   "\<lbrace>st_tcb_at' (\<lambda>st'. (st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow>
-                      st' \<noteq> Inactive \<and> \<not> idle' st')) t
+                       st' \<noteq> Inactive \<and> \<not> idle' st')
+                   \<and> (\<forall>rptr. st' = BlockedOnReply rptr \<longrightarrow>
+                             st = BlockedOnReply rptr)) t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and sch_act_not t
       and valid_tcb_state' st
@@ -5261,15 +5355,17 @@ lemma sts_invs_minor':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
-              simp: cteCaps_of_def o_def)
+              simp: cteCaps_of_def o_def pred_tcb_at'_eq_commute)
   apply (intro conjI impI)
     apply clarsimp
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   apply (erule if_live_then_nonz_capE')
   apply (clarsimp simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
 
 lemma sts_invs':
   "\<lbrace>(\<lambda>s. st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
+      and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply rptr)) t s \<longrightarrow> st = BlockedOnReply rptr)
       and tcb_at' t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and (\<lambda>s. \<not>runnable' st \<longrightarrow> sch_act_not t s)
@@ -5697,6 +5793,7 @@ crunches tcbReleaseRemove
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and valid_pde_mappings'[wp]: valid_pde_mappings'
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   (wp: crunch_wps simp: crunch_simps tcb_cte_cases_def)
 
 global_interpretation tcbReleaseRemove: typ_at_all_props' "tcbReleaseRemove tptr"
@@ -5967,7 +6064,7 @@ lemma tcbReleaseRemove_invs':
   "tcbReleaseRemove tcbPtr \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
-                    untyped_ranges_zero_lift tcbReleaseRemove_valid_queues
+                    untyped_ranges_zero_lift tcbReleaseRemove_valid_queues valid_replies'_lift
               simp: cteCaps_of_def o_def)
   done
 

@@ -4882,6 +4882,10 @@ lemma cteSwap_iflive'[wp]:
   apply auto
   done
 
+crunches updateMDB, updateCap
+  for valid_replies'[wp]: valid_replies'
+  (wp: valid_replies'_lift)
+
 lemma cteSwap_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and
     cte_wp_at' (weak_derived' c o cteCap) c1 and

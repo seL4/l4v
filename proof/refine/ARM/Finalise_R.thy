@@ -1438,7 +1438,7 @@ lemma emptySlot_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
-   apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
+   apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift valid_replies'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of o_def)
   done
 
@@ -1488,8 +1488,7 @@ lemma clearUntypedFreeIndex_corres_noop:
 lemma clearUntypedFreeIndex_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> clearUntypedFreeIndex slot \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
-  apply (rule hoare_pre)
-   apply (wp | simp add: valid_mdb'_def)+
+  apply (wpsimp wp: valid_replies'_lift valid_mdb'_lift)
   done
 
 lemma empty_slot_corres:
@@ -2240,13 +2239,9 @@ lemma unbindNotification_invs[wp]:
              split: ntfn.splits)
   apply (rule conjI)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-  apply (rule conjI)
-   apply (clarsimp simp: pred_tcb_at' conj_comms)
-   apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs live_ntfn'_def)
-  apply (frule obj_at_valid_objs', clarsimp+)
-  apply (simp add: valid_ntfn'_def valid_obj'_def projectKOs
-            split: ntfn.splits)
+  apply (clarsimp simp: pred_tcb_at' conj_comms)
+  apply (erule if_live_then_nonz_capE')
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs live_ntfn'_def)
   done
 
 lemma ntfn_bound_tcb_at':
@@ -2312,7 +2307,8 @@ crunches schedContextMaybeUnbindNtfn
   (simp: crunch_simps wp: crunch_wps ignore: setReply)
 
 lemma replyUnlink_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)
+    and (\<lambda>s. replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_dom_schedule'_def
@@ -2401,15 +2397,32 @@ lemma replyRemove_valid_objs'[wp]:
          | intro conjI impI)+
   done
 
-lemma replyUnlink_valid_mdb'[wp]:
-  "replyUnlink replyPtr tcbPtr \<lbrace>valid_mdb'\<rbrace>"
-  unfolding replyUnlink_def valid_mdb'_def
-  by (wpsimp wp: gts_wp')
+lemma replyPop_valid_replies'[wp]:
+  "\<lbrace>\<lambda>s. valid_replies' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+        \<and> sym_refs (list_refs_of_replies' s)\<rbrace>
+   replyPop replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  unfolding replyPop_def
+  supply if_split[split del]
+  apply (wpsimp wp: hoare_vcg_imp_lift)
+                 apply (wpsimp wp: updateReply_valid_replies'_bound hoare_vcg_imp_lift
+                                   hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_if_lift)+
+  apply (rename_tac prevReplyPtr)
+  apply (drule_tac rptr=prevReplyPtr in valid_replies'D)
+   apply (frule reply_sym_heap_Prev_Next)
+   apply (frule_tac p=replyPtr in sym_heapD1)
+    apply (fastforce simp: opt_map_def obj_at'_def projectKOs)
+   apply clarsimp
+  apply (fastforce simp: obj_at'_def projectKOs)
+  done
 
-lemma cleanReply_valid_mdb'[wp]:
-  "cleanReply replyPtr \<lbrace>valid_mdb'\<rbrace>"
-  unfolding cleanReply_def valid_mdb'_def
-  by (wpsimp wp: gts_wp')
+lemma replyRemove_valid_replies'[wp]:
+  "\<lbrace>\<lambda>s. valid_replies' s \<and> pspace_aligned' s \<and> pspace_distinct' s
+        \<and> sym_refs (list_refs_of_replies' s)\<rbrace>
+   replyRemove replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  unfolding replyRemove_def
+  by (wpsimp wp: hoare_vcg_imp_lift')
 
 lemma replyPop_valid_mdb'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_mdb'\<rbrace>"
@@ -2424,11 +2437,15 @@ lemma replyRemove_valid_mdb'[wp]:
   by (wpsimp wp: gts_wp')+
 
 lemma replyPop_valid_pspace'[wp]:
-  "replyPop replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and> sym_refs (list_refs_of_replies' s)\<rbrace>
+   replyPop replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   by (wpsimp simp: valid_pspace'_def)
 
 lemma replyRemove_valid_pspace'[wp]:
-  "replyRemove replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_pspace' s \<and> sym_refs (list_refs_of_replies' s)\<rbrace>
+   replyRemove replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   by (wpsimp simp: valid_pspace'_def)
 
 lemma replyPop_valid_queues[wp]:
@@ -2733,7 +2750,7 @@ lemma replyPop_invs':
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
-  apply (wpsimp wp: replyPop_iflive replyPop_valid_idle')
+  apply (wpsimp wp: replyPop_iflive replyPop_valid_idle' simp: valid_pspace'_def)
   done
 
 lemma replyRemove_invs':
@@ -3370,6 +3387,11 @@ method cancelIPC_makes_unlive_hammer =
   (normalise_obj_at',
    frule (2) sym_ref_replyTCB_Receive_or_Reply,
    fastforce simp: weak_sch_act_wf_def pred_tcb_at'_def obj_at'_def projectKOs)
+
+lemma obj_at_replyTCBs_of:
+  "obj_at' (\<lambda>reply. replyTCB reply = tptr_opt) rptr s
+   \<Longrightarrow> replyTCBs_of s rptr = tptr_opt"
+  by (clarsimp simp: obj_at'_def projectKOs opt_map_def)
 
 lemma cancelIPC_makes_unlive:
   "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s
@@ -4226,7 +4248,7 @@ lemma schedContextUnbindReply_invs'[wp]:
    schedContextUnbindReply scPtr
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding schedContextUnbindReply_def
-  apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_Nothing_invs'
+  apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_None_invs'
                     hoare_vcg_imp_lift typ_at_lifts)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def sym_refs_asrt_def)
   apply (frule (1) ko_at_valid_objs', clarsimp simp: projectKOs)
