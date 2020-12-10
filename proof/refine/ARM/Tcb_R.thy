@@ -164,12 +164,14 @@ crunches schedContextResume
   (wp: crunch_wps)
 
 lemma setThreadState_Restart_invs':
-  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s\<rbrace>
+  "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s
+        \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) t s\<rbrace>
    setThreadState Restart t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
-  apply (wp setThreadState_ct_not_inQ)
-  apply (fastforce dest: global'_no_ex_cap)
+  apply (wpsimp wp: setThreadState_ct_not_inQ simp: pred_tcb_at'_eq_commute)
+  apply (auto dest: global'_no_ex_cap
+              simp: o_def pred_tcb_at'_def obj_at'_def)
   done
 
 crunches cancel_ipc
@@ -229,9 +231,11 @@ lemma restart_corres:
                        in hoare_strengthen_post)
            apply (wpsimp wp: cancel_ipc_no_refs cancel_ipc_ex_nonz_cap_to_tcb)
           apply (fastforce simp: invs_def valid_state_def idle_no_ex_cap valid_pspace_def)
-         apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t and ex_nonz_cap_to' t" in hoare_strengthen_post)
+         apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t and ex_nonz_cap_to' t and st_tcb_at' simple' t"
+                in hoare_strengthen_post)
           apply wpsimp
-         apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak valid_pspace'_def)[1]
+         apply (fastforce simp: invs'_def valid_state'_def sch_act_wf_weak valid_pspace'_def
+                          elim: pred_tcb'_weakenE)[1]
         apply (clarsimp simp: tcb_relation_def)
        apply (wpsimp wp: gts_wp gts_wp' thread_get_wp')+
    apply (fastforce elim: valid_sched_scheduler_act_not simp: pred_tcb_at_def obj_at_def)
@@ -2092,7 +2096,7 @@ lemma schedContextBindTCB_corres:
                  threadSet_sch_actT_P[where P=False, simplified] threadSet_ctes_ofT threadSet_mdb'
                  threadSet_valid_release_queue threadSet_valid_release_queue' valid_irq_node_lift
                  valid_irq_handlers_lift'' untyped_ranges_zero_lift threadSet_valid_dom_schedule'
-                 threadSet_ct_idle_or_in_cur_domain' threadSet_cur
+                 threadSet_ct_idle_or_in_cur_domain' threadSet_cur threadSet_valid_replies'
               | clarsimp simp: tcb_cte_cases_def cteCaps_of_def
               | rule hoare_vcg_conj_lift threadSet_wp refl)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
@@ -2460,14 +2464,15 @@ lemma schedContextBindTCB_invs':
              threadSet_valid_release_queue' threadSet_not_inQ threadSet_cur
              untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
              threadSet_ct_idle_or_in_cur_domain' hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
+             threadSet_valid_replies'
           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (fastforce simp: valid_idle'_def idle_tcb'_2_def pred_tcb_at'_def obj_at'_def projectKOs
-                         objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
-                         valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                         valid_release_queue'_def inQ_def cteCaps_of_def
-                   elim: ps_clear_domE  split: if_splits)
-  done
+  (* slow: around 70s *)
+  by (fastforce simp: valid_idle'_def idle_tcb'_2_def pred_tcb_at'_def obj_at'_def projectKOs
+                      objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
+                      valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
+                      valid_release_queue'_def inQ_def cteCaps_of_def
+                elim: ps_clear_domE  split: if_splits)
 
 lemma threadSetPriority_bound_sc_tcb_at' [wp]:
   "threadSetPriority tptr prio \<lbrace>\<lambda>s. Q (bound_sc_tcb_at' P t s)\<rbrace>"

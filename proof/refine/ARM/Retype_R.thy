@@ -3068,7 +3068,8 @@ lemma createObjects_valid_pspace':
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
             \<and> caps_overlap_reserved' {ptr .. ptr + of_nat (n * 2^gbits * 2 ^ objBitsKO val ) - 1} s
             \<and> ptr \<noteq> 0\<rbrace>
-  createObjects' ptr n val gbits \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
+         createObjects' ptr n val gbits
+         \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   (* FIXME: clean this up *)
   apply (cut_tac not_0)
   apply (simp add: split_def createObjects'_def
@@ -3098,6 +3099,7 @@ proof (intro conjI impI)
 
   assume pn: "pspace_no_overlap' ptr sz s"
      and vo: "valid_objs' s"
+     and vr: "valid_replies' s"
      and ad: "pspace_aligned' s" "pspace_distinct' s"
      and pc: "caps_no_overlap'' ptr sz s"
     and mdb: "valid_mdb' s"
@@ -3218,6 +3220,24 @@ proof (intro conjI impI)
     apply (case_tac reply; fastforce simp: valid_reply'_def valid_bound_tcb'_def obj_at_disj'
                     split: option.splits)
     done
+
+  show valid_replies': "valid_replies' ?s'" using vr
+    apply (subst mult.commute)
+    apply (clarsimp simp: valid_replies'_def pred_tcb_at'_def obj_at_disj'
+                          foldr_upd_app_if[folded data_map_insert_def]
+                   elim!: ranE
+                   split: if_split_asm)
+    apply (insert sym[OF mko])[1]
+    apply (clarsimp simp: makeObjectKO_def projectKOs opt_map_def makeObject_reply
+                   split: bool.split_asm sum.split_asm
+                          ARM_H.object_type.split_asm
+                          apiobject_type.split_asm
+                          kernel_object.split_asm
+                          arch_kernel_object.split_asm
+                          if_splits option.splits)
+    apply fastforce
+    done
+
   have not_0: "0 \<notin> set (new_cap_addrs (2 ^ gbits * n) ptr val)"
     using p_0
     apply clarsimp
@@ -3306,20 +3326,22 @@ lemma getObject_valid_pde'[wp]:
   apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
   done
 
-crunch valid_objs'[wp]: copyGlobalMappings "valid_objs'"
+crunches copyGlobalMappings
+  for valid_objs'[wp]: "valid_objs'"
+  and pspace_aligned'[wp]: "pspace_aligned'"
+  and pspace_distinct'[wp]: "pspace_distinct'"
+  and valid_mdb[wp]: "valid_mdb'"
+  and no_0_obj' [wp]: no_0_obj'
   (ignore: storePDE wp: crunch_wps)
-crunch pspace_aligned'[wp]: copyGlobalMappings "pspace_aligned'"
-  (wp: crunch_wps)
-crunch pspace_distinct'[wp]: copyGlobalMappings "pspace_distinct'"
-  (wp: crunch_wps)
 
-crunch valid_mdb[wp]: copyGlobalMappings "valid_mdb'"
-  (wp: crunch_wps)
+lemma copyGlobalMappings_valid_replies'[wp]:
+  "\<lbrace>valid_replies' and pspace_aligned' and pspace_distinct'\<rbrace>
+   copyGlobalMappings pd
+   \<lbrace>\<lambda>_. valid_replies'\<rbrace>" (is "\<lbrace>?Pre\<rbrace> _ \<lbrace>_\<rbrace>")
+  unfolding copyGlobalMappings_def
+  by (wpsimp wp: mapM_x_inv_wp[where I="?Pre"])
 
-crunch no_0_obj' [wp]: copyGlobalMappings no_0_obj'
-  (wp: crunch_wps)
-
-lemma copyGlobalMappings_valid_pspace[wp]:
+lemma copyGlobalMappings_valid_pspace'[wp]:
   "\<lbrace>valid_pspace'\<rbrace> copyGlobalMappings pd \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   by (simp add: valid_pspace'_def | wp)+
 

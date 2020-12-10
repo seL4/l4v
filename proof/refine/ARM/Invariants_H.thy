@@ -1026,11 +1026,14 @@ definition "vs_valid_duplicates' \<equiv> \<lambda>h.
 abbreviation
   "is_reply_linked rptr s \<equiv> replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None"
 
-definition valid_replies' :: "kernel_state \<Rightarrow> bool" where
-  "valid_replies' s \<equiv>
-     (\<forall>rptr. is_reply_linked rptr s
+definition valid_replies'_except :: "obj_ref set \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "valid_replies'_except RS s \<equiv>
+     (\<forall>rptr. rptr \<notin> RS \<and> is_reply_linked rptr s
              \<longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
                          \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
+
+definition [simplified empty_iff simp_thms valid_replies'_except_def]:
+  "valid_replies' s \<equiv> valid_replies'_except {} s"
 
 defs valid_replies'_sc_asrt_def:
   "valid_replies'_sc_asrt \<equiv> \<lambda>rptr s.
@@ -1041,6 +1044,7 @@ definition
   valid_pspace' :: "kernel_state \<Rightarrow> bool"
 where
   "valid_pspace' \<equiv> valid_objs' and
+                   valid_replies' and
                    pspace_aligned' and
                    pspace_distinct' and
                    no_0_obj' and
@@ -1985,13 +1989,14 @@ lemma valid_pde_mapping'_simps[simp]:
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceI' [intro]:
-  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s\<rbrakk>
+  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s;
+    valid_replies' s\<rbrakk>
   \<Longrightarrow> valid_pspace' s"  unfolding valid_pspace'_def by simp
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
-      valid_mdb' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+    \<lbrakk> valid_objs' s; valid_replies' s; pspace_aligned' s; pspace_distinct' s;
+      no_0_obj' s; valid_mdb' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
 lemma idle'_only_sc_refs:
@@ -2020,6 +2025,10 @@ lemma pred_tcb_at_conj':
   apply (simp add: pred_tcb_at'_def)
   apply (erule (1) obj_at_conj')
   done
+
+lemma pred_tcb_at'_eq_commute:
+  "pred_tcb_at' proj ((=) v) = pred_tcb_at' proj (\<lambda>x. x = v)"
+  by (intro ext) (auto simp: pred_tcb_at'_def obj_at'_def)
 
 lemma obj_at_False' [simp]:
   "obj_at' (\<lambda>k. False) t s = False"
@@ -2115,6 +2124,14 @@ lemma valid_mdb'_pspaceI:
   "valid_mdb' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_mdb' s'"
   unfolding valid_mdb'_def by simp
 
+lemma valid_replies'_pspaceI:
+  "valid_replies' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_replies' s'"
+  unfolding valid_replies'_def
+  apply clarsimp
+  apply (drule_tac x=rptr in spec)
+  apply (auto simp: opt_map_def intro: pred_tcb_at'_pspaceI)
+  done
+
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
   unfolding state_refs_of'_def ps_clear_def
@@ -2125,7 +2142,7 @@ lemma valid_pspace':
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def
-           intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
+           intro: valid_obj'_pspaceI valid_mdb'_pspaceI valid_replies'_pspaceI)
 
 lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
@@ -3204,6 +3221,12 @@ lemma valid_objs_size_update [iff]:
   apply (fastforce intro: valid_obj_size'_pspaceI simp: pspace)
   done
 
+lemma valid_replies'_update [iff]:
+  "valid_replies' (f s) = valid_replies' s"
+  apply (simp add: valid_replies'_def pspace)
+  apply (auto simp: pspace pred_tcb_at'_def)
+  done
+
 lemma pspace_aligned_update [iff]:
   "pspace_aligned' (f s) = pspace_aligned' s"
   by (simp add: pspace pspace_aligned'_def)
@@ -3479,6 +3502,7 @@ lemma ex_cte_cap_to'_pres:
    apply assumption
   apply simp
   done
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 lemma page_directory_pde_atI':
   "\<lbrakk> page_directory_at' p s; x < 2 ^ pageBits \<rbrakk> \<Longrightarrow> pde_at' (p + (x << 2)) s"
@@ -3639,6 +3663,10 @@ lemma no_0_typ_at'_eq [simp]:
 
 lemma valid_pspace_valid_objs'[elim!]:
   "valid_pspace' s \<Longrightarrow> valid_objs' s"
+  by (simp add: valid_pspace'_def)
+
+lemma valid_pspace_valid_replies'[elim!]:
+  "valid_pspace' s \<Longrightarrow> valid_replies' s"
   by (simp add: valid_pspace'_def)
 
 lemma valid_pspace_valid_objs_size'[elim!]:
@@ -3808,7 +3836,7 @@ lemma invs_mdb' [elim!]:
 
 lemma invs_valid_replies'[elim!]:
   "invs' s \<Longrightarrow> valid_replies' s"
-  sorry
+  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
 
 lemma valid_mdb_no_loops [elim!]:
   "valid_mdb_ctes m \<Longrightarrow> no_loops m"
@@ -3945,6 +3973,7 @@ lemmas invs'_implies =
   invs_valid_release_queue
   invs_valid_release_queue'
   invs_sym_list_refs_of_replies'
+  invs_valid_replies'
 
 lemma valid_bitmap_valid_bitmapQ_exceptE:
   "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;
@@ -4048,6 +4077,15 @@ method normalise_obj_at' =
 
 end
 
+lemma valid_replies'D:
+  "valid_replies' s \<Longrightarrow> is_reply_linked rptr s
+   \<Longrightarrow> \<exists>tptr. replyTCBs_of s rptr = Some tptr
+              \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s"
+  apply (clarsimp simp: valid_replies'_def)
+  apply (drule_tac x=rptr in spec)
+  apply fastforce
+  done
+
 lemma valid_replies'_no_tcb:
   "\<lbrakk>replyTCBs_of s rptr = None; valid_replies' s\<rbrakk>
    \<Longrightarrow> \<not> is_reply_linked rptr s"
@@ -4063,11 +4101,26 @@ lemma valid_replies'_other_state:
   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)+
   done
 
+lemma valid_replies'_sc_asrtD:
+  "valid_replies'_sc_asrt rptr s \<Longrightarrow> replySCs_of s rptr \<noteq> None
+   \<Longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
+               \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s)"
+  by (clarsimp simp: valid_replies'_sc_asrt_def)
+
 lemma valid_replies'_sc_asrt_replySC_None:
   "\<lbrakk>valid_replies'_sc_asrt rptr s; replyTCBs_of s rptr = Some tptr;
     st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
    \<Longrightarrow> replySCs_of s rptr = None"
   by (force simp: valid_replies'_sc_asrt_def pred_tcb_at'_def obj_at'_def)
+
+lemma valid_replies'_no_tcb_not_linked:
+  "\<lbrakk>replyTCBs_of s replyPtr = None;
+    valid_replies' s; valid_replies'_sc_asrt replyPtr s\<rbrakk>
+    \<Longrightarrow> \<not> is_reply_linked replyPtr s \<and> replySCs_of s replyPtr = None"
+  apply (clarsimp simp: valid_replies'_def valid_replies'_sc_asrt_def)
+  apply (drule_tac x=replyPtr in spec)
+  apply clarsimp
+  done
 
 lemma valid_replies'_sc_asrt_lift:
   assumes x: "\<And>P. f \<lbrace>\<lambda>s. P (replySCs_of s)\<rbrace>"

@@ -45,23 +45,23 @@ lemmas valid_vspace_obj_elims [rule_format, elim!] =
 
 lemmas Arch_objBits_simps' = pteBits_def pdeBits_def pageBits_def objBits_simps
 
-sublocale setObject_pte: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _" getObject
+sublocale setObject_pte: simple_non_tcb_non_sc_non_reply_ko' "setObject :: _ \<Rightarrow> pte \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale setObject_pde: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _" getObject
+sublocale setObject_pde: simple_non_tcb_non_sc_non_reply_ko' "setObject :: _ \<Rightarrow> pde \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale setObject_asidpool: simple_non_tcb_non_sc_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _" getObject
+sublocale setObject_asidpool: simple_non_tcb_non_sc_non_reply_ko' "setObject :: _ \<Rightarrow> asidpool \<Rightarrow> _" getObject
   by (unfold_locales,
       simp add: projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale storePDE: simple_non_tcb_non_sc_ko' "storePDE" getObject
+sublocale storePDE: simple_non_tcb_non_sc_non_reply_ko' "storePDE" getObject
   by (unfold_locales,
       simp add: storePDE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 
-sublocale storePTE: simple_non_tcb_non_sc_ko' "storePTE" getObject
+sublocale storePTE: simple_non_tcb_non_sc_non_reply_ko' "storePTE" getObject
   by (unfold_locales,
       simp add: storePTE_def projectKO_opts_defs archObjSize_def Arch_objBits_simps' | wp)+
 

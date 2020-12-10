@@ -777,10 +777,10 @@ lemma doReplyTransfer_invs'[wp]:
   apply (simp add: doReplyTransfer_def liftM_def)
   apply (rule hoare_seq_ext[OF _ get_reply_sp'], rename_tac reply)
   apply (case_tac "replyTCB reply"; clarsimp; (solves wpsimp)?)
-  apply (rename_tac replyTCBPtr)
+  apply (rename_tac receiver)
   apply (rule hoare_seq_ext[OF _ gts_sp'])
   apply (rule hoare_if; (solves wpsimp)?)
-  apply (rule_tac B="\<lambda>_. ?pre and tcb_at' replyTCBPtr and ex_nonz_cap_to' replyTCBPtr"
+  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and ex_nonz_cap_to' receiver"
                in hoare_seq_ext[rotated])
    apply (wpsimp wp: replyRemove_invs')
    apply (clarsimp cong: conj_cong
@@ -793,16 +793,21 @@ lemma doReplyTransfer_invs'[wp]:
   apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
   apply (case_tac fault; clarsimp)
    apply (wpsimp wp: doIPCTransfer_invs setThreadState_Running_invs')
-  apply (rule_tac Q="?pre and tcb_at' replyTCBPtr and ex_nonz_cap_to' replyTCBPtr
-                     and (\<lambda>s. replyTCBPtr \<noteq> ksIdleThread s)"
+   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
+  apply (rule_tac Q="?pre and st_tcb_at' ((=) Inactive) receiver
+                          and ex_nonz_cap_to' receiver and (\<lambda>s. receiver \<noteq> ksIdleThread s)"
                in hoare_weaken_pre[rotated])
    using global'_no_ex_cap apply fastforce
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_fault_invs'\<close>)+
-  apply (rule hoare_seq_ext_skip)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2\<close>)+
+  apply (rule_tac B="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver
+                     and (\<lambda>s. receiver \<noteq> ksIdleThread s)"
+         in  hoare_seq_ext[rotated])
    apply clarsimp
    apply (intro conjI impI)
     apply (wpsimp wp: setThreadState_Restart_invs')
+    apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
    apply (wpsimp wp: sts_invs_minor')
+   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
   apply (rule hoare_seq_ext[OF _ isRunnable_sp])
   apply (wpsimp wp: possibleSwitchTo_invs' handleTimeout_invs' threadGet_wp hoare_drop_imps)
   apply (fastforce simp: pred_tcb_at'_def obj_at'_def
@@ -1267,11 +1272,12 @@ lemma gts_imp':
   done
 
 crunches replyFromKernel
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
+  for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
   and cap_to'[wp]: "ex_nonz_cap_to' p"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and sch_act_simple[wp]: sch_act_simple
-  (rule: sch_act_simple_lift)
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  (rule: sch_act_simple_lift simp: crunch_simps wp: crunch_wps)
 
 lemma rfk_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> replyFromKernel t x1 \<lbrace>\<lambda>_ s. P (ksReadyQueues s p)\<rbrace>"

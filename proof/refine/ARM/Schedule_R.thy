@@ -2669,6 +2669,12 @@ lemma refillUnblockCheck_ct_idle_or_in_cur_domain'[wp]:
   apply (wpsimp wp: scActive_wp)
   done
 
+crunches refillUnblockCheck, refillBudgetCheck
+  for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
+  and valid_replies'[wp]: valid_replies'
+  (wp: crunch_wps valid_replies'_lift)
+
 lemma refillUnblockCheck_invs':
   "refillUnblockCheck scPtr \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def pred_conj_def)
@@ -4074,10 +4080,12 @@ crunches schedContextDonate
   and cur_tcb'[wp]: "cur_tcb'"
   and urz[wp]: untyped_ranges_zero'
   and valid_dom_schedule'[wp]: valid_dom_schedule'
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and valid_replies' [wp]: valid_replies'
   (simp: comp_def tcb_cte_cases_def crunch_simps
      wp: threadSet_not_inQ hoare_vcg_imp_lift' valid_irq_node_lift
          setQueue_cur threadSet_ifunsafe'T threadSet_cur crunch_wps
-         cur_tcb_lift valid_dom_schedule'_lift)
+         cur_tcb_lift valid_dom_schedule'_lift valid_replies'_lift)
 
 lemma schedContextDonate_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' tcbPtr\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"

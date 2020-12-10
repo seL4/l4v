@@ -291,7 +291,10 @@ crunches schedContextUpdateConsumed
   and valid_pde_mappings'[wp]: valid_pde_mappings'
   and valid_queues[wp]: valid_queues
   and ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
-  (wp: crunch_wps simp: crunch_simps tcb_cte_cases_def)
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and valid_replies' [wp]: valid_replies'
+  and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
   by typ_at_props'
@@ -435,7 +438,10 @@ crunches schedContextCancelYieldTo
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps simp: crunch_simps tcb_cte_cases_def)
+  and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
+  and valid_replies' [wp]: valid_replies'
+  and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
+  (wp: crunch_wps threadSet_pred_tcb_no_state simp: crunch_simps)
 
 global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContextCancelYieldTo t"
   by typ_at_props'
@@ -446,7 +452,7 @@ lemma schedContextCancelYieldTo_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def
                    valid_dom_schedule'_def)
-  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
+  apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
   apply (fastforce simp: inQ_def valid_queues_def valid_queues_no_bitmap_def)
@@ -574,7 +580,7 @@ crunches schedContextDonate
 
 crunches schedContextDonate, schedContextUnbindAllTCBs, unbindFromSC,
          schedContextZeroRefillMax, schedContextUnbindYieldFrom, schedContextUnbindReply
-  for st_tcb_at'[wp]: "st_tcb_at' P t"
+  for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 
 crunches setSchedContext

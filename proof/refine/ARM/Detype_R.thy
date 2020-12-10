@@ -496,6 +496,7 @@ context delete_locale
 begin
 interpretation Arch . (*FIXME: arch_split*)
 lemma  valid_objs: "valid_objs' s'"
+  and    vreplies: "valid_replies' s'"
   and      pspace: "valid_pspace' s'"
   and          pa: "pspace_aligned' s'"
   and          pd: "pspace_distinct' s'"
@@ -1419,6 +1420,19 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
     apply (frule pspace_alignedD'[OF _ pa])
     apply (frule pspace_distinctD'[OF _ pd])
     apply (clarsimp simp: ko_wp_at'_def)
+    done
+
+  show "valid_replies' ?s" using vreplies assms
+    apply (clarsimp simp: valid_replies'_def simp del: imp_disjL)
+    apply (prop_tac "rptr \<notin> base_bits")
+     apply (clarsimp simp: opt_map_def)
+    apply (drule_tac x=rptr in spec, drule mp)
+     apply (fastforce simp: opt_map_def)
+    apply clarsimp
+    apply (prop_tac "tptr \<notin> base_bits")
+     apply (rule live_notRange[where P=live']; clarsimp?)
+     apply (fastforce simp: ko_wp_at'_def pred_tcb_at'_def obj_at'_def projectKOs)
+    apply (clarsimp simp: pred_tcb_at'_def opt_map_def)
     done
 
   show "sym_refs (map_set (replies' ||> list_refs_of_reply'))"
