@@ -4051,7 +4051,7 @@ lemma updateReply_obj_at'[wp]:
   apply (wpsimp wp: setReply_obj_at')
   by (clarsimp simp: obj_at'_def split: if_splits)
 
-lemma replyPush'_valid_objs':
+lemma replyPush'_valid_objs'[wp]:
   "replyPush' callerPtr calleePtr replyPtr canDonate scPtrOptDonated scPtrOptCallee \<lbrace>valid_objs'\<rbrace>"
   supply if_split [split del]
   unfolding replyPush'_def getReplyTCB_def
