@@ -4043,26 +4043,50 @@ crunches replyPush'
   and valid_queues[wp]: "valid_queues"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-lemma replyPush'_valid_objs'[wp]:
-  "replyPush' callerPtr calleePtr replyPtr canDonate scPtrOptDonated scPtrOptCallee \<lbrace>valid_objs'\<rbrace>"
-(*   apply (solves wp | simp (no_asm_use) add: replyPush'_def split del: if_split cong: conj_cong |
-         wp hoare_when_wp haskell_assert_wp hoare_vcg_if_lift hoare_vcg_all_lift
-            hoare_vcg_disj_lift hoare_vcg_imp_lift' set_sc'.valid_objs'
-            set_reply'.valid_objs' setReply_obj_at')+
-  apply (clarsimp simp: valid_tcb_state'_def ko_wp_at'_def obj_at'_def)
-  apply (fastforce elim: valid_objsE'[where x="the scPtrOptDonated"]
-                   simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                         valid_reply'_def valid_bound_obj'_def objBits_def objBitsKO_def
-                         obj_at'_def projectKO_eq projectKO_reply projectKO_tcb projectKO_sc)
-  done
- *)
-  sorry (* soon-to-be-redundant -- Mitch *)
+lemma updateReply_obj_at'[wp]:
+  "\<lbrace>if r = replyPtr then obj_at' (P \<circ> f) replyPtr else obj_at' P replyPtr\<rbrace>
+   updateReply r f 
+   \<lbrace>\<lambda>_. obj_at' (P :: reply \<Rightarrow> bool) replyPtr\<rbrace>"
+  unfolding updateReply_def
+  apply (wpsimp wp: setReply_obj_at')
+  by (clarsimp simp: obj_at'_def split: if_splits)
 
 lemma replyPush_valid_objs'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>valid_objs'\<rbrace>"
-  by (rule monadic_rewrite_refine_valid[OF monadic_rewrite_replyPush, where P''=\<top>, simplified])
-     (wpsimp wp: schedContextDonate_valid_objs' threadGet_wp hoare_vcg_if_lift hoare_vcg_imp_lift
-           simp: getReplyTCB_def obj_at'_def split_del: if_split)
+  supply if_split [split del]
+  unfolding replyPush_def getReplyTCB_def
+  apply wpsimp
+                           apply (wpsimp wp: schedContextDonate_valid_objs')
+                          apply wpsimp+
+                          apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                                                   tcb_at' calleePtr s" 
+                                 in hoare_strengthen_post[rotated])
+                           apply clarsimp
+                           apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+                           apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+                          apply wpsimp+
+                       apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                                    tcb_at' calleePtr s" in hoare_strengthen_post[rotated])
+                        apply (clarsimp simp: split: if_split)
+                        apply (intro conjI; intro allI impI)
+                         apply (frule (1) reply_ko_at_valid_objs_valid_reply')
+                         apply (clarsimp simp: valid_reply'_def)
+                        apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+                        apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+                       apply wpsimp+
+                 apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                                          tcb_at' calleePtr s" 
+                        in hoare_strengthen_post[rotated])
+                  apply (clarsimp simp: split: if_split)
+                  apply (intro conjI; intro allI impI)
+                   apply (frule (1) reply_ko_at_valid_objs_valid_reply'[where p=replyPtr])
+                   apply (clarsimp simp: valid_reply'_def obj_at'_def  objBits_def objBitsKO_def)
+                  apply (frule (1) reply_ko_at_valid_objs_valid_reply'[where p=replyPtr])
+                  apply (clarsimp simp: valid_reply'_def obj_at'_def  objBits_def objBitsKO_def)
+                 apply wpsimp
+                apply (wpsimp simp: valid_tcb_state'_def wp: updateReply_valid_objs'_preserved_strong)
+               apply (wpsimp wp: gts_wp')+
+  by (clarsimp simp: obj_at'_def pred_tcb_at'_def valid_reply'_def)
 
 lemma replyPush_sch_act_wf:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not callerPtr s\<rbrace>
@@ -4098,23 +4122,6 @@ lemma replyPush_sym_refs_list_refs_of_replies'_helper:
 
 crunches updateReply
   for sc_ko_at'[wp]: "\<lambda>s. P (ko_at' (ko :: sched_context) p s)"
-                                                  
-lemma reply_at'_obj_at'_set_obj'[unfolded injectKO_reply]:
-  assumes "P (reply :: reply)"
-      and "reply_at' ptr s"
-  shows "obj_at' P ptr (set_obj' ptr reply s)"
-  using assms
-  apply (clarsimp simp: objBits_def objBitsKO_def inj_def
-                        same_size_obj_at'_set_obj'_iff[where 'a=reply, simplified])
-  done
-
-lemma updateReply_obj_at'[wp]:
-  "\<lbrace>if r = replyPtr then obj_at' (P \<circ> f) replyPtr else obj_at' P replyPtr\<rbrace>
-   updateReply r f 
-   \<lbrace>\<lambda>_. obj_at' (P :: reply \<Rightarrow> bool) replyPtr\<rbrace>"
-  unfolding updateReply_def
-  apply (wpsimp wp: setReply_obj_at')
-  by (clarsimp simp: obj_at'_def split: if_splits)
 
 lemma replyPush_sym_refs_list_refs_of_replies'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
