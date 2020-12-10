@@ -65,6 +65,10 @@ mark the notification object as active.
 >                         cancelIPC tcb
 >                         setThreadState Running tcb
 >                         asUser tcb $ setRegister badgeRegister badge
+>                         tcbSc <- threadGet tcbSchedContext tcb
+>                         active <- if tcbSc == Nothing then return False else scActive (fromJust tcbSc)
+>                         curSc <- getCurSc
+>                         when (tcbSc /= Nothing && active && (fromJust tcbSc) /= curSc) $ refillUnblockCheck (fromJust tcbSc)
 >                         maybeDonateSc tcb ntfnPtr
 >                         schedulable <- isSchedulable tcb
 >                         when schedulable $ possibleSwitchTo tcb
@@ -80,6 +84,9 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                     [] -> IdleNtfn
 >                     _  -> WaitingNtfn queue
 >                   }
+>                 destSc <- threadGet tcbSchedContext dest
+>                 curSc <- getCurSc
+>                 when (destSc /= Nothing && (fromJust destSc) /= curSc) $ refillUnblockCheck (fromJust destSc)
 >                 setThreadState Running dest
 >                 asUser dest $ setRegister badgeRegister badge
 >                 maybeDonateSc dest ntfnPtr
@@ -155,7 +162,10 @@ If a notification object is deleted, then pending receive operations must be can
 >                 setNotification ntfnPtr (ntfn { ntfnObj = IdleNtfn })
 >                 forM_ queue (\t -> do
 >                     setThreadState Restart t
->                     possibleSwitchTo t)
+>                     possibleSwitchTo t
+>                     tSc <- threadGet tcbSchedContext t
+>                     curSc <- getCurSc
+>                     when (tSc /= Nothing && (fromJust tSc) /= curSc) $ refillUnblockCheck (fromJust tSc))
 >                 rescheduleRequired
 >             _ -> return ()
 
@@ -186,6 +196,12 @@ The following function will remove the given thread from the queue of the notifi
 >             ActiveNtfn badge -> do
 >                 asUser tcb $ setRegister badgeRegister badge
 >                 setNotification ntfnPtr $ ntfn {ntfnObj = IdleNtfn}
+>                 maybeDonateSc tcb ntfnPtr
+>                 tcbScOpt <- threadGet tcbSchedContext tcb
+>                 ntfnScPtrOpt <- liftM ntfnSc (getNotification ntfnPtr)
+>                 active <- if tcbScOpt == Nothing then return False else scActive (fromJust tcbScOpt)
+>                 curSc <- getCurSc
+>                 when (tcbScOpt /= Nothing && tcbScOpt == ntfnScPtrOpt && active && (fromJust tcbScOpt) /= curSc) $ refillUnblockCheck (fromJust tcbScOpt)
 >             _ -> fail "tried to complete signal with inactive notification object"
 
 
@@ -252,4 +268,3 @@ The following functions are specialisations of the "getObject" and "setObject" f
 >     case ntfnObj ntfn of
 >         WaitingNtfn qs -> Just qs
 >         _ -> Nothing
-

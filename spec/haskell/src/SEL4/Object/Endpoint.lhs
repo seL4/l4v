@@ -108,6 +108,8 @@ The receiving thread has now completed its blocking operation and can run. If th
 
 >                 setThreadState Running dest
 >                 possibleSwitchTo dest
+>                 curSc <- getCurSc
+>                 when (scOptDest /= Nothing && (fromJust scOptDest) /= curSc) $ refillUnblockCheck (fromJust scOptDest)
 
 Empty receive endpoints are invalid.
 
@@ -175,6 +177,9 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                   let canGrant = blockingIPCCanGrant senderState
 >                   let canGrantReply = blockingIPCCanGrantReply senderState
 >                   doIPCTransfer sender (Just epptr) badge canGrant thread
+>                   senderSc <- threadGet tcbSchedContext sender
+>                   curSc <- getCurSc
+>                   when (senderSc /= Nothing && (fromJust senderSc) /= curSc) $ refillUnblockCheck (fromJust senderSc)
 >                   let call = blockingIPCIsCall senderState
 >                   fault <- threadGet tcbFault sender
 >                   case (call, fault, canGrant || canGrantReply, replyOpt) of
@@ -279,6 +284,9 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                         then do
 >                             setThreadState Restart t
 >                             possibleSwitchTo t
+>                             tSc <- threadGet tcbSchedContext t
+>                             curSc <- getCurSc
+>                             when (tSc /= Nothing && (fromJust tSc) /= curSc) $ refillUnblockCheck (fromJust tSc)
 >                         else setThreadState Inactive t)
 >                 rescheduleRequired
 
@@ -303,6 +311,9 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                             then do
 >                                 setThreadState Restart t
 >                                 possibleSwitchTo t
+>                                 tSc <- threadGet tcbSchedContext t
+>                                 curSc <- getCurSc
+>                                 when (tSc /= Nothing && (fromJust tSc) /= curSc) $ refillUnblockCheck (fromJust tSc)
 >                             else setThreadState Inactive t
 >                         return False
 >                     else return True
@@ -354,4 +365,3 @@ The following two functions are specialisations of "getObject" and
 >     qs' <- tcbEPDequeue tptr qs
 >     qs'' <- tcbEPAppend tptr qs'
 >     setEndpoint epPtr (updateEpQueue ep qs'')
-

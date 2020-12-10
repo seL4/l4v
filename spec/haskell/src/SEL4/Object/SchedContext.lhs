@@ -28,7 +28,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
 >         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
->         scReleased, setConsumed, refillResetRR
+>         scReleased, setConsumed, refillResetRR, scActive
 >     ) where
 
 \begin{impdetails}
@@ -381,6 +381,8 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 >     setSchedContext scPtr $ sc { scTCB = Just tcbPtr }
+>     active <- scActive scPtr
+>     when active $ refillUnblockCheck scPtr
 >     schedContextResume scPtr
 >     schedulable <- isSchedulable tcbPtr
 >     when schedulable $ do
@@ -678,7 +680,8 @@ This module uses the C preprocessor to select a target architecture.
 >                 when (scTCB == Nothing) $ do
 >                     schedContextDonate scPtr tcbPtr
 >                     curSc <- getCurSc
->                     when (scPtr /= curSc) $ refillUnblockCheck scPtr
+>                     active <- scActive scPtr
+>                     when (scPtr /= curSc && active) $ refillUnblockCheck scPtr
 >                     schedContextResume scPtr
 
 > maybeReturnSc :: PPtr Notification -> PPtr TCB -> Kernel ()

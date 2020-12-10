@@ -154,6 +154,9 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
+>         active <- if scOpt == Nothing then return False else scActive (fromJust scOpt)
+>         curSc <- getCurSc
+>         when (scOpt /= Nothing && active && (fromJust scOpt) /= curSc) $ refillUnblockCheck (fromJust scOpt)
 >         when (isJust scOpt) $ schedContextResume (fromJust scOpt)
 >         schedulable <- isSchedulable target
 >         when schedulable $ possibleSwitchTo target
@@ -199,6 +202,10 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                 then return ()
 >                 else do
 >                     replyRemove reply receiver
+>                     receiverSc <- threadGet tcbSchedContext receiver
+>                     active <- if receiverSc == Nothing then return False else scActive (fromJust receiverSc)
+>                     curSc <- getCurSc
+>                     when (receiverSc /= Nothing && active && (fromJust receiverSc) /= curSc) $ refillUnblockCheck (fromJust receiverSc)
 >                     faultOpt <- threadGet tcbFault receiver
 >                     case faultOpt of
 >                         Nothing -> do
@@ -740,4 +747,3 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 
 %
-
