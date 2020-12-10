@@ -2902,13 +2902,21 @@ crunch invs[wp]: prepareThreadDelete "invs'"
 
 end
 
+lemma weak_sch_act_wf_updates[simp]:
+  "weak_sch_act_wf sa (s\<lparr>ksReprogramTimer := a\<rparr>) = weak_sch_act_wf sa s"
+  "weak_sch_act_wf sa (s\<lparr>ksReleaseQueue := b\<rparr>) = weak_sch_act_wf sa s"
+  by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
+
+crunches tcbReleaseRemove
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
+
 lemma schedContextDonate_weak_sch_act_wf[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp only: schedContextDonate_def)
   apply (wpsimp wp: threadSet_weak_sch_act_wf setSchedContext_weak_sch_act_wf rescheduleRequired_weak_sch_act_wf)
-        apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
-        apply (wpsimp wp: threadSet_weak_sch_act_wf)
-       apply wpsimp+
+         apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
+         apply (wpsimp wp: threadSet_weak_sch_act_wf)
+        apply wpsimp+
   done
 
 lemma ntfnSc_sym_refsD:
@@ -3531,6 +3539,8 @@ lemma schedContextDonate_valid_queues:
     apply (wpsimp wp: tcbSchedDequeue_valid_queues)
     apply (fastforce intro: valid_objs'_maxDomain valid_objs'_maxPriority)
    apply (rule hoare_seq_ext_skip)
+    apply (wpsimp wp: tcbReleaseRemove_valid_queues)
+   apply (rule hoare_seq_ext_skip)
     apply (wpsimp wp: threadSet_valid_queues_new threadSet_valid_objs')
     apply (clarsimp simp: obj_at'_def inQ_def valid_tcb'_def tcb_cte_cases_def)
    apply (wpsimp wp: rescheduleRequired_valid_queues)
@@ -3578,6 +3588,14 @@ lemma rescheduleRequired_valid_sched_context'[wp]:
 global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
   by typ_at_props'
 
+lemma valid_sched_context'_updates[simp]:
+  "valid_sched_context' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_sched_context' sc' s"
+  "valid_sched_context' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_sched_context' sc' s"
+  by (auto simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
+
+crunches tcbReleaseRemove
+  for valid_sched_context'[wp]: "\<lambda>s. valid_sched_context' sc' s"
+
 lemma schedContextDonate_valid_objs':
   "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
    schedContextDonate scPtr tcbPtr
@@ -3592,6 +3610,7 @@ lemma schedContextDonate_valid_objs':
   apply (rule hoare_seq_ext_skip)
    apply (rule hoare_when_cases, clarsimp)
    apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
+   apply (rule hoare_seq_ext_skip, wpsimp)
    apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
     apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
    apply wpsimp
@@ -3666,6 +3685,11 @@ lemma setSchedContext_valid_reply'[wp]:
   apply (wpsimp simp: setSchedContext_def wp: setObject_sc_wp)
    apply (clarsimp simp: valid_obj'_def valid_reply'_def)+
   done
+
+lemma valid_reply'_updates[simp]:
+  "valid_reply' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_reply' sc' s"
+  "valid_reply' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_reply' sc' s"
+  by (auto simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
 
 crunches schedContextDonate
   for valid_reply'[wp]: "\<lambda>s. valid_reply' reply s"
@@ -3831,12 +3855,27 @@ lemma tcbSchedDequeue_valid_inQ_queues:
   done
 
 lemma threadSet_tcbSchedContext_update_valid_inQ_queues[wp]:
-  "\<lbrace>valid_inQ_queues and tcb_at' t\<rbrace>
-   threadSet (tcbSchedContext_update sc_opt) tcbPtr
+  "threadSet (tcbSchedContext_update sc_opt) tcbPtr \<lbrace>valid_inQ_queues\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  apply (fastforce simp: valid_inQ_queues_def obj_at'_def inQ_def projectKOs objBitsKO_def)
+  done
+
+lemma threadSet_tcbInReleaseQueue_update_valid_inQ_queues[wp]:
+  "\<lbrace>valid_inQ_queues\<rbrace>
+   threadSet (tcbInReleaseQueue_update sc_opt) tcbPtr
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   apply (wpsimp wp: threadSet_wp)
   apply (fastforce simp: valid_inQ_queues_def obj_at'_def inQ_def projectKOs objBitsKO_def)
   done
+
+lemma valid_inQ_queues_updates[simp]:
+  "valid_inQ_queues (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_inQ_queues s"
+  "valid_inQ_queues (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_inQ_queues s"
+  by (auto simp: valid_inQ_queues_def)
+
+crunches setReprogramTimer, setReleaseQueue, tcbReleaseRemove
+  for valid_inQ_queues[wp]: valid_inQ_queues
+  (simp: tcbReleaseRemove_def)
 
 lemma schedContextDonate_valid_inQ_queues:
   "\<lbrace>valid_inQ_queues and valid_objs' and tcb_at' tcbPtr\<rbrace>
@@ -3853,10 +3892,11 @@ lemma schedContextDonate_valid_inQ_queues:
     apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
                       simp: valid_sched_context'_def)
    apply (rule hoare_seq_ext_skip)
+    apply wpsimp
+   apply (rule hoare_seq_ext_skip)
     apply (wpsimp wp: threadSet_valid_objs')
     apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def)
    apply wpsimp+
-  apply fastforce
   done
 
 lemma replyPop_valid_inQ_queues[wp]:
