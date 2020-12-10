@@ -106,10 +106,7 @@ where
     scp \<leftarrow> assert_opt sc_opt;
     sc' \<leftarrow> get_sched_context cur_sc;
 
-    when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ do
-      modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-      refill_unblock_check scp
-     od;
+    when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
 
     reprogram \<leftarrow> gets reprogram_timer;
     when reprogram $ commit_time;
@@ -278,7 +275,6 @@ where
     sched_context_resume sc_ptr;
     schedulable <- is_schedulable tcb_ptr;
     if schedulable then do
-      refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
       curtime \<leftarrow> gets cur_time;
       assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);

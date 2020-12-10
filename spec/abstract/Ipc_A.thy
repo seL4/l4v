@@ -315,7 +315,9 @@ where
                         | _ \<Rightarrow> return True; \<comment> \<open>why does C allow dest to have no sc?\<close>
                 assert test;
                 set_thread_state dest Running;
-                possible_switch_to dest
+                possible_switch_to dest;
+                cur_sc_ptr \<leftarrow> gets cur_sc;
+                when (new_sc_opt \<noteq> None \<and> cur_sc_ptr \<noteq> the new_sc_opt) $ refill_unblock_check (the new_sc_opt)
               od
        | (RecvEP [], _) \<Rightarrow> fail
    od"
@@ -330,18 +332,24 @@ where
      of ActiveNtfn _ \<Rightarrow> True
       | _ \<Rightarrow> False"
 
-
 text\<open>Helper function for performing \emph{signal} when receiving on a normal
 endpoint\<close>
 definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "complete_signal ntfnptr tcb \<equiv> do
-     ntfn \<leftarrow> get_notification ntfnptr;
+  "complete_signal ntfn_ptr tcb_ptr \<equiv> do
+     ntfn \<leftarrow> get_notification ntfn_ptr;
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
-           as_user tcb $ setRegister badge_register badge;
-           set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn
+           as_user tcb_ptr $ setRegister badge_register badge;
+           set_notification ntfn_ptr $ ntfn_obj_update (K IdleNtfn) ntfn;
+           maybe_donate_sc tcb_ptr ntfn_ptr;
+           sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
+           ntfnsc \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfn_ptr;
+           active \<leftarrow> if sc_opt = None then return False else get_sc_active (the sc_opt);
+           cur_sc_ptr \<leftarrow> gets cur_sc;
+           when (sc_opt \<noteq> None \<and> sc_opt = ntfnsc \<and> active \<and> the sc_opt \<noteq> cur_sc_ptr)
+             $ refill_unblock_check (the sc_opt)
          od
      | _ \<Rightarrow> fail
    od"
@@ -410,6 +418,9 @@ where
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
                         thread;
+              sender_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
+              cur_sc_ptr \<leftarrow> gets cur_sc;
+              when (sender_sc \<noteq> None \<and> the sender_sc \<noteq> cur_sc_ptr) $ refill_unblock_check (the sender_sc);
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
@@ -444,6 +455,9 @@ where
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb,
          ntfn_sc = sc_ptr \<rparr>;
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+     cur_sc_ptr \<leftarrow> gets cur_sc;
+     when (sc_opt \<noteq> None \<and> the sc_opt \<noteq> cur_sc_ptr) $ refill_unblock_check (the sc_opt);
      set_thread_state dest Running;
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
@@ -469,16 +483,21 @@ where
   "send_signal ntfnptr badge \<equiv> do
     ntfn \<leftarrow> get_notification ntfnptr;
     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
-          (IdleNtfn, Some tcb) \<Rightarrow> do
-                  st \<leftarrow> get_thread_state tcb;
+          (IdleNtfn, Some tcb_ptr) \<Rightarrow> do
+                  st \<leftarrow> get_thread_state tcb_ptr;
                   if receive_blocked st
                   then do
-                      cancel_ipc tcb;
-                      set_thread_state tcb Running;
-                      as_user tcb $ setRegister badge_register badge;
-                      maybe_donate_sc tcb ntfnptr;
-                      schedulable <- is_schedulable tcb;
-                      when (schedulable) $ possible_switch_to tcb
+                      cancel_ipc tcb_ptr;
+                      set_thread_state tcb_ptr Running;
+                      as_user tcb_ptr $ setRegister badge_register badge;
+                      maybe_donate_sc tcb_ptr ntfnptr;
+                      schedulable \<leftarrow> is_schedulable tcb_ptr;
+                      when schedulable $ possible_switch_to tcb_ptr;
+                      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
+                      active \<leftarrow> if sc_opt = None then return False else get_sc_active (the sc_opt);
+                      cur_sc_ptr \<leftarrow> gets cur_sc;
+                      when (sc_opt \<noteq> None \<and> active \<and> the sc_opt \<noteq> cur_sc_ptr)
+                         $ refill_unblock_check (the sc_opt)
                     od
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
             od
@@ -589,6 +608,12 @@ where
         BlockedOnReply r \<Rightarrow> do
           assert (r = reply);
           reply_remove receiver reply;
+
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          active \<leftarrow> if sc_opt = None then return False else get_sc_active (the sc_opt);
+          cur_sc_ptr \<leftarrow> gets cur_sc;
+          when (sc_opt \<noteq> None \<and> active \<and> the sc_opt \<noteq> cur_sc_ptr) $ refill_unblock_check (the sc_opt);
+
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do

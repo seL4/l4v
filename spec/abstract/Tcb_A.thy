@@ -35,6 +35,9 @@ definition
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
       set_thread_state thread Restart;
+      active \<leftarrow> if sc_opt = None then return False else get_sc_active (the sc_opt);
+      cur_sc_ptr \<leftarrow> gets cur_sc;
+      when (sc_opt \<noteq> None \<and> active \<and> the sc_opt \<noteq> cur_sc_ptr) (refill_unblock_check (the sc_opt));
       maybeM sched_context_resume sc_opt;
       test_possible_switch_to thread
     od
