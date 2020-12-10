@@ -2273,9 +2273,6 @@ lemma unbindMaybeNotification_invs[wp]:
           elim!: obj_atE' if_live_then_nonz_capE'
           split: option.splits ntfn.splits)
 
-crunches getReplyTCB
-  for inv[wp]: P
-
 lemma setNotification_invs':
   "\<lbrace>invs'
     and (\<lambda>s. live_ntfn' ntfn \<longrightarrow> ex_nonz_cap_to' ntfnPtr s)
@@ -2343,7 +2340,7 @@ lemma replyClear_invs'[wp]:
 lemma finaliseCap_True_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding finaliseCap_def sym_refs_asrt_def
-  apply (wpsimp wp: irqs_masked_lift getReplyTCB_wp simp: Let_def split_del: if_split)
+  apply (wpsimp wp: irqs_masked_lift simp: Let_def split_del: if_split)
   apply clarsimp
   apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
    apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
@@ -2965,8 +2962,8 @@ lemma replyUnlink_obj_at_tcb_none:
   "\<lbrace>K (rptr' = rptr)\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. replyTCB reply = None) rptr'\<rbrace>"
-  apply (simp add: replyUnlink_def setReplyTCB_def)
-  apply (wpsimp wp: updateReply_wp_all gts_wp' getReplyTCB_wp)
+  apply (simp add: replyUnlink_def)
+  apply (wpsimp wp: updateReply_wp_all gts_wp')
   by (auto simp: obj_at'_def projectKOs objBitsKO_def)
 
 lemma replyUnlink_makes_unlive:
@@ -2974,8 +2971,8 @@ lemma replyUnlink_makes_unlive:
         \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> rptr' = rptr\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr'\<rbrace>"
-  apply (simp add: replyUnlink_def setReplyTCB_def)
-  apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp' getReplyTCB_wp)
+  apply (simp add: replyUnlink_def)
+  apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp')
   by (auto simp: ko_wp_at'_def obj_at'_def projectKOs is_aligned_def ps_clear_def
                  objBitsKO_def live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def)
 
@@ -3233,52 +3230,51 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (simp add: finaliseCap_def Let_def getThreadCSpaceRoot
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp prepares_delete_helper'' [OF cancelAllIPC_unlive]
-             prepares_delete_helper'' [OF cancelAllSignals_unlive]
-             prepares_delete_helper'' [OF replyClear_makes_unlive]
-             schedContextZeroRefillMax_removeable'
-             prepareThreadDelete_unqueued prepareThreadDelete_nonq
-             prepareThreadDelete_inactive
-             suspend_makes_inactive suspend_nonq
-             suspend_bound_yt_tcb_at'_None
-             deletingIRQHandler_removeable'
-             deletingIRQHandler_final[where slot=slot]
-             unbindMaybeNotification_obj_at'_ntfnBound
-             getNotification_wp
-             suspend_bound_tcb_at'
-             unbindNotification_bound_tcb_at'
-             unbindMaybeNotification_obj_at'_no_change
-             schedContextMaybeUnbindNtfn_obj_at'_ntfnSc
-             unbindFromSC_bound_sc_tcb_at'_None
-             getReplyTCB_wp hoare_vcg_if_lift_strong
-             schedContextUnbindYieldFrom_makes_unlive
-             schedContextUnbindReply_obj_at'_reply_None
-             schedContextUnbindReply_obj_at'_not_reply
-             schedContextUnbindNtfn_obj_at'_ntfn_None
-             schedContextUnbindNtfn_obj_at'_not_ntfn
-             schedContextUnbindAllTCBs_obj_at'_tcb_None
-           | simp add: isZombie_Null isThreadCap_threadCapRefs_tcbptr
-                       isArchObjectCap_Cap_capCap not_obj_at'
-           | (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
-                  clarsimp simp: isCap_simps)
-           | wpc
-           | strengthen invs_valid_objs' invs_sch_act_wf')+
-  apply clarsimp
+   apply (wpsimp wp: prepares_delete_helper'' [OF cancelAllIPC_unlive]
+                     prepares_delete_helper'' [OF cancelAllSignals_unlive]
+                     unbindMaybeNotification_obj_at'_ntfnBound
+                     unbindMaybeNotification_obj_at'_no_change
+               simp: isZombie_Null)
+    apply (strengthen invs_valid_objs' invs_sch_act_wf')
+    apply (wpsimp wp: schedContextMaybeUnbindNtfn_obj_at'_ntfnSc
+                      prepares_delete_helper'' [OF replyClear_makes_unlive]
+                      hoare_vcg_if_lift_strong simp: isZombie_Null)+
+        apply (clarsimp simp: obj_at'_def)
+       apply (wpsimp wp: schedContextZeroRefillMax_removeable'
+                         prepareThreadDelete_unqueued prepareThreadDelete_nonq
+                         prepareThreadDelete_inactive
+                         suspend_makes_inactive
+                         suspend_nonq
+                         suspend_bound_yt_tcb_at'_None
+                         unbindNotification_bound_tcb_at'
+                         unbindFromSC_bound_sc_tcb_at'_None
+                         schedContextUnbindYieldFrom_makes_unlive
+                         schedContextUnbindReply_obj_at'_reply_None
+                         schedContextUnbindReply_obj_at'_not_reply
+                         schedContextUnbindNtfn_obj_at'_ntfn_None
+                         schedContextUnbindNtfn_obj_at'_not_ntfn
+                         schedContextUnbindAllTCBs_obj_at'_tcb_None
+                   simp: isZombie_Null isThreadCap_threadCapRefs_tcbptr)+
+    apply (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
+           clarsimp simp: isCap_simps)
+   apply (wpsimp wp: deletingIRQHandler_removeable'
+                     deletingIRQHandler_final[where slot=slot])+
   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp)
   apply (case_tac "cteCap cte",
          simp_all add: isCap_simps capRange_def cap_has_cleanup'_def
                        final_matters'_def objBits_simps
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
-    (* ThreadCap *)
-    apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
-    apply (clarsimp simp: valid_cap'_def)
-    apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
-    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+     (* ThreadCap *)
+     apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
+     apply (clarsimp simp: valid_cap'_def)
+     apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
+     apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def)
+    (* EndpointCap *)
+    apply fastforce
    (* ArchObjectCap *)
-   apply (clarsimp simp: obj_at'_def)
+   apply (fastforce simp: obj_at'_def)
   (* ReplyCap *)
-  apply clarsimp
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: obj_at'_def)
   apply (frule (1) valid_replies'_no_tcb[OF ko_at_obj_at', simplified], clarsimp)
@@ -3413,8 +3409,7 @@ lemma replyUnlink_st_tcb_at_simplish:
   "replyUnlink r t' \<lbrace>st_tcb_at' (\<lambda>st. P st \<or> simple' st) t\<rbrace>"
   supply if_split [split del]
   unfolding replyUnlink_def
-  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp'
-              simp: getReplyTCB_def)
+  apply (wpsimp wp: sts_st_tcb' hoare_vcg_if_lift2 hoare_vcg_imp_lift' gts_wp')
   done
 
 crunch st_tcb_at_simplish: cteDeleteOne
@@ -3674,7 +3669,7 @@ crunches setThreadState
 
 lemma replyUnlink_valid_reply'[wp]:
   "replyUnlink replyPtr tcbPtr \<lbrace>valid_reply' reply\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def liftM_def setReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def liftM_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   by (auto simp: valid_reply'_def obj_at'_def projectKOs objBitsKO_def valid_bound_obj'_def
           split: option.splits)
@@ -3731,7 +3726,7 @@ lemma finaliseCapTrue_standin_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_objs'\<rbrace>
    finaliseCapTrue_standin cap final
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  apply (simp add: finaliseCapTrue_standin_def Let_def getReplyTCB_def)
+  apply (simp add: finaliseCapTrue_standin_def Let_def)
   apply (intro conjI impI; wpsimp)
   done
 
@@ -3928,8 +3923,7 @@ lemma finaliseCapTrue_standin_valid_inQ_queues[wp]:
    finaliseCapTrue_standin cap final
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   unfolding finaliseCapTrue_standin_def Let_def
-  apply (wpsimp wp: getReplyTCB_wp)
-  done
+  by wpsimp
 
 crunches isFinalCapability
   for valid_objs'[wp]: valid_objs'
@@ -4003,7 +3997,7 @@ lemma finaliseCap_invs:
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift getReplyTCB_wp | simp only: o_def)+
+   apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift | simp only: o_def)+
   sorry (* finaliseCap_invs *) (*
   apply clarsimp
   apply (intro conjI impI)
