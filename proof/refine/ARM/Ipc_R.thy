@@ -4051,6 +4051,42 @@ lemma updateReply_obj_at'[wp]:
   apply (wpsimp wp: setReply_obj_at')
   by (clarsimp simp: obj_at'_def split: if_splits)
 
+lemma replyPush'_valid_objs':
+  "replyPush' callerPtr calleePtr replyPtr canDonate scPtrOptDonated scPtrOptCallee \<lbrace>valid_objs'\<rbrace>"
+  supply if_split [split del]
+  unfolding replyPush'_def getReplyTCB_def
+  apply wpsimp
+                     apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                                              tcb_at' calleePtr s" 
+                            in hoare_strengthen_post[rotated])
+                      apply clarsimp
+                      apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+                      apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+                     apply_trace wpsimp+
+                  apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                               tcb_at' calleePtr s" in hoare_strengthen_post[rotated])
+                   apply (clarsimp simp: split: if_split)
+                   apply (intro conjI; intro allI impI)
+                    apply (frule (1) reply_ko_at_valid_objs_valid_reply')
+                    apply (clarsimp simp: valid_reply'_def)
+                   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+                   apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+                  apply (frule Some_to_the, simp)
+                  apply wpsimp+
+            apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
+                                     tcb_at' calleePtr s" 
+                   in hoare_strengthen_post[rotated])
+             apply (clarsimp simp: split: if_split)
+             apply (intro conjI; intro allI impI)
+              apply (frule (1) reply_ko_at_valid_objs_valid_reply'[where p=replyPtr])
+              apply (clarsimp simp: valid_reply'_def obj_at'_def  objBits_def objBitsKO_def)
+             apply (frule (1) reply_ko_at_valid_objs_valid_reply'[where p=replyPtr])
+             apply (clarsimp simp: valid_reply'_def obj_at'_def  objBits_def objBitsKO_def)
+            apply wpsimp
+           apply (wpsimp simp: valid_tcb_state'_def wp: updateReply_valid_objs'_preserved_strong)
+          apply (wpsimp wp: gts_wp')+
+  by (clarsimp simp: obj_at'_def pred_tcb_at'_def valid_reply'_def)
+
 lemma replyPush_valid_objs'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>valid_objs'\<rbrace>"
   supply if_split [split del]
