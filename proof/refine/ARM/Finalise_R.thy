@@ -3224,7 +3224,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   apply (rule hoare_pre)
    apply (wpsimp wp: prepares_delete_helper'' [OF cancelAllIPC_unlive]
                      prepares_delete_helper'' [OF cancelAllSignals_unlive]
-                     unbindMaybeNotification_obj_at'_ntfnBound 
+                     unbindMaybeNotification_obj_at'_ntfnBound
                      unbindMaybeNotification_obj_at'_no_change
                simp: isZombie_Null)
     apply (strengthen invs_valid_objs' invs_sch_act_wf')
@@ -3235,7 +3235,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
        apply (wpsimp wp: schedContextZeroRefillMax_removeable'
                          prepareThreadDelete_unqueued prepareThreadDelete_nonq
                          prepareThreadDelete_inactive
-                         suspend_makes_inactive 
+                         suspend_makes_inactive
                          suspend_nonq
                          suspend_bound_yt_tcb_at'_None
                          unbindNotification_bound_tcb_at'
@@ -3245,10 +3245,10 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                          schedContextUnbindReply_obj_at'_not_reply
                          schedContextUnbindNtfn_obj_at'_ntfn_None
                          schedContextUnbindNtfn_obj_at'_not_ntfn
-                         schedContextUnbindAllTCBs_obj_at'_tcb_None 
+                         schedContextUnbindAllTCBs_obj_at'_tcb_None
                    simp: isZombie_Null isThreadCap_threadCapRefs_tcbptr)+
     apply (rule hoare_strengthen_post [OF arch_finaliseCap_removeable[where slot=slot]],
-           clarsimp simp: isCap_simps)   
+           clarsimp simp: isCap_simps)
    apply (wpsimp wp: deletingIRQHandler_removeable'
                      deletingIRQHandler_final[where slot=slot])+
   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp)
