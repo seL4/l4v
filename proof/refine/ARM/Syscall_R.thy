@@ -449,7 +449,7 @@ lemma pinv_corres:
               apply wpsimp+
           apply (rule corres_guard_imp)
             apply (rule corres_split_eqr [OF _ gct_corres])
-              apply (rule corres_split_nor [OF _ do_reply_transfer_corres])
+              apply (rule corres_split_nor [OF _ doReplyTransfer_corres])
                 apply (rule corres_trivial, simp)
                apply wp+
            apply (clarsimp simp: tcb_at_invs)
