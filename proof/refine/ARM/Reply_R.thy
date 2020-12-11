@@ -13,10 +13,24 @@ defs replyUnlink_assertion_def:
     \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
                           \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
+
 crunches updateReply
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t' s)"
   and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s p) t"
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and valid_queues[wp]: "valid_queues"
+
+lemma replyTCB_update_reply_projs[wp]:
+  "\<lbrace>\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)
+          ((replyTCBs_of s)(rptr := tptrOpt)) (replySCs_of s)\<rbrace>
+   updateReply rptr (replyTCB_update (\<lambda>_. tptrOpt))
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding updateReply_def
+  apply wpsimp
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext opt_map_def obj_at'_def projectKO_eq)+
+  done
 
 lemma replyUnlink_st_tcb_at':
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (t' = t \<longrightarrow> P (P' Inactive)) \<and> (t' \<noteq> t \<longrightarrow> P (st_tcb_at' P' t' s))\<rbrace>
@@ -122,6 +136,17 @@ lemma updateReply_list_refs_of_replies'_inv:
                  split: option.splits)
   done
 
+lemma replyUnlink_reply_projs[wp]:
+  "\<lbrace>\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)
+          ((replyTCBs_of s)(rptr := None)) (replySCs_of s)\<rbrace>
+   replyUnlink rptr tptr
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding replyUnlink_def
+  apply (wpsimp wp: gts_wp')
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext)+
+  done
+
 lemma setReply_valid_pde_mappings'[wp]:
   "setReply p r \<lbrace>valid_pde_mappings'\<rbrace>"
   unfolding valid_pde_mappings'_def setReply_def
@@ -167,16 +192,16 @@ lemma updateReply_replyNexts_replyPrevs_inv:
                   split: option.splits)+
   done
 
-lemma cleanReply_replyNexts_replyPrevs[wp]:
-  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := Nothing)) ((replyPrevs_of s)(rptr := Nothing))\<rbrace>
+lemma cleanReply_reply_projs[wp]:
+  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := None)) ((replyPrevs_of s)(rptr := None))
+          (replyTCBs_of s) ((replySCs_of s)(rptr := None))\<rbrace>
    cleanReply rptr
-   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
   unfolding cleanReply_def updateReply_def
   apply (wpsimp wp: set_reply'.set_wp)
-  apply (erule rsubst2[where P=P])
-   apply (clarsimp simp: ext opt_map_def list_refs_of_reply'_def obj_at'_def projectKO_eq
-                         map_set_def projectKO_opt_reply ARM_H.fromPPtr_def
-                  split: option.splits)+
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext opt_map_def obj_at'_def projectKO_eq
+                    split: option.splits)+
   done
 
 lemma updateReply_valid_objs'_preserved_strong:

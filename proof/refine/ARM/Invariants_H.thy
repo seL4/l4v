@@ -210,6 +210,12 @@ lemma getHeadScPtr_None_iff:
   "(getHeadScPtr x) = None \<longleftrightarrow> (\<forall>rn. x \<noteq> Some (Head rn))"
   by (cases x; clarsimp simp: getHeadScPtr_def split: reply_next.split)
 
+lemma replyNext_None_iff:
+  "replyNext r = None \<longleftrightarrow> replyNext_of r = None \<and> replySc r = None"
+  apply (cases "replyNext r"; clarsimp)
+  apply (case_tac a; clarsimp)
+  done
+
 lemma getReplyNextPtr_Head_None[simp]:
   "getReplyNextPtr (Some (Head rn)) = None" by (simp add: getReplyNextPtr_def)
 
@@ -1010,15 +1016,18 @@ definition "vs_valid_duplicates' \<equiv> \<lambda>h.
               x && ~~ mask (vs_ptr_align ko) = y && ~~ mask (vs_ptr_align ko) \<longrightarrow>
               h x = h y"
 
+abbreviation
+  "is_reply_linked rptr s \<equiv> replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None"
+
 definition valid_replies' :: "kernel_state \<Rightarrow> bool" where
   "valid_replies' s \<equiv>
-     (\<forall>rptr. replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None
+     (\<forall>rptr. is_reply_linked rptr s
              \<longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
                          \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
 
 defs valid_replies'_sc_asrt_def:
   "valid_replies'_sc_asrt \<equiv> \<lambda>rptr s.
-     obj_at' (\<lambda>reply. replySc reply \<noteq> None) rptr s
+     replySCs_of s rptr \<noteq> None
        \<longrightarrow> (\<exists>tptr. replyTCBs_of s rptr = Some tptr
                    \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s)"
 definition
@@ -3984,6 +3993,51 @@ method normalise_obj_at' =
   normalise_obj_at'_step, normalise_obj_at'_step?
 
 end
+
+lemma valid_replies'_no_tcb:
+  "\<lbrakk>replyTCBs_of s rptr = None; valid_replies' s\<rbrakk>
+   \<Longrightarrow> \<not> is_reply_linked rptr s"
+  by (force simp: valid_replies'_def opt_map_def)
+
+lemma valid_replies'_other_state:
+  "\<lbrakk>replyTCBs_of s rptr = Some tptr;
+    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr));
+    valid_replies' s\<rbrakk>
+   \<Longrightarrow> \<not> is_reply_linked rptr s"
+  apply (clarsimp simp: valid_replies'_def)
+  apply (drule_tac x=rptr in spec)
+  apply (fastforce simp: pred_tcb_at'_def obj_at'_def)+
+  done
+
+lemma valid_replies'_sc_asrt_replySc_None:
+  "\<lbrakk>valid_replies'_sc_asrt rptr s; replyTCBs_of s rptr = Some tptr;
+    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
+   \<Longrightarrow> replySCs_of s rptr = None"
+  by (force simp: valid_replies'_sc_asrt_def pred_tcb_at'_def obj_at'_def)
+
+lemma valid_replies'_lift:
+  assumes rNext: "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
+  and rPrev: "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
+  and rTCB: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
+  and st: "\<And>rptr p. f \<lbrace>st_tcb_at' ((=) (BlockedOnReply rptr)) p\<rbrace>"
+  shows "\<lbrace>valid_replies'\<rbrace> f \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
+  unfolding valid_def valid_replies'_def
+  apply (clarsimp simp del: imp_disjL)
+  subgoal for s a b rptr
+    apply (drule_tac x=rptr in spec)
+    apply (prop_tac "is_reply_linked rptr s")
+     apply (rule ccontr)
+     apply clarsimp
+     apply (frule use_valid[OF _ rNext[where P="\<lambda>nexts. nexts rptr = None"]], force)
+     apply (frule use_valid[OF _ rPrev[where P="\<lambda>prevs. prevs rptr = None"]], force)
+     apply force
+    apply (drule mp; clarsimp)
+    apply (frule use_valid[OF _ rTCB[where P="\<lambda>tcbs. tcbs rptr = Some tcb" for tcb]])
+     apply (force simp: opt_map_def)
+    apply (frule use_valid[OF _ st], assumption)
+    apply clarsimp
+    done
+  done
 
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)

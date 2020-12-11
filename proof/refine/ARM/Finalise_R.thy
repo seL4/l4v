@@ -2958,28 +2958,21 @@ lemma schedContextMaybeUnbindNtfn_obj_at'_ntfnSc:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma replyUnlink_obj_at_tcb_none:
-  "\<lbrace>K (rptr' = rptr)\<rbrace>
-   replyUnlink rptr tptr
-   \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. replyTCB reply = None) rptr'\<rbrace>"
-  apply (simp add: replyUnlink_def)
-  apply (wpsimp wp: updateReply_wp_all gts_wp')
-  by (auto simp: obj_at'_def projectKOs objBitsKO_def)
-
 lemma replyUnlink_makes_unlive:
-  "\<lbrace>\<lambda>s. obj_at' (\<lambda>reply. \<not> bound (replyNext reply) \<and> \<not> bound (replyPrev reply)) rptr' s
+  "\<lbrace>\<lambda>s. \<not> is_reply_linked rptr' s \<and> replySCs_of s rptr' = None
         \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> rptr' = rptr\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr'\<rbrace>"
   apply (simp add: replyUnlink_def)
   apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp')
-  by (auto simp: ko_wp_at'_def obj_at'_def projectKOs is_aligned_def ps_clear_def
-                 objBitsKO_def live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def)
+  by (auto simp: ko_wp_at'_def obj_at'_def projectKOs opt_map_def objBitsKO_def
+                 live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def
+                 replyNext_None_iff)
 
 lemma cleanReply_obj_at_next_prev_none:
   "\<lbrace>K (rptr' = rptr)\<rbrace>
    cleanReply rptr
-   \<lbrace>\<lambda>_. obj_at' (\<lambda>reply. \<not> bound (replyNext reply) \<and> \<not> bound (replyPrev reply)) rptr'\<rbrace>"
+   \<lbrace>\<lambda>_ s. \<not> is_reply_linked rptr s \<and> replySCs_of s rptr = None\<rbrace>"
   apply (simp add: cleanReply_def )
   apply (wpsimp wp: updateReply_wp_all)
   apply (auto simp: obj_at'_def projectKOs objBitsKO_def)
@@ -3034,8 +3027,9 @@ lemma cancelIPC_makes_unlive:
           apply (wpsimp wp: hoare_pre_cont, cancelIPC_makes_unlive_hammer)
          apply (wpsimp wp: setThreadState_unlive_other replyUnlink_makes_unlive
                            hoare_vcg_all_lift hoare_drop_imps threadSet_weak_sch_act_wf)
-         apply (frule (1) valid_replies'_other_state;
-                clarsimp simp: valid_replies'_sc_asrt_replySc_None)
+         apply (frule obj_at_replyTCBs_of,
+                frule (1) valid_replies'_other_state;
+                  clarsimp simp: valid_replies'_sc_asrt_replySc_None)
          apply cancelIPC_makes_unlive_hammer
         (* BlockedOnReply*)
         apply (wpsimp wp: replyRemoveTCB_makes_unlive threadSet_pred_tcb_no_state
@@ -3277,10 +3271,10 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   (* ReplyCap *)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: obj_at'_def)
-  apply (frule (1) valid_replies'_no_tcb[OF ko_at_obj_at', simplified], clarsimp)
-   apply (clarsimp simp: valid_replies'_sc_asrt_def obj_at'_def projectKOs
-                         getHeadScPtr_None_iff)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def projectKOs)
+  apply (frule (1) obj_at_replyTCBs_of[OF ko_at_obj_at', simplified])
+  apply (frule valid_replies'_no_tcb, clarsimp)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def projectKOs opt_map_def
+                        valid_replies'_sc_asrt_def replyNext_None_iff)
   done
 
 lemma cteDeleteOne_cte_wp_at_preserved:
