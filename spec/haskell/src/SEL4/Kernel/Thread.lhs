@@ -211,21 +211,21 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                             restart <- handleFaultReply fault receiver (msgLabel mi) mrs
 >                             threadSet (\tcb -> tcb { tcbFault = Nothing }) receiver
 >                             setThreadState (if restart then Restart else Inactive) receiver
->                             runnable <- isRunnable receiver
->                             scPtrOpt <- threadGet tcbSchedContext receiver
->                             when (scPtrOpt /= Nothing && runnable) $ do
->                                 let scPtr = fromJust scPtrOpt
->                                 ready <- refillReady scPtr
->                                 sufficient <- refillSufficient scPtr 0
->                                 if ready && sufficient
->                                     then possibleSwitchTo receiver
->                                     else do
->                                         sc <- getSchedContext scPtr
->                                         isHandlerValid <- isValidTimeoutHandler receiver
->                                         case (isHandlerValid, fault) of
->                                             (False, _) -> postpone scPtr
->                                             (_, Timeout _) -> postpone scPtr
->                                             _ -> handleTimeout receiver $ Timeout $ scBadge sc
+>                     runnable <- isRunnable receiver
+>                     scPtrOpt <- threadGet tcbSchedContext receiver
+>                     when (scPtrOpt /= Nothing && runnable) $ do
+>                         let scPtr = fromJust scPtrOpt
+>                         ready <- refillReady scPtr
+>                         sufficient <- refillSufficient scPtr 0
+>                         if ready && sufficient
+>                             then possibleSwitchTo receiver
+>                             else do
+>                                 sc <- getSchedContext scPtr
+>                                 isHandlerValid <- isValidTimeoutHandler receiver
+>                                 case (isHandlerValid, faultOpt) of
+>                                     (False, _) -> postpone scPtr
+>                                     (_, Just (Timeout _)) -> postpone scPtr
+>                                     _ -> handleTimeout receiver $ Timeout $ scBadge sc
 
 \subsubsection{Ordinary IPC}
 
