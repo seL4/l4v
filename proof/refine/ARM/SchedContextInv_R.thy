@@ -575,7 +575,7 @@ lemma maybeAddEmptyTail_corres:
                      simp: obj_at_def is_sc_obj_def vs_all_heap_simps)
   apply (rename_tac sc')
   apply (corressimp corres: refillAddTail_corres)
-  apply (frule refills_heads_equal; clarsimp simp: obj_at'_def)
+  apply (frule refill_hd_relation; clarsimp simp: obj_at'_def)
   apply (fastforce dest: valid_objs_valid_sched_context_size
                    simp: obj_at_def is_sc_obj_def vs_all_heap_simps refill_map_def)
   done
@@ -919,7 +919,7 @@ lemma refillResetRR_corres:
                   in updateRefillHd_corres)
       apply simp
      apply (clarsimp simp: refill_map_def)
-     apply (frule refills_heads_equal[rotated]; fastforce?)
+     apply (frule refill_hd_relation, clarsimp)
      apply (prop_tac "length (sc_refills sc) = 2")
       apply (clarsimp simp: rr_valid_refills_def)
      apply (intro conjI impI)
@@ -1035,7 +1035,7 @@ lemma refillPopHead_corres:
        apply simp
       apply (clarsimp simp: obj_at_def)
      apply simp
-    apply (fastforce dest: refills_heads_equal)
+    apply (fastforce dest: refill_hd_relation)
    apply wpsimp
     apply (wpsimp wp: set_object_wp)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def vs_all_heap_simps)
@@ -1434,7 +1434,7 @@ lemma refillUpdate_corres:
                     simp: valid_sched_context'_def sc_relation_def sc_at_pred_n_def obj_at_def
                           refills_map_def)
   apply (clarsimp split del: if_split)
-  apply (frule_tac sc=abs_sc and sc'=conc_sc in refills_heads_equal; (solves simp)?)
+  apply (frule_tac sc=abs_sc and sc'=conc_sc in refill_hd_relation; (solves simp)?)
   apply (clarsimp simp: refill_map_def)
   apply (intro conjI impI allI)
    apply (rule corres_guard_imp)

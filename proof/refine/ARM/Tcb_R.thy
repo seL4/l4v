@@ -528,14 +528,6 @@ lemma readreg_invs':
        | clarsimp simp: invs'_def valid_state'_def
                  dest!: global'_no_ex_cap)+
 
-crunch invs'[wp]: getSanitiseRegisterInfo invs'
-
-crunches getSanitiseRegisterInfo
-  for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' d"
-  and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
-  and tcb_at'[wp]: "tcb_at' a"
-
-
 lemma writereg_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
@@ -2994,7 +2986,7 @@ lemma get_sc_released_corres:
    apply (case_tac "sc_active sc"; clarsimp)
    apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
     apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
-   apply (drule_tac s'=s' in refills_heads_equal_valid_sched_context')
+   apply (drule_tac s'=s' in refill_hd_relation2)
       apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def
                              kernelWCETTicks_def vs_all_heap_simps cfg_valid_refills_def
                              rr_valid_refills_def sp_valid_refills_def obj_at_def

@@ -3523,7 +3523,7 @@ lemma refillReady_corres:
    apply (clarsimp simp: pspace_relation_def)
    apply (drule_tac x=sc_ptr in bspec, blast)
    apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (frule refills_heads_equal_valid_sched_context'[rotated 2])
+  apply (frule refill_hd_relation2[rotated 2])
     apply simp
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   apply (clarsimp simp: kernelWCETTicks_def refill_ready_def state_relation_def)
@@ -3578,7 +3578,7 @@ lemma readTCBRefillReady_simp:
    apply (clarsimp simp: pspace_relation_def)
    apply (drule_tac x=sc_ptr in bspec, blast)
    apply (fastforce simp: obj_at'_def projectKOs split: if_splits)
-  apply (frule refills_heads_equal_valid_sched_context')
+  apply (frule refill_hd_relation2)
     apply (clarsimp simp: vs_all_heap_simps valid_refills_def rr_valid_refills_def
                    split: if_splits)
    apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
