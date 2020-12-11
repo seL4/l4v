@@ -2093,7 +2093,7 @@ lemma replyClear_weak_sch_act_wf[wp]:
 
 crunches finaliseCapTrue_standin
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-  (simp: crunch_simps wp: crunch_wps getReplyTCB_wp)
+  (simp: crunch_simps wp: crunch_wps)
 
 (* This is currently unused. It should be provable if we add `sch_act_simple` to the preconditions *)
 lemma cteDeleteOne_weak_sch_act[wp]:
@@ -2809,7 +2809,7 @@ lemma replyUnlink_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>
    replyUnlink a b
    \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   done
 
@@ -4020,7 +4020,7 @@ lemma monadic_rewrite_replyPush:
   "monadic_rewrite False True \<top>
    (do stateAssert sym_refs_asrt [];
        scPtrOptDonated <- threadGet tcbSchedContext callerPtr;
-       tptrOpt <- getReplyTCB replyPtr;
+       tptrOpt <- liftM replyTCB (getReply replyPtr);
        haskell_assert (tptrOpt = Nothing) [];
        scPtrOptCallee <- threadGet tcbSchedContext calleePtr;
        replyPush' callerPtr calleePtr replyPtr canDonate scPtrOptDonated scPtrOptCallee;
@@ -4054,7 +4054,7 @@ lemma updateReply_obj_at'[wp]:
 lemma replyPush'_valid_objs'[wp]:
   "replyPush' callerPtr calleePtr replyPtr canDonate scPtrOptDonated scPtrOptCallee \<lbrace>valid_objs'\<rbrace>"
   supply if_split [split del]
-  unfolding replyPush'_def getReplyTCB_def
+  unfolding replyPush'_def
   apply wpsimp
                      apply (rule_tac Q="%_ s. valid_objs' s \<and> reply_at' replyPtr s \<and>
                                               tcb_at' calleePtr s"
@@ -4090,7 +4090,7 @@ lemma replyPush'_valid_objs'[wp]:
 lemma replyPush_valid_objs'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>valid_objs'\<rbrace>"
   supply if_split [split del]
-  unfolding replyPush_def getReplyTCB_def
+  unfolding replyPush_def
   apply wpsimp
                            apply (wpsimp wp: schedContextDonate_valid_objs')
                           apply wpsimp+
@@ -4128,7 +4128,7 @@ lemma replyPush_sch_act_wf:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not callerPtr s\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding replyPush_def getReplyTCB_def
+  unfolding replyPush_def
   by (wpsimp wp: sts_sch_act' hoare_vcg_all_lift hoare_vcg_if_lift hoare_drop_imps)
 
 lemma replyPush_sym_refs_list_refs_of_replies'_helper:
@@ -4162,7 +4162,7 @@ crunches updateReply
 lemma replyPush_sym_refs_list_refs_of_replies'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   supply if_split [split del]
-  apply (simp only: replyPush_def getReplyTCB_def)
+  apply (simp only: replyPush_def)
   apply (rule replyPush_sym_refs_list_refs_of_replies'_helper
               hoare_fun_app_wp hoare_when_wp hoare_seq_ext hoare_K_bind)+
                       apply wpsimp+
@@ -4219,7 +4219,7 @@ lemma replyPush_if_live_then_nonz_cap':
                  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
                 apply (wpsimp simp: valid_tcb_state'_def wp: updateReply_valid_objs'_preserved_strong
                          updateReply_iflive'_strong hoare_vcg_imp_lift' hoare_vcg_all_lift)
-               apply (wpsimp wp: gts_wp' threadGet_wp simp: getReplyTCB_def)+
+               apply (wpsimp wp: gts_wp' threadGet_wp simp:)+
   apply (drule obj_at_ko_at', clarsimp)
   apply (rule_tac x=ko in exI)
   apply (clarsimp simp: sym_refs_asrt_def)
@@ -4253,7 +4253,7 @@ lemma replyPush_valid_idle':
                                                     scTCB ko \<noteq> Some (ksIdleThread s)))"
                              in hoare_strengthen_post[where a="setThreadState _ _", rotated], force)
                 apply (wpsimp wp: gts_wp' threadGet_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-                            simp: updateReply_def getReplyTCB_def)+
+                            simp: updateReply_def)+
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb sym_refs_asrt_def)
   apply (drule_tac ko=obj in sym_refs_ko_atD'[rotated])
    apply (auto simp: valid_reply'_def valid_idle'_def idle_tcb'_def refs_of_rev'
@@ -4265,7 +4265,7 @@ lemma replyPush_valid_queues:
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   by (rule monadic_rewrite_refine_valid[OF monadic_rewrite_replyPush, where P''=\<top>, simplified])
-     (wpsimp wp: weak_if_wp schedContextDonate_valid_queues hoare_drop_imps simp: getReplyTCB_def)
+     (wpsimp wp: weak_if_wp schedContextDonate_valid_queues hoare_drop_imps simp:)
 
 lemma replyPush_valid_queues'[wp]:
   "replyPush callerPtr calleePtr replyPtr canDonate \<lbrace>valid_queues'\<rbrace>"

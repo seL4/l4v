@@ -13,9 +13,6 @@ defs replyUnlink_assertion_def:
     \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
                           \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
-crunches getReplyTCB
-  for inv: "P"
-
 crunches updateReply
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t' s)"
@@ -25,7 +22,7 @@ lemma replyUnlink_st_tcb_at':
     replyUnlink r t
    \<lbrace>\<lambda>rv s. P (st_tcb_at' P' t' s)\<rbrace>"
   unfolding replyUnlink_def
-  apply (wpsimp simp: getReplyTCB_def
+  apply (wpsimp simp:
                   wp: sts_st_tcb_at'_cases_strong gts_wp' hoare_vcg_imp_lift
                 cong: conj_cong split: if_split_asm)
   done
@@ -35,7 +32,7 @@ lemma replyUnlink_st_tcb_at'_sym_ref:
           obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s \<and> test Inactive\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. st_tcb_at' test tptr\<rbrace>"
-  apply (wpsimp simp: replyUnlink_def getReplyTCB_def
+  apply (wpsimp simp: replyUnlink_def
                   wp: sts_st_tcb_at'_cases gts_wp')
   apply (fastforce simp: obj_at'_def projectKOs)
   done
@@ -82,7 +79,7 @@ lemma replyUnlink_tcb_obj_at'_no_change:
    replyUnlink rptr tptr'
    \<lbrace>\<lambda>_ s. P (obj_at' Q tptr s)\<rbrace>"
   unfolding replyUnlink_def scheduleTCB_def rescheduleRequired_def
-            getReplyTCB_def updateReply_def
+            updateReply_def
   apply (rule hoare_gen_asm)
   apply (wpsimp wp: setThreadState_tcb_obj_at'_no_change gts_wp')
   done
@@ -134,7 +131,7 @@ lemma setReply_valid_pde_mappings'[wp]:
 
 lemma replyUnlink_valid_pspace'[wp]:
   "replyUnlink rptr tptr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding replyUnlink_def getReplyTCB_def replyUnlink_assertion_def
+  unfolding replyUnlink_def replyUnlink_assertion_def
             updateReply_def
   apply (wpsimp wp: sts'_valid_pspace'_inv hoare_vcg_imp_lift'
               simp: valid_tcb_state'_def valid_pspace'_def)
@@ -148,7 +145,7 @@ lemma replyUnlink_idle'[wp]:
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding replyUnlink_def replyUnlink_assertion_def updateReply_def
-  apply (wpsimp wp: getReplyTCB_wp hoare_vcg_imp_lift'
+  apply (wpsimp wp: hoare_vcg_imp_lift'
               simp: pred_tcb_at'_def)
   apply normalise_obj_at'
   apply (frule(1) reply_ko_at_valid_objs_valid_reply'[OF _ valid_pspace_valid_objs'])
@@ -279,7 +276,7 @@ lemma valid_mdb'_lift:
 
 lemma replyUnlink_valid_objs'[wp]:
   "replyUnlink rptr tptr \<lbrace>valid_objs'\<rbrace>"
-  unfolding replyUnlink_def getReplyTCB_def
+  unfolding replyUnlink_def
   apply (wpsimp wp: updateReply_valid_objs'_preserved[where upd="replyTCB_update (\<lambda>_. tptrOpt)"
                                                       for tptrOpt] gts_wp'
               simp: valid_tcb_state'_def)
@@ -357,7 +354,7 @@ lemma updateReply_iflive'_strong:
 lemma replyUnlink_iflive'[wp]:
   "replyUnlink rptr tptr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   unfolding replyUnlink_def
-  apply (wpsimp wp: updateReply_iflive' gts_wp' getReplyTCB_wp simp: live_reply'_def)
+  apply (wpsimp wp: updateReply_iflive' gts_wp' simp: live_reply'_def)
   done
 
 lemma cleanReply_iflive'[wp]:
@@ -578,14 +575,14 @@ lemma replyUnlink_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not t s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def liftM_def)
+  apply (clarsimp simp: replyUnlink_def liftM_def)
   by (wpsimp wp: sts_sch_act' hoare_drop_imp)
 
 lemma replyUnlink_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not t s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding replyUnlink_def getReplyTCB_def updateReply_def
+  unfolding replyUnlink_def updateReply_def
   by (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift gts_wp'
            simp: weak_sch_act_wf_def)
 

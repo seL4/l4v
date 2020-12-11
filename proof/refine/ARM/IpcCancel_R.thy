@@ -194,7 +194,7 @@ lemma reply_unlink_tcb_corres:
    apply clarsimp
    apply (drule (1) st_tcb_at_coerce_concrete; clarsimp simp: state_relation_def)
    apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
-  apply (simp add: reply_unlink_tcb_def replyUnlink_def getReplyTCB_def liftM_def)
+  apply (simp add: reply_unlink_tcb_def replyUnlink_def liftM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_reply_corres])
       apply (rule corres_assert_gen_asm_l)
@@ -245,7 +245,7 @@ lemma setEndpoint_valid_tcbs'[wp]:
 
 lemma replyUnlink_valid_tcbs'[wp]:
   "replyUnlink replyPtr tcbPtr \<lbrace>valid_tcbs'\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReply_def getReplyTCB_def
+  apply (clarsimp simp: replyUnlink_def getReply_def
                         updateReply_def)
   apply (wpsimp wp: set_reply'.getObject_wp set_reply'.getObject_wp gts_wp'
               simp: valid_tcb_state'_def )
@@ -1285,7 +1285,7 @@ lemma setThreadState_inQ[wp]:
 
 lemma replyUnlink_valid_inQ_queues[wp]:
   "replyUnlink replyPtr tcbPtr \<lbrace>valid_inQ_queues\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   apply (fastforce simp: valid_inQ_queues_def obj_at'_def projectKOs)
   done
@@ -1951,7 +1951,7 @@ lemmas (in delete_one_conc_pre) suspend_makes_simple' =
 
 crunches cancelSignal, replyUnlink, cleanReply
   for valid_queues[wp]: valid_queues
-  (simp: getReplyTCB_def crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma tcbFault_update_valid_queues:
   "\<lbrakk>ko_at' tcb t s; valid_queues s\<rbrakk>
@@ -2744,14 +2744,14 @@ qed
 
 lemma replyUnlink_sch_act[wp]:
   "replyUnlink r t \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp only: replyUnlink_def getReplyTCB_def liftM_def)
+  apply (simp only: replyUnlink_def liftM_def)
   apply (wpsimp wp: sts_sch_act' gts_wp')
   apply (fastforce simp: replyUnlink_assertion_def st_tcb_at'_def obj_at'_def)
   done
 
 lemma replyUnlink_list_refs_of_replies'[wp]:
   "replyUnlink r t \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  unfolding replyUnlink_def updateReply_def getReplyTCB_def
+  unfolding replyUnlink_def updateReply_def
   apply (wpsimp simp: updateObject_default_def setObject_def split_def wp: gts_wp')
   apply (erule arg_cong[where f=P, THEN iffD1, rotated])
   apply (rule ext)
@@ -2764,7 +2764,7 @@ lemma replyUnlink_valid_pspace'[wp]:
   "\<lbrace>\<lambda>s. valid_pspace' s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. valid_pspace' s\<rbrace>"
-  unfolding replyUnlink_def updateReply_def getReplyTCB_def
+  unfolding replyUnlink_def updateReply_def
   apply (wpsimp wp: gts_wp' simp: valid_tcb_state'_def)
   apply (frule valid_pspace_valid_objs')
   apply (frule(1) reply_ko_at_valid_objs_valid_reply')
@@ -2776,7 +2776,7 @@ lemma replyUnlink_if_live_then_nonz_cap'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. if_live_then_nonz_cap' s\<rbrace>"
-  unfolding replyUnlink_def updateReply_def getReplyTCB_def
+  unfolding replyUnlink_def updateReply_def
   apply (wpsimp wp: gts_wp')
   apply (erule if_live_then_nonz_capE')
   apply normalise_obj_at'
@@ -2787,7 +2787,7 @@ lemma replyUnlink_valid_idle'[wp]:
   "\<lbrace>\<lambda>s. valid_idle' s \<and> valid_pspace' s \<and> t \<noteq> ksIdleThread s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. valid_idle' s\<rbrace>"
-  unfolding replyUnlink_def updateReply_def getReplyTCB_def
+  unfolding replyUnlink_def updateReply_def
   apply (wpsimp wp: gts_wp' simp: valid_reply'_def)
   apply (frule valid_pspace_valid_objs')
   apply (frule(1) reply_ko_at_valid_objs_valid_reply')
@@ -2797,7 +2797,7 @@ lemma replyUnlink_valid_idle'[wp]:
 
 lemma replyUnlink_valid_irq_node'[wp]:
   "replyUnlink r t \<lbrace>\<lambda> s. valid_irq_node' (irq_node' s) s\<rbrace>"
-  unfolding replyUnlink_def getReplyTCB_def
+  unfolding replyUnlink_def
   by (wpsimp wp: valid_irq_node_lift gts_wp')
 
 crunches updateReply
@@ -2807,7 +2807,7 @@ lemma replyUnlink_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s p) t\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. P (ksReadyQueues s p) t\<rbrace>"
-  unfolding replyUnlink_def getReplyTCB_def
+  unfolding replyUnlink_def
   by (wpsimp wp: gts_wp' sts_ksQ)
 
 lemma weak_sch_act_wf_D1:
@@ -3097,7 +3097,7 @@ lemma setThreadState_valid_ep'[wp]:
 
 lemma replyUnlink_valid_ep'[wp]:
   "replyUnlink replyPtr tcbPtr \<lbrace>valid_ep' ep\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def updateReply_def)
   apply (wpsimp wp: set_reply'.set_wp gts_wp')
   apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
   done
@@ -3248,7 +3248,7 @@ lemma replyUnlink_unlive:
   "\<lbrace>ko_wp_at' (Not \<circ> live') p and sch_act_not p\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. ko_wp_at' (Not o live') p\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def getReplyTCB_def updateReply_def)
+  apply (clarsimp simp: replyUnlink_def updateReply_def)
   apply (wpsimp wp: setThreadState_Inactive_unlive set_reply'.set_wp gts_wp')
   apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs is_aligned_def ps_clear_def
                          objBitsKO_def live'_def live_reply'_def)
