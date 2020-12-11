@@ -187,4 +187,3 @@ on the thread state of the replyTCB of the replyPtr
 
 > setReply :: PPtr Reply -> Reply -> Kernel ()
 > setReply rptr r = setObject rptr r
-
