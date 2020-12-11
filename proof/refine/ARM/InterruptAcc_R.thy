@@ -154,7 +154,7 @@ lemma refillSufficient_corres:
          apply clarsimp
          apply (prop_tac "r_amount (refill_hd sc) = rAmount (refillHd sc')")
           apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                                 refills_heads_equal_valid_sched_context')
+                                 refill_hd_relation2)
          apply (clarsimp simp: refill_sufficient_def sufficientRefills_def refillHd_def
                                refill_capacity_def refillsCapacity_def MIN_BUDGET_def
                                minBudget_def kernelWCETTicks_def)

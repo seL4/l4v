@@ -252,40 +252,6 @@ definition sc_relation ::
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
 
-lemma refills_map_non_empty_pos_count:
-  "refills_map start count mx list \<noteq> [] \<Longrightarrow> 0 < count \<and> 0 < mx"
-  apply (clarsimp simp: refills_map_def refill_map_def wrap_slice_def split: if_split_asm)
-  by linarith
-
-lemma hd_refills_map:
-  "\<lbrakk>refills_map start count mx list \<noteq> []; mx \<le> length list; start < mx\<rbrakk>
-   \<Longrightarrow> hd (refills_map start count mx list) = refill_map (list ! start)"
-  apply (frule refills_map_non_empty_pos_count)
-  apply (clarsimp simp: refills_map_def)
-  by (simp add: hd_map hd_wrap_slice)
-
-lemma refills_heads_equal:
-  "\<lbrakk>sc_relation sc n sc'; scRefillCount sc' \<le> scRefillMax sc'; 0 < scRefillCount sc';
-    scRefillMax sc' \<le> length (scRefills sc'); scRefillHead sc' < scRefillMax sc'\<rbrakk>
-   \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
-  apply (frule hd_refills_map[where count="scRefillCount sc'", rotated]; simp?)
-   apply (frule hd_wrap_slice[where list="scRefills sc'"]; simp?)
-   apply (clarsimp simp: refills_map_def)
-   apply (metis add_cancel_right_left length_0_conv length_greater_0_conv length_wrap_slice
-                less_add_eq_less order_less_imp_le)
-  apply (clarsimp simp: sc_relation_def refillHd_def refill_map_def)
-  done
-
-lemma refills_heads_equal_valid_sched_context':
-  "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []; valid_sched_context' sc' s'\<rbrakk>
-   \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc)
-       \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
-  apply (frule refills_heads_equal; (solves simp)?)
-  apply (auto simp: sc_relation_def valid_sched_context'_def refillHd_def refills_map_def
-                    refill_map_def wrap_slice_def
-             split: if_splits)
-  done
-
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
      reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
@@ -1338,6 +1304,74 @@ lemma refills_tl_equal:
    apply fastforce
   apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
   done
+
+(* A standard (and active) scheduling context should have the following properties. They follow
+   from valid_sched_context' and sc_valid_refills as the following two lemmas show. *)
+abbreviation std_sc' where
+  "std_sc' ko \<equiv> 0 < scRefillCount ko \<and> scRefillMax ko \<le> length (scRefills ko) \<and> scRefillHead ko < scRefillMax ko"
+
+lemma std_sc'_normal:
+  "valid_sched_context' sc' s' \<Longrightarrow> 0 < scRefillMax sc' \<Longrightarrow> 0 < scRefillCount sc' \<Longrightarrow> std_sc' sc'"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma sc_valid_refills_scRefillCount:
+  "\<lbrakk>sc_valid_refills sc; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> 0 < scRefillCount sc'"
+  apply (clarsimp simp: valid_sched_context_def sc_relation_def)
+  apply (case_tac "scRefillCount sc'"; simp)
+  by (clarsimp simp: refills_map_def sc_valid_refills_def rr_valid_refills_def)
+
+lemma sc_refills_neq_zero_cross:
+  "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []\<rbrakk>
+   \<Longrightarrow> refills_map (scRefillHead sc') (scRefillCount sc') (scRefillMax sc') (scRefills sc') \<noteq> []"
+  by (clarsimp simp: sc_relation_def)
+
+lemma refills_map_non_empty_pos_count:
+  "refills_map start count mx list \<noteq> [] \<Longrightarrow> 0 < count \<and> 0 < mx"
+  apply (clarsimp simp: refills_map_def refill_map_def wrap_slice_def split: if_split_asm)
+  by linarith
+
+lemma hd_refills_map:
+  "\<lbrakk>refills_map start count mx list \<noteq> []; mx \<le> length list; start < mx\<rbrakk>
+   \<Longrightarrow> hd (refills_map start count mx list) = refill_map (list ! start)"
+  apply (frule refills_map_non_empty_pos_count)
+  apply (clarsimp simp: refills_map_def)
+  by (simp add: hd_map hd_wrap_slice)
+
+lemma refill_hd_relation:
+  "sc_relation sc n sc' \<Longrightarrow> std_sc' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
+  apply (clarsimp simp: sc_relation_def refillHd_def refills_map_def valid_sched_context'_def hd_map)
+  apply (subst hd_map, clarsimp simp: wrap_slice_def)
+  apply (clarsimp simp: hd_wrap_slice)
+  done
+
+lemma refill_hd_relation2:
+  "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []; valid_sched_context' sc' s'\<rbrakk>
+   \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc)
+       \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
+  apply (frule refill_hd_relation)
+   apply (frule (1) sc_refills_neq_zero_cross[THEN refills_map_non_empty_pos_count])
+   apply (erule std_sc'_normal; simp)
+  apply (clarsimp simp: refill_map_def)
+  done
+
+lemma sc_refill_ready_relation:
+  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  sc_refill_ready time sc = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
+   apply (frule (1) refill_hd_relation)
+  by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
+
+lemma sc_refill_capacity_relation:
+  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  sc_refill_capacity x sc = refillsCapacity x (scRefills sc') (scRefillHead sc')"
+  apply (frule (1) refill_hd_relation)
+  by (clarsimp simp: refillsCapacity_def refill_capacity_def refillHd_def refill_map_def)
+
+lemma sc_refill_sufficient_relation:
+  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  sc_refill_sufficient x sc = sufficientRefills x (scRefills sc') (scRefillHead sc')"
+  apply (frule (1) sc_refill_capacity_relation[where x=x])
+  by (clarsimp simp: sufficientRefills_def refill_sufficient_def minBudget_def MIN_BUDGET_def
+                        kernelWCETTicks_def)
 
 end
 end

@@ -2651,7 +2651,7 @@ lemma valid_replies'[wp]:
   apply (rule_tac Q="\<lambda>_. ?pre valid_replies'_alt" in hoare_post_imp;
          clarsimp simp: valid_replies'_def2)
   unfolding obj_at'_real_def
-  apply_trace (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift ko_wp_at hoare_vcg_ex_lift)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift ko_wp_at hoare_vcg_ex_lift)
   by (fastforce simp: valid_replies'_def2 obj_at'_def ko_wp_at'_def projectKOs)
 
 lemma valid_pspace':
@@ -4296,6 +4296,19 @@ lemma valid_bound_obj'_lift:
   "f \<lbrace>P (the x)\<rbrace> \<Longrightarrow> f \<lbrace>valid_bound_obj' P x\<rbrace>"
   unfolding valid_bound_obj'_def
   by (case_tac x; wpsimp)
+
+lemma ep_at'_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and ep_at t) (ep_at' t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  by (erule (3) ep_at_cross)
+
+lemma sch_act_not_cross_rel:
+  "cross_rel (scheduler_act_not t) (sch_act_not t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  apply (case_tac "scheduler_action s"; simp)
+  by (clarsimp simp: scheduler_act_not_def sched_act_relation_def)
 
 global_interpretation set_simple_ko: typ_at_pres "set_simple_ko C ptr ep"
   unfolding typ_at_pres_def by wpsimp

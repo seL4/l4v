@@ -2391,12 +2391,6 @@ lemma weak_valid_sched_action_strg:
                       obj_at_kh_kheap_simps vs_all_heap_simps is_tcb_def
                split: Structures_A.kernel_object.splits)
 
-lemma gets_the_exs_valid:
-  "bound (m s) \<Longrightarrow> \<lbrace>(=) s\<rbrace> gets_the m \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
-  by (clarsimp simp: bind_def assert_opt_def fail_def
-                     gets_def get_def return_def exs_valid_def gets_the_def
-              split: option.splits)
-
 lemma no_ofail_get_tcb[wp]:
   "no_ofail (tcb_at tp) (get_tcb tp)"
   unfolding get_tcb_def no_ofail_def
@@ -2830,21 +2824,20 @@ crunches rescheduleRequired, tcbSchedDequeue, setThreadState
   (wp: crunch_wps)
 
 lemma threadSet_valid_replies':
-  "\<lbrace>\<lambda>s. valid_replies' s \<and>
+  "\<lbrace>\<lambda>s. valid_replies' s  \<and>
         (\<forall>tcb. ko_at' tcb t s
-           \<longrightarrow> (\<forall>rptr. BlockedOnReply (Some rptr) = tcbState tcb
-                        \<longrightarrow> BlockedOnReply (Some rptr) = tcbState (f tcb)
-                            \<or> \<not> is_reply_linked rptr s))\<rbrace>
+           \<longrightarrow> (\<forall>rptr. tcbState tcb = BlockedOnReply (Some rptr)
+                       \<longrightarrow> is_reply_linked rptr s \<longrightarrow> tcbState (f tcb) = BlockedOnReply (Some rptr)))\<rbrace>
    threadSet f t
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   apply (clarsimp simp: threadSet_def)
   apply (wpsimp wp: setObject_tcb_valid_replies' getObject_tcb_wp)
-  by (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  by (force simp: pred_tcb_at'_def obj_at'_def projectKOs)
 
 lemma sts'_valid_replies':
   "\<lbrace>\<lambda>s. valid_replies' s \<and>
         (\<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s
-                  \<longrightarrow> BlockedOnReply (Some rptr) = st \<or> \<not> is_reply_linked rptr s)\<rbrace>
+                  \<longrightarrow> is_reply_linked rptr s \<longrightarrow> st = BlockedOnReply (Some rptr))\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
@@ -5364,7 +5357,7 @@ lemma sts_invs_minor':
 
 lemma sts_invs':
   "\<lbrace>(\<lambda>s. st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
-      and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply rptr)) t s \<longrightarrow> st = BlockedOnReply rptr)
+      and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s \<longrightarrow> (is_reply_linked rptr s) \<longrightarrow> st = BlockedOnReply (Some rptr))
       and tcb_at' t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and (\<lambda>s. \<not>runnable' st \<longrightarrow> sch_act_not t s)
@@ -5375,7 +5368,7 @@ lemma sts_invs':
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
-  done
+  by metis
 
 lemma sts_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"

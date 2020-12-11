@@ -2742,8 +2742,7 @@ lemma replyRemove_valid_idle'[wp]:
   done
 
 lemma replyPop_invs':
-  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)
-          and obj_at' (\<lambda>reply. replyNext reply \<noteq> None) replyPtr
+  "\<lbrace>invs' and obj_at' (\<lambda>reply. replyNext reply \<noteq> None) replyPtr
           and ex_nonz_cap_to' tcbPtr
           and (\<lambda>s. \<forall>scPtr. obj_at' (\<lambda>r. replyNext r = Some (Head scPtr)) replyPtr s
                            \<longrightarrow> obj_at' (\<lambda>sc. scTCB sc \<noteq> Some idle_thread_ptr) scPtr s)\<rbrace>
@@ -2751,14 +2750,16 @@ lemma replyPop_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: replyPop_iflive replyPop_valid_idle' simp: valid_pspace'_def)
+  apply (fastforce dest: global'_no_ex_cap)
   done
 
 lemma replyRemove_invs':
-  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s) and ex_nonz_cap_to' tcbPtr\<rbrace>
+  "\<lbrace>invs' and ex_nonz_cap_to' tcbPtr\<rbrace>
    replyRemove replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: replyRemove_if_live_then_nonz_cap' replyRemove_valid_idle')
+  apply (fastforce dest: global'_no_ex_cap)
   done
 
 lemma replyClear_invs'[wp]:
