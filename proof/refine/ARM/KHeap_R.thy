@@ -10,70 +10,25 @@ imports
   Machine_R
 begin
 
-lemma valid_replies'_no_tcb:
-  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = None) rptr s; valid_replies' s;
-    obj_at' (\<lambda>reply. replySc reply = None) rptr s\<rbrakk>
-   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
-  apply normalise_obj_at'
-  apply (clarsimp simp: valid_replies'_def)
-  apply (auto simp: opt_map_def obj_at'_def projectKOs getHeadScPtr_def
-             split: option.splits reply_next.splits dest!: spec)
-  done
+lemma obj_at_replyTCBs_of:
+  "obj_at' (\<lambda>reply. replyTCB reply = tptr_opt) rptr s
+   \<Longrightarrow> replyTCBs_of s rptr = tptr_opt"
+  by (clarsimp simp: obj_at'_def projectKOs opt_map_def)
 
-lemma valid_replies'_other_state:
-  "\<lbrakk>obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s;
-    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr));
-    valid_replies' s; obj_at' (\<lambda>reply. replySc reply = None) rptr s\<rbrakk>
-   \<Longrightarrow> obj_at' (\<lambda>a. replyNext a = None \<and> replyPrev a = None) rptr s"
-  apply normalise_obj_at'
-  apply (clarsimp simp: valid_replies'_def)
-  apply (drule_tac x=rptr in spec)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-  apply (auto simp: obj_at'_def opt_map_def getHeadScPtr_def
-             split: reply_next.splits)
-  done
-
-lemma valid_replies'_sc_asrt_replySc_None:
-  "\<lbrakk>valid_replies'_sc_asrt rptr s; obj_at' (\<lambda>reply. replyTCB reply = Some tptr) rptr s;
-    st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
-   \<Longrightarrow> obj_at' (\<lambda>reply. replySc reply = None) rptr s"
-  by (force simp: valid_replies'_sc_asrt_def obj_at'_def pred_tcb_at'_def projectKOs)
-
-lemma valid_replies'_def2:
-  "pspace_distinct' s \<Longrightarrow> pspace_aligned' s \<Longrightarrow>
-   valid_replies' s =
+abbreviation
+  "valid_replies'_alt s \<equiv>
      (\<forall>rptr rp. ko_at' rp rptr s \<and> ((\<exists>rp'. replyNext rp = Some (Next rp')) \<or> replyPrev rp \<noteq> None)
                 \<longrightarrow> (\<exists>tptr. replyTCB rp = Some tptr
                             \<and> st_tcb_at' ((=) (BlockedOnReply (Some rptr))) tptr s))"
+
+lemma valid_replies'_def2:
+  "pspace_distinct' s \<Longrightarrow> pspace_aligned' s \<Longrightarrow>
+   valid_replies' s = valid_replies'_alt s"
   unfolding valid_replies'_def
   apply (rule iffI; clarsimp simp: obj_at'_def projectKOs)
    apply (drule_tac x=rptr in spec, clarsimp simp: opt_map_def)
   apply (clarsimp simp: pspace_alignedD' pspace_distinctD' opt_map_def projectKOs
                   split: option.splits)
-  done
-
-lemma valid_replies'_lift:
-  assumes rNext: "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
-  and rPrev: "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
-  and rTCB: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
-  and st: "\<And>P p. f \<lbrace>st_tcb_at' P p\<rbrace>"
-  shows "\<lbrace>valid_replies'\<rbrace> f \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
-  unfolding valid_def valid_replies'_def
-  apply (clarsimp simp del: imp_disjL)
-  subgoal for s a b rptr
-    apply (drule_tac x=rptr in spec)
-    apply (prop_tac "replyNexts_of s rptr \<noteq> None \<or> replyPrevs_of s rptr \<noteq> None")
-     apply (rule ccontr)
-     apply clarsimp
-     apply (frule use_valid[OF _ rNext[where P="\<lambda>nexts. nexts rptr = None"]], force)
-     apply (frule use_valid[OF _ rPrev[where P="\<lambda>prevs. prevs rptr = None"]], force)
-     apply force
-    apply (drule mp; clarsimp)
-    apply (frule use_valid[OF _ rTCB[where P="\<lambda>tcbs. tcbs rptr = Some tcb" for tcb]])
-     apply (force simp: opt_map_def)
-    apply (frule use_valid[OF _ st], assumption)
-    apply clarsimp
-    done
   done
 
 primrec
@@ -2598,15 +2553,17 @@ lemma setReply_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp set_reply'.state_refs_of') (simp flip: fun_upd_def)
 
-lemma setReply_replyNexts_replyPrevs[wp]:
+lemma setReply_reply_projs[wp]:
   "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := replyNext_of reply))
-          ((replyPrevs_of s)(rptr := replyPrev reply))\<rbrace>
+          ((replyPrevs_of s)(rptr := replyPrev reply))
+          ((replyTCBs_of s)(rptr := replyTCB reply))
+          ((replySCs_of s)(rptr := replySc reply))\<rbrace>
    setReply rptr reply
-   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
   apply (wpsimp simp: setReply_def updateObject_default_def setObject_def split_def)
-  apply (erule rsubst2[where P=P])
-   apply (clarsimp simp: ext opt_map_def list_refs_of_reply'_def map_set_def projectKO_opt_reply
-                  split: option.splits)+
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext opt_map_def list_refs_of_reply'_def map_set_def projectKO_opt_reply
+                    split: option.splits)+
   done
 
 lemma updateReply_wp_all:
@@ -3461,8 +3418,7 @@ lemma valid_replies_sc_cross:
     pspace_aligned s; pspace_distinct s; reply_at rptr s\<rbrakk>
    \<Longrightarrow> valid_replies'_sc_asrt rptr s'"
   apply (clarsimp simp: valid_replies_defs valid_replies'_sc_asrt_def)
-  apply normalise_obj_at'
-  apply (rename_tac rp scptr)
+  apply (rename_tac scptr rp ko)
   apply (prop_tac "sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) scptr s")
    apply (frule_tac sc_ptr=scptr and reply_ptr=rptr in sym_refs_sc_replies_sc_at)
     apply (rule ccontr)

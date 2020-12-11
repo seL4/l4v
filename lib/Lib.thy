@@ -2554,6 +2554,14 @@ lemma rsubst2:
   "\<lbrakk>P s x; s = t; x = y\<rbrakk> \<Longrightarrow> P t y"
   by simp
 
+lemma rsubst3:
+  "\<lbrakk>P a b c ; a = s; b = t; c = u\<rbrakk> \<Longrightarrow> P s t u"
+  by simp
+
+lemma rsubst4:
+  "\<lbrakk>P a b c d; a = s; b = t; c = u; d = v\<rbrakk> \<Longrightarrow> P s t u v"
+  by simp
+
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
   by blast
 
