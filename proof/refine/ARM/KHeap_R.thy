@@ -3608,16 +3608,15 @@ lemma get_sched_context_exs_valid:
               split: Structures_A.kernel_object.splits)
 
 lemma no_fail_simple_ko_at:
-  "\<lbrakk>inj C; is_simple_type (C ko)\<rbrakk> \<Longrightarrow> no_fail (ko_at (C ko) p) (get_simple_ko C p)"
-  apply (wpsimp simp: get_simple_ko_def obj_at_def wp: get_object_wp)
-  by (auto simp: partial_inv_def inj_def split: if_splits)
+  "no_fail (ntfn_at p) (get_notification p)"
+  "no_fail (ep_at p) (get_endpoint p)"
+  "no_fail (reply_at p) (get_reply p)"
+  by (wpsimp simp: get_simple_ko_def obj_at_def is_obj_defs a_type_def partial_inv_def
+               wp: get_object_wp split:  Structures_A.kernel_object.splits)+
 
-lemmas no_fail_get_notification[wp] =
-  no_fail_simple_ko_at[where C=kernel_object.Notification, simplified]
-lemmas no_fail_get_reply[wp] =
-  no_fail_simple_ko_at[where C=kernel_object.Reply, simplified]
-lemmas no_fail_get_endpoint[wp] =
-  no_fail_simple_ko_at[where C=kernel_object.Endpoint, simplified]
+lemmas no_fail_get_notification[wp] = no_fail_simple_ko_at(1)
+lemmas no_fail_get_reply[wp] = no_fail_simple_ko_at(2)
+lemmas no_fail_get_endpoint[wp] = no_fail_simple_ko_at(3)
 
 lemma get_sched_context_no_fail:
   "no_fail (\<lambda>s. sc_at ptr s) (get_sched_context ptr)"

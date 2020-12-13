@@ -2300,7 +2300,7 @@ lemma isSchedulable_corres:
   done
 
 lemma get_simple_ko_exs_valid:
-  "\<lbrakk>inj C; ko_at (C ko) p s; is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
+  "\<lbrakk>inj C; \<exists>ko. ko_at (C ko) p s \<and> is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
   by (auto simp: get_simple_ko_def get_object_def gets_def return_def get_def
                      partial_inv_def exs_valid_def bind_def obj_at_def is_reply fail_def inj_def split: prod.splits)
 
