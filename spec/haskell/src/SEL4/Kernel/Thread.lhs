@@ -222,10 +222,12 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                             else do
 >                                 sc <- getSchedContext scPtr
 >                                 isHandlerValid <- isValidTimeoutHandler receiver
->                                 case (isHandlerValid, faultOpt) of
->                                     (False, _) -> postpone scPtr
->                                     (_, Just (Timeout _)) -> postpone scPtr
->                                     _ -> handleTimeout receiver $ Timeout $ scBadge sc
+>                                 isTimeout <- case faultOpt of
+>                                     Just (Timeout _) -> return True
+>                                     _ -> return False
+>                                 if isHandlerValid && not isTimeout
+>                                     then handleTimeout receiver $ Timeout $ scBadge sc
+>                                     else postpone scPtr
 
 \subsubsection{Ordinary IPC}
 
