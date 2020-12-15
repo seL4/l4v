@@ -19,8 +19,8 @@ primrec heap_path :: "('a \<rightharpoonup> 'a) \<Rightarrow> 'a option \<Righta
 | "heap_path hp x (a#as) y = (x = Some a \<and> heap_path hp (hp a) as y)"
 
 (* When a path ends in None, it is a singly-linked list *)
-abbreviation heap_list :: "('a \<rightharpoonup> 'a) \<Rightarrow> 'a option \<Rightarrow> 'a list \<Rightarrow> bool" where
-  "heap_list hp x xs \<equiv> heap_path hp x xs None"
+abbreviation heap_ls :: "('a \<rightharpoonup> 'a) \<Rightarrow> 'a option \<Rightarrow> 'a list \<Rightarrow> bool" where
+  "heap_ls hp x xs \<equiv> heap_path hp x xs None"
 
 (* Walk a linked list of next pointers, recording which it visited.
    Terminates artificially at loops, and otherwise because the address domain is finite *)
@@ -53,31 +53,31 @@ lemma heap_path_None[simp]:
   "heap_path hp None xs end = (xs = [] \<and> end = None)"
   by (cases xs, auto)
 
-lemma heap_list_unique:
-  "\<lbrakk> heap_list hp x xs; heap_list hp x ys \<rbrakk> \<Longrightarrow> xs = ys"
+lemma heap_ls_unique:
+  "\<lbrakk> heap_ls hp x xs; heap_ls hp x ys \<rbrakk> \<Longrightarrow> xs = ys"
   by (induct xs arbitrary: ys x; simp) (case_tac ys; clarsimp)
 
-lemma heap_list_hd_not_in_tl:
-  "heap_list hp (hp x) xs \<Longrightarrow> x \<notin> set xs"
+lemma heap_ls_hd_not_in_tl:
+  "heap_ls hp (hp x) xs \<Longrightarrow> x \<notin> set xs"
 proof
   assume "x \<in> set xs"
   then obtain ys zs where xs: "xs = ys @ x # zs"  by (auto simp: in_set_conv_decomp)
-  moreover assume "heap_list hp (hp x) xs"
-  moreover from this xs have "heap_list hp (hp x) zs" by clarsimp
-  ultimately show False by (fastforce dest: heap_list_unique)
+  moreover assume "heap_ls hp (hp x) xs"
+  moreover from this xs have "heap_ls hp (hp x) zs" by clarsimp
+  ultimately show False by (fastforce dest: heap_ls_unique)
 qed
 
-lemma heap_list_distinct:
-  "heap_list hp x xs \<Longrightarrow> distinct xs"
-  by (induct xs arbitrary: x; clarsimp simp: heap_list_hd_not_in_tl)
+lemma heap_ls_distinct:
+  "heap_ls hp x xs \<Longrightarrow> distinct xs"
+  by (induct xs arbitrary: x; clarsimp simp: heap_ls_hd_not_in_tl)
 
-lemma heap_list_is_walk':
-  "\<lbrakk> heap_list hp x xs; set xs \<inter> set ys = {} \<rbrakk> \<Longrightarrow> heap_walk hp x ys = ys @ xs"
-  by (frule heap_list_distinct) (induct xs arbitrary: x ys; clarsimp)
+lemma heap_ls_is_walk':
+  "\<lbrakk> heap_ls hp x xs; set xs \<inter> set ys = {} \<rbrakk> \<Longrightarrow> heap_walk hp x ys = ys @ xs"
+  by (frule heap_ls_distinct) (induct xs arbitrary: x ys; clarsimp)
 
-lemma heap_list_is_walk:
-  "heap_list hp x xs \<Longrightarrow> heap_walk hp x [] = xs"
-  using heap_list_is_walk' by fastforce
+lemma heap_ls_is_walk:
+  "heap_ls hp x xs \<Longrightarrow> heap_walk hp x [] = xs"
+  using heap_ls_is_walk' by fastforce
 
 lemma heap_path_end_unique:
   "heap_path hp x xs y \<Longrightarrow> heap_path hp x xs y' \<Longrightarrow> y = y'"
@@ -142,8 +142,8 @@ lemma heap_walk_Nil_None:
   "heap_walk hp st [] = [] \<Longrightarrow> st = None"
    by (case_tac st; simp only: heal_walk_Some_nonempty)
 
-lemma heap_list_last_None:
-  "heap_list hp st xs \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> hp (last xs) = None"
+lemma heap_ls_last_None:
+  "heap_ls hp st xs \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> hp (last xs) = None"
   by (induct xs rule: rev_induct; clarsimp)
 
 (* sym_heap *)
@@ -163,15 +163,15 @@ lemma sym_heap_path_reverse:
           \<longleftrightarrow> heap_path hp' (Some p') (p'#(rev ps)) (Some p)"
   by (induct ps arbitrary: p p' rule: rev_induct; force)
 
-lemma sym_heap_list_rev_Cons:
-  "\<lbrakk>sym_heap hp hp'; heap_list hp (Some p) (p#ps)\<rbrakk>
+lemma sym_heap_ls_rev_Cons:
+  "\<lbrakk>sym_heap hp hp'; heap_ls hp (Some p) (p#ps)\<rbrakk>
   \<Longrightarrow> heap_path hp' (Some (last (p#ps))) (rev ps) (Some p)"
   supply rev.simps[simp del]
   apply (induct ps arbitrary: p rule: rev_induct; simp add: rev.simps)
   by (auto dest!: sym_heap_path_reverse[THEN iffD1])
 
-lemma sym_heap_list_rev:
-  "\<lbrakk>sym_heap hp hp'; heap_list hp (Some p) ps\<rbrakk>
+lemma sym_heap_ls_rev:
+  "\<lbrakk>sym_heap hp hp'; heap_ls hp (Some p) ps\<rbrakk>
   \<Longrightarrow> heap_path hp' (Some (last ps)) (butlast (rev ps)) (Some p)
       \<and> hp (last ps) = None"
   apply (induct ps arbitrary: p rule: rev_induct, simp)
@@ -184,8 +184,8 @@ lemma heap_path_extend:
   "heap_path hp st (ls @ [p]) (hp p) \<longleftrightarrow> heap_path hp st ls (Some p)"
   by (induct ls rule: rev_induct; simp)
 
-lemma heap_path_prefix_heap_list:
-  "\<lbrakk>heap_list hp st xs; heap_path hp st ys ed\<rbrakk> \<Longrightarrow> ys \<le> xs"
+lemma heap_path_prefix_heap_ls:
+  "\<lbrakk>heap_ls hp st xs; heap_path hp st ys ed\<rbrakk> \<Longrightarrow> ys \<le> xs"
   apply (induct xs arbitrary: ys st, simp)
   apply (case_tac ys; clarsimp)
   done
@@ -200,7 +200,7 @@ lemma heap_path_distinct_next_cases: (* the other direction needs sym_heap *)
   \<Longrightarrow> ed = Some p \<or> ed = Some np \<or> np \<in> set xs"
   apply (cases ed; simp)
    apply (frule in_list_decompose_takeWhile)
-   apply (subgoal_tac "heap_list hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
+   apply (subgoal_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
    apply (drule heap_path_non_nil_lookup_next)
    apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
    apply (metis in_set_dropD list.set_intros(1))
@@ -214,11 +214,11 @@ lemma heap_path_distinct_next_cases: (* the other direction needs sym_heap *)
   apply clarsimp
   by (metis in_set_dropD list.set_intros(1)) simp
 
-lemma heap_list_next_in_list:
-  "\<lbrakk>heap_list hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
+lemma heap_ls_next_in_list:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
   \<Longrightarrow> np \<in> set xs"
    apply (subgoal_tac "distinct xs")
-   by (fastforce dest!: heap_path_distinct_next_cases) (erule heap_list_distinct)
+   by (fastforce dest!: heap_path_distinct_next_cases) (erule heap_ls_distinct)
 
 lemma heap_path_distinct_sym_prev_cases:
   "\<lbrakk>heap_path hp st xs ed; distinct xs; np \<in> set xs; hp p = Some np; sym_heap hp hp'\<rbrakk>
@@ -229,7 +229,7 @@ lemma heap_path_distinct_sym_prev_cases:
   apply (cases xs; simp del: heap_path.simps)
   apply (frule heap_path_head, simp)
   apply (cases ed, clarsimp)
-   apply (drule sym_heap_list_rev_Cons, fastforce)
+   apply (drule sym_heap_ls_rev_Cons, fastforce)
    apply (drule heap_path_distinct_next_cases[where hp=hp']; simp)
    apply fastforce
   apply (simp del: heap_path.simps)
@@ -239,16 +239,16 @@ lemma heap_path_distinct_sym_prev_cases:
   apply fastforce
   done
 
-lemma heap_list_prev_cases:
-  "\<lbrakk>heap_list hp st xs; np \<in> set xs; hp p = Some np; sym_heap hp hp'\<rbrakk>
+lemma heap_ls_prev_cases:
+  "\<lbrakk>heap_ls hp st xs; np \<in> set xs; hp p = Some np; sym_heap hp hp'\<rbrakk>
   \<Longrightarrow> st = Some np \<or> p \<in> set xs"
    apply (subgoal_tac "distinct xs")
-   by (fastforce dest!: heap_path_distinct_sym_prev_cases) (erule heap_list_distinct)
+   by (fastforce dest!: heap_path_distinct_sym_prev_cases) (erule heap_ls_distinct)
 
-lemma heap_list_prev_not_in:
-  "\<lbrakk>heap_list hp st xs; np \<notin> set xs; hp p = Some np\<rbrakk>
+lemma heap_ls_prev_not_in:
+  "\<lbrakk>heap_ls hp st xs; np \<notin> set xs; hp p = Some np\<rbrakk>
   \<Longrightarrow> p \<notin> set xs"
-  by (meson heap_list_next_in_list)
+  by (meson heap_ls_next_in_list)
 
 lemma heap_path_distinct_prev_not_in:
   "\<lbrakk>heap_path hp st xs ed; distinct xs; np \<notin> set xs; hp p = Some np; ed \<noteq> Some np; ed \<noteq> Some p\<rbrakk>
@@ -262,9 +262,9 @@ lemma heap_path_distinct_next_not_in:
   \<Longrightarrow> np \<notin> set xs"
   by (fastforce dest!: heap_path_distinct_sym_prev_cases[simplified])
 
-lemma heap_list_next_not_in:
-  "\<lbrakk>heap_list hp st xs; p \<notin> set xs; hp p = Some np; sym_heap hp hp'; st \<noteq> Some np\<rbrakk>
+lemma heap_ls_next_not_in:
+  "\<lbrakk>heap_ls hp st xs; p \<notin> set xs; hp p = Some np; sym_heap hp hp'; st \<noteq> Some np\<rbrakk>
   \<Longrightarrow> np \<notin> set xs"
-  by (fastforce dest!: heap_list_prev_cases[simplified])
+  by (fastforce dest!: heap_ls_prev_cases[simplified])
 
 end
