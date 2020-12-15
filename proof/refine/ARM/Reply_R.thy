@@ -15,11 +15,12 @@ defs replyUnlink_assertion_def:
 
 
 crunches updateReply
-  for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
-  and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t' s)"
-  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s p) t"
+  for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
+  and tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
+  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and valid_queues[wp]: "valid_queues"
+  and reply_at'[wp]: "\<lambda>s. P (reply_at' rp s)"
 
 lemma replyTCB_update_reply_projs[wp]:
   "\<lbrace>\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)
