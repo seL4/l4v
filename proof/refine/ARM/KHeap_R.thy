@@ -3695,7 +3695,7 @@ method add_ready_qs_runnable =
 lemma replyTCBs_of_cross:
   "\<lbrakk>(s, s') \<in> state_relation; reply_tcb_reply_at P rptr s\<rbrakk>
    \<Longrightarrow> P (replyTCBs_of s' rptr)"
-  apply (clarsimp simp: reply_at_ppred_def obj_at_def is_tcb state_relation_def)
+  apply (clarsimp simp: reply_at_ppred_def obj_at_def state_relation_def)
   apply (drule (1) pspace_relation_absD, clarsimp simp: other_obj_relation_def)
   apply (case_tac z; simp)
   apply (clarsimp simp: opt_map_def reply_relation_def)

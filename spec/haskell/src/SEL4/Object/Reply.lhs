@@ -41,10 +41,14 @@ This module specifies the behavior of reply objects.
 
 > bindScReply :: PPtr SchedContext -> PPtr Reply -> Kernel ()
 > bindScReply scPtr replyPtr = do
+>     stateAssert sym_refs_asrt
+>         "bindScReply: `sym_refs (state_refs_of' s)` must hold"
 >     sc <- getSchedContext scPtr
 >     scReplyOpt <- return $ scReply sc
 >     when (scReplyOpt /= Nothing) $ do
 >         scReplyPtr <- return $ fromJust scReplyOpt
+>         stateAssert (valid_replies'_sc_asrt scReplyPtr)
+>             "Assert that `valid_replies'_sc` holds for replyPtr"
 >         updateReply scReplyPtr (\reply -> reply { replyNext = Just (Next replyPtr) })
 >     updateReply replyPtr (\reply -> reply { replyPrev = scReplyOpt })
 >     setSchedContext scPtr (sc { scReply = Just replyPtr })
