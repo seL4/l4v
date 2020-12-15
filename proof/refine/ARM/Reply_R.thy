@@ -13,7 +13,6 @@ defs replyUnlink_assertion_def:
     \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
                           \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
-
 crunches updateReply
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
   and tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
@@ -22,7 +21,29 @@ crunches updateReply
   and valid_queues[wp]: "valid_queues"
   and reply_at'[wp]: "\<lambda>s. P (reply_at' rp s)"
 
-lemma replyTCB_update_reply_projs[wp]:
+lemma updateReply_replyNext_reply_projs[wp]:
+  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := getReplyNextPtr next)) (replyPrevs_of s)
+          (replyTCBs_of s) ((replySCs_of s)(rptr := getHeadScPtr next))\<rbrace>
+   updateReply rptr (replyNext_update (\<lambda>_. next))
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding updateReply_def
+  apply wpsimp
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext opt_map_def obj_at'_def projectKO_eq)+
+  done
+
+lemma updateReply_replyPrev_reply_projs[wp]:
+  "\<lbrace>\<lambda>s. P (replyNexts_of s) ((replyPrevs_of s)(rptr := prev))
+          (replyTCBs_of s) (replySCs_of s)\<rbrace>
+   updateReply rptr (replyPrev_update (\<lambda>_. prev))
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding updateReply_def
+  apply wpsimp
+  apply (erule rsubst4[where P=P])
+     apply (clarsimp simp: ext opt_map_def obj_at'_def projectKO_eq)+
+  done
+
+lemma updateReply_replyTCB_reply_projs[wp]:
   "\<lbrace>\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)
           ((replyTCBs_of s)(rptr := tptrOpt)) (replySCs_of s)\<rbrace>
    updateReply rptr (replyTCB_update (\<lambda>_. tptrOpt))
@@ -32,6 +53,17 @@ lemma replyTCB_update_reply_projs[wp]:
   apply (erule rsubst4[where P=P])
      apply (clarsimp simp: ext opt_map_def obj_at'_def projectKO_eq)+
   done
+
+lemma updateReply_reply_projs:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko rptr s \<longrightarrow>
+       P (\<lambda>a. if a = rptr then replyNext_of (f ko) else replyNexts_of s a)
+         (\<lambda>a. if a = rptr then replyPrev (f ko) else replyPrevs_of s a)
+         (\<lambda>a. if a = rptr then replyTCB (f ko) else replyTCBs_of s a)
+         (\<lambda>a. if a = rptr then replySc (f ko) else replySCs_of s a)\<rbrace>
+   updateReply rptr f
+   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
+  unfolding updateReply_def
+  by wpsimp
 
 lemma replyUnlink_st_tcb_at':
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (t' = t \<longrightarrow> P (P' Inactive)) \<and> (t' \<noteq> t \<longrightarrow> P (st_tcb_at' P' t' s))\<rbrace>
@@ -236,7 +268,6 @@ crunches cleanReply, updateReply
 
 crunches replyUnlink
   for list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
-  and replyNexts_replyPrevs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s)"
   and ct_not_inQ[wp]: ct_not_inQ
   and ex_nonz_cap_to'[wp]: "(\<lambda>s. ex_nonz_cap_to' t s)"
   and valid_irq_handlers'[wp]: valid_irq_handlers'
@@ -248,7 +279,7 @@ crunches replyUnlink
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and sch_act_not[wp]: "sch_act_not t"
-  (wp: crunch_wps updateReply_list_refs_of_replies'_inv updateReply_replyNexts_replyPrevs_inv)
+  (wp: crunch_wps updateReply_list_refs_of_replies'_inv)
 
 crunches replyRemoveTCB
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -317,8 +348,9 @@ lemma replyRemoveTCB_valid_pspace'[wp]:
   done
 
 lemma updateReply_iflive'_strong:
-  "\<lbrace>if_live_then_nonz_cap' and
-    (\<lambda>s. \<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko) \<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace>
+  "\<lbrace>\<lambda>s. reply_at' rptr s
+         \<longrightarrow> if_live_then_nonz_cap' s
+             \<and> (\<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko) \<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace>
    updateReply rptr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding if_live_then_nonz_cap'_def
@@ -326,6 +358,7 @@ lemma updateReply_iflive'_strong:
     apply (wpsimp wp: updateReply_wp_all)
    apply wpsimp
   apply clarsimp
+  apply normalise_obj_at'
   apply (drule_tac x=x in spec)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def ps_clear_def projectKO_reply)
   apply (case_tac "x=rptr"; clarsimp)
@@ -397,30 +430,6 @@ lemma cleanReply_valid_pspace'[wp]:
   unfolding cleanReply_def
   apply (wpsimp wp: updateReply_valid_pspace' simp: live_reply'_def)
   apply (clarsimp simp: valid_reply'_def)
-  done
-
-lemma updateReply_replyNext_Nothing[wp]:
-  "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := Nothing)) (replyPrevs_of s)\<rbrace>
-   updateReply rptr (replyNext_update (\<lambda>_. Nothing))
-   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s)\<rbrace>"
-  unfolding updateReply_def
-  apply wpsimp
-  apply (erule rsubst2[where P=P])
-   apply (clarsimp simp: ext get_refs_def opt_map_def list_refs_of_reply'_def obj_at'_def
-                         projectKO_eq
-                  split: option.split)+
-  done
-
-lemma updateReply_replyPrev_Nothing[wp]:
-  "\<lbrace>\<lambda>s. P (replyNexts_of s) ((replyPrevs_of s)(rptr := Nothing))\<rbrace>
-   updateReply rptr (replyPrev_update (\<lambda>_. Nothing))
-   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s)\<rbrace>"
-  unfolding updateReply_def
-  apply wpsimp
-  apply (erule rsubst2[where P=P])
-   apply (clarsimp simp: ext get_refs_def opt_map_def list_refs_of_reply'_def obj_at'_def
-                         projectKO_eq
-                  split: option.split)+
   done
 
 lemma cleanReply_list_refs_of_replies':
@@ -664,15 +673,6 @@ crunches updateReply
   for sc_obj_at'[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) scp s)"
   and reply_at'[wp]: "reply_at' rptr"
 
-lemma updateReply_replyNexts_replyPrevs:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko rptr s \<longrightarrow>
-       P (\<lambda>a. if a = rptr then replyNext_of (f ko) else replyNexts_of s a)
-         (\<lambda>a. if a = rptr then replyPrev (f ko) else replyPrevs_of s a)\<rbrace>
-   updateReply rptr f
-   \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s)\<rbrace>"
-  unfolding updateReply_def
-  by wpsimp
-
 lemma replyNext_update_corres_Head:
   "corres dc (reply_at rptr) (reply_at' rptr)
    (set_reply_obj_ref reply_sc_update rptr (Some scptr))
@@ -767,10 +767,10 @@ lemma bindReplySc_corres:
                            OF _ set_reply_obj_ref_noop[where rptr=rptr and x=None]])
              apply (simp add: bind_assoc)
              apply (rule corres_split_deprecated[OF _ updateReply_replyPrev_corres])
-                  apply (rule corres_split_deprecated[OF _ update_sc_reply_stack_update_ko_at'_corres])
-                    apply (rule updateReply_replyPrev_same_corres)
-                    apply (clarsimp simp: reply_relation_def)
-                   apply (wpsimp wp: updateReply_replyNexts_replyPrevs)+
+               apply (rule corres_split_deprecated[OF _ update_sc_reply_stack_update_ko_at'_corres])
+                 apply (rule updateReply_replyPrev_same_corres)
+                 apply (clarsimp simp: reply_relation_def)
+                apply (wpsimp wp: updateReply_reply_projs)+
             apply (rule_tac F="(sc_replies x \<noteq> []) = (\<exists>y. scReply sc = Some y)" in corres_gen_asm2)
             apply (erule corres_when2)
             apply (rule_tac F="scReply sc = Some (hd (sc_replies x))" in corres_gen_asm2)
@@ -778,27 +778,20 @@ lemma bindReplySc_corres:
             apply (rule replyNext_update_corres_Next)
            apply (wpsimp wp: hoare_vcg_all_lift)
           apply wpsimp
-           apply (rule_tac Q="\<lambda>_. reply_at' rptr and ko_at' sc scptr
-                    and (\<lambda>s. heap_ls (replyPrevs_of s) (Some y) (sc_replies x))
-                    and K (rptr \<notin> set (sc_replies x))"
-                  in hoare_strengthen_post[rotated])
-            apply clarsimp
-            apply (erule (1) heap_path_heap_upd_not_in[simplified fun_upd_def])
-           apply wpsimp
-           apply (frule Some_to_the, simp)
-          apply (wpsimp wp: updateReply_replyNexts_replyPrevs)
+          apply (rule_tac Q="\<lambda>_. reply_at' rptr and ko_at' sc scptr
+                   and (\<lambda>s. heap_ls (replyPrevs_of s) (Some y) (sc_replies x))
+                   and K (rptr \<notin> set (sc_replies x))"
+                 in hoare_strengthen_post[rotated])
+           apply clarsimp
+           apply (erule (1) heap_path_heap_upd_not_in[simplified fun_upd_def])
+          apply wpsimp
+          apply (frule Some_to_the, simp)
          apply simp
          apply (clarsimp simp: obj_at_def)
          apply (frule (1) valid_sched_context_objsI)
          apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
         apply clarsimp
         apply (case_tac "sc_replies x"; simp)
-        apply (intro allI impI conjI)
-        apply (subgoal_tac "replyPrevs_of s a = replyPrev ko")
-         apply (erule rsubst2[where P="\<lambda>a b. heap_ls a b c" for c])
-          apply (rule ext, simp)
-         apply simp
-        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_reply opt_map_def)
        apply assumption
       apply (clarsimp simp: obj_at_def  is_sc_obj)
       apply (frule state_relation_sc_replies_relation)
@@ -900,7 +893,7 @@ lemma updateReply_obj_at'_inv:
                   projectKO_reply)
 
 lemma updateReply_iflive'_weak:
-  "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' replyPtr\<rbrace>
+  "\<lbrace>\<lambda>s. reply_at' replyPtr s \<longrightarrow> if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' replyPtr s\<rbrace>
    updateReply replyPtr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: updateReply_iflive'_strong)
@@ -964,34 +957,35 @@ lemma bindScReply_sch_act_wf[wp]:
   by (wpsimp wp: sts_sch_act' hoare_vcg_all_lift hoare_vcg_if_lift hoare_drop_imps)
 
 lemma bindScReply_sym_refs_list_refs_of_replies':
-  "\<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s) \<and>
-        obj_at' (\<lambda>ko. replyPrev ko = None \<and> replyNext ko = None) replyPtr s \<and>
-        (\<forall>oldReplyPtr. obj_at' (\<lambda>ko. scReply ko = Some oldReplyPtr) scPtr s \<longrightarrow>
-         obj_at' (\<lambda>ko. replyNext ko = Some (Head scPtr)) oldReplyPtr s)\<rbrace>
+  "\<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)
+        \<and> \<not> is_reply_linked replyPtr s \<and> replySCs_of s replyPtr = None
+        \<and> (\<forall>oldReplyPtr. obj_at' (\<lambda>ko. scReply ko = Some oldReplyPtr) scPtr s
+                            \<longrightarrow> replySCs_of s oldReplyPtr = Some scPtr)\<rbrace>
    bindScReply scPtr replyPtr
    \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   supply if_split [split del]
   unfolding bindScReply_def
-  apply (wpsimp wp: hoare_vcg_if_lift2 updateReply_list_refs_of_replies' updateReply_obj_at'
-                    hoare_vcg_all_lift hoare_vcg_imp_lift' set_reply'.obj_at')
+  apply (wpsimp wp: updateReply_list_refs_of_replies' updateReply_obj_at'
+                    hoare_vcg_all_lift hoare_vcg_imp_lift')
   by (auto simp: list_refs_of_replies'_def list_refs_of_reply'_def
-                 opt_map_Some_def obj_at'_def projectKO_eq get_refs_def
-           elim: delta_sym_refs split: if_splits)
+                 opt_map_Some_def obj_at'_def projectKO_eq
+           elim: delta_sym_refs split: if_splits)[1]
 
 lemma bindScReply_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap'
     and ex_nonz_cap_to' scPtr and ex_nonz_cap_to' replyPtr
-    and (\<lambda>s. \<forall>rp. obj_at' (\<lambda>ko. scReply ko = Some rp) scPtr s \<longrightarrow> obj_at' (\<lambda>ko. replyNext ko = Some (Head scPtr)) rp s )\<rbrace>
+    and (\<lambda>s. \<forall>rp. obj_at' (\<lambda>ko. scReply ko = Some rp) scPtr s
+                    \<longrightarrow> replySCs_of s rp = Some scPtr)\<rbrace>
    bindScReply scPtr replyPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding bindScReply_def
   apply (simp (no_asm_use) split del: if_split
          | wp hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_imp_lift'
-              hoare_vcg_if_lift set_reply'.obj_at' updateReply_iflive'_weak
+              hoare_vcg_if_lift updateReply_iflive'_weak
          | rule threadGet_wp)+
   apply clarsimp
   apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq live_reply'_def projectKO_reply)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq live_reply'_def projectKO_reply)
   done
 
 lemma bindScReply_ex_nonz_cap_to'[wp]:
