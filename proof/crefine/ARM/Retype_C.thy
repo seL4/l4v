@@ -2971,6 +2971,7 @@ proof -
            fpexc_C := 0,
            fpscr_C := 0
          \<rparr>,
+        odd_n_contextRegisters_padding_C := 0,
         registers_C :=
           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<19]
            (registers_C (tcbContext_C (tcbArch_C undefined)))\<rparr>

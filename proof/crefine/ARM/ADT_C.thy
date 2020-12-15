@@ -130,7 +130,7 @@ definition
   to_user_context_C :: "user_context \<Rightarrow> user_context_C"
 where
   "to_user_context_C uc \<equiv>
-    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))
+    user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r))) 0
                    (user_fpu_state_C ((ARRAY r. fpuRegs (fpu_state uc) (finite_index r)))
                       (fpuExc (fpu_state uc)) (fpuScr (fpu_state uc)))"
 
