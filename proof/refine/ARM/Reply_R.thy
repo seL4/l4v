@@ -502,17 +502,17 @@ lemmas sym_refs_reply_heap_path_doubly_linked_Prevs_rev
 lemmas sym_refs_reply_heap_path_doubly_linked_Nexts_rev
   = sym_heap_path_reverse[OF reply_sym_heap_Prev_Next]
 
-lemmas sym_refs_replyNext_heap_list_Cons
-  = sym_heap_list_rev_Cons[OF reply_sym_heap_Next_Prev]
+lemmas sym_refs_replyNext_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Next_Prev]
 
-lemmas sym_refs_replyPrev_heap_list_Cons
-  = sym_heap_list_rev_Cons[OF reply_sym_heap_Prev_Next]
+lemmas sym_refs_replyPrev_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Prev_Next]
 
-lemmas sym_refs_replyNext_heap_list
-  = sym_heap_list_rev[OF reply_sym_heap_Next_Prev]
+lemmas sym_refs_replyNext_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Next_Prev]
 
-lemmas sym_refs_replyPrev_heap_list
-  = sym_heap_list_rev[OF reply_sym_heap_Prev_Next]
+lemmas sym_refs_replyPrev_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Prev_Next]
 
 (* end: sym_heap *)
 

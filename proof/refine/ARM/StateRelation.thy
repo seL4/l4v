@@ -456,7 +456,7 @@ definition
   sc_replies_relation_2 ::
   "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
   "sc_replies_relation_2 sc_repls scRepl replPrevs \<equiv>
-     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_list replPrevs (scRepl p) replies"
+     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_ls replPrevs (scRepl p) replies"
 
 abbreviation sc_replies_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "sc_replies_relation s s' \<equiv>
@@ -469,7 +469,7 @@ abbreviation sc_replies_relation_obj ::
   "sc_replies_relation_obj obj obj' nexts \<equiv>
    case (obj, obj') of
      (Structures_A.SchedContext sc _, KOSchedContext sc') \<Rightarrow>
-       heap_list nexts (scReply sc') (sc_replies sc)"
+       heap_ls nexts (scReply sc') (sc_replies sc)"
 
 primrec
   sched_act_relation :: "Structures_A.scheduler_action \<Rightarrow> Structures_H.scheduler_action \<Rightarrow> bool"
@@ -897,7 +897,7 @@ lemma sc_replies_prevs_walk:
   apply (erule_tac x=p in allE)
   apply (erule_tac x="sc_replies sc" in allE)
   apply (clarsimp simp: sc_replies.all_simps)
-  apply (rule heap_list_is_walk)
+  apply (rule heap_ls_is_walk)
   apply (subgoal_tac "scReplies_of s' p = scReply sc'", simp)
   apply (clarsimp simp: opt_map_def projectKO_opt_sc)
   done
@@ -906,7 +906,7 @@ lemma sc_replies_relation_prevs_list:
   "\<lbrakk> sc_replies_relation s s';
      kheap s x = Some (kernel_object.SchedContext sc n);
      ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
-    \<Longrightarrow> heap_list (replyPrevs_of s') (scReply sc') (sc_replies sc)"
+    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
   apply (drule_tac x=x and y="sc_replies sc" in spec2)
   apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
