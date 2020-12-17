@@ -3360,23 +3360,21 @@ lemma refills_heads_equal:
    \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc) \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
   by (auto simp: sc_relation_def refillHd_def refill_map_def hd_refills_map)
 
-(* To resolve this sorry, we need to modify valid_sched_context' by adding 0 < scRefillCount sc
-   to the list of conjuncts in the case where 0 < scRefillMax sc.
-   This currently breaks refillPopHead_invs', as well as any invs' lemma for any function which
-   calls refillPopHead. *)
 lemma refills_heads_equal_active:
-  "\<lbrakk>sc_active sc; valid_sched_context' sc' s'; \<exists>n. sc_relation sc n sc'\<rbrakk>
+  "\<lbrakk>sc_active sc; sc_refills sc \<noteq> []; valid_sched_context' sc' s'; \<exists>n. sc_relation sc n sc'\<rbrakk>
    \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc) \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
   apply (rule refills_heads_equal; (solves simp)?)
-  apply (clarsimp simp: sc_relation_def active_sc_def)
-  apply (auto simp: sc_relation_def refillHd_def refill_map_def hd_refills_map
-                    valid_sched_context'_def)
-  sorry
+  apply (auto simp: sc_relation_def valid_sched_context'_def active_sc_def
+                    refillHd_def refills_map_def refill_map_def wrap_slice_def
+             split: if_splits)
+  done
 
 lemma refillReady_corres:
   "sc_ptr = scPtr
-   \<Longrightarrow> corres (=) (pspace_aligned and pspace_distinct and sc_at sc_ptr and active_sc_at sc_ptr)
-                  valid_objs'
+   \<Longrightarrow> corres (=) (pspace_aligned and pspace_distinct
+                                  and sc_at sc_ptr
+                                  and active_sc_at sc_ptr
+                                  and active_sc_valid_refills) valid_objs'
               (get_sc_refill_ready sc_ptr) (refillReady scPtr)"
   apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel], simp)
   apply (clarsimp simp: get_sc_refill_ready_def refill_ready_def refillReady_def)
@@ -3388,16 +3386,25 @@ lemma refillReady_corres:
         apply (rename_tac s s')
         apply (prop_tac "r_time (refill_hd sc) = rTime (refillHd sc')")
          apply (rule_tac s'=s' in refills_heads_equal_active[THEN conjunct2, symmetric])
-           apply simp
+            apply (erule conjunct1)
+           apply (erule conjunct2)
           apply blast
          apply blast
         apply wpsimp+
    apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (drule active_sc_valid_refillsE[where scp=sc_ptr,rotated])
+    apply (clarsimp simp: is_sc_active_def is_sc_active_kh_simp[symmetric])
+   apply (fastforce simp: vs_all_heap_simps pred_map_def cfg_valid_refills_def rr_valid_refills_def
+                          sp_valid_refills_def sc_refill_cfgs_of_scs_def map_project_def
+                   split: if_splits)
   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc')
   done
 
 lemma getTCBRefillReady_corres:
-  "corres (=) (pspace_aligned and pspace_distinct and valid_objs and active_sc_tcb_at t) valid_objs'
+  "corres (=) (pspace_aligned and pspace_distinct
+                              and valid_objs
+                              and active_sc_tcb_at t
+                              and active_sc_valid_refills) valid_objs'
           (get_tcb_refill_ready t)
           (getTCBRefillReady t)"
    (is "corres _ ?abs ?conc _ _")
@@ -3407,8 +3414,8 @@ lemma getTCBRefillReady_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac Q="?abs" and Q'="?conc"
                  in corres_split[OF _ threadget_corres[where r="(=)"] thread_get_sp threadGet_inv])
-       apply (rename_tac sc sc')
-       defer
+     apply (rename_tac sc sc')
+     defer
      apply (clarsimp simp: tcb_relation_def)
     apply (clarsimp simp: vs_all_heap_simps obj_at_def is_tcb_def)
    apply simp
@@ -3434,7 +3441,10 @@ lemma getReleaseQueue_corres:
   by (clarsimp simp: state_relation_def release_queue_relation_def)
 
 lemma releaseQNonEmptyAndReady_corres:
-  "corres (=) (pspace_aligned and pspace_distinct and valid_objs and valid_release_q) valid_objs'
+  "corres (=) (pspace_aligned and pspace_distinct
+                              and valid_objs
+                              and valid_release_q
+                              and active_sc_valid_refills) valid_objs'
               release_q_non_empty_and_ready releaseQNonEmptyAndReady"
   (is "corres _ ?abs _ _ _")
   apply (clarsimp simp: release_q_non_empty_and_ready_def releaseQNonEmptyAndReady_def)
