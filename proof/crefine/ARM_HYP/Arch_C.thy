@@ -4237,6 +4237,17 @@ lemma decodeARMMMUInvocation_ccorres:
                  elim!: ccap_relationE split: if_split_asm)
   done
 
+lemma vcpu_reg_saved_when_disabled_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+           Call vcpu_reg_saved_when_disabled_'proc
+           \<lbrace> \<acute>ret__unsigned_long = from_bool (\<^bsup>s\<^esup>field = scast seL4_VCPUReg_SCTLR) \<rbrace>"
+  by vcg clarsimp
+
+
+lemma vcpuRegSavedWhenDisabled_spec[simp]:
+  "vcpuRegSavedWhenDisabled reg = (reg = VCPURegSCTLR)"
+  by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
+
 lemma writeVCPUReg_ccorres:
   notes Collect_const[simp del] dc_simp[simp del]
   shows
@@ -4253,34 +4264,31 @@ lemma writeVCPUReg_ccorres:
    apply (rule_tac C'="{s. cvcpuopt \<noteq> None \<and> (cvcpuopt \<noteq> None \<longrightarrow> fst (the cvcpuopt) = vcpuptr) }"
             and Q="\<lambda>s. vcpuptr \<noteq> 0 \<and> (armHSCurVCPU \<circ> ksArchState) s = cvcpuopt"
             and Q'=UNIV in ccorres_rewrite_cond_sr)
-  subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
-                          split: option.splits)
-   apply (clarsimp simp: vcpureg_eq_use_types) \<comment> \<open>C register comparison into reg comparison\<close>
+    subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
+                        split: option.splits)
    apply (rule ccorres_Cond_rhs)
-
     \<comment> \<open>vcpuptr is current vcpu\<close>
     apply clarsimp
     apply (rename_tac curvcpuactive)
-    apply (rule ccorres_Cond_rhs ; clarsimp)
-     apply (rule_tac C'="{s. curvcpuactive }"
+    apply csymbr
+    apply (rule_tac C'="{s. reg = VCPURegSCTLR \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
-  subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
-                        split: option.splits)
+     subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
+                          simp: cur_vcpu_relation_def from_bool_0 vcpureg_eq_use_types(1)
+                          split: option.splits)
      (* unification choking on schematics with pairs *)
-     apply (rule_tac A="vcpu_at' vcpuptr" and A'=UNIV in ccorres_guard_imp)
-       apply (rule ccorres_Cond_rhs ; clarsimp)
-        apply (ctac (no_vcg) add: setSCTLR_ccorres)
+    apply (rule_tac A="vcpu_at' vcpuptr" and A'=UNIV in ccorres_guard_imp)
+      apply (rule ccorres_Cond_rhs, clarsimp)
        apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-      apply fastforce
+      apply (simp (no_asm_simp))
+      apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
      apply fastforce
-    apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
+    apply fastforce
    \<comment> \<open>no current vcpu\<close>
    apply clarsimp
    apply wpc
-   apply (subgoal_tac "\<not> x1")
-    prefer 2
-    apply fastforce
+   apply (rename_tac cur b, prop_tac "\<not>cur", fastforce)
    apply simp
    apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
   apply fastforce
@@ -4300,52 +4308,45 @@ lemma readVCPUReg_ccorres:
    apply (rule_tac C'="{s. cvcpuopt \<noteq> None \<and> (cvcpuopt \<noteq> None \<longrightarrow> fst (the cvcpuopt) = vcpuptr) }"
             and Q="\<lambda>s. vcpuptr \<noteq> 0 \<and> (armHSCurVCPU \<circ> ksArchState) s = cvcpuopt"
             and Q'=UNIV in ccorres_rewrite_cond_sr)
-  subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
+    subgoal by (fastforce dest: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
                           split: option.splits)
-   apply (clarsimp simp: vcpureg_eq_use_types) \<comment> \<open>C register comparison into reg comparison\<close>
    apply (rule ccorres_Cond_rhs)
     \<comment> \<open>vcpuptr is current vcpu\<close>
     apply clarsimp
     apply (rename_tac curvcpuactive)
-    apply (rule ccorres_Cond_rhs ; clarsimp)
-     apply (rule_tac C'="{s. curvcpuactive }"
+    apply csymbr
+    apply (rule_tac C'="{s. reg = VCPURegSCTLR \<and> \<not>curvcpuactive }"
                             and Q="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (vcpuptr, curvcpuactive)"
                             and Q'=UNIV in ccorres_rewrite_cond_sr)
-  subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def
-                        split: option.splits)
-     (* unification choking on schematics with pairs *)
-     apply (rule_tac A=\<top> and A'=UNIV in ccorres_guard_imp)
-       apply (rule ccorres_Cond_rhs ; clarsimp)
-        \<comment> \<open>SCTLR\<close>
-        apply (rule ccorres_add_return2)
-        apply (ctac (no_vcg) add: getSCTLR_ccorres)
-         apply (fastforce intro!: ccorres_return_C)
-        apply simp
-        apply (rule hoare_post_taut[of \<top>])
+     subgoal by (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
+                          simp: cur_vcpu_relation_def from_bool_0 vcpureg_eq_use_types(1)
+                          split: option.splits)
+    (* unification choking on schematics with pairs *)
+    apply (rule_tac A="vcpu_at' vcpuptr" and A'=UNIV in ccorres_guard_imp)
+      apply (rule ccorres_Cond_rhs, clarsimp)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
         apply (fastforce intro!: ccorres_return_C)
-       apply wpsimp
-      (* re-unify with ccorres_guard_imp *)
-      apply fastforce
+       apply wp
+      apply (simp (no_asm_simp))
+      apply (rule ccorres_add_return2)
+      apply (ctac (no_vcg) add: vcpu_hw_read_reg_ccorres)
+       apply (fastforce intro!: ccorres_return_C)
+      apply wp
      apply fastforce
-    \<comment> \<open>any other hyp register\<close>
-    apply (rule ccorres_add_return2)
-    apply (ctac (no_vcg) add: vcpu_hw_read_reg_ccorres)
-     apply (fastforce intro!: ccorres_return_C)
-    apply wpsimp
+    apply fastforce
+   \<comment> \<open>no current vcpu\<close>
    apply clarsimp
    apply wpc
-   apply (subgoal_tac "\<not> x1")
-    prefer 2
-    apply fastforce
+   apply (rename_tac cur b, prop_tac "\<not>cur", fastforce)
    apply simp
    apply (rule ccorres_add_return2)
    apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
     apply (fastforce intro!: ccorres_return_C)
-   apply wpsimp
+   apply wp
   apply fastforce
   done
+
 
 lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
   notes Collect_const[simp del] dc_simp[simp del]

@@ -67,9 +67,8 @@ where
        | _ \<Rightarrow> (False, False));
 
      if on_cur_vcpu
-       then if reg = VCPURegSCTLR
-              then if active then do_machine_op getSCTLR
-                             else vcpu_read_reg vcpu_ptr VCPURegSCTLR
+       then if vcpuRegSavedWhenDisabled reg \<and> \<not>active
+              then vcpu_read_reg vcpu_ptr reg
               else do_machine_op $ readVCPUHardwareReg reg
        else vcpu_read_reg vcpu_ptr reg
   od"
@@ -85,9 +84,8 @@ where
        | _ \<Rightarrow> (False, False));
 
      if on_cur_vcpu
-       then if reg = VCPURegSCTLR
-         then if active then do_machine_op $ setSCTLR val
-                        else vcpu_write_reg vcpu_ptr reg val
+       then if vcpuRegSavedWhenDisabled reg \<and> \<not>active
+         then vcpu_write_reg vcpu_ptr reg val
          else do_machine_op $ writeVCPUHardwareReg reg val
        else vcpu_write_reg vcpu_ptr reg val
   od"
