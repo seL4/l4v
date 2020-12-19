@@ -1519,18 +1519,15 @@ section \<open> Preservation of state_relation for the concrete side symbolic ex
 
 (** sr_inv **)
 
-definition sr_inv_ul :: "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> (unit \<times> 'b) set \<times> 'c) \<Rightarrow> bool" where
+definition
+  sr_inv_ul :: "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> (unit \<times> 'b) set \<times> 'c) \<Rightarrow> bool" where
   "sr_inv_ul sr P P' f \<equiv>
-       \<forall>s s' t'. (s, s') \<in> sr \<longrightarrow> P s \<longrightarrow> P' s'
-              \<longrightarrow> ((), t') \<in> fst (f s') \<longrightarrow> (s, t') \<in> sr"
+       \<forall>s s' t' x. (s, s') \<in> sr \<longrightarrow> P s \<longrightarrow> P' s'
+              \<longrightarrow> (x, t') \<in> fst (f s') \<longrightarrow> (s, t') \<in> sr"
 
 lemma corres_noop_assm: (* check equivalence *)
   "(\<forall>s. P s \<longrightarrow> \<lbrace>P' and (\<lambda>s'. (s, s') \<in> sr)\<rbrace> m \<lbrace>\<lambda>_ s'. (s, s') \<in> sr\<rbrace>) \<longleftrightarrow> sr_inv_ul sr P P' m"
   by (fastforce simp: valid_def sr_inv_ul_def)
-
-lemma sr_inv_ul_imp:
-  "\<lbrakk>sr_inv_ul sr Q Q' f; \<And>s. P s \<Longrightarrow> Q s; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk> \<Longrightarrow> sr_inv_ul sr P P' f "
-  by (clarsimp simp: sr_inv_ul_def)
 
 lemma sr_inv_stronger_imp:
   "\<lbrakk>sr_inv_ul sr Q Q' f;
@@ -1539,12 +1536,8 @@ lemma sr_inv_stronger_imp:
    \<Longrightarrow> sr_inv_ul sr P P' f"
   by (clarsimp simp: sr_inv_ul_def)
 
-lemma sr_inv_ul_cross:
-  "\<lbrakk>sr_inv_ul sr P (P' and Q') f; \<And>s s'. P s \<Longrightarrow> P' s' \<Longrightarrow> Q' s'\<rbrakk> \<Longrightarrow> sr_inv_ul sr P P' f "
-  by (clarsimp simp: sr_inv_stronger_imp)
-
-lemma sr_inv_ul_cross_str:
-  "\<lbrakk>sr_inv_ul sr P (P' and Q') f; \<And>s s'. (s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> P' s' \<Longrightarrow> Q' s'\<rbrakk> \<Longrightarrow> sr_inv_ul sr P P' f "
+lemma sr_inv_ul_imp:
+  "\<lbrakk>sr_inv_ul sr Q Q' f; \<And>s. P s \<Longrightarrow> Q s; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk> \<Longrightarrow> sr_inv_ul sr P P' f "
   by (clarsimp simp: sr_inv_stronger_imp)
 
 lemma return_sr_inv[simp]:
@@ -1552,7 +1545,7 @@ lemma return_sr_inv[simp]:
   by (clarsimp simp: sr_inv_ul_def return_def)
 
 lemma sr_inv_ul_bind:
-  "\<lbrakk> sr_inv_ul sr P P' g; \<lbrace>P'\<rbrace> g \<lbrace> \<lambda>rv. Q' rv\<rbrace>; \<And>rv. sr_inv_ul sr P (Q' rv) (f rv) \<rbrakk>
+  "\<lbrakk> \<And>rv. sr_inv_ul sr P (Q' rv) (f rv); sr_inv_ul sr P P' g; \<lbrace>P'\<rbrace> g \<lbrace> \<lambda>rv. Q' rv\<rbrace> \<rbrakk>
    \<Longrightarrow> sr_inv_ul sr P P' (g >>= f)"
   apply (unfold sr_inv_ul_def valid_def)
   apply clarify
@@ -1562,7 +1555,6 @@ lemma sr_inv_ul_bind:
   apply clarify
   apply (drule_tac x=s and y=s' in spec2)
   apply (drule_tac x=s'' in spec)
-  apply clarify
   apply (drule_tac x=x in meta_spec)
   apply (drule_tac x=s and y=s'' in spec2)
   apply (drule_tac x=t' in spec)
@@ -1570,17 +1562,15 @@ lemma sr_inv_ul_bind:
   apply simp
   done
 
-lemma corres_noop_sr_inv:
-  assumes P: "sr_inv_ul sr P P' f"
+lemma corres_noop_sr:
+  assumes sr: "sr_inv_ul sr P P' f"
+  assumes ex: "\<lbrace> P' \<rbrace> f \<lbrace>\<lambda>rv _. r x rv\<rbrace>"
   assumes nf': "\<And>s. \<lbrakk> P s; nf' \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') f"
-  assumes r: "r () x"
   shows "corres_underlying sr nf nf' r P P' (return x) f"
-  using P r
-  apply (simp add: corres_underlying_def return_def split_def)
-  apply (clarsimp simp: sr_inv_ul_def)
-  apply (drule_tac x=a and y=b in spec2, clarsimp)
-  apply (insert nf')
-  apply (clarsimp simp: valid_def no_fail_def)
+  using sr ex
+  apply (clarsimp simp: sr_inv_ul_def corres_underlying_def return_def)
+  apply (clarsimp simp: no_failD[OF nf'[simplified]] valid_def)
+  apply (drule_tac x=b in spec, clarsimp)
   done
 
 (* corres_symb_exec_r_sr basically combines the two lemmas corres_split_noop_rhs and corres_noop
@@ -1589,7 +1579,7 @@ lemma corres_symb_exec_r_sr:
   assumes z: "corres_underlying sr nf nf' r P Q' x y"
   assumes sr: "sr_inv_ul sr P P' m"
   assumes ex: "\<lbrace> P' \<rbrace> m \<lbrace>\<lambda>_. Q'\<rbrace>"
-  assumes nf: "nf' \<Longrightarrow> no_fail P' m"
+  assumes nf: "\<And>s. \<lbrakk> P s; nf' \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') m"
   shows "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
   using sr z ex nf
   unfolding corres_underlying_def sr_inv_ul_def
@@ -1604,24 +1594,13 @@ lemma corres_symb_exec_r_sr:
    apply clarsimp
    apply (drule_tac x="(rv', s'')" in bspec, simp)
    apply simp
-  apply (drule_tac x=s and y=s' in spec2, clarsimp simp: no_failD valid_def)
+  apply (drule_tac x=s and y=s' in spec2, clarsimp simp: no_failD[OF nf] valid_def)
   apply (rename_tac t')
-  apply (drule_tac x=t' in spec, clarsimp)
+  apply (drule_tac x=s in meta_spec)
   apply (drule_tac x=s' in spec, clarsimp)
   apply (drule bspec[of "fst _"], simp)
   apply clarsimp
-  apply ( drule_tac x="(s, t')" in bspec, simp)
+  apply (drule_tac x="(s, t')" in bspec, simp)
   by clarsimp
-
-lemma corres_noop_sr:
-  assumes sr: "sr_inv_ul sr P P' f"
-  assumes ex: "\<lbrace> P' \<rbrace> f \<lbrace>\<lambda>rv _. r x rv\<rbrace>"
-  assumes nf': "\<And>s. \<lbrakk> P s; nf' \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') f"
-  shows "corres_underlying sr nf nf' r P P' (return x) f"
-  using sr ex
-  apply (clarsimp simp: sr_inv_ul_def corres_underlying_def return_def)
-  apply (clarsimp simp: no_failD[OF nf'[simplified]] valid_def)
-  apply (drule_tac x=b in spec, clarsimp)
-  done
 
 end
