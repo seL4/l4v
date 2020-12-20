@@ -637,9 +637,9 @@ lemma replyRemoveTCB_invs':
 context begin interpretation Arch .
 
 lemma pspace_relation_reply_update_conc_only:
-  "\<lbrakk> pspace_relation s s'; s x = Some (Structures_A.Reply reply); s' x = Some (KOReply reply');
+  "\<lbrakk> pspace_relation ps ps'; ps x = Some (Structures_A.Reply reply); ps' x = Some (KOReply reply');
      reply_relation reply new\<rbrakk>
-       \<Longrightarrow> pspace_relation s (s'(x \<mapsto> (KOReply new)))"
+   \<Longrightarrow> pspace_relation ps (ps'(x \<mapsto> (KOReply new)))"
   apply (simp add: pspace_relation_def pspace_dom_update dom_fun_upd2
               del: dom_fun_upd)
   apply (erule conjE)
@@ -650,6 +650,7 @@ lemma pspace_relation_reply_update_conc_only:
                         pte_relation_def pde_relation_def
                  split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)
   done
+
 end
 
 lemma replyPrevs_of_replyNext_update:
@@ -660,27 +661,18 @@ lemma replyPrevs_of_replyNext_update:
                  split: option.split_asm reply_next.split_asm)
   by (fastforce simp: projectKO_opt_reply opt_map_def)
 
-lemma scs_of'_replyNext_update:
-  "ko_at' reply' rp s' \<Longrightarrow>
-      scs_of' (s'\<lparr>ksPSpace := ksPSpace s'(rp \<mapsto>
-                            KOReply (reply' \<lparr> replyNext := v \<rparr>))\<rparr>) = scs_of' s'"
-  apply (clarsimp simp: obj_at'_def projectKOs isNext_def
-                 split: option.split_asm reply_next.split_asm)
-  by (fastforce simp: projectKO_opt_sc opt_map_def)
-
-lemma scs_of'_replyPrev_update:
-  "ko_at' reply' rp s' \<Longrightarrow>
-      scs_of' (s'\<lparr>ksPSpace := ksPSpace s'(rp \<mapsto>
-                            KOReply (reply' \<lparr> replyPrev := v \<rparr>))\<rparr>) = scs_of' s'"
+lemma scs_of'_reply_update:
+  "reply_at' rp s' \<Longrightarrow>
+      scs_of' (s'\<lparr>ksPSpace := ksPSpace s'(rp \<mapsto> KOReply reply)\<rparr>) = scs_of' s'"
   apply (clarsimp simp: obj_at'_def projectKOs isNext_def
                  split: option.split_asm reply_next.split_asm)
   by (fastforce simp: projectKO_opt_sc opt_map_def)
 
 lemma sc_replies_relation_replyNext_update:
   "\<lbrakk>sc_replies_relation s s'; ko_at' reply' rp s'\<rbrakk>
-     \<Longrightarrow> sc_replies_relation s(s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto>
+     \<Longrightarrow> sc_replies_relation s (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto>
                                            KOReply (reply' \<lparr> replyNext := v \<rparr>))\<rparr>)"
-  by (clarsimp simp: scs_of'_replyNext_update[simplified]
+  by (clarsimp simp: scs_of'_reply_update[simplified] obj_at'_def
                      replyPrevs_of_replyNext_update[simplified])
 
 (* an example of an sr_inv lemma; to be used in reply_remove_tcb_corres *)
