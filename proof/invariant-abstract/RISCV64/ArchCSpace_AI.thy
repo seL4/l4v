@@ -99,9 +99,8 @@ lemma set_free_index_invs [CSpace_AI_assms]:
     set_cap_idle update_cap_ifunsafe)
   apply (simp add:valid_irq_node_def)
   apply wps
-
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_valid_arch_caps
-    set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
+    set_cap_irq_handlers cap_table_at_typ_at set_cap_typ_at
     set_cap_cap_refs_respects_device_region_spec[where ptr = cref])
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule conjI,simp add:valid_pspace_def)
@@ -410,36 +409,10 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def)
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: table_cap_ref_def table_cap_ref_arch_def valid_cap_def
-                        obj_at_def is_ep is_ntfn is_tcb is_cap_table
+                        obj_at_def is_ep is_ntfn is_tcb is_cap_table is_reply is_sc_obj
                         a_type_def is_cap_simps
                  split: cap.split_asm arch_cap.split_asm
                         if_split_asm option.split_asm)
-  done
-
-
-lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
-  "\<lbrace>valid_arch_caps and tcb_at t and valid_objs and pspace_aligned\<rbrace>
-     setup_reply_master t
-   \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp set_cap_valid_arch_caps get_cap_wp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state
-                        is_pt_cap_def vs_cap_ref_def)
-  apply (rule no_cap_to_obj_with_diff_ref_triv,
-         simp_all add: is_cap_simps table_cap_ref_def)
-  apply (simp add: valid_cap_def cap_aligned_def word_bits_def)
-  apply (clarsimp simp: obj_at_def is_tcb dest!: pspace_alignedD)
-  done
-
-
-lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
-  "\<lbrace>cap_refs_in_kernel_window and tcb_at t and pspace_in_kernel_window\<rbrace>
-      setup_reply_master t
-   \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: setup_reply_master_def)
-  apply (wp get_cap_wp)
-  apply (clarsimp simp: pspace_in_kernel_window_def obj_at_def
-                        cap_range_def)
   done
 
 
@@ -481,10 +454,6 @@ lemma cap_insert_simple_arch_caps_no_ap:
   apply (intro conjI impI allI)
   by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
 
-lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
-  "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  by wpsimp
-
 lemma cap_insert_derived_ioports[CSpace_AI_assms]:
   "\<lbrace>valid_ioports and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
      cap_insert cap src dest
@@ -511,11 +480,11 @@ lemma is_cap_simps':
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
-  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x False R)"
-  "is_master_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x True R)"
+  "is_reply_cap cap = (\<exists>x R. cap = cap.ReplyCap x R)"
+  "is_sched_context_cap cap = (\<exists>x n. cap = cap.SchedContextCap x n)"
   "is_nondevice_page_cap cap = (\<exists> u v w x. cap = ArchObjectCap (FrameCap u v w False x))"
   by (cases cap, auto simp: is_zombie_def is_arch_cap_def is_nondevice_page_cap_def
-                            is_reply_cap_def is_master_reply_cap_def is_FrameCap_def
+                            is_reply_cap_def is_FrameCap_def
                      split: cap.splits arch_cap.splits)+
 
 lemma cap_insert_simple_invs:
@@ -549,13 +518,15 @@ lemma cap_insert_simple_invs:
 lemmas is_derived_def = is_derived_def[simplified is_derived_arch_def]
 
 crunches arch_post_cap_deletion
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+  for pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and valid_objs[wp]: valid_objs
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' p s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and invs_no_pre[wp]: invs
   and cur_thread[wp]:  "\<lambda>s. P (cur_thread s)"
+  and release_queue[wp]:  "\<lambda>s. P (release_queue s)"
+  and ready_queues[wp]:  "\<lambda>s. P (ready_queues s)"
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and mdb_inv[wp]: "\<lambda>s. P (cdt s)"
   and valid_list[wp]: valid_list

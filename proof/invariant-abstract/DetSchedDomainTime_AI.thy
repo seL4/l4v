@@ -669,11 +669,6 @@ lemma check_budget_restart_domain_time_inv[wp]:
       check_budget_restart \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   by (wpsimp simp: check_budget_restart_def)
 
-crunch valid_domain_list[wp]:
-  check_budget_restart, update_time_stamp
-  "valid_domain_list :: det_state \<Rightarrow> _"
-  (wp: crunch_wps check_cap_inv mapM_wp' maybeM_inv simp: Let_def zipWithM_x_mapM)
-
 lemma check_budget_restart_domain_consumed_time_gt[wp]:
   "\<lbrace>(\<lambda>s. consumed_time s < domain_time s)\<rbrace>
       check_budget_restart \<lbrace>\<lambda>_ s::det_state. consumed_time s  < domain_time s \<rbrace>"

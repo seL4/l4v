@@ -1242,10 +1242,9 @@ lemma val_le_length_Cons:
   apply (cases n, simp_all)
   done
 
-lemma derive_cap_cnode[wp]:  (* FIXME arch refactor *)
+lemma derive_cap_cnode[wp]:
   "\<lbrace>\<lambda>s. is_cnode_cap cap\<rbrace> derive_cap slot cap  \<lbrace>\<lambda>rv s. is_cnode_cap rv\<rbrace>, -"
-  by (wpsimp simp: derive_cap_def ARM_A.arch_derive_cap_def) auto
-
+  by (wpsimp simp: derive_cap_def) (auto intro: hoare_FalseE_R)
 
 lemma decode_cv_space_inv[wp]:
   "\<lbrace>P\<rbrace> decode_cv_space args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"

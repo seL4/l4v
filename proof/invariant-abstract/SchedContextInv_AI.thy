@@ -1868,7 +1868,7 @@ lemma decode_sched_control_inv_wf:
   apply (case_tac ko; simp)
   apply (clarsimp simp: valid_refills_number_def max_refills_cap_def
                         us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def MIN_BUDGET_US_def
-                        ARM.kernelWCET_ticks_def not_less)
+                        not_less)
   done
 
 end

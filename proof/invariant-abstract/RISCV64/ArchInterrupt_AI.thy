@@ -78,12 +78,9 @@ lemma maskInterrupt_invs_ARCH[Interrupt_AI_asms]:
   "\<lbrace>invs and (\<lambda>s. \<not>b \<longrightarrow> interrupt_states s irq \<noteq> IRQInactive)\<rbrace>
    do_machine_op (maskInterrupt b irq)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-   apply (simp add: do_machine_op_def split_def maskInterrupt_def)
-   apply wp
-   apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def
-                         valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def
-                         cur_tcb_def valid_irq_states_def valid_irq_masks_def)
-  done
+  by (wpsimp simp: do_machine_op_def maskInterrupt_def in_monad invs_def valid_state_def
+                   valid_machine_state_def cur_tcb_def cur_sc_tcb_def valid_irq_states_def
+                   valid_irq_masks_def)
 
 crunch device_state_inv[wp]: plic_complete_claim "\<lambda>ms. P (device_state ms)"
 
@@ -105,7 +102,8 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def
              split: cap.splits option.splits arch_cap.splits
-         split del: if_split)
+         split del: if_split
+              cong: if_cong)
   done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
@@ -122,7 +120,8 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   "\<lbrace>invs and ex_inv and irq_handler_inv_valid i\<rbrace> invoke_irq_handler i \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
  proof -
    have
-   cap_insert_invs_ex_invs[wp]: "\<And>cap src dest. \<lbrace>ex_inv and (invs  and cte_wp_at (\<lambda>c. c = NullCap) dest and valid_cap cap and
+   cap_insert_invs_ex_invs[wp]: "\<And>cap src dest. \<lbrace>ex_inv and
+   (invs  and cte_wp_at (\<lambda>c. c = NullCap) dest and valid_cap cap and
    tcb_cap_valid cap dest and
    ex_cte_cap_wp_to (appropriate_cte_cap cap) dest and
    (\<lambda>s. \<forall>r\<in>obj_refs cap.
@@ -131,14 +130,14 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s) and
    (\<lambda>s. cte_wp_at (\<lambda>cap'. \<forall>irq\<in>cap_irqs cap - cap_irqs cap'. irq_issued irq s)
          src s) and
-   (\<lambda>s. \<forall>t R. cap = ReplyCap t False R \<longrightarrow>
-            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s) and
-   K (\<not> is_master_reply_cap cap))\<rbrace>
+   (\<lambda>s. \<forall>t R. cap = ReplyCap t R \<longrightarrow>
+            st_tcb_at awaiting_reply t s \<and> \<not> has_reply_cap t s))\<rbrace>
   cap_insert cap src dest \<lbrace>\<lambda>rv s. invs s \<and> ex_inv s\<rbrace>"
    apply wp
    apply (auto simp: cte_wp_at_caps_of_state)
    done
   show ?thesis
+  supply if_cong[cong]
   apply (cases i, simp_all)
     apply (wp dmo_plic_complete_claim)
     apply simp+
@@ -237,18 +236,17 @@ lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI)
-  apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
-     apply (wpsimp wp: dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt
-                      send_signal_interrupt_states simp: arch_mask_irq_signal_def)+
-     apply (wp get_cap_wp send_signal_interrupt_states )
-    apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
-     apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
-     apply (intro allI exI, erule cte_wp_at_weakenE)
-     apply (clarsimp simp: is_cap_simps)
-    apply (wpsimp wp: hoare_drop_imps resetTimer_invs_ARCH
-                simp: get_irq_state_def
-           | rule conjI)+
- done
+   apply (simp add: do_machine_op_bind empty_fail_ackInterrupt_ARCH empty_fail_maskInterrupt_ARCH)
+   apply (wp dmo_maskInterrupt_invs maskInterrupt_invs_ARCH dmo_ackInterrupt send_signal_interrupt_states
+          | wpc | simp add: arch_mask_irq_signal_def)+
+       apply (wp get_cap_wp send_signal_interrupt_states)
+      apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
+       apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
+       apply (intro allI exI, erule cte_wp_at_weakenE)
+       apply (clarsimp simp: is_cap_simps)
+      apply (wp hoare_drop_imps resetTimer_invs_ARCH dmo_ackInterrupt
+             | simp add: get_irq_state_def ackDeadlineIRQ_def handle_reserved_irq_def)+
+  done
 
 lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   "\<lbrace>arch_irq_control_inv_valid i\<rbrace>
@@ -260,6 +258,15 @@ lemma sts_arch_irq_control_inv_valid[wp, Interrupt_AI_asms]:
   done
 
 crunch typ_at[wp]: arch_invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
+
+crunches invoke_irq_control
+  for cur_thread[wp, Interrupt_AI_asms]: "\<lambda>s. P (cur_thread s)"
+  and ct_in_state[wp, Interrupt_AI_asms]: "ct_in_state P"
+  (wp: crunch_wps simp: crunch_simps)
+
+crunches invoke_irq_handler
+  for ct_active[wp, Interrupt_AI_asms]: "ct_active"
+  (wp: gts_wp get_simple_ko_wp crunch_wps simp: crunch_simps)
 
 end
 

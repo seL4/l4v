@@ -155,7 +155,8 @@ lemma is_ko_to_discs:
   "is_ep = is_Endpoint"
   "is_ntfn = is_Notification"
   "is_tcb = is_TCB"
-  apply (all \<open>rule ext, simp add: is_ep_def is_ntfn_def is_tcb_def split: kernel_object.splits\<close>)
+  "is_reply = is_Reply"
+  apply (all \<open>rule ext, simp add: is_ep_def is_ntfn_def is_tcb_def is_reply_def split: kernel_object.splits\<close>)
   done
 
 lemma cap_to_pt_is_pt_cap:
@@ -164,7 +165,7 @@ lemma cap_to_pt_is_pt_cap:
    \<Longrightarrow> is_pt_cap cap"
   by (drule (1) valid_capsD)
      (auto simp: pts_of_ko_at is_pt_cap_def arch_cap_fun_lift_def arch_cap.disc_eq_case(4)
-                 valid_cap_def obj_at_def is_ko_to_discs is_cap_table_def
+                 valid_cap_def obj_at_def is_ko_to_discs is_cap_table_def is_sc_obj_def
            split: if_splits arch_cap.split cap.splits option.splits)
 
 lemma unique_vs_lookup_table:
@@ -596,14 +597,14 @@ lemma set_asid_pool_cte_wp_at:
              simp: cte_wp_at_after_update)
 
 lemma set_pt_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  " set_pt ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
 
 
 lemma set_asid_pool_pred_tcb_at[wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  "set_asid_pool ptr val \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
   done
@@ -668,6 +669,10 @@ lemma mask_asid_low_bits_ucast_ucast:
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
   unfolding set_asid_pool_def by (wpsimp wp: get_object_wp)
+
+lemma set_asid_pool_cur_sc[wp]:
+  "set_asid_pool p a \<lbrace>\<lambda>s. P (cur_sc s)\<rbrace>"
+  unfolding set_asid_pool_def by (wpsimp wp: set_object_wp)
 
 lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
@@ -919,22 +924,19 @@ lemma set_pt_valid_mdb:
   including unfold_objects
   by (wpsimp wp: set_pt_cdt valid_mdb_lift simp: set_pt_def set_object_def)
 
+lemma set_pt_idle_sc_at[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. P (idle_sc_at t s)\<rbrace>"
+  including unfold_objects
+  by (wpsimp wp: set_object_wp simp: set_pt_def)
+
 lemma set_pt_valid_idle:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+  "set_pt p pt \<lbrace>\<lambda>s. valid_idle s\<rbrace>"
   including unfold_objects
   by (wpsimp wp: valid_idle_lift simp: set_pt_def)
 
 lemma set_pt_ifunsafe:
   "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects by (wpsimp simp: set_pt_def)
-
-lemma set_pt_reply_caps:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
-
-lemma set_pt_reply_masters:
-  "\<lbrace>valid_reply_masters\<rbrace>  set_pt p pt  \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  by (wp valid_reply_masters_cte_lift)
 
 crunches set_pt
   for global_ref[wp]: "\<lambda>s. P (global_refs s)"
@@ -949,23 +951,12 @@ lemma set_pt_valid_global:
   by (wp valid_global_refs_cte_lift)
 
 lemma set_pt_cur:
-  "\<lbrace>\<lambda>s. cur_tcb s\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
-  apply (simp add: cur_tcb_def set_pt_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def is_tcb_def)
-  done
-
+  "set_pt p pt \<lbrace>cur_tcb\<rbrace>"
+  including unfold_objects by (wpsimp simp: set_pt_def)
 
 lemma set_pt_aligned [wp]:
-  "\<lbrace>pspace_aligned\<rbrace> set_pt p pt \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
-  apply (simp add: set_pt_def)
-  apply (wp get_object_wp set_object_aligned)
-  apply (clarsimp simp: a_type_def obj_at_def
-                  split: kernel_object.splits arch_kernel_obj.splits)
-  done
-
+  "set_pt p pt \<lbrace>pspace_aligned\<rbrace>"
+  including unfold_objects by (wpsimp simp: set_pt_def)
 
 crunch interrupt_states[wp]: set_pt "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
@@ -1046,7 +1037,6 @@ lemma valid_global_refsD:
   apply (drule(1) valid_global_refsD2)
   apply fastforce
   done
-
 
 lemma set_pt_global_objs [wp]:
   "\<lbrace>\<top>\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
@@ -1613,11 +1603,9 @@ lemma set_asid_pool_valid_mdb [wp]:
 
 
 lemma set_asid_pool_valid_idle [wp]:
-  "\<lbrace>\<lambda>s. valid_idle s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
-  including unfold_objects
-  by (wpsimp wp: valid_idle_lift simp: set_asid_pool_def)
+  "\<lbrace>\<lambda>s. valid_idle s\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. valid_idle s\<rbrace>"
+  by (wpsimp simp: set_asid_pool_def set_object_def get_object_def obj_at_def a_type_simps
+             wp: valid_idle_lift)
 
 
 lemma set_asid_pool_ifunsafe [wp]:
@@ -1626,20 +1614,6 @@ lemma set_asid_pool_ifunsafe [wp]:
   \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
   including unfold_objects
   by (wpsimp simp: set_asid_pool_def)
-
-
-lemma set_asid_pool_reply_caps [wp]:
-  "\<lbrace>\<lambda>s. valid_reply_caps s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. valid_reply_caps s\<rbrace>"
-  by (wp valid_reply_caps_st_cte_lift)
-
-
-lemma set_asid_pool_reply_masters [wp]:
-  "\<lbrace>valid_reply_masters\<rbrace>
-   set_asid_pool p ap
-   \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  by (wp valid_reply_masters_cte_lift)
 
 
 crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
@@ -2018,6 +1992,35 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
+lemma set_asid_pool_sc_at_pred_n[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P p' s)\<rbrace>"
+  including unfold_objects
+  by (wpsimp simp: set_asid_pool_def sc_at_pred_n_def wp: set_object_wp)
+
+lemma set_asid_pool_replies_with_sc[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (replies_with_sc s)\<rbrace>"
+  by (wp replies_with_sc_lift)
+
+lemma set_asid_pool_replies_blocked[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
+  by (wp replies_blocked_lift)
+
+lemma set_asid_pool_valid_replies[wp]:
+  "set_asid_pool p ap \<lbrace>valid_replies\<rbrace>"
+  by (wp|wps)+
+
+lemma set_asid_pool_sch_act[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  including unfold_objects by (wpsimp simp: set_asid_pool_def wp: set_object_wp)
+
+lemma set_asid_pool_fault_tcbs_valid_states_except_set[wp]:
+  "set_asid_pool p ap \<lbrace>fault_tcbs_valid_states_except_set T\<rbrace>"
+  by (wp fault_tcbs_valid_states_lift)
+
+lemma set_asid_pool_cur_sc_tcb[wp]:
+  "set_asid_pool p ap \<lbrace>cur_sc_tcb\<rbrace>"
+  unfolding cur_sc_tcb_def by wp_pre (wpsimp|wps)+
+
 lemma set_asid_pool_invs_restrict:
   "\<lbrace>invs and ko_at (ArchObj (ASIDPool ap)) p and (\<lambda>s. \<exists>a. asid_table s a = Some p) and
     valid_asid_table and pspace_aligned\<rbrace>
@@ -2206,8 +2209,6 @@ crunches store_pte
   and valid_idle[wp]: valid_idle
   and only_idle[wp]: only_idle
   and if_unsafe_then_cap[wp]: if_unsafe_then_cap
-  and valid_reply_caps[wp]: valid_reply_caps
-  and valid_reply_masters[wp]: valid_reply_masters
   and valid_global_refs[wp]: valid_global_refs
   and valid_irq_node[wp]: valid_irq_node
   and valid_irq_handlers[wp]: valid_irq_handlers
@@ -2221,7 +2222,9 @@ crunches store_pte
   and pspace_respects_device_region[wp]: pspace_respects_device_region
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   and cur_tcb[wp]: cur_tcb
-  (wp: set_pt_zombies set_pt_ifunsafe set_pt_reply_caps set_pt_reply_masters
+  and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: set_pt_zombies set_pt_ifunsafe set_object_wp
        set_pt_valid_global valid_irq_node_typ valid_irq_handlers_lift set_pt_cur)
 
 lemma store_pte_valid_global_tables:
@@ -2803,6 +2806,44 @@ lemma store_pte_valid_arch_caps:
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
 
+lemma set_pt_sc_at_pred_n[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P p' s)\<rbrace>"
+  including unfold_objects
+  by (wpsimp simp: set_pt_def sc_at_pred_n_def wp: set_object_wp)
+
+lemma set_pt_replies_with_sc[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. P (replies_with_sc s)\<rbrace>"
+  by (wp replies_with_sc_lift)
+
+lemma set_pt_replies_blocked[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. P (replies_blocked s)\<rbrace>"
+  by (wp replies_blocked_lift)
+
+lemma set_pt_valid_replies[wp]:
+  "set_pt p pt \<lbrace>valid_replies\<rbrace>"
+  by (wp|wps)+
+
+lemma set_pt_sch_act[wp]:
+  "set_pt p pt \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
+  including unfold_objects by (wpsimp simp: set_pt_def wp: set_object_wp)
+
+lemma set_pt_fault_tcbs_valid_states_except_set[wp]:
+  "set_pt p pt \<lbrace>fault_tcbs_valid_states_except_set T\<rbrace>"
+  by (wp fault_tcbs_valid_states_lift)
+
+lemma set_pt_cur_sc_tcb[wp]:
+  "set_pt p pt \<lbrace>cur_sc_tcb\<rbrace>"
+  unfolding cur_sc_tcb_def by wp_pre (wpsimp|wps)+
+
+crunches store_pte
+  for cur_sc_tcb[wp]: "cur_sc_tcb"
+  and fault_tcbs_valid_states_except_set[wp]: "fault_tcbs_valid_states_except_set T"
+  and sch_act[wp]: "\<lambda>s. P (scheduler_action s)"
+  and sc_at_pred_n[wp]: "\<lambda>s. Q (sc_at_pred_n N proj P p' s)"
+  and replies_with_sc[wp]: "\<lambda>s. P (replies_with_sc s)"
+  and replies_blocked[wp]: "\<lambda>s. P (replies_blocked s)"
+  and valid_replies[wp]: valid_replies
+
 lemma store_pte_invs:
   "\<lbrace> invs
      and (\<lambda>s. table_base p \<notin> global_refs s)
@@ -2921,6 +2962,10 @@ lemma user_getreg_inv[wp]:
 lemma dmo_read_sbadaddr_inv[wp]:
   "do_machine_op read_sbadaddr \<lbrace>P\<rbrace>"
   by (rule dmo_inv) (simp add: read_sbadaddr_def)
+
+lemma cur_tcb_more_update[iff]:
+  "cur_tcb (trans_state f s) = cur_tcb s"
+  by (simp add: cur_tcb_def)
 
 end
 

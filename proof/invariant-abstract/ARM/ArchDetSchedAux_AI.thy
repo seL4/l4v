@@ -122,7 +122,7 @@ lemma perform_asid_control_invocation_obj_at_live:
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
   apply (rename_tac region_ptr target_slot_cnode target_slot_idx untyped_slot_cnode untyped_slot_idx asid)
   apply (rule_tac S="region_ptr && ~~mask page_bits = region_ptr \<and> is_aligned region_ptr page_bits
-                     \<and> word_size_bits \<le> page_bits \<and> page_bits \<le> word_bits \<and> page_bits \<le> 32
+                     \<and> word_size_bits \<le> page_bits \<and> page_bits < word_bits
                      \<and> obj_bits_api (ArchObject ASIDPoolObj) 0 = page_bits" in hoare_gen_asm''
          , fastforce simp: valid_aci_def cte_wp_at_caps_of_state valid_cap_simps
                            cap_aligned_def page_bits_def pageBits_def word_size_bits_def
@@ -138,7 +138,7 @@ lemma perform_asid_control_invocation_obj_at_live:
   apply (frule detype_invariants
          ; clarsimp simp: valid_aci_def cte_wp_at_caps_of_state page_bits_def
                           intvl_range_conv empty_descendants_range_in descendants_range_def2
-                          detype_clear_um_independent range_cover_full
+                          detype_clear_um_independent range_cover_full word_bits_def
                     cong: conj_cong)
   apply (frule pspace_no_overlap_detype[OF caps_of_state_valid_cap]; clarsimp)
   apply (erule rsubst[of N]; rule iffI; clarsimp simp: obj_at_def)

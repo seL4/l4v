@@ -57,6 +57,8 @@ requalify_facts
   state_hyp_refs_of_tcb_bound_ntfn_update
   state_hyp_refs_of_tcb_domain_update
   state_hyp_refs_of_tcb_priority_update
+  update_sched_context_hyp_refs_of
+
   arch_valid_obj_same_type
   default_arch_object_not_live
   default_tcb_not_live
@@ -69,6 +71,8 @@ requalify_facts
   valid_tcb_arch_ref_lift
 
 end
+
+declare update_sched_context_hyp_refs_of[wp]
 
 lemmas cap_is_device_obj_is_device[simp] = cap_is_device_obj_is_device
 lemmas storeWord_device_state_hoare[wp] = storeWord_device_state_inv
@@ -2119,17 +2123,6 @@ lemma update_sched_context_refs_of [wp]:
   \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wpsimp simp: update_sched_context_def set_object_def get_object_def)
   apply (clarsimp simp: state_refs_of_def ext elim!: rsubst[where P = P])
-  done
-
-lemma update_sched_context_hyp_refs_of [wp]:
- "\<lbrace>\<lambda>s. P ((state_hyp_refs_of s))\<rbrace>
-    update_sched_context ptr f
-  \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: update_sched_context_def set_object_def get_object_def)
-  apply (clarsimp elim!: rsubst[where P=P])
-  apply (rule all_ext)
-  apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def
-                 split: kernel_object.splits)
   done
 
 lemma update_sched_context_distinct [wp]:

@@ -24,11 +24,13 @@ requalify_facts
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
+  getCurrentTime_invs
 end
 
 lemmas [wp] =
   arch_decode_invocation_inv
   lookup_cap_and_slot_inv
+  getCurrentTime_invs
 
 lemmas [simp] =
   data_to_cptr_def
@@ -196,7 +198,7 @@ where
   "valid_invocation (InvokeUntyped i) = valid_untyped_inv i"
 | "valid_invocation (InvokeEndpoint w w2 b gr) = (ep_at w and ex_nonz_cap_to w)"
 | "valid_invocation (InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
-| "valid_invocation (InvokeTCB i) = Tcb_AI.tcb_inv_wf i"
+| "valid_invocation (InvokeTCB i) = tcb_inv_wf i"
 | "valid_invocation (InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
 | "valid_invocation (InvokeReply reply grant) = (reply_at reply and ex_nonz_cap_to reply)"
 | "valid_invocation (InvokeIRQControl i) = irq_control_inv_valid i"
@@ -1149,13 +1151,6 @@ lemma hs_invs[wp]:
 
 end
 
-(*
-lemma tcb_cnode_index_3_reply_or_null:
-  "\<lbrakk> tcb_at t s; tcb_cap_valid cap (t, tcb_cnode_index 3) s \<rbrakk> \<Longrightarrow> is_reply_cap cap \<or> cap = cap.NullCap"
-  apply (clarsimp  simp: tcb_cap_valid_def st_tcb_def2 tcb_at_def)
-  apply (clarsimp split: Structures_A.thread_state.split_asm)
-  done*)
-
 lemma ex_nonz_cap_to_tcb_strg:
   "(\<exists>cref. cte_wp_at (\<lambda>cap. is_thread_cap cap \<and> p \<in> zobj_refs cap) cref s)
        \<longrightarrow> ex_nonz_cap_to p s"
@@ -1170,49 +1165,6 @@ lemma ex_tcb_cap_to_tcb_at_strg:
   apply (drule(2) valid_cap_tcb_at_tcb_or_zomb)
   apply fastforce
   done
-(*
-lemma delete_caller_cap_nonz_cap:
-  "\<lbrace>ex_nonz_cap_to p and tcb_at t and valid_objs\<rbrace>
-      delete_caller_cap t
-   \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (simp add: delete_caller_cap_def ex_nonz_cap_to_def cte_wp_at_caps_of_state)
-  apply (rule hoare_pre)
-  apply (wp hoare_vcg_ex_lift cap_delete_one_caps_of_state)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (rule_tac x=a in exI)
-  apply (rule_tac x=b in exI)
-  apply clarsimp
-  apply (drule (1) tcb_cap_valid_caps_of_stateD)
-  apply (drule (1) tcb_cnode_index_3_reply_or_null)
-  apply (auto simp: is_cap_simps)
-  done
-
-lemma delete_caller_cap_invs[wp]:
-  "\<lbrace>invs and tcb_at t\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: delete_caller_cap_def, wp)
-  apply (clarsimp simp: emptyable_def)
-  done
-
-lemma delete_caller_cap_simple[wp]:
-  "\<lbrace>st_tcb_at active t\<rbrace> delete_caller_cap t' \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
-  apply (simp add: delete_caller_cap_def)
-  apply (wp cap_delete_one_st_tcb_at)
-  apply simp
-  done
-
-lemma delete_caller_deletes_caller[wp]:
-  "\<lbrace>\<top>\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv. cte_wp_at ((=) cap.NullCap) (t, tcb_cnode_index 3)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (t, tcb_cnode_index 3)"
-               in hoare_post_imp,
-         clarsimp elim!: cte_wp_at_weakenE)
-  apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def, wp)
-   apply (simp add: if_apply_def2, wp get_cap_wp)
-  apply (clarsimp elim!: cte_wp_at_weakenE)
-  done
-
-lemma delete_caller_cap_deleted[wp]:
-  "\<lbrace>\<top>\<rbrace> delete_caller_cap thread \<lbrace>\<lambda>rv. cte_wp_at (\<lambda>c. c = cap.NullCap) (thread, tcb_cnode_index 3)\<rbrace>"
-  by (simp add: delete_caller_cap_def, wp)*)
 
 lemma invs_valid_tcb_ctable_strengthen:
   "invs s \<longrightarrow> ((\<exists>y. get_tcb thread s = Some y) \<longrightarrow>
@@ -1364,13 +1316,6 @@ lemma update_time_stamp_ct_in_release_queue [wp]:
                    is_sc_active_def get_tcb_def in_release_queue_def
             split: option.splits)
 
-lemma getCurrentTime_invs[wp]:
-  "do_machine_op getCurrentTime \<lbrace>invs\<rbrace>"
-  apply (simp add: ARM.getCurrentTime_def modify_def)
-  apply (wpsimp wp: dmo_invs simp: modify_def)
-  by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
-                   split_def select_f_returns in_return)
-
 lemma update_time_stamp_invs[wp]:
   "update_time_stamp \<lbrace>invs\<rbrace>"
   by (wpsimp simp: update_time_stamp_def)
@@ -1474,10 +1419,6 @@ lemma do_reply_transfer_ct_active[wp]:
                                 get_simple_ko_wp)+
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
-
-crunches reply_unlink_tcb, do_ipc_transfer
-  for fault_tcb_at[wp]: "fault_tcb_at P t :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps set_thread_state_pred_tcb_at)
 
 lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
   "\<lbrace>ct_active and fault_tcb_at ((=) None) t\<rbrace>

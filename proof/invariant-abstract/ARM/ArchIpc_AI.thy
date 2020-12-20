@@ -434,6 +434,9 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
 
 declare make_arch_fault_msg_inv[Ipc_AI_assms]
 
+(* interface lemma name *)
+lemmas make_arch_fault_msg_valid_replies = make_arch_fault_msg_inv
+
 end
 
 global_interpretation Ipc_AI?: Ipc_AI

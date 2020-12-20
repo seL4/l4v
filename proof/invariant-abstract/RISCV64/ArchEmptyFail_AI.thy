@@ -17,7 +17,7 @@ crunch_ignore (empty_fail)
         pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
+  loadWord, load_word_offs, store_word_offs, storeWord, getRestartPC, get_mrs, setRegister
 
 end
 
@@ -29,15 +29,19 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
 
 context Arch begin global_naming RISCV64
 
+crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_thread_state_act
+  (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
+         bool.splits list.splits thread_state.splits split_def catch_def sum.splits
+         Let_def wp: zipWithM_x_empty_fail)
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
          Let_def wp: zipWithM_x_empty_fail)
 
-crunch (empty_fail) empty_fail[wp]:
-  decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
-  decode_set_priority, decode_set_mcpriority, decode_set_sched_params,
-  decode_set_tls_base
+crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
+  decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
+  decode_set_tls_base, decode_set_space
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -145,18 +149,13 @@ context Arch begin global_naming RISCV64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
-
+(*
 global_interpretation EmptyFail_AI_schedule_unit?: EmptyFail_AI_schedule_unit
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
-
-global_interpretation EmptyFail_AI_schedule_det?: EmptyFail_AI_schedule_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+*)
 
 global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   proof goal_cases
@@ -173,7 +172,7 @@ lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"
   by (clarsimp simp: plic_complete_claim_def ef_machine_op_lift)
 
-crunches possible_switch_to, handle_event, activate_thread
+crunches handle_event, activate_thread, check_budget
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pte.splits
@@ -184,18 +183,13 @@ crunches possible_switch_to, handle_event, activate_thread
    ignore_del: possible_switch_to)
 
 end
-
+(*
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit
   proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
-
-global_interpretation EmptyFail_AI_call_kernel_det?: EmptyFail_AI_call_kernel_det
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
-  qed
+*)
 
 global_interpretation EmptyFail_AI_call_kernel?: EmptyFail_AI_call_kernel
   proof goal_cases

@@ -910,5 +910,14 @@ lemma set_tcb_obj_ref_asid_map[wp]:
   "\<lbrace>valid_asid_map\<rbrace> set_tcb_obj_ref f t ko \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
   by (wpsimp wp: set_object_asid_map simp: set_tcb_obj_ref_def vs_refs_def)
 
+lemma update_sched_context_hyp_refs_of[wp]:
+ "update_sched_context ptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
+
 end
 end

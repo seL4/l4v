@@ -521,7 +521,7 @@ lemmas valid_global_tables_def = valid_global_tables_2_def
 
 definition global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set" where
   "global_refs \<equiv> \<lambda>s.
-     {idle_thread s} \<union>
+     {idle_thread s, idle_sc_ptr} \<union>
      range (interrupt_irq_node s) \<union>
      (\<Union>level. riscv_global_pts (arch_state s) level)"
 
@@ -621,6 +621,8 @@ definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype
                    | TCB tcb           \<Rightarrow> tcb_hyp_refs (tcb_arch tcb)
                    | Endpoint ep       \<Rightarrow> {}
                    | Notification ntfn \<Rightarrow> {}
+                   | SchedContext sc n => {}
+                   | Reply reply       => {}
                    | ArchObj ao        \<Rightarrow> refs_of_ao ao"
 
 definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
@@ -945,6 +947,14 @@ lemma idle_global[simp, intro!]:
   "idle_thread s \<in> global_refs s"
   by (simp add: global_refs_def)
 
+lemma idle_sc_global:
+  "idle_sc_ptr \<in> global_refs s"
+  by (simp add: global_refs_def)
+
+lemma idle_ptrs_neq:
+  "idle_thread_ptr \<noteq> idle_sc_ptr"
+  by (clarsimp simp: idle_thread_ptr_def idle_sc_ptr_def)
+
 lemma valid_ipc_buffer_cap_null[simp, intro!]:
   "valid_ipc_buffer_cap NullCap buf"
   by (simp add: valid_ipc_buffer_cap_def)
@@ -1178,13 +1188,16 @@ lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_mcpriority_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ctable_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_vtable_update f tcb) = tcb_arch_ref tcb"
-  "\<And>f. tcb_arch_ref (tcb_reply_update f tcb) = tcb_arch_ref tcb"
-  "\<And>f. tcb_arch_ref (tcb_caller_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_ipcframe_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_state_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_fault_handler_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_fault_update f tcb) = tcb_arch_ref tcb"
   "\<And>f. tcb_arch_ref (tcb_bound_notification_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_sched_context_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_yield_to_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_timeout_handler_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_domain_update f tcb) = tcb_arch_ref tcb"
+  "\<And>f. tcb_arch_ref (tcb_priority_update f tcb) = tcb_arch_ref tcb"
   "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
   "tcb_arch_ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers regs (tcb_arch tcb)\<rparr>) = tcb_arch_ref tcb"
   by (auto simp: tcb_arch_ref_def)
@@ -1197,13 +1210,16 @@ lemma hyp_live_tcb_simps[simp]:
   "\<And>f. hyp_live (TCB (tcb_mcpriority_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_ctable_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_vtable_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_reply_update f tcb)) = hyp_live (TCB tcb)"
-  "\<And>f. hyp_live (TCB (tcb_caller_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_ipcframe_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_state_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_sched_context_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_yield_to_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_fault_handler_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_timeout_handler_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_fault_update f tcb)) = hyp_live (TCB tcb)"
   "\<And>f. hyp_live (TCB (tcb_bound_notification_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_domain_update f tcb)) = hyp_live (TCB tcb)"
+  "\<And>tcb f. hyp_live (TCB (tcb_priority_update f tcb)) = hyp_live (TCB tcb)"
   by (simp_all add: hyp_live_tcb_def)
 
 lemma wellformed_arch_typ:
@@ -2607,6 +2623,11 @@ lemma kernel_mappings_canonical:
   apply word_bitwise
   apply simp
   done
+
+
+lemma valid_sc_size_less_word_bits:
+  "valid_sched_context_size n \<Longrightarrow> min_sched_context_bits + n < word_bits"
+  by (simp add: valid_sched_context_size_def untyped_max_bits_def word_bits_def)
 
 end
 

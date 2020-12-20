@@ -46,7 +46,7 @@ lemma cap_master_cap_tcb_cap_valid_arch:
    tcb_cap_valid c' p s"
   (* slow: 5 to 10s *)
   by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
-                 valid_ipc_buffer_cap_def  is_cap_simps
+                 valid_ipc_buffer_cap_def  is_cap_simps valid_fault_handler_def
                  is_nondevice_page_cap_simps
            elim: pred_tcb_weakenE
           split: option.splits cap.splits arch_cap.splits
@@ -108,7 +108,7 @@ lemma mab_wb [simp]:
 
 lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
+     get_cap (t, tcb_cnode_index 2)
    \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp

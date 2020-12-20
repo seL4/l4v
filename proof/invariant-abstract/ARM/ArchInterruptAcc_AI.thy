@@ -25,6 +25,13 @@ lemma dmo_maskInterrupt_invs [InterruptAcc_AI_assms]:
                    valid_irq_masks_but_def valid_machine_state_def cur_tcb_def cur_sc_tcb_def
                    valid_irq_states_def valid_irq_masks_def)
 
+lemma getCurrentTime_invs[wp]:
+  "do_machine_op getCurrentTime \<lbrace>invs\<rbrace>"
+  apply (simp add: getCurrentTime_def modify_def)
+  apply (wpsimp wp: dmo_invs simp: modify_def)
+  by (simp add: do_machine_op_def modify_def in_get bind_assoc get_def put_def gets_def in_bind
+                split_def select_f_returns in_return)
+
 end
 
 global_interpretation InterruptAcc_AI?: InterruptAcc_AI

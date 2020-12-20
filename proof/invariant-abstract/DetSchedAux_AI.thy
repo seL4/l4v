@@ -14,6 +14,7 @@ requalify_facts
   init_arch_objects_typ_at
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
+  hyp_live_default_object
 end
 
 lemmas [wp] =
@@ -771,11 +772,6 @@ lemma invoke_untyped_valid_idle:
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   by (strengthen invs_valid_idle) (wpsimp wp: invoke_untyp_invs)
 
-(* FIXME: move to arch assumption in Retype_AI *)
-lemma hyp_live_default_object:
-  "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
-  by (cases ty; simp add: ARM.hyp_live_def)
-
 (* FIXME: move to Retype_AI *)
 lemma live0_default_object:
   "ty \<noteq> Untyped \<Longrightarrow> \<not> live0 (default_object ty dev us dm)"
@@ -933,22 +929,12 @@ lemma (in DetSchedAux_AI) invoke_untyped_valid_sched:
 
 \<comment> \<open>Miscellaneous\<close>
 
-lemma weak_valid_sched_action_switch_thread_is_schedulable:
-  "\<lbrakk>weak_valid_sched_action s; scheduler_action s = switch_thread thread\<rbrakk> \<Longrightarrow>
-     is_schedulable_opt thread s = Some True"
-  by (auto simp: weak_valid_sched_action_def is_schedulable_opt_def in_release_queue_def
-                 obj_at_kh_kheap_simps pred_map_simps map_join_simps vs_heap_simps
-          split: option.splits )
-
 lemma valid_sched_action_weak_valid_sched_action:
   "valid_sched_action s \<Longrightarrow> weak_valid_sched_action s"
   by (simp add: valid_sched_action_def)
 
 lemmas valid_sched_weak_valid_sched_action =
   valid_sched_valid_sched_action[THEN valid_sched_action_weak_valid_sched_action]
-
-lemmas valid_sched_switch_thread_is_schedulable =
-  weak_valid_sched_action_switch_thread_is_schedulable[OF valid_sched_weak_valid_sched_action]
 
 lemma simple_sched_act_not[simp]:
   "simple_sched_action s \<Longrightarrow> scheduler_act_not t s"

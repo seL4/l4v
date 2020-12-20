@@ -912,7 +912,7 @@ lemma finalise_cap_replaceable_helper:
                   wp: get_object_wp get_simple_ko_wp )
   by (auto simp: obj_at_def)
 
-lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
+lemma finalise_cap_replaceable [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
         \<and> cte_wp_at ((=) cap) sl s \<and> invs s
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)

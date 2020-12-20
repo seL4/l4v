@@ -10,12 +10,18 @@ begin
 
 context begin interpretation Arch .
 
+requalify_consts
+  time_oracle
+
 requalify_facts
   kernelWCET_us_non_zero
   kernelWCET_ticks_non_zero
   do_ipc_transfer_cur_thread
   machine_ops_last_machine_time
   handle_arch_fault_reply_typ_at
+  getCurrentTime_def
+  install_tcb_cap_sc_tcb_sc_at
+
 end
 
 lemmas [wp] =
@@ -4083,7 +4089,7 @@ lemma sorted_release_q_sc_refill_cfg_update_irrelevant:
    apply (fastforce simp: tcb_sc_refill_cfgs_2_def sc_ready_time_def heap_upd_def
                           map_project_simps opt_map_simps map_join_simps assms
                    split: if_splits)
-  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def map_project_simps, rename_tac scrc scp)
+  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def map_project_simps in_opt_map_eq, rename_tac scrc scp)
   by (case_tac "scp = ref"; fastforce simp: sc_ready_time_def heap_upd_def
                                             opt_map_simps map_join_simps assms)
 
@@ -6708,7 +6714,7 @@ lemma tcc_valid_sched:
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
-                 dest!: valid_vtable_root_is_arch_cap)
+                 dest!: is_valid_vtable_root_is_arch_cap)
      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
     by auto
@@ -14573,7 +14579,7 @@ lemma tcc_cur_sc_chargeable:
   \<comment> \<open>resolve generated preconditions\<close>
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
-                 dest!: valid_vtable_root_is_arch_cap)
+                 dest!: is_valid_vtable_root_is_arch_cap)
       apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
@@ -15448,8 +15454,7 @@ crunches tcb_release_remove, tcb_sched_action
 *)
 definition next_time_2 :: "_ \<Rightarrow> _ \<Rightarrow> time" where
   "next_time_2 lmt mts \<equiv> (of_nat
-      (min (18446744073709551615 - unat kernelWCET_ticks)
-           (unat lmt + ARM.time_oracle (Suc mts))))"
+      (min (18446744073709551615 - unat kernelWCET_ticks) (unat lmt + time_oracle (Suc mts))))"
 
 abbreviation next_time :: "'a state \<Rightarrow> time" where
   "next_time s \<equiv> next_time_2 (last_machine_time_of s) (time_state_of s)"
@@ -17426,7 +17431,7 @@ lemma update_time_stamp_cur_time[wp]:
   apply (rule_tac hoare_seq_ext)
    apply wpsimp
   apply (clarsimp simp: valid_def)
-  apply (clarsimp simp: do_machine_op_def select_f_def in_get in_bind in_gets in_return ARM.getCurrentTime_def)
+  apply (clarsimp simp: do_machine_op_def select_f_def in_get in_bind in_gets in_return getCurrentTime_def)
   apply (simp add: in_modify)
   apply (clarsimp simp: next_time_def)
   done
@@ -17872,7 +17877,7 @@ lemma tcc_ct_not_queued:
   apply (clarsimp cong: conj_cong)
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
-                 dest!: valid_vtable_root_is_arch_cap)
+                 dest!: is_valid_vtable_root_is_arch_cap)
      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by auto
@@ -18822,7 +18827,7 @@ lemma dmo_getCurrentTime_machine_time[wp]:
   "\<lbrace>\<lambda>s. pred_next_time (\<lambda>x. P x (Suc (time_state_of s))) s\<rbrace>
    do_machine_op getCurrentTime
    \<lbrace>\<lambda>_. (\<lambda>s. P (last_machine_time_of s) (time_state_of s))\<rbrace>"
-  unfolding ARM.getCurrentTime_def
+  unfolding getCurrentTime_def
   apply (wpsimp wp: do_machine_op_machine_state)
   by (clarsimp simp: next_time_def)
 
@@ -20765,7 +20770,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
         \<and> invs s
         \<and> cur_sc_more_than_ready s
         \<and> valid_sched s
-        \<and> Tcb_AI.tcb_inv_wf iv s\<rbrace>
+        \<and> tcb_inv_wf iv s\<rbrace>
    invoke_tcb iv
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_in_release_q_imp_zero_consumed s\<rbrace>"
   apply (cases iv; clarsimp?, (solves \<open>wpsimp\<close>)?)
@@ -20861,7 +20866,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
      apply (case_tac sc; clarsimp?)
     apply simp
    apply (rule valid_validE)
-   apply (wpsimp wp: hoare_case_option_wp ARM.install_tcb_cap_sc_tcb_sc_at)
+   apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_sc_tcb_sc_at)
    apply (clarsimp split: option.splits)
 
   apply (rule hoare_seq_ext_skipE, wpsimp wp: thread_set_wp simp: set_mcpriority_def)
@@ -21598,7 +21603,7 @@ lemma invoke_tcb_ct_ready_if_schedulable[wp]:
         apply (intro conjI impI;
                clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
                               real_cte_at_cte ct_in_state_def
-                       dest!: valid_vtable_root_is_arch_cap)
+                       dest!: is_valid_vtable_root_is_arch_cap)
            apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
           apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
           by auto
