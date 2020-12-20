@@ -3800,6 +3800,10 @@ lemma invs_valid_release_queue' [elim!]:
   "invs' s \<Longrightarrow> valid_release_queue' s"
   by (simp add: invs'_def valid_state'_def)
 
+lemma invs_sym_list_refs_of_replies'[elim!]:
+  "invs' s \<Longrightarrow> sym_refs (list_refs_of_replies' s)"
+  by (simp add: invs'_def valid_state'_def)
+
 lemma invs_valid_idle'[elim!]:
   "invs' s \<Longrightarrow> valid_idle' s"
   by (fastforce simp: invs'_def valid_state'_def)
@@ -3891,6 +3895,7 @@ lemmas invs'_implies =
   invs_queues'
   invs_valid_release_queue
   invs_valid_release_queue'
+  invs_sym_list_refs_of_replies'
 
 lemma valid_bitmap_valid_bitmapQ_exceptE:
   "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;
