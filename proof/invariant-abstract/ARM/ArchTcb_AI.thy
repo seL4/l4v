@@ -287,10 +287,6 @@ lemma is_cnode_or_valid_arch_is_cap_simps:
   "is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
   by (auto simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def is_cap_simps)+
 
-lemma valid_vtable_root_is_arch_cap:
-  "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"
-  by (auto simp: ARM_A.is_valid_vtable_root_def is_cap_simps)
-
 lemma install_tcb_frame_cap_invs:
   "\<lbrace>invs and
     (\<lambda>s. \<forall>new_cap src_slot.
@@ -368,7 +364,7 @@ lemma tcc_invs[Tcb_AI_asms]:
   \<comment> \<open>resolve generated preconditions\<close>
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
-                 dest!: valid_vtable_root_is_arch_cap)
+                 dest!: is_valid_vtable_root_is_arch_cap)
       apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
      apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
   by (auto simp: valid_ipc_buffer_cap valid_fault_handler_def)
@@ -410,7 +406,7 @@ lemma tcs_invs[Tcb_AI_asms]:
   apply (subgoal_tac "\<not>bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) t s")
    apply (intro conjI impI;
           (clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
-                  dest!: valid_vtable_root_is_arch_cap)?)
+                  dest!: is_valid_vtable_root_is_arch_cap)?)
      apply (erule cte_wp_at_strengthen, simp)
     apply (clarsimp simp: obj_at_def is_ep is_tcb)
    apply (intro conjI; intro allI impI)
@@ -519,7 +515,7 @@ end
 context begin interpretation Arch .
 
 requalify_consts is_cnode_or_valid_arch
-requalify_facts invoke_tcb_typ_at install_tcb_cap_invs valid_vtable_root_is_arch_cap
+requalify_facts invoke_tcb_typ_at install_tcb_cap_invs
                 is_cnode_or_valid_arch_is_cap_simps
 
 end
@@ -528,9 +524,7 @@ global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = ARM.is_cnode_or_valid_arch
 proof goal_cases
   interpret Arch .
-  case 1 show ?case
-  by (unfold_locales; (fact Tcb_AI_asms)?)
-
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
 qed
 
 end

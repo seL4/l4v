@@ -298,8 +298,9 @@ lemma set_vm_root_invs[wp]:
   unfolding set_vm_root_def
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
-crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
-  (simp: crunch_simps)
+lemma svr_pred_st_tcb[wp]:
+  "set_vm_root t' \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
+  unfolding set_vm_root_def by (wpsimp wp: get_cap_wp)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
 
@@ -330,7 +331,7 @@ lemma valid_cap_obj_ref_pt:
   "\<lbrakk> s \<turnstile> cap; s \<turnstile> cap'; obj_refs cap = obj_refs cap' \<rbrakk>
        \<Longrightarrow> is_pt_cap cap \<longrightarrow> is_pt_cap cap'"
   by (auto simp: is_cap_simps valid_cap_def valid_arch_cap_ref_def
-                 obj_at_def is_ep is_ntfn is_cap_table is_tcb a_type_def
+                 obj_at_def is_ep is_ntfn is_cap_table is_tcb is_reply is_sc_obj a_type_def
           split: cap.split_asm if_split_asm arch_cap.split_asm option.split_asm)
 
 lemma is_pt_cap_asid_None_table_ref:
@@ -628,7 +629,6 @@ next
     apply (subst pt_lookup_from_level_simps)
     apply (wpsimp wp: IH)
     apply (rule conjI; clarsimp)
-     prefer 2
      apply (subst (asm) (2) pt_walk.simps)
      apply (clarsimp)
     apply (rule conjI; clarsimp)
@@ -932,7 +932,8 @@ crunch underlying_memory[wp]: ackInterrupt, hwASIDFlush, read_sbadaddr, setVSpac
 
 crunches storeWord, ackInterrupt, hwASIDFlush, read_sbadaddr, setVSpaceRoot, sfence
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (simp: crunch_simps)
+  and machine_times[wp]: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
+  (simp: crunch_simps storeWord_def)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
@@ -1254,7 +1255,6 @@ lemma unmap_page_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding unmap_page_def
   apply (wpsimp wp: store_pte_invs_unmap)
-  apply (rule conjI; clarsimp)
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI)
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac level pte pt_ptr)
@@ -1279,11 +1279,11 @@ lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<l
 lemma data_at_orth:
   "data_at a p s
    \<Longrightarrow> \<not> ep_at p s \<and> \<not> ntfn_at p s \<and> \<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
-         \<and> \<not> pt_at p s \<and> \<not> asid_pool_at p s"
-  apply (clarsimp simp: data_at_def obj_at_def a_type_def)
-  apply (case_tac "kheap s p",simp)
-  subgoal for ko by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def)
-  done
+         \<and> \<not> pt_at p s \<and> \<not> asid_pool_at p s \<and> \<not> reply_at p s \<and> (\<forall>n. \<not> sc_obj_at n p s)"
+  unfolding data_at_def obj_at_def a_type_def
+  apply (cases "kheap s p", simp)
+  by (rename_tac ko, case_tac ko)
+     (auto simp: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def is_reply_def is_sc_obj_def)
 
 lemma data_at_frame_cap:
   "\<lbrakk>data_at sz p s; valid_cap cap s; p \<in> obj_refs cap\<rbrakk> \<Longrightarrow> is_frame_cap cap"
@@ -1334,12 +1334,13 @@ lemma unmap_page_not_target:
                    split: if_split_asm option.splits)
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
   apply (rule conjI; clarsimp simp: in_omonad)
+   prefer 2
    apply (drule vs_lookup_slot_level)
-   apply (rename_tac slot level' pte)
+   apply (rename_tac level' slot pte)
    apply (rule conjI; clarsimp)
+    prefer 2
     apply (rule conjI, fastforce)
     apply (clarsimp simp: pte_ref_def is_PagePTE_def pptr_from_pte_def)
-   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
     apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pptr)")
      apply (clarsimp simp: vs_lookup_table_def in_omonad)
@@ -1356,7 +1357,7 @@ lemma unmap_page_not_target:
    apply (clarsimp simp: is_PagePTE_def)
    apply (drule (3) data_at_level, simp)
   (* lookup has stopped at wrong level for pgsz *)
-  apply (rename_tac level')
+  apply (rename_tac level' slot')
   apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
    apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pptr)")
     apply (clarsimp simp: vs_lookup_table_def in_omonad)
@@ -1984,8 +1985,22 @@ lemma do_machine_op_valid_kernel_mappings:
 
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj level ao s'"
+  shows "ArchObj ao = default_object ty dev us d \<Longrightarrow> valid_vspace_obj level ao s'"
   by (cases ty; simp add: default_object_def tyunt)
+
+lemmas setDeadline_irq_masks = no_irq[OF no_irq_setDeadline]
+crunch device_state_inv[wp]: setDeadline "\<lambda>ms. P (device_state ms)"
+
+lemma dmo_setDeadline[wp]:
+  "do_machine_op (setDeadline t) \<lbrace>invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: setDeadline_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ setDeadline_irq_masks])
+  done
 
 end
 

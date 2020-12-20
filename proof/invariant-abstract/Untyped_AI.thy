@@ -1484,7 +1484,7 @@ lemma retype_region_ranges':
      apply (simp add: range_cover_def)+
    apply (subst add.commute, rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
      apply (fastforce simp: range_cover_def)
-    apply (simp add: word_bits_def is_aligned_mult_triv2[where n=endpoint_bits, simplified])+
+    apply (simp add: word_bits_def is_aligned_mult_triv2[where n=reply_bits, simplified])+
   apply (simp add: p_assoc_help)
   apply (rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl]])
    apply (simp add: range_cover_def)+

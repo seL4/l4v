@@ -57,6 +57,8 @@ lemma non_vspace_objs[intro!]:
   "non_vspace_obj (CNode sz cnode_contents)"
   "non_vspace_obj (TCB tcb)"
   "non_vspace_obj (Notification notification)"
+  "non_vspace_obj (SchedContext sc n)"
+  "non_vspace_obj (Reply r)"
   by (auto simp: non_vspace_obj_def)
 
 lemma vspace_obj_predE:
@@ -649,7 +651,7 @@ lemma valid_table_caps_ptD:
   by (fastforce simp: valid_table_caps_def simp del: split_paired_Ex)
 
 lemma store_pde_pred_tcb_at:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  "store_pte ptr val \<lbrace>\<lambda>s. N (pred_tcb_at proj P t s)\<rbrace>"
   apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def in_opt_map_eq)
   done
@@ -710,7 +712,7 @@ lemma pspace_respects_region_cong[cong]:
 
 definition "obj_is_device tp dev \<equiv>
   case tp of Untyped \<Rightarrow> dev
-    | _ \<Rightarrow>(case (default_object tp dev 0) of (ArchObj (DataPage dev _)) \<Rightarrow> dev
+    | _ \<Rightarrow>(case default_object tp dev 0 0 of ArchObj (DataPage dev _) \<Rightarrow> dev
           | _ \<Rightarrow> False)"
 
 lemma cap_is_device_obj_is_device[simp]:
@@ -736,12 +738,41 @@ lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longri
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
+lemma state_hyp_refs_of_sc_update: "\<And>s sc val n. typ_at (ASchedContext n) sc s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp: RISCV64.state_hyp_refs_of_def obj_at_def RISCV64.hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
+
+lemma state_hyp_refs_of_reply_update: "\<And>s r val. typ_at AReply r s \<Longrightarrow>
+       state_hyp_refs_of (s\<lparr>kheap := kheap s(r \<mapsto> Reply val)\<rparr>) = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: RISCV64.state_hyp_refs_of_def obj_at_def RISCV64.hyp_refs_of_def)
+  done
+
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
           state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_sched_context_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_sched_context := sc\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: RISCV64.state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_yield_to_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_yield_to := sc\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: RISCV64.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_state_update:
@@ -752,11 +783,27 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
+lemma state_hyp_refs_of_tcb_domain_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_domain := d\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
+lemma state_hyp_refs_of_tcb_priority_update:
+       "kheap s t = Some (TCB tcb) \<Longrightarrow>
+          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_priority := d\<rparr>))\<rparr>)
+            = state_hyp_refs_of s"
+  apply (rule all_ext)
+  apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
+  done
+
 lemma default_arch_object_not_live[simp]: "\<not> live (ArchObj (default_arch_object aty dev us))"
   by (clarsimp simp: default_arch_object_def live_def hyp_live_def arch_live_def
                split: aobject_type.splits)
 
-lemma default_tcb_not_live[simp]: "\<not> live (TCB default_tcb)"
+lemma default_tcb_not_live[simp]: "\<not> live (TCB (default_tcb d))"
   by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
 
 lemma valid_arch_tcb_same_type:
@@ -794,6 +841,19 @@ lemma valid_vspace_obj_same_type:
 lemma invs_valid_uses[elim!]:
   "invs s \<Longrightarrow> valid_uses s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
+
+lemma set_tcb_obj_ref_asid_map[wp]:
+  "set_tcb_obj_ref f t ko \<lbrace>valid_asid_map\<rbrace>"
+  by (wpsimp simp: valid_asid_map_def)
+
+lemma update_sched_context_hyp_refs_of[wp]:
+  "update_sched_context ptr f \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P])
+  apply (rule all_ext)
+  apply (clarsimp simp: state_hyp_refs_of_def obj_at_def hyp_refs_of_def
+                 split: kernel_object.splits)
+  done
 
 end
 end

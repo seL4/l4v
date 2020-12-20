@@ -82,14 +82,21 @@ lemma is_cnode_or_valid_arch_cap_asid: (* arch specific *)
   "is_cnode_or_valid_arch cap \<Longrightarrow> (is_pt_cap cap \<longrightarrow> cap_asid cap \<noteq> None)"
   by (auto simp add: is_cnode_or_valid_arch_def is_cap_simps)
 
-lemma checked_insert_tcb_invs[wp]: (* arch specific *)
+lemma same_object_as_Nulls[simp]:
+  "\<not>same_object_as cap NullCap"
+  "\<not>same_object_as NullCap cap"
+  by (auto simp: same_object_as_def split: cap.splits)
+
+lemma checked_insert_tcb_invs: (* arch specific *)
   "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
-        and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
+        and K (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap)
+        and valid_cap new_cap
         and tcb_cap_valid new_cap (target, ref)
-        and K (is_pt_cap new_cap \<longrightarrow> cap_asid new_cap \<noteq> None)
+        and (\<lambda>s. valid_fault_handler new_cap
+                         \<longrightarrow> cte_wp_at (\<lambda>c. c = new_cap \<or> c = NullCap) src_slot s)
         and (cte_wp_at (\<lambda>c. obj_refs c = obj_refs new_cap
                               \<longrightarrow> table_cap_ref c = table_cap_ref new_cap \<and>
-                                 vspace_asid c = vspace_asid new_cap) src_slot)\<rbrace>
+                                  vspace_asid c = vspace_asid new_cap) src_slot)\<rbrace>
      check_cap_at new_cap src_slot
       (check_cap_at (ThreadCap target) slot
        (cap_insert new_cap src_slot (target, ref))) \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -119,30 +126,46 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
    apply (clarsimp simp: is_cnode_or_valid_arch_def is_cap_simps
                          is_valid_vtable_root_def)
   apply (rule conjI)
-   apply (erule(1) checked_insert_is_derived, simp+)
-  apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
+   apply (erule disjE)
+    apply (erule(1) checked_insert_is_derived, simp+)
+   apply (auto simp: is_cnode_or_valid_arch_def is_derived_def is_cap_simps valid_fault_handler_def)
   done
 
-crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "tcb_at a"
-crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "invs"
-crunch ex_nonz_cap_to[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "ex_nonz_cap_to a"
+lemma checked_insert_tcb_invs': (* arch specific *)
+  "\<lbrace>invs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
+        and K (is_cnode_or_valid_arch new_cap) and valid_cap new_cap
+        and tcb_cap_valid new_cap (target, ref)
+        and (cte_wp_at (\<lambda>c. obj_refs c = obj_refs new_cap
+                              \<longrightarrow> table_cap_ref c = table_cap_ref new_cap \<and>
+                                  vspace_asid c = vspace_asid new_cap) src_slot)\<rbrace>
+   check_cap_at new_cap src_slot
+    (check_cap_at (cap.ThreadCap target) slot
+     (cap_insert new_cap src_slot (target, ref)))
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp wp: checked_insert_tcb_invs)
+  by (auto simp: is_cap_simps is_cnode_or_valid_arch_def valid_fault_handler_def)
+
+crunches arch_post_modify_registers
+  for tcb_at[wp, Tcb_AI_asms]: "tcb_at a"
+  and invs[wp, Tcb_AI_asms]: invs
+  and ex_nonz_cap_to[wp, Tcb_AI_asms]: "ex_nonz_cap_to a"
+  and fault_tcb_at[wp, Tcb_AI_asms]: "fault_tcb_at P a"
+
+crunches arch_get_sanitise_register_info
+  for inv[wp, Tcb_AI_asms]: "P"
 
 lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
   assumes x: "P cap.NullCap"
   shows      "\<lbrace>\<lambda>s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>
                 finalise_cap cap fin
               \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
-  apply (cases cap, simp_all)
-       apply (wp suspend_caps_of_state hoare_vcg_all_lift
-            | simp
-            | rule impI
-            | rule hoare_drop_imps)+
-     apply (clarsimp simp: ball_ran_eq x)
-    apply (wp delete_one_caps_of_state
-         | rule impI
-         | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done
-
+  apply (cases cap; (solves \<open>wpsimp\<close>)?)
+    apply (wpsimp wp: hoare_drop_imps)
+   apply (wpsimp wp: suspend_caps_of_state hoare_drop_imps hoare_vcg_all_lift)
+   apply (fastforce simp: ran_def x split: if_splits)
+  apply (wpsimp wp: delete_one_caps_of_state
+              simp: deleting_irq_handler_def get_irq_slot_def ball_ran_eq x)
+  done
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
   "table_cap_ref (max_free_index_update cap) = table_cap_ref cap"
@@ -152,11 +175,11 @@ end
 
 global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
-  and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-  proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
-  qed
+    and is_cnode_or_valid_arch = RISCV64.is_cnode_or_valid_arch
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+qed
 
 context Arch begin global_naming RISVB64
 
@@ -187,10 +210,6 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
      apply (simp | rule obj_ref_none_no_asid)+
   done
 
-lemma as_user_valid_cap[wp]:
-  "as_user t f \<lbrace>valid_cap cap\<rbrace>"
-  by (wp valid_cap_typ)
-
 lemma as_user_ipc_tcb_cap_valid4[wp]:
   "as_user t f \<lbrace>tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
   apply (simp add: as_user_def set_object_def)
@@ -198,94 +217,205 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
                  dest!: get_tcb_SomeD)
-  apply (clarsimp simp: get_tcb_def)
   done
+
+lemma thread_set_mcp_ex_nonz_cap_to[wp]:
+  "thread_set (tcb_mcpriority_update g) t \<lbrace>ex_nonz_cap_to a\<rbrace>"
+  by (wpsimp wp: ex_nonz_cap_to_pres thread_set_cte_wp_at_trivial simp: tcb_cap_cases_def) auto
 
 lemma is_nondevice_page_cap_simp[simp]:
   "is_nondevice_page_cap (ArchObjectCap (FrameCap p q s False t))"
   by (subst is_nondevice_page_cap) simp
 
+lemma valid_ipc_buffer_cap:
+  "valid_ipc_buffer_cap c b =
+  (c = NullCap \<or> (\<exists>p R sz m. c = ArchObjectCap (FrameCap p R sz False m) \<and> is_aligned b msg_align_bits))"
+  by (auto simp: valid_ipc_buffer_cap_def is_FrameCap_def split: cap.splits)
+
 lemma option_case_eq_None:
   "((case m of None \<Rightarrow> None | Some (a,b) \<Rightarrow> Some a) = None) = (m = None)"
   by (clarsimp split: option.splits)
 
-lemma tc_invs[Tcb_AI_asms]:
-  "\<lbrace>invs and tcb_at a
-       and (case_option \<top> (valid_cap o fst) e)
-       and (case_option \<top> (valid_cap o fst) f)
-       and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
-       and (case_option \<top> (cte_at o snd) e)
-       and (case_option \<top> (cte_at o snd) f)
-       and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
-       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
-       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
-       and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-       \<comment> \<open>only set prio \<le> mcp of authorising thread\<close>
-       and (\<lambda>s. case_option True (\<lambda>(pr, auth). mcpriority_tcb_at (\<lambda>mcp. pr \<le> mcp) auth s) pr)
-       \<comment> \<open>only set mcp \<le> mcp of authorising thread\<close>
-       and (\<lambda>s. case_option True (\<lambda>(mcp, auth). mcpriority_tcb_at (\<lambda>m. mcp \<le> m) auth s) mcp)
-       and K (case_option True (is_cnode_cap o fst) e)
-       and K (case_option True (is_valid_vtable_root o fst) f)
-       and K (case_option True (\<lambda>v. case_option True
-                          ((swp valid_ipc_buffer_cap (fst v)
-                             and is_arch_cap and is_cnode_or_valid_arch)
-                                o fst) (snd v)) g)
-       and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
-      invoke_tcb (ThreadControl a sl b mcp pr e f g)
+lemma install_tcb_cap_invs:
+  "\<lbrace>invs and tcb_at target and
+    (\<lambda>s. \<forall>new_cap src_slot.
+       slot_opt = Some (new_cap, src_slot)
+         \<longrightarrow> K (is_cnode_or_valid_arch new_cap \<or>
+                valid_fault_handler new_cap) s
+          \<and> valid_cap new_cap s
+          \<and> tcb_cap_valid new_cap (target, tcb_cnode_index n) s
+          \<and> (valid_fault_handler new_cap
+               \<longrightarrow> cte_wp_at valid_fault_handler (target, tcb_cnode_index n) s
+               \<and> cte_wp_at (\<lambda>c. c = new_cap \<or> c = NullCap) src_slot s)
+          \<and> (case tcb_cap_cases (tcb_cnode_index n) of None \<Rightarrow> True | Some (getF, setF, restr) \<Rightarrow> \<forall>st. restr target st new_cap)
+          \<and> (tcb_cnode_index n = tcb_cnode_index 2 \<longrightarrow> (\<forall>ptr. valid_ipc_buffer_cap new_cap ptr))
+          \<and> real_cte_at src_slot s \<and> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: install_tcb_cap_def)
+  apply (wpsimp wp: checked_insert_tcb_invs cap_delete_deletes
+                    hoare_vcg_imp_lift_R
+         | strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg
+         | wpsimp wp: cap_delete_ep)+
+  by (auto simp: typ_at_eq_kheap_obj cap_table_at_typ tcb_at_typ
+                 is_cnode_or_valid_arch_def is_cap_simps real_cte_at_cte
+          elim!: cte_wp_at_weakenE)
+
+lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_asms]:
+  "\<lbrace>no_cap_to_obj_dr_emp cap and
+    (\<lambda>s. \<forall>new_cap src_slot. slot_opt = Some (new_cap, src_slot)
+                          \<longrightarrow> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
+  apply (simp add: install_tcb_cap_def)
+  by (wpsimp wp: checked_insert_no_cap_to hoare_vcg_const_imp_lift)
+
+lemma is_cnode_or_valid_arch_is_cap_simps:
+  "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
+  "is_valid_vtable_root cap \<Longrightarrow> is_cnode_or_valid_arch cap"
+  by (auto simp: is_cnode_or_valid_arch_def is_valid_vtable_root_def is_cap_simps
+           split: cap.splits arch_cap.splits option.splits)
+
+lemma install_tcb_frame_cap_invs:
+  "\<lbrace>invs and
+    (\<lambda>s. \<forall>new_cap src_slot.
+       buffer = Some (new_cap, src_slot)
+         \<longrightarrow> (\<forall>a aa b.
+                    src_slot = Some (a, aa, b) \<longrightarrow>
+                    is_nondevice_page_cap a \<and>
+                    valid_ipc_buffer_cap a new_cap \<and>
+                    s \<turnstile> a \<and>
+                    no_cap_to_obj_dr_emp a s \<and>
+                    cte_wp_at (\<lambda>_. True) (aa, b) s))\<rbrace>
+   install_tcb_frame_cap target slot buffer
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: install_tcb_frame_cap_def )
+  apply wp
+   \<comment> \<open>exception case\<close>
+   apply (rule hoare_vcg_E_elim, wpsimp)
+   \<comment> \<open>non-exception case\<close>
+   apply wpsimp
+     apply (wpsimp wp: checked_insert_tcb_invs[where ref="tcb_cnode_index 2"])
+    apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp
+                      thread_set_tcb_ipc_buffer_cap_cleared_invs
+                      thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
+                      thread_set_ipc_tcb_cap_valid)
+   apply((wpsimp wp: cap_delete_deletes
+             hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
+             static_imp_wp static_imp_conj_wp
+           | strengthen use_no_cap_to_obj_asid_strg
+           | wp cap_delete_ep)+)[1]
+  by (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)
+
+lemma tcc_invs[Tcb_AI_asms]:
+  "\<lbrace>invs and tcb_inv_wf (ThreadControlCaps t sl fh th croot vroot buf)\<rbrace>
+      invoke_tcb (ThreadControlCaps t sl fh th croot vroot buf)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (rule hoare_gen_asm)+
-  apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
-  apply (rule hoare_vcg_precond_imp)
-   apply wp
-      apply ((simp only: simp_thms
-        | (simp add: conj_comms del: hoare_True_E_R,
-                  strengthen imp_consequent[where Q="x = None" for x], simp cong: conj_cong)
-        | rule wp_split_const_if wp_split_const_if_R
-                   hoare_vcg_all_lift_R
-                   hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
-                   hoare_vcg_R_conj
-        | (wp out_invs_trivial case_option_wpE cap_delete_deletes
-             cap_delete_valid_cap cap_insert_valid_cap out_cte_at
-             cap_insert_cte_at cap_delete_cte_at out_valid_cap
-             hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
-             thread_set_tcb_ipc_buffer_cap_cleared_invs
-             thread_set_invs_trivial[OF ball_tcb_cap_casesI]
-             hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c" for c]
-             check_cap_inv [where P="tcb_cap_valid c p" for c p]
-             check_cap_inv[where P="cte_at p0" for p0]
-             check_cap_inv[where P="tcb_at p0" for p0]
-             thread_set_cte_at
-             thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
-             thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
-             checked_insert_no_cap_to
-             out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
-             thread_set_ipc_tcb_cap_valid
-             static_imp_wp static_imp_conj_wp)[1]
-        | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
-                    emptyable_def
-               del: hoare_True_E_R
-        | wpc
-        | strengthen use_no_cap_to_obj_asid_strg use_no_cap_to_obj_asid_strg[simplified conj_comms]
-                     tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
-                     tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (intro conjI impI; clarsimp?;
-     (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
-                        is_cnode_or_valid_arch_def tcb_cap_valid_def
-                        invs_valid_objs cap_asid_def vs_cap_ref_def
-                        case_bool_If valid_ipc_buffer_cap_def option_case_eq_None
-                       | split cap.splits arch_cap.splits if_splits)+)
-  apply (simp split: option.splits)
+  supply if_cong[cong]
+  apply (simp add: split_def cong: option.case_cong)
+  apply wp
+       \<comment> \<open>install_tcb_cap 2\<close>
+       \<comment> \<open>deal with exception case\<close>
+       apply (rule hoare_vcg_E_elim, wpsimp simp: install_tcb_frame_cap_def)
+       \<comment> \<open>non-exception case\<close>
+       apply (wpsimp wp: install_tcb_frame_cap_invs)
+      \<comment> \<open>pull invs out the front and simplify\<close>
+      apply ((simp add: conj_comms del: hoare_True_E_R, simp cong: conj_cong))
+      \<comment> \<open>install_tcb_cap 1\<close>
+      apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
+      apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                        install_tcb_cap_invs)
+     \<comment> \<open>install_tcb_cap 0\<close>
+     apply (simp)
+     apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
+     apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                        install_tcb_cap_invs
+            | strengthen tcb_cap_always_valid_strg
+            | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+    \<comment> \<open>install_tcb_cap 4\<close>
+    apply (simp)
+    apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
+    apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                       install_tcb_cap_invs
+           | strengthen tcb_cap_always_valid_strg
+           | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+   \<comment> \<open>install_tcb_cap 3\<close>
+   apply (simp)
+   apply (rule hoare_vcg_E_elim, wp install_tcb_cap_invs)
+   apply ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                      install_tcb_cap_invs
+          | strengthen tcb_cap_always_valid_strg
+          | wp install_tcb_cap_cte_wp_at_ep)+)[1]
+  \<comment> \<open>cleanup\<close>
+  apply (simp)
+  apply (strengthen tcb_cap_always_valid_strg)
+  apply (clarsimp cong: conj_cong)
+  \<comment> \<open>resolve generated preconditions\<close>
+  apply (intro conjI impI;
+         clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
+                 dest!: is_valid_vtable_root_is_arch_cap)
+      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state\<close>)
+     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+  by (auto simp: valid_ipc_buffer_cap valid_fault_handler_def)
+
+crunches empty_slot
+  for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P target"
+  (wp: crunch_wps)
+
+lemma install_tcb_cap_sc_tcb_sc_at[wp]:
+  "\<lbrace>sc_tcb_sc_at P d and invs and tcb_at target\<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+   \<lbrace>\<lambda>_. sc_tcb_sc_at P d\<rbrace>"
+  unfolding install_tcb_cap_def
+  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+
+lemma tcs_invs[Tcb_AI_asms]:
+  "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>
+   invoke_tcb (ThreadControlSched t sl fh  mcp pr sc)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  supply if_cong[cong]
+  apply (simp add: split_def cong: option.case_cong)
+  apply (wpsimp wp: maybeM_wp_drop_None, assumption)
+     apply (clarsimp cong: conj_cong)
+     apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
+    apply (clarsimp cong: conj_cong)
+    apply (wpsimp wp: maybeM_wp_drop_None hoare_vcg_all_lift hoare_vcg_imp_lift', assumption)
+   apply (clarsimp cong: conj_cong)
+   apply (rule hoare_post_addE[where R="invs and tcb_at t and ex_nonz_cap_to t"])
+   apply (clarsimp cong: conj_cong)
+   apply (rule hoare_vcg_E_elim)
+    apply (wpsimp wp: install_tcb_cap_invs)
+   apply (wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
+                     install_tcb_cap_invs hoare_vcg_imp_lift
+                     install_tcb_cap_ex_nonz_cap_to
+               simp: not_pred_tcb)
+  apply simp
+  apply (strengthen use_no_cap_to_obj_asid_strg tcb_cap_always_valid_strg tcb_cap_valid_ep_strgs)
+  apply (clarsimp cong: conj_cong simp: pred_neg_def)
+  apply (subgoal_tac "\<not>bound_sc_tcb_at (\<lambda>a. a = Some idle_sc_ptr) t s")
+   apply (intro conjI impI;
+          (clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
+                  dest!: is_valid_vtable_root_is_arch_cap)?)
+     apply (erule cte_wp_at_strengthen, simp)
+    apply (clarsimp simp: obj_at_def is_ep is_tcb)
+   apply (intro conjI; intro allI impI)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
+   apply (clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ)
+   apply (clarsimp simp: obj_at_def is_ep sc_at_pred_n_def)
+  apply clarsimp
+  apply (drule bound_sc_tcb_at_idle_sc_idle_thread[rotated, rotated], clarsimp, clarsimp)
+  apply (fastforce simp: invs_def valid_state_def sc_at_pred_n_def
+                         obj_at_def valid_idle_def
+                 dest!: idle_no_ex_cap)
   done
 
-lemma check_valid_ipc_buffer_inv: (* arch_specific *)
+lemma check_valid_ipc_buffer_inv:
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: check_valid_ipc_buffer_def whenE_def
              cong: cap.case_cong arch_cap.case_cong
              split del: if_split)
   apply (rule hoare_pre)
-   apply (wp | simp add: if_apply_def2 split del: if_split | wpcw)+
+   apply (wp | simp add: whenE_def if_apply_def2 | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp[Tcb_AI_asms]:
@@ -337,12 +467,11 @@ lemma no_cap_to_obj_with_diff_ref_update_cap_data[Tcb_AI_asms]:
    apply (simp add: no_cap_to_obj_with_diff_ref_def
                     update_cap_objrefs)
   apply (clarsimp simp: update_cap_data_closedform
-                        table_cap_ref_def Let_def
+                        table_cap_ref_def
                         arch_update_cap_data_def
-                 split: cap.split arch_cap.splits)
+                 split: cap.split)
   apply simp
   done
-
 
 lemma update_cap_valid[Tcb_AI_asms]:
   "valid_cap cap (s::'state_ext::state_ext state) \<Longrightarrow>
@@ -355,38 +484,34 @@ lemma update_cap_valid[Tcb_AI_asms]:
          simp_all add: update_cap_data_def cap_rights_update_def
                        is_cap_defs Let_def split_def valid_cap_def
                        badge_update_def the_cnode_cap_def cap_aligned_def
-                       arch_update_cap_data_def
-            split del: if_split)
-     apply (simp add: badge_update_def cap_rights_update_def)
-    apply (simp add: badge_update_def)
+                       arch_update_cap_data_def split: bool.splits)
    apply (simp add: word_bits_def)
   apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
-  apply (case_tac arch_cap, simp_all add: acap_rights_update_def Let_def
-                                     split: option.splits prod.splits)
+  apply (case_tac arch_cap, simp_all add: acap_rights_update_def
+                                     split: option.splits prod.splits bool.splits)
   done
-
 
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
-  (ignore: check_cap_at setNextPC zipWithM
-       wp: hoare_drop_imps mapM_x_wp' check_cap_inv
-     simp: crunch_simps)
+  (simp: crunch_simps
+     wp: hoare_drop_imps mapM_x_wp' check_cap_inv)
 
 end
 
 context begin interpretation Arch .
 requalify_consts is_cnode_or_valid_arch
-requalify_facts invoke_tcb_typ_at
+requalify_facts invoke_tcb_typ_at install_tcb_cap_invs
+                is_cnode_or_valid_arch_is_cap_simps
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = RISCV64.is_cnode_or_valid_arch
-  proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
-  qed
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+qed
 
 end

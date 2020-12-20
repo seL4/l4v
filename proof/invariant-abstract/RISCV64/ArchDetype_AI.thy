@@ -499,9 +499,8 @@ lemma in_user_frame_eq:
                      Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
                      order_class.Icc_eq_Icc
     and [simp] = p2pm1_to_mask
-  shows "p \<notin> untyped_range cap \<Longrightarrow> in_user_frame p
-              (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
-               \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
+  shows "p \<notin> untyped_range cap \<Longrightarrow>
+         in_user_frame p (s \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_user_frame p s"
     using cap_is_valid untyped
     apply (cases cap; simp add: in_user_frame_def valid_untyped_def valid_cap_def obj_at_def)
@@ -527,9 +526,7 @@ lemma in_device_frame_eq:
           order_class.Icc_eq_Icc
      and  p2pm1[simp] = p2pm1_to_mask
   shows "p \<notin> untyped_range cap
-       \<Longrightarrow> in_device_frame p
-              (trans_state (\<lambda>_. detype_ext (untyped_range cap) (exst s)) s
-               \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
+       \<Longrightarrow> in_device_frame p (s \<lparr>kheap := \<lambda>x. if x \<in> untyped_range cap then None else kheap s x\<rparr>)
          = in_device_frame p s"
     using cap_is_valid untyped
     unfolding in_device_frame_def
@@ -611,7 +608,7 @@ context begin interpretation Arch .
 lemma delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
-    invs and ct_active\<rbrace>
+    invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
@@ -628,6 +625,24 @@ lemma delete_objects_invs[wp]:
   apply (drule (1) cte_wp_valid_cap)
   apply (simp add: valid_cap_def cap_aligned_def word_size_bits_def untyped_min_bits_def)
   done
+
+lemma scheduler_action_detype:
+  "P (scheduler_action s) \<Longrightarrow> P (scheduler_action (detype {ptr..ptr + 2 ^ bits - 1} s))"
+  by (auto simp: detype_def)
+
+lemma do_machine_op_scheduler_action [wp]:
+  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_machine_op mop
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  by (wpsimp simp: do_machine_op_def)
+
+lemma delete_objects_scheduler_action [wp]:
+  "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> delete_objects ptr bits
+   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  apply (wpsimp simp: delete_objects_def)
+   apply (rule hoare_strengthen_post[where Q = "\<lambda>_ s. P (scheduler_action s)"])
+    apply (wpsimp simp: scheduler_action_detype)+
+  done
+
 end
 
 end

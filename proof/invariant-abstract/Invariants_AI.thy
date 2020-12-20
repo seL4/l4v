@@ -111,7 +111,7 @@ lemmas x_bit_defs [simp] =
   tcb_bits_def
   endpoint_bits_def
   ntfn_bits_def
-  repy_bits_def
+  reply_bits_def
   iarch_tcb_context_set
   iarch_tcb_set_registers
 
@@ -332,7 +332,7 @@ lemmas reply_sc_reply_at_def = reply_at_ppred_def[of reply_sc]
 lemmas reply_tcb_reply_at_def = reply_at_ppred_def[of reply_tcb]
 
 abbreviation simple_obj_at ::
-  "('u \<Rightarrow> kernel_object) \<Rightarrow> ('u \<Rightarrow> bool) \<Rightarrow> 32 word \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
+  "('u \<Rightarrow> kernel_object) \<Rightarrow> ('u \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
   where
   "simple_obj_at C \<equiv> sk_obj_at_pred C (\<lambda>obj. obj)"
 

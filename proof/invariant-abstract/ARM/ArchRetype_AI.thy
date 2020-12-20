@@ -1356,6 +1356,10 @@ lemma valid_arch_mdb_detype:
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by auto
 
+lemma hyp_live_default_object:
+  "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
+  by (cases ty; simp add: hyp_live_def)
+
 end
 
 lemmas clearMemory_invs[wp] = ARM.clearMemory_invs

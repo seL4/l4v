@@ -25,7 +25,7 @@ definition riscv_global_pt_ptr :: obj_ref
 (* Sufficiently aligned for irq type + cte_level_bits *)
 definition init_irq_node_ptr :: obj_ref
   where
-  "init_irq_node_ptr = pptr_base + 0x3000"
+  "init_irq_node_ptr = pptr_base + 0x4000"
 
 (* The highest user-level virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.

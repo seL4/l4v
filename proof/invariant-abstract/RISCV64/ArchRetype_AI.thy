@@ -38,6 +38,8 @@ lemma no_gs_types_simps [simp, Retype_AI_assms]:
   "TCBObject \<in> no_gs_types"
   "EndpointObject \<in> no_gs_types"
   "NotificationObject \<in> no_gs_types"
+  "ReplyObject \<in> no_gs_types"
+  "SchedContextObject \<in> no_gs_types"
   "ArchObject PageTableObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
   by (simp_all add: no_gs_types_def)
@@ -93,7 +95,7 @@ crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 
-lemmas init_arch_objects_cap_table[wp] = cap_table_at_lift_valid [OF init_arch_objects_typ_at]
+lemmas init_arch_objects_cap_table[wp] = cap_table_at_typ_at [OF init_arch_objects_typ_at]
 
 crunch device_state_inv[wp]: clearMemory "\<lambda>ms. P (device_state ms)"
   (wp: mapM_x_wp ignore_del: clearMemory)
@@ -121,12 +123,6 @@ crunch only_idle[wp]: copy_global_mappings "only_idle"
 crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
   (wp: crunch_wps)
 
-crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps)
-
-crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps)
-
 crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
   (wp: crunch_wps)
 
@@ -134,9 +130,6 @@ crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
 crunch irq_states[wp]: copy_global_mappings "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps)
-
-crunch caps_of_state[wp]: copy_global_mappings "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps)
 
 crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_window"
@@ -202,7 +195,7 @@ lemma init_arch_objects_invs_from_restricted:
 
 
 lemma obj_bits_api_neq_0 [Retype_AI_assms]:
-  "ty \<noteq> Untyped \<Longrightarrow> 0 < obj_bits_api ty us"
+  "ty \<noteq> Untyped \<Longrightarrow> ty \<noteq> SchedContextObject \<Longrightarrow> 0 < obj_bits_api ty us"
   unfolding obj_bits_api_def
   by (clarsimp simp: slot_bits_def default_arch_object_def bit_simps
                split: apiobject_type.splits aobject_type.splits)
@@ -220,26 +213,27 @@ global_interpretation Retype_AI_slot_bits?: Retype_AI_slot_bits
 context Arch begin global_naming RISCV64
 
 lemma valid_untyped_helper [Retype_AI_assms]:
-  assumes valid_c : "s  \<turnstile> c"
-  and   cte_at  : "cte_wp_at ((=) c) q s"
-  and     tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  assumes valid_c: "s  \<turnstile> c"
+  and   cte_at : "cte_wp_at ((=) c) q s"
+  and     tyunt: "ty \<noteq> Untyped"
+  and      tysc: "ty = SchedContextObject \<Longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
   and   range  : "is_untyped_cap c \<Longrightarrow> usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {}"
   and     pn   : "pspace_no_overlap_range_cover ptr sz s"
   and     cn   : "caps_no_overlap ptr sz s"
   and     vp   : "valid_pspace s"
   shows "valid_cap c
-           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us) else kheap s x\<rparr>)"
+           (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us) then Some (default_object ty dev us (cur_domain s)) else kheap s x\<rparr>)"
   (is "valid_cap c ?ns")
-  proof -
+proof -
   have obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x ?ns"
   by (clarsimp simp: obj_at_def dest: domI)
    (erule pspace_no_overlapC [OF pn _ _ cover vp])
   note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
         Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
-    using cover tyunt
-    by (clarsimp simp:obj_bits_dev_irr)
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
+    using cover tyunt tysc
+    by (clarsimp simp: obj_bits_dev_irr)
 
   show ?thesis
   using cover valid_c range usable_range_emptyD[where cap = c] cte_at
@@ -252,7 +246,8 @@ lemma valid_untyped_helper [Retype_AI_assms]:
   apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:if_split_asm)
    apply (thin_tac "\<forall>x. Q x" for Q)
    apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
-    apply (simp add: obj_bits_dev_irr tyunt)
+     apply (simp add: obj_bits_dev_irr tyunt)
+    apply (clarsimp simp: tysc)
    apply (frule usable_range_subseteq)
     apply (simp add:is_cap_simps)
    apply (clarsimp simp:cap_aligned_def split:if_split_asm)
@@ -261,7 +256,7 @@ lemma valid_untyped_helper [Retype_AI_assms]:
       apply (simp add: range_cover_def)
      apply (simp add: range_cover_def word_bits_def)
     apply (simp add: range_cover_def)
-   apply (clarsimp simp: default_obj_range Int_ac tyunt
+   apply (clarsimp simp: default_obj_range Int_ac tyunt tysc
                   split: if_split_asm)
    apply (elim disjE)
     apply (drule(2) subset_trans[THEN disjoint_subset2])
@@ -272,24 +267,21 @@ lemma valid_untyped_helper [Retype_AI_assms]:
    apply (simp add:Int_ac)
   apply (thin_tac "\<forall>x. Q x" for Q)
   apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-  apply (clarsimp simp:cap_aligned_def)
-  apply (frule aligned_ranges_subset_or_disjoint)
-   apply (erule retype_addrs_aligned[where sz = sz])
-     apply (simp add: range_cover_def)
-    apply (simp add: range_cover_def word_bits_def)
-   apply (simp add: range_cover_def)
-  apply (clarsimp simp: default_obj_range Int_ac tyunt
+   apply (clarsimp simp:cap_aligned_def)
+   apply (frule aligned_ranges_subset_or_disjoint)
+    apply (erule retype_addrs_aligned[where sz = sz])
+      apply (simp add: range_cover_def)
+     apply (simp add: range_cover_def word_bits_def)
+    apply (simp add: range_cover_def)
+   apply (simp add: tysc)
+  apply (clarsimp simp: default_obj_range Int_ac tyunt tysc
                  split: if_split_asm)
-  apply (erule disjE)
-   apply (simp add: cte_wp_at_caps_of_state)
-   apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-   apply (simp add: p_assoc_help[symmetric])
-   apply (erule impE)
-    apply blast (* set arith *)
-   apply blast (* set arith *)
-  apply blast (* set arith  *)
+  apply (simp add: cte_wp_at_caps_of_state)
+  apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
+  apply (simp add: p_assoc_help[symmetric])
+  apply blast
   done
-  qed
+qed
 
 lemma valid_default_arch_tcb:
   "\<And>s. valid_arch_tcb default_arch_tcb s"
@@ -320,30 +312,28 @@ lemma valid_cap:
   assumes cap:
     "(s::'state_ext state) \<turnstile> cap \<and> untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}"
   shows "s' \<turnstile> cap"
-  proof -
-  note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff
-  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us)) n"
-    using cover tyunt
+proof -
+  note [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                    Int_atLeastAtMost atLeastatMost_empty_iff
+  have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
+    using cover tyunt tysc
     by (clarsimp simp: obj_bits_dev_irr)
   show ?thesis
-    unfolding valid_cap_def
     using cap
-    apply (case_tac cap)
-               apply (simp_all add: valid_cap_def obj_at_pres cte_at_pres valid_arch_cap_ref_def
-                               split: option.split_asm arch_cap.split_asm option.splits)
+    apply (case_tac cap; simp add: valid_cap_def obj_at_pres cte_at_pres valid_arch_cap_ref_def
+                              split: option.split_asm arch_cap.split_asm option.splits)
     apply (clarsimp simp add: valid_untyped_def ps_def s'_def)
     apply (rule conjI)
      apply clarsimp
-     apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
+     apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
       apply (simp add: Int_ac p_assoc_help[symmetric])
      apply simp
     apply clarsimp
-    apply (drule disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt]])
+    apply (drule (1) disjoint_subset [OF retype_addrs_obj_range_subset [OF _ cover' tyunt tysc[THEN conjunct1, THEN impI]]])
      apply (simp add: Int_ac p_assoc_help[symmetric])
     apply simp
     done
-  qed
+qed
 
 lemma valid_global_refs:
   "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
@@ -382,7 +372,7 @@ lemma ptes_of:
   by (simp add: pte_of_def obind_def pts_of split: option.splits)
 
 lemma default_empty:
-  "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = empty_pt"
+  "default_object ty dev us d = ArchObj (PageTable pt) \<Longrightarrow> pt = empty_pt"
   by (simp add: default_object_def default_arch_object_def tyunt
            split: apiobject_type.splits aobject_type.splits)
 
@@ -583,10 +573,10 @@ proof
   assume p: "vs_lookup_table level asid (vref_for_level vref (level + 1)) s' = Some (level, p)"
   assume vref: "vref \<in> user_region"
   assume "aobjs_of s' p = Some ao"
-  hence "aobjs_of s p = Some ao \<or> ArchObj ao = default_object ty dev us"
+  hence "aobjs_of s p = Some ao \<or> ArchObj ao = default_object ty dev us (cur_domain s)"
     by (simp add: ps_def obj_at_def s'_def in_opt_map_eq split: if_split_asm)
   moreover
-  { assume "ArchObj ao = default_object ty dev us" with tyunt
+  { assume "ArchObj ao = default_object ty dev us (cur_domain s)" with tyunt
     have "valid_vspace_obj level ao s'" by (rule valid_vspace_obj_default)
   }
   moreover
@@ -701,7 +691,7 @@ lemma pspace_respects_device_regionD:
 
 
 lemma default_obj_dev:
-  "\<lbrakk>ty \<noteq> Untyped;default_object ty dev us = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
+  "\<lbrakk>ty \<noteq> Untyped; default_object ty dev us dm = ArchObj (DataPage dev' sz)\<rbrakk> \<Longrightarrow> dev = dev'"
   by (clarsimp simp: default_object_def default_arch_object_def
               split: apiobject_type.split_asm aobject_type.split_asm)
 
@@ -736,7 +726,7 @@ lemma valid_table_caps:
 
 lemma caps_of_state':
   "caps_of_state s p = Some cap \<Longrightarrow> caps_of_state s' p = Some cap"
-  by (fastforce simp: F cte_wp_at_cases s'_def ps_def orthr)
+  by (fastforce simp: cte_wp_at_cases s'_def ps_def orthr caps_of_state_Some_simp)
 
 lemma valid_vs_lookup:
   "valid_vs_lookup s \<Longrightarrow> valid_vs_lookup s'"
@@ -800,8 +790,8 @@ lemma pspace_in_kernel_window:
   apply (simp add: pspace_in_kernel_window_def s'_def ps_def)
   apply (clarsimp simp: region_in_kernel_window_def
                    del: ballI)
-  apply (drule retype_addrs_mem_subset_ptr_bits[OF cover tyunt])
-  apply (fastforce simp: field_simps obj_bits_dev_irr tyunt)
+  apply (drule retype_addrs_mem_subset_ptr_bits[OF cover tyunt tysc[THEN conjunct1, simplified atomize_imp]])
+  apply (fastforce simp: field_simps obj_bits_dev_irr tyunt tysc)
   done
 
 lemma pspace_respects_device_region:
@@ -817,9 +807,9 @@ lemma pspace_respects_device_region:
   apply (rule pspace_respects_device_regionI)
      apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                         split: if_split_asm )
-      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
-       using cover tyunt
-       apply (simp add: obj_bits_api_def3 split: if_splits)
+      apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp]])
+       using cover tyunt tysc
+       apply (simp add: obj_bits_api_def3[where dm="cur_domain s"] split: if_splits)
       apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
@@ -831,9 +821,9 @@ lemma pspace_respects_device_region:
      apply fastforce
     apply (clarsimp simp add: pspace_respects_device_region_def s'_def ps_def
                        split: if_split_asm )
-     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt])
-      using cover tyunt
-      apply (simp add: obj_bits_api_def4 split: if_splits)
+     apply (drule retype_addrs_obj_range_subset[OF _ _ tyunt tysc[THEN conjunct1, simplified atomize_imp]])
+      using cover tyunt tysc
+      apply (simp add: obj_bits_api_def4[where dm="cur_domain s"] split: if_splits)
      apply (frule default_obj_dev[OF tyunt],simp)
       apply (drule(1) subsetD)
       apply (rule exE[OF dev])
@@ -885,7 +875,6 @@ lemma post_retype_invs:
   using equal_kernel_mappings valid_global_vspace_mappings
   apply (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
-                     valid_reply_caps valid_reply_masters
                      valid_global_refs valid_arch_state
                      valid_irq_node_def obj_at_pres
                      valid_arch_caps valid_global_objs_def
@@ -893,7 +882,7 @@ lemma post_retype_invs:
                      valid_mdb_rep2 mdb_and_revokable
                      valid_pspace cur_tcb only_idle
                      valid_kernel_mappings valid_asid_map
-                     valid_ioc vms
+                     valid_ioc vms cur_sc_tcb
                      pspace_in_kernel_window
                      pspace_respects_device_region
                      cap_refs_respects_device_region
@@ -956,6 +945,7 @@ lemma retype_region_plain_invs:
       and region_in_kernel_window {ptr .. (ptr &&~~ mask sz) + 2 ^ sz - 1}
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
       and K (ty = Structures_A.CapTableObject \<longrightarrow> 0 < us)
+      and K (ty = SchedContextObject \<longrightarrow>  min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
       and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_strengthen_post[OF retype_region_post_retype_invs])
@@ -983,14 +973,14 @@ lemma invs_irq_state_independent:
    = invs s"
   by (clarsimp simp: irq_state_independent_A_def invs_def
                      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
-                     only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
-                     valid_reply_masters_def valid_global_refs_def valid_arch_state_def
+                     only_idle_def if_unsafe_then_cap_def
+                     valid_global_refs_def valid_arch_state_def
                      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
                      valid_vspace_objs_def valid_arch_caps_def
                      valid_kernel_mappings_def equal_kernel_mappings_def
                      valid_asid_map_def vspace_at_asid_def
                      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
-                     cur_tcb_def sym_refs_def state_refs_of_def state_hyp_refs_of_def
+                     cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def state_hyp_refs_of_def
                      swp_def valid_irq_states_def
               split: option.split)
 
@@ -1021,8 +1011,12 @@ lemma caps_region_kernel_window_imp:
   apply blast
   done
 
-crunch irq_node[wp]: init_arch_objects "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
+crunches init_arch_objects
+  for pred_tcb_at[wp]: "\<lambda>s. N (pred_tcb_at proj P t s)"
+  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and ct_in_state[wp]: "ct_in_state P"
+  (wp: crunch_wps ct_in_state_thread_state_lift)
 
 lemma init_arch_objects_excap:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace>
@@ -1030,14 +1024,15 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
-  (wp: crunch_wps)
-
 lemma valid_arch_mdb_detype:
   "valid_arch_mdb (is_original_cap s) (caps_of_state s) \<Longrightarrow>
             valid_arch_mdb (is_original_cap (detype (untyped_range cap) s))
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by (auto simp: valid_arch_mdb_def)
+
+lemma hyp_live_default_object:
+  "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
+  by (cases ty; simp add: hyp_live_def)
 
 end
 
@@ -1057,6 +1052,8 @@ lemmas init_arch_objects_wps
       RISCV64.init_arch_objects_valid_cap
       RISCV64.init_arch_objects_cap_table
       RISCV64.init_arch_objects_excap
-      RISCV64.init_arch_objects_st_tcb_at
+      RISCV64.init_arch_objects_pred_tcb_at
+      RISCV64.init_arch_objects_cur_thread
+      RISCV64.init_arch_objects_ct_in_state
 
 end

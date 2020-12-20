@@ -12,145 +12,217 @@ context Arch begin global_naming RISCV64
 
 named_theorems DetSchedAux_AI_assms
 
+lemmas arch_machine_ops_valid_sched_pred[wp] =
+  arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred]
+  arch_machine_ops_last_machine_time[THEN dmo_valid_sched_pred']
+
+lemma set_pt_valid_sched_pred[wp]:
+  "set_pt ptr pt \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (wpsimp simp: set_pt_def wp: set_object_wp_strong get_object_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
+           split:  kernel_object.splits if_splits)
+
+lemma set_asid_pool_bound_sc_obj_tcb_at[wp]:
+  "set_asid_pool ptr pool \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  apply (wpsimp simp: set_asid_pool_def wp: set_object_wp_strong get_object_wp)
+  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps a_type_def fun_upd_def
+           split:  kernel_object.splits if_splits)
+
+lemma copy_global_mappings_valid_sched_pred[wp]:
+  "copy_global_mappings pd \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  by (wpsimp simp: copy_global_mappings_def store_pte_def wp: mapM_x_wp_inv)
+
+lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
+  "init_arch_objects new_type ptr num_objects obj_sz refs \<lbrace>valid_sched_pred_strong P\<rbrace>"
+  by (wpsimp simp: init_arch_objects_def wp: dmo_valid_sched_pred mapM_x_wp_inv)
+
 crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
-  and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
-  (wp: crunch_wps hoare_unless_wp valid_etcbs_lift)
-
-crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp
-   simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym unless_def
-   ignore: freeMemory retype_region_ext)
-crunch ready_queues[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (ready_queues s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-   simp: detype_def detype_ext_def crunch_simps
-          wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-crunch scheduler_action[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (scheduler_action s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-   simp: detype_def detype_ext_def crunch_simps
-         wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv'
-   simp: detype_def detype_ext_def crunch_simps
-         wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps mapME_x_inv_wp preemption_point_inv dxo_wp_weak
-   simp: detype_def detype_ext_def crunch_simps
-         wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory retype_region_ext)
-
-lemma tcb_sched_action_valid_idle_etcb:
-  "\<lbrace>valid_idle_etcb\<rbrace>
-     tcb_sched_action foo thread
-   \<lbrace>\<lambda>_. valid_idle_etcb\<rbrace>"
-  apply (rule valid_idle_etcb_lift)
-  apply (simp add: tcb_sched_action_def set_tcb_queue_def)
-  apply (wp | simp)+
-  done
-
-crunch ekheap[wp]: do_machine_op "\<lambda>s. P (ekheap s)"
-
-lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
-  "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
-  apply (simp add: delete_objects_def)
-  apply (wp)
-  apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def etcb_at_def|wp)+
-  done
-
-crunch etcb_at[wp]: reset_untyped_cap "etcb_at P t"
-  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
-    simp: unless_def)
-
-crunch valid_etcbs[wp]: reset_untyped_cap "valid_etcbs"
-  (wp: preemption_point_inv' mapME_x_inv_wp crunch_wps
-    simp: unless_def)
-
-lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
-  "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P t s) and valid_etcbs\<rbrace> invoke_untyped ui \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
-  apply (cases ui)
-  apply (simp add: mapM_x_def[symmetric] invoke_untyped_def whenE_def
-           split del: if_split)
-  apply (wp retype_region_etcb_at mapM_x_wp'
-            create_cap_no_pred_tcb_at typ_at_pred_tcb_at_lift
-            hoare_convert_imp[OF create_cap_no_pred_tcb_at]
-            hoare_convert_imp[OF _ init_arch_objects_exst]
-      | simp
-      | (wp (once) hoare_drop_impE_E))+
-  done
-
-
-crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects valid_blocked
-  (wp: valid_blocked_lift set_cap_typ_at)
-
-lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace>
-          perform_asid_control_invocation aci
-          \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
-  apply (simp add: perform_asid_control_invocation_def)
-  apply (rule hoare_pre)
-   apply (wp | wpc | simp)+
-       apply (wp hoare_imp_lift_something typ_at_pred_tcb_at_lift)[1]
-      apply (rule hoare_drop_imps)
-      apply (wp retype_region_etcb_at)+
-  apply simp
-  done
-
-crunch ct[wp]: perform_asid_control_invocation "\<lambda>s. P (cur_thread s)"
-
-crunch idle_thread[wp]: perform_asid_control_invocation "\<lambda>s. P (idle_thread s)"
-
-crunch valid_etcbs[wp]: perform_asid_control_invocation valid_etcbs (wp: static_imp_wp)
-
-crunch valid_blocked[wp]: perform_asid_control_invocation valid_blocked (wp: static_imp_wp)
-
-crunch schedact[wp]: perform_asid_control_invocation "\<lambda>s :: det_ext state. P (scheduler_action s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
-
-crunch rqueues[wp]: perform_asid_control_invocation "\<lambda>s :: det_ext state. P (ready_queues s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
-
-crunch cur_domain[wp]: perform_asid_control_invocation "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def cap_insert_ext_def ignore: freeMemory)
-
-lemma perform_asid_control_invocation_valid_sched:
-  "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>
-     perform_asid_control_invocation aci
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (rule hoare_pre)
-   apply (rule_tac I="invs and ct_active and valid_aci aci" in valid_sched_tcb_state_preservation)
-          apply (wp perform_asid_control_invocation_st_tcb_at)
-          apply simp
-         apply (wp perform_asid_control_etcb_at)+
-    apply (rule hoare_strengthen_post, rule aci_invs)
-    apply (simp add: invs_def valid_state_def)
-   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s"])
-    apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s"])
-     apply (rule hoare_lift_Pf[where f="\<lambda>s. idle_thread s"])
-      apply wp+
-  apply simp
-  done
-
-crunch valid_queues[wp]: init_arch_objects valid_queues (wp: valid_queues_lift)
-
-crunch valid_sched_action[wp]: init_arch_objects valid_sched_action (wp: valid_sched_action_lift)
-
-crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
+  and valid_idle[wp, DetSchedAux_AI_assms]: "\<lambda>s. valid_idle s"
+  (wp: crunch_wps)
 
 end
 
-lemmas tcb_sched_action_valid_idle_etcb
-    = RISCV64.tcb_sched_action_valid_idle_etcb
-
-global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
-  proof goal_cases
-  interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
-  qed
-
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
-  qed
+qed
 
+context Arch begin global_naming RISCV64
+
+(* FIXME: move? *)
+lemma init_arch_objects_obj_at_impossible:
+  "\<forall>ao. \<not> P (ArchObj ao) \<Longrightarrow>
+    \<lbrace>\<lambda>s. Q (obj_at P p s)\<rbrace> init_arch_objects a b c d e \<lbrace>\<lambda>rv s. Q (obj_at P p s)\<rbrace>"
+  by (auto intro: init_arch_objects_obj_at_non_pt)
+
+lemma perform_asid_control_etcb_at:
+  "\<lbrace>etcb_at P t\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>r s. st_tcb_at (Not \<circ> inactive) t s \<longrightarrow> etcb_at P t s\<rbrace>"
+  apply (cases aci, rename_tac frame slot parent base)
+  apply (simp add: perform_asid_control_invocation_def, thin_tac _)
+  apply (rule hoare_seq_ext[OF _ delete_objects_etcb_at])
+  apply (rule hoare_seq_ext[OF _ get_cap_inv])
+  apply (rule hoare_seq_ext[OF _ set_cap_valid_sched_pred])
+  apply (rule hoare_seq_ext[OF _ retype_region_etcb_at])
+  apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_imp_lift')
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
+
+crunches perform_asid_control_invocation
+  for cur_time[wp]: "\<lambda>s. P (cur_time s)"
+
+lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
+  "\<lbrace>\<lambda>s. bound_sc_obj_tcb_at (P (cur_time s)) t s
+        \<and> ex_nonz_cap_to t s
+        \<and> invs s
+        \<and> ct_active s
+        \<and> scheduler_action s = resume_cur_thread
+        \<and> valid_aci aci s \<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. bound_sc_obj_tcb_at (P (cur_time s)) t s\<rbrace>"
+  apply (rule hoare_lift_Pf3[where f=cur_time, rotated], wpsimp)
+  by (rule bound_sc_obj_tcb_at_nonz_cap_lift
+      ; wpsimp wp: perform_asid_control_invocation_st_tcb_at
+                   perform_asid_control_invocation_sc_at_pred_n)
+
+crunches perform_asid_control_invocation
+  for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
+  and valid_blocked[wp]: "valid_blocked"
+  (wp: static_imp_wp)
+
+crunches perform_asid_control_invocation
+  for rqueues[wp]: "\<lambda>s. P (ready_queues s)"
+  and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
+  and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
+  and release_queue[wp]: "\<lambda>s. P (release_queue s)"
+  and misc[wp]: "\<lambda>s. P (scheduler_action s) (ready_queues s)
+               (cur_domain s) (release_queue s)"
+
+(* FIXME: move up *)
+lemma pageBits_le_word_bits[simp]:
+  "pageBits \<le> word_bits"
+  by (simp add: bit_simps word_bits_def)
+
+(* FIXME: move up *)
+lemmas pageBits_le_word_bits_unfolded[simp] = pageBits_le_word_bits[unfolded word_bits_def, simplified]
+
+(* FIXME: move to ArchArch_AI *)
+lemma perform_asid_control_invocation_obj_at_live:
+  assumes csp: "cspace_agnostic_pred P"
+  assumes live: "\<forall>ko. P ko \<longrightarrow> live ko"
+  shows
+  "\<lbrace>\<lambda>s. N (obj_at P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. N (obj_at P p s)\<rbrace>"
+  apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
+  apply (rename_tac region_ptr target_slot_cnode target_slot_idx untyped_slot_cnode untyped_slot_idx asid)
+  apply (rule_tac S="region_ptr && ~~mask pageBits = region_ptr \<and> is_aligned region_ptr pageBits
+                     \<and> word_size_bits \<le> pageBits
+                     \<and> obj_bits_api (ArchObject ASIDPoolObj) 0 = pageBits" in hoare_gen_asm''
+         , fastforce simp: valid_aci_def cte_wp_at_caps_of_state valid_cap_simps
+                           cap_aligned_def page_bits_def pageBits_def word_size_bits_def
+                           obj_bits_api_def default_arch_object_def
+                    dest!: caps_of_state_valid[rotated])
+  apply (clarsimp simp: delete_objects_rewrite bind_assoc)
+  apply (wpsimp wp: cap_insert_cspace_agnostic_obj_at[OF csp]
+                    set_cap.cspace_agnostic_obj_at[OF csp]
+                    retype_region_obj_at_live[where sz=page_bits, OF live]
+                    max_index_upd_invs_simple set_cap_no_overlap get_cap_wp
+                    hoare_vcg_ex_lift hoare_vcg_all_lift
+         | strengthen invs_valid_objs invs_psp_aligned)+
+  apply (frule detype_invariants
+         ; clarsimp simp: valid_aci_def cte_wp_at_caps_of_state page_bits_def
+                          intvl_range_conv empty_descendants_range_in descendants_range_def2
+                          detype_clear_um_independent range_cover_full
+                    cong: conj_cong)
+  apply (frule pspace_no_overlap_detype[OF caps_of_state_valid_cap]; clarsimp)
+  apply (erule rsubst[of N]; rule iffI; clarsimp simp: obj_at_def)
+  apply (drule live[THEN spec, THEN mp])
+  apply (frule (2) if_live_then_nonz_cap_invs)
+  by (frule (2) descendants_of_empty_untyped_range[where p=p]; simp)
+
+lemma perform_asid_control_invocation_pred_tcb_at_live:
+  assumes live: "\<forall>tcb. P (proj (tcb_to_itcb tcb)) \<longrightarrow> live (TCB tcb)"
+  shows
+  "\<lbrace>\<lambda>s. N (pred_tcb_at proj P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. N (pred_tcb_at proj P p s)\<rbrace>"
+  unfolding pred_tcb_at_def using live
+  by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def tcb_to_itcb_def)
+
+lemma perform_asid_control_invocation_sc_at_pred_n_live:
+  assumes live: "\<forall>sc. P (proj sc) \<longrightarrow> live_sc sc"
+  shows
+  "\<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P p s)
+        \<and> invs s
+        \<and> ct_active s
+        \<and> valid_aci aci s
+        \<and> scheduler_action s = resume_cur_thread\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>rv s. Q (sc_at_pred_n N proj P p s)\<rbrace>"
+  unfolding sc_at_pred_n_def using live
+  by (auto intro!: perform_asid_control_invocation_obj_at_live simp: cspace_agnostic_pred_def live_def)
+
+lemma perform_asid_control_invocation_valid_idle:
+  "\<lbrace>invs and ct_active
+         and valid_aci aci
+         and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. valid_idle\<rbrace>"
+  by (strengthen invs_valid_idle) wpsimp
+
+crunches perform_asid_control_invocation
+  for lmt[wp]: "\<lambda>s. P (last_machine_time_of s)"
+  (ignore: do_machine_op
+     simp: detype_def crunch_simps
+       wp: do_machine_op_machine_state dxo_wp_weak crunch_wps)
+
+lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
+  "perform_asid_control_invocation aci
+   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding perform_asid_control_invocation_def
+  by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
+           comb: hoare_drop_imp)
+
+lemma perform_asid_control_invocation_valid_sched:
+  "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
+    valid_sched and valid_idle\<rbrace>
+     perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule_tac I="invs and ct_active and
+                      (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
+          in valid_sched_tcb_state_preservation_gen)
+                 apply simp
+                 by (wpsimp wp: perform_asid_control_invocation_st_tcb_at
+                                perform_asid_control_invocation_pred_tcb_at_live
+                                perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
+                                perform_asid_control_etcb_at
+                                perform_asid_control_invocation_sc_at_pred_n
+                                perform_asid_control_invocation_valid_idle
+                                perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
+                                hoare_vcg_all_lift
+                          simp: ipc_queued_thread_state_live live_sc_def)+
+
+lemma kernelWCET_us_non_zero:
+  "kernelWCET_us \<noteq> 0"
+  using kernelWCET_us_pos by fastforce
+
+lemma kernelWCET_ticks_non_zero:
+  "kernelWCET_ticks \<noteq> 0"
+  using kernelWCET_us_non_zero us_to_ticks_nonzero
+  by (fastforce simp: kernelWCET_ticks_def)
+
+end
 end

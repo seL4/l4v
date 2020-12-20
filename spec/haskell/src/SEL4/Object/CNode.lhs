@@ -338,7 +338,7 @@ Determine whether the CTE is valid, and has children to be deleted. If a child i
 >         nextCTE <- withoutPreemption $ getCTE nextPtr
 >         when (cte `isMDBParentOf` nextCTE) $ do
 >             cteDelete nextPtr True
->             preemptionPoint
+>
 >             cteRevoke slot
 
 \subsubsection{Deleting Capabilities}

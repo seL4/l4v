@@ -10,6 +10,17 @@ imports
   "./$L4V_ARCH/ArchIpc_AI"
 begin
 
+context begin interpretation Arch .
+
+requalify_consts
+  make_arch_fault_msg
+
+requalify_facts
+  make_arch_fault_msg_invs
+  make_arch_fault_msg_valid_replies
+
+end
+
 lemma replies_with_sc_kh_update_sc:
   "sc_replies (f sc v) = sc_replies sc
    \<Longrightarrow> replies_with_sc (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext (f sc v) n)\<rparr>)
@@ -153,17 +164,15 @@ lemma tcb_ep_dequeue_valid_SendEP:
   "\<lbrace>valid_ep (SendEP q) and K (t \<in> set q)\<rbrace> tcb_ep_dequeue t q \<lbrace>\<lambda>q'. valid_ep (SendEP (t#q'))\<rbrace>"
   apply (case_tac q; simp)
   apply (wpsimp simp: tcb_ep_dequeue_def valid_ep_def)
-  apply (fastforce simp: findIndex_def findIndex'_app
-                   dest: in_set_takeD in_set_dropD findIndex_member)
-  done
+  by (fastforce simp: findIndex_def findIndex'_app
+                dest: in_set_takeD in_set_dropD findIndex_member)
 
 lemma tcb_ep_dequeue_valid_RecvEP:
   "\<lbrace>valid_ep (RecvEP q) and K (t \<in> set q)\<rbrace> tcb_ep_dequeue t q \<lbrace>\<lambda>q'. valid_ep (RecvEP (t#q'))\<rbrace>"
   apply (case_tac q; simp)
   apply (wpsimp simp: tcb_ep_dequeue_def valid_ep_def)
-  apply (fastforce simp: findIndex_def findIndex'_app
-                   dest: in_set_takeD in_set_dropD findIndex_member)
-  done
+  by (fastforce simp: findIndex_def findIndex'_app
+                dest: in_set_takeD in_set_dropD findIndex_member)
 
 lemma tcb_ep_dequeue_valid_ep:
   "\<lbrace>valid_ep (update_ep_queue ep q) and K (ep \<noteq> IdleEP \<and> t \<in> set q)\<rbrace>
@@ -792,7 +801,7 @@ lemma sched_context_update_consumed_valid_replies[wp]:
   by (wpsimp wp: update_sched_context_wp)
 
 crunch valid_replies[wp]: do_ipc_transfer "valid_replies_pred P"
-  (simp: crunch_simps wp: crunch_wps ARM.make_arch_fault_msg_inv)
+  (simp: crunch_simps wp: crunch_wps make_arch_fault_msg_valid_replies)
 
 lemma set_reply_sc_valid_replies_already_BlockedOnReply:
   "\<lbrace> \<lambda>s. valid_replies s \<and> r \<in> fst ` replies_blocked s \<rbrace>

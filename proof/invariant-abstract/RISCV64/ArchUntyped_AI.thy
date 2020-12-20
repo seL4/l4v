@@ -129,6 +129,7 @@ proof -
         apply (erule range_cover.sz)
        apply (simp add: range_cover_def)
       apply (clarsimp simp: get_free_ref_def empty_descendants_range_in)
+      apply (rule conjI, clarsimp simp: obj_bits_api_def min_sched_context_bits_def)
       apply (rule conjI[rotated], blast, clarsimp)
       apply (drule_tac x = "(obj_ref_of node_cap, nat_to_cref (bits_of node_cap) slota)" in bspec)
        apply (clarsimp simp: is_cap_simps nat_to_cref_def word_bits_def bits_of_def valid_cap_simps
@@ -138,6 +139,7 @@ proof -
         apply (clarsimp dest!: valid_cap_aligned simp: cap_aligned_def word_bits_def)+
       apply simp+
      apply (clarsimp simp: get_free_ref_def)
+     apply (rule conjI; clarsimp simp: obj_bits_api_def min_sched_context_bits_def)
     apply (erule disjE)
      apply (drule_tac x= "cs!0" in bspec, clarsimp)
      apply simp
@@ -155,7 +157,7 @@ lemma retype_ret_valid_caps_captable[Untyped_AI_assms]:
       \<and> range_cover ptr sz (obj_bits_api CapTableObject us) n \<and> ptr \<noteq> 0
        \<rbrakk>
          \<Longrightarrow> \<forall>y\<in>{0..<n}. s
-                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
+                \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object CapTableObject dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api CapTableObject us)) [0..<n])
                            (kheap s)\<rparr> \<turnstile> CNodeCap (ptr_add ptr (y * 2 ^ obj_bits_api CapTableObject us)) us []"
 by ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         cte_level_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
@@ -168,7 +170,7 @@ lemma retype_ret_valid_caps_aobj[Untyped_AI_assms]:
   \<lbrakk>pspace_no_overlap_range_cover ptr sz s \<and> x6 \<noteq> ASIDPoolObj \<and>
   range_cover ptr sz (obj_bits_api (ArchObject x6) us) n \<and> ptr \<noteq> 0\<rbrakk>
             \<Longrightarrow> \<forall>y\<in>{0..<n}. s
-                   \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us)) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
+                   \<lparr>kheap := foldr (\<lambda>p kh. kh(p \<mapsto> default_object (ArchObject x6) dev us (cur_domain s))) (map (\<lambda>p. ptr_add ptr (p * 2 ^ obj_bits_api (ArchObject x6) us)) [0..<n])
                               (kheap s)\<rparr> \<turnstile> ArchObjectCap (arch_default_cap x6 (ptr_add ptr (y * 2 ^ obj_bits_api (ArchObject x6) us)) us dev)"
   apply (rename_tac aobject_type us n)
   apply (case_tac aobject_type)
@@ -216,7 +218,7 @@ lemma set_untyped_cap_invs_simple[Untyped_AI_assms]:
   apply (simp add:valid_irq_node_def)
   apply wps
   apply (wp hoare_vcg_all_lift set_cap_irq_handlers set_cap_valid_arch_caps
-    set_cap_irq_handlers cap_table_at_lift_valid set_cap_typ_at
+    set_cap_irq_handlers cap_table_at_typ_at set_cap_typ_at
     set_untyped_cap_refs_respects_device_simple)
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)
   apply (intro conjI,clarsimp)
@@ -340,7 +342,7 @@ lemma nonempty_table_caps_of[Untyped_AI_assms]:
 
 
 lemma nonempty_default[simp, Untyped_AI_assms]:
-  "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us)"
+  "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp dev us d)"
   apply (case_tac tp, simp_all add: default_object_def nonempty_table_def a_type_def)
   apply (rename_tac aobject_type)
   apply (case_tac aobject_type; simp add: default_arch_object_def)
@@ -361,6 +363,66 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (simp add: default_arch_object_def split: aobject_type.split)
   apply (auto simp: arch_is_frame_type_def)
   done
+
+(* FIXME: move *)
+lemma set_object_obj_at_other:
+  assumes "ptr \<noteq> p"
+  shows "set_object ptr ko \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[of N])
+  using assms by (clarsimp simp: obj_at_def)
+
+lemma copy_global_mappings_obj_at_other:
+  assumes ptr: "ptr \<noteq> p"
+  assumes aligned: "is_aligned ptr pt_bits"
+  shows "copy_global_mappings ptr \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+proof -
+  have bits:
+    "\<And>i. i \<le> 2 ^ ptTranslationBits - 1 \<Longrightarrow> table_base (ptr + (i << pte_bits)) = ptr"
+    by (metis aligned mask_2pm1 table_base_plus)
+  show ?thesis
+    by (wpsimp simp: copy_global_mappings_def store_pte_def set_pt_def bits
+                 wp: mapM_x_wp' set_object_obj_at_other[OF ptr]
+                     get_object_wp)
+qed
+
+lemma init_arch_objects_obj_at_other[Untyped_AI_assms]:
+  "\<lbrakk>\<forall>ptr\<in>set ptrs. is_aligned ptr (obj_bits_api ty us); p \<notin> set ptrs\<rbrakk>
+    \<Longrightarrow> init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+               wp: mapM_x_wp' copy_global_mappings_obj_at_other)
+
+lemma copy_global_mappings_obj_at_non_pt:
+  assumes non_pd: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  shows "copy_global_mappings ptr \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  apply (clarsimp simp: copy_global_mappings_def)
+  apply (rule hoare_seq_ext[OF _ gets_inv])
+  apply (rule mapM_x_wp')
+  apply (rule hoare_seq_ext[OF _ get_pte_inv])
+  apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp get_object_wp)
+  apply (clarsimp simp: obj_at_def elim!: rsubst[of N])
+  apply (rule iffI; drule spec[OF non_pd, THEN mp]; simp)
+  done
+
+lemma init_arch_objects_obj_at_non_pt:
+  assumes non_pt: "\<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  shows "init_arch_objects ty ptr n us ptrs \<lbrace>\<lambda>s. N (obj_at P p s)\<rbrace>"
+  by (wpsimp simp: init_arch_objects_def obj_bits_api_def default_arch_object_def
+               wp: mapM_x_wp' copy_global_mappings_obj_at_non_pt[OF non_pt])
+
+lemma non_arch_non_pt:
+  "\<forall>ko. P ko \<longrightarrow> non_arch_obj ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  by (auto simp: non_arch_obj_def)
+
+lemma live_non_pt:
+  "\<forall>ko. P ko \<longrightarrow> live ko \<Longrightarrow> \<forall>ko. P ko \<longrightarrow> (\<forall>pd. ko \<noteq> ArchObj (PageTable pd))"
+  by (auto simp: live_def hyp_live_def)
+
+lemmas init_arch_objects_obj_at_non_arch[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pt[OF non_arch_non_pt]
+
+lemmas init_arch_objects_obj_at_live[Untyped_AI_assms] =
+  init_arch_objects_obj_at_non_pt[OF live_non_pt]
 
 end
 
