@@ -339,14 +339,6 @@ where
           unbind_maybe_notification r;
           cancel_all_signals r
        od)"
-| "fast_finalise (SchedContextCap sc b)    final =
-      (when final $ do
-          sched_context_unbind_all_tcbs sc;
-          sched_context_unbind_ntfn sc;
-          sched_context_unbind_reply sc;
-          sched_context_unbind_yield_from sc;
-          set_sc_obj_ref sc_refill_max_update sc 0
-      od)"
 | "fast_finalise _ _ = fail"
 
 text \<open>Delete a capability with the assumption that the fast finalisation
@@ -543,7 +535,6 @@ definition
     ReplyCap r R \<Rightarrow> True
   | EndpointCap r b R \<Rightarrow> True
   | NotificationCap r b R \<Rightarrow> True
-  | SchedContextCap _ _ \<Rightarrow> True
   | NullCap \<Rightarrow> True
   | _ \<Rightarrow> False"
 
