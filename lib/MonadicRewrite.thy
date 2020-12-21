@@ -507,6 +507,30 @@ next
     by (fastforce simp: corres_underlying_def split_def)
 qed
 
+lemma monadic_rewrite_corres':
+  assumes cu: "corres_underlying R False nf' r P P' a c'"
+  and     me: "monadic_rewrite False True Q c c'"
+  shows   "corres_underlying R False nf' r  P (P' and Q) a c"
+proof (rule corres_underlyingI)
+  fix s t rv' t'
+  assume st: "(s, t) \<in> R" and pq: "(P' and Q) t" and ps: "P s" and ct: "(rv', t') \<in> fst (c t)"
+  from pq have P't: "P' t" and Qt: "Q t" by simp_all
+
+  from me ct Qt have c't: "(rv', t') \<in> fst (c' t)"
+   by (clarsimp simp: monadic_rewrite_def)
+
+  from cu st ps P't c't obtain s' rv where
+     as: "(rv, s') \<in> fst (a s)" and rest: "nf' \<longrightarrow> \<not> snd (c' t)" "(s', t') \<in> R" "r rv rv'"
+    by (fastforce elim: corres_underlyingE)
+
+  with rest as show "\<exists>(rv, s')\<in>fst (a s). (s', t') \<in> R \<and> r rv rv'" by auto
+next
+  fix s t
+  assume "(s, t) \<in> R" "(P' and Q) t" "P s" "nf'"
+  thus "\<not> snd (c t)" using cu me
+    by (fastforce simp: corres_underlying_def split_def monadic_rewrite_def)
+qed
+
 lemma monadic_rewrite_refine_valid:
   "monadic_rewrite F E P f g
     \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>
