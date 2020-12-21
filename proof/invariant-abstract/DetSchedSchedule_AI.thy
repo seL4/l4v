@@ -10977,7 +10977,7 @@ lemma update_sk_obj_ref_sc_tcb_sc_at[wp]:
   apply (wpsimp simp: update_sk_obj_ref_def set_simple_ko_def set_object_def
                 wp: get_object_wp get_simple_ko_wp)
   apply (clarsimp simp: partial_inv_def sc_tcb_sc_at_def obj_at_def)
-  by (case_tac "C ntfn"; clarsimp simp: a_type_def)
+  by (case_tac "C obj"; clarsimp simp: a_type_def)
 
 lemma sts_obj_at_neq:
   "\<lbrace>obj_at P t and K (t\<noteq>t')\<rbrace> set_thread_state t' st \<lbrace>\<lambda>_. obj_at P t\<rbrace>"

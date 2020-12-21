@@ -87,7 +87,7 @@ method get_simple_ko_method =
   (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)
 
 lemma get_simple_ko_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (f ntfn) ntfnptr s \<longrightarrow> P ntfn s\<rbrace> get_simple_ko f ntfnptr \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>obj. ko_at (f obj) ptr s \<longrightarrow> P obj s\<rbrace> get_simple_ko f ptr \<lbrace>P\<rbrace>"
   by get_simple_ko_method
 
 lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>rv. P\<rbrace>"
