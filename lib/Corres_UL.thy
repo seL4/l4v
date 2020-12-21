@@ -951,6 +951,11 @@ qed
 (* for instantiations *)
 lemma corres_inst: "corres_underlying sr nf nf' r P P' f g \<Longrightarrow> corres_underlying sr nf nf' r P P' f g" .
 
+(* for instantiations; only need to specify what you are adding *)
+lemma corres_inst_add:
+  "corres_underlying sr nf nf' r (P and Q) (P' and Q') f g
+   \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (P' and Q') f g" .
+
 lemma corres_assert_opt_assume:
   assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g x)"
   assumes "\<And>s. Q s \<Longrightarrow> P' \<noteq> None"
