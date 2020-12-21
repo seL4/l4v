@@ -531,7 +531,7 @@ lemma (* fpu_thread_delete_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   by (wpsimp simp: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
 
-lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
+lemma finalise_cap_replaceable [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
         \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
