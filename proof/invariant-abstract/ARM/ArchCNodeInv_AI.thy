@@ -773,10 +773,6 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
 
 context Arch begin global_naming ARM
 
-crunch rvk_prog: unbind_from_sc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
-  (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp maybeM_inv ignore: set_tcb_obj_ref)
-
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
    finalise_cap a b

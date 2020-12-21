@@ -5575,26 +5575,15 @@ lemma fast_finalise_valid_sched:
    fast_finalise cap final
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (cases cap; clarsimp)
-      apply wpsimp
-     apply (wpsimp wp: cancel_all_ipc_valid_sched, intro conjI; clarsimp)
-    apply wpsimp
-      apply (strengthen invs_valid_idle invs_sym_refs, simp)
-      apply (wpsimp wp: unbind_maybe_notification_invs)
-     apply (wpsimp, clarsimp)
-   apply (wpsimp wp: cancel_ipc_valid_sched get_simple_ko_wp
-                     reply_remove_valid_sched gts_wp)
-   apply (simp add: pred_tcb_at_eq_commute tcb_at_kh_simps pred_map_def)
-  apply (wpsimp wp: set_sc_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift
-                          sched_context_unbind_all_tcbs_valid_sched)
-  apply (rename_tac sc n tp)
-   apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) sc"
-                          in hoare_strengthen_post[rotated])
-    apply (clarsimp simp: tcb_at_kh_simps[symmetric] pred_tcb_at_eq_commute)
-    apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], clarsimp)
-    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-   apply (wpsimp wp: sched_context_unbind_yield_from_invs)
-  apply (clarsimp split: if_splits)
-  apply (fastforce simp: invs_def valid_state_def cap_range_def dest!: valid_global_refsD)
+     apply wpsimp
+    apply (wpsimp wp: cancel_all_ipc_valid_sched, intro conjI; clarsimp)
+   apply wpsimp
+     apply (strengthen invs_valid_idle invs_sym_refs, simp)
+     apply (wpsimp wp: unbind_maybe_notification_invs)
+    apply (wpsimp, clarsimp)
+  apply (wpsimp wp: cancel_ipc_valid_sched get_simple_ko_wp
+                    reply_remove_valid_sched gts_wp)
+  apply (simp add: pred_tcb_at_eq_commute tcb_at_kh_simps pred_map_def)
   done
 
 context DetSchedSchedule_AI begin
@@ -6209,22 +6198,21 @@ lemma fast_finalise_cur_sc_chargeable:
    fast_finalise d e
    \<lbrace>\<lambda>_. cur_sc_chargeable :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (case_tac d; simp)
-      apply wpsimp
-     apply (wpsimp wp: cancel_all_ipc_cur_sc_chargeable)
-    apply (wpsimp wp: cancel_all_signals_cur_sc_chargeable unbind_maybe_notification_invs simp:)
-   subgoal for rcap
-   apply (wpsimp wp: cancel_ipc_cur_sc_chargeable reply_remove_cur_sc_chargeable)
-     apply (wpsimp wp: gts_wp get_simple_ko_wp)+
-   apply (subgoal_tac "st_tcb_at (ipc_queued_thread_state) x s")
-    apply (clarsimp simp: obj_at_kh_kheap_simps ct_in_state_kh_simp)
-   apply (intro conjI; intro allI impI; clarsimp simp: invs_def pred_map_simps)
-   apply (subgoal_tac "(rcap, TCBReply) \<in> state_refs_of s x")
-    apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2 tcb_st_refs_of_def
-                          pred_neg_def
-                   split: thread_state.splits if_splits)
-   apply (erule reply_tcb_not_idle_thread_helper, simp add: obj_at_def, clarsimp)
-   done
-  apply wpsimp
+     apply wpsimp
+    apply (wpsimp wp: cancel_all_ipc_cur_sc_chargeable)
+   apply (wpsimp wp: cancel_all_signals_cur_sc_chargeable unbind_maybe_notification_invs simp:)
+  subgoal for rcap
+    apply (wpsimp wp: cancel_ipc_cur_sc_chargeable reply_remove_cur_sc_chargeable)
+      apply (wpsimp wp: gts_wp get_simple_ko_wp)+
+    apply (subgoal_tac "st_tcb_at (ipc_queued_thread_state) x s")
+     apply (clarsimp simp: obj_at_kh_kheap_simps ct_in_state_kh_simp)
+     apply (intro conjI; intro allI impI; clarsimp simp: invs_def pred_map_simps)
+    apply (subgoal_tac "(rcap, TCBReply) \<in> state_refs_of s x")
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2 tcb_st_refs_of_def
+                           pred_neg_def
+                    split: thread_state.splits if_splits)
+    apply (erule reply_tcb_not_idle_thread_helper, simp add: obj_at_def, clarsimp)
+    done
   done
 
 lemma cap_delete_one_cur_sc_chargeable[wp]:
@@ -13284,11 +13272,10 @@ lemma fast_finalise_not_queued:
    fast_finalise cap final
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (cases cap; simp)
-      apply wpsimp
-     apply (wpsimp wp: cancel_all_ipc_not_queued)
-    apply (wpsimp wp: cancel_all_signals_not_queued unbind_maybe_notification_valid_objs)
-   apply (wpsimp wp: gts_wp get_simple_ko_wp)
-  apply wpsimp
+     apply wpsimp
+    apply (wpsimp wp: cancel_all_ipc_not_queued)
+   apply (wpsimp wp: cancel_all_signals_not_queued unbind_maybe_notification_valid_objs)
+  apply (wpsimp wp: gts_wp get_simple_ko_wp)
   done
 
 lemma cap_insert_check_cap_ext_valid[wp]:"
@@ -17245,11 +17232,8 @@ lemma fast_finalise_released_if_bound[wp]:
    fast_finalise cap final
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t\<rbrace>"
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
-   apply (wpsimp wp: reply_remove_released_if_bound_other gts_wp get_simple_ko_wp)
-   apply (fastforce simp: tcb_at_kh_simps pred_map_def pred_neg_def)
-  apply (rename_tac sc n)
-  apply (wpsimp wp: update_sched_context_released_if_bound_other)
-  apply (fastforce simp: invs_def valid_state_def cap_range_def dest!: valid_global_refsD)
+  apply (wpsimp wp: reply_remove_released_if_bound_other gts_wp get_simple_ko_wp)
+  apply (fastforce simp: tcb_at_kh_simps pred_map_def pred_neg_def)
   done
 
 lemma cap_delete_one_released_if_bound[wp]:
@@ -19182,12 +19166,7 @@ lemma fast_finalise_cur_sc_offset_ready[wp]:
   "fast_finalise cap final
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>" (is "_ \<lbrace>?Q\<rbrace>")
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
-   apply (wpsimp wp: gts_wp get_simple_ko_wp)
-  apply (wpsimp wp: valid_sched_wp)
-   apply (rule_tac Q="\<lambda>_. ?Q" in hoare_post_imp)
-    apply (clarsimp simp: active_sc_def vs_all_heap_simps heap_upd_def)
-   apply wpsimp
-  apply (clarsimp simp: active_sc_def vs_all_heap_simps heap_upd_def)
+  apply (wpsimp wp: gts_wp get_simple_ko_wp)
   done
 
 crunches deleting_irq_handler
@@ -20580,11 +20559,10 @@ abbreviation (input) cur_sc_in_release_q_imp_zero_consumed_pred where
 lemma fast_finalise_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "fast_finalise cap final
    \<lbrace>\<lambda>s :: det_state. cur_sc_in_release_q_imp_zero_consumed_pred s\<rbrace>"
-  apply  (cases cap; (clarsimp simp: when_def, intro conjI impI)?; (solves \<open>wpsimp\<close>)?)
-   apply (wpsimp wp: gts_wp' get_simple_ko_wp cancel_all_ipc_valid_sched cancel_all_ipc_invs)
-   apply (fastforce simp: not_in_release_q_def vs_all_heap_simps in_release_q_def pred_neg_def
-                          is_blocked_on_reply_def)
-  apply (wpsimp simp: sched_context_unbind_all_tcbs_def)
+  apply (cases cap; (clarsimp simp: when_def, intro conjI impI)?; (solves \<open>wpsimp\<close>)?)
+  apply (wpsimp wp: gts_wp' get_simple_ko_wp cancel_all_ipc_valid_sched cancel_all_ipc_invs)
+  apply (fastforce simp: not_in_release_q_def vs_all_heap_simps in_release_q_def pred_neg_def
+                         is_blocked_on_reply_def)
   done
 
 lemma cap_delete_one_cur_sc_in_release_q_imp_zero_consumed[wp]:

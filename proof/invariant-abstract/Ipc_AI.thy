@@ -1612,9 +1612,6 @@ crunch ct[wp]: do_ipc_transfer "cur_tcb :: 'state_ext state \<Rightarrow> bool"
 crunch zombies[wp]: do_ipc_transfer "zombies_final :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_zombies simp: crunch_simps ball_conj_distrib )
 
-crunch it[wp]: set_message_info "\<lambda>s::'state_ext state. P (idle_thread s)"
-  (wp: mapM_wp' set_message_info_it ignore: set_message_info)
-
 crunch it[wp]: do_ipc_transfer "\<lambda>s::'state_ext state. P (idle_thread s)"
   (wp: sched_context_update_consumed_it crunch_wps
     simp: crunch_simps zipWithM_x_mapM ignore: set_object)

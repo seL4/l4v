@@ -1449,9 +1449,11 @@ lemma cancel_all_signals_it[wp]:
 crunch it[wp]: unbind_notification "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps)
 
-crunch it[wp]: fast_finalise "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps
-    ignore: test_reschedule tcb_release_remove)
+crunches
+  unbind_notification, fast_finalise, sched_context_unbind_all_tcbs,
+  sched_context_unbind_yield_from, sched_context_unbind_reply, sched_context_unbind_ntfn
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma sym_refs_bound_yt_tcb_at:
   "sym_refs (state_refs_of s) \<Longrightarrow> bound_yt_tcb_at ((=) (Some sc)) t s \<Longrightarrow>

@@ -422,7 +422,10 @@ lemma sched_context_unbind_all_tcbs_caps_of_state[wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> sched_context_unbind_all_tcbs scref \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_all_tcbs_def)
 
-crunch caps_of_state[wp]: fast_finalise "\<lambda>s. P (caps_of_state s)"
+crunches
+  fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
+  sched_context_unbind_reply, sched_context_unbind_ntfn
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: maybeM_inv mapM_x_wp thread_set_caps_of_state_trivial get_simple_ko_inv assert_inv hoare_drop_imps
    simp: tcb_cap_cases_def crunch_simps get_blocking_object_def)
 
@@ -1107,13 +1110,13 @@ lemma cap_delete_one_cte_wp_at_preserved:
 interpretation delete_one_pre
   by (unfold_locales; wpsimp wp: cap_delete_one_cte_wp_at_preserved)
 
-crunches sched_context_unbind_all_tcbs, sched_context_unbind_yield_from
-  for cte_wp_at[wp]: "cte_wp_at P p"
-
 crunch cte_wp_at[wp]: cancel_ipc "cte_wp_at P p"
   (wp: thread_set_cte_wp_at_trivial ball_tcb_cap_casesI)
 
-crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
+crunches
+  fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
+  sched_context_unbind_reply, sched_context_unbind_ntfn
+  for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps ignore: set_tcb_obj_ref simp: crunch_simps)
 
 lemma (in Finalise_AI_1) finalise_cap_equal_cap[wp]:
@@ -1153,8 +1156,6 @@ end
 
 crunch (in Finalise_AI_2) invs[wp]: deleting_irq_handler "invs :: 'a state \<Rightarrow> bool"
   (wp: maybeM_inv)
-
-crunch tcb_at[wp]: unbind_notification "tcb_at t"
 
 
 locale Finalise_AI_3 = Finalise_AI_2 a b
@@ -1208,12 +1209,12 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
      prepare_thread_delete t
        \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
 
-crunches suspend, unbind_maybe_notification, unbind_notification
+crunches
+  suspend, unbind_maybe_notification, unbind_notification, deleting_irq_handler,
+  sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
+  sched_context_unbind_reply, sched_context_unbind_ntfn
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp maybeM_inv simp: crunch_simps)
-
-crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
 
 lemmas cancel_all_ipc_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF cancel_all_ipc_irq_node cancel_all_ipc_cte_wp_at]
