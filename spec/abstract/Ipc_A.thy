@@ -364,7 +364,7 @@ where
                         | _ \<Rightarrow> fail);
      reply \<leftarrow> (case reply_cap of
                  ReplyCap r _ \<Rightarrow> do
-                   tptr \<leftarrow> get_reply_obj_ref reply_tcb r;
+                   tptr \<leftarrow> get_reply_tcb r;
                    when (tptr \<noteq> None \<and> the tptr \<noteq> thread) $ cancel_ipc (the tptr);
                    return (Some r)
                  od

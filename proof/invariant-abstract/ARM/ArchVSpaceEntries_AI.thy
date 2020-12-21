@@ -457,7 +457,7 @@ crunch valid_pdpt_objs[wp]: sched_context_unbind_reply "valid_pdpt_objs"
 lemma fast_finalise_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> fast_finalise cap final \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   by (cases cap;
-      wpsimp simp: set_refills_def
+      wpsimp simp: set_refills_def o_def
                wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
 crunch valid_pdpt_objs[wp]: prepare_thread_delete "valid_pdpt_objs"
@@ -476,7 +476,7 @@ crunch valid_pdpt_objs[wp]: unbind_from_sc,suspend "valid_pdpt_objs"
 
 lemma finalise_cap_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> finalise_cap c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  by (cases c; wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
+  by (cases c; wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp simp: o_def)
 
 lemma preemption_point_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"

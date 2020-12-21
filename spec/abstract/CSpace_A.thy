@@ -321,8 +321,7 @@ where
   "fast_finalise NullCap                 final = return ()"
 | "fast_finalise (ReplyCap r _)          final =
       (when final $ do
-         reply \<leftarrow> get_reply r;
-         tptr \<leftarrow> return (reply_tcb reply);
+         tptr \<leftarrow> get_reply_tcb r;
          case tptr of
            None \<Rightarrow> return ()
          | Some tp \<Rightarrow> do
@@ -486,8 +485,7 @@ where
 | "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, NullCap)"
 | "finalise_cap (ReplyCap r _)           final =
       (liftM (K (NullCap, NullCap)) $ when final $ do
-         reply \<leftarrow> get_reply r;
-         tptr \<leftarrow> return (reply_tcb reply);
+         tptr \<leftarrow> get_reply_tcb r;
          case tptr of
            None \<Rightarrow> return ()
          | Some tp \<Rightarrow> do
