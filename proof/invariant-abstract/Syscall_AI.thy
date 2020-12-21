@@ -1572,6 +1572,7 @@ lemma complete_signal_state_refs_of:
   apply (rule hoare_pre)
    apply (wp get_simple_ko_wp | wpc | simp)+
   apply clarsimp
+  apply (rename_tac ntfn badge)
   apply (subgoal_tac " get_refs NTFNBound (ntfn_bound_tcb ntfn) \<union>
                        get_refs NTFNSchedContext (ntfn_sc ntfn) = state_refs_of s ntfnc")
    apply (clarsimp simp: if_apply_def2 split: if_splits if_split_asm)
