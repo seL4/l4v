@@ -4047,4 +4047,126 @@ lemma valid_replies'_lift:
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
+
+(* more on heap_path *)
+
+lemma heap_ls_next_takeWhile_append:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
+  \<Longrightarrow>takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
+   apply (prop_tac "distinct xs")
+    apply (erule heap_ls_distinct)
+   apply (frule in_list_decompose_takeWhile)
+   apply (prop_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
+    apply simp
+   apply (drule heap_path_non_nil_lookup_next)
+   apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
+   apply (prop_tac "np \<in> set xs")
+    apply (erule (2) heap_ls_next_in_list)
+   apply (frule in_list_decompose_takeWhile[where x=np])
+   apply (drule (1) distinct_inj_middle[where x=np and xa="takeWhile ((\<noteq>) np) xs" and ya="takeWhile ((\<noteq>) p) xs @ [p]"])
+   apply simp+
+  done
+
+(* RT FIXME: Move *)
+lemma takeWhile_neq_notin_same:
+  "x \<notin> set xs \<Longrightarrow> takeWhile ((\<noteq>) x) xs = xs"
+  using takeWhile_eq_all_conv by blast
+
+lemma heap_path_extend_takeWhile:
+  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p); hp p = Some np\<rbrakk>
+  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np)"
+  apply (case_tac "p \<in> set xs")
+  apply (subst heap_ls_next_takeWhile_append[where p=p and np=np and hp=hp]; simp)
+  apply (drule takeWhile_neq_notin_same, simp)
+  apply (drule (1) heap_path_end_unique, simp)
+  done
+
+lemma heap_ls_next_takeWhile_append_sym:
+  "\<lbrakk>heap_ls hp st xs; np \<in> set xs; st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
+  \<Longrightarrow>takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
+  apply (frule (3) heap_ls_prev_cases, simp)
+  apply (fastforce elim!: heap_ls_next_takeWhile_append)
+  done
+
+lemma heap_path_curtail_takeWhile:
+  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np);
+    st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
+  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p)"
+  apply (case_tac "np \<in> set xs")
+   apply (drule (4) heap_ls_next_takeWhile_append_sym)
+   apply simp
+  apply (drule takeWhile_neq_notin_same, simp)
+  apply (drule (1) heap_path_end_unique, simp)
+  done
+
+(* more on heap_path : end *)
+
+(* sym_heap *)
+
+lemma sym_refs_replyNext_replyPrev_sym:
+  "sym_refs (list_refs_of_replies' s') \<Longrightarrow>
+    replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
+  apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
+   apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
+    apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+   apply (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+                  split: option.split_asm)
+  apply (drule_tac tp=ReplyPrev and y=rp and x=rp' in sym_refsD[rotated])
+   apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+  by (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+              split: option.split_asm)
+
+lemma reply_sym_heap_Next_Prev:
+  "sym_refs (list_refs_of_replies' s') \<Longrightarrow> sym_heap (replyNexts_of s') (replyPrevs_of s')"
+  using sym_refs_replyNext_replyPrev_sym by clarsimp
+
+lemmas reply_sym_heap_Prev_Next
+  = sym_heap_symmetric[THEN iffD1, OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyNext_None
+  = sym_heap_None[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_None
+  = sym_heap_None[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Prevs_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Nexts_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Prev_Next]
+
+(* end: sym_heap *)
+
+(** sc_with_reply' **)
+
+definition sc_with_reply' where
+  "sc_with_reply' rp s' =
+     the_pred_option
+         (\<lambda>sc_ptr. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' sc_ptr) xs
+                     \<and> heap_path (replyPrevs_of s') (scReplies_of s' sc_ptr) (takeWhile ((\<noteq>) rp) xs) (Some rp))"
+
+lemma sc_with_reply'_SomeD:
+  "sc_with_reply' rp s' = Some scp \<Longrightarrow>
+     \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
+                     \<and> heap_path (replyPrevs_of s') (scReplies_of s' scp) (takeWhile ((\<noteq>) rp) xs) (Some rp)"
+  by (clarsimp simp: sc_with_reply'_def dest!: the_pred_option_SomeD)
+
+lemma sc_with_reply'_NoneD:
+  "sc_with_reply' rp s' = None \<Longrightarrow>
+     \<nexists>!scp. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
+                     \<and> heap_path (replyPrevs_of s') (scReplies_of s' scp) (takeWhile ((\<noteq>) rp) xs) (Some rp)"
+  by (clarsimp simp: sc_with_reply'_def the_pred_option_def split: if_split_asm)
+
 end
