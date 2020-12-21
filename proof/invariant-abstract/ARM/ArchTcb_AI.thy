@@ -172,7 +172,7 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
                 finalise_cap cap fin
               \<lbrace>\<lambda>rv s. \<forall>cp \<in> ran (caps_of_state s). P cp\<rbrace>"
   apply (cases cap; (solves \<open>wpsimp\<close>)?)
-    apply (wpsimp wp: hoare_drop_imps)
+    apply (wpsimp wp: hoare_drop_imps simp: o_def)
    apply (wpsimp wp: suspend_caps_of_state hoare_drop_imps hoare_vcg_all_lift)
    apply (fastforce simp: ran_def x split: if_splits)
   apply (wpsimp wp: delete_one_caps_of_state

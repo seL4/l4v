@@ -1324,7 +1324,6 @@ lemma finalise_cap_replaceable [Finalise_AI_asms]:
                             cancel_all_signals_unlive[unfolded o_def]))+)[1]
            \<comment> \<open>reply\<close>
            apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc | hammer)+)[1]
-                     apply (rename_tac tcb, rule_tac t=tcb and s= "the (reply_tcb reply)" in subst, simp)
                      apply (wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,
                              wp (once) cancel_ipc_unlive_reply_receive[unfolded o_def], hammer)
                     apply ((wpsimp wp: gts_wp get_simple_ko_wp | hammer | wp (once) hoare_drop_imps, rule hoare_vcg_conj_lift,
@@ -1607,8 +1606,8 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
   supply if_cong[cong]
-  apply (case_tac a,simp_all)
-  apply (wpsimp wp: hoare_drop_imps| clarsimp)+
+  apply (case_tac a; simp)
+         apply (wpsimp wp: hoare_drop_imps simp: o_def)+
   done
 
 lemmas (*arch_finalise_cte_irq_node *) [wp,Finalise_AI_asms]

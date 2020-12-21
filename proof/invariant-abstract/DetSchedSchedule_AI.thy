@@ -18081,9 +18081,9 @@ lemma receive_ipc_scheduler_act_sane[wp]:
    receive_ipc thread cap is_blocking reply_cap
    \<lbrace>\<lambda>_. scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (wpsimp simp: receive_ipc_def wp: hoare_drop_imp possible_switch_to_scheduler_act_sane' gts_wp)
-            apply (rule_tac Q="\<lambda>_. scheduler_act_sane and ct_not_blocked" in hoare_strengthen_post[rotated])
-             apply (clarsimp simp: ct_in_state_def tcb_at_kh_simps vs_all_heap_simps)
-            apply (wpsimp simp: send_ipc_def wp: hoare_drop_imp hoare_vcg_all_lift get_sk_obj_ref_wp)+
+             apply (rule_tac Q="\<lambda>_. scheduler_act_sane and ct_not_blocked" in hoare_strengthen_post[rotated])
+              apply (clarsimp simp: ct_in_state_def tcb_at_kh_simps vs_all_heap_simps)
+             apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift get_simple_ko_wp)+
   done
 
 lemma receive_signal_scheduler_act_sane[wp]:

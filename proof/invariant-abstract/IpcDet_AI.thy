@@ -225,7 +225,7 @@ definition receive_ipc_preamble ::
   "receive_ipc_preamble reply t \<equiv>
     case reply of NullCap \<Rightarrow> return None
                 | ReplyCap r _ \<Rightarrow>
-                    do tptr <- get_reply_obj_ref reply_tcb r;
+                    do tptr <- get_reply_tcb r;
                        when (tptr \<noteq> None \<and> the tptr \<noteq> t) $ cancel_ipc (the tptr);
                        return (Some r)
                     od
@@ -238,7 +238,7 @@ crunches receive_ipc_preamble
 lemma receive_ipc_preamble_st_tcb_at:
   "\<lbrace>\<lambda>s. P (st_tcb_at P' t s)\<rbrace> receive_ipc_preamble reply t \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
   by (wpsimp simp: receive_ipc_preamble_def
-               wp: cancel_ipc_st_tcb_at hoare_vcg_if_lift2 get_sk_obj_ref_wp)
+               wp: cancel_ipc_st_tcb_at hoare_vcg_if_lift2 get_simple_ko_wp)
 
 global_interpretation set_tcb_obj_ref: non_reply_op "set_tcb_obj_ref f ref new"
   apply unfold_locales
@@ -770,7 +770,7 @@ lemma receive_ipc_preamble_rv:
   unfolding receive_ipc_preamble_def
   apply (cases reply; clarsimp intro!: hoare_weaken_pre[OF return_wp])
   apply (thin_tac _, rename_tac reply_ptr R)
-  apply (rule hoare_seq_ext[OF _ get_sk_obj_ref_sp]; simp)
+  apply (rule hoare_seq_ext[OF _ grt_sp]; simp?)
   apply (rename_tac t_opt)
   apply (case_tac t_opt;
          clarsimp intro!: hoare_weaken_pre[OF return_wp] reply_tcb_reply_at_None_imp_reply_sc_reply_at_None'
