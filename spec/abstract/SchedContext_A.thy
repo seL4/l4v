@@ -102,6 +102,32 @@ where
   "set_refills sc_ptr refills = set_sc_obj_ref sc_refills_update sc_ptr refills"
 
 definition
+  update_refill_hd :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_refill_hd sc_ptr f = do
+     refills \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (f (hd refills) # (tl refills))
+   od"
+
+definition
+  set_refill_hd :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_refill_hd sc_ptr new = update_refill_hd sc_ptr (\<lambda>_. new)"
+
+definition
+  update_refill_tl :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_refill_tl sc_ptr f = do
+     refills \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (butlast refills @ [f (last refills)])
+   od"
+
+definition
+  set_refill_tl :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "set_refill_tl sc_ptr new = update_refill_tl sc_ptr (\<lambda>_. new)"
+
+definition
   maybe_add_empty_tail :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "maybe_add_empty_tail sc_ptr = do
@@ -152,31 +178,52 @@ where
                                       r_amount = r_amount (last original) + r_amount new \<rparr>
                       in (butlast original) @ [new_last])"
 
-fun
-  refills_merge_prefix :: "refill list \<Rightarrow> refill list"
+definition
+  refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
 where
-  "refills_merge_prefix [] = []"
-| "refills_merge_prefix [r] = [r]"
-| "refills_merge_prefix (r1 # r2 # rs) =
-     (if can_merge_refill r1 r2
-      then refills_merge_prefix (merge_refill r1 r2 # rs)
-      else r1 # r2 # rs)"
+  "refill_pop_head sc_ptr \<equiv> do
+     refills \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (tl refills);
+     return (hd refills)
+   od"
+
+definition
+  refill_head_overlapping :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
+where
+  "refill_head_overlapping sc_ptr \<equiv> do {
+    sc \<leftarrow> read_sched_context sc_ptr;
+    oreturn (length (sc_refills sc) > 1
+             \<and> r_time (hd (tl (sc_refills sc))) \<le> r_time (refill_hd sc) + r_amount (refill_hd sc))
+  }"
+
+definition
+  merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "merge_refills sc_ptr \<equiv> do
+     head \<leftarrow> refill_pop_head sc_ptr;
+     refills' \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (merge_refill head (hd refills') # (tl refills'))
+   od"
+
+definition
+  refill_head_overlapping_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "refill_head_overlapping_loop sc_ptr
+     \<equiv> whileLoop (\<lambda>_ s. the ((refill_head_overlapping sc_ptr) s)) (\<lambda>_. merge_refills sc_ptr) ()"
 
 definition
   refill_unblock_check :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_unblock_check sc_ptr = do
+  "refill_unblock_check sc_ptr \<equiv> do
     robin \<leftarrow> is_round_robin sc_ptr;
-    ct \<leftarrow> gets cur_time;
-    refills \<leftarrow> get_refills sc_ptr;
-
     ready \<leftarrow> get_sc_refill_ready sc_ptr;
     when (ready \<and> \<not>robin) $ do
-         modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-         refills' \<leftarrow> return $ refills_merge_prefix ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>
-                                                    # tl refills);
-         set_refills sc_ptr refills'
-         od
+      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+      ct \<leftarrow> gets cur_time;
+      refills \<leftarrow> get_refills sc_ptr;
+      set_refill_hd sc_ptr ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>);
+      refill_head_overlapping_loop sc_ptr
+    od
   od"
 
 definition
@@ -190,17 +237,31 @@ where
                         \<lparr>r_time = r_time (hd (tl refills)), r_amount = r_amount (hd (tl refills)) + usage\<rparr>]
    od"
 
-fun
-  MIN_BUDGET_merge :: "refill list \<Rightarrow> refill list"
+definition
+  head_insufficient :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
 where
-  "MIN_BUDGET_merge [] = []"
-| "MIN_BUDGET_merge [r] = [r]"
-| "MIN_BUDGET_merge (r0 # r1 # rs)
-    = (if r_amount r0 < MIN_BUDGET
-       then let new_hd = \<lparr>r_time = r_time r1 - r_amount r0,
-                          r_amount = r_amount r0 + r_amount r1\<rparr>
-            in MIN_BUDGET_merge (new_hd # rs)
-       else r0 # r1 # rs)"
+  "head_insufficient sc_ptr \<equiv>  do {
+    sc \<leftarrow> read_sched_context sc_ptr;
+    oreturn (r_amount (hd (sc_refills sc)) < MIN_BUDGET)
+  }"
+
+definition
+  non_overlapping_merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "non_overlapping_merge_refills sc_ptr \<equiv> do
+     old_head \<leftarrow> refill_pop_head sc_ptr;
+     refills' \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (\<lparr>r_time = r_time (hd refills') - r_amount old_head,
+                          r_amount = r_amount (hd refills') + r_amount old_head\<rparr>
+                        # tl refills')
+   od"
+
+definition
+  head_insufficient_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "head_insufficient_loop sc_ptr
+     \<equiv> whileLoop (\<lambda>_ s. the ((head_insufficient sc_ptr) s))
+                  (\<lambda>_. non_overlapping_merge_refills sc_ptr) ()"
 
 definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -221,8 +282,8 @@ where
       adjusted_hd \<leftarrow> return \<lparr>r_time = r_time (hd refills) + usage',
                              r_amount = r_amount (hd refills) - usage'\<rparr>;
       full \<leftarrow> refill_full sc_ptr;
-      refills' \<leftarrow> return $ schedule_used full (adjusted_hd # (tl refills)) used;
-      set_refills sc_ptr (refills_merge_prefix (MIN_BUDGET_merge refills'))
+      set_refills sc_ptr $ schedule_used full (adjusted_hd # (tl refills)) used;
+      head_insufficient_loop sc_ptr
     od
 
    od"
