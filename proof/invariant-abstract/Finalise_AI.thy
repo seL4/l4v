@@ -118,7 +118,7 @@ locale Finalise_AI_1 =
     "\<And> S t cap.
     \<lbrace>no_cap_to_obj_with_diff_ref cap S :: 'a state \<Rightarrow> bool\<rbrace>
        suspend t
-     \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"  
+     \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
   assumes deleting_irq_handler_cte_preserved:
   "\<And> P p irq.\<lbrakk> \<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap \<rbrakk>
     \<Longrightarrow> \<lbrace>cte_wp_at P p\<rbrace>
