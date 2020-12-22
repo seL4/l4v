@@ -1032,8 +1032,9 @@ lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_pre)
   apply (wp empty_slot_invs get_cap_wp fast_finalise_invs)
-  apply (clarsimp; intro conjI; simp?)
-   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
+  apply (clarsimp simp del: split_paired_Ex)
+  apply (intro conjI; fastforce?)
+  apply (drule cte_wp_at_valid_objs_valid_cap; fastforce)
   done
 
 end

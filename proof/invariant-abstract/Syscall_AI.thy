@@ -1588,7 +1588,9 @@ lemma do_nbrecv_failed_transfer_state_refs_of[wp]:
   done
 
 lemma fast_finalise_sym_refs:
-  "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s)\<rbrace>
+   fast_finalise cap final
+   \<lbrace>\<lambda>y s. sym_refs (state_refs_of s)\<rbrace>"
   by (strengthen invs_sym_refs, rule fast_finalise_invs)
 
 crunch state_refs_of[wp]: empty_slot "\<lambda>s. P (state_refs_of s)"
