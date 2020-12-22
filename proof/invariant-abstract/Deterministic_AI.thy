@@ -4064,7 +4064,7 @@ crunch valid_list[wp]: do_fault_transfer valid_list
   (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
 
 crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
-  (wp: mapM_wp hoare_drop_imp)
+  (wp: mapM_wp hoare_drop_imp whileLoop_wp')
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
@@ -4089,7 +4089,11 @@ crunches set_refills,refill_size
 lemma refill_budget_check_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding refill_budget_check_def
-  by (wpsimp simp: is_round_robin_def)
+  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps
+              simp: is_round_robin_def merge_refills_def refill_pop_head_def
+                    head_insufficient_loop_def refill_head_overlapping_loop_def
+                    non_overlapping_merge_refills_def)
+  done
 
 lemma refill_budget_check_round_robin_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4168,7 +4172,7 @@ crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
 
 crunch valid_list[wp]: sched_context_bind_ntfn valid_list
 crunch valid_list[wp]: sched_context_yield_to valid_list
-  (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
+  (wp: hoare_drop_imps crunch_wps whileLoop_wp' simp: crunch_simps)
 crunch valid_list[wp]: invoke_sched_context valid_list
 
 crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)

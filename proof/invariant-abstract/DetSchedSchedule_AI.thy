@@ -3224,7 +3224,7 @@ for ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
 and release_queue[wp]: "\<lambda>s::det_state. P (release_queue s)"
 and cur_domain[wp]: "\<lambda>s::det_state. P (cur_domain s)"
 and idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps whileLoop_wp')
 
 lemma pred_map2_heap_upd_no_change[simp]:
   assumes "\<And>v. P (f v) \<longleftrightarrow> P v"
@@ -6928,14 +6928,14 @@ lemma valid_refills_consumed_time_update[iff]:
 
 lemma sc_valid_refills_unat_sum_list_at_most_unat_max_word:
   "\<lbrakk>sc_valid_refills sc; sc_period sc \<noteq> 0; MIN_BUDGET \<le> sc_budget sc\<rbrakk>
-   \<Longrightarrow> sum_list (map unat (map r_amount (sc_refills sc))) \<le> unat max_time"
+   \<Longrightarrow> refills_unat_sum (sc_refills sc) \<le> unat max_time"
   apply (rule unat_sum_list_at_most_unat_max_word)
       apply (clarsimp simp: sc_valid_refills_def rr_valid_refills_def split: if_splits)+
   done
 
 lemma valid_refills_refills_unat_sum_equals_budget:
   "\<lbrakk>sc_valid_refills sc; sc_period sc \<noteq> 0; MIN_BUDGET \<le> sc_budget sc\<rbrakk>
-   \<Longrightarrow> sum_list (map unat (map r_amount (sc_refills sc))) = unat (sc_budget sc)"
+   \<Longrightarrow> refills_unat_sum (sc_refills sc) = unat (sc_budget sc)"
   supply map_map [simp del]
   apply (clarsimp simp: sc_valid_refills_def rr_valid_refills_def split: if_splits)
    apply (rule_tac s="refills_sum (sc_refills sc)" and t="sc_budget sc" in subst; assumption?)
@@ -7049,8 +7049,10 @@ lemma refill_unblock_check_valid_sched_misc[wp]:
           (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: hoare_drop_imp)
+  unfolding refill_unblock_check_def merge_refills_def refill_pop_head_def
+            refill_head_overlapping_loop_def
+  apply (wpsimp wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemma refill_update_valid_sched_misc[wp]:
   "refill_update sc_ptr period budget mrefills
@@ -7140,8 +7142,10 @@ lemma sc_refills_update_refill_ready_sc[wp]:
 
 lemma refill_unblock_check_is_active_sc_at[wp]:
   "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. Q (is_active_sc scp s)\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_def set_refills_def)
-  by wpsimp
+  apply (clarsimp simp: refill_unblock_check_def set_refills_def merge_refills_def
+                        refill_pop_head_def refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps)
+  done
 
 lemma refill_update_is_active_sc[wp]:
   "\<lbrace>\<lambda>s. if scp = sc_ptr
@@ -7188,73 +7192,949 @@ lemma refill_new_is_refill_sufficient[wp]:
                  split: if_splits)
   done
 
-lemma refills_mege_prefix_r_amount_hd:
-  "sum_list (map unat (map r_amount (a # ls))) \<le> unat max_time
-   \<Longrightarrow> r_amount a \<le> r_amount (hd (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)))"
-  supply map_map[simp del]
-  apply (induct ls arbitrary: a)
-   apply force
-  apply (rename_tac aa)
-  apply simp
-  apply (intro impI)
-  apply (drule_tac x="merge_refill (aa\<lparr>r_time := new_time\<rparr>) a" in meta_spec)
-  apply (simp add: can_merge_refill_def merge_refill_def word_le_nat_alt)
-  apply (subgoal_tac "unat (r_amount a + r_amount aa) = unat (r_amount a) + unat (r_amount aa)")
-   apply linarith
-  apply (rule unat_add_lem', simp add: max_word_def)
+lemma refill_head_overlapping_true_imp_length_at_least_two:
+  "\<lbrakk>the (fun_of_m (refill_head_overlapping sc_ptr) s); pred_map \<top> (sc_refill_cfgs_of s) sc_ptr\<rbrakk>
+   \<Longrightarrow> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
+  apply (clarsimp simp: fun_of_m_def refill_head_overlapping_def vs_all_heap_simps)
+  apply (fastforce simp: bind_def get_sched_context_def get_object_def return_def gets_def get_def
+                  split: if_splits)
   done
 
-lemma refills_mege_prefix_r_amount_hd_simple:
-  "\<lbrakk>refills \<noteq> []; sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> r_amount (hd refills) \<le> r_amount (hd (refills_merge_prefix refills))"
-  apply (cases refills)
-   apply simp
+lemma refill_head_overlapping_true_imp_refills_overlapping:
+  "pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<Longrightarrow> the (fun_of_m (refill_head_overlapping sc_ptr) s)
+       = pred_map (\<lambda>cfg. r_time (hd (tl (scrc_refills cfg)))
+                       \<le> r_time (hd (scrc_refills cfg)) + r_amount (hd (scrc_refills cfg)))
+                  (sc_refill_cfgs_of s) sc_ptr"
+  apply (clarsimp simp: fun_of_m_def refill_head_overlapping_def vs_all_heap_simps)
+  apply (clarsimp simp: bind_def get_sched_context_def get_object_def return_def gets_def get_def
+                 split: if_splits)
+  apply (fastforce simp: the_equality)
+  done
+
+method merge_refills_simple
+  = (clarsimp simp: merge_refills_def refill_pop_head_def merge_refill_def
+     , wpsimp wp: set_refills_wp get_refills_wp
+     , (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps pred_map_simps refills_sum_def)?)
+
+lemma merge_refills_refills_sum:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg)
+                 (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  apply (case_tac list; clarsimp simp: add_ac)
+  done
+
+lemma refill_head_overlapping_loop_refills_sum:
+  "refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg)
+                 (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply (wpsimp wp: merge_refills_refills_sum)
+  apply (fastforce dest: refill_head_overlapping_true_imp_length_at_least_two
+                   simp: vs_all_heap_simps)
+  done
+
+lemma merge_refills_refills_unat_sum:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; simp?)
   apply (rename_tac a list)
-  apply (simp only: )
-  apply (insert refills_mege_prefix_r_amount_hd)
-  apply (drule_tac x=a in meta_spec)
-  apply (drule_tac x=list in meta_spec)
-  apply (drule_tac x="r_time a" in meta_spec)
+  apply (subst unat_add_lem')
+   apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+    apply (fastforce intro: member_le_sum_list)
+   apply (clarsimp simp: max_word_def)
+  apply (case_tac list; simp)
+  done
+
+lemma merge_refills_hd_r_time:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. r_time (scrc_refill_hd cfg) \<le> P (cur_time s))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. r_time (scrc_refill_hd cfg) \<le> P (cur_time s))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  done
+
+lemma refill_head_overlapping_loop_hd_r_time:
+  "refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. r_time (hd (scrc_refills cfg)) \<le> P (cur_time s))
+                 (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply (wpsimp wp: merge_refills_hd_r_time)
+  apply (fastforce dest: refill_head_overlapping_true_imp_length_at_least_two
+                   simp: vs_all_heap_simps)
+  done
+
+lemma merge_refills_hd_r_time_unat:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) \<le> P (cur_time s))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) \<le> P (cur_time s))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  done
+
+lemma refill_head_overlapping_loop_hd_r_time_unat:
+  "refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg))) \<le> P (cur_time s))
+                             (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply (wpsimp wp: merge_refills_hd_r_time_unat)
+  apply (fastforce dest: refill_head_overlapping_true_imp_length_at_least_two
+                   simp: vs_all_heap_simps)
+  done
+
+lemma merge_refills_is_refill_ready:
+  "merge_refills sc_ptr \<lbrace>is_refill_ready sc_ptr'\<rbrace>"
+  apply merge_refills_simple
+  apply (clarsimp simp: refill_ready_def)
+  done
+
+lemma refill_head_overlapping_is_refill_ready:
+  "refill_head_overlapping_loop sc_ptr \<lbrace>is_refill_ready sc_ptr'\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply (wpsimp wp: merge_refills_is_refill_ready)
+  done
+
+lemma merge_refills_hd_r_amount:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. a \<le> r_amount (scrc_refill_hd cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. a \<le> r_amount (scrc_refill_hd cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def pred_map_simps)
+  apply (rename_tac sc n)
+  apply (clarsimp simp: word_le_nat_alt)
+  apply (subst unat_add_lem')
+   apply (case_tac "sc_refills sc"; clarsimp?)
+   apply (rename_tac list)
+   apply (clarsimp simp: max_word_def)
+   apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+    apply (fastforce intro: member_le_sum_list)
+   apply (clarsimp simp: max_word_def)
+  apply fastforce
+  done
+
+lemma refill_head_overlapping_loop_hd_r_amount:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. a \<le> r_amount (hd (scrc_refills cfg))) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. a \<le> r_amount (hd (scrc_refills cfg))) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (wpsimp wp: merge_refills_hd_r_amount)
+   apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                     simp: vs_all_heap_simps)
+  apply (wpsimp wp: merge_refills_refills_unat_sum)
+  apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                    simp: vs_all_heap_simps)
+
+  done
+
+lemma merge_refills_no_overflow_helper:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + refills_unat_sum (scrc_refills cfg)
+                        \<le> unat max_time)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + refills_unat_sum (scrc_refills cfg)
+                          \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def pred_map_simps)
+  apply (subst unat_add_lem')
+   apply (case_tac "sc_refills sc"; clarsimp)
+   apply (case_tac list; clarsimp?)
+   apply (clarsimp simp: max_word_def)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  apply (case_tac list; clarsimp?)
+  done
+
+lemma merge_refills_no_overflow:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + refills_unat_sum (scrc_refills cfg)
+                           \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (clarsimp simp: obj_at_def refills_unat_sum_def pred_map_simps)
+  apply (rename_tac sc n)
+  apply (rule_tac left="[\<lparr>r_time = r_time (refill_hd sc),
+                          r_amount = r_amount (hd (tl (sc_refills sc))) + r_amount (refill_hd sc)\<rparr>]"
+              and right="tl (tl (sc_refills sc))"
+               in no_overflow_append)
+    apply (clarsimp simp: no_overflow_def)
+    apply (subst unat_add_lem')
+     apply (case_tac "sc_refills sc"; clarsimp)
+     apply (rename_tac list)
+     apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+      apply (fastforce intro: member_le_sum_list)
+     apply (clarsimp simp: max_word_def)
+    apply (case_tac "sc_refills sc"; clarsimp)
+    apply (case_tac list; clarsimp?)
+   apply (blast intro: no_overflow_sublist)
   apply simp
+  done
+
+lemma refill_head_overlapping_loop_no_overflow:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg)))
+                           + refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>r s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (wpsimp wp: merge_refills_no_overflow_helper merge_refills_no_overflow)
+  apply (fastforce dest: refill_head_overlapping_true_imp_length_at_least_two
+                   simp: vs_all_heap_simps)
+  done
+
+lemma merge_refills_ordered_disjoint:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply merge_refills_simple
+  apply (rename_tac sc n)
+  apply (rule_tac left="[\<lparr>r_time = r_time (refill_hd sc),
+                          r_amount = r_amount (hd (tl (sc_refills sc))) + r_amount (refill_hd sc)\<rparr>]"
+              and right="tl (tl (sc_refills sc))"
+               in ordered_disjoint_append
+         ; fastforce?)
+   apply (blast intro: ordered_disjoint_sublist)
+  apply clarsimp
+  apply (subst unat_add_lem')
+   apply (clarsimp simp: max_word_def refills_unat_sum_def)
+   apply (case_tac "sc_refills sc"; clarsimp)
+   apply (rename_tac list)
+   apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+    apply (fastforce intro: member_le_sum_list
+                      simp: tl_Nil)
+   apply fastforce
+  apply (rule_tac j="unat (r_time (hd (tl (sc_refills sc))))
+                     + unat (r_amount (hd (tl (sc_refills sc))))"
+               in le_trans)
+   apply (clarsimp simp: ordered_disjoint_def)
+   apply (drule_tac x=0 in spec)
+   apply clarsimp
+   apply (metis hd_conv_nth length_greater_0_conv length_ineq_not_Nil(2) non_empty_tail_length
+                nth_tl tail_nonempty_length)
+  apply (clarsimp simp: ordered_disjoint_def)
+  apply (metis (no_types, lifting) hd_conv_nth length_greater_0_conv length_ineq_not_Nil(1)
+               length_tl nth_tl numeral_nat(7) tail_nonempty_length)
+  done
+
+lemma refill_head_overlapping_loop_ordered_disjoint:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (wpsimp wp: merge_refills_refills_unat_sum merge_refills_ordered_disjoint)
+  apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                    simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  done
+
+lemma refill_head_overlapping_loop_ordered_disjoint_strong:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (tl (scrc_refills cfg))) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + refills_unat_sum (scrc_refills cfg)
+                           \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre", rotated 3]
+         ; fastforce?)
+   defer
+   apply (case_tac "\<not> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr")
+    apply (clarsimp simp: vs_all_heap_simps)
+    apply (rename_tac sc n)
+    apply (case_tac "length (sc_refills sc) = 0 \<or> length (sc_refills sc) = 1")
+     apply (clarsimp simp: ordered_disjoint_def)
+    apply linarith
+   apply clarsimp
+   apply (frule refill_head_overlapping_true_imp_refills_overlapping[THEN arg_cong_Not, THEN iffD1])
+    apply clarsimp
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (rename_tac sc n)
+   apply (case_tac "sc_refills sc")
+    apply (clarsimp simp: ordered_disjoint_def)
+   apply clarsimp
+   apply (rename_tac a list)
+   apply (rule_tac left="[a]" and right=list in ordered_disjoint_append)
+      apply (clarsimp simp: ordered_disjoint_def)
+     apply simp
+    apply (clarsimp simp: word_le_nat_alt)
+    apply (subst unat_add_lem'[symmetric])
+     apply (clarsimp simp: refills_unat_sum_def max_word_def)
+    apply (subst unat_add_lem')
+     apply (clarsimp simp: max_word_def refills_unat_sum_def)
+    apply (subst unat_add_lem'[symmetric])
+     apply (clarsimp simp: refills_unat_sum_def max_word_def)
+    apply linarith
+   apply simp
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+     defer
+     apply (wpsimp wp: merge_refills_no_overflow)
+     apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                       simp: vs_all_heap_simps)
+    apply (wpsimp wp: merge_refills_no_overflow_helper)
+    apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                      simp: vs_all_heap_simps)
+   apply (wpsimp wp: merge_refills_refills_unat_sum)
+   apply (fastforce intro: refill_head_overlapping_true_imp_length_at_least_two
+                     simp: vs_all_heap_simps)
+  apply (clarsimp simp: vs_all_heap_simps)
+  apply (wpsimp simp: merge_refills_def refill_pop_head_def
+                  wp: set_refills_wp get_refills_wp)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+  apply (blast dest: ordered_disjoint_sublist)
+  done
+
+lemma refill_head_overlapping_loop_window:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg)))
+                           + refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply merge_refills_simple
+  apply (clarsimp simp: window_def last_tl tl_Nil)
+  done
+
+lemma refill_head_overlapping_loop_length:
+  "refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply merge_refills_simple
+  apply (frule refill_head_overlapping_true_imp_length_at_least_two)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps pred_map_simps)
+  done
+
+lemma head_insufficient_helper:
+  "pred_map \<top> (sc_refill_cfgs_of s) sc_ptr
+   \<Longrightarrow> \<not> the (fun_of_m (head_insufficient sc_ptr) s)
+       = pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (scrc_refill_hd cfg))
+                  (sc_refill_cfgs_of s) sc_ptr"
+  apply (clarsimp simp: fun_of_m_def vs_all_heap_simps head_insufficient_def get_refills_def
+                        get_sched_context_def get_object_def gets_def return_def get_def bind_def)
+  apply (fastforce simp: the_equality)
+  done
+
+method non_overlapping_merge_refills_simple
+  = (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def merge_refill_def
+     , wpsimp wp: set_refills_wp get_refills_wp
+     , (clarsimp simp: vs_all_heap_simps obj_at_def)?)
+
+lemma non_overlapping_merge_refills_nonempty_refills:
+  "non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  done
+
+lemma head_insufficient_loop_nonempty_refills:
+  "head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: whileLoop_wp'; fastforce?)
+  apply (wpsimp wp: non_overlapping_merge_refills_nonempty_refills)
+  done
+
+lemma head_insufficient_length_at_least_two:
+  "\<lbrakk>pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+             (sc_refill_cfgs_of s) sc_ptr;
+    the (fun_of_m (head_insufficient sc_ptr) s)\<rbrakk>
+   \<Longrightarrow> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
+  apply (prop_tac "\<not> pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (scrc_refill_hd cfg))
+                              (sc_refill_cfgs_of s) sc_ptr")
+   using head_insufficient_helper apply (fastforce simp: vs_all_heap_simps refills_unat_sum_def)
+  apply (clarsimp simp: vs_all_heap_simps refills_unat_sum_def)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; clarsimp simp: word_le_nat_alt)
+  done
+
+lemma non_overlapping_merge_refills_refills_unat_sum:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; simp?)
+  apply (rename_tac list)
+  apply (subst unat_add_lem')
+   apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+    apply (fastforce intro: member_le_sum_list)
+   apply (clarsimp simp: max_word_def)
+  apply (case_tac list; simp)
+  done
+
+lemma non_overlapping_merge_refills_refills_unat_sum_lower_bound:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (subst unat_add_lem')
+   apply (case_tac "sc_refills sc"; clarsimp)
+   apply (clarsimp simp: max_word_def)
+   apply (case_tac list; clarsimp)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  apply (clarsimp simp: max_word_def)
+  apply (case_tac list; clarsimp)
+  done
+
+lemma head_insufficient_loop_refills_sum:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    defer
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def merge_refill_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (frule head_insufficient_length_at_least_two, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps pred_map_simps)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  apply (rename_tac list)
+  apply (case_tac list; clarsimp)
+  apply (clarsimp simp: add_ac)
+  done
+
+lemma non_overlapping_merge_refills_refills_unat_sum_equals_budget:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; simp?)
+  apply (rename_tac list)
+  apply (prop_tac "unat (sc_budget sc) \<le> unat max_time", fastforce)
+  apply (subst unat_add_lem')
+   apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
+    apply (fastforce intro: member_le_sum_list)
+   apply (clarsimp simp: max_word_def)
+  apply (case_tac list; simp)
+  done
+
+lemma head_insufficient_loop_refills_unat_sum_equals_budget:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_equals_budget)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def merge_refill_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (frule head_insufficient_length_at_least_two, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps pred_map_simps)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  apply (rename_tac list)
+  apply (case_tac list; clarsimp)
+  apply (clarsimp simp: add_ac refills_unat_sum_def)
+  apply (subst unat_add_lem')
+   apply (prop_tac "unat (sc_budget sc) \<le> unat max_time", fastforce)
+   apply (clarsimp simp: max_word_def)
+  apply presburger
+  done
+
+lemma non_overlapping_merge_refills_ordered_disjoint_helper:
+  "\<lbrakk>ordered_disjoint (a # r1 # rs); sum_list (map unat (map r_amount (a # r1 # rs))) \<le> unat max_time\<rbrakk>
+   \<Longrightarrow> ordered_disjoint (\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr> # rs)"
+  apply (rule_tac left="[\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr>]"
+              and right="rs"
+               in ordered_disjoint_append)
+     apply (clarsimp simp: ordered_disjoint_def)
+    apply (meson ordered_disjoint_tail)
+   apply clarsimp
+   apply (subst unat_sub, clarsimp simp: word_le_nat_alt)
+    apply (clarsimp simp: ordered_disjoint_def)
+    apply (drule_tac x=0 in spec)
+    apply fastforce
+   apply (prop_tac "unat (r_amount a) \<le> unat (r_time r1)")
+    apply (fastforce simp: ordered_disjoint_def)
+   apply (subst unat_add_lem', clarsimp simp: max_word_def)
+   apply (clarsimp simp: ordered_disjoint_def)
+   apply (drule_tac x=1 in spec)
+   apply (simp add: hd_conv_nth)
+  apply simp
+  done
+
+lemma non_overlapping_merge_refills_ordered_disjoint:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; (solves simp)?)
+  apply (rename_tac list)
+  apply (case_tac list; (solves simp)?)
+  apply (fastforce dest: non_overlapping_merge_refills_ordered_disjoint_helper
+                   simp: add_ac)
+  done
+
+lemma head_insufficient_loop_ordered_disjoint:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    defer
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (wpsimp wp: non_overlapping_merge_refills_ordered_disjoint)
+  done
+
+lemma head_time_plus_budget_bounded:
+  "\<lbrakk>no_overflow refills; ordered_disjoint refills\<rbrakk>
+   \<Longrightarrow> unat (r_time (hd refills)) + sum_list (map unat (map r_amount refills)) \<le> unat max_time"
+  supply map_map[simp del]
+  apply (induct refills rule: length_induct)
+  apply (rename_tac xs)
+  apply (case_tac xs; simp)
+  apply (rename_tac xs a list)
+  apply (case_tac list)
+   apply (fastforce simp: no_overflow_def)
+  apply (drule_tac x=list in spec)
+  apply (elim impE; fastforce?)
+    apply (fastforce intro: no_overflow_tail)
+   apply (fastforce intro: ordered_disjoint_tail)
+  apply (rule_tac j="unat (r_time (hd list)) + sum_list (map unat (map r_amount list))" in le_trans)
+   apply (fastforce simp: ordered_disjoint_def)
+  apply assumption
+  done
+
+lemma non_overlapping_merge_refills_no_overflow_helper:
+  "\<lbrakk>no_overflow (a # r1 # rs); ordered_disjoint (a # r1 # rs)\<rbrakk>
+   \<Longrightarrow> no_overflow (\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr> # rs)"
+  apply (frule (1) head_time_plus_budget_bounded)
+  apply (rule_tac left="[\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr>]"
+              and right="rs"
+               in no_overflow_append)
+    apply (clarsimp simp: no_overflow_def)
+    apply (prop_tac "unat (r_amount a) \<le> unat (r_time r1)")
+     apply (fastforce simp: ordered_disjoint_def)
+    apply (subst unat_sub)
+     apply (clarsimp simp: word_le_nat_alt)
+    apply (subst unat_add_lem', clarsimp simp: max_word_def)
+    apply linarith
+   apply (meson no_overflow_tail)
+  apply simp
+  done
+
+lemma non_overlapping_merge_refills_no_overflow:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply (rename_tac sc n)
+  apply (case_tac "sc_refills sc"; (solves simp)?)
+  apply (rename_tac list)
+  apply (case_tac list; (solves simp)?)
+  apply (fastforce dest: non_overlapping_merge_refills_no_overflow_helper
+                   simp: add_ac)
+  done
+
+lemma head_insufficient_loop_no_overflow:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+     defer
+     apply (wpsimp wp: non_overlapping_merge_refills_ordered_disjoint)
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (wpsimp wp: non_overlapping_merge_refills_no_overflow)
+  apply (fastforce dest: head_insufficient_length_at_least_two)
+  done
+
+lemma head_insufficient_loop_refills_window:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+     defer
+     apply (wpsimp wp: non_overlapping_merge_refills_ordered_disjoint)
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def merge_refill_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (frule head_insufficient_length_at_least_two, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps refills_unat_sum_def obj_at_def window_def)
+  apply (rename_tac sc n)
+  apply (prop_tac "last (tl (tl (sc_refills sc))) = refill_tl sc")
+   apply (case_tac "sc_refills sc"; simp)
+   apply (rename_tac list)
+   apply (case_tac list; simp)
+  apply (prop_tac "unat (r_time (refill_hd sc))
+                    \<le> unat (r_time (hd (tl (sc_refills sc))) - r_amount (refill_hd sc))")
+   apply (subst unat_sub)
+    apply (fastforce simp: ordered_disjoint_def word_le_nat_alt hd_conv_nth nth_tl tl_Nil)
+   apply (fastforce simp: ordered_disjoint_def hd_conv_nth nth_tl tl_Nil)
+  apply clarsimp
+  done
+
+lemma ordered_disjoint_no_overflow_implies_sorted:
+  "\<lbrakk>ordered_disjoint refills; no_overflow refills; k < length refills; l < length refills; k \<le> l\<rbrakk>
+   \<Longrightarrow> unat (r_time (refills ! k)) \<le> unat (r_time (refills ! l))"
+  apply (case_tac "k = l", simp)
+  by (frule ordered_disjoint_non_adjacent[where refills=refills and k=k and l=l]; clarsimp)
+
+lemma head_insufficient_loop_hd_r_time:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (last (scrc_refills cfg))) \<le> P (cur_time s))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg))) \<le> P (cur_time s))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+        defer
+        apply (wpsimp wp: non_overlapping_merge_refills_ordered_disjoint)
+       apply (wpsimp wp: non_overlapping_merge_refills_no_overflow)
+       apply (fastforce dest: head_insufficient_length_at_least_two)
+      apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+      apply (fastforce dest: head_insufficient_length_at_least_two)
+     apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+     apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_nonempty_refills)
+   apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+   apply (rename_tac sc n)
+   apply (rule_tac y="unat (r_time (refill_tl sc))" in order_trans
+          ; fastforce?)
+   apply (frule_tac k=0 and l="length (sc_refills sc) - 1"
+                 in ordered_disjoint_no_overflow_implies_sorted
+          ; fastforce?)
+   apply (simp add: hd_conv_nth last_conv_nth unat_arith_simps(1))
+  apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def merge_refill_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (frule head_insufficient_length_at_least_two, clarsimp)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+  apply (intro conjI impI)
+   apply (subst unat_sub)
+    apply (clarsimp simp: word_le_nat_alt ordered_disjoint_def)
+    apply (drule_tac x=0 in spec)
+    apply clarsimp
+    apply (metis Groups.add_ac(2) One_nat_def Suc_diff_Suc ab_semigroup_add_class.add_ac(1)
+                 hd_conv_nth le_iff_add length_ineq_not_Nil(1) length_tl nth_tl zero_less_Suc)
+   apply (rename_tac sc n)
+   apply (rule_tac y="unat (r_time (hd (tl (sc_refills sc))))" in order_trans
+          ; fastforce?)
+   apply (frule_tac k=0 and l=1 in ordered_disjoint_no_overflow_implies_sorted
+          ; fastforce?)
+   apply (metis Nitpick.size_list_simp(2) One_nat_def hd_conv_nth last_conv_nth last_tl length_tl
+                rel_simps(71))
+  apply (simp add: last_tl tl_Nil)
+  done
+
+lemma head_insufficient_loop_hd_r_time_same:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. r_time (hd (scrc_refills cfg)) \<le> P (cur_time s))
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (hd (scrc_refills cfg)))
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. r_time (hd (scrc_refills cfg)) \<le> P (cur_time s))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_pre_cont)
+   using head_insufficient_helper apply (fastforce simp: vs_all_heap_simps refills_unat_sum_def)
+  done
+
+lemma head_insufficient_loop_MIN_BUDGET_in_head:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                         (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (hd (scrc_refills cfg)))
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+     apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+     apply (fastforce dest: head_insufficient_length_at_least_two)
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_nonempty_refills)
+  using head_insufficient_helper apply (fastforce simp: vs_all_heap_simps refills_unat_sum_def)
+  done
+
+lemma non_overlapping_merge_refills_length_bounded:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. 1 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply non_overlapping_merge_refills_simple
+  apply fastforce
+  done
+
+lemma head_insufficient_loop_length_bounded:
+  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg)
+                 (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat MIN_BUDGET \<le> refills_unat_sum (scrc_refills cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+    defer
+    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound)
+    apply (fastforce dest: head_insufficient_length_at_least_two)
+   apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum)
+   apply (fastforce dest: head_insufficient_length_at_least_two)
+  apply (wpsimp wp: non_overlapping_merge_refills_length_bounded)
+  apply (fastforce dest: head_insufficient_length_at_least_two
+                   simp: vs_all_heap_simps obj_at_def)
+  done
+
+definition
+  round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "round_robin sc_ptr s \<equiv> pred_map (\<lambda>cfg. scrc_period cfg = 0) (sc_refill_cfgs_of s) sc_ptr"
+
+abbreviation rr_valid_refills_unbundled where
+  "rr_valid_refills_unbundled sc_ptr s \<equiv>
+   pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (hd (scrc_refills cfg))) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. (unat (r_amount (hd (scrc_refills cfg)))
+                        + unat (r_amount (last (scrc_refills cfg)))
+                       \<le> unat max_time)) (sc_refill_cfgs_of s) sc_ptr
+    \<and> pred_map (\<lambda>cfg. length (scrc_refills cfg) =2) (sc_refill_cfgs_of s) sc_ptr
+    \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+    \<and> pred_map (\<lambda>cfg. scrc_refill_max cfg = MIN_REFILLS) (sc_refill_cfgs_of s) sc_ptr
+    \<and> pred_map (\<lambda>cfg. scrc_budget cfg \<le> MAX_SC_PERIOD) (sc_refill_cfgs_of s) sc_ptr"
+
+abbreviation sp_valid_refills_unbundled where
+  "sp_valid_refills_unbundled sc_ptr s \<equiv>
+   pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (hd (scrc_refills cfg))) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. scrc_budget cfg \<le> scrc_period cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_REFILLS \<le> scrc_refill_max cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. scrc_period cfg \<le> MAX_SC_PERIOD) (sc_refill_cfgs_of s) sc_ptr"
+
+lemma valid_refills_unbundled:
+  "valid_refills sc_ptr s  \<longleftrightarrow>
+   (if round_robin sc_ptr s
+    then rr_valid_refills_unbundled sc_ptr s
+    else sp_valid_refills_unbundled sc_ptr s)"
+  apply (clarsimp simp: vs_all_heap_simps round_robin_def sc_valid_refills_def rr_valid_refills_def)
+  apply fastforce
+  done
+
+lemma is_round_robin_sp:
+  "\<lbrace>Q\<rbrace>
+   is_round_robin scp
+   \<lbrace>\<lambda>rv s. Q s \<and> (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> (rv = (sc_period sc = 0)))\<rbrace>"
+  apply (wpsimp simp: is_round_robin_def)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma is_refill_sufficient_alt:
+  "unat MIN_BUDGET + unat usage \<le> unat max_time
+   \<Longrightarrow> is_refill_sufficient usage sc_ptr s
+       = pred_map (\<lambda>cfg. MIN_BUDGET + usage \<le> r_amount (hd (scrc_refills cfg)))
+                  (sc_refill_cfgs_of s) sc_ptr"
+  apply (clarsimp simp: vs_all_heap_simps refill_sufficient_def refill_capacity_def)
+  apply (intro iffI)
+   apply (fastforce simp: MIN_BUDGET_pos MIN_BUDGET_nonzero word_l_diffs(3) word_not_le)
+  apply (prop_tac "unat (MIN_BUDGET + usage) = unat MIN_BUDGET + unat usage")
+   apply (fastforce simp: unat_plus_simple unat_sum_bound_equiv)
+  apply (fastforce simp: unat_sub word_le_nat_alt word_less_nat_alt)
   done
 
 lemma refill_unblock_check_is_refill_sufficient[wp]:
-  "\<lbrace>valid_refills sc_ptr' and is_refill_sufficient usage sc_ptr'\<rbrace>
-   refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>_. is_refill_sufficient usage sc_ptr'\<rbrace>"
-  supply map_map[simp del]
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
+  "unat MIN_BUDGET + unat usage \<le> unat max_time
+   \<Longrightarrow> \<lbrace>is_refill_sufficient usage sc_ptr' and valid_refills sc_ptr'\<rbrace>
+       refill_unblock_check sc_ptr
+       \<lbrace>\<lambda>_. is_refill_sufficient usage sc_ptr'\<rbrace>"
+  apply (subst is_refill_sufficient_alt, simp)+
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_when_cases, simp)
+  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_refills_sp]\<close>
+                       \<open>rule hoare_seq_ext_skip, solves wpsimp, clarsimp?\<close>)
 
-  apply (clarsimp simp: valid_refills_def obj_at_def vs_all_heap_simps refill_sufficient_def
-                        refill_capacity_def
-                 split: if_splits)
-  apply (case_tac "sc_period y = 0"; clarsimp)
-  apply (case_tac "sc_ptr = sc_ptr'"; clarsimp)
-  apply (rename_tac sc' n') \<comment> \<open>kheap s sc_ptr' = Some (SchedContext sc' n')\<close>
+  apply (cases "sc_ptr' \<noteq> sc_ptr")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
 
-   \<comment> \<open>a couple useful facts\<close>
-  apply (clarsimp simp: refills_sum_def)
-  apply (frule_tac refills="sc_refills sc'" in unat_sum_list_equals_budget
-         ; (simp add: refills_sum_def)?)
-
-  apply (prop_tac "MIN_BUDGET \<noteq> 0")
-   using MIN_BUDGET_pos apply simp
-  apply clarsimp
-  apply (rename_tac sc' n')
-
-  apply (prop_tac "r_amount (refill_hd sc')
-                    \<le> r_amount (hd (refills_merge_prefix
-                                      (refill_hd sc'\<lparr>r_time := cur_time s + kernelWCET_ticks\<rparr>
-                                       # tl (sc_refills sc'))))")
-   apply (rule refills_mege_prefix_r_amount_hd)
-   using word_le_nat_alt apply fastforce
-   \<comment> \<open>end of the proof of the useful facts\<close>
-
-  apply (intro conjI impI allI; fastforce?)
-  apply (prop_tac "usage \<le> r_amount (refill_hd sc')")
-   using MIN_BUDGET_pos apply force
-  apply (fastforce intro: leI simp: word_le_nat_alt unat_sub split: if_splits)
+  apply (rename_tac refills)
+  apply (rule_tac Q="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                                  (sc_refill_cfgs_of s) sc_ptr
+                         \<and> pred_map (\<lambda>cfg. scrc_refills cfg = refills) (sc_refill_cfgs_of s) sc_ptr
+                         \<and> pred_map (\<lambda>cfg. MIN_BUDGET + usage \<le> r_amount (scrc_refill_hd cfg))
+                                     (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_weaken_pre[rotated])
+   apply (fastforce dest: unat_sum_list_equals_budget
+                    simp: sc_valid_refills_def vs_all_heap_simps obj_at_def)
+  apply (rule_tac B="\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                                    (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. MIN_BUDGET + usage \<le> r_amount (scrc_refill_hd cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: set_refills_wp)
+    apply (clarsimp simp: vs_all_heap_simps refills_unat_sum_def obj_at_def)
+    apply (rename_tac sc n)
+    apply (case_tac "sc_refills sc"; clarsimp)
+   apply (wpsimp wp: set_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps refills_unat_sum_def)
+  apply (wpsimp wp: refill_head_overlapping_loop_hd_r_amount)
   done
 
 lemma refill_update_is_refill_sufficient[wp]:
@@ -7425,7 +8305,7 @@ lemma refill_update_valid_refills:
   apply presburger
   done
 
-lemma schedule_used_sum [simp]:
+lemma schedule_used_sum[simp]:
   "refills_sum (schedule_used b refills new) = refills_sum (refills @ [new])"
   apply (cases refills)
    apply (clarsimp simp: schedule_used_def)
@@ -7519,17 +8399,6 @@ lemma schedule_used_release_time_bounded:
   apply (cases refills; clarsimp simp: schedule_used_def)
   done
 
-(* FIXME: replace original *)
-lemma ordered_disjoint_no_overflow_implies_sorted:
-  "\<lbrakk>ordered_disjoint refills;
-    no_overflow refills;
-    k < length refills;
-    l < length refills;
-    k \<le> l\<rbrakk>
-   \<Longrightarrow> unat (r_time (refills ! k)) \<le> unat (r_time (refills ! l))"
-  apply (case_tac "k = l", simp)
-  by (frule ordered_disjoint_non_adjacent[where refills=refills and k=k and l=l]; clarsimp)
-
 lemma sc_valid_refills_times_bounded_helper:
   "sc_valid_refills sc
   \<Longrightarrow> sc_period sc \<noteq> 0
@@ -7599,429 +8468,6 @@ lemma sc_refill_ready_release_time_well_bounded:
   apply (simp add: word_le_nat_alt)
   done
 
-lemma refills_merge_prefix_refills_sum:
-  "refills_sum (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)) = refills_sum (a # ls)"
-  apply (induction ls arbitrary: a)
-   apply simp
-  apply (drule_tac x="merge_refill (aa\<lparr>r_time := new_time\<rparr>) a" in meta_spec)
-  apply (simp add: merge_refill_def)
-  done
-
-lemma refills_merge_prefix_refills_sum_simple:
-  "refills \<noteq> [] \<Longrightarrow> refills_sum (refills_merge_prefix refills) = refills_sum refills"
-  apply (cases refills)
-   apply simp
-  apply (rename_tac a ls)
-  apply (insert refills_merge_prefix_refills_sum)
-  apply (drule_tac x="r_time a" in meta_spec)
-  apply (drule_tac x=a in meta_spec)
-  apply simp
-  done
-
-lemma refills_merge_prefix_ordered_disjoint:
-  "\<lbrakk>ordered_disjoint ls;
-    unat new_time + sum_list (map unat (map r_amount (a # ls))) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> ordered_disjoint (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls))"
-  supply map_map[simp del]
-  apply (induction ls arbitrary: a rule: length_induct)
-  apply (case_tac xs)
-   apply (simp add: ordered_disjoint_def)
-  apply simp
-  apply (intro conjI impI)
-
-   \<comment> \<open>can merge first two refills\<close>
-   apply (simp add: can_merge_refill_def merge_refill_def)
-   apply (drule_tac x=list in spec)
-   apply clarsimp
-   apply (elim impE)
-    using ordered_disjoint_tail apply blast
-   apply (drule_tac x="merge_refill a aa" in spec)
-   apply (simp add: merge_refill_def)
-   apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
-    apply linarith
-   apply (rule unat_add_lem', simp add: max_word_def)
-
-  \<comment> \<open>cannot merge first two refills\<close>
-  apply (simp add: can_merge_refill_def merge_refill_def)
-  apply (simp add: word_not_le)
-  apply (rule_tac left="[a\<lparr>r_time := new_time\<rparr>]" and right="aa # list" in ordered_disjoint_append)
-     apply (simp add: ordered_disjoint_def)
-    using ordered_disjoint_tail apply blast
-   apply (intro conjI impI)
-   apply clarsimp
-   apply (simp add: word_less_nat_alt)
-   apply (subgoal_tac "unat (new_time + r_amount a) = unat new_time + unat (r_amount a)")
-    apply linarith
-   apply (rule unat_add_lem', simp add: max_word_def)
-  apply simp
-  done
-
-lemma head_time_plus_budget_bounded:
-  "\<lbrakk>no_overflow refills; ordered_disjoint refills\<rbrakk>
-   \<Longrightarrow> unat (r_time (hd refills)) + sum_list (map unat (map r_amount refills)) \<le> unat max_time"
-  supply map_map[simp del]
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs; simp)
-  apply (rename_tac xs a list)
-  apply (case_tac list)
-   apply (fastforce simp: no_overflow_def)
-  apply (drule_tac x=list in spec)
-  apply (elim impE; fastforce?)
-    apply (fastforce intro: no_overflow_tail)
-   apply (fastforce intro: ordered_disjoint_tail)
-  apply (rule_tac j="unat (r_time (hd list)) + sum_list (map unat (map r_amount list))" in le_trans)
-   apply (fastforce simp: ordered_disjoint_def)
-  apply assumption
-  done
-
-lemma refills_merge_prefix_ordered_disjoint_simple:
-  "\<lbrakk>refills \<noteq> []; ordered_disjoint refills;
-   sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> ordered_disjoint (refills_merge_prefix refills)"
-  supply map_map[simp del]
-  apply (induction refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply (simp add: ordered_disjoint_def)
-  apply (rename_tac a list)
-  apply (case_tac list)
-   apply simp
-  apply (rename_tac aa lista)
-  apply (simp add: can_merge_refill_def merge_refill_def)
-  apply (drule_tac x="\<lparr>r_time = r_time a, r_amount = r_amount aa + r_amount a\<rparr> # lista" in spec)
-  apply clarsimp
-  apply (elim impE)
-    apply (rule_tac left="[\<lparr>r_time = r_time a, r_amount = r_amount aa + r_amount a\<rparr>]"
-                and right=lista
-                 in ordered_disjoint_append)
-       apply (clarsimp simp: ordered_disjoint_def)
-      apply (fastforce intro: ordered_disjoint_tail)
-     apply clarsimp
-     apply (subst unat_add_lem')
-      apply (clarsimp simp: max_word_def)
-     apply (rule_tac j="unat (r_time aa) + unat (r_amount aa)" in le_trans)
-      apply (fastforce simp: ordered_disjoint_def)
-     apply (metis ordered_disjoint_def add_diff_cancel_right' hd_conv_nth length_greater_0_conv
-                  list.size(4) nth_Cons_0 nth_Cons_Suc ordered_disjoint_tail)
-    apply simp
-   apply (subst unat_add_lem')
-    apply (clarsimp simp: max_word_def)
-   apply clarsimp
-  apply clarsimp
-  done
-
-lemma refills_merge_prefix_no_overflow:
-  "\<lbrakk>unat new_time + sum_list (map unat (map r_amount (a # ls))) \<le> unat max_time;
-    no_overflow ls\<rbrakk>
-   \<Longrightarrow> no_overflow (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls))"
-  supply map_map[simp del]
-  apply (induction ls arbitrary: a rule: length_induct)
-  apply (case_tac xs)
-   apply (simp add: no_overflow_def)
-  apply simp
-  apply (intro conjI impI)
-
-   \<comment> \<open>can merge first two refills\<close>
-   apply (simp add: can_merge_refill_def merge_refill_def)
-   apply (drule_tac x=list in spec)
-   apply clarsimp
-   apply (drule_tac x="merge_refill a aa" in spec)
-   apply (simp add: can_merge_refill_def merge_refill_def)
-   apply (elim impE)
-     apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
-      apply linarith
-     apply (rule unat_add_lem', simp add: max_word_def)
-    using no_overflow_tail apply fast
-   apply blast
-
-  \<comment> \<open>cannot merge first two refills\<close>
-  apply (rule_tac left="[a\<lparr>r_time := new_time\<rparr>]" and right="aa # list" in no_overflow_append)
-    apply (simp add: no_overflow_def)
-   using no_overflow_tail apply fast
-  by force
-
-lemma refills_merge_prefix_no_overflow_simple:
-  "\<lbrakk>no_overflow refills;
-    unat (r_time (hd refills)) + sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> no_overflow (refills_merge_prefix refills)"
-  supply map_map[simp del]
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply (case_tac list; simp)
-  apply (rename_tac aa lista)
-  apply (simp add: can_merge_refill_def merge_refill_def)
-  apply (drule_tac x="\<lparr>r_time = r_time a, r_amount = r_amount aa + r_amount a\<rparr> # lista" in spec)
-  apply (elim impE; fastforce?)
-   apply (rule_tac left="[\<lparr>r_time = r_time a, r_amount = r_amount aa + r_amount a\<rparr>]"
-               and right="lista"
-                in no_overflow_append)
-     apply (clarsimp simp: no_overflow_def)
-     apply (subst unat_add_lem')
-      apply (clarsimp simp: max_word_def)
-     apply linarith
-    apply (fastforce intro: no_overflow_tail)
-   apply simp
-  apply clarsimp
-  apply (subst unat_add_lem')
-   apply (clarsimp simp: max_word_def)
-  apply linarith
-  done
-
-lemma refills_merge_prefix_window:
-  "\<lbrakk>r_time a \<le> new_time;
-    unat new_time + sum_list (map unat (map r_amount (a # ls))) \<le> unat max_time;
-    sum_list (map unat (map r_amount (a # ls))) \<le> unat period;
-    window (a # ls) period\<rbrakk>
-   \<Longrightarrow> window (refills_merge_prefix (a\<lparr>r_time := new_time\<rparr> # ls)) period"
-  supply map_map[simp del]
-  apply (induction ls arbitrary: a rule: length_induct)
-  apply (case_tac xs)
-   apply (simp add: window_def)
-  apply (rename_tac xs a aa list)
-
-  \<comment> \<open>a useful fact\<close>
-  apply (subgoal_tac "unat (r_amount aa + r_amount a) = unat (r_amount aa) + unat (r_amount a)")
-   prefer 2
-   apply (rule unat_add_lem', simp add: max_word_def)
-  \<comment> \<open>end of the proof of the useful fact\<close>
-
-  apply simp
-  apply (intro conjI impI)
-
-   \<comment> \<open>can merge first two refills\<close>
-   apply (drule_tac x=list in spec)
-   apply clarsimp
-   apply (drule_tac x="\<lparr>r_time = new_time, r_amount = r_amount aa + r_amount a\<rparr>" in spec)
-   apply (elim impE; clarsimp?)
-    apply (clarsimp simp: window_def word_le_nat_alt split: if_splits)
-   apply (clarsimp simp: can_merge_refill_def merge_refill_def word_le_nat_alt)
-
-  \<comment> \<open>cannot merge first two refills\<close>
-  using word_le_nat_alt window_def by force
-
-lemma refills_merge_prefix_window_simple:
-  "\<lbrakk>window refills period; sum_list (map unat (map r_amount refills)) \<le> unat period;
-    unat (r_time (hd refills)) + sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> window (refills_merge_prefix refills) period"
-  apply (cases refills)
-   apply simp
-  apply (insert refills_merge_prefix_window)
-  apply fastforce
-  done
-
-lemma refills_merge_prefix_length:
-  "length (refills_merge_prefix ls) \<le> length ls"
-  by (induct ls rule: refills_merge_prefix.induct) fastforce+
-
-lemma MIN_BUDGET_merge_same_hd_r_time:
-  "\<lbrakk>refills \<noteq> []; MIN_BUDGET \<le> r_amount (hd refills)\<rbrakk>
-   \<Longrightarrow> r_time (hd (MIN_BUDGET_merge refills)) = r_time (hd refills)"
-  apply (cases refills; simp)
-  apply (case_tac list; fastforce)
-  done
-
-lemma MIN_BUDGET_merge_nonempty:
-  "ls \<noteq> [] \<Longrightarrow> MIN_BUDGET_merge ls \<noteq> []"
-  by (induct ls rule: MIN_BUDGET_merge.induct; simp)
-
-lemma MIN_BUDGET_merge_head_r_amount:
-  "\<lbrakk>refills \<noteq> []; sum_list (map unat (map r_amount (refills))) \<le> unat max_time;
-    unat MIN_BUDGET \<le> sum_list (map unat (map r_amount (refills)))\<rbrakk>
-   \<Longrightarrow> MIN_BUDGET \<le> r_amount (hd (MIN_BUDGET_merge refills))"
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (case_tac list)
-   apply (clarsimp simp: word_le_nat_alt)
-  apply (rename_tac aa lista)
-  apply simp
-  apply (intro conjI impI)
-   apply (drule_tac x="\<lparr>r_time = r_time aa - r_amount a, r_amount = r_amount a + r_amount aa\<rparr>
-                       # lista"
-                 in spec)
-   apply clarsimp
-   apply (elim impE)
-     apply (subst unat_add_lem', clarsimp simp: max_word_def)
-     apply linarith
-    apply (subst unat_add_lem', clarsimp simp: max_word_def)
-    apply linarith
-   apply fast
-  apply (fastforce simp: linorder_not_less)
-  done
-
-lemma MIN_BUDGET_merge_ordered_disjoint_helper:
-  "\<lbrakk>ordered_disjoint (a # r1 # rs); sum_list (map unat (map r_amount (a # r1 # rs))) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> ordered_disjoint (\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr> # rs)"
-  apply (rule_tac left="[\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr>]"
-              and right="rs"
-               in ordered_disjoint_append)
-     apply (clarsimp simp: ordered_disjoint_def)
-    apply (meson ordered_disjoint_tail)
-   apply clarsimp
-   apply (subst unat_sub, clarsimp simp: word_le_nat_alt)
-    apply (clarsimp simp: ordered_disjoint_def)
-    apply (drule_tac x=0 in spec)
-    apply fastforce
-   apply (prop_tac "unat (r_amount a) \<le> unat (r_time r1)")
-    apply (fastforce simp: ordered_disjoint_def)
-   apply (subst unat_add_lem', clarsimp simp: max_word_def)
-   apply (clarsimp simp: ordered_disjoint_def)
-   apply (drule_tac x=1 in spec)
-   apply (simp add: hd_conv_nth)
-  apply simp
-  done
-
-lemma MIN_BUDGET_merge_no_overflow_helper:
-  "\<lbrakk>no_overflow (a # r1 # rs); ordered_disjoint (a # r1 # rs)\<rbrakk>
-   \<Longrightarrow> no_overflow (\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr> # rs)"
-  apply (frule (1) head_time_plus_budget_bounded)
-  apply (rule_tac left="[\<lparr>r_time = r_time r1 - r_amount a, r_amount = r_amount a + r_amount r1\<rparr>]"
-              and right="rs"
-               in no_overflow_append)
-    apply (clarsimp simp: no_overflow_def)
-    apply (prop_tac "unat (r_amount a) \<le> unat (r_time r1)")
-     apply (fastforce simp: ordered_disjoint_def)
-    apply (subst unat_sub)
-     apply (clarsimp simp: word_le_nat_alt)
-    apply (subst unat_add_lem', clarsimp simp: max_word_def)
-    apply linarith
-   apply (meson no_overflow_tail)
-  apply simp
-  done
-
-lemma MIN_BUDGET_merge_r_time_hd:
-  "\<lbrakk>refills \<noteq> []; ordered_disjoint refills; no_overflow refills;
-    unat MIN_BUDGET \<le> sum_list (map unat (map r_amount (refills)));
-    sum_list (map unat (map r_amount (refills))) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> r_time (hd (MIN_BUDGET_merge refills)) \<le> r_time (last refills)"
-  apply (cases refills)
-   apply simp
-  apply (induct refills rule: MIN_BUDGET_merge.induct)
-    apply blast
-   apply fastforce
-  apply (rename_tac r0 r1 rs a list)
-  apply clarsimp
-  apply (intro conjI impI)
-     apply simp
-     apply (meson add_leE unat_arith_simps(1) word_sub_le)
-    apply clarsimp
-    apply (prop_tac "unat (r_amount a + r_amount r1) = unat (r_amount a) + unat (r_amount r1)")
-     apply (meson add_left_mono_trans le_iff_add unat_plus_simple unat_sum_bound_equiv)
-    apply (fastforce intro!: MIN_BUDGET_merge_no_overflow_helper
-                             MIN_BUDGET_merge_ordered_disjoint_helper
-                       dest: no_overflow_tail ordered_disjoint_tail)
-   apply (simp add: word_le_nat_alt)
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (frule_tac refills="a # r1 # rs" and k=0 and l="length (a # r1 # rs) - 1"
-                in ordered_disjoint_no_overflow_implies_sorted
-         ; fastforce?)
-  apply (fastforce simp: last_conv_nth)
-  done
-
-lemma MIN_BUDGET_merge_refills_sum:
-  "refills_sum (MIN_BUDGET_merge refills) = refills_sum refills"
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs; simp)
-  apply (rename_tac a list)
-  apply (case_tac list; simp add: refills_sum_def)
-  done
-
-lemma MIN_BUDGET_merge_ordered_disjoint:
-  "\<lbrakk>ordered_disjoint refills; sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> ordered_disjoint (MIN_BUDGET_merge refills)"
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply (case_tac list)
-   apply simp
-  apply (rename_tac aa lista)
-  apply simp
-  apply (intro impI)
-  apply (drule_tac x="\<lparr>r_time = r_time aa - r_amount a, r_amount = r_amount a + r_amount aa\<rparr> # lista"
-                in spec)
-  apply (elim impE; fastforce?)
-   apply (fastforce intro: MIN_BUDGET_merge_ordered_disjoint_helper)
-  apply clarsimp
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
-  apply linarith
-  done
-
-lemma MIN_BUDGET_merge_no_overflow:
-  "\<lbrakk>no_overflow refills; ordered_disjoint refills;
-   sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> no_overflow (MIN_BUDGET_merge refills)"
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply (case_tac list)
-   apply simp
-  apply simp
-  apply (intro impI)
-  apply (drule_tac x="\<lparr>r_time = r_time aa - r_amount a, r_amount = r_amount a + r_amount aa\<rparr> # lista"
-                in spec)
-  apply (elim impE; fastforce?)
-    apply (fastforce intro: MIN_BUDGET_merge_no_overflow_helper)
-   apply (fastforce intro: MIN_BUDGET_merge_ordered_disjoint_helper)
-  apply clarsimp
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
-  apply linarith
-  done
-
-lemma MIN_BUDGET_merge_window:
-  "\<lbrakk>ordered_disjoint refills; window refills period;
-   sum_list (map unat (map r_amount refills)) \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> window (MIN_BUDGET_merge refills) period"
-  apply (induct refills rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply (case_tac list)
-   apply simp
-  apply (rename_tac aa lista)
-  apply simp
-  apply (intro impI)
-  apply (drule_tac x="\<lparr>r_time = r_time aa - r_amount a, r_amount = r_amount a + r_amount aa\<rparr> # lista"
-                in spec)
-  apply (elim impE; fastforce?)
-    apply (fastforce intro: MIN_BUDGET_merge_ordered_disjoint_helper)
-   apply (clarsimp simp: window_def)
-   apply (prop_tac "unat (r_time a) \<le> unat (r_time aa - r_amount a)")
-    apply (subst unat_sub)
-     apply (fastforce simp: ordered_disjoint_def word_le_nat_alt)
-    apply (fastforce simp: ordered_disjoint_def word_le_nat_alt)
-   apply (clarsimp simp: ordered_disjoint_def)
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
-  apply simp
-  done
-
-lemma refill_budget_check_word_helper:
-  "\<lbrakk>sc_refills sc \<noteq> []; sum_list (map unat (map r_amount (sc_refills sc))) = unat (sc_budget sc)\<rbrakk>
-   \<Longrightarrow> unat (r_amount (refill_hd sc) - (min usage (r_amount (refill_hd sc))))
-       + sum_list (map unat (map r_amount (tl (sc_refills sc))))
-       + unat (min usage (r_amount (refill_hd sc)))
-         = unat (sc_budget sc)"
-  supply map_map[simp del]
-  apply (subst unat_sub; fastforce?)
-  apply (prop_tac "min usage (r_amount (refill_hd sc)) \<le> r_amount (refill_hd sc)", simp)
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (prop_tac "[refill_hd sc] @ tl (sc_refills sc) = sc_refills sc", fastforce)
-  apply (prop_tac "sum_list (map unat (map r_amount [refill_hd sc]))
-                   = unat (r_amount (refill_hd sc))", force)
-  apply (metis sum_list_append map_append)
-  done
-
 lemma schedule_used_unat_sum:
   "sum_list (map unat (map r_amount list)) + unat (r_amount new) \<le> unat max_time
    \<Longrightarrow> sum_list (map unat (map r_amount (schedule_used full list new)))
@@ -8058,27 +8504,6 @@ lemma schedule_used_unat_sum:
   apply (metis sum_list_append map_append)
   done
 
-lemma MIN_BUDGET_merge_unat_sum:
-  "sum_list (map unat (map r_amount list)) \<le> unat max_time
-   \<Longrightarrow> sum_list (map unat (map r_amount (MIN_BUDGET_merge list)))
-       = sum_list (map unat (map r_amount list))"
-  apply (induct list rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs; clarsimp?)
-  apply (case_tac list)
-   apply simp
-  apply (rename_tac aa lista)
-  apply simp
-  apply (intro impI)
-  apply (drule_tac x="\<lparr>r_time = r_time aa - r_amount a, r_amount = r_amount a + r_amount aa\<rparr>
-                      # lista"
-                in spec)
-  apply simp
-  apply (prop_tac "unat (r_amount a + r_amount aa) = unat (r_amount a) + unat (r_amount aa)")
-   apply (meson add_left_mono_trans nat_le_iff_add unat_plus_simple unat_sum_bound_equiv)
-  apply simp
-  done
-
 lemma schedule_used_r_time_last:
   "\<lbrakk>no_overflow list; r_time (last list) \<le> r_time new\<rbrakk>
    \<Longrightarrow> r_time (last (schedule_used full list new)) \<le> r_time new"
@@ -8108,14 +8533,15 @@ lemma schedule_used_head_r_time_shift_forward:
                word_le_less_eq)
   done
 
-lemma MIN_BUDGET_merge_length:
-  "length (MIN_BUDGET_merge ls) \<le> length ls"
-  by (induct ls rule: MIN_BUDGET_merge.induct) fastforce+
-
 lemma schedule_used_full_length:
   "list \<noteq> [] \<Longrightarrow> length (schedule_used True list new) = length list"
   apply (cases list; clarsimp simp: schedule_used_def)
   done
+
+(* FIXME RT: move *)
+lemma add_less_mono_trans:
+  "\<lbrakk>(a :: nat) + c < d; b \<le> c\<rbrakk> \<Longrightarrow> a + b < d"
+  by fastforce
 
 lemma unat_add_subtract_cancel:
   "\<lbrakk>unat (a :: 64 word) + unat b \<le> unat max_time; b \<le> c\<rbrakk>
@@ -8156,7 +8582,7 @@ lemma refill_budget_check_refill_amount_helper:
   apply (rule_tac j="unat (sc_budget sc)" in le_trans)
    apply (clarsimp simp: refills_sum_def word_le_nat_alt)
    apply (prop_tac "unat (r_amount refill) \<in> set (map unat (map r_amount (sc_refills sc)))", force)
-   apply (fastforce dest: member_le_sum_list)
+   apply (fastforce dest: member_le_sum_list simp: refills_unat_sum_def)
   apply (clarsimp simp: word_le_nat_alt)
   done
 
@@ -8168,7 +8594,7 @@ lemma refill_budget_check_no_overflow_schedule_used_helper:
     sc_budget sc \<le> sc_period sc;  sc_period sc \<le> MAX_SC_PERIOD;
      unat (r_amount (refill_hd sc)) \<le> unat (sc_period sc)\<rbrakk>
    \<Longrightarrow> no_overflow
-        (schedule_used (length (sc_refills sc) = sc_refill_max sc)
+        (schedule_used full
           (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
             r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
            # tl (sc_refills sc))
@@ -8206,7 +8632,7 @@ lemma refill_budget_check_ordered_disjoint_helper:
     sc_budget sc \<le> sc_period sc; unat (r_time (refill_hd sc)) + unat (sc_period sc) \<le> unat max_time;
     window (sc_refills sc) (sc_period sc)\<rbrakk>
    \<Longrightarrow> ordered_disjoint
-         (schedule_used (length (sc_refills sc) = sc_refill_max sc)
+         (schedule_used full
            (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
              r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
             # tl (sc_refills sc))
@@ -8246,239 +8672,82 @@ lemma refill_budget_check_ordered_disjoint_helper:
   apply (clarsimp simp: window_def last_tl)
   done
 
-lemma refill_budget_check_unat_sum_helper:
-  "\<lbrakk>0 < usage; refills_sum (sc_refills sc) = sc_budget sc; ordered_disjoint (sc_refills sc);
-    no_overflow (sc_refills sc); sc_refills sc \<noteq> [];  MIN_BUDGET \<le> sc_budget sc\<rbrakk>
-   \<Longrightarrow> sum_list
-            (map unat
-              (map r_amount
-                (schedule_used (length (sc_refills sc) = sc_refill_max sc)
-                  (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
-                    r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
-                   # tl (sc_refills sc))
-                  \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
-                   r_amount = min usage (r_amount (refill_hd sc))\<rparr>)))
-        = unat (sc_budget sc)"
-  supply map_map[simp del]
-  apply (subst schedule_used_unat_sum)
-   apply clarsimp
-   apply (subst unat_sub; fastforce?)
-   apply (metis min.cobounded2 refill_budget_check_word_helper unat_bounded_above unat_sub
-                unat_sum_list_equals_budget)
-  apply clarsimp
-  apply (subst unat_sub; fastforce?)
-  apply (metis min.cobounded2 refill_budget_check_word_helper unat_sub
-               unat_sum_list_equals_budget)
-  done
-
-lemma refill_budget_check_r_time_plus_sum_bounded_helper:
-  "\<lbrakk>refill_ready_no_overflow 0 (cur_time s) (refill_hd sc); current_time_bounded 3 s; 0 < usage;
-    refills_sum (sc_refills sc) = sc_budget sc; ordered_disjoint (sc_refills sc);
-    no_overflow (sc_refills sc); window (sc_refills sc) (sc_period sc);
-    MIN_BUDGET \<le> r_amount (refill_hd sc); sc_refills sc \<noteq> [];  MIN_BUDGET \<le> sc_budget sc;
-    sc_budget sc \<le> sc_period sc;  sc_period sc \<le> MAX_SC_PERIOD\<rbrakk>
-   \<Longrightarrow> unat
-         (r_time
-           (hd (MIN_BUDGET_merge
-                 (schedule_used (length (sc_refills sc) = sc_refill_max sc)
-                   (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
-                     r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
-                    # tl (sc_refills sc))
-                   \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
-                    r_amount = min usage (r_amount (refill_hd sc))\<rparr>))))
-        + sum_list
-            (map unat
-              (map r_amount
-                (MIN_BUDGET_merge
-                  (schedule_used (length (sc_refills sc) = sc_refill_max sc)
-                    (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
-                        r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
-                     # tl (sc_refills sc))
-                    \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
-                     r_amount = min usage (r_amount (refill_hd sc))\<rparr>))))
-        \<le> unat max_time"
-  supply map_map[simp del]
-  apply (frule (2) unat_sum_list_equals_budget)
-   apply (clarsimp simp: word_le_nat_alt)
-  apply (frule_tac refill="refill_hd sc" in refill_budget_check_refill_amount_helper; fastforce?)
-  apply (subst MIN_BUDGET_merge_unat_sum)
-   apply (fastforce dest: refill_budget_check_unat_sum_helper)
-  apply (subst refill_budget_check_unat_sum_helper; fastforce?)
-  apply (rule add_right_mono_trans[OF _ MIN_BUDGET_merge_r_time_hd[simplified word_le_nat_alt]])
-       apply (rule add_right_mono_trans[OF _ schedule_used_r_time_last[simplified word_le_nat_alt]])
-         apply clarsimp
-         apply (subst unat_add_lem')
-          apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                                word_le_nat_alt)
-         apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def word_le_nat_alt)
-        apply (fastforce intro: refill_budget_check_no_overflow_helper)
-       apply (clarsimp split: if_splits)
-       apply (intro conjI impI)
-        apply (subst unat_add_lem')
-         apply (frule_tac refill="refill_hd sc" in refill_budget_check_refill_amount_helper
-                ; fastforce?)
-         apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def)
-         apply (prop_tac "min usage (r_amount (refill_hd sc)) \<le> r_amount (refill_hd sc)", simp)
-         apply (clarsimp simp: word_le_nat_alt max_word_def)
-        apply (subst unat_add_lem'; fastforce?)
-        apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                              word_le_nat_alt)
-        apply (prop_tac " unat (min usage (r_amount (refill_hd sc))) \<le> unat (r_amount (refill_hd sc))")
-         using min.cobounded2 word_le_nat_alt apply blast
-        apply linarith
-       apply (frule_tac refill="last (tl (sc_refills sc))" in refill_budget_check_refill_amount_helper
-              ; fastforce?)
-        apply (simp add: last_tl)
-       apply (subst unat_add_lem')
-        apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                              word_le_nat_alt)
-       apply (clarsimp simp: window_def last_tl)
-      apply (fastforce simp: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-     apply (rule refill_budget_check_ordered_disjoint_helper; fastforce?)
-     apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def word_le_nat_alt)
-    apply (fastforce intro: refill_budget_check_no_overflow_schedule_used_helper)
-   apply (subst schedule_used_unat_sum)
+lemma schedule_used_window:
+  "\<lbrakk>sc_valid_refills sc; current_time_bounded 3 s;
+    refill_ready_no_overflow 0 (cur_time s) (refill_hd sc); sc_period sc \<noteq> 0\<rbrakk>
+   \<Longrightarrow> window (schedule_used full
+              (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
+                r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
+               # tl (sc_refills sc))
+              \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
+               r_amount = min usage (r_amount (refill_hd sc))\<rparr>)
+              (sc_period sc)"
+  apply (clarsimp simp: window_def sc_valid_refills_def)
+  apply (rule le_trans[OF schedule_used_r_time_last[simplified word_le_nat_alt]])
+    apply (fastforce intro: refill_budget_check_no_overflow_helper)
+   apply (clarsimp split: if_splits)
+   apply (intro conjI impI)
+    apply (subst unat_add_lem')
+     apply (rule_tac c="unat (r_amount (refill_hd sc))" in add_less_mono_trans)
+      apply (metis no_overflow_def hd_in_set le_imp_less_Suc power_two_max_word_fold)
+     apply (simp flip: word_le_nat_alt)
+    apply (subst unat_add_lem')
+     apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
+                           word_le_nat_alt)
     apply clarsimp
-    apply (subst refill_budget_check_word_helper; fastforce?)
-   apply clarsimp
-   apply (subst refill_budget_check_word_helper; fastforce?)
-   apply (clarsimp simp: word_le_nat_alt)
-  apply (fastforce dest: refill_budget_check_unat_sum_helper)
+    apply (rule_tac j="unat (r_amount (refill_hd sc))" in le_trans)
+     apply (simp flip: word_le_nat_alt)
+    apply (fastforce intro: refill_budget_check_refill_amount_helper)
+   apply (subst unat_add_lem'; fastforce?)
+    apply (frule_tac refill="last (tl (sc_refills sc))"
+                  in refill_budget_check_refill_amount_helper
+           ; fastforce?)
+     apply (simp add: last_tl)
+    apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
+                          word_le_nat_alt)
+   apply (clarsimp simp: window_def last_tl)
+  apply clarsimp
+  apply (subst unat_add_lem')
+   apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
+                         word_le_nat_alt)
+  apply clarsimp
+  apply (rule le_trans[OF _ schedule_used_head_r_time_shift_forward[simplified word_le_nat_alt]])
+    apply clarsimp
+    apply (subst unat_add_lem')
+     apply (rule_tac c="unat (r_amount (refill_hd sc))" in add_less_mono_trans)
+      apply (metis no_overflow_def hd_in_set le_imp_less_Suc power_two_max_word_fold)
+     using min.cobounded2 word_le_nat_alt apply blast
+    apply simp
+   apply blast
+  apply clarsimp
+  apply (subst unat_add_subtract_cancel)
+    apply (rule_tac y="unat (r_amount (refill_hd sc))" in add_left_mono_trans)
+     apply (clarsimp simp: no_overflow_def max_word_def)
+    using min.cobounded2 word_le_nat_alt apply blast
+   apply simp
+  apply (clarsimp simp: no_overflow_def)
   done
 
-(* FIXME RT: move *)
-lemma add_less_mono_trans:
-  "\<lbrakk>(a :: nat) + c < d; b \<le> c\<rbrakk> \<Longrightarrow> a + b < d"
-  by fastforce
+lemma refill_full_sp:
+  "\<lbrace>Q\<rbrace>
+   refill_full sc_ptr
+   \<lbrace>\<lambda>rv s. Q s \<and> (\<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n)
+                         \<and> (rv = (length (sc_refills sc) = sc_refill_max sc)))\<rbrace>"
+  apply (wpsimp simp: is_round_robin_def)
+  apply (clarsimp simp: obj_at_def)
+  done
 
-lemma refill_budget_check_valid_refills[wp]:
-   "\<lbrace>cur_sc_offset_ready 0
-     and valid_refills p
-     and current_time_bounded 3\<rbrace>
-    refill_budget_check usage
-    \<lbrace>\<lambda>_. valid_refills p\<rbrace>"
-  supply if_weak_cong[cong del] if_split[split del] map_map[simp del]
-  apply (clarsimp simp: refill_budget_check_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (wpsimp wp: get_object_wp set_refills_wp refill_full_wp is_round_robin_wp)
-  apply (clarsimp simp: obj_at_def
-                 split: if_splits)
-  apply (clarsimp simp: vs_all_heap_simps)
-  apply (case_tac "p \<noteq> cur_sc s"; clarsimp)
+lemma refill_budget_check_schedule_used_length_at_most_sc_refill_max:
+  "\<lbrakk>sc_valid_refills sc; sc_period sc \<noteq> 0\<rbrakk>
+   \<Longrightarrow> length (schedule_used
+              (length (sc_refills sc) = sc_refill_max sc)
+              (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
+                r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
+               # tl (sc_refills sc))
+              \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
+               r_amount = min usage (r_amount (refill_hd sc))\<rparr>)
+       \<le> sc_refill_max sc"
   apply (clarsimp simp: sc_valid_refills_def)
-  apply (rename_tac s sc n)
-  apply (intro conjI impI)
-
-        \<comment> \<open>refills_sum\<close>
-        apply (subst refills_merge_prefix_refills_sum_simple)
-         apply (fastforce simp: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-        apply (subst MIN_BUDGET_merge_refills_sum)
-        apply (subst schedule_used_sum)
-        apply simp
-        apply (metis list.exhaust_sel refills_sum_cons)
-
-       \<comment> \<open>ordered_disjoint\<close>
-       apply (subst refills_merge_prefix_ordered_disjoint_simple)
-          apply (fastforce simp: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-         apply (subst MIN_BUDGET_merge_ordered_disjoint; simp?)
-          apply (rule refill_budget_check_ordered_disjoint_helper; fastforce?)
-          apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def
-                                word_le_nat_alt)
-         apply (fastforce dest: refill_budget_check_unat_sum_helper)
-        apply (subst MIN_BUDGET_merge_unat_sum)
-        apply (fastforce dest: refill_budget_check_unat_sum_helper)
-       apply simp
-
-      \<comment> \<open>no_overflow\<close>
-      apply (frule_tac refill="refill_hd sc" in refill_budget_check_refill_amount_helper
-             ; fastforce?)
-      apply (subst refills_merge_prefix_no_overflow_simple)
-        apply (subst MIN_BUDGET_merge_no_overflow)
-          apply (fastforce intro: refill_budget_check_no_overflow_schedule_used_helper)
-         apply (fastforce intro: refill_budget_check_ordered_disjoint_helper
-                           simp: current_time_bounded_def refill_ready_no_overflow_def
-                                 word_le_nat_alt)
-        apply (fastforce dest: refill_budget_check_unat_sum_helper)
-       apply simp
-      apply (fastforce intro: refill_budget_check_r_time_plus_sum_bounded_helper)
-
-     \<comment> \<open>window\<close>
-     apply (subst refills_merge_prefix_window_simple)
-        apply (subst MIN_BUDGET_merge_window)
-          apply (fastforce intro: refill_budget_check_ordered_disjoint_helper
-                            simp: current_time_bounded_def refill_ready_no_overflow_def
-                                  word_le_nat_alt)
-         apply (clarsimp simp: window_def)
-         apply (rule le_trans[OF schedule_used_r_time_last[simplified word_le_nat_alt]])
-           apply (fastforce intro: refill_budget_check_no_overflow_helper)
-          apply (clarsimp split: if_splits)
-          apply (intro conjI impI)
-           apply (subst unat_add_lem')
-            apply (rule_tac c="unat (r_amount (refill_hd sc))" in add_less_mono_trans)
-             apply (metis no_overflow_def hd_in_set le_imp_less_Suc power_two_max_word_fold)
-            apply (simp flip: word_le_nat_alt)
-           apply (subst unat_add_lem')
-            apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                                  word_le_nat_alt)
-           apply clarsimp
-           apply (rule_tac j="unat (r_amount (refill_hd sc))" in le_trans)
-            apply (simp flip: word_le_nat_alt)
-           apply (fastforce intro: refill_budget_check_refill_amount_helper)
-          apply (subst unat_add_lem'; fastforce?)
-          apply (frule_tac refill="last (tl (sc_refills sc))"
-                        in refill_budget_check_refill_amount_helper
-                 ; fastforce?)
-           apply (simp add: last_tl)
-          apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                                word_le_nat_alt)
-          apply (clarsimp simp: window_def last_tl)
-         apply clarsimp
-         apply (subst unat_add_lem')
-          apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
-                                word_le_nat_alt)
-         apply clarsimp
-         apply (rule le_trans[OF _ schedule_used_head_r_time_shift_forward[simplified word_le_nat_alt]])
-           apply clarsimp
-           apply (subst unat_add_lem')
-            apply (rule_tac c="unat (r_amount (refill_hd sc))" in add_less_mono_trans)
-             apply (metis no_overflow_def hd_in_set le_imp_less_Suc power_two_max_word_fold)
-            using min.cobounded2 word_le_nat_alt apply blast
-           apply simp
-          apply blast
-         apply clarsimp
-         apply (subst unat_add_subtract_cancel)
-           apply (rule_tac y="unat (r_amount (refill_hd sc))" in add_left_mono_trans)
-            apply (clarsimp simp: no_overflow_def max_word_def)
-           using min.cobounded2 word_le_nat_alt apply blast
-          apply simp
-         apply (fastforce simp: no_overflow_def)
-        apply (fastforce dest: refill_budget_check_unat_sum_helper)
-       apply simp
-      apply (subst MIN_BUDGET_merge_unat_sum)
-       apply (fastforce dest: refill_budget_check_unat_sum_helper)
-      apply (fastforce dest: refill_budget_check_unat_sum_helper
-                       simp: word_le_nat_alt)
-     apply (fastforce dest: refill_budget_check_r_time_plus_sum_bounded_helper)
-
-    \<comment> \<open>MIN_BUDGET in head\<close>
-    apply (rule xtr6[OF refills_mege_prefix_r_amount_hd_simple])
-      apply (fastforce simp: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-     apply (fastforce dest: refill_budget_check_unat_sum_helper
-                      simp: MIN_BUDGET_merge_unat_sum)
-    apply (subst MIN_BUDGET_merge_head_r_amount)
-       apply (fastforce simp: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-      apply (fastforce dest: refill_budget_check_unat_sum_helper)
-     apply (fastforce dest: refill_budget_check_unat_sum_helper
-                      simp: unat_arith_simps(1))
-    apply simp
-
-   \<comment> \<open>list nonempty\<close>
-   apply (fastforce simp: refills_merge_valid MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-
-  \<comment> \<open>length at most sc_refill_max sc\<close>
-  apply (rule le_trans[OF refills_merge_prefix_length])
-  apply (rule le_trans[OF MIN_BUDGET_merge_length])
   apply (case_tac "length (sc_refills sc) < sc_refill_max sc")
    apply (prop_tac "length (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
                              r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
@@ -8491,6 +8760,272 @@ lemma refill_budget_check_valid_refills[wp]:
   apply (subst schedule_used_full_length; fastforce?)
   apply (metis Groups.add_ac(2) Nitpick.size_list_simp(2) le_refl list.size(4) semiring_norm(164)
                semiring_normalization_rules(5))
+  done
+
+lemma refill_budget_check_word_helper:
+  "\<lbrakk>sc_refills sc \<noteq> []; sum_list (map unat (map r_amount (sc_refills sc))) = unat (sc_budget sc)\<rbrakk>
+   \<Longrightarrow> unat (r_amount (refill_hd sc) - (min usage (r_amount (refill_hd sc))))
+       + sum_list (map unat (map r_amount (tl (sc_refills sc))))
+       + unat (min usage (r_amount (refill_hd sc)))
+         = unat (sc_budget sc)"
+  supply map_map[simp del]
+  apply (subst unat_sub; fastforce?)
+  apply (prop_tac "min usage (r_amount (refill_hd sc)) \<le> r_amount (refill_hd sc)", simp)
+  apply (clarsimp simp: word_le_nat_alt)
+  apply (prop_tac "[refill_hd sc] @ tl (sc_refills sc) = sc_refills sc", fastforce)
+  apply (prop_tac "sum_list (map unat (map r_amount [refill_hd sc]))
+                   = unat (r_amount (refill_hd sc))", force)
+  apply (metis sum_list_append map_append)
+  done
+
+lemma refill_budget_check_unat_sum_helper:
+  "\<lbrakk>0 < usage; refills_sum (sc_refills sc) = sc_budget sc; ordered_disjoint (sc_refills sc);
+    no_overflow (sc_refills sc); sc_refills sc \<noteq> [];  MIN_BUDGET \<le> sc_budget sc\<rbrakk>
+   \<Longrightarrow> refills_unat_sum
+                (schedule_used (length (sc_refills sc) = sc_refill_max sc)
+                  (\<lparr>r_time = r_time (refill_hd sc) + min usage (r_amount (refill_hd sc)),
+                    r_amount = r_amount (refill_hd sc) - min usage (r_amount (refill_hd sc))\<rparr>
+                   # tl (sc_refills sc))
+                  \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
+                   r_amount = min usage (r_amount (refill_hd sc))\<rparr>)
+        = unat (sc_budget sc)"
+  supply map_map[simp del]
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (subst schedule_used_unat_sum)
+   apply clarsimp
+   apply (subst unat_sub; fastforce?)
+  apply (metis (no_types, hide_lams) map_map min.cobounded2 refill_budget_check_word_helper
+               refills_sum_def unat_bounded_above unat_sub valid_refills_unat_sum_list)
+  apply clarsimp
+  apply (subst unat_sub; fastforce?)
+  apply (metis min.cobounded2 refill_budget_check_word_helper refills_unat_sum_def unat_sub
+               unat_sum_list_equals_budget)
+  done
+
+lemma refill_budget_sched_schedule_used_r_time_helper:
+  "\<lbrace>\<lambda>s. valid_refills sc_ptr s  \<and> cur_sc_offset_ready 0 s \<and> current_time_bounded 3 s
+        \<and> cur_sc s = sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)
+        \<and> \<not> round_robin sc_ptr s\<rbrace>
+   set_refills sc_ptr
+               (schedule_used full (\<lparr>r_time = r_time (refill_hd sc)
+                                              + min usage (r_amount (refill_hd sc)),
+                                     r_amount = r_amount (refill_hd sc)
+                                                - min usage (r_amount (refill_hd sc))\<rparr>
+                                    # tl (sc_refills sc))
+                                   \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
+                                    r_amount = min usage (r_amount (refill_hd sc))\<rparr>)
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + 2 * unat MAX_SC_PERIOD
+                           \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (prop_tac "unat (min usage (r_amount (refill_hd sc))) \<le> unat (r_amount (refill_hd sc))")
+   using min.cobounded2 unat_arith_simps(1) apply blast
+  apply (wpsimp wp: set_refills_wp simp: round_robin_def vs_all_heap_simps obj_at_def)
+  apply (rule add_right_mono_trans
+               [OF _ schedule_used_release_time_bounded[simplified word_le_nat_alt]])
+    apply clarsimp
+    apply (subst unat_add_lem')
+     apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def max_word_def
+                           sc_valid_refills_def word_le_nat_alt)
+    apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def
+                          sc_valid_refills_def word_le_nat_alt)
+   apply clarsimp
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: no_overflow_def max_word_def sc_valid_refills_def)
+    apply (drule_tac x="refill_hd sc" in bspec)
+     apply fastforce
+    apply fastforce
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def
+                          max_word_def sc_valid_refills_def word_le_nat_alt)
+   apply (clarsimp simp: sc_valid_refills_def)
+   apply (rule_tac y="unat (r_amount (refill_hd sc))" in order_trans, fastforce)
+   apply (simp add: refill_budget_check_refill_amount_helper)
+  apply clarsimp
+  apply (subst unat_add_lem')
+   apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def max_word_def
+                         sc_valid_refills_def word_le_nat_alt)
+  apply (subst unat_sub)
+   apply (clarsimp simp: word_le_nat_alt)
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def max_word_def
+                          sc_valid_refills_def word_le_nat_alt)
+   apply (subst unat_sub)
+    apply (clarsimp simp: word_le_nat_alt)
+   apply (metis (no_types) add.commute add_increasing2 diff_le_self order_trans
+                sc_valid_refills_amounts_bounded sc_valid_refills_hd_in_list unat_arith_simps(1)
+                zero_le)
+  apply (subst unat_add_lem')
+   apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def max_word_def
+                         sc_valid_refills_def word_le_nat_alt)
+  apply (subst unat_sub)
+   apply (clarsimp simp: word_le_nat_alt)
+  apply (metis diff_le_self)
+  done
+
+abbreviation all_sp_valid_refills_but_MIN_BUDGET_in_head where
+  "all_sp_valid_refills_but_MIN_BUDGET_in_head sc_ptr s \<equiv>
+   pred_map (\<lambda>cfg. refills_sum (scrc_refills cfg) = scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. window (scrc_refills cfg) (scrc_period cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. length (scrc_refills cfg) \<le> scrc_refill_max cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> scrc_budget cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. scrc_budget cfg \<le> scrc_period cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. MIN_REFILLS \<le> scrc_refill_max cfg) (sc_refill_cfgs_of s) sc_ptr
+   \<and> pred_map (\<lambda>cfg. scrc_period cfg \<le> MAX_SC_PERIOD) (sc_refill_cfgs_of s) sc_ptr"
+
+lemma head_insufficient_loop_r_time_helper:
+  "\<lbrace>\<lambda>s. all_sp_valid_refills_but_MIN_BUDGET_in_head sc_ptr s
+        \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                    (sc_refill_cfgs_of s) sc_ptr
+        \<and> pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + 2 * unat MAX_SC_PERIOD
+                           \<le> unat max_time)
+                    (sc_refill_cfgs_of s) sc_ptr\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) + unat MAX_SC_PERIOD
+                          \<le> unat max_time)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
+  apply (rule_tac Q="\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg))
+                                            \<le> unat max_time - unat MAX_SC_PERIOD)
+                                    (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_strengthen_post[rotated])
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (prop_tac "unat MAX_SC_PERIOD \<le> unat max_time", fastforce)
+   apply (blast dest: le_diff_conv2)
+  apply (wpsimp wp: head_insufficient_loop_hd_r_time)
+  apply (fastforce simp: window_def vs_all_heap_simps word_le_nat_alt)
+  done
+
+method schedule_used_simple
+  = (wpsimp wp: set_refills_wp
+     , clarsimp simp: round_robin_def vs_all_heap_simps obj_at_def sc_valid_refills_def)
+
+method head_insufficient_loop_simple
+  = ((clarsimp simp: head_insufficient_loop_def)?
+     , wpsimp wp: whileLoop_wp' set_refills_wp get_refills_wp
+            simp: non_overlapping_merge_refills_def refill_pop_head_def
+     , clarsimp simp: vs_all_heap_simps obj_at_def sc_valid_refills_def round_robin_def
+     , fastforce?)
+
+method refill_head_overlapping_loop_simple
+  = ((clarsimp simp: refill_head_overlapping_loop_def)?
+     , wpsimp wp: whileLoop_wp' set_refills_wp get_refills_wp
+            simp: merge_refills_def round_robin_def refill_pop_head_def sc_valid_refills_def
+                  vs_all_heap_simps obj_at_def)
+
+lemma refill_budget_check_valid_refills[wp]:
+  "\<lbrace>valid_refills sc_ptr and cur_sc_offset_ready 0 and current_time_bounded 3\<rbrace>
+   refill_budget_check usage
+   \<lbrace>\<lambda>_. valid_refills sc_ptr\<rbrace>"
+  supply map_map[simp del]
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp], rename_tac sc)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_when_cases, simp)
+  apply clarsimp
+  apply (rule hoare_seq_ext[OF _ refill_full_sp])
+
+  apply (case_tac "sc_ptr \<noteq> csc_ptr")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
+
+  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                           = unat (scrc_budget cfg))
+                                   (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_pre_add[THEN iffD2, simplified pred_conj_def])
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (frule valid_refills_refills_unat_sum_equals_budget
+          ; fastforce?)
+   apply (clarsimp simp: sc_valid_refills_def)
+
+  apply (rule_tac B="\<lambda>_ s. \<not> round_robin sc_ptr s
+                           \<and> all_sp_valid_refills_but_MIN_BUDGET_in_head sc_ptr s
+                           \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                              = unat (scrc_budget cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg)))
+                                              + 2 * unat MAX_SC_PERIOD
+                                              \<le> unat max_time)
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix
+          ; (solves schedule_used_simple)?)
+          apply (wpsimp wp: set_refills_wp
+                      simp: round_robin_def vs_all_heap_simps)
+          apply (clarsimp simp: sc_valid_refills_def refills_sum_def obj_at_def)
+          apply (rename_tac sc n)
+          apply (case_tac "sc_refills sc"; clarsimp)
+         apply (wpsimp wp: set_refills_wp)
+         apply (fastforce intro: refill_budget_check_ordered_disjoint_helper
+                           simp: sc_valid_refills_def current_time_bounded_def word_le_nat_alt
+                                 refill_ready_no_overflow_def obj_at_def vs_all_heap_simps)
+        apply (wpsimp wp: set_refills_wp)
+        apply (fastforce intro: refill_budget_check_no_overflow_schedule_used_helper
+                          simp: sc_valid_refills_def refill_budget_check_refill_amount_helper
+                                obj_at_def vs_all_heap_simps)
+       apply (wpsimp wp: set_refills_wp)
+       apply (fastforce intro: schedule_used_window
+                         simp: obj_at_def vs_all_heap_simps)
+      apply (wpsimp wp: set_refills_wp)
+      apply (fastforce simp: schedule_used_non_nil vs_all_heap_simps)
+     apply (wpsimp wp: set_refills_wp)
+     apply (fastforce intro: refill_budget_check_schedule_used_length_at_most_sc_refill_max
+                       simp: obj_at_def vs_all_heap_simps)
+    apply (wpsimp wp: set_refills_wp)
+    apply (fastforce intro: refill_budget_check_unat_sum_helper
+                      simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+   apply (wpsimp wp: refill_budget_sched_schedule_used_r_time_helper)
+   apply (clarsimp simp: round_robin_def vs_all_heap_simps)
+
+  apply (rule_tac B="\<lambda>_ s. \<not> round_robin sc_ptr s
+                           \<and> sp_valid_refills_unbundled sc_ptr s
+                           \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                              = unat (scrc_budget cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg)))
+                                              + unat MAX_SC_PERIOD
+                                              \<le> unat max_time)
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix
+          ; (solves head_insufficient_loop_simple)?)
+          apply (wpsimp wp: head_insufficient_loop_refills_sum)
+          apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+         apply (wpsimp wp: head_insufficient_loop_ordered_disjoint)
+         apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+        apply (wpsimp wp: head_insufficient_loop_no_overflow)
+        apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+       apply (wpsimp wp: head_insufficient_loop_refills_window)
+       apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+      apply (wpsimp wp: head_insufficient_loop_MIN_BUDGET_in_head)
+      apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+     apply (wpsimp wp: head_insufficient_loop_length_bounded)
+     apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+    apply (wpsimp wp: head_insufficient_loop_refills_unat_sum_equals_budget)
+    apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+   apply (wpsimp wp: head_insufficient_loop_r_time_helper)
+
+  apply (rule_tac Q="\<lambda>_ s. \<not> round_robin sc_ptr s \<and> sp_valid_refills_unbundled sc_ptr s"
+               in hoare_strengthen_post[rotated])
+   apply (fastforce simp: valid_refills_def vs_all_heap_simps round_robin_def)
+
+  apply (intro hoare_vcg_conj_lift_pre_fix
+         ; (solves refill_head_overlapping_loop_simple)?)
+       apply (wpsimp wp: refill_head_overlapping_loop_refills_sum)
+      apply (wpsimp wp: refill_head_overlapping_loop_ordered_disjoint)
+      apply (clarsimp simp: vs_all_heap_simps)
+     apply (wpsimp wp: refill_head_overlapping_loop_no_overflow)
+     apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+    apply (wpsimp wp: refill_head_overlapping_loop_window)
+    apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+   apply (wpsimp wp: refill_head_overlapping_loop_hd_r_amount)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (wpsimp wp: refill_head_overlapping_loop_length)
   done
 
 lemma valid_refills_sc_update:
@@ -8617,76 +9152,141 @@ lemma set_refills_check_no_change:
   apply (wpsimp wp: set_refills_wp)
   by (clarsimp simp: vs_all_heap_simps obj_at_def)
 
-\<comment> \<open>FIXME RT: This seems useful, but it is not used. Should we keep it?\<close>
-lemma refill_unblock_check_no_change:
-  "refill_unblock_check scp
-   \<lbrace>\<lambda>s. Q (pred_map (\<lambda>cfg. P (scrc_period cfg) (scrc_budget cfg) (scrc_refill_max cfg)) (sc_refill_cfgs_of s) p)\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: set_refills_check_no_change)
+lemma get_sc_refill_ready_sp:
+   "\<lbrace>P\<rbrace>
+    get_sc_refill_ready sc_ptr
+    \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = sc_refill_ready (cur_time s) sc)\<rbrace>"
+   apply (simp add: get_sc_refill_ready_def)
+   apply (wp hoare_return_sp)
+   apply clarsimp
+   apply (rule_tac x=sc in exI, auto)
+   done
+
+lemma refill_unblock_check_no_overflow_helper:
+  "\<lbrakk>no_overflow (sc_refills sc); current_time_bounded (Suc 0) s;
+    refills_unat_sum (sc_refills sc) = unat (sc_budget sc); sc_refills sc \<noteq> [];
+    sc_budget sc \<le> sc_period sc; sc_period sc \<le> MAX_SC_PERIOD\<rbrakk>
+   \<Longrightarrow> no_overflow (refill_hd sc \<lparr>r_time := cur_time s + kernelWCET_ticks\<rparr> # tl (sc_refills sc))"
+  apply (rule_tac left="[refill_hd sc \<lparr>r_time := cur_time s + kernelWCET_ticks\<rparr>]"
+              and right="tl (sc_refills sc)"
+               in no_overflow_append)
+    apply (clarsimp simp: no_overflow_def current_time_bounded_def refill_ready_def)
+    apply (prop_tac "unat (r_amount (refill_hd sc)) \<le> unat MAX_SC_PERIOD")
+     apply (clarsimp simp: refills_unat_sum_def)
+     apply (rule_tac y="sum_list (map unat (map r_amount (sc_refills sc)))" in order_trans)
+      apply (fastforce intro: member_le_sum_list)
+     apply (clarsimp simp: word_le_nat_alt)
+    apply (subst unat_add_lem')
+     apply (clarsimp simp: max_word_def)
+    apply linarith
+   using no_overflow_sublist apply blast
+  apply simp
+  done
+
+lemma refill_unblock_check_no_overflow_helper2:
+  "\<lbrakk>current_time_bounded (Suc 0) s; refills_unat_sum (sc_refills sc) = unat (sc_budget sc);
+    sc_refills sc \<noteq> []; sc_budget sc \<le> sc_period sc; sc_period sc \<le> MAX_SC_PERIOD\<rbrakk>
+   \<Longrightarrow> unat (cur_time s + kernelWCET_ticks)
+        + refills_unat_sum (refill_hd sc \<lparr>r_time := cur_time s + kernelWCET_ticks\<rparr>
+                            # tl (sc_refills sc))
+       \<le> unat max_time"
+  apply (clarsimp simp: refills_unat_sum_def no_overflow_def current_time_bounded_def)
+  apply (subst unat_add_lem', simp add: max_word_def)
+  apply (clarsimp simp: word_le_nat_alt)
+  apply (case_tac "sc_refills sc"; clarsimp)
+  done
 
 lemma refill_unblock_check_valid_refills[wp]:
    "\<lbrace>valid_refills p and current_time_bounded 1\<rbrace>
-    refill_unblock_check scp
+    refill_unblock_check sc_ptr
     \<lbrace>\<lambda>_. valid_refills p\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: valid_refills_def vs_all_heap_simps)
-  apply (subgoal_tac "unat (cur_time s + kernelWCET_ticks) + unat (sc_budget sc) \<le> unat max_time")
-  apply (intro conjI)
-         apply (clarsimp simp: pred_map_def obj_at_def vs_all_heap_simps refills_merge_prefix_refills_sum neq_Nil_conv)
-        apply (clarsimp simp: neq_Nil_conv)
-        apply (rule refills_merge_prefix_ordered_disjoint)
-         apply (erule ordered_disjoint_tail)
-        apply (subst valid_refills_unat_sum_list[symmetric, simplified  map_map[symmetric]], simp, simp)
-        apply (clarsimp simp: refills_sum_def)
-       apply (clarsimp simp: neq_Nil_conv)
-       apply (rule refills_merge_prefix_no_overflow[rotated])
-        apply (erule no_overflow_tail)
-       apply (subst valid_refills_unat_sum_list[symmetric, simplified  map_map[symmetric]], simp, simp)
-       apply (clarsimp simp: refills_sum_def)
-      apply (clarsimp simp: refills_sum_def)
-     apply (clarsimp simp: neq_Nil_conv)
-     apply (erule refills_merge_prefix_window[rotated 3])
-       apply (clarsimp simp: refill_ready_def)
-      apply (subst valid_refills_unat_sum_list[symmetric, simplified  map_map[symmetric]], simp, simp)
-      apply (clarsimp simp: refills_sum_def)
-     apply (subst valid_refills_unat_sum_list[symmetric, simplified  map_map[symmetric]], simp, simp)
-     apply (clarsimp simp: refills_sum_def word_le_nat_alt)
-     apply (rule_tac y="r_amount (refill_hd sc)" in xtr6)
-      apply (rule refills_mege_prefix_r_amount_hd)
-      using unat_sum_list_equals_budget apply simp
-     apply fastforce
-    apply (rule refills_merge_valid[simplified], clarsimp)
-    apply (case_tac "sc_refills sc"; simp)
-   apply (rule order_trans[OF refills_merge_prefix_length], clarsimp)
-  apply (clarsimp simp: current_time_bounded_def)
-  apply (rule order_trans, rule add_le_mono1, rule unat_plus_gt)
-  apply (erule order_trans[rotated], clarsimp)
-  using order_trans_rules(23) word_le_nat_alt by blast
+  supply map_map[simp del]
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext[OF _ get_sc_refill_ready_sp])
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
 
-lemma refills_merge_prefix_r_time_hd:
-  "r_time (hd (refills_merge_prefix list)) = r_time (hd list)"
-  apply (induct list rule: length_induct)
-  apply (rename_tac xs)
-  apply (case_tac xs)
-   apply simp
-  apply (rename_tac a list)
-  apply (case_tac list)
-   apply simp
-  apply (clarsimp simp: can_merge_refill_def merge_refill_def)
+  apply (case_tac "sc_ptr \<noteq> p")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
+
+  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                           = unat (scrc_budget cfg))
+                                   (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_pre_add[THEN iffD2])
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (frule valid_refills_refills_unat_sum_equals_budget
+          ; fastforce?)
+   apply (clarsimp simp: sc_valid_refills_def)
+
+  apply (rule_tac Q="\<lambda>_ s. \<not> round_robin sc_ptr s \<and> sp_valid_refills_unbundled sc_ptr s"
+               in hoare_strengthen_post[rotated])
+   apply (fastforce simp: valid_refills_def vs_all_heap_simps round_robin_def)
+
+  apply (intro hoare_vcg_conj_lift_pre_fix
+         ; (solves refill_head_overlapping_loop_simple)?)
+       apply (wpsimp wp: refill_head_overlapping_loop_refills_sum set_refills_wp get_refills_wp)
+       apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def)
+       apply (rename_tac sc n)
+       apply (case_tac "sc_refills sc"; clarsimp)
+      apply (wpsimp wp: refill_head_overlapping_loop_ordered_disjoint_strong
+                        set_refills_wp get_refills_wp)
+      apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def)
+      apply (intro conjI impI allI)
+         apply (blast dest: ordered_disjoint_sublist)
+        apply (fastforce intro: refill_unblock_check_no_overflow_helper)
+       apply (fastforce intro: refill_unblock_check_no_overflow_helper2)
+      apply (clarsimp simp: refills_unat_sum_def)
+      apply (rename_tac sc n)
+      apply (case_tac "sc_refills sc"; clarsimp)
+     apply (wpsimp wp: refill_head_overlapping_loop_no_overflow set_refills_wp get_refills_wp)
+     apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def)
+     apply (fastforce intro: refill_unblock_check_no_overflow_helper
+                             refill_unblock_check_no_overflow_helper2)
+    apply (wpsimp wp: refill_head_overlapping_loop_window set_refills_wp get_refills_wp)
+    apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def)
+    apply (intro conjI impI)
+     prefer 2
+     apply (fastforce intro: refill_unblock_check_no_overflow_helper
+                             refill_unblock_check_no_overflow_helper2)
+    apply (clarsimp simp: window_def refill_ready_def word_le_nat_alt current_time_bounded_def)
+    apply (prop_tac "last (tl (sc_refills sca)) = refill_tl sca")
+     using last_tl apply blast
+    apply (prop_tac "unat (cur_time s + kernelWCET_ticks)
+                     = unat (cur_time s) + unat kernelWCET_ticks")
+     apply (subst unat_add_lem', simp add: max_word_def, simp)
+    apply fastforce
+   apply (wpsimp wp: refill_head_overlapping_loop_hd_r_amount set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def refills_unat_sum_def)
+   apply (rename_tac sc n)
+   apply (case_tac "sc_refills sc"; clarsimp)
+  apply (wpsimp wp: refill_head_overlapping_loop_length set_refills_wp get_refills_wp)
+  apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def)
+  done
+
+lemma refill_unblock_check_is_refill_ready[wp]:
+  "refill_unblock_check sc_ptr' \<lbrace>is_refill_ready sc_ptr\<rbrace>"
+  (is "valid _ _ ?post")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (subst bind_assoc[symmetric])
+  apply (rule_tac B="?post" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (fastforce simp: pred_tcb_at_def obj_at_def vs_all_heap_simps refill_ready_def)
+  apply (wpsimp wp: refill_head_overlapping_is_refill_ready)
   done
 
 lemma refill_unblock_check_budget_ready[wp]:
-  "\<lbrace>budget_ready tcb_ptr\<rbrace>
-   refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>xc s. budget_ready tcb_ptr s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_def)
-  apply (intro conjI impI, fastforce)
-     apply (clarsimp simp: refills_merge_prefix_r_time_hd)
-    apply (rule_tac x=ref' in exI; clarsimp)
+  "refill_unblock_check sc_ptr \<lbrace>budget_ready tcb_ptr\<rbrace>"
+  apply (clarsimp simp: budget_ready_def2)
+  apply (wpsimp wp: hoare_vcg_ex_lift)
   done
 
 (* FIXME: merge is_active_sc with existing notion *)
@@ -8717,39 +9317,14 @@ lemma refill_unblock_check_budget_sufficient[wp]:
   "\<lbrace>budget_sufficient tcb_ptr and active_sc_tcb_at tcb_ptr and active_sc_valid_refills\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>xc s. budget_sufficient tcb_ptr s\<rbrace>"
-  supply map_map[simp del]
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  apply (frule (1) active_implies_valid_refills_tcb_at)
-  apply (clarsimp simp: obj_at_def vs_all_heap_simps is_refill_sufficient_def
-                        refill_sufficient_defs)
-  apply (intro conjI impI)
-       apply clarsimp+
-  apply (rule_tac x=ref'a in exI; clarsimp)
-  apply (erule_tac y="r_amount (refill_hd sc)" in order_trans)
-  apply (rule refills_mege_prefix_r_amount_hd)
-  apply (subgoal_tac "sc_valid_refills sc")
-   apply (simp add: sc_valid_refills_def, elim conjE)
-   apply (frule_tac refills="sc_refills sc" in unat_sum_list_equals_budget
-          ; (simp add: refills_sum_def)?)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_refills_def sc_at_pred_n_def)
+  apply (clarsimp simp: budget_sufficient_def2)
+  apply (wpsimp wp: refill_unblock_check_is_refill_sufficient hoare_vcg_ex_lift)
+  apply (fastforce simp: active_sc_valid_refills_def vs_all_heap_simps obj_at_kh_kheap_simps)
   done
 
-lemma refill_unblock_check_active_sc_tcb_at[wp]:
-  "\<lbrace> active_sc_tcb_at x\<rbrace>
-     refill_unblock_check sc_ptr
-   \<lbrace> \<lambda>r. active_sc_tcb_at x\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (fastforce simp: vs_all_heap_simps obj_at_def)
-
-lemma refill_unblock_check_not_active_sc_tcb_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> active_sc_tcb_at x s\<rbrace>
-     refill_unblock_check sc_ptr
-   \<lbrace> \<lambda>r s. \<not> active_sc_tcb_at x s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (auto simp: vs_all_heap_simps obj_at_def split: if_splits)
+crunches refill_unblock_check
+  for active_sc_tcb_at[wp]: "\<lambda>s. P (active_sc_tcb_at tcb_ptr s)"
+  (wp: crunch_wps whileLoop_wp')
 
 lemma refill_unblock_check_released_sc_tcb_at[wp]:
   "\<lbrace>released_sc_tcb_at x and active_sc_valid_refills\<rbrace>
@@ -8759,13 +9334,12 @@ lemma refill_unblock_check_released_sc_tcb_at[wp]:
   by wpsimp
 
 lemma refill_unblock_check_valid_ready_qs[wp]:
-  "\<lbrace> valid_ready_qs and active_sc_valid_refills\<rbrace>
-     refill_unblock_check sc_ptr
-   \<lbrace> \<lambda>_. valid_ready_qs\<rbrace>"
-  apply (clarsimp simp: valid_ready_qs_def )
+  "\<lbrace>valid_ready_qs and active_sc_valid_refills\<rbrace>
+   refill_unblock_check sc_ptr
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  apply (clarsimp simp: valid_ready_qs_def)
   apply (wpsimp simp: Ball_def released_sc_tcb_at_def
-                  wp: hoare_vcg_all_lift hoare_vcg_imp_lift''
-                      refill_unblock_check_active_sc_tcb_at)
+                  wp: hoare_vcg_all_lift hoare_vcg_imp_lift'' refill_unblock_check_active_sc_tcb_at)
   done
 
 context DetSchedSchedule_AI begin
@@ -8927,7 +9501,9 @@ crunches commit_domain_time, refill_budget_check, refill_budget_check_round_robi
   and in_cur_domain[wp]: "in_cur_domain t"
   and valid_idle_etcb[wp]: "valid_idle_etcb"
   and etcb_at[wp]: "etcb_at P t"
-  (wp: crunch_wps set_refills_budget_ready simp: crunch_simps)
+  (wp: crunch_wps set_refills_budget_ready whileLoop_wp'
+   simp: crunch_simps refill_pop_head_def merge_refills_def non_overlapping_merge_refills_def
+         refill_head_overlapping_loop_def head_insufficient_loop_def)
 
 lemma commit_time_sc_tcb_sc_at[wp]:
   "commit_time \<lbrace>\<lambda>s. sc_tcb_sc_at P sc_ptr s\<rbrace>"
@@ -8937,14 +9513,74 @@ lemma commit_time_sc_tcb_sc_at[wp]:
 crunches commit_time
   for simple_sched_action[wp]: "simple_sched_action"
   and ct_not_in_q[wp]: "ct_not_in_q"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps)
+
+lemma head_insufficient_loop_valid_sched_action_not:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   head_insufficient_loop csc_ptr
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply non_overlapping_merge_refills_simple
+    apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                           obj_at_def scheduler_act_not_def is_activatable_def
+                           switch_in_cur_domain_def in_cur_domain_def etcb_at'_def)
+   apply non_overlapping_merge_refills_simple
+   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                          obj_at_def scheduler_act_not_def is_activatable_def
+                          switch_in_cur_domain_def in_cur_domain_def etcb_at'_def
+                   split: if_splits)
+  apply non_overlapping_merge_refills_simple
+  done
+
+lemma refill_head_overlapping_loop_valid_sched_action_not:
+  "\<lbrace>\<lambda>s. valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   refill_head_overlapping_loop csc_ptr
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply merge_refills_simple
+    apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                           obj_at_def scheduler_act_not_def is_activatable_def
+                           switch_in_cur_domain_def in_cur_domain_def etcb_at'_def)
+   apply merge_refills_simple
+   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                          obj_at_def scheduler_act_not_def is_activatable_def
+                          switch_in_cur_domain_def in_cur_domain_def etcb_at'_def
+                   split: if_splits)
+  apply merge_refills_simple
+  done
+
+crunches head_insufficient_loop
+  for sc_scheduler_act_not_cur_sc[wp]: "\<lambda>s. sc_scheduler_act_not (cur_sc s) s"
+  (wp: crunch_wps whileLoop_wp')
 
 lemma refill_budget_check_valid_sched_action_act_not:
   "\<lbrace>valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: set_refills_valid_sched_action_act_not is_round_robin_wp)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s
+                           \<and> cur_sc s = csc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                          obj_at_def scheduler_act_not_def is_activatable_def
+                          switch_in_cur_domain_def in_cur_domain_def etcb_at'_def
+                   split: if_splits)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: head_insufficient_loop_valid_sched_action_not)
+  apply (wpsimp wp: refill_head_overlapping_loop_valid_sched_action_not)
+  done
 
 lemma refill_budget_check_round_robin_valid_sched_action_act_not:
   "\<lbrace>valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
@@ -8953,18 +9589,74 @@ lemma refill_budget_check_round_robin_valid_sched_action_act_not:
   unfolding refill_budget_check_round_robin_def
   by (wpsimp wp: set_refills_valid_sched_action_act_not is_round_robin_wp)
 
+lemma head_insufficient_loop_valid_ready_qs_not:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> sc_not_in_ready_q (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   head_insufficient_loop csc_ptr
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply non_overlapping_merge_refills_simple
+    apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps obj_at_def not_queued_def)
+   apply non_overlapping_merge_refills_simple
+   apply (fastforce simp: vs_all_heap_simps obj_at_def split: if_splits)
+  apply non_overlapping_merge_refills_simple
+  done
+
+lemma refill_head_overlapping_loop_valid_ready_qs_not:
+  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> sc_not_in_ready_q (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   refill_head_overlapping_loop csc_ptr
+   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply merge_refills_simple
+    apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps obj_at_def not_queued_def)
+   apply merge_refills_simple
+   apply (fastforce simp: vs_all_heap_simps obj_at_def split: if_splits)
+  apply merge_refills_simple
+  done
+
+crunches head_insufficient_loop
+  for sc_not_in_ready_q_cur_sc[wp]: "\<lambda>s. sc_not_in_ready_q (cur_sc s) s"
+  (wp: crunch_wps whileLoop_wp')
+
 lemma refill_budget_check_valid_ready_qs_not_queued:
   "\<lbrace>valid_ready_qs and (\<lambda>s. sc_not_in_ready_q (cur_sc s) s)\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: set_refills_valid_ready_qs is_round_robin_wp)
+  supply map_map[simp del]
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> sc_not_in_ready_q (cur_sc s) s
+                           \<and> cur_sc s = csc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps obj_at_def not_queued_def
+                   split: if_splits)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: head_insufficient_loop_valid_ready_qs_not)
+  apply (wpsimp wp: refill_head_overlapping_loop_valid_ready_qs_not)
+  done
 
 lemma schedule_used_hd_r_time_same:
   "\<lbrakk>list \<noteq> [];
     full \<longrightarrow> 1 < length list\<rbrakk>
    \<Longrightarrow> r_time (hd (schedule_used full list new)) = r_time (hd list)"
   by (cases list; fastforce simp: schedule_used_def)
+
+lemma is_refill_ready_alt:
+  "is_refill_ready sc_ptr s
+   = pred_map (\<lambda>cfg. r_time (hd (scrc_refills cfg)) \<le> (cur_time s) + kernelWCET_ticks)
+              (sc_refill_cfgs_of s) sc_ptr"
+  apply (clarsimp simp: refill_ready_def vs_all_heap_simps)
+  done
 
 lemma refill_budget_check_refill_ready_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. if sc_ptr = cur_sc s
@@ -8974,45 +9666,70 @@ lemma refill_budget_check_refill_ready_offset_ready_and_sufficient:
    refill_budget_check usage
    \<lbrace>\<lambda>_ s. is_refill_ready sc_ptr s\<rbrace>"
   supply map_map[simp del]
-  unfolding refill_budget_check_def get_sc_refill_ready_def is_round_robin_def
-  apply (wpsimp wp: set_refills_wp simp: is_refill_sufficient_def)
-  apply (clarsimp simp: vs_all_heap_simps split: if_splits)
-  apply (intro conjI impI allI)
-   apply (clarsimp simp: vs_all_heap_simps refill_ready_def refill_ready_no_overflow_def
-                         sc_at_ppred_def obj_at_def refill_sufficient_def refill_capacity_def
-                  split: if_splits)
-    using MIN_BUDGET_pos apply fastforce
-   apply (clarsimp simp: valid_refills_def rr_valid_refills_def vs_all_heap_simps obj_at_def)
-   apply (clarsimp simp: word_le_nat_alt word_less_nat_alt unat_sub)
-   apply (subst refills_merge_prefix_r_time_hd)
-   apply (subst MIN_BUDGET_merge_same_hd_r_time)
-     apply (fastforce simp: schedule_used_non_nil)
-    apply (subst xtr6[OF schedule_used_r_amount_head]; fastforce?)
-     apply clarsimp
-     apply (frule (2) unat_sum_list_equals_budget)
-      apply (clarsimp simp: word_le_nat_alt)
-     apply (metis (mono_tags, hide_lams) refill_budget_check_word_helper Groups.add_ac(1)
-                  unat_bounded_above)
-    apply clarsimp
-    apply (prop_tac "min usage (r_amount (refill_hd y)) = usage")
-     using unat_mono word_le_not_less apply fastforce
-    apply (metis linorder_min_same1 unat_sub word_le_nat_alt)
-   apply (subst schedule_used_hd_r_time_same; fastforce?)
-    apply (metis MIN_REFILLS_def Nitpick.size_list_simp(2) One_nat_def Suc_eq_plus1 Suc_le_eq
-                 list.size(4) numeral_eqs(1))
+  apply (subst is_refill_ready_alt)+
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp], rename_tac sc)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_when_cases, simp)
    apply clarsimp
-   apply (prop_tac "min usage (r_amount (refill_hd y)) = usage")
-    using unat_mono word_le_not_less apply fastforce
-   apply (metis (mono_tags) Groups.add_ac(2) One_nat_def add_diff_cancel_right' cur_time_no_overflow
-                current_time_bounded_strengthen le0 unat_plus_gt_trans unat_plus_simple word_sub_le)
-  apply (clarsimp simp: sc_valid_refills_def split: if_splits)
-   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac "0 < usage")
-   using MIN_BUDGET_pos apply simp
-  apply (clarsimp simp: refill_ready_def refill_ready_no_overflow_def)
-  apply (clarsimp simp: current_time_bounded_def word_le_nat_alt)
-  apply (metis add_leE unat_plus_simple unat_sum_bound_equiv)
+   apply (clarsimp simp: refill_sufficient_def vs_all_heap_simps refill_ready_no_overflow_def
+                         refill_ready_def refill_capacity_def obj_at_def
+                  split: if_splits)
+    using MIN_BUDGET_nonzero apply blast
+   apply (metis (no_types, hide_lams) Groups.add_ac(2) add_0 cur_time_no_overflow unat_0
+                unat_plus_simple word_le_nat_alt word_neq_0_conv)
+  apply (rule hoare_seq_ext[OF _ refill_full_sp])
+
+  apply (case_tac "sc_ptr \<noteq> csc_ptr")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
+
+  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                           = unat (scrc_budget cfg))
+                                   (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_pre_add[THEN iffD2])
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (frule valid_refills_refills_unat_sum_equals_budget
+          ; fastforce?)
+   apply (clarsimp simp: sc_valid_refills_def)
+
+  apply (rule_tac B="\<lambda>_ s. pred_map (\<lambda>cfg. r_time (scrc_refill_hd cfg)
+                                            \<le> cur_time s + kernelWCET_ticks)
+                                    (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> r_amount (scrc_refill_hd cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+
+    apply (wpsimp wp: set_refills_wp)
+    apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt refill_ready_no_overflow_def
+                          current_time_bounded_def obj_at_def sc_valid_refills_def)
+    apply (subst schedule_used_hd_r_time_same; fastforce?)
+     apply (metis MIN_REFILLS_def Nitpick.size_list_simp(2) One_nat_def Suc_eq_plus1 Suc_le_eq
+                  list.size(4) numeral_eqs(1))
+    apply clarsimp
+    apply (prop_tac "min usage (r_amount (refill_hd scb)) = usage")
+     apply (clarsimp simp: refill_sufficient_def word_le_nat_alt)
+     apply (metis (full_types) MIN_BUDGET_pos refill_capacity_def word_le_nat_alt word_le_not_less)
+    apply (metis add_leE unat_plus_gt_trans unat_split_plus unat_sum_bound_equiv)
+
+   apply (wpsimp wp: set_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (rule order_trans[OF _ schedule_used_r_amount_head])
+     apply (clarsimp simp: refill_sufficient_def refill_capacity_def obj_at_def
+                    split: if_splits)
+     apply (metis linorder_min_same1 word_not_le)
+    apply blast
+   apply (clarsimp simp: obj_at_def current_time_bounded_def refill_ready_no_overflow_def
+                         refills_unat_sum_def sc_valid_refills_def)
+   apply (metis (mono_tags, hide_lams) refill_budget_check_word_helper Groups.add_ac(1)
+                unat_bounded_above)
+
+  apply (wpsimp wp: head_insufficient_loop_hd_r_time_same refill_head_overlapping_loop_hd_r_time)
   done
 
 lemma refill_budget_check_is_refill_sufficient:
@@ -9022,41 +9739,62 @@ lemma refill_budget_check_is_refill_sufficient:
          else is_refill_sufficient 0 sc_ptr s\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_ s. is_refill_sufficient 0 sc_ptr s\<rbrace>"
-  supply map_map[simp del]
-  unfolding refill_budget_check_def get_sc_refill_ready_def
-  apply (wpsimp wp: set_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: obj_at_def vs_all_heap_simps refill_sufficient_def refill_capacity_def
-                        valid_refills_def
-                 split: if_splits)
-  apply (intro conjI impI allI; fastforce?)
-  apply clarsimp
-  apply (elim disjE; fastforce?)
-  apply (elim conjE)
-  apply (frule (2) unat_sum_list_equals_budget)
-   apply (clarsimp simp: refills_sum_def)
-  apply (rule xtr6[OF refills_mege_prefix_r_amount_hd_simple])
-    apply (simp add: MIN_BUDGET_merge_nonempty schedule_used_non_nil)
-   apply (subst MIN_BUDGET_merge_unat_sum)
-   apply (subst schedule_used_unat_sum)
+  (is "valid _ _ ?post")
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp], rename_tac sc)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_when_cases, simp)
    apply clarsimp
-   using refill_budget_check_word_helper apply fastforce
-  apply (subst MIN_BUDGET_merge_head_r_amount)
-     using schedule_used_non_nil apply blast
-    apply (subst schedule_used_unat_sum)
-    apply clarsimp
-    using refill_budget_check_word_helper apply fastforce
-   apply clarsimp
-   apply (subst schedule_used_unat_sum)
-    apply clarsimp
-    using refill_budget_check_word_helper apply fastforce
-   apply clarsimp
-   using refill_budget_check_word_helper apply (simp add: word_le_nat_alt)
-  apply simp
+   apply (clarsimp simp: is_refill_sufficient_def refill_sufficient_def vs_all_heap_simps
+                         refill_capacity_def obj_at_def sub_wrap_lt
+                  split: if_splits)
+   apply (simp add: order_trans_rules(23) word_sub_le)
+  apply (rule hoare_seq_ext[OF _ refill_full_sp])
+
+  apply (case_tac "sc_ptr \<noteq> csc_ptr")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
+
+  apply (rule_tac B="\<lambda>_ s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                           = unat (scrc_budget cfg))
+                                    (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> scrc_budget cfg)
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+     apply (wpsimp wp: set_refills_wp)
+     apply (fastforce intro: refill_budget_check_unat_sum_helper
+                      simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+    apply (wpsimp wp: set_refills_wp)
+    apply (fastforce intro: refill_budget_check_unat_sum_helper
+                      simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+   apply (wpsimp wp: set_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps schedule_used_non_nil)
+
+  apply (rule_tac B="\<lambda>_ s. ?post () s
+                           \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                              = unat (scrc_budget cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (subst is_refill_sufficient_alt, simp)+
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: head_insufficient_loop_MIN_BUDGET_in_head)
+    apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+   apply (wpsimp wp: head_insufficient_loop_refills_unat_sum_equals_budget)
+   apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+  apply (subst is_refill_sufficient_alt, simp)+
+  apply (wpsimp wp: refill_head_overlapping_loop_hd_r_amount)
+  apply (clarsimp simp: vs_all_heap_simps)
   done
 
 crunches refill_budget_check
   for etcb_eq[wp]: "etcb_eq p d t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps)
 
 lemma refill_budget_check_round_robin_refill_ready_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. if sc_ptr = cur_sc s
@@ -9099,12 +9837,62 @@ lemma precondition_cases:
   apply (rule hoare_vcg_disj_lift)
   by force+
 
+lemma head_insufficient_loop_valid_release_q:
+  "\<lbrace>\<lambda>s. valid_release_q s \<and> sc_not_in_release_q (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   head_insufficient_loop csc_ptr
+   \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: set_refills_valid_release_q get_refills_wp hoare_vcg_all_lift
+                      hoare_vcg_imp_lift' set_refills_wp
+                simp: non_overlapping_merge_refills_def refill_pop_head_def)
+    apply (fastforce simp: vs_all_heap_simps obj_at_def split: if_splits)
+   apply non_overlapping_merge_refills_simple
+   apply (fastforce split: if_splits)
+  apply non_overlapping_merge_refills_simple
+  done
+
+lemma refill_head_overlapping_loop_valid_release_q:
+  "\<lbrace>\<lambda>s. valid_release_q s \<and> sc_not_in_release_q sc_ptr s\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: set_refills_valid_release_q get_refills_wp hoare_vcg_all_lift
+                      hoare_vcg_imp_lift' set_refills_wp
+                simp: merge_refills_def refill_pop_head_def)
+   apply (fastforce simp: vs_all_heap_simps obj_at_def split: if_splits)
+  apply (wpsimp wp: set_refills_wp get_refills_wp
+              simp: merge_refills_def refill_pop_head_def)
+  apply (fastforce simp: vs_all_heap_simps obj_at_def split: if_splits)
+  done
+
+crunches head_insufficient_loop
+  for sc_not_in_release_q_cur_sc[wp]: "\<lambda>s. sc_not_in_release_q (cur_sc s) s"
+  (wp: crunch_wps whileLoop_wp')
+
 lemma refill_budget_check_valid_release_q:
   "\<lbrace>valid_release_q and (\<lambda>s. sc_not_in_release_q (cur_sc s) s)\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: set_refills_valid_release_q is_round_robin_wp)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule_tac B="\<lambda>_ s. valid_release_q s \<and> sc_not_in_release_q (cur_sc s) s
+                           \<and> cur_sc s = csc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_valid_release_q)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: head_insufficient_loop_valid_release_q)
+  apply (wpsimp wp: refill_head_overlapping_loop_valid_release_q)
+  done
 
 lemma refill_budget_check_round_robin_valid_release_q:
   "\<lbrace>valid_release_q and (\<lambda>s. sc_not_in_release_q (cur_sc s) s)\<rbrace>
@@ -9131,8 +9919,10 @@ lemma refill_budget_check_valid_sched_misc[wp]:
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)
           (ep_send_qs_of s) (ep_recv_qs_of s)\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: hoare_drop_imp)
+  unfolding refill_budget_check_def refill_head_overlapping_loop_def merge_refills_def
+            refill_pop_head_def head_insufficient_loop_def non_overlapping_merge_refills_def
+  apply (wpsimp wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemmas hoare_vcg_conj_lift_left_fix
   = hoare_vcg_conj_lift[where P=R and P'=R for R, simplified]
@@ -9140,8 +9930,10 @@ lemmas hoare_vcg_conj_lift_left_fix
 (* FIXME RT: remove duplicated versions below, possible move more stuff up with these. *)
 lemma refill_budget_check_active_sc_tcb_at[wp]:
   "refill_budget_check usage \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: hoare_drop_imp)
+  unfolding refill_budget_check_def refill_head_overlapping_loop_def merge_refills_def
+            refill_pop_head_def head_insufficient_loop_def non_overlapping_merge_refills_def
+  apply (wpsimp wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemma refill_budget_check_active_sc_tcb_at':
   assumes "\<And>P. refill_budget_check usage \<lbrace>\<lambda>s. P (t s)\<rbrace>"
@@ -9321,23 +10113,6 @@ lemma heap_upd_update_id:
    "heap_upd (scrc_refills_update id) ptr (sc_refill_cfgs_of s) = sc_refill_cfgs_of s"
   by (fastforce simp: heap_upd_def option_map_def split: option.splits if_splits)
 
-lemma refill_budget_check_sc_refills_update_unspecified:
-  "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s)
-              (last_machine_time_of s) (time_state_of s) (cur_time s) (cur_domain s) (cur_thread s)
-              (idle_thread s) (ready_queues s) (release_queue s) (scheduler_action s)
-              (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
-              (heap_upd (scrc_refills_update f) (cur_sc s) (sc_refill_cfgs_of s)) (sc_replies_of s)\<rbrace>
-   refill_budget_check usage
-   \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
-  unfolding refill_budget_check_def when_def
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext_skip, solves wpsimp, simp?
-         | intro conjI impI)+
-   apply (wpsimp wp: set_refills_valid_sched_pred)
-  apply (wpsimp wp: is_round_robin_wp)
-  apply (metis heap_upd_update_id)
-  done
-
 lemma refill_budget_check_round_robin_sc_refills_update_unspecified:
   "\<lbrace>\<lambda>s. \<forall>f. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
               (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
@@ -9400,7 +10175,7 @@ lemma commit_time_valid_sched_action:
 
 crunches commit_domain_time, refill_budget_check, refill_budget_check_round_robin
   for valid_blocked_except_set[wp]: "valid_blocked_except_set S"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps)
 
 lemma refill_budget_check_round_robin_not_active_sc[wp]:
    "\<lbrace>(\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
@@ -9414,8 +10189,11 @@ lemma refill_budget_check_not_active_sc[wp]:
    "\<lbrace>(\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
     refill_budget_check usage
     \<lbrace>\<lambda>_ s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: valid_sched_wp hoare_drop_imp)
+  unfolding refill_budget_check_def refill_head_overlapping_loop_def merge_refills_def
+            refill_pop_head_def head_insufficient_loop_def non_overlapping_merge_refills_def
+  apply (wpsimp wp: hoare_drop_imp whileLoop_wp' set_refills_wp get_refills_wp
+              simp: obj_at_def vs_all_heap_simps)
+  done
 
 lemma commit_time_not_active_sc[wp]:
   "\<lbrace>(\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp)\<rbrace>
@@ -9444,57 +10222,136 @@ lemma set_refills_bounded_release_time:
   by (clarsimp simp: vs_all_heap_simps bounded_release_time_def pred_map_simps obj_at_def
                     heap_upd_def split: if_split)
 
-lemma refill_budget_check_bounded_release_time:
-  "\<lbrace>bounded_release_time scp
-    and cur_sc_offset_ready 0
-    and current_time_bounded 3
-    and valid_refills scp\<rbrace>
-   refill_budget_check consumed
-   \<lbrace>\<lambda>_. bounded_release_time scp\<rbrace>"
+lemma refill_budget_check_bounded_release_time_schedule_used_helper:
+ "\<lbrace>\<lambda>s. bounded_release_time sc_ptr s \<and> cur_sc_offset_ready 0 s \<and> current_time_bounded 3 s
+       \<and> valid_refills sc_ptr s \<and> cur_sc s = csc_ptr
+       \<and> (\<exists>n. ko_at (SchedContext sc n) csc_ptr s)
+       \<and> (\<exists>sc. (\<exists>n. kheap s csc_ptr = Some (SchedContext sc n)) \<and> (sc_period sc \<noteq> 0))
+       \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) = unat (scrc_budget cfg))
+                  (sc_refill_cfgs_of s) sc_ptr
+       \<and> \<not> sc_ptr \<noteq> csc_ptr\<rbrace>
+   set_refills csc_ptr (schedule_used full
+                        (\<lparr>r_time = r_time (refill_hd sc) + min consumed (r_amount (refill_hd sc)),
+                          r_amount = r_amount (refill_hd sc) - min consumed (r_amount (refill_hd sc))\<rparr>
+                         # tl (sc_refills sc))
+                        \<lparr>r_time = r_time (refill_hd sc) + sc_period sc,
+                         r_amount = min consumed (r_amount (refill_hd sc))\<rparr>)
+   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (last (scrc_refills cfg)))
+                           \<le> unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD)
+                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
   supply map_map[simp del]
-  unfolding refill_budget_check_def
-  apply (wpsimp wp: is_round_robin_wp set_refills_bounded_release_time)
-  apply (clarsimp simp: obj_at_def)
-  apply (frule sc_refill_ready_release_time_well_bounded, (simp add: current_time_bounded_def)+)
-   apply (clarsimp simp: refill_ready_def refill_ready_no_overflow_def vs_all_heap_simps)
-   apply (clarsimp simp: word_le_nat_alt)
-   apply (subst unat_add_lem', clarsimp simp: max_word_def)
-   apply simp
-  apply (clarsimp simp: cur_sc_offset_ready_def obj_at_def bounded_release_time_def
-                        current_time_bounded_def)
-  apply (clarsimp simp: valid_refills_def vs_all_heap_simps word_le_nat_alt)
-  apply (subst refills_merge_prefix_r_time_hd)
-  apply (rule le_trans[OF MIN_BUDGET_merge_r_time_hd[simplified word_le_nat_alt]])
-       apply (fastforce simp: schedule_used_non_nil)
-         apply (fastforce intro: refill_budget_check_ordered_disjoint_helper
-                           simp: word_le_nat_alt)
-       apply (simp flip: word_le_nat_alt)
-     apply (rule refill_budget_check_no_overflow_schedule_used_helper; fastforce?)
-       apply (fastforce simp: refill_ready_no_overflow_def)
-      apply (clarsimp simp: current_time_bounded_def)
-     apply (fastforce intro: refill_budget_check_refill_amount_helper)
-    apply (subst refill_budget_check_unat_sum_helper; fastforce?)
-    apply (fastforce simp: word_le_nat_alt)
-   apply (subst refill_budget_check_unat_sum_helper; fastforce?)
-   apply (fastforce simp: word_le_nat_alt)
+  apply (wpsimp wp: set_refills_wp)
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+  apply (prop_tac "unat (r_amount (refill_hd sc)) \<le> unat (sc_period sc)")
+   apply (clarsimp simp: sc_valid_refills_def obj_at_def word_le_nat_alt)
+   apply (rule_tac y="refills_unat_sum (sc_refills sc)" in order_trans)
+    apply (clarsimp simp: refills_unat_sum_def)
+    apply (metis elem_le_sum_list hd_conv_nth hd_map_simp length_greater_0_conv length_map)
+   apply fastforce
+  apply (prop_tac "unat (r_time (refill_hd sc) + sc_period sc)
+                   = unat (r_time (refill_hd sc)) + unat (sc_period sc)")
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: refill_ready_no_overflow_def current_time_bounded_def obj_at_def
+                          sc_valid_refills_def no_overflow_def max_word_def)
+    apply (clarsimp simp: word_le_nat_alt)
+   apply blast
+  apply (prop_tac "unat (min consumed (r_amount (refill_hd sc))) \<le> unat (r_amount (refill_hd sc))")
+   using min.cobounded2 word_le_nat_alt apply blast
   apply (rule le_trans[OF schedule_used_r_time_last[simplified word_le_nat_alt]])
-    apply (fastforce intro: refill_budget_check_no_overflow_helper)
+    apply (rule refill_budget_check_no_overflow_helper)
+     apply (clarsimp simp: sc_valid_refills_def obj_at_def)
+    apply (clarsimp simp: sc_valid_refills_def obj_at_def)
    apply clarsimp
    apply (intro conjI impI)
     apply (subst unat_add_lem')
-     apply (rule_tac c="unat (r_amount (refill_hd sc))" in add_less_mono_trans)
-      apply (metis no_overflow_def hd_in_set le_imp_less_Suc power_two_max_word_fold)
-     using min.cobounded2 word_le_nat_alt apply blast
-    apply (subst unat_add_lem', clarsimp simp: max_word_def)
-    apply clarsimp
-    apply (rule_tac j="unat (r_amount (refill_hd sc))" in le_trans)
-     using min.cobounded2 word_le_nat_alt apply blast
-    apply (fastforce intro: refill_budget_check_refill_amount_helper simp: word_le_nat_alt)
-   apply (subst unat_add_lem', clarsimp simp: max_word_def)
-   apply (clarsimp simp: window_def last_tl)
+     apply (clarsimp simp: sc_valid_refills_def no_overflow_def max_word_def word_le_nat_alt)
+     apply (drule_tac x="refill_hd sc" in bspec)
+      apply fastforce
+     apply linarith
+    apply force
+   apply (clarsimp simp: window_def last_tl sc_valid_refills_def)
+  apply (clarsimp simp: current_time_bounded_def refill_ready_no_overflow_def max_word_def
+                        word_le_nat_alt bounded_release_time_def sc_valid_refills_def)
+  done
+
+lemma refill_budget_check_bounded_release_time:
+  "\<lbrace>bounded_release_time sc_ptr and cur_sc_offset_ready 0 and current_time_bounded 3
+    and valid_refills sc_ptr\<rbrace>
+   refill_budget_check consumed
+   \<lbrace>\<lambda>_. bounded_release_time sc_ptr\<rbrace>"
+  (is "valid _ _ ?post")
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp], rename_tac sc)
+  apply (rule hoare_seq_ext[OF _ is_round_robin_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_when_cases, simp)
   apply clarsimp
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
-  apply linarith
+  apply (rule hoare_seq_ext[OF _ refill_full_sp])
+
+  apply (case_tac "sc_ptr \<noteq> csc_ptr")
+   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+               simp: merge_refills_def refill_pop_head_def head_insufficient_loop_def
+                     refill_head_overlapping_loop_def non_overlapping_merge_refills_def
+                     vs_all_heap_simps)
+
+  apply (rule_tac R1="\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                           = unat (scrc_budget cfg))
+                                   (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_pre_add[THEN iffD2])
+   apply (clarsimp simp: vs_all_heap_simps)
+   apply (frule valid_refills_refills_unat_sum_equals_budget
+          ; fastforce?)
+   apply (clarsimp simp: sc_valid_refills_def)
+
+  apply (rule_tac B="\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (last (scrc_refills cfg)))
+                                            \<le> unat (cur_time s) + unat kernelWCET_ticks
+                                               + unat MAX_SC_PERIOD)
+                                     (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. no_overflow (scrc_refills cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg)
+                                              = unat (scrc_budget cfg))
+                                       (sc_refill_cfgs_of s) sc_ptr
+                           \<and> pred_map (\<lambda>cfg. MIN_BUDGET \<le> scrc_budget cfg)
+                                       (sc_refill_cfgs_of s) sc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+         apply (wpsimp wp: refill_budget_check_bounded_release_time_schedule_used_helper)
+        apply (wpsimp wp: set_refills_wp)
+        apply (fastforce intro: refill_budget_check_ordered_disjoint_helper
+                          simp: sc_valid_refills_def current_time_bounded_def word_le_nat_alt
+                                refill_ready_no_overflow_def obj_at_def vs_all_heap_simps)
+       apply (wpsimp wp: set_refills_wp)
+       apply (fastforce intro: refill_budget_check_no_overflow_schedule_used_helper
+                         simp: sc_valid_refills_def refill_budget_check_refill_amount_helper
+                               obj_at_def vs_all_heap_simps)
+      apply (wpsimp wp: set_refills_wp)
+      apply (clarsimp simp: vs_all_heap_simps)
+      apply (rule_tac b="unat (sc_budget sc)" in ord_eq_le_trans)
+       apply (fastforce intro: refill_budget_check_unat_sum_helper
+                        simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+      apply fastforce
+     apply (wpsimp wp: set_refills_wp)
+     apply (fastforce simp: schedule_used_non_nil vs_all_heap_simps)
+    apply (wpsimp wp: set_refills_wp)
+    apply (fastforce intro: refill_budget_check_unat_sum_helper
+                      simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+   apply (wpsimp wp: set_refills_wp)
+   apply (fastforce intro: refill_budget_check_unat_sum_helper
+                     simp: obj_at_def vs_all_heap_simps sc_valid_refills_def)
+
+  apply (rule_tac B="?post" in hoare_seq_ext[rotated])
+   apply (clarsimp simp: bounded_release_time_def)
+   apply (wpsimp wp: head_insufficient_loop_hd_r_time)
+   apply (clarsimp simp: vs_all_heap_simps word_le_nat_alt)
+  apply (clarsimp simp: bounded_release_time_def)
+  apply (wpsimp wp: refill_head_overlapping_loop_hd_r_time_unat)
   done
 
 lemma refill_budget_check_round_robin_active_sc_valid_refills:
@@ -9562,8 +10419,20 @@ lemma commit_time_valid_blocked_except_set[wp]:
 
 lemma refill_budget_check_active_reply_scs[wp]:
   "refill_budget_check usage \<lbrace>active_reply_scs\<rbrace>"
-  by (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
-           simp: active_reply_scs_defs)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply head_insufficient_loop_simple
+    apply (fastforce simp: active_reply_scs_def active_if_reply_sc_at_def vs_all_heap_simps
+                           active_sc_def obj_at_def)
+   apply simp
+  apply refill_head_overlapping_loop_simple
+   apply (fastforce simp: active_reply_scs_def active_if_reply_sc_at_def vs_all_heap_simps
+                          active_sc_def obj_at_def)
+  apply simp
+  done
 
 lemma refill_budget_check_round_robin_active_reply_scs[wp]:
   "refill_budget_check_round_robin usage \<lbrace>active_reply_scs\<rbrace>"
@@ -9610,44 +10479,40 @@ lemma update_sched_context_tcb_ready_times_idem:
                elim!: rsubst[of P]
               intro!: option_eqI[where opt'="map_project _ _ _"])
 
-lemma refill_unblock_check_sorted_release_q:
-  "\<lbrace>\<lambda>s. sorted_release_q s \<and> sc_not_in_release_q sc_ptr s\<rbrace>
-   refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>rv. sorted_release_q\<rbrace>"
-  supply if_split[split del]
-  apply (rule hoare_lift_Pf2[where f=release_queue, rotated], wpsimp)
-  apply (rule sorted_release_q_2_valid_lift)
-  apply (simp add: refill_unblock_check_def)
-  apply (intro hoare_seq_ext_skip hoare_if hoare_when_cases; (solves \<open>wpsimp wp:\<close>)?)
-    unfolding set_refills_def
-    apply (rule update_sched_context_tcb_ready_times_idem; simp add: in_queue_2_def)+
-  done
-
 lemma refill_unblock_check_valid_release_q:
   "\<lbrace>valid_release_q and sc_not_in_release_q sc_ptr\<rbrace>
-    refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>rv. valid_release_q\<rbrace>"
-  unfolding valid_release_q_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' refill_unblock_check_sorted_release_q
-           simp: Ball_def)
+   refill_unblock_check sc_ptr
+   \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule_tac B="\<lambda>_ s. valid_release_q s \<and> sc_not_in_release_q sc_ptr s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_valid_release_q)
+  apply (wpsimp wp: refill_head_overlapping_loop_valid_release_q)
+  done
 
-lemma ruc_not_pred_map_sc_active[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: valid_sched_wp hoare_drop_imp is_round_robin_wp)
 
 lemma refill_unblock_check_bounded_release_time:
-  "\<lbrace>bounded_release_time scp
-    and current_time_bounded 1\<rbrace>
+  "\<lbrace>bounded_release_time sc_ptr' and current_time_bounded 1\<rbrace>
    refill_unblock_check sc_ptr
-   \<lbrace>\<lambda>rv. bounded_release_time scp\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_bounded_release_time get_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: obj_at_def refills_merge_prefix_r_time_hd current_time_bounded_def
-                        bounded_release_time_def)
-  apply (subgoal_tac "unat (cur_time s + kernelWCET_ticks)
-              \<le> unat (cur_time s) + unat kernelWCET_ticks + unat MAX_SC_PERIOD", clarsimp)
-  by (rule order_trans, rule unat_plus_gt, simp)
+   \<lbrace>\<lambda>_. bounded_release_time sc_ptr'\<rbrace>"
+  (is "valid ?pre _ ?post")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (subst bind_assoc[symmetric])
+  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps bounded_release_time_def unat_plus_gt_trans)
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="?post"]
+         ; fastforce?)
+  apply merge_refills_simple
+  done
 
 lemma refill_unblock_check_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
@@ -9664,8 +10529,8 @@ lemma refill_unblock_check_valid_blocked_except_set[wp]:
    \<lbrace>\<lambda>rv. valid_blocked_except_set S\<rbrace>"
   unfolding refill_unblock_check_def
   apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: vs_all_heap_simps valid_blocked_except_set_2_def valid_blocked_thread_def)
-  apply (drule_tac x=t in spec, fastforce simp: obj_at_def)
+  apply (fastforce simp: vs_all_heap_simps valid_blocked_except_set_2_def valid_blocked_thread_def
+                        obj_at_def)
   done
 
 lemmas refill_unblock_check_valid_blocked[wp] =
@@ -9679,7 +10544,7 @@ lemma ready_or_release_reprogram_timer_update[simp]:
 crunches refill_unblock_check
   for sc_at_period[wp]: "sc_at_period P p"
   and sc_at_period_sc[wp]: "\<lambda>s. sc_at_period P (cur_sc s) s"
-    (wp: crunch_wps simp: crunch_simps)
+    (wp: crunch_wps whileLoop_wp' simp: crunch_simps)
 
 lemma refill_unblock_check_valid_sched_action[wp]:
   "\<lbrace>valid_sched_action and active_sc_valid_refills\<rbrace>
@@ -9701,17 +10566,24 @@ lemma refill_unblock_check_released_ipc_queues[wp]:
 
 lemma refill_unblock_check_active_reply_scs[wp]:
   "refill_unblock_check scp \<lbrace>active_reply_scs\<rbrace>"
-  unfolding refill_unblock_check_def by (wpsimp wp: hoare_drop_imps)
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply refill_head_overlapping_loop_simple
+   apply (fastforce simp: active_reply_scs_def active_if_reply_sc_at_def vs_all_heap_simps
+                          active_sc_def)
+  apply simp
+  done
 
 lemma refill_unblock_check_valid_sched_except_blocked:
-  "\<lbrace>valid_sched_except_blocked
-    and sc_not_in_release_q sc_ptr
-    and current_time_bounded 1\<rbrace>
-    refill_unblock_check sc_ptr
+  "\<lbrace>valid_sched_except_blocked and sc_not_in_release_q sc_ptr and current_time_bounded 1\<rbrace>
+   refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_. valid_sched_except_blocked\<rbrace>"
   unfolding valid_sched_def
   by (wpsimp wp: refill_unblock_check_valid_ready_qs refill_unblock_check_valid_release_q
-                 refill_unblock_check_valid_sched_action refill_unblock_check_active_sc_valid_refills)
+                 refill_unblock_check_valid_sched_action
+                 refill_unblock_check_active_sc_valid_refills)
 
 lemma refill_unblock_check_valid_sched:
   "\<lbrace>valid_sched and sc_not_in_release_q sc_ptr and current_time_bounded 1\<rbrace>
@@ -9724,12 +10596,22 @@ lemma refill_unblock_check_valid_sched:
                  refill_unblock_check_active_sc_valid_refills)
 
 lemma refill_unblock_check_cur_sc_budget_sufficient[wp]:
-  "\<lbrace>\<lambda>s. sc_ptr \<noteq> cur_sc s \<and> cur_sc_budget_sufficient s\<rbrace>
-  refill_unblock_check sc_ptr
+  "\<lbrace>\<lambda>s. cur_sc_budget_sufficient s \<and> sc_ptr \<noteq> cur_sc s\<rbrace>
+   refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_ s. cur_sc_budget_sufficient s\<rbrace>"
-  unfolding refill_unblock_check_def is_round_robin_def refill_ready_def
-  apply (wpsimp wp: hoare_vcg_all_lift get_refills_wp set_refills_wp)
-  by (clarsimp simp: vs_all_heap_simps)
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply merge_refills_simple
+  done
 
 (* end refill_unblock_check *)
 
@@ -9739,26 +10621,47 @@ lemma ready_or_release_updates[simp]:
 
 context DetSchedSchedule_AI begin
 
-lemma ruc_refill_ready_no_overflow_sc:
-  "\<lbrace>\<lambda>s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc' \<and> sc' \<noteq> sc\<rbrace>
-   refill_unblock_check sc
-   \<lbrace>\<lambda>_ s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc'\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp hoare_drop_imp hoare_vcg_all_lift)
-  by (clarsimp simp: vs_all_heap_simps)
+lemma refill_unblock_check_refill_ready_no_overflow_sc:
+  "\<lbrace>\<lambda>s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc_ptr'
+        \<and> sc_ptr' \<noteq> sc_ptr\<rbrace>
+   refill_unblock_check sc_ptr
+   \<lbrace>\<lambda>_ s. pred_map (refill_ready_no_overflow_sc usage curtime) (sc_refill_cfgs_of s) sc_ptr'\<rbrace>"
+  unfolding refill_unblock_check_def refill_head_overlapping_loop_def merge_refills_def
+            refill_pop_head_def refill_ready_no_overflow_def merge_refill_def
+  apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp' is_round_robin_wp
+              simp: vs_all_heap_simps obj_at_def)
+  done
 
 lemma ruc_is_refill_sufficient_indep:
-  "\<lbrace>\<lambda>s. is_refill_sufficient x sc' s \<and> sc' \<noteq> sc\<rbrace>
-   refill_unblock_check sc
-   \<lbrace>\<lambda>_ s. is_refill_sufficient x sc' s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp hoare_drop_imp hoare_vcg_all_lift)
-  by (clarsimp simp: vs_all_heap_simps)
+  "\<lbrace>\<lambda>s. is_refill_sufficient usage sc_ptr' s \<and> sc_ptr' \<noteq> sc_ptr\<rbrace>
+   refill_unblock_check sc_ptr
+   \<lbrace>\<lambda>_ s. is_refill_sufficient usage sc_ptr' s\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply merge_refills_simple
+  done
 
 lemma refill_unblock_check_cur_sc_active[wp]:
   "refill_unblock_check a \<lbrace>cur_sc_active\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: valid_sched_wp get_refills_wp is_round_robin_wp)
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp hoare_drop_imp hoare_vcg_all_lift whileLoop_wp'
+                     set_refills_wp
+               simp: vs_all_heap_simps obj_at_def)
+  apply refill_head_overlapping_loop_simple
+  done
 
 lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
   "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. scptr \<noteq> cur_sc s)\<rbrace>
@@ -9766,13 +10669,23 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
    \<lbrace>\<lambda>_. cur_sc_more_than_ready\<rbrace>"
   apply (wpsimp wp: hoare_vcg_imp_lift' simp: cur_sc_more_than_ready_def)
     apply (wps, wpsimp)
-   apply (wps, wpsimp wp: ruc_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep)
+   apply (wps, wpsimp wp: refill_unblock_check_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep)
   apply clarsimp
+  done
+
+lemma cur_tcb_sc_at:
+  "\<lbrakk>valid_objs s; cur_tcb s; bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s\<rbrakk>
+   \<Longrightarrow> sc_at sc_ptr s"
+  apply (clarsimp simp: cur_tcb_def valid_objs_def)
+  apply (drule_tac x="cur_thread s" in bspec)
+   apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (clarsimp simp: valid_obj_def obj_at_def pred_tcb_at_def valid_tcb_def valid_bound_obj_def
+                        option_None_True_const)
   done
 
 lemma switch_sched_context_valid_sched:
   "\<lbrace>valid_sched and simple_sched_action
-     and valid_state
+     and valid_state and cur_tcb
      and cur_sc_in_release_q_imp_zero_consumed
      and cur_sc_more_than_ready
      and current_time_bounded 3
@@ -10734,9 +11647,15 @@ lemma not_queued_refill_unblock_check:
   "\<lbrace>\<lambda>s. \<forall>t. sc_tcb_sc_at (\<lambda>p. p = Some t) sc_ptr s \<longrightarrow> not_queued t s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>rv s. \<forall>t. sc_tcb_sc_at (\<lambda>p. p = Some t) sc_ptr s \<longrightarrow> not_queued t s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: get_refills_wp hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply refill_head_overlapping_loop_simple
+   apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  apply simp
   done
 
 lemma sched_context_donate_valid_blocked_except_set:
@@ -12904,7 +13823,7 @@ lemmas receive_ipc_blocked_valid_sched =
 crunches receive_ipc_preamble, refill_unblock_check
   for valid_machine_time[wp]: valid_machine_time
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps whileLoop_wp')
 
 lemma maybe_return_sc_not_queued[wp]:
   "\<lbrace>not_queued thread and scheduler_act_sane\<rbrace>
@@ -14215,7 +15134,8 @@ lemma check_budget_sc_tcb_sc_at[wp]:
   unfolding check_budget_def charge_budget_def end_timeslice_def
             handle_timeout_def refill_budget_check_def refill_reset_rr_def
   apply clarsimp
-  apply (wpsimp wp: hoare_drop_imps send_fault_ipc_sc_tcb_sc_at hoare_vcg_if_lift2 simp: Let_def)
+  apply (wpsimp wp: hoare_drop_imps send_fault_ipc_sc_tcb_sc_at hoare_vcg_if_lift2  whileLoop_wp'
+              simp: Let_def)
   done
 
 lemma check_budget_simple_sched_action[wp]:
@@ -14299,12 +15219,67 @@ lemma end_timeslice_released_ipc_queues:
   unfolding end_timeslice_def
   by (wpsimp wp: handle_timeout_released_ipc_queues thread_get_wp' simp: is_timeout_fault_def)
 
-lemma refill_budget_check_weak_valid_sched_action:
-  "\<lbrace>weak_valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
-   refill_budget_check consumed
+lemma head_insufficient_loop_weak_valid_sched_action_not:
+  "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   head_insufficient_loop csc_ptr
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: set_refills_weak_valid_sched_action_act_not is_round_robin_wp)
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: set_refills_wp get_refills_wp
+                simp: non_overlapping_merge_refills_def refill_pop_head_def)
+    apply (fastforce simp: weak_valid_sched_action_def vs_all_heap_simps
+                           obj_at_def scheduler_act_not_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp
+               simp: non_overlapping_merge_refills_def refill_pop_head_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp
+              simp: non_overlapping_merge_refills_def refill_pop_head_def)
+  done
+
+lemma refill_head_overlapping_loop_weak_valid_sched_action_not:
+  "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
+   refill_head_overlapping_loop csc_ptr
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: set_refills_wp get_refills_wp
+                simp: merge_refills_def refill_pop_head_def)
+    apply (fastforce simp: weak_valid_sched_action_def vs_all_heap_simps
+                           obj_at_def scheduler_act_not_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp
+               simp: merge_refills_def refill_pop_head_def)
+   apply (fastforce simp: weak_valid_sched_action_def vs_all_heap_simps
+                          obj_at_def scheduler_act_not_def
+                   split: if_splits)
+  apply (wpsimp wp: set_refills_wp get_refills_wp
+              simp: merge_refills_def refill_pop_head_def)
+  done
+
+lemma refill_budget_check_weak_valid_sched_action_act_not:
+  "\<lbrace>weak_valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
+   refill_budget_check usage
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  supply map_map[simp del]
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac csc_ptr)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (rule_tac B="\<lambda>_ s. weak_valid_sched_action s \<and> sc_scheduler_act_not (cur_sc s) s
+                           \<and> cur_sc s = csc_ptr"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def vs_all_heap_simps
+                          obj_at_def scheduler_act_not_def
+                   split: if_splits)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: head_insufficient_loop_weak_valid_sched_action_not)
+  apply (wpsimp wp: refill_head_overlapping_loop_weak_valid_sched_action_not)
+  done
 
 lemma refill_budget_check_round_robin_weak_valid_sched_action:
   "\<lbrace>weak_valid_sched_action and (\<lambda>s. sc_scheduler_act_not (cur_sc s) s)\<rbrace>
@@ -14315,13 +15290,15 @@ lemma refill_budget_check_round_robin_weak_valid_sched_action:
 
 lemma refill_budget_check_cur_sc_tcb[wp]:
   "refill_budget_check usage \<lbrace>cur_sc_tcb\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: hoare_drop_imps)
-
-lemma refill_budget_check_active_sc_tcb_at[wp]:
-  "refill_budget_check usage \<lbrace>\<lambda>s. P (active_sc_tcb_at t s)\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: hoare_drop_imp)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+  apply (head_insufficient_loop_simple
+         ; clarsimp simp: obj_at_def cur_sc_tcb_def sc_at_pred_n_def)
+  apply refill_head_overlapping_loop_simple
+  done
 
 lemma refill_budget_check_active_sc_tcb_at':
   assumes "\<And>P. refill_budget_check usage \<lbrace>\<lambda>s. P (t s)\<rbrace>"
@@ -14826,15 +15803,111 @@ lemma refill_budget_check_round_robin_released_ipc_queues:
 lemma released_imp_active: "released_sc_tcb_at t s \<Longrightarrow> active_sc_tcb_at t s"
   by (fastforce simp: pred_map2'_pred_maps elim!: pred_map_weakenE)
 
+lemma refill_pop_head_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
+   refill_pop_head sc_ptr
+   \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
+  apply (clarsimp simp: refill_pop_head_def)
+  apply (wpsimp wp: set_refills_released_ipc_queues get_refills_wp)
+  apply (clarsimp simp: pred_map_ipc_queued_thread_state_iff cur_sc_not_blocked_def
+                        is_blocked_on_recv_ntfn_def)
+  done
+
+lemma non_overlapping_merge_refills_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
+   non_overlapping_merge_refills sc_ptr
+   \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
+  apply (clarsimp simp: non_overlapping_merge_refills_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+     apply (wpsimp wp: refill_pop_head_released_ipc_queues)
+    apply (clarsimp simp: refill_pop_head_def)
+    apply (wpsimp wp: set_refills_wp get_refills_wp)
+    apply (clarsimp simp: cur_sc_not_blocked_def vs_all_heap_simps)
+   apply (clarsimp simp: refill_pop_head_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (wpsimp wp: set_refills_released_ipc_queues get_refills_wp)
+  apply (clarsimp simp: pred_map_ipc_queued_thread_state_iff cur_sc_not_blocked_def
+                        is_blocked_on_recv_ntfn_def)
+  done
+
+lemma head_insufficient_loop_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
+   head_insufficient_loop sc_ptr
+   \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: head_insufficient_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: non_overlapping_merge_refills_released_ipc_queues)
+   apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: cur_sc_not_blocked_def vs_all_heap_simps)
+  apply (clarsimp simp: non_overlapping_merge_refills_def refill_pop_head_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  done
+
+lemma merge_refills_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
+   merge_refills sc_ptr
+   \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
+  apply (clarsimp simp: merge_refills_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+     apply (wpsimp wp: refill_pop_head_released_ipc_queues)
+    apply (clarsimp simp: refill_pop_head_def)
+    apply (wpsimp wp: set_refills_wp get_refills_wp)
+    apply (clarsimp simp: cur_sc_not_blocked_def vs_all_heap_simps)
+   apply (clarsimp simp: refill_pop_head_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (wpsimp wp: set_refills_released_ipc_queues get_refills_wp)
+  apply (clarsimp simp: pred_map_ipc_queued_thread_state_iff cur_sc_not_blocked_def
+                        is_blocked_on_recv_ntfn_def)
+  done
+
+lemma refill_head_overlapping_loop_released_ipc_queues:
+  "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
+   refill_head_overlapping_loop sc_ptr
+   \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: merge_refills_released_ipc_queues)
+   apply (clarsimp simp: merge_refills_def refill_pop_head_def)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: cur_sc_not_blocked_def vs_all_heap_simps)
+  apply (clarsimp simp: merge_refills_def refill_pop_head_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  done
+
+crunches head_insufficient_loop
+  for cur_sc_not_blocked[wp]: "\<lambda>s. cur_sc_not_blocked s"
+  (wp: crunch_wps whileLoop_wp')
+
 lemma refill_budget_check_released_ipc_queues:
-  "\<lbrace>released_ipc_queues
-    and active_sc_valid_refills
-    and cur_sc_not_blocked\<rbrace>
+  "\<lbrace>released_ipc_queues and cur_sc_not_blocked\<rbrace>
    refill_budget_check usage
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
-  unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_released_ipc_queues is_round_robin_wp simp: cur_sc_not_blocked_def)
-  by (auto simp: pred_map_ipc_queued_thread_state_iff)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (clarsimp simp: pred_conj_def)
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+     apply (wpsimp wp: set_refills_released_ipc_queues
+                 simp: cur_sc_not_blocked_def merge_refills_def refill_pop_head_def obj_at_def)
+     apply (fastforce simp: pred_map_ipc_queued_thread_state_iff)
+    apply (wpsimp wp: set_refills_wp)
+    apply (clarsimp simp: cur_sc_not_blocked_def vs_all_heap_simps)
+   apply (wpsimp wp: set_refills_wp)
+  apply (wpsimp wp: head_insufficient_loop_released_ipc_queues
+                    refill_head_overlapping_loop_released_ipc_queues)
+  done
 
 lemma charge_budget_valid_blocked[wp]:
   "\<lbrace>valid_blocked_except_set S\<rbrace>
@@ -15034,7 +16107,7 @@ lemma ct_not_blocked_cur_sc_not_blocked:
 
 crunches refill_budget_check_round_robin, refill_budget_check
   for valid_machine_time[wp]: valid_machine_time
-  (wp: crunch_wps)
+  (wp: crunch_wps whileLoop_wp')
 
 lemma charge_budget_valid_ready_qs:
   "\<lbrace>valid_ready_qs
@@ -15124,8 +16197,17 @@ lemma refill_budget_check_round_robin_cur_sc_active[wp]:
 
 lemma refill_budget_check_cur_sc_active[wp]:
   "refill_budget_check consumed \<lbrace>cur_sc_active\<rbrace>"
-  by (wpsimp wp: refill_budget_check_sc_refills_update_unspecified
-           simp: active_reply_scs_defs)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: obj_at_def cur_sc_tcb_def sc_at_pred_n_def vs_all_heap_simps)
+  apply (rule hoare_seq_ext_skip)
+   apply head_insufficient_loop_simple
+  apply refill_head_overlapping_loop_simple
+  done
 
 lemma charge_budget_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> (can_timeout \<longrightarrow> cur_sc_tcb_are_bound s \<longrightarrow> cur_sc_active s)\<rbrace>
@@ -15402,11 +16484,19 @@ lemma valid_blocked_except_cur_thread:
 
 lemma refill_budget_check_sc_refill_max_sc_at:
   "refill_budget_check usage \<lbrace>sc_refill_max_sc_at P sc_ptr\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: update_sched_context_wp set_refills_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
-              simp: is_round_robin_def sc_at_pred_n_def obj_at_def
-                    refill_budget_check_def refill_full_def refill_ready_def
-      | intro conjI impI)+
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+  apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+              simp: obj_at_def merge_refills_def refill_pop_head_def sc_at_pred_n_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (head_insufficient_loop_simple
+          ; clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (refill_head_overlapping_loop_simple
+         ; clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
 
 lemma refill_budget_check_round_robin_sc_refill_max_sc_at:
   "refill_budget_check_round_robin usage \<lbrace>sc_refill_max_sc_at P sc_ptr\<rbrace>"
@@ -15557,8 +16647,17 @@ lemma refill_budget_check_round_robin_is_active_sc[wp]:
 
 lemma refill_budget_check_is_active_sc[wp]:
   "refill_budget_check d \<lbrace>is_active_sc scp\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp wp: valid_sched_wp is_round_robin_wp)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: obj_at_def cur_sc_tcb_def sc_at_pred_n_def vs_all_heap_simps)
+  apply (rule hoare_seq_ext_skip)
+   apply head_insufficient_loop_simple
+  apply refill_head_overlapping_loop_simple
+  done
 
 lemma commit_time_is_active_sc[wp]:
   "commit_time \<lbrace>is_active_sc scp\<rbrace>"
@@ -15591,7 +16690,7 @@ lemma refill_update_active_reply_scs[wp]:
 
 crunches commit_time
   for vmt[wp]: "\<lambda>s. P (cur_time s) (machine_state s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps whileLoop_wp')
 
 lemma invoke_sched_control_configure_valid_sched:
   "\<lbrace>valid_sched
@@ -18489,7 +19588,7 @@ crunches cancel_ipc
 
 crunches refill_unblock_check
   for valid_machine_time[wp]: valid_machine_time
-  (wp: crunch_wps)
+  (wp: crunch_wps whileLoop_wp')
 
 lemma update_waiting_ntfn_ct_ready_if_schedulable:
   "\<lbrace>ct_ready_if_schedulable
@@ -18734,7 +19833,8 @@ crunches handle_invocation
   for vmt[wp]: "(\<lambda>s. P (last_machine_time_of s) (cur_time s)) :: det_state \<Rightarrow> _"
   and pnt[wp]: "(\<lambda>s. P (last_machine_time_of s) (time_state_of s)) :: det_state \<Rightarrow> _"
   (ignore: syscall do_machine_op
-       wp: syscall_valid crunch_wps do_machine_op_machine_state dxo_wp_weak mapME_x_wp_inv check_cap_inv filterM_preserved
+       wp: syscall_valid crunch_wps do_machine_op_machine_state dxo_wp_weak mapME_x_wp_inv
+           check_cap_inv filterM_preserved whileLoop_wp'
      simp: crunch_simps)
 
 crunches check_budget_restart, handle_recv, handle_yield
@@ -19316,14 +20416,6 @@ lemma sched_context_resume_cur_sc_in_release_q_imp_zero_consumed:
   apply (fastforce split: if_splits)
   done
 
-lemma refill_unblock_check_is_refill_ready[wp]:
-  "\<lbrace>is_refill_ready sc_ptr\<rbrace>
-   refill_unblock_check sc_ptr'
-   \<lbrace>\<lambda>_. is_refill_ready sc_ptr\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_def refills_merge_prefix_r_time_hd)
-
 lemma refill_unblock_check_cur_sc_is_refill_ready[wp]:
   "\<lbrace>\<lambda>s. is_refill_ready (cur_sc s) s\<rbrace>
    refill_unblock_check sc_ptr
@@ -19331,11 +20423,16 @@ lemma refill_unblock_check_cur_sc_is_refill_ready[wp]:
   by (rule hoare_lift_concrete_Pf[where f=cur_sc]; wpsimp)
 
 lemma refill_unblock_check_cur_sc_is_refill_sufficient[wp]:
-  "\<lbrace>\<lambda>s. valid_refills (cur_sc s) s \<and> is_refill_sufficient usage (cur_sc s) s\<rbrace>
+  "unat MIN_BUDGET + unat usage \<le> unat max_time \<Longrightarrow>
+   \<lbrace>\<lambda>s. is_refill_sufficient usage (cur_sc s) s \<and> valid_refills (cur_sc s) s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_ s. is_refill_sufficient usage (cur_sc s) s\<rbrace>"
   apply (rule hoare_weaken_pre)
-  by (wpsimp | wps)+
+   apply (rule hoare_lift_Pf2[where f=cur_sc])
+    apply (wpsimp wp: refill_unblock_check_is_refill_sufficient)
+   apply wpsimp
+  apply fastforce
+  done
 
 crunches refill_unblock_check, refill_update, refill_new
   for valid_machine_time[wp]: "valid_machine_time"
@@ -19828,17 +20925,37 @@ lemma refill_unblock_check_cur_sc_offset_ready_consumed_time[wp]:
   "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and> scp \<noteq> cur_sc s\<rbrace>
    refill_unblock_check scp
    \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (auto simp: obj_at_def vs_all_heap_simps)
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply merge_refills_simple
+  done
 
 lemma refill_unblock_check_cur_sc_offset_sufficient_consumed_time[wp]:
   "\<lbrace>\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s \<and> scp \<noteq> cur_sc s\<rbrace>
    refill_unblock_check scp
    \<lbrace>\<lambda>_ s. cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp is_round_robin_wp)
-  by (auto simp: obj_at_def vs_all_heap_simps)
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: set_refills_wp get_refills_wp)
+   apply (clarsimp simp: vs_all_heap_simps)
+  apply (clarsimp simp: refill_head_overlapping_loop_def)
+  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
+         ; fastforce?)
+  apply merge_refills_simple
+  done
 
 lemma do_reply_transfer_sc_not_in_release_q:
   "\<lbrace>\<lambda>s. sc_not_in_release_q (cur_sc s) s

@@ -2086,15 +2086,6 @@ lemma set_refills_wp:
   unfolding set_refills_def
   by (wpsimp wp: update_sched_context_wp)
 
-lemma valid_irq_node_refill_unblock_check[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>valid_irq_node\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp
-              simp: is_round_robin_def)
-  apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table_def)
-  apply (drule_tac x=irq in spec, clarsimp)
-  done
-
 crunches maybe_donate_sc
   for equal_kernel_mappings[wp]: equal_kernel_mappings
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
@@ -2127,7 +2118,7 @@ crunches maybe_donate_sc
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and typ_at[wp]: "\<lambda>s. P (typ_at T t s)"
-  (wp: maybeM_inv crunch_wps simp: crunch_simps is_round_robin_def)
+  (wp: maybeM_inv crunch_wps whileLoop_wp' simp: crunch_simps is_round_robin_def)
 
 crunch typ_at[wp]: send_signal "\<lambda>s. P (typ_at T t s)"
   (wp: hoare_drop_imps maybeM_inv)
@@ -2229,12 +2220,12 @@ crunch st_tcb_at[wp]: sched_context_resume "\<lambda>s. P (st_tcb_at P' t s)"
   (wp: crunch_wps)
 
 crunch valid_replies_pred[wp]: refill_unblock_check "\<lambda>s.  valid_replies_pred P s"
-  (wp: crunch_wps simp: crunch_simps is_round_robin_def)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps is_round_robin_def)
 
 lemma refill_unblock_check_st_tcb_at[wp]:
   "refill_unblock_check scptr \<lbrace> \<lambda>s. P (st_tcb_at P' t s) \<rbrace>"
   unfolding refill_unblock_check_def
-  by (wpsimp wp: hoare_drop_imps cong: if_cong)
+  by (wpsimp wp: hoare_drop_imps whileLoop_wp' cong: if_cong)
 
 lemma maybe_donate_sc_st_tcb_at[wp]:
   "maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace> \<lambda>s. P (st_tcb_at P' t s) \<rbrace>"
@@ -2856,7 +2847,7 @@ lemma maybe_return_sc_pred_tcb_at:
   done
 
 crunch pred_tcb_at[wp]: sched_context_resume, refill_unblock_check "pred_tcb_at proj P tcb_ptr"
-  (wp: crunch_wps simp: crunch_simps is_round_robin_def)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps is_round_robin_def)
 
 lemma maybe_donate_sc_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P tcb_ptr' and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr

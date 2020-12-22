@@ -440,7 +440,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_has_no_reply_cap:
 
 crunches refill_unblock_check
   for pred_tcb[wp]: "\<lambda>s. P (pred_tcb_at f Q t s)"
-  (wp: crunch_wps hoare_vcg_if_lift2)
+  (wp: crunch_wps whileLoop_wp' hoare_vcg_if_lift2)
 
 lemmas si_invs[wp] = si_invs'[where Q=\<top>,OF hoare_TrueI hoare_TrueI hoare_TrueI hoare_TrueI,simplified]
 

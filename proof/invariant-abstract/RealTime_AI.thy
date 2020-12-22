@@ -1054,12 +1054,19 @@ crunches
   (wp_del: get_sc_active_wp get_sc_refill_ready_wp get_sc_refill_sufficient_wp
            get_sc_released_wp refill_full_wp)
 
+(* FIXME RT Michael: move to lib *)
+lemma whileLoop_wp':
+  "(\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<rbrace> B r \<lbrace> I \<rbrace>) \<Longrightarrow>
+  \<lbrace> I r \<rbrace> whileLoop C B r \<lbrace> I \<rbrace>"
+  apply (fastforce intro: whileLoop_wp)
+  done
+
 crunches
   sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, postpone,
-  refill_unblock_check, unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
-  sched_context_unbind_reply, schedule_tcb
+  unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
+  sched_context_unbind_reply, schedule_tcb, refill_unblock_check
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
+  (wp: crunch_wps whileLoop_wp' hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
 
 lemma sched_context_update_consumed_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> sched_context_update_consumed param_a \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace> "

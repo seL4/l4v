@@ -47,7 +47,7 @@ crunches commit_domain_time,set_next_interrupt,set_refills,refill_budget_check
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
-  (wp: crunch_wps simp: Let_def)
+  (wp: crunch_wps whileLoop_wp' simp: Let_def)
 
 crunch reprogram_timer[wp]: commit_time "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps hoare_vcg_if_lift2 ignore: commit_domain_time)
@@ -57,7 +57,7 @@ crunches refill_unblock_check
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
   and cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_sc_cur_thread[wp]: "\<lambda>s. P (cur_sc s) (cur_thread s)"
-  (wp: crunch_wps hoare_vcg_if_lift2)
+  (wp: crunch_wps hoare_vcg_if_lift2 whileLoop_wp')
 
 (* FIXME: rename to is_round_robin_inv *)
 lemma round_robin_inv[wp]: "\<lbrace>\<lambda>s. P s\<rbrace> is_round_robin x \<lbrace> \<lambda>_ s. P s\<rbrace>"
@@ -80,14 +80,12 @@ lemma get_refills_wp:
   \<lbrace> \<lambda>r s. P r s\<rbrace>"
   by (wpsimp simp: get_sched_context_def get_refills_def wp: get_object_wp) fastforce
 
-lemma refills_merge_valid:
-  "ls \<noteq> [] \<Longrightarrow> refills_merge_prefix ls \<noteq> []"
-  by (induct ls rule: refills_merge_prefix.induct; simp)
-
 lemma refill_unblock_check_valid_objs[wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_objs\<rbrace>"
-  by (wpsimp wp: set_refills_valid_objs
-             simp: refill_unblock_check_def is_round_robin_def refills_merge_valid)
+  by (wpsimp wp: set_refills_valid_objs whileLoop_wp' get_refills_wp update_sched_context_wp
+                 hoare_drop_imps
+           simp: refill_unblock_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+                 refill_head_overlapping_loop_def)
 
 lemma schedule_used_non_nil:
   "schedule_used b ls u \<noteq> []"
@@ -96,10 +94,10 @@ lemma schedule_used_non_nil:
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
   unfolding refill_budget_check_def
-  apply (wpsimp wp: set_refills_valid_objs hoare_vcg_imp_lift'
-                    get_refills_wp hoare_vcg_all_lift
-              simp: Let_def is_round_robin_def
-         | intro conjI)+
+  apply (wpsimp wp: set_refills_valid_objs hoare_drop_imps
+                    get_refills_wp whileLoop_wp' update_sched_context_wp
+              simp: non_overlapping_merge_refills_def merge_refills_def refill_pop_head_def
+                    head_insufficient_loop_def refill_head_overlapping_loop_def)
   done
 
 (* FIXME RT: move to Invariants_AI *)
@@ -379,12 +377,14 @@ lemma set_refills_valid_idle[wp]:
 
 crunches refill_budget_check
   for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps whileLoop_wp')
 
 lemma refill_budget_check_if_live_then_nonz_cap[wp]:
   "refill_budget_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  apply (clarsimp simp: refill_budget_check_def is_round_robin_def)
-  apply wpsimp
+  apply (clarsimp simp: refill_budget_check_def is_round_robin_def merge_refills_def
+                        refill_pop_head_def non_overlapping_merge_refills_def
+                        head_insufficient_loop_def refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps)
   done
 
 crunches refill_budget_check
@@ -418,16 +418,15 @@ crunches refill_budget_check
  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
  and valid_ioc[wp]: "valid_ioc"
  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (simp: Let_def wp: hoare_drop_imps)
+  (simp: Let_def wp: hoare_drop_imps whileLoop_wp')
 
 lemma refill_budget_check_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-   by (wpsimp simp: refill_budget_check_def
-                wp: hoare_drop_imp)
-
-lemma refill_budget_check_ex_cap[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  by (wp ex_nonz_cap_to_pres)
+  apply (wpsimp simp: refill_budget_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemma refill_budget_check_mdb [wp]:
   "\<lbrace>valid_mdb\<rbrace> refill_budget_check u  \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
@@ -435,13 +434,19 @@ lemma refill_budget_check_mdb [wp]:
 
 lemma refill_budget_check_hyp_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  by (wpsimp simp: refill_budget_check_def
-               wp: hoare_drop_imp)
+  apply (wpsimp simp: refill_budget_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemma refill_budget_check_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> refill_budget_check u \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  by (wpsimp simp: refill_budget_check_def
-               wp: hoare_drop_imp)
+  apply (wpsimp simp: refill_budget_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  done
 
 lemma refill_budget_check_round_robin_invs[wp]:
   "\<lbrace>invs\<rbrace> refill_budget_check_round_robin u \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -450,14 +455,18 @@ lemma refill_budget_check_round_robin_invs[wp]:
 
 lemma refill_budget_check_invs[wp]:
   "refill_budget_check usage \<lbrace>invs\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_def Let_def
-                  wp: hoare_drop_imp get_sched_context_wp)
+  apply (wpsimp simp: refill_budget_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
   done
 
 lemma refill_budget_check_valid_sc[wp]:
   "refill_budget_check usage \<lbrace>valid_sched_context sc\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_def
-                  wp: hoare_drop_imp)
+  apply (wpsimp simp: refill_budget_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
   done
 
 lemma update_sched_context_valid_irq_node [wp]:
@@ -555,20 +564,96 @@ lemma sc_consumed_update_sym_refs[wp]:
    \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
   by (wpsimp wp: update_sched_context_refs_of_same)
 
-lemma refill_unblock_check_valid_state [wp]:
-  "\<lbrace>valid_state\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. valid_state\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_def get_refills_def if_apply_def2 wp: hoare_drop_imps hoare_vcg_all_lift)
-  apply (clarsimp simp: valid_state_def refills_merge_valid[simplified])
+crunches refill_unblock_check
+  for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
+  (simp: crunch_simps is_round_robin_def wp: crunch_wps whileLoop_wp')
+
+lemma refill_unblock_check_if_live_then_nonz_cap[wp]:
+  "refill_unblock_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def is_round_robin_def merge_refills_def
+                        refill_pop_head_def non_overlapping_merge_refills_def
+                        refill_head_overlapping_loop_def)
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps)
   done
 
-lemma refill_unblock_check_cur_tcb [wp]:
-  "\<lbrace>cur_tcb\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def if_apply_def2 wp: hoare_drop_imps hoare_vcg_all_lift)
+crunches refill_unblock_check
+  for aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  and sc_at[wp]: "sc_at sc_ptr"
+  and cte_wp_at[wp]: "cte_wp_at P c"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
+  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_global_objs[wp]: "valid_global_objs"
+  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
+  and valid_arch_caps[wp]: "valid_arch_caps"
+  and only_idle[wp]: "only_idle"
+  and ifunsafe[wp]: "if_unsafe_then_cap"
+  and valid_arch[wp]: "valid_arch_state"
+  and valid_irq_states[wp]: "valid_irq_states"
+  and vms[wp]: "valid_machine_state"
+  and valid_vspace_objs[wp]: "valid_vspace_objs"
+  and valid_global_refs[wp]: "valid_global_refs"
+  and v_ker_map[wp]: "valid_kernel_mappings"
+  and equal_mappings[wp]: "equal_kernel_mappings"
+  and valid_asid_map[wp]: "valid_asid_map"
+  and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
+  and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
+  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
+  and cur_tcb[wp]: "cur_tcb"
+  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
+  and valid_ioc[wp]: "valid_ioc"
+  and valid_replies[wp]: valid_replies
+  and valid_idle[wp]: valid_idle
+  and valid_irq_node[wp]: valid_irq_node
+  and valid_ioports[wp]: valid_ioports
+  and cur_sc_tcb[wp]: cur_sc_tcb
+  (simp: Let_def is_round_robin_def wp: hoare_drop_imps whileLoop_wp' hoare_vcg_if_lift2)
 
-lemma refill_unblock_check_invs [wp]: "\<lbrace>invs\<rbrace> refill_unblock_check r \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp simp: refills_merge_valid[simplified] is_round_robin_def
-               wp: hoare_drop_imp get_refills_wp)
+lemmas refill_unblock_check_typ_ats [wp] =
+  abs_typ_at_lifts [OF refill_unblock_check_typ_at]
+
+lemma refill_unblock_check_zombies[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>zombies_final\<rbrace>"
+  apply (wpsimp simp: refill_unblock_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def is_round_robin_def
+                      refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  done
+
+lemma refill_unblock_check_mdb [wp]:
+  "\<lbrace>valid_mdb\<rbrace> refill_unblock_check sc_ptr \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+  by (wpsimp wp: valid_mdb_lift)
+
+lemma refill_unblock_check_hyp_refs_of[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: refill_unblock_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def is_round_robin_def
+                      refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  done
+
+lemma refill_unblock_check_refs_of[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: refill_unblock_check_def merge_refills_def refill_pop_head_def
+                      non_overlapping_merge_refills_def is_round_robin_def
+                      refill_head_overlapping_loop_def
+                  wp: hoare_drop_imp whileLoop_wp')
+  apply (clarsimp simp: state_refs_of_def)
+  done
+
+lemma refill_unblock_check_valid_state [wp]:
+  "refill_unblock_check r \<lbrace>valid_state\<rbrace>"
+  apply (wpsimp simp: valid_state_def valid_pspace_def pred_conj_def)
+  done
+
+lemma refill_unblock_check_invs [wp]:
+  "refill_unblock_check r \<lbrace>invs\<rbrace>"
+  apply (wpsimp simp: invs_def)
+  done
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -608,8 +693,11 @@ lemma valid_sched_context_domain_time_update[simp]:
 
 lemma refill_budget_check_valid_replies[wp]:
   "refill_budget_check usage \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: refill_budget_check_def is_round_robin_def
-               wp: get_refills_wp)
+  apply (wpsimp simp: refill_budget_check_def is_round_robin_def merge_refills_def
+                      non_overlapping_merge_refills_def refill_pop_head_def
+                      head_insufficient_loop_def refill_head_overlapping_loop_def
+                  wp: get_refills_wp whileLoop_wp' update_sched_context_wp hoare_drop_imps)
+  done
 
 lemma commit_time_valid_replies[wp]:
   "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
@@ -709,8 +797,11 @@ lemma set_refills_bound_sc_tcb_at [wp]:
 
 lemma refill_budget_check_bound_sc_tcb_at [wp]:
   "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
-  unfolding refill_budget_check_def is_round_robin_def
-  by wpsimp
+  unfolding refill_budget_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+            non_overlapping_merge_refills_def
+            head_insufficient_loop_def refill_head_overlapping_loop_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  done
 
 lemma commit_time_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
@@ -724,7 +815,10 @@ lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def get_refills_def is_round_robin_def)
+  unfolding refill_unblock_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+            non_overlapping_merge_refills_def refill_head_overlapping_loop_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  done
 
 lemma set_next_interrupt_invs[wp]: "\<lbrace>invs\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp wp: hoare_drop_imp get_sched_context_wp dmo_setDeadline
@@ -740,10 +834,12 @@ lemma sc_consumed_update_valid_state [wp]:
                wp: update_sched_context_valid_objs_same valid_irq_node_typ)
 
 lemma refill_budget_check_valid_idle:
-  "\<lbrace>valid_idle\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp simp: is_round_robin_def
-               wp: get_refills_wp)
+  "refill_budget_check usage \<lbrace>valid_idle\<rbrace>"
+  unfolding refill_budget_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+            non_overlapping_merge_refills_def
+            head_insufficient_loop_def refill_head_overlapping_loop_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  done
 
 lemma refill_budget_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
@@ -799,7 +895,7 @@ lemma ct_in_state_cur_sc_update[iff]:
   by (simp add: ct_in_state_def)
 
 crunch pred_tcb_at[wp]: commit_time "\<lambda>s. P (pred_tcb_at proj f t s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps whileLoop_wp')
 
 lemma update_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> update_sched_context p f \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -812,7 +908,11 @@ lemma set_refills_ct_in_state[wp]:
 
 lemma refill_budget_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_budget_check consumed \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp simp: refill_budget_check_def is_round_robin_def)
+  unfolding refill_budget_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+            non_overlapping_merge_refills_def
+            head_insufficient_loop_def refill_head_overlapping_loop_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  done
 
 (* FIXME: move *)
 lemma ct_in_state_domain_time_update[simp]:
@@ -824,8 +924,10 @@ crunch ct_in_state[wp]: commit_time "ct_in_state t"
 
 lemma refill_unblock_check_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> refill_unblock_check csc \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
-  by (wpsimp wp: get_refills_wp
-           simp: refill_unblock_check_def is_round_robin_def)
+  unfolding refill_unblock_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+            refill_head_overlapping_loop_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  done
 
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
@@ -1469,81 +1571,52 @@ lemma update_sched_context_ex_cap_cur_thread [wp]:
   apply (rule ex_cap_to_after_update[simplified fun_upd_apply[symmetric]], simp)
   by (clarsimp simp: obj_at_def)
 
-crunches refill_unblock_check
- for aligned[wp]: pspace_aligned
- and distinct[wp]: pspace_distinct
- and iflive[wp]: if_live_then_nonz_cap
- and sc_at[wp]: "sc_at sc_ptr"
- and tcb_at[wp]: "tcb_at sc_ptr"
- and cte_wp_at[wp]: "cte_wp_at P c"
- and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
- and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
- and no_cdt[wp]: "\<lambda>s. P (cdt s)"
- and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
- and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
- and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
- and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
- and valid_idle[wp]: valid_idle
- and valid_irq_handlers[wp]: valid_irq_handlers
- and valid_global_objs[wp]: "valid_global_objs"
- and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
- and valid_arch_caps[wp]: "valid_arch_caps"
- and only_idle[wp]: "only_idle"
- and ifunsafe[wp]: "if_unsafe_then_cap"
- and valid_arch[wp]: "valid_arch_state"
- and valid_irq_states[wp]: "valid_irq_states"
- and vms[wp]: "valid_machine_state"
- and valid_vspace_objs[wp]: "valid_vspace_objs"
- and valid_global_refs[wp]: "valid_global_refs"
- and v_ker_map[wp]: "valid_kernel_mappings"
- and equal_mappings[wp]: "equal_kernel_mappings"
- and valid_asid_map[wp]: "valid_asid_map"
- and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
- and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
- and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
- and pspace_respects_device_region[wp]: "pspace_respects_device_region"
- and cur_tcb[wp]: "cur_tcb"
- and valid_mdb[wp]: "valid_mdb"
- and valid_ioc[wp]: "valid_ioc"
- and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
- and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (simp: Let_def wp: hoare_drop_imps hoare_vcg_if_lift2 zipWithM_x_inv ignore: set_mrs)
-
 lemma refill_unblock_check_tcb_at_ct[wp]:
     "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace>
      refill_unblock_check scp
      \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def set_refills_def is_tcb update_sched_context_def
-                   is_round_robin_def pred_tcb_at_def obj_at_def
-               wp: hoare_vcg_if_lift2 set_object_wp get_object_wp get_refills_wp)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", rotated], wp)
+  apply wpsimp
+  done
 
 lemma refill_unblock_check_ex_nonz_cap_to_ct[wp]:
     "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> refill_unblock_check scp
        \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def set_refills_def is_round_robin_def
-               wp: get_refills_wp)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", rotated], wp)
+  apply wpsimp
+  done
 
-lemma refill_unblock_check_zombies[wp]:
-  "\<lbrace>zombies_final\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. zombies_final\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def is_round_robin_def
-        wp: get_refills_wp hoare_vcg_if_lift2 get_sched_context_wp)
+(* FIXME RT: move to Lib *)
+\<comment> \<open>For forward reasoning in Hoare proofs, these lemmas allow skipping over the
+    left-hand-side of monadic bind, while keeping the same precondition.\<close>
+lemmas hoare_seq_ext_skip
+  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
 
 lemma refill_unblock_check_state_refs_of_ct[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s) (cur_thread s)\<rbrace>
-     refill_unblock_check scp \<lbrace>\<lambda>_ s. P (state_refs_of s) (cur_thread s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
-                      update_sched_context_def set_object_def
-                  wp: get_refills_wp get_object_wp)
-  apply (clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def
-                  intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])
+  "refill_unblock_check scp \<lbrace>\<lambda>s. P (state_refs_of s) (cur_thread s)\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def refill_head_overlapping_loop_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp simp: set_refills_def
+                   wp: update_sched_context_wp)
+   apply (clarsimp simp: state_refs_of_def obj_at_def
+                 intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])
+  apply (wpsimp simp: set_refills_def merge_refills_def refill_pop_head_def
+                  wp: update_sched_context_wp get_refills_wp  whileLoop_wp')
+   apply (clarsimp simp: state_refs_of_def obj_at_def
+                 intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])+
   done
 
 lemma refill_unblock_check_it_ct[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s) (cur_thread s)\<rbrace>
     refill_unblock_check scp \<lbrace>\<lambda>_ s. P (idle_thread s) (cur_thread s)\<rbrace>"
-  by (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
-                   update_sched_context_def set_object_def
-               wp: get_refills_wp get_object_wp)
+  apply (wpsimp simp: refill_unblock_check_def is_round_robin_def set_refills_def
+                      update_sched_context_def set_object_def merge_refills_def refill_pop_head_def
+                      refill_head_overlapping_loop_def
+                  wp: get_refills_wp get_object_wp whileLoop_wp')
+  done
 
 lemma get_sc_refill_capacity_sp:
   "\<lbrace>\<lambda>s. P s \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)\<rbrace>

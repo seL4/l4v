@@ -254,7 +254,7 @@ crunch interrupt_states[wp]: cancel_signal, blocked_cancel_ipc "\<lambda>s. P (i
   (wp: crunch_wps)
 
 crunch interrupt_states[wp]: update_waiting_ntfn "\<lambda>s. P (interrupt_states s)"
-  (wp: mapM_x_wp_inv maybeM_inv crunch_wps ignore: sched_context_donate
+  (wp: mapM_x_wp_inv maybeM_inv crunch_wps whileLoop_wp' ignore: sched_context_donate
    simp: crunch_simps is_round_robin_def)
 
 crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)"
