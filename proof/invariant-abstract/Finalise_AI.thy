@@ -891,7 +891,7 @@ lemma reset_sc_refill_max_invs[wp]:
   by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
-  "\<lbrace>invs and cte_wp_at ((=) cap) slot\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s)\<rbrace> fast_finalise cap final \<lbrace>\<lambda>_. invs\<rbrace>"
   by (cases cap;
       wpsimp wp: cancel_all_ipc_invs cancel_all_signals_invs
                    unbind_maybe_notification_invs sched_context_maybe_unbind_ntfn_invs
