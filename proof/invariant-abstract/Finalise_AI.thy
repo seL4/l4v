@@ -119,17 +119,6 @@ locale Finalise_AI_1 =
     \<lbrace>no_cap_to_obj_with_diff_ref cap S :: 'a state \<Rightarrow> bool\<rbrace>
        suspend t
      \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
-  assumes finalise_cap_replaceable:
-    "\<And> cap x sl.
-    \<lbrace>\<lambda>(s :: 'a state). s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
-          \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
-          \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
-          \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
-                                 valid_vspace_objs s \<and>
-                                 valid_arch_state s \<and>
-                                 valid_arch_caps s)\<rbrace>
-       finalise_cap cap x
-     \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
   assumes deleting_irq_handler_cte_preserved:
   "\<And> P p irq.\<lbrakk> \<And>cap. P cap \<Longrightarrow> \<not> can_fast_finalise cap \<rbrakk>
     \<Longrightarrow> \<lbrace>cte_wp_at P p\<rbrace>
