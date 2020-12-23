@@ -900,14 +900,13 @@ lemma sc_replies_prevs_walk:
   apply (clarsimp simp: opt_map_def projectKO_opt_sc)
   done
 
-lemma sc_replies_relation_prevs_list:
+lemma sc_replies_relation_prevs_list':
   "\<lbrakk> sc_replies_relation s s';
-     kheap s x = Some (kernel_object.SchedContext sc n);
-     ksPSpace s' x = Some (KOSchedContext sc')\<rbrakk>
-    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)"
+     kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
+    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (drule_tac x=x and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
+  apply (drule_tac x=scp and y="sc_replies sc" in spec2)
+  apply (clarsimp simp: opt_map_left_Some sc_of_def)
   done
 
 lemma list_refs_of_replies'_reftype[simp]:
