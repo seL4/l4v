@@ -14,6 +14,6 @@ imports
 
 begin
 
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs decls_only NOT refillsMergePrefix minBudgetMerge refillsBudgetCheck
+#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs decls_only NOT refillsMergePrefix minBudgetMerge refillsBudgetCheck refillHeadOverlappingLoop headInsufficientLoop
 
 end

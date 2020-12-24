@@ -27,6 +27,12 @@ requalify_consts
   getCurrentTime
 end
 
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only
+definition refillHeadOverlappingLoop_def:
+"refillHeadOverlappingLoop scPtr = whileLoop (\<lambda>_ s. the (fun_of_m (refillHeadOverlapping scPtr) s)) (\<lambda>_. mergeRefills scPtr) ()"
+
+definition headInsufficientLoop_def:
+"headInsufficientLoop scPtr = whileLoop (\<lambda>_ s. the (fun_of_m (refillHdInsufficient scPtr) s)) (\<lambda>_. nonOverlappingMergeRefills scPtr) ()"
+
+#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only NOT refillHeadOverlappingLoop headInsufficientLoop
 
 end

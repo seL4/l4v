@@ -293,6 +293,16 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     return $ rAmount (refillHd sc) < minBudget
 
+> nonOverlappingMergeRefills :: PPtr SchedContext -> Kernel ()
+> nonOverlappingMergeRefills scPtr = do
+>     old_head <- refillPopHead scPtr
+>     updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head,
+>                                            rAmount = rAmount head + rAmount old_head }
+
+> headInsufficientLoop :: PPtr SchedContext -> Kernel ()
+> headInsufficientLoop scPtr =
+        whileLoop (\r s -> funOfM (refillHdInsufficient scPtr)) (\r -> nonOverlappingMergeRefills scPtr) ()
+
 > refillBudgetCheck :: Ticks -> Kernel ()
 > refillBudgetCheck usage = do
 >     scPtr <- getCurSc
@@ -310,17 +320,11 @@ This module uses the C preprocessor to select a target architecture.
 
       Ensure that the rAmount of the head refill is at least minBudget
 
->     whileM (refillHdInsufficient scPtr) $ do
->       old_head <- refillPopHead scPtr
->       updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head,
->                                              rAmount = rAmount head + rAmount old_head }
+>     headInsufficientLoop scPtr
 
       Ensure head refill is disjoint from the following refill
 
->     whileM (refillHeadOverlapping scPtr) $ do
->       old_head <- refillPopHead scPtr
->       updateRefillHd scPtr $ \head -> head { rTime = rTime head,
->                                              rAmount = rAmount head + rAmount old_head }
+>     refillHeadOverlappingLoop scPtr
 
 > refillBudgetCheckRoundRobin :: Ticks -> Kernel ()
 > refillBudgetCheckRoundRobin usage = do
@@ -340,22 +344,27 @@ This module uses the C preprocessor to select a target architecture.
 >     refills <- refillSize scPtr
 >     return (refills > 1 && enough_time)
 
+> mergeRefills :: PPtr SchedContext -> Kernel ()
+> mergeRefills scPtr = do
+>     old_head <- refillPopHead scPtr
+>     updateRefillHd scPtr $ \head -> head { rTime = rAmount old_head,
+>                                            rAmount = rAmount head + rAmount old_head }
+
+> refillHeadOverlappingLoop :: PPtr SchedContext -> Kernel ()
+> refillHeadOverlappingLoop scPtr =
+        whileLoop (\r s -> funOfM (refillHeadOverlapping scPtr)) (\r -> mergeRefills scPtr) ()
+
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
 >       scactive <- scActive scPtr
 >       assert scactive "scPtr should be active"
 >       roundRobin <- isRoundRobin scPtr
 >       ready <- refillReady scPtr
->       when (roundRobin && ready) $ do
+>       when (!roundRobin && ready) $ do
 >         setReprogramTimer True
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
->         whileM (refillHeadOverlapping scPtr) $ do
->           amount <- liftM rAmount $ mapScPtr scPtr refillHd
->           refillPopHead scPtr
->           curTime <- getCurTime
->           updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks,
->                                                  rAmount = rAmount head + amount }
+>         refillHeadOverlappingLoop scPtr
 
 > schedContextUpdateConsumed :: PPtr SchedContext -> Kernel Time
 > schedContextUpdateConsumed scPtr = do
