@@ -350,7 +350,7 @@ lemma restart_invs':
 
 crunches "ThreadDecls_H.restart"
   for tcb'[wp]: "tcb_at' t"
-  (wp: crunch_wps whileM_inv)
+  (wp: crunch_wps)
 
 lemma no_fail_setRegister: "no_fail \<top> (setRegister r v)"
   by (simp add: setRegister_def)

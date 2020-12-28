@@ -1821,8 +1821,7 @@ lemma tcbReleaseRemove_valid_release_queue'[wp]:
   done
 
 crunches setReprogramTimer
-  for valid_objs'[wp]: valid_objs'
-  and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   and if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
   and valid_mdb'[wp]: valid_mdb'
   and ct_not_inQ[wp]: ct_not_inQ

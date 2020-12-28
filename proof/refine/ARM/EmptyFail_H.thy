@@ -189,7 +189,7 @@ crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.post
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
   refillUnblockCheck, schedContextResume
-  (simp: Let_def)
+  (simp: Let_def wp: empty_fail_whileLoop)
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)
@@ -279,7 +279,7 @@ lemma catchError_empty_fail[intro!, wp, simp]:
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
-  (wp: empty_fail_catch empty_fail_setDeadline)
+  (wp: empty_fail_catch empty_fail_setDeadline empty_fail_whileLoop)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   tcbReleaseDequeue

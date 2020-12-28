@@ -111,7 +111,7 @@ lemma setObjectReply_valid_duplicates'[wp]:
 crunches transferCaps, sendFaultIPC, handleFault, replyFromKernel, insertNewCap
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: transferCapsToSlots
-       wp: crunch_wps hoare_vcg_const_Ball_lift hoare_vcg_all_lift get_rs_cte_at' whileM_inv
+       wp: crunch_wps hoare_vcg_const_Ball_lift hoare_vcg_all_lift get_rs_cte_at'
      simp: zipWithM_x_mapM ball_conj_distrib crunch_simps)
 
 lemma koTypeOf_pte:
@@ -1822,7 +1822,7 @@ crunch valid_cap'[wp]:
 
 crunch valid_duplicates'[wp]:
   sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps whileM_inv simp: crunch_simps)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps)
 
 lemma invokeIRQControl_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> performIRQControl a
@@ -2172,7 +2172,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
 
 crunches invokeSchedContext, invokeSchedControlConfigure
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift whileM_inv)
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift whileLoop_wp')
 
 lemma performInvocation_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<and> invs' s \<and> sch_act_simple s

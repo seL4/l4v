@@ -2697,7 +2697,7 @@ crunches sendSignal
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and irqs_masked'[wp]: "irqs_masked'"
-  (wp: crunch_wps whileM_inv simp: crunch_simps o_def)
+  (wp: crunch_wps whileLoop_wp' simp: crunch_simps o_def)
 
 lemma ct_in_state_activatable_imp_simple'[simp]:
   "ct_in_state' activatable' s \<Longrightarrow> ct_in_state' simple' s"
@@ -3288,7 +3288,7 @@ end
 crunches sendFaultIPC, receiveIPC, receiveSignal
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  (wp: crunch_wps hoare_vcg_all_lift whileM_inv simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift whileLoop_wp' simp: crunch_simps)
 
 global_interpretation sendFaultIPC: typ_at_all_props' "sendFaultIPC t cap f d"
   by typ_at_props'
@@ -3400,7 +3400,7 @@ crunches doIPCTransfer
 
 crunches receiveIPC
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift whileM_inv
+  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift
    simp: crunch_simps zipWithM_x_mapM ignore: constOnFailure)
 
 lemmas possibleSwitchToTo_cteCaps_of[wp]
