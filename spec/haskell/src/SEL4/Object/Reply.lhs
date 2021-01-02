@@ -101,8 +101,7 @@ This module specifies the behavior of reply objects.
 >         setSchedContext scPtr (sc { scReply = prevReplyPtrOpt })
 >         when (prevReplyPtrOpt /= Nothing) $ do
 >             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->             prevReply <- getReply prevReplyPtr
->             setReply prevReplyPtr (prevReply { replyNext = replyNext reply })
+>             updateReply prevReplyPtr (\reply -> reply { replyNext = replyNext reply })
 >     cleanReply replyPtr
 >     replyUnlink replyPtr tcbPtr
 
@@ -122,13 +121,11 @@ This module specifies the behavior of reply objects.
 >        else do
 >            when (nextReplyPtrOpt /= Nothing) $ do
 >                nextReplyPtr <- return $ theReplyNextPtr nextReplyPtrOpt
->                nextReply <- getReply nextReplyPtr
->                setReply nextReplyPtr (nextReply { replyPrev = Nothing })
+>                updateReply nextReplyPtr (\reply -> reply { replyPrev = Nothing })
 
 >            when (prevReplyPtrOpt /= Nothing) $ do
 >                prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->                prevReply <- getReply prevReplyPtr
->                setReply prevReplyPtr (prevReply { replyNext = Nothing })
+>                updateReply prevReplyPtr (\reply -> reply { replyNext = Nothing })
 
 >            cleanReply replyPtr
 >            replyUnlink replyPtr tcbPtr
