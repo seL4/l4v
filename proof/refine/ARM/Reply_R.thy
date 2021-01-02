@@ -646,8 +646,7 @@ lemma replyNext_Next_update_sr_inv:
    apply (erule (2) pspace_relation_reply_update_conc_only)
    apply (clarsimp simp: reply_relation_def getHeadScPtr_def isNext_def isHead_def
                   split: reply_next.splits option.splits)
-  apply (rule sc_replies_relation_replyNext_update[simplified])
-   apply simp
+  apply (erule sc_replies_relation_replyNext_update[simplified])
   by (clarsimp simp: obj_at'_def objBits_simps projectKOs replySizeBits_def)
 
 (* for reply_remove_tcb_corres *)
@@ -655,7 +654,7 @@ lemma replyNext_Next_update_sr_inv:
 (** sym_refs and prev/next; scReply and replySc *)
 
 lemma sym_refs_replySc_scReplies_of:
-  "\<lbrakk>reply_at' rp s';sym_refs (state_refs_of' s'); sc_at' scp s'\<rbrakk>
+  "\<lbrakk>reply_at' rp s'; sym_refs (state_refs_of' s'); sc_at' scp s'\<rbrakk>
    \<Longrightarrow> (replies_of' s' |> replySc) rp = Some scp \<longleftrightarrow> scReplies_of s' scp = Some rp"
   apply (rule iffI)
    apply (drule_tac tp=SCReply and x=rp and y=scp in sym_refsE;
@@ -695,7 +694,6 @@ lemma sc_replies_relation_prevs_list':
      kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
     \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (drule_tac x=scp and y="sc_replies sc" in spec2)
   apply (clarsimp simp: opt_map_left_Some sc_of_def)
   done
 
@@ -731,7 +729,6 @@ lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   apply (case_tac "rp \<in> set (sc_replies sc)"; simp)
   apply (prop_tac "\<forall>xs. rp \<notin> set xs \<longrightarrow> takeWhile ((\<noteq>) rp) xs = xs")
    using takeWhile_eq_all_conv apply blast
-  apply (drule_tac x="sc_replies sc" in spec)
   apply clarsimp
   using heap_path_end_unique by blast
 
@@ -746,7 +743,7 @@ lemma sc_replies_relation_sc_with_reply_cross_eq:
 lemma sc_replies_relation_sc_with_reply_None:
   "\<lbrakk>sc_replies_relation s s'; reply_at rp s; ko_at' (reply'::reply) rp s';
     sc_with_reply rp s = None; valid_replies s\<rbrakk>
-     \<Longrightarrow> sc_replies_relation s(s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto> KOReply (f reply'))\<rparr>)"
+     \<Longrightarrow> sc_replies_relation s (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto> KOReply (f reply'))\<rparr>)"
   apply (clarsimp simp: sc_replies_relation_def)
   apply (rename_tac scp replies)
   apply (drule_tac x=scp and y=replies in spec2)
@@ -789,15 +786,11 @@ lemma next_reply_in_sc_replies:
   using heap_ls_unique sc_replies_relation_prevs_list' apply blast
   apply simp
   apply (frule (3) heap_ls_prev_cases[OF _ _ _ reply_sym_heap_Prev_Next])
-  apply (frule (1) sym_refs_replySCs_of_None)
+  apply (drule (1) sym_refs_replySCs_of_None)
    apply (erule replyNexts_Some_replySCs_None)
-  apply (drule_tac x=scp in spec)
   apply (clarsimp simp: vs_heap_simps)
-  apply (frule (2) heap_ls_next_takeWhile_append[where p=nrp])
-  apply (frule in_list_decompose_takeWhile[where x=rp])
-  apply (frule in_list_decompose_takeWhile[where x=nrp])
-  apply auto
-  done
+  apply (drule (2) heap_ls_next_takeWhile_append)
+  by (force dest!: in_list_decompose_takeWhile)
 
 lemma prev_reply_in_sc_replies:
   "\<lbrakk>sc_replies_relation s s'; sc_with_reply rp s = Some scp; sym_refs (list_refs_of_replies' s');
