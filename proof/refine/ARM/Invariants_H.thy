@@ -4053,17 +4053,16 @@ declare upd_simps[simp]
 lemma heap_ls_next_takeWhile_append:
   "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
   \<Longrightarrow>takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
-   apply (prop_tac "distinct xs")
-    apply (erule heap_ls_distinct)
-   apply (frule in_list_decompose_takeWhile)
-   apply (prop_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
-    apply simp
-   apply (drule heap_path_non_nil_lookup_next)
-   apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
-   apply (prop_tac "np \<in> set xs")
-    apply (erule (2) heap_ls_next_in_list)
-   apply (frule in_list_decompose_takeWhile[where x=np])
-   apply (drule (1) distinct_inj_middle[where x=np and xa="takeWhile ((\<noteq>) np) xs" and ya="takeWhile ((\<noteq>) p) xs @ [p]"])
+  apply (frule heap_ls_distinct)
+  apply (frule in_list_decompose_takeWhile)
+  apply (prop_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
+   apply simp
+  apply (drule heap_path_non_nil_lookup_next)
+  apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
+  apply (prop_tac "np \<in> set xs")
+   apply (erule (2) heap_ls_next_in_list)
+  apply (frule in_list_decompose_takeWhile[where x=np])
+  apply (drule (1) distinct_inj_middle[where x=np and xa="takeWhile ((\<noteq>) np) xs" and ya="takeWhile ((\<noteq>) p) xs @ [p]"])
    apply simp+
   done
 
