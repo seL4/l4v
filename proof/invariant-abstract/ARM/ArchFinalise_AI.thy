@@ -327,10 +327,6 @@ lemmas unbind_from_sc_final_cap[wp] =
 
 crunch is_final_cap'[wp]: prepare_thread_delete "is_final_cap' cap"
 
-crunches unbind_from_sc
- for cte_wp_at[wp]: "cte_wp_at P c"
-  (wp: maybeM_inv)
-
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
          \<and> cte_wp_at ((=) cap) slot s\<rbrace>
@@ -518,8 +514,6 @@ lemma cancel_ipc_bound_sc_tcb_at_None:
   "\<lbrace>bound_sc_tcb_at ((=) None) t'\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. bound_sc_tcb_at ((=) None) t'\<rbrace>"
   by (wpsimp simp: cancel_ipc_def
                wp: get_sk_obj_ref_wp gts_wp thread_set_no_change_tcb_pred hoare_drop_imps)
-
-crunch obj_at_not_live[wp]: tcb_release_remove "obj_at (Not \<circ> live) t"
 
 lemma sched_context_cancel_yield_to_unlive:
   "\<lbrace>bound_tcb_at ((=) None) t and bound_sc_tcb_at ((=) None) t and st_tcb_at ((=) Inactive) t\<rbrace>
@@ -720,12 +714,6 @@ lemma ssc_bound_yt_tcb_at[wp]:
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
-crunches tcb_release_remove, tcb_sched_action, reschedule_required
-  for bound_tcb_at[wp]: "bound_tcb_at P p"
-  and bound_yt_tcb_at[wp]: "bound_yt_tcb_at P p"
-  and bound_sc_tcb_at[wp]: "bound_sc_tcb_at P p"
-  (wp: crunch_wps)
-
 lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_unbind_tcb a \<lbrace>\<lambda>y. bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
@@ -778,8 +766,7 @@ lemma bound_yt_tcb_bound_yield_from_at:
    apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
   apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_sched_context_def is_tcb
                     state_refs_of_def refs_of_rev
-          simp del: refs_of_simps
-             elim!: valid_objsE)
+          simp del: refs_of_simps)
   done
 
 lemma unbind_from_sc_no_cap_to_obj_ref[wp]:
@@ -965,8 +952,7 @@ lemma finalise_cap_replaceable [Finalise_AI_asms]:
                       intro: valid_NullCapD
                       dest!: reply_tcb_state_refs)[1]
           \<comment> \<open>Cnode\<close>
-          apply ((wpsimp wp: unbind_maybe_notification_not_live_helper sched_context_maybe_unbind_ntfn_not_bound_sc
-                 | hammer)+)[1]
+          apply ((wpsimp | hammer)+)[1]
           apply (rule conjI)
            apply (clarsimp simp: obj_at_def)
            apply (case_tac ko; clarsimp simp: is_cap_table_def[split_simps kernel_object.split] live_def)
@@ -1025,9 +1011,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
 context Arch begin global_naming ARM
 
 lemma fast_finalise_replaceable[wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
-     \<and> cte_wp_at ((=) cap) sl s \<and> valid_asid_table (arm_asid_table (arch_state s)) s
-     \<and> invs s\<rbrace>
+  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> cte_wp_at ((=) cap) sl s \<and> invs s\<rbrace>
      fast_finalise cap x
    \<lbrace>\<lambda>rv s. cte_wp_at (replaceable s sl cap.NullCap) sl s\<rbrace>"
   apply (cases "cap_irqs cap = {}")
