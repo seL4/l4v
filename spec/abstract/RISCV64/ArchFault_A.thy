@@ -16,7 +16,7 @@ fun make_arch_fault_msg :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> (data
   where
   "make_arch_fault_msg (VMFault vptr archData) thread = do
      pc \<leftarrow> as_user thread getRestartPC;
-     return (5, pc # vptr # archData)
+     return (6, pc # vptr # archData)
    od"
 
 definition handle_arch_fault_reply ::

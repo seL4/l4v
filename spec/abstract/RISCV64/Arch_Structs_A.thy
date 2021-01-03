@@ -138,7 +138,11 @@ definition endpoint_bits :: nat
 
 definition ntfn_bits :: nat
   where
-  "ntfn_bits \<equiv> 5"
+  "ntfn_bits \<equiv> 6"
+
+definition reply_bits :: nat
+  where
+  "reply_bits \<equiv> 5"
 
 definition untyped_min_bits :: nat
   where
@@ -304,6 +308,14 @@ definition arch_tcb_set_registers :: "(register \<Rightarrow> machine_word) \<Ri
 definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarrow> machine_word"
   where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
+
+text \<open>
+  This matches @{text "60 * 60 * MS_IN_S"} because it should be in micro-seconds.
+\<close>
+definition
+  MAX_SC_PERIOD :: "64 word" (* FIXME RT: Rename this to MAX_BUDGET_US to match  *)
+where
+  "MAX_SC_PERIOD \<equiv> 60 * 60 * 1000"
 
 end
 end

@@ -20,7 +20,7 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
   where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
-     buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
+     buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 2);
      buffer_cap \<leftarrow> get_cap buffer_frame_slot;
      case buffer_cap of
        ArchObjectCap (FrameCap p R vms False _) \<Rightarrow>

@@ -7,8 +7,7 @@
 chapter "An Initial Kernel State"
 
 theory Init_A
-imports "../Retype_A"
-"Lib.SplitRule"
+imports "../Retype_A" "Lib.SplitRule"
 begin
 
 context Arch begin global_naming RISCV64_A
@@ -83,17 +82,24 @@ definition init_kheap :: kheap
        TCB \<lparr>
          tcb_ctable = NullCap,
          tcb_vtable = NullCap,
-         tcb_reply = NullCap,
-         tcb_caller = NullCap,
          tcb_ipcframe = NullCap,
+         tcb_fault_handler = NullCap,
+         tcb_timeout_handler = NullCap,
          tcb_state = IdleThreadState,
-         tcb_fault_handler = replicate word_bits False,
          tcb_ipc_buffer = 0,
          tcb_fault = None,
          tcb_bound_notification = None,
          tcb_mcpriority = minBound,
+         tcb_sched_context = Some idle_sc_ptr,
+         tcb_yield_to = None,
+         tcb_priority = 0,
+         tcb_domain = 0,
          tcb_arch = init_arch_tcb
          \<rparr>,
+      idle_sc_ptr \<mapsto> SchedContext (default_sched_context
+                                    \<lparr>sc_tcb := Some idle_thread_ptr,
+                                     sc_refills := [\<lparr>r_time = 0, r_amount = 0\<rparr>],
+                                     sc_refill_max := MIN_REFILLS\<rparr>) 0,
       riscv_global_pt_ptr \<mapsto> init_global_pt
     )"
 
@@ -115,6 +121,17 @@ definition init_A_st :: "'z::state_ext state"
     is_original_cap = init_ioc,
     cur_thread = idle_thread_ptr,
     idle_thread = idle_thread_ptr,
+    consumed_time = 0,
+    cur_time = 0,
+    cur_sc = idle_sc_ptr,
+    reprogram_timer = False,
+    scheduler_action = resume_cur_thread,
+    domain_list = [(0,15)],
+    domain_index = 0,
+    cur_domain = 0,
+    domain_time = 15,
+    ready_queues = const (const []),
+    release_queue = [],
     machine_state = init_machine_state,
     interrupt_irq_node = \<lambda>irq. init_irq_node_ptr + (ucast irq << cte_level_bits),
     interrupt_states = \<lambda>_. IRQInactive,

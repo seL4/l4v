@@ -142,6 +142,10 @@ definition idle_thread_ptr :: vspace_ref
   where
   "idle_thread_ptr = pptr_base + 0x1000"
 
+definition
+  idle_sc_ptr :: vspace_ref where
+  "idle_sc_ptr = pptr_base + 0x3000"
+
 (* FIXME: nat_to_cref is not arch specific *)
 definition nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref"
   where
@@ -179,13 +183,17 @@ definition syscall_message :: "register list"
   where
   "syscall_message \<equiv> syscallMessage"
 
+definition timeout_message :: "register list"
+  where
+  "timeout_message \<equiv> timeoutMessage"
+
 datatype arch_fault
   = VMFault (vm_fault_address : vspace_ref) (vm_fault_arch_data : "machine_word list")
 
 end
 
 context begin interpretation Arch .
-  requalify_consts idle_thread_ptr
+  requalify_consts idle_thread_ptr idle_sc_ptr
 end
 
 end
