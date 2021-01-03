@@ -7,7 +7,7 @@
 chapter "Toplevel RISCV64 Definitions"
 
 theory Arch_A
-imports "../TcbAcc_A"
+imports "../CSpace_A"
 begin
 
 context Arch begin global_naming RISCV64_A
