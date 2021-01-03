@@ -2975,10 +2975,9 @@ lemma replyPop_makes_unlive:
    replyPop rptr tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') rptr\<rbrace>"
   apply (simp add: replyPop_def)
-  apply (wpsimp wp: replyUnlink_makes_unlive cleanReply_obj_at_next_prev_none
-                    hoare_vcg_if_lift threadGet_wp
+  by (wpsimp wp: replyUnlink_makes_unlive cleanReply_obj_at_next_prev_none
+                    hoare_vcg_if_lift
          | wp (once) hoare_drop_imps)+
-  by (clarsimp simp: obj_at'_def)
 
 lemma replyRemove_makes_unlive:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -3674,12 +3673,13 @@ lemma replyPop_valid_objs'[wp]:
   apply (rule_tac Q="valid_objs' and ko_at' reply replyPtr and tcb_at' tcbPtr"
                in hoare_weaken_pre[rotated])
    apply clarsimp
-  apply (wpsimp wp: updateReply_valid_objs'_preserved replyUnlink_valid_objs'
-                 hoare_vcg_if_lift hoare_drop_imps schedContextDonate_valid_objs'
-           simp: valid_reply'_def split_del: if_split cong: conj_cong)
+  apply (wpsimp wp: replyUnlink_valid_objs' schedContextDonate_valid_objs')
+         apply (rule_tac Q="\<lambda>_. valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
+          apply clarsimp
+         apply (wpsimp wp: updateReply_valid_objs'_preserved hoare_drop_imps
+                     simp: valid_reply'_def)+
   by (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
-                     simp: valid_reply'_def valid_sched_context_size'_def
-                           valid_sched_context'_def objBits_def objBitsKO_def)
+                simp: valid_reply'_def valid_sched_context'_def)
 
 lemma replyRemove_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyRemove replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
@@ -3875,10 +3875,11 @@ lemma replyPop_valid_inQ_queues[wp]:
   apply (rule_tac Q="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
          in hoare_weaken_pre[rotated])
    apply fastforce
-  apply (wpsimp wp: schedContextDonate_valid_inQ_queues
-                    updateReply_valid_objs'_preserved replyUnlink_valid_objs'
-                    hoare_vcg_if_lift hoare_drop_imps
-              cong: conj_cong simp: valid_reply'_def)
+  apply (wpsimp wp: schedContextDonate_valid_inQ_queues replyUnlink_valid_objs')
+         apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
+          apply clarsimp
+  apply (wpsimp wp: updateReply_valid_objs'_preserved hoare_drop_imps
+              simp: valid_reply'_def)+
   apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
                    simp: valid_sched_context'_def valid_reply'_def)
   done
