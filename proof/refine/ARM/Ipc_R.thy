@@ -1840,30 +1840,10 @@ lemma handleFaultReply_cur' [wp]:
 
 lemma replyRemove_valid_objs'[wp]:
   "replyRemove replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
-  apply (clarsimp simp: replyRemove_def)
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'], rename_tac reply)
-  apply (intro hoare_seq_ext[OF _ assert_opt_sp] hoare_seq_ext[OF _ assert_sp]
-               hoare_seq_ext[OF _ gts_sp'])
-  apply (rule hoare_if; (solves wpsimp)?)
-  apply (rule_tac Q="valid_objs' and valid_reply' reply" in hoare_weaken_pre[rotated])
-   apply (fastforce dest: reply_ko_at_valid_objs_valid_reply')
-  apply (rule hoare_seq_ext_skip)
-   apply (clarsimp simp: when_def pred_conj_def)
-   apply (rule hoare_vcg_conj_lift)
-    apply (wpsimp wp: set_reply_valid_objs')
-    apply (fastforce dest: reply_ko_at_valid_objs_valid_reply'
-                     simp: valid_reply'_def)
-   apply (wpsimp wp: set_reply'.set_wp)
-   apply (clarsimp simp: valid_reply'_def valid_bound_obj'_def)
-   apply (fastforce simp: obj_at'_def projectKOs objBitsKO_def split: option.splits)
-  apply (rule_tac B="\<lambda>_. valid_objs'" in hoare_seq_ext[rotated])
-   apply (clarsimp simp: when_def)
-   apply (intro conjI impI; (solves wpsimp)?)
-   apply (wpsimp wp: set_reply_valid_objs')
-   apply (fastforce dest: reply_ko_at_valid_objs_valid_reply'
-                    simp: valid_reply'_def)
-  apply (wpsimp wp: replyUnlink_valid_objs')
-  done
+  unfolding replyRemove_def
+  by (wpsimp wp: updateReply_valid_objs'_preserved replyUnlink_valid_objs'
+                 hoare_vcg_if_lift hoare_drop_imps
+           simp: valid_reply'_def split_del: if_split)
 
 lemma emptySlot_weak_sch_act[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>

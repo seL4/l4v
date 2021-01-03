@@ -3606,12 +3606,18 @@ lemma setQueue_valid_reply'[wp]:
   apply (fastforce simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
   done
 
+lemma valid_sched_context_size'_scReply_update[simp]:
+  "valid_sched_context_size' (scReply_update f ko) = valid_sched_context_size' ko"
+  by (clarsimp simp: valid_sched_context_size'_def scBits_simps objBits_simps)
+
 lemma replyPop_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (clarsimp simp: replyPop_def)
   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
-                    hoare_drop_imps hoare_vcg_if_lift2
-         | intro conjI impI)+
+                    hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
+         | intro conjI impI
+         | clarsimp dest!: reply_ko_at_valid_objs_valid_reply' sc_ko_at_valid_objs_valid_sc'
+                     simp: valid_sched_context'_def valid_reply'_def)+
   done
 
 lemma threadSet_valid_reply'[wp]:
@@ -3665,22 +3671,15 @@ lemma replyPop_valid_objs'[wp]:
   apply (rule hoare_seq_ext[OF _ get_reply_sp'])
   apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
                        \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
-  apply (rule_tac Q="valid_objs' and valid_reply' reply and tcb_at' tcbPtr"
+  apply (rule_tac Q="valid_objs' and ko_at' reply replyPtr and tcb_at' tcbPtr"
                in hoare_weaken_pre[rotated])
-   apply (fastforce intro!: reply_ko_at_valid_objs_valid_reply')
-  apply (intro hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext, wpsimp wp: replyUnlink_valid_objs')
-  apply (rule hoare_when_cases, clarsimp)
-  apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext_skip; wp)
-     apply (wp hoare_vcg_if_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
-    apply (rule getSchedContext_wp)
-   apply (rule_tac Q="\<lambda>_. valid_objs' and valid_reply' reply" in hoare_strengthen_post[rotated])
-    apply (fastforce dest: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
+   apply clarsimp
+  apply (wpsimp wp: updateReply_valid_objs'_preserved replyUnlink_valid_objs'
+                 hoare_vcg_if_lift hoare_drop_imps schedContextDonate_valid_objs'
+           simp: valid_reply'_def split_del: if_split cong: conj_cong)
+  by (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
                      simp: valid_reply'_def valid_sched_context_size'_def
                            valid_sched_context'_def objBits_def objBitsKO_def)
-   apply (wpsimp wp: schedContextDonate_valid_objs')+
-  done
 
 lemma replyRemove_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyRemove replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
@@ -3873,15 +3872,15 @@ lemma replyPop_valid_inQ_queues[wp]:
   apply (rule hoare_seq_ext[OF _ get_reply_sp'])
   apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
                        \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
-  apply (rule_tac Q="?pre and tcb_at' tcbPtr" in hoare_weaken_pre[rotated])
+  apply (rule_tac Q="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
+         in hoare_weaken_pre[rotated])
    apply fastforce
-  apply (intro hoare_seq_ext[OF _ assert_sp])
-  apply (rule hoare_seq_ext, wpsimp wp: replyUnlink_valid_objs')
-  apply (rule hoare_when_cases, clarsimp)
-  apply (wpsimp wp: set_sc'.valid_inQ_queues hoare_drop_imps schedContextDonate_valid_inQ_queues
-                    threadGet_wp
-         | intro conjI impI)+
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (wpsimp wp: schedContextDonate_valid_inQ_queues
+                    updateReply_valid_objs'_preserved replyUnlink_valid_objs'
+                    hoare_vcg_if_lift hoare_drop_imps
+              cong: conj_cong simp: valid_reply'_def)
+  apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
+                   simp: valid_sched_context'_def valid_reply'_def)
   done
 
 crunches replyRemove, replyClear
