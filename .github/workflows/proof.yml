@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM]
+        arch: [ARM, RISCV64]
     steps:
     - name: Cache ~/.stack
       uses: actions/cache@v2
@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM]
+        arch: [ARM, RISCV64]
     steps:
     - name: Cache Isabelle Images
       uses: actions/cache@v2
