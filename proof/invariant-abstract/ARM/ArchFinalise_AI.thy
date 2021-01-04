@@ -576,11 +576,12 @@ lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
      reply_unlink_sc sc_ptr reply
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply\<rbrace>"
+  unfolding reply_unlink_sc_def
   apply (wpsimp wp: update_sched_context_obj_at_impossible
                     simple_obj_set_prop_at get_simple_ko_wp
                     set_simple_ko_obj_at_disjoint hoare_vcg_all_lift
-              simp: reply_unlink_sc_def is_reply update_sk_obj_ref_def
-        | wp (once) hoare_drop_imps)+
+              simp: is_reply
+        | wp (once) hoare_drop_imps | simp)+
   apply (clarsimp simp: obj_at_def live_def live_reply_def invs_reply_tcb_None_reply_sc_None)
   done
 
@@ -606,8 +607,7 @@ lemma reply_unlink_sc_None:
   apply (wpsimp simp: is_reply update_sk_obj_ref_def
                wp: update_sched_context_obj_at_impossible simple_obj_set_prop_at get_simple_ko_wp
                    set_simple_ko_obj_at_disjoint hoare_vcg_all_lift assert_wp hoare_vcg_const_imp_lift
-        | wp (once) hoare_drop_imps)+
-  apply (rule conjI, clarsimp)
+        | wp (once) hoare_drop_imps | simp)+
    apply (erule_tac p=scp in obj_at_valid_objsE, assumption)
    apply (clarsimp simp: valid_obj_def valid_sched_context_def dest!:distinct_hd_not_in_tl)
   apply (clarsimp simp: obj_at_def)
