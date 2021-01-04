@@ -209,20 +209,43 @@ lemma set_notification_valid_tcbs[wp]:
   done
 
 context begin interpretation Arch .
-lemma update_valid_tcb:
-  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>)"
-  "valid_tcb ptr tcb s \<Longrightarrow> valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>)"
-  by (auto simp: valid_tcb_def valid_tcb_state_def obj_at_def is_reply_def valid_bound_obj_def
-                 valid_arch_tcb_def
-          split: Structures_A.thread_state.splits option.splits)
-end
 
-lemma update_valid_tcbs:
-  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>ready_queues := a\<rparr>)"
-  "valid_tcbs s \<Longrightarrow> valid_tcbs (s\<lparr>scheduler_action := b\<rparr>)"
-  apply (simp_all add: valid_tcbs_def)
-  apply (auto intro: update_valid_tcb)
-  done
+(* FIXME RT: All of these release_queue updates should be automatic using some existing locales.
+             Move these into those locales.*)
+lemma update_valid_tcb[simp]:
+  "valid_tcb ptr tcb (s\<lparr>release_queue := q\<rparr>) = valid_tcb ptr tcb s"
+  "valid_tcb ptr tcb (s\<lparr>reprogram_timer := rt\<rparr>) = valid_tcb ptr tcb s"
+  "valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>) = valid_tcb ptr tcb s"
+  "valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>) = valid_tcb ptr tcb s"
+  by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
+          split: Structures_A.thread_state.splits option.splits)
+
+lemma update_valid_tcbs[simp]:
+  "valid_tcbs (s\<lparr>release_queue := q\<rparr>) = valid_tcbs s"
+  "valid_tcbs (s\<lparr>reprogram_timer := rt\<rparr>) = valid_tcbs s"
+  "valid_tcbs (s\<lparr>ready_queues := a\<rparr>) = valid_tcbs s"
+  "valid_tcbs (s\<lparr>scheduler_action := b\<rparr>) = valid_tcbs s"
+  by (simp_all add: valid_tcbs_def)
+
+crunches tcb_release_remove
+  for valid_tcbs[wp]: valid_tcbs
+  (simp: crunch_simps)
+
+lemma update_valid_tcb'[simp]:
+  "valid_tcb' tcb (s\<lparr>ksReleaseQueue := a\<rparr>) = valid_tcb' tcb s"
+  "valid_tcb' tcb (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_tcb' tcb s"
+  "valid_tcb' tcb (s\<lparr>ksReadyQueuesL1Bitmap := c\<rparr>) = valid_tcb' tcb s"
+  "valid_tcb' tcb (s\<lparr>ksReadyQueuesL2Bitmap := d\<rparr>) = valid_tcb' tcb s"
+  "valid_tcb' tcb (s\<lparr>ksReadyQueues := e\<rparr>) = valid_tcb' tcb s"
+  "valid_tcb' tcb (s\<lparr>ksSchedulerAction := f\<rparr>) = valid_tcb' tcb s"
+  by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def
+          split: option.splits thread_state.splits)
+
+lemma update_tcbInReleaseQueue_False_valid_tcb'[simp]:
+  "valid_tcb' (tcbInReleaseQueue_update a tcb) s = valid_tcb' tcb s"
+  by (auto simp: valid_tcb'_def tcb_cte_cases_def)
+
+end
 
 crunches tcb_sched_action
   for valid_tcb[wp]: "\<lambda>s. valid_tcb ptr tcb s"
@@ -257,7 +280,6 @@ lemma set_thread_state_valid_tcbs[wp]:
   apply (clarsimp simp: valid_tcbs_def)
   apply (wpsimp wp: is_schedulable_inv hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps
               simp: set_scheduler_action_def)
-  apply (fastforce simp: valid_tcbs_def obj_at_def intro!: update_valid_tcb)
   done
 
 lemma reply_unlink_tcb_valid_tcbs[wp]:
@@ -314,6 +336,21 @@ lemma valid_tcbs'_maxPriority:
   done
 
 lemmas valid_objs'_maxPriority = valid_tcbs'_maxPriority[OF valid_objs'_valid_tcbs']
+
+lemma valid_tcbs'_obj_at':
+  assumes "valid_tcbs' s"
+          "tcb_at' t s"
+          "\<And>tcb. ko_at' tcb t s \<Longrightarrow> valid_tcb' tcb s \<Longrightarrow> R s tcb"
+  shows "obj_at' (R s) t s"
+  using assms
+  apply (clarsimp simp add: projectKOs valid_tcbs'_def ran_def typ_at'_def
+                            ko_wp_at'_def valid_obj'_def valid_tcb'_def obj_at'_def)
+  done
+
+lemma update_valid_tcbs'[simp]:
+  "valid_tcbs' (s\<lparr>ksReleaseQueue := q\<rparr>) = valid_tcbs' s"
+  "valid_tcbs' (s\<lparr>ksReprogramTimer := rt\<rparr>) = valid_tcbs' s"
+  by (simp_all add: valid_tcbs'_def)
 
 lemma invs'_machine:
   assumes mask: "irq_masks (f (ksMachineState s)) =
@@ -3840,7 +3877,7 @@ lemma setThreadState_valid_objs'[wp]:
   apply (clarsimp simp: valid_tcb'_tcbState_update)
   done
 
-lemma update_valid_tcb':
+lemma update_valid_tcb'2:
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueuesL1Bitmap := a\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueuesL2Bitmap := b\<rparr>)"
   "valid_tcb' tcb s \<Longrightarrow> valid_tcb' tcb (s\<lparr>ksReadyQueues := c\<rparr>)"
@@ -3869,7 +3906,7 @@ lemma addToBitmap_valid_tcbs'[wp]:
 crunches setQueue
   for valid_tcb'[wp]: "\<lambda>s. valid_tcb' tcb s"
   and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s ptr = opt)"
-  (wp: update_valid_tcb')
+  (wp: update_valid_tcb'2)
 
 lemma tcbSchedEnqueue_valid_tcb'[wp]:
   "tcbSchedEnqueue thread \<lbrace>valid_tcb' tcb\<rbrace>"

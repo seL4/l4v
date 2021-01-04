@@ -166,20 +166,6 @@ lemma replyTCB_update_corres:
       apply (simp add: reply_relation_def)
   by (wpsimp simp: obj_at'_def replyPrev_same_def)+
 
-lemma setReply_valid_tcb'[wp]:
-  "setReply rp new  \<lbrace>valid_tcb' tcb\<rbrace>"
-  apply (clarsimp simp: setReply_def)
-  apply (rule setObject_valid_tcb')
-  done
-
-lemma setReply_valid_tcbs'[wp]:
-  "setReply rp new  \<lbrace>valid_tcbs'\<rbrace>"
-  unfolding valid_tcbs'_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-    apply (wpsimp simp: setReply_def )+
-    apply (wpsimp wp: set_reply'.setObject_wp)+
-  done
-
 lemma reply_unlink_tcb_corres:
   "\<lbrakk>st = Structures_A.BlockedOnReceive ep (Some rp) pl
     \<or> st = Structures_A.BlockedOnReply rp\<rbrakk> \<Longrightarrow>
@@ -1834,7 +1820,6 @@ lemma tcbReleaseRemove_valid_objs'[wp]:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def valid_cap'_def tcb_cte_cases_def)
   done
 
 lemma tcbReleaseRemove_valid_mdb'[wp]:
