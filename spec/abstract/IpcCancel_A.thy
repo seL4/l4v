@@ -148,11 +148,11 @@ where
      if hd sc_replies = reply_ptr
      then do  \<comment> \<open>if it is the head\<close>
        assert (reply_sc reply = Some sc_ptr); \<comment> \<open>only the head of the list should point to the sc\<close>
-       set_reply reply_ptr (reply_sc_update (K None) reply); \<comment> \<open>set @{text reply_sc} to None\<close>
+       update_sched_context sc_ptr (sc_replies_update tl); \<comment> \<open>pop the head\<close>
        case tl sc_replies of
            [] \<Rightarrow> return ()
          | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr); \<comment> \<open>fix up the refs\<close>
-       set_sc_obj_ref sc_replies_update sc_ptr (tl sc_replies) \<comment> \<open>pop the head\<close>
+       set_reply reply_ptr (reply_sc_update (K None) reply) \<comment> \<open>set @{text reply_sc} to None\<close>
      od
      else do
        assert (reply_sc reply = None); \<comment> \<open>only the head of the list should point to the sc\<close>
