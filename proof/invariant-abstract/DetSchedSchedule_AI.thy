@@ -3474,9 +3474,7 @@ lemma reply_unlink_sc_valid_sched_misc[wp]:
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
           (sc_refill_cfgs_of s)\<rbrace>"
-  apply (wpsimp simp: reply_unlink_sc_def
-                  wp: update_sk_obj_ref_wps set_simple_ko_wps get_simple_ko_wp)
-  by (auto simp: obj_at_kh_kheap_simps vs_all_heap_simps pred_map_simps fun_upd_def)
+  by (wpsimp simp: reply_unlink_sc_def wp: get_simple_ko_wp)
 
 lemma reply_unlink_tcb_valid_sched_pred_lift:
   assumes "\<lbrace>\<lambda>s::'z::state_ext state. valid_sched_pred_strong P' s\<rbrace>
