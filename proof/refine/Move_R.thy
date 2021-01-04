@@ -345,4 +345,8 @@ lemma Reply_or_Receive_reply_at:
   apply (drule (1) st_tcb_at_valid_st2)
   by (fastforce simp: obj_at_def valid_tcb_state_def)
 
+lemma valid_tcb_state_BlockedOnReply[simp]:
+  "valid_tcb_state (Structures_A.thread_state.BlockedOnReply reply_ptr) = reply_at reply_ptr"
+  by (rule ext, simp add: valid_tcb_state_def)
+
 end

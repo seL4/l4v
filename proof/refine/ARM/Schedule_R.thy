@@ -2601,10 +2601,6 @@ lemma scRefills_length_replaceAt_Hd:
    0 < scRefillMax ko \<longrightarrow> (\<forall>val. length (replaceAt (scRefillHead ko) (scRefills ko) val) = length (scRefills ko))"
   by (clarsimp, subst length_replaceAt; clarsimp simp: valid_sched_context'_def)
 
-lemma ko_at'_inj:
-  "ko_at' ko ptr  s \<Longrightarrow> ko_at' ko' ptr s \<Longrightarrow> ko' = ko"
-  by (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-
 lemma refillAddTail_invs'[wp]:
   "refillAddTail scPtr t \<lbrace>invs'\<rbrace>"
   apply (simp add: refillAddTail_def)
@@ -3001,9 +2997,7 @@ crunches tcbReleaseDequeue
 lemma tcbReleaseDequeue_valid_objs'[wp]:
   "tcbReleaseDequeue \<lbrace>valid_objs'\<rbrace>"
   unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_objs')
-  apply (fastforce simp: valid_tcb'_def tcbInReleaseQueue_update_tcb_cte_cases)
-  done
+  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_objs')
 
 lemma tcbReleaseDequeue_sch_act_wf[wp]:
   "tcbReleaseDequeue \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
