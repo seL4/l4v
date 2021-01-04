@@ -89,20 +89,20 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                 assert (isReceive recvState)
 >                        "TCB in receive endpoint queue must be blocked on receive"
 >                 doIPCTransfer thread (Just epptr) badge canGrant dest
->                 scOptDest <- threadGet tcbSchedContext dest
->                 scOptSrc <- threadGet tcbSchedContext thread
->                 fault <- threadGet tcbFault thread
 >                 let replyOpt = replyObject recvState
 >                 case replyOpt of
 >                     Just reply -> replyUnlink reply dest
 >                     _ -> return ()
->                 case (call, fault, canGrant || canGrantReply, replyOpt) of
->                     (False, Nothing, _, _) -> do
->                         when (canDonate && scOptDest == Nothing) $
->                             schedContextDonate (fromJust scOptSrc) dest
->                     (_, _, True, Just reply) -> do
->                         replyPush thread dest reply canDonate
->                     _ -> setThreadState Inactive thread
+>                 scOptDest <- threadGet tcbSchedContext dest
+>                 fault <- threadGet tcbFault thread
+>                 if (call || isJust fault)
+>                   then if ((canGrant || canGrantReply) && isJust replyOpt)
+>                     then replyPush thread dest (fromJust replyOpt) canDonate
+>                     else setThreadState Inactive thread
+>                   else when (canDonate && scOptDest == Nothing) $ do
+>                     scOptSrc <- threadGet tcbSchedContext thread
+>                     schedContextDonate (fromJust scOptSrc) dest
+
 
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
