@@ -433,7 +433,10 @@ where
      if fault = None
      then do
        set_thread_state t Restart;
-       possible_switch_to t
+       possible_switch_to t;
+       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+       cur_sc_ptr \<leftarrow> gets cur_sc;
+       when (sc_opt \<noteq> None \<and> the sc_opt \<noteq> cur_sc_ptr) $ refill_unblock_check (the sc_opt)
      od
      else set_thread_state t Inactive
    od"
@@ -537,7 +540,12 @@ where
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
                       _ \<leftarrow> set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
-                                     possible_switch_to t od) queue;
+                                     possible_switch_to t;
+                                     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+                                     cur_sc_ptr \<leftarrow> gets cur_sc;
+                                     when (sc_opt \<noteq> None \<and> the sc_opt \<noteq> cur_sc_ptr)
+                                            $ refill_unblock_check (the sc_opt)
+                                  od) queue;
                       reschedule_required
                      od
                | _ \<Rightarrow> return ()

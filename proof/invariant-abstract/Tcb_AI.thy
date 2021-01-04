@@ -127,7 +127,7 @@ lemma restart_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding restart_def
   apply (wpsimp wp: hoare_drop_imp sts_invs_minor cancel_ipc_no_refs
-                    cancel_ipc_ex_nonz_cap_to_tcb gts_wp)
+                    cancel_ipc_ex_nonz_cap_to_tcb gts_wp hoare_vcg_all_lift)
   apply (auto dest!: idle_no_ex_cap simp: invs_def valid_state_def valid_pspace_def)
   done
 
@@ -164,7 +164,7 @@ lemma (in Tcb_AI_1) writereg_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at dest and ex_nonz_cap_to dest\<rbrace>
      invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp |rule conjI)+
+  by (wpsimp | rule conjI)+
 
 lemma (in Tcb_AI_1) copyreg_invs:
   "\<lbrace>(invs::'state_ext state \<Rightarrow> bool) and tcb_at src and tcb_at dest and ex_nonz_cap_to dest and
@@ -777,7 +777,7 @@ crunches sched_context_unbind_tcb, sched_context_bind_tcb
   and cte_wp_at[wp]: "cte_wp_at P p"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and no_cap_to_obj_with_diff_ref[wp]: "no_cap_to_obj_with_diff_ref c S"
-  (rule: abs_typ_at_lifts no_cap_to_obj_with_diff_ref_lift
+  (wp: abs_typ_at_lifts no_cap_to_obj_with_diff_ref_lift hoare_drop_imps
    ignore: set_tcb_obj_ref)
 
 schematic_goal rec_del_CTEDeleteCall:
@@ -1836,7 +1836,31 @@ lemma install_tcb_cap_bound_sc_tcb_at[wp]:
    install_tcb_cap target slot 3 slot_opt
    \<lbrace>\<lambda>_. bound_sc_tcb_at P target'\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+  apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+  done
+
+crunches possible_switch_to
+  for sc_at_pred_n[wp]: "\<lambda>s. Q (sc_at_pred_n N proj P p s)"
+  (wp: crunch_wps simp: crunch_simps is_round_robin_def)
+
+lemma refill_unblock_check_sc_tcb_sc_at[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P target s)\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def is_round_robin_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
+
+crunches cancel_all_ipc
+  for sc_at_pred_n[wp]: "\<lambda>s. Q (sc_tcb_sc_at P target s)"
+  (wp: crunch_wps simp: crunch_simps ignore: set_simple_ko)
+
+lemma install_tcb_cap_sc_tcb_sc_at[wp]:
+  "\<lbrace>\<lambda>s. sc_tcb_sc_at P target' s \<and> tcb_at target s \<and> invs s\<rbrace>
+   install_tcb_cap target slot 3 slot_opt
+   \<lbrace>\<lambda>_ s. sc_tcb_sc_at P target' s\<rbrace>"
+  unfolding install_tcb_cap_def
+  apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+  done
 
 lemma install_tcb_cap_not_ipc_queued_thread[wp]:
   "\<lbrace>st_tcb_at (not ipc_queued_thread_state) t and tcb_at target and invs\<rbrace>
@@ -1855,9 +1879,8 @@ lemma set_simple_ko_sc_at_pred_n[wp]:
   done
 
 crunches cancel_all_ipc
-  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P p s)"
-  and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
-  (wp: crunch_wps simp: crunch_simps)
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: crunch_simps)
 
 lemma valid_cap_not_ep_at_not_ep_cap:
   "\<lbrakk> r \<in> obj_refs cap; \<not> ep_at r s; s \<turnstile> cap \<rbrakk>

@@ -12,6 +12,7 @@ context begin interpretation Arch .
 
 requalify_facts
   arch_post_cap_deletion_pred_tcb_at
+  arch_post_cap_deletion_sc_at_pred_n
   arch_post_cap_deletion_cur_thread
   as_user_hyp_refs_of
 
@@ -35,7 +36,7 @@ crunch typ_at[wp]: cancel_all_ipc "\<lambda>s. P (typ_at T p s)" (wp: crunch_wps
 
 crunches restart_thread_if_no_fault
   for valid_objs[wp]: valid_objs
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_vcg_if_lift2)
 
 lemma cancel_all_ipc_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
@@ -97,12 +98,19 @@ lemma unbind_maybe_notification_st_tcb_at[wp]:
   "unbind_maybe_notification r \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
   by (wpsimp simp: unbind_maybe_notification_def update_sk_obj_ref_def get_sk_obj_ref_def wp: maybeM_inv)
 
+crunches refill_unblock_check
+  for pred_tcb_at[wp]: "\<lambda>s. P' (pred_tcb_at proj P t s)"
+  (wp: crunch_wps hoare_vcg_if_lift2)
+
 lemma cancel_all_signals_st_tcb_at_helper:
   fixes P P' t
   defines "V \<equiv> \<lambda>q s. if t \<in> set q then P (P' Restart) else P (st_tcb_at P' t s)"
   shows "\<lbrace>V q\<rbrace>
           mapM_x (\<lambda>t. do set_thread_state t Restart;
-                         possible_switch_to t
+                         possible_switch_to t;
+                         sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+                         cur_sc_ptr \<leftarrow> gets cur_sc;
+                         when (sc_opt \<noteq> None \<and> the sc_opt \<noteq> cur_sc_ptr) $ refill_unblock_check (the sc_opt)
                       od) q
          \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
   by (rule mapM_x_inv_wp2[of \<top> V, simplified]; simp add: V_def)
@@ -696,11 +704,9 @@ lemma sched_context_donate_valid_irq_node [wp]:
   by (wp valid_irq_node_typ)
 
 lemma restart_thread_if_no_fault_fault_tcbs_valid_states[wp]:
-  "\<lbrace>fault_tcbs_valid_states\<rbrace>
-   restart_thread_if_no_fault t
-   \<lbrace>\<lambda>_. fault_tcbs_valid_states\<rbrace>"
+  "restart_thread_if_no_fault t \<lbrace>fault_tcbs_valid_states\<rbrace>"
   apply (simp add: restart_thread_if_no_fault_def)
-  apply (wpsimp wp: sts_fault_tcbs_valid_states thread_get_wp')+
+  apply (wpsimp wp: sts_fault_tcbs_valid_states thread_get_wp' hoare_vcg_if_lift2 hoare_drop_imps)
   apply (auto simp: pred_tcb_at_def obj_at_def)
   done
 
@@ -1345,7 +1351,6 @@ lemma reply_remove_tcb_invs:
           , fastforce simp: in_replies_blockedI''[where t=t, OF refl] pred_tcb_at_def obj_at_def)
    apply (fastforce dest!: valid_replies_2_in_replies_with_sc_upd_replies set_takeWhileD
                        simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
-
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def if_bool_simps cong: if_cong)
   apply (rename_tac reply)
   apply (rule_tac V="distinct [r,t,sc_ptr]" in revcut_rl, fastforce, clarsimp cong: if_cong)
@@ -1632,6 +1637,8 @@ end
 
 crunch pred_tcb_at[wp]: empty_slot "\<lambda>s. Q (pred_tcb_at proj P t s)"
 
+crunch sc_at_pred_n[wp]: empty_slot "\<lambda>s. Q (sc_at_pred_n N proj P p s)"
+
 lemma set_thread_state_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_tcb_at P t\<rbrace>"
   unfolding set_thread_state_def set_object_def get_object_def
@@ -1642,7 +1649,7 @@ lemma reply_unlink_tcb_bound_tcb_at[wp]:
   by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def wp: hoare_drop_imp)
 
 crunch bound_tcb_at[wp]: cancel_all_ipc, is_final_cap, get_cap, tcb_release_remove "bound_tcb_at P t"
-  (wp: mapM_x_wp_inv crunch_wps simp: crunch_simps)
+  (wp: mapM_x_wp_inv crunch_wps hoare_vcg_if_lift2 simp: crunch_simps)
 
 lemma in_release_queue_ready_queues_update[simp]:
   "in_release_queue t (ready_queues_update f s) = in_release_queue t s"
@@ -1792,17 +1799,21 @@ lemma set_thread_state_fault_tcb_at[wp]:
 
 lemma cancel_all_signals_invs_helper:
   "\<lbrace>all_invs_but_sym_refs
-          and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
-                  \<and> sym_refs (\<lambda>x. if x \<in> set q then
-                                    {r \<in> state_refs_of s x. snd r = TCBBound \<or>
-                                     snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
-                                  else state_refs_of s x)
-                  \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x)
-                  \<and> valid_replies s
-                  \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s
-                                \<and> fault_tcb_at ((=) None) x s))\<rbrace>
-     mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
-                    possible_switch_to t od) q
+    and (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s)
+             \<and> sym_refs (\<lambda>x. if x \<in> set q then {r \<in> state_refs_of s x. snd r = TCBBound
+                                                                        \<or> snd r = TCBSchedContext
+                                                                        \<or> snd r = TCBYieldTo}
+                             else state_refs_of s x)
+             \<and> sym_refs (\<lambda>x. state_hyp_refs_of s x)
+             \<and> valid_replies s
+             \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s
+                                      \<and> fault_tcb_at ((=) None) x s))\<rbrace>
+   mapM_x (\<lambda>t. do set_thread_state t Restart;
+                  possible_switch_to t;
+                  sc_opt <- get_tcb_obj_ref tcb_sched_context t;
+                  cur_sc_ptr <- gets cur_sc;
+                  when (sc_opt \<noteq> None \<and> the sc_opt \<noteq> cur_sc_ptr) $ refill_unblock_check (the sc_opt)
+               od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule mapM_x_inv_wp2, fastforce)
@@ -1966,7 +1977,7 @@ crunches restart_thread_if_no_fault
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
   and tcb_at[wp]: "tcb_at p"
   and ep_at[wp]: "ep_at p"
-  (simp: crunch_simps wp: crunch_wps sts_valid_replies)
+  (simp: crunch_simps wp: crunch_wps sts_valid_replies hoare_vcg_if_lift2)
 
 lemma restart_thread_if_no_fault_refs_of[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of s) (t := tcb_non_st_state_refs_of s t))\<rbrace>
@@ -2368,10 +2379,22 @@ lemma cancel_all_unlive_helper':
 crunch obj_at[wp]: possible_switch_to "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma refill_unblock_check_obj_at_impossible':
+  "\<lbrakk>(\<And>tcb. \<not> P' (TCB tcb)); (\<And>sc n. \<not> P' (SchedContext sc n))\<rbrakk>
+   \<Longrightarrow> refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_def)
+  apply (wpsimp wp: sts_obj_at_impossible' update_sched_context_wp hoare_drop_imps get_refills_wp
+              simp: set_refills_def is_round_robin_def)
+  apply (clarsimp simp: obj_at_def)
+  done
+
 lemma restart_thread_if_no_fault_obj_at_impossible':
-  "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> restart_thread_if_no_fault t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>(\<And>tcb. \<not> P' (TCB tcb)); (\<And>sc n. \<not> P' (SchedContext sc n))\<rbrakk>
+   \<Longrightarrow> restart_thread_if_no_fault t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding restart_thread_if_no_fault_def
-  by (wpsimp wp: sts_obj_at_impossible' hoare_drop_imps)
+  apply (wpsimp wp: sts_obj_at_impossible' refill_unblock_check_obj_at_impossible' thread_get_inv
+                    hoare_drop_imps)
+  done
 
 lemmas
   restart_thread_if_no_fault_obj_at_impossible =
@@ -2390,7 +2413,7 @@ lemma cancel_all_unlive_helper:
    apply (wpsimp wp: hoare_drop_imp restart_thread_if_no_fault_obj_at_impossible
                      cancel_all_unlive_helper'
                simp: is_ep)
-  apply (clarsimp simp: obj_at_def)
+   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb_def)+
   done
 
 lemma cancel_all_ipc_unlive:
@@ -2420,12 +2443,12 @@ lemma cancel_all_signals_unlive[wp]:
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp
-        | wpc
-        | simp add: unbind_maybe_notification_def)+
+          | wpc
+          | simp add: unbind_maybe_notification_def)+
      apply (rule_tac Q="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
       apply (fastforce elim: obj_at_weakenE)
-     apply (wp mapM_x_wp' sts_obj_at_impossible
-      | simp add: is_ntfn)+
+     apply (wp mapM_x_wp' sts_obj_at_impossible refill_unblock_check_obj_at_impossible'
+            | simp add: is_ntfn)+
     apply (wpsimp simp: set_simple_ko_def set_object_def get_object_def)
    apply wpsimp
   apply (auto simp: obj_at_def live_def live_ntfn_def)

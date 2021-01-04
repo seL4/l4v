@@ -1240,6 +1240,21 @@ lemma valid_blocked_except_set_in_release_queue_sum:
   apply (drule_tac x=t in spec; simp)
   done
 
+lemma valid_blocked_except_set_not_runnable':
+  "valid_blocked_except_set {t} s \<Longrightarrow> \<not> st_tcb_at runnable t s  \<Longrightarrow> valid_blocked s"
+  unfolding valid_blocked_defs obj_at_kh_kheap_simps runnable_eq
+  by (erule allEI; rename_tac t'; case_tac "t' = t"; clarsimp simp: pred_map_simps)
+
+lemma valid_blocked_not_schedulable:
+  "\<lbrakk>valid_sched_except_blocked s; valid_blocked_except t s;
+    \<not> is_schedulable_bool t s\<rbrakk>
+    \<Longrightarrow> valid_blocked s"
+  apply (simp only: is_schedulable_bool_def2)
+  apply (fastforce dest: valid_blocked_except_set_in_release_queue_sum
+                         valid_blocked_except_set_not_runnable'
+                         valid_blocked_except_set_no_active_sc_sum)
+  done
+
 lemma schedulable_unfold2:
   "((is_schedulable_opt tp s) = Some X)
    \<Longrightarrow> tcb_at tp s

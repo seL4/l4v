@@ -12,7 +12,7 @@ chapter \<open>Arch IPC Cancelling\<close>
 
 
 theory ArchIpcCancel_A
-imports "../CSpaceAcc_A"
+imports "../Sporadic_A"
 begin
 
 context Arch begin global_naming ARM_A

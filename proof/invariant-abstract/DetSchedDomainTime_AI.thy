@@ -486,13 +486,9 @@ crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s::det_state. P (domain_
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
    simp: crunch_simps)
 
-crunches sched_context_bind_tcb, restart
+crunches sched_context_bind_tcb, restart, refill_update, refill_new
   for domain_time_inv[wp]: "\<lambda>s::det_state. P (domain_time s)"
   (wp: hoare_drop_imp maybeM_inv)
-
-crunches refill_update, refill_new
-  for domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps)
 
 crunches set_extra_badge, schedule_tcb
   for domain_consumed_time_inv[wp]: "\<lambda>s. P (domain_time s)(consumed_time s)"
