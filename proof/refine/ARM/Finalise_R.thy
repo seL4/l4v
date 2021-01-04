@@ -1288,7 +1288,7 @@ lemma emptySlot_valid_global_refs[wp]:
   done
 
 lemmas doMachineOp_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF doMachineOp_ctes doMachineOp_ksInterrupt]
+    = valid_irq_handlers_lift'' [OF doMachineOp_ksPSpace doMachineOp_ksInterrupt]
 
 lemma deletedIRQHandler_irq_handlers'[wp]:
   "\<lbrace>\<lambda>s. valid_irq_handlers' s \<and> (IRQHandlerCap irq \<notin> ran (cteCaps_of s))\<rbrace>
@@ -3514,11 +3514,10 @@ lemma tcbSchedDequeue_valid_tcbs'[wp]:
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
-lemma schedContextDonate_valid_queues:
+lemma schedContextDonate_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
    apply (rule hoare_when_cases, clarsimp)
@@ -3589,7 +3588,6 @@ lemma schedContextDonate_valid_objs':
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
   apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
                in hoare_weaken_pre[rotated])
@@ -3858,7 +3856,6 @@ lemma schedContextDonate_valid_inQ_queues:
    \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
    apply (rule hoare_when_cases, clarsimp)

@@ -1918,6 +1918,62 @@ lemma asUser_idle'[wp]:
   apply (wpsimp wp: threadSet_idle' select_f_inv)
   done
 
+lemma threadSet_vrq_wp:
+  "\<lbrace>valid_release_queue and
+    (\<lambda>s. tptr \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (\<lambda>obj. tcbInReleaseQueue (f obj)) tptr s)\<rbrace>
+   threadSet f tptr
+   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  apply (clarsimp simp: valid_release_queue_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+  by (case_tac "x=tptr"; simp)
+
+lemma threadSet_vrq_inv:
+  "\<lbrace>valid_release_queue and
+    (\<lambda>s. (\<forall>obj. tcbInReleaseQueue (f obj) = tcbInReleaseQueue obj))\<rbrace>
+   threadSet f tptr
+   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  apply (clarsimp simp: valid_release_queue_def)
+  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+
+(* FIXME: rename. VER-1331 *)
+lemma threadSet_obj_at'_simple_strongest:
+  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
+          (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (f tcb)) t s)) \<and>
+          (t \<noteq> t' \<longrightarrow> P (obj_at' Q t' s))\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_ s. P (obj_at' (Q :: tcb \<Rightarrow> bool) t' s)\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: set_tcb'.setObject_obj_at'_strongest set_tcb'.getObject_wp)
+  apply (case_tac "t = t'"; clarsimp simp: obj_at'_def)
+  done
+
+lemma threadSet_vrq'_inv:
+  "\<lbrace>valid_release_queue' and
+    (\<lambda>s. (\<forall>obj. tcbInReleaseQueue (f obj) = tcbInReleaseQueue obj))\<rbrace>
+   threadSet f tptr
+   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  apply (clarsimp simp: valid_release_queue'_def)
+  by (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift' hoare_vcg_all_lift)
+
+lemma threadSet_enqueue_vrq:
+  "\<lbrace>(\<lambda>s. \<forall>a. a \<in> set (ksReleaseQueue s) \<longrightarrow> a\<noteq>t \<longrightarrow> obj_at' tcbInReleaseQueue a s)
+    and tcb_at' t\<rbrace>
+   threadSet (tcbInReleaseQueue_update (\<lambda>_. True)) t
+   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  apply (clarsimp simp: valid_release_queue_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+  by (case_tac "x=t"; simp)
+
+lemma asUser_vrq[wp]:
+  "asUser tptr f \<lbrace>valid_release_queue\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  by (wpsimp wp: hoare_drop_imps threadSet_vrq_inv)
+
+lemma asUser_vrq'[wp]:
+  "asUser tptr f \<lbrace>valid_release_queue'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  by (wpsimp wp: threadSet_vrq'_inv hoare_drop_imps)
+
 lemma no_fail_asUser [wp]:
   "no_fail \<top> f \<Longrightarrow> no_fail (tcb_at' t) (asUser t f)"
   apply (simp add: asUser_def split_def)
@@ -5483,18 +5539,6 @@ lemma asUser_irq_handlers':
 lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr>) = tcbArch_update f"
   by (rule ext, case_tac tcb, simp)
 
-(* FIXME: rename. VER-1331 *)
-lemma threadSet_obj_at'_simple_strongest:
-  "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow>
-          (t = t' \<longrightarrow> P (obj_at' (\<lambda>tcb. Q (f tcb)) t s)) \<and>
-          (t \<noteq> t' \<longrightarrow> P (obj_at' Q t' s))\<rbrace>
-   threadSet f t
-   \<lbrace>\<lambda>_ s. P (obj_at' (Q :: tcb \<Rightarrow> bool) t' s)\<rbrace>"
-  unfolding threadSet_def
-  apply (wpsimp wp: set_tcb'.setObject_obj_at'_strongest set_tcb'.getObject_wp)
-  apply (case_tac "t = t'"; clarsimp simp: obj_at'_def)
-  done
-
 (* Used as the "side condition template" for the `*_obj_at'_only_st_qd_ft` family of
    `crunch`-able lemmas. Needs to keep the assumption about `f` separate from the hoare
    triple so as to not pollute the side conditions that `crunch` will add to the final
@@ -5616,40 +5660,6 @@ lemma threadSet_empty_tcbSchedContext_valid_tcbs'[wp]:
   "threadSet (tcbSchedContext_update Map.empty) t \<lbrace>valid_tcbs'\<rbrace>"
   by (wp threadSet_valid_tcbs') (simp add: valid_tcb'_def valid_tcbs'_def tcb_cte_cases_def)
 
-lemma threadSet_vrq_wp:
-  "\<lbrace>valid_release_queue and
-    (\<lambda>s. tptr \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (\<lambda>obj. tcbInReleaseQueue (f obj)) tptr s)\<rbrace>
-   threadSet f tptr
-   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
-  apply (clarsimp simp: valid_release_queue_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
-  by (case_tac "x=tptr"; simp)
-
-lemma threadSet_vrq_inv:
-  "\<lbrace>valid_release_queue and
-    (\<lambda>s. (\<forall>obj. tcbInReleaseQueue (f obj) = tcbInReleaseQueue obj))\<rbrace>
-   threadSet f tptr
-   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
-  apply (clarsimp simp: valid_release_queue_def)
-  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
-
-lemma threadSet_vrq'_inv:
-  "\<lbrace>valid_release_queue' and
-    (\<lambda>s. (\<forall>obj. tcbInReleaseQueue (f obj) = tcbInReleaseQueue obj))\<rbrace>
-   threadSet f tptr
-   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
-  apply (clarsimp simp: valid_release_queue'_def)
-  by (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift' hoare_vcg_all_lift)
-
-lemma threadSet_enqueue_vrq:
-  "\<lbrace>(\<lambda>s. \<forall>a. a \<in> set (ksReleaseQueue s) \<longrightarrow> a\<noteq>t \<longrightarrow> obj_at' tcbInReleaseQueue a s)
-    and tcb_at' t\<rbrace>
-   threadSet (tcbInReleaseQueue_update (\<lambda>_. True)) t
-   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
-  apply (clarsimp simp: valid_release_queue_def)
-  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
-  by (case_tac "x=t"; simp)
-
 lemma threadSet_enqueue_vrq':
   "\<lbrace>(\<lambda>s. \<forall>a. obj_at' tcbInReleaseQueue a s \<longrightarrow> a\<noteq>t \<longrightarrow> a \<in> set (ksReleaseQueue s))
     and tcb_at' t
@@ -5685,6 +5695,42 @@ lemma thread_set_empty_tcb_sched_context_weaker_valid_sched_action[wp]:
   apply (auto simp: is_tcb_def get_tcb_def obj_at_def  map_project_def tcbs_of_kh_def opt_map_def
                     pred_map_def map_join_def tcb_scps_of_tcbs_def sc_refill_cfgs_of_scs_def
              split: option.splits Structures_A.kernel_object.splits)
+  done
+
+lemma ntfn_rel_ntfn_sc:
+  "ntfn_relation ntfn ntfn' \<Longrightarrow> ntfn_sc ntfn = ntfnSc ntfn'"
+  by (simp add: ntfn_relation_def)
+
+lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def pred_neg_def
+               wp: get_object_wp)
+
+lemma set_sc_obj_ref_valid_tcb[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  by (wpsimp wp: get_object_wp simp: update_sched_context_def)
+
+lemma set_sc_obj_ref_valid_tcbs[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+
+lemma valid_tcbs_valid_tcbE:
+  assumes "tcb_at t s"
+          "valid_tcbs s"
+          "\<And>tcb. ko_at (TCB tcb) t s \<Longrightarrow> valid_tcb t tcb s \<Longrightarrow> R s (TCB tcb)"
+  shows "obj_at (R s) t s"
+  using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; clarsimp simp: is_tcb_def)
+  apply (rename_tac tcb)
+  apply (prop_tac "valid_tcb t tcb s")
+   apply (clarsimp simp: valid_tcbs_def)
+   apply (drule_tac x=t in spec)
+   apply (drule_tac x=tcb in spec)
+   apply (clarsimp simp: obj_at_def)
+  apply clarsimp
   done
 
 end

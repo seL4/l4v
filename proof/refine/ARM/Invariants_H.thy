@@ -260,6 +260,9 @@ abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb o
 abbreviation tcb_scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "tcb_scs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
 
+abbreviation scTCBs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "scTCBs_of s \<equiv> scs_of' s |> scTCB"
+
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
  "tcb_cte_cases \<equiv> [    0 \<mapsto> (tcbCTable, tcbCTable_update),
@@ -268,6 +271,29 @@ definition
                     0x30 \<mapsto> (tcbFaultHandler, tcbFaultHandler_update),
                     0x40 \<mapsto> (tcbTimeoutHandler, tcbTimeoutHandler_update)
                    ]"
+
+definition sqheap_refs_retract_at :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> 'a \<Rightarrow> bool" where
+  "sqheap_refs_retract_at heap symheap p \<equiv> \<forall>r. pred_map_eq r heap p \<longrightarrow> pred_map_eq p symheap r"
+
+definition sqheap_refs_retract :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "sqheap_refs_retract heap symheap \<equiv> \<forall>p. sqheap_refs_retract_at heap symheap p"
+
+definition sqheap_refs_inv :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "sqheap_refs_inv heap symheap \<equiv> sqheap_refs_retract heap symheap \<and> sqheap_refs_retract symheap heap"
+
+lemmas sqheap_refs_inv_defs = sqheap_refs_inv_def sqheap_refs_retract_def sqheap_refs_retract_at_def
+
+lemma sqheap_refs_inv_def2:
+  "sqheap_refs_inv heap symheap \<equiv> \<forall>p q. pred_map_eq q heap p \<longleftrightarrow> pred_map_eq p symheap q"
+  by (auto simp: atomize_eq sqheap_refs_inv_defs)
+
+abbreviation tcbs_scs_sym_refs where
+  "tcbs_scs_sym_refs s \<equiv> sqheap_refs_inv (tcb_scs_of' s) (scTCBs_of s)"
+
+abbreviation replies_scs_sym_refs where
+  "replies_scs_sym_refs s \<equiv> sqheap_refs_inv (scReplies_of s) (replySCs_of s)"
+
+lemmas tcbs_scs_sym_refs_def = sqheap_refs_inv_def sqheap_refs_retract_def sqheap_refs_retract_at_def
 
 definition
   max_ipc_words :: word32 where

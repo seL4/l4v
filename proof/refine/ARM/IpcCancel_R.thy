@@ -179,16 +179,18 @@ lemma replyTCB_update_corres:
   by (wpsimp simp: obj_at'_def replyPrev_same_def)+
 
 lemma reply_unlink_tcb_corres:
-  "\<lbrakk>st = Structures_A.BlockedOnReceive ep (Some rp) pl
-    \<or> st = Structures_A.BlockedOnReply rp\<rbrakk> \<Longrightarrow>
-   corres dc
+  "corres dc
      (valid_tcbs and pspace_aligned and pspace_distinct
-       and st_tcb_at ((=) st) t and reply_tcb_reply_at ((=) (Some t)) rp)
-          (valid_tcbs' and valid_release_queue_iff)
-        (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "_ \<Longrightarrow> corres _ _ ?conc_guard _ _")
+       and tcb_at t
+       and st_tcb_at (\<lambda>st. \<exists>ep pl. st = Structures_A.BlockedOnReceive ep (Some rp) pl
+                           \<or> st = Structures_A.BlockedOnReply rp) t
+       and reply_tcb_reply_at ((=) (Some t)) rp)
+        (valid_tcbs' and valid_release_queue_iff)
+        (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "corres _ _ ?conc_guard _ _")
   apply (rule_tac Q="?conc_guard
-              and st_tcb_at' (\<lambda>st. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp)
-                                 \<or> st = BlockedOnReply (Some rp)) t" in corres_cross_over_guard)
+         and st_tcb_at' (\<lambda>st. (\<exists>ep pl. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp))
+                               \<or> st = BlockedOnReply (Some rp)) t"
+         in corres_cross_over_guard)
    apply clarsimp
    apply (drule (1) st_tcb_at_coerce_concrete; clarsimp simp: state_relation_def)
    apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
@@ -326,7 +328,6 @@ lemma blocked_cancel_ipc_corres:
               apply (rule corres_split_deprecated [OF _ reply_unlink_tcb_corres])
                  apply (rule sts_corres)
                  apply simp
-                apply fastforce
                apply wpsimp
               apply (wpsimp wp: replyUnlink_valid_objs')
              apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -534,7 +535,6 @@ lemma reply_remove_tcb_corres:
                   apply (fold dc_def)
                   apply (rule corres_guard_imp)
                     apply (rule reply_unlink_tcb_corres)
-                    apply (rule disjI2)
                     apply fastforce
                    apply simp+
   sorry
@@ -2356,7 +2356,6 @@ lemma cancel_all_ipc_corres_helper:
                       apply (rule restart_thread_if_no_fault_corres)
                      apply simp
                     apply simp
-                   apply fastforce
                   apply (wpsimp wp: reply_unlink_tcb_valid_sched_action)
                  apply wpsimp
                 apply (fastforce simp: vs_all_heap_simps pred_tcb_at_def obj_at_def

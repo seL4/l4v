@@ -1016,7 +1016,7 @@ lemma reorder_ntfn_corres:
               apply (rule set_ntfn_corres)
               apply (clarsimp simp: ntfn_relation_def)
              apply clarsimp
-             apply (rule tcb_ep_append_corres)
+             apply (rule tcbEPAppend_corres)
             apply wp
            apply wp
           apply (rule tcb_ep_dequeue_corres)
@@ -1074,7 +1074,7 @@ lemma reorder_ep_corres:
                  apply (rule set_ep_corres)
                  apply (case_tac rv; clarsimp simp: ep_relation_def updateEpQueue_def)
                 apply clarsimp
-                apply (rule tcb_ep_append_corres)
+                apply (rule tcbEPAppend_corres)
                apply wp
               apply wp
              apply (rule tcb_ep_dequeue_corres)
@@ -3254,9 +3254,6 @@ lemma get_sc_released_corres:
            apply (clarsimp simp: sc_relation_def active_sc_def)
           apply (clarsimp simp: state_relation_def)
          apply wpsimp+
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp simp: state_relation_def)
-     apply wpsimp+
    apply (fastforce simp: obj_at_def sc_at_pred_n_def is_obj_defs valid_obj_def)
   apply clarsimp
   done

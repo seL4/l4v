@@ -3909,5 +3909,25 @@ lemma threadGet_getObject:
                    od"
   apply (simp add: threadGet_def threadRead_def oliftM_def getObject_def[symmetric])
   done
+  
+crunches doMachineOp
+  for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
+
+definition receive_reply :: "Structures_A.thread_state \<Rightarrow> obj_ref option" where
+  "receive_reply st \<equiv> case st of
+           (Structures_A.thread_state.BlockedOnReceive ep reply_opt pl) \<Rightarrow> reply_opt"
+
+lemma receive_reply_sel:
+  "receive_reply (Structures_A.thread_state.BlockedOnReceive ep reply_opt pl) = reply_opt"
+  by (simp add: receive_reply_def)
+
+lemma valid_tcb_state'_simps[simp]:
+  "valid_tcb_state' thread_state.Running s = True"
+  "valid_tcb_state' thread_state.Inactive s = True"
+  "valid_tcb_state' thread_state.Restart s = True"
+  "valid_tcb_state' thread_state.IdleThreadState s = True"
+  "valid_tcb_state' (thread_state.BlockedOnSend ref b c d e) s = ep_at' ref s"
+  "valid_tcb_state' (thread_state.BlockedOnReply r) s = valid_bound_reply' r s"
+  by (clarsimp simp: valid_tcb_state'_def)+
 
 end
