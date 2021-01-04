@@ -825,10 +825,10 @@ lemma reply_remove_arch[wp]:
 
 lemma reply_unlink_sc_valid_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  apply (simp add: reply_unlink_sc_def)
+  apply (simp add: reply_unlink_sc_def liftM_def)
   apply (wpsimp simp: reply_at_typ sc_at_typ
                   wp: valid_sc_typ_list_all_reply[simplified reply_at_typ]
-                      hoare_vcg_imp_lift hoare_vcg_ex_lift
+                      hoare_vcg_imp_lift hoare_vcg_ex_lift abs_typ_at_lifts
                       hoare_vcg_all_lift get_simple_ko_wp)
   apply (safe;
          clarsimp elim!: obj_at_valid_objsE
@@ -940,8 +940,6 @@ lemma reply_unlink_sc_iflive[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_disj_lift
                     hoare_vcg_all_lift get_simple_ko_wp)
   apply (safe; (drule(1) ko_at_obj_congD; clarsimp)+)
-     apply (fastforce simp: live_def live_sc_def obj_at_def
-                     dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
     apply (fastforce simp: live_def obj_at_def live_reply_def
                     dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
    apply (subgoal_tac "xa \<in> set (sc_replies scb)")
