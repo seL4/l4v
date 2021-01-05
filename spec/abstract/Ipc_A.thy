@@ -306,14 +306,6 @@ where
                   thread_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
                   sched_context_donate (the thread_sc) dest
                 od;
-                new_sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
-                test \<leftarrow> case new_sc_opt of Some scp \<Rightarrow> do
-                            sufficient \<leftarrow> get_sc_refill_sufficient scp 0;
-                            ready \<leftarrow> get_sc_refill_ready scp;
-                            return (sufficient \<and> ready)
-                        od
-                        | _ \<Rightarrow> return True; \<comment> \<open>why does C allow dest to have no sc?\<close>
-                assert test;
                 set_thread_state dest Running;
                 possible_switch_to dest
               od
