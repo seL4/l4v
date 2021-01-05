@@ -1434,7 +1434,7 @@ lemma send_ipc_not_blocking_not_calling_ct_active[wp]:
   apply (wpsimp wp: set_thread_state_ct_st hoare_drop_imp wp_del: reply_push_ct_active)+
             apply (rule hoare_pre_cont)
            apply (rule hoare_pre_cont)
-          apply wpsimp
+          apply (wpsimp wp: hoare_drop_imp)
          apply (wpsimp wp: thread_get_wp')
         apply (rule_tac Q="\<lambda>_. ct_active and fault_tcb_at ((=) None) t"
                in hoare_post_imp)

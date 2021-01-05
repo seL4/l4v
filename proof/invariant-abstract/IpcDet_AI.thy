@@ -1796,13 +1796,6 @@ lemma si_invs'_helper_no_reply:
                  (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                      sched_context_donate (the caller_sc_opt) dest
                   od);
-     new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-     test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-              od;
-     y <- assert test;
      y <- set_thread_state dest Running;
      possible_switch_to dest
   od
@@ -1925,13 +1918,6 @@ lemma si_invs'_helper_some_reply:
                   (do caller_sc_opt <- get_tcb_obj_ref tcb_sched_context tptr;
                       sched_context_donate (the caller_sc_opt) dest
                    od);
-      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test \<leftarrow> case new_sc_opt of None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do sufficient <- get_sc_refill_sufficient scp 0;
-                               ready <- get_sc_refill_ready scp;
-                               return (sufficient \<and> ready)
-                            od;
-      y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
    od
@@ -1942,31 +1928,24 @@ lemma si_invs'_helper_some_reply:
    apply wpsimp
         apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
         apply (wpsimp wp: sts_invs_minor2)
-       apply wpsimp
-      apply (wpsimp wp: hoare_drop_imp)
-     apply (wpsimp simp: get_tcb_obj_ref_def)
     apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_push_st_tcb_at)
      apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
       apply (wpsimp wp: reply_push_st_tcb_at_Inactive)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-     apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
-      apply (wpsimp wp: sts_st_tcb_at_other)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (wpsimp wp: reply_push_invs' sts_invs_minor2')
+           apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+          apply (rule_tac Q="\<lambda>_. st_tcb_at ((=) Inactive) dest" in hoare_strengthen_post)
+           apply (wpsimp wp: sts_st_tcb_at_other)
+          apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+         apply (wpsimp wp: reply_push_invs' sts_invs_minor2')+
+   apply (frule active_st_tcb_at_state_refs_ofD)
+   apply (frule st_tcb_weakenE[where P'="\<lambda>st. \<not> awaiting_reply st"], fastforce)
    apply (rule conjI; clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (rule conjI; intro impI)
-    apply (drule (1) idle_no_ex_cap, clarsimp)
    apply (intro conjI)
-      apply fastforce
      apply fastforce
     apply (drule (1) idle_no_ex_cap, clarsimp)
    apply (drule (1) idle_no_ex_cap, clarsimp)
   apply wpsimp
-       apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
-       apply (wpsimp wp: sts_invs_minor2)
-      apply wpsimp
-     apply (wpsimp wp: hoare_drop_imp)
-    apply (wpsimp simp: get_tcb_obj_ref_def)
+    apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
+    apply (wpsimp wp: sts_invs_minor2)
    apply (wpsimp wp: hoare_vcg_conj_lift sched_context_donate_invs
                simp: get_tcb_obj_ref_def thread_get_def)
   apply (subgoal_tac "dest \<noteq> idle_thread s")
@@ -2059,15 +2038,6 @@ lemma si_invs'_helper_fault:
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
                                                        sched_context_donate (the thread_sc) dest
                                                    od);
-      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test <- case new_sc_opt of
-                None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do
-                  sufficient <- get_sc_refill_sufficient scp 0;
-                  ready <- get_sc_refill_ready scp;
-                  return (sufficient \<and> ready)
-                od;
-      y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
    od
@@ -2183,15 +2153,6 @@ lemma si_invs'_helper:
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
                                                        sched_context_donate (the thread_sc) dest
                                                    od);
-      new_sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
-      test <- case new_sc_opt of
-                None \<Rightarrow> return True
-              | Some scp \<Rightarrow> do
-                  sufficient <- get_sc_refill_sufficient scp 0;
-                  ready <- get_sc_refill_ready scp;
-                  return (sufficient \<and> ready)
-                od;
-      y <- assert test;
       y <- set_thread_state dest Running;
       possible_switch_to dest
    od

@@ -11276,9 +11276,6 @@ lemma send_ipc_valid_ready_qs:
   apply (rule hoare_seq_ext[OF _ gsc_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> released_if_bound_sc_tcb_at dest s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: possible_switch_to_valid_ready_qs'' set_thread_state_valid_ready_qs
                      set_thread_state_pred_map_tcb_sts_of)
   apply (simp add: pred_conj_def obj_at_def)
@@ -11355,9 +11352,6 @@ lemma send_ipc_valid_release_q:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. valid_release_q s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: set_thread_state_valid_release_q)
   apply (simp add: pred_conj_def obj_at_def)
   by (wpsimp wp: set_thread_state_valid_release_q simp: in_release_q_runnable split: if_splits)
@@ -11385,9 +11379,6 @@ lemma send_ipc_ct_not_in_q:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. ct_not_in_q s \<and> ct_in_cur_domain s \<and> dest \<noteq> idle_thread s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: possible_switch_to_not_it_ct_not_in_q maybeM_inv)
   by wpsimp
 
@@ -11418,9 +11409,6 @@ lemma send_ipc_valid_sched_action:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_. valid_sched_action and released_if_bound_sc_tcb_at dest and active_sc_valid_refills" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: set_thread_state_valid_sched_action set_thread_state_pred_map_tcb_sts_of
                      hoare_vcg_imp_lift' hoare_vcg_if_lift2 hoare_vcg_all_lift
                simp: vs_all_heap_simps)
@@ -11453,9 +11441,6 @@ lemma send_ipc_ct_in_cur_domain:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. ct_in_cur_domain s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: maybeM_inv)
   by wpsimp
 
@@ -11488,9 +11473,6 @@ lemma send_ipc_valid_blocked:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. valid_blocked_except_set S s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: possible_switch_to_valid_blocked set_thread_state_valid_blocked maybeM_inv)
   apply (simp add: pred_conj_def obj_at_def)
   apply (intro hoare_if[rotated] hoare_when_cases)
@@ -11529,9 +11511,6 @@ lemma send_ipc_released_ipc_queues:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_. released_ipc_queues and active_sc_valid_refills" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: set_thread_state_released_ipc_queues maybeM_wp_weak hoare_vcg_if_lift2 hoare_drop_imp
                simp: is_blocked_thread_state_defs)
   apply (simp add: pred_conj_def obj_at_def)
@@ -11564,9 +11543,6 @@ lemma send_ipc_active_reply_scs:
   apply (rule hoare_seq_ext[OF _ gsc_sp], clarsimp simp: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. active_reply_scs s" in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gbn_inv])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply wpsimp
   by wpsimp
 
@@ -11660,10 +11636,6 @@ lemma send_ipc_valid_sched:
                            \<and> current_time_bounded 1 s
                            \<and> not_in_release_q dest s"
          in hoare_seq_ext)
-   apply (rule hoare_seq_ext[OF _ gsc_sp])
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply fastforce
-   apply (rule hoare_seq_ext[OF _ assert_inv])
    apply (wpsimp wp: set_thread_state_possible_switch_to_valid_sched)
 
   apply (simp add: pred_conj_def obj_at_def valid_blocked_thread_def)
@@ -17088,9 +17060,8 @@ lemma send_ipc_released_if_bound[wp]:
             apply (wpsimp wp: hoare_drop_imp reply_push_released_if_bound_not_callee hoare_vcg_all_lift)
            apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)
           apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)
-              apply (wpsimp wp: sched_context_donate_released_if_bound_not_callee)
-             apply (wpsimp wp: hoare_drop_imp)
-            apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift, wpsimp wp: sched_context_donate_released_if_bound_not_callee, wpsimp)
+           apply (wpsimp wp: sched_context_donate_released_if_bound_not_callee)
+          apply (wpsimp wp: hoare_drop_imp)
          apply (rule_tac Q="\<lambda>_ s. released_if_bound_sc_tcb_at t s \<and> active_sc_valid_refills s \<and> (can_donate \<longrightarrow> dest \<noteq> t)"
                 in hoare_post_imp, clarsimp)
          apply wpsimp+
@@ -17298,12 +17269,9 @@ lemma send_ipc_ct_in_state:
    \<lbrace>\<lambda>_. ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
   unfolding send_ipc_def
-  apply (wpsimp wp: sts_ctis_neq maybeM_inv)
-            apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift get_tcb_obj_ref_wp)
-           apply (rule_tac Q="\<lambda>a b. ct_in_state P b \<and> (cur_thread b = x21 \<longrightarrow>  P Running)" in hoare_strengthen_post[rotated])
-            apply clarsimp
-           apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_all_lift  hoare_vcg_imp_lift' reply_push_ct_in_state sts_ctis_neq)
-          apply (wpsimp wp: thread_get_wp')+
+  apply (wpsimp wp: sts_ctis_neq hoare_vcg_if_lift2 hoare_vcg_all_lift hoare_vcg_disj_lift
+                    reply_push_ct_in_state sts_ctis_neq)
+            apply (wpsimp wp: thread_get_wp')+
         apply (rule_tac Q="\<lambda>a b. ct_in_state P b
                                  \<and> (cur_thread b = x21 \<longrightarrow> P Running)
                                  \<and> (thread = cur_thread b \<longrightarrow> (call \<or> fault_tcb_at bound thread b)
@@ -18883,7 +18851,6 @@ lemma send_ipc_cur_sc_more_than_ready[wp]:
   "send_ipc block call badge can_grant can_grant_reply can_donate thread epptr
    \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
   unfolding send_ipc_def
-  apply (wpsimp wp: get_tcb_obj_ref_wp)
   by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)+
 
 crunches handle_timeout
@@ -19687,7 +19654,6 @@ lemma send_ipc_sc_not_in_release_q:
    apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
    apply (rule hoare_seq_ext[OF _ gsc_sp])
    apply (wpsimp wp: sched_context_donate_sc_not_in_release_q)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply wpsimp
   done
 
