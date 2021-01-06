@@ -36,7 +36,7 @@ The following is the definition of the seven object types that are always availa
 > cteSizeBits = wordSizeCase 4 5
 
 > replySizeBits :: Int
-> replySizeBits = 4
+> replySizeBits = wordSizeCase 4 5
 
 > minSchedContextBits :: Int
 > minSchedContextBits = 8
