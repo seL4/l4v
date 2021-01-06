@@ -261,11 +261,11 @@ crunch interrupt_states[wp]: cancel_ipc "\<lambda>s. P (interrupt_states s)"
   (wp: hoare_drop_imps)
 
 lemma cancel_ipc_noreply_interrupt_states:
-  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t s \<and> P (interrupt_states s) \<rbrace>
-         cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
+  "\<lbrace>\<lambda>s. st_tcb_at (Not \<circ> is_blocked_on_reply) t s \<and> P (interrupt_states s) \<rbrace>
+   cancel_ipc t
+   \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
   apply (simp add: cancel_ipc_def)
-   apply (wpsimp wp: gts_wp)+
-  done
+  by (wpsimp wp: gts_wp)
 
 lemma send_signal_interrupt_states[wp_unsafe]:
   "\<lbrace>\<lambda>s. P (interrupt_states s) \<and> valid_objs s\<rbrace> send_signal a b \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"

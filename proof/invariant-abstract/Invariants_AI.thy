@@ -1064,8 +1064,7 @@ lemmas valid_replies_defs = valid_replies_2_def replies_with_sc_def replies_bloc
 
 abbreviation
   "fault_tcb_states st \<equiv>
-     (\<exists>ep data. st = BlockedOnSend ep data) \<or> (\<exists>ep. st = BlockedOnReply ep) \<or>
-     st = Inactive"
+     is_blocked_on_send st \<or> is_blocked_on_reply st \<or> st = Inactive"
 
 definition
   "fault_tcbs_valid_states_except_set TS \<equiv>
@@ -1340,6 +1339,9 @@ abbreviation
                  st = Running \<or>
                  st = Restart \<or>
                  idle st \<or> awaiting_reply st"
+
+abbreviation
+  "is_reply_state st \<equiv> is_blocked_on_reply st \<or> is_blocked_on_receive st"
 
 abbreviation
   "ct_active \<equiv> ct_in_state active"
@@ -1618,7 +1620,6 @@ lemma tcb_st_refs_of_simps[simp]: (* ARMHYP add TCBHypRef? *)
  "tcb_st_refs_of (Running)               = {}"
  "tcb_st_refs_of (Inactive)              = {}"
  "tcb_st_refs_of (Restart)               = {}"
-(* "tcb_st_refs_of (YieldTo t)             = {(t, TCBYieldTo)}"*)
  "tcb_st_refs_of (BlockedOnReply r')      = {(r', TCBReply)}"
  "tcb_st_refs_of (IdleThreadState)       = {}"
  "\<And>x. tcb_st_refs_of (BlockedOnReceive x r data)  = (if bound r then {(x, TCBBlockedRecv), (the r, TCBReply)} else {(x, TCBBlockedRecv)})"
@@ -1723,8 +1724,6 @@ lemma st_tcb_at_refs_of_rev:
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts.      ts = BlockedOnNotification x) t s"
-(*  "obj_at (\<lambda>ko. (x, TCBYieldTo) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts.      ts = YieldTo x) t s"*)
   by (auto simp add: refs_of_rev pred_tcb_at_def)
 
 

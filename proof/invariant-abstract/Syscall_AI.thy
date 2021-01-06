@@ -228,7 +228,8 @@ lemma check_budget_restart_invs[wp]:
   apply (wpsimp wp: gts_wp)
   apply (frule invs_fault_tcbs_valid_states)
   apply (frule_tac t="cur_thread s" in fault_tcbs_valid_states_not_fault_tcb_states)
-   apply (fastforce simp: pred_neg_def elim: pred_tcb_weakenE)
+   apply (fastforce simp: pred_neg_def is_blocked_thread_state_defs
+                    elim: pred_tcb_weakenE)
   apply (case_tac st; clarsimp)
    apply (frule invs_iflive,
           clarsimp simp: if_live_then_nonz_cap_def pred_tcb_at_def obj_at_def live_def)+

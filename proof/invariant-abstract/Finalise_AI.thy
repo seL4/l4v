@@ -640,58 +640,11 @@ lemma symreftype_neq:
        tcb_st_refs_of_def ep_q_refs_of_def ntfn_q_refs_of_def
       split: ntfn.splits endpoint.splits thread_state.splits if_split_asm option.splits
       dest!: symreftype_inverse')
-(*
-lemma reply_unlink_tcb_invs:
-  "\<lbrace>invs and (\<lambda>s. reply_tcb_reply_at (\<lambda>t. \<exists>tp. t = (Some tp)
-          \<and> st_tcb_at (\<lambda>st. st = BlockedOnReply (Some rptr) \<or>
-                            (st = BlockedOnReceive ep (Some rptr) \<and> ko_at (Endpoint IdleEP) ep s)) tp s) rptr s)\<rbrace>
-      reply_unlink_tcb rptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (clarsimp simp: reply_unlink_tcb_def)
-  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-      wp: sts_only_idle valid_irq_node_typ gts_inv hoare_drop_imp split_del: if_split)
-  apply (frule ko_at_state_refs_ofD)
-  apply (erule (1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_reply_def)
-  apply (rule conjI, clarsimp)
-   apply (drule (1) if_live_then_nonz_capD2)
-    apply (clarsimp simp: live_def live_reply_def)
-   apply simp
-  apply (rule conjI)
-   apply (erule delta_sym_refs)
-    apply (clarsimp split: if_split_asm)
-   apply (clarsimp split: if_split_asm split del: if_split simp: get_refs_def2)
-       apply (erule (1) obj_at_valid_objsE)
-       apply (clarsimp simp: valid_obj_def valid_reply_def valid_bound_obj_def tcb_at_def dest!: get_tcb_SomeD)
-      apply (clarsimp dest!: symreftype_neq)
-     apply (erule (1) obj_at_valid_objsE)
-     apply (clarsimp simp: valid_obj_def valid_reply_def valid_bound_obj_def is_tcb is_sc_obj_def obj_at_def)
-    apply (erule (1) obj_at_valid_objsE)
-    apply (clarsimp simp: valid_obj_def valid_reply_def valid_bound_obj_def is_tcb is_sc_obj_def obj_at_def)
-    apply (clarsimp simp: state_refs_of_def obj_at_def get_refs_def2 tcb_st_refs_of_def reply_tcb_reply_at_def pred_tcb_at_def)
-    apply (case_tac "tcb_state tcb"; simp)
-   apply (erule (1) obj_at_valid_objsE)
-   apply (clarsimp simp: valid_obj_def valid_reply_def valid_bound_obj_def is_tcb is_sc_obj_def obj_at_def
-      split: option.splits)
-   apply (fastforce simp: state_refs_of_def obj_at_def get_refs_def2 reply_tcb_reply_at_def pred_tcb_at_def)
-  apply (erule (1) obj_at_valid_objsE)
-  apply (simp add: valid_obj_def valid_reply_def valid_bound_obj_def obj_at_def is_tcb
-      pred_tcb_at_def reply_tcb_reply_at_def split: kernel_object.splits)
-  apply (case_tac "tcb_state tcb"; simp)
-   apply (drule_tac p=y in if_live_then_nonz_capD2, simp)
-    apply (simp add: live_def pred_tcb_at_def obj_at_def)
-   apply (clarsimp dest!: idle_no_ex_cap)
-  apply (drule_tac p=y in if_live_then_nonz_capD2, simp)
-   apply (simp add: live_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp dest!: idle_no_ex_cap)
-  done*)
 
 lemma reply_tcb_state_refs:
   "\<lbrakk>reply_tcb reply = Some t; valid_objs s; sym_refs (state_refs_of s);
     kheap s rptr = Some (Reply reply)\<rbrakk>
-  \<Longrightarrow> \<exists>tcb. kheap s t = Some (TCB tcb) \<and>
-     st_tcb_at (\<lambda>st. st = BlockedOnReply rptr
-                    \<or> (\<exists>ep pl. st = BlockedOnReceive ep (Some rptr) pl)) t s"
+  \<Longrightarrow> st_tcb_at (\<lambda>st. reply_object st = Some rptr) t s"
   apply (erule (1) valid_objsE)
   apply (drule sym_refs_ko_atD[rotated])
    apply (simp add: obj_at_def)

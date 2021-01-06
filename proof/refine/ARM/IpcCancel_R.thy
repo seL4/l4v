@@ -2573,7 +2573,7 @@ proof -
                           simp: obj_at_def valid_obj_def)
        apply (intro conjI impI allI ballI; fastforce?)
           apply (fastforce dest!: in_send_ep_queue_TCBBlockedSend
-                            simp: is_blocked_on_send_recv_def vs_all_heap_simps obj_at_def
+                            simp: vs_all_heap_simps obj_at_def
                                   state_refs_of_def tcb_st_refs_of_def refs_of_def get_refs_def2
                            split: option.splits Structures_A.thread_state.splits
                                   Structures_A.kernel_object.splits)
@@ -2590,7 +2590,7 @@ proof -
                         simp: obj_at_def valid_obj_def)
      apply (intro conjI impI allI ballI; fastforce?)
          apply (fastforce dest!: in_recv_ep_queue_TCBBlockedRecv
-                           simp: is_blocked_on_send_recv_def vs_all_heap_simps obj_at_def
+                           simp: vs_all_heap_simps obj_at_def
                                  state_refs_of_def tcb_st_refs_of_def refs_of_def get_refs_def2
                           split: option.splits Structures_A.thread_state.splits
                                  Structures_A.kernel_object.splits)

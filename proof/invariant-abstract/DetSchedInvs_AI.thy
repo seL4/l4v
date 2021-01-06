@@ -2522,26 +2522,11 @@ type_synonym released_ipc_queues_t
      \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg)
      \<Rightarrow> bool"
 
-definition is_blocked_on_send :: "thread_state \<Rightarrow> bool" where
-  "is_blocked_on_send st \<equiv> \<exists>ep sender_data. st = BlockedOnSend ep sender_data"
+abbreviation is_blocked_on_recv_ntfn :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_recv_ntfn st \<equiv> is_blocked_on_receive st \<or> is_blocked_on_ntfn st"
 
-(* FIXME RT: duplicates awaiting_reply, but differently *)
-definition is_blocked_on_reply :: "thread_state \<Rightarrow> bool" where
-  "is_blocked_on_reply st \<equiv> \<exists>reply. st = BlockedOnReply reply"
-
-definition is_blocked_on_recv_ntfn :: "thread_state \<Rightarrow> bool" where
-  "is_blocked_on_recv_ntfn st \<equiv>
-    (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)
-     \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)"
-
-definition is_blocked_on_send_recv :: "thread_state \<Rightarrow> bool" where
-  "is_blocked_on_send_recv st \<equiv>
-    (\<exists>ep sender_data. st = BlockedOnSend ep sender_data)
-     \<or> (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)"
-
-lemmas is_blocked_thread_state_defs
-  = is_blocked_on_send_def is_blocked_on_reply_def is_blocked_on_recv_ntfn_def
-    is_blocked_on_send_recv_def
+abbreviation is_blocked_on_send_recv :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_send_recv st \<equiv> is_blocked_on_send st \<or> is_blocked_on_receive st"
 
 abbreviation blocked_on_send_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "blocked_on_send_tcb_at t s \<equiv> pred_map is_blocked_on_send (tcb_sts_of s) t"
@@ -2646,48 +2631,11 @@ abbreviation (input) valid_sched_ipc_queues :: valid_sched_t where
   "valid_sched_ipc_queues ctime cdom ct it rq rlq sa etcbs sts scps faults scrcs replies
    \<equiv> released_ipc_queues_2 ctime sts scps faults scrcs"
 
-lemma is_blocked_thread_state_simps[simp]:
-  "\<not> is_blocked_on_recv_ntfn Running"
-  "\<not> is_blocked_on_recv_ntfn Inactive"
-  "\<not> is_blocked_on_recv_ntfn Restart"
-  "  is_blocked_on_recv_ntfn (BlockedOnReceive ep reply_opt receiver_data)"
-  "\<not> is_blocked_on_recv_ntfn (BlockedOnSend ep sender_data)"
-  "\<not> is_blocked_on_recv_ntfn (BlockedOnReply reply)"
-  "  is_blocked_on_recv_ntfn (BlockedOnNotification ntfn)"
-  "\<not> is_blocked_on_recv_ntfn IdleThreadState"
-  "\<not> is_blocked_on_send Running"
-  "\<not> is_blocked_on_send Inactive"
-  "\<not> is_blocked_on_send Restart"
-  "\<not> is_blocked_on_send (BlockedOnReceive ep reply_opt receiver_data)"
-  "  is_blocked_on_send (BlockedOnSend ep sender_data)"
-  "\<not> is_blocked_on_send (BlockedOnReply reply)"
-  "\<not> is_blocked_on_send (BlockedOnNotification ntfn)"
-  "\<not> is_blocked_on_send IdleThreadState"
-  "\<not> is_blocked_on_reply Running"
-  "\<not> is_blocked_on_reply Inactive"
-  "\<not> is_blocked_on_reply Restart"
-  "\<not> is_blocked_on_reply (BlockedOnReceive ep reply_opt receiver_data)"
-  "\<not> is_blocked_on_reply (BlockedOnSend ep sender_data)"
-  "  is_blocked_on_reply (BlockedOnReply reply)"
-  "\<not> is_blocked_on_reply (BlockedOnNotification ntfn)"
-  "\<not> is_blocked_on_reply IdleThreadState"
-  "\<not> is_blocked_on_send_recv Running"
-  "\<not> is_blocked_on_send_recv Inactive"
-  "\<not> is_blocked_on_send_recv Restart"
-  "  is_blocked_on_send_recv (BlockedOnReceive ep reply_opt receiver_data)"
-  "  is_blocked_on_send_recv (BlockedOnSend ep sender_data)"
-  "\<not> is_blocked_on_send_recv (BlockedOnReply reply)"
-  "\<not> is_blocked_on_send_recv (BlockedOnNotification ntfn)"
-  "\<not> is_blocked_on_send_recv IdleThreadState"
-  by (auto simp: is_blocked_thread_state_defs)
-
 (* FIXME RT: move *)
 lemma ipc_queued_thread_state_def2:
   "ipc_queued_thread_state st \<equiv>
-    (\<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data)
-    \<or> (\<exists>ntfn. st = BlockedOnNotification ntfn)
-    \<or> (\<exists>ep sender_data. st = BlockedOnSend ep sender_data)
-    \<or> (\<exists>reply. st = BlockedOnReply reply)"
+    is_blocked_on_receive st \<or> is_blocked_on_ntfn st \<or> is_blocked_on_send st
+    \<or> is_blocked_on_reply st"
   by (clarsimp simp: atomize_eq; cases st; simp)
 
 lemma pred_map_ipc_queued_thread_state_iff:
@@ -3756,22 +3704,11 @@ abbreviation cur_sc_tcb_are_bound :: "'z state \<Rightarrow> bool" where
 abbreviation ct_not_blocked where
   "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
 
-(* FIXME: move or tidy up *)
-\<comment> \<open>Schedulability of threads in notification and endpoint queues\<close>
-primrec
-  BlockedOnNtfn :: "thread_state \<Rightarrow> bool"
-where
-  "BlockedOnNtfn (Running)                = False"
-| "BlockedOnNtfn (Inactive)               = False"
-| "BlockedOnNtfn (Restart)                = False"
-| "BlockedOnNtfn (BlockedOnReceive _ _ _) = False"
-| "BlockedOnNtfn (BlockedOnSend _ _)      = False"
-| "BlockedOnNtfn (BlockedOnNotification _) = True"
-| "BlockedOnNtfn (IdleThreadState)        = False"
-| "BlockedOnNtfn (BlockedOnReply _)       = False"
+abbreviation ct_not_blocked_on_ntfn where
+  "ct_not_blocked_on_ntfn s \<equiv> ct_in_state (\<lambda>x. \<not> is_blocked_on_ntfn x) s"
 
-abbreviation ct_not_BlockedOnNtfn where
-  "ct_not_BlockedOnNtfn s \<equiv> ct_in_state (\<lambda>x. \<not>BlockedOnNtfn x) s"
+abbreviation ct_not_blocked_on_receive where
+  "ct_not_blocked_on_receive s \<equiv> ct_in_state (\<lambda>x. \<not> is_blocked_on_receive x) s"
 
 lemma ct_in_state_kh_simp:
   "ct_in_state P s = ct_in_state' P s"
@@ -3958,12 +3895,6 @@ lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and 
 
 abbreviation sc_bounded_release_time :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
   "sc_bounded_release_time ct sc \<equiv> cfg_bounded_release_time ct (sc_refill_cfg_of sc)"
-
-definition is_BlockedOnReceive where
- "is_BlockedOnReceive st \<equiv> \<exists>x y z. st = BlockedOnReceive x y z"
-
-abbreviation not_BlockedOnReceive where
- "not_BlockedOnReceive st \<equiv> \<not> is_BlockedOnReceive st"
 
 locale valid_sched_pred_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"
