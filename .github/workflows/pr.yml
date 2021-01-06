@@ -32,3 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/style@master
+
+  thylint:
+    name: 'Theory Linter'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: seL4/ci-actions/thylint@master
+    - uses: yuzutech/annotations-action@v0.2.1
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        title: 'File annotations for theory linter'
+        input: './annotations.json'
+      if: always()
