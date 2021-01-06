@@ -2315,7 +2315,7 @@ lemma maybe_donate_sc_invs[wp]:
   done
 
 lemma set_thread_state_not_BOReply_valid_replies:
-  "\<lbrace>valid_replies and st_tcb_at (\<lambda>st. \<forall>r. st \<noteq> BlockedOnReply r) t\<rbrace>
+  "\<lbrace>valid_replies and st_tcb_at (\<lambda>st. \<not> is_blocked_on_reply st) t\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>r. valid_replies\<rbrace>"
   apply (wpsimp wp: sts_valid_replies)
@@ -2437,7 +2437,7 @@ lemma cancel_ipc_simple2:
   done
 
 lemma cancel_ipc_cte_wp_at_not_reply_state:
-  "\<lbrace>\<lambda>s. \<forall>r. st_tcb_at ((\<noteq>) (BlockedOnReply r)) t s \<and> cte_wp_at P p s\<rbrace>
+  "\<lbrace>\<lambda>s. st_tcb_at (Not \<circ> is_blocked_on_reply) t s \<and> cte_wp_at P p s\<rbrace>
     cancel_ipc t
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)

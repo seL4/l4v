@@ -274,8 +274,8 @@ lemma cancel_ipc_tcb [wp]:
 
 lemma gbep_ret:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr r d \<or>
-     st = Structures_A.BlockedOnSend epPtr p \<rbrakk> \<Longrightarrow>
-  get_blocking_object st = return epPtr"
+     st = Structures_A.BlockedOnSend epPtr p \<rbrakk>
+   \<Longrightarrow> get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def ep_blocked_def assert_opt_def)
 
 locale delete_one_abs =
@@ -628,7 +628,8 @@ lemma cancel_signal_invs:
    apply (clarsimp split:option.split)
   apply (rule conjI)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, clarsimp+)
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp;
+          clarsimp simp: is_blocked_thread_state_defs)
   apply (rule conjI, erule delta_sym_refs)
     apply (clarsimp split: if_split_asm)+
    apply (fastforce dest: refs_in_get_refs symreftype_inverse')
@@ -908,7 +909,7 @@ lemma replies_blocked_upd_tcb_st_valid_replies_not_blocked:
 
 lemma reply_unlink_tcb_assume_asserts:
   assumes "\<lbrace> P and reply_tcb_reply_at (\<lambda>t'. t' = Some t) r
-               and st_tcb_at (\<lambda>st. st = BlockedOnReply r \<or> (\<exists>ep d. st = BlockedOnReceive ep (Some r) d)) t \<rbrace>
+               and st_tcb_at (\<lambda>st. reply_object st = Some r) t \<rbrace>
             reply_unlink_tcb t r
            \<lbrace> Q \<rbrace>"
   shows "\<lbrace> P \<rbrace> reply_unlink_tcb t r \<lbrace> Q \<rbrace>"
@@ -920,7 +921,7 @@ lemma reply_unlink_tcb_assume_asserts:
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule hoare_weaken_pre[OF hoare_vcg_prop])
-  by (clarsimp simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)
+  by (auto simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)
 
 text \<open>@{term reply_unlink_tcb} does not preserve @{term invs} when the
       associated thread is @{term BlockedOnReceive}, because it drops a
@@ -1520,7 +1521,8 @@ lemma suspend_invs_helper:
   apply (rule_tac V="valid_replies_2 (replies_with_sc s)
            (replies_blocked_upd_tcb_st Inactive t (replies_blocked s))" in revcut_rl
          , clarsimp simp: pred_tcb_at_def obj_at_def)
-   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp, clarsimp+)
+   apply (subst replies_blocked_upd_tcb_st_not_BlockedonReply, simp;
+          clarsimp simp: is_blocked_thread_state_defs)
   apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl)
    apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply simp
@@ -1993,8 +1995,8 @@ crunches reply_unlink_tcb
 lemma cancel_all_ipc_invs_helper':
   "\<lbrace>all_invs_but_sym_refs and
      (\<lambda>s. (\<forall>x\<in>set q. ex_nonz_cap_to x s \<and> tcb_at x s
-                     \<and> st_tcb_at (\<lambda>st. (\<exists>epptr ro pl. st = BlockedOnReceive epptr ro pl) \<or>
-                                       (\<exists>epptr pl. st = BlockedOnSend epptr pl)) x s)
+                     \<and> st_tcb_at (\<lambda>st. is_blocked_on_receive st \<or>
+                                       is_blocked_on_send st) x s)
           \<and> distinct q
           \<and> sym_refs (\<lambda>x. if x \<in> set q
                           then {r \<in> state_refs_of s x. snd r \<noteq> TCBBlockedRecv \<and>
@@ -2021,7 +2023,7 @@ lemma cancel_all_ipc_invs_helper':
           | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
    apply (rule_tac V="t \<noteq> idle_thread s" in revcut_rl, fastforce simp: idle_no_ex_cap)
    apply (clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def
-                         replies_blocked_upd_tcb_st_helper)
+                         replies_blocked_upd_tcb_st_helper is_blocked_thread_state_defs)
    apply (erule disjE; clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def)
     apply (rule conjI; clarsimp)
      apply (drule_tac x=t and y=r and tp=ReplyTCB in sym_refsE
@@ -2031,7 +2033,7 @@ lemma cancel_all_ipc_invs_helper':
   (* To avoid case-splitting on st in the main proof, we'll isolate the one case
      that is interesting, and prove the remainder by extracting a smaller problem
      which is much easier to solve by cases on st. First, the simpler cases. *)
-  apply (case_tac "\<forall>ep r pl. st \<noteq> BlockedOnReceive ep (Some r) pl"; clarsimp)
+  apply (case_tac "\<not> is_blocked_on_receive st"; clarsimp)
    apply (subst bind_assoc[symmetric])
    apply (rule_tac s="return ()" in ssubst[where P="\<lambda>a. \<lbrace>P\<rbrace> do _ <- a; b od \<lbrace>Q\<rbrace>" for P a b Q])
     apply (case_tac st; fastforce)
@@ -2039,16 +2041,17 @@ lemma cancel_all_ipc_invs_helper':
    apply (rule conjI, clarsimp)
    apply (erule delta_sym_refs
           ; fastforce simp: pred_tcb_at_def obj_at_def state_refs_of_def get_refs_def2
+                            is_blocked_thread_state_defs
                      split: if_splits)
   (* now the interesting case *)
   apply (wpsimp wp: hoare_vcg_ball_lift restart_thread_if_no_fault_other
                     reply_unlink_tcb_st_tcb_at reply_unlink_tcb_refs_of
                     hoare_drop_imps)
   apply (intro conjI impI allI ballI
-         ; clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def is_tcb)
+         ; clarsimp simp: reply_at_ppred_def pred_tcb_at_def obj_at_def is_tcb is_blocked_thread_state_defs)
   by (erule delta_sym_refs
-         ; (clarsimp simp: in_state_refs_of_iff get_refs_def2 split: if_splits,
-            (erule disjE; clarsimp?)+))
+      ; (clarsimp simp: in_state_refs_of_iff get_refs_def2 split: if_splits,
+         (erule disjE; clarsimp?)+))+
 
 lemma ep_list_tcb_at':
   "x \<in> set q
@@ -2352,10 +2355,10 @@ lemma cancel_all_signals_invs:
                     dest!: bspec sym_refs_ko_atD st_tcb_at_state_refs_ofD)
    apply (clarsimp simp: refs_of_ntfn_def dest!: ko_at_state_refs_ofD)
   apply clarsimp
-  apply (subgoal_tac "st_tcb_at (\<lambda>st. \<exists>ref. st = BlockedOnNotification ref) xa s")
+  apply (subgoal_tac "st_tcb_at (\<lambda>st. is_blocked_on_ntfn st) xa s")
    apply (auto elim!: fault_tcbs_valid_states_not_fault_tcb_states pred_tcb_weakenE
                       ntfn_queued_st_tcb_at
-                simp: pred_neg_def)
+                simp: pred_neg_def is_blocked_thread_state_defs)
   done
 
 lemma cancel_all_unlive_helper':

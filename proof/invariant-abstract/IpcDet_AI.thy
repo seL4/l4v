@@ -441,7 +441,7 @@ lemma receive_ipc_blocked_invs':
       apply (cases ep; clarsimp)
       apply (frule invs_valid_objs, erule valid_objsE, simp add: obj_at_def)
       apply (clarsimp simp add: valid_obj_def valid_ep_def)
-      by (fastforce dest!: ep_queued_st_tcb_at[where P="\<lambda>st. \<exists>e p p' r. st \<in> {BlockedOnSend e p, BlockedOnReceive e r p'}"]
+      by (fastforce dest!: ep_queued_st_tcb_at[where P="is_blocked_on_send or is_blocked_on_receive"]
                      simp: ep_q_refs_of_def invs_valid_objs invs_sym_refs pred_tcb_at_def obj_at_def)+
     have ep_queue:
       "ep_q_refs_of ep = set queue \<times> {EPRecv}"
@@ -1615,7 +1615,7 @@ lemma active_st_tcb_at_not_in_replies_blocked:
   by (clarsimp simp: st_tcb_at_def replies_blocked_def obj_at_def)
 
 lemma no_reply_in_ts_rv_False:
-  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>x y pl. (st = BlockedOnReceive x (Some y) pl)) \<or> (\<exists>y. (st = BlockedOnReply y))) caller\<rbrace>
+  "\<lbrace>st_tcb_at (\<lambda>st. (\<exists>y. reply_object st = Some y)) caller\<rbrace>
    no_reply_in_ts caller
    \<lbrace>\<lambda>ts_reply s. \<not> ts_reply\<rbrace>"
   apply (wpsimp simp: no_reply_in_ts_def get_thread_state_def wp: thread_get_wp)
@@ -2107,7 +2107,7 @@ lemma si_invs'_helper_fault:
    apply (subgoal_tac "dest \<noteq> tptr")
     apply (fastforce elim!: fault_tcbs_valid_states_except_set_not_fault_tcb_states
                             pred_tcb_weakenE
-                      simp: pred_neg_def)
+                      simp: pred_neg_def is_blocked_thread_state_defs)
    apply (fastforce simp: st_tcb_at_def obj_at_def)
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   apply (subgoal_tac "valid_obj dest (TCB tcb) s")

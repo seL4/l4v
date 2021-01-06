@@ -2634,13 +2634,13 @@ lemma gts_wp:
   by (wpsimp wp: thread_get_wp' simp: pred_tcb_at_def obj_at_def)
 
 lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
-  "\<lbrakk>kheap s t = Some (TCB tcb); \<forall>r. tcb_state tcb \<noteq> BlockedOnReply r;
-  \<forall>r. st \<noteq> BlockedOnReply r\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>kheap s t = Some (TCB tcb); \<not> is_blocked_on_reply (tcb_state tcb);
+    \<not> is_blocked_on_reply st\<rbrakk> \<Longrightarrow>
   replies_blocked_upd_tcb_st st t (replies_blocked s) = replies_blocked s"
-  apply  (rule set_eqI[OF iffI])
+  apply (rule set_eqI[OF iffI])
    apply (clarsimp simp: replies_blocked_upd_tcb_st_def split: if_splits)
   apply (clarsimp simp: replies_blocked_upd_tcb_st_def replies_blocked_def
-      pred_tcb_at_def obj_at_def)
+                        pred_tcb_at_def obj_at_def)
   done
 
 global_interpretation set_thread_state: non_sc_op "set_thread_state t st"

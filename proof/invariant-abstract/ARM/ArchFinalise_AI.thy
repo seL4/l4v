@@ -1643,7 +1643,7 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
                     | solves \<open>clarsimp dest!: no_cap_to_idle_sc_ptr\<close>
                     | solves \<open> clarsimp,
                                (frule (2) reply_tcb_state_refs[OF _ invs_valid_objs invs_sym_refs],
-                                fastforce simp: obj_at_def, clarsimp),
+                                fastforce simp: obj_at_def),
                                 (auto simp: reply_tcb_reply_at_def pred_tcb_at_def obj_at_def)\<close>)+
   apply clarsimp
   apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)

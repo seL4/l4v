@@ -384,12 +384,70 @@ datatype thread_state
   = Running
   | Inactive
   | Restart
-(*  | YieldTo obj_ref (* sc ref *)*)
   | BlockedOnReceive obj_ref "obj_ref option" receiver_payload
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply obj_ref
   | BlockedOnNotification obj_ref
   | IdleThreadState
+
+(* FIXME RT: generating the following discriminators and selectors automatically breaks
+             unrelated proofs in strange ways *)
+
+fun reply_object where
+  "reply_object (BlockedOnReceive _ reply_opt _) = reply_opt"
+| "reply_object (BlockedOnReply reply) = Some reply"
+| "reply_object _ = None"
+
+definition is_blocked_on_receive where
+ "is_blocked_on_receive st \<equiv>
+    \<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data"
+
+definition is_blocked_on_send :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_send st \<equiv> \<exists>ep sender_data. st = BlockedOnSend ep sender_data"
+
+definition is_blocked_on_reply :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_reply st \<equiv> \<exists>reply. st = BlockedOnReply reply"
+
+definition is_blocked_on_ntfn :: "thread_state \<Rightarrow> bool" where
+  "is_blocked_on_ntfn st \<equiv> \<exists>ntfn. st = BlockedOnNotification ntfn"
+
+lemmas is_blocked_thread_state_defs
+  = is_blocked_on_receive_def is_blocked_on_send_def is_blocked_on_reply_def is_blocked_on_ntfn_def
+
+lemma is_blocked_thread_state_simps[simp]:
+  "\<not> is_blocked_on_receive Running"
+  "\<not> is_blocked_on_receive Inactive"
+  "\<not> is_blocked_on_receive Restart"
+  "  is_blocked_on_receive (BlockedOnReceive ep reply_opt receiver_data)"
+  "\<not> is_blocked_on_receive (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_receive (BlockedOnReply reply)"
+  "\<not> is_blocked_on_receive (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_receive IdleThreadState"
+  "\<not> is_blocked_on_send Running"
+  "\<not> is_blocked_on_send Inactive"
+  "\<not> is_blocked_on_send Restart"
+  "\<not> is_blocked_on_send (BlockedOnReceive ep reply_opt receiver_data)"
+  "  is_blocked_on_send (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_send (BlockedOnReply reply)"
+  "\<not> is_blocked_on_send (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_send IdleThreadState"
+  "\<not> is_blocked_on_reply Running"
+  "\<not> is_blocked_on_reply Inactive"
+  "\<not> is_blocked_on_reply Restart"
+  "\<not> is_blocked_on_reply (BlockedOnReceive ep reply_opt receiver_data)"
+  "\<not> is_blocked_on_reply (BlockedOnSend ep sender_data)"
+  "  is_blocked_on_reply (BlockedOnReply reply)"
+  "\<not> is_blocked_on_reply (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_reply IdleThreadState"
+  "\<not> is_blocked_on_ntfn Running"
+  "\<not> is_blocked_on_ntfn Inactive"
+  "\<not> is_blocked_on_ntfn Restart"
+  "\<not> is_blocked_on_ntfn (BlockedOnReceive ep reply_opt receiver_data)"
+  "\<not> is_blocked_on_ntfn (BlockedOnSend ep sender_data)"
+  "\<not> is_blocked_on_ntfn (BlockedOnReply reply)"
+  " is_blocked_on_ntfn (BlockedOnNotification ntfn)"
+  "\<not> is_blocked_on_ntfn IdleThreadState"
+  by (auto simp: is_blocked_thread_state_defs)
 
 type_synonym priority = word8
 type_synonym domain = word8
