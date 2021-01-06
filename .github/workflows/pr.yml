@@ -32,3 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/style@master
+
+  thylint:
+	name: thylint
+	runs-on: ubuntu-latest
+	steps:
+	- uses: seL4/ci-actions/thylint@thylint
