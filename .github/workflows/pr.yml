@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/thylint@thylint
-    - uses: yuzutech/annotations-action@v0.1.0
+    - uses: yuzutech/annotations-action@v0.2.1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         title: 'Annotate thylint results'
