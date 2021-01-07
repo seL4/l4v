@@ -94,6 +94,6 @@ where
   od"
 
 #INCLUDE_HASKELL SEL4/Model/StateData.lhs decls_only ONLY capHasProperty sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2
-#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue Kernel assert stateAssert findM funArray newKernelState capHasProperty ifM whenM whileM andM orM maybeToMonad sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2
+#INCLUDE_HASKELL SEL4/Model/StateData.lhs NOT doMachineOp KernelState ReadyQueue ReaderM Kernel KernelR getsJust assert stateAssert funOfM condition whileLoop findM funArray newKernelState capHasProperty ifM whenM whileM andM orM maybeToMonad sym_refs_asrt valid_replies'_sc_asrt ready_qs_runnable tcs_cross_asrt1 tcs_cross_asrt2
 
 end

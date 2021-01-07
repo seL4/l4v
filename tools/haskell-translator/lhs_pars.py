@@ -631,6 +631,10 @@ def constructor_reversing(tokens):
         rbrack = braces.str(')', '+', '+')
         comma = braces.str(',', '+', '+')
         return [lbrack, tokens[1], comma, tokens[2], rbrack, tokens[0]]
+    elif tokens[0] == 'state_t':
+        # bail on inline monad constructions,
+        # such functions must be explicitly ignored in the skeleton file
+        return []
     else:
         print("Error parsing " + filename)
         print("Can't deal with %s" % tokens)
