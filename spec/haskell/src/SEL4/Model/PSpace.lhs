@@ -20,7 +20,7 @@ This module contains the data structure and operations for the physical memory m
 % {-# BOOT-IMPORTS: Data.Map SEL4.Object.Structures SEL4.Machine.RegisterSet #-}
 % {-# BOOT-EXPORTS: PSpace #PRegion newPSpace #-}
 
-> import Prelude hiding (Word, read)
+> import Prelude hiding (Word)
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
 
@@ -129,7 +129,7 @@ requested type.
 >         loadObject (fromPPtr ptr) ptr' after val
 
 > getObject :: PSpaceStorable a => PPtr a -> Kernel a
-> getObject ptr = read (readObject ptr)
+> getObject ptr = getsJust (readObject ptr)
 
 > setObject :: PSpaceStorable a => PPtr a -> a -> Kernel ()
 > setObject ptr val = do
