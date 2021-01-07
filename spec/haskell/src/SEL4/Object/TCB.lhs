@@ -1077,18 +1077,17 @@ On some architectures, the thread context may include registers that may be modi
 >         commitTime
 >     setCurSc csc
 
-> getTCBRefillReady :: PPtr TCB -> Kernel Bool
-> getTCBRefillReady tcbPtr = do
->      scOpt <- threadGet tcbSchedContext tcbPtr
->      ready <- refillReady $ fromJust scOpt
->      return ready
+> readTCBRefillReady :: PPtr TCB -> KernelR Bool
+> readTCBRefillReady tcbPtr = do
+>      scOpt <- threadRead tcbSchedContext tcbPtr
+>      readRefillReady $ fromJust scOpt
 
-> releaseQNonEmptyAndReady :: Kernel Bool
+> releaseQNonEmptyAndReady :: KernelR Bool
 > releaseQNonEmptyAndReady = do
->     rq <- getReleaseQueue
+>     rq <- readReleaseQueue
 >     if rq == []
 >       then return False
->       else getTCBRefillReady (head rq)
+>       else readTCBRefillReady (head rq)
 
 > awakenBody :: Kernel ()
 > awakenBody = do
@@ -1100,7 +1099,7 @@ On some architectures, the thread context may include registers that may be modi
 >     possibleSwitchTo awakened
 
 > awaken :: Kernel ()
-> awaken = whileLoop (\r s -> funOfM releaseQNonEmptyAndReady) (\r -> awaken_body) ()
+> awaken = whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const awakenBody) ()
 
 > tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
 > tcbEPFindIndex tptr queue curIndex = do

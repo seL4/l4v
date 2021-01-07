@@ -22,7 +22,7 @@ This module uses the C preprocessor to select a target architecture.
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
 >         refillBudgetCheckRoundRobin, updateScPtr, emptyRefill, scBitsFromRefillLength,
 >         isCurDomainExpired, refillUnblockCheck, mapScPtr,
->         refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
+>         readRefillReady, refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
 >         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
@@ -233,11 +233,14 @@ This module uses the C preprocessor to select a target architecture.
 >     setRefillHd scPtr (Refill { rTime = curTime, rAmount = budget })
 >     maybeAddEmptyTail scPtr
 
-> refillReady :: PPtr SchedContext -> Kernel Bool
-> refillReady scPtr = do
->     sc <- getSchedContext scPtr
->     curTime <- getCurTime
+> readRefillReady :: PPtr SchedContext -> KernelR Bool
+> readRefillReady scPtr = do
+>     sc <- readSchedContext scPtr
+>     curTime <- readCurTime
 >     return $ rTime (refillHd sc) <= curTime + kernelWCETTicks
+
+> refillReady :: PPtr SchedContext -> Kernel Bool
+> refillReady scPtr = getsJust (readRefillReady scPtr)
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()
 > refillUpdate scPtr newPeriod newBudget newMaxRefills = do
