@@ -23,7 +23,7 @@ We use the C preprocessor to select a target architecture.
 
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
-> import Prelude hiding (Word, read)
+> import Prelude hiding (Word)
 > import qualified SEL4.Model.StateData.TARGET as Arch
 
 \begin{impdetails}
@@ -139,10 +139,10 @@ Read-only, potentially failing functions:
 > type ReaderM s = ReaderT s Maybe
 > type KernelR = ReaderM KernelState
 
-To run a "ReaderM" inside a state monad stack, e.g. the "Kernel" monad, use "read":
+To run a "ReaderM" inside a state monad stack, e.g. the "Kernel" monad, use "getsJust":
 
-> read :: Monad m => ReaderM s a -> StateT s m a
-> read r = do
+> getsJust :: Monad m => ReaderM s a -> StateT s m a
+> getsJust r = do
 >     x <- gets (runReaderT r)
 >     maybe (fail "must return something") return x
 
