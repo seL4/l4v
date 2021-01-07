@@ -134,14 +134,17 @@ Kernel functions are sequences of operations that transform a "KernelState" obje
 
 Note that there is no error-signalling mechanism available to functions in "Kernel". Therefore, all errors encountered in such functions are fatal, and will halt the kernel. See \autoref{sec:model.failures} for the definition of monads used for error handling.
 
-Read-only functions on the kernel state (excluding the machine state):
+Read-only, potentially failing functions:
 
-> type KernelR = Reader KernelState
+> type ReaderM s = ReaderT s Maybe
+> type KernelR = ReaderM KernelState
 
-To run a "Reader" inside a state monad stack, use "read":
+To run a "ReaderM" inside a state monad stack, e.g. the "Kernel" monad, use "read":
 
-> read :: Monad m => Reader s a -> StateT s m a
-> read r = gets (runReader r)
+> read :: Monad m => ReaderM s a -> StateT s m a
+> read r = do
+>     x <- gets (runReaderT r)
+>     maybe (fail "must return something") return x
 
 \subsubsection{Scheduler Queues}
 
