@@ -1090,8 +1090,8 @@ On some architectures, the thread context may include registers that may be modi
 >       then return False
 >       else getTCBRefillReady (head rq)
 
-> awaken_body :: Kernel ()
-> awaken_body = do
+> awakenBody :: Kernel ()
+> awakenBody = do
 >     rq <- getReleaseQueue
 >     assert (distinct rq) "The release queue is always distinct"
 >     awakened <- tcbReleaseDequeue
