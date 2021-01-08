@@ -475,12 +475,13 @@ This module uses the C preprocessor to select a target architecture.
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
->     tcb <- getObject tptr
->     when (tcbSchedContext tcb /= Nothing) $ do
->         let scPtr = fromJust $ tcbSchedContext tcb
+>     sc_ptr_opt <- threadGet tcbSchedContext tptr
+>     when (sc_ptr_opt /= Nothing) $ do
+>         let scPtr = fromJust sc_ptr_opt
 >         schedContextUnbindTCB scPtr
 >         sc <- getSchedContext scPtr
->         schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
+>         when (scYieldFrom sc /= Nothing) $
+>             schedContextCompleteYieldTo $ fromJust $ scYieldFrom sc
 
 > postpone :: PPtr SchedContext -> Kernel ()
 > postpone scPtr = do
