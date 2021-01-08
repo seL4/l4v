@@ -191,10 +191,10 @@ from the directory `l4v/`. For available sessions, see the corresponding
 each major directory in the repository.
 
 For interactively exploring, say the invariant proof of the abstract
-specification with a pre-built logic image for the abstract specification,
-run
+specification with a pre-built logic image for the abstract specification and
+all of the invariant proof's dependencies, run
 
-    ./isabelle/bin/isabelle jedit -d . -l ASpec
+    ./isabelle/bin/isabelle jedit -d . -R AInvs
 
 in `l4v/` and open one of the files in `proof/invariant-abstract`.
 
