@@ -289,8 +289,8 @@ where
                 set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
                                                      | _ \<Rightarrow> RecvEP queue);
                 recv_state \<leftarrow> get_thread_state dest;
-                (reply, reply_can_grant) \<leftarrow> case recv_state
-                  of (BlockedOnReceive _ reply data) \<Rightarrow> return (reply, receiver_can_grant data)
+                reply \<leftarrow> case recv_state
+                  of (BlockedOnReceive _ reply data) \<Rightarrow> return reply
                   | _ \<Rightarrow> fail;
                 do_ipc_transfer thread (Some epptr) badge can_grant dest;
                 maybeM (reply_unlink_tcb dest) reply;
@@ -298,7 +298,7 @@ where
 
                 fault \<leftarrow> thread_get tcb_fault thread;
                 if call \<or> fault \<noteq> None then
-                  if (can_grant \<or> reply_can_grant) \<and> reply \<noteq> None then
+                  if (can_grant \<or> can_grant_reply) \<and> reply \<noteq> None then
                     reply_push thread dest (the reply) can_donate
                   else
                     set_thread_state thread Inactive
