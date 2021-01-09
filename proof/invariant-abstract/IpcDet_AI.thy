@@ -1987,16 +1987,15 @@ lemma si_invs'_helper_fault:
         sym_refs (state_hyp_refs_of s)\<rbrace>
     do
       recv_state <- get_thread_state dest;
-      (reply, reply_can_grant) <- case recv_state of
-                                    BlockedOnReceive _ reply data \<Rightarrow>
-                                      return (reply, receiver_can_grant data)
+      reply <- case recv_state of BlockedOnReceive _ reply data \<Rightarrow>
+                                      return reply
                                   | _ \<Rightarrow> fail;
       y <- do_ipc_transfer tptr (Some epptr) ba cg dest;
       y <- maybeM (reply_unlink_tcb dest) reply;
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
-           then if (cg \<or> reply_can_grant) \<and> (\<exists>y. reply = Some y)
+           then if (cg \<or> cgr) \<and> (\<exists>y. reply = Some y)
                 then reply_push tptr dest (the reply) can_donate
                 else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
@@ -2103,16 +2102,16 @@ lemma si_invs'_helper:
         sym_refs (state_hyp_refs_of s)\<rbrace>
     do
       recv_state <- get_thread_state dest;
-      (reply, reply_can_grant) <- case recv_state of
+      reply <- case recv_state of
                                     BlockedOnReceive _ reply data \<Rightarrow>
-                                      return (reply, receiver_can_grant data)
+                                      return reply
                                   | _ \<Rightarrow> fail;
       y <- do_ipc_transfer tptr (Some epptr) ba cg dest;
       y <- maybeM (reply_unlink_tcb dest) reply;
       sc_opt <- get_tcb_obj_ref tcb_sched_context dest;
       fault <- thread_get tcb_fault tptr;
       y <- if call \<or> (\<exists>y. fault = Some y)
-           then if (cg \<or> reply_can_grant) \<and> (\<exists>y. reply = Some y)
+           then if (cg \<or> cgr) \<and> (\<exists>y. reply = Some y)
                 then reply_push tptr dest (the reply) can_donate
                 else set_thread_state tptr Inactive
            else when (can_donate \<and> sc_opt = None) (do thread_sc <- get_tcb_obj_ref tcb_sched_context tptr;
