@@ -983,20 +983,24 @@ crunches setExtraBadge, transferCapsToSlots
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
 
+crunches transferCapsToSlots
+  for valid_release_queue[wp]: valid_release_queue
+  and valid_release_queue'[wp]: valid_release_queue'
+  (wp: crunch_wps)
+
 lemma transferCapsToSlots_invs[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> distinct slots
-          \<and> (\<forall>x \<in> set slots. cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) x s)
-          \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s)
-          \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
-          \<and> length slots \<le> 1
-          \<and> transferCaps_srcs caps s\<rbrace>
-    transferCapsToSlots ep buffer n caps slots mi
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+        \<and> (\<forall>x \<in> set slots. cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) x s)
+        \<and> (\<forall>x \<in> set slots. ex_cte_cap_to' x s)
+        \<and> (\<forall>x \<in> set slots. real_cte_at' x s)
+        \<and> length slots \<le> 1
+        \<and> transferCaps_srcs caps s\<rbrace>
+   transferCapsToSlots ep buffer n caps slots mi
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (wp valid_irq_node_lift)
-  sorry (* valid_release_queue
   apply fastforce
-  done *)
+  done
 
 lemma grs_distinct'[wp]:
   "\<lbrace>\<top>\<rbrace> getReceiveSlots t buf \<lbrace>\<lambda>rv s. distinct rv\<rbrace>"
