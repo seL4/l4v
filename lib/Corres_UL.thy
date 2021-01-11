@@ -348,6 +348,9 @@ lemma corres_split:
   apply simp
   done
 
+lemmas corres_split_skip
+  = corres_split'[rotated 2, where Q="\<lambda>_. P" and P=P and Q'="\<lambda>_. P'" and P'=P' for P P']
+
 primrec
   rel_sum_comb :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'd \<Rightarrow> bool)
                      \<Rightarrow> ('a + 'c \<Rightarrow> 'b + 'd \<Rightarrow> bool)" (infixl "\<oplus>" 95)
