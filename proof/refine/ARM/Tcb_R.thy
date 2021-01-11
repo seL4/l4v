@@ -485,45 +485,42 @@ lemma arch_post_modify_registers_corres:
   apply (rule corres_stateAssert_assume)
    by simp+
 
+(* FIXME RT: move *)
+crunches Tcb_A.restart
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to tcb_ptr"
+  (wp: crunch_wps cancel_ipc_cap_to simp: crunch_simps)
+
+crunches restart
+  for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' tcbPtr"
+  (wp: crunch_wps threadSet_cap_to simp: crunch_simps tcb_cte_cases_def)
+
 lemma writereg_corres:
-  "corres (dc \<oplus> (=)) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
-        (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
-        (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
-        (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
+  "corres (dc \<oplus> (=))
+          (einvs and simple_sched_action and tcb_at dest and ex_nonz_cap_to dest
+           and current_time_bounded 1)
+          (invs' and tcb_at' dest and ex_nonz_cap_to' dest)
+          (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
+          (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
   apply (simp add: invokeTCB_def performTransfer_def arch_get_sanitise_register_info_def
                    frameRegisters_def gpRegisters_def getSanitiseRegisterInfo_def
                    sanitiseRegister_def sanitise_register_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split_nor)
-         prefer 2
-         apply (rule corres_as_user)
-         apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
-         apply (rule corres_Id, simp+)
-         apply (rule no_fail_pre, wp no_fail_mapM)
-            apply clarsimp
-            apply (wp no_fail_setRegister | simp)+
-        apply clarsimp
-        apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
-          apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
-            apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
-              apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
-              apply simp
-             apply (wp+)[2](* this broke after changes to restart *) (*
-           apply ((wp static_imp_wp restart_invs'
-                 | strengthen valid_sched_weak_strg
-                              invs_valid_queues' invs_queues invs_weak_sch_act_wf
-                 | clarsimp simp: invs_def valid_state_def valid_sched_def invs'_def valid_state'_def
-                            dest!: global'_no_ex_cap idle_no_ex_cap)+)[2]
-         apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and ex_nonz_cap_to dest" in hoare_strengthen_post[rotated])
-          apply (fastforce simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def dest!: idle_no_ex_cap) *)
-  sorry (* depends on restart *)
-  (*
-         prefer 2
-         apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest and ex_nonz_cap_to' dest" in hoare_strengthen_post[rotated])
-          apply (fastforce simp: sch_act_wf_weak invs'_def valid_state'_def dest!: global'_no_ex_cap)
-         apply (wp | clarsimp)+
-  done *)
+  apply (rule corres_split'[rotated 2, OF gets_sp getCurThread_sp])
+   apply (corressimp corres: gct_corres)
+  apply (rule corres_split_skip; (solves wpsimp)?)
+   apply (corressimp corres: corres_as_user
+                       simp: zipWithM_mapM getRestartPC_def setNextPC_def
+                         wp: no_fail_mapM no_fail_setRegister)
+  apply (rule corres_split_skip; (solves wpsimp)?)
+   apply (corressimp corres: arch_post_modify_registers_corres[simplified])
+  apply (rule_tac Q="\<lambda>_. einvs" and Q'="\<lambda>_. invs'" in corres_split'[rotated 2])
+     apply (wpsimp wp: restart_valid_sched)
+     using idle_no_ex_cap apply fastforce
+    apply (wpsimp wp: restart_invs')
+    using global'_no_ex_cap apply fastforce
+   apply (corressimp corres: restart_corres)
+  apply (corressimp corres: rescheduleRequired_corres)
+  apply fastforce
+  done
 
 lemma tcbSchedDequeue_ResumeCurrentThread_imp_notct[wp]:
   "\<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>

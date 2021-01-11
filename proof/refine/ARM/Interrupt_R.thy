@@ -356,8 +356,8 @@ lemma invoke_arch_irq_handler_corres:
 
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
-   corres dc (einvs and irq_handler_inv_valid i)
-             (invs' and irq_handler_inv_valid' i')
+   corres dc (einvs and irq_handler_inv_valid i and simple_sched_action)
+             (invs' and irq_handler_inv_valid' i' and sch_act_simple)
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
   supply arch_invoke_irq_handler.simps[simp del]
@@ -375,8 +375,7 @@ lemma invoke_irq_handler_corres:
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
                       in hoare_post_imp)
          apply fastforce
-        apply (wp cap_delete_one_still_derived)+
-  sorry (*
+        apply (wp cap_delete_one_still_derived cap_delete_one_valid_sched)+
        apply (strengthen invs_mdb_strengthen')
        apply wp+
       apply (simp add: conj_comms eq_commute)
@@ -390,7 +389,7 @@ lemma invoke_irq_handler_corres:
       apply (rule cap_delete_one_corres)
      apply wp+
    apply simp+
-  done *)
+  done
 
 lemma ntfn_badge_derived_enough_strg:
   "cte_wp_at' (\<lambda>cte. isNotificationCap cap \<and> badge_derived' cap (cteCap cte)) ptr s
@@ -565,6 +564,10 @@ lemma dmo_setIRQTrigger_invs'[wp]:
                      machine_rest_lift_def split_def | wp)+
   done
 
+crunches doMachineOp
+  for ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' P ptr"
+  (wp: ex_cte_cap_to'_pres)
+
 lemma arch_invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and arch_irq_control_inv_valid' i\<rbrace> ARM_H.performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: ARM_H.performIRQControl_def)
@@ -572,14 +575,13 @@ lemma arch_invoke_irq_control_invs'[wp]:
    apply (wp cteInsert_simple_invs
           | simp add: cte_wp_at_ctes_of isCap_simps IRQ_def
           | wpc)+
-  sorry (*
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)
   apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (auto dest: valid_irq_handlers_ctes_ofD
               simp: invs'_def valid_state'_def IRQ_def)
-  done *)
+  done
 
 lemma invoke_irq_control_invs'[wp]:
   "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -649,15 +651,22 @@ lemma tcbSchedAppend_invs_but_ct_not_inQ':
    tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
-  sorry (*
    apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
              valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
              untyped_ranges_zero_lift
         | simp add: cteCaps_of_def o_def
         | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
-  done *)
+  done
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
+
+lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
+  "doMachineOp ackDeadlineIRQ \<lbrace>invs'\<rbrace>"
+  apply (wpsimp simp: ackDeadlineIRQ_def wp: dmo_invs' ackInterrupt_irq_masks)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
+    apply wpsimp+
+  done
 
 lemma handle_interrupt_corres:
   "corres dc
@@ -690,7 +699,6 @@ lemma handle_interrupt_corres:
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule send_signal_corres)
-  sorry (*
               apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
                                     arch_mask_irq_signal_def maskIrqSignal_def)+
            apply (rule corres_split)
@@ -699,17 +707,9 @@ lemma handle_interrupt_corres:
             apply ((wp | simp)+)
     apply clarsimp
    apply fastforce
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply simp
-      apply (rule corres_split [OF corres_machine_op timerTick_corres])
-        apply (rule corres_eq_trivial, simp+)
-         apply (rule corres_machine_op)
-         apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
-        apply wp+
-   apply clarsimp
-  apply clarsimp
-  done *)
+  apply (corressimp corres: corres_machine_op reprogram_timer_corres
+                      simp: ackDeadlineIRQ_def)
+  done
 
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
@@ -766,9 +766,8 @@ lemma dmo_ackInterrupt[wp]:
   done
 
 lemma hint_invs[wp]:
-  "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "handleInterrupt irq \<lbrace>invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def cong: irqstate.case_cong)
-  sorry (*
   apply (rule conjI; rule impI)
    apply (wp dmo_maskInterrupt_True getCTE_wp'
           | wpc | simp add: doMachineOp_bind maskIrqSignal_def )+
@@ -778,7 +777,7 @@ lemma hint_invs[wp]:
       apply (wp threadSet_invs_trivial | simp add: inQ_def handleReservedIRQ_def)+
    apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
   apply (assumption)+
-  done *)
+  done
 
 end
 
