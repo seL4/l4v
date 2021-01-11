@@ -3143,6 +3143,13 @@ lemma checkPrio_lt_ct_weak:
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   by (rule le_ucast_ucast_le) simp
 
+lemma checkPrio_lt_ct_weak':
+  "\<lbrace>P\<rbrace> checkPrio prio auth \<lbrace>\<lambda>rv s. P s \<and> mcpriority_tcb_at' (\<lambda>mcp. ucast prio \<le> mcp) auth s\<rbrace>, -"
+  apply (wpsimp wp: hoare_vcg_conj_liftE1)
+    apply (wpsimp wp: checkPrio_inv)
+   apply (wpsimp wp: checkPrio_lt_ct_weak)+
+  done
+
 crunches checkPrio
   for tcb_at'[wp]: "tcb_at' t"
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' t"
@@ -3185,18 +3192,22 @@ lemma decodeSetMCPriority_inv[wp]:
              | wpcw)+
   done
 
-lemma decodeSetSchedParams_wf[wp]:
-  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t \<rbrace>
-    decodeSetSchedParams args (ThreadCap t) slot extras
+lemma decodeSetSchedParams_wf:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
+    and (\<lambda>s. \<forall>x \<in> set extras. real_cte_at' (snd x) s
+                              \<and> s \<turnstile>' fst x \<and> (\<forall>y \<in> zobj_refs' (fst x). ex_nonz_cap_to' y s))\<rbrace>
+   decodeSetSchedParams args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  unfolding decodeSetSchedParams_def
-  apply (wpsimp wp: checkPrio_lt_ct_weak | wp (once) checkPrio_inv)+
-  sorry (* FIXME RT: sc_at'_n/setThreadState
-  apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (rule conjI;
-         cut_tac max_word_max[where 'a=8, unfolded max_word_def];
-         simp)
-  done *)
+  unfolding decodeSetSchedParams_def scReleased_def refillReady_def scActive_def isBlocked_def
+  apply (cases args; cases extras; clarsimp; (solves \<open>wpsimp wp: checkPrio_inv\<close>)?)
+  apply (clarsimp split: list.splits; safe; (solves \<open>wpsimp wp: checkPrio_inv\<close>)?)
+  apply (clarsimp simp: validE_R_def)
+  apply (rule hoare_seq_ext_skipE, wpsimp wp: checkPrio_inv)
+  apply (rule hoare_vcg_seqE[OF _ checkPrio_lt_ct_weak'[unfolded validE_R_def]])+
+  apply (wpsimp wp: checkPrio_lt_ct_weak gts_wp' threadGet_wp)
+  apply (clarsimp simp: maxPriority_def numPriorities_def pred_tcb_at'_def obj_at'_def projectKOs)
+  using max_word_max[where 'a=8, unfolded max_word_def] apply simp
+  done
 
 (* FIXME RT: move to...? *)
 lemma is_blocked_corres:
@@ -3394,24 +3405,23 @@ lemma decode_set_ipc_corres:
                             (\<lambda>s. invs' s \<and> (\<forall>x \<in> set extras'. cte_at' (snd x) s))
        (decode_set_ipc_buffer args cap slot extras)
        (decodeSetIPCBuffer args cap' (cte_map slot) extras')"
-  apply (simp    add: decode_set_ipc_buffer_def decodeSetIPCBuffer_def
-           split del: if_split)
+  apply (simp add: decode_set_ipc_buffer_def decodeSetIPCBuffer_def)
   apply (cases args)
    apply simp
   apply (cases extras)
    apply simp
-  apply (clarsimp simp: list_all2_Cons1 liftME_def[symmetric]
-                        is_cap_simps
-             split del: if_split)
-  apply (clarsimp simp add: returnOk_def newroot_rel_def)
-  sorry (*
+  apply (clarsimp simp: list_all2_Cons1 liftME_def[symmetric] is_cap_simps)
+  apply (clarsimp simp: returnOk_def newroot_rel_def emptyTCCaps_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ derive_cap_corres])
-        apply (simp add: o_def newroot_rel_def split_def dc_def[symmetric])
-        apply (erule check_valid_ipc_corres)
-       apply (wp hoareE_TrueI | simp)+
+    apply (rule corres_splitEE[OF _ derive_cap_corres])
+        apply (simp add: o_def newroot_rel_def dc_def[symmetric])
+        apply (rule corres_rel_imp)
+         apply (erule check_valid_ipc_corres)
+        apply (simp add: dc_def)
+       apply (clarsimp simp: tcCapsBuffer_update_def)
+      apply wpsimp+
   apply fastforce
-  done *)
+  done
 
 lemma decodeSetIPC_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
@@ -3772,10 +3782,16 @@ lemma decode_set_tls_base_corres:
   by (rule sym, rule ucast_id)
 
 lemma decodeSetTimeoutEndpoint_corres:
-  "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
-          (decode_set_timeout_ep (cap.ThreadCap t) slot extra)
-          (decodeSetTimeoutEndpoint (capability.ThreadCap t) slot' extra')"
-  sorry
+  "list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<Longrightarrow>
+   corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
+          (decode_set_timeout_ep (cap.ThreadCap t) slot extras)
+          (decodeSetTimeoutEndpoint (capability.ThreadCap t) (cte_map slot) extras')"
+  apply (clarsimp simp: decode_set_timeout_ep_def decodeSetTimeoutEndpoint_def)
+  apply (cases extras; cases extras'; clarsimp)
+  apply (fastforce simp: check_handler_ep_def unlessE_def returnOk_def bindE_def
+                         newroot_rel_def emptyTCCaps_def throwError_def
+                   dest: cap_rel_valid_fh)
+  done
 
 lemma decode_tcb_inv_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
@@ -3855,21 +3871,31 @@ lemma decodeSetTLSBase_wf:
              cong: list.case_cong)
   by wpsimp
 
+lemma decodeSetTimeoutEndpoint_wf[wp]:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
+     and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' fst x \<and> cte_at' (snd x) s)\<rbrace>
+   decodeSetTimeoutEndpoint (ThreadCap t) slot extras
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
+  apply (simp add: decodeSetTimeoutEndpoint_def emptyTCCaps_def
+             cong: list.case_cong)
+  apply wpsimp
+  done
+
 lemma decodeTCBInv_wf:
   "\<lbrace>invs' and tcb_at' t and cte_at' slot and ex_nonz_cap_to' t
          and (\<lambda>s. \<forall>x \<in> set extras. real_cte_at' (snd x) s
                           \<and> s \<turnstile>' fst x \<and> (\<forall>y \<in> zobj_refs' (fst x). ex_nonz_cap_to' y s))\<rbrace>
-     decodeTCBInvocation label args (capability.ThreadCap t) slot extras
+   decodeTCBInvocation label args (capability.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeTCBInvocation_def Let_def
               cong: if_cong gen_invocation_labels.case_cong split del: if_split)
   apply (rule hoare_pre)
    apply (wpc, (wp decodeTCBConf_wf decodeReadReg_wf decodeWriteReg_wf decodeSetTLSBase_wf
-             decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)+)
-  sorry (*
+             decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf
+             decodeSetSchedParams_wf)+)
   apply (clarsimp simp: real_cte_at')
   apply (fastforce simp: real_cte_at_not_tcb_at' objBits_defs)
-  done *)
+  done
 
 crunches getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
