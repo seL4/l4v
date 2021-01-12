@@ -34,6 +34,12 @@ definition
  "runState f s \<equiv> THE x. x \<in> fst (f s)"
 
 definition
+  "runReaderT \<equiv> id"
+
+abbreviation (input)
+  "getsJust \<equiv> gets_the"
+
+definition
   sassert :: "bool \<Rightarrow> 'a \<Rightarrow> 'a" where
  "sassert P \<equiv> if P then id else (\<lambda>x. undefined)"
 
