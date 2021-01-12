@@ -79,6 +79,11 @@ type_synonym 'a kernel = "(kernel_state, 'a) nondet_monad"
 translations
   (type) "'c kernel" <= (type) "(kernel_state, 'c) nondet_monad"
 
+type_synonym 'a kernel_r = "(kernel_state, 'a) lookup"
+
+translations
+  (type) "'c kernel_r" <= (type) "(kernel_state, 'c) lookup"
+
 subsection "Kernel Functions"
 
 subsubsection "Initial Kernel State"

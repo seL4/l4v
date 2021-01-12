@@ -25,8 +25,8 @@ requalify_consts
 end
 
 lemma projectKO_eq2:
-  "((obj,s') \<in> fst (projectKO ko s)) = (projectKO_opt ko = Some obj \<and> s' = s)"
-  by (auto simp: projectKO_def fail_def return_def split: option.splits)
+  "(projectKO ko s = Some obj) = (projectKO_opt ko = Some obj)"
+  by (auto simp: projectKO_def ofail_def oreturn_def oassert_opt_def split: option.splits)
 
 
 \<comment> \<open>-----------------------------------\<close>
@@ -232,22 +232,7 @@ end
 instantiation reply :: pspace_storable
 begin
 
-(* reply extra instance defs *)
-
-
-definition
-  makeObject_reply: "(makeObject :: reply)  \<equiv> Reply Nothing Nothing Nothing"
-
-definition
-  loadObject_reply[simp]:
- "(loadObject p q n obj) :: reply kernel \<equiv>
-    loadObject_default p q n obj"
-
-definition
-  updateObject_reply[simp]:
- "updateObject (val :: reply) \<equiv>
-    updateObject_default val"
-
+#INCLUDE_HASKELL SEL4/Object/Instances.lhs instanceproofs bodies_only ONLY Reply
 
 instance
   apply (intro_classes)
@@ -274,7 +259,7 @@ definition
 
 definition
   loadObject_sc[simp]:
-  "(loadObject p q n obj) :: sched_context kernel \<equiv>
+  "(loadObject p q n obj) :: sched_context kernel_r \<equiv>
      loadObject_default p q n obj"
 
 definition

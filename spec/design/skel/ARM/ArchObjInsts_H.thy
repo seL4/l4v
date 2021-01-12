@@ -147,7 +147,7 @@ definition
 
 definition
   loadObject_asidpool[simp]:
- "(loadObject p q n obj) :: asidpool kernel \<equiv>
+ "(loadObject p q n obj) :: asidpool kernel_r \<equiv>
     loadObject_default p q n obj"
 
 definition
