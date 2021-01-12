@@ -2490,6 +2490,14 @@ lemma replyPop_invs':
   apply (wpsimp wp: )
   sorry
 
+lemma replyClear_invs'[wp]:
+  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
+   replyClear replyPtr tcbPtr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def
+  apply (wpsimp wp: )
+  sorry
+
 (* Ugh, required to be able to split out the abstract invs *)
 lemma finaliseCap_True_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>rv. invs'\<rbrace>"
