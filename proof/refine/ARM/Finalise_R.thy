@@ -1436,7 +1436,7 @@ lemma emptySlot_invs'[wp]:
             \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of o_def)
@@ -2224,7 +2224,7 @@ lemma tcb_bound_refs'_not_Bound:
 
 lemma unbindNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindNotification_def invs'_def valid_state'_def)
+  apply (simp add: unbindNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
@@ -2262,7 +2262,7 @@ lemma ntfn_bound_tcb_at':
 
 lemma unbindMaybeNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindMaybeNotification ntfnptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def)
+  apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (wpsimp wp: sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues
                     valid_irq_node_lift irqs_masked_lift setBoundNotification_ct_not_inQ
@@ -2283,7 +2283,7 @@ lemma setNotification_invs':
                    else state_refs_of' s a)) \<rbrace>
     setNotification ntfnPtr ntfn
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add:  invs'_def valid_state'_def)
+  apply (simp add:  invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -2308,7 +2308,7 @@ lemma schedContextUnbindNtfn_valid_objs'[wp]:
 
 lemma schedContextUnbindNtfn_invs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_pspace'_def
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def
   apply wpsimp \<comment> \<open>this handles valid_objs' separately\<close>
    unfolding schedContextUnbindNtfn_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
@@ -2325,7 +2325,7 @@ lemma replyUnlink_invs'[wp]:
   "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
+  unfolding invs'_def valid_state'_def valid_dom_schedule'_def
   by wpsimp
 
 lemma replyClear_invs'[wp]:

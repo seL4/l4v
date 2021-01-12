@@ -489,11 +489,13 @@ lemma tcbSchedEnqueue_invs'[wp]:
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
      tcbSchedEnqueue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
-  apply (wpsimp wp: tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift
-                    valid_irq_handlers_lift' cur_tcb_lift untyped_ranges_zero_lift
-              simp: cteCaps_of_def o_def)
-  apply (auto elim!: st_tcb_ex_cap'')
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (rule hoare_pre)
+   apply (wp tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
+             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
+             untyped_ranges_zero_lift
+        | simp add: cteCaps_of_def o_def
+        | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
   done
 
 crunch ksMachine[wp]: tcbSchedAppend "\<lambda>s. P (ksMachineState s)"
@@ -582,7 +584,7 @@ lemma tcbSchedAppend_invs'[wp]:
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
      tcbSchedAppend t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp tcbSchedAppend_ct_not_inQ valid_irq_node_lift irqs_masked_lift hoare_vcg_disj_lift
              valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
@@ -701,7 +703,7 @@ lemma tcbSchedDequeue_invs'[wp]:
              valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
              tcbSchedDequeue_valid_queues
              untyped_ranges_zero_lift
-        | simp add: cteCaps_of_def o_def)+
+        | simp add: cteCaps_of_def o_def valid_dom_schedule'_def)+
   apply (auto simp: valid_pspace'_def obj_at'_def
               dest: valid_objs'_maxDomain[where t=t] valid_objs'_maxPriority[where t=t])
   done
@@ -886,7 +888,7 @@ proof -
                               valid_release_queue'_def sch_act_wf ct_in_state'_def
                               state_refs_of'_def ps_clear_def valid_irq_node'_def valid_queues'_def
                               ct_not_inQ_ct tcb_in_cur_domain_ct ct_idle_or_in_cur_domain'_def
-                              bitmapQ_defs valid_queues_no_bitmap_def
+                              bitmapQ_defs valid_queues_no_bitmap_def valid_dom_schedule'_def
                         cong: option.case_cong)
     done
 qed
@@ -985,7 +987,7 @@ proof -
                               ps_clear_def valid_irq_node'_def
                               ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                               valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def valid_queues'_def
-                              valid_release_queue_def valid_release_queue'_def
+                              valid_release_queue_def valid_release_queue'_def valid_dom_schedule'_def
                               all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
                               ready_qs_runnable_def
                         cong: option.case_cong
@@ -1102,7 +1104,7 @@ lemma tcbSchedDequeue_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace>
      tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
-  unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
+  unfolding all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_dom_schedule'_def
   apply (wp tcbSchedDequeue_ct_not_inQ sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
             tcbSchedDequeue_valid_queues_weak
@@ -1934,7 +1936,7 @@ lemma nextDomain_invs_no_cicd':
   apply wp
   apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
                         ct_not_inQ_def cur_tcb'_def ct_idle_or_in_cur_domain'_def dschDomain_def
-                        all_invs_but_ct_idle_or_in_cur_domain'_def)
+                        all_invs_but_ct_idle_or_in_cur_domain'_def valid_dom_schedule'_def)
   done
 
 (* FIXME RT: move this to Lib or similar *)
@@ -2015,7 +2017,8 @@ lemma setSchedulerAction_invs': (* not in wp set, clobbered by ssa_wp *)
   "\<lbrace>\<lambda>s. invs' s \<rbrace> setSchedulerAction ChooseNewThread \<lbrace>\<lambda>_. invs' \<rbrace>"
   by (wpsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_irq_node'_def ct_not_inQ_def
                    valid_queues_def valid_release_queue_def valid_release_queue'_def
-                   valid_queues_no_bitmap_def valid_queues'_def ct_idle_or_in_cur_domain'_def)
+                   valid_queues_no_bitmap_def valid_queues'_def ct_idle_or_in_cur_domain'_def
+                   valid_dom_schedule'_def)
 
 lemma scheduleChooseNewThread_corres:
   "corres dc
@@ -2190,7 +2193,7 @@ proof -
   show ?thesis
     apply (simp add: setSchedulerAction_def)
     apply wp
-    apply (clarsimp simp add: invs'_def valid_state'_def cur_tcb'_def
+    apply (clarsimp simp add: invs'_def valid_state'_def cur_tcb'_def valid_dom_schedule'_def
                               obj_at'_sa valid_pspace'_sa Invariants_H.valid_queues_def
                               state_refs_of'_def iflive_sa ps_clear_def
                               valid_irq_node'_def valid_queues'_def valid_release_queue_def
@@ -2393,7 +2396,8 @@ lemma setReprogramTimer_invs'[wp]:
   unfolding setReprogramTimer_def
   apply wpsimp
   by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
-                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
+                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
+                     valid_dom_schedule'_def)
 
 lemma machine_op_lift_underlying_memory_invar:
   "(x, b) \<in> fst (machine_op_lift a m) \<Longrightarrow> underlying_memory b = underlying_memory m"
@@ -2414,7 +2418,8 @@ lemma setCurSc_invs'[wp]:
                         ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
                         valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
                         bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def
+                        valid_dom_schedule'_def)
   done
 
 lemma setConsumedTime_invs'[wp]:
@@ -2425,7 +2430,8 @@ lemma setConsumedTime_invs'[wp]:
                         ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
                         valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
                         bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def
+                        valid_dom_schedule'_def)
   done
 
 lemma setDomainTime_invs'[wp]:
@@ -2436,7 +2442,8 @@ lemma setDomainTime_invs'[wp]:
                         ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
                         valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
                         bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
+                        valid_queues'_def valid_release_queue_def valid_release_queue'_def
+                        valid_dom_schedule'_def)
   done
 
 lemma setSchedContext_valid_idle'[wp]:
@@ -2460,7 +2467,7 @@ lemma setSchedContext_invs':
     and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
     setSchedContext scPtr sc
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add:  invs'_def valid_state'_def)
+  apply (simp add:  invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -3060,7 +3067,7 @@ lemma tcbReleaseDequeue_invs'[wp]:
     and distinct_release_queue\<rbrace>
    tcbReleaseDequeue
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_state'_def
+  by (wpsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def
                wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
                    cteCaps_of_ctes_of_lift)
 

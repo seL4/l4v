@@ -1422,7 +1422,7 @@ lemma dmo_clearMemory_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule conjI)
    apply (simp add: valid_irq_masks'_def, elim allEI, clarsimp)
    apply (drule use_valid)

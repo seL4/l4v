@@ -2688,7 +2688,7 @@ lemma set_ntfn_minor_invs':
       and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
    setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
+  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def valid_dom_schedule'_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
               simp: o_def)
   done

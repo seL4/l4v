@@ -642,7 +642,7 @@ lemma cancelSignal_invs':
        apply (wp, simp)
       done
     show ?thesis
-      apply (simp add: cancelSignal_def invs'_def valid_state'_def Let_def)
+      apply (simp add: cancelSignal_def invs'_def valid_state'_def Let_def valid_dom_schedule'_def)
       apply (rule hoare_seq_ext[OF _ stateAssert_sp])
       apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
                 hoare_vcg_all_lift [OF set_ntfn'.ksReadyQueues]
@@ -833,7 +833,7 @@ lemma blockedCancelIPC_invs':
    apply (simp add: blockedCancelIPC_def getBlockingObject_def)
    apply (wpsimp wp: getEndpoint_wp)
    apply (clarsimp simp: obj_at'_def)
-  unfolding invs'_def valid_state'_def decompose_list_refs_of_replies'
+  unfolding invs'_def valid_state'_def decompose_list_refs_of_replies' valid_dom_schedule'_def
   apply (wpsimp wp: valid_irq_node_lift typ_at_lifts blockedCancelIPC_valid_idle'
                     valid_irq_handlers_lift' valid_irq_states_lift' irqs_masked_lift
               simp: cteCaps_of_def pred_tcb_at'_def)
@@ -1703,7 +1703,8 @@ lemma schedContextCancelYieldTo_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' t\<rbrace>
    schedContextCancelYieldTo t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def
+                   setSchedContext_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
@@ -1883,7 +1884,7 @@ lemma tcbReleaseRemove_ct_not_inQ[wp]:
 
 lemma tcbReleaseRemove_invs':
   "tcbReleaseRemove tcbPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift tcbReleaseRemove_valid_queues
               simp: cteCaps_of_def o_def)
@@ -2206,6 +2207,7 @@ lemma possibleSwitchTo_all_invs_but_ct_not_inQ':
         \<and> sch_act_simple s \<and> ex_nonz_cap_to' t s\<rbrace>
    possibleSwitchTo t
    \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
+  unfolding valid_dom_schedule'_def
   apply wp
    apply (rule hoare_use_eq_irq_node', wp)
    apply (wpsimp wp: typ_at_lift_valid_irq_node' valid_irq_handlers_lift'
@@ -2829,6 +2831,7 @@ lemma cancel_all_invs'_helper:
                od) q
    \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
   supply if_split[split del] comp_apply[simp del]
+  unfolding valid_dom_schedule'_def
   apply (rule mapM_x_inv_wp2)
    apply clarsimp
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
@@ -2955,7 +2958,7 @@ lemma sch_act_wf_weak[elim!]:
 
 lemma rescheduleRequired_all_invs_but_ct_not_inQ:
   "\<lbrace>all_invs_but_ct_not_inQ'\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: rescheduleRequired_ct_not_inQ valid_irq_node_lift valid_irq_handlers_lift''
                     irqs_masked_lift cur_tcb_lift untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
@@ -2970,8 +2973,9 @@ lemma cancelAllIPC_invs'[wp]:
                     cancel_all_invs'_helper hoare_vcg_const_Ball_lift
                     valid_global_refs_lift' valid_arch_state_lift'
                     valid_irq_node_lift ssa_invs' sts_sch_act' getEndpoint_wp
-                    irqs_masked_lift)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def)
+                    irqs_masked_lift
+              simp: valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def valid_dom_schedule'_def)
   apply (frule obj_at_valid_objs', fastforce)
   apply (clarsimp simp: projectKOs valid_obj'_def)
   apply (rule conjI)
@@ -3013,6 +3017,7 @@ lemma cancelAllSignals_invs'_helper:
                         possibleSwitchTo t
                 od) q
    \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
+  unfolding valid_dom_schedule'_def
   apply (rule mapM_x_inv_wp2)
    apply clarsimp
   apply (wpsimp wp: sts_st_tcb_at'_cases valid_irq_node_lift irqs_masked_lift
@@ -3034,8 +3039,10 @@ lemma cancelAllSignals_invs'[wp]:
    apply wpsimp
   apply (wpsimp wp: rescheduleRequired_all_invs_but_ct_not_inQ sts_st_tcb_at'_cases
                     cancelAllSignals_invs'_helper hoare_vcg_const_Ball_lift
-                    hoare_drop_imps hoare_vcg_all_lift)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_ntfn'_def)
+                    hoare_drop_imps hoare_vcg_all_lift
+              simp: valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_ntfn'_def
+                        valid_dom_schedule'_def)
   apply (prop_tac "valid_ntfn' ntfn s")
    apply (frule (2) ntfn_ko_at_valid_objs_valid_ntfn')
   apply (clarsimp simp: valid_ntfn'_def)
@@ -3386,6 +3393,7 @@ lemma cancelBadgedSends_filterM_helper':
            \<and> (\<forall>y \<in> set ys. state_refs_of' s y = {(epptr, TCBBlockedSend)}
                                                  \<union> tcb_non_st_state_refs_of' s y)
            \<and> distinct rv \<and> distinct (xs @ ys) \<and> set rv \<subseteq> set xs \<and> (\<forall>x \<in> set xs. tcb_at' x s)\<rbrace>"
+  unfolding valid_dom_schedule'_def
   apply (rule_tac xs=xs in rev_induct)
    apply clarsimp
    apply wp
@@ -3434,15 +3442,16 @@ lemma cancelBadgedSends_invs[wp]:
                            symmetric])+
   apply (rule hoare_seq_ext
                 [OF rescheduleRequired_all_invs_but_ct_not_inQ])
-  apply (simp add: list_case_return cong: list.case_cong)
+  apply (simp add: list_case_return valid_dom_schedule'_def cong: list.case_cong)
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)
     apply (rule hoare_strengthen_post,
            rule cancelBadgedSends_filterM_helper[where epptr=epptr])
     apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric] o_def)
-    apply (clarsimp simp add: valid_ep'_def split: list.split)
+    apply (clarsimp simp add: valid_ep'_def valid_dom_schedule'_def split: list.split)
     apply blast
+   apply (simp add: valid_dom_schedule'_def)
    apply (wp valid_irq_node_lift irqs_masked_lift | wp (once) sch_act_sane_lift)+
-  apply (clarsimp simp: invs'_def valid_state'_def
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def
                         valid_ep'_def fun_upd_def[symmetric]
                         obj_at'_weakenE[OF _ TrueI])
   apply (frule obj_at_valid_objs', clarsimp)

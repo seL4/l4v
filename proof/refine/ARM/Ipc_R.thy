@@ -1689,6 +1689,7 @@ lemma schedContextUpdateConsumed_state_refs_of:
   apply (rule ext; clarsimp)
   done
 
+(* FIXME RT: Move probably to KHeap (along with the scTCB version in Finalise_R) *)
 lemma valid_sched_context_size'_scConsumed_update[simp]:
   "valid_sched_context_size' (scConsumed_update f koc) = valid_sched_context_size' koc"
   by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
