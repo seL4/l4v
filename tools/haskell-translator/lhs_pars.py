@@ -128,7 +128,7 @@ def get_defs(filename):
 
 def top_transform(input, isLhs):
     """Top level transform, deals with lhs artefacts, divides
-        the code up into a series of seperate definitions, and
+        the code up into a series of separate definitions, and
         passes these definitions through the definition transforms."""
     to_process = []
     comments = []
@@ -476,7 +476,7 @@ hand_classes = {'Bits': ['HS_bit'],
 
 def type_transform(string):
     """Performs transformations on a type signature, whether
-        part of a type signature line or occuring in a function."""
+        part of a type signature line or occurring in a function."""
 
     # deal with type classes by recursion
     bits = string.split('=>', 1)
@@ -1072,7 +1072,7 @@ def finite_instance_proofs(header, cons):
     return (lines, [])
 
 # wondering where the serialisable proofs went? see
-# commit 21361f073bbafcfc985934e563868116810d9fa2 for last known occurence.
+# commit 21361f073bbafcfc985934e563868116810d9fa2 for last known occurrence.
 
 
 # leave type tags 0..11 for explicit use outside of this script
@@ -1193,7 +1193,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
     else:
         extradefs.extend([
             '  loadObject_%s[simp]:' % header,
-            ' "(loadObject p q n obj) :: %s kernel \<equiv>' % header,
+            ' "(loadObject p q n obj) :: %s kernel_r \<equiv>' % header,
             '    loadObject_default p q n obj"',
         ])
 
@@ -1513,8 +1513,8 @@ def body_transform(body, defined, sig, nopattern=False):
 dollar_lambda_regex = re.compile(r"\$\s*\\<lambda>")
 
 
-def bracket_dollar_lambdas(xxx_todo_changeme):
-    (line, children) = xxx_todo_changeme
+def bracket_dollar_lambdas(line_and_children):
+    (line, children) = line_and_children
     if dollar_lambda_regex.search(line):
         [left, right] = dollar_lambda_regex.split(line)
         line = '%s(\<lambda>%s' % (left, right)
@@ -1616,16 +1616,16 @@ def type_assertion_transform(line, children):
     return (type_assertion_transform_inner(line), children)
 
 
-def where_clause_guarded_body(xxx_todo_changeme1):
-    (line, children) = xxx_todo_changeme1
+def where_clause_guarded_body(line_and_children):
+    (line, children) = line_and_children
     if children and leading_bar.match(children[0][0]):
         return (line + ' =', guarded_body_transform(children, ' = '))
     else:
         return (line, children)
 
 
-def where_clause_transform(xxx_todo_changeme2):
-    (line, children) = xxx_todo_changeme2
+def where_clause_transform(line_and_children):
+    (line, children) = line_and_children
     ws = line.split('where', 1)[0]
     if line.strip() != 'where':
         assert line.strip().startswith('where')
@@ -1694,12 +1694,17 @@ def order_let_children(L):
     return L2
 
 
-def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
-    (line, children) = xxx_todo_changeme3
+def do_clauses_transform(line_and_children, rawsig, type=None):
+    (line, children) = line_and_children
+
+    # special casing this, because there is not enough info in the source to get the type:
+    if line.lstrip().startswith('loadObject'):
+        type = option_m
+
     if children and children[-1][0].lstrip().startswith('where'):
         where_clause = where_clause_transform(children[-1])
         where_clause = [do_clauses_transform(
-            (l, c), rawsig, 0) for (l, c) in where_clause]
+            (l, c), rawsig, nondet_m) for (l, c) in where_clause]
         others = (line, children[:-1])
         others = do_clauses_transform(others, rawsig, type)
         (line, children) = where_clause[0]
@@ -1713,7 +1718,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
 
     if type is None:
         if not rawsig:
-            type = 0
+            type = nondet_m
             sig = None
         else:
             sig = ' '.join(flatten_tree([rawsig]))
@@ -1728,13 +1733,13 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
         children = [do_clauses_transform(elt,
                                          rawsig,
                                          type=subtype)
-                    for elt, subtype in zip(children, [1, 0, 1, 0, type])]
+                    for elt, subtype in zip(children, [error_m, nondet_m, error_m, nondet_m, type])]
     elif line.strip().endswith('catchFailure'):
         assert len(children) == 2
         children = [do_clauses_transform(elt,
                                          rawsig,
                                          type=subtype)
-                    for elt, subtype in zip(children, [1, 0])]
+                    for elt, subtype in zip(children, [error_m, nondet_m])]
     else:
         children = [do_clauses_transform(elt,
                                          rawsig,
@@ -1750,7 +1755,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
         ws = lead_ws(line)
         return (line[:-2] + '(', children + [(ws + ')', [])])
 
-    line = line[:-2] + '(do' + 'E' * type
+    line = line[:-2] + monad_braces[type][0]
 
     children = [(l, c) for (l, c) in children if l.strip() or c]
 
@@ -1763,7 +1768,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
                 l = l + ' ' + extra
                 c = c[1:]
             l = ''.join(l.split('let ', 1))
-            letsubs = '<- return' + 'Ok' * type + ' ('
+            letsubs = '<- ' + monad_op(type, 'return') + ' ('
             l = letsubs.join(l.split('=', 1))
             (l, c) = add_trailing_string(')', (l, c))
             children2.extend(do_clause_pattern(l, c, type))
@@ -1774,7 +1779,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
                 for child in children2[:-1]] + [children2[-1]]
 
     ws = lead_ws(line)
-    children.append((ws + 'od' + 'E' * type + ')', []))
+    children.append((ws + monad_braces[type][1], []))
 
     return (line, children + other_children)
 
@@ -1800,7 +1805,7 @@ def do_clause_pattern(line, children, type, n=0):
 
     v = 'v%d' % get_next_unique_id()
 
-    ass = 'assert' + ('E' * type)
+    ass = monad_op(type, 'assert')
     ws = lead_ws(line)
 
     if left.startswith('('):
@@ -1840,7 +1845,7 @@ def do_clause_pattern(line, children, type, n=0):
         if left.startswith(lhs):
             left = left[len(lhs):]
             tab = left_start_table[lhs]
-            lM = 'liftM' + 'E' * type
+            lM = monad_op(type, 'liftM')
             nl = ('%s <- %s %s $ %s' % (left, lM, tab, right))
             return do_clause_pattern(nl, children, type, n + 1)
 
@@ -1875,12 +1880,66 @@ def split_on_unmatched_bracket(elts, n=None):
 
     return (elts, [], n)
 
+nondet_m = 'nondet'
+option_m = 'option'
+error_m = 'error'
+syscall_m = 'syscall'
 
-def monad_type_acquire(sig, type=0):
+error_m_map = {
+    'return': 'returnOk',
+    'when': 'whenE',
+    'unless': 'unlessE',
+    'liftM': 'liftME',
+    'mapM': 'mapME',
+    'forM': 'forME',
+    'assert': 'assertE',
+    'stateAssert': 'stateAssertE'
+}
+
+syscall_m_map = {k:v+"E" for (k,v) in error_m_map.items()}
+
+option_m_map = {
+    'return': 'oreturn',
+    'assert': 'oassert',
+    'fail': 'ofail',
+    'liftM': 'oliftM',
+    'maybeToMonad': 'oassert_opt',
+    'magnitudeCheck': 'read_magnitudeCheck'
+}
+
+monad_op_map = {
+    option_m: option_m_map,
+    error_m: error_m_map,
+    syscall_m: syscall_m_map
+}
+
+monad_braces = {
+    nondet_m: ('(do', 'od)'),
+    error_m: ('(doE', 'odE)'),
+    syscall_m: ('(doEE', 'odEE)'),
+    option_m: ('do {', 'odO'), # odO will later be replaced by } (and } by \rparr)
+}
+
+def monad_ops(type):
+    """return operators that have to be adjusted for given monad type"""
+    if type in monad_op_map:
+        return list(monad_op_map[type].keys())
+    else:
+        return []
+
+
+def monad_op(type, op):
+    """return Isabelle operator ame for the specified monad type and operator"""
+    if type in monad_op_map and op in monad_op_map[type]:
+        return monad_op_map[type][op]
+    else:
+        return op
+
+def monad_type_acquire(sig, type=nondet_m):
     # note kernel appears after kernel_f/kernel_monad
-    for (key, n) in [('kernel_f', 1), ('fault_monad', 1), ('syscall_monad', 2),
-                     ('kernel_monad', 0), ('kernel_init', 1), ('kernel_p', 1),
-                     ('kernel', 0)]:
+    for (key, n) in [('kernel_f', error_m), ('fault_monad', error_m), ('syscall_monad', syscall_m),
+                     ('kernel_monad', nondet_m), ('kernel_init', error_m), ('kernel_p', error_m),
+                     ('kernel_r', option_m), ('kernel', nondet_m)]:
         if key in sig:
             sigend = sig.split(key)[-1]
             return monad_type_acquire(sigend, n)
@@ -1888,68 +1947,68 @@ def monad_type_acquire(sig, type=0):
     return type
 
 
-def monad_type_transform(xxx_todo_changeme4):
-    (line, type) = xxx_todo_changeme4
+def monad_type_transform(line_and_type):
+    (line, type) = line_and_type
     split = None
     if 'withoutError' in line:
         split = 'withoutError'
-        newtype = 1
+        newtype = error_m
     elif 'doKernelOp' in line:
         split = 'doKernelOp'
-        newtype = 0
+        newtype = nondet_m
     elif 'runInit' in line:
         split = 'runInit'
-        newtype = 1
+        newtype = error_m
     elif 'withoutFailure' in line:
         split = 'withoutFailure'
-        newtype = 0
+        newtype = nondet_m
     elif 'withoutFault' in line:
         split = 'withoutFault'
-        newtype = 0
+        newtype = nondet_m
     elif 'withoutPreemption' in line:
         split = 'withoutPreemption'
-        newtype = 0
+        newtype = nondet_m
     elif 'allowingFaults' in line:
         split = 'allowingFaults'
-        newtype = 1
+        newtype = error_m
     elif 'allowingErrors' in line:
         split = 'allowingErrors'
-        newtype = 2
+        newtype = syscall_m
     elif '`catchFailure`' in line:
         [left, right] = line.split('`catchFailure`', 1)
-        left, _ = monad_type_transform((left, 1))
-        right, type = monad_type_transform((right, 0))
+        left, _ = monad_type_transform((left, error_m))
+        right, type = monad_type_transform((right, nondet_m))
         return (left + '`catchFailure`' + right, type)
     elif 'catchingFailure' in line:
         split = 'catchingFailure'
-        newtype = 1
+        newtype = error_m
     elif 'catchF' in line:
         split = 'catchF'
-        newtype = 1
+        newtype = error_m
     elif 'emptyOnFailure' in line:
         split = 'emptyOnFailure'
-        newtype = 1
+        newtype = error_m
     elif 'constOnFailure' in line:
         split = 'constOnFailure'
-        newtype = 1
+        newtype = error_m
     elif 'nothingOnFailure' in line:
         split = 'nothingOnFailure'
-        newtype = 1
+        newtype = error_m
     elif 'nullCapOnFailure' in line:
         split = 'nullCapOnFailure'
-        newtype = 1
+        newtype = error_m
     elif '`catchFault`' in line:
         split = '`catchFault`'
-        newtype = 1
+        newtype = error_m
     elif 'capFaultOnFailure' in line:
         split = 'capFaultOnFailure'
-        newtype = 1
+        newtype = error_m
     elif 'ignoreFailure' in line:
         split = 'ignoreFailure'
-        newtype = 1
+        newtype = error_m
     elif 'handleInvocation False' in line:  # THIS IS A HACK
         split = 'handleInvocation False'
-        newtype = 0
+        newtype = nondet_m
     if split:
         [left, right] = line.split(split, 1)
         left, _ = monad_type_transform((left, type))
@@ -1957,20 +2016,14 @@ def monad_type_transform(xxx_todo_changeme4):
         return (left + split + right, newnewtype)
 
     if type:
-        line = ('return' + 'Ok' * type).join(line.split('return'))
-        line = ('when' + 'E' * type).join(line.split('when'))
-        line = ('unless' + 'E' * type).join(line.split('unless'))
-        line = ('mapM' + 'E' * type).join(line.split('mapM'))
-        line = ('forM' + 'E' * type).join(line.split('forM'))
-        line = ('liftM' + 'E' * type).join(line.split('liftM'))
-        line = ('assert' + 'E' * type).join(line.split('assert'))
-        line = ('stateAssert' + 'E' * type).join(line.split('stateAssert'))
+        for op in monad_ops(type):
+            line = monad_op(type, op).join(line.split(op))
 
     return (line, type)
 
 
-def case_clauses_transform(xxx_todo_changeme5):
-    (line, children) = xxx_todo_changeme5
+def case_clauses_transform(line_and_type):
+    (line, children) = line_and_type
     children = [case_clauses_transform(child) for child in children]
 
     if not line.endswith(' of'):
@@ -2151,6 +2204,7 @@ regexes = [
     (re.compile(r"\(\+(\w+)\)"), r"(\<lambda> x. x + \1)"),
     (re.compile(r"\\([^<].*?)\s*->"), r"\<lambda> \1."),
     (re.compile('}'), r"\<rparr>"),
+    (re.compile('odO'), "}"),
     (re.compile(r"(\s)!!(\s)"), r"\1LIST_INDEX\2"),
     (re.compile(r"(\w)!"), r"\1 "),
     (re.compile(r"\s?!"), ''),
@@ -2215,7 +2269,7 @@ ext_regexes = [
     (re.compile(r"{([^={<]*[^={<:])=([^={<]*)\\<rparr>"),
      r"\<lparr>\1:=\2\<rparr>",
      re.compile(r"THIS SHOULD NOT APPEAR IN THE SOURCE"), ""),
-    (re.compile(r"{"), r"\<lparr>", re.compile(r"([^=:])=(\s|$|\w)"),
+    (re.compile(r"(?<!do ){"), r"\<lparr>", re.compile(r"([^=:])=(\s|$|\w)"),
      r"\1:=\2"),
 ]
 
@@ -2224,16 +2278,16 @@ leading_bar = re.compile(r"\s*\|")
 type_assertion = re.compile(r"\(([^(]*)::([^)]*)\)")
 
 
-def run_regexes(xxx_todo_changeme6, _regexes=regexes):
-    (line, children) = xxx_todo_changeme6
+def run_regexes(line_and_children, _regexes=regexes):
+    (line, children) = line_and_children
     for re, s in _regexes:
         line = re.sub(s, line)
     children = [run_regexes(elt, _regexes=_regexes) for elt in children]
     return ((line, children))
 
 
-def run_ext_regexes(xxx_todo_changeme7):
-    (line, children) = xxx_todo_changeme7
+def run_ext_regexes(line_and_children):
+    (line, children) = line_and_children
     for re, s, add_re, add_s in ext_regexes:
         m = re.search(line)
         if m is None:
@@ -2726,8 +2780,8 @@ def get_lambda_body_lines(d):
     return lines
 
 
-def add_trailing_string(s, xxx_todo_changeme8):
-    (line, children) = xxx_todo_changeme8
+def add_trailing_string(s, line_and_children):
+    (line, children) = line_and_children
     if children == []:
         return (line + s, children)
     else:
@@ -2735,8 +2789,8 @@ def add_trailing_string(s, xxx_todo_changeme8):
         return (line, children[0:-1] + [modified])
 
 
-def remove_trailing_string(s, xxx_todo_changeme9, _handled=False):
-    (line, children) = xxx_todo_changeme9
+def remove_trailing_string(s, line_and_children, _handled=False):
+    (line, children) = line_and_children
     if not _handled:
         try:
             return remove_trailing_string(s, (line, children), _handled=True)
@@ -2755,16 +2809,16 @@ def remove_trailing_string(s, xxx_todo_changeme9, _handled=False):
         return (line, children[0:-1] + [modified])
 
 
-def get_trailing_string(n, xxx_todo_changeme10):
-    (line, children) = xxx_todo_changeme10
+def get_trailing_string(n, line_and_children):
+    (line, children) = line_and_children
     if children == []:
         return line[-n:]
     else:
         return get_trailing_string(n, children[-1])
 
 
-def has_trailing_string(s, xxx_todo_changeme11):
-    (line, children) = xxx_todo_changeme11
+def has_trailing_string(s, line_and_children):
+    (line, children) = line_and_children
     if children == []:
         return line.endswith(s)
     else:
@@ -2803,8 +2857,8 @@ def lead_ws(string):
     return string[:amount]
 
 
-def adjust_ws(xxx_todo_changeme12, n):
-    (line, children) = xxx_todo_changeme12
+def adjust_ws(line_and_children, n):
+    (line, children) = line_and_children
     if n > 0:
         line = ' ' * n + line
     else:
