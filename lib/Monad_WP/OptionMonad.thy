@@ -91,9 +91,22 @@ definition
 definition
   "oassert P \<equiv> if P then oreturn () else ofail"
 
-definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option"
-  where
+definition
+  "oassert_opt r \<equiv> case r of None \<Rightarrow> ofail | Some x \<Rightarrow> oreturn x"
+
+definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option" where
   "oapply x \<equiv> \<lambda>s. s x"
+
+definition oliftM :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'a) lookup \<Rightarrow> ('s,'b) lookup" where
+  "oliftM f m \<equiv> do { x \<leftarrow> m; oreturn (f x) }"
+
+(* Reader monad interface: *)
+abbreviation (input)
+  "ask \<equiv> Some"
+
+definition
+  "asks f = do { v <- ask; oreturn (f v) }"
+
 
 text \<open>
   If the result can be an exception.
