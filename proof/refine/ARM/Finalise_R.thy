@@ -2517,7 +2517,9 @@ lemma invs_asid_update_strg':
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_state'_def)
-  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
+                   valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def
+                   tcb_in_cur_domain'_def valid_dom_schedule'_def)
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
@@ -2528,7 +2530,7 @@ lemma invalidateASIDEntry_invs' [wp]:
   apply (wp loadHWASID_wp | simp)+
   apply (clarsimp simp: fun_upd_def[symmetric])
   apply (rule conjI)
-   apply (clarsimp simp: invs'_def valid_state'_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
    apply (rule conjI)
     apply (simp add: valid_global_refs'_def
                      global_refs'_def)
@@ -2540,7 +2542,7 @@ lemma invalidateASIDEntry_invs' [wp]:
                     valid_asid_map'_def
                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
    subgoal by (auto elim!: subset_inj_on)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule conjI)
    apply (simp add: valid_global_refs'_def
                     global_refs'_def)
@@ -2890,7 +2892,7 @@ lemma schedContextUnbindTCB_invs'_helper:
             threadSet_global_refsT irqs_masked_lift untyped_ranges_zero_lift
             valid_irq_node_lift valid_irq_handlers_lift''
          | (rule hoare_vcg_conj_lift, rule threadSet_wp)
-         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
+         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def valid_dom_schedule'_def)+
   apply (frule ko_at_valid_objs'_pre[where p=scPtr], clarsimp)
   (* slow 60s *)
   apply (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
