@@ -2126,18 +2126,6 @@ lemma possibleSwitchTo_valid_queues[wp]:
   by (wpsimp wp: hoare_drop_imps hoare_vcg_if_lift2
            simp: inReleaseQueue_def possibleSwitchTo_def curDomain_def bitmap_fun_defs)
 
-lemma schedContextDonate_valid_queues':
-  "schedContextDonate sc t \<lbrace> valid_queues' \<rbrace>"
-  apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)
-  apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_when_cases, simp)
-   apply ((rule hoare_seq_ext_skip
-           , wpsimp wp: threadSet_valid_queues' hoare_vcg_imp_lift' simp: inQ_def)
-          | wpsimp wp: threadSet_valid_queues' hoare_vcg_imp_lift' simp: inQ_def)+
-  done
-
 lemma cancelAllIPC_valid_queues':
   "cancelAllIPC t \<lbrace> valid_queues' \<rbrace>"
   apply (clarsimp simp: cancelAllIPC_def)
@@ -3551,8 +3539,6 @@ lemma completeSignal_invs':
                    dest: invs_valid_idle')
   done
 
-lemmas threadSet_urz = untyped_ranges_zero_lift[where f="cteCaps_of", OF _ threadSet_cteCaps_of]
-
 crunches doIPCTransfer
   for urz[wp]: "untyped_ranges_zero'"
   (ignore: threadSet wp: threadSet_urz crunch_wps simp: zipWithM_x_mapM)
@@ -3816,6 +3802,13 @@ lemma cteInsert_ct'[wp]:
 
 crunches tcbSchedDequeue
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
+crunches schedContextDonate
+  for no_0_obj'[wp]: no_0_obj'
+  and valid_mdb'[wp]: valid_mdb'
+(simp: untyped_ranges_zero_inv_null_filter_cteCaps_of
+         comp_def tcb_cte_cases_def valid_mdb'_def crunch_simps
+     wp: threadSet_not_inQ hoare_vcg_imp_lift' valid_irq_node_lift valid_irq_handlers_lift''
+         setQueue_cur untyped_ranges_zero_lift threadSet_ifunsafe'T threadSet_cur crunch_wps)
 
 crunches schedContextDonate
   for no_0_obj'[wp]: no_0_obj'
@@ -3930,7 +3923,7 @@ lemma schedContextDonate_invs':
    apply (auto dest!: global'_sc_no_ex_cap
                simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
                      pred_tcb_at'_def valid_idle'_def idle_tcb'_def refs_of_rev')
-  done
+  using fold_list_refs_of_replies' by presburger
 
 lemma thread_set_empty_tcb_sched_context_valid_tcbs[wp]:
   "thread_set (tcb_sched_context_update Map.empty) t \<lbrace>valid_tcbs\<rbrace>"
