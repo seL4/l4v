@@ -54,23 +54,59 @@ where
 | "koTypeOf (KOKernelData) = KernelDataT"
 | "koTypeOf (KOArch e) = ArchT (archTypeOf e)"
 
+(* FIXME: move *)
+definition ounless :: "bool \<Rightarrow> unit kernel_r \<Rightarrow> unit kernel_r"
+where "ounless P f \<equiv> if P then oreturn () else f"
+
+(* FIXME: move *)
+definition owhen :: "bool \<Rightarrow> unit kernel_r \<Rightarrow> unit kernel_r"
+where "owhen P f \<equiv> if P then f else oreturn ()"
+
+(* FIXME: move *)
+definition ohaskell_fail :: "unit list \<Rightarrow> 'a kernel_r" where
+  "ohaskell_fail ls = K None"
+
+(* FIXME: move *)
+definition ohaskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> unit kernel_r" where
+  "ohaskell_assert P ls \<equiv> if P then oreturn () else ofail"
+
+definition
+  read_typeError :: "unit list \<Rightarrow> kernel_object \<Rightarrow> 'a kernel_r" where
+  "read_typeError t1 t2 \<equiv> ofail"
+
 definition
   typeError :: "unit list \<Rightarrow> kernel_object \<Rightarrow> 'a kernel" where
   "typeError t1 t2 \<equiv> fail"
+
+definition
+  read_alignError :: "nat \<Rightarrow> 'a kernel_r" where
+  "read_alignError n \<equiv> ofail"
 
 definition
   alignError :: "nat \<Rightarrow> 'a kernel" where
   "alignError n \<equiv> fail"
 
 definition
+  read_alignCheck :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel_r" where
+  "read_alignCheck x n \<equiv> ounless ((x && mask n) = 0) $ read_alignError n"
+
+definition
   alignCheck :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel" where
-  "alignCheck x n \<equiv> unless ((x && mask n) = 0) $ alignError n"
+  "alignCheck x n \<equiv> gets_the $ read_alignCheck x n"
+
+
+definition
+  read_magnitudeCheck :: "machine_word \<Rightarrow> machine_word option \<Rightarrow> nat \<Rightarrow> unit kernel_r"
+where
+ "read_magnitudeCheck x y n \<equiv>
+    case y of None \<Rightarrow> oreturn ()
+            | Some z \<Rightarrow> oassert (\<not> (z - x < 1 << n))"
 
 definition
   magnitudeCheck :: "machine_word \<Rightarrow> machine_word option \<Rightarrow> nat \<Rightarrow> unit kernel"
 where
- "magnitudeCheck x y n \<equiv> case y of None \<Rightarrow> return ()
-               | Some z \<Rightarrow> when (z - x < 1 << n) fail"
+ "magnitudeCheck x y n \<equiv> gets_the $ read_magnitudeCheck x y n"
+
 
 class pre_storable =
   fixes injectKO :: "'a \<Rightarrow> kernel_object"
@@ -81,34 +117,28 @@ class pre_storable =
   assumes project_koType: "(\<exists>v. projectKO_opt ko = Some (v::'a)) = (koTypeOf ko = koType TYPE('a))"
 begin
 
-definition
-  projectKO :: "kernel_object \<Rightarrow> 'a kernel"
-where
-  "projectKO e \<equiv>
-  case projectKO_opt e of None \<Rightarrow> fail | Some k \<Rightarrow> return k"
+definition projectKO :: "kernel_object \<Rightarrow> 'a kernel_r" where
+  "projectKO e \<equiv> oassert_opt (projectKO_opt e)"
 
-definition
-  objBits :: "'a \<Rightarrow> nat"
-where
+definition objBits :: "'a \<Rightarrow> nat" where
   "objBits v \<equiv> objBitsKO (injectKO v)"
 
-definition
-  loadObject_default :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object \<Rightarrow> 'a kernel"
-where
-  "loadObject_default ptr ptr' next obj \<equiv> do
-     assert (ptr = ptr');
+definition loadObject_default ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object \<Rightarrow> 'a kernel_r" where
+  "loadObject_default ptr ptr' next obj \<equiv> do {
+     oassert (ptr = ptr');
      val \<leftarrow> projectKO obj;
-     alignCheck ptr (objBits val);
-     magnitudeCheck ptr next (objBits val);
-     return val
-  od"
+     oassert (is_aligned ptr (objBits val));
+     read_magnitudeCheck ptr next (objBits val);
+     oreturn val
+  }"
 
-definition
-  updateObject_default :: "'a \<Rightarrow> kernel_object \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object kernel"
-where
+definition updateObject_default ::
+  "'a \<Rightarrow> kernel_object \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object kernel"
+  where
   "updateObject_default val oldObj ptr ptr' next \<equiv> do
      assert (ptr = ptr');
-     (_ :: 'a) \<leftarrow> projectKO oldObj;
+     (_ :: 'a) \<leftarrow> gets_the $ projectKO oldObj;
      assert (objBitsKO (injectKO val) = objBitsKO oldObj);
      alignCheck ptr (objBits val);
      magnitudeCheck ptr next (objBits val);
@@ -172,7 +202,7 @@ class pspace_storable = pre_storable +
     In this case, the process for extracting the CTE from the surrounding TCB
     is more involved. See `loadObject_cte` in `ObjectInstances_H`.
   \<close>
-  fixes loadObject :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object \<Rightarrow> 'a kernel"
+  fixes loadObject :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word option \<Rightarrow> kernel_object \<Rightarrow> 'a kernel_r"
 
   \<comment>\<open>
     `updateObject` is only used in the generic definition of `setObject`,
