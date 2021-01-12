@@ -72,8 +72,7 @@ The "loadObject" and "updateObject" functions are used to insert or extract an o
 The default definitions are sufficient for most kernel objects. There is one exception in the platform-independent code, for "CTE" objects; it can be found in \autoref{sec:object.instances}.
 \end{impdetails}
 
->     loadObject :: (Monad m) => Word -> Word -> Maybe Word ->
->                                 KernelObject -> m a
+>     loadObject :: Word -> Word -> Maybe Word -> KernelObject -> KernelR a
 >     loadObject ptr ptr' next obj = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
 >         val <- projectKO obj
@@ -81,7 +80,7 @@ The default definitions are sufficient for most kernel objects. There is one exc
 >         sizeCheck ptr next (objBits val)
 >         return val
 
->     updateObject :: (Monad m) => a -> KernelObject -> Word ->
+>     updateObject :: Monad m => a -> KernelObject -> Word ->
 >                         Word -> Maybe Word -> m KernelObject
 >     updateObject val oldObj ptr ptr' next = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
