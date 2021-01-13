@@ -3584,23 +3584,23 @@ lemma cap_CNode_case_throw:
      = (doE unlessE (isCNodeCap cap) (throw x); m odE)"
   by (cases cap, simp_all add: isCap_simps unlessE_def)
 
-lemma decode_set_space_corres:
+lemma decodeCVSpace_corres:
   notes if_cong [cong]
   shows
- "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
-      is_thread_cap cap \<rbrakk> \<Longrightarrow>
-  corres (ser \<oplus> tcbinv_relation)
-         (invs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))
-         (invs' and valid_cap' cap'  and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
-      (decode_set_space args cap slot extras)
-      (decodeSetSpace args cap' (cte_map slot) extras')"
-  apply (simp    add: decode_set_space_def decodeSetSpace_def
+ "\<lbrakk>cap_relation cap cap';
+   list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
+   is_thread_cap cap\<rbrakk> \<Longrightarrow>
+  corres (ser \<oplus> (\<lambda>abs_inv conc_inv. tcbinv_relation abs_inv conc_inv))
+      (invs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))
+      (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
+      (decode_cv_space args cap slot extras)
+      (decodeCVSpace args cap' (cte_map slot) extras')"
+  apply (simp    add: decode_cv_space_def decodeCVSpace_def
                       Let_def
            split del: if_split)
-  apply (cases "3 \<le> length args \<and> 2 \<le> length extras'")
+  apply (cases "2 \<le> length args \<and> 2 \<le> length extras'")
    apply (clarsimp simp: val_le_length_Cons list_all2_Cons2
               split del: if_split)
-  sorry (*
    apply (simp add: liftE_bindE liftM_def
                     getThreadCSpaceRoot getThreadVSpaceRoot
                  split del: if_split)
@@ -3618,10 +3618,10 @@ lemma decode_set_space_corres:
                             apply (rule corres_trivial)
                             apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps
                                                   list_all2_conv_all_nth split_def)
-                           apply (unfold unlessE_whenE)
+                            apply (unfold unlessE_whenE)
                            apply (rule corres_whenE)
                              apply (case_tac vroot_cap', simp_all add:
-                                              is_valid_vtable_root_def isValidVTableRoot_def
+                                              is_valid_vtable_root_def
                                               ARM_H.isValidVTableRoot_def)[1]
                              apply (rename_tac arch_cap)
                              apply (clarsimp, case_tac arch_cap, simp_all)[1]
@@ -3645,7 +3645,7 @@ lemma decode_set_space_corres:
               apply (rule corres_trivial, simp)
              apply simp
             apply (unfold whenE_def, wp+)[2]
-          apply (clarsimp simp: is_cap_simps get_tcb_vtable_ptr_def cte_map_tcb_1[simplified] objBits_defs)
+          apply (clarsimp simp: is_cap_simps get_tcb_vtable_ptr_def cte_map_tcb_1[simplified])
          apply simp
          apply (wp hoare_drop_imps)+
        apply (clarsimp simp: is_cap_simps get_tcb_ctable_ptr_def cte_map_tcb_0)
@@ -3656,14 +3656,56 @@ lemma decode_set_space_corres:
    apply fastforce
   apply (frule list_all2_lengthD)
   apply (clarsimp split: list.split)
-  done *)
+  done
 
-lemma decodeSetSpace_wf[wp]:
+lemma decode_cv_space_is_ThreadControlCaps[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   decode_cv_space args cap slot excaps
+   \<lbrace>\<lambda>rv s. tcb_invocation.is_ThreadControlCaps rv\<rbrace>, -"
+  apply (clarsimp simp: decode_cv_space_def returnOk_def validE_R_def)
+  apply (rule hoare_seq_ext_skipE, wpsimp)+
+  apply (clarsimp simp: return_def validE_def valid_def)
+  done
+
+lemma decodeSetSpace_corres:
+ "\<lbrakk>cap_relation cap cap';
+   list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
+   is_thread_cap cap\<rbrakk> \<Longrightarrow>
+  corres (ser \<oplus> tcbinv_relation)
+         (invs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))
+         (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
+      (decode_set_space args cap slot extras)
+      (decodeSetSpace args cap' (cte_map slot) extras')"
+  apply (simp add: decode_set_space_def decodeSetSpace_def check_handler_ep_def unlessE_whenE)
+  apply (cases "\<not> (2 \<le> length args \<and> 3 \<le> length extras')")
+   apply (clarsimp dest!: list_all2_lengthD split: list.split)
+   apply fastforce
+  apply (clarsimp simp: val_le_length_Cons list_all2_Cons2
+             split del: if_split)
+  apply (rule corres_guard_imp)
+    apply (rule corres_splitEE[OF _ decodeCVSpace_corres])
+         apply (rename_tac abs_space conc_space)
+         apply (rule_tac F="tcb_invocation.is_ThreadControlCaps abs_space" in corres_gen_asm)
+         apply clarsimp
+         apply (intro conjI impI; simp add: cap_rel_valid_fh)
+         apply (prop_tac "newroot_rel (tc_new_croot abs_space) (tcCapsCRoot conc_space)")
+          apply (case_tac abs_space; clarsimp)
+         apply (prop_tac "newroot_rel (tc_new_vroot abs_space) (tcCapsVRoot conc_space)")
+          apply (case_tac abs_space; clarsimp)
+         apply (rule corres_returnOkTT)
+         apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps list_all2_conv_all_nth)
+        apply blast
+       apply fastforce+
+     apply wp+
+   apply fastforce+
+  done
+
+lemma decodeCVSpace_wf[wp]:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
       and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' fst x \<and> cte_at' (snd x) s \<and> t \<noteq> snd x \<and> t + 16 \<noteq> snd x)\<rbrace>
-     decodeSetSpace args (ThreadCap t) slot extras
+     decodeCVSpace args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  apply (simp       add: decodeSetSpace_def Let_def split_def
+  apply (simp       add: decodeCVSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
                          cap_CNode_case_throw
               split del: if_split cong: if_cong list.case_cong)
@@ -3678,15 +3720,58 @@ lemma decodeSetSpace_wf[wp]:
   apply (simp del: length_greater_0_conv add: valid_updateCapDataI)
   done
 
-lemma decodeSetSpace_inv[wp]:
-  "\<lbrace>P\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp       add: decodeSetSpace_def Let_def split_def
+lemma decodeSetSpace_wf[wp]:
+  "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t and cte_at' slot
+      and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' fst x \<and> cte_at' (snd x) s \<and> t \<noteq> snd x \<and> t + 16 \<noteq> snd x)\<rbrace>
+     decodeSetSpace args (ThreadCap t) slot extras
+   \<lbrace>tcb_inv_wf'\<rbrace>,-"
+  apply (simp       add: decodeSetSpace_def decodeCVSpace_def Let_def split_def
+                         unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
+                         cap_CNode_case_throw
+              split del: if_split cong: if_cong list.case_cong)
+  apply (rule hoare_pre)
+   apply (wp
+             | simp    add: o_def split_def
+                 split del: if_split
+             | wpc
+             | rule hoare_drop_imps)+
+  apply (clarsimp simp del: length_greater_0_conv
+                 split del: if_split)
+  apply (simp del: length_greater_0_conv add: valid_updateCapDataI)
+  done
+
+lemma decodeCVSpace_inv[wp]:
+  "decodeCVSpace args cap slot extras \<lbrace>P\<rbrace>"
+  apply (simp       add: decodeCVSpace_def Let_def split_def
                          unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
               split del: if_split cong: if_cong list.case_cong)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
             | simp add: o_def split_def split del: if_split
             | wpcw)+
+  done
+
+lemma decodeSetSpace_inv[wp]:
+  "\<lbrace>P\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (simp       add: decodeSetSpace_def decodeCVSpace_def Let_def split_def
+                         unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
+              split del: if_split cong: if_cong list.case_cong)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps
+            | simp add: o_def split_def split del: if_split
+            | wpcw)+
+  done
+
+lemma decodeCVSpace_is_tc[wp]:
+  "\<lbrace>\<top>\<rbrace> decodeCVSpace args cap slot extras \<lbrace>\<lambda>rv s. isThreadControlCaps rv\<rbrace>,-"
+  apply (simp       add: decodeCVSpace_def Let_def split_def
+                         unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
+              split del: if_split cong: list.case_cong)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps
+           | simp only: isThreadControlCaps_def tcbinvocation.simps
+           | wpcw)+
+  apply simp
   done
 
 lemma decodeSetSpace_is_tc[wp]:
@@ -3697,6 +3782,18 @@ lemma decodeSetSpace_is_tc[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps
            | simp only: isThreadControlCaps_def tcbinvocation.simps
+           | wpcw)+
+  apply simp
+  done
+
+lemma decodeCVSpace_tc_target[wp]:
+  "\<lbrace>\<lambda>s. P (capTCBPtr cap)\<rbrace> decodeCVSpace args cap slot extras \<lbrace>\<lambda>rv s. P (tcCapsTarget rv)\<rbrace>,-"
+  apply (simp       add: decodeCVSpace_def Let_def split_def
+                         unlessE_def getThreadVSpaceRoot getThreadCSpaceRoot
+              split del: if_split cong: list.case_cong)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps
+           | simp only: tcbinvocation.sel
            | wpcw)+
   apply simp
   done
@@ -3713,6 +3810,16 @@ lemma decodeSetSpace_tc_target[wp]:
   apply simp
   done
 
+lemma decodeCVSpace_tc_slot[wp]:
+  "\<lbrace>\<lambda>s. P slot\<rbrace> decodeCVSpace args cap slot extras \<lbrace>\<lambda>rv s. P (tcCapsSlot rv)\<rbrace>,-"
+  apply (simp add: decodeCVSpace_def split_def unlessE_def
+                   getThreadVSpaceRoot getThreadCSpaceRoot
+             cong: list.case_cong)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps | wpcw | simp only: tcbinvocation.sel)+
+  apply simp
+  done
+
 lemma decodeSetSpace_tc_slot[wp]:
   "\<lbrace>\<lambda>s. P slot\<rbrace> decodeSetSpace args cap slot extras \<lbrace>\<lambda>rv s. P (tcCapsSlot rv)\<rbrace>,-"
   apply (simp add: decodeSetSpace_def split_def unlessE_def
@@ -3723,42 +3830,54 @@ lemma decodeSetSpace_tc_slot[wp]:
   apply simp
   done
 
-lemma decode_tcb_conf_corres:
+lemma decodeTCBConfigure_corres:
   notes if_cong [cong] option.case_cong [cong]
   shows
- "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
-     is_thread_cap cap \<rbrakk> \<Longrightarrow>
-  corres (ser \<oplus> tcbinv_relation) (einvs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))
-                                 (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
+ "\<lbrakk>cap_relation cap cap';
+   list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
+   is_thread_cap cap\<rbrakk> \<Longrightarrow>
+  corres (ser \<oplus> tcbinv_relation)
+      (einvs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))
+      (invs' and valid_cap' cap' and (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
       (decode_tcb_configure args cap slot extras)
       (decodeTCBConfigure args cap' (cte_map slot) extras')"
   apply (clarsimp simp add: decode_tcb_configure_def decodeTCBConfigure_def)
-  apply (cases "length args < 4")
   apply (clarsimp split: list.split)
   apply (cases "length extras < 3")
-  apply (clarsimp split: list.split simp: list_all2_Cons2)
-  apply (clarsimp simp: linorder_not_less val_le_length_Cons list_all2_Cons1
-      priorityBits_def)
+   apply (clarsimp split: list.split simp: list_all2_Cons2)
+  apply (clarsimp simp: linorder_not_less val_le_length_Cons list_all2_Cons1 priorityBits_def)
   apply (rule corres_guard_imp)
-  apply (rule corres_splitEE [OF _ decode_set_ipc_corres])
-  sorry (*
-         apply (rule corres_splitEE [OF _ decode_set_space_corres])
-              apply (rule_tac F="is_thread_control set_params" in corres_gen_asm)
-              apply (rule_tac F="is_thread_control set_space" in corres_gen_asm)
-  apply (rule_tac F="tcThreadCapSlot setSpace = cte_map slot" in corres_gen_asm2)
-  apply (rule corres_trivial)
-  apply (clarsimp simp: returnOk_def is_thread_control_def2 is_cap_simps)
-  apply (wp | simp add: invs_def valid_sched_def)+
-  done *)
+    apply (rule corres_splitEE [OF _ decode_set_ipc_corres])
+         apply (rule corres_splitEE [OF _ decodeCVSpace_corres])
+              apply (rule_tac F="is_thread_control_caps set_params" in corres_gen_asm)
+              apply (rule_tac F="is_thread_control_caps set_space" in corres_gen_asm)
+              apply (rule_tac F="tcCapsSlot setSpace = cte_map slot" in corres_gen_asm2)
+              apply (rule corres_trivial)
+              apply (clarsimp simp: returnOk_def is_cap_simps newroot_rel_def
+                                    is_thread_control_caps_def
+                             split: tcb_invocation.splits)
+             apply (wpsimp simp: invs_def valid_sched_def)+
+  done
 
 lemma isThreadControl_def2:
   "isThreadControlCaps tinv = (\<exists>a b c d e f g. tinv = ThreadControlCaps a b c d e f g)"
   by (cases tinv, simp_all add: isThreadControlCaps_def)
 
+lemma decodeCVSpaceSome[wp]:
+  "\<lbrace>\<top>\<rbrace> decodeCVSpace xs cap y zs
+   \<lbrace>\<lambda>rv s. tcCapsCRoot rv \<noteq> None\<rbrace>,-"
+  apply (simp add: decodeCVSpace_def split_def cap_CNode_case_throw
+             cong: list.case_cong if_cong del: not_None_eq)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps | wpcw
+             | simp only: tcbinvocation.sel option.simps)+
+  apply simp
+  done
+
 lemma decodeSetSpaceSome[wp]:
   "\<lbrace>\<top>\<rbrace> decodeSetSpace xs cap y zs
    \<lbrace>\<lambda>rv s. tcCapsCRoot rv \<noteq> None\<rbrace>,-"
-  apply (simp add: decodeSetSpace_def split_def cap_CNode_case_throw
+  apply (simp add: decodeSetSpace_def decodeCVSpace_def split_def cap_CNode_case_throw
              cong: list.case_cong if_cong del: not_None_eq)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
@@ -3911,12 +4030,12 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decode_readreg_corres]
              corres_guard_imp[OF decode_writereg_corres]
              corres_guard_imp[OF decode_copyreg_corres]
-             corres_guard_imp[OF decode_tcb_conf_corres]
+             corres_guard_imp[OF decodeTCBConfigure_corres]
              corres_guard_imp[OF decode_set_priority_corres]
              corres_guard_imp[OF decode_set_mcpriority_corres]
              corres_guard_imp[OF decode_set_sched_params_corres]
              corres_guard_imp[OF decode_set_ipc_corres]
-             corres_guard_imp[OF decode_set_space_corres]
+             corres_guard_imp[OF decodeSetSpace_corres]
              corres_guard_imp[OF decode_bind_notification_corres]
              corres_guard_imp[OF decode_unbind_notification_corres]
              corres_guard_imp[OF decode_set_tls_base_corres]
