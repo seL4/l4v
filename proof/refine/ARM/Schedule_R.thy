@@ -3330,7 +3330,7 @@ lemma weak_sch_act_wf_at_cross:
   apply simp
   done
 
-lemma possible_switch_to_corres:
+lemma possibleSwitchTo_corres:
   "corres dc
     (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct and valid_tcbs)
     (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')

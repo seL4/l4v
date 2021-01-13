@@ -716,6 +716,7 @@ crunches cancelIPC
   and vms'[wp]: "valid_machine_state'"
   and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   and pspace_domain_valid[wp]: pspace_domain_valid
+  and ntfn_at'[wp]: "ntfn_at' t"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches blockedCancelIPC
@@ -1760,6 +1761,18 @@ crunches setReleaseQueue, setReprogramTimer
   (simp: crunch_simps valid_bitmapQ_def bitmapQ_def bitmapQ_no_L2_orphans_def
          bitmapQ_no_L1_orphans_def)
 
+lemma setReleaseQueue_obj_at'[wp]:
+  "setReleaseQueue Q \<lbrace>\<lambda>s. R (obj_at' P t s)\<rbrace>"
+  unfolding setReleaseQueue_def by wpsimp
+
+crunches setReleaseQueue
+  for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+
+lemma setReleaseQueue_valid_queues_no_bitmap[wp]:
+  "setReleaseQueue Q \<lbrace>valid_queues_no_bitmap\<rbrace>"
+  unfolding valid_queues_no_bitmap_def
+  by (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift hoare_vcg_ball_lift2)
+
 crunches tcbReleaseRemove
   for valid_bitmapQ[wp]: valid_bitmapQ
   and bitmapQ_no_L2_orphans[wp]: bitmapQ_no_L2_orphans
@@ -1896,7 +1909,6 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) t"
                in hoare_seq_ext[rotated])
    apply (wpsimp wp: sts_invs_minor' sts_st_tcb_at'_cases)
-   apply (fastforce simp: valid_tcb_state'_def)
   apply (wpsimp wp: tcbReleaseRemove_invs' schedContextCancelYieldTo_invs')
   done
 
@@ -2072,7 +2084,7 @@ lemma restart_thread_if_no_fault_corres:
        apply (clarsimp simp: fault_rel_optionation_def)
       apply (rule corres_split[OF _ sts_corres])
          apply clarsimp
-         apply (rule possible_switch_to_corres)
+         apply (rule possibleSwitchTo_corres)
         apply clarsimp
        apply (wpsimp wp: set_thread_state_valid_sched_action)
       apply (wpsimp wp: sts_st_tcb_at'_cases)
@@ -2309,7 +2321,6 @@ lemma cancelAllIPC_loop_body_valid_queues:
   apply (rule hoare_seq_ext_skip, wpsimp)
    apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   apply (wpsimp wp: sts_valid_queues sts_st_tcb_at'_cases hoare_drop_imps)
-  apply (clarsimp simp: obj_at'_def projectKOs valid_tcb_state'_def pred_neg_def st_tcb_at'_def)
   done
 
 lemma cancel_all_ipc_corres_helper:
@@ -2622,7 +2633,7 @@ lemma ntfn_cancel_corres_helper:
          ; ((subst pred_conj_assoc)+)?)
         apply clarsimp
         apply (rule corres_guard_imp)
-          apply (rule corres_split[OF possible_switch_to_corres])
+          apply (rule corres_split[OF possibleSwitchTo_corres])
             apply (rule sts_corres)
             apply simp
            apply (wp set_thread_state_valid_sched_action
@@ -3121,8 +3132,6 @@ lemma cancelAllSignals_valid_objs'[wp]:
    apply simp
   apply (wpsimp wp: setSchedulerAction_valid_objs' mapM_x_wp' sts_valid_objs'
                     hoare_vcg_ball_lift typ_at_lifts)
-   apply (simp add: valid_tcb_state'_def)
-  apply (wp hoare_vcg_ball_lift)
   apply (auto simp: projectKOs valid_obj'_def valid_ntfn'_def
               dest: ko_at_valid_objs')
   done
