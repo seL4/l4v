@@ -43,4 +43,5 @@ jobs:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         title: 'File annotations for theory linter'
         input: './annotations.json'
+      continue-on-error: true
       if: always()
