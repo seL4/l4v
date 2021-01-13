@@ -350,6 +350,7 @@ def defs_transform(d):
         assert 0
 
     d.body = body_transform(d.body, d.defined, d.sig)
+
     return d
 
 
@@ -1189,7 +1190,11 @@ def pspace_storable_instance_proofs(header, canonical, d):
     extradefs.extend(['', 'definition', ])
     if 'loadObject' in defs:
         extradefs.append('  loadObject_%s:' % header)
-        extradefs.extend(flatten_tree(defs['loadObject'].body))
+        body = flatten_tree(defs['loadObject'].body)
+        bits = body[0].split('loadObject')
+        bits = bits[1].split('\<equiv>')
+        body[0] = '"(loadObject %s) :: %s kernel_r \<equiv>' % (bits[0], header)
+        extradefs.extend(body)
     else:
         extradefs.extend([
             '  loadObject_%s[simp]:' % header,
@@ -1443,6 +1448,12 @@ def body_transform(body, defined, sig, nopattern=False):
     # assume single object
     [(line, children)] = body
 
+    # special casing this, because there is not enough info in the source to get the type:
+    if defined == 'loadObject':
+        type = option_m
+    else:
+        type = None
+
     if '(' in line.split('=')[0] and not nopattern:
         [(line, children)] = \
             pattern_match_transform([(line, children)])
@@ -1471,7 +1482,7 @@ def body_transform(body, defined, sig, nopattern=False):
     if children and (children[-1][0].endswith('where') or
                      children[-1][0].lstrip().startswith('where')):
         bits = line.split('\<equiv>')
-        where_clause = where_clause_transform(children[-1])
+        where_clause = where_clause_transform(children[-1], type)
         children = children[:-1]
         if len(bits) == 2 and bits[1].strip():
             line = bits[0] + '\<equiv>'
@@ -1486,7 +1497,7 @@ def body_transform(body, defined, sig, nopattern=False):
 
     (line, children) = case_clauses_transform((line, children))
 
-    (line, children) = do_clauses_transform((line, children), sig)
+    (line, children) = do_clauses_transform((line, children), sig, type)
 
     if children and leading_bar.match(children[0][0]):
         line = line + ' \<equiv>'
@@ -1624,7 +1635,7 @@ def where_clause_guarded_body(line_and_children):
         return (line, children)
 
 
-def where_clause_transform(line_and_children):
+def where_clause_transform(line_and_children, type=None):
     (line, children) = line_and_children
     ws = line.split('where', 1)[0]
     if line.strip() != 'where':
@@ -1638,7 +1649,7 @@ def where_clause_transform(line_and_children):
     children = [do_clauses_transform(
         (l, c),
         None,
-        type=0) for (l, c) in children]
+        type) for (l, c) in children]
     children = list(map(where_clause_guarded_body, children))
     for i, (l, c) in enumerate(children):
         l2 = braces.str(l, '(', ')')
@@ -1697,14 +1708,10 @@ def order_let_children(L):
 def do_clauses_transform(line_and_children, rawsig, type=None):
     (line, children) = line_and_children
 
-    # special casing this, because there is not enough info in the source to get the type:
-    if line.lstrip().startswith('loadObject'):
-        type = option_m
-
     if children and children[-1][0].lstrip().startswith('where'):
-        where_clause = where_clause_transform(children[-1])
+        where_clause = where_clause_transform(children[-1], type)
         where_clause = [do_clauses_transform(
-            (l, c), rawsig, nondet_m) for (l, c) in where_clause]
+            (l, c), rawsig, type) for (l, c) in where_clause]
         others = (line, children[:-1])
         others = do_clauses_transform(others, rawsig, type)
         (line, children) = where_clause[0]
@@ -1900,11 +1907,16 @@ syscall_m_map = {k:v+"E" for (k,v) in error_m_map.items()}
 
 option_m_map = {
     'return': 'oreturn',
-    'assert': 'oassert',
-    'fail': 'ofail',
+    'assert': 'ohaskell_assert',
+    'fail': 'ohaskell_fail',
+    'when': 'owhen',
+    'unless': 'ounless',
     'liftM': 'oliftM',
     'maybeToMonad': 'oassert_opt',
-    'magnitudeCheck': 'read_magnitudeCheck'
+    'alignCheck': 'read_alignCheck',
+    'alignError': 'read_alignError',
+    'typeError': 'read_typeError',
+    'sizeCheck': 'read_magnitudeCheck'
 }
 
 monad_op_map = {
@@ -2213,7 +2225,7 @@ regexes = [
     (re.compile(r"//"), ' aLU '),
     (re.compile('otherwise'), 'True     '),
     (re.compile(r"(^|\W)fail "), r"\1haskell_fail "),
-    (re.compile('assert '), 'haskell_assert '),
+    (re.compile('(?<!_)assert '), 'haskell_assert '),
     (re.compile('assertE '), 'haskell_assertE '),
     (re.compile('=='), '='),
     (re.compile(r"\(/="), '(\<lambda>x. x \<noteq>'),
