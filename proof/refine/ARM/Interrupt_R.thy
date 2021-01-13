@@ -670,15 +670,15 @@ lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
 
 lemma handle_interrupt_corres:
   "corres dc
-     (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
+     (einvs and current_time_bounded 1) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
-  (is "corres dc (einvs) ?P' ?f ?g")
+  (is "corres dc ?Q ?P' ?f ?g")
   apply (simp add: handle_interrupt_def handleInterrupt_def )
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ get_irq_state_corres,
-                               where R="\<lambda>rv. einvs"
+                               where R="\<lambda>rv. ?Q"
                                  and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
        apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
@@ -693,12 +693,12 @@ lemma handle_interrupt_corres:
      apply (rule corres_split [OF _ get_irq_slot_corres])
        apply simp
        apply (rule corres_split [OF _ get_cap_corres,
-                                 where R="\<lambda>rv. einvs and valid_cap rv"
+                                 where R="\<lambda>rv. ?Q and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
          apply (rule corres_split'[where r'=dc])
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
-             apply (rule corres_guard_imp, rule send_signal_corres)
+             apply (rule corres_guard_imp, rule sendSignal_corres)
               apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind
                                     arch_mask_irq_signal_def maskIrqSignal_def)+
            apply (rule corres_split)

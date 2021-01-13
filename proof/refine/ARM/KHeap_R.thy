@@ -2804,8 +2804,7 @@ end
 lemma set_ntfn_minor_invs':
   "\<lbrace>invs'
       and valid_ntfn' val
-      and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)
-      and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
+      and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)\<rbrace>
    setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
@@ -3884,6 +3883,28 @@ lemma reply_at'_cross_rel:
 lemma cross_relF:
   "(s, s') \<in> state_relation \<Longrightarrow> cross_rel A B \<Longrightarrow> A s \<Longrightarrow> B s'"
   by (clarsimp simp: cross_rel_def)
+
+lemma valid_simple'[simp]:
+  "valid_tcb_state' Running = \<top>"
+  "valid_tcb_state' Inactive = \<top>"
+  "valid_tcb_state' Restart = \<top>"
+  "valid_tcb_state' IdleThreadState = \<top>"
+  by (rule ext, simp add: valid_tcb_state'_def)+
+
+lemma tcb_at'_ex1_ko_at':
+  "tcb_at' t s \<Longrightarrow> \<exists>!tcb. ko_at' (tcb::tcb) t s"
+  by (clarsimp simp: obj_at'_def)
+
+lemma ex1_ex_eq_all:
+  "\<exists>!x. Q x \<Longrightarrow> (\<exists>x. Q x \<and> P x) = (\<forall>x. Q x \<longrightarrow> P x)"
+  by fastforce
+
+lemmas tcb_at'_ex_eq_all = ex1_ex_eq_all[OF tcb_at'_ex1_ko_at']
+
+lemma receiveBlocked_equiv:
+  "receiveBlocked st = is_BlockedOnReceive st"
+  unfolding receiveBlocked_def
+  by (case_tac st; simp)
 
 end
 end

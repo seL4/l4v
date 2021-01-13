@@ -349,4 +349,41 @@ lemma valid_tcb_state_BlockedOnReply[simp]:
   "valid_tcb_state (Structures_A.thread_state.BlockedOnReply reply_ptr) = reply_at reply_ptr"
   by (rule ext, simp add: valid_tcb_state_def)
 
+lemma receive_blocked_equiv:
+  "receive_blocked st = is_blocked_on_receive st"
+  by (case_tac st; clarsimp simp: receive_blocked_def is_blocked_on_receive_def)
+
+lemma delta_sym_refs_remove_only:
+  assumes x: "sym_refs rfs'"
+      and diff: "p2 \<noteq> p1"
+      and y: "nr1 = Set.remove (p2, tp) (rfs' p1)"
+      and z: "nr2 = Set.remove (p1, symreftype tp) (rfs' p2)"
+  shows "sym_refs (\<lambda>p. if p = p1 then nr1
+                  else if p = p2 then nr2
+                  else rfs' p)"
+  apply (rule delta_sym_refs[OF x])
+  using diff by (auto simp: y z split: if_splits)
+
+lemma subset_remove:
+  "X \<subseteq> Set.remove x Y = (X \<subseteq> Y \<and> x \<notin> X)"
+  apply (rule iffI; clarsimp simp: subset_eq)
+  by fastforce
+
+lemma fst_image_set_zip:
+  "length xs = length ys \<Longrightarrow> fst ` set (zip xs ys) = set xs"
+  by (auto simp: set_zip in_set_conv_nth image_def)
+
+lemma thread_set_ko_not_tcb_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s \<and> (t = tptr \<longrightarrow> obj_at (\<lambda>ko. \<exists>tcb'. ko = TCB tcb' \<and> f tcb' \<noteq> tcb) tptr s)\<rbrace>
+  thread_set f tptr
+  \<lbrace>\<lambda>_ s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  apply (wpsimp simp: thread_set_def set_object_def obj_at_def pred_neg_def
+                  wp: get_object_wp)+
+  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  done
+
+lemma thread_set_valid_tcb[wp]:
+  "thread_set f tptr \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  by (wpsimp wp: get_object_wp simp: thread_set_def)
+
 end
