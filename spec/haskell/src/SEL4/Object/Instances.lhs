@@ -83,7 +83,7 @@ As mentioned in the documentation for the type class "PSpaceStorable", there is 
 
 >     loadObject ptr ptr' next obj = case obj of
 >         KOCTE cte -> do
->             unless (ptr == ptr') $ fail "no CTE found in pspace at address"
+>             assert (ptr == ptr') "no CTE found in pspace at address"
 >             alignCheck ptr (objBits cte)
 >             sizeCheck ptr next (objBits cte)
 >             return cte
