@@ -207,7 +207,7 @@ The "Configure" call is a batched call to "SetIPCParams" and "SetSpace".
 >     cap slot (cRoot:vRoot:bufferFrame:_)
 >   = do
 >     setIPCParams <- decodeSetIPCBuffer [buffer] cap slot [bufferFrame]
->     setSpace <- decodeSetSpace [cRootData, vRootData] cap slot [cRoot, vRoot]
+>     setSpace <- decodeCVSpace [cRootData, vRootData] cap slot [cRoot, vRoot]
 >     return $ ThreadControlCaps {
 >         tcCapsTarget = capTCBPtr cap,
 >         tcCapsSlot = tcCapsSlot setSpace,
@@ -318,9 +318,9 @@ If an existing root capability is valid and final --- that is, it is the only ex
 This is to ensure that the source capability is not made invalid by the deletion of the old root.
 \end{impdetails}
 
-> decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
+> decodeCVSpace :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetSpace (cRootData:vRootData:_) cap slot (fhArg:cRootArg:vRootArg:_) = do
+> decodeCVSpace (cRootData:vRootData:_) cap slot (cRootArg:vRootArg:_) = do
 >     canChangeCRoot <- withoutFailure $ liftM not $
 >         slotCapLongRunningDelete =<< getThreadCSpaceRoot (capTCBPtr cap)
 >     canChangeVRoot <- withoutFailure $ liftM not $
@@ -341,6 +341,20 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     vRoot <- if isValidVTableRoot vRootCap'
 >         then return (vRootCap', vRootSlot)
 >         else throw IllegalOperation
+>     return $ ThreadControlCaps {
+>         tcCapsTarget = capTCBPtr cap,
+>         tcCapsSlot = slot,
+>         tcCapsFaultHandler = Nothing,
+>         tcCapsTimeoutHandler = Nothing,
+>         tcCapsCRoot = Just cRoot,
+>         tcCapsVRoot = Just vRoot,
+>         tcCapsBuffer = Nothing }
+> decodeCVSpace _ _ _ _ = throw TruncatedMessage
+
+> decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
+>         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
+> decodeSetSpace (cRootData:vRootData:_) cap slot (fhArg:cRootArg:vRootArg:_) = do
+>     space <- decodeCVSpace [cRootData,vRootData] cap slot [cRootArg,vRootArg]
 >     let (fhCap, fhSlot) = fhArg
 >     faultHandler <- if isValidFaultHandler fhCap
 >         then return (fhCap, fhSlot)
@@ -350,8 +364,8 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcCapsSlot = slot,
 >         tcCapsFaultHandler = Just faultHandler,
 >         tcCapsTimeoutHandler = Nothing,
->         tcCapsCRoot = Just cRoot,
->         tcCapsVRoot = Just vRoot,
+>         tcCapsCRoot = tcCapsCRoot space,
+>         tcCapsVRoot = tcCapsVRoot space,
 >         tcCapsBuffer = Nothing }
 > decodeSetSpace _ _ _ _ = throw TruncatedMessage
 
