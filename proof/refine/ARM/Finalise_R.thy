@@ -2203,9 +2203,6 @@ end
 global_interpretation finaliseCap: typ_at_all_props' "finaliseCap cap final x"
   by typ_at_props'
 
-global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
-  by typ_at_props'
-
 lemma ntfn_q_refs_of'_mult:
   "ntfn_q_refs_of' ntfn = (case ntfn of Structures_H.WaitingNtfn q \<Rightarrow> set q | _ \<Rightarrow> {}) \<times> {NTFNSignal}"
   by (cases ntfn, simp_all)
@@ -3110,10 +3107,6 @@ lemma setConsumed_obj_at'_not_consumed:
   apply (clarsimp simp: setConsumed_def)
   apply (wpsimp wp: schedContextUpdateConsumed_obj_at'_not_consumed)
   done
-
-crunches setConsumed
-  for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma schedContextCancelYieldTo_makes_unlive:
   "\<lbrace>obj_at' (\<lambda>sc. scTCB sc = None) scPtr and obj_at' (\<lambda>sc. scNtfn sc = None) scPtr and

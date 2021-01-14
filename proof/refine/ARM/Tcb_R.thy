@@ -46,29 +46,6 @@ lemma valid_sched_context'_scConsumed_update:
   "valid_sched_context' ko s \<Longrightarrow> valid_sched_context' (scConsumed_update f ko) s"
   by (clarsimp simp: valid_sched_context'_def)
 
-lemma setConsumed_invs':
-  "setConsumed scp buffer \<lbrace>invs'\<rbrace>"
-  apply (simp add: setConsumed_def)
-  by (wpsimp wp: schedContextUpdateConsumed_invs'
-      | strengthen tcb_at_invs')+
-
-crunches setConsumed
-  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and tcb_at'[wp]: "\<lambda>s. Q (tcb_at' t s)"
-
-lemma schedContextCompleteYieldTo_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' thread\<rbrace>
-   schedContextCompleteYieldTo thread
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  unfolding schedContextCompleteYieldTo_def
-  by (wpsimp wp: schedContextCancelYieldTo_invs' setConsumed_invs'
-                 hoare_drop_imp hoare_vcg_if_lift2
-           simp: sch_act_simple_def)
-
-crunches schedContextCompleteYieldTo
-  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and tcb_at'[wp]: "\<lambda>s. Q (tcb_at' t s)"
-
 lemma st_tcb_at'_valid_idle'_helper:
   "st_tcb_at' P t s \<Longrightarrow> invs' s \<Longrightarrow> t = ksIdleThread s \<longrightarrow> P (IdleThreadState)"
   by (clarsimp simp: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
@@ -78,94 +55,6 @@ lemma st_tcb_at'_valid_idle'_helper':
   "invs' s \<Longrightarrow> \<forall>t. t = ksIdleThread s \<longrightarrow> st_tcb_at' idle' t s"
   by (clarsimp simp: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
                      idle_tcb'_def)
-
-(* FIXME RT: move, but where? *)
-lemma maybeM_when:
-  "maybeM f x = when (x \<noteq> None) (f (the x))"
-  unfolding maybeM_def
-  by (clarsimp split: option.splits)
-
-lemma schedContextUpdateConsumed_corres:
- "corres (=) (sc_at scp) (sc_at' scp)
-            (sched_context_update_consumed scp)
-            (schedContextUpdateConsumed scp)"
-  unfolding sched_context_update_consumed_def schedContextUpdateConsumed_def
-  apply (simp add: maxTicksToUs_def ticksToUs_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_sc_corres])
-      apply (rule corres_if2, clarsimp simp: maxTicksToUs_def sc_relation_def)
-       apply (rule corres_split_deprecated[OF corres_return_eq_same[OF refl]])
-         apply (rule scConsumed_update_corres, clarsimp simp: sc_relation_def)
-        apply wpsimp+
-      apply (rule corres_split_deprecated[OF corres_return_eq_same scConsumed_update_corres],
-             clarsimp simp: sc_relation_def)
-        apply wpsimp+
-  done
-
-lemma schedContextUpdateConsumed_tcb_at'CT[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  by (wpsimp | wps)+
-
-lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>valid_ipc_buffer_ptr' x\<rbrace>"
-  unfolding schedContextUpdateConsumed_def valid_ipc_buffer_ptr'_def
-  by wpsimp
-
-lemma setConsumed_corres:
- "corres dc ((\<lambda>s. tcb_at (cur_thread s) s) and case_option \<top> in_user_frame buf and sc_at scp)
-            (\<lambda>s. tcb_at' (ksCurThread s) s \<and> case_option \<top> valid_ipc_buffer_ptr' buf s \<and> sc_at' scp s)
-            (set_consumed scp buf)
-            (setConsumed scp buf)"
-  apply (simp add: set_consumed_def setConsumed_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ schedContextUpdateConsumed_corres])
-      apply (rule corres_split_deprecated [OF _ gct_corres], simp)
-        apply (rule corres_split_deprecated [OF set_mi_corres set_mrs_corres])
-  by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def)+
-
-lemma complete_yield_to_corres:
- "corres dc (invs and tcb_at thread) (invs' and tcb_at' thread)
-    (complete_yield_to thread) (schedContextCompleteYieldTo thread)"
-  apply (simp add: complete_yield_to_def schedContextCompleteYieldTo_def schedContextCancelYieldTo_def)
-  apply (subst maybeM_when)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_tcb_yield_to_corres], simp)
-      apply (rule corres_when2[OF refl])
-      apply (clarsimp, wpfix)
-      apply (rule corres_split_deprecated[OF _ lipcb_corres], simp)
-        apply (rule corres_split_deprecated[OF _ setConsumed_corres])
-          apply (clarsimp simp: schedContextCancelYieldTo_def)
-          apply (rule corres_symb_exec_r'[where Q'=\<top>])
-             apply (rule_tac F="scPtrOpt = Some y" in corres_gen_asm2)
-             apply simp
-             apply (subst dc_def[symmetric])
-             apply (subst bind_assoc[symmetric])
-             apply (rule corres_split_deprecated[OF tcb_yield_to_update_corres update_sc_no_reply_stack_update_corres])
-                  apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
-              apply (wpsimp wp: threadGet_wp)+
-           apply (clarsimp simp: obj_at'_def)
-          apply wpsimp
-         apply (wpsimp wp: sc_at_typ_at)
-        apply (clarsimp cong: conj_cong)
-        apply (rule_tac Q="\<lambda>rv. pred_tcb_at' itcbYieldTo ((=) (Some y)) thread"
-               in hoare_strengthen_post[rotated])
-         apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-        apply wpsimp
-       apply wpsimp
-      apply wpsimp
-     apply (wpsimp wp: get_tcb_obj_ref_wp)
-    apply (wpsimp wp: threadGet_wp)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_tcb_def)
-   apply (subgoal_tac "valid_tcb thread tcb s", clarsimp simp: valid_tcb_def)
-   apply (fastforce simp: obj_at'_def valid_tcb_valid_obj elim: valid_objs_ko_at
-                    dest: invs_valid_objs)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def cur_tcb'_def
-                        obj_at'_real_def ko_wp_at'_def pred_tcb_at'_def projectKO_tcb)
-  apply (subgoal_tac "valid_tcb' obja s", clarsimp simp: valid_tcb'_def)
-   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_tcb_at'_def valid_bound_obj'_def)
-  apply (fastforce simp: valid_objs'_def valid_obj'_def)
-  done
 
 lemma activate_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable' and sch_act_simple)
