@@ -942,6 +942,17 @@ lemma bindScReply_valid_objs'[wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
+lemma sym_refs_replySCs_of_scReplies_of:
+  "\<lbrakk>sym_refs (state_refs_of' s'); pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
+   \<Longrightarrow> replySCs_of s' rp = Some scp \<longleftrightarrow> scReplies_of s' scp = Some rp"
+  apply (rule iffI)
+   apply (drule_tac tp=SCReply and x=rp and y=scp in sym_refsE;
+          force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_left_Some refs_of_rev'
+                dest: pspace_alignedD' pspace_distinctD' split: if_split_asm option.split_asm)+
+  by (drule_tac tp=ReplySchedContext and x=scp and y=rp in sym_refsE;
+      force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_left_Some refs_of_rev'
+               dest: pspace_alignedD' pspace_distinctD' split: if_split_asm option.split_asm)+
+
 crunches bindScReply
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'

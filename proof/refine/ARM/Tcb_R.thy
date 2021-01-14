@@ -2215,7 +2215,7 @@ lemma schedContextBindTCB_corres:
              apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated], fastforce)
              apply wp
             apply (rule_tac f'="scTCB_update (\<lambda>_. Some t)"
-                         in update_sc_no_reply_stack_update_ko_at'_corres; clarsimp)
+                         in update_sc_no_reply_stack_update_ko_at'_corres; clarsimp?)
              apply (clarsimp simp: sc_relation_def)
             apply (clarsimp simp: objBits_def objBitsKO_def)
            apply (simp add: pred_conj_def invs_def valid_state_def  cong: conj_cong)

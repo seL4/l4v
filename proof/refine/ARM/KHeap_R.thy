@@ -1612,6 +1612,14 @@ lemma get_reply_corres:
   apply (simp add: other_obj_relation_def)
   done
 
+lemma getReply_TCB_corres:
+  "corres (=) (reply_at ptr) (reply_at' ptr)
+     (get_reply_tcb ptr) (liftM replyTCB (getReply ptr))"
+  apply clarsimp
+  apply (rule get_reply_corres[THEN corres_rel_imp])
+  apply (clarsimp simp: reply_relation_def)
+  done
+
 lemma get_sc_corres:
   "corres (\<lambda>sc sc'. \<exists>n. sc_relation sc n sc') (sc_at ptr) (sc_at' ptr)
      (get_sched_context ptr) (getSchedContext ptr)"
@@ -2832,9 +2840,12 @@ lemma idle_sc_is_global [intro!]:
   by (simp add: global_refs'_def)
 
 lemma valid_globals_cte_wpD':
-  "\<lbrakk> valid_global_refs' s; cte_wp_at' P p s \<rbrakk>
-       \<Longrightarrow> \<exists>cte. P cte \<and> ksIdleThread s \<notin> capRange (cteCap cte)"
+  "\<lbrakk> valid_global_refs' s; cte_wp_at' P p s; ptr \<in> global_refs' s \<rbrakk>
+       \<Longrightarrow> \<exists>cte. P cte \<and> ptr \<notin> capRange (cteCap cte)"
   by (fastforce simp: valid_global_refs'_def valid_refs'_def  cte_wp_at_ctes_of)
+
+lemmas valid_globals_cte_wpD'_idleThread = valid_globals_cte_wpD'[OF _ _ idle_is_global]
+lemmas valid_globals_cte_wpD'_idleSC = valid_globals_cte_wpD'[OF _ _ idle_sc_is_global]
 
 lemma dmo_aligned'[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
@@ -3779,34 +3790,26 @@ lemma ko_at'_cross:
                      ARM_A.arch_kernel_obj.split_asm)
 
 lemma update_sc_no_reply_stack_update_ko_at'_corres:
-  "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
-    \<forall>sc. sc_replies sc = sc_replies (f sc); \<forall>sc'. objBits sc' = objBits (f' sc');
-    \<forall>sc'. scReply (f' sc') = scReply sc'\<rbrakk> \<Longrightarrow>
-   corres dc
-     (sc_at ptr and pspace_aligned and pspace_distinct)
-     (ko_at' sc' ptr)
-     (update_sched_context ptr f)
-     (setSchedContext ptr (f' sc'))"
-  apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
-   apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
-  apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
-   apply (fastforce dest!: state_relationD ko_at'_cross)
+  assumes x: "\<And>sc n. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
+  assumes y: "\<And>sc. sc_replies sc = sc_replies (f sc)"
+  assumes z: "objBits sc' = objBits (f' sc')"
+  assumes r: "scReply sc' = scReply (f' sc')"
+  shows
+    "corres dc (sc_at ptr) (ko_at' sc' ptr)
+            (update_sched_context ptr f)
+            (setSchedContext ptr (f' sc'))"
+  unfolding update_sched_context_def
   apply (rule corres_guard_imp)
-    apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
-               and n1="objBits sc' - minSchedContextBits"
-                         in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
-    apply (rule corres_symb_exec_l)
-       apply (rule corres_guard_imp)
-         apply (rule_tac P="\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc' - minSchedContextBits))"
-                     and P'="ko_at' sc' ptr"  in corres_inst)
-         apply (rule_tac n="objBits sc' - minSchedContextBits" in setSchedContext_no_stack_update_corres)
-            apply simp+
-      apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
-       apply (rename_tac ko; case_tac ko; simp)
-      apply simp
-     apply (wpsimp simp: obj_at_def is_sc_obj_def)+
-    apply (wpsimp wp: get_sched_context_no_fail)
-   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+    apply (rule corres_symb_exec_l'[where Q'="\<lambda>r s. ko_at r ptr s \<and> (\<exists>n. is_sc_obj n r)",
+                                    where P="\<lambda>s. obj_at \<top> ptr s"])
+      apply (rule corres_guard_imp[where P'=R and Q'=R for R])
+        apply (rule_tac F="(\<exists>n. is_sc_obj n obj)" in corres_gen_asm)
+        apply (case_tac obj; simp add: is_sc_obj_def)
+        apply (rule setSchedContext_no_stack_update_corres[where f'=f'])
+           apply (clarsimp simp: x obj_at_def intro!: y z r)+
+     apply (fastforce simp: exs_valid_def get_object_def in_monad)
+    apply (wpsimp wp: get_object_wp)
+   apply (fastforce simp: obj_at_def)
   apply simp
   done
 
@@ -3816,14 +3819,15 @@ lemma update_sc_no_reply_stack_update_corres:
     \<forall>sc'. scReply (f' sc') = scReply sc' \<rbrakk> \<Longrightarrow>
    corres dc (sc_at ptr and pspace_aligned and pspace_distinct) \<top>
           (update_sched_context ptr f)
-         (do sc <- getSchedContext ptr;
-             setSchedContext ptr (f' sc)
+         (do sc' <- getSchedContext ptr;
+             setSchedContext ptr (f' sc')
           od)"
   apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
   apply (rule corres_symb_exec_r)
-     apply (rename_tac sc')
-     apply (erule update_sc_no_reply_stack_update_ko_at'_corres; simp)
+     apply (rule corres_guard1_imp)
+      apply (rule update_sc_no_reply_stack_update_ko_at'_corres; simp)
+     apply clarsimp
     apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
    apply (rename_tac ko; case_tac ko; simp)
    apply (wpsimp simp: obj_at_def is_sc_obj_def)+
@@ -3875,6 +3879,13 @@ lemma reply_at'_cross_rel:
   unfolding cross_rel_def state_relation_def
   apply clarsimp
   by (erule (3) reply_at_cross)
+
+lemma sch_act_simple_cross_rel:
+  "cross_rel simple_sched_action sch_act_simple"
+  apply (clarsimp simp: cross_rel_def)
+  by (fastforce simp: simple_sched_action_def sch_act_simple_def
+                dest: state_relation_sched_act_relation
+               split: Structures_A.scheduler_action.splits)
 
 (* FIXME RT: move to Corres_UL.thy *)
 lemma cross_relF:

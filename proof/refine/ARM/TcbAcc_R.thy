@@ -558,6 +558,9 @@ lemma threadget_corres:
   apply (simp add: x)
   done
 
+lemmas get_tcb_obj_ref_corres
+  = threadget_corres[where 'a="obj_ref option", folded get_tcb_obj_ref_def]
+
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: threadGet_def getObject_tcb_inv | wp)+
 
@@ -2744,14 +2747,24 @@ lemma sts_corres:
                      simp: projectKOs valid_tcbs'_def obj_at'_def)+
   done
 
+lemma set_tcb_obj_ref_corresT:
+  assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
+                         tcb_relation (f (\<lambda>_. new) tcb) (f' tcb')"
+  assumes y: "\<And>tcb. \<forall>(getF, setF) \<in> ran tcb_cap_cases. getF (f (\<lambda>_. new) tcb) = getF tcb"
+  assumes z: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
+                 getF (f' tcb) = getF tcb"
+  shows      "corres dc (tcb_at t) (tcb_at' t)
+                     (set_tcb_obj_ref f t new) (threadSet f' t)"
+  by (clarsimp simp: set_tcb_obj_ref_thread_set threadset_corresT x y z)
+
+lemmas set_tcb_obj_ref_corres =
+    set_tcb_obj_ref_corresT [OF _ _ all_tcbI, OF _ ball_tcb_cap_casesI ball_tcb_cte_casesI]
+
 lemma sbn_corres:
-  "corres dc
-          (tcb_at t)
-          (tcb_at' t)
+  "corres dc (tcb_at t) (tcb_at' t)
           (set_tcb_obj_ref tcb_bound_notification_update t ntfn) (setBoundNotification ntfn t)"
-  apply (simp add: set_tcb_obj_ref_def setBoundNotification_def)
-  apply (subst thread_set_def[simplified, symmetric])
-  apply (rule threadset_corres, simp_all add: tcb_relation_def)
+  apply (simp add: setBoundNotification_def)
+  apply (rule set_tcb_obj_ref_corres; simp add: tcb_relation_def)
   done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification

@@ -8,6 +8,14 @@ theory SchedContext_R
 imports VSpace_R
 begin
 
+lemma sym_refs_tcbSchedContext:
+  "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>
+   \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
+  apply (drule (1) sym_refs_obj_atD')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def
+                    refs_of_rev' projectKOs)
+  done
+
 lemma setSchedContext_valid_idle'[wp]:
   "\<lbrace>valid_idle' and K (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' v)\<rbrace>
    setSchedContext scPtr v
@@ -465,10 +473,9 @@ lemma tcb_yield_to_update_corres:
           (set_tcb_obj_ref tcb_yield_to_update t yt) (threadSet (tcbYieldTo_update (\<lambda>_. yt)) t)"
   apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
-  apply (simp add: set_tcb_obj_ref_def)
-  apply (subst thread_set_def[simplified, symmetric])
   apply (rule corres_guard_imp)
-    apply (rule threadset_corres, simp_all add: tcb_relation_def)
+    apply (rule set_tcb_obj_ref_corres; simp add: tcb_relation_def)
+   apply simp+
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
