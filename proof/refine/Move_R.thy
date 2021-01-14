@@ -430,4 +430,10 @@ lemma schedule_sched_act_rct[wp]:
 
 (* END: scheduler_action lemmas needed in Refine.thy *)
 
+(* FIXME RT: move to Lib? *)
+lemma maybeM_when:
+  "maybeM f x = when (x \<noteq> None) (f (the x))"
+  unfolding maybeM_def
+  by (clarsimp split: option.splits)
+
 end

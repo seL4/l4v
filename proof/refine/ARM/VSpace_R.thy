@@ -3107,6 +3107,45 @@ lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"
   by (simp add: isPDCap_def)
 
+lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
+  "\<lbrace>valid_objs'\<rbrace> lookupIPCBuffer b t \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
+  unfolding lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
+  apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
+                   locateSlot_conv threadGet_getObject)
+  apply (wp getCTE_wp getObject_tcb_wp | wpc)+
+  apply (clarsimp simp del: imp_disjL)
+  apply (drule obj_at_ko_at')
+  apply (clarsimp simp del: imp_disjL)
+  apply (rule_tac x = ko in exI)
+  apply (frule ko_at_cte_ipcbuffer)
+  apply (clarsimp simp: cte_wp_at_ctes_of simp del: imp_disjL)
+  apply (rename_tac d ref rghts sz mapdata)
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+  apply (frule (1) ko_at_valid_objs')
+   apply (clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
+  apply (clarsimp simp: valid_obj'_def valid_tcb'_def
+                        isCap_simps cte_level_bits_def field_simps)
+  apply (drule bspec [OF _ ranI [where a = "0x20"]])
+   apply simp
+  apply (clarsimp simp: valid_cap'_def)
+  apply (rule conjI)
+   apply (rule aligned_add_aligned)
+     apply (clarsimp simp: capAligned_def)
+     apply assumption
+    apply (erule is_aligned_andI1)
+   apply (case_tac sz; simp add: msg_align_bits)
+  apply (clarsimp simp: capAligned_def)
+  apply (drule_tac x = "(tcbIPCBuffer ko && mask (pageBitsForSize sz)) >> pageBits" in spec)
+  apply (subst(asm) mult.commute mult.left_commute, subst(asm) shiftl_t2n[symmetric])
+  apply (simp add: shiftr_shiftl1)
+  apply (subst (asm) mask_out_add_aligned)
+   apply (erule is_aligned_weaken [OF _ pbfs_atleast_pageBits])
+  apply (erule mp)
+  apply (rule shiftr_less_t2n)
+  apply (clarsimp simp: pbfs_atleast_pageBits)
+  apply (rule and_mask_less')
+  apply (simp add: word_bits_conv)
+  done
 
 end
 
