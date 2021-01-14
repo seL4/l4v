@@ -501,7 +501,7 @@ locale delete_one_conc = delete_one_conc_pre +
 
 locale delete_one = delete_one_conc + delete_one_abs +
   assumes delete_one_corres:
-    "corres dc (einvs and cte_wp_at can_fast_finalise ptr)
+    "corres dc (einvs and simple_sched_action and cte_wp_at can_fast_finalise ptr)
                (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 

@@ -181,6 +181,11 @@ lemma capAligned_sched_contextI:
   by (clarsimp simp: obj_at'_real_def capAligned_def sc_size_bounds_def ko_wp_at'_def isCap_simps
                      objBits_simps word_bits_def capUntypedPtr_def maxUntypedSizeBits_def)
 
+lemma sc_at'_n_sc_at':
+  "sc_at'_n n p s \<Longrightarrow> sc_at' p s"
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs)
+  by (case_tac ko; clarsimp)
+
 lemma ko_at_valid_objs':
   assumes ko: "ko_at' k p s"
   assumes vo: "valid_objs' s"

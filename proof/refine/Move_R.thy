@@ -430,10 +430,30 @@ lemma schedule_sched_act_rct[wp]:
 
 (* END: scheduler_action lemmas needed in Refine.thy *)
 
+lemma sc_at_sc_obj_at:
+  "sc_at p s = (\<exists>n. sc_obj_at n p s)"
+  by (auto simp: obj_at_def)
+
+(* FIXME RT: move to KHeap_AI *)
+lemma update_sched_context_decompose:
+   "update_sched_context scp (\<lambda>sc. f (g sc))
+    = (do update_sched_context scp g; update_sched_context scp f od)"
+  apply (rule ext)
+  by (clarsimp simp: update_sched_context_def get_object_def set_object_def a_type_simps
+                     gets_def get_def put_def return_def fail_def assert_def bind_def
+              split: Structures_A.kernel_object.splits)
+
 (* FIXME RT: move to Lib? *)
 lemma maybeM_when:
   "maybeM f x = when (x \<noteq> None) (f (the x))"
   unfolding maybeM_def
   by (clarsimp split: option.splits)
+
+(* FIXME RT: move this to Lib or similar *)
+lemma bind_dummy_ret_val:
+  "do y \<leftarrow> a;
+      b
+   od = do a; b od"
+  by simp
 
 end

@@ -2200,6 +2200,9 @@ crunches finaliseCap
 
 end
 
+global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC t"
+  by typ_at_props'
+
 global_interpretation finaliseCap: typ_at_all_props' "finaliseCap cap final x"
   by typ_at_props'
 
@@ -2279,13 +2282,6 @@ lemma setNotification_invs':
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add:  invs'_def valid_state'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
-  done
-
-lemma setSchedContext_utr[wp]:
-  "\<lbrace>untyped_ranges_zero'\<rbrace> setSchedContext scPtr sc \<lbrace>\<lambda>rv. untyped_ranges_zero'\<rbrace>"
-  apply (simp add: cteCaps_of_def)
-  apply (rule hoare_pre, wp untyped_ranges_zero_lift)
-  apply (simp add: o_def)
   done
 
 lemma schedContextUnbindNtfn_valid_objs'[wp]:
@@ -2748,7 +2744,7 @@ crunches tcbReleaseRemove, tcbSchedDequeue, rescheduleRequired
   for obj_at'_sc[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) p s)"
   (wp: crunch_wps)
 
-lemma schedContextUnbindTCB_invs':
+lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextUnbindTCB_def
   apply (rule schedContextUnbindTCB_invs'_helper[simplified] hoare_seq_ext | clarsimp)+
@@ -3254,7 +3250,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
      (* ThreadCap *)
      apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
      apply (clarsimp simp: valid_cap'_def)
-     apply (drule valid_globals_cte_wpD'[rotated], clarsimp)
+     apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
      apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def)
     (* EndpointCap *)
     apply fastforce
@@ -3963,25 +3959,101 @@ lemma deletingIRQHandler_invs' [wp]:
   apply simp
   done
 
+crunches
+  unbindFromSC, schedContextUnbindReply, schedContextUnbindNtfn, schedContextUnbindAllTCBs
+  for sch_act_simple[wp]: sch_act_simple
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma unbindFromSC_invs'[wp]:
+  "\<lbrace>invs' and sch_act_simple and tcb_at' t and K (t \<noteq> idle_thread_ptr)\<rbrace>
+   unbindFromSC t
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (clarsimp simp: unbindFromSC_def sym_refs_asrt_def)
+  apply (wpsimp split_del: if_split)
+     apply (rule_tac Q="\<lambda>_. sc_at' y and invs' and sch_act_simple" in hoare_post_imp)
+      apply (fastforce simp: projectKOs valid_obj'_def valid_sched_context'_def
+                      dest!: ko_at_valid_objs')
+     apply (wpsimp wp: typ_at_lifts threadGet_wp)+
+  apply (drule obj_at_ko_at', clarsimp)
+  apply (frule ko_at_valid_objs'; clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
+  apply (rule_tac x=ko in exI, clarsimp)
+  apply (frule sym_refs_tcbSchedContext; assumption?)
+  apply (subgoal_tac "ex_nonz_cap_to' idle_sc_ptr s")
+   apply (fastforce simp: invs'_def valid_state'_def global'_sc_no_ex_cap)
+  apply (fastforce intro!: if_live_then_nonz_capE'
+                     simp: projectKOs obj_at'_def ko_wp_at'_def live_sc'_def)
+  done
+
+lemma schedContextZeroRefillMax_invs'[wp]:
+  "\<lbrace>invs' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
+   schedContextZeroRefillMax scPtr
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (clarsimp simp: schedContextZeroRefillMax_def)
+  apply (wpsimp wp: setSchedContext_invs')
+  apply (frule (1) invs'_ko_at_valid_sched_context')
+  apply (fastforce intro!: if_live_then_nonz_capE'
+                     simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
+                           valid_sched_context'_def valid_sched_context_size'_def
+                           objBits_simps')
+  done
+
+lemma schedContextUnbindYieldFrom_invs'[wp]:
+  "\<lbrace>invs' and sch_act_simple\<rbrace>
+   schedContextUnbindYieldFrom scPtr
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindYieldFrom_def)
+  apply wpsimp
+  apply (fastforce dest: invs'_ko_at_valid_sched_context' simp: valid_sched_context'_def)
+  done
+
+lemma schedContextUnbindReply_invs'[wp]:
+  "\<lbrace>invs' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
+   schedContextUnbindReply scPtr
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  unfolding schedContextUnbindReply_def
+  apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_Nothing_invs'
+                    hoare_vcg_imp_lift typ_at_lifts)
+  apply (frule ko_at_valid_objs'; (fastforce simp: projectKOs)?)
+  apply (intro conjI)
+     apply (subst sym_refs_replySCs_of_scReplies_of; (fastforce simp: sym_refs_asrt_def)?)
+     apply (fastforce simp: obj_at'_def opt_map_def projectKOs split: option.splits)
+    apply (fastforce elim: if_live_then_nonz_capE'[OF invs_iflive']
+                     simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def)
+   apply (auto simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
+                     objBits_simps')
+  done
+
+lemma schedContextUnbindAllTCBs_invs'[wp]:
+  "\<lbrace>invs' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
+   schedContextUnbindAllTCBs scPtr
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (clarsimp simp: schedContextUnbindAllTCBs_def)
+  by wpsimp
+
 lemma finaliseCap_invs:
   "\<lbrace>invs' and sch_act_simple and valid_cap' cap
-         and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>
+          and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace>
    finaliseCap cap fin flag
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: finaliseCap_def Let_def
              cong: if_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift | simp only: o_def)+
-  sorry (* finaliseCap_invs *) (*
+   apply (wpsimp wp: hoare_vcg_all_lift)
+  apply (case_tac cap; clarsimp simp: isCap_simps)
+    apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleThread)
+    apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
+     apply clarsimp
+    apply (clarsimp dest!: invs_valid_idle' simp: valid_cap'_def valid_idle'_def)
+   apply (frule sym_ref_replyTCB_Receive_or_Reply; simp add: sym_refs_asrt_def)
+   apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
+    apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
+   apply (fastforce intro!: if_live_then_nonz_capE'
+                      simp: projectKOs pred_tcb_at'_def obj_at'_def ko_wp_at'_def)
+  apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleSC)
+  apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
+   apply clarsimp
   apply clarsimp
-  apply (intro conjI impI)
-    apply (clarsimp dest!: isCapDs simp: valid_cap'_def)
-   apply (drule invs_valid_global', drule(1) valid_globals_cte_wpD')
-   apply (drule valid_capAligned, drule capAligned_capUntypedPtr)
-    apply (clarsimp dest!: isCapDs)
-   apply (clarsimp dest!: isCapDs)
-  apply (clarsimp dest!: isCapDs)
-  done *)
+  done
 
 lemma finaliseCap_zombie_cap[wp]:
   "finaliseCap cap fin flag \<lbrace>cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)) sl\<rbrace>"
@@ -4014,8 +4086,6 @@ lemma finaliseCap_cte_cap_wp_to[wp]:
   done
 
 global_interpretation unbindNotification: typ_at_all_props' "unbindNotification tcb"
-  by typ_at_props'
-global_interpretation unbindFromSC: typ_at_all_props' "unbindFromSC tcb"
   by typ_at_props'
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4060,7 +4130,7 @@ lemma interrupt_cap_null_or_ntfn:
   done
 
 lemma (in delete_one) deleting_irq_corres:
-  "corres dc (einvs) (invs')
+  "corres dc (einvs and simple_sched_action) (invs')
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
@@ -4069,7 +4139,7 @@ lemma (in delete_one) deleting_irq_corres:
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"
              and P="cte_wp_at (\<lambda>cp. is_ntfn_cap cp \<or> cp = cap.NullCap) slot
-                 and einvs"
+                 and einvs and simple_sched_action"
              and P'="invs' and cte_wp_at' (\<lambda>cte. cteCap cte = rv)
                  (cte_map slot)" in corres_req)
           apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
@@ -4191,7 +4261,7 @@ lemma unbind_maybe_notification_corres:
   apply (clarsimp simp: valid_obj'_def valid_ntfn'_def split: option.splits)
   done
 
-lemma sc_maybe_unbind_ntfn_corres:
+lemma schedContextUnbindNtfn_corres:
   "corres dc
      (invs and sc_at sc)
      invs'
@@ -4274,6 +4344,40 @@ lemma sched_context_maybe_unbind_ntfn_corres:
      apply (wpsimp wp: get_simple_ko_wp getNotification_wp split: option.splits)+
   done
 
+lemma replyRemove_corres:
+  "corres dc (invs and tcb_at tptr) (invs' and K (rptr' = rptr))
+      (reply_remove tptr rptr) (replyRemove rptr' tptr)"
+  apply (clarsimp simp: reply_remove_def replyRemove_def)
+  sorry
+
+lemma replyClear_corres:
+  "corres dc
+          (invs and valid_ready_qs and st_tcb_at is_reply_state tp)
+          (invs' and st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tp)
+          (do
+             state \<leftarrow> get_thread_state tp;
+             case state of
+                 Structures_A.thread_state.BlockedOnReply r \<Rightarrow> reply_remove tp r
+               | _ \<Rightarrow> cancel_ipc tp
+           od)
+          (replyClear rptr tp)"
+  apply (clarsimp simp: replyClear_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_deprecated[OF _ gts_corres])
+      apply (rename_tac st st')
+      apply (rule_tac R="is_blocked_on_receive st" in corres_cases_lhs;
+             clarsimp simp: thread_state_relation_def is_blocked_thread_state_defs)
+       apply (rule cancel_ipc_corres)
+      apply (rule_tac R="is_blocked_on_reply st" in corres_cases_lhs;
+             clarsimp simp: is_blocked_thread_state_defs)
+       apply (wpfix add: Structures_H.thread_state.sel)
+       apply (rule replyRemove_corres)
+      apply (rule corres_False'[where P'=\<top>])
+     apply (wpsimp wp: gts_wp gts_wp')+
+   apply (clarsimp simp: simp: pred_tcb_at_def obj_at_def is_obj_defs)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+  done
+
 lemma fast_finalise_corres:
   "\<lbrakk> final_matters' cap' \<longrightarrow> final = final'; cap_relation cap cap';
      can_fast_finalise cap \<rbrakk>
@@ -4282,60 +4386,84 @@ lemma fast_finalise_corres:
                        \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
-           (do
-               p \<leftarrow> finaliseCap cap' final' True;
-               assert (capRemovable (fst p) (cte_map ptr) \<and> snd p = NullCap)
-            od)"
-  apply (cases cap, simp_all add: finaliseCap_def isCap_simps
+           (finaliseCap cap' final' True)"
+  apply (cases cap, simp_all add: finaliseCap_def isCap_simps final_matters'_def
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def capRemovable_def
                        split del: if_split cong: if_cong)
-   apply (clarsimp simp: final_matters'_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_rel_imp)
+    (* EndpointCap *)
+    apply clarsimp
+    apply (rule corres_guard_imp)
       apply (rule cancel_all_ipc_corres)
-     apply simp
-    apply (simp add: valid_cap_def)
-   apply (simp add: valid_cap'_def)
-  apply (clarsimp simp: final_matters'_def)
-  apply (rule corres_guard_imp)
-  sorry (* fast_finalise_corres *) (*
-    apply (rule corres_split_deprecated[OF _ unbind_maybe_notification_corres])
+     apply (simp add: valid_cap_def)
+    apply (simp add: valid_cap'_def)
+   (* NotificationCap *)
+   apply clarsimp
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_deprecated[OF _ sched_context_maybe_unbind_ntfn_corres])
+       apply (rule corres_split_deprecated[OF _ unbind_maybe_notification_corres])
          apply (rule ntfn_cancel_corres)
-       apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps getNotification_wp
-            | wpc)+
-   apply (clarsimp simp: valid_cap_def)
-  apply (clarsimp simp: valid_cap'_def projectKOs valid_obj'_def
-                 dest!: invs_valid_objs' obj_at_valid_objs' )
-  done *)
+        apply (wpsimp wp: unbind_maybe_notification_invs abs_typ_at_lifts typ_at_lifts)+
+    apply (clarsimp simp: valid_cap_def)
+   apply (clarsimp simp: valid_cap'_def)
+  (* ReplyCap *)
+  apply clarsimp
+  apply (rename_tac rptr rs)
+  apply (add_sym_refs, add_valid_replies rptr simp: valid_cap_def)
+  apply (rule corres_stateAssert_assume; (simp add: sym_refs_asrt_def)?)
+  apply (rule corres_stateAssert_assume; simp?)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_deprecated[OF _ getReply_TCB_corres])
+      apply (simp split del: if_split)
+      apply (rule_tac R="tptrOpt = None" in corres_cases';
+             clarsimp simp del: corres_return)
+       apply (rule corres_return_trivial)
+      apply wpfix
+      apply (rule replyClear_corres)
+     apply (wpsimp wp: get_simple_ko_wp)+
+   apply (clarsimp simp: valid_cap_def valid_sched_valid_ready_qs)
+   apply (drule reply_tcb_state_refs;
+          fastforce simp: pred_tcb_at_def obj_at_def is_blocked_thread_state_defs
+                    elim: reply_object.elims)
+  apply (clarsimp simp: valid_cap'_def)
+  apply (rule pred_tcb'_weakenE, erule sym_ref_replyTCB_Receive_or_Reply; fastforce)
+  done
+
+lemma finaliseCap_true_removable[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   finaliseCap cap final True
+   \<lbrace>\<lambda>rv s. capRemovable (fst rv) (cte_map slot) \<and> snd rv = capability.NullCap\<rbrace>"
+  by (cases cap; wpsimp simp: finaliseCap_def isCap_simps capRemovable_def)
 
 lemma cap_delete_one_corres:
-  "corres dc (einvs and cte_wp_at can_fast_finalise ptr)
-        (invs' and cte_at' (cte_map ptr))
-        (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
+  "corres dc (einvs and simple_sched_action and cte_wp_at can_fast_finalise slot)
+        (invs' and cte_at' (cte_map slot))
+        (cap_delete_one slot) (cteDeleteOne (cte_map slot))"
   apply (simp add: cap_delete_one_def cteDeleteOne_def'
                    unless_def when_def)
+  apply (rule corres_cross[OF sch_act_simple_cross_rel], clarsimp)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ get_cap_corres])
       apply (rule_tac F="can_fast_finalise cap" in corres_gen_asm)
       apply (rule corres_if)
         apply fastforce
-       apply (rule corres_split_deprecated [OF _ final_cap_corres[where ptr=ptr]])
-         apply (simp add: split_def bind_assoc [THEN sym])
-         apply (rule corres_split_deprecated [OF _ fast_finalise_corres[where sl=ptr]])
+       apply (rule corres_split_deprecated [OF _ final_cap_corres[where ptr=slot]])
+         apply (rule corres_split_deprecated [OF _ fast_finalise_corres[where sl=slot]])
+              apply clarsimp
+              apply wpfix
+              apply (rule corres_assert_assume_r)
               apply (rule empty_slot_corres)
-             apply simp+
-          apply (wp hoare_drop_imps)+
-  sorry (* cap_delete_one_corres *) (*
-        apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+
+              apply simp+
+          apply (wpsimp wp: hoare_drop_imps fast_finalise_invs fast_finalise_valid_sched)+
+       apply (wp isFinalCapability_inv)
       apply (rule corres_trivial, simp)
      apply (wp get_cap_wp getCTE_wp)+
-   apply (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_Null
-                  elim!: caps_of_state_valid_cap)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply fastforce
-  done *)
+   apply (fastforce simp: cte_wp_at_caps_of_state can_fast_finalise_Null
+                simp del: split_paired_Ex
+                   elim!: caps_of_state_valid_cap)
+  apply (fastforce simp: cte_wp_at_ctes_of)
+  done
 
 end
 (* FIXME: strengthen locale instead *)
@@ -4347,62 +4475,313 @@ global_interpretation delete_one
    apply auto
   done
 
+lemma schedContextUnbindTCB_corres:
+  "corres dc (einvs and sc_tcb_sc_at bound sc_ptr)
+             (invs' and obj_at' (\<lambda>sc. bound (scTCB sc)) sc_ptr)
+          (sched_context_unbind_tcb sc_ptr) (schedContextUnbindTCB sc_ptr)"
+  apply (clarsimp simp: sched_context_unbind_tcb_def schedContextUnbindTCB_def
+                        sym_refs_asrt_def)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+  apply (rule corres_guard_imp)
+     apply (rule corres_split[OF get_sc_corres])
+       apply (rename_tac sc sc')
+       apply (rule corres_assert_opt_assume_l)
+       apply (rule corres_assert_assume_r)
+       apply (prop_tac "scTCB sc' = sc_tcb sc"; clarsimp)
+        apply (clarsimp simp: sc_relation_def)
+       apply (rule corres_split[OF gct_corres])
+         apply (rule corres_split[OF corres_when], clarsimp simp: sc_relation_def)
+            apply (rule rescheduleRequired_corres)
+           apply (rule corres_split[OF tcbSchedDequeue_corres])
+             apply (rule corres_split[OF tcb_release_remove_corres])
+               apply (rule corres_split[OF set_tcb_obj_ref_corres];
+                      clarsimp simp: tcb_relation_def)
+                 apply (rule_tac sc'=sc' in update_sc_no_reply_stack_update_ko_at'_corres)
+                    apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+                apply wpsimp+
+       apply (case_tac sc'; clarsimp)
+       apply (wpfix add: sched_context.sel)
+       apply simp
+      apply wpsimp+
+    apply (frule invs_valid_objs)
+    apply (fastforce simp: sc_at_pred_n_def obj_at_def is_obj_defs valid_obj_def
+                           valid_sched_context_def)
+   apply normalise_obj_at'
+   apply (fastforce simp: valid_obj'_def valid_sched_context'_def projectKOs
+                   dest!: ko_at_valid_objs')
+  apply clarsimp
+  done
+
+lemma unbindFromSC_corres:
+  "corres dc (einvs and tcb_at t and K (t \<noteq> idle_thread_ptr)) (invs' and tcb_at' t)
+          (unbind_from_sc t) (unbindFromSC t)"
+  apply (clarsimp simp: unbind_from_sc_def unbindFromSC_def maybeM_when)
+  apply (rule corres_gen_asm)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF get_tcb_obj_ref_corres[where r="(=)"]])
+        apply (clarsimp simp: tcb_relation_def)
+       apply (rename_tac sc_ptr_opt sc_ptr_opt')
+       apply clarsimp
+       apply (rule_tac R="bound sc_ptr_opt'" in corres_cases'; clarsimp)
+       apply wpfix
+       apply (rule corres_split[OF schedContextUnbindTCB_corres])
+         apply (rule corres_split[OF get_sc_corres])
+           apply (rule corres_when2; clarsimp simp: sc_relation_def)
+           apply (case_tac rv, case_tac rv', simp)
+           apply (wpfix add: Structures_A.sched_context.select_convs sched_context.sel)
+           apply (rule complete_yield_to_corres)
+          apply (wpsimp wp: abs_typ_at_lifts)+
+        apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
+         apply (auto simp: valid_obj_def valid_sched_context_def
+                    dest!: invs_valid_objs valid_objs_ko_at)[1]
+        apply wpsimp
+       apply (rule_tac Q="\<lambda>_. sc_at' y and invs'" in hoare_post_imp)
+        apply (fastforce simp: projectKOs valid_obj'_def valid_sched_context'_def
+                        dest!: ko_at_valid_objs')
+       apply (wpsimp wp: typ_at_lifts get_tcb_obj_ref_wp threadGet_wp)+
+    apply (frule invs_valid_objs, frule invs_sym_refs, frule invs_valid_global_refs)
+    apply (frule sym_ref_tcb_sc; (fastforce simp: obj_at_def)?)
+    apply (frule (1) valid_objs_ko_at)
+    apply (subgoal_tac "ex_nonz_cap_to y s")
+     apply (fastforce dest!: idle_sc_no_ex_cap
+                       simp: obj_at_def sc_at_pred_n_def valid_obj_def valid_tcb_def)
+    apply (fastforce elim!: if_live_then_nonz_cap_invs simp: live_def live_sc_def)
+   apply clarsimp
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (rule_tac x=ko in exI, clarsimp)
+   apply (frule sym_refs_tcbSchedContext; assumption?)
+   apply (subgoal_tac "ex_nonz_cap_to' y s")
+    apply (fastforce simp: invs'_def obj_at'_def valid_state'_def global'_sc_no_ex_cap)
+   apply (fastforce intro!: if_live_then_nonz_capE'
+                      simp: projectKOs obj_at'_def ko_wp_at'_def live_sc'_def)
+  apply (clarsimp simp: sym_refs_asrt_def)
+  done
+
+lemma schedContextUnbindAllTCBs_corres:
+  "corres dc (einvs and sc_at scPtr and K (scPtr \<noteq> idle_sc_ptr)) (invs' and sc_at' scPtr)
+          (sched_context_unbind_all_tcbs scPtr) (schedContextUnbindAllTCBs scPtr)"
+  apply (clarsimp simp: sched_context_unbind_all_tcbs_def schedContextUnbindAllTCBs_def)
+  apply (rule corres_gen_asm, clarsimp)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF get_sc_corres])
+      apply (rule corres_when)
+       apply (clarsimp simp: sc_relation_def)
+      apply (rule schedContextUnbindTCB_corres)
+     apply wpsimp+
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma replyNext_update_corres_empty:
+  "corres dc (reply_at rptr) (reply_at' rptr)
+   (set_reply_obj_ref reply_sc_update rptr None)
+   (updateReply rptr (\<lambda>reply. replyNext_update (\<lambda>_. None) reply))"
+  unfolding update_sk_obj_ref_def updateReply_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_deprecated[OF set_reply_corres get_reply_corres])
+      apply (clarsimp simp: reply_relation_def)
+     apply wpsimp+
+  apply (clarsimp simp: obj_at'_def replyPrev_same_def)
+  done
+
+lemma schedContextUnbindReply_corres:
+  "corres dc (einvs and sc_at scPtr and K (scPtr \<noteq> idle_sc_ptr)) (invs' and sc_at' scPtr)
+             (sched_context_unbind_reply scPtr) (schedContextUnbindReply scPtr)"
+  apply (clarsimp simp: sched_context_unbind_reply_def schedContextUnbindReply_def
+                        liftM_def unless_def)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF get_sc_corres, where R'="\<lambda>sc. ko_at' sc scPtr"])
+       apply (rename_tac sc sc')
+       apply (rule_tac Q'="ko_at' sc' scPtr
+                and K (scReply sc' = hd_opt (sc_replies sc))
+                and (\<lambda>s. scReply sc' \<noteq> None \<longrightarrow> reply_at' (the (scReply sc')) s)
+                and (\<lambda>s. heap_ls (replyPrevs_of s) (scReply sc') (sc_replies sc))"
+              and Q="sc_at scPtr
+                and pspace_aligned and pspace_distinct and valid_objs
+                and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) scPtr s)"
+              in stronger_corres_guard_imp)
+         apply (rule corres_guard_imp)
+           apply (rule_tac F="(sc_replies sc \<noteq> []) = (\<exists>y. scReply sc' = Some y)" in corres_gen_asm2)
+           apply (rule corres_when)
+            apply clarsimp
+           apply (rule_tac F="scReply sc' = Some (hd (sc_replies sc))" in corres_gen_asm2)
+           apply clarsimp
+           apply (rule corres_split[OF replyNext_update_corres_empty])
+             apply (rule update_sc_reply_stack_update_ko_at'_corres)
+            apply wpsimp+
+          apply (clarsimp simp: obj_at_def)
+          apply (frule (1) valid_sched_context_objsI)
+          apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+         apply clarsimp
+         apply (case_tac "sc_replies sc"; simp)
+        apply assumption
+       apply (clarsimp simp: obj_at_def)
+       apply (frule state_relation_sc_replies_relation)
+       apply (subgoal_tac "scReply sc' = hd_opt (sc_replies sc)")
+        apply (intro conjI)
+          apply clarsimp
+         apply clarsimp
+         apply (erule (1) reply_at_cross[rotated])
+          apply (frule (1) valid_sched_context_objsI)
+          apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
+         apply fastforce
+        apply (erule (1) sc_replies_relation_prevs_list)
+        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_sc)
+       apply (erule (1) sc_replies_relation_scReply[symmetric])
+       apply (clarsimp simp: obj_at'_real_def  ko_wp_at'_def projectKO_sc)
+      apply wpsimp+
+    apply (fastforce simp: sym_refs_asrt_def)+
+  done
+
+lemma schedContextUnbindYieldFrom_corres:
+  "corres dc (einvs and sc_at scPtr and K (scPtr \<noteq> idle_sc_ptr)) (invs' and sc_at' scPtr)
+          (sched_context_unbind_yield_from scPtr) (schedContextUnbindYieldFrom scPtr)"
+  apply (clarsimp simp: sched_context_unbind_yield_from_def schedContextUnbindYieldFrom_def
+                        maybeM_when)
+  apply add_sym_refs
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF get_sc_corres])
+       apply (rename_tac sc sc')
+       apply (case_tac sc')
+       apply (clarsimp simp: sc_relation_def)
+       apply (wpfix add: sched_context.sel)
+       apply (rule corres_when)
+        apply (clarsimp simp: sc_relation_def)
+       apply (rule complete_yield_to_corres)
+      apply wpsimp+
+    apply (fastforce dest!: invs_valid_objs valid_objs_ko_at
+                      simp: valid_obj_def valid_sched_context_def)
+   apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
+                     simp: valid_obj'_def valid_sched_context'_def)
+  apply (clarsimp simp: sym_refs_asrt_def)
+  done
+
+lemma schedContextZeroRefillMax_corres:
+  "corres dc (\<lambda>s. sc_at scPtr s) (sc_at' scPtr)
+          (sched_context_zero_refill_max scPtr) (schedContextZeroRefillMax scPtr)"
+  apply (clarsimp simp: sched_context_zero_refill_max_def schedContextZeroRefillMax_def
+                        set_refills_def sc_at_sc_obj_at)
+  apply (rule corres_underlying_lift_ex1')
+  apply (rule corres_guard_imp)
+    apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])
+    apply (rule_tac n1=n in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+    apply (rule corres_split[OF get_sc_corres])
+      apply (rule_tac P="ko_at (kernel_object.SchedContext sc n) scPtr"
+                  and P'="ko_at' rv' scPtr"
+             in stronger_corres_guard_imp)
+        apply (rule_tac sc=sc and sc'=rv' in setSchedContext_update_corres)
+         apply (clarsimp simp: sc_relation_def refills_map_def objBits_def objBitsKO_def)+
+       apply (clarsimp simp: obj_at_def)
+      apply (clarsimp simp: state_relation_def obj_at_def obj_at'_def projectKOs)
+      apply (erule (2) sc_replies_relation_prevs_list)
+     apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)+
+  done
+
+lemma can_fast_finalise_finalise_cap:
+  "can_fast_finalise cap
+   \<Longrightarrow> finalise_cap cap final
+         = do fast_finalise cap final; return (cap.NullCap, cap.NullCap) od"
+  by (cases cap; simp add: can_fast_finalise_def liftM_def)
+
+lemma can_fast_finalise_finaliseCap:
+  "is_ReplyCap cap \<or> is_EndpointCap cap \<or> is_NotificationCap cap \<or> cap = NullCap
+   \<Longrightarrow> finaliseCap cap final flag
+         = do finaliseCap cap final True; return (NullCap, NullCap) od"
+  by (cases cap; simp add: finaliseCap_def isCap_simps)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma finalise_cap_corres:
   "\<lbrakk> final_matters' cap' \<Longrightarrow> final = final'; cap_relation cap cap';
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
      \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> cap_relation (snd x) (snd y))
            (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
-                       \<and> cte_wp_at ((=) cap) sl s)
-           (\<lambda>s. invs' s \<and> s \<turnstile>' cap' \<and>
-                 (final_matters' cap' \<longrightarrow>
-                      final' = isFinal cap' (cte_map sl) (cteCaps_of s)))
+                       \<and> cte_wp_at ((=) cap) sl s \<and> simple_sched_action s)
+           (\<lambda>s. invs' s \<and> s \<turnstile>' cap'
+                   \<and> (final_matters' cap' \<longrightarrow>
+                        final' = isFinal cap' (cte_map sl) (cteCaps_of s))
+                   \<and> sch_act_simple s)
            (finalise_cap cap final) (finaliseCap cap' final' flag)"
+  apply (case_tac "can_fast_finalise cap")
+   apply (simp add: can_fast_finalise_finalise_cap)
+   apply (subst can_fast_finalise_finaliseCap,
+          clarsimp simp: can_fast_finalise_def split: cap.splits)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF fast_finalise_corres[where sl=sl]]; assumption?)
+        apply simp
+       apply (simp only: K_bind_def)
+       apply (rule corres_returnTT)
+       apply wpsimp+
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
                                   can_fast_finalise_def
                        split del: if_split cong: if_cong)
-        apply (clarsimp simp: final_matters'_def)
-        apply (rule corres_guard_imp)
-          apply (rule cancel_all_ipc_corres)
-         apply (simp add: valid_cap_def)
-        apply (simp add: valid_cap'_def)
-       apply (clarsimp simp add: final_matters'_def)
-       apply (rule corres_guard_imp)
-  sorry (* finalise_cap_corres *) (*
-         apply (rule corres_split_deprecated[OF _ unbind_maybe_notification_corres])
-           apply (rule ntfn_cancel_corres)
-          apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
-        apply (clarsimp simp: valid_cap_def)
-       apply (clarsimp simp: valid_cap'_def)
-      apply (fastforce simp: final_matters'_def shiftL_nat zbits_map_def)
-     apply (clarsimp simp add: final_matters'_def getThreadCSpaceRoot
-                               liftM_def[symmetric] o_def zbits_map_def
-                               dc_def[symmetric])
+       (* CNodeCap *)
+       apply (fastforce simp: final_matters'_def shiftL_nat zbits_map_def)
+      (* ThreadCap *)
+      apply (rename_tac tptr)
+      apply (clarsimp simp: final_matters'_def getThreadCSpaceRoot
+                            liftM_def[symmetric] o_def zbits_map_def)
+      apply (rule_tac P="K (tptr \<noteq> idle_thread_ptr)" and P'="K (tptr \<noteq> idle_thread_ptr)"
+             in corres_add_guard)
+       apply clarsimp
+       apply (frule(1) valid_global_refsD[OF invs_valid_global_refs _ idle_global])
+       apply (clarsimp dest!: invs_valid_idle simp: valid_idle_def cap_range_def)
+      apply (rule corres_guard_imp)
+        apply (rule corres_split[OF unbind_notification_corres])
+          apply (rule corres_split[OF unbindFromSC_corres])
+            apply (rule corres_split[OF suspend_corres])
+              apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
+              apply (rule prepareThreadDelete_corres)
+             apply (wp unbind_notification_invs unbind_from_sc_valid_sched)+
+       apply (clarsimp simp: valid_cap_def)
+      apply (clarsimp simp: valid_cap'_def)
+     (* SchedContextCap *)
+     apply (rename_tac scptr n)
+     apply (clarsimp simp: final_matters'_def liftM_def[symmetric]
+                           o_def dc_def[symmetric])
+     apply (rule_tac P="K (scptr \<noteq> idle_sc_ptr)" and P'="K (scptr \<noteq> idle_sc_ptr)"
+            in corres_add_guard)
+      apply clarsimp
+      apply (frule(1) valid_global_refsD[OF invs_valid_global_refs _ idle_sc_global])
+      apply (clarsimp dest!: invs_valid_idle simp: valid_idle_def cap_range_def)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[OF _ unbind_notification_corres])
-         apply (rule corres_split_deprecated[OF _ suspend_corres])
-            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-          apply (rule prepareThreadDelete_corres)
-        apply (wp unbind_notification_invs unbind_notification_simple_sched_action)+
-      apply (simp add: valid_cap_def)
-     apply (simp add: valid_cap'_def)
-    apply (simp add: final_matters'_def liftM_def[symmetric]
-                     o_def dc_def[symmetric])
-    apply (intro impI, rule corres_guard_imp)
+       apply (rule corres_split[OF schedContextUnbindAllTCBs_corres])
+         apply (rule corres_split[OF schedContextUnbindNtfn_corres])
+           apply (rule corres_split[OF schedContextUnbindReply_corres])
+             apply (rule corres_split[OF schedContextUnbindYieldFrom_corres])
+               apply (clarsimp simp: o_def dc_def[symmetric])
+               apply (rule schedContextZeroRefillMax_corres)
+              apply (wpsimp wp: abs_typ_at_lifts typ_at_lifts)+
+      apply (clarsimp simp: valid_cap_def)
+     apply (clarsimp simp: valid_cap'_def sc_at'_n_sc_at')
+    (* IRQHandlerCap *)
+    apply (clarsimp simp: final_matters'_def liftM_def[symmetric]
+                          o_def dc_def[symmetric])
+    apply (rule corres_guard_imp)
       apply (rule deleting_irq_corres)
      apply simp
     apply simp
+   (* ZombieCap *)
    apply (clarsimp simp: final_matters'_def)
    apply (rule_tac F="False" in corres_req)
     apply clarsimp
     apply (frule zombies_finalD, (clarsimp simp: is_cap_simps)+)
     apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply simp
+  (* ArchObjectCap *)
   apply (clarsimp split del: if_split simp: o_def)
-  apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)
-  done *)
-context begin interpretation Arch . (*FIXME: arch_split*)
+  apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)[1]
+  done
+
 lemma arch_recycleCap_improve_cases:
    "\<lbrakk> \<not> isPageCap cap; \<not> isPageTableCap cap; \<not> isPageDirectoryCap cap;
          \<not> isASIDControlCap cap \<rbrakk> \<Longrightarrow> (if isASIDPoolCap cap then v else undefined) = v"
