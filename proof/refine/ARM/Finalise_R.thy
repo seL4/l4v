@@ -2403,19 +2403,19 @@ replyPop replyPtr tcbPtr
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
   apply (rule hoare_seq_ext)
    apply (wpsimp wp: cleanReply_list_refs_of_replies')
+  apply (rule hoare_when_cases)
+   apply wpsimp
+   apply (erule delta_sym_refs
+          ; clarsimp simp: isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
+                           list_refs_of_replies'_def
+                    split: reply_next.split_asm if_splits option.splits)
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: comp_def\<close>, simp?)+
+  apply (rule hoare_seq_ext)
+   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)
+   apply (wpsimp wp: hoare_when_cases)
   apply (rule hoare_when_cases[rotated])
-   apply (rule hoare_seq_ext[OF _ assert_sp])
-   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: comp_def\<close>, simp?)+
-   apply (rule hoare_seq_ext)
-    apply wpsimp
-   apply (rule hoare_when_cases)
-    apply (subst if_cancel, clarsimp)
-    apply (erule delta_sym_refs
-           ; clarsimp simp: isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
-                            list_refs_of_replies'_def
-                     split: reply_next.split_asm if_splits option.splits)
-   apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-   apply (wpsimp wp: hoare_vcg_if_lift)
+apply (wpsimp wp: updateReply_list_refs_of_replies'_inv)
    apply (clarsimp simp: isHead_def)
    apply (frule_tac reply=prevReply in ko_at'_replies_of')
    apply (frule (3) sym_refs_replyNext)
@@ -2424,7 +2424,7 @@ replyPop replyPtr tcbPtr
                             list_refs_of_replies'_def  get_refs_def
                      split: if_splits option.splits | rule conjI)+)
   apply (clarsimp simp: obj_at'_def)
-  done
+  sorry
 
 lemma updateReply_list_refs_of_replies':
   assumes "\<And>reply. list_refs_of_reply' (f reply) = k (list_refs_of_reply' reply)"
@@ -2435,12 +2435,6 @@ lemma updateReply_list_refs_of_replies':
   apply (erule subst[rotated])
   apply (rule arg_cong[where f=P, OF all_ext], clarsimp)
   by (clarsimp simp: map_set_def ko_at'_replies_of' opt_map_left_Some)
-
-lemma bar:
-  "list_refs_of_reply' (reply \<lparr> replyPrev := Nothing \<rparr>)
-   = Set.filter (\<lambda>ref. snd ref \<noteq> ReplyPrev) (list_refs_of_reply' reply)"
-  apply (simp add: Set.filter_def list_refs_of_reply'_def get_refs_def split: option.splits)
-  sorry
 
 crunches updateReply, cleanReply
   for valid_irq_node'[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
