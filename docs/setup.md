@@ -110,7 +110,7 @@ mkdir -p ~/.isabelle/etc
 cp -i misc/etc/settings ~/.isabelle/etc/settings
 ./isabelle/bin/isabelle components -a
 ./isabelle/bin/isabelle jedit -bf
-./isabelle/bin/isabelle build -bv HOL-Word
+./isabelle/bin/isabelle build -bv HOL
 ```
 
 These commands perform the following steps:
@@ -121,13 +121,13 @@ These commands perform the following steps:
   Isabelle `contrib` tools from the Munich Isabelle repository and set up
   paths such that multiple Isabelle repository installations can be used
   side by side without interfering with each other.
-* download `contrib` components from either the Munich or TS repository. This includes
+* download `contrib` components from the Isabelle repository. This includes
   Scala, a Java JDK, PolyML, and multiple external provers. You should
   download these, even if you have these tools previously installed
   elsewhere to make sure you have the right versions. Depending on your
   internet connection, this may take some time.
 * compile and build the Isabelle PIDE jEdit interface.
-* build basic Isabelle images, including `HOL-Word` to ensure that
+* build basic Isabelle images to ensure that
   the installation works. This may take a few minutes.
 
 Alternatively, it is possible to use the official Isabelle2020 release

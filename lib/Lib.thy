@@ -20,7 +20,7 @@ imports
   Eval_Bool
   NICTATools
   "HOL-Library.Prefix_Order"
-  "HOL-Word.Word"
+  "HOL-Library.Word" (* FIXME: this should not be necessary *)
 begin
 
 (* FIXME: eliminate *)

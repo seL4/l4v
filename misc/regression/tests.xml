@@ -51,7 +51,7 @@
   -->
 <testsuite>
 
-  <!-- Build Isabelle and common theories (Pure, HOL, HOL-Word, Word). -->
+  <!-- Build Isabelle and common theories (Pure, HOL, Word). -->
   <sequence>
     <test name="isabelle" cwd="../.." cpu-timeout="3600">isabelle/bin/isabelle build -d . -vb Word_Lib</test>
   </sequence>
