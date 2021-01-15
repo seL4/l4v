@@ -8,7 +8,6 @@
  * Lemmas about this instance should also go here. *)
 theory NatBitwise
 imports
-  "HOL-Word.Word"
   Lib
 begin
 
