@@ -464,8 +464,7 @@ This module uses the C preprocessor to select a target architecture.
 >     replyPtrOpt <- return $ scReply sc
 >     when (replyPtrOpt /= Nothing) $ do
 >         replyPtr <- return $ fromJust replyPtrOpt
->         reply <- getReply replyPtr
->         setReply replyPtr (reply { replyNext = Nothing })
+>         updateReply replyPtr (\reply -> reply { replyNext = Nothing })
 >         setSchedContext scPtr (sc { scReply = Nothing })
 
 > schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
@@ -557,8 +556,7 @@ This module uses the C preprocessor to select a target architecture.
 >         let replyPtrOpt = scReply sc
 >         when (replyPtrOpt /= Nothing) $ do
 >             let replyPtr = fromJust replyPtrOpt
->             reply <- getReply replyPtr
->             setReply replyPtr (reply { replyNext = Nothing })
+>             updateReply replyPtr (\reply -> reply { replyNext = Nothing })
 >             setSchedContext scPtr $ sc { scReply = Nothing }
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer

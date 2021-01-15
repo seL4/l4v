@@ -14,7 +14,7 @@ This module specifies the behavior of reply objects.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Machine SEL4.Model SEL4.Object.Structures #-}
-% {-# BOOT-EXPORTS: replyRemove replyRemoveTCB replyPush replyUnlink getReply setReply #-}
+% {-# BOOT-EXPORTS: replyRemove replyRemoveTCB replyPush replyUnlink updateReply #-}
 
 > import {-# SOURCE #-} SEL4.Kernel.Thread(getThreadState, setThreadState)
 > import SEL4.Machine.RegisterSet(PPtr)
@@ -28,6 +28,11 @@ This module specifies the behavior of reply objects.
 
 \end{impdetails}
 
+> getReply :: PPtr Reply -> Kernel Reply
+> getReply rptr = getObject rptr
+
+> setReply :: PPtr Reply -> Reply -> Kernel ()
+> setReply rptr r = setObject rptr r
 
 > updateReply :: PPtr Reply -> (Reply -> Reply) -> Kernel ()
 > updateReply replyPtr upd = do
@@ -161,9 +166,3 @@ on the thread state of the replyTCB of the replyPtr
 > cleanReply replyPtr = do
 >     updateReply replyPtr $ \reply -> reply { replyPrev = Nothing }
 >     updateReply replyPtr $ \reply -> reply { replyNext = Nothing }
-
-> getReply :: PPtr Reply -> Kernel Reply
-> getReply rptr = getObject rptr
-
-> setReply :: PPtr Reply -> Reply -> Kernel ()
-> setReply rptr r = setObject rptr r
