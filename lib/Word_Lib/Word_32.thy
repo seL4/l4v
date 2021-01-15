@@ -4,13 +4,50 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-section "Lemmas for Word Length 32"
+section "Words of Length 32"
 
-theory Word_Lemmas_32
-imports
-  Word_Lemmas_Prefix
-  Word_Setup_32
+theory Word_32
+  imports
+    Word_8
+    Word_16
+    Word_Syntax
+    Rsplit
+    More_Word_Operations
+    Bitwise
 begin
+
+type_synonym word32 = "32 word"
+lemma len32: "len_of (x :: 32 itself) = 32" by simp
+
+type_synonym sword32 = "32 sword"
+
+type_synonym machine_word_len = 32
+type_synonym machine_word = "machine_word_len word"
+
+definition word_bits :: nat
+where
+  "word_bits = LENGTH(machine_word_len)"
+
+text \<open>The following two are numerals so they can be used as nats and words.\<close>
+definition word_size_bits :: "'a :: numeral"
+where
+  "word_size_bits = 2"
+
+definition word_size :: "'a :: numeral"
+where
+  "word_size = 4"
+
+lemma word_bits_conv[code]:
+  "word_bits = 32"
+  unfolding word_bits_def by simp
+
+lemma word_size_word_size_bits:
+  "(word_size::nat) = 2 ^ word_size_bits"
+  unfolding word_size_def word_size_bits_def by simp
+
+lemma word_bits_word_size_conv:
+  "word_bits = word_size * 8"
+  unfolding word_bits_def word_size_def by simp
 
 lemma ucast_8_32_inj:
   "inj (ucast ::  8 word \<Rightarrow> 32 word)"
@@ -49,7 +86,7 @@ lemma unat_mask_2_less_4:
   "unat (p && mask 2 :: word32) < 4"
   apply (rule unat_less_helper)
   apply (rule order_le_less_trans, rule word_and_le1)
-  apply (simp add: mask_def)
+  apply (simp add: mask_eq)
   done
 
 lemmas unat_of_nat32' = unat_of_nat_eq[where 'a=32]
@@ -89,8 +126,8 @@ lemma unat_less_2p_word_bits:
 lemma Suc_unat_mask_div:
   "Suc (unat (mask sz div word_size::word32)) = 2 ^ (min sz word_bits - 2)"
   apply (case_tac "sz < word_bits")
-   apply (case_tac "2\<le>sz")
-    apply (clarsimp simp: word_size_def word_bits_def min_def mask_def)
+   apply (case_tac "2 \<le> sz")
+    apply (clarsimp simp: word_size_def word_bits_def min_def mask_eq)
     apply (drule (2) Suc_div_unat_helper
            [where 'a=32 and sz=sz and us=2, simplified, symmetric])
    apply (simp add: not_le word_size_def word_bits_def)
@@ -130,14 +167,7 @@ lemma less_4_cases:
 lemma unat_ucast_8_32:
   fixes x :: "word8"
   shows "unat (ucast x :: word32) = unat x"
-  unfolding ucast_def unat_def
-  apply (subst int_word_uint)
-  apply (subst mod_pos_pos_trivial)
-    apply simp
-   apply (rule lt2p_lem)
-   apply simp
-  apply simp
-  done
+  by transfer simp
 
 lemma if_then_1_else_0:
   "((if P then 1 else 0) = (0 :: word32)) = (\<not> P)"
@@ -175,20 +205,12 @@ lemma of_nat32_n_less_equal_power_2:
 
 lemma word_rsplit_0:
   "word_rsplit (0 :: word32) = [0, 0, 0, 0 :: word8]"
-  apply (simp add: word_rsplit_def bin_rsplit_def Let_def)
-  done
+  by (simp add: word_rsplit_def bin_rsplit_def)
 
 lemma unat_ucast_10_32 :
   fixes x :: "10 word"
   shows "unat (ucast x :: word32) = unat x"
-  unfolding ucast_def unat_def
-  apply (subst int_word_uint)
-  apply (subst mod_pos_pos_trivial)
-    apply simp
-   apply (rule lt2p_lem)
-   apply simp
-  apply simp
-  done
+  by transfer simp
 
 lemma bool_mask [simp]:
   fixes x :: word32
@@ -234,7 +256,7 @@ lemma ucast_of_nats [simp]:
   "(ucast (of_nat x :: word16) :: sword16) = (of_nat x)"
   "(ucast (of_nat x :: word16) :: sword8) = (of_nat x)"
   "(ucast (of_nat x :: word8) :: sword8) = (of_nat x)"
-  by (auto simp: ucast_of_nat is_down)
+  by (simp_all add: of_nat_take_bit take_bit_word_eq_self)
 
 lemmas signed_shift_guard_simpler_32'
     = power_strict_increasing_iff[where b="2 :: nat" and y=31]
@@ -256,30 +278,40 @@ lemma le_step_down_word_3:
 
 lemma shiftr_1:
   "(x::word32) >> 1 = 0 \<Longrightarrow> x < 2"
-  by word_bitwise clarsimp
+  by transfer (simp add: take_bit_drop_bit drop_bit_Suc)
 
 lemma has_zero_byte:
   "~~ (((((v::word32) && 0x7f7f7f7f) + 0x7f7f7f7f) || v) || 0x7f7f7f7f) \<noteq> 0
     \<Longrightarrow> v && 0xff000000 = 0 \<or> v && 0xff0000 = 0 \<or> v && 0xff00 = 0 \<or> v && 0xff = 0"
-  apply clarsimp
-  apply word_bitwise
-  by metis
+  by word_bitwise auto
 
 lemma mask_step_down_32:
-  "(b::32word) && 0x1 = (1::32word) \<Longrightarrow> (\<exists>x. x < 32 \<and> mask x = b >> 1) \<Longrightarrow> (\<exists>x. mask x = b)"
-  apply clarsimp
-  apply (rule_tac x="x + 1" in exI)
-  apply (subgoal_tac "x \<le> 31")
-   apply (erule le_step_down_nat, clarsimp simp:mask_def, word_bitwise, clarsimp+)+
-   apply (clarsimp simp:mask_def, word_bitwise, clarsimp)
-  apply clarsimp
-  done
+  \<open>\<exists>x. mask x = b\<close> if \<open>b && 1 = 1\<close>
+    and \<open>\<exists>x. x < 32 \<and> mask x = b >> 1\<close> for b :: \<open>32word\<close>
+proof -
+  from \<open>b && 1 = 1\<close> have \<open>odd b\<close>
+    by (auto simp add: mod_2_eq_odd and_one_eq)
+  then have \<open>b mod 2 = 1\<close>
+    using odd_iff_mod_2_eq_one by blast
+  from \<open>\<exists>x. x < 32 \<and> mask x = b >> 1\<close> obtain x where \<open>x < 32\<close> \<open>mask x = b >> 1\<close> by blast
+  then have \<open>mask x = b div 2\<close>
+    using shiftr1_is_div_2 [of b] by simp
+  with \<open>b mod 2 = 1\<close> have \<open>2 * mask x + 1 = 2 * (b div 2) + b mod 2\<close>
+    by (simp only:)
+  also have \<open>\<dots> = b\<close>
+    by (simp add: mult_div_mod_eq)
+  finally have \<open>2 * mask x + 1 = b\<close> .
+  moreover have \<open>mask (Suc x) = 2 * mask x + (1 :: 'a::len word)\<close>
+    by (simp add: mask_Suc_rec)
+  ultimately show ?thesis
+    by auto
+qed
 
 lemma unat_of_int_32:
   "\<lbrakk>i \<ge> 0; i \<le>2 ^ 31\<rbrakk> \<Longrightarrow> (unat ((of_int i)::sword32)) = nat i"
-  unfolding unat_def
-  apply (subst eq_nat_nat_iff, clarsimp+)
-  apply (simp add: word_of_int uint_word_of_int)
+  unfolding unat_eq_nat_uint
+  apply (subst eq_nat_nat_iff)
+    apply (auto simp add: take_bit_int_eq_self)
   done
 
 lemmas word_ctz_not_minus_1_32 = word_ctz_not_minus_1[where 'a=32, simplified]
@@ -304,5 +336,10 @@ lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword
   apply (subst down_cast_same[symmetric])
    apply (simp add:is_down)+
   done
+
+lemma word32_and_max_simp:
+  \<open>x AND 0xFFFFFFFF = x\<close> for x :: \<open>32 word\<close>
+  using word_and_full_mask_simp [of x]
+  by (simp add: numeral_eq_Suc mask_Suc_exp)
 
 end

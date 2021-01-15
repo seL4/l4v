@@ -5,7 +5,7 @@
  *)
 
 theory Word_Lemmas_64_Internal
-imports Word_Lemmas_64
+imports Word_Lib_Sumo
 begin
 
 lemmas unat_add_simple = iffD1[OF unat_add_lem[where 'a = 64, folded word_bits_def]]
@@ -43,11 +43,11 @@ lemma unat_mask_3_less_8:
 
 lemma scast_specific_plus64:
   "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
+  by (metis of_nat_add of_nat_numeral scast_of_nat)
 
 lemma scast_specific_plus64_signed:
   "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
+  by (metis scast_scast_id(2) scast_specific_plus64)
 
 lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
                           mask_len_id[where 'a=64, simplified]
