@@ -14,7 +14,7 @@ text \<open>
 \<close>
 
 theory Word_Lemmas_Internal
-imports Word_Lemmas
+imports Word_Lemmas More_Word_Operations Word_Syntax
 begin
 
 lemma signed_ge_zero_scast_eq_ucast:
@@ -74,12 +74,8 @@ lemma createNewCaps_guard:
   fixes x :: "'a :: len word"
   shows "\<lbrakk> unat x = c; b < 2 ^ LENGTH('a) \<rbrakk>
          \<Longrightarrow> (n < of_nat b \<and> n < x) = (n < of_nat (min (min b c) c))"
-  apply (erule subst)
-  apply (simp add: min.assoc)
-  apply (rule iffI)
-   apply (simp add: min_def word_less_nat_alt split: if_split)
-  apply (simp add: min_def word_less_nat_alt not_le le_unat_uoi split: if_split_asm)
-  by (simp add: of_nat_inverse)
+  by (metis (no_types) min_less_iff_conj nat_neq_iff unat_less_helper unat_ucast_less_no_overflow
+                       unsigned_less word_unat.Rep_inverse)
 
 lemma bits_2_subtract_ineq:
   "i < (n :: ('a :: len) word)
@@ -141,9 +137,7 @@ lemma of_nat_shift_distinct_helper:
    apply (rule power_strict_increasing)
     apply simp
    apply simp
-  apply (simp add: word_less_nat_alt)
-  apply (simp add: unat_minus_one [OF of_nat_neq_0]
-                   word_unat.Abs_inverse unats_def)
+  apply (fastforce simp: unat_of_nat_minus_1 word_less_nat_alt)
   done
 
 lemmas pre_helper2 = add_mult_in_mask_range[folded add_mask_fold]
@@ -345,7 +339,7 @@ lemma two_bits_cases:
   "\<lbrakk> LENGTH('a) > 2; (x :: 'a :: len word) && 3 = 0 \<Longrightarrow> P; x && 3 = 1 \<Longrightarrow> P;
      x && 3 = 2 \<Longrightarrow> P; x && 3 = 3 \<Longrightarrow> P \<rbrakk>
    \<Longrightarrow> P"
-  apply (frule and_mask_cases[where n=2 and x=x, simplified mask_def])
+  apply (frule and_mask_cases[where n=2 and x=x, simplified mask_eq])
   using upt_conv_Cons by auto[1]
 
 lemma zero_OR_eq:
@@ -379,7 +373,7 @@ proof -
   have "unat (x && mask n) \<le> unat (2^n::'a word)"
     apply (fold word_le_nat_alt)
     apply (rule order_trans, rule word_and_le1)
-    apply (simp add: mask_def)
+    apply (simp add: mask_eq)
     done
   with assms
   show ?thesis by (simp add: unat_2tp_if)
@@ -393,11 +387,10 @@ lemma sign_extend_less_mask_idem:
 
 lemma word_and_le:
   "a \<le> c \<Longrightarrow> (a :: 'a :: len word) && b \<le> c"
-  by (subst word_bool_alg.conj.commute)
-     (erule word_and_le')
+  by (subst and.commute) (erule word_and_le')
 
 lemma le_smaller_mask:
-  "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m"
+  "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m" for x :: "'a::len word"
   by (erule (1) order.trans[OF _ mask_mono])
 
 (* The strange phrasing and ordering of assumptions is to support using this as a

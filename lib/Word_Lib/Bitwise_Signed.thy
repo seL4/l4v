@@ -6,9 +6,10 @@
 
 section "Bitwise tactic for Signed Words"
 
-theory WordBitwise_Signed
+theory Bitwise_Signed
 imports
-  "HOL-Word.More_Word"
+  "HOL-Library.Word"
+  Bitwise
   Signed_Words
 begin
 

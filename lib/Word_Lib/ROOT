@@ -6,18 +6,17 @@
 
 chapter Lib
 
-session Word_Lib (lib) = "HOL-Word" +
-  options [timeout = 150, document=pdf]
+session Word_Lib (lib) = HOL +
+  options [timeout = 300, document=pdf]
   sessions
-    "HOL-Library"
     "HOL-Eisbach"
-  directories  (* not in the AFP *)
+  directories  (* not in the AFP: *)
     "$L4V_ARCH"
-  theories
-    "Word_Lemmas_32"
-    "Word_Lemmas_64"
   theories (* not in the AFP: *)
     "Distinct_Prop"
     "$L4V_ARCH/WordSetup"
+  theories
+    Guide
+    Examples
   document_files
     "root.tex"

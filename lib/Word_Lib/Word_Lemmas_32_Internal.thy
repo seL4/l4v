@@ -5,7 +5,7 @@
  *)
 
 theory Word_Lemmas_32_Internal
-imports Word_Lemmas_32
+imports Word_Lib_Sumo
 begin
 
 lemmas sint_eq_uint_32 = sint_eq_uint_2pl[where 'a=32, simplified]
@@ -95,7 +95,7 @@ lemmas unat_ucast_16_32 = unat_signed_ucast_less_ucast[where 'a=16 and 'b=32, si
 (* FIXME: generalize? *)
 lemma scast_mask_8:
   "scast (mask 8 :: sword32) = (mask 8 :: word32)"
-  by (clarsimp simp: mask_def)
+  by (clarsimp simp: mask_eq)
 
 lemmas ucast_le_8_32_equiv = ucast_le_up_down_iff[where 'a=8 and 'b=32, simplified]
 
