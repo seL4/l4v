@@ -3163,7 +3163,7 @@ lemma schedContextUnbindReply_obj_at'_not_reply:
   "(\<And>ko f. P (scReply_update f ko) = P ko)
    \<Longrightarrow> schedContextUnbindReply scPtr \<lbrace>obj_at' P p\<rbrace>"
   apply (clarsimp simp: schedContextUnbindReply_def)
-  apply (wpsimp wp: set_sc'.obj_at'_strongest set_reply'.set_wp)
+  apply (wpsimp wp: set_sc'.obj_at'_strongest updateReply_wp_all)
   by (auto simp: obj_at'_def projectKOs)
 
 lemma schedContextUnbindReply_obj_at'_reply_None:
