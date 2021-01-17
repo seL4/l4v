@@ -29,7 +29,7 @@ USA
 section "Examples for Parallel Assignments"
 
 theory XVcgEx
-imports XVcg
+imports "../XVcg"
 
 begin
 

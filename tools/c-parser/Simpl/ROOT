@@ -10,6 +10,5 @@ session Simpl (AFP) = HOL +
   theories
     Simpl
   document_files
-    "mathpartir.sty"
     "root.bib"
     "root.tex"

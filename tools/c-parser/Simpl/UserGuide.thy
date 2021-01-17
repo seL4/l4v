@@ -873,8 +873,7 @@ apply (hoare_rule HoareTotal_ProcRec2
 \<close>
   txt \<open>@{subgoals [margin=75,display]}\<close>
 apply simp_all
-by (vcg,simp)+
-
+  by (vcg,force)+
 text \<open>By doing some arithmetic we can express the termination condition with a single
 measure function.
 \<close>

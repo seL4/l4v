@@ -28,7 +28,7 @@ USA
 
 section \<open>Examples using Statespaces\<close>
 
-theory VcgExSP imports HeapList Vcg begin
+theory VcgExSP imports "../HeapList" "../Vcg" begin
 
 
 subsection \<open>State Spaces\<close>
