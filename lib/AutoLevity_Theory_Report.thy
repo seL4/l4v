@@ -371,7 +371,7 @@ fun file_of_thy thy =
     val path = Resources.master_directory thy;
     val name = Context.theory_name thy;
     val path' = Path.append path (Path.basic (name ^ ".thy"))
-  in Path.smart_implode path' end;
+  in Path.implode_symbolic path' end;
 
 fun entry_of_thy thy = ({name = Context.theory_name thy, file = file_of_thy thy} : theory_entry)
 

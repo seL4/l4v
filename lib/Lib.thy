@@ -19,9 +19,10 @@ imports
   ML_Goal
   Eval_Bool
   NICTATools
-  "HOL-Library.Prefix_Order"
-  "HOL-Library.Word" (* FIXME: this should not be necessary *)
+  "Word_Lib.WordSetup"
 begin
+
+typ "32 word"
 
 (* FIXME: eliminate *)
 abbreviation (input)
@@ -2589,11 +2590,7 @@ lemma int_shiftl_less_cancel:
 lemma int_shiftl_lt_2p_bits:
   "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
   apply (clarsimp simp: shiftl_int_def)
-  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
-  apply (drule_tac z="2^i" in less_le_trans)
-   apply simp
-  apply simp
-  done
+  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
 \<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
 
 lemma int_eq_test_bit:
@@ -2615,7 +2612,7 @@ text \<open>Support for defining enumerations on datatypes derived from enumerat
 lemma distinct_map_enum:
   "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>
    \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
-  by (simp add: distinct_map enum_distinct inj_onI)
+  by (simp add: distinct_map inj_onI)
 
 lemma if_option_None_eq:
   "((if P then None else Some x) = None) = P"
