@@ -411,7 +411,7 @@ lemma pinv_corres:
   apply (case_tac i)
 
              apply (clarsimp simp: o_def liftE_bindE)
-             apply (rule corres_stateAssertE_add_assertion[where P'=\<top>, simplified])
+             apply (rule corres_stateAssertE_add_assertion)
              apply (rule corres_guard_imp)
 
                apply (rule corres_split_norE[OF corres_returnOkTT])
@@ -478,7 +478,7 @@ lemma pinv_corres:
          apply (wpsimp+)[4]
      \<comment> \<open>CNodes\<close>
      apply clarsimp
-     apply (rule corres_stateAssertE_add_assertion[where P'=\<top>, simplified])
+     apply (rule corres_stateAssertE_add_assertion)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE [OF _ inv_cnode_corres])
           apply (rule corres_trivial, simp add: returnOk_def)
