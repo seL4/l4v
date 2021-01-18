@@ -1307,8 +1307,8 @@ lemma corres_stateAssert_implied2:
 
 lemma corres_stateAssert_add_assertion:
   "\<lbrakk> corres_underlying sr nf nf' r P (Q and Q') f (g ());
-     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; P' s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r (P and P') Q f (stateAssert Q' [] >>= g)"
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f (stateAssert Q' [] >>= g)"
   apply (clarsimp simp: bind_assoc stateAssert_def)
   apply (rule corres_symb_exec_r [OF _ get_sp])
     apply (rule corres_assume_pre)
@@ -1319,8 +1319,8 @@ lemma corres_stateAssert_add_assertion:
 
 lemma corres_stateAssertE_add_assertion:
   "\<lbrakk> corres_underlying sr nf nf' (i \<oplus> r) P (Q and Q') f (g ());
-     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; P' s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' (i \<oplus> r) (P and P') Q f (stateAssertE Q' [] >>=E g)"
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' (i \<oplus> r) P Q f (stateAssertE Q' [] >>=E g)"
   by (clarsimp simp: stateAssertE_def liftE_bindE corres_stateAssert_add_assertion)
 
 lemma corres_add_noop_lhs:

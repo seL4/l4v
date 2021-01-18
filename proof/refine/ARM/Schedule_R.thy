@@ -711,7 +711,7 @@ lemma cur_thread_update_corres:
              (modify (cur_thread_update (\<lambda>_. t))) (setCurThread t)"
   apply add_ready_qs_runnable
   apply (unfold setCurThread_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply clarsimp
   apply (rule corres_modify)
@@ -796,7 +796,7 @@ proof -
     apply -
     apply (simp add: switch_to_thread_def Thread_H.switchToThread_def)
     apply add_ready_qs_runnable
-    apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
+    apply (rule corres_stateAssert_add_assertion)
      apply (rule corres_symb_exec_l[where Q = "\<lambda> s rv. (?PA and (=) rv) s"])
         apply (rule corres_symb_exec_l)
            apply (rule corres_guard_imp[OF mainpart])
@@ -827,13 +827,13 @@ lemma switch_idle_thread_corres:
   "corres dc (invs and valid_sched) invs_no_cicd' switch_to_idle_thread switchToIdleThread"
   apply add_ready_qs_runnable
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ git_corres])
       apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
         apply (unfold setCurThread_def)
-        apply (rule corres_stateAssert_add_assertion[where P'=\<top> and P=\<top>, simplified])
+        apply (rule corres_stateAssert_add_assertion)
          apply clarsimp
          apply (rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
@@ -1707,7 +1707,7 @@ lemma chooseThread_corres:
      choose_thread chooseThread" (is "corres _ ?PREI ?PREH _ _")
   apply add_ready_qs_runnable
   unfolding choose_thread_def chooseThread_def numDomains_def
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply (simp only: numDomains_def return_bind Let_def)
   apply (simp cong: if_cong) (* clean up if 1 < numDomains *)

@@ -401,7 +401,7 @@ lemma cancel_signal_corres:
   apply add_sym_refs
   apply add_ready_qs_runnable
   apply (simp add: cancel_signal_def cancelSignal_def Let_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ntfn_corres])
@@ -535,9 +535,9 @@ lemma cancel_ipc_corres:
   apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: sym_refs_asrt_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+  apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
@@ -1431,7 +1431,7 @@ lemma (in delete_one) suspend_corres:
              (SchedContext_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: SchedContext_A.suspend_def Thread_H.suspend_def)
   apply add_sym_refs
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
+  apply (rule corres_stateAssert_add_assertion)
    prefer 2
    apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule corres_guard_imp)
@@ -2517,7 +2517,7 @@ proof -
                                            , folded cancelAllIPC_loop_body_def])
     apply (subst forM_x_def fun_app_def)+
     apply add_sym_refs
-    apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified, rotated])
+    apply (rule corres_stateAssert_add_assertion[rotated])
      apply (clarsimp simp: pred_conj_def sym_refs_asrt_def)
     apply (rule corres_split'[OF _ _ get_simple_ko_sp get_ep_sp'])
      apply (rule corres_guard_imp [OF get_ep_corres]
@@ -2645,7 +2645,7 @@ lemma ntfn_cancel_corres:
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
   apply add_sym_refs
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
+  apply (rule corres_stateAssert_add_assertion)
   apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
    apply (rule corres_guard_imp [OF get_ntfn_corres])
     apply simp+
@@ -3479,7 +3479,7 @@ lemma cancel_badged_sends_corres:
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
   apply add_sym_refs
   apply (clarsimp simp: cancel_badged_sends_def cancelBadgedSends_def)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
+  apply (rule corres_stateAssert_add_assertion)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF _ get_ep_corres get_simple_ko_sp get_ep_sp'
                               , where Q="invs and valid_sched"

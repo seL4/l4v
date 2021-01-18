@@ -904,8 +904,8 @@ lemma detype_corres:
    apply (erule ksReleaseQueue_runnable_thread_state; fastforce?)
   apply add_sym_refs
   apply (simp add: deleteObjects_def2)
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
-  apply (rule corres_stateAssert_add_assertion[where P'=\<top>, simplified])
+  apply (rule corres_stateAssert_add_assertion)
+  apply (rule corres_stateAssert_add_assertion)
    prefer 2
    apply clarsimp
    apply (rule delete_locale.deletionIsSafe_holds
