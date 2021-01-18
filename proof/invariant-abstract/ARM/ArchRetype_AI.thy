@@ -1354,24 +1354,13 @@ lemma valid_arch_mdb_detype:
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by auto
 
-end
-
-lemmas clearMemory_invs[wp] = ARM.clearMemory_invs
-
-lemmas invs_irq_state_independent[intro!, simp]
-    = ARM.invs_irq_state_independent
-
-lemmas init_arch_objects_invs_from_restricted
-    = ARM.init_arch_objects_invs_from_restricted
-
-lemmas caps_region_kernel_window_imp
-    = ARM.caps_region_kernel_window_imp
-
 lemmas init_arch_objects_wps
-    = ARM.init_arch_objects_cte_wp_at
-      ARM.init_arch_objects_valid_cap
-      ARM.init_arch_objects_cap_table
-      ARM.init_arch_objects_excap
-      ARM.init_arch_objects_st_tcb_at
+    = init_arch_objects_cte_wp_at
+      init_arch_objects_valid_cap
+      init_arch_objects_cap_table
+      init_arch_objects_excap
+      init_arch_objects_st_tcb_at
+
+end
 
 end
