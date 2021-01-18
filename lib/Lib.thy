@@ -22,8 +22,6 @@ imports
   "Word_Lib.WordSetup"
 begin
 
-typ "32 word"
-
 (* FIXME: eliminate *)
 abbreviation (input)
   split   :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<times> 'b \<Rightarrow> 'c"
