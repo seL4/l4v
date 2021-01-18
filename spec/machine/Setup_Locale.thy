@@ -6,7 +6,7 @@
 
 
 theory Setup_Locale
-imports "Lib.Qualify" "Lib.Requalify" "Lib.Extend_Locale"
+imports "Lib.Qualify" "Lib.Requalify"
 begin
 
 (*

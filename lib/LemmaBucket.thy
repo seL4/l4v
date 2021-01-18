@@ -496,13 +496,14 @@ lemma not_emptyI:
 lemma add_mask_lower_bits2:
   "\<lbrakk>is_aligned (x :: 'a :: len word) n; p && ~~ mask n = 0\<rbrakk> \<Longrightarrow> x + p && ~~ mask n = x"
   apply (subst word_plus_and_or_coroll)
-  apply (simp add: aligned_mask_disjoint and_mask_0_iff_le_mask)
-   apply (clarsimp simp: word_bool_alg.conj_disj_distrib2)
+   apply (simp add: aligned_mask_disjoint and_mask_0_iff_le_mask)
+  apply (clarsimp simp: bit.conj_disj_distrib2)
   done
 
 (* FIXME: move to GenericLib *)
 lemma if3_fold2:
-  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)" by simp
+  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)"
+  by (rule z3_rule)
 
 lemma inter_UNIV_minus[simp]:
   "x \<inter> (UNIV - y) = x-y" by blast

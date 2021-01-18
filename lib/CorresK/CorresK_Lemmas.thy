@@ -108,7 +108,6 @@ lemma F_all2_eq:
  apply (intro conjI impI allI)
  apply (drule list_all2_conjD)
  apply (simp add: list.rel_eq)
- apply clarsimp
  apply (simp add: list_all2_to_list_all list_all_mem_subset)
  apply (rule list.rel_refl_strong;simp)
  done

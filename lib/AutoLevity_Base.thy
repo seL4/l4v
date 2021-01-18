@@ -214,9 +214,6 @@ end
 
    This is needed to perform localized attribute tests (e.g.. is this locale assumption marked as simp?) *)
 
-(* TODO: extend_locale breaks this naming scheme by adding the "chunk" qualifier. This can
-   probably just be handled as a special case *)
-
 fun most_local_fact_of ctxt xnm prop =
 let
   val local_name = xnm |> try (Long_Name.explode #> tl #> tl #> Long_Name.implode)

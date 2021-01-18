@@ -141,7 +141,7 @@ fun end_global_qualify thy =
      |> (fn thy => fold (Sign.hide_const false o snd) consts thy)
      |> (fn thy => fold (Sign.hide_type false o snd) types thy);
 
-    val lthy = Named_Target.begin (#target_name args, Position.none) thy''
+    val lthy = Target_Context.context_begin_named_cmd [] (#target_name args, Position.none) thy''
       |> Local_Theory.map_background_naming (Name_Space.parent_path #> Name_Space.mandatory_path nm);
 
     val lthy' = lthy

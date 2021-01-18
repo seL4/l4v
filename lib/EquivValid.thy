@@ -717,17 +717,19 @@ lemma bind_spec_ev:
   shows "spec_equiv_valid_inv s' I A (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
   using reads_res_1
   apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def valid_def bind_def split_def)
+  apply (rename_tac t a b aa ba ab bb ac bc)
   apply (erule_tac x=t in allE)
   apply clarsimp
   apply (erule_tac x="(a, b)" in ballE)
-  apply (erule_tac x="(ab, bb)" in ballE)
-  apply clarsimp
-  apply (cut_tac rv="ab" and s''="b" in reads_res_2)
-   apply assumption
-  apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
-  apply(erule_tac x=bb in allE)
-  using hoare
-  apply (fastforce simp: valid_def)+
+   apply (erule_tac x="(ab, bb)" in ballE)
+    apply clarsimp
+    apply (cut_tac reads_res_2)
+     prefer 2
+     apply assumption
+    apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
+    apply(erule_tac x=bb in allE)
+    using hoare
+    apply (fastforce simp: valid_def)+
   done
 
 lemma bindE_spec_ev:

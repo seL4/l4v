@@ -200,7 +200,7 @@ lemma either_simp[simp]: "either = case_sum"
   apply (simp add: either_def)
   done
 
-class HS_bit = bit_operations +
+class HS_bit = semiring_bit_operations +
   fixes shiftL :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
   fixes shiftR :: "'a \<Rightarrow> nat \<Rightarrow> 'a"
   fixes bitSize :: "'a \<Rightarrow> nat"
@@ -236,7 +236,7 @@ instance ..
 
 end
 
-class finiteBit = bit_operations +
+class finiteBit = ring_bit_operations +
   fixes finiteBitSize :: "'a \<Rightarrow> nat"
 
 instantiation word :: (len) finiteBit
@@ -305,12 +305,7 @@ lemma fromIntegral_simp2[simp]: "fromIntegral = unat"
   by (simp add: fromIntegral_def fromInteger_nat toInteger_word)
 
 lemma fromIntegral_simp3[simp]: "fromIntegral = ucast"
-  apply (simp add: fromIntegral_def fromInteger_word toInteger_word)
-  apply (rule ext)
-  apply (simp add: ucast_def)
-  apply (subst word_of_nat)
-  apply (simp add: unat_def)
-  done
+  unfolding fromIntegral_def fromInteger_word toInteger_word by force
 
 lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
   by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
@@ -318,9 +313,7 @@ lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id
 definition
   infix_apply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'b \<Rightarrow> 'c" ("_ `~_~` _" [81, 100, 80] 80) where
   infix_apply_def[simp]:
- "infix_apply a f b \<equiv> f a b"
-
-term "return $ a `~b~` c d"
+ "a `~f~` b \<equiv> f a b"
 
 definition
   zip3 :: "'a list \<Rightarrow> 'b list \<Rightarrow> 'c list \<Rightarrow> ('a \<times> 'b \<times> 'c) list" where

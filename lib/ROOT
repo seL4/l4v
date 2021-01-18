@@ -35,7 +35,6 @@ session Lib (lib) = Word_Lib +
     HaskellLib_H
     Eval_Bool
     Bisim_UL
-    Extend_Locale
     Solves_Tac
     Crunch
     Crunch_Instances_NonDet
