@@ -1280,25 +1280,13 @@ lemma valid_arch_mdb_detype:
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by (simp add: valid_arch_mdb_def ioport_revocable_def detype_def)
 
-end
-
-lemmas clearMemory_invs[wp] = X64.clearMemory_invs
-
-lemmas invs_irq_state_independent[intro!, simp]
-    = X64.invs_irq_state_independent
-
-lemmas caps_region_kernel_window_imp
-    = X64.caps_region_kernel_window_imp
-
-
-lemmas init_arch_objects_invs_from_restricted
-    = X64.init_arch_objects_invs_from_restricted
-
 lemmas init_arch_objects_wps
-    = X64.init_arch_objects_cte_wp_at
-      X64.init_arch_objects_valid_cap
-      X64.init_arch_objects_cap_table
-      X64.init_arch_objects_excap
-      X64.init_arch_objects_st_tcb_at
+    = init_arch_objects_cte_wp_at
+      init_arch_objects_valid_cap
+      init_arch_objects_cap_table
+      init_arch_objects_excap
+      init_arch_objects_st_tcb_at
+
+end
 
 end
