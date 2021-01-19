@@ -463,6 +463,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextUnbindReply :: PPtr SchedContext -> Kernel ()
 > schedContextUnbindReply scPtr = do
+>     stateAssert sym_refs_asrt "Assert that `sym_refs (state_refs_of' s)` holds"
 >     sc <- getSchedContext scPtr
 >     replyPtrOpt <- return $ scReply sc
 >     when (replyPtrOpt /= Nothing) $ do
@@ -477,6 +478,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     sc_ptr_opt <- threadGet tcbSchedContext tptr
 >     when (sc_ptr_opt /= Nothing) $ do
 >         let scPtr = fromJust sc_ptr_opt
