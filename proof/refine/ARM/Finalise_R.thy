@@ -2377,9 +2377,53 @@ lemma schedContextDonate_valid_queues:
   apply (wpsimp wp: threadSet_valid_queues_new hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply (clarsimp simp: obj_at'_def inQ_def)
   done
-thm schedContextDonate_def tcbSchedDequeue_def 
-tcbReleaseRemove_def setQueue_def getReleaseQueue_def 
-setReleaseQueue_def
+
+lemma valid_sched_context'_updates[simp]:
+  "valid_sched_context' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_sched_context' sc' s"
+  "valid_sched_context' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_sched_context' sc' s"
+  by (auto simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
+
+crunches tcbReleaseRemove, tcbSchedDequeue, rescheduleRequired
+  for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
+  (wp: crunch_wps)
+
+global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
+  by typ_at_props'
+
+crunches tcbReleaseRemove
+  for valid_sched_context'[wp]: "\<lambda>s. valid_sched_context' sc' s"
+
+lemma schedContextDonate_valid_objs':
+  "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
+   schedContextDonate scPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: schedContextDonate_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
+  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
+               in hoare_weaken_pre[rotated])
+   apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (rule hoare_when_cases, clarsimp)
+   apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
+    apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
+   apply wpsimp
+  apply (rule_tac B="\<lambda>_. ?pre and sc_at' scPtr" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_sc_valid_objs')
+   apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
+                         sc_size_bounds_def objBits_def objBitsKO_def)
+  apply (wpsimp wp: threadSet_valid_objs')
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
+  done
+
+lemma schedContextDonate_valid_pspace':
+  "\<lbrace>valid_pspace' and tcb_at' tcbPtr\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  sorry
+
+(* End lemmas for schedContextDonate *)
 
 lemma isHeadSome:
  "isHead (Some h) \<longleftrightarrow> (\<exists>p. h = Head p)"
@@ -2500,16 +2544,10 @@ crunches updateReply, cleanReply
 
 lemma replyPop_valid_pspace'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding replyPop_def valid_pspace'_def cleanReply_def
+  unfolding replyPop_def cleanReply_def
   supply set_reply'.set_wp[wp del] if_split[split del]
-  apply (wpsimp wp: )
-             apply (rule_tac Q="\<lambda>_. valid_pspace'" in hoare_strengthen_post)
-              apply (wp replyUnlink_valid_pspace')
-             apply (simp add: valid_pspace_mdb')
-            apply (wpsimp wp: updateReply_valid_objs'_preserved_strong updateReply_valid_pspace'_strong
-                              hoare_vcg_all_lift simp: valid_reply'_def)
-           apply (wpsimp wp: )
-find_theorems schedContextDonate
+  apply (wpsimp wp: updateReply_valid_pspace' schedContextDonate_valid_pspace')
+find_theorems tcbSchedContext valid
   oops
 
 lemma replyPop_ksSchedulerAction[wp]:
@@ -2972,10 +3010,6 @@ lemma schedContextUnbindTCB_invs'_helper:
                      valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
                      idle_tcb'_def state_refs_of'_def comp_def)
   done
-
-crunches tcbReleaseRemove, tcbSchedDequeue, rescheduleRequired
-  for obj_at'_sc[wp]: "obj_at' (P :: sched_context \<Rightarrow> bool) p"
-  (wp: crunch_wps)
 
 lemma schedContextUnbindTCB_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -3755,43 +3789,6 @@ lemma rescheduleRequired_valid_sched_context'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: isSchedulable_inv)+
   apply (wpsimp simp: valid_sched_context'_def valid_bound_obj'_def
                split: option.splits)
-  done
-
-global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
-  by typ_at_props'
-
-lemma valid_sched_context'_updates[simp]:
-  "valid_sched_context' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_sched_context' sc' s"
-  "valid_sched_context' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_sched_context' sc' s"
-  by (auto simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
-
-crunches tcbReleaseRemove
-  for valid_sched_context'[wp]: "\<lambda>s. valid_sched_context' sc' s"
-
-lemma schedContextDonate_valid_objs':
-  "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
-   schedContextDonate scPtr tcbPtr
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  (is "valid ?pre _ _")
-  apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
-               in hoare_weaken_pre[rotated])
-   apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
-  apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_when_cases, clarsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
-    apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
-   apply wpsimp
-  apply (rule_tac B="\<lambda>_. ?pre and sc_at' scPtr" in hoare_seq_ext[rotated])
-   apply (wpsimp wp: set_sc_valid_objs')
-   apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
-                         sc_size_bounds_def objBits_def objBitsKO_def)
-  apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
 lemma setQueue_valid_reply'[wp]:
