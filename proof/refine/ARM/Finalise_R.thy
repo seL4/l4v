@@ -2857,6 +2857,7 @@ lemma unbindFromSC_bound_sc_tcb_at'_None:
    unbindFromSC t
    \<lbrace>\<lambda>rv. bound_sc_tcb_at' ((=) None) t\<rbrace>"
   apply (simp add: unbindFromSC_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (wpsimp wp: schedContextUnbindTCB_bound_sc_tcb_at'_None threadGet_wp get_sc_inv'
                     hoare_drop_imp)
   apply (auto simp: pred_tcb_at'_def obj_at'_def)
