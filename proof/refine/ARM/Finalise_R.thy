@@ -2440,55 +2440,65 @@ lemma hoare_vcg_conj_lift':
   apply (rule hoare_pre_imp [OF _ y], simp)
   done
 
+lemma updateReply_list_refs_of_replies':
+  "\<lbrace>\<lambda>s. \<forall>r. ko_at' r replyPtr s \<longrightarrow>
+              P ((list_refs_of_replies' s)(replyPtr := list_refs_of_reply' (f r)))\<rbrace>
+   updateReply replyPtr f
+   \<lbrace>\<lambda>rv s. P (list_refs_of_replies' s)\<rbrace>"
+  by (wpsimp simp: updateReply_def)
+
+lemma hotfix:
+  "\<And>reply s y prevReplyPtr prevReply.
+       \<lbrakk>replyNext reply = Some y; replyPrev reply = Some prevReplyPtr; sym_refs (list_refs_of_replies' s);
+        obj_at' (\<lambda>reply. \<exists>y. replyNext reply = Some y) replyPtr s; ko_at' reply replyPtr s;
+        isHead (Some y); ko_at' prevReply prevReplyPtr s; replies_of' s prevReplyPtr = Some prevReply;
+        replyNext prevReply = Some (Next replyPtr)\<rbrakk>
+       \<Longrightarrow> sym_refs
+             (\<lambda>a. if a = replyPtr then {}
+                   else if a = prevReplyPtr
+                        then list_refs_of_reply' (replyNext_update (\<lambda>_. replyNext reply) prevReply)
+                        else list_refs_of_replies' s a)"
+  by (erule delta_sym_refs
+          ; clarsimp simp: isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
+                           list_refs_of_replies'_def opt_map_def get_refs_def
+                    split: reply_next.split_asm if_splits option.splits)
+
 lemma replyPop_list_refs_of_replies'[wp]:
   "\<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s) \<and> obj_at' (\<lambda>reply. replyNext reply \<noteq> None) replyPtr s\<rbrace>
 replyPop replyPtr tcbPtr
 \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   unfolding replyPop_def
   apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-  apply (rename_tac reply)
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)+
   apply (rule hoare_seq_ext)
    apply (wpsimp wp: cleanReply_list_refs_of_replies')
   apply (rule hoare_when_cases)
-   apply wpsimp
-   apply (erule delta_sym_refs
-          ; clarsimp simp: isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
-                           list_refs_of_replies'_def
-                    split: reply_next.split_asm if_splits option.splits)
+   apply (clarsimp simp: obj_at'_def)
   apply (rule hoare_seq_ext[OF _ assert_sp])
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: comp_def\<close>, simp?)+
   apply (rule hoare_seq_ext)
    apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>, simp?)
    apply (wpsimp wp: hoare_when_cases)
   apply (rule hoare_when_cases[rotated])
-apply (wpsimp wp: updateReply_list_refs_of_replies'_inv)
-   apply (clarsimp simp: isHead_def)
+   apply (wpsimp wp: updateReply_list_refs_of_replies')
+   apply (rename_tac prevReplyPtr prevReply)
    apply (frule_tac reply=prevReply in ko_at'_replies_of')
    apply (frule (3) sym_refs_replyNext)
-   apply (erule delta_sym_refs
-          ; (clarsimp simp: obj_at'_def projectKOs list_refs_of_reply'_def
-                            list_refs_of_replies'_def  get_refs_def
-                     split: if_splits option.splits | rule conjI)+)
-  apply (clarsimp simp: obj_at'_def)
-  sorry
-
-lemma updateReply_list_refs_of_replies':
-  assumes "\<And>reply. list_refs_of_reply' (f reply) = k (list_refs_of_reply' reply)"
-  shows "\<lbrace>\<lambda>s. P (map_set (heap_upd k replyPtr (list_refs_of_replies_opt' s)))\<rbrace>
-         updateReply replyPtr f
-         \<lbrace>\<lambda>rv s. P (list_refs_of_replies' s)\<rbrace>"
-  apply (wpsimp simp: updateReply_def heap_upd_def assms)
-  apply (erule subst[rotated])
-  apply (rule arg_cong[where f=P, OF all_ext], clarsimp)
-  by (clarsimp simp: map_set_def ko_at'_replies_of' opt_map_left_Some)
+(* check above hotfix *)
+subgoal sorry
+  apply (clarsimp simp:)
+  apply (erule delta_sym_refs
+         ; clarsimp simp: isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
+                          list_refs_of_replies'_def opt_map_def
+                   split: reply_next.split_asm if_splits option.splits)
+  done
 
 crunches updateReply, cleanReply
   for valid_irq_node'[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
   and valid_irq_handlers'[wp]: valid_irq_handlers'
   and valid_irq_states'[wp]: valid_irq_states'
 
-lemma replyRemoveTCB_valid_pspace'[wp]:
+lemma replyPop_valid_pspace'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
   unfolding replyPop_def valid_pspace'_def cleanReply_def
   supply set_reply'.set_wp[wp del] if_split[split del]
@@ -2500,9 +2510,17 @@ lemma replyRemoveTCB_valid_pspace'[wp]:
                               hoare_vcg_all_lift simp: valid_reply'_def)
            apply (wpsimp wp: )
 find_theorems schedContextDonate
-
   oops
 
+lemma replyPop_ksSchedulerAction[wp]:
+  "replyPop replyPtr tcbPtr \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+  subgoal sorry
+  done
+
+(* 
+crunches replyPop
+  for ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+ *)
 (* 
 crunches replyPop
   for valid_pspace'[wp]: valid_pspace'
