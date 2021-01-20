@@ -13722,10 +13722,9 @@ lemma sched_context_yield_to_valid_sched:
                     tcb_sched_dequeue_valid_blocked_except_set' tcb_sched_dequeue_valid_ready_qs)
   apply (clarsimp simp: valid_sched_def)
   apply (intro conjI)
-   apply (clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
-   apply (frule invs_sym_refs)
-   apply (frule_tac scp=sc_ptr in sym_ref_sc_tcb, blast, blast, force)
-  apply (clarsimp simp: ct_in_state_def runnable_eq_active)
+   apply (clarsimp simp: ct_in_state_def runnable_eq_active)
+  apply (fastforce dest!: invs_sym_refs sym_ref_sc_tcb
+                    simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps)
   done
 
 lemma invoke_sched_context_valid_sched:
