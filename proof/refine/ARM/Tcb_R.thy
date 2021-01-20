@@ -1154,6 +1154,18 @@ lemma gts_isRunnable_corres:
    apply auto
   done
 
+lemma gts_isBlocked_corres:
+  "corres (\<lambda>ts blocked. ipc_queued_thread_state ts = blocked) (tcb_at t) (tcb_at' t)
+     (get_thread_state t) (isBlocked t)"
+  apply (simp add: isBlocked_def)
+  apply (subst bind_return[symmetric])
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ gts_corres])
+      apply (case_tac rv, clarsimp+)
+     apply (wp hoare_TrueI)+
+   apply auto
+  done
+
 lemma tcbSchedDequeue_not_queued:
   "\<lbrace>\<top>\<rbrace> tcbSchedDequeue t
    \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
