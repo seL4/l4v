@@ -295,8 +295,8 @@ where
         set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
         set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
         tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr;
         tcb_sched_action tcb_sched_enqueue ct_ptr;
+        tcb_sched_action tcb_sched_enqueue tcb_ptr;
         reschedule_required
       od
     od
