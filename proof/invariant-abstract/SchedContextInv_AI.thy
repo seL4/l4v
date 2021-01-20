@@ -578,8 +578,8 @@ where
              | NotificationCap n _ _ \<Rightarrow>
                    ex_nonz_cap_to n and sc_ntfn_sc_at (\<lambda>ntfn. ntfn = (Some n)) scptr
              | _ \<Rightarrow> \<lambda>_. False))"
-  | "valid_sched_context_inv (InvokeSchedContextUnbind scptr cap)
-     = (sc_at scptr and ex_nonz_cap_to scptr and (\<lambda>s. obj_ref_of cap \<noteq> cur_thread s))"
+  | "valid_sched_context_inv (InvokeSchedContextUnbind scptr)
+     = (sc_at scptr and ex_nonz_cap_to scptr)"
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
@@ -1786,7 +1786,12 @@ lemma sts_valid_sched_control_inv[wp]:
 lemma decode_sched_context_inv_inv:
   "\<lbrace>P\<rbrace> decode_sched_context_invocation label sc_ptr excaps args \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: decode_sched_context_invocation_def whenE_def split del: if_split
+   apply (simp add: decode_sched_context_invocation_def
+                    decode_sched_context_bind_def
+                    decode_sched_context_unbind_object_def
+                    decode_sched_context_yield_to_def
+                    whenE_def
+         split del: if_split
           | wp (once) hoare_drop_imp get_sk_obj_ref_inv get_sc_obj_ref_inv | wpcw)+
   done
 
@@ -1803,8 +1808,11 @@ lemma decode_sched_context_inv_wf:
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
      decode_sched_context_invocation label sc_ptr excaps args
    \<lbrace>valid_sched_context_inv\<rbrace>, -"
-  apply (wpsimp simp: decode_sched_context_invocation_def whenE_def
-                      get_sk_obj_ref_def get_tcb_obj_ref_def get_sc_obj_ref_def
+  apply (wpsimp simp: decode_sched_context_invocation_def
+                      decode_sched_context_bind_def
+                      decode_sched_context_unbind_object_def
+                      decode_sched_context_yield_to_def
+                      whenE_def get_sk_obj_ref_def get_tcb_obj_ref_def get_sc_obj_ref_def
            split_del: if_split
                   wp: hoare_vcg_if_splitE get_simple_ko_wp thread_get_wp' get_sched_context_wp
                       gts_wp)
