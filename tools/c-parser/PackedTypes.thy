@@ -779,10 +779,7 @@ proof (simp add: packed_type_access_ti, rule ext)
   from cgrd have al: "ptr_val p \<le> ptr_val p + of_nat (size_of TYPE('b) - 1)" by (rule c_guard_no_wrap)
 
   have szb: "size_of TYPE('b) < 2 ^ len_of TYPE(addr_bitsize)"
-    apply (fold card_word)
-    apply (fold addr_card_def)
-    apply (rule max_size)
-    done
+    by (metis len_of_addr_card max_size)
 
   have szt: "n + size_td t \<le> size_of TYPE('b)"
     unfolding size_of_def
@@ -798,7 +795,7 @@ proof (simp add: packed_type_access_ti, rule ext)
     by (rule wf_size_desc_gt)
 
   have uofn: "unat (of_nat n :: addr_bitsize word) = n" using szn szb
-    by (simp add: nat_less_le unat_of_nat_eq)
+    by (metis le_unat_uoi nat_less_le unat_of_nat_len)
 
   from eu have std: "size_td t = size_of TYPE('a)" using fl
     by (simp add: export_size_of)
@@ -814,17 +811,10 @@ proof (simp add: packed_type_access_ti, rule ext)
       have "c_guard (Ptr &(p\<rightarrow>f) :: 'a ptr)" using cgrd fl eu
         by (rule c_guard_field_lvalue)
       hence pft: "&(p\<rightarrow>f) \<le> &(p\<rightarrow>f) + of_nat (size_td t - 1)"
-        apply -
-        apply (drule c_guard_no_wrap)
-        apply (simp add: std)
-        done
+        by (metis c_guard_no_wrap ptr_val.ptr_val_def std)
 
       have szt': "size_td t < 2 ^ len_of TYPE(addr_bitsize)"
-        apply (subst std)
-        apply (fold card_word)
-        apply (fold addr_card_def)
-        apply (rule max_size)
-        done
+        by (metis len_of_addr_card max_size std)
 
       have ofn: "of_nat n \<le> x - ptr_val p"
       proof (rule le_minus')
@@ -833,36 +823,23 @@ proof (simp add: packed_type_access_ti, rule ext)
           by (rule intvl_le_lower)
       next
         from szb szn have "of_nat n \<le> (of_nat (size_of TYPE('b) - 1) :: addr_bitsize word)"
-          apply -
-          apply (rule of_nat_mono_maybe_le)
-           apply simp_all
-          done
+          by (metis One_nat_def of_nat_mono_maybe_le b0 less_imp_diff_less nat_le_Suc_less)
         with al show "ptr_val p \<le> ptr_val p + of_nat n"
           by (rule word_plus_mono_right2)
       qed
 
       thus nlt: "n \<le> unat (x - ptr_val p)"
-        by (simp add: word_le_nat_alt uofn)
+        by (metis uofn word_le_nat_alt)
       have "x \<le> ptr_val p + (of_nat n + of_nat (size_td t - 1))" using xin pft szt' t0
         unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
-        apply -
-        apply (drule (2) intvl_less_upper)
-        apply (simp add: add.assoc)
-        done
+        by (metis (no_types) add.assoc intvl_less_upper)
       moreover have "x \<in> {ptr_val p..+size_of TYPE('b)}" using fl xin
         by (rule subsetD [OF field_tag_sub])
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
-        apply -
-        apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
-         apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
-        apply (erule (2) intvl_le_lower)
-        done
+        by (metis add_diff_cancel_left' intvl_le_lower word_diff_ls(4))
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: addr_bitsize word) = n + size_td t - 1"
         using t0 order_le_less_trans [OF szt1 szb]
-        apply (subst Abs_fnat_homs(1))
-        apply (subst unat_of_nat)
-        apply simp
-        done
+        by (metis Nat.add_diff_assoc One_nat_def Suc_leI of_nat_add unat_of_nat_len)
       ultimately have "unat (x - ptr_val p) \<le> n + size_td t - 1"
         by (simp add: word_le_nat_alt)
       thus "unat (x - ptr_val p) < n + size_td t" using t0
@@ -884,7 +861,7 @@ proof (simp add: packed_type_access_ti, rule ext)
       have "unat (x - &(p\<rightarrow>f)) = unat ((x - ptr_val p) - of_nat n)"
         by (simp add: field_lvalue_def field_lookup_offset_eq [OF fl])
       also have "\<dots> = unat (x - ptr_val p) - n"
-        by (simp add: unat_sub [OF ofn] uofn)
+        by (metis ofn unat_sub uofn)
       finally have "unat (x - &(p\<rightarrow>f)) = unat (x - ptr_val p) - n" .
 
       thus "access_ti (typ_info_t TYPE('a)) v (replicate (size_of TYPE('a)) 0) ! unat (x - &(p\<rightarrow>f)) =
@@ -919,15 +896,12 @@ proof (simp add: packed_type_access_ti, rule ext)
             by (rule intvl_le_lower)
         qed
         thus unx: "unat (x - ptr_val p) < size_td (typ_info_t TYPE('b))" using szb b0
-          by (simp add: word_le_nat_alt size_of_def unat_of_nat)
+          by (metis (no_types) One_nat_def Suc_leI le_m1_iff_lt of_nat_1 of_nat_diff of_nat_mono_maybe
+                               semiring_1_class.of_nat_0 size_of_def unat_less_helper)
 
         show "unat (x - ptr_val p) < n - 0 \<or> n - 0 + size_td t \<le> unat (x - ptr_val p)" using xin xni
           unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
-          apply -
-          apply (erule intvl_cut)
-           apply simp
-          apply (rule max_size)
-          done
+          using intvl_cut by auto
 
         show "wf_fd (typ_info_t TYPE('b))" by (rule wf_fd)
             (* clag *)
@@ -939,10 +913,7 @@ proof (simp add: packed_type_access_ti, rule ext)
           by (simp add: size_of_def)
 
         have "heap_list hp (size_td (typ_info_t TYPE('b))) (ptr_val p) ! unat (x - ptr_val p) = hp x"
-          apply (subst heap_list_nth)
-           apply (rule unx)
-          apply simp
-          done
+          by (subst heap_list_nth, rule unx) simp
 
         thus "access_ti (typ_info_t TYPE('b)) (h_val hp p) (replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
           unfolding h_val_def

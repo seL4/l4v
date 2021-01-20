@@ -245,9 +245,9 @@ in
       val oldity = TermsTypes.IntInfo.ity2wty oldty
       val newity = TermsTypes.IntInfo.ity2wty newty
       fun tf t = if is_signed oldty then
-                   Const(@{const_name "scast"}, oldity --> newity) $ t
+                   Const(@{const_name "signed"}, oldity --> newity) $ t
                  else
-                   Const(@{const_name "ucast"}, oldity --> newity) $ t
+                   Const(@{const_name "unsigned"}, oldity --> newity) $ t
 
       (* strictly, "overflow" here results in an implementation-defined value, or an
          "implementation-defined signal" (???) [6.3.1.3].
@@ -588,7 +588,7 @@ in
       end
     in
       if is_result_signed (ei1, ei2) then
-        add_guard div_zero_check (check_signed_binop(@{const_name "sdiv"}, mk_sdiv, ei1, ei2))
+        add_guard div_zero_check (check_signed_binop(@{const_name "signed_divide"}, mk_sdiv, ei1, ei2))
       else
         add_guard div_zero_check (mk_arithop(@{const_name "divide"}, ei1, ei2))
     end
@@ -600,7 +600,7 @@ in
       end
     in
       if is_result_signed (ei1, ei2) then
-        add_guard div_zero_check (check_signed_binop(@{const_name "smod"}, mk_smod, ei1, ei2))
+        add_guard div_zero_check (check_signed_binop(@{const_name "signed_modulo"}, mk_smod, ei1, ei2))
       else
         add_guard div_zero_check (mk_arithop(@{const_name "modulo"}, ei1, ei2))
     end
