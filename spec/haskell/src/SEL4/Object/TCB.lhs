@@ -691,10 +691,12 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     sc <- withoutFailure $ getSchedContext scPtr
 >     when (scTCB sc == Nothing) $ throw IllegalOperation
 >     ctPtr <- withoutFailure $ getCurThread
->     when (fromJust (scTCB sc) == ctPtr) $ throw IllegalOperation
->     ct <- withoutFailure $ getObject ctPtr
+>     when (scTCB sc == Just ctPtr) $ throw IllegalOperation
 >     priority <- withoutFailure $ threadGet tcbPriority $ fromJust $ scTCB sc
->     when (priority > tcbMCP ct) $ throw IllegalOperation
+>     ct_mcp <- withoutFailure $ threadGet tcbMCP ctPtr
+>     when (priority > ct_mcp) $ throw IllegalOperation
+>     yt_ptr <- withoutFailure $ threadGet tcbYieldTo ctPtr
+>     when (yt_ptr /= Nothing) $ throw IllegalOperation
 >     return $ InvokeSchedContextYieldTo scPtr buffer
 
 > decodeSchedContextInvocation :: Word -> PPtr SchedContext -> [Capability] -> Maybe (PPtr Word) ->
@@ -706,9 +708,9 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         SchedContextBind -> decodeSchedContext_Bind scPtr excaps
 >         SchedContextUnbindObject -> decodeSchedContext_UnbindObject scPtr excaps
 >         SchedContextUnbind -> do
->             ctPtr <- withoutFailure $ getCurThread
 >             sc <- withoutFailure $ getSchedContext scPtr
->             when (fromJust (scTCB sc) == ctPtr) $ throw IllegalOperation
+>             ctPtr <- withoutFailure $ getCurThread
+>             when (scTCB sc == Just ctPtr) $ throw IllegalOperation
 >             return $ InvokeSchedContextUnbind scPtr
 >         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr buffer
 >         _ -> throw IllegalOperation
