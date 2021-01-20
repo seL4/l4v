@@ -878,6 +878,14 @@ lemma valid_capAligned:
   "valid_cap' c s \<Longrightarrow> capAligned c"
   by (simp add: valid_cap'_def)
 
+lemma valid_SchedContextCap_sc_at':
+  "\<lbrakk>valid_cap' (SchedContextCap sc_ptr n) s\<rbrakk> \<Longrightarrow> sc_at' sc_ptr s"
+  apply (clarsimp simp: valid_cap'_def obj_at'_real_def)
+  apply (rule ko_wp_at'_weakenE)
+   apply (fastforce simp: objBits_simps
+                   split: kernel_object.splits)+
+  done
+
 lemma caps_no_overlap'_no_region:
   "\<lbrakk> caps_no_overlap' m (capRange cap); valid_objs' s;
     m = ctes_of s; s \<turnstile>' cap; fresh_virt_cap_class (capClass cap) m \<rbrakk> \<Longrightarrow>
