@@ -383,6 +383,14 @@ lemma corres_splitEE:
    apply (clarsimp simp: lift_def y)+
   done
 
+lemmas corres_splitEE''
+  = corres_splitEE[where P=P and Q=P and P'=P' and Q'=P' for P P'
+                   , simplified pred_conj_def, simplified, rotated]
+
+lemmas corres_splitEE_skip
+  = corres_splitEE[where P=P and Q=P and P'=P' and Q'=P' and R="\<lambda>_. P" and R'="\<lambda>_. P'" for P P'
+                   , simplified pred_conj_def, simplified, rotated]
+
 lemma corres_split_handle:
   assumes y: "\<And>ft ft'. f' ft ft'
               \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (E ft) (E' ft') (b ft) (d ft')"
