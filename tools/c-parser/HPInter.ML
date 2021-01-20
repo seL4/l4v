@@ -189,7 +189,7 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
       val speclocalename = Binding.name_of speclocalename_b
         (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
            is dropped and not used again *)
-      val lthy = Named_Target.init gloc thy
+      val lthy = Named_Target.init [] gloc thy
       val tm = Syntax.read_term lthy tstr
       val (vs, body) = strip_forall tm
       val PQopt =
@@ -397,7 +397,7 @@ let
           fninfo
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
-  val lthy = Named_Target.init globloc thy
+  val lthy = Named_Target.init [] globloc thy
   val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
   val _ = Feedback.informStr (0, "Translated all functions")
   val globs = extract_fixes globals_elems
@@ -409,9 +409,9 @@ let
       val _ = Feedback.informStr (0, "Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
     in
       lthy
-      |> Local_Theory.open_target |> snd
+      |> Local_Theory.begin_nested |> snd
       |> Local_Theory.define e |> #2
-      |> Local_Theory.close_target
+      |> Local_Theory.end_nested
     end
   in
     List.foldl foldthis lthy elems
@@ -422,7 +422,7 @@ let
   (* set up _impl by defining \<Gamma> *)
   val thy =
       if List.exists (isSome o #body) fninfo then let
-          val lthy = Named_Target.init globloc thy
+          val lthy = Named_Target.init [] globloc thy
           fun get_body fni = let
             val nm = #fname fni
           in
@@ -455,7 +455,7 @@ let
         val speclocalename = Binding.name_of speclocalename_b
         (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
            is dropped and not used again *)
-        val lthy = Named_Target.init globloc thy
+        val lthy = Named_Target.init [] globloc thy
         val t = Syntax.read_term lthy tstr
         val _ = Feedback.informStr (0, "Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^
@@ -471,6 +471,7 @@ let
             Expression.add_locale
                 speclocalename_b
                 speclocalename_b
+                []
                 globloc_expr
                 [e']
                 thy
@@ -491,7 +492,7 @@ let
       List.foldl add_spec_locales (Symtab.empty, thy) name_specs
 
   val (globloc, ctxt) =
-      Expression.add_locale localename_b localename_b globloc_expr [] thy
+      Expression.add_locale localename_b localename_b [] globloc_expr [] thy
 
 in
   (globloc, Local_Theory.exit_global ctxt)

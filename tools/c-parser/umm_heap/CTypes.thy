@@ -1791,7 +1791,7 @@ lemma fi_fa_consistentD:
 
 lemma length_super_update_bs [simp]:
   "n + length v \<le> length bs \<Longrightarrow> length (super_update_bs v bs n) = length bs"
-  by (clarsimp simp: super_update_bs_def)
+  unfolding super_update_bs_def by simp
 
 lemma drop_super_update_bs:
   "\<lbrakk> k \<le> n; n \<le> length bs \<rbrakk> \<Longrightarrow> drop k (super_update_bs v bs n) = super_update_bs v (drop k bs) (n - k)"
@@ -2202,10 +2202,7 @@ lemma final_intvl_disj:
    apply clarsimp
    apply(case_tac q; simp)
   apply(drule intvlD, clarsimp)
-  apply(subst (asm) word_unat.norm_eq_iff [symmetric])
-  apply(subst (asm) len_of_addr_card)
-  apply simp
-  done
+  by (metis add.commute add_leD1 len_of_addr_card less_trans nat_less_le of_nat_inverse)
 
 lemma fa_fu_lookup_disj_inter:
   "\<forall>f m d n f' d' n'. field_lookup t f m = Some (d,n) \<longrightarrow>
@@ -2309,7 +2306,7 @@ proof -
   have "int (align_of TYPE('a)) dvd (i * int (size_of TYPE('a)))"
     by (simp add: align_size_of)
   with aligned show ?thesis
-    apply (case_tac p, simp add: ptr_aligned_def ptr_add_def scast_id)
+    apply (case_tac p, simp add: ptr_aligned_def ptr_add_def)
     apply (simp only: unat_simps len_signed)
     apply (metis align align_size_of dvd_add dvd_mod dvd_mult2 mult.commute)
     done

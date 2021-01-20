@@ -27,8 +27,6 @@ end
 
 lemma (in globals_fn_global_addresses) returns40:
   "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== PROC test2() \<lbrace> \<acute>ret__int = 40 \<rbrace>"
-apply vcg
-apply unat_arith
-done
+  by vcg simp
 
 end

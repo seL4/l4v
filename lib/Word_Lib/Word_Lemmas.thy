@@ -769,7 +769,7 @@ lemma bin_cat_eqD1: "bin_cat a n b = bin_cat c n d \<Longrightarrow> a = c"
 
 lemma bin_cat_eqD2: "bin_cat a n b = bin_cat c n d \<Longrightarrow> bintrunc n b = bintrunc n d"
   by (metis take_bit_bin_cat_eq)
-  
+
 lemma bin_cat_inj: "(bin_cat a n b) = bin_cat c n d \<longleftrightarrow> a = c \<and> bintrunc n b = bintrunc n d"
   by (auto intro: bin_cat_cong bin_cat_eqD1 bin_cat_eqD2)
 
@@ -867,7 +867,7 @@ lemma word_and_or_mask_aligned:
 lemma word_and_or_mask_aligned2:
   \<open>is_aligned b n \<Longrightarrow> a \<le> mask n \<Longrightarrow> a + b = a OR b\<close>
   using word_and_or_mask_aligned [of b n a] by (simp add: ac_simps)
-  
+
 lemma is_aligned_ucastI:
   "is_aligned w n \<Longrightarrow> is_aligned (ucast w) n"
   apply transfer
@@ -1095,6 +1095,10 @@ lemma t2p_shiftr:
 lemma scast_1[simp]:
   "scast (1 :: 'a :: len signed word) = (1 :: 'a word)"
   by simp
+
+lemma unsigned_uminus1 [simp]:
+  \<open>(unsigned (-1::'b::len word)::'c::len word) = mask LENGTH('b)\<close>
+  by word_eqI
 
 lemma ucast_ucast_mask_eq:
   "\<lbrakk> UCAST('a::len \<rightarrow> 'b::len) x = y; x AND mask LENGTH('b) = x \<rbrakk> \<Longrightarrow> x = ucast y"
@@ -1483,7 +1487,7 @@ lemma is_up_compose:
 
 lemma of_int_sint_scast:
   "of_int (sint (x :: 'a :: len word)) = (scast x :: 'b :: len word)"
-  by (fact Word.of_int_sint) 
+  by (fact Word.of_int_sint)
 
 lemma scast_of_nat_to_signed [simp]:
   "scast (of_nat x :: 'a :: len word) = (of_nat x :: 'a signed word)"
@@ -1605,7 +1609,7 @@ next
     using less_imp_le_nat apply blast
     done
 qed
-  
+
 lemma scast_ucast_mask_compare:
   "scast (ucast w :: 'b::len word) = w
    \<longleftrightarrow> (w \<le> mask (LENGTH('b) - 1) \<or> NOT(mask (LENGTH('b) - 1)) \<le> w)"

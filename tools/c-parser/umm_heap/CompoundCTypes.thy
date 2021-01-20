@@ -431,9 +431,6 @@ lemma fu_eq_mask_ti_typ_combine:
   apply(rename_tac xs')
   apply(clarsimp simp: fu_eq_mask_def update_ti_adjust_ti)
   apply(clarsimp simp: update_ti_list_t_def size_of_def)
-  apply(rule conjI; clarsimp)
-   prefer 2
-   apply fastforce
   apply(subst upd [where w="f undefined"])
    apply(simp add: size_of_def)
   apply(subst upd [where w="f undefined" and v="f (h v')" for v'])

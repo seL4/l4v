@@ -439,7 +439,7 @@ where
 lemma ptr_add_def':
   "ptr_add (Ptr p :: ('a::c_type) ptr) n
       = (Ptr (p + of_int n * of_nat (size_of TYPE('a))))"
-  by (cases p, auto simp: ptr_add_def scast_id)
+  by (cases p, auto simp: ptr_add_def)
 
 definition
   ptr_sub :: "('a::c_type) ptr \<Rightarrow> ('a::c_type) ptr \<Rightarrow> 32 signed word" (infixl "-\<^sub>p" 65)

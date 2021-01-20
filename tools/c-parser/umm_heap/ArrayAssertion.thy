@@ -137,8 +137,7 @@ lemma ptr_add_assertion_uint[simp]:
   "ptr_add_assertion ptr (uint offs) strong htd
     = (offs = 0 \<or> array_assertion ptr
         (case strong of True \<Rightarrow> Suc (unat offs) | False \<Rightarrow> unat offs) htd)"
-  by (simp add: ptr_add_assertion_positive uint_0_iff unat_def
-         split: bool.split)
+  by (metis ptr_add_assertion_positive uint_nonnegative unat_def unsigned_eq_0_iff)
 
 text \<open>Ignore char and void pointers. The C standard specifies that arithmetic on
 char and void pointers doesn't create any special checks.\<close>

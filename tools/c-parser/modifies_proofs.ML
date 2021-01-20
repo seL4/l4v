@@ -429,12 +429,12 @@ end
 fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
   if Config.get_global thy calculate_modifies_proofs then
     let
-      val lthy = Named_Target.init globloc thy
+      val lthy = Named_Target.init [] globloc thy
     in
       lthy
-        |> Local_Theory.open_target |> snd
+        |> Local_Theory.begin_nested |> snd
         |> prove_all_modifies_goals_local csenv includeP tyargs
-        |> Local_Theory.close_target
+        |> Local_Theory.end_nested
         |> Local_Theory.exit_global
     end
   else

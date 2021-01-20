@@ -324,20 +324,19 @@ lemma intvl_plus_sub_Suc:
 lemma intvl_neq_start:
   "\<lbrakk> (q::'a::len word) \<in> {p..+n}; p \<noteq> q \<rbrakk> \<Longrightarrow> q \<in> {p + 1..+n - Suc 0}"
   by (clarsimp simp: intvl_def)
-     (metis (no_types) Suc_diff_1 add.commute add_Suc_right diff_diff_left neq0_conv
-                       of_nat_Suc semiring_1_class.of_nat_0 zero_less_diff)
+     (metis One_nat_def diff_Suc_1 less_Suc_eq_0_disj less_imp_Suc_add of_nat_Suc take_bit_eq_0_iff
+            take_bit_of_0)
 
 lemmas unat_simps' =
-  word_arith_nat_defs word_unat.eq_norm len_of_addr_card mod_less
+  word_arith_nat_defs unat_of_nat len_of_addr_card mod_less
 
 lemma intvl_offset_nmem:
   "\<lbrakk> q \<in> {(p::'a::len word)..+unat x}; y \<le>  2^len_of TYPE('a) - unat x \<rbrakk> \<Longrightarrow>
       q \<notin> {p + x..+y}"
   apply (clarsimp simp: intvl_def)
   apply (simp only: unat_simps')
-  apply (subst (asm) word_unat.Abs_inject)
-    apply (auto simp: unats_def)
-  done
+  apply (subst (asm) word_of_nat_eq_iff)
+  using take_bit_nat_eq_self by auto
 
 lemma intvl_Suc_nmem' [simp]:
   "n < 2^len_of TYPE('a) \<Longrightarrow> (p::'a::len word) \<notin> {p + 1..+n - Suc 0}"
@@ -353,9 +352,9 @@ lemma intvl_sub_eq:
   shows "{p + x..+unat (y - x)} = {p..+unat y} - {p..+unat x}"
 proof -
   have "unat y - unat x \<le> 2 ^ len_of TYPE('a) - unat x"
-    by (insert unat_lt2p [of y], arith)
+    by (meson diff_le_mono less_or_eq_imp_le unsigned_less)
   moreover have "x \<le> y" by fact
-  moreover hence "unat (y - x) = unat y - unat x"
+  moreover from this have "unat (y - x) = unat y - unat x"
     by (simp add: word_le_nat_alt, unat_arith)
   ultimately show ?thesis
     by (force dest: intvl_offset_nmem intvl_mem_offset elim: intvl_plus_sub_offset
