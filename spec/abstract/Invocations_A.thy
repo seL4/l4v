@@ -60,7 +60,7 @@ datatype sched_context_invocation =
     InvokeSchedContextConsumed obj_ref "obj_ref option"
   | InvokeSchedContextBind obj_ref cap
   | InvokeSchedContextUnbindObject obj_ref cap
-  | InvokeSchedContextUnbind obj_ref cap
+  | InvokeSchedContextUnbind obj_ref
   | InvokeSchedContextYieldTo obj_ref "obj_ref option"
 
 datatype sched_control_invocation =

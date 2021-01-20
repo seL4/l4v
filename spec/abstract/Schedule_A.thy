@@ -317,7 +317,7 @@ where
       ThreadCap _ \<Rightarrow> sched_context_unbind_tcb sc_ptr
     | NotificationCap _ _ _ \<Rightarrow> sched_context_unbind_ntfn sc_ptr
     | _ \<Rightarrow> fail)
-  | InvokeSchedContextUnbind sc_ptr cap \<Rightarrow> do
+  | InvokeSchedContextUnbind sc_ptr \<Rightarrow> do
       sched_context_unbind_all_tcbs sc_ptr;
       sched_context_unbind_ntfn sc_ptr;
       sched_context_unbind_reply sc_ptr
