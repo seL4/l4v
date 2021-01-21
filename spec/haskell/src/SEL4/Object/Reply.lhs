@@ -99,7 +99,7 @@ This module specifies the behavior of reply objects.
 >         setSchedContext scPtr (sc { scReply = prevReplyPtrOpt })
 >         when (prevReplyPtrOpt /= Nothing) $ do
 >             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
->             updateReply prevReplyPtr (\reply -> reply { replyNext = replyNext reply })
+>             updateReply prevReplyPtr (\prevReply -> prevReply { replyNext = replyNext reply })
 >         tcbScPtrOpt <- threadGet tcbSchedContext tcbPtr
 >         when (tcbScPtrOpt == Nothing) $ schedContextDonate scPtr tcbPtr
 >     cleanReply replyPtr
