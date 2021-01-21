@@ -22,6 +22,7 @@ requalify_consts
   decodeTransfer
   gpRegisters
   frameRegisters
+  badgeRegister
   getRegister
   setNextPC
   getRestartPC
