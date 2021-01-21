@@ -89,7 +89,7 @@ lemma set_bit_unfold:
 lemma bit_set_bit_word_iff [bit_simps]:
   \<open>bit (set_bit w m b) n \<longleftrightarrow> (if m = n then n < LENGTH('a) \<and> b else bit w n)\<close>
   for w :: \<open>'a::len word\<close>
-  by (auto simp add: set_bit_unfold bit_unset_bit_iff bit_set_bit_iff exp_eq_zero_iff not_le bit_imp_le_length)
+  by (auto simp add: set_bit_unfold bit_unset_bit_iff bit_set_bit_iff not_le bit_imp_le_length)
 
 lemma word_set_nth [simp]: "set_bit w n (test_bit w n) = w"
   for w :: "'a::len word"

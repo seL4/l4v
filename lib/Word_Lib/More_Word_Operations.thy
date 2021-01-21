@@ -238,13 +238,11 @@ lemma word_log2_max:
 
 lemma word_clz_0[simp]:
   "word_clz (0::'a::len word) = LENGTH('a)"
-  unfolding word_clz_def
-  by (simp add: takeWhile_replicate)
+  unfolding word_clz_def by simp
 
 lemma word_clz_minus_one[simp]:
   "word_clz (-1::'a::len word) = 0"
-  unfolding word_clz_def
-  by (simp add: takeWhile_replicate)
+  unfolding word_clz_def by simp
 
 lemma is_aligned_alignUp[simp]:
   "is_aligned (alignUp p n) n"
@@ -334,7 +332,7 @@ next
     apply (subst unat_word_ariths)
     apply simp
     apply (subst mult_mod_left)
-    apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power min.absorb2)
+    apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power)
     done
   ultimately have lt: "2 ^ n * (unat a div 2 ^ n + 1) < 2 ^ LENGTH('a)" by simp
 
@@ -527,8 +525,7 @@ proof -
     hence allj: "\<forall>j\<in>set(to_bl w). \<not> j"
       by (metis a length_takeWhile_less less_irrefl_nat word_clz_def)
     hence "to_bl w = replicate (length (to_bl w)) False"
-      by (auto simp add: to_bl_unfold rev_map simp flip: map_replicate_trivial)
-        (metis allj eq_zero_set_bl nz)
+      using eq_zero_set_bl nz by fastforce
     hence "w = 0"
       by (metis to_bl_0 word_bl.Rep_eqD word_bl_Rep')
     with nz have False by simp
