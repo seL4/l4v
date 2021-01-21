@@ -117,9 +117,8 @@ If the notification object is idle, then it becomes a waiting notification objec
 >                 True -> do
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
->                       maybeReturnSc ntfnPtr thread
->                       scheduleTCB thread
 >                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn ([thread]) }
+>                       maybeReturnSc ntfnPtr thread
 >                 False -> doNBRecvFailedTransfer thread
 
 If the notification object is already waiting, the current thread is blocked and added to the queue. Note that this case cannot occur when the notification object is bound, as only the associated thread can wait on it.
@@ -128,10 +127,9 @@ If the notification object is already waiting, the current thread is blocked and
 >                 True -> do
 >                       setThreadState (BlockedOnNotification {
 >                                          waitingOnNotification = ntfnPtr } ) thread
->                       maybeReturnSc ntfnPtr thread
->                       scheduleTCB thread
 >                       qs' <- tcbEPAppend thread queue
 >                       setNotification ntfnPtr $ ntfn {ntfnObj = WaitingNtfn qs' }
+>                       maybeReturnSc ntfnPtr thread
 >                 False -> doNBRecvFailedTransfer thread
 
 If the notification object is active, the badge of the invoked notification object capability will be loaded to the badge of the receiving thread and the notification object will be marked as idle.
