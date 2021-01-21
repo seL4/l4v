@@ -6,6 +6,7 @@
 
 (* License: BSD, terms see file ./LICENSE *)
 
+(* FIXME: rename this theory, it's not about 32 any more *)
 theory Vanilla32_Preliminaries
 imports CTypes
 begin

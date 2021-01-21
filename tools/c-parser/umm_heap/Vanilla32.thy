@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* License: BSD, terms see file ./LICENSE *)
-
+(* FIXME: rename this theory, not about 32 any more *)
 theory Vanilla32
-imports Word_Mem_Encoding "Word_Lib.Word_Lib_Sumo" CTypes
+imports Word_Mem_Encoding CTypes
 begin
-
 
 
 overloading typ_info_word \<equiv> typ_info_t begin
@@ -294,25 +292,25 @@ lemma align_td_ptr [simp]: "align_td (typ_info_t TYPE('a::c_type ptr)) = addr_al
 lemma ptr_add_word32_signed [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 4 * of_int x"
-  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_word32 [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) simp
 
 lemma ptr_add_word64_signed [simp]:
   fixes a :: "64 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 8 * of_int x"
-  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_word64 [simp]:
   fixes a :: "64 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 8 * x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
-  by (simp add:CTypesDefs.ptr_add_def)
+  by (simp add: ptr_add_def)
 
 lemma from_bytes_ptr_to_bytes_ptr:
   "from_bytes (to_bytes (v::addr_bitsize word) bs) = (Ptr v :: 'a::c_type ptr)"

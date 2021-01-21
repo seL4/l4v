@@ -322,7 +322,7 @@ lemma s_footprintD2:
 
 lemma s_footprint_restrict:
   "x \<in> s_footprint p \<Longrightarrow> (s |` s_footprint p) x = s x"
-  by (rule restrict_in)
+  by (fact restrict_in)
 
 lemma restrict_s_fst:
   "fst (restrict_s d X x) \<Longrightarrow> fst (d x)"

@@ -5,7 +5,7 @@
  *)
 
 theory Word_Mem_Encoding
-  imports Vanilla32_Preliminaries "Word_Lib.Rsplit"
+  imports Vanilla32_Preliminaries
 begin
 
 (* Little-endian encoding *)
