@@ -43,9 +43,7 @@ lemma heap_update_heap_update_list:
    apply (subst if_P)
     apply (fastforce intro: intvlI)
    apply (clarsimp simp: unat_of_nat word_bits_def)
-  apply (subst (1 2)  heap_update_list_value,
-    simp add: addr_card,
-    simp add: addr_card)
+  apply (subst (1 2) heap_update_list_value, simp add: addr_card, simp add: addr_card)
   apply (case_tac "x \<in> {q..+length l}")
    apply (subst if_P, simp)
    apply (subst if_P)

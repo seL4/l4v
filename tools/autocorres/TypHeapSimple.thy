@@ -427,6 +427,7 @@ proof -
      apply simp
      done
   from assms show ?thesis
+    supply unsigned_of_nat[simp del]
     apply (clarsimp simp: super_field_update_t_def)
     apply (rule ext)
     apply (clarsimp simp: field_lvalue_def split: option.splits)
@@ -492,8 +493,9 @@ lemma field_of_t_field_lookup:
   assumes b: "export_uinfo s = typ_uinfo_t TYPE('b::mem_type)"
   assumes n: "n = field_offset TYPE('a) f"
   shows "field_of_t (Ptr &(ptr\<rightarrow>f) :: ('b ptr)) (ptr :: 'a ptr)"
+  supply unsigned_of_nat[simp del]
   apply (clarsimp simp del: field_lookup_offset_eq
-      simp: field_of_t_def field_of_def)
+                 simp: field_of_t_def field_of_def)
   apply (subst td_set_field_lookup)
    apply (rule wf_desc_typ_tag)
   apply (rule exI [where x=f])
@@ -502,7 +504,7 @@ lemma field_of_t_field_lookup:
   apply (subst field_lookup_export_uinfo_Some)
    apply assumption
   apply (clarsimp simp del: field_lookup_offset_eq
-      simp: field_lvalue_def unat_of_nat_field_offset)
+                  simp: field_lvalue_def unat_of_nat_field_offset)
   done
 
 lemma simple_lift_field_update':
@@ -531,6 +533,7 @@ proof (rule ext)
     done
 
   have equal_case: "?LHS ptr = ?RHS ptr"
+    supply unsigned_of_nat[simp del]
     apply (insert cl)
     apply (clarsimp simp: simple_lift_def split: if_split_asm)
     apply (clarsimp simp: hrs_mem_update)
@@ -732,6 +735,7 @@ lemma zero_not_in_intvl_no_overflow:
 
 lemma intvl_split:
   "\<lbrakk> n \<ge> a \<rbrakk> \<Longrightarrow> { p :: ('a :: len) word ..+ n } = { p ..+ a } \<union> { p + of_nat a ..+ (n - a)}"
+  supply unsigned_of_nat[simp del]
   apply (rule set_eqI, rule iffI)
    apply (clarsimp simp: intvl_def not_less)
    apply (rule_tac x=k in exI)

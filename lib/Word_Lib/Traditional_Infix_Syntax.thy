@@ -361,6 +361,15 @@ lemma shiftr_numeral [simp]:
   \<open>(numeral k >> numeral n :: 'a::len word) = drop_bit (numeral n) (numeral k)\<close>
   by (fact shiftr_word_eq)
 
+lemma shiftr_numeral_Suc [simp]:
+  \<open>(numeral k >> Suc 0 :: 'a::len word) = drop_bit (Suc 0) (numeral k)\<close>
+  by (fact shiftr_word_eq)
+
+lemma drop_bit_numeral_bit0_1 [simp]:
+  \<open>drop_bit (Suc 0) (numeral k) =
+    (word_of_int (drop_bit (Suc 0) (take_bit LENGTH('a) (numeral k))) :: 'a::len word)\<close>
+  by (metis Word_eq_word_of_int drop_bit_word.abs_eq of_int_numeral)
+
 lemma nth_mask [simp]:
   \<open>(mask n :: 'a::len word) !! i \<longleftrightarrow> i < n \<and> i < size (mask n :: 'a word)\<close>
   by (auto simp add: test_bit_word_eq word_size Word.bit_mask_iff)
