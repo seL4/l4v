@@ -386,4 +386,11 @@ does this by adding an assertion and proving it True by using .
 > valid_replies'_sc_asrt :: PPtr Reply -> KernelState -> Bool
 > valid_replies'_sc_asrt _ _ = True
 
+To ease the burden of proof for weakest precondition rules involving ThreadControlSched tcb
+invocations, we assert various conditions that hold in the abstract.
 
+> tcs_cross_asrt1 :: PPtr TCB -> Maybe (Maybe (PPtr SchedContext)) -> KernelState -> Bool
+> tcs_cross_asrt1 _ _ _ = True
+
+> tcs_cross_asrt2 :: KernelState -> Bool
+> tcs_cross_asrt2 _ = True

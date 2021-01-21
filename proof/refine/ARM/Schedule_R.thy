@@ -711,9 +711,7 @@ lemma cur_thread_update_corres:
              (modify (cur_thread_update (\<lambda>_. t))) (setCurThread t)"
   apply add_ready_qs_runnable
   apply (unfold setCurThread_def)
-  apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: ready_qs_runnable_def)
-  apply clarsimp
+  apply (rule corres_stateAssert_add_assertion[rotated]; clarsimp)
   apply (rule corres_modify)
   apply (simp add: state_relation_def swp_def)
   done
@@ -802,7 +800,7 @@ proof -
            apply (rule corres_guard_imp[OF mainpart])
             apply (auto intro: no_fail_pre [OF no_fail_assert] no_fail_pre [OF no_fail_get]
                          dest: st_tcb_at_tcb_at [THEN get_tcb_at]
-                   | simp add: assert_def ready_qs_runnable_def
+                   | simp add: assert_def
                    | wp)+
     done
 qed
@@ -828,7 +826,7 @@ lemma switch_idle_thread_corres:
   apply add_ready_qs_runnable
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: ready_qs_runnable_def)
+   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ git_corres])
       apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
@@ -842,7 +840,8 @@ lemma switch_idle_thread_corres:
    apply (simp add: invs_unique_refs invs_valid_vs_lookup invs_valid_objs invs_valid_asid_map
                     invs_arch_state invs_valid_global_objs invs_psp_aligned invs_distinct
                     invs_valid_idle invs_vspace_objs)
-  apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
+                   valid_pspace'_def ready_qs_runnable_def)
   done
 
 lemma gq_sp: "\<lbrace>P\<rbrace> getQueue d p \<lbrace>\<lambda>rv. P and (\<lambda>s. ksReadyQueues s (d, p) = rv)\<rbrace>"
@@ -1738,7 +1737,6 @@ lemma chooseThread_corres:
       apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift ksReadyQueuesL1Bitmap_return_wp)
      apply (simp add: curDomain_def, wp)+
    apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_ready_qs_def max_non_empty_queue_def)
-   apply (thin_tac "\<forall>d p. \<forall>t\<in>set (ksReadyQueues s' (d, p)). st_tcb_at' runnable' t s'")
    apply (erule_tac x="cur_domain sa" in allE)
    apply (erule_tac x="Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}" in allE)
    apply (case_tac "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []})")
@@ -1753,7 +1751,7 @@ lemma chooseThread_corres:
     apply (rule_tac x="cur_domain sa" in exI)
     apply (rule_tac x="Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}" in exI)
     apply clarsimp
-  apply (clarsimp dest!: invs_no_cicd'_queues)
+  apply (clarsimp dest!: invs_no_cicd'_queues simp: ready_qs_runnable_def)
   apply (fastforce intro: ksReadyQueuesL1Bitmap_st_tcb_at')
   done
 
@@ -3358,6 +3356,24 @@ lemma possibleSwitchTo_corres:
                 apply (case_tac rvb; simp)
                apply (wpsimp simp: tcb_relation_def if_apply_def2 valid_sched_action_def
                                wp: hoare_drop_imp inReleaseQueue_inv)+
+  done
+
+lemma ct_active_cross:
+  "\<lbrakk> (s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; ct_active s \<rbrakk>
+     \<Longrightarrow> ct_active' s'"
+  by (clarsimp simp: state_relation_def ct_in_state_def ct_in_state'_def
+                     st_tcb_at_runnable_cross runnable_eq_active runnable_eq_active'[symmetric])
+
+\<comment> \<open>Strengthen the consequent as necessary, there's more that can be derived from the assumptions\<close>
+lemma ct_released_cross_weak:
+  "\<lbrakk> (s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; ct_released s; cur_tcb' s' \<rbrakk>
+     \<Longrightarrow> bound_sc_tcb_at' bound (ksCurThread s') s'"
+  apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  apply (clarsimp simp: state_relation_def pspace_relation_def )
+  apply (erule_tac x="ksCurThread s'" in ballE)
+   apply (auto simp: vs_all_heap_simps other_obj_relation_def tcb_relation_def
+                          cur_tcb'_def pred_tcb_at'_def obj_at'_def projectKOs
+                   split: kernel_object.splits)
   done
 
 end

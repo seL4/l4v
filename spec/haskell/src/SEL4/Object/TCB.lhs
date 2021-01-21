@@ -492,10 +492,14 @@ The use of "checkCapAt" addresses a corner case in which the only capability to 
 
 > invokeTCB (ThreadControlSched target slot faultHandler mcPriority priority sc)
 >   = do
+>         stateAssert (tcs_cross_asrt1 target sc)
+>             "Assert some conditions that hold in the abstract at this point"
 >         installTCBCap target slot 3 faultHandler
 >         withoutPreemption $ do
 >             let mcPriority' = mapMaybe fst mcPriority
 >             maybe (return ()) (setMCPriority target) mcPriority'
+>             stateAssert tcs_cross_asrt2
+>                 "Assert some conditions that hold in the abstract at this point"
 >             let priority' = mapMaybe fst priority
 >             maybe (return ()) (setPriority target) priority'
 >             targetScOpt <- mapTCBPtr target tcbSchedContext
