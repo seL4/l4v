@@ -4014,15 +4014,6 @@ lemma complete_signal_corres:
   apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def obj_at'_def)
   done
 
-
-lemma do_nbrecv_failed_transfer_corres:
-  "corres dc (tcb_at thread)
-            (tcb_at' thread)
-            (do_nbrecv_failed_transfer thread)
-            (doNBRecvFailedTransfer thread)"
-  unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
-  by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
-
 lemma ntfn_relation_par_inj:
   "ntfn_relation ntfn ntfn' \<Longrightarrow> ntfn_sc ntfn = ntfnSc ntfn'"
   by (simp add: ntfn_relation_def)
@@ -4480,61 +4471,271 @@ lemma receive_ipc_corres:
              split: option.splits)
   done *)
 
-lemma receive_signal_corres:
+lemma scheduleTCB_corres:
+  "corres dc
+          (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct
+           and tcb_at tcbPtr)
+          (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
+          (schedule_tcb tcbPtr)
+          (scheduleTCB tcbPtr)"
+  apply (clarsimp simp: schedule_tcb_def scheduleTCB_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ gct_corres])
+      apply (rule corres_split[OF _ get_sa_corres], rename_tac sched_action)
+        apply (rule corres_split[OF _ isSchedulable_corres])
+          apply (clarsimp simp: when_def)
+          apply (intro conjI impI; (clarsimp simp: sched_act_relation_def)?)
+           apply (rule rescheduleRequired_corres)
+          apply (case_tac sched_act; clarsimp)
+         apply (wpsimp wp: isSchedulable_wp)+
+  done
+
+crunches maybe_return_sc
+  for tcb_at[wp]: "tcb_at thread"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma maybeReturnSc_valid_objs'[wp]:
+  "maybeReturnSc ntfnPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
+  apply (clarsimp simp: maybeReturnSc_def)
+  apply (wpsimp wp: threadSet_valid_objs' threadGet_wp getNotification_wp
+                    hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (clarsimp dest!: ntfn_ko_at_valid_objs_valid_ntfn'
+                   simp: obj_at'_def projectKOs)
+  apply (rename_tac tcb)
+  apply (rule_tac x=tcb in exI)
+  apply clarsimp
+  apply (rename_tac sc sc_ptr)
+  apply (prop_tac "ko_at' sc (the (tcbSchedContext tcb)) s")
+   apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
+                    simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+  done
+
+lemma maybeReturnSc_valid_tcbs'[wp]:
+  "maybeReturnSc ntfnPtr tcbPtr \<lbrace>valid_tcbs'\<rbrace>"
+  apply (clarsimp simp: maybeReturnSc_def)
+  apply (wpsimp wp: threadSet_valid_tcbs' threadGet_wp getNotification_wp
+                    hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (fastforce simp: obj_at'_def projectKOs)
+  done
+
+lemma maybe_return_sc_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and tcb_at tcb_ptr\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (clarsimp simp: maybe_return_sc_def)
+  apply (wpsimp wp: set_object_valid_tcbs thread_get_wp get_simple_ko_wp
+              simp: set_tcb_obj_ref_def get_tcb_obj_ref_def get_sk_obj_ref_def)
+  apply (clarsimp simp: obj_at_def is_tcb_def valid_tcbs_def)
+  apply (fastforce simp: get_tcb_def
+                  split: Structures_A.kernel_object.splits)
+  done
+
+lemma maybeReturnSc_valid_queues:
+  "\<lbrace>valid_queues and valid_tcbs'\<rbrace>
+   maybeReturnSc ntfnPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  apply (clarsimp simp: maybeReturnSc_def)
+  apply (wpsimp wp: hoare_drop_imps)
+     apply (wpsimp wp: threadSet_valid_queues_new hoare_vcg_if_lift2
+                       getNotification_wp threadGet_wp)+
+  apply (clarsimp simp: obj_at'_def inQ_def)
+  done
+
+crunches maybeReturnSc
+  for valid_queues'[wp]: valid_queues'
+  and valid_release_queue[wp]: valid_release_queue
+  (wp: crunch_wps simp: crunch_simps inQ_def)
+
+lemma maybeReturnSc_valid_release_queue':
+  "\<lbrace>valid_release_queue' and valid_tcbs'\<rbrace>
+   maybeReturnSc ntfnPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  (is "valid ?pre _ _")
+  apply (clarsimp simp: maybeReturnSc_def liftM_def)
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (rule hoare_seq_ext[OF _ threadGet_sp])
+  apply (rule hoare_when_cases; clarsimp)
+  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: threadSet_valid_release_queue' threadSet_valid_objs')
+   apply (clarsimp simp: obj_at'_def valid_release_queue'_def)
+  apply wpsimp
+  done
+
+lemma maybe_return_sc_weak_valid_sched_action:
+  "\<lbrace>weak_valid_sched_action and scheduler_act_not tcb_ptr and tcb_at tcb_ptr\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  apply (clarsimp simp: maybe_return_sc_def)
+  apply (wpsimp wp: set_object_wp thread_get_wp get_simple_ko_wp
+              simp: set_tcb_obj_ref_def get_tcb_obj_ref_def get_sk_obj_ref_def)
+  apply (clarsimp simp: obj_at_def is_tcb_def)
+  apply (rename_tac tcb, case_tac tcb; clarsimp)
+  apply (fastforce simp: weak_valid_sched_action_def scheduler_act_not_def vs_all_heap_simps)
+  done
+
+lemma doNBRecvFailedTransfer_corres:
+  "corres dc (pspace_aligned and pspace_distinct and tcb_at thread) \<top>
+             (do_nbrecv_failed_transfer thread) (doNBRecvFailedTransfer thread)"
+  apply (rule corres_cross[where Q' = "tcb_at' thread", OF tcb_at'_cross_rel], simp)
+  apply (clarsimp simp: do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def)
+  apply (rule corres_guard_imp)
+    apply (clarsimp simp: badge_register_def badgeRegister_def)
+    apply (rule user_setreg_corres)
+   apply clarsimp+
+  done
+
+lemma tcb_ep_find_index_corres:
+  "corres (=) (tcb_at t and (\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and K (n < length list))
+              (tcb_at' t and (\<lambda>s. \<forall>t \<in> set list. tcb_at' t s))
+              (tcb_ep_find_index t list n) (tcbEPFindIndex t list n)"
+  apply (rule corres_gen_asm')
+  apply (induct n)
+   apply (subst tcb_ep_find_index.simps)
+   apply (subst tcbEPFindIndex.simps)
+   apply (rule corres_split_eqr)
+      apply (rule corres_split_eqr)
+         apply (rule corres_if, simp)
+          apply (rule corres_trivial, simp)
+         apply (rule corres_trivial, simp)
+        apply (rule threadget_corres, simp add: tcb_relation_def)
+       apply wpsimp
+      apply wpsimp
+     apply (rule threadget_corres, simp add: tcb_relation_def)
+    apply wpsimp
+   apply wpsimp
+  apply (subst tcb_ep_find_index.simps)
+  apply (subst tcbEPFindIndex.simps)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr)
+       apply (rule corres_split_eqr)
+          apply (rule corres_if, simp)
+           apply (rule corres_if, simp)
+            apply (rule corres_trivial, simp)
+           apply simp
+          apply (rule corres_trivial, simp)
+         apply (rule threadget_corres, simp add: tcb_relation_def)
+        apply (wp thread_get_wp)
+       apply (wp threadGet_wp)
+      apply (rule threadget_corres, simp add: tcb_relation_def)
+     apply (wp thread_get_wp)
+    apply (wpsimp wp: threadGet_wp)
+   apply (fastforce simp: projectKO_eq projectKO_tcb obj_at'_def)+
+  done
+
+lemma tcb_ep_dequeue_corres:
+  "qs = qs' \<Longrightarrow> corres (=) \<top> \<top> (tcb_ep_dequeue t qs) (tcbEPDequeue t qs')"
+  by (clarsimp simp: tcb_ep_dequeue_def tcbEPDequeue_def)
+
+lemma tcb_ep_append_corres:
+  "corres (=) (\<lambda>s. tcb_at t s \<and> (\<forall>t \<in> set qs. tcb_at t s))
+              (\<lambda>s. tcb_at' t s \<and> (\<forall>t \<in> set qs. tcb_at' t s))
+              (tcb_ep_append t qs) (tcbEPAppend t qs)"
+  apply (clarsimp simp: tcb_ep_append_def tcbEPAppend_def null_def split del: if_split)
+  apply (rule corres_guard_imp)
+    apply (rule corres_if; clarsimp?)
+    apply (rule_tac corres_split[OF _ tcb_ep_find_index_corres])
+      apply wpsimp+
+  done
+
+lemma tcbEPFindIndex_inv[wp]:
+  "tcbEPFindIndex t q i \<lbrace>P\<rbrace>"
+  apply (induct i; subst tcbEPFindIndex.simps; wpsimp)
+  by simp+ wpsimp+
+
+crunch inv[wp]: tcbEPAppend P
+
+lemma as_user_refs_of[wp]:
+  "as_user thread f \<lbrace>\<lambda>s. obj_at (\<lambda>ko. P (refs_of ko)) ptr s\<rbrace>"
+  apply (clarsimp simp: as_user_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: get_tcb_def get_refs_def2 tcb_st_refs_of_def
+                 split: Structures_A.kernel_object.splits)
+  done
+
+lemma receiveSignal_corres:
  "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
-  corres dc (invs and st_tcb_at active thread and valid_cap cap and ex_nonz_cap_to thread)
-            (invs' and tcb_at' thread and valid_cap' cap')
+  corres dc ((invs and weak_valid_sched_action and scheduler_act_not thread and valid_ready_qs
+             and active_sc_valid_refills and valid_release_q and current_time_bounded 1
+             and (\<lambda>s. thread = cur_thread s) and not_queued thread and not_in_release_q thread
+             and ex_nonz_cap_to thread) and valid_cap cap)
+            (invs' and tcb_at' thread and ex_nonz_cap_to' thread and valid_cap' cap')
             (receive_signal thread cap isBlocking) (receiveSignal thread cap' isBlocking)"
+  (is "\<lbrakk>_;_\<rbrakk> \<Longrightarrow> corres _ (?pred and _) _ _ _")
   apply (simp add: receive_signal_def receiveSignal_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
-  apply (rename_tac word1 word2 rights)
+  apply (rename_tac cap_ntfn_ptr badge rights)
+  apply (rule_tac Q="\<lambda>rv. ?pred and tcb_at thread and ntfn_at cap_ntfn_ptr
+                          and valid_ntfn rv and obj_at ((=) (Notification rv)) cap_ntfn_ptr"
+              and Q'="\<lambda>rv'. invs' and valid_release_queue_iff and ex_nonz_cap_to' thread
+                            and tcb_at' thread and ntfn_at' cap_ntfn_ptr
+                            and valid_ntfn' rv' and ko_at' rv' cap_ntfn_ptr"
+               in corres_split')
+     apply (corressimp corres: get_ntfn_corres
+                         simp: ntfn_at_def2 valid_cap_def st_tcb_at_tcb_at valid_cap'_def)
+    defer
+    apply (wpsimp wp: get_simple_ko_wp)
+    apply (fastforce simp: valid_cap_def obj_at_def valid_obj_def
+                     dest: invs_valid_objs)
+   apply (wpsimp wp: getNotification_wp)
+   apply (fastforce simp: obj_at'_def projectKOs valid_obj'_def
+                    dest: invs_valid_objs')
+  apply (case_tac "ntfn_obj rv"; clarsimp simp: ntfn_relation_def)
+    apply (case_tac isBlocking; simp)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[OF _ sts_corres])
+          apply (rule corres_split[OF _ set_ntfn_corres])
+             apply (rule maybeReturnSc_corres)
+            apply (wpsimp wp: maybe_return_sc_weak_valid_sched_action)
+            apply (clarsimp simp: ntfn_relation_def)
+           apply wpsimp
+          apply wpsimp
+         apply (clarsimp simp: thread_state_relation_def)
+        apply (wpsimp wp: set_thread_state_weak_valid_sched_action)
+       apply wpsimp
+      apply (fastforce simp: valid_tcb_state_def)
+     apply (fastforce simp: valid_tcb_state'_def)
+    apply (corressimp corres: doNBRecvFailedTransfer_corres)
+    apply fastforce
+   \<comment> \<open>WaitingNtfn\<close>
+   apply (case_tac isBlocking; simp)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF _ sts_corres])
+         apply (rule corres_split[OF _ tcb_ep_append_corres])
+           apply (rule corres_split[OF _ set_ntfn_corres])
+              apply (rule  maybeReturnSc_corres)
+             apply (wpsimp wp: maybe_return_sc_weak_valid_sched_action)
+             apply (clarsimp simp: ntfn_relation_def)
+            apply wpsimp
+           apply wpsimp
+          apply wpsimp
+         apply wpsimp
+        apply (clarsimp simp: thread_state_relation_def)
+       apply (wpsimp wp: set_thread_state_weak_valid_sched_action)
+      apply (wpsimp wp: hoare_vcg_ball_lift2)
+     apply (fastforce simp: valid_tcb_state_def valid_ntfn_def)
+    apply (fastforce simp: valid_tcb_state'_def valid_ntfn'_def)
+   apply (corressimp corres: doNBRecvFailedTransfer_corres)
+   apply fastforce
+  \<comment> \<open>ActiveNtfn\<close>
   apply (rule corres_guard_imp)
-    apply (rule_tac R="\<lambda>rv. invs and tcb_at thread and st_tcb_at active thread and
-                            ntfn_at word1 and ex_nonz_cap_to thread and
-                            valid_ntfn rv and
-                            obj_at (\<lambda>k. k = Notification rv) word1" and
-                            R'="\<lambda>rv'. invs' and tcb_at' thread and ntfn_at' word1 and
-                            valid_ntfn' rv'"
-                         in corres_split [OF _ get_ntfn_corres])
-      apply clarsimp
-      apply (case_tac "ntfn_obj rv")
-        \<comment> \<open>IdleNtfn\<close>
-        apply (simp add: ntfn_relation_def)
-        apply (rule corres_guard_imp)
-          apply (case_tac isBlocking; simp)
-           apply (rule corres_split [OF _ sts_corres])
-              sorry (*
-              apply (rule set_ntfn_corres)
-              apply (simp add: ntfn_relation_def)
-             apply simp
-            apply wp+
-          apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp+)
-       \<comment> \<open>WaitingNtfn\<close>
-       apply (simp add: ntfn_relation_def)
-       apply (rule corres_guard_imp)
-         apply (case_tac isBlocking; simp)
-          apply (rule corres_split[OF _ sts_corres])
-             apply (rule set_ntfn_corres)
-             apply (simp add: ntfn_relation_def)
-            apply simp
-           apply wp+
-         apply (rule corres_guard_imp)
-           apply (rule do_nbrecv_failed_transfer_corres, simp+)
-      \<comment> \<open>ActiveNtfn\<close>
-      apply (simp add: ntfn_relation_def)
-      apply (rule corres_guard_imp)
-        apply (simp add: badgeRegister_def badge_register_def)
-        apply (rule corres_split [OF _ user_setreg_corres])
-          apply (rule set_ntfn_corres)
-          apply (simp add: ntfn_relation_def)
-         apply wp+
-       apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                       elim!: st_tcb_weakenE)
-      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-     apply wp+
-   apply (clarsimp simp add: ntfn_at_def2 valid_cap_def st_tcb_at_tcb_at)
-  apply (clarsimp simp add: valid_cap'_def)
-  done *)
+    apply (clarsimp simp: badge_register_def badgeRegister_def)
+    apply (rule corres_split[OF _ user_setreg_corres])
+      apply (rule corres_split[OF _ set_ntfn_corres])
+         apply (rule maybeDonateSc_corres)
+        apply (clarsimp simp: ntfn_relation_def)
+       apply (wpsimp wp: set_ntfn_minor_invs)
+      apply (wpsimp wp: set_ntfn_minor_invs')
+     apply (wpsimp wp: hoare_vcg_imp_lift'
+                 simp: valid_ntfn_def)
+    apply (wpsimp wp: hoare_vcg_imp_lift')
+   apply (fastforce intro: if_live_then_nonz_capD2
+                     simp: obj_at_def live_def live_ntfn_def valid_ntfn_def)
+  apply (fastforce intro!: if_live_then_nonz_capE'
+                     simp: valid_ntfn'_def obj_at'_def projectKOs live_ntfn'_def ko_wp_at'_def)
+  done
 
 lemma tg_sp':
   "\<lbrace>P\<rbrace> threadGet f p \<lbrace>\<lambda>t. obj_at' (\<lambda>t'. f t' = t) p and P\<rbrace>"
@@ -4608,11 +4809,6 @@ lemma gets_the_noop_corres:
                         return_def gets_def bind_def get_def)
   apply (clarsimp simp: assert_opt_def return_def dest!: P)
   done
-
-lemma tcbEPFindIndex_inv[wp]:
-  "tcbEPFindIndex t q i \<lbrace>P\<rbrace>"
-  apply (induct i; subst tcbEPFindIndex.simps; wpsimp)
-  by simp+ wpsimp+
 
 end
 
@@ -5261,8 +5457,6 @@ lemma tcbEPFindIndex_wp:
   apply (wpsimp wp: threadGet_wp | assumption)+
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
   done
-
-crunch inv[wp]: tcbEPAppend P
 
 lemma tcbEPAppend_valid_SendEP:
   "\<lbrace>valid_ep' (SendEP (t#q)) and K (t \<notin> set q)\<rbrace> tcbEPAppend t q \<lbrace>\<lambda>q'. valid_ep' (SendEP q')\<rbrace>"

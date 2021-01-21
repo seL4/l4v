@@ -1061,59 +1061,6 @@ lemma setP_invs':
                          pred_tcb_at'_def obj_at'_def projectKO_eq)
   done
 
-lemma tcb_ep_find_index_corres:
-  "corres (=) (tcb_at t and (\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and K (n < length list))
-              (tcb_at' t and (\<lambda>s. \<forall>t \<in> set list. tcb_at' t s))
-              (tcb_ep_find_index t list n) (tcbEPFindIndex t list n)"
-  apply (rule corres_gen_asm')
-  apply (induct n)
-   apply (subst tcb_ep_find_index.simps)
-   apply (subst tcbEPFindIndex.simps)
-   apply (rule corres_split_eqr)
-      apply (rule corres_split_eqr)
-         apply (rule corres_if, simp)
-          apply (rule corres_trivial, simp)
-         apply (rule corres_trivial, simp)
-        apply (rule threadget_corres, simp add: tcb_relation_def)
-       apply wpsimp
-      apply wpsimp
-     apply (rule threadget_corres, simp add: tcb_relation_def)
-    apply wpsimp
-   apply wpsimp
-  apply (subst tcb_ep_find_index.simps)
-  apply (subst tcbEPFindIndex.simps)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr)
-       apply (rule corres_split_eqr)
-          apply (rule corres_if, simp)
-           apply (rule corres_if, simp)
-            apply (rule corres_trivial, simp)
-           apply simp
-          apply (rule corres_trivial, simp)
-         apply (rule threadget_corres, simp add: tcb_relation_def)
-        apply (wp thread_get_wp)
-       apply (wp threadGet_wp)
-      apply (rule threadget_corres, simp add: tcb_relation_def)
-     apply (wp thread_get_wp)
-    apply (wpsimp wp: threadGet_wp)
-   apply (fastforce simp: projectKO_eq projectKO_tcb obj_at'_def)+
-  done
-
-lemma tcb_ep_dequeue_corres:
-  "qs = qs' \<Longrightarrow> corres (=) \<top> \<top> (tcb_ep_dequeue t qs) (tcbEPDequeue t qs')"
-  by (clarsimp simp: tcb_ep_dequeue_def tcbEPDequeue_def)
-
-lemma tcb_ep_append_corres:
-  "corres (=) (\<lambda>s. tcb_at t s \<and> (\<forall>t \<in> set qs. tcb_at t s))
-              (\<lambda>s. tcb_at' t s \<and> (\<forall>t \<in> set qs. tcb_at' t s))
-              (tcb_ep_append t qs) (tcbEPAppend t qs)"
-  apply (clarsimp simp: tcb_ep_append_def tcbEPAppend_def null_def split del: if_split)
-  apply (rule corres_guard_imp)
-    apply (rule corres_if; clarsimp?)
-    apply (rule_tac corres_split[OF _ tcb_ep_find_index_corres])
-      apply wpsimp+
-  done
-
 lemma reorder_ntfn_corres:
   "ntfn = ntfn' \<Longrightarrow> corres dc (invs and st_tcb_at (\<lambda>st. ntfn_blocked st = Some ntfn) t)
                               (invs' and st_tcb_at' (\<lambda>st. ntfnBlocked st = Some ntfn) t)
