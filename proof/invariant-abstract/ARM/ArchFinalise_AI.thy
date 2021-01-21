@@ -813,8 +813,9 @@ lemma sched_context_unbind_yield_from_not_live:
   apply (auto simp: obj_at_def live_def live_sc_def)
   done
 
-lemma sc_refill_max_update_not_live[wp]:
-  "update_sched_context sc_ptr (sc_refill_max_update f) \<lbrace>obj_at (Not \<circ> live) sc\<rbrace>"
+lemma sched_context_zero_refill_max_not_live[wp]:
+  "sched_context_zero_refill_max sc_ptr \<lbrace>obj_at (Not \<circ> live) sc\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
   apply (wpsimp simp: wp: update_sched_context_wp)
   apply (auto simp: obj_at_def live_def live_sc_def)
   done
@@ -973,7 +974,7 @@ lemma finalise_cap_replaceable [Finalise_AI_asms]:
         | hammer
         | wp (once) sched_context_unbind_yield_from_not_live[unfolded o_def]
         | wp (once) hoare_drop_imps; wp (once) hoare_vcg_conj_lift,
-          wp (once) sc_refill_max_update_not_live[unfolded o_def])+)[1]
+          wp (once) sched_context_zero_refill_max_not_live[unfolded o_def])+)[1]
       \<comment> \<open>schedcontrol\<close>
       apply ((wpsimp | hammer)+)[1]
      \<comment> \<open>irqcontrol\<close>

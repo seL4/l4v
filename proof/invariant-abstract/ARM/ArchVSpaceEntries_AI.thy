@@ -460,19 +460,15 @@ lemma fast_finalise_valid_pdpt_objs[wp]:
       wpsimp simp: set_refills_def o_def
                wp: get_sched_context_wp hoare_vcg_if_lift2 hoare_drop_imps)
 
-crunch valid_pdpt_objs[wp]: prepare_thread_delete "valid_pdpt_objs"
-
-crunch valid_pdpt_objs[wp]: unbind_notification,deleting_irq_handler "valid_pdpt_objs"
+crunches
+  prepare_thread_delete, unbind_notification, deleting_irq_handler, set_asid_pool,
+  invalidate_asid_entry, unbind_from_sc, suspend, sched_context_zero_refill_max
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv simp: unless_def)
 
-crunch valid_pdpt_objs[wp]: set_asid_pool,invalidate_asid_entry "valid_pdpt_objs"
-  (ignore: set_object wp: get_object_wp)
-
-crunch valid_pdpt_objs[wp]: delete_asid_pool,arch_finalise_cap "valid_pdpt_objs"
+crunches delete_asid_pool, arch_finalise_cap
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
-
-crunch valid_pdpt_objs[wp]: unbind_from_sc,suspend "valid_pdpt_objs"
-  (wp: maybeM_inv)
 
 lemma finalise_cap_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> finalise_cap c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"

@@ -152,7 +152,7 @@ crunch domain_list_inv[wp]: reschedule_required,schedule_tcb "\<lambda>s. P (dom
 crunch domain_list_inv[wp]: reply_unlink_tcb, reply_unlink_sc, tcb_sched_action "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
-crunch domain_list_inv[wp]: reply_remove, sched_context_unbind_tcb "\<lambda>s. P (domain_list s)"
+crunch domain_list_inv[wp]: reply_remove, sched_context_unbind_tcb, sched_context_zero_refill_max "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps get_simple_ko_wp)
 
 crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
@@ -167,9 +167,6 @@ lemma rec_del_domain_list[wp]:
 
 crunch domain_list_inv[wp]: cap_delete, activate_thread "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp)
-
-crunch domain_list_inv[wp]: possible_switch_to "\<lambda>s. P (domain_list s)"
-  (simp: get_tcb_obj_ref_def wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
 crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak mapM_x_wp simp: Let_def)
