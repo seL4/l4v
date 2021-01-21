@@ -15,10 +15,7 @@ imports
   Word_Lemmas
 begin
 
-type_synonym word8 = "8 word"
 lemma len8: "len_of (x :: 8 itself) = 8" by simp
-
-type_synonym sword8 =  "8 sword"
 
 lemma word8_and_max_simp:
   \<open>x AND 0xFF = x\<close> for x :: \<open>8 word\<close>

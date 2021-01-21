@@ -9,17 +9,13 @@ section "Words of Length 64"
 theory Word_64
   imports
     Word_Lemmas
-    Word_8
-    Word_16
+    Word_Names
     Word_Syntax
     Rsplit
     More_Word_Operations
 begin
 
-type_synonym word64 = "64 word"
 lemma len64: "len_of (x :: 64 itself) = 64" by simp
-
-type_synonym sword64 = "64 sword"
 
 type_synonym machine_word_len = 64
 type_synonym machine_word = "machine_word_len word"
@@ -144,13 +140,13 @@ lemmas word64_minus_one_le' = word_minus_one_le[where 'a=64]
 lemmas word64_minus_one_le = word64_minus_one_le'[simplified]
 
 lemma ucast_not_helper:
-  fixes a::word8
+  fixes a::"8 word"
   assumes a: "a \<noteq> 0xFF"
   shows "ucast a \<noteq> (0xFF::word64)"
 proof
   assume "ucast a = (0xFF::word64)"
   also
-  have "(0xFF::word64) = ucast (0xFF::word8)" by simp
+  have "(0xFF::word64) = ucast (0xFF::8 word)" by simp
   finally
   show False using a
     apply -
@@ -176,7 +172,7 @@ lemma if_then_0_else_1:
 lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
 
 lemma ucast_le_ucast_8_64:
-  "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: word8))"
+  "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: 8 word))"
   by (simp add: ucast_le_ucast)
 
 lemma in_16_range:
@@ -200,7 +196,7 @@ lemma of_nat64_n_less_equal_power_2:
   by (rule of_nat_n_less_equal_power_2, clarsimp simp: word_size)
 
 lemma word_rsplit_0:
-  "word_rsplit (0 :: word64) = [0, 0, 0, 0, 0, 0, 0, 0 :: word8]"
+  "word_rsplit (0 :: word64) = [0, 0, 0, 0, 0, 0, 0, 0 :: 8 word]"
   by (simp add: word_rsplit_def bin_rsplit_def)
 
 lemma unat_ucast_10_64 :
@@ -247,11 +243,8 @@ lemmas sint64_of_int_eq = sint64_of_int_eq' [simplified]
 
 lemma ucast_of_nats [simp]:
   "(ucast (of_nat x :: word64) :: sword64) = (of_nat x)"
-  "(ucast (of_nat x :: word64) :: sword16) = (of_nat x)"
-  "(ucast (of_nat x :: word64) :: sword8) = (of_nat x)"
-  "(ucast (of_nat x :: word16) :: sword16) = (of_nat x)"
-  "(ucast (of_nat x :: word16) :: sword8) = (of_nat x)"
-  "(ucast (of_nat x :: word8) :: sword8) = (of_nat x)"
+  "(ucast (of_nat x :: word64) :: 16 sword) = (of_nat x)"
+  "(ucast (of_nat x :: word64) :: 8 sword) = (of_nat x)"
   by (simp_all add: of_nat_take_bit take_bit_word_eq_self)
 
 lemmas signed_shift_guard_simpler_64'
@@ -288,7 +281,7 @@ proof -
   then have \<open>mask x = b div 2\<close>
     using shiftr1_is_div_2 [of b] by simp
   with \<open>b mod 2 = 1\<close> have \<open>2 * mask x + 1 = 2 * (b div 2) + b mod 2\<close>
-    by (simp only:) 
+    by (simp only:)
   also have \<open>\<dots> = b\<close>
     by (simp add: mult_div_mod_eq)
   finally have \<open>2 * mask x + 1 = b\<close> .
@@ -306,27 +299,6 @@ lemma unat_of_int_64:
   done
 
 lemmas word_ctz_not_minus_1_64 = word_ctz_not_minus_1[where 'a=64, simplified]
-
-(* Helper for packing then unpacking a 64-bit variable. *)
-lemma cast_chunk_assemble_id_64[simp]:
-  "(((ucast ((ucast (x::64 word))::32 word))::64 word) || (((ucast ((ucast (x >> 32))::32 word))::64 word) << 32)) = x"
-  by (simp add:cast_chunk_assemble_id)
-
-(* Another variant of packing and unpacking a 64-bit variable. *)
-lemma cast_chunk_assemble_id_64'[simp]:
-  "(((ucast ((scast (x::64 word))::32 word))::64 word) || (((ucast ((scast (x >> 32))::32 word))::64 word) << 32)) = x"
-  by (simp add:cast_chunk_scast_assemble_id)
-
-(* Specialisations of down_cast_same for adding to local simpsets. *)
-lemma cast_down_u64: "(scast::64 word \<Rightarrow> 32 word) = (ucast::64 word \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
-
-lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
 
 lemma word64_and_max_simp:
   \<open>x AND 0xFFFFFFFFFFFFFFFF = x\<close> for x :: \<open>64 word\<close>

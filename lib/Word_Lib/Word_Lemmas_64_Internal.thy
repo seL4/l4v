@@ -5,7 +5,7 @@
  *)
 
 theory Word_Lemmas_64_Internal
-imports Word_Lib_Sumo
+imports Word_Lib_Sumo Word_64
 begin
 
 lemmas unat_add_simple = iffD1[OF unat_add_lem[where 'a = 64, folded word_bits_def]]
@@ -31,7 +31,6 @@ lemma machine_word_and_3F_less_40:
   "(w :: machine_word) && 0x3F < 0x40"
   by (rule word_and_less', simp)
 
-(* FIXME: move to GenericLib *)
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
 lemma unat_mask_3_less_8:

@@ -6,7 +6,7 @@
 
 (*<*)
 theory Guide
-  imports Word_Lib_Sumo
+  imports Word_Lib_Sumo Word_64
 begin
 
 hide_const (open) Generic_set_bit.set_bit
@@ -269,7 +269,7 @@ text \<open>
 
           More lemmas on words, covering many other theories mentioned here.
 
-    \<^descr>[Words of fixed length]
+    \<^descr>[Words of popular lengths].
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_8\<close>]
 
@@ -281,11 +281,15 @@ text \<open>
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_32\<close>]
 
-          for 32-bit words.
+          for 32-bit words. This theory is not part of  \<^text>\<open>Word_Lib_Sumo\<close>, because it shadows
+          names from \<^theory>\<open>Word_Lib.Word_64\<close>. They can be used together, but then will have
+          to use qualified names in applications.
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_64\<close>]
 
-          for 64-bit words.
+          for 64-bit words. This theory is not part of  \<^text>\<open>Word_Lib_Sumo\<close>, because it shadows
+          names from \<^theory>\<open>Word_Lib.Word_32\<close>. They can be used together, but then will have
+          to use qualified names in applications.
 \<close>
 
 
@@ -314,7 +318,8 @@ text \<open>
     An entry point importing any relevant theory in that session.  Intended
     for backward compatibility: start importing this theory when
     migrating applications to Isabelle2021, and later sort out
-    what you really need.
+    what you really need. You may need to include
+   \<^theory>\<open>Word_Lib.Word_32\<close> or \<^theory>\<open>Word_Lib.Word_64\<close> separately.
 
   \<^descr>[\<^theory>\<open>Word_Lib.Generic_set_bit\<close>]
 
@@ -347,6 +352,7 @@ text \<open>
 
     Collection of operations and theorems which are kept for backward
     compatibility and not used in other theories in session \<^text>\<open>Word_Lib\<close>.
+    They are used in applications of \<^text>\<open>Word_Lib\<close>, but should be migrated to there.
 \<close>
 
 (*<*)

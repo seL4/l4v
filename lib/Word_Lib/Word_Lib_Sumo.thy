@@ -40,7 +40,6 @@ imports
   Word_8
   Word_16
   Word_32
-  Word_64
   Word_Syntax
   Signed_Division_Word
   More_Word_Operations
@@ -96,7 +95,6 @@ lemmas word_and_max_simps =
   word8_and_max_simp
   word16_and_max_simp
   word32_and_max_simp
-  word64_and_max_simp
 
 lemma distinct_lemma: "f x \<noteq> f y \<Longrightarrow> x \<noteq> y" by auto
 
