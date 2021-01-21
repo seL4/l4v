@@ -296,7 +296,7 @@ lemma offset_slot':
   "\<lbrakk>slot < 2^radix\<rbrakk> \<Longrightarrow> offset slot radix = unat slot"
   by (clarsimp simp: offset_def Word.less_mask_eq)
 
-lemmas word_bits_def = Word_Setup_32.word_bits_def
+lemmas word_bits_def = Word_32.word_bits_def
 
 lemma offset_slot:
   "\<lbrakk>slot < 2^radix; radix < word_bits\<rbrakk> \<Longrightarrow> offset (of_nat slot) radix = slot"
