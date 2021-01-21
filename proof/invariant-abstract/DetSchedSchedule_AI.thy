@@ -3938,10 +3938,19 @@ lemma unbind_notification_valid_sched[wp]:
 lemma sched_context_unbind_tcb_valid_sched_misc[wp]:
   "sched_context_unbind_tcb sc_ptr
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (cur_time s)
-          (cur_domain s) (cur_thread s)(idle_thread s) (etcbs_of s)
+          (cur_domain s) (cur_thread s) (idle_thread s) (etcbs_of s)
           (tcb_sts_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def
                wp: hoare_drop_imp hoare_vcg_all_lift set_tcb_sched_context_valid_sched_except_tcb_scp_heap)
+
+lemma sched_context_unbind_all_tcbs_valid_sched_misc[wp]:
+  "sched_context_unbind_all_tcbs sc_ptr
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (cur_time s)
+          (cur_domain s) (cur_thread s) (idle_thread s) (etcbs_of s)
+          (tcb_sts_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
+  unfolding sched_context_unbind_all_tcbs_def
+  by (wpsimp wp: get_sched_context_wp update_sched_context_wp update_sk_obj_ref_wp
+           simp: obj_at_def vs_all_heap_simps fun_upd_def tcb_heap.all_simps)
 
 lemma unbind_from_sc_valid_sched_misc[wp]:
   "unbind_from_sc tcb_ptr
@@ -4075,32 +4084,28 @@ lemma sched_context_donate_ct_in_cur_domain[wp]:
   "sched_context_donate sc_ptr tcb_ptr \<lbrace>ct_in_cur_domain\<rbrace>"
   by (wpsimp simp: sched_context_donate_def)
 
-lemma sorted_release_q_sc_refill_cfg_update_irrelevant:
-  assumes "\<And>sc. r_time (hd (scrc_refills (f sc))) = r_time (hd (scrc_refills sc))"
-  shows "sorted_release_q_2 (tcb_sc_refill_cfgs_2 tcb_scps (heap_upd f ref sc_refill_cfgs))
-         = sorted_release_q_2 (tcb_sc_refill_cfgs_2 tcb_scps sc_refill_cfgs)"
-  apply (rule ext, rename_tac queue, rule sorted_release_q_2_eq_lift)
-  apply (intro sc_ready_time_eq_iff[THEN iffD2] conjI allI)
-   apply (fastforce simp: tcb_sc_refill_cfgs_2_def opt_map_def heap_upd_def
-                   split: option.splits if_splits)
-  apply (rule iffI)
-   apply (fastforce simp: tcb_sc_refill_cfgs_2_def sc_ready_time_def heap_upd_def
-                          map_project_simps opt_map_simps map_join_simps assms
-                   split: if_splits)
-  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def map_project_simps in_opt_map_eq, rename_tac scrc scp)
-  by (case_tac "scp = ref"; fastforce simp: sc_ready_time_def heap_upd_def
-                                            opt_map_simps map_join_simps assms)
+lemma sched_context_zero_refill_max_valid_sched_misc[wp]:
+  "sched_context_zero_refill_max sc_ptr
+   \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s)
+          (sc_replies_of s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
+          (ready_queues s) (release_queue s) (scheduler_action s) (tcbs_of s)\<rbrace>"
+  unfolding sched_context_zero_refill_max_def
+  by (wpsimp wp: get_sched_context_wp update_sched_context_wp update_sk_obj_ref_wp
+           simp: obj_at_def vs_all_heap_simps fun_upd_def tcb_heap.all_simps)
 
-lemma set_sc_refill_max_valid_sched_unbound_sc:
+lemma sched_context_zero_refill_max_valid_sched_unbound_sc:
   "\<lbrace>\<lambda>s. valid_sched s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t) \<and> \<not> non_empty_sc_replies_at ref s\<rbrace>
-   set_sc_obj_ref sc_refill_max_update ref 0
+   sched_context_zero_refill_max ref
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def)
   supply if_split[split del] if_bool_simps[simp]
   apply (wpsimp wp: valid_sched_wp simp: valid_sched_def)
   apply (intro conjI)
         apply (clarsimp simp: valid_ready_queued_thread_2_def vs_all_heap_simps heap_upd_def elim!: valid_ready_qsE)
-       apply (clarsimp simp: sorted_release_q_sc_refill_cfg_update_irrelevant elim!: valid_release_qE)
-       apply (clarsimp simp: vs_all_heap_simps heap_upd_def)
+       apply (fastforce simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps map_project_simps
+                              heap_upd_def pred_map_simps sc_ready_time_eq_iff
+                       split: if_splits
+                       elim!: valid_release_qE sorted_release_qE)
       apply (fastforce simp: valid_sched_action_def weak_valid_sched_action_def heap_upd_def vs_all_heap_simps)
      apply (clarsimp elim!: valid_blockedE' simp: heap_upd_def vs_all_heap_simps active_sc_def split: if_splits)
     apply (fastforce simp: heap_upd_def vs_all_heap_simps is_blocked_thread_state_defs
@@ -5604,7 +5609,7 @@ lemma finalise_cap_valid_sched[wp]:
      apply (clarsimp dest!: invs_valid_idle simp: valid_idle_def cap_range_def)
     apply (clarsimp elim!: cte_wp_valid_cap)
    apply (rename_tac scptr x)
-   apply (wpsimp wp: set_sc_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift)
+   apply (wpsimp wp: sched_context_zero_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift)
     apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) scptr"
                  in hoare_strengthen_post[rotated])
      apply (clarsimp simp: tcb_at_kh_simps(3)[symmetric] pred_tcb_at_eq_commute)
@@ -17142,6 +17147,13 @@ lemma update_sched_context_released_if_bound_other:
   apply (wpsimp wp: update_sched_context_wp)
   by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 
+lemma sched_context_zero_refill_max_released_if_bound_other:
+  "\<lbrace>\<lambda>s. released_if_bound_sc_tcb_at t s \<and> \<not> heap_ref_eq sc_ptr t (tcb_scps_of s)\<rbrace>
+   sched_context_zero_refill_max sc_ptr
+   \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+  by (wpsimp wp: update_sched_context_released_if_bound_other)
+
 lemma sched_context_unbind_all_tcbs_not_bound[wp]:
   "\<lbrace>invs and K (sc \<noteq> idle_sc_ptr)\<rbrace>
    sched_context_unbind_all_tcbs sc
@@ -18827,11 +18839,11 @@ crunches cancel_all_ipc, cancel_all_signals, sched_context_unbind_all_tcbs, susp
   for cur_sc_more_than_ready[wp]: cur_sc_more_than_ready
   (wp: crunch_wps ignore: update_sched_context)
 
-lemma set_refill_max_zero_cur_sc_more_than_ready[wp]:
-  "\<lbrace>cur_sc_more_than_ready\<rbrace> set_sc_obj_ref sc_refill_max_update scp 0
-   \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+lemma sched_context_zero_refill_max_cur_sc_more_than_ready[wp]:
+  "sched_context_zero_refill_max scp \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
   apply (wpsimp wp: update_sched_context_wp)
-  apply (clarsimp simp: cur_sc_more_than_ready_def vs_all_heap_simps active_sc_def)
+  apply (clarsimp simp: cur_sc_more_than_ready_def vs_all_heap_simps active_sc_def obj_at_def)
   done
 
 crunches fast_finalise, cap_delete_one, finalise_cap, cap_delete
@@ -19091,16 +19103,19 @@ crunches deleting_irq_handler
   for cur_sc_offset_ready[wp]: "\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) (s::det_state)"
   (wp: mapM_x_wp)
 
+lemma sched_context_zero_refill_max_cur_sc_offset_ready[wp]:
+  "sched_context_zero_refill_max scp
+   \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (fastforce simp: vs_all_heap_simps active_sc_def obj_at_def)
+  done
+
 lemma finalise_cap_cur_sc_offset_ready[wp]:
   "finalise_cap cap final
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) (s::det_state)\<rbrace>" (is "_ \<lbrace>?Q\<rbrace>")
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
-   apply (wpsimp wp: gts_wp get_simple_ko_wp)
-  apply (wpsimp wp: valid_sched_wp)
-   apply (rule_tac Q="\<lambda>_. ?Q" in hoare_post_imp)
-    apply (clarsimp simp: active_sc_def vs_all_heap_simps heap_upd_def)
-   apply wpsimp
-  apply (clarsimp simp: active_sc_def vs_all_heap_simps heap_upd_def)
+  apply (wpsimp wp: gts_wp get_simple_ko_wp)
   done
 
 lemma rec_del_cur_sc_offset_ready[wp]:
@@ -21342,9 +21357,9 @@ lemma suspend_not_ipc_queued_thread[wp]:
   apply (fastforce simp: pred_neg_def split: thread_state.splits)
   done
 
-lemma unbind_from_sc_st_tcb_at[wp]:
-  "unbind_from_sc x \<lbrace>st_tcb_at P t\<rbrace>"
-  by (wpsimp simp: unbind_from_sc_def wp: hoare_drop_imps hoare_vcg_all_lift)
+crunches unbind_from_sc, sched_context_zero_refill_max
+  for st_tcb_at[wp]: "st_tcb_at P t"
+  (wp: crunch_wps hoare_vcg_all_lift)
 (*FIXME RT: move everything between the previous comment and this one*)
 
 lemma finalise_cap_not_ipc_queued_thread[wp]:
@@ -21389,7 +21404,7 @@ lemma finalise_cap_released_if_bound[wp]:
   apply (case_tac cap; (solves \<open>wpsimp\<close>)?; simp)
    apply (wpsimp wp: gts_wp get_simple_ko_wp reply_remove_released_if_bound_other)
    apply (fastforce simp: pred_tcb_at_def obj_at_def pred_neg_def split: if_split)
-  apply (wpsimp wp: update_sched_context_released_if_bound_other)
+  apply (wpsimp wp: sched_context_zero_refill_max_released_if_bound_other)
   apply (fastforce simp: invs_def valid_state_def cap_range_def
                   dest!: valid_global_refsD split: if_split)
   done

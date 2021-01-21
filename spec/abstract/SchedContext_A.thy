@@ -381,6 +381,13 @@ where
      when (sc' \<noteq> Some sc_ptr) $ sched_context_bind_tcb sc_ptr tcb_ptr
    od"
 
+definition
+  sched_context_zero_refill_max :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "sched_context_zero_refill_max sc_ptr = do
+     set_sc_obj_ref sc_refill_max_update sc_ptr 0;
+     set_refills sc_ptr []
+   od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
 definition

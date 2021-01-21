@@ -406,15 +406,11 @@ lemma empty_slot_caps_of_state:
 crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch caps_of_state[wp]: reply_unlink_tcb, reply_unlink_sc "\<lambda>s. P (caps_of_state s)"
-  (wp: maybeM_inv mapM_x_wp' crunch_wps)
-
-crunch caps_of_state[wp]: tcb_release_remove "\<lambda>s. P (caps_of_state s)"
-
-crunch caps_of_state[wp]:
+crunches
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   unbind_maybe_notification, unbind_from_sc, sched_context_unbind_tcb,
-  sched_context_unbind_yield_from, update_sk_obj_ref "\<lambda>s. P (caps_of_state s)"
+  sched_context_unbind_yield_from, update_sk_obj_ref, sched_context_zero_refill_max
+  for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps maybeM_inv
    ignore: set_object set_tcb_obj_ref tcb_release_remove)
 
@@ -839,8 +835,9 @@ lemma sc_refill_max_update_cur_sc_tcb[wp]:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
-lemma reset_sc_refill_max_invs[wp]:
-  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> set_sc_obj_ref sc_refill_max_update p n \<lbrace>\<lambda>_. invs\<rbrace>"
+lemma sched_context_zero_refill_max_invs[wp]:
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> sched_context_zero_refill_max p \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (clarsimp simp: sched_context_zero_refill_max_def)
   by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
@@ -1068,7 +1065,7 @@ crunch cte_wp_at[wp]: cancel_ipc "cte_wp_at P p"
 
 crunches
   fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
-  sched_context_unbind_reply, sched_context_unbind_ntfn
+  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_zero_refill_max
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps ignore: set_tcb_obj_ref simp: crunch_simps)
 
@@ -1165,7 +1162,7 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
 crunches
   suspend, unbind_maybe_notification, unbind_notification, deleting_irq_handler,
   sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
-  sched_context_unbind_reply, sched_context_unbind_ntfn
+  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_zero_refill_max
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp maybeM_inv simp: crunch_simps)
 
