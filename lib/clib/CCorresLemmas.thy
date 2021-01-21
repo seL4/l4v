@@ -112,9 +112,9 @@ lemma exec_handlers_Hoare_from_vcg_might_fail:
     \<Longrightarrow> exec_handlers_Hoare \<Gamma> P (c # hs) Q A'"
   apply (clarsimp simp: exec_handlers_Hoare_def
              split del: if_split split: if_split_asm)
-   apply (erule exec_handlers.cases, simp_all)
-    apply (case_tac hsa, simp_all)
-     apply (erule exec_handlers.cases, simp_all)
+   apply (erule exec_handlers.cases; simp)
+    apply (cases hs; simp)
+     apply (erule exec_handlers.cases; simp)
     apply (frule exec_handlers_Cons_le, simp)
    apply (drule hoare_sound)
    apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
@@ -872,10 +872,11 @@ proof -
       apply (rule diff_Suc_less [OF lt0])
       done
   qed
-  thus ?thesis using lxs
-    apply (auto simp: init_xs_def dest!: spec[where x=Nil]
-                simp: j pn word_less_nat_alt neq_Nil_conv unat_word_ariths unat_of_nat push_mods
-            elim!: ccorres_guard_imp2)
+  thus ?thesis using lxs j pn
+    apply (auto simp: init_xs_def word_less_nat_alt neq_Nil_conv unat_word_ariths unat_of_nat push_mods
+                simp del: unsigned_of_nat
+                elim!: ccorres_guard_imp2
+                dest!: spec[where x=Nil])
     done
 qed
 
@@ -897,8 +898,7 @@ lemma ccorres_abstract_cslift:
   fixes p :: "'a :: c_type ptr"
   shows "(\<And>rv. P rv \<Longrightarrow> ccorres_underlying sr Gamm rvr xf arrel axf G (G' rv) hs a c) \<Longrightarrow>
   ccorres_underlying sr Gamm rvr xf arrel axf G ({s. P ((f::'a \<Rightarrow> ('b::{type})) s) \<longrightarrow> s \<in> G' (f s)} \<inter> {s. P (f s)}) hs a c"
-  apply (erule ccorres_abstract_h_val)
-  done
+  by (fact ccorres_abstract_h_val)
 
 lemma ccorres_cond2:
   assumes abs: "\<forall>s s'. (s, s') \<in> sr \<and> R s \<longrightarrow> P  = (s' \<in> P') "
