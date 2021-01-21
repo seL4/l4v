@@ -33,6 +33,7 @@ begin
 declare word_neq_0_conv [simp del]
 declare neq0_conv [simp del]
 declare fun_upd_apply[simp del]
+declare of_int_and_nat[simp del]
 
 (* Remove wp combinators which are problematic for AutoCorres
    and restore some prior configuration. *)

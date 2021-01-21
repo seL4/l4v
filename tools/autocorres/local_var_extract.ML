@@ -32,7 +32,7 @@ val the' = Utils.the'
 
 (* Simpset we use for automated tactics. *)
 fun setup_l2_ss ctxt = put_simpset AUTOCORRES_SIMPSET ctxt
-                         addsimps [@{thm ucast_id}, @{thm pred_conj_def}]
+                         addsimps [@{thm pred_conj_def}]
 
 (* Convert a set of variable names into an Isabelle list of strings. *)
 fun var_set_to_isa_list prog_info s =
@@ -56,8 +56,7 @@ fun var_set_to_isa_list prog_info s =
  *
  * would return ("x", @{term "x + b + c"}).
  *)
-fun convert_local_vars name_map term [] = ([], term)
-  | convert_local_vars name_map term ((var_name, var_term) :: vars)  =
+fun convert_local_vars name_map term [] = ([], term)  | convert_local_vars name_map term ((var_name, var_term) :: vars)  =
       if Utils.contains_subterm var_term term then
         let
           val free_var = name_map (var_name, fastype_of var_term)

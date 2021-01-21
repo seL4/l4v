@@ -255,8 +255,8 @@ lemma ucast_scast_same [polish, L2opt, simp]:
   done
 
 lemma [polish, L2opt, simp]:
-    "word_of_int (int x) = of_nat x"
-  by (clarsimp simp: word_of_nat)
+  "word_of_int (int x) = of_nat x"
+  by (fact of_int_of_nat_eq)
 
 (* Optimising "if" constructs. *)
 

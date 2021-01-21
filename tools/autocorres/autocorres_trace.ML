@@ -61,6 +61,8 @@ signature AUTOCORRES_TRACE = sig
         Proof.context -> (cterm -> thm) -> thm -> bool -> thm * SimpTrace option
 
   val print_ac_trace: thm RuleTrace -> string
+  val print_ac_simp_trace: SimpTrace -> string
+
   val writeFile: string -> string -> unit
 end;
 
@@ -368,8 +370,18 @@ fun print_ac_trace' indent (RuleTrace tr) =
        indent' ^ "Step: " ^ print_thm (#step tr |> fst) ^ "\n\n" ^
        String.concat (map (print_ac_trace' indent') (#trace tr) |> intercalate ["\n"]))
   end
+
 in
 val print_ac_trace = print_ac_trace' ""
+
+fun print_ac_simp_trace (SimpTrace tr) =
+  let val print_cterm = cterm_to_string true
+      val print_thm = Thm.cprop_of #> print_cterm
+  in
+    "Equation: " ^ print_thm(#equation tr) ^ "\n" ^
+    "Thms: \n" ^
+    String.concat (map (fn (name, thm) => name ^ ": " ^ print_cterm thm) (#thms tr) |> intercalate ["\n"])
+  end
 end
 
 fun writeFile filename string =

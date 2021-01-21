@@ -318,7 +318,7 @@ let
   val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file filename)
   val locale_name = case !(#c_locale opt) of NONE => locale_name
                                            | SOME l => l
-  val lthy = case try (Named_Target.begin (locale_name, Position.none)) thy of
+  val lthy = case try (Target_Context.context_begin_named_cmd [] (locale_name, Position.none)) thy of
                  SOME lthy => lthy
                | NONE => error ("autocorres: no such locale: " ^ locale_name)
 
@@ -722,7 +722,7 @@ let
 
 in
   (* Exit context. *)
-  Named_Target.exit lthy
+  Target_Context.end_named_cmd lthy |> Context.the_theory
 end
 
 end
