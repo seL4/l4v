@@ -14,8 +14,6 @@
 theory CTypesBase
 imports
   Addr_Type
-  "HOL-Library.Prefix_Order"
-  "Word_Lib.Signed_Words"
 begin
 
 section "Type setup"
@@ -293,8 +291,6 @@ proof -
     using assms by simp unat_arith
   show ?thesis unfolding intvl_def by (auto intro!: witness)
 qed
-
-declare of_nat_diff [simp]
 
 lemma intvl_self_offset:
   fixes p::"'a::len word"

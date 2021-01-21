@@ -5,7 +5,7 @@
  *)
 
 theory PackedTypes
-imports "Word_Lib.WordSetup" CProof
+imports CProof
 begin
 
 section \<open>Underlying definitions for the class axioms\<close>

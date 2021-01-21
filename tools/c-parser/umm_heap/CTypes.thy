@@ -1009,8 +1009,6 @@ lemma fd_cons_access_update_list_append:
   apply(clarsimp simp: fd_cons_access_update_def)
   apply(drule_tac x="take (size_td_list xs) bs" in spec)
   apply clarsimp
-  apply(erule impE)
-   apply(clarsimp simp: min_def)
   apply(simp add: access_ti_append)
   apply(drule_tac x="drop (size_td_list xs) bs" in spec)
   apply clarsimp
@@ -1351,8 +1349,6 @@ lemma wf_lf_fd_cons':
     apply(rotate_tac -4)
     apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec)
     apply clarsimp
-    apply(erule impE)
-     apply(clarsimp simp: min_def split: if_split_asm)
     apply(rotate_tac -1)
     apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
     apply(simp add: min_ll)
@@ -1645,8 +1641,6 @@ lemma wf_fd_cons [rule_format]:
     apply(rotate_tac -4)
     apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec)
     apply clarsimp
-    apply(erule impE)
-     apply(clarsimp simp: min_def split: if_split_asm)
     apply(rotate_tac -1)
     apply(drule_tac x="take (size_td_pair dt_pair) bs'" in spec)
     apply(simp add: min_ll)
