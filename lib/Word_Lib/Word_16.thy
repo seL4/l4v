@@ -12,10 +12,7 @@ imports
   Signed_Words
 begin
 
-type_synonym word16 = "16 word"
 lemma len16: "len_of (x :: 16 itself) = 16" by simp
-
-type_synonym sword16 = "16 sword"
 
 lemma word16_and_max_simp:
   \<open>x AND 0xFFFF = x\<close> for x :: \<open>16 word\<close>

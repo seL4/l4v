@@ -8,9 +8,9 @@ section "Words of Length 32"
 
 theory Word_32
   imports
-    Word_8
-    Word_16
+    Word_Lemmas
     Word_Syntax
+    Word_Names
     Rsplit
     More_Word_Operations
     Bitwise
@@ -143,13 +143,13 @@ lemmas word32_minus_one_le' = word_minus_one_le[where 'a=32]
 lemmas word32_minus_one_le = word32_minus_one_le'[simplified]
 
 lemma ucast_not_helper:
-  fixes a::word8
+  fixes a::"8 word"
   assumes a: "a \<noteq> 0xFF"
   shows "ucast a \<noteq> (0xFF::word32)"
 proof
   assume "ucast a = (0xFF::word32)"
   also
-  have "(0xFF::word32) = ucast (0xFF::word8)" by simp
+  have "(0xFF::word32) = ucast (0xFF::8 word)" by simp
   finally
   show False using a
     apply -
@@ -165,7 +165,7 @@ lemma less_4_cases:
   done
 
 lemma unat_ucast_8_32:
-  fixes x :: "word8"
+  fixes x :: "8 word"
   shows "unat (ucast x :: word32) = unat x"
   by transfer simp
 
@@ -180,7 +180,7 @@ lemma if_then_0_else_1:
 lemmas if_then_simps = if_then_0_else_1 if_then_1_else_0
 
 lemma ucast_le_ucast_8_32:
-  "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
+  "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: 8 word))"
   by (simp add: ucast_le_ucast)
 
 lemma in_16_range:
@@ -204,7 +204,7 @@ lemma of_nat32_n_less_equal_power_2:
   by (rule of_nat_n_less_equal_power_2, clarsimp simp: word_size)
 
 lemma word_rsplit_0:
-  "word_rsplit (0 :: word32) = [0, 0, 0, 0 :: word8]"
+  "word_rsplit (0 :: word32) = [0, 0, 0, 0 :: 8 word]"
   by (simp add: word_rsplit_def bin_rsplit_def)
 
 lemma unat_ucast_10_32 :
@@ -251,11 +251,11 @@ lemmas sint32_of_int_eq = sint32_of_int_eq' [simplified]
 
 lemma ucast_of_nats [simp]:
   "(ucast (of_nat x :: word32) :: sword32) = (of_nat x)"
-  "(ucast (of_nat x :: word32) :: sword16) = (of_nat x)"
-  "(ucast (of_nat x :: word32) :: sword8) = (of_nat x)"
-  "(ucast (of_nat x :: word16) :: sword16) = (of_nat x)"
-  "(ucast (of_nat x :: word16) :: sword8) = (of_nat x)"
-  "(ucast (of_nat x :: word8) :: sword8) = (of_nat x)"
+  "(ucast (of_nat x :: word32) :: 16 sword) = (of_nat x)"
+  "(ucast (of_nat x :: word32) :: 8 sword) = (of_nat x)"
+  "(ucast (of_nat x :: 16 word) :: 16 sword) = (of_nat x)"
+  "(ucast (of_nat x :: 16 word) :: 8 sword) = (of_nat x)"
+  "(ucast (of_nat x :: 8 word) :: 8 sword) = (of_nat x)"
   by (simp_all add: of_nat_take_bit take_bit_word_eq_self)
 
 lemmas signed_shift_guard_simpler_32'
@@ -328,14 +328,10 @@ lemma cast_chunk_assemble_id_64'[simp]:
 
 (* Specialisations of down_cast_same for adding to local simpsets. *)
 lemma cast_down_u64: "(scast::64 word \<Rightarrow> 32 word) = (ucast::64 word \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
+  by (subst down_cast_same[symmetric]; simp add:is_down)+
 
 lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword \<Rightarrow> 32 word)"
-  apply (subst down_cast_same[symmetric])
-   apply (simp add:is_down)+
-  done
+  by (subst down_cast_same[symmetric]; simp add:is_down)
 
 lemma word32_and_max_simp:
   \<open>x AND 0xFFFFFFFF = x\<close> for x :: \<open>32 word\<close>
