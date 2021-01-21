@@ -86,10 +86,6 @@ lemma bin_nth_numeral: "bin_rest x = y \<Longrightarrow> bin_nth x (numeral n) =
   by (simp add: numeral_eq_Suc bit_Suc)
 
 lemmas bin_nth_numeral_simps [simp] =
-  bin_nth_numeral [OF bin_rest_numeral_simps(2)]
-  bin_nth_numeral [OF bin_rest_numeral_simps(5)]
-  bin_nth_numeral [OF bin_rest_numeral_simps(6)]
-  bin_nth_numeral [OF bin_rest_numeral_simps(7)]
   bin_nth_numeral [OF bin_rest_numeral_simps(8)]
 
 lemmas bin_nth_simps =
@@ -207,7 +203,7 @@ lemma bin_nth_Bit1:
   by auto
 
 lemma bintrunc_bintrunc_l: "n \<le> m \<Longrightarrow> bintrunc m (bintrunc n w) = bintrunc n w"
-  by (simp add: min.absorb2)
+  by simp
 
 lemma sbintrunc_sbintrunc_l: "n \<le> m \<Longrightarrow> sbintrunc m (sbintrunc n w) = sbintrunc n w"
   by (simp add: min_def)
@@ -216,10 +212,10 @@ lemma bintrunc_bintrunc_ge: "n \<le> m \<Longrightarrow> bintrunc n (bintrunc m 
   by (rule bin_eqI) (auto simp: nth_bintr)
 
 lemma bintrunc_bintrunc_min [simp]: "bintrunc m (bintrunc n w) = bintrunc (min m n) w"
-  by (rule bin_eqI) (auto simp: nth_bintr)
+  by (rule take_bit_take_bit)
 
 lemma sbintrunc_sbintrunc_min [simp]: "sbintrunc m (sbintrunc n w) = sbintrunc (min m n) w"
-  by (rule bin_eqI) (auto simp: nth_sbintr min.absorb1 min.absorb2)
+  by (rule signed_take_bit_signed_take_bit)
 
 lemmas sbintrunc_Suc_Pls =
   signed_take_bit_Suc [where a="0::int", simplified bin_last_numeral_simps bin_rest_numeral_simps]
@@ -262,7 +258,7 @@ lemma sbintrunc_Suc_Is:
   by auto
 
 lemma sbintrunc_Suc_lem: "sbintrunc (Suc n) x = y \<Longrightarrow> m = Suc n \<Longrightarrow> sbintrunc m x = y"
-  by auto
+  by (rule ssubst)
 
 lemmas sbintrunc_Suc_Ialts =
   sbintrunc_Suc_Is [THEN sbintrunc_Suc_lem]
@@ -271,9 +267,7 @@ lemma sbintrunc_bintrunc_lt: "m > n \<Longrightarrow> sbintrunc n (bintrunc m w)
   by (rule bin_eqI) (auto simp: nth_sbintr nth_bintr)
 
 lemma bintrunc_sbintrunc_le: "m \<le> Suc n \<Longrightarrow> bintrunc m (sbintrunc n w) = bintrunc m w"
-  apply (rule bin_eqI)
-  using le_Suc_eq less_Suc_eq_le apply (auto simp: nth_sbintr nth_bintr)
-  done
+  by (rule take_bit_signed_take_bit)
 
 lemmas bintrunc_sbintrunc [simp] = order_refl [THEN bintrunc_sbintrunc_le]
 lemmas sbintrunc_bintrunc [simp] = lessI [THEN sbintrunc_bintrunc_lt]

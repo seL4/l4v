@@ -427,7 +427,7 @@ val word_len_simproc =
 
 fun nat_get_Suc_simproc_fn n_sucs ctxt ct =
   let
-    val (f $ arg) = Thm.term_of ct;
+    val (f, arg) = dest_comb (Thm.term_of ct);
     val n =
       (case arg of \<^term>\<open>nat\<close> $ n => n | n => n)
       |> HOLogic.dest_number |> snd;

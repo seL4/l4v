@@ -173,7 +173,7 @@ qed
 lemma bit_shiftl_word_iff [bit_simps]:
   \<open>bit (w << m) n \<longleftrightarrow> m \<le> n \<and> n < LENGTH('a) \<and> bit w (n - m)\<close>
   for w :: \<open>'a::len word\<close>
-  by (simp add: shiftl_word_eq bit_push_bit_iff exp_eq_zero_iff not_le)
+  by (simp add: shiftl_word_eq bit_push_bit_iff not_le)
 
 lemma bit_shiftr_word_iff [bit_simps]:
   \<open>bit (w >> m) n \<longleftrightarrow> bit w (m + n)\<close>
@@ -473,9 +473,8 @@ lemma test_bit_split':
     (\<forall>n m.
       b !! n = (n < size b \<and> c !! n) \<and>
       a !! m = (m < size a \<and> c !! (m + size b)))"
-  by (auto simp add: word_split_bin' test_bit_bin bit_unsigned_iff word_size
-    bit_drop_bit_eq ac_simps exp_eq_zero_iff
-    dest: bit_imp_le_length)
+  by (auto simp add: word_split_bin' test_bit_bin bit_unsigned_iff word_size bit_drop_bit_eq ac_simps
+           dest: bit_imp_le_length)
 
 lemma test_bit_split:
   "word_split c = (a, b) \<Longrightarrow>
