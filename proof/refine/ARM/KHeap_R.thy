@@ -3568,19 +3568,14 @@ lemma state_refs_of_cross:
 
 lemma ready_qs_runnable_cross:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_ready_qs s\<rbrakk>
-   \<Longrightarrow> \<forall>d p. \<forall>t\<in>set (ksReadyQueues s' (d, p)). st_tcb_at' runnable' t s'"
-  apply (clarsimp simp: valid_ready_qs_def)
-  apply (frule state_relation_ready_queues_relation)
-  apply (clarsimp simp: ready_queues_relation_def)
-  apply (prop_tac "st_tcb_at runnable t s")
-   apply (fastforce simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
-  apply (fastforce intro: sts_rel_runnable
-                   dest!: st_tcb_at_coerce_concrete
-                    simp: st_tcb_at'_def obj_at'_def)
-  done
+   \<Longrightarrow> ready_qs_runnable s'"
+  unfolding ready_qs_runnable_def
+  by (fastforce simp: state_relation_def ready_queues_relation_def
+                      in_ready_q_def st_tcb_at_runnable_cross
+                dest: valid_ready_qs_in_ready_qD)
 
 method add_ready_qs_runnable =
-  rule_tac Q="(\<lambda>s. \<forall>d p. \<forall>t\<in>set (ksReadyQueues s (d, p)). st_tcb_at' runnable' t s)"
+  rule_tac Q=ready_qs_runnable
         in corres_cross_add_guard
   , (clarsimp simp: pred_conj_def)?
   , (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?

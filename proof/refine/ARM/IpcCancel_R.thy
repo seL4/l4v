@@ -402,7 +402,7 @@ lemma cancel_signal_corres:
   apply add_ready_qs_runnable
   apply (simp add: cancel_signal_def cancelSignal_def Let_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: ready_qs_runnable_def)
+   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ntfn_corres])
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
@@ -538,7 +538,7 @@ lemma cancel_ipc_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
-   apply (clarsimp simp: ready_qs_runnable_def)
+   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
       apply (rule corres_split[OF _ threadset_corres])

@@ -1462,6 +1462,11 @@ definition
 abbreviation
   "active' st \<equiv> st = Structures_H.Running \<or> st = Structures_H.Restart"
 
+lemma runnable_eq_active': "runnable' = active'"
+  apply (rule ext)
+  apply (case_tac st, simp_all)
+  done
+
 abbreviation
   "simple' st \<equiv> st = Structures_H.Inactive \<or>
                 st = Structures_H.Running \<or>
