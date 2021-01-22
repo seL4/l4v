@@ -499,8 +499,7 @@ where
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnNotification ntfnptr);
                           set_notification ntfnptr $ ntfn_obj_update (K (WaitingNtfn [thread])) ntfn;
-                          maybe_return_sc ntfnptr thread;
-                          schedule_tcb thread
+                          maybe_return_sc ntfnptr thread
                         od
                    | False \<Rightarrow> do_nbrecv_failed_transfer thread)
        | WaitingNtfn queue \<Rightarrow>
@@ -509,8 +508,7 @@ where
                           set_thread_state thread (BlockedOnNotification ntfnptr);
                           qs' \<leftarrow> tcb_ep_append thread queue;
                           set_notification ntfnptr $ ntfn_obj_update (K (WaitingNtfn qs')) ntfn;
-                          maybe_return_sc ntfnptr thread;
-                          schedule_tcb thread
+                          maybe_return_sc ntfnptr thread
                         od
                    | False \<Rightarrow> do_nbrecv_failed_transfer thread)
        | ActiveNtfn badge \<Rightarrow> do
