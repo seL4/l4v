@@ -2423,6 +2423,17 @@ lemma schedContextDonate_valid_pspace':
   "\<lbrace>valid_pspace' and tcb_at' tcbPtr\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   sorry
 
+lemma schedContextDonate_sch_act_wf[wp]:
+  "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  sorry
+
+lemma schedContextDonate_if_live_then_nonz_cap':
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> valid_objs' s \<and>
+        ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s\<rbrace>
+   schedContextDonate scPtr tcbPtr
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  sorry
+
 (* End lemmas for schedContextDonate *)
 
 lemma isHeadSome:
@@ -2546,13 +2557,9 @@ crunches replyPop
   (simp: crunch_simps wp: crunch_wps)
 
 lemma replyPop_sch_act_wf[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-   replyPop replyPtr tcbPtr
-   \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  "replyPop replyPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   unfolding replyPop_def
-  apply (wpsimp wp: sch_act_wf_lift replyUnlink_st_tcb_at' hoare_vcg_imp_lift hoare_vcg_disj_lift
-)
-sorry
+  by (wpsimp wp: hoare_drop_imp)
 
 lemma replyPop_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
@@ -2567,12 +2574,25 @@ lemma replyPop_valid_queues[wp]:
                      simp: valid_sched_context'_def valid_reply'_def)+ *)
   sorry
 
+(* \<lambda>s. if_live_then_nonz_cap' s \<and> valid_objs' s \<and>
+        ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s *)
+
+lemma replyPop_iflive:
+  "replyPop replyPtr tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_if_live_then_nonz_cap' hoare_vcg_if_lift_strong
+                    threadGet_const)
+                  apply (clarsimp simp: obj_at'_def)
+                 apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
+  sorry
+
 lemma replyPop_invs':
   "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: )
+find_theorems if_live_then_nonz_cap valid
   sorry
 
 (* lemma replyClear_invs'[wp]:
