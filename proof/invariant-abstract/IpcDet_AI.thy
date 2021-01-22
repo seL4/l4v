@@ -2524,7 +2524,7 @@ lemma rai_invs':
   apply (rename_tac notification, case_tac "ntfn_obj notification"; simp)
     apply (case_tac is_blocking; simp)
      apply (wpsimp simp: live_def live_ntfn_def invs_def valid_state_def valid_pspace_def
-                     wp: maybe_return_sc_schedule_tcb sts_only_idle sts_valid_replies
+                     wp: sts_only_idle sts_valid_replies
                          sts_fault_tcbs_valid_states valid_ioports_lift)
      apply (clarsimp simp: valid_tcb_state_def
                            ntfn_at_typ obj_at_def  is_tcb valid_ntfn_def)
