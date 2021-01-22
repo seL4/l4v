@@ -1067,4 +1067,42 @@ lemma setReply_valid_tcbs'[wp]:
 crunches updateReply
   for valid_tcbs'[wp]: valid_tcbs'
 
+lemma updateReply_replyNext_Nothing_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and reply_at' rptr\<rbrace>
+   updateReply rptr (replyNext_update (\<lambda>_. Nothing))
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wpsimp wp: updateReply_wp_all)
+  apply (fastforce simp: valid_obj'_def valid_reply'_def obj_at'_def projectKOs
+                   elim: valid_objs'_reply_update[rotated 2])
+  done
+
+lemma updateReply_None_sym_refs_list_refs_of_replies'[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s) \<and>
+        replySCs_of s rptr \<noteq> None\<rbrace>
+   updateReply rptr (replyNext_update (\<lambda>_. Nothing))
+   \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
+  apply (wpsimp wp: updateReply_list_refs_of_replies')
+  apply (erule delta_sym_refs)
+   apply (auto simp: list_refs_of_reply'_def map_set_def
+                     opt_map_def obj_at'_def projectKOs
+              split: option.splits if_splits)
+  done
+
+lemma updateReply_replyNext_Nothing_iflive'[wp]:
+  "updateReply rptr (replyNext_update (\<lambda>_. Nothing)) \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  apply (wp updateReply_wp_all)
+  apply (fastforce simp: if_live_then_nonz_cap'_def live_reply'_def ps_clear_upd'
+                         ex_cap_to'_after_update ko_wp_at'_def obj_at'_def projectKOs
+                  split: if_splits)
+  done
+
+lemma updateReply_replyNext_Nothing_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> replySCs_of s rptr \<noteq> None\<rbrace>
+   updateReply rptr (replyNext_update (\<lambda>_. Nothing))
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (simp only: invs'_def valid_state'_def valid_pspace'_def)
+  apply wpsimp
+  apply (fastforce simp: obj_at'_def projectKOs dest: pspace_alignedD' pspace_distinctD')
+  done
+
 end
