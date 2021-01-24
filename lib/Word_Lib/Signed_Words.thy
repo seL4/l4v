@@ -46,7 +46,7 @@ lemma scast_of_nat [simp]:
 
 lemma scast_ucast_id [simp]:
   "scast (ucast (x :: 'a::len word) :: 'a signed word) = x"
-  by transfer (simp add: take_bit_signed_take_bit) 
+  by transfer (simp add: take_bit_signed_take_bit)
 
 lemma scast_eq_scast_id [simp]:
   "((scast (a :: 'a::len signed word) :: 'a word) = scast b) = (a = b)"

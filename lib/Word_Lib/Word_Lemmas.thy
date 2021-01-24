@@ -1415,7 +1415,8 @@ lemma toEnum_of_ucast:
   by (simp add: unat_pow_le_intro)
 
 lemma plus_mask_AND_NOT_mask_eq:
-  "x && ~~mask n = x \<Longrightarrow> (x + mask n) && ~~mask n = x"
+  "x AND NOT(mask n) = x \<Longrightarrow> (x + mask n) AND NOT(mask n) = x"
+  for x::\<open>'a::len word\<close>
   by (subst word_plus_and_or_coroll; word_eqI_solve)
 
 lemmas unat_ucast_mask = unat_ucast_eq_unat_and_mask[where w=a for a]

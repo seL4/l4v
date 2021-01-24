@@ -14,7 +14,7 @@ text \<open>
 \<close>
 
 theory Word_Lemmas_Internal
-imports Word_Lemmas More_Word_Operations Word_Syntax
+imports Word_Lemmas More_Word_Operations Many_More Word_Syntax
 begin
 
 lemma signed_ge_zero_scast_eq_ucast:
@@ -412,11 +412,9 @@ lemma word_ctz_max:
 
 lemma scast_of_nat_small:
   "x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> scast (of_nat x :: 'a :: len word) = (of_nat x :: 'b :: len word)"
-  apply (rule sym, subst word_unat.inverse_norm)
-  apply (simp add: scast_def word_of_int[symmetric]
-                   of_nat_nat[symmetric] unat_def[symmetric])
-  apply (simp add: int_eq_sint unat_of_nat)
-  done
+  apply transfer
+  apply simp
+  by (metis One_nat_def id_apply int_eq_sint of_int_eq_id signed_of_nat)
 
 lemmas casts_of_nat_small = ucast_of_nat_small scast_of_nat_small
 

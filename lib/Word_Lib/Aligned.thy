@@ -100,7 +100,7 @@ next
     then have \<open>2 ^ LENGTH('a) \<le> 2 ^ n * q\<close>
       by (simp add: l power_add)
     with unat_w [symmetric] show False
-      by (metis le_antisym nat_less_le unsigned_less) 
+      by (metis le_antisym nat_less_le unsigned_less)
   qed
   ultimately show thesis
     using that by blast
@@ -1005,7 +1005,7 @@ proof cases
 next
   assume "\<not> sz < LENGTH('a)"
   with al have "x = 0"
-    by (meson is_aligned_get_word_bits) 
+    by (meson is_aligned_get_word_bits)
   thus ?thesis by simp
 qed
 
