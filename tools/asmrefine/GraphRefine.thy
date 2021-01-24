@@ -1261,11 +1261,11 @@ lemma bintrunc_len_eq_signed:
 
 lemma uint_word_of_int_uint_signed_unsigned:
   "uint (word_of_int (uint (x :: 'a :: len signed word)) :: 'a word) = uint x"
-  by (simp add: bintrunc_len_eq_signed word_ubin.eq_norm)
+  by (metis len_signed uint_word_of_int_eq word_uint.Rep_inverse)
 
 (*FIXME: move to lib *)
 lemma is_up_is_down_remove_sign[simp]:
-  "is_up (UCAST('a :: len0 signed \<rightarrow> 'a))"
+  "is_up (UCAST('a :: len signed \<rightarrow> 'a))"
   "is_down (UCAST('a signed \<rightarrow> 'a))"
   unfolding is_up_def is_down_def source_size target_size by simp_all
 
@@ -1299,8 +1299,7 @@ lemma heap_update_word32:
 
 lemma heap_update_sword32:
   "heap_update p (w :: 32 signed word) hp = store_word32 (ptr_val p) (ucast w) hp"
-  by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def word_rsplit_same
-                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+  by (simp add: heap_update_remove_sign heap_update_word32)
 
 lemma heap_update_word64:
   "heap_update p w hp = store_word64 (ptr_val p) w hp"
@@ -1308,8 +1307,7 @@ lemma heap_update_word64:
 
 lemma heap_update_sword64:
   "heap_update p (w :: 64 signed word) hp = store_word64 (ptr_val p) (ucast w) hp"
-  by (simp add: heap_update_def to_bytes_def typ_info_word store_word64_def word_rsplit_same
-                ucast_def uint_word_of_int_uint_signed_unsigned word_rsplit_def)
+  by (simp add: heap_update_remove_sign heap_update_word64)
 
 lemma heap_update_ptr:
   "heap_update (p :: ('a :: c_type) ptr ptr) p' hp = store_machine_word (ptr_val p) (ptr_val p') hp"
@@ -1545,7 +1543,7 @@ lemma heap_update_list_If1:
    apply (clarsimp simp: nth_append)
    apply (rule refl)
   apply (simp add: nth_append split del: if_split cong: if_cong)
-  apply (auto simp: unat_of_nat addr_card linorder_not_less less_Suc_eq
+  apply (auto simp: addr_card linorder_not_less less_Suc_eq take_bit_nat_eq_self
               dest: word_unat.Rep_inverse')
   done
 
@@ -2154,9 +2152,11 @@ end
 
 ML \<open>
 fun define_graph_fun_short funs s =
-  Local_Theory.subtarget
-    (ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
-                                 (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s)
+  Local_Theory.begin_nested
+  #> snd
+  #> ParseGraph.define_graph_fun funs (Long_Name.base_name s ^ "_graph")
+                                 (Binding.name (Long_Name.base_name s ^ "_graph_fun")) s
+  #> Local_Theory.end_nested
 \<close>
 
 end

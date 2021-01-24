@@ -892,8 +892,7 @@ lemma num_visits_equals_j_first:
   "card {i. i < m \<and> trace_addr tr i = Some n} = j
     \<Longrightarrow> j \<noteq> 0
     \<Longrightarrow> \<exists>m'. trace_addr tr m' = Some n \<and> card {i. i < m' \<and> trace_addr tr i = Some n} = j - 1"
-  apply (frule_tac P="\<lambda>m. card {i. i < m \<and> trace_addr tr i = Some n} = j"
-    in ex_least_nat_le[rotated])
+  apply (frule_tac P="\<lambda>m. card {i. i < m \<and> trace_addr tr i = Some n} = j" in ex_least_nat_le)
    apply simp
   apply clarify
   apply (rule_tac x="k - 1" in exI)
