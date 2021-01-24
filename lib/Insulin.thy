@@ -106,6 +106,7 @@ fun unescape_const s =
   let val cs = String.extract (s, String.size desugar_random_tag, NONE) |> String.explode
       fun readDelim d (#"_" :: cs) = (d, cs)
         | readDelim d (c :: cs) = readDelim (d @ [c]) cs
+        | readDelim _ [] = raise Match
       val (delim, cs) = readDelim [] cs
       val delimlen = length delim
       fun splitDelim name cs =
@@ -180,6 +181,7 @@ fun term_to_unconst (Const (name, typ)) =
 
 fun term_from_unconst (UCConst typ) (name :: consts) =
       ((if unescape_const name = name then Const else Free) (name, typ), consts)
+  | term_from_unconst (UCConst _) [] = raise Match
   | term_from_unconst (UCAbs (var, typ, body)) consts = let
       val (body', consts) = term_from_unconst body consts
       in (Abs (var, typ, body'), consts) end
@@ -214,14 +216,14 @@ fun focus_list (xs: 'a list): ('a list * 'a * 'a list) list =
 
 (* Do one rewrite pass: try every constant in sequence, then collect the ones which
  * reduced the occurrences of bad strings *)
-fun rewrite_pass ctxt (t: term) (improved: term -> bool) (escape_const: string -> string): term =
+fun rewrite_pass (t: term) (improved: term -> bool) (escape_const: string -> string): term =
   let val (ucterm, consts) = term_to_unconst t
       fun rewrite_one (prev, const, rest) =
-            let val (t', []) = term_from_unconst ucterm (prev @ [escape_const const] @ rest)
+            let val (t', _) = term_from_unconst ucterm (prev @ [escape_const const] @ rest)
             in improved t' end
       val consts_to_rewrite = focus_list consts |> map rewrite_one
       val consts' = map2 (fn rewr => fn const => if rewr then escape_const const else const) consts_to_rewrite consts
-      val (t', []) = term_from_unconst ucterm consts'
+      val (t', _) = term_from_unconst ucterm consts'
   in t' end
 
 (* Do rewrite passes until bad strings are gone or no more rewrites are possible *)
@@ -230,8 +232,8 @@ fun desugar ctxt (t0: term) (bads: string list): term =
       val _ = if null bads then error "Nothing to desugar" else ()
       fun rewrite t = let
         val counts0 = count t
-        fun improved t' = exists (<) (count t' ~~ counts0)
-        val t' = rewrite_pass ctxt t improved escape_const
+        fun improved t' = exists (op <) (count t' ~~ counts0)
+        val t' = rewrite_pass t improved escape_const
         in if forall (fn c => c = 0) (count t') (* bad strings gone *)
            then t'
            else if t = t' (* no more rewrites *)

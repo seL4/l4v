@@ -120,7 +120,7 @@ fun get_action ctxt prop = let
             val (fname, T) = dest_Const c
             val acts = Symtab.lookup_list actions fname
             fun interesting arg = not (member Term.aconv_untyped xs arg)
-                andalso exists (fn i => not (member (=) xs (Bound i)))
+                andalso exists (fn i => not (member (op =) xs (Bound i)))
                     (Term.loose_bnos arg)
           in the (sfirst acts (fn (i, selname, thms) => if interesting (nth ys i)
             then SOME (var, idx, mk_sel selname T i, thms) else NONE))
@@ -209,7 +209,8 @@ local
           val rhs_var = rhs |> Term.dest_Var |> fst;
           val data_name = Term.dest_Const data_const |> fst;
           val rhs_idx = ListExtras.find_index (curry op = rhs_var) data_vars |> the;
-        in (fun_name, data_name, rhs_idx) end;
+        in (fun_name, data_name, rhs_idx) end
+      | t => raise TERM("unexpected", [t]);
 in
   fun dest_accessor ctxt thm =
     case try dest_accessor' thm of
@@ -276,7 +277,7 @@ datatype foo =
   | another nat
 
 primrec get_basic_0 where
-  "get_basic_0 (basic x0 x1) = x0"
+    "get_basic_0 (basic x0 x1) = x0"
 
 primrec get_nat where
     "get_nat (basic x _) = x"

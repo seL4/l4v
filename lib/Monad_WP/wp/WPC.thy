@@ -152,7 +152,7 @@ end;
 
 (* give each rule in the list one possible resolution outcome *)
 fun resolve_each_once_tac ctxt thms i
-    = fold (curry (APPEND'))
+    = fold (curry (op APPEND'))
         (map (DETERM oo resolve_tac ctxt o single) thms)
         (K no_tac) i
 

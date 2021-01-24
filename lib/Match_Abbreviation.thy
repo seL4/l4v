@@ -49,10 +49,10 @@ fun find_term ctxt get pat t = find_term1 ctxt get t
 fun lambda_frees_vars ctxt ord_t t = let
     fun is_free t = is_Free t andalso not (Variable.is_fixed ctxt (Term.term_name t))
     fun is_it t = is_free t orelse is_Var t
-    val get = fold_aterms (fn t => if is_it t then insert (=) t else I)
+    val get = fold_aterms (fn t => if is_it t then insert (op =) t else I)
     val all_vars = get ord_t []
     val vars = get t []
-    val ord_vars = filter (member (=) vars) all_vars
+    val ord_vars = filter (member (op =) vars) all_vars
   in fold lambda ord_vars t end
 
 fun parse_pat_fixes ctxt fixes pats = let

@@ -116,6 +116,7 @@ definition
   select :: "'a set \<Rightarrow> ('s,'a) nondet_monad" where
   "select A \<equiv> \<lambda>s. (A \<times> {s}, False)"
 
+(* FIXME isa: at the end of the update, retire "OR", use \<sqinter> everywhere instead *)
 definition
   alternative :: "('s,'a) nondet_monad \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow>
                   ('s,'a) nondet_monad"

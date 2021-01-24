@@ -342,7 +342,7 @@ fun instantiate_terms ctxt bounds var_insts term =
   to above, to deal with bound variables we first need to drop any binders
   that had been added to the instantiations.
 \<close>
-fun instantiate_types ctxt bounds_num tvar_insts term =
+fun instantiate_types ctxt _ tvar_insts term =
   let
     fun instantiateT tvar_inst typ =
       let
@@ -357,10 +357,10 @@ fun instantiate_types ctxt bounds_num tvar_insts term =
 \<comment> \<open>
   Instantiate a given thm with the supplied instantiations, returning a term.
 \<close>
-fun instantiate_thm ctxt thm {bounds, terms as var_insts, typs as tvar_insts} =
+fun instantiate_thm ctxt thm {bounds, terms, typs} =
   Thm.prop_of thm
-  |> instantiate_terms ctxt bounds var_insts
-  |> instantiate_types ctxt (length bounds) tvar_insts
+  |> instantiate_terms ctxt bounds terms
+  |> instantiate_types ctxt (length bounds) typs
 
 fun filtered_instantiation_lines ctxt {bounds, terms, typs} =
   let
