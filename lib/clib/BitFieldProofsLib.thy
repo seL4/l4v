@@ -11,12 +11,12 @@ imports
 begin
 
 lemmas guard_simps =
-  word_sle_def word_sless_def scast_id
+  word_sle_def word_sless_def
 
 lemmas mask_shift_simps =
   ucast_def shift_over_ao_dists word_bw_assocs
   word_size multi_shift_simps mask_def
-  word_ao_dist NOT_eq scast_id
+  word_ao_dist NOT_eq
   word_and_max_simps
 
 lemmas sep_heap_simps =
