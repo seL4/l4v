@@ -15,9 +15,16 @@ theory Generic_set_bit
     Most_significant_bit
 begin
 
-class set_bit = ring_bit_operations +
+class set_bit = semiring_bits +
   fixes set_bit :: \<open>'a \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> 'a\<close>
-  assumes set_bit_eq: \<open>set_bit a n b = (if b then Bit_Operations.set_bit else unset_bit) n a\<close>
+  assumes bit_set_bit_iff [bit_simps]:
+    \<open>bit (set_bit a m b) n \<longleftrightarrow>
+      (if m = n then b else bit a n) \<and> 2 ^ n \<noteq> 0\<close>
+
+lemma set_bit_eq:
+  \<open>set_bit a n b = (if b then Bit_Operations.set_bit else unset_bit) n a\<close>
+  for a :: \<open>'a::{ring_bit_operations, set_bit}\<close>
+  by (rule bit_eqI) (simp add: bit_simps)
 
 instantiation int :: set_bit
 begin
@@ -26,7 +33,8 @@ definition set_bit_int :: \<open>int \<Rightarrow> nat \<Rightarrow> bool \<Righ
   where \<open>set_bit i n b = bin_sc n b i\<close>
 
 instance
-  by standard (simp add: set_bit_int_def bin_sc_eq)
+  by standard
+    (simp_all add: set_bit_int_def bin_nth_sc_gen bit_simps)
 
 end
 
@@ -73,11 +81,8 @@ definition set_bit_word :: \<open>'a word \<Rightarrow> nat \<Rightarrow> bool \
   where word_set_bit_def: \<open>set_bit a n x = word_of_int (bin_sc n x (uint a))\<close>
 
 instance
-  apply standard
-  apply (simp add: word_set_bit_def bin_sc_eq Bit_Operations.set_bit_def unset_bit_def)
-  apply transfer
-  apply simp
-  done
+  by standard
+    (auto simp add: word_set_bit_def bin_nth_sc_gen bit_simps)
 
 end
 
@@ -89,7 +94,7 @@ lemma set_bit_unfold:
 lemma bit_set_bit_word_iff [bit_simps]:
   \<open>bit (set_bit w m b) n \<longleftrightarrow> (if m = n then n < LENGTH('a) \<and> b else bit w n)\<close>
   for w :: \<open>'a::len word\<close>
-  by (auto simp add: set_bit_unfold bit_unset_bit_iff bit_set_bit_iff not_le bit_imp_le_length)
+  by (auto simp add: bit_simps dest: bit_imp_le_length)
 
 lemma word_set_nth [simp]: "set_bit w n (test_bit w n) = w"
   for w :: "'a::len word"
