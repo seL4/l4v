@@ -309,9 +309,9 @@ definition
 where
   "decode_set_space args cap slot excaps \<equiv> doE
     whenE (length args < 2 \<or> length excaps < 3) $ throwError TruncatedMessage;
-    space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 excaps);
-    fh_arg  \<leftarrow> returnOk $ excaps ! 2;
-    fault_handler \<leftarrow> check_handler_ep 3 fh_arg;
+    space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 (drop 1 excaps));
+    fh_arg  \<leftarrow> returnOk $ excaps ! 0;
+    fault_handler \<leftarrow> check_handler_ep 1 fh_arg;
     returnOk $ ThreadControlCaps (obj_ref_of cap) slot (Some fault_handler) None
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
