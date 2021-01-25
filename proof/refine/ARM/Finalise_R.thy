@@ -2433,7 +2433,94 @@ lemma schedContextDonate_if_live_then_nonz_cap':
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   sorry
+lemma schedContextDonate_if_unsafe_then_cap':
+  "\<lbrace>if_unsafe_then_cap'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. if_unsafe_then_cap'\<rbrace>"
+  sorry
 
+lemma schedContextDonate_valid_idle':
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> ksIdleThread s \<and> obj_at' (\<lambda>x. scTCB x \<noteq> Some (ksIdleThread s)) scPtr s\<rbrace>
+   schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_global_refs':
+  "\<lbrace>valid_global_refs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_arch_state':
+  "\<lbrace>valid_arch_state'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_irq_node':
+  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_ s. valid_irq_node' (irq_node' s) s\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_irq_handlers':
+  "\<lbrace>valid_irq_handlers'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_irq_handlers'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_irq_states':
+  "\<lbrace>valid_irq_states'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_machine_state':
+  "\<lbrace>valid_machine_state'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_irqs_masked':
+  "\<lbrace>irqs_masked'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_queues':
+  "\<lbrace>valid_queues'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_release_queue:
+  "\<lbrace>valid_release_queue\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_release_queue':
+  "\<lbrace>valid_release_queue'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ct_not_inQ:
+  "\<lbrace>ct_not_inQ\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ct_idle_or_in_cur_domain':
+  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_pde_mappings':
+  "\<lbrace>valid_pde_mappings'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pde_mappings'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_pspace_domain_valid:
+  "\<lbrace>pspace_domain_valid\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. pspace_domain_valid\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ksCurDomain:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_dom_schedule':
+  "\<lbrace>valid_dom_schedule' and (\<lambda>s. valid_dom_schedule' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))\<rbrace>
+   schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_untyped_ranges_zero':
+  "\<lbrace>untyped_ranges_zero'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. untyped_ranges_zero'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_cur_tcb':
+  "\<lbrace>cur_tcb'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> bound_sc_tcb_at' ((=) None) tcbPtr s \<and>
+        ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' tcbPtr s\<rbrace>
+   schedContextDonate scPtr tcbPtr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
 (* End lemmas for schedContextDonate *)
 
 lemma isHeadSome:
@@ -2495,6 +2582,57 @@ lemma hoare_vcg_conj_lift':
   apply (rule hoare_pre_imp [OF _ y], simp)
   done
 
+crunches replyPop
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
+  and valid_global_refs'[wp]: valid_global_refs'
+  and valid_arch_state'[wp]: valid_arch_state'
+  and valid_irq_node'[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
+  and valid_irq_handlers'[wp]: valid_irq_handlers'
+  and valid_irq_states'[wp]: valid_irq_states'
+  and valid_machine_state'[wp]: valid_machine_state'
+  and irqs_masked'[wp]: irqs_masked'
+  and valid_queues'[wp]: valid_queues'
+  and valid_release_queue[wp]: valid_release_queue
+  and valid_release_queue'[wp]: valid_release_queue'
+  and ct_not_inQ[wp]: ct_not_inQ
+  and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
+  and valid_pde_mappings'[wp]: valid_pde_mappings'
+  and pspace_domain_valid[wp]: pspace_domain_valid
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and untyped_ranges_zero'[wp]: untyped_ranges_zero'
+  and cur_tcb'[wp]: cur_tcb'
+  (simp: crunch_simps)
+
+lemma replyPop_valid_pspace'[wp]:
+  "replyPop replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_valid_pspace' hoare_vcg_if_lift_strong threadGet_const)
+                  apply (clarsimp simp: obj_at'_def)
+                 apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
+apply safe
+  apply (clarsimp simp: obj_at'_def isReply_def projectKOs st_tcb_at'_def objBits_simps'
+              ps_clear_upd' isHead_def split: reply_next.splits)
+  apply safe
+  apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp')
+  apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs opt_map_def objBitsKO_def
+                 live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def
+                 replyNext_None_iff)
+  sorry
+
+lemma replyPop_valid_queues[wp]:
+  "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  apply (clarsimp simp: replyPop_def)
+  apply (wpsimp wp: schedContextDonate_valid_queues hoare_vcg_if_lift_strong threadGet_const)
+               apply (clarsimp simp: obj_at'_def)
+              apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
+(*   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
+                    hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
+         | intro conjI impI
+         | clarsimp dest!: reply_ko_at_valid_objs_valid_reply' sc_ko_at_valid_objs_valid_sc'
+                     simp: valid_sched_context'_def valid_reply'_def)+ *)
+  sorry
+
 lemma updateReply_list_refs_of_replies':
   "\<lbrace>\<lambda>s. \<forall>r. ko_at' r replyPtr s \<longrightarrow>
               P ((list_refs_of_replies' s)(replyPtr := list_refs_of_reply' (f r)))\<rbrace>
@@ -2530,55 +2668,11 @@ lemma replyPop_list_refs_of_replies'[wp]:
                     split: if_splits option.splits)+
   done
 
-crunches updateReply, cleanReply
-  for valid_irq_node'[wp]: "\<lambda>s. valid_irq_node' (irq_node' s) s"
-  and valid_irq_handlers'[wp]: valid_irq_handlers'
-  and valid_irq_states'[wp]: valid_irq_states'
-
-lemma replyPop_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and tcb_at' tcbPtr\<rbrace>
-   replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
-  unfolding replyPop_def
-  apply (wpsimp wp: schedContextDonate_valid_pspace' hoare_vcg_if_lift_strong threadGet_const)
-                  apply (clarsimp simp: obj_at'_def)
-                 apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
-  apply clarsimp
-  apply (rule conjI)
-   apply (clarsimp simp: obj_at'_def projectKOs valid_pspace'_def objBitsKO_def valid_objs'_def
-   valid_mdb'_def valid_obj'_def valid_mdb_ctes_def isHead_def
-   isHead_def obj_at'_def projectKOs list_refs_of_reply'_def
-                              list_refs_of_replies'_def opt_map_def get_refs_def
-   split: if_splits option.splits
-   )
-  sorry
-
-crunches replyPop
-  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  (simp: crunch_simps wp: crunch_wps)
-
-lemma replyPop_sch_act_wf[wp]:
-  "replyPop replyPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding replyPop_def
-  by (wpsimp wp: hoare_drop_imp)
-
-lemma replyPop_valid_queues[wp]:
-  "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  apply (clarsimp simp: replyPop_def)
-  apply (wpsimp wp: schedContextDonate_valid_queues hoare_vcg_if_lift_strong threadGet_const)
-               apply (clarsimp simp: obj_at'_def)
-              apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
-(*   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
-                    hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
-         | intro conjI impI
-         | clarsimp dest!: reply_ko_at_valid_objs_valid_reply' sc_ko_at_valid_objs_valid_sc'
-                     simp: valid_sched_context'_def valid_reply'_def)+ *)
-  sorry
-
-(* \<lambda>s. if_live_then_nonz_cap' s \<and> valid_objs' s \<and>
-        ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s *)
-
 lemma replyPop_iflive:
-  "replyPop replyPtr tcbPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> valid_objs' s \<and>
+        ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s\<rbrace>
+   replyPop replyPtr tcbPtr
+   \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding replyPop_def
   apply (wpsimp wp: schedContextDonate_if_live_then_nonz_cap' hoare_vcg_if_lift_strong
                     threadGet_const)
@@ -2586,35 +2680,48 @@ lemma replyPop_iflive:
                  apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
   sorry
 
+lemma replyPop_valid_idle'[wp]:
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> ksIdleThread s\<rbrace>
+   replyPop replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_valid_idle' schedContextDonate_valid_pspace' hoare_vcg_if_lift_strong
+                    threadGet_const)
+                  apply (clarsimp simp: obj_at'_def)
+                 apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
+  sorry
+
+lemma replyPop_valid_dom_schedule'[wp]:
+  "\<lbrace>valid_dom_schedule' and (\<lambda>s. valid_dom_schedule' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))\<rbrace>
+   replyPop replyPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_valid_dom_schedule' hoare_vcg_if_lift_strong
+                    threadGet_const)
+(* need to write replyUnlink valid_dom_schedule' lemma *)
+  sorry
+
 lemma replyPop_invs':
   "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
-  apply (wpsimp wp: )
-find_theorems if_live_then_nonz_cap valid
+  apply (wpsimp wp: replyPop_iflive)
   sorry
-
-(* lemma replyClear_invs'[wp]:
-  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
-   replyClear replyPtr tcbPtr
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
-  apply (wpsimp wp: )
-  sorry *)
 
 (* Ugh, required to be able to split out the abstract invs *)
 lemma finaliseCap_True_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding finaliseCap_def sym_refs_asrt_def
-  apply (wpsimp wp: irqs_masked_lift simp: Let_def split_del: if_split)
+  sorry
+  (* apply (wpsimp wp: irqs_masked_lift simp: Let_def split_del: if_split)
   apply clarsimp
   apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
    apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
   apply (drule (2) sym_ref_replyTCB_Receive_or_Reply)
   apply (auto intro!: if_live_then_nonz_capE'
                 simp: projectKOs pred_tcb_at'_def obj_at'_def ko_wp_at'_def)[1]
-  done
+  done *)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
