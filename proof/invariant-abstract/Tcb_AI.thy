@@ -1264,17 +1264,15 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
           and tcb_at t and cte_at slot and ex_cte_cap_to slot
           and ex_nonz_cap_to t
-          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                          \<and> ex_cte_cap_to (snd x) s
-                          \<and> no_cap_to_obj_dr_emp (fst x) s)
-          and K (2 \<le> length args \<and> 2 \<le> length extras)\<rbrace>
-  decode_cv_space (take 2 args) (ThreadCap t) slot (take 2 extras)
+          and (\<lambda>s. \<forall>x \<in> set cv_caps. s \<turnstile> fst x \<and> real_cte_at (snd x) s
+                                     \<and> ex_cte_cap_to (snd x) s
+                                     \<and> no_cap_to_obj_dr_emp (fst x) s)
+          and K (2 \<le> length args \<and> 2 \<le> length cv_caps)\<rbrace>
+  decode_cv_space (take 2 args) (ThreadCap t) slot cv_caps
   \<lbrace>tcb_inv_wf\<rbrace>, -"
   apply (simp add: decode_cv_space_def split del: if_split)
   apply (wpsimp wp: derive_cap_valid_cap simp: o_def split_del: if_split
          | rule hoare_drop_imps)+
-  apply (clarsimp split del: if_split
-                   simp del: length_greater_0_conv)
   apply (simp add: update_cap_data_validI
                    no_cap_to_obj_with_diff_ref_update_cap_data
               del: length_greater_0_conv)
@@ -1288,20 +1286,25 @@ lemma tcb_inv_set_space_strg:
 
 lemma decode_set_space_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
-  and tcb_at t and cte_at slot and ex_cte_cap_to slot
-          and ex_nonz_cap_to t
-          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                          \<and> cte_wp_at ((=) (fst x)) (snd x) s
-                          \<and> ex_cte_cap_to (snd x) s
-                          \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
+    and tcb_at t and cte_at slot and ex_cte_cap_to slot
+    and ex_nonz_cap_to t
+    and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
+                               \<and> cte_wp_at ((=) (fst x)) (snd x) s
+                               \<and> ex_cte_cap_to (snd x) s
+                               \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
      decode_set_space args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   unfolding decode_set_space_def
-  apply (wpsimp wp:  hoare_vcg_const_imp_lift_R simp_del: tcb_inv_wf.simps
+  apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp_del: tcb_inv_wf.simps
          | strengthen tcb_inv_set_space_strg
          | rule hoare_drop_imps)+
   apply (clarsimp simp: valid_fault_handler_def real_cte_at_cte)
-  apply (erule disjE; clarsimp simp: split_paired_Ball)
+  apply (prop_tac "set (take 2 (drop (Suc 0) extras)) \<subseteq> set extras")
+   apply (meson basic_trans_rules(23) set_drop_subset set_take_subset)
+  apply (intro conjI)
+        apply blast
+       apply fastforce
+      apply (metis gr0I nth_mem zero_less_numeral crunch_simps(1) gr0I nth_mem rel_simps(51))+
   done
 
 end
@@ -1346,10 +1349,10 @@ lemma decode_tcb_conf_wf[wp]:
          and tcb_at t and cte_at slot and ex_cte_cap_to slot
          and ex_nonz_cap_to t
          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> fst x \<and> real_cte_at (snd x) s
-                                 \<and> ex_cte_cap_to (snd x) s
-                                 \<and> t \<noteq> fst (snd x)
-                                 \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
-     decode_tcb_configure args (cap.ThreadCap t) slot extras
+                                   \<and> ex_cte_cap_to (snd x) s
+                                   \<and> t \<noteq> fst (snd x)
+                                   \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
+   decode_tcb_configure args (cap.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   apply (clarsimp simp add: decode_tcb_configure_def)
   apply wp
@@ -1363,6 +1366,7 @@ lemma decode_tcb_conf_wf[wp]:
       apply (subst (asm) is_thread_control_caps_def2)
       apply clarsimp
      apply (wpsimp simp: real_cte_at_cte)+
+  apply (fastforce dest!: in_set_takeD)
   done
 
 lemma decode_tcb_conf_inv[wp]:
