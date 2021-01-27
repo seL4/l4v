@@ -879,27 +879,6 @@ lemma updateReply_replyTCB_valid_objs':
      (auto simp: valid_obj'_def valid_reply'_def obj_at'_def projectKO_eq projectKO_reply
           split: option.splits)
 
-lemma replyNext_update_Head_valid_objs':
-  "\<lbrace>valid_objs' and sc_at' scp\<rbrace>
-   updateReply replyPtr (replyNext_update (\<lambda>_. Some (Head scp)))
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp wp: updateReply_valid_objs')
-  by (clarsimp simp: valid_reply'_def)
-
-lemma replyNext_update_Next_valid_objs':
-  "\<lbrace>valid_objs' and reply_at' rptr\<rbrace>
-   updateReply replyPtr (replyNext_update (\<lambda>_. Some (Next rptr)))
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp wp: updateReply_valid_objs')
-  by (clarsimp simp: valid_reply'_def)
-
-lemma replyPrev_update_valid_objs':
-  "\<lbrace>valid_objs' and (\<lambda>s. rptr_opt \<noteq> None \<longrightarrow> reply_at' (the rptr_opt) s)\<rbrace>
-   updateReply replyPtr (replyPrev_update (\<lambda>_. rptr_opt))
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp wp: updateReply_valid_objs')
-  by (clarsimp simp: valid_reply'_def valid_bound_reply'_def split: option.splits)
-
 lemma updateReply_valid_tcb_state'[wp]:
   "updateReply rptr f \<lbrace>valid_tcb_state' ts\<rbrace>"
   by (wpsimp wp: set_reply'.set_wp simp: updateReply_def)
