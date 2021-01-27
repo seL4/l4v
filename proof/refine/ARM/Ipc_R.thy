@@ -3402,7 +3402,7 @@ lemma replyPush_corres:
                  apply simp
                  apply (rule corres_split [OF schedContextDonate_corres bindReplySc_corres])
                   apply (wpsimp wp: sc_at_typ_at)
-                 apply wpsimp
+                 apply (wpsimp wp: bindScReply_valid_objs')
                 apply simp
                apply (wpsimp wp: set_thread_state_invs hoare_vcg_imp_lift'
                                  hoare_vcg_all_lift sts_in_replies_blocked
@@ -3411,7 +3411,7 @@ lemma replyPush_corres:
              apply clarsimp
              apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
             apply (clarsimp simp: valid_tcb_state'_def cong: conj_cong)
-            apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+            apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift updateReply_replyTCB_valid_objs')
            apply (clarsimp simp: tcb_relation_def)
           apply (wpsimp wp: thread_get_wp')
           apply assumption
@@ -4195,7 +4195,7 @@ lemma schedContextDonate_if_live_then_nonz_cap':
 
 lemma schedContextDonate_valid_idle':
   "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr \<and>
-        obj_at' (\<lambda>x. scTCB x \<noteq> Some idle_thread_ptr) scPtr s\<rbrace>
+        \<not> obj_at' (\<lambda>x. scTCB x = Some idle_thread_ptr) scPtr s\<rbrace>
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   apply (simp only: schedContextDonate_def)
@@ -4208,8 +4208,7 @@ lemma schedContextDonate_valid_idle':
                                 tcbPtr \<noteq> ksIdleThread s \<and> from \<noteq> ksIdleThread s"
                     in hoare_strengthen_post)
         apply wpsimp+
-  apply (auto simp: obj_at'_def projectKO_eq projectKO_sc valid_idle'_def)
-  done
+  by (auto simp: obj_at'_def projectKO_eq projectKO_sc valid_idle'_def)
 
 lemma schedContextDonate_valid_release_queue'[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>valid_release_queue'\<rbrace>"
@@ -4282,15 +4281,18 @@ lemma tcbSchedEnqueue_valid_tcb_state'[wp]:
   by (wpsimp simp: tcbSchedEnqueue_def)
 
 lemma replyPush_valid_objs'[wp]:
-  "\<lbrace>valid_objs' and tcb_at' callerPtr and tcb_at' calleePtr and reply_at' replyPtr\<rbrace>
+  "\<lbrace>valid_objs' and reply_at' replyPtr\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   supply if_split [split del]
   unfolding replyPush_def
   apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift2
-                    threadGet_wp hoare_vcg_imp_lift')
-  apply (drule obj_at_ko_at'[where p=calleePtr], clarsimp)
+                    threadGet_wp hoare_vcg_imp_lift' updateReply_replyTCB_valid_objs'
+                    bindScReply_valid_objs')
   apply (drule obj_at_ko_at'[where p=callerPtr], clarsimp)
+  apply (rename_tac tcb, rule_tac x=tcb in exI, clarsimp)
+  apply (drule obj_at_ko_at'[where p=calleePtr], clarsimp)
+  apply (rename_tac tcb2, rule_tac x=tcb2 in exI, clarsimp)
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb'[where p=callerPtr])
   apply (force simp: valid_tcb_state'_def valid_tcb'_def valid_bound_sc'_def)
   done
@@ -4363,7 +4365,7 @@ lemma replyPush_if_live_then_nonz_cap':
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding replyPush_def
-  apply (wp schedContextDonate_if_live_then_nonz_cap' bindScReply_if_live_then_nonz_cap')
+  apply (wp schedContextDonate_if_live_then_nonz_cap' bindScReply_if_live_then_nonz_cap' bindScReply_valid_objs')
        apply (rule_tac Q="\<lambda>_ s. (\<forall>scp. scPtrOptDonated = Some scp \<longrightarrow> ex_nonz_cap_to' scp s \<and> sc_at' scp s) \<and>
                                 ex_nonz_cap_to' calleePtr s \<and> ex_nonz_cap_to' replyPtr s \<and>
                                 valid_objs' s \<and> if_live_then_nonz_cap' s \<and> reply_at' replyPtr s
@@ -4373,7 +4375,7 @@ lemma replyPush_if_live_then_nonz_cap':
        apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
       apply (simp (no_asm_use) add: split del: if_split
              | wp hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_imp_lift' updateReply_obj_at'
-                  hoare_vcg_if_lift set_reply'.obj_at' updateReply_iflive'_weak
+                  hoare_vcg_if_lift set_reply'.obj_at' updateReply_iflive'_weak updateReply_replyTCB_valid_objs'
              | rule threadGet_wp)+
   apply clarsimp
   apply (frule pred_tcb_at')
@@ -4412,7 +4414,6 @@ lemma bindScReply_valid_idle':
 lemma replyPush_valid_idle':
   "\<lbrace>valid_idle'
     and valid_pspace'
-    and valid_objs'
     and st_tcb_at' active' callerPtr\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
@@ -4442,7 +4443,6 @@ lemma replyPush_valid_idle':
       apply (clarsimp simp: state_refs_of'_def ko_wp_at'_def obj_at'_real_def refs_of'_def
                             projectKO_tcb valid_idle'_def idle_tcb'_def tcb_st_refs_of'_def)
      apply (clarsimp simp: valid_idle'_def idle_tcb'_def obj_at'_real_def ko_wp_at'_def)
-    apply (subgoal_tac "valid_obj' (KOTCB ko) s")
      apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_obj'_def projectKO_tcb
                            valid_tcb'_def)
      apply (erule notE, rule sym)
@@ -4451,20 +4451,20 @@ lemma replyPush_valid_idle':
       apply (clarsimp simp: state_refs_of'_def refs_of'_def projectKO_sc get_refs_def valid_idle'_def
                      split: option.splits)
      apply (clarsimp simp: state_refs_of'_def refs_of'_def projectKO_sc get_refs_def split: option.splits)
-    apply (frule (1) ko_at_valid_objs'_pre, clarsimp)
    apply (clarsimp simp: valid_reply'_def)
   apply (clarsimp simp: valid_idle'_def idle_tcb'_def obj_at'_real_def ko_wp_at'_def
                         pred_tcb_at'_def)
   done
 
 lemma replyPush_valid_queues:
-  "\<lbrace>valid_queues and valid_objs' and tcb_at' callerPtr
+  "\<lbrace>valid_queues and valid_objs'
     and reply_at' replyPtr\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   supply if_split [split del]
   unfolding replyPush_def
-  apply (wpsimp wp: schedContextDonate_valid_queues
+  apply (wpsimp wp: schedContextDonate_valid_queues updateReply_replyTCB_valid_objs'
+                    bindScReply_valid_objs'
                     threadGet_wp hoare_vcg_if_lift2 hoare_vcg_imp_lift')
   apply (frule obj_at_ko_at'[where p=callerPtr], clarsimp, rename_tac tcb)
   apply (rule_tac x=tcb in exI, clarsimp)
@@ -4501,7 +4501,7 @@ lemma replyPush_sch_act_wf:
 lemma replyPush_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not callerPtr s \<and> st_tcb_at' active' callerPtr s \<and>
         ex_nonz_cap_to' callerPtr s \<and> ex_nonz_cap_to' calleePtr s \<and> ex_nonz_cap_to' replyPtr s
-        \<and> tcb_at' calleePtr s \<and> reply_at' replyPtr s
+        \<and> reply_at' replyPtr s
         \<and> obj_at' (\<lambda>ko. replyTCB ko = None) replyPtr s\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_ s. invs' s\<rbrace>"

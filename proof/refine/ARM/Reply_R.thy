@@ -205,7 +205,7 @@ lemma cleanReply_reply_projs[wp]:
                     split: option.splits)+
   done
 
-lemma updateReply_valid_objs'_preserved_strong:
+lemma updateReply_valid_objs':
   "\<lbrace>valid_objs' and (\<lambda>s. \<forall>r. valid_reply' r s \<longrightarrow> valid_reply' (upd r) s)\<rbrace>
    updateReply rptr upd
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
@@ -215,17 +215,10 @@ lemma updateReply_valid_objs'_preserved_strong:
   apply clarsimp
   done
 
-lemma updateReply_valid_objs'_preserved:
-  "\<lbrace>valid_objs' and K (\<forall>r s. valid_reply' r s \<longrightarrow> valid_reply' (upd r) s)\<rbrace>
-   updateReply rptr upd
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp wp: updateReply_valid_objs'_preserved_strong)
-  done
-
 lemma cleanReply_valid_objs'[wp]:
   "cleanReply rptr \<lbrace>valid_objs'\<rbrace>"
   unfolding cleanReply_def
-  apply (wpsimp wp: updateReply_valid_objs'_preserved
+  apply (wpsimp wp: updateReply_valid_objs'
               simp: valid_reply'_def)
   done
 
@@ -302,7 +295,7 @@ lemma valid_mdb'_lift:
 lemma replyUnlink_valid_objs'[wp]:
   "replyUnlink rptr tptr \<lbrace>valid_objs'\<rbrace>"
   unfolding replyUnlink_def
-  apply (wpsimp wp: updateReply_valid_objs'_preserved[where upd="replyTCB_update (\<lambda>_. tptrOpt)"
+  apply (wpsimp wp: updateReply_valid_objs'[where upd="replyTCB_update (\<lambda>_. tptrOpt)"
                                                       for tptrOpt] gts_wp'
               simp: valid_tcb_state'_def)
   apply (clarsimp simp: valid_reply'_def)
@@ -312,8 +305,9 @@ lemma replyRemoveTCB_valid_pspace'[wp]:
   "replyRemoveTCB tptr \<lbrace>valid_pspace'\<rbrace>"
   unfolding replyRemoveTCB_def valid_pspace'_def cleanReply_def
   supply set_reply'.set_wp[wp del] if_split[split del]
-  apply (wpsimp wp: valid_mdb'_lift updateReply_valid_objs'_preserved hoare_vcg_if_lift
-                    hoare_vcg_imp_lift gts_wp' haskell_assert_inv)
+  apply (wpsimp wp: valid_mdb'_lift updateReply_valid_objs' hoare_vcg_if_lift
+                    hoare_vcg_imp_lift gts_wp' haskell_assert_inv
+              simp: valid_reply'_def)
   apply (clarsimp simp: valid_reply'_def if_bool_eq_conj if_distribR)
   apply (case_tac "replyPrev ko = None"; clarsimp)
    apply (drule(1) sc_ko_at_valid_objs_valid_sc'
@@ -877,7 +871,7 @@ crunches setThreadState
 crunches updateReply
   for valid_obj'[wp]: "valid_obj' obj"
 
-lemma updateReply_replyTCB_valid_objs'[wp]:
+lemma updateReply_replyTCB_valid_objs':
   "\<lbrace>valid_objs' and case_option \<top> (\<lambda>t. tcb_at' t) p\<rbrace>
    updateReply rptr (replyTCB_update (\<lambda>_. p))
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
@@ -885,36 +879,25 @@ lemma updateReply_replyTCB_valid_objs'[wp]:
      (auto simp: valid_obj'_def valid_reply'_def obj_at'_def projectKO_eq projectKO_reply
           split: option.splits)
 
-lemma updateReply_valid_objs':
-  "\<lbrace>valid_objs'
-    and (\<lambda>s. \<forall>ko. ko_at' ko rptr s \<longrightarrow> valid_reply' (f ko) s)\<rbrace>
-   updateReply rptr f
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp wp: set_reply'.valid_objs' simp: updateReply_def)
-  by (fastforce simp: valid_obj'_def)
-
-lemma replyNext_update_Head_valid_objs'[wp]:
+lemma replyNext_update_Head_valid_objs':
   "\<lbrace>valid_objs' and sc_at' scp\<rbrace>
    updateReply replyPtr (replyNext_update (\<lambda>_. Some (Head scp)))
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_objs')
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
   by (clarsimp simp: valid_reply'_def)
 
-lemma replyNext_update_Next_valid_objs'[wp]:
+lemma replyNext_update_Next_valid_objs':
   "\<lbrace>valid_objs' and reply_at' rptr\<rbrace>
    updateReply replyPtr (replyNext_update (\<lambda>_. Some (Next rptr)))
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_objs')
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
   by (clarsimp simp: valid_reply'_def)
 
-lemma replyPrev_update_valid_objs'[wp]:
+lemma replyPrev_update_valid_objs':
   "\<lbrace>valid_objs' and (\<lambda>s. rptr_opt \<noteq> None \<longrightarrow> reply_at' (the rptr_opt) s)\<rbrace>
    updateReply replyPtr (replyPrev_update (\<lambda>_. rptr_opt))
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp wp: updateReply_valid_objs')
-  apply (frule (1) reply_ko_at_valid_objs_valid_reply')
   by (clarsimp simp: valid_reply'_def valid_bound_reply'_def split: option.splits)
 
 lemma updateReply_valid_tcb_state'[wp]:
@@ -978,22 +961,33 @@ lemma updateReply_iflive'_weak:
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: updateReply_iflive'_strong)
 
-lemma bindScReply_valid_objs'[wp]:
-  "\<lbrace>valid_objs' and reply_at' replyPtr and sc_at' scp\<rbrace>
+lemma bindScReply_valid_objs':
+  "\<lbrace>valid_objs' and reply_at' replyPtr\<rbrace>
    bindScReply scp replyPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (solves wp | simp (no_asm_use) add: bindScReply_def split del: if_split cong: conj_cong |
-           wp hoare_when_wp haskell_assert_wp hoare_vcg_if_lift2 hoare_vcg_all_lift
-              hoare_vcg_disj_lift hoare_vcg_imp_lift' set_sc'.valid_objs'
-              set_reply'.valid_objs' set_reply'.obj_at')+
-  apply (clarsimp simp: valid_obj'_def)
-  apply (drule obj_at_ko_at'[where p=scp], clarsimp)
-  apply (frule sc_ko_at_valid_objs_valid_sc', assumption)
-  apply (intro conjI impI allI;
-         clarsimp;
-         drule (1) ko_at'_inj;
-         clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def
-                        objBitsKO_def)
+  unfolding bindScReply_def
+  supply set_sc_valid_objs'[wp del] set_sc'.valid_objs'[wp]
+  apply (wpsimp wp: updateReply_valid_objs')
+       apply (rule_tac Q="\<lambda>_. valid_objs' and sc_at' scp" in hoare_strengthen_post)
+        apply wpsimp
+       apply (simp add: valid_reply'_def valid_bound_obj'_def)
+      apply (wpsimp wp: updateReply_valid_objs')
+     apply wpsimp
+      apply (rule_tac Q="\<lambda>_. valid_objs' and reply_at' y and reply_at' replyPtr
+                         and ko_at' sc scp" in hoare_strengthen_post)
+       apply (wpsimp wp: updateReply_valid_objs')
+      apply clarsimp
+      apply (prop_tac "sc_at' scp s")
+       apply (clarsimp simp: obj_at'_def)
+      apply (clarsimp simp: valid_reply'_def valid_obj'_def
+      valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
+           dest!: sc_ko_at_valid_objs_valid_sc')+
+     apply wpsimp+
+  apply safe
+       apply ((clarsimp simp: valid_reply'_def valid_obj'_def
+       valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
+       dest!: sc_ko_at_valid_objs_valid_sc')+)[5]
+  apply (clarsimp simp: obj_at'_def)
   done
 
 crunches bindScReply
