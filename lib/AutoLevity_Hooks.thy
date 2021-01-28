@@ -136,7 +136,7 @@ in
 end;
 
 (* Wrapper that outputs to the Isabelle build log directory *)
-fun levity_session_log () =
+fun levity_session_log _ =
 let
   val this_session = Session.get_name ();
   val fname = this_session ^ ".lev";
@@ -156,6 +156,7 @@ handle exn =>
             (Runtime.exn_message_list exn);
    Exn.reraise exn);
 
+
 end
 \<close>
 
@@ -163,8 +164,8 @@ end
    The session shutdown hook requires a patch to Isabelle, so we wrap
    this code to be a no-op on vanilla Isabelle installations. *)
 ML \<open>
-try (ML_Context.eval ML_Compiler.flags @{here})
-    (ML_Lex.read_text ("Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log", @{here}))
+try (ML_Context.eval ML_Compiler.flags Position.none)
+    (ML_Lex.read_text ("Session.register_shutdown_hook AutoLevity_Combined_Report.levity_session_log", Position.none))
 \<close>
 
 end
