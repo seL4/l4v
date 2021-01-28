@@ -12078,7 +12078,7 @@ abbreviation (input)
       \<and> current_time_bounded 1 s"
 
 lemma valid_sched_active_reply_scs[simp,elim!]:
-  "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_repls
+  "valid_sched_2 wk_vsa vbl riq ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_repls
    \<Longrightarrow> active_reply_scs_2 sc_repls sc_refill_cfgs"
   by (simp add: valid_sched_def)
 

@@ -1533,7 +1533,7 @@ lemma send_fault_ipc_invs':
   "\<lbrace>invs and Q
     and st_tcb_at active tptr and ex_nonz_cap_to tptr and K (valid_fault fault)
     and (\<lambda>s. \<exists>n. caps_of_state s (tptr, tcb_cnode_index n) = Some cap)
-    and K (is_ep_cap cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
+    and K (valid_fault_handler cap) and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at bound tptr s)\<rbrace>
    send_fault_ipc tptr cap fault canDonate
    \<lbrace>\<lambda>rv. invs and Q\<rbrace>"
   apply (cases "valid_fault fault"; simp)
@@ -1566,10 +1566,12 @@ lemma handle_timeout_Timeout_invs:
    apply (clarsimp simp: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
    apply (drule invs_iflive)
    apply (drule (1) if_live_then_nonz_capD2)
-    apply (fastforce simp: live_def split: )
+    apply (fastforce simp: live_def)
    apply clarsimp
-  apply (rule_tac x=4 in exI)
-  apply (auto simp: tcb_cnode_map_def caps_of_state_tcb_index_trans)
+  apply (rule_tac P="\<exists>n. P n" and P'="P 4" and Q=Q and Q'=Q for P Q in conj_forward)
+    apply (rule context_conjI)
+     apply (clarsimp simp: caps_of_state_tcb_index_trans tcb_cnode_map_def)
+    apply (auto simp: tcb_cap_slot_regular get_tcb_ko_at obj_at_def dest: tcb_cap_slot_regular)
   done
 
 lemma end_timeslice_invs:
