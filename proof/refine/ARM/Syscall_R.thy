@@ -433,8 +433,12 @@ lemma pinv_corres:
                    apply simp
                   apply simp
                  apply wp+
-             apply (clarsimp simp: ct_in_state_def)
-             apply (fastforce elim: st_tcb_ex_cap)
+             apply (clarsimp simp: invs_def valid_sched_def valid_state_def valid_pspace_def
+                                   fault_tcbs_valid_states_to_except_set schact_is_rct_sane
+                                   ct_in_state_def released_sc_tcb_at_def active_sc_tcb_at_def2)
+             apply (intro conjI)
+              apply (fastforce elim: st_tcb_ex_cap)
+             apply (clarsimp simp: pred_tcb_at_def obj_at_def)
             apply (clarsimp simp: pred_conj_def invs'_def cur_tcb'_def simple_sane_strg
                                   sch_act_simple_def)
            apply (rule corres_guard_imp)

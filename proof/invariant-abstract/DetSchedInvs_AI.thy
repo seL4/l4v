@@ -3054,7 +3054,7 @@ lemma active_reply_scsE:
   using assms by (simp add: active_reply_scs_2_def active_if_reply_sc_at_2_def)
 
 definition valid_sched_2 where
-  "valid_sched_2 wk_vsa vbl ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
+  "valid_sched_2 wk_vsa vbl riq ctime cdom ct it queues rlq sa etcbs tcb_sts tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_ready_qs_2 queues ctime etcbs tcb_sts tcb_scps sc_refill_cfgs
     \<and> valid_release_q_2 rlq tcb_sts tcb_scps sc_refill_cfgs
     \<and> ready_or_release_2 queues rlq
@@ -3063,16 +3063,16 @@ definition valid_sched_2 where
     \<and> ct_in_cur_domain_2 ct it sa cdom etcbs
     \<and> (vbl \<longrightarrow> valid_blocked_2 queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs)
     \<and> valid_idle_etcb_2 etcbs
-    \<and> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs
+    \<and> (riq \<longrightarrow> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs)
     \<and> active_reply_scs_2 sc_reps sc_refill_cfgs
     \<and> active_sc_valid_refills_2 ctime sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True)"
+  "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True True)"
 
 lemmas valid_sched_def = valid_sched_2_def
 
-abbreviation "valid_sched_except_blocked_2 \<equiv> valid_sched_2 True False"
+abbreviation "valid_sched_except_blocked_2 \<equiv> valid_sched_2 True False True"
 
 abbreviation valid_sched_except_blocked :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_except_blocked \<equiv> valid_sched_pred valid_sched_except_blocked_2"
@@ -3089,11 +3089,17 @@ lemma valid_sched_valid_sched_except_blocked_lift:
   by (rule hoare_vcg_conj_lift_N_pre_conj[where N="\<lambda>P. P"]; rule assms)
 
 abbreviation valid_sched_except_blocked_except_wk_sched_action_2 where
-  "valid_sched_except_blocked_except_wk_sched_action_2 \<equiv> valid_sched_2 False False"
+  "valid_sched_except_blocked_except_wk_sched_action_2 \<equiv> valid_sched_2 False False True"
 
 abbreviation valid_sched_except_blocked_except_wk_sched_action :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched_except_blocked_except_wk_sched_action
    \<equiv> valid_sched_pred valid_sched_except_blocked_except_wk_sched_action_2"
+
+abbreviation "valid_sched_except_blocked_except_released_ipc_qs_2 \<equiv> valid_sched_2 True False False"
+
+abbreviation valid_sched_except_blocked_except_released_ipc_qs :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_sched_except_blocked_except_released_ipc_qs
+   \<equiv> valid_sched_pred valid_sched_except_blocked_except_released_ipc_qs_2"
 
 abbreviation einvs :: "det_ext state \<Rightarrow> bool" where
   "einvs \<equiv> invs and valid_list and valid_sched"
