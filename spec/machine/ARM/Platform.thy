@@ -56,7 +56,7 @@ definition
 
 definition
   physBase :: word32 where
-  "physBase \<equiv> 0x40000000"
+  "physBase \<equiv> 0x0"
 
 definition
   physMappingOffset :: word32 where
@@ -76,7 +76,7 @@ definition
 
 definition
   maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 160"
+  "maxIRQ \<equiv> 187"
 
 end
 
