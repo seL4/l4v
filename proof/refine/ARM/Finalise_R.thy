@@ -2521,6 +2521,11 @@ lemma schedContextDonate_invs':
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   sorry
+
+lemma schedContextDonate_valid_mdb':
+  "\<lbrace>valid_mdb'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
+  sorry
+
 (* End lemmas for schedContextDonate *)
 
 lemma isHeadSome:
@@ -2602,30 +2607,87 @@ crunches replyPop
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and untyped_ranges_zero'[wp]: untyped_ranges_zero'
   and cur_tcb'[wp]: cur_tcb'
+  and no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps)
+
+lemma replyNext_update_valid_objs':
+  "\<lbrace>valid_objs' and
+      (\<lambda>s. ((\<forall>r. next_opt = Some (Next r) \<longrightarrow> reply_at' r s) \<and>
+            (\<forall>sc. next_opt = Some (Head sc) \<longrightarrow> sc_at' sc s)))\<rbrace>
+   updateReply replyPtr (replyNext_update (\<lambda>_. next_opt))
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (case_tac next_opt; clarsimp)
+  sorry
+
+lemma replyPop_valid_objs'[wp]:
+  "replyPop replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_const)
+                  apply (clarsimp simp: obj_at'_def)
+                 apply wp+
+                apply (wpsimp wp: replyNext_update_valid_objs' hoare_drop_imp)
+               apply wp+
+              apply_trace (wpsimp )
+              apply (rule conjI; clarsimp)
+               apply (wpsimp wp: hoare_vcg_all_lift set_sc'.valid_objs' hoare_vcg_imp_lift)+
+      apply (rule conjI; clarsimp)
+       apply (case_tac x; clarsimp)
+       apply (wpfix add: reply.sel)
+       apply (wpsimp wp: gts_wp')+
+  apply (simp add: isHead_to_head)
+  apply (drule_tac k=x in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_reply'_def)
+  done
+
+
+lemma replyUnlink_valid_mdb'[wp]:
+  "replyUnlink replyPtr tcbPtr \<lbrace>valid_mdb'\<rbrace>"
+  unfolding replyUnlink_def valid_mdb'_def
+  by (wpsimp wp: gts_wp')
+
+lemma cleanReply_valid_mdb'[wp]:
+  "cleanReply replyPtr \<lbrace>valid_mdb'\<rbrace>"
+  unfolding cleanReply_def valid_mdb'_def
+  by (wpsimp wp: gts_wp')
+
+lemma updateReply_valid_mdb'[wp]:
+  "updateReply replyPtr upd \<lbrace>valid_mdb'\<rbrace>"
+  unfolding updateReply_def valid_mdb'_def
+  by (wpsimp wp: gts_wp')
+
+lemma replyPop_valid_mdb'[wp]:
+  "replyPop replyPtr tcbPtr \<lbrace>valid_mdb'\<rbrace>"
+  unfolding replyPop_def
+  apply (wpsimp wp: schedContextDonate_valid_mdb' hoare_vcg_if_lift_strong threadGet_const)
+  apply (clarsimp simp: obj_at'_def)
+  by (wpsimp wp: gts_wp')+
 
 lemma replyPop_valid_pspace'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_pspace'\<rbrace>"
-  unfolding replyPop_def
-  apply (wpsimp wp: schedContextDonate_valid_pspace' hoare_vcg_if_lift_strong threadGet_const)
-                  apply (clarsimp simp: obj_at'_def)
-                 apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
-apply safe
-  apply (clarsimp simp: obj_at'_def isReply_def projectKOs st_tcb_at'_def objBits_simps'
-              ps_clear_upd' isHead_def split: reply_next.splits)
-  apply safe
-  apply (wpsimp wp: setThreadState_Inactive_unlive updateReply_wp_all gts_wp')
-  apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs opt_map_def objBitsKO_def
-                 live'_def live_reply'_def weak_sch_act_wf_def pred_tcb_at'_def
-                 replyNext_None_iff)
-  sorry
+  by (wpsimp simp: valid_pspace'_def)
 
 lemma replyPop_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (clarsimp simp: replyPop_def)
   apply (wpsimp wp: schedContextDonate_valid_queues hoare_vcg_if_lift_strong threadGet_const)
                apply (clarsimp simp: obj_at'_def)
-              apply (wp updateReply_wp_all set_sc'.set_wp gts_wp')+
+              apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift hoare_drop_imps)
+apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift hoare_drop_imps)
+
+
+              apply (wp updateReply_obj_at'_only_st_qd_ft)
+             apply_trace wpsimp
+
+(* 
+             apply_trace (wp replyNext_update_valid_objs')
+
+
+apply auto
+apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def split: if_splits)
+ *)
 (*   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
                     hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
          | intro conjI impI
@@ -2685,8 +2747,8 @@ lemma replyPop_valid_idle'[wp]:
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding replyPop_def
-  apply (wpsimp wp: schedContextDonate_valid_idle' schedContextDonate_valid_pspace' hoare_vcg_if_lift_strong
-                    threadGet_const)
+  apply (wpsimp wp: schedContextDonate_valid_idle' schedContextDonate_valid_pspace'
+                    hoare_vcg_if_lift_strong threadGet_const)
                   apply (clarsimp simp: obj_at'_def)
                  apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
   sorry
