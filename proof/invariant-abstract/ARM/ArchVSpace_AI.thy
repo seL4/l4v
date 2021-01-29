@@ -20,9 +20,8 @@ lemma kernel_base_shift_cast_le:
   "(kernel_base >> 20 \<le> ucast x) =
         (ucast (kernel_base >> 20) \<le> x)"
   apply (simp add: word_le_def)
-  apply (subst uint_ucast, simp,
-         simp add: kernel_base_def)
-  apply (simp add: ucast_def)
+  apply (subst uint_ucast, simp, simp add: kernel_base_def)
+  apply (simp only: ucast_def)
   apply (subst word_uint.Abs_inverse)
    apply (cut_tac x=x in word_uint.Rep)
    apply (simp add: uints_num)
@@ -260,11 +259,6 @@ lemma dmo_pd_at_asid [wp]:
   apply wp
   apply (simp add: vspace_at_asid_def)
   done
-
-
-crunch inv: find_pd_for_asid "P"
-  (simp: assertE_def crunch_simps wp: crunch_wps)
-
 
 lemma find_pd_for_asid_pd_at_asid [wp]:
   "\<lbrace>\<top>\<rbrace> find_pd_for_asid asid \<lbrace>\<lambda>pd. vspace_at_asid asid pd\<rbrace>, -"
@@ -591,8 +585,6 @@ lemma flush_space_invs[wp]: "\<lbrace>invs\<rbrace> flush_space asid \<lbrace>\<
 
 crunch valid_vs_lookup[wp]: flush_space "valid_vs_lookup"
 
-crunch valid_arch_state[wp]: flush_space "valid_arch_state"
-
 crunch valid_global_objs[wp]: flush_space "valid_global_objs"
 
 crunch caps_of_state[wp]: flush_space "\<lambda>s. P (caps_of_state s)"
@@ -847,13 +839,6 @@ crunch arm_asid_table_inv[wp]: invalidate_asid_entry
 
 
 crunch pred_tcb_at_P [wp]: find_free_hw_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
-
-
-crunch pred_tcb_at [wp]: find_pd_for_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
-  (simp: crunch_simps)
-
-
-crunch aligned [wp]: load_hw_asid pspace_aligned
 
 
 lemma hw_asid_Some [wp]:
@@ -1327,17 +1312,9 @@ definition "pg_entry_align pgsz \<equiv> case pgsz of
   | ARMSection \<Rightarrow> 2
   | ARMSuperSection \<Rightarrow> 6"
 
-crunch "distinct" [wp]: flush_page pspace_distinct (simp: crunch_simps)
-
-
 crunch inv[wp]: check_mapping_pptr "P"
 
-lemma lookup_pd_slot_pd:
-  "is_aligned pd pd_bits \<Longrightarrow> (lookup_pd_slot pd vptr && ~~ mask pd_bits) = pd"
-  apply (simp add: lookup_pd_slot_def Let_def)
-  apply (rule pd_shifting)
-  apply (simp add: pd_bits_def pageBits_def)
-  done
+lemmas lookup_pd_slot_pd = lookup_pd_slot_eq
 
 crunch vspace_objs [wp]: flush_page valid_vspace_objs
   (simp: crunch_simps valid_vspace_objs_arch_update)
@@ -1404,9 +1381,6 @@ lemma page_directory_at_aligned_pd_bits:
   apply (drule(1) pspace_alignedD)
   apply (simp add:pd_bits_def pageBits_def)
   done
-
-crunch vspace_objs [wp]: flush_page valid_vspace_objs
-  (simp: crunch_simps valid_vspace_objs_arch_update)
 
 
 definition
@@ -2711,12 +2685,12 @@ lemma store_pde_invs_unmap':
    apply (clarsimp simp: vs_refs_def graph_of_def split: if_split_asm)
    apply (rule_tac x="(ac, bc)" in image_eqI)
     apply clarsimp
-   apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
+   apply (clarsimp simp: ucast_ucast_mask_shift_helper)
 
   apply (rule conjI)
    apply safe[1]
       apply (clarsimp simp: vs_refs_pages_def graph_of_def
-                            ucast_ucast_mask_shift_helper ucast_id
+                            ucast_ucast_mask_shift_helper
                       split: if_split_asm)
       apply (rule_tac x="(ac, bc)" in image_eqI)
        apply clarsimp
@@ -2727,7 +2701,7 @@ lemma store_pde_invs_unmap':
                     split: if_split_asm)
     apply (rule_tac x="(ac,bc)" in image_eqI)
      apply clarsimp
-    apply (clarsimp simp: ucast_ucast_mask_shift_helper ucast_id)
+    apply (clarsimp simp: ucast_ucast_mask_shift_helper)
    apply (clarsimp simp: vs_refs_pages_def graph_of_def)
    apply (rule_tac x="(ucast (p && mask pd_bits >> 2), x)" in image_eqI)
     apply (clarsimp simp: ucast_ucast_mask_shift_helper)
@@ -2802,10 +2776,9 @@ lemma simpler_store_pde_def:
             ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pd_bits) \<mapsto>
                                        (ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))))\<rparr>)}, False)
         | _ => ({}, True))"
-  apply     (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
-                        return_def fail_def set_object_def get_def put_def bind_def get_pd_def
-                  split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
-  done
+  by (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
+                 return_def fail_def set_object_def get_def put_def bind_def get_pd_def
+           split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
 
 lemma pde_update_valid_vspace_objs:
   "[|valid_vspace_objs s; valid_pde pde s; pde_ref pde = None; kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd))|]
@@ -3342,9 +3315,6 @@ lemma store_pde_no_lookup_pages:
                      graph_of_def image_def
               split: if_split_asm)
 
-crunch vs_lookup_pages[wp]:
-  get_hw_asid,find_pd_for_asid,set_vm_root_for_flush "\<lambda>s. P (vs_lookup_pages s)"
-
 lemma flush_table_vs_lookup_pages[wp]:
   "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>
    flush_table a b c d
@@ -3493,9 +3463,6 @@ crunches cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
   (wp: cacheRangeOp_respects_device_region simp: crunch_simps
    ignore_del: cleanByVA cleanInvalByVA invalidateByVA invalidateL2Range
                branchFlush invalidateByVA_I cleanInvalidateL2Range storeWord)
-
-crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
-  (simp: crunch_simps wp: crunch_wps)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
@@ -4004,9 +3971,6 @@ lemma unmap_page_invs:
   apply (auto simp: vmsz_aligned_def)
   done
 
-crunch cte_wp_at [wp]: unmap_page "\<lambda>s. P (cte_wp_at P' p s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma "\<lbrace>\<lambda>s. P (vs_lookup s) (valid_pte pte s)\<rbrace> set_cap cap cptr \<lbrace>\<lambda>_ s. P (vs_lookup s) (valid_pte pte s)\<rbrace>"
   apply (rule hoare_lift_Pf[where f=vs_lookup])
   apply (rule hoare_lift_Pf[where f="valid_pte pte"])
@@ -4201,28 +4165,19 @@ lemma kernel_slot_impossible_vs_lookup_pages2:
   done
 
 lemma pt_aligned:
-  "\<lbrakk>page_table_at pt s; pspace_aligned s\<rbrakk>
-   \<Longrightarrow> is_aligned pt 10"
+  "\<lbrakk>page_table_at pt s; pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned pt 10"
   by (auto simp: obj_at_def pspace_aligned_def pt_bits_def pageBits_def dom_def)
 
 lemma vaddr_segment_nonsense:
-  "is_aligned (p :: word32) 14 \<Longrightarrow>
-   p + (vaddr >> 20 << 2) && ~~ mask pd_bits = p"
-  by (simp add: mask_32_max_word
-    shiftl_less_t2n'[where m=12 and n=2, simplified]
-    shiftr_less_t2n'[where m=12 and n=20, simplified]
-    pd_bits_def pageBits_def
-    is_aligned_add_helper[THEN conjunct2])
+  "is_aligned (p :: word32) 14 \<Longrightarrow> p + (vaddr >> 20 << 2) && ~~ mask pd_bits = p"
+  by (fact pd_shifting)
 
 lemma vaddr_segment_nonsense2:
   "is_aligned (p :: word32) 14 \<Longrightarrow>
    p + (vaddr >> 20 << 2) && mask pd_bits >> 2 = vaddr >> 20"
-  by (simp add: mask_32_max_word
-    shiftl_less_t2n'[where m=12 and n=2, simplified]
-    shiftr_less_t2n'[where m=12 and n=20, simplified]
-    pd_bits_def pageBits_def
-    is_aligned_add_helper[THEN conjunct1]
-    triple_shift_fun)
+  by (simp add: shiftl_less_t2n'[where m=12 and n=2, simplified]
+                shiftr_less_t2n'[where m=12 and n=20, simplified]
+                pd_bits_def pageBits_def is_aligned_add_helper[THEN conjunct1] triple_shift_fun)
 
 lemma vaddr_segment_nonsense3:
   "is_aligned (p :: word32) 10 \<Longrightarrow>
@@ -4483,8 +4438,6 @@ lemma unmap_page_section_unmapped:
                VSRef (ucast (asid_high_bits_of asid)) None] \<unrhd> p) s\<rbrace>"
   by (rule hoare_pre_imp[OF _ unmap_page_unmapped]) auto
 
-crunch global_refs: store_pde "\<lambda>s. P (global_refs s)"
-
 crunch invs[wp]: pte_check_if_mapped, pde_check_if_mapped "invs"
 
 crunch vs_lookup[wp]: pte_check_if_mapped, pde_check_if_mapped "\<lambda>s. P (vs_lookup s)"
@@ -4506,9 +4459,7 @@ lemma data_at_orth:
 
 lemma data_at_pg_cap:
   "\<lbrakk>data_at sz p s;valid_cap cap s; p \<in> obj_refs cap\<rbrakk> \<Longrightarrow> is_pg_cap cap"
-  apply (case_tac cap)
-   apply (clarsimp simp: is_pg_cap_def obj_refs.simps valid_cap_def
-                         data_at_orth split option.split)+
+  apply (case_tac cap; clarsimp simp: is_pg_cap_def valid_cap_def data_at_orth option.split)
   apply (clarsimp split: arch_cap.split_asm simp: data_at_orth)
   done
 

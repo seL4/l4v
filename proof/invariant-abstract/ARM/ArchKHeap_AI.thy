@@ -316,7 +316,8 @@ lemma set_object_pt_not_vs_lookup_pages:
    apply (clarsimp simp: obj_at_def split:if_split_asm)
    apply (case_tac "pa=p")
     apply (clarsimp simp: vs_refs_pages_def graph_of_def)
-    apply (erule_tac x=ab in allE)
+    apply (rename_tac slot pte)
+    apply (erule_tac x=slot in allE)
     apply (drule_tac R="vs_lookup_pages1 s" in rtranclD)
     apply clarsimp
     apply (drule tranclD)
@@ -337,7 +338,8 @@ lemma set_object_pt_not_vs_lookup_pages:
   apply (clarsimp simp: obj_at_def split:if_split_asm)
   apply (case_tac "pa=p")
    apply (clarsimp simp: vs_refs_pages_def graph_of_def)
-   apply (erule_tac x=rs in allE)
+   apply (rename_tac vs slot pte)
+   apply (erule_tac x=vs in allE)
    apply (clarsimp simp: vs_lookup_pages_def)
    apply (drule(1) ImageI, erule (1) notE)
   apply clarsimp
@@ -848,7 +850,7 @@ lemma valid_ioports_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (arch_state s)\<rbrace>"
   shows      "\<lbrace>valid_ioports\<rbrace> f \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
-  apply (simp add: valid_ioports_def)
+  apply simp
   apply (rule hoare_use_eq [where f=caps_of_state, OF x y])
   done
 
@@ -856,7 +858,7 @@ lemma valid_arch_mdb_lift:
   assumes c: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
   assumes r: "\<And>P. \<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> f \<lbrace>\<lambda>r s. P (is_original_cap s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>r s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  apply (clarsimp simp: valid_arch_mdb_def valid_def)
+  apply (clarsimp simp: valid_def)
   done
 
 

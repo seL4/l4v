@@ -3084,8 +3084,8 @@ lemma real_cte_at_typ_valid:
    \<Longrightarrow> \<lbrace>real_cte_at p\<rbrace> f \<lbrace>\<lambda>rv. real_cte_at p\<rbrace>"
   by (simp add: cap_table_at_typ)
 
-lemma dmo_aligned:
-  "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+lemma dmo_aligned[wp]:
+  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pspace_aligned_def)
