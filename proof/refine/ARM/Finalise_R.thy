@@ -2674,26 +2674,36 @@ lemma replyPop_valid_queues[wp]:
   apply (clarsimp simp: replyPop_def)
   apply (wpsimp wp: schedContextDonate_valid_queues hoare_vcg_if_lift_strong threadGet_const)
                apply (clarsimp simp: obj_at'_def)
-              apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift hoare_drop_imps)
-apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift hoare_drop_imps)
-
-
+              apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift)+
+              apply (case_tac reply; clarsimp)
+              apply (wpfix add: reply.sel)
               apply (wp updateReply_obj_at'_only_st_qd_ft)
-             apply_trace wpsimp
-
-(* 
-             apply_trace (wp replyNext_update_valid_objs')
-
-
-apply auto
-apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def split: if_splits)
- *)
-(*   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
-                    hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
-         | intro conjI impI
-         | clarsimp dest!: reply_ko_at_valid_objs_valid_reply' sc_ko_at_valid_objs_valid_sc'
-                     simp: valid_sched_context'_def valid_reply'_def)+ *)
-  sorry
+             apply (case_tac reply; clarsimp)
+             apply (wpfix add: reply.sel)
+             apply (wpsimp wp: replyNext_update_valid_objs')
+            apply (wpsimp wp: hoare_vcg_imp_lift)
+             apply (case_tac reply; clarsimp)
+             apply (wpfix add: reply.sel)
+             apply (wpsimp wp: updateReply_obj_at'_only_st_qd_ft)
+            apply (wp updateReply_valid_queues)
+           apply wpsimp
+           apply (rule conjI; clarsimp)
+            apply (case_tac x; clarsimp)
+            apply (wpfix add: reply.sel)
+            apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
+           apply (wpsimp wp: hoare_vcg_imp_lift set_sc'.valid_queues)
+          apply (wpsimp wp: )+
+      apply (case_tac x; clarsimp)
+      apply (rule conjI; clarsimp)
+       apply (wpfix add: reply.sel)
+       apply (wpsimp wp: gts_wp')+
+  apply (simp add: isHead_to_head)
+  apply (drule_tac k=koa in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_reply'_def)
+  done
 
 lemma updateReply_list_refs_of_replies':
   "\<lbrace>\<lambda>s. \<forall>r. ko_at' r replyPtr s \<longrightarrow>
