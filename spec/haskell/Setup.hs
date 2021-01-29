@@ -41,6 +41,7 @@ targets =
     [ ("arm-exynos",    ("ARM",     "Exynos4210",   []))
     , ("arm-kzm",       ("ARM",     "KZM",          []))
     , ("arm-sabre",     ("ARM",     "Sabre",        []))
+    , ("arm-zynqmp",    ("ARM",     "ZynqMP",       []))
     , ("x64-pc99",      ("X64",     "PC99",         []))
     , ("arm-tk1-nosmmu",("ARM", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT"]))
     , ("arm-tk1",       ("ARM", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT",
