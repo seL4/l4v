@@ -919,8 +919,7 @@ lemma ep_redux_simps:
   "ntfn_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))
         = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits option.splits
-                 simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def
-               intro!: ext)+
+                 simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def)+
 
 
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
@@ -1300,14 +1299,6 @@ lemma set_ntfn_minor_invs:
   done
 
 crunch asid_map[wp]: set_bound_notification "valid_asid_map"
-
-lemma dmo_aligned[wp]:
-  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pspace_aligned_def)
-  done
-
 
 lemma do_machine_op_result[wp]:
   "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow>

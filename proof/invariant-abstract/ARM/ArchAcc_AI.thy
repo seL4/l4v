@@ -523,8 +523,7 @@ lemma pte_at_aligned_vptr:
   \<Longrightarrow> pte_at (x + (pt + (((vptr >> 12) && 0xFF) << 2))) s"
   apply (erule page_table_pte_at_diffE[where x="(x >> 2) + ((vptr >> 12) && 0xFF)"];simp?)
    apply (simp add: word_shiftl_add_distrib upto_enum_step_def)
-   apply (clarsimp simp: word_shift_by_2 shiftr_shiftl1
-                         is_aligned_neg_mask_eq is_aligned_shift)
+   apply (clarsimp simp: word_shift_by_2 shiftr_shiftl1 is_aligned_shift)
   apply (subst add.commute, rule is_aligned_add_less_t2n)
       apply (rule is_aligned_andI1[where n=4], rule is_aligned_shiftr, simp)
      apply (rule shiftr_less_t2n)
@@ -1774,10 +1773,6 @@ crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-
 crunch idle [wp]: set_asid_pool "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
@@ -2678,7 +2673,7 @@ lemma lookup_pd_slot_add_eq:
   apply (subgoal_tac "2 < pd_bits \<and> size vptr \<le> 18 + pd_bits")
    apply (simp add: and_mask_0_iff_le_mask le_mask_iff)
    apply (subst word_plus_and_or_coroll)
-    apply (subst word_bool_alg.conj.commute)
+    apply (subst word_bw_comms)
     apply (rule aligned_mask_disjoint[where n=6])
      apply (rule is_aligned_shiftl, rule is_aligned_shiftr, simp)
     apply (rule order.trans, rule leq_high_bits_shiftr_low_bits_leq_bits[where high_bits=4])

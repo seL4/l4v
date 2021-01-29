@@ -896,10 +896,12 @@ lemma cancel_all_ipc_invs_helper:
           apply (fastforce dest!:symreftype_inverse' ep_no_ntfn_bound)
          apply (clarsimp dest!: symreftype_inverse')
          apply (frule (3) ep_list_tcb_at)
-         apply (frule_tac t=y in tcb_at_no_ntfn_bound, simp+)
-       apply (clarsimp dest!: symreftype_inverse')
-       apply (frule (3) ep_list_tcb_at)
-       apply (clarsimp simp: obj_at_def is_tcb is_ep)
+         apply (frule_tac t=y in tcb_at_no_ntfn_bound, simp+)[1]
+        apply simp
+       subgoal
+         apply (clarsimp dest!: symreftype_inverse')
+         apply (frule (3) ep_list_tcb_at)
+         by (clarsimp simp: obj_at_def is_tcb is_ep)
       apply (fastforce dest!: obj_at_state_refs_ofD x)
      apply (fastforce dest!: obj_at_state_refs_ofD x)
     apply (fastforce dest!: symreftype_inverse' ep_no_ntfn_bound)

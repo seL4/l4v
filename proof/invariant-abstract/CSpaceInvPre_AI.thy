@@ -27,16 +27,14 @@ lemma set_cap_caps_of_state[wp]:
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac obj; simp_all split del: if_split cong: if_cong bind_cong)
    apply (wpsimp wp: set_object_wp)
-   apply (clarsimp elim!: rsubst[where P=P]
+   apply (fastforce elim!: rsubst[where P=P]
                     simp: caps_of_state_cte_wp_at cte_wp_at_cases
-                          fun_upd_def[symmetric] wf_cs_upd obj_at_def
-                  intro!: ext)
-   apply blast
+                          fun_upd_def[symmetric] wf_cs_upd obj_at_def)
   apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: obj_at_def)
-  apply (safe elim!: rsubst[where P=P] intro!: ext)
-      apply (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases,
-             auto simp: tcb_cap_cases_def split: if_split_asm)
+  apply (safe elim!: rsubst[where P=P];
+         rule ext; clarsimp simp: caps_of_state_cte_wp_at cte_wp_at_cases)
+      apply (auto simp: tcb_cap_cases_def split: if_split_asm)
   done
 
 lemmas gen_obj_refs_Int_not =
@@ -115,7 +113,7 @@ lemma wf_cs_ran_nonempty:
   "well_formed_cnode_n sz cs \<Longrightarrow> ran cs \<noteq> {}"
   apply (clarsimp simp: well_formed_cnode_n_def)
   apply (drule_tac f="\<lambda>S. replicate sz False \<in> S" in arg_cong)
-  apply (auto intro: ranI)
+  apply auto
   done
 
 lemma set_cap_obj_at_impossible:

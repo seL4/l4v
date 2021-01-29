@@ -809,9 +809,7 @@ lemma valid_ioc_detype[detype_invs_lemmas]: "valid_ioc (detype (untyped_range ca
       done
   qed
 
-(* FIXME: consider to source out. *)
-lemma p2pm1_to_mask: "\<And>p n. p + 2 ^ n - 1 = p + mask n" (* SIMP *)
-  by (simp add: mask_2pm1 field_simps)
+lemmas p2pm1_to_mask = add_mask_fold
 
 lemma valid_irq_states_detype[detype_invs_lemmas]: "valid_irq_states
           (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
@@ -829,9 +827,9 @@ lemma invariants:
   assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-using detype_invs_lemmas detype_invs_assms ct_act
-by (simp add: invs_def valid_state_def valid_pspace_def
-                 detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
+  using detype_invs_lemmas detype_invs_assms ct_act
+  by (simp add: invs_def valid_state_def valid_pspace_def
+                detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
 
 end
 
@@ -929,8 +927,6 @@ lemma of_nat_le_pow:
   apply simp
   done
 
-lemma maxword_len_conv': True by simp
-
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
@@ -969,6 +965,7 @@ lemma (in Detype_AI) mapM_storeWord_clear_um:
 lemma intvl_range_conv':
   "\<lbrakk>is_aligned (ptr::'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>
    (\<exists>k. x = ptr + of_nat k \<and> k < 2 ^ bits) \<longleftrightarrow> (ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
+  including no_take_bit
   apply (rule iffI)
    apply (clarsimp simp: x_power_minus_1 mask_2pm1[symmetric])
    apply (frule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])

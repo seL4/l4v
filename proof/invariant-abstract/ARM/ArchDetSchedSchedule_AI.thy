@@ -87,10 +87,6 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
 
-crunch ct_in_cur_domain_2[wp]: set_vm_root
-  "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
-  (simp: crunch_simps)
-
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
   (simp: crunch_simps)
@@ -287,7 +283,6 @@ crunches arch_post_cap_deletion
   and not_queued[wp, DetSchedSchedule_AI_assms]: "not_queued t"
   and sched_act_not[wp, DetSchedSchedule_AI_assms]: "scheduler_act_not t"
   and weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]: weak_valid_sched_action
-  and valid_idle[wp, DetSchedSchedule_AI_assms]: valid_idle
 
 crunches flush_space, invalidate_asid_entry, get_asid_pool
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"

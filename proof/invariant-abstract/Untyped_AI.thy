@@ -384,6 +384,8 @@ lemma range_cover_stuff:
    range_cover (alignUp (w + ((of_nat rv)::machine_word)) bits) sz bits n"
   apply (clarsimp simp: range_cover_def)
   proof (intro conjI)
+    include no_take_bit
+
     assume not_0 : "0<n"
     assume bound : "n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits)" "rv\<le> 2^sz"
       "sz < word_bits"
@@ -418,7 +420,7 @@ lemma range_cover_stuff:
       apply (subst shiftl_shiftr1)
        apply (simp_all add: word_size)
       apply (rule bit_eqI)
-      apply (simp add: word_bits_conv shiftl_word_eq mask_eq_mask bit_and_iff bit_push_bit_iff bit_1_iff bit_mask_iff bit_exp_iff not_le)
+      apply (simp add: word_bits_conv shiftl_word_eq bit_and_iff bit_push_bit_iff bit_1_iff bit_mask_iff bit_exp_iff not_le)
       apply auto
      done
 
@@ -509,7 +511,8 @@ lemma range_cover_stuff:
         apply (simp_all add: word_bits_def)[2]
       apply (subst word_of_nat_le)
        apply (subst unat_power_lower_machine)
-        apply (simp add: word_bits_def)+
+        apply ((simp add: word_bits_def)+)[3]
+     apply (simp del: word_of_nat_eq_0_iff)
      apply (erule of_nat_neq_0)
      apply (erule le_less_trans)
      apply (rule power_strict_increasing)
@@ -703,6 +706,7 @@ lemma inj_bits:
 lemma of_nat_shiftR:
   "a < 2 ^ word_bits \<Longrightarrow>
    unat (of_nat (shiftR a b)::machine_word) = unat ((of_nat a :: machine_word) >> b)"
+  including no_take_bit
   apply (subst shiftr_div_2n')
   apply (clarsimp simp: shiftR_nat)
   apply (subst unat_of_nat_eq[where 'a=machine_word_len])
@@ -716,10 +720,11 @@ lemma of_nat_shiftR:
 
 lemma valid_untypedD:
   "\<lbrakk> s \<turnstile> cap.UntypedCap dev ptr bits idx; kheap s p = Some ko; pspace_aligned s\<rbrakk> \<Longrightarrow>
-  obj_range p ko \<inter> cap_range (cap.UntypedCap dev ptr bits idx) \<noteq> {} \<longrightarrow>
-  (obj_range p ko  \<subseteq> cap_range (cap.UntypedCap dev ptr bits idx)
-  \<and> obj_range p ko \<inter> usable_untyped_range (cap.UntypedCap dev ptr bits idx) = {})"
+   obj_range p ko \<inter> cap_range (cap.UntypedCap dev ptr bits idx) \<noteq> {} \<longrightarrow>
+      obj_range p ko  \<subseteq> cap_range (cap.UntypedCap dev ptr bits idx)
+      \<and> obj_range p ko \<inter> usable_untyped_range (cap.UntypedCap dev ptr bits idx) = {}"
   by (clarsimp simp: valid_untyped_def valid_cap_def cap_range_def obj_range_def)
+     (meson order_trans)
 
 lemma pspace_no_overlap_detype':
   "\<lbrakk> s \<turnstile> cap.UntypedCap dev ptr bits idx; pspace_aligned s; valid_objs s \<rbrakk>
@@ -3332,7 +3337,7 @@ lemma retype_region_obj_ref_range:
    apply assumption
   apply (clarsimp)
   apply (drule subsetD[OF obj_refs_default_cap])
-  apply (drule_tac x = ra in  bspec)
+  apply (drule_tac x = r in  bspec)
    apply (simp add: ptr_add_def)
    apply (drule(1) range_cover_mem)
    apply simp

@@ -524,7 +524,7 @@ lemma cap_refs_respects_device_region_detype[detype_invs_proofs]:
   have "cap_refs_respects_device_region s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def cte_wp_at_detype
+    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def
                 simp del: split_paired_All split_paired_Ex)
     apply (drule_tac x = "(a,b)" in spec)
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def detype_def)
