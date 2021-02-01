@@ -2394,11 +2394,6 @@ lemma valid_bound_sc_typ_at:
   apply fastforce
   done
 
-lemma sort_queue_ntfn_bound_tcb:
-  "\<lbrace>\<lambda>s. ntfn_bound_tcb x = None\<rbrace> sort_queue q
-   \<lbrace>\<lambda>rv s. case ntfn_bound_tcb x of None \<Rightarrow> True | Some tcb \<Rightarrow> rv = [tcb]\<rbrace>"
-  by (case_tac "ntfn_bound_tcb x = None"; wpsimp)
-
 lemma set_thread_state_set_tcb_at[wp]:
   "\<lbrace>\<lambda>s. \<forall>t\<in>set q. tcb_at t s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. \<forall>t\<in>set q. tcb_at t s\<rbrace>"
   by (wpsimp wp: hoare_vcg_ball_lift)
@@ -2544,13 +2539,13 @@ lemma rai_invs':
      apply (clarsimp simp: idle_no_ex_cap)
     apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
    apply (case_tac is_blocking; simp)
-    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def valid_ntfn_def
-                        live_def live_ntfn_def do_nbrecv_failed_transfer_def
-                        valid_tcb_state_def
-                    wp: maybe_return_sc_schedule_tcb sort_queue_ntfn_bound_tcb sts_only_idle
-                        sts_valid_replies sts_fault_tcbs_valid_states
-                        valid_irq_node_typ[where f="as_user t f" for t f]
-                        valid_ioports_lift)
+    apply (rule hoare_weaken_pre)
+     apply (rule_tac P="ntfn_bound_tcb notification = None" in hoare_gen_asm)
+     apply (wpsimp wp: maybe_return_sc_schedule_tcb sts_only_idle sts_valid_replies
+                       sts_fault_tcbs_valid_states valid_ioports_lift
+                       valid_irq_node_typ[where f="as_user t f" for t f]
+                 simp: invs_def valid_state_def valid_pspace_def valid_tcb_state_def
+                       valid_ntfn_def live_ntfn_def live_def do_nbrecv_failed_transfer_def)+
     apply (rule conjI, clarsimp simp: is_ntfn obj_at_def)
     apply (rule conjI, clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
     apply (rule obj_at_valid_objsE, assumption+)
@@ -2562,7 +2557,6 @@ lemma rai_invs':
                           clarsimp intro!: not_BlockedOnReply_not_in_replies_blocked
                                      simp: st_tcb_at_def obj_at_def\<close>)
     apply (subgoal_tac "ntfn_bound_tcb notification = None")
-     apply (rule conjI, simp)
      apply (rule conjI, fastforce elim: fault_tcbs_valid_states_active)
      apply (rule conjI, rule delta_sym_refs, assumption)
        apply (fastforce simp: state_refs_of_def obj_at_def st_tcb_at_def split: if_splits)

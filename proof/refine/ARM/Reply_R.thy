@@ -58,6 +58,9 @@ crunches cleanReply
   and weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (rule: weak_sch_act_wf_lift)
 
+global_interpretation updateReply: typ_at_all_props' "updateReply r f"
+  by typ_at_props'
+
 global_interpretation cleanReply: typ_at_all_props' "cleanReply p"
   by typ_at_props'
 
@@ -77,13 +80,11 @@ lemma replyRemoveTCB_st_tcb_at'[wp]:
   done
 
 lemma replyRemoveTCB_st_tcb_at'_cases:
-  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P Inactive) \<and> (t \<noteq> t' \<longrightarrow> st_tcb_at' P t s)\<rbrace>
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> Q (P Inactive)) \<and> (t \<noteq> t' \<longrightarrow> Q (st_tcb_at' P t s))\<rbrace>
    replyRemoveTCB t'
-   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
+   \<lbrace>\<lambda>_ s. Q (st_tcb_at' P t s)\<rbrace>"
   unfolding replyRemoveTCB_def cleanReply_def
-  apply (wpsimp wp: replyUnlink_st_tcb_at' hoare_vcg_imp_lift' gts_wp' haskell_assert_inv)
-  apply (case_tac "t = t'"; clarsimp simp: pred_tcb_at'_def)
-  done
+  by (wpsimp wp: replyUnlink_st_tcb_at' gts_wp' hoare_vcg_imp_lift')
 
 lemma replyUnlink_tcb_obj_at'_no_change:
   "\<lbrace>(\<lambda>s. P (obj_at' Q tptr s)) and
@@ -917,12 +918,6 @@ lemma replyPrev_update_valid_objs'[wp]:
   apply (frule (1) reply_ko_at_valid_objs_valid_reply')
   by (clarsimp simp: valid_reply'_def valid_bound_reply'_def split: option.splits)
 
-lemma updateReply_valid_tcb_state'[wp]:
-  "updateReply rptr f \<lbrace>valid_tcb_state' ts\<rbrace>"
-  by (wpsimp wp: set_reply'.set_wp simp: updateReply_def)
-     (fastforce simp: valid_tcb_state'_def valid_bound_obj'_def obj_at'_def objBitsKO_def projectKOs
-               split: thread_state.splits option.splits)
-
 lemma updateReply_obj_at':
   "\<lbrace>\<lambda>s. reply_at' rptr s \<longrightarrow>
           P (obj_at' (\<lambda>ko. if rptr = p then Q (f ko) else Q ko) p s)\<rbrace>
@@ -977,6 +972,12 @@ lemma updateReply_iflive'_weak:
    updateReply replyPtr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   by (wpsimp wp: updateReply_iflive'_strong)
+
+lemma updateReply_replyTCB_invs':
+  "\<lbrace>invs' and ex_nonz_cap_to' rptr and case_option \<top> (\<lambda>t. tcb_at' t) p\<rbrace>
+   updateReply rptr (replyTCB_update (\<lambda>_. p))
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (wpsimp wp: updateReply_iflive'_weak simp:  invs'_def valid_state'_def valid_pspace'_def)
 
 lemma bindScReply_valid_objs'[wp]:
   "\<lbrace>valid_objs' and reply_at' replyPtr and sc_at' scp\<rbrace>

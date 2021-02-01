@@ -124,6 +124,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
 >         let epptr = capEPPtr cap
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)
 >             NullCap -> return Nothing
