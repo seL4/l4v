@@ -2768,12 +2768,11 @@ lemma do_reply_transfer_respects:
           apply (rule_tac Q="\<lambda>_ s'. integrity aag X st s \<and>
                                       integrity_tcb_in_fault_reply aag X receiver TRFFinal s s'"
                        in hoare_post_imp)
-     apply (fastforce dest!: integrity_tcb_in_fault_reply_final elim!: integrity_trans)
-   apply (wp set_thread_state_respects_in_fault_reply
-             thread_set_no_fault_respects_in_fault_reply
-             handle_fault_reply_respects_in_fault_reply
-         | simp)+
-   apply force
+           apply (fastforce dest!: integrity_tcb_in_fault_reply_final elim!: integrity_trans)
+          apply (wp set_thread_state_respects_in_fault_reply
+                    thread_set_no_fault_respects_in_fault_reply
+                    handle_fault_reply_respects_in_fault_reply
+                | simp)+
    apply (strengthen integrity_tcb_in_fault_reply_refl)+
    apply (wp cap_delete_one_reply_st_tcb_at)
   \<comment> \<open>the end\<close>
