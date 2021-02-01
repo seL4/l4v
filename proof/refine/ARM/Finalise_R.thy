@@ -2742,14 +2742,49 @@ lemma replyPop_list_refs_of_replies'[wp]:
 
 lemma replyPop_iflive:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> valid_objs' s \<and>
-        ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s\<rbrace>
+        ex_nonz_cap_to' tcbPtr s\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding replyPop_def
   apply (wpsimp wp: schedContextDonate_if_live_then_nonz_cap' hoare_vcg_if_lift_strong
                     threadGet_const)
                   apply (clarsimp simp: obj_at'_def)
-                 apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
+                 apply (wpsimp wp: )+
+              apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift)+
+              apply (case_tac reply; clarsimp)
+              apply (wpfix add: reply.sel)
+              apply (wp updateReply_obj_at'_only_st_qd_ft)
+             apply (case_tac reply; clarsimp)
+             apply (wpfix add: reply.sel)
+             apply (wpsimp wp: updateReply_iflive'_strong replyNext_update_valid_objs')
+            apply (wpsimp wp: hoare_vcg_imp_lift)
+             apply (case_tac reply; clarsimp)
+             apply (wpfix add: reply.sel)
+             apply (wpsimp wp: updateReply_obj_at'_only_st_qd_ft)
+            apply (wp updateReply_iflive'_strong)
+           apply wpsimp+
+           apply (rule conjI; clarsimp)
+            apply (case_tac x; clarsimp)
+            apply (wpfix add: reply.sel)
+            apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
+           apply (wpsimp wp: hoare_vcg_imp_lift set_sc'.valid_queues)
+          apply (wpsimp wp: )+
+      apply (case_tac x; clarsimp)
+      apply (rule conjI; clarsimp)
+       apply (wpfix add: reply.sel)
+       apply (wpsimp wp: gts_wp')+
+  apply (simp add: isHead_to_head)
+  apply (drule_tac k=koa in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_reply'_def if_live_then_nonz_cap'_def obj_at'_def projectKOs)
+  sorry
+
+lemma updateReply_obj_at'_sc_state:
+  "updateReply prevReplyPtr upd \<lbrace>\<lambda>s. obj_at' (\<lambda>x. scTCB x \<noteq> Some (ksIdleThread s)) scPtr s\<rbrace>"
+  apply (wpsimp wp: simp: updateReply_def)
+find_theorems setReply obj_at'
   sorry
 
 lemma replyPop_valid_idle'[wp]:
@@ -2760,7 +2795,29 @@ lemma replyPop_valid_idle'[wp]:
   apply (wpsimp wp: schedContextDonate_valid_idle' schedContextDonate_valid_pspace'
                     hoare_vcg_if_lift_strong threadGet_const)
                   apply (clarsimp simp: obj_at'_def)
-                 apply (wpsimp wp: updateReply_wp_all set_sc'.set_wp gts_wp')+
+                 apply (wpsimp wp: )+
+              apply (wpsimp wp: replyNext_update_valid_objs' hoare_vcg_imp_lift)+
+              apply (case_tac reply; clarsimp)
+              apply (wpfix add: reply.sel)
+              apply (wp updateReply_obj_at'_only_st_qd_ft)
+             apply (case_tac reply; clarsimp)
+             apply (wpfix add: reply.sel)
+             apply (wpsimp wp: updateReply_obj_at'_sc_state updateReply_valid_pspace'_strong hoare_vcg_imp_lift)+
+             apply (wpsimp wp: updateReply_obj_at'_only_st_qd_ft)
+apply (wpsimp wp: updateReply_obj_at'_sc_state updateReply_valid_pspace'_strong hoare_vcg_imp_lift)+
+           apply (rule conjI; clarsimp)
+            apply (case_tac x; clarsimp)
+            apply (wpfix add: reply.sel)
+            apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
+           apply (wpsimp wp: set_sc'.set_ko_at')
+find_theorems setSchedContext obj_at'
+find_theorems updateReply valid_pspace'
+  sorry
+
+lemma replyUnlink_valid_dom_schedule':
+  "replyUnlink replyPtr tcbPtr \<lbrace>valid_dom_schedule'\<rbrace>"
+  unfolding replyUnlink_def
+  apply (wpsimp)
   sorry
 
 lemma replyPop_valid_dom_schedule'[wp]:
@@ -2769,16 +2826,18 @@ lemma replyPop_valid_dom_schedule'[wp]:
    \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
   unfolding replyPop_def
   apply (wpsimp wp: schedContextDonate_valid_dom_schedule' hoare_vcg_if_lift_strong
-                    threadGet_const)
-(* need to write replyUnlink valid_dom_schedule' lemma *)
+                    threadGet_const replyUnlink_valid_dom_schedule')
+(* need to write replyUnlink and cleanReply valid_dom_schedule' lemma *)
   sorry
 
 lemma replyPop_invs':
-  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)
+          and obj_at' (\<lambda>reply. replyNext reply \<noteq> None) replyPtr\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: replyPop_iflive)
+apply (clarsimp simp: valid_pspace'_def valid_dom_schedule'_def if_live_then_nonz_cap'_def)
   sorry
 
 (* Ugh, required to be able to split out the abstract invs *)
