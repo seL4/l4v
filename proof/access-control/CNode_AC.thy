@@ -247,7 +247,7 @@ lemma decode_cnode_inv_authorised:
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
-               simp: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
+               simp: simp_thms fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
           | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
@@ -452,7 +452,7 @@ lemma empty_slot_integrity_spec:
                  empty_slot_extended_list_integ_lift empty_slot_list_integrity[where m="cdt s"]
          | simp add: set_cdt_def | wpc)+
   apply (safe; \<comment> \<open>for speedup\<close>
-         clarsimp simp add: integrity_def,
+         (clarsimp simp add: integrity_def)?,
          blast intro: cca_owned cdt_change_allowed_all_children)
   done
 
