@@ -668,6 +668,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > maybeDonateSc :: PPtr TCB -> PPtr Notification -> Kernel ()
 > maybeDonateSc tcbPtr ntfnPtr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     scOpt <- threadGet tcbSchedContext tcbPtr
 >     when (scOpt == Nothing) $ do
 >         scPtrOpt <- liftM ntfnSc (getNotification ntfnPtr)
@@ -683,6 +685,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > maybeReturnSc :: PPtr Notification -> PPtr TCB -> Kernel ()
 > maybeReturnSc ntfnPtr tcbPtr = do
+>     stateAssert sym_refs_asrt
+>         "Assert that `sym_refs (state_refs_of' s)` holds"
 >     nscOpt <- liftM ntfnSc $ getNotification ntfnPtr
 >     tscOpt <- threadGet tcbSchedContext tcbPtr
 >     when (nscOpt == tscOpt && nscOpt /= Nothing) $ do

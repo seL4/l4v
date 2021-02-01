@@ -23,11 +23,16 @@ crunch aligned'[wp]: cancelAllSignals pspace_aligned'
 crunch distinct'[wp]: cancelAllSignals pspace_distinct'
   (wp: crunch_wps mapM_x_wp')
 
+lemma cancelSignal_st_tcb_at'_cases:
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> Q (P Inactive)) \<and> (t \<noteq> t' \<longrightarrow> Q (st_tcb_at' P t s))\<rbrace>
+   cancelSignal t' n
+   \<lbrace>\<lambda>_ s. Q (st_tcb_at' P t s)\<rbrace>"
+  unfolding cancelSignal_def replyRemoveTCB_def cleanReply_def
+  by (wpsimp wp: sts_st_tcb_at'_cases_strong getNotification_wp hoare_vcg_imp_lift')
+
 lemma cancelSignal_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (simp add: cancelSignal_def Let_def)
-  apply (wp setThreadState_st_tcb | simp)+
-  done
+  by (wpsimp wp: cancelSignal_st_tcb_at'_cases)
 
 lemma cancelSignal_pred_tcb_at':
   "\<lbrace>pred_tcb_at' proj P t' and K (t \<noteq> t')\<rbrace>
@@ -56,6 +61,28 @@ defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
 
+lemma blockedCancelIPC_st_tcb_at:
+  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> Q (P Inactive)) \<and> (t \<noteq> t' \<longrightarrow> Q (st_tcb_at' P t s))\<rbrace>
+   blockedCancelIPC st t' rptr
+   \<lbrace>\<lambda>_ s. Q (st_tcb_at' P t s)\<rbrace>"
+  unfolding blockedCancelIPC_def getBlockingObject_def
+  by (wpsimp wp: sts_st_tcb_at'_cases_strong replyUnlink_st_tcb_at' getEndpoint_wp hoare_vcg_imp_lift')
+
+lemma cancelIPC_st_tcb_at':
+  "\<lbrace>\<lambda>s. if t' = t \<and> st_tcb_at' (\<lambda>st. st \<notin> {Running, Restart, IdleThreadState}) t' s
+        then P (P' Inactive)
+        else P (st_tcb_at' P' t' s)\<rbrace>
+   cancelIPC t
+   \<lbrace>\<lambda>rv s. P (st_tcb_at' P' t' s)\<rbrace>"
+  apply (clarsimp simp: cancelIPC_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (wpsimp wp: blockedCancelIPC_st_tcb_at replyRemoveTCB_st_tcb_at'_cases
+                    cancelSignal_st_tcb_at'_cases threadSet_pred_tcb_no_state)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def)
+  done
+
 lemma cancelIPC_simple[wp]:
   "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   unfolding cancelIPC_def blockedCancelIPC_def
@@ -63,6 +90,10 @@ lemma cancelIPC_simple[wp]:
               simp: Let_def tcb_obj_at'_pred_tcb'_set_obj'_iff)
   apply (clarsimp simp: st_tcb_at'_def o_def obj_at'_def isBlockedOnReply_def)
   done
+
+lemma cancelIPC_st_tcb_at'_different_thread:
+  "\<lbrace>\<lambda>s. P (st_tcb_at' st t' s) \<and> t \<noteq> t'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv s. P (st_tcb_at' st t' s)\<rbrace>"
+  by (wpsimp wp: cancelIPC_st_tcb_at')
 
 (* Assume various facts about cteDeleteOne, proved in Finalise_R *)
 locale delete_one_conc_pre =
@@ -103,25 +134,6 @@ lemma cancelSignal_st_tcb_at':
   apply (wpsimp wp: setThreadState_st_tcb_at'_cases
                     hoare_drop_imp[where R="\<lambda>rv _. delete t (f rv) = []" for f]
                     hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
-  done
-
-lemma cancelIPC_simple':
-  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)\<rbrace>
-   cancelIPC t
-   \<lbrace>\<lambda>_. st_tcb_at' simple' t\<rbrace>"
-  unfolding cancelIPC_def Let_def getBlockingObject_def blockedCancelIPC_def
-  apply (wpsimp wp: sts_st_tcb_at'_cases hoare_vcg_all_lift hoare_vcg_imp_lift
-                    hoare_pre_cont[where a="getEndpoint x" and P="\<lambda>rv _. P rv" for x P]
-                    hoare_disjI2[where f="getEndpoint x" and Q="\<lambda>_. tcb_at' y" for x y]
-                    replyUnlink_st_tcb_at'_sym_ref replyRemoveTCB_st_tcb_at'_sym_ref
-                    cancelSignal_st_tcb_at' threadSet_pred_tcb_at_state[where p=t] gts_wp')
-  apply (rule conjI; clarsimp)
-   apply normalise_obj_at'
-   apply (rename_tac rptr tcb reply)
-   apply (erule notE)
-   apply (frule(1) sym_ref_Receive_or_Reply_replyTCB', fast)
-   apply (clarsimp simp: obj_at'_def projectKO_eq project_inject)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
 context begin interpretation Arch .
@@ -871,16 +883,6 @@ lemma cancelSignal_st_tcb_at:
   apply (wp sts_st_tcb_at'_cases hoare_vcg_const_imp_lift
             hoare_drop_imp[where R="%rv s. P' rv" for P'])
    apply clarsimp+
-  done
-
-lemma blockedCancelIPC_st_tcb_at:
-  "\<lbrace>\<lambda>s. (t = t' \<longrightarrow> P Inactive) \<and> (t \<noteq> t' \<longrightarrow> st_tcb_at' P t s)\<rbrace>
-   blockedCancelIPC st t' rptr
-   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  unfolding blockedCancelIPC_def Let_def getBlockingObject_def
-  apply (wpsimp wp: setThreadState_st_tcb_at'_cases replyUnlink_st_tcb_at' hoare_vcg_imp_lift'
-                    getEndpoint_wp)
-  apply fastforce
   done
 
 lemma cancelIPC_st_tcb_at:
@@ -1900,8 +1902,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' simple' t"
                in hoare_seq_ext[rotated])
-   apply (wpsimp wp: cancelIPC_simple')
-   apply (clarsimp simp: sym_refs_asrt_def)
+   apply (wpsimp wp: cancelIPC_simple)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip)
    apply clarsimp
@@ -3103,8 +3104,6 @@ lemma cancelAllIPC_valid_objs'[wp]:
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> valid_ep' epa s" in hoare_seq_ext[rotated])
    apply (wpsimp wp: set_ep_valid_objs')
-    apply (wpsimp wp: set_ep'.set_wp)
-   apply (clarsimp simp: pred_conj_def simp del: fun_upd_apply)
    apply (frule (1) ep_ko_at_valid_objs_valid_ep')
    apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
   apply (rule hoare_seq_ext)

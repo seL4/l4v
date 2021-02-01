@@ -52,6 +52,8 @@ This function performs an signal operation, given a capability to a notification
 
 Fetch the notification object object, and select the operation based on its state.
 
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         nTFN <- getNotification ntfnPtr
 >         case (ntfnObj nTFN, ntfnBoundTCB nTFN) of
 
@@ -108,6 +110,8 @@ This function performs an receive signal operation, given a thread pointer and a
 Fetch the notification object, and select the operation based on its state.
 
 >         let ntfnPtr = capNtfnPtr cap
+>         stateAssert sym_refs_asrt
+>             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 

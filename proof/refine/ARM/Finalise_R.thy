@@ -2146,6 +2146,7 @@ crunches cteDeleteOne, suspend, prepareThreadDelete
 
 end
 
+global_interpretation cancelIPC: typ_at_all_props' "cancelIPC x" by typ_at_props'
 global_interpretation cancelAllIPC: typ_at_all_props' "cancelAllIPC x" by typ_at_props'
 global_interpretation cancelAllSignals: typ_at_all_props' "cancelAllSignals x" by typ_at_props'
 global_interpretation suspend: typ_at_all_props' "suspend x" by typ_at_props'
@@ -2276,11 +2277,7 @@ lemma unbindMaybeNotification_invs[wp]:
 lemma setNotification_invs':
   "\<lbrace>invs'
     and (\<lambda>s. live_ntfn' ntfn \<longrightarrow> ex_nonz_cap_to' ntfnPtr s)
-    and valid_ntfn' ntfn
-    and (\<lambda>s. sym_refs
-             (\<lambda>a. if a = ntfnPtr
-                   then refs_of_ntfn' ntfn
-                   else state_refs_of' s a)) \<rbrace>
+    and valid_ntfn' ntfn\<rbrace>
     setNotification ntfnPtr ntfn
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add:  invs'_def valid_state'_def)
@@ -3625,18 +3622,6 @@ lemma replyPop_valid_queues:
   apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
                     hoare_drop_imps hoare_vcg_if_lift2
          | intro conjI impI)+
-  done
-
-lemma removeFromBitmap_valid_reply'[wp]:
-  "removeFromBitmap tdom prio \<lbrace>valid_reply' sc\<rbrace>"
-  apply (wpsimp simp: bitmap_fun_defs)
-  apply (fastforce simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
-  done
-
-lemma addToBitmap_valid_reply'[wp]:
-  "addToBitmap tdom prio \<lbrace>valid_reply' ep\<rbrace>"
-  apply (wpsimp simp: bitmap_fun_defs)
-  apply (fastforce simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
   done
 
 lemma threadSet_valid_reply'[wp]:

@@ -853,28 +853,6 @@ lemma threadSet_valid_objs_tcbPriority_update:
     apply (fastforce  simp: obj_at'_def)+
   done
 
-crunch inv[wp]: tcbEPDequeue P
-
-lemma tcbEPDequeue_valid_SendEP:
-  "\<lbrace>valid_ep' (SendEP q) and K (t \<in> set q)\<rbrace> tcbEPDequeue t q \<lbrace>\<lambda>q'. valid_ep' (SendEP (t#q'))\<rbrace>"
-  apply (wpsimp simp: tcbEPDequeue_def valid_ep'_def)
-  apply (fastforce simp: findIndex_def findIndex'_app
-                   dest: in_set_takeD in_set_dropD findIndex_member)
-  done
-
-lemma tcbEPDequeue_valid_RecvEP:
-  "\<lbrace>valid_ep' (RecvEP q) and K (t \<in> set q)\<rbrace> tcbEPDequeue t q \<lbrace>\<lambda>q'. valid_ep' (RecvEP (t#q'))\<rbrace>"
-  apply (wpsimp simp: tcbEPDequeue_def valid_ep'_def)
-  apply (fastforce simp: findIndex_def findIndex'_app
-                   dest: in_set_takeD in_set_dropD findIndex_member)
-  done
-
-lemma tcbEPDequeue_valid_ep':
-  "\<lbrace>valid_ep' (updateEpQueue ep q) and K (ep \<noteq> IdleEP \<and> t \<in> set q)\<rbrace>
-   tcbEPDequeue t q
-   \<lbrace>\<lambda>q'. valid_ep' (updateEpQueue ep (t#q'))\<rbrace>"
-  by (cases ep) (wpsimp wp: tcbEPDequeue_valid_SendEP tcbEPDequeue_valid_RecvEP simp: updateEpQueue_def)+
-
 lemma tcbEPDequeueAppend_valid_ntfn'_rv:
   "\<lbrace>valid_ntfn' ntfn and K (ntfnObj ntfn = WaitingNtfn qs \<and> t \<in> set qs)\<rbrace>
    do qs' \<leftarrow> tcbEPDequeue t qs;
@@ -924,45 +902,6 @@ lemma reorderNtfn_invs':
                         ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
                  split: option.splits)
   done
-
-lemma tcbEPAppend_rv_wf:
-  "\<lbrace>\<top>\<rbrace> tcbEPAppend t q \<lbrace>\<lambda>rv s. set rv = set (t#q)\<rbrace>"
-  apply (simp only: tcbEPAppend_def)
-  apply (wp tcbEPFindIndex_wp)
-  apply (auto simp: null_def set_append[symmetric])
-  done
-
-lemma tcbEPAppend_rv_wf':
-  "\<lbrace>P (set (t#q))\<rbrace> tcbEPAppend t q \<lbrace>\<lambda>rv. P (set rv)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (frule use_valid[OF _ tcbEPAppend_rv_wf], simp, simp)
-  apply (frule use_valid[OF _ tcbEPAppend_inv, where P = "P (set (t#q))"], simp+)
-  done
-
-lemma tcbEPAppend_rv_wf'':
-  "\<lbrace>P (ep_q_refs_of' (updateEpQueue ep (t#q))) and K (ep \<noteq> IdleEP)\<rbrace>
-   tcbEPAppend t q
-   \<lbrace>\<lambda>rv. P (ep_q_refs_of' (updateEpQueue ep rv))\<rbrace>"
-  by (cases ep; wpsimp wp: tcbEPAppend_rv_wf' simp: updateEpQueue_def)
-
-lemma tcbEPDequeue_rv_wf:
-  "\<lbrace>\<lambda>_. t \<in> set q \<and> distinct q\<rbrace> tcbEPDequeue t q \<lbrace>\<lambda>rv s. set rv = set q - {t}\<rbrace>"
-  apply (wpsimp simp: tcbEPDequeue_def)
-  apply (fastforce dest: findIndex_member)
-  done
-
-lemma tcbEPDequeue_rv_wf':
-  "\<lbrace>P (set q - {t}) and K (t \<in> set q \<and> distinct q)\<rbrace> tcbEPDequeue t q \<lbrace>\<lambda>rv. P (set rv)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (frule use_valid[OF _ tcbEPDequeue_rv_wf], simp, simp)
-  apply (frule use_valid[OF _ tcbEPDequeue_inv, where P = "P (set q - {t})"], simp+)
-  done
-
-lemma tcbEPDequeue_rv_wf'':
-  "\<lbrace>P (ep_q_refs_of' (updateEpQueue ep q)) and K (t \<in> set q \<and> distinct q \<and> ep \<noteq> IdleEP)\<rbrace>
-   tcbEPDequeue t q
-   \<lbrace>\<lambda>rv. P (ep_q_refs_of' (updateEpQueue ep (t#rv)))\<rbrace>"
-  by (cases ep; wpsimp wp: tcbEPDequeue_rv_wf' simp: Times_Diff_distrib1 insert_absorb updateEpQueue_def)
 
 lemma set_ep_minor_invs':
   "\<lbrace>invs' and obj_at' (\<lambda>ep. ep_q_refs_of' ep = ep_q_refs_of' val) ptr
