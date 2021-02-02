@@ -341,7 +341,7 @@ lemma dcorres_revoke_the_cap_corres:
    apply clarsimp
     apply (rule corres_dummy_return_r)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF dcorres_revoke_cap_no_descendants])
+      apply (rule corres_split_deprecated[OF dcorres_revoke_cap_no_descendants])
         apply simp
         apply (rule delete_cap_simple_corres)
         apply (wp cap_delete_one_cte_at)+
@@ -388,10 +388,10 @@ lemma finalise_cancel_ipc:
            apply (rule corres_symb_exec_r)
               apply (rule corres_symb_exec_r)
                  apply (rule corres_dummy_return_pl)
-                 apply (rule corres_split[ OF _ corres_dummy_set_sync_ep])
+                 apply (rule corres_split_deprecated[ OF _ corres_dummy_set_sync_ep])
                    apply clarsimp
                    apply (rule corres_dummy_return_pr)
-                   apply (rule corres_split [OF _ dcorres_revoke_cap_unnecessary])
+                   apply (rule corres_split_deprecated [OF _ dcorres_revoke_cap_unnecessary])
                      apply (simp add: when_def dc_def[symmetric])
                      apply (rule set_thread_state_corres)
                     apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
@@ -409,10 +409,10 @@ lemma finalise_cancel_ipc:
           apply (rule corres_symb_exec_r)
              apply (rule corres_symb_exec_r)
                 apply (rule corres_dummy_return_pl)
-                apply (rule corres_split[ OF _ corres_dummy_set_sync_ep])
+                apply (rule corres_split_deprecated[ OF _ corres_dummy_set_sync_ep])
                   apply clarsimp
                   apply (rule corres_dummy_return_pr)
-                  apply (rule corres_split [OF _ dcorres_revoke_cap_unnecessary])
+                  apply (rule corres_split_deprecated [OF _ dcorres_revoke_cap_unnecessary])
                     unfolding K_bind_def
                     apply (rule set_thread_state_corres)
                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
@@ -426,7 +426,7 @@ lemma finalise_cancel_ipc:
      apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
     apply (simp add:reply_cancel_ipc_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ thread_set_fault_corres])
+      apply (rule corres_split_deprecated[OF _ thread_set_fault_corres])
          apply (rule corres_symb_exec_r)
             apply (simp add: revoke_cap_simple.simps)
             apply (subst transform_tcb_slot_simp[symmetric])
@@ -440,10 +440,10 @@ lemma finalise_cancel_ipc:
      apply (rule_tac Q'="\<lambda>r. valid_ntfn r and (=) s'" in corres_symb_exec_r)
         apply (rule corres_symb_exec_r)
            apply (rule corres_dummy_return_pl)
-           apply (rule corres_split[ OF _ corres_dummy_set_notification])
+           apply (rule corres_split_deprecated[ OF _ corres_dummy_set_notification])
              unfolding K_bind_def
              apply (rule corres_dummy_return_pr)
-             apply (rule corres_split[OF _ dcorres_revoke_cap_unnecessary])
+             apply (rule corres_split_deprecated[OF _ dcorres_revoke_cap_unnecessary])
                unfolding K_bind_def
                apply (rule set_thread_state_corres)
               including no_pre
@@ -478,7 +478,7 @@ lemma dcorres_deleting_irq_handler:
      (CSpace_A.deleting_irq_handler word)"
   apply (simp add:CSpace_D.deleting_irq_handler_def CSpace_A.deleting_irq_handler_def)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ dcorres_get_irq_slot])
+  apply (rule corres_split_deprecated[OF _ dcorres_get_irq_slot])
     apply (simp, rule delete_cap_simple_corres,simp)
     apply (rule hoare_vcg_precond_imp [where Q="invs and valid_etcbs"])
     including no_pre
@@ -821,7 +821,7 @@ lemma flush_table_exec:
   "\<lbrakk>dcorres dc R (Q rv) h (g rv); \<lbrace>P\<rbrace> flush_table aa a b word \<lbrace>Q\<rbrace>\<rbrakk>\<Longrightarrow>dcorres dc R P h ((flush_table aa a b word) >>= g)"
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ dcorres_flush_table])
+  apply (rule corres_split_deprecated[OF _ dcorres_flush_table])
   apply (simp|wp)+
   done
 
@@ -1070,7 +1070,7 @@ lemma remove_cdt_pt_slot_exec:
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ dummy_remove_cdt_pt_slot])
+  apply (rule corres_split_deprecated[OF _ dummy_remove_cdt_pt_slot])
     apply (rule_tac F="rv = ()" in corres_gen_asm)
     unfolding K_bind_def
     apply clarsimp
@@ -1087,7 +1087,7 @@ lemma remove_cdt_pd_slot_exec:
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ dummy_remove_cdt_pd_slot])
+  apply (rule corres_split_deprecated[OF _ dummy_remove_cdt_pd_slot])
     unfolding K_bind_def
   apply (simp|wp)+
 done
@@ -1099,7 +1099,7 @@ lemma remove_cdt_asid_pool_slot_exec:
     (remove_parent (a ,aptr) >>= g) f"
   apply (rule corres_dummy_return_pr)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF _ dummy_remove_cdt_asid_pool_slot])
+  apply (rule corres_split_deprecated[OF _ dummy_remove_cdt_asid_pool_slot])
     unfolding K_bind_def
   apply (simp|wp)+
 done
@@ -1643,9 +1643,9 @@ lemma dcorres_store_invalid_pde_tail_super_section:
    apply (rule corres_guard_imp)
      apply (simp add:mapM_Cons dc_def[symmetric])
      apply (rule corres_dummy_return_l)
-     apply (rule corres_split[OF _ dcorres_store_pde_non_sense])
+     apply (rule corres_split_deprecated[OF _ dcorres_store_pde_non_sense])
        apply (rule corres_dummy_return_l)
-       apply (rule corres_split[OF _  Cons.hyps[unfolded swp_def]])
+       apply (rule corres_split_deprecated[OF _  Cons.hyps[unfolded swp_def]])
          apply (rule corres_free_return[where P=\<top> and P'=\<top>])
         apply wp+
      apply simp
@@ -1683,9 +1683,9 @@ lemma dcorres_store_invalid_pte_tail_large_page:
    apply (rule corres_guard_imp)
      apply (simp add:mapM_Cons dc_def[symmetric])
      apply (rule corres_dummy_return_l)
-     apply (rule corres_split[OF _ dcorres_store_pte_non_sense])
+     apply (rule corres_split_deprecated[OF _ dcorres_store_pte_non_sense])
        apply (rule corres_dummy_return_l)
-       apply (rule corres_split[OF _  Cons.hyps[unfolded swp_def]])
+       apply (rule corres_split_deprecated[OF _  Cons.hyps[unfolded swp_def]])
          apply (rule corres_free_return[where P=\<top> and P'=\<top>])
         apply wp+
      apply simp
@@ -1736,9 +1736,9 @@ lemma dcorres_unmap_large_section:
   apply (rule corres_guard_imp)
     apply (simp add:transform_pd_slot_ref_def)
     apply (rule corres_dummy_return_l)
-    apply (rule corres_split[OF _ dcorres_store_invalid_pde_super_section[where pg_id = pg_id]])
+    apply (rule corres_split_deprecated[OF _ dcorres_store_invalid_pde_super_section[where pg_id = pg_id]])
       apply(rule corres_dummy_return_l)
-      apply (rule_tac r'=dc in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
+      apply (rule_tac r'=dc in corres_split_deprecated[OF corres_free_return[where P=\<top> and P'=\<top>]])
         apply (rule dcorres_store_invalid_pde_tail_super_section[where slot = ptr])
        apply wp+
     apply (wp store_pde_non_sense_wp)
@@ -1858,9 +1858,9 @@ lemma dcorres_unmap_large_page:
   apply (simp add:upto_enum_step_def transform_pt_slot_ref_def upto_enum_def hd_map_simp)+
   apply (rule corres_guard_imp)
     apply(rule corres_dummy_return_l)
-    apply (rule corres_split[OF _ dcorres_store_invalid_pte[where pg_id = pg_id]])
+    apply (rule corres_split_deprecated[OF _ dcorres_store_invalid_pte[where pg_id = pg_id]])
       apply(rule corres_dummy_return_l)
-      apply (rule_tac r'=dc in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
+      apply (rule_tac r'=dc in corres_split_deprecated[OF corres_free_return[where P=\<top> and P'=\<top>]])
         apply (rule dcorres_store_invalid_pte_tail_large_page[where slot = ptr])
        apply wp+
     apply (wp store_pte_non_sense_wp)
@@ -2169,7 +2169,7 @@ lemma dcorres_page_table_mapped:
       apply (rule corres_splitEE[OF _ dcorres_find_pd_for_asid])
         apply (rule_tac F =" is_aligned pda 14" in corres_gen_asm2)
         apply (clarsimp simp:liftE_bindE dcorres_lookup_pd_slot)
-        apply (rule corres_split[OF _ dcorres_get_pde])
+        apply (rule corres_split_deprecated[OF _ dcorres_get_pde])
           apply (case_tac  rv')
              apply (simp add:transform_pde_def)
              apply (rule dcorres_returnOk,simp)
@@ -2233,15 +2233,15 @@ lemma dcorres_unmap_page_table:
      (ARM_A.unmap_page_table a b w)"
   apply (simp add: unmap_page_table_def PageTableUnmap_D.unmap_page_table_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ dcorres_page_table_mapped])
+    apply (rule corres_split_deprecated[OF _ dcorres_page_table_mapped])
       apply (rule dcorres_option[where P = \<top>])
        apply simp
       apply (simp add: dc_def[symmetric])
       apply (rule corres_dummy_return_l)
-       apply (rule corres_split[where r'=dc])
+       apply (rule corres_split_deprecated[where r'=dc])
           apply clarify
           apply (rule corres_dummy_return_l)
-          apply (rule corres_split[where r'=dc])
+          apply (rule corres_split_deprecated[where r'=dc])
             apply (rule dcorres_flush_table)
            apply (clarsimp)
            apply (rule dcorres_machine_op_noop)
@@ -2525,7 +2525,7 @@ lemma dcorres_delete_asid:
        apply (rule dcorres_symb_exec_r_strong)
          apply (rule corres_guard_imp)
            apply (rule corres_dummy_return_l)
-           apply (rule corres_split[OF corres_trivial,where r'=dc])
+           apply (rule corres_split_deprecated[OF corres_trivial,where r'=dc])
               apply (rule dcorres_symb_exec_r[OF dcorres_set_vm_root])
                apply wp+
              apply (rule dcorres_set_asid_pool)
@@ -2604,20 +2604,20 @@ lemma dcorres_finalise_cap:
          apply (clarsimp simp:invs_def valid_state_def)+
       apply (rule corres_rel_imp)
        apply (rule corres_guard_imp)
-         apply (rule corres_split[OF dcorres_cancel_all_signals dcorres_unbind_maybe_notification])
+         apply (rule corres_split_deprecated[OF dcorres_cancel_all_signals dcorres_unbind_maybe_notification])
           apply (wp unbind_maybe_notification_valid_etcbs | simp | wpc)+
        apply ((clarsimp simp:invs_def valid_state_def)+)[2]
      apply (simp add:IpcCancel_A.suspend_def bind_assoc)
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ dcorres_unbind_notification])
-         apply (rule corres_split[OF _ finalise_cancel_ipc])
+       apply (rule corres_split_deprecated[OF _ dcorres_unbind_notification])
+         apply (rule corres_split_deprecated[OF _ finalise_cancel_ipc])
          apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
          apply (rule dcorres_rhs_noop_above)
           apply (case_tac "rv = Running"; simp)
            apply (rule update_restart_pc_dcorres)
           apply simp
-           apply (rule corres_split)
+           apply (rule corres_split_deprecated)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
               apply (rule corres_split'[OF prepare_thread_delete_dcorres])
@@ -2635,7 +2635,7 @@ lemma dcorres_finalise_cap:
      apply (simp add:not_idle_thread_def)
     apply clarsimp
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ dcorres_deleting_irq_handler])
+      apply (rule corres_split_deprecated[OF _ dcorres_deleting_irq_handler])
         apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
         apply (clarsimp simp:transform_cap_def)
        apply (wp|clarsimp)+
@@ -2647,7 +2647,7 @@ lemma dcorres_finalise_cap:
      \<comment> \<open>arch_cap.ASIDPoolCap\<close>
      apply (rule corres_guard_imp)
        apply (simp add:transform_asid_def)
-       apply (rule corres_split[OF _ dcorres_delete_asid_pool])
+       apply (rule corres_split_deprecated[OF _ dcorres_delete_asid_pool])
          apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
          apply (clarsimp simp:transform_cap_def)
         apply (wp|clarsimp)+
@@ -2656,7 +2656,7 @@ lemma dcorres_finalise_cap:
      apply (simp add:transform_mapping_def)
     apply (clarsimp simp:transform_mapping_def)
     apply (rule corres_guard_imp)
-      apply (rule_tac corres_split[OF _ dcorres_unmap_page])
+      apply (rule_tac corres_split_deprecated[OF _ dcorres_unmap_page])
         apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
         apply (clarsimp simp:transform_cap_def)
        apply (wp | clarsimp )+
@@ -2665,7 +2665,7 @@ lemma dcorres_finalise_cap:
    apply (clarsimp simp:transform_mapping_def split:option.splits)
    apply (rule dcorres_expand_pfx)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ dcorres_unmap_page_table])
+     apply (rule corres_split_deprecated[OF _ dcorres_unmap_page_table])
           apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
           apply (clarsimp simp:transform_cap_def)
          apply ((wp|clarsimp )+)[4]
@@ -2675,7 +2675,7 @@ lemma dcorres_finalise_cap:
       apply (wp|clarsimp)+
   apply (rule conjI | clarsimp split:option.splits)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ dcorres_delete_asid])
+    apply (rule corres_split_deprecated[OF _ dcorres_delete_asid])
       apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
       apply (clarsimp simp:transform_cap_def)
      apply (wp|clarsimp split:option.splits)+
@@ -3038,7 +3038,7 @@ lemma swap_for_delete_corres:
   apply (rule corres_gen_asm2)
   apply (simp add: swap_for_delete_def cap_swap_for_delete_def when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_cap_corres[OF refl]])+
+    apply (rule corres_split_deprecated[OF _ get_cap_corres[OF refl]])+
         apply simp
         apply (rule swap_cap_corres)
        apply (wp get_cap_wp)+
@@ -3592,7 +3592,7 @@ next
        apply (rule monadic_rewrite_bind_head)
        apply (rule finalise_slot_inner1_add_if_Null[unfolded split_def])
       apply (simp add: bind_assoc if_to_top_of_bind)
-      apply (rule corres_split[OF _ get_cap_corres[OF refl]])
+      apply (rule corres_split_deprecated[OF _ get_cap_corres[OF refl]])
         apply (rename_tac cap)
         apply (rule corres_cutMon)
         apply (simp add: if_to_top_of_bindE cutMon_walk_if
@@ -3610,11 +3610,11 @@ next
         apply (rule corres_cutMon)
         apply (simp add: cutMon_walk_bind del: fst_conv)
         apply (rule corres_drop_cutMon_bind)
-        apply (rule corres_split [OF _ is_final_cap_corres[OF refl]])
+        apply (rule corres_split_deprecated [OF _ is_final_cap_corres[OF refl]])
            apply (rule corres_cutMon)
            apply (simp add: cutMon_walk_bind del: fst_conv)
            apply (rule corres_drop_cutMon_bind)
-           apply (rule corres_split[OF _ dcorres_finalise_cap[where slot=slot]])
+           apply (rule corres_split_deprecated[OF _ dcorres_finalise_cap[where slot=slot]])
               apply (rename_tac fin fin')
               apply (rule corres_cutMon)
               apply (simp(no_asm) add: cutMon_walk_if)
@@ -3649,7 +3649,7 @@ next
                  apply (rule monadic_rewrite_bind_tail)
                   apply (rule monadic_trancl_preemptible_return)
                  apply wp+
-               apply (rule corres_split[OF _ set_cap_corres])
+               apply (rule corres_split_deprecated[OF _ set_cap_corres])
                    apply (rule corres_underlying_gets_pre_lhs)
                    apply (rule corres_trivial, simp add: returnOk_liftE)
                   apply (wp | simp)+
@@ -3658,7 +3658,7 @@ next
                apply (rule monadic_rewrite_pick_alternative_2)
               apply (simp add: cutMon_walk_bind)
               apply (rule corres_drop_cutMon_bind)
-              apply (rule corres_split[OF _ set_cap_corres])
+              apply (rule corres_split_deprecated[OF _ set_cap_corres])
                   apply (rule_tac P="dcorres r P P' f" for r P P' f in subst)
                    apply (rule_tac f="\<lambda>_. ()" in gets_bind_ign)
                   apply (rule_tac r'="\<lambda>rv rv'. transform_cslot_ptr `
@@ -3666,7 +3666,7 @@ next
                                                 {(p, replicate (zombie_cte_bits zb) False),
                                                  (p, nat_to_cref (zombie_cte_bits zb) n)} | _ \<Rightarrow> {}) \<subseteq> rv"
                               and P=\<top> and P'="valid_cap (fst fin') and invs and valid_etcbs
-                                                 and (\<lambda>s. idle_thread s \<notin> obj_refs (fst fin'))" in corres_split)
+                                                 and (\<lambda>s. idle_thread s \<notin> obj_refs (fst fin'))" in corres_split_deprecated)
                      apply (rule monadic_rewrite_corres2)
                       apply (rule monadic_rewrite_bindE_head)
                       apply (rule monadic_rewrite_trans)

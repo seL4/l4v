@@ -415,7 +415,7 @@ lemma dcorres_symb_exec_r:
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where R="\<lambda>rv. P" and R'="\<lambda>rv. Q' rv" and r' = dc])
+    apply (rule corres_split_deprecated[where R="\<lambda>rv. P" and R'="\<lambda>rv. Q' rv" and r' = dc])
        apply simp
        defer
       apply wp
@@ -429,7 +429,7 @@ lemma dcorres_symb_exec_r_strong:
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
     apply (rule corres_guard_imp)
-       apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
+       apply (rule corres_split_deprecated[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
        apply (unfold K_bind_def)
       apply (assumption)
      defer

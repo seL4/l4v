@@ -333,8 +333,8 @@ lemma corres_split':
 text \<open>Derivative splitting rules\<close>
 
 lemma corres_split:
-  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' r (R rv) (R' rv') (b rv) (d rv')"
   assumes x: "corres_underlying sr nf nf' r' P P' a c"
+  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' r (R rv) (R' rv') (b rv) (d rv')"
   assumes    "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   using assms
@@ -347,6 +347,16 @@ lemma corres_split:
   apply (rule hoare_weaken_pre, assumption)
   apply simp
   done
+
+\<comment> \<open>This lemma is deprecated and is currently being kept only to avoid updating existing proofs.
+   Use @thm{corres_split} instead.\<close>
+lemma corres_split_deprecated:
+  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' r (R rv) (R' rv') (b rv) (d rv')"
+  assumes x: "corres_underlying sr nf nf' r' P P' a c"
+  assumes    "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
+  shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
+  using assms
+  by (auto elim!: corres_split)
 
 lemmas corres_split_skip
   = corres_split'[rotated 2, where Q="\<lambda>_. P" and P=P and Q'="\<lambda>_. P'" and P'=P' for P P']
@@ -376,7 +386,7 @@ lemma corres_splitEE:
   shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   using assms
   apply (unfold bindE_def validE_def)
-  apply (rule corres_split)
+  apply (rule corres_split_deprecated)
      defer
      apply assumption+
   apply (case_tac rv)
@@ -399,7 +409,7 @@ lemma corres_split_handle:
   shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a <handle> (\<lambda>ft. b ft)) (c <handle> (\<lambda>ft'. d ft'))"
   using assms
   apply (simp add: handleE_def handleE'_def validE_def)
-  apply (rule corres_split)
+  apply (rule corres_split_deprecated)
      defer
      apply assumption+
   apply (case_tac v, simp_all, safe, simp_all add: y)
@@ -411,7 +421,7 @@ lemma corres_split_catch:
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a <catch> (\<lambda>ft. b ft)) (c <catch> (\<lambda>ft'. d ft'))"
   apply (simp add: catch_def)
-  apply (rule corres_split [OF _ x, where R="case_sum E \<top>\<top>" and R'="case_sum E' \<top>\<top>"])
+  apply (rule corres_split_deprecated [OF _ x, where R="case_sum E \<top>\<top>" and R'="case_sum E' \<top>\<top>"])
     apply (case_tac x)
      apply (clarsimp simp: y)
     apply clarsimp
@@ -423,7 +433,7 @@ lemma corres_split_eqr:
  assumes y: "\<And>rv. corres_underlying sr nf nf' r (R rv) (R' rv) (b rv) (d rv)"
  assumes x: "corres_underlying sr nf nf' (=) P P' a c" "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
  shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= d)"
-  apply (rule corres_split[OF _ x])
+  apply (rule corres_split_deprecated[OF _ x])
   apply (simp add: y)
   done
 
@@ -447,7 +457,7 @@ lemma corres_split_nor:
  "\<lbrakk> corres_underlying sr nf nf' r R R' b d; corres_underlying sr nf nf' dc P P' a c;
     \<lbrace>Q\<rbrace> a \<lbrace>\<lambda>x. R\<rbrace>; \<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>x. R'\<rbrace> \<rbrakk>
  \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b)) (c >>= (\<lambda>rv. d))"
-  apply (rule corres_split, assumption+)
+  apply (rule corres_split_deprecated, assumption+)
   done
 
 lemma corres_split_norE:
@@ -471,7 +481,7 @@ lemma corres_split_mapr:
   assumes y: "corres_underlying sr nf nf' ((=) \<circ> f) P P' a c"
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= d)"
-  apply (rule corres_split[OF _ y z])
+  apply (rule corres_split_deprecated[OF _ y z])
   apply simp
   apply (drule sym)
   apply (simp add: x)
@@ -655,7 +665,7 @@ lemma corres_symb_exec_l:
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr nf nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
+    apply (subst gets_bind_ign[symmetric], rule corres_split_deprecated)
        apply (rule z)
       apply (rule corres_noop2)
          apply (erule x)
@@ -674,7 +684,7 @@ lemma corres_symb_exec_r:
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
+    apply (subst gets_bind_ign[symmetric], rule corres_split_deprecated)
        apply (rule z)
       apply (rule corres_noop2)
          apply (simp add: simpler_gets_def exs_valid_def)
@@ -701,7 +711,7 @@ proof -
   show ?thesis
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric],
-             rule corres_split [OF _ P])
+             rule corres_split_deprecated [OF _ P])
       apply (rule z)
      apply wp
     apply (rule y)
@@ -1171,7 +1181,7 @@ lemma corres_split_bind_case_sum:
   assumes w: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> d \<lbrace>S'\<rbrace>,\<lbrace>R'\<rbrace>"
   shows "corres_underlying sr nf nf' r (P and Q) (P' and Q')
             (a >>= (\<lambda>rv. case_sum b c rv)) (d >>= (\<lambda>rv'. case_sum e f rv'))"
-  apply (rule corres_split [OF _ x])
+  apply (rule corres_split_deprecated [OF _ x])
     defer
     apply (insert w)[2]
     apply (simp add: validE_def)+
@@ -1299,7 +1309,7 @@ lemma corres_stateAssert_implied2:
   shows "corres_underlying sr nf nf' dc P Q f (g >>= (\<lambda>_. stateAssert Q' []))"
   apply (subst bind_return[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        prefer 2
        apply (rule c)
       apply (clarsimp simp: corres_underlying_def return_def
@@ -1347,7 +1357,7 @@ lemmas corres_split_noop_rhs
 lemmas corres_split_noop_rhs2
   = corres_split_nor[THEN corres_add_noop_lhs2]
 
-lemmas corres_split_dc = corres_split[where r'=dc, simplified]
+lemmas corres_split_dc = corres_split_deprecated[where r'=dc, simplified]
 
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
