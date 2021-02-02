@@ -86,7 +86,7 @@ lemma typ_at_UserDataI:
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
-  sorry (* schedContext
+  apply (case_tac ko; simp)
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
@@ -95,7 +95,7 @@ lemma typ_at_UserDataI:
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
    apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
   apply (simp add: obj_at_def  a_type_def)
-  done *)
+  done
 
 lemma typ_at_DeviceDataI:
   "\<lbrakk> typ_at' UserDataDeviceT (p && ~~ mask pageBits) s';
@@ -118,7 +118,7 @@ lemma typ_at_DeviceDataI:
               split: Structures_A.kernel_object.split_asm
                      Structures_H.kernel_object.split_asm
                      if_split_asm arch_kernel_obj.split_asm)
-  sorry (* schedContext
+  apply (case_tac ko; simp)
   apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
@@ -127,7 +127,7 @@ lemma typ_at_DeviceDataI:
    apply (erule word_less_power_trans2 [OF _ pbfs_atleast_pageBits])
    apply (case_tac vmpage_size, simp_all add: word_bits_conv)[1]
   apply (simp add: obj_at_def  a_type_def)
-  done *)
+  done
 
 lemma pointerInUserData_relation:
   "\<lbrakk> (s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
@@ -227,21 +227,6 @@ lemma absKState_correct:
   done
 
 text \<open>The top-level invariance\<close>
-
-lemma activate_thread_sched_act:
-  "\<lbrace>ct_in_state activatable and
-    (\<lambda>s. is_schedulable_bool (cur_thread s) s \<and> P (scheduler_action s))\<rbrace>
-   activate_thread
-   \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  unfolding activate_thread_def
-  sorry (*
-  by (simp add: activate_thread_def set_thread_state_def arch_activate_idle_thread_def
-      | (wp set_thread_state_sched_act gts_wp)+ | wpc)+ *)
-
-lemma schedule_sched_act_rct[wp]:
-  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_ s. scheduler_action s = resume_cur_thread\<rbrace>"
-  unfolding Schedule_A.schedule_def
-  sorry
 
 lemma call_kernel_sched_act_rct[wp]:
   "\<lbrace> einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and
@@ -590,7 +575,7 @@ lemma kernel_corres:
        apply (simp add: kernelExitAssertions_def state_relation_def)
       apply (simp only: bind_assoc)
       apply (rule kernel_corres')
-  sorry (* FIXME RT: call_kernel_domain_time_inv_det_ext
+  sorry (* FIXME RT: call_kernel_domain_time_inv_det_ext in DetSchedDomainTime_AI
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp
    apply clarsimp

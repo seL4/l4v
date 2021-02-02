@@ -386,4 +386,48 @@ lemma thread_set_valid_tcb[wp]:
   "thread_set f tptr \<lbrace>valid_tcb ptr tcb\<rbrace>"
   by (wpsimp wp: get_object_wp simp: thread_set_def)
 
+(* BEGIN: scheduler_action lemmas needed in Refine.thy *)
+
+(* FIXME RT: improve the existing sts_schedulable_scheduler_action *)
+lemma sts_schedulable_scheduler_action2:
+  "\<lbrace>\<lambda>s. P (scheduler_action s) \<and> is_schedulable_bool thread s \<and> runnable st\<rbrace>
+   set_thread_state thread st
+  \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  apply (wpsimp wp: stsa_schedulable_scheduler_action set_object_wp simp: set_thread_state_def)
+  apply (clarsimp simp: is_schedulable_bool_def is_sc_active_def get_tcb_def
+                        in_release_queue_def
+                 split: option.splits kernel_object.splits)
+  apply (rename_tac ko ko' ko'')
+  apply (case_tac ko; clarsimp)
+  by fastforce
+
+lemma activate_thread_sched_act:
+  "\<lbrace>(\<lambda>s. P (scheduler_action s)) and
+    ct_in_state activatable and
+    (\<lambda>s. is_schedulable_bool (cur_thread s) s) \<rbrace>
+   activate_thread
+   \<lbrace>\<lambda>_. \<lambda>s. P (scheduler_action s)\<rbrace>"
+  unfolding activate_thread_def
+  by (wpsimp wp: sts_schedulable_scheduler_action2 gts_wp hoare_drop_imp hoare_vcg_all_lift
+           simp: is_schedulable_bool_def2)
+
+crunches sc_and_timer
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (wp: crunch_wps)
+
+lemmas ssa_schact_is_rct_obvious[wp] = set_scheduler_action_obvious
+                                         [where a=resume_cur_thread,
+                                          simplified schact_is_rct_def[symmetric]]
+
+lemma schact_is_rct_simps[simp]:
+  "schact_is_rct_2 resume_cur_thread"
+  by (simp add: schact_is_rct_def)
+
+lemma schedule_sched_act_rct[wp]:
+  "\<lbrace>\<top>\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  unfolding Schedule_A.schedule_def
+  by wpsimp
+
+(* END: scheduler_action lemmas needed in Refine.thy *)
+
 end
