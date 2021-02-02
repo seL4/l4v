@@ -1433,7 +1433,7 @@ lemma kheap_ekheap_double_gets: "(\<And>rv erv rv'. pspace_relation rv rv' \<Lon
 corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
   apply (rule corres_symb_exec_l)
      apply (rule corres_guard_imp)
-       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split)
+       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split_deprecated)
           apply clarsimp
           apply assumption
          apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
@@ -2548,7 +2548,7 @@ lemma copy_global_corres:
                    and Q'="\<lambda>xs s. \<forall>x \<in> set xs. pde_at' (global_pd + (x << 2)) s
                                               \<and> pde_at' (pd + (x << 2)) s"
                           in corres_mapM_list_all2, (simp add: pdeBits_def)+)
-          apply (rule corres_guard_imp, rule corres_split)
+          apply (rule corres_guard_imp, rule corres_split_deprecated)
                apply (erule store_pde_corres[OF _ refl])
               apply (rule corres_rel_imp)
                apply (rule_tac get_pde_corres[OF refl])

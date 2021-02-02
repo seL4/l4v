@@ -29,7 +29,7 @@ next
   show ?case
     apply (simp add: mapM_Cons)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ z [OF P] w [OF P]])
+      apply (rule corres_split_deprecated[OF _ z [OF P] w [OF P]])
       apply (rule corres_split' [OF Q])
         apply (rule corres_trivial, simp add: y)
        apply (wp | simp)+
@@ -113,7 +113,7 @@ next
       apply (case_tac rv)
        apply (clarsimp simp: throwError_def)
        apply clarsimp
-        apply (rule corres_split[OF _ Q])
+        apply (rule corres_split_deprecated[OF _ Q])
           apply (rule corres_trivial)
           apply (case_tac rv)
            apply (clarsimp simp add: lift_def throwError_def)
@@ -164,7 +164,7 @@ proof -
   show ?thesis
     apply (rule corres_guard_imp)
       apply (unfold gets_the_def)
-      apply (subst bind_return[symmetric], rule corres_split [OF _ z])
+      apply (subst bind_return[symmetric], rule corres_split_deprecated [OF _ z])
         apply (rule corres_trivial, clarsimp simp: assert_opt_def)
        apply (wp | simp)+
   done

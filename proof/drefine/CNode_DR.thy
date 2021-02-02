@@ -183,12 +183,12 @@ lemma insert_cap_sibling_corres:
                    cap_insert_ext_def update_cdt_list_def set_cdt_list_modify
              cong: option.case_cong)
   apply (rule stronger_corres_guard_imp)
-     apply (rule corres_split[OF _ get_cap_corres])+
+     apply (rule corres_split_deprecated[OF _ get_cap_corres])+
        apply (rule corres_assert_lhs corres_assert_rhs)+
           apply (rule_tac F = "src_cap = transform_cap src_capa" in corres_gen_asm)
           apply simp
-          apply (rule corres_split[OF _ dcorres_set_untyped_cap_as_full])
-            apply (rule corres_split[OF _ set_cap_corres[OF refl refl]])
+          apply (rule corres_split_deprecated[OF _ dcorres_set_untyped_cap_as_full])
+            apply (rule corres_split_deprecated[OF _ set_cap_corres[OF refl refl]])
               apply (rule dcorres_opt_parent_set_parent_helper)
               apply (clarsimp simp:gets_fold_into_modify dc_def[symmetric]
                 option_return_modify_modify modify_modify bind_assoc
@@ -275,7 +275,7 @@ lemma insert_cap_child_corres:
                    cap_insert_ext_def update_cdt_list_def set_cdt_list_modify
              cong: option.case_cong)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[OF _ get_cap_corres])+
+    apply (rule corres_split_deprecated[OF _ get_cap_corres])+
           apply (rule_tac P="old_cap \<noteq> cdl_cap.NullCap" and P'="rv' \<noteq> cap.NullCap"
             in corres_symmetric_bool_cases)
            apply (clarsimp simp :transform_cap_def split:cap.splits arch_cap.splits)
@@ -283,8 +283,8 @@ lemma insert_cap_child_corres:
            apply (rule corres_trivial)
            apply (simp add:corres_free_fail)
           apply (simp add:assert_def)
-          apply (rule corres_split[OF _ dcorres_set_untyped_cap_as_full])
-            apply (rule corres_split[OF _ set_cap_corres[OF refl refl]])
+          apply (rule corres_split_deprecated[OF _ dcorres_set_untyped_cap_as_full])
+            apply (rule corres_split_deprecated[OF _ set_cap_corres[OF refl refl]])
               apply (rule dcorres_set_parent_helper)
               apply (rule_tac P=\<top> and P'="(\<lambda>s. should_be_parent_of src_capa (orig s) cap orig')
                 and cte_at src and cte_at child
@@ -467,7 +467,7 @@ proof -
                      | simp add: swp_def cte_wp_at_caps_of_state)+
         apply (simp add: insert_cap_orphan_def)
         apply (rule corres_dummy_return_pr[where b="()"])
-        apply (rule corres_split[where r'=dc])
+        apply (rule corres_split_deprecated[where r'=dc])
            apply (rule corres_assert_lhs)
            apply simp
            apply (rule set_cap_corres, simp+)[1]
@@ -1101,7 +1101,7 @@ lemma dcorres_list_all2_mapM_':
    apply simp
   apply (clarsimp simp add: mapM_x_def sequence_x_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ y])
+    apply (rule corres_split_deprecated [OF _ y])
          apply (clarsimp dest!: suffix_ConsD)
          apply (erule meta_allE, (drule(1) meta_mp)+)
          apply assumption
@@ -1260,7 +1260,7 @@ lemma dcorres_set_asid_pool_empty:
       apply (rule dcorres_symb_exec_r)
         apply (rule corres_dummy_return_pr)
         apply (rule corres_guard_imp)
-          apply (rule corres_split[OF _ dummy_remove_cdt_asid_pool_slot])
+          apply (rule corres_split_deprecated[OF _ dummy_remove_cdt_asid_pool_slot])
             apply (clarsimp)
             apply (rule dcorres_set_asid_pool)
               apply fastforce
@@ -1351,13 +1351,13 @@ proof (induct ls)
     apply (clarsimp simp:ef_storeWord)+
     apply (subst corrupt_frame_duplicate[symmetric])
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ dcorres_store_word_conservative[where sz = sz]])
+      apply (rule corres_split_deprecated[OF _ dcorres_store_word_conservative[where sz = sz]])
       apply (clarsimp)
       apply (subst do_machine_op_bind)
       apply (rule empty_fail_mapM,clarsimp simp:ef_storeWord)
       apply (clarsimp simp:dc_def[symmetric])+
       apply (rule corres_dummy_return_l)
-      apply (rule corres_split[OF corres_free_return[where P = \<top> and P'=\<top>]])
+      apply (rule corres_split_deprecated[OF corres_free_return[where P = \<top> and P'=\<top>]])
       apply (rule_tac Cons.hyps)
       using Cons
       apply simp
@@ -1647,7 +1647,7 @@ lemma dcorres_dummy_empty_slot_pd_mapM_x:
         apply (rule corres_dummy_return_r)
         apply (rule dcorres_expand_pfx)
         apply (rule corres_guard_imp)
-          apply (rule corres_split[OF Cons.hyps])
+          apply (rule corres_split_deprecated[OF Cons.hyps])
             apply (clarsimp simp:Cons)
           apply (rule dcorres_dummy_empty_slot_pd)
             apply (clarsimp simp:Cons)+
@@ -2031,8 +2031,8 @@ lemma invoke_cnode_corres:
     apply (clarsimp simp: transform_cslot_ptr_inj [OF cte_wp_at_cte_at real_cte_at_cte])
    apply (simp add: cap_null_reply_case_If case_bool_If)
    apply (rule stronger_corres_guard_imp)
-     apply (rule corres_split [OF _ get_cur_thread_corres])
-       apply (rule corres_split [OF _ get_cap_corres])
+     apply (rule corres_split_deprecated [OF _ get_cur_thread_corres])
+       apply (rule corres_split_deprecated [OF _ get_cap_corres])
           apply (simp split del: if_split)
           apply (rule corres_if_rhs2)
            apply (rule corres_trivial, simp)
@@ -2149,7 +2149,7 @@ lemma dcorres_ensure_empty:
     (CSpace_D.ensure_empty (transform_cslot_ptr slot)) (ensure_empty slot)"
   apply (clarsimp simp: CSpace_D.ensure_empty_def ensure_empty_def liftE_bindE unlessE_whenE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_cap_corres])
+    apply (rule corres_split_deprecated[OF _ get_cap_corres])
        apply (rule corres_whenE)
          apply (simp add:transform_cap_def split:cap.splits arch_cap.splits)
         apply (rule dcorres_free_throw)
@@ -2169,7 +2169,7 @@ lemma derive_cap_dummy:
    apply (simp add: bindE_def)
    apply (rule corres_dummy_return_l)
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ ensure_no_children_dummy, where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
+     apply (rule corres_split_deprecated [OF _ ensure_no_children_dummy, where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
        apply (clarsimp simp: corres_underlying_def lift_def return_def split: sum.splits)
        apply (fastforce simp: in_monad)
       apply wp+
@@ -2299,7 +2299,7 @@ lemma dcorres_update_cap_data_bind:
            (f' (CSpace_A.update_cap_data b data cap'))"
   apply (subst return_bind [symmetric, where f=f'])
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        prefer 2
        apply (rule dcorres_update_cap_data, simp)
       apply simp
@@ -2436,7 +2436,7 @@ lemma decode_cnode_corres:
                     prefer 2
                     apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
                    apply (simp add:liftE_bindE)
-                   apply (rule corres_split)
+                   apply (rule corres_split_deprecated)
                       prefer 2
                       apply (rule get_cap_corres, rule refl)
                      apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
@@ -2465,7 +2465,7 @@ lemma decode_cnode_corres:
                   apply (rule corres_splitEE[OF _ dcorres_ensure_empty])
                     apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
                           apply (simp add:liftE_bindE)
-                          apply (rule corres_split[OF _ get_cap_corres])
+                          apply (rule corres_split_deprecated[OF _ get_cap_corres])
                              apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
                               apply (simp add:update_cap_rights_def
                                 CSpace_D.update_cap_data_def)
@@ -2509,7 +2509,7 @@ lemma decode_cnode_corres:
                   prefer 2
                   apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
                  apply (simp add:liftE_bindE)
-                 apply (rule corres_split)
+                 apply (rule corres_split_deprecated)
                     prefer 2
                     apply (rule get_cap_corres, rule refl)
                    apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
@@ -2526,7 +2526,7 @@ lemma decode_cnode_corres:
                 apply (rule corres_splitEE[OF _ dcorres_ensure_empty])
                   apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
                         apply (simp add:liftE_bindE)
-                        apply (rule corres_split[OF _ get_cap_corres])
+                        apply (rule corres_split_deprecated[OF _ get_cap_corres])
                            apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
                             apply (simp add:update_cap_rights_def
                                 CSpace_D.update_cap_data_def)
@@ -2588,7 +2588,7 @@ lemma decode_cnode_corres:
          prefer 2
          apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
         apply (simp add: liftE_bindE)
-        apply (rule corres_split)
+        apply (rule corres_split_deprecated)
            prefer 2
            apply (rule get_cap_corres, rule refl)
           apply (rule corres_splitEE)
@@ -2639,7 +2639,7 @@ lemma decode_cnode_corres:
                  apply simp
                 apply simp
                apply (simp add: liftE_bindE)
-               apply (rule corres_split)
+               apply (rule corres_split_deprecated)
                   prefer 2
                   apply (rule get_cap_corres, rule refl)
                  apply (rule corres_splitEE)
@@ -2647,7 +2647,7 @@ lemma decode_cnode_corres:
                     apply (rule corres_whenE [where r=dc], simp)
                      apply (rule dcorres_throw)
                     apply simp
-                   apply (rule corres_split)
+                   apply (rule corres_split_deprecated)
                       prefer 2
                       apply (rule get_cap_corres, rule refl)
                      apply (rule corres_splitEE)

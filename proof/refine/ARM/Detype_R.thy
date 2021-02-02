@@ -668,7 +668,7 @@ lemma detype_corres:
                         valid_pspace' s" in corres_split')
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
-       apply (rule corres_split[OF cNodeNoPartialOverlap])
+       apply (rule corres_split_deprecated[OF cNodeNoPartialOverlap])
          apply (rule corres_machine_op[OF corres_Id], simp+)
          apply (rule no_fail_freeMemory, simp+)
         apply (wp hoare_vcg_ex_lift)+

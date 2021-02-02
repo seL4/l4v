@@ -219,7 +219,7 @@ lemma corres_injection:
      \<Longrightarrow> corres (f \<oplus> r) P P' (t m) (t' m')"
   apply (simp add: injection_handler_def handleE'_def x y)
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        defer
        apply assumption
       apply (rule wp_post_taut)

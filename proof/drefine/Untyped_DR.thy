@@ -336,7 +336,7 @@ lemma delete_objects_dcorres:
    apply (simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
   apply (rule corres_name_pre, clarify)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ detype_dcorres])
+    apply (rule corres_split_deprecated[OF _ detype_dcorres])
        apply (rule freeMemory_dcorres, simp+)
     apply wp
    apply clarsimp
@@ -599,7 +599,7 @@ lemma retype_region_dcorres:
    apply (rule dcorres_expand_pfx)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split)
+     apply (rule corres_split_deprecated)
         apply (rule corres_trivial)
         apply simp
        apply (rule_tac r = dc and Q = \<top> and Q' = "(=) s'" in corres_guard_imp)
@@ -1273,7 +1273,7 @@ lemma reset_untyped_cap_corres:
   apply (simp add: Untyped_D.reset_untyped_cap_def reset_untyped_cap_def
                    liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_cap_corres])
+    apply (rule corres_split_deprecated[OF _ get_cap_corres])
        apply (rule_tac F="is_untyped_cap capa \<and> cap_aligned capa
                  \<and> bits_of capa > 2 \<and> free_index_of capa \<le> 2 ^ bits_of capa"
              in corres_gen_asm2)
@@ -1331,7 +1331,7 @@ lemma reset_untyped_cap_corres:
             apply (rule corres_guard_imp)
               apply (rule corres_add_noop_lhs)
               apply (rule corres_split_nor[OF _ clearMemory_corres_noop[OF refl]])
-                   apply (rule corres_split[OF _ set_cap_corres])
+                   apply (rule corres_split_deprecated[OF _ set_cap_corres])
                        apply (subst alternative_com)
                        apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
                       apply (clarsimp simp: is_cap_simps bits_of_def)
@@ -1476,13 +1476,13 @@ lemma invoke_untyped_corres:
           apply (rule reset_untyped_cap_corres[where idx=idx])
          apply simp
         apply simp
-        apply (rule corres_split[OF _ get_cap_corres])
+        apply (rule corres_split_deprecated[OF _ get_cap_corres])
            apply simp
            apply (rule generate_object_ids_exec[where ptr = ptr and us = us and sz = sz])
            apply simp
-           apply (rule corres_split[OF _ update_available_range_dcorres])
+           apply (rule corres_split_deprecated[OF _ update_available_range_dcorres])
              apply simp
-             apply (rule corres_split[OF _ retype_region_dcorres[where sz = sz]])
+             apply (rule corres_split_deprecated[OF _ retype_region_dcorres[where sz = sz]])
                apply (rule corres_split_noop_rhs[OF _ init_arch_objects_corres_noop[where sz =sz]])
                    apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
                                     zip_map1 zip_map2 o_def split_beta dc_def[symmetric])

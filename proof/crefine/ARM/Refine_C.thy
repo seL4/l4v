@@ -724,19 +724,19 @@ lemma entry_corres_C:
            (kernelEntry e uc) (kernelEntry_C fp e uc)"
   apply (simp add: kernelEntry_C_def kernelEntry_def getCurThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
+    apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
        prefer 2
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-      apply (rule corres_split)
+      apply (rule corres_split_deprecated)
          prefer 2
          apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
          apply simp
-        apply (rule corres_split)
+        apply (rule corres_split_deprecated)
            prefer 2
            apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
             apply (rule callKernel_withFastpath_corres_C, simp)
            apply (rule callKernel_corres_C[unfolded dc_def], simp)
-          apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
+          apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
             apply (rule getContext_corres, simp)
@@ -913,20 +913,20 @@ lemma do_user_op_corres_C:
                      (doUserOp f tc) (doUserOp_C f tc)"
   apply (simp only: doUserOp_C_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
+    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
        prefer 2
        apply (clarsimp simp: simpler_gets_def getCurThread_def
                 corres_underlying_def rf_sr_def cstate_relation_def Let_def)
-      apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+      apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split_deprecated)
          prefer 2
          apply (clarsimp simp: cstate_to_A_def absKState_def
                                rf_sr_def cstate_to_H_correct ptable_lift_def)
-        apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+        apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split_deprecated)
            prefer 2
            apply (clarsimp simp: cstate_to_A_def absKState_def
                                  rf_sr_def cstate_to_H_correct ptable_rights_def)
           apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="(=)"
-                 in corres_split)
+                 in corres_split_deprecated)
              prefer 2
              apply clarsimp
              apply (rule fun_cong[where x=ptrFromPAddr])
@@ -936,34 +936,34 @@ lemma do_user_op_corres_C:
                                cpspace_relation_def)
              apply assumption
             apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="(=)"
-                 in corres_split)
+                 in corres_split_deprecated)
                prefer 2
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                cpspace_relation_def)
                apply (drule(1) device_mem_C_relation[symmetric])
                apply (simp add: comp_def)
-              apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+              apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split_deprecated)
                  prefer 2
                  apply (clarsimp simp: cstate_relation_def rf_sr_def
                    Let_def cmachine_state_relation_def)
-                apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
+                apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
                    prefer 2
                    apply (clarsimp simp add: corres_underlying_def fail_def
                         assert_def return_def
                         split:if_splits)
                   apply simp
-                  apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
+                  apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
                     prefer 2
                     apply (clarsimp simp add: corres_underlying_def fail_def
                          assert_def return_def
                          split:if_splits)
                    apply simp
-                   apply (rule_tac r'="(=)" in corres_split[OF _ corres_select])
+                   apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
                       prefer 2
                       apply clarsimp
                      apply simp
-                     apply (rule corres_split[OF _ user_memory_update_corres_C])
-                         apply (rule corres_split[OF _ device_update_corres_C,
+                     apply (rule corres_split_deprecated[OF _ user_memory_update_corres_C])
+                         apply (rule corres_split_deprecated[OF _ device_update_corres_C,
                                          where R="\<top>\<top>" and R'="\<top>\<top>"])
                         apply (wp select_wp | simp)+
    apply (intro conjI allI ballI impI)
@@ -987,7 +987,7 @@ lemma check_active_irq_corres_C:
   apply (simp add: checkActiveIRQ_C_def checkActiveIRQ_def getActiveIRQ_C_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        apply simp
       apply (rule ccorres_corres_u_xf)
        apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
