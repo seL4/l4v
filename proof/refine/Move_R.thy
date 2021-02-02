@@ -118,7 +118,7 @@ lemma corres_symb_exec_l':
   assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
   shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
+    apply (subst gets_bind_ign[symmetric], rule corres_split_deprecated)
        apply (rule z)
       apply (rule corres_noop3)
         apply (erule x)
@@ -136,7 +136,7 @@ lemma corres_symb_exec_r':
   assumes nf: "nf' \<Longrightarrow> no_fail R' m"
   shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split)
+    apply (subst gets_bind_ign[symmetric], rule corres_split_deprecated)
        apply (rule z)
       apply (rule_tac P'="a' and a''" for a' a'' in corres_noop3)
         apply (simp add: simpler_gets_def exs_valid_def)

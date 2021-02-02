@@ -36,8 +36,8 @@ lemma kernel_entry_if_corres:
                       (kernel_entry_if event tc) (kernelEntry_if event tc)"
   apply (simp add: kernel_entry_if_def kernelEntry_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split)
+    apply (rule corres_split_deprecated [OF _ gct_corres])
+      apply (rule corres_split_deprecated)
          prefer 2
          apply simp
          apply (rule threadset_corresT)
@@ -48,7 +48,7 @@ lemma kernel_entry_if_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split [OF _ he_corres])
+        apply (rule corres_split_deprecated [OF _ he_corres])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
@@ -258,7 +258,7 @@ lemma corres_gets_same:
   (do r \<leftarrow> gets f; n r od)
   (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
-  apply (rule corres_split[where r' = "(=)"])
+  apply (rule corres_split_deprecated[where r' = "(=)"])
    apply simp
    apply (rule corres)
    apply clarsimp
@@ -322,15 +322,15 @@ lemma do_user_op_if_corres:
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ corres_machine_op,where r'="(=)"])
+       apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
          apply clarsimp
-         apply (rule corres_split[where r'="(=)"])
+         apply (rule corres_split_deprecated[where r'="(=)"])
             apply clarsimp
-            apply (rule corres_split[OF _ corres_machine_op,where r'="(=)"])
+            apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
                apply clarsimp
-               apply (rule corres_split[OF _ corres_machine_op,where r'="(=)"])
+               apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
                   apply clarsimp
-                  apply (rule corres_split[OF _ corres_machine_op, where r'="(=)"])
+                  apply (rule corres_split_deprecated[OF _ corres_machine_op, where r'="(=)"])
                      apply (rule corres_return_same_trivial)
                     apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
             apply (clarsimp simp: user_memory_update_def)
@@ -507,17 +507,17 @@ lemma do_user_op_if_corres':
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ corres_machine_op',where r'="(=)"])
+       apply (rule corres_split_deprecated[OF _ corres_machine_op',where r'="(=)"])
          apply simp
-         apply (rule corres_split[where r'="dc"])
+         apply (rule corres_split_deprecated[where r'="dc"])
             apply simp
-            apply (rule corres_split[where r'="(=)"])
+            apply (rule corres_split_deprecated[where r'="(=)"])
                apply clarsimp
-               apply (rule corres_split[OF _ corres_machine_op',where r'="(=)"])
+               apply (rule corres_split_deprecated[OF _ corres_machine_op',where r'="(=)"])
                   apply simp
-                  apply (rule corres_split[OF _ corres_machine_op', where r'="(=)"])
+                  apply (rule corres_split_deprecated[OF _ corres_machine_op', where r'="(=)"])
                      apply simp
-                     apply (rule corres_split[OF _ corres_machine_op', where r'="(=)"])
+                     apply (rule corres_split_deprecated[OF _ corres_machine_op', where r'="(=)"])
                      apply (rule corres_return_same_trivial)
                     apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
            apply (clarsimp simp: select_def corres_underlying_def)
@@ -656,8 +656,8 @@ lemma handle_preemption_if_corres:
          (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="(=)"])
-       apply (rule corres_split[where r'="dc"])
+    apply (rule corres_split_deprecated[where r'="(=)"])
+       apply (rule corres_split_deprecated[where r'="dc"])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
@@ -738,8 +738,8 @@ lemma schedule_if_corres:
          (schedule_if tc) (schedule'_if tc)"
   apply (simp add: schedule_if_def schedule'_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="dc"])
-       apply (rule corres_split[where r'="dc"])
+    apply (rule corres_split_deprecated[where r'="dc"])
+       apply (rule corres_split_deprecated[where r'="dc"])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
            apply simp
@@ -838,7 +838,7 @@ lemma kernel_exit_if_corres:
    (kernel_exit_if tc) (kernelExit_if tc)"
   apply (simp add: kernel_exit_if_def kernelExit_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where r'="(=)"])
+    apply (rule corres_split_deprecated[where r'="(=)"])
        apply simp
        apply (rule threadget_corres)
        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def

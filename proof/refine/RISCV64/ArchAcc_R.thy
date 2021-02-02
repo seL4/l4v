@@ -631,7 +631,7 @@ next
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
                      gets_the_if_distrib checkPTAt_def)
-    apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
+    apply (rule corres_guard_imp, rule corres_split_deprecated[where r'=pte_relation'])
          apply (rule corres_if3)
            apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
           apply (rule corres_stateAssert_implied)
@@ -983,7 +983,7 @@ lemma find_vspace_for_asid_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_asid_pool_corres[OF refl]])
+    apply (rule corres_split_deprecated [OF _ get_asid_pool_corres[OF refl]])
       apply (rule_tac P="case_option \<top> pt_at (pool (ucast asid)) and pspace_aligned and pspace_distinct"
                  and P'="no_0_obj'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)

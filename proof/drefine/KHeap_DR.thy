@@ -865,7 +865,7 @@ lemma set_cap_null_cap_corres:
     od)"
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [where r'="dc"])
+    apply (rule corres_split_deprecated [where r'="dc"])
        apply clarsimp
        apply (rule set_cap_corres)
         apply (clarsimp simp:transform_cap_def)
@@ -1338,7 +1338,7 @@ lemma empty_slot_corres:
   apply (clarsimp simp:PageTableUnmap_D.empty_slot_def IpcCancel_A.empty_slot_def)
   apply (rule get_cap_no_fail)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [where r'="%x y. x=transform_cap y"])
+    apply (rule corres_split_deprecated [where r'="%x y. x=transform_cap y"])
        apply (case_tac "capa = cap.NullCap")
         apply (subgoal_tac "cap = cdl_cap.NullCap")
          apply clarsimp
@@ -1347,16 +1347,16 @@ lemma empty_slot_corres:
         apply clarsimp
         apply (rule dcorres_gets_all_param)
         apply (rule_tac P="%a. dcorres dc P P' h a" for P P' h in subst[OF bind_assoc[where m="gets cdt"]])
-        apply (rule corres_split [where r'="dc"])
+        apply (rule corres_split_deprecated [where r'="dc"])
            apply (rule corres_add_noop_lhs)
            apply (rule_tac P'="\<lambda>_. valid_etcbs and valid_idle and (\<lambda>s. fst slot \<noteq> idle_thread s)" in corres_underlying_split)
               apply (rule empty_slot_ext_dcorres)
              apply (wp empty_slot_ext_valid_etcbs | simp)+
            apply (rule corres_guard_imp)
              apply (rule corres_dummy_return_pl)
-             apply (rule corres_split [OF _ set_original_dummy_corres])
+             apply (rule corres_split_deprecated [OF _ set_original_dummy_corres])
               apply (rule corres_dummy_return_l)
-              apply (rule corres_split[where r'=dc])
+              apply (rule corres_split_deprecated[where r'=dc])
                  apply (case_tac "\<exists>irq. v = cap.IRQHandlerCap irq"; clarsimp)
                  apply (clarsimp simp: deleted_irq_handler_def)
                  apply (fold dc_def)
@@ -1876,7 +1876,7 @@ lemma set_list_modify_corres_helper:
       apply (drule sym)
       apply (clarsimp simp:mapM_x_Cons)
       apply (rule corres_guard_imp)
-        apply (rule corres_split)
+        apply (rule corres_split_deprecated)
         apply (rule Cons.hyps[simplified])
         apply (clarsimp simp:Cons.prems)+
         using Cons.hyps
@@ -2544,7 +2544,7 @@ lemma dcorres_do_unbind_notification:
   apply (clarsimp)
   apply (rule corres_guard_imp)
     apply (rule corres_dummy_return_pl[where b="()"])
-    apply (rule corres_split[OF _ corres_dummy_set_notification])
+    apply (rule corres_split_deprecated[OF _ corres_dummy_set_notification])
       apply (clarsimp simp: tcb_slots)
       apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
                                        not_idle_thread_def tcb_slots, simplified])
@@ -2559,7 +2559,7 @@ lemma dcorres_unbind_maybe_notification:
    (unbind_maybe_notification ntfn)"
   apply (simp add: PageTableUnmap_D.unbind_maybe_notification_def IpcCancel_A.unbind_maybe_notification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ dcorres_ntfn_bound_tcb, unfolded  fun_app_def, simplified])
+    apply (rule corres_split_deprecated[OF _ dcorres_ntfn_bound_tcb, unfolded  fun_app_def, simplified])
       apply (simp add: option_set_option_select)
       apply (rule_tac P'="case (ntfn_bound_tcb ntfna) of None \<Rightarrow> R' | Some x \<Rightarrow> R''" for R' R'' in corres_inst)
       apply (rule_tac P="case (set_to_option (set_option (ntfn_bound_tcb ntfna))) of None \<Rightarrow> R | Some x \<Rightarrow> R'''" for R R''' in corres_inst)
@@ -2678,7 +2678,7 @@ lemma fast_finalise_corres:
    apply (clarsimp simp:dcorres_cancel_all_ipc)
 apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        apply (rule dcorres_cancel_all_signals)
       apply (rule dcorres_unbind_maybe_notification)
      apply (wp unbind_notification_valid_etcbs unbind_maybe_notification_valid_etcbs | simp add:  | wpc)+
@@ -2900,7 +2900,7 @@ lemma always_empty_slot_corres:
        apply simp
        apply (rule dcorres_gets_all_param)
        apply (rule_tac P="%a. dcorres dc P P' h a" for P P' h in subst[OF bind_assoc[where m="gets cdt"]])
-       apply (rule corres_split [where r'="dc"])
+       apply (rule corres_split_deprecated [where r'="dc"])
           apply (rule dcorres_rhs_noop_above[OF empty_slot_ext_dcorres])
             apply (rule corres_bind_ignore_ret_rhs)
             apply (rule set_cap_null_cap_corres)
@@ -2920,15 +2920,15 @@ lemma delete_cap_simple_corres:
   apply (clarsimp simp:delete_cap_simple_def cap_delete_one_def)
   apply (rule get_cap_no_fail)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="%r r'. r = transform_cap r'" in corres_split)
+    apply (rule_tac r'="%r r'. r = transform_cap r'" in corres_split_deprecated)
        apply (case_tac "rv' = cap.NullCap")
         apply (subgoal_tac "rv = cdl_cap.NullCap")
          apply (clarsimp simp:transform_cap_def unless_def when_def)
         apply (clarsimp simp:transform_cap_def)
        apply (subgoal_tac "rv\<noteq>cdl_cap.NullCap")
         apply (clarsimp simp:unless_def when_def)
-        apply(rule corres_split[where r'="%x y. x=y"])
-           apply (rule corres_split[where r'="dc"])+
+        apply(rule corres_split_deprecated[where r'="%x y. x=y"])
+           apply (rule corres_split_deprecated[where r'="dc"])+
               apply (rule always_empty_slot_corres)
              apply simp
              apply (rule fast_finalise_corres)
@@ -3485,7 +3485,7 @@ lemma dcorres_machine_op_noop:
     apply (rule corres_symb_exec_r[OF _ _ gets_wp])
       apply (rule corres_symb_exec_r)
          apply (simp add: split_beta)
-         apply (rule corres_split[where r'=dc, THEN corres_add_noop_lhs,
+         apply (rule corres_split_deprecated[where r'=dc, THEN corres_add_noop_lhs,
                                   OF _ _ return_wp])
            apply (rule corres_trivial, simp)
           apply (simp add: return_modify)

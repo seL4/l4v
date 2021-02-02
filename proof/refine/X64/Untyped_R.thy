@@ -961,7 +961,7 @@ lemma corres_list_all2_mapM_':
    apply simp
   apply (clarsimp simp add: mapM_x_def sequence_x_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ y])
+    apply (rule corres_split_deprecated [OF _ y])
          apply (clarsimp dest!: suffix_ConsD)
          apply (erule meta_allE, (drule(1) meta_mp)+)
          apply assumption
@@ -1564,9 +1564,9 @@ shows
          apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l])
           apply (rule corres_cong[OF refl refl _ refl refl, THEN iffD1])
            apply (rule bind_return[THEN fun_cong])
-          apply (rule corres_split [OF _ set_cap_pspace_corres])
+          apply (rule corres_split_deprecated [OF _ set_cap_pspace_corres])
              apply (subst bind_return[symmetric],
-                    rule corres_split)
+                    rule corres_split_deprecated)
                 prefer 2
                 apply (simp add: dc_def[symmetric])
                 apply (rule updateMDB_symb_exec_r)
@@ -3344,7 +3344,7 @@ lemma createNewCaps_ranges':
 
 declare split_paired_Ex[simp del]
 lemmas corres_split_retype_createNewCaps
-   = corres_split [OF _ corres_retype_region_createNewCaps,
+   = corres_split_deprecated [OF _ corres_retype_region_createNewCaps,
                    simplified bind_assoc, simplified ]
 declare split_paired_Ex[simp add]
 
@@ -4336,7 +4336,7 @@ lemma reset_untyped_cap_corres:
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ getSlotCap_corres])
+    apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
        apply (rule_tac F="cap = cap.UntypedCap dev ptr sz idx
                \<and> (\<exists>s. s \<turnstile> cap)" in corres_gen_asm)
        apply (clarsimp simp: bits_of_def free_index_of_def unlessE_def
@@ -4344,7 +4344,7 @@ lemma reset_untyped_cap_corres:
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
        apply (simp add: liftE_bindE bits_of_def split del: if_split)
-       apply (rule corres_split[OF _ detype_corres])
+       apply (rule corres_split_deprecated[OF _ detype_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
             apply (simp add: bits_of_def shiftL_nat)
@@ -5009,7 +5009,7 @@ lemma inv_untyped_corres':
                 sz (if reset then 0 else idx)" in corres_gen_asm)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
-          apply (rule corres_split[OF _ updateFreeIndex_corres,rotated])
+          apply (rule corres_split_deprecated[OF _ updateFreeIndex_corres,rotated])
               apply (simp add:isCap_simps)+
              apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n
                                   free_index_of_def)

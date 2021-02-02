@@ -301,7 +301,7 @@ lemma handle_interrupt_corres_branch:
               od)"
    apply (rule corres_dummy_return_pl)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ dcorres_machine_op_noop])
+     apply (rule corres_split_deprecated[OF _ dcorres_machine_op_noop])
        apply (clarsimp simp:dc_def[symmetric])
        apply (rule dcorres_machine_op_noop)
    apply (wp|clarsimp)+
@@ -362,9 +362,9 @@ lemma handle_interrupt_corres:
   apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="(=) s'" in corres_split[OF _ dcorres_get_irq_slot])
+     apply (rule_tac Q'="(=) s'" in corres_split_deprecated[OF _ dcorres_get_irq_slot])
        apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
-          in corres_split[OF _ option_get_cap_corres])
+          in corres_split_deprecated[OF _ option_get_cap_corres])
           apply (case_tac rv'a)
                      prefer 4
                      apply (simp_all add:when_def)
@@ -459,7 +459,7 @@ lemma dcorres_invoke_irq_control_body:
   apply (rule dcorres_symb_exec_r_strong)
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_trivial])
+      apply (rule corres_split_deprecated[OF corres_trivial])
          apply (rule corres_free_return)
         apply (subgoal_tac "IrqHandlerCap word = transform_cap (cap.IRQHandlerCap word)")
          apply (simp only:)
@@ -506,7 +506,7 @@ lemma dcorres_arch_invoke_irq_control:
   apply (simp add: liftE_bindE)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ dmo_setIRQTrigger_dcorres])
+    apply (rule corres_split_deprecated [OF _ dmo_setIRQTrigger_dcorres])
       apply clarsimp
       apply (rule dcorres_invoke_irq_control_body)
      apply wpsimp+
@@ -608,10 +608,10 @@ lemma dcorres_invoke_irq_handler:
    apply (rule dcorres_expand_pfx)
    apply (clarsimp dest!:is_ntfn_capD simp:valid_cap_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ dcorres_get_irq_slot])
+     apply (rule corres_split_deprecated[OF _ dcorres_get_irq_slot])
        apply (rule_tac F="irq_slot\<noteq> (a,b)" in corres_gen_asm2)
        apply simp
-       apply (rule corres_split[OF _ delete_cap_simple_corres])
+       apply (rule corres_split_deprecated[OF _ delete_cap_simple_corres])
          apply (subst alternative_com)
          apply (rule dcorres_insert_cap_combine,simp)
         apply wp
@@ -635,7 +635,7 @@ lemma dcorres_invoke_irq_handler:
   (* ClearIRQHandler *)
   apply (clarsimp simp: Interrupt_D.invoke_irq_handler_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ dcorres_get_irq_slot])
+    apply (rule corres_split_deprecated[OF _ dcorres_get_irq_slot])
       apply (clarsimp)
       apply (rule delete_cap_simple_corres)
      apply (wp get_irq_slot_not_idle_wp,clarsimp)+

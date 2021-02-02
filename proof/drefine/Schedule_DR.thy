@@ -101,7 +101,7 @@ lemma arch_switch_to_thread_dcorres:
   apply (clarsimp simp: arch_switch_to_thread_def)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ dcorres_set_vm_root])
+    apply (rule corres_split_deprecated [OF _ dcorres_set_vm_root])
       apply simp
       apply (rule dcorres_machine_op_noop)
       apply (simp add: ARM.clearExMonitor_def, wp)[1]
@@ -122,7 +122,7 @@ lemma switch_to_thread_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P=\<top> and P'="\<lambda>s. idle_thread s \<noteq> x"])
@@ -168,7 +168,7 @@ lemma switch_to_thread_same_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P'="\<lambda>s. idle_thread s \<noteq> x"])
@@ -405,7 +405,7 @@ lemma schedule_choose_new_thread_dcorres:
     (* dom_t = 0 *)
     apply (simp only: schedule_def_2)
     apply (rule corres_guard_imp)
-      apply (rule_tac r'="\<lambda>_ _. True" and  P=\<top> and P'=\<top> and R="\<lambda>_. \<top>" and R'="\<lambda>_ s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread" in corres_split)
+      apply (rule_tac r'="\<lambda>_ _. True" and  P=\<top> and P'=\<top> and R="\<lambda>_. \<top>" and R'="\<lambda>_ s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread" in corres_split_deprecated)
          apply (clarsimp)
          apply (rule dcorres_symb_exec_r)
            apply (rule dcorres_symb_exec_r, rename_tac rq)

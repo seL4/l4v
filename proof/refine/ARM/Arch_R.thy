@@ -131,14 +131,14 @@ lemma pac_corres:
   apply (frule valid_capAligned)
   apply (clarsimp simp: capAligned_def page_bits_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        prefer 2
        apply (erule detype_corres)
        apply (simp add:pageBits_def)
-      apply (rule corres_split[OF _ getSlotCap_corres])
+      apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
-         apply (rule corres_split[OF _ updateFreeIndex_corres])
-             apply (rule corres_split)
+         apply (rule corres_split_deprecated[OF _ updateFreeIndex_corres])
+             apply (rule corres_split_deprecated)
                 prefer 2
                 apply (simp )
                 apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))",
@@ -154,12 +154,12 @@ lemma pac_corres:
                   apply (simp add: makeObject_asidpool const_def inv_def)
                  apply (rule range_cover_full)
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
-               apply (rule corres_split)
+               apply (rule corres_split_deprecated)
                   prefer 2
                   apply (rule cins_corres_simple, simp, rule refl, rule refl)
                  apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
-                 apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
+                 apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
                     prefer 2
                     apply (clarsimp simp: state_relation_def arch_state_relation_def)
                    apply (rule corres_trivial)
@@ -489,11 +489,11 @@ lemma resolve_vaddr_corres:
     apply (rule_tac R="\<lambda>rv s. valid_pde rv s \<and> pspace_aligned s"
                and R'="\<lambda>_ s. pspace_distinct' s \<and> pspace_aligned' s
                            \<and> vs_valid_duplicates' (ksPSpace s)"
-                in corres_split[OF _ get_master_pde_corres])
+                in corres_split_deprecated[OF _ get_master_pde_corres])
       apply (case_tac rv, simp_all add: pde_relation'_def)[1]
       apply (rule corres_stateAssert_assume_stronger)
        apply (rule stronger_corres_guard_imp)
-         apply (rule corres_split[OF _ get_master_pte_corres[OF refl]])
+         apply (rule corres_split_deprecated[OF _ get_master_pte_corres[OF refl]])
            apply (rule corres_trivial)
            apply (case_tac rva, simp_all add: pte_relation'_def)[1]
           apply (wp get_master_pte_inv)+
@@ -1046,7 +1046,7 @@ shows
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                in corres_gen_asm2)
-        apply (rule corres_split[OF _ final_cap_corres[where ptr=slot]])
+        apply (rule corres_split_deprecated[OF _ final_cap_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres)
@@ -1091,7 +1091,7 @@ shows
        apply (rule whenE_throwError_corres, simp)
         apply clarsimp
        apply (simp add: liftE_bindE)
-       apply (rule corres_split[OF _ _ resolve_vaddr_valid_mapping_size])
+       apply (rule corres_split_deprecated[OF _ _ resolve_vaddr_valid_mapping_size])
          prefer 2
          apply clarsimp
          apply (rule resolve_vaddr_corres[THEN corres_gen_asm])

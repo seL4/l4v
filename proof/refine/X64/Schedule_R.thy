@@ -48,7 +48,7 @@ proof -
     apply (simp only: findM.simps)
     apply (subst P)
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ x])
+      apply (rule corres_split_deprecated [OF _ x])
          apply (rule corres_if2)
            apply (case_tac ra, clarsimp+)[1]
           apply (rule corres_trivial, clarsimp)
@@ -114,9 +114,9 @@ lemma tcbSchedAppend_corres:
    apply clarsimp
   apply (clarsimp simp: unless_def when_def cong: if_cong)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
-       apply (rule corres_split[where r'="(=)", OF _ ethreadget_corres])
-          apply (rule corres_split[where r'="(=)"])
+    apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
+       apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
+          apply (rule corres_split_deprecated[where r'="(=)"])
              apply (rule corres_split_noop_rhs2)
                 apply (rule corres_split_noop_rhs2)
                    apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
@@ -697,8 +697,8 @@ proof -
          setCurThread t
       od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ arch_switch_thread_corres])
-        apply (rule corres_split[OF cur_thread_update_corres tcbSchedDequeue_corres])
+      apply (rule corres_split_deprecated [OF _ arch_switch_thread_corres])
+        apply (rule corres_split_deprecated[OF cur_thread_update_corres tcbSchedDequeue_corres])
          apply (wp|clarsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
 
@@ -731,8 +731,8 @@ lemma switch_idle_thread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ git_corres])
-      apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
+    apply (rule corres_split_deprecated [OF _ git_corres])
+      apply (rule corres_split_deprecated [OF _ arch_switch_idle_thread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
@@ -1561,7 +1561,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
   unfolding guarded_switch_to_def isRunnable_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gts_corres])
+    apply (rule corres_split_deprecated[OF _ gts_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switch_thread_corres)
@@ -1612,9 +1612,9 @@ proof -
   apply (subst if_swap[where P="_ \<noteq> 0"]) (* put switchToIdleThread on first branch*)
   apply (rule corres_name_pre)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ curDomain_corres])
+    apply (rule corres_split_deprecated[OF _ curDomain_corres])
       apply clarsimp
-      apply (rule corres_split[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+      apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
         apply (erule corres_if2[OF sym])
          apply (rule switch_idle_thread_corres)
         apply (rule corres_symb_exec_r)
@@ -1774,7 +1774,7 @@ lemma schedule_ChooseNewThread_fragment_corres:
   apply (subst bind_dummy_ret_val)
   apply (subst bind_dummy_ret_val)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ corres_when])
+    apply (rule corres_split_deprecated[OF _ corres_when])
         apply simp
         apply (rule chooseThread_corres)
        apply simp
@@ -1808,7 +1808,7 @@ lemma isHighestPrio_corres:
   apply (clarsimp simp: gets_is_highest_prio_expand isHighestPrio_def)
   apply (subst getHighestPrio_def')
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+    apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
       apply (rule corres_if_r'[where P'="\<lambda>_. True",rotated])
        apply (rule_tac corres_symb_exec_r)
               apply (rule_tac
@@ -1846,8 +1846,8 @@ lemma scheduleChooseNewThread_corres:
            schedule_choose_new_thread scheduleChooseNewThread"
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ domain_time_corres], clarsimp)
-      apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
+    apply (rule corres_split_deprecated[OF _ domain_time_corres], clarsimp)
+      apply (rule corres_split_deprecated[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule set_sa_corres)
         apply (wp | simp)+
     apply (wp | simp add: getDomainTime_def)+
@@ -1882,8 +1882,8 @@ lemma schedule_corres:
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
-        apply (rule corres_split[OF _ get_sa_corres])
+    apply (rule corres_split_deprecated[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
+        apply (rule corres_split_deprecated[OF _ get_sa_corres])
           apply (rule corres_split_sched_act,assumption)
             apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
               apply (rule_tac corres_symb_exec_l)
@@ -1893,29 +1893,29 @@ lemma schedule_corres:
          prefer 2
          (* choose thread *)
          apply clarsimp
-          apply (rule corres_split[OF _ thread_get_isRunnable_corres])
-            apply (rule corres_split[OF _ corres_when])
+          apply (rule corres_split_deprecated[OF _ thread_get_isRunnable_corres])
+            apply (rule corres_split_deprecated[OF _ corres_when])
              apply (rule scheduleChooseNewThread_corres, simp)
               apply (rule tcbSchedEnqueue_corres, simp)
            apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
                   | clarsimp)+
         (* switch to thread *)
-        apply (rule corres_split[OF _ thread_get_isRunnable_corres],
+        apply (rule corres_split_deprecated[OF _ thread_get_isRunnable_corres],
                 rename_tac was_running wasRunning)
-          apply (rule corres_split[OF _ corres_when])
-              apply (rule corres_split[OF _ git_corres], rename_tac it it')
+          apply (rule corres_split_deprecated[OF _ corres_when])
+              apply (rule corres_split_deprecated[OF _ git_corres], rename_tac it it')
                 apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
-                apply (rule corres_split[OF _ ethreadget_corres[where r="(=)"]],
+                apply (rule corres_split_deprecated[OF _ ethreadget_corres[where r="(=)"]],
                        rename_tac tp tp')
-                   apply (rule corres_split[OF _ ethread_get_when_corres[where r="(=)"]],
+                   apply (rule corres_split_deprecated[OF _ ethread_get_when_corres[where r="(=)"]],
                            rename_tac cp cp')
-                      apply (rule corres_split[OF _ schedule_switch_thread_fastfail_corres])
-                           apply (rule corres_split[OF _ curDomain_corres])
-                             apply (rule corres_split[OF _ isHighestPrio_corres]; simp only:)
+                      apply (rule corres_split_deprecated[OF _ schedule_switch_thread_fastfail_corres])
+                           apply (rule corres_split_deprecated[OF _ curDomain_corres])
+                             apply (rule corres_split_deprecated[OF _ isHighestPrio_corres]; simp only:)
                                apply (rule corres_if, simp)
-                                apply (rule corres_split[OF _ tcbSchedEnqueue_corres])
+                                apply (rule corres_split_deprecated[OF _ tcbSchedEnqueue_corres])
                                   apply (simp, fold dc_def)
-                                  apply (rule corres_split[OF _ set_sa_corres])
+                                  apply (rule corres_split_deprecated[OF _ set_sa_corres])
                                      apply (rule scheduleChooseNewThread_corres, simp)
 
                                    apply (wp | simp)+
@@ -1929,9 +1929,9 @@ lemma schedule_corres:
 
                                apply (rule corres_if, fastforce)
 
-                                apply (rule corres_split[OF _ tcbSchedAppend_corres])
+                                apply (rule corres_split_deprecated[OF _ tcbSchedAppend_corres])
                                   apply (simp, fold dc_def)
-                                  apply (rule corres_split[OF _ set_sa_corres])
+                                  apply (rule corres_split_deprecated[OF _ set_sa_corres])
                                      apply (rule scheduleChooseNewThread_corres, simp)
 
                                    apply (wp | simp)+
@@ -1943,7 +1943,7 @@ lemma schedule_corres:
                                  apply (wp tcb_sched_action_append_valid_blocked hoare_vcg_all_lift append_thread_queued)
                                 apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
 
-                               apply (rule corres_split[OF _ guarded_switch_to_corres], simp)
+                               apply (rule corres_split_deprecated[OF _ guarded_switch_to_corres], simp)
                                  apply (rule set_sa_corres[simplified dc_def])
                                  apply (wp | simp)+
 
@@ -2356,14 +2356,14 @@ lemma possibleSwitchTo_corres:
   supply ethread_get_wp[wp del]
   apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ curDomain_corres], simp)
-      apply (rule corres_split[OF _ ethreadget_corres[where r="(=)"]])
-         apply (rule corres_split[OF _ get_sa_corres])
+    apply (rule corres_split_deprecated[OF _ curDomain_corres], simp)
+      apply (rule corres_split_deprecated[OF _ ethreadget_corres[where r="(=)"]])
+         apply (rule corres_split_deprecated[OF _ get_sa_corres])
            apply (rule corres_if, simp)
             apply (rule tcbSchedEnqueue_corres)
            apply (rule corres_if, simp)
              apply (case_tac action; simp)
-            apply (rule corres_split[OF _ rescheduleRequired_corres])
+            apply (rule corres_split_deprecated[OF _ rescheduleRequired_corres])
               apply (rule tcbSchedEnqueue_corres)
              apply (wp rescheduleRequired_valid_queues'_weak)+
            apply (rule set_sa_corres, simp)
