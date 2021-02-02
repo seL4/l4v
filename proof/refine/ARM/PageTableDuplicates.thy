@@ -2066,43 +2066,23 @@ lemma tc_caps_valid_duplicates':
     K (case_option True (isCNodeCap o fst) croot) and
     case_option \<top> (valid_cap' o fst) vroot and
     K (case_option True (isValidVTableRoot o fst) vroot) and
+    case_option \<top> (valid_cap' o fst) fault_h and
+    K (case_option True (isValidFaultHandler o fst) fault_h) and
+    case_option \<top> (valid_cap' o fst) timeout_h and
+    K (case_option True (isValidFaultHandler o fst) timeout_h) and
     case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) ipcb) and
     K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) ipcb))
     and K (case_option True (swp is_aligned msg_align_bits o fst) ipcb)\<rbrace>
-      invokeTCB (ThreadControlCaps t sl fault_h timout_h croot vroot ipcb)
+      invokeTCB (ThreadControlCaps t sl fault_h timeout_h croot vroot ipcb)
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: split_def invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
-                   getThreadBufferSlot_def locateSlot_conv
-             cong: option.case_cong)
-  sorry (*
-  apply (simp only: eq_commute[where a="t"])
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
-               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
-               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
-  apply ((simp only: simp_thms cases_simp cong: conj_cong
-          | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-              threadSet_ipcbuffer_trivial
-              (* setPriority has no effect on vs_duplicates *)
-              case_option_wp[where m'="return ()", OF setPriority_valid_duplicates' return_inv,simplified]
-              checkCap_inv[where P="tcb_at' t" for t]
-              checkCap_inv[where P="valid_cap' c" for c]
-              checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
-              checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
-              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
-              assertDerived_wp threadSet_cte_wp_at'
-              hoare_vcg_all_lift_R hoare_vcg_all_lift static_imp_wp)[1]
-          | wpc
-          | simp add: inQ_def
-          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_lift)+)
-  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
-                        tcbIPCBufferSlot_def)
-  by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
-  *)
+  apply (simp add: invokeTCB_def)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                    installTCBCap_invs' installTCBCap_sch_act_simple)
+  apply (fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
+  done
+
+crunches schedContextBindTCB
+  for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
 
 lemma tc_sched_valid_duplicates':
   "\<lbrace>invs' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -2112,39 +2092,7 @@ lemma tc_sched_valid_duplicates':
     K (valid_option_prio mcp)\<rbrace>
       invokeTCB  (ThreadControlSched t sl sc_fh pri mcp sc_opt)
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  sorry (*
-  apply (rule hoare_gen_asm)
-  apply (simp add: split_def invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
-                   getThreadBufferSlot_def locateSlot_conv
-             cong: option.case_cong)
-  apply (simp only: eq_commute[where a="a"])
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
-               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
-  apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
-               hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
-  apply ((simp only: simp_thms cases_simp cong: conj_cong
-          | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-              threadSet_ipcbuffer_trivial
-              (* setPriority has no effect on vs_duplicates *)
-              case_option_wp[where m'="return ()", OF setPriority_valid_duplicates' return_inv,simplified]
-              checkCap_inv[where P="tcb_at' t" for t]
-              checkCap_inv[where P="valid_cap' c" for c]
-              checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)" for P]
-              checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
-              checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
-              assertDerived_wp threadSet_cte_wp_at'
-              hoare_vcg_all_lift_R hoare_vcg_all_lift static_imp_wp)[1]
-          | wpc
-          | simp add: inQ_def
-          | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_lift)+)
-  apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs
-                        tcbIPCBufferSlot_def)
-  by (auto dest!: isCapDs isReplyCapD isValidVTableRootD simp: isCap_simps)
- *)
+  by (wpsimp simp: mapTCBPtr_def stateAssertE_def invokeTCB_def wp: hoare_drop_imps)
 
 crunches performTransfer, unbindNotification, bindNotification, setDomain
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
