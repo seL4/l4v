@@ -3397,7 +3397,7 @@ lemma ensure_empty_corres:
                      (ensure_empty p) (ensureEmptySlot q)"
   apply (clarsimp simp add: ensure_empty_def ensureEmptySlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_cap_corres])
+    apply (rule corres_split_deprecated [OF _ get_cap_corres])
       apply (rule corres_trivial)
       apply (case_tac cap, auto simp add: whenE_def returnOk_def)[1]
      apply wp+
@@ -3930,7 +3930,7 @@ lemma setup_reply_master_corres:
    apply (clarsimp simp: tcb_cnode_index_def2 cte_map_nat_to_cref word_bits_def cte_level_bits_def)
   apply (clarsimp simp: cte_level_bits_def)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split [OF _ get_cap_corres])
+    apply (rule corres_split_deprecated [OF _ get_cap_corres])
       apply (rule corres_when)
        apply fastforce
       apply (rule_tac P'="einvs and tcb_at t" in corres_stateAssert_implied)
@@ -4692,8 +4692,8 @@ lemma cins_corres_simple:
   unfolding cap_insert_def cteInsert_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_cap_corres])
-      apply (rule corres_split [OF _ get_cap_corres])
+    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+      apply (rule corres_split_deprecated [OF _ get_cap_corres])
         apply (rule_tac F="cteCap rv' = NullCap" in corres_gen_asm2)
         apply simp
         apply (rule_tac P="?P and cte_at dest and
@@ -4718,7 +4718,7 @@ lemma cins_corres_simple:
                         R'="\<lambda>r. ?P' and cte_wp_at' ((=) rv') (cte_map dest)
            and cte_wp_at' ((=) (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE))) (cte_map src)
            and (\<lambda>s. safe_parent_for' (ctes_of s) src' c')"
-                        in corres_split[where r'=dc])
+                        in corres_split_deprecated[where r'=dc])
              apply (rule corres_stronger_no_failI)
               apply (rule no_fail_pre, wp hoare_weak_lift_imp)
               apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)

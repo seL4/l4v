@@ -1440,7 +1440,7 @@ lemma kheap_ekheap_double_gets: "(\<And>rv erv rv'. pspace_relation rv rv' \<Lon
 corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
   apply (rule corres_symb_exec_l)
      apply (rule corres_guard_imp)
-       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split)
+       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split_deprecated)
           apply clarsimp
           apply assumption
          apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])

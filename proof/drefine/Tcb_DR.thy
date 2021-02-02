@@ -436,7 +436,7 @@ lemma suspend_corres:
      (Tcb_D.suspend obj_id) (IpcCancel_A.suspend obj_id)"
   apply (rule corres_guard_imp)
     apply (clarsimp simp: IpcCancel_A.suspend_def Tcb_D.suspend_def)
-    apply (rule corres_split[OF _ finalise_cancel_ipc])
+    apply (rule corres_split_deprecated[OF _ finalise_cancel_ipc])
       apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
       apply (rule dcorres_rhs_noop_above)
          apply (case_tac "rv = Running"; simp)
@@ -557,8 +557,8 @@ lemma restart_corres:
     tcb_cspace_slot_def tcb_replycap_slot_def)
   apply (intro conjI impI)
        apply (rule corres_guard_imp)
-         apply (rule corres_split[OF _ finalise_cancel_ipc])
-           apply (rule corres_split[OF _ dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
+         apply (rule corres_split_deprecated[OF _ finalise_cancel_ipc])
+           apply (rule corres_split_deprecated[OF _ dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
             apply (rule dcorres_rhs_noop_below_True[OF dcorres_rhs_noop_below_True])
              apply (rule possible_switch_to_dcorres)
              apply (rule tcb_sched_action_dcorres)
@@ -603,7 +603,7 @@ lemma invoke_tcb_corres_read_regs:
    apply clarsimp
    apply (subst bind_return [symmetric])
    apply (rule corres_guard_imp)
-     apply (rule corres_split [where r'=dc])
+     apply (rule corres_split_deprecated [where r'=dc])
         apply (rule corres_symb_exec_r)
            apply (rule dcorres_idempotent_as_user)
            apply (rule hoare_mapM_idempotent)
@@ -630,9 +630,9 @@ lemma invoke_tcb_corres_write_regs:
                         arch_post_modify_registers_def)
   apply (rule corres_symb_exec_r)
      apply (rule corres_guard_imp)
-       apply (rule corres_split [where r'=dc])
+       apply (rule corres_split_deprecated [where r'=dc])
           apply (rule corres_dummy_return_l)
-          apply (rule corres_split [where r'=dc])
+          apply (rule corres_split_deprecated [where r'=dc])
              apply (rule corres_split_noop_rhs[OF corres_trivial])
                apply simp
               apply (clarsimp simp: when_def)
@@ -658,7 +658,7 @@ lemma corres_mapM_x_rhs_induct:
   apply (clarsimp simp: mapM_x_def sequence_x_def dc_def)
   apply (erule ssubst)
   apply (rule corres_guard_imp)
-    apply (rule corres_split)
+    apply (rule corres_split_deprecated)
        apply (assumption)
       apply assumption
      apply assumption
@@ -685,7 +685,7 @@ lemma invoke_tcb_corres_copy_regs_loop:
    apply (clarsimp simp: mapM_x_mapM)
    apply (rule corres_guard_imp)
    apply (rule corres_dummy_return_l)
-     apply (rule corres_split[OF corres_free_return[where P=\<top> and P'= \<top>] Intent_DR.set_registers_corres])
+     apply (rule corres_split_deprecated[OF corres_free_return[where P=\<top> and P'= \<top>] Intent_DR.set_registers_corres])
      apply (wp|simp)+
   done
 
@@ -731,12 +731,12 @@ lemma invoke_tcb_corres_copy_regs:
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_post_modify_registers_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [where r'=dc])
-       apply (rule corres_split [where r'=dc])
+    apply (rule corres_split_deprecated [where r'=dc])
+       apply (rule corres_split_deprecated [where r'=dc])
           apply (rule corres_corrupt_tcb_intent_dupl)
-          apply (rule corres_split [where r'=dc])
+          apply (rule corres_split_deprecated [where r'=dc])
              apply (rule corres_dummy_return_l)
-                apply (rule corres_split [where r'=dc])
+                apply (rule corres_split_deprecated [where r'=dc])
                    apply (rule corres_symb_exec_r)
                      apply (rule corres_split_noop_rhs[OF corres_trivial])
                     apply simp
@@ -753,7 +753,7 @@ lemma invoke_tcb_corres_copy_regs:
             apply (clarsimp simp: when_def)
             apply (rule corres_bind_ignore_ret_rhs)
             apply (rule corres_corrupt_tcb_intent_dupl)
-            apply (rule corres_split [where r'=dc])
+            apply (rule corres_split_deprecated [where r'=dc])
                apply (unfold K_bind_def)
                apply (rule corres_symb_exec_r)
                   apply (simp add:setNextPC_def)
@@ -1046,7 +1046,7 @@ lemma dcorres_tcb_update_ipc_buffer:
      apply (rule corres_splitEE[OF _  dcorres_tcb_empty_slot])
         apply (clarsimp simp:liftE_bindE)
         apply (simp add:liftE_def)
-        apply (rule corres_split[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
+        apply (rule corres_split_deprecated[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
           apply (rule corres_dummy_return_pl)
           apply (clarsimp simp:returnOk_def)
           apply (rule corres_symb_exec_r)
@@ -1076,13 +1076,13 @@ lemma dcorres_tcb_update_ipc_buffer:
     apply (rule corres_splitEE[OF _ dcorres_tcb_empty_slot])
        apply (clarsimp simp:tcb_update_thread_slot_def whenE_liftE)
        apply (clarsimp simp:liftE_bindE)
-       apply (rule corres_split[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
+       apply (rule corres_split_deprecated[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
          apply (clarsimp simp:bind_assoc)
          apply (rule corres_dummy_return_pl)
          apply simp
-         apply (rule corres_split[OF _ get_cap_corres])
+         apply (rule corres_split_deprecated[OF _ get_cap_corres])
             apply (clarsimp simp:liftE_def returnOk_def)
-            apply (rule corres_split[OF _ corres_when])
+            apply (rule corres_split_deprecated[OF _ corres_when])
                 apply (rule corres_trivial,clarsimp simp:returnOk_def)
                 apply (rule corres_symb_exec_r)
                    apply (rule corres_guard_imp)
@@ -1095,7 +1095,7 @@ lemma dcorres_tcb_update_ipc_buffer:
                   apply (simp add:valid_ipc_buffer_cap_def is_arch_cap_def split:cap.splits)
                  apply (clarsimp simp: valid_cap_def is_arch_cap_def valid_ipc_buffer_cap_def
                              split: cap.split_asm arch_cap.split_asm)+
-              apply (rule corres_split[OF _ get_cap_corres])
+              apply (rule corres_split_deprecated[OF _ get_cap_corres])
                  apply (rule corres_when)
                   apply (rule sym)
                   apply (case_tac cap')
@@ -1178,13 +1178,13 @@ lemma dcorres_tcb_update_vspace_root:
        apply (clarsimp simp: whenE_liftE bind_assoc)
        apply (clarsimp simp: liftE_def bind_assoc)
        apply (clarsimp simp: is_valid_vtable_root_def )
-       apply (rule corres_split[OF _ get_cap_corres])
-          apply (rule corres_split[OF _ corres_when])
+       apply (rule corres_split_deprecated[OF _ get_cap_corres])
+          apply (rule corres_split_deprecated[OF _ corres_when])
               apply (rule corres_trivial)
               apply clarsimp
               apply (rule arch_same_obj_as_lift)
               apply (clarsimp simp: valid_cap_def is_arch_cap_def)+
-            apply (rule corres_split[OF _ get_cap_corres])
+            apply (rule corres_split_deprecated[OF _ get_cap_corres])
                apply (rule corres_when)
                 apply (rule sym)
                 apply (case_tac cap')
@@ -1255,16 +1255,16 @@ lemma dcorres_tcb_update_cspace_root:
     apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
     apply (clarsimp simp:whenE_liftE bind_assoc same_object_as_def)
     apply (clarsimp simp:liftE_def bind_assoc)
-    apply (rule corres_split[OF _ get_cap_corres])
+    apply (rule corres_split_deprecated[OF _ get_cap_corres])
       apply (rule_tac F = "(is_cnode_cap x \<and> obj_refs x = obj_refs aaa) \<longrightarrow> (bits_of x = bits_of aaa)" in corres_gen_asm2)
-          apply (rule corres_split[OF _ corres_when])
+          apply (rule corres_split_deprecated[OF _ corres_when])
           apply (rule corres_trivial)
             apply (clarsimp)
           apply (rule iffI)
             apply (clarsimp simp:is_cap_simps bits_of_def cap_type_def transform_cap_def
               split:cap.split_asm arch_cap.split_asm if_split_asm)
           apply (clarsimp simp:cap_has_object_def is_cap_simps cap_type_def)
-          apply (rule corres_split[OF _ get_cap_corres])
+          apply (rule corres_split_deprecated[OF _ get_cap_corres])
             apply (rule corres_when)
           apply (rule sym)
             apply (simp add:table_cap_ref_def)
@@ -1686,7 +1686,7 @@ lemma dcorres_bind_notification:
                  split: Structures_A.kernel_object.splits)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ corres_dummy_set_notification], simp)
+    apply (rule corres_split_deprecated[OF _ corres_dummy_set_notification], simp)
       apply (rule set_bound_notification_corres)
      apply (wp |simp add: not_idle_thread_def infer_tcb_bound_notification_def)+
   done
@@ -1699,7 +1699,7 @@ lemma invoke_tcb_corres_bind:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF corres_return_trivial dcorres_bind_notification])
+  apply (rule corres_split_deprecated[OF corres_return_trivial dcorres_bind_notification])
   apply (wp | simp)+
   done
 
@@ -1711,7 +1711,7 @@ lemma invoke_tcb_corres_unbind:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF corres_return_trivial dcorres_unbind_notification])
+  apply (rule corres_split_deprecated[OF corres_return_trivial dcorres_unbind_notification])
   apply (wp | simp)+
   done
 
@@ -1723,7 +1723,7 @@ lemma invoke_tcb_corres_setTLSBase:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [where r'=dc])
+    apply (rule corres_split_deprecated [where r'=dc])
        apply (rule corres_symb_exec_r)
           apply (rule corres_split_noop_rhs[OF corres_trivial])
             apply simp
