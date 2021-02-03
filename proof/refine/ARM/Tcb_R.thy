@@ -2685,7 +2685,7 @@ lemma decodeUnbindNotification_corres:
    apply auto
   done
 
-lemma decode_set_tls_base_corres:
+lemma decodeSetTLSBase_corres:
   "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
           (decode_set_tls_base w (cap.ThreadCap t))
           (decodeSetTLSBase w (capability.ThreadCap t))"
@@ -2720,7 +2720,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeSetSpace_corres]
              corres_guard_imp[OF decodeBindNotification_corres]
              corres_guard_imp[OF decodeUnbindNotification_corres]
-             corres_guard_imp[OF decode_set_tls_base_corres],
+             corres_guard_imp[OF decodeSetTLSBase_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_sched_def)
   apply (auto simp: list_all2_map1 list_all2_map2
              elim!: list_all2_mono)
