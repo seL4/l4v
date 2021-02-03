@@ -270,7 +270,7 @@ lemma suspend_cap_to'[wp]:
 declare det_getRegister[simp]
 declare det_setRegister[simp]
 
-lemma readreg_corres:
+lemma invokeTCB_ReadRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs  and tcb_at src and ex_nonz_cap_to src)
         (invs' and sch_act_simple and tcb_at' src and ex_nonz_cap_to' src)
@@ -1822,7 +1822,7 @@ lemma tcbinv_corres:
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
          apply (rule corres_guard_imp [OF writereg_corres], simp+)[1]
-        apply (rule corres_guard_imp [OF readreg_corres], simp+)[1]
+        apply (rule corres_guard_imp [OF invokeTCB_ReadRegisters_corres], simp+)[1]
        apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
       apply (clarsimp simp del: invoke_tcb.simps)
       apply (rename_tac word one t2 mcp t3 t4 t5 t6 t7 t8 t9 t10 t11)
