@@ -2547,7 +2547,7 @@ lemma corres_splitEE':
    apply (clarsimp simp: lift_def y)+
   done
 
-lemma decode_bind_notification_corres:
+lemma decodeBindNotification_corres:
 notes if_cong[cong] shows
   "\<lbrakk> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y)) extras extras' \<rbrakk> \<Longrightarrow>
     corres (ser \<oplus> tcbinv_relation)
@@ -2640,7 +2640,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeSetSchedParams_corres]
              corres_guard_imp[OF decodeSetIPCBuffer_corres]
              corres_guard_imp[OF decodeSetSpace_corres]
-             corres_guard_imp[OF decode_bind_notification_corres]
+             corres_guard_imp[OF decodeBindNotification_corres]
              corres_guard_imp[OF decode_unbind_notification_corres]
              corres_guard_imp[OF decode_set_tls_base_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_sched_def)
