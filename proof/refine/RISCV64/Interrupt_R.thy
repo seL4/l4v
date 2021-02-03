@@ -194,7 +194,7 @@ lemma arch_check_irq_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ \<and> unat y \<noteq> unat irqInvalid\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_valid)
 
-lemma arch_decode_irq_control_corres:
+lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
@@ -257,8 +257,8 @@ lemma decode_irq_control_corres:
      apply (prop_tac "length args \<le> 2", arith)
      apply (clarsimp split: list.split)
     apply (simp add: minIRQ_def o_def)
-    apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres])[1]
-   apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres]
+    apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres])[1]
+   apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres]
                dest!: not_le_imp_less
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]

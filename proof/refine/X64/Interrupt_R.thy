@@ -200,7 +200,7 @@ lemmas irq_const_defs =
   maxIRQ_def minIRQ_def
   X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
 
-lemma arch_decode_irq_control_corres:
+lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
@@ -285,7 +285,7 @@ lemma decode_irq_control_corres:
                            length_Suc_conv checkIRQ_def)
     apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
     apply arith
-  apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres] dest!: not_le_imp_less simp: o_def length_Suc_conv split: list.splits)
+  apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres] dest!: not_le_imp_less simp: o_def length_Suc_conv split: list.splits)
   done
 
 crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
