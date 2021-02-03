@@ -744,7 +744,7 @@ lemma schedule_if_corres:
                         P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
            apply simp
           apply (clarsimp simp: state_relation_def)
-         apply (rule activate_corres)
+         apply (rule activateThread_corres)
         apply wp+
       apply (rule schedule_corres)
      apply (wp schedule_invs' schedule_domain_time_left)+

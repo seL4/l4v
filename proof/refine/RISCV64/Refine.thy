@@ -567,7 +567,7 @@ lemma callKernel_corres':
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
       apply (rule corres_split [OF _ schedule_corres])
-        apply (rule activate_corres)
+        apply (rule activateThread_corres)
        apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
                  schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
      apply (rule_tac Q="\<lambda>_. valid_sched and invs and valid_list" and

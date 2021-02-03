@@ -747,7 +747,7 @@ lemma schedule_if_corres_C:
          apply (rule ccorres_corres_u')
             apply (rule activateThread_ccorres)
            apply (rule corres_nofail)
-            apply (rule activate_corres)
+            apply (rule activateThread_corres)
            apply (erule FalseE)
           apply simp
          apply simp

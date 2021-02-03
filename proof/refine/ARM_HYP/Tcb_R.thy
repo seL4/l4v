@@ -24,7 +24,7 @@ lemma activateIdleThread_corres:
     (arch_activate_idle_thread t) (activateIdleThread t)"
   by (simp add: arch_activate_idle_thread_def activateIdleThread_def)
 
-lemma activate_corres:
+lemma activateThread_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
             activate_thread activateThread"
   apply (simp add: activate_thread_def activateThread_def)
