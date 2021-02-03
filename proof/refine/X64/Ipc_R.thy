@@ -1598,7 +1598,7 @@ lemma makeArchFaultMessage_corres:
      apply (wp+, auto)
   done
 
-lemma mk_ft_msg_corres:
+lemma makeFaultMessage_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
      (make_fault_msg ft t)
      (makeFaultMessage (fault_map ft) t)"
@@ -1666,14 +1666,14 @@ lemma do_fault_transfer_corres:
     apply (clarsimp simp: obj_at_def is_tcb)
    apply wp
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ mk_ft_msg_corres])
+      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ set_mi_corres])
              apply (rule user_setreg_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ mk_ft_msg_corres])
+      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ set_mi_corres])
              apply (rule user_setreg_corres)
