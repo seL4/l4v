@@ -1223,7 +1223,7 @@ crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicate
 crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
-lemma hinv_corres:
+lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
@@ -1385,7 +1385,7 @@ lemma hs_corres:
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
-  by (simp add: handle_send_def handleSend_def hinv_corres)
+  by (simp add: handle_send_def handleSend_def handleInvocation_corres)
 
 lemma hs_invs'[wp]:
   "\<lbrace>invs' and ct_active' and
@@ -1808,7 +1808,7 @@ lemma hc_corres:
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
          handle_call handleCall"
-  by (simp add: handle_call_def handleCall_def liftE_bindE hinv_corres)
+  by (simp add: handle_call_def handleCall_def liftE_bindE handleInvocation_corres)
 
 lemma hc_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
