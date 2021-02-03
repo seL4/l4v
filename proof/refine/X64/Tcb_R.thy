@@ -2028,7 +2028,7 @@ lemma checkPrio_corres:
    apply (simp add: cur_tcb_def cur_tcb'_def)+
   done
 
-lemma decode_set_priority_corres:
+lemma decodeSetPriority_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation)
@@ -2635,7 +2635,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeWriteRegisters_corres]
              corres_guard_imp[OF decodeCopyRegisters_corres]
              corres_guard_imp[OF decode_tcb_conf_corres]
-             corres_guard_imp[OF decode_set_priority_corres]
+             corres_guard_imp[OF decodeSetPriority_corres]
              corres_guard_imp[OF decode_set_mcpriority_corres]
              corres_guard_imp[OF decode_set_sched_params_corres]
              corres_guard_imp[OF decode_set_ipc_corres]
