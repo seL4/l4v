@@ -1869,7 +1869,7 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
   (wp: hoare_drop_imps hoare_vcg_split_case_option mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
-lemma arch_tcb_sanitise_corres:
+lemma arch_getSanitiseRegisterInfo_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
       (arch_get_sanitise_register_info t)
       (getSanitiseRegisterInfo t)"
@@ -1898,7 +1898,7 @@ lemma handle_fault_reply_registers_corres:
             od)"
 
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ arch_tcb_sanitise_corres])
+    apply (rule corres_split [OF _ arch_getSanitiseRegisterInfo_corres])
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
       apply (rule corres_as_user')

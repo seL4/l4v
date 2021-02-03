@@ -331,7 +331,7 @@ lemma invokeTCB_WriteRegisters_corres:
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
-      apply (rule corres_split [OF _ arch_tcb_sanitise_corres])
+      apply (rule corres_split [OF _ arch_getSanitiseRegisterInfo_corres])
          apply (rule corres_split_nor)
             prefer 2
              apply (rule corres_as_user)
