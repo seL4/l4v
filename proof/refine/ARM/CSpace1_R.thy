@@ -3758,7 +3758,7 @@ lemma getCTE_get:
   apply (clarsimp simp:cte_wp_at_ctes_of)
   done
 
-lemma set_untyped_cap_as_full_corres:
+lemma setUntypedCapAsFull_corres:
   "\<lbrakk>cap_relation c c'; src' = cte_map src; dest' = cte_map dest;
     cap_relation src_cap (cteCap srcCTE); rv = cap.NullCap;
     cteCap rv' = capability.NullCap; mdbPrev (cteMDBNode rv') = nullPointer \<and>
@@ -5426,7 +5426,7 @@ lemma cins_corres:
               apply (erule (5) cte_map_inj)
 (* FIXME *)
 
-             apply (rule set_untyped_cap_as_full_corres)
+             apply (rule setUntypedCapAsFull_corres)
                    apply simp+
             apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb
                set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap

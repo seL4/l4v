@@ -4819,7 +4819,7 @@ lemma cins_corres_simple:
          apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
           subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
          apply (erule (5) cte_map_inj)
-         apply (rule set_untyped_cap_as_full_corres)
+         apply (rule setUntypedCapAsFull_corres)
          apply simp+
           apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb set_untyped_cap_as_full_valid_list
              set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
