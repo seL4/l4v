@@ -100,7 +100,7 @@ lemma valid_ipc_buffer_ptr'D2:
   apply simp
   done
 
-lemma load_ct_corres:
+lemma loadCapTransfer_corres:
   notes msg_max_words_simps = max_ipc_words_def msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def
                               capTransferDataSize_def msgExtraCapBits_def
   shows
@@ -139,7 +139,7 @@ lemma get_recv_slot_corres:
    apply (simp add: getReceiveSlots_def)
   apply (simp add: getReceiveSlots_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ load_ct_corres])
+    apply (rule corres_split [OF _ loadCapTransfer_corres])
       apply (rule corres_empty_on_failure)
       apply (rule corres_splitEE)
          prefer 2

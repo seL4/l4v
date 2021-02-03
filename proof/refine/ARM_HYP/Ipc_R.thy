@@ -100,7 +100,7 @@ lemma valid_ipc_buffer_ptr'D2:
   apply simp
   done
 
-lemma load_ct_corres:
+lemma loadCapTransfer_corres:
   "corres ct_relation \<top> (valid_ipc_buffer_ptr' buffer) (load_cap_transfer buffer) (loadCapTransfer buffer)"
   apply (simp add: load_cap_transfer_def loadCapTransfer_def
                    captransfer_from_words_def
@@ -135,7 +135,7 @@ lemma get_recv_slot_corres:
    apply (simp add: getReceiveSlots_def)
   apply (simp add: getReceiveSlots_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ load_ct_corres])
+    apply (rule corres_split [OF _ loadCapTransfer_corres])
       apply (rule corres_empty_on_failure)
       apply (rule corres_splitEE)
          prefer 2
