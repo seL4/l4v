@@ -199,7 +199,7 @@ definition
 where
   "cdl_irq_handler_invocation_relation x y \<equiv> x = translate_irq_handler_invocation y"
 
-lemma decode_irq_handler_corres:
+lemma decodeIRQHandlerInvocation_corres:
   "\<And> slot. \<lbrakk> Some (IrqHandlerIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap (Structures_A.IRQHandlerCap x');
      excaps = transform_cap_list excaps' \<rbrakk> \<Longrightarrow>

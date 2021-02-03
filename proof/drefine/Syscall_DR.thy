@@ -331,7 +331,7 @@ lemma decode_invocation_irqhandlercap_corres:
   apply clarsimp
   apply (simp split: cdl_intent.splits)
   apply (rule corres_rel_imp)
-   apply (erule decode_irq_handler_corres, simp+)[1]
+   apply (erule decodeIRQHandlerInvocation_corres, simp+)[1]
   apply clarsimp
   apply (case_tac xa, simp)
   apply (simp add: cdl_invocation_relation_def
