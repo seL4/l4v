@@ -59,7 +59,7 @@ lemma activateThread_corres:
   done
 
 
-lemma bind_notification_corres:
+lemma bindNotification_corres:
   "corres dc
          (invs and tcb_at t and ntfn_at a) (invs' and tcb_at' t and ntfn_at' a)
          (bind_notification t a) (bindNotification t a)"
@@ -1794,7 +1794,7 @@ lemma tcbinv_corres:
     apply clarsimp
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ bind_notification_corres])
+     apply (rule corres_split[OF _ bindNotification_corres])
        apply (rule corres_trivial, simp)
       apply wp+
     apply clarsimp
