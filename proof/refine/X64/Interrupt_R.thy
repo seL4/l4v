@@ -499,7 +499,7 @@ crunches X64_H.updateIRQState
   and ex_cte_cap_wp_to'[wp]: "ex_cte_cap_wp_to' a b"
   (simp: ex_cte_cap_wp_to'_def valid_mdb'_def)
 
-lemma arch_invoke_irq_control_corres:
+lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
           (invs' and arch_irq_control_inv_valid' ivk')
@@ -563,7 +563,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  by (clarsimp simp: arch_invoke_irq_control_corres)
+  by (clarsimp simp: arch_performIRQControl_corres)
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"
 
