@@ -659,7 +659,7 @@ lemma corres_gets_machine_state:
   by (clarsimp simp: gets_def corres_underlying_def
                      in_monad bind_def get_def return_def state_relation_def)
 
-lemma do_user_op_corres:
+lemma doUserOp_corres:
   "corres (=) (einvs and ct_running)
                  (invs' and (%s. ksSchedulerAction s = ResumeCurrentThread) and
                   ct_running')
@@ -862,7 +862,7 @@ lemma ckernel_invariant:
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
       apply (rule doUserOp_valid_objs')
-     apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
+     apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF doUserOp_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
@@ -876,7 +876,7 @@ lemma ckernel_invariant:
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
       apply (rule doUserOp_valid_objs')
-     apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF do_user_op_corres]])
+     apply (rule valid_corres_combined[OF do_user_op_invs2 corres_guard_imp2[OF doUserOp_corres]])
       apply clarsimp
      apply (rule doUserOp_invs'[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
@@ -957,7 +957,7 @@ lemma fw_sim_A_H:
 
    apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: do_user_op_H_def do_user_op_A_def monad_to_transition_def)
-    apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF do_user_op_corres])
+    apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF doUserOp_corres])
      apply simp
     apply (clarsimp simp add: corres_underlying_def)
     apply (drule (1) bspec, clarsimp)
@@ -966,7 +966,7 @@ lemma fw_sim_A_H:
 
    apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
     apply (clarsimp simp: do_user_op_H_def do_user_op_A_def monad_to_transition_def)
-    apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF do_user_op_corres])
+    apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF doUserOp_corres])
      apply simp
     apply (clarsimp simp add: corres_underlying_def)
     apply (drule (1) bspec, clarsimp)
