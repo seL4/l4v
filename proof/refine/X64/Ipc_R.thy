@@ -3488,7 +3488,7 @@ lemma gets_the_noop_corres:
   apply (clarsimp simp: assert_opt_def return_def dest!: P)
   done
 
-lemma hdf_corres:
+lemma handleDoubleFault_corres:
   "corres dc (tcb_at thread)
              (tcb_at' thread and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
              (handle_double_fault thread f ft)
@@ -4273,7 +4273,7 @@ lemma hf_corres:
                rule corres_split [where P="tcb_at thread",
                                   OF _ gets_the_noop_corres [where x="()"]])
        apply (rule corres_split_catch)
-          apply (rule hdf_corres)
+          apply (rule handleDoubleFault_corres)
           apply (rule_tac F="valid_fault f" in corres_gen_asm)
          apply (rule sendFaultIPC_corres, assumption)
          apply simp
