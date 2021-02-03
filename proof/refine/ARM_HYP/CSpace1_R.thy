@@ -7065,7 +7065,7 @@ lemma cteSwap_corres:
      done
 
 
-lemma cap_swap_for_delete_corres:
+lemma capSwapForDelete_corres:
   assumes "src' = cte_map src" "dest' = cte_map dest"
   shows "corres dc
          (valid_objs and pspace_aligned and pspace_distinct and

@@ -7161,7 +7161,7 @@ next
        apply (clarsimp simp: cte_wp_at_def)
        apply (drule(1) zombies_finalD2, clarsimp+)
       apply (fold dc_def)
-      apply (rule corres_guard_imp, rule cap_swap_for_delete_corres)
+      apply (rule corres_guard_imp, rule capSwapForDelete_corres)
          apply (simp add: cte_map_replicate)
         apply simp
        apply clarsimp
