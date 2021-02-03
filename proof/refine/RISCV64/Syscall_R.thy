@@ -1605,7 +1605,7 @@ lemma setSchedulerAction_obj_at'[wp]:
   unfolding setSchedulerAction_def
   by (wp, clarsimp elim!: obj_at'_pspaceI)
 
-lemma hy_corres:
+lemma handleYield_corres:
   "corres dc einvs (invs' and ct_active' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) handle_yield handleYield"
   apply (clarsimp simp: handle_yield_def handleYield_def)
   apply (rule corres_guard_imp)
@@ -1978,7 +1978,7 @@ proof -
                              corres_guard_imp [OF hr_corres]
                              corres_guard_imp[OF hrw_corres]
                              corres_guard_imp[OF hc_corres]
-                             corres_guard_imp[OF hy_corres]
+                             corres_guard_imp[OF handleYield_corres]
                              active_from_running active_from_running'
                       simp: simple_sane_strg)[8]
          apply (rule corres_split')
