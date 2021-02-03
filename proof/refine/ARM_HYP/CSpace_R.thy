@@ -3430,7 +3430,7 @@ lemma lookup_cap_corres:
      (lookupCap thread epcptr')"
   apply (simp add: lookup_cap_def lookupCap_def lookupCapAndSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ lookup_slot_corres])
+    apply (rule corres_splitEE [OF _ lookupSlotForThread_corres])
       apply (simp add: split_def)
       apply (subst bindE_returnOk[symmetric])
       apply (rule corres_splitEE)

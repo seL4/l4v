@@ -1335,7 +1335,7 @@ lemma lcs_corres:
           apply (rule corres_returnOkTT, simp)
          apply simp
         apply wp+
-      apply (rule corres_rel_imp, rule lookup_slot_corres)
+      apply (rule corres_rel_imp, rule lookupSlotForThread_corres)
       apply (simp add: split_def)
      apply (wp | simp add: liftE_bindE[symmetric])+
   done

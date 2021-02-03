@@ -692,7 +692,7 @@ lemma getSlotCap_tcb_corres:
   apply (simp add: o_def cte_map_def tcb_cnode_index_def)
   done
 
-lemma lookup_slot_corres:
+lemma lookupSlotForThread_corres:
   "corres (lfr \<oplus> (\<lambda>(cref, bits) cref'. cref' = cte_map cref))
         (valid_objs and pspace_aligned and tcb_at t)
         (valid_objs' and pspace_aligned' and pspace_distinct' and tcb_at' t)
@@ -759,7 +759,7 @@ lemma lc_corres:
   apply (simp add: lookup_cap_def lookupCap_def bindE_assoc
                    lookupCapAndSlot_def liftME_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ lookup_slot_corres])
+    apply (rule corres_splitEE[OF _ lookupSlotForThread_corres])
       apply (simp add: split_def getSlotCap_def liftM_def[symmetric] o_def)
       apply (rule get_cap_corres)
      apply (rule hoare_pre, wp lookup_slot_cte_at_wp|simp)+
