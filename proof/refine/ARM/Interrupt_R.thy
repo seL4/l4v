@@ -684,7 +684,7 @@ lemma timerTick_corres:
            apply simp
            apply (rule corres_when,simp)
            apply (rule corres_split[OF _ decDomainTime_corres])
-             apply (rule corres_split[OF _ domain_time_corres])
+             apply (rule corres_split[OF _ getDomainTime_corres])
                apply (rule corres_when,simp)
                apply (rule rescheduleRequired_corres)
               apply (wp hoare_drop_imp)+

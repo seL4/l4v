@@ -1670,7 +1670,7 @@ lemma schact_bind_inside: "do x \<leftarrow> f; (case act of resume_cur_thread \
 interpretation tcb_sched_action_extended: is_extended' "tcb_sched_action f a"
   by (unfold_locales)
 
-lemma domain_time_corres:
+lemma getDomainTime_corres:
   "corres (=) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
@@ -1846,7 +1846,7 @@ lemma scheduleChooseNewThread_corres:
            schedule_choose_new_thread scheduleChooseNewThread"
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ domain_time_corres], clarsimp)
+    apply (rule corres_split[OF _ getDomainTime_corres], clarsimp)
       apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule set_sa_corres)
         apply (wp | simp)+
