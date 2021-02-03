@@ -514,7 +514,7 @@ lemma no_fail_callKernel:
   unfolding all_invs'_def
   apply (rule corres_nofail)
    apply (rule corres_guard_imp)
-     apply (rule kernel_corres)
+     apply (rule callKernel_corres)
     apply force
    apply (simp add: sch_act_simple_def)
   apply metis

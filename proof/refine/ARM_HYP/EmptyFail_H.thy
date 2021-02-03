@@ -293,7 +293,7 @@ theorem call_kernel_serial:
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"
   apply (cut_tac m = "call_kernel event" in corres_underlying_serial)
-    apply (rule kernel_corres)
+    apply (rule callKernel_corres)
    apply (rule callKernel_empty_fail)
   apply auto
   done

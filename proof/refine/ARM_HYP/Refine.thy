@@ -542,7 +542,7 @@ lemma Ex_Some_conv:
 
 text \<open>The top-level correspondence\<close>
 
-lemma kernel_corres':
+lemma callKernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
                and (\<lambda>s. scheduler_action s = resume_cur_thread))
              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
@@ -601,7 +601,7 @@ lemma kernel_corres':
   apply (clarsimp simp: active_from_running')
   done
 
-lemma kernel_corres:
+lemma callKernel_corres:
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
               (\<lambda>s. scheduler_action s = resume_cur_thread) and
               (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s))
@@ -620,7 +620,7 @@ lemma kernel_corres:
         apply simp
        apply (simp add: kernelExitAssertions_def state_relation_def)
       apply (simp only: bind_assoc)
-      apply (rule kernel_corres')
+      apply (rule callKernel_corres')
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp
    apply clarsimp
@@ -660,7 +660,7 @@ lemma entry_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split [OF _ kernel_corres])
+        apply (rule corres_split [OF _ callKernel_corres])
           apply (rule corres_split_eqr [OF _ gct_corres])
             apply (rule threadget_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
