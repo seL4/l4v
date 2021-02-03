@@ -1854,7 +1854,7 @@ lemma handle_fault_reply_registers_corres:
        apply (clarsimp simp: sanitise_register_corres|wp)+
   done
 
-lemma handle_fault_reply_corres:
+lemma handleFaultReply_corres:
   "ft' = fault_map ft \<Longrightarrow>
    corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (handle_fault_reply ft t label msg)
@@ -2190,7 +2190,7 @@ lemma do_reply_transfer_corres:
         apply (rule corres_split_eqr [OF _ lipcb_corres'])
           apply (rule corres_split_eqr [OF _ get_mrs_corres])
             apply (simp(no_asm) del: dc_simp)
-            apply (rule corres_split_eqr [OF _ handle_fault_reply_corres])
+            apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
                apply (rule corres_split [OF _ threadset_corresT])
                      apply (rule_tac Q="valid_sched and cur_tcb and tcb_at receiver and pspace_aligned and pspace_distinct"
                                  and Q'="tcb_at' receiver and cur_tcb'
