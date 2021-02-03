@@ -65,7 +65,7 @@ lemma bindNotification_corres:
          (bind_notification t a) (bindNotification t a)"
   apply (simp add: bind_notification_def bindNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_ntfn_corres])
+    apply (rule corres_split[OF _ getNotification_corres])
       apply (rule corres_split[OF _ set_ntfn_corres])
          apply (rule sbn_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
@@ -2649,7 +2649,7 @@ notes if_cong[cong] shows
                                 split: Structures_A.ntfn.splits Structures_H.ntfn.splits
                                        option.splits)
                      apply simp
-                     apply (rule get_ntfn_corres)
+                     apply (rule getNotification_corres)
                     apply wp+
                   apply (rule corres_trivial, clarsimp simp: whenE_def returnOk_def)
                  apply (wp | simp add: whenE_def split del: if_split)+

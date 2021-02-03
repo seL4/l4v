@@ -302,7 +302,7 @@ lemma ac_corres:
           (cancelSignal t ntfn)"
   apply (simp add: cancel_signal_def cancelSignal_def Let_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ntfn_corres])
+    apply (rule corres_split [OF _ getNotification_corres])
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
       apply (case_tac "ntfn_obj ntfna")
         apply (simp add: ntfn_relation_def isWaitingNtfn_def)
@@ -1998,7 +1998,7 @@ lemma cancelAllSignals_corres:
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
   apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
-   apply (rule corres_guard_imp [OF get_ntfn_corres])
+   apply (rule corres_guard_imp [OF getNotification_corres])
     apply simp+
   apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
   apply (rule corres_guard_imp)

@@ -2681,7 +2681,7 @@ lemma send_signal_corres:
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ntfn_corres,
+    apply (rule corres_split [OF _ getNotification_corres,
                 where
                 R  = "\<lambda>rv. einvs and ntfn_at ep and valid_ntfn rv and
                            ko_at (Structures_A.Notification rv) ep" and
@@ -3225,7 +3225,7 @@ lemma complete_signal_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac R'="\<lambda>ntfn. ntfn_at' ntfnptr and tcb_at' tcb and valid_pspace'
                          and valid_ntfn' ntfn and (\<lambda>_. isActive ntfn)"
-                                in corres_split [OF _ get_ntfn_corres])
+                                in corres_split [OF _ getNotification_corres])
       apply (rule corres_gen_asm2)
       apply (case_tac "ntfn_obj rv")
         apply (clarsimp simp: ntfn_relation_def isActive_def
@@ -3376,7 +3376,7 @@ lemma receive_ipc_corres:
               apply (clarsimp simp: valid_tcb_state_def)
              apply (clarsimp simp add: valid_tcb_state'_def)
             apply (rule corres_option_split[rotated 2])
-              apply (rule get_ntfn_corres)
+              apply (rule getNotification_corres)
              apply clarsimp
             apply (rule corres_trivial, simp add: ntfn_relation_def default_notification_def
                                                   default_ntfn_def)
@@ -3409,7 +3409,7 @@ lemma receive_signal_corres:
                             obj_at (\<lambda>k. k = Notification rv) word1" and
                             R'="\<lambda>rv'. invs' and tcb_at' thread and ntfn_at' word1 and
                             valid_ntfn' rv'"
-                         in corres_split [OF _ get_ntfn_corres])
+                         in corres_split [OF _ getNotification_corres])
       apply clarsimp
       apply (case_tac "ntfn_obj rv")
         \<comment> \<open>IdleNtfn\<close>

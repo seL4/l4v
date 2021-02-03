@@ -3909,7 +3909,7 @@ lemma unbind_notification_corres:
       apply (rule corres_option_split)
         apply simp
        apply (rule corres_return_trivial)
-      apply (rule corres_split[OF _ get_ntfn_corres])
+      apply (rule corres_split[OF _ getNotification_corres])
         apply clarsimp
         apply (rule corres_split[OF _ set_ntfn_corres])
            apply (rule sbn_corres)
@@ -3933,7 +3933,7 @@ lemma unbind_maybe_notification_corres:
       (unbindMaybeNotification ntfnptr)"
   apply (simp add: unbind_maybe_notification_def unbindMaybeNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_ntfn_corres])
+    apply (rule corres_split[OF _ getNotification_corres])
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)

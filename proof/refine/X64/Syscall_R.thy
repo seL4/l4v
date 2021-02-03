@@ -1517,7 +1517,7 @@ lemma hw_corres':
                     prefer 3
                     apply (rule corres_trivial)
                     apply (clarsimp simp: lookup_failure_map_def)+
-                 apply (rule get_ntfn_corres)
+                 apply (rule getNotification_corres)
                 apply (wp get_simple_ko_wp getNotification_wp | wpcw | simp)+
               apply (clarsimp simp: lookup_failure_map_def)
              apply (clarsimp simp: valid_cap_def ct_in_state_def)

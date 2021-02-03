@@ -1040,7 +1040,7 @@ lemma no_fail_getNotification [wp]:
   apply (clarsimp split: option.split_asm simp: objBits_simps')
   done
 
-lemma get_ntfn_corres:
+lemma getNotification_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
      (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)
