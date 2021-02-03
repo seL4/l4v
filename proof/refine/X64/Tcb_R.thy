@@ -18,7 +18,7 @@ lemma asUser_setNextPC_corres:
   apply (rule no_fail_setNextPC)
   done
 
-lemma activate_idle_thread_corres:
+lemma activateIdleThread_corres:
  "corres dc (invs and st_tcb_at idle t)
             (invs' and st_tcb_at' idle' t)
     (arch_activate_idle_thread t) (activateIdleThread t)"
@@ -48,7 +48,7 @@ lemma activate_corres:
           apply (clarsimp simp: st_tcb_at_tcb_at)
          apply fastforce
         apply (rule corres_guard_imp)
-          apply (rule activate_idle_thread_corres)
+          apply (rule activateIdleThread_corres)
          apply (clarsimp elim!: st_tcb_weakenE)
         apply (clarsimp elim!: pred_tcb'_weakenE)
        apply (wp gts_st_tcb gts_st_tcb' gts_st_tcb_at)+
