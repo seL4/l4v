@@ -1241,7 +1241,7 @@ lemma hinv_corres:
           apply (rule syscall_corres)
                   apply (rule hinv_corres_assist, simp)
                  apply (clarsimp simp add: when_def)
-                 apply (rule hf_corres)
+                 apply (rule handleFault_corres)
                  apply simp
                 apply (simp add: split_def)
                 apply (rule corres_split [OF _ get_mrs_corres])
@@ -1525,7 +1525,7 @@ lemma hw_corres':
     apply (rule corres_split_eqr [OF _ gct_corres])
       apply (rule corres_split_eqr [OF _ user_getreg_corres])
         apply (rule corres_split_catch)
-           apply (erule hf_corres)
+           apply (erule handleFault_corres)
           apply (rule corres_cap_fault)
           apply (rule corres_splitEE [OF _ lookupCap_corres])
             apply (rule_tac P="?pre1 and tcb_at thread
@@ -1982,7 +1982,7 @@ lemma hh_corres:
           (handle_hypervisor_fault thread fault)
           (handleHypervisorFault thread fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  apply (corres corres: hf_corres)
+  apply (corres corres: handleFault_corres)
    apply (simp add: ucast_id)
   apply (clarsimp simp: valid_fault_def)
   done
@@ -2048,7 +2048,7 @@ proof -
                       simp: simple_sane_strg)[8]
          apply (rule corres_split')
             apply (rule corres_guard_imp[OF gct_corres], simp+)
-           apply (rule hf_corres)
+           apply (rule handleFault_corres)
            apply simp
           apply (simp add: valid_fault_def)
           apply wp
@@ -2062,7 +2062,7 @@ proof -
                      elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
         apply (rule corres_split')
            apply (rule corres_guard_imp, rule gct_corres, simp+)
-          apply (rule hf_corres)
+          apply (rule handleFault_corres)
           apply (simp add: valid_fault_def)
          apply wp
          apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
@@ -2095,7 +2095,7 @@ proof -
       apply (rule_tac corres_split')
          apply (rule corres_guard_imp, rule gct_corres, simp+)
         apply (rule corres_split_catch)
-           apply (erule hf_corres)
+           apply (erule handleFault_corres)
           apply (rule hv_corres)
          apply (wp handle_vm_fault_valid_fault)
         apply (wp hvmf_invs_etc)

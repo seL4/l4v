@@ -868,7 +868,7 @@ proof -
                            apply clarsimp
                            apply (rename_tac threadState threadState')
                            apply (case_tac threadState; simp)
-                          apply (rule hf_corres)
+                          apply (rule handleFault_corres)
                           apply clarsimp
                          apply clarsimp
                          apply (wp gts_wp)
@@ -949,7 +949,7 @@ lemma vppiEvent_corres:
                 apply (fold dc_def)
                 apply (rule corres_when)
                  apply (case_tac gts; fastforce)
-                apply (rule hf_corres, simp)
+                apply (rule handleFault_corres, simp)
                apply (wp gts_st_tcb_at hoare_vcg_imp_lift')
               apply (wp gts_st_tcb_at' hoare_vcg_imp_lift')
              (* on both sides, we check that the current thread is runnable, then have to know it

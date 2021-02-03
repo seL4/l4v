@@ -4313,7 +4313,7 @@ lemma sfi_invs_plus':
   apply (subst(asm) global'_no_ex_cap, auto)
   done
 
-lemma hf_corres:
+lemma handleFault_corres:
   "fr f f' \<Longrightarrow>
    corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread
                    and (%_. valid_fault f))

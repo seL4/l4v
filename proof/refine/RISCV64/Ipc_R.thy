@@ -4191,7 +4191,7 @@ crunches send_fault_ipc
   and pspace_distinct[wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma hf_corres:
+lemma handleFault_corres:
   "fr f f' \<Longrightarrow>
    corres dc (einvs and st_tcb_at active thread and ex_nonz_cap_to thread
                    and (\<lambda>_. valid_fault f))
