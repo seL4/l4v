@@ -1346,7 +1346,7 @@ crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
 
 lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
-lemma hs_corres:
+lemma handleSend_corres:
   "corres (dc \<oplus> dc)
           (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
           (invs' and
@@ -1979,7 +1979,7 @@ proof -
 
           apply (rename_tac syscall)
           apply (case_tac syscall)
-          apply (auto intro: corres_guard_imp[OF hs_corres]
+          apply (auto intro: corres_guard_imp[OF handleSend_corres]
                              corres_guard_imp[OF hw]
                              corres_guard_imp [OF hr_corres]
                              corres_guard_imp[OF hrw_corres]
