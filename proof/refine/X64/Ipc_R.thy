@@ -128,7 +128,7 @@ lemma loadCapTransfer_corres:
               simp add: word_size_bits_def is_aligned_def)+
   done
 
-lemma get_recv_slot_corres:
+lemma getReceiveSlots_corres:
   "corres (\<lambda>xs ys. ys = map cte_map xs)
     (tcb_at receiver and valid_objs and pspace_aligned)
     (tcb_at' receiver and valid_objs' and pspace_aligned' and pspace_distinct' and
@@ -1065,7 +1065,7 @@ lemma transferCaps_corres:
                    getThreadCSpaceRoot)
   apply (rule corres_assume_pre)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_recv_slot_corres])
+    apply (rule corres_split [OF _ getReceiveSlots_corres])
       apply (rule_tac x=recv_buf in option_corres)
        apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
        apply (case_tac info, simp)
