@@ -1973,7 +1973,7 @@ lemma ep_cancel_corres_helper:
     apply (auto elim: obj_at'_weakenE simp: valid_tcb_state'_def)
   done
 
-lemma ep_cancel_corres:
+lemma cancelAllIPC_corres:
   "corres dc (invs and valid_sched and ep_at ep) (invs' and ep_at' ep)
              (cancel_all_ipc ep) (cancelAllIPC ep)"
 proof -

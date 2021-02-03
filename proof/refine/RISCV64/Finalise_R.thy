@@ -3542,7 +3542,7 @@ lemma fast_finalise_corres:
    apply (clarsimp simp: final_matters'_def)
    apply (rule corres_guard_imp)
      apply (rule corres_rel_imp)
-      apply (rule ep_cancel_corres)
+      apply (rule cancelAllIPC_corres)
      apply simp
     apply (simp add: valid_cap_def)
    apply (simp add: valid_cap'_def)
@@ -3609,7 +3609,7 @@ lemma finalise_cap_corres:
                        split del: if_split cong: if_cong)
         apply (clarsimp simp: final_matters'_def)
         apply (rule corres_guard_imp)
-          apply (rule ep_cancel_corres)
+          apply (rule cancelAllIPC_corres)
          apply (simp add: valid_cap_def)
         apply (simp add: valid_cap'_def)
        apply (clarsimp simp add: final_matters'_def)
