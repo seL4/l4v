@@ -129,7 +129,7 @@ crunches vcpu_switch
   for valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
   (simp: crunch_simps valid_vs_lookup_current_vcpu wp: crunch_wps)
 
-lemma arch_switch_thread_corres:
+lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
               and valid_vspace_objs and pspace_aligned and pspace_distinct
               and valid_vs_lookup and valid_global_objs
@@ -777,7 +777,7 @@ proof -
          setCurThread t
       od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ arch_switch_thread_corres])
+      apply (rule corres_split [OF _ arch_switchToThread_corres])
         apply (rule corres_split[OF cur_thread_update_corres tcbSchedDequeue_corres])
          apply (wpsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
