@@ -1674,7 +1674,7 @@ lemma getDomainTime_corres:
   "corres (=) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
-lemma next_domain_corres:
+lemma nextDomain_corres:
   "corres dc \<top> \<top> next_domain nextDomain"
   apply (simp add: next_domain_def nextDomain_def)
   apply (rule corres_modify)
@@ -1778,7 +1778,7 @@ lemma schedule_ChooseNewThread_fragment_corres:
         apply simp
         apply (rule chooseThread_corres)
        apply simp
-      apply (rule next_domain_corres)
+      apply (rule nextDomain_corres)
      apply (wp nextDomain_invs_no_cicd')+
    apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
   done
