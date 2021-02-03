@@ -205,7 +205,7 @@ lemma decode_invocation_corres:
                    split del: if_split cong: if_cong)
        apply (clarsimp simp add: o_def)
        apply (rule corres_guard_imp)
-         apply (rule decode_tcb_inv_corres, rule refl,
+         apply (rule decodeTCBInvocation_corres, rule refl,
                 simp_all add: valid_cap_def valid_cap'_def)[3]
        apply (simp add: split_def)
        apply (rule list_all2_conj)

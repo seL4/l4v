@@ -2586,7 +2586,7 @@ lemma decodeSetTLSBase_corres:
                  split: list.split)
   by (rule sym, rule ucast_id)
 
-lemma decode_tcb_inv_corres:
+lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';
       list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
       length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
