@@ -669,7 +669,7 @@ lemma setPriority_corres: "corres dc (einvs and tcb_at t) (invs' and tcb_at' t a
   apply (clarsimp simp: invs'_def valid_state'_def sch_act_wf_weak)
   done
 
-lemma smcp_corres: "corres dc (tcb_at t) (tcb_at' t)
+lemma setMCPriority_corres: "corres dc (tcb_at t) (tcb_at' t)
                      (set_mcpriority t x) (setMCPriority t x)"
   apply (rule corres_guard_imp)
     apply (clarsimp simp: setMCPriority_def set_mcpriority_def)
@@ -1380,7 +1380,7 @@ proof -
   have S': "\<And>t x. corres dc (tcb_at t) (tcb_at' t)
                     (case_option (return ()) (\<lambda>(mcp, auth). set_mcpriority t mcp) mcp_auth)
                     (case_option (return ()) (\<lambda>mcp'. setMCPriority t (fst mcp')) mcp_auth)"
-    apply(case_tac mcp_auth; clarsimp simp: smcp_corres)
+    apply(case_tac mcp_auth; clarsimp simp: setMCPriority_corres)
     done
   have T: "\<And>x x' ref getfn target.
       \<lbrakk> newroot_rel x x'; getfn = return (cte_map (target, ref));
