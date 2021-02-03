@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma setNextPCs_corres:
+lemma asUser_setNextPC_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
   apply (rule corres_as_user)
@@ -42,7 +42,7 @@ lemma activate_corres:
                   safe, simp_all)[1]
          apply (rule corres_guard_imp)
            apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
-             apply (rule corres_split_nor [OF _ setNextPCs_corres])
+             apply (rule corres_split_nor [OF _ asUser_setNextPC_corres])
                apply (rule sts_corres)
                apply (simp | wp weak_sch_act_wf_lift_linear)+
           apply (clarsimp simp: st_tcb_at_tcb_at)
@@ -434,7 +434,7 @@ proof -
                 (do pc \<leftarrow> asUser t getRestartPC; asUser t (setNextPC pc) od)"
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
-        apply (rule setNextPCs_corres)
+        apply (rule asUser_setNextPC_corres)
        apply wp+
      apply simp+
     done
