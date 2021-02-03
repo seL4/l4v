@@ -3139,7 +3139,7 @@ lemma rfk_invs':
 
 crunch nosch[wp]: replyFromKernel "\<lambda>s. P (ksSchedulerAction s)"
 
-lemma complete_signal_corres:
+lemma completeSignal_corres:
   "corres dc (ntfn_at ntfnptr and tcb_at tcb and pspace_aligned and valid_objs and pspace_distinct)
              (ntfn_at' ntfnptr and tcb_at' tcb and valid_pspace' and obj_at' isActive ntfnptr)
              (complete_signal ntfnptr tcb) (completeSignal ntfnptr tcb)"
@@ -3192,7 +3192,7 @@ lemma receive_ipc_corres:
                apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def
                               split: Structures_A.ntfn.splits Structures_H.notification.splits)
               apply clarsimp
-              apply (rule complete_signal_corres)
+              apply (rule completeSignal_corres)
              apply (rule_tac P="einvs and valid_sched and tcb_at thread and
                                        ep_at word1 and valid_ep ep and
                                        obj_at (\<lambda>k. k = Endpoint ep) word1
