@@ -1413,7 +1413,7 @@ lemma copyMRs_valid_mdb[wp]:
   "\<lbrace>valid_mdb'\<rbrace> copyMRs t buf t' buf' n \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   by (simp add: valid_mdb'_def copyMRs_ctes_of)
 
-lemma do_normal_transfer_corres:
+lemma doNormalTransfer_corres:
   "corres dc
   (tcb_at sender and tcb_at receiver and (pspace_aligned:: det_state \<Rightarrow> bool)
    and valid_objs and cur_tcb and valid_mdb and valid_list and pspace_distinct
@@ -1720,7 +1720,7 @@ lemma dit_corres:
          apply (simp add: fault_rel_optionation_def)
         apply (rule corres_split_eqr [OF _ lipcb_corres'])
           apply (simp add: dc_def[symmetric])
-          apply (rule do_normal_transfer_corres)
+          apply (rule doNormalTransfer_corres)
          apply (wp | simp add: valid_pspace'_def)+
        apply (simp add: dc_def[symmetric])
        apply (rule do_fault_transfer_corres)
