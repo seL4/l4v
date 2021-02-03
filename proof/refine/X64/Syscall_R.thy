@@ -1678,7 +1678,7 @@ lemma simple_from_running':
   by (clarsimp elim!: pred_tcb'_weakenE
                simp: ct_in_state'_def)+
 
-lemma hr_corres:
+lemma handleReply_corres:
   "corres dc (einvs and ct_running) (invs' and ct_running')
          handle_reply handleReply"
   apply (simp add: handle_reply_def handleReply_def
@@ -1933,7 +1933,7 @@ lemma hrw_corres:
          (do x \<leftarrow> handle_reply; handle_recv True od)
          (do x \<leftarrow> handleReply; handleRecv True od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ hr_corres])
+    apply (rule corres_split_nor [OF _ handleReply_corres])
       apply (rule handleRecv_isBlocking_corres')
      apply (wp handle_reply_nonz_cap_to_ct handleReply_sane
                handleReply_nonz_cap_to_ct handleReply_ct_not_ksQ handle_reply_valid_sched)+
@@ -1981,7 +1981,7 @@ proof -
           apply (case_tac syscall)
           apply (auto intro: corres_guard_imp[OF handleSend_corres]
                              corres_guard_imp[OF hw]
-                             corres_guard_imp [OF hr_corres]
+                             corres_guard_imp [OF handleReply_corres]
                              corres_guard_imp[OF hrw_corres]
                              corres_guard_imp[OF hc_corres]
                              corres_guard_imp[OF handleYield_corres]
