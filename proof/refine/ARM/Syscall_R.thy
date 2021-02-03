@@ -462,7 +462,7 @@ lemma pinv_corres:
     apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
     apply (rule corres_guard_imp, rule invoke_irq_control_corres, simp+)
    apply (clarsimp simp: liftME_def[symmetric] o_def dc_def[symmetric])
-   apply (rule corres_guard_imp, rule invoke_irq_handler_corres, simp+)
+   apply (rule corres_guard_imp, rule invokeIRQHandler_corres, simp+)
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule inv_arch_corres, assumption)

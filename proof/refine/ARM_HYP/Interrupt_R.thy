@@ -358,7 +358,7 @@ lemma valid_globals_ex_cte_cap_irq:
     mult.commute mult.left_commute)
   done
 
-lemma invoke_irq_handler_corres:
+lemma invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc (einvs and irq_handler_inv_valid i)
              (invs' and irq_handler_inv_valid' i')
