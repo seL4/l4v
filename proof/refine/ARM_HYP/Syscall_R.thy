@@ -1509,7 +1509,7 @@ lemma delete_caller_cap_valid_ep_cap:
    by (wp get_cap_wp fast_finalise_typ_at abs_typ_at_lifts(1)
        | simp add: unless_def valid_cap_def)+
 
-lemma hw_corres':
+lemma handleRecv_isBlocking_corres':
    "corres dc (einvs and ct_in_state active
                     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
               (invs' and ct_in_state' simple'
@@ -1572,13 +1572,13 @@ lemma hw_corres':
                         ct_in_state'_def sch_act_sane_not)
   done
 
-lemma hw_corres:
+lemma handleRecv_isBlocking_corres:
   "corres dc (einvs and ct_active)
              (invs' and ct_active' and sch_act_sane and
                     (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
             (handle_recv isBlocking) (handleRecv isBlocking)"
   apply (rule corres_guard_imp)
-    apply (rule hw_corres')
+    apply (rule handleRecv_isBlocking_corres')
    apply (clarsimp simp: ct_in_state_def)
    apply (fastforce elim!: st_tcb_weakenE st_tcb_ex_cap)
   apply (clarsimp simp: ct_in_state'_def invs'_def valid_state'_def)
@@ -1964,7 +1964,7 @@ lemma hrw_corres:
          (do x \<leftarrow> handleReply; handleRecv True od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor [OF _ hr_corres])
-      apply (rule hw_corres')
+      apply (rule handleRecv_isBlocking_corres')
      apply (wp handle_reply_nonz_cap_to_ct handleReply_sane
                handleReply_nonz_cap_to_ct handleReply_ct_not_ksQ handle_reply_valid_sched)+
    apply (fastforce simp: ct_in_state_def ct_in_state'_def simple_sane_strg
@@ -2027,7 +2027,7 @@ proof -
                (invs' and ct_running'
                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
                (handle_recv isBlocking) (handleRecv isBlocking)"
-    apply (rule corres_guard_imp [OF hw_corres])
+    apply (rule corres_guard_imp [OF handleRecv_isBlocking_corres])
      apply (clarsimp simp: ct_in_state_def ct_in_state'_def
                      elim!: st_tcb_weakenE pred_tcb'_weakenE
                      dest!: ct_not_ksQ)+
