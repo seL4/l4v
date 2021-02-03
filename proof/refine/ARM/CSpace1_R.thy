@@ -746,7 +746,7 @@ lemma lookupSlot_inv[wp]:
   apply (wp | simp add: split_def)+
   done
 
-lemma lc_corres:
+lemma lookupCap_corres:
  "corres (lfr \<oplus> cap_relation)
          (valid_objs and pspace_aligned and tcb_at t)
          (valid_objs' and pspace_aligned' and pspace_distinct' and tcb_at' t)

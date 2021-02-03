@@ -1490,7 +1490,7 @@ lemma hw_corres':
         apply (rule corres_split_catch)
            apply (erule hf_corres)
           apply (rule corres_cap_fault)
-          apply (rule corres_splitEE [OF _ lc_corres])
+          apply (rule corres_splitEE [OF _ lookupCap_corres])
             apply (rule_tac P="?pre1 and tcb_at thread
                                and (\<lambda>s. (cur_thread s) = thread  )
                                and valid_cap rv"
