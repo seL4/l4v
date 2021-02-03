@@ -2106,7 +2106,7 @@ lemma eq_ucast_word8[simp]:
                    source_size_def target_size_def word_size)
   done
 
-lemma check_prio_corres:
+lemma checkPrio_corres:
   "corres (ser \<oplus> dc) (tcb_at auth) (tcb_at' auth)
      (check_prio p auth) (checkPrio p auth)"
   apply (simp add: check_prio_def checkPrio_def)
@@ -2138,7 +2138,7 @@ lemma decode_set_priority_corres:
          clarsimp simp: decode_set_priority_def decodeSetPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply (rule corres_splitEE[OF _ check_prio_corres])
+     apply (rule corres_splitEE[OF _ checkPrio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
       apply wpsimp+
@@ -2157,7 +2157,7 @@ lemma decode_set_mcpriority_corres:
          clarsimp simp: decode_set_mcpriority_def decodeSetMCPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply (rule corres_splitEE[OF _ check_prio_corres])
+     apply (rule corres_splitEE[OF _ checkPrio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
       apply wpsimp+
@@ -2269,8 +2269,8 @@ lemma decode_set_sched_params_corres:
    apply (clarsimp split: list.split simp: list_all2_Cons2)
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
   apply (rule corres_split_eqrE)
-     apply (rule corres_split_norE[OF _ check_prio_corres])
-       apply (rule corres_splitEE[OF _ check_prio_corres])
+     apply (rule corres_split_norE[OF _ checkPrio_corres])
+       apply (rule corres_splitEE[OF _ checkPrio_corres])
          apply (rule corres_returnOkTT)
          apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
         apply (wpsimp wp: check_prio_inv checkPrio_inv)+
