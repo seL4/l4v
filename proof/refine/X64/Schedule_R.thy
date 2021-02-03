@@ -1783,7 +1783,7 @@ lemma schedule_ChooseNewThread_fragment_corres:
    apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
   done
 
-lemma schedule_switch_thread_fastfail_corres:
+lemma scheduleSwitchThreadFastfail_corres:
   "\<lbrakk> ct \<noteq> it \<longrightarrow> (tp = tp' \<and> cp = cp') ; ct = ct' ; it = it' \<rbrakk> \<Longrightarrow>
    corres ((=)) (is_etcb_at ct) (tcb_at' ct)
      (schedule_switch_thread_fastfail ct it cp tp)
@@ -1909,7 +1909,7 @@ lemma schedule_corres:
                        rename_tac tp tp')
                    apply (rule corres_split[OF _ ethread_get_when_corres[where r="(=)"]],
                            rename_tac cp cp')
-                      apply (rule corres_split[OF _ schedule_switch_thread_fastfail_corres])
+                      apply (rule corres_split[OF _ scheduleSwitchThreadFastfail_corres])
                            apply (rule corres_split[OF _ curDomain_corres])
                              apply (rule corres_split[OF _ isHighestPrio_corres]; simp only:)
                                apply (rule corres_if, simp)
