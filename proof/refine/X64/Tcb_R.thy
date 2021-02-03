@@ -547,7 +547,7 @@ lemma threadSet_valid_queues'_no_state:
   apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
   done
 
-lemma gts_isRunnable_corres:
+lemma isRunnable_corres:
   "corres (\<lambda>ts runn. runnable ts = runn) (tcb_at t) (tcb_at' t)
      (get_thread_state t) (isRunnable t)"
   apply (simp add: isRunnable_def)
@@ -632,7 +632,7 @@ lemma sp_corres2:
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF _ tcbSchedDequeue_corres])
       apply (rule corres_split [OF _ ethread_set_corres], simp_all)[1]
-         apply (rule corres_split [OF _ gts_isRunnable_corres])
+         apply (rule corres_split [OF _ isRunnable_corres])
            apply (erule corres_when)
            apply(rule corres_split [OF _ gct_corres])
              apply (wp corres_if; clarsimp)

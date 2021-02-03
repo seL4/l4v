@@ -357,7 +357,7 @@ lemma set_domain_setDomain_corres:
     apply (rule corres_split[OF _ gct_corres])
       apply (rule corres_split[OF _ tcbSchedDequeue_corres])
         apply (rule corres_split[OF _ ethread_set_corres])
-                 apply (rule corres_split[OF _ gts_isRunnable_corres])
+                 apply (rule corres_split[OF _ isRunnable_corres])
                    apply simp
                    apply (rule corres_split[OF corres_when[OF refl]])
                       apply (rule rescheduleRequired_corres)
