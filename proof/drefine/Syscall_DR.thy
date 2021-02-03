@@ -808,7 +808,7 @@ lemma handle_fault_corres:
         apply (rule_tac F = "obj = cur_thread s'" in corres_gen_asm2)
         apply simp
         apply (rule dcorres_handle_double_fault)
-       apply (rule_tac tcb = obj' and etcb=etcb in send_fault_ipc_corres)
+       apply (rule_tac tcb = obj' and etcb=etcb in sendFaultIPC_corres)
        apply (clarsimp simp:transform_def transform_current_thread_def
                             not_idle_thread_def)
       apply (wp)

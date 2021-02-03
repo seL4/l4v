@@ -3463,7 +3463,7 @@ lemma tg_sp':
 
 declare lookup_cap_valid' [wp]
 
-lemma send_fault_ipc_corres:
+lemma sendFaultIPC_corres:
   "valid_fault f \<Longrightarrow> fr f f' \<Longrightarrow>
   corres (fr \<oplus> dc)
          (einvs and st_tcb_at active thread and ex_nonz_cap_to thread)
@@ -4329,7 +4329,7 @@ lemma hf_corres:
        apply (rule corres_split_catch)
           apply (rule hdf_corres)
           apply (rule_tac F="valid_fault f" in corres_gen_asm)
-         apply (rule send_fault_ipc_corres, assumption)
+         apply (rule sendFaultIPC_corres, assumption)
          apply simp
         apply wp+
        apply (rule hoare_post_impErr, rule sfi_invs_plus', simp_all)[1]

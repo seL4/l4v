@@ -2827,7 +2827,7 @@ lemma thread_set_valid_etcbs_2:
 
 lemmas [simp] = AllowSend_def AllowRecv_def CanModify_def
 
-lemma send_fault_ipc_corres:
+lemma sendFaultIPC_corres:
   "did = thread \<Longrightarrow>
    dcorres (dc\<oplus>dc) \<top>
      (not_idle_thread thread and st_tcb_at active thread and valid_irq_node and
