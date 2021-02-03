@@ -2207,7 +2207,7 @@ lemma sts_valid_pspace_hangers:
 
 declare no_fail_getSlotCap [wp]
 
-lemma setup_caller_corres:
+lemma setupCallerCap_corres:
   "corres dc
      (st_tcb_at (Not \<circ> halted) sender and tcb_at receiver and
       st_tcb_at (Not \<circ> awaiting_reply) sender and valid_reply_caps and
@@ -2418,7 +2418,7 @@ proof -
                                 in corres_symmetric_bool_cases, blast)
                         apply (simp add: when_def dc_def[symmetric] split del: if_split)
                         apply (rule corres_if2, simp)
-                         apply (rule setup_caller_corres)
+                         apply (rule setupCallerCap_corres)
                         apply (rule sts_corres, simp)
                        apply (rule corres_trivial)
                        apply (simp add: when_def dc_def[symmetric] split del: if_split)
@@ -3194,7 +3194,7 @@ lemma receive_ipc_corres:
                                         and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                              in corres_guard_imp [OF corres_if])
                     apply (simp add: fault_rel_optionation_def)
-                   apply (rule corres_if2 [OF _ setup_caller_corres sts_corres])
+                   apply (rule corres_if2 [OF _ setupCallerCap_corres sts_corres])
                            apply simp
                           apply simp
                          apply (rule corres_split [OF _ sts_corres])
