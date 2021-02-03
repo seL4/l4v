@@ -2346,7 +2346,7 @@ lemma decodeSetMCPriority_is_tc[wp]:
 crunch inv[wp]: decodeSetIPCBuffer "P"
   (simp: crunch_simps)
 
-lemma slot_long_running_corres:
+lemma slotCapLongRunningDelete_corres:
   "cte_map ptr = ptr' \<Longrightarrow>
    corres (=) (cte_at ptr and invs) invs'
            (slot_cap_long_running_delete ptr)
@@ -2399,8 +2399,8 @@ lemma decode_set_space_corres:
                     getThreadCSpaceRoot getThreadVSpaceRoot
                  split del: if_split)
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ slot_long_running_corres])
-        apply (rule corres_split [OF _ slot_long_running_corres])
+     apply (rule corres_split [OF _ slotCapLongRunningDelete_corres])
+        apply (rule corres_split [OF _ slotCapLongRunningDelete_corres])
            apply (rule corres_split_norE)
               apply (simp(no_asm) add: split_def unlessE_throwError_returnOk
                                        bindE_assoc cap_CNode_case_throw
