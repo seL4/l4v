@@ -3585,7 +3585,7 @@ lemma (in delete_one) deleting_irq_corres:
           apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
           apply (auto simp: cte_wp_at_ctes_of is_cap_simps isCap_simps)[1]
          apply simp
-         apply (rule corres_guard_imp, rule delete_one_corres[unfolded dc_def])
+         apply (rule corres_guard_imp, rule cteDeleteOne_corres[unfolded dc_def])
           apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
          apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (wp getCTE_wp' | simp add: getSlotCap_def)+

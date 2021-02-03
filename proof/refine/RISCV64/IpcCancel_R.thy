@@ -494,7 +494,7 @@ locale delete_one_conc = delete_one_conc_pre +
     "\<And>p. \<lbrace>invs'\<rbrace> cteDeleteOne p \<lbrace>\<lambda>rv. invs'\<rbrace>"
 
 locale delete_one = delete_one_conc + delete_one_abs +
-  assumes delete_one_corres:
+  assumes cteDeleteOne_corres:
     "corres dc (einvs and cte_wp_at can_fast_finalise ptr)
                (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
@@ -568,7 +568,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
                 del: split_paired_Ex)
     apply (rule corres_guard_imp)
       apply (rule_tac P'="\<lambda>s. \<exists>r'. cte_wp_at ((=) (cap.ReplyCap t False r')) sl s"
-                   in corres_stateAssert_implied [OF delete_one_corres])
+                   in corres_stateAssert_implied [OF cteDeleteOne_corres])
       apply (fastforce dest: pspace_relation_cte_wp_at
                             state_relation_pspace_relation
                       simp: cte_wp_at_ctes_of isCap_simps)
