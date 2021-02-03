@@ -615,7 +615,7 @@ lemma callKernel_corres:
   done
 
 
-lemma entry_corres:
+lemma kernelEntry_corres:
   "corres (=) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                   (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle) and
                   (\<lambda>s. scheduler_action s = resume_cur_thread))
@@ -847,7 +847,7 @@ lemma ckernel_invariant:
   apply (clarsimp simp: kernel_call_H_def)
 
    apply (drule use_valid[OF _ valid_corres_combined
-                            [OF kernel_entry_invs entry_corres],
+                            [OF kernel_entry_invs kernelEntry_corres],
                             OF _ kernelEntry_invs'[THEN hoare_weaken_pre]])
      apply fastforce
     apply (fastforce simp: ex_abs_def sch_act_simple_def ct_running_related ct_idle_related
@@ -934,7 +934,7 @@ lemma fw_sim_A_H:
 
    apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
     apply (clarsimp simp add: kernel_call_H_def kernel_call_A_def)
-    apply (rule rev_mp, rule_tac tc=tc and event=x in entry_corres)
+    apply (rule rev_mp, rule_tac tc=tc and event=x in kernelEntry_corres)
     apply (clarsimp simp: corres_underlying_def)
     apply (drule (1) bspec)
     apply (clarsimp simp: sch_act_simple_def)
