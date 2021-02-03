@@ -657,7 +657,7 @@ lemma sp_corres2:
   apply (force simp: state_relation_def elim: valid_objs'_maxDomain valid_objs'_maxPriority)
   done
 
-lemma sp_corres: "corres dc (einvs and tcb_at t) (invs' and tcb_at' t and valid_objs' and (\<lambda>_. x \<le> maxPriority))
+lemma setPriority_corres: "corres dc (einvs and tcb_at t) (invs' and tcb_at' t and valid_objs' and (\<lambda>_. x \<le> maxPriority))
                      (set_priority t x) (setPriority t x)"
   apply (rule corres_guard_imp)
     apply (rule sp_corres2)
@@ -1272,7 +1272,7 @@ proof -
   have S: "\<And>t x. corres dc (einvs and tcb_at t) (invs' and tcb_at' t and valid_objs' and K (valid_option_prio p_auth))
                    (case_option (return ()) (\<lambda>(p, auth). set_priority t p) p_auth)
                    (case_option (return ()) (\<lambda>p'. setPriority t (fst p')) p_auth)"
-    apply (case_tac p_auth; clarsimp simp: sp_corres)
+    apply (case_tac p_auth; clarsimp simp: setPriority_corres)
     done
   have S': "\<And>t x. corres dc (tcb_at t) (tcb_at' t)
                     (case_option (return ()) (\<lambda>(mcp, auth). set_mcpriority t mcp) mcp_auth)
