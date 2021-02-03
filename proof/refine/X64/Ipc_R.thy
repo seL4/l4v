@@ -1728,7 +1728,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (simp add: word_bits_conv)
   done
 
-lemma dit_corres:
+lemma doIPCTransfer_corres:
   "corres dc
      (tcb_at s and tcb_at r and valid_objs and pspace_aligned
         and valid_list
@@ -2200,7 +2200,7 @@ lemma do_reply_transfer_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ threadget_fault_corres])
       apply (case_tac rv, simp_all add: fault_rel_optionation_def bind_assoc)[1]
-       apply (rule corres_split [OF _ dit_corres])
+       apply (rule corres_split [OF _ doIPCTransfer_corres])
          apply (rule corres_split [OF _ cap_delete_one_corres])
            apply (rule corres_split [OF _ sts_corres])
               apply (rule possibleSwitchTo_corres)
@@ -2523,7 +2523,7 @@ proof -
                      in corres_gen_asm)
               apply (clarsimp simp: case_bool_If  case_option_If if3_fold
                           simp del: dc_simp split del: if_split cong: if_cong)
-              apply (rule corres_split [OF _ dit_corres])
+              apply (rule corres_split [OF _ doIPCTransfer_corres])
                 apply (rule corres_split [OF _ sts_corres])
                    apply (rule corres_split [OF _ possibleSwitchTo_corres])
                        apply (fold when_def)[1]
@@ -2603,7 +2603,7 @@ proof -
                     in corres_gen_asm)
              apply (clarsimp simp: isReceive_def case_bool_If
                         split del: if_split cong: if_cong)
-             apply (rule corres_split [OF _ dit_corres])
+             apply (rule corres_split [OF _ doIPCTransfer_corres])
                apply (rule corres_split [OF _ sts_corres])
                    apply (rule possibleSwitchTo_corres)
                   apply (simp add: if_apply_def2)
@@ -3279,7 +3279,7 @@ lemma receive_ipc_corres:
               apply (clarsimp simp: isSend_def case_bool_If
                                     case_option_If if3_fold
                          split del: if_split cong: if_cong)
-              apply (rule corres_split [OF _ dit_corres])
+              apply (rule corres_split [OF _ doIPCTransfer_corres])
                 apply (simp split del: if_split cong: if_cong)
                 apply (fold dc_def)[1]
                 apply (rule_tac P="valid_objs and valid_mdb and valid_list
