@@ -7018,13 +7018,13 @@ next
                apply (erule conjunct2)
               apply (rule drop_spec_corres,
                      simp add: liftME_def[symmetric] o_def dc_def[symmetric])
-              apply (rule cap_update_corres)
+              apply (rule updateCap_corres)
                apply simp
               apply (simp(no_asm_use) add: cap_cyclic_zombie_def split: cap.split_asm)
               apply (simp add: is_cap_simps)
              apply (rule spec_corres_splitE')
                 apply simp
-                apply (rule cap_update_corres, erule conjunct1)
+                apply (rule updateCap_corres, erule conjunct1)
                 apply (case_tac "fst rvb", auto simp: isCap_simps is_cap_simps)[1]
                apply (rule spec_corres_splitE)
                   apply (rule iffD1 [OF spec_corres_liftME2[where fn="\<lambda>v. (True, NullCap)"]])
@@ -7243,7 +7243,7 @@ next
              apply (rule corres_symb_exec_r)
                 apply (rule_tac F="cteCap endCTE = capability.NullCap"
                             in corres_gen_asm2, simp)
-                apply (rule cap_update_corres)
+                apply (rule updateCap_corres)
                  apply simp
                 apply (simp add: is_cap_simps)
                apply (rule_tac Q="\<lambda>rv. cte_at' (cte_map ?target)" in valid_prove_more)

@@ -2256,7 +2256,7 @@ lemma pspace_relationsD:
   "\<lbrakk>pspace_relation kh kh'; ekheap_relation ekh kh'\<rbrakk> \<Longrightarrow> pspace_relations ekh kh kh'"
   by (simp add: pspace_relations_def)
 
-lemma cap_update_corres:
+lemma updateCap_corres:
   "\<lbrakk>cap_relation cap cap';
     is_zombie cap \<or> is_cnode_cap cap \<or> is_thread_cap cap \<rbrakk>
    \<Longrightarrow> corres dc (\<lambda>s. invs s \<and>
