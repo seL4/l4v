@@ -633,7 +633,7 @@ lemma user_mem'_corres:
                          invs_def invs'_def
                          corres_underlying_def user_mem_relation)
 
-lemma device_mem_corres:
+lemma device_mem'_corres:
   "corres (=) invs invs' (gets (\<lambda>x. g (device_mem x))) (gets (\<lambda>x. g (device_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
@@ -705,7 +705,7 @@ lemma do_user_op_corres:
              apply (rule user_mem'_corres)
             apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
                prefer 2
-               apply (rule device_mem_corres)
+               apply (rule device_mem'_corres)
               apply (rule_tac r'="(=)" in corres_split)
                  prefer 2
                  apply (rule corres_gets_machine_state)
