@@ -1217,7 +1217,7 @@ lemma hinv_corres:
                 apply simp
                 apply wp[1]
                apply (clarsimp simp: when_def)
-               apply (rule rfk_corres)
+               apply (rule replyFromKernel_corres)
               apply (rule corres_split [OF _ sts_corres])
                  apply (rule corres_splitEE [OF _ pinv_corres])
                      apply simp
@@ -1227,7 +1227,7 @@ lemma hinv_corres:
                        apply (fold dc_def)[1]
                        apply (rule corres_split [OF sts_corres])
                           apply simp
-                         apply (rule corres_when [OF refl rfk_corres])
+                         apply (rule corres_when [OF refl replyFromKernel_corres])
                         apply (simp add: when_def)
                         apply (rule conjI, rule impI)
                          apply (rule reply_from_kernel_tcb_at)

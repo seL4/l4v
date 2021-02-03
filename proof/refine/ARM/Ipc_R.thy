@@ -3053,7 +3053,7 @@ lemma sai_invs'[wp]:
                    split: thread_state.splits
                    dest!: global'_no_ex_cap st_tcb_ex_cap'' ko_at_valid_objs')+
 
-lemma rfk_corres:
+lemma replyFromKernel_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (reply_from_kernel t r) (replyFromKernel t r)"
   apply (case_tac r)
