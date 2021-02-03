@@ -2022,7 +2022,7 @@ lemma decodeReadRegisters_corres:
        apply (wp|simp)+
   done
 
-lemma decode_writereg_corres:
+lemma decodeWriteRegisters_corres:
   notes if_cong [cong]
   shows
   "\<lbrakk> length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
@@ -2710,7 +2710,7 @@ lemma decode_tcb_inv_corres:
   apply (simp add: returnOk_def)
   apply (intro conjI impI
              corres_guard_imp[OF decodeReadRegisters_corres]
-             corres_guard_imp[OF decode_writereg_corres]
+             corres_guard_imp[OF decodeWriteRegisters_corres]
              corres_guard_imp[OF decode_copyreg_corres]
              corres_guard_imp[OF decode_tcb_conf_corres]
              corres_guard_imp[OF decode_set_priority_corres]
