@@ -2276,7 +2276,7 @@ lemma checkValidIPCBuffer_ArchObject_wp:
     | wpc | clarsimp simp: isCap_simps is_aligned_mask msg_align_bits msgAlignBits_def)+
   done
 
-lemma decode_set_ipc_corres:
+lemma decodeSetIPCBuffer_corres:
   notes if_cong [cong]
   shows
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
@@ -2534,7 +2534,7 @@ lemma decode_tcb_conf_corres:
   apply (clarsimp simp: linorder_not_less val_le_length_Cons list_all2_Cons1
       priorityBits_def)
   apply (rule corres_guard_imp)
-  apply (rule corres_splitEE [OF _ decode_set_ipc_corres])
+  apply (rule corres_splitEE [OF _ decodeSetIPCBuffer_corres])
          apply (rule corres_splitEE [OF _ decode_set_space_corres])
               apply (rule_tac F="is_thread_control set_params" in corres_gen_asm)
               apply (rule_tac F="is_thread_control set_space" in corres_gen_asm)
@@ -2696,7 +2696,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeSetPriority_corres]
              corres_guard_imp[OF decodeSetMCPriority_corres]
              corres_guard_imp[OF decodeSetSchedParams_corres]
-             corres_guard_imp[OF decode_set_ipc_corres]
+             corres_guard_imp[OF decodeSetIPCBuffer_corres]
              corres_guard_imp[OF decode_set_space_corres]
              corres_guard_imp[OF decode_bind_notification_corres]
              corres_guard_imp[OF decode_unbind_notification_corres]
