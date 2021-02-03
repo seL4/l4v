@@ -8756,7 +8756,7 @@ lemma inv_cnode_corres:
   apply (cases ci, simp_all)
         apply clarsimp
         apply (rule corres_guard_imp)
-          apply (rule cins_corres)
+          apply (rule cteInsert_corres)
             apply simp+
          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         elim!: cte_wp_at_cte_at)

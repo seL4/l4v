@@ -5162,7 +5162,7 @@ lemma cte_map_inj_eq':
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma cins_corres:
+lemma cteInsert_corres:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
         trans_state_update'[symmetric,simp]
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
@@ -6603,7 +6603,7 @@ corres_underlying srel nf rrel G G' (do do_extended_op (return ()); g od) (g')"
   done
 *)
 
-(* consider putting in AINVS or up above cins_corres *)
+(* consider putting in AINVS or up above cteInsert_corres *)
 lemma next_slot_eq:
   "\<lbrakk>next_slot p t' m' = x; t' = t; m' = m\<rbrakk> \<Longrightarrow> next_slot p t m = x"
   by simp

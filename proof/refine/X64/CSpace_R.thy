@@ -5124,7 +5124,7 @@ lemma cins_corres_simple:
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
-  (* exact reproduction of proof in cins_corres,
+  (* exact reproduction of proof in cteInsert_corres,
      as it does not used is_derived *)
   apply(simp add: cdt_list_relation_def del: split_paired_All split_paired_Ex)
   apply(subgoal_tac "no_mloop (cdt a) \<and> finite_depth (cdt a)")

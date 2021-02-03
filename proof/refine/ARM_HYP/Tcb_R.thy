@@ -962,7 +962,7 @@ lemma checked_insert_corres:
       apply (unfold assertDerived_def)[1]
       apply (rule corres_stateAssert_implied [where P'=\<top>])
        apply simp
-       apply (erule cins_corres [OF _ refl refl])
+       apply (erule cteInsert_corres [OF _ refl refl])
       apply clarsimp
       apply (drule cte_wp_at_norm [where p=src_slot])
       apply (case_tac src_slot)

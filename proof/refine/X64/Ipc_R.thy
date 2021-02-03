@@ -466,7 +466,7 @@ next
            apply (simp add: liftE_bindE)
            apply (rule corres_split_nor)
               prefer 2
-              apply (rule cins_corres, simp_all add: hd_map)[1]
+              apply (rule cteInsert_corres, simp_all add: hd_map)[1]
              apply (simp add: tl_map)
              apply (rule corres_rel_imp, rule Cons.hyps, simp_all)[1]
             apply (wp valid_case_option_post_wp hoare_vcg_const_Ball_lift
@@ -2344,7 +2344,7 @@ lemma setup_caller_corres:
           apply (rule corres_symb_exec_r)
              apply (rule_tac F="rv = capability.NullCap"
                           in corres_gen_asm2, simp)
-             apply (rule cins_corres)
+             apply (rule cteInsert_corres)
                apply (simp split: if_splits)
               apply (simp add: cte_map_def tcbReplySlot_def
                                tcb_cnode_index_def cte_level_bits_def)

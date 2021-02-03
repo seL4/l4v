@@ -383,7 +383,7 @@ lemma invoke_irq_handler_corres:
      apply (rule corres_split [OF _ get_irq_slot_corres])
        apply simp
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
-         apply (rule cins_corres, simp+)
+         apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
