@@ -1513,7 +1513,7 @@ lemma hw_corres':
                apply (rule_tac r'=ntfn_relation in corres_splitEE)
                   apply (rule corres_if)
                     apply (clarsimp simp: ntfn_relation_def)
-                   apply (clarsimp, rule receive_signal_corres)
+                   apply (clarsimp, rule receiveSignal_corres)
                     prefer 3
                     apply (rule corres_trivial)
                     apply (clarsimp simp: lookup_failure_map_def)+

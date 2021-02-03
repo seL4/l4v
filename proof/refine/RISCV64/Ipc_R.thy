@@ -3316,7 +3316,7 @@ lemma receiveIPC_corres:
              split: option.splits)[1]
   done
 
-lemma receive_signal_corres:
+lemma receiveSignal_corres:
   "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc (invs and st_tcb_at active thread and valid_cap cap and ex_nonz_cap_to thread)
             (invs' and tcb_at' thread and valid_cap' cap')
