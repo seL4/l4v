@@ -442,7 +442,7 @@ lemma pinv_corres:
        apply (fastforce elim!: cte_wp_at_weakenE')
       apply (clarsimp simp: liftME_def)
       apply (rule corres_guard_imp)
-        apply (erule tcbinv_corres)
+        apply (erule invokeTCB_corres)
        apply (simp)+
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)

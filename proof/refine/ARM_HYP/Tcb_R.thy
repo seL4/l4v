@@ -1814,7 +1814,7 @@ where
 | "tcb_inv_wf' (tcbinvocation.SetTLSBase ref w)
              = (tcb_at' ref and ex_nonz_cap_to' ref)"
 
-lemma tcbinv_corres:
+lemma invokeTCB_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (dc \<oplus> (=))
          (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti)
