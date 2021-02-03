@@ -1802,7 +1802,7 @@ lemma hr_ct_active'[wp]:
                   dest: ctes_of_valid')
   done
 
-lemma hc_corres:
+lemma handleCall_corres:
   "corres (dc \<oplus> dc) (einvs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_active)
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
@@ -2042,7 +2042,7 @@ proof -
                              corres_guard_imp[OF hw]
                              corres_guard_imp [OF handleReply_corres]
                              corres_guard_imp[OF hrw_corres]
-                             corres_guard_imp[OF hc_corres]
+                             corres_guard_imp[OF handleCall_corres]
                              corres_guard_imp[OF handleYield_corres]
                              active_from_running active_from_running'
                       simp: simple_sane_strg)[8]
