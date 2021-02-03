@@ -3848,7 +3848,7 @@ lemma sym_refs_vcpu_tcb:
 lemma vcpuFinalise_corres [corres]:
   "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
   unfolding vcpuFinalise_def vcpu_finalise_def
-  apply (corressimp corres: get_vcpu_corres simp: vcpu_relation_def)
+  apply (corressimp corres: getObject_vcpu_corres simp: vcpu_relation_def)
      apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
   apply (rule conjI)
    apply clarsimp

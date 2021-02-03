@@ -162,7 +162,7 @@ lemma lookupAround2_same1[simp]:
   apply (simp add: lookupAround2_known1)
   done
 
-lemma get_vcpu_corres:
+lemma getObject_vcpu_corres:
   "corres vcpu_relation (vcpu_at vcpu) (vcpu_at' vcpu)
                         (get_vcpu vcpu) (getObject vcpu)"
   apply (simp add: getObject_def get_vcpu_def get_object_def split_def)

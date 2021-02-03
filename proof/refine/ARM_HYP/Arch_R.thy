@@ -812,7 +812,7 @@ lemma get_vcpu_LR_corres[corres]:
   "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
              (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
   apply simp
-  apply (rule corres_rel_imp, rule get_vcpu_corres)
+  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
   apply (rename_tac vcpu', case_tac vcpu')
   apply (clarsimp simp: vcpu_relation_def vgic_map_def)
   done
@@ -1266,7 +1266,7 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: get_vcpu_corres set_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: getObject_vcpu_corres set_vcpu_corres wp: get_vcpu_wp)
   apply clarsimp
   done
 
@@ -1279,7 +1279,7 @@ lemma invoke_vcpu_read_register_corres:
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: get_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1294,7 +1294,7 @@ lemma invoke_vcpu_write_register_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: set_vcpu_corres getObject_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1315,7 +1315,7 @@ lemma associate_vcpu_tcb_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: get_vcpu_corres set_vcpu_corres
+  apply (corressimp search: getObject_vcpu_corres set_vcpu_corres
                        wp: get_vcpu_wp getVCPU_wp
                      simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
@@ -1360,7 +1360,7 @@ lemma invoke_vcpu_ack_vppi_corres:
         (invokeVCPUAckVPPI vcpu vppi)"
   unfolding invokeVCPUAckVPPI_def invoke_vcpu_ack_vppi_def write_vcpu_register_def
             writeVCPUReg_def
-  by (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
+  by (corressimp corres: set_vcpu_corres getObject_vcpu_corres wp: get_vcpu_wp)
      (auto simp: vcpu_relation_def split: option.splits)
 
 lemma perform_vcpu_invocation_corres:

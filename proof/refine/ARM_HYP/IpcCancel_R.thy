@@ -1553,7 +1553,7 @@ lemma dissociateVCPUTCB_corres [@lift_corres_args, corres]:
              (dissociate_vcpu_tcb v t) (dissociateVCPUTCB v t)"
   unfolding dissociate_vcpu_tcb_def dissociateVCPUTCB_def
   apply (clarsimp simp:  bind_assoc when_fail_assert opt_case_when)
-  apply (corressimp corres: get_vcpu_corres set_vcpu_corres get_tcb_corres)
+  apply (corressimp corres: getObject_vcpu_corres set_vcpu_corres get_tcb_corres)
   apply (wpsimp wp: arch_thread_get_wp
       simp: archThreadSet_def tcb_ko_at' tcb_at_typ_at'
       | strengthen imp_drop_strg[where Q="tcb_at t s" for s]

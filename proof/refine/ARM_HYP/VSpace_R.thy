@@ -809,7 +809,7 @@ lemma vcpuUpdate_corres[corres]:
   "\<forall>v1 v2. vcpu_relation v1 v2 \<longrightarrow> vcpu_relation (f v1) (f' v2) \<Longrightarrow>
     corres dc (vcpu_at v) (vcpu_at' v)
            (vcpu_update v f) (vcpuUpdate v f')"
-  by (corressimp corres: get_vcpu_corres set_vcpu_corres
+  by (corressimp corres: getObject_vcpu_corres set_vcpu_corres
                  simp: vcpu_update_def vcpuUpdate_def vcpu_relation_def)
 
 lemma vgicUpdate_corres[corres]:
@@ -828,7 +828,7 @@ lemma vcpuReadReg_corres[corres]:
   apply (simp add: vcpu_read_reg_def vcpuReadReg_def)
   apply (rule corres_guard_imp)
     apply (rule corres_assert_gen_asm2)
-    apply (rule corres_split'[OF get_vcpu_corres])
+    apply (rule corres_split'[OF getObject_vcpu_corres])
       apply (wpsimp simp: vcpu_relation_def)+
   done
 
@@ -867,7 +867,7 @@ lemma vcpuRestoreReg_corres[corres]:
   apply (clarsimp simp: vcpu_restore_reg_def vcpuRestoreReg_def)
   apply (rule corres_guard_imp)
     apply (rule corres_assert_gen_asm2)
-    apply (rule corres_split[OF _ get_vcpu_corres])
+    apply (rule corres_split[OF _ getObject_vcpu_corres])
       apply (rule corres_machine_op)
       apply (rule corres_Id)
         apply (fastforce simp: vcpu_relation_def)
@@ -916,7 +916,7 @@ lemma restoreVirtTimer_corres[corres]:
     apply (rule corres_split_eqr[OF _ vcpuReadReg_corres], simp)
       apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
         apply (rule corres_split_eqr[OF _ corres_machine_op], simp)+
-              apply (rule corres_split[OF _ get_vcpu_corres])
+              apply (rule corres_split[OF _ getObject_vcpu_corres])
                 apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
                   apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
                     apply (clarsimp simp: vcpu_relation_def)
@@ -1005,7 +1005,7 @@ lemma vcpuEnable_corres:
   apply (simp add: vcpu_enable_def vcpuEnable_def doMachineOp_bind do_machine_op_bind bind_assoc)
   apply (rule corres_guard_imp)
     apply (rule corres_split_dc[OF _ vcpuRestoreReg_corres])+
-      apply (rule corres_split[OF _ get_vcpu_corres], rename_tac vcpu')
+      apply (rule corres_split[OF _ getObject_vcpu_corres], rename_tac vcpu')
         apply (case_tac vcpu')
         apply (rule corres_split_dc[OF _ corres_machine_op]
                | rule corres_machine_op corres_Id restoreVirtTimer_corres
@@ -1023,7 +1023,7 @@ lemma vcpuRestore_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_dc[OF _ corres_machine_op]
            | rule corres_machine_op corres_Id)+
-          apply (rule corres_split[OF _ get_vcpu_corres], rename_tac vcpu')
+          apply (rule corres_split[OF _ getObject_vcpu_corres], rename_tac vcpu')
             apply (rule corres_split[OF _ corres_gets_gicvcpu_numlistregs])
               apply (case_tac vcpu'
                      , clarsimp simp: comp_def vcpu_relation_def vgic_map_def mapM_x_mapM
