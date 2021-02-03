@@ -91,7 +91,7 @@ lemma corres_check_no_children:
      apply (rule corres_guard_imp[OF corres_splitEE])
          apply (rule corres_returnOkTT)
          apply simp
-        apply (rule ensure_no_children_corres)
+        apply (rule ensureNoChildren_corres)
         apply simp
        apply wp+
       apply simp+

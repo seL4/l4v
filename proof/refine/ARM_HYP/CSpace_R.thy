@@ -3333,7 +3333,7 @@ lemma derive_cap_corres:
             apply (simp_all add: returnOk_def Let_def is_zombie_def isCap_simps
                           split: sum.splits)
    apply (rule_tac Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. True" in
-               corres_initial_splitE [OF ensure_no_children_corres])
+               corres_initial_splitE [OF ensureNoChildren_corres])
       apply simp
      apply clarsimp
     apply wp+

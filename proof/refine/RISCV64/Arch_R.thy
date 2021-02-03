@@ -897,7 +897,7 @@ shows
                                 objBits_simps bindE_assoc split_def)
           apply (rule corres_splitEE)
              prefer 2
-             apply (rule ensure_no_children_corres, rule refl)
+             apply (rule ensureNoChildren_corres, rule refl)
             apply (rule corres_splitEE)
                prefer 2
                apply (erule lsfc_corres, rule refl)

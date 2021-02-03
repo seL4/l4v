@@ -6951,7 +6951,7 @@ lemma subtree_no_parent:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma ensure_no_children_corres:
+lemma ensureNoChildren_corres:
   "p' = cte_map p \<Longrightarrow>
   corres (ser \<oplus> dc) (cte_at p) (pspace_aligned' and pspace_distinct' and cte_at' p' and valid_mdb')
          (ensure_no_children p) (ensureNoChildren p')"
