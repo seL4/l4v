@@ -675,7 +675,7 @@ lemma arch_switch_thread_ksQ[wp]:
 crunch valid_queues[wp]: "Arch.switchToThread" "Invariants_H.valid_queues"
 (wp: crunch_wps simp: crunch_simps)
 
-lemma switch_thread_corres:
+lemma switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
                 and valid_vs_lookup and valid_global_objs
@@ -1498,7 +1498,7 @@ lemma guarded_switch_to_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_symb_exec_l'[OF _ gts_exs_valid])
       apply (rule corres_assert_assume_l)
-      apply (rule switch_thread_corres)
+      apply (rule switchToThread_corres)
      apply (force simp: st_tcb_at_tcb_at)
     apply (wp gts_st_tcb_at)
     apply (force simp: st_tcb_at_tcb_at)+
@@ -1564,7 +1564,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
     apply (rule corres_split[OF _ gts_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
-      apply (rule switch_thread_corres)
+      apply (rule switchToThread_corres)
      apply (wp gts_st_tcb_at)+
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
