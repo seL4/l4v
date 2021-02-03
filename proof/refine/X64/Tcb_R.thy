@@ -1949,7 +1949,7 @@ lemma decodeWriteRegisters_corres:
    apply simp+
   done
 
-lemma decode_copyreg_corres:
+lemma decodeCopyRegisters_corres:
   "\<lbrakk> list_all2 cap_relation extras extras'; length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation) (invs and tcb_at t) (invs' and tcb_at' t)
      (decode_copy_registers args (cap.ThreadCap t) extras)
@@ -2633,7 +2633,7 @@ lemma decode_tcb_inv_corres:
   apply (intro conjI impI
              corres_guard_imp[OF decodeReadRegisters_corres]
              corres_guard_imp[OF decodeWriteRegisters_corres]
-             corres_guard_imp[OF decode_copyreg_corres]
+             corres_guard_imp[OF decodeCopyRegisters_corres]
              corres_guard_imp[OF decode_tcb_conf_corres]
              corres_guard_imp[OF decode_set_priority_corres]
              corres_guard_imp[OF decode_set_mcpriority_corres]
