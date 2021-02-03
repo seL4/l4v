@@ -1195,7 +1195,7 @@ lemma hinv_corres:
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
-      apply (rule corres_split [OF _ get_mi_corres])
+      apply (rule corres_split [OF _ getMessageInfo_corres])
         apply clarsimp
         apply (simp add: liftM_def cap_register_def capRegister_def)
         apply (rule corres_split_eqr [OF _ user_getreg_corres])

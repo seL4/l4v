@@ -13,7 +13,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
-lemma get_mi_corres: "corres ((=) \<circ> message_info_map)
+lemma getMessageInfo_corres: "corres ((=) \<circ> message_info_map)
                       (tcb_at t) (tcb_at' t)
                       (get_message_info t) (getMessageInfo t)"
   apply (rule corres_guard_imp)
@@ -1385,7 +1385,7 @@ lemma do_normal_transfer_corres:
   apply (simp add: do_normal_transfer_def doNormalTransfer_def)
   apply (rule corres_guard_imp)
 
-    apply (rule corres_split_mapr [OF _ get_mi_corres])
+    apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
       apply (rule_tac F="valid_message_info mi" in corres_gen_asm)
       apply (rule_tac r'="list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))"
                   in corres_split)
@@ -1429,7 +1429,7 @@ lemmas corres_ipc_thread_helper =
 
 lemmas corres_ipc_info_helper =
   corres_split_maprE [where f = message_info_map, OF _
-                                corres_liftE_lift [OF get_mi_corres]]
+                                corres_liftE_lift [OF getMessageInfo_corres]]
 
 crunch typ_at'[wp]: doNormalTransfer "\<lambda>s. P (typ_at' T p s)"
 
@@ -2120,7 +2120,7 @@ lemma do_reply_transfer_corres:
 
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ cap_delete_one_corres])
-      apply (rule corres_split_mapr [OF _ get_mi_corres])
+      apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
         apply (rule corres_split_eqr [OF _ lipcb_corres'])
           apply (rule corres_split_eqr [OF _ get_mrs_corres])
             apply (simp(no_asm) del: dc_simp)
