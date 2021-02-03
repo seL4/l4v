@@ -158,7 +158,7 @@ lemma decodeDomainInvocation_corres:
      apply (wp | simp)+
 done
 
-lemma decode_invocation_corres:
+lemma decodeInvocation_corres:
   "\<lbrakk>cptr = to_bl cptr'; mi' = message_info_map mi;
     slot' = cte_map slot; cap_relation cap cap';
     args = args'; list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -1245,7 +1245,7 @@ lemma hinv_corres:
                  apply simp
                 apply (simp add: split_def)
                 apply (rule corres_split [OF _ get_mrs_corres])
-                  apply (rule decode_invocation_corres, simp_all)[1]
+                  apply (rule decodeInvocation_corres, simp_all)[1]
                    apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
                   apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
                  apply wp[1]

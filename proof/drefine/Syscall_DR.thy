@@ -554,7 +554,7 @@ lemma decode_invocation_zombiecap_corres:
 (*
  * Show that decoding of invocations corresponds.
  *)
-lemma decode_invocation_corres:
+lemma decodeInvocation_corres:
   "\<lbrakk> (Some intent) = transform_intent (invocation_type label) args;
      invoked_cap_ref = transform_cslot_ptr slot;
      invoked_cap = transform_cap cap;
@@ -1013,7 +1013,7 @@ lemma lookup_cap_and_slot_inv:
   done
 
 (* We need following lemma because we need to match get_mrs in abstract and cdl_intent_op in capdl after state s is fixed *)
-lemma decode_invocation_corres':
+lemma decodeInvocation_corres':
   "\<lbrakk>(\<lambda>(cap, slot, extra) (slot', cap', extra', buffer).
      cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot' \<and> extra = transform_cap_list extra')
      rv rv'; get_tcb (cur_thread s) s = Some ctcb; ct_running s;invs s\<rbrakk>
@@ -1044,7 +1044,7 @@ lemma decode_invocation_corres':
       defer
       apply clarsimp
       apply (rule dcorres_expand_pfx)
-      apply (rule corres_guard_imp[OF decode_invocation_corres])
+      apply (rule corres_guard_imp[OF decodeInvocation_corres])
            apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def)+
      apply (wp get_tcb_mrs_wp | clarsimp)+
   apply (rule dcorres_expand_pfx)
@@ -1295,7 +1295,7 @@ lemma handle_invocation_corres:
        apply (rule corres_when,simp)
        apply (rule handle_fault_corres)
       apply (rule corres_split_bind_case_sum)
-          apply (rule decode_invocation_corres')
+          apply (rule decodeInvocation_corres')
              apply (simp add: split_def)+
          apply (rule dcorres_when_r)
           apply (rule corres_dummy_return_r)
