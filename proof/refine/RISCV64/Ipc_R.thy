@@ -3170,7 +3170,7 @@ lemma doNBRecvFailedTransfer_corres:
   unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
   by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
 
-lemma receive_ipc_corres:
+lemma receiveIPC_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'"
   shows "
    corres dc (einvs and valid_sched and tcb_at thread and valid_cap cap and ex_nonz_cap_to thread

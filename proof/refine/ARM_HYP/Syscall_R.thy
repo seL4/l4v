@@ -1538,7 +1538,7 @@ lemma hw_corres':
                apply (rename_tac rights)
                 apply (case_tac "AllowRead \<in> rights"; simp)
                  apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
-                   apply (rule receive_ipc_corres)
+                   apply (rule receiveIPC_corres)
                     apply (clarsimp)+
                   apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)+
                 apply (clarsimp)+
