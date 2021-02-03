@@ -2646,7 +2646,7 @@ lemma cancelBadgedSends_invs[wp]:
 crunch state_refs_of[wp]: tcb_sched_action "\<lambda>s. P (state_refs_of s)"
   (ignore_del: tcb_sched_action)
 
-lemma cancel_badged_sends_corres:
+lemma cancelBadgedSends_corres:
   "corres dc (invs and valid_sched and ep_at epptr) (invs' and ep_at' epptr)
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
   apply (simp add: cancel_badged_sends_def cancelBadgedSends_def)

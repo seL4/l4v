@@ -8732,7 +8732,7 @@ lemma inv_cnode_corres:
                 simp add: is_cap_simps)
    apply (clarsimp simp: when_def unless_def isCap_simps)
    apply (rule corres_guard_imp)
-     apply (rule cancel_badged_sends_corres)
+     apply (rule cancelBadgedSends_corres)
     apply (simp add: valid_cap_def)
    apply (simp add: valid_cap'_def)
   apply (clarsimp)
