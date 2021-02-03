@@ -2537,7 +2537,7 @@ lemma decodeSetSpace_tc_slot[wp]:
   apply simp
   done
 
-lemma decode_tcb_conf_corres:
+lemma decodeTCBConfigure_corres:
   notes if_cong [cong] option.case_cong [cong]
   shows
  "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
@@ -2712,7 +2712,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeReadRegisters_corres]
              corres_guard_imp[OF decodeWriteRegisters_corres]
              corres_guard_imp[OF decodeCopyRegisters_corres]
-             corres_guard_imp[OF decode_tcb_conf_corres]
+             corres_guard_imp[OF decodeTCBConfigure_corres]
              corres_guard_imp[OF decodeSetPriority_corres]
              corres_guard_imp[OF decodeSetMCPriority_corres]
              corres_guard_imp[OF decodeSetSchedParams_corres]
