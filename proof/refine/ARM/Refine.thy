@@ -614,7 +614,7 @@ lemma callKernel_corres:
   apply clarsimp
   done
 
-lemma user_mem_corres:
+lemma user_mem'_corres:
   "corres (=) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
@@ -686,7 +686,7 @@ lemma do_user_op_corres:
            apply (fastforce dest: absKState_correct [rotated])
           apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
              prefer 2
-             apply (rule user_mem_corres)
+             apply (rule user_mem'_corres)
             apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
                prefer 2
                apply (rule device_mem_corres)

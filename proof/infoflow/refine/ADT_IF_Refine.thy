@@ -447,7 +447,7 @@ lemma corres_ex_abs_lift':
 lemma gct_corres': "corres_underlying state_relation nf nf' (=) \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
-lemma user_mem_corres':
+lemma user_mem'_corres':
   "corres_underlying state_relation nf nf' (=) invs invs' (gets (\<lambda>x. g (user_mem x))) (gets (\<lambda>x. g (user_mem' x)))"
   by (clarsimp simp add: gets_def get_def return_def bind_def
                          invs_def invs'_def
