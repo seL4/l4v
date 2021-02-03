@@ -348,7 +348,7 @@ lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
    apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def etcb_at_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
   done
 
-lemma handle_interrupt_corres:
+lemma handleInterrupt_corres:
   "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)

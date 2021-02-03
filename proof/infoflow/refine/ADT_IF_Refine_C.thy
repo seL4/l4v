@@ -642,7 +642,7 @@ lemma handlePreemption_if_def2:
 lemma handleInterrupt_no_fail: "no_fail (ex_abs (einvs) and invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) a \<noteq> irqstate.IRQInactive)) (handleInterrupt a)"
   apply (rule no_fail_pre)
   apply (rule corres_nofail)
-    apply (rule handle_interrupt_corres)
+    apply (rule handleInterrupt_corres)
    apply (erule FalseE)
   apply (fastforce simp: ex_abs_def)
   done

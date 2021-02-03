@@ -1011,7 +1011,7 @@ lemma handle_reserved_irq_corres[corres]:
      apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
   done
 
-lemma handle_interrupt_corres:
+lemma handleInterrupt_corres:
   "corres dc
      (einvs)
      (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive) and

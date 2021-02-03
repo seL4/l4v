@@ -2019,7 +2019,7 @@ proof -
                                       and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s"
                                       for R''])
             apply (case_tac rv, simp_all add: doMachineOp_return)[1]
-            apply (rule handle_interrupt_corres)
+            apply (rule handleInterrupt_corres)
            apply (rule corres_machine_op)
            apply (rule corres_Id, simp+)
            apply (wp hoare_vcg_all_lift

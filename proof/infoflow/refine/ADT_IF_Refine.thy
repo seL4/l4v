@@ -666,7 +666,7 @@ lemma handle_preemption_if_corres:
          apply (rule corres_when)
           apply simp
          apply simp
-         apply (rule handle_interrupt_corres)
+         apply (rule handleInterrupt_corres)
         apply (wp handle_interrupt_valid_domain_time)+
       apply (rule dmo_getActiveIRQ_corres)
      apply (rule dmo_getActiveIRQ_wp)

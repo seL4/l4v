@@ -803,7 +803,7 @@ lemma timerTick_corres:
 
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
-lemma handle_interrupt_corres:
+lemma handleInterrupt_corres:
   "corres dc
      (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"

@@ -552,7 +552,7 @@ lemma callKernel_corres':
             apply (simp add: when_def)
            apply (rule corres_when[simplified dc_def], simp)
            apply simp
-           apply (rule handle_interrupt_corres[simplified dc_def])
+           apply (rule handleInterrupt_corres[simplified dc_def])
           apply simp
           apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
          apply simp

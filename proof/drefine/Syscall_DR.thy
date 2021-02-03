@@ -1633,7 +1633,7 @@ lemma handle_event_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ get_active_irq_corres])
         apply (clarsimp simp:option.splits)
-        apply (rule handle_interrupt_corres)
+        apply (rule handleInterrupt_corres)
        apply (wp | simp)+
    apply (rule corres_symb_exec_r)
       apply (rule corres_symb_exec_catch_r)
