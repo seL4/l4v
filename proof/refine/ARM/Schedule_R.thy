@@ -767,7 +767,7 @@ lemma arch_switchToIdleThread_corres:
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
   done
 
-lemma switch_idle_thread_corres:
+lemma switchToIdleThread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
@@ -1610,7 +1610,7 @@ proof -
       apply clarsimp
       apply (rule corres_split[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
         apply (erule corres_if2[OF sym])
-         apply (rule switch_idle_thread_corres)
+         apply (rule switchToIdleThread_corres)
         apply (rule corres_symb_exec_r)
            apply (rule corres_symb_exec_r)
               apply (rule_tac
