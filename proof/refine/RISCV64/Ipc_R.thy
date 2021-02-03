@@ -393,7 +393,7 @@ lemma cte_refs'_maskedAsFull[simp]:
  done
 
 
-lemma tc_loop_corres:
+lemma transferCapsToSlots_corres:
   "\<lbrakk> list_all2 (\<lambda>(cap, slot) (cap', slot'). cap_relation cap cap'
              \<and> slot' = cte_map slot) caps caps';
       mi' = message_info_map mi \<rbrakk> \<Longrightarrow>
@@ -1039,7 +1039,7 @@ lemma transferCaps_corres:
        apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
        apply (case_tac info, simp)
       apply simp
-      apply (rule corres_rel_imp, rule tc_loop_corres,
+      apply (rule corres_rel_imp, rule transferCapsToSlots_corres,
              simp_all add: split_def)[1]
       apply (case_tac info, simp)
      apply (wp hoare_vcg_all_lift get_rs_cte_at static_imp_wp
