@@ -1492,7 +1492,7 @@ lemma asUser_mapM_getRegister_corres:
   apply (simp add: getRegister_def)
   done
 
-lemma make_arch_fault_msg_corres:
+lemma makeArchFaultMessage_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
@@ -1522,7 +1522,7 @@ lemma mk_ft_msg_corres:
      apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
-  apply (rule make_arch_fault_msg_corres)
+  apply (rule makeArchFaultMessage_corres)
   done
 
 lemma makeFaultMessage_inv[wp]:
