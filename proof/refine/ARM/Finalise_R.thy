@@ -3378,7 +3378,7 @@ lemma (in delete_one) deleting_irq_corres:
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_irq_slot_corres])
+    apply (rule corres_split [OF _ getIRQSlot_corres])
       apply simp
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"

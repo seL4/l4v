@@ -8,7 +8,7 @@ theory InterruptAcc_R
 imports TcbAcc_R
 begin
 
-lemma get_irq_slot_corres:
+lemma getIRQSlot_corres:
   "corres (\<lambda>sl sl'. sl' = cte_map sl) \<top> \<top> (get_irq_slot irq) (getIRQSlot irq)"
   apply (simp add: getIRQSlot_def get_irq_slot_def locateSlot_conv
                    liftM_def[symmetric])

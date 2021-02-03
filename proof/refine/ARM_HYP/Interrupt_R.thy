@@ -371,7 +371,7 @@ lemma invokeIRQHandler_corres:
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ get_irq_slot_corres])
+     apply (rule corres_split [OF _ getIRQSlot_corres])
        apply simp
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
@@ -389,7 +389,7 @@ lemma invokeIRQHandler_corres:
     apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
    apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_irq_slot_corres])
+    apply (rule corres_split [OF _ getIRQSlot_corres])
       apply simp
       apply (rule cap_delete_one_corres)
      apply wp+
@@ -1036,7 +1036,7 @@ lemma handleInterrupt_corres:
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
     apply (simp add: getSlotCap_def bind_assoc)
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ get_irq_slot_corres])
+      apply (rule corres_split [OF _ getIRQSlot_corres])
         apply simp
         apply (rule corres_split [OF _ get_cap_corres,
                                  where R="\<lambda>rv. einvs and valid_cap rv"
