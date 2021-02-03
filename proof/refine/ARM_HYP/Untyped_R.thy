@@ -4290,7 +4290,7 @@ lemma reset_untyped_cap_corres:
               apply (rule corres_guard_imp)
                 apply (rule corres_split_nor)
                    apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
-                       apply (rule preemption_corres)
+                       apply (rule preemptionPoint_corres)
                       apply simp
                      apply (simp add: getFreeRef_def getFreeIndex_def
                                       free_index_of_def)

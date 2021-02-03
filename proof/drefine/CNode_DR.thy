@@ -591,7 +591,7 @@ lemma empty_set_eq: "{x. False} = {}"
   by auto
 
 
-lemma preemption_corres:
+lemma preemptionPoint_corres:
   "dcorres (dc \<oplus> dc) P P'
        (Monads_D.throw \<sqinter> returnOk x)
        preemption_point"
@@ -791,7 +791,7 @@ lemma cap_revoke_corres_helper:
            apply (rule_tac r'= "dc \<oplus> dc" and P =" \<lambda>r s. case r of Inr a \<Rightarrow> a = False | _  \<Rightarrow> True"
              and P' = "\<lambda>r s. (case r of Inr rva \<Rightarrow> (r , s) \<in> fst (Exceptions_A.preemption_point s') | _ \<Rightarrow> True)"
              in corres_underlying_split)
-              apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
+              apply (rule corres_guard_imp[OF corres_trivial[OF preemptionPoint_corres]])
                apply simp+
              apply (rule alternative_valid)
               apply (simp add:valid_def throwError_def return_def)

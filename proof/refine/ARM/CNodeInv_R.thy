@@ -7033,7 +7033,7 @@ next
                    apply (rename_tac nat)
                    apply (case_tac nat, simp_all)[1]
                   apply clarsimp
-                 apply (rule spec_corres_splitE'[OF preemption_corres])
+                 apply (rule spec_corres_splitE'[OF preemptionPoint_corres])
                    apply (rule "2.hyps"(2)[unfolded fun_app_def rec_del_concrete_unfold
                                                     finaliseSlot_def],
                           assumption+)
@@ -7701,7 +7701,7 @@ proof (induct rule: cap_revoke.induct)
     apply (clarsimp simp: whenE_def)
     apply (rule spec_corres_guard_imp)
       apply (rule spec_corres_splitE' [OF cap_delete_corres])
-        apply (rule spec_corres_splitE' [OF preemption_corres])
+        apply (rule spec_corres_splitE' [OF preemptionPoint_corres])
           apply (rule "1.hyps",
                    (simp add: cte_wp_at_def in_monad select_def next_revoke_cap_def select_ext_def
                      | assumption | rule conjI refl)+)[1]
