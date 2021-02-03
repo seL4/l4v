@@ -1957,7 +1957,7 @@ crunch valid_etcbs[wp]: possible_switch_to  "valid_etcbs"
 crunch valid_etcbs[wp]: handle_recv "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma hrw_corres:
+lemma handleReply_handleRecv_corres:
   "corres dc (einvs and ct_running)
              (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
          (do x \<leftarrow> handle_reply; handle_recv True od)
@@ -2041,7 +2041,7 @@ proof -
           apply (auto intro: corres_guard_imp[OF handleSend_corres]
                              corres_guard_imp[OF hw]
                              corres_guard_imp [OF handleReply_corres]
-                             corres_guard_imp[OF hrw_corres]
+                             corres_guard_imp[OF handleReply_handleRecv_corres]
                              corres_guard_imp[OF handleCall_corres]
                              corres_guard_imp[OF handleYield_corres]
                              active_from_running active_from_running'
