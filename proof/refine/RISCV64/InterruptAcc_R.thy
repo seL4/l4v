@@ -20,7 +20,7 @@ lemma getIRQSlot_corres:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma set_irq_state_corres:
+lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>
    corres dc \<top> \<top> (set_irq_state state irq) (setIRQState state' irq)"
   apply (simp add: set_irq_state_def setIRQState_def

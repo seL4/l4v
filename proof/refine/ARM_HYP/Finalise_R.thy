@@ -1471,7 +1471,7 @@ lemma deleted_irq_corres:
     (deleted_irq_handler irq)
     (deletedIRQHandler irq)"
   apply (simp add: deleted_irq_handler_def deletedIRQHandler_def)
-  apply (rule set_irq_state_corres)
+  apply (rule setIRQState_corres)
   apply (simp add: irq_state_relation_def)
   done
 

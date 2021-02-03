@@ -509,7 +509,7 @@ lemma arch_performIRQControl_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
         apply (rule corres_split_nor)
-           apply (rule corres_split_nor [OF _ set_irq_state_corres])
+           apply (rule corres_split_nor [OF _ setIRQState_corres])
               apply (rule cins_corres_simple)
                 apply (wp | simp add: irq_state_relation_def
                                       IRQHandler_valid IRQHandler_valid')+
@@ -525,7 +525,7 @@ lemma arch_performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
-       apply (rule corres_split_nor [OF _ set_irq_state_corres])
+       apply (rule corres_split_nor [OF _ setIRQState_corres])
         apply (rule cins_corres_simple)
             apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+
@@ -549,7 +549,7 @@ lemma performIRQControl_corres:
      (performIRQControl i')"
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor [OF _ set_irq_state_corres])
+     apply (rule corres_split_nor [OF _ setIRQState_corres])
         apply (rule cins_corres_simple)
           apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+
