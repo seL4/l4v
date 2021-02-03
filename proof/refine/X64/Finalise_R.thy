@@ -3723,7 +3723,7 @@ lemma fast_finalise_corres:
   apply (clarsimp simp: final_matters'_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ unbind_maybe_notification_corres])
-         apply (rule ntfn_cancel_corres)
+         apply (rule cancelAllSignals_corres)
        apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps getNotification_wp
             | wpc)+
    apply (clarsimp simp: valid_cap_def)
@@ -3789,7 +3789,7 @@ lemma finalise_cap_corres:
        apply (clarsimp simp add: final_matters'_def)
        apply (rule corres_guard_imp)
          apply (rule corres_split[OF _ unbind_maybe_notification_corres])
-           apply (rule ntfn_cancel_corres)
+           apply (rule cancelAllSignals_corres)
           apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
         apply (clarsimp simp: valid_cap_def)
        apply (clarsimp simp: valid_cap'_def)

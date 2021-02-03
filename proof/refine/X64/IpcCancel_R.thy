@@ -2044,7 +2044,7 @@ lemma set_ntfn_tcb_obj_at' [wp]:
 apply (clarsimp simp: setNotification_def, wp)
 done
 
-lemma ntfn_cancel_corres:
+lemma cancelAllSignals_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
