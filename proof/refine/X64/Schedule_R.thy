@@ -714,7 +714,7 @@ proof -
     done
 qed
 
-lemma arch_switch_idle_thread_corres:
+lemma arch_switchToIdleThread_corres:
   "corres dc
         (valid_arch_state and valid_objs and valid_asid_map and unique_table_refs \<circ> caps_of_state
            and valid_vs_lookup and valid_global_objs and pspace_aligned and pspace_distinct
@@ -732,7 +732,7 @@ lemma switch_idle_thread_corres:
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getIdleThread_corres])
-      apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
+      apply (rule corres_split [OF _ arch_switchToIdleThread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)

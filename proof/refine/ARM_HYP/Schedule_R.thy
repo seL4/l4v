@@ -827,7 +827,7 @@ lemma tcb_at'_ksIdleThread_lift:
   apply (rule hoare_lift_Pf[where f=ksIdleThread])
   by (wpsimp wp: T I)+
 
-lemma arch_switch_idle_thread_corres:
+lemma arch_switchToIdleThread_corres:
   "corres dc
          invs
          (valid_arch_state' and pspace_aligned' and pspace_distinct' and no_0_obj' and valid_idle')
@@ -849,7 +849,7 @@ lemma switch_idle_thread_corres:
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getIdleThread_corres])
-      apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
+      apply (rule corres_split [OF _ arch_switchToIdleThread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
