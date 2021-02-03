@@ -41,7 +41,7 @@ lemma activateThread_corres:
                   isRunning_def isRestart_def,
                   safe, simp_all)[1]
          apply (rule corres_guard_imp)
-           apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
+           apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
              apply (rule corres_split_nor [OF _ asUser_setNextPC_corres])
                apply (rule sts_corres)
                apply (simp | wp weak_sch_act_wf_lift_linear)+
@@ -433,7 +433,7 @@ proof -
                 (do pc \<leftarrow> as_user t getRestartPC; as_user t (setNextPC pc) od)
                 (do pc \<leftarrow> asUser t getRestartPC; asUser t (setNextPC pc) od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
+      apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
         apply (rule asUser_setNextPC_corres)
        apply wp+
      apply simp+

@@ -1474,7 +1474,7 @@ lemma msgFromLookupFailure_map[simp]:
      = msg_from_lookup_failure lf"
   by (cases lf, simp_all add: lookup_failure_map_def msgFromLookupFailure_def)
 
-lemma getRestartPCs_corres:
+lemma asUser_getRestartPC_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
                  (as_user t getRestartPC) (asUser t getRestartPC)"
   apply (rule corres_as_user')
@@ -1498,7 +1498,7 @@ lemma make_arch_fault_msg_corres:
   (makeArchFaultMessage (arch_fault_map f) t)"
   apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
+    apply (rule corres_split_eqr[OF _ asUser_getRestartPC_corres])
       apply (rule corres_trivial, simp add: arch_fault_map_def)
      apply (wp+, auto)
   done
@@ -1509,7 +1509,7 @@ lemma mk_ft_msg_corres:
      (makeFaultMessage (fault_map ft) t)"
   apply (cases ft, simp_all add: makeFaultMessage_def split del: if_split)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
+       apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
          apply (rule corres_trivial, simp add: fromEnum_def enum_bool)
         apply (wp | simp)+
     apply (simp add: ARM_H.syscallMessage_def)
