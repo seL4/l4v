@@ -400,7 +400,7 @@ lemma setDomain_corres:
                simp: valid_sched_def valid_sched_action_def)
   done
 
-lemma pinv_corres:
+lemma performInvocation_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and valid_invocation i
@@ -1255,7 +1255,7 @@ lemma hinv_corres:
                apply (clarsimp simp: when_def)
                apply (rule replyFromKernel_corres)
               apply (rule corres_split [OF _ sts_corres])
-                 apply (rule corres_splitEE [OF _ pinv_corres])
+                 apply (rule corres_splitEE [OF _ performInvocation_corres])
                      apply simp
                      apply (rule corres_split [OF _ gts_corres])
                        apply (rename_tac state state')
