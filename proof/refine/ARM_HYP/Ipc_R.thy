@@ -1546,7 +1546,7 @@ lemma asUser_getRestartPC_corres:
   apply (rule no_fail_getRestartPC)
   done
 
-lemma user_mapM_getRegister_corres:
+lemma asUser_mapM_getRegister_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
      (as_user t (mapM getRegister regs))
      (asUser t (mapM getRegister regs))"
@@ -1580,12 +1580,12 @@ lemma mk_ft_msg_corres:
         apply (wp | simp)+
     apply (simp add: ARM_HYP_H.syscallMessage_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
+      apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
         apply (rule corres_trivial, simp)
        apply (wp | simp)+
    apply (simp add: ARM_HYP_H.exceptionMessage_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
+     apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
   apply (rule make_arch_fault_msg_corres)
