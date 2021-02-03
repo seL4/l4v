@@ -652,7 +652,7 @@ lemma arch_switch_idle_thread_corres:
         arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 RISCV64_H.switchToIdleThread_def)
-  apply (corressimp corres: git_corres set_vm_root_corres)
+  apply (corressimp corres: getIdleThread_corres set_vm_root_corres)
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb
                         valid_arch_state_asid_table valid_arch_state_global_arch_objs)
   done
@@ -661,7 +661,7 @@ lemma switch_idle_thread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ git_corres])
+    apply (rule corres_split [OF _ getIdleThread_corres])
       apply (rule corres_split [OF _ arch_switch_idle_thread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
@@ -1879,7 +1879,7 @@ lemma schedule_corres:
         apply (rule corres_split[OF _ thread_get_isRunnable_corres],
                 rename_tac was_running wasRunning)
           apply (rule corres_split[OF _ corres_when])
-              apply (rule corres_split[OF _ git_corres], rename_tac it it')
+              apply (rule corres_split[OF _ getIdleThread_corres], rename_tac it it')
                 apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
                 apply (rule corres_split[OF _ ethreadget_corres[where r="(=)"]],
                        rename_tac tp tp')

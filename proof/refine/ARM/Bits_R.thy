@@ -191,7 +191,7 @@ lemma gct_corres [corres]: "corres (=) \<top> \<top> (gets cur_thread) getCurThr
 lemma gct_wp [wp]: "\<lbrace>\<lambda>s. P (ksCurThread s) s\<rbrace> getCurThread \<lbrace>P\<rbrace>"
   by (unfold getCurThread_def, wp)
 
-lemma git_corres [corres]:
+lemma getIdleThread_corres [corres]:
   "corres (=) \<top> \<top> (gets idle_thread) getIdleThread"
   by (simp add: getIdleThread_def state_relation_def)
 
