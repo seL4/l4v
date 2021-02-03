@@ -1376,7 +1376,7 @@ lemma tcb_at_cte_at_map:
   apply (auto elim: cte_wp_at_tcbI')
   done
 
-lemma delete_caller_cap_corres:
+lemma deleteCallerCap_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
      (delete_caller_cap t)
      (deleteCallerCap t)"
@@ -1500,7 +1500,7 @@ lemma hw_corres':
              apply (rule corres_guard_imp)
                apply (rename_tac rights)
                 apply (case_tac "AllowRead \<in> rights"; simp)
-                 apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
+                 apply (rule corres_split_nor[OF _ deleteCallerCap_corres])
                    apply (rule receiveIPC_corres)
                     apply (clarsimp)+
                   apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)+
@@ -1696,7 +1696,7 @@ lemma hr_corres:
                               and cte_at' (cte_map (thread, tcb_cnode_index 3))"
                     in corres_inst)
         apply (auto split: cap_relation_split_asm arch_cap.split_asm bool.split
-                   intro!: corres_guard_imp [OF delete_caller_cap_corres]
+                   intro!: corres_guard_imp [OF deleteCallerCap_corres]
                            corres_guard_imp [OF doReplyTransfer_corres]
                            corres_fail
                      simp: valid_cap_def valid_cap'_def is_cap_simps assert_def is_reply_cap_to_def)[1]
