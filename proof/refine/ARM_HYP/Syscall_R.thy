@@ -354,7 +354,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (auto simp: obj_at'_def)
   done
 
-lemma set_domain_setDomain_corres:
+lemma setDomain_corres:
   "corres dc
      (valid_etcbs and valid_sched and tcb_at tptr)
      (invs'  and sch_act_simple
@@ -457,7 +457,7 @@ lemma pinv_corres:
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ set_domain_setDomain_corres])
+      apply (rule corres_split [OF _ setDomain_corres])
         apply (rule corres_trivial, simp)
        apply (wp)+
        apply (clarsimp+)[2]
