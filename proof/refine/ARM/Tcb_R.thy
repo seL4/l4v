@@ -2667,7 +2667,7 @@ notes if_cong[cong] shows
    apply (fastforce simp: valid_cap_def valid_cap'_def dest: hd_in_set)+
   done
 
-lemma decode_unbind_notification_corres:
+lemma decodeUnbindNotification_corres:
   "corres (ser \<oplus> tcbinv_relation)
       (tcb_at t)
       (tcb_at' t)
@@ -2719,7 +2719,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeSetIPCBuffer_corres]
              corres_guard_imp[OF decodeSetSpace_corres]
              corres_guard_imp[OF decodeBindNotification_corres]
-             corres_guard_imp[OF decode_unbind_notification_corres]
+             corres_guard_imp[OF decodeUnbindNotification_corres]
              corres_guard_imp[OF decode_set_tls_base_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_sched_def)
   apply (auto simp: list_all2_map1 list_all2_map2
