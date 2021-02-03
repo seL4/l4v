@@ -1340,7 +1340,7 @@ lemma lookupCapAndSlot_corres:
      apply (wp | simp add: liftE_bindE[symmetric])+
   done
 
-lemma lec_corres:
+lemma lookupExtraCaps_corres:
   "\<lbrakk> info' = message_info_map info; buffer = buffer'\<rbrakk> \<Longrightarrow>
   corres (fr \<oplus> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x)))
    (valid_objs and pspace_aligned and tcb_at thread and (\<lambda>_. valid_message_info info))
@@ -1439,7 +1439,7 @@ lemma do_normal_transfer_corres:
          apply (rule corres_if[OF refl])
           apply (rule corres_split_catch)
              apply (rule corres_trivial, simp)
-            apply (rule lec_corres, simp+)
+            apply (rule lookupExtraCaps_corres, simp+)
            apply wp+
          apply (rule corres_trivial, simp)
         apply simp

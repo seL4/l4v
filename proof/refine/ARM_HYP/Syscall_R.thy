@@ -267,7 +267,7 @@ lemma hinv_corres_assist:
        \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lookupCapAndSlot_corres, simp)
       apply (rule corres_split [OF _ lipcb_corres])
-        apply (rule corres_splitEE [OF _ lec_corres])
+        apply (rule corres_splitEE [OF _ lookupExtraCaps_corres])
             apply (rule corres_returnOkTT)
             apply simp+
          apply (wp | simp)+
