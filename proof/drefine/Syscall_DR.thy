@@ -709,7 +709,7 @@ lemma perform_invocation_corres:
       apply (rule corres_dummy_return_l)
       apply (rule corres_split)
       apply (rule corres_trivial[OF  corres_free_return])
-      apply (rule do_reply_transfer_corres, simp)
+      apply (rule doReplyTransfer_corres, simp)
       apply (wp|clarsimp)+
       apply (simp add: ct_active_not_idle_etc)
       apply (rule conjI, fastforce)+
@@ -1494,7 +1494,7 @@ lemma handle_reply_corres:
          apply (clarsimp simp: corres_fail dc_def[symmetric] split: bool.split)
          apply (rename_tac word rights)
          apply (rule corres_guard_imp)
-           apply (rule do_reply_transfer_corres)
+           apply (rule doReplyTransfer_corres)
            apply (simp add: transform_tcb_slot_simp)
           apply simp
          apply (clarsimp simp:ct_running_not_idle_etc)

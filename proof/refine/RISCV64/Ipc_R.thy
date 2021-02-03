@@ -2112,7 +2112,7 @@ crunches handle_fault_reply
   for pspace_alignedp[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
-lemma do_reply_transfer_corres:
+lemma doReplyTransfer_corres:
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
            and cte_wp_at ((=) (cap.ReplyCap receiver False rights)) slot)
@@ -2240,7 +2240,7 @@ lemma do_reply_transfer_corres:
 
 (* when we cannot talk about reply cap rights explicitly (for instance, when a schematic ?rights
    would be generated too early *)
-lemma do_reply_transfer_corres':
+lemma doReplyTransfer_corres':
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
            and cte_wp_at (is_reply_cap_to receiver) slot)
@@ -2248,7 +2248,7 @@ lemma do_reply_transfer_corres':
             and valid_pspace' and cte_at' (cte_map slot))
      (do_reply_transfer sender receiver slot grant)
      (doReplyTransfer sender receiver (cte_map slot) grant)"
-  using do_reply_transfer_corres[of receiver sender _ slot]
+  using doReplyTransfer_corres[of receiver sender _ slot]
   by (fastforce simp add: cte_wp_at_reply_cap_to_ex_rights corres_underlying_def)
 
 lemma valid_pspace'_splits[elim!]:

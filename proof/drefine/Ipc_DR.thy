@@ -2238,7 +2238,7 @@ lemma when_return:
 
 crunch valid_etcbs[wp]: handle_fault_reply valid_etcbs
 
-lemma do_reply_transfer_corres:
+lemma doReplyTransfer_corres:
   notes wp_post_taut [wp]
   shows
   "slot' = transform_cslot_ptr slot \<Longrightarrow>

@@ -442,7 +442,7 @@ lemma pinv_corres:
        apply simp
        apply (rule corres_guard_imp)
          apply (rule corres_split_eqr [OF _ gct_corres])
-           apply (rule corres_split_nor [OF _ do_reply_transfer_corres'])
+           apply (rule corres_split_nor [OF _ doReplyTransfer_corres'])
              apply (rule corres_trivial, simp)
             apply wp+
         apply (clarsimp simp: tcb_at_invs)
@@ -1692,7 +1692,7 @@ lemma hr_corres:
                     in corres_inst)
         apply (auto split: cap_relation_split_asm arch_cap.split_asm bool.split
                    intro!: corres_guard_imp [OF delete_caller_cap_corres]
-                           corres_guard_imp [OF do_reply_transfer_corres]
+                           corres_guard_imp [OF doReplyTransfer_corres]
                            corres_fail
                      simp: valid_cap_def valid_cap'_def is_cap_simps assert_def is_reply_cap_to_def)[1]
         apply (fastforce simp: invs_def valid_state_def
