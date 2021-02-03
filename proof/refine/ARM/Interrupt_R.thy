@@ -519,7 +519,7 @@ lemma arch_performIRQControl_corres:
   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   done
 
-lemma invoke_irq_control_corres:
+lemma performIRQControl_corres:
   "irq_control_inv_relation i i' \<Longrightarrow>
    corres (dc \<oplus> dc) (einvs and irq_control_inv_valid i)
              (invs' and irq_control_inv_valid' i')
