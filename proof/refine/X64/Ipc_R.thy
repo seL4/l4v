@@ -1369,7 +1369,7 @@ lemma getMessageInfo_msgExtraCaps[wp]:
    apply wpsimp+
   done
 
-lemma lcs_corres:
+lemma lookupCapAndSlot_corres:
   "cptr = to_bl cptr' \<Longrightarrow>
   corres (lfr \<oplus> (\<lambda>a b. cap_relation (fst a) (fst b) \<and> snd b = cte_map (snd a)))
     (valid_objs and pspace_aligned and tcb_at thread)
@@ -1446,7 +1446,7 @@ lemma lec_corres:
             apply simp
            apply simp
           apply simp
-          apply (rule corres_cap_fault [OF lcs_corres])
+          apply (rule corres_cap_fault [OF lookupCapAndSlot_corres])
           apply simp
          apply simp
          apply (wp | simp)+
