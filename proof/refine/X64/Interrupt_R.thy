@@ -646,7 +646,7 @@ lemma invoke_irq_control_invs'[wp]:
               simp: invs'_def valid_state'_def)
   done
 
-lemma get_irq_state_corres:
+lemma getIRQState_corres:
   "corres irq_state_relation \<top> \<top>
        (get_irq_state irq) (getIRQState irq)"
   apply (simp add: get_irq_state_def getIRQState_def getInterruptState_def)
@@ -812,7 +812,7 @@ lemma handle_interrupt_corres:
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ get_irq_state_corres,
+     apply (rule corres_split [OF _ getIRQState_corres,
                                where R="\<lambda>rv. einvs"
                                  and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
