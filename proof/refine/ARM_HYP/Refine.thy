@@ -563,7 +563,7 @@ lemma callKernel_corres':
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        prefer 2
-       apply (rule corres_split_handle [OF _ he_corres])
+       apply (rule corres_split_handle [OF _ handleEvent_corres])
          apply simp
          apply (rule corres_split [OF _ corres_machine_op])
             prefer 2

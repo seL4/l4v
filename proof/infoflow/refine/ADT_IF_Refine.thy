@@ -48,7 +48,7 @@ lemma kernel_entry_if_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split [OF _ he_corres])
+        apply (rule corres_split [OF _ handleEvent_corres])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>

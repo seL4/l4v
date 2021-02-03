@@ -333,7 +333,7 @@ lemma kernelEntry_corres_C:
         apply (rule corres_split[OF _ ccorres_corres_u_xf, simplified bind_assoc])
             prefer 3
             apply (rule corres_nofail)
-             apply (rule he_corres)
+             apply (rule handleEvent_corres)
             apply simp
            prefer 2
            apply (rule_tac Q'="UNIV" in ccorres_guard_imp)
