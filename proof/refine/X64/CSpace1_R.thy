@@ -6709,7 +6709,7 @@ lemma inj_on_image_set_diff15 : (* for compatibility of assumptions *)
   "\<lbrakk>inj_on f C; A \<subseteq> C; B \<subseteq> C\<rbrakk> \<Longrightarrow> f ` (A - B) = f ` A - f ` B"
 by (rule inj_on_image_set_diff; auto)
 
-lemma cap_swap_corres:
+lemma cteSwap_corres:
   assumes srcdst: "src' = cte_map src" "dest' = cte_map dest"
   assumes scr: "cap_relation scap scap'"
   assumes dcr: "cap_relation dcap dcap'"
@@ -7183,7 +7183,7 @@ lemma cap_swap_for_delete_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac P1=wellformed_cap in corres_split [OF _ get_cap_corres_P])
       apply (rule_tac P1=wellformed_cap in corres_split [OF _ get_cap_corres_P])
-        apply (rule cap_swap_corres, rule refl, rule refl, clarsimp+)
+        apply (rule cteSwap_corres, rule refl, rule refl, clarsimp+)
        apply (wp get_cap_wp getCTE_wp')+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (drule (1) caps_of_state_valid_cap)+

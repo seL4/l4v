@@ -8715,7 +8715,7 @@ lemma inv_cnode_corres:
      apply (rule corres_guard_imp)
        apply (rule_tac F="wellformed_cap cap1 \<and> wellformed_cap cap2"
               in corres_gen_asm)
-       apply (erule (1) cap_swap_corres [OF refl refl], simp+)
+       apply (erule (1) cteSwap_corres [OF refl refl], simp+)
       apply (simp add: invs_def valid_state_def valid_pspace_def
                        real_cte_tcb_valid valid_cap_def2)
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
