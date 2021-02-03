@@ -612,7 +612,7 @@ lemma num_domains[simp]:
   apply(simp add: num_domains_def numDomains_def)
   done
 
-lemma dec_domain_time_corres:
+lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
   apply (simp add:dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)
   apply (clarsimp simp:state_relation_def)
@@ -674,7 +674,7 @@ lemma timerTick_corres:
           apply (rule corres_split[where r' = dc ])
              apply simp
              apply (rule corres_when,simp)
-             apply (rule corres_split[OF _ dec_domain_time_corres])
+             apply (rule corres_split[OF _ decDomainTime_corres])
                apply (rule corres_split[OF _ domain_time_corres])
                  apply (rule corres_when,simp)
                  apply (rule rescheduleRequired_corres)
