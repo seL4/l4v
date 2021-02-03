@@ -1944,7 +1944,7 @@ lemma handleReply_handleRecv_corres:
   apply (fastforce elim: pred_tcb'_weakenE)
   done
 
-lemma hh_corres:
+lemma handleHypervisorFault_corres:
   "corres dc (einvs and  st_tcb_at active thread and ex_nonz_cap_to thread
                    and (%_. valid_fault f))
              (invs' and sch_act_not thread
@@ -2048,7 +2048,7 @@ proof -
                   elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
          apply (rule corres_split')
             apply (rule corres_guard_imp[OF gct_corres], simp+)
-           apply (rule hh_corres)
+           apply (rule handleHypervisorFault_corres)
           apply (simp add: valid_fault_def)
           apply wp
           apply (fastforce elim!: st_tcb_ex_cap st_tcb_weakenE
