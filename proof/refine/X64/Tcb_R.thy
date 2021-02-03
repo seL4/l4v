@@ -312,7 +312,7 @@ declare invs_valid_queues'[rule_format, elim!]
 lemma einvs_valid_etcbs: "einvs s \<longrightarrow> valid_etcbs s"
   by (clarsimp simp: valid_sched_def)
 
-lemma arch_post_modify_registers_corres:
+lemma asUser_postModifyRegisters_corres:
   "corres dc (tcb_at t) (tcb_at' t and tcb_at' ct)
      (arch_post_modify_registers ct t)
      (asUser t $ postModifyRegisters ct t)"
@@ -347,7 +347,7 @@ lemma writereg_corres:
          apply (rule no_fail_pre, wp no_fail_mapM)
             apply (clarsimp simp: sanitiseOrFlags_def sanitiseAndFlags_def)
             apply ((safe)[1], (wp no_fail_setRegister | simp)+)
-        apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+        apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
           apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
             apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
               apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
@@ -448,7 +448,7 @@ proof -
           apply (rule corres_split_nor)
              apply (rule corres_split_nor)
                 apply (rule corres_split_eqr[OF _ gct_corres])
-                  apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+                  apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
                     apply (rule corres_split[OF _ corres_when[OF refl rescheduleRequired_corres]])
                       apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                       apply simp

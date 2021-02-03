@@ -302,7 +302,7 @@ lemma invokeTCB_ReadRegisters_corres:
   apply (clarsimp simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
   done
 
-lemma arch_post_modify_registers_corres:
+lemma asUser_postModifyRegisters_corres:
   "corres dc (tcb_at t) (tcb_at' t and tcb_at' ct)
      (arch_post_modify_registers ct t)
      (asUser t $ postModifyRegisters ct t)"
@@ -333,7 +333,7 @@ lemma writereg_corres:
           apply simp
          apply (rule no_fail_pre, wp no_fail_mapM)
             apply (clarsimp, (wp no_fail_setRegister | simp)+)
-        apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+        apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
           apply (rule corres_split_nor[OF _ corres_when[OF refl restart_corres]])
             apply (rule corres_split_nor[OF _ corres_when[OF refl rescheduleRequired_corres]])
               apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
@@ -432,7 +432,7 @@ proof -
           apply (rule corres_split_nor)
              apply (rule corres_split_nor)
                 apply (rule corres_split_eqr[OF _ gct_corres])
-                  apply (rule corres_split_nor[OF _ arch_post_modify_registers_corres[simplified]])
+                  apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
                     apply (rule corres_split[OF _ corres_when[OF refl rescheduleRequired_corres]])
                       apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                       apply simp
