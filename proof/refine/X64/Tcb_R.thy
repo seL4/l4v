@@ -388,7 +388,7 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def)
 
-lemma copyreg_corres:
+lemma invokeTCB_CopyRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
           ex_nonz_cap_to dest)
@@ -1766,7 +1766,7 @@ lemma tcbinv_corres:
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
          apply (rule corres_guard_imp [OF invokeTCB_WriteRegisters_corres], simp+)[1]
         apply (rule corres_guard_imp [OF invokeTCB_ReadRegisters_corres], simp+)[1]
-       apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
+       apply (rule corres_guard_imp [OF invokeTCB_CopyRegisters_corres], simp+)[1]
       apply (clarsimp simp del: invoke_tcb.simps)
       apply (rename_tac word one t2 mcp t3 t4 t5 t6 t7 t8 t9 t10 t11)
       apply (rule_tac F="is_aligned word 5" in corres_req)
