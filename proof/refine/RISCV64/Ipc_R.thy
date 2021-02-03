@@ -2637,7 +2637,7 @@ lemma send_signal_corres:
                                  thread_state_relation_def
                           split: Structures_A.thread_state.splits
                                  Structures_H.thread_state.splits)
-         apply (rule corres_split[OF _ cancel_ipc_corres])
+         apply (rule corres_split[OF _ cancelIPC_corres])
            apply (rule corres_split[OF _ sts_corres])
               apply (simp add: badgeRegister_def badge_register_def)
               apply (rule corres_split[OF _ user_setreg_corres])

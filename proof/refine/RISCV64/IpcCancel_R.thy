@@ -584,7 +584,7 @@ lemma (in delete_one) reply_cancel_ipc_corres:
   done
 qed
 
-lemma (in delete_one) cancel_ipc_corres:
+lemma (in delete_one) cancelIPC_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
       (cancel_ipc t) (cancelIPC t)"
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
@@ -1376,7 +1376,7 @@ lemma (in delete_one) suspend_corres:
    apply (fastforce dest!: tcb_at_cross state_relation_pspace_relation)
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ cancel_ipc_corres])
+    apply (rule corres_split_nor [OF _ cancelIPC_corres])
       apply (rule corres_split [OF _ gts_corres])
         apply (rule corres_split_nor)
            apply (rule corres_split_nor [OF _ sts_corres])

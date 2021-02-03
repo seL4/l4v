@@ -208,7 +208,7 @@ lemma restart_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
-      apply (rule corres_split_nor [OF _ cancel_ipc_corres])
+      apply (rule corres_split_nor [OF _ cancelIPC_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
              apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
