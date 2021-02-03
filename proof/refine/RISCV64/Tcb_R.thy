@@ -783,7 +783,7 @@ lemma sameObject_corres2:
   apply (case_tac arch_capa; simp)
   done
 
-lemma check_cap_at_corres:
+lemma checkCapAt_corres:
   assumes r: "cap_relation cap cap'"
   assumes c: "corres dc Q Q' f f'"
   assumes Q: "\<And>s. P s \<and> cte_wp_at (same_object_as cap) slot s \<Longrightarrow> Q s"
@@ -809,7 +809,7 @@ lemma check_cap_at_corres_weak:
   shows "corres dc (P and cte_at slot and invs) (P' and pspace_aligned' and pspace_distinct')
              (check_cap_at cap slot f)
              (checkCapAt cap' (cte_map slot) f')"
-  apply (rule check_cap_at_corres, rule r, rule c)
+  apply (rule checkCapAt_corres, rule r, rule c)
   apply auto
   done
 
@@ -844,7 +844,7 @@ lemma checked_insert_corres:
                         and
                         P'="cte_wp_at' (\<lambda>c. cteCap c = NullCap) (cte_map (target, ref))
                             and invs' and valid_cap' newCap"
-                       in check_cap_at_corres, assumption)
+                       in checkCapAt_corres, assumption)
       apply (rule check_cap_at_corres_weak, simp)
       apply (unfold assertDerived_def)[1]
       apply (rule corres_stateAssert_implied [where P'=\<top>])
