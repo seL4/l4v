@@ -128,7 +128,7 @@ where
 
 
 (* FIXME: move *)
-lemma dec_domain_inv_corres:
+lemma decodeDomainInvocation_corres:
   shows "\<lbrakk> list_all2 cap_relation (map fst cs) (map fst cs');
            list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) cs cs' \<rbrakk> \<Longrightarrow>
         corres (ser \<oplus> ((\<lambda>x. inv_relation x \<circ> uncurry Invocations_H.invocation.InvokeDomain) \<circ> (\<lambda>(x,y). Invocations_A.invocation.InvokeDomain x y))) \<top> \<top>
@@ -213,7 +213,7 @@ lemma decode_invocation_corres:
       \<comment> \<open>DomainCap\<close>
       apply (simp add: isCap_defs)
       apply (rule corres_guard_imp)
-      apply (rule dec_domain_inv_corres)
+      apply (rule decodeDomainInvocation_corres)
       apply (simp+)[4]
      \<comment> \<open>IRQControl\<close>
      apply (simp add: isCap_defs o_def)
