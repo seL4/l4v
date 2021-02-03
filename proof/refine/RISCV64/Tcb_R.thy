@@ -2135,7 +2135,7 @@ lemma decodeSetSchedParams_wf[wp]:
          simp)
   done
 
-lemma decode_set_sched_params_corres:
+lemma decodeSetSchedParams_corres:
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation)
@@ -2608,7 +2608,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decode_tcb_conf_corres]
              corres_guard_imp[OF decodeSetPriority_corres]
              corres_guard_imp[OF decodeSetMCPriority_corres]
-             corres_guard_imp[OF decode_set_sched_params_corres]
+             corres_guard_imp[OF decodeSetSchedParams_corres]
              corres_guard_imp[OF decode_set_ipc_corres]
              corres_guard_imp[OF decode_set_space_corres]
              corres_guard_imp[OF decode_bind_notification_corres]
