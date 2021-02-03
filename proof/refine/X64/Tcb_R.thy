@@ -324,7 +324,7 @@ lemma asUser_postModifyRegisters_corres:
     apply (rule corres_stateAssert_assume)
      by simp+
 
-lemma writereg_corres:
+lemma invokeTCB_WriteRegisters_corres:
   "corres (dc \<oplus> (=)) (einvs  and tcb_at dest and ex_nonz_cap_to dest)
         (invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
@@ -1764,7 +1764,7 @@ lemma tcbinv_corres:
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
-         apply (rule corres_guard_imp [OF writereg_corres], simp+)[1]
+         apply (rule corres_guard_imp [OF invokeTCB_WriteRegisters_corres], simp+)[1]
         apply (rule corres_guard_imp [OF invokeTCB_ReadRegisters_corres], simp+)[1]
        apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
       apply (clarsimp simp del: invoke_tcb.simps)
