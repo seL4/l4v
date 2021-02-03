@@ -869,7 +869,7 @@ lemma cancel_ipc_valid_idle:
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
   done
 
-lemma send_signal_corres:
+lemma sendSignal_corres:
   notes if_split [split del]
   shows
   "ep_id = epptr \<Longrightarrow> dcorres dc \<top> (invs and valid_etcbs)

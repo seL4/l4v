@@ -424,7 +424,7 @@ lemma pinv_corres:
                                sch_act_simple_def)
         apply (rule corres_guard_imp)
           apply (simp add: liftE_bindE)
-          apply (rule corres_split [OF _ send_signal_corres])
+          apply (rule corres_split [OF _ sendSignal_corres])
             apply (rule corres_trivial)
             apply (simp add: returnOk_def)
            apply wp+

@@ -2547,7 +2547,7 @@ lemma valid_sched_weak_strg:
 crunch weak_valid_sched_action[wp]: as_user weak_valid_sched_action
   (wp: weak_valid_sched_action_lift)
 
-lemma send_signal_corres:
+lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)

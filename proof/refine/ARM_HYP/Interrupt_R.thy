@@ -1044,7 +1044,7 @@ lemma handleInterrupt_corres:
           apply (rule corres_split'[where r'=dc])
              apply (case_tac xb, simp_all add: doMachineOp_return)[1]
               apply (clarsimp simp add: when_def doMachineOp_return)
-              apply (rule corres_guard_imp, rule send_signal_corres)
+              apply (rule corres_guard_imp, rule sendSignal_corres)
                apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
             apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
             apply (rule corres_split)

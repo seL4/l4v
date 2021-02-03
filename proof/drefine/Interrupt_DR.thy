@@ -371,7 +371,7 @@ lemma handleInterrupt_corres:
                   apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def | rule conjI)+
                    apply (rule corres_dummy_return_l)
                    apply (rule corres_underlying_split [where P'="\<lambda>rv. \<top>" and P = "\<lambda>rv. \<top>"])
-                      apply (rule corres_guard_imp[OF send_signal_corres])
+                      apply (rule corres_guard_imp[OF sendSignal_corres])
                         apply (simp+)
                    apply (clarsimp simp:handle_interrupt_corres_branch dc_def[symmetric])+
                   apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+

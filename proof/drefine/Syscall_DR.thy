@@ -695,7 +695,7 @@ lemma perform_invocation_corres:
     apply (clarsimp simp:invoke_notification_def liftE_bindE)
     apply (clarsimp simp:liftE_def bind_assoc returnOk_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ send_signal_corres])
+      apply (rule corres_split[OF _ sendSignal_corres])
       apply (rule corres_trivial)
       apply (simp add:dc_def corres_free_return)
       apply (wp | clarsimp)+

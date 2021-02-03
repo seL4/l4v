@@ -2609,7 +2609,7 @@ lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"
   by (simp add: valid_sched_def valid_sched_action_def)
 
-lemma send_signal_corres:
+lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
