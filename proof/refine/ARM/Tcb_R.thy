@@ -2000,7 +2000,7 @@ lemma copyregsets_map_only[simp]:
   "copyregsets_map v = ARMNoExtraRegisters"
   by (cases "copyregsets_map v", simp)
 
-lemma decode_readreg_corres:
+lemma decodeReadRegisters_corres:
   "corres (ser \<oplus> tcbinv_relation) (invs and tcb_at t) (invs' and tcb_at' t)
      (decode_read_registers args (cap.ThreadCap t))
      (decodeReadRegisters args (ThreadCap t))"
@@ -2709,7 +2709,7 @@ lemma decode_tcb_inv_corres:
              split del: if_split split: gen_invocation_labels.split)
   apply (simp add: returnOk_def)
   apply (intro conjI impI
-             corres_guard_imp[OF decode_readreg_corres]
+             corres_guard_imp[OF decodeReadRegisters_corres]
              corres_guard_imp[OF decode_writereg_corres]
              corres_guard_imp[OF decode_copyreg_corres]
              corres_guard_imp[OF decode_tcb_conf_corres]
