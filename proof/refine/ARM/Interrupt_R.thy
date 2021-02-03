@@ -153,7 +153,7 @@ lemma isIRQActive_wp:
   apply (clarsimp simp: irq_issued'_def)
   done
 
-lemma arch_check_irq_corres:
+lemma checkIRQ_corres:
   "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (checkIRQ irq)"
   unfolding arch_check_irq_def checkIRQ_def rangeCheck_def
   apply (rule corres_guard_imp)
@@ -216,7 +216,7 @@ lemma arch_decode_irq_control_corres:
   \<comment>\<open>ARMIRQIssueIRQHandler\<close>
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE[OF _ arch_check_irq_corres])
+     apply (rule corres_splitEE[OF _ checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
        apply (rule corres_split_eqr[OF _ is_irq_active_corres])
