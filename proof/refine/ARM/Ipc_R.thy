@@ -1539,7 +1539,7 @@ lemmas threadget_fault_corres =
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
-lemma do_fault_transfer_corres:
+lemma doFaultTransfer_corres:
   "corres dc
     (obj_at (\<lambda>ko. \<exists>tcb ft. ko = TCB tcb \<and> tcb_fault tcb = Some ft) sender
      and tcb_at receiver and case_option \<top> in_user_frame recv_buf)
@@ -1669,7 +1669,7 @@ lemma dit_corres:
           apply (rule doNormalTransfer_corres)
          apply (wp | simp add: valid_pspace'_def)+
        apply (simp add: dc_def[symmetric])
-       apply (rule do_fault_transfer_corres)
+       apply (rule doFaultTransfer_corres)
       apply (clarsimp simp: obj_at_def)
      apply (erule ignore_if)
     apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
