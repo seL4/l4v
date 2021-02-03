@@ -726,7 +726,7 @@ lemma tcbSchedDequeue_invs'[wp]:
   apply (fastforce elim: valid_objs'_maxDomain valid_objs'_maxPriority simp: valid_pspace'_def)+
   done
 
-lemma cur_thread_update_corres:
+lemma setCurThread_corres:
   "corres dc \<top> \<top> (modify (cur_thread_update (\<lambda>_. t))) (setCurThread t)"
   apply (unfold setCurThread_def)
   apply (rule corres_modify)
@@ -778,7 +778,7 @@ proof -
       od)"
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ arch_switchToThread_corres])
-        apply (rule corres_split[OF cur_thread_update_corres tcbSchedDequeue_corres])
+        apply (rule corres_split[OF setCurThread_corres tcbSchedDequeue_corres])
          apply (wpsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
 
