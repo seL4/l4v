@@ -2277,7 +2277,7 @@ lemma decodeSetSchedParams_corres:
     apply (corressimp simp: valid_cap_def valid_cap'_def)+
   done
 
-lemma check_valid_ipc_corres:
+lemma checkValidIPCBuffer_corres:
   "cap_relation cap cap' \<Longrightarrow>
    corres (ser \<oplus> dc) \<top> \<top>
      (check_valid_ipc_buffer vptr cap)
@@ -2332,7 +2332,7 @@ lemma decode_set_ipc_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE [OF _ derive_cap_corres])
         apply (simp add: o_def newroot_rel_def split_def dc_def[symmetric])
-        apply (erule check_valid_ipc_corres)
+        apply (erule checkValidIPCBuffer_corres)
        apply (wp hoareE_TrueI | simp)+
   apply fastforce
   done
