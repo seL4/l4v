@@ -1039,7 +1039,7 @@ lemma grs_distinct'[wp]:
   apply simp
   done
 
-lemma tc_corres:
+lemma transferCaps_corres:
   "\<lbrakk> info' = message_info_map info;
     list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))
          caps caps' \<rbrakk>
@@ -1493,7 +1493,7 @@ lemma do_normal_transfer_corres:
          apply (rule corres_trivial, simp)
         apply simp
         apply (rule corres_split_eqr [OF _ copy_mrs_corres])
-          apply (rule corres_split [OF _ tc_corres])
+          apply (rule corres_split [OF _ transferCaps_corres])
               apply (rename_tac mi' mi'')
               apply (rule_tac F="mi_label mi' = mi_label mi"
                         in corres_gen_asm)

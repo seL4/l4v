@@ -1207,7 +1207,7 @@ lemma assertDerived_wp_weak:
   apply (wpsimp simp: assertDerived_def)
   done
 
-lemma tc_corres:
+lemma transferCaps_corres:
   assumes x: "newroot_rel e e'"
   and y: "newroot_rel f f'"
   and z: "(case g of None \<Rightarrow> g' = None
@@ -1771,7 +1771,7 @@ lemma tcbinv_corres:
       apply (rename_tac word one t2 mcp t3 t4 t5 t6 t7 t8 t9 t10 t11)
       apply (rule_tac F="is_aligned word 5" in corres_req)
        apply (clarsimp simp add: is_aligned_weaken [OF tcb_aligned])
-      apply (rule corres_guard_imp [OF tc_corres], clarsimp+)
+      apply (rule corres_guard_imp [OF transferCaps_corres], clarsimp+)
        apply (clarsimp simp: is_cnode_or_valid_arch_def
                       split: option.split option.split_asm)
       apply clarsimp
