@@ -218,7 +218,7 @@ lemma decode_invocation_corres:
       apply (simp+)[4]
      \<comment> \<open>IRQControl\<close>
      apply (simp add: isCap_defs o_def)
-     apply (rule corres_guard_imp, rule decode_irq_control_corres, simp+)[1]
+     apply (rule corres_guard_imp, rule decodeIRQControlInvocation_corres, simp+)[1]
     \<comment> \<open>IRQHandler\<close>
     apply (simp add: isCap_defs o_def)
     apply (rule corres_guard_imp, rule decodeIRQHandlerInvocation_corres, simp+)[1]

@@ -303,7 +303,7 @@ lemma decode_invocation_irqcontrolcap_corres:
    apply(erule exE, rotate_tac -1, drule sym)
    apply(clarsimp simp: throw_opt_def get_irq_control_intent_def)
    apply (rule dcorres_liftME_liftME)
-    apply (rule decode_irq_control_corres, auto simp: transform_cap_def)[1]
+    apply (rule decodeIRQControlInvocation_corres, auto simp: transform_cap_def)[1]
    apply (clarsimp simp: cdl_irq_control_invocation_relation_def)
    apply (clarsimp simp: cdl_invocation_relation_def translate_invocation_def)
   apply (rule corres_guard_imp)

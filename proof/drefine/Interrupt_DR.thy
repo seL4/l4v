@@ -51,7 +51,7 @@ definition
 where
   "cdl_irq_control_invocation_relation x y \<equiv> x = translate_irq_control_invocation y"
 
-lemma decode_irq_control_corres:
+lemma decodeIRQControlInvocation_corres:
   "\<lbrakk> Some (IrqControlIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap cap';
      cap' = cap.IRQControlCap;

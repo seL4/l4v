@@ -237,7 +237,7 @@ lemma irqhandler_simp[simp]:
    (case gen_invocation_type label of IRQIssueIRQHandler \<Rightarrow> b | _ \<Rightarrow> c) = c"
   by (clarsimp split: gen_invocation_labels.splits)
 
-lemma decode_irq_control_corres:
+lemma decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp)) (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
