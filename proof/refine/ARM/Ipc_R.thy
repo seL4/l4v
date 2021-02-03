@@ -3102,7 +3102,7 @@ lemma completeSignal_corres:
   done
 
 
-lemma do_nbrecv_failed_transfer_corres:
+lemma doNBRecvFailedTransfer_corres:
   "corres dc (tcb_at thread)
             (tcb_at' thread)
             (do_nbrecv_failed_transfer thread)
@@ -3151,7 +3151,7 @@ lemma receive_ipc_corres:
                      apply (simp add: ep_relation_def)
                     apply simp
                    apply wp+
-                 apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
+                 apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres, simp)
                  apply simp
                 apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
                valid_tcb_state_def st_tcb_at_tcb_at)
@@ -3232,7 +3232,7 @@ lemma receive_ipc_corres:
                    apply (simp add: ep_relation_def)
                   apply simp
                  apply wp+
-               apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
+               apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres, simp)
                apply simp
               apply (clarsimp simp: valid_tcb_state_def)
              apply (clarsimp simp add: valid_tcb_state'_def)
@@ -3282,7 +3282,7 @@ lemma receive_signal_corres:
               apply (simp add: ntfn_relation_def)
              apply simp
             apply wp+
-          apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp+)
+          apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres, simp+)
        \<comment> \<open>WaitingNtfn\<close>
        apply (simp add: ntfn_relation_def)
        apply (rule corres_guard_imp)
@@ -3293,7 +3293,7 @@ lemma receive_signal_corres:
             apply simp
            apply wp+
          apply (rule corres_guard_imp)
-           apply (rule do_nbrecv_failed_transfer_corres, simp+)
+           apply (rule doNBRecvFailedTransfer_corres, simp+)
       \<comment> \<open>ActiveNtfn\<close>
       apply (simp add: ntfn_relation_def)
       apply (rule corres_guard_imp)
