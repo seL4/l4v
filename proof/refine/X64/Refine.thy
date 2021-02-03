@@ -728,7 +728,7 @@ definition
                           (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running' s) \<and>
                           0 < ksDomainTime s \<and> valid_domain_list' s}"
 
-lemma check_active_irq_corres':
+lemma checkActiveIRQ_corres':
   "corres (=) \<top> \<top> (check_active_irq) (checkActiveIRQ)"
   apply (simp add: check_active_irq_def checkActiveIRQ_def)
   apply (rule corres_guard_imp)
@@ -738,7 +738,7 @@ lemma check_active_irq_corres':
      apply (wp | simp )+
   done
 
-lemma check_active_irq_corres:
+lemma checkActiveIRQ_corres:
   "corres (=)
     (invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
@@ -746,7 +746,7 @@ lemma check_active_irq_corres:
       and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' and (ct_running' or ct_idle'))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
-    apply (rule check_active_irq_corres', auto)
+    apply (rule checkActiveIRQ_corres', auto)
   done
 
 lemma check_active_irq_corres_just_running:
@@ -758,7 +758,7 @@ lemma check_active_irq_corres_just_running:
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
-    apply (rule check_active_irq_corres', auto)
+    apply (rule checkActiveIRQ_corres', auto)
   done
 
 lemma check_active_irq_corres_just_idle:
@@ -770,7 +770,7 @@ lemma check_active_irq_corres_just_idle:
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
-    apply (rule check_active_irq_corres', auto)
+    apply (rule checkActiveIRQ_corres', auto)
   done
 
 lemma checkActiveIRQ_invs':
@@ -909,7 +909,7 @@ lemma ckernel_invariant:
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
      apply (rule checkActiveIRQ_valid_objs')
-    apply (rule valid_corres_combined[OF check_active_irq_invs check_active_irq_corres])
+    apply (rule valid_corres_combined[OF check_active_irq_invs checkActiveIRQ_corres])
     apply (rule checkActiveIRQ_invs'[THEN hoare_weaken_pre])
     apply clarsimp
      apply (fastforce simp: ex_abs_def)
@@ -974,18 +974,18 @@ lemma fw_sim_A_H:
 
    apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: check_active_irq_H_def check_active_irq_A_def)
-    apply (rule rev_mp, rule check_active_irq_corres)
+    apply (rule rev_mp, rule checkActiveIRQ_corres)
     apply (clarsimp simp: corres_underlying_def)
     apply fastforce
 
    apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: check_active_irq_H_def check_active_irq_A_def)
-    apply (rule rev_mp, rule check_active_irq_corres)
+    apply (rule rev_mp, rule checkActiveIRQ_corres)
     apply (clarsimp simp: corres_underlying_def)
     apply fastforce
 
    apply (clarsimp simp: check_active_irq_H_def check_active_irq_A_def)
-   apply (rule rev_mp, rule check_active_irq_corres)
+   apply (rule rev_mp, rule checkActiveIRQ_corres)
    apply (clarsimp simp: corres_underlying_def)
     apply fastforce
 
