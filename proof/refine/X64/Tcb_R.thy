@@ -2321,7 +2321,7 @@ lemma cap_CNode_case_throw:
      = (doE unlessE (isCNodeCap cap) (throw x); m odE)"
   by (cases cap, simp_all add: isCap_simps unlessE_def)
 
-lemma decode_set_space_corres:
+lemma decodeSetSpace_corres:
   notes if_cong [cong]
   shows
  "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
@@ -2477,7 +2477,7 @@ lemma decode_tcb_conf_corres:
       priorityBits_def)
   apply (rule corres_guard_imp)
   apply (rule corres_splitEE [OF _ decodeSetIPCBuffer_corres])
-         apply (rule corres_splitEE [OF _ decode_set_space_corres])
+         apply (rule corres_splitEE [OF _ decodeSetSpace_corres])
               apply (rule_tac F="is_thread_control set_params" in corres_gen_asm)
               apply (rule_tac F="is_thread_control set_space" in corres_gen_asm)
   apply (rule_tac F="tcThreadCapSlot setSpace = cte_map slot" in corres_gen_asm2)
@@ -2639,7 +2639,7 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decodeSetMCPriority_corres]
              corres_guard_imp[OF decodeSetSchedParams_corres]
              corres_guard_imp[OF decodeSetIPCBuffer_corres]
-             corres_guard_imp[OF decode_set_space_corres]
+             corres_guard_imp[OF decodeSetSpace_corres]
              corres_guard_imp[OF decode_bind_notification_corres]
              corres_guard_imp[OF decode_unbind_notification_corres]
              corres_guard_imp[OF decode_set_tls_base_corres],
