@@ -926,7 +926,7 @@ proof -
     done
 qed
 
-lemma vppi_event_corres:
+lemma vppiEvent_corres:
   "corres dc einvs
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
     (vppi_event irq) (vppiEvent irq)"
@@ -1004,7 +1004,7 @@ lemma handle_reserved_irq_corres[corres]:
                         irq_vppi_event_index_def non_kernel_IRQs_def IRQ_def irqVGICMaintenance_def
                         irqVTimerEvent_def)
   apply (rule conjI; clarsimp)
-   apply (rule corres_guard_imp, rule vppi_event_corres)
+   apply (rule corres_guard_imp, rule vppiEvent_corres)
      apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
   apply (rule conjI; clarsimp)
    apply (rule corres_guard_imp)
