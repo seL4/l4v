@@ -218,7 +218,7 @@ crunch ksCurThread[wp]: invalidateASIDEntry, flushSpace "\<lambda>s. P (ksCurThr
 crunch obj_at'[wp]: invalidateASIDEntry, flushSpace "obj_at' P p"
 
 lemmas flush_space_corres_args[corres] =
-  flush_space_corres[@lift_corres_args]
+  flushSpace_corres[@lift_corres_args]
 
 lemmas invalidate_asid_entry_corres_args[corres] =
   invalidate_asid_entry_corres[@lift_corres_args]
@@ -260,7 +260,7 @@ lemma delete_asid_corresb:
          continue (* function application *)
          continue (* corresK_when *)
          continue (* split *)
-             continue (* flush_space_corres *)
+             continue (* flushSpace_corres *)
             continue (* K_bind *)
             continue (* K_bind *)
             continue (* split *)

@@ -536,7 +536,7 @@ lemma handleVMFault_corres:
    apply simp+
   done
 
-lemma flush_space_corres:
+lemma flushSpace_corres:
   "corres dc
           (K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
            and valid_asid_map and valid_vspace_objs
@@ -858,7 +858,7 @@ lemma delete_asid_corres:
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv')
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast)
-        apply (rule corres_split [OF _ flush_space_corres[where pd=pd]])
+        apply (rule corres_split [OF _ flushSpace_corres[where pd=pd]])
           apply (rule corres_split [OF _ invalidate_asid_entry_corres[where pd=pd]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
@@ -962,7 +962,7 @@ lemma delete_asid_pool_corres:
                  apply (clarsimp simp: ucast_ucast_low_bits)
                 apply simp
                 apply (rule_tac pd1="the (pool (ucast xa))"
-                          in corres_split [OF _ flush_space_corres])
+                          in corres_split [OF _ flushSpace_corres])
                   apply (rule_tac pd="the (pool (ucast xa))"
                              in invalidate_asid_entry_corres)
                  apply wp
