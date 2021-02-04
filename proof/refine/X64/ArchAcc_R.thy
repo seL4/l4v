@@ -1244,7 +1244,7 @@ lemma pdpt_at_lift:
 lemmas checkPDPTAt_corres[corresK] =
   corres_stateAssert_implied_frame[OF pdpt_at_lift, folded checkPDPTAt_def]
 
-lemma lookup_pdpt_slot_corres:
+lemma lookupPDPTSlot_corres:
   "corres (lfr \<oplus> (=))
           (pspace_aligned and valid_vspace_objs and page_map_l4_at pml4
           and (\<exists>\<rhd>pml4) and
@@ -1304,7 +1304,7 @@ lemma lookup_pd_slot_corres:
           (lookup_pd_slot pml4 vptr) (lookupPDSlot pml4 vptr)"
   apply (simp add: lookup_pd_slot_def lookupPDSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookup_pdpt_slot_corres])
+    apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
          prefer 2
@@ -1545,7 +1545,7 @@ lemma createMappingEntries_corres:
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
       apply (rule corres_lookup_error)
-      apply (rule lookup_pdpt_slot_corres)
+      apply (rule lookupPDPTSlot_corres)
      apply wp+
    apply clarsimp
   apply simp

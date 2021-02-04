@@ -714,7 +714,7 @@ lemma unmapPage_corres:
                              simp_del: dc_simp)+
                          | wp (once) hoare_drop_imps)+)[10]
         apply (rule corres_guard_imp)
-          apply (rule corres_split_strengthen_ftE[OF lookup_pdpt_slot_corres])
+          apply (rule corres_split_strengthen_ftE[OF lookupPDPTSlot_corres])
             apply (simp del: dc_simp)
             apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
@@ -1226,7 +1226,7 @@ lemma unmap_pd_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookup_pdpt_slot_corres])
+        apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
           apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
             apply (rule corres_splitEE[where r'=dc])
                prefer 2

@@ -783,7 +783,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
        apply (rule corres_splitEE)
           prefer 2
           apply (rule corres_lookup_error)
-          apply (rule lookup_pdpt_slot_corres)
+          apply (rule lookupPDPTSlot_corres)
          apply (rule corres_splitEE)
             prefer 2
             apply simp
