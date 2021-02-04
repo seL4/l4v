@@ -2038,7 +2038,7 @@ lemma obj_refs_Master:
   by (clarsimp simp: isCap_simps
               split: cap_relation_split_asm arch_cap.split_asm)
 
-lemma final_cap_corres':
+lemma isFinalCapability_corres':
   "final_matters' (cteCap cte) \<Longrightarrow>
    corres (=) (invs and cte_wp_at ((=) cap) ptr)
                (invs' and cte_wp_at' ((=) cte) (cte_map ptr))
@@ -2123,14 +2123,14 @@ lemma final_cap_corres':
   by (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps arch_gen_obj_refs_def
                  split: cap.split_asm)
 
-lemma final_cap_corres:
+lemma isFinalCapability_corres:
   "corres (\<lambda>rv rv'. final_matters' (cteCap cte) \<longrightarrow> rv = rv')
           (invs and cte_wp_at ((=) cap) ptr)
           (invs' and cte_wp_at' ((=) cte) (cte_map ptr))
        (is_final_cap cap) (isFinalCapability cte)"
   apply (cases "final_matters' (cteCap cte)")
    apply simp
-   apply (erule final_cap_corres')
+   apply (erule isFinalCapability_corres')
   apply (subst bind_return[symmetric],
          rule corres_symb_exec_r)
      apply (rule corres_no_failI)
@@ -3540,7 +3540,7 @@ lemma cap_delete_one_corres:
       apply (rule_tac F="can_fast_finalise cap" in corres_gen_asm)
       apply (rule corres_if)
         apply fastforce
-       apply (rule corres_split [OF _ final_cap_corres[where ptr=ptr]])
+       apply (rule corres_split [OF _ isFinalCapability_corres[where ptr=ptr]])
          apply (simp add: split_def bind_assoc [THEN sym])
          apply (rule corres_split [OF _ fast_finalise_corres[where sl=ptr]])
               apply (rule emptySlot_corres)

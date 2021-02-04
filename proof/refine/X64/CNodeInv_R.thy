@@ -7144,7 +7144,7 @@ next
                 simp add: returnOk_def)
         apply (rule spec_corres_splitE')
            apply simp
-           apply (rule final_cap_corres[where ptr=slot])
+           apply (rule isFinalCapability_corres[where ptr=slot])
           apply (rule spec_corres_splitE')
              apply simp
              apply (rule finalise_cap_corres[where sl=slot])

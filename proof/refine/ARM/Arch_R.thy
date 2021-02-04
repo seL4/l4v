@@ -1066,7 +1066,7 @@ shows
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                in corres_gen_asm2)
-        apply (rule corres_split[OF _ final_cap_corres[where ptr=slot]])
+        apply (rule corres_split[OF _ isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres)

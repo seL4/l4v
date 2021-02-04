@@ -2298,7 +2298,7 @@ lemma slotCapLongRunningDelete_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])
       apply (auto split: cap_relation_split_asm arch_cap.split_asm
-                 intro!: corres_rel_imp [OF final_cap_corres[where ptr=ptr]]
+                 intro!: corres_rel_imp [OF isFinalCapability_corres[where ptr=ptr]]
                    simp: liftM_def[symmetric] final_matters'_def
                          long_running_delete_def
                          longRunningDelete_def isCap_simps)[1]
