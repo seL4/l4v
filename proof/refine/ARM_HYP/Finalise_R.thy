@@ -1475,7 +1475,7 @@ lemma deletedIRQHandler_corres:
   apply (simp add: irq_state_relation_def)
   done
 
-lemma arch_post_cap_deletion_corres:
+lemma arch_postCapDeletion_corres:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (ARM_HYP_H.postCapDeletion cap')"
   by (corressimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
 
@@ -1483,7 +1483,7 @@ lemma post_cap_deletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
    apply (corressimp corres: deletedIRQHandler_corres)
-  by (corressimp corres: arch_post_cap_deletion_corres)
+  by (corressimp corres: arch_postCapDeletion_corres)
 
 lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"
