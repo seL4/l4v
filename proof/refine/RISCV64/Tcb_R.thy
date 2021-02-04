@@ -43,7 +43,7 @@ lemma activateThread_corres:
          apply (rule corres_guard_imp)
            apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
              apply (rule corres_split_nor [OF _ asUser_setNextPC_corres])
-               apply (rule sts_corres)
+               apply (rule setThreadState_corres)
                apply (simp | wp weak_sch_act_wf_lift_linear)+
           apply (clarsimp simp: st_tcb_at_tcb_at invs_distinct)
          apply fastforce
@@ -210,7 +210,7 @@ lemma restart_corres:
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
       apply (rule corres_split_nor [OF _ cancelIPC_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
-          apply (rule corres_split_nor [OF _ sts_corres])
+          apply (rule corres_split_nor [OF _ setThreadState_corres])
              apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
               apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
                               sts_valid_queues sts_st_tcb'

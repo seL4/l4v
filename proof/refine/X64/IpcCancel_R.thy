@@ -185,7 +185,7 @@ lemma blocked_cancel_ipc_corres:
         apply simp
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ set_ep_corres])
-             apply (rule sts_corres)
+             apply (rule setThreadState_corres)
              apply simp
             apply (simp add: ep_relation_def)
            apply (simp add: valid_tcb_state_def pred_conj_def)
@@ -208,7 +208,7 @@ lemma blocked_cancel_ipc_corres:
        apply clarsimp
        apply (rule corres_guard_imp)
          apply (rule corres_split [OF _ set_ep_corres])
-            apply (rule sts_corres)
+            apply (rule setThreadState_corres)
             apply simp
            apply (simp add: ep_relation_def)
           apply (wp)+
@@ -233,7 +233,7 @@ lemma blocked_cancel_ipc_corres:
        apply simp
        apply (rule corres_guard_imp)
          apply (rule corres_split [OF _ set_ep_corres])
-            apply (rule sts_corres)
+            apply (rule setThreadState_corres)
             apply simp
            apply (simp add: ep_relation_def)
           apply (simp add: valid_tcb_state_def pred_conj_def)
@@ -256,7 +256,7 @@ lemma blocked_cancel_ipc_corres:
       apply clarsimp
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ set_ep_corres])
-           apply (rule sts_corres)
+           apply (rule setThreadState_corres)
            apply simp
           apply (simp add: ep_relation_def)
          apply (wp)+
@@ -311,13 +311,13 @@ lemma ac_corres:
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
         apply (rule corres_split [OF _ set_ntfn_corres])
-           apply (rule sts_corres)
+           apply (rule setThreadState_corres)
            apply simp
           apply (simp add: ntfn_relation_def)
          apply (wp)+
        apply (simp add: list_case_If del: dc_simp)
        apply (rule corres_split [OF _ set_ntfn_corres])
-          apply (rule sts_corres)
+          apply (rule setThreadState_corres)
           apply simp
          apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
         apply (wp)+
@@ -1410,7 +1410,7 @@ lemma (in delete_one) suspend_corres:
     apply (rule corres_split_nor [OF _ cancelIPC_corres])
       apply (rule corres_split [OF _ getThreadState_corres])
         apply (rule corres_split_nor)
-           apply (rule corres_split_nor [OF _ sts_corres])
+           apply (rule corres_split_nor [OF _ setThreadState_corres])
               apply (rule tcbSchedDequeue_corres')
              apply wpsimp
             apply wp
@@ -1957,7 +1957,7 @@ lemma ep_cancel_corres_helper:
       apply (rule corres_guard_imp)
         apply (subst bind_return_unit, rule corres_split [OF tcbSchedEnqueue_corres])
           apply simp
-          apply (rule corres_guard_imp [OF sts_corres])
+          apply (rule corres_guard_imp [OF setThreadState_corres])
             apply simp
            apply (simp add: valid_tcb_state_def)
           apply simp
@@ -2674,7 +2674,7 @@ lemma cancelBadgedSends_corres:
                apply (rule_tac F="\<exists>pl. st = Structures_A.BlockedOnSend epptr pl"
                             in corres_gen_asm)
                apply (clarsimp simp: o_def dc_def[symmetric] liftM_def)
-               apply (rule corres_split [OF _ sts_corres])
+               apply (rule corres_split [OF _ setThreadState_corres])
                   apply (rule corres_split[OF _ tcbSchedEnqueue_corres])
                     apply (rule corres_trivial)
                     apply simp

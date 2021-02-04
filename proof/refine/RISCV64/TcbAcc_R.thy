@@ -2140,7 +2140,7 @@ lemma thread_get_isRunnable_corres:
   apply (case_tac "tcb_state x",simp_all)
   done
 
-lemma sts_corres:
+lemma setThreadState_corres:
   "thread_state_relation ts ts' \<Longrightarrow>
    corres dc
           (tcb_at t and pspace_aligned and pspace_distinct)

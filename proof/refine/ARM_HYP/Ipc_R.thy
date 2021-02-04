@@ -2216,7 +2216,7 @@ lemma doReplyTransfer_corres:
       apply (case_tac rv, simp_all add: fault_rel_optionation_def bind_assoc)[1]
        apply (rule corres_split [OF _ doIPCTransfer_corres])
          apply (rule corres_split [OF _ cap_delete_one_corres])
-           apply (rule corres_split [OF _ sts_corres])
+           apply (rule corres_split [OF _ setThreadState_corres])
               apply (rule possibleSwitchTo_corres)
              apply simp
             apply (wp set_thread_state_runnable_valid_sched set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_st_tcb' sts_valid_queues sts_valid_objs' delete_one_tcbDomain_obj_at'
@@ -2261,13 +2261,13 @@ lemma doReplyTransfer_corres:
                                    in corres_guard_imp)
                        apply (case_tac rvb, simp_all)[1]
                         apply (rule corres_guard_imp)
-                          apply (rule corres_split [OF _ sts_corres])
+                          apply (rule corres_split [OF _ setThreadState_corres])
                       apply (fold dc_def, rule possibleSwitchTo_corres)
                                apply simp
                               apply (wp static_imp_wp static_imp_conj_wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
                                         sts_st_tcb' sts_valid_queues | simp | force simp: valid_sched_def valid_sched_action_def valid_tcb_state'_def)+
                        apply (rule corres_guard_imp)
-                      apply (rule sts_corres)
+                      apply (rule setThreadState_corres)
                       apply (simp_all)[20]
                    apply (clarsimp simp add: tcb_relation_def fault_rel_optionation_def
                                              tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
@@ -2378,7 +2378,7 @@ lemma setupCallerCap_corres:
         apply blast
        apply (rule no_fail_pre, wp)
        apply (clarsimp simp: cte_wp_at_ctes_of)
-      apply (rule sts_corres)
+      apply (rule setThreadState_corres)
       apply (simp split: option.split)
      apply (wp sts_valid_pspace_hangers
                  | simp add: cte_wp_at_ctes_of)+
@@ -2504,7 +2504,7 @@ proof -
        apply (case_tac rv)
          apply (simp add: ep_relation_def)
          apply (rule corres_guard_imp)
-           apply (rule corres_split [OF _ sts_corres])
+           apply (rule corres_split [OF _ setThreadState_corres])
               apply (rule set_ep_corres)
               apply (simp add: ep_relation_def)
              apply (simp add: fault_rel_optionation_def)
@@ -2514,7 +2514,7 @@ proof -
          \<comment> \<open>concludes IdleEP if bl branch\<close>
         apply (simp add: ep_relation_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ sts_corres])
+          apply (rule corres_split [OF _ setThreadState_corres])
              apply (rule set_ep_corres)
              apply (simp add: ep_relation_def)
             apply (simp add: fault_rel_optionation_def)
@@ -2539,7 +2539,7 @@ proof -
               apply (clarsimp simp: case_bool_If  case_option_If if3_fold
                           simp del: dc_simp split del: if_split cong: if_cong)
               apply (rule corres_split [OF _ doIPCTransfer_corres])
-                apply (rule corres_split [OF _ sts_corres])
+                apply (rule corres_split [OF _ setThreadState_corres])
                    apply (rule corres_split [OF _ possibleSwitchTo_corres])
                        apply (fold when_def)[1]
 
@@ -2548,7 +2548,7 @@ proof -
                         apply (simp add: when_def dc_def[symmetric] split del: if_split)
                         apply (rule corres_if2, simp)
                          apply (rule setupCallerCap_corres)
-                        apply (rule sts_corres, simp)
+                        apply (rule setThreadState_corres, simp)
                        apply (rule corres_trivial)
                        apply (simp add: when_def dc_def[symmetric] split del: if_split)
                       apply (simp split del: if_split add: if_apply_def2)
@@ -2619,7 +2619,7 @@ proof -
              apply (clarsimp simp: isReceive_def case_bool_If
                         split del: if_split cong: if_cong)
              apply (rule corres_split [OF _ doIPCTransfer_corres])
-               apply (rule corres_split [OF _ sts_corres])
+               apply (rule corres_split [OF _ setThreadState_corres])
                    apply (rule possibleSwitchTo_corres)
                   apply (simp add: if_apply_def2)
                   apply (wp hoare_drop_imps)
@@ -2705,7 +2705,7 @@ lemma sendSignal_corres:
                           split: Structures_A.thread_state.splits
                                  Structures_H.thread_state.splits)
          apply (rule corres_split[OF _ cancelIPC_corres])
-           apply (rule corres_split[OF _ sts_corres])
+           apply (rule corres_split[OF _ setThreadState_corres])
               apply (simp add: badgeRegister_def badge_register_def)
               apply (rule corres_split[OF _ asUser_setRegister_corres])
                 apply (rule possibleSwitchTo_corres)
@@ -2738,7 +2738,7 @@ lemma sendSignal_corres:
       apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
       apply (simp add: list_case_helper split del: if_split)
       apply (rule corres_split [OF _ set_ntfn_corres])
-         apply (rule corres_split [OF _ sts_corres])
+         apply (rule corres_split [OF _ setThreadState_corres])
             apply (simp add: badgeRegister_def badge_register_def)
             apply (rule corres_split [OF _ asUser_setRegister_corres])
               apply (rule possibleSwitchTo_corres)
@@ -2769,7 +2769,7 @@ lemma sendSignal_corres:
      apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
      apply (simp add: list_case_helper)
      apply (rule corres_split [OF _ set_ntfn_corres])
-        apply (rule corres_split [OF _ sts_corres])
+        apply (rule corres_split [OF _ setThreadState_corres])
            apply (simp add: badgeRegister_def badge_register_def)
            apply (rule corres_split [OF _ asUser_setRegister_corres])
              apply (rule possibleSwitchTo_corres)
@@ -3285,7 +3285,7 @@ lemma receiveIPC_corres:
                apply (simp add: ep_relation_def)
                apply (rule corres_guard_imp)
                  apply (case_tac isBlocking; simp)
-                  apply (rule corres_split [OF _ sts_corres])
+                  apply (rule corres_split [OF _ setThreadState_corres])
                      apply (rule set_ep_corres)
                      apply (simp add: ep_relation_def)
                     apply simp
@@ -3333,10 +3333,10 @@ lemma receiveIPC_corres:
                                         and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                              in corres_guard_imp [OF corres_if])
                     apply (simp add: fault_rel_optionation_def)
-                   apply (rule corres_if2 [OF _ setupCallerCap_corres sts_corres])
+                   apply (rule corres_if2 [OF _ setupCallerCap_corres setThreadState_corres])
                            apply simp
                           apply simp
-                         apply (rule corres_split [OF _ sts_corres])
+                         apply (rule corres_split [OF _ setThreadState_corres])
                             apply (rule possibleSwitchTo_corres)
                            apply simp
                           apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
@@ -3366,7 +3366,7 @@ lemma receiveIPC_corres:
              apply (simp add: ep_relation_def)
              apply (rule_tac corres_guard_imp)
                apply (case_tac isBlocking; simp)
-                apply (rule corres_split [OF _ sts_corres])
+                apply (rule corres_split [OF _ setThreadState_corres])
                    apply (rule set_ep_corres)
                    apply (simp add: ep_relation_def)
                   apply simp
@@ -3416,7 +3416,7 @@ lemma receiveSignal_corres:
         apply (simp add: ntfn_relation_def)
         apply (rule corres_guard_imp)
           apply (case_tac isBlocking; simp)
-           apply (rule corres_split [OF _ sts_corres])
+           apply (rule corres_split [OF _ setThreadState_corres])
               apply (rule set_ntfn_corres)
               apply (simp add: ntfn_relation_def)
              apply simp
@@ -3426,7 +3426,7 @@ lemma receiveSignal_corres:
        apply (simp add: ntfn_relation_def)
        apply (rule corres_guard_imp)
          apply (case_tac isBlocking; simp)
-          apply (rule corres_split[OF _ sts_corres])
+          apply (rule corres_split[OF _ setThreadState_corres])
              apply (rule set_ntfn_corres)
              apply (simp add: ntfn_relation_def)
             apply simp
@@ -3529,7 +3529,7 @@ lemma handleDoubleFault_corres:
   apply (simp add: handle_double_fault_def handleDoubleFault_def)
   apply (rule corres_guard_imp)
     apply (subst bind_return [symmetric],
-           rule corres_split' [OF sts_corres])
+           rule corres_split' [OF setThreadState_corres])
        apply simp
       apply (rule corres_noop2)
          apply (simp add: exs_valid_def return_def)
