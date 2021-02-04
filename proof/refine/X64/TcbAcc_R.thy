@@ -1928,7 +1928,7 @@ definition
 where
  "weak_sch_act_wf sa = (\<lambda>s. \<forall>t. sa = SwitchToThread t \<longrightarrow> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 
-lemma set_sa_corres:
+lemma setSchedulerAction_corres:
   "sched_act_relation sa sa'
     \<Longrightarrow> corres dc \<top> \<top> (set_scheduler_action sa) (setSchedulerAction sa')"
   apply (simp add: setSchedulerAction_def set_scheduler_action_def)
@@ -1951,7 +1951,7 @@ lemma rescheduleRequired_corres:
     apply (rule corres_split[OF _ get_sa_corres])
       apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
               and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split[where r'=dc])
-         apply (rule set_sa_corres)
+         apply (rule setSchedulerAction_corres)
          apply simp
         apply (case_tac action)
           apply simp
@@ -1971,7 +1971,7 @@ lemma rescheduleRequired_corres_simple:
   apply (simp add: rescheduleRequired_def)
   apply (rule corres_symb_exec_r[where Q'="\<lambda>rv s. rv = ResumeCurrentThread \<or> rv = ChooseNewThread"])
      apply (rule corres_symb_exec_r)
-        apply (rule set_sa_corres, simp)
+        apply (rule setSchedulerAction_corres, simp)
        apply (wp | clarsimp split: scheduler_action.split)+
     apply (wp | clarsimp simp: sch_act_simple_def split: scheduler_action.split)+
   apply (simp add: getSchedulerAction_def)

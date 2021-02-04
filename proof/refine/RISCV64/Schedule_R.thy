@@ -1826,7 +1826,7 @@ lemma scheduleChooseNewThread_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ getDomainTime_corres], clarsimp)
       apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
-        apply (rule set_sa_corres)
+        apply (rule setSchedulerAction_corres)
         apply (wp | simp)+
     apply (wp | simp add: getDomainTime_def)+
    apply auto
@@ -1891,7 +1891,7 @@ lemma schedule_corres:
                                apply (rule corres_if, simp)
                                 apply (rule corres_split[OF _ tcbSchedEnqueue_corres])
                                   apply (simp, fold dc_def)
-                                  apply (rule corres_split[OF _ set_sa_corres])
+                                  apply (rule corres_split[OF _ setSchedulerAction_corres])
                                      apply (rule scheduleChooseNewThread_corres, simp)
 
                                    apply (wp | simp)+
@@ -1907,7 +1907,7 @@ lemma schedule_corres:
 
                                 apply (rule corres_split[OF _ tcbSchedAppend_corres])
                                   apply (simp, fold dc_def)
-                                  apply (rule corres_split[OF _ set_sa_corres])
+                                  apply (rule corres_split[OF _ setSchedulerAction_corres])
                                      apply (rule scheduleChooseNewThread_corres, simp)
 
                                    apply (wp | simp)+
@@ -1920,7 +1920,7 @@ lemma schedule_corres:
                                 apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
 
                                apply (rule corres_split[OF _ guarded_switch_to_corres], simp)
-                                 apply (rule set_sa_corres[simplified dc_def])
+                                 apply (rule setSchedulerAction_corres[simplified dc_def])
                                  apply (wp | simp)+
 
                              (* isHighestPrio *)
@@ -2347,7 +2347,7 @@ lemma possibleSwitchTo_corres:
             apply (rule corres_split[OF _ rescheduleRequired_corres])
               apply (rule tcbSchedEnqueue_corres)
              apply (wp rescheduleRequired_valid_queues'_weak)+
-           apply (rule set_sa_corres, simp)
+           apply (rule setSchedulerAction_corres, simp)
           apply (wpsimp simp: etcb_relation_def if_apply_def2
                         wp: hoare_drop_imp[where f="ethread_get a b" for a b])+
       apply (wp hoare_drop_imps)[1]
