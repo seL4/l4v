@@ -994,7 +994,7 @@ lemma setEndpoint_corres [corres]:
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
-lemma set_ntfn_corres [corres]:
+lemma setNotification_corres [corres]:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"

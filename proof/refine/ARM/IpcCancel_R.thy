@@ -310,13 +310,13 @@ lemma ac_corres:
        apply (rename_tac list)
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
-        apply (rule corres_split [OF _ set_ntfn_corres])
+        apply (rule corres_split [OF _ setNotification_corres])
            apply (rule setThreadState_corres)
            apply simp
           apply (simp add: ntfn_relation_def)
          apply (wp)+
        apply (simp add: list_case_If del: dc_simp)
-       apply (rule corres_split [OF _ set_ntfn_corres])
+       apply (rule corres_split [OF _ setNotification_corres])
           apply (rule setThreadState_corres)
           apply simp
          apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
@@ -2002,7 +2002,7 @@ lemma cancelAllSignals_corres:
     apply simp+
   apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ set_ntfn_corres])
+    apply (rule corres_split [OF _ setNotification_corres])
        apply (rule corres_split [OF rescheduleRequired_corres])
          apply (rule ep_cancel_corres_helper)
         apply (wp mapM_x_wp'[where 'b="det_ext state"]

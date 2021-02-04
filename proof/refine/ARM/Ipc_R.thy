@@ -2566,7 +2566,7 @@ lemma sendSignal_corres:
     apply (clarsimp simp add: ntfn_relation_def)
     apply (case_tac "ntfnBoundTCB nTFN")
      apply clarsimp
-     apply (rule corres_guard_imp[OF set_ntfn_corres])
+     apply (rule corres_guard_imp[OF setNotification_corres])
        apply (clarsimp simp add: ntfn_relation_def)+
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ getThreadState_corres])
@@ -2591,7 +2591,7 @@ lemma sendSignal_corres:
           apply wp
          apply (clarsimp simp: invs'_def valid_state'_def sch_act_wf_weak
                                valid_tcb_state'_def)
-        apply (rule set_ntfn_corres)
+        apply (rule setNotification_corres)
         apply (clarsimp simp add: ntfn_relation_def)
        apply (wp gts_wp gts_wp' | clarsimp)+
      apply (auto simp: valid_ntfn_def receive_blocked_def valid_sched_def invs_cur
@@ -2608,7 +2608,7 @@ lemma sendSignal_corres:
     apply (rule corres_guard_imp)
       apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
       apply (simp add: list_case_helper split del: if_split)
-      apply (rule corres_split [OF _ set_ntfn_corres])
+      apply (rule corres_split [OF _ setNotification_corres])
          apply (rule corres_split [OF _ setThreadState_corres])
             apply (simp add: badgeRegister_def badge_register_def)
             apply (rule corres_split [OF _ asUser_setRegister_corres])
@@ -2639,7 +2639,7 @@ lemma sendSignal_corres:
    apply (rule corres_guard_imp)
      apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
      apply (simp add: list_case_helper)
-     apply (rule corres_split [OF _ set_ntfn_corres])
+     apply (rule corres_split [OF _ setNotification_corres])
         apply (rule corres_split [OF _ setThreadState_corres])
            apply (simp add: badgeRegister_def badge_register_def)
            apply (rule corres_split [OF _ asUser_setRegister_corres])
@@ -2664,7 +2664,7 @@ lemma sendSignal_corres:
   \<comment> \<open>ActiveNtfn\<close>
   apply (clarsimp simp add: ntfn_relation_def)
   apply (rule corres_guard_imp)
-    apply (rule set_ntfn_corres)
+    apply (rule setNotification_corres)
     apply (simp add: ntfn_relation_def combine_ntfn_badges_def
                      combine_ntfn_msgs_def)
    apply (simp add: invs_def valid_state_def valid_ntfn_def)
@@ -3093,7 +3093,7 @@ lemma completeSignal_corres:
                        split: ntfn.splits Structures_H.notification.splits)+
       apply (rule corres_guard2_imp)
        apply (simp add: badgeRegister_def badge_register_def)
-       apply (rule corres_split[OF set_ntfn_corres asUser_setRegister_corres])
+       apply (rule corres_split[OF setNotification_corres asUser_setRegister_corres])
          apply (clarsimp simp: ntfn_relation_def)
         apply (wp set_simple_ko_valid_objs get_simple_ko_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
   apply (clarsimp simp: valid_pspace'_def)
@@ -3278,7 +3278,7 @@ lemma receiveSignal_corres:
         apply (rule corres_guard_imp)
           apply (case_tac isBlocking; simp)
            apply (rule corres_split [OF _ setThreadState_corres])
-              apply (rule set_ntfn_corres)
+              apply (rule setNotification_corres)
               apply (simp add: ntfn_relation_def)
              apply simp
             apply wp+
@@ -3288,7 +3288,7 @@ lemma receiveSignal_corres:
        apply (rule corres_guard_imp)
          apply (case_tac isBlocking; simp)
           apply (rule corres_split[OF _ setThreadState_corres])
-             apply (rule set_ntfn_corres)
+             apply (rule setNotification_corres)
              apply (simp add: ntfn_relation_def)
             apply simp
            apply wp+
@@ -3299,7 +3299,7 @@ lemma receiveSignal_corres:
       apply (rule corres_guard_imp)
         apply (simp add: badgeRegister_def badge_register_def)
         apply (rule corres_split [OF _ asUser_setRegister_corres])
-          apply (rule set_ntfn_corres)
+          apply (rule setNotification_corres)
           apply (simp add: ntfn_relation_def)
          apply wp+
        apply (fastforce simp: invs_def valid_state_def valid_pspace_def
