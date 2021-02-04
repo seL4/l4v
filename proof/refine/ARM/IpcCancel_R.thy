@@ -171,7 +171,7 @@ lemma blocked_cancel_ipc_corres:
             od)"
   apply (simp add: blocked_cancel_ipc_def gbep_ret)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ep_corres])
+    apply (rule corres_split [OF _ getEndpoint_corres])
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
       apply (rule corres_assert_assume[rotated])
        apply (clarsimp split: endpoint.splits)
@@ -1971,7 +1971,7 @@ proof -
   show ?thesis
     apply (simp add: cancel_all_ipc_def cancelAllIPC_def)
     apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ep_sp'])
-     apply (rule corres_guard_imp [OF get_ep_corres], simp+)
+     apply (rule corres_guard_imp [OF getEndpoint_corres], simp+)
     apply (case_tac epa, simp_all add: ep_relation_def
                                        get_ep_queue_def)
      apply (rule corres_guard_imp [OF P]
@@ -2600,7 +2600,7 @@ lemma cancelBadgedSends_corres:
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
   apply (simp add: cancel_badged_sends_def cancelBadgedSends_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ep_corres get_simple_ko_sp get_ep_sp',
+    apply (rule corres_split [OF _ getEndpoint_corres get_simple_ko_sp get_ep_sp',
                                  where Q="invs and valid_sched" and Q'=invs'])
     apply simp_all
   apply (case_tac ep, simp_all add: ep_relation_def)

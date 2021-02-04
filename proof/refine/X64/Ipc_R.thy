@@ -2478,7 +2478,7 @@ proof -
   apply (case_tac bl)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ get_ep_corres,
+     apply (rule corres_split [OF _ getEndpoint_corres,
               where
               R="\<lambda>rv. einvs and st_tcb_at active t and ep_at ep and
                       valid_ep rv and obj_at (\<lambda>ob. ob = Endpoint rv) ep
@@ -2569,7 +2569,7 @@ proof -
       apply wp+
     apply (clarsimp simp: ep_at_def2)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ep_corres,
+    apply (rule corres_split [OF _ getEndpoint_corres,
              where
              R="\<lambda>rv. einvs and st_tcb_at active t and ep_at ep and
                      valid_ep rv and obj_at (\<lambda>k. k = Endpoint rv) ep"
@@ -3230,7 +3230,7 @@ lemma receiveIPC_corres:
   apply (rename_tac word1 word2 right)
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_ep_corres])
+    apply (rule corres_split [OF _ getEndpoint_corres])
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ getBoundNotification_corres])
           apply (rule_tac r'="ntfn_relation" in corres_split)

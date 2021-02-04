@@ -877,7 +877,7 @@ lemma no_fail_getEndpoint [wp]:
    apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
-lemma get_ep_corres [corres]:
+lemma getEndpoint_corres [corres]:
   "corres ep_relation (ep_at ptr) (ep_at' ptr)
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
