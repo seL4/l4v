@@ -211,11 +211,11 @@ declare word_div_1 [simp]
 declare word_minus_one_le [simp]
 declare word64_minus_one_le [simp]
 
-lemma load_word_offs_corres':
+lemma loadWordUser_corres':
   "\<lbrakk> y < unat max_ipc_words; y' = of_nat y * 8 \<rbrakk> \<Longrightarrow>
   corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + y'))"
   apply simp
-  apply (erule load_word_offs_corres)
+  apply (erule loadWordUser_corres)
   done
 
 declare loadWordUser_inv [wp]
@@ -1430,7 +1430,7 @@ lemma lookupExtraCaps_corres:
            apply simp
           apply simp
           apply (rule corres_guard_imp)
-            apply (rule load_word_offs_corres')
+            apply (rule loadWordUser_corres')
              apply (clarsimp simp: buffer_cptr_index_def msg_max_length_def
                                    max_ipc_words valid_message_info_def
                                    msg_max_extra_caps_def word_le_nat_alt)

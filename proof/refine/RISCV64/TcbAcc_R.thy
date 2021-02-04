@@ -3275,7 +3275,7 @@ proof -
   thus ?thesis by (simp add: in_user_frame_def)
 qed
 
-lemma load_word_offs_corres:
+lemma loadWordUser_corres:
   assumes y: "y < unat max_ipc_words"
   shows "corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + of_nat y * 8))"
   unfolding loadWordUser_def
@@ -3399,7 +3399,7 @@ lemma get_mrs_corres:
               apply simp
              apply simp
             apply (simp add: word_size wordSize_def wordBits_def)
-            apply (rule load_word_offs_corres)
+            apply (rule loadWordUser_corres)
             apply simp
            apply wp+
          apply simp
@@ -3599,7 +3599,7 @@ proof -
               apply (rule corres_split_eqr)
                apply (rule store_word_offs_corres)
                apply simp
-               apply (rule load_word_offs_corres)
+               apply (rule loadWordUser_corres)
                apply simp
               apply (wp hoare_vcg_all_lift | simp)+
            apply (clarsimp simp: upto_enum_def)
