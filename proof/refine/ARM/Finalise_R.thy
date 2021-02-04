@@ -3468,7 +3468,7 @@ lemma unbindNotification_corres:
                   split: option.splits)
   done
 
-lemma unbind_maybe_notification_corres:
+lemma unbindMaybeNotification_corres:
   "corres dc
       (invs and ntfn_at ntfnptr) (invs' and ntfn_at' ntfnptr)
       (unbind_maybe_notification ntfnptr)
@@ -3520,7 +3520,7 @@ lemma fast_finalise_corres:
    apply (simp add: valid_cap'_def)
   apply (clarsimp simp: final_matters'_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ unbind_maybe_notification_corres])
+    apply (rule corres_split[OF _ unbindMaybeNotification_corres])
          apply (rule cancelAllSignals_corres)
        apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps getNotification_wp
             | wpc)+
@@ -3586,7 +3586,7 @@ lemma finalise_cap_corres:
         apply (simp add: valid_cap'_def)
        apply (clarsimp simp add: final_matters'_def)
        apply (rule corres_guard_imp)
-         apply (rule corres_split[OF _ unbind_maybe_notification_corres])
+         apply (rule corres_split[OF _ unbindMaybeNotification_corres])
            apply (rule cancelAllSignals_corres)
           apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
         apply (clarsimp simp: valid_cap_def)
