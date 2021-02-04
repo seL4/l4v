@@ -149,7 +149,7 @@ lemma pac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        prefer 2
-       apply (erule detype_corres)
+       apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)

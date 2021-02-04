@@ -4224,7 +4224,7 @@ lemma reset_untyped_cap_corres:
                        split del: if_split cong: if_cong)
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
-       apply (rule corres_split[OF _ detype_corres])
+       apply (rule corres_split[OF _ deleteObjects_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
             apply (simp add: bits_of_def shiftL_nat)
