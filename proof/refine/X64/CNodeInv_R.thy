@@ -8873,7 +8873,7 @@ lemma corres_null_cap_update:
 
 declare corres_False' [simp]
 
-lemma inv_cnode_corres:
+lemma invokeCNode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
    corres (dc \<oplus> dc)
      (einvs and simple_sched_action and valid_cnode_inv ci)

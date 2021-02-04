@@ -454,7 +454,7 @@ lemma performInvocation_corres:
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [OF _ inv_cnode_corres])
+       apply (rule corres_splitEE [OF _ invokeCNode_corres])
           apply (rule corres_trivial, simp add: returnOk_def)
          apply assumption
         apply wp+
