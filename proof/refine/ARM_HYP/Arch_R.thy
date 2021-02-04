@@ -518,7 +518,7 @@ lemma flush_type_map:
                         ARM_HYP_H.isPageFlushLabel_def ARM_HYP_H.isPDFlushLabel_def
                  split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
-lemma resolve_vaddr_corres:
+lemma resolveVAddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
   corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
@@ -1225,7 +1225,7 @@ shows
         apply (rule corres_split[OF _ _ resolve_vaddr_valid_mapping_size])
           prefer 2
           apply clarsimp
-          apply (rule resolve_vaddr_corres[THEN corres_gen_asm])
+          apply (rule resolveVAddr_corres[THEN corres_gen_asm])
            apply simp
           apply (clarsimp simp: not_le)
          apply (case_tac rva)
