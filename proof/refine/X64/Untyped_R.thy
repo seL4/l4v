@@ -4321,7 +4321,7 @@ lemma ex_tupI:
 context begin interpretation Arch . (*FIXME: arch_split*)
 (* mostly stuff about PPtr/fromPPtr, which seems pretty soft *)
 
-lemma reset_untyped_cap_corres:
+lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
     (invs and valid_untyped_inv_wcap ui
@@ -5000,7 +5000,7 @@ lemma inv_untyped_corres':
         apply (rule corres_split_norE)
            prefer 2
            apply (rule corres_whenE, simp)
-            apply (rule reset_untyped_cap_corres[where ui=ui and ui'=ui'])
+            apply (rule resetUntypedCap_corres[where ui=ui and ui'=ui'])
             apply (simp add: ui ui')
            apply simp
           apply simp
