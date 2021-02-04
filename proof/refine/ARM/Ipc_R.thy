@@ -20,7 +20,7 @@ lemma getMessageInfo_corres: "corres ((=) \<circ> message_info_map)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
     apply (simp add: ARM_H.msgInfoRegister_def
              ARM.msgInfoRegister_def ARM_A.msg_info_register_def)
-    apply (rule corres_split_eqr [OF _ user_getreg_corres])
+    apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
   done

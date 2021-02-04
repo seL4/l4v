@@ -1201,7 +1201,7 @@ lemma handleInvocation_corres:
       apply (rule corres_split [OF _ getMessageInfo_corres])
         apply clarsimp
         apply (simp add: liftM_def cap_register_def capRegister_def)
-        apply (rule corres_split_eqr [OF _ user_getreg_corres])
+        apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
           apply (rule syscall_corres)
                   apply (rule hinv_corres_assist, simp)
                  apply (clarsimp simp add: when_def)
@@ -1486,7 +1486,7 @@ lemma handleRecv_isBlocking_corres':
              cong: if_cong cap.case_cong capability.case_cong bool.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
-      apply (rule corres_split_eqr [OF _ user_getreg_corres])
+      apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
           apply (rule corres_cap_fault)

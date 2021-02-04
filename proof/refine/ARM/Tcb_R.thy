@@ -412,7 +412,7 @@ proof -
         apply (rule corres_modify')
          apply simp
         apply simp
-       apply (rule user_getreg_corres)
+       apply (rule asUser_getRegister_corres)
        apply (simp | wp)+
     done
   have R: "\<And>src src' des des' xs ys. \<lbrakk> src = src'; des = des'; xs = ys \<rbrakk> \<Longrightarrow>

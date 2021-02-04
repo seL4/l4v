@@ -127,7 +127,7 @@ lemma handleVMFault_corres:
        apply (rule corres_split_eqrE)
           apply (cases fault; simp)
          apply simp
-         apply (rule user_getreg_corres)
+         apply (rule asUser_getRegister_corres)
         apply (simp, wp as_user_typ_at)
        apply (simp, wp asUser_typ_ats)
       apply simp

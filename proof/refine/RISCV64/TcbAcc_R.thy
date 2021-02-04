@@ -1497,7 +1497,7 @@ proof -
     done
 qed
 
-lemma user_getreg_corres:
+lemma asUser_getRegister_corres:
  "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
         (as_user t (getRegister r)) (asUser t (getRegister r))"
   apply (rule corres_as_user')
@@ -3561,7 +3561,7 @@ proof -
              (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
     apply (rule_tac S=Id in corres_mapM, simp+)
-        apply (rule corres_split_eqr [OF user_setreg_corres user_getreg_corres])
+        apply (rule corres_split_eqr [OF user_setreg_corres asUser_getRegister_corres])
         apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
         done
 
