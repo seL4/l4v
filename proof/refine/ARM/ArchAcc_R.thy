@@ -1164,7 +1164,7 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply auto
   done
 
-lemma ensure_safe_mapping_corres [corres]:
+lemma ensureSafeMapping_corres [corres]:
   "mapping_map m m' \<Longrightarrow>
   corres (ser \<oplus> dc) (valid_mapping_entries m)
                     (pspace_aligned' and pspace_distinct'

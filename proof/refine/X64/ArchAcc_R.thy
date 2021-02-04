@@ -1599,7 +1599,7 @@ lemma createMappingEntries_wf:
      apply (wp | simp split: vmpage_entry.splits)+
   by auto
 
-lemma ensure_safe_mapping_corres:
+lemma ensureSafeMapping_corres:
   notes mapping_map_simps = mapping_map_def page_entry_map_def page_entry_ptr_map_def attr_mask_def
   shows
   "\<lbrakk>mapping_map m m'\<rbrakk> \<Longrightarrow>

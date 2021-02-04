@@ -983,7 +983,7 @@ shows
              apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
                apply (rule corres_splitEE'[OF createMappingEntries_corres]
                       ; simp add: mask_vmrights_corres vm_attributes_corres)
-                 apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)
+                 apply (rule corres_splitEE'[OF ensureSafeMapping_corres], assumption)
                    apply (rule corres_returnOkTT)
                    \<comment> \<open>program split done, now prove resulting preconditions and Hoare triples\<close>
                    apply (simp add: archinv_relation_def page_invocation_map_def)
