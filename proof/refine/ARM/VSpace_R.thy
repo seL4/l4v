@@ -1410,7 +1410,7 @@ lemma unmapPageTable_corres:
     apply (rule corres_split_eqr [OF _ pageTableMapped_corres])
       apply (simp add: case_option_If2 split del: if_split)
       apply (rule corres_if2[OF refl])
-       apply (rule corres_split [OF _ store_pde_corres'])
+       apply (rule corres_split [OF _ storePDE_corres'])
           apply (rule corres_split[OF _ corres_machine_op])
              apply (rule flushTable_corres)
             apply (rule corres_Id, rule refl, simp)
@@ -1586,7 +1586,7 @@ lemma unmapPage_corres:
            apply (rule corres_guard_imp)
              apply (rule corres_split_strengthen_ftE[OF checkMappingPPtr_corres])
                apply simp
-               apply (rule corres_split[OF _ store_pde_corres'])
+               apply (rule corres_split[OF _ storePDE_corres'])
                   apply (rule corres_machine_op)
                   apply (rule corres_Id, rule refl, simp)
                   apply (rule no_fail_cleanByVA_PoU)
@@ -1616,7 +1616,7 @@ lemma unmapPage_corres:
                     prefer 5
                     apply (rule order_refl)
                    apply (clarsimp simp: superSectionPDEOffsets_def pdeBits_def)
-                   apply (rule corres_guard_imp, rule store_pde_corres')
+                   apply (rule corres_guard_imp, rule storePDE_corres')
                      apply (simp add:pde_relation_aligned_def)+
                     apply clarsimp
                     apply (erule (2) pde_at_aligned_vptr)
@@ -1899,7 +1899,7 @@ lemma corres_store_pde_with_invalid_tail:
       apply simp
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule store_pde_corres')
+       apply (rule storePDE_corres')
        apply (drule bspec)
         apply simp
        apply (simp add:pde_relation_aligned_def)
@@ -2188,7 +2188,7 @@ proof -
          apply (clarsimp simp: mapM_Cons bind_assoc split del:if_split)
          apply (rule corres_guard_imp)
            apply (rule corres_split[OF _ pdeCheckIfMapped_corres])
-             apply (rule corres_split[OF _ store_pde_corres'])
+             apply (rule corres_split[OF _ storePDE_corres'])
                 apply (rule corres_split[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
                    apply (rule corres_split[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
                         apply (clarsimp simp: when_def)
@@ -2408,7 +2408,7 @@ lemma performPageTableInvocation_corres:
       apply (rule corres_split [OF _ updateCap_same_master])
          prefer 2
          apply assumption
-        apply (rule corres_split [OF _ store_pde_corres'])
+        apply (rule corres_split [OF _ storePDE_corres'])
            apply (rule corres_machine_op)
            apply (rule corres_Id, rule refl, simp)
            apply (rule no_fail_cleanByVA_PoU)
