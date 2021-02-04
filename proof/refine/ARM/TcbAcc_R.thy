@@ -3249,7 +3249,7 @@ lemma loadWordUser_corres:
   apply (simp add: valid_ipc_buffer_ptr'_def msg_align_bits)
   done
 
-lemma store_word_offs_corres:
+lemma storeWordUser_corres:
   assumes y: "y < unat max_ipc_words"
   shows "corres dc (in_user_frame a) (valid_ipc_buffer_ptr' a)
                    (store_word_offs a y w) (storeWordUser (a + of_nat y * 4) w)"
@@ -3443,7 +3443,7 @@ proof -
          apply (rule corres_split_nor, rule corres_trivial, clarsimp simp: min.commute)
           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
                         in zipWithM_x_corres)
-              apply (fastforce intro: store_word_offs_corres)
+              apply (fastforce intro: storeWordUser_corres)
              apply wp+
             apply (clarsimp simp add: S msgMaxLength_def msg_max_length_def set_zip)
             apply (simp add: wordSize_def wordBits_def word_size max_ipc_words
@@ -3523,7 +3523,7 @@ proof -
            apply (rule corres_trivial, simp)
           apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}" in corres_mapM, simp+)
               apply (rule corres_split_eqr)
-               apply (rule store_word_offs_corres)
+               apply (rule storeWordUser_corres)
                apply simp
                apply (rule loadWordUser_corres)
                apply simp

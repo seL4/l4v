@@ -253,7 +253,7 @@ lemma corres_set_extra_badge:
           (\<lambda>_. msg_max_length + 2 + n < unat max_ipc_words))
          (set_extra_badge buffer b n) (setExtraBadge buffer b' n)"
   apply (rule corres_gen_asm2)
-  apply (drule store_word_offs_corres [where a=buffer and w=b])
+  apply (drule storeWordUser_corres [where a=buffer and w=b])
   apply (simp add: set_extra_badge_def setExtraBadge_def buffer_cptr_index_def
                    bufferCPtrOffset_def Let_def)
   apply (simp add: word_size_def wordSize_def wordBits_def
