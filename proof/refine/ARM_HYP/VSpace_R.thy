@@ -2276,7 +2276,7 @@ definition
    | ARM_A.flush_type.CleanInvalidate \<Rightarrow> ARM_HYP_H.flush_type.CleanInvalidate
    | ARM_A.flush_type.Unify \<Rightarrow> ARM_HYP_H.flush_type.Unify"
 
-lemma do_flush_corres:
+lemma doFlush_corres:
   "corres_underlying Id nf nf' dc \<top> \<top>
              (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
   apply (simp add: do_flush_def doFlush_def)
@@ -2313,7 +2313,7 @@ lemma perform_page_directory_corres:
      apply (rule corres_split [OF _ setVMRootForFlush_corres])
        apply (rule corres_split [OF _ corres_machine_op])
           prefer 2
-          apply (rule do_flush_corres)
+          apply (rule doFlush_corres)
          apply (rule corres_when, simp)
          apply (rule corres_split [OF _ gct_corres])
            apply clarsimp
@@ -2985,7 +2985,7 @@ proof -
      apply (rule corres_split [OF _ setVMRootForFlush_corres])
        apply (rule corres_split [OF _ corres_machine_op])
           prefer 2
-          apply (rule do_flush_corres)
+          apply (rule doFlush_corres)
          apply (rule corres_when, simp)
          apply (rule corres_split [OF _ gct_corres])
            apply simp
