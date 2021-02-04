@@ -688,7 +688,7 @@ lemma flushSpace_corres:
   apply simp
   done
 
-lemma invalidate_tlb_by_asid_corres:
+lemma invalidateTLBByASID_corres:
   "corres dc
           (K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
            and valid_asid_map and valid_vspace_objs
@@ -727,7 +727,7 @@ lemma invalidate_tlb_by_asid_corres_ex:
           (invalidate_tlb_by_asid asid) (invalidateTLBByASID asid)"
   apply (rule corres_name_pre, clarsimp)
   apply (rule corres_guard_imp)
-    apply (rule_tac pd=pd in invalidate_tlb_by_asid_corres)
+    apply (rule_tac pd=pd in invalidateTLBByASID_corres)
    apply simp+
   done
 
