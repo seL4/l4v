@@ -863,7 +863,7 @@ lemma same_refs_vs_cap_ref_eq:
   apply (case_tac pte; clarsimp)
   done
 
-lemma perform_page_corres:
+lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   notes mapping_map_simps = mapping_map_def page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
   shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)

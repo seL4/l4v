@@ -2109,7 +2109,7 @@ lemma same_refs_vs_cap_ref_eq:
    apply (all \<open>rename_tac pte slots p; case_tac slots; clarsimp\<close>)
   done
 
-lemma perform_page_corres:
+lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))

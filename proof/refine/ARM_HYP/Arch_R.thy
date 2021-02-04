@@ -1383,7 +1383,7 @@ lemma arch_performInvocation_corres:
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
   note invocation_corres =  perform_page_table_corres performPageDirectoryInvocation_corres
-                            performASIDControlInvocation_corres pap_corres perform_page_corres performARMVCPUInvocation_corres
+                            performASIDControlInvocation_corres pap_corres performPageInvocation_corres performARMVCPUInvocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp

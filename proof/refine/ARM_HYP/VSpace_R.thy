@@ -2770,7 +2770,7 @@ lemma valid_slots_duplicated'_length_Inr:
            dest: is_aligned_no_overflow'
           split: pde.splits)
 
-lemma perform_page_corres:
+lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
