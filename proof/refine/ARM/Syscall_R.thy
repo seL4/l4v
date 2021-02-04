@@ -1240,7 +1240,7 @@ lemma handleInvocation_corres:
               apply (rule corres_split [OF _ sts_corres])
                  apply (rule corres_splitEE [OF _ performInvocation_corres])
                      apply simp
-                     apply (rule corres_split [OF _ gts_corres])
+                     apply (rule corres_split [OF _ getThreadState_corres])
                        apply (rename_tac state state')
                        apply (case_tac state, simp_all)[1]
                        apply (fold dc_def)[1]

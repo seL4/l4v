@@ -34,7 +34,7 @@ lemma activateThread_corres:
                                 \<and> invs s \<and> st_tcb_at ((=) ts) thread s"
                   and R'="\<lambda>ts s. valid_tcb_state' ts s \<and> (idle' ts \<or> runnable' ts)
                                 \<and> invs' s \<and> st_tcb_at' (\<lambda>ts'. ts' = ts) thread s"
-                  in  corres_split [OF _ gts_corres])
+                  in  corres_split [OF _ getThreadState_corres])
         apply (rule_tac F="idle rv \<or> runnable rv" in corres_req, simp)
         apply (rule_tac F="idle' rv' \<or> runnable' rv'" in corres_req, simp)
         apply (case_tac rv, simp_all add:
@@ -206,7 +206,7 @@ lemma restart_corres:
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gts_corres])
+    apply (rule corres_split [OF _ getThreadState_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
       apply (rule corres_split_nor [OF _ cancelIPC_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
@@ -540,7 +540,7 @@ lemma isRunnable_corres:
   apply (simp add: isRunnable_def)
   apply (subst bind_return[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gts_corres])
+    apply (rule corres_split[OF _ getThreadState_corres])
       apply (case_tac rv, clarsimp+)
      apply (wp hoare_TrueI)+
    apply auto

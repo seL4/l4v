@@ -2171,7 +2171,7 @@ lemma doReplyTransfer_corres:
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
   apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
    apply (rule corres_guard_imp)
-     apply (rule gts_corres, (clarsimp simp add: st_tcb_at_tcb_at)+)
+     apply (rule getThreadState_corres, (clarsimp simp add: st_tcb_at_tcb_at)+)
   apply (rule_tac F = "awaiting_reply state" in corres_req)
    apply (clarsimp simp add: st_tcb_at_def obj_at_def is_tcb)
    apply (fastforce simp: invs_def valid_state_def intro: has_reply_cap_cte_wpD
@@ -2517,7 +2517,7 @@ proof -
        apply (rule corres_guard_imp)
          apply (rule corres_split [OF _ set_ep_corres])
             apply (simp add: isReceive_def split del:if_split)
-            apply (rule corres_split [OF _ gts_corres])
+            apply (rule corres_split [OF _ getThreadState_corres])
               apply (rule_tac
                      F="\<exists>data. recv_state = Structures_A.BlockedOnReceive ep data"
                      in corres_gen_asm)
@@ -2597,7 +2597,7 @@ proof -
       apply (clarsimp split del: if_split)
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ set_ep_corres])
-           apply (rule corres_split [OF _ gts_corres])
+           apply (rule corres_split [OF _ getThreadState_corres])
              apply (rule_tac
                 F="\<exists>data. recv_state = Structures_A.BlockedOnReceive ep data"
                     in corres_gen_asm)
@@ -2683,7 +2683,7 @@ lemma sendSignal_corres:
      apply (rule corres_guard_imp[OF set_ntfn_corres])
        apply (clarsimp simp add: ntfn_relation_def)+
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ gts_corres])
+      apply (rule corres_split[OF _ getThreadState_corres])
         apply (rule corres_if)
           apply (fastforce simp: receive_blocked_def receiveBlocked_def
                                  thread_state_relation_def
@@ -3270,7 +3270,7 @@ lemma receiveIPC_corres:
        apply (case_tac list, simp_all split del: if_split)[1]
        apply (rule corres_guard_imp)
          apply (rule corres_split [OF _ set_ep_corres])
-            apply (rule corres_split [OF _ gts_corres])
+            apply (rule corres_split [OF _ getThreadState_corres])
               apply (rule_tac
                        F="\<exists>data.
                            sender_state =

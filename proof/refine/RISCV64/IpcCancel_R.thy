@@ -589,7 +589,7 @@ lemma (in delete_one) cancelIPC_corres:
       (cancel_ipc t) (cancelIPC t)"
   apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gts_corres])
+    apply (rule corres_split [OF _ getThreadState_corres])
       apply (rule_tac P="einvs and st_tcb_at ((=) state) t" and
                       P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
       apply (case_tac state, simp_all add: isTS_defs list_case_If)[1]
@@ -1377,7 +1377,7 @@ lemma (in delete_one) suspend_corres:
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor [OF _ cancelIPC_corres])
-      apply (rule corres_split [OF _ gts_corres])
+      apply (rule corres_split [OF _ getThreadState_corres])
         apply (rule corres_split_nor)
            apply (rule corres_split_nor [OF _ sts_corres])
               apply (rule tcbSchedDequeue_corres')
@@ -2586,7 +2586,7 @@ lemma cancelBadgedSends_corres:
                 simp_all add: list_all2_refl)[1]
            apply (clarsimp simp: liftM_def[symmetric] o_def)
            apply (rule corres_guard_imp)
-             apply (rule corres_split [OF _ gts_corres])
+             apply (rule corres_split [OF _ getThreadState_corres])
                apply (rule_tac F="\<exists>pl. st = Structures_A.BlockedOnSend epptr pl"
                             in corres_gen_asm)
                apply (clarsimp simp: o_def dc_def[symmetric] liftM_def)

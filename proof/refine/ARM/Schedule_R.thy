@@ -1555,7 +1555,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
   unfolding guarded_switch_to_def isRunnable_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gts_corres])
+    apply (rule corres_split[OF _ getThreadState_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switchToThread_corres)

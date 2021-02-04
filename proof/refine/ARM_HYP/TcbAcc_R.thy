@@ -1681,7 +1681,7 @@ lemma asUser_setRegister_corres:
   apply (rule corres_modify'; simp)
   done
 
-lemma gts_corres:
+lemma getThreadState_corres:
   "corres thread_state_relation (tcb_at t) (tcb_at' t)
           (get_thread_state t) (getThreadState t)"
   apply (simp add: get_thread_state_def getThreadState_def)

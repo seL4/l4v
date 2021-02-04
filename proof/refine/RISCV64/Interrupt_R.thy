@@ -669,7 +669,7 @@ lemma timerTick_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ gct_corres])
         apply simp
-        apply (rule corres_split [OF _ gts_corres])
+        apply (rule corres_split [OF _ getThreadState_corres])
           apply (rename_tac state state')
           apply (rule corres_split[where r' = dc ])
              apply simp
