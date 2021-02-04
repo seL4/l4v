@@ -227,7 +227,7 @@ lemma decodeInvocation_corres:
   \<comment> \<open>Arch\<close>
   apply (clarsimp simp only: cap_relation.simps)
   apply (clarsimp simp add: isCap_defs Let_def o_def)
-  apply (rule corres_guard_imp [OF dec_arch_inv_corres])
+  apply (rule corres_guard_imp [OF arch_decodeInvocation_corres])
       apply (simp_all add: list_all2_map2 list_all2_map1)+
   done
 

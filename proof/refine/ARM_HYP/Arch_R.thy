@@ -892,7 +892,7 @@ lemma corres_splitEE':
 lemmas vmsz_aligned_imp_aligned
     = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)

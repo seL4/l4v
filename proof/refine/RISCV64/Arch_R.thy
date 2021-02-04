@@ -756,7 +756,7 @@ lemma decode_page_table_inv_corres:
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)

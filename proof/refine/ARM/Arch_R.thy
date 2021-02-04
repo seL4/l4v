@@ -782,7 +782,7 @@ lemma corres_splitEE':
 lemmas whenE_throwError_corres_terminal =
   whenE_throwError_corres[where m="returnOk ()" and m'="returnOk ()", OF _ _ corres_returnOkTT, simplified]
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)

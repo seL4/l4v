@@ -1103,7 +1103,7 @@ lemma decode_ioport_control_inv_corres:
   apply (clarsimp simp: isCap_simps split: invocation_label.splits arch_invocation_label.splits)
   done
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
