@@ -1333,7 +1333,7 @@ definition
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPDPointerTableCap cap)"
 
-lemma unmap_pdpt_corres:
+lemma unmapPDPT_corres:
   assumes "asid' = asid" "vptr' = vptr" "pd' = pd"
   notes liftE_get_pml4e_corres = get_pml4e_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
@@ -1429,7 +1429,7 @@ lemma performPDPTInvocation_corres:
          apply (clarsimp simp: is_pdpt_cap_def update_map_data_def)
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
-       apply (rule corres_split [OF _ unmap_pdpt_corres[OF refl refl refl]])
+       apply (rule corres_split [OF _ unmapPDPT_corres[OF refl refl refl]])
          apply (rule clear_pdpt_corres[simplified bit_simps bitSimps, simplified])
         apply wp+
       apply (rule corres_trivial, simp)

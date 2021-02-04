@@ -3631,7 +3631,7 @@ lemma arch_finaliseCap_corres:
      apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
                        vmsz_aligned_def
                 elim!: is_aligned_weaken)[2]
-   apply (rule corres_guard_imp, rule unmap_pdpt_corres[OF refl refl refl])
+   apply (rule corres_guard_imp, rule unmapPDPT_corres[OF refl refl refl])
     apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
                       vmsz_aligned_def
                elim!: is_aligned_weaken)[2]
