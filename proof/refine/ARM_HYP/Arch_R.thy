@@ -1094,7 +1094,7 @@ shows
                           OF corres_lookup_error[OF find_pd_for_asid_corres[where pd=undefined, OF refl]]])
               apply (rule whenE_throwError_corres; simp)
               apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
-                apply (rule corres_splitEE'[OF create_mapping_entries_corres]
+                apply (rule corres_splitEE'[OF createMappingEntries_corres]
                        ; simp add: mask_vmrights_corres vm_attributes_corres)
                   apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)
                     apply (rule corres_returnOkTT)

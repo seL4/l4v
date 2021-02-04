@@ -1125,7 +1125,7 @@ definition
 where
   "mapping_map \<equiv> pte_relation' \<otimes> (=) \<oplus> pde_relation' \<otimes> (=)"
 
-lemma create_mapping_entries_corres [corres]:
+lemma createMappingEntries_corres [corres]:
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
      attrib' = vmattributes_map attrib; base = base'; vptr = vptr'; pgsz = pgsz'; pd = pd' \<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> mapping_map)

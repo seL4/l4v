@@ -1507,7 +1507,7 @@ definition
 where
   "mapping_map \<equiv> page_entry_map \<otimes> page_entry_ptr_map"
 
-lemma create_mapping_entries_corres:
+lemma createMappingEntries_corres:
   notes mapping_map_simps = page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
   shows
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
