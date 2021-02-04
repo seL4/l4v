@@ -695,7 +695,7 @@ lemma unmapPage_corres:
                    apply simp
                    apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                    apply simp
-                   apply (rule store_pte_corres')
+                   apply (rule storePTE_corres')
                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
                                   simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
@@ -897,7 +897,7 @@ proof -
           apply (rule corres_name_pre)
           apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
           apply (rule corres_guard_imp)
-            apply (rule corres_split[OF _ store_pte_corres'])
+            apply (rule corres_split[OF _ storePTE_corres'])
                apply (rule corres_split[where r'="(=)"])
                   apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
@@ -1040,7 +1040,7 @@ lemma clear_page_table_corres:
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
-      apply (rule corres_guard_imp, rule store_pte_corres')
+      apply (rule corres_guard_imp, rule storePTE_corres')
         apply (simp add:pte_relation_def)+
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)

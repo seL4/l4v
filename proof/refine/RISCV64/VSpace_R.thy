@@ -366,7 +366,7 @@ lemma unmapPageTable_corres:
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
         apply (rule corres_split_eqrE[OF _ lookupPTFromLevel_corres[OF _ refl]])
            apply (simp add: liftE_bindE)
-           apply (rule corres_split[OF _ store_pte_corres])
+           apply (rule corres_split[OF _ storePTE_corres])
               apply simp
               apply (rule corres_machine_op)
               apply (rule corres_Id; simp)
@@ -431,7 +431,7 @@ lemma unmapPage_corres:
              apply fastforce
             apply (rule corres_splitEE[OF _ checkMappingPPtr_corres]; assumption?)
               apply (simp add: liftE_bindE)
-              apply (rule corres_split[OF _ store_pte_corres])
+              apply (rule corres_split[OF _ storePTE_corres])
                  apply simp
                  apply (rule corres_machine_op, rule corres_Id, rule refl; simp)
                 apply simp
@@ -537,7 +537,7 @@ lemma performPageInvocation_corres:
      apply (simp add: perform_pg_inv_map_def)
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF _ updateCap_same_master])
-          apply (rule corres_split[OF _ store_pte_corres])
+          apply (rule corres_split[OF _ storePTE_corres])
              apply (rule corres_machine_op, rule corres_Id; simp)
             apply assumption
            apply wpsimp+
@@ -626,7 +626,7 @@ lemma clear_page_table_corres:
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> pspace_distinct s"
                and Q'="\<lambda>_. \<top>"
                 in corres_mapM_list_all2, simp_all)
-      apply (rule corres_guard_imp, rule store_pte_corres)
+      apply (rule corres_guard_imp, rule storePTE_corres)
         apply (simp add:pte_relation_def)+
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)
@@ -659,7 +659,7 @@ lemma performPageTableInvocation_corres:
      apply (rule corres_split [OF _ updateCap_same_master])
         prefer 2
         apply simp
-       apply (rule corres_split [OF _ store_pte_corres])
+       apply (rule corres_split [OF _ storePTE_corres])
           apply (rule corres_machine_op, rule corres_Id; simp)
          apply assumption
         apply wpsimp+

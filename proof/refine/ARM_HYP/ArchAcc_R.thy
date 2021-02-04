@@ -1056,7 +1056,7 @@ lemma storePDE_corres':
 lemma wordsFromPTEis2: "\<exists>a b . wordsFromPTE pte = [a , b]"
   by (cases pte ; clarsimp simp: wordsFromPTE_def tailM_def headM_def)
 
-lemma store_pte_corres [corres]:
+lemma storePTE_corres [corres]:
   "pte_relation_aligned (p>>pte_bits) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
@@ -1076,12 +1076,12 @@ lemma store_pte_corres [corres]:
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
-lemma store_pte_corres':
+lemma storePTE_corres':
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs)
             (pspace_aligned' and pspace_distinct')
             (store_pte p pte) (storePTE p pte')"
-  apply (rule stronger_corres_guard_imp, rule store_pte_corres)
+  apply (rule stronger_corres_guard_imp, rule storePTE_corres)
    apply auto
   done
 

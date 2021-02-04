@@ -958,7 +958,7 @@ lemma storePDE_corres':
    apply auto
   done
 
-lemma store_pte_corres:
+lemma storePTE_corres:
   "pte_relation' pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
@@ -976,13 +976,13 @@ lemma store_pte_corres:
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
-lemma store_pte_corres':
+lemma storePTE_corres':
   "pte_relation' pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs)
             (pspace_aligned' and pspace_distinct')
             (store_pte p pte) (storePTE p pte')"
   apply (rule stronger_corres_guard_imp,
-         erule store_pte_corres)
+         erule storePTE_corres)
    apply auto
   done
 

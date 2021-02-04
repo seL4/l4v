@@ -450,7 +450,7 @@ lemma set_pt_corres:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma store_pte_corres:
+lemma storePTE_corres:
   "pte_relation' pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
@@ -835,7 +835,7 @@ lemma corres_gets_global_pt [corres]:
   done
 
 lemmas get_pte_corres'[corres] = get_pte_corres[@lift_corres_args]
-lemmas store_pte_corres'[corres] = store_pte_corres[@lift_corres_args]
+lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   "corres dc (valid_global_arch_objs and pspace_aligned and pspace_distinct and pt_at pt)

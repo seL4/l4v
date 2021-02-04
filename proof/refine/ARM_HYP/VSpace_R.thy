@@ -2153,7 +2153,7 @@ lemma unmapPage_corres:
                  apply simp
                  apply (rule corres_splitEE[OF _ checkMappingPPtr_corres])
                    apply simp
-                   apply (rule corres_split [OF _ store_pte_corres'])
+                   apply (rule corres_split [OF _ storePTE_corres'])
                       apply (rule corres_machine_op)
                       apply (rule corres_Id, rule refl, simp)
                       apply (rule no_fail_cleanByVA_PoU)
@@ -2182,7 +2182,7 @@ lemma unmapPage_corres:
                       apply (rule_tac P="(\<lambda>s. \<forall>x\<in>set largePagePTEOffsets. pte_at (x + pa) s) and pspace_aligned and valid_etcbs"
                                      and P'="pspace_aligned' and pspace_distinct'"
                                      in corres_guard_imp)
-                      apply (rule store_pte_corres',  simp add:pte_relation_aligned_def)
+                      apply (rule storePTE_corres',  simp add:pte_relation_aligned_def)
                       apply clarsimp
                       apply clarsimp
                       apply (wp store_pte_typ_at hoare_vcg_const_Ball_lift | clarsimp | wp (once) hoare_drop_imps)+
@@ -2573,7 +2573,7 @@ lemma corres_store_pte_with_invalid_tail:
        apply simp
       apply clarsimp
       apply (rule corres_guard_imp)
-        apply (rule store_pte_corres')
+        apply (rule storePTE_corres')
         apply (drule bspec)
          apply simp
         apply (simp add:pte_relation_aligned_def addPTEOffset_def)
@@ -2805,7 +2805,7 @@ proof -
           apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
           apply (rule corres_guard_imp)
             apply (rule corres_split[OF _ pteCheckIfMapped_corres])
-              apply (rule corres_split[OF _ store_pte_corres'])
+              apply (rule corres_split[OF _ storePTE_corres'])
                  apply (rule corres_split[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
                      apply (rule corres_split[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
                           apply (clarsimp simp add: when_def)
@@ -3054,7 +3054,7 @@ lemma clear_page_table_corres:
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
-      apply (rule corres_guard_imp, rule store_pte_corres')
+      apply (rule corres_guard_imp, rule storePTE_corres')
         apply (simp add:pte_relation_aligned_def)+
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)
