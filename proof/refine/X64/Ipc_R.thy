@@ -459,7 +459,7 @@ next
          prefer 2
          apply (rule unifyFailure_discard2)
           apply (case_tac mi, clarsimp)
-         apply (rule derive_cap_corres)
+         apply (rule deriveCap_corres)
           apply (simp add: remove_rights_def)
          apply clarsimp
         apply (rule corres_split_norE)

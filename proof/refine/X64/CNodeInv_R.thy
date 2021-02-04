@@ -198,7 +198,7 @@ lemma decodeCNodeInvocation_corres:
                              prefer 2
                              apply (simp add: returnOk_def del: imp_disjL)
                              apply (rule conjI[rotated], rule impI)
-                              apply (rule derive_cap_corres)
+                              apply (rule deriveCap_corres)
                                apply (clarsimp simp: cap_relation_mask
                                                      cap_map_update_data
                                               split: option.split)

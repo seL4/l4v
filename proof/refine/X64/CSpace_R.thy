@@ -3471,7 +3471,7 @@ lemma cteInsert_invs:
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
   done
 
-lemma derive_cap_corres:
+lemma deriveCap_corres:
  "\<lbrakk>cap_relation c c'; cte = cte_map slot \<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> cap_relation)
          (cte_at slot)

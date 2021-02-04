@@ -2238,7 +2238,7 @@ lemma decodeSetIPCBuffer_corres:
              split del: if_split)
   apply (clarsimp simp add: returnOk_def newroot_rel_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ derive_cap_corres])
+    apply (rule corres_splitEE [OF _ deriveCap_corres])
         apply (simp add: o_def newroot_rel_def split_def dc_def[symmetric])
         apply (erule checkValidIPCBuffer_corres)
        apply (wp hoareE_TrueI | simp)+
@@ -2347,9 +2347,9 @@ lemma decodeSetSpace_corres:
               apply (simp(no_asm) add: split_def unlessE_throwError_returnOk
                                        bindE_assoc cap_CNode_case_throw
                             split del: if_split)
-              apply (rule corres_splitEE [OF _ derive_cap_corres])
+              apply (rule corres_splitEE [OF _ deriveCap_corres])
                   apply (rule corres_split_norE)
-                     apply (rule corres_splitEE [OF _ derive_cap_corres])
+                     apply (rule corres_splitEE [OF _ deriveCap_corres])
                          apply (rule corres_split_norE)
                             apply (rule corres_trivial)
                             apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps
