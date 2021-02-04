@@ -1306,7 +1306,7 @@ lemma archThreadSet_corres_vcpu_Some[corres]:
   apply (simp add: arch_tcb_relation_def)
   done
 
-lemma associate_vcpu_tcb_corres:
+lemma associateVCPUTCB_corres:
   "corres (=) (invs and vcpu_at v and tcb_at t)
                (invs' and vcpu_at' v and tcb_at' t)
                (do y \<leftarrow> associate_vcpu_tcb v t;
@@ -1365,7 +1365,7 @@ lemma invoke_vcpu_ack_vppi_corres:
 
 lemma perform_vcpu_invocation_corres:
   notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
-                     invokeVCPUWriteReg_corres associate_vcpu_tcb_corres
+                     invokeVCPUWriteReg_corres associateVCPUTCB_corres
                      invoke_vcpu_ack_vppi_corres
   shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
                        (invs' and ct_active' and valid_vcpuinv' (vcpu_invocation_map iv))
