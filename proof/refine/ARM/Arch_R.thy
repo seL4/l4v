@@ -122,7 +122,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i)
@@ -1173,7 +1173,7 @@ lemma inv_arch_corres:
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_guard_imp [OF pac_corres], rule refl)
+     apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)

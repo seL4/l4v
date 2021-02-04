@@ -121,7 +121,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i)
@@ -1383,7 +1383,7 @@ lemma inv_arch_corres:
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
   note invocation_corres =  perform_page_table_corres perform_page_directory_corres
-                            pac_corres pap_corres perform_page_corres perform_vcpu_invocation_corres
+                            performASIDControlInvocation_corres pap_corres perform_page_corres perform_vcpu_invocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp
