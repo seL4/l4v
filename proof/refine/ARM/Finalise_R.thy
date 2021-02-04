@@ -1506,7 +1506,7 @@ lemma clearUntypedFreeIndex_valid_pspace'[wp]:
    apply (wp | simp add: valid_mdb'_def)+
   done
 
-lemma empty_slot_corres:
+lemma emptySlot_corres:
   "cap_relation info info' \<Longrightarrow> corres dc (einvs and cte_at slot) (invs' and cte_at' (cte_map slot))
              (empty_slot slot info) (emptySlot (cte_map slot) info')"
   unfolding emptySlot_def empty_slot_def
@@ -3543,7 +3543,7 @@ lemma cap_delete_one_corres:
        apply (rule corres_split [OF _ final_cap_corres[where ptr=ptr]])
          apply (simp add: split_def bind_assoc [THEN sym])
          apply (rule corres_split [OF _ fast_finalise_corres[where sl=ptr]])
-              apply (rule empty_slot_corres)
+              apply (rule emptySlot_corres)
              apply simp+
           apply (wp hoare_drop_imps)+
         apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+

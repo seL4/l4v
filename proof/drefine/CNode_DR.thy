@@ -518,7 +518,7 @@ lemma delete_cap_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
       apply (clarsimp simp:bindE_assoc when_def)
-      apply (rule empty_slot_corres)
+      apply (rule emptySlot_corres)
      apply wp+
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)
@@ -547,7 +547,7 @@ lemma delete_cap_corres':
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
       apply (clarsimp simp:bindE_assoc when_def)
-      apply (rule empty_slot_corres)
+      apply (rule emptySlot_corres)
      apply wp+
     apply (rule validE_validE_R)
     apply (simp add:validE_def weak_valid_mdb_def)

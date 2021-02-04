@@ -7045,7 +7045,7 @@ proof (induct rule: rec_del.induct,
                                  whenE_liftE)
         apply (rule corres_when, simp)
         apply simp
-        apply (rule empty_slot_corres)
+        apply (rule emptySlot_corres)
        apply (wp rec_del_invs rec_del_valid_list rec_del_cte_at finaliseSlot_invs hoare_drop_imps
                  preemption_point_inv'
             | simp)+
