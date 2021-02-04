@@ -1420,7 +1420,7 @@ lemma arch_ioport_inv_case_simp:
   by (clarsimp simp: archinv_relation_def split: invocation.splits arch_invocation.splits)
 
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)

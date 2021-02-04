@@ -942,7 +942,7 @@ shows
   done
 
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)

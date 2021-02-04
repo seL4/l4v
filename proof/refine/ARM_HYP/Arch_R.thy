@@ -1375,7 +1375,7 @@ lemma performARMVCPUInvocation_corres:
      apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj')+
   done
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   assumes "archinv_relation ai ai'"
   shows   "corres (dc \<oplus> (=))
                   (einvs and ct_active and valid_arch_inv ai)

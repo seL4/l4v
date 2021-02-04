@@ -465,7 +465,7 @@ lemma performInvocation_corres:
    apply (rule corres_guard_imp, rule invokeIRQHandler_corres, simp+)
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule inv_arch_corres, assumption)
+    apply (rule arch_performInvocation_corres, assumption)
    apply (clarsimp+)[2]
   done
 
