@@ -1363,7 +1363,7 @@ lemma invokeVCPUAckVPPI_corres:
   by (corressimp corres: set_vcpu_corres getObject_vcpu_corres wp: get_vcpu_wp)
      (auto simp: vcpu_relation_def split: option.splits)
 
-lemma perform_vcpu_invocation_corres:
+lemma performARMVCPUInvocation_corres:
   notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
                      invokeVCPUWriteReg_corres associateVCPUTCB_corres
                      invokeVCPUAckVPPI_corres
@@ -1383,7 +1383,7 @@ lemma inv_arch_corres:
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
   note invocation_corres =  perform_page_table_corres perform_page_directory_corres
-                            performASIDControlInvocation_corres pap_corres perform_page_corres perform_vcpu_invocation_corres
+                            performASIDControlInvocation_corres pap_corres perform_page_corres performARMVCPUInvocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp
