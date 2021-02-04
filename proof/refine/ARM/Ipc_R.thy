@@ -1425,7 +1425,7 @@ lemma corres_liftE_lift:
   by simp
 
 lemmas corres_ipc_thread_helper =
-  corres_split_eqrE [OF _  corres_liftE_lift [OF gct_corres]]
+  corres_split_eqrE [OF _  corres_liftE_lift [OF getCurThread_corres]]
 
 lemmas corres_ipc_info_helper =
   corres_split_maprE [where f = message_info_map, OF _

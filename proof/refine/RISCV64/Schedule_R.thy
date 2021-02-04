@@ -1858,7 +1858,7 @@ lemma schedule_corres:
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
+    apply (rule corres_split[OF _ getCurThread_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
         apply (rule corres_split[OF _ getSchedulerAction_corres])
           apply (rule corres_split_sched_act,assumption)
             apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')

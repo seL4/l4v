@@ -8682,7 +8682,7 @@ lemma invokeCNode_corres:
    apply (rename_tac prod)
    apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps)
    apply (rule corres_guard_imp)
-     apply (rule corres_split [OF _ gct_corres])
+     apply (rule corres_split [OF _ getCurThread_corres])
         apply (subgoal_tac "thread + 2^cte_level_bits * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
          prefer 2
          apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def cte_level_bits_def objBits_defs)

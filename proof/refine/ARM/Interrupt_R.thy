@@ -676,7 +676,7 @@ lemma timerTick_corres:
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
   apply (rule corres_guard_imp)
-  apply (rule corres_split [OF _ gct_corres])
+  apply (rule corres_split [OF _ getCurThread_corres])
       apply simp
       apply (rule corres_split [OF _ getThreadState_corres])
         apply (rename_tac state state')

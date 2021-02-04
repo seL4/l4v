@@ -36,7 +36,7 @@ lemma kernel_entry_if_corres:
                       (kernel_entry_if event tc) (kernelEntry_if event tc)"
   apply (simp add: kernel_entry_if_def kernelEntry_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
+    apply (rule corres_split [OF _ getCurThread_corres])
       apply (rule corres_split)
          prefer 2
          apply simp
@@ -444,7 +444,7 @@ lemma corres_ex_abs_lift':
   apply fastforce
   done
 
-lemma gct_corres': "corres_underlying state_relation nf nf' (=) \<top> \<top> (gets cur_thread) getCurThread"
+lemma getCurThread_corres': "corres_underlying state_relation nf nf' (=) \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
 lemma user_mem'_corres':
@@ -843,7 +843,7 @@ lemma kernel_exit_if_corres:
        apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
-      apply (rule gct_corres)
+      apply (rule getCurThread_corres)
      apply wp+
    apply clarsimp+
   done

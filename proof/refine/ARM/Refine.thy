@@ -637,7 +637,7 @@ lemma kernelEntry_corres:
           (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
+    apply (rule corres_split [OF _ getCurThread_corres])
       apply (rule corres_split)
          prefer 2
          apply simp
@@ -648,7 +648,7 @@ lemma kernelEntry_corres:
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
         apply (rule corres_split [OF _ callKernel_corres])
-          apply (rule corres_split_eqr [OF _ gct_corres])
+          apply (rule corres_split_eqr [OF _ getCurThread_corres])
             apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
@@ -677,7 +677,7 @@ lemma doUserOp_corres:
           (do_user_op f tc) (doUserOp f tc)"
   apply (simp add: do_user_op_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres])
+    apply (rule corres_split[OF _ getCurThread_corres])
       apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
          prefer 2
          apply (fastforce dest: absKState_correct [rotated])

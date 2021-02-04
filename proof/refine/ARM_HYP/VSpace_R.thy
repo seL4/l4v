@@ -1384,7 +1384,7 @@ lemma deleteASID_corres:
                apply (clarsimp simp: o_def)
                apply (erule notE)
                apply (erule ucast_ucast_eq, simp, simp)
-              apply (rule corres_split [OF _ gct_corres])
+              apply (rule corres_split [OF _ getCurThread_corres])
                 apply simp
                 apply (rule setVMRoot_corres)
                apply wp+
@@ -1541,7 +1541,7 @@ lemma deleteASIDPool_corres:
              apply (simp add: word_size nth_ucast)
             apply (rule corres_split)
                prefer 2
-               apply (rule gct_corres)
+               apply (rule getCurThread_corres)
               apply (simp only:)
               apply (rule setVMRoot_corres)
              apply wp+
@@ -1610,7 +1610,7 @@ proof -
   show ?thesis
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
+    apply (rule corres_split [OF _ getCurThread_corres])
       apply (rule corres_split [where R="\<lambda>_. vspace_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                                                and valid_asid_map and valid_vs_lookup
                                                and valid_vspace_objs
@@ -1829,7 +1829,7 @@ lemma flushTable_corres:
         apply (rule corres_when, rule refl)
         apply (rule corres_split[where r' = dc, OF corres_when corres_machine_op])
             apply simp
-           apply (rule corres_split[OF _ gct_corres])
+           apply (rule corres_split[OF _ getCurThread_corres])
              apply (simp, rule setVMRoot_corres)
             apply ((wp mapM_wp' hoare_vcg_const_imp_lift get_pte_wp getPTE_wp|
                     wpc|simp|fold cur_tcb_def cur_tcb'_def)+)[4]
@@ -1864,7 +1864,7 @@ lemma flushPage_corres:
         apply (rule corres_when, rule refl)
         apply (rule corres_split [OF _ corres_machine_op [where r=dc]])
            apply (rule corres_when, rule refl)
-           apply (rule corres_split [OF _ gct_corres])
+           apply (rule corres_split [OF _ getCurThread_corres])
              apply simp
              apply (rule setVMRoot_corres)
             apply wp+
@@ -2315,7 +2315,7 @@ lemma performPageDirectoryInvocation_corres:
           prefer 2
           apply (rule doFlush_corres)
          apply (rule corres_when, simp)
-         apply (rule corres_split [OF _ gct_corres])
+         apply (rule corres_split [OF _ getCurThread_corres])
            apply clarsimp
            apply (rule setVMRoot_corres)
           apply wp+
@@ -2987,7 +2987,7 @@ proof -
           prefer 2
           apply (rule doFlush_corres)
          apply (rule corres_when, simp)
-         apply (rule corres_split [OF _ gct_corres])
+         apply (rule corres_split [OF _ getCurThread_corres])
            apply simp
            apply (rule setVMRoot_corres)
           apply wp+
@@ -2999,7 +2999,7 @@ proof -
   \<comment> \<open>PageGetAddr\<close>
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres])
+    apply (rule corres_split[OF _ getCurThread_corres])
       apply simp
       apply (rule corres_split[OF setMessageInfo_corres setMRs_corres])
          apply (simp add: message_info_map_def)

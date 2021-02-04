@@ -662,7 +662,7 @@ lemma timerTick_corres:
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
   apply (rule corres_guard_imp)
-  apply (rule corres_split [OF _ gct_corres])
+  apply (rule corres_split [OF _ getCurThread_corres])
       apply simp
       apply (rule corres_split [OF _ getThreadState_corres])
         apply (rename_tac state state')
@@ -861,7 +861,7 @@ proof -
                  apply (rename_tac eisr0 eisr1 flags)
                  apply (rule corres_split[OF _ corres_gets_numlistregs])
                    apply (rule corres_split[where r'="\<lambda>rv rv'. rv' = arch_fault_map rv"])
-                      apply (rule corres_split_eqr[OF _ gct_corres])
+                      apply (rule corres_split_eqr[OF _ getCurThread_corres])
                         apply (rule corres_split[OF _ getThreadState_corres])
                           apply (fold dc_def)
                           apply (rule corres_when)
@@ -944,7 +944,7 @@ lemma vppiEvent_corres:
 
       apply (rule corres_split_dc[OF _ corres_machine_op])
          apply (rule corres_split_dc[OF _ vcpuUpdate_corres])
-            apply (rule corres_split_eqr[OF _ gct_corres])
+            apply (rule corres_split_eqr[OF _ getCurThread_corres])
               apply (rule corres_split[OF _ getThreadState_corres], rename_tac gts gts')
                 apply (fold dc_def)
                 apply (rule corres_when)

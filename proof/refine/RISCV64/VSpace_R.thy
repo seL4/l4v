@@ -237,7 +237,7 @@ lemma deleteASID_corres [corres]:
              apply (rule ext)
              apply (clarsimp simp: o_def ucast_ucast_a is_down asid_low_bits_of_def)
              apply (word_bitwise, clarsimp)
-            apply (rule corres_split [OF _ gct_corres])
+            apply (rule corres_split [OF _ getCurThread_corres])
               apply simp
               apply (rule setVMRoot_corres[OF refl])
              apply wp+
@@ -309,7 +309,7 @@ lemma deleteASIDPool_corres:
            apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
            apply (erule_tac x=n in allE)
            apply (simp add: word_size nth_ucast)
-          apply (rule corres_split[OF _ gct_corres])
+          apply (rule corres_split[OF _ getCurThread_corres])
             apply (rule setVMRoot_corres, simp)
            apply (wp getASID_wp)+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_arch_state
@@ -574,7 +574,7 @@ lemma performPageInvocation_corres:
    apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
   apply (clarsimp simp: perform_pg_inv_get_addr_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres])
+    apply (rule corres_split[OF _ getCurThread_corres])
       apply simp
       apply (rule corres_split[OF setMessageInfo_corres setMRs_corres])
          apply (simp add: message_info_map_def)

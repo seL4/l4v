@@ -229,7 +229,7 @@ lemma corres_inst_eq_ext:
   by (auto simp add: corres_inst_eq_def)
 
 lemma delete_asid_corresb:
-  notes [corres] = corres_gets_asid gct_corres set_asid_pool_corres and
+  notes [corres] = corres_gets_asid getCurThread_corres set_asid_pool_corres and
     [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
     invalidateASIDEntry_corres
     setVMRoot_corres
@@ -276,7 +276,7 @@ lemma delete_asid_corresb:
                   continue (* K_bind *)
                   continue (* K_bind *)
                   continue (* split *)
-                      continue (* gct_corres *)
+                      continue (* getCurThread_corres *)
                      continue (* setVMRoot_corres *)
                     finish (* backtracking? *)
                     apply (corressimp simp: mask_asid_low_bits_ucast_ucast
@@ -329,7 +329,7 @@ lemma cte_wp_at_ex:
 
 (* Sadly broken:
 lemma setVMRootForFlush_corres:
-  notes [corres] = gct_corres getSlotCap_corres
+  notes [corres] = getCurThread_corres getSlotCap_corres
   shows
   "corres (=)
           (cur_tcb and vspace_at_asid asid pd
@@ -372,7 +372,7 @@ lemma setVMRootForFlush_corres:
 text \<open>Note we can wrap it all up in corressimp\<close>
 
 lemma setVMRootForFlush_corres':
-  notes [corres] = gct_corres getSlotCap_corres
+  notes [corres] = getCurThread_corres getSlotCap_corres
   shows
   "corres (=)
           (cur_tcb and vspace_at_asid asid pd

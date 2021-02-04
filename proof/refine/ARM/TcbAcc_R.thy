@@ -2113,7 +2113,7 @@ lemma setThreadState_corres:
        apply simp
        apply (subst thread_get_test[where test="runnable"])
        apply (rule corres_split[OF _ thread_get_isRunnable_corres])
-         apply (rule corres_split[OF _ gct_corres])
+         apply (rule corres_split[OF _ getCurThread_corres])
            apply (rule corres_split[OF _ getSchedulerAction_corres])
              apply (simp only: when_def)
              apply (rule corres_if[where Q=\<top> and Q'=\<top>])

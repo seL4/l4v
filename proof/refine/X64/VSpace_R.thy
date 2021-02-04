@@ -332,7 +332,7 @@ lemma deleteASID_corres [corres]:
                apply (simp add: inv_def mask_asid_low_bits_ucast_ucast)
                apply (rule ext)
                apply (clarsimp simp: o_def)
-              apply (rule corres_split [OF _ gct_corres])
+              apply (rule corres_split [OF _ getCurThread_corres])
                 apply simp
                 apply (rule setVMRoot_corres[OF refl])
                apply wp+
@@ -432,7 +432,7 @@ lemma deleteASIDPool_corres:
              apply (simp add: word_size nth_ucast)
             apply (rule corres_split)
                prefer 2
-               apply (rule gct_corres)
+               apply (rule getCurThread_corres)
               apply (simp only:)
               apply (rule setVMRoot_corres[OF refl])
              apply wp+
@@ -987,7 +987,7 @@ proof -
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def
                         fromPAddr_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gct_corres])
+    apply (rule corres_split[OF _ getCurThread_corres])
       apply simp
       apply (rule corres_split[OF setMessageInfo_corres setMRs_corres])
          apply (simp add: message_info_map_def)

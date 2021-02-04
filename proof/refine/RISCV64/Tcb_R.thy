@@ -29,7 +29,7 @@ lemma activateThread_corres:
             activate_thread activateThread"
   apply (simp add: activate_thread_def activateThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ gct_corres])
+    apply (rule corres_split_eqr [OF _ getCurThread_corres])
       apply (rule_tac R="\<lambda>ts s. valid_tcb_state ts s \<and> (idle ts \<or> runnable ts)
                                 \<and> invs s \<and> st_tcb_at ((=) ts) thread s"
                   and R'="\<lambda>ts s. valid_tcb_state' ts s \<and> (idle' ts \<or> runnable' ts)
@@ -285,7 +285,7 @@ lemma invokeTCB_ReadRegisters_corres:
                    frameRegisters_def gpRegisters_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (rule corres_split [OF _ gct_corres])
+       apply (rule corres_split [OF _ getCurThread_corres])
          apply (simp add: liftM_def[symmetric])
          apply (rule corres_as_user)
          apply (rule corres_Id)
@@ -322,7 +322,7 @@ lemma invokeTCB_WriteRegisters_corres:
                    sanitiseRegister_def sanitise_register_def getSanitiseRegisterInfo_def
                    frameRegisters_def gpRegisters_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ gct_corres])
+    apply (rule corres_split [OF _ getCurThread_corres])
       apply (rule corres_split_nor)
          prefer 2
          apply (rule corres_as_user)
@@ -431,7 +431,7 @@ proof -
         apply (rule corres_split [OF _ corres_when [OF refl restart_corres]], simp)
           apply (rule corres_split_nor)
              apply (rule corres_split_nor)
-                apply (rule corres_split_eqr[OF _ gct_corres])
+                apply (rule corres_split_eqr[OF _ getCurThread_corres])
                   apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
                     apply (rule corres_split[OF _ corres_when[OF refl rescheduleRequired_corres]])
                       apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
@@ -623,7 +623,7 @@ lemma sp_corres2:
       apply (rule corres_split [OF _ ethread_set_corres], simp_all)[1]
          apply (rule corres_split [OF _ isRunnable_corres])
            apply (erule corres_when)
-           apply(rule corres_split [OF _ gct_corres])
+           apply(rule corres_split [OF _ getCurThread_corres])
              apply (wp corres_if; clarsimp)
               apply (rule rescheduleRequired_corres)
              apply (rule possibleSwitchTo_corres)
@@ -1369,7 +1369,7 @@ proof -
          apply (rule corres_split_norE)
             apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm2)
             apply (rule corres_split_nor)
-               apply (rule corres_split [OF _ gct_corres], clarsimp)
+               apply (rule corres_split [OF _ getCurThread_corres], clarsimp)
                  apply (rule corres_when[OF refl rescheduleRequired_corres])
                 apply (wpsimp wp: gct_wp)+
               apply (rule threadset_corres,
@@ -1395,7 +1395,7 @@ proof -
             apply (rule corres_split)
                prefer 2
                apply (erule checked_insert_corres)
-              apply (rule corres_split[OF _ gct_corres], clarsimp)
+              apply (rule corres_split[OF _ getCurThread_corres], clarsimp)
                 apply (rule corres_when[OF refl rescheduleRequired_corres])
                apply (wp gct_wp)+
              apply (wp hoare_drop_imp threadcontrol_corres_helper3)[1]
@@ -1780,7 +1780,7 @@ lemma invokeTCB_corres:
   apply (simp add: invokeTCB_def tlsBaseRegister_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ TcbAcc_R.asUser_setRegister_corres])
-      apply (rule corres_split[OF _ Bits_R.gct_corres])
+      apply (rule corres_split[OF _ Bits_R.getCurThread_corres])
         apply (rule corres_split[OF _ Corres_UL.corres_when])
             apply (rule corres_trivial, simp)
            apply simp
@@ -1895,7 +1895,7 @@ lemma decodeReadRegisters_corres:
        apply (rule corres_trivial)
        apply (fastforce simp: returnOk_def)
       apply (simp add: liftE_bindE)
-      apply (rule corres_split[OF _ gct_corres])
+      apply (rule corres_split[OF _ getCurThread_corres])
         apply (rule corres_trivial)
         apply (clarsimp simp: whenE_def)
        apply (wp|simp)+
@@ -1918,7 +1918,7 @@ lemma decodeWriteRegisters_corres:
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (simp add: liftE_bindE)
-    apply (rule corres_split[OF _ gct_corres])
+    apply (rule corres_split[OF _ getCurThread_corres])
       apply (rule corres_split_norE)
          apply (rule corres_trivial, simp)
         apply (rule corres_trivial, simp)
