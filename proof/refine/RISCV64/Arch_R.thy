@@ -645,7 +645,7 @@ crunches isFinalCapability
   for no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma decode_page_table_inv_corres:
+lemma decodeX64PageTableInvocation_corres:
   "\<lbrakk>cap = arch_cap.PageTableCap p opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -938,7 +938,7 @@ shows
 
   \<comment> \<open>PageTableCap\<close>
   apply (simp add: isCap_simps decodeRISCVMMUInvocation_def Let_def  split del: if_split)
-  apply (rule decode_page_table_inv_corres; simp)
+  apply (rule decodeX64PageTableInvocation_corres; simp)
   done
 
 
