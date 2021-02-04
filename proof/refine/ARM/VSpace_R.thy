@@ -364,7 +364,7 @@ lemma invalidate_asid_ext_corres:
   apply fastforce
   done
 
-lemma invalidate_hw_asid_entry_corres:
+lemma invalidateHWASIDEntry_corres:
   "corres dc \<top> \<top> (invalidate_hw_asid_entry a) (invalidateHWASIDEntry a)"
   apply (simp add: invalidate_hw_asid_entry_def invalidateHWASIDEntry_def)
   apply (rule corres_guard_imp)
@@ -406,7 +406,7 @@ lemma find_free_hw_asid_corres:
                  apply fastforce
                 apply (rule corres_split)
                    prefer 2
-                   apply (rule invalidate_hw_asid_entry_corres)
+                   apply (rule invalidateHWASIDEntry_corres)
                   apply (rule corres_split)
                      apply (rule corres_trivial)
                      apply simp
@@ -805,7 +805,7 @@ lemma invalidate_asid_entry_corres:
          apply (rule invalidateASID_corres[where pd=pd])
         apply simp
        apply simp
-       apply (rule invalidate_hw_asid_entry_corres)
+       apply (rule invalidateHWASIDEntry_corres)
       apply (wp load_hw_asid_wp
                | clarsimp cong: if_cong)+
    apply (simp add: pd_at_asid_uniq)

@@ -184,7 +184,7 @@ lemmas invalidate_asid_corres_args[corres] =
   invalidateASID_corres[@lift_corres_args]
 
 lemmas invalidate_hw_asid_entry_corres_args[corres] =
-  invalidate_hw_asid_entry_corres[@lift_corres_args]
+  invalidateHWASIDEntry_corres[@lift_corres_args]
 
 lemma invalidate_asid_entry_corres:
   "corres dc (valid_vspace_objs and valid_asid_map
