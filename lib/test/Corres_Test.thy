@@ -178,7 +178,7 @@ context begin interpretation Arch .
 
 
 lemmas load_hw_asid_corres_args[corres] =
-  load_hw_asid_corres[@lift_corres_args]
+  loadHWASID_corres[@lift_corres_args]
 
 lemmas invalidate_asid_corres_args[corres] =
   invalidate_asid_corres[@lift_corres_args]

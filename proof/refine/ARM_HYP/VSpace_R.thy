@@ -277,7 +277,7 @@ lemma findPDForASIDAssert_known_corres:
   apply simp
   done
 
-lemma load_hw_asid_corres:
+lemma loadHWASID_corres:
   "corres (=)
           (valid_vspace_objs and pspace_distinct
                  and pspace_aligned and valid_asid_map
@@ -468,7 +468,7 @@ lemma get_hw_asid_corres:
           (get_hw_asid a) (getHWASID a)"
   apply (simp add: get_hw_asid_def getHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ load_hw_asid_corres[where pd=pd]])
+    apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
       apply clarsimp
       apply (rule corres_split_eqr [OF _ find_free_hw_asid_corres])
@@ -670,7 +670,7 @@ lemma flush_space_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        prefer 2
-       apply (rule load_hw_asid_corres[where pd=pd])
+       apply (rule loadHWASID_corres[where pd=pd])
       apply (rule corres_split [where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
          prefer 2
          apply (rule corres_machine_op [where r=dc])
@@ -702,7 +702,7 @@ lemma invalidate_tlb_by_asid_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
        prefer 2
-       apply (rule load_hw_asid_corres[where pd=pd])
+       apply (rule loadHWASID_corres[where pd=pd])
       apply (case_tac maybe_hw_asid)
        apply simp
       apply clarsimp
@@ -1302,7 +1302,7 @@ lemma invalidate_asid_entry_corres:
              (invalidate_asid_entry asid) (invalidateASIDEntry asid)"
   apply (simp add: invalidate_asid_entry_def invalidateASIDEntry_def)
   apply (rule corres_guard_imp)
-   apply (rule corres_split [OF _ load_hw_asid_corres[where pd=pd]])
+   apply (rule corres_split [OF _ loadHWASID_corres[where pd=pd]])
      apply (rule corres_split [OF _ corres_when])
          apply (rule invalidate_asid_corres[where pd=pd])
         apply simp
@@ -1799,7 +1799,7 @@ lemma load_hw_asid_corres2:
      (pspace_aligned' and pspace_distinct' and no_0_obj')
     (load_hw_asid a) (loadHWASID a)"
   apply (rule stronger_corres_guard_imp)
-    apply (rule load_hw_asid_corres[where pd=pd])
+    apply (rule loadHWASID_corres[where pd=pd])
    apply (clarsimp simp: pd_at_asid_uniq)
   apply simp
   done
