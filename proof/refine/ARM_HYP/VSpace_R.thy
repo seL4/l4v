@@ -390,7 +390,7 @@ lemma invalidateHWASIDEntry_corres:
   apply simp
   done
 
-lemma find_free_hw_asid_corres:
+lemma findFreeHWASID_corres:
   "corres (=)
           (valid_asid_map and valid_vspace_objs
               and pspace_aligned and pspace_distinct
@@ -471,7 +471,7 @@ lemma get_hw_asid_corres:
     apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
       apply clarsimp
-      apply (rule corres_split_eqr [OF _ find_free_hw_asid_corres])
+      apply (rule corres_split_eqr [OF _ findFreeHWASID_corres])
          apply (rule corres_split [OF _ storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp)
           apply (wp load_hw_asid_wp | simp)+
