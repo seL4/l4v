@@ -1368,7 +1368,7 @@ lemma valid_ioports_issuedD':
   apply (clarsimp simp: valid_ioports'_def all_ioports_issued'_def)
   by auto
 
-lemma perform_ioport_control_inv_corres:
+lemma performX64PortInvocation_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPortControl x\<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
       (einvs and ct_active and valid_arch_inv ai)
@@ -1435,7 +1435,7 @@ lemma arch_performInvocation_corres:
                 clarsimp simp: archinv_relation_def)
   apply (cases "\<exists>x. ai = arch_invocation.InvokeIOPortControl x")
    apply (clarsimp simp: archinv_relation_def)
-   apply (rule corres_guard_imp[OF perform_ioport_control_inv_corres[where ai=ai, simplified]];
+   apply (rule corres_guard_imp[OF performX64PortInvocation_corres[where ai=ai, simplified]];
                 clarsimp simp: archinv_relation_def)
   apply (subst arch_ioport_inv_case_simp; simp)
   apply (clarsimp simp: archinv_relation_def)
