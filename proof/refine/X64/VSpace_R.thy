@@ -262,7 +262,7 @@ lemma dMo_no_0_obj'[wp]:
   apply wp
   by (simp add: no_0_obj'_def)
 
-lemma hw_asid_invalidate_corres:
+lemma hwASIDInvalidate_corres:
   assumes "pm' = pm" "asid' = asid"
   shows "corres dc \<top> \<top> (hw_asid_invalidate asid pm) (hwASIDInvalidate asid' pm')"
   using assms
@@ -321,7 +321,7 @@ lemma deleteASID_corres [corres]:
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv'[OF refl])
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def)
-        apply (rule corres_split [OF _ hw_asid_invalidate_corres[where pm=pm]])
+        apply (rule corres_split [OF _ hwASIDInvalidate_corres[where pm=pm]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
                         and P'="pspace_aligned' and pspace_distinct'"
@@ -414,7 +414,7 @@ lemma deleteASIDPool_corres:
                  apply (clarsimp simp: ucast_ucast_low_bits)
                 apply (simp add: ucast_ucast_low_bits)
                 apply (rule_tac pm="the (inv ASIDPool x xa)"
-                         in hw_asid_invalidate_corres[OF refl refl])
+                         in hwASIDInvalidate_corres[OF refl refl])
                apply simp
               apply simp
              apply clarsimp
