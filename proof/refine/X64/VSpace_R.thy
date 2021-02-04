@@ -689,7 +689,7 @@ lemma unmapPage_corres:
           apply (cases sz, simp_all)[1]
              apply (rule corres_guard_imp)
                apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
-               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
+               apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                  apply simp
                  apply (rule corres_splitEE[OF _ liftE_get_pte_corres])
                    apply simp

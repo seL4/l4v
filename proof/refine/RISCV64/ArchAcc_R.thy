@@ -673,7 +673,7 @@ next
     done
 qed
 
-lemma lookup_pt_slot_corres:
+lemma lookupPTSlot_corres:
   "corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
           (pspace_aligned and pspace_distinct and valid_vspace_objs
              and valid_asid_table and \<exists>\<rhd>(max_pt_level,pt)

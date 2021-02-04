@@ -557,7 +557,7 @@ lemma decodeX64FrameInvocation_corres:
            apply (rule corres_splitEE)
               prefer 2
               apply (simp only: corres_liftE_rel_sum)
-              apply (rule lookup_pt_slot_corres)
+              apply (rule lookupPTSlot_corres)
              apply (clarsimp simp: unlessE_whenE)
              apply (rule corres_splitEE[where r'=dc])
                 prefer 2
@@ -680,7 +680,7 @@ lemma decodeX64PageTableInvocation_corres:
        apply (rule corres_splitEE)
           prefer 2
           apply (simp)
-          apply (rule lookup_pt_slot_corres)
+          apply (rule lookupPTSlot_corres)
          apply clarsimp
          apply (rule corres_splitEE)
             prefer 2

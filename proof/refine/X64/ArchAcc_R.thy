@@ -1341,7 +1341,7 @@ lemma get_pde_valid[wp]:
   apply simp
   done
 
-lemma lookup_pt_slot_corres:
+lemma lookupPTSlot_corres:
   "corres (lfr \<oplus> (=))
           (pspace_aligned and valid_vspace_objs and valid_arch_state and equal_kernel_mappings
            and valid_global_objs and (\<exists>\<rhd> pml4) and page_map_l4_at pml4 and
@@ -1527,7 +1527,7 @@ lemma createMappingEntries_corres:
          apply (rule corres_returnOkTT)
          apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
         apply (rule corres_lookup_error)
-        apply (rule lookup_pt_slot_corres)
+        apply (rule lookupPTSlot_corres)
        apply wp+
      apply clarsimp
     apply simp+

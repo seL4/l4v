@@ -420,7 +420,7 @@ lemma unmapPage_corres:
         apply (rule corres_splitEE)
            prefer 2
            apply simp
-           apply (rule lookup_pt_slot_corres)
+           apply (rule lookupPTSlot_corres)
           apply (clarsimp simp: unlessE_whenE)
           apply datatype_schem
           apply (rule whenE_throwError_corres_initial, simp, simp)

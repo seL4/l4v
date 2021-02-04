@@ -2149,7 +2149,7 @@ lemma unmapPage_corres:
           apply (cases sz, simp_all)[1]
              apply (rule corres_guard_imp)
                apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
-               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
+               apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                  apply simp
                  apply (rule corres_splitEE[OF _ checkMappingPPtr_corres])
                    apply simp
@@ -2164,7 +2164,7 @@ lemma unmapPage_corres:
                 page_directory_at_aligned_pd_bits vmsz_aligned_def)
               apply (simp add:valid_unmap_def pageBits_def)+
             apply (rule corres_guard_imp)
-              apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres])
+              apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                 apply (rule_tac F="is_aligned p 7" in corres_gen_asm)
                 apply (simp add: is_aligned_mask[symmetric])
                 apply (rule corres_split_strengthen_ftE[OF checkMappingPPtr_corres])

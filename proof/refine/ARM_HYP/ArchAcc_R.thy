@@ -1208,7 +1208,7 @@ lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
 
 
-lemma lookup_pt_slot_corres [corres]:
+lemma lookupPTSlot_corres [corres]:
   "corres (lfr \<oplus> (=))
           (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
