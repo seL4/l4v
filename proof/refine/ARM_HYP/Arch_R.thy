@@ -1273,7 +1273,7 @@ lemma invokeVCPUInjectIRQ_corres:
 lemma [wp]:"no_fail \<top> getSCTLR"
   by (clarsimp simp: getSCTLR_def)
 
-lemma invoke_vcpu_read_register_corres:
+lemma invokeVCPUReadReg_corres:
   "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')
                  (invoke_vcpu_read_register v r)
                  (invokeVCPUReadReg v r)"
@@ -1364,7 +1364,7 @@ lemma invoke_vcpu_ack_vppi_corres:
      (auto simp: vcpu_relation_def split: option.splits)
 
 lemma perform_vcpu_invocation_corres:
-  notes inv_corres = invokeVCPUInjectIRQ_corres invoke_vcpu_read_register_corres
+  notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
                      invoke_vcpu_write_register_corres associate_vcpu_tcb_corres
                      invoke_vcpu_ack_vppi_corres
   shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
