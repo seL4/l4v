@@ -789,7 +789,7 @@ lemma loadHWASID_wp [wp]:
   apply (auto split: option.split)
   done
 
-lemma invalidate_asid_entry_corres:
+lemma invalidateASIDEntry_corres:
   "corres dc (valid_vspace_objs and valid_asid_map
                 and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
                 and vspace_at_asid asid pd and valid_vs_lookup
@@ -859,7 +859,7 @@ lemma delete_asid_corres:
          apply (rule get_asid_pool_corres_inv')
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast)
         apply (rule corres_split [OF _ flushSpace_corres[where pd=pd]])
-          apply (rule corres_split [OF _ invalidate_asid_entry_corres[where pd=pd]])
+          apply (rule corres_split [OF _ invalidateASIDEntry_corres[where pd=pd]])
             apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
                                and valid_etcbs"
                         and P'="pspace_aligned' and pspace_distinct'"
@@ -964,7 +964,7 @@ lemma delete_asid_pool_corres:
                 apply (rule_tac pd1="the (pool (ucast xa))"
                           in corres_split [OF _ flushSpace_corres])
                   apply (rule_tac pd="the (pool (ucast xa))"
-                             in invalidate_asid_entry_corres)
+                             in invalidateASIDEntry_corres)
                  apply wp
                  apply clarsimp
                  apply (wpsimp)+
