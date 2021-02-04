@@ -1885,7 +1885,7 @@ lemma invokeTCB_corres:
    apply (case_tac option)
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ unbind_notification_corres])
+      apply (rule corres_split[OF _ unbindNotification_corres])
         apply (rule corres_trivial, simp)
        apply wp+
      apply (clarsimp)

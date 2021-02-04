@@ -3467,7 +3467,7 @@ lemma arch_finaliseCap_corres:
   done
 
 
-lemma unbind_notification_corres:
+lemma unbindNotification_corres:
   "corres dc
       (invs and tcb_at t)
       invs'
@@ -3624,7 +3624,7 @@ lemma finalise_cap_corres:
                                liftM_def[symmetric] o_def zbits_map_def
                                dc_def[symmetric])
      apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ unbind_notification_corres])
+       apply (rule corres_split[OF _ unbindNotification_corres])
          apply (rule corres_split[OF _ suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
           apply (rule prepareThreadDelete_corres)
