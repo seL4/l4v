@@ -543,7 +543,7 @@ lemma decodeX64FrameInvocation_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres[OF refl])
+        apply (rule findVSpaceForASID_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE[where r'=dc])
           prefer 2
@@ -637,7 +637,7 @@ lemma maybeVSpaceForASID_corres:
     apply (rule corres_split_catch)
        apply (rule corres_trivial, simp)
       apply (simp add: o_def)
-      apply (rule find_vspace_for_asid_corres, simp)
+      apply (rule findVSpaceForASID_corres, simp)
      apply wpsimp+
   done
 
@@ -675,7 +675,7 @@ lemma decodeX64PageTableInvocation_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres[OF refl])
+        apply (rule findVSpaceForASID_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE)
           prefer 2

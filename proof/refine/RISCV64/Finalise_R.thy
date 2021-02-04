@@ -3451,7 +3451,7 @@ lemma arch_finaliseCap_corres:
        apply (rule unmapPageTable_corres; simp)
       apply (rule corres_splitEE)
          prefer 2
-         apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule find_vspace_for_asid_corres; simp)
+         apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
          apply (case_tac x; simp)
         apply (simp only: whenE_def)
         apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)

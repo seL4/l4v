@@ -959,7 +959,7 @@ lemma find_vspace_for_asid_rewite:
   apply (simp add: liftE_bindE bind_assoc exec_gets opt_map_def asid_low_bits_of_def)
   done
 
-lemma find_vspace_for_asid_corres:
+lemma findVSpaceForASID_corres:
   assumes "asid' = ucast asid"
   shows "corres (lfr \<oplus> (=))
                 (valid_vspace_objs and valid_asid_table

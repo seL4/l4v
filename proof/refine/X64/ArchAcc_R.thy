@@ -1660,7 +1660,7 @@ lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"
   by (simp add: asidBits_def asidHighBits_def asid_wf_def asid_bits_defs mask_def)
 
-lemma find_vspace_for_asid_corres:
+lemma findVSpaceForASID_corres:
   assumes "asid' = asid"
   shows "corres (lfr \<oplus> (=))
                 ((\<lambda>s. valid_arch_state s \<or> vspace_at_asid_ex asid s)
@@ -1736,14 +1736,14 @@ lemma find_vspace_for_asid_corres:
   apply simp
   done
 
-lemma find_vspace_for_asid_corres':
+lemma findVSpaceForASID_corres':
   assumes "asid' = asid"
   shows "corres (lfr \<oplus> (=))
                 (vspace_at_asid_ex asid and valid_vspace_objs
                     and pspace_aligned and  K (0 < asid \<and> asid_wf asid))
                 (pspace_aligned' and pspace_distinct' and no_0_obj')
                 (find_vspace_for_asid asid) (findVSpaceForASID asid')"
-  apply (rule corres_guard_imp, rule find_vspace_for_asid_corres[OF assms])
+  apply (rule corres_guard_imp, rule findVSpaceForASID_corres[OF assms])
    apply fastforce
   apply simp
   done
