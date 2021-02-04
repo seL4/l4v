@@ -526,7 +526,7 @@ lemma resolveVAddr_corres:
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
-lemma dec_arch_inv_page_flush_corres:
+lemma decodeARMPageFlush_corres:
   "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
@@ -1013,7 +1013,7 @@ shows
     apply (cases "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))")
      apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
      apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-        apply (rule dec_arch_inv_page_flush_corres,
+        apply (rule decodeARMPageFlush_corres,
                 clarsimp simp: ARM_H.isPageFlushLabel_def)+
     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
