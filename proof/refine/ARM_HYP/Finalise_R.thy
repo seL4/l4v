@@ -1466,7 +1466,7 @@ lemma emptySlot_invs'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
-lemma deleted_irq_corres:
+lemma deletedIRQHandler_corres:
   "corres dc \<top> \<top>
     (deleted_irq_handler irq)
     (deletedIRQHandler irq)"
@@ -1482,7 +1482,7 @@ lemma arch_post_cap_deletion_corres:
 lemma post_cap_deletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
-   apply (corressimp corres: deleted_irq_corres)
+   apply (corressimp corres: deletedIRQHandler_corres)
   by (corressimp corres: arch_post_cap_deletion_corres)
 
 lemma set_cap_trans_state:
