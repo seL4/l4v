@@ -1285,7 +1285,7 @@ lemma invokeVCPUReadReg_corres:
   done
 
 
-lemma invoke_vcpu_write_register_corres:
+lemma invokeVCPUWriteReg_corres:
   "corres (=) (vcpu_at vcpu) (vcpu_at' vcpu and no_0_obj')
         (do y \<leftarrow> invoke_vcpu_write_register vcpu r v;
                  return []
@@ -1365,7 +1365,7 @@ lemma invoke_vcpu_ack_vppi_corres:
 
 lemma perform_vcpu_invocation_corres:
   notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
-                     invoke_vcpu_write_register_corres associate_vcpu_tcb_corres
+                     invokeVCPUWriteReg_corres associate_vcpu_tcb_corres
                      invoke_vcpu_ack_vppi_corres
   shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
                        (invs' and ct_active' and valid_vcpuinv' (vcpu_invocation_map iv))
