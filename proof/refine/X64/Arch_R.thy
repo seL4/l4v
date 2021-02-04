@@ -1031,7 +1031,7 @@ lemma free_range_corres:
   apply (simp only: orList_False)
   by auto
 
-lemma is_ioport_range_free_corres:
+lemma isIOPortRangeFree_corres:
   "f \<le> l \<Longrightarrow> corres (=) \<top> \<top>
      (is_ioport_range_free f l)
      (isIOPortRangeFree f l)"
@@ -1076,7 +1076,7 @@ lemma decodeX64PortInvocation_corres:
      apply (rule whenE_throwError_corres)
        apply clarsimp
       apply clarsimp
-     apply (rule corres_split_eqr[OF _ is_ioport_range_free_corres])
+     apply (rule corres_split_eqr[OF _ isIOPortRangeFree_corres])
         apply (clarsimp simp: unlessE_whenE)
         apply (rule whenE_throwError_corres)
           apply clarsimp
