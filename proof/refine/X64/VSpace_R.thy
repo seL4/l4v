@@ -719,7 +719,7 @@ lemma unmapPage_corres:
             apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                  apply simp
-                 apply (rule store_pdpte_corres')
+                 apply (rule storePDPTE_corres')
                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
                                       lookup_pdpt_slot_wp
                                 simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
@@ -927,7 +927,7 @@ proof -
         apply (rule corres_name_pre)
         apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
         apply (rule corres_guard_imp)
-          apply (rule corres_split[OF _ store_pdpte_corres'])
+          apply (rule corres_split[OF _ storePDPTE_corres'])
              apply (rule corres_split[where r'="(=)"])
                 apply simp
                 apply (rule invalidatePageStructureCacheASID_corres)
@@ -1104,7 +1104,7 @@ lemma clear_pdpt_corres:
                and Q="\<lambda>xs s. \<forall>x \<in> set xs. pdpte_at x s \<and> pspace_aligned s \<and> valid_etcbs s"
                and Q'="\<lambda>xs. pspace_aligned' and pspace_distinct'"
                 in corres_mapM_list_all2, simp_all)
-      apply (rule corres_guard_imp, rule store_pdpte_corres')
+      apply (rule corres_guard_imp, rule storePDPTE_corres')
         apply (simp add:pde_relation_def)+
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)
@@ -1237,7 +1237,7 @@ lemma unmap_pd_corres:
               apply simp
               apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
                 apply (rule corres_split[OF invalidatePageStructureCacheASID_corres
-                                            store_pdpte_corres'])
+                                            storePDPTE_corres'])
                   apply ((wpsimp wp: get_pdpte_wp simp: pdpte_at_def)+)[8]
           apply (wpsimp wp: hoare_drop_imps)
          apply ((wp lookup_pdpt_slot_wp find_vspace_for_asid_wp)+)[6]
@@ -1271,7 +1271,7 @@ lemma performPageDirectoryInvocation_corres:
      apply (rule corres_split [OF _ updateCap_same_master])
         prefer 2
         apply assumption
-       apply (rule corres_split [OF _ store_pdpte_corres'])
+       apply (rule corres_split [OF _ storePDPTE_corres'])
           apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
              apply simp
              apply (rule invalidatePageStructureCacheASID_corres)
