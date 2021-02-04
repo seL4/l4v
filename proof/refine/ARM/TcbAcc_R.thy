@@ -3307,7 +3307,7 @@ lemmas msgRegisters_unfold
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
 
-lemma get_mrs_corres:
+lemma getMRs_corres:
   "corres (=) (tcb_at t)
               (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"

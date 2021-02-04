@@ -2250,7 +2250,7 @@ lemma doReplyTransfer_corres:
     apply (rule corres_split [OF _ cap_delete_one_corres])
       apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
         apply (rule corres_split_eqr [OF _ lipcb_corres'])
-          apply (rule corres_split_eqr [OF _ get_mrs_corres])
+          apply (rule corres_split_eqr [OF _ getMRs_corres])
             apply (simp(no_asm) del: dc_simp)
             apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
                apply (rule corres_split [OF _ threadset_corresT])

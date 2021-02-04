@@ -3361,7 +3361,7 @@ lemma thread_get_registers:
   apply (clarsimp simp: map_upd_triv select_f_def image_def return_def)
   done
 
-lemma get_mrs_corres:
+lemma getMRs_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct)
               (case_option \<top> valid_ipc_buffer_ptr' buf)
               (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"

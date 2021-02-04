@@ -1208,7 +1208,7 @@ lemma handleInvocation_corres:
                  apply (rule handleFault_corres)
                  apply simp
                 apply (simp add: split_def)
-                apply (rule corres_split [OF _ get_mrs_corres])
+                apply (rule corres_split [OF _ getMRs_corres])
                   apply (rule decodeInvocation_corres, simp_all)[1]
                    apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
                   apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
