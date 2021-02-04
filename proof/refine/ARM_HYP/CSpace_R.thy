@@ -3972,7 +3972,7 @@ proof -
     by (simp add: noReplyCapsFor_def)
 qed
 
-lemma setup_reply_master_corres:
+lemma setupReplyMaster_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
        (setup_reply_master t) (setupReplyMaster t)"
   apply (simp add: setupReplyMaster_def setup_reply_master_def)

@@ -210,7 +210,7 @@ lemma restart_corres:
     apply (rule corres_split [OF _ getThreadState_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
       apply (rule corres_split_nor [OF _ cancelIPC_corres])
-        apply (rule corres_split_nor [OF _ setup_reply_master_corres])
+        apply (rule corres_split_nor [OF _ setupReplyMaster_corres])
           apply (rule corres_split_nor [OF _ setThreadState_corres])
              apply (rule corres_split [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
               apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
