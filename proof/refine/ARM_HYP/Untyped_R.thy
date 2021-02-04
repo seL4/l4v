@@ -139,7 +139,7 @@ lemma corres_whenE_throw_merge:
   \<Longrightarrow> corres r P P' f (doE _ \<leftarrow> whenE A (throwError e); _ \<leftarrow>  whenE B (throwError e); h odE)"
   by (auto simp: whenE_def split: if_splits)
 
-lemma dec_untyped_inv_corres:
+lemma decodeUntypedInvocation_corres:
   assumes cap_rel: "list_all2 cap_relation cs cs'"
   shows "corres
         (ser \<oplus> untypinv_relation)

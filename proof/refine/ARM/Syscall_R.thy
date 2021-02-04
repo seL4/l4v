@@ -182,7 +182,7 @@ lemma decodeInvocation_corres:
              apply (simp add: isCap_defs)
             \<comment> \<open>Untyped\<close>
             apply (simp add: isCap_defs Let_def o_def split del: if_split)
-            apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
+            apply (rule corres_guard_imp, rule decodeUntypedInvocation_corres)
               apply ((clarsimp simp:cte_wp_at_caps_of_state)+)[3]
            \<comment> \<open>(Async)Endpoint\<close>
            apply (simp add: isCap_defs returnOk_def)
