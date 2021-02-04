@@ -3804,7 +3804,7 @@ lemma interrupt_cap_null_or_ntfn:
                  split: cap.split_asm)
   done
 
-lemma (in delete_one) deleting_irq_corres:
+lemma (in delete_one) deletingIRQHandler_corres:
   "corres dc (einvs) (invs')
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
@@ -4093,7 +4093,7 @@ lemma finalise_cap_corres:
      apply (simp add: valid_cap'_def)
     apply (simp add: final_matters'_def liftM_def[symmetric] o_def dc_def[symmetric])
     apply (intro impI, rule corres_guard_imp)
-      apply (rule deleting_irq_corres)
+      apply (rule deletingIRQHandler_corres)
      apply simp
     apply simp
    apply (clarsimp simp: final_matters'_def)
