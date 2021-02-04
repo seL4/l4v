@@ -196,7 +196,7 @@ lemma decodeInvocation_corres:
         apply (clarsimp simp add: o_def)
         apply (rule corres_guard_imp)
           apply (rule_tac F="length list \<le> 64" in corres_gen_asm)
-          apply (rule dec_cnode_inv_corres, simp+)
+          apply (rule decodeCNodeInvocation_corres, simp+)
          apply (simp add: valid_cap_def word_bits_def)
         apply simp
        \<comment> \<open>ThreadCap\<close>

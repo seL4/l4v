@@ -154,7 +154,7 @@ lemma cancelSendRightsEq:
                   split: cap.splits bool.splits if_splits |
          case_tac x)+
 
-lemma dec_cnode_inv_corres:
+lemma decodeCNodeInvocation_corres:
   "\<lbrakk> cap_relation (cap.CNodeCap w n list) cap'; list_all2 cap_relation cs cs';
      length list \<le> 32 \<rbrakk> \<Longrightarrow>
   corres
