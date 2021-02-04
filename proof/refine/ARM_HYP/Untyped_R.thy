@@ -1416,7 +1416,7 @@ lemma clearUntypedFreeIndex_corres_noop_psp:
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
 
-lemma create_cap_corres:
+lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
 shows
   "\<lbrakk> cref' = cte_map (fst tup)
@@ -2902,7 +2902,7 @@ lemma inv_untyped_corres_helper1:
   apply (fold mapM_x_def)
   apply (rule corres_list_all2_mapM_)
      apply (rule corres_guard_imp)
-       apply (erule create_cap_corres)
+       apply (erule insertNewCap_corres)
       apply (clarsimp simp: cte_wp_at_def is_cap_simps)
      apply (clarsimp simp: fun_upd_def cte_wp_at_ctes_of)
     apply clarsimp
