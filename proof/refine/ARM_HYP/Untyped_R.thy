@@ -392,7 +392,7 @@ next
            apply (rule corres_returnOkTT)
            apply (rule crel)
           apply simp
-          apply (rule corres_splitEE[OF _ lsfc_corres])
+          apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
               apply simp
               apply (rule getSlotCap_corres,simp)
              apply (rule crel)

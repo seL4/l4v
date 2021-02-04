@@ -147,7 +147,7 @@ lemma getReceiveSlots_corres:
            prefer 2
            apply (rule corres_unify_failure)
             apply (simp add: ct_relation_def)
-            apply (erule lsfc_corres [OF _ refl])
+            apply (erule lookupSlotForCNodeOp_corres [OF _ refl])
            apply simp
           apply (simp add: split_def liftE_bindE unlessE_whenE)
           apply (rule corres_split [OF _ get_cap_corres])

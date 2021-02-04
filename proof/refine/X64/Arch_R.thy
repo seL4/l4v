@@ -1082,7 +1082,7 @@ lemma decode_ioport_control_inv_corres:
           apply clarsimp
          apply clarsimp
         apply (clarsimp simp: lookupTargetSlot_def)
-        apply (rule corres_splitEE[OF _ lsfc_corres])
+        apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
             apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
                apply (rule corres_returnOkTT)
                apply (clarsimp simp: archinv_relation_def ioport_control_inv_relation_def)
@@ -1247,7 +1247,7 @@ shows
               apply (rule ensureNoChildren_corres, rule refl)
              apply (rule corres_splitEE)
                 prefer 2
-                apply (erule lsfc_corres, rule refl)
+                apply (erule lookupSlotForCNodeOp_corres, rule refl)
                apply (rule corres_splitEE)
                   prefer 2
                   apply (rule ensureEmptySlot_corres)

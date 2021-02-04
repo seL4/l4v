@@ -230,7 +230,7 @@ lemma arch_decodeIRQControlInvocation_corres:
    apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
-     apply (rule corres_splitEE[OF _ lsfc_corres])
+     apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
             apply (rule whenE_throwError_corres, ((simp add: maxPCIBus_def maxPCIDev_def maxPCIFunc_def)+)[2])+
             apply (rule corres_returnOkTT)
@@ -249,7 +249,7 @@ lemma arch_decodeIRQControlInvocation_corres:
    apply (simp add: ucast_nat_def add.commute toEnum_unat_ucast_helper_64_8)
    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
-     apply (rule corres_splitEE[OF _ lsfc_corres])
+     apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
             apply (rule corres_split[OF _ corres_gets_num_ioapics])
             apply (rule whenE_throwError_corres, ((simp add: ucast_id ioapicIRQLines_def)+)[2])+

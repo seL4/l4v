@@ -3411,7 +3411,7 @@ lemma ensureEmpty_inv[wp]:
   "\<lbrace>P\<rbrace> ensureEmptySlot p \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: ensureEmptySlot_def unlessE_whenE whenE_def | wp)+
 
-lemma lsfc_corres:
+lemma lookupSlotForCNodeOp_corres:
   "\<lbrakk>cap_relation c c'; ptr = to_bl ptr'\<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> (\<lambda>cref cref'. cref' = cte_map cref))
             (valid_objs and pspace_aligned and valid_cap c)

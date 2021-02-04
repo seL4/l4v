@@ -900,7 +900,7 @@ shows
              apply (rule ensureNoChildren_corres, rule refl)
             apply (rule corres_splitEE)
                prefer 2
-               apply (erule lsfc_corres, rule refl)
+               apply (erule lookupSlotForCNodeOp_corres, rule refl)
               apply (rule corres_splitEE)
                  prefer 2
                  apply (rule ensureEmptySlot_corres)
