@@ -328,7 +328,7 @@ lemma cte_wp_at_ex:
   by (simp add: cte_wp_at_def)
 
 (* Sadly broken:
-lemma set_vm_root_for_flush_corres:
+lemma setVMRootForFlush_corres:
   notes [corres] = gct_corres getSlotCap_corres
   shows
   "corres (=)
@@ -371,7 +371,7 @@ lemma set_vm_root_for_flush_corres:
 
 text \<open>Note we can wrap it all up in corressimp\<close>
 
-lemma set_vm_root_for_flush_corres':
+lemma setVMRootForFlush_corres':
   notes [corres] = gct_corres getSlotCap_corres
   shows
   "corres (=)

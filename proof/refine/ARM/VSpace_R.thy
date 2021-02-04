@@ -1067,7 +1067,7 @@ lemma deleteASIDPool_corres:
   apply clarsimp
   done
 
-lemma set_vm_root_for_flush_corres:
+lemma setVMRootForFlush_corres:
   "corres (=)
           (cur_tcb and vspace_at_asid asid pd
            and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
@@ -1299,7 +1299,7 @@ lemma flush_table_corres:
   apply (simp add: ptBits_def pt_bits_def pageBits_def is_aligned_mask cong: corres_weak_cong)
   apply (thin_tac "P" for P)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
+    apply (rule corres_split [OF _ setVMRootForFlush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
         apply (clarsimp cong: corres_weak_cong)
         apply (rule corres_when, rule refl)
@@ -1334,7 +1334,7 @@ lemma flush_page_corres:
   apply (simp add: is_aligned_mask cong: corres_weak_cong)
   apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
+    apply (rule corres_split [OF _ setVMRootForFlush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
         apply (clarsimp cong: corres_weak_cong)
         apply (rule corres_when, rule refl)
@@ -1688,7 +1688,7 @@ lemma perform_page_directory_corres:
    apply (clarsimp simp: page_directory_invocation_map_def)
    apply (rule corres_guard_imp)
      apply (rule corres_when, simp)
-     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
+     apply (rule corres_split [OF _ setVMRootForFlush_corres])
        apply (rule corres_split [OF _ corres_machine_op])
           prefer 2
           apply (rule do_flush_corres)
@@ -2307,7 +2307,7 @@ proof -
                          page_invocation_map_def)
    apply (rule corres_guard_imp)
      apply (rule corres_when, simp)
-     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
+     apply (rule corres_split [OF _ setVMRootForFlush_corres])
        apply (rule corres_split [OF _ corres_machine_op])
           prefer 2
           apply (rule do_flush_corres)
