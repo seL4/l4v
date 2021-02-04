@@ -172,7 +172,7 @@ lemma asidBits_asid_bits[simp]:
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
 
-lemma find_pd_for_asid_assert_corres:
+lemma findPDForASIDAssert_corres:
   "corres (\<lambda>rv rv'. rv = pd \<and> rv' = pd)
            (K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                  and pspace_aligned and pspace_distinct
@@ -257,7 +257,7 @@ lemma findPDForASIDAssert_known_corres:
    apply clarsimp
    apply (erule(3) find_pd_for_asid_assert_eq[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ find_pd_for_asid_assert_corres[where pd=pd]])
+    apply (rule corres_split [OF _ findPDForASIDAssert_corres[where pd=pd]])
       apply simp
      apply wp+
    apply clarsimp
@@ -307,7 +307,7 @@ lemma store_hw_asid_corres:
           (store_hw_asid a h) (storeHWASID a h)"
   apply (simp add: store_hw_asid_def storeHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ find_pd_for_asid_assert_corres[where pd=pd]])
+    apply (rule corres_split [OF _ findPDForASIDAssert_corres[where pd=pd]])
       apply (rule corres_split_eqr)
          apply (rule corres_split)
             prefer 2
