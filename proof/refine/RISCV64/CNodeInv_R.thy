@@ -175,7 +175,7 @@ lemma decodeCNodeInvocation_corres:
                         cong: if_cong list.case_cong)
         apply (rule corres_guard_imp)
           apply (rule corres_splitEE [OF _ lsfc_corres])
-              apply (rule corres_splitEE [OF _ ensure_empty_corres])
+              apply (rule corres_splitEE [OF _ ensureEmptySlot_corres])
                  apply (rule corres_splitEE [OF _ lsfc_corres])
                      apply (simp(no_asm) add: liftE_bindE del: de_Morgan_conj split del: if_split)
                      apply (rule corres_split [OF _ get_cap_corres'])
@@ -247,7 +247,7 @@ lemma decodeCNodeInvocation_corres:
            apply (rule corres_split_norE)
               apply (rule corres_returnOkTT)
               apply simp
-             apply (rule ensure_empty_corres)
+             apply (rule ensureEmptySlot_corres)
              apply simp
             apply wp+
            apply simp
@@ -321,7 +321,7 @@ lemma decodeCNodeInvocation_corres:
                     apply (drule (2) cte_map_inj_eq, clarsimp+)[1]
                    apply (rule corres_guard_imp)
                      apply (erule corres_whenE)
-                      apply (rule ensure_empty_corres)
+                      apply (rule ensureEmptySlot_corres)
                       apply clarsimp
                      apply simp
                     apply clarsimp

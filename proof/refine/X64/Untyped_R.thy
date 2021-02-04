@@ -367,7 +367,7 @@ next
                   apply (rule_tac P = "valid_cap (cap.CNodeCap r bits g) and invs" in corres_guard_imp [where P' = invs'])
                     apply (rule mapME_x_corres_inv [OF _ _ _ refl])
                       apply (simp del: ser_def)
-                      apply (rule ensure_empty_corres)
+                      apply (rule ensureEmptySlot_corres)
                       apply (clarsimp simp: is_cap_simps)
                      apply (simp, wp)
                     apply (simp, wp)

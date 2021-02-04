@@ -3391,7 +3391,7 @@ lemma lookup_cap_corres:
    apply auto
   done
 
-lemma ensure_empty_corres:
+lemma ensureEmptySlot_corres:
   "q = cte_map p \<Longrightarrow>
    corres (ser \<oplus> dc) (invs and cte_at p) invs'
                      (ensure_empty p) (ensureEmptySlot q)"

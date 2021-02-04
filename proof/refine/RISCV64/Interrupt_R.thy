@@ -221,7 +221,7 @@ lemma arch_decodeIRQControlInvocation_corres:
        apply (rule corres_split_eqr[OF _ is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
          apply (rule corres_splitEE[OF _ lsfc_corres])
-             apply (rule corres_splitEE[OF _ ensure_empty_corres])
+             apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
                 apply (rule corres_returnOkTT)
                 apply (clarsimp simp: arch_irq_control_inv_relation_def)
                apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv
@@ -270,7 +270,7 @@ lemma decodeIRQControlInvocation_corres:
     apply (rule corres_split_eqr[OF _ is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE[OF _ lsfc_corres])
-          apply (rule corres_splitEE[OF _ ensure_empty_corres])
+          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
              apply (rule corres_returnOkTT)
              apply (clarsimp simp: arch_irq_control_inv_relation_def)
             apply (wpsimp wp: isIRQActive_inv arch_check_irq_valid' checkIRQ_inv

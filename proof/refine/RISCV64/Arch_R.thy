@@ -903,7 +903,7 @@ shows
                apply (erule lsfc_corres, rule refl)
               apply (rule corres_splitEE)
                  prefer 2
-                 apply (rule ensure_empty_corres)
+                 apply (rule ensureEmptySlot_corres)
                  apply clarsimp
                 apply (rule corres_returnOk[where P="\<top>"])
                 apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
