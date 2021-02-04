@@ -359,7 +359,7 @@ lemma valid_globals_ex_cte_cap_irq:
     mult.commute mult.left_commute)
   done
 
-lemma invoke_arch_irq_handler_corres:
+lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (ARM_H.invokeIRQHandler i')"
   apply (cases i; clarsimp simp: ARM_H.invokeIRQHandler_def)
@@ -376,7 +376,7 @@ lemma invokeIRQHandler_corres:
      (InterruptDecls_H.invokeIRQHandler i')"
   supply arch_invoke_irq_handler.simps[simp del]
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
-    apply (rule corres_guard_imp, rule invoke_arch_irq_handler_corres; simp)
+    apply (rule corres_guard_imp, rule arch_invokeIRQHandler_corres; simp)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)

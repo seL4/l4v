@@ -346,7 +346,7 @@ lemma no_fail_plic_complete_claim [simp, wp]:
   unfolding RISCV64.plic_complete_claim_def
   by (rule no_fail_machine_op_lift)
 
-lemma invoke_arch_irq_handler_corres:
+lemma arch_invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc \<top> \<top> (arch_invoke_irq_handler i) (RISCV64_H.invokeIRQHandler i')"
   apply (cases i; clarsimp simp: RISCV64_H.invokeIRQHandler_def)
@@ -362,7 +362,7 @@ lemma invokeIRQHandler_corres:
      (InterruptDecls_H.invokeIRQHandler i')"
   supply arch_invoke_irq_handler.simps[simp del]
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
-    apply (rule corres_guard_imp, rule invoke_arch_irq_handler_corres; simp)
+    apply (rule corres_guard_imp, rule arch_invokeIRQHandler_corres; simp)
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
