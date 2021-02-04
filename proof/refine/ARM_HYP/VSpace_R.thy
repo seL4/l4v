@@ -456,7 +456,7 @@ crunch distinct'[wp]: findFreeHWASID "pspace_distinct'"
 
 crunch no_0_obj'[wp]: getHWASID "no_0_obj'"
 
-lemma get_hw_asid_corres:
+lemma getHWASID_corres:
   "corres (=)
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
@@ -491,7 +491,7 @@ lemma arm_context_switch_corres:
           (arm_context_switch pd a) (armv_contextSwitch pd a)"
   apply (simp add: arm_context_switch_def armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ get_hw_asid_corres[where pd=pd]])
+    apply (rule corres_split_eqr [OF _ getHWASID_corres[where pd=pd]])
       apply (rule corres_machine_op)
       apply (rule corres_rel_imp)
        apply (rule corres_underlying_trivial)
