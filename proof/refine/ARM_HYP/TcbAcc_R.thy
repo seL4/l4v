@@ -1988,7 +1988,7 @@ lemma setSchedulerAction_corres:
   apply (clarsimp simp: in_monad simpler_modify_def state_relation_def)
   done
 
-lemma get_sa_corres:
+lemma getSchedulerAction_corres:
   "corres sched_act_relation \<top> \<top> (gets scheduler_action) getSchedulerAction"
   apply (simp add: getSchedulerAction_def)
   apply (clarsimp simp: state_relation_def)
@@ -1999,7 +1999,7 @@ lemma rescheduleRequired_corres:
      (reschedule_required) rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_sa_corres])
+    apply (rule corres_split[OF _ getSchedulerAction_corres])
       apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
               and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split[where r'=dc])
          apply (rule setSchedulerAction_corres)
@@ -2197,7 +2197,7 @@ lemma sts_corres:
        apply (subst thread_get_test[where test="runnable"])
        apply (rule corres_split[OF _ thread_get_isRunnable_corres])
          apply (rule corres_split[OF _ gct_corres])
-           apply (rule corres_split[OF _ get_sa_corres])
+           apply (rule corres_split[OF _ getSchedulerAction_corres])
              apply (simp only: when_def)
              apply (rule corres_if[where Q=\<top> and Q'=\<top>])
                apply (rule iffI)
