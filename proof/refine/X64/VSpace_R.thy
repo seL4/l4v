@@ -1462,7 +1462,7 @@ definition
     asid_pool_at' p and cte_wp_at' (isPML4Cap' o cteCap) slot and K
     (0 < asid \<and> asid_wf asid)"
 
-lemma pap_corres:
+lemma performASIDPoolInvocation_corres:
   assumes "ap' = asid_pool_invocation_map ap"
   shows "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)
                    (pspace_aligned' and pspace_distinct' and valid_apinv' ap')

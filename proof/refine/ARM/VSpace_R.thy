@@ -2473,7 +2473,7 @@ definition
   asid_pool_at' p and cte_wp_at' (isPDCap o cteCap) slot and K
   (0 < asid \<and> asid \<le> 2^asid_bits - 1)"
 
-lemma pap_corres:
+lemma performASIDPoolInvocation_corres:
   "ap' = asid_pool_invocation_map ap \<Longrightarrow>
   corres dc
           (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)

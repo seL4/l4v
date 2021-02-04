@@ -713,7 +713,7 @@ crunches copy_global_mappings
   and distinct[wp]: pspace_distinct
   (wp: crunch_wps)
 
-lemma pap_corres:
+lemma performASIDPoolInvocation_corres:
   assumes "ap' = asid_pool_invocation_map ap"
   shows "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_arch_state and valid_apinv ap)
                    (no_0_obj' and valid_apinv' ap')

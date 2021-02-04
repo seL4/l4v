@@ -3155,7 +3155,7 @@ definition (* ARMHYP: need review *)
   | VCPUWriteRegister v _ _ \<Rightarrow> vcpu_at' v
   | VCPUAckVPPI v _ \<Rightarrow> vcpu_at' v"
 
-lemma pap_corres:
+lemma performASIDPoolInvocation_corres:
   "ap' = asid_pool_invocation_map ap \<Longrightarrow>
   corres dc
           (valid_objs and pspace_aligned and pspace_distinct and valid_apinv ap and valid_etcbs)

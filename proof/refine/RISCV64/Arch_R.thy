@@ -973,7 +973,7 @@ lemma arch_performInvocation_corres:
    apply (fastforce simp: valid_arch_inv'_def)
   apply (clarsimp simp: archinv_relation_def)
   apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-      apply (rule pap_corres; wpsimp)
+      apply (rule performASIDPoolInvocation_corres; wpsimp)
      apply wpsimp+
    apply (fastforce simp: valid_arch_inv_def)
   apply (fastforce simp: valid_arch_inv'_def)
