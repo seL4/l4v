@@ -482,7 +482,7 @@ lemma get_pte_corres'':
                               (get_pte p) (getObject p')"
   using assms get_pte_corres' by simp
 
-lemma flush_table_corres:
+lemma flushTable_corres:
   assumes "pm' = pm" "vptr' = vptr" "pt' = pt" "asid' = asid"
   shows "corres dc (pspace_aligned and valid_objs and valid_arch_state
                       and cur_tcb and vspace_at_asid asid pm and valid_asid_map
@@ -596,7 +596,7 @@ lemma unmap_page_table_corres:
                                 simp: lookup_failure_map_def pde_relation_def
                                 split: X64_A.pde.splits)
               apply simp
-              apply (rule corres_split[OF _ flush_table_corres[OF refl refl refl refl]])
+              apply (rule corres_split[OF _ flushTable_corres[OF refl refl refl refl]])
                 apply (rule corres_split[OF _ store_pde_corres'])
                    apply (rule invalidatePageStructureCacheASID_corres)
                   apply simp

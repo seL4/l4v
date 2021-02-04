@@ -1807,7 +1807,7 @@ lemma load_hw_asid_corres2:
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma flush_table_corres:
+lemma flushTable_corres:
   "corres dc
           (pspace_aligned and valid_objs and valid_arch_state and
            cur_tcb and vspace_at_asid asid pd and valid_asid_map and valid_vspace_objs and
@@ -1987,7 +1987,7 @@ lemma unmap_page_table_corres:
       apply (rule corres_if2[OF refl])
        apply (rule corres_split [OF _ store_pde_corres'])
           apply (rule corres_split[OF _ corres_machine_op])
-             apply (rule flush_table_corres)
+             apply (rule flushTable_corres)
             apply (rule corres_Id, rule refl, simp)
             apply (wp no_fail_cleanByVA_PoU)+
            apply (simp, wp+)
