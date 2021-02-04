@@ -1443,7 +1443,7 @@ lemma arch_performInvocation_corres:
   apply (cases ai)
          apply (clarsimp simp: archinv_relation_def performX64MMUInvocation_def)
          apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-             apply (rule perform_page_table_corres; wpsimp)
+             apply (rule performPageTableInvocation_corres; wpsimp)
             apply wpsimp+
           apply (fastforce simp: valid_arch_inv_def)
          apply (fastforce simp: valid_arch_inv'_def)

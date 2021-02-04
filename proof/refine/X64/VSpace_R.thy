@@ -1122,7 +1122,7 @@ lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 lemmas unmapPageDirectory_typ_ats[wp] = typ_at_lifts[OF unmapPageDirectory_typ_at']
 lemmas unmapPDPT_typ_ats[wp] = typ_at_lifts[OF unmapPDPT_typ_at']
 
-lemma perform_page_table_corres:
+lemma performPageTableInvocation_corres:
   "page_table_invocation_map pti pti' \<Longrightarrow>
    corres dc
           (invs and valid_etcbs and valid_pti pti)

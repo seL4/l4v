@@ -1382,7 +1382,7 @@ lemma arch_performInvocation_corres:
                   (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
-  note invocation_corres =  perform_page_table_corres performPageDirectoryInvocation_corres
+  note invocation_corres =  performPageTableInvocation_corres performPageDirectoryInvocation_corres
                             performASIDControlInvocation_corres pap_corres performPageInvocation_corres performARMVCPUInvocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
