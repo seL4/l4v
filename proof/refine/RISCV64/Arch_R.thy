@@ -449,7 +449,7 @@ lemma select_ext_fap:
 lemmas vmsz_aligned_imp_aligned
     = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
-lemma check_slot_corres:
+lemma checkSlot_corres:
   "(\<And>pte pte'. pte_relation' pte pte' \<Longrightarrow> test' pte' = test pte) \<Longrightarrow>
    corres (ser \<oplus> dc)
           (pte_at p and pspace_aligned and pspace_distinct) \<top>
@@ -569,7 +569,7 @@ lemma decode_page_inv_corres:
                   prefer 2
                   apply (cases opt; clarsimp)
                    apply (fold ser_def)
-                   apply (rule check_slot_corres)
+                   apply (rule checkSlot_corres)
                    apply fastforce
                   apply (rule corres_guard_imp)
                     apply (rule whenE_throwError_corres)
@@ -578,7 +578,7 @@ lemma decode_page_inv_corres:
                     apply (rule whenE_throwError_corres)
                       apply fastforce
                      apply presburger
-                    apply (rule check_slot_corres)
+                    apply (rule checkSlot_corres)
                     apply (case_tac pte; simp add: is_PageTablePTE_def RISCV64_H.isPageTablePTE_def)
                    apply blast
                   apply blast
