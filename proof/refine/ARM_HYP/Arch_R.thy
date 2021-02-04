@@ -822,7 +822,7 @@ lemma vgi_mask[simp]:
   "vgicIRQActive = vgic_irq_active"
   by (auto simp: vgicIRQMask_def vgic_irq_mask_def vgic_irq_active_def vgicIRQActive_def)
 
-lemma dec_vcpu_inv_corres:
+lemma decodeARMVCPUInvocation_corres:
   notes if_split [split del]
   shows
   "\<lbrakk>acap_relation arch_cap arch_cap'; list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -1254,7 +1254,7 @@ shows
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                    split: option.splits)
    apply clarsimp
-  apply (simp, rule corres_guard_imp[OF dec_vcpu_inv_corres]; simp)
+  apply (simp, rule corres_guard_imp[OF decodeARMVCPUInvocation_corres]; simp)
   done
 
 
