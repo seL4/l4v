@@ -1049,7 +1049,7 @@ lemma isIOPortRangeFree_wp:
   apply (clarsimp simp: issued_ioports'_def)
   by (simp add: disjoint_iff_not_equal)
 
-lemma decode_ioport_control_inv_corres:
+lemma decodeX64PortInvocation_corres:
   "\<lbrakk>list_all2 cap_relation caps caps'; cap = arch_cap.IOPortControlCap; acap_relation cap cap'\<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
@@ -1276,7 +1276,7 @@ shows
 
 \<comment> \<open>IOPortControlCap\<close>
        apply (simp add: isCap_simps isIOCap_def Let_def split del: if_split)
-       apply (rule corres_guard_imp, rule decode_ioport_control_inv_corres; simp)
+       apply (rule corres_guard_imp, rule decodeX64PortInvocation_corres; simp)
 
     \<comment> \<open>PageCap\<close>
     apply (rename_tac word cap_rights vmpage_size option)
