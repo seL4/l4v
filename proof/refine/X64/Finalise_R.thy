@@ -3597,7 +3597,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma arch_finalise_cap_corres:
+lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
            (\<lambda>s. invs s \<and> valid_etcbs s
@@ -3818,7 +3818,7 @@ lemma finalise_cap_corres:
     apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply simp
   apply (clarsimp split del: if_split simp: o_def)
-  apply (rule corres_guard_imp [OF arch_finalise_cap_corres], (fastforce simp: valid_sched_def)+)
+  apply (rule corres_guard_imp [OF arch_finaliseCap_corres], (fastforce simp: valid_sched_def)+)
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
