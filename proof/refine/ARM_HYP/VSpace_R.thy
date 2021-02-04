@@ -1909,7 +1909,7 @@ crunch distinct'[wp]: unmapPageTable "pspace_distinct'"
   (simp: crunch_simps
      wp: crunch_wps getObject_inv loadObject_default_inv)
 
-lemma page_table_mapped_corres:
+lemma pageTableMapped_corres:
   "corres (=) (valid_arch_state and valid_vspace_objs and pspace_aligned
                        and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits))
                  (pspace_aligned' and pspace_distinct' and no_0_obj')
@@ -1982,7 +1982,7 @@ lemma unmap_page_table_corres:
           (unmapPageTable asid vptr pt)"
   apply (clarsimp simp: unmapPageTable_def unmap_page_table_def ignoreFailure_def const_def cong: option.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ page_table_mapped_corres])
+    apply (rule corres_split_eqr [OF _ pageTableMapped_corres])
       apply (simp add: case_option_If2 split del: if_split)
       apply (rule corres_if2[OF refl])
        apply (rule corres_split [OF _ store_pde_corres'])
