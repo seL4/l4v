@@ -1380,7 +1380,7 @@ definition
  | X64_A.PDPTUnmap cap ptr \<Rightarrow>
       \<exists>cap'. pdpti' = PDPTUnmap cap' (cte_map ptr) \<and> cap_relation cap (ArchObjectCap cap')"
 
-lemma perform_pdpt_corres:
+lemma performPDPTInvocation_corres:
   "pdpt_invocation_map pdpti pdpti' \<Longrightarrow>
    corres dc
           (invs and valid_etcbs and valid_pdpti pdpti)
