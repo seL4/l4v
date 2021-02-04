@@ -1105,7 +1105,7 @@ lemma arch_deriveCap_valid:
                    capUntypedPtr_def ARM_H.capUntypedPtr_def)
   done
 
-lemma arch_derive_corres [corres]:
+lemma arch_deriveCap_corres [corres]:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
   corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>

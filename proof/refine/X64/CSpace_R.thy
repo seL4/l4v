@@ -3489,7 +3489,7 @@ lemma deriveCap_corres:
   apply clarsimp
   apply (rule corres_rel_imp)
    apply (rule corres_guard_imp)
-     apply (rule arch_derive_corres)
+     apply (rule arch_deriveCap_corres)
      apply (clarsimp simp: o_def)+
   done
 

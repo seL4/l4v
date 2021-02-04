@@ -888,7 +888,7 @@ lemma mdata_map_simps[simp]:
   "mdata_map (Some (asid, ref)) = Some (ucast asid, ref)"
   by (auto simp add: mdata_map_def)
 
-lemma arch_derive_corres:
+lemma arch_deriveCap_corres:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
   corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>

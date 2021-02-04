@@ -1467,7 +1467,7 @@ lemma arch_deriveCap_valid:
    apply (simp add: valid_cap'_def capAligned_def capUntypedPtr_def X64_H.capUntypedPtr_def)+
   done
 
-lemma arch_derive_corres:
+lemma arch_deriveCap_corres:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
   corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>
