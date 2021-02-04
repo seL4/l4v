@@ -566,7 +566,7 @@ lemma user_region_or:
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
 
-lemma lookup_pt_slot_from_level_corres:
+lemma lookupPTSlotFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
      (pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_table and
@@ -681,7 +681,7 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corressimp corres: lookup_pt_slot_from_level_corres)
+  by (corressimp corres: lookupPTSlotFromLevel_corres)
 
 lemma pt_lookup_from_level_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
@@ -703,7 +703,7 @@ proof (induct level arbitrary: level' pt pt')
 next
   case (minus level)
 
-  (* FIXME: unfortunate duplication from lookup_pt_slot_from_level_corres *)
+  (* FIXME: unfortunate duplication from lookupPTSlotFromLevel_corres *)
   from `0 < level`
   obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
   with `0 < level`
