@@ -1352,7 +1352,7 @@ lemma associateVCPUTCB_corres:
   apply (simp add: valid_vcpu'_def typ_at_tcb')
   done
 
-lemma invoke_vcpu_ack_vppi_corres:
+lemma invokeVCPUAckVPPI_corres:
   "corres (=) (vcpu_at vcpu) (vcpu_at' vcpu)
         (do y \<leftarrow> invoke_vcpu_ack_vppi vcpu vppi;
                  return []
@@ -1366,7 +1366,7 @@ lemma invoke_vcpu_ack_vppi_corres:
 lemma perform_vcpu_invocation_corres:
   notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
                      invokeVCPUWriteReg_corres associateVCPUTCB_corres
-                     invoke_vcpu_ack_vppi_corres
+                     invokeVCPUAckVPPI_corres
   shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
                        (invs' and ct_active' and valid_vcpuinv' (vcpu_invocation_map iv))
                 (perform_vcpu_invocation iv) (performARMVCPUInvocation (vcpu_invocation_map iv))"
