@@ -662,7 +662,7 @@ lemma kernelEntry_corres:
          apply (simp add: exst_same_def)
         apply (rule corres_split [OF _ callKernel_corres])
           apply (rule corres_split_eqr [OF _ gct_corres])
-            apply (rule threadget_corres)
+            apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+

@@ -1581,7 +1581,7 @@ lemma makeFaultMessage_inv[wp]:
   done
 
 lemmas threadget_fault_corres =
-          threadget_corres [where r = fault_rel_optionation
+          threadGet_corres [where r = fault_rel_optionation
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
@@ -3431,7 +3431,7 @@ lemma sendFaultIPC_corres:
           apply auto[1]
          apply (clarsimp simp: lookup_failure_map_def)
         apply wp+
-      apply (rule threadget_corres)
+      apply (rule threadGet_corres)
       apply (simp add: tcb_relation_def)
      apply wp+
    apply (fastforce elim: st_tcb_at_tcb_at)

@@ -389,7 +389,7 @@ lemma assert_get_tcb_corres:
   apply assumption
   done
 
-lemma threadget_corres:
+lemma threadGet_corres:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> r (f tcb) (f' tcb')"
   shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                        (thread_get f t) (threadGet f' t)"
@@ -1664,7 +1664,7 @@ lemma gts_corres:
   "corres thread_state_relation (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (get_thread_state t) (getThreadState t)"
   apply (simp add: get_thread_state_def getThreadState_def)
-  apply (rule threadget_corres)
+  apply (rule threadGet_corres)
   apply (simp add: tcb_relation_def)
   done
 
@@ -1695,7 +1695,7 @@ lemma gbn_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (get_bound_notification t) (getBoundNotification t)"
   apply (simp add: get_bound_notification_def getBoundNotification_def)
-  apply (rule threadget_corres)
+  apply (rule threadGet_corres)
   apply (simp add: tcb_relation_def)
   done
 
@@ -3698,7 +3698,7 @@ lemma lipcb_corres':
    apply (fastforce simp: pspace_aligned_cross pspace_distinct_cross state_relation_def)
   apply (simp add: lookup_ipc_buffer_def RISCV64_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ threadget_corres])
+    apply (rule corres_split_eqr [OF _ threadGet_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
        apply (rule corres_split [OF _ getSlotCap_corres])
           apply (rule_tac F="valid_ipc_buffer_cap rv buffer_ptr"

@@ -2014,7 +2014,7 @@ lemma checkPrio_corres:
   apply (simp add: check_prio_def checkPrio_def)
   apply (rule corres_guard_imp)
     apply (simp add: liftE_bindE)
-    apply (rule corres_split[OF _ threadget_corres])
+    apply (rule corres_split[OF _ threadGet_corres])
        apply (rule_tac rvr = dc and
                          R = \<top> and
                         R' = \<top> in

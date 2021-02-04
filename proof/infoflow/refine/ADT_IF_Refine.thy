@@ -840,7 +840,7 @@ lemma kernel_exit_if_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="(=)"])
        apply simp
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
       apply (rule gct_corres)
