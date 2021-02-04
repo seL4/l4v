@@ -1500,7 +1500,7 @@ lemma doNormalTransfer_corres:
               apply (rule corres_split_nor [OF _ setMessageInfo_corres])
                  apply (simp add: badge_register_def badgeRegister_def)
                  apply (fold dc_def)
-                 apply (rule user_setreg_corres)
+                 apply (rule asUser_setRegister_corres)
                 apply (case_tac mi', clarsimp)
                apply wp
              apply simp+
@@ -1669,14 +1669,14 @@ lemma doFaultTransfer_corres:
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ setMessageInfo_corres])
-             apply (rule user_setreg_corres)
+             apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ setMessageInfo_corres])
-             apply (rule user_setreg_corres)
+             apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
   done
@@ -2692,7 +2692,7 @@ lemma sendSignal_corres:
          apply (rule corres_split[OF _ cancelIPC_corres])
            apply (rule corres_split[OF _ sts_corres])
               apply (simp add: badgeRegister_def badge_register_def)
-              apply (rule corres_split[OF _ user_setreg_corres])
+              apply (rule corres_split[OF _ asUser_setRegister_corres])
                 apply (rule possibleSwitchTo_corres)
                apply wp
              apply (clarsimp simp: thread_state_relation_def)
@@ -2725,7 +2725,7 @@ lemma sendSignal_corres:
       apply (rule corres_split [OF _ set_ntfn_corres])
          apply (rule corres_split [OF _ sts_corres])
             apply (simp add: badgeRegister_def badge_register_def)
-            apply (rule corres_split [OF _ user_setreg_corres])
+            apply (rule corres_split [OF _ asUser_setRegister_corres])
               apply (rule possibleSwitchTo_corres)
              apply ((wp | simp)+)[1]
             apply (rule_tac Q="\<lambda>_. Invariants_H.valid_queues and valid_queues' and
@@ -2756,7 +2756,7 @@ lemma sendSignal_corres:
      apply (rule corres_split [OF _ set_ntfn_corres])
         apply (rule corres_split [OF _ sts_corres])
            apply (simp add: badgeRegister_def badge_register_def)
-           apply (rule corres_split [OF _ user_setreg_corres])
+           apply (rule corres_split [OF _ asUser_setRegister_corres])
              apply (rule possibleSwitchTo_corres)
             apply (wp cur_tcb_lift | simp)+
          apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
@@ -3167,7 +3167,7 @@ lemma replyFromKernel_corres:
                         badge_register_def badgeRegister_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ lipcb_corres])
-      apply (rule corres_split [OF _ user_setreg_corres])
+      apply (rule corres_split [OF _ asUser_setRegister_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres])
            apply (rule setMessageInfo_corres)
            apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
@@ -3199,7 +3199,7 @@ lemma completeSignal_corres:
                        split: ntfn.splits Structures_H.notification.splits)+
       apply (rule corres_guard2_imp)
        apply (simp add: badgeRegister_def badge_register_def)
-       apply (rule corres_split[OF set_ntfn_corres user_setreg_corres])
+       apply (rule corres_split[OF set_ntfn_corres asUser_setRegister_corres])
          apply (clarsimp simp: ntfn_relation_def)
         apply (wp set_simple_ko_valid_objs get_simple_ko_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
   apply (clarsimp simp: valid_pspace'_def)
@@ -3214,7 +3214,7 @@ lemma doNBRecvFailedTransfer_corres:
             (do_nbrecv_failed_transfer thread)
             (doNBRecvFailedTransfer thread)"
   unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
-  by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
+  by (simp add: badgeRegister_def badge_register_def, rule asUser_setRegister_corres)
 
 lemma receiveIPC_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'"
@@ -3404,7 +3404,7 @@ lemma receiveSignal_corres:
       apply (simp add: ntfn_relation_def)
       apply (rule corres_guard_imp)
         apply (simp add: badgeRegister_def badge_register_def)
-        apply (rule corres_split [OF _ user_setreg_corres])
+        apply (rule corres_split [OF _ asUser_setRegister_corres])
           apply (rule set_ntfn_corres)
           apply (simp add: ntfn_relation_def)
          apply wp+

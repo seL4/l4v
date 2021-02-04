@@ -319,7 +319,7 @@ lemma asUser_postModifyRegisters_corres:
   apply (rule corres_guard_imp)
     apply (clarsimp simp: arch_post_modify_registers_def postModifyRegisters_def when_def)
     apply safe
-     apply (rule user_setreg_corres)
+     apply (rule asUser_setRegister_corres)
     apply (subst submonad_asUser.return)
     apply (rule corres_stateAssert_assume)
      by simp+
@@ -1802,7 +1802,7 @@ lemma invokeTCB_corres:
    apply (clarsimp simp: obj_at'_def projectKOs)
   apply (simp add: invokeTCB_def tlsBaseRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ TcbAcc_R.user_setreg_corres])
+    apply (rule corres_split[OF _ TcbAcc_R.asUser_setRegister_corres])
       apply (rule corres_split[OF _ Bits_R.gct_corres])
         apply (rule corres_split[OF _ Corres_UL.corres_when])
             apply (rule corres_trivial, simp)

@@ -825,7 +825,7 @@ lemma setMessageInfo_corres:
   apply (simp add: setMessageInfo_def set_message_info_def)
   apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) =
                       message_info_to_data mi")
-   apply (simp add: user_setreg_corres msg_info_register_def
+   apply (simp add: asUser_setRegister_corres msg_info_register_def
                     msgInfoRegister_def)
   apply (simp add: message_info_to_data_eqv)
   done
