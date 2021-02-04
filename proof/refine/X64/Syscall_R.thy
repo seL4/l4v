@@ -2033,7 +2033,7 @@ proof -
          apply (rule corres_guard_imp, rule gct_corres, simp+)
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
-          apply (rule hv_corres)
+          apply (rule handleVMFault_corres)
          apply (rule hoare_elim_pred_conjE2)
          apply (rule hoare_vcg_E_conj, rule valid_validE_E, wp)
          apply (wp handle_vm_fault_valid_fault)

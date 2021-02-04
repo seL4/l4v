@@ -118,7 +118,7 @@ lemma asidBits_asid_bits[simp]:
   by (simp add: asid_bits_def asidBits_def
                 asidHighBits_def asid_low_bits_def)
 
-lemma hv_corres:
+lemma handleVMFault_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: X64_H.handleVMFault_def handle_vm_fault_def)

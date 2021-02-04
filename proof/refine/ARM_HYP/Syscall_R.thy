@@ -2096,7 +2096,7 @@ proof -
          apply (rule corres_guard_imp, rule gct_corres, simp+)
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
-          apply (rule hv_corres)
+          apply (rule handleVMFault_corres)
          apply (wp handle_vm_fault_valid_fault)
         apply (wp hvmf_invs_etc)
        apply wp

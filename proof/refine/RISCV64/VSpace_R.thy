@@ -56,7 +56,7 @@ lemma no_fail_read_stval[intro!,simp]:
   "no_fail \<top> read_stval"
   by (simp add: read_stval_def)
 
-lemma hv_corres:
+lemma handleVMFault_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: RISCV64_H.handleVMFault_def handle_vm_fault_def)

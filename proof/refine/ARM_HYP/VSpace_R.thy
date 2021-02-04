@@ -630,7 +630,7 @@ lemma setVCPU_ct_not_inQ[wp]:
   apply assumption
   done
 
-lemma hv_corres:
+lemma handleVMFault_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: ARM_HYP_H.handleVMFault_def)
