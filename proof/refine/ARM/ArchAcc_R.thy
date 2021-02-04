@@ -906,7 +906,7 @@ lemma store_pte_corres':
    apply auto
   done
 
-lemma lookup_pd_slot_corres [simp]:
+lemma lookupPDSlot_corres [simp]:
   "lookupPDSlot pd vptr = lookup_pd_slot pd vptr"
   by (simp add: lookupPDSlot_def lookup_pd_slot_def pageBits_def ptBits_def pdeBits_def)
 

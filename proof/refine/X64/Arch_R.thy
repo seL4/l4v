@@ -688,7 +688,7 @@ lemma decodeX64PageTableInvocation_corres:
        apply (rule corres_splitEE)
           prefer 2
           apply (rule corres_lookup_error)
-          apply (rule lookup_pd_slot_corres)
+          apply (rule lookupPDSlot_corres)
          apply (rule corres_splitEE)
             prefer 2
             apply simp
