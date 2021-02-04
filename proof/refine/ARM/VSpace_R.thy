@@ -1507,7 +1507,7 @@ lemma store_pte_pd_at_asid[wp]:
   apply clarsimp
   done
 
-lemma unmap_page_corres:
+lemma unmapPage_corres:
   "corres dc (invs and valid_etcbs and
               K (valid_unmap sz (asid,vptr) \<and> vptr < kernel_base \<and> asid \<le> mask asid_bits))
              (valid_objs' and valid_arch_state' and pspace_aligned' and
@@ -2279,7 +2279,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split)
          prefer 2
-         apply (rule unmap_page_corres)
+         apply (rule unmapPage_corres)
         apply (rule corres_split [where r'=acap_relation])
            prefer 2
            apply simp

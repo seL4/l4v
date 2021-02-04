@@ -406,7 +406,7 @@ crunch inv[wp]: checkMappingPPtr "P"
 
 lemmas liftE_get_pte_corres = get_pte_corres[THEN corres_liftE_rel_sum[THEN iffD2]]
 
-lemma unmap_page_corres:
+lemma unmapPage_corres:
   assumes "sz' = sz" "asid' = ucast asid" "vptr' = vptr" "pptr' = pptr"
   shows "corres dc (invs and K (valid_unmap sz (asid,vptr) \<and> vptr \<in> user_region))
                    (no_0_obj')
@@ -565,7 +565,7 @@ lemma perform_page_corres:
        apply clarsimp
        apply datatype_schem
        apply (fold dc_def)[1]
-       apply (rule unmap_page_corres; simp)
+       apply (rule unmapPage_corres; simp)
       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct)
     apply (clarsimp simp: cte_wp_at_caps_of_state wellformed_pte_def

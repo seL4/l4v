@@ -3882,7 +3882,7 @@ lemma arch_finalise_cap_corres:
       apply (clarsimp simp: valid_cap_def mask_def)
      apply (clarsimp simp: valid_cap'_def)
      apply auto[1]
-    apply (rule corres_guard_imp, rule unmap_page_corres)
+    apply (rule corres_guard_imp, rule unmapPage_corres)
       apply simp
      apply (clarsimp simp: valid_cap_def valid_unmap_def)
      apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def

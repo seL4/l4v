@@ -658,7 +658,7 @@ lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iff
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 
-lemma unmap_page_corres:
+lemma unmapPage_corres:
   assumes "sz' = sz" "asid' = asid" "vptr' = vptr" "pptr' = pptr"
   shows "corres dc (invs and valid_etcbs and
                      K (valid_unmap sz (asid,vptr) \<and> vptr < pptr_base \<and> asid_wf asid
@@ -959,7 +959,7 @@ proof -
     apply (rule corres_guard_imp)
      apply (rule corres_split)
         prefer 2
-        apply (rule unmap_page_corres[OF refl refl refl refl])
+        apply (rule unmapPage_corres[OF refl refl refl refl])
        apply (rule corres_split [where r'=acap_relation])
           prefer 2
           apply simp
