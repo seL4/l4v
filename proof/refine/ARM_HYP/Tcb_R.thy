@@ -1373,7 +1373,7 @@ proof -
     apply (clarsimp simp add: newroot_rel_def returnOk_def split_def)
     apply (rule corres_gen_asm)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_norE [OF _ cap_delete_corres])
+      apply (rule corres_split_norE [OF _ cteDelete_corres])
         apply (simp del: dc_simp)
         apply (erule checked_insert_corres)
        apply (fold validE_R_def)
@@ -1460,14 +1460,14 @@ proof -
              apply (rule threadcontrol_corres_helper1[unfolded pred_conj_def])
             apply (wp hoare_drop_imp)
             apply (wp threadcontrol_corres_helper2 | wpc | simp)+
-           apply (rule cap_delete_corres)
+           apply (rule cteDelete_corres)
           apply wp
          apply (wpsimp wp: cteDelete_invs' hoare_vcg_conj_lift)
         apply (fastforce simp: emptyable_def)
        apply fastforce
       apply clarsimp
       apply (rule corres_guard_imp)
-        apply (rule corres_split_norE [OF _ cap_delete_corres])
+        apply (rule corres_split_norE [OF _ cteDelete_corres])
           apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm)
           apply (rule_tac F="isArchObjectCap ac" in corres_gen_asm2)
           apply (rule corres_split_nor)

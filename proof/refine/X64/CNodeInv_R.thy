@@ -7482,7 +7482,7 @@ next
     done
 qed
 
-lemma cap_delete_corres:
+lemma cteDelete_corres:
   "corres (dc \<oplus> dc)
       (einvs and simple_sched_action and cte_at ptr and emptyable ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
@@ -7853,7 +7853,7 @@ proof (induct rule: cap_revoke.induct)
      apply (rule cap_revoke_mdb_stuff4, (simp add: in_get_cap_cte_wp_at)+)
     apply (clarsimp simp: whenE_def)
     apply (rule spec_corres_guard_imp)
-      apply (rule spec_corres_splitE' [OF cap_delete_corres])
+      apply (rule spec_corres_splitE' [OF cteDelete_corres])
         apply (rule spec_corres_splitE' [OF preemptionPoint_corres])
           apply (rule "1.hyps",
                    (simp add: cte_wp_at_def in_monad select_def next_revoke_cap_def select_ext_def
@@ -8894,7 +8894,7 @@ lemma inv_cnode_corres:
         apply (clarsimp simp: cte_wp_at_caps_of_state real_cte_tcb_valid)
        apply (clarsimp simp: cte_wp_at_ctes_of)
        apply (rule cap_revoke_corres)
-     apply (rule corres_guard_imp [OF cap_delete_corres])
+     apply (rule corres_guard_imp [OF cteDelete_corres])
       apply (clarsimp simp: cte_at_typ cap_table_at_typ halted_emptyable)
      apply simp
     apply (rename_tac cap1 cap2 p1 p2 p3)
