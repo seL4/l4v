@@ -297,7 +297,7 @@ lemma loadHWASID_corres:
 crunch inv[wp]: loadHWASID "P"
   (wp: crunch_wps)
 
-lemma store_hw_asid_corres:
+lemma storeHWASID_corres:
   "corres dc
           (vspace_at_asid a pd and pd_at_uniq a pd
                   and valid_vspace_objs and pspace_distinct
@@ -461,7 +461,7 @@ lemma get_hw_asid_corres:
       apply (case_tac maybe_hw_asid, simp_all)[1]
       apply clarsimp
       apply (rule corres_split_eqr [OF _ find_free_hw_asid_corres])
-         apply (rule corres_split [OF _ store_hw_asid_corres[where pd=pd]])
+         apply (rule corres_split [OF _ storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp )
           apply (wpsimp wp: load_hw_asid_wp)+
    apply (simp add: pd_at_asid_uniq)
