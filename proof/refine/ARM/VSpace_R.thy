@@ -1317,7 +1317,7 @@ lemma flushTable_corres:
                 simp add: cur_tcb'_def [symmetric] cur_tcb_def [symmetric] )+
   done
 
-lemma flush_page_corres:
+lemma flushPage_corres:
   "corres dc
           (K (is_aligned vptr pageBits \<and> asid \<le> mask asid_bits \<and> asid \<noteq> 0) and
            cur_tcb and valid_arch_state and valid_objs and
@@ -1521,7 +1521,7 @@ lemma unmap_page_corres:
              rule find_pd_for_asid_corres,simp)
         apply (rule corres_splitEE)
            apply clarsimp
-           apply (rule flush_page_corres)
+           apply (rule flushPage_corres)
           apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
           apply (rule_tac P="\<exists>\<rhd> pd and page_directory_at pd and vspace_at_asid asid pd
                              and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits))
