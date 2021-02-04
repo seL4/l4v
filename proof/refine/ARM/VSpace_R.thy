@@ -2065,7 +2065,7 @@ lemma message_info_from_data_eqv:
                  msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def mask_def
                  shiftL_nat msgMaxLength_def msgLabelBits_def)
 
-lemma set_mi_corres:
+lemma setMessageInfo_corres:
  "mi' = message_info_map mi \<Longrightarrow>
   corres dc (tcb_at t) (tcb_at' t)
          (set_message_info t mi) (setMessageInfo t mi')"
@@ -2326,7 +2326,7 @@ proof -
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])
       apply simp
-      apply (rule corres_split[OF set_mi_corres set_mrs_corres])
+      apply (rule corres_split[OF setMessageInfo_corres set_mrs_corres])
          apply (simp add: message_info_map_def)
         apply clarsimp
        apply (wp)+

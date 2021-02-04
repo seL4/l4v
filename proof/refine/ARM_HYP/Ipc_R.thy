@@ -1466,7 +1466,7 @@ lemma doNormalTransfer_corres:
               apply (rename_tac mi' mi'')
               apply (rule_tac F="mi_label mi' = mi_label mi"
                         in corres_gen_asm)
-              apply (rule corres_split_nor [OF _ set_mi_corres])
+              apply (rule corres_split_nor [OF _ setMessageInfo_corres])
                  apply (simp add: badge_register_def badgeRegister_def)
                  apply (fold dc_def)
                  apply (rule user_setreg_corres)
@@ -1673,14 +1673,14 @@ lemma doFaultTransfer_corres:
    apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ set_mi_corres])
+          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
              apply (rule user_setreg_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ set_mi_corres])
+          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
              apply (rule user_setreg_corres)
             apply simp
            apply (wp | simp)+
@@ -3202,7 +3202,7 @@ lemma replyFromKernel_corres:
     apply (rule corres_split_eqr [OF _ lipcb_corres])
       apply (rule corres_split [OF _ user_setreg_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres])
-           apply (rule set_mi_corres)
+           apply (rule setMessageInfo_corres)
            apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
                   | clarsimp)+
   done
