@@ -837,7 +837,7 @@ lemma invalidateASID_valid_arch_state [wp]:
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
-lemma delete_asid_corres:
+lemma deleteASID_corres:
   "corres dc
           (invs and valid_etcbs and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0))
           (pspace_aligned' and pspace_distinct' and no_0_obj'

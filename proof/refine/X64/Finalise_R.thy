@@ -3635,7 +3635,7 @@ lemma arch_finalise_cap_corres:
     apply (auto simp: valid_cap_def valid_cap'_def mask_def bit_simps wellformed_mapdata_def
                       vmsz_aligned_def
                elim!: is_aligned_weaken)[2]
-  apply (rule corres_guard_imp, rule delete_asid_corres[OF refl refl])
+  apply (rule corres_guard_imp, rule deleteASID_corres[OF refl refl])
    apply (auto simp: mask_def valid_cap_def)[2]
   done
 

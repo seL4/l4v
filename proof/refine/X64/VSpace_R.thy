@@ -297,7 +297,7 @@ crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
 
-lemma delete_asid_corres [corres]:
+lemma deleteASID_corres [corres]:
   assumes "asid' = asid" "pm' = pm"
   notes set_asid_pool_def[simp del]
   shows "corres dc

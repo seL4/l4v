@@ -3890,7 +3890,7 @@ lemma arch_finalise_cap_corres:
    apply (rule corres_guard_imp, rule unmap_page_table_corres)
     apply (auto simp: valid_cap_def valid_cap'_def mask_def
                elim!: is_aligned_weaken invs_valid_asid_map)[2]
-  apply (rule corres_guard_imp, rule delete_asid_corres)
+  apply (rule corres_guard_imp, rule deleteASID_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
   apply corres
   apply (clarsimp simp: valid_cap_def valid_cap'_def)

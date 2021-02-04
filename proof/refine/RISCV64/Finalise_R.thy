@@ -3456,7 +3456,7 @@ lemma arch_finalise_cap_corres:
         apply (simp only: whenE_def)
         apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
          apply simp
-         apply (rule delete_asid_corres; rule refl)
+         apply (rule deleteASID_corres; rule refl)
         apply simp
        apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table)

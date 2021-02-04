@@ -203,7 +203,7 @@ lemma hwASIDFlush_corres[corres]:
   "corres dc \<top> \<top> (do_machine_op (hwASIDFlush x)) (doMachineOp (hwASIDFlush x))"
   by (corressimp corres: corres_machine_op)
 
-lemma delete_asid_corres [corres]:
+lemma deleteASID_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"
   shows "corres dc invs no_0_obj'
                 (delete_asid asid pm) (deleteASID asid' pm')"
