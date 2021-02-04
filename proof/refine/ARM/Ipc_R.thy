@@ -5483,6 +5483,48 @@ lemma hf_corres:
    apply (auto elim: cte_wp_at_tcbI' simp: objBitsKO_def return_def tcb_cte_cases_def)
   done
 
+lemma handleTimeout_corres:
+  assumes "fr f f'"
+  shows "corres dc (invs and valid_list and valid_sched_except_blocked_except_released_ipc_qs
+                         and scheduler_act_not t and st_tcb_at active t and ex_nonz_cap_to t
+                         and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
+                   (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
+                   (handle_timeout t f) (handleTimeout t f')"
+  (is "corres _ ?G ?G' _ _")
+  using assms
+  apply (clarsimp simp: handle_timeout_def handleTimeout_def)
+  apply (rule corres_gen_asm)
+  apply (rule_tac Q="?G" and Q'="?G' and obj_at' (isEndpointCap \<circ> cteCap \<circ> tcbTimeoutHandler) t"
+               in stronger_corres_guard_imp)
+    apply (rule corres_symb_exec_r)
+       apply (rule corres_assert_assume_r)
+       apply (rule corres_guard_imp)
+         apply (rule corres_split[OF _ assert_get_tcb_corres])
+           apply (rule corres_assert_assume_l)
+           apply (rule corres_split)
+              apply clarsimp
+             apply (rule corres_split_catch[OF _ send_fault_ipc_corres])
+                  apply (fastforce simp: tcb_relation_def)+
+              apply (wp getTCB_wp)+
+        apply (fastforce simp: pred_tcb_at_def cte_wp_at_def obj_at_def is_tcb_def get_cap_def
+                               get_object_def get_tcb_def valid_obj_def valid_tcb_def bind_def
+                               return_def tcb_cap_cases_def tcb_cnode_map_def simpler_gets_def
+                         dest: invs_valid_objs)
+       apply assumption
+      apply (wpsimp wp: getTCB_wp simp: isValidTimeoutHandler_def)
+      apply (fastforce simp: isCap_simps pred_tcb_at'_def obj_at'_def projectKOs
+                             valid_obj'_def valid_tcb'_def tcb_cte_cases_def
+                       dest: invs_valid_objs')
+     apply (wpsimp wp: hoare_drop_imps simp: isValidTimeoutHandler_def)+
+  apply (clarsimp simp: pred_tcb_at_def pred_tcb_at'_def obj_at_def obj_at'_def
+                        is_tcb_def projectKOs state_relation_def pspace_relation_def)
+  apply (erule_tac x=t in ballE)
+   apply (auto simp: other_obj_relation_def tcb_relation_def cap_relation_def
+                     cte_wp_at_caps_of_state caps_of_state_def tcb_cnode_map_def
+                     get_object_def get_tcb_def get_cap_def simpler_gets_def
+                     return_def bind_def is_cap_simps isCap_simps)
+  done
+
 lemma hf_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
           and st_tcb_at' active' t

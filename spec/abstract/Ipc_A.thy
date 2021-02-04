@@ -544,7 +544,7 @@ where
   "handle_timeout tptr ex \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb tptr;
      assert (is_ep_cap (tcb_timeout_handler tcb));
-     send_fault_ipc tptr (tcb_timeout_handler tcb) ex False;
+     send_fault_ipc tptr (tcb_timeout_handler tcb) ex False <catch> K (return False);
      return ()
   od"
 
