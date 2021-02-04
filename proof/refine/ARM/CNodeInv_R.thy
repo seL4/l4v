@@ -7000,7 +7000,7 @@ next
            apply (rule isFinalCapability_corres[where ptr=slot])
           apply (rule spec_corres_splitE')
              apply simp
-             apply (rule finalise_cap_corres[where sl=slot])
+             apply (rule finaliseCap_corres[where sl=slot])
                apply simp
               apply simp
              apply simp
