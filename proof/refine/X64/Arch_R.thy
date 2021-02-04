@@ -562,7 +562,7 @@ lemma corres_splitEE':
   shows   "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
   by (rule corres_splitEE; rule assms)
 
-lemma decode_page_inv_corres:
+lemma decodeX64FrameInvocation_corres:
   "\<lbrakk>cap = arch_cap.PageCap d p R mt sz opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -1282,7 +1282,7 @@ shows
     apply (rename_tac word cap_rights vmpage_size option)
     apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
           split del: if_split)
-        apply (rule decode_page_inv_corres; simp)
+        apply (rule decodeX64FrameInvocation_corres; simp)
 
    \<comment> \<open>PageTableCap\<close>
    apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def

@@ -511,7 +511,7 @@ lemma vmsz_aligned_user_region:
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
   by (word_bitwise, clarsimp simp: word_size)
 
-lemma decode_page_inv_corres:
+lemma decodeX64FrameInvocation_corres:
   "\<lbrakk>cap = arch_cap.FrameCap p R sz d opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -934,7 +934,7 @@ shows
    \<comment> \<open>PageCap\<close>
    apply (rename_tac word cap_rights vmpage_size option)
    apply (simp add: isCap_simps decodeRISCVMMUInvocation_def Let_def split del: if_split)
-   apply (rule decode_page_inv_corres; simp)
+   apply (rule decodeX64FrameInvocation_corres; simp)
 
   \<comment> \<open>PageTableCap\<close>
   apply (simp add: isCap_simps decodeRISCVMMUInvocation_def Let_def  split del: if_split)
