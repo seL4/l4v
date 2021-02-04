@@ -3649,7 +3649,7 @@ lemma unbindNotification_corres:
   supply option.case_cong_weak[cong]
   apply (simp add: unbind_notification_def unbindNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ gbn_corres])
+    apply (rule corres_split[OF _ getBoundNotification_corres])
       apply (rule corres_option_split)
         apply simp
        apply (rule corres_return_trivial)

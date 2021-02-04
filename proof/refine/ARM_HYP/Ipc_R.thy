@@ -3265,7 +3265,7 @@ lemma receiveIPC_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ep_corres])
       apply (rule corres_guard_imp)
-        apply (rule corres_split [OF _ gbn_corres])
+        apply (rule corres_split [OF _ getBoundNotification_corres])
           apply (rule_tac r'="ntfn_relation" in corres_split)
              apply (rule corres_if)
                apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def

@@ -1691,7 +1691,7 @@ lemma gts_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> getThreadState t \<l
 lemma gts_inv'[wp]: "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getThreadState_def) wp
 
-lemma gbn_corres:
+lemma getBoundNotification_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
           (get_bound_notification t) (getBoundNotification t)"
   apply (simp add: get_bound_notification_def getBoundNotification_def)

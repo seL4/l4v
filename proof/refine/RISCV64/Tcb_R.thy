@@ -2552,7 +2552,7 @@ notes if_cong[cong] shows
               apply (wp | wpc | simp)+
             apply (rule corres_trivial, simp split: option.splits add: returnOk_def)
            apply (wp | wpc | simp)+
-         apply (rule gbn_corres)
+         apply (rule getBoundNotification_corres)
         apply (simp | wp gbn_wp gbn_wp')+
       apply (rule corres_trivial)
       apply (auto simp: returnOk_def whenE_def)[1]
@@ -2573,7 +2573,7 @@ lemma decodeUnbindNotification_corres:
        apply (simp split: option.splits)
        apply (simp add: returnOk_def)
       apply simp
-      apply (rule gbn_corres)
+      apply (rule getBoundNotification_corres)
      apply wp+
    apply auto
   done
