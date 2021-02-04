@@ -1067,7 +1067,7 @@ lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       a_type_def objBits_simps other_obj_relation_def
                       archObjSize_def pageBits_def
 
-lemma set_ep_corres [corres]:
+lemma setEndpoint_corres [corres]:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"

@@ -2490,7 +2490,7 @@ proof -
          apply (simp add: ep_relation_def)
          apply (rule corres_guard_imp)
            apply (rule corres_split [OF _ setThreadState_corres])
-              apply (rule set_ep_corres)
+              apply (rule setEndpoint_corres)
               apply (simp add: ep_relation_def)
              apply (simp add: fault_rel_optionation_def)
             apply wp+
@@ -2500,7 +2500,7 @@ proof -
         apply (simp add: ep_relation_def)
         apply (rule corres_guard_imp)
           apply (rule corres_split [OF _ setThreadState_corres])
-             apply (rule set_ep_corres)
+             apply (rule setEndpoint_corres)
              apply (simp add: ep_relation_def)
             apply (simp add: fault_rel_optionation_def)
            apply wp+
@@ -2515,7 +2515,7 @@ proof -
         apply simp
        apply (clarsimp split del: if_split)
        apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
+         apply (rule corres_split [OF _ setEndpoint_corres])
             apply (simp add: isReceive_def split del:if_split)
             apply (rule corres_split [OF _ getThreadState_corres])
               apply (rule_tac
@@ -2596,7 +2596,7 @@ proof -
        apply fastforce
       apply (clarsimp split del: if_split)
       apply (rule corres_guard_imp)
-        apply (rule corres_split [OF _ set_ep_corres])
+        apply (rule corres_split [OF _ setEndpoint_corres])
            apply (rule corres_split [OF _ getThreadState_corres])
              apply (rule_tac
                 F="\<exists>data. recv_state = Structures_A.BlockedOnReceive ep data"
@@ -3253,7 +3253,7 @@ lemma receiveIPC_corres:
                apply (rule corres_guard_imp)
                  apply (case_tac isBlocking; simp)
                   apply (rule corres_split [OF _ setThreadState_corres])
-                     apply (rule set_ep_corres)
+                     apply (rule setEndpoint_corres)
                      apply (simp add: ep_relation_def)
                     apply simp
                    apply wp+
@@ -3269,7 +3269,7 @@ lemma receiveIPC_corres:
         apply (clarsimp simp: valid_ep_def)
        apply (case_tac list, simp_all split del: if_split)[1]
        apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
+         apply (rule corres_split [OF _ setEndpoint_corres])
             apply (rule corres_split [OF _ getThreadState_corres])
               apply (rule_tac
                        F="\<exists>data.
@@ -3334,7 +3334,7 @@ lemma receiveIPC_corres:
              apply (rule_tac corres_guard_imp)
                apply (case_tac isBlocking; simp)
                 apply (rule corres_split [OF _ setThreadState_corres])
-                   apply (rule set_ep_corres)
+                   apply (rule setEndpoint_corres)
                    apply (simp add: ep_relation_def)
                   apply simp
                  apply wp+

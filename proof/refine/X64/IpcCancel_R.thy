@@ -184,7 +184,7 @@ lemma blocked_cancel_ipc_corres:
        apply (case_tac "remove1 t list")
         apply simp
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ set_ep_corres])
+          apply (rule corres_split [OF _ setEndpoint_corres])
              apply (rule setThreadState_corres)
              apply simp
             apply (simp add: ep_relation_def)
@@ -207,7 +207,7 @@ lemma blocked_cancel_ipc_corres:
                               valid_tcb_state'_def)[1]
        apply clarsimp
        apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
+         apply (rule corres_split [OF _ setEndpoint_corres])
             apply (rule setThreadState_corres)
             apply simp
            apply (simp add: ep_relation_def)
@@ -232,7 +232,7 @@ lemma blocked_cancel_ipc_corres:
       apply (case_tac "remove1 t list")
        apply simp
        apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ set_ep_corres])
+         apply (rule corres_split [OF _ setEndpoint_corres])
             apply (rule setThreadState_corres)
             apply simp
            apply (simp add: ep_relation_def)
@@ -255,7 +255,7 @@ lemma blocked_cancel_ipc_corres:
                              valid_tcb_state'_def)[1]
       apply clarsimp
       apply (rule corres_guard_imp)
-        apply (rule corres_split [OF _ set_ep_corres])
+        apply (rule corres_split [OF _ setEndpoint_corres])
            apply (rule setThreadState_corres)
            apply simp
           apply (simp add: ep_relation_def)
@@ -1999,7 +1999,7 @@ proof -
                    rescheduleRequired
                 od)"
     apply (rule corres_split')
-       apply (rule corres_guard_imp [OF set_ep_corres])
+       apply (rule corres_guard_imp [OF setEndpoint_corres])
          apply (simp add: ep_relation_def)+
       apply (rule corres_split [OF rescheduleRequired_corres])
         apply (rule ep_cancel_corres_helper)
@@ -2657,10 +2657,10 @@ lemma cancelBadgedSends_corres:
   apply (case_tac ep, simp_all add: ep_relation_def)
   apply (simp add: filterM_mapM list_case_return cong: list.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ set_ep_corres])
+    apply (rule corres_split_nor [OF _ setEndpoint_corres])
        apply (rule corres_split_eqr[OF _ _ _ hoare_post_add[where R="\<lambda>_. valid_objs'"]])
           apply (rule corres_split [OF rescheduleRequired_corres])
-            apply (rule set_ep_corres)
+            apply (rule setEndpoint_corres)
             apply (simp split: list.split add: ep_relation_def)
            apply (wp weak_sch_act_wf_lift_linear)+
          apply (rule_tac S="(=)"

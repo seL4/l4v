@@ -1008,7 +1008,7 @@ lemmas obj_at_simps = obj_at_def obj_at'_def map_to_ctes_upd_other
                       is_other_obj_relation_type_def
                       a_type_def objBits_simps other_obj_relation_def pageBits_def
 
-lemma set_ep_corres:
+lemma setEndpoint_corres:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
