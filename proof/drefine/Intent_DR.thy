@@ -1956,7 +1956,7 @@ lemma set_object_valid_etcbs: "\<lbrace>valid_etcbs and (\<lambda>s. kheap s ptr
   apply (auto simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def st_tcb_at_kh_def obj_at_kh_def)
   done
 
-lemma set_mrs_corres:
+lemma setMRs_corres:
   "dcorres dc \<top>
    (valid_idle and valid_objs and pspace_aligned and pspace_distinct and not_idle_thread y
      and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y and valid_etcbs)
@@ -2141,7 +2141,7 @@ lemma dcorres_set_mrs:
    (corrupt_frame buf)
              (set_mrs y (Some (buf + (bptr && mask (pageBitsForSize sz)))) b)"
   apply (rule corrupt_frame_include_self)
-   apply (rule corres_guard_imp[OF set_mrs_corres])
+   apply (rule corres_guard_imp[OF setMRs_corres])
     apply clarsimp+
   done
 

@@ -1841,7 +1841,7 @@ lemma dcorres_set_mrs':
     apply (rule_tac F = "rva = Some b" in corres_gen_asm)
     apply clarsimp
     apply (rule corrupt_frame_include_self)
-    apply (rule corres_guard_imp[OF set_mrs_corres])
+    apply (rule corres_guard_imp[OF setMRs_corres])
       apply (simp add:data_to_message_info_valid)+
     apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases)
     apply (drule_tac t = "tcb_ipcframe obj" in sym)

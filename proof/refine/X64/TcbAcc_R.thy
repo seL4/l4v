@@ -3466,7 +3466,7 @@ lemma UserContext_fold:
   apply (clarsimp split: prod.splits)
   by (metis user_context.sel(1) user_context.sel(2))
 
-lemma set_mrs_corres:
+lemma setMRs_corres:
   assumes m: "mrs' = mrs"
   shows
   "corres (=) (tcb_at t and case_option \<top> in_user_frame buf)

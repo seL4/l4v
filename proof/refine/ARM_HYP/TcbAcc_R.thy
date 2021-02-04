@@ -3484,7 +3484,7 @@ lemma storeWordUser_valid_ipc_buffer_ptr' [wp]:
   unfolding valid_ipc_buffer_ptr'_def2
   by (wp hoare_vcg_all_lift storeWordUser_typ_at')
 
-lemma set_mrs_corres:
+lemma setMRs_corres:
   assumes m: "mrs' = mrs"
   shows
   "corres (=) (tcb_at t and case_option \<top> in_user_frame buf)

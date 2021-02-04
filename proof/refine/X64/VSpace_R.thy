@@ -989,7 +989,7 @@ proof -
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ gct_corres])
       apply simp
-      apply (rule corres_split[OF setMessageInfo_corres set_mrs_corres])
+      apply (rule corres_split[OF setMessageInfo_corres setMRs_corres])
          apply (simp add: message_info_map_def)
         apply clarsimp
        apply (wp)+

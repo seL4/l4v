@@ -1667,14 +1667,14 @@ lemma doFaultTransfer_corres:
    apply wp
    apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
+        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ setMessageInfo_corres])
              apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
       apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
+        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
           apply (rule corres_split_nor [OF _ setMessageInfo_corres])
              apply (rule asUser_setRegister_corres)
             apply simp
@@ -3168,7 +3168,7 @@ lemma replyFromKernel_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ lipcb_corres])
       apply (rule corres_split [OF _ asUser_setRegister_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres])
+        apply (rule corres_split_eqr [OF _ setMRs_corres])
            apply (rule setMessageInfo_corres)
            apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
                   | clarsimp)+
