@@ -1449,7 +1449,7 @@ lemma arch_performInvocation_corres:
          apply (fastforce simp: valid_arch_inv'_def)
         apply (clarsimp simp: archinv_relation_def)
         apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-            apply (rule perform_page_directory_corres; wpsimp)
+            apply (rule performPageDirectoryInvocation_corres; wpsimp)
            apply wpsimp+
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)

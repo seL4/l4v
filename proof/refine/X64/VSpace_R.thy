@@ -1253,7 +1253,7 @@ crunches unmap_pd, unmap_pdpt
   and pspace_aligned[wp]: "pspace_aligned"
   and pspace_distinct[wp]: "pspace_distinct"
 
-lemma perform_page_directory_corres:
+lemma performPageDirectoryInvocation_corres:
   "page_directory_invocation_map pdi pdi' \<Longrightarrow>
    corres dc
           (invs and valid_etcbs and valid_pdi pdi)

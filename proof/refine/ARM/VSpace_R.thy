@@ -1677,7 +1677,7 @@ definition
   | ARM_A.PageDirectoryFlush typ start end pstart pd asid \<Rightarrow>
       pdi' = PageDirectoryFlush (flush_type_map typ) start end pstart pd asid"
 
-lemma perform_page_directory_corres:
+lemma performPageDirectoryInvocation_corres:
   "page_directory_invocation_map pdi pdi' \<Longrightarrow>
    corres dc (invs and valid_pdi pdi)
              (valid_objs' and pspace_aligned' and pspace_distinct' and no_0_obj'
