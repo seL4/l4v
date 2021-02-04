@@ -8625,7 +8625,7 @@ lemma invokeCNode_corres:
         apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
        apply clarsimp
        apply (rule corres_guard_imp)
-         apply (erule cap_move_corres)
+         apply (erule cteMove_corres)
         apply (clarsimp simp: cte_wp_at_caps_of_state real_cte_tcb_valid)
        apply (clarsimp simp: cte_wp_at_ctes_of)
        apply (rule cap_revoke_corres)
@@ -8654,9 +8654,9 @@ lemma invokeCNode_corres:
      apply simp
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF cap_move_corres])
+      apply (rule corres_split [OF cteMove_corres])
          apply assumption
-        apply (erule cap_move_corres)
+        apply (erule cteMove_corres)
        apply wp
        apply (simp add: cte_wp_at_caps_of_state)
        apply (wp cap_move_caps_of_state cteMove_cte_wp_at [simplified o_def])+
@@ -8702,7 +8702,7 @@ lemma invokeCNode_corres:
             apply (case_tac cap, simp_all add: isCap_simps is_cap_simps split: bool.split)[1]
             apply clarsimp
             apply (rule corres_guard_imp)
-              apply (rule cap_move_corres)
+              apply (rule cteMove_corres)
               apply (simp add: real_cte_tcb_valid)+
         apply (wp get_cap_wp)
        apply (simp add: getSlotCap_def)

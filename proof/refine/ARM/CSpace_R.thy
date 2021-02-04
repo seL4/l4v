@@ -750,7 +750,7 @@ lemma set_cap_not_quite_corres':
                 apply (fastforce simp: c p pspace_relations_def)+
                 done
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma cap_move_corres:
+lemma cteMove_corres:
   assumes cr: "cap_relation cap cap'"
   notes trans_state_update'[symmetric,simp]
   shows
