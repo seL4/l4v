@@ -74,7 +74,7 @@ lemma no_fail_setVSpaceRoot[intro!, simp]:
   "no_fail \<top> (setVSpaceRoot v a)"
   by (simp add: setVSpaceRoot_def)
 
-lemma set_vm_root_corres [corres]:
+lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and
                     pspace_aligned and pspace_distinct and
@@ -239,7 +239,7 @@ lemma delete_asid_corres [corres]:
              apply (word_bitwise, clarsimp)
             apply (rule corres_split [OF _ gct_corres])
               apply simp
-              apply (rule set_vm_root_corres[OF refl])
+              apply (rule setVMRoot_corres[OF refl])
              apply wp+
            apply (thin_tac "x = f o g" for x f g)
            apply (simp del: fun_upd_apply)
@@ -310,7 +310,7 @@ lemma delete_asid_pool_corres:
            apply (erule_tac x=n in allE)
            apply (simp add: word_size nth_ucast)
           apply (rule corres_split[OF _ gct_corres])
-            apply (rule set_vm_root_corres, simp)
+            apply (rule setVMRoot_corres, simp)
            apply (wp getASID_wp)+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_arch_state
                          invs_cur[unfolded cur_tcb_def]

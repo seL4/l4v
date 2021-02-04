@@ -152,7 +152,7 @@ lemma get_current_cr3_corres [corres]:
   apply (simp add: getCurrentUserCR3_def get_current_cr3_def)
   by (clarsimp simp: state_relation_def arch_state_relation_def)
 
-lemma set_vm_root_corres [corres]:
+lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_arch_state and valid_objs
                       and unique_table_refs o caps_of_state and valid_vs_lookup
@@ -334,7 +334,7 @@ lemma delete_asid_corres [corres]:
                apply (clarsimp simp: o_def)
               apply (rule corres_split [OF _ gct_corres])
                 apply simp
-                apply (rule set_vm_root_corres[OF refl])
+                apply (rule setVMRoot_corres[OF refl])
                apply wp+
              apply (thin_tac "x = f o g" for x f g)
              apply (simp del: fun_upd_apply)
@@ -434,7 +434,7 @@ lemma delete_asid_pool_corres:
                prefer 2
                apply (rule gct_corres)
               apply (simp only:)
-              apply (rule set_vm_root_corres[OF refl])
+              apply (rule setVMRoot_corres[OF refl])
              apply wp+
          apply (rule_tac R="\<lambda>_ s. rv = x64_asid_table (arch_state s)"
                   in hoare_post_add)

@@ -76,7 +76,7 @@ lemma arch_switchToThread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split' [OF set_vm_root_corres])
+    apply (rule corres_split' [OF setVMRoot_corres])
       apply (rule corres_machine_op[OF corres_rel_imp])
       apply (rule corres_underlying_trivial)
        apply (simp add: ARM.clearExMonitor_def | wp)+
@@ -763,7 +763,7 @@ lemma arch_switchToIdleThread_corres:
         Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 ARM_H.switchToIdleThread_def)
-  apply (corressimp corres: getIdleThread_corres set_vm_root_corres[@lift_corres_args])
+  apply (corressimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args])
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
   done
 

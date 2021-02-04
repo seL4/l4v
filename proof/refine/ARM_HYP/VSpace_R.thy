@@ -1154,7 +1154,7 @@ lemma valid_objs_valid_tcb: "\<lbrakk> valid_objs s ; ko_at (TCB t) p s \<rbrakk
 lemma valid_objs_valid_tcb': "\<lbrakk> valid_objs' s ; ko_at' (t :: tcb) p s \<rbrakk> \<Longrightarrow> valid_tcb' t s"
   by (fastforce simp add: obj_at'_def ran_def valid_obj'_def projectKOs valid_objs'_def)
 
-lemma set_vm_root_corres:
+lemma setVMRoot_corres:
   "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map
               and unique_table_refs o caps_of_state and valid_vs_lookup
               and pspace_aligned and pspace_distinct
@@ -1386,7 +1386,7 @@ lemma delete_asid_corres:
                apply (erule ucast_ucast_eq, simp, simp)
               apply (rule corres_split [OF _ gct_corres])
                 apply simp
-                apply (rule set_vm_root_corres)
+                apply (rule setVMRoot_corres)
                apply wp+
              apply (simp del: fun_upd_apply)
              apply (fold cur_tcb_def)
@@ -1543,7 +1543,7 @@ lemma delete_asid_pool_corres:
                prefer 2
                apply (rule gct_corres)
               apply (simp only:)
-              apply (rule set_vm_root_corres)
+              apply (rule setVMRoot_corres)
              apply wp+
          apply (rule_tac R="\<lambda>_ s. rv = arm_asid_table (arch_state s)"
                     in hoare_post_add)
@@ -1830,7 +1830,7 @@ lemma flush_table_corres:
         apply (rule corres_split[where r' = dc, OF corres_when corres_machine_op])
             apply simp
            apply (rule corres_split[OF _ gct_corres])
-             apply (simp, rule set_vm_root_corres)
+             apply (simp, rule setVMRoot_corres)
             apply ((wp mapM_wp' hoare_vcg_const_imp_lift get_pte_wp getPTE_wp|
                     wpc|simp|fold cur_tcb_def cur_tcb'_def)+)[4]
           apply (rule corres_Id[OF refl])
@@ -1866,7 +1866,7 @@ lemma flush_page_corres:
            apply (rule corres_when, rule refl)
            apply (rule corres_split [OF _ gct_corres])
              apply simp
-             apply (rule set_vm_root_corres)
+             apply (rule setVMRoot_corres)
             apply wp+
           apply (rule corres_Id, rule refl, simp)
           apply (rule no_fail_pre, wp no_fail_invalidateLocalTLB_VAASID)
@@ -2317,7 +2317,7 @@ lemma perform_page_directory_corres:
          apply (rule corres_when, simp)
          apply (rule corres_split [OF _ gct_corres])
            apply clarsimp
-           apply (rule set_vm_root_corres)
+           apply (rule setVMRoot_corres)
           apply wp+
         apply (simp add: cur_tcb_def[symmetric])
         apply (wp hoare_drop_imps)
@@ -2989,7 +2989,7 @@ proof -
          apply (rule corres_when, simp)
          apply (rule corres_split [OF _ gct_corres])
            apply simp
-           apply (rule set_vm_root_corres)
+           apply (rule setVMRoot_corres)
           apply wp+
         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
         apply (wp hoare_drop_imps)

@@ -232,7 +232,7 @@ lemma delete_asid_corresb:
   notes [corres] = corres_gets_asid gct_corres set_asid_pool_corres and
     [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
     invalidate_asid_entry_corres
-    set_vm_root_corres
+    setVMRoot_corres
   notes [wp] = set_asid_pool_asid_map_unmap set_asid_pool_vs_lookup_unmap'
     set_asid_pool_vspace_objs_unmap'
     invalidate_asid_entry_invalidates
@@ -277,7 +277,7 @@ lemma delete_asid_corresb:
                   continue (* K_bind *)
                   continue (* split *)
                       continue (* gct_corres *)
-                     continue (* set_vm_root_corres *)
+                     continue (* setVMRoot_corres *)
                     finish (* backtracking? *)
                     apply (corressimp simp: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+

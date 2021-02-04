@@ -78,7 +78,7 @@ lemma arch_switchToThread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def RISCV64_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule set_vm_root_corres[OF refl])
+    apply (rule setVMRoot_corres[OF refl])
    apply (clarsimp simp: st_tcb_at_tcb_at valid_arch_state_asid_table
                          valid_arch_state_global_arch_objs)
   apply simp
@@ -652,7 +652,7 @@ lemma arch_switchToIdleThread_corres:
         arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 RISCV64_H.switchToIdleThread_def)
-  apply (corressimp corres: getIdleThread_corres set_vm_root_corres)
+  apply (corressimp corres: getIdleThread_corres setVMRoot_corres)
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb
                         valid_arch_state_asid_table valid_arch_state_global_arch_objs)
   done
