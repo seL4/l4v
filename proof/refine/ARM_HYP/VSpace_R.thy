@@ -2609,7 +2609,7 @@ lemma pteCheckIfMapped_corres:
   apply simp
   done
 
-lemma pde_check_if_mapped_corres:
+lemma pdeCheckIfMapped_corres:
   "corres (=) (pde_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pde_check_if_mapped slot) (pdeCheckIfMapped slot)"
   apply (simp add: pde_check_if_mapped_def pdeCheckIfMapped_def)
     apply (rule corres_guard_imp)
@@ -2861,7 +2861,7 @@ proof -
           apply (fastforce split: pde.splits)
          apply (clarsimp simp:mapM_Cons bind_assoc split del:if_split)
          apply (rule corres_guard_imp)
-           apply (rule corres_split[OF _ pde_check_if_mapped_corres])
+           apply (rule corres_split[OF _ pdeCheckIfMapped_corres])
              apply (rule corres_split[OF _ store_pde_corres'])
                 apply (rule corres_split[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
                     apply (rule corres_split[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
