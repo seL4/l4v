@@ -1942,7 +1942,7 @@ lemma updateCap_valid_slots'[wp]:
   apply (wp hoare_vcg_ball_lift)
   done
 
-lemma pte_check_if_mapped_corres:
+lemma pteCheckIfMapped_corres:
   "corres (=) (pte_at slot) ((\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct') (pte_check_if_mapped slot) (pteCheckIfMapped slot)"
   apply (simp add: pte_check_if_mapped_def pteCheckIfMapped_def)
     apply (rule corres_guard_imp)
@@ -2139,7 +2139,7 @@ proof -
           apply (rule corres_name_pre)
           apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
           apply (rule corres_guard_imp)
-            apply (rule corres_split[OF _ pte_check_if_mapped_corres])
+            apply (rule corres_split[OF _ pteCheckIfMapped_corres])
               apply (rule corres_split[OF _ store_pte_corres'])
                  apply (rule corres_split[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
                     apply (rule corres_split[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
