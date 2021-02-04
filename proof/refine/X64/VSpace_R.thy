@@ -1211,7 +1211,7 @@ lemma flush_all_corres [corres]:
   apply (rule corres_underlying_trivial[OF no_fail_invalidateASID])
   done
 
-lemma unmap_pd_corres:
+lemma unmapPageDirectory_corres:
   assumes "asid' = asid" "vptr' = vptr" "pd' = pd"
   notes liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
@@ -1302,7 +1302,7 @@ lemma performPageDirectoryInvocation_corres:
          apply (clarsimp simp: is_pd_cap_def update_map_data_def)
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
-       apply (rule corres_split [OF _ unmap_pd_corres[OF refl refl refl]])
+       apply (rule corres_split [OF _ unmapPageDirectory_corres[OF refl refl refl]])
          apply (rule clear_page_directory_corres[simplified bit_simps bitSimps, simplified])
         apply wp+
       apply (rule corres_trivial, simp)
