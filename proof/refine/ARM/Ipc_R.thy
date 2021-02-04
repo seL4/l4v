@@ -1653,7 +1653,7 @@ lemma doIPCTransfer_corres:
                                     \<comment> \<open>\<exists>ft. tcb_fault tcb = Some ft\<close>) s sa"
                in corres_split')
      apply (rule corres_guard_imp)
-       apply (rule lipcb_corres')
+       apply (rule lookupIPCBuffer_corres')
       apply auto[2]
     apply (rule corres_split' [OF _ _ thread_get_sp threadGet_inv])
      apply (rule corres_guard_imp)
@@ -1664,7 +1664,7 @@ lemma doIPCTransfer_corres:
        apply (subst case_option_If)+
        apply (rule corres_if2)
          apply (simp add: fault_rel_optionation_def)
-        apply (rule corres_split_eqr [OF _ lipcb_corres'])
+        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
           apply (simp add: dc_def[symmetric])
           apply (rule doNormalTransfer_corres)
          apply (wp | simp add: valid_pspace'_def)+
@@ -2121,7 +2121,7 @@ lemma doReplyTransfer_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ cap_delete_one_corres])
       apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
-        apply (rule corres_split_eqr [OF _ lipcb_corres'])
+        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
           apply (rule corres_split_eqr [OF _ getMRs_corres])
             apply (simp(no_asm) del: dc_simp)
             apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
@@ -3060,7 +3060,7 @@ lemma replyFromKernel_corres:
   apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
                         badge_register_def badgeRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ lipcb_corres])
+    apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres])
       apply (rule corres_split [OF _ asUser_setRegister_corres])
         apply (rule corres_split_eqr [OF _ setMRs_corres])
            apply (rule setMessageInfo_corres)

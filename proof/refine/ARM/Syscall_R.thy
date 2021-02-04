@@ -266,7 +266,7 @@ lemma hinv_corres_assist:
        prefer 2
        \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lookupCapAndSlot_corres, simp)
-      apply (rule corres_split [OF _ lipcb_corres])
+      apply (rule corres_split [OF _ lookupIPCBuffer_corres])
         apply (rule corres_splitEE [OF _ lookupExtraCaps_corres])
             apply (rule corres_returnOkTT)
             apply simp+

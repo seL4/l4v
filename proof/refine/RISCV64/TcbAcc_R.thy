@@ -3689,7 +3689,7 @@ qed
 
 lemmas valid_ipc_buffer_cap_simps = valid_ipc_buffer_cap_def [split_simps cap.split arch_cap.split]
 
-lemma lipcb_corres':
+lemma lookupIPCBuffer_corres':
   "corres (=) (tcb_at t and valid_objs and pspace_aligned and pspace_distinct)
               (no_0_obj')
               (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
@@ -3738,9 +3738,9 @@ lemma lipcb_corres':
   apply clarsimp
   done
 
-lemma lipcb_corres:
+lemma lookupIPCBuffer_corres:
   "corres (=) (tcb_at t and invs) (no_0_obj') (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
-  using lipcb_corres'
+  using lookupIPCBuffer_corres'
   by (rule corres_guard_imp, auto simp: invs'_def valid_state'_def)
 
 
