@@ -441,7 +441,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -608,7 +608,7 @@ lemma decode_page_inv_corres:
           apply (rule corres_returnOkTT, simp)
          apply (rule corres_splitEE'[OF corres_lookup_error[OF find_vspace_for_asid_corres]], simp)
            apply (rule whenE_throwError_corres; simp)
-           apply (rule corres_splitEE'[where r'=dc, OF check_vp_corres])
+           apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
              apply (rule corres_splitEE'[OF create_mapping_entries_corres]
                     ; simp add: mask_vmrights_corres vm_attributes_corres)
                apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)

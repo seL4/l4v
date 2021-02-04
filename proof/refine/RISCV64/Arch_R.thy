@@ -391,7 +391,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -553,7 +553,7 @@ lemma decode_page_inv_corres:
           apply simp
          apply (rule corres_splitEE[where r'=dc])
             prefer 2
-            apply (rule check_vp_corres)
+            apply (rule checkVPAlignment_corres)
            apply (rule corres_splitEE)
               prefer 2
               apply (simp only: corres_liftE_rel_sum)
