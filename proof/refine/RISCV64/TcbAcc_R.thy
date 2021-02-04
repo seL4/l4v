@@ -3530,7 +3530,7 @@ proof -
      done
 qed
 
-lemma copy_mrs_corres:
+lemma copyMRs_corres:
   "corres (=) (tcb_at s and tcb_at r and pspace_aligned and pspace_distinct
                and case_option \<top> in_user_frame sb
                and case_option \<top> in_user_frame rb

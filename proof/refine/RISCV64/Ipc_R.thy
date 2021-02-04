@@ -1443,7 +1443,7 @@ lemma doNormalTransfer_corres:
            apply wp+
          apply (rule corres_trivial, simp)
         apply simp
-        apply (rule corres_split_eqr [OF _ copy_mrs_corres])
+        apply (rule corres_split_eqr [OF _ copyMRs_corres])
           apply (rule corres_split [OF _ transferCaps_corres])
               apply (rename_tac mi' mi'')
               apply (rule_tac F="mi_label mi' = mi_label mi"

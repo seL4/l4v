@@ -2013,7 +2013,7 @@ lemma set_registers_ipc_buffer_ptr_at[wp]:
   done
 
 
-lemma copy_mrs_corres:
+lemma copyMRs_corres:
   "valid_message_info mi \<Longrightarrow>
    dcorres dc \<top> ((valid_idle and valid_objs and pspace_aligned and pspace_distinct and not_idle_thread y
      and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y and valid_etcbs))
@@ -2153,7 +2153,7 @@ lemma dcorres_copy_mrs:
     (copy_mrs thread rv y (Some (buf + (bptr && mask (pageBitsForSize sz))))
                (mi_length mi))"
   apply (rule corrupt_frame_include_self)
-   apply (rule corres_guard_imp[OF copy_mrs_corres])
+   apply (rule corres_guard_imp[OF copyMRs_corres])
      apply auto
   done
 
