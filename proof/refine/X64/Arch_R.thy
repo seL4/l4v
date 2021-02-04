@@ -846,7 +846,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
   apply (simp add: isCap_simps split del: if_split)
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
-lemma decode_pdpt_inv_corres:
+lemma decodeX64PDPointerTableInvocation_corres:
   "\<lbrakk>cap = arch_cap.PDPointerTableCap p opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -1297,7 +1297,7 @@ shows
   \<comment> \<open>PDPointerTableCap\<close>
   apply (simp add: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
         split del: if_split)
-  apply (rule decode_pdpt_inv_corres; simp)
+  apply (rule decodeX64PDPointerTableInvocation_corres; simp)
 
   \<comment> \<open>PML4Cap - no invocations\<close>
   apply (clarsimp simp: isCap_simps isIOCap_def decodeX64MMUInvocation_def Let_def
