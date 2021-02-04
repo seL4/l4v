@@ -1397,7 +1397,7 @@ crunches storePDE, storePTE
   and valid_arch'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
 
-lemma unmap_page_table_corres:
+lemma unmapPageTable_corres:
   "corres dc
           (invs and valid_etcbs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr 20 \<and> asid \<le> mask asid_bits))
@@ -2438,7 +2438,7 @@ lemma perform_page_table_corres:
          apply (clarsimp simp: is_pt_cap_def update_map_data_def)
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
-       apply (rule corres_split [OF _ unmap_page_table_corres])
+       apply (rule corres_split [OF _ unmapPageTable_corres])
          apply (rule corres_split_nor)
             apply (rule corres_machine_op, rule corres_Id)
               apply (simp add: pteBits_def)+

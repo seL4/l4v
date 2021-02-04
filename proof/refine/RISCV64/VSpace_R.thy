@@ -353,7 +353,7 @@ lemma no_fail_sfence[intro!,simp,wp]:
   "no_fail \<top> sfence"
   by (simp add: sfence_def)
 
-lemma unmap_page_table_corres:
+lemma unmapPageTable_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
   shows "corres dc
           (invs and (\<lambda>s.  vspace_for_asid asid s \<noteq> Some pt) and K (0 < asid \<and> vptr \<in> user_region))
@@ -683,7 +683,7 @@ lemma perform_page_table_corres:
         apply (wp get_cap_wp)+
       apply (rule corres_if3)
         apply (fastforce simp: acap_map_data_def mdata_map_def is_PageTableCap_def)
-       apply (rule corres_split [OF _ unmap_page_table_corres])
+       apply (rule corres_split [OF _ unmapPageTable_corres])
             apply (rule clear_page_table_corres)
            apply (clarsimp simp: mdata_map_def)
           apply (clarsimp simp: mdata_map_def)

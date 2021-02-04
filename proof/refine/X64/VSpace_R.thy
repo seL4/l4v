@@ -573,7 +573,7 @@ lemmas invalidatePageStructureCacheASID_corres =
 crunch inv[wp]: lookupPTSlot "P"
   (wp: loadObject_default_inv)
 
-lemma unmap_page_table_corres:
+lemma unmapPageTable_corres:
   assumes "asid' = asid" "vptr' = vptr" "pt' = pt"
   notes liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
@@ -1171,7 +1171,7 @@ lemma perform_page_table_corres:
          apply (clarsimp simp: is_pt_cap_def update_map_data_def)
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
-       apply (rule corres_split [OF _ unmap_page_table_corres[OF refl refl refl]])
+       apply (rule corres_split [OF _ unmapPageTable_corres[OF refl refl refl]])
          apply (rule clear_page_table_corres[simplified bit_simps bitSimps, simplified])
         apply wp+
       apply (rule corres_trivial, simp)

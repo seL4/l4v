@@ -1972,7 +1972,7 @@ lemma storePDE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePDE param_a param_
 lemma storePTE_cur_tcb'[wp]: "\<lbrace>cur_tcb'\<rbrace> storePTE param_a param_b \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
   by (wpsimp wp: setObject_cte_wp_at2' headM_inv hoare_drop_imp simp: storePTE_def)
 
-lemma unmap_page_table_corres:
+lemma unmapPageTable_corres:
   "corres dc
           (invs and valid_etcbs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr 21 \<and> asid \<le> mask asid_bits))
@@ -3112,7 +3112,7 @@ lemma perform_page_table_corres:
          apply (clarsimp simp: is_pt_cap_def update_map_data_def)
         apply (wp get_cap_wp)+
       apply (rule corres_if[OF refl])
-       apply (rule corres_split [OF _ unmap_page_table_corres])
+       apply (rule corres_split [OF _ unmapPageTable_corres])
          apply (rule corres_split_nor)
             apply (rule corres_machine_op, rule corres_Id)
               apply simp+

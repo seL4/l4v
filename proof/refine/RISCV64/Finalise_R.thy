@@ -3448,7 +3448,7 @@ lemma arch_finalise_cap_corres:
                 elim: is_aligned_weaken)[2]
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where f=dc])
-       apply (rule unmap_page_table_corres; simp)
+       apply (rule unmapPageTable_corres; simp)
       apply (rule corres_splitEE)
          prefer 2
          apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule find_vspace_for_asid_corres; simp)
