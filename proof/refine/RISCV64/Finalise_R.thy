@@ -1524,7 +1524,7 @@ lemma arch_postCapDeletion_corres:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (RISCV64_H.postCapDeletion cap')"
   by (clarsimp simp: arch_post_cap_deletion_def RISCV64_H.postCapDeletion_def)
 
-lemma post_cap_deletion_corres:
+lemma postCapDeletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
    apply (corressimp corres: deletedIRQHandler_corres)
@@ -1584,7 +1584,7 @@ lemma empty_slot_corres:
   apply (rule conjI, clarsimp)
   apply clarsimp
   apply (simp only: bind_assoc[symmetric])
-  apply (rule corres_split'[where r'=dc, OF _ post_cap_deletion_corres])
+  apply (rule corres_split'[where r'=dc, OF _ postCapDeletion_corres])
     defer
     apply wpsimp+
   apply (rule corres_no_failI)
