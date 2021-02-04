@@ -383,7 +383,7 @@ lemma valid_arch_state_unmap_strg':
 crunch x64KSASIDTable_inv[wp]: hwASIDInvalidate
     "\<lambda>s. P (x64KSASIDTable (ksArchState s))"
 
-lemma delete_asid_pool_corres:
+lemma deleteASIDPool_corres:
   assumes "base' = base" "ptr' = ptr"
   shows "corres dc (invs and K (is_aligned base asid_low_bits)
                          and asid_pool_at ptr)

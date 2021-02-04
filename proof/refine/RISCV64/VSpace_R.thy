@@ -281,7 +281,7 @@ lemma mask_is_asid_low_bits_of[simp]:
   apply (word_bitwise, simp add: word_size)
   done
 
-lemma delete_asid_pool_corres:
+lemma deleteASIDPool_corres:
   assumes "base' = ucast base" "ptr' = ptr"
   shows "corres dc (invs and K (is_aligned base asid_low_bits) and asid_pool_at ptr)
                    (no_0_obj')

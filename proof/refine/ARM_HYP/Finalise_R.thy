@@ -3878,7 +3878,7 @@ lemma arch_finalise_cap_corres:
                        final_matters'_def case_bool_If liftM_def[symmetric]
                        o_def dc_def[symmetric]
                 split: option.split, safe)
-     apply (rule corres_guard_imp, rule delete_asid_pool_corres)
+     apply (rule corres_guard_imp, rule deleteASIDPool_corres)
       apply (clarsimp simp: valid_cap_def mask_def)
      apply (clarsimp simp: valid_cap'_def)
      apply auto[1]

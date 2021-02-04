@@ -1438,7 +1438,7 @@ crunch armKSASIDTable_inv[wp]: invalidateASIDEntry
 crunch armKSASIDTable_inv[wp]: flushSpace
     "\<lambda>s. P (armKSASIDTable (ksArchState s))"
 
-lemma delete_asid_pool_corres:
+lemma deleteASIDPool_corres:
   "corres dc
           (invs and K (is_aligned base asid_low_bits
                          \<and> base \<le> mask asid_bits)

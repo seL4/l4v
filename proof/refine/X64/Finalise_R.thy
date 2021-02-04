@@ -3615,7 +3615,7 @@ lemma arch_finalise_cap_corres:
                        o_def dc_def[symmetric]
                 split: option.split,
          safe)
-       apply (rule corres_guard_imp, rule delete_asid_pool_corres[OF refl refl])
+       apply (rule corres_guard_imp, rule deleteASIDPool_corres[OF refl refl])
         apply (clarsimp simp: valid_cap_def mask_def)
        apply (clarsimp simp: valid_cap'_def)
        apply auto[1]
