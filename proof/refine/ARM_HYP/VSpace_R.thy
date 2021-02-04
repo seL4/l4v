@@ -775,7 +775,7 @@ lemma corres_gets_gicvcpu_numlistregs:
 
 lemmas corres_split_forward = corres_split'[rule_format, where Q="\<lambda>_. P" and P=P  and Q'="\<lambda>_. P'" and P'=P' for P P']
 
-lemma set_vcpu_corres:
+lemma setObject_VCPU_corres:
   "vcpu_relation vcpuObj vcpuObj'
    \<Longrightarrow>  corres dc (vcpu_at  vcpu)
                   (vcpu_at' vcpu)
@@ -809,7 +809,7 @@ lemma vcpuUpdate_corres[corres]:
   "\<forall>v1 v2. vcpu_relation v1 v2 \<longrightarrow> vcpu_relation (f v1) (f' v2) \<Longrightarrow>
     corres dc (vcpu_at v) (vcpu_at' v)
            (vcpu_update v f) (vcpuUpdate v f')"
-  by (corressimp corres: getObject_vcpu_corres set_vcpu_corres
+  by (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres
                  simp: vcpu_update_def vcpuUpdate_def vcpu_relation_def)
 
 lemma vgicUpdate_corres[corres]:
