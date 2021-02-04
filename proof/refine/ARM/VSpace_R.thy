@@ -1461,7 +1461,7 @@ lemma corres_split_strengthen_ftE:
    apply (simp add: validE_R_def)+
   done
 
-lemma check_mapping_corres:
+lemma checkMappingPPtr_corres:
   "corres (dc \<oplus> dc)
             ((case slotptr of Inl ptr \<Rightarrow> pte_at ptr | Inr ptr \<Rightarrow> pde_at ptr) and
              (\<lambda>s. (case slotptr of Inl ptr \<Rightarrow> is_aligned ptr (pg_entry_align sz)
@@ -1537,7 +1537,7 @@ lemma unmap_page_corres:
                apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres[OF refl refl]])
                  apply simp
-                 apply (rule corres_splitEE[OF _ check_mapping_corres])
+                 apply (rule corres_splitEE[OF _ checkMappingPPtr_corres])
                    apply simp
                    apply (rule corres_split [OF _ store_pte_corres'])
                       apply (rule corres_machine_op)
@@ -1556,7 +1556,7 @@ lemma unmap_page_corres:
               apply (rule corres_split_strengthen_ftE[OF lookup_pt_slot_corres[OF refl refl]])
                 apply (rule_tac F="is_aligned p 6" in corres_gen_asm)
                 apply (simp add: is_aligned_mask[symmetric])
-                apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
+                apply (rule corres_split_strengthen_ftE[OF checkMappingPPtr_corres])
                   apply (simp add: largePagePTEOffsets_def pteBits_def)
                   apply (rule corres_split [OF _ corres_mapM])
                            prefer 8
@@ -1584,7 +1584,7 @@ lemma unmap_page_corres:
              apply (simp add:pd_bits_def pageBits_def)
             apply (clarsimp simp: pd_aligned page_directory_pde_at_lookupI)
            apply (rule corres_guard_imp)
-             apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
+             apply (rule corres_split_strengthen_ftE[OF checkMappingPPtr_corres])
                apply simp
                apply (rule corres_split[OF _ store_pde_corres'])
                   apply (rule corres_machine_op)
@@ -1600,7 +1600,7 @@ lemma unmap_page_corres:
             apply (simp add:pd_bits_def pageBits_def word_bits_conv)
            apply (simp add:pd_bits_def pageBits_def)
           apply (rule corres_guard_imp)
-            apply (rule corres_split_strengthen_ftE[OF check_mapping_corres])
+            apply (rule corres_split_strengthen_ftE[OF checkMappingPPtr_corres])
               apply (rule_tac F="is_aligned (lookup_pd_slot pd vptr) 6"
                             in corres_gen_asm)
               apply (simp add: is_aligned_mask[symmetric])

@@ -392,7 +392,7 @@ lemma corres_split_strengthen_ftE:
    apply (simp add: validE_R_def)+
   done
 
-lemma check_mapping_corres:
+lemma checkMappingPPtr_corres:
   "pte_relation' pte pte' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
       (whenE (RISCV64_A.is_PagePTE pte \<longrightarrow> pptr_from_pte pte \<noteq> pptr) (throwError ExceptionTypes_A.InvalidRoot))
       (checkMappingPPtr pptr pte')"
@@ -429,7 +429,7 @@ lemma unmap_page_corres:
              apply (rule corres_rel_imp)
               apply (rule liftE_get_pte_corres[@lift_corres_args], simp)
              apply fastforce
-            apply (rule corres_splitEE[OF _ check_mapping_corres]; assumption?)
+            apply (rule corres_splitEE[OF _ checkMappingPPtr_corres]; assumption?)
               apply (simp add: liftE_bindE)
               apply (rule corres_split[OF _ store_pte_corres])
                  apply simp

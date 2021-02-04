@@ -628,7 +628,7 @@ lemma corres_split_strengthen_ftE:
    apply (simp add: validE_R_def)+
   done
 
-lemma check_mapping_corres:
+lemma checkMappingPPtr_corres:
   "page_entry_map m m' \<Longrightarrow> corres (dc \<oplus> dc) \<top> \<top>
       (unlessE (check_mapping_pptr pptr m) $ throwError ExceptionTypes_A.InvalidRoot)
       (checkMappingPPtr pptr m')"
@@ -693,7 +693,7 @@ lemma unmap_page_corres:
                  apply simp
                  apply (rule corres_splitEE[OF _ liftE_get_pte_corres])
                    apply simp
-                   apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
+                   apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                    apply simp
                    apply (rule store_pte_corres')
                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
@@ -705,7 +705,7 @@ lemma unmap_page_corres:
            apply (rule corres_split_strengthen_ftE[OF lookup_pd_slot_corres])
              apply (simp del: dc_simp)
              apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
-               apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
+               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                   apply simp
                   apply (rule store_pde_corres')
                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
@@ -717,7 +717,7 @@ lemma unmap_page_corres:
           apply (rule corres_split_strengthen_ftE[OF lookup_pdpt_slot_corres])
             apply (simp del: dc_simp)
             apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
-              apply (rule corres_split_norE[OF _ check_mapping_corres, where r=dc, simplified])
+              apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                  apply simp
                  apply (rule store_pdpte_corres')
                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
