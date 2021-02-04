@@ -928,7 +928,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
   apply (simp add: isCap_simps split del: if_split)
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
-lemma ensure_port_op_allowed_corres:
+lemma ensurePortOperationAllowed_corres:
   "\<lbrakk>cap = arch_cap.IOPortCap f l; acap_relation cap cap'\<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> dc) (valid_cap (cap.ArchObjectCap cap) and K (w \<le> 0xFFFF \<and> (x = 1\<or> x = 2 \<or> x = 4))) (valid_cap' (ArchObjectCap cap'))
      (ensure_port_operation_allowed cap w x)
@@ -972,7 +972,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortIn16")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -982,7 +982,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortIn32")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -992,7 +992,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut8")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -1001,7 +1001,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut16")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -1010,7 +1010,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut32")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -1019,7 +1019,7 @@ lemma decode_port_inv_corres:
      apply (rule corres_split_norE)
         apply (rule corres_returnOkTT)
         apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensure_port_op_allowed_corres, simp, simp)
+       apply (rule ensurePortOperationAllowed_corres, simp, simp)
       apply wpsimp+
   apply (clarsimp simp: isCap_simps Let_def split: arch_invocation_label.splits invocation_label.splits)
   done
