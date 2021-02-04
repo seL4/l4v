@@ -2157,7 +2157,7 @@ lemma setThreadState_corres:
      apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
    done
 
-lemma sbn_corres:
+lemma setBoundNotification_corres:
   "corres dc
           (tcb_at t)
           (tcb_at' t)

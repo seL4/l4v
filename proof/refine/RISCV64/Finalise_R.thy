@@ -3482,7 +3482,7 @@ lemma unbindNotification_corres:
       apply (rule corres_split[OF _ getNotification_corres])
         apply clarsimp
         apply (rule corres_split[OF _ set_ntfn_corres])
-           apply (rule sbn_corres)
+           apply (rule setBoundNotification_corres)
           apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
          apply (wp gbn_wp' gbn_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
@@ -3508,7 +3508,7 @@ lemma unbindMaybeNotification_corres:
        apply (rule corres_return_trivial)
       apply simp
       apply (rule corres_split[OF _ set_ntfn_corres])
-         apply (rule sbn_corres)
+         apply (rule setBoundNotification_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (wp get_simple_ko_wp getNotification_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
