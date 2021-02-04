@@ -344,7 +344,7 @@ lemma set_vm_root_for_flush_corres:
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply corres
-         apply_debug (trace) (tags "corres_search") (corres_search search: arm_context_switch_corres)
+         apply_debug (trace) (tags "corres_search") (corres_search search: armv_contextSwitch_corres)
   continue (* step left *)
   continue (* if rule *)
   continue (* failed corres on first subgoal, trying next *)
@@ -386,7 +386,7 @@ lemma set_vm_root_for_flush_corres':
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
-  apply (corressimp search: arm_context_switch_corres
+  apply (corressimp search: armv_contextSwitch_corres
                         wp: get_cap_wp getSlotCap_wp
                       simp: isCap_simps)
   apply (rule context_conjI)

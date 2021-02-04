@@ -479,7 +479,7 @@ lemma getHWASID_corres:
   apply simp
   done
 
-lemma arm_context_switch_corres:
+lemma armv_contextSwitch_corres:
   "corres dc
           (vspace_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
@@ -1238,7 +1238,7 @@ proof -
                     apply (simp add: lookup_failure_map_def)
                    apply simp
                   apply simp
-                  apply (rule arm_context_switch_corres)
+                  apply (rule armv_contextSwitch_corres)
                  apply simp
                 apply simp
                 apply (wpsimp simp: armv_contextSwitch_def if_apply_def2 wp: assert_get_tcb_ko')+
@@ -1603,7 +1603,7 @@ proof -
                return True
             od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ arm_context_switch_corres])
+      apply (rule corres_split [OF _ armv_contextSwitch_corres])
         apply (rule corres_trivial)
         apply (wp | simp)+
     done
