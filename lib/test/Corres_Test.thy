@@ -181,7 +181,7 @@ lemmas load_hw_asid_corres_args[corres] =
   loadHWASID_corres[@lift_corres_args]
 
 lemmas invalidate_asid_corres_args[corres] =
-  invalidate_asid_corres[@lift_corres_args]
+  invalidateASID_corres[@lift_corres_args]
 
 lemmas invalidate_hw_asid_entry_corres_args[corres] =
   invalidate_hw_asid_entry_corres[@lift_corres_args]

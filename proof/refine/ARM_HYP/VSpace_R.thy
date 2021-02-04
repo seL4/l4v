@@ -342,7 +342,7 @@ lemma storeHWASID_corres:
        apply (wp | simp)+
   done
 
-lemma invalidate_asid_corres:
+lemma invalidateASID_corres:
   "corres dc
           (valid_asid_map and valid_vspace_objs
                and pspace_aligned and pspace_distinct
@@ -372,7 +372,7 @@ lemma invalidate_asid_ext_corres:
                \<and> a \<noteq> 0 \<and> a \<le> mask asid_bits)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
      (invalidate_asid a) (invalidateASID a)"
-  apply (insert invalidate_asid_corres)
+  apply (insert invalidateASID_corres)
   apply (clarsimp simp: corres_underlying_def)
   apply fastforce
   done
@@ -1304,7 +1304,7 @@ lemma invalidate_asid_entry_corres:
   apply (rule corres_guard_imp)
    apply (rule corres_split [OF _ loadHWASID_corres[where pd=pd]])
      apply (rule corres_split [OF _ corres_when])
-         apply (rule invalidate_asid_corres[where pd=pd])
+         apply (rule invalidateASID_corres[where pd=pd])
         apply simp
        apply simp
        apply (rule invalidate_hw_asid_entry_corres)
