@@ -364,7 +364,7 @@ lemma unmapPageTable_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ pt_lookup_from_level_corres[OF _ refl]])
+        apply (rule corres_split_eqrE[OF _ lookupPTFromLevel_corres[OF _ refl]])
            apply (simp add: liftE_bindE)
            apply (rule corres_split[OF _ store_pte_corres])
               apply simp

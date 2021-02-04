@@ -683,7 +683,7 @@ lemma lookupPTSlot_corres:
   unfolding lookupPTSlot_def pt_lookup_slot_def
   by (corressimp corres: lookupPTSlotFromLevel_corres)
 
-lemma pt_lookup_from_level_corres:
+lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (lfr \<oplus> (=))
           (pspace_aligned and pspace_distinct and valid_vspace_objs
