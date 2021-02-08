@@ -52,8 +52,6 @@ This module specifies the behavior of reply objects.
 
 > replyPush :: PPtr TCB -> PPtr TCB -> PPtr Reply -> Bool -> Kernel ()
 > replyPush callerPtr calleePtr replyPtr canDonate = do
->     stateAssert sym_refs_asrt
->         "replyPush: `sym_refs (state_refs_of' s)` must hold"
 >     stateAssert (valid_replies'_sc_asrt replyPtr)
 >         "replyPush: valid_replies'_sc holds for replyPtr"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
