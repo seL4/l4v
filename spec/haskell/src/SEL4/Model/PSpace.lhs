@@ -10,7 +10,7 @@ This module contains the data structure and operations for the physical memory m
 >         PSpace, newPSpace, initPSpace,
 >         PSpaceStorable,
 >         objBits, injectKO, projectKO, makeObject, loadObject, updateObject,
->         getObject, setObject, deleteObjects, reserveFrame,
+>         getObject, readObject, setObject, deleteObjects, reserveFrame,
 >         typeError, alignError, alignCheck, sizeCheck,
 >         loadWordUser, storeWordUser, placeNewObject,
 >     ) where
@@ -20,13 +20,14 @@ This module contains the data structure and operations for the physical memory m
 % {-# BOOT-IMPORTS: Data.Map SEL4.Object.Structures SEL4.Machine.RegisterSet #-}
 % {-# BOOT-EXPORTS: PSpace #PRegion newPSpace #-}
 
-> import Prelude hiding (Word)
+> import Prelude hiding (Word, read)
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
 
 > import qualified Data.Map
 > import Data.Bits
 > import Data.List
+> import Control.Monad.Reader(asks)
 > import SEL4.Machine.RegisterSet
 > import SEL4.Machine.Hardware
 
@@ -120,12 +121,15 @@ assumed to have checked that the address is correctly aligned for the
 requested object type and that it actually contains an object of the
 requested type.
 
-> getObject :: PSpaceStorable a => PPtr a -> Kernel a
-> getObject ptr = do
->         map <- gets $ psMap . ksPSpace
+> readObject :: PSpaceStorable a => PPtr a -> KernelR a
+> readObject ptr = do
+>         map <- asks $ psMap . ksPSpace
 >         let (before, after) = lookupAround2 (fromPPtr ptr) map
 >         (ptr', val) <- maybeToMonad before
 >         loadObject (fromPPtr ptr) ptr' after val
+
+> getObject :: PSpaceStorable a => PPtr a -> Kernel a
+> getObject ptr = read (readObject ptr)
 
 > setObject :: PSpaceStorable a => PPtr a -> a -> Kernel ()
 > setObject ptr val = do

@@ -16,7 +16,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > module SEL4.Object.SchedContext (
 >         schedContextUnbindAllTCBs, invokeSchedContext,
->         invokeSchedControlConfigure, getSchedContext,
+>         invokeSchedControlConfigure, getSchedContext, readSchedContext,
 >         schedContextUnbindTCB, schedContextBindTCB, schedContextResume,
 >         setSchedContext, updateTimeStamp, commitTime, rollbackTime,
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
@@ -33,7 +33,7 @@ This module uses the C preprocessor to select a target architecture.
 
 \begin{impdetails}
 
-> import Prelude hiding (Word)
+> import Prelude hiding (Word, read)
 > import SEL4.Config
 > import SEL4.Machine.Hardware
 > import SEL4.Machine.RegisterSet(PPtr(..), Word)
@@ -42,7 +42,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Kernel.VSpace(lookupIPCBuffer)
 > import SEL4.Model.Failures
 > import SEL4.Model.Preemption(KernelP, withoutPreemption)
-> import SEL4.Model.PSpace(getObject, setObject)
+> import SEL4.Model.PSpace(getObject, readObject, setObject)
 > import SEL4.Model.StateData
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
@@ -66,6 +66,9 @@ This module uses the C preprocessor to select a target architecture.
 
 > getSchedContext :: PPtr SchedContext -> Kernel SchedContext
 > getSchedContext = getObject
+
+> readSchedContext :: PPtr SchedContext -> KernelR SchedContext
+> readSchedContext = readObject
 
 > setSchedContext :: PPtr SchedContext -> SchedContext -> Kernel ()
 > setSchedContext = setObject
