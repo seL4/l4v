@@ -2133,25 +2133,29 @@ lemma installThreadBuffer_corres:
   done
 
 lemma tcb_at_cte_at'_0: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 0)) s"
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb split: option.splits)
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+                 split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
   apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
   done
 
 lemma tcb_at_cte_at'_1: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index (Suc 0))) s"
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb split: option.splits)
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+                 split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
   apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def of_bl_def)
   done
 
 lemma tcb_at_cte_at'_3: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 3)) s"
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb split: option.splits)
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+                 split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
   apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
   done
 
 lemma tcb_at_cte_at'_4: "tcb_at' a s \<Longrightarrow> cte_at' (cte_map (a, tcb_cnode_index 4)) s"
-  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb split: option.splits)
+  apply (clarsimp simp: obj_at'_def projectKO_def fail_def return_def projectKO_tcb oassert_opt_def
+                 split: option.splits)
   apply (rule_tac ptr'=a in cte_wp_at_tcbI'; simp add: objBitsKO_def)
   apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def)
   done
@@ -2490,7 +2494,7 @@ lemma setMCPriority_ex_nonz_cap_to'[wp]:
   by (wpsimp wp: threadSet_cap_to' simp: setMCPriority_def)
 
 lemma mapTCBPtr_threadGet: "mapTCBPtr t f = threadGet f t"
-  by (clarsimp simp: mapTCBPtr_def threadGet_def liftM_def)
+  by (clarsimp simp: mapTCBPtr_def threadGet_getObject)
 
 lemma monadic_rewrite_bind_unbind:
   "monadic_rewrite False True (tcb_at t)
@@ -3108,7 +3112,7 @@ lemma decode_set_mcpriority_corres:
 
 lemma getMCP_sp:
   "\<lbrace>P\<rbrace> threadGet tcbMCP t \<lbrace>\<lambda>rv. mcpriority_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
-  apply (simp add: threadGet_def)
+  apply (simp add: threadGet_getObject)
   apply wp
   apply (simp add: o_def pred_tcb_at'_def)
   apply (wp getObject_tcb_wp)
@@ -3951,7 +3955,7 @@ lemma decodeBindNotification_wf:
   apply (rule hoare_pre)
    apply (wp getNotification_wp getObject_tcb_wp
         | wpc
-        | simp add: threadGet_def getBoundNotification_def)+
+        | simp add: threadGet_getObject getBoundNotification_def)+
   apply (fastforce simp: valid_cap'_def[where c="capability.ThreadCap t"]
                          is_ntfn invs_def valid_state'_def valid_pspace'_def
                          projectKOs null_def pred_tcb_at'_def obj_at'_def
@@ -3963,7 +3967,7 @@ lemma decodeUnbindNotification_wf:
      decodeUnbindNotification (capability.ThreadCap t)
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
   apply (simp add: decodeUnbindNotification_def)
-  apply (wp getObject_tcb_wp | wpc | simp add: threadGet_def getBoundNotification_def)+
+  apply (wp getObject_tcb_wp | wpc | simp add: threadGet_getObject getBoundNotification_def)+
   apply (auto simp: obj_at'_def pred_tcb_at'_def)
   done
 

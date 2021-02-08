@@ -183,23 +183,20 @@ lemma can_be_is:
   apply (auto simp: Let_def)[1]
   done
 
+lemma no_ofail_cte_wp_at'_readObject[simp]:
+  "no_ofail (cte_wp_at' (P::cte \<Rightarrow> bool) p) (readObject p::cte kernel_r)"
+  by (clarsimp simp: cte_wp_at'_def getObject_def readObject_def obind_def omonad_defs split_def
+                     no_ofail_def gets_the_def gets_def get_def bind_def
+                     return_def assert_opt_def fail_def
+              split: option.splits)
+
+lemma no_fail_getObject [wp]:
+  "no_fail (cte_at' p) (getObject p::cte kernel)"
+  by (clarsimp simp: getCTE_def getObject_def no_ofail_gets_the)
+
 lemma no_fail_getCTE [wp]:
   "no_fail (cte_at' p) (getCTE p)"
-  apply (simp add: getCTE_def getObject_def split_def
-                   loadObject_cte alignCheck_def unless_def
-                   alignError_def is_aligned_mask[symmetric]
-             cong: kernel_object.case_cong)
-  apply (rule no_fail_pre, (wp | wpc)+)
-  apply (clarsimp simp: cte_wp_at'_def getObject_def
-                        loadObject_cte split_def in_monad
-                 dest!: in_singleton
-             split del: if_split)
-  apply (clarsimp simp: in_monad typeError_def objBits_simps
-                        magnitudeCheck_def
-                 split: kernel_object.split_asm if_split_asm option.split_asm
-             split del: if_split)
-       apply simp+
-  done
+  by (wpsimp simp: getCTE_def)
 
 lemma tcb_cases_related:
   "tcb_cap_cases ref = Some (getF, setF, restr) \<Longrightarrow>
@@ -2188,24 +2185,33 @@ lemma ctes_of_valid:
   apply (fastforce)
   done
 
-lemma no_fail_setCTE [wp]:
-  "no_fail (cte_at' p) (setCTE p c)"
-  apply (clarsimp simp: setCTE_def setObject_def split_def unless_def
-                        updateObject_cte alignCheck_def alignError_def
-                        typeError_def is_aligned_mask[symmetric]
-                  cong: kernel_object.case_cong)
+lemma readObject_cte_at'[simplified]:
+  "bound (readObject p s :: cte option) \<Longrightarrow> cte_at' p s"
+  unfolding cte_wp_at'_def getObject_def
+  by (clarsimp simp: omonad_defs split_def gets_the_def exec_gets return_def)
+
+lemma readObject_cte_ko_at':
+  "readObject p s = Some (cte :: cte) \<Longrightarrow> cte_wp_at' ((=) cte) p s"
+  unfolding cte_wp_at'_def getObject_def
+  by (clarsimp simp: omonad_defs split_def gets_the_def exec_gets return_def)
+
+lemma no_fail_setObject_cte [wp]:
+  "no_fail (cte_at' t) (setObject t (t'::cte))"
+  unfolding setObject_def
+  apply (clarsimp simp: updateObject_cte gets_the_def alignCheck_def is_aligned_mask[symmetric]
+             split del: if_split cong: kernel_object.case_cong)
   apply (wp|wpc)+
   apply (clarsimp simp: cte_wp_at'_def getObject_def split_def
-                        in_monad loadObject_cte
-                 dest!: in_singleton
-             split del: if_split)
-  apply (clarsimp simp: typeError_def alignCheck_def alignError_def
-                        in_monad is_aligned_mask[symmetric] objBits_simps
-                        magnitudeCheck_def
-                 split: kernel_object.split_asm if_split_asm option.splits
-             split del: if_split)
-    apply simp_all
-  done
+                        in_monad loadObject_cte readObject_def omonad_defs
+                 dest!: in_singleton split: option.splits split del: if_split)
+  by (fastforce simp: read_typeError_def objBits_simps
+                      read_magnitudeCheck_def ohaskell_assert_def
+               split: kernel_object.split_asm if_split_asm
+           split del: if_split)
+
+lemma no_fail_setCTE [wp]:
+  "no_fail (cte_at' p) (setCTE p c)"
+  unfolding setCTE_def by wp
 
 lemma no_fail_updateCap [wp]:
   "no_fail (cte_at' p) (updateCap p cap')"

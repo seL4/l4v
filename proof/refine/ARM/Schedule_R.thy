@@ -285,9 +285,9 @@ lemma tcbSchedAppend_valid_queues'[wp]:
                    in hoare_post_imp)
         apply (clarsimp simp: valid_queues'_def obj_at'_def projectKOs inQ_def)
        apply (wp setQueue_valid_queues' | simp | simp add: setQueue_def)+
-     apply (wp getObject_tcb_wp | simp add: threadGet_def)+
+     apply (wp getObject_tcb_wp | simp add: threadGet_getObject)+
      apply (clarsimp simp: obj_at'_def inQ_def projectKOs valid_queues'_def)
-    apply (wp getObject_tcb_wp | simp add: threadGet_def)+
+    apply (wp getObject_tcb_wp | simp add: threadGet_getObject)+
   apply (clarsimp simp: obj_at'_def)
   done
 
@@ -2900,7 +2900,7 @@ lemma inReleaseQueue_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko tcb_ptr s \<longrightarrow> P (tcbInReleaseQueue ko) s\<rbrace>
    inReleaseQueue tcb_ptr
    \<lbrace>P\<rbrace>"
-  unfolding inReleaseQueue_def threadGet_def
+  unfolding inReleaseQueue_def threadGet_getObject
   apply (wpsimp wp: getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
   done

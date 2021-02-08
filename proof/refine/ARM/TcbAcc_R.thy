@@ -551,10 +551,9 @@ lemma assert_get_tcb_corres:
 lemma threadget_corres:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow> r (f tcb) (f' tcb')"
   shows      "corres r (tcb_at t) (tcb_at' t) (thread_get f t) (threadGet f' t)"
-  apply (simp add: thread_get_def threadGet_def)
-  apply (fold liftM_def)
-  apply simp
-  apply (rule corres_rel_imp)
+  apply (simp add: thread_get_def threadGet_getObject)
+  apply (rule corres_split_skip)
+     apply wpsimp+
    apply (rule assert_get_tcb_corres)
   apply (simp add: x)
   done
@@ -744,7 +743,7 @@ lemma setObject_tcb_iflive':
                          in_magnitude_check objBits_simps' prod_eq_iff
                          obj_at'_def)
    apply fastforce
-  apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
+  apply (clarsimp simp: updateObject_default_def bind_def projectKOs in_monad)
   done
 
 lemma setObject_tcb_idle':
@@ -779,7 +778,7 @@ lemma setObject_tcb_ifunsafe':
                           in_magnitude_check objBits_simps' prod_eq_iff
                           obj_at'_def)
     apply fastforce
-   apply (clarsimp simp: updateObject_default_def bind_def projectKOs)
+   apply (clarsimp simp: updateObject_default_def bind_def projectKOs in_monad)
   apply wp
   done
 
@@ -1679,11 +1678,11 @@ lemma corres_as_user':
              (tcb_at t) (tcb_at' t)
              (gets_the (get_tcb t)) (threadGet (atcbContextGet o tcbArch) t)"
     apply (rule corres_guard_imp)
-      apply (rule corres_gets_the)
-      apply (simp add: threadGet_def)
-      apply (rule corres_rel_imp [OF corres_get_tcb])
-      apply (simp add: tcb_relation_def arch_tcb_relation_def)
-     apply (simp add: tcb_at_def)+
+      apply (simp add: threadGet_getObject)
+      apply (rule corres_bind_return)
+      apply (rule corres_split[OF _ assert_get_tcb_corres])
+        apply (simp add: tcb_relation_def arch_tcb_relation_def)
+       apply wpsimp+
     done
   have L2: "\<And>tcb tcb' con con'. \<lbrakk> tcb_relation tcb tcb'; con = con'\<rbrakk>
               \<Longrightarrow> tcb_relation (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)
@@ -1741,12 +1740,14 @@ proof -
   have R: "\<And>x. tcbArch_update (\<lambda>_. tcbArch x) x = x"
     by (case_tac x, simp)
   show ?thesis
-    apply (simp add: asUser_def split_def threadGet_def threadSet_def
+    apply (simp add: asUser_def split_def threadGet_getObject threadSet_def
                      liftM_def bind_assoc)
-    apply (clarsimp simp: valid_def in_monad getObject_def setObject_def
+    apply (clarsimp simp: valid_def in_monad getObject_def readObject_def setObject_def
                           loadObject_default_def projectKOs objBits_simps'
                           modify_def split_def updateObject_default_def
-                          in_magnitude_check select_f_def
+                          in_magnitude_check select_f_def omonad_defs obind_def
+               split del: if_split
+                   split: option.split_asm if_split_asm
                    dest!: P)
     apply (simp add: R map_upd_triv)
     done
@@ -1784,9 +1785,8 @@ lemma threadGet_wp:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
    threadGet f t
    \<lbrace>P\<rbrace>"
-  apply (simp add: threadGet_def)
+  apply (simp add: threadGet_getObject)
   apply (wp getObject_tcb_wp)
-  apply clarsimp
   done
 
 lemma threadGet_sp:
@@ -1894,24 +1894,18 @@ crunches asUser
 
 lemma asUser_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> asUser t m \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
-  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp | wpc | simp)+
-     apply (rule_tac f="ksCurDomain" in hoare_lift_Pf)
-      apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp)+
-  apply (clarsimp simp: obj_at'_def)
-  done
+  unfolding asUser_def tcb_in_cur_domain'_def threadGet_getObject
+  by (wpsimp wp: threadSet_obj_at'_strongish getObject_tcb_wp | wps | clarsimp simp: obj_at'_def)+
 
 lemma asUser_tcbDomain_inv[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
-  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
-  done
+  unfolding asUser_def tcb_in_cur_domain'_def threadGet_getObject
+  by (wpsimp wp: threadSet_obj_at'_strongish getObject_tcb_wp | wps | clarsimp simp: obj_at'_def)+
 
 lemma asUser_tcbPriority_inv[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
-  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
-  done
+  unfolding asUser_def tcb_in_cur_domain'_def threadGet_getObject
+  by (wpsimp wp: threadSet_obj_at'_strongish getObject_tcb_wp | wps | clarsimp simp: obj_at'_def)+
 
 lemma asUser_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -1956,7 +1950,7 @@ lemma gts_corres:
   done
 
 lemma gts_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getThreadState t \<lbrace>valid_tcb_state'\<rbrace>"
-  apply (simp add: getThreadState_def threadGet_def liftM_def)
+  apply (simp add: getThreadState_def threadGet_getObject)
   apply (wp getObject_tcb_wp)
   apply clarsimp
   apply (drule obj_at_ko_at', clarsimp)
@@ -1965,7 +1959,7 @@ lemma gts_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getThreadState t \<lbr
   done
 
 lemma gts_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> getThreadState t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (simp add: getThreadState_def threadGet_def liftM_def)
+  apply (simp add: getThreadState_def threadGet_getObject)
   apply wp
    apply (rule hoare_chain)
      apply (rule obj_at_getObject)
@@ -1988,7 +1982,7 @@ lemma gbn_corres:
   done
 
 lemma gbn_bound_tcb_at'[wp]: "\<lbrace>bound_tcb_at' P t\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (simp add: getBoundNotification_def threadGet_def liftM_def)
+  apply (simp add: getBoundNotification_def threadGet_getObject)
   apply wp
    apply (rule hoare_strengthen_post)
     apply (rule obj_at_getObject)
@@ -2032,7 +2026,7 @@ lemma isRunnable_inv[wp]:
 lemma isRunnable_wp[wp]:
   "\<lbrace>\<lambda>s. Q (st_tcb_at' (runnable') t s) s\<rbrace> isRunnable t \<lbrace>Q\<rbrace>"
   apply (simp add: isRunnable_def2)
-  apply (wpsimp simp: getThreadState_def threadGet_def wp: getObject_tcb_wp)
+  apply (wpsimp simp: getThreadState_def threadGet_getObject wp: getObject_tcb_wp)
   apply (clarsimp simp: getObject_def valid_def in_monad st_tcb_at'_def
                         loadObject_default_def projectKOs obj_at'_def
                         split_def objBits_simps in_magnitude_check)
@@ -2088,7 +2082,7 @@ lemma getObject_obj_at_tcb:
 
 lemma threadGet_obj_at':
   "\<lbrace>obj_at' (\<lambda>t. P (f t) t) t\<rbrace> threadGet f t \<lbrace>\<lambda>rv. obj_at' (P rv) t\<rbrace>"
-  by (simp add: threadGet_def o_def | wp getObject_obj_at_tcb)+
+  by (simp add: threadGet_getObject | wp getObject_obj_at_tcb)+
 
 lemma setQueue_corres:
   "corres dc \<top> \<top> (set_tcb_queue d p q) (setQueue d p q)"
@@ -2365,8 +2359,8 @@ lemma isRunnable_sp:
    \<lbrace>\<lambda>rv s. \<exists>tcb'. ko_at' tcb' tcb_ptr s
                   \<and> (rv = (tcbState tcb' = Running \<or> tcbState tcb' = Restart))
            \<and> P s\<rbrace>"
-  unfolding isRunnable_def getThreadState_def threadGet_def liftM_def
-  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_def comp_def)
+  unfolding isRunnable_def getThreadState_def
+  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_getObject)
   apply (fastforce simp: obj_at'_def split: Structures_H.thread_state.splits)
   done
 
@@ -2374,9 +2368,8 @@ lemma inReleaseQueue_sp:
   "\<lbrace>P\<rbrace>
    inReleaseQueue tcb_ptr
    \<lbrace>\<lambda>rv s. \<exists>tcb'. ko_at' tcb' tcb_ptr s \<and> (rv = (tcbInReleaseQueue tcb')) \<and> P s\<rbrace>"
-  unfolding inReleaseQueue_def threadGet_def
-  apply wpsimp
-  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_def comp_def)
+  unfolding inReleaseQueue_def
+  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp simp: threadGet_getObject)
   apply (clarsimp simp: obj_at'_def)
   done
 
@@ -2640,7 +2633,7 @@ lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur
   done
 
 lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_get (\<lambda>tcb. runnable (tcb_state tcb)) t) (isRunnable t)"
-  apply (simp add:  isRunnable_def getThreadState_def threadGet_def
+  apply (simp add:  isRunnable_def getThreadState_def threadGet_getObject
                    thread_get_def)
   apply (fold liftM_def)
   apply simp
@@ -3190,11 +3183,12 @@ lemma setQueue_after:
    (threadSet f t >>= (\<lambda>rv. setQueue d p q))"
   apply (simp add: setQueue_def)
   apply (rule oblivious_modify_swap)
-  apply (simp add: threadSet_def getObject_def setObject_def
-                   loadObject_default_def
-                   split_def projectKO_def2 alignCheck_assert
-                   magnitudeCheck_assert updateObject_default_def)
-  apply (intro oblivious_bind, simp_all)
+  apply (simp add: threadSet_def getObject_def setObject_def obind_def
+                   loadObject_default_def gets_the_def omonad_defs read_magnitudeCheck_assert
+                   split_def projectKO_def alignCheck_assert readObject_def
+                   magnitudeCheck_assert updateObject_default_def
+            split: option.splits if_splits)
+  apply (intro oblivious_bind, simp_all split: option.splits)
   done
 
 lemma tcbSchedEnqueue_sch_act[wp]:
@@ -3214,7 +3208,7 @@ lemma tcbSchedEnqueue_weak_sch_act[wp]:
 
 lemma threadGet_const:
   "\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> obj_at' (P \<circ> f) t s\<rbrace> threadGet f t \<lbrace>\<lambda>rv s. P (rv)\<rbrace>"
-  apply (simp add: threadGet_def liftM_def)
+  apply (simp add: threadGet_getObject)
   apply (wp getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
   done
@@ -3425,7 +3419,7 @@ qed
 
 lemma threadGet_const_tcb_at:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> obj_at' (P s \<circ> f) t s\<rbrace> threadGet f t \<lbrace>\<lambda>rv s. P s rv \<rbrace>"
-  apply (simp add: threadGet_def liftM_def)
+  apply (simp add: threadGet_getObject)
   apply (wp getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
   done
@@ -3434,7 +3428,7 @@ lemma threadGet_const_tcb_at_imp_lift:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> obj_at' (P s \<circ> f) t s \<longrightarrow>  obj_at' (Q s \<circ> f) t s \<rbrace>
    threadGet f t
    \<lbrace>\<lambda>rv s. P s rv \<longrightarrow> Q s rv \<rbrace>"
-  apply (simp add: threadGet_def liftM_def)
+  apply (simp add: threadGet_getObject)
   apply (wp getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
   done
@@ -3771,9 +3765,9 @@ lemma tcbSchedEnqueue_valid_queues'[wp]:
                    in hoare_post_imp)
         apply (clarsimp simp: valid_queues'_def obj_at'_def projectKOs inQ_def)
        apply (wp setQueue_valid_queues' | simp | simp add: setQueue_def)+
-     apply (wp getObject_tcb_wp | simp add: threadGet_def)+
+     apply (wp getObject_tcb_wp | simp add: threadGet_getObject)+
      apply (clarsimp simp: obj_at'_def inQ_def projectKOs valid_queues'_def)
-    apply (wp getObject_tcb_wp | simp add: threadGet_def)+
+    apply (wp getObject_tcb_wp | simp add: threadGet_getObject)+
   apply (clarsimp simp: obj_at'_def)
   done
 
@@ -4612,7 +4606,7 @@ lemma sbn_valid_idle'[wp]:
 
 lemma gts_sp':
   "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. st_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
-  apply (simp add: getThreadState_def threadGet_def)
+  apply (simp add: getThreadState_def threadGet_getObject)
   apply wp
   apply (simp add: o_def pred_tcb_at'_def)
   apply (wp getObject_tcb_wp)
@@ -4621,7 +4615,7 @@ lemma gts_sp':
 
 lemma gbn_sp':
   "\<lbrace>P\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv. bound_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
-  apply (simp add: getBoundNotification_def threadGet_def)
+  apply (simp add: getBoundNotification_def threadGet_getObject)
   apply wp
   apply (simp add: o_def pred_tcb_at'_def)
   apply (wp getObject_tcb_wp)

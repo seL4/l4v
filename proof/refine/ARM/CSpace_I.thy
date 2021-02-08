@@ -819,14 +819,9 @@ lemma capBadge_maskCapRights[simp]:
 
 lemma getObject_cte_det:
   "(r::cte,s') \<in> fst (getObject p s) \<Longrightarrow> fst (getObject p s) = {(r,s)} \<and> s' = s"
-  apply (clarsimp simp add: getObject_def bind_def get_def gets_def
-                            return_def loadObject_cte split_def)
-  apply (clarsimp split: kernel_object.split_asm if_split_asm option.split_asm
-                   simp: in_monad typeError_def alignError_def magnitudeCheck_def)
-       apply (simp_all add: bind_def return_def assert_opt_def split_def
-                            alignCheck_def is_aligned_mask[symmetric]
-                            unless_def when_def magnitudeCheck_def)
-  done
+  by (clarsimp simp: getObject_def in_monad split_def obind_def gets_def get_def
+                     readObject_def omonad_defs bind_def return_def gets_the_def assert_opt_def
+              split: option.splits)
 
 lemma cte_wp_at_obj_cases':
   "cte_wp_at' P p s =

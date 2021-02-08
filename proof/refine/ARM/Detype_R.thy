@@ -2129,8 +2129,9 @@ lemma simpler_updateObject_def:
   apply (case_tac b; simp add: cte_check_def typeError_def fail_def tcbSlot_defs cteSizeBits_def)
   by (intro conjI;
       clarsimp simp: alignCheck_def unless_def when_def not_less[symmetric]
-                     alignError_def is_aligned_mask magnitudeCheck_def
+                     alignError_def is_aligned_mask magnitudeCheck_def assert_def
                      cte_update_def return_def tcbSlot_defs objBits_simps cteSizeBits_def
+                     read_alignCheck_def ounless_def read_magnitudeCheck_def read_alignError_def
                split:option.splits;
       fastforce simp:return_def fail_def bind_def)+
 
@@ -2188,22 +2189,15 @@ lemma cte_wp_at_top:
    = (\<exists>a b. fst (lookupAround2 src (ksPSpace s)) = Some (a, b) \<and>
             cte_check b src a (snd (lookupAround2 src (ksPSpace s))))"
   apply (simp add: cte_wp_at'_def getObject_def gets_def get_def bind_def return_def split_def
-                   assert_opt_def fail_def
-              split: option.splits)
+                   assert_opt_def fail_def gets_the_def readObject_def omonad_defs obind_def
+            split: option.splits)
   apply (clarsimp simp: loadObject_cte)
-  apply (case_tac b; simp add: typeError_def fail_def cte_check_def
-                          split: Structures_H.kernel_object.splits)
-   apply (simp add: loadObject_cte cte_check_def tcbSlot_defs objBits_simps cteSizeBits_def)
-   apply (simp add: alignCheck_def bind_def alignError_def fail_def return_def objBits_simps
-                    magnitudeCheck_def in_monad is_aligned_mask when_def
-               split: option.splits)
-   apply (intro conjI impI allI; simp add: not_le)
-  apply (clarsimp simp: cte_check_def)
-  apply (simp add: alignCheck_def bind_def alignError_def fail_def return_def objBits_simps
-                   magnitudeCheck_def in_monad is_aligned_mask when_def
-              split:option.splits)
-  apply (intro conjI impI allI,simp_all add:not_le)
-  done
+  by (case_tac b;
+      simp add: typeError_def read_typeError_def obind_def omonad_defs cte_check_def
+                read_alignCheck_def read_magnitudeCheck_def read_alignError_def is_aligned_mask
+                objBits_simps tcbSlot_defs cteSizeBits_def
+         split: option.split;
+      fastforce)
 
 lemma neq_out_intv:
   "\<lbrakk>a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
@@ -2458,15 +2452,17 @@ lemma fail_set: "fst (fail s) = {}"
 
 lemma locateCTE_cte_no_fail:
  "no_fail (cte_at' src) (locateCTE src)"
-  apply (clarsimp simp:no_fail_def cte_wp_at'_def getObject_def
-     locateCTE_def return_def gets_def get_def bind_def split_def
-     assert_opt_def assert_def in_fail fail_set split:option.splits)
+  apply (clarsimp simp: no_fail_def cte_wp_at'_def getObject_def
+                        locateCTE_def return_def gets_def get_def bind_def split_def
+                        gets_the_def readObject_def omonad_defs obind_def
+                        assert_opt_def assert_def fail_set
+                 split: option.splits)
   apply (clarsimp simp:cte_check_def ObjectInstances_H.loadObject_cte)
-  apply (drule in_singleton)
   by (auto simp: objBits_simps cteSizeBits_def alignError_def
-    alignCheck_def in_monad is_aligned_mask magnitudeCheck_def
-    typeError_def
-    cong: if_cong split: if_splits option.splits kernel_object.splits)
+                 alignCheck_def in_monad is_aligned_mask magnitudeCheck_def
+                 typeError_def read_typeError_def read_magnitudeCheck_def
+                 ohaskell_fail_def ohaskell_assert_def
+           cong: if_cong split: if_splits option.splits kernel_object.splits)
 
 lemma not_in_new_cap_addrs:
   "\<lbrakk>is_aligned ptr (objBitsKO obj + us);
@@ -2709,9 +2705,9 @@ lemma locateCTE_ko_wp_at':
    \<lbrace>\<lambda>rv. ko_wp_at' \<top> rv \<rbrace>"
   apply (clarsimp simp:locateCTE_def split_def)
   apply wp
-  apply (clarsimp simp:cte_wp_at'_def getObject_def
-    gets_def split_def get_def bind_def return_def
-    ko_wp_at'_def lookupAround2_char1 assert_opt_def)
+  apply (clarsimp simp: cte_wp_at'_def getObject_def gets_the_def  obind_def omonad_defs
+                        gets_def split_def get_def bind_def return_def readObject_def
+                        ko_wp_at'_def lookupAround2_char1 assert_opt_def)
   apply (clarsimp split:option.splits
     simp:fail_def return_def lookupAround2_char1)
   apply (case_tac ba)
@@ -2774,39 +2770,11 @@ lemma magnitudeCheck_det:
 lemma getPDE_det:
   "ko_wp_at' ((=) (KOArch (KOPDE pde))) p s
    \<Longrightarrow> getObject p s = ({((pde::ARM_H.pde),s)},False)"
-  apply (clarsimp simp:ko_wp_at'_def getObject_def split_def
-                       bind_def gets_def return_def get_def
-                       assert_opt_def split:if_splits)
-
-  apply (clarsimp simp: fail_def return_def lookupAround2_known1)
-   apply (simp add: loadObject_default_def)
-  apply (clarsimp simp:projectKO_def projectKO_opt_pde alignCheck_def
-    is_aligned_mask objBits_simps unless_def)
-  apply (clarsimp simp:bind_def return_def)
-  apply (intro conjI)
-   apply (intro set_eqI iffI)
-    apply clarsimp
-    apply (subst (asm) in_magnitude_check')
-     apply (simp add:archObjSize_def is_aligned_mask pteBits_def pdeBits_def)+
-    apply (rule bexI[rotated])
-     apply (rule in_magnitude_check'[THEN iffD2])
-      apply (simp add:is_aligned_mask)+
-   apply (clarsimp simp:image_def)
-  apply (clarsimp simp:magnitudeCheck_assert assert_def
-    objBits_def archObjSize_def
-    return_def fail_def lookupAround2_char2 split:option.splits if_split_asm)
-  apply (rule ccontr)
-  apply (simp add:ps_clear_def field_simps pteBits_def pdeBits_def)
-  apply (erule_tac x = x2 in in_empty_interE)
-   apply (clarsimp simp:less_imp_le)
-   apply (rule conjI)
-    apply (subst add.commute)
-    apply (rule word_diff_ls')
-     apply (clarsimp simp:field_simps not_le plus_one_helper)
-    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
-   apply simp
-  apply auto
-  done
+  by (clarsimp simp: getObject_def split_def gets_the_def ko_wp_at'_def obj_at'_def
+                     bind_def gets_def return_def get_def projectKOs
+                     assert_opt_def fail_def typ_at'_def
+                     no_ofailD[OF no_ofail_pde_at'_readObject]
+              split: if_splits option.splits)
 
 lemma in_dom_eq:
   "m a = Some obj \<Longrightarrow> dom (\<lambda>b. if b = a then Some g else m b) = dom m"
@@ -2921,15 +2889,15 @@ lemma storePDE_det:
    \<Longrightarrow> storePDE ptr (new_pde::ARM_H.pde) s =
        modify
          (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
-  apply (clarsimp simp:ko_wp_at'_def storePDE_def split_def
-                       bind_def gets_def return_def
-                       get_def setObject_def
-                       assert_opt_def split:if_splits)
-  apply (clarsimp simp:lookupAround2_known1 return_def alignCheck_def
-                       updateObject_default_def split_def
-                       archObjSize_def unless_def projectKO_def
-                       projectKO_opt_pde bind_def when_def
-                       is_aligned_mask[symmetric] objBits_simps)
+  apply (clarsimp simp: ko_wp_at'_def storePDE_def split_def
+                        bind_def gets_def return_def
+                        get_def setObject_def
+                        assert_opt_def split:if_splits)
+  apply (clarsimp simp: lookupAround2_known1 return_def alignCheck_def
+                        updateObject_default_def split_def gets_the_def
+                        archObjSize_def unless_def projectKO_def read_alignCheck_def
+                        projectKO_opt_pde bind_def when_def omonad_defs
+                        is_aligned_mask[symmetric] objBits_simps)
   apply (drule magnitudeCheck_det)
     apply (simp add:objBits_simps archObjSize_def)+
   apply (simp add:simpler_modify_def)
@@ -3378,38 +3346,10 @@ lemma setCTE_modify_gsUserPages_commute:
 lemma getTCB_det:
   "ko_wp_at' ((=) (KOTCB tcb)) p s
    \<Longrightarrow> getObject p s = ({(tcb,s)},False)"
-  apply (clarsimp simp:ko_wp_at'_def getObject_def split_def
-                       bind_def gets_def return_def get_def
-                       assert_opt_def split:if_splits)
-  apply (clarsimp simp: fail_def return_def lookupAround2_known1)
-   apply (simp add:loadObject_default_def)
-  apply (clarsimp simp:projectKO_def projectKO_opt_tcb alignCheck_def
-    is_aligned_mask objBits_simps' unless_def)
-  apply (clarsimp simp:bind_def return_def)
-  apply (intro conjI)
-   apply (intro set_eqI iffI)
-    apply clarsimp
-    apply (subst (asm) in_magnitude_check')
-     apply (simp add:archObjSize_def is_aligned_mask)+
-    apply (rule bexI[rotated])
-     apply (rule in_magnitude_check'[THEN iffD2])
-      apply (simp add:is_aligned_mask)+
-   apply (clarsimp simp:image_def)
-  apply (clarsimp simp:magnitudeCheck_assert assert_def
-    objBits_def archObjSize_def
-    return_def fail_def lookupAround2_char2 split:option.splits if_split_asm)
-  apply (rule ccontr)
-  apply (simp add:ps_clear_def field_simps)
-  apply (erule_tac x = x2 in in_empty_interE)
-   apply (clarsimp simp:less_imp_le)
-   apply (rule conjI)
-    apply (subst add.commute)
-    apply (rule word_diff_ls')
-     apply (clarsimp simp:field_simps not_le plus_one_helper)
-    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
-   apply simp
-  apply auto
-  done
+  by (clarsimp simp: ko_wp_at'_def getObject_def split_def gets_the_def
+                     bind_def gets_def return_def get_def fail_def assert_opt_def
+                     no_ofailD[OF no_ofail_tcb_at'_readObject] obj_at'_def projectKOs
+              split: if_splits option.split)
 
 lemma threadSet_det:
   "tcb_at' ptr s
@@ -3423,10 +3363,10 @@ lemma threadSet_det:
   apply (clarsimp simp:setObject_def gets_def get_def)
   apply (subst bind_def)
   apply (clarsimp simp:split_def)
-  apply (simp add:lookupAround2_known1 bind_assoc projectKO_def
-    assert_opt_def updateObject_default_def projectKO_opt_tcb)
-  apply (clarsimp simp add:
-    alignCheck_def unless_def when_def
+  apply (simp add:lookupAround2_known1 bind_assoc projectKO_def gets_the_def
+    assert_opt_def updateObject_default_def projectKO_opt_tcb omonad_defs)
+  apply (clarsimp simp: read_alignCheck_def omonad_defs
+    alignCheck_def unless_def when_def gets_the_def
     is_aligned_mask objBits_simps)
   apply (clarsimp simp:magnitudeCheck_det bind_def)
   apply (cut_tac ko = "KOTCB obj" in magnitudeCheck_det)
@@ -3540,7 +3480,7 @@ lemma placeNewObject_tcb_at':
   apply (simp add: placeNewObject_def placeNewObject'_def split_def)
   apply (wp hoare_unless_wp | wpc | simp add:alignError_def)+
   apply (auto simp: obj_at'_def is_aligned_mask lookupAround2_None1 lookupAround2_char1 field_simps
-                    projectKO_opt_tcb projectKO_def return_def ps_clear_def objBits_simps
+                    projectKO_opt_tcb projectKO_def return_def ps_clear_def objBits_simps oassert_opt_def
               split: if_splits
              dest!: pspace_no_overlap_disjoint')
   done
@@ -3747,13 +3687,14 @@ lemma threadSet_gsUntypedZeroRanges_commute':
   "monad_commute \<top>
      (threadSet fn ptr)
      (modify (\<lambda>s. s \<lparr> gsUntypedZeroRanges := f (gsUntypedZeroRanges s) \<rparr> ))"
-  apply (simp add: threadSet_def getObject_def setObject_def)
+  apply (simp add: threadSet_def getObject_def setObject_def readObject_def)
   apply (rule commute_commute)
   apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
-     | simp add: modify_commute updateObject_default_def alignCheck_assert
+     | simp add: modify_commute updateObject_default_def alignCheck_assert obind_def
                  magnitudeCheck_assert return_commute return_commute[THEN commute_commute]
-                 projectKO_def2 assert_commute2 assert_commute2[THEN commute_commute]
-                 assert_opt_def2 loadObject_default_def
+                 projectKO_def assert_commute2 assert_commute2[THEN commute_commute]
+                 assert_opt_def2 loadObject_default_def gets_the_def omonad_defs
+                 read_magnitudeCheck_assert
           split: option.split prod.split)+
   apply (simp add: monad_commute_def exec_gets exec_modify)
   done
@@ -3777,12 +3718,13 @@ lemma copyGlobalMappings_gsUntypedZeroRanges_commute':
   apply (rule monad_commute_guard_imp)
    apply (rule commute_commute[OF monad_commute_split[where P="\<top>"]])
      apply (rule mapM_x_commute[where f = id and P="\<top>\<top>"])
-      apply (simp add: storePDE_def getObject_def setObject_def cong: bind_cong)
+      apply (simp add: storePDE_def getObject_def setObject_def readObject_def cong: bind_cong)
       apply (strengthen monad_commute_guard_imp[OF monad_commute_split[where P="\<top>" and Q="\<top>\<top>"], OF _ _ hoare_vcg_prop]
          | simp add: modify_commute updateObject_default_def alignCheck_assert
                      magnitudeCheck_assert return_commute return_commute[THEN commute_commute]
-                     projectKO_def2 assert_commute2 assert_commute2[THEN commute_commute]
-                     assert_opt_def2 loadObject_default_def
+                     projectKO_def assert_commute2 assert_commute2[THEN commute_commute]
+                     assert_opt_def2 loadObject_default_def gets_the_def
+                     read_magnitudeCheck_assert omonad_defs obind_def
               split: option.split prod.split)+
       apply (simp add: monad_commute_def exec_gets exec_modify)
      apply wp

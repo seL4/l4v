@@ -19,9 +19,10 @@ lemma set_ep_valid_duplicate' [wp]:
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
-  apply (clarsimp simp:updateObject_default_def assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def split:if_splits option.splits)
+  apply (clarsimp simp: updateObject_default_def assert_def bind_def when_def
+                        alignError_def magnitudeCheck_def read_magnitudeCheck_def
+                        assert_opt_def return_def fail_def
+                 split: if_splits option.splits)
    apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
        apply simp+
   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
@@ -37,9 +38,10 @@ lemma set_ntfn_valid_duplicate' [wp]:
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = v,simplified])
-  apply (clarsimp simp:updateObject_default_def assert_def bind_def
-    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
-    assert_opt_def return_def fail_def split:if_splits option.splits)
+  apply (clarsimp simp: updateObject_default_def assert_def bind_def when_def
+                        alignError_def magnitudeCheck_def read_magnitudeCheck_def
+                        assert_opt_def return_def fail_def
+                 split: if_splits option.splits)
    apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
        apply simp+
   apply (rule_tac ko = ba in valid_duplicates'_non_pd_pt_I)
@@ -727,7 +729,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
         updateObject_default_def
         split: option.splits)+
      apply (clarsimp simp: objBits_simps archObjSize_def obj_at'_def scBits_simps
-                           projectKO_def projectKO_opt_pde fail_def return_def)
+                           projectKO_def projectKO_opt_pde fail_def return_def oassert_opt_def)
      apply (intro conjI impI)
        apply (clarsimp simp: obj_at'_def objBits_simps scBits_simps
                              projectKO_def projectKO_opt_pde fail_def return_def pde.exhaust
@@ -795,7 +797,7 @@ lemma copyGlobalMappings_ksPSpace_same:
     updateObject_default_def
     split: option.splits)+
     apply (clarsimp simp:objBits_simps archObjSize_def)
-    apply (clarsimp simp:obj_at'_def objBits_simps
+    apply (clarsimp simp:obj_at'_def objBits_simps oassert_opt_def
       projectKO_def projectKO_opt_pde fail_def return_def
       split: Structures_H.kernel_object.splits
       arch_kernel_object.splits)
@@ -1452,8 +1454,7 @@ crunch valid_duplicates'[wp]:
 lemma get_asid_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
   getObject param_b \<lbrace>\<lambda>(pool::asidpool) s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:getObject_def split_def| wp)+
-  apply (simp add:loadObject_default_def|wp)+
+  apply (simp add:getObject_def | wp)+
   done
 
 lemma set_asid_pool_valid_duplicates'[wp]:
@@ -1509,7 +1510,7 @@ lemma storePDE_no_duplicates':
      Structures_H.kernel_object.splits ARM_H.pde.splits
      ARM_H.pte.splits)
   apply (clarsimp split:option.splits)
-  apply (drule_tac p = x and p' = y in valid_duplicates'_D)
+  apply (drule_tac p = x in valid_duplicates'_D)
    apply simp+
   done
 
@@ -1542,7 +1543,7 @@ lemma storePTE_no_duplicates':
      Structures_H.kernel_object.splits ARM_H.pde.splits
      ARM_H.pte.splits)
   apply (clarsimp split:option.splits)
-  apply (drule_tac p = x and p' = y in valid_duplicates'_D)
+  apply (drule_tac p = x in valid_duplicates'_D)
    apply simp+
   done
 
@@ -1557,7 +1558,7 @@ lemma checkMappingPPtr_SmallPage:
    apply (wp unlessE_wp getPTE_wp |wpc|simp add:)+
   apply (clarsimp simp:ko_wp_at'_def obj_at'_def)
   apply (clarsimp simp:projectKO_def projectKO_opt_pte
-    return_def fail_def vs_entry_align_def
+    return_def fail_def vs_entry_align_def oassert_opt_def
     split:kernel_object.splits
     arch_kernel_object.splits option.splits)
   done
@@ -1569,7 +1570,7 @@ lemma checkMappingPPtr_Section:
    apply (wp unlessE_wp getPDE_wp |wpc|simp add:)+
   apply (clarsimp simp:ko_wp_at'_def obj_at'_def)
   apply (clarsimp simp:projectKO_def projectKO_opt_pde
-    return_def fail_def vs_entry_align_def
+    return_def fail_def vs_entry_align_def oassert_opt_def
     split:kernel_object.splits
     arch_kernel_object.splits option.splits)
   done
@@ -1597,7 +1598,7 @@ lemma lookupPTSlot_aligned:
   apply (wp|wpc|simp)+
   apply (wp getPDE_wp)
   apply (clarsimp simp:obj_at'_def vmsz_aligned_def)
-  apply (clarsimp simp:projectKO_def fail_def
+  apply (clarsimp simp:projectKO_def fail_def oassert_opt_def
     projectKO_opt_pde return_def lookup_pt_slot_no_fail_def
     split:option.splits Structures_H.kernel_object.splits
     arch_kernel_object.splits)
