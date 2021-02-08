@@ -3303,7 +3303,6 @@ lemma getObject_valid_pde'[wp]:
      apply (simp add: objBits_simps archObjSize_def pdeBits_def)
     apply (rule getObject_inv[where P=valid_objs'])
     apply (simp add: loadObject_default_inv)
-   apply simp
   apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
   done
 

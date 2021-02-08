@@ -1572,7 +1572,7 @@ lemma mk_ft_msg_corres:
      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
-   apply (clarsimp simp: threadGet_def liftM_def)
+   apply (clarsimp simp: threadGet_getObject)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF _ assert_get_tcb_corres])
        apply (rename_tac tcb tcb')
@@ -1764,7 +1764,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def ARM_H.lookupIPCBuffer_def
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
-                   locateSlot_conv threadGet_def comp_def)
+                   locateSlot_conv threadGet_getObject)
   apply (wp getCTE_wp getObject_tcb_wp | wpc)+
   apply (clarsimp simp del: imp_disjL)
   apply (drule obj_at_ko_at')
@@ -4776,7 +4776,7 @@ lemma receiveSignal_corres:
 lemma tg_sp':
   "\<lbrace>P\<rbrace> threadGet f p \<lbrace>\<lambda>t. obj_at' (\<lambda>t'. f t' = t) p and P\<rbrace>"
   including no_pre
-  apply (simp add: threadGet_def)
+  apply (simp add: threadGet_getObject)
   apply wp
   apply (rule hoare_strengthen_post)
    apply (rule getObject_tcb_sp)
@@ -5691,7 +5691,7 @@ lemma hf_invs' [wp]:
    apply (intro conjI impI allI; fastforce?)
      apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-   apply (clarsimp simp: ex_nonz_cap_to'_def pred_tcb_at'_def return_def
+   apply (clarsimp simp: ex_nonz_cap_to'_def pred_tcb_at'_def return_def oassert_opt_def
                          fail_def obj_at'_def projectKO_def projectKO_tcb
                   split: option.splits)
    apply (rule_tac x="t+0x30" in exI)

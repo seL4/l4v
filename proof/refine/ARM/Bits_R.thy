@@ -139,7 +139,7 @@ lemma projectKO_user_data_device:
 lemmas projectKOs =
   projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb projectKO_reply projectKO_sc
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data projectKO_user_data_device
-  projectKO_eq projectKO_eq2
+  projectKO_eq
 
 lemma capAligned_epI:
   "ep_at' p s \<Longrightarrow> capAligned (EndpointCap p a b c d e)"
