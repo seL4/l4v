@@ -61,6 +61,7 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.Maybe(fromJust)
 > import Data.WordLib
 > import Control.Monad.State(runState)
+> import Control.Monad.Reader(runReader)
 
 \end{impdetails}
 
@@ -944,8 +945,11 @@ This function will return a physical pointer to a thread's IPC buffer slot, used
 The following two trivial functions will get or set a given field of a
 TCB, using a pointer to the TCB.
 
+> threadRead :: (TCB -> a) -> PPtr TCB -> KernelR a
+> threadRead f tptr = liftM f $ readObject tptr
+
 > threadGet :: (TCB -> a) -> PPtr TCB -> Kernel a
-> threadGet f tptr = liftM f $ getObject tptr
+> threadGet f tptr = read (threadRead f tptr)
 
 > threadSet :: (TCB -> TCB) -> PPtr TCB -> Kernel ()
 > threadSet f tptr = do

@@ -18,12 +18,12 @@ We use the C preprocessor to select a target architecture.
 
 > module SEL4.Model.StateData (
 >         module SEL4.Model.StateData,
->         module Control.Monad, get, gets, put, modify,
+>         module Control.Monad, get, gets, put, modify, asks
 >     ) where
 
 The architecture-specific definitions are imported qualified with the "Arch" prefix.
 
-> import Prelude hiding (Word)
+> import Prelude hiding (Word, read)
 > import qualified SEL4.Model.StateData.TARGET as Arch
 
 \begin{impdetails}
@@ -41,6 +41,7 @@ The architecture-specific definitions are imported qualified with the "Arch" pre
 > import Data.WordLib
 > import Control.Monad
 > import Control.Monad.State
+> import Control.Monad.Reader
 > import Data.Word(Word64)
 
 \end{impdetails}
@@ -133,6 +134,15 @@ Kernel functions are sequences of operations that transform a "KernelState" obje
 
 Note that there is no error-signalling mechanism available to functions in "Kernel". Therefore, all errors encountered in such functions are fatal, and will halt the kernel. See \autoref{sec:model.failures} for the definition of monads used for error handling.
 
+Read-only functions on the kernel state (excluding the machine state):
+
+> type KernelR = Reader KernelState
+
+To run a "Reader" inside a state monad stack, use "read":
+
+> read :: Monad m => Reader s a -> StateT s m a
+> read r = gets (runReader r)
+
 \subsubsection{Scheduler Queues}
 
 The ready queue is simply a list of threads that are ready to
@@ -191,6 +201,9 @@ Similarly, these functions access the idle thread pointer, the ready queue for a
 
 > getReleaseQueue :: Kernel ReleaseQueue
 > getReleaseQueue = gets ksReleaseQueue
+
+> readReleaseQueue :: KernelR ReleaseQueue
+> readReleaseQueue = asks ksReleaseQueue
 
 > setReleaseQueue :: ReleaseQueue -> Kernel ()
 > setReleaseQueue releaseQueue = modify (\ks -> ks { ksReleaseQueue = releaseQueue })
@@ -260,6 +273,9 @@ These functions access and modify the current domain and the number of ticks rem
 
 > getCurTime :: Kernel Time
 > getCurTime = gets ksCurTime
+
+> readCurTime :: KernelR Time
+> readCurTime = asks ksCurTime
 
 > setCurTime :: Time -> Kernel ()
 > setCurTime curTime = modify (\ks -> ks { ksCurTime = curTime })
