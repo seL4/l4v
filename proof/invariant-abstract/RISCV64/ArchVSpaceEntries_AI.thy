@@ -330,10 +330,15 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
 crunches activate_thread,switch_to_thread, handle_hypervisor_fault,
          switch_to_idle_thread, handle_call, handle_recv, handle_vm_fault,
          handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
-         schedule_choose_new_thread, activate_thread, switch_to_thread, awaken
+         schedule_choose_new_thread, activate_thread, switch_to_thread
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (simp: crunch_simps wp: crunch_wps
    ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)
+
+lemma awaken_valid_vspace_objs'[wp]:
+  "awaken \<lbrace>valid_vspace_objs'\<rbrace>"
+  unfolding awaken_def awaken_body_def tcb_release_dequeue_def
+  by (rule whileLoop_wp) wpsimp
 
 crunches sc_and_timer
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
