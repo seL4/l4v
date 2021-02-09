@@ -1113,6 +1113,16 @@ lemma corres_cases':
                                    (\<lambda>s. (R \<longrightarrow> P' s) \<and> (\<not>R \<longrightarrow> Q' s)) f g"
   by (cases R; simp)
 
+lemma corres_cases_lhs:
+  "\<lbrakk> R \<Longrightarrow> corres_underlying sr nf nf' r P P' f g; \<not>R \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. (R \<longrightarrow> P s) \<and> (\<not>R \<longrightarrow> Q s)) (P' and Q') f g"
+  by (simp add: corres_underlying_def) blast
+
+lemma corres_cases_rhs:
+  "\<lbrakk> R \<Longrightarrow> corres_underlying sr nf nf' r P P' f g; \<not>R \<Longrightarrow> corres_underlying sr nf nf' r Q Q' f g \<rbrakk>
+  \<Longrightarrow> corres_underlying sr nf nf' r (P and Q) (\<lambda>s'. (R \<longrightarrow> P' s') \<and> (\<not>R \<longrightarrow> Q' s')) f g"
+  by (simp add: corres_underlying_def) blast
+
 lemma corres_alternate1:
   "corres_underlying sr nf nf' r P P' a c \<Longrightarrow> corres_underlying sr nf nf' r P P' (a \<sqinter> b) c"
   apply (simp add: corres_underlying_def alternative_def)
