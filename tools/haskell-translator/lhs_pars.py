@@ -1887,6 +1887,7 @@ def split_on_unmatched_bracket(elts, n=None):
 
     return (elts, [], n)
 
+
 nondet_m = 'nondet'
 option_m = 'option'
 error_m = 'error'
@@ -1903,7 +1904,7 @@ error_m_map = {
     'stateAssert': 'stateAssertE'
 }
 
-syscall_m_map = {k:v+"E" for (k,v) in error_m_map.items()}
+syscall_m_map = {k: v+"E" for (k, v) in error_m_map.items()}
 
 option_m_map = {
     'return': 'oreturn',
@@ -1929,8 +1930,9 @@ monad_braces = {
     nondet_m: ('(do', 'od)'),
     error_m: ('(doE', 'odE)'),
     syscall_m: ('(doEE', 'odEE)'),
-    option_m: ('do {', 'odO'), # odO will later be replaced by } (and } by \rparr)
+    option_m: ('do {', 'odO'),  # odO will later be replaced by } (and } by \rparr)
 }
+
 
 def monad_ops(type):
     """return operators that have to be adjusted for given monad type"""
@@ -1946,6 +1948,7 @@ def monad_op(type, op):
         return monad_op_map[type][op]
     else:
         return op
+
 
 def monad_type_acquire(sig, type=nondet_m):
     # note kernel appears after kernel_f/kernel_monad
