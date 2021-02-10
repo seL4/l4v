@@ -22,8 +22,15 @@ declare K_def [simp]
    TODO: design a sensible syntax for them. *)
 
 (* Partial correctness. *)
-definition ovalid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
-  "ovalid P f Q \<equiv> \<forall>s r. P s \<and> f s = Some r \<longrightarrow> Q r s"
+definition ovalid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  ("o\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
+  "o\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s r. P s \<and> f s = Some r \<longrightarrow> Q r s"
+
+abbreviation (input)
+  oinvariant :: "('s,'a) lookup \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ o\<lbrace>_\<rbrace>" [59,0] 60)
+where
+  "oinvariant f P \<equiv> o\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+
 (* Total correctness. *)
 definition ovalidNF :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
   "ovalidNF P f Q \<equiv> \<forall>s. P s \<longrightarrow> (f s \<noteq> None \<and> (\<forall>r. f s = Some r \<longrightarrow> Q r s))"
