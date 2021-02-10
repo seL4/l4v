@@ -413,7 +413,7 @@ lemma performInvocation_corres:
           apply (rule corres_guard_imp)
            apply (rule corres_split [OF _ getCurThread_corres])
              apply simp
-             apply (rule corres_split [OF _ send_ipc_corres])
+             apply (rule corres_split [OF _ sendIPC_corres])
                 apply (rule corres_trivial)
                 apply simp
                apply simp

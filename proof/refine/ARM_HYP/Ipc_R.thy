@@ -2478,7 +2478,7 @@ crunch tcb_at'[wp]: possibleSwitchTo "tcb_at' t"
 crunch valid_pspace'[wp]: possibleSwitchTo valid_pspace'
   (wp: crunch_wps)
 
-lemma send_ipc_corres:
+lemma sendIPC_corres:
 (* call is only true if called in handleSyscall SysCall, which
    is always blocking. *)
   assumes "call \<longrightarrow> bl"
@@ -3490,7 +3490,7 @@ lemma sendFaultIPC_corres:
           apply (rule corres_guard_imp)
             apply (rule corres_if2 [OF refl])
              apply (simp add: dc_def[symmetric])
-             apply (rule corres_split [OF send_ipc_corres threadset_corres], simp_all)[1]
+             apply (rule corres_split [OF sendIPC_corres threadset_corres], simp_all)[1]
                apply (simp add: tcb_relation_def fault_rel_optionation_def exst_same_def)+
               apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
                         thread_set_typ_at ep_at_typ_at ex_nonz_cap_to_pres
