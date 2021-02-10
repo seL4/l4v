@@ -282,7 +282,7 @@ lemma blocked_cancel_ipc_corres:
   apply (fastforce simp: ko_wp_at'_def obj_at'_def dest: sym_refs_st_tcb_atD')
   done
 
-lemma ac_corres:
+lemma cancelSignal_corres:
   "corres dc
           (invs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
           (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
@@ -610,7 +610,7 @@ lemma (in delete_one) cancelIPC_corres:
          apply (rule reply_cancel_ipc_corres)
         apply (clarsimp elim!: st_tcb_weakenE)
        apply (clarsimp elim!: pred_tcb'_weakenE)
-      apply (rule corres_guard_imp [OF ac_corres], simp+)
+      apply (rule corres_guard_imp [OF cancelSignal_corres], simp+)
      apply (wp gts_sp[where P="\<top>",simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
