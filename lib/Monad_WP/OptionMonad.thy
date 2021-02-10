@@ -100,6 +100,12 @@ definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow
 definition oliftM :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'a) lookup \<Rightarrow> ('s,'b) lookup" where
   "oliftM f m \<equiv> do { x \<leftarrow> m; oreturn (f x) }"
 
+definition ounless :: "bool \<Rightarrow> ('s, unit) lookup \<Rightarrow> ('s, unit) lookup" where
+  "ounless P f \<equiv> if P then oreturn () else f"
+
+definition owhen :: "bool \<Rightarrow> ('s, unit) lookup \<Rightarrow> ('s, unit) lookup" where
+  "owhen P f \<equiv> if P then f else oreturn ()"
+
 (* Reader monad interface: *)
 abbreviation (input)
   "ask \<equiv> Some"
