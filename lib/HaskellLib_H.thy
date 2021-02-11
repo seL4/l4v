@@ -15,13 +15,14 @@ imports
   NatBitwise
   "More_Numeral_Type"
   "Monad_WP/WhileLoopRules"
+  "Monad_WP/OptionMonadWP"
 begin
 
 abbreviation (input) "flip \<equiv> swp"
 
 abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
                       \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>'_" 60)
-  where "bind_drop \<equiv> (\<lambda>x y. bind x (K_bind y))"
+  where "bind_drop \<equiv> (\<lambda>x y. NonDetMonad.bind x (K_bind y))"
 
 lemma bind_drop_test:
   "foldr bind_drop x (return ()) = sequence_x x"
@@ -602,5 +603,14 @@ lemma whileM_inv:
   shows "whileM P f \<lbrace>Q\<rbrace>"
   unfolding whileM_def
   by (wpsimp wp: whileLoop_wp[where I="\<lambda>_. Q"])
+
+definition ohaskell_fail :: "unit list \<Rightarrow> ('s, 'a) lookup" where
+  "ohaskell_fail = K ofail"
+
+definition ohaskell_assert :: "bool \<Rightarrow> unit list \<Rightarrow> ('s, unit) lookup" where
+  "ohaskell_assert P ls \<equiv> if P then oreturn () else ofail"
+
+lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def asks_def
+                     ohaskell_assert_def ohaskell_fail_def ounless_def owhen_def
 
 end
