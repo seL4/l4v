@@ -113,6 +113,8 @@ abbreviation (input)
 definition
   "asks f = do { v <- ask; oreturn (f v) }"
 
+abbreviation
+  "ogets \<equiv> asks"
 
 text \<open>
   If the result can be an exception.
