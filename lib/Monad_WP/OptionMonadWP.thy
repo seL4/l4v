@@ -46,6 +46,14 @@ lemma no_ofail_is_ovalidNF: "no_ofail P f \<equiv> ovalidNF P f (\<lambda>_ _. T
 lemma ovalidNF_combine: "\<lbrakk> ovalid P f Q; no_ofail P f \<rbrakk> \<Longrightarrow> ovalidNF P f Q"
   by (auto simp: ovalidNF_def ovalid_def no_ofail_def)
 
+(* use ovalid with f s = Some r *)
+lemma use_ovalidE:
+  "\<lbrakk>ovalid P f Q; P s; f s = Some r; Q r s \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (clarsimp simp: ovalid_def)
+
+lemma use_ovalid:
+  "\<lbrakk>ovalid P f Q; f s = Some r; P s \<rbrakk> \<Longrightarrow> Q r s"
+  by (clarsimp simp: ovalid_def)
 
 (* Annotating programs with loop invariant and measure. *)
 definition owhile_inv ::
@@ -78,8 +86,16 @@ lemma ovalid_K_bind_wp [wp]:
   "ovalid P f Q \<Longrightarrow> ovalid P (K_bind f x) Q"
   by simp
 
-lemma ogets_wp [wp]: "ovalid (\<lambda>s. P (f s) s) (ogets f) P"
-  by (simp add: ovalid_def ogets_def)
+lemma asks_wp[wp]:
+  "o\<lbrace>\<lambda>s. P (f s) s\<rbrace> asks f \<lbrace>P\<rbrace>"
+  by (simp add: split_def asks_def oreturn_def obind_def ovalid_def)
+
+(* more direct form *)
+lemma asks_SomeD:
+  "\<lbrakk>asks f s = Some r; Q (f s) s\<rbrakk> \<Longrightarrow> Q r s"
+  by (rule use_ovalid[OF asks_wp])
+
+lemma ogets_wp [wp]: "ovalid (\<lambda>s. P (f s) s) (ogets f) P" by wp
 
 lemma oguard_wp [wp]: "ovalid (\<lambda>s. f s \<longrightarrow> P () s) (oguard f) P"
   by (simp add: ovalid_def oguard_def)
@@ -197,11 +213,32 @@ lemma ovalidNF_wp_comb3 [wp_comb]:
 
 
 (* FIXME: WP rules for no_ofail, which might not be correct. *)
-lemma no_ofail_ofail [wp]: "no_ofail (\<lambda>_. False) ofail"
-  by (simp add: no_ofail_def ofail_def)
+lemma no_ofailD:
+  "\<lbrakk> no_ofail P m; P s \<rbrakk> \<Longrightarrow> \<exists>y. m s = Some y"
+  by (simp add: no_ofail_def)
 
-lemma no_ofail_ogets [wp]: "no_ofail (\<lambda>_. True) (ogets f)"
-  by (simp add: no_ofail_def ogets_def)
+lemma no_ofail_obind2 [simp]:
+  assumes f: "no_ofail P f"
+  assumes v: "o\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>"
+  assumes g: "\<forall>r. no_ofail (R r) (g r)"
+  shows "no_ofail (P and Q) (f |>> g)"
+  using v g
+  by (fastforce simp: no_ofail_def obind_def pred_conj_def ovalid_def dest: no_ofailD [OF f])
+
+lemma no_ofail_ofail [simp, wp]:
+  "no_ofail \<bottom> ofail"
+  by (simp add: no_ofail_def)
+
+lemma no_ofail_asks_simp[simp]:
+  "no_ofail P (asks f)"
+  unfolding asks_def get_def oreturn_def obind_def no_ofail_def
+  by simp
+
+lemma no_ofail_asks[wp]:
+  "no_ofail \<top> (asks f)"
+  by simp
+
+lemma no_ofail_ogets [wp]: "no_ofail (\<lambda>_. True) (ogets f)" by simp
 
 lemma no_ofail_obind [wp]:
   "\<lbrakk> \<And>r. no_ofail (P r) (g r); no_ofail Q f; ovalid Q f P \<rbrakk> \<Longrightarrow> no_ofail Q (obind f g)"
@@ -227,6 +264,28 @@ lemma no_ofail_oreturn [wp]:
 lemma no_ofail_oskip [wp]:
   "no_ofail (\<lambda>_. True) oskip"
   by (simp add: no_ofail_def oskip_def)
+
+lemma no_ofail_oassert_opt [simp, wp]:
+  "no_ofail (\<lambda>_. P \<noteq> None) (oassert_opt P)"
+  by (simp add: no_ofail_def oassert_opt_def split: option.splits)
+
+lemma no_ofail_owhen [wp]:
+  "(P \<Longrightarrow> no_ofail Q f) \<Longrightarrow> no_ofail (if P then Q else \<top>) (owhen P f)"
+  by (simp add: no_ofail_def owhen_def)
+
+lemma no_ofail_ounless [wp]:
+  "(\<not>P \<Longrightarrow> no_ofail Q f) \<Longrightarrow> no_ofail (if P then \<top> else Q) (ounless P f)"
+  by (simp add: no_ofail_def ounless_def)
+
+lemma no_ofail_oassert [simp, wp]:
+  "no_ofail (\<lambda>_. P) (oassert P)"
+  by (simp add: oassert_def no_ofail_def)
+
+lemma no_ofail_gets_the :
+  "no_ofail P f \<Longrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
+  by (fastforce simp: no_ofail_def no_fail_def gets_the_def gets_def
+                      get_def assert_opt_def bind_def return_def fail_def
+               split: option.split)
 
 lemma no_ofail_is_triple [wp_trip]:
   "no_ofail P f = triple_judgement P f (\<lambda>s f. f s \<noteq> None)"
