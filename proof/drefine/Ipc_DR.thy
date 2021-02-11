@@ -869,7 +869,7 @@ lemma cancel_ipc_valid_idle:
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def not_idle_thread_def | rule conjI)+
   done
 
-lemma sendSignal_corres:
+lemma send_signal_corres:
   notes if_split [split del]
   shows
   "ep_id = epptr \<Longrightarrow> dcorres dc \<top> (invs and valid_etcbs)
@@ -1841,7 +1841,7 @@ lemma dcorres_set_mrs':
     apply (rule_tac F = "rva = Some b" in corres_gen_asm)
     apply clarsimp
     apply (rule corrupt_frame_include_self)
-    apply (rule corres_guard_imp[OF setMRs_corres])
+    apply (rule corres_guard_imp[OF set_mrs_corres])
       apply (simp add:data_to_message_info_valid)+
     apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases)
     apply (drule_tac t = "tcb_ipcframe obj" in sym)
@@ -2238,7 +2238,7 @@ lemma when_return:
 
 crunch valid_etcbs[wp]: handle_fault_reply valid_etcbs
 
-lemma doReplyTransfer_corres:
+lemma do_reply_transfer_corres:
   notes wp_post_taut [wp]
   shows
   "slot' = transform_cslot_ptr slot \<Longrightarrow>
@@ -2827,7 +2827,7 @@ lemma thread_set_valid_etcbs_2:
 
 lemmas [simp] = AllowSend_def AllowRecv_def CanModify_def
 
-lemma sendFaultIPC_corres:
+lemma send_fault_ipc_corres:
   "did = thread \<Longrightarrow>
    dcorres (dc\<oplus>dc) \<top>
      (not_idle_thread thread and st_tcb_at active thread and valid_irq_node and

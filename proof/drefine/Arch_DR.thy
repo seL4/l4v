@@ -1440,7 +1440,7 @@ lemma invoke_page_directory_corres:
   apply (clarsimp simp: perform_page_directory_invocation_def)
   done
 
-lemma pteCheckIfMapped_corres:
+lemma pte_check_if_mapped_corres:
   "dcorres dc \<top> \<top> (return a) (pte_check_if_mapped pte)"
   apply (clarsimp simp add: pte_check_if_mapped_def get_master_pte_def get_pte_def get_pt_def
                             bind_assoc in_monad get_object_def corres_underlying_def return_def)
@@ -1448,7 +1448,7 @@ lemma pteCheckIfMapped_corres:
   by (simp add: get_pte_def get_pt_def get_object_def in_monad bind_assoc
          split: pte.splits kernel_object.splits arch_kernel_obj.splits)
 
-lemma pdeCheckIfMapped_corres:
+lemma pde_check_if_mapped_corres:
   "dcorres dc \<top> \<top> (return a) (pde_check_if_mapped pde)"
   apply (clarsimp simp add: pde_check_if_mapped_def get_master_pde_def get_pde_def get_pd_def
                             in_monad get_object_def corres_underlying_def return_def)
@@ -1492,7 +1492,7 @@ lemma invoke_page_corres:
        apply (rule corres_guard_imp)
          apply (rule corres_split [OF _ set_cap_corres])
              apply (rule corres_dummy_return_pl[where b ="()"])
-             apply (rule corres_split[OF _ pteCheckIfMapped_corres])
+             apply (rule corres_split[OF _ pte_check_if_mapped_corres])
                apply (simp split del: if_split)
                apply (rule corres_dummy_return_l)
                apply (rule corres_split[OF _ store_pte_set_cap_corres])
@@ -1511,7 +1511,7 @@ lemma invoke_page_corres:
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ set_cap_corres])
             apply (rule corres_dummy_return_pl[where b="()"])
-            apply (rule corres_split[OF _ pdeCheckIfMapped_corres])
+            apply (rule corres_split[OF _ pde_check_if_mapped_corres])
               apply (simp split del: if_split)
               apply (rule corres_dummy_return_l)
               apply (rule corres_split[OF _ store_pde_set_cap_corres])

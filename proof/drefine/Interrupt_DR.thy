@@ -51,7 +51,7 @@ definition
 where
   "cdl_irq_control_invocation_relation x y \<equiv> x = translate_irq_control_invocation y"
 
-lemma decodeIRQControlInvocation_corres:
+lemma decode_irq_control_corres:
   "\<lbrakk> Some (IrqControlIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap cap';
      cap' = cap.IRQControlCap;
@@ -199,7 +199,7 @@ definition
 where
   "cdl_irq_handler_invocation_relation x y \<equiv> x = translate_irq_handler_invocation y"
 
-lemma decodeIRQHandlerInvocation_corres:
+lemma decode_irq_handler_corres:
   "\<And> slot. \<lbrakk> Some (IrqHandlerIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap (Structures_A.IRQHandlerCap x');
      excaps = transform_cap_list excaps' \<rbrakk> \<Longrightarrow>
@@ -348,7 +348,7 @@ lemma timer_tick_dcorres: "dcorres dc P P' (return ()) timer_tick"
    apply (simp add: timer_tick_def reschedule_required_def set_scheduler_action_def etcb_at_def split: option.splits | wp tcb_sched_action_transform dec_domain_time_transform thread_set_time_slice_transform | wpc | wp (once) hoare_vcg_all_lift hoare_drop_imps)+
   done
 
-lemma handleInterrupt_corres:
+lemma handle_interrupt_corres:
   "dcorres dc \<top> (invs and valid_etcbs) (Interrupt_D.handle_interrupt x) (Interrupt_A.handle_interrupt x)"
   apply (clarsimp simp:Interrupt_A.handle_interrupt_def)
   apply (clarsimp simp:get_irq_state_def gets_def bind_assoc)
@@ -371,7 +371,7 @@ lemma handleInterrupt_corres:
                   apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def | rule conjI)+
                    apply (rule corres_dummy_return_l)
                    apply (rule corres_underlying_split [where P'="\<lambda>rv. \<top>" and P = "\<lambda>rv. \<top>"])
-                      apply (rule corres_guard_imp[OF sendSignal_corres])
+                      apply (rule corres_guard_imp[OF send_signal_corres])
                         apply (simp+)
                    apply (clarsimp simp:handle_interrupt_corres_branch dc_def[symmetric])+
                   apply (simp add: corres_guard_imp[OF handle_interrupt_corres_branch])+

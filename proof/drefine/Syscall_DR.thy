@@ -303,7 +303,7 @@ lemma decode_invocation_irqcontrolcap_corres:
    apply(erule exE, rotate_tac -1, drule sym)
    apply(clarsimp simp: throw_opt_def get_irq_control_intent_def)
    apply (rule dcorres_liftME_liftME)
-    apply (rule decodeIRQControlInvocation_corres, auto simp: transform_cap_def)[1]
+    apply (rule decode_irq_control_corres, auto simp: transform_cap_def)[1]
    apply (clarsimp simp: cdl_irq_control_invocation_relation_def)
    apply (clarsimp simp: cdl_invocation_relation_def translate_invocation_def)
   apply (rule corres_guard_imp)
@@ -331,7 +331,7 @@ lemma decode_invocation_irqhandlercap_corres:
   apply clarsimp
   apply (simp split: cdl_intent.splits)
   apply (rule corres_rel_imp)
-   apply (erule decodeIRQHandlerInvocation_corres, simp+)[1]
+   apply (erule decode_irq_handler_corres, simp+)[1]
   apply clarsimp
   apply (case_tac xa, simp)
   apply (simp add: cdl_invocation_relation_def
@@ -554,7 +554,7 @@ lemma decode_invocation_zombiecap_corres:
 (*
  * Show that decoding of invocations corresponds.
  *)
-lemma decodeInvocation_corres:
+lemma decode_invocation_corres:
   "\<lbrakk> (Some intent) = transform_intent (invocation_type label) args;
      invoked_cap_ref = transform_cslot_ptr slot;
      invoked_cap = transform_cap cap;
@@ -695,7 +695,7 @@ lemma perform_invocation_corres:
     apply (clarsimp simp:invoke_notification_def liftE_bindE)
     apply (clarsimp simp:liftE_def bind_assoc returnOk_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ sendSignal_corres])
+      apply (rule corres_split[OF _ send_signal_corres])
       apply (rule corres_trivial)
       apply (simp add:dc_def corres_free_return)
       apply (wp | clarsimp)+
@@ -709,7 +709,7 @@ lemma perform_invocation_corres:
       apply (rule corres_dummy_return_l)
       apply (rule corres_split)
       apply (rule corres_trivial[OF  corres_free_return])
-      apply (rule doReplyTransfer_corres, simp)
+      apply (rule do_reply_transfer_corres, simp)
       apply (wp|clarsimp)+
       apply (simp add: ct_active_not_idle_etc)
       apply (rule conjI, fastforce)+
@@ -808,7 +808,7 @@ lemma handle_fault_corres:
         apply (rule_tac F = "obj = cur_thread s'" in corres_gen_asm2)
         apply simp
         apply (rule dcorres_handle_double_fault)
-       apply (rule_tac tcb = obj' and etcb=etcb in sendFaultIPC_corres)
+       apply (rule_tac tcb = obj' and etcb=etcb in send_fault_ipc_corres)
        apply (clarsimp simp:transform_def transform_current_thread_def
                             not_idle_thread_def)
       apply (wp)
@@ -1013,7 +1013,7 @@ lemma lookup_cap_and_slot_inv:
   done
 
 (* We need following lemma because we need to match get_mrs in abstract and cdl_intent_op in capdl after state s is fixed *)
-lemma decodeInvocation_corres':
+lemma decode_invocation_corres':
   "\<lbrakk>(\<lambda>(cap, slot, extra) (slot', cap', extra', buffer).
      cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot' \<and> extra = transform_cap_list extra')
      rv rv'; get_tcb (cur_thread s) s = Some ctcb; ct_running s;invs s\<rbrakk>
@@ -1044,7 +1044,7 @@ lemma decodeInvocation_corres':
       defer
       apply clarsimp
       apply (rule dcorres_expand_pfx)
-      apply (rule corres_guard_imp[OF decodeInvocation_corres])
+      apply (rule corres_guard_imp[OF decode_invocation_corres])
            apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def)+
      apply (wp get_tcb_mrs_wp | clarsimp)+
   apply (rule dcorres_expand_pfx)
@@ -1295,7 +1295,7 @@ lemma handle_invocation_corres:
        apply (rule corres_when,simp)
        apply (rule handle_fault_corres)
       apply (rule corres_split_bind_case_sum)
-          apply (rule decodeInvocation_corres')
+          apply (rule decode_invocation_corres')
              apply (simp add: split_def)+
          apply (rule dcorres_when_r)
           apply (rule corres_dummy_return_r)
@@ -1494,7 +1494,7 @@ lemma handle_reply_corres:
          apply (clarsimp simp: corres_fail dc_def[symmetric] split: bool.split)
          apply (rename_tac word rights)
          apply (rule corres_guard_imp)
-           apply (rule doReplyTransfer_corres)
+           apply (rule do_reply_transfer_corres)
            apply (simp add: transform_tcb_slot_simp)
           apply simp
          apply (clarsimp simp:ct_running_not_idle_etc)
@@ -1633,7 +1633,7 @@ lemma handle_event_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ get_active_irq_corres])
         apply (clarsimp simp:option.splits)
-        apply (rule handleInterrupt_corres)
+        apply (rule handle_interrupt_corres)
        apply (wp | simp)+
    apply (rule corres_symb_exec_r)
       apply (rule corres_symb_exec_catch_r)

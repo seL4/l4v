@@ -1259,7 +1259,7 @@ lemma delete_objects_invs2:
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   by (rule hoare_name_pre_state, clarsimp, wp delete_objects_invs, fast)
 
-lemma resetUntypedCap_corres:
+lemma reset_untyped_cap_corres:
   notes delete_objects_invs[wp del]
   shows
   "dcorres (dc \<oplus> dc) \<top> (invs and valid_etcbs and ct_active
@@ -1473,7 +1473,7 @@ lemma invoke_untyped_corres:
       apply (rule corres_split_norE)
          prefer 2
          apply (rule corres_whenE, simp)
-          apply (rule resetUntypedCap_corres[where idx=idx])
+          apply (rule reset_untyped_cap_corres[where idx=idx])
          apply simp
         apply simp
         apply (rule corres_split[OF _ get_cap_corres])

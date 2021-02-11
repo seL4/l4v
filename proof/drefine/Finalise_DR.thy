@@ -3512,7 +3512,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
           apply clarsimp
           apply assumption
          apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric])
-         apply (rule emptySlot_corres)
+         apply (rule empty_slot_corres)
         apply (simp add: when_def)
         apply (rule monadic_rewrite_corres2)
          apply (rule monadic_trancl_preemptible_return)

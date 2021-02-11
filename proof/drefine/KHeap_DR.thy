@@ -1337,7 +1337,7 @@ lemma empty_slot_ext_dcorres: "dcorres dc P P' (return ()) (empty_slot_ext slot 
 lemma cap_case_irq_handler_not[simp]: "\<forall>irq. v \<noteq> cap.IRQHandlerCap irq \<Longrightarrow> (case v of cap.IRQHandlerCap irq \<Rightarrow> f irq | _ \<Rightarrow> g) = g"
   by (case_tac v; simp)
 
-lemma emptySlot_corres:
+lemma empty_slot_corres:
   "dcorres dc \<top>
            (weak_valid_mdb and valid_idle and not_idle_thread (fst slot) and valid_etcbs)
            (PageTableUnmap_D.empty_slot (transform_cslot_ptr slot))

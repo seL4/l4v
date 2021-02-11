@@ -47,7 +47,7 @@ lemma dcorres_call_kernel:
         apply (simp add: handle_pending_interrupts_def)
         apply (rule corres_split [OF _ get_active_irq_corres])
           apply (clarsimp simp: when_def split: option.splits)
-          apply (rule handleInterrupt_corres[simplified dc_def])
+          apply (rule handle_interrupt_corres[simplified dc_def])
          apply ((wp | simp)+)[3]
       apply (rule hoare_post_imp_dc2E, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)
