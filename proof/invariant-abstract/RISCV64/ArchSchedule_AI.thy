@@ -10,6 +10,8 @@ begin
 
 context Arch begin global_naming RISCV64
 
+declare opt_mapE[rule del]
+
 named_theorems Schedule_AI_asms
 
 lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
