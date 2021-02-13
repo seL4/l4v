@@ -25,6 +25,7 @@ requalify_consts
   ticksToUs
   maxTicksToUs
   getCurrentTime
+  maxPeriodUs
 end
 
 #INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only
