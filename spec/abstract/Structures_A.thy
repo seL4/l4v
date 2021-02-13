@@ -53,7 +53,6 @@ requalify_consts
   untyped_min_bits
   untyped_max_bits
   msg_label_bits
-  MAX_SC_PERIOD
 
 requalify_facts
   kernelWCET_ticks_pos2
@@ -522,9 +521,6 @@ definition
       tcb_domain     = domain,
       tcb_arch       = default_arch_tcb\<rparr>"
 
-type_synonym ticks = "64 word"
-type_synonym time  = "64 word"
-
 record refill =
   r_time   :: time
   r_amount :: time
@@ -542,10 +538,13 @@ record sched_context =
   sc_replies    :: "obj_ref list"
 
 definition "MIN_REFILLS = 2"
-definition "MIN_BUDGET = 2 * kernelWCET_ticks"
+
 definition "MIN_BUDGET_US = 2 * kernelWCET_us"
+definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def kernelWCET_ticks_pos2 by clarsimp
+
+definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
 
 definition "min_sched_context_bits = 8"
 
