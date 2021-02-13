@@ -901,3 +901,6 @@ FIXME ARMHYP consider moving to platform code?
 > maxTicksToUs :: Word64
 > maxTicksToUs = undefined
 
+> maxPeriodUs :: Word64
+> maxPeriodUs = undefined
+
