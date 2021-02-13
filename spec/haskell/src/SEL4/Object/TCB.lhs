@@ -745,10 +745,10 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     targetCap <- return $ head excaps
 >     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
 >     scPtr <- return $ capSchedContextPtr targetCap
->     when (budgetUs > maxUsToTicks || budgetUs < minBudgetUs) $
->         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxUsToTicks))
->     when (periodUs > maxUsToTicks || periodUs < minBudgetUs) $
->         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxUsToTicks))
+>     when (budgetUs > maxPeriodUs || budgetUs < minBudgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
+>     when (periodUs > maxPeriodUs || periodUs < minBudgetUs) $
+>         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral maxPeriodUs))
 >     when (periodUs < budgetUs) $
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral periodUs))
 >     when (fromIntegral extraRefills + minRefills > refillAbsoluteMax(targetCap)) $
