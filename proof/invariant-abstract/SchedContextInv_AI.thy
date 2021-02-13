@@ -596,8 +596,8 @@ where
     "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
-        and K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET)
-        and K (period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET)
+        and K (budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET)
+        and K (period \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET)
         and K (budget \<le> period))"
 
 
@@ -1875,10 +1875,14 @@ lemma decode_sched_control_inv_wf:
    prefer 2
    apply (drule hd_in_set, simp)
   apply (clarsimp simp add: valid_cap_def obj_at_def is_sc_obj_def split: cap.split_asm)
+  apply (rename_tac ko)
   apply (case_tac ko; simp)
   apply (clarsimp simp: valid_refills_number_def max_refills_cap_def
-                        us_to_ticks_mono[simplified mono_def] MIN_BUDGET_def MIN_BUDGET_US_def
-                        not_less)
+                        MIN_BUDGET_def MIN_BUDGET_US_def MAX_PERIOD_def not_less
+                        us_to_ticks_mono[simplified mono_def] kernelWCET_ticks_def)
+  apply (insert us_to_ticks_mult)
+  using kernelWCET_ticks_no_overflow apply clarsimp
+  using mono_def apply blast
   done
 
 end
