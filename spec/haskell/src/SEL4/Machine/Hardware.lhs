@@ -243,3 +243,6 @@ The constant "nullPointer" is a physical pointer guaranteed to be invalid.
 > usToTicks :: Word64 -> Word64
 > usToTicks = Arch.usToTicks
 
+> maxPeriodUs :: Word64
+> maxPeriodUs = Arch.maxPeriodUs
+
