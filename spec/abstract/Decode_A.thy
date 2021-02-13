@@ -587,14 +587,14 @@ where
     target_cap \<leftarrow> returnOk $ hd excaps;
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
-    whenE ((us_to_ticks budget_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks budget_\<mu>s) < MIN_BUDGET) $
-      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_SC_PERIOD));
-    whenE ((us_to_ticks period_\<mu>s) > MAX_SC_PERIOD \<or> (us_to_ticks period_\<mu>s) < MIN_BUDGET) $
-      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_SC_PERIOD));
+    whenE (MAX_PERIOD_US < budget_\<mu>s \<or> budget_\<mu>s < MIN_BUDGET_US) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
+    whenE (MAX_PERIOD_US < period_\<mu>s \<or> period_\<mu>s < MIN_BUDGET_US) $
+      throwError (RangeError (ucast MIN_BUDGET_US) (ucast MAX_PERIOD_US));
     whenE (period_\<mu>s < budget_\<mu>s) $
       throwError (RangeError (ucast MIN_BUDGET_US) (ucast period_\<mu>s));
     whenE (unat extra_refills + MIN_REFILLS > max_refills_cap target_cap) $
-      throwError (RangeError 0 (of_nat (max_refills_cap target_cap) - MIN_REFILLS));
+      throwError (RangeError 0 (of_nat (max_refills_cap target_cap - MIN_REFILLS)));
     assertE (MIN_REFILLS \<le> unat extra_refills + MIN_REFILLS);
     returnOk $ InvokeSchedControlConfigure sc_ptr
        (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS) badge
