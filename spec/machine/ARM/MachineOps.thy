@@ -116,22 +116,32 @@ where
 consts' maxTimer_us :: "64 word"
 consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
-(*
-consts' us_to_ticks :: "64 word \<Rightarrow> 64 word"
-*)
+consts' max_us_to_ticks :: "64 word"
+
+text \<open>
+  This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds.
+\<close>
+definition
+  MAX_PERIOD_US :: "64 word"
+where
+  "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
+
 end
 
 qualify ARM (in Arch)
 
+type_synonym ticks = "64 word"
+type_synonym time  = "64 word"
+
 axiomatization
-  kernelWCET_us :: "64 word"
+  kernelWCET_us :: ticks
 where
   kernelWCET_us_pos: "0 < kernelWCET_us"
 and
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
 
 axiomatization
-  us_to_ticks :: "64 word \<Rightarrow> 64 word"
+  us_to_ticks :: "ticks \<Rightarrow> ticks"
 where
   us_to_ticks_mono[intro!]: "mono us_to_ticks"
 and
@@ -139,10 +149,13 @@ and
 and
   us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
 and
-  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks (kernelWCET_us)) \<le> unat (max_word :: 64 word)"
+  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks (kernelWCET_us)) \<le> unat (max_word :: ticks)"
+and
+  us_to_ticks_mult: "unat n * unat (us_to_ticks a) \<le> unat (max_word :: ticks)
+                     \<Longrightarrow> n * us_to_ticks a = us_to_ticks (n * a)"
 
 axiomatization
-  ticks_to_us :: "64 word \<Rightarrow> 64 word"
+  ticks_to_us :: "ticks \<Rightarrow> ticks"
 
 end_qualify
 
@@ -152,7 +165,7 @@ definition
   "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
 
 lemma replicate_no_overflow:
-  "n * unat (a :: 64 word) \<le> unat (upper_bound :: 64 word)
+  "n * unat (a :: ticks) \<le> unat (upper_bound :: ticks)
    \<Longrightarrow> unat (word_of_int n * a) = n * unat a"
   by (metis (mono_tags, hide_lams) le_unat_uoi of_nat_mult word_of_nat word_unat.Rep_inverse)
 
@@ -160,7 +173,7 @@ lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
   apply (simp add: kernelWCET_ticks_def word_less_nat_alt)
   apply (subgoal_tac "unat (2 * us_to_ticks kernelWCET_us) = 2 * unat (us_to_ticks kernelWCET_us)")
    using ARM.kernelWCET_us_pos2 ARM.us_to_ticks_nonzero unat_gt_0 apply force
-  apply (subgoal_tac "2 * unat (us_to_ticks kernelWCET_us) \<le> unat (max_word :: 64 word)")
+  apply (subgoal_tac "2 * unat (us_to_ticks kernelWCET_us) \<le> unat (max_word :: ticks)")
    using replicate_no_overflow apply fastforce
   using kernelWCET_ticks_no_overflow by force
 
