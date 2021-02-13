@@ -20,6 +20,8 @@ requalify_types
   vmfault_type
   hyp_fault_type
   irq
+  ticks
+  time
 
 requalify_consts
   getActiveIRQ
@@ -55,6 +57,8 @@ requalify_consts
   kernelWCET_ticks
   maxTimer_us
   max_ticks_to_us
+  max_us_to_ticks
+  MAX_PERIOD_US
   us_to_ticks
   ticks_to_us
   setDeadline
@@ -64,6 +68,7 @@ requalify_facts
   us_to_ticks_zero
   us_to_ticks_nonzero
   kernelWCET_ticks_no_overflow
+  us_to_ticks_mult
   kernelWCET_ticks_def
   replicate_no_overflow
 
