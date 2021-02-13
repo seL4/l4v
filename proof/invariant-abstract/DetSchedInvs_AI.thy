@@ -1484,7 +1484,7 @@ definition rr_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> tick
       \<and> length refills = 2
       \<and> MIN_BUDGET \<le> budget
       \<and> refill_max = MIN_REFILLS
-      \<and> budget \<le> MAX_SC_PERIOD)"
+      \<and> budget \<le> MAX_PERIOD)"
 
 definition sp_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> bool" where
   "sp_valid_refills refills refill_max period budget \<equiv>
@@ -1498,7 +1498,7 @@ definition sp_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> tick
       \<and> MIN_BUDGET \<le> budget
       \<and> budget \<le> period
       \<and> MIN_REFILLS \<le> refill_max
-      \<and> period \<le> MAX_SC_PERIOD)"
+      \<and> period \<le> MAX_PERIOD)"
 
 \<comment> \<open>unat is monotonic on le\<close>
 lemma unat_le_mono:
@@ -1629,7 +1629,7 @@ lemmas consumed_time_bounded_def = consumed_time_bounded_2_def
 
 definition current_time_bounded_2 where
   "current_time_bounded_2 k curtime \<equiv>
-   unat curtime + unat kernelWCET_ticks + k * unat MAX_SC_PERIOD \<le> unat max_time"
+   unat curtime + unat kernelWCET_ticks + k * unat MAX_PERIOD \<le> unat max_time"
 
 abbreviation current_time_bounded :: "nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "current_time_bounded k s \<equiv> current_time_bounded_2 k (cur_time s)"
@@ -2353,7 +2353,7 @@ lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
 definition bounded_release_time_2 :: "time \<Rightarrow> time \<Rightarrow> bool" where
   "bounded_release_time_2 curtime reltime \<equiv>
-     unat reltime \<le> unat curtime + unat kernelWCET_ticks + unat MAX_SC_PERIOD"
+     unat reltime \<le> unat curtime + unat kernelWCET_ticks + unat MAX_PERIOD"
 
 abbreviation cfg_bounded_release_time :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
   "cfg_bounded_release_time t cfg \<equiv>
