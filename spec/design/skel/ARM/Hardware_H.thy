@@ -19,7 +19,7 @@ definition ticksToUs :: "word64 \<Rightarrow> word64" where
   "ticksToUs \<equiv> ticks_to_us"
 
 definition maxUsToTicks :: "word64" where
-  "maxUsToTicks \<equiv> 60 * 60 * 1000" (* FIXME RT: sync with aspec and C *)
+  "maxUsToTicks \<equiv> max_us_to_ticks"
 
 definition maxTicksToUs :: "word64" where
   "maxTicksToUs \<equiv> max_ticks_to_us"
@@ -30,7 +30,10 @@ definition kernelWCETTicks :: "word64" where
 definition kernelWCETUs :: "word64" where
   "kernelWCETUs \<equiv> kernelWCET_us"
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs Platform=Platform.ARM CONTEXT ARM_H NOT getMemoryRegions getDeviceRegions getKernelDevices loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt setDeadline configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory clearMemoryVM initMemory freeMemory writeTTBR0 setGlobalPD  setTTBCR setHardwareASID invalidateLocalTLB invalidateLocalTLB_ASID invalidateLocalTLB_VAASID cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidate_D_PoU cleanInvalidateL2Range invalidateL2Range cleanL2Range isb dsb dmb getIFSR getDFSR getFAR HardwareASID wordFromPDE wordFromPTE VMFaultType VMPageSize HypFaultType pageBits pageBitsForSize toPAddr cacheLineBits cacheLine lineStart cacheRangeOp cleanCacheRange_PoC cleanInvalidateCacheRange_RAM cleanCacheRange_RAM cleanCacheRange_PoU invalidateCacheRange_RAM invalidateCacheRange_I branchFlushRange cleanCaches_PoU cleanInvalidateL1Caches addrFromPPtr ptrFromPAddr initIRQController setIRQTrigger MachineData getCurrentTime usToTicks ticksToUs maxUsToTicks maxTicksToUs ackDeadlineIRQ
+definition maxPeriodUs :: "word64" where
+  "maxPeriodUs \<equiv> MAX_PERIOD_US"
+
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs Platform=Platform.ARM CONTEXT ARM_H NOT getMemoryRegions getDeviceRegions getKernelDevices loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt setDeadline configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory clearMemoryVM initMemory freeMemory writeTTBR0 setGlobalPD  setTTBCR setHardwareASID invalidateLocalTLB invalidateLocalTLB_ASID invalidateLocalTLB_VAASID cleanByVA cleanByVA_PoU invalidateByVA invalidateByVA_I invalidate_I_PoU cleanInvalByVA branchFlush clean_D_PoU cleanInvalidate_D_PoC cleanInvalidate_D_PoU cleanInvalidateL2Range invalidateL2Range cleanL2Range isb dsb dmb getIFSR getDFSR getFAR HardwareASID wordFromPDE wordFromPTE VMFaultType VMPageSize HypFaultType pageBits pageBitsForSize toPAddr cacheLineBits cacheLine lineStart cacheRangeOp cleanCacheRange_PoC cleanInvalidateCacheRange_RAM cleanCacheRange_RAM cleanCacheRange_PoU invalidateCacheRange_RAM invalidateCacheRange_I branchFlushRange cleanCaches_PoU cleanInvalidateL1Caches addrFromPPtr ptrFromPAddr initIRQController setIRQTrigger MachineData getCurrentTime usToTicks ticksToUs maxUsToTicks maxTicksToUs maxPeriodUs ackDeadlineIRQ
 
 end
 
