@@ -309,13 +309,5 @@ definition arch_tcb_get_registers :: "arch_tcb \<Rightarrow> register \<Rightarr
   where
   "arch_tcb_get_registers a_tcb \<equiv> user_regs (tcb_context a_tcb)"
 
-text \<open>
-  This matches @{text "60 * 60 * MS_IN_S"} because it should be in micro-seconds.
-\<close>
-definition
-  MAX_SC_PERIOD :: "64 word" (* FIXME RT: Rename this to MAX_BUDGET_US to match  *)
-where
-  "MAX_SC_PERIOD \<equiv> 60 * 60 * 1000"
-
 end
 end
