@@ -336,6 +336,9 @@ maxUsToTicks = undefined
 maxTicksToUs :: Word64
 maxTicksToUs = undefined
 
+maxPeriodUs :: Word64
+maxPeriodUs = undefined
+
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
 
