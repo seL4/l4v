@@ -43,13 +43,17 @@ primrec valid_sc_inv' :: "sched_context_invocation \<Rightarrow> kernel_state \<
                 bound_yt_tcb_at' ((=) None) ct s \<and>
                 obj_at' (\<lambda>sc. \<exists>t. scTCB sc = Some t \<and> t \<noteq> ct) scptr s))"
 
-(* FIXME RT: valid_refills_number is probably wrong for Haskell *)
+definition
+  valid_refills_number' :: "nat \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "valid_refills_number' max_refills n \<equiv> max_refills \<le> refillAbsoluteMax' n"
+
 primrec valid_sc_ctrl_inv' :: "sched_control_invocation \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_sc_ctrl_inv' (InvokeSchedControlConfigure scptr budget period mrefills badge) =
-     ((\<lambda>s. \<exists>n. sc_at'_n n scptr s \<and> valid_refills_number mrefills n) and
+     ((\<lambda>s. \<exists>n. sc_at'_n n scptr s \<and> valid_refills_number' mrefills n) and
       ex_nonz_cap_to' scptr and K (MIN_REFILLS \<le> mrefills) and
-      K (budget \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
-         period \<le> MAX_SC_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
+      K (budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
+         period \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
          budget \<le> period))"
 
 primrec sc_inv_rel :: "Invocations_A.sched_context_invocation \<Rightarrow> sched_context_invocation \<Rightarrow> bool"
@@ -125,14 +129,24 @@ lemma decodeSchedContextInvocation_wf:
   apply (fastforce dest: valid_SchedContextCap_sc_at')
   done
 
-(* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
 lemma decodeSchedControlInvocation_wf:
-  "\<lbrace> invs' and sch_act_simple and
-     (\<lambda>s. \<forall>cap\<in>set excaps. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s) and
-     (\<lambda>s. \<forall>x\<in>set excaps. valid_cap' x s) \<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. \<forall>cap\<in>set excaps. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s)
+    and (\<lambda>s. \<forall>x\<in>set excaps. valid_cap' x s)\<rbrace>
    decodeSchedControlInvocation label args excaps
    \<lbrace>valid_sc_ctrl_inv'\<rbrace>, -"
-  sorry
+  apply (clarsimp simp: decodeSchedControlInvocation_def)
+  apply (case_tac "genInvocationType label"; simp; (solves wpsimp)?)
+  apply (wpsimp simp: decodeSchedControl_Configure_def)
+  apply (cases excaps; simp)
+  apply (rename_tac a list, case_tac a; simp add: isSchedContextCap_def)
+  apply (clarsimp simp: valid_cap'_def  ko_wp_at'_def scBits_simps valid_refills_number'_def
+                        MAX_PERIOD_def maxPeriodUs_def usToTicks_def us_to_ticks_mono
+                        MIN_BUDGET_def kernelWCET_ticks_def timeArgSize_def minBudgetUs_def
+                        MIN_REFILLS_def minRefills_def not_less)
+  apply (insert us_to_ticks_mult)
+  using kernelWCET_ticks_no_overflow apply clarsimp
+  using mono_def apply blast
+  done
 
 lemma decodeSchedcontext_Bind_corres:
   "list_all2 cap_relation excaps excaps'
@@ -319,12 +333,27 @@ lemma decode_sc_inv_corres:
 
 lemma decode_sc_ctrl_inv_corres:
   "list_all2 cap_relation excaps excaps' \<Longrightarrow>
-   corres (ser \<oplus> sc_ctrl_inv_rel)
-           (invs and valid_sched  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x ))
-           (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s))
-           (decode_sched_control_invocation (mi_label mi) args' excaps)
-           (decodeSchedControlInvocation (mi_label mi) args' excaps')"
-  sorry
+   corres (ser \<oplus> sc_ctrl_inv_rel) \<top> \<top>
+          (decode_sched_control_invocation (mi_label mi) args' excaps)
+          (decodeSchedControlInvocation (mi_label mi) args' excaps')"
+  apply (clarsimp simp: decode_sched_control_invocation_def decodeSchedControlInvocation_def)
+  apply (cases "gen_invocation_type (mi_label mi)"
+         ; clarsimp simp: decodeSchedControl_Configure_def TIME_ARG_SIZE_def timeArgSize_def)
+  apply (cases excaps; clarsimp)
+  apply (rename_tac cap list)
+  apply (cases excaps'; clarsimp)
+  apply (rule corres_splitEE_skip; (solves wpsimp)?)
+   apply corressimp
+  apply (rule corres_splitEE'')
+      apply corressimp
+     apply (case_tac cap; clarsimp simp: isSchedContextCap_def)
+    apply (rule whenE_throwError_sp[simplified validE_R_def])+
+  apply corressimp
+  apply (auto simp: minBudgetUs_def MIN_BUDGET_US_def maxPeriodUs_def parse_time_arg_def
+                    parseTimeArg_def usToTicks_def minRefills_def MIN_REFILLS_def
+                    max_num_refills_eq_refillAbsoluteMax' refillAbsoluteMax_def max_refills_cap_def
+             split: cap.splits)
+  done
 
 (* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
 lemma invoke_sched_context_corres:
