@@ -819,19 +819,19 @@ private method getObject_valid_obj =
   rule getObject_valid_obj; clarsimp simp: objBits_simps' valid_obj'_def scBits_pos_power2
 
 lemma get_ep'_valid_ep[wp]:
-  "\<lbrace> invs' and ep_at' ep \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
+  "\<lbrace> valid_objs' \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
   unfolding getEndpoint_def by getObject_valid_obj
 
 lemma get_ntfn'_valid_ntfn[wp]:
-  "\<lbrace> invs' and ntfn_at' ep \<rbrace> getNotification ep \<lbrace> valid_ntfn' \<rbrace>"
+  "\<lbrace> valid_objs' \<rbrace> getNotification ep \<lbrace> valid_ntfn' \<rbrace>"
   unfolding getNotification_def by getObject_valid_obj
 
 lemma get_sc_valid_sc'[wp]:
-  "\<lbrace> invs' and sc_at' sc \<rbrace> getSchedContext sc \<lbrace> valid_sched_context' \<rbrace>"
+  "\<lbrace> valid_objs' \<rbrace> getSchedContext sc \<lbrace> valid_sched_context' \<rbrace>"
   unfolding getSchedContext_def by getObject_valid_obj
 
 lemma get_reply_valid_reply'[wp]:
-  "\<lbrace> invs' and sc_at' sc \<rbrace> getReply sc \<lbrace> valid_reply' \<rbrace>"
+  "\<lbrace> valid_objs'\<rbrace> getReply sc \<lbrace> valid_reply' \<rbrace>"
   unfolding getReply_def by getObject_valid_obj
 
 end
