@@ -757,7 +757,7 @@ lemma perform_asid_control_invocation_respects:
                         range_cover_def obj_bits_api_def default_arch_object_def
                         pageBits_def word_bits_def)
   apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)
-  apply(simp add: mask_neg_mask_is_zero mask_zero)
+  apply(simp add: and_mask_eq_iff_shiftr_0 mask_zero)
   done
 
 lemma pas_refined_set_asid_strg:
@@ -925,7 +925,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
    apply (rule conjI)
     apply (clarsimp simp: range_cover_def obj_bits_api_def default_arch_object_def)
     apply (subst is_aligned_neg_mask_eq[THEN sym], assumption)
-    apply (simp add: mask_neg_mask_is_zero pageBits_def mask_zero)
+    apply (simp add: and_mask_eq_iff_shiftr_0 pageBits_def mask_zero)
    apply (clarsimp simp: aag_cap_auth_def pas_refined_refl)
    apply (drule_tac x=frame in bspec)
     apply (simp add: is_aligned_no_overflow)
@@ -1114,7 +1114,6 @@ lemma pageBitsForSize_le_t29:
 lemmas vmsz_aligned_t2n_neg_mask
     = x_t2n_sub_1_neg_mask[OF _ pageBitsForSize_le_t29, folded vmsz_aligned_def]
 
-
 lemma decode_arch_invocation_authorised:
   "\<lbrace>invs and pas_refined aag
         and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -1216,7 +1215,7 @@ lemma decode_arch_invocation_authorised:
       apply (subgoal_tac "is_aligned word pt_bits")
        apply (simp add: is_aligned_no_overflow)
       apply (simp add: pt_bits_def pageBits_def)
-      apply (simp add: word_minus_1 minus_one_norm)
+      apply simp
       apply (subst (asm) upto_enum_step_red [where us = 2, simplified])
       apply (simp add: pt_bits_def pageBits_def word_bits_conv)
       apply (simp add: pt_bits_def pageBits_def word_bits_conv)
