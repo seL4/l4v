@@ -430,6 +430,16 @@ lemma schedule_sched_act_rct[wp]:
 
 (* END: scheduler_action lemmas needed in Refine.thy *)
 
+lemma valid_BlockedOnReceive[simp]:
+  "valid_tcb_state (Structures_A.thread_state.BlockedOnReceive epptr replyOpt payload)
+   = (ep_at epptr and valid_bound_reply replyOpt)"
+  by (rule ext, clarsimp simp: valid_tcb_state_def split: option.splits)
+
+(* FIXME RT: move to Lib? *)
+lemma case_option_ext:
+  "(case_option f f' x) s = case_option (f s) (\<lambda>y. f' y s) x"
+  by (case_tac x; simp)
+
 lemma sc_at_sc_obj_at:
   "sc_at p s = (\<exists>n. sc_obj_at n p s)"
   by (auto simp: obj_at_def)

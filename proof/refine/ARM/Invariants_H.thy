@@ -4069,29 +4069,22 @@ lemma valid_replies'_sc_asrt_replySC_None:
    \<Longrightarrow> replySCs_of s rptr = None"
   by (force simp: valid_replies'_sc_asrt_def pred_tcb_at'_def obj_at'_def)
 
+lemma valid_replies'_sc_asrt_lift:
+  assumes x: "\<And>P. f \<lbrace>\<lambda>s. P (replySCs_of s)\<rbrace>"
+  assumes y: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
+  assumes z: "\<And>rptr t. f \<lbrace>st_tcb_at' ((=) (BlockedOnReply rptr)) t\<rbrace>"
+  shows "f \<lbrace>valid_replies'_sc_asrt replyPtr\<rbrace>"
+  unfolding valid_replies'_sc_asrt_def
+  by (wpsimp wp: hoare_vcg_imp_lift' x y z hoare_vcg_ex_lift)
+
 lemma valid_replies'_lift:
   assumes rNext: "\<And>P. f \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
   and rPrev: "\<And>P. f \<lbrace>\<lambda>s. P (replyPrevs_of s)\<rbrace>"
   and rTCB: "\<And>P. f \<lbrace>\<lambda>s. P (replyTCBs_of s)\<rbrace>"
   and st: "\<And>rptr p. f \<lbrace>st_tcb_at' ((=) (BlockedOnReply rptr)) p\<rbrace>"
   shows "\<lbrace>valid_replies'\<rbrace> f \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
-  unfolding valid_def valid_replies'_def
-  apply (clarsimp simp del: imp_disjL)
-  subgoal for s a b rptr
-    apply (drule_tac x=rptr in spec)
-    apply (prop_tac "is_reply_linked rptr s")
-     apply (rule ccontr)
-     apply clarsimp
-     apply (frule use_valid[OF _ rNext[where P="\<lambda>nexts. nexts rptr = None"]], force)
-     apply (frule use_valid[OF _ rPrev[where P="\<lambda>prevs. prevs rptr = None"]], force)
-     apply force
-    apply (drule mp; clarsimp)
-    apply (frule use_valid[OF _ rTCB[where P="\<lambda>tcbs. tcbs rptr = Some tcb" for tcb]])
-     apply (force simp: opt_map_def)
-    apply (frule use_valid[OF _ st], assumption)
-    apply clarsimp
-    done
-  done
+  unfolding valid_replies'_def
+  by (wpsimp wp: hoare_vcg_imp_lift' rNext rPrev rTCB st hoare_vcg_all_lift hoare_vcg_ex_lift)
 
 lemma cteCaps_of_ctes_of_lift:
   "(\<And>P. f \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"

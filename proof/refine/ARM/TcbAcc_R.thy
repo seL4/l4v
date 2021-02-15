@@ -5001,11 +5001,11 @@ lemma tcbSchedAppend_ct_not_inQ:
       done
   qed
 
-lemma setSchedulerAction_direct:
+lemma setSchedulerAction_direct[wp]:
   "\<lbrace>\<top>\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_ s. ksSchedulerAction s = sa\<rbrace>"
   by (wpsimp simp: setSchedulerAction_def)
 
-lemma rescheduleRequired_ct_not_inQ:
+lemma rescheduleRequired_ct_not_inQ[wp]:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (simp add: rescheduleRequired_def ct_not_inQ_def)
   apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = ChooseNewThread"

@@ -4188,4 +4188,38 @@ lemma pred_tcb_at'_equiv:
       clarsimp simp: pred_tcb_at'_def pred_map_def obj_at'_real_def ko_wp_at'_def projectKOs
                      opt_map_def)
 
+lemma isBlockedOnSend_equiv:
+  "isBlockedOnSend st = is_BlockedOnSend st"
+  by (case_tac st; simp add: isBlockedOnSend_def)
+
+lemma isSend_equiv:
+  "isSend st = is_BlockedOnSend st"
+  by (case_tac st; simp add: isSend_def)
+
+lemma sch_act_wf_not_runnable_sch_act_not:
+  "\<lbrakk>st_tcb_at' P t s; sch_act_wf (ksSchedulerAction s) s; \<forall>st. P st \<longrightarrow> \<not> runnable' st\<rbrakk> \<Longrightarrow>
+   sch_act_not t s"
+   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+
+lemma isTimeoutFault_fault_map[simp]:
+  "isTimeoutFault (fault_map a) = is_timeout_fault a"
+  by (clarsimp simp: isTimeoutFault_def fault_map_def is_timeout_fault_def
+              split: ExceptionTypes_A.fault.splits)
+
+lemma valid_bound_obj_lift:
+  "f \<lbrace>P (the x)\<rbrace> \<Longrightarrow> f \<lbrace>valid_bound_obj P x\<rbrace>"
+  unfolding valid_bound_obj_def
+  by (case_tac x; wpsimp)
+
+lemma valid_bound_obj'_lift:
+  "f \<lbrace>P (the x)\<rbrace> \<Longrightarrow> f \<lbrace>valid_bound_obj' P x\<rbrace>"
+  unfolding valid_bound_obj'_def
+  by (case_tac x; wpsimp)
+
+global_interpretation set_simple_ko: typ_at_pres "set_simple_ko C ptr ep"
+  unfolding typ_at_pres_def by wpsimp
+
+global_interpretation update_sk_obj_ref: typ_at_pres "update_sk_obj_ref C update ref new"
+  unfolding typ_at_pres_def by wpsimp
+
 end
