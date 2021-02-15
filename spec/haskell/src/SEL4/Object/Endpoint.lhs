@@ -19,6 +19,7 @@ This module specifies the contents and behaviour of a synchronous IPC endpoint.
 
 > import Prelude hiding (Word)
 > import SEL4.API.Types
+> import SEL4.API.Failures
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object.Reply(updateReply, getReply, replyPush, replyRemove, replyUnlink, replyRemoveTCB)
@@ -121,6 +122,10 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > isActive (NTFN (ActiveNtfn _) _ _) = True
 > isActive _ = False
 
+> isTimeoutFault :: Fault -> Bool
+> isTimeoutFault (Timeout _) = True
+> isTimeoutFault _ = False
+
 > receiveIPC :: PPtr TCB -> Capability -> Bool -> Capability -> Kernel ()
 > receiveIPC thread cap@(EndpointCap {}) isBlocking replyCap = do
 >         let epptr = capEPPtr cap
@@ -179,14 +184,16 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                   doIPCTransfer sender (Just epptr) badge canGrant thread
 >                   let call = blockingIPCIsCall senderState
 >                   fault <- threadGet tcbFault sender
->                   case (call, fault, canGrant || canGrantReply, replyOpt) of
->                       (False, Nothing, _, _) -> do
+>                   if (call || isJust fault)
+>                       then if ((canGrant || canGrantReply) && replyOpt /= Nothing)
+>                           then do
+>                               senderSc <- threadGet tcbSchedContext sender
+>                               donate <- return ((senderSc /= Nothing) && not (isJust fault && isTimeoutFault (fromJust fault)))
+>                               replyPush sender thread (fromJust replyOpt) donate
+>                           else setThreadState Inactive sender
+>                       else do
 >                           setThreadState Running sender
 >                           possibleSwitchTo sender
->                       (_, _, True, Just reply) -> do
->                           senderSc <- threadGet tcbSchedContext sender
->                           replyPush sender thread reply (senderSc /= Nothing)
->                       _ -> setThreadState Inactive sender
 >               SendEP [] -> fail "Send endpoint queue must not be empty"
 
 > receiveIPC _ _ _ _ = fail "receiveIPC: invalid cap"
