@@ -798,10 +798,10 @@ lemma reorder_ntfn_corres:
               apply (rule set_ntfn_corres)
               apply (clarsimp simp: ntfn_relation_def)
              apply clarsimp
-             apply (rule tcb_ep_append_corres)
+             apply (rule tcbEPAppend_corres)
             apply wp
            apply wp
-          apply (rule tcb_ep_dequeue_corres)
+          apply (rule tcbEPDequeue_corres)
           apply (clarsimp simp: ntfn_relation_def get_ntfn_queue_def getntfnQueue_def
                          split: Structures_A.ntfn.splits)
          apply (rule tcb_ep_dequeue_rv_wf')
@@ -856,10 +856,10 @@ lemma reorder_ep_corres:
                  apply (rule set_ep_corres)
                  apply (case_tac rv; clarsimp simp: ep_relation_def updateEpQueue_def)
                 apply clarsimp
-                apply (rule tcb_ep_append_corres)
+                apply (rule tcbEPAppend_corres)
                apply wp
               apply wp
-             apply (rule tcb_ep_dequeue_corres)
+             apply (rule tcbEPDequeue_corres)
              apply clarsimp
             apply (rule tcb_ep_dequeue_rv_wf')
            apply (rule tcbEPDequeue_rv_wf')
