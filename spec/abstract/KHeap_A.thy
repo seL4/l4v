@@ -19,14 +19,20 @@ for kernel objects.\<close>
 
 section "General Object Access"
 
+text \<open>The kernel reader option monad\<close>
+type_synonym ('a,'z) r_monad = "('z state, 'a) lookup"
+
+definition
+  read_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) r_monad"
+where
+  "read_object \<equiv> swp kheap"
+(*  "read_object ptr s = kheap s ptr" *)
+
 definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
-  "get_object ptr \<equiv> do
-     kh \<leftarrow> gets kheap;
-     assert (kh ptr \<noteq> None);
-     return $ the $ kh ptr
-   od"
+  "get_object ptr \<equiv> gets_the $ read_object ptr"
+(* this is equivalent to "get_object ptr \<equiv> gets_map kheap ptr" *)
 
 definition
   set_object :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -42,14 +48,18 @@ where
 section "TCBs"
 
 definition
-  get_tcb :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> tcb option"
+  get_tcb :: "obj_ref \<Rightarrow> (tcb, 'z::state_ext ) r_monad"
 where
   "get_tcb tcb_ref state \<equiv>
-   case kheap state tcb_ref of
+   case read_object tcb_ref state of
       None      \<Rightarrow> None
     | Some kobj \<Rightarrow> (case kobj of
         TCB tcb \<Rightarrow> Some tcb
       | _       \<Rightarrow> None)"
+
+definition
+  thread_read :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) r_monad" where
+  "thread_read f tptr \<equiv> oliftM f (get_tcb tptr)"
 
 definition
   thread_get :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
@@ -217,6 +227,15 @@ abbreviation
 section \<open>Scheduling Contexts\<close>
 
 definition
+  read_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) r_monad"
+where
+  "read_sched_context ptr \<equiv> do {
+     kobj \<leftarrow> read_object ptr;
+     case kobj of SchedContext sc n \<Rightarrow> oreturn sc
+                 | _ \<Rightarrow> ofail
+   }"
+
+definition
   get_sched_context :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
 where
   "get_sched_context ptr \<equiv> do
@@ -224,6 +243,11 @@ where
      case kobj of SchedContext sc n \<Rightarrow> return sc
                  | _ \<Rightarrow> fail
    od"
+
+definition
+  read_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) r_monad"
+where
+  "read_sc_obj_ref f ref \<equiv> oliftM f (read_sched_context ref)"
 
 definition
   get_sc_obj_ref :: "(sched_context => obj_ref option) \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
