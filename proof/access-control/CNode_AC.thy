@@ -1452,14 +1452,6 @@ lemma all_rsubst:
   "\<lbrakk> \<forall>v. P (f v); \<exists>v. f v = r \<rbrakk> \<Longrightarrow> P r"
   by clarsimp
 
-lemma ucast_ucast_mask_pt_bits:
-  "ucast (ucast (p && mask pt_bits >> 2) :: word8)
-     = (p :: word32) && mask pt_bits >> 2"
-  apply (simp add: ucast_ucast_mask shiftr_over_and_dist
-                   word_bw_assocs)
-  apply (simp add: mask_def pt_bits_def pageBits_def)
-  done
-
 lemma store_pte_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. \<forall>S. P ((state_vrefs s) (p && ~~ mask pt_bits :=
           (state_vrefs s (p && ~~ mask pt_bits) - S) \<union>
@@ -1472,7 +1464,9 @@ lemma store_pte_st_vrefs[wp]:
   apply (simp add: fun_upd_def[symmetric] fun_upd_comp)
   apply (erule all_rsubst[where P=P])
   apply (subst fun_eq_iff, clarsimp simp: split_def)
-  apply (cases "pte_ref pte", auto simp: ucast_ucast_mask_pt_bits)
+  apply (cases "pte_ref pte")
+   apply (auto simp: ucast_ucast_mask shiftr_over_and_dist
+                     word_bw_assocs mask_def pt_bits_def pageBits_def)
   done
 
 lemma store_pte_thread_states[wp]:
