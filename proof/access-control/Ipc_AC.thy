@@ -288,12 +288,6 @@ lemma receive_signal_integrity_autarch:
 
 subsubsection\<open>Non-autarchy: the sender is running\<close>
 
-
-lemma length_msg_registers:
-  "length msg_registers = 4"
-  unfolding msg_registers_def
-  by (simp add: msgRegisters_def upto_enum_def fromEnum_def enum_register)
-
 lemma send_upd_ctxintegrity:
   "\<lbrakk> direct_send {pasSubject aag} aag ep tcb
       \<or> indirect_send {pasSubject aag} aag (the (tcb_bound_notification tcb)) ep tcb;
@@ -1554,7 +1548,7 @@ lemma copy_mrs_integrity_autarch:
             store_word_offs_integrity_autarch [where aag = aag and thread = receiver]
        | wpc
        | simp
-       | fastforce simp: length_msg_registers msg_align_bits split: if_split_asm)+
+       | fastforce simp: msg_align_bits split: if_split_asm)+
   done
 
 (* FIXME: Why was the [wp] attribute clobbered by interpretation of the Arch locale? *)
@@ -2023,7 +2017,7 @@ lemma set_message_info_respects_in_ipc:
 
 lemma mul_add_word_size_lt_msg_align_bits_ofnat:
   "\<lbrakk> p < 2 ^ (msg_align_bits - 2); k < 4 \<rbrakk>
-   \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: word32) ^ msg_align_bits"
+   \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
   unfolding word_size_def
   apply simp
   apply (rule is_aligned_add_less_t2n[where n=2])
@@ -2031,7 +2025,6 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat:
                           is_aligned_word_size_2[simplified word_size_def, simplified])
   apply (erule word_less_power_trans_ofnat [where k = 2 and m=9, simplified], simp)
   done
-
 
 lemmas ptr_range_off_off_mems =
     ptr_range_add_memI [OF _ mul_word_size_lt_msg_align_bits_ofnat]
@@ -2229,7 +2222,7 @@ lemma copy_mrs_respects_in_ipc:
             mapM_wp'
             hoare_vcg_const_imp_lift hoare_vcg_all_lift
        | wpc
-       | fastforce split: if_split_asm simp: length_msg_registers)+
+       | fastforce split: if_split_asm)+
   done
 
 lemma do_normal_transfer_respects_in_ipc:
@@ -2272,7 +2265,7 @@ lemma set_mrs_respects_in_ipc:
        | simp split del: if_split add: zipWithM_x_mapM_x split_def)+
    apply (clarsimp simp add: set_zip nth_append simp: msg_align_bits msg_max_length_def
                    split: if_split_asm)
-   apply (simp add: length_msg_registers)
+   apply (simp add: msg_registers_def msgRegisters_def upto_enum_def fromEnum_def enum_register)
    apply arith
    apply simp
    apply wp+

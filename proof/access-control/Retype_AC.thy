@@ -16,7 +16,7 @@ definition
 where
  "authorised_untyped_inv aag ui \<equiv> case ui of
      Invocations_A.untyped_invocation.Retype src_slot reset base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
-       is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
+       is_subject aag (fst src_slot) \<and> (0 :: obj_ref) < of_nat (length slots) \<and>
        (\<forall>x\<in>set (retype_addrs aligned_free_ref new_type (length slots) obj_sz). is_subject aag x) \<and>
        (\<forall>x\<in>{aligned_free_ref..aligned_free_ref + of_nat (length slots)*2^(obj_bits_api new_type obj_sz) - 1}. is_subject aag x) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
@@ -80,18 +80,11 @@ lemma storeWord_integrity_autarch:
   apply (auto simp: integrity_def is_aligned_mask [symmetric] intro!: trm_lrefl ptr_range_memI ptr_range_add_memI)
   done
 
-lemma word_minus_1:
-  "x + (0xFFFFFFFF::word32) = x - 1"
-  by simp
-
 lemma Suc_0_lt_cases:
   "\<lbrakk>(x = 0 \<Longrightarrow> False); (x = 1 \<Longrightarrow> False)\<rbrakk> \<Longrightarrow> Suc 0 < x"
   apply (rule classical)
   apply (auto simp add: not_less le_Suc_eq)
   done
-
-lemmas upto_enum_step_shift_red =
-   upto_enum_step_shift_red[where 'a=32, simplified, simplified word_bits_def[symmetric, simplified]]
 
 lemma clearMemory_respects:
   "\<lbrace>\<lambda> a. integrity aag X st (s\<lparr>machine_state := a\<rparr>) \<and>
@@ -214,14 +207,6 @@ lemma dmo_mapM_x_cleanCacheRange_PoU_integrity:
            (mapM_x (\<lambda>x. cleanCacheRange_PoU (f x) (g x) (h x)) refs)
        \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wp dmo_mapM_x_wp_inv)
-
-definition word_object_size :: "apiobject_type \<Rightarrow> nat" where
-  "word_object_size aobject_type \<equiv>
-    (case aobject_type of
-         (ArchObject SmallPageObj) \<Rightarrow> 12 |
-         (ArchObject LargePageObj) \<Rightarrow> 16 |
-         (ArchObject SectionObj) \<Rightarrow> 20 |
-         (ArchObject SuperSectionObj) \<Rightarrow> 24)"
 
 lemma init_arch_objects_integrity:
   "\<lbrace>integrity aag X st and
@@ -562,7 +547,6 @@ lemma pd_shifting_dual':
   apply (subst (asm) pageBits_def)
   apply (simp add: pd_shifting_dual)
   done
-
 
 lemma empty_table_update_from_arm_global_pts:
   "\<lbrakk>valid_global_objs s;
@@ -1138,13 +1122,6 @@ lemma  bits_of_UntypedCap:
   apply(simp add: bits_of_def split: cap.splits)
   done
 
-
-lemma mask_neg_mask_is_zero:
-  "((x::word32) && ~~ a) && a = 0"
-  apply(subst word_bw_assocs)
-  apply simp
-  done
-
 (* clagged from Untyped_R.invoke_untyped_proofs.usable_range_disjoint *)
 lemma usable_range_disjoint:
   assumes cte_wp_at: "cte_wp_at ((=) (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) cref s"
@@ -1168,14 +1145,15 @@ lemma usable_range_disjoint:
       done
 
       have idx_compare''[simp]:
-       "unat ((ptr && mask sz) + (of_nat (length slots) * (2::word32) ^ obj_bits_api tp us)) < 2 ^ sz
+       "unat ((ptr && mask sz) + (of_nat (length slots) * 2 ^ obj_bits_api tp us)) < 2 ^ sz
         \<Longrightarrow> ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1
         < ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us"
       apply (rule word_leq_le_minus_one,simp)
       apply (rule neq_0_no_wrap)
       apply (rule machine_word_plus_mono_right_split)
-      apply (simp add:shiftl_t2n range_cover_unat[OF cover] field_simps)
-      apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def, OF cover])+
+      apply (simp add: shiftl_t2n range_cover_unat[OF cover] field_simps)
+      apply (simp only: word_bits_def range_cover.sz(1)[OF cover])
+      apply simp
       done
       show ?thesis
        apply (clarsimp simp:mask_out_sub_mask blah)
@@ -1450,7 +1428,7 @@ lemma data_to_obj_type_ret_not_asid_pool:
 definition authorised_untyped_inv' where
  "authorised_untyped_inv' aag ui \<equiv> case ui of
      Invocations_A.untyped_invocation.Retype src_slot reset base aligned_free_ref new_type obj_sz slots dev \<Rightarrow>
-       is_subject aag (fst src_slot) \<and> (0::word32) < of_nat (length slots) \<and>
+       is_subject aag (fst src_slot) \<and> (0 :: obj_ref) < of_nat (length slots) \<and>
        new_type \<noteq> ArchObject ASIDPoolObj \<and>
        (\<forall>x\<in>set slots. is_subject aag (fst x))"
 
@@ -1478,7 +1456,7 @@ lemma authorised_untyped_invI:
   done
 
 lemma nonzero_unat_simp:
-  "0 < unat (x::word32) \<Longrightarrow> 0 < x"
+  "0 < unat (x::obj_ref) \<Longrightarrow> 0 < x"
   apply(auto dest: word_of_nat_less)
   done
 
@@ -1500,16 +1478,15 @@ lemma decode_untyped_invocation_authorised:
   apply(rule hoare_pre)
    apply (strengthen authorised_untyped_invI[mk_strg I])
    apply(wp dui_inv_wf | simp)+
-  apply (clarsimp simp: decode_untyped_invocation_def split_def
-                        authorised_untyped_inv'_def
-                  split del: if_split split: untyped_invocation.splits)
-  (* need to hoist the is_cnode_cap assumption into postcondition later on *)
-
-  apply (simp add: unlessE_def[symmetric] whenE_def[symmetric] unlessE_whenE
-           split del: if_split)
-  apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
-        | simp split: untyped_invocation.splits
-        | (auto)[1])+
+   apply (clarsimp simp: decode_untyped_invocation_def split_def
+                         authorised_untyped_inv'_def
+                   split del: if_split split: untyped_invocation.splits)
+   (* need to hoist the is_cnode_cap assumption into postcondition later on *)
+   apply (simp add: unlessE_def[symmetric] whenE_def[symmetric] unlessE_whenE
+            split del: if_split)
+   apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
+         | simp split: untyped_invocation.splits
+         | (auto)[1])+
            apply (rule_tac Q="\<lambda>node_cap s.
              (is_cnode_cap node_cap \<longrightarrow> is_subject aag (obj_ref_of node_cap)) \<and>
              is_subject aag (fst slot) \<and>
@@ -1522,20 +1499,20 @@ lemma decode_untyped_invocation_authorised:
           apply clarsimp
           apply(wp lookup_slot_for_cnode_op_authorised
                    lookup_slot_for_cnode_op_inv whenE_throwError_wp)+
-     apply(rule hoare_drop_imps)+
-     apply(clarsimp)
-     apply(rule_tac Q'="\<lambda>rv s. rv \<noteq> ArchObject ASIDPoolObj \<and>
-                               (\<forall> cap. cte_wp_at ((=) cap) slot s \<longrightarrow>
-                                 (\<forall>ref\<in>ptr_range base (bits_of cap). is_subject aag ref)) \<and>
-                              is_subject aag (fst slot) \<and>
-                          pas_refined aag s \<and> 2 \<le> sz \<and>
-                          sz < word_bits \<and> is_aligned base sz \<and>
-                          (is_cnode_cap (excaps ! 0) \<longrightarrow>
-                            (\<forall> x\<in>obj_refs (excaps ! 0). is_subject aag x))"
-                 in hoare_post_imp_R)
-      apply(wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
-     apply(case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_unat_simp)[1]
-    apply(wp whenE_throwError_wp)+
+      apply(rule hoare_drop_imps)+
+      apply(clarsimp)
+      apply(rule_tac Q'="\<lambda>rv s. rv \<noteq> ArchObject ASIDPoolObj \<and>
+                                (\<forall> cap. cte_wp_at ((=) cap) slot s \<longrightarrow>
+                                  (\<forall>ref\<in>ptr_range base (bits_of cap). is_subject aag ref)) \<and>
+                               is_subject aag (fst slot) \<and>
+                           pas_refined aag s \<and> 2 \<le> sz \<and>
+                           sz < word_bits \<and> is_aligned base sz \<and>
+                           (is_cnode_cap (excaps ! 0) \<longrightarrow>
+                             (\<forall> x\<in>obj_refs (excaps ! 0). is_subject aag x))"
+                  in hoare_post_imp_R)
+       apply(wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
+      apply(case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_unat_simp)[1]
+     apply(wp whenE_throwError_wp)+
   apply(auto dest!: bang_0_in_set
               simp: valid_cap_def cap_aligned_def obj_ref_of_def is_cap_simps
                     cap_auth_conferred_def pas_refined_all_auth_is_owns

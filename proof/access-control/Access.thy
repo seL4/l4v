@@ -38,7 +38,7 @@ the grant bit set.
 
 type_synonym 'a agent_map = "obj_ref \<Rightarrow> 'a"
 type_synonym 'a agent_asid_map = "asid \<Rightarrow> 'a"
-type_synonym 'a agent_irq_map = "10 word \<Rightarrow> 'a"
+type_synonym 'a agent_irq_map = "irq \<Rightarrow> 'a"
 type_synonym 'a agent_domain_map = "domain \<Rightarrow> 'a set"
 
 text\<open>
@@ -122,7 +122,7 @@ given pointer.
 
 \<close>
 
-abbreviation is_subject :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
+abbreviation is_subject :: "'a PAS \<Rightarrow> obj_ref \<Rightarrow> bool"
 where
   "is_subject aag ptr \<equiv> pasObjectAbs aag ptr = pasSubject aag"
 
@@ -133,7 +133,7 @@ pointer that he doesn't own but has some authority to.
 
 \<close>
 
-abbreviation(input) aag_has_auth_to :: "'a PAS \<Rightarrow> auth \<Rightarrow> word32 \<Rightarrow> bool"
+abbreviation(input) aag_has_auth_to :: "'a PAS \<Rightarrow> auth \<Rightarrow> obj_ref \<Rightarrow> bool"
 where
   "aag_has_auth_to aag auth ptr \<equiv> (pasSubject aag, auth, pasObjectAbs aag ptr) \<in> pasPolicy aag"
 
@@ -1054,7 +1054,7 @@ lemma cnode_integrityE:
   using hyp cnode_integrityD by blast
 
 definition asid_pool_integrity ::
-  "'a set \<Rightarrow> 'a PAS \<Rightarrow> (10 word \<rightharpoonup> obj_ref) \<Rightarrow> (10 word \<rightharpoonup> obj_ref) \<Rightarrow> bool"
+  "'a set \<Rightarrow> 'a PAS \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> bool"
   where
   "asid_pool_integrity subjects aag pool pool' \<equiv>
    \<forall>x. pool' x \<noteq> pool x \<longrightarrow> pool' x = None
@@ -1515,7 +1515,7 @@ where
 
 subsection \<open>auth_ipc_buffer\<close>
 
-definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> word32 \<Rightarrow> word32 set"
+definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref set"
 where
   "auth_ipc_buffers s \<equiv>
      \<lambda>p. case (get_tcb p s) of
@@ -1688,7 +1688,7 @@ text\<open>
   v' = (final parent of ptr, final "originality" of ptr)
 \<close>
 definition integrity_cdt
-  :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (32 word \<Rightarrow> thread_state option)
+  :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (obj_ref \<Rightarrow> thread_state option)
        \<Rightarrow> cslot_ptr \<Rightarrow> (cslot_ptr option \<times> bool) \<Rightarrow> (cslot_ptr option \<times> bool) \<Rightarrow> bool"
 where
   "integrity_cdt aag subjects m tcbsts ptr v v'
@@ -1735,7 +1735,7 @@ text\<open>
   l and l' are the initial and final list of children of ptr
 \<close>
 definition integrity_cdt_list
-  :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (32 word \<Rightarrow> thread_state option) \<Rightarrow> cslot_ptr \<Rightarrow>
+  :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> cdt \<Rightarrow> (obj_ref \<Rightarrow> thread_state option) \<Rightarrow> cslot_ptr \<Rightarrow>
       (cslot_ptr list) \<Rightarrow> (cslot_ptr list) \<Rightarrow> bool"
 where
   "integrity_cdt_list aag subjects m tcbsts ptr l l'
@@ -1788,7 +1788,7 @@ where
 lemma integrity_interrupts_refl[simp]: "integrity_interrupts aag subjects ptr v v"
   by (simp add: integrity_interrupts_def)
 
-definition integrity_asids :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> asid \<Rightarrow> word32 option \<Rightarrow> word32 option \<Rightarrow> bool"
+definition integrity_asids :: "'a PAS \<Rightarrow> 'a set \<Rightarrow> asid \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> bool"
 where
   "integrity_asids aag subjects asid pp_opt pp_opt'
      \<equiv> pp_opt = pp_opt' \<or> (\<forall> asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid \<longrightarrow> pasASIDAbs aag asid' \<in> subjects)"
