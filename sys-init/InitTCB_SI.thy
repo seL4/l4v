@@ -909,7 +909,7 @@ lemma configure_tcb_sep:
             and root_size = si_cnode_size
             and tcb_cap = "TcbCap (the (t obj_id))"
             and tcb = "spec2s t (the (cdl_objects spec obj_id))"] |
-         simp add: guard_equal_si_cspace_cap' cap_object_simps is_tcb_default_cap)+
+         simp add: guard_equal_si_cspace_cap' is_tcb_default_cap)+
   apply (subst offset_slot_si_cnode_size', assumption)+
   apply clarsimp
   apply sep_solve

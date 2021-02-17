@@ -96,7 +96,7 @@ lemma guard_size_shiftl_non_zero:
     apply (rule of_nat_n_less_equal_power_2)
     apply (clarsimp simp: guard_bits_def)
    apply (clarsimp simp: guard_bits_def)
-  apply (clarsimp simp: of_nat_0)
+  apply (clarsimp simp: of_nat_0 simp del: word_of_nat_eq_0_iff)
   apply (drule of_nat_0)
    apply (erule less_le_trans)
    apply (clarsimp simp: guard_bits_def word_bits_def)
@@ -710,9 +710,8 @@ lemma well_formed_cap_has_object:
   apply (clarsimp simp: well_formed_caps_def)
   apply (erule_tac x=slot in allE)
   apply (clarsimp simp: domI)
-  apply (clarsimp simp: cap_has_object_def well_formed_cap_def
-                 split: cdl_cap.splits)
-  done
+  by (clarsimp simp: cap_has_object_def well_formed_cap_def
+               split: cdl_cap.splits)
 
 lemma well_formed_cap_object:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some spec_cap;
@@ -1592,9 +1591,8 @@ lemma well_formed_objects_card:
   apply (frule well_formed_objects_only_real_or_irq)
   apply (subgoal_tac " card (used_irqs spec) =  card (used_irq_nodes spec)", simp)
    apply (subst card_Un_Int, simp+)
-   apply (metis Int_commute Nat.add_0_right Un_commute card_empty used_irq_nodes_def)
+   apply (simp add: Int_commute Un_commute used_irq_nodes_def)
   by (metis card_image inj_inj_on used_irq_nodes_def)
-
 
 (****************************************
  * Packing data into a well_formed cap. *
@@ -1636,7 +1634,7 @@ lemma update_cap_rights_and_data:
    apply (drule_tac m=8 in word_shift_zero, rule less_imp_le)
      apply (clarsimp simp: guard_bits_def word_of_nat_less)
     apply simp
-   apply (clarsimp simp: of_nat_0 guard_bits_def word_bits_def)
+   apply (clarsimp simp: of_nat_0 guard_bits_def word_bits_def simp del: word_of_nat_eq_0_iff)
    apply (clarsimp simp: badge_update_def cap_rights_def cap_data_def
                          guard_update_def guard_as_rawdata_def)
   apply (cut_tac p="word2 << 8" and d="of_nat nat1 << 3" and n=8 in is_aligned_add_or)
@@ -1644,7 +1642,7 @@ lemma update_cap_rights_and_data:
    apply (rule shiftl_less_t2n)
     apply (clarsimp simp: guard_bits_def word_of_nat_less)
    apply simp
-  apply (simp add: word_ao_dist shiftr_over_or_dist shiftl_shiftr1 word_size shiftl_mask_is_0
+  apply (simp add: word_ao_dist shiftr_over_or_dist shiftl_shiftr1 word_size
                    word_bw_assocs mask_and_mask guard_as_rawdata_def guard_update_def)
   apply (subst le_mask_iff[THEN iffD1])
    apply (rule plus_one_helper)
@@ -1661,6 +1659,7 @@ lemma update_cap_rights_and_data:
   apply simp
   apply (subst less_mask_eq)
    apply (clarsimp simp: guard_bits_def word_of_nat_less)
+  including no_take_bit
   apply (clarsimp simp: guard_bits_def word_of_nat_less word_bits_def unat_of_nat32)
   done
 
