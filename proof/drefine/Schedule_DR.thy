@@ -404,7 +404,6 @@ lemma schedule_choose_new_thread_dcorres:
               apply (wp hoare_drop_imp| simp | clarsimp simp: valid_sched_def)+
           apply (frule max_set_not_empty, fastforce)
          apply (wp hoare_drop_imp| simp)+
-    apply (clarsimp simp: valid_sched_def)
     (* dom_t = 0 *)
     apply (simp only: schedule_def_2)
     apply (rule corres_guard_imp)

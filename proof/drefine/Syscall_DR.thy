@@ -1393,6 +1393,7 @@ lemma handle_recv_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[OF _ get_cur_thread_corres])
       apply (simp add:liftM_def select_f_get_register get_thread_def bind_assoc)
+      apply (rename_tac thread)
       apply (rule_tac P=\<top> and P'="invs and valid_etcbs and (\<lambda>s. thread = cur_thread s
                                    \<and> not_idle_thread thread s \<and> st_tcb_at active thread s)"
                      in dcorres_gets_the)
@@ -1485,6 +1486,7 @@ lemma handle_reply_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ get_cur_thread_corres])
       apply simp
+      apply (rename_tac thread)
       apply (rule_tac R="\<lambda>_. \<top>" and
                       R'="\<lambda>cap. invs and valid_etcbs and ct_running and tcb_at thread
                                 and not_idle_thread thread
