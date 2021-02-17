@@ -284,23 +284,19 @@ lemma send_fault_ipc_bisim:
       apply (simp add: Let_def)
       apply (rule hoare_vcg_seqE)
        apply (rule hoare_vcg_seqE)
-        apply wpc
-                  apply wp+
+        apply (wpc; wp)
+       apply wp
        apply simp
        apply (rule hoare_post_imp_R [OF lc_sep])
        apply (clarsimp simp: separate_cap_def)
       apply (wp | simp add: Let_def)+
-       apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
-       apply (erule separate_capE, simp_all)[1]
+        apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
+        apply (erule separate_capE, simp_all)[1]
          apply (wp | simp)+
-     apply clarsimp
-     apply assumption
-     \<comment> \<open>det_ont\<close>
-    apply (simp add: Let_def cong: cap.case_cong)
-    apply (wp not_empty_lc)
+       apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)
       apply (erule separate_capE, simp_all)[1]
-        apply wpsimp+
+       apply wpsimp+
   done
 
 lemma handle_fault_bisim:
@@ -421,7 +417,6 @@ lemma handle_invocation_bisim:
                  apply (rule handle_fault_bisim)
                 apply simp
                 apply (rule bisim_split_reflE_eq)
-                  apply simp
                   apply (rule decode_invocation_bisim)
                  apply wp+
                apply (simp, rule bisim_refl')
