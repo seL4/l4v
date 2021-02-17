@@ -84,7 +84,7 @@ lemma start_thread_sep:
             and cnode_cap = si_cspace_cap
             and root_size = si_cnode_size
             and tcb_cap = "TcbCap (the (t obj_id))"] |
-         simp add: guard_equal_si_cspace_cap' cap_object_simps is_tcb_default_cap)+
+         simp add: guard_equal_si_cspace_cap' is_tcb_default_cap)+
   apply (subst offset_slot_si_cnode_size', assumption)+
   apply (clarsimp simp: cap_transform_MasterReplyCap)
   by sep_solve

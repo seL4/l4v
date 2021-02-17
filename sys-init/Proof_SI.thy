@@ -143,7 +143,7 @@ lemma le_list_all:
   apply (clarsimp simp: list_all_iff)
   apply (subst word_arith_power_alt)
   apply simp
-  by (metis (no_types) dual_order.strict_trans2 unat_less_2_si_cnode_size word_of_int_numeral word_of_int_power_hom)
+  by (metis (no_types) dual_order.strict_trans2 unat_less_2_si_cnode_size)
 
 lemma list_all_drop:
   "list_all P xs \<Longrightarrow> list_all P (drop n xs)"

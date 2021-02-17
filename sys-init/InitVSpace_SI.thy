@@ -304,7 +304,7 @@ lemma pd_slot_compute_from_pt[simp]:
     apply (rule shiftl_less_t2n, simp+)
    apply (clarsimp simp: shiftr_over_or_dist)
    apply (subst shiftl_shiftr_id, simp+)
-   apply (clarsimp simp: limited_and_simps)
+   apply (clarsimp simp: shiftl_shiftr2)
    apply (subst le_mask_iff [THEN iffD1])
     apply (clarsimp simp: mask_def plus_one_helper)
    apply clarsimp
