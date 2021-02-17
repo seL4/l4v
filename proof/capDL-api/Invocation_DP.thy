@@ -202,7 +202,7 @@ lemma syscall_valid_helper:
     arg_decode_fn arg_error_handler_fn
     perform_syscall_fn
    \<lbrace>Q\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
-  apply (simp add:syscall_def del:split_paired_all)
+  apply (simp add:syscall_def)
   apply (rule hoare_vcg_handle_elseE)
     apply simp
    apply simp
@@ -455,9 +455,6 @@ lemma corrupt_ipc_buffer_active_tcbs[wp]:
   apply wp
   done
 
-crunch cdl_current_thread [wp]:  update_thread "\<lambda>s. P (cdl_current_thread s)"
-(wp: crunch_wps)
-
 lemma update_thread_wp:
   "\<lbrace>tcb_at' (\<lambda>tcb. P (f tcb)) thread\<rbrace> update_thread thread f
   \<lbrace>\<lambda>rv. tcb_at' P thread \<rbrace>"
@@ -508,8 +505,7 @@ lemma handle_pending_interrupts_no_ntf_cap:
   apply (rule hoare_pre)
    apply (wp send_signal_no_pending
            | wpc
-           | simp add: option_select_def handle_interrupt_def
-             split del: if_splits)+
+           | simp add: option_select_def handle_interrupt_def split del: if_split)+
    apply (wp alternative_wp select_wp hoare_drop_imps hoare_vcg_all_lift)
   apply simp
   done
@@ -696,14 +692,6 @@ crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread
     helper
   simp:cdl_cur_thread_detype crunch_simps)
 
-crunch cdl_current_thread[wp]: insert_cap_sibling "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
-  simp: crunch_simps)
-
-crunch cdl_current_thread[wp]: insert_cap_child "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
-  simp:crunch_simps)
-
 crunch cdl_current_thread[wp]: move_cap "\<lambda>s. P (cdl_current_thread s)"
 (wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
   simp:crunch_simps)
@@ -855,7 +843,7 @@ lemma syscall_valid_helper_allow_error:
     perform_syscall_fn
    \<lbrace>\<lambda>r s. (\<not> tcb_has_error thread_ptr s \<longrightarrow> Q s)
        \<and>  (tcb_has_error thread_ptr s \<longrightarrow> P s)\<rbrace>,\<lbrace>\<lambda>r. Inv\<rbrace>"
-  apply (simp add:syscall_def del:split_paired_all)
+  apply (simp add:syscall_def)
   apply (rule hoare_vcg_handle_elseE)
     apply (erule hoare_pre)
     apply simp

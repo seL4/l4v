@@ -679,15 +679,13 @@ lemma reset_cap_asid_ep_cap:
 lemma reset_cap_asid_ntfn_cap:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> is_ntfn_cap cap = is_ntfn_cap cap'"
-  apply (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
-  done
+  by (case_tac cap; case_tac cap'; simp add: reset_cap_asid_def)
 
 lemma cap_rights_reset_cap_asid:
   "reset_cap_asid cap = reset_cap_asid cap'
  \<Longrightarrow> cap_rights cap = cap_rights cap'"
   apply (clarsimp simp: cap_rights_def reset_cap_asid_def)
-  apply (case_tac cap; (case_tac cap'; simp))
-  done
+  by (case_tac cap; (case_tac cap'; simp))
 
 (* Lemmas about valid_src_cap *)
 lemma reset_cap_asid_cnode_cap:
@@ -788,9 +786,6 @@ lemma always_empty_wp:
 lemma fast_finalise_cap_non_ep_wp:
   "\<lbrace><P> and K (\<not> ep_related_cap cap') \<rbrace> fast_finalise cap' final \<lbrace>\<lambda>y. <P>\<rbrace>"
   by (case_tac cap',simp_all add:ep_related_cap_def)
-
-crunch inv [wp]:  is_final_cap "\<lambda>s. P"
-(wp:crunch_wps select_wp  simp:split_def unless_def)
 
 lemma delete_cap_simple_wp:
  "\<lbrace>\<lambda>s. <ptr  \<mapsto>c cap  \<and>* R> s \<and> \<not> ep_related_cap cap\<rbrace>
@@ -1042,10 +1037,10 @@ lemma decode_cnode_mint_rvu:
        apply (metis reset_cap_asid_cap_type)
       apply (frule (1) reset_cap_asid_ep_cap[THEN iffD1])
       apply simp
-      apply (metis reset_cap_asid_cap_badge ep_related_capI)
+      apply (metis reset_cap_asid_cap_badge ep_related_capI(1))
      apply (frule (1) reset_cap_asid_ntfn_cap[THEN iffD1])
      apply simp
-     apply (metis reset_cap_asid_cap_badge ep_related_capI)
+     apply (metis reset_cap_asid_cap_badge ep_related_capI(2))
     apply (metis option.inject reset_cap_asid_cnode_cap)
    apply (metis cap_rights_reset_cap_asid)
   apply sep_solve
@@ -1103,14 +1098,9 @@ lemma decode_cnode_mutate_rvu:
    apply (clarsimp dest!: mapu_dest_opt_cap
      simp: conj_comms update_cap_data_non cong:non_cap_cong)
    apply (subst (asm) reset_cap_asid_ep_related_cap[OF sym], assumption)
-   apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong
-                ep_related_capI)
+   apply (metis reset_cap_asid_cap_type valid_src_cap_asid_cong ep_related_capI(1-2))
   apply sep_solve
   done
-
-crunch preserve [wp]:  decode_cnode_invocation "P"
-(wp: derive_cap_wpE unlessE_wp hoare_whenE_wp select_wp hoare_drop_imps
-  simp: hoare_if_simpE if_apply_def2 throw_on_none_def)
 
 lemma do_kernel_op_pull_back:
   "\<lbrace>\<lambda>s. P s\<rbrace> oper \<lbrace>\<lambda>r. Q r\<rbrace> \<Longrightarrow>
