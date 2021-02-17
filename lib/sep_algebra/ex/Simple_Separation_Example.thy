@@ -139,7 +139,7 @@ lemma "VARS H p q r
     apply fastforce
    apply clarsimp
    apply (case_tac ps, simp)
-   apply (rename_tac p ps')
+   apply (rename_tac p q ps qs p' ps')
    apply (clarsimp simp: sep_conj_exists sep_conj_ac)
    apply (subst points_to, sep_solve)
    apply (rule_tac x = "ps'" in exI)
