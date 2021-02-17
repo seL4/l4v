@@ -705,8 +705,7 @@ lemma call_kernel_with_intent_no_fault_helper':
 done
 
 lemma is_tcb_cap_is_object:  "is_tcb_cap tcb_cap  \<Longrightarrow> TcbCap (cap_object tcb_cap) = tcb_cap"
-  apply (clarsimp simp: cap_type_def cap_object_simps split: cdl_cap.splits)
-done
+  by (clarsimp simp: cap_type_def split: cdl_cap.splits)
 
 
 lemma reset_cap_asid_mem_mapping:
@@ -1033,6 +1032,7 @@ shows
           reset_cap_asid buffer_frame_cap = reset_cap_asid (buffer_frame_cap') " in hoare_gen_asmEx)
           apply (simp)
           apply (elim exE)
+          supply [[simproc del: defined_all]]
           apply simp
           apply (rule false_e_explode)
           apply (rule no_exception_conj')
@@ -1056,7 +1056,7 @@ shows
            apply (rule conjI)
             prefer 2
             apply (simp add: sep_conj_assoc update_tcb_fault_endpoint_def)
-            apply (clarsimp simp:unify cap_object_simps dest!:cap_typeD)
+            apply (clarsimp simp:unify dest!:cap_typeD)
             apply (rule sep_map_c_any[where cap = RestartCap])
             apply (sep_schem)
            apply sep_solve
@@ -1157,12 +1157,6 @@ shows
   apply (sep_select_asm 4)
   apply (sep_solve)
   done
-
-crunch idle_thread[wp]: set_cap "\<lambda>s. P (cdl_current_thread s)"
-  (wp: crunch_wps)
-
-crunch current_domain[wp]: set_cap "\<lambda>s. P (cdl_current_domain s)"
-  (wp: crunch_wps)
 
 lemma reset_cap_asid_pending:
   "reset_cap_asid cap' = reset_cap_asid cap

@@ -63,16 +63,13 @@ lemma decode_page_map_intent_rv_20_24:
   [(PageDirectoryCap ptr real' asid',pdref)]
   (PageIntent (PageMapIntent vaddr perms vmattr))
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
-  apply (simp add:decode_invocation_def get_index_def
-    get_page_intent_def throw_opt_def cap_rights_def
-    decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
+  apply (simp add: decode_invocation_def get_index_def get_page_intent_def throw_opt_def
+                   cap_rights_def decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
   apply (wp alternativeE_wp select_wp | wpc)+
-  apply (rule validE_validE_R)
-   apply (wp alternativeE_wp)
-    apply (simp add:cdl_page_mapping_entries_def
-      split del:if_splits | wp | wpc)+
-
-   apply auto
+     apply (rule validE_validE_R)
+     apply (wp alternativeE_wp)
+     apply (simp add:cdl_page_mapping_entries_def split del:if_split | wp | wpc)+
+  apply auto
   done
 
 lemma decode_page_map_intent_rv_16_12:
@@ -92,7 +89,7 @@ lemma decode_page_map_intent_rv_16_12:
   apply (wp alternativeE_wp select_wp)
   apply (rule validE_validE_R)
    apply (wp alternativeE_wp)
-    apply (simp add:cdl_page_mapping_entries_def split del:if_splits)
+    apply (simp add:cdl_page_mapping_entries_def)
     apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
    apply auto
   done
