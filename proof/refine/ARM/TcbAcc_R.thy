@@ -329,7 +329,7 @@ lemma tcb_update_corres:
                         in_magnitude_check)
   done
 
-lemma assert_get_tcb_corres:
+lemma getObject_TCB_corres:
   "corres tcb_relation (tcb_at t) (tcb_at' t)
           (gets_the (get_tcb t)) (getObject t)"
   apply (rule corres_guard_imp)
@@ -346,7 +346,7 @@ lemma threadGet_corres:
   apply (fold liftM_def)
   apply simp
   apply (rule corres_rel_imp)
-   apply (rule assert_get_tcb_corres)
+   apply (rule getObject_TCB_corres)
   apply (simp add: x)
   done
 
@@ -378,7 +378,7 @@ lemma threadset_corresT:
                     (thread_set f t) (threadSet f' t)"
   apply (simp add: thread_set_def threadSet_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ assert_get_tcb_corres])
+    apply (rule corres_split [OF _ getObject_TCB_corres])
       apply (rule tcb_update_corres')
           apply (erule x)
          apply (rule y)
@@ -2093,7 +2093,7 @@ lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_g
   apply (fold liftM_def)
   apply simp
   apply (rule corres_rel_imp)
-   apply (rule assert_get_tcb_corres)
+   apply (rule getObject_TCB_corres)
   apply (clarsimp simp add: tcb_relation_def thread_state_relation_def)
   apply (case_tac "tcb_state x",simp_all)
   done
