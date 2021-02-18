@@ -180,7 +180,7 @@ lemma storePTE_state_refs_of[wp]:
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
-lemma set_asid_pool_corres:
+lemma setObject_ASIDPool_corres:
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p)
             (set_asid_pool p a) (setObject p a')"
@@ -204,12 +204,12 @@ lemma set_asid_pool_corres:
   apply (simp add: typ_at_to_obj_at_arches)
   done
 
-lemma set_asid_pool_corres':
+lemma setObject_ASIDPool_corres':
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and valid_etcbs) (pspace_aligned' and pspace_distinct')
             (set_asid_pool p a) (setObject p a')"
   apply (rule stronger_corres_guard_imp,
-         erule set_asid_pool_corres)
+         erule setObject_ASIDPool_corres)
    apply auto
   done
 

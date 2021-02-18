@@ -232,7 +232,7 @@ lemma deleteASID_corres [corres]:
                        in corres_split)
              prefer 2
              apply (simp del: fun_upd_apply)
-             apply (rule set_asid_pool_corres)
+             apply (rule setObject_ASIDPool_corres)
              apply (simp add: inv_def mask_asid_low_bits_ucast_ucast)
              apply (rule ext)
              apply (clarsimp simp: o_def ucast_ucast_a is_down asid_low_bits_of_def)
@@ -741,7 +741,7 @@ lemma performASIDPoolInvocation_corres:
              apply (rule getObject_ASIDPool_corres[OF refl])
             apply simp
            apply (simp cong: corres_weak_cong)
-           apply (rule set_asid_pool_corres)
+           apply (rule setObject_ASIDPool_corres)
            apply (rule ext)
            apply (clarsimp simp: inv_def is_cap_simps ucast_up_inj)
           apply (wp getASID_wp)+

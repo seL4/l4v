@@ -229,7 +229,7 @@ lemma corres_inst_eq_ext:
   by (auto simp add: corres_inst_eq_def)
 
 lemma delete_asid_corresb:
-  notes [corres] = corres_gets_asid getCurThread_corres set_asid_pool_corres and
+  notes [corres] = corres_gets_asid getCurThread_corres setObject_ASIDPool_corres and
     [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
     invalidateASIDEntry_corres
     setVMRoot_corres
@@ -272,7 +272,7 @@ lemma delete_asid_corresb:
                    continue (* backtracking *)
                continue (* split *)
                    continue (* function application *)
-                   continue (* set_asid_pool_corres *)
+                   continue (* setObject_ASIDPool_corres *)
                   continue (* K_bind *)
                   continue (* K_bind *)
                   continue (* split *)
