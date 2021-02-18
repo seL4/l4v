@@ -330,11 +330,11 @@ crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
 
 lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
-lemma get_pte_corres'':
+lemma getObject_PTE_corres'':
   assumes "p' = p"
   shows "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
                               (get_pte p) (getObject p')"
-  using assms get_pte_corres by simp
+  using assms getObject_PTE_corres by simp
 
 crunches unmapPageTable, unmapPage
   for aligned'[wp]: "pspace_aligned'"
@@ -404,7 +404,7 @@ lemma checkMappingPPtr_corres:
 crunch inv[wp]: checkMappingPPtr "P"
   (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
 
-lemmas liftE_get_pte_corres = get_pte_corres[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pte_corres = getObject_PTE_corres[THEN corres_liftE_rel_sum[THEN iffD2]]
 
 lemma unmapPage_corres:
   assumes "sz' = sz" "asid' = ucast asid" "vptr' = vptr" "pptr' = pptr"

@@ -607,7 +607,7 @@ lemma pte_relation_aligned_simp:
   by (clarsimp simp: pte_relation_aligned_def pte_bits_def
               split: ARM_HYP_H.pte.splits if_splits)
 
-lemma get_pte_corres [@lift_corres_args, corres]:
+lemma getObject_PTE_corres [@lift_corres_args, corres]:
   "corres (pte_relation_aligned (p >> pte_bits)) (pte_at p) (pte_at' p)
      (get_pte p) (getObject p)"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
@@ -796,7 +796,7 @@ lemma get_master_pte_corres [corres]:
    apply (rule no_fail_pre, wp)
    apply clarsimp
   apply (clarsimp simp: in_monad)
-  using get_pte_corres [OF refl, of p]
+  using getObject_PTE_corres [OF refl, of p]
   apply (clarsimp simp: corres_underlying_def)
   apply (drule bspec, assumption, clarsimp)
   apply (drule (1) bspec, clarsimp)
@@ -845,12 +845,12 @@ lemma get_master_pte_corres [corres]:
   apply (drule (1) bspec, clarsimp simp: addPTEOffset_def)
   done
 
-lemma get_pte_corres':
+lemma getObject_PTE_corres':
   "corres (pte_relation_aligned (p >> pte_bits)) (pte_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pte p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pte_corres)
+         rule getObject_PTE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pte_atI')

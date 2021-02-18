@@ -457,7 +457,7 @@ lemma checkSlot_corres:
           (checkSlot p test')"
   apply (simp add: check_slot_def checkSlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_pte_corres])
+    apply (rule corres_split[OF _ getObject_PTE_corres])
       apply (rule corres_whenE, simp)
        apply (rule corres_trivial, simp)
       apply simp
@@ -686,7 +686,7 @@ lemma decodeX64PageTableInvocation_corres:
             prefer 2
             apply simp
             apply datatype_schem
-            apply (rule get_pte_corres)
+            apply (rule getObject_PTE_corres)
            apply (simp add: unlessE_whenE)
            apply (rule corres_splitEE[where r'=dc])
               prefer 2

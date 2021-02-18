@@ -296,7 +296,7 @@ lemma mask_pt_bits_inner_beauty:
   (p && ~~ mask pt_bits) + (ucast ((ucast (p && mask pt_bits >> word_size_bits)) :: 9 word) << word_size_bits) = (p::machine_word)"
   by (rule mask_split_aligned; simp add: bit_simps)
 
-lemma get_pte_corres:
+lemma getObject_PTE_corres:
   "corres (pte_relation') (pte_at p) (pte_at' p)
      (get_pte p) (getObject p)"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
@@ -359,12 +359,12 @@ lemma aligned_distinct_relation_pte_atI'[elim]:
                         projectKOs)
   done
 
-lemma get_pte_corres':
+lemma getObject_PTE_corres':
   "corres (pte_relation') (pte_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pte p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pte_corres)
+         rule getObject_PTE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pte_atI')

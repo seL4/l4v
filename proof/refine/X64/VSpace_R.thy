@@ -476,11 +476,11 @@ lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 crunch no_0_obj'[wp]: flushTable "no_0_obj'"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma get_pte_corres'':
+lemma getObject_PTE_corres'':
   assumes "p' = p"
   shows "corres pte_relation' (pte_at p) (pspace_aligned' and pspace_distinct')
                               (get_pte p) (getObject p')"
-  using assms get_pte_corres' by simp
+  using assms getObject_PTE_corres' by simp
 
 lemma flushTable_corres:
   assumes "pm' = pm" "vptr' = vptr" "pt' = pt" "asid' = asid"
@@ -512,7 +512,7 @@ lemma flushTable_corres:
          apply (frule zip_map_rel[where f=ucast and g=id, simplified])
           apply (simp add: upto_enum_def bit_simps ucast_of_nat_small)
          apply (rule corres_guard_imp)
-           apply (rule corres_split[OF _ get_pte_corres''])
+           apply (rule corres_split[OF _ getObject_PTE_corres''])
               apply (case_tac rv; case_tac rv'; simp add: ucast_id)
               apply (rule corres_machine_op)
               apply (subgoal_tac "ucast x = y"; simp)
@@ -655,7 +655,7 @@ lemma set_pt_vs_lookup [wp]:
       clarsimp simp: obj_at_def vs_refs_def split: if_splits)
 
 lemmas liftE_get_pde_corres = getObject_PDE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
-lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pte_corres = getObject_PTE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pdpte_corres = getObject_PDPTE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 
 lemma unmapPage_corres:

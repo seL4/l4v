@@ -2081,7 +2081,7 @@ lemma checkMappingPPtr_corres:
                    checkMappingPPtr_def)
   apply (cases slotptr, simp_all add: liftE_bindE)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ get_pte_corres'])
+     apply (rule corres_split[OF _ getObject_PTE_corres'])
        apply (rule corres_trivial)
        subgoal by (cases sz,
          auto simp add: is_aligned_mask[symmetric]

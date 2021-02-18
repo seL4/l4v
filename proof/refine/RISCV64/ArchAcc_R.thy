@@ -333,7 +333,7 @@ lemma corres_cross_over_pte_at:
   apply assumption
   done
 
-lemma get_pte_corres:
+lemma getObject_PTE_corres:
   "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
           (get_pte p) (getObject p)"
   apply (rule corres_cross_over_pte_at, fastforce)
@@ -559,7 +559,7 @@ lemma pteAtIndex_corres:
      \<top>
      (get_pte (pt_slot_offset level pt vptr))
      (pteAtIndex level' pt vptr)"
-  by (simp add: pteAtIndex_def) (rule get_pte_corres)
+  by (simp add: pteAtIndex_def) (rule getObject_PTE_corres)
 
 lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
@@ -777,7 +777,7 @@ next
           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                 addr_from_ppn_def)
          apply (simp add: state_relation_def)
-        apply (simp, rule get_pte_corres)
+        apply (simp, rule getObject_PTE_corres)
        apply wpsimp+
      apply (simp add: bit0.neq_0_conv)
      apply (frule (5) vs_lookup_table_is_aligned)
@@ -834,7 +834,7 @@ lemma corres_gets_global_pt [corres]:
   apply (case_tac "riscvKSGlobalPTs (ksArchState s') maxPTLevel"; simp)
   done
 
-lemmas get_pte_corres'[corres] = get_pte_corres[@lift_corres_args]
+lemmas getObject_PTE_corres'[corres] = getObject_PTE_corres[@lift_corres_args]
 lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
