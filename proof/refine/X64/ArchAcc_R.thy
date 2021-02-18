@@ -218,7 +218,7 @@ lemma mask_pd_bits_inner_beauty:
   (p && ~~ mask pd_bits) + (ucast ((ucast (p && mask pd_bits >> word_size_bits)) :: 9 word) << word_size_bits) = (p :: machine_word)"
   by (rule mask_split_aligned; simp add: bit_simps)
 
-lemma get_pde_corres:
+lemma getObject_PDE_corres:
   "corres (pde_relation') (pde_at p) (pde_at' p)
      (get_pde p) (getObject p)"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
@@ -279,12 +279,12 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
                         projectKOs)
   done
 
-lemma get_pde_corres':
+lemma getObject_PDE_corres':
   "corres (pde_relation') (pde_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pde p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pde_corres)
+         rule getObject_PDE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pde_atI')
@@ -1354,7 +1354,7 @@ lemma lookupPTSlot_corres:
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
          prefer 2
-         apply (simp, rule get_pde_corres')
+         apply (simp, rule getObject_PDE_corres')
         apply (case_tac pde; simp add: lookup_failure_map_def bit_simps lookupPTSlotFromPT_def
                                   split: pde.splits)
         apply (simp add: returnOk_liftE checkPTAt_def)
@@ -1624,7 +1624,7 @@ lemma ensureSafeMapping_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
          apply simp
-         apply (rule get_pde_corres')
+         apply (rule getObject_PDE_corres')
         apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pde.splits if_splits)[1]
        apply wp[2]
       apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+

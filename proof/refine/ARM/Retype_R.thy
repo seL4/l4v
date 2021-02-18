@@ -2551,7 +2551,7 @@ lemma copyGlobalMappings_corres:
           apply (rule corres_guard_imp, rule corres_split)
                apply (erule storePDE_corres[OF _ refl])
               apply (rule corres_rel_imp)
-               apply (rule_tac get_pde_corres[OF refl])
+               apply (rule_tac getObject_PDE_corres[OF refl])
               apply clarsimp
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce

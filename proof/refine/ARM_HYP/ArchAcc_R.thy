@@ -253,7 +253,7 @@ lemma pde_relation_aligned_simp:
   by (clarsimp simp: pde_relation_aligned_def pde_bits_def
               split: ARM_HYP_H.pde.splits if_splits)
 
-lemma get_pde_corres [@lift_corres_args, corres]:
+lemma getObject_PDE_corres [@lift_corres_args, corres]:
   "corres (pde_relation_aligned (p >> pde_bits)) (pde_at p) (pde_at' p)
      (get_pde p) (getObject p)"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
@@ -533,7 +533,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
    apply (rule no_fail_pre, wp)
    apply clarsimp
   apply (clarsimp simp: in_monad)
-  using get_pde_corres [OF refl, of p]
+  using getObject_PDE_corres [OF refl, of p]
   apply (clarsimp simp: corres_underlying_def)
   apply (drule bspec, assumption, clarsimp)
   apply (drule (1) bspec, clarsimp)
@@ -582,12 +582,12 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
   apply (drule (1) bspec, clarsimp simp: addPDEOffset_def)
   done
 
-lemma get_pde_corres':
+lemma getObject_PDE_corres':
   "corres (pde_relation_aligned (p >> pde_bits)) (pde_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pde p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pde_corres)
+         rule getObject_PDE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pde_atI')

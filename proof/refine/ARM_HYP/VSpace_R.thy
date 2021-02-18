@@ -1921,7 +1921,7 @@ lemma pageTableMapped_corres:
       apply (rule corres_trivial, simp)
      apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
        apply (simp add: liftE_bindE)
-       apply (rule corres_split [OF _ get_pde_corres'])
+       apply (rule corres_split [OF _ getObject_PDE_corres'])
          apply (rule corres_trivial)
          apply (case_tac rv,
            simp_all add: returnOk_def pde_relation_aligned_def
@@ -2092,7 +2092,7 @@ lemma checkMappingPPtr_corres:
     apply simp
    apply (simp add:is_aligned_mask[symmetric] is_aligned_shiftr pg_entry_align_def)
   apply (rule corres_guard_imp)
-   apply (rule corres_split[OF _ get_pde_corres'])
+   apply (rule corres_split[OF _ getObject_PDE_corres'])
       apply (rule corres_trivial)
       subgoal by (cases sz,
          auto simp add: is_aligned_mask[symmetric]

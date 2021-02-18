@@ -692,7 +692,7 @@ lemma decodeX64PageTableInvocation_corres:
          apply (rule corres_splitEE)
             prefer 2
             apply simp
-            apply (rule get_pde_corres')
+            apply (rule getObject_PDE_corres')
            apply (simp add: unlessE_whenE)
            apply (rule corres_splitEE)
               prefer 2

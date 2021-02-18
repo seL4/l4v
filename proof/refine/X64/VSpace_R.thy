@@ -575,7 +575,7 @@ crunch inv[wp]: lookupPTSlot "P"
 
 lemma unmapPageTable_corres:
   assumes "asid' = asid" "vptr' = vptr" "pt' = pt"
-  notes liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+  notes liftE_get_pde_corres = getObject_PDE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
           (invs and valid_etcbs and page_table_at pt and
            K (0 < asid \<and> is_aligned vptr pd_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))
@@ -654,7 +654,7 @@ lemma set_pt_vs_lookup [wp]:
   by (rule order_antisym; rule vs_lookup_sub;
       clarsimp simp: obj_at_def vs_refs_def split: if_splits)
 
-lemmas liftE_get_pde_corres = get_pde_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pde_corres = getObject_PDE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 

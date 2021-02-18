@@ -222,7 +222,7 @@ lemma pde_relation_aligned_simp:
   by (clarsimp simp: pde_relation_aligned_def
               split: ARM_H.pde.splits if_splits)
 
-lemma get_pde_corres [corres]:
+lemma getObject_PDE_corres [corres]:
   "p = p' \<Longrightarrow> corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p')
      (get_pde p) (getObject p')"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
@@ -445,12 +445,12 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
     done
   qed
 
-lemma get_pde_corres' :
+lemma getObject_PDE_corres' :
   "corres (pde_relation_aligned (p >> 2)) (pde_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pde p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pde_corres)
+         rule getObject_PDE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pde_atI')
