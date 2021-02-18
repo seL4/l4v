@@ -534,7 +534,7 @@ lemma get_pml4e_corres':
   done
 
 \<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
-lemma set_pd_corres:
+lemma setObject_PD_corres:
   "pde_relation' pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
                      and pspace_aligned and valid_etcbs)
@@ -935,7 +935,7 @@ lemma storePDE_corres:
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pd_corres)
+     apply (erule setObject_PD_corres)
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def

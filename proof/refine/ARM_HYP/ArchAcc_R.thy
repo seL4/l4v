@@ -864,7 +864,7 @@ lemma get_master_pte_corres':
      (get_master_pte p) (getObject p)"
   by (rule stronger_corres_guard_imp, rule get_master_pte_corres) auto
 
-lemma set_pd_corres [corres]:
+lemma setObject_PD_corres [corres]:
   "pde_relation_aligned (p>>pde_bits) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
                      and pspace_aligned and valid_etcbs)
@@ -1031,7 +1031,7 @@ lemma storePDE_corres [corres]:
   apply (insert wordsFromPDEis2[of pde'])
   apply (clarsimp simp: tailM_def headM_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pd_corres)
+     apply (erule setObject_PD_corres)
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def
