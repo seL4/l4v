@@ -620,7 +620,7 @@ lemma more_pt_inner_beauty:
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
 \<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
-lemma set_pt_corres:
+lemma setObject_PT_corres:
   "pte_relation' pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
                      and pspace_aligned and valid_etcbs)
@@ -963,7 +963,7 @@ lemma storePTE_corres:
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres)
+     apply (erule setObject_PT_corres)
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def

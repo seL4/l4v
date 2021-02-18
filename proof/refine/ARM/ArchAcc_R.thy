@@ -774,7 +774,7 @@ lemma setObject_PD_corres [@lift_corres_args, corres]:
   done
 
 
-lemma set_pt_corres [@lift_corres_args, corres]:
+lemma setObject_PT_corres [@lift_corres_args, corres]:
   "pte_relation_aligned (p >> 2) pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
                      and pspace_aligned and valid_etcbs)
@@ -884,7 +884,7 @@ lemma storePTE_corres [@lift_corres_args, corres]:
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres[OF _ refl])
+     apply (erule setObject_PT_corres[OF _ refl])
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def

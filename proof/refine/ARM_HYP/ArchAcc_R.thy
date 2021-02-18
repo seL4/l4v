@@ -944,7 +944,7 @@ lemma setObject_PD_corres [corres]:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma set_pt_corres [corres]:
+lemma setObject_PT_corres [corres]:
   "pte_relation_aligned (p >> pte_bits) pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
                      and pspace_aligned and valid_etcbs)
@@ -1063,7 +1063,7 @@ lemma storePTE_corres [corres]:
   apply (insert wordsFromPTEis2[of pte'])
   apply (clarsimp simp: tailM_def headM_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres)
+     apply (erule setObject_PT_corres)
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def

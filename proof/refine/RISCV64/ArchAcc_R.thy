@@ -376,7 +376,7 @@ lemma one_less_2p_pte_bits[simp]:
   by (simp add: bit_simps)
 
 \<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
-lemma set_pt_corres:
+lemma setObject_PT_corres:
   "pte_relation' pte pte' \<Longrightarrow>
    corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
               pspace_aligned and pspace_distinct) \<top>
@@ -456,7 +456,7 @@ lemma storePTE_corres:
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_assume_pre, simp add: pte_at_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres)
+     apply (erule setObject_PT_corres)
     apply (clarsimp simp: exs_valid_def gets_map_def fst_assert_opt in_omonad
                           exec_gets bind_assoc obj_at_def pte_at_def)
    apply (wpsimp simp: obj_at_def in_omonad)
