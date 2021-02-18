@@ -155,7 +155,7 @@ lemma invs_weak_sch_act_wf[elim!]:
 crunch tcb_at[wp]: set_endpoint "tcb_at t"
 crunch tcb_at'[wp]: setEndpoint "tcb_at' t"
 
-lemma blocked_cancel_ipc_corres:
+lemma blocked_cancelIPC_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr p' \<or>
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
    corres dc (invs and st_tcb_at ((=) st) t) (invs' and st_tcb_at' ((=) st') t)
@@ -604,14 +604,14 @@ lemma (in delete_one) cancelIPC_corres:
                       P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
       apply (case_tac state, simp_all add: isTS_defs list_case_If)[1]
          apply (rule corres_guard_imp)
-           apply (rule blocked_cancel_ipc_corres)
+           apply (rule blocked_cancelIPC_corres)
             apply fastforce
            apply fastforce
           apply simp
          apply simp
         apply (clarsimp simp add: isTS_defs list_case_If)
         apply (rule corres_guard_imp)
-          apply (rule blocked_cancel_ipc_corres)
+          apply (rule blocked_cancelIPC_corres)
            apply fastforce
           apply fastforce
          apply simp
