@@ -346,7 +346,7 @@ lemma setObject_update_TCB_corres':
    apply (clarsimp simp: other_obj_relation_def exst)
   apply (rule corres_guard_imp)
     apply (rule corres_rel_imp)
-     apply (rule set_other_obj_corres[where P="(=) tcb'"])
+     apply (rule setObject_other_corres[where P="(=) tcb'"])
            apply (rule ext)+
            apply simp
           defer

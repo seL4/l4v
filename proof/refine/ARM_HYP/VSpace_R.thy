@@ -783,7 +783,7 @@ lemma setObject_VCPU_corres:
                   (setObject vcpu vcpuObj')"
   apply (simp add: set_vcpu_def)
   apply (rule corres_guard_imp)
-    apply (rule set_other_obj_corres [where P="\<lambda>ko::vcpu. True"], simp)
+    apply (rule setObject_other_corres [where P="\<lambda>ko::vcpu. True"], simp)
          apply (clarsimp simp: obj_at'_def projectKOs)
          apply (erule map_to_ctes_upd_other, simp, simp)
         apply (simp add: a_type_def is_other_obj_relation_type_def)

@@ -186,7 +186,7 @@ lemma setObject_ASIDPool_corres:
             (set_asid_pool p a) (setObject p a')"
   apply (simp add: set_asid_pool_def)
   apply (rule corres_guard_imp)
-    apply (rule set_other_obj_corres [where P="\<lambda>ko::asidpool. True"])
+    apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
           apply simp
          apply (clarsimp simp: obj_at'_def projectKOs)
          apply (erule map_to_ctes_upd_other, simp, simp)
@@ -533,7 +533,7 @@ lemma get_pml4e_corres':
    apply (simp add:state_relation_def)+
   done
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres:
   "pde_relation' pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
@@ -619,7 +619,7 @@ lemma more_pt_inner_beauty:
   shows "(p && ~~ mask pt_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pt_corres:
   "pte_relation' pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
@@ -705,7 +705,7 @@ lemma more_pdpt_inner_beauty:
   shows "(p && ~~ mask pdpt_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pdpt_corres:
   "pdpte_relation' pdpte pdpte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PDPointerTable pt)) (p && ~~ mask pdpt_bits)
@@ -791,7 +791,7 @@ lemma more_pml4_inner_beauty:
   shows "(p && ~~ mask pml4_bits) + (ucast x << word_size_bits) = p \<Longrightarrow> False"
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pml4_corres:
   "pml4e_relation' pml4e pml4e' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageMapL4 pt)) (p && ~~ mask pml4_bits)

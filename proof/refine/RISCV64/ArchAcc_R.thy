@@ -272,7 +272,7 @@ lemma setObject_ASIDPool_corres:
    apply wpsimp
   apply (rule corres_cross_over_asid_pool_at, fastforce)
   apply (rule corres_guard_imp)
-    apply (rule set_other_obj_corres [where P="\<lambda>ko::asidpool. True"])
+    apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
           apply simp
          apply (clarsimp simp: obj_at'_def)
          apply (erule map_to_ctes_upd_other, simp, simp)
@@ -375,7 +375,7 @@ lemma one_less_2p_pte_bits[simp]:
   "(1::machine_word) < 2 ^ pte_bits"
   by (simp add: bit_simps)
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pt_corres:
   "pte_relation' pte pte' \<Longrightarrow>
    corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and

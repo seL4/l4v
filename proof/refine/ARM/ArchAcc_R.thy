@@ -200,7 +200,7 @@ lemma setObject_ASIDPool_corres [corres]:
   corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p')
             (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
-  apply (corressimp search: set_other_obj_corres[where P="\<lambda>_. True"]
+  apply (corressimp search: setObject_other_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_obj_relation_def asid_pool_relation_def)
   apply (clarsimp simp: obj_at_simps )
@@ -693,7 +693,7 @@ lemma get_master_pte_corres':
    apply auto
   done
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma set_pd_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)

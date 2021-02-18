@@ -931,7 +931,7 @@ where
   "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
   "exst_same' _ _ = True"
 
-lemma set_other_obj_corres:
+lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
   assumes z: "\<And>s. obj_at' P ptr s
@@ -1013,7 +1013,7 @@ lemma setEndpoint_corres:
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
-    apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+    apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
@@ -1022,7 +1022,7 @@ lemma setNotification_corres:
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
-       apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+       apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 
