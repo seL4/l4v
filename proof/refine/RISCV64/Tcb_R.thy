@@ -818,7 +818,7 @@ defs
   "assertDerived src cap f \<equiv>
    do stateAssert (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap o cteCap) src s) []; f od"
 
-lemma checked_insert_corres:
+lemma checkCapAt_cteInsert_corres:
   "cap_relation new_cap newCap \<Longrightarrow>
    corres dc (einvs and cte_wp_at (\<lambda>c. c = cap.NullCap) (target, ref)
                and cte_at slot and K (is_cnode_or_valid_arch new_cap
@@ -1293,7 +1293,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split_norE [OF _ cteDelete_corres])
         apply (simp del: dc_simp)
-        apply (erule checked_insert_corres)
+        apply (erule checkCapAt_cteInsert_corres)
        apply (fold validE_R_def)
        apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap
                     | strengthen use_no_cap_to_obj_asid_strg)+
@@ -1394,7 +1394,7 @@ proof -
                     simp add: tcb_relation_def, (simp add: exst_same_def)+)
             apply (rule corres_split)
                prefer 2
-               apply (erule checked_insert_corres)
+               apply (erule checkCapAt_cteInsert_corres)
               apply (rule corres_split[OF _ getCurThread_corres], clarsimp)
                 apply (rule corres_when[OF refl rescheduleRequired_corres])
                apply (wp gct_wp)+
