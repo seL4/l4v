@@ -3792,7 +3792,7 @@ lemma descendants_range_ex_cte':
   apply blast
   done
 
-lemma update_untyped_cap_corres:
+lemma updateCap_isUntypedCap_corres:
   "\<lbrakk>is_untyped_cap cap; isUntypedCap cap'; cap_relation cap cap'\<rbrakk>
    \<Longrightarrow> corres dc
          (cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_ref_of c = obj_ref_of cap \<and>
@@ -3844,7 +3844,7 @@ lemma updateFreeIndex_corres:
           apply (rule_tac F="isUntypedCap capa
                              \<and> cap_relation cap (capFreeIndex_update (\<lambda>_. idx) capa)"
                           in corres_gen_asm2)
-          apply (rule update_untyped_cap_corres, simp+)
+          apply (rule updateCap_isUntypedCap_corres, simp+)
            apply (clarsimp simp: isCap_simps)
           apply simp
          apply (wp getSlotCap_wp)+
