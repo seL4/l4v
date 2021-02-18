@@ -8675,7 +8675,7 @@ lemma corres_null_cap_update:
      apply (rule corres_guard_imp, rule getCTE_symb_exec_r, simp+)
     prefer 3
     apply clarsimp
-    apply (rule set_cap_pspace_corres)
+    apply (rule setCTE_corres)
     apply (wp | simp)+
    apply (fastforce elim!: cte_wp_at_weakenE)
   apply wp

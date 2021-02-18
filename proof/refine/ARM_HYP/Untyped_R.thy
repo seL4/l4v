@@ -1535,7 +1535,7 @@ shows
          apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l])
           apply (rule corres_cong[OF refl refl _ refl refl, THEN iffD1])
            apply (rule bind_return[THEN fun_cong])
-          apply (rule corres_split [OF _ set_cap_pspace_corres])
+          apply (rule corres_split [OF _ setCTE_corres])
              apply (subst bind_return[symmetric],
                     rule corres_split)
                 prefer 2

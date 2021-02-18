@@ -3505,7 +3505,7 @@ lemma deriveCap_untyped_derived:
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
   done
 
-lemma set_cap_pspace_corres:
+lemma setCTE_corres:
   "cap_relation cap (cteCap cte) \<Longrightarrow>
    corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True dc
       (pspace_distinct and pspace_aligned and valid_objs and cte_at p)
@@ -3826,7 +3826,7 @@ lemma create_reply_master_corres:
     apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap)+
   apply (rule corres_guard_imp)
     apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l'])
-     apply (rule set_cap_pspace_corres)
+     apply (rule setCTE_corres)
      apply simp
     apply wp
    apply (clarsimp simp: cte_wp_at_cte_at valid_pspace_def)
