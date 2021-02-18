@@ -499,7 +499,7 @@ locale delete_one = delete_one_conc + delete_one_abs +
                (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 
-lemma (in delete_one) reply_cancel_ipc_corres:
+lemma (in delete_one) cancelIPC_ReplyCap_corres:
   "corres dc (einvs  and st_tcb_at awaiting_reply t)
              (invs' and st_tcb_at' awaiting_reply' t)
       (reply_cancel_ipc t)
@@ -607,7 +607,7 @@ lemma (in delete_one) cancelIPC_corres:
          apply simp
         apply simp
        apply (rule corres_guard_imp)
-         apply (rule reply_cancel_ipc_corres)
+         apply (rule cancelIPC_ReplyCap_corres)
         apply (clarsimp elim!: st_tcb_weakenE)
        apply (clarsimp elim!: pred_tcb'_weakenE)
       apply (rule corres_guard_imp [OF cancelSignal_corres], simp+)
