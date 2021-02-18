@@ -252,7 +252,7 @@ lemma get_asid_pool_corres_inv':
                 (asid_pool_at p) (pspace_aligned' and pspace_distinct')
                 (get_asid_pool p) (getObject p')"
   apply (rule corres_rel_imp)
-   apply (rule get_asid_pool_corres'[OF assms])
+   apply (rule getObject_ASIDPool_corres'[OF assms])
   apply simp
   done
 
@@ -399,7 +399,7 @@ lemma deleteASIDPool_corres:
       apply (rule corres_when)
        apply simp
       apply (simp add: liftM_def)
-      apply (rule corres_split [OF _ get_asid_pool_corres'[OF refl]])
+      apply (rule corres_split [OF _ getObject_ASIDPool_corres'[OF refl]])
         apply (rule corres_split)
            prefer 2
            apply (rule corres_mapM [where r=dc and r'=dc], simp, simp)
@@ -1493,7 +1493,7 @@ lemma performASIDPoolInvocation_corres:
               prefer 2
               apply (simp cong: corres_weak_cong)
               apply (rule corres_rel_imp)
-               apply (rule get_asid_pool_corres'[OF refl])
+               apply (rule getObject_ASIDPool_corres'[OF refl])
               apply simp
              apply (simp only: return_bind cong: corres_weak_cong)
              apply (rule set_asid_pool_corres')

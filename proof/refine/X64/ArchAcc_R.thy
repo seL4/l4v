@@ -37,7 +37,7 @@ lemma asid_low_bits [simp]:
   "asidLowBits = asid_low_bits"
   by (simp add: asid_low_bits_def asidLowBits_def)
 
-lemma get_asid_pool_corres:
+lemma getObject_ASIDPool_corres:
   "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (asid_pool_at' p)
           (get_asid_pool p) (getObject p)"
@@ -100,14 +100,14 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
                         projectKOs)
   done
 
-lemma get_asid_pool_corres':
+lemma getObject_ASIDPool_corres':
   assumes "p' = p"
   shows "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
                 (asid_pool_at p) (pspace_aligned' and pspace_distinct')
                 (get_asid_pool p) (getObject p')"
   apply (simp add: assms)
   apply (rule stronger_corres_guard_imp,
-         rule get_asid_pool_corres)
+         rule getObject_ASIDPool_corres)
    apply auto
   done
 
@@ -1681,7 +1681,7 @@ lemma findVSpaceForASID_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_asid_pool_corres'[OF refl]])
+    apply (rule corres_split [OF _ getObject_ASIDPool_corres'[OF refl]])
       apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)

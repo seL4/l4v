@@ -197,7 +197,7 @@ lemma corres_cross_over_asid_pool_at:
   apply assumption
   done
 
-lemma get_asid_pool_corres:
+lemma getObject_ASIDPool_corres:
   "p' = p \<Longrightarrow>
    corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
@@ -981,7 +981,7 @@ lemma findVSpaceForASID_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_asid_pool_corres[OF refl]])
+    apply (rule corres_split [OF _ getObject_ASIDPool_corres[OF refl]])
       apply (rule_tac P="case_option \<top> pt_at (pool (ucast asid)) and pspace_aligned and pspace_distinct"
                  and P'="no_0_obj'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
