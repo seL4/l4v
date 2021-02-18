@@ -2682,7 +2682,7 @@ lemma unbind_maybe_notification_valid_idle[wp]:
   apply (auto simp: obj_at_def is_ntfn_def)
   done
 
-lemma fast_finaliseCap_corres:
+lemma fast_finalise_corres:
   "dcorres dc \<top> (valid_state and valid_idle and valid_etcbs) (PageTableUnmap_D.fast_finalise (transform_cap rv') final)
    (IpcCancel_A.fast_finalise rv' final)"
   apply (case_tac rv')
@@ -2947,7 +2947,7 @@ lemma delete_cap_simple_corres:
            apply (rule corres_split[where r'="dc"])+
               apply (rule always_empty_slot_corres)
              apply simp
-             apply (rule fast_finaliseCap_corres)
+             apply (rule fast_finalise_corres)
             apply wp
            apply (rule hoare_post_imp [where Q="\<lambda>r. valid_mdb and valid_idle
                         and  not_idle_thread (fst slot) and valid_etcbs"])
