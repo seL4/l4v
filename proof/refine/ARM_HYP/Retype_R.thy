@@ -5203,9 +5203,6 @@ lemma corres_retype_update_gsI:
   using corres_retype' [OF not_zero aligned obj_bits_api check usv ko orr cover]
   by (simp add: f)
 
-lemma gcd_corres: "corres (=) \<top> \<top> (gets cur_domain) curDomain"
-  by (simp add: curDomain_def state_relation_def)
-
 lemma retype_region2_extra_ext_mapM_x_corres:
   shows "corres dc
            (valid_etcbs and (\<lambda>s. \<forall>addr\<in>set addrs. tcb_at addr s))
@@ -5217,7 +5214,7 @@ lemma retype_region2_extra_ext_mapM_x_corres:
              addrs)"
   apply (rule corres_guard_imp)
     apply (simp add: retype_region2_extra_ext_def curDomain_mapM_x_futz[symmetric] when_def)
-    apply (rule corres_split_eqr[OF _ gcd_corres])
+    apply (rule corres_split_eqr[OF _ curDomain_corres])
       apply (rule_tac S="Id \<inter> {(x, y). x \<in> set addrs}"
                   and P="\<lambda>s. (\<forall>t \<in> set addrs. tcb_at t s) \<and> valid_etcbs s"
                   and P'="\<lambda>s. \<forall>t \<in> set addrs. tcb_at' t s"
