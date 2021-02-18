@@ -3952,7 +3952,7 @@ lemma unbindMaybeNotification_corres:
                   split: option.splits)
   done
 
-lemma fast_finalise_corres:
+lemma fast_finaliseCap_corres:
   "\<lbrakk> final_matters' cap' \<longrightarrow> final = final'; cap_relation cap cap';
      can_fast_finalise cap \<rbrakk>
    \<Longrightarrow> corres dc
@@ -4000,7 +4000,7 @@ lemma cap_delete_one_corres:
         apply fastforce
        apply (rule corres_split [OF _ isFinalCapability_corres[where ptr=ptr]])
          apply (simp add: split_def bind_assoc [THEN sym])
-         apply (rule corres_split [OF _ fast_finalise_corres[where sl=ptr]])
+         apply (rule corres_split [OF _ fast_finaliseCap_corres[where sl=ptr]])
               apply (rule emptySlot_corres)
              apply simp+
           apply (wp hoare_drop_imps)+
