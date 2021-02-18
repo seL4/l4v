@@ -656,7 +656,7 @@ lemma set_pt_vs_lookup [wp]:
 
 lemmas liftE_get_pde_corres = getObject_PDE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 lemmas liftE_get_pte_corres = get_pte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
-lemmas liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+lemmas liftE_get_pdpte_corres = getObject_PDPTE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
 
 lemma unmapPage_corres:
   assumes "sz' = sz" "asid' = asid" "vptr' = vptr" "pptr' = pptr"
@@ -1213,7 +1213,7 @@ lemma flush_all_corres [corres]:
 
 lemma unmapPageDirectory_corres:
   assumes "asid' = asid" "vptr' = vptr" "pd' = pd"
-  notes liftE_get_pdpte_corres = get_pdpte_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
+  notes liftE_get_pdpte_corres = getObject_PDPTE_corres'[THEN corres_liftE_rel_sum[THEN iffD2]]
   shows "corres dc
           (invs and valid_etcbs and page_directory_at pd and
            K (0 < asid \<and> is_aligned vptr pdpt_shift_bits \<and> vptr < pptr_base \<and> canonical_address vptr \<and> asid_wf asid))

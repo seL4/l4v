@@ -787,7 +787,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
          apply (rule corres_splitEE)
             prefer 2
             apply simp
-            apply (rule get_pdpte_corres')
+            apply (rule getObject_PDPTE_corres')
            apply (simp add: unlessE_whenE)
            apply (rule corres_splitEE)
               prefer 2

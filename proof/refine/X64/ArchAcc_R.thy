@@ -376,7 +376,7 @@ lemma mask_pdpt_bits_inner_beauty:
   (p && ~~ mask pdpt_bits) + (ucast ((ucast (p && mask pdpt_bits >> word_size_bits)) :: 9 word) << word_size_bits) = (p::machine_word)"
   by (rule mask_split_aligned; simp add: bit_simps)
 
-lemma get_pdpte_corres:
+lemma getObject_PDPTE_corres:
   "corres (pdpte_relation') (pdpte_at p) (pdpte_at' p)
      (get_pdpte p) (getObject p)"
   apply (simp add: getObject_def get_pdpte_def get_pdpt_def get_object_def split_def bind_assoc)
@@ -439,12 +439,12 @@ lemma aligned_distinct_relation_pdpte_atI'[elim]:
                         projectKOs)
   done
 
-lemma get_pdpte_corres':
+lemma getObject_PDPTE_corres':
   "corres (pdpte_relation') (pdpte_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pdpte p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pdpte_corres)
+         rule getObject_PDPTE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pdpte_atI')
@@ -1308,7 +1308,7 @@ lemma lookupPDSlot_corres:
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
          prefer 2
-         apply (simp, rule get_pdpte_corres')
+         apply (simp, rule getObject_PDPTE_corres')
         apply (case_tac pdpte; simp add: lookup_failure_map_def bit_simps lookupPDSlotFromPD_def
                                   split: pdpte.splits)
         apply (simp add: returnOk_liftE checkPDAt_def)
@@ -1636,7 +1636,7 @@ lemma ensureSafeMapping_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_initial_splitE [where Q="\<lambda>_. \<top>" and Q'="\<lambda>_. \<top>"])
         apply simp
-        apply (rule get_pdpte_corres')
+        apply (rule getObject_PDPTE_corres')
        apply (case_tac rv, simp_all add: corres_returnOk split:X64_H.pdpte.splits if_splits)[1]
       apply wp[2]
      apply (wp hoare_drop_imps | wpc | simp add: valid_mapping_entries_def)+
