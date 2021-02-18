@@ -295,7 +295,7 @@ lemma updateObject_tcb_inv:
   "\<lbrace>P\<rbrace> updateObject (obj::tcb) ko p q n \<lbrace>\<lambda>rv. P\<rbrace>"
   by simp (rule updateObject_default_inv)
 
-lemma tcb_update_corres':
+lemma setObject_update_TCB_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"
   assumes tables: "\<forall>(getF, v) \<in> ran tcb_cap_cases. getF tcbu = getF tcb"
   assumes tables': "\<forall>(getF, v) \<in> ran tcb_cte_cases. getF tcbu' = getF tcb'"
@@ -327,7 +327,7 @@ lemma tcb_update_corres':
   apply simp
   done
 
-lemma tcb_update_corres:
+lemma setObject_update_TCB_corres:
   "\<lbrakk> tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu';
      \<forall>(getF, v) \<in> ran tcb_cap_cases. getF tcbu = getF tcb;
      \<forall>(getF, v) \<in> ran tcb_cte_cases. getF tcbu' = getF tcb';
@@ -336,7 +336,7 @@ lemma tcb_update_corres:
                (\<lambda>s'. (tcb', s') \<in> fst (getObject add s'))
                (set_object add (TCB tcbu)) (setObject add tcbu')"
   apply (rule corres_guard_imp)
-    apply (erule (3) tcb_update_corres', force)
+    apply (erule (3) setObject_update_TCB_corres', force)
    apply fastforce
   apply (clarsimp simp: getObject_def in_monad split_def obj_at'_def
                         loadObject_default_def projectKOs objBits_simps'
@@ -393,7 +393,7 @@ lemma threadset_corresT:
   apply (simp add: thread_set_def threadSet_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getObject_TCB_corres])
-      apply (rule tcb_update_corres')
+      apply (rule setObject_update_TCB_corres')
           apply (erule x)
          apply (rule y)
         apply (clarsimp simp: bspec_split [OF spec [OF z]])
@@ -1444,7 +1444,7 @@ lemma corres_as_user':
                      (\<lambda>s'. (tcb', s') \<in> fst (getObject add s'))
                      (set_object add (TCB (tcb \<lparr> tcb_arch := arch_tcb_context_set con (tcb_arch tcb) \<rparr>)))
                      (setObject add (tcb' \<lparr> tcbArch := atcbContextSet con' (tcbArch tcb') \<rparr>))"
-    by (rule tcb_update_corres [OF L2],
+    by (rule setObject_update_TCB_corres [OF L2],
         (simp add: tcb_cte_cases_def tcb_cap_cases_def exst_same_def)+)
   have L4: "\<And>con con'. con = con' \<Longrightarrow>
             corres (\<lambda>(irv, nc) (irv', nc'). r irv irv' \<and> nc = nc')
@@ -4679,7 +4679,7 @@ lemma asUser_irq_handlers':
   apply (wpsimp wp: threadSet_irq_handlers' [OF all_tcbI, OF ball_tcb_cte_casesI] select_f_inv)
   done
 
-(* the brave can try to move this up to near tcb_update_corres' *)
+(* the brave can try to move this up to near setObject_update_TCB_corres' *)
 
 definition non_exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
 where

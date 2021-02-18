@@ -1500,7 +1500,7 @@ lemma archThreadSet_corres:
   "(\<And>a a'. arch_tcb_relation a a' \<Longrightarrow> arch_tcb_relation (f a) (f' a')) \<Longrightarrow>
   corres dc (tcb_at t) (tcb_at' t) (arch_thread_set f t) (archThreadSet f' t)"
   apply (simp add: arch_thread_set_def archThreadSet_def)
-  apply (corres corres: get_tcb_corres tcb_update_corres')
+  apply (corres corres: get_tcb_corres setObject_update_TCB_corres')
   apply wpsimp+
   apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
   done
