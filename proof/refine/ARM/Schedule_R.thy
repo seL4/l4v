@@ -1757,7 +1757,7 @@ lemma bind_dummy_ret_val:
    od = do a; b od"
   by simp
 
-lemma schedule_ChooseNewThread_fragment_corres:
+lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
      (do _ \<leftarrow> when (domainTime = 0) next_domain;
          choose_thread
@@ -1841,7 +1841,7 @@ lemma scheduleChooseNewThread_corres:
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ getDomainTime_corres], clarsimp)
-      apply (rule corres_split[OF _ schedule_ChooseNewThread_fragment_corres, simplified bind_assoc])
+      apply (rule corres_split[OF _ scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule setSchedulerAction_corres)
         apply (wp | simp)+
     apply (wp | simp add: getDomainTime_def)+
