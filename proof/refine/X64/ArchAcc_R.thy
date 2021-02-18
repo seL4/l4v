@@ -792,7 +792,7 @@ lemma more_pml4_inner_beauty:
   by (rule mask_split_aligned_neg[OF _ _ x]; simp add: bit_simps)
 
 \<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
-lemma set_pml4_corres:
+lemma setObject_PML4_corres:
   "pml4e_relation' pml4e pml4e' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageMapL4 pt)) (p && ~~ mask pml4_bits)
                      and pspace_aligned and valid_etcbs)
@@ -880,7 +880,7 @@ lemma store_pml4e_corres [corres]:
   using assms
   apply (simp add: store_pml4e_def storePML4E_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pml4_corres)
+     apply (erule setObject_PML4_corres)
     apply (clarsimp simp: exs_valid_def get_pml4_def get_object_def exec_gets bind_assoc
                           obj_at_def pml4e_at_def)
     apply (clarsimp simp: a_type_def return_def
