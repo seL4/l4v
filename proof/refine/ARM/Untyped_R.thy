@@ -3817,7 +3817,7 @@ lemma updateCap_isUntypedCap_corres:
        apply (rule_tac F = " (cap.UntypedCap dev r bits f) = free_index_update (\<lambda>_. f) c"
                       in corres_gen_asm)
        apply simp
-       apply (rule set_untyped_cap_corres)
+       apply (rule setCTE_UntypedCap_corres)
          apply ((clarsimp simp: cte_wp_at_caps_of_state cte_wp_at_ctes_of)+)[3]
       apply (subst identity_eq)
       apply (wp getCTE_sp getCTE_get no_fail_getCTE)+

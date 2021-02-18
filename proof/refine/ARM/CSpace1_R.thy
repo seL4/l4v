@@ -3665,7 +3665,7 @@ lemma updateUntypedCap_descendants_of:
   apply (clarsimp simp:mdb_next_rel_def mdb_next_def split:if_splits)
   done
 
-lemma set_untyped_cap_corres:
+lemma setCTE_UntypedCap_corres:
   "\<lbrakk>cap_relation cap (cteCap cte); is_untyped_cap cap; idx' = idx\<rbrakk>
    \<Longrightarrow> corres dc (cte_wp_at ((=) cap) src and valid_objs and
                   pspace_aligned and pspace_distinct)
@@ -3777,7 +3777,7 @@ lemma setUntypedCapAsFull_corres:
         apply (rule corres_symb_exec_r)
            apply (rule_tac F="cte = srcCTE" in corres_gen_asm2)
            apply (simp)
-           apply (rule set_untyped_cap_corres)
+           apply (rule setCTE_UntypedCap_corres)
              apply simp+
            apply (clarsimp simp:free_index_update_def isCap_simps is_cap_simps)
            apply (subst identity_eq)
