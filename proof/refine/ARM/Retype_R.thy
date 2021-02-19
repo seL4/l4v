@@ -2576,7 +2576,7 @@ lemma copy_global_corres:
                    and Q'="\<lambda>xs s. \<forall>x \<in> set xs. pde_at' (global_pd + (x << 2)) s
                                               \<and> pde_at' (pd + (x << 2)) s"
                           in corres_mapM_list_all2, (simp add: pdeBits_def)+)
-          apply (rule corres_guard_imp, rule corres_split)
+          apply (rule corres_guard_imp, rule corres_split_deprecated)
                apply (erule store_pde_corres[OF _ refl])
               apply (rule corres_rel_imp)
                apply (rule_tac get_pde_corres[OF refl])
