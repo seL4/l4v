@@ -110,7 +110,7 @@ lemma corres_split_liftM2:
   and h1: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" and h2: "\<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>x. R' (f x)\<rbrace>"
   shows "corres r (P and Q) (P' and Q') (a >>= b) (liftM f c >>= d)"
   apply (rule corres_guard_imp)
-  apply (rule corres_split [OF _ _ h1])
+  apply (rule corres_split_deprecated [OF _ _ h1])
        prefer 2
        apply (simp add: o_def)
        apply (rule corr)
@@ -174,7 +174,7 @@ lemma dec_cnode_inv_corres:
              apply (rule corres_splitEE [OF _ ensure_empty_corres])
                 apply (rule corres_splitEE [OF _ lsfc_corres])
                     apply (simp(no_asm) add: liftE_bindE del: de_Morgan_conj split del: if_split)
-                    apply (rule corres_split [OF _ get_cap_corres'])
+                    apply (rule corres_split_deprecated [OF _ get_cap_corres'])
                        prefer 2
                        apply (simp add: split_def)
                       apply (rule whenE_throwError_corres)
@@ -240,7 +240,7 @@ lemma dec_cnode_inv_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE [OF _ lsfc_corres])
           apply (simp(no_asm) add: split_beta liftE_bindE)
-          apply (rule corres_split [OF _ get_cap_corres'])
+          apply (rule corres_split_deprecated [OF _ get_cap_corres'])
              apply (rule corres_split_norE)
                 apply (rule corres_trivial)
                 apply (clarsimp simp add: returnOk_def)
@@ -6763,7 +6763,7 @@ proof -
   show ?thesis
     unfolding spec_corres_def
     apply (rule corres_guard_imp)
-      apply (rule corres_split)
+      apply (rule corres_split_deprecated)
          apply (erule w)
         apply (rule x[unfolded spec_corres_def])
        apply (wp z)
@@ -7238,7 +7238,7 @@ next
          apply (simp add: in_monad)
         apply (rule drop_spec_corres)
         apply (simp add: liftE_bindE del: rec_del.simps)
-        apply (rule corres_split [OF _ get_cap_corres])
+        apply (rule corres_split_deprecated [OF _ get_cap_corres])
           apply (rule_tac F="cteCap ourCTE = Zombie ptr (zbits_map bits) (Suc n)
                                \<or> cteCap ourCTE = NullCap
                                \<or> (\<exists>zb n cp. cteCap ourCTE = Zombie (cte_map slot) zb n
@@ -8661,7 +8661,7 @@ lemma inv_cnode_corres:
      apply simp
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF cap_move_corres])
+      apply (rule corres_split_deprecated [OF cap_move_corres])
          apply assumption
         apply (erule cap_move_corres)
        apply wp

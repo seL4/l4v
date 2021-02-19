@@ -635,7 +635,7 @@ lemma updateReply_replyPrev_same_corres:
      (updateReply rp f)"
   apply (simp add: update_sk_obj_ref_def updateReply_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_reply_corres])
+    apply (rule corres_split_deprecated[OF _ get_reply_corres])
       apply (rule set_reply_corres)
       apply (simp add: rr)
      apply wpsimp+
@@ -647,7 +647,7 @@ lemma updateReply_replyPrev_corres:
      (updateReply rp (replyPrev_update (\<lambda>_. new)))"
   apply (simp add: update_sk_obj_ref_def updateReply_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_reply_corres])
+    apply (rule corres_split_deprecated[OF _ get_reply_corres])
       apply (rule setReply_not_queued_corres)
       apply (simp add: reply_relation_def)
   by wpsimp+
@@ -679,7 +679,7 @@ lemma replyNext_update_corres_Head:
    (updateReply rptr (\<lambda>reply. replyNext_update (\<lambda>_. Some (Head scptr)) reply))"
   unfolding update_sk_obj_ref_def updateReply_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF set_reply_corres get_reply_corres])
+    apply (rule corres_split_deprecated [OF set_reply_corres get_reply_corres])
       apply (clarsimp simp: reply_relation_def)
      apply wpsimp+
   apply (clarsimp simp: obj_at'_def replyPrev_same_def)
@@ -692,7 +692,7 @@ lemma replyNext_update_corres_Next:
     unfolding update_sk_obj_ref_def updateReply_def
   apply clarsimp
   apply (rule corres_guard_imp)
-  apply (rule corres_split [OF set_reply_corres get_reply_corres])
+  apply (rule corres_split_deprecated [OF set_reply_corres get_reply_corres])
   apply (clarsimp simp: reply_relation_def)
   apply wpsimp+
   apply (clarsimp simp: obj_at'_def replyPrev_same_def)
@@ -746,7 +746,7 @@ lemma bindReplySc_corres:
   unfolding bind_sc_reply_def bindScReply_def case_list_when
   apply (clarsimp simp: liftM_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_sc_corres, where R'="\<lambda>sc. reply_at' rptr and ko_at' sc scptr"])
+    apply (rule corres_split_deprecated [OF _ get_sc_corres, where R'="\<lambda>sc. reply_at' rptr and ko_at' sc scptr"])
     (* This command is the lynch-pin. This does all useful state-relation lifting
          and prepares the rest of the argument*)
       apply (rule_tac Q'="reply_at' rptr and ko_at' sc scptr
@@ -760,14 +760,14 @@ lemma bindReplySc_corres:
                and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext x n) scptr s)"
              in stronger_corres_guard_imp)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [where r'=dc])
+          apply (rule corres_split_deprecated [where r'=dc])
              apply (rule corres_add_noop_lhs)
              apply (rule monadic_rewrite_corres
                           [OF _ monadic_rewrite_bind_head,
                            OF _ set_reply_obj_ref_noop[where rptr=rptr and x=None]])
              apply (simp add: bind_assoc)
-             apply (rule corres_split[OF _ updateReply_replyPrev_corres])
-                  apply (rule corres_split[OF _ update_sc_reply_stack_update_ko_at'_corres])
+             apply (rule corres_split_deprecated[OF _ updateReply_replyPrev_corres])
+                  apply (rule corres_split_deprecated[OF _ update_sc_reply_stack_update_ko_at'_corres])
                     apply (rule updateReply_replyPrev_same_corres)
                     apply (clarsimp simp: reply_relation_def)
                    apply (wpsimp wp: updateReply_replyNexts_replyPrevs)+
