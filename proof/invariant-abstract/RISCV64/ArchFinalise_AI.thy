@@ -388,10 +388,9 @@ lemma arch_thread_set_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace>
      arch_thread_set p v
    \<lbrace>\<lambda>s. cap_refs_respects_device_region\<rbrace>"
-  apply (simp add: arch_thread_set_def set_object_def get_object_def)
+  apply (simp add: arch_thread_set_def set_object_def get_object_def gets_the_def assert_opt_def)
   apply wp
   apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst cap_refs_respects_region_cong)
     prefer 3
     apply assumption
@@ -450,14 +449,10 @@ lemma arch_thread_set_pred_tcb_at[wp_unsafe]:
 
 lemma arch_thread_set_if_unsafe_then_cap[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
-  apply (simp add: arch_thread_set_def)
+  apply (simp add: arch_thread_set_def gets_the_def assert_opt_def)
   apply (wp get_object_wp set_object_ifunsafe)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev)
-  apply assumption
-  apply simp
-  apply (subst get_tcb_rev, assumption, simp)+
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 
@@ -479,7 +474,6 @@ lemma arch_thread_set_valid_ioc[wp]:
                   simp del: fun_upd_apply
                   split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
   apply (subst cte_wp_at_update_some_tcb,assumption)
    apply (clarsimp simp: tcb_cnode_map_def)+
@@ -493,10 +487,6 @@ lemma arch_thread_set_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> arch_t
   apply (wp get_object_wp set_object_zombies)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev)
-  apply assumption
-  apply simp
-  apply (subst get_tcb_rev, assumption, simp)+
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 
@@ -526,7 +516,6 @@ lemma arch_thread_set_valid_objs_context[wp]:
   apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
   apply (erule_tac x=v in allE)
   apply (clarsimp simp: dom_def)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def)
   done
 
@@ -543,7 +532,6 @@ lemma arch_thread_sym_refs[wp]:
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
   apply (subst sym_refs_update_some_tcb[where f="tcb_arch_update f"])
     apply assumption
@@ -573,7 +561,6 @@ lemma arch_thread_set_if_live_then_nonz_cap':
   apply (wp set_object_iflive)
   apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   apply (erule_tac x=v in allE, drule mp; assumption?)
   apply (clarsimp simp: live_def)
@@ -1384,7 +1371,6 @@ lemma arch_thread_set_cte_wp_at[wp]:
   apply (simp add: arch_thread_set_def)
   apply (wp set_object_wp)
   apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
   apply (subst cte_wp_at_update_some_tcb[where f="tcb_arch_update f"])
     apply (clarsimp simp: tcb_cnode_map_def)+
