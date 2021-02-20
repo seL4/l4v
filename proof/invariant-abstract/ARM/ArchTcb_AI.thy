@@ -226,7 +226,6 @@ lemma as_user_ipc_tcb_cap_valid4[wp]:
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
                  dest!: get_tcb_SomeD)
-  apply (clarsimp simp: get_tcb_def)
   done
 
 lemma thread_set_mcp_ex_nonz_cap_to[wp]:

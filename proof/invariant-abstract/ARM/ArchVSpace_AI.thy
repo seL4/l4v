@@ -1844,9 +1844,9 @@ lemma simpler_set_pd_def:
               False)
         else ({}, True))"
   apply (rule ext)
-  apply (auto simp: set_pd_def get_object_def simpler_gets_def assert_def
+  apply (auto simp: set_pd_def get_object_def simpler_gets_def assert_def gets_the_def assert_opt_def
                     return_def fail_def set_object_def get_def put_def bind_def a_type_def
-          split: Structures_A.kernel_object.split arch_kernel_obj.split)
+             split: Structures_A.kernel_object.split arch_kernel_obj.split option.splits)
   done
 
 lemma set_pd_valid_vs_lookup_map:
@@ -2817,7 +2817,8 @@ lemma simpler_store_pde_def:
         | _ => ({}, True))"
   apply     (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
                         return_def fail_def set_object_def get_def put_def bind_def get_pd_def
-                  split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
+                        gets_the_def assert_opt_def
+                 split: Structures_A.kernel_object.splits option.splits arch_kernel_obj.splits if_split_asm)
   done
 
 lemma pde_update_valid_vspace_objs:

@@ -1273,11 +1273,12 @@ lemma valid_pd_kernel_mappings [iff]:
 (* FIXME: Clagged *)
 lemma get_cap_update [iff]:
   "(fst (get_cap p (f s)) = {(cap, f s)}) = (fst (get_cap p s) = {(cap, s)})"
-  apply (simp add: get_cap_def get_object_def bind_assoc
-                   exec_gets split_def assert_def pspace)
+  apply (simp add: get_cap_def get_object_def bind_assoc read_object_def gets_the_def
+                   exec_gets split_def assert_def pspace assert_opt_def
+            split: option.splits)
   apply (clarsimp simp: fail_def)
-  apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
-      apply (simp_all add: return_def fail_def assert_def bind_def)
+  apply (rename_tac ko, case_tac ko, simp_all add: assert_opt_def split: option.splits)
+        apply (simp_all add: return_def fail_def assert_def bind_def)
   done
 
 (* FIXME: Clagged *)
