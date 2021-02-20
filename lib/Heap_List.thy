@@ -267,4 +267,73 @@ lemma heap_ls_next_not_in:
   \<Longrightarrow> np \<notin> set xs"
   by (fastforce dest!: heap_ls_prev_cases[simplified])
 
+(* more on heap_path *)
+
+(* moved from ListLibLemmas *)
+lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb) \<Longrightarrow> list = (ya @ x # yb) \<Longrightarrow> xa = ya \<and> xb = yb"
+  apply (induct list arbitrary: xa ya)
+  apply simp
+  apply clarsimp
+  apply (case_tac "xa")
+   apply simp
+   apply (case_tac "ya")
+    apply simp
+   apply clarsimp
+  apply clarsimp
+  apply (case_tac "ya")
+   apply (simp (no_asm_simp))
+   apply simp
+  apply clarsimp
+  done
+
+lemma heap_ls_next_takeWhile_append:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
+  \<Longrightarrow> takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
+  apply (frule heap_ls_distinct)
+  apply (frule in_list_decompose_takeWhile)
+  apply (subgoal_tac "heap_ls hp st (takeWhile ((\<noteq>) p) xs @ p # drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs)")
+   prefer 2 apply simp
+  apply (drule heap_path_non_nil_lookup_next)
+  apply (case_tac "drop (length (takeWhile ((\<noteq>) p) xs) + 1) xs"; simp)
+  apply (subgoal_tac "np \<in> set xs")
+   prefer 2 apply (erule (2) heap_ls_next_in_list)
+  apply (frule in_list_decompose_takeWhile[where x=np])
+  apply (drule (1) distinct_inj_middle[where x=np and xa="takeWhile ((\<noteq>) np) xs" and ya="takeWhile ((\<noteq>) p) xs @ [p]"])
+   apply simp+
+  done
+
+(* RT FIXME: Move *)
+lemma takeWhile_neq_notin_same:
+  "x \<notin> set xs \<Longrightarrow> takeWhile ((\<noteq>) x) xs = xs"
+  using takeWhile_eq_all_conv by blast
+
+lemma heap_path_extend_takeWhile:
+  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p); hp p = Some np\<rbrakk>
+  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np)"
+  apply (case_tac "p \<in> set xs")
+  apply (subst heap_ls_next_takeWhile_append[where p=p and np=np and hp=hp]; simp)
+  apply (drule takeWhile_neq_notin_same, simp)
+  apply (drule (1) heap_path_end_unique, simp)
+  done
+
+lemma heap_ls_next_takeWhile_append_sym:
+  "\<lbrakk>heap_ls hp st xs; np \<in> set xs; st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
+  \<Longrightarrow>takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
+  apply (frule (3) heap_ls_prev_cases, simp)
+  apply (fastforce elim!: heap_ls_next_takeWhile_append)
+  done
+
+lemma heap_path_curtail_takeWhile:
+  "\<lbrakk>heap_ls hp st xs; heap_path hp st (takeWhile ((\<noteq>) np) xs) (Some np);
+    st \<noteq> Some np; hp p = Some np; sym_heap hp hp'\<rbrakk>
+  \<Longrightarrow> heap_path hp st (takeWhile ((\<noteq>) p) xs) (Some p)"
+  apply (case_tac "np \<in> set xs")
+   apply (drule (4) heap_ls_next_takeWhile_append_sym)
+   apply simp
+  apply (drule takeWhile_neq_notin_same, simp)
+  apply (drule (1) heap_path_end_unique, simp)
+  done
+
+(* more on heap_path : end *)
+
 end
