@@ -2669,10 +2669,11 @@ lemma valid_vso_at_update [iff]:
 (* FIXME: move to generic *)
 lemma get_cap_update [iff]:
   "(fst (get_cap p (f s)) = {(cap, f s)}) = (fst (get_cap p s) = {(cap, s)})"
-  apply (simp add: get_cap_def get_object_def bind_assoc
-                   exec_gets split_def assert_def pspace)
+  apply (simp add: get_cap_def get_object_def bind_assoc gets_the_def read_object_def
+                   exec_gets split_def assert_def pspace assert_opt_def
+            split: option.splits)
   apply (clarsimp simp: fail_def)
-  apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
+  apply (rename_tac obj; case_tac obj, simp_all add: assert_opt_def split: option.splits)
       apply (simp_all add: return_def fail_def assert_def bind_def)
   done
 
