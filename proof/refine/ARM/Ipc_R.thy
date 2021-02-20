@@ -5476,7 +5476,7 @@ lemma handleTimeout_corres:
              apply (rule corres_split_catch[OF _ send_fault_ipc_corres])
                   apply (fastforce simp: tcb_relation_def)+
               apply (wp getTCB_wp)+
-        apply (fastforce simp: pred_tcb_at_def cte_wp_at_def obj_at_def is_tcb_def get_cap_def
+        apply (fastforce simp: pred_tcb_at_def cte_wp_at_def obj_at_def is_tcb_def get_cap_def gets_the_def
                                get_object_def get_tcb_def valid_obj_def valid_tcb_def bind_def
                                return_def tcb_cap_cases_def tcb_cnode_map_def simpler_gets_def
                          dest: invs_valid_objs)
@@ -5492,7 +5492,7 @@ lemma handleTimeout_corres:
    apply (auto simp: other_obj_relation_def tcb_relation_def cap_relation_def
                      cte_wp_at_caps_of_state caps_of_state_def tcb_cnode_map_def
                      get_object_def get_tcb_def get_cap_def simpler_gets_def
-                     return_def bind_def is_cap_simps isCap_simps)
+                     return_def bind_def is_cap_simps isCap_simps gets_the_def)
   done
 
 lemma hf_invs' [wp]:

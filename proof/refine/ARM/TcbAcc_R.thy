@@ -627,12 +627,12 @@ lemma threadSet_corres_noopT:
 proof -
   have S: "\<And>t s. tcb_at t s \<Longrightarrow> return v s = (thread_set id t >>= (\<lambda>x. return v)) s"
     apply (clarsimp simp: tcb_at_def)
-    apply (simp add: return_def thread_set_def gets_the_def
-                     assert_opt_def simpler_gets_def set_object_def get_object_def
-                     put_def get_def bind_def assert_def a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
+    apply (clarsimp simp: return_def thread_set_def gets_the_def
+                          assert_opt_def simpler_gets_def set_object_def get_object_def
+                          put_def get_def bind_def assert_def a_type_def[split_simps kernel_object.split arch_kernel_obj.split]
+                   dest!: get_tcb_SomeD)
     apply (subgoal_tac "kheap s(t \<mapsto> TCB tcb) = kheap s", simp)
      apply (simp add: map_upd_triv get_tcb_SomeD)
-    apply (simp add: get_tcb_SomeD map_upd_triv)
     done
   show ?thesis
     apply (rule stronger_corres_guard_imp)
@@ -2341,8 +2341,9 @@ lemma isSchedulable_corres:
 
 lemma get_simple_ko_exs_valid:
   "\<lbrakk>inj C; \<exists>ko. ko_at (C ko) p s \<and> is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
-  by (auto simp: get_simple_ko_def get_object_def gets_def return_def get_def
-                     partial_inv_def exs_valid_def bind_def obj_at_def is_reply fail_def inj_def split: prod.splits)
+  by (fastforce simp: get_simple_ko_def get_object_def gets_def return_def get_def
+                      partial_inv_def exs_valid_def bind_def obj_at_def is_reply fail_def inj_def
+                      gets_the_def assert_def)
 
 lemmas get_notification_exs_valid[wp] =
   get_simple_ko_exs_valid[where C=kernel_object.Notification, simplified]

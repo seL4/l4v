@@ -621,7 +621,7 @@ lemma set_reply_obj_ref_noop:
    (return ())
    (set_reply_obj_ref (K id) rptr x)"
   by (clarsimp simp: set_simple_ko_def monadic_rewrite_def exec_gets
-                     update_sk_obj_ref_def
+                     update_sk_obj_ref_def gets_the_def
                      get_simple_ko_def partial_inv_inj_Some get_object_def bind_assoc obj_at_def
                      is_reply_def2 set_object_def exec_get put_id_return)
 

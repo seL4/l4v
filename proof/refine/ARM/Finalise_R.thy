@@ -1465,7 +1465,7 @@ lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad set_object_def get_object_def)
-  apply (case_tac y)
+  apply (rename_tac obj s'' obj' kobj; case_tac obj)
   apply (auto simp add: in_monad set_object_def split: if_split_asm)
   done
 
