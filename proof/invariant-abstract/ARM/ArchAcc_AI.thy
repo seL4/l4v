@@ -1147,8 +1147,9 @@ lemma simpler_set_pt_def:
            ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>)}, False)
         else ({}, True))"
   apply (rule ext)
-  apply (clarsimp simp: set_pt_def set_object_def get_object_def assert_def
-                        put_def get_def simpler_gets_def bind_def return_def fail_def)
+  apply (clarsimp simp: set_pt_def set_object_def get_object_def assert_def read_object_def assert_opt_def
+                        put_def get_def simpler_gets_def bind_def return_def fail_def gets_the_def
+                 split: option.split)
   apply (rule conjI)
    apply (clarsimp simp: set_pt_def set_object_def get_object_def assert_def
                          put_def get_def simpler_gets_def bind_def
@@ -3328,7 +3329,7 @@ proof -
      prefer 2
      apply assumption
     apply (rule ext)
-    apply (simp add: get_tcb_def)
+    apply (simp add: get_tcb_def read_object_def)
     apply (case_tac "kheap s t"; simp)
     apply (case_tac a; simp)
     apply (clarsimp simp: arch_tcb_context_set_def arch_tcb_context_get_def)
