@@ -336,7 +336,7 @@ lemma get_asid_pool_corres [corres]:
    apply wp
    apply (fastforce simp: typ_at_to_obj_at_arches
                     dest: no_ofailD[OF no_ofail_asidpool_at'_readObject])
-  apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
+  apply (clarsimp simp: in_monad loadObject_default_def projectKOs gets_the_def)
   apply (simp add: bind_assoc exec_gets)
   apply (drule asid_pool_at_ko)
   apply (clarsimp simp: obj_at_def)
@@ -420,7 +420,7 @@ lemma get_pde_corres [corres]:
   apply wp
    apply (fastforce simp: typ_at_to_obj_at_arches dest: no_ofailD[OF no_ofail_pde_at'_readObject])
    apply simp
-  apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
+  apply (clarsimp simp: in_monad loadObject_default_def projectKOs gets_the_def)
   apply (simp add: bind_assoc exec_gets)
   apply (clarsimp simp: pde_at_def obj_at_def)
   apply (clarsimp simp add: a_type_def return_def
@@ -499,7 +499,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
     apply (rule corres_no_failI)
      apply wp
    apply (fastforce simp: typ_at_to_obj_at_arches dest: no_ofailD[OF no_ofail_pde_at'_readObject])
-    apply (clarsimp simp: in_monad loadObject_default_def
+    apply (clarsimp simp: in_monad loadObject_default_def gets_the_def
                           projectKOs and_not_mask_twice)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pde_at_def obj_at_def)
@@ -516,7 +516,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
                      in pde_relation_alignedD)
          apply assumption
         apply (simp add:mask_pd_bits_inner_beauty)
-       apply (clarsimp simp: pde_relation_aligned_def
+       apply (clarsimp simp: pde_relation_aligned_def gets_the_def exec_gets return_def
                       split: if_splits ARM_H.pde.splits)
        apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
           apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
@@ -542,7 +542,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
       apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
         apply assumption
        apply (simp add:mask_pd_bits_inner_beauty)
-      apply (clarsimp simp:pde_relation_aligned_def
+      apply (clarsimp simp:pde_relation_aligned_def gets_the_def exec_gets return_def
         split:if_splits ARM_H.pde.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
          apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
@@ -566,7 +566,7 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
      apply (frule_tac x = "(ucast (p && mask pd_bits >> 2))" in pde_relation_alignedD)
        apply assumption
       apply (simp add:mask_pd_bits_inner_beauty)
-     apply (clarsimp simp:pde_relation_aligned_def
+     apply (clarsimp simp:pde_relation_aligned_def gets_the_def exec_gets return_def
        split:if_splits ARM_H.pde.splits)
      apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
         apply (simp add:is_aligned_neg_mask is_aligned_weaken[where y = 2])
@@ -655,7 +655,7 @@ lemma get_pte_corres [corres]:
    apply (fastforce simp: typ_at_to_obj_at_arches dest: no_ofailD[OF no_ofail_pte_at'_readObject])
    apply simp
   apply (clarsimp simp: in_monad loadObject_default_def projectKOs)
-  apply (simp add: bind_assoc exec_gets)
+  apply (simp add: bind_assoc exec_gets gets_the_def)
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (clarsimp simp add: a_type_def return_def
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
@@ -734,7 +734,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
    apply (fastforce simp: typ_at_to_obj_at_arches dest: no_ofailD[OF no_ofail_pte_at'_readObject])
     apply simp
     apply (clarsimp simp: in_monad loadObject_default_def
-      projectKOs and_not_mask_twice)
+      projectKOs and_not_mask_twice gets_the_def)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pte_at_def obj_at_def)
     apply (clarsimp split:ARM_A.pte.splits)
@@ -749,7 +749,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
       apply (frule_tac x = "(ucast (p && mask pt_bits >> 2))" in pte_relation_alignedD)
         apply assumption
        apply (simp add:mask_pt_bits_inner_beauty)
-      apply (clarsimp simp:pte_relation_aligned_def
+      apply (clarsimp simp:pte_relation_aligned_def gets_the_def exec_gets return_def
         split:if_splits ARM_H.pte.splits)
       apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
          apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
@@ -808,7 +808,7 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
                  in pte_relation_alignedD)
      apply assumption
     apply (simp add:mask_pt_bits_inner_beauty)
-   apply (clarsimp simp:pte_relation_aligned_def
+   apply (clarsimp simp:pte_relation_aligned_def gets_the_def exec_gets return_def
      split:if_splits ARM_H.pte.splits)
    apply (drule_tac p' = "p && ~~ mask 6" in valid_duplicates'_D[rotated])
       apply (simp add:is_aligned_weaken[where y = 2] is_aligned_neg_mask)
@@ -868,8 +868,8 @@ lemma set_pd_corres [@lift_corres_args, corres]:
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
-  apply (clarsimp simp: obj_at_def exec_gets)
-  apply (clarsimp simp: set_object_def bind_assoc exec_get)
+  apply (clarsimp simp: obj_at_def gets_the_def)
+  apply (clarsimp simp: set_object_def bind_assoc exec_get exec_gets)
   apply (clarsimp simp: put_def)
   apply (clarsimp simp: state_relation_def mask_pd_bits_inner_beauty)
   apply (rule conjI)
@@ -943,8 +943,8 @@ lemma set_pt_corres [@lift_corres_args, corres]:
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
-  apply (clarsimp simp: obj_at_def exec_gets)
-  apply (clarsimp simp: set_object_def bind_assoc exec_get)
+  apply (clarsimp simp: obj_at_def gets_the_def)
+  apply (clarsimp simp: set_object_def bind_assoc exec_get exec_gets)
   apply (clarsimp simp: put_def)
   apply (clarsimp simp: state_relation_def mask_pt_bits_inner_beauty)
   apply (rule conjI)
@@ -1005,13 +1005,13 @@ lemma store_pde_corres [@lift_corres_args, corres]:
   apply (rule corres_symb_exec_l)
      apply (erule set_pd_corres[OF _ refl])
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
-                          obj_at_def pde_at_def)
+                          obj_at_def pde_at_def gets_the_def)
     apply (clarsimp simp: a_type_def return_def
                     split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
    apply wp
    apply clarsimp
   apply (clarsimp simp: get_pd_def obj_at_def no_fail_def pde_at_def
-                        get_object_def bind_assoc exec_gets)
+                        get_object_def bind_assoc exec_gets gets_the_def)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
@@ -1031,14 +1031,14 @@ lemma store_pte_corres [@lift_corres_args, corres]:
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
      apply (erule set_pt_corres[OF _ refl])
-    apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
+    apply (clarsimp simp: exs_valid_def get_pt_def get_object_def gets_the_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def
                     split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
    apply wp
    apply clarsimp
   apply (clarsimp simp: get_pt_def obj_at_def pte_at_def no_fail_def
-                        get_object_def bind_assoc exec_gets)
+                        get_object_def bind_assoc exec_gets gets_the_def)
   apply (clarsimp simp: a_type_def return_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done

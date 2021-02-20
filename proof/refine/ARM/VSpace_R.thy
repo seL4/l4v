@@ -116,7 +116,7 @@ lemma find_pd_for_asid_eq_helper:
   apply (drule ucast_up_inj, simp)
   apply (simp add: find_pd_for_asid_def bind_assoc
                    word_neq_0_conv[symmetric] liftE_bindE)
-  apply (simp add: exec_gets liftE_bindE bind_assoc
+  apply (simp add: exec_gets liftE_bindE bind_assoc gets_the_def
                    get_asid_pool_def get_object_def)
   apply (simp add: mask_asid_low_bits_ucast_ucast)
   apply (drule ucast_up_inj, simp)
@@ -139,7 +139,7 @@ lemma find_pd_for_asid_assert_eq:
                   cong: bind_apply_cong)
   apply (clarsimp split: Structures_A.kernel_object.splits
                          arch_kernel_obj.splits if_split_asm)
-  apply (simp add: get_pde_def get_pd_def get_object_def
+  apply (simp add: get_pde_def get_pd_def get_object_def gets_the_def
                    bind_assoc pd_bits_def pdBits_def pdeBits_def pageBits_def)
   apply (simp add: exec_gets)
   done
@@ -221,7 +221,7 @@ lemma find_pd_for_asid_assert_corres:
            apply (clarsimp split: Structures_A.kernel_object.splits
                                   arch_kernel_obj.splits if_split_asm)
            apply (simp add: get_pde_def exs_valid_def bind_def return_def
-                            get_pd_def get_object_def simpler_gets_def)
+                            get_pd_def get_object_def simpler_gets_def gets_the_def)
           apply wp
           apply simp
          apply (simp add: get_pde_def get_pd_def)

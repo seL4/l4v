@@ -1108,7 +1108,7 @@ lemma get_ep_corres [corres]:
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_simple_ko_def getEndpoint_def get_object_def
+  apply (simp add: get_simple_ko_def getEndpoint_def get_object_def gets_the_def
                    getObject_def bind_assoc ep_at_def2)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ep partial_inv_def)
@@ -1588,7 +1588,7 @@ lemma get_ntfn_corres:
   apply (rule corres_no_failI)
    apply wp
   apply (simp add: get_simple_ko_def getNotification_def get_object_def
-                   getObject_def bind_assoc)
+                   getObject_def bind_assoc gets_the_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
@@ -1603,7 +1603,7 @@ lemma get_reply_corres:
   apply (rule corres_no_failI)
    apply wp
   apply (simp add: get_simple_ko_def getReply_def get_object_def
-                   getObject_def bind_assoc)
+                   getObject_def bind_assoc gets_the_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_reply partial_inv_def)
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
@@ -1626,7 +1626,7 @@ lemma get_sc_corres:
   apply (rule corres_no_failI)
    apply wp
   apply (simp add: get_sched_context_def getSchedContext_def get_object_def
-                   getObject_def bind_assoc)
+                   getObject_def bind_assoc gets_the_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
                  split: Structures_A.kernel_object.splits)
@@ -1643,7 +1643,7 @@ lemma get_sc_corres_size:
   apply (rule corres_no_failI)
    apply wp
   apply (simp add: get_sched_context_def getSchedContext_def get_object_def
-                   getObject_def bind_assoc)
+                   getObject_def bind_assoc gets_the_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj
                  split: Structures_A.kernel_object.splits)
@@ -3756,7 +3756,7 @@ lemma get_sched_context_exs_valid:
   "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)
    \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_sched_context scp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
   by (clarsimp simp: get_sched_context_def get_object_def obj_at_def bind_def is_sc_obj_def
-                     gets_def get_def return_def exs_valid_def
+                     gets_def get_def return_def exs_valid_def gets_the_def
               split: Structures_A.kernel_object.splits)
 
 lemma no_fail_simple_ko_at:
@@ -3773,7 +3773,7 @@ lemmas no_fail_get_endpoint[wp] = no_fail_simple_ko_at(3)
 lemma get_sched_context_no_fail:
   "no_fail (\<lambda>s. sc_at ptr s) (get_sched_context ptr)"
   by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
-                     gets_def obj_at_def is_sc_obj_def
+                     gets_def obj_at_def is_sc_obj_def gets_the_def
               split: Structures_A.kernel_object.splits)
 
 (* this let us cross the sc size information from concrete to abstract *)

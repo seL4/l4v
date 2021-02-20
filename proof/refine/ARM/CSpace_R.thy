@@ -5597,8 +5597,9 @@ lemma updateCap_same_master:
        apply (subst conj_assoc[symmetric])
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
-        apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                         split: if_split_asm Structures_A.kernel_object.splits)
+        apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
+        apply (rename_tac obj ps' s'' obj' kobj; case_tac obj;
+               simp add: return_def fail_def split: if_split_asm)
        apply (rule conjI)
         apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (intro allI conjI)
@@ -5615,8 +5616,9 @@ lemma updateCap_same_master:
          prefer 2
          apply (frule setCTE_pspace_only)
          apply clarsimp
-         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                         split: if_split_asm Structures_A.kernel_object.splits)
+         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
+        apply (rename_tac obj s'' obj' kobj; case_tac obj;
+               simp add: return_def fail_def split: if_split_asm)
         apply (frule set_cap_caps_of_state_monad)
         apply (drule is_original_cap_set_cap)
         apply clarsimp

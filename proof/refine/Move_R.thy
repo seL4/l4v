@@ -441,7 +441,8 @@ lemma update_sched_context_decompose:
   apply (rule ext)
   by (clarsimp simp: update_sched_context_def get_object_def set_object_def a_type_simps
                      gets_def get_def put_def return_def fail_def assert_def bind_def
-              split: Structures_A.kernel_object.splits)
+                     gets_the_def assert_opt_def
+              split: Structures_A.kernel_object.splits option.splits)
 
 (* FIXME RT: move to Lib? *)
 lemma maybeM_when:

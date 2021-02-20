@@ -1683,14 +1683,14 @@ lemma set_cap_not_quite_corres_prequel:
    apply (frule tcb_cases_related2)
    apply (clarsimp simp: set_cap_def2 split_def bind_def get_object_def
                          simpler_gets_def assert_def fail_def return_def
-                         set_object_def get_def put_def)
+                         set_object_def get_def put_def gets_the_def)
    apply (erule(2) pspace_relation_update_tcbs)
    apply (simp add: c)
   apply clarsimp
   apply (frule(5) cte_map_pulls_cte_to_abstract[OF p])
   apply (clarsimp simp: set_cap_def split_def bind_def get_object_def
                         simpler_gets_def assert_def fail_def return_def
-                        set_object_def get_def put_def domI
+                        set_object_def get_def put_def domI gets_the_def
                         a_type_def[split_simps kernel_object.split arch_kernel_obj.split])
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_cs_def valid_cs_size_def exI)
@@ -1779,8 +1779,9 @@ lemma set_cap_not_quite_corres:
   apply (prop_tac "sc_replies_of x = sc_replies_of s")
    apply (erule use_valid[OF _ set_cap.valid_sched_pred], simp)
   apply (clarsimp simp: set_cap_def split_def in_monad set_object_def
-                        get_object_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm)
+                        get_object_def)
+  apply (rename_tac obj ps' x' obj' kobj)
+  apply (case_tac obj; clarsimp simp: fail_def return_def split: if_split_asm)
   done
 
 lemma descendants_of_eq':
@@ -3750,8 +3751,9 @@ lemma set_untyped_cap_corres:
    apply clarsimp
 
   apply (frule setCTE_pspace_only)
-  apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-                 split: if_split_asm Structures_A.kernel_object.splits)
+  apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
+  apply (rename_tac obj ps' s'' obj' kobj; case_tac obj;
+         simp add: fail_def return_def split: if_split_asm)
   done
 
 lemma getCTE_get:
