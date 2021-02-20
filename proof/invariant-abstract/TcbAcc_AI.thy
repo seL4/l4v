@@ -99,8 +99,9 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   apply (rule bind_cong [OF refl])
   apply (clarsimp simp: gets_the_member set_object_def get_object_def in_monad bind_assoc
                         gets_def put_def bind_def get_def return_def select_f_def
-                 dest!: get_tcb_SomeD)
-  apply (subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
+                        gets_the_def assert_opt_def get_tcb_def
+                 split: option.split_asm kernel_object.split_asm)
+  apply (rename_tac v; subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
   done
 
@@ -2290,7 +2291,6 @@ lemma sts_tcb_ko_at:
   apply (simp add: set_thread_state_def set_object_def get_object_def)
   apply (wp|simp)+
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-  apply (simp add: get_tcb_def)
   done
 
 

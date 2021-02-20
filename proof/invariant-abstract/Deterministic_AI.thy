@@ -3141,8 +3141,9 @@ lemma set_cap_exst_update:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),exst_update f s') \<in> fst (set_cap c p (exst_update f s))"
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
-  apply (case_tac y)
-      apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
+  apply (rename_tac obj; case_tac obj)
+      apply (auto simp: in_monad set_object_def get_object_def
+                 split: if_split_asm kernel_object.splits)
   done
 
 lemma no_parent_not_next_slot:

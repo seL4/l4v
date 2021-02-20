@@ -160,7 +160,7 @@ lemma unpleasant_helper:
 
 lemma get_object_det:
   "(r,s') \<in> fst (get_object p s) \<Longrightarrow> get_object p s = ({(r,s)}, False)"
-  by (auto simp: in_monad get_object_def bind_def gets_def get_def return_def)
+  by (auto simp: in_monad get_object_def bind_def gets_def get_def return_def gets_the_def)
 
 
 lemma get_object_at_obj:
@@ -412,7 +412,7 @@ lemma gets_the_tcb_get_cap:
   apply (clarsimp simp add: tcb_at_def liftM_def bind_def assert_opt_def
                             gets_the_def simpler_gets_def return_def)
   apply (clarsimp    dest!: get_tcb_SomeD
-                  simp add: get_cap_def tcb_cnode_map_def
+                  simp add: get_cap_def tcb_cnode_map_def gets_the_def
                             get_object_def bind_def simpler_gets_def
                             return_def assert_def fail_def assert_opt_def)
   done
@@ -483,12 +483,11 @@ lemma set_cap_cte_eq:
   cte_at p' s \<and> cte_wp_at P p t = (if p = p' then P c else cte_wp_at P p s)"
   apply (cases p)
   apply (cases p')
-  apply (auto simp: set_cap_def2 split_def in_monad cte_wp_at_cases
-                    get_object_def set_object_def wf_cs_upd
-             split: Structures_A.kernel_object.splits if_split_asm
-                    option.splits,
-         auto simp: tcb_cap_cases_def split: if_split_asm)
-  done
+  apply (clarsimp simp: set_cap_def2 split_def in_monad set_object_def
+                       get_object_def tcb_cap_cases_def a_type_def cte_wp_at_cases wf_cs_upd
+                split: if_split_asm option.splits)
+  by (simp_all add: return_def tcb_cap_cases_def fail_def
+             split: kernel_object.splits if_split_asm, auto)
 
 
 lemma descendants_of_cte_at:
@@ -515,10 +514,10 @@ lemma descendants_of_cte_at2:
 
 lemma in_set_cap_cte_at:
   "(x, s') \<in> fst (set_cap c p' s) \<Longrightarrow> cte_at p s' = cte_at p s"
-  by (fastforce simp: cte_at_cases set_cap_def split_def wf_cs_upd
-                     in_monad get_object_def set_object_def
-               split: Structures_A.kernel_object.splits if_split_asm)
-
+  by (clarsimp simp: cte_at_cases set_cap_def split_def
+                     in_monad get_object_def set_object_def)
+     (auto simp: tcb_cap_cases_def return_def fail_def wf_cs_upd
+          split: if_split_asm kernel_object.split_asm)
 
 lemma in_set_cap_cte_at_swp:
   "(x, s') \<in> fst (set_cap c p' s) \<Longrightarrow> swp cte_at s' = swp cte_at s"
@@ -906,13 +905,14 @@ lemma cap_master_cap_simps:
 lemma is_original_cap_set_cap:
   "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> is_original_cap s' = is_original_cap s"
   by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-               split: if_split_asm Structures_A.kernel_object.splits)
-
+               split: if_split_asm)
+     (simp add: tcb_cap_cases_def return_def fail_def split: if_split_asm kernel_object.split_asm)
 
 lemma mdb_set_cap:
   "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> cdt s' = cdt s"
   by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-               split: if_split_asm Structures_A.kernel_object.splits)
+               split: if_split_asm)
+     (simp add: tcb_cap_cases_def return_def fail_def split: if_split_asm kernel_object.split_asm)
 
 (* FIXME: rename *)
 lemma yes_indeed [simp]:
@@ -3996,9 +3996,10 @@ lemma set_original_set_cap_comm:
   apply (rule ext)
   apply (clarsimp simp: bind_def split_def set_cap_def set_original_def
                         get_object_def set_object_def get_def put_def
-                        simpler_gets_def simpler_modify_def
-                        assert_def return_def fail_def)
-  apply (case_tac y;
+                        simpler_gets_def simpler_modify_def gets_the_def
+                        assert_def return_def fail_def assert_opt_def
+                 split: option.splits)
+  apply (rename_tac y; case_tac y;
          simp add: return_def fail_def)
   done
 

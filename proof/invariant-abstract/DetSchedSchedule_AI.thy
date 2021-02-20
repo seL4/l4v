@@ -13752,7 +13752,7 @@ lemma update_sched_context_known_sc:
   assumes "kheap s sc_ptr = Some (SchedContext sc n)"
   shows "update_sched_context sc_ptr (\<lambda>_. f sc) s = update_sched_context sc_ptr f s"
   using assms
-  by (auto simp: obj_at_def update_sched_context_def get_object_def set_object_def
+  by (auto simp: obj_at_def update_sched_context_def get_object_def set_object_def gets_the_def
                  gets_def get_def assert_def return_def put_def fail_def bind_def)
 
 lemma sc_ready_times_cong:

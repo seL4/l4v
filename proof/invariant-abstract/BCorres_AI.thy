@@ -14,6 +14,14 @@ abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"
 
 abbreviation "s_bcorres \<equiv> s_bcorres_underlying truncate_state"
 
+lemma get_object_bcorres[wp]:
+  "bcorres (get_object p) (get_object p)"
+  apply (simp add: get_object_def)
+  apply (simp add: gets_the_def gets_def bind_def get_def return_def assert_opt_def read_object_def)
+  apply (simp add: bcorres_underlying_def s_bcorres_underlying_def fail_def return_def
+            split: option.splits)
+  done
+
 lemma dxo_bcorres[wp]:
   "bcorres (do_extended_op f) (do_extended_op f)"
   apply (simp add: do_extended_op_def)
@@ -76,15 +84,15 @@ crunch (bcorres) bcorres[wp]:
 lemma get_cap_det:
   "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"
   apply (cases p)
-  apply (clarsimp simp add: in_monad get_cap_def get_object_def
-                     split: kernel_object.split_asm)
-   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def)
-  apply (simp add: bind_def simpler_gets_def return_def assert_opt_def)
-  done
+  apply (clarsimp simp: in_monad get_cap_def get_object_def read_object_def)
+  apply (rename_tac ko caps; case_tac ko; simp add: fail_def)
+  by (clarsimp simp: in_monad gets_the_def gets_def get_def bind_assoc assert_opt_def
+                     fail_def return_def bind_def
+              split: option.splits)+
 
 lemma get_object_bcorres_any[wp]:
   "bcorres_underlying (trans_state e) (get_object a) (get_object a)"
-  by (wpsimp simp: get_object_def)
+  by (wpsimp simp: get_object_def read_object_def)
 
 lemma get_cap_bcorres_any:
   "bcorres_underlying (trans_state e) (get_cap x) (get_cap x)"
@@ -111,6 +119,9 @@ lemma get_cap_helper:
 lemma is_final_cap_bcorres[wp]:
   "bcorres (is_final_cap a) (is_final_cap a)"
   by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper | wp)+
+
+lemma read_object_truncate[simp]: "read_object a (truncate_state s) = read_object a s"
+  by (clarsimp simp: read_object_def)
 
 lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   by (simp add: get_tcb_def)
@@ -166,9 +177,5 @@ lemma preemption_point_bcorres[wp]:
   unfolding preemption_point_def by wpsimp
 
 crunch (bcorres) bcorres[wp]: cap_swap_for_delete truncate_state
-
-lemma gets_the_get_tcb_bcorres[wp]:
-  "bcorres (gets_the (get_tcb a)) (gets_the (get_tcb a)) "
-  by (wpsimp simp: gets_the_def bcorres_underlying_def assert_opt_def split: option.splits|rule conjI)+
 
 end

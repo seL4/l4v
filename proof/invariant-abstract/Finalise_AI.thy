@@ -365,18 +365,17 @@ lemma set_cap_revokable_update:
   ((),is_original_cap_update f s') \<in> fst (set_cap c p (is_original_cap_update f s))"
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
-  apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
-  done
-
+  apply (rename_tac obj; case_tac obj)
+  by (auto simp: in_monad set_object_def get_object_def
+          split: if_split_asm kernel_object.split_asm)
 
 lemma set_cap_cdt_update:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),cdt_update f s') \<in> fst (set_cap c p (cdt_update f s))"
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
-  apply (case_tac y)
-  apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
-  done
+  apply (rename_tac obj; case_tac obj)
+  by (auto simp: in_monad set_object_def get_object_def
+          split: if_split_asm kernel_object.split_asm)
 
 lemma tcb_cap_cases_lt:
   "n < 5 \<Longrightarrow> tcb_cap_cases (nat_to_cref 3 n) \<noteq> None"
