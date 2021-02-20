@@ -29,7 +29,7 @@ schematic_goal assert_get_tcb_pspace:
   apply (unfold gets_the_def)
   apply (rule submonad_bind_alt [OF submonad_args_pspace])
      apply (rule gets_submonad [OF submonad_args_pspace _ refl])
-     apply (simp add: get_tcb_def)
+     apply (simp add: get_tcb_def read_object_def)
     apply (rule assert_opt_submonad [OF submonad_args_pspace])
    apply simp
   apply (rule empty_fail_assert_opt)

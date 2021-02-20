@@ -995,7 +995,7 @@ lemma empty_fail_put[intro!, simp]:
 lemma set_refills_empty_fail [simp]: (* FIXME RT: move *)
   "empty_fail (set_refills sc_ptr refills)"
   by (auto simp: set_refills_def get_sched_context_def update_sched_context_def get_object_def
-                 set_object_def
+                 set_object_def gets_the_def
           intro!: empty_fail_bind empty_fail_get
           split: kernel_object.splits)
 

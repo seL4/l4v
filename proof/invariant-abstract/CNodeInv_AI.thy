@@ -2356,7 +2356,7 @@ end
 
 
 lemma get_object_some: "kheap s ptr = Some ko \<Longrightarrow> get_object ptr s = ({(ko, s)}, False)"
-  by (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
+  by (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def gets_the_def)
 
 lemma set_cap_id:
   "cte_wp_at ((=) c) p s \<Longrightarrow> set_cap c p s = ({((),s)}, False)"
@@ -2364,7 +2364,7 @@ lemma set_cap_id:
   apply (cases p)
   apply (erule disjE)
    apply clarsimp
-   apply (simp add: set_cap_def get_object_def bind_assoc exec_gets)
+   apply (simp add: set_cap_def get_object_def bind_assoc exec_gets gets_the_def)
    apply (rule conjI)
     apply (clarsimp simp: set_object_def)
     apply (frule get_object_some)
@@ -2375,7 +2375,7 @@ lemma set_cap_id:
     apply (rule ext, simp)
    apply (clarsimp simp: get_object_def gets_def get_def bind_def assert_def return_def)
   apply clarsimp
-  apply (simp add: set_cap_def get_object_def bind_assoc
+  apply (simp add: set_cap_def get_object_def bind_assoc gets_the_def
                    exec_gets set_object_def exec_get put_def)
   apply (clarsimp simp: tcb_cap_cases_def
                  split: if_split_asm,

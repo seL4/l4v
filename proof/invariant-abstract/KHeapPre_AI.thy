@@ -39,7 +39,7 @@ lemma dmo_return [simp]:
 
 lemma get_object_sp:
   "\<lbrace>P\<rbrace> get_object p \<lbrace>\<lambda>r. P and ko_at r p\<rbrace>"
-  apply (simp add: get_object_def)
+  apply (simp add: get_object_def gets_the_def read_object_def)
   apply wp
   apply (auto simp add: obj_at_def)
   done
@@ -133,9 +133,18 @@ lemma set_object_neg_ko:
   done
 
 lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
-  apply (case_tac "kheap s t", simp_all add: get_tcb_def)
+  apply (case_tac "kheap s t", simp_all add: get_tcb_def read_object_def)
   apply (case_tac a, simp_all)
   done
+
+lemma get_tcb_read_object_Some:
+  "get_tcb t s = Some tcb \<longleftrightarrow> read_object t s = Some (TCB tcb)"
+  by (rule iffI;
+      clarsimp simp: get_tcb_def split: option.splits kernel_object.split_asm)
+
+lemma the_get_tcb_kheap_Some[simp]:
+  "kheap s p = Some (TCB tcb) \<Longrightarrow> the (get_tcb p s) = tcb"
+  by (clarsimp simp: get_tcb_def obind_def read_object_def)
 
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
   by (simp add: tcb_at_def)
@@ -186,7 +195,7 @@ lemma get_object_wp:
 
 lemma get_tcb_rev:
   "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
-  by (clarsimp simp:get_tcb_def)
+  by (clarsimp simp:get_tcb_def read_object_def)
 
 lemma get_tcb_obj_atE[elim!]:
   "\<lbrakk> get_tcb t s = Some tcb; get_tcb t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"

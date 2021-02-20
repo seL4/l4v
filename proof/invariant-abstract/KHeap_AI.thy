@@ -446,10 +446,10 @@ lemma get_simple_ko_actual_ko[wp]:
   "\<lbrace> obj_at (\<lambda>ko. bound (partial_inv f ko)) ep \<rbrace>
    get_simple_ko f ep
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = f rv) ep \<rbrace>"
-   by (fastforce simp: get_simple_ko_def get_object_def bind_def partial_inv_def
-                             valid_def gets_def get_def return_def in_fail
-                             assert_def obj_at_def split_def the_equality
-                   split: kernel_object.splits option.splits)
+    by (clarsimp simp: get_simple_ko_def get_object_def bind_def partial_inv_def
+                       valid_def gets_def get_def return_def in_fail gets_the_def fail_def
+                       assert_def obj_at_def split_def the_equality assert_opt_def
+                split: kernel_object.splits option.splits)
 
 lemma get_object_valid [wp]:
   "\<lbrace>valid_objs\<rbrace> get_object oref \<lbrace> valid_obj oref \<rbrace>"
@@ -954,39 +954,12 @@ lemma dmo_invs:
 
 lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
-  apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def)
-  apply (clarsimp split: option.splits kernel_object.splits)
-  apply (intro conjI impI allI;
-         match premises in "kheap _ t = Some (TCB _)" \<Rightarrow> succeed \<bar> _ \<Rightarrow> fastforce)
-    apply clarsimp
-    apply (rename_tac value_g s tcb fail_g value_f fail_f)
-    apply (rule_tac x="value_f" in exI)
-    apply (rule_tac x="s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
-    apply fastforce
-   apply clarsimp
-   apply (rename_tac value_g ta s tcb value_f fail_g ko)
-   apply (drule_tac x="ko" in spec)
-   apply clarsimp
-   apply (case_tac ko; blast?)
-   apply (rename_tac tcb_2)
-   apply (drule_tac x=tcb_2 in spec)
-   apply clarsimp
-   apply blast
-  apply (rename_tac tcb_2)
-  apply (case_tac "snd (f (arch_tcb_context_get (tcb_arch tcb_2)))")
-   apply simp
-  apply clarsimp
-  apply (rule iffI)
-   apply fastforce
-  apply clarsimp
-  apply (case_tac "kheap s' t = None")
-   apply fastforce
-  apply clarsimp
-  apply (rename_tac ko)
-  apply (case_tac ko; (solves auto)?)
-  apply clarsimp
-  apply blast
-  done
+  by (force simp: as_user_def bind_assoc bind_select_f_bind[symmetric] split_def
+                  select_f_def gets_the_def gets_def get_def assert_opt_def get_tcb_def
+                  get_object_def read_object_def obind_def set_object_def
+                  return_def fail_def assert_def put_def bind_def
+           split: option.splits if_splits kernel_object.split_asm)
+
 
 lemma as_user_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -2133,7 +2106,7 @@ lemma update_sched_context_distinct [wp]:
 lemma update_sched_context_cur_tcb [wp]:
   "\<lbrace>cur_tcb\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_tcb_def tcb_at_def
-                   get_tcb_def)
+                   get_tcb_def read_object_def)
 
 lemma update_sched_context_kernel_window [wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> update_sched_context ptr f \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"

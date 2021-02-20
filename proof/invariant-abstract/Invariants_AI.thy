@@ -1379,6 +1379,8 @@ abbreviation (input)
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Lemmas"
 
+declare read_object_def[simp]
+
 lemma valid_bound_obj_None[simp]:
   "valid_bound_obj f None = \<top>"
   by (auto simp: valid_bound_obj_def)
@@ -1425,7 +1427,7 @@ lemmas is_obj_defs = is_ep is_ntfn is_tcb is_reply is_cap_table is_sc_obj_def
 lemma obj_at_get_object:
   "obj_at P ref s \<Longrightarrow> fst (get_object ref s) \<noteq> {}"
   by (auto simp: obj_at_def get_object_def gets_def get_def
-                 return_def assert_def bind_def)
+                 return_def assert_def bind_def gets_the_def)
 
 lemma ko_at_tcb_at:
   "ko_at (TCB t) p s \<Longrightarrow> tcb_at p s"
@@ -2075,15 +2077,14 @@ lemma cte_wp_at_cases:
                              P (get tcb)))"
   apply (cases t)
   apply (cases "kheap s (fst t)")
-   apply (simp add: cte_wp_at_def get_cap_def
+   apply (simp add: cte_wp_at_def get_cap_def gets_the_def
                     get_object_def gets_def get_def return_def assert_def
-                    fail_def bind_def)
+                    fail_def bind_def assert_opt_def)+
   apply (simp add: cte_wp_at_def get_cap_def tcb_cnode_map_def bind_def
                    get_object_def assert_opt_def return_def gets_def get_def
-                   assert_def fail_def dom_def
+                   assert_def fail_def dom_def tcb_cap_cases_def
               split: if_split_asm kernel_object.splits
                      option.splits)
-  apply (simp add: tcb_cap_cases_def)
   done
 
 lemma cte_wp_at_cases2:
