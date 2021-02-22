@@ -214,6 +214,17 @@ lemma update_valid_tcbs[simp]:
   "valid_tcbs (s\<lparr>scheduler_action := b\<rparr>) = valid_tcbs s"
   by (simp_all add: valid_tcbs_def)
 
+lemma valid_tcb_domain_update:
+  "valid_tcb tptr (tcb\<lparr>tcb_domain := new_dom\<rparr>) s = valid_tcb tptr tcb s"
+  unfolding valid_tcb_def
+  by (clarsimp simp: tcb_cap_cases_def)
+
+lemma valid_tcb'_tcbDomain_update:
+  "new_dom \<le> maxDomain \<Longrightarrow>
+   \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbDomain_update (\<lambda>_. new_dom) tcb) s"
+  unfolding valid_tcb'_def
+  by (clarsimp simp: tcb_cte_cases_def)
+
 crunches tcb_release_remove
   for valid_tcbs[wp]: valid_tcbs
   (simp: crunch_simps)
