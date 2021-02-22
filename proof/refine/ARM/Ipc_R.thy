@@ -2635,7 +2635,6 @@ lemma replyPush_corres:
     (\<lambda>_. caller \<noteq> idle_thread_ptr) and
     tcb_at caller and tcb_at callee and reply_at reply_ptr
               and ex_nonz_cap_to reply_ptr
-              and st_tcb_at active caller
               and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
               and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
               and weak_valid_sched_action and scheduler_act_not caller
@@ -2853,7 +2852,7 @@ lemma sendIPC_corres:
    is always blocking. *)
   assumes "call \<longrightarrow> bl"
   shows
-  "corres dc (einvs and st_tcb_at active t and ep_at ep and ex_nonz_cap_to t
+  "corres dc (einvs and ep_at ep and ex_nonz_cap_to t and tcb_at t
               and scheduler_act_not t and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s))
              (invs' and sch_act_not t and tcb_at' t and ep_at' ep)
              (send_ipc bl call bg cg cgr cd t ep) (sendIPC bl call bg cg cgr cd t ep)"
@@ -2866,7 +2865,7 @@ lemma sendIPC_corres:
      apply (clarsimp split del: if_split)
      apply (rule corres_guard_imp)
        apply (rule corres_split [OF _ get_ep_corres, where
-                R="\<lambda>rv. einvs and st_tcb_at active t and ep_at ep and
+                R="\<lambda>rv. einvs and tcb_at t and ep_at ep and
                         valid_ep rv and obj_at (\<lambda>ob. ob = Endpoint rv) ep
                         and ex_nonz_cap_to t and scheduler_act_not t
                         and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s)"
@@ -2961,7 +2960,6 @@ lemma sendIPC_corres:
                     apply (rule reply_unlink_tcb_corres)
                    apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
                             scheduler_act_not t and valid_sched_action and valid_replies and tcb_at t
-
       and tcb_at a
       and scheduler_act_not a and (\<lambda>s. data \<noteq> None \<longrightarrow> reply_at (the data) s \<and>
                                                 ex_nonz_cap_to (the data) s \<and>
@@ -2969,7 +2967,7 @@ lemma sendIPC_corres:
                                                 \<and> reply_sc_reply_at (\<lambda>tptr. tptr = None) (the data) s \<and>
                                                 the data \<notin> fst ` replies_with_sc s
                                                 )
-      and st_tcb_at active t and K (t \<noteq> idle_thread_ptr)
+      and K (t \<noteq> idle_thread_ptr)
       and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s)" in hoare_strengthen_post[rotated])
                     apply (clarsimp cong: conj_cong)
                     apply (frule valid_sched_action_weak_valid_sched_action, simp)
@@ -2999,7 +2997,7 @@ lemma sendIPC_corres:
                  apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
                         valid_replies and
                         scheduler_act_not t and valid_sched_action and tcb_at t and tcb_at a and
-                        if_live_then_nonz_cap and scheduler_act_not a and st_tcb_at active t and
+                        if_live_then_nonz_cap and scheduler_act_not a and
                         K (t \<noteq> idle_thread_ptr) and
                         (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s) and (\<lambda>s. data \<noteq> None
                         \<longrightarrow> st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReceive ep data pl)) a s \<and>
@@ -3009,9 +3007,6 @@ lemma sendIPC_corres:
                         the data \<notin> fst ` replies_with_sc s)"
                         in hoare_strengthen_post[rotated])
                apply (clarsimp split: option.splits)
-                  apply (case_tac "t = a"; simp)
-                   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
-                   apply (case_tac "tcb_state tcb"; simp)
                   apply (intro conjI)
                     apply (erule valid_objs_valid_tcbs)
                    apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb, fastforce)
@@ -3054,14 +3049,13 @@ lemma sendIPC_corres:
            apply (frule (1) sym_refsD, simp)
            apply (frule TCBBlockedRecv_in_state_refs_of)
            apply (clarsimp simp: invs_def pred_tcb_at_eq_commute cong: conj_cong)
-           apply (intro conjI impI)
-                  apply (fastforce)
+            apply (intro conjI impI)
                  apply (clarsimp simp: valid_ep_def split: list.splits)
                 apply (erule (1) if_live_then_nonz_capD)
-              apply (clarsimp simp: obj_at_def live_def)
-             apply (erule weak_valid_sched_action_scheduler_action_not)
-             apply (clarsimp simp: obj_at_def pred_tcb_at_def)
-               apply (clarsimp simp: obj_at_def pred_tcb_at_def valid_idle_def)
+                apply (clarsimp simp: obj_at_def live_def)
+               apply (erule weak_valid_sched_action_scheduler_action_not)
+               apply (clarsimp simp: obj_at_def pred_tcb_at_def)
+              apply (clarsimp, erule (1) FalseI[OF idle_no_ex_cap], clarsimp simp: valid_idle_def)
         apply (case_tac "receive_reply x"; simp)
         apply (subgoal_tac "data = Some aa", simp)
          apply (subgoal_tac "reply_tcb_reply_at ((=) (Some a)) aa s", simp)
