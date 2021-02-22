@@ -2803,12 +2803,6 @@ lemma replyPush_valid_objs'[wp]:
   apply (force simp: valid_tcb_state'_def valid_tcb'_def valid_bound_sc'_def)
   done
 
-(* FIXME RT: move *)
-lemma isBlockedOnReceive_equiv:
-  "isBlockedOnReceive st = (\<exists>a b c. st = BlockedOnReceive a b c)"
-  unfolding isBlockedOnReceive_def
-  by (case_tac st; simp)
-
 crunches reply_unlink_tcb
   for sc_replies_sc_at[wp]: "\<lambda>s. Q (sc_replies_sc_at P scp s)"
   (wp: crunch_wps)

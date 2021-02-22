@@ -3930,4 +3930,9 @@ lemma valid_tcb_state'_simps[simp]:
   "valid_tcb_state' (thread_state.BlockedOnReply r) s = valid_bound_reply' r s"
   by (clarsimp simp: valid_tcb_state'_def)+
 
+lemma isBlockedOnReceive_equiv:
+  "isBlockedOnReceive st = (\<exists>a b c. st = BlockedOnReceive a b c)"
+  unfolding isBlockedOnReceive_def
+  by (case_tac st; simp)
+
 end
