@@ -351,50 +351,38 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (auto simp: obj_at'_def)
   done
 
-lemma set_domain_setDomain_corres:
+lemma setDomain_corres:
   "corres dc
-     (valid_sched and tcb_at tptr)
-     (invs' and sch_act_simple and (\<lambda>s. new_dom \<le> maxDomain))
+     (valid_tcbs and pspace_aligned and pspace_distinct and weak_valid_sched_action and tcb_at tptr)
+     (invs' and (\<lambda>_. new_dom \<le> maxDomain))
      (set_domain tptr new_dom)
      (setDomain tptr new_dom)"
   apply (rule corres_gen_asm2)
   apply (simp add: set_domain_def setDomain_def thread_set_domain_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ gct_corres])
-      apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres])
-  sorry (*
-                 apply (rule corres_split_deprecated[OF _ gts_isRunnable_corres])
-                   apply simp
-                   apply (rule corres_split_deprecated[OF corres_when[OF refl]])
-                      apply (rule rescheduleRequired_corres)
-                     apply clarsimp
-                     apply (rule corres_when[OF refl])
-                     apply (rule tcbSchedEnqueue_corres)
-                    apply (wp hoare_drop_imps hoare_vcg_conj_lift | clarsimp| assumption)+
-          apply (clarsimp simp: etcb_relation_def)
-         apply ((wp hoare_vcg_conj_lift hoare_vcg_disj_lift | clarsimp)+)[1]
-        apply clarsimp
-        apply (rule_tac Q="\<lambda>_. valid_objs' and valid_queues' and valid_queues and
-          (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' tptr"
-          in hoare_strengthen_post[rotated])
-         apply (auto simp: invs'_def valid_state'_def sch_act_wf_weak st_tcb_at'_def o_def)[1]
-        apply (wp threadSet_valid_objs' threadSet_valid_queues'_no_state
-          threadSet_valid_queues_no_state
-          threadSet_pred_tcb_no_state | simp)+
-      apply (rule_tac Q = "\<lambda>r s. invs' s \<and> (\<forall>p. tptr \<notin> set (ksReadyQueues s p)) \<and> sch_act_simple s
-        \<and>  tcb_at' tptr s" in hoare_strengthen_post[rotated])
-       apply (clarsimp simp:invs'_def valid_state'_def valid_pspace'_def sch_act_simple_def)
-       apply (clarsimp simp:valid_tcb'_def)
-       apply (drule(1) bspec)
-       apply (clarsimp simp:tcb_cte_cases_def)
-       apply fastforce
-      apply (wp hoare_vcg_all_lift Tcb_R.tcbSchedDequeue_not_in_queue)+
-   apply clarsimp
-   apply (frule tcb_at_is_etcb_at)
-    apply simp+
-   apply (auto elim: tcb_at_is_etcb_at valid_objs'_maxDomain valid_objs'_maxPriority pred_tcb'_weakenE
-               simp: valid_sched_def valid_sched_action_def)
-  done *)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF gct_corres])
+      apply (rule corres_split[OF tcbSchedDequeue_corres])
+        apply (rule corres_split[OF threadset_corresT])
+             apply (clarsimp simp: tcb_relation_def)
+            apply (clarsimp simp: tcb_cap_cases_def)
+           apply (clarsimp simp: tcb_cte_cases_def)
+          apply (rule corres_split[OF isSchedulable_corres])
+            apply (rule corres_split[OF corres_when[OF _ tcbSchedEnqueue_corres]], simp)
+              apply (rule corres_when[OF _ rescheduleRequired_corres], simp)
+             apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2 thread_set_weak_valid_sched_action
+                               threadSet_valid_tcbs' threadSet_vrq_inv threadSet_vrq'_inv
+                               threadSet_valid_queues_no_state threadSet_valid_queues'_no_state
+                         simp: valid_tcb_domain_update)+
+      apply (clarsimp cong: conj_cong)
+      apply (rule hoare_vcg_conj_lift, strengthen valid_tcb'_tcbDomain_update, wpsimp)
+      apply (wpsimp wp: tcbSchedDequeue_valid_queues tcbSchedDequeue_nonq hoare_vcg_all_lift)
+     apply wpsimp+
+  apply (frule cross_relF[OF _ tcb_at'_cross_rel], fastforce)
+  apply (frule invs'_valid_tcbs', clarsimp)
+  apply (frule obj_at_ko_at', clarsimp)
+  apply (frule tcb_ko_at_valid_objs_valid_tcb', fastforce)
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_tcb'_def invs'_def valid_state'_def)
+  done
 
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
@@ -461,10 +449,10 @@ lemma pinv_corres:
         \<comment> \<open>domain cap\<close>
         apply (clarsimp simp: invoke_domain_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ set_domain_setDomain_corres])
+          apply (rule corres_split_deprecated [OF _ setDomain_corres])
             apply (rule corres_trivial, simp)
            apply (wp)+
-         apply (clarsimp+)[3]
+         apply ((clarsimp | fastforce)+)[3]
        \<comment> \<open>SchedContext\<close>
        apply (rule corres_guard_imp)
          apply (rule corres_splitEE)
@@ -861,27 +849,6 @@ lemma valid_irq_node_tcbSchedEnqueue[wp]:
   apply (simp add:valid_irq_node'_def)
   done
 
-lemma rescheduleRequired_valid_queues_but_ct_domain:
-  "\<lbrace>\<lambda>s. valid_queues s \<and> valid_objs' s
-     \<and> (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s) \<rbrace>
-    rescheduleRequired
-   \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  sorry (* FIXME RT: needs statement update
-  apply (simp add: rescheduleRequired_def)
-  apply (wp | wpc | simp)+
-  done *)
-
-lemma rescheduleRequired_valid_queues'_but_ct_domain:
-  "\<lbrace>\<lambda>s. valid_queues' s
-     \<and> (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)
-   \<rbrace>
-    rescheduleRequired
-   \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  sorry (* FIXME RT: needs statement update
-  apply (simp add: rescheduleRequired_def)
-  apply (wp | wpc | simp | fastforce simp: valid_queues'_def)+
-  done *)
-
 lemma tcbSchedEnqueue_valid_action:
   "\<lbrace>\<lambda>s. \<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s\<rbrace>
   tcbSchedEnqueue ptr
@@ -919,11 +886,11 @@ lemma rescheduleRequired_all_invs_but_extra:
   apply (simp add: invs'_def valid_state'_def)
   apply (rule hoare_pre)
   apply (wp add: rescheduleRequired_ct_not_inQ irqs_masked_lift cur_tcb_lift
-                 rescheduleRequired_sch_act' rescheduleRequired_valid_queues_but_ct_domain
-                 rescheduleRequired_valid_queues'_but_ct_domain
+                 rescheduleRequired_sch_act' rescheduleRequired_valid_queues
+                 rescheduleRequired_valid_queues'
                  valid_irq_node_lift valid_irq_handlers_lift'')
   apply (auto simp: o_def)
-  sorry
+  done
 
 lemma threadSet_all_invs_but_sch_extra:
   "\<lbrace> tcb_at' t and (\<lambda>s. (\<forall>p. t \<notin> set (ksReadyQueues s p))) and
