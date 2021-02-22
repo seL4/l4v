@@ -3659,8 +3659,8 @@ lemma schedContextDonate_invs':
    apply (rule_tac hoare_weaken_pre[OF hoare_pre_cont])
    apply (clarsimp simp: obj_at'_def)
   apply (wp schedContextDonate_valid_pspace'
-                    schedContextDonate_valid_queues schedContextDonate_valid_queues'
-                    schedContextDonate_valid_idle' schedContextDonate_if_live_then_nonz_cap')
+            schedContextDonate_valid_queues schedContextDonate_valid_queues'
+            schedContextDonate_valid_idle' schedContextDonate_if_live_then_nonz_cap')
   apply clarsimp
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_sc)
   apply (auto dest!: global'_sc_no_ex_cap
@@ -5543,7 +5543,7 @@ lemma replySCs_of_retract:
    replies_scs_sym_refs s \<Longrightarrow>
      \<forall>x xa. obj_at' (\<lambda>a. scReply a = Some x) xa s \<longrightarrow>
             obj_at' (\<lambda>a. replyNext a = Some (Head xa)) x s"
-  apply (clarsimp simp: )
+  apply clarsimp
   apply (subgoal_tac "pred_map_eq x (scReplies_of s) xa")
    apply (subgoal_tac "pred_map_eq xa (replySCs_of s) x")
     apply (subgoal_tac "reply_at' x s")
@@ -5602,8 +5602,7 @@ lemma replyPush_if_live_then_nonz_cap':
 (\<forall>rp scp. obj_at' (\<lambda>ko. scReply ko = Some rp) scp s
                                          \<longrightarrow>  obj_at' (\<lambda>ko. replyNext ko = Some (Head scp)) rp s)) \<and>
                                 ex_nonz_cap_to' calleePtr s \<and> ex_nonz_cap_to' replyPtr s \<and>
-                                valid_objs' s \<and> if_live_then_nonz_cap' s \<and> reply_at' replyPtr s
-                                 "
+                                valid_objs' s \<and> if_live_then_nonz_cap' s \<and> reply_at' replyPtr s"
                     in hoare_strengthen_post[rotated], clarsimp)
        apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
       apply (simp (no_asm_use) add: split del: if_split
@@ -5646,9 +5645,9 @@ lemma not_idle_scTCB0:
    obj_at' (\<lambda>x.  tcbSchedContext x = Some t) y s \<Longrightarrow>
    sc_at' t s"
   apply (subgoal_tac "tcb_at' y s")
-  apply (frule obj_at_ko_at', clarsimp)
-  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-  apply (clarsimp simp: valid_tcb'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb projectKO_sc)+
+   apply (frule obj_at_ko_at', clarsimp)
+   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+   apply (clarsimp simp: valid_tcb'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb projectKO_sc)+
   done
 
 lemma sdsfdf[elim!]:
@@ -5661,17 +5660,17 @@ lemma not_idle_scTCB99:
    obj_at' (\<lambda>x. scTCB x = Some t) y s \<Longrightarrow>
    tcb_at' t s"
   apply (subgoal_tac "sc_at' y s")
-  apply (frule obj_at_ko_at'[where P=\<top>], clarsimp)
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_tcb projectKO_sc
-                        valid_sched_context'_def)+
+   apply (frule obj_at_ko_at'[where P=\<top>], clarsimp)
+   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_tcb projectKO_sc
+                         valid_sched_context'_def)+
   done
 
 lemma sc_tcbs_of_pred_map_equiv:
   "sc_at' y s \<Longrightarrow>
    obj_at' (\<lambda>x. scTCB x = Some t) y s = pred_map_eq t (scTCBs_of s) y"
   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_eq_def pred_map_def
-                        projectKO_sc opt_map_def)
+                     projectKO_sc opt_map_def)
 
 lemma tcb_scs_of_pred_map_equiv:
   "tcb_at' y s \<Longrightarrow>
@@ -5715,10 +5714,10 @@ lemma not_idle_tcbSC:
    tcb_at' y s \<Longrightarrow>
    obj_at' (\<lambda>x. tcbSchedContext x \<noteq> Some idle_sc_ptr) y s"
   apply (subgoal_tac "\<not>obj_at' (\<lambda>x. tcbSchedContext x = Some idle_sc_ptr) y s")
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
   apply clarsimp
   apply (subst (asm) tcbs_scs_sym_refs_equiv[symmetric], clarsimp+)
-  apply (clarsimp simp: valid_idle'_def)
+   apply (clarsimp simp: valid_idle'_def)
   apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def)
   done
 
@@ -6269,8 +6268,8 @@ lemma SCReply_pred_map_state_refs_of':
   "\<lbrakk>pred_map ((=) r) (scReplies_of s) p; pspace_aligned' s; pspace_distinct' s\<rbrakk>
    \<Longrightarrow> (r, SCReply) \<in> state_refs_of' s p"
   apply (subgoal_tac "sc_at' p s")
-  apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_sc
-                        tcb_of'_Some)
+   apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_sc
+                         tcb_of'_Some)
   apply (erule (1) KOSC_sc_at'[rotated])
   apply (clarsimp simp: pred_map_def projectKO_sc)
   done
@@ -6287,7 +6286,7 @@ lemma ReplySC_pred_map_state_refs_of':
   "\<lbrakk>pred_map ((=) r) (replySCs_of s) p; pspace_aligned' s; pspace_distinct' s\<rbrakk>
    \<Longrightarrow> (r, ReplySchedContext) \<in> state_refs_of' s p"
   apply (subgoal_tac "reply_at' p s")
-  apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_reply)
+   apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_reply)
   apply (erule (1) KOReply_reply_at'[rotated])
   apply (clarsimp simp: pred_map_def projectKO_reply)
   done
