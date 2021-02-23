@@ -4082,4 +4082,73 @@ lemma valid_replies'_lift:
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
+
+(* sym_heap *)
+
+lemma sym_refs_replyNext_replyPrev_sym:
+  "sym_refs (list_refs_of_replies' s') \<Longrightarrow>
+    replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
+  apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
+   apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
+    apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+   apply (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+                  split: option.split_asm)
+  apply (drule_tac tp=ReplyPrev and y=rp and x=rp' in sym_refsD[rotated])
+   apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
+  by (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+              split: option.split_asm)
+
+lemma reply_sym_heap_Next_Prev:
+  "sym_refs (list_refs_of_replies' s') \<Longrightarrow> sym_heap (replyNexts_of s') (replyPrevs_of s')"
+  using sym_refs_replyNext_replyPrev_sym by clarsimp
+
+lemmas reply_sym_heap_Prev_Next
+  = sym_heap_symmetric[THEN iffD1, OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyNext_None
+  = sym_heap_None[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_None
+  = sym_heap_None[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Prevs_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_reply_heap_path_doubly_linked_Nexts_rev
+  = sym_heap_path_reverse[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_ls_Cons
+  = sym_heap_ls_rev_Cons[OF reply_sym_heap_Prev_Next]
+
+lemmas sym_refs_replyNext_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Next_Prev]
+
+lemmas sym_refs_replyPrev_heap_ls
+  = sym_heap_ls_rev[OF reply_sym_heap_Prev_Next]
+
+(* end: sym_heap *)
+
+(** sc_with_reply' **)
+
+definition sc_with_reply' where
+  "sc_with_reply' rp s' =
+     the_pred_option
+         (\<lambda>sc_ptr. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' sc_ptr) xs
+                     \<and> rp \<in> set xs)"
+
+lemma sc_with_reply'_SomeD:
+  "sc_with_reply' rp s' = Some scp \<Longrightarrow>
+     \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
+                     \<and> rp \<in> set xs"
+  by (clarsimp simp: sc_with_reply'_def dest!: the_pred_option_SomeD)
+
+lemma sc_with_reply'_NoneD:
+  "sc_with_reply' rp s' = None \<Longrightarrow>
+     \<nexists>!scp. \<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs
+                     \<and> rp \<in> set xs"
+  by (clarsimp simp: sc_with_reply'_def the_pred_option_def split: if_split_asm)
+
 end

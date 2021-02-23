@@ -172,7 +172,7 @@ lemma set_simple_ko_not_tcb_at[wp]:
   done
 
 lemma set_reply_obj_ref_not_tcb_at[wp]:
-  "set_reply_obj_ref f rp opt \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  "set_reply_obj_ref f rp opt \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
   apply (clarsimp simp: update_sk_obj_ref_def)
   apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
   apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
