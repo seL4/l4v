@@ -236,7 +236,8 @@ lemma requiv_ptable_rights_eq:
       apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
                              vspace_cap_rights_to_auth_def)+)[4]
    apply clarsimp
-   apply (frule_tac r=ba in some_get_page_info_kmapsD)
+   apply (rename_tac b)
+   apply (frule_tac r=b in some_get_page_info_kmapsD)
       apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
                              vspace_cap_rights_to_auth_def)+)[4]
 

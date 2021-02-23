@@ -136,12 +136,10 @@ lemma get_asid_pool_revrv':
   apply(rule_tac W="\<lambda>rv rv'. aag_can_read aag ptr \<longrightarrow>rv = rv'" in equiv_valid_rv_bind)
     apply(rule get_object_revrv')
    apply(case_tac "aag_can_read aag ptr")
-    apply(simp)
-    apply(case_tac rv')
-        apply(simp | rule fail_ev2_l)+
-    apply(rename_tac arch_kernel_obj)
-    apply(case_tac arch_kernel_obj)
-       apply(simp | rule return_ev2 | rule fail_ev2_l)+
+    apply(simp split: kernel_object.splits)
+    apply(rule conjI | clarsimp | rule fail_ev2_l)+
+    apply(simp split: arch_kernel_obj.splits)
+    apply(rule conjI | clarsimp | rule return_ev2 | rule fail_ev2_l)+
    apply(clarsimp simp: equiv_valid_2_def)
    apply(case_tac rv)
        apply(clarsimp simp: fail_def)+

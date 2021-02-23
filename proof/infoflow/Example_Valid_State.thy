@@ -280,9 +280,7 @@ where
       Some $ bin_to_bl bits (of_nat n)"
 
 lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = Some (to_bl x)"
-  apply (clarsimp simp: nat_to_bl_def to_bl_def)
-  apply (auto simp: uint_nat le_def word_size)
-  done
+  by (clarsimp simp: nat_to_bl_def to_bl_def le_def word_size)
 
 definition
   the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list"
@@ -333,13 +331,13 @@ lemma nat_to_bl_eq:
   apply (erule_tac x="b div 2" in allE)
   apply (erule impE)
    apply (metis power_commutes td_gal_lt zero_less_numeral)
-  apply (clarsimp simp: bin_rest_def bin_last_def zdiv_int)
+  apply (clarsimp simp: bin_last_def zdiv_int)
   apply (rule iffI [rotated], clarsimp)
   apply (subst (asm) (1 2 3 4) bin_to_bl_aux_alt)
   apply (clarsimp simp: mod_eq_dvd_iff)
   apply (subst split_div_mod [where k=2])
   apply clarsimp
-  apply (metis of_nat_numeral not_mod_2_eq_0_eq_1 of_nat_1 of_nat_eq_iff zmod_int)
+  apply presburger
   done
 
 lemma nat_to_bl_mod_n_eq [simp]:
@@ -1266,7 +1264,7 @@ lemma valid_obj_s0[simp]:
                                 shared_page_ptr_def
                                 valid_vm_rights_def vm_kernel_only_def
                                 kernel_base_def pageBits_def pt_bits_def vmsz_aligned_def
-                                is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                                is_aligned_def[THEN iffD2]
                                 is_aligned_addrFromPPtr_n)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
                            valid_ipc_buffer_cap_def valid_tcb_state_def valid_arch_tcb_def
@@ -1274,7 +1272,7 @@ lemma valid_obj_s0[simp]:
                        is_valid_vtable_root_def)+
   apply (simp add: valid_vm_rights_def vm_kernel_only_def
                    kernel_base_def pageBits_def vmsz_aligned_def
-                   is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                   is_aligned_def[THEN iffD2]
                    is_aligned_addrFromPPtr_n)
   done
 
@@ -1313,12 +1311,14 @@ lemma pspace_distinct_s0:
    apply (clarsimp simp: s0_ptr_defs cte_level_bits_def)
    apply (case_tac "(ucast irq << 4) < (ucast irqa << 4)")
     apply (frule udvd_decr'[where K="0x10::32 word" and ua=0, simplified])
+       apply (simp add: shiftl_t2n uint_word_ariths)
+       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
+       apply simp
       apply (simp add: shiftl_t2n uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
       apply simp
-     apply (simp add: shiftl_t2n uint_word_ariths)
-     apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
-     apply simp
+     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
+     apply (simp add: shiftl_int_def take_bit_eq_mod)
     apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irqa")
@@ -1359,12 +1359,14 @@ lemma pspace_distinct_s0:
     apply simp
    apply (case_tac "(ucast irq << 4) > (ucast irqa << 4)")
     apply (frule udvd_decr'[where K="0x10::32 word" and ua=0, simplified])
+       apply (simp add: shiftl_t2n uint_word_ariths)
+       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
+       apply simp
       apply (simp add: shiftl_t2n uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
       apply simp
-     apply (simp add: shiftl_t2n uint_word_ariths)
-     apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
-     apply simp
+     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
+     apply (simp add: shiftl_int_def take_bit_eq_mod)
     apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irq")
@@ -1689,41 +1691,41 @@ lemma valid_global_pd_mappings_s0[simp]:
      apply simp
     apply simp
    apply (case_tac "ucast x << 20 < (0xE0000000::32 word)")
-   apply (subgoal_tac "(0xE0000000::32 word) - 0x100000 \<ge> ucast x << 20")
-    apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xDFFFFFFF")
-     apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xDFFFFFFF::32 word" in order_trans_rules(23))
-      apply simp
-     apply ((drule(1) order_trans_rules(23))+, force)
-    apply (simp add: add.commute
-               word_plus_mono_left[where x="0xFFFFF" and z="0xDFF00000", simplified])
-   apply (simp add: shiftl_t2n)
-   apply (rule udvd_decr'[where K="0x100000" and q="0xE0000000" and ua=0, simplified])
+    apply (subgoal_tac "(0xE0000000::32 word) - 0x100000 \<ge> ucast x << 20")
+     apply (subgoal_tac "0xFFFFF + (ucast x << 20) \<le> 0xDFFFFFFF")
+      apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xDFFFFFFF::32 word" in order_trans_rules(23))
+       apply simp
+      apply ((drule(1) order_trans_rules(23))+, force)
+     apply (simp add: add.commute)
+     apply (simp add: word_plus_mono_left[where x="0xFFFFF" and z="0xDFF00000", simplified])
+    apply (simp add: shiftl_t2n)
+    apply (rule udvd_decr'[where K="0x100000" and q="0xE0000000" and ua=0, simplified])
        apply simp
       apply (simp add: uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^20" and b="2^12", simplified])
       apply simp
      apply simp
     apply simp
-    apply (erule notE)
-    apply (cut_tac x="ucast x::32 word" and n=20 in shiftl_shiftr_id)
-      apply simp
-     apply (simp add: ucast_less[where 'b=12, simplified])
-    apply simp
-    apply (rule ucast_up_inj[where 'b=32])
+   apply (erule notE)
+   apply (cut_tac x="ucast x::32 word" and n=20 in shiftl_shiftr_id)
      apply simp
-    apply simp
-   apply (drule_tac c="0xFFFFF + (ucast x << 20)" and d="0xFFFFF" and b="0xFFFFF" in word_sub_mono)
-      apply simp
-     apply (rule word_sub_le)
-     apply (rule order_trans_rules(23)[rotated], assumption)
-     apply simp
-    apply (simp add: add.commute)
-    apply (rule no_plus_overflow_neg)
-    apply simp
-    apply (drule_tac x="ucast x << 20" in order_trans_rules(23), assumption)
-    apply (simp add: le_less_trans)
+    apply (simp add: ucast_less[where 'b=12, simplified])
    apply simp
-   done
+   apply (rule ucast_up_inj[where 'b=32])
+    apply simp
+   apply simp
+  apply (drule_tac c="0xFFFFF + (ucast x << 20)" and d="0xFFFFF" and b="0xFFFFF" in word_sub_mono)
+     apply simp
+    apply (rule word_sub_le)
+    apply (rule order_trans_rules(23)[rotated], assumption)
+    apply simp
+   apply (simp add: add.commute)
+   apply (rule no_plus_overflow_neg)
+   apply simp
+   apply (drule_tac x="ucast x << 20" in order_trans_rules(23), assumption)
+   apply (simp add: le_less_trans)
+  apply simp
+  done
 
 lemma pspace_in_kernel_window_s0[simp]:
   "pspace_in_kernel_window s0_internal"
