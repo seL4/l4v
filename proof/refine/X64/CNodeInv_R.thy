@@ -7080,6 +7080,7 @@ lemmas finaliseSlot_typ_ats[wp] = typ_at_lifts[OF finaliseSlot_typ_at']
 lemmas rec_del_valid_list_irq_state_independent[wp] =
   rec_del_preservation[OF cap_swap_for_delete_valid_list set_cap_valid_list empty_slot_valid_list finalise_cap_valid_list preemption_point_valid_list]
 
+(* unsure *)
 lemma rec_del_corres:
   "\<forall>C \<in> rec_del_concrete args.
    spec_corres s (dc \<oplus> (case args of

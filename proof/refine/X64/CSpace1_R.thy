@@ -314,6 +314,7 @@ lemma getCTE_wp':
   apply clarsimp
   done
 
+(* getSlotCap_TCB_corres, also see get_tcb_cap_corres which looks similar *)
 lemma getSlotCap_corres:
   "cte_ptr' = cte_map cte_ptr \<Longrightarrow>
    corres cap_relation
@@ -1752,6 +1753,7 @@ qed
 definition pspace_relations where
   "pspace_relations ekh kh kh' \<equiv> pspace_relation kh kh' \<and> ekheap_relation ekh kh'"
 
+(* unsure *)
 lemma set_cap_not_quite_corres_prequel:
   assumes cr:
   "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
@@ -1815,6 +1817,7 @@ lemma setCTE_pspace_only:
   apply (rule exI, rule refl)
   done
 
+(* unsure *)
 lemma set_cap_not_quite_corres:
   assumes cr:
   "pspace_relations (ekheap s) (kheap s) (ksPSpace s')"
@@ -1950,6 +1953,7 @@ lemma pspace_relation_cte_wp_atI:
   apply assumption
   done
 
+(* unsure *)
 lemma sameRegion_corres:
   "\<lbrakk> sameRegionAs c' d'; cap_relation c c'; cap_relation d d' \<rbrakk>
   \<Longrightarrow> same_region_as c d"

@@ -1485,6 +1485,7 @@ lemma gts_exs_valid[wp]:
   apply (erule get_tcb_at)
   done
 
+(* guarded_SwitchToThread_corres? also what's the difference to switchToThread_corres? *)
 lemma guarded_switch_to_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
@@ -1549,6 +1550,8 @@ lemma corres_gets_queues_getReadyQueuesL1Bitmap:
   unfolding state_relation_def valid_queues_def getReadyQueuesL1Bitmap_def
   by (clarsimp simp: bitmapL1_zero_ksReadyQueues ready_queues_relation_def)
 
+(* switchToThread_chooseThread_fragment_corres? or chooseThread_corres_helper
+   (this lemmas is used for chooseThread_corres) *)
 lemma guarded_switch_to_chooseThread_fragment_corres:
   "corres dc
     (P and st_tcb_at runnable t and invs and valid_sched)
@@ -1856,6 +1859,7 @@ lemma scheduleChooseNewThread_corres:
 
 crunch static_inv[wp]: guarded_switch_to "\<lambda>_. P"
 
+(* what is ethread_get_when? *)
 lemma ethread_get_when_corres:
   assumes x: "\<And>etcb tcb'. etcb_relation etcb tcb' \<Longrightarrow> r (f etcb) (f' tcb')"
   shows      "corres (\<lambda>rv rv'. b \<longrightarrow> r rv rv') (is_etcb_at t) (tcb_at' t)

@@ -1824,6 +1824,7 @@ lemma corres_get_etcb:
   done
 
 
+(* what is ethread_get? *)
 lemma ethreadget_corres:
   assumes x: "\<And>etcb tcb'. etcb_relation etcb tcb' \<Longrightarrow> r (f etcb) (f' tcb')"
   shows      "corres r (is_etcb_at t) (tcb_at' t) (ethread_get f t) (threadGet f' t)"
@@ -2119,6 +2120,7 @@ lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur
   apply (simp add: get_thread_state_def thread_get_def)
   done
 
+(* difference to isRunnable_corres? abstract sides are different *)
 lemma thread_get_isRunnable_corres: "corres (=) (tcb_at t) (tcb_at' t) (thread_get (\<lambda>tcb. runnable (tcb_state tcb)) t) (isRunnable t)"
   apply (simp add:  isRunnable_def getThreadState_def threadGet_def
                    thread_get_def)
@@ -3320,6 +3322,7 @@ lemma storeWordUser_corres:
   apply (simp add: valid_ipc_buffer_ptr'_def)
   done
 
+(* difference to loadWordUser_corres? *)
 lemma load_word_corres:
   "corres (=) \<top>
      (typ_at' UserDataT (a && ~~ mask pageBits) and (\<lambda>s. is_aligned a word_size_bits))
@@ -3616,6 +3619,7 @@ lemma cte_at_tcb_at_32':
   apply fastforce
   done
 
+(* see getSlotCap_tcb_corres *)
 lemma get_tcb_cap_corres:
   "tcb_cap_cases ref = Some (getF, v) \<Longrightarrow>
    corres cap_relation (tcb_at t and valid_objs) (tcb_at' t and pspace_aligned' and pspace_distinct')
@@ -4657,6 +4661,7 @@ where
   "non_exst_same' (KOTCB tcb) (KOTCB tcb') = non_exst_same tcb tcb'" |
   "non_exst_same' _ _ = True"
 
+(* unsure *)
 lemma set_eobject_corres':
   assumes e: "etcb_relation etcb tcb'"
   assumes z: "\<And>s. obj_at' P ptr s
@@ -4702,6 +4707,7 @@ lemma set_eobject_corres':
   apply (clarsimp simp: other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits X64_A.arch_kernel_obj.splits)
   done
 
+(* unsure *)
 lemma set_eobject_corres:
   assumes tcbs: "non_exst_same tcb' tcbu'"
   assumes e: "etcb_relation etcb tcb' \<Longrightarrow> etcb_relation etcbu tcbu'"

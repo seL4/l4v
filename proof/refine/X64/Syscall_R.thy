@@ -29,6 +29,7 @@ One can clearly see this is simulating some kind of monadic Maybe sequence
 trying to identify all possible errors before actually performing the syscall.
 *)
 
+(* unsure *)
 lemma syscall_corres:
   assumes corres:
     "corres (fr \<oplus> r_flt_rel) P P' m_flt m_flt'"

@@ -137,6 +137,7 @@ lemma decode_irq_handler_valid'[wp]:
   apply clarsimp
   done
 
+(* difference to isIRQActive_corres? isIRQActive seems to be more of a specific case *)
 lemma is_irq_active_corres:
   "corres (=) \<top> \<top> (is_irq_active irq) (isIRQActive irq)"
   apply (simp add: is_irq_active_def isIRQActive_def get_irq_state_def

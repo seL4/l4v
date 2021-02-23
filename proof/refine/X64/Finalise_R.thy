@@ -3731,6 +3731,7 @@ lemma fast_finaliseCap_corres:
                  dest!: invs_valid_objs' obj_at_valid_objs' )
   done
 
+(* similar to cteDeleteOne_corres, except cteDeleteOne_corres exists as a locale assumption*)
 lemma cap_delete_one_corres:
   "corres dc (einvs and cte_wp_at can_fast_finalise ptr)
         (invs' and cte_at' (cte_map ptr))
@@ -3948,6 +3949,7 @@ definition thread_set_all :: "(Structures_A.tcb \<Rightarrow> Structures_A.tcb) 
         set_thread_all tptr (f tcb) (g etcb)
      od"
 
+(* unsure *)
 lemma set_thread_all_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
@@ -4043,6 +4045,7 @@ lemma tcb_update_all_corres':
   apply simp
   done
 
+(* unsure *)
 lemma thread_gets_the_all_corres:
   shows      "corres (\<lambda>(tcb, etcb) tcb'. tcb_relation tcb tcb' \<and> etcb_relation etcb tcb')
                 (tcb_at t and is_etcb_at t) (tcb_at' t)

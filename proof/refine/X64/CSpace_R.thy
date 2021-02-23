@@ -3566,6 +3566,8 @@ lemma maskCapRightsUntyped [simp]:
 
 declare if_option_Some[simp]
 
+(* difference to lookupCap_corres? these look the same but lookup_cap_corres has an assumption
+   whereas the other substitutes the assumption into the goal *)
 lemma lookup_cap_corres:
   "\<lbrakk> epcptr = to_bl epcptr' \<rbrakk> \<Longrightarrow>
    corres (lfr \<oplus> cap_relation)
@@ -3958,6 +3960,7 @@ lemma setCTE_work_units_completed[wp]:
   apply (wp updateObject_cte_inv crunch_wps | simp)+
   done
 
+(* unsure *)
 lemma create_reply_master_corres:
   "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
    corres dc

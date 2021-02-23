@@ -1018,6 +1018,7 @@ definition
                                  and valid_cap' (ArchObjectCap cap)
                                  and K (isPageTableCap cap)"
 
+(* unsure because of body *)
 lemma clear_page_table_corres:
   "corres dc (pspace_aligned and page_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
@@ -1050,6 +1051,7 @@ lemma clear_page_table_corres:
   apply simp
   done
 
+(* unsure because of body *)
 lemma clear_page_directory_corres:
   "corres dc (pspace_aligned and page_directory_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')
@@ -1082,6 +1084,7 @@ lemma clear_page_directory_corres:
   apply simp
   done
 
+(* unsure because of body *)
 lemma clear_pdpt_corres:
   "corres dc (pspace_aligned and pd_pointer_table_at p and valid_etcbs)
              (pspace_aligned' and pspace_distinct')

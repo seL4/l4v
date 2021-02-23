@@ -343,6 +343,7 @@ lemma setObject_update_TCB_corres:
                         in_magnitude_check)
   done
 
+(* see get_tcb_corres and corres_get_tcb *)
 lemma getObject_TCB_corres:
   "corres tcb_relation (tcb_at t) (tcb_at' t)
           (gets_the (get_tcb t)) (getObject t)"
@@ -1786,6 +1787,7 @@ lemma setQueue_nosch[wp]:
 lemma gq_wp[wp]: "\<lbrace>\<lambda>s. Q (ksReadyQueues s (d, p)) s\<rbrace> getQueue d p \<lbrace>Q\<rbrace>"
   by (simp add: getQueue_def, wp)
 
+(* see getObject_TCB_corres and corres_get_tcb *)
 lemma get_tcb_corres:
   "corres tcb_relation (tcb_at t) (tcb_at' t) (gets_the (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)

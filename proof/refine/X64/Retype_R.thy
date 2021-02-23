@@ -5226,6 +5226,7 @@ lemma corres_retype_update_gsI:
   using corres_retype' [OF not_zero aligned obj_bits_api check usv ko orr cover]
   by (simp add: f)
 
+(* unsure *)
 lemma retype_region2_extra_ext_mapM_x_corres:
   shows "corres dc
            (valid_etcbs and (\<lambda>s. \<forall>addr\<in>set addrs. tcb_at addr s))

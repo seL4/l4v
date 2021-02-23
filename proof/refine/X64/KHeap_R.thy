@@ -101,6 +101,7 @@ lemmas page_table_at_obj_at'
   = page_table_at'_def[unfolded typ_at_to_obj_at_arches]
 
 
+(* see get_tcb_corres and getObject_TCB_corres *)
 lemma corres_get_tcb:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)

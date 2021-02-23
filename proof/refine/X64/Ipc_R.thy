@@ -1862,6 +1862,7 @@ crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)"
   (wp: hoare_drop_imps hoare_vcg_split_case_option mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
+(* unsure *)
 lemma sanitise_register_corres:
   "foldl (\<lambda>s (a, b). UserContext (fpu_state s) ((user_regs s)(a := sanitise_register x a b))) s
           (zip msg_template msg) =
@@ -1876,6 +1877,7 @@ lemma sanitise_register_corres:
   by (auto simp: sanitise_or_flags_def sanitise_and_flags_def user_vtop_def mask_def
                     sanitiseOrFlags_def sanitiseAndFlags_def)
 
+(* handleFaultReply_corres_helper? *)
 lemma handle_fault_reply_registers_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
            (do t' \<leftarrow> arch_get_sanitise_register_info t;
@@ -3480,6 +3482,7 @@ lemma sendFaultIPC_corres:
   apply fastforce
   done
 
+(* maybe return_noop_corres? *)
 lemma gets_the_noop_corres:
   assumes P: "\<And>s. P s \<Longrightarrow> f s \<noteq> None"
   shows "corres dc P P' (gets_the f) (return x)"

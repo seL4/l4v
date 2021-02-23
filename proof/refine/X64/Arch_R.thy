@@ -426,6 +426,7 @@ where
    | InvokeIOPort i \<Rightarrow> \<top>
    | InvokeIOPortControl ic \<Rightarrow> ioport_control_inv_valid' ic"
 
+(* unsure *)
 lemma mask_vmrights_corres:
   "maskVMRights (vmrights_map R) (rightsFromWord d) =
   vmrights_map (mask_vm_rights R (data_to_rights d))"
@@ -436,6 +437,7 @@ lemma mask_vmrights_corres:
                      vm_kernel_only_def vm_read_only_def
                split: bool.splits)
 
+(* unsure *)
 lemma vm_attributes_corres:
   "vmattributes_map (attribs_from_word w) = attribsFromWord w"
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
@@ -956,6 +958,7 @@ lemma ucast_ucast_ioport_max [simp]:
   "UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) y) \<le> 0xFFFF"
   by word_bitwise
 
+(* there already exists decodeX64PortInvocation_corres, which seems to be more specific *)
 lemma decode_port_inv_corres:
   "\<lbrakk>cap = arch_cap.IOPortCap f l; acap_relation cap cap' \<rbrakk> \<Longrightarrow>
      corres (ser \<oplus> archinv_relation)
@@ -1334,6 +1337,8 @@ lemma port_out_corres[@lift_corres_args, corres]:
      apply wpsimp+
   done
 
+(* difference to performX64PortInvocation_corres? one is InvokeIOPortControl, the other is 
+   InvokeIOPort *)
 lemma perform_port_inv_corres:
   "\<lbrakk>archinv_relation ai ai'; ai = arch_invocation.InvokeIOPort x\<rbrakk>
   \<Longrightarrow> corres (dc \<oplus> (=))

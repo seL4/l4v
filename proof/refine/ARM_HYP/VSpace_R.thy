@@ -364,6 +364,7 @@ lemma invalidateASID_corres:
   apply simp
   done
 
+(* modified version of invalidateASID_corres with existential, so maybe invalidateASID_ext_corres? *)
 lemma invalidate_asid_ext_corres:
   "corres dc
           (\<lambda>s. \<exists>pd. valid_asid_map s \<and> valid_vspace_objs s
