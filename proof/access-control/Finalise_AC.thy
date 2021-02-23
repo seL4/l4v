@@ -587,8 +587,8 @@ lemma arch_finalise_cap_respects[wp]:
    apply (wp unmap_page_respects unmap_page_table_respects delete_asid_respects
               | wpc | simp)+
   apply clarsimp
-  apply (auto simp: cap_auth_conferred_def is_page_cap_def aag_cap_auth_def
-                    pas_refined_all_auth_is_owns valid_cap_simps
+  apply (auto simp: cap_auth_conferred_def arch_cap_auth_conferred_def is_page_cap_def
+                    aag_cap_auth_def pas_refined_all_auth_is_owns valid_cap_simps
                     cap_links_asid_slot_def label_owns_asid_slot_def
              dest!: pas_refined_Control intro: pas_refined_Control_into_is_subject_asid)
   done
@@ -1014,7 +1014,7 @@ lemma pas_refined_set_asid_table_empty_strg:
       prefer 2
       apply (clarsimp simp: state_vrefs_def obj_at_def vs_refs_no_global_pts_def)
      apply (auto intro: state_asids_to_policy_aux.intros auth_graph_map_memI[OF sbta_vref]
-                        pas_refined_refl[simplified pas_refined_def state_objs_to_policy_def])[3]
+                intro!: pas_refined_refl[simplified pas_refined_def state_objs_to_policy_def])[3]
   apply(rule pas_refined_asid_mem)
    apply(drule_tac t="pasSubject aag" in sym)
    apply(simp, rule sata_asidpool)

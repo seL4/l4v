@@ -140,6 +140,8 @@ session DPolicy in "dpolicy" = DRefine +
  *)
 
 session Access in "access-control" = AInvs +
+  directories
+    "$L4V_ARCH"
   theories
     "ADT_AC"
     "ExampleSystem"

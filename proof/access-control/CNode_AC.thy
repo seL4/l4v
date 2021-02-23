@@ -5,7 +5,7 @@
  *)
 
 theory CNode_AC
-imports Access
+imports ArchAccess_AC
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -14,6 +14,7 @@ declare arch_post_modify_registers_def[simp]
 declare arch_post_cap_deletion_def[simp]
 declare arch_cap_cleanup_opt_def[simp]
 declare arch_mask_irq_signal_def[simp]
+declare arch_integrity_subjects_def[simp]
 
 (* FIXME: arch-split *)
 lemmas post_cap_deletion_simps[simp] = post_cap_deletion_def[simplified arch_post_cap_deletion_def]
@@ -547,7 +548,7 @@ lemma set_cap_integrity_deletion_aux:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (integrity_trans_start)
   apply (rule hoare_pre)
-   apply(unfold integrity_subjects_def)[1]
+   apply(unfold integrity_subjects_def arch_integrity_subjects_def)[1]
    apply (wp hoare_wp_combs)
     apply (unfold set_cap_def)[1]
     apply (wpc)
@@ -1456,7 +1457,7 @@ lemma store_pte_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. \<forall>S. P ((state_vrefs s) (p && ~~ mask pt_bits :=
           (state_vrefs s (p && ~~ mask pt_bits) - S) \<union>
              (\<Union>(p', sz, auth)\<in>set_option (pte_ref pte).
-                   (\<lambda>(p'', a). (p'', VSRef ((p && mask pt_bits) >> 2) (Some APageTable), a)) ` (ptr_range p' sz \<times> auth))))\<rbrace>
+                   (\<lambda>(p'', a). (p'', (p && mask pt_bits) >> 2, APageTable, a)) ` (ptr_range p' sz \<times> auth))))\<rbrace>
       store_pte p pte \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
@@ -1499,6 +1500,8 @@ apply (wp get_object_wp)
 apply simp
 done
 
+crunch asid_table_inv [wp]: store_pte "\<lambda>s. P (asid_table s)"
+
 lemma store_pte_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K (\<forall>x. pte_ref pte = Some x \<longrightarrow> (\<forall>a \<in> snd (snd x).
          \<forall>p' \<in> (ptr_range (fst x) (fst (snd x))). auth_graph_map (pasObjectAbs aag) {(p && ~~ mask pt_bits, a, p')} \<subseteq> pasPolicy aag))\<rbrace>
@@ -1513,9 +1516,10 @@ lemma store_pte_pas_refined[wp]:
    apply (erule state_bits_to_policy.cases,
           auto intro: state_bits_to_policy.intros auth_graph_map_memI
                split: if_split_asm)[1]
-  apply (erule_tac B="state_asids_to_policy aag s" for s in subset_trans[rotated])
+  apply (erule_tac B="state_asids_to_policy_aux _ _ _ _" in subset_trans[rotated])
   apply (auto intro: state_asids_to_policy_aux.intros
               elim!: state_asids_to_policy_aux.cases
+               elim: subset_trans[rotated]
               split: if_split_asm)
   done
 
@@ -1525,7 +1529,7 @@ lemma store_pde_st_vrefs[wp]:
            (if ucast (kernel_base >> 20) \<le> (ucast (p && mask pd_bits >> 2)::12 word) then {}
             else
                (\<Union>(p', sz, auth)\<in>set_option (pde_ref2 pde).
-                   (\<lambda>(p'', a). (p'', VSRef ((p && mask pd_bits) >> 2) (Some APageDirectory), a)) ` (ptr_range p' sz \<times> auth)))))\<rbrace>
+                   (\<lambda>(p'', a). (p'', (p && mask pd_bits) >> 2, APageDirectory, a)) ` (ptr_range p' sz \<times> auth)))))\<rbrace>
       store_pde p pde \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def split del: if_split)
   apply (wp get_object_wp)
@@ -1571,7 +1575,7 @@ lemma store_pde_pas_refined[wp]:
    apply (erule state_bits_to_policy.cases,
           auto intro: state_bits_to_policy.intros auth_graph_map_memI
                split: if_split_asm)[1]
-  apply (erule_tac B="state_asids_to_policy aag s" for s in subset_trans[rotated])
+  apply (erule_tac B="state_asids_to_policy_aux _ _ _ _" in subset_trans[rotated])
   apply (auto intro: state_asids_to_policy_aux.intros
               elim!: state_asids_to_policy_aux.cases
               split: if_split_asm)
@@ -1581,8 +1585,7 @@ lemmas pde_ref_simps = pde_ref_def[split_simps pde.split]
     pde_ref2_def[split_simps pde.split]
 
 lemma set_asid_pool_st_vrefs[wp]:
-  "\<lbrace>\<lambda>s. P ((state_vrefs s) (p := (\<lambda>(r, p). (p, VSRef (ucast r)
-               (Some AASIDPool), Control)) ` graph_of pool))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_vrefs s) (p := (\<lambda>(r, p). (p, ucast r, AASIDPool, Control)) ` graph_of pool))\<rbrace>
       set_asid_pool p pool \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
@@ -1802,7 +1805,7 @@ lemma derive_cap_auth_derived:
    apply (wp | wpc | simp add: arch_derive_cap_def)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (safe, simp_all)
-  apply (clarsimp simp: auth_derived_def cap_auth_conferred_def is_page_cap_def)
+  apply (clarsimp simp: auth_derived_def arch_cap_auth_conferred_def cap_auth_conferred_def)
   done
 
 lemma cap_rights_to_auth_mono:
@@ -1812,15 +1815,14 @@ lemma cap_rights_to_auth_mono:
 lemma auth_derived_mask_cap:
   "auth_derived cap cap' \<Longrightarrow> auth_derived (mask_cap R cap) cap'"
   apply (simp add: auth_derived_def mask_cap_def cap_rights_update_def
-                   is_cap_simps acap_rights_update_def
-                   validate_vm_rights_def vm_kernel_only_def
-                   vm_read_only_def
+                   acap_rights_update_def validate_vm_rights_def
+                   vm_kernel_only_def vm_read_only_def
             split: cap.split arch_cap.split bool.splits)
-  apply (rule conjI | clarsimp
-              | erule subsetD
-              | simp add: cap_auth_conferred_def vspace_cap_rights_to_auth_def
-                          reply_cap_rights_to_auth_def cap_rights_to_auth_def
-                          is_page_cap_def split: if_split_asm)+
+  apply safe
+  apply (auto simp: cap_auth_conferred_def arch_cap_auth_conferred_def
+                    cap_rights_to_auth_def reply_cap_rights_to_auth_def
+                    vspace_cap_rights_to_auth_def
+             split: if_split_asm)
   done
 
 lemma auth_derived_update_cap_data:
@@ -1887,7 +1889,7 @@ lemma arch_derive_cap_obj_refs_auth:
   unfolding arch_derive_cap_def
   apply (rule hoare_pre)
    apply (wp | wpc)+
-  apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def)
+  apply (clarsimp simp: cap_auth_conferred_def arch_cap_auth_conferred_def)
   done
 
 lemma derive_cap_obj_refs_auth:
@@ -1986,8 +1988,7 @@ lemma update_cap_cap_auth_conferred_subset:
 lemma update_cap_cli:
   "cap_links_irq aag l (update_cap_data b w cap) = cap_links_irq aag l cap"
   unfolding update_cap_data_def arch_update_cap_data_def
-  apply (cases cap, simp_all add: is_cap_simps cli_no_irqs badge_update_def the_cnode_cap_def Let_def)
-  done
+  by (cases cap, simp_all add: is_cap_simps cli_no_irqs badge_update_def the_cnode_cap_def Let_def)
 
 lemma untyped_range_update_cap_data [simp]:
   "untyped_range (update_cap_data b w c) = untyped_range c"

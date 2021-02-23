@@ -5,7 +5,7 @@
  *)
 
 theory ExampleSystem
-imports Access
+imports ArchAccess_AC
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

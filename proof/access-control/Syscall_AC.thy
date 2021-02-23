@@ -672,7 +672,7 @@ lemma set_thread_state_restart_to_running_respects:
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac tro_tcb_activate[OF refl refl])
-    apply (simp add: tcb_bound_notification_reset_integrity_def)+
+    apply (simp add: tcb_bound_notification_reset_integrity_def ctxt_IP_update_def)+
   done
 
 lemma activate_thread_respects:

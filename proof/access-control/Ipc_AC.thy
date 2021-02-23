@@ -253,8 +253,8 @@ lemma lookup_ipc_buffer_has_auth [wp]:
    apply (simp add: msg_align_bits pageBits_def)
   apply simp
   apply (drule (1) cap_auth_caps_of_state)
-  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def vspace_cap_rights_to_auth_def
-                        vm_read_write_def is_page_cap_def split: if_split_asm)
+  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                        vspace_cap_rights_to_auth_def vm_read_write_def is_page_cap_def)
   apply (drule bspec)
    apply (erule (3) ipcframe_subset_page)
   apply simp
@@ -318,7 +318,7 @@ lemma send_upd_ctxintegrity:
           blast),
         rule tro_trans_spec,
         (rule tro_tcb_generic'[OF refl refl refl]; simp),
-        rule tro_orefl, simp, rule tcb.equality; solves\<open>simp add:arch_tcb_context_set_def\<close>))
+        rule tro_orefl, simp, rule tcb.equality; solves simp))
 
 lemma set_mrs_respects_in_signalling':
   "\<lbrace>integrity aag X st and st_tcb_at ((=) Structures_A.Running) thread and
@@ -428,12 +428,6 @@ lemma set_ntfn_valid_objs_at:
 lemma drop_Suc0_iff:
   "xs \<noteq> [] \<Longrightarrow> (drop (Suc 0) xs = ys) = (\<exists>x. xs = x # ys)"
   by (auto simp: neq_Nil_conv)
-
-lemma receive_blocked_on_def3:
-  "receive_blocked_on ref ts =
-     ((\<exists>pl. ts = Structures_A.BlockedOnReceive ref pl)
-      \<or> ts = Structures_A.BlockedOnNotification ref)"
-  by (cases ts, auto)
 
 
 lemma integrity_receive_blocked_chain:
@@ -817,8 +811,9 @@ lemma remove_rights_cap_auth_conferred_subset:
   "x \<in> cap_auth_conferred (remove_rights R cap) \<Longrightarrow> x \<in> cap_auth_conferred cap"
   unfolding remove_rights_def cap_rights_update_def
   apply (clarsimp split: if_split_asm cap.splits arch_cap.splits bool.splits
-    simp: cap_auth_conferred_def vspace_cap_rights_to_auth_def acap_rights_update_def
-          validate_vm_rights_def vm_read_only_def vm_kernel_only_def)
+                   simp: cap_auth_conferred_def arch_cap_auth_conferred_def
+                         vspace_cap_rights_to_auth_def acap_rights_update_def
+                         validate_vm_rights_def vm_read_only_def vm_kernel_only_def)
   apply (erule set_mp [OF cap_rights_to_auth_mono, rotated], clarsimp)+
   apply (auto simp: is_page_cap_def cap_rights_to_auth_def reply_cap_rights_to_auth_def split:if_splits)
   done
@@ -858,12 +853,12 @@ lemma auth_derived_refl[simp]:
 
 lemma derive_cap_auth_derived:
   "\<lbrace>\<top>\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv cap \<rbrace>,-"
-  apply (cases cap ; (wpsimp simp:derive_cap_def)?)
+  apply (cases cap ; (wpsimp simp: derive_cap_def)?)
   apply (case_tac x12 ;
-         simp add:derive_cap_def arch_derive_cap_def;
+         simp add: derive_cap_def arch_derive_cap_def;
          wpc?;
          wp?;
-         simp add:auth_derived_def cap_auth_conferred_def)
+         simp add: auth_derived_def cap_auth_conferred_def arch_cap_auth_conferred_def)
   done
 
 (* FIXME MOVE *)
@@ -1388,8 +1383,7 @@ lemma receive_ipc_base_pas_refined:
                              (AllowGrant \<in> rights \<longrightarrow> is_subject aag (hd list)) \<and>
                              (pasSubject aag, Reply, pasObjectAbs aag (hd list)) \<in> pasPolicy aag)"
                      in hoare_strengthen_post[rotated])
-         apply (fastforce simp: cap_auth_conferred_def pas_refined_all_auth_is_owns
-                                pas_refined_refl)
+         apply (fastforce simp: pas_refined_refl)
         apply (wp static_imp_wp do_ipc_transfer_pas_refined set_simple_ko_pas_refined
                   set_thread_state_pas_refined get_simple_ko_wp hoare_vcg_all_lift
                   hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
@@ -1901,14 +1895,12 @@ lemma tcb_context_no_change:
 
 lemma auth_ipc_buffers_mem_Write:
   "\<lbrakk> x \<in> auth_ipc_buffers s thread; pas_refined aag s; valid_objs s; is_subject aag thread \<rbrakk>
-  \<Longrightarrow> aag_has_auth_to aag Write x"
+     \<Longrightarrow> aag_has_auth_to aag Write x"
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_cur_auth_caps_of_state)
    apply simp
-  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def
-                        vspace_cap_rights_to_auth_def vm_read_write_def
-                        is_page_cap_def
-                 split: if_split_asm)
+  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                        vspace_cap_rights_to_auth_def vm_read_write_def)
   apply (auto dest: ipcframe_subset_page)
   done
 
@@ -2461,8 +2453,10 @@ lemma cap_insert_ext_integrity_in_ipc_reply:
    apply simp
    apply (simp add: list_integ_def del: split_paired_All)
    apply (fold list_integ_def get_tcb_def tcb_states_of_state_def)
-   apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
+  apply (rule conjI)
    apply (rule cca_reply; force)
+  apply (fastforce split: if_splits)
   done
 
 lemma update_cdt_wp:
@@ -2651,26 +2645,6 @@ lemma thread_set_fault_pas_refined:
   apply (wp send_ipc_pas_refined thread_set_pas_refined
             thread_set_refs_trivial thread_set_obj_at_impossible
        | simp)+
-  done
-
-lemma owns_ep_owns_receivers':
-  "\<lbrakk> (\<forall>auth. aag_has_auth_to aag auth epptr); pas_refined aag s; valid_objs s;
-     sym_refs (state_refs_of s); ko_at (Endpoint ep) epptr s; (t, EPRecv) \<in> ep_q_refs_of ep\<rbrakk>
-  \<Longrightarrow> is_subject aag t"
-  apply (drule (1) ep_rcv_queued_st_tcb_at [where P = "receive_blocked_on epptr"])
-      apply clarsimp
-     apply clarsimp
-    apply clarsimp
-   apply (rule refl)
-  apply (drule st_tcb_at_to_thread_states)
-  apply (clarsimp simp: receive_blocked_on_def2)
-  apply (drule spec [where x = Grant])
-  apply (frule aag_wellformed_grant_Control_to_recv [OF _ _ pas_refined_wellformed])
-    apply (rule pas_refined_mem [OF sta_ts])
-     apply fastforce
-    apply assumption
-   apply assumption
-  apply (erule (1) aag_Control_into_owns)
   done
 
 lemma send_fault_ipc_pas_refined:

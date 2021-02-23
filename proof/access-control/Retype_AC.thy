@@ -249,7 +249,7 @@ lemma retype_region_integrity:
   apply (clarsimp simp add: integrity_def)
   apply(fastforce intro: tro_lrefl tre_lrefl
                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                   simp: image_def p_assoc_help power_sub integrity_def)
+                   simp: image_def p_assoc_help power_sub)
   done
 
 lemma retype_region_ret_is_subject:
@@ -426,6 +426,12 @@ lemma dmo_clearMemory_respects':
 
 lemma integrity_work_units_completed_update[simp]:
   "integrity aag X st (work_units_completed_update f s) = integrity aag X st s"
+  by (simp add: integrity_def)
+
+lemma integrity_irq_state_independent[intro!, simp]:
+  "integrity x y z (s\<lparr>machine_state :=
+                              machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
+   = integrity x y z s"
   by (simp add: integrity_def)
 
 lemma reset_untyped_cap_integrity:
@@ -776,14 +782,18 @@ lemmas use_retype_region_proofs_ext
 
 end
 
-lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
+context is_extended begin interpretation Arch .
+
+lemma pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
   shows "\<lbrace>pas_refined aag and P\<rbrace> f \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-apply (simp add: pas_refined_def)
-apply (wp tdmw)
-apply (wp lift_inv)
-apply simp+
-done
+  apply (simp add: pas_refined_def)
+  apply (wp tdmw)
+   apply (wp lift_inv)
+   apply simp+
+  done
+
+end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 

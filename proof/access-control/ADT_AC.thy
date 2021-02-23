@@ -27,7 +27,7 @@ lemma pd_of_thread_same_agent:
      apply (simp add: dom_tcb_cap_cases[simplified])
     apply simp
    apply (simp add: obj_refs_def)
-  apply (simp add: cap_auth_conferred_def is_page_cap_def)
+  apply (simp add: cap_auth_conferred_def arch_cap_auth_conferred_def is_page_cap_def)
   done
 
 lemma invs_valid_global_pd_mappings:
