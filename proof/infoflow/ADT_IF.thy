@@ -2845,19 +2845,12 @@ lemma preemption_point_irq_state_inv'[wp]:
             dmo_getActiveIRQ_wp
         | wpc
         | simp add: reset_work_units_def)+
-     apply (elim conjE)
-     apply simp
-    apply (wp OR_choiceE_wp[where P'="irq_state_inv st" and P''="irq_state_inv st"]
-              dmo_getActiveIRQ_wp
-          | wpc
-          | simp add: reset_work_units_def)+
      apply(clarsimp simp: irq_state_inv_def)
      apply(simp add: next_irq_state_Suc[OF _ recurring_next_irq_state_dom])
      apply (clarsimp simp: irq_state_next_def)
      apply(simp add: next_irq_state_Suc'[OF _ recurring_next_irq_state_dom])
-
     apply(wp | simp add: update_work_units_def irq_state_inv_def | fastforce)+
-     done
+  done
 
 lemma validE_validE_E':
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"

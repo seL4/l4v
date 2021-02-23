@@ -638,7 +638,6 @@ lemma dmo_device_memory_update_globals_equiv_scheduler:
    apply clarsimp
    apply(simp add: device_memory_update_def simpler_modify_def)
   apply(clarsimp simp: globals_equiv_scheduler_def split: option.splits)
-  apply blast
   done
 
 
@@ -3109,9 +3108,11 @@ lemma kernel_schedule_if_confidentiality:
   apply(case_tac u, simp_all)
   apply(frule (6) uwr_reads_equiv_f_g_affects_equiv)
   apply(simp split: prod.splits)
+  apply(rename_tac x1 x1' x2 x1'' x2')
+  supply [[simproc del: defined_all]]
   apply(case_tac s', case_tac t')
   apply(simp add: split_paired_all)
-  apply(frule_tac s=x2 and t=x2a and s2=x2
+  apply(frule_tac s=x2 and t=x2' and s2=x2
                in use_ev[OF schedule_if_reads_respects_f_g
                               [where st=s0_internal, OF current_domains_distinct]])
        apply assumption
@@ -3490,7 +3491,6 @@ lemma small_Step_confidentiality_part_not_PSched:
               | simp_all add: not_schedule_modes_KernelEntry)+)[1]
                apply(drule do_user_op_A_if_confidentiality'[
                                      where s=s and t=t and s'=s' and t'=t' and u=u],simp+)
-               apply blast
               apply(drule do_user_op_A_if_confidentiality'[
                                   where s=s and t=t and s'=s' and t'=t' and u=u], simp+)
              apply(drule_tac s=s and t=t and u=u and s'="(aa,ba)"

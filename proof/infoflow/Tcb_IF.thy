@@ -354,7 +354,6 @@ shows "
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj
         | (wp
-             check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
              check_cap_inv2[where Q="\<lambda>_ s. t \<noteq> idle_thread s"]
              out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at

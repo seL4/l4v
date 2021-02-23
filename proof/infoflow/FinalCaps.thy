@@ -1305,9 +1305,10 @@ lemma reply_cancel_ipc_silc_inv:
   apply wps
   apply (wp static_imp_wp hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply clarsimp
+  apply (rename_tac b a)
   apply (frule(1) descendants_of_owned_or_transferable, force, force, elim disjE)
   apply (clarsimp simp add:silc_inv_def)
-  apply (case_tac "cdt s (aa,ba)")
+  apply (case_tac "cdt s (a,b)")
    apply (fastforce dest: descendants_of_NoneD)
   apply (elim is_transferable.cases)
     apply (fastforce dest: mdb_cte_atD valid_mdb_mdb_cte_at simp:  cte_wp_at_caps_of_state)
