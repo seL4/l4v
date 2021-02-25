@@ -1026,6 +1026,9 @@ lemma ccorres_add_returnOk:
 lemmas ccorres_when
     = ccorres_cond2[OF _ _ ccorres_return_Skip[where a="()"], folded when_def]
 
+lemmas ccorres_when_strong
+    = ccorres_cond_strong[OF _ _ ccorres_return_Skip[where a="()"], folded when_def]
+
 lemma ccorres_Guard_True:
   "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a c
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c)"
