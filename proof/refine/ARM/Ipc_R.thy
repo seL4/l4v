@@ -6062,6 +6062,15 @@ lemma sdfkjh:
   apply (erule back_subst[where P=P], rule ext)
   by (clarsimp simp: opt_map_def)
 
+lemma setSchedContext_scReplies_of:
+  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = scPtr then scReply sc else scReplies_of s a)\<rbrace>
+   setSchedContext scPtr sc
+   \<lbrace>\<lambda>_ s. P (scReplies_of s)\<rbrace>"
+  unfolding setSchedContext_def
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (erule back_subst[where P=P], rule ext)
+  by (clarsimp simp: opt_map_def)
+
 lemma threadSet_tcb_scs_of':
   "\<lbrace>\<lambda>s. P (\<lambda>a. if a = t then tcbSchedContext (h (the (tcbs_of' s a))) else tcb_scs_of' s a)\<rbrace>
    threadSet h t
@@ -6073,25 +6082,56 @@ lemma threadSet_tcb_scs_of':
   apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKOs)
   done
 
+lemma sdfjkh:
+  "pred_map_eq j HH t \<Longrightarrow> pred_map_eq k HH t
+   \<Longrightarrow> j = k"
+  by (clarsimp simp: pred_map_eq_def pred_map_def)
+
 lemma sdjfkh[wp]:
-  "maybeReturnSc y t \<lbrace>tcbs_scs_sym_refs\<rbrace>"
+  "\<lbrace>tcbs_scs_sym_refs and valid_objs'\<rbrace>
+   maybeReturnSc y t
+   \<lbrace>\<lambda>_. tcbs_scs_sym_refs\<rbrace>"
+  unfolding maybeReturnSc_def
+  apply (simp add: liftM_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply wpsimp
+      apply (wps, wpsimp wp: sdfkjh)
+     apply wpsimp+
+    apply (wps, wpsimp wp: threadSet_tcb_scs_of')
+   apply (wpsimp wp: threadGet_wp)
+  apply (clarsimp simp: tcb_at'_ex_eq_all)
+  apply (drule sym, simp)
+  apply (subgoal_tac "pred_map_eq (the (tcbSchedContext tcb)) (tcb_scs_of' s) t")
+   apply (clarsimp simp: tcbs_scs_sym_refs_def pred_map_eq_upd)
+   apply (auto)[1]
+  using sdfjkh apply metis
+  using sdfjkh apply metis
+  apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at'_real_def ko_wp_at'_def opt_map_def
+                        projectKOs)
+  done
+
+lemma sdjfkh34[wp]:
   "maybeReturnSc y t \<lbrace>replies_scs_sym_refs\<rbrace>"
   unfolding maybeReturnSc_def
-  apply (wpsimp)
-  apply wps
-  apply (wpsimp wp: sdfkjh)
-  using [[wp_trace]]
-  apply_trace (wpsimp wp: )
+  apply (simp add: liftM_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply wpsimp
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-  apply wps
-  apply (wpsimp wp: threadSet_tcb_scs_of')
-  apply_trace (wpsimp wp:threadGet_wp )
-  apply (rule_tac Q="\<lambda>_. tcbs_scs_sym_refs" in hoare_strengthen_post[rotated])
-  apply clarsimp
-  sorry (* hmmm, fix later *)
-
-find_theorems setObject scTCBs_of
+        apply (wps, wpsimp)
+       apply wpsimp
+      apply (wps, wpsimp wp: setSchedContext_scReplies_of)
+     apply wpsimp
+    apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+   apply (wpsimp wp: threadGet_wp)
+  apply (clarsimp simp: tcb_at'_ex_eq_all)
+  apply (drule sym, simp)
+  apply (erule back_subst)
+  apply (rule arg_cong2[where f=sqheap_refs_inv, OF _ refl])
+  apply (rule ext)
+  apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at'_real_def ko_wp_at'_def opt_map_def
+                        projectKOs)
+  done
 
 crunches cleanReply
   for scTCBs_of[wp]: "\<lambda>s. P (scTCBs_of s)"
@@ -6168,7 +6208,7 @@ lemma ri_isdfnsvs' [wp]:
   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding cancelIPC_def
   apply wpsimp
-  sorry
+  sorry  (* hmmm, fix later *)
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
