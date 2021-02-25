@@ -6157,7 +6157,7 @@ crunches cancelIPC
   (wp: crunch_wps threadSet_tcb_scs_of'_inv
  ignore: setSchedContext threadSet)
 
-lemma sdfjkh:
+lemma sdfjkh1:
   "pred_map P (\<lambda>a. if a = r then A a else B a) t = (if t = r then ((pred_map P A r)) else (pred_map P B t))"
   by (clarsimp simp: pred_map_def)
 
@@ -6175,13 +6175,16 @@ lemma ri_isdfnvs' [wp]:
   apply wps
   apply (wpsimp wp: hoare_drop_imp)
   apply wpsimp
-  apply (auto simp: sqheap_refs_inv_defs sdfjkh pred_map_eq_def split: if_splits)
+  apply (auto simp: sqheap_refs_inv_defs sdfjkh1 pred_map_eq_def split: if_splits)
   apply (subgoal_tac "\<not> (\<exists>p. pred_map ((=) p) (replySCs_of s) t)")
   apply (fastforce)
   apply (simp only: pred_map_def)
   apply (fastforce)
   apply (simp only: pred_map_def)
   done
+
+term replies_with_sc
+find_theorems valid_replies
 
 lemma ri_inv345s' [wp]:
   "\<lbrace>replies_scs_sym_refs and (\<lambda>s. replySCs_of s t = None)\<rbrace>
@@ -6195,7 +6198,7 @@ lemma ri_inv345s' [wp]:
   apply wpsimp
   apply wpsimp
   apply (wpsimp wp: hoare_vcg_if_lift2)
- oops
+  sorry
 
 crunches blockedCancelIPC
   for replies_scs_sym_refs[wp]: replies_scs_sym_refs
