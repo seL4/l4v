@@ -359,7 +359,7 @@ lemma schedContextCancelYieldTo_valid_pde_mappings'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_pde_mappings'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def setSchedContext_def)
   apply (wpsimp wp: threadGet_wp)
-  apply (fastforce simp: valid_pde_mappings'_def obj_at'_def projectKOs ps_clear_upd')
+  apply (fastforce simp: valid_pde_mappings'_def obj_at'_def projectKOs ps_clear_upd)
   done
 
 lemma schedContextCancelYieldTo_cur_tcb'[wp]:

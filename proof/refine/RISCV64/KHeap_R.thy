@@ -185,13 +185,6 @@ lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
   by (clarsimp simp add: updateObject_default_def in_monad)
 
-lemma ps_clear_upd':
-  "ksPSpace s y = Some v \<Longrightarrow>
-    ps_clear x n (s' \<lparr> ksPSpace := ksPSpace s(y \<mapsto> v')\<rparr>) = ps_clear x n s"
-  by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
-
-lemmas ps_clear_updE' = iffD2[OF ps_clear_upd', rotated]
-
 lemma obj_at_setObject1:
   assumes R: "\<And>(v::'a::pspace_storable) p q n ko s x s''.
                 (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> x = injectKO v"
@@ -230,7 +223,7 @@ lemma obj_at_setObject2:
    apply (clarsimp simp: lookupAround2_char1)
    apply (drule iffD1 [OF project_koType, OF exI])
    apply simp
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
   done
 
 lemma updateObject_ep_eta:
@@ -256,11 +249,11 @@ lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def)
   apply (clarsimp simp: valid_def typ_at'_def ko_wp_at'_def in_monad
-                        lookupAround2_char1 ps_clear_upd')
+                        lookupAround2_char1 ps_clear_upd)
   apply (drule updateObject_type)
   apply clarsimp
   apply (drule objBits_type)
-  apply (simp add: ps_clear_upd')
+  apply (simp add: ps_clear_upd)
   done
 
 lemma setObject_typ_at_not:
@@ -295,19 +288,19 @@ lemma setObject_cte_wp_at2':
   apply (erule rsubst[where P=P'])
   apply (rule iffI)
    apply (erule disjEI)
-    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1 y)
+    apply (clarsimp simp: ps_clear_upd lookupAround2_char1 y)
    apply (erule exEI [where 'a=machine_word])
-   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+   apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
    apply (drule(1) x)
     apply (clarsimp simp: lookupAround2_char1 prod_eqI)
    apply (fastforce dest: bspec [OF _ ranI])
   apply (erule disjEI)
-   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
+   apply (clarsimp simp: ps_clear_upd lookupAround2_char1
                   split: if_split_asm)
    apply (frule updateObject_type)
    apply (case_tac ba, simp_all add: y)[1]
   apply (erule exEI)
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1
                  split: if_split_asm)
   apply (frule updateObject_type)
   apply (case_tac ba, simp_all)
@@ -379,7 +372,7 @@ lemma obj_at_setObject3:
   shows "\<lbrace>(\<lambda>s. P v)\<rbrace> setObject p v \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
   apply (clarsimp simp add: valid_def in_monad obj_at'_def
                             setObject_def split_def project_inject objBits_def[symmetric]
-                            R updateObject_default_def in_magnitude_check P ps_clear_upd')
+                            R updateObject_default_def in_magnitude_check P ps_clear_upd)
   apply fastforce
   done
 
@@ -396,7 +389,7 @@ lemma setObject_tcb_strongest:
    apply simp
   apply (simp add: setObject_def split_def)
   apply (clarsimp simp: valid_def obj_at'_def split_def in_monad
-                        updateObject_default_def ps_clear_upd')
+                        updateObject_default_def ps_clear_upd)
   done
 
 lemma getObject_obj_at':
@@ -505,7 +498,7 @@ lemma get_ntfn'_valid_ntfn[wp]:
 lemma setObject_distinct[wp]:
   shows     "\<lbrace>pspace_distinct'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_distinct'_def ps_clear_upd' objBits_def[symmetric]
+                        pspace_distinct'_def ps_clear_upd objBits_def[symmetric]
                  split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
@@ -515,7 +508,7 @@ lemma setObject_distinct[wp]:
 lemma setObject_aligned[wp]:
   shows     "\<lbrace>pspace_aligned'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_aligned'_def ps_clear_upd' objBits_def[symmetric]
+                        pspace_aligned'_def ps_clear_upd objBits_def[symmetric]
                  split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
@@ -525,7 +518,7 @@ lemma setObject_aligned[wp]:
 lemma setObject_canonical[wp]:
   shows     "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_canonical'_def ps_clear_upd' objBits_def[symmetric]
+                        pspace_canonical'_def ps_clear_upd objBits_def[symmetric]
                  split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
@@ -535,7 +528,7 @@ lemma setObject_canonical[wp]:
 lemma setObject_in_kernel_mappings[wp]:
   shows     "\<lbrace>pspace_in_kernel_mappings'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_in_kernel_mappings'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_in_kernel_mappings'_def ps_clear_upd' objBits_def[symmetric]
+                        pspace_in_kernel_mappings'_def ps_clear_upd objBits_def[symmetric]
                  split: if_split_asm
                  dest!: updateObject_objBitsKO)
    apply (fastforce dest: bspec[OF _ domI])
@@ -1076,7 +1069,7 @@ lemma setObject_ko_wp_at:
                  elim!: rsubst[where P=P]
              split del: if_split)
   apply (rule iffI)
-   apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
+   apply (clarsimp simp: n ps_clear_upd objBits_def[symmetric]
                   split: if_split_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
                         ps_clear_upd
@@ -1229,7 +1222,7 @@ lemma setObject_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setObject p v \<lbrace>\<lambda>r. no_0_obj'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def)
   apply (clarsimp simp: valid_def no_0_obj'_def ko_wp_at'_def in_monad
-                        lookupAround2_char1 ps_clear_upd')
+                        lookupAround2_char1 ps_clear_upd)
   done
 
 lemma valid_updateCapDataI:

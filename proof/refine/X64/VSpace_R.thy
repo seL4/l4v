@@ -1749,7 +1749,7 @@ lemma storePDE_state_refs' [wp]:
   apply (clarsimp simp: storePDE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -1777,7 +1777,7 @@ lemma storePDPTE_state_refs' [wp]:
   apply (clarsimp simp: storePDPTE_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -1805,7 +1805,7 @@ lemma storePML4E_state_refs' [wp]:
   apply (clarsimp simp: storePML4E_def)
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -2340,7 +2340,7 @@ lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -2625,7 +2625,7 @@ lemma setObject_cte_obj_at_ap':
   \<lbrace>\<lambda>_ s. P' (obj_at' P p s)\<rbrace>"
   apply (clarsimp simp: setObject_def in_monad split_def
                         valid_def lookupAround2_char1
-                        obj_at'_def ps_clear_upd' projectKOs
+                        obj_at'_def ps_clear_upd projectKOs
              split del: if_split)
   apply (clarsimp elim!: rsubst[where P=P'])
   apply (clarsimp simp: updateObject_cte in_monad objBits_simps

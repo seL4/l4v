@@ -2551,7 +2551,7 @@ lemma threadSet_not_tcb[wp]:
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def projectKOs split_def in_magnitude_check
                      objBits_simps' updateObject_default_def
-                     ps_clear_upd' projectKO_opt_tcb)
+                     ps_clear_upd projectKO_opt_tcb)
 
 lemma setThreadState_not_tcb[wp]:
   "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
@@ -2600,7 +2600,7 @@ lemma setObject_ko_wp_at':
   by (clarsimp simp: setObject_def valid_def in_monad
                      ko_wp_at'_def x split_def n
                      updateObject_default_def
-                     objBits_def[symmetric] ps_clear_upd'
+                     objBits_def[symmetric] ps_clear_upd
                      in_magnitude_check v projectKOs)
 
 lemma rescheduleRequired_unlive:

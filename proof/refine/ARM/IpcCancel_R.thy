@@ -350,8 +350,8 @@ lemma blocked_cancel_ipc_corres:
        apply (clarsimp split del: if_split)
        apply (frule (1) Receive_or_Send_ep_at'[rotated], blast)
        apply (clarsimp split del: if_split)
-       apply (rule conjI, clarsimp simp: obj_at'_def projectKOs ps_clear_upd' objBits_simps)
-       apply (rule conjI; clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ps_clear_upd')
+       apply (rule conjI, clarsimp simp: obj_at'_def projectKOs ps_clear_upd objBits_simps)
+       apply (rule conjI; clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs ps_clear_upd)
        apply (intro conjI impI; clarsimp?)
          apply (erule valid_objs'_ep_update)
           apply (case_tac "remove1 t list"
@@ -3447,7 +3447,7 @@ lemma threadSet_unlive_other:
                      setObject_def in_monad loadObject_default_def
                      ko_wp_at'_def projectKOs split_def in_magnitude_check
                      objBits_simps' updateObject_default_def
-                     ps_clear_upd' ARM_H.fromPPtr_def)
+                     ps_clear_upd ARM_H.fromPPtr_def)
 
 lemma rescheduleRequired_unlive[wp]:
   "\<lbrace>\<lambda>s. ko_wp_at' (Not \<circ> live') p s \<and> sch_act_not p s\<rbrace>

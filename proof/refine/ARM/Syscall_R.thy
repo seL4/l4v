@@ -1130,7 +1130,7 @@ lemmas set_thread_state_active_valid_sched =
 lemma setTCB_valid_duplicates'[wp]:
   "setObject a (tcb::tcb) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
