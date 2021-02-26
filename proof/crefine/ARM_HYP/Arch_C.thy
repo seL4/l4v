@@ -3755,7 +3755,6 @@ lemma decodeARMMMUInvocation_ccorres:
                   apply (rule_tac P = "rv'a = from_bool (\<not>( isUntypedCap (fst (hd extraCaps)) \<and>
                             capBlockSize (fst (hd extraCaps)) = objBits (makeObject ::asidpool)
                             ))" in ccorres_gen_asm2)
-                  apply csymbr
                 apply (rule ccorres_symb_exec_r)
                   apply (rule_tac xf'=ret__int_' in ccorres_abstract, ceqv)
                   apply (rule_tac P = "rv'b = from_bool (\<not>( isUntypedCap (fst (hd extraCaps)) \<and>
