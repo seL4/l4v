@@ -1970,6 +1970,197 @@ crunches cteDeleteOne
 crunches handleFaultReply
   for valid_objs'[wp]: valid_objs'
 
+lemma bind_sc_reply_weak_valid_sched_action[wp]:
+  "bind_sc_reply a b \<lbrace>weak_valid_sched_action\<rbrace>"
+  unfolding bind_sc_reply_def by wpsimp
+
+lemma bind_sc_reply_invs[wp]:
+  "\<lbrace> \<lambda>s. invs s
+         \<and> reply_at reply_ptr s
+         \<and> sc_at sc_ptr s
+         \<and> ex_nonz_cap_to reply_ptr s
+         \<and> ex_nonz_cap_to sc_ptr s
+         \<and> reply_sc_reply_at (\<lambda>sc_ptr'. sc_ptr' = None) reply_ptr s
+         \<and> reply_ptr \<in> fst ` replies_blocked s
+         \<and> reply_ptr \<notin> fst ` replies_with_sc s \<rbrace>
+    bind_sc_reply sc_ptr reply_ptr
+   \<lbrace> \<lambda>rv. invs \<rbrace>"
+  unfolding bind_sc_reply_def
+  supply if_weak_cong[cong del] if_split[split del]
+  apply (rule hoare_seq_ext[OF _ gscrpls_sp])
+  apply (rename_tac sc_replies')
+  apply (case_tac sc_replies'; simp)
+   apply (wpsimp wp: sched_context_donate_invs)
+     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
+                         valid_ioports_lift)
+    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
+   apply clarsimp
+   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
+                          reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
+                          sc_replies_sc_at_def pred_tcb_at_def is_tcb is_reply is_sc_obj_def
+                  split: if_splits
+                  elim!: delta_sym_refs)
+   apply safe
+        apply fastforce
+       apply fastforce
+      apply (clarsimp simp: valid_idle_def)
+     apply (rule replies_with_sc_upd_replies_new_valid_replies)
+       apply fastforce
+      apply (clarsimp simp: image_def)
+      apply (rule_tac x="(reply_ptr, b)" in bexI; fastforce)
+     apply (clarsimp simp: image_def)
+    apply (fastforce simp: invs_def valid_state_def valid_pspace_def
+                           reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
+                           sc_replies_sc_at_def pred_tcb_at_def is_tcb is_reply is_sc_obj_def
+                    split: if_splits
+                    elim!: delta_sym_refs)
+   apply (clarsimp simp: idle_sc_no_ex_cap)
+  apply wpsimp
+     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
+                         valid_ioports_lift valid_sc_typ_list_all_reply)
+    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
+   apply (wpsimp simp: get_simple_ko_def get_object_def
+                   wp: valid_sc_typ_list_all_reply valid_ioports_lift)
+  apply (subgoal_tac "list_all (\<lambda>r. reply_at r s) (a # list) \<and> reply_ptr \<notin> set (a # list) \<and> distinct (a # list)")
+   apply (clarsimp simp: invs_def valid_pspace_def valid_state_def)
+   apply (intro conjI)
+     apply (rule replies_with_sc_upd_replies_valid_replies_add_one, simp)
+       apply (clarsimp simp:replies_blocked_def image_def, fastforce)
+      apply simp
+     apply (clarsimp simp:sc_replies_sc_at_def obj_at_def)
+    apply (erule delta_sym_refs)
+     apply (clarsimp split: if_splits
+                     elim!: delta_sym_refs)
+    apply (clarsimp simp: reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
+                          pred_tcb_at_def is_tcb is_reply is_sc_obj sc_at_pred_n_def
+                   split: if_splits
+                   elim!: delta_sym_refs)
+    apply (safe; clarsimp?)
+    apply (rename_tac rp1 tl s tptr scp sc r1 r2 n1)
+    apply (subgoal_tac "(rp1,scp) \<in> replies_with_sc s \<and> (rp1,sc_ptr) \<in> replies_with_sc s")
+     apply (clarsimp dest!: valid_replies_2_inj_onD )
+    apply (intro conjI)
+     apply (subgoal_tac "valid_reply r1 s")
+      apply (clarsimp simp: valid_reply_def refs_of_def obj_at_def is_sc_obj_def
+                     split: option.splits)
+      apply (rename_tac ko n2)
+      apply (case_tac ko; clarsimp simp: get_refs_def)
+      apply (erule disjE, clarsimp split: option.splits)+
+      apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: option.splits)
+     apply (erule valid_objs_valid_reply, assumption)
+    apply(clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
+    apply (metis cons_set_intro)
+   apply (fastforce simp: idle_sc_no_ex_cap tcb_at_def is_tcb_def
+                    dest: pred_tcb_at_tcb_at get_tcb_SomeD)
+  apply (clarsimp simp del: distinct.simps list.pred_inject insert_iff)
+  apply (frule sc_replies_sc_at_subset_fst_replies_with_sc)
+  apply (frule invs_valid_objs)
+  apply (intro conjI)
+    apply (erule replies_blocked_list_all_reply_at)
+    apply (meson dual_order.trans invs_valid_replies valid_replies_defs(1))
+   apply fastforce
+  apply (erule (1) valid_objs_sc_replies_distinct)
+  done
+
+lemma replyPush_corres:
+  "can_donate = can_donate' \<Longrightarrow>
+   corres dc (invs and tcb_at caller and tcb_at callee and reply_at reply_ptr
+              and ex_nonz_cap_to reply_ptr
+              and st_tcb_at active caller
+              and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
+              and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
+              and weak_valid_sched_action and scheduler_act_not caller)
+             (valid_release_queue_iff and valid_objs' and valid_queues and valid_queues')
+   (reply_push caller callee reply_ptr can_donate)
+   (replyPush caller callee reply_ptr can_donate')"
+  unfolding reply_push_def replyPush_def
+  apply clarsimp
+  apply add_sym_refs
+  apply (rule_tac Q="\<lambda>s. valid_replies'_sc_asrt reply_ptr s" in corres_cross_add_guard)
+   apply (fastforce elim: valid_replies_sc_cross)
+  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+    apply (rule stronger_corres_guard_imp)
+      apply (simp add: get_tcb_obj_ref_def)
+      apply (rule corres_split_deprecated [OF _ threadget_corres[where r="(=)"]])
+         apply (rule corres_split_deprecated [OF _ threadget_corres[where r="(=)"]])
+            apply (rule corres_split_deprecated [OF _ replyTCB_update_corres])
+              apply (rule corres_split_deprecated[OF _ sts_corres])
+                 apply (rule corres_when2, clarsimp)
+                 apply simp
+                 apply (rule corres_split_deprecated [OF schedContextDonate_corres bindReplySc_corres])
+                  apply (wpsimp wp: sc_at_typ_at)
+                 apply wpsimp
+                apply simp
+               apply (wpsimp wp: set_thread_state_invs hoare_vcg_imp_lift'
+                                 hoare_vcg_all_lift sts_in_replies_blocked
+                                 set_thread_state_weak_valid_sched_action)
+              apply (wpsimp wp: hoare_vcg_imp_lift' sts_invs_minor')
+             apply clarsimp
+             apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
+            apply (clarsimp simp: valid_tcb_state'_def cong: conj_cong)
+            apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift updateReply_valid_objs')
+           apply (clarsimp simp: tcb_relation_def)
+          apply (wpsimp wp: thread_get_wp')
+          apply assumption
+         apply (wpsimp wp: threadGet_wp)
+        apply (clarsimp simp: tcb_relation_def)
+       apply (wpsimp wp: thread_get_wp')
+      apply (wpsimp wp: threadGet_wp)
+     apply (subgoal_tac "caller \<noteq> reply_ptr")
+      apply (subgoal_tac "caller \<noteq> idle_thread_ptr")
+       apply (clarsimp simp: invs_def valid_state_def
+                             valid_pspace_def cong: conj_cong)
+       apply (frule valid_objs_valid_tcbs, clarsimp)
+       apply (frule (1) valid_objs_ko_at[where ptr=caller])
+       apply (subgoal_tac "ex_nonz_cap_to caller s", clarsimp)
+        apply (frule (1) idle_no_ex_cap)
+        apply (frule (2) no_tcb_not_in_replies_with_sc, clarsimp)
+        apply (intro conjI)
+            apply (clarsimp simp: valid_obj_def valid_tcb_def)
+           apply clarsimp
+          apply (clarsimp simp: replies_blocked_def pred_tcb_at_def obj_at_def)
+         apply (erule delta_sym_refs_insert_only, simp)
+           apply (subst set_eq_subset, intro conjI)
+            apply (clarsimp simp: state_refs_of_def)
+           apply (clarsimp simp: state_refs_of_def obj_at_def is_tcb get_refs_def2)
+           apply (subgoal_tac "tcb_st_refs_of (tcb_state tcb) = {}", simp)
+            apply fastforce
+           apply (fastforce simp: tcb_st_refs_of_def pred_tcb_at_def obj_at_def)
+          apply (subst set_eq_subset, intro conjI)
+           apply (clarsimp simp: state_refs_of_def)
+          apply (clarsimp simp: state_refs_of_def obj_at_def is_reply get_refs_def2)
+          apply (clarsimp simp: obj_at_def sk_obj_at_pred_def)
+         apply simp
+        apply (subgoal_tac "sc_tcb_sc_at ((=) (Some caller)) y s")
+         apply (clarsimp simp: sc_at_pred_n_def)
+         apply (erule (1) if_live_then_nonz_capD)
+         apply (clarsimp simp: live_def live_sc_def, fastforce)
+        apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric, OF refl eq_commute])
+         apply assumption
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+       apply (erule (1) if_live_then_nonz_capD)
+       apply (clarsimp simp: live_def  is_tcb obj_at_def)
+       apply (frule (1) bound_sc_tcb_at_idle_sc_idle_thread[where t=caller])
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+       apply simp
+      apply clarsimp
+      apply (frule invs_valid_idle)
+      apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
+     apply (clarsimp simp: obj_at_def is_tcb is_reply)
+    apply clarsimp
+    apply (frule valid_objs'_valid_tcbs')
+    apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=caller]], fastforce, clarsimp)
+    apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=callee]], fastforce, clarsimp)
+    apply (frule cross_relF[OF _ reply_at'_cross_rel[where t=reply_ptr]], fastforce, clarsimp)
+    apply (prop_tac "obj_at' (\<lambda>t. valid_bound_sc' (tcbSchedContext t) s') caller s'")
+     apply (erule valid_tcbs'_obj_at'[rotated])
+      apply (clarsimp simp: valid_tcb'_def)
+     apply (clarsimp simp: obj_at'_def sym_refs_asrt_def valid_reply'_def)+
+  done
+
 lemma do_reply_transfer_corres:
   "corres dc
      (einvs and reply_at reply and tcb_at sender)
@@ -3715,197 +3906,6 @@ lemma maybeReturnSc_corres:
     apply (clarsimp simp: valid_tcbs'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb)
    apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: sym_refs_asrt_def)
-  done
-
-lemma bind_sc_reply_weak_valid_sched_action[wp]:
-  "bind_sc_reply a b \<lbrace>weak_valid_sched_action\<rbrace>"
-  unfolding bind_sc_reply_def by wpsimp
-
-lemma bind_sc_reply_invs[wp]:
-  "\<lbrace> \<lambda>s. invs s
-         \<and> reply_at reply_ptr s
-         \<and> sc_at sc_ptr s
-         \<and> ex_nonz_cap_to reply_ptr s
-         \<and> ex_nonz_cap_to sc_ptr s
-         \<and> reply_sc_reply_at (\<lambda>sc_ptr'. sc_ptr' = None) reply_ptr s
-         \<and> reply_ptr \<in> fst ` replies_blocked s
-         \<and> reply_ptr \<notin> fst ` replies_with_sc s \<rbrace>
-    bind_sc_reply sc_ptr reply_ptr
-   \<lbrace> \<lambda>rv. invs \<rbrace>"
-  unfolding bind_sc_reply_def
-  supply if_weak_cong[cong del] if_split[split del]
-  apply (rule hoare_seq_ext[OF _ gscrpls_sp])
-  apply (rename_tac sc_replies')
-  apply (case_tac sc_replies'; simp)
-   apply (wpsimp wp: sched_context_donate_invs)
-     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift)
-    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
-   apply clarsimp
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                          reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
-                          sc_replies_sc_at_def pred_tcb_at_def is_tcb is_reply is_sc_obj_def
-                  split: if_splits
-                  elim!: delta_sym_refs)
-   apply safe
-        apply fastforce
-       apply fastforce
-      apply (clarsimp simp: valid_idle_def)
-     apply (rule replies_with_sc_upd_replies_new_valid_replies)
-       apply fastforce
-      apply (clarsimp simp: image_def)
-      apply (rule_tac x="(reply_ptr, b)" in bexI; fastforce)
-     apply (clarsimp simp: image_def)
-    apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                           reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
-                           sc_replies_sc_at_def pred_tcb_at_def is_tcb is_reply is_sc_obj_def
-                    split: if_splits
-                    elim!: delta_sym_refs)
-   apply (clarsimp simp: idle_sc_no_ex_cap)
-  apply wpsimp
-     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                     wp: valid_irq_node_typ set_reply_sc_valid_replies_already_BlockedOnReply
-                         valid_ioports_lift valid_sc_typ_list_all_reply)
-    apply (wpsimp wp: set_sc_replies_valid_replies update_sched_context_valid_idle)
-   apply (wpsimp simp: get_simple_ko_def get_object_def
-                   wp: valid_sc_typ_list_all_reply valid_ioports_lift)
-  apply (subgoal_tac "list_all (\<lambda>r. reply_at r s) (a # list) \<and> reply_ptr \<notin> set (a # list) \<and> distinct (a # list)")
-   apply (clarsimp simp: invs_def valid_pspace_def valid_state_def)
-   apply (intro conjI)
-     apply (rule replies_with_sc_upd_replies_valid_replies_add_one, simp)
-       apply (clarsimp simp:replies_blocked_def image_def, fastforce)
-      apply simp
-     apply (clarsimp simp:sc_replies_sc_at_def obj_at_def)
-    apply (erule delta_sym_refs)
-     apply (clarsimp split: if_splits
-                     elim!: delta_sym_refs)
-    apply (clarsimp simp: reply_sc_reply_at_def obj_at_def state_refs_of_def get_refs_def2
-                          pred_tcb_at_def is_tcb is_reply is_sc_obj sc_at_pred_n_def
-                   split: if_splits
-                   elim!: delta_sym_refs)
-    apply (safe; clarsimp?)
-    apply (rename_tac rp1 tl s tptr scp sc r1 r2 n1)
-    apply (subgoal_tac "(rp1,scp) \<in> replies_with_sc s \<and> (rp1,sc_ptr) \<in> replies_with_sc s")
-     apply (clarsimp dest!: valid_replies_2_inj_onD )
-    apply (intro conjI)
-     apply (subgoal_tac "valid_reply r1 s")
-      apply (clarsimp simp: valid_reply_def refs_of_def obj_at_def is_sc_obj_def
-                     split: option.splits)
-      apply (rename_tac ko n2)
-      apply (case_tac ko; clarsimp simp: get_refs_def)
-      apply (erule disjE, clarsimp split: option.splits)+
-      apply (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def split: option.splits)
-     apply (erule valid_objs_valid_reply, assumption)
-    apply(clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def)
-    apply (metis cons_set_intro)
-   apply (fastforce simp: idle_sc_no_ex_cap tcb_at_def is_tcb_def
-                    dest: pred_tcb_at_tcb_at get_tcb_SomeD)
-  apply (clarsimp simp del: distinct.simps list.pred_inject insert_iff)
-  apply (frule sc_replies_sc_at_subset_fst_replies_with_sc)
-  apply (frule invs_valid_objs)
-  apply (intro conjI)
-    apply (erule replies_blocked_list_all_reply_at)
-    apply (meson dual_order.trans invs_valid_replies valid_replies_defs(1))
-   apply fastforce
-  apply (erule (1) valid_objs_sc_replies_distinct)
-  done
-
-lemma replyPush_corres:
-  "can_donate = can_donate' \<Longrightarrow>
-   corres dc (invs and tcb_at caller and tcb_at callee and reply_at reply_ptr
-              and ex_nonz_cap_to reply_ptr
-              and st_tcb_at active caller
-              and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
-              and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
-              and weak_valid_sched_action and scheduler_act_not caller)
-             (valid_release_queue_iff and valid_objs' and valid_queues and valid_queues')
-   (reply_push caller callee reply_ptr can_donate)
-   (replyPush caller callee reply_ptr can_donate')"
-  unfolding reply_push_def replyPush_def
-  apply clarsimp
-  apply add_sym_refs
-  apply (rule_tac Q="\<lambda>s. valid_replies'_sc_asrt reply_ptr s" in corres_cross_add_guard)
-   apply (fastforce elim: valid_replies_sc_cross)
-  apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-    apply (rule stronger_corres_guard_imp)
-      apply (simp add: get_tcb_obj_ref_def)
-      apply (rule corres_split_deprecated [OF _ threadget_corres[where r="(=)"]])
-         apply (rule corres_split_deprecated [OF _ threadget_corres[where r="(=)"]])
-            apply (rule corres_split_deprecated [OF _ replyTCB_update_corres])
-              apply (rule corres_split_deprecated[OF _ sts_corres])
-                 apply (rule corres_when2, clarsimp)
-                 apply simp
-                 apply (rule corres_split_deprecated [OF schedContextDonate_corres bindReplySc_corres])
-                  apply (wpsimp wp: sc_at_typ_at)
-                 apply wpsimp
-                apply simp
-               apply (wpsimp wp: set_thread_state_invs hoare_vcg_imp_lift'
-                                 hoare_vcg_all_lift sts_in_replies_blocked
-                                 set_thread_state_weak_valid_sched_action)
-              apply (wpsimp wp: hoare_vcg_imp_lift' sts_invs_minor')
-             apply clarsimp
-             apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
-            apply (clarsimp simp: valid_tcb_state'_def cong: conj_cong)
-            apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift updateReply_valid_objs')
-           apply (clarsimp simp: tcb_relation_def)
-          apply (wpsimp wp: thread_get_wp')
-          apply assumption
-         apply (wpsimp wp: threadGet_wp)
-        apply (clarsimp simp: tcb_relation_def)
-       apply (wpsimp wp: thread_get_wp')
-      apply (wpsimp wp: threadGet_wp)
-     apply (subgoal_tac "caller \<noteq> reply_ptr")
-      apply (subgoal_tac "caller \<noteq> idle_thread_ptr")
-       apply (clarsimp simp: invs_def valid_state_def
-                             valid_pspace_def cong: conj_cong)
-       apply (frule valid_objs_valid_tcbs, clarsimp)
-       apply (frule (1) valid_objs_ko_at[where ptr=caller])
-       apply (subgoal_tac "ex_nonz_cap_to caller s", clarsimp)
-        apply (frule (1) idle_no_ex_cap)
-        apply (frule (2) no_tcb_not_in_replies_with_sc, clarsimp)
-        apply (intro conjI)
-            apply (clarsimp simp: valid_obj_def valid_tcb_def)
-           apply clarsimp
-          apply (clarsimp simp: replies_blocked_def pred_tcb_at_def obj_at_def)
-         apply (erule delta_sym_refs_insert_only, simp)
-           apply (subst set_eq_subset, intro conjI)
-            apply (clarsimp simp: state_refs_of_def)
-           apply (clarsimp simp: state_refs_of_def obj_at_def is_tcb get_refs_def2)
-           apply (subgoal_tac "tcb_st_refs_of (tcb_state tcb) = {}", simp)
-            apply fastforce
-           apply (fastforce simp: tcb_st_refs_of_def pred_tcb_at_def obj_at_def)
-          apply (subst set_eq_subset, intro conjI)
-           apply (clarsimp simp: state_refs_of_def)
-          apply (clarsimp simp: state_refs_of_def obj_at_def is_reply get_refs_def2)
-          apply (clarsimp simp: obj_at_def sk_obj_at_pred_def)
-         apply simp
-        apply (subgoal_tac "sc_tcb_sc_at ((=) (Some caller)) y s")
-         apply (clarsimp simp: sc_at_pred_n_def)
-         apply (erule (1) if_live_then_nonz_capD)
-         apply (clarsimp simp: live_def live_sc_def, fastforce)
-        apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric, OF refl eq_commute])
-         apply assumption
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-       apply (erule (1) if_live_then_nonz_capD)
-       apply (clarsimp simp: live_def  is_tcb obj_at_def)
-       apply (frule (1) bound_sc_tcb_at_idle_sc_idle_thread[where t=caller])
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-       apply simp
-      apply clarsimp
-      apply (frule invs_valid_idle)
-      apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
-     apply (clarsimp simp: obj_at_def is_tcb is_reply)
-    apply clarsimp
-    apply (frule valid_objs'_valid_tcbs')
-    apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=caller]], fastforce, clarsimp)
-    apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=callee]], fastforce, clarsimp)
-    apply (frule cross_relF[OF _ reply_at'_cross_rel[where t=reply_ptr]], fastforce, clarsimp)
-    apply (prop_tac "obj_at' (\<lambda>t. valid_bound_sc' (tcbSchedContext t) s') caller s'")
-     apply (erule valid_tcbs'_obj_at'[rotated])
-      apply (clarsimp simp: valid_tcb'_def)
-     apply (clarsimp simp: obj_at'_def sym_refs_asrt_def valid_reply'_def)+
   done
 
 lemma receive_ipc_corres:
