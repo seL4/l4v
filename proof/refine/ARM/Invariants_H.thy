@@ -293,8 +293,6 @@ abbreviation tcbs_scs_sym_refs where
 abbreviation replies_scs_sym_refs where
   "replies_scs_sym_refs s \<equiv> sqheap_refs_inv (scReplies_of s) (replySCs_of s)"
 
-lemmas tcbs_scs_sym_refs_def = sqheap_refs_inv_def sqheap_refs_retract_def sqheap_refs_retract_at_def
-
 definition
   max_ipc_words :: word32 where
   "max_ipc_words \<equiv> capTransferDataSize + msgMaxLength + msgMaxExtraCaps + 2"
