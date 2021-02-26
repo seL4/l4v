@@ -6141,7 +6141,8 @@ lemma sdjfkhsdfsdf[wp]:
   "replyRemoveTCB param_a \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
   unfolding replyRemoveTCB_def
   apply (wpsimp wp: sdfkjh gts_wp')
-   sorry  (* hmmm, fix later *)
+  apply (erule back_subst[where P=P], rule ext, clarsimp)
+  by (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def)
 
 lemma sdjfkhsdfdfgsdf[wp]:
   "replyRemoveTCB param_a \<lbrace>\<lambda>s. P (tcb_scs_of' s)\<rbrace>"
@@ -6161,57 +6162,73 @@ lemma sdfjkh1:
   "pred_map P (\<lambda>a. if a = r then A a else B a) t = (if t = r then ((pred_map P A r)) else (pred_map P B t))"
   by (clarsimp simp: pred_map_def)
 
-lemma ri_isdfnvs' [wp]:
-  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. replySCs_of s t = None)\<rbrace>
-  cleanReply t
+lemma cleanReply_replies_scs_sym_refs :
+  "\<lbrace>\<lambda>s. sqheap_refs_inv (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)\<rbrace>
+  cleanReply rptr
   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding cleanReply_def
   apply (clarsimp simp: bind_assoc updateReply_def)
-  apply wpsimp
-  apply wps
-  apply wpsimp
-  apply wpsimp
-  apply wpsimp
-  apply wps
-  apply (wpsimp wp: hoare_drop_imp)
-  apply wpsimp
-  apply (auto simp: sqheap_refs_inv_defs sdfjkh1 pred_map_eq_def split: if_splits)
-  apply (subgoal_tac "\<not> (\<exists>p. pred_map ((=) p) (replySCs_of s) t)")
-  apply (fastforce)
-  apply (simp only: pred_map_def)
-  apply (fastforce)
-  apply (simp only: pred_map_def)
+  apply (wpsimp wp: hoare_drop_imp | wps)+
   done
 
-term replies_with_sc
-find_theorems valid_replies
-
 lemma ri_inv345s' [wp]:
-  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. replySCs_of s t = None)\<rbrace>
+  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
   replyRemoveTCB t
   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   supply if_split [split del]
   unfolding replyRemoveTCB_def
   apply (clarsimp simp: bind_assoc updateReply_def)
+  apply wpsimp
+  apply (wpsimp wp: cleanReply_replies_scs_sym_refs)
   apply wp
-  apply wps
-  apply wpsimp
-  apply wpsimp
-  apply (wpsimp wp: hoare_vcg_if_lift2)
-  sorry
 
-crunches blockedCancelIPC
+  apply wps
+         apply wpsimp
+        apply (rule_tac Q="\<lambda>replya s. (replySCs_of s) (the (replyPrev reply)) = None \<and>
+                 sqheap_refs_inv (scReplies_of s)
+                  (\<lambda>a. if a = rptr then None
+                        else replySCs_of s a)"
+       in hoare_strengthen_post[rotated])
+  subgoal sorry (* fine *)
+        apply_trace (wpsimp)
+       apply (wp hoare_vcg_if_lift2 hoare_drop_imp[where R="\<lambda>r s. ko_at' a b s " for a b]
+                         hoare_vcg_imp_lift' hoare_vcg_all_lift)
+          apply wps
+          apply (wpsimp wp: setSchedContext_scReplies_of)
+         apply wpsimp
+        apply wp
+         apply wps
+         apply wpsimp
+        apply wpsimp
+       apply (wp hoare_vcg_if_lift2 hoare_drop_imp[where R="\<lambda>r s. ko_at' a b s " for a b]
+                         hoare_vcg_imp_lift' hoare_vcg_all_lift)
+         apply wps
+
+         apply (wpsimp wp: setSchedContext_scReplies_of)
+        apply wpsimp
+       apply wp
+        apply wps
+        apply wpsimp
+       apply wpsimp
+      apply (rule_tac Q="\<lambda>replya s. replies_scs_sym_refs s \<and> sym_refs (list_refs_of_replies' s)"
+     in hoare_strengthen_post[rotated])
+       apply (clarsimp split: if_splits)
+  subgoal sorry (* fine *)
+      apply (wpsimp wp: hoare_drop_imp)+
+  done
+
+crunches blockedCancelIPC, cancelSignal
   for replies_scs_sym_refs[wp]: replies_scs_sym_refs
   (wp: crunch_wps
  ignore: setSchedContext setReply updateReply)
 
 lemma ri_isdfnsvs' [wp]:
-  "\<lbrace>replies_scs_sym_refs\<rbrace>
+  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
   cancelIPC t
   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   unfolding cancelIPC_def
-  apply wpsimp
-  sorry  (* hmmm, fix later *)
+  apply (wpsimp wp: gts_wp')
+  sorry (* boring *)
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
@@ -6289,10 +6306,10 @@ lemma ri_invs' [wp]:
   apply (frule invs'_tcbs_scs_sym_refs, fastforce, fastforce, fastforce)
   apply (frule sym_refs_replies_scs, fastforce, fastforce, fastforce)
   apply (clarsimp cong: conj_cong)
-  apply (fastforce simp: invs'_def valid_state'_def valid_idle'_def idle_tcb'_def
+(*   apply (fastforce simp: invs'_def valid_state'_def valid_idle'_def idle_tcb'_def
                          valid_pspace'_def
-                         pred_tcb_at'_def obj_at'_def projectKOs isCap_simps isSend_def)
-  done
+                         pred_tcb_at'_def obj_at'_def projectKOs isCap_simps isSend_def) *)
+  sorry (* boring -- same as above *)
 
 lemma replyUnlink_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcbPtr \<noteq> ksIdleThread s\<rbrace> replyUnlink replyPtr tcbPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -6473,7 +6490,7 @@ lemma sfi_invs_plus':
 
 lemma hf_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_except_blocked_except_released_ipc_qs
+  shows "corres dc (invs and valid_list and valid_sched_action
                          and scheduler_act_not t and st_tcb_at active t
                          and ex_nonz_cap_to t and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
@@ -6523,7 +6540,7 @@ lemma hf_corres:
 
 lemma handleTimeout_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_except_blocked_except_released_ipc_qs
+  shows "corres dc (invs and valid_list and valid_sched_action
                          and scheduler_act_not t and st_tcb_at active t and ex_nonz_cap_to t
                          and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
