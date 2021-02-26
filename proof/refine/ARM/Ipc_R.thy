@@ -3898,6 +3898,99 @@ lemma schedContextDonate_invs':
   apply (wp schedContextDonate_valid_pspace' schedContextDonate_valid_release_queue
                     schedContextDonate_valid_queues schedContextDonate_valid_queues'
                     schedContextDonate_valid_idle' schedContextDonate_if_live_then_nonz_cap')
+
+(* 
+lemma schedContextDonate_if_unsafe_then_cap':
+  "\<lbrace>if_unsafe_then_cap'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. if_unsafe_then_cap'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_idle':
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> ksIdleThread s \<and> obj_at' (\<lambda>x. scTCB x \<noteq> Some (ksIdleThread s)) scPtr s\<rbrace>
+   schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_global_refs':
+  "\<lbrace>valid_global_refs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_arch_state':
+  "\<lbrace>valid_arch_state'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_irq_node':
+  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_irq_handlers':
+  "\<lbrace>valid_irq_handlers'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_irq_handlers'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_irq_states':
+  "\<lbrace>valid_irq_states'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_machine_state':
+  "\<lbrace>valid_machine_state'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_machine_state'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_irqs_masked':
+  "\<lbrace>irqs_masked'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. irqs_masked'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_queues':
+  "\<lbrace>valid_queues'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_release_queue:
+  "\<lbrace>valid_release_queue\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_release_queue':
+  "\<lbrace>valid_release_queue'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ct_not_inQ:
+  "\<lbrace>ct_not_inQ\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ct_idle_or_in_cur_domain':
+  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. ct_idle_or_in_cur_domain'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_pde_mappings':
+  "\<lbrace>valid_pde_mappings'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_pde_mappings'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_pspace_domain_valid:
+  "\<lbrace>pspace_domain_valid\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. pspace_domain_valid\<rbrace>"
+  sorry
+
+lemma schedContextDonate_ksCurDomain:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_dom_schedule':
+  "\<lbrace>valid_dom_schedule' and (\<lambda>s. valid_dom_schedule' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))\<rbrace>
+   schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_valid_dom_schedule':
+  "\<lbrace>valid_dom_schedule' and (\<lambda>s. valid_dom_schedule' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))\<rbrace>
+    schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_cur_tcb':
+  "\<lbrace>cur_tcb'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
+  sorry
+
+lemma schedContextDonate_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> bound_sc_tcb_at' ((=) None) tcbPtr s \<and>
+        ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' tcbPtr s\<rbrace>
+   schedContextDonate scPtr tcbPtr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
+ *)
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_sc)
   apply (drule_tac ko=obj in sym_refs_ko_atD'[rotated, where p=scPtr])
    apply (auto dest!: global'_sc_no_ex_cap
