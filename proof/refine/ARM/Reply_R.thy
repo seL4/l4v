@@ -1054,7 +1054,7 @@ lemma no_fail_cleanReply [wp]:
   unfolding cleanReply_def
   apply (rule no_fail_pre, rule no_fail_bind)
      apply (wpsimp wp: updateReply_wp_all)+
-  apply (clarsimp simp: obj_at'_def ps_clear_upd' objBits_simps' projectKOs)
+  apply (clarsimp simp: obj_at'_def ps_clear_upd objBits_simps' projectKOs)
   done
 
 (* sc_with_reply/sc_with_reply' *)
@@ -1601,7 +1601,7 @@ lemma sc_replies_update_takeWhile_middle_sym_refs:
 lemma updateReply_ko_at'_other:
   "\<lbrace>K (p \<noteq> rp) and ko_at' ko p\<rbrace> updateReply rp f \<lbrace>\<lambda>_. ko_at' ko p\<rbrace>"
   apply (wpsimp wp: updateReply_wp_all)
-  by (clarsimp simp: obj_at'_def projectKOs ps_clear_upd')
+  by (clarsimp simp: obj_at'_def projectKOs ps_clear_upd)
 
 lemma update_replyPrev_replyNexts_inv[wp]:
   "updateReply rp (replyPrev_update prev) \<lbrace>\<lambda>s. P (replyNexts_of s)\<rbrace>"
@@ -1673,7 +1673,7 @@ lemma updateReply_Prev_Next_rewrite:
     done
    apply (all \<open>clarsimp simp: updateReply_def getReply_def setReply_def getObject_def2
                               obj_at'_def projectKOs updateObject_default_def setObject_def
-                              loadObject_default_def2[simplified] ARM_H.fromPPtr_def ps_clear_upd'
+                              loadObject_default_def2[simplified] ARM_H.fromPPtr_def
                               split_def in_monad in_magnitude_check' objBits_simps'\<close>)
    apply (fastforce simp add: fun_upd_def replyPrevNext_update_commute)+
   done

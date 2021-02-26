@@ -2469,10 +2469,10 @@ lemma setCTE_vs_entry_align[wp]:
                  elim!: rsubst[where P=P])
   apply (drule(1) updateObject_cte_is_tcb_or_cte [OF _ refl, rotated])
   apply (elim exE conjE disjE)
-   apply (clarsimp simp: ps_clear_upd' objBits_simps
+   apply (clarsimp simp: ps_clear_upd objBits_simps
                          lookupAround2_char1)
    apply (simp add:vs_entry_align_def)
-  apply (clarsimp simp: ps_clear_upd' objBits_simps vs_entry_align_def)
+  apply (clarsimp simp: ps_clear_upd objBits_simps vs_entry_align_def)
   done
 
 lemma updateCap_vs_entry_align[wp]:
@@ -2666,7 +2666,7 @@ lemma setCTE_valid_duplicates'[wp]:
   setCTE p cte \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:setCTE_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = cte,simplified])
@@ -4882,7 +4882,7 @@ lemma setASIDPool_state_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
@@ -4892,7 +4892,7 @@ lemma setASIDPool_state_hyp_refs' [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def projectKOs objBits_simps
-                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd'
+                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)

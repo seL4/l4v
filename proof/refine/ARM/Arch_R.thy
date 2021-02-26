@@ -1328,7 +1328,7 @@ lemma setTCB_pdpt_bits'[wp]:
    setObject a (tcb::tcb)
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
-                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        projectKOs pspace_aligned'_def ps_clear_upd
                         objBits_def[symmetric] lookupAround2_char1
                  split: if_split_asm)
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
@@ -1339,9 +1339,9 @@ lemma setTCB_pdpt_bits'[wp]:
     assert_opt_def return_def fail_def typeError_def objBits_simps
     vs_entry_align_def
     split:if_splits option.splits Structures_H.kernel_object.splits,
-    ((erule(1) ps_clear_updE')+))
+    ((erule(1) ps_clear_updE)+))
   apply (clarsimp)
-  apply (erule(1) ps_clear_updE')
+  apply (erule(1) ps_clear_updE)
   done
 
 crunch vs_entry_align'[wp]:

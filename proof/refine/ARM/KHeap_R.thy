@@ -324,17 +324,17 @@ lemma ps_clear_domE[elim?]:
   "\<lbrakk> ps_clear x n s; dom (ksPSpace s) = dom (ksPSpace s') \<rbrakk> \<Longrightarrow> ps_clear x n s'"
   by (simp add: ps_clear_def)
 
-lemma ps_clear_upd':
+lemma ps_clear_upd:
   "ksPSpace s y = Some v \<Longrightarrow>
     ps_clear x n (ksPSpace_update (\<lambda>a. ksPSpace s(y \<mapsto> v')) s') = ps_clear x n s"
   by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
-lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd', rotated]
+lemmas ps_clear_updE'[elim] = iffD2[OF ps_clear_upd, rotated]
 
 lemma setObject_sc_at'_n[wp]:
   "setObject ptr val \<lbrace>\<lambda>s. P (sc_at'_n n p s)\<rbrace>"
   by (fastforce simp : valid_def setObject_def ko_wp_at'_def in_monad split_def updateObject_size
-                       ps_clear_upd' lookupAround2_char1 updateObject_type)
+                       ps_clear_upd lookupAround2_char1 updateObject_type)
 
 lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
@@ -376,7 +376,7 @@ lemma obj_at_setObject2:
    apply (clarsimp simp: lookupAround2_char1)
    apply (drule iffD1 [OF project_koType, OF exI])
    apply simp
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
   done
 
 \<comment>\<open>
@@ -461,7 +461,7 @@ lemma obj_at'_set_obj'_distinct:
           "obj_at' Q p' s"
   shows "obj_at' P p (set_ko' p' ko s) = obj_at' P p s"
   using assms apply -
-  apply (rule iffI; fastforce simp: obj_at'_def projectKO_eq project_inject ps_clear_upd')
+  apply (rule iffI; fastforce simp: obj_at'_def projectKO_eq project_inject ps_clear_upd)
   done
 
 lemmas pred_tcb_at'_set_obj'_distinct =
@@ -526,9 +526,9 @@ lemma setObject_distinct_types_preserves_obj_at'_pre:
   apply (clarsimp simp: lookupAround2_char1)
   apply (case_tac "obj_at' P t s")
    apply (clarsimp simp: obj_at'_def projectKOs)
-   using project_koType ps_clear_upd'
+   using project_koType ps_clear_upd
    apply fastforce
-  apply (clarsimp simp: obj_at'_def projectKOs ps_clear_upd')
+  apply (clarsimp simp: obj_at'_def projectKOs ps_clear_upd)
   apply (intro impI conjI iffI; metis project_koType)
   done
 
@@ -624,7 +624,7 @@ end
 lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
   by (clarsimp simp: setObject_def split_def valid_def typ_at'_def ko_wp_at'_def in_monad
-                        lookupAround2_char1 ps_clear_upd' updateObject_size updateObject_type)
+                        lookupAround2_char1 ps_clear_upd updateObject_size updateObject_type)
 
 lemma setObject_typ_at_not:
   "\<lbrace>\<lambda>s. \<not> (typ_at' T p' s)\<rbrace> setObject p v \<lbrace>\<lambda>r s. \<not> (typ_at' T p' s)\<rbrace>"
@@ -656,19 +656,19 @@ lemma setObject_cte_wp_at2':
   apply (erule rsubst[where P=P'])
   apply (rule iffI)
    apply (erule disjEI)
-    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1 y)
+    apply (clarsimp simp: ps_clear_upd lookupAround2_char1 y)
    apply (erule exEI [where 'a=word32])
-   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+   apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
    apply (drule(1) x)
     apply (clarsimp simp: lookupAround2_char1 prod_eqI)
    apply (fastforce dest: bspec [OF _ ranI])
   apply (erule disjEI)
-   apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
+   apply (clarsimp simp: ps_clear_upd lookupAround2_char1
                   split: if_split_asm)
    apply (frule updateObject_type)
    apply (case_tac ba, simp_all add: y)[1]
   apply (erule exEI)
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1
                  split: if_split_asm)
   apply (frule updateObject_type)
   apply (case_tac ba, simp_all)
@@ -697,7 +697,7 @@ lemma obj_at_setObject3:
                             setObject_def split_def projectKOs
                             project_inject objBits_def[symmetric]
                             R updateObject_default_def
-                            in_magnitude_check P ps_clear_upd')
+                            in_magnitude_check P ps_clear_upd)
   apply fastforce
   done
 
@@ -715,7 +715,7 @@ lemma setObject_tcb_strongest:
   apply (simp add: setObject_def split_def)
   apply (clarsimp simp: valid_def obj_at'_def split_def in_monad
                         updateObject_default_def projectKOs
-                        ps_clear_upd')
+                        ps_clear_upd)
   done
 
 method setObject_easy_cases =
@@ -908,7 +908,7 @@ begin
 
 private method unfold_setObject_inmonad =
   (clarsimp simp: setObject_def split_def valid_def in_monad projectKOs updateObject_size
-                  objBits_def[symmetric] lookupAround2_char1 ps_clear_upd'
+                  objBits_def[symmetric] lookupAround2_char1 ps_clear_upd
             split: if_split_asm),
     (fastforce dest: bspec[OF _ domI])+
 
@@ -1763,10 +1763,10 @@ lemma setObject_ko_wp_at:
                  elim!: rsubst[where P=P]
              split del: if_split)
   apply (rule iffI)
-   apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
+   apply (clarsimp simp: n ps_clear_upd objBits_def[symmetric]
                   split: if_split_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
-                        ps_clear_upd'
+                        ps_clear_upd
                  split: if_split_asm)
   done
 
@@ -1914,7 +1914,7 @@ lemma setObject_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setObject p v \<lbrace>\<lambda>r. no_0_obj'\<rbrace>"
   apply (clarsimp simp: setObject_def split_def)
   apply (clarsimp simp: valid_def no_0_obj'_def ko_wp_at'_def in_monad
-                        lookupAround2_char1 ps_clear_upd')
+                        lookupAround2_char1 ps_clear_upd)
   done
 
 lemma valid_updateCapDataI:
@@ -2073,7 +2073,7 @@ lemma setObject_state_refs_of':
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (clarsimp simp: state_refs_of'_def objBits_def[symmetric]
-                        ps_clear_upd'
+                        ps_clear_upd
                   cong: if_cong option.case_cong)
   done
 
@@ -2090,7 +2090,7 @@ lemma setObject_state_refs_of_eq:
                  elim!: rsubst[where P=P] intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (frule x)
-  apply (simp add: state_refs_of'_def ps_clear_upd' updateObject_size
+  apply (simp add: state_refs_of'_def ps_clear_upd updateObject_size
              cong: option.case_cong if_cong)+
   done
 
@@ -2255,7 +2255,7 @@ lemma typ_at'[wp]:
 
 lemma sc_at'_n[wp]: "f p v \<lbrace>\<lambda>s. P (sc_at'_n n p' s)\<rbrace>"
   unfolding f_def
-  by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd'
+  by (clarsimp simp: valid_def setObject_def in_monad split_def ko_wp_at'_def ps_clear_upd
                      updateObject_size lookupAround2_char1 updateObject_type)
 
 sublocale typ_at_all_props' "f p v" for p v by typ_at_props'
@@ -2364,7 +2364,7 @@ lemma setObject_obj_at'_strongest:
   apply (case_tac "ptr = ptr' (set_obj' ptr obj s)"; simp)
    apply (clarsimp simp: same_size_obj_at'_set_obj'_iff
                          obj_at'_ignoring_obj[where P="P f obj" for f])
-  apply (clarsimp simp: obj_at'_def projectKO_eq project_inject ps_clear_upd')
+  apply (clarsimp simp: obj_at'_def projectKO_eq project_inject ps_clear_upd)
   done
 
 lemmas obj_at'_strongest = setObject_obj_at'_strongest[folded f_def]
@@ -3075,7 +3075,7 @@ lemma typ_at'_same_type:
   assumes "typ_at' T p s" "koTypeOf k = koTypeOf ko" "objBitsKO k = objBitsKO ko" "ksPSpace s p' = Some ko"
   shows "typ_at' T p (s\<lparr>ksPSpace :=ksPSpace s(p' \<mapsto> k)\<rparr>)"
   using assms
-  by (clarsimp simp: typ_at'_def ko_wp_at'_def ps_clear_upd')
+  by (clarsimp simp: typ_at'_def ko_wp_at'_def ps_clear_upd)
 
 lemma cte_at'_same_type:
   "\<lbrakk>cte_wp_at' \<top> t s; koTypeOf k = koTypeOf ko;objBitsKO k = objBitsKO ko;
@@ -3098,7 +3098,7 @@ lemma valid_ep'_ep_update:
 lemma valid_cap'_ep_update:
   "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_ep' ep s; ep_at' epPtr s \<rbrakk>
      \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
-  supply ps_clear_upd'[simp]
+  supply ps_clear_upd[simp]
   apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
                         valid_cap'_def obj_at'_def projectKOs objBits_simps
                  split: endpoint.splits capability.splits)
@@ -3123,7 +3123,7 @@ lemma valid_cap'_ep_update:
 lemma valid_cap'_reply_update:
   "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_reply' reply s; reply_at' rptr s \<rbrakk>
      \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
-  supply ps_clear_upd'[simp]
+  supply ps_clear_upd[simp]
   apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
                         valid_cap'_def obj_at'_def projectKOs objBits_simps
                  split: endpoint.splits capability.splits)
@@ -3146,7 +3146,7 @@ lemma valid_tcb_state'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s;  ksPSpace s x = Some (KOTCB obj) \<rbrakk>
      \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
-  by (fastforce simp: typ_at'_same_type ps_clear_upd' objBits_simps valid_obj'_def projectKOs
+  by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_tcb_state'_def valid_bound_obj'_def valid_tcb'_def obj_at'_def
                split: option.splits thread_state.splits)
 
@@ -3154,7 +3154,7 @@ lemma valid_tcb_state'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s; ksPSpace s x = Some (KOTCB obj) \<rbrakk>
      \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
-  by (fastforce simp: typ_at'_same_type ps_clear_upd' objBits_simps valid_obj'_def projectKOs
+  by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_bound_obj'_def valid_tcb'_def valid_tcb_state'_def obj_at'_def
                split: option.splits thread_state.splits)
 
@@ -3162,7 +3162,7 @@ lemma valid_tcb'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOTCB obj) \<rbrakk>
      \<Longrightarrow> valid_tcb' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
-  by (fastforce simp: typ_at'_same_type ps_clear_upd' objBits_simps valid_obj'_def projectKOs
+  by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_bound_obj'_def valid_tcb'_def obj_at'_def valid_tcb_state'_ep_update
                       valid_cap'_ep_update
               split: option.splits thread_state.splits)
@@ -3181,7 +3181,7 @@ lemma valid_arch_obj'_ep_update:
 lemma valid_arch_obj'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s; ksPSpace s x = Some (KOArch obj) \<rbrakk>
      \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
-  supply ps_clear_upd'[simp]
+  supply ps_clear_upd[simp]
   apply (rule valid_objsE', simp, simp)
   apply (cases obj; clarsimp simp: valid_arch_obj'_def valid_obj'_def obj_at'_def projectKOs
                             split: arch_kernel_object.splits)
@@ -3198,7 +3198,7 @@ lemma valid_obj'_ep_update:
   apply (rule valid_objsE', simp, simp)
   apply (clarsimp simp: valid_obj'_def obj_at'_def projectKOs)
   by (cases obj;
-      clarsimp simp: typ_at'_same_type valid_obj'_def obj_at'_def ps_clear_upd'
+      clarsimp simp: typ_at'_same_type valid_obj'_def obj_at'_def ps_clear_upd
                      valid_ntfn'_def  valid_bound_obj'_def valid_reply'_def valid_cte'_def
                      valid_sched_context'_def objBits_simps projectKOs valid_cap'_ep_update
                      valid_arch_obj'_ep_update valid_ep'_ep_update valid_tcb'_ep_update
@@ -3230,8 +3230,8 @@ lemma valid_objs'_ep_update:
      \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (clarsimp simp: valid_objs'_def obj_at'_def projectKOs)
   apply (erule ranE)
-  apply (clarsimp simp: ps_clear_upd' split: if_split_asm)
-   apply (fastforce simp: valid_obj'_def valid_ep'_def obj_at'_def ps_clear_upd'
+  apply (clarsimp simp: ps_clear_upd split: if_split_asm)
+   apply (fastforce simp: valid_obj'_def valid_ep'_def obj_at'_def ps_clear_upd
                           objBits_simps projectKOs
                    split: endpoint.splits)
   apply (fastforce intro!: valid_obj'_ep_update simp: valid_objs'_def obj_at'_def projectKOs)
@@ -3254,14 +3254,14 @@ lemma valid_release_queue_ksPSpace_update:
     ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
     koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
     valid_release_queue (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
-  by (fastforce simp: valid_release_queue_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd')
+  by (fastforce simp: valid_release_queue_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd)
 
 lemma valid_release_queue'_ksPSpace_update:
   "\<lbrakk>valid_release_queue' s;
     ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
     koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
     valid_release_queue' (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
-  by (fastforce simp: valid_release_queue'_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd')
+  by (fastforce simp: valid_release_queue'_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd)
 
 lemma sym_ref_Receive_or_Reply_replyTCB':
   "\<lbrakk> sym_refs (state_refs_of' s); ko_at' tcb tp s;

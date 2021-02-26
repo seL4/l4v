@@ -3084,7 +3084,7 @@ lemma schedContextZeroRefillMax_unlive[wp]:
   unfolding schedContextZeroRefillMax_def
   apply (wpsimp wp: set_sc'.set_wp)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
-                        ps_clear_upd' objBits_simps)
+                        ps_clear_upd objBits_simps)
   done
 
 crunches setMessageInfo, setMRs
