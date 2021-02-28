@@ -6132,6 +6132,23 @@ lemma isHead345:
    (replyNexts_of s ya \<noteq> None) \<Longrightarrow> (replySCs_of s ya = None)"
    by (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
 
+lemma sqheap_refs_inv_remove_only:
+  "sqheap_refs_inv h1 h2 \<Longrightarrow>
+   pred_map_eq x h2 y \<Longrightarrow> 
+   sqheap_refs_inv (\<lambda>a. if a = x then None else h1 a)
+                   (\<lambda>a. if a = y then None else h2 a)"
+  apply (clarsimp simp: sqheap_refs_inv_defs pred_map_eq_upd)
+  apply (intro conjI allI; rule contrapos_imp; intro impI)
+  apply (erule allE2)
+  apply (drule (1) mp)
+   apply (simp add: pred_map_eq_def pred_map_def )
+  apply (rule allE2[where P="\<lambda>a b. pred_map_eq b h2 a \<longrightarrow> R a b h1" for R], assumption)
+  apply (drule (1) mp[rotated])
+  apply (erule allE2[where P="\<lambda>a b. pred_map_eq b h2 a \<longrightarrow> R a b h1" for R])
+  apply (drule (1) mp[rotated])
+   apply (simp only: pred_map_eq_def pred_map_def, clarsimp)
+  done
+
 lemma ri_inv345s' [wp]:
   "\<lbrace>replies_scs_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
   replyRemoveTCB t
@@ -6166,26 +6183,43 @@ lemma ri_inv345s' [wp]:
       apply wpsimp
      apply (rule_tac Q="\<lambda>replya s. replies_scs_sym_refs s \<and> sym_refs (list_refs_of_replies' s)"
     in hoare_strengthen_post[rotated])
-      apply (clarsimp split: if_splits )
-      apply (safe)
-            apply (clarsimp simp: isHead_to_head)
-            apply (erule isHead345)
-            apply (subgoal_tac "replyPrevs_of s r = Some ya")
-             apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
-            apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
- apply (clarsimp simp: isHead_to_head)
-  subgoal sorry
- apply (clarsimp simp: isHead_to_head)
-            apply (erule isHead345)
-            apply (subgoal_tac "replyPrevs_of s r = Some ya")
-             apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
-            apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
-apply (clarsimp simp: sqheap_refs_inv_defs split: if_splits)
-  subgoal sorry (* fine *)
-  subgoal sorry (* fine *)
-  subgoal sorry (* fine *)
-  subgoal sorry (* fine *)
-      apply (wpsimp wp: hoare_drop_imp)+
+      apply (clarsimp split: if_splits)
+    apply (safe)
+          apply (clarsimp simp: isHead_to_head)
+          apply (subgoal_tac "replyPrevs_of s r = Some ya")
+           apply (erule isHead345)
+           apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
+          apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)        
+         apply (drule ko_at'_inj, assumption, simp)
+         apply (clarsimp simp: isHead_to_head)
+         apply (subgoal_tac "replyPrevs_of s r = Some rPtr")
+          apply (frule isHead345)
+           apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
+          apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+         apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+        apply (drule ko_at'_inj, assumption, simp)
+        apply clarsimp
+        apply (subgoal_tac "replyPrevs_of s r = Some ya")
+         apply (erule isHead345)
+         apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
+        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+       apply (clarsimp simp: isHead_to_head)
+       apply (erule sqheap_refs_inv_remove_only)
+       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def
+                             pred_map_eq_def pred_map_def)
+      apply (clarsimp simp: isHead_to_head)
+      apply (erule rsubst2[where P=sqheap_refs_inv, OF _ refl])
+      apply (rule ext, clarsimp split: if_split)
+      apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+     apply clarsimp
+     apply (subgoal_tac "replyPrevs_of s r = Some y")
+      apply (erule isHead345)
+      apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
+     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+    apply (erule rsubst2[where P=sqheap_refs_inv, OF _ refl])
+    apply (rule ext, clarsimp split: if_split)
+    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
+   apply (wpsimp wp: hoare_drop_imp)+
   done
 
 crunches blockedCancelIPC, cancelSignal
