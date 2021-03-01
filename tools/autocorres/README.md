@@ -16,7 +16,7 @@ abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
   [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: https://ts.data61.csiro.au/software/TS/c-parser/
+  [2]: https://ts.data61.csiro.au/software/TS/c-parser.html
 
 
 
