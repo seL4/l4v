@@ -19,7 +19,7 @@ before transferring the noninterference result to the kernel's
 C implementation via the [Design Spec Refinement Proof](../refine/) and
 the [C Refinement Proof](../crefine/).
 
-  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Murray_MBGBSLGK_13.abstract.pml "seL4: from General Purpose to a Proof of Information Flow Enforcement"
+  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Murray_MBGBSLGK_13.abstract "seL4: from General Purpose to a Proof of Information Flow Enforcement"
 
 Building
 --------
