@@ -279,11 +279,6 @@ lemma msg_from_syserr_map[simp]:
   apply (case_tac err,clarsimp+)
   done
 
-(* FIXME: move *)
-lemma non_exst_same_timeSlice_upd[simp]:
-  "non_exst_same tcb (tcbDomain_update f tcb)"
-  by (cases tcb, simp add: non_exst_same_def)
-
 lemma threadSet_tcbDomain_update_ct_idle_or_in_cur_domain':
   "\<lbrace>ct_idle_or_in_cur_domain' and (\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread) \<rbrace>
      threadSet (tcbDomain_update (\<lambda>_. domain)) t
@@ -1785,10 +1780,6 @@ lemma hc_invs'[wp]:
   apply (wp)
   apply (clarsimp)
   done
-
-lemma sch_act_sane_ksMachineState [iff]:
-  "sch_act_sane (s\<lparr>ksMachineState := b\<rparr>) = sch_act_sane s"
-  by (simp add: sch_act_sane_def)
 
 lemma cteInsert_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> cteInsert newCap srcSlot destSlot \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"

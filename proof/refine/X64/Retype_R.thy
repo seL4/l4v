@@ -1197,11 +1197,6 @@ lemma update_gs_simps[simp]:
    gsUserPages_update (\<lambda>ups x. if x \<in> ptrs then Some X64HugePage else ups x)"
   by (simp_all add: update_gs_def)
 
-lemma caps_of_state_kheap_ekheap[simp]: "caps_of_state (kheap_update f (ekheap_update ef s)) =
-       caps_of_state (kheap_update f s)"
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  done
-
 lemma retype_state_relation:
   notes data_map_insert_def[simp del]
   assumes  sr:   "(s, s') \<in> state_relation"

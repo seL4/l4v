@@ -1306,7 +1306,7 @@ lemma weak_derived_updateCapData:
   apply (clarsimp simp: Let_def isCap_simps updateCapData_def)
   done
 
-lemma maskCapRights_Reply:
+lemma maskCapRights_Reply[simp]:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
   apply (insert capMasterCap_maskCapRights)
   apply (rule master_eqI, rule isCap_Master)

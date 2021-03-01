@@ -180,6 +180,58 @@ lemma almost_no_orphans_disj:
   apply (auto intro: pred_tcb_at')
   done
 
+lemma no_orphans_update_simps[simp]:
+  "no_orphans (gsCNodes_update f s) = no_orphans s"
+  "no_orphans (gsUserPages_update g s) = no_orphans s"
+  "no_orphans (gsUntypedZeroRanges_update h s) = no_orphans s"
+  by (simp_all add: no_orphans_def all_active_tcb_ptrs_def
+                    is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
+
+lemma no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
+  "no_orphans (ksReadyQueuesL1Bitmap_update f s) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
+  "no_orphans (ksReadyQueuesL2Bitmap_update f s) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma no_orphans_ksIdle[simp]:
+   "no_orphans (ksIdleThread_update f s) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  apply auto
+  done
+
+lemma no_orphans_ksWorkUnits [simp]:
+   "no_orphans (ksWorkUnitsCompleted_update f s) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  apply auto
+  done
+
+lemma no_orphans_irq_state_independent[intro!, simp]:
+  "no_orphans (s \<lparr>ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr> \<rparr>)
+   = no_orphans s"
+  by (simp add: no_orphans_def all_active_tcb_ptrs_def
+                all_queued_tcb_ptrs_def is_active_tcb_ptr_def)
+
+add_upd_simps "no_orphans (gsUntypedZeroRanges_update f s)"
+declare upd_simps[simp]
+
+lemma almost_no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
+  "almost_no_orphans t (ksReadyQueuesL1Bitmap_update f s) = almost_no_orphans t s"
+  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma almost_no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
+  "almost_no_orphans t (ksReadyQueuesL2Bitmap_update f s) = almost_no_orphans t s"
+  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma all_active_tcb_ptrs_queue [simp]:
+  "all_active_tcb_ptrs (ksReadyQueues_update f s) = all_active_tcb_ptrs s"
+  by (clarsimp simp: all_active_tcb_ptrs_def is_active_tcb_ptr_def)
+
 (****************************************************************************************************)
 
 crunch ksCurThread [wp]: setVMRoot "\<lambda> s. P (ksCurThread s)"
@@ -194,28 +246,8 @@ crunch no_orphans [wp]: threadGet "no_orphans"
 
 crunch no_orphans [wp]: getNotification "no_orphans"
 
-lemma no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
-  "no_orphans (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = no_orphans s"
-  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  by auto
-
-lemma no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
-  "no_orphans (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = no_orphans s"
-  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  by auto
-
 crunch no_orphans [wp]: addToBitmap "no_orphans"
 crunch no_orphans [wp]: removeFromBitmap "no_orphans"
-
-lemma almost_no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
-  "almost_no_orphans t (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = almost_no_orphans t s"
-  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  by auto
-
-lemma almost_no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
-  "almost_no_orphans t (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = almost_no_orphans t s"
-  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  by auto
 
 crunch almost_no_orphans [wp]: addToBitmap "almost_no_orphans x"
 crunch almost_no_orphans [wp]: removeFromBitmap "almost_no_orphans x"
@@ -263,10 +295,6 @@ lemma threadSet_almost_no_orphans:
   unfolding almost_no_orphans_disj all_queued_tcb_ptrs_def
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at2 | clarsimp)+
   done
-
-lemma all_active_tcb_ptrs_queue [simp]:
-  "all_active_tcb_ptrs (ksReadyQueues_update f s) = all_active_tcb_ptrs s"
-  by (clarsimp simp: all_active_tcb_ptrs_def is_active_tcb_ptr_def)
 
 lemma setQueue_no_orphans_enq:
   "\<lbrace> \<lambda>s. no_orphans s \<and> set (ksReadyQueues s (d, prio)) \<subseteq> set qs \<rbrace>
@@ -584,19 +612,6 @@ lemma switchToIdleThread_no_orphans' [wp]:
   apply (auto simp: no_orphans_disj all_queued_tcb_ptrs_def is_active_tcb_ptr_def
                     st_tcb_at_neg' tcb_at_typ_at')
   done
-
-lemma ct_in_state_ksSched [simp]:
-  "ct_in_state' activatable' (ksSchedulerAction_update f s) = ct_in_state' activatable' s"
-  unfolding ct_in_state'_def
-  apply auto
-  done
-
-lemma no_orphans_ksIdle [simp]:
-   "no_orphans (ksIdleThread_update f s) = no_orphans s"
-  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  apply auto
-  done
-
 
 crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
   (wp: no_orphans_lift ignore: ARM.clearExMonitor)
@@ -1364,13 +1379,6 @@ lemma copyGlobalMappings_no_orphans [wp]:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-lemma no_orphans_update_simps[simp]:
-  "no_orphans (gsCNodes_update f s) = no_orphans s"
-  "no_orphans (gsUserPages_update g s) = no_orphans s"
-  "no_orphans (gsUntypedZeroRanges_update h s) = no_orphans s"
-  by (simp_all add: no_orphans_def all_active_tcb_ptrs_def
-                    is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
-
 crunch no_orphans [wp]: insertNewCap "no_orphans"
 (wp: hoare_drop_imps)
 
@@ -1470,21 +1478,6 @@ lemma deleteObjects_no_orphans [wp]:
   apply (clarsimp simp: pred_tcb_at'_def obj_at_delete'[simplified field_simps]
                   cong: if_cong)
   done
-
-lemma no_orphans_ksWorkUnits [simp]:
-   "no_orphans (ksWorkUnitsCompleted_update f s) = no_orphans s"
-  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
-  apply auto
-  done
-
-lemma no_orphans_irq_state_independent[intro!, simp]:
-  "no_orphans (s \<lparr>ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr> \<rparr>)
-   = no_orphans s"
-  by (simp add: no_orphans_def all_active_tcb_ptrs_def
-                all_queued_tcb_ptrs_def is_active_tcb_ptr_def)
-
-add_upd_simps "no_orphans (gsUntypedZeroRanges_update f s)"
-declare upd_simps[simp]
 
 crunch no_orphans[wp]: updateFreeIndex "no_orphans"
 

@@ -2508,10 +2508,6 @@ lemma finaliseCap_True_invs[wp]:
     apply (wp irqs_masked_lift| simp | wpc)+
   done
 
-lemma ct_not_inQ_ksArchState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksArchState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = x64KSASIDTable (ksArchState s) \<longrightarrow>
    invs' (s\<lparr>ksArchState := x64KSASIDTable_update
@@ -3861,10 +3857,6 @@ crunch valid_irq_states'[wp]: copyGlobalMappings "valid_irq_states'"
 
 crunch ksDomScheduleIdx[wp]: copyGlobalMappings "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: crunch_wps)
-
-lemma ct_in_current_domain_ArchState_update[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksArchState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
-  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma threadSet_ct_idle_or_in_cur_domain':
   "\<lbrace>ct_idle_or_in_cur_domain' and (\<lambda>s. \<forall>tcb. tcbDomain tcb = ksCurDomain s \<longrightarrow> tcbDomain (F tcb) = ksCurDomain s)\<rbrace>

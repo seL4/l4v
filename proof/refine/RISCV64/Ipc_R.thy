@@ -1068,8 +1068,6 @@ crunch typ_at'[wp]: transferCaps "\<lambda>s. P (typ_at' T p s)"
 
 lemmas transferCaps_typ_ats[wp] = typ_at_lifts [OF transferCaps_typ_at']
 
-declare maskCapRights_Reply [simp]
-
 lemma isIRQControlCap_mask [simp]:
   "isIRQControlCap (maskCapRights R c) = isIRQControlCap c"
   apply (case_tac c)
@@ -2099,10 +2097,6 @@ lemma cancelIPC_valid_queues'[wp]:
 
 crunch valid_objs'[wp]: handleFaultReply valid_objs'
 
-lemma valid_tcb'_tcbFault_update[simp]:
-  "\<And>tcb s. valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbFault_update f tcb) s"
-  by (clarsimp simp: valid_tcb'_def  tcb_cte_cases_def cteSizeBits_def)
-
 lemma cte_wp_at_is_reply_cap_toI:
   "cte_wp_at ((=) (cap.ReplyCap t False rights)) ptr s
    \<Longrightarrow> cte_wp_at (is_reply_cap_to t) ptr s"
@@ -2381,19 +2375,6 @@ lemmas transferCapsToSlots_pred_tcb_at' =
 crunches doIPCTransfer, possibleSwitchTo
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: mapM_wp' crunch_wps simp: zipWithM_x_mapM)
-
-
-(* FIXME move *)
-lemma tcb_in_cur_domain'_ksSchedulerAction_update[simp]:
-  "tcb_in_cur_domain' t (ksSchedulerAction_update f s) = tcb_in_cur_domain' t s"
-by (simp add: tcb_in_cur_domain'_def)
-
-(* FIXME move *)
-lemma ct_idle_or_in_cur_domain'_ksSchedulerAction_update[simp]:
-  "b\<noteq> ResumeCurrentThread \<Longrightarrow>
-   ct_idle_or_in_cur_domain' (s\<lparr>ksSchedulerAction := b\<rparr>)"
-  apply (clarsimp simp add: ct_idle_or_in_cur_domain'_def)
-  done
 
 lemma setSchedulerAction_ct_in_domain:
  "\<lbrace>\<lambda>s. ct_idle_or_in_cur_domain' s
