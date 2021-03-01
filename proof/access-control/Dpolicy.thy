@@ -20,7 +20,7 @@ pas_refined_transform.
 More details of this result and how it is used can be found in Section 6.1 of
 "Comprehensive Formal Verification of an OS Microkernel", which can be
 downloaded from
-https://ts.data61.csiro.au/publications/nictaabstracts/Klein_AEMSKH_14.abstract.pml
+https://ts.data61.csiro.au/publications/nictaabstracts/Klein_AEMSKH_14.abstract
 *)
 
 context begin interpretation Arch . (*FIXME: arch_split*)

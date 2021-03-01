@@ -28,5 +28,5 @@ more of the seL4 [proofs](../proof/). Each has its own directory:
  * [proofcount](proofcount/) - Tool for collecting metrics from
    finished proofs.
 
-  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Greenaway_LAK_14.abstract.pml "Don't Sweat the Small Stuff: Formal Verification of C Code Without the Pain"
+  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Greenaway_LAK_14.abstract "Don't Sweat the Small Stuff: Formal Verification of C Code Without the Pain"
 
