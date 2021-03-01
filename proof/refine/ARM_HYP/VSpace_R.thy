@@ -3264,14 +3264,13 @@ lemma findFreeHWASID_invs:
              ct_not_inQ_def
            split del: if_split)
   apply (intro conjI)
-    apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
-   apply clarsimp
-   apply (drule_tac x=p in spec)
-   apply (drule use_valid)
+   apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
+  apply clarsimp
+  apply (drule_tac x=p in spec)
+  apply (drule use_valid)
     apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory)
-    apply blast
-   apply clarsimp
-  apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+   apply blast
+  apply clarsimp
   done
 
 lemma findFreeHWASID_invs_no_cicd':
@@ -3409,10 +3408,6 @@ crunch ksIdleThread[wp]: asUser "\<lambda>s. P (ksIdleThread s)"
 (wp: crunch_wps simp: crunch_simps)
 crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
 (wp: crunch_wps simp: crunch_simps)
-
-lemma ct_not_inQ_ksArchState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksArchState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
 
 lemma dmo_machine_op_lift_invs'[wp]:
   "doMachineOp (machine_op_lift f) \<lbrace>invs'\<rbrace>"
@@ -4005,8 +4000,6 @@ lemma invs'_armHSCurVCPU_update[simp]:
              valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
              irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
-  apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def
-                       ct_idle_or_in_cur_domain'_def ct_not_inQ_def)
   done
 
 lemma armHSCurVCPU_None_invs'[wp]:

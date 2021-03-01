@@ -1270,7 +1270,7 @@ lemma weak_derived_updateCapData:
   \<Longrightarrow> weak_derived' (updateCapData P x c) c'"
   by (clarsimp simp add: weak_derived'_def updateCapData_Master)
 
-lemma maskCapRights_Reply:
+lemma maskCapRights_Reply[simp]:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
   apply (insert capMasterCap_maskCapRights)
   apply (rule master_eqI, rule isCap_Master)

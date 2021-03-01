@@ -187,54 +187,6 @@ lemma valid_objs'_maxPriority:
   apply (clarsimp simp: valid_tcb'_def)
   done
 
-lemma invs'_machine:
-  assumes mask: "irq_masks (f (ksMachineState s)) =
-                 irq_masks (ksMachineState s)"
-  assumes vms: "valid_machine_state' (ksMachineState_update f s) =
-                valid_machine_state' s"
-  shows "invs' (ksMachineState_update f s) = invs' s"
-proof -
-  have valid_pspace'_machine: "\<And>f s.
-       valid_pspace' (ksMachineState_update f s) = valid_pspace' s"
-    by simp
-  have valid_idle'_machine: "\<And>f s.
-       valid_idle' (ksMachineState_update f s) = valid_idle' s"
-    by fastforce
-  show ?thesis
-    apply (cases "ksSchedulerAction s")
-    apply (simp_all add: invs'_def valid_state'_def cur_tcb'_def ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                    valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
-                    vms ct_not_inQ_def
-                    state_refs_of'_def ps_clear_def
-                    valid_irq_node'_def mask
-              cong: option.case_cong)
-    done
-qed
-
-lemma invs_no_cicd'_machine:
-  assumes mask: "irq_masks (f (ksMachineState s)) =
-                 irq_masks (ksMachineState s)"
-  assumes vms: "valid_machine_state' (ksMachineState_update f s) =
-                valid_machine_state' s"
-  shows "invs_no_cicd' (ksMachineState_update f s) = invs_no_cicd' s"
-proof -
-  have valid_pspace'_machine: "\<And>f s.
-       valid_pspace' (ksMachineState_update f s) = valid_pspace' s"
-    by simp
-  have valid_idle'_machine: "\<And>f s.
-       valid_idle' (ksMachineState_update f s) = valid_idle' s"
-    by fastforce
-  show ?thesis
-    apply (cases "ksSchedulerAction s")
-    apply (simp_all add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def cur_tcb'_def ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                    valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
-                    vms ct_not_inQ_def
-                    state_refs_of'_def ps_clear_def
-                    valid_irq_node'_def mask
-              cong: option.case_cong)
-    done
-qed
-
 lemma doMachineOp_irq_states':
   assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   shows "\<lbrace>valid_irq_states'\<rbrace> doMachineOp f \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
@@ -717,15 +669,6 @@ lemma threadSet_pspace_no_overlap' [wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma pspace_no_overlap_queues [simp]:
-  "pspace_no_overlap' w sz (ksReadyQueues_update f s) = pspace_no_overlap' w sz s"
-  by (simp add: pspace_no_overlap'_def)
-
-lemma pspace_no_overlap'_ksSchedulerAction[simp]:
-  "pspace_no_overlap' a b (ksSchedulerAction_update f s) =
-   pspace_no_overlap' a b s"
-  by (simp add: pspace_no_overlap'_def)
-
 lemma threadSet_global_refsT:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases.
                  getF (F tcb) = getF tcb"
@@ -1027,10 +970,6 @@ lemma threadSet_valid_queues_Qf:
   apply (clarsimp simp: valid_queues'_def subset_iff)
   done
 
-lemma ksReadyQueues_update_id:
-  "ksReadyQueues_update id s = s"
-  by simp
-
 lemma addToQs_subset:
   "set (qs p) \<subseteq> set (addToQs F t qs p)"
 by (clarsimp simp: addToQs_def split_def)
@@ -1267,14 +1206,6 @@ lemma threadSet_vms'[wp]:
   "\<lbrace>valid_machine_state'\<rbrace> threadSet F t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   by (intro hoare_vcg_all_lift hoare_vcg_disj_lift; wp)
-
-lemma vms_ksReadyQueues_update[simp]:
-  "valid_machine_state' (ksReadyQueues_update f s) = valid_machine_state' s"
-  by (simp add: valid_machine_state'_def)
-
-lemma ct_not_inQ_ksReadyQueues_update[simp]:
-  "ct_not_inQ (ksReadyQueues_update f s) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
 
 lemma threadSet_not_inQ:
   "\<lbrace>ct_not_inQ and (\<lambda>s. (\<exists>tcb. tcbQueued (F tcb) \<and> \<not> tcbQueued tcb)
@@ -1515,10 +1446,6 @@ lemma asUser_typ_at' [wp]:
   by (simp add: asUser_def bind_assoc split_def, wp select_f_inv)
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts [OF asUser_typ_at']
-
-lemma inQ_context[simp]:
-  "inQ d p (tcbArch_update f tcb) = inQ d p tcb"
-  by (cases tcb, simp add: inQ_def)
 
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1933,6 +1860,10 @@ definition
 where
  "weak_sch_act_wf sa = (\<lambda>s. \<forall>t. sa = SwitchToThread t \<longrightarrow> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 
+lemma weak_sch_act_wf_updateDomainTime[simp]:
+  "weak_sch_act_wf m (ksDomainTime_update f s) = weak_sch_act_wf m s"
+  by (simp add:weak_sch_act_wf_def tcb_in_cur_domain'_def )
+
 lemma set_sa_corres:
   "sched_act_relation sa sa'
     \<Longrightarrow> corres dc \<top> \<top> (set_scheduler_action sa) (setSchedulerAction sa')"
@@ -2180,13 +2111,9 @@ lemma sbn_corres:
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification
   for tcb'[wp]: "tcb_at' addr"
 
-lemma valid_tcb_tcbQueued:
-  "valid_tcb' (tcbQueued_update f tcb) = valid_tcb' tcb"
-  by (cases tcb, rule ext, simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
-
 crunches rescheduleRequired, removeFromBitmap
   for valid_objs'[wp]: valid_objs'
-  (simp: unless_def valid_tcb_tcbQueued crunch_simps)
+  (simp: unless_def crunch_simps)
 
 
 lemma tcbSchedDequeue_valid_objs' [wp]: "\<lbrace> valid_objs' \<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. valid_objs' \<rbrace>"
@@ -2925,11 +2852,6 @@ lemma tcbSchedAppend_valid_queues[wp]:
    unfolding tcbSchedAppend_def
    by (fastforce intro:  tcbSchedEnqueueOrAppend_valid_queues)
 
-lemma valid_queues_ksSchedulerAction_update[simp]:
-  "Invariants_H.valid_queues (ksSchedulerAction_update f s) = Invariants_H.valid_queues s"
- unfolding Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
- by simp
-
 lemma rescheduleRequired_valid_queues[wp]:
   "\<lbrace>\<lambda>s. Invariants_H.valid_queues s \<and> valid_objs' s \<and>
         weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -2947,18 +2869,6 @@ lemma rescheduleRequired_valid_queues_sch_act_simple:
   apply (simp add: rescheduleRequired_def)
   apply (wp | wpc | simp | fastforce simp: Invariants_H.valid_queues_def sch_act_simple_def)+
   done
-
-lemma valid_bitmapQ_ksSchedulerAction_upd[simp]:
-  "valid_bitmapQ (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = valid_bitmapQ s"
-  unfolding bitmapQ_defs by simp
-
-lemma bitmapQ_no_L1_orphans_ksSchedulerAction_upd[simp]:
-  "bitmapQ_no_L1_orphans (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = bitmapQ_no_L1_orphans s"
-  unfolding bitmapQ_defs by simp
-
-lemma bitmapQ_no_L2_orphans_ksSchedulerAction_upd[simp]:
-  "bitmapQ_no_L2_orphans (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) = bitmapQ_no_L2_orphans s"
-  unfolding bitmapQ_defs by simp
 
 lemma rescheduleRequired_valid_bitmapQ_sch_act_simple:
   "\<lbrace> valid_bitmapQ and sch_act_simple\<rbrace>
@@ -3090,10 +3000,6 @@ lemma tcbSchedEnqueue_valid_queues'[wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma valid_queues'_ksSchedulerAction_update[simp]:
-  "Invariants_H.valid_queues' (ksSchedulerAction_update f s) = Invariants_H.valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma rescheduleRequired_valid_queues'_weak[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
     rescheduleRequired
@@ -3128,7 +3034,8 @@ lemma setBoundNotification_valid_queues'[wp]:
   apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
   done
 
-lemma valid_tcb'_tcbState_update:"\<And>tcb s st . \<lbrakk> valid_tcb_state' st s; valid_tcb' tcb s \<rbrakk> \<Longrightarrow> valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
+lemma valid_tcb'_tcbState_update:
+  "\<lbrakk> valid_tcb_state' st s; valid_tcb' tcb s \<rbrakk> \<Longrightarrow> valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def valid_tcb_state'_def)
   done
 
@@ -4178,27 +4085,6 @@ lemma tcbSchedAppend_ct_not_inQ:
       done
   qed
 
-lemma ct_not_inQ_update_cnt:
-  "ct_not_inQ s \<Longrightarrow> ct_not_inQ (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-   by (simp add: ct_not_inQ_def)
-
-lemma ct_not_inQ_update_stt:
-  "ct_not_inQ s \<Longrightarrow> ct_not_inQ (s\<lparr>ksSchedulerAction := SwitchToThread t\<rparr>)"
-   by (simp add: ct_not_inQ_def)
-
-lemma valid_bitmapQ_upd_scheduler_action:
-  "valid_bitmapQ (s\<lparr>ksSchedulerAction := x \<rparr>) = valid_bitmapQ s"
-  unfolding bitmapQ_defs
-  by simp
-
-lemma invs'_update_cnt:
-  "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-   by (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_update_cnt
-                      valid_queues_def valid_queues'_def valid_irq_node'_def
-                      cur_tcb'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                      valid_bitmapQ_upd_scheduler_action valid_queues_no_bitmap_def
-                      bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def)
-
 lemma setSchedulerAction_direct:
   "\<lbrace>\<top>\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>_ s. ksSchedulerAction s = sa\<rbrace>"
   by (wpsimp simp: setSchedulerAction_def)
@@ -4227,10 +4113,9 @@ lemma possibleSwitchTo_ct_not_inQ:
     possibleSwitchTo t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: possibleSwitchTo_def curDomain_def)
-  apply (wp static_imp_wp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ threadGet_wp
-       | wpc
-       | (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt], fastforce)
-       | clarsimp simp: ct_not_inQ_update_stt bitmap_fun_defs)+
+  apply (wpsimp wp: static_imp_wp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ
+                    threadGet_wp
+       | (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt], fastforce))+
   apply (fastforce simp: obj_at'_def)
   done
 
@@ -4659,6 +4544,18 @@ where
   "non_exst_same' (KOTCB tcb) (KOTCB tcb') = non_exst_same tcb tcb'" |
   "non_exst_same' _ _ = True"
 
+lemma non_exst_same_prio_upd[simp]:
+  "non_exst_same tcb (tcbPriority_update f tcb)"
+  by (cases tcb, simp add: non_exst_same_def)
+
+lemma non_exst_same_timeSlice_upd[simp]:
+  "non_exst_same tcb (tcbTimeSlice_update f tcb)"
+  by (cases tcb, simp add: non_exst_same_def)
+
+lemma non_exst_same_domain_upd[simp]:
+  "non_exst_same tcb (tcbDomain_update f tcb)"
+  by (cases tcb, simp add: non_exst_same_def)
+
 lemma set_eobject_corres':
   assumes e: "etcb_relation etcb tcb'"
   assumes z: "\<And>s. obj_at' P ptr s
@@ -4760,14 +4657,6 @@ lemma ethread_set_corresT:
 
 lemmas ethread_set_corres =
     ethread_set_corresT [OF _ all_tcbI, OF _ ball_tcb_cte_casesI]
-
-lemma non_exst_same_prio_upd[simp]:
-  "non_exst_same tcb (tcbPriority_update f tcb)"
-  by (cases tcb, simp add: non_exst_same_def)
-
-lemma non_exst_same_timeSlice_upd[simp]:
-  "non_exst_same tcb (tcbTimeSlice_update f tcb)"
-  by (cases tcb, simp add: non_exst_same_def)
 
 end
 end

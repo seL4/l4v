@@ -57,6 +57,16 @@ crunches cancelIPC, cancelSignal
 crunch pred_tcb_at'[wp]: emptySlot "pred_tcb_at' proj P t"
   (wp: setCTE_pred_tcb_at')
 
+lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL1Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
+lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL2Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
@@ -1610,16 +1620,6 @@ lemma threadSet_valid_inQ_queues:
   apply (fastforce)
   done
 
-lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
-  "valid_inQ_queues (s\<lparr>ksReadyQueuesL1Bitmap := f\<rparr>) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
-lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
-  "valid_inQ_queues (s\<lparr>ksReadyQueuesL2Bitmap := f\<rparr>) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
 (* reorder the threadSet before the setQueue, useful for lemmas that don't refer to bitmap *)
 lemma setQueue_after_addToBitmap:
   "(setQueue d p q >>= (\<lambda>rv. (when P (addToBitmap d p)) >>= (\<lambda>rv. threadSet f t))) =
@@ -1656,10 +1656,6 @@ lemma tcbSchedEnqueue_valid_inQ_queues[wp]:
  *)
 definition
   "removeFromBitmap_conceal d p q t \<equiv> when (null [x\<leftarrow>q . x \<noteq> t]) (removeFromBitmap d p)"
-
-lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
-  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
-  by (simp add: valid_inQ_queues_def)
 
 crunches rescheduleRequired, scheduleTCB
   for valid_inQ_queues[wp]: valid_inQ_queues

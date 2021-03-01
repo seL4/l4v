@@ -1224,16 +1224,6 @@ lemma invokeArch_tcb_at':
   apply (wp, clarsimp simp: pred_tcb_at')
   done
 
-(* FIXME random place to have these *)
-lemma pspace_no_overlap_queuesL1 [simp]:
-  "pspace_no_overlap' w sz (ksReadyQueuesL1Bitmap_update f s) = pspace_no_overlap' w sz s"
-  by (simp add: pspace_no_overlap'_def)
-
-(* FIXME random place to have these *)
-lemma pspace_no_overlap_queuesL2 [simp]:
-  "pspace_no_overlap' w sz (ksReadyQueuesL2Bitmap_update f s) = pspace_no_overlap' w sz s"
-  by (simp add: pspace_no_overlap'_def)
-
 lemma setObject_tcb_pre:
   assumes "\<lbrace>P and tcb_at' p\<rbrace> setObject p (t::tcb) \<lbrace>Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> setObject p (t::tcb) \<lbrace>Q\<rbrace>" using assms
@@ -1862,7 +1852,7 @@ lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
-lemma invs_asid_table_strenghten':
+lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
             armKSASIDTable_update (\<lambda>_. (armKSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
@@ -1903,7 +1893,7 @@ lemma performASIDControlInvocation_invs' [wp]:
    apply fastforce
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift)
-       apply (strengthen invs_asid_table_strenghten')
+       apply (strengthen invs_asid_table_strengthen')
        apply (wp cteInsert_simple_invs)
       apply (wp createObjects'_wp_subst[OF
                 createObjects_no_cte_invs [where sz = pageBits and ty="Inl (KOArch (KOASIDPool pool))" for pool]]

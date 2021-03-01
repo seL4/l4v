@@ -1157,6 +1157,17 @@ global_interpretation update_gs: PSpace_update_eq "update_gs ty us ptrs"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma ksMachineState_update_gs[simp]:
+  "ksMachineState (update_gs tp us addrs s) = ksMachineState s"
+  by (simp add: update_gs_def
+         split: aobject_type.splits Structures_A.apiobject_type.splits)
+
+lemma update_gs_ksMachineState_update_swap:
+  "update_gs tp us addrs (ksMachineState_update f s) =
+   ksMachineState_update f (update_gs tp us addrs s)"
+  by (simp add: update_gs_def
+         split: aobject_type.splits Structures_A.apiobject_type.splits)
+
 lemma update_gs_id:
   "tp \<in> no_gs_types \<Longrightarrow> update_gs tp us addrs = id"
   by (simp add: no_gs_types_def update_gs_def
@@ -1172,11 +1183,6 @@ lemma update_gs_simps[simp]:
   "update_gs (ArchObject HugePageObj) us ptrs =
    gsUserPages_update (\<lambda>ups x. if x \<in> ptrs then Some RISCVHugePage else ups x)"
   by (simp_all add: update_gs_def)
-
-lemma caps_of_state_kheap_ekheap[simp]: "caps_of_state (kheap_update f (ekheap_update ef s)) =
-       caps_of_state (kheap_update f s)"
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  done
 
 lemma retype_state_relation:
   notes data_map_insert_def[simp del]
@@ -2478,16 +2484,6 @@ lemmas object_splits =
   RISCV64_H.object_type.split_asm
   sum.split_asm kernel_object.split_asm
   arch_kernel_object.split_asm
-
-lemma ksMachineState_update_gs[simp]:
-  "ksMachineState (update_gs tp us addrs s) = ksMachineState s"
-  by (simp add: update_gs_def
-         split: aobject_type.splits Structures_A.apiobject_type.splits)
-lemma update_gs_ksMachineState_update_swap:
-  "update_gs tp us addrs (ksMachineState_update f s) =
-   ksMachineState_update f (update_gs tp us addrs s)"
-  by (simp add: update_gs_def
-         split: aobject_type.splits Structures_A.apiobject_type.splits)
 
 declare hoare_in_monad_post[wp del]
 declare univ_get_wp[wp del]

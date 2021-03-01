@@ -1182,33 +1182,9 @@ lemma out_corresT:
 
 lemmas out_corres = out_corresT [OF _ all_tcbI, OF ball_tcb_cap_casesI ball_tcb_cte_casesI]
 
-lemma sch_act_simple_readyQueue[simp]:
-  "sch_act_simple (s\<lparr>ksReadyQueues := a\<rparr>) = sch_act_simple s"
-  apply (simp add: sch_act_simple_def)
-  done
-
-lemma sch_act_simple_ksReadyQueuesL1Bitmap[simp]:
-  "sch_act_simple (s\<lparr>ksReadyQueuesL1Bitmap := a\<rparr>) = sch_act_simple s"
-  apply (simp add: sch_act_simple_def)
-  done
-
-lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
-  "sch_act_simple (s\<lparr>ksReadyQueuesL2Bitmap := a\<rparr>) = sch_act_simple s"
-  apply (simp add: sch_act_simple_def)
-  done
-
-lemma sch_act_simple_updateObject[simp]:
-  "sch_act_simple (s\<lparr>ksPSpace := a \<rparr>) = sch_act_simple s"
-  apply (simp add: sch_act_simple_def)
-  done
-
 lemma tcbSchedDequeue_sch_act_simple[wp]:
   "tcbSchedDequeue t \<lbrace>sch_act_simple\<rbrace>"
   by (wpsimp simp: sch_act_simple_def)
-
-lemma ps_clear_ksReadyQueue[simp]:
-  "ps_clear x n (ksReadyQueues_update f s) = ps_clear x n s"
-  by (simp add: ps_clear_def)
 
 lemma valid_queues_subsetE':
   "\<lbrakk> valid_queues' s; ksPSpace s = ksPSpace s';
@@ -1236,14 +1212,6 @@ lemma setQueue_ex_idle_cap[wp]:
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to' (ksIdleThread s) s\<rbrace>"
   by (simp add: setQueue_def, wp,
       simp add: ex_nonz_cap_to'_def cte_wp_at_pspaceI)
-
-lemma tcbPriority_ts_safe:
-  "tcbState (tcbPriority_update f tcb) = tcbState tcb"
-  by (case_tac tcb, simp)
-
-lemma tcbQueued_ts_safe:
-  "tcbState (tcbQueued_update f tcb) = tcbState tcb"
-  by (case_tac tcb, simp)
 
 lemma tcbPriority_caps_safe:
   "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbPriority_update f tcb) = getF tcb) x"
@@ -1487,10 +1455,6 @@ lemma assertDerived_wp_weak:
   apply (wpsimp simp: assertDerived_def)
   done
 
-lemma tcbMCP_ts_safe:
-  "tcbState (tcbMCP_update f tcb) = tcbState tcb"
-  by (case_tac tcb, simp)
-
 lemma tcbMCP_caps_safe:
   "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbMCP_update f tcb) = getF tcb) x"
   by (rule all_tcbI, rule ball_tcb_cte_casesI, simp+)
@@ -1657,10 +1621,6 @@ lemma threadSet_valid_queues'_no_state2:
              split del: if_split cong: if_cong)
   apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
   done
-
-lemma inQ_tcbIPCBuffer_update_idem[simp]:
-  "inQ d p (tcbIPCBuffer_update (\<lambda>_. x) ko) = inQ d p ko"
-  by (clarsimp simp: inQ_def)
 
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"

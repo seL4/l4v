@@ -2343,10 +2343,6 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch invs'[wp]: flushSpace "invs'" (ignore: doMachineOp)
 
-lemma ct_not_inQ_ksArchState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksArchState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
    invs' (s\<lparr>ksArchState := armKSASIDTable_update
@@ -3501,7 +3497,6 @@ lemma tcbSchedDequeue_valid_tcbs'[wp]:
   apply (clarsimp simp: when_def)
   apply (rule hoare_seq_ext_skip, wpsimp)+
   apply (wpsimp wp: threadSet_valid_tcbs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
 lemma schedContextDonate_valid_queues:
@@ -4810,10 +4805,6 @@ crunch tcb_in_cur_domain'[wp]: copyGlobalMappings "tcb_in_cur_domain' t"
 
 crunch ct__in_cur_domain'[wp]: copyGlobalMappings ct_idle_or_in_cur_domain'
   (wp: crunch_wps)
-
-lemma ct_in_current_domain_ArchState_update[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksArchState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
-  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma threadSet_ct_idle_or_in_cur_domain':
   "\<lbrace>ct_idle_or_in_cur_domain' and (\<lambda>s. \<forall>tcb. tcbDomain tcb = ksCurDomain s \<longrightarrow> tcbDomain (F tcb) = ksCurDomain s)\<rbrace>
