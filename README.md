@@ -172,7 +172,7 @@ The repository is organised as follows.
     systems.
 
 
-  [6]: https://ts.data61.csiro.au/publications/nictaabstracts/Matichuk_WM_14.abstract.pml "An Isabelle Proof Method Language"
+  [6]: https://ts.data61.csiro.au/publications/nictaabstracts/Matichuk_WM_14.abstract "An Isabelle Proof Method Language"
 
 
 Hardware requirements
