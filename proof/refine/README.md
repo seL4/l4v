@@ -15,7 +15,7 @@ design specification, and builds on the [Abstract Spec Invariant
 Proof](../invariant-abstract/). It is described in the TPHOLS '08
 [paper][1].
 
-  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Cock_KS_08.abstract.pml "Secure Microkernels, State Monads and Scalable Refinement"
+  [1]: https://ts.data61.csiro.au/publications/nictaabstracts/Cock_KS_08.abstract "Secure Microkernels, State Monads and Scalable Refinement"
 
 Building
 --------
