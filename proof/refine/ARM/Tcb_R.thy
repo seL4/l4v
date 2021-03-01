@@ -2446,7 +2446,8 @@ lemma tc_caps_invs':
   apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp setP_invs' setMCPriority_invs'
                     installTCBCap_invs' installThreadBuffer_invs' installTCBCap_sch_act_simple)
   apply (clarsimp cong: conj_cong)
-  apply (fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
+  apply (intro conjI; intro allI impI; clarsimp;
+         fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
   done
 
 lemma schedContextBindTCB_invs':

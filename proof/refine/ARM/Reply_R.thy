@@ -353,9 +353,8 @@ lemma replyRemoveTCB_valid_pspace'[wp]:
   done
 
 lemma updateReply_iflive'_strong:
-  "\<lbrace>\<lambda>s. reply_at' rptr s
-         \<longrightarrow> if_live_then_nonz_cap' s
-             \<and> (\<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko) \<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace>
+  "\<lbrace>(\<lambda>s. reply_at' rptr s \<longrightarrow> if_live_then_nonz_cap' s) and
+   (\<lambda>s. \<forall>ko. ko_at' ko rptr s \<and> \<not> live_reply' ko \<and> live_reply' (f ko) \<longrightarrow> ex_nonz_cap_to' rptr s)\<rbrace>
    updateReply rptr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding if_live_then_nonz_cap'_def
@@ -363,8 +362,6 @@ lemma updateReply_iflive'_strong:
     apply (wpsimp wp: updateReply_wp_all)
    apply wpsimp
   apply clarsimp
-  apply normalise_obj_at'
-  apply (drule_tac x=x in spec)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def ps_clear_def projectKO_reply)
   apply (case_tac "x=rptr"; clarsimp)
   done
@@ -845,7 +842,7 @@ lemma updateReply_iflive'_weak:
   "\<lbrace>\<lambda>s. reply_at' replyPtr s \<longrightarrow> if_live_then_nonz_cap' s \<and> ex_nonz_cap_to' replyPtr s\<rbrace>
    updateReply replyPtr f
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp wp: updateReply_iflive'_strong)
+  by (wpsimp wp: updateReply_iflive'_strong, clarsimp simp: obj_at'_def)
 
 lemma updateReply_replyTCB_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' rptr and case_option \<top> (\<lambda>t. tcb_at' t) p\<rbrace>
@@ -881,7 +878,6 @@ lemma bindScReply_valid_objs'[wp]:
        apply ((clarsimp simp: valid_reply'_def valid_obj'_def objBits_simps'
                               valid_sched_context'_def valid_sched_context_size'_def
                        dest!: sc_ko_at_valid_objs_valid_sc')+)[5]
-  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma sym_refs_replySCs_of_scReplies_of:
@@ -907,34 +903,34 @@ lemma bindScReply_sch_act_wf[wp]:
 
 lemma bindScReply_sym_refs_list_refs_of_replies':
   "\<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)
-        \<and> \<not> is_reply_linked replyPtr s \<and> replySCs_of s replyPtr = None
-        \<and> (\<forall>oldReplyPtr. obj_at' (\<lambda>ko. scReply ko = Some oldReplyPtr) scPtr s
-                            \<longrightarrow> replySCs_of s oldReplyPtr = Some scPtr)\<rbrace>
+      \<and> \<not> is_reply_linked replyPtr s \<and> replySCs_of s replyPtr = None
+      \<and> (\<forall>oldReplyPtr. (scReplies_of s) scPtr = Some oldReplyPtr
+                          \<longrightarrow> replySCs_of s oldReplyPtr = Some scPtr)\<rbrace>
    bindScReply scPtr replyPtr
    \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   supply if_split [split del]
   unfolding bindScReply_def
   apply (wpsimp wp: updateReply_list_refs_of_replies' updateReply_obj_at'
                     hoare_vcg_all_lift hoare_vcg_imp_lift')
-  by (auto simp: list_refs_of_replies'_def list_refs_of_reply'_def
+  by (auto simp: list_refs_of_replies'_def list_refs_of_reply'_def pred_map_eq
                  opt_map_Some_def obj_at'_def projectKO_eq
-           elim: delta_sym_refs split: if_splits)[1]
+           elim: delta_sym_refs split: if_splits)
 
 lemma bindScReply_if_live_then_nonz_cap':
   "\<lbrace>if_live_then_nonz_cap'
     and ex_nonz_cap_to' scPtr and ex_nonz_cap_to' replyPtr
-    and (\<lambda>s. \<forall>rp. obj_at' (\<lambda>ko. scReply ko = Some rp) scPtr s
+    and (\<lambda>s. \<forall>rp. (scReplies_of s) scPtr = Some rp
                     \<longrightarrow> replySCs_of s rp = Some scPtr)\<rbrace>
    bindScReply scPtr replyPtr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   unfolding bindScReply_def
   apply (simp (no_asm_use) split del: if_split
-         | wp hoare_vcg_all_lift hoare_vcg_disj_lift hoare_vcg_imp_lift'
+         | wp hoare_vcg_all_lift hoare_vcg_imp_lift'
               hoare_vcg_if_lift updateReply_iflive'_weak
          | rule threadGet_wp)+
   apply clarsimp
   apply (erule if_live_then_nonz_capE')
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq live_reply'_def projectKO_reply)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq live_reply'_def projectKOs opt_map_def)
   done
 
 lemma bindScReply_ex_nonz_cap_to'[wp]:
@@ -952,11 +948,6 @@ lemma bindScReply_obj_at'_scTCB[wp]:
   unfolding bindScReply_def
   apply (wpsimp wp: hoare_drop_imp set_sc'.obj_at')
   by (auto simp: obj_at'_real_def ko_wp_at'_def)
-
-lemma setReply_valid_tcb'[wp]:
-  "setReply rp new  \<lbrace>valid_tcb' tcb\<rbrace>"
-  apply (clarsimp simp: setReply_def)
-  by (rule setObject_valid_tcb')
 
 lemma setReply_valid_tcbs'[wp]:
   "setReply rp new  \<lbrace>valid_tcbs'\<rbrace>"
