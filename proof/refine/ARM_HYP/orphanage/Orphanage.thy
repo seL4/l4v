@@ -8,6 +8,6 @@ theory Orphanage
 imports Refine.Refine
 begin
 
-(* FIXME: palce holder, Orphanage not proved for ARM_HYP *)
+(* FIXME: place holder, Orphanage not proved for ARM_HYP *)
 
 end

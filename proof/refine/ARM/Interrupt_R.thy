@@ -434,18 +434,11 @@ lemma isnt_irq_handler_strg:
   "(\<not> isIRQHandlerCap cap) \<longrightarrow> (\<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> P irq)"
   by (clarsimp simp: isCap_simps)
 
-lemma ct_in_current_domain_ksMachineState:
-  "ct_idle_or_in_cur_domain' (ksMachineState_update p s) = ct_idle_or_in_cur_domain' s"
-  apply (simp add:ct_idle_or_in_cur_domain'_def)
-  apply (simp add:tcb_in_cur_domain'_def)
-  done
-
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> ARM_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i; wpsimp wp: dmo_maskInterrupt simp: ARM_H.invokeIRQHandler_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
-                        valid_machine_state'_def ct_not_inQ_def
-                        ct_in_current_domain_ksMachineState)
+                        valid_machine_state'_def ct_not_inQ_def)
   done
 
 lemma invoke_irq_handler_invs'[wp]:
@@ -472,9 +465,6 @@ lemma IRQHandler_valid':
   "(s' \<turnstile>' IRQHandlerCap irq) = (irq \<le> maxIRQ)"
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
-lemma valid_mdb_interrupts'[simp]:
-  "valid_mdb' (ksInterruptState_update f s) = valid_mdb' s"
-  by (simp add: valid_mdb'_def)
 crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
 crunch cte_wp_at[wp]: setIRQState "cte_wp_at' P p"
 
@@ -627,23 +617,12 @@ lemma dec_domain_time_corres:
   apply (clarsimp simp:state_relation_def)
   done
 
-lemma weak_sch_act_wf_updateDomainTime[simp]:
-  "weak_sch_act_wf m (s\<lparr>ksDomainTime := t\<rparr>)
-   = weak_sch_act_wf m s"
-  by (simp add:weak_sch_act_wf_def tcb_in_cur_domain'_def )
-
 lemma tcbSchedAppend_valid_objs':
   "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
   apply (simp add:tcbSchedAppend_def)
-  apply (wp hoare_unless_wp
-    threadSet_valid_objs' threadGet_wp
-    | simp add:valid_tcb_tcbQueued)+
+  apply (wpsimp wp: hoare_unless_wp threadSet_valid_objs' threadGet_wp)
   apply (clarsimp simp add:obj_at'_def typ_at'_def)
   done
-
-lemma valid_tcb_tcbTimeSlice_update[simp]:
-  "valid_tcb' (tcbTimeSlice_update (\<lambda>_. timeSlice) tcb) s = valid_tcb' tcb s"
-  by (simp add:valid_tcb'_def tcb_cte_cases_def)
 
 lemma thread_state_case_if:
  "(case state of Structures_A.thread_state.Running \<Rightarrow> f | _ \<Rightarrow> g) =
@@ -806,24 +785,6 @@ lemma handle_interrupt_corres:
    apply clarsimp
   apply clarsimp
   done
-
-lemma ksDomainTime_invs[simp]:
-  "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"
-  by (simp add:invs'_def valid_state'_def
-    cur_tcb'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-    tcb_in_cur_domain'_def valid_machine_state'_def)
-
-lemma valid_machine_state'_ksDomainTime[simp]:
-  "valid_machine_state' (a\<lparr>ksDomainTime := t\<rparr>) = valid_machine_state' a"
-  by (simp add:valid_machine_state'_def)
-
-lemma cur_tcb'_ksDomainTime[simp]:
-  "cur_tcb' (a\<lparr>ksDomainTime := 0\<rparr>) = cur_tcb' a"
-  by (simp add:cur_tcb'_def)
-
-lemma ct_idle_or_in_cur_domain'_ksDomainTime[simp]:
-  "ct_idle_or_in_cur_domain' (a\<lparr>ksDomainTime := t \<rparr>) = ct_idle_or_in_cur_domain' a"
-  by (simp add:ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma threadSet_ksDomainTime[wp]:
   "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> threadSet f ptr \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"

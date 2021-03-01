@@ -4436,11 +4436,6 @@ crunch ct_in_state'[wp]: doMachineOp "ct_in_state' P"
 crunch st_tcb_at'[wp]: doMachineOp "st_tcb_at' P p"
   (simp: crunch_simps ct_in_state'_def)
 
-lemma ex_cte_cap_wp_to_work_units[simp]:
-  "ex_cte_cap_wp_to' P slot (ksWorkUnitsCompleted_update f s)
-    = ex_cte_cap_wp_to' P slot s"
-  by (simp add: ex_cte_cap_wp_to'_def)
-
 lemma ex_cte_cap_wp_to_irq_state_independent_H[simp]:
   "irq_state_independent_H (ex_cte_cap_wp_to' P slot)"
   by (simp add: ex_cte_cap_wp_to'_def)
@@ -4476,9 +4471,6 @@ lemma setCTE_ct_in_state:
   apply (rule hoare_pre, wp ct_in_state'_decomp setCTE_pred_tcb_at')
   apply (auto simp: ct_in_state'_def)
   done
-
-add_upd_simps "ct_in_state' P (gsUntypedZeroRanges_update f s)"
-declare upd_simps[simp]
 
 crunch ct_in_state[wp]: updateFreeIndex "ct_in_state' P"
 crunch nosch[wp]: updateFreeIndex "\<lambda>s. P (ksSchedulerAction s)"

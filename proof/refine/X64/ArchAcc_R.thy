@@ -1977,14 +1977,6 @@ lemma clearMemory_vms':
   apply (rule clearMemory_um_eq_0)
   done
 
-lemma ct_not_inQ_ksMachineState_update[simp]:
-  "ct_not_inQ (s\<lparr>ksMachineState := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
-lemma ct_in_current_domain_ksMachineState_update[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksMachineState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
-  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-
 lemma dmo_clearMemory_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (clearMemory w sz) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
