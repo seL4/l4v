@@ -1828,7 +1828,7 @@ lemma setObject_cte_scs_of'_use_valid_ksPSpace:
   assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
       and pre: "P (scs_of' s)"
   shows "P (ps |> sc_of')"
-  using use_valid[OF step setObject_cte_scs_of'] pre
+  using use_valid[OF step setObject_scs_of'(1)] pre
   by auto
 
 lemma updateCap_stuff:

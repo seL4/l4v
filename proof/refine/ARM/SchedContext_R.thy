@@ -594,7 +594,6 @@ lemma schedContextDonate_valid_objs':
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
   apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
                in hoare_weaken_pre[rotated])

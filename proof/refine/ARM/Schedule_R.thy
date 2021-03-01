@@ -3603,7 +3603,6 @@ lemma schedContextDonate_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
    apply (rule hoare_when_cases, clarsimp)
@@ -3624,7 +3623,6 @@ lemma schedContextDonate_valid_queues:
 lemma schedContextDonate_valid_queues':
   "schedContextDonate sc t \<lbrace>valid_queues'\<rbrace>"
   apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext_skip, solves wpsimp)
   apply (rule hoare_seq_ext_skip, solves wpsimp)
   apply (rule hoare_seq_ext_skip)
    apply (rule hoare_when_cases, simp)
@@ -3689,28 +3687,28 @@ lemma schedContextDonate_if_live_then_nonz_cap':
   by (wpsimp wp: threadSet_iflive'T setSchedContext_iflive' hoare_vcg_all_lift threadSet_cap_to'
            simp: conj_ac cong: conj_cong | wp hoare_drop_imps | fastforce simp: tcb_cte_cases_def)+
 
+(* `obj_at' (\<lambda>x. scTCB x \<noteq> Some idle_thread_ptr) scPtr s` is
+   needed because sometimes sym_refs doesn't hold in its entirety here. *)
 lemma schedContextDonate_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> bound_sc_tcb_at' ((=) None) tcbPtr s \<and>
-        ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' tcbPtr s\<rbrace>
+        ex_nonz_cap_to' scPtr s \<and> ex_nonz_cap_to' tcbPtr s \<and>
+        obj_at' (\<lambda>x. scTCB x \<noteq> Some idle_thread_ptr) scPtr s\<rbrace>
    schedContextDonate scPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp only: invs'_def valid_state'_def)
-  apply (rule_tac E="\<lambda>s. sc_at' scPtr s \<and> sym_refs (state_refs_of' s)"
-               in hoare_strengthen_pre_via_assert_backward)
+  apply (rule_tac E="\<lambda>s. sc_at' scPtr s" in hoare_strengthen_pre_via_assert_backward)
    apply (simp only: schedContextDonate_def)
-   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
-   apply (rule hoare_K_bind)
    apply (rule hoare_seq_ext[OF _ get_sc_sp'])
    apply (rule_tac hoare_weaken_pre[OF hoare_pre_cont])
-   apply (clarsimp simp: obj_at'_def sym_refs_asrt_def)
-  apply (wp schedContextDonate_valid_pspace' schedContextDonate_vrq
+   apply (clarsimp simp: obj_at'_def)
+  apply (wp schedContextDonate_valid_pspace'
             schedContextDonate_valid_queues schedContextDonate_valid_queues'
             schedContextDonate_valid_idle' schedContextDonate_if_live_then_nonz_cap')
+  apply clarsimp
   apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_sc)
-  apply (drule_tac ko=obj in sym_refs_ko_atD'[rotated, where p=scPtr])
-   apply (auto dest!: global'_sc_no_ex_cap
-               simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
-                     pred_tcb_at'_def valid_idle'_def idle_tcb'_def refs_of_rev')
+  apply (auto dest!: global'_sc_no_ex_cap
+              simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
+                    pred_tcb_at'_def valid_idle'_def idle_tcb'_def refs_of_rev')
   done
 
 lemma tcbSchedDequeue_notksQ:
@@ -3852,7 +3850,6 @@ lemma schedContextDonate_corres:
   apply add_sym_refs
   apply (simp add: test_reschedule_def get_sc_obj_ref_def set_tcb_obj_ref_thread_set
                    schedContextDonate_def sched_context_donate_def schedContextDonate_corres_helper)
-  apply (rule corres_stateAssert_assume)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split_deprecated [OF _ get_sc_corres])
        apply (rule corres_split_deprecated [OF _ corres_when2])
@@ -3924,7 +3921,6 @@ lemma schedContextDonate_corres:
    apply (clarsimp simp: valid_obj'_def valid_sched_context'_def obj_at'_def projectKOs)
    apply (frule valid_objs'_valid_tcbs')
    apply (fastforce simp: valid_obj'_def valid_tcb'_def)
-  apply (clarsimp simp: sym_refs_asrt_def)
   done
 
 end
