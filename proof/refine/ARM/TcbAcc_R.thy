@@ -764,12 +764,6 @@ lemma setObject_tcb_valid_globals' [wp]:
    apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
   done
 
-lemma getObject_tcb_wp:
-  "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
-  by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check)
-
 lemma setObject_tcb_pspace_no_overlap':
   "\<lbrace>pspace_no_overlap' w s and tcb_at' t\<rbrace>
   setObject t (tcb::tcb)

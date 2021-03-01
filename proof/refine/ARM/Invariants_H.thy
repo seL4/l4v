@@ -260,6 +260,33 @@ abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb o
 abbreviation tcb_scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "tcb_scs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
 
+abbreviation scTCBs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "scTCBs_of s \<equiv> scs_of' s |> scTCB"
+
+(* 
+  sym_heapd is a definition version of sym_heap (abbreviation).
+  This is temporary for now, it should be combined with sym_heap properly,
+  either within the current PR, or later.
+*)
+
+definition sym_heapd :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> bool" where
+  "sym_heapd h1 h2 \<equiv> \<forall>p q. pred_map_eq q h1 p \<longleftrightarrow> pred_map_eq p h2 q"
+
+lemma sym_heapd_def2:
+  "sym_heapd h1 h2 = 
+  ((\<forall>p q. pred_map_eq q h1 p \<longrightarrow> pred_map_eq p h2 q) \<and> (\<forall>p q. pred_map_eq q h2 p \<longrightarrow> pred_map_eq p h1 q))"
+  unfolding sym_heapd_def by fastforce
+
+lemma sym_heapd_sym:
+  "sym_heapd h1 h2 = sym_heapd h2 h1"
+  unfolding sym_heapd_def by fastforce
+
+abbreviation tcbs_scs_sym_refs where
+  "tcbs_scs_sym_refs s \<equiv> sym_heapd (tcb_scs_of' s) (scTCBs_of s)"
+
+abbreviation replies_scs_sym_refs where
+  "replies_scs_sym_refs s \<equiv> sym_heapd (scReplies_of s) (replySCs_of s)"
+
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
  "tcb_cte_cases \<equiv> [    0 \<mapsto> (tcbCTable, tcbCTable_update),

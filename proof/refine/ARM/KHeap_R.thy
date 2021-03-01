@@ -766,14 +766,6 @@ lemma setObject_reply_replies_of'[wp]:
   \<lbrace>\<lambda>_ s. P' (replies_of' s)\<rbrace>"
   by setObject_easy_cases
 
-lemma setObject_endpoint_scs_of'[wp]:
-  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
-  by setObject_easy_cases
-
-lemma setObject_notification_scs_of'[wp]:
-  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
-  by setObject_easy_cases
-
 \<comment>\<open>
   Warning: this may not be a weakest precondition. `setObject c`
   asserts that there's already a correctly-typed object at `c`,
@@ -787,13 +779,13 @@ lemma setObject_sched_context_scs_of'[wp]:
   \<lbrace>\<lambda>_ s. P' (scs_of' s)\<rbrace>"
   by setObject_easy_cases
 
-lemma setObject_cte_scs_of'[wp]:
+lemma setObject_scs_of'[wp]:
   "setObject c (cte::cte) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
-  by setObject_easy_cases
-
-lemma setObject_reply_scs_of'[wp]:
   "setObject c (reply::reply) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
-  by setObject_easy_cases
+  "setObject c (tcb::tcb) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  "setObject c (notification::notification) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  "setObject c (endpoint::endpoint) \<lbrace>\<lambda>s. P' (scs_of' s)\<rbrace>"
+  by setObject_easy_cases+
 
 lemmas setReply_replies_of' = setObject_reply_replies_of'[folded setReply_def]
 
@@ -3994,11 +3986,25 @@ lemma cross_relF:
   "(s, s') \<in> state_relation \<Longrightarrow> cross_rel A B \<Longrightarrow> A s \<Longrightarrow> B s'"
   by (clarsimp simp: cross_rel_def)
 
-lemma valid_simple'[simp]:
+lemma tcb_of'_tcb[simp]:
+  "tcb_of' (KOTCB t) = Some t"
+  by (clarsimp simp: tcb_of'_def)+
+
+lemma tcb_of'_not_tcb[simp]:
+  "tcb_of' (KOEndpoint e) = None"
+  "tcb_of' (KONotification n) = None"
+  "tcb_of' (KOCTE c) = None"
+  "tcb_of' (KOSchedContext sc) = None"
+  "tcb_of' (KOReply r) = None"
+  by (clarsimp simp: tcb_of'_def)+
+
+lemma valid_tcb_state'_simps[simp]:
   "valid_tcb_state' Running = \<top>"
   "valid_tcb_state' Inactive = \<top>"
   "valid_tcb_state' Restart = \<top>"
   "valid_tcb_state' IdleThreadState = \<top>"
+  "valid_tcb_state' (BlockedOnSend ref b c d e) = ep_at' ref"
+  "valid_tcb_state' (BlockedOnReply r) = valid_bound_reply' r"
   by (rule ext, simp add: valid_tcb_state'_def)+
 
 lemma tcb_at'_ex1_ko_at':
@@ -4021,6 +4027,298 @@ lemma threadGet_getObject:
                          return (f x)
                    od"
   apply (simp add: threadGet_def threadRead_def oliftM_def getObject_def[symmetric])
+  done
+
+lemma obj_at'_typ_at'[elim!]:
+  "obj_at' (P :: ('a :: pspace_storable) \<Rightarrow> bool) p s \<Longrightarrow>
+   obj_at' (\<top> :: ('a :: pspace_storable) \<Rightarrow> bool) p s"
+  by (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+
+lemma sc_tcbs_of_pred_map_equiv:
+  "obj_at' (\<lambda>x. scTCB x = Some t) p s = 
+   (sc_at' p s \<and> pred_map_eq t (scTCBs_of s) p)"
+  by (intro iffI; clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_eq
+                                 projectKOs opt_map_def)
+
+lemma tcb_scs_of_pred_map_equiv:
+  "obj_at' (\<lambda>x. tcbSchedContext x = Some sc) p s = 
+   (tcb_at' p s \<and> pred_map_eq sc (tcb_scs_of' s) p)"
+  by (intro iffI; clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_eq
+                                 projectKOs opt_map_def)
+
+lemma replySCs_of_pred_map_equiv:
+  "obj_at' (\<lambda>a. replyNext a = Some (Head sc)) p s = 
+   (reply_at' p s \<and> pred_map_eq sc (replySCs_of s) p)"
+  by (intro iffI; clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_eq
+                                 projectKOs opt_map_def)
+
+lemma scReplies_of_pred_map_equiv:
+  "obj_at' (\<lambda>a. scReply a = Some sc) p s = 
+   (sc_at' p s \<and> pred_map_eq sc (scReplies_of s) p)"
+  by (intro iffI; clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_map_eq
+                                 projectKOs opt_map_def)
+
+lemma tcbs_scs_sym_refs_equiv:
+  "\<lbrakk>tcbs_scs_sym_refs s; valid_objs' s; sc_at' p s \<or> tcb_at' p s\<rbrakk> \<Longrightarrow>
+   obj_at' (\<lambda>x. scTCB x = Some t) p s = obj_at' (\<lambda>x. tcbSchedContext x = Some p) t s"
+  apply (rule iffI; subgoal_tac "sc_at' p s \<and> tcb_at' t s", clarsimp)
+     apply (clarsimp simp: sc_tcbs_of_pred_map_equiv tcb_scs_of_pred_map_equiv sym_heapd_def)
+    apply (frule obj_at'_typ_at', simp)
+    apply (frule obj_at_ko_at', clarsimp)
+    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply (clarsimp simp: sc_tcbs_of_pred_map_equiv tcb_scs_of_pred_map_equiv sym_heapd_def)
+  apply (frule obj_at'_typ_at', simp)
+  apply (frule obj_at_ko_at', clarsimp)
+  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  apply (clarsimp simp: valid_tcb'_def)
+  done
+
+lemma not_idle_scTCB:
+  "\<lbrakk>tcbs_scs_sym_refs s; valid_objs' s; valid_idle' s; p \<noteq> idle_sc_ptr; sc_at' p s\<rbrakk> \<Longrightarrow>
+   obj_at' (\<lambda>x. scTCB x \<noteq> Some idle_thread_ptr) p s"
+  apply (subgoal_tac "\<not>obj_at' (\<lambda>x. scTCB x = Some idle_thread_ptr) p s")
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (subst (asm) sym_heapd_sym)
+  apply (clarsimp simp: sc_tcbs_of_pred_map_equiv sym_heapd_def)
+  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def pred_map_eq
+                        projectKOs)
+  done
+
+lemma not_idle_tcbSC:
+  "\<lbrakk>tcbs_scs_sym_refs s; valid_objs' s; valid_idle' s; p \<noteq> idle_thread_ptr; tcb_at' p s\<rbrakk> \<Longrightarrow>
+   obj_at' (\<lambda>x. tcbSchedContext x \<noteq> Some idle_sc_ptr) p s"
+  apply (subgoal_tac "\<not>obj_at' (\<lambda>x. tcbSchedContext x = Some idle_sc_ptr) p s")
+   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (clarsimp simp: tcb_scs_of_pred_map_equiv sym_heapd_def)
+  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def pred_map_eq
+                        projectKOs)
+  done
+
+lemma setObject_tcb_tcbs_of':
+  "\<lbrace>\<lambda>s. P' ((tcbs_of' s)(c \<mapsto> tcb))\<rbrace>
+  setObject c (tcb::tcb)
+  \<lbrace>\<lambda>_ s. P' (tcbs_of' s)\<rbrace>"
+  by (setObject_easy_cases, clarsimp simp: ARM_H.fromPPtr_def)
+
+lemma setObject_other_tcbs_of'[wp]:
+  "setObject c (r::reply) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  "setObject c (e::endpoint) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  "setObject c (n::notification) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  "setObject c (sc::sched_context) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
+  by setObject_easy_cases+
+
+lemma setObject_cte_tcb_scs_of'[wp]:
+  "setObject c (reply::cte) \<lbrace>\<lambda>s. P' (tcb_scs_of' s)\<rbrace>"
+  by setObject_easy_cases
+
+lemma threadSet_tcb_scs_of'_inv:
+  "\<forall>x. tcbSchedContext (f x) = tcbSchedContext x \<Longrightarrow>
+  threadSet f t \<lbrace>\<lambda>s. P (tcb_scs_of' s)\<rbrace>"
+  unfolding threadSet_def
+  apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
+  apply (wpsimp wp: setObject_tcb_tcbs_of')
+  apply (erule subst[where P=P, rotated], rule ext)
+  apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKO_tcb
+                 split: option.splits)
+  done
+
+lemma KOTCB_tcb_at':
+  "\<exists>v'. ksPSpace s p = Some (KOTCB v') \<Longrightarrow> pspace_aligned' s \<Longrightarrow> pspace_distinct' s \<Longrightarrow> tcb_at' p s"
+  apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb
+                        tcb_of'_Some)
+  apply (intro conjI)
+   apply (erule (1) pspace_alignedD')
+  apply (erule (1) pspace_distinctD')
+  done
+
+lemma KOSC_sc_at':
+  "\<exists>v'. ksPSpace s p = Some (KOSchedContext v') \<Longrightarrow> pspace_aligned' s \<Longrightarrow> pspace_distinct' s \<Longrightarrow> sc_at' p s"
+  apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def)
+  apply (intro conjI)
+   apply (erule (1) pspace_alignedD')
+  apply (erule (1) pspace_distinctD')
+  done
+
+lemma KOReply_reply_at':
+  "\<exists>v'. ksPSpace s p = Some (KOReply v') \<Longrightarrow> pspace_aligned' s \<Longrightarrow> pspace_distinct' s \<Longrightarrow> reply_at' p s"
+  apply (clarsimp simp: pred_map_def state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_reply
+                        tcb_of'_Some)
+  apply (intro conjI)
+   apply (erule (1) pspace_alignedD')
+  apply (erule (1) pspace_distinctD')
+  done
+
+(* FIXME RT: maybe move? *)
+lemma prod_in_refsD:
+  "\<And>ref x y. (x, ref) \<in> ep_q_refs_of' y \<Longrightarrow> ref \<in> {EPRecv, EPSend}"
+  "\<And>ref x y. (x, ref) \<in> ntfn_q_refs_of' y \<Longrightarrow> ref \<in> {NTFNSignal}"
+  "\<And>ref x y. (x, ref) \<in> tcb_st_refs_of' y \<Longrightarrow> ref \<in> {TCBBlockedRecv, TCBReply, TCBSignal, TCBBlockedSend}"
+  "\<And>ref x a b c. (x, ref) \<in> tcb_bound_refs' a b c \<Longrightarrow> ref \<in> {TCBBound, TCBSchedContext, TCBYieldTo}"
+  apply (rename_tac ep; case_tac ep; simp)
+  apply (rename_tac ep; case_tac ep; simp)
+  apply (rename_tac ep; case_tac ep; clarsimp split: if_splits)
+  apply (clarsimp simp: tcb_bound_refs'_def get_refs_def2)
+  done
+
+lemma SCTcb_state_refs_of':
+  "(p, SCTcb) \<in> state_refs_of' s scp = obj_at' (\<lambda>ko. scTCB ko = Some p) scp s"
+  apply (rule iffI)
+   apply (clarsimp simp: state_refs_of'_def split: option.splits if_splits)
+   apply (rename_tac ko, case_tac ko; simp add: get_refs_def2)
+      apply (fastforce dest: prod_in_refsD)+
+   apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
+  done
+
+lemma TCBSchedContext_state_refs_of':
+  "(scp, TCBSchedContext) \<in> state_refs_of' s p = obj_at' (\<lambda>ko. tcbSchedContext ko = Some scp) p s"
+  apply (rule iffI)
+   apply (clarsimp simp: state_refs_of'_def split: option.splits if_splits)
+   apply (rename_tac ko, case_tac ko; simp add: get_refs_def2)
+     apply (fastforce dest: prod_in_refsD)
+    apply (fastforce dest: prod_in_refsD)
+   apply (erule disjE, fastforce dest: prod_in_refsD)
+   apply (clarsimp simp: obj_at'_def projectKOs tcb_bound_refs'_def get_refs_def2)
+  apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
+  done
+
+lemma SCReply_state_refs_of':
+  "(r, SCReply) \<in> state_refs_of' s p = obj_at' (\<lambda>ko. scReply ko = Some r) p s"
+  apply (rule iffI)
+   apply (clarsimp simp: state_refs_of'_def split: option.splits if_splits)
+   apply (rename_tac ko, case_tac ko; simp add: get_refs_def2)
+     apply (fastforce dest: prod_in_refsD)+
+   apply (clarsimp simp: obj_at'_def projectKOs tcb_bound_refs'_def get_refs_def2)
+  apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
+  done
+
+lemma ReplySchedContext_state_refs_of':
+  "(scp, ReplySchedContext) \<in> state_refs_of' s p = obj_at' (\<lambda>ko. replyNext ko = Some (Head scp)) p s"
+  apply (rule iffI)
+   apply (clarsimp simp: state_refs_of'_def split: option.splits if_splits)
+   apply (rename_tac ko, case_tac ko; simp add: get_refs_def2)
+     apply (fastforce dest: prod_in_refsD)+
+   apply (clarsimp simp: obj_at'_def projectKOs tcb_bound_refs'_def get_refs_def2)
+  apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
+  done
+
+lemma TCBSC_pred_map_state_refs_of':
+  "\<lbrakk>pred_map_eq scp (tcb_scs_of' s) p; pspace_aligned' s; pspace_distinct' s\<rbrakk>
+   \<Longrightarrow> (scp, TCBSchedContext) \<in> state_refs_of' s p"
+  apply (clarsimp simp: TCBSchedContext_state_refs_of' tcb_scs_of_pred_map_equiv)
+  apply (clarsimp simp: pred_map_eq tcb_of'_def)
+  apply (rule KOTCB_tcb_at'; simp)
+  apply (case_tac v'a; clarsimp)
+  done
+
+lemma SCTcb_pred_map_state_refs_of':
+  "\<lbrakk>pred_map_eq r (scTCBs_of s) scp; pspace_aligned' s; pspace_distinct' s\<rbrakk>
+   \<Longrightarrow> (r, SCTcb) \<in> state_refs_of' s scp"
+  apply (subgoal_tac "sc_at' scp s")
+   apply (clarsimp simp: pred_map_eq state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_sc
+                         tcb_of'_Some)
+  apply (erule (1) KOSC_sc_at'[rotated])
+  apply (clarsimp simp: pred_map_eq projectKO_sc)
+  done
+
+lemma SCReply_pred_map_state_refs_of':
+  "\<lbrakk>pred_map_eq r (scReplies_of s) p; pspace_aligned' s; pspace_distinct' s\<rbrakk>
+   \<Longrightarrow> (r, SCReply) \<in> state_refs_of' s p"
+  apply (subgoal_tac "sc_at' p s")
+   apply (clarsimp simp: pred_map_eq state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_sc
+                         tcb_of'_Some)
+  apply (erule (1) KOSC_sc_at'[rotated])
+  apply (clarsimp simp: pred_map_eq projectKO_sc)
+  done
+
+lemma ReplySC_pred_map_state_refs_of':
+  "\<lbrakk>pred_map_eq scp (replySCs_of s) r; pspace_aligned' s; pspace_distinct' s\<rbrakk>
+   \<Longrightarrow> (scp, ReplySchedContext) \<in> state_refs_of' s r"
+  apply (subgoal_tac "reply_at' r s")
+   apply (clarsimp simp: pred_map_eq state_refs_of'_def obj_at'_real_def ko_wp_at'_def projectKO_reply)
+  apply (erule (1) KOReply_reply_at'[rotated])
+  apply (clarsimp simp: pred_map_eq projectKO_reply)
+  done
+
+lemma invs'_tcbs_scs_sym_refs:
+  "\<lbrakk>sym_refs (state_refs_of' s); pspace_aligned' s; pspace_distinct' s; valid_objs' s\<rbrakk>
+   \<Longrightarrow> tcbs_scs_sym_refs s"
+  apply (clarsimp simp: sym_heapd_def2)
+  apply (intro conjI impI allI)
+   apply (frule (2) TCBSC_pred_map_state_refs_of')
+   apply (frule (1) sym_refsD, simp add: SCTcb_state_refs_of' sc_tcbs_of_pred_map_equiv)
+  apply (frule (2) SCTcb_pred_map_state_refs_of')
+   apply (frule (1) sym_refsD, simp add: TCBSchedContext_state_refs_of' tcb_scs_of_pred_map_equiv)
+  done
+
+lemma sym_refs_replies_scs:
+  "\<lbrakk>sym_refs (state_refs_of' s); pspace_aligned' s; pspace_distinct' s; valid_objs' s\<rbrakk>
+   \<Longrightarrow> replies_scs_sym_refs s"
+  apply (clarsimp simp: sym_heapd_def2)
+  apply (intro conjI impI allI)
+   apply (frule (2) SCReply_pred_map_state_refs_of')
+   apply (frule (1) sym_refsD, simp add: ReplySchedContext_state_refs_of' replySCs_of_pred_map_equiv)
+  apply (frule (2) ReplySC_pred_map_state_refs_of')
+   apply (frule (1) sym_refsD, simp add: SCReply_state_refs_of' scReplies_of_pred_map_equiv)
+  done
+
+lemma setSchedContext_scTCBs_of:
+  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = scPtr then scTCB sc else scTCBs_of s a)\<rbrace>
+   setSchedContext scPtr sc
+   \<lbrace>\<lambda>_ s. P (scTCBs_of s)\<rbrace>"
+  unfolding setSchedContext_def
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (erule back_subst[where P=P], rule ext)
+  by (clarsimp simp: opt_map_def)
+
+lemma setSchedContext_scReplies_of:
+  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = scPtr then scReply sc else scReplies_of s a)\<rbrace>
+   setSchedContext scPtr sc
+   \<lbrace>\<lambda>_ s. P (scReplies_of s)\<rbrace>"
+  unfolding setSchedContext_def
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (erule back_subst[where P=P], rule ext)
+  by (clarsimp simp: opt_map_def)
+
+lemma getObject_tcb_wp:
+  "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
+  by (clarsimp simp: getObject_def valid_def in_monad
+                     split_def objBits_simps' loadObject_default_def
+                     projectKOs obj_at'_def in_magnitude_check)
+
+lemma threadSet_tcb_scs_of':
+  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = t then tcbSchedContext (f (the (tcbs_of' s a))) else tcb_scs_of' s a)\<rbrace>
+   threadSet f t
+   \<lbrace>\<lambda>_ s. P (tcb_scs_of' s)\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: setObject_tcb_wp getObject_tcb_wp)
+  apply (clarsimp simp: tcb_at'_ex_eq_all)
+  apply (erule back_subst[where P=P], rule ext)
+  apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKOs)
+  done
+
+lemma pred_map_eq_inj:
+  "pred_map_eq val1 h p \<Longrightarrow> pred_map_eq val2 h p \<Longrightarrow> val1 = val2"
+  by (clarsimp simp: pred_map_eq)
+
+lemma replyNexts_Some_replySCs_None:
+  "replyNexts_of s rPtr \<noteq> None \<Longrightarrow> replySCs_of s rPtr = None"
+   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def split: option.split)
+
+lemma sym_heapd_remove_only:
+  "\<lbrakk> sym_heapd h1 h2; pred_map_eq x h2 y \<rbrakk> \<Longrightarrow>
+   sym_heapd (\<lambda>a. if a = x then None else h1 a) (\<lambda>a. if a = y then None else h2 a)"
+  apply (clarsimp simp: sym_heapd_def2 pred_map_eq_upd)
+  apply (intro conjI allI; rule contrapos_imp; intro impI)
+  apply (erule allE2)
+  apply (drule (1) mp)
+   apply (simp add: pred_map_eq_def pred_map_def )
+  apply (rule allE2[where P="\<lambda>a b. pred_map_eq b h2 a \<longrightarrow> R a b h1" for R], assumption)
+  apply (drule (1) mp[rotated])
+  apply (erule allE2[where P="\<lambda>a b. pred_map_eq b h2 a \<longrightarrow> R a b h1" for R])
+  apply (drule (1) mp[rotated])
+   apply (simp only: pred_map_eq_def pred_map_def, clarsimp)
   done
 
 end

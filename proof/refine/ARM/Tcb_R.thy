@@ -2446,7 +2446,8 @@ lemma tc_caps_invs':
   apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp setP_invs' setMCPriority_invs'
                     installTCBCap_invs' installThreadBuffer_invs' installTCBCap_sch_act_simple)
   apply (clarsimp cong: conj_cong)
-  apply (fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
+  apply (intro conjI; intro allI impI; clarsimp;
+         fastforce simp: isValidFaultHandler_def isCap_simps isValidVTableRoot_def)
   done
 
 lemma schedContextBindTCB_invs':
@@ -3011,9 +3012,6 @@ lemma get_sc_released_corres:
            apply (clarsimp simp: sc_relation_def active_sc_def)
           apply (clarsimp simp: state_relation_def)
          apply wpsimp+
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp simp: state_relation_def)
-     apply wpsimp+
    apply (fastforce simp: obj_at_def sc_at_pred_n_def is_obj_defs valid_obj_def)
   apply clarsimp
   done
