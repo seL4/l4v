@@ -53,6 +53,20 @@ definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> boo
   "valid_inQ_queues \<equiv>
      \<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and> distinct (ksReadyQueues s (d, p))"
 
+lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
+  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
+  by (simp add: valid_inQ_queues_def)
+
+lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL1Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
+lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL2Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
@@ -1269,16 +1283,6 @@ lemma threadSet_valid_inQ_queues:
   apply (fastforce)
   done
 
-lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
-  "valid_inQ_queues (s\<lparr>ksReadyQueuesL1Bitmap := f\<rparr>) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
-lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
-  "valid_inQ_queues (s\<lparr>ksReadyQueuesL2Bitmap := f\<rparr>) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
 (* reorder the threadSet before the setQueue, useful for lemmas that don't refer to bitmap *)
 lemma setQueue_after_addToBitmap:
   "(setQueue d p q >>= (\<lambda>rv. (when P (addToBitmap d p)) >>= (\<lambda>rv. threadSet f t))) =
@@ -1320,10 +1324,6 @@ lemma removeFromBitmap_conceal_valid_inQ_queues[wp]:
   "\<lbrace> valid_inQ_queues \<rbrace> removeFromBitmap_conceal d p q t \<lbrace> \<lambda>_. valid_inQ_queues \<rbrace>"
   unfolding valid_inQ_queues_def removeFromBitmap_conceal_def
   by (wp|clarsimp simp: bitmap_fun_defs)+
-
-lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
-  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
-  by (simp add: valid_inQ_queues_def)
 
 lemma rescheduleRequired_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> rescheduleRequired \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"

@@ -302,16 +302,6 @@ lemma do_user_op_invs2:
     do_user_op_invs | simp | force)+
   done
 
-lemma ct_running_irq_state_independent[intro!, simp]:
-  "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
-   = ct_running s"
-  by (simp add: ct_in_state_def)
-
-lemma ct_idle_irq_state_independent[intro!, simp]:
-  "ct_idle (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
-   = ct_idle s"
-  by (simp add: ct_in_state_def)
-
 lemmas ext_init_def = ext_init_det_ext_ext_def ext_init_unit_def
 
 lemma valid_list_init[simp]:

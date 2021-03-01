@@ -1156,10 +1156,6 @@ lemma threadSet_valid_queues'_no_state2:
   apply (fastforce simp: projectKOs inQ_def split: if_split_asm)
   done
 
-lemma inQ_tcbIPCBuffer_update_idem[simp]:
-  "inQ d p (tcbIPCBuffer_update (\<lambda>_. x) ko) = inQ d p ko"
-  by (clarsimp simp: inQ_def)
-
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"
   by (wpsimp simp: tcb_cte_cases_def getThreadBufferSlot_def locateSlot_conv cte_level_bits_def

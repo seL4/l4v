@@ -1527,10 +1527,6 @@ crunches doMachineOp
   and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   and ioports'[wp]: valid_ioports'
 
-lemma valid_ioports_cr3_update[elim!]:
-  "valid_ioports' s \<Longrightarrow> valid_ioports' (s\<lparr>ksArchState := x64KSCurrentUserCR3_update (\<lambda>_. c) (ksArchState s)\<rparr>)"
-  by (clarsimp simp: valid_ioports'_simps)
-
 lemma setCurrentUserCR3_invs' [wp]:
   "\<lbrace>invs' and K (valid_cr3' c)\<rbrace> setCurrentUserCR3 c \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding setCurrentUserCR3_def

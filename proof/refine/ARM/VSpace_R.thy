@@ -2576,14 +2576,13 @@ lemma findFreeHWASID_invs:
              ct_not_inQ_def
            split del: if_split)
   apply (intro conjI)
-    apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
-   apply clarsimp
-   apply (drule_tac x=p in spec)
-   apply (drule use_valid)
+   apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
+  apply clarsimp
+  apply (drule_tac x=p in spec)
+  apply (drule use_valid)
     apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory)
-    apply blast
-   apply clarsimp
-  apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+   apply blast
+  apply clarsimp
   done
 
 lemma findFreeHWASID_invs_no_cicd':

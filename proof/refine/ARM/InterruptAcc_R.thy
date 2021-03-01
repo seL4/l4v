@@ -117,32 +117,25 @@ lemma preemptionPoint_inv:
           | simp)+
   done
 
-lemma invs'_wu [simp, intro!]:
-  "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-  apply (simp add: invs'_def cur_tcb'_def valid_state'_def Invariants_H.valid_queues_def
-                   valid_queues'_def valid_release_queue_def valid_release_queue'_def
-                   valid_irq_node'_def valid_machine_state'_def ct_not_inQ_def
-                   ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs
-                   valid_queues_no_bitmap_def)
-  done
+lemma ct_running_irq_state_independent[intro!, simp]:
+  "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
+   = ct_running s"
+  by (simp add: ct_in_state_def)
 
-lemma ct_in_state'_irq_state_independent [simp, intro!]:
-  "ct_in_state' x (s\<lparr>ksMachineState := ksMachineState s
-                          \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) =
-   ct_in_state' x s"
-  by (simp add: ct_in_state'_def irq_state_independent_H_def)+
+lemma ct_idle_irq_state_independent[intro!, simp]:
+  "ct_idle (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
+   = ct_idle s"
+  by (simp add: ct_in_state_def)
 
-lemma ex_cte_cap_wp_to'_irq_state_independent [simp, intro!]:
-  "ex_cte_cap_wp_to' x y (s\<lparr>ksMachineState := ksMachineState s
-                          \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) =
-   ex_cte_cap_wp_to' x y s"
-  by (simp add: ex_cte_cap_wp_to'_def irq_state_independent_H_def)+
+lemma typ_at'_irq_state_independent[simp, intro!]:
+  "P (typ_at' T p (s \<lparr>ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr>\<rparr>))
+   = P (typ_at' T p s)"
+  by (simp add: typ_at'_def)
 
-lemma ps_clear_irq_state_independent [simp, intro!]:
-  "ps_clear a b (s\<lparr>ksMachineState := ksMachineState s
-                    \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) =
-   ps_clear a b s"
-  by (simp add: ps_clear_def)
+lemma sch_act_simple_irq_state_independent[intro!, simp]:
+  "sch_act_simple (s \<lparr> ksMachineState := ksMachineState s \<lparr> irq_state := f (irq_state (ksMachineState s)) \<rparr> \<rparr>) =
+   sch_act_simple s"
+  by (simp add: sch_act_simple_def)
 
 lemma invs'_irq_state_independent [simp, intro!]:
   "invs' (s\<lparr>ksMachineState := ksMachineState s

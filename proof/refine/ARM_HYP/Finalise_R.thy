@@ -1449,10 +1449,6 @@ lemma emptySlot_untyped_ranges[wp]:
   apply (simp add: untypedZeroRange_def isCap_simps)
   done
 
-lemma valid_arch_state'_interrupt[simp]:
-  "valid_arch_state' (ksInterruptState_update f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def cong: option.case_cong)
-
 crunch valid_arch'[wp]: emptySlot valid_arch_state'
   (wp: crunch_wps)
 
@@ -4133,10 +4129,6 @@ crunch ct__in_cur_domain'[wp]: copyGlobalMappings ct_idle_or_in_cur_domain'
 
 crunch gsUntypedZeroRanges[wp]: copyGlobalMappings "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: crunch_wps)
-
-lemma ct_in_current_domain_ArchState_update[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksArchState := v\<rparr>) = ct_idle_or_in_cur_domain' s"
-  by (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
 lemma threadSet_ct_idle_or_in_cur_domain':
   "\<lbrace>ct_idle_or_in_cur_domain' and (\<lambda>s. \<forall>tcb. tcbDomain tcb = ksCurDomain s \<longrightarrow> tcbDomain (F tcb) = ksCurDomain s)\<rbrace>

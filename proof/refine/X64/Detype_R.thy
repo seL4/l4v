@@ -85,10 +85,6 @@ lemma descendants_range_inD':
   done
 end
 
-interpretation clear_um:
-  p_arch_idle_update_int_eq "clear_um S"
-  by unfold_locales (simp_all add: clear_um_def)
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma descendants_range'_def2:
@@ -1506,7 +1502,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from sa_simp ctnotinQ
-  show "ct_not_inQ ?state''"
+  show "ct_not_inQ state'"
     apply (clarsimp simp: ct_not_inQ_def pred_tcb_at'_def)
     apply (drule obj_at'_and
                    [THEN iffD2, OF conjI,
@@ -1519,7 +1515,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (clarsimp dest!: ex_nonz_cap_notRange)
     done
 
-  from ctcd show "ct_idle_or_in_cur_domain' ?state''"
+  from ctcd show "ct_idle_or_in_cur_domain' state'"
     apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
     apply (intro impI)
     apply (elim disjE impE)
@@ -1688,13 +1684,6 @@ lemma deleteObjects_st_tcb_at':
   apply (simp add: delete_locale_def)
   done
 
-lemma ex_cte_cap_wp_to'_gsCNodes_update[simp]:
-  "ex_cte_cap_wp_to' P p (gsCNodes_update f s') = ex_cte_cap_wp_to' P p s'"
-  by (simp add: ex_cte_cap_wp_to'_def)
-lemma ex_cte_cap_wp_to'_gsUserPages_update[simp]:
-  "ex_cte_cap_wp_to' P p (gsUserPages_update f s') = ex_cte_cap_wp_to' P p s'"
-  by (simp add: ex_cte_cap_wp_to'_def)
-
 lemma deleteObjects_cap_to':
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
      and invs' and ct_active' and sch_act_simple
@@ -1742,19 +1731,6 @@ lemma valid_untyped_no_overlap:
     apply (clarsimp simp:p_assoc_help)
    apply fastforce+
   done
-
-lemma pspace_no_overlap'_gsCNodes_update[simp]:
-  "pspace_no_overlap' p b (gsCNodes_update f s') = pspace_no_overlap' p b s'"
-  by (simp add: pspace_no_overlap'_def)
-
-lemma pspace_no_overlap'_gsUserPages_update[simp]:
-  "pspace_no_overlap' p b (gsUserPages_update f s') = pspace_no_overlap' p b s'"
-  by (simp add: pspace_no_overlap'_def)
-
-lemma pspace_no_overlap'_ksMachineState_update[simp]:
-  "pspace_no_overlap' p n (ksMachineState_update f s) =
-   pspace_no_overlap' p n s"
-  by (simp add: pspace_no_overlap'_def)
 
 lemma deleteObject_no_overlap[wp]:
   "\<lbrace>valid_cap' (UntypedCap d ptr bits idx) and valid_pspace'\<rbrace>
@@ -3938,11 +3914,6 @@ lemma new_cap_object_comm_helper:
   apply (drule_tac x = "parent " in spec)
    apply clarsimp
   done
-
-lemma pspace_no_overlap_gsUntypedZeroRanges[simp]:
-  "pspace_no_overlap' ptr n (gsUntypedZeroRanges_update f s)
-    = pspace_no_overlap' ptr n s"
-  by (simp add: pspace_no_overlap'_def)
 
 crunch pspace_aligned'[wp]: updateNewFreeIndex "pspace_aligned'"
 crunch pspace_canonical'[wp]: updateNewFreeIndex "pspace_canonical'"

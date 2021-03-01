@@ -832,14 +832,6 @@ lemma setCTE_tcb_in_cur_domain':
   apply (wp setObject_cte_obj_at_tcb' | simp)+
   done
 
-lemma tcbCTable_upd_simp [simp]:
-  "tcbCTable (tcbCTable_update (\<lambda>_. x) tcb) = x"
-  by (cases tcb) simp
-
-lemma tcbVTable_upd_simp [simp]:
-  "tcbVTable (tcbVTable_update (\<lambda>_. x) tcb) = x"
-  by (cases tcb) simp
-
 lemma setCTE_ctes_of_wp [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s (p \<mapsto> cte))\<rbrace>
   setCTE p cte
@@ -1354,7 +1346,7 @@ lemma weak_derived_updateCapData:
   apply (clarsimp simp: Let_def isCap_simps updateCapData_def)
   done
 
-lemma maskCapRights_Reply:
+lemma maskCapRights_Reply[simp]:
   "isReplyCap (maskCapRights r c) = isReplyCap c"
   apply (insert capMasterCap_maskCapRights)
   apply (rule master_eqI, rule isCap_Master)

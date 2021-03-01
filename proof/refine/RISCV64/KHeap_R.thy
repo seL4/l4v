@@ -170,17 +170,6 @@ lemma updateObject_cte_is_tcb_or_cte:
 
 declare plus_1_less[simp]
 
-lemma ps_clear_domE[elim?]:
-  "\<lbrakk> ps_clear x n s; dom (ksPSpace s) = dom (ksPSpace s') \<rbrakk> \<Longrightarrow> ps_clear x n s'"
-  by (simp add: ps_clear_def)
-
-lemma ps_clear_upd:
-  "ksPSpace s y = Some v \<Longrightarrow>
-    ps_clear x n (ksPSpace_update (\<lambda>a. ksPSpace s(y \<mapsto> v')) s') = ps_clear x n s"
-  by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
-
-lemmas ps_clear_updE[elim] = iffD2[OF ps_clear_upd, rotated]
-
 lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
   by (clarsimp simp add: updateObject_default_def in_monad)

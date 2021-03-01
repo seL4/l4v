@@ -743,10 +743,6 @@ lemma setP_vq[wp]:
            | clarsimp simp: valid_objs'_maxDomain valid_objs'_maxPriority)+
   done
 
-lemma ps_clear_ksReadyQueue[simp]:
-  "ps_clear x n (ksReadyQueues_update f s) = ps_clear x n s"
-  by (simp add: ps_clear_def)
-
 lemma valid_queues_subsetE':
   "\<lbrakk> valid_queues' s; ksPSpace s = ksPSpace s';
      \<forall>x. set (ksReadyQueues s x) \<subseteq> set (ksReadyQueues s' x) \<rbrakk>
@@ -755,10 +751,6 @@ lemma valid_queues_subsetE':
                 ps_clear_def subset_iff projectKOs)
 
 crunch vq'[wp]: getCurThread valid_queues'
-
-lemma valid_queues_ksSchedulerAction_update [simp]:
-  "valid_queues' (ksSchedulerAction_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
 
 lemma setP_vq'[wp]:
   "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and> sch_act_wf (ksSchedulerAction s) s \<and> p \<le> maxPriority\<rbrace>
@@ -795,14 +787,6 @@ lemma setQueue_ex_idle_cap[wp]:
    \<lbrace>\<lambda>rv s. ex_nonz_cap_to' (ksIdleThread s) s\<rbrace>"
   by (simp add: setQueue_def, wp,
       simp add: ex_nonz_cap_to'_def cte_wp_at_pspaceI)
-
-lemma tcbPriority_ts_safe:
-  "tcbState (tcbPriority_update f tcb) = tcbState tcb"
-  by (case_tac tcb, simp)
-
-lemma tcbQueued_ts_safe:
-  "tcbState (tcbQueued_update f tcb) = tcbState tcb"
-  by (case_tac tcb, simp)
 
 lemma tcbPriority_caps_safe:
   "\<forall>tcb. \<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF (tcbPriority_update f tcb) = getF tcb) x"
@@ -1233,10 +1217,6 @@ proof -
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def o_def)
   by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
 qed
-
-lemma inQ_tcbIPCBuffer_update_idem[simp]:
-  "inQ d p (tcbIPCBuffer_update (\<lambda>_. x) ko) = inQ d p ko"
-  by (clarsimp simp: inQ_def)
 
 lemma getThreadBufferSlot_dom_tcb_cte_cases:
   "\<lbrace>\<top>\<rbrace> getThreadBufferSlot a \<lbrace>\<lambda>rv s. rv \<in> (+) a ` dom tcb_cte_cases\<rbrace>"

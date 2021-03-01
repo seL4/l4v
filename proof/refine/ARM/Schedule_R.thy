@@ -861,30 +861,17 @@ lemma setCurThread_invs_no_cicd':
      setCurThread t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  have obj_at'_ct: "\<And>f P addr s.
-       obj_at' P addr (ksCurThread_update f s) = obj_at' P addr s"
-    by (fastforce intro: obj_at'_pspaceI)
-  have valid_pspace'_ct: "\<And>s f.
-       valid_pspace' (ksCurThread_update f s) = valid_pspace' s"
-    by simp
-  have vms'_ct: "\<And>s f.
-       valid_machine_state' (ksCurThread_update f s) = valid_machine_state' s"
-    by (simp add: valid_machine_state'_def)
   have ct_not_inQ_ct: "\<And>s t . \<lbrakk> ct_not_inQ s; obj_at' (\<lambda>x. \<not> tcbQueued x) t s\<rbrakk> \<Longrightarrow> ct_not_inQ (s\<lparr> ksCurThread := t \<rparr>)"
     apply (simp add: ct_not_inQ_def o_def)
     done
-  have tcb_in_cur_domain_ct: "\<And>s f t.
-       tcb_in_cur_domain' t  (ksCurThread_update f s)= tcb_in_cur_domain' t s"
-    by (fastforce simp: tcb_in_cur_domain'_def)
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
     apply (clarsimp simp add: all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def cur_tcb'_def
-                              valid_state'_def obj_at'_ct valid_pspace'_ct vms'_ct
-                              Invariants_H.valid_queues_def valid_release_queue_def
+                              valid_state'_def  valid_queues_def valid_release_queue_def
                               valid_release_queue'_def sch_act_wf ct_in_state'_def
                               state_refs_of'_def ps_clear_def valid_irq_node'_def valid_queues'_def
-                              ct_not_inQ_ct tcb_in_cur_domain_ct ct_idle_or_in_cur_domain'_def
+                              ct_not_inQ_ct  ct_idle_or_in_cur_domain'_def
                               bitmapQ_defs valid_queues_no_bitmap_def
                         cong: option.case_cong)
     done
@@ -966,9 +953,6 @@ lemma idle'_not_tcbQueued':
 lemma setCurThread_invs_no_cicd'_idle_thread:
   "\<lbrace>invs_no_cicd' and (\<lambda>s. t = ksIdleThread s) \<rbrace> setCurThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  have vms'_ct: "\<And>s f.
-       valid_machine_state' (ksCurThread_update f s) = valid_machine_state' s"
-    by (simp add: valid_machine_state'_def)
   have ct_not_inQ_ct: "\<And>s t . \<lbrakk> ct_not_inQ s; obj_at' (\<lambda>x. \<not> tcbQueued x) t s\<rbrakk> \<Longrightarrow> ct_not_inQ (s\<lparr> ksCurThread := t \<rparr>)"
     apply (simp add: ct_not_inQ_def o_def)
     done
@@ -978,7 +962,7 @@ proof -
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (clarsimp simp add: vms'_ct ct_not_inQ_ct idle'_activatable' idle'_not_tcbQueued'[simplified o_def]
+    apply (clarsimp simp add: ct_not_inQ_ct idle'_activatable' idle'_not_tcbQueued'[simplified o_def]
                               invs'_def cur_tcb'_def valid_state'_def
                               sch_act_wf ct_in_state'_def state_refs_of'_def
                               ps_clear_def valid_irq_node'_def
@@ -1134,13 +1118,10 @@ lemma switchToThread_invs[wp]:
 lemma setCurThread_ct_in_state:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
 proof -
-  have obj_at'_ct: "\<And>P addr f s.
-       obj_at' P addr (ksCurThread_update f s) = obj_at' P addr s"
-    by (fastforce intro: obj_at'_pspaceI)
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (simp add: ct_in_state'_def pred_tcb_at'_def obj_at'_ct o_def)
+    apply (simp add: ct_in_state'_def pred_tcb_at'_def o_def)
     done
 qed
 
@@ -1464,14 +1445,6 @@ lemma corres_split_sched_act:
   apply (cases act)
     apply (rule corres_guard_imp, force+)+
     done
-
-lemma cur_tcb'_ksReadyQueuesL1Bitmap_upd[simp]:
-  "cur_tcb' (s\<lparr>ksReadyQueuesL1Bitmap := x\<rparr>) = cur_tcb' s"
-  unfolding cur_tcb'_def by simp
-
-lemma cur_tcb'_ksReadyQueuesL2Bitmap_upd[simp]:
-  "cur_tcb' (s\<lparr>ksReadyQueuesL2Bitmap := x\<rparr>) = cur_tcb' s"
-  unfolding cur_tcb'_def by simp
 
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
@@ -1798,74 +1771,13 @@ lemma next_domain_corres:
                    \<mu>s_to_ms_equiv us_to_ticks_equiv)
   done
 
-(* FIXME RT: use locales to shorten this work *)
-lemma valid_queues'_ksCurDomain[simp]:
-  "valid_queues' (ksCurDomain_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues'_ksDomScheduleIdx[simp]:
-  "valid_queues' (ksDomScheduleIdx_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues'_ksDomSchedule[simp]:
-  "valid_queues' (ksDomSchedule_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues'_ksDomainTime[simp]:
-  "valid_queues' (ksDomainTime_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues'_ksWorkUnitsCompleted[simp]:
-  "valid_queues' (ksWorkUnitsCompleted_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma valid_queues'_ksReprogramTimer[simp]:
   "valid_queues' (ksReprogramTimer_update f s) = valid_queues' s"
   by (simp add: valid_queues'_def)
 
-lemma valid_queues_ksCurDomain[simp]:
-  "Invariants_H.valid_queues (ksCurDomain_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomScheduleIdx[simp]:
-  "Invariants_H.valid_queues (ksDomScheduleIdx_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomSchedule[simp]:
-  "Invariants_H.valid_queues (ksDomSchedule_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksDomainTime[simp]:
-  "Invariants_H.valid_queues (ksDomainTime_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_queues_ksWorkUnitsCompleted[simp]:
-  "Invariants_H.valid_queues (ksWorkUnitsCompleted_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
 lemma valid_queues_ksReprogramTimer[simp]:
   "Invariants_H.valid_queues (ksReprogramTimer_update f s) = Invariants_H.valid_queues s"
   by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_irq_node'_ksCurDomain[simp]:
-  "valid_irq_node' w (ksCurDomain_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
-
-lemma valid_irq_node'_ksDomScheduleIdx[simp]:
-  "valid_irq_node' w (ksDomScheduleIdx_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
-
-lemma valid_irq_node'_ksDomSchedule[simp]:
-  "valid_irq_node' w (ksDomSchedule_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
-
-lemma valid_irq_node'_ksDomainTime[simp]:
-  "valid_irq_node' w (ksDomainTime_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
-
-lemma valid_irq_node'_ksWorkUnitsCompleted[simp]:
-  "valid_irq_node' w (ksWorkUnitsCompleted_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
 
 lemma valid_irq_node'_ksReprogramTimer[simp]:
   "valid_irq_node' w (ksReprogramTimer_update f s) = valid_irq_node' w s"
@@ -2162,29 +2074,13 @@ lemma ssa_all_invs_but_ct_not_inQ':
    (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)\<rbrace>
    setSchedulerAction sa \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
 proof -
-  have obj_at'_sa: "\<And>P addr f s.
-       obj_at' P addr (ksSchedulerAction_update f s) = obj_at' P addr s"
-    by (fastforce intro: obj_at'_pspaceI)
-  have valid_pspace'_sa: "\<And>f s.
-       valid_pspace' (ksSchedulerAction_update f s) = valid_pspace' s"
-    by simp
-  have iflive_sa: "\<And>f s.
-       if_live_then_nonz_cap' (ksSchedulerAction_update f s)
-         = if_live_then_nonz_cap' s"
-    by fastforce
-  have ifunsafe_sa[simp]: "\<And>f s.
-       if_unsafe_then_cap' (ksSchedulerAction_update f s) = if_unsafe_then_cap' s"
-    by fastforce
-  have idle_sa[simp]: "\<And>f s.
-       valid_idle' (ksSchedulerAction_update f s) = valid_idle' s"
-    by fastforce
   show ?thesis
     apply (simp add: setSchedulerAction_def)
     apply wp
     apply (clarsimp simp add: invs'_def valid_state'_def cur_tcb'_def
-                              obj_at'_sa valid_pspace'_sa Invariants_H.valid_queues_def
-                              state_refs_of'_def iflive_sa ps_clear_def
-                              valid_irq_node'_def valid_queues'_def valid_release_queue_def
+                              Invariants_H.valid_queues_def
+                              state_refs_of'_def ps_clear_def
+                              valid_irq_node'_def valid_queues'_def
                               valid_release_queue'_def tcb_in_cur_domain'_def
                               ct_idle_or_in_cur_domain'_def bitmapQ_defs valid_queues_no_bitmap_def
                         cong: option.case_cong)
@@ -2232,13 +2128,10 @@ lemma switchToThread_ct_not_queued_2:
 lemma setCurThread_obj_at':
   "\<lbrace> obj_at' P t \<rbrace> setCurThread t \<lbrace>\<lambda>rv s. obj_at' P (ksCurThread s) s \<rbrace>"
 proof -
-  have obj_at'_ct: "\<And>P addr f s.
-       obj_at' P addr (ksCurThread_update f s) = obj_at' P addr s"
-    by (fastforce intro: obj_at'_pspaceI)
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (simp add: ct_in_state'_def st_tcb_at'_def obj_at'_ct)
+    apply (simp add: ct_in_state'_def st_tcb_at'_def)
     done
 qed
 
@@ -2261,16 +2154,12 @@ lemma switchToIdleThread_activatable_2[wp]:
   done
 
 lemma switchToThread_tcb_in_cur_domain':
-  "\<lbrace>tcb_in_cur_domain' thread\<rbrace> ThreadDecls_H.switchToThread thread
-  \<lbrace>\<lambda>y s. tcb_in_cur_domain' (ksCurThread s) s\<rbrace>"
-  apply (simp add: Thread_H.switchToThread_def)
-  apply (rule hoare_pre)
-  apply (wp)
-    apply (simp add: ARM_H.switchToThread_def setCurThread_def)
-    apply (wp tcbSchedDequeue_not_tcbQueued | simp )+
-   apply (simp add:tcb_in_cur_domain'_def)
-   apply (wp tcbSchedDequeue_tcbDomain hoare_drop_imps | wps)+
-  apply (clarsimp simp:tcb_in_cur_domain'_def)
+  "\<lbrace>tcb_in_cur_domain' thread\<rbrace>
+   ThreadDecls_H.switchToThread thread
+   \<lbrace>\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s\<rbrace>"
+  apply (simp add: Thread_H.switchToThread_def setCurThread_def)
+  apply (wpsimp wp: tcbSchedDequeue_not_tcbQueued tcbSchedDequeue_tcbDomain
+                    hoare_drop_imps)
   done
 
 lemma chooseThread_invs_no_cicd'_posts: (* generic version *)
@@ -2423,11 +2312,6 @@ lemma setDomainTime_invs'[wp]:
   "setDomainTime v \<lbrace>invs'\<rbrace>"
   unfolding setDomainTime_def
   apply wpsimp
-  apply (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def cur_tcb'_def
-                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def
-                        valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
-                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
-                        valid_queues'_def valid_release_queue_def valid_release_queue'_def)
   done
 
 lemma invs'_ko_at_idle_sc_is_idle':
@@ -3102,13 +2986,10 @@ lemma schedule_sch_act_simple:
 lemma ssa_ct:
   "\<lbrace>ct_in_state' P\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
 proof -
-  have obj_at'_sa: "\<And>P addr f s.
-       obj_at' P addr (ksSchedulerAction_update f s) = obj_at' P addr s"
-    by (fastforce intro: obj_at'_pspaceI)
   show ?thesis
     apply (unfold setSchedulerAction_def)
     apply wp
-    apply (clarsimp simp add: ct_in_state'_def pred_tcb_at'_def obj_at'_sa)
+    apply (clarsimp simp add: ct_in_state'_def pred_tcb_at'_def)
     done
 qed
 
