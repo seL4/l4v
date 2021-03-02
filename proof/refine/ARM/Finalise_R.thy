@@ -2616,8 +2616,9 @@ lemma replyNext_update_valid_objs':
             (\<forall>sc. next_opt = Some (Head sc) \<longrightarrow> sc_at' sc s)))\<rbrace>
    updateReply replyPtr (replyNext_update (\<lambda>_. next_opt))
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (case_tac next_opt; clarsimp)
-  sorry
+  apply (case_tac next_opt
+         ; wpsimp wp: updateReply_valid_objs'_preserved_strong simp: valid_reply'_def)
+  by (case_tac a; clarsimp)
 
 lemma replyPop_valid_objs'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
@@ -2682,14 +2683,16 @@ lemma replyPop_valid_queues[wp]:
              apply (wpsimp wp: updateReply_obj_at'_only_st_qd_ft)
             apply (wp updateReply_valid_queues)
            apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_if_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
-            apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
-           apply (wpsimp wp: hoare_vcg_imp_lift set_sc'.valid_queues)
-          apply (wpsimp wp: )+
-       apply (wpsimp wp: gts_wp')+
+          apply (wpsimp wp: hoare_vcg_conj_lift hoare_vcg_disj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
+         apply (wpsimp wp: hoare_vcg_imp_lift set_sc'.valid_queues)
+        apply (wpsimp wp: )+
+      apply (wpsimp wp: gts_wp')+
   apply (simp add: isHead_to_head split: if_split)
+  apply clarsimp
   apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
                  valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (clarsimp simp: valid_reply'_def obj_at'_def)
+  
   sorry
 
 lemma replyPop_valid_queues'[wp]:
@@ -2788,6 +2791,7 @@ lemma replyPop_iflive:
   apply (clarsimp simp: isHead_to_head split: if_splits)
   apply (intro conjI | clarsimp)+
           apply auto
+find_theorems ex_nonz_cap_to' -valid
               apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
                              valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
               apply (clarsimp simp: valid_reply'_def if_live_then_nonz_cap'_def obj_at'_def projectKOs)
@@ -4162,23 +4166,6 @@ lemma valid_reply'_updates[simp]:
 
 crunches schedContextDonate
   for valid_reply'[wp]: "\<lambda>s. valid_reply' reply s"
-
-lemma replyPop_valid_objs'[wp]:
-  "replyPop replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
-  apply (clarsimp simp: replyPop_def)
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
-  apply (rule_tac Q="valid_objs' and ko_at' reply replyPtr and tcb_at' tcbPtr"
-               in hoare_weaken_pre[rotated])
-   apply clarsimp
-  apply (wpsimp wp: replyUnlink_valid_objs' schedContextDonate_valid_objs')
-         apply (rule_tac Q="\<lambda>_. valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
-          apply clarsimp
-         apply (wpsimp wp: updateReply_valid_objs'_preserved hoare_drop_imps
-                     simp: valid_reply'_def)+
-  by (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
-                simp: valid_reply'_def valid_sched_context'_def)
 
 lemma replyRemove_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyRemove replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
