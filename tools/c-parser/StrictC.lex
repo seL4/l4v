@@ -173,6 +173,8 @@ attr_start = "__attribute__"{ws}*"((";
                   => (tok(Tokens.STRUCT,source,yypos,yypos+size yytext-1));
 <TDEF>"struct"    => (YYBEGIN TS;
                       tok(Tokens.STRUCT,source,yypos,yypos+size yytext-1));
+<INITIAL,TS,TSS,TSI>"union"
+                  => (tok(Tokens.UNION,source,yypos,yypos+size yytext-1));
 <TDEF>"union"     => (YYBEGIN TS;
                       tok(Tokens.UNION,source,yypos,yypos+size yytext-1));
 <TDEF>"enum"      => (YYBEGIN TS;

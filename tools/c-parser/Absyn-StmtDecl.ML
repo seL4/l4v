@@ -39,6 +39,7 @@ datatype declaration =
             Initialisers are translated into subsequent assignment statements
             by the parser. *)
        | StructDecl of string wrap * (expr ctype * string wrap) list
+       | UnionDecl of string wrap * (expr ctype * string wrap) list
        | TypeDecl of (expr ctype * string wrap) list
        | ExtFnDecl of {rettype : expr ctype, name : string wrap,
                        params : (expr ctype * string option) list,

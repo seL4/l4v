@@ -458,6 +458,7 @@ and constify_abtype ecenv (ty : expr ctype)  : int ctype = let
       | PlainChar => PlainChar
       | Unsigned x => Unsigned x
       | StructTy s => StructTy s
+      | UnionTy s => UnionTy s
       | EnumTy x => EnumTy x
       | Bitfield(b,e) => Bitfield (b, IntInf.toInt (consteval ecenv e))
       | Ident s => Ident s

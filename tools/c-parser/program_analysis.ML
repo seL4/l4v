@@ -53,6 +53,7 @@ sig
   val cse2ecenv : csenv -> ecenv
   val get_array_mentions : csenv -> (int ctype * int) Binaryset.set
   val get_senv : csenv -> senv
+  val get_unenv : csenv -> senv
   val get_rettype : string -> csenv -> int ctype option
   val get_heaptypes : csenv -> int ctype Binaryset.set
   val compute_callgraphs : csenv ->
@@ -236,6 +237,7 @@ fun max_type ty1 ty2 =
       (Array(_, NONE), _) => ty2
     | (_, Array(_, NONE)) => ty1
     | _ => ty1
+    (* TODO: how should this react to unions? *)
 
 fun vars_compatible vi1 vi2 =
     get_mname vi1 <> get_mname vi2 orelse
@@ -305,7 +307,9 @@ structure TypesTab = Table(struct type key = int ctype * int ctype list
                            end)
 
 datatype csenv (* CalculateState environment *) =
-         CSE of {senv : senv, allow_underscore_idents : bool,
+         CSE of {senv : senv,
+                 unenv : senv,
+                 allow_underscore_idents : bool,
                  anon_vars : bool,
                  fninfo : (int ctype * bool * var_info list) Symtab.table,
                  hpfninfo : Absyn.ext_decl Symtab.table,
@@ -345,6 +349,7 @@ datatype csenv (* CalculateState environment *) =
 fun get_vars (CSE {vars,...}) = vars
 fun get_mangled_vars (CSE {mangled_vars, ...}) = mangled_vars
 fun get_senv (CSE {senv,...}) = senv
+fun get_unenv (CSE {unenv,...}) = unenv
 fun get_scope (CSE {scope,...}) = scope
 fun get_fulleenv (CSE {enumenv,...}) = enumenv
 fun get_globinits (CSE {globinits,...}) = globinits
@@ -393,7 +398,7 @@ fun is_recursivefn (CSE {recursive_functions,...}) s =
 fun get_modified_global_locns (CSE {modify_locs,...}) = modify_locs
 
 fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,munge_info_fname,...} : s2s_config)=
-    CSE {senv = [], anon_vars = anon_vars, allow_underscore_idents = aui,
+    CSE {senv = [], unenv = [], anon_vars = anon_vars, allow_underscore_idents = aui,
          vars = Symtab.empty, local_aliases = Symtab.empty, mangled_vars = Symtab.empty,
          scope = [Symtab.empty],
          fninfo = Symtab.empty, hpfninfo = Symtab.empty,
@@ -429,14 +434,14 @@ end
 local
   open FunctionalRecordUpdate
   (* see http://mlton.org/FunctionalRecordUpdate *)
-  fun cse_makeUpdate z = makeUpdate26 z
+  fun cse_makeUpdate z = makeUpdate27 z
   fun update_CSE z = let
-    fun from senv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+    fun from senv unenv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
              array_mentions
              heaptypes call_info addressed embedded_fncalls modifies
              defined_functions recursive_functions caller_info
              modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname =
-        {senv = senv, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
+        {senv = senv, unenv=unenv, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
          local_aliases = local_aliases, mangled_vars = mangled_vars, hpfninfo = hpfninfo,
          scope = scope, enumenv = enumenv, array_mentions = array_mentions,
          heaptypes = heaptypes, call_info = call_info, addressed = addressed,
@@ -451,8 +456,8 @@ local
               recursive_functions defined_functions modifies embedded_fncalls
               addressed call_info heaptypes array_mentions enumenv scope mangled_vars
               local_aliases vars
-              hpfninfo fninfo anon_vars aui senv =
-        {senv = senv, anon_vars = anon_vars, fninfo = fninfo, vars = vars, scope = scope,
+              hpfninfo fninfo anon_vars aui unenv senv =
+        {senv = senv, unenv = unenv, anon_vars = anon_vars, fninfo = fninfo, vars = vars, scope = scope,
          hpfninfo = hpfninfo, local_aliases = local_aliases, mangled_vars = mangled_vars,
          allow_underscore_idents = aui,
          enumenv = enumenv, array_mentions = array_mentions,
@@ -464,14 +469,14 @@ local
          read_globals = read_globals, globinits = globinits, owners = owners,
          munge_info_fname = munge_info_fname}
 
-    fun to f {senv, anon_vars, fninfo, vars, local_aliases, mangled_vars, scope,
+    fun to f {senv, unenv, anon_vars, fninfo, vars, local_aliases, mangled_vars, scope,
               enumenv, array_mentions,
               heaptypes, hpfninfo, munge_info_fname,
               call_info, addressed, embedded_fncalls, modifies,
               defined_functions, recursive_functions, caller_info,
               modify_locs, typedefs, fnspecs, read_globals, globinits,owners,
               allow_underscore_idents = aui} =
-        f senv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+        f senv unenv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
           array_mentions
           heaptypes call_info addressed embedded_fncalls modifies
           defined_functions recursive_functions caller_info
@@ -517,6 +522,8 @@ fun cse_fupdscope f (CSE cse) =
     CSE (update_CSE cse (U #scope (f (#scope cse))) $$)
 fun cse_fupdsenv f (CSE cse) =
     CSE (update_CSE cse (U #senv (f (#senv cse))) $$)
+fun cse_fupdunenv f (CSE cse) =
+    CSE (update_CSE cse (U #unenv (f (#unenv cse))) $$)
 fun cse_fupdenumenv f (CSE cse) =
     CSE (update_CSE cse (U #enumenv (f (#enumenv cse))) $$)
 fun cse_fupdarray_mentions f (CSE cse) =
@@ -927,6 +934,30 @@ fun newstr_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
 in
   cse_fupdsenv (fn rest => (node nm, flds) :: rest) cse
 end
+
+(* TODO: unions *)
+fun new_union_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
+  open NameGeneration
+  fun foldthis ((cty,fldnm),acc) =
+      process_type (left fldnm, right fldnm) (cty, acc)
+  val cse = List.foldl foldthis cse flds0
+  val ecenv = cse2ecenv cse
+  fun uscore_check i nmty s =
+      if get_allow_underscores cse orelse check_uscore_ok (node s) then ()
+      else
+        Feedback.errorStr'(left s, right s,
+                           rmUScoreSafety (i (node s)) ^
+                           " is an illegal name for a union " ^nmty)
+  val flds =
+      map (fn (ty,s) =>
+              ((uscore_check unC_field_name "field" s; node s),
+               remove_enums (constify_abtype ecenv ty)))
+          flds0
+  val _ = uscore_check unC_struct_name "tag" nm
+in
+  cse_fupdunenv (fn rest => (node nm, flds) :: rest) cse
+end
+
 
 
 fun find_scoped_vdecl name scope = let
@@ -1584,6 +1615,7 @@ in
       ({decl = d', localinits = localinits, globalinits = globalinits}, e)
     end
   | StructDecl s => (puredecl d, newstr_decl s e)
+  | UnionDecl s => (puredecl d, new_union_decl s e)
   | TypeDecl _ => raise Fail "collect_vars: TypeDecl unexpected, \
                              \translate these out!"
   | ExtFnDecl {rettype = rettype0,name = fname0,params,specs,...} => let

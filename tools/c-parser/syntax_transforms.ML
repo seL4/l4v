@@ -227,6 +227,8 @@ fun remove_decl_typedefs env d =
     end
   | StructDecl (sname, tys) =>
       (SOME (StructDecl (sname, map (apfst (update_type env)) tys)), env)
+  | UnionDecl (unname, tys) =>
+      (SOME (UnionDecl (unname, map (apfst (update_type env)) tys)), env)
   | TypeDecl tys => let
       val newrhs = map (fn (ty, nm) => (node nm, update_type env ty)) tys
     in
@@ -245,6 +247,7 @@ fun remove_decl_typedefs env d =
     in
       (SOME (EnumDecl (sw, map ecmap ecs)), env)
     end
+  | _ => raise Fail "missing case in remove_decl_typedefs"
 
 val bogus = SourcePos.bogus
 
@@ -575,6 +578,7 @@ fun dsubst th d =
           VarDecl(tysubst th ty, nm, b, iopt, attrs)
       | TypeDecl tnms => TypeDecl (map (apfst (tysubst th)) tnms)
       | _ => d
+      (* TODO: union? *)
 
 fun edsubst th ed =
     case ed of
@@ -601,6 +605,7 @@ fun calctheta (edec, acc as (i, th)) =
                  acc
              end
            | _ => acc)
+(* TODO: union? *)
 
 fun remove_anonstructs edecs =
   let

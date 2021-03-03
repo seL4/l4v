@@ -164,6 +164,13 @@ fun gen_struct_id () =
        NameGeneration.internalAnonStructPfx^Int.toString (!scount))
 end
 
+local val uncount = ref 0
+in
+fun gen_union_id () =
+      (suncount := !uncount + 1;
+       NameGeneration.internalAnonUnionPfx^Int.toString (!uncount))
+end
+
 datatype storage_class_specifier = TypeDef | Extern | Static | Auto | Register | Thread_Local
 datatype type_qualifier = Const | Volatile | Restrict
 datatype typespectok = ts_unsigned
@@ -175,19 +182,23 @@ datatype typespectok = ts_unsigned
                      | ts_longlong
                      | ts_short
                      | ts_void
-type struct_or_union_specifier = expr ctype wrap * struct_id_decl wrap list
+type struct_specifier = expr ctype wrap * struct_id_decl wrap list
+type union_specifier = expr ctype wrap * struct_id_decl wrap list (* TODO *)
 type enum_specifier = (string option wrap *
                        (string wrap * expr option) list) wrap
 datatype type_specifier = Tstok of typespectok wrap
-                        | Tsstruct of struct_or_union_specifier
+                        | Tsstruct of struct_specifier
+                        | Tsunion of union_specifier
                         | Tsenum of enum_specifier
                         | Tstypeid of string wrap
 fun tsleft (Tstok tok) = left tok
   | tsleft (Tsstruct (ty, _)) = left ty
+  | tsleft (Tsunion (ty, _)) = left ty
   | tsleft (Tstypeid s) = left s
   | tsleft (Tsenum es) = left es
 fun tsright (Tstok tok) = right tok
   | tsright (Tsstruct (ty, _)) = right ty
+  | tsright (Tsunion (ty, _)) = right ty
   | tsright (Tstypeid s) = right s
   | tsright (Tsenum es) = right es
 
@@ -254,6 +265,34 @@ in
   wrap(StructDecl(nm, fields'), left s, right s)
 end
 
+(* TODO *)
+fun parse_uniddecl (s : struct_id_decl wrap) : declaration wrap = let
+  val (nm, fields) = node s
+  fun ok_inttype ity = (ity = Int)
+  fun f (ty : expr ctype, s : string wrap, opbit : expr option) = let
+    fun error r = (errorStr'(left s, r, "Bad base-type for bitfield");
+                   Bitfield(true, one_const))
+    val ty' : expr ctype =
+        case opbit of
+          NONE => ty
+        | SOME e => (case ty of
+                       Signed ity =>
+                       if ok_inttype ity then
+                         Bitfield(true, e)
+                       else error (eright e)
+                     | Unsigned ity =>
+                       if ok_inttype ity then
+                         Bitfield(false, e)
+                       else error (eright e)
+                     | _ => error (eright e))
+  in
+    (ty',s)
+  end
+  val fields' = map f fields
+in
+  wrap(UnionDecl(nm, fields'), left s, right s)
+end
+
 fun empty_enumspec es = [wrap(EnumDecl (node es), left es, right es)]
 
 fun empty_declarator (ds : decl_specifier list) : declaration wrap list =
@@ -285,6 +324,11 @@ fun empty_declarator (ds : decl_specifier list) : declaration wrap list =
                  (errorStr'(dslleft rest, dslright rest,
                             "Extraneous crap after struct declaration");
                   empty_declarator [TypeSpec (Tsstruct s)])
+    | [TypeSpec (Tsunion (_, siddecls))] => map parse_uniddecl siddecls
+    | TypeSpec (Tsunion s) :: rest =>
+                 (errorStr'(dslleft rest, dslright rest,
+                            "Extraneous crap after union declaration");
+                  empty_declarator [TypeSpec (Tsunion s)])
     | [TypeSpec (Tsenum es)] => empty_enumspec es
     | TypeSpec (Tsenum es) :: rest =>
                  (errorStr'(dslleft rest, dslright rest,
@@ -310,6 +354,8 @@ fun sort_toks (bases, sgnmods) dsl =
              | _ => sort_toks (wrap(Tstok tk, left tk, right tk) :: bases,
                                sgnmods) r)
     | TypeSpec (x as Tsstruct (ty,_)) :: r =>
+        sort_toks (wrap(x, left ty, right ty)::bases, sgnmods) r
+    | TypeSpec (x as Tsunion (ty,_)) :: r =>
         sort_toks (wrap(x, left ty, right ty)::bases, sgnmods) r
     | TypeSpec (x as Tstypeid sw) :: r =>
         sort_toks (wrap(x,left sw,right sw)::bases, sgnmods) r
@@ -398,6 +444,7 @@ in
                      | x => wrap(Signed (ity_of_tok tk),
                                  left tk, right tk))
       | Tsstruct (ty, _) => ty
+      | Tsunion (ty, _) => ty
       | Tstypeid s => wrap(Ident (node s), left s, right s)
       | Tsenum e => wrap (EnumTy (node (#1 (node e))), left e, right e)
     end
@@ -432,8 +479,12 @@ in
      | Tsstruct(ty,_) => (errorStr'(left m, right m,
                                     "Signedness modifier on struct");
                           ty)
+     | Tsunion(ty,_) => (errorStr'(left m, right m,
+                                    "Signedness modifier on struct");
+                          ty)
      | Tsenum e => (errorStr'(left m, right m, "Signedness modifier on enum");
                     wrap(EnumTy (node (#1 (node e))), left e, right e))
+     | _ => raise Fail "unhandled case in token signedness check"
 end
 
 (* returns a (SourcePos.t * SourcePos.t) option *)
@@ -764,7 +815,8 @@ end
         | direct_declarator of addecl wrap
         | asm_declarator_mod of unit
         | type_specifier of type_specifier
-        | struct_or_union_specifier of struct_or_union_specifier
+        | struct_specifier of struct_specifier
+        | union_specifier of union_specifier
         | struct_id of string wrap
 
 
@@ -1282,8 +1334,7 @@ asm_declarator_mod
 struct_id : ID (wrap(ID, IDleft, IDright))
           | TYPEID (wrap(TYPEID, TYPEIDleft, TYPEIDright))
 
-(* no unions for the moment *)
-struct_or_union_specifier
+struct_specifier
 : STRUCT struct_id
                 ((wrap(StructTy
                            (C_struct_name (node struct_id)),
@@ -1312,6 +1363,35 @@ struct_or_union_specifier
                     decls)
                  end)
 
+union_specifier
+: UNION struct_id
+                ((wrap(UnionTy
+                           (C_struct_name (node struct_id)),
+                       UNIONleft,
+                       right struct_id),
+                  []))
+| UNION struct_id LCURLY struct_declaration_list RCURLY
+                (let val (flds, decls) = struct_declaration_list
+                     val raw_s_name = node struct_id
+                     val munged_name = C_struct_name raw_s_name
+                     val sname_w = wrap(munged_name, left struct_id,
+                                        right struct_id)
+                 in
+                   (wrap(UnionTy munged_name, UNIONleft, right struct_id),
+                    wrap((sname_w, node flds),
+                         UNIONleft, RCURLYright) :: decls)
+                 end)
+| UNION LCURLY struct_declaration_list RCURLY
+                (let
+                   val (flds, decls) = struct_declaration_list
+                   val anonid = gen_union_id ()
+                   val anonw = wrap(anonid, UNIONright, LCURLYleft)
+                 in
+                   (wrap(UnionTy anonid, UNIONleft, LCURLYleft),
+                    wrap((anonw, node flds), UNIONleft, RCURLYright) ::
+                    decls)
+                 end)
+
 
 type_specifier
 : INT
@@ -1330,8 +1410,10 @@ type_specifier
                 (Tstok(wrap(ts_unsigned, UNSIGNEDleft, UNSIGNEDright)))
 | BOOL
                 (Tstok(wrap(ts_bool, BOOLleft, BOOLright)))
-| struct_or_union_specifier
-                (Tsstruct struct_or_union_specifier)
+| struct_specifier
+                (Tsstruct struct_specifier)
+| union_specifier
+                (Tsunion union_specifier)
 | enum_specifier
                 (Tsenum enum_specifier)
 | TYPEID

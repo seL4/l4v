@@ -547,16 +547,9 @@ fun doit args =
                   (SyntaxTransforms.remove_typedefs ast)
             val _ = ProgramAnalysis.export_mungedb cse
             val _ = filename := fname
-            fun do_analyses alist =
-                case alist of
-                  [] => exit (if !Feedback.numErrors = 0 then success else failure)
-                | f::fs => let
-                    val () = f cse ast'
-                  in
-                    do_analyses fs
-                  end
-          in
-            do_analyses (List.rev (!analyses))
+            val _ = map (fn f => f cse ast') (List.rev (!analyses)) (* do the analyses *)
+           in
+            exit (if !Feedback.numErrors = 0 then success else failure)
           end
       end
     | _ => die usage_msg

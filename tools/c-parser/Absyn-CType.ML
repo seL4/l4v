@@ -13,6 +13,7 @@ datatype 'c ctype =
        | Bool
        | PlainChar
        | StructTy of string
+       | UnionTy of string
        | EnumTy of string option
        | Ptr of 'c ctype
        | Array of 'c ctype * 'c option
@@ -109,6 +110,7 @@ in
   | Array(ty0, SOME sz) => tyname ty0 ^ "_array" ^ f sz
   | Array(ty0, NONE) => tyname ty0 ^ "_array[incomplete]"
   | StructTy s => "struct_" ^ s
+  | UnionTy s => "union_" ^ s
   | Ident s => "typedef_"^s
   | Bitfield (true, n) => "int:"^f n
   | Bitfield (false,n) => "unsigned:"^f n
@@ -192,15 +194,16 @@ fun tysz_rank ty =
       Signed _ => 0
     | Unsigned _ => 1
     | StructTy _ => 2
-    | EnumTy _ => 3
-    | Ptr _ => 4
-    | Array _ => 5
-    | Bitfield _ => 6
-    | Ident _ => 7
-    | Function _ => 8
-    | Void => 9
-    | PlainChar => 10
-    | Bool => 11
+    | UnionTy _ => 3
+    | EnumTy _ => 4
+    | Ptr _ => 5
+    | Array _ => 6
+    | Bitfield _ => 7
+    | Ident _ => 8
+    | Function _ => 9
+    | Void => 10
+    | PlainChar => 11
+    | Bool => 12
 
 fun ctype_compare cecmp (ty1, ty2) =
   case (ty1, ty2) of
@@ -208,6 +211,7 @@ fun ctype_compare cecmp (ty1, ty2) =
   | (Unsigned i1, Unsigned i2) => inttype_compare(i1, i2)
   | (StructTy s1, StructTy s2) => String.compare(s1, s2)
   | (EnumTy s1, EnumTy s2) => option_compare String.compare(s1, s2)
+  | (UnionTy s1, UnionTy s2) => String.compare(s1, s2)
   | (Ptr ty1, Ptr ty2) => ctype_compare cecmp (ty1, ty2)
   | (Array tysz1, Array tysz2) =>
       pair_compare(ctype_compare cecmp, option_compare cecmp) (tysz1,tysz2)
@@ -359,6 +363,7 @@ in
   | PlainChar => 1
   | Bool => ti (boolWidth div CHAR_BIT)
   | StructTy s => structsizes s
+  | UnionTy s => raise Fail "Can't compute size for unions (yet)"
   | EnumTy s => int_sizeof Int
   | Ptr _ => ti (ptrWidth div CHAR_BIT)
   | Array(base, SOME sz) => sz * sizeof structsizes base

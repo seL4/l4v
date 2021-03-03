@@ -143,6 +143,7 @@ end
 
 datatype isa_type = refty of (isa_type option * int ctype)
                   | recd of (string * int ctype)
+                  | union of (string * int ctype)
                   | array of isa_type * int * int ctype
                   | existing of typ * int ctype
 type isa_senv = isa_type rcd_env
@@ -155,6 +156,7 @@ type staterep = isa_decl list
 
 fun isa_type_to_cty (refty (_, c)) = c
   | isa_type_to_cty (recd(_, c)) = c
+  | isa_type_to_cty (union(_, c)) = c
   | isa_type_to_cty (array (_, _, c)) = c
   | isa_type_to_cty (existing(_, c)) = c
 
@@ -170,6 +172,7 @@ fun translate_inttype (ty : int ctype) =
   | Array(ty0, SOME sz) => array (translate_inttype ty0, sz, ty)
   | Array(_, NONE) => raise Fail "translate_inttype: incomplete array!"
   | StructTy s => recd (s, ty)
+  | UnionTy s => union (s, ty)
   | EnumTy _ => translate_inttype (Signed Int)
   | Ident _ => raise Fail "Should never happen: translate out typedefs"
   | Void => raise Fail "Values of bare void type illegal"
@@ -239,6 +242,7 @@ in
     refty (NONE, _) => mk_ptr_ty unit
   | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ ctxt ity0)
   | recd (s, _) => Type (m s, [])
+  | union (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
     Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_array_size_ty sz])
   | existing (ty, _) => ty
@@ -292,6 +296,7 @@ end
 
 datatype umm_decl = umm_array of int ctype * int
                   | umm_struct of string * (string * int ctype) list
+                  | umm_union of string * (string * int ctype) list
 structure UMMKey =
 struct
   type key = umm_decl
@@ -301,6 +306,10 @@ struct
                                              (p1, p2)
     | ord (umm_struct _, umm_array _) = GREATER
     | ord (umm_struct (s1, _), umm_struct (s2, _)) = String.compare (s1,s2)
+     (* TODO: check this *)
+    | ord (umm_union (s1, _), umm_union (s2, _)) = String.compare (s1,s2)
+    | ord (umm_union _, _) = GREATER
+    | ord (_, umm_union _) = LESS
 end
 structure UMMTab = Table(UMMKey)
 local
@@ -333,6 +342,7 @@ let
                 case cty of
                   Ptr ty' => struct_refs (ty', acc)
                 | StructTy s' => Symtab.cons_list (s,s') acc
+                | UnionTy s' => Symtab.cons_list (s,s') acc
                 | Array(ty', _) => struct_refs (ty', acc)
                 | _ => acc
           in
@@ -424,6 +434,7 @@ fun mk_thy_types cse install thy = let
 
   *)
   val rcds = get_senv cse
+  val unenv = get_unenv cse
   val sorted_structs = get_sorted_structs cse
 
   open MemoryModelExtras
@@ -453,7 +464,7 @@ fun mk_thy_types cse install thy = let
         fun mk_ctype_instance (recname, _) thy = let
           val recty = Syntax.read_typ_global thy recname
 
-          (* establish the new type as a c_type, which requires no proof, as
+          (* establish the new ztype as a c_type, which requires no proof, as
              there are no axioms attached to c_type *)
           val c_type_instance_t =
               Logic.mk_of_class(recty, "CTypesDefs.c_type")
@@ -486,7 +497,7 @@ fun mk_thy_types cse install thy = let
   val arrays = List.filter (fn (_, sz) => sz <> 0)
                            (Binaryset.listItems (get_array_mentions cse))
   val umm_events = let
-    val evs = map umm_array arrays @ map umm_struct rcds
+    val evs = map umm_array arrays @ map umm_struct rcds @ map umm_union unenv
   in
     if null evs then []
     else let
@@ -498,6 +509,10 @@ fun mk_thy_types cse install thy = let
             List.foldl (fn (a,acc) => Binaryset.add(acc,umm_array a))
                        (Binaryset.empty UMMKey.ord)
                        arrays
+       val umm_union_map =
+            List.foldl (fn (u as (s,_),acc) => Symtab.update (s,umm_union u) acc)
+                       Symtab.empty
+                       unenv
         fun toEv ty =
             case ty of
               Array (ty, SOME sz) => let
@@ -506,6 +521,7 @@ fun mk_thy_types cse install thy = let
                 if Binaryset.member(umm_array_set, u) then SOME u else NONE
               end
           | StructTy s => Symtab.lookup umm_struct_map s
+          | UnionTy s => Symtab.lookup umm_union_map s
           | _ => NONE
         fun umm_included uev =
             case uev of

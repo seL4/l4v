@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
+(*
+ * Provides serialisation for CType and CExpr.
+ *)
 structure Absyn_Serial =
 struct
 
@@ -26,6 +29,7 @@ fun ty_serial f (Signed ity) = Nm ("Signed", [Q (inttyname ity)])
   | ty_serial f Bool = Nm ("Bool", [])
   | ty_serial f PlainChar = Nm ("PlainChar", [])
   | ty_serial f (StructTy s) = Nm ("StructTy", [Q s])
+  | ty_serial f (UnionTy s) = Nm ("UnionTy", [Q s])
   | ty_serial f (EnumTy so) = Nm ("EnumTy", [opt_serial Q so])
   | ty_serial f (Ptr ty) = Nm ("Ptr", [ty_serial f ty])
   | ty_serial f (Array (ty, co)) = Nm ("Array",
@@ -35,6 +39,7 @@ fun ty_serial f (Signed ity) = Nm ("Signed", [Q (inttyname ity)])
   | ty_serial f (Function (ty, xs)) = Nm ("Function", [ty_serial f ty,
     list_serial (ty_serial f) xs])
   | ty_serial f Void = Nm ("Void", [])
+  | ty_serial _ _ = raise Fail "ty_serial: unguarded case"
 
 val int_ctype_serial = ty_serial (fn i => Q (Int.toString i))
 
@@ -107,6 +112,8 @@ fun decl_serial (VarDecl (ty, s, cls, init, atts))
         opt_serial init_serial init, list_serial gcc_att_serial atts])
   | decl_serial (StructDecl (s, xs)) = Nm ("StructDecl", [Q (node s),
         list_serial varspec_serial xs])
+  | decl_serial (UnionDecl (s, xs)) = Nm ("UnionDecl", [Q (node s),
+        list_serial varspec_serial xs])
   | decl_serial (TypeDecl xs) = Nm ("TypeDecl", map varspec_serial xs)
   | decl_serial (ExtFnDecl dets) = Nm ("ExtFnDecl",
     [varspec_serial (#rettype dets, #name dets),
@@ -116,6 +123,7 @@ fun decl_serial (VarDecl (ty, s, cls, init, atts))
   | decl_serial (EnumDecl (so, xs)) = Nm ("EnumDecl",
         [opt_serial Q (node so), list_serial (pair_serial "EnumElt" (Q o node)
             (opt_serial expr_serial)) xs])
+  | decl_serial _ = raise Fail "missing case in decl_serial"
 
 fun stmt_serial s = let
     fun os2s (SOME s) = "Some (" ^ s ^ ")"

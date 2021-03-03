@@ -154,6 +154,7 @@ in
         in
           fld_type
         end
+      | UnionTy sname => Fail ("Union field access not implemented (yet)")
       | _ => Fail "Attempt to field-dereference non-struct value"
     end
   | ArrayDeref(e1, e2) => let
