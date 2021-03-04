@@ -48,6 +48,7 @@ requalify_consts
   getCurrentTime
   maxIRQ
   minIRQ
+  timerIRQ
   word_size_bits
   clearMemory
   non_kernel_IRQs
@@ -59,6 +60,7 @@ requalify_consts
   max_ticks_to_us
   max_us_to_ticks
   MAX_PERIOD_US
+  MAX_PERIOD
   us_to_ticks
   ticks_to_us
   setDeadline
@@ -68,9 +70,16 @@ requalify_facts
   us_to_ticks_zero
   us_to_ticks_nonzero
   kernelWCET_ticks_no_overflow
+  MAX_PERIOD_US_def
+  MAX_PERIOD_def
   us_to_ticks_mult
+  cur_time_bound_no_overflow
   kernelWCET_ticks_def
   replicate_no_overflow
+  cur_time_bound_nonzero'
+  cur_time_bound_no_overflow'
+  cur_time_bound_minus
+  cur_time_bound_minus'
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
