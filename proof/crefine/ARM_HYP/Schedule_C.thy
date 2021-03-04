@@ -370,16 +370,37 @@ lemma scheduleChooseNewThread_ccorres:
      (Call scheduleChooseNewThread_'proc)"
   apply (cinit')
    apply (rule ccorres_pre_getDomainTime)
-   apply (rule ccorres_split_nothrow)
-       apply (rule_tac R="\<lambda>s. ksDomainTime s = domainTime" in ccorres_when)
-        apply (fastforce simp: rf_sr_ksDomainTime)
-       apply (rule_tac xf'=xfdc in ccorres_call[OF nextDomain_ccorres] ; simp)
-      apply ceqv
-     apply (ctac (no_vcg) add: chooseThread_ccorres)
-    apply (wp nextDomain_invs_no_cicd')
-   apply clarsimp
-   apply (vcg exspec=nextDomain_modifies)
-  apply (clarsimp simp: if_apply_def2 invs'_invs_no_cicd')
+   apply (csymbr)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_split_nothrow)
+         apply (rule_tac R="\<lambda>s. ksDomainTime s = domainTime"
+                     and R'="{s'. (domainTime = 0) = (ret__unsigned_long_' s' \<noteq> 0)}"
+                in ccorres_when_strong)
+          apply (clarsimp simp: rf_sr_ksDomainTime)
+         apply (rule ccorres_add_return2)
+         apply (rule_tac xf=xfdc in ccorres_split_nothrow)
+             apply (rule_tac xf'=xfdc in ccorres_call[OF nextDomain_ccorres] ; simp)
+            apply ceqv
+           apply (rule ccorres_return[where R=\<top> and R'=UNIV])
+           apply (simp, rule conseqPre, vcg, simp)
+          apply wp
+         apply (vcg exspec=nextDomain_modifies)
+        apply ceqv
+       apply (rule ccorres_add_return2)
+       apply (rule_tac xf=xfdc in ccorres_split_nothrow)
+           apply (rule_tac xf'=xfdc in ccorres_call[OF chooseThread_ccorres]; simp)
+          apply ceqv
+         apply (rule ccorres_rel_imp2)
+           apply (rule ccorres_return_C[where xf=switchedDomain_' and arrel="\<top>\<top>"
+                                        and r=dc and rvxf=xfdc])
+             apply simp+
+        apply wp
+       apply (vcg exspec=chooseThread_modifies)
+      apply (wp nextDomain_invs_no_cicd')
+     apply (vcg exspec=nextDomain_modifies)
+    apply vcg
+   apply (rule conseqPre, vcg, clarsimp)
+  apply (clarsimp simp: if_apply_def2 invs'_invs_no_cicd' split: if_splits)
   done
 
 lemma isHighestPrio_ccorres:
@@ -464,7 +485,7 @@ lemma schedule_ccorres:
         apply (rule ccorres_lhs_assoc)+
         apply (rule ccorres_split_nothrow_dc)
            apply (simp add: bind_assoc)
-           apply (ctac add: scheduleChooseNewThread_ccorres)
+           apply (rule ccorres_call[OF scheduleChooseNewThread_ccorres]; simp)
           apply (ctac(no_simp) add: ccorres_setSchedulerAction)
           apply (wpsimp simp: cscheduler_action_relation_def
                  | vcg exspec=scheduleChooseNewThread_modifies exspec=tcbSchedEnqueue_modifies)+
@@ -571,7 +592,7 @@ lemma schedule_ccorres:
                   apply (rule ccorres_lhs_assoc)+
                   apply (rule ccorres_split_nothrow_dc)
                      apply (simp add: bind_assoc)
-                     apply (ctac add: scheduleChooseNewThread_ccorres)
+                    apply (rule ccorres_call[OF scheduleChooseNewThread_ccorres]; simp)
                     apply (ctac(no_simp) add: ccorres_setSchedulerAction)
                     apply (wpsimp simp: cscheduler_action_relation_def)+
                   apply (vcg exspec=scheduleChooseNewThread_modifies)
@@ -607,7 +628,7 @@ lemma schedule_ccorres:
                    apply (rule ccorres_lhs_assoc)+
                    apply (rule ccorres_split_nothrow_dc)
                       apply (simp add: bind_assoc)
-                      apply (ctac add: scheduleChooseNewThread_ccorres)
+                      apply (rule ccorres_call[OF scheduleChooseNewThread_ccorres]; simp)
                      apply (ctac(no_simp) add: ccorres_setSchedulerAction)
                      apply (wpsimp simp: cscheduler_action_relation_def)+
                    apply (vcg exspec=scheduleChooseNewThread_modifies)
