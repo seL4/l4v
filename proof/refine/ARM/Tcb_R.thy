@@ -3898,7 +3898,7 @@ crunches getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma inv_tcb_IRQInactive:
+(* lemma inv_tcb_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeTCB tcb_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeTCB_def)
@@ -3908,7 +3908,7 @@ lemma inv_tcb_IRQInactive:
              hoare_vcg_const_imp_lift_R cteDelete_irq_states'
              hoare_vcg_const_imp_lift |
           simp add: split_def)+
-  sorry
+  sorry *)
 
 end
 

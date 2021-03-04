@@ -658,6 +658,9 @@ lemma finaliseSlot_recset_wf: "wf finaliseSlot_recset"
   by (intro wf_sum_wf wf_rdcall_finalise_ord_lift wf_measure
             wf_inv_image wf_lex_prod wf_less_than)
 
+crunches getRefills, isCurDomainExpired
+  for inv[wp]: P
+
 lemma in_preempt':
   "(Inr rv, s') \<in> fst (preemptionPoint s) \<Longrightarrow>
    \<exists>f g. s' = ksWorkUnitsCompleted_update f
@@ -666,12 +669,15 @@ lemma in_preempt':
                    getActiveIRQ_def doMachineOp_def split_def
                    select_f_def select_def getWorkUnits_def setWorkUnits_def
                    modifyWorkUnits_def return_def returnOk_def
-              split: option.splits if_splits)
-   apply (erule disjE)
-     apply (cases "workUnitsLimit \<le> ksWorkUnitsCompleted s + 1", drule (1) mp,
-            rule exI[where x="\<lambda>x. 0"], rule exI[where x=Suc], force,
-            rule exI[where x="\<lambda>x. x + 1"], rule exI[where x=id], force)+
-  apply (rule exI[where x="\<lambda>x. x + 1"], rule exI[where x=id], force)
+                   getConsumedTime_def scActive_def refillSufficient_def getCurSc_def
+                   getSchedContext_def
+            split: if_splits)
+   apply (cases "workUnitsLimit \<le> ksWorkUnitsCompleted s + 1"
+          , rule exI[where x="\<lambda>x. 0"], rule exI[where x=Suc]
+          , fastforce dest: in_inv_by_hoareD[OF getObject_sc_inv]
+                            in_inv_by_hoareD[OF getRefills_inv]
+                            in_inv_by_hoareD[OF isCurDomainExpired_inv]
+          , rule exI[where x="\<lambda>x. x + 1"], rule exI[where x=id], fastforce)+
   done
 
 lemma updateCap_implies_cte_at:
@@ -8780,7 +8786,7 @@ crunches finaliseCap
        no_irq_cleanByVA_PoU hoare_vcg_all_lift
    simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs)
 
-lemma finaliseSlot_IRQInactive':
+(* lemma finaliseSlot_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b
   \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
 proof (induct rule: finalise_spec_induct)
@@ -8801,9 +8807,9 @@ proof (induct rule: finalise_spec_induct)
            apply simp
           apply (wp hoare_drop_imps hoare_vcg_all_lift | simp add: locateSlot_conv)+
     done
-qed
+qed *)
 
-lemma finaliseSlot_IRQInactive:
+(* lemma finaliseSlot_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> finaliseSlot a b
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (unfold validE_E_def)
@@ -8811,13 +8817,13 @@ lemma finaliseSlot_IRQInactive:
   apply (rule use_spec(2) [OF finaliseSlot_IRQInactive', folded finaliseSlot_def])
    apply (rule TrueI)
   apply assumption
-  done
+  done *)
 
 lemma finaliseSlot_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> finaliseSlot a b \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   by (wp finaliseSlot_preservation | clarsimp)+
 
-lemma cteDelete_IRQInactive:
+(* lemma cteDelete_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: cteDelete_def split_def)
@@ -8828,7 +8834,7 @@ lemma cteDelete_IRQInactive:
     apply simp
    apply simp
   apply assumption
-  done
+  done *)
 
 lemma cteDelete_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
@@ -8843,15 +8849,15 @@ lemma cteDelete_irq_states':
   apply assumption
   done
 
-lemma preemptionPoint_IRQInactive_spec:
+(* lemma preemptionPoint_IRQInactive_spec:
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> preemptionPoint
   \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply wp
   apply (rule hoare_pre, wp preemptionPoint_invR)
    apply clarsimp+
-  done
+  done *)
 
-lemma cteRevoke_IRQInactive':
+(* lemma cteRevoke_IRQInactive':
   "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> cteRevoke x
   \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
 proof (induct rule: cteRevoke.induct)
@@ -8863,8 +8869,8 @@ proof (induct rule: cteRevoke.induct)
     apply clarsimp
     done
 qed
-
-lemma cteRevoke_IRQInactive:
+ *)
+(* lemma cteRevoke_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> cteRevoke x
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (unfold validE_E_def)
@@ -8882,7 +8888,7 @@ lemma inv_cnode_IRQInactive:
              hoare_whenE_wp
            | wpc
            | simp add:  split_def)+
-  done
+  done *)
 
 end
 

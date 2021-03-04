@@ -477,7 +477,7 @@ lemma doMachineOp_getActiveIRQ_IRQ_active':
   apply simp
   done
 
-lemma preemptionPoint_irq [wp]:
+(* lemma preemptionPoint_irq:
   "\<lbrace>valid_irq_states'\<rbrace> preemptionPoint -,
    \<lbrace>\<lambda>irq s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive\<rbrace>"
   apply (simp add: preemptionPoint_def setWorkUnits_def modifyWorkUnits_def getWorkUnits_def)
@@ -488,7 +488,7 @@ lemma preemptionPoint_irq [wp]:
     apply clarsimp
    apply wp+
   apply clarsimp
-  done
+  done *)
 
 lemmas doMachineOp_obj_at = doMachineOp_obj_at'
 

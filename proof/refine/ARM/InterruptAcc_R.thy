@@ -93,10 +93,26 @@ lemma work_units_and_irq_state_state_relationI [intro!]:
    \<in> state_relation"
   by (simp add: state_relation_def swp_def)
 
+lemma OR_choiceE_corres:
+  "corres dc \<top> \<top> (OR_choiceE c f (returnOk ())) (whenE c' f')"
+
+
+
+thm preemption_point_def preemptionPoint_def
+term "gets work_units_completed"
+
+
+thm preemptionPoint_def
+
+find_theorems do_machine_op corres
+thm corres_machine_op
 lemma preemption_corres:
   "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
-  apply (simp add: preemption_point_def preemptionPoint_def)
-  by (auto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
+  apply (simp add: preemption_point_def preemptionPoint_def work_units_limit_reached_def)
+find_theorems whenE
+thm get_sc_active_def scActive_def
+sorry \<comment> \<open>Michael\<close>
+  by (xauto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
                  corres_underlying_def select_def bind_def get_def bindE_def select_f_def modify_def
                  alternative_def throwError_def returnOk_def return_def lift_def doMachineOp_def split_def
                  put_def getWorkUnits_def setWorkUnits_def modifyWorkUnits_def do_machine_op_def
@@ -104,17 +120,19 @@ lemma preemption_corres:
                  update_work_units_def wrap_ext_bool_det_ext_ext_def work_units_limit_def workUnitsLimit_def
                  work_units_limit_reached_def OR_choiceE_def reset_work_units_def mk_ef_def
            elim: state_relationE)
-  (* what? *)
-  (* who says our proofs are not automatic.. *)
 
 lemma preemptionPoint_inv:
   assumes "(\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s)"
           "irq_state_independent_H P"
   shows "\<lbrace>P\<rbrace> preemptionPoint \<lbrace>\<lambda>_. P\<rbrace>" using assms
-  apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def)
-  apply (wpc
-          | wp hoare_whenE_wp hoare_seq_ext [OF _ select_inv] alternative_valid hoare_drop_imps
-          | simp)+
+  apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def
+                   isCurDomainExpired_def getDomainTime_def)
+  apply (rule validE_valid)
+  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (clarsimp simp: whenE_def)
+  apply (intro conjI impI; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (wpsimp simp: scActive_def refillSufficient_def getRefills_def)
   done
 
 lemma invs'_wu [simp, intro!]:

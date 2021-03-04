@@ -5697,25 +5697,5 @@ crunches deleteObjects, updateFreeIndex
   (wp: doMachineOp_irq_states' crunch_wps
    simp: freeMemory_def no_irq_storeWord unless_def)
 
-lemma resetUntypedCap_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace>
-    resetUntypedCap slot
-  \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  (is "\<lbrace>?P\<rbrace> resetUntypedCap slot \<lbrace>?Q\<rbrace>,\<lbrace>?E\<rbrace>")
-  apply (simp add: resetUntypedCap_def)
-  apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_post_impErr]
-             doMachineOp_irq_states' preemptionPoint_inv hoare_drop_imps
-     | simp add: no_irq_clearMemory if_apply_def2)+
-  done
-
-lemma inv_untyped_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> invokeUntyped ui
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeUntyped_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp resetUntypedCap_IRQInactive | wpc | simp)+
-  done
-
 end
 end

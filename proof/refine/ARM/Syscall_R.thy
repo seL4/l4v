@@ -1814,7 +1814,7 @@ proof -
   done *)
 qed
 
-lemma inv_irq_IRQInactive:
+(* lemma inv_irq_IRQInactive:
   "\<lbrace>\<top>\<rbrace> performIRQControl irqcontrol_invocation
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: performIRQControl_def)
@@ -1838,7 +1838,7 @@ lemma retype_pi_IRQInactive:
           | wpsimp wp: inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive
                        inv_untyped_IRQInactive inv_arch_IRQInactive
                  simp: stateAssertE_def stateAssert_def)+
-  done
+  done *)
 
 end
 
