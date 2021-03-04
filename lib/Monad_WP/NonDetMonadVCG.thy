@@ -1091,6 +1091,17 @@ lemma hoare_vcg_seqE:
  apply(blast intro: seqE')
 done
 
+\<comment> \<open>For forward reasoning in Hoare proofs, these lemmas allow skipping over the
+    left-hand-side of monadic bind, while keeping the same precondition.\<close>
+lemmas hoare_seq_ext_skip
+  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemmas hoare_seq_ext_skipE
+  = hoare_vcg_seqE[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemmas hoare_seq_ext_skip'
+  = hoare_seq_ext[where B=C and C=C for C]
+
 lemma hoare_seq_ext_nobind:
   "\<lbrakk> \<lbrace>B\<rbrace> g \<lbrace>C\<rbrace>;
      \<lbrace>A\<rbrace> f \<lbrace>\<lambda>r s. B s\<rbrace> \<rbrakk> \<Longrightarrow>
