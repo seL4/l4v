@@ -1609,110 +1609,7 @@ lemma update_replyPrev_replyNexts_inv[wp]:
   apply wpsimp
   by (metis ko_at'_replies_of' map_upd_triv opt_map_upd_Some)
 
-lemma get_object_def2:
-  "get_object p = do
-     kh \<leftarrow> gets kheap;
-     assert (kh p \<noteq> None);
-     return $ the $ kh p
-   od"
-  apply (rule ext)
-  apply (rule monad_state_eqI)
-    apply ((clarsimp simp: get_object_def gets_the_def gets_def assert_opt_def in_monad
-                    split: option.splits)+)[2]
-  by (clarsimp simp: snd_bind get_object_def snd_gets_the assert_def exec_gets return_def)
-
 (* replyRemoveTCB_corres specific corres rules *)
-
-(* setting scheduling contexts with sc_replies update *)
-context begin interpretation Arch .
-
-lemma setSchedContext_sc_replies_relation_corres:
-  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
-  (* h below is the sc_replies_relation preservation condition for sc update *)
-  and     h : "\<forall> hp. heap_ls hp (scReply sc') (sc_replies sc)
-                       \<longrightarrow> heap_ls hp (scReply (f' sc')) (sc_replies (f sc))"
-  and     s : "objBits sc' = objBits (f' sc')"
-  shows
-  "corres dc (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
-             (ko_at' sc' ptr)
-         (set_object ptr  (kernel_object.SchedContext (f sc) n))
-         (setSchedContext ptr (f' sc'))"
-  proof -
-  have x: "updateObject (f' sc') = updateObject_default (f' sc')" by clarsimp
-  have z: "\<And>s. sc_at' ptr s
-               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO (f' sc'))) = map_to_ctes (ksPSpace s)"
-    by (clarsimp simp: obj_at_simps)
-  have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
-    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
-                split: kernel_object.splits arch_kernel_object.splits)
-  show ?thesis
-    apply (insert P R' h s)
-    apply (clarsimp simp: setSchedContext_def)
-    apply (rule corres_no_failI)
-     apply (rule no_fail_pre)
-      apply wp
-      apply (rule x)
-     apply (clarsimp elim!: obj_at'_weakenE simp: sc_relation_def objBits_simps scBits_simps)
-    apply (clarsimp simp: obj_at_def is_sc_obj_def obj_at'_def projectKO_eq projectKO_opts_defs)
-    apply (unfold update_sched_context_def set_object_def setObject_def)
-    apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
-                          put_def return_def modify_def get_object_def x
-                          projectKOs obj_at_def a_type_def
-                          updateObject_default_def in_magnitude_check[OF _ P]
-                   split: Structures_A.kernel_object.splits)
-    apply (rename_tac s s')
-    apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext sc n)) ptr s")
-     apply (clarsimp simp: obj_at_def)
-    apply (clarsimp simp: state_relation_def
-                          z[simplified obj_at'_def is_sc_obj_def projectKO_eq projectKO_opts_defs, simplified])
-    apply (clarsimp simp: caps_of_state_after_update cte_wp_at_after_update
-                              swp_def fun_upd_def obj_at_def)
-    apply (subst conj_assoc[symmetric])
-    apply (rule conjI[rotated])
-     apply (clarsimp simp: ghost_relation_def)
-     apply (erule_tac x=ptr in allE)+
-     apply (clarsimp simp: obj_at_def a_type_def
-                     split: Structures_A.kernel_object.splits if_split_asm)
-    apply (fold fun_upd_def)
-    apply (simp only: pspace_relation_def simp_thms
-                      pspace_dom_update[where x="kernel_object.SchedContext _ _"
-                                          and v="kernel_object.SchedContext _ _",
-                                        simplified a_type_def, simplified])
-    apply (simp only: dom_fun_upd2 simp_thms)
-    apply (elim conjE)
-    apply (frule bspec, erule domI)
-    apply (rule conjI)
-     apply (rule ballI, drule(1) bspec)
-     apply (drule domD)
-     apply (clarsimp simp: project_inject split: if_split_asm kernel_object.split_asm)
-     apply (rename_tac bb aa ba)
-     apply (drule_tac x="(aa, ba)" in bspec, simp)
-     apply clarsimp
-     apply (frule_tac ko'="kernel_object.SchedContext sc n" and x'=ptr
-              in obj_relation_cut_same_type)
-        apply simp+
-     apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.split_asm if_split_asm)
-      (* sc_replies_relation *)
-    apply (drule_tac x="replyPrevs_of s'" in spec)
-    apply (clarsimp simp: sc_replies_relation_def)
-    apply (rule conjI; clarsimp)
-     apply (clarsimp simp: sc_replies_relation_def vs_heap_simps projectKO_opt_reply
-                    split: if_split_asm)
-     apply (drule_tac x=ptr and y="sc_replies sc" in spec2)
-     apply (prop_tac "ptr \<notin> dom (replyPrevs_of s')")
-      apply (clarsimp simp: vs_heap_simps projectKO_opt_reply)
-     apply simp
-     apply (erule mp)
-      apply (clarsimp simp: opt_map_left_Some)
-    apply (clarsimp simp: sc_replies_relation_def vs_heap_simps projectKO_opt_reply
-                   split: if_split_asm)
-    apply (rename_tac sc0 n0)
-    apply (drule_tac x=p and y="sc_replies sc0" in spec2, clarsimp)
-    apply (prop_tac "ptr \<notin> dom (replyPrevs_of s')")
-     apply (clarsimp simp: vs_heap_simps projectKO_opt_reply)
-    by simp
-  qed
-end
 
 lemma setSchedContext_scReply_update_None_corres:
   "corres dc ((\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp) and valid_objs and pspace_aligned and pspace_distinct)
@@ -1734,21 +1631,16 @@ lemma setSchedContext_scReply_update_None_corres:
                   and n1="objBits sc' - minSchedContextBits"
                             in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
        apply (rule corres_symb_exec_l)
+          apply (rule_tac P="(\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc'
+                                                                                    - minSchedContextBits)))
+                              and K (rp = hd (sc_replies sc))"
+                      and P'="ko_at' sc' ptr"  in corres_inst)
+          apply (rule corres_gen_asm')
           apply (rule corres_guard_imp)
-            apply (rule_tac P="(\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc'
-                                                                                       - minSchedContextBits)))
-                               and K (rp = hd (sc_replies sc))"
-                        and P'="ko_at' sc' ptr"  in corres_inst)
-            apply (rule corres_gen_asm')
-            apply (rule_tac n="objBits sc' - minSchedContextBits"
-                   in setSchedContext_sc_replies_relation_corres)
-              apply (clarsimp simp: sc_relation_def)
-             apply clarsimp
-            apply (clarsimp simp: objBits_simps)
-           apply simp
-          apply simp
+            apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres; simp?)
+             apply (clarsimp simp: sc_relation_def objBits_simps)+
          apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
-          apply (rename_tac ko xs; case_tac ko; clarsimp)
+          apply (rename_tac ko; case_tac ko; clarsimp)
          apply simp
         apply (wpsimp simp: obj_at_def is_sc_obj_def vs_heap_simps)
        apply (wpsimp wp: get_sched_context_no_fail)
@@ -1762,42 +1654,6 @@ lemma replyPrevNext_update_commute:
    = replyNext_update g (replyPrev_update f reply)"
   by (cases reply; clarsimp)
 
-lemma getObject_def2:
-  "getObject ptr = do
-     map \<leftarrow> gets $ psMap \<circ> ksPSpace;
-     (before, after) \<leftarrow> return (lookupAround2 (fromPPtr ptr) map);
-     (ptr', val) \<leftarrow> assert_opt before;
-     gets_the $ loadObject (fromPPtr ptr) ptr' after val
-   od"
-  apply (rule ext)
-  apply (rule monad_state_eqI)
-    apply (force simp: getObject_def readObject_def gets_the_def exec_gets obind_def split_def
-                       omonad_defs assert_opt_def fail_def return_def in_monad ARM_H.fromPPtr_def
-                split: option.splits)+
-  by (clarsimp simp: snd_bind split_def getObject_def gets_the_def exec_gets assert_opt_def
-                     readObject_def obind_def omonad_defs return_def fail_def
-              split: option.splits)
-
-lemma loadObject_default_def2:
-  "(gets_the $ loadObject_default ptr ptr' next obj) = do
-     assert (ptr = ptr');
-     val \<leftarrow> (case projectKO_opt obj of None \<Rightarrow> fail | Some k \<Rightarrow> return k);
-     alignCheck ptr (objBits val);
-     magnitudeCheck ptr next (objBits val);
-     return val
-   od"
-  apply (rule ext)
-  apply (rule monad_state_eqI)
-    apply (force simp: loadObject_default_def gets_the_def exec_gets obind_def split_def
-                       omonad_defs assert_opt_def fail_def return_def in_monad ARM_H.fromPPtr_def
-                       read_magnitudeCheck_assert magnitudeCheck_assert projectKOs
-                split: option.splits if_splits)+
-  by (force simp: snd_bind split_def loadObject_default_def gets_the_def exec_gets assert_opt_def
-                  obind_def omonad_defs return_def fail_def projectKO_def assert_def
-                  read_magnitudeCheck_assert magnitudeCheck_assert
-                  read_alignError_def is_aligned_mask  alignCheck_def read_alignCheck_def
-           split: option.splits)
-  
 lemma updateReply_Prev_Next_rewrite:
   "monadic_rewrite False True (reply_at' rp)
     (do y <- updateReply rp (replyPrev_update f);
