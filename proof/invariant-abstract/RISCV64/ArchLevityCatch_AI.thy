@@ -57,16 +57,18 @@ lemma asid_high_bits_of_add:
   done
 
 lemma preemption_point_success [simp,intro]:
-  "((Inr (), s') \<in> fst (preemption_point s)) \<Longrightarrow>
-  \<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es \<rparr>"
+  "\<lbrakk>\<exists>sc n. kheap s (cur_sc s) = Some (SchedContext sc n); ((Inr (), s') \<in> fst (preemption_point s))\<rbrakk>
+   \<Longrightarrow> \<exists>f es. s' = s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>,
+                                                      exst := es \<rparr>"
   apply (auto simp: in_monad preemption_point_def do_machine_op_def
                     select_f_def select_def getActiveIRQ_def alternative_def
                     do_extended_op_def OR_choiceE_def mk_ef_def
-             split: option.splits if_splits
-             intro: exI[where x=id])
-      apply (rule_tac x=Suc in exI, rule_tac x="exst bb" in exI, force)+
-    apply (rule_tac x=id in exI, rule_tac x="exst b" in exI, force)+
-    done
+                    get_sc_refill_sufficient_def get_sc_active_def get_sched_context_def
+                    refill_sufficient_def get_object_def
+             split: if_splits)
+        apply (rule_tac x=Suc in exI, rule_tac x="exst bb" in exI, fastforce)+
+     apply (rule_tac x=id in exI, rule_tac x="exst b" in exI, force)+
+  done
 
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)

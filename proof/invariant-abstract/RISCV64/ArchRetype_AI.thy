@@ -1034,26 +1034,14 @@ lemma hyp_live_default_object:
   "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
   by (cases ty; simp add: hyp_live_def)
 
-end
-
-lemmas clearMemory_invs[wp] = RISCV64.clearMemory_invs
-
-lemmas invs_irq_state_independent[intro!, simp]
-    = RISCV64.invs_irq_state_independent
-
-lemmas init_arch_objects_invs_from_restricted
-    = RISCV64.init_arch_objects_invs_from_restricted
-
-lemmas caps_region_kernel_window_imp
-    = RISCV64.caps_region_kernel_window_imp
-
 lemmas init_arch_objects_wps
-    = RISCV64.init_arch_objects_cte_wp_at
-      RISCV64.init_arch_objects_valid_cap
-      RISCV64.init_arch_objects_cap_table
-      RISCV64.init_arch_objects_excap
-      RISCV64.init_arch_objects_pred_tcb_at
-      RISCV64.init_arch_objects_cur_thread
-      RISCV64.init_arch_objects_ct_in_state
+    = init_arch_objects_cte_wp_at
+      init_arch_objects_valid_cap
+      init_arch_objects_cap_table
+      init_arch_objects_excap
+      init_arch_objects_pred_tcb_at
+      init_arch_objects_cur_thread
+      init_arch_objects_ct_in_state
+end
 
 end

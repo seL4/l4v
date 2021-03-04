@@ -349,7 +349,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
     (\<lambda>s. scheduler_action s = resume_cur_thread) and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
       (call_kernel e) :: (unit,unit) s_monad
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
-  apply (cases e, simp_all add: call_kernel_def)
+  apply (cases e, simp_all add: call_kernel_def preemption_path_def)
        apply (rule hoare_seq_ext[rotated])
         apply (rule validE_valid)
         apply (rule_tac Q="\<lambda>_. valid_vspace_objs'" in handleE_wp[rotated])
