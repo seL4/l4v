@@ -231,6 +231,53 @@ lemma koType_objBitsKO:
           split: Structures_H.kernel_object.splits
                  ARM_H.arch_kernel_object.splits)
 
+lemma get_object_def2:
+  "get_object p = do
+     kh \<leftarrow> gets kheap;
+     assert (kh p \<noteq> None);
+     return $ the $ kh p
+   od"
+  apply (rule ext)
+  apply (rule monad_state_eqI)
+    apply ((clarsimp simp: get_object_def gets_the_def gets_def assert_opt_def in_monad
+                    split: option.splits)+)[2]
+  by (clarsimp simp: snd_bind get_object_def snd_gets_the assert_def exec_gets return_def)
+
+lemma getObject_def2:
+  "getObject ptr = do
+     map \<leftarrow> gets $ psMap \<circ> ksPSpace;
+     (before, after) \<leftarrow> return (lookupAround2 (fromPPtr ptr) map);
+     (ptr', val) \<leftarrow> assert_opt before;
+     gets_the $ loadObject (fromPPtr ptr) ptr' after val
+   od"
+  apply (rule ext)
+  apply (rule monad_state_eqI)
+    apply (force simp: getObject_def readObject_def gets_the_def exec_gets obind_def split_def
+                       omonad_defs assert_opt_def fail_def return_def in_monad ARM_H.fromPPtr_def
+                split: option.splits)+
+  by (clarsimp simp: snd_bind split_def getObject_def gets_the_def exec_gets assert_opt_def
+                     readObject_def obind_def omonad_defs return_def fail_def
+              split: option.splits)
+
+lemma loadObject_default_def2:
+  "(gets_the $ loadObject_default ptr ptr' next obj) = do
+     assert (ptr = ptr');
+     val \<leftarrow> (case projectKO_opt obj of None \<Rightarrow> fail | Some k \<Rightarrow> return k);
+     alignCheck ptr (objBits val);
+     magnitudeCheck ptr next (objBits val);
+     return val
+   od"
+  apply (rule ext)
+  apply (rule monad_state_eqI)
+    apply (force simp: loadObject_default_def gets_the_def exec_gets obind_def split_def
+                       omonad_defs assert_opt_def fail_def return_def in_monad ARM_H.fromPPtr_def
+                       read_magnitudeCheck_assert magnitudeCheck_assert projectKOs
+                split: option.splits if_splits)+
+  by (force simp: snd_bind split_def loadObject_default_def gets_the_def exec_gets assert_opt_def
+                  obind_def omonad_defs return_def fail_def projectKO_def assert_def
+                  read_magnitudeCheck_assert magnitudeCheck_assert
+                  read_alignError_def is_aligned_mask  alignCheck_def read_alignCheck_def
+           split: option.splits)
 
 lemma corres_get_tcb [corres]:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
@@ -1496,17 +1543,39 @@ lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` r
   done
   qed
 
-lemma setSchedContext_update_corres:
-  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
-  assumes s: "objBits sc' = objBits (f' sc')"
-  shows "corres dc
-         (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
-         (ko_at' sc' ptr and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
-            (set_object ptr (kernel_object.SchedContext (f sc) n))
-            (setSchedContext ptr (f' sc'))"
+lemma sc_at'_cross:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "sc_at' ptr s'"
+  shows "sc_at ptr s" using assms
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
+                     other_obj_relation_def pte_relation_def pde_relation_def
+              split: Structures_A.kernel_object.split_asm if_split_asm
+                     ARM_A.arch_kernel_obj.split_asm)
+
+lemma sc_obj_at'_cross:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "obj_at' (\<lambda>k::sched_context. objBits k = minSchedContextBits + n) ptr s'"
+  shows "sc_obj_at n ptr s" using assms
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
+                     objBits_simps scBits_simps
+                     other_obj_relation_def pte_relation_def pde_relation_def sc_relation_def
+              split: Structures_A.kernel_object.split_asm if_split_asm
+                     ARM_A.arch_kernel_obj.split_asm)
+
+lemma setSchedContext_corres:
+  assumes R': "sc_relation sc n sc'"
+  assumes s: " n + minSchedContextBits = objBits sc'"
+  shows "corres dc \<top>
+         (obj_at' (\<lambda>k::sched_context. objBits k = objBits sc') ptr and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
+            (set_object ptr (kernel_object.SchedContext sc n))
+            (setSchedContext ptr sc')"
   proof -
   have z: "\<And>s. sc_at' ptr s
-               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO (f' sc'))) = map_to_ctes (ksPSpace s)"
+               \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO sc')) = map_to_ctes (ksPSpace s)"
     by (clarsimp simp: obj_at_simps)
   have P: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
     by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
@@ -1517,16 +1586,19 @@ lemma setSchedContext_update_corres:
     apply (rule corres_no_failI)
      apply (rule no_fail_pre)
       apply wp
-      apply (clarsimp)
-     apply (clarsimp elim!: obj_at'_weakenE simp: sc_relation_def objBits_simps scBits_simps)
+      apply clarsimp
+     apply clarsimp
+    apply clarsimp
+    apply (rename_tac s s' rv; prop_tac "sc_obj_at n ptr s")
+     apply (fastforce intro!: sc_obj_at'_cross dest: state_relation_pspace_relation simp: obj_at'_def)
     apply (clarsimp simp: obj_at_def is_sc_obj_def obj_at'_def projectKO_eq projectKO_opts_defs)
     apply (unfold update_sched_context_def set_object_def setObject_def)
     apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
-                          put_def return_def modify_def get_object_def
+                          put_def return_def modify_def get_object_def2
                           projectKOs obj_at_def a_type_def
                           updateObject_default_def in_magnitude_check[OF _ P]
                    split: Structures_A.kernel_object.splits)
-    apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext sc n)) ptr a")
+    apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext sc n)) ptr s")
      apply (clarsimp simp: obj_at_def)
     apply (clarsimp simp: state_relation_def
                           z[simplified obj_at'_def is_sc_obj_def projectKO_eq projectKO_opts_defs, simplified])
@@ -1541,7 +1613,7 @@ lemma setSchedContext_update_corres:
     apply (fold fun_upd_def)
     apply (simp only: pspace_relation_def simp_thms
                       pspace_dom_update[where x="kernel_object.SchedContext _ _"
-                                          and v="kernel_object.SchedContext (f _) _",
+                                          and v="kernel_object.SchedContext _ _",
                                         simplified a_type_def, simplified])
     apply (simp only: dom_fun_upd2 simp_thms)
     apply (elim conjE)
@@ -1550,10 +1622,10 @@ lemma setSchedContext_update_corres:
      apply (rule ballI, drule(1) bspec)
      apply (drule domD)
      apply (clarsimp simp: project_inject split: if_split_asm kernel_object.split_asm)
-     apply (rename_tac bb aa ba)
+     apply (rename_tac sc0 x bb aa ba)
      apply (drule_tac x="(aa, ba)" in bspec, simp)
      apply clarsimp
-     apply (frule_tac ko'="kernel_object.SchedContext sc n" and x'=ptr
+     apply (frule_tac ko'="kernel_object.SchedContext sc0 n" and x'=ptr
               in obj_relation_cut_same_type)
         apply simp+
      apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.split_asm if_split_asm)
@@ -1564,6 +1636,23 @@ lemma setSchedContext_update_corres:
             split: if_splits)
 qed
 
+lemma setSchedContext_update_corres:
+  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
+  assumes s: "objBits sc' = objBits (f' sc')"
+  shows "corres dc
+         (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
+         (ko_at' sc' ptr and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
+            (set_object ptr (kernel_object.SchedContext (f sc) n))
+            (setSchedContext ptr (f' sc'))"
+  apply (insert R' s)
+  apply (rule_tac F="sc_relation sc n sc'" in corres_req)
+   apply (drule state_relation_pspace_relation)
+   apply (drule (1) pspace_relation_absD)
+   apply (clarsimp simp: obj_at'_def projectKOs split: if_split_asm)
+  apply (rule corres_guard_imp)
+    apply (rule setSchedContext_corres)
+  by (clarsimp simp: obj_at'_def sc_relation_def objBits_simps scBits_simps)+
+
 lemma setSchedContext_no_stack_update_corres:
   "\<lbrakk>sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
      sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
@@ -1573,14 +1662,17 @@ lemma setSchedContext_no_stack_update_corres:
          (ko_at' sc' ptr)
             (set_object ptr (kernel_object.SchedContext (f sc) n))
             (setSchedContext ptr (f' sc'))"
+  apply (rule_tac F="sc_relation sc n sc'" in corres_req)
+   apply (drule state_relation_pspace_relation)
+   apply (drule (1) pspace_relation_absD)
+   apply (clarsimp simp: obj_at'_def projectKOs split: if_split_asm)
   apply (rule stronger_corres_guard_imp)
-    apply (erule setSchedContext_update_corres; clarsimp)
-   apply clarsimp
-  apply (clarsimp simp: state_relation_def sc_replies_relation_def)
-  apply (drule_tac x=ptr and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: vs_all_heap_simps obj_at'_real_def ko_wp_at'_def opt_map_def)
-  done
-
+    apply (rule setSchedContext_update_corres[where sc=sc and sc'=sc'])
+     apply simp+
+  apply (clarsimp dest!: state_relation_sc_replies_relation
+                   simp: obj_at'_def projectKOs)
+  apply (drule (2) sc_replies_relation_prevs_list)
+  by fastforce
 
 lemma get_ntfn_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
