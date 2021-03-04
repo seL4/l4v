@@ -1685,7 +1685,7 @@ lemma refill_reset_rr_invs[wp]:
   "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"
   unfolding refill_reset_rr_def by wpsimp
 
-lemma charge_budget_invs:
+lemma charge_budget_invs[wp]:
   "\<lbrace>invs\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>rv. invs\<rbrace>"

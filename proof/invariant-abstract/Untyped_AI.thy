@@ -2787,9 +2787,15 @@ lemma reset_untyped_cap_invs_etc:
                 | rule irq_state_independent_A_conjI
                 | simp add: cte_wp_at_caps_of_state
                 | wp (once) ct_in_state_thread_state_lift
-                | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
+                | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                        getCurrentTime_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                        time_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                        cur_time_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2]
+                        update_time_stamp_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
                   simp add: ex_cte_cap_wp_to_def ct_in_state_def))+
-     apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
+     apply (simp add: ct_in_state_def ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
+     apply clarsimp
+       apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
                            cte_wp_at_caps_of_state nth_rev)
      apply (strengthen order_trans[where z="2 ^ sz", rotated, mk_strg I E])
      apply (clarsimp split: if_split_asm)

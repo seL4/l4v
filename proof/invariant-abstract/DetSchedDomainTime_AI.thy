@@ -322,8 +322,6 @@ crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s
 
 crunch domain_list_inv[wp]: lookup_reply,lookup_cap "\<lambda>s::det_state. P (domain_list s)"
 
-crunch domain_list_inv[wp]: update_time_stamp "\<lambda>s. P (domain_list s)"
-
 context DetSchedDomainTime_AI_2 begin
 
 lemma invoke_cnode_domain_list_inv[wp]:
@@ -377,7 +375,7 @@ lemma call_kernel_domain_list_inv_det_ext:
   "\<lbrace> \<lambda>s::det_state. P (domain_list s) \<rbrace>
      (call_kernel e) :: (unit,det_ext) s_monad
    \<lbrace>\<lambda>_ s. P (domain_list s) \<rbrace>"
-  unfolding call_kernel_def
+  unfolding call_kernel_def preemption_path_def
   apply (wp)
    apply (simp add: schedule_def)
    apply (wpsimp wp: without_preemption_wp is_schedulable_wp hoare_vcg_all_lift hoare_drop_imps
@@ -477,7 +475,7 @@ crunch domain_time_inv[wp]: delete_objects "\<lambda>s :: det_state. P (domain_t
    ignore: freeMemory)
 
 crunch domain_time_inv[wp]: preemption_point "\<lambda>s::det_state. P (domain_time s)"
-  (wp: select_inv OR_choiceE_weak_wp ignore: OR_choiceE ignore_del: preemption_point)
+  (wp: select_inv OR_choiceE_weak_wp crunch_wps ignore: OR_choiceE ignore_del: preemption_point)
 
 crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s::det_state. P (domain_time s)"
   (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
@@ -611,8 +609,6 @@ crunch domain_time_inv[wp]: cancel_badged_sends "\<lambda>s::det_state. P (domai
   (ignore: filterM clearMemory
      simp: filterM_mapM crunch_simps
        wp: crunch_wps)
-
-crunch domain_time_inv[wp]: update_time_stamp "\<lambda>s. P (domain_time s)"
 
 context DetSchedDomainTime_AI_2 begin
 

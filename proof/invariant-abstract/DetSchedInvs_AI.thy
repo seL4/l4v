@@ -25,18 +25,6 @@ global_interpretation do_machine_op: non_heap_op "do_machine_op m"
 abbreviation max_time :: time where
   "max_time \<equiv> max_word"
 
-(* FIXME RT: move to Lib *)
-\<comment> \<open>For forward reasoning in Hoare proofs, these lemmas allow skipping over the
-    left-hand-side of monadic bind, while keeping the same precondition.\<close>
-lemmas hoare_seq_ext_skip
-  = hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
-
-lemmas hoare_seq_ext_skipE
-  = hoare_vcg_seqE[where B="\<lambda>_. A" and A=A for A, rotated]
-
-lemmas hoare_seq_ext_skip'
-  = hoare_seq_ext[where B=C and C=C for C]
-
 \<comment> \<open>Various lifting rules\<close>
 
 lemma hoare_liftP_ext_pre_conj:
@@ -1225,8 +1213,10 @@ lemma sym_refs_inv_sc_tcbs[simp, elim!]:
   by (simp add: heap_refs_inv_def)
 
 (* FIXME RT: generate these with a locale *)
-lemmas invs_retract_tcb_scps = sym_refs_retract_tcb_scps[OF invs_sym_refs]
-lemmas invs_retract_sc_tcbs = sym_refs_retract_sc_tcbs[OF invs_sym_refs]
+lemmas invs_retract_tcb_scps[simp, elim!] = sym_refs_retract_tcb_scps[OF invs_sym_refs]
+lemmas invs_retract_sc_tcbs[simp, elim!] = sym_refs_retract_sc_tcbs[OF invs_sym_refs]
+lemmas invs_heap_refs_inv_tcb_scps[simp, elim!] = sym_refs_inv_tcb_scps[OF invs_sym_refs]
+lemmas invs_heap_refs_inv_sc_tcbs[simp, elim!] = sym_refs_inv_sc_tcbs[OF invs_sym_refs]
 lemmas sym_refs_inj_tcb_scps = sym_refs_retract_tcb_scps[THEN heap_refs_retract_heap_ref_inj]
 lemmas sym_refs_inj_sc_tcbs = sym_refs_retract_sc_tcbs[THEN heap_refs_retract_heap_ref_inj]
 lemmas invs_inj_tcb_scps = sym_refs_inj_tcb_scps[OF invs_sym_refs]
@@ -3742,12 +3732,19 @@ lemma strengthen_cur_sc_chargeable:
   done
 
 lemma cur_sc_tcb_are_bound_cur_sc_chargeable:
-  "cur_sc_tcb_are_bound s \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s) \<Longrightarrow> cur_sc_tcb_only_sym_bound s"
+  "\<lbrakk>cur_sc_tcb_are_bound s; heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)\<rbrakk>
+   \<Longrightarrow> cur_sc_tcb_only_sym_bound s"
   unfolding cur_sc_tcb_only_sym_bound_def
   apply (intro conjI; clarsimp)
    apply (clarsimp simp: vs_all_heap_simps)
   apply (drule (1) heap_refs_retractD[rotated])+
   by (clarsimp simp: vs_all_heap_simps)
+
+lemma cur_sc_tcb_only_sym_bound_cur_sc_not_in_release_q:
+  "\<lbrakk>cur_sc_tcb_only_sym_bound s; ct_not_in_release_q s\<rbrakk> \<Longrightarrow> sc_not_in_release_q (cur_sc s) s"
+  apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def not_in_release_q_def vs_all_heap_simps)
+  apply fastforce
+  done
 
 lemma invs_strengthen_cur_sc_chargeable:
   "cur_sc_tcb_are_bound s \<and> invs s \<Longrightarrow> cur_sc_chargeable s"

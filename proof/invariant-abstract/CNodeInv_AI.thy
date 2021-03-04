@@ -129,11 +129,6 @@ locale CNodeInv_AI =
     "\<And>P d cap. vs_cap_ref (update_cap_data P d cap) = vs_cap_ref cap"
   assumes weak_derived_cap_is_device:
     "\<And>c c'. \<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
-  assumes in_preempt[simp,intro]:
-    "\<And>rv s' (s::'state_ext state).
-      (Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
-      (\<exists>f es. s' = s \<lparr> machine_state := machine_state s
-                     \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"
   assumes invs_irq_state_independent[intro!, simp]:
     "\<And>(s::'state_ext state) f.
       invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
@@ -196,6 +191,8 @@ locale CNodeInv_AI =
   "\<And>x p t. \<lbrace>\<lambda>(s::'state_ext state). caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
      prepare_thread_delete t
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
+
+lemmas in_preempt = preemption_point_success
 
 locale CNodeInv_AI_2 = CNodeInv_AI state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
@@ -862,10 +859,19 @@ lemma suspend_thread_cap:
    apply (simp add: cte_wp_at_caps_of_state)+
   done
 
-lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
-  "not_recursive_cspaces (s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
+lemma not_recursive_cspaces_preemption_point_independent[intro!, simp]:
+  "not_recursive_cspaces
+     (s\<lparr>machine_state := machine_state s
+                          \<lparr>irq_state := f (irq_state (machine_state s)),
+                           time_state := g (time_state (machine_state s)),
+                           last_machine_time := lasttime\<rparr>\<rparr>)
    = not_recursive_cspaces s"
   by (simp add: not_recursive_cspaces_def)
+
+lemma not_recursive_cspaces_time_independent_simple[simp]:
+  "not_recursive_cspaces (s \<lparr> cur_time := t \<rparr>) = not_recursive_cspaces s"
+  "not_recursive_cspaces (s \<lparr> consumed_time := t' \<rparr>) = not_recursive_cspaces s"
+  by (simp add: not_recursive_cspaces_def)+
 
 context CNodeInv_AI begin
 
@@ -956,7 +962,7 @@ lemma without_preemption_wp [wp_split]:
 
 lemmas rec_del_induct = rec_del.pinduct[OF rec_del_dom]
 
-lemma rec_del_preservation':
+lemma rec_del_preservationE':
   fixes s :: "'state_ext state"
   fixes P :: "'state_ext state \<Rightarrow> bool"
   assumes wp:
@@ -964,9 +970,9 @@ lemma rec_del_preservation':
     "\<And>sl cap. \<lbrace>P\<rbrace> set_cap sl cap \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl opt. \<lbrace>P\<rbrace> empty_slot sl opt \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>cap fin. \<lbrace>P\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. P\<rbrace>"
-    "\<And>cap fin. \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>"
+    "\<And>cap fin. \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
   shows
-  "s \<turnstile> \<lbrace>P\<rbrace> rec_del call \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  "s \<turnstile> \<lbrace>P\<rbrace> rec_del call \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. E\<rbrace>"
 proof (induct rule: rec_del_induct)
   case (1 slot exposed s)
   show ?case
@@ -985,7 +991,6 @@ next
     apply (simp only: split_def)
     apply (wp wp "2.hyps")
          apply (wp wp)[1]
-        apply (simp only: simp_thms)
         apply (rule "2.hyps", assumption+)
        apply (wp wp hoare_drop_imps | simp add: is_final_cap_def)+
     done
@@ -1005,6 +1010,12 @@ next
     apply wp
     done
 qed (auto simp: rec_del_dom rec_del_fails)
+
+lemmas rec_del_preservation'
+  = rec_del_preservationE'[where P=P and E=P for P, OF _ _ _ _ valid_validE]
+
+lemmas rec_del_preservationE =
+       use_spec(2)[OF rec_del_preservationE']
 
 lemmas rec_del_preservation[crunch_rules] =
        validE_valid [OF use_spec(2) [OF rec_del_preservation']]
@@ -2542,11 +2553,11 @@ lemmas cap_revoke_simps = cap_revoke.psimps[OF cap_revoke_dom]
 
 lemmas cap_revoke_induct = cap_revoke.pinduct[OF cap_revoke_dom]
 
-lemma cap_revoke_preservation':
+lemma cap_revoke_preservationE':
   fixes P and s :: "'state_ext state" and ptr
-  assumes x: "\<And>p. \<lbrace>P\<rbrace> cap_delete p \<lbrace>\<lambda>rv. P\<rbrace>"
-  assumes p: "\<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows      "s \<turnstile> \<lbrace>P\<rbrace> cap_revoke ptr \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. P\<rbrace>"
+  assumes x: "\<And>p. \<lbrace>P\<rbrace> cap_delete p \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
+  assumes p: "\<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
+  shows      "s \<turnstile> \<lbrace>P\<rbrace> cap_revoke ptr \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
 proof (induct rule: cap_revoke_induct)
   case (1 slot)
   show ?case
@@ -2556,6 +2567,12 @@ proof (induct rule: cap_revoke_induct)
      apply simp_all
     done
 qed
+
+lemmas cap_revoke_preservationE = use_spec(2) [OF cap_revoke_preservationE']
+
+lemmas cap_revoke_preservation'
+  = cap_revoke_preservationE'
+      [where P=P and E=P for P, simplified, OF valid_validE, OF _ valid_validE]
 
 lemmas cap_revoke_preservation = use_spec(2) [OF cap_revoke_preservation']
 

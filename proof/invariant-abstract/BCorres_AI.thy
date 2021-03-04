@@ -172,9 +172,9 @@ lemma throw_on_false_bcorres[wp]:
 
 crunch_ignore (bcorres) (add: getActiveIRQ)
 
-lemma preemption_point_bcorres[wp]:
+(* lemma preemption_point_bcorres[wp]:
   "bcorres preemption_point preemption_point"
-  unfolding preemption_point_def by wpsimp
+  unfolding preemption_point_def by wpsimp *)
 
 crunch (bcorres) bcorres[wp]: cap_swap_for_delete truncate_state
 

@@ -1321,18 +1321,11 @@ lemma update_time_stamp_invs[wp]:
   "update_time_stamp \<lbrace>invs\<rbrace>"
   by (wpsimp simp: update_time_stamp_def)
 
-crunches update_time_stamp
-  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
-  and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  and ct_in_state[wp]: "ct_in_state P"
-  and sc_at_pred_n[wp]: "\<lambda>s. Q (sc_at_pred_n N proj P p s)"
-  and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at p P t s)"
-  and pred_tcb_at_ct[wp]: "\<lambda>s. pred_tcb_at p P (cur_thread s) s"
-
 lemma update_time_stamp_ct_is_schedulable_bool [wp]:
   "update_time_stamp
    \<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: is_schedulable_bool_def' wp: hoare_vcg_ex_lift)
+  by (wpsimp simp: is_schedulable_bool_def' in_release_queue_def
+               wp: hoare_vcg_ex_lift update_time_stamp_wp)
 
 crunches thread_set
   for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
@@ -1544,6 +1537,13 @@ lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
               elim: st_tcb_ex_cap)
   done
 
+crunches update_time_stamp
+  for schact[wp]: "\<lambda>s. P (scheduler_action s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  and ct_active[wp]: "ct_active"
+  and st_tcb_at[wp]: "st_tcb_at P t"
+  (wp: hoare_drop_imps simp: crunch_simps)
+
 lemma he_invs[wp]:
   "\<And>e.
     \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
@@ -1557,7 +1557,7 @@ lemma he_invs[wp]:
                  by (wpsimp wp: hoare_vcg_imp_conj_lift' check_budget_restart_true
                           comb: hoare_drop_imps hoare_drop_imp_conj'
                           simp: if_apply_def2 valid_fault_def
-                     | wps
+                     | wps | erule active_from_running
                      | fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                                 elim!: st_tcb_ex_cap dest: active_from_running)+
 

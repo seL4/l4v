@@ -1282,7 +1282,7 @@ definition
        (cur_sc s) s"
 
 definition valid_machine_time_2 :: "time \<Rightarrow> time \<Rightarrow> bool" where
-   "valid_machine_time_2 ct lmt \<equiv> lmt \<le> - kernelWCET_ticks - 1 \<and> ct \<le> lmt"
+   "valid_machine_time_2 ct lmt \<equiv> lmt \<le> - (kernelWCET_ticks + 3 * MAX_PERIOD) - 1 \<and> ct \<le> lmt"
 
 abbreviation valid_machine_time :: "'z state \<Rightarrow> bool" where
  "valid_machine_time s \<equiv> valid_machine_time_2 (cur_time s) (last_machine_time (machine_state s))"
@@ -1290,7 +1290,7 @@ abbreviation valid_machine_time :: "'z state \<Rightarrow> bool" where
 lemmas valid_machine_time_def = valid_machine_time_2_def
 
 lemma cur_time_bounded:
-  "valid_machine_time s \<Longrightarrow> cur_time s \<le> - kernelWCET_ticks - 1"
+  "valid_machine_time s \<Longrightarrow> cur_time s \<le> - (kernelWCET_ticks + 3 * MAX_PERIOD) - 1"
   by (rule_tac b="last_machine_time (machine_state s)" in order.trans;
       simp add: valid_machine_time_def)
 
