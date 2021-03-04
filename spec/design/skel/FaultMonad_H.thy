@@ -71,10 +71,10 @@ where
 
 subsection "Preemption"
 
-type_synonym 'a kernel_p = "(irq + 'a) kernel"
+type_synonym 'a kernel_p = "(unit + 'a) kernel"
 
 translations
-  (type) "'a kernel_p" <= (type) "(irq + 'a) kernel"
+  (type) "'a kernel_p" <= (type) "(unit + 'a) kernel"
 
 definition
   withoutPreemption :: "'a kernel \<Rightarrow> 'a kernel_p"
@@ -86,21 +86,5 @@ definition
   workUnitsLimit :: machine_word
 where
   "workUnitsLimit \<equiv> 0x64"
-
-definition
-  preemptionPoint :: "unit kernel_p"
-where
-  "preemptionPoint \<equiv> doE
-     liftE $ modifyWorkUnits (\<lambda>u. u + 1);
-     workUnits <- liftE $ getWorkUnits;
-     whenE (workUnitsLimit <= workUnits) $ doE
-       liftE $ setWorkUnits 0;
-       preempt <- liftE $ doMachineOp (getActiveIRQ True);
-       case preempt of
-           Some irq => throwError irq
-           | None => returnOk ()
-     odE
-   odE"
-
 
 end

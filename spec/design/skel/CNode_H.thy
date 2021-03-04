@@ -15,6 +15,7 @@ imports
   CSpaceDecls_H
   EndpointDecls_H
   PSpaceFuns_H
+  SchedContextDecls_H
 begin
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs

@@ -7,7 +7,7 @@
 This module defines the types and functions used by the kernel model to implement preemption points and non-preemptible sections in the kernel code.
 
 > module SEL4.Model.Preemption(
->     KernelP, withoutPreemption, preemptionPoint
+>     KernelP, withoutPreemption
 >     ) where
 
 \begin{impdetails}
@@ -38,17 +38,4 @@ If an operation must be performed during which the kernel state is temporarily i
 > withoutPreemption :: Kernel a -> KernelP a
 > withoutPreemption = lift
 
-In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
-
-> workUnitsLimit = 0x64
-
-> preemptionPoint :: KernelP ()
-> preemptionPoint = do
->     lift $ modifyWorkUnits ((+) 1)
->     workUnits <- lift $ getWorkUnits
->     when (workUnitsLimit <= workUnits) $ do
->       lift $ setWorkUnits 0
->       preempt <- lift $ doMachineOp (getActiveIRQ True)
->       case preempt of
->           Just irq -> throwError ()
->           Nothing -> return ()
+For MCS, the function preemptionPoint is defined at the end of Object/SchedContext.lhs due to its dependencies on some functions on scheduling contexts.

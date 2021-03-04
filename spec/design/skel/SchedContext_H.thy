@@ -28,6 +28,29 @@ requalify_consts
   maxPeriodUs
 end
 
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only NOT preemptionPoint workUnitsLimit
+
+defs preemptionPoint_def:
+"preemptionPoint\<equiv> (doE
+    liftE $ modifyWorkUnits (\<lambda>op. op + 1);
+    workUnits \<leftarrow> liftE $ getWorkUnits;
+    whenE (workUnitsLimit \<le> workUnits) $ (doE
+      liftE $ setWorkUnits 0;
+      preempt \<leftarrow> liftE $ doMachineOp (getActiveIRQ True);
+      (case preempt of
+            Some irq \<Rightarrow>   throwError ()
+          | None \<Rightarrow>   (doE
+             csc \<leftarrow> liftE $ getCurSc;
+             active \<leftarrow> liftE $ scActive csc;
+             consumed \<leftarrow> liftE $ getConsumedTime;
+             sufficient \<leftarrow> liftE $ refillSufficient csc consumed;
+             domExp \<leftarrow> liftE $isCurDomainExpired;
+             if (Not (active \<and> sufficient) \<or> domExp)
+                  then throwError ()
+                  else returnOk ()
+          odE)
+          )
+    odE)
+odE)"
 
 end

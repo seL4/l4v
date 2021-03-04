@@ -1018,10 +1018,8 @@ On some architectures, the thread context may include registers that may be modi
 > checkBudget = do
 >     csc <- getCurSc
 >     consumed <- getConsumedTime
->     capacity <- refillCapacity csc consumed
->     full <- refillFull csc
->     robin <- isRoundRobin csc
->     if (capacity >= minBudget && (robin || not full))
+>     sufficient <- refillSufficient csc consumed
+>     if sufficient
 >         then do
 >             domExp <- isCurDomainExpired
 >             if domExp

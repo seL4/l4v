@@ -28,7 +28,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
 >         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
->         scReleased, setConsumed, refillResetRR
+>         scReleased, setConsumed, refillResetRR, preemptionPoint
 >     ) where
 
 \begin{impdetails}
@@ -44,6 +44,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Model.Preemption(KernelP, withoutPreemption)
 > import SEL4.Model.PSpace(getObject, readObject, setObject)
 > import SEL4.Model.StateData
+> import SEL4.Model.Preemption
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
@@ -55,6 +56,8 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.List(delete)
 > import Data.Word(Word64)
 > import Data.Maybe
+
+> import Control.Monad.Except
 
 \end{impdetails}
 
@@ -723,3 +726,27 @@ This module uses the C preprocessor to select a target architecture.
 >     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 >     setReprogramTimer True
 >     return tcbPtr
+
+In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
+
+> workUnitsLimit = 0x64
+
+> preemptionPoint :: KernelP ()
+> preemptionPoint = do
+>     lift $ modifyWorkUnits ((+) 1)
+>     workUnits <- lift $ getWorkUnits
+>     when (workUnitsLimit <= workUnits) $ do
+>       lift $ setWorkUnits 0
+>       preempt <- lift $ doMachineOp (getActiveIRQ True)
+>       case preempt of
+>           Just irq -> throwError ()
+>           Nothing -> do
+>              csc <- lift $ getCurSc
+>              active <- lift $ scActive csc
+>              consumed <- lift $ getConsumedTime
+>              sufficient <- lift $ refillSufficient csc consumed
+>              domExp <- lift $isCurDomainExpired
+>              if (not (active && sufficient) || domExp)
+>                   then throwError ()
+>                   else return ()
+
