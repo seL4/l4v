@@ -47,7 +47,7 @@ lemma getCurrentTime_wp[CSpace_AI_assms]:
                    select_f_select[simplified liftM_def]
                    select_modify_comm gets_machine_state_modify)
   apply wp
-  apply (fastforce simp:time_state_independent_A_def getCurrentTime_independent_A_def in_monad
+  apply (fastforce simp: time_state_independent_A_def getCurrentTime_independent_A_def in_monad
                   split: if_splits)
   done
 

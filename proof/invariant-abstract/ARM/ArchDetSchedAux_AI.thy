@@ -55,44 +55,41 @@ lemma max_word_as_nat:
   done
 
 lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
-  "\<And>s x s'. valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s)) \<Longrightarrow>
-            valid_machine_time_2 x (last_machine_time s')"
+  "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))
+   \<Longrightarrow> valid_machine_time_2 x (last_machine_time s')"
   apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
   apply (rule word_of_nat_le)
   apply (rule Lattices.linorder_class.min.coboundedI1)
   apply (subst unat_minus_one)
-apply (insert cur_time_bound_nonzero')
+   apply (insert cur_time_bound_nonzero')
    apply (metis less_diff_gt0 more_arith_simps(4) word_le_less_eq word_not_simps(1) word_sub_le_iff
                 word_zero_le)
-apply (insert cur_time_bound_no_overflow')
-apply (prop_tac "- kernelWCET_ticks - 3 * MAX_PERIOD = - (kernelWCET_ticks + 3 * MAX_PERIOD)")
-  apply simp
-apply (simp only: )
+  apply (insert cur_time_bound_no_overflow')
+  apply (prop_tac "- kernelWCET_ticks - 3 * MAX_PERIOD = - (kernelWCET_ticks + 3 * MAX_PERIOD)")
+   apply simp
+  apply (simp only: )
   apply (subst unat_minus')
-apply (insert cur_time_bound_no_overflow')
-  apply force
-apply (prop_tac "2 ^ LENGTH(64) = Suc (unat (max_time))")
-using power_two_max_word_fold
-  apply blast
-using max_word_as_nat
-  apply linarith
-done
+   apply (insert cur_time_bound_no_overflow')
+   apply force
+  apply (prop_tac "2 ^ LENGTH(64) = Suc (unat (max_time))")
+   using power_two_max_word_fold apply blast
+  using max_word_as_nat apply linarith
+  done
 
 lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
   "\<lbrace>valid_machine_time\<rbrace>
    do_machine_op getCurrentTime
    \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - (kernelWCET_ticks + 3 * MAX_PERIOD) - 1)\<rbrace>"
   supply minus_add_distrib[simp del]
-  apply_trace (wpsimp simp: do_machine_op_def)
+  apply (wpsimp simp: do_machine_op_def)
   apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
   apply (intro conjI)
    apply (clarsimp simp: min_def, intro conjI impI)
   subgoal
     apply (rule_tac order.trans, assumption)
-    apply_trace (rule_tac order.trans, assumption)
+    apply (rule_tac order.trans, assumption)
     apply (rule preorder_class.eq_refl)
     apply (subst group_add_class.diff_conv_add_uminus)
-
     apply (subst minus_one_norm_num)
     apply clarsimp
     apply (rule word_unat.Rep_inverse'[symmetric])
@@ -101,8 +98,8 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
      apply (rule preorder_class.eq_refl)
      apply simp
     apply simp
-apply (insert cur_time_bound_no_overflow')
-apply linarith
+    apply (insert cur_time_bound_no_overflow')
+    apply linarith
     done
   subgoal for s
     apply (subst (asm) linorder_class.not_le)
@@ -128,8 +125,8 @@ apply linarith
      apply (rule preorder_class.eq_refl)
      apply simp
     apply simp
-apply (insert cur_time_bound_no_overflow')
-apply linarith
+    apply (insert cur_time_bound_no_overflow')
+    apply linarith
     done
   subgoal for s
     apply (subst (asm) linorder_class.not_le)
@@ -146,8 +143,8 @@ apply linarith
       apply (rule preorder_class.eq_refl)
       apply simp
      apply simp
-apply (insert cur_time_bound_no_overflow')
-apply linarith
+     apply (insert cur_time_bound_no_overflow')
+     apply linarith
     apply clarsimp
     done
   done
