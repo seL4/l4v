@@ -6595,7 +6595,7 @@ and simple_sched_action[wp]: "simple_sched_action :: det_ext state \<Rightarrow>
 
 lemma install_tcb_frame_cap_valid_sched:
   "\<lbrace>valid_sched and valid_machine_time and simple_sched_action and invs\<rbrace>
-   install_tcb_frame_cap a d f
+   install_tcb_frame_cap target slot buffer
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   unfolding install_tcb_frame_cap_def
   by (wpsimp wp: reschedule_valid_sched_const check_cap_inv hoare_drop_imp
@@ -17515,7 +17515,7 @@ lemma perform_invocation_consumed_time_bounded[wp]:
   done
 
 lemma perform_invocation_current_time_bounded_3[wp]:
-  " perform_invocation block call can_donate iv \<lbrace>current_time_bounded 3 :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  "perform_invocation block call can_donate iv \<lbrace>current_time_bounded 3 :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (cases iv; wpsimp)
   done
 
@@ -18715,7 +18715,7 @@ lemma perform_invocation_valid_machine_time[wp]:
   done
 
 lemma handle_invocation_valid_machine_time[wp]:
-  "handle_invocation a b c d cptr
+  "handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>valid_machine_time :: det_state \<Rightarrow> _\<rbrace>"
   unfolding handle_invocation_def
   apply (wpsimp wp: syscall_valid hoare_drop_imp hoare_drop_impE)
@@ -19226,7 +19226,7 @@ lemma install_tcb_cap_cur_sc_active_implies_cur_sc_offset_sufficient[wp]:
   done
 
 lemma maybe_sched_context_unbind_tcb_cur_sc_offset_ready[wp]:
-  "maybe_sched_context_unbind_tcb arget
+  "maybe_sched_context_unbind_tcb target
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: maybe_sched_context_unbind_tcb_def get_tcb_obj_ref_def
                         sched_context_unbind_tcb_def)
@@ -19239,7 +19239,7 @@ lemma maybe_sched_context_unbind_tcb_cur_sc_offset_ready[wp]:
   done
 
 lemma maybe_sched_context_unbind_tcb_cur_sc_offset_sufficient[wp]:
-  "maybe_sched_context_unbind_tcb arget
+  "maybe_sched_context_unbind_tcb target
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: maybe_sched_context_unbind_tcb_def get_tcb_obj_ref_def
                         sched_context_unbind_tcb_def)
@@ -19471,9 +19471,6 @@ lemma handle_interrupt_cur_sc_more_than_ready[wp]:
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_more_than_ready s\<rbrace>"
   unfolding handle_interrupt_def get_irq_state_def get_irq_slot_def
   by (wpsimp wp: get_cap_wp send_signal_cur_sc_more_than_ready)
-
-(* RT FIXME: using this is perhaps not neat. Investigate if there is a better way to solve this *)
-lemmas schact_conj_commute = conj_commute[where Q="schact_is_rct s" for s]
 
 method handle_event_cur_sc_more_than_ready_syscall
   =  (subst validE_R_def
@@ -19902,13 +19899,6 @@ lemma preemption_point_cur_sc_not_in_release_q[wp]:
   "preemption_point \<lbrace>\<lambda>s. sc_not_in_release_q (cur_sc s) s\<rbrace>"
   apply (clarsimp simp: preemption_point_def)
   apply (wpsimp wp: OR_choiceE_weak_wp hoare_drop_imps)
-  done
-
-lemma delete_objects_cur_sc_chargeable[wp]:
-  "delete_objects ptr bits \<lbrace>not cur_sc_tcb_are_bound\<rbrace>"
-  unfolding delete_objects_def
-  apply (wpsimp simp: detype_def cur_sc_chargeable_def pred_neg_def)
-  apply (clarsimp simp: vs_all_heap_simps split: if_splits)
   done
 
 lemma delete_objects_cur_sc_not_in_release_q[wp]:
@@ -20963,7 +20953,7 @@ crunches cap_delete_one
   and release_q_bound_to_sc[wp]:
           "\<lambda>s :: det_state. (\<forall>t\<in>set (release_queue s).
                                                 pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) t)"
-  and heap_refs_inv_sc_cbs[wp]: "\<lambda>s :: det_state. heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)"
+  and heap_refs_inv_sc_tcbs_of[wp]: "\<lambda>s :: det_state. heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)"
   (simp: crunch_simps wp: crunch_wps)
 
 lemma finalise_cap_release_q_not_blocked_on_reply[wp]:
@@ -21114,8 +21104,8 @@ lemma install_tcb_frame_cap_cur_sc_in_release_q_imp_zero_consumed_pred[wp]:
   unfolding install_tcb_frame_cap_def
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
-  apply (rule_tac B="\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed_pred s"
-              and E="\<lambda>_ s. True"
+  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
+              and E="\<top>\<top>"
                in hoare_vcg_seqE[rotated])
    apply wpsimp
   apply (rule hoare_seq_ext_skipE, wpsimp wp: thread_set_wp)
