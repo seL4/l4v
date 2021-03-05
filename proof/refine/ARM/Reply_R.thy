@@ -13,6 +13,11 @@ defs replyUnlink_assertion_def:
     \<equiv> \<lambda>replyPtr state s. state = BlockedOnReply (Some replyPtr)
                           \<or> (\<exists>ep d. state = BlockedOnReceive ep d (Some replyPtr))"
 
+lemma valid_reply'_updates[simp]:
+  "\<And>f. valid_reply' reply (ksReprogramTimer_update f s) = valid_reply' reply s"
+  "\<And>f. valid_reply' reply (ksReleaseQueue_update f s) = valid_reply' reply s"
+  by (auto simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
+
 crunches updateReply
   for pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj test t s)"
   and tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"

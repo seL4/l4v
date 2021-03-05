@@ -1771,66 +1771,6 @@ lemma next_domain_corres:
                    \<mu>s_to_ms_equiv us_to_ticks_equiv)
   done
 
-lemma valid_queues'_ksReprogramTimer[simp]:
-  "valid_queues' (ksReprogramTimer_update f s) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
-lemma valid_queues_ksReprogramTimer[simp]:
-  "Invariants_H.valid_queues (ksReprogramTimer_update f s) = Invariants_H.valid_queues s"
-  by (simp add: Invariants_H.valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
-
-lemma valid_irq_node'_ksReprogramTimer[simp]:
-  "valid_irq_node' w (ksReprogramTimer_update f s) = valid_irq_node' w s"
-  by (simp add: valid_irq_node'_def)
-
-lemma valid_release_queue_ksWorkUnitsCompleted[simp]:
-  "Invariants_H.valid_release_queue (ksWorkUnitsCompleted_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue_ksReprogramTimer[simp]:
-  "Invariants_H.valid_release_queue (ksReprogramTimer_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue_ksDomainTime[simp]:
-  "Invariants_H.valid_release_queue (ksDomainTime_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue_ksCurDomain[simp]:
-  "Invariants_H.valid_release_queue (ksCurDomain_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue_ksDomScheduleIdx[simp]:
-  "Invariants_H.valid_release_queue (ksDomScheduleIdx_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue_ksSchedulerAction[simp]:
-  "Invariants_H.valid_release_queue (ksSchedulerAction_update f s) = Invariants_H.valid_release_queue s"
-  by (simp add: Invariants_H.valid_release_queue_def)
-
-lemma valid_release_queue'_ksSchedulerAction[simp]:
-  "Invariants_H.valid_release_queue' (ksSchedulerAction_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
-lemma valid_release_queue'_ksWorkUnitsCompleted[simp]:
-  "Invariants_H.valid_release_queue' (ksWorkUnitsCompleted_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
-lemma valid_release_queue'_ksReprogramTimer[simp]:
-  "Invariants_H.valid_release_queue' (ksReprogramTimer_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
-lemma valid_release_queue'_ksDomainTime[simp]:
-  "Invariants_H.valid_release_queue' (ksDomainTime_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
-lemma valid_release_queue'_ksCurDomain[simp]:
-  "Invariants_H.valid_release_queue' (ksCurDomain_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
-lemma valid_release_queue'_ksDomScheduleIdx[simp]:
-  "Invariants_H.valid_release_queue' (ksDomScheduleIdx_update f s) = Invariants_H.valid_release_queue' s"
-  by (simp add: Invariants_H.valid_release_queue'_def)
-
 lemma next_domain_valid_sched[wp]:
   "\<lbrace> valid_sched and (\<lambda>s. scheduler_action s  = choose_new_thread)\<rbrace> next_domain \<lbrace> \<lambda>_. valid_sched \<rbrace>"
   apply (simp add: next_domain_def Let_def)
@@ -2320,19 +2260,6 @@ lemma invs'_ko_at_idle_sc_is_idle':
   apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)
   done
 
-lemma live_sc'_scRefills_update[simp]:
-  "live_sc' (scRefills_update f koc) = live_sc' koc"
-  by (clarsimp simp: live_sc'_def)
-
-lemma live_sc'_scRefillCount_update[simp]:
-  "live_sc' (scRefillCount_update f koc) = live_sc' koc"
-  by (clarsimp simp: live_sc'_def)
-
-lemma valid_sched_context'_scRefills_update:
-  "valid_sched_context' koc s \<Longrightarrow> (MIN_REFILLS \<le> length (f (scRefills koc)) \<and>
-         scRefillMax koc \<le> length (f (scRefills koc))) \<Longrightarrow> valid_sched_context' (scRefills_update f koc) s"
-  by (clarsimp simp: valid_sched_context'_def)
-
 (* FIXME RT: Move to Lib *)
 lemma length_replaceAt:
   "i < length lst  \<Longrightarrow> length (replaceAt i lst val) = length lst"
@@ -2690,25 +2617,6 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
  "setReleaseQueue qs \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp simp: setReleaseQueue_def)
 
-lemma ksReprogramTimer_update_misc[simp]:
-  "valid_machine_state' (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_machine_state' s"
-  "ct_not_inQ (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_not_inQ s"
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksReprogramTimer := b\<rparr>) = ct_idle_or_in_cur_domain' s"
-  "cur_tcb' (s\<lparr>ksReprogramTimer := b\<rparr>) = cur_tcb' s"
-  apply (clarsimp simp: valid_machine_state'_def ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-                        tcb_in_cur_domain'_def cur_tcb'_def)+
-  done
-
-lemma valid_machine_state'_ksReleaseQueue[simp]:
-  "valid_machine_state' (s\<lparr>ksReleaseQueue := param_a\<rparr>) = valid_machine_state' s"
-  unfolding valid_machine_state'_def
-  by simp
-
-lemma ct_idle_or_in_cur_domain'_ksReleaseQueue[simp]:
-  "ct_idle_or_in_cur_domain' (s\<lparr>ksReleaseQueue := param_a\<rparr>) = ct_idle_or_in_cur_domain' s"
-  unfolding ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-  by simp
-
 crunches tcbReleaseDequeue
   for valid_pspace'[wp]: valid_pspace'
   and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
@@ -2771,8 +2679,7 @@ lemma tcbReleaseDequeue_if_live_then_nonz_cap'[wp]:
 lemma tcbReleaseDequeue_ct_not_inQ[wp]:
   "tcbReleaseDequeue \<lbrace>ct_not_inQ\<rbrace>"
   unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_not_inQ)
-  by (clarsimp simp: ct_not_inQ_def)
+  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_not_inQ)
 
 lemma tcbReleaseDequeue_valid_queues[wp]:
   "tcbReleaseDequeue \<lbrace>valid_queues\<rbrace>"

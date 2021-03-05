@@ -368,10 +368,10 @@ lemma setDomain_corres:
           apply (rule corres_split[OF isSchedulable_corres])
             apply (rule corres_split[OF corres_when[OF _ tcbSchedEnqueue_corres]], simp)
               apply (rule corres_when[OF _ rescheduleRequired_corres], simp)
-             apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2 thread_set_weak_valid_sched_action
-                               threadSet_valid_tcbs' threadSet_vrq_inv threadSet_vrq'_inv
-                               threadSet_valid_queues_no_state threadSet_valid_queues'_no_state
-                         simp: valid_tcb_domain_update)+
+             apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2
+                               thread_set_weak_valid_sched_action threadSet_valid_tcbs'
+                               threadSet_vrq_inv threadSet_vrq'_inv threadSet_valid_queues_no_state
+                               threadSet_valid_queues'_no_state)+
       apply (clarsimp cong: conj_cong)
       apply (rule hoare_vcg_conj_lift, strengthen valid_tcb'_tcbDomain_update, wpsimp)
       apply (wpsimp wp: tcbSchedDequeue_valid_queues tcbSchedDequeue_nonq hoare_vcg_all_lift)
@@ -1587,10 +1587,6 @@ lemma cteInsert_sane[wp]:
   apply (wp hoare_vcg_all_lift
             hoare_convert_imp [OF cteInsert_nosch cteInsert_ct])
   done
-
-lemma sch_act_sane_ksReprogramTimer[simp]:
-  "sch_act_sane (ksReprogramTimer_update f s) = sch_act_sane s"
-  by (simp add: sch_act_sane_def)
 
 crunches setExtraBadge, transferCaps, handleFaultReply, doIPCTransfer
   for sch_act_sane [wp]: sch_act_sane

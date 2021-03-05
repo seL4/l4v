@@ -42,10 +42,6 @@ lemma invs'_live_sc'_ex_nonz_cap_to':
   apply (clarsimp simp: invs'_def valid_state'_def if_live_then_nonz_cap'_def)
   by (fastforce simp: obj_at'_real_def ko_wp_at'_def projectKO_sc)
 
-lemma valid_sched_context'_scConsumed_update:
-  "valid_sched_context' ko s \<Longrightarrow> valid_sched_context' (scConsumed_update f ko) s"
-  by (clarsimp simp: valid_sched_context'_def)
-
 lemma st_tcb_at'_valid_idle'_helper:
   "st_tcb_at' P t s \<Longrightarrow> invs' s \<Longrightarrow> t = ksIdleThread s \<longrightarrow> P (IdleThreadState)"
   by (clarsimp simp: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
@@ -163,27 +159,6 @@ lemma activate_sch_act: (* FIXME RT: not true any more, ksSchedulerAction update
                  elim!: pred_tcb'_weakenE)
   done *)
 
-lemma ct_not_inQ_ksReleaseQueue_upd[simp]:
-  "ct_not_inQ (s\<lparr>ksReleaseQueue := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
-lemma valid_irq_node'_ksReleaseQueue_upd[simp]:
-  "valid_irq_node' (irq_node' s) (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_irq_node' (irq_node' s) s"
-  by (simp add: valid_irq_node'_def)
-
-lemma cur_tcb'_ksReleaseQueue_upd[simp]:
-  "cur_tcb' (s\<lparr>ksReleaseQueue := v\<rparr>) = cur_tcb' s"
-  by (simp add: cur_tcb'_def)
-
-lemma valid_queues_ksReleaseQueue_upd[simp]:
-  "valid_queues (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def
-                bitmapQ_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
-
-lemma valid_queues'_ksReleaseQueue_upd[simp]:
-  "valid_queues' (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma ksReleaseQueue_ksReprogramTimer_update:
   "ksReleaseQueue_update (\<lambda>_. fv) (ksReprogramTimer_update (\<lambda>_. gv) s) =
    ksReprogramTimer_update (\<lambda>_. gv) (ksReleaseQueue_update (\<lambda>_. fv) s)"
@@ -240,10 +215,6 @@ crunches postpone, schedContextResume
 crunches schedContextResume
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   (wp: crunch_wps)
-
-lemma valid_Restart'[simp]:
-  "valid_tcb_state' Restart = \<top>"
-  by (rule ext, simp add: valid_tcb_state'_def)
 
 lemma setThreadState_Restart_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s\<rbrace>

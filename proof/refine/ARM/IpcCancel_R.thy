@@ -2146,7 +2146,6 @@ lemma tcbReleaseRemove_ct_not_inQ[wp]:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (wpsimp wp: threadSet_not_inQ)
-  apply (clarsimp simp: ct_not_inQ_def)
   done
 
 lemma tcbReleaseRemove_invs':
