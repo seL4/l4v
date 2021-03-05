@@ -8,6 +8,38 @@ theory SchedContext_R
 imports VSpace_R
 begin
 
+lemma live_sc'_scConsumed_update[simp]:
+  "live_sc' (scConsumed_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
+
+lemma live_sc'_scRefills_update[simp]:
+  "live_sc' (scRefills_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
+
+lemma live_sc'_scRefillCount_update[simp]:
+  "live_sc' (scRefillCount_update f koc) = live_sc' koc"
+  by (clarsimp simp: live_sc'_def)
+
+lemma valid_sched_context'_scRefills_update:
+  "valid_sched_context' koc s
+   \<Longrightarrow> (MIN_REFILLS \<le> length (f (scRefills koc))
+        \<and> scRefillMax koc \<le> length (f (scRefills koc)))
+   \<Longrightarrow> valid_sched_context' (scRefills_update f koc) s"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma valid_sched_context'_updates[simp]:
+  "\<And>f. valid_sched_context' sc' (ksReprogramTimer_update f s) = valid_sched_context' sc' s"
+  "\<And>f. valid_sched_context' sc' (ksReleaseQueue_update f s) = valid_sched_context' sc' s"
+  by (auto simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
+
+lemma valid_sched_context'_scConsumed_update[simp]:
+  "valid_sched_context' (scConsumed_update f ko) s = valid_sched_context' ko s"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma valid_sched_context_size'_scConsumed_update[simp]:
+  "valid_sched_context_size' (scConsumed_update f sc') = valid_sched_context_size' sc'"
+  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+
 lemma sym_refs_tcbSchedContext:
   "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
@@ -188,10 +220,6 @@ lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
   unfolding schedContextUpdateConsumed_def valid_ipc_buffer_ptr'_def
   by wpsimp
 
-lemma live_sc'_scConsumed_update[simp]:
-  "live_sc' (scConsumed_update f koc) = live_sc' koc"
-  by (clarsimp simp: live_sc'_def)
-
 lemma schedContextUpdateConsumed_iflive[wp]:
   "schedContextUpdateConsumed scp \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp simp: schedContextUpdateConsumed_def)
@@ -211,10 +239,6 @@ lemma schedContextUpdateConsumed_state_refs_of:
   apply (clarsimp dest!: ko_at_state_refs_ofD' elim!: rsubst[where P=P])
   apply (rule ext; clarsimp)
   done
-
-lemma valid_sched_context_size'_scConsumed_update[simp]:
-  "valid_sched_context_size' (scConsumed_update f koc) = valid_sched_context_size' koc"
-  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
 
 lemma schedContextUpdateConsumed_objs'[wp]:
   "schedContextUpdateConsumed sc \<lbrace>valid_objs'\<rbrace>"

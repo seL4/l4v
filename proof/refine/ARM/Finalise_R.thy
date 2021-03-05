@@ -2887,14 +2887,6 @@ crunch invs[wp]: prepareThreadDelete "invs'"
 
 end
 
-lemma weak_sch_act_wf_updates[simp]:
-  "weak_sch_act_wf sa (s\<lparr>ksReprogramTimer := a\<rparr>) = weak_sch_act_wf sa s"
-  "weak_sch_act_wf sa (s\<lparr>ksReleaseQueue := b\<rparr>) = weak_sch_act_wf sa s"
-  by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
-
-crunches tcbReleaseRemove
-  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
-
 lemma schedContextDonate_weak_sch_act_wf[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp only: schedContextDonate_def)
@@ -3560,11 +3552,6 @@ lemma rescheduleRequired_valid_sched_context'[wp]:
 global_interpretation schedContextDonate: typ_at_all_props' "schedContextDonate scPtr tcbPtr"
   by typ_at_props'
 
-lemma valid_sched_context'_updates[simp]:
-  "valid_sched_context' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_sched_context' sc' s"
-  "valid_sched_context' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_sched_context' sc' s"
-  by (auto simp: valid_sched_context'_def valid_bound_obj'_def split: option.splits)
-
 crunches tcbReleaseRemove
   for valid_sched_context'[wp]: "\<lambda>s. valid_sched_context' sc' s"
 
@@ -3645,11 +3632,6 @@ lemma setSchedContext_valid_reply'[wp]:
   apply (wpsimp simp: setSchedContext_def wp: setObject_sc_wp)
    apply (clarsimp simp: valid_obj'_def valid_reply'_def)+
   done
-
-lemma valid_reply'_updates[simp]:
-  "valid_reply' sc' (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_reply' sc' s"
-  "valid_reply' sc' (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_reply' sc' s"
-  by (auto simp: valid_reply'_def valid_bound_obj'_def split: option.splits)
 
 crunches schedContextDonate
   for valid_reply'[wp]: "\<lambda>s. valid_reply' reply s"
@@ -3827,11 +3809,6 @@ lemma threadSet_tcbInReleaseQueue_update_valid_inQ_queues[wp]:
   apply (wpsimp wp: threadSet_wp)
   apply (fastforce simp: valid_inQ_queues_def obj_at'_def inQ_def projectKOs objBitsKO_def)
   done
-
-lemma valid_inQ_queues_updates[simp]:
-  "valid_inQ_queues (s\<lparr>ksReprogramTimer := a\<rparr>) = valid_inQ_queues s"
-  "valid_inQ_queues (s\<lparr>ksReleaseQueue := b\<rparr>) = valid_inQ_queues s"
-  by (auto simp: valid_inQ_queues_def)
 
 crunches setReprogramTimer, setReleaseQueue, tcbReleaseRemove
   for valid_inQ_queues[wp]: valid_inQ_queues

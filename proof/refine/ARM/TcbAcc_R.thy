@@ -200,22 +200,22 @@ lemma set_simple_ko_valid_tcbs[wp]:
 
 (* FIXME RT: move/cleanup as part of consolidating valid_objs/valid_tcbs *)
 lemma update_valid_tcb[simp]:
-  "valid_tcb ptr tcb (s\<lparr>release_queue := q\<rparr>) = valid_tcb ptr tcb s"
-  "valid_tcb ptr tcb (s\<lparr>reprogram_timer := rt\<rparr>) = valid_tcb ptr tcb s"
-  "valid_tcb ptr tcb (s\<lparr>ready_queues := a\<rparr>) = valid_tcb ptr tcb s"
-  "valid_tcb ptr tcb (s\<lparr>scheduler_action := b\<rparr>) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (release_queue_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (reprogram_timer_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (ready_queues_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (scheduler_action_update f s) = valid_tcb ptr tcb s"
   by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
           split: Structures_A.thread_state.splits option.splits)
 
 lemma update_valid_tcbs[simp]:
-  "valid_tcbs (s\<lparr>release_queue := q\<rparr>) = valid_tcbs s"
-  "valid_tcbs (s\<lparr>reprogram_timer := rt\<rparr>) = valid_tcbs s"
-  "valid_tcbs (s\<lparr>ready_queues := a\<rparr>) = valid_tcbs s"
-  "valid_tcbs (s\<lparr>scheduler_action := b\<rparr>) = valid_tcbs s"
+  "\<And>f. valid_tcbs (release_queue_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (reprogram_timer_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (ready_queues_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (scheduler_action_update f s) = valid_tcbs s"
   by (simp_all add: valid_tcbs_def)
 
-lemma valid_tcb_domain_update:
-  "valid_tcb tptr (tcb\<lparr>tcb_domain := new_dom\<rparr>) s = valid_tcb tptr tcb s"
+lemma valid_tcb_domain_update[simp]:
+  "valid_tcb tptr (tcb_domain_update f tcb) s = valid_tcb tptr tcb s"
   unfolding valid_tcb_def
   by (clarsimp simp: tcb_cap_cases_def)
 
@@ -224,6 +224,12 @@ lemma valid_tcb'_tcbDomain_update:
    \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbDomain_update (\<lambda>_. new_dom) tcb) s"
   unfolding valid_tcb'_def
   by (clarsimp simp: tcb_cte_cases_def)
+
+lemma valid_tcb'_tcbState_update:
+  "\<lbrakk>valid_tcb_state' st s; valid_tcb' tcb s\<rbrakk> \<Longrightarrow>
+   valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def valid_tcb_state'_def)
+  done
 
 crunches tcb_release_remove
   for valid_tcbs[wp]: valid_tcbs
@@ -330,12 +336,12 @@ lemma valid_tcbs'_obj_at':
   done
 
 lemma update_valid_tcb'[simp]:
-  "valid_tcb' tcb (s\<lparr>ksReleaseQueue := a\<rparr>) = valid_tcb' tcb s"
-  "valid_tcb' tcb (s\<lparr>ksReprogramTimer := b\<rparr>) = valid_tcb' tcb s"
-  "valid_tcb' tcb (s\<lparr>ksReadyQueuesL1Bitmap := c\<rparr>) = valid_tcb' tcb s"
-  "valid_tcb' tcb (s\<lparr>ksReadyQueuesL2Bitmap := d\<rparr>) = valid_tcb' tcb s"
-  "valid_tcb' tcb (s\<lparr>ksReadyQueues := e\<rparr>) = valid_tcb' tcb s"
-  "valid_tcb' tcb (s\<lparr>ksSchedulerAction := f\<rparr>) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksReleaseQueue_update f s) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksReprogramTimer_update f s) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksReadyQueuesL1Bitmap_update f s) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksReadyQueuesL2Bitmap_update f s) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksReadyQueues_update f s) = valid_tcb' tcb s"
+  "\<And>f. valid_tcb' tcb (ksSchedulerAction_update f s) = valid_tcb' tcb s"
   by (auto simp: valid_tcb'_def valid_tcb_state'_def valid_bound_obj'_def
           split: option.splits thread_state.splits)
 
@@ -344,12 +350,12 @@ lemma update_tcbInReleaseQueue_False_valid_tcb'[simp]:
   by (auto simp: valid_tcb'_def tcb_cte_cases_def)
 
 lemma update_valid_tcbs'[simp]:
-  "valid_tcbs' (s\<lparr>ksReleaseQueue := q\<rparr>) = valid_tcbs' s"
-  "valid_tcbs' (s\<lparr>ksReprogramTimer := rt\<rparr>) = valid_tcbs' s"
-  "valid_tcbs' (s\<lparr>ksReadyQueuesL1Bitmap := c\<rparr>) = valid_tcbs' s"
-  "valid_tcbs' (s\<lparr>ksReadyQueuesL2Bitmap := d\<rparr>) = valid_tcbs' s"
-  "valid_tcbs' (s\<lparr>ksReadyQueues := e\<rparr>) = valid_tcbs' s"
-  "valid_tcbs' (s\<lparr>ksSchedulerAction := f\<rparr>) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksReleaseQueue_update f s) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksReprogramTimer_update f s) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksReadyQueuesL1Bitmap_update f s) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksReadyQueuesL2Bitmap_update f s) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksReadyQueues_update f s) = valid_tcbs' s"
+  "\<And>f. valid_tcbs' (ksSchedulerAction_update f s) = valid_tcbs' s"
   by (simp_all add: valid_tcbs'_def)
 
 lemma doMachineOp_irq_states':
@@ -2134,9 +2140,11 @@ definition
 where
  "weak_sch_act_wf sa = (\<lambda>s. \<forall>t. sa = SwitchToThread t \<longrightarrow> st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 
-lemma weak_sch_act_wf_updateDomainTime[simp]:
-  "weak_sch_act_wf m (ksDomainTime_update f s) = weak_sch_act_wf m s"
-  by (simp add:weak_sch_act_wf_def tcb_in_cur_domain'_def )
+lemma weak_sch_act_wf_updates[simp]:
+  "\<And>f. weak_sch_act_wf sa (ksDomainTime_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksReprogramTimer_update f s) = weak_sch_act_wf sa s"
+  "\<And>f. weak_sch_act_wf sa (ksReleaseQueue_update f s) = weak_sch_act_wf sa s"
+  by (auto simp: weak_sch_act_wf_def tcb_in_cur_domain'_def)
 
 lemma set_sa_corres:
   "sched_act_relation sa sa'
@@ -2629,12 +2637,6 @@ lemma setObject_valid_release_queue':
   apply (wpsimp wp: setObject_tcb_obj_at'_strongest hoare_vcg_imp_lift)
   apply (rename_tac t s)
   apply (case_tac "ptr = t"; clarsimp)
-  done
-
-lemma valid_tcb'_tcbState_update:
-  "\<lbrakk>valid_tcb_state' st s; valid_tcb' tcb s\<rbrakk> \<Longrightarrow>
-   valid_tcb' (tcbState_update (\<lambda>_. st) tcb) s"
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def valid_tcb_state'_def)
   done
 
 lemma sts_corres:
@@ -4567,6 +4569,9 @@ lemma tcbReleaseRemove_pred_tcb_at'[wp]:
           | clarsimp simp: tcb_to_itcb'_def setReleaseQueue_def
                            setReprogramTimer_def getReleaseQueue_def)+
   done
+
+crunches tcbReleaseRemove
+  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
 lemma ksReleaseQueue_runnable_thread_state:
   "\<lbrakk>(s,s') \<in> state_relation; valid_release_q s; pspace_aligned s; pspace_distinct s\<rbrakk>

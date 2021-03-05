@@ -3683,27 +3683,6 @@ lemma setThreadState_BlockedOnReceive_invs':
   apply (clarsimp dest: global'_no_ex_cap simp: valid_tcb_state'_def comp_def)
   done
 
-lemma ct_not_inQ_ksReleaseQueue_upd[simp]:
-  "ct_not_inQ (s\<lparr>ksReleaseQueue := v\<rparr>) = ct_not_inQ s"
-  by (simp add: ct_not_inQ_def)
-
-lemma valid_irq_node'_ksReleaseQueue_upd[simp]:
-  "valid_irq_node' (irq_node' s) (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_irq_node' (irq_node' s) s"
-  by (simp add: valid_irq_node'_def)
-
-lemma cur_tcb'_ksReleaseQueue_upd[simp]:
-  "cur_tcb' (s\<lparr>ksReleaseQueue := v\<rparr>) = cur_tcb' s"
-  by (simp add: cur_tcb'_def)
-
-lemma valid_queues_ksReleaseQueue_upd[simp]:
-  "valid_queues (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_queues s"
-  by (simp add: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def
-                bitmapQ_def bitmapQ_no_L1_orphans_def bitmapQ_no_L2_orphans_def)
-
-lemma valid_queues'_ksReleaseQueue_upd[simp]:
-  "valid_queues' (s\<lparr>ksReleaseQueue := v\<rparr>) = valid_queues' s"
-  by (simp add: valid_queues'_def)
-
 lemma ksReleaseQueue_ksReprogramTimer_update:
   "ksReleaseQueue_update (\<lambda>_. fv) (ksReprogramTimer_update (\<lambda>_. gv) s) =
    ksReprogramTimer_update (\<lambda>_. gv) (ksReleaseQueue_update (\<lambda>_. fv) s)"
@@ -4888,12 +4867,6 @@ crunches replyPush
   and vrq[wp]: valid_release_queue
   and valid_queues'[wp]: valid_queues'
   (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift simp: crunch_simps valid_mdb'_def)
-
-lemma valid_tcb_state'_update[simp]:
-  "valid_tcb_state' ts (s\<lparr>ksReadyQueues := qs\<rparr>) = valid_tcb_state' ts s"
-  "valid_tcb_state' ts (s\<lparr>ksReadyQueuesL1Bitmap := l1b\<rparr>) = valid_tcb_state' ts s"
-  "valid_tcb_state' ts (s\<lparr>ksReadyQueuesL2Bitmap := l2b\<rparr>) = valid_tcb_state' ts s"
-  by (auto simp: valid_tcb_state'_def valid_bound_obj'_def split: thread_state.splits option.splits)
 
 crunches setQueue
   for valid_tcb_state'[wp]: "valid_tcb_state' ts"
