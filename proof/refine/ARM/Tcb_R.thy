@@ -159,59 +159,6 @@ lemma activate_sch_act: (* FIXME RT: not true any more, ksSchedulerAction update
                  elim!: pred_tcb'_weakenE)
   done *)
 
-lemma ksReleaseQueue_ksReprogramTimer_update:
-  "ksReleaseQueue_update (\<lambda>_. fv) (ksReprogramTimer_update (\<lambda>_. gv) s) =
-   ksReprogramTimer_update (\<lambda>_. gv) (ksReleaseQueue_update (\<lambda>_. fv) s)"
-  by simp
-
-lemma ksPSpace_ksReprogramTimer_update:
-  "ksPSpace_update (\<lambda>_. fv) (ksReprogramTimer_update (\<lambda>_. gv) s) =
-   ksReprogramTimer_update (\<lambda>_. gv) (ksPSpace_update (\<lambda>_. fv) s)"
-  by simp
-
-lemma tcbReleaseEnqueue_invs'[wp]:
-  "tcbReleaseEnqueue tcb \<lbrace>invs'\<rbrace>"
-  apply (clarsimp simp: getScTime_def getTCBSc_def tcbReleaseEnqueue_def
-                        getReleaseQueue_def setReleaseQueue_def setReprogramTimer_def)
-  apply (clarsimp simp add: invs'_def valid_state'_def split del: if_split)
-  apply (wp threadSet_valid_pspace'T threadSet_sch_actT_P[where P=False, simplified]
-           threadSet_iflive'T threadSet_ifunsafe'T threadSet_idle'T threadSet_not_inQ
-           valid_irq_node_lift valid_irq_handlers_lift'' threadSet_ct_idle_or_in_cur_domain'
-           threadSet_cur untyped_ranges_zero_lift threadSet_valid_queues threadSet_valid_queues'
-         | rule refl threadSet_wp [THEN hoare_vcg_conj_lift]
-         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
-     apply (clarsimp simp: ksReleaseQueue_ksReprogramTimer_update
-                           ksPSpace_ksReprogramTimer_update if_cancel_eq_True)
-     apply (wpsimp wp: mapM_wp_lift getScTime_wp threadGet_wp)+
-  apply (clarsimp simp: invs'_def valid_state'_def comp_def obj_at'_def inQ_def cteCaps_of_def)
-  apply (intro conjI)
-      apply (clarsimp simp: valid_release_queue_def obj_at'_def projectKOs objBitsKO_def)+
-   apply (intro conjI impI; clarsimp)
-       apply (auto split: if_splits elim: ps_clear_domE)[3]
-    apply (drule_tac x=a in spec, drule mp)
-     apply (rule_tac ys=rvs in tup_in_fst_image_set_zipD)
-     apply (clarsimp simp: image_def)
-     apply (rule_tac x="(a,b)" in bexI)
-      apply (auto split: if_splits elim: ps_clear_domE)[3]
-   apply (drule_tac x=a in spec, drule mp)
-    apply (rule_tac ys=rvs in tup_in_fst_image_set_zipD)
-    apply (clarsimp simp: image_def)
-    apply (rule_tac x="(a,b)" in bexI)
-     apply (auto split: if_splits elim: ps_clear_domE)[3]
-  apply (clarsimp simp: valid_release_queue'_def)
-  apply (erule_tac x=t in allE)
-  apply (drule mp)
-   apply (fastforce simp: obj_at'_def projectKO_eq projectKO_tcb objBitsKO_def inQ_def
-                    elim: ps_clear_domE split: if_splits)
-  apply (clarsimp simp: image_def in_set_conv_decomp zip_append1)
-  apply (rule_tac x="hd (drop (length ys) rvs)" in exI)
-  apply (case_tac "drop (length ys) rvs"; fastforce dest: list_all2_lengthD)
-  done
-
-crunches postpone, schedContextResume
-  for invs'[wp]: invs'
-  (wp: crunch_wps)
-
 crunches schedContextResume
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   (wp: crunch_wps)
