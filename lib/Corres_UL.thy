@@ -1632,6 +1632,18 @@ lemma corres_noop_sr:
   apply (drule_tac x=b in spec, clarsimp)
   done
 
+lemma corres_noop_sr2:
+  assumes x: "\<And>s. P s  \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  assumes sr: "sr_inv_ul sr P P' g"
+  assumes nf': "\<And>s. \<lbrakk> P s; nf' \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') g"
+  assumes nf : "nf \<Longrightarrow> no_fail P f"
+  shows "corres_underlying sr nf nf' dc P P' f g"
+  using sr x
+  apply (clarsimp simp: sr_inv_ul_def corres_underlying_def return_def)
+  apply (clarsimp simp: no_failD[OF nf'[simplified]] valid_def exs_valid_def)
+  apply (drule_tac x=a in meta_spec, fastforce)
+  done
+
 (* corres_symb_exec_r_sr basically combines the two lemmas corres_split_noop_rhs and corres_noop
    in one and separates out the sr_inv part *)
 lemma corres_symb_exec_r_sr:
