@@ -546,58 +546,6 @@ syntax (input)
 
 lemma "[(x,1) . x \<leftarrow> [0..10]] = [(x,1) | x \<leftarrow> [0..10]]" by (rule refl)
 
-definition
-  whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
-  "whileM C B \<equiv> do
-    c \<leftarrow> C;
-    whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
-    return ()
-  od"
-
-definition
-  ifM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
-          ('s, 'a) nondet_monad" where
-  "ifM test t f = do
-    c \<leftarrow> test;
-    if c then t else f
-   od"
-
-definition
-  whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
-  "whenM t m = ifM t m (return ())"
-
-definition
-  orM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
-  "orM a b = ifM a (return True) b"
-
-definition
-  andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
-  "andM a b = ifM a b (return False)"
-
-lemma ifM_wp[wp]:
-  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>" "\<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>"
-  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> R s\<rbrace>"
-  shows "\<lbrace>A and B\<rbrace> ifM P f g \<lbrace>S\<rbrace>"
-  unfolding ifM_def by wpsimp
-
-lemma andM_wp[wp]:
-  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
-  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q' s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q False s\<rbrace>"
-  shows "\<lbrace>P and P'\<rbrace> andM A B \<lbrace>Q\<rbrace>"
-  unfolding andM_def by wp
-
-lemma orM_wp[wp]:
-  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
-  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q True s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q' s\<rbrace>"
-  shows "\<lbrace>P and P'\<rbrace> orM A B \<lbrace>Q\<rbrace>"
-  unfolding orM_def by wp
-
-lemma whenM_wp[wp]:
-  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>"
-  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> S () s\<rbrace>"
-  shows "\<lbrace>A and B\<rbrace> whenM P f \<lbrace>S\<rbrace>"
-  unfolding whenM_def by wpsimp
-
 lemma whileM_inv:
   assumes [wp]: "f \<lbrace>Q\<rbrace>" "P \<lbrace>Q\<rbrace>"
   shows "whileM P f \<lbrace>Q\<rbrace>"
