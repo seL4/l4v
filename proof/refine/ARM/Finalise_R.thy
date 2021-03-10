@@ -3132,9 +3132,8 @@ lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextUnbindTCB_def
   apply (rule schedContextUnbindTCB_invs'_helper[simplified] hoare_seq_ext | clarsimp)+
-        apply (wp tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
-                  tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
-  apply (clarsimp simp: if_distribR split del: if_split)
+        apply (wpsimp wp: tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
+                          tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
   apply (fastforce dest: sym_refs_obj_atD'
                    simp: invs_queues invs_weak_sch_act_wf invs_valid_objs' invs'_valid_tcbs'
                          sym_refs_asrt_def if_cancel_eq_True ko_wp_at'_def refs_of_rev'

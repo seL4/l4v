@@ -457,4 +457,15 @@ lemma bind_dummy_ret_val:
    od = do a; b od"
   by simp
 
+(* FIXME RT: This should replace lookup_cap_and_slot_valid_fault2 *)
+lemma lookup_cap_and_slot_valid_fault3[wp]:
+  "\<lbrace>invs and K (p = to_bl p')\<rbrace>
+   lookup_cap_and_slot thread p
+   -,\<lbrace>\<lambda>ft s. valid_fault (ExceptionTypes_A.CapFault p' rp ft)\<rbrace>"
+  using lookup_cap_and_slot_valid_fault
+  apply (clarsimp simp: validE_E_def validE_def valid_def
+                 split: sum.splits)
+  apply (drule invs_valid_objs, fastforce)
+  done
+
 end
