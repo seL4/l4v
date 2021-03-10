@@ -866,7 +866,8 @@ lemma lookup_ipc_buffer_has_read_auth:
      apply (rule order_trans [OF _ pbfs_atleast_pageBits])
      apply (simp add: msg_align_bits pageBits_def)
     apply (drule (1) cap_auth_caps_of_state)
-    apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def vspace_cap_rights_to_auth_def vm_read_only_def)
+    apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                          vspace_cap_rights_to_auth_def vm_read_only_def)
     apply (drule bspec)
      apply (erule (3) ipcframe_subset_page)
     apply (clarsimp split: if_split_asm simp: vspace_cap_rights_to_auth_def is_page_cap_def)

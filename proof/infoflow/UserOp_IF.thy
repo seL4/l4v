@@ -473,7 +473,7 @@ lemma data_at_same_size:
    apply (drule is_aligned_ptrFromPAddrD[OF _ pageBitsForSize_le_t24])
      apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
       apply simp
-     apply (fastforce simp: pbfs_less_wb[unfolded word_bits_def,simplified])
+     apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
    apply (simp add: is_aligned_neg_mask_eq)
   apply (drule not_sym)
   apply (erule(5) data_at_disjoint_equiv)
@@ -491,7 +491,7 @@ lemma data_at_same_size:
   apply (rule arg_cong[where f = "\<lambda>x. x && ~~ mask z" for z])
   apply (subst neg_mask_add_aligned[OF _ and_mask_less'])
     apply simp
-   apply (fastforce simp: pbfs_less_wb[unfolded word_bits_def,simplified])
+   apply (fastforce simp: pbfs_less_wb'[unfolded word_bits_def,simplified])
   apply simp
   done
 qed

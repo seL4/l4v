@@ -229,7 +229,7 @@ lemma pas_refined_pasMayActivate_update:
   "pas_refined aag s \<Longrightarrow>
    pas_refined (aag\<lparr> pasMayActivate := x \<rparr>) s"
   apply(simp add: pas_refined_def)
-  apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayActivate_update
+  apply(clarsimp simp: irq_map_wellformed_aux_def state_asids_to_policy_pasMayActivate_update[simplified]
                        state_irqs_to_policy_pasMayActivate_update tcb_domain_map_wellformed_aux_def)
   done
 
@@ -297,7 +297,7 @@ lemma pas_refined_pasMayEditReadyQueues_update:
    pas_refined (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) s"
   apply(simp add: pas_refined_def)
   apply(clarsimp simp: irq_map_wellformed_aux_def
-                       state_asids_to_policy_pasMayEditReadyQueues_update
+                       state_asids_to_policy_pasMayEditReadyQueues_update[simplified]
                        state_irqs_to_policy_pasMayEditReadyQueues_update
                        tcb_domain_map_wellformed_aux_def)
   done

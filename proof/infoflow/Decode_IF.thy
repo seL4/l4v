@@ -626,7 +626,7 @@ lemma arch_decode_invocation_reads_respects_f:
                    apply simp
                   apply(case_tac xc, simp_all)[1]
                  apply(rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
-                 apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def)
+                 apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
                 apply(simp add: lookup_pd_slot_def)
                 apply(subgoal_tac "excaps ! 0 \<in> set excaps")
                  apply(subst vaddr_segment_nonsense)
@@ -648,7 +648,7 @@ lemma arch_decode_invocation_reads_respects_f:
             apply fastforce
            apply(fastforce dest: cte_wp_valid_cap simp: valid_cap_simps)
           apply(rule ball_subset[OF _ vspace_cap_rights_to_auth_mask_vm_rights])
-          apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def)
+          apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def)
          apply(subgoal_tac "excaps ! 0 \<in> set excaps")
           apply(fastforce intro: aag_cap_auth_PageDirectoryCap_asid)
          apply fastforce

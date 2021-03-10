@@ -816,10 +816,11 @@ text \<open>
   through the actions of l, this state can be modified, then we say that the
   label l' can be affected by l. This is, of course, just a more coarse
   statement of the integrity property from the access proofs.
-
+\<close>
+(* FIXME: theorem no longer exists
   The case in which @{thm tro_asidpool_clear} is covered when the graph is wellformed
   since, in this case, the subject has Control rights to the asid.
-\<close>
+*)
 inductive_set subjectAffects :: "'a auth_graph \<Rightarrow> 'a \<Rightarrow> 'a set"
   for g :: "'a auth_graph" and l :: "'a"
 where
@@ -864,7 +865,7 @@ where
      l'' \<in> subjectAffects g l" |
   (* if you alter an asid mapping, you affect the domain who owns that asid *)
   affects_asidpool_map:
-    "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l" |
+    "(l,AAuth ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l" |
   (* if you are sending to an ntfn, which is bound to a tcb that is
      receive blocked on an ep, then you can affect that ep *)
   affects_ep_bound_trans:
@@ -1693,9 +1694,8 @@ lemma auth_ipc_buffers_mem_Write':
   apply (clarsimp simp add: auth_ipc_buffers_member_def)
   apply (drule (1) cap_auth_caps_of_state)
     apply simp
-  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def
-                        vspace_cap_rights_to_auth_def vm_read_write_def
-                        is_page_cap_def
+  apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                        vspace_cap_rights_to_auth_def vm_read_write_def is_page_cap_def
                  split: if_split_asm)
    apply (auto dest: ipcframe_subset_page)
   done

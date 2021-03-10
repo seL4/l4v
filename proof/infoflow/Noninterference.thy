@@ -666,10 +666,10 @@ crunch silc_dom_equiv[wp]: do_user_op_if "silc_dom_equiv aag st"
 
 lemma pas_refined_pasMayActivate_update[simp]:
   "pas_refined (aag\<lparr>pasMayActivate := x, pasMayEditReadyQueues := x\<rparr>) s = pas_refined aag s"
-  apply(simp add: pas_refined_def  irq_map_wellformed_aux_def tcb_domain_map_wellformed_aux_def)
-  apply(simp add: state_asids_to_policy_pasMayActivate_update
+  apply(simp add: pas_refined_def irq_map_wellformed_aux_def tcb_domain_map_wellformed_aux_def)
+  apply(simp add: state_asids_to_policy_pasMayActivate_update[simplified]
                   state_irqs_to_policy_pasMayActivate_update
-                  state_asids_to_policy_pasMayEditReadyQueues_update
+                  state_asids_to_policy_pasMayEditReadyQueues_update[simplified]
                   state_irqs_to_policy_pasMayEditReadyQueues_update)
   done
 
@@ -795,35 +795,47 @@ lemma pas_refined_tcb_st_to_auth:
   done
 
 
-
-
 (* FIXME DO _state abreviation for all elements and use them to write rule explicitely *)
+
+lemmas arch_integrity_subjects_mem =
+  arch_integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct1]
+
+lemmas arch_integrity_subjects_device =
+  arch_integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct1]
+
+lemmas arch_integrity_subjects_asids =
+  arch_integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2]
+
 lemmas integrity_subjects_obj =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct1]
 
 lemmas integrity_subjects_eobj =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_mem =
+lemmas integrity_subjects_cdt =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_device =
+lemmas integrity_subjects_cdt_list =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt =
+lemmas integrity_subjects_interrupts =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_cdt_list =
+lemmas integrity_subjects_ready_queues =
   integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
 
-lemmas integrity_subjects_interrupts =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
+lemmas integrity_subjects_arch =
+  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
+
+lemmas integrity_subjects_mem =
+  integrity_subjects_arch[THEN arch_integrity_subjects_mem]
+
+lemmas integrity_subjects_device =
+  integrity_subjects_arch[THEN arch_integrity_subjects_device]
 
 lemmas integrity_subjects_asids =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct1]
+  integrity_subjects_arch[THEN arch_integrity_subjects_asids]
 
-lemmas integrity_subjects_ready_queues =
-  integrity_subjects_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2, THEN conjunct2]
 
 lemma pas_wellformed_pasSubject_update_Control:
   "\<lbrakk> pas_wellformed (aag\<lparr>pasSubject := pasObjectAbs aag p\<rparr>);
@@ -984,10 +996,11 @@ lemma partitionIntegrity_subjectAffects_obj:
         case (troa_tcb_activate tcb tcb')
         thus ?thesis by blast
       next
-        case (troa_asidpool_clear pool pool')
+        case (troa_arch ao ao')
         thus ?thesis (* TODO cleanup that one *)
-          using hyps unfolding asid_pool_integrity_def
+          using hyps unfolding arch_integrity_obj_atomic.simps asid_pool_integrity_def
           apply clarsimp
+          apply (rule ccontr)
           apply (drule fun_noteqD)
           apply (erule exE, rename_tac r)
           apply (drule_tac x=r in spec)
@@ -1361,7 +1374,7 @@ lemma partitionIntegrity_subjectAffects_asid:
      apply (rule sata_asidpool)
       apply assumption
      apply assumption
-    apply (simp add: asid_pool_integrity_def)
+    apply (simp add: arch_integrity_obj_alt.simps asid_pool_integrity_def)
     apply (drule_tac x="ucast asid" in spec)+
     apply clarsimp
     apply (drule owns_mapping_owns_asidpool)

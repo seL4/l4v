@@ -548,7 +548,7 @@ lemma init_arch_objects_reads_respects_g:
          equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]
          copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned
          hoare_vcg_ball_lift | wpc | simp)+
-  apply (fastforce simp: word_object_size_def)
+  apply clarsimp
   done
 
 lemma copy_global_mappings_globals_equiv:

@@ -1931,6 +1931,11 @@ lemma store_word_offs_globals_equiv:
   done
 
 
+lemma length_msg_registers:
+  "length msg_registers = 4"
+  unfolding msg_registers_def
+  by (simp add: msgRegisters_def upto_enum_def fromEnum_def enum_register)
+
 lemma length_msg_lt_msg_max:
   "length msg_registers < msg_max_length"
   apply(simp add: length_msg_registers msg_max_length_def)
@@ -2066,7 +2071,11 @@ lemma delete_objects_valid_ko_at_arm:
   apply(wp detype_valid_ko_at_arm do_machine_op_valid_ko_at_arm | simp add: ptr_range_def)+
   done
 
-
+lemma mask_neg_mask_is_zero:
+  "((x::obj_ref) && ~~ a) && a = 0"
+  apply(subst word_bw_assocs)
+  apply simp
+  done
 
 lemma perform_asid_control_invocation_globals_equiv:
   notes delete_objects_invs[wp del]
@@ -2231,7 +2240,7 @@ lemma decode_arch_invocation_authorised_for_globals:
             apply(simp add: valid_cap_def)
            apply(simp add: vmsz_aligned_def)
            apply(drule_tac ptr="msg ! 0" and off="2 ^ pageBitsForSize vmpage_size - 1" in is_aligned_no_wrap')
-            apply(insert pbfs_less_wb)
+            apply(insert pbfs_less_wb')
             apply(clarsimp)
            apply(fastforce simp: x_power_minus_1)
           apply(clarsimp)
