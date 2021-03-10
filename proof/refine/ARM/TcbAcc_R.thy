@@ -111,6 +111,7 @@ crunches setThreadState, threadSet
   and tcb_at'[wp]: "\<lambda>s. P (tcb_at' p s)"
   and obj_at'_reply[wp]: "\<lambda>s. P (obj_at' (Q :: reply \<Rightarrow> bool) p s)"
   and obj_at'_ep[wp]: "\<lambda>s. P (obj_at' (Q :: endpoint \<Rightarrow> bool) p s)"
+  and obj_at'_ntfn[wp]: "\<lambda>s. P (obj_at' (Q :: notification \<Rightarrow> bool) p s)"
   and obj_at'_sc[wp]: "\<lambda>s. Q (obj_at' (P :: sched_context \<Rightarrow> bool) p s)"
   (wp: crunch_wps set_tcb'.set_preserves_some_obj_at')
 
@@ -3548,6 +3549,13 @@ lemma tcbSchedEnqueue_valid_release_queue'[wp]:
   apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
   done
 
+crunches tcbSchedEnqueue
+  for valid_dom_schedule'_misc[wp]: "\<lambda>s. P (ksDomScheduleIdx s) (ksDomSchedule s)"
+
+lemma tcbSchedEnqueue_valid_dom_schedule'[wp]:
+  "tcbSchedEnqueue t \<lbrace>valid_dom_schedule'\<rbrace>"
+  by (wpsimp wp: valid_dom_schedule'_lift)
+
 lemma tcbSchedAppend_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_tcbs'\<rbrace>
    tcbSchedAppend t
@@ -4095,15 +4103,17 @@ lemmas msgRegisters_unfold
          unfolded toEnum_def enum_register, simplified]
 
 lemma get_mrs_corres:
+  assumes mirel: "mi' = message_info_map mi" shows
   "corres (=) (tcb_at t)
               (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
-              (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"
+              (get_mrs t buf mi) (getMRs t buf mi')"
   proof -
   have S: "get = gets id"
     by (simp add: gets_def)
   have T: "corres (\<lambda>con regs. regs = map con msg_registers) (tcb_at t) (tcb_at' t)
      (thread_get (arch_tcb_get_registers o tcb_arch) t) (asUser t (mapM getRegister ARM_H.msgRegisters))"
     unfolding arch_tcb_get_registers_def
+
     apply (subst thread_get_as_user)
     apply (rule corres_as_user')
     apply (subst mapM_gets)
@@ -4111,7 +4121,7 @@ lemma get_mrs_corres:
     apply (simp add: S ARM_H.msgRegisters_def msg_registers_def)
     done
   show ?thesis
-  apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: if_split)
+  apply (case_tac mi, simp add: get_mrs_def getMRs_def mirel split del: if_split)
   apply (case_tac buf)
    apply (rule corres_guard_imp)
      apply (rule corres_split_deprecated [where R = "\<lambda>_. \<top>" and R' =  "\<lambda>_. \<top>", OF _ T])
@@ -4629,14 +4639,20 @@ lemma sts_bound_sc_tcb_at'[wp]:
       ; wpsimp wp: threadSet_pred_tcb_at_state
              simp: pred_tcb_at'_def)+
 
+lemma sts_bound_yt_tcb_at'[wp]:
+  "setThreadState st t' \<lbrace>bound_yt_tcb_at' P t\<rbrace>"
+  apply (clarsimp simp: setThreadState_def)
+  by (cases "t = t'";
+      wpsimp wp: threadSet_pred_tcb_at_state
+           simp: pred_tcb_at'_def)
+
 lemma sbn_st_tcb'[wp]:
   "setBoundNotification ntfn t' \<lbrace>st_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
          simp_all add: setBoundNotification_def
                   split del: if_split)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
-  apply (wp threadSet_obj_at'_really_strongest
-              | simp add: pred_tcb_at'_def)+
+  apply (wp threadSet_obj_at'_really_strongest | simp add: pred_tcb_at'_def)+
   done
 
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState, setBoundNotification, scheduleTCB

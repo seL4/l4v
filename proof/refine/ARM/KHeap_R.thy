@@ -4177,4 +4177,10 @@ lemma sym_heap_remove_only:
   apply (subst (asm) sym_heap_symmetric[simplified sym_heap_def], simp)
   done
 
+lemma pred_tcb_at'_equiv:
+  "pred_tcb_at' p P t s = (tcb_at' t s \<and> P (p (tcb_to_itcb' (the (tcbs_of' s t)))))"
+  by (rule iffI;
+      clarsimp simp: pred_tcb_at'_def pred_map_def obj_at'_real_def ko_wp_at'_def projectKOs
+                     opt_map_def)
+
 end

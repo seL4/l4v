@@ -3728,14 +3728,14 @@ lemma tcbSchedDequeue_notksQ:
   done
 
 lemma tcbSchedDequeue_nonq:
-  "\<lbrace>valid_queues and tcb_at' t and K (t = t')\<rbrace>
+  "\<lbrace>\<lambda>s. if t=t' then valid_queues s else t' \<notin> set (ksReadyQueues s p)\<rbrace>
    tcbSchedDequeue t
    \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: tcbSchedDequeue_def)
+  unfolding tcbSchedDequeue_def
   apply (wpsimp wp: threadGet_wp)
   apply (case_tac p)
-  apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def)
+  apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
+                  split: if_splits)
   done
 
 crunches tcbReleaseRemove
