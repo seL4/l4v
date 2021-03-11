@@ -4079,6 +4079,12 @@ lemma valid_replies'_lift:
     done
   done
 
+lemma cteCaps_of_ctes_of_lift:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>) \<Longrightarrow> f \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"
+  unfolding cteCaps_of_def .
+
+lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift
+
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]

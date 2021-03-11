@@ -607,16 +607,6 @@ lemma tcbSchedDequeue_not_queued:
   apply (wp tg_sp' [where P=\<top>, simplified] | simp)+
   done
 
-lemma tcbSchedDequeue_not_in_queue:
-  "\<And>p. \<lbrace>Invariants_H.valid_queues and tcb_at' t and valid_objs'\<rbrace> tcbSchedDequeue t
-   \<lbrace>\<lambda>rv s. t \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (rule_tac Q="\<lambda>rv. Invariants_H.valid_queues and obj_at' (Not \<circ> tcbQueued) t"
-               in hoare_post_imp)
-   apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def projectKOs inQ_def )
-  apply (wp tcbSchedDequeue_not_queued tcbSchedDequeue_valid_queues |
-         simp add: valid_objs'_maxDomain valid_objs'_maxPriority)+
-  done
-
 lemma threadSet_ct_in_state':
   "(\<And>tcb. tcbState (f tcb) = tcbState tcb) \<Longrightarrow>
   \<lbrace>ct_in_state' test\<rbrace> threadSet f t \<lbrace>\<lambda>rv. ct_in_state' test\<rbrace>"
