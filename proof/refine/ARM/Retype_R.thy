@@ -3482,14 +3482,6 @@ lemma createObjects_orig_cte_wp_at2':
              | simp add: o_def cong: option.case_cong)+
   done
 
-lemma threadSet_cte_wp_at2'T:
-  assumes "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-  shows "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
-  using assms by (rule threadSet_cte_wp_at'T)
-
-lemmas threadSet_cte_wp_at2' =
-  threadSet_cte_wp_at2'T [OF all_tcbI, OF ball_tcb_cte_casesI]
-
 lemma createNewCaps_cte_wp_at2:
   "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s) \<and> \<not> P' makeObject
       \<and> n \<noteq> 0

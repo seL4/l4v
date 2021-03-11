@@ -5,7 +5,7 @@
  *)
 
 theory Reply_R
-imports TcbAcc_R
+imports Schedule_R
 begin
 
 defs replyUnlink_assertion_def:
@@ -284,7 +284,7 @@ crunches replyUnlink
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
   and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   and sch_act_not[wp]: "sch_act_not t"
-  (wp: crunch_wps updateReply_list_refs_of_replies'_inv)
+  (wp: crunch_wps updateReply_list_refs_of_replies'_inv simp: crunch_simps)
 
 crunches replyRemoveTCB
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
