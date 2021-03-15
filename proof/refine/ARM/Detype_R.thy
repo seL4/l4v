@@ -1711,7 +1711,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
     apply simp
     done
 
-qed (clarsimp)
+qed (clarsimp simp: valid_dom_schedule'_def)
 
 lemma (in delete_locale) delete_ko_wp_at':
   assumes    objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"

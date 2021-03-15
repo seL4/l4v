@@ -1436,7 +1436,7 @@ lemma emptySlot_invs'[wp]:
             \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of o_def)
@@ -2225,7 +2225,7 @@ lemma tcb_bound_refs'_not_Bound:
 
 lemma unbindNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindNotification_def invs'_def valid_state'_def)
+  apply (simp add: unbindNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
@@ -2263,7 +2263,7 @@ lemma ntfn_bound_tcb_at':
 
 lemma unbindMaybeNotification_invs[wp]:
   "\<lbrace>invs'\<rbrace> unbindMaybeNotification ntfnptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def)
+  apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (wpsimp wp: sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues
                     valid_irq_node_lift irqs_masked_lift setBoundNotification_ct_not_inQ
@@ -2280,7 +2280,7 @@ lemma setNotification_invs':
     and valid_ntfn' ntfn\<rbrace>
     setNotification ntfnPtr ntfn
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add:  invs'_def valid_state'_def)
+  apply (simp add:  invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -2298,7 +2298,7 @@ lemma schedContextUnbindNtfn_valid_objs'[wp]:
 
 lemma schedContextUnbindNtfn_invs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_pspace'_def
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def
   apply wpsimp \<comment> \<open>this handles valid_objs' separately\<close>
    unfolding schedContextUnbindNtfn_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
@@ -2353,7 +2353,9 @@ lemma invs_asid_update_strg':
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
   apply (simp add: valid_state'_def)
-  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
+                   valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def
+                   tcb_in_cur_domain'_def valid_dom_schedule'_def)
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
@@ -2364,7 +2366,7 @@ lemma invalidateASIDEntry_invs' [wp]:
   apply (wp loadHWASID_wp | simp)+
   apply (clarsimp simp: fun_upd_def[symmetric])
   apply (rule conjI)
-   apply (clarsimp simp: invs'_def valid_state'_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
    apply (rule conjI)
     apply (simp add: valid_global_refs'_def
                      global_refs'_def)
@@ -2376,7 +2378,7 @@ lemma invalidateASIDEntry_invs' [wp]:
                     valid_asid_map'_def
                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
    subgoal by (auto elim!: subset_inj_on)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule conjI)
    apply (simp add: valid_global_refs'_def
                     global_refs'_def)
@@ -2726,7 +2728,7 @@ lemma schedContextUnbindTCB_invs'_helper:
             threadSet_global_refsT irqs_masked_lift untyped_ranges_zero_lift
             valid_irq_node_lift valid_irq_handlers_lift''
          | (rule hoare_vcg_conj_lift, rule threadSet_wp)
-         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
+         | clarsimp simp: tcb_cte_cases_def cteCaps_of_def valid_dom_schedule'_def)+
   apply (frule ko_at_valid_objs'_pre[where p=scPtr], clarsimp)
   (* slow 60s *)
   apply (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
