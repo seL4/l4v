@@ -416,6 +416,11 @@ lemma whileLoop_wp:
   \<lbrace> I r \<rbrace> whileLoop C B r \<lbrace> Q \<rbrace>"
   by (rule valid_whileLoop)
 
+lemma whileLoop_wp':
+  "(\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<rbrace> B r \<lbrace> I \<rbrace>) \<Longrightarrow> \<lbrace> I r \<rbrace> whileLoop C B r \<lbrace> I \<rbrace>"
+  apply (fastforce intro: whileLoop_wp)
+  done
+
 lemma whileLoop_wp_inv [wp]:
   "\<lbrakk> \<And>r. \<lbrace>\<lambda>s. I r s \<and> C r s\<rbrace> B r \<lbrace>I\<rbrace>; \<And>r s. \<lbrakk>I r s; \<not> C r s\<rbrakk> \<Longrightarrow> Q r s \<rbrakk>
       \<Longrightarrow> \<lbrace> I r \<rbrace> whileLoop_inv C B r I M \<lbrace> Q \<rbrace>"
