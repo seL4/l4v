@@ -250,42 +250,23 @@ abbreviation scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> sched_
 abbreviation scReplies_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "scReplies_of s \<equiv> scs_of' s |> scReply"
 
-definition tcb_of' :: "kernel_object \<Rightarrow> tcb option" where
-  "tcb_of' kobj \<equiv> (case kobj of KOTCB tcb \<Rightarrow> Some tcb
-                               | _         \<Rightarrow> None)"
+abbreviation tcb_of' :: "kernel_object \<Rightarrow> tcb option" where
+  "tcb_of' \<equiv> projectKO_opt"
 
 abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb option" where
   "tcbs_of' s \<equiv> ksPSpace s |> tcb_of'"
 
-abbreviation tcb_scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "tcb_scs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
+abbreviation tcbSCs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "tcbSCs_of s \<equiv> tcbs_of' s |> tcbSchedContext"
 
 abbreviation scTCBs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "scTCBs_of s \<equiv> scs_of' s |> scTCB"
 
-(* 
-  sym_heapd is a definition version of sym_heap (abbreviation).
-  This is temporary for now, it should be combined with sym_heap properly,
-  either within the current PR, or later.
-*)
+abbreviation sym_heap_tcbSCs where
+  "sym_heap_tcbSCs s \<equiv> sym_heap (tcbSCs_of s) (scTCBs_of s)"
 
-definition sym_heapd :: "('a \<rightharpoonup> 'b) \<Rightarrow> ('b \<rightharpoonup> 'a) \<Rightarrow> bool" where
-  "sym_heapd h1 h2 \<equiv> \<forall>p q. pred_map_eq q h1 p \<longleftrightarrow> pred_map_eq p h2 q"
-
-lemma sym_heapd_def2:
-  "sym_heapd h1 h2 = 
-  ((\<forall>p q. pred_map_eq q h1 p \<longrightarrow> pred_map_eq p h2 q) \<and> (\<forall>p q. pred_map_eq q h2 p \<longrightarrow> pred_map_eq p h1 q))"
-  unfolding sym_heapd_def by fastforce
-
-lemma sym_heapd_sym:
-  "sym_heapd h1 h2 = sym_heapd h2 h1"
-  unfolding sym_heapd_def by fastforce
-
-abbreviation tcbs_scs_sym_refs where
-  "tcbs_scs_sym_refs s \<equiv> sym_heapd (tcb_scs_of' s) (scTCBs_of s)"
-
-abbreviation replies_scs_sym_refs where
-  "replies_scs_sym_refs s \<equiv> sym_heapd (scReplies_of s) (replySCs_of s)"
+abbreviation sym_heap_scReplies where
+  "sym_heap_scReplies s \<equiv> sym_heap (scReplies_of s) (replySCs_of s)"
 
 definition
   tcb_cte_cases :: "word32 \<rightharpoonup> ((tcb \<Rightarrow> cte) \<times> ((cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb))" where
@@ -2017,7 +1998,7 @@ lemma valid_pspaceE' [elim]:
 lemma idle'_only_sc_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {(idle_sc_ptr, TCBSchedContext)}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def tcb_of'_def)
+                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -4132,7 +4113,7 @@ lemma sym_refs_replyNext_replyPrev_sym:
 
 lemma reply_sym_heap_Next_Prev:
   "sym_refs (list_refs_of_replies' s') \<Longrightarrow> sym_heap (replyNexts_of s') (replyPrevs_of s')"
-  using sym_refs_replyNext_replyPrev_sym by clarsimp
+  using sym_refs_replyNext_replyPrev_sym by (clarsimp simp: sym_heap_def)
 
 lemmas reply_sym_heap_Prev_Next
   = sym_heap_symmetric[THEN iffD1, OF reply_sym_heap_Next_Prev]

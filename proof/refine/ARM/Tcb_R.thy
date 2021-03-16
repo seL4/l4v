@@ -254,7 +254,7 @@ lemma restart_invs':
               in hoare_strengthen_post[rotated])
         apply wpsimp
         apply (clarsimp simp: isSchedulable_bool_def pred_map_pred_conj[simplified pred_conj_def]
-                              projectKO_opt_tcb pred_map_def tcb_of'_Some pred_tcb_at'_def
+                              projectKO_opt_tcb pred_map_def pred_tcb_at'_def
                               obj_at'_real_def ko_wp_at'_def)
        apply (wpsimp wp: hoare_vcg_imp_lift')
       apply (rule_tac Q="\<lambda>_. invs' and
