@@ -220,7 +220,7 @@ lemma no_ofailD:
 lemma no_ofail_obind2 [simp]:
   assumes f: "no_ofail P f"
   assumes v: "o\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>"
-  assumes g: "\<forall>r. no_ofail (R r) (g r)"
+  assumes g: "\<And>r. no_ofail (R r) (g r)"
   shows "no_ofail (P and Q) (f |>> g)"
   using v g
   by (fastforce simp: no_ofail_def obind_def pred_conj_def ovalid_def dest: no_ofailD [OF f])
