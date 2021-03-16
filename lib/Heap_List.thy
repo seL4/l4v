@@ -148,20 +148,21 @@ lemma heap_ls_last_None:
 
 (* sym_heap *)
 
-abbreviation sym_heap where
+definition sym_heap where
   "sym_heap hp hp' \<equiv> \<forall>p p'. hp p = Some p' \<longleftrightarrow> hp' p' = Some p"
 
 lemma sym_heap_symmetric:
-  "sym_heap hp hp' \<longleftrightarrow> sym_heap hp' hp" by blast
+  "sym_heap hp hp' \<longleftrightarrow> sym_heap hp' hp"
+  unfolding sym_heap_def by blast
 
 lemma sym_heap_None:
-  "\<lbrakk>sym_heap hp hp'; hp p = None\<rbrakk> \<Longrightarrow> \<forall>p'. hp' p' \<noteq> Some p" by force
+  "\<lbrakk>sym_heap hp hp'; hp p = None\<rbrakk> \<Longrightarrow> \<forall>p'. hp' p' \<noteq> Some p" unfolding sym_heap_def by force
 
 lemma sym_heap_path_reverse:
   "sym_heap hp hp' \<Longrightarrow>
       heap_path hp (Some p) (p#ps) (Some p')
           \<longleftrightarrow> heap_path hp' (Some p') (p'#(rev ps)) (Some p)"
-  by (induct ps arbitrary: p p' rule: rev_induct; force)
+  unfolding sym_heap_def by (induct ps arbitrary: p p' rule: rev_induct; force)
 
 lemma sym_heap_ls_rev_Cons:
   "\<lbrakk>sym_heap hp hp'; heap_ls hp (Some p) (p#ps)\<rbrakk>
@@ -229,13 +230,13 @@ lemma heap_path_distinct_sym_prev_cases:
   apply (cases xs; simp del: heap_path.simps)
   apply (frule heap_path_head, simp)
   apply (cases ed, clarsimp)
-   apply (drule sym_heap_ls_rev_Cons, fastforce)
-   apply (drule heap_path_distinct_next_cases[where hp=hp']; simp)
-   apply fastforce
+   apply (frule sym_heap_ls_rev_Cons, fastforce)
+   apply (drule heap_path_distinct_next_cases[where hp=hp']; simp add: sym_heap_def)
+   apply simp
   apply (simp del: heap_path.simps)
-  apply (drule (1) sym_heap_path_reverse[where hp'=hp', THEN iffD1])
+  apply (frule (1) sym_heap_path_reverse[where hp'=hp', THEN iffD1])
   apply simp
-  apply (frule heap_path_distinct_next_cases[where hp=hp']; simp)
+  apply (frule heap_path_distinct_next_cases[where hp=hp']; simp add: sym_heap_def)
   apply fastforce
   done
 
