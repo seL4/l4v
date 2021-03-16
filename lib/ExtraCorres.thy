@@ -198,6 +198,14 @@ lemma corres_modify:
   shows "corres_underlying sr nf nf' dc P P' (modify f) (modify g)"
   by (simp add: simpler_modify_def corres_singleton rl)
 
+lemma gets_the_corres:
+ "\<lbrakk>no_ofail P a; no_ofail P' b\<rbrakk> \<Longrightarrow>
+   corres_underlying sr False True r P P' (gets_the a) (gets_the b)
+   = (\<forall> s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (the (a s)) (the (b s')))"
+  by (fastforce simp: gets_the_def no_ofail_def corres_underlying_def split_def exec_gets
+                      assert_opt_def fail_def return_def
+               split: option.split)
+
 lemma corres_gets_the:
   assumes x: "corres_underlying sr nf nf' (r \<circ> the) P P' (gets f) y"
   shows      "corres_underlying sr nf nf' r (P and (\<lambda>s. f s \<noteq> None)) P' (gets_the f) y"
@@ -218,6 +226,25 @@ proof -
   done
 qed
 
+lemma corres_gets_the':
+  assumes x: "corres_underlying sr nf nf' (\<lambda>x y. r x (the y)) P P' f (gets g)"
+  shows      "corres_underlying sr nf nf' r P (P' and (\<lambda>s. g s \<noteq> None)) f (gets_the g) "
+proof -
+  have z: "corres_underlying sr nf nf' (\<lambda>x y. \<exists>y'. y = Some y' \<and> r x y')
+                 P (P' and (\<lambda>s. g s \<noteq> None)) f (gets g)"
+    apply (subst corres_cong [OF refl refl refl refl])
+     defer
+     apply (rule corres_guard_imp[OF x], simp+)
+    apply (clarsimp simp: simpler_gets_def)
+    done
+  show ?thesis
+    apply (rule corres_guard_imp)
+      apply (unfold gets_the_def)
+      apply (subst bind_return[symmetric], rule corres_split [OF z])
+        apply (rule corres_trivial, clarsimp simp: assert_opt_def)
+       apply (wp | simp)+
+  done
+qed
 
 lemma corres_u_nofail:
   "corres_underlying S nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
