@@ -754,8 +754,8 @@ lemma replyRemoveTCB_corres:
               apply (drule sc_with_reply'_SomeD, clarsimp)
               apply (case_tac "hd xs = rp")
                apply (drule heap_path_head, clarsimp)
-               apply (drule (3) sym_refs_replySCs_of_scReplies_of[THEN iffD2, rotated])
-               apply (clarsimp simp: obj_at'_def projectKOs)
+               apply (drule (2) sym_refs_scReplies)
+               apply (clarsimp simp: obj_at'_def projectKOs sym_heap_def)
 
               apply (frule (1) heap_path_takeWhile_lookup_next)
               apply (frule heap_path_head, clarsimp)
@@ -861,9 +861,9 @@ lemma replyRemoveTCB_corres:
                                             objBits_simps)
                      apply (erule sym_refs_replyNext_replyPrev_sym[THEN iffD2])
                      apply (clarsimp simp: opt_map_left_Some obj_at'_def projectKOs)
-                    apply (frule (2) sym_refs_replySCs_of_scReplies_of[THEN iffD2])
-                      apply (fastforce simp: hd_opt_def projectKOs opt_map_left_Some
-                                        del: opt_mapE split: list.split_asm)
+                    apply (frule (2) sym_refs_scReplies)
+                    apply (clarsimp simp: hd_opt_def projectKOs opt_map_left_Some sym_heap_def
+                                   split: list.split_asm)
                     apply (clarsimp simp: opt_map_left_Some obj_at'_def projectKOs split: reply_next.splits)
 
                   (* rp is in the middle of the reply stack *)

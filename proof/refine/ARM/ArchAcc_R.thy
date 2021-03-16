@@ -356,7 +356,7 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   apply (clarsimp simp: other_obj_relation_def)
   apply (simp split: Structures_H.kernel_object.split_asm
                      arch_kernel_object.split_asm)
-  apply (drule(2) aligned'_distinct'_obj_at'I[where 'a=asidpool], simp)
+  apply (drule(2) aligned'_distinct'_ko_at'I[where 'a=asidpool], simp)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   done
@@ -436,7 +436,7 @@ lemma get_pde_corres [corres]:
   done
 
 lemmas aligned_distinct_pde_atI'
-    = aligned'_distinct'_obj_at'I[where 'a=pde,
+    = aligned'_distinct'_ko_at'I[where 'a=pde,
                                 simplified, OF _ _ _ refl]
 
 lemma aligned_distinct_relation_pde_atI'[elim]:
@@ -682,7 +682,7 @@ lemma pte_relation_alignedD:
   done
 
 lemmas aligned_distinct_pte_atI'
-    = aligned'_distinct'_obj_at'I[where 'a=pte,
+    = aligned'_distinct'_ko_at'I[where 'a=pte,
                                 simplified, OF _ _ _ refl]
 
 lemma aligned_distinct_relation_pte_atI'[elim]:

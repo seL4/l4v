@@ -602,7 +602,7 @@ proof -
         apply (rule corres_noop [where P=\<top> and P'=\<top>])
          apply wpsimp+
       apply (fastforce dest: pspace_relation_tcb_at
-                       simp: state_relation_def tcb_of'_def opt_map_def obj_at'_def projectKOs
+                       simp: state_relation_def opt_map_def obj_at'_def projectKOs
                       split: option.splits)
      apply clarsimp
     apply simp
@@ -2935,14 +2935,14 @@ where
 abbreviation
   "ct_isSchedulable \<equiv> ct_active'
                        and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
-                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) (ksCurThread s))"
+                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) (ksCurThread s))"
 
 definition
   isSchedulable_bool :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "isSchedulable_bool tcbPtr s'
     \<equiv> pred_map (\<lambda>tcb. runnable' (tcbState tcb) \<and> \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s') tcbPtr
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcb_scs_of' s') tcbPtr"
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') tcbPtr"
 
 lemma isSchedulable_wp:
   "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
@@ -2951,10 +2951,10 @@ lemma isSchedulable_wp:
   apply (wpsimp simp: hoare_vcg_if_lift2 obj_at_def is_tcb inReleaseQueue_def wp: threadGet_wp)
   apply (rule conjI)
    apply (fastforce simp: isSchedulable_bool_def isScActive_def obj_at'_def projectKOs
-                          pred_tcb_at'_def tcb_of'_def pred_map_simps in_opt_map_eq
+                          pred_tcb_at'_def pred_map_simps in_opt_map_eq
                    split: option.splits)
   apply (clarsimp simp: isSchedulable_bool_def isScActive_def obj_at'_def projectKOs
-                         pred_tcb_at'_def tcb_of'_def pred_map_simps in_opt_map_eq vs_all_heap_simps
+                         pred_tcb_at'_def pred_map_simps in_opt_map_eq vs_all_heap_simps
                  split: option.splits)
   by argo
 
@@ -2998,19 +2998,19 @@ lemma threadSet_isSchedulable_bool_nochange:
   unfolding isSchedulable_bool_def threadSet_def
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def projectKOs)
-  apply (fastforce simp: pred_map_def tcb_of'_def projectKOs isScActive_def)
+  apply (fastforce simp: pred_map_def projectKOs isScActive_def)
   done
 
 lemma threadSet_isSchedulable_bool:
   "\<lbrace>\<lambda>s. runnable' st
       \<and> pred_map (\<lambda>tcb. \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s) t
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) t\<rbrace>
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) t\<rbrace>
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def projectKOs)
-  apply (fastforce simp: pred_map_def tcb_of'_def projectKOs isScActive_def)
+  apply (fastforce simp: pred_map_def projectKOs isScActive_def)
   done
 
 lemma setObject_queued_pred_tcb_at'[wp]:
@@ -3088,7 +3088,7 @@ lemma sts_sch_act':
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def tcb_of'_def obj_at'_def projectKOs pred_map_def)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs pred_map_def)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   done
@@ -3108,7 +3108,7 @@ lemma sts_sch_act[wp]:
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def tcb_of'_def obj_at'_def projectKOs pred_map_def)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs pred_map_def)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   apply (fastforce simp: sch_act_simple_def)
@@ -4763,7 +4763,7 @@ lemma rescheduleRequired_iflive'[wp]:
   apply (simp add: rescheduleRequired_def)
   apply (wpsimp wp: isSchedulable_wp)
   apply (erule if_live_then_nonz_capE')
-  apply (fastforce simp: isSchedulable_bool_def pred_map_def tcb_of'_def
+  apply (fastforce simp: isSchedulable_bool_def pred_map_def
                          ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
 
