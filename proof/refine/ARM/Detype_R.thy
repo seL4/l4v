@@ -4796,7 +4796,6 @@ lemma createTCBs_tcb_at':
     apply simp
    apply simp
   apply (clarsimp simp: retype_obj_at_disj')
-  apply (clarsimp simp: projectKO_opt_tcb)
   apply (clarsimp simp: new_cap_addrs_def image_def)
   apply (drule_tac x = "unat x" in bspec)
    apply (simp add:objBits_simps' shiftl_t2n)

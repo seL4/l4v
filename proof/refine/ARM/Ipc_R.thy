@@ -2069,7 +2069,7 @@ lemma replyPush_corres:
    corres dc (invs and tcb_at caller and tcb_at callee and reply_at reply_ptr
               and ex_nonz_cap_to reply_ptr
               and st_tcb_at active caller
-              and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
+              and reply_sc_reply_at (\<lambda>scp. scp = None) reply_ptr
               and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
               and weak_valid_sched_action and scheduler_act_not caller)
              (valid_release_queue_iff and valid_objs' and valid_queues and valid_queues')
@@ -4716,7 +4716,7 @@ lemma replyPush_sym_refs_list_refs_of_replies':
   "\<lbrace>(\<lambda>s. sym_refs (list_refs_of_replies' s))
     and valid_replies'
     and valid_objs'
-    and (\<lambda>s. replyTCBs_of s replyPtr = None) and replies_scs_sym_refs\<rbrace>
+    and (\<lambda>s. replyTCBs_of s replyPtr = None) and scReply_sym_refs\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_ s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   supply if_split [split del]
@@ -4737,13 +4737,13 @@ lemma replyPush_sym_refs_list_refs_of_replies':
   apply (intro conjI)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-  apply (clarsimp simp: sym_heapd_def pred_map_eq)
+  apply (clarsimp simp: sym_heap_def pred_map_eq)
   done
 
 lemma replyPush_if_live_then_nonz_cap':
   "\<lbrace> if_live_then_nonz_cap' and valid_objs' and valid_idle' and
      ex_nonz_cap_to' replyPtr and ex_nonz_cap_to' callerPtr and ex_nonz_cap_to' calleePtr and
-     tcbs_scs_sym_refs and replies_scs_sym_refs and (\<lambda>s. callerPtr \<noteq> ksIdleThread s)\<rbrace>
+     scTCB_sym_refs and scReply_sym_refs and (\<lambda>s. callerPtr \<noteq> ksIdleThread s)\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   supply if_split [split del]
@@ -4774,13 +4774,13 @@ lemma replyPush_if_live_then_nonz_cap':
    apply (intro conjI)
     apply (erule if_live_then_nonz_capE')
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_sc pred_map_def pred_map_eq_def live_sc'_def)
-    apply (clarsimp simp: sym_heapd_def pred_map_eq)
+    apply (clarsimp simp: sym_heap_def)
   apply (intro conjI)
     apply (frule obj_at_ko_at'[where p=callerPtr], clarsimp)
     apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
     apply (clarsimp simp: valid_tcb'_def)
    apply (subgoal_tac "(tcb_scs_of' s) callerPtr = Some scp")
-    apply (clarsimp simp: sym_heapd_def pred_map_eq)
+    apply (clarsimp simp: sym_heap_def)
    apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKOs)
   apply (clarsimp simp: valid_idle'_def)
   done
@@ -4796,7 +4796,7 @@ lemma replyPush_valid_idle':
   "\<lbrace>valid_idle'
     and valid_pspace'
     and (\<lambda>s. callerPtr \<noteq> ksIdleThread s)
-    and tcbs_scs_sym_refs\<rbrace>
+    and scTCB_sym_refs\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   apply (simp only: replyPush_def)
@@ -4854,7 +4854,7 @@ lemma replyPush_sch_act_wf:
   by (wpsimp wp: sts_sch_act' hoare_vcg_all_lift hoare_vcg_if_lift hoare_drop_imps)
 
 lemma replyPush_invs':
-  "\<lbrace>invs' and tcbs_scs_sym_refs and replies_scs_sym_refs and
+  "\<lbrace>invs' and scTCB_sym_refs and scReply_sym_refs and
     sch_act_not callerPtr and ex_nonz_cap_to' callerPtr and ex_nonz_cap_to' calleePtr and
     ex_nonz_cap_to' replyPtr and (\<lambda>s. replyTCBs_of s replyPtr = None)\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
@@ -4956,10 +4956,11 @@ crunches rescheduleRequired
   for scs_tcbs_of[wp]: "\<lambda>s. P (tcb_scs_of' s) (scTCBs_of s)"
   (wp: crunch_wps threadSet_tcb_scs_of'_inv ignore: threadSet)
 
-lemma maybeReturnSc_tcbs_scs_sym_refs[wp]:
-  "\<lbrace>tcbs_scs_sym_refs and valid_objs'\<rbrace>
+lemma maybeReturnSc_scTCB_sym_refs[wp]:
+  "\<lbrace>scTCB_sym_refs and valid_objs'\<rbrace>
    maybeReturnSc y t
-   \<lbrace>\<lambda>_. tcbs_scs_sym_refs\<rbrace>"
+   \<lbrace>\<lambda>_. scTCB_sym_refs\<rbrace>"
+  supply opt_mapE [rule del]
   unfolding maybeReturnSc_def
   apply (simp add: liftM_def)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
@@ -4968,17 +4969,14 @@ lemma maybeReturnSc_tcbs_scs_sym_refs[wp]:
    apply (wpsimp wp: threadGet_wp)
   apply (clarsimp simp: tcb_at'_ex_eq_all)
   apply (drule sym, simp)
-  apply (subgoal_tac "pred_map_eq (the (tcbSchedContext tcb)) (tcb_scs_of' s) t")
-   apply (clarsimp simp: sym_heapd_def pred_map_eq_upd)
-   apply (intro conjI; clarsimp)
-    using pred_map_eq_inj apply metis
-   using pred_map_eq_inj apply metis
-  apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at'_real_def ko_wp_at'_def opt_map_def
-                        projectKOs)
+  apply (subgoal_tac "(tcb_scs_of' s) t = Some (the (tcbSchedContext tcb))")
+   apply (clarsimp simp: sym_heap_def)
+   apply (subst (asm) sym_heap_symmetric[simplified sym_heap_def], simp)
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def opt_map_def projectKOs)
   done
 
-lemma maybeReturnSc_replies_scs_sym_refs[wp]:
-  "maybeReturnSc y t \<lbrace>replies_scs_sym_refs\<rbrace>"
+lemma maybeReturnSc_scReply_sym_refs[wp]:
+  "maybeReturnSc y t \<lbrace>scReply_sym_refs\<rbrace>"
   unfolding maybeReturnSc_def
   apply (simp add: liftM_def)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
@@ -4988,7 +4986,7 @@ lemma maybeReturnSc_replies_scs_sym_refs[wp]:
   apply (clarsimp simp: tcb_at'_ex_eq_all)
   apply (drule sym, simp)
   apply (erule back_subst)
-  apply (rule arg_cong2[where f=sym_heapd, OF _ refl], rule ext)
+  apply (rule arg_cong2[where f=sym_heap, OF _ refl], rule ext)
   apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at'_real_def ko_wp_at'_def opt_map_def
                         projectKOs)
   done
@@ -5009,43 +5007,43 @@ lemma replyRemoveTCB_tcb_scs_of'[wp]:
   unfolding replyRemoveTCB_def
   by (wpsimp wp: setSchedContext_scTCBs_of gts_wp')
 
-lemma replyRemoveTCB_tcbs_scs_sym_refs[wp]:
-  "replyRemoveTCB tptr \<lbrace>tcbs_scs_sym_refs\<rbrace>"
+lemma replyRemoveTCB_scTCB_sym_refs[wp]:
+  "replyRemoveTCB tptr \<lbrace>scTCB_sym_refs\<rbrace>"
   by (rule hoare_weaken_pre, wps, wpsimp, simp)
 
 crunches cancelIPC
-  for tcbs_scs_sym_refs[wp]: tcbs_scs_sym_refs
+  for scTCB_sym_refs[wp]: scTCB_sym_refs
   (wp: crunch_wps threadSet_tcb_scs_of'_inv ignore: setSchedContext threadSet)
 
-lemma cleanReply_replies_scs_sym_refs :
-  "\<lbrace>\<lambda>s. sym_heapd (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)\<rbrace>
+lemma cleanReply_scReply_sym_refs :
+  "\<lbrace>\<lambda>s. sym_heap (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)\<rbrace>
    cleanReply rptr
-   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>"
+   \<lbrace>\<lambda>_. scReply_sym_refs\<rbrace>"
   unfolding cleanReply_def
   apply (clarsimp simp: bind_assoc updateReply_def)
   apply (wpsimp wp: hoare_drop_imp | wps)+
   done
 
-lemma replyRemoveTCB_replies_scs_sym_refs [wp]:
-  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
+lemma replyRemoveTCB_scReply_sym_refs [wp]:
+  "\<lbrace>scReply_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
    replyRemoveTCB t
-   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>"
+   \<lbrace>\<lambda>_. scReply_sym_refs\<rbrace>"
   supply if_split [split del]
   unfolding replyRemoveTCB_def
   apply (clarsimp simp: bind_assoc updateReply_def)
   apply wpsimp
-         apply (wpsimp wp: cleanReply_replies_scs_sym_refs)
+         apply (wpsimp wp: cleanReply_scReply_sym_refs)
         apply wp
          apply wps
          apply wpsimp
         apply (rule_tac Q="\<lambda>_ s. (replySCs_of s) (the (replyPrev reply)) = None \<and>
-                 sym_heapd (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)"
+                 sym_heap (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)"
                in hoare_strengthen_post[rotated], clarsimp)
         apply wpsimp
        apply (rule_tac Q="\<lambda>_ s. (replyPrev reply \<noteq> None \<longrightarrow>
                 reply_at' (the (replyPrev reply)) s \<longrightarrow>
                 (replySCs_of s) (the (replyPrev reply)) = None) \<and>
-                sym_heapd (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)"
+                sym_heap (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)"
               in hoare_strengthen_post[rotated])
         apply (clarsimp split: if_splits simp: obj_at'_def)
        apply (wp hoare_vcg_if_lift2 hoare_vcg_imp_lift' hoare_vcg_all_lift)
@@ -5057,7 +5055,7 @@ lemma replyRemoveTCB_replies_scs_sym_refs [wp]:
         apply wpsimp
        apply wpsimp
       apply wpsimp
-     apply (rule_tac Q="\<lambda>replya s. replies_scs_sym_refs s \<and> sym_refs (list_refs_of_replies' s)"
+     apply (rule_tac Q="\<lambda>replya s. scReply_sym_refs s \<and> sym_refs (list_refs_of_replies' s)"
             in hoare_strengthen_post[rotated])
       apply (clarsimp split: if_splits)
       apply (intro conjI; intro allI impI)
@@ -5085,11 +5083,10 @@ lemma replyRemoveTCB_replies_scs_sym_refs [wp]:
           apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
          apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
         apply (clarsimp simp: isHead_to_head)
-        apply (erule sym_heapd_remove_only)
-        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def
-                              pred_map_eq_def pred_map_def)
+        apply (erule sym_heap_remove_only)
+        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def pred_map_eq)
        apply (clarsimp simp: isHead_to_head)
-       apply (erule rsubst2[where P=sym_heapd, OF _ refl])
+       apply (erule rsubst2[where P=sym_heap, OF _ refl])
        apply (rule ext, clarsimp split: if_split)
        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
       apply (intro conjI, intro allI impI)
@@ -5098,20 +5095,20 @@ lemma replyRemoveTCB_replies_scs_sym_refs [wp]:
         apply (rule replyNexts_Some_replySCs_None)
         apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
-      apply (erule rsubst2[where P=sym_heapd, OF _ refl])
+      apply (erule rsubst2[where P=sym_heap, OF _ refl])
       apply (rule ext, clarsimp split: if_split)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
      apply (wpsimp wp: hoare_drop_imp)+
   done
 
 crunches blockedCancelIPC, cancelSignal
-  for replies_scs_sym_refs[wp]: replies_scs_sym_refs
+  for scReply_sym_refs[wp]: scReply_sym_refs
   (wp: crunch_wps  ignore: setSchedContext setReply updateReply)
 
-lemma cancelIPC_replies_scs_sym_refs [wp]:
-  "\<lbrace>replies_scs_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
+lemma cancelIPC_scReply_sym_refs [wp]:
+  "\<lbrace>scReply_sym_refs and (\<lambda>s. sym_refs (list_refs_of_replies' s))\<rbrace>
    cancelIPC t
-   \<lbrace>\<lambda>_. replies_scs_sym_refs\<rbrace>"
+   \<lbrace>\<lambda>_. scReply_sym_refs\<rbrace>"
   unfolding cancelIPC_def
   by (wpsimp wp: gts_wp', simp add: comp_def)
 
@@ -5130,7 +5127,7 @@ lemma ri_invs' [wp]:
    apply (rule hoare_seq_ext)
     \<comment> \<open>After getEndpoint, the following holds regardless of the type of ep\<close>
     apply (rule_tac B="\<lambda>ep s. invs' s \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
-                              tcbs_scs_sym_refs s \<and> replies_scs_sym_refs s \<and>
+                              scTCB_sym_refs s \<and> scReply_sym_refs s \<and>
                               st_tcb_at' simple' t s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s \<and>
                               (\<forall>x. replyOpt = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and>
                                                          reply_at' x s \<and> replyTCBs_of s x = None) \<and>
@@ -5189,8 +5186,8 @@ lemma ri_invs' [wp]:
    apply (fastforce simp: refs_of_rev' ko_wp_at'_def tcb_bound_refs'_def get_refs_def
                    split: option.splits)
   apply (clarsimp simp: comp_def invs'_def valid_state'_def valid_pspace'_def cong: conj_cong imp_cong)
-  apply (frule (3) invs'_tcbs_scs_sym_refs)
-  apply (frule (3) sym_refs_replies_scs)
+  apply (frule (2) sym_refs_tcbs_scs)
+  apply (frule (2) sym_refs_replies_scs)
   apply (subgoal_tac "ex_nonz_cap_to' (capEPPtr cap) s \<and> st_tcb_at' simple' t s \<and>
                       t \<noteq> ksIdleThread s \<and> (ep_at' (capEPPtr cap) s \<longrightarrow>
                       obj_at' (\<lambda>ep. ep \<noteq> Structures_H.endpoint.IdleEP \<longrightarrow> t \<notin> set (epQueue ep))
@@ -5225,7 +5222,7 @@ crunches doIPCTransfer
 lemma si_invs'_helper2:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not t s \<and> st_tcb_at' active' t s \<and> tcb_at' d s \<and>
         ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' d s \<and>
-        tcbs_scs_sym_refs s \<and> replies_scs_sym_refs s \<and>
+        scTCB_sym_refs s \<and> scReply_sym_refs s \<and>
         (\<forall>reply. replyObject recvState = Some reply \<longrightarrow> ex_nonz_cap_to' reply s \<and> reply_at' reply s
                  \<and> replyTCBs_of s reply = None) \<and>
         (cd \<and> scOptDest = Nothing \<longrightarrow> bound_sc_tcb_at' ((=) None) d s \<and>
@@ -5292,7 +5289,7 @@ lemma si_invs'2[wp]:
                                   ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and>
                                   (\<forall>x. replyObject recvState = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and> reply_at' x s
                                        \<and> replyTCBs_of s x = None) \<and>
-                                  tcbs_scs_sym_refs s \<and> replies_scs_sym_refs s \<and>
+                                  scTCB_sym_refs s \<and> scReply_sym_refs s \<and>
                                   (cd \<longrightarrow> (\<exists>scptr. bound_sc_tcb_at' (\<lambda>scp. scp = Some scptr) t s \<and>
                                                    ex_nonz_cap_to' scptr s))"
                 in hoare_strengthen_post[rotated])
@@ -5303,7 +5300,7 @@ lemma si_invs'2[wp]:
                            hoare_vcg_ex_lift hoare_vcg_imp_lift')
         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
                                  ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and> a \<noteq> t \<and>
-                                 tcbs_scs_sym_refs s \<and> replies_scs_sym_refs s \<and>
+                                 scTCB_sym_refs s \<and> scReply_sym_refs s \<and>
                                  (\<forall>x. replyObject recvState = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and> reply_at' x s) \<and>
                                  (cd \<longrightarrow> (\<exists>scptr. bound_sc_tcb_at' (\<lambda>scp. scp = Some scptr) t s \<and> ex_nonz_cap_to' scptr s))"
                in hoare_strengthen_post[rotated])
@@ -5321,8 +5318,8 @@ lemma si_invs'2[wp]:
         apply (fastforce simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def
                                projectKO_eq projectKO_tcb isReceive_def
                         split: thread_state.splits)
-       apply (erule (3) invs'_tcbs_scs_sym_refs)
-      apply (erule (3) sym_refs_replies_scs)
+       apply (erule (2) sym_refs_tcbs_scs)
+      apply (erule (2) sym_refs_replies_scs)
      apply (subgoal_tac "ko_wp_at' live' xb s \<and> reply_at' xb s", clarsimp)
       apply (erule (1) if_live_then_nonz_capE')
      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb)

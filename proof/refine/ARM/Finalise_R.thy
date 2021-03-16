@@ -3901,11 +3901,12 @@ lemma schedContextUnbindReply_invs'[wp]:
   unfolding schedContextUnbindReply_def
   apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_Nothing_invs'
                     hoare_vcg_imp_lift typ_at_lifts)
-  apply (frule ko_at_valid_objs'; (fastforce simp: projectKOs)?)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def sym_refs_asrt_def)
+  apply (frule (1) ko_at_valid_objs', clarsimp simp: projectKOs)
+  apply (frule (2) sym_refs_replies_scs)
   apply (intro conjI)
-     apply (subst sym_refs_replySCs_of_scReplies_of; (fastforce simp: sym_refs_asrt_def)?)
-     apply (fastforce simp: obj_at'_def opt_map_def projectKOs split: option.splits)
-    apply (fastforce elim: if_live_then_nonz_capE'[OF invs_iflive']
+     apply (fastforce simp: obj_at'_def opt_map_def projectKOs sym_heap_def split: option.splits)
+    apply (fastforce elim: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def)
    apply (auto simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
                      objBits_simps')

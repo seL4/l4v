@@ -101,7 +101,7 @@ lemma tcbSchedAppend_corres:
           (tcb_sched_action (tcb_sched_append) t) (tcbSchedAppend t)"
   apply (rule corres_cross_back[where P="tcb_at t" and P'="tcb_at' t"])
     apply (fastforce dest: pspace_relation_tcb_at
-                     simp: state_relation_def tcb_of'_def opt_map_def obj_at'_def projectKOs
+                     simp: state_relation_def opt_map_def obj_at'_def projectKOs
                     split: option.splits)
    apply simp
   apply (simp only: tcbSchedAppend_def tcb_sched_action_def)
@@ -1540,7 +1540,7 @@ lemma runnable_cross_rel:
   apply (clarsimp simp: other_obj_relation_def split: option.splits)
   apply (case_tac "ko"; simp)
   apply (rule_tac x="x6" in exI)
-  apply (clarsimp simp: tcb_of'_def opt_map_def)
+  apply (clarsimp simp: opt_map_def)
   apply (clarsimp simp: tcb_relation_def thread_state_relation_def)
   apply (case_tac "tcb_state b"; simp add: runnable_def)
   apply clarsimp
@@ -1559,7 +1559,7 @@ lemma tcbInReleaseQueue_cross_rel:
   apply (clarsimp simp: other_obj_relation_def split: option.splits)
   apply (case_tac "koa"; simp)
   apply (rule_tac x="x6" in exI)
-  apply (clarsimp simp: tcb_of'_def opt_map_def)
+  apply (clarsimp simp: opt_map_def)
   apply (subgoal_tac "obj_at' tcbInReleaseQueue t s'")
   apply (subgoal_tac "release_queue_relation (release_queue s) (ksReleaseQueue s')")
   apply (clarsimp simp: release_queue_relation_def not_in_release_q_def valid_release_queue'_def)
@@ -1588,7 +1588,7 @@ lemma isScActive_cross_rel:
       apply (subgoal_tac "valid_sched_context_size n")
        apply (clarsimp simp: other_obj_relation_def split: option.splits)
        apply (clarsimp simp: obj_at'_def projectKO_eq Bits_R.projectKO_sc)
-       apply (clarsimp simp: tcb_of'_def opt_map_def tcb_relation_def)
+       apply (clarsimp simp: opt_map_def tcb_relation_def)
        apply (rule_tac x=scp in exI, simp)
        apply (clarsimp simp: isScActive_def active_sc_def)
        apply (clarsimp simp: obj_at'_def projectKO_eq Bits_R.projectKO_sc pred_map_def opt_map_def)
@@ -1644,7 +1644,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
                          invs_valid_vs_lookup invs_unique_refs)
    apply (clarsimp simp: thread_get_def in_monad pred_tcb_at_def obj_at_def get_tcb_ko_at)
   apply (prop_tac "st_tcb_at' runnable' t s")
-   apply (clarsimp simp: pred_tcb_at'_def isSchedulable_bool_def pred_map_def obj_at'_def tcb_of'_def
+   apply (clarsimp simp: pred_tcb_at'_def isSchedulable_bool_def pred_map_def obj_at'_def
                          projectKO_eq Bits_R.projectKO_tcb
                   split: kernel_object.splits)
   by (auto elim!: pred_tcb'_weakenE split: thread_state.splits
@@ -2572,7 +2572,7 @@ lemma setSchedulerAction_ksSchedulerAction[wp]:
 lemma isSchedulable_bool_runnableE:
   "isSchedulable_bool t s \<Longrightarrow> tcb_at' t s \<Longrightarrow> st_tcb_at' runnable' t s"
   unfolding isSchedulable_bool_def
-  by (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def projectKO_eq projectKO_opt_tcb tcb_of'_Some)
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def projectKO_eq projectKO_opt_tcb)
 
 lemma rescheduleRequired_invs'[wp]:
   "rescheduleRequired \<lbrace>invs'\<rbrace>"
