@@ -8,7 +8,7 @@ theory Bits_AI
 imports "./$L4V_ARCH/ArchBits_AI"
 begin
 
-lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'
+lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp' whileLoop_wp'
 
 lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
                       assertE_def zipWithM_mapM zipWithM_x_mapM
