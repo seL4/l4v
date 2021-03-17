@@ -40,6 +40,11 @@ lemma valid_sched_context_size'_scConsumed_update[simp]:
   "valid_sched_context_size' (scConsumed_update f sc') = valid_sched_context_size' sc'"
   by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
 
+lemma readSchedContext_SomeD:
+  "readSchedContext scp s = Some sc'
+   \<Longrightarrow> ksPSpace s scp = Some (KOSchedContext sc')"
+  by (clarsimp simp: readSchedContext_def asks_def obj_at'_def projectKOs)
+
 lemma sym_refs_tcbSchedContext:
   "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"

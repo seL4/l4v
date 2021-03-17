@@ -2174,10 +2174,14 @@ lemma handleInterrupt_valid_duplicates'[wp]:
           |wpc|simp add: handleReservedIRQ_def maskIrqSignal_def)+
   done
 
+crunches awaken
+  for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps)
+
 crunch valid_duplicates' [wp]:
   schedule "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (ignore: setNextPC clearExMonitor threadSet simp: crunch_simps
-   wp: whileM_inv findM_inv hoare_drop_imps)
+   wp: hoare_drop_imps)
 
 lemma activate_sch_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. ct_in_state' activatable' s \<and> vs_valid_duplicates' (ksPSpace s)\<rbrace>
