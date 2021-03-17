@@ -1,0 +1,307 @@
+#!/usr/bin/env python3
+#
+# Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
+# End-user interface to internal L4.verified test board. The internal test board
+# tracks a Google Repo manifest file that points to bleeding-edge versions of
+# component repos.
+#
+# This script creates a suitable manifest from the current local repository and
+# uploads it to the test board. It also performs some error checking.
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import json
+import tempfile
+import getpass
+import time
+import lxml.etree as etree
+
+parser = argparse.ArgumentParser(description="L4.verified test board script")
+
+# as git commit -m
+parser.add_argument('-m', '--message',
+                    help="Use this commit message without prompting")
+parser.add_argument('--testboard', default='git@github.com:seL4/gh-testboard.git',
+                    help="Test board manifest URL")
+username = getpass.getuser()
+current_time_in_sec = int(time.time())
+branch_name = f"{username}_{current_time_in_sec}"
+parser.add_argument('--testboard-branch', default=branch_name,
+                    help="Name of the branch to push the testboard manifest to")
+parser.add_argument('--quiet', action='store_true',
+                    help="Do not print progress messages")
+parser.add_argument('--debug', action='store_true',
+                    help="Print verbose debugging messages")
+parser.add_argument('--repo_dir', default='.',
+                    help="Directory of repo")
+
+# In Python 3, subprocess returns bytes instead of (Unicode) str.
+# We don't worry about that here, since our subprocesses are
+# expected to output text.
+def subprocess_output(*args, **kwargs):
+    out = subprocess.check_output(*args, **kwargs)
+    if bytes is not str and type(out) is bytes:
+        return out.decode() # what could go wrong?
+    else:
+        return out
+
+# github remotes are of the form git@github.com:user/repo
+# but repo expects an ssh URL, e.g. ssh://git@github.com/user/repo
+def fixup_github(remote):
+    git_url = 'git@github.com:'
+    url, repo = remote
+    if url.startswith(git_url):
+        return 'ssh://git@github.com/' + url[len(git_url):], repo
+    else:
+        return remote
+
+def main(argv):
+    args = parser.parse_args(argv)
+
+    def log(msg):
+        if args.quiet:
+            return
+        for line in msg.split('\n'):
+            sys.stdout.write('[log] ' + line + '\n')
+    def debug(msg):
+        if not args.debug:
+            return
+        for line in msg.split('\n'):
+            sys.stdout.write('[debug] ' + line + '\n')
+    def fatal(msg):
+        sys.stderr.write('[fatal] ' + msg + '\n')
+        sys.exit(1)
+
+    def git_in_subrepo(subrepo, cmd):
+        return subprocess_output(['git', '-C', subrepo] + cmd, cwd=args.repo_dir,stderr=subprocess.STDOUT)
+
+    if not os.path.isdir(os.path.join(args.repo_dir, '.repo')):
+        fatal("Could not find .repo directory. (You need to run this in the top-level directory.)")
+
+    # Check external programs.
+    try:
+        debug("git is: {}".format(subprocess_output(['git', '--version']).rstrip()))
+    except OSError:
+        fatal("This script requires `git'. Install it first.")
+
+    try:
+        debug("repo is: {}".format(subprocess_output(['repo', '--version'],cwd=args.repo_dir).splitlines()[1]))
+    except OSError:
+        fatal("This script requires `repo' (Google Repo). Make sure it is in your PATH.")
+
+    log("Checking repositories.")
+
+    # List all component repositories.
+    # Subprocess output: one component repo directory per line
+    subrepos = subprocess_output(['repo', 'list', '-p'], cwd=args.repo_dir).split()
+
+    # Find a suitable remote branch for each repository HEAD.
+    only_local = []
+    candidate_remotes = {}
+    commit_ident = {}
+    for subrepo in subrepos:
+        # Subprocess output: identifiers of the form "<remote>/<branch>", one per line
+        # NB: some lines have other formats like "<alias> -> <real_remote>".
+        # Google Repo also adds fake remotes like "m".
+        remotes = git_in_subrepo(subrepo, ['branch', '-r', '--contains', 'HEAD']).split('\n')
+        remotes = [r.strip().split('/', 1) for r in remotes if r]
+        debug('Remotes for {}: {}'.format(subrepo, remotes))
+        # Subprocess output: commit hash
+        commit_ident[subrepo] = git_in_subrepo(subrepo, ['rev-parse', 'HEAD']).strip()
+        if not remotes:
+            # TODO: offer to auto-push commits if they have a sane upstream branch.
+            #       Would need to be careful with master!
+            only_local.append(subrepo)
+        else:
+            candidate_remotes[subrepo] = remotes
+    if only_local:
+        fatal("Some changes have not been pushed to a remote. Changed repos:" +
+              ''.join('\n  ' + r for r in only_local))
+    del only_local
+
+    # Looks ok. Now get the URL for each remote.
+    # URLs are split as site/project:
+    #   example.com/my/repo.git -> ('example.com/my', 'repo')
+    remote_url = {}
+    remote_name = {}
+    for subrepo in subrepos:
+        # Pick the first remote that has a sensible URL.
+        good_remote = None
+        debug("Remote URLs for {}:".format(subrepo))
+        for remote, branch in candidate_remotes[subrepo]:
+            try:
+                # Subprocess output: remote URL, if it exists
+                url = git_in_subrepo(subrepo, ['config', 'remote.{}.url'.format(remote)]).rstrip('\n')
+                # Split the project name off the end of the URL.
+                try:
+                    site, project = url.rsplit('/', 1)
+                    if project.endswith('.git'):
+                        project = project[:-len('.git')]
+                    debug("  {}/{}: {}/{} (ok)".format(remote, branch, site, project))
+                    good_remote = (remote, (site, project))
+                    break
+                except ValueError:
+                    debug("  {}/{}: {} (bad)".format(remote, branch, url))
+                    pass
+            except subprocess.CalledProcessError:
+                debug("  {}/{}: (error)".format(remote, branch))
+                pass
+        if good_remote is None:
+            fatal("{}: Could not get a remote URL. Tried these remotes: {}".
+                  format(subrepo, ', '.join(map(repr, candidate_remotes[subrepo]))))
+        else:
+            remote_name[subrepo], remote_url[subrepo] = good_remote
+            remote_url[subrepo] = fixup_github(remote_url[subrepo])
+    del candidate_remotes
+
+    # Check for conflicting remote names.
+    remote_name_lookup = {}
+    for subrepo in subrepos:
+        remote = remote_name[subrepo]
+        site, project = remote_url[subrepo]
+        if remote not in remote_name_lookup:
+            remote_name_lookup[remote] = ((site, project), subrepo)
+        else:
+            (other_site, other_project), other_subrepo = remote_name_lookup[remote]
+            if site != other_site:
+                # We could generate a <remote alias=...> attribute in the
+                # manifest to deal with this, but it's not worth the trouble.
+                fatal(("Remote name \"{}\" refers to multiple URLs:\n"
+                       "  {}/{} in {}\n"
+                       "  {}/{} in {}"
+                      ).format(remote,
+                               site, project, subrepo,
+                               other_site, other_project, other_subrepo))
+
+    # Construct repo manifest.
+    # Reference: output of `repo help manifest'.
+    manifest_spec = etree.Element("manifest")
+
+    for remote, (url, subrepo) in remote_name_lookup.items():
+        site, _ = url
+        # remove duplicated remotes
+        [ manifest_spec.remove(t) for t in manifest_spec.findall("remote") if t.get("name") == remote ]
+        remote_spec = etree.SubElement(manifest_spec, "remote",
+                                       name=remote, fetch=site)
+    for subrepo in subrepos:
+        site, project = remote_url[subrepo]
+        # remove duplicated projects
+        [ manifest_spec.remove(t) for t in manifest_spec.findall("project") if t.get("name").lower() == project.lower() ]
+        project_spec = etree.SubElement(manifest_spec, "project",
+                                        name=project, path=subrepo, remote=remote_name[subrepo],
+                                        revision=commit_ident[subrepo])
+    manifest = etree.ElementTree(manifest_spec)
+    manifest_string = etree.tostring(manifest, pretty_print=True)
+
+    debug("Test board manifest:")
+    debug(manifest_string.decode())
+
+    # Clone test board repo and write manifest to it.
+    log("Updating test board repository.")
+
+    testboard_repo = tempfile.mkdtemp()
+    try:
+        try:
+            testboard_clone_log = subprocess_output(['git', 'clone', args.testboard, testboard_repo])
+        except subprocess.CalledProcessError as e:
+            fatal("Failed to clone testboard repo. Log:\n" + e.output)
+        debug(testboard_clone_log)
+        debug("Cloned test board repo to: {}".format(testboard_repo))
+        try:
+            #TODO: if someone specifies a branch via --testboard-branch, and it already exists,
+            #      then this will fail :(
+            testboard_switch_branch_log = subprocess_output(['git', 'checkout', '-b', args.testboard_branch], cwd=testboard_repo)
+        except subprocess.CalledProcessError as e:
+            fatal("Failed to switch to branch in testboard repo. Log:\n" + e.output)
+        debug(testboard_switch_branch_log)
+
+        with open(os.path.join(testboard_repo, 'manifest.xml'), 'wb') as f:
+            f.write(manifest_string)
+
+        # Check if there is anything to commit.
+        if subprocess_output(['git', 'diff'], cwd=testboard_repo).strip() == '':
+            manifest_head = subprocess_output(['git', 'log', '--oneline'], cwd=testboard_repo).strip()
+            fatal("Nothing to commit. Your repository is identical to the test board HEAD:\n  " + manifest_head)
+
+        # Commit to testboard repo.
+        # If no message is specified, pre-populate a sensible default
+        # in the user's editor.
+        if args.message is None:
+            # Subprocess output: user name
+            git_user = subprocess_output(['git', 'config', 'user.name'], cwd=args.repo_dir).strip('\n')
+            # Currently, the shortlog (first line) just contains the user name.
+            # It would be nice if we identified the "actively modified" subrepo and
+            # put that in the first line.
+            commit_template = "Test board commit by {}\n\n".format(git_user)
+            man_subrepos = manifest_spec.findall("project")
+            subrepo_column_width = max(len(t.get("name")) for t in man_subrepos)
+            subrepo_default = manifest_spec.find("default")
+            subrepo_default = subrepo_default if subrepo_default is not None else manifest_spec
+            for subrepo in man_subrepos:
+                # Subprocess output: "<hash> <one-line commit message> [<relative committer date>]"
+                subrepo_name = subrepo.get("name")
+                subrepo_path = subrepo.get("path") or subrepo_name
+                subrepo_rev  = subrepo.get("revision") or subrepo_default.get("revision") or 'UNKNOWN'
+                try:
+                    subrepo_rev_log = git_in_subrepo(subrepo_path, ['log', subrepo_rev, '-n', '1', '--format=%h %s [%cr]'])
+                except subprocess.CalledProcessError as e:
+                    log("Seems like the reference %s is not in %s" % (subrepo_rev, subrepo_path))
+                    debug(e.output)
+
+                commit_template += '{:{}} {}'.format('[' + subrepo_name + ']', subrepo_column_width + 2, subrepo_rev_log)
+
+            commit_template += '\n'
+            for subrepo in subrepos:
+                commit_template += "{0:{1}} {2[0]}/{2[1]}\n".format(subrepo + ':', subrepo_column_width + 1, remote_url[subrepo])
+
+            # L4V_ARCH tags
+            l4v_archs = ['ARM','ARM_HYP','RISCV64','X64']
+            arch_line = 'L4V_TEST_ARCHS: ' + ' '.join(['[%s]' % arch for arch in l4v_archs])
+
+            git_template = f"""{commit_template}
+
+# Remove from L4V_TEST_ARCHS any architecture you don't want to be tested
+{arch_line}
+
+# Enter commit message. Lines beginning with # are ignored.
+
+"""
+
+            git_template_file = os.path.join(testboard_repo, '.gittemplate')
+            with open(git_template_file, 'a') as f:
+                f.write('\n' + git_template)
+            try:
+                set_template = subprocess_output(['git', 'config', 'commit.template', '.gittemplate'], cwd=testboard_repo)
+            except subprocess.CalledProcessError as e:
+                fatal("Failed to set git template. Log:\n" + e.output)
+
+            commit_command = ['git', 'commit', 'manifest.xml']
+        else:
+            commit_command = ['git', 'commit', 'manifest.xml', '-m', args.message]
+
+        try:
+            subprocess.check_call(commit_command, cwd=testboard_repo)
+        except subprocess.CalledProcessError:
+            fatal("Failed to commit to the test board repository.")
+
+        # Now attempt to push it.
+        # This may fail if someone else has pushed a commit in the meantime.
+        try:
+            subprocess.check_call(['git', 'push', '--set-upstream', 'origin', args.testboard_branch], cwd=testboard_repo)
+        except subprocess.CalledProcessError:
+            fatal("Failed to push to test board.")
+
+        testboard_oneline = subprocess_output(['git', 'log', '--oneline'], cwd=testboard_repo).strip()
+        log("Done. Your test board commit is:\n  " + testboard_oneline)
+    finally:
+        shutil.rmtree(testboard_repo)
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
