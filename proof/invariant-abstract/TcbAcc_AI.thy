@@ -22,6 +22,20 @@ declare user_getreg_inv[wp]
 
 end
 
+lemma thread_read_SomeD:
+  "thread_read f tp s = Some p \<Longrightarrow> \<exists>tcb. kheap s tp = Some (TCB tcb) \<and> f tcb = p"
+  by (clarsimp simp: thread_read_def oliftM_def dest!: get_tcb_SomeD)
+
+lemma read_tcb_obj_ref_SomeD:
+  "read_tcb_obj_ref f tp s = Some p \<Longrightarrow> \<exists>tcb. kheap s tp = Some (TCB tcb) \<and> f tcb = p"
+  by (clarsimp simp: read_tcb_obj_ref_def dest!: thread_read_SomeD)
+
+lemma read_tcb_obj_ref_NoneD:
+  "read_tcb_obj_ref f tp s = None
+   \<Longrightarrow> \<not> (\<exists>tcb. kheap s tp = Some (TCB tcb))"
+  by (clarsimp simp: read_tcb_obj_ref_def oliftM_def obind_def thread_read_def get_tcb_def
+              split: option.split_asm)
+
 declare global_refs_kheap[simp]
 
 locale TcbAcc_AI_storeWord_invs =
