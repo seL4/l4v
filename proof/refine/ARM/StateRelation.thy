@@ -216,6 +216,18 @@ definition wrap_slice :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> 
 lemma "wrap_slice 1 3 4 [1::nat,2,3,4,5,6] = [2,3,4]" by eval
 lemma "wrap_slice 3 3 4 [1::nat,2,3,4,5,6] = [4,1,2]" by eval
 
+lemma length_wrap_slice[simp]:
+  "\<lbrakk> count \<le> mx; start \<le> mx; mx \<le> length xs \<rbrakk> \<Longrightarrow> length (wrap_slice start count mx xs) = count"
+  by (simp add: wrap_slice_def)
+
+lemma wrap_slice_empty[simp]:
+  "start \<le> mx \<Longrightarrow> wrap_slice start 0 mx xs = []"
+  by (clarsimp simp: wrap_slice_def)
+
+lemma hd_wrap_slice:
+  "\<lbrakk>0 < count; mx \<le> length list; start < mx\<rbrakk> \<Longrightarrow> hd (wrap_slice start count mx list) = list ! start"
+  by (auto simp: wrap_slice_def hd_drop_conv_nth)
+
 definition refills_map :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> refill list \<Rightarrow>  Structures_A.refill list" where
   "refills_map start count mx \<equiv> map refill_map \<circ> wrap_slice (min start mx) (min count mx) mx"
 
@@ -239,6 +251,40 @@ definition sc_relation ::
      sc_refill_max sc = scRefillMax sc' \<and>
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
+
+lemma refills_map_non_empty_pos_count:
+  "refills_map start count mx list \<noteq> [] \<Longrightarrow> 0 < count \<and> 0 < mx"
+  apply (clarsimp simp: refills_map_def refill_map_def wrap_slice_def split: if_split_asm)
+  by linarith
+
+lemma hd_refills_map:
+  "\<lbrakk>refills_map start count mx list \<noteq> []; mx \<le> length list; start < mx\<rbrakk>
+   \<Longrightarrow> hd (refills_map start count mx list) = refill_map (list ! start)"
+  apply (frule refills_map_non_empty_pos_count)
+  apply (clarsimp simp: refills_map_def)
+  by (simp add: hd_map hd_wrap_slice)
+
+lemma refills_heads_equal:
+  "\<lbrakk>sc_relation sc n sc'; scRefillCount sc' \<le> scRefillMax sc'; 0 < scRefillCount sc';
+    scRefillMax sc' \<le> length (scRefills sc'); scRefillHead sc' < scRefillMax sc'\<rbrakk>
+   \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
+  apply (frule hd_refills_map[where count="scRefillCount sc'", rotated]; simp?)
+   apply (frule hd_wrap_slice[where list="scRefills sc'"]; simp?)
+   apply (clarsimp simp: refills_map_def)
+   apply (metis add_cancel_right_left length_0_conv length_greater_0_conv length_wrap_slice
+                less_add_eq_less order_less_imp_le)
+  apply (clarsimp simp: sc_relation_def refillHd_def refill_map_def)
+  done
+
+lemma refills_heads_equal_valid_sched_context':
+  "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []; valid_sched_context' sc' s'\<rbrakk>
+   \<Longrightarrow> rAmount (refillHd sc') = r_amount (refill_hd sc)
+       \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
+  apply (frule refills_heads_equal; (solves simp)?)
+  apply (auto simp: sc_relation_def valid_sched_context'_def refillHd_def refills_map_def
+                    refill_map_def wrap_slice_def
+             split: if_splits)
+  done
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
@@ -554,15 +600,6 @@ definition
 where
  "rights_mask_map \<equiv> \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs)
                                    (AllowGrantReply \<in> rs)"
-
-
-lemma length_wrap_slice[simp]:
-  "\<lbrakk> count \<le> mx; start \<le> mx; mx \<le> length xs \<rbrakk> \<Longrightarrow> length (wrap_slice start count mx xs) = count"
-  by (simp add: wrap_slice_def)
-
-lemma wrap_slice_empty[simp]:
-  "start \<le> mx \<Longrightarrow> wrap_slice start 0 mx xs = []"
-  by (clarsimp simp: wrap_slice_def)
 
 lemma obj_relation_cutsE:
   "\<lbrakk> (y, P) \<in> obj_relation_cuts ko x; P ko ko';

@@ -2987,35 +2987,26 @@ lemma is_blocked_corres:
 lemma get_sc_released_corres:
   "corres (=) (active_sc_valid_refills and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
           (get_sc_released sc_ptr) (scReleased sc_ptr)"
-  apply (simp add: get_sc_released_def sc_released_def scReleased_def
-                   scActive_def refillReady_def getCurTime_def bind_assoc)
-  apply (rule corres_split_deprecated[OF _ get_sc_corres, THEN corres_guard_imp])
-      apply clarsimp
-      apply (rule corres_symb_exec_r[OF _ get_sc_sp'])
-        apply (rule corres_split_deprecated[OF _ corres_gets_trivial, simplified])
-           apply (rename_tac sc sc' n sc2' cur_time cur_time')
-           apply (rule_tac P="active_sc_valid_refills and sc_at_pred ((=) sc) sc_ptr"
-                           and P'="valid_objs' and ko_at' sc' sc_ptr and ko_at' sc2' sc_ptr"
-                           in corres_return[THEN iffD2, rule_format])
-           apply normalise_obj_at'
-           apply (subgoal_tac "sc_active sc = (0 < scRefillMax sc')")
-            apply (case_tac "sc_active sc"; clarsimp)
-            apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
-             apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
-            apply (drule_tac s'=s' in refills_heads_equal_active)
-               apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def
-                                      kernelWCET_ticks_def kernelWCETTicks_def vs_all_heap_simps
-                                      cfg_valid_refills_def rr_valid_refills_def sp_valid_refills_def
-                                      sc_at_ppred_def obj_at_def valid_obj'_def obj_at'_def projectKOs
-                               split: if_splits)+
-           apply (clarsimp simp: sc_relation_def active_sc_def)
-          apply (clarsimp simp: state_relation_def)
-         apply wpsimp+
-      apply (clarsimp simp: obj_at'_def)
-     apply (clarsimp simp: state_relation_def)
-     apply wpsimp+
-   apply (fastforce simp: obj_at_def sc_at_pred_n_def is_obj_defs valid_obj_def)
-  apply clarsimp
+  apply (simp add: get_sc_released_def scReleased_def scActive_def refillReady_def)
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (corressimp corres: get_sc_corres)
+  apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)
+  apply (rule corres_symb_exec_r[rotated, OF gets_the_sp]; (solves wpsimp)?)
+   apply (wpsimp wp: no_ofail_gets_the readRefillReady_no_ofail)
+  apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def)
+  apply normalise_obj_at'
+  apply (subgoal_tac "sc_active sc = (0 < scRefillMax v')")
+   apply (case_tac "sc_active sc"; clarsimp)
+   apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
+    apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
+   apply (drule_tac s'=s' in refills_heads_equal_valid_sched_context')
+      apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def
+                             kernelWCETTicks_def vs_all_heap_simps cfg_valid_refills_def
+                             rr_valid_refills_def sp_valid_refills_def obj_at_def
+                             valid_obj'_def obj_at'_def projectKOs readCurTime_def ogets_def
+                             state_relation_def
+                      split: if_splits)+
+  apply (clarsimp simp: refill_ready_def readCurTime_def ogets_def sc_relation_def active_sc_def)
   done
 
 (* FIXME RT: move to...? *)

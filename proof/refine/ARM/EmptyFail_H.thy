@@ -117,10 +117,6 @@ lemma empty_fail_getObject_reply [intro!, wp, simp]:
   "empty_fail (getObject p :: reply kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getObject_sc [intro!, wp, simp]:
-  "empty_fail (getObject p :: sched_context kernel)"
-  by (simp add: empty_fail_getObject)
-
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
   "empty_fail (getEndpoint ep)"
   by (simp add: getEndpoint_def)
@@ -188,7 +184,12 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
+lemma empty_fail_getObject_sc [intro!, wp, simp]:
+   "empty_fail (getObject p :: sched_context kernel)"
+   by (simp add: empty_fail_getObject)
+
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.postpone"
+  (simp: getSchedContext_def)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
@@ -285,8 +286,13 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
   (wp: empty_fail_catch empty_fail_setDeadline)
 
-crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "TCBDecls_H.awaken"
-  (ignore_del: ThreadDecls_H.suspend)
+crunch (empty_fail) empty_fail[intro!, wp, simp]: tcbReleaseDequeue
+
+lemma awaken_empty_fail[intro!, wp, simp]:
+  "empty_fail awaken"
+  apply (clarsimp simp: awaken_def awakenBody_def)
+  apply (wpsimp wp: empty_fail_whileLoop)
+  done
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
