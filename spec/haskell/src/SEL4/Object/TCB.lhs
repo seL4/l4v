@@ -1077,33 +1077,29 @@ On some architectures, the thread context may include registers that may be modi
 >         commitTime
 >     setCurSc csc
 
-> releaseQNonEmptyAndReady :: Kernel Bool
-> releaseQNonEmptyAndReady = do
->     rq <- getReleaseQueue
->     if rq == [] then return False
->         else do
->             scOpt <- threadGet tcbSchedContext $ head rq
->             ready <- refillReady $ fromJust scOpt
->             return ready
+> readTCBRefillReady :: PPtr TCB -> KernelR Bool
+> readTCBRefillReady tcbPtr = do
+>      scOpt <- threadRead tcbSchedContext tcbPtr
+>      readRefillReady $ fromJust scOpt
 
-> awaken :: Kernel ()
-> awaken = do
+> releaseQNonEmptyAndReady :: KernelR Bool
+> releaseQNonEmptyAndReady = do
+>     rq <- readReleaseQueue
+>     if rq == []
+>       then return False
+>       else readTCBRefillReady (head rq)
+
+> awakenBody :: Kernel ()
+> awakenBody = do
 >     rq <- getReleaseQueue
 >     assert (distinct rq) "The release queue is always distinct"
->     whileM releaseQNonEmptyAndReady $ do
->         awakened <- tcbReleaseDequeue
->         ctPtr <- getCurThread
->         assert (awakened /= ctPtr) "the currently running thread cannot have just woken up"
->         runnable <- isRunnable awakened
->         assert runnable "the awakened thread must be runnable"
->         scPtrOpt <- threadGet tcbSchedContext awakened
->         scPtr <- return $ fromJust scPtrOpt
->         roundRobin <- isRoundRobin scPtr
->         assert (not roundRobin) "round robin threads should not be in the release queue"
->         sufficient <- refillSufficient scPtr 0
->         assert sufficient "threads HEAD refill should always be > MIN_BUDGET"
->         possibleSwitchTo awakened
->         setReprogramTimer True
+>     awakened <- tcbReleaseDequeue
+>     runnable <- isRunnable awakened
+>     assert runnable "the awakened thread must be runnable"
+>     possibleSwitchTo awakened
+
+> awaken :: Kernel ()
+> awaken = whileLoop (const (fromJust . runReaderT releaseQNonEmptyAndReady)) (const awakenBody) ()
 
 > tcbEPFindIndex :: PPtr TCB -> [PPtr TCB] -> Int -> Kernel Int
 > tcbEPFindIndex tptr queue curIndex = do
@@ -1128,4 +1124,3 @@ On some architectures, the thread context may include registers that may be modi
 > tcbEPDequeue tptr queue = do
 >     index <- return $ fromJust $ findIndex (\x -> x == tptr) queue
 >     return $ take index queue ++ drop (index + 1) queue
-
