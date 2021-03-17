@@ -1635,13 +1635,10 @@ crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
 crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"
   (simp: Let_def wp: hoare_drop_imp)
 
-crunch valid_pdpt[wp]: activate_thread,switch_to_thread,
-       switch_to_idle_thread "valid_pdpt_objs"
+crunch valid_pdpt[wp]: activate_thread, switch_to_thread, switch_to_idle_thread,
+                       awaken "valid_pdpt_objs"
   (simp: crunch_simps
    wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp)
-
-crunch valid_pdpt[wp]: awaken "valid_pdpt_objs"
-  (wp: hoare_drop_imp mapM_x_wp')
 
 crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
  handle_interrupt, handle_vm_fault, handle_hypervisor_fault
