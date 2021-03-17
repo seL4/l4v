@@ -126,6 +126,12 @@ lemma read_object_truncate[simp]: "read_object a (truncate_state s) = read_objec
 lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   by (simp add: get_tcb_def)
 
+lemma read_sched_context_truncate[simp]: "read_sched_context a (truncate_state s) = read_sched_context a s"
+  by (simp add: read_sched_context_def obind_def omonad_defs split: kernel_object.splits option.splits)
+
+lemma read_sc_refill_ready_truncate[simp]: "read_sc_refill_ready a (truncate_state s) = read_sc_refill_ready a s"
+  by (simp add: read_sc_refill_ready_def obind_def omonad_defs split: option.splits)
+
 lemma in_release_queue_truncate[simp]:
   "in_release_queue t (truncate_state s) = in_release_queue t s"
   by (simp add: in_release_queue_def)
@@ -141,6 +147,10 @@ lemma set_tcb_queue_bcorres[wp]:
   apply (simp cong: if_cong)
   done
 
+lemma get_sc_refill_ready_bcorres[wp]:
+  "bcorres (get_sc_refill_ready scp) (get_sc_refill_ready scp)"
+  by (wpsimp simp: get_sc_refill_ready_def gets_the_def)
+
 crunch (bcorres)bcorres[wp]:
   cancel_all_ipc, bind_notification, cancel_all_signals
   truncate_state
@@ -155,8 +165,6 @@ lemma unbind_maybe_notification_bcorres[wp]:
 lemma unbind_notification_bcorres[wp]:
   "bcorres (unbind_notification a) (unbind_notification a)"
   by (wpsimp simp: unbind_notification_def maybeM_def)
-
-crunch (bcorres)bcorres[wp]: set_reply truncate_state (simp: gets_the_def ignore: gets_the)
 
 (*
 lemma fast_finalise_bcorres[wp]:

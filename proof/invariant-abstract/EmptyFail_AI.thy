@@ -444,6 +444,7 @@ crunch (empty_fail) empty_fail[wp]:
 
 crunch (empty_fail) empty_fail[wp, intro!, simp]:
   possible_switch_to, awaken, schedule_switch_thread_fastfail
+  (wp: empty_fail_whileLoop)
 
 crunch (empty_fail) empty_fail[wp, intro!, simp]: sc_and_timer
   (wp: empty_fail_setDeadline simp: Let_def)

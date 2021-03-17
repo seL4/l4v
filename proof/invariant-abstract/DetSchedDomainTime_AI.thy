@@ -168,8 +168,12 @@ lemma rec_del_domain_list[wp]:
 crunch domain_list_inv[wp]: cap_delete, activate_thread "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp)
 
-crunch domain_list_inv[wp]: awaken "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imp dxo_wp_weak mapM_x_wp simp: Let_def)
+crunch domain_list_inv[wp]: possible_switch_to "\<lambda>s. P (domain_list s)"
+  (simp: get_tcb_obj_ref_def wp: hoare_vcg_if_lift2 hoare_drop_imp)
+
+crunches awaken
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps)
 
 crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
   (simp: Let_def wp: get_sched_context_wp get_refills_wp wp: crunch_wps)

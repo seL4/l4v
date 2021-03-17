@@ -1024,12 +1024,30 @@ lemma get_sc_refill_sufficient_wp[wp]:
    \<lbrace>Q\<rbrace>"
  by (wpsimp simp: get_sc_refill_sufficient_def)
 
+lemma read_sched_context_SomeD:
+  "read_sched_context scp s = Some sc \<Longrightarrow> \<exists>n. kheap s scp = Some (SchedContext sc n)"
+  by (clarsimp simp: read_sched_context_def split: kernel_object.split_asm)
+
+lemma read_sched_context_NoneD:
+  "read_sched_context scp s = None \<Longrightarrow> \<not>(\<exists>n sc. kheap s scp = Some (SchedContext sc n))"
+  by (clarsimp simp: read_sched_context_def obind_def split: kernel_object.split_asm)
+
+lemma read_sc_refill_ready_SomeD:
+  "read_sc_refill_ready scp s = Some b
+   \<Longrightarrow> \<exists>sc. read_sched_context scp s = Some sc \<and> sc_refill_ready (cur_time s) sc = b"
+  by (clarsimp simp: read_sc_refill_ready_def asks_def)
+
+lemma read_sc_refill_ready_NoneD:
+  "read_sc_refill_ready scp s = None \<Longrightarrow> read_sched_context scp s = None"
+  by (clarsimp simp: read_sc_refill_ready_def obind_def asks_def split: option.split_asm)
+
 lemma get_sc_refill_ready_wp[wp]:
   "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
          Q (sc_refill_ready (cur_time s) sc) s\<rbrace>
    get_sc_refill_ready scp
    \<lbrace>Q\<rbrace>"
- by (wpsimp simp: get_sc_refill_ready_def)
+ by (wpsimp simp: get_sc_refill_ready_def obj_at_def)
+    (clarsimp dest!: read_sc_refill_ready_SomeD read_sched_context_SomeD)
 
 lemma get_sc_released_wp[wp]:
   "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>

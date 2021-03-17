@@ -2118,51 +2118,27 @@ lemma gets_the_bind_collapse:
                       obind_pair_def obind_def return_def fail_def
                split: option.splits)
 
+lemma read_sc_refill_ready_simp:
+  "read_sc_refill_ready scp s =
+    (case read_sched_context scp s
+       of Some sc \<Rightarrow> Some (sc_refill_ready (cur_time s) sc)
+        | _ \<Rightarrow> None)"
+  by (clarsimp simp: read_sc_refill_ready_def obind_def asks_def split: option.split_asm)
+
 lemma get_sc_refill_ready_gets_the:
-  "get_sc_refill_ready scp = gets_the (\<lambda>s. map_project (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp)"
-  apply (simp add: get_sc_refill_ready_def refill_ready_def gets_gets_the
-                   get_sched_context_gets_the gets_the_bind_collapse)
-  apply (simp add: gets_the_map_project[symmetric])
-  by (auto intro!: arg_cong[where f=gets_the] map_eqI
-             simp: map_project_simps obind_pair_def obind_def sc_heap.all_simps
-                   sc_refill_cfgs.all_simps
-            split: option.splits)
+  "get_sc_refill_ready scp
+   = gets_the (\<lambda>s. map_project (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp)"
+  apply (rule ext)
+  apply (clarsimp simp: get_sc_refill_ready_def gets_the_def exec_gets)
+  by (simp add: read_sc_refill_ready_simp read_sched_context_def obind_def
+                sc_refill_cfgs.all_simps assert_opt_def map_project_simps omonad_defs
+         split: option.splits kernel_object.splits)
 
 lemma get_sc_refill_sufficient_gets_the:
   "get_sc_refill_sufficient scp usage = gets_the (\<lambda>s. map_project (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp)"
   apply (simp add: get_sc_refill_sufficient_def get_sched_context_gets_the
                    gets_the_map_project[symmetric])
   by (auto intro!: arg_cong[where f=gets_the] map_eqI simp: map_project_simps vs_all_heap_simps)
-
-lemma get_tcb_refill_ready_gets_the:
-  "get_tcb_refill_ready t
-   = gets_the (\<lambda>s. map_project (\<lambda>sc. refill_ready_sc (cur_time s) sc) (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t)"
-  apply (simp add: get_tcb_refill_ready_def)
-  apply (simp add: get_tcb_obj_ref_gets_the assert_opt_gets_the_K
-                   get_sc_refill_ready_gets_the
-             flip: gets_the_obind)
-  apply (intro arg_cong[where f=gets_the] ext)
-  by (auto simp: obind_def map_project_def opt_map_def map_join_def
-                 vs_all_heap_simps obj_at_kh_kheap_simps sc_refill_cfgs_of_scs_def scs_of_kh_def
-          split: option.splits kernel_object.splits)
-
-lemma fun_of_m_gets_the:
-  "fun_of_m (gets_the f) = f"
-  by (auto simp: fun_of_m_def gets_the_def bind_def gets_def get_def return_def
-                 assert_opt_def fail_def
-          split: option.splits)
-
-lemma fun_of_m_get_tcb_refill_ready:
-  "fun_of_m (get_tcb_refill_ready t) s
-   = map_project (\<lambda>sc. refill_ready_sc (cur_time s) sc)
-                 (map_join (tcb_scps_of s) |> sc_refill_cfgs_of s) t"
-  by (simp add: get_tcb_refill_ready_gets_the fun_of_m_gets_the)
-
-lemma fun_of_m_get_tcb_refill_budget_ready:
-  "\<exists>sc. bound_sc_obj_tcb_at ((=) sc) target s \<Longrightarrow>
-   fun_of_m (get_tcb_refill_ready target) s = Some (budget_ready target s)"
-  by (clarsimp simp: fun_of_m_get_tcb_refill_ready vs_all_heap_simps
-                     map_project_simps map_join_simps opt_map_simps)
 
 (* FIXME: Move up. Perhaps use more widely, to get rid of pred_map2? *)
 definition tcb_sc_refill_cfgs_2 ::
@@ -2197,16 +2173,6 @@ lemma option_eqI:
   shows "opt = opt'"
   by (cases opt; simp add: assms)
 
-lemma get_tcb_refill_ready_tcb_ready_times_of:
-  assumes "bound_sc_obj_tcb_at P t s"
-  shows "fun_of_m (get_tcb_refill_ready t) s
-         = map_option (\<lambda>ready_time. ready_time \<le> cur_time s + kernelWCET_ticks)
-                      (tcb_ready_times_of s t)"
-  using assms
-  by (auto intro: option_eqI
-            simp: fun_of_m_get_tcb_refill_ready vs_all_heap_simps refill_ready_def tcb_ready_times_defs
-                  map_project_simps map_join_simps opt_map_simps)
-
 lemma bound_sc_obj_tcb_at_eqI:
   assumes "kheap s t = Some (TCB tcb)"
           "tcb_sched_context tcb = Some scp"
@@ -2219,24 +2185,6 @@ lemma budget_sufficient_has_ready_time:
   shows "\<exists>rt. tcb_ready_times_of s t = Some rt"
   using assms
   by (auto simp: opt_map_simps map_join_simps map_project_simps pred_map_simps tcb_ready_times_defs)
-
-lemma get_tcb_refill_ready_simp2:
-  assumes "bound_sc_obj_tcb_at P t s"
-  shows "the (fun_of_m (get_tcb_refill_ready t) s)
-         = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks)"
-  unfolding get_tcb_refill_ready_tcb_ready_times_of[OF assms]
-  using budget_sufficient_has_ready_time[OF assms]
-  by auto
-
-lemma get_tcb_refill_ready_simp3:
-  assumes "kheap s t = Some (TCB tcb)"
-          "tcb_sched_context tcb = Some scp"
-          "kheap s scp = Some (SchedContext sc n)"
-  shows "the (fun_of_m (get_tcb_refill_ready t) s)
-         = (tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks)"
-  unfolding get_tcb_refill_ready_tcb_ready_times_of[OF bound_sc_obj_tcb_at_eqI[OF assms]]
-  using budget_sufficient_has_ready_time[OF bound_sc_obj_tcb_at_eqI[OF assms]]
-  by auto
 
 (* FIXME: move *)
 lemma map_snd_zip':
