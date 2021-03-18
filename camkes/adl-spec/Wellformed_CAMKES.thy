@@ -147,7 +147,7 @@ where
   "refs_valid_procedures component_instance procedures conns \<equiv>
     \<forall>(name, (req, proc)) \<in> set procedures.
       req = InterfaceRequired \<longrightarrow> proc \<noteq> [] \<longrightarrow>
-      (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, name))"
+      (\<exists>1 z \<in> (concat (map (\<lambda>y. conn_from (snd y)) conns)). z = (component_instance, name))"
 
 text \<open>
   For events and dataports, an interface can be left unconnected in a system with no
@@ -308,7 +308,7 @@ lemma refs_valid_procedures_ann:
      (\<forall>(name, (req, proc)) \<in> set procedures.
       req = InterfaceRequired \<longrightarrow>
       check_wellformed (refs_valid_procedures, name)
-        (proc \<noteq> [] \<longrightarrow> (\<exists>1 y \<in> conns. \<exists>1 z \<in> conn_from (snd y). z = (component_instance, name))))"
+        (proc \<noteq> [] \<longrightarrow> (\<exists>1 z \<in> (concat (map (\<lambda>y. conn_from (snd y)) conns)). z = (component_instance, name))))"
   by (simp only: refs_valid_procedures_def remove_generic_tag simp_thms)
 
 text \<open>
