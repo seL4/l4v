@@ -17,18 +17,14 @@ abbreviation
               ret__struct_resolveAddressBits_ret_C_')"
 
 lemma rab_failure_case_ccorres:
-  fixes v :: "word32" and ist :: "cstate \<Rightarrow> cstate" and f :: int
-  defines "call_part \<equiv> (call ist f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
-             (\<lambda>ts s'. Basic (\<lambda>s.
-                  globals_update (current_lookup_fault_'_update
-                     (\<lambda>_. ret__struct_lookup_fault_C_' s')) s)))"
-  assumes spec: "\<Gamma>\<turnstile> G' call_part {s. v \<noteq> scast EXCEPTION_NONE \<and> lookup_failure_rel e v (errstate s)}"
-  and     mod:  "\<And>s. \<Gamma>\<turnstile> {s'. (s, s') \<in> rf_sr} call_part {s'. (s, s') \<in> rf_sr}"
+  assumes spec: "\<Gamma>\<turnstile> G' call_part {s. resolveAddressBits_ret_C.status_C v \<noteq> scast EXCEPTION_NONE
+                                      \<and> lookup_failure_rel e (resolveAddressBits_ret_C.status_C v)
+                                                           (errstate s)}"
+  assumes mod:  "\<And>s. \<Gamma>\<turnstile> {s'. (s, s') \<in> rf_sr} call_part {s'. (s, s') \<in> rf_sr}"
   shows "ccorres (lookup_failure_rel \<currency> r) rab_xf \<top> G' (SKIP # hs)
    (throwError e)
    (call_part ;;
-    \<acute>ret___struct_resolveAddressBits_ret_C :==
-      resolveAddressBits_ret_C.status_C_update (\<lambda>_. v) \<acute>ret___struct_resolveAddressBits_ret_C;;
+    \<acute>ret___struct_resolveAddressBits_ret_C :== v;;
     return_C ret__struct_resolveAddressBits_ret_C_'_update ret___struct_resolveAddressBits_ret_C_')"
   apply (rule ccorres_rhs_assoc)+
   apply (rule ccorres_symb_exec_r [where R=\<top>, OF _ spec])
@@ -214,7 +210,7 @@ next
      apply (rule_tac P = "capptr = cptr' \<and> ccap_relation cap' nodeCap" in ccorres_gen_asm2)
      apply (erule conjE)
      apply (erule_tac t = capptr in ssubst)
-     apply csymbr_legacy+
+     apply csymbr+
      apply (simp add: cap_get_tag_isCap split del: if_split)
      apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
@@ -515,7 +511,6 @@ next
        apply (vcg strip_guards=true)
       apply (rule conjI)
       \<comment> \<open>Haskell guard\<close>
-       apply (thin_tac "unat n_bits = guard")
        apply (clarsimp simp del: imp_disjL) \<comment> \<open>take a while\<close>
        apply (intro impI conjI allI)
            apply fastforce
