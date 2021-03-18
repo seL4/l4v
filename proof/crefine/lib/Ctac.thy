@@ -1452,17 +1452,10 @@ lemma ceqv_xpres_lvar_nondet_init:
   done
 
 \<comment> \<open>
-Some ceqv_xpres rules as stated above are too general for the automation.
-Here, we build two instantiations of the rules for use in the tactics.
-
-ceqv_xpres_rules_legacy:
-  - Rules that matches the behaviour of an older version of the
-    ceqv_xpres framework, for compatibility with older proofs.
-  - Currently used in all methods except `cinit` and `cinit'`.
-
-ceqv_xpres_rules_new:
-  - A rule set that better understands exceptional control flow.
-  - Currently used in `cinit` and `cinit'`
+Some ceqv_xpres rules as stated above are too general for the automation, and need to
+be instantiated to ensure that output parameters are fully determined by input parameters.
+The instantiations we use in `ceqv_xpres_rules` allow us to take advantage of exceptional
+control flow.
 \<close>
 
 lemmas ceqv_xpres_returns
@@ -1471,24 +1464,13 @@ lemmas ceqv_xpres_returns
 lemmas ceqv_xpres_basics
   = ceqv_xpres_Basic ceqv_xpres_lvar_nondet_init
 
-lemmas ceqv_xpres_special_legacy =
-  ceqv_xpres_abnormalI[OF xpres_abnormal_trivial]
-  ceqv_xpres_Throw[where abnormal=False]
-  ceqv_xpres_returns[where pres_norm=pres and pres=pres and abnormal=False for pres, simplified]
-  ceqv_xpres_basics[where pres_abr=pres and pres=pres for pres]
-
-lemmas ceqv_xpres_special_new =
+lemmas ceqv_xpres_rules =
+  ceqv_xpres_xfdc ceqv_xpres_whileAnno ceqv_xpres_While ceqv_xpres_Cond ceqv_xpres_Guard
+  ceqv_xpres_Seq ceqv_xpres_call_ceqv_xpres ceqv_xpres_Skip ceqv_xpres_Catch ceqv_xpres_ccatchbrk
   ceqv_xpres_abnormalI
   ceqv_xpres_Throw[where abnormal=True]
   ceqv_xpres_returns[where pres_norm=True and abnormal=True, simplified]
   ceqv_xpres_basics[where pres_abr=True]
-
-lemmas ceqv_xpres_rules_common =
-  ceqv_xpres_xfdc ceqv_xpres_whileAnno ceqv_xpres_While ceqv_xpres_Cond ceqv_xpres_Guard
-  ceqv_xpres_Seq ceqv_xpres_call_ceqv_xpres ceqv_xpres_Skip ceqv_xpres_Catch ceqv_xpres_ccatchbrk
-
-lemmas ceqv_xpres_rules_legacy = ceqv_xpres_rules_common ceqv_xpres_special_legacy
-lemmas ceqv_xpres_rules_new = ceqv_xpres_rules_common ceqv_xpres_special_new
 
 lemma ceqv_xpres_FalseI:
   "ceqv_xpres \<Gamma> xf v pres c False False False c"
@@ -1858,10 +1840,7 @@ method_setup clift = \<open>CtacImpl.corres_abstract_args\<close>
 method_setup cinitlift = \<open>CtacImpl.corres_abstract_init_args\<close>
   "Abstract a list of local variables into HOL variable without touching the remaining guards"
 
-method_setup csymbr = \<open>CtacImpl.corres_symb_rhs_new\<close>
-  "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
-
-method_setup csymbr_legacy = \<open>CtacImpl.corres_symb_rhs_legacy\<close>
+method_setup csymbr = \<open>CtacImpl.corres_symb_rhs\<close>
   "Symbolically execute the call on the right hand side of corres (see ccorres_lift_rhss). Arguments simp (add|del|only)."
 
 method_setup ceqv = \<open>CtacImpl.corres_ceqv\<close>
