@@ -1070,13 +1070,13 @@ lemma createSafeMappingEntries_PDE_ccorres:
       apply (simp add:ARMSuperSectionBits_def word_0_sle_from_less
          ARMSectionBits_def)
       apply (ccorres_remove_UNIV_guard)
-      apply csymbr_legacy
+      apply csymbr
       apply (rule ccorres_rhs_assoc2,rule ccorres_splitE)
           apply (simp only:whileAnno_def)
           apply (ccorres_remove_UNIV_guard)
           apply (rule_tac r'=dc and xf'=xfdc and F="\<lambda>_. page_directory_at' pd"
                     and Q="{s. pde_range_C.base_C (pde_entries_C
-                                 (ret___struct_create_mappings_pde_return_C_' s))
+                                                   ret___struct_create_mappings_pde_return_C)
                                    = Ptr (lookup_pd_slot pd vaddr)}"
                      in ccorres_sequenceE_while)
                apply (simp add: liftE_bindE)
@@ -1085,7 +1085,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                            and xf'=ret__int_' in ccorres_split_nothrow_novcg)
                     apply (rule ccorres_add_return2, rule ccorres_pre_getObject_pde)
                     apply (rule_tac P'="{s. let ptr = (pde_range_C.base_C (pde_entries_C
-                                    (ret___struct_create_mappings_pde_return_C_' s)))
+                                                       ret___struct_create_mappings_pde_return_C))
                                   in \<exists>v. cslift s (CTypesDefs.ptr_add ptr (uint (i_' s))) = Some v
                                    \<and> cpde_relation x v
                                    \<and> (i_' s = 0 \<or> array_assertion ptr (Suc (unat (i_' s)))
