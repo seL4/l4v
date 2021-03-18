@@ -317,8 +317,7 @@ fun corres_solve_ceqv_old (trace : trace_opts) (depth : int) ctxt =
             SOLVE' (corres_ceqv_tac trace depth ctxt)]
 
 val ceqv_xpres_ceqvI = @{thm ceqv_xpres_ceqvD};
-val ceqv_xpres_rules_legacy = @{thms ceqv_xpres_rules_legacy};
-val ceqv_xpres_rules_new = @{thms ceqv_xpres_rules_new};
+val ceqv_xpres_rules = @{thms ceqv_xpres_rules};
 val ceqv_xpres_FalseI = @{thm ceqv_xpres_FalseI};
 val ceqv_xpres_rewrite_basic_left_cong = @{thm ceqv_xpres_rewrite_basic_left_cong};
 val ceqv_xpres_rewrite_basic_refl = @{thm ceqv_xpres_rewrite_basic_refl};
@@ -349,7 +348,7 @@ fun apply_ceqv_xpres_rules1 ctxt rules _ n = DETERM
              apply_ceqv_xpres_rules_trace := t;
              resolve_tac ctxt [ceqv_xpres_FalseI] n)) n));
 
-fun apply_ceqv_xpres_rules ceqv_xpres_rules ctxt = let
+fun apply_ceqv_xpres_rules ctxt = let
     val seq = ceqv_simpl_seq ctxt
     val ex_rules = if seq then [@{thm ceqv_xpres_While_simpl_sequence}]
         else []
@@ -451,8 +450,8 @@ fun xpres_abnormal_tac ctxt =
     resolve_tac ctxt @{thms xpres_abnormal_rules}
     ORELSE' resolve_tac ctxt @{thms xpres_abnormal_trivial}
 
-fun ceqv2_consts_and_tacs ceqv_xpres_rules ctxt = map (apfst (fst o dest_Const)) [
-  (@{term ceqv_xpres}, apply_ceqv_xpres_rules ceqv_xpres_rules ctxt),
+fun ceqv2_consts_and_tacs ctxt = map (apfst (fst o dest_Const)) [
+  (@{term ceqv_xpres}, apply_ceqv_xpres_rules ctxt),
   (@{term ceqv_xpres_rewrite_basic}, solve_ceqv_xpres_rewrite_basic),
   (@{term ceqv_xpres_rewrite_set}, K (resolve_tac ctxt ceqv_xpres_rewrite_set_rules)),
   (@{term ceqv_xpres_basic_preserves}, SUBGOAL o solve_ceqv_xpres_basic_preserves),
@@ -463,22 +462,21 @@ fun ceqv2_consts_and_tacs ceqv_xpres_rules ctxt = map (apfst (fst o dest_Const))
   (@{term xpres_abnormal}, K (xpres_abnormal_tac ctxt))
 ];
 
-fun ceqv2_all_tacs ceqv_xpres_rules ctxt = SUBGOAL (fn (t, n) =>
+fun ceqv2_all_tacs ctxt = SUBGOAL (fn (t, n) =>
   case head_of (HOLogic.dest_Trueprop (Logic.strip_assums_concl t)) of
-    Const (s, T) => (case (filter (fn v => fst v = s) (ceqv2_consts_and_tacs ceqv_xpres_rules ctxt)) of
+    Const (s, T) => (case (filter (fn v => fst v = s) (ceqv2_consts_and_tacs ctxt)) of
         (v :: _) => (snd v) ctxt n
       | [] => raise TERM ("ceqv2_all_tacs: unknown head const " ^ s, [Const (s, T), t]))
   | _ => raise TERM ("ceqv2_all_tacs: unknown form", [t]));
 
-fun ceqv2_tac ceqv_xpres_rules ctxt n = let
+fun ceqv2_tac ctxt n = let
 in
   resolve_tac ctxt [ceqv_xpres_ceqvI] n THEN
     SELECT_GOAL (REPEAT_DETERM (eresolve_tac ctxt [thin_rl] 1)
-       THEN REPEAT_DETERM (ceqv2_all_tacs ceqv_xpres_rules ctxt 1)) n
+       THEN REPEAT_DETERM (ceqv2_all_tacs ctxt 1)) n
 end;
 
-fun corres_solve_ceqv ceqv_xpres_rules (_ (*trace*) : trace_opts) (_ (*depth*) : int) =
-    ceqv2_tac ceqv_xpres_rules;
+fun corres_solve_ceqv (_ (*trace*) : trace_opts) (_ (*depth*) : int) = ceqv2_tac;
 
 fun rename_fresh_tac nm i thm = let
     (* FIXME: proper name context handling *)
@@ -497,7 +495,7 @@ fun corres_pre_lift_tac lift_thms trace depth ctxt xf =
              inst lift1_local_thm xf ORELSE' inst lift1_global_thm xf,
              rename_fresh_tac var_name,
              resolve_tac ctxt [lift2_thm],
-             corres_solve_ceqv ceqv_xpres_rules_new trace depth ctxt]
+             corres_solve_ceqv trace depth ctxt]
   end;
 
 fun extract_lhs_xf (ct as (Const ("Language.com.Basic", _) $ _)) = extract_basic_xf ct
@@ -540,22 +538,20 @@ end;
 
 val guard_is_UNIVI  = @{thms "guard_is_UNIVI"}
 
-fun ccorres_cleanup_rest (ceqv_xpres_rules : thm list)
-                         (trace : trace_opts)
+fun ccorres_cleanup_rest (trace : trace_opts)
                          (depth : int)
                          (ctxt : Proof.context)
                          (n : int) = let
     val match_ceqv      = Proof_Context.get_thms ctxt "match_ceqv"
     val my_clarsimp_tac = prim_trace_tac' (#trace_this trace) depth "my_clarsimp_tac" ctxt (SOLVE' (clarsimp_tac ctxt))
 in
-    (FIRST_COMMIT' [(resolve_tac ctxt match_ceqv, corres_solve_ceqv ceqv_xpres_rules trace depth ctxt),
+    (FIRST_COMMIT' [(resolve_tac ctxt match_ceqv, corres_solve_ceqv trace depth ctxt),
                     (resolve_tac ctxt guard_is_UNIVI, fn _ => all_tac), (* maybe we should try simp? *)
                     (fn _ => all_tac, my_clarsimp_tac)]) n
 end;
 
 
-fun ccorres_norename_cleanup (ceqv_xpres_rules : thm list)
-                             (trace : trace_opts)
+fun ccorres_norename_cleanup (trace : trace_opts)
                              (depth : int)
                              (ctxt : Proof.context)
                              (n : int) = let
@@ -563,10 +559,10 @@ fun ccorres_norename_cleanup (ceqv_xpres_rules : thm list)
 in
     prim_trace_tac (#trace_this trace) depth "CLEANUP (no rename)" ctxt
                    (resolve_tac ctxt match_cc n
-                    THEN_ELSE (all_tac, ccorres_cleanup_rest ceqv_xpres_rules trace (depth + 1) ctxt n))
+                    THEN_ELSE (all_tac, ccorres_cleanup_rest trace (depth + 1) ctxt n))
 end;
 
-fun ccorres_rename_cleanup ceqv_xpres_rules trace depth xf ctxt n = let
+fun ccorres_rename_cleanup trace depth xf ctxt n = let
     val match_cc  = Proof_Context.get_thms ctxt "match_ccorres"
 
     val base_xf   = Long_Name.base_name xf
@@ -575,7 +571,7 @@ in
     prim_trace_tac (#trace_this trace) depth "CLEANUP" ctxt
                    (resolve_tac ctxt match_cc n
                     THEN_ELSE (rename_fresh_tac var_name n,
-                               ccorres_cleanup_rest ceqv_xpres_rules trace (depth + 1) ctxt n))
+                               ccorres_cleanup_rest trace (depth + 1) ctxt n))
 end;
 
 fun abstract_record_xf_if_required trace depth ctxt xf o_xfr = let
@@ -585,7 +581,7 @@ in
     case o_xfr of
         SOME (_, true) => prim_trace_tac' (#trace_this trace) depth "ccorres_abstract" ctxt
                                           (Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] [] abstract_thm
-                                           THEN_ALL_NEW ccorres_rename_cleanup ceqv_xpres_rules_new trace (depth + 1) xf ctxt)
+                                           THEN_ALL_NEW ccorres_rename_cleanup trace (depth + 1) xf ctxt)
       | _              => fn _ => all_tac
 end;
 
@@ -729,7 +725,7 @@ fun ccorres_doit (opts : ctac_opts)
         (* solve the remaining subgoals *)
         val resttac = (resolve_tac ctxt skips) (* Ignore any valids etc. *)
                           ORELSE'
-                          ccorres_rename_cleanup ceqv_xpres_rules_new trace depth' xf ctxt
+                          ccorres_rename_cleanup trace depth' xf ctxt
     in
         (abstract_record_xf_if_required trace depth ctxt xf o_xfru)
             THEN'
@@ -801,8 +797,7 @@ in
     map inst_type_vars thms
 end handle Bind => raise TACTIC ("Exception Bind in instantiate_xf_type: check order of assumptions to rhss lemmas in Corres_C and function corres_symb_rhs_tac");
 
-fun corres_symb_rhs_exec_tac (ceqv_xpres_rules : thm list)
-                             (trace : trace_opts)
+fun corres_symb_rhs_exec_tac (trace : trace_opts)
                              (depth : int)
                              (ctxt : Proof.context)
                              (lhs : term)
@@ -830,7 +825,7 @@ fun corres_symb_rhs_exec_tac (ceqv_xpres_rules : thm list)
 in
     prim_trace_tac' (#trace_this trace) depth ("CSYMBR (" ^ proc_name ^ ")") ctxt
                     (Rule_Insts.res_inst_tac ctxt insts [] rule
-                     THEN_ALL_NEW ccorres_rename_cleanup ceqv_xpres_rules trace depth' xf ctxt) n t
+                     THEN_ALL_NEW ccorres_rename_cleanup trace depth' xf ctxt) n t
 end; (* handle TERM  e => no_tac
             | ERROR e => no_tac *)
 
@@ -845,13 +840,13 @@ fun corres_trim_lvar_nondet_init_tac trace depth ctxt known_guard = let
     in
               prim_trace_tac' (#trace_this trace) depth "LVAR_INIT" ctxt
                                           (resolve_tac ctxt [remove_lvar_init]
-                                           THEN_ALL_NEW (ccorres_norename_cleanup ceqv_xpres_rules_new trace depth ctxt)) i
+                                           THEN_ALL_NEW (ccorres_norename_cleanup trace depth ctxt)) i
     end;
 in
     resolve_tac ctxt match_seq THEN' SUBGOAL tac
 end;
 
-fun corres_symb_rhs_tac ceqv_xpres_rules (opts : ceqv_opts) ctxt =
+fun corres_symb_rhs_tac (opts : ceqv_opts) ctxt =
 let
     val ctxt      = Context_Position.set_visible false ctxt
     val trace     = #trace opts
@@ -900,13 +895,13 @@ let
         val basic_tac =
             prim_trace_tac' (#trace_this trace) depth "CSYMBR (Basic)" ctxt
                             (Rule_Insts.res_inst_tac ctxt xf_inst [] basic_thm
-                             THEN_ALL_NEW (ccorres_norename_cleanup ceqv_xpres_rules trace depth' ctxt))
+                             THEN_ALL_NEW (ccorres_norename_cleanup trace depth' ctxt))
 
         val call_thms' = Proof_Context.get_thms ctxt ("ccorres_lift_rhss" ^ record_suffix)
         val call_thms = inst_tp call_thms'
         val _ = forall (fn (t, t') => Thm.concl_of t <> Thm.concl_of t') (call_thms ~~ call_thms')
             orelse raise THM ("corres_symb_rhs_tac: failed to inst_tp", 1, call_thms @ call_thms')
-        val call_tac  = EVERY' [corres_symb_rhs_exec_tac ceqv_xpres_rules trace depth ctxt lhs (xf_inst @ xfr_inst) call_thms new_xf_name,
+        val call_tac  = EVERY' [corres_symb_rhs_exec_tac trace depth ctxt lhs (xf_inst @ xfr_inst) call_thms new_xf_name,
                                 (* Yes, simp should ignore assumptions -- this simplifies away the state dep. on i *)
                                     TRY' (simp_tac ss),
                                 TRY' (resolve_tac ctxt gen_asm)]
@@ -963,7 +958,7 @@ fun corres_boilerplate_tac opts unfold_haskell_p xfs ctxt = let
 
         val ccorres_trim_redundant_throw = Proof_Context.get_thms ctxt "ccorres_trim_redundant_throw"
         val trim_redundant_throw_tac = resolve_tac ctxt ccorres_trim_redundant_throw
-                                       THEN_ALL_NEW ccorres_norename_cleanup ceqv_xpres_rules_new trace depth' ctxt
+                                       THEN_ALL_NEW ccorres_norename_cleanup trace depth' ctxt
 
         val ccorres_trim_DontReach = Proof_Context.get_thms ctxt "ccorres_special_trim_guard_DontReach_pis"
         val pis_thms = Proof_Context.get_thms ctxt "push_in_stmt_rules"
@@ -1140,8 +1135,8 @@ fun corres_pre_abstract_args lift_fn =
 val corres_abstract_args = corres_pre_abstract_args corres_pre_lift_tac_clift;
 val corres_abstract_init_args = corres_pre_abstract_args corres_pre_lift_tac_cinit;
 
-fun corres_symb_rhs ceqv_xpres_rules = let
-    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_symb_rhs_tac ceqv_xpres_rules (apply upds default_csymbr_opts) ctxt);
+val corres_symb_rhs = let
+    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_symb_rhs_tac (apply upds default_csymbr_opts) ctxt);
 
     val option_args = Args.parens (P.list (Scan.first csymbr_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
@@ -1150,11 +1145,8 @@ in
     |> shorten_names
 end;
 
-val corres_symb_rhs_legacy = corres_symb_rhs ceqv_xpres_rules_legacy
-val corres_symb_rhs_new = corres_symb_rhs ceqv_xpres_rules_new
-
 val corres_ceqv = let
-    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_solve_ceqv ceqv_xpres_rules_new (#trace (apply upds default_ceqv_opts)) 0 ctxt);
+    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_solve_ceqv (#trace (apply upds default_ceqv_opts)) 0 ctxt);
 
     val option_args = Args.parens (P.list (Scan.first ceqv_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
