@@ -42,6 +42,10 @@ type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym registers_count = 35
 type_synonym registers_array = "machine_word[registers_count]"
 
+type_synonym register_idx_len = 8
+type_synonym register_idx = "register_idx_len word"
+type_synonym int_literal_len = "32 signed"
+
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"
 abbreviation "tcb_cnode_Ptr \<equiv> Ptr :: addr \<Rightarrow> tcb_cnode_array ptr"

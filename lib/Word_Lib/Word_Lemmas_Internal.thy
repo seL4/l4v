@@ -623,4 +623,26 @@ lemma word_le_1:
   shows "w \<le> 1 \<longleftrightarrow> w = 0 \<or> w = 1"
   using dual_order.antisym lt1_neq0 word_zero_le by blast
 
+lemma less_ucast_ucast_less':
+  "x < UCAST('b \<rightarrow> 'a) y \<Longrightarrow> UCAST('a \<rightarrow> 'b) x < y"
+  for x :: "'a::len word" and y :: "'b::len word"
+  by (clarsimp simp: order.strict_iff_order dual_order.antisym le_ucast_ucast_le)
+
+lemma ucast_up_less_bounded_implies_less_ucast_down':
+  assumes len: "LENGTH('a::len) < LENGTH('b::len)"
+  assumes bound: "y < 2 ^ LENGTH('a)"
+  assumes less: "UCAST('a \<rightarrow> 'b) x < y"
+  shows "x < UCAST('b \<rightarrow> 'a) y"
+  apply (rule le_less_trans[OF _ ucast_mono[OF less bound]])
+  using len by (simp add: is_down ucast_down_ucast_id)
+
+lemma ucast_up_less_bounded_iff_less_ucast_down':
+  assumes len: "LENGTH('a::len) < LENGTH('b::len)"
+  assumes bound: "y < 2 ^ LENGTH('a)"
+  shows "UCAST('a \<rightarrow> 'b) x < y \<longleftrightarrow> x < UCAST('b \<rightarrow> 'a) y"
+  apply (rule iffI)
+   prefer 2
+   apply (simp add: less_ucast_ucast_less')
+  using assms by (rule ucast_up_less_bounded_implies_less_ucast_down')
+
 end
