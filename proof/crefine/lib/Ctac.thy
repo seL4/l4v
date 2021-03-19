@@ -1103,6 +1103,29 @@ lemmas ceqv_rules = ceqv_refl [where xf' = xfdc] \<comment> \<open>Any ceqv with
   ceqv_refl [where c = return_void_C] ceqv_refl [where c = break_C]
   ceqv_refl [where c = catchbrk_C]
 
+\<comment> \<open>
+Equivalence of SIMPL commands under the assumption that a variable contains a specified value.
+Intended to be used to calculate output parameters from input parameters.
+Stronger than `ceqv`, since it can also calculate the conditions under which the variable's
+value is preserved.
+
+Input parameters:
+- c: The SIMPL command under consideration.
+- pres_cont: false if execution of a previous command terminates normally
+  without preserving the value of the variable.
+- xf: a function that extracts the value of a particular variable from the state.
+- v: if `pres_cont` is true, the presumed value of the variable prior to executing `c`.
+
+Output parameters:
+- pres_norm: true if syntactic analysis shows that the variable still has
+  the value `v` whenever `c` terminates normally.
+- pres_abr: true if syntactic analysis shows that the variable still has
+  the value `v` whenever `c` terminates abruptly.
+- abnormal: true if syntactic analysis shows that `c` never terminates normally.
+- c': a command that is equivalent to `c`, with the intention that occurrences of the
+  variable have been replaced with the value `v` in any context where that value is
+  known to have been preserved.
+\<close>
 definition
   ceqv_xpres :: "(('s,'p,'f) body) \<Rightarrow> ('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> bool \<Rightarrow> ('s,'p,'f) com
                  \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> ('s,'p,'f) com \<Rightarrow> bool"
