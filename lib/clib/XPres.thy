@@ -25,7 +25,10 @@ lemma xpres_eq_If_True:
 
 lemmas xpres_eq_If_rules = xpres_eq_If_False xpres_eq_If_True
 
-(* Intended to be used to calculate `abnormal` by syntactic analysis of `c`. *)
+(* Intended to be used to calculate `abnormal` by syntactic analysis of `c`.
+   `abnormal` should be true if syntactic analysis of `c` shows that `c`
+   never terminates normally. Note that this does not imply that `c` necessarily
+   terminates abruptly. *)
 definition xpres_abnormal where
   "xpres_abnormal \<Gamma> c abnormal \<equiv> \<forall>s t. abnormal \<longrightarrow> \<not> \<Gamma> \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> Normal t"
 
@@ -100,7 +103,19 @@ lemmas xpres_abnormal_rules
     xpres_abnormal_seq xpres_abnormal_cond xpres_abnormal_call
 
 (* Intended to be used to calculate `pres_norm`, `pres_abr` and `abnormal`
-   by syntactic analysis of `c`. *)
+   by syntactic analysis of `c`.
+
+   Input parameters:
+   - c: the program under consideration.
+   - xf: a function that extracts the value of a particular variable from the state.
+   - v: the presumed value of the variable prior to executing `c`.
+
+   Ouptut parameters:
+   - pres_norm: true if syntactic analysis of `c` shows that the variable
+     still has the value `v` whenever `c` terminates normally.
+   - pres_abr: true if syntactic analysis of `c` shows that the variable
+     still has the value `v` whenever `c` terminates abruptly.
+   - abormal: true if syntactic analysis shows that `c` never terminates normally. *)
 definition xpres_strong ::
   "('s,'p,'f) body \<Rightarrow> ('s \<Rightarrow> 'v) \<Rightarrow> 'v \<Rightarrow> ('s,'p,'f) com \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> bool"
   where
