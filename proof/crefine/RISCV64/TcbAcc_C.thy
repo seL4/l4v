@@ -120,13 +120,12 @@ lemma register_from_H_less:
   by (cases hr, simp_all add: "StrictC'_register_defs")
 
 lemma register_from_H_sless:
-  "register_from_H hr <s 35"
+  "UCAST(register_idx_len \<rightarrow> int_literal_len) (register_from_H hr) <s 0x23"
   by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
 
-lemma register_from_H_0_sle[simp]:
-  "0 <=s register_from_H hr"
-  using word_0_sle_from_less[OF order_less_le_trans] register_from_H_less
-  by fastforce
+lemma register_from_H_0_sle'[simp]:
+  "0 <=s UCAST(register_idx_len \<rightarrow> int_literal_len) (register_from_H hr)"
+  by (cases hr, simp_all add: "StrictC'_register_defs" word_sless_def word_sle_def)
 
 lemma getRegister_ccorres [corres]:
   "ccorres (=) ret__unsigned_long_' \<top>
