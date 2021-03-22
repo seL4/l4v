@@ -1522,7 +1522,7 @@ lemma no_fail_setRegister[wp]: "no_fail \<top> (setRegister r v)"
 lemmas corresK_as_user' =
   corres_as_user'[atomized, THEN corresK_lift_rule, THEN mp]
 
-lemma asUser_sanitise_corres[corres]:
+lemma asUser_sanitiseRegister_corres[corres]:
   "b=b' \<Longrightarrow> t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')
             (as_user t (do cpsr \<leftarrow> getRegister CPSR;
                            setRegister CPSR (sanitise_register b CPSR cpsr)
