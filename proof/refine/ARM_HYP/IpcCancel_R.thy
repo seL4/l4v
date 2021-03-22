@@ -1505,7 +1505,7 @@ lemma archThreadSet_corres:
   apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
   done
 
-lemma archThreadSet_corres_vcpu_None[corres]:
+lemma archThreadSet_VCPU_None_corres[corres]:
   "t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')
     (arch_thread_set (tcb_vcpu_update Map.empty) t) (archThreadSet (atcbVCPUPtr_update Map.empty) t')"
   apply simp
