@@ -1863,7 +1863,7 @@ lemma addToBitmap_noop_corres:
   by (rule corres_noop)
      (wp | simp add: state_relation_def | rule no_fail_pre)+
 
-lemma addToBitmap_if_null_corres_noop: (* used this way in Haskell code *)
+lemma addToBitmap_if_null_noop_corres: (* used this way in Haskell code *)
   "corres dc \<top> \<top> (return ()) (if null queue then addToBitmap d p else return ())"
   by (cases "null queue", simp_all add: addToBitmap_noop_corres)
 

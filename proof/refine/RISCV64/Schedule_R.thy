@@ -127,7 +127,7 @@ lemma tcbSchedAppend_corres:
              apply (rule corres_split_noop_rhs2)
                 apply (rule corres_split_noop_rhs2)
                    apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
-                  apply (rule addToBitmap_if_null_corres_noop)
+                  apply (rule addToBitmap_if_null_noop_corres)
                  apply wp+
                apply (simp add: tcb_sched_append_def)
                apply (intro conjI impI)
