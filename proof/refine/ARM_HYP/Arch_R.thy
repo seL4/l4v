@@ -1299,7 +1299,7 @@ lemma invokeVCPUWriteReg_corres:
   apply (wpsimp simp: getCurThread_def)+
   done
 
-lemma archThreadSet_corres_vcpu_Some[corres]:
+lemma archThreadSet_VCPU_Some_corres[corres]:
   "corres dc (tcb_at t) (tcb_at' t)
     (arch_thread_set (tcb_vcpu_update (\<lambda>_. Some v)) t) (archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t)"
   apply (rule archThreadSet_corres)
