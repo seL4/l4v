@@ -1822,7 +1822,7 @@ lemma no_fail_return:
   "no_fail x (return y)"
   by wp
 
-lemma addToBitmap_corres_noop:
+lemma addToBitmap_noop_corres:
   "corres dc \<top> \<top> (return ()) (addToBitmap d p)"
   unfolding addToBitmap_def modifyReadyQueuesL1Bitmap_def getReadyQueuesL1Bitmap_def
             modifyReadyQueuesL2Bitmap_def getReadyQueuesL2Bitmap_def
@@ -1831,7 +1831,7 @@ lemma addToBitmap_corres_noop:
 
 lemma addToBitmap_if_null_corres_noop: (* used this way in Haskell code *)
   "corres dc \<top> \<top> (return ()) (if null queue then addToBitmap d p else return ())"
-  by (cases "null queue", simp_all add: addToBitmap_corres_noop)
+  by (cases "null queue", simp_all add: addToBitmap_noop_corres)
 
 lemma removeFromBitmap_corres_noop:
   "corres dc \<top> \<top> (return ()) (removeFromBitmap tdom prioa)"
@@ -1880,7 +1880,7 @@ proof -
                apply (rule corres_split_noop_rhs2)
                    apply (rule corres_split_noop_rhs2)
                      apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def exst_same_def)
-                    apply (fastforce intro: addToBitmap_corres_noop)
+                    apply (fastforce intro: addToBitmap_noop_corres)
                    apply wp+
                  apply (simp add: tcb_sched_enqueue_def split del: if_split)
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
