@@ -1465,7 +1465,7 @@ lemma tcb_vcpu_relation:
   "arch_tcb_relation a a' \<Longrightarrow> tcb_vcpu a = atcbVCPUPtr a'"
   unfolding arch_tcb_relation_def by auto
 
-lemma archThreadGet_vcpu_corres[corres]:
+lemma archThreadGet_VCPU_corres[corres]:
   "corres (=) (tcb_at t) (tcb_at' t) (arch_thread_get tcb_vcpu t) (archThreadGet atcbVCPUPtr t)"
   by (rule archThreadGet_corres) (erule tcb_vcpu_relation)
 
