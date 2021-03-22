@@ -750,7 +750,7 @@ lemma checkActiveIRQ_corres:
     apply (rule checkActiveIRQ_corres', auto)
   done
 
-lemma check_active_irq_corres_just_running:
+lemma checkActiveIRQ_just_running_corres:
   "corres (=)
     (invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
@@ -888,7 +888,7 @@ lemma ckernel_invariant:
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
       apply (rule checkActiveIRQ_valid_objs')
-     apply (rule valid_corres_combined[OF check_active_irq_invs_just_running check_active_irq_corres_just_running])
+     apply (rule valid_corres_combined[OF check_active_irq_invs_just_running checkActiveIRQ_just_running_corres])
      apply (rule checkActiveIRQ_invs'_just_running[THEN hoare_weaken_pre])
      apply (fastforce simp: ex_abs_def)
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
