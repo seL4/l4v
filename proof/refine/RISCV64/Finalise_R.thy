@@ -1538,7 +1538,7 @@ lemma set_cap_trans_state:
       apply (auto simp add: in_monad set_object_def well_formed_cnode_n_def split: if_split_asm)
   done
 
-lemma clearUntypedFreeIndex_corres_noop:
+lemma clearUntypedFreeIndex_noop_corres:
   "corres dc \<top> (cte_at' (cte_map slot))
     (return ()) (clearUntypedFreeIndex (cte_map slot))"
   apply (simp add: clearUntypedFreeIndex_def)
@@ -1567,7 +1567,7 @@ lemma emptySlot_corres:
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_corres_noop])
+    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
                      corres_split [OF _ get_cap_corres])
