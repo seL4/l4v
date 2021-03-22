@@ -646,7 +646,7 @@ lemma handleVMFault_corres:
     apply wpsimp+
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE,prefer_next,simp)
-       apply (rule corres_as_user')
+       apply (rule asUser_corres')
        apply (rule corres_no_failI [where R="(=)"])
         apply (rule no_fail_getRestartPC)
        apply fastforce

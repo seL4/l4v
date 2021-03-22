@@ -1432,7 +1432,7 @@ lemma (in delete_one) suspend_corres:
           apply (rule corres_if)
             apply (case_tac state; simp)
            apply (simp add: update_restart_pc_def updateRestartPC_def)
-           apply (rule corres_as_user')
+           apply (rule asUser_corres')
            apply (simp add: ARM_HYP.nextInstructionRegister_def ARM_HYP.faultRegister_def
                             ARM_HYP_H.nextInstructionRegister_def ARM_HYP_H.faultRegister_def)
            apply (simp add: ARM_HYP_H.Register_def)
@@ -1520,7 +1520,7 @@ lemma no_fail_setRegister[wp]: "no_fail \<top> (setRegister r v)"
   by (simp add: setRegister_def)
 
 lemmas corresK_as_user' =
-  corres_as_user'[atomized, THEN corresK_lift_rule, THEN mp]
+  asUser_corres'[atomized, THEN corresK_lift_rule, THEN mp]
 
 lemma asUser_sanitiseRegister_corres[corres]:
   "b=b' \<Longrightarrow> t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')

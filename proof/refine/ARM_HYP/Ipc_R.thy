@@ -1541,7 +1541,7 @@ lemma msgFromLookupFailure_map[simp]:
 lemma asUser_getRestartPC_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
                  (as_user t getRestartPC) (asUser t getRestartPC)"
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (rule corres_Id, simp, simp)
   apply (rule no_fail_getRestartPC)
   done
@@ -1550,7 +1550,7 @@ lemma asUser_mapM_getRegister_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
      (as_user t (mapM getRegister regs))
      (asUser t (mapM getRegister regs))"
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (rule corres_Id [OF refl refl])
   apply (rule no_fail_mapM)
   apply (simp add: getRegister_def)
@@ -1901,7 +1901,7 @@ lemma handle_fault_reply_registers_corres:
     apply (rule corres_split [OF _ arch_getSanitiseRegisterInfo_corres])
        apply (rule corres_split)
        apply (rule corres_trivial, simp)
-      apply (rule corres_as_user')
+      apply (rule asUser_corres')
       apply(simp add: setRegister_def sanitise_register_def
                       sanitiseRegister_def syscallMessage_def Let_def cong: register.case_cong)
       apply(subst zipWithM_x_modify)+

@@ -1387,7 +1387,7 @@ lemma (in delete_one) suspend_corres:
           apply (rule corres_if)
             apply (case_tac state; simp)
            apply (simp add: update_restart_pc_def updateRestartPC_def)
-           apply (rule corres_as_user')
+           apply (rule asUser_corres')
            apply (simp add: RISCV64.nextInstructionRegister_def RISCV64.faultRegister_def
                             RISCV64_H.nextInstructionRegister_def RISCV64_H.faultRegister_def)
            apply (simp add: RISCV64_H.Register_def)

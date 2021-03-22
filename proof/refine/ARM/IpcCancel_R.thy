@@ -1420,7 +1420,7 @@ lemma (in delete_one) suspend_corres:
           apply (rule corres_if)
             apply (case_tac state; simp)
            apply (simp add: update_restart_pc_def updateRestartPC_def)
-           apply (rule corres_as_user')
+           apply (rule asUser_corres')
            apply (simp add: ARM.nextInstructionRegister_def ARM.faultRegister_def
                             ARM_H.nextInstructionRegister_def ARM_H.faultRegister_def)
            apply (simp add: ARM_H.Register_def)

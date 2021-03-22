@@ -13,7 +13,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma asUser_setNextPC_corres:
   "corres dc (tcb_at t and invs) (tcb_at' t and invs')
              (as_user t (setNextPC v)) (asUser t (setNextPC v))"
-  apply (rule corres_as_user)
+  apply (rule asUser_corres)
   apply (rule corres_Id, simp, simp)
   apply (rule no_fail_setNextPC)
   done
@@ -290,7 +290,7 @@ lemma invokeTCB_ReadRegisters_corres:
     apply (rule corres_split_nor)
        apply (rule corres_split [OF _ getCurThread_corres])
          apply (simp add: liftM_def[symmetric])
-         apply (rule corres_as_user)
+         apply (rule asUser_corres)
          apply (rule corres_Id)
            apply simp
           apply simp
@@ -338,7 +338,7 @@ lemma invokeTCB_WriteRegisters_corres:
     apply (rule corres_split [OF _ getCurThread_corres])
       apply (rule corres_split_nor)
          prefer 2
-         apply (rule corres_as_user)
+         apply (rule asUser_corres)
          apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
          apply (rule corres_Id, simp+)
          apply (rule no_fail_pre, wp no_fail_mapM)
@@ -408,7 +408,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
         apply (simp add: setRegister_def)
-        apply (rule corres_as_user)
+        apply (rule asUser_corres)
         apply (rule corres_modify')
          apply simp
         apply simp

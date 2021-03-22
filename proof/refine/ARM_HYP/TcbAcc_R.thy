@@ -1416,7 +1416,7 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
-lemma corres_as_user':
+lemma asUser_corres':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t)
                        (tcb_at' t)
@@ -1474,11 +1474,11 @@ lemma corres_as_user':
   done
 qed
 
-lemma corres_as_user:
+lemma asUser_corres:
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t and invs) (tcb_at' t and invs') (as_user t f) (asUser t g)"
   apply (rule corres_guard_imp)
-    apply (rule corres_as_user' [OF y])
+    apply (rule asUser_corres' [OF y])
    apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   done
@@ -1506,7 +1506,7 @@ qed
 lemma asUser_getRegister_corres:
  "corres (=) (tcb_at t) (tcb_at' t)
         (as_user t (getRegister r)) (asUser t (getRegister r))"
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (clarsimp simp: getRegister_def)
   done
 
@@ -1678,7 +1678,7 @@ lemma asUser_setRegister_corres:
              (as_user t (setRegister r v))
              (asUser t (setRegister r v))"
   apply (simp add: setRegister_def)
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (rule corres_modify'; simp)
   done
 
@@ -3408,7 +3408,7 @@ lemma getMRs_corres:
      (thread_get (arch_tcb_get_registers o tcb_arch) t) (asUser t (mapM getRegister ARM_HYP_H.msgRegisters))"
     unfolding arch_tcb_get_registers_def
     apply (subst thread_get_as_user)
-    apply (rule corres_as_user')
+    apply (rule asUser_corres')
     apply (subst mapM_gets)
      apply (simp add: getRegister_def)
     apply (simp add: S ARM_HYP_H.msgRegisters_def msg_registers_def)
@@ -3517,7 +3517,7 @@ proof -
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_nor [OF _ corres_as_user'], rule corres_trivial, simp)
+       apply (rule corres_split_nor [OF _ asUser_corres'], rule corres_trivial, simp)
          apply (rule corres_modify')
           apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
                            cong: if_cong simp del: the_index.simps)
@@ -3529,7 +3529,7 @@ proof -
                           msgMaxLength_def msgLengthBits_def)
     apply (simp add: msg_max_length_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_nor [OF _ corres_as_user'])
+      apply (rule corres_split_nor [OF _ asUser_corres'])
          apply (rule corres_split_nor, rule corres_trivial, clarsimp simp: min.commute)
           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
                         in zipWithM_x_corres)
