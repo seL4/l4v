@@ -822,7 +822,7 @@ lemma checkCapAt_corres:
   apply (fastforce elim: cte_wp_at_weakenE' intro: Q')
   done
 
-lemma check_cap_at_corres_weak:
+lemma checkCapAt_weak_corres:
   assumes r: "cap_relation cap cap'"
   assumes c: "corres dc P P' f f'"
   shows "corres dc (P and cte_at slot and invs) (P' and pspace_aligned' and pspace_distinct')
@@ -866,7 +866,7 @@ lemma checkCapAt_cteInsert_corres:
                         P'="cte_wp_at' (\<lambda>c. cteCap c = NullCap) (cte_map (target, ref))
                             and invs' and valid_cap' newCap"
                        in checkCapAt_corres, assumption)
-      apply (rule check_cap_at_corres_weak, simp)
+      apply (rule checkCapAt_weak_corres, simp)
       apply (unfold assertDerived_def)[1]
       apply (rule corres_stateAssert_implied [where P'=\<top>])
        apply simp
