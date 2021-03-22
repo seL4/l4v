@@ -1432,7 +1432,7 @@ crunches create_cap_ext
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma clearUntypedFreeIndex_corres_noop_psp:
+lemma updateNewFreeIndex_noop_psp_corres:
   "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
     dc \<top> (cte_at' slot)
     (return ()) (updateNewFreeIndex slot)"
@@ -1572,7 +1572,7 @@ shows
                 apply (rule updateMDB_symb_exec_r)
                apply (simp add: dc_def[symmetric])
                apply (rule corres_split_noop_rhs[OF _ updateMDB_symb_exec_r])
-                apply (rule clearUntypedFreeIndex_corres_noop_psp)
+                apply (rule updateNewFreeIndex_noop_psp_corres)
                apply (wp getCTE_wp set_cdt_valid_objs set_cdt_cte_at
                          hoare_weak_lift_imp | simp add: o_def)+
     apply (clarsimp simp: cte_wp_at_cte_at)
