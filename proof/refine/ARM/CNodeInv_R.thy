@@ -7578,7 +7578,7 @@ lemma cap_revoke_mdb_stuff4:
        apply(simp add: cte_wp_at_def)+
        done
 
-lemma cap_revoke_corres':
+lemma cteRevoke_corres':
   "spec_corres s (dc \<oplus> dc)
       (einvs and simple_sched_action and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
@@ -7715,7 +7715,7 @@ proof (induct rule: cap_revoke.induct)
     done
 qed
 
-lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
+lemmas cteRevoke_corres = use_spec_corres [OF cteRevoke_corres']
 
 crunch typ_at'[wp]: invokeCNode "\<lambda>s. P (typ_at' T p s)"
   (ignore: filterM finaliseSlot
@@ -8628,7 +8628,7 @@ lemma invokeCNode_corres:
          apply (erule cteMove_corres)
         apply (clarsimp simp: cte_wp_at_caps_of_state real_cte_tcb_valid)
        apply (clarsimp simp: cte_wp_at_ctes_of)
-       apply (rule cap_revoke_corres)
+       apply (rule cteRevoke_corres)
      apply (rule corres_guard_imp [OF cteDelete_corres])
       apply (clarsimp simp: cte_at_typ cap_table_at_typ halted_emptyable)
      apply simp
