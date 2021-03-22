@@ -175,7 +175,7 @@ lemma performASIDControlInvocation_corres:
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
                apply (rule corres_split)
                   prefer 2
-                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
@@ -1385,7 +1385,7 @@ lemma performX64PortInvocation_corres:
   apply (case_tac x; clarsimp simp: bind_assoc simp del: split_paired_All)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF _ set_ioport_mask_corres])
-      apply (rule corres_split_nor[OF _ cins_corres_simple])
+      apply (rule corres_split_nor[OF _ cteInsert_simple_corres])
            apply (rule corres_return_eq_same, simp)
           apply (clarsimp simp: cap_relation_def)
          apply simp

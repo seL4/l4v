@@ -4672,7 +4672,7 @@ lemma maskedAsFull_revokable_safe_parent:
 done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma cins_corres_simple:
+lemma cteInsert_simple_corres:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
   shows "corres dc
