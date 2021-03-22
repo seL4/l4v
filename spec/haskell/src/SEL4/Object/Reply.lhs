@@ -85,6 +85,7 @@ This module specifies the behavior of reply objects.
 >         when (prevReplyPtrOpt /= Nothing) $ do
 >             prevReplyPtr <- return $ fromJust prevReplyPtrOpt
 >             updateReply prevReplyPtr (\reply -> reply { replyNext = replyNext reply })
+>             updateReply replyPtr (\reply -> reply { replyNext = Nothing })
 >         tcbScPtrOpt <- threadGet tcbSchedContext tcbPtr
 >         when (tcbScPtrOpt == Nothing) $ schedContextDonate scPtr tcbPtr
 >     cleanReply replyPtr
