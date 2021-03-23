@@ -983,28 +983,18 @@ lemma reply_unlink_sc_None:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma sc_with_reply_None_no_reply_sc:
-  "\<lbrakk>kheap s rp' = Some (Reply reply); invs s; sc_with_reply rp' s = None\<rbrakk>
-       \<Longrightarrow> reply_sc reply = None"
-  apply (rule ccontr, clarsimp simp: obj_at_def)
-  apply (drule(3) reply_sc_refs[OF _ invs_valid_objs invs_sym_refs])
-  apply (drule_tac sc=y in valid_replies_sc_with_reply_None[OF _ invs_valid_replies])
-   apply (clarsimp simp: sc_at_ppred_def obj_at_def)+
-  done
-
 lemma reply_remove_unlive:
   "\<lbrace>invs and K (rp = rp')\<rbrace>
-     reply_remove t rp
-   \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) rp'\<rbrace>"
+   reply_remove t rp
+   \<lbrace>\<lambda>_. obj_at (Not \<circ> live) rp'\<rbrace>"
   supply if_split[split del]
   apply (simp add: reply_remove_def assert_opt_def)
   apply (rule hoare_gen_asm[simplified])
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-  apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], clarsimp)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: not_live_reply_weaken[OF reply_unlink_tcb_not_live] reply_unlink_sc_None)
-  by (clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply invs_valid_objs
-                     sc_with_reply_None_no_reply_sc)
+  apply (fastforce dest: sc_with_reply_None_reply_sc_reply_at
+                   simp: reply_at_ppred_def obj_at_def is_reply_def)
+  done
 
 lemma reply_unlink_tcb_not_live':
   "\<lbrace>reply_sc_reply_at (\<lambda>sc. sc = None) reply and K (reply = reply')\<rbrace>
@@ -1012,15 +1002,6 @@ lemma reply_unlink_tcb_not_live':
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) reply\<rbrace>"
   by (rule hoare_gen_asm)
      (wpsimp wp: not_live_reply_weaken[OF reply_unlink_tcb_not_live] simp: obj_at_def)
-
-lemma st_tcb_recv_reply_state_refs:
-  "\<lbrakk>valid_objs s; sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply) pl)) thread s\<rbrakk>
-  \<Longrightarrow> \<exists>rep. (kheap s reply = Some (Reply rep) \<and> reply_tcb rep = Some thread)"
-  apply (frule (1) st_tcb_at_valid_st2)
-  apply (drule (1) sym_refs_st_tcb_atD[rotated])
-  apply (clarsimp simp: get_refs_def2 obj_at_def valid_tcb_state_def is_reply
-                  split: thread_state.splits if_splits)
-  done
 
 lemma blocked_cancel_ipc_unlive:
   "\<lbrace>st_tcb_at ((=) st) thread and (\<lambda>s. sym_refs (state_refs_of s)) and valid_replies and valid_objs
