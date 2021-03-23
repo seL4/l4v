@@ -412,4 +412,215 @@ lemma upcast_less_unat_less:
   shows "unat x < y"
   by (rule unat_mono[OF less, simplified unat_ucast_up_simp[OF len] unat_of_nat_eq[OF bound]])
 
+lemma word_ctz_max:
+  "word_ctz w \<le> size w"
+  unfolding word_ctz_def
+  by (rule order_trans[OF List.length_takeWhile_le], clarsimp simp: word_size)
+
+lemma scast_of_nat_small:
+  "x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> scast (of_nat x :: 'a :: len word) = (of_nat x :: 'b :: len word)"
+  apply (rule sym, subst word_unat.inverse_norm)
+  apply (simp add: scast_def word_of_int[symmetric]
+                   of_nat_nat[symmetric] unat_def[symmetric])
+  apply (simp add: int_eq_sint unat_of_nat)
+  done
+
+lemmas casts_of_nat_small = ucast_of_nat_small scast_of_nat_small
+
+\<comment>\<open>The conditions under which `takeWhile P xs = take n xs` and `dropWhile P xs = drop n xs`\<close>
+definition list_while_len where
+  "list_while_len P n xs \<equiv> (\<forall>i. i < n \<longrightarrow> i < length xs \<longrightarrow> P (xs ! i))
+                            \<and> (n < length xs \<longrightarrow> \<not> P (xs ! n))"
+
+lemma list_while_len_iff_takeWhile_eq_take:
+  "list_while_len P n xs \<longleftrightarrow> takeWhile P xs = take n xs"
+  unfolding list_while_len_def
+  apply (rule iffI[OF takeWhile_eq_take_P_nth], simp+)
+  apply (intro conjI allI impI)
+   apply (rule takeWhile_take_has_property_nth, clarsimp)
+  apply (drule_tac f=length in arg_cong, simp)
+  apply (induct xs arbitrary: n; clarsimp split: if_splits)
+  done
+
+lemma list_while_len_exists:
+  "\<exists>n. list_while_len P n xs"
+  apply (induction xs; simp add: list_while_len_def)
+  apply (rename_tac x xs)
+  apply (erule exE)
+  apply (case_tac "P x")
+   apply (rule_tac x="Suc n" in exI, clarsimp)
+   apply (case_tac i; simp)
+  apply (rule_tac x=0 in exI, simp)
+  done
+
+lemma takeWhile_truncate:
+  "length (takeWhile P xs) \<le> m
+   \<Longrightarrow> takeWhile P (take m xs) = takeWhile P xs"
+  apply (cut_tac list_while_len_exists[where P=P and xs=xs], clarsimp)
+  apply (case_tac "n \<le> m")
+   apply (subgoal_tac "list_while_len P n (take m xs)")
+    apply(simp add: list_while_len_iff_takeWhile_eq_take)
+   apply (clarsimp simp: list_while_len_def)
+  apply (simp add: list_while_len_iff_takeWhile_eq_take)
+  done
+
+lemma word_clz_shiftr_1:
+  fixes z::"'a::len word"
+  assumes wordsize: "1 < LENGTH('a)"
+  shows "z \<noteq> 0 \<Longrightarrow> word_clz (z >> 1) = word_clz z + 1"
+  supply word_size [simp]
+  apply (clarsimp simp: word_clz_def)
+  using wordsize apply (subst bl_shiftr, simp)
+  apply (subst takeWhile_append2; simp add: wordsize)
+  apply (subst takeWhile_truncate)
+  using word_clz_nonzero_max[where w=z]
+   apply (clarsimp simp: word_clz_def)
+   apply simp+
+  done
+
+lemma shiftr_Suc:
+  fixes x::"'a::len word"
+  shows "x >> (Suc n) = x >> n >> 1"
+  by (clarsimp simp: shiftr_shiftr)
+
+lemma word_clz_shiftr:
+  fixes z :: "'a::len word"
+  shows "n < LENGTH('a) \<Longrightarrow> mask n < z \<Longrightarrow> word_clz (z >> n) = word_clz z + n"
+  apply (simp add: le_mask_iff Not_eq_iff[THEN iffD2, OF le_mask_iff, simplified not_le]
+                   word_neq_0_conv)
+  apply (induction n; simp)
+  apply (subgoal_tac "0 < z >> n")
+   apply (subst shiftr_Suc)
+   apply (subst word_clz_shiftr_1; simp)
+  apply (clarsimp simp: word_less_nat_alt shiftr_div_2n' div_mult2_eq)
+  apply (case_tac "unat z div 2 ^ n = 0"; simp)
+  apply (clarsimp simp: div_eq_0_iff)
+  done
+
+lemma mask_to_bl_exists_True:
+  "x && mask n \<noteq> 0 \<Longrightarrow> \<exists>m. (rev (to_bl x)) ! m \<and> m < n"
+  apply (subgoal_tac "\<not>(\<forall>m. m < n \<longrightarrow> \<not>(rev (to_bl x)) ! m)", fastforce)
+  apply (intro notI)
+  apply (subgoal_tac "x && mask n = 0", clarsimp)
+  apply (clarsimp simp: eq_zero_set_bl in_set_conv_nth)
+  apply (subst (asm) to_bl_nth, clarsimp simp: word_size)
+  apply (clarsimp simp: word_size)
+  apply (drule_tac x="LENGTH('a) - Suc i" in spec, simp)
+  apply (subst (asm) rev_nth, simp)
+  apply (subst (asm) to_bl_nth; clarsimp simp: word_size)
+  done
+
+lemma word_ctz_shiftr_1:
+  fixes z::"'a::len word"
+  assumes wordsize: "1 < LENGTH('a)"
+  shows "z \<noteq> 0 \<Longrightarrow> 1 \<le> word_ctz z \<Longrightarrow> word_ctz (z >> 1) = word_ctz z - 1"
+  supply word_size [simp]
+  apply (clarsimp simp: word_ctz_def)
+  using wordsize apply (subst bl_shiftr, simp)
+  apply (simp add: rev_take )
+  apply (subgoal_tac
+         "length (takeWhile Not (rev (to_bl z))) - Suc 0
+          = length (takeWhile Not (take 1 (rev (to_bl z)) @ drop 1 (rev (to_bl z)))) - Suc 0")
+   apply (subst (asm) takeWhile_append2)
+    apply clarsimp
+    apply (case_tac "rev (to_bl z)"; simp)
+   apply clarsimp
+   apply (subgoal_tac "\<exists>m. (rev (to_bl z)) ! m \<and> m < LENGTH('a)", clarsimp)
+    apply (case_tac m)
+     apply (case_tac "rev (to_bl z)"; simp)
+    apply (subst takeWhile_append1, subst in_set_conv_nth)
+      apply (rule_tac x=nat in exI)
+      apply (intro conjI)
+       apply (clarsimp simp: wordsize)
+       using wordsize apply linarith
+      apply (rule refl, clarsimp)
+    apply simp
+   apply (rule mask_to_bl_exists_True, simp)
+  apply simp
+  done
+
+lemma word_ctz_bound_below_helper:
+  fixes x :: "'a::len word"
+  assumes sz: "n \<le> LENGTH('a)"
+  shows "x && mask n = 0
+         \<Longrightarrow> to_bl x = (take (LENGTH('a) - n) (to_bl x) @ replicate n False)"
+  apply (subgoal_tac "replicate n False = drop (LENGTH('a) - n) (to_bl x)")
+   apply (subgoal_tac "True \<notin> set (drop (LENGTH('a) - n) (to_bl x))")
+    apply (drule list_of_false, clarsimp simp: sz)
+   apply (drule_tac sym[where t="drop n x" for n x], clarsimp)
+  apply (rule sym)
+  apply (rule is_aligned_drop; clarsimp simp: is_aligned_mask sz)
+  done
+
+lemma word_ctz_bound_below:
+  fixes x :: "'a::len word"
+  assumes sz[simp]: "n \<le> LENGTH('a)"
+  shows "x && mask n = 0 \<Longrightarrow> n \<le> word_ctz x"
+  apply (clarsimp simp: word_ctz_def)
+  apply (subst word_ctz_bound_below_helper[OF sz]; simp)
+  apply (subst takeWhile_append2; clarsimp)
+  done
+
+lemma word_ctz_bound_above:
+  fixes x :: "'a::len word"
+  shows "x && mask n \<noteq> 0 \<Longrightarrow> word_ctz x < n"
+  apply (cases "n \<le> LENGTH('a)")
+   apply (frule mask_to_bl_exists_True, clarsimp)
+   apply (clarsimp simp: word_ctz_def)
+   apply (subgoal_tac "m < length ((rev (to_bl x)))")
+    apply (subst id_take_nth_drop[where xs="rev (to_bl x)"], assumption)
+    apply (subst takeWhile_tail, simp)
+    apply (rule order.strict_trans1)
+     apply (rule List.length_takeWhile_le)
+    apply simp
+   apply (erule order.strict_trans2, clarsimp)
+  apply (simp add: not_le)
+  apply (erule le_less_trans[OF word_ctz_max, simplified word_size])
+  done
+
+lemma word_ctz_shiftr:
+  fixes z::"'a::len word"
+  assumes nz: "z \<noteq> 0"
+  shows "n < LENGTH('a) \<Longrightarrow> n \<le> word_ctz z \<Longrightarrow> word_ctz (z >> n) = word_ctz z - n"
+  apply (induction n; simp)
+  apply (subst shiftr_Suc)
+  apply (subst word_ctz_shiftr_1, simp)
+    apply clarsimp
+    apply (subgoal_tac "word_ctz z < n", clarsimp)
+    apply (rule word_ctz_bound_above, clarsimp simp: word_size)
+    apply (subst (asm) and_mask_eq_iff_shiftr_0[symmetric], clarsimp simp: nz)
+   apply (rule word_ctz_bound_below, clarsimp simp: word_size)
+   apply (rule mask_zero)
+   apply (rule is_aligned_shiftr, simp add: is_aligned_mask)
+   apply (case_tac "z && mask (Suc n) = 0", simp)
+   apply (frule word_ctz_bound_above[rotated]; clarsimp simp: word_size)
+  apply simp
+  done
+
+\<comment> \<open>Useful for solving goals of the form `(w::32 word) <= 0xFFFFFFFF` by simplification\<close>
+lemma word_less_max_simp:
+  fixes w :: "'a::len word"
+  assumes "max_w = -1"
+  shows "w \<le> max_w"
+  unfolding assms by simp
+
+lemma word_and_mask_word_ctz_zero:
+  assumes "l = word_ctz w"
+  shows "w && mask l = 0"
+  unfolding word_ctz_def assms
+  apply (word_eqI)
+  apply (drule takeWhile_take_has_property_nth)
+  apply (simp add: test_bit_bl)
+  done
+
+lemma word_ctz_len_word_and_mask_zero:
+  fixes w :: "'a::len word"
+  shows "word_ctz w = LENGTH('a) \<Longrightarrow> w = 0"
+  by (drule sym, drule word_and_mask_word_ctz_zero, simp)
+
+lemma word_le_1:
+  fixes w :: "'a::len word"
+  shows "w \<le> 1 \<longleftrightarrow> w = 0 \<or> w = 1"
+  using dual_order.antisym lt1_neq0 word_zero_le by blast
+
 end
