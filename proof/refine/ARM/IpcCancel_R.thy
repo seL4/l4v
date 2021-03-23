@@ -394,7 +394,7 @@ lemma blocked_cancel_ipc_corres:
    apply (frule (2) Receive_or_Send_ep_at)
    apply (clarsimp simp: obj_at_def is_ep pred_tcb_at_def)
    apply (rule conjI, clarsimp)
-    apply (drule (1) BlockedOnReceive_reply_tcb_reply_at[rotated])
+    apply (drule st_tcb_recv_reply_state_refs)
      apply (fastforce simp: pred_tcb_at_def obj_at_def)
     apply (clarsimp simp: sk_obj_at_pred_def obj_at_def)
    apply (rule conjI)
@@ -777,7 +777,15 @@ lemma replyRemoveTCB_corres:
                 apply (rule_tac Q="(\<lambda>s'. scReplies_of s' scp = hd_opt (sc_replies sc)) and sc_at' scp"
                        in corres_cross_add_guard)
                  apply (clarsimp; rule conjI)
-                  apply (fastforce dest!: state_relationD sc_replies_relation_scReply_cross)
+                  apply (frule state_relation_sc_replies_relation)
+                  apply (frule sc_replies_relation_scReplies_of[symmetric])
+                    apply (fastforce dest!: sc_at_cross valid_objs_valid_sched_context_size
+                                      simp: obj_at_def is_sc_obj_def obj_at'_def)
+                   apply (fastforce dest!: sc_at_cross valid_objs_valid_sched_context_size
+                                     simp: obj_at_def is_sc_obj_def state_relation_def obj_at'_def
+                                           projectKOs opt_map_def)
+                  apply (clarsimp simp: sc_replies_of_scs_def map_project_def opt_map_def
+                                        scs_of_kh_def sc_of_def)
                  apply (fastforce dest!: state_relation_pspace_relation sc_at_cross
                                          valid_objs_valid_sched_context_size
                                    simp: obj_at_def is_sc_obj)
@@ -832,7 +840,7 @@ lemma replyRemoveTCB_corres:
                          apply (clarsimp dest!: reply_ko_at_valid_objs_valid_reply' simp: valid_reply'_def)
                         apply simp
                        apply (wpsimp wp: sc_replies_update_takeWhile_sc_with_reply
-                                         sc_replies_update_takeWhile_valid_replies')
+                                         sc_replies_update_takeWhile_valid_replies)
                       apply (wpsimp wp: scReply_update_empty_sc_with_reply')
                      apply clarsimp
                      apply (frule_tac reply_ptr=rp and sc_ptr= scp and list="tl (sc_replies sc)"
@@ -915,7 +923,7 @@ lemma replyRemoveTCB_corres:
                          apply simp
                         apply (wpsimp wp: sc_replies_update_takeWhile_sc_with_reply
                                           sc_replies_update_takeWhile_middle_sym_refs
-                                          sc_replies_update_takeWhile_valid_replies')
+                                          sc_replies_update_takeWhile_valid_replies)
                        apply (wpsimp wp: updateReply_valid_objs' updateReply_ko_at'_other)
                       apply (clarsimp cong: conj_cong)
                       apply simp
@@ -2598,8 +2606,8 @@ proof -
         apply (rule not_idle_tcb_in_RecvEp; (fastforce simp: obj_at_def)?)
        apply (clarsimp simp: vs_all_heap_simps reply_unlink_ts_pred_def)
        apply (subst identity_eq)
-       apply (fastforce intro!: BlockedOnReceive_reply_tcb_reply_at
-                          simp: pred_tcb_at_def obj_at_def)
+       apply (fastforce dest!: st_tcb_recv_reply_state_refs invs_sym_refs
+                         simp: pred_tcb_at_def obj_at_def reply_at_ppred_def)
       apply (clarsimp simp: valid_ep_def)
      apply (clarsimp simp: ep_relation_def)
     apply (wpsimp simp: get_ep_queue_def)

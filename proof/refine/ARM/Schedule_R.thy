@@ -100,8 +100,9 @@ lemma tcbSchedAppend_corres:
   "corres dc \<top> (tcb_at' t and valid_queues and valid_queues')
           (tcb_sched_action (tcb_sched_append) t) (tcbSchedAppend t)"
   apply (rule corres_cross_back[where P="tcb_at t" and P'="tcb_at' t"])
-    apply (clarsimp simp: state_relation_def)
-    apply (erule (1) pspace_relation_tcb_at)
+    apply (fastforce dest: pspace_relation_tcb_at
+                     simp: state_relation_def tcb_of'_def opt_map_def obj_at'_def projectKOs
+                    split: option.splits)
    apply simp
   apply (simp only: tcbSchedAppend_def tcb_sched_action_def)
   apply (rule corres_symb_exec_r [OF _ _ threadGet_inv,
