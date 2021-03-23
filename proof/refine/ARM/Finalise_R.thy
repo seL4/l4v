@@ -3471,14 +3471,42 @@ lemma valid_sched_context_size'_scReply_update[simp]:
   "valid_sched_context_size' (scReply_update f ko) = valid_sched_context_size' ko"
   by (clarsimp simp: valid_sched_context_size'_def scBits_simps objBits_simps)
 
+lemma valid_reply'_replyNext_update_None[simp]:
+  "\<forall>r. valid_reply' r s \<longrightarrow> valid_reply' (replyNext_update Map.empty r) s"
+  by (clarsimp simp: valid_reply'_def)
+
 lemma replyPop_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyPop replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  apply (clarsimp simp: replyPop_def)
-  apply (wpsimp wp: schedContextDonate_valid_queues replyUnlink_valid_objs'
-                    hoare_drop_imps hoare_vcg_if_lift2 updateReply_valid_objs'_preserved
-         | intro conjI impI
-         | clarsimp dest!: reply_ko_at_valid_objs_valid_reply' sc_ko_at_valid_objs_valid_sc'
-                     simp: valid_sched_context'_def valid_reply'_def)+
+  apply (clarsimp simp: replyPop_def bind_assoc assert_opt_def)
+  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
+  apply (rename_tac reply; case_tac "replyTCB reply"; simp)
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (case_tac "replyNext reply"; simp add: bind_assoc)
+   apply wpsimp
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_gen_asm_conj)
+  apply (clarsimp simp: isHead_def split: reply_next.split_asm)
+  apply (rename_tac scp)
+  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
+  apply (wpsimp wp: schedContextDonate_valid_queues)
+     apply (rule_tac Q="\<lambda>_. valid_queues and valid_objs'" in hoare_strengthen_post[rotated], simp)
+     apply (wpsimp wp: updateReply_valid_objs' hoare_vcg_if_lift split_del: if_split)+
+   apply (rule_tac Q="\<lambda>_. valid_queues and valid_objs' and
+                      (\<lambda>s. bound (replyPrev reply) \<longrightarrow>
+                           (\<forall>r. valid_reply' r s \<longrightarrow>
+                                valid_reply' (replyNext_update (\<lambda>_. Some (Head scp)) r) s))"
+          in hoare_strengthen_post[rotated])
+    apply blast
+   apply (wpsimp wp: updateReply_valid_objs')
+   apply (wpsimp wp: set_sc'.set_wp)
+  apply clarsimp
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc'[rotated])
+  apply (frule (1) reply_ko_at_valid_objs_valid_reply'[rotated])
+  apply (clarsimp simp: valid_sched_context'_def valid_reply'_def)
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
   done
 
 lemma threadSet_valid_reply'[wp]:
@@ -3500,43 +3528,33 @@ lemma rescheduleRequired_valid_reply'[wp]:
                   split: option.splits)
   done
 
-crunches setThreadState
-  for valid_reply'[wp]: "\<lambda>s. valid_reply' reply s"
-  (wp: crunch_wps simp: crunch_simps)
+(* from Victor's Finalise_R PR *)
+lemma replyNext_update_valid_objs':
+  "\<lbrace>valid_objs' and
+      (\<lambda>s. ((\<forall>r. next_opt = Some (Next r) \<longrightarrow> reply_at' r s) \<and>
+            (\<forall>sc. next_opt = Some (Head sc) \<longrightarrow> sc_at' sc s)))\<rbrace>
+   updateReply replyPtr (replyNext_update (\<lambda>_. next_opt))
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (case_tac next_opt
+         ; wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
+  by (case_tac a; clarsimp)
 
-lemma replyUnlink_valid_reply'[wp]:
-  "replyUnlink replyPtr tcbPtr \<lbrace>valid_reply' reply\<rbrace>"
-  apply (clarsimp simp: replyUnlink_def liftM_def updateReply_def)
-  apply (wpsimp wp: set_reply'.set_wp gts_wp')
-  by (auto simp: valid_reply'_def obj_at'_def projectKOs objBitsKO_def valid_bound_obj'_def
-          split: option.splits)
-
-lemma setSchedContext_valid_reply'[wp]:
-  "setSchedContext ptr f \<lbrace>valid_reply' reply\<rbrace>"
-  apply (rule_tac Q="\<lambda>_. valid_obj' (KOReply reply)" in hoare_strengthen_post)
-  apply (wpsimp simp: setSchedContext_def wp: setObject_sc_wp)
-   apply (clarsimp simp: valid_obj'_def valid_reply'_def)+
-  done
-
-crunches schedContextDonate
-  for valid_reply'[wp]: "\<lambda>s. valid_reply' reply s"
-
+(* from Victor's Finalise_R PR *)
 lemma replyPop_valid_objs'[wp]:
   "replyPop replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
-  apply (clarsimp simp: replyPop_def)
-  apply (rule hoare_seq_ext[OF _ get_reply_sp'])
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ gts_sp']\<close>
-                       \<open>rule hoare_seq_ext_skip, solves wpsimp\<close>)
-  apply (rule_tac Q="valid_objs' and ko_at' reply replyPtr and tcb_at' tcbPtr"
-               in hoare_weaken_pre[rotated])
-   apply clarsimp
-  apply (wpsimp wp: replyUnlink_valid_objs' schedContextDonate_valid_objs')
-         apply (rule_tac Q="\<lambda>_. valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
-          apply clarsimp
-         apply (wpsimp wp: updateReply_valid_objs'_preserved hoare_drop_imps
-                     simp: valid_reply'_def)+
-  by (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
-                simp: valid_reply'_def valid_sched_context'_def)
+  unfolding replyPop_def
+  supply if_split[split del]
+  apply (wpsimp wp: schedContextDonate_valid_objs' hoare_vcg_if_lift_strong threadGet_const)
+                  apply (clarsimp simp: obj_at'_def)
+                 apply (wpsimp wp: replyNext_update_valid_objs' hoare_drop_imp hoare_vcg_if_lift2)+
+                apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift hoare_vcg_if_lift2 )+
+  apply (simp add: isHead_to_head)
+  apply (drule_tac k=x in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: projectKOs valid_obj'_def
+                 valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_reply'_def)
+  done
 
 lemma replyRemove_valid_queues:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> replyRemove replyPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
@@ -3727,13 +3745,32 @@ lemma replyPop_valid_inQ_queues[wp]:
   apply (rule_tac Q="?pre and tcb_at' tcbPtr and ko_at' reply replyPtr"
          in hoare_weaken_pre[rotated])
    apply fastforce
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (case_tac "replyNext reply"; simp add: bind_assoc)
+   apply wpsimp
+  apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_gen_asm_conj)
+  apply (clarsimp simp: isHead_def split: reply_next.split_asm)
+  apply (rename_tac scp)
+  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (wpsimp wp: schedContextDonate_valid_inQ_queues replyUnlink_valid_objs')
-         apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
-          apply clarsimp
-  apply (wpsimp wp: updateReply_valid_objs'_preserved hoare_drop_imps
-              simp: valid_reply'_def)+
-  apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc' reply_ko_at_valid_objs_valid_reply'
-                   simp: valid_sched_context'_def valid_reply'_def)
+     apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr" in hoare_strengthen_post[rotated])
+      apply clarsimp
+     apply (wpsimp wp: updateReply_valid_objs' hoare_vcg_if_lift)+
+   apply (rule_tac Q="\<lambda>_. valid_inQ_queues and valid_objs' and tcb_at' tcbPtr and
+                         (\<lambda>s. bound (replyPrev reply) \<longrightarrow>
+                              (\<forall>r. valid_reply' r s \<longrightarrow>
+                                   valid_reply' (replyNext_update (\<lambda>_. Some (Head scp)) r) s))"
+          in hoare_strengthen_post[rotated])
+    apply blast
+   apply wpsimp
+   apply (wpsimp wp: set_sc'.set_wp)
+  apply clarsimp
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc'[rotated])
+  apply (frule (1) reply_ko_at_valid_objs_valid_reply'[rotated])
+  apply (clarsimp simp: valid_sched_context'_def valid_reply'_def)
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
   done
 
 crunches replyRemove, replyClear

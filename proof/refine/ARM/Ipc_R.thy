@@ -1839,7 +1839,7 @@ lemma handleFaultReply_cur' [wp]:
 lemma replyRemove_valid_objs'[wp]:
   "replyRemove replyPtr tcbPtr \<lbrace>valid_objs'\<rbrace>"
   unfolding replyRemove_def
-  by (wpsimp wp: updateReply_valid_objs'_preserved replyUnlink_valid_objs'
+  by (wpsimp wp: updateReply_valid_objs' replyUnlink_valid_objs'
                  hoare_vcg_if_lift hoare_drop_imps
            simp: valid_reply'_def split_del: if_split)
 
