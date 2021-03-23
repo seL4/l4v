@@ -4521,8 +4521,12 @@ lemma schedContextUnbindReply_corres:
          apply fastforce
         apply (erule (1) sc_replies_relation_prevs_list)
         apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_sc)
-       apply (erule (1) sc_replies_relation_scReply[symmetric])
-       apply (clarsimp simp: obj_at'_real_def  ko_wp_at'_def projectKO_sc)
+       apply (frule state_relation_sc_replies_relation)
+       apply (frule sc_replies_relation_scReplies_of[symmetric])
+         apply (fastforce simp: obj_at_def is_sc_obj_def obj_at'_def)
+        apply (fastforce simp: obj_at'_def projectKOs opt_map_def)
+       apply (fastforce simp: obj_at'_real_def opt_map_def ko_wp_at'_def sc_replies_of_scs_def
+                              map_project_def scs_of_kh_def sc_of_def)
       apply wpsimp+
     apply (fastforce simp: sym_refs_asrt_def)+
   done

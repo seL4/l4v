@@ -569,18 +569,6 @@ lemma threadset_corresT:
 lemmas threadset_corres =
     threadset_corresT [OF _ _ all_tcbI, OF _ ball_tcb_cap_casesI ball_tcb_cte_casesI]
 
-lemma pspace_relation_tcb_at:
-  assumes p: "pspace_relation (kheap a) (ksPSpace c)"
-  assumes t: "tcb_at' t c"
-  shows "tcb_at t a" using assms
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE)
-  apply (clarsimp simp: other_obj_relation_def is_tcb obj_at_def
-                 split: Structures_A.kernel_object.split_asm if_split_asm
-                        ARM_A.arch_kernel_obj.split_asm)+
-  done
-
 lemma threadSet_corres_noopT:
   assumes x: "\<And>tcb tcb'. tcb_relation tcb tcb' \<Longrightarrow>
                          tcb_relation tcb (fn tcb')"
@@ -609,9 +597,10 @@ proof -
           apply (rule y)
         apply (rule corres_noop [where P=\<top> and P'=\<top>])
          apply wpsimp+
-      apply (erule pspace_relation_tcb_at[rotated])
-      apply clarsimp
-     apply simp
+      apply (fastforce dest: pspace_relation_tcb_at
+                       simp: state_relation_def tcb_of'_def opt_map_def obj_at'_def projectKOs
+                      split: option.splits)
+     apply clarsimp
     apply simp
     done
 qed

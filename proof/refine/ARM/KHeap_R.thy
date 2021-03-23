@@ -279,6 +279,24 @@ lemma loadObject_default_def2:
                   read_alignError_def is_aligned_mask  alignCheck_def read_alignCheck_def
            split: option.splits)
 
+lemma pspace_relation_tcb_at:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "tcbs_of' s' t \<noteq> None"
+  shows "tcb_at t s" using assms
+  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
+                 simp: other_obj_relation_def obj_at_def projectKOs is_tcb_def tcb_of'_def
+                split: Structures_A.kernel_object.split_asm if_split_asm
+                       ARM_A.arch_kernel_obj.split_asm kernel_object.splits)
+
+lemma pspace_relation_sc_at:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "scs_of' s' scp \<noteq> None"
+  shows "sc_at scp s" using assms
+  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
+                 simp: other_obj_relation_def is_sc_obj obj_at_def projectKOs
+                split: Structures_A.kernel_object.split_asm if_split_asm
+                       ARM_A.arch_kernel_obj.split_asm)
+
 lemma corres_get_tcb [corres]:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
   apply (rule corres_no_failI)
@@ -3636,7 +3654,10 @@ lemma state_refs_of_cross_eq:
     apply (clarsimp simp: ntfn_q_refs_of_def ntfn_relation_def split: Structures_A.ntfn.splits)
    apply (clarsimp simp: sc_relation_def get_refs_def2)
    apply (drule state_relation_sc_replies_relation)
-   apply (clarsimp simp: sc_replies_relation_scReply)
+   apply (frule sc_replies_relation_scReplies_of)
+     apply (fastforce simp: obj_at_def is_sc_obj_def)
+    apply (clarsimp simp: opt_map_def)
+   apply (clarsimp simp: opt_map_def sc_replies_of_scs_def map_project_def scs_of_kh_def sc_of_def)
   apply (clarsimp simp: reply_relation_def split: Structures_A.ntfn.splits)
   done
 
