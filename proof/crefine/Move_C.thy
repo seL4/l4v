@@ -1347,4 +1347,16 @@ lemma tcbSchedEnqueue_queued_queues_inv:
   apply normalise_obj_at'
   done
 
+(* FIXME BV: generalise *)
+lemma word_clz_1[simp]:
+  "word_clz (1::32 word) = 31"
+  "word_clz (1::64 word) = 63"
+  by (clarsimp simp: word_clz_def to_bl_def)+
+
+(* FIXME BV: generalise *)
+lemma word_ctz_0[simp]:
+  "word_ctz (0::32 word) = 32"
+  "word_ctz (0::64 word) = 64"
+  by (clarsimp simp: word_ctz_def to_bl_def)+
+
 end

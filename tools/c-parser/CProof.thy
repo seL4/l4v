@@ -439,4 +439,18 @@ lemma asm_spec_preserves:
   apply (erule (1) spec)
   done
 
+lemma hoarep_Seq:
+  assumes a: "A \<subseteq> C"
+  assumes b: "B \<subseteq> C"
+  assumes c: "hoarep \<Gamma> \<Theta> F P c Q A"
+  assumes d: "hoarep \<Gamma> \<Theta> F Q d R B"
+  shows "hoarep \<Gamma> \<Theta> F P (Seq c d) R C"
+proof -
+  note post = HoarePartialDef.conseqPost[OF _ subset_refl]
+  show ?thesis
+  by (rule hoarep.Seq[OF post[OF c a] post[OF d b]])
+qed
+
+lemmas hoarep_Seq_nothrow = hoarep_Seq[OF empty_subsetI subset_refl]
+
 end

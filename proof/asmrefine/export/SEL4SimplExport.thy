@@ -5,7 +5,7 @@
  *)
 
 theory SEL4SimplExport
-imports "ArchSEL4SimplExport" "CSpec.Substitute"
+imports "ArchSEL4SimplExport"
 begin
 
 ML \<open>

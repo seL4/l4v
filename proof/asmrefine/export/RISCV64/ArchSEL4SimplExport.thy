@@ -5,7 +5,7 @@
  *)
 
 theory ArchSEL4SimplExport
-imports "AsmRefine.SimplExport"
+imports "AsmRefine.SimplExport" "CSpec.Substitute"
 begin
 
 end
