@@ -1009,7 +1009,10 @@ lemma reply_push_sender_sc_Some_invs:
   apply (prop_tac "reply_at reply_ptr s",
          clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def, simp)
   apply (prop_tac "reply_at x s",
-         erule (1) valid_objs_sc_replies_reply_at, simp, simp)
+         erule_tac sc_ptr=sc_caller in valid_objs_sc_replies_reply_at)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+   apply (metis list.set_intros(1))
+  apply (rule conjI, simp)
   apply (rule conjI, rule replies_blocked_list_all_reply_at, assumption)
    apply (drule valid_replies_2D1)
    apply (rule_tac B="fst ` replies_with_sc s" in subset_trans; simp?)
@@ -1469,30 +1472,6 @@ lemma reply_push_st_tcb_at_Inactive:
 lemma valid_replies_2_inj_onD:
   "valid_replies_2 S T \<Longrightarrow> \<forall>x y a. (a,x) \<in> S \<longrightarrow> (a,y) \<in> S \<longrightarrow> x=y"
   by (fastforce simp: valid_replies_2_def inj_on_def)
-
-lemma sym_refs_reply_sc_reply_at:
-  "sym_refs (state_refs_of s) \<Longrightarrow>
-   sc_replies_sc_at ((=) (reply_ptr # list)) sc_ptr s \<Longrightarrow>
-   reply_sc_reply_at (\<lambda>sp. sp = (Some sc_ptr)) reply_ptr s"
-  apply (subgoal_tac "(sc_ptr, ReplySchedContext) \<in> state_refs_of s reply_ptr")
-   apply (clarsimp simp: state_refs_of_def refs_of_def split: option.splits)
-   apply (case_tac x2; clarsimp simp: get_refs_def reply_sc_reply_at_def obj_at_def split: option.splits)
-  apply (erule sym_refsE)
-  apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply_def split: option.splits)
-  apply (fastforce simp: state_refs_of_def refs_of_def get_refs_def split: option.splits)
-  done
-
-lemma sym_refs_sc_replies_sc_at:
-  "sym_refs (state_refs_of s) \<Longrightarrow>
-   reply_sc_reply_at (\<lambda>sp. sp = (Some sc_ptr)) reply_ptr s \<Longrightarrow>
-   \<exists>list. sc_replies_sc_at ((=) (reply_ptr # list)) sc_ptr s"
-  apply (subgoal_tac "(reply_ptr, SCReply) \<in> state_refs_of s sc_ptr")
-   apply (clarsimp simp: state_refs_of_def refs_of_def split: option.splits)
-   apply (case_tac x2; clarsimp simp: get_refs_def sc_replies_sc_at_def obj_at_def split: option.splits)
-  apply (erule sym_refsE)
-  apply (clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def split: option.splits)
-  apply (fastforce simp: state_refs_of_def refs_of_def get_refs_def split: option.splits)
-  done
 
 lemma reply_push_invs_helper:
   "\<lbrace> \<lambda>s. invs s

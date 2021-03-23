@@ -3158,21 +3158,6 @@ abbreviation ct_in_state' :: "_ \<Rightarrow> 'z state \<Rightarrow> bool" where
 definition next_thread where
   "next_thread queues \<equiv> (hd (max_non_empty_queue queues))"
 
-lemma BlockedOnReceive_reply_tcb_reply_at:
-  "\<exists>epptr pl. st_tcb_at ((=) (BlockedOnReceive epptr (Some rptr) pl)) tptr s
-   \<Longrightarrow> sym_refs (state_refs_of s) \<Longrightarrow> valid_objs s
-   \<Longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some tptr) rptr s"
-  apply (subgoal_tac "reply_at rptr s")
-  apply (clarsimp simp: pred_tcb_at_eq_commute)
-  apply (subgoal_tac "(tptr, ReplyTCB) \<in> (state_refs_of s) rptr")
-  apply (clarsimp simp: state_refs_of_def  get_refs_def reply_tcb_reply_at_def
-                        pred_tcb_at_def obj_at_def refs_of_def is_reply
-                 split: option.splits)
-  apply (erule sym_refsE)
-  apply (clarsimp simp: state_refs_of_def pred_tcb_at_def obj_at_def)
-  apply (clarsimp dest!: st_tcb_at_valid_st2 simp: valid_tcb_state_def)
-  done
-
 lemma valid_blocked_except_set_2_subset[elim]:
   "valid_blocked_except_set_2 T queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs \<Longrightarrow>
    T \<subseteq> S \<Longrightarrow>

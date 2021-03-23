@@ -648,6 +648,38 @@ lemma reply_tcb_state_refs:
                   split: thread_state.splits if_splits)
   done
 
+lemma st_tcb_recv_reply_state_refs:
+  "\<lbrakk>sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply) pl)) thread s\<rbrakk>
+  \<Longrightarrow> \<exists>rep. (kheap s reply = Some (Reply rep) \<and> reply_tcb rep = Some thread)"
+  apply (drule (1) sym_refs_st_tcb_atD[rotated])
+  apply (clarsimp simp: get_refs_def2 obj_at_def valid_tcb_state_def is_reply refs_of_def
+                 split: thread_state.splits if_splits kernel_object.splits)
+  done
+
+lemma sym_refs_reply_sc_reply_at:
+  "sym_refs (state_refs_of s) \<Longrightarrow>
+   sc_replies_sc_at ((=) (reply_ptr # list)) sc_ptr s \<Longrightarrow>
+   reply_sc_reply_at (\<lambda>sp. sp = (Some sc_ptr)) reply_ptr s"
+  apply (subgoal_tac "(sc_ptr, ReplySchedContext) \<in> state_refs_of s reply_ptr")
+   apply (clarsimp simp: state_refs_of_def refs_of_def split: option.splits)
+   apply (case_tac x2; clarsimp simp: get_refs_def reply_sc_reply_at_def obj_at_def split: option.splits)
+  apply (erule sym_refsE)
+  apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply_def split: option.splits)
+  apply (fastforce simp: state_refs_of_def refs_of_def get_refs_def split: option.splits)
+  done
+
+lemma sc_with_reply_None_reply_sc_reply_at:
+  "\<lbrakk> sc_with_reply rp s = None; reply_at rp s;
+      sym_refs (state_refs_of s); valid_replies s\<rbrakk>
+       \<Longrightarrow> reply_sc_reply_at ((=) None) rp s"
+  apply (rule ccontr, clarsimp simp: obj_at_def reply_sc_reply_at_def is_reply)
+  apply (drule not_sym, clarsimp)
+  apply (drule sym_refs_sc_replies_sc_at)
+   apply (fastforce simp: obj_at_def reply_sc_reply_at_def)
+  apply (drule_tac sc=y in valid_replies_sc_with_reply_None, simp)
+  apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
+  by (metis list.set_intros(1))
+
 lemma SCNtfn_in_state_refsD:
   "\<lbrakk>(y, SCNtfn) \<in> state_refs_of s x\<rbrakk>
     \<Longrightarrow> obj_at (\<lambda>ko. \<exists>np n. ko = SchedContext np n \<and> sc_ntfn np = Some y) x s"

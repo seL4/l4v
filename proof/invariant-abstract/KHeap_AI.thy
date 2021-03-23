@@ -1272,10 +1272,6 @@ locale typ_at_pres =
   fixes f  :: "('state_ext::state_ext state, 'a) nondet_monad"
   assumes typ_at[wp]: "\<And>P t p. f \<lbrace>\<lambda>s. P (typ_at t p s)\<rbrace>"
 
-lemma is_sc_obj:
-  "is_sc_obj n ko = (valid_sched_context_size n \<and> (\<exists>sc. ko = SchedContext sc n))"
-  by (cases ko) (auto simp add: is_sc_obj_def)
-
 lemma sk_obj_at_pred_id_lift:
   assumes h: "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C (\<lambda>obj. obj) (Q \<circ> proj) p s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (sk_obj_at_pred C proj Q p s)\<rbrace>"
