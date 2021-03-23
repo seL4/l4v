@@ -4369,14 +4369,27 @@ lemma sc_with_reply_def':
 
 lemmas sc_with_reply_def'2 = sc_with_reply_def'[unfolded the_pred_option_def]
 
+lemma is_sc_obj:
+  "is_sc_obj n ko = (valid_sched_context_size n \<and> (\<exists>sc. ko = SchedContext sc n))"
+  by (cases ko) (auto simp add: is_sc_obj_def)
+
+lemma sc_with_reply_Some_sc_at:
+  "\<lbrakk>sc_with_reply rp s = Some scp; valid_objs s\<rbrakk> \<Longrightarrow> sc_at scp s"
+  by (fastforce dest!: sc_with_reply_SomeD elim: valid_sched_context_size_objsI
+                 simp: obj_at_def is_sc_obj)
+
 lemma valid_objs_sc_replies_reply_at:
-  "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> rp \<in> set replies \<Longrightarrow> reply_at rp s"
-  apply (clarsimp simp: sc_at_pred_n_eq_commute
-                        sc_replies_sc_at_def  obj_at_def)
-  apply (subgoal_tac "valid_sched_context sc s")
-   apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)
-  apply (fastforce simp: valid_obj_def)
-  done
+  "\<lbrakk>valid_objs s; sc_replies_sc_at (\<lambda>rs. rp \<in> set rs) sc_ptr s\<rbrakk> \<Longrightarrow> reply_at rp s"
+  by (fastforce simp: sc_replies_sc_at_def obj_at_def valid_sched_context_def list_all_def
+                dest: valid_sched_context_objsI)
+
+lemma sc_with_reply_SomeD1:
+  "sc_with_reply rptr s = Some sc_ptr \<Longrightarrow> sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) sc_ptr s"
+  by (auto simp add: sc_with_reply_def' elim: the_pred_option_SomeD)
+
+lemma sc_with_reply_Some_reply_at:
+  "\<lbrakk>sc_with_reply rp s = Some scp; valid_objs s\<rbrakk> \<Longrightarrow> reply_at rp s"
+  by (fastforce dest: sc_with_reply_SomeD1 valid_objs_sc_replies_reply_at)
 
 lemma valid_objs_sc_replies_distinct:
   "valid_objs s \<Longrightarrow> sc_replies_sc_at ((=) replies) sc_ptr s \<Longrightarrow> distinct replies"
@@ -4403,16 +4416,15 @@ lemma valid_repliesE1:
   by (fastforce dest: valid_repliesD1_simp
                 simp: replies_with_sc_def replies_blocked_def)
 
-lemma reply_sc_refs:
-  "\<lbrakk>reply_sc reply = Some t; valid_objs s; sym_refs (state_refs_of s);
-    kheap s rptr = Some (Reply reply)\<rbrakk>
-  \<Longrightarrow> \<exists>sc n. kheap s t = Some (SchedContext sc n) \<and>
-     (rptr \<in> set (sc_replies sc))"
-  apply (erule (1) valid_objsE)
-  apply (drule sym_refs_ko_atD[rotated])
-   apply (simp add: obj_at_def)
-  apply (clarsimp simp: get_refs_def2 obj_at_def valid_obj_def valid_reply_def refs_of_rev
-                        valid_bound_obj_def is_sc_obj_def state_refs_of_def image_iff)
+lemma sym_refs_sc_replies_sc_at:
+  "\<lbrakk>sym_refs (state_refs_of s); reply_sc_reply_at (\<lambda>sp. sp = (Some sc_ptr)) reply_ptr s\<rbrakk>
+   \<Longrightarrow> \<exists>list. sc_replies_sc_at ((=) (reply_ptr # list)) sc_ptr s"
+  apply (subgoal_tac "(reply_ptr, SCReply) \<in> state_refs_of s sc_ptr")
+   apply (clarsimp simp: state_refs_of_def refs_of_def split: option.splits)
+   apply (case_tac x2; clarsimp simp: get_refs_def sc_replies_sc_at_def obj_at_def split: option.splits)
+  apply (erule sym_refsE)
+  apply (clarsimp simp: reply_sc_reply_at_def obj_at_def is_reply_def split: option.splits)
+  apply (fastforce simp: state_refs_of_def refs_of_def get_refs_def split: option.splits)
   done
 
 lemma invs_reply_tcb_None_reply_sc_None:
@@ -4424,9 +4436,11 @@ lemma invs_reply_tcb_None_reply_sc_None:
    apply (clarsimp dest!: sym_refs_st_tcb_atD simp: obj_at_def get_refs_def
                    split: option.splits)+
   apply (rule ccontr, clarsimp)
-  apply (frule(3) reply_sc_refs)
-  apply (fastforce simp: sc_at_ppred_def obj_at_def image_def)
-  done
+  apply (frule sym_refs_sc_replies_sc_at)
+   apply (clarsimp simp: reply_at_ppred_def obj_at_def)
+   apply force
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def image_def)
+  by (metis cons_set_intro)
 
 lemma the_pred_option_None_iff:
   "the_pred_option P = None \<longleftrightarrow> (\<nexists>!x. P x)"
@@ -4502,8 +4516,10 @@ proof -
     apply (clarsimp simp: obj_at_def reply_sc_reply_at_def is_reply)
     apply (rule ccontr)
     apply (case_tac "reply_sc reply"; clarsimp)
-    apply (drule (3) reply_sc_refs[rotated])
-    by (fastforce simp: image_iff replies_with_sc_def obj_at_def sc_replies_sc_at_def)
+    apply (drule sym_refs_sc_replies_sc_at)
+     apply (fastforce simp: reply_at_ppred_def obj_at_def)
+    apply (clarsimp simp: replies_with_sc_def obj_at_def sc_replies_sc_at_def)
+    by (metis list.set_intros(1))
 qed
 
 lemma runnable_eq:

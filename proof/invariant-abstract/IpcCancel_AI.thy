@@ -1215,10 +1215,6 @@ lemma reply_remove_invs:
          ; clarsimp simp: valid_obj_def valid_sched_context_def)
   by (rule conjI; erule (1) if_live_then_nonz_cap_invs; clarsimp simp: live_def live_sc_def)
 
-lemma sc_with_reply_SomeD1:
-  "sc_with_reply rptr s = Some sc_ptr \<Longrightarrow> sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) sc_ptr s"
-  by (auto simp add: sc_with_reply_def' elim: the_pred_option_SomeD)
-
 lemma reply_sc_update_None_invs:
   "\<lbrace>all_invs_but_sym_refs and (\<lambda>s. sym_refs
                (\<lambda>x. if x = r
@@ -1275,18 +1271,39 @@ lemma replies_blocked_takeWhile_eq:
    apply (clarsimp simp: image_def replies_blocked_def st_tcb_at_def obj_at_def)
    by (fastforce simp: sc_replies_sc_at_def obj_at_def)
 
-(* this is true but precondition could be weaker? *)
-lemma sc_replies_update_take_While_valid_replies:
-  "\<lbrace> valid_replies and (\<lambda>s. sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s \<and> r' \<in> set replies)\<rbrace>
-   set_sc_obj_ref sc_replies_update sc_ptr (takeWhile (\<lambda>r. r \<noteq> r') replies)
-   \<lbrace>\<lambda>rv. valid_replies\<rbrace>"
-  apply (wpsimp wp: update_sched_context_wp)
-  apply (clarsimp simp: valid_replies_2_def)
-  apply (intro conjI)
-   apply (simp add: replies_blocked_takeWhile_eq)
-   apply (rule subset_trans, erule replies_with_sc_takeWhile_subset[THEN image_mono], assumption, assumption)
-  apply (rule inj_on_subset, assumption, rule replies_with_sc_takeWhile_subset, assumption, assumption)
+lemma sc_replies_update_replies_blocked:
+  "ko_at (SchedContext sc n) scp s
+   \<Longrightarrow> {(r, t). st_tcb_at (\<lambda>st. st = BlockedOnReply r) t
+                          (s\<lparr>kheap := kheap s(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
+       = replies_blocked s"
+  apply (clarsimp simp: replies_blocked_def pred_tcb_at_def obj_at_def)
+  apply fastforce
   done
+
+lemma replies_with_sc_subset:
+  "\<lbrakk>ko_at (SchedContext sc n) scp s; \<forall>list. set (f list) \<subseteq> set list\<rbrakk>
+   \<Longrightarrow> {(r, sc'). sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc'
+                                   (s\<lparr>kheap := kheap s(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
+       \<subseteq> replies_with_sc s"
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def replies_with_sc_def)
+  apply blast
+  done
+
+lemma sc_replies_update_takeWhile_valid_replies:
+  "update_sched_context scp (sc_replies_update (takeWhile ((\<noteq>) rp))) \<lbrace>valid_replies\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: valid_replies_defs)
+  apply (intro conjI impI)
+   apply (frule_tac f="takeWhile ((\<noteq>) rp)" in sc_replies_update_replies_blocked)
+   apply (simp add: replies_blocked_def)
+   apply (frule_tac f="takeWhile ((\<noteq>) rp)" in replies_with_sc_subset)
+    apply (metis set_takeWhileD subset_code(1))
+   apply (simp only: replies_with_sc_def)
+   apply blast
+  apply (prop_tac "set (takeWhile ((\<noteq>) rp) (sc_replies sc)) \<subseteq> set (sc_replies sc)")
+   apply (metis set_takeWhileD subset_code(1))
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def inj_on_def)
+  by blast
 
 lemma sc_replies_update_takeWhile_not_fst_replies_with_sc:
   "\<lbrace>valid_replies and (\<lambda>s. sc_replies_sc_at (\<lambda>rs. r' \<in> set rs) sc_ptr s)\<rbrace>

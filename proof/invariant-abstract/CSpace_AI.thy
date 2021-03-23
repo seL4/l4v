@@ -2189,6 +2189,9 @@ lemma connect_eqv_singleE':
 lemma identity_eq :"((=) x) = (\<lambda>c. c = x)"
   by (rule ext) auto
 
+lemma neq_conv : "((\<noteq>) x) = (\<lambda>c. c \<noteq> x)"
+  by (rule ext) auto
+
 lemma forall_eq: "(\<forall>x. P x = Q x) \<Longrightarrow> (\<forall>x. P x) = (\<forall>b. Q b)"
   by auto
 
