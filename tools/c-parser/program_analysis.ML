@@ -6,7 +6,6 @@
 
 signature PROGRAM_ANALYSIS =
 sig
-
   type 'ce ctype = 'ce Absyn.ctype
   type expr = Absyn.expr
   type ecenv = Absyn.ecenv
@@ -14,9 +13,8 @@ sig
                      allow_underscore_idents : bool,
                      munge_info_fname : string option}
 
-  type 'a rcd_env = (string * (string * 'a) list) list
-  type senv = int ctype rcd_env
-
+  type struct_or_union = ExpressionTyping.struct_or_union
+  type struct_union_env = ExpressionTyping.struct_union_env
 
   (* Information necessary for name and definition generation.
      - `src_name` is the name as it appears in the original source file, or a
@@ -34,7 +32,7 @@ sig
   val get_mname : var_info -> MString.t
   val get_vi_fname : var_info -> string option
   val get_vi_type : var_info -> int ctype
-  val get_vi_senv : var_info -> senv
+  val get_vi_struct_union_env : var_info -> struct_union_env
   val get_vi_attrs : var_info -> StmtDecl.gcc_attribute list
   val declpos : var_info -> Region.t
   val vi_compare : var_info * var_info -> order
@@ -52,8 +50,7 @@ sig
   type csenv
   val cse2ecenv : csenv -> ecenv
   val get_array_mentions : csenv -> (int ctype * int) Binaryset.set
-  val get_senv : csenv -> senv
-  val get_unenv : csenv -> senv
+  val get_struct_union_env : csenv -> struct_union_env
   val get_rettype : string -> csenv -> int ctype option
   val get_heaptypes : csenv -> int ctype Binaryset.set
   val compute_callgraphs : csenv ->
@@ -104,7 +101,7 @@ sig
   val split_asm_stmt : Absyn.statement_node -> asm_stmt_elements
   val merge_asm_stmt : asm_stmt_elements -> Absyn.statement_node
 
-  val get_globals_rcd : csenv -> senv
+  val get_globals_rcd : csenv -> struct_union_env
 
   type mungedb = {fun_name: string option, nm_info: nm_info} list
 
@@ -141,7 +138,7 @@ end
 structure ProgramAnalysis : PROGRAM_ANALYSIS =
 struct
 
-open Absyn NameGeneration
+open Absyn NameGeneration ExpressionTyping
 
 type program = ext_decl list
 type s2s_config = {anon_vars : bool, owners : string list,
@@ -157,14 +154,11 @@ fun fname_str NONE = NameGeneration.initialisation_function
     VCG environment state-space
    ---------------------------------------------------------------------- *)
 
-
-type 'a rcd_env = (string * (string * 'a) list) list
-type senv = int ctype rcd_env
 datatype var_info =
          VI of {name : string,
                 return_var : bool,
                 vtype : int ctype,
-                struct_env : senv,
+                struct_union_env : struct_union_env,
 
                 (* Name of the function in which this variable was declared (if
                    any). *)
@@ -186,7 +180,7 @@ fun srcname (VI{name,...}) = name
 fun get_mname (VI {munged_name, ...}) = munged_name
 fun get_vi_fname (VI {fname,...}) = fname
 fun get_vi_type (VI {vtype,...}) = vtype
-fun get_vi_senv (VI {struct_env,...}) = struct_env
+fun get_vi_struct_union_env (VI {struct_union_env,...}) = struct_union_env
 fun declpos (VI {declared_at,...}) = declared_at
 
 fun vi_compare(VI vi1, VI vi2) = let
@@ -205,7 +199,7 @@ end
    fname is NONE if the variable is global, "return" variables are not
    global.
 
-   The struct_env is the structure type environment that is in force at the
+   The struct_union_env is the structure type environment that is in force at the
    point of the variable's declaration.  This allows the consumer of this
    data to figure out what is meant by a Struct s type.
 
@@ -307,8 +301,7 @@ structure TypesTab = Table(struct type key = int ctype * int ctype list
                            end)
 
 datatype csenv (* CalculateState environment *) =
-         CSE of {senv : senv,
-                 unenv : senv,
+         CSE of {struct_union_env : struct_union_env,
                  allow_underscore_idents : bool,
                  anon_vars : bool,
                  fninfo : (int ctype * bool * var_info list) Symtab.table,
@@ -348,8 +341,7 @@ datatype csenv (* CalculateState environment *) =
                  munge_info_fname : string option}
 fun get_vars (CSE {vars,...}) = vars
 fun get_mangled_vars (CSE {mangled_vars, ...}) = mangled_vars
-fun get_senv (CSE {senv,...}) = senv
-fun get_unenv (CSE {unenv,...}) = unenv
+fun get_struct_union_env (CSE {struct_union_env,...}) = struct_union_env
 fun get_scope (CSE {scope,...}) = scope
 fun get_fulleenv (CSE {enumenv,...}) = enumenv
 fun get_globinits (CSE {globinits,...}) = globinits
@@ -370,9 +362,15 @@ fun get_anon_vars (CSE {anon_vars, ...}) = anon_vars
 fun get_owners (CSE{owners,...}) = owners
 fun get_allow_underscores(CSE{allow_underscore_idents = aui,...}) = aui
 
-fun get_fields cse s = valOf (StrictCBasics.assoc(get_senv cse, s))
-                       handle Option =>
-                              raise Fail ("get_fields: no fields for "^s)
+fun get_fields cse s =
+  get_struct_union_env cse
+  |> map
+    (fn ExpressionTyping.Struct {name,members} => (name,members)
+      | ExpressionTyping.Union {name,members} => (name,members))
+  |> (fn xs => AList.lookup (op =) xs s)
+  |> the
+  handle Option =>
+    raise Fail ("get_fields: no fields for "^s)
 fun get_array_mentions (CSE {array_mentions,...}) = array_mentions
 
 fun get_heaptypes (CSE {heaptypes,...}) = heaptypes
@@ -398,7 +396,7 @@ fun is_recursivefn (CSE {recursive_functions,...}) s =
 fun get_modified_global_locns (CSE {modify_locs,...}) = modify_locs
 
 fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,munge_info_fname,...} : s2s_config)=
-    CSE {senv = [], unenv = [], anon_vars = anon_vars, allow_underscore_idents = aui,
+    CSE {struct_union_env = [], anon_vars = anon_vars, allow_underscore_idents = aui,
          vars = Symtab.empty, local_aliases = Symtab.empty, mangled_vars = Symtab.empty,
          scope = [Symtab.empty],
          fninfo = Symtab.empty, hpfninfo = Symtab.empty,
@@ -434,14 +432,14 @@ end
 local
   open FunctionalRecordUpdate
   (* see http://mlton.org/FunctionalRecordUpdate *)
-  fun cse_makeUpdate z = makeUpdate27 z
+  fun cse_makeUpdate z = makeUpdate26 z
   fun update_CSE z = let
-    fun from senv unenv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+    fun from struct_union_env aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
              array_mentions
              heaptypes call_info addressed embedded_fncalls modifies
              defined_functions recursive_functions caller_info
              modify_locs typedefs fnspecs read_globals globinits owners munge_info_fname =
-        {senv = senv, unenv=unenv, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
+        {struct_union_env = struct_union_env, anon_vars = anon_vars, fninfo = fninfo, vars = vars,
          local_aliases = local_aliases, mangled_vars = mangled_vars, hpfninfo = hpfninfo,
          scope = scope, enumenv = enumenv, array_mentions = array_mentions,
          heaptypes = heaptypes, call_info = call_info, addressed = addressed,
@@ -456,8 +454,8 @@ local
               recursive_functions defined_functions modifies embedded_fncalls
               addressed call_info heaptypes array_mentions enumenv scope mangled_vars
               local_aliases vars
-              hpfninfo fninfo anon_vars aui unenv senv =
-        {senv = senv, unenv = unenv, anon_vars = anon_vars, fninfo = fninfo, vars = vars, scope = scope,
+              hpfninfo fninfo anon_vars aui struct_union_env =
+        {struct_union_env = struct_union_env, anon_vars = anon_vars, fninfo = fninfo, vars = vars, scope = scope,
          hpfninfo = hpfninfo, local_aliases = local_aliases, mangled_vars = mangled_vars,
          allow_underscore_idents = aui,
          enumenv = enumenv, array_mentions = array_mentions,
@@ -469,14 +467,14 @@ local
          read_globals = read_globals, globinits = globinits, owners = owners,
          munge_info_fname = munge_info_fname}
 
-    fun to f {senv, unenv, anon_vars, fninfo, vars, local_aliases, mangled_vars, scope,
+    fun to f {struct_union_env, anon_vars, fninfo, vars, local_aliases, mangled_vars, scope,
               enumenv, array_mentions,
               heaptypes, hpfninfo, munge_info_fname,
               call_info, addressed, embedded_fncalls, modifies,
               defined_functions, recursive_functions, caller_info,
               modify_locs, typedefs, fnspecs, read_globals, globinits,owners,
               allow_underscore_idents = aui} =
-        f senv unenv aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
+        f struct_union_env aui anon_vars fninfo hpfninfo vars local_aliases mangled_vars scope enumenv
           array_mentions
           heaptypes call_info addressed embedded_fncalls modifies
           defined_functions recursive_functions caller_info
@@ -487,21 +485,21 @@ local
 
   fun vi_makeUpdate z = makeUpdate9 z
   fun update_VI z = let
-    fun from name return_var vtype struct_env fname proto_param
+    fun from name return_var vtype struct_union_env fname proto_param
             munged_name declared_at attrs =
         {name = name, return_var = return_var, vtype = vtype,
-         struct_env = struct_env, fname = fname, declared_at = declared_at,
+         struct_union_env = struct_union_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
          attrs = attrs}
-    fun from' attrs declared_at munged_name proto_param fname struct_env
+    fun from' attrs declared_at munged_name proto_param fname struct_union_env
               vtype return_var name =
         {name = name, return_var = return_var, vtype = vtype,
-         struct_env = struct_env, fname = fname, declared_at = declared_at,
+         struct_union_env = struct_union_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
          attrs = attrs}
-    fun to f {name, return_var, vtype, struct_env, fname, proto_param,
+    fun to f {name, return_var, vtype, struct_union_env, fname, proto_param,
               munged_name, declared_at, attrs} =
-        f name return_var vtype struct_env fname proto_param
+        f name return_var vtype struct_union_env fname proto_param
           munged_name declared_at attrs
   in
     vi_makeUpdate (from, from', to)
@@ -520,10 +518,8 @@ fun cse_fupdhpfninfo f (CSE cse) =
     CSE (update_CSE cse (U #hpfninfo (f (#hpfninfo cse))) $$)
 fun cse_fupdscope f (CSE cse) =
     CSE (update_CSE cse (U #scope (f (#scope cse))) $$)
-fun cse_fupdsenv f (CSE cse) =
-    CSE (update_CSE cse (U #senv (f (#senv cse))) $$)
-fun cse_fupdunenv f (CSE cse) =
-    CSE (update_CSE cse (U #unenv (f (#unenv cse))) $$)
+fun cse_fupd_struct_union_env f (CSE cse) =
+    CSE (update_CSE cse (U #struct_union_env (f (#struct_union_env cse))) $$)
 fun cse_fupdenumenv f (CSE cse) =
     CSE (update_CSE cse (U #enumenv (f (#enumenv cse))) $$)
 fun cse_fupdarray_mentions f (CSE cse) =
@@ -616,13 +612,19 @@ in
         Ptr ty0 => add_heaptype ty0 env'
       | Array(ty0, _) => add_heaptype ty0 env'
       | StructTy s => let
+        val struct_union_env =
+          get_struct_union_env env'
+          |> map
+              (fn ExpressionTyping.Struct {name,members} => (name,members)
+                | ExpressionTyping.Union {name,members} => (name,members))
         in
-          case StrictCBasics.assoc (get_senv env', s) of
+          case AList.lookup (op =) struct_union_env s of
             NONE => (* do nothing for the moment, thus env, not env' *) env
           | SOME flds =>
-            List.foldl (fn ((_, fldty), env) => add_heaptype fldty env)
-                       env'
-                       flds
+            List.foldl
+              (fn ({typ=typ,...}, env) => add_heaptype typ env)
+              env'
+              flds
         end
       | _ => env'
     end
@@ -780,7 +782,7 @@ in
   | Unsigned i => ialignof i
   | PlainChar => 1
   | Ptr _ => IntInf.toInt (ptrWidth div CHAR_BIT)
-  | StructTy s => maxl (map (alignof cse o #2) (get_fields cse s))
+  | StructTy s => maxl (map (alignof cse o #typ) (get_fields cse s))
   | Array(base, _) => alignof cse base
   | EnumTy _ => alignof cse (Signed Int)
   | Ident _ => raise Fail "ProgramAnalysis.alignof: typedefs need to be \
@@ -808,7 +810,7 @@ in
     end
 end
 and strsize cse s : Int.int = let
-    val flds = map #2 (get_fields cse s)
+    val flds = map #typ (get_fields cse s)
     val a = maxl (map (alignof cse) flds)
     val lastn = length flds - 1
     val lastty = List.last flds
@@ -830,10 +832,11 @@ and cse_typing cse e = let
       | SOME vi => SOME (get_vi_type vi)
                     handle Empty => raise Fail "Empty vi-list in cse_typing"
 in
-  ExpressionTyping.expr_type (cse2ecenv cse)
-                              (get_senv cse)
-                              (var_typing scopes)
-                              e
+  ExpressionTyping.expr_type
+    (cse2ecenv cse)
+    (get_struct_union_env cse)
+    (var_typing scopes)
+    e
 end
 
 fun fndes_callinfo cse e =
@@ -913,7 +916,7 @@ in
   s <> "" andalso String.sub(s,0) <> #"_"
 end
 
-fun newstr_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
+fun new_struct_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
   open NameGeneration
   fun foldthis ((cty,fldnm),acc) =
       process_type (left fldnm, right fldnm) (cty, acc)
@@ -926,37 +929,43 @@ fun newstr_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
                            rmUScoreSafety (i (node s)) ^
                            " is an illegal name for a structure " ^nmty)
   val flds =
-      map (fn (ty,s) =>
-              ((uscore_check unC_field_name "field" s; node s),
-               remove_enums (constify_abtype ecenv ty)))
-          flds0
+      map
+        (fn (ty,s) =>
+          {name = (uscore_check unC_member_name "field" s; node s),
+          typ = remove_enums (constify_abtype ecenv ty)})
+        flds0
   val _ = uscore_check unC_struct_name "tag" nm
 in
-  cse_fupdsenv (fn rest => (node nm, flds) :: rest) cse
+  cse_fupd_struct_union_env
+    (fn rest => ExpressionTyping.Struct {name = node nm, members = flds} :: rest) cse
 end
 
-(* TODO: unions *)
-fun new_union_decl (nm, flds0 : (expr ctype * string wrap) list) cse = let
-  open NameGeneration
-  fun foldthis ((cty,fldnm),acc) =
+fun new_union_decl (nm, membs : (expr ctype * string wrap) list) cse =
+  let
+    open NameGeneration
+    fun foldthis ((cty,fldnm),acc) =
       process_type (left fldnm, right fldnm) (cty, acc)
-  val cse = List.foldl foldthis cse flds0
-  val ecenv = cse2ecenv cse
-  fun uscore_check i nmty s =
-      if get_allow_underscores cse orelse check_uscore_ok (node s) then ()
-      else
-        Feedback.errorStr'(left s, right s,
-                           rmUScoreSafety (i (node s)) ^
-                           " is an illegal name for a union " ^nmty)
-  val flds =
-      map (fn (ty,s) =>
-              ((uscore_check unC_field_name "field" s; node s),
-               remove_enums (constify_abtype ecenv ty)))
-          flds0
-  val _ = uscore_check unC_struct_name "tag" nm
-in
-  cse_fupdunenv (fn rest => (node nm, flds) :: rest) cse
-end
+    val cse = List.foldl foldthis cse membs
+    val ecenv = cse2ecenv cse
+    fun uscore_check i problemtype s =
+        if get_allow_underscores cse orelse check_uscore_ok (node s) then
+         ()
+        else
+          Feedback.errorStr'(left s, right s,
+                            rmUScoreSafety (i (node s)) ^
+                            " is an illegal name for a union" ^ problemtype)
+    val members =
+      map
+        (fn (ty,s) =>
+          { name = (uscore_check unC_member_name " member" s; node s),
+            typ = remove_enums (constify_abtype ecenv ty) })
+        membs
+    val _ = uscore_check unC_union_name "" nm
+  in
+    cse_fupd_struct_union_env
+      (fn rest => ExpressionTyping.Union {name = node nm, members = members} :: rest)
+      cse
+  end
 
 
 
@@ -1137,7 +1146,7 @@ fun map_ras _ (E x) = E x
 
 (* fname is a string option; NONE corresponds to an expression appearing at
    the global level, as can happen in the initialisation of a global *)
-fun process_exprs lvstate fname (env as CSE {senv, ...}) exprs = let
+fun process_exprs lvstate fname (env as CSE {struct_union_env, ...}) exprs = let
   fun inc ((fm,greads), k) = (TypeTab.map_default (k,0) (fn i => i + 1) fm, greads)
   (* count_fncalls not only counts function calls in the accompanying fmap,
      but is also a general traversal of the expression, where other stuff
@@ -1354,7 +1363,7 @@ fun process_exprs lvstate fname (env as CSE {senv, ...}) exprs = let
           val nm = embret_var_name (tyname rettype, count)
           val retvar =
               VI {name = MString.dest nm, munged_name = nm, vtype = rettype,
-                  struct_env = senv, proto_param = false,
+                  struct_union_env = struct_union_env, proto_param = false,
                   fname = SOME "", return_var = true, attrs = [],
                   declared_at = Region.bogus}
         in
@@ -1454,7 +1463,7 @@ fun fold_pipe (f : 'env -> 'a -> 'b * 'env) (env0 : 'env) (items : 'a list) =
 
 (* fname is a string option : NONE corresponds to a declaration at the global
    level *)
-fun process_decl fname (d:declaration wrap) (e as CSE {senv,...}) = let
+fun process_decl fname (d:declaration wrap) (e as CSE {struct_union_env,...}) = let
   val ecenv = cse2ecenv e
   fun puredecl d = {decl = d, localinits = [], globalinits = []}
 in
@@ -1527,7 +1536,7 @@ in
           else (fname, MString.mk str)
 
       val vi = VI {name = str, vtype = vty, attrs = attrs,
-                   munged_name = munged_name, struct_env = senv,
+                   munged_name = munged_name, struct_union_env = struct_union_env,
                    proto_param = false,
                    fname = fname, return_var = false,
                    declared_at = Region.make{left = left s, right = right s}}
@@ -1614,8 +1623,8 @@ in
     in
       ({decl = d', localinits = localinits, globalinits = globalinits}, e)
     end
-  | StructDecl s => (puredecl d, newstr_decl s e)
-  | UnionDecl s => (puredecl d, new_union_decl s e)
+  | StructDecl s => (puredecl d, new_struct_decl s e)
+  | UnionDecl u => (puredecl d, new_union_decl u e)
   | TypeDecl _ => raise Fail "collect_vars: TypeDecl unexpected, \
                              \translate these out!"
   | ExtFnDecl {rettype = rettype0,name = fname0,params,specs,...} => let
@@ -1637,7 +1646,7 @@ in
               val retvar = VI {name = MString.dest ret_vname,
                                munged_name = ret_vname,
                                vtype = rettype, proto_param = false,
-                               struct_env = senv,
+                               struct_union_env = struct_union_env,
                                fname = SOME fname, return_var = true,
                                attrs = [], declared_at = Region.bogus}
             in
@@ -1650,7 +1659,7 @@ in
         val var =
             VI {name = name, vtype = param_norm (constify_abtype ecenv ty),
                 munged_name = MString.mk name, attrs = [],
-                struct_env = senv, proto_param = true,
+                struct_union_env = struct_union_env, proto_param = true,
                 fname = SOME fname, return_var = false,
                 declared_at = Region.bogus}
         val (var',e') = insert_var (var, e)
@@ -1660,7 +1669,7 @@ in
       val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
       val ftype = Function(rettype, paramtypes)
       val fvi = VI {name = fname, vtype = ftype, munged_name = MString.mk fname,
-                    proto_param = false, struct_env = senv,
+                    proto_param = false, struct_union_env = struct_union_env,
                     fname = NONE, return_var = false, attrs = [],
                     declared_at = Region.Wrap.region d}
       val (_, e) = insert_var (fvi, e)
@@ -1998,7 +2007,7 @@ fun process_one_extdecl (env0 : csenv) edec =
         val ecenv = cse2ecenv env0
         val rettype = fparam_norm (constify_abtype ecenv rettype0)
         val fname = SOME (node s)
-        val senv = get_senv env0
+        val struct_union_env = get_struct_union_env env0
         val env = delete_earlier_fvars (node s)
                                        (insert_fnretty (s,rettype, env0))
         val env = new_defined_fn s env
@@ -2006,14 +2015,14 @@ fun process_one_extdecl (env0 : csenv) edec =
         val retvar =
             VI {name = MString.dest rv_nm, munged_name = rv_nm, attrs = [],
                 vtype = rettype, proto_param = false,
-                struct_env = senv,
+                struct_union_env = struct_union_env,
                 fname = SOME (node s), return_var = true,
                 declared_at = Region.bogus}
         val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
         val ftype = Function(rettype, paramtypes)
         val fvi = VI {name = node s, vtype = ftype,
                       munged_name = MString.mk (node s),
-                      proto_param = false, struct_env = senv,
+                      proto_param = false, struct_union_env = struct_union_env,
                       fname = NONE, return_var = false, attrs = [],
                       declared_at = Region.Wrap.region s}
         val (_, env) = insert_var(fvi,env)
@@ -2022,7 +2031,7 @@ fun process_one_extdecl (env0 : csenv) edec =
                munged_name = MString.mk (node pname),
                attrs = [],
                vtype = param_norm (constify_abtype ecenv ty),
-               struct_env = senv, proto_param = false,
+               struct_union_env = struct_union_env, proto_param = false,
                fname = fname, return_var = false,
                declared_at =
                  Region.make{left = left pname, right = right pname}}
@@ -2294,7 +2303,9 @@ let
 in
   if null advis then []
   else
-    [(adglob_rcd_tyname, map (fn vi => (srcname vi, get_vi_type vi)) advis)]
+    [ExpressionTyping.Struct
+      { name = adglob_rcd_tyname,
+        members = map (fn vi => {name = srcname vi, typ = get_vi_type vi}) advis}]
 end
 
 (* Iterate over each element of each list value in a table. No good guarantees

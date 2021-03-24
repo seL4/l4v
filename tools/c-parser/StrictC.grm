@@ -167,7 +167,7 @@ end
 local val uncount = ref 0
 in
 fun gen_union_id () =
-      (suncount := !uncount + 1;
+      (uncount := !uncount + 1;
        NameGeneration.internalAnonUnionPfx^Int.toString (!uncount))
 end
 
@@ -267,7 +267,7 @@ end
 
 (* TODO *)
 fun parse_uniddecl (s : struct_id_decl wrap) : declaration wrap = let
-  val (nm, fields) = node s
+  val (nm, members) = node s
   fun ok_inttype ity = (ity = Int)
   fun f (ty : expr ctype, s : string wrap, opbit : expr option) = let
     fun error r = (errorStr'(left s, r, "Bad base-type for bitfield");
@@ -288,9 +288,9 @@ fun parse_uniddecl (s : struct_id_decl wrap) : declaration wrap = let
   in
     (ty',s)
   end
-  val fields' = map f fields
+  val members' = map f members
 in
-  wrap(UnionDecl(nm, fields'), left s, right s)
+  wrap(UnionDecl(nm, members'), left s, right s)
 end
 
 fun empty_enumspec es = [wrap(EnumDecl (node es), left es, right es)]
@@ -518,6 +518,12 @@ fun first_sdecls (dsl : decl_specifier list) =
     | TypeSpec (Tsstruct(ty, sdecls)) :: _ => sdecls
     | _ :: rest => first_sdecls rest
 
+fun first_un_decls (dsl : decl_specifier list) =
+    case dsl of
+      [] => []
+    | TypeSpec (Tsunion (ty, s_or_u_decls)) :: _ => s_or_u_decls
+    | _ :: rest => first_un_decls rest
+
 fun first_enum_dec (dsl : decl_specifier list) =
     case dsl of
       [] => NONE
@@ -567,6 +573,7 @@ let
   val is_typedef = isSome (has_typedef dsl)
   val is_extern = isSome (has_extern dsl)
   val sdecls = first_sdecls (node dsl)
+  val undecls = first_un_decls (node dsl)
   val endecs = case first_enum_dec (node dsl) of
                  NONE => []
                | SOME es => [wrap(EnumDecl (node es), left es, right es)]
@@ -614,7 +621,8 @@ let
 in
   endecs @
   map handle_declarator idl @
-  map parse_siddecl sdecls
+  map parse_siddecl sdecls @
+  map parse_uniddecl undecls
 end
 
 fun last_blockitem (bilist : block_item list) = let
@@ -1232,7 +1240,7 @@ struct_declaration
                        val (ddw, eop) = sd
                        val (nm,ad,_,_) = node ddw
                      in
-                       (node ad (node basetype), apnode C_field_name nm, eop)
+                       (node ad (node basetype), apnode C_member_name nm, eop)
                      end
                  in
                    (wrap(map apply_decltor (node struct_declarator_list),
@@ -1524,7 +1532,7 @@ designator_list
 
 designator
 : LBRACKET rexpression RBRACKET  (DesignE rexpression)
-| YDOT ID                        (DesignFld (C_field_name ID))
+| YDOT ID                        (DesignFld (C_member_name ID))
 
 initializer
 : rexpression
@@ -1959,14 +1967,14 @@ postfix_expression
            handle_builtin_fns e
          end)
 | postfix_expression YDOT ID
-        (ewrap(StructDot(postfix_expression, C_field_name ID),
+        (ewrap(StructDot(postfix_expression, C_member_name ID),
                eleft postfix_expression,
                IDright))
 | postfix_expression ARROW ID
         (ewrap(StructDot(ewrap(Deref postfix_expression,
                                eleft postfix_expression,
                                eright postfix_expression),
-                         C_field_name ID),
+                         C_member_name ID),
                eleft postfix_expression,
                IDright))
 | LPAREN type_name RPAREN LCURLY initializer_list RCURLY

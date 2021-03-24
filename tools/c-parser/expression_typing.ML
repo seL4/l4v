@@ -6,9 +6,15 @@
 
 signature EXPRESSION_TYPING =
 sig
-
   type 'a ctype = 'a Absyn.ctype
+  datatype struct_or_union =
+    Union of { name : string, members : { name : string, typ : int ctype } list }
+  | Struct of { name : string, members : { name : string, typ : int ctype } list }
+  type struct_union_env = struct_or_union list
   type expr = Absyn.expr
+
+  val struct_or_union_to_memb_structure : struct_or_union -> string * (string * int ctype) list
+
   (* predicates on classes of C types *)
   val scalar_type : 'a ctype -> bool
   val ptr_type : 'a ctype -> bool
@@ -21,7 +27,7 @@ sig
       SourcePos.t * SourcePos.t * Absyn.binoptype * int ctype * int ctype -> int ctype
   val unop_type : Absyn.unoptype * 'a ctype -> 'a ctype
   val expr_type : Absyn.ecenv ->
-                  (string * (string * int ctype) list) list ->
+                  struct_union_env ->
                   (string -> int ctype option) ->
                   Absyn.expr -> int ctype
 end
@@ -32,6 +38,21 @@ struct
 
 open Basics Absyn
 
+datatype struct_or_union =
+  Union of { name : string, members : { name : string, typ : int ctype } list }
+| Struct of { name : string, members : { name : string, typ : int ctype } list }
+type struct_union_env = struct_or_union list
+
+fun struct_or_union_to_memb_structure s_or_u =
+  let
+    val (name,members) =
+      case s_or_u of
+        Struct {name,members} => (name,members)
+      | Union {name,members} => (name,members)
+    val members' = map (fn {name,typ} => (name,typ)) members
+  in
+    (name,members')
+  end
 
 fun cast_compatible fromty toty = scalar_type fromty andalso scalar_type toty
 
@@ -120,8 +141,8 @@ fun unop_type (unop, ty) =
     | BitNegate => if integer_type ty then ty
                    else raise Fail "Bad type to bitwise complement"
 
-fun expr_type ecenv senv varinfo e = let
-  val expr_type = expr_type ecenv senv varinfo
+fun expr_type ecenv struct_union_env varinfo e = let
+  val expr_type = expr_type ecenv struct_union_env varinfo
   fun Fail s = (Feedback.errorStr'(eleft e, eright e, "expr-typing: " ^ s);
                 raise Feedback.WantToExit "Can't continue")
 in
@@ -146,15 +167,39 @@ in
     in
       case expr_type e0 of
         StructTy sname => let
-          val sinfo = valOf (assoc(senv, sname))
-          val fld_type =
-              valOf (assoc(sinfo,fld))
-              handle Option =>
-                       Fail ("Field \""^fld^"\" invalid fieldname")
+          val members =
+            struct_union_env
+            |> map (fn Union {name,members} => (name,members) | Struct {name,members} => (name,members))
+            |> (fn x => AList.lookup (op =) x sname)
+            |> the
+            handle Option => Fail ("Failed to lookup struct \""^sname^"\"")
+          val field_type =
+            members
+            |> map (fn {name,typ} => (name,typ))
+            |> (fn xs => assoc (xs,fld))
+            |> the
+            handle Option => Fail ("Failed to lookup field \""^fld^"\" in struct \""^sname^"\"")
         in
-          fld_type
+          field_type
         end
-      | UnionTy sname => Fail ("Union field access not implemented (yet)")
+      | UnionTy unname =>
+          let
+            val members =
+              struct_union_env
+              |> map (fn Union {name,members} => (name,members) | Struct {name,members} => (name,members))
+              |> (fn x => AList.lookup (op =) x unname)
+              |> the
+              handle Option => Fail ("Failed to lookup union \""^unname^"\"")
+            val member_type =
+              members
+              |> map (fn {name,typ} => (name,typ))
+              |> (fn xs => assoc (xs,fld))
+              |> the
+              handle Option => Fail ("Failed to lookup member \""^fld^"\" in union \""^unname^"\"")
+          in
+            (* TODO *)
+            Fail ("Union field access not implemented (yet)")
+          end
       | _ => Fail "Attempt to field-dereference non-struct value"
     end
   | ArrayDeref(e1, e2) => let

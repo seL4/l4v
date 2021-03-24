@@ -6,13 +6,14 @@
 
 signature CALCULATE_STATE =
 sig
-
   type var_info = ProgramAnalysis.var_info
   type csenv = ProgramAnalysis.csenv
   type 'a ctype = 'a Absyn.ctype
   type ecenv = Absyn.ecenv
-  type 'a rcd_env = 'a ProgramAnalysis.rcd_env
   type nm_info = ProgramAnalysis.nm_info
+  type struct_or_union = ExpressionTyping.struct_or_union
+  type struct_union_env = ExpressionTyping.struct_union_env
+
 
   val define_enum_consts : ecenv -> theory -> theory
 
@@ -92,7 +93,7 @@ end;
 structure CalculateState : CALCULATE_STATE =
 struct
 
-open Basics Absyn TermsTypes NameGeneration ProgramAnalysis Feedback
+open Basics Absyn TermsTypes NameGeneration ProgramAnalysis Feedback ExpressionTyping
 
 val bnm = Binding.name
 
@@ -146,7 +147,7 @@ datatype isa_type = refty of (isa_type option * int ctype)
                   | union of (string * int ctype)
                   | array of isa_type * int * int ctype
                   | existing of typ * int ctype
-type isa_senv = isa_type rcd_env
+type isa_senv = (string * isa_type) list
 
 datatype var_sort =
          Local of string | NSGlobal | AddressedGlobal | UntouchedGlobal
@@ -326,37 +327,48 @@ end
  * Structures may be mutulally dependent; in this case, the structures will
  * appear in the same list in the output.
  *)
-fun get_sorted_structs cse =
+fun get_sorted_ctypes cse =
 let
-  val rcds = get_senv cse
+  val struct_union_env = get_struct_union_env cse
   val sorted_structs =
-      if null rcds then []
-      else let
-          val (rcdmap,rcdnames) =
-              List.foldl (fn (r as (s,_),(tab,nms)) =>
-                             (Symtab.update (s, r) tab, s::nms))
-                         (Symtab.empty, [])
-                         rcds
-          fun rcd_neighbours ((s, flds), acc) = let
-            fun struct_refs (cty, acc) =
+      if null struct_union_env then
+        []
+      else
+        let
+          val struct_union_tab =
+              List.foldl
+                (fn (r as Struct {name,...}, tab) => (Symtab.update (name, r) tab)
+                  | (u as Union  {name,...}, tab) => (Symtab.update (name, u) tab))
+                Symtab.empty
+                struct_union_env
+          (* add types contained within a ctype to the edge table *)
+          fun ctyp_neighbours ({name,members}, tab) =
+            let
+              fun struct_refs (cty, tab) =
                 case cty of
-                  Ptr ty' => struct_refs (ty', acc)
-                | StructTy s' => Symtab.cons_list (s,s') acc
-                | UnionTy s' => Symtab.cons_list (s,s') acc
-                | Array(ty', _) => struct_refs (ty', acc)
-                | _ => acc
-          in
-            List.foldl (fn ((_,ty),acc) => struct_refs (ty,acc)) acc flds
-          end
-          val inclusion_graph = List.foldl rcd_neighbours Symtab.empty rcds
+                  Ptr ty' => struct_refs (ty', tab)
+                | StructTy s_name => Symtab.cons_list (name, s_name) tab
+                | UnionTy  u_name => Symtab.cons_list (name, u_name) tab
+                | Array (ty', _) => struct_refs (ty', tab)
+                | _ => tab
+            in
+              List.foldl (fn ({typ,...}, tab) => struct_refs (typ,tab)) tab members
+            end
+          (* add all ctype edges to the edge table *)
+          val inclusion_graph =
+            struct_union_env
+            |> map (fn Union u => u | Struct s => s)
+            |> List.foldl ctyp_neighbours Symtab.empty
           val inverse_graph = flip_symtab inclusion_graph
-          open Topo_Sort
-          val sorted0 = topo_sort {cmp = String.compare,
-                                   graph = Symtab.lookup_list inclusion_graph,
-                                   converse = Symtab.lookup_list inverse_graph}
-                                  rcdnames
+          val ctyp_names = Symtab.keys struct_union_tab
+          val sorted0 =
+            Topo_Sort.topo_sort
+              { cmp = String.compare,
+                graph = Symtab.lookup_list inclusion_graph,
+                converse = Symtab.lookup_list inverse_graph }
+              ctyp_names
         in
-          map (map (valOf o Symtab.lookup rcdmap)) sorted0
+          map (map (the o Symtab.lookup struct_union_tab)) sorted0
         end
 in
   sorted_structs
@@ -372,35 +384,35 @@ fun gen_umm_types_file cse outfile =
 let
   val num_ty_string = Word_Lib.dest_binT #> string_of_int
 
-  fun write_one strm (recname, flds) = let
-    fun isa_to_string (refty (NONE, _)) = "Ptr Unit"
-      | isa_to_string (refty (SOME ty, _)) = "Ptr " ^ isa_to_string ty
-      | isa_to_string (recd (s, _)) = s
-      | isa_to_string (array (ty, n, _)) = "Array " ^ (isa_to_string ty) ^
-                                           " " ^ (Int.toString n)
-      | isa_to_string (existing (Type(@{type_name "word"},
-                                  [Type (@{type_name "Signed_Words.signed"}, [n])]), _)) =
+  fun write_one strm s_or_u =
+    let
+      val {name,members} = (case s_or_u of Struct s => s | Union u => u)
+
+      fun isa_to_string (refty (NONE, _)) = "Ptr Unit"
+        | isa_to_string (refty (SOME ty, _)) = "Ptr " ^ isa_to_string ty
+        | isa_to_string (recd (s, _)) = s
+        | isa_to_string (array (ty, n, _)) = "Array " ^ (isa_to_string ty) ^ " " ^ (Int.toString n)
+        | isa_to_string (existing (Type(@{type_name "word"},
+                                    [Type (@{type_name "Signed_Words.signed"}, [n])]), _)) =
             "Signed_Word " ^ num_ty_string n
-      | isa_to_string (existing (Type(@{type_name "word"},
-                                      [n]), _)) = "Word " ^ num_ty_string n
-      | isa_to_string _ = error "Unexpected type in isa_to_string"
+        | isa_to_string (existing (Type(@{type_name "word"}, [n]), _)) = "Word " ^ num_ty_string n
+        | isa_to_string _ = error "Unexpected type in isa_to_string"
 
-    fun do_one_fld (fldname, fldty) =
-        TextIO.output (strm, "\t" ^ fldname ^ ":" ^
-                             isa_to_string (translate_type fldty) ^ "\n")
+      val struct_or_un = (case s_or_u of Struct _ => "struct" | Union _ => "union")
 
-    val _ = TextIO.output (strm, recname ^ "\n")
-    val _ = app do_one_fld flds
-  in
-    TextIO.output (strm, "\n")
-  end
+      fun do_one_memb {name,typ} =
+        TextIO.output (strm, "\t" ^ name ^ ":" ^ isa_to_string (translate_type typ) ^ "\n")
+    in
+      TextIO.output (strm, struct_or_un ^ " " ^ name ^ "\n");
+      app do_one_memb members;
+      TextIO.output (strm, "\n")
+    end
 
-  val sorted_structs = get_sorted_structs cse
+  val sorted_structs = get_sorted_ctypes cse
   val outstrm = TextIO.openOut outfile
-  val _ = app (app (write_one outstrm)) sorted_structs
-  val _ = TextIO.closeOut outstrm
 in
-  ()
+  app (app (write_one outstrm)) sorted_structs;
+  TextIO.closeOut outstrm
 end
 
 val outfilnameN = "umm_types.txt"
@@ -433,12 +445,12 @@ fun mk_thy_types cse install thy = let
      for consumption by later phases of the translation.
 
   *)
-  val rcds = get_senv cse
-  val unenv = get_unenv cse
-  val sorted_structs = get_sorted_structs cse
+  val struct_union_env = get_struct_union_env cse
+  val sorted_ctypes = get_sorted_ctypes cse
 
   open MemoryModelExtras
   open UserTypeDeclChecking
+
   val umm_prfstate = initial_state
   fun new_rcdinfo (recname,flds) thy = let
     fun fldtys (fldname, cty) = (fldname, ctype_to_typ (thy,cty), cty)
@@ -446,73 +458,99 @@ fun mk_thy_types cse install thy = let
     (recname, map fldtys flds)
   end
 
-  fun rcddecls_phase0 (recflds, thy) = let
+  fun ctypes_to_isabelle_types_phase0 (struct_union_env, thy) = let
   in
-    if install then let
+    let
+      val _ =
+          informStr(2, "Defining isabelle type(s) corresponding to \
+                        \struct group:")
+      val _ =
+        app
+          (fn Struct {name,members} =>
+              informStr (2, "  struct "^name^", with fields: "^listvars #name members)
+            | Union {name,members} =>
+              informStr (2, "  union "^name^", with members: "^listvars #name members))
+          struct_union_env
+
+      fun mk_ctype_instance (name, thy) = let
+        val struct_typ = Syntax.read_typ_global thy name
+        (* establish the new ztype as a c_type, which requires no proof, as
+            there are no axioms attached to c_type *)
+        val c_type_instance_t = Logic.mk_of_class (struct_typ, "CTypesDefs.c_type")
+        val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
+        val is_c_type_thm =
+          Goal.prove_internal
+            (thy2ctxt thy)
+            []
+            c_type_instance_ct
+            (K (Class.intro_classes_tac (thy2ctxt thy) []))
+        val thy = Axclass.add_arity is_c_type_thm thy
         val _ =
-            informStr(2, "Defining isabelle type(s) corresponding to \
-                         \struct group:")
-        val _ = app (fn (recname,flds) =>
-                        informStr (2, "  struct " ^ recname^ ", with fields: " ^
-                                      listvars #1 flds))
-                    recflds
-
-        fun mk_rp_fld thy (fldname,cty) = {fldname = fldname,
-                                           fldty = ctype_to_typ (thy,cty)}
-        fun mk_rp_recd thy (recname, flds) =
-            {record_name = recname, fields = map (mk_rp_fld thy) flds}
-        fun mk_ctype_instance (recname, _) thy = let
-          val recty = Syntax.read_typ_global thy recname
-
-          (* establish the new ztype as a c_type, which requires no proof, as
-             there are no axioms attached to c_type *)
-          val c_type_instance_t =
-              Logic.mk_of_class(recty, "CTypesDefs.c_type")
-          val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
-          val is_c_type_thm =
-              Goal.prove_internal (thy2ctxt thy) [] c_type_instance_ct
-                                  (fn _ => Class.intro_classes_tac (thy2ctxt thy) [])
-          val thy = Axclass.add_arity is_c_type_thm thy
-
-          val _ =
-              informStr (2, "Proved  instance "^
-                            Syntax.string_of_typ (thy2ctxt thy) recty^
-                            " :: c_type")
-        in
-          thy
-        end
+          informStr
+            (2, "Proved  instance "^Syntax.string_of_typ (thy2ctxt thy) struct_typ^" :: c_type")
       in
-        thy |> RecursiveRecordPackage.define_record_type (map (mk_rp_recd thy) recflds)
-            |> Basics.fold mk_ctype_instance recflds
+        thy
       end
-    else
+      fun define_isabelle_types (Struct {name,members}, thy) =
+        let
+          val members' = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
+        in
+          (* TODO: shouldn't need to construct a singleton list here *)
+          RecursiveRecordPackage.define_record_type [{record_name=name, members=members'}] thy
+        end
+       | define_isabelle_types (Union {name,members}, thy) =
+        let
+          val members' = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
+        in
+          (* TODO: shouldn't need to construct a singleton list here *)
+          RecursiveRecordPackage.define_union_type [{union_name=name, members=members'}] thy
+        end
+    in
       thy
+      |> (fn thy => List.foldl define_isabelle_types thy struct_union_env)
+      |> (fn thy =>
+            List.foldl
+              mk_ctype_instance
+              thy
+              (map (fn Struct s => #name s | Union u => #name u) struct_union_env))
+    end
   end
 
-  val thy = List.foldl rcddecls_phase0 thy sorted_structs
+  val thy =
+    if install then
+      List.foldl ctypes_to_isabelle_types_phase0 thy sorted_ctypes
+    else
+      thy
 
   (* Yuck, sorry *)
   val _ = gen_umm_types_file cse outfilnameN
 
+  val structs =
+    struct_union_env
+    |> List.mapPartial
+      (fn Struct {name,members} => SOME (name, map (fn {name,typ} => (name,typ)) members)
+        | Union _ => NONE)
+  val unions =
+    struct_union_env
+    |> List.mapPartial
+      (fn Union {name,members} => SOME (name, map (fn {name,typ} => (name,typ)) members)
+        | Struct _ => NONE)
   val arrays = List.filter (fn (_, sz) => sz <> 0)
                            (Binaryset.listItems (get_array_mentions cse))
   val umm_events = let
-    val evs = map umm_array arrays @ map umm_struct rcds @ map umm_union unenv
+    val evs = map umm_array arrays @ map umm_struct structs @ map umm_union unions
   in
     if null evs then []
     else let
         val umm_struct_map =
-            List.foldl (fn (r as (s,_),acc) => Symtab.update (s,umm_struct r) acc)
-                       Symtab.empty
-                       rcds
-        val umm_array_set =
-            List.foldl (fn (a,acc) => Binaryset.add(acc,umm_array a))
-                       (Binaryset.empty UMMKey.ord)
-                       arrays
+          List.foldl (fn (r,acc) => Symtab.update (#1 r, umm_struct r) acc) Symtab.empty structs
        val umm_union_map =
-            List.foldl (fn (u as (s,_),acc) => Symtab.update (s,umm_union u) acc)
-                       Symtab.empty
-                       unenv
+          List.foldl (fn (u, acc) => Symtab.update (#1 u, umm_union u) acc) Symtab.empty unions
+        val umm_array_set =
+          List.foldl
+            (fn (a,acc) => Binaryset.add(acc,umm_array a))
+            (Binaryset.empty UMMKey.ord)
+            arrays
         fun toEv ty =
             case ty of
               Array (ty, SOME sz) => let
@@ -526,7 +564,8 @@ fun mk_thy_types cse install thy = let
         fun umm_included uev =
             case uev of
               umm_array (ty, _) => [ty]
-            | umm_struct(_, flds) => map #2 flds
+            | umm_struct (_, flds) => map #2 flds
+            | umm_union (_, membs) => map #2 membs
         val inclusion =
             List.foldl
                 (fn (u,acc) => UMMTab.update
@@ -546,7 +585,7 @@ fun mk_thy_types cse install thy = let
       end
   end
 
-  fun rcddecl_phase1 (p as (recname, _ (* flds *)), (thy, st, rcdacc)) = let
+  fun rcddecl_phase1 (p as (recname, _), (thy, st, rcdacc)) = let
     val rcdinfo = new_rcdinfo p thy
     val (st, thy1) =
         if install then
@@ -558,6 +597,18 @@ fun mk_thy_types cse install thy = let
     (thy1, st, rcdinfo :: rcdacc)
   end
 
+  (* TODO!! *)
+  fun undecl_phase1 (p as (unname, _), (thy, st, rcdacc)) = let
+    val uninfo = new_rcdinfo p thy
+    val (st, thy1) =
+        if (install; false) then
+          (informStr (2, "Proving UMM properties for union " ^ unname);
+           struct_type cse {struct_type = uninfo, state = st}
+                       thy)
+        else (st, thy)
+  in
+    (thy1, st, uninfo :: rcdacc)
+  end
   fun arraytype_phase1 ((cty, n), (thy, st, rcdacc)) = let
       val (st', thy') =
           if install then
@@ -574,9 +625,13 @@ fun mk_thy_types cse install thy = let
       case idecl of
         umm_array ai => arraytype_phase1 (ai, acc)
       | umm_struct ri => rcddecl_phase1 (ri, acc)
+      | umm_union ui => undecl_phase1 (ui, acc)
 
-  val (thy, final_state, rcdinfo0)
-    = List.foldl phase1 (thy, umm_prfstate, []) umm_events
+  val (thy, final_state, rcdinfo0) =
+    List.foldl
+      phase1
+      (thy, umm_prfstate, [])
+      umm_events
   val thy = if install then UserTypeDeclChecking.finalise final_state thy
             else thy
 in

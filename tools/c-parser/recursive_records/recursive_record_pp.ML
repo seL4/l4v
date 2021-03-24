@@ -42,10 +42,9 @@ in
     map (gen_field_tr' updateN record_update_tr') names;
 
 
-  fun install_translations
-        {record_name = _, fields : {fldname : string, fldty : typ} list} thy =
+  fun install_translations {members : {name : string, typ : typ} list, record_name = _} thy =
   let
-    val field_tr's = print_translation (map #fldname fields)
+    val field_tr's = print_translation (map #name members)
   in
     Sign.print_translation field_tr's thy
   end

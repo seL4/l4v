@@ -789,12 +789,6 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
            var_accessor = var_accessor thy globty,
            rcd_updator = rcd_updator thy,
            rcd_accessor = rcd_accessor thy rcdinfo}
-
-  val (ecenv,senv) = let
-    open ProgramAnalysis
-  in
-    (cse2ecenv cse, get_senv cse)
-  end
   val stmt_trans = stmt_term ctxt cse fname termbuilders
                              varinfo fninfo
                              statetype globty styargs ms

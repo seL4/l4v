@@ -157,7 +157,9 @@ fun get_Csyntax thy s = let
           (mk_thy_relative thy s)
       handle IO.Io {name, ...} => error ("I/O error on "^name)
 in
-  ast0 |> SyntaxTransforms.remove_anonstructs |> SyntaxTransforms.remove_typedefs
+  ast0
+  |> SyntaxTransforms.remove_anon_structs_and_unions
+  |> SyntaxTransforms.remove_typedefs
 end
 
 fun define_naming_scheme [] _ = I
@@ -217,10 +219,13 @@ fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy 
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm : MString.t, gty) defs = let
+      val memb_structure_env =
+        get_struct_union_env cse
+        |> map ExpressionTyping.struct_or_union_to_memb_structure
       val rhs_opt = MSymTab.lookup inittab gnm
       val rhs_t =
-          case  rhs_opt of
-            NONE => ExpressionTranslation.zero_term thy (get_senv cse) gty
+          case rhs_opt of
+            NONE => ExpressionTranslation.zero_term thy memb_structure_env gty
           | SOME rhs => let
               open ExpressionTranslation
               fun error _ = (Feedback.errorStr'(eleft rhs, eright rhs,

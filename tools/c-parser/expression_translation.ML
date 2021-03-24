@@ -8,7 +8,6 @@
 
 signature EXPRESSION_TRANSLATION =
 sig
-
   type expr_info
   type ctyp = int Absyn.ctype
   type varinfo =
@@ -16,7 +15,7 @@ sig
 
   val anal_integer_conversion : bool Config.T
 
-  val zero_term : theory -> ProgramAnalysis.senv -> ctyp -> term
+  val zero_term : theory -> (string * (string * ctyp) list) list -> ctyp -> term
 
   val ctype_of : expr_info -> ctyp
   val rval_of : expr_info -> term -> term
@@ -715,9 +714,7 @@ end handle TYPE (s, tys, tms) => raise TYPE("binop_term ("^binopname bop^"): "^
                                             s, tys, tms)
 
 
-type senv = (string * (string * int ctype) list) list
-
-fun zero_term thy (senv:senv) cty = let
+fun zero_term thy (memb_structure_env : (string * (string * int ctype) list) list) cty = let
   open CalculateState
 in
   (* create a term of the Isabelle type corresponding to cty which is
@@ -729,7 +726,7 @@ in
     | Ptr Void => mk_ptr (mk_zero addr_ty, @{typ unit})
     | Ptr cty0 => mk_ptr (mk_zero addr_ty, ctype_to_typ(thy,cty0))
     | StructTy s => let
-        val flds = case assoc(senv, s) of
+        val flds = case assoc(memb_structure_env, s) of
                      NONE => raise Fail ("zero_term: no s. info for "^s)
                    | SOME fs => map #2 fs
         val constructor_nm = Sign.intern_const thy (s ^ "." ^ s)
@@ -738,7 +735,7 @@ in
                                      raise Fail ("Didn't get a type for "^
                                                  constructor_nm)
       in
-        List.foldl (fn (fld,acc) => acc $ zero_term thy senv fld)
+        List.foldl (fn (fld,acc) => acc $ zero_term thy memb_structure_env fld)
                    (Const(constructor_nm, constructor_typ))
                    flds
       end
@@ -747,7 +744,7 @@ in
         val ety = ctype_to_typ(thy, ty)
       in
         Const("Arrays.FCP", (nat --> ety) --> ity) $
-             (Abs("_", nat, zero_term thy senv ty))
+             (Abs("_", nat, zero_term thy memb_structure_env ty))
       end
     | EnumTy _ => mk_zero(ctype_to_typ(thy, Signed Int))
     | _ => raise Fail ("zero_term: can't handle: " ^ tyname cty)
@@ -793,7 +790,9 @@ end
 fun expr_term ctxt cse tbuilders varinfo e : expr_info = let
   val thy = Proof_Context.theory_of ctxt
   val ecenv = ProgramAnalysis.cse2ecenv cse
-  val senv = ProgramAnalysis.get_senv cse
+  val memb_structure_env =
+    ProgramAnalysis.get_struct_union_env cse
+    |> map ExpressionTyping.struct_or_union_to_memb_structure
   val tyinfo = ProgramAnalysis.cse_typing cse
   val error = fn s => error(SourcePos.toString (eleft e) ^ ": " ^ s)
   val expr_term = expr_term ctxt cse tbuilders varinfo
@@ -847,42 +846,39 @@ fun expr_term ctxt cse tbuilders varinfo e : expr_info = let
          * init is the initialiser for the "current object"
     *)
     fun interpret_initializer levelty curpath init =
-        case init of
-          InitE e => let
+      case init of
+        InitE e =>
+          let
             val ei0 = expr_term e
             val e_ty = ctype_of ei0
           in
-            if aggregate_type e_ty then let
-                (* Though an aggregate the initializer may be for
-                   something not an immediate child.
-                   This means we have to look along curpath for something
-                   of the same type *)
-              in
-                case find_type levelty senv curpath e_ty of
-                  NONE => error ("Leaf initialiser of type " ^ tyname e_ty ^
-                                 " doesn't match up with required path")
-                | SOME p => ([(p, ei0)], leaf_inc_path levelty senv p)
-              end
-            else (* e must be a leaf *) let
-                val leafty = type_at_path levelty senv curpath
+            if aggregate_type e_ty then
+              (* Though an aggregate the initializer may be for something not an immediate child.
+                 This means we have to look along curpath for something of the same type *)
+              case find_type levelty memb_structure_env curpath e_ty of
+                NONE => error ("Leaf initialiser of type " ^ tyname e_ty ^
+                               " doesn't match up with required path")
+              | SOME p => ([(p, ei0)], leaf_inc_path levelty memb_structure_env p)
+            else (* e must be a leaf *)
+              let
+                val leafty = type_at_path levelty memb_structure_env curpath
                 val ei = typecast (thy, leafty, ei0)
-                val p' = leaf_inc_path levelty senv curpath
+                val p' = leaf_inc_path levelty memb_structure_env curpath
               in
                 ([(curpath, ei)], p')
               end
           end
-        | InitList dilist => let
-            val ty = type_at_path levelty senv [hd curpath]
-            val _ = if not (aggregate_type ty) then
-                      Feedback.warnStr'(eleft e, eright e,
-                                        "Scalar initialisor in braces")
-                    else ()
-            val bumped = leaf_inc_path levelty senv [hd curpath]
-            val (inits, _) = interpret_dilist ty (SOME (tl curpath)) dilist
-          in
-            (map (fn (p,ei) => (hd curpath :: p, ei)) inits, bumped)
-          end
-
+      | InitList dilist => let
+          val ty = type_at_path levelty memb_structure_env [hd curpath]
+          val _ = if not (aggregate_type ty) then
+                    Feedback.warnStr'(eleft e, eright e,
+                                      "Scalar initialisor in braces")
+                  else ()
+          val bumped = leaf_inc_path levelty memb_structure_env [hd curpath]
+          val (inits, _) = interpret_dilist ty (SOME (tl curpath)) dilist
+        in
+          (map (fn (p,ei) => (hd curpath :: p, ei)) inits, bumped)
+        end
     and interpret_dilist levelty curpath_opt dinits =
         case dinits of
           [] => ([], curpath_opt)
@@ -897,9 +893,9 @@ fun expr_term ctxt cse tbuilders varinfo e : expr_info = let
                   end
                 | _ => let
                     val path = map trans_d ds
-                    val extended_path = extend_to_leaf levelty senv path
+                    val extended_path = extend_to_leaf levelty memb_structure_env path
                     val front_path = #1 (split_last path)
-                    val levelty' = type_at_path levelty senv front_path
+                    val levelty' = type_at_path levelty memb_structure_env front_path
                     val (p_inits, p0_opt) =
                         interpret_initializer levelty'
                                               (List.drop (extended_path,
@@ -914,7 +910,7 @@ fun expr_term ctxt cse tbuilders varinfo e : expr_info = let
             (translated_inits @ more_inits, p_opt)
           end
   in
-    interpret_dilist cty (SOME (extend_to_leaf cty senv [])) dinits
+    interpret_dilist cty (SOME (extend_to_leaf cty memb_structure_env [])) dinits
   end
 in
   case enode e of
@@ -1197,7 +1193,7 @@ in
           informStr (7, "Compound literal updates are: "^
                         String.concat
                             (map (fn (vp,_) => vpl_toString vp ^ ", ") updates))
-      val zero_tm = zero_term thy senv cty
+      val zero_tm = zero_term thy memb_structure_env cty
       val _ = informStr(7, "Compound literal base zero is: "^
                            Syntax.string_of_term (thy2ctxt thy)
                                                  zero_tm)

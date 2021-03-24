@@ -144,7 +144,7 @@ sig
   type program = Absyn.ext_decl list
   val remove_typedefs : program -> program
   val remove_embedded_fncalls : ProgramAnalysis.csenv -> program -> program
-  val remove_anonstructs : program -> program
+  val remove_anon_structs_and_unions : program -> program
 end;
 
 
@@ -558,6 +558,9 @@ fun tysubst th ty =
         StructTy s => (case Symtab.lookup th s of
                            NONE => ty
                          | SOME s' => StructTy s')
+      | UnionTy s => (case Symtab.lookup th s of
+                           NONE => ty
+                         | SOME s' => UnionTy s')
       | Ptr ty => Ptr (tysubst th ty)
       | Array (ty, sz) => Array (tysubst th ty, sz)
       | Function (retty, args) => Function (tysubst th retty,
@@ -574,11 +577,11 @@ fun ws th strw =
 fun dsubst th d =
     case d of
         StructDecl (nmw, flds) => StructDecl (ws th nmw, map (apfst (tysubst th)) flds)
+      | UnionDecl (nmw, membs) => UnionDecl (ws th nmw, map (apfst (tysubst th)) membs)
       | VarDecl(ty, nm, b, iopt, attrs) =>
           VarDecl(tysubst th ty, nm, b, iopt, attrs)
       | TypeDecl tnms => TypeDecl (map (apfst (tysubst th)) tnms)
       | _ => d
-      (* TODO: union? *)
 
 fun edsubst th ed =
     case ed of
@@ -586,28 +589,33 @@ fun edsubst th ed =
       | Decl d => Decl (apnode (dsubst th) d)
 
 fun calctheta (edec, acc as (i, th)) =
-    case edec of
-        FnDefn _ => acc
-      | Decl dw =>
-        (case node dw of
-             StructDecl (nmw, _) =>
-             let
-               val oldnm = node nmw
-               open NameGeneration
-             in
-               if String.isPrefix internalAnonStructPfx oldnm then
-                 let
-                   val newnm = mkAnonStructName i
-                 in
-                   (i + 1, Symtab.update (oldnm, newnm) th)
-                 end
-               else
-                 acc
-             end
-           | _ => acc)
-(* TODO: union? *)
+  case edec of
+    FnDefn _ => acc
+  | Decl dw =>
+      (case node dw of
+        StructDecl (nmw, _) =>
+          let
+            val oldnm = node nmw
+            open NameGeneration
+          in
+            if String.isPrefix internalAnonStructPfx oldnm then
+              (i + 1, Symtab.update (oldnm, mkAnonStructName i) th)
+            else
+              acc
+          end
+        | UnionDecl (nmw, _) =>
+          let
+            val oldnm = node nmw
+            open NameGeneration
+          in
+            if String.isPrefix internalAnonUnionPfx oldnm then
+              (i + 1, Symtab.update (oldnm, mkAnonUnionName i) th)
+            else
+              acc
+          end
+        | _ => acc)
 
-fun remove_anonstructs edecs =
+fun remove_anon_structs_and_unions edecs =
   let
     val (_, theta) = List.foldl calctheta (1, Symtab.empty) edecs
   in

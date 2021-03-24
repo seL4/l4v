@@ -17,16 +17,13 @@ sig
   (* Constructs the translated type of C struct *)
   (* no type variables allowed! *)
   val define_record_type :
-       {record_name : string,
-        fields : {fldname : string, fldty : typ} list} list ->
-      theory -> theory
+    {record_name : string, members : {name : string, typ : typ} list} list -> theory -> theory
+
   (* Constructs the translated type of C struct *)
   val define_union_type :
-       {union_name : string,
-        members : {name : string, typ : typ} list} list ->
-      theory -> theory
+    {union_name : string, members : {name : string, typ : typ} list} list -> theory -> theory
 
-  val get_simpset : theory -> simpset;
+  val get_simpset : theory -> simpset
 end;
 
 structure RecursiveRecordPackage : RECURSIVE_RECORD_PACKAGE =
@@ -56,16 +53,24 @@ val updateN = Record.updateN
 
 fun gen_vars tys = Library.map_index (fn (i,ty) => Free ("x" ^ Int.toString i, ty)) tys
 
+fun make_casename nm =
+  case String.explode nm of
+    c :: cs => String.implode (Char.toUpper c :: cs)
+  | _ => raise Fail "empty member name in union!"
 
-fun define_record_updator arg (i, {fldname, fldty}) thy =
+fun make_extractor_name nm =
+  "get_" ^ make_casename nm
+
+
+fun define_record_updator arg (i, {name, typ}) thy =
   let
     val bnm = Binding.name
     val arg_ty = type_of arg
     val (con, args) = strip_comb arg
-    val upd_ty = (fldty --> fldty) --> (arg_ty --> arg_ty)
-    val upd_name = suffix updateN fldname
+    val upd_ty = (typ --> typ) --> (arg_ty --> arg_ty)
+    val upd_name = suffix updateN name
     val upd_t = Free (upd_name, upd_ty)
-    val f = Free ("f", fldty --> fldty)
+    val f = Free ("f", typ --> typ)
     val lhs_t = upd_t $ f $ arg
     val modified_args = Library.nth_map i (curry op$ f) args
     val rhs_t = List.foldl (op$ o swap) con modified_args
@@ -78,23 +83,22 @@ fun define_record_updator arg (i, {fldname, fldty}) thy =
     |> snd
   end
 
-fun define_record_functions (r as {record_name, fields}) thy =
+fun define_record_functions (r as {record_name, members}) thy =
   let
     val recordnameb = Binding.name record_name
     val domty = Type (Sign.full_name thy recordnameb, [])
-    val constructor_ty = List.foldr op--> domty (map #fldty fields)
-    val constructor_t =
-        Const (Sign.intern_const thy record_name, constructor_ty)
-    val args = gen_vars (map #fldty fields)
+    val constructor_ty = List.foldr op--> domty (map #typ members)
+    val constructor_t = Const (Sign.intern_const thy record_name, constructor_ty)
+    val args = gen_vars (map #typ members)
     val record_value_t = List.foldl (fn (a,t) => t $ a) constructor_t args
   in
     (thy
       |> Sign.add_path record_name
-      |> Library.fold_index (define_record_updator record_value_t) fields
+      |> Library.fold_index (define_record_updator record_value_t) members
       |> RecursiveRecordPP.install_translations r
       |> Sign.parent_path)
     before
-    tracing("Defined accessor and update functions for record "^record_name)
+    tracing("Defined accessor and update functions for record " ^ record_name)
   end
 
 
@@ -141,21 +145,22 @@ fun define_union_functions (u as {union_name, members}) thy =
   val case_union_t = Syntax.parse_term ctxt ("case_"^union_name)
   fun mk_defn (i,{name,typ=lhstyp}) thy =
     let
-    val bname = Binding.name (name^"_def")
-    val lhs = Free (name, union_typ --> lhstyp)
-    val rhs =
-      Library.fold_index
-      (fn (j, {typ,...}) => fn acc_t =>
-        acc_t $ (if i = j then const_id_t typ else const_undef_t typ lhstyp))
-      members
-      case_union_t
-    val (_,ctxt) =
-      Specification.definition
-        NONE
-        []
-        []
-        ((bname,[]), Logic.mk_equals (lhs, rhs))
-        (Named_Target.theory_init thy)
+      val extractor_name = make_extractor_name name
+      val bname = Binding.name (extractor_name ^ "_def")
+      val lhs = Free (extractor_name, union_typ --> lhstyp)
+      val rhs =
+        Library.fold_index
+        (fn (j, {typ,...}) => fn acc_t =>
+          acc_t $ (if i = j then const_id_t typ else const_undef_t typ lhstyp))
+        members
+        case_union_t
+      val (_,ctxt) =
+        Specification.definition
+          NONE
+          []
+          []
+          ((bname,[]), Logic.mk_equals (lhs, rhs))
+          (Named_Target.theory_init thy)
     in
       Local_Theory.exit_global ctxt
     end
@@ -212,15 +217,14 @@ val [updvar] =
     get_vars (nth (Thm.prems_of updcong_foldE) 1) []
   end
 
-
-fun prove_record_rewrites ({record_name, fields}, thy) =
+fun prove_record_rewrites ({record_name, members}, thy) =
   let
     val _ = tracing("Proving rewrites for struct "^record_name)
     val rty = Type (Sign.intern_type thy record_name, [])
     val r_var = Free ("r", rty)
     val r_var' = Free ("r'", rty)
     val domty = Type (Sign.full_name thy (Binding.name record_name), [])
-    val constructor_ty = List.foldr op--> domty (map #fldty fields)
+    val constructor_ty = List.foldr op--> domty (map #typ members)
     val constructor_t =
         Const (Sign.intern_const thy record_name, constructor_ty)
     val case_tac = Induct_Tacs.case_tac
@@ -229,26 +233,26 @@ fun prove_record_rewrites ({record_name, fields}, thy) =
                           (fn {context,...} =>
                               case_tac context "r" [] NONE 1 THEN
                               asm_full_simp_tac context 1)
-    fun mk_upd_t {fldname,fldty} =
-        Const (Sign.intern_const thy (suffix updateN fldname),
-              (fldty --> fldty) --> (rty --> rty))
+    fun mk_upd_t {name,typ} =
+        Const (Sign.intern_const thy (suffix updateN name),
+              (typ --> typ) --> (rty --> rty))
   
-    fun prove_accupd_same (fld as {fldname, fldty}) =
+    fun prove_accupd_same (fld as {name, typ}) =
       let
-        val f = Free ("f", fldty --> fldty)
-        val acc = Const (Sign.intern_const thy fldname, rty --> fldty)
+        val f = Free ("f", typ --> typ)
+        val acc = Const (Sign.intern_const thy name, rty --> typ)
         val upd = mk_upd_t fld
         val lhs_t = acc $ (upd $ f $ r_var)
         val rhs_t = f $ (acc $ r_var)
       in
         prove (HOLogic.mk_eq (lhs_t, rhs_t))
       end
-    val accupd_sames = map prove_accupd_same fields
+    val accupd_sames = map prove_accupd_same members
   
     fun prove_accupd_diff (acc, upd) =
       let
-        val {fldname = accname, fldty = accty} = acc
-        val {fldname = _, fldty = updty} = upd
+        val {name = accname, typ = accty} = acc
+        val {name = _, typ = updty} = upd
         val acc_t = Const (Sign.intern_const thy accname, rty --> accty)
         val upd_t = mk_upd_t upd
         val f = Free ("f", updty --> updty)
@@ -257,11 +261,11 @@ fun prove_record_rewrites ({record_name, fields}, thy) =
       in
         prove (HOLogic.mk_eq (lhs_t, rhs_t))
       end
-    val accupd_diffs = map prove_accupd_diff (cprod_less_diag fields)
-  
-    fun prove_updupd_same (fld as {fldname=_, fldty}) =
+    val accupd_diffs = map prove_accupd_diff (cprod_less_diag members)
+
+    fun prove_updupd_same (fld as {typ,...}) =
       let
-        val ffty = fldty --> fldty
+        val ffty = typ --> typ
         val upd_t = mk_upd_t fld
         val f = Free ("f", ffty)
         val g = Free ("g", ffty)
@@ -271,12 +275,12 @@ fun prove_record_rewrites ({record_name, fields}, thy) =
       in
         prove (HOLogic.mk_eq (lhs_t, rhs_t))
       end
-    val updupd_sames = map prove_updupd_same fields
+    val updupd_sames = map prove_updupd_same members
   
     fun prove_updupd_diff (upd1, upd2) =
       let
-        val {fldname = _, fldty = updty1} = upd1
-        val {fldname = _, fldty = updty2} = upd2
+        val {name = _, typ = updty1} = upd1
+        val {name = _, typ = updty2} = upd2
         val upd1_t = mk_upd_t upd1
         val upd2_t = mk_upd_t upd2
         val f = Free ("f", updty1 --> updty1)
@@ -286,44 +290,44 @@ fun prove_record_rewrites ({record_name, fields}, thy) =
       in
         prove (HOLogic.mk_eq (rhs_t, lhs_t))
       end
-    val updupd_diffs = map prove_updupd_diff (lower_triangle fields)
+    val updupd_diffs = map prove_updupd_diff (lower_triangle members)
   
-    fun prove_idupdates (fld as {fldname, fldty}) =
+    fun prove_idupdates (fld as {name, typ}) =
     let
       val upd_t = mk_upd_t fld
-      val acc_t = Const (Sign.intern_const thy fldname, rty --> fldty)
+      val acc_t = Const (Sign.intern_const thy name, rty --> typ)
     in
-      prove (HOLogic.mk_eq (upd_t $ (Term.abs ("_",fldty) (acc_t $ r_var)) $ r_var, r_var))
+      prove (HOLogic.mk_eq (upd_t $ (Term.abs ("_",typ) (acc_t $ r_var)) $ r_var, r_var))
     end
-    val idupdates = map prove_idupdates fields
+    val idupdates = map prove_idupdates members
   
     (* proves that (| fld1 = fld1 v, fld2 = fld2 v, fld3 = fld3 v,..|) = v *)
     val idupd_value1 =
       let
-        fun mk_arg ({fldname, fldty}, acc) =
+        fun mk_arg ({name, typ}, acc) =
           let
-            val acc_t = Const (Sign.intern_const thy fldname, rty --> fldty)
+            val acc_t = Const (Sign.intern_const thy name, rty --> typ)
           in
             acc $ (acc_t $ r_var)
           end
       in
-        prove (HOLogic.mk_eq (List.foldl mk_arg constructor_t fields, r_var))
+        prove (HOLogic.mk_eq (List.foldl mk_arg constructor_t members, r_var))
       end
 
   (* proves that u (| fld1 := fld1 v, fld2 := fld2 v, ... |) = v *)
   val idupd_value2 =
     let
-      fun mk_arg (fld as {fldname, fldty}, t) =
+      fun mk_arg (fld as {name, typ}, t) =
         let
-          val acc_t = Const (Sign.intern_const thy fldname, rty --> fldty)
+          val acc_t = Const (Sign.intern_const thy name, rty --> typ)
           val upd_t = mk_upd_t fld
         in
-          upd_t $ (Term.abs ("_",fldty) (acc_t $ r_var)) $ t
+          upd_t $ (Term.abs ("_",typ) (acc_t $ r_var)) $ t
         end
     in
       Goal.prove_global_future
         thy [] []
-        (HOLogic.mk_Trueprop (HOLogic.mk_eq (List.foldl mk_arg r_var' fields, r_var)))
+        (HOLogic.mk_Trueprop (HOLogic.mk_eq (List.foldl mk_arg r_var' members, r_var)))
         (fn {context,...} => case_tac context "r" [] NONE 1 THEN
                            case_tac context "r'" [] NONE 1 THEN
                            asm_full_simp_tac context 1)
@@ -412,7 +416,9 @@ fun prove_union_rewrites ({union_name, members}, thy) =
         (fn {context = ctxt,...} =>
           let
             val extractor_defns =
-              map (Proof_Context.get_thm ctxt o (fn n => n^"_def") o #name) members
+              map
+                (Proof_Context.get_thm ctxt o (fn n => make_extractor_name n ^ "_def") o #name)
+                members
           in
             asm_full_simp_tac (ctxt addsimps extractor_defns) 1
           end)
@@ -425,14 +431,15 @@ fun prove_union_rewrites ({union_name, members}, thy) =
     fun prove_extractor_reduce (i,{name,typ = T}) =
       let
         val unty = Type (Sign.intern_type thy union_name, [])
-        val constructor = Const (Sign.intern_const thy (String.map Char.toUpper name), T --> unty)
+        val constructor = Const (Sign.intern_const thy (make_casename name), T --> unty)
         val val_var = Free ("x", T) (* has to be same as in the case_tac above *)
         fun mk_undef T = Const (@{const_name undefined}, T)
       in
         Library.map_index
           (fn (j,{name = j_name, typ = U}) =>
             let
-              val extractor = Const (Sign.intern_const thy j_name, unty --> U)
+              val extractor_name = make_extractor_name j_name
+              val extractor = Const (Sign.intern_const thy extractor_name, unty --> U)
               val lhs = extractor $ (constructor $ val_var)
             in
               if i = j then
@@ -628,10 +635,10 @@ fun define_record_type records thy =
     (* define algebraic types *)
     val fpT_names = map (Sign.full_name thy o Binding.name o #record_name) records
 
-    fun spec_of {record_name, fields} =
+    fun spec_of {record_name, members} =
       let
         val b = Binding.name record_name
-        val field_bindings = map (fn {fldname,fldty} => (Binding.name fldname, fldty)) fields
+        val field_bindings = map (fn {name,typ} => (Binding.name name, typ)) members
         val case_bindings = [(( (Binding.empty, b), field_bindings), NoSyn)]
       in
         ((((([], b), NoSyn), case_bindings), (Binding.empty, Binding.empty, Binding.empty)), [])
@@ -660,11 +667,7 @@ fun define_union_type unions thy =
       let
         val constructor = Binding.name union_name
         fun member_to_binding {name,typ} =
-          let
-            val casename = String.map Char.toUpper name
-          in
-            (((Binding.empty, Binding.name casename), [(Binding.empty, typ)]), NoSyn)
-          end
+          (((Binding.empty, Binding.name (make_casename name)), [(Binding.empty, typ)]), NoSyn)
         val case_bindings = map member_to_binding members
       in
         ((((([], constructor), NoSyn), case_bindings),
@@ -692,10 +695,10 @@ use "recursive_records/recursive_record_package.ML";
 val thy0 = the_context ();
 val thy = RecursiveRecordPackage.define_record_type
   [{record_name = "lnode",
-    fields = [{fldname = "data1", fldty = TermsTypes.nat},
-              {fldname = "data2", fldty = TermsTypes.nat},
-              {fldname = "next",
-               fldty = TermsTypes.mk_ptr_ty
+    members = [{name = "data1", typ = TermsTypes.nat},
+              {name = "data2", typ = TermsTypes.nat},
+              {name = "next",
+               typ = TermsTypes.mk_ptr_ty
                          (Type (Sign.full_name thy0 "lnode", []))}]}]
   thy0;
 
