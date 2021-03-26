@@ -2749,7 +2749,7 @@ lemma setSchedContext_state_refs_of'[wp]:
   by (wp set_sc'.state_refs_of') (simp flip: fun_upd_def)
 
 lemma setReply_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s)(p := get_refs ReplySchedContext (replySc reply) \<union>
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s)(p := get_refs ReplySchedContext (replySC reply) \<union>
                                    get_refs ReplyTCB (replyTCB reply)))\<rbrace>
    setReply p reply
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
@@ -2759,7 +2759,7 @@ lemma setReply_reply_projs[wp]:
   "\<lbrace>\<lambda>s. P ((replyNexts_of s)(rptr := replyNext_of reply))
           ((replyPrevs_of s)(rptr := replyPrev reply))
           ((replyTCBs_of s)(rptr := replyTCB reply))
-          ((replySCs_of s)(rptr := replySc reply))\<rbrace>
+          ((replySCs_of s)(rptr := replySC reply))\<rbrace>
    setReply rptr reply
    \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
   apply (wpsimp simp: setReply_def updateObject_default_def setObject_def split_def)
