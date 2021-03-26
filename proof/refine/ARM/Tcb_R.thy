@@ -167,7 +167,7 @@ lemma setThreadState_Restart_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s\<rbrace>
    setThreadState Restart t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp setThreadState_ct_not_inQ)
   apply (fastforce dest: global'_no_ex_cap)
   done
@@ -707,7 +707,7 @@ lemma set_ep_minor_invs':
           and (\<lambda>s. ptr \<noteq> ksIdleThread s)\<rbrace>
    setEndpoint ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def)
+  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def valid_dom_schedule'_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift simp: o_def)
   done
 
@@ -754,7 +754,7 @@ lemma tcbSchedEnqueue_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and st_tcb_at' runnable' t\<rbrace>
    tcbSchedEnqueue t
    \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp valid_irq_node_lift valid_irq_handlers_lift' untyped_ranges_zero_lift)
   apply (auto elim!: st_tcb_ex_cap'' simp: o_def)
   done
@@ -2464,7 +2464,7 @@ lemma schedContextBindTCB_invs':
     apply (wp (once) hoare_drop_imps)
      apply (wp hoare_vcg_imp_lift')
     apply (wp hoare_drop_imps)
-   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
    apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_sch_act threadSet_iflive'
              threadSet_cap_to threadSet_ifunsafe'T  threadSet_idle'T threadSet_ctes_ofT
              threadSet_valid_queues_new threadSet_valid_queues' threadSet_valid_release_queue
@@ -2472,7 +2472,7 @@ lemma schedContextBindTCB_invs':
              untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
              threadSet_ct_idle_or_in_cur_domain' hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (fastforce simp: valid_idle'_def idle_tcb'_2_def pred_tcb_at'_def obj_at'_def projectKOs
                          objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
                          valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
@@ -2579,7 +2579,7 @@ lemma setSchedulerAction_invs'[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setSchedulerAction_def)
   apply wp
-  apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def
+  apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def valid_dom_schedule'_def
                 valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs cur_tcb'_def
                 ct_not_inQ_def valid_release_queue_def valid_release_queue'_def)
   apply (simp add: ct_idle_or_in_cur_domain'_def)
@@ -2651,7 +2651,7 @@ lemma bindNotification_invs':
        and invs'\<rbrace>
     bindNotification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding bindNotification_def invs'_def valid_state'_def
+  unfolding bindNotification_def invs'_def valid_state'_def valid_dom_schedule'_def
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (wpsimp wp: set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift
                     setBoundNotification_ct_not_inQ valid_bound_ntfn_lift

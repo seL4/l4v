@@ -51,7 +51,7 @@ lemma setIRQState_invs[wp]:
   apply (wp dmo_maskInterrupt)
   apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
                         Invariants_H.valid_queues_def valid_queues'_def valid_release_queue_def
-                        valid_release_queue'_def
+                        valid_release_queue'_def valid_dom_schedule'_def
                         valid_idle'_def valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
@@ -142,7 +142,7 @@ lemma invs'_irq_state_independent [simp, intro!]:
                  \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) =
    invs' s"
   apply (clarsimp simp: irq_state_independent_H_def invs'_def valid_state'_def
-          valid_pspace'_def sch_act_wf_def
+          valid_pspace'_def sch_act_wf_def valid_dom_schedule'_def
           valid_queues_def sym_refs_def state_refs_of'_def
           if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
           valid_idle'_def valid_global_refs'_def

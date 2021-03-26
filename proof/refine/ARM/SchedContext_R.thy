@@ -69,7 +69,7 @@ lemma setSchedContext_invs':
     and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
     setSchedContext scPtr sc
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -298,7 +298,7 @@ lemma schedContextUpdateConsumed_if_unsafe_then_cap'[wp]:
 
 lemma schedContextUpdateConsumed_invs'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
@@ -438,7 +438,8 @@ lemma schedContextCancelYieldTo_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' t\<rbrace>
    schedContextCancelYieldTo t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def
+                   valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)

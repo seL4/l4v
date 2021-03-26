@@ -998,7 +998,7 @@ lemma transferCapsToSlots_invs[wp]:
         \<and> transferCaps_srcs caps s\<rbrace>
    transferCapsToSlots ep buffer n caps slots mi
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp valid_irq_node_lift)
   apply fastforce
   done
@@ -3154,7 +3154,7 @@ lemma setThreadState_nonqueued_state_update:
                \<and> (t = ksIdleThread s \<longrightarrow> idle' st)
                \<and> (\<not> runnable' st \<longrightarrow> sch_act_simple s)\<rbrace>
   setThreadState st t \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre, wp valid_irq_node_lift
                             sts_valid_queues
                             setThreadState_ct_not_inQ)
@@ -3421,7 +3421,7 @@ lemma setThreadState_Running_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ex_nonz_cap_to' t s\<rbrace>
    setThreadState Running t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp setThreadState_ct_not_inQ valid_irq_node_lift)
   apply (fastforce dest: global'_no_ex_cap)
   done
@@ -3431,7 +3431,7 @@ lemma setThreadState_BlockedOnReceive_invs':
         valid_bound_reply' rptr s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s\<rbrace>
    setThreadState (BlockedOnReceive eptr cg rptr) t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp sts_sch_act' setThreadState_ct_not_inQ valid_irq_node_lift)
   apply (clarsimp dest: global'_no_ex_cap simp: valid_tcb_state'_def comp_def)
   done
@@ -3450,7 +3450,7 @@ lemma tcbReleaseEnqueue_invs'[wp]:
   "tcbReleaseEnqueue tcb \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: getScTime_def getTCBSc_def tcbReleaseEnqueue_def
                         getReleaseQueue_def setReleaseQueue_def setReprogramTimer_def)
-  apply (clarsimp simp add: invs'_def valid_state'_def split del: if_split)
+  apply (clarsimp simp add: invs'_def valid_state'_def valid_dom_schedule'_def split del: if_split)
   apply (wp threadSet_valid_pspace'T threadSet_sch_actT_P[where P=False, simplified]
            threadSet_iflive'T threadSet_ifunsafe'T threadSet_idle'T threadSet_not_inQ
            valid_irq_node_lift valid_irq_handlers_lift'' threadSet_ct_idle_or_in_cur_domain'
@@ -4501,7 +4501,8 @@ lemma maybeReturnSc_ex_nonz_cap_to'[wp]:
 lemma maybeReturnSc_invs':
   "\<lbrace>invs' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace> maybeReturnSc nptr tptr \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wpsimp wp: setSchedContext_invs' simp: maybeReturnSc_def )
-      apply (clarsimp simp add: invs'_def valid_state'_def split del: if_split)
+      apply (clarsimp simp add: invs'_def valid_state'_def valid_dom_schedule'_def
+                     split del: if_split)
       apply (wp threadSet_valid_pspace'T threadSet_sch_actT_P[where P=False, simplified]
                 threadSet_ctes_of threadSet_iflive'T threadSet_ifunsafe'T threadSet_idle'T
                 threadSet_not_inQ valid_irq_node_lift valid_irq_handlers_lift'' threadSet_cur
@@ -4513,7 +4514,8 @@ lemma maybeReturnSc_invs':
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (rename_tac ntfn tcb)
   apply (rule_tac x=tcb in exI)
-  apply (clarsimp simp: invs'_def valid_state'_def inQ_def comp_def eq_commute[where a="Some _"])
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def inQ_def comp_def
+                        eq_commute[where a="Some _"])
   apply (intro conjI impI allI; clarsimp?)
         apply (fastforce simp: valid_release_queue'_def obj_at'_def projectKOs)
        apply (fastforce simp: valid_release_queue'_def obj_at'_def projectKOs)
@@ -4827,7 +4829,7 @@ lemma replyPush_invs':
 
 lemma setEndpoint_invs':
   "\<lbrace>invs' and valid_ep' ep and ex_nonz_cap_to' eptr\<rbrace> setEndpoint eptr ep \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_state'_def comp_def)
+  by (wpsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def comp_def)
 
 crunches maybeReturnSc, cancelIPC
   for sch_act_not[wp]: "sch_act_not t"
@@ -4984,7 +4986,7 @@ lemma ri_invs' [wp]:
 
 lemma replyUnlink_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcbPtr \<noteq> ksIdleThread s\<rbrace> replyUnlink replyPtr tcbPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
+  unfolding invs'_def valid_state'_def valid_dom_schedule'_def
   by (wpsimp wp: replyUnlink_valid_idle')
 
 lemma asUser_pred_tcb_at'[wp]:
@@ -5043,7 +5045,8 @@ lemma si_invs'[wp]:
          apply (fastforce simp: obj_at'_def projectKO_eq projectKO_tcb
                                 pred_tcb_at'_def invs'_def valid_state'_def
                          dest!: global'_no_ex_cap)
-        apply (wpsimp simp: invs'_def valid_state'_def valid_pspace'_def comp_def sym_refs_asrt_def
+        apply (wpsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def valid_pspace'_def
+                            comp_def sym_refs_asrt_def
                         wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' gts_wp')+
     apply (intro conjI; clarsimp?)
         apply (force simp: obj_at'_def projectKO_eq projectKO_ep valid_obj'_def valid_ep'_def
@@ -5070,14 +5073,15 @@ lemma si_invs'[wp]:
    \<comment> \<open>ep' = IdleEP\<close>
    apply (cases bl)
     apply (wpsimp wp: sts_sch_act' sts_valid_queues setThreadState_ct_not_inQ
-                simp: invs'_def valid_state'_def valid_ep'_def)
+                simp: invs'_def valid_state'_def valid_dom_schedule'_def valid_ep'_def)
     apply (fastforce simp: valid_tcb_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
                            projectKO_eq projectKO_tcb idle_tcb'_def comp_def)
    apply wpsimp
   \<comment> \<open>ep' = SendEP\<close>
   apply (cases bl)
    apply (wpsimp wp: tcbEPAppend_valid_SendEP sts_sch_act' sts_valid_queues setThreadState_ct_not_inQ
-               simp: invs'_def valid_state'_def valid_pspace'_def valid_ep'_def sym_refs_asrt_def)
+               simp: invs'_def valid_state'_def valid_dom_schedule'_def valid_pspace'_def
+                     valid_ep'_def sym_refs_asrt_def)
    apply (erule valid_objsE'[where x=ep], fastforce simp: obj_at'_def projectKO_eq projectKO_ep)
    apply (drule_tac ko="SendEP xa" in sym_refs_ko_atD'[rotated])
     apply (fastforce simp: obj_at'_def projectKO_eq projectKO_ep)

@@ -5017,7 +5017,7 @@ lemma cteSwap_invs'[wp]:
     K (c1 \<noteq> c2)\<rbrace>
   cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def pred_conj_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def pred_conj_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_conj_lift sch_act_wf_lift
              valid_queues_lift cur_tcb_lift
@@ -5487,7 +5487,7 @@ lemma make_zombie_invs':
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
-                   valid_irq_handlers'_def irq_issued'_def)
+                   valid_irq_handlers'_def irq_issued'_def valid_dom_schedule'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
             valid_arch_state_lift' valid_irq_node_lift ct_idle_or_in_cur_domain'_lift2
@@ -8518,7 +8518,7 @@ lemma cteMove_invs' [wp]:
             cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) word2 x\<rbrace>
      cteMove capability word1 word2
    \<lbrace>\<lambda>y. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def pred_conj_def)
+  apply (simp add: invs'_def valid_state'_def pred_conj_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
                   | rule hoare_vcg_conj_lift[rotated])+
@@ -8688,7 +8688,7 @@ lemma updateCap_noop_invs:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot\<rbrace>
      updateCap slot cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def
                    valid_pspace'_def valid_mdb'_def)
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp updateCap_iflive'
