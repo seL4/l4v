@@ -171,7 +171,7 @@ abbreviation
 text \<open>replyNext aliases\<close>
 
 abbreviation
-  "replySc \<equiv> \<lambda>r. getHeadScPtr (replyNext r)"
+  "replySC \<equiv> \<lambda>r. getHeadScPtr (replyNext r)"
 
 abbreviation
   "replyNext_of \<equiv> \<lambda>r. getReplyNextPtr (replyNext r)"
@@ -211,7 +211,7 @@ lemma getHeadScPtr_None_iff:
   by (cases x; clarsimp simp: getHeadScPtr_def split: reply_next.split)
 
 lemma replyNext_None_iff:
-  "replyNext r = None \<longleftrightarrow> replyNext_of r = None \<and> replySc r = None"
+  "replyNext r = None \<longleftrightarrow> replyNext_of r = None \<and> replySC r = None"
   apply (cases "replyNext r"; clarsimp)
   apply (case_tac a; clarsimp)
   done
@@ -239,7 +239,7 @@ abbreviation replyTCBs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> o
   "replyTCBs_of s \<equiv> replies_of' s |> replyTCB"
 
 abbreviation replySCs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "replySCs_of s \<equiv> replies_of' s |> replySc"
+  "replySCs_of s \<equiv> replies_of' s |> replySC"
 
 abbreviation sc_of' :: "kernel_object \<Rightarrow> sched_context option" where
   "sc_of' \<equiv> projectKO_opt"
@@ -334,7 +334,7 @@ definition refs_of_sc' :: "sched_context \<Rightarrow> ref_set" where
                           \<union> get_refs SCReply (scReply sc)"
 
 definition refs_of_reply' :: "reply \<Rightarrow> ref_set" where
-  "refs_of_reply' r \<equiv> get_refs ReplySchedContext (replySc r)
+  "refs_of_reply' r \<equiv> get_refs ReplySchedContext (replySC r)
                           \<union> get_refs ReplyTCB (replyTCB r)"
 
 definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
@@ -673,7 +673,7 @@ definition valid_sched_context' :: "sched_context \<Rightarrow> kernel_state \<R
 definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_reply' reply s \<equiv>
      valid_bound_tcb' (replyTCB reply) s
-     \<and> valid_bound_sc' (replySc reply) s
+     \<and> valid_bound_sc' (replySC reply) s
      \<and> valid_bound_reply' (replyPrev reply) s
      \<and> valid_bound_reply' (replyNext_of reply) s"
 
@@ -1732,7 +1732,7 @@ lemma refs_of_rev':
   "(x, SCReply) \<in> refs_of' ko =
     (\<exists>sc. ko = KOSchedContext sc \<and> scReply sc = Some x)"
   "(x, ReplySchedContext) \<in> refs_of' ko =
-    (\<exists>reply. ko = KOReply reply \<and> replySc reply = Some x)"
+    (\<exists>reply. ko = KOReply reply \<and> replySC reply = Some x)"
   "(x, ReplyTCB) \<in> refs_of' ko =
     (\<exists>reply. ko = KOReply reply \<and> replyTCB reply = Some x)"
   "(x, TCBYieldTo) \<in> refs_of' ko =
@@ -4063,7 +4063,7 @@ lemma valid_replies'_other_state:
   apply (fastforce simp: pred_tcb_at'_def obj_at'_def)+
   done
 
-lemma valid_replies'_sc_asrt_replySc_None:
+lemma valid_replies'_sc_asrt_replySC_None:
   "\<lbrakk>valid_replies'_sc_asrt rptr s; replyTCBs_of s rptr = Some tptr;
     st_tcb_at' P tptr s; \<not> P (BlockedOnReply (Some rptr))\<rbrakk>
    \<Longrightarrow> replySCs_of s rptr = None"

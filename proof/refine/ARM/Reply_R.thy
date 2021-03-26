@@ -64,7 +64,7 @@ lemma updateReply_reply_projs:
        P (\<lambda>a. if a = rptr then replyNext_of (f ko) else replyNexts_of s a)
          (\<lambda>a. if a = rptr then replyPrev (f ko) else replyPrevs_of s a)
          (\<lambda>a. if a = rptr then replyTCB (f ko) else replyTCBs_of s a)
-         (\<lambda>a. if a = rptr then replySc (f ko) else replySCs_of s a)\<rbrace>
+         (\<lambda>a. if a = rptr then replySC (f ko) else replySCs_of s a)\<rbrace>
    updateReply rptr f
    \<lbrace>\<lambda>_ s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)\<rbrace>"
   unfolding updateReply_def
@@ -1011,7 +1011,7 @@ lemma sc_replies_relation_replyNext_update:
   by (clarsimp simp: scs_of'_reply_update[simplified] obj_at'_def
                      replyPrevs_of_replyNext_update[simplified])
 
-(* sym_refs and prev/next; scReply and replySc *)
+(* sym_refs and prev/next; scReply and replySC *)
 
 lemma sym_refs_replySCs_of_None:
   "\<lbrakk>sym_refs (state_refs_of' s'); pspace_aligned' s'; pspace_distinct' s';
