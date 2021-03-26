@@ -576,7 +576,7 @@ lemma reply_unlink_sc_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>r. ko = Reply r \<and> reply_tcb r = None) reply and invs\<rbrace>
      reply_unlink_sc sc_ptr reply
    \<lbrace>\<lambda>rv. obj_at (\<lambda>ko. \<not> live ko \<and> is_reply ko) reply\<rbrace>"
-  unfolding reply_unlink_sc_def
+  unfolding reply_unlink_sc_def update_sk_obj_ref_def
   apply (wpsimp wp: update_sched_context_obj_at_impossible
                     simple_obj_set_prop_at get_simple_ko_wp
                     set_simple_ko_obj_at_disjoint hoare_vcg_all_lift

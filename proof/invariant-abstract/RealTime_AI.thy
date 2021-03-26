@@ -940,16 +940,12 @@ lemma reply_unlink_sc_iflive[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_disj_lift
                     hoare_vcg_all_lift get_simple_ko_wp)
   apply (safe; (drule(1) ko_at_obj_congD; clarsimp)+)
-    apply (fastforce simp: live_def obj_at_def live_reply_def
-                    dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
-   apply (subgoal_tac "xa \<in> set (sc_replies scb)")
-    apply (fastforce simp: obj_at_def
-                    dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
-                           valid_replies_in_replies_sc_live
-                    intro: sc_replies_sc_at_ko_atI)
-   apply (fastforce intro: list.set_sel)
-  apply (fastforce simp: live_def live_reply_def obj_at_def
-                  dest!: if_live_then_nonz_capD2 valid_objs_ko_at)
+  apply (subgoal_tac "xa \<in> set (sc_replies scb)")
+   apply (fastforce simp: obj_at_def
+                   dest!: if_live_then_nonz_capD2 valid_sched_object_reply_at
+                          valid_replies_in_replies_sc_live
+                   intro: sc_replies_sc_at_ko_atI)
+  apply (fastforce intro: list.set_sel)
   done
 
 lemma reply_unlink_tcb_iflive[wp]:

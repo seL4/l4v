@@ -152,7 +152,7 @@ where
        case tl sc_replies of
            [] \<Rightarrow> return ()
          | r'#_ \<Rightarrow> set_reply_obj_ref reply_sc_update r' (Some sc_ptr); \<comment> \<open>fix up the refs\<close>
-       set_reply reply_ptr (reply_sc_update (K None) reply) \<comment> \<open>set @{text reply_sc} to None\<close>
+       set_reply_obj_ref reply_sc_update reply_ptr None \<comment> \<open>set @{text reply_sc} to None\<close>
      od
      else do
        assert (reply_sc reply = None); \<comment> \<open>only the head of the list should point to the sc\<close>

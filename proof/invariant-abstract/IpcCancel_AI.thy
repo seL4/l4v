@@ -147,8 +147,7 @@ global_interpretation sched_context_donate: non_reply_op "sched_context_donate s
 global_interpretation reply_unlink_sc: non_reply_tcb_op "reply_unlink_sc scp rp"
   apply unfold_locales
   unfolding reply_unlink_sc_def
-  apply (wpsimp wp: set_reply_reply_sc_update_reply_tcb_reply_at get_simple_ko_wp)
-  by (clarsimp simp: reply_tcb_reply_at_def obj_at_def)
+  by (wpsimp wp: set_reply_reply_sc_update_reply_tcb_reply_at get_simple_ko_wp)
 
 lemma reply_remove_st_tcb_at[wp]:
   "\<lbrace> \<lambda>s. if t'=t then P (P' Inactive) else P (st_tcb_at P' t' s) \<rbrace>
