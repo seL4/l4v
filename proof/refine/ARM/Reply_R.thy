@@ -562,7 +562,7 @@ lemma replyRemoveTCB_sch_act_wf:
 
 lemma replyRemoveTCB_invs':
   "replyRemoveTCB tptr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
+  unfolding invs'_def valid_state'_def valid_dom_schedule'_def
   apply (wpsimp wp: replyRemoveTCB_sym_refs_list_refs_of_replies' replyRemoveTCB_valid_idle'
                     valid_irq_node_lift valid_irq_handlers_lift' valid_irq_states_lift'
                     irqs_masked_lift replyRemoveTCB_sch_act_wf
@@ -788,7 +788,8 @@ crunches bindScReply
   and tcb_at'[wp]: "tcb_at' t"
   and cte_wp_at'[wp]: "cte_wp_at' P p"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift simp: crunch_simps valid_mdb'_def)
+  (wp: crunch_wps hoare_vcg_all_lift valid_irq_node_lift
+   simp: crunch_simps valid_mdb'_def valid_dom_schedule'_def)
 
 crunches rescheduleRequired, scheduleTCB
   for valid_tcb_state'[wp]: "valid_tcb_state' ts"

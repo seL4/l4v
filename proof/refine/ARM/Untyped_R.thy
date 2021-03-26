@@ -3619,7 +3619,7 @@ lemma updateFreeIndex_clear_invs':
         \<and> descendants_of' src (ctes_of s) = {}\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-  apply (clarsimp simp:invs'_def valid_state'_def)
+  apply (clarsimp simp:invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wp updateFreeIndex_valid_pspace_no_overlap')
    apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
    apply (wp updateFreeIndex_valid_pspace_no_overlap' sch_act_wf_lift valid_queues_lift
@@ -5287,7 +5287,7 @@ lemma insertNewCap_invs':
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule insertNewCap_nullcap)
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
              valid_queues_lift cur_tcb_lift tcb_in_cur_domain'_lift

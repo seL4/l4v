@@ -423,8 +423,9 @@ lemma isnt_irq_handler_strg:
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> ARM_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i; wpsimp wp: dmo_maskInterrupt simp: ARM_H.invokeIRQHandler_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_masks'_def
-                        valid_machine_state'_def ct_not_inQ_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def valid_irq_masks'_def
+                        valid_machine_state'_def ct_not_inQ_def
+                        ct_in_current_domain_ksMachineState)
   done
 
 lemma invoke_irq_handler_invs'[wp]:
@@ -628,7 +629,7 @@ lemma threadState_case_if:
 lemma tcbSchedAppend_invs_but_ct_not_inQ':
   "\<lbrace>invs' and st_tcb_at' runnable' t \<rbrace>
    tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
              valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
