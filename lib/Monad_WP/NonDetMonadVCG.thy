@@ -1210,6 +1210,15 @@ lemma hoare_vcg_conj_lift:
   apply (rule hoare_pre_imp [OF _ y], simp)
   done
 
+lemma hoare_vcg_conj_lift':
+  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>"
+  shows      "\<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
+  apply (subst bipred_conj_def[symmetric], rule hoare_post_conj)
+   apply (rule hoare_pre_imp [OF _ x], simp)
+  apply (rule hoare_pre_imp [OF _ y], simp)
+  done
+
 lemma hoare_vcg_conj_liftE1:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> Q' r s\<rbrace>,\<lbrace>E\<rbrace>"
