@@ -520,8 +520,8 @@ lemma gbep_ret':
       \<Longrightarrow> getBlockingObject st = return epPtr"
   by (auto simp add: getBlockingObject_def epBlocked_def assert_opt_def)
 
-lemma replySc_None_not_head:
-  "replySc reply = None \<longleftrightarrow> \<not> isHead (replyNext reply)"
+lemma replySC_None_not_head:
+  "replySC reply = None \<longleftrightarrow> \<not> isHead (replyNext reply)"
   by (fastforce simp: isHead_def getHeadScPtr_def split: reply_next.split_asm option.split_asm)
 
 lemma sr_inv_sc_with_reply_None_helper:
@@ -722,10 +722,10 @@ lemma replyRemoveTCB_corres:
              apply (case_tac sc_opt; simp split del: if_split add: bind_assoc)
 
               (** sc_with_reply rp s = None **)
-              apply (rule_tac F="replySc reply' = None" in corres_req)
+              apply (rule_tac F="replySC reply' = None" in corres_req)
                apply (fastforce dest!: sc_with_reply_None_reply_sc_reply_at dest: replySCs_of_cross
                                  simp: obj_at'_def projectKOs opt_map_left_Some)
-              apply (clarsimp simp: replySc_None_not_head)
+              apply (clarsimp simp: replySC_None_not_head)
   subgoal for reply'
     apply (simp only: bind_assoc[symmetric])
     apply (rule corres_symb_exec_r_sr)
@@ -797,7 +797,7 @@ lemma replyRemoveTCB_corres:
                                       and reply_sc_reply_at ((=) replysc) rp"
                           in corres_inst)
                    apply (rename_tac replysc)
-                   apply (rule_tac F="replySc reply' = replysc" in corres_req)
+                   apply (rule_tac F="replySC reply' = replysc" in corres_req)
                apply (fastforce dest!: replySCs_of_cross simp: obj_at'_def projectKOs opt_map_left_Some)
                    apply (case_tac "hd (sc_replies sc) = rp"; simp split del: if_split)
 

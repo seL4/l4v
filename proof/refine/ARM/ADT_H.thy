@@ -475,7 +475,7 @@ definition
   "mapScSize sc \<equiv> scBitsFromRefillLength' (length (scRefills sc)) - minSchedContextBits"
 
 definition replyMap :: "reply \<Rightarrow>  Structures_A.reply" where
-  "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySc r \<rparr>"
+  "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySC r \<rparr>"
 
 definition
   absHeap :: "(word32 \<rightharpoonup> vmpage_size) \<Rightarrow> (word32 \<rightharpoonup> nat) \<Rightarrow>

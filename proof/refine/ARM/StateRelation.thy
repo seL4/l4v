@@ -288,7 +288,7 @@ lemma refills_heads_equal_valid_sched_context':
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
-     reply_sc reply = replySc reply' \<and> reply_tcb reply = replyTCB reply'"
+     reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
 
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"

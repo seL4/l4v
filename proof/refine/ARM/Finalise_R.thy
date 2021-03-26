@@ -3278,7 +3278,7 @@ lemma cancelIPC_makes_unlive:
                            hoare_vcg_all_lift hoare_drop_imps threadSet_weak_sch_act_wf)
          apply (frule obj_at_replyTCBs_of,
                 frule (1) valid_replies'_other_state;
-                  clarsimp simp: valid_replies'_sc_asrt_replySc_None)
+                  clarsimp simp: valid_replies'_sc_asrt_replySC_None)
          apply cancelIPC_makes_unlive_hammer
         (* BlockedOnReply*)
         apply (wpsimp wp: replyRemoveTCB_makes_unlive threadSet_pred_tcb_no_state
