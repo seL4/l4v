@@ -2174,66 +2174,6 @@ crunches possibleSwitchTo
 global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
   by typ_at_props'
 
-lemma possibleSwitchTo_sch_act[wp]:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wpsimp simp: possibleSwitchTo_def wp: inReleaseQueue_wp threadGet_wp)
-  by (fastforce simp: obj_at'_def tcb_in_cur_domain'_def)
-
-lemma possibleSwitchTo_weak_sch_act[wp]:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding possibleSwitchTo_def
-  apply (wpsimp wp: inReleaseQueue_wp threadGet_wp rescheduleRequired_weak_sch_act_wf)
-  by (auto simp: obj_at'_def weak_sch_act_wf_def tcb_in_cur_domain'_def
-                 projectKO_eq ps_clear_domE)
-
-lemma possibleSwitchTo_iflive'[wp]:
-  "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' t
-      and (\<lambda>s. \<forall>t. ksSchedulerAction s = SwitchToThread t
-                   \<longrightarrow> st_tcb_at' runnable' t s)\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  by (wpsimp simp: possibleSwitchTo_def inReleaseQueue_def
-               wp: hoare_vcg_if_lift2 hoare_drop_imps)
-
-lemma possibleSwitchTo_ct_idle_or_in_cur_domain'[wp]:
-  "possibleSwitchTo t \<lbrace>ct_idle_or_in_cur_domain'\<rbrace>"
-  apply (wpsimp simp: possibleSwitchTo_def
-                  wp: threadGet_wp inReleaseQueue_wp)
-  apply (fastforce simp: obj_at'_def ct_idle_or_in_cur_domain'_def)
-  done
-
-lemma possibleSwitchTo_utr[wp]:
-  "possibleSwitchTo t \<lbrace>untyped_ranges_zero'\<rbrace>"
-  by (wpsimp simp: cteCaps_of_def o_def wp: untyped_ranges_zero_lift)
-
-lemma possibleSwitchTo_all_invs_but_ct_not_inQ':
-  "\<lbrace>\<lambda>s. all_invs_but_ct_not_inQ' s \<and> st_tcb_at' runnable' t s
-        \<and> valid_objs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
-        \<and> sch_act_simple s \<and> ex_nonz_cap_to' t s\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  unfolding valid_dom_schedule'_def
-  apply wp
-   apply (rule hoare_use_eq_irq_node', wp)
-   apply (wpsimp wp: typ_at_lift_valid_irq_node' valid_irq_handlers_lift'
-                     cteCaps_of_ctes_of_lift irqs_masked_lift)
-  apply clarsimp
-  apply (intro conjI; fastforce?)
-  by (metis fold_list_refs_of_replies')
-
-lemma possibleSwitchTo_sch_act_not_other:
-  "\<lbrace>\<lambda>s. sch_act_not t' s \<and> t' \<noteq> t\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>_. sch_act_not t'\<rbrace>"
-  apply (clarsimp simp: possibleSwitchTo_def)
-  apply (wpsimp wp: threadGet_wp inReleaseQueue_wp)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
 (* FIXME RT: move to AInvs *)
 lemma restart_thread_if_no_fault_reply_tcb_reply_at[wp]:
   "restart_thread_if_no_fault t \<lbrace>reply_tcb_reply_at ((=) (Some t')) r_opt\<rbrace>"
