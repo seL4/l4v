@@ -2910,14 +2910,14 @@ where
 abbreviation
   "ct_isSchedulable \<equiv> ct_active'
                        and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
-                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) (ksCurThread s))"
+                       and (\<lambda>s. pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of' s) (ksCurThread s))"
 
 definition
   isSchedulable_bool :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "isSchedulable_bool tcbPtr s'
     \<equiv> pred_map (\<lambda>tcb. runnable' (tcbState tcb) \<and> \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s') tcbPtr
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcb_scs_of' s') tcbPtr"
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of' s') tcbPtr"
 
 lemma isSchedulable_wp:
   "\<lbrace>\<lambda>s. \<forall>t. isSchedulable_bool tcbPtr s = t \<and> tcb_at' tcbPtr s \<longrightarrow> P t s\<rbrace> isSchedulable tcbPtr \<lbrace>P\<rbrace>"
@@ -2979,7 +2979,7 @@ lemma threadSet_isSchedulable_bool_nochange:
 lemma threadSet_isSchedulable_bool:
   "\<lbrace>\<lambda>s. runnable' st
       \<and> pred_map (\<lambda>tcb. \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s) t
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) t\<rbrace>
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of' s) t\<rbrace>
    threadSet (tcbState_update (\<lambda>_. st)) t
    \<lbrace>\<lambda>_. isSchedulable_bool t\<rbrace>"
   unfolding isSchedulable_bool_def threadSet_def

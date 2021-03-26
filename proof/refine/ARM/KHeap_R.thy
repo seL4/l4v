@@ -4022,7 +4022,7 @@ lemma shows
   obj_at'_sc_tcbs_of_equiv:
     "obj_at' (\<lambda>x. scTCB x = Some t) p s = (sc_at' p s \<and> scTCBs_of s p = Some t)"
   and obj_at'_tcb_scs_of_equiv:
-    "obj_at' (\<lambda>x. tcbSchedContext x = Some sc) p s = (tcb_at' p s \<and> tcb_scs_of' s p = Some sc)"
+    "obj_at' (\<lambda>x. tcbSchedContext x = Some sc) p s = (tcb_at' p s \<and> tcbSCs_of' s p = Some sc)"
   and obj_at'_replySCs_of_equiv:
     "obj_at' (\<lambda>a. replyNext a = Some (Head sc)) p s = (reply_at' p s \<and> replySCs_of s p = Some sc)"
   and obj_at'_scReplies_of_equiv:
@@ -4061,13 +4061,13 @@ lemma setObject_other_tcbs_of'[wp]:
   "setObject c (sc::sched_context) \<lbrace>\<lambda>s. P' (tcbs_of' s)\<rbrace>"
   by setObject_easy_cases+
 
-lemma setObject_cte_tcb_scs_of'[wp]:
-  "setObject c (reply::cte) \<lbrace>\<lambda>s. P' (tcb_scs_of' s)\<rbrace>"
+lemma setObject_cte_tcbSCs_of'[wp]:
+  "setObject c (reply::cte) \<lbrace>\<lambda>s. P' (tcbSCs_of' s)\<rbrace>"
   by setObject_easy_cases
 
-lemma threadSet_tcb_scs_of'_inv:
+lemma threadSet_tcbSCs_of'_inv:
   "\<forall>x. tcbSchedContext (f x) = tcbSchedContext x \<Longrightarrow>
-  threadSet f t \<lbrace>\<lambda>s. P (tcb_scs_of' s)\<rbrace>"
+  threadSet f t \<lbrace>\<lambda>s. P (tcbSCs_of' s)\<rbrace>"
   unfolding threadSet_def
   apply (rule hoare_seq_ext[OF _ get_tcb_sp'])
   apply (wpsimp wp: setObject_tcb_tcbs_of')
@@ -4139,7 +4139,7 @@ lemma ReplySchedContext_state_refs_of':
   done
 
 lemma TCBSC_pred_map_state_refs_of':
-  "\<lbrakk>tcb_scs_of' s p = Some scp; pspace_aligned' s; pspace_distinct' s\<rbrakk>
+  "\<lbrakk>tcbSCs_of' s p = Some scp; pspace_aligned' s; pspace_distinct' s\<rbrakk>
    \<Longrightarrow> (scp, TCBSchedContext) \<in> state_refs_of' s p"
   apply (clarsimp simp: TCBSchedContext_state_refs_of' obj_at'_tcb_scs_of_equiv projectKOs
                         ksPSpace_obj_at')
@@ -4220,10 +4220,10 @@ lemma getObject_tcb_wp:
                      split_def objBits_simps' loadObject_default_def
                      projectKOs obj_at'_def in_magnitude_check)
 
-lemma threadSet_tcb_scs_of':
-  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = t then tcbSchedContext (f (the (tcbs_of' s a))) else tcb_scs_of' s a)\<rbrace>
+lemma threadSet_tcbSCs_of':
+  "\<lbrace>\<lambda>s. P (\<lambda>a. if a = t then tcbSchedContext (f (the (tcbs_of' s a))) else tcbSCs_of' s a)\<rbrace>
    threadSet f t
-   \<lbrace>\<lambda>_ s. P (tcb_scs_of' s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (tcbSCs_of' s)\<rbrace>"
   unfolding threadSet_def
   apply (wpsimp wp: setObject_tcb_wp getObject_tcb_wp)
   apply (clarsimp simp: tcb_at'_ex_eq_all)

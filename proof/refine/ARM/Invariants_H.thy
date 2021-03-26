@@ -256,14 +256,14 @@ abbreviation tcb_of' :: "kernel_object \<Rightarrow> tcb option" where
 abbreviation tcbs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> tcb option" where
   "tcbs_of' s \<equiv> ksPSpace s |> tcb_of'"
 
-abbreviation tcb_scs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "tcb_scs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
+abbreviation tcbSCs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "tcbSCs_of' s \<equiv> tcbs_of' s |> tcbSchedContext"
 
 abbreviation scTCBs_of :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
   "scTCBs_of s \<equiv> scs_of' s |> scTCB"
 
 abbreviation scTCB_sym_refs where
-  "scTCB_sym_refs s \<equiv> sym_heap (tcb_scs_of' s) (scTCBs_of s)"
+  "scTCB_sym_refs s \<equiv> sym_heap (tcbSCs_of' s) (scTCBs_of s)"
 
 abbreviation scReply_sym_refs where
   "scReply_sym_refs s \<equiv> sym_heap (scReplies_of s) (replySCs_of s)"

@@ -4659,15 +4659,15 @@ lemma updateReply_reply_at'_wp:
   done
 
 crunches setThreadState
-  for tcb_scs_of'[wp]: "\<lambda>s. P (tcb_scs_of' s)"
-  (ignore: threadSet wp: threadSet_tcb_scs_of'_inv)
+  for tcbSCs_of'[wp]: "\<lambda>s. P (tcbSCs_of' s)"
+  (ignore: threadSet wp: threadSet_tcbSCs_of'_inv)
 
 crunches replyUnlink
-  for tcb_scs_of'[wp]: "\<lambda>s. P (tcb_scs_of' s)"
+  for tcbSCs_of'[wp]: "\<lambda>s. P (tcbSCs_of' s)"
   and scs_of'[wp]: "\<lambda>s. P (scs_of' s)"
 
 lemma replyUnlink_misc_heaps[wp]:
-  "replyUnlink rPtr tPtr \<lbrace>\<lambda>s. P (tcb_scs_of' s) (scTCBs_of s) (scReplies_of s) (replySCs_of s)\<rbrace>"
+  "replyUnlink rPtr tPtr \<lbrace>\<lambda>s. P (tcbSCs_of' s) (scTCBs_of s) (scReplies_of s) (replySCs_of s)\<rbrace>"
   by (rule hoare_weaken_pre, wps, wp, simp)
 
 lemma schedContextUpdateConsumed_scReplies_of[wp]:
@@ -4689,7 +4689,7 @@ lemma schedContextUpdateConsumed_sc_tcbs_of[wp]:
   done
 
 crunches schedContextUpdateConsumed
-  for tcb_scs_of'[wp]: "\<lambda>s. P (tcb_scs_of' s)"
+  for tcbSCs_of'[wp]: "\<lambda>s. P (tcbSCs_of' s)"
 
 crunches doIPCTransfer
   for replySCs_of[wp]: "\<lambda>s. P (replySCs_of s)"
@@ -4697,7 +4697,7 @@ crunches doIPCTransfer
 
 lemma schedContextUpdateConsumed_misc_heaps[wp]:
   "schedContextUpdateConsumed scPtr
-   \<lbrace>\<lambda>s. P (scReplies_of s) (replySCs_of s) (tcb_scs_of' s) (scTCBs_of s)\<rbrace>"
+   \<lbrace>\<lambda>s. P (scReplies_of s) (replySCs_of s) (tcbSCs_of' s) (scTCBs_of s)\<rbrace>"
   by (rule hoare_weaken_pre, wps, wp, simp)
 
 crunches doIPCTransfer
@@ -4705,11 +4705,11 @@ crunches doIPCTransfer
   (wp: crunch_wps ignore: setSchedContext simp: zipWithM_x_mapM)
 
 crunches doIPCTransfer
-  for scs_tcbs_of[wp]: "\<lambda>s. P (tcb_scs_of' s) (scTCBs_of s)"
-  (wp: crunch_wps threadSet_tcb_scs_of'_inv ignore: threadSet simp: zipWithM_x_mapM)
+  for scs_tcbs_of[wp]: "\<lambda>s. P (tcbSCs_of' s) (scTCBs_of s)"
+  (wp: crunch_wps threadSet_tcbSCs_of'_inv ignore: threadSet simp: zipWithM_x_mapM)
 
 crunches setEndpoint
-  for misc_heaps[wp]: "\<lambda>s. P (scReplies_of s) (replySCs_of s) (tcb_scs_of' s) (scTCBs_of s)"
+  for misc_heaps[wp]: "\<lambda>s. P (scReplies_of s) (replySCs_of s) (tcbSCs_of' s) (scTCBs_of s)"
   (wp: crunch_wps)
 
 lemma replyPush_sym_refs_list_refs_of_replies':
@@ -4779,7 +4779,7 @@ lemma replyPush_if_live_then_nonz_cap':
     apply (frule obj_at_ko_at'[where p=callerPtr], clarsimp)
     apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
     apply (clarsimp simp: valid_tcb'_def)
-   apply (subgoal_tac "(tcb_scs_of' s) callerPtr = Some scp")
+   apply (subgoal_tac "(tcbSCs_of' s) callerPtr = Some scp")
     apply (clarsimp simp: sym_heap_def)
    apply (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def projectKOs)
   apply (clarsimp simp: valid_idle'_def)
@@ -4953,8 +4953,8 @@ lemma cancelIPC_notin_epQueue:
   by (wpsimp wp: blockedCancelIPC_notin_epQueue hoare_drop_imps threadSet_valid_objs')
 
 crunches rescheduleRequired
-  for scs_tcbs_of[wp]: "\<lambda>s. P (tcb_scs_of' s) (scTCBs_of s)"
-  (wp: crunch_wps threadSet_tcb_scs_of'_inv ignore: threadSet)
+  for scs_tcbs_of[wp]: "\<lambda>s. P (tcbSCs_of' s) (scTCBs_of s)"
+  (wp: crunch_wps threadSet_tcbSCs_of'_inv ignore: threadSet)
 
 lemma maybeReturnSc_scTCB_sym_refs[wp]:
   "\<lbrace>scTCB_sym_refs and valid_objs'\<rbrace>
@@ -4965,11 +4965,11 @@ lemma maybeReturnSc_scTCB_sym_refs[wp]:
   apply (simp add: liftM_def)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
-  apply (wpsimp wp: setSchedContext_scTCBs_of threadSet_tcb_scs_of' | wps)+
+  apply (wpsimp wp: setSchedContext_scTCBs_of threadSet_tcbSCs_of' | wps)+
    apply (wpsimp wp: threadGet_wp)
   apply (clarsimp simp: tcb_at'_ex_eq_all)
   apply (drule sym, simp)
-  apply (subgoal_tac "(tcb_scs_of' s) t = Some (the (tcbSchedContext tcb))")
+  apply (subgoal_tac "(tcbSCs_of' s) t = Some (the (tcbSchedContext tcb))")
    apply (clarsimp simp: sym_heap_def)
    apply (subst (asm) sym_heap_symmetric[simplified sym_heap_def], simp)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def opt_map_def projectKOs)
@@ -4993,7 +4993,7 @@ lemma maybeReturnSc_scReply_sym_refs[wp]:
 
 crunches cleanReply
   for scTCBs_of[wp]: "\<lambda>s. P (scTCBs_of s)"
-  and tcb_scs_of'[wp]: "\<lambda>s. P (tcb_scs_of' s)"
+  and tcbSCs_of'[wp]: "\<lambda>s. P (tcbSCs_of' s)"
 
 lemma replyRemoveTCB_scTCBs_of[wp]:
   "replyRemoveTCB tptr \<lbrace>\<lambda>s. P (scTCBs_of s)\<rbrace>"
@@ -5002,8 +5002,8 @@ lemma replyRemoveTCB_scTCBs_of[wp]:
   apply (erule back_subst[where P=P], rule ext, clarsimp)
   by (clarsimp simp: opt_map_def obj_at'_real_def ko_wp_at'_def)
 
-lemma replyRemoveTCB_tcb_scs_of'[wp]:
-  "replyRemoveTCB tptr \<lbrace>\<lambda>s. P (tcb_scs_of' s)\<rbrace>"
+lemma replyRemoveTCB_tcbSCs_of'[wp]:
+  "replyRemoveTCB tptr \<lbrace>\<lambda>s. P (tcbSCs_of' s)\<rbrace>"
   unfolding replyRemoveTCB_def
   by (wpsimp wp: setSchedContext_scTCBs_of gts_wp')
 
@@ -5013,7 +5013,7 @@ lemma replyRemoveTCB_scTCB_sym_refs[wp]:
 
 crunches cancelIPC
   for scTCB_sym_refs[wp]: scTCB_sym_refs
-  (wp: crunch_wps threadSet_tcb_scs_of'_inv ignore: setSchedContext threadSet)
+  (wp: crunch_wps threadSet_tcbSCs_of'_inv ignore: setSchedContext threadSet)
 
 lemma cleanReply_scReply_sym_refs :
   "\<lbrace>\<lambda>s. sym_heap (scReplies_of s) (\<lambda>a. if a = rptr then None else replySCs_of s a)\<rbrace>

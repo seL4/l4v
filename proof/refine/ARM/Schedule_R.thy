@@ -1226,7 +1226,7 @@ lemma scheduleTCB_rct:
 lemma setThreadState_rct:
   "\<lbrace>\<lambda>s. (t = ksCurThread s \<longrightarrow> runnable' st
       \<and> pred_map (\<lambda>tcb. \<not>(tcbInReleaseQueue tcb)) (tcbs_of' s) t
-      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcb_scs_of' s) t)
+      \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of' s) t)
         \<and> ksSchedulerAction s = ResumeCurrentThread\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
@@ -1571,7 +1571,7 @@ lemma tcbInReleaseQueue_cross_rel:
 
 lemma isScActive_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and valid_objs and active_sc_tcb_at t)
-             (\<lambda>s'. pred_map ((\<lambda>scPtr. isScActive scPtr s')) (tcb_scs_of' s') t)"
+             (\<lambda>s'. pred_map ((\<lambda>scPtr. isScActive scPtr s')) (tcbSCs_of' s') t)"
   apply (rule cross_rel_imp[OF tcb_at'_cross_rel[where t=t]])
    apply (clarsimp simp: cross_rel_def)
    apply (subgoal_tac "pspace_relation (kheap s) (ksPSpace s')")
