@@ -54,7 +54,7 @@ lemma dmo_maskInterrupt:
 lemma dmo_maskInterrupt_True:
   "\<lbrace>invs'\<rbrace> doMachineOp (maskInterrupt True irq) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (simp add: valid_irq_masks'_def valid_machine_state'_def
                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done

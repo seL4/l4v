@@ -1391,9 +1391,8 @@ abbreviation
   "untyped_ranges_zero' s \<equiv> untyped_ranges_zero_inv (cteCaps_of s)
       (gsUntypedZeroRanges s)"
 
-(* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
-abbreviation
+definition
   "valid_dom_schedule' \<equiv>
    \<lambda>s. ksDomSchedule s \<noteq> [] \<and> (\<forall>x\<in>set (ksDomSchedule s). dschDomain x \<le> maxDomain \<and> 0 < dschLength x)
        \<and> ksDomSchedule s = ksDomSchedule (newKernelState undefined)
@@ -2779,6 +2778,13 @@ lemma valid_asid_pool_lift':
   shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
   by (cases ap) (simp|wp x typ_at_lifts_strong[where P=id] hoare_vcg_const_Ball_lift)+
 
+lemma valid_dom_schedule'_lift:
+  assumes dsi: "\<And>Q. \<lbrace>\<lambda>s. Q (ksDomScheduleIdx s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (ksDomScheduleIdx s)\<rbrace>"
+  assumes ds: "\<And>Q. \<lbrace>\<lambda>s. Q (ksDomSchedule s)\<rbrace> f \<lbrace>\<lambda>rv s. Q (ksDomSchedule s)\<rbrace>"
+    shows "\<lbrace>\<lambda>s. valid_dom_schedule' s\<rbrace> f \<lbrace>\<lambda>rv. valid_dom_schedule'\<rbrace>"
+   unfolding valid_dom_schedule'_def
+   by (wpsimp wp: dsi ds)
+
 lemma valid_bound_tcb_lift:
   "(\<And>T p. f \<lbrace>typ_at' T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_bound_tcb' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_ats'[symmetric] split: option.splits)
@@ -3890,6 +3896,7 @@ lemma invs'_gsCNodes_update[simp]:
              bitmapQ_defs
              valid_queues'_def valid_release_queue_def valid_release_queue'_def valid_irq_node'_def
              valid_irq_handlers'_def irq_issued'_def irqs_masked'_def valid_machine_state'_def
+             valid_dom_schedule'_def
              cur_tcb'_def)
   apply (cases "ksSchedulerAction s'")
   apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
@@ -3901,7 +3908,7 @@ lemma invs'_gsUserPages_update[simp]:
   apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs valid_queues'_def valid_release_queue_def valid_release_queue'_def
              valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
-             valid_machine_state'_def cur_tcb'_def)
+             valid_machine_state'_def cur_tcb'_def valid_dom_schedule'_def)
   apply (cases "ksSchedulerAction s'")
   apply (simp_all add: ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                        ct_not_inQ_def)
@@ -3913,11 +3920,11 @@ lemma pred_tcb'_neq_contra:
 
 lemma invs'_ksDomSchedule:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomSchedule s = KernelStateData_H.ksDomSchedule (newKernelState undefined)"
-unfolding invs'_def valid_state'_def by clarsimp
+unfolding invs'_def valid_state'_def valid_dom_schedule'_def by clarsimp
 
 lemma invs'_ksDomScheduleIdx:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomScheduleIdx s < length (KernelStateData_H.ksDomSchedule (newKernelState undefined))"
-unfolding invs'_def valid_state'_def by clarsimp
+unfolding invs'_def valid_state'_def valid_dom_schedule'_def by clarsimp
 
 lemmas invs'_implies =
   invs_cur' invs_iflive'

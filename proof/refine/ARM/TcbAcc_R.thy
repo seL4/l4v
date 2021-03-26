@@ -1445,7 +1445,7 @@ lemma threadSet_ct_idle_or_in_cur_domain':
 
 lemma threadSet_valid_dom_schedule':
   "\<lbrace> valid_dom_schedule'\<rbrace> threadSet F t \<lbrace>\<lambda>_. valid_dom_schedule'\<rbrace>"
-  unfolding threadSet_def
+  unfolding threadSet_def valid_dom_schedule'_def
   by (wp setObject_ksDomSchedule_inv hoare_Ball_helper)
 
 lemma threadSet_invs_trivialT:
@@ -5236,7 +5236,7 @@ lemma sts_invs_minor':
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
   apply (intro conjI impI)
@@ -5254,7 +5254,7 @@ lemma sts_invs':
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
   done
@@ -5760,7 +5760,7 @@ lemma tcbReleaseDequeue_invs'[wp]:
     and distinct_release_queue\<rbrace>
    tcbReleaseDequeue
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_state'_def
+  by (wpsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def
                wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
                    cteCaps_of_ctes_of_lift)
 
@@ -5942,7 +5942,7 @@ lemma tcbReleaseRemove_ct_not_inQ[wp]:
 
 lemma tcbReleaseRemove_invs':
   "tcbReleaseRemove tcbPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift tcbReleaseRemove_valid_queues
               simp: cteCaps_of_def o_def)

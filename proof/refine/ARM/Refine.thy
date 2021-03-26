@@ -447,7 +447,8 @@ lemma device_update_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
    apply (simp add: doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
                     gets_def get_def bind_def valid_def return_def)
-   by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def)
+   by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def
+                      valid_dom_schedule'_def)
 
 lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G
 

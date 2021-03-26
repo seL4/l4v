@@ -882,7 +882,7 @@ abbreviation (input) "all_invs_but_sch_extra \<equiv>
 lemma rescheduleRequired_all_invs_but_extra:
   "\<lbrace>\<lambda>s. all_invs_but_sch_extra s\<rbrace>
     rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
   apply (wp add: rescheduleRequired_ct_not_inQ irqs_masked_lift cur_tcb_lift
                  rescheduleRequired_sch_act' rescheduleRequired_valid_queues
