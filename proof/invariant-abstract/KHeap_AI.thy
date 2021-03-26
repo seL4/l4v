@@ -1083,8 +1083,10 @@ lemma ep_redux_simps:
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch irq_node_inv[wp]: set_simple_ko "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
+crunches set_simple_ko
+  for irq_node_inv[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and valid_irq_node[wp]: valid_irq_node
+  (wp: crunch_wps valid_irq_node_typ)
 
 lemma set_simple_ko_global_refs [wp]:
   "set_simple_ko f ntfn p \<lbrace>valid_global_refs\<rbrace>"
