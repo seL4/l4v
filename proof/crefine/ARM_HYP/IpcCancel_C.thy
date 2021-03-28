@@ -2108,8 +2108,8 @@ lemma ksReadyQueuesL2Bitmap_nonzeroI:
    done
 
 lemma clzl_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
-       \<lbrace>\<acute>ret__long = of_nat (word_clz (x_' s)) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0} Call clzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_clz (x___unsigned_long_' s))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply clarsimp
   apply (rule_tac x="ret__long_'_update f x" for f in exI)
