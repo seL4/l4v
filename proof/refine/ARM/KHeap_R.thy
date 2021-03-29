@@ -3721,7 +3721,6 @@ lemma valid_replies_sc_cross:
   apply (drule subsetD, force)
   apply (clarsimp simp: pred_tcb_at_eq_commute[symmetric])
   apply (frule (1) st_tcb_reply_state_refs)
-  apply clarsimp
   apply (drule (3) st_tcb_at_coerce_concrete)
   apply (drule replyTCBs_of_cross[where P="\<lambda>rtcb. rtcb = (Some tptr)" for tptr])
    apply (fastforce simp: sk_obj_at_pred_def2)

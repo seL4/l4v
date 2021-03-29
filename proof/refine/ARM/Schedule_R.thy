@@ -3603,7 +3603,7 @@ lemma schedule_corres:
 
 end
 
-lemma schedContextDonate_valid_queues:
+lemma schedContextDonate_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_objs'\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   (is "valid ?pre _ _")
   apply (clarsimp simp: schedContextDonate_def)
@@ -3624,7 +3624,7 @@ lemma schedContextDonate_valid_queues:
   apply (clarsimp simp: obj_at'_def inQ_def)
   done
 
-lemma schedContextDonate_valid_queues':
+lemma schedContextDonate_valid_queues'[wp]:
   "schedContextDonate sc t \<lbrace>valid_queues'\<rbrace>"
   apply (clarsimp simp: schedContextDonate_def)
   apply (rule hoare_seq_ext_skip, solves wpsimp)
@@ -3850,41 +3850,28 @@ crunches tcbReleaseRemove
   (wp: crunch_wps)
 
 lemma schedContextDonate_corres:
-  "corres dc (invs and sc_at scp and tcb_at thread and weak_valid_sched_action)
+  "corres dc (sc_at scp and tcb_at thread and weak_valid_sched_action and pspace_aligned and
+              pspace_distinct and valid_objs)
              (valid_objs' and valid_queues and valid_queues' and
               valid_release_queue and valid_release_queue')
              (sched_context_donate scp thread)
              (schedContextDonate scp thread)"
-  apply add_sym_refs
   apply (simp add: test_reschedule_def get_sc_obj_ref_def set_tcb_obj_ref_thread_set
                    schedContextDonate_def sched_context_donate_def schedContextDonate_corres_helper)
    apply (rule stronger_corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ get_sc_corres])
-       apply (rule corres_split_deprecated [OF _ corres_when2])
-           apply (rule corres_split_deprecated
-                      [OF threadset_corresT
-                          update_sc_no_reply_stack_update_ko_at'_corres
-                            [where f'="scTCB_update (\<lambda>_. Some thread)"]])
-                   apply (clarsimp simp: tcb_relation_def)
-                  apply (clarsimp simp: tcb_cap_cases_def)
-                 apply (clarsimp simp: tcb_cte_cases_def)
+     apply (rule corres_split [OF get_sc_corres])
+       apply (rule corres_split [OF corres_when2])
                 apply (clarsimp simp: sc_relation_def)
-               apply clarsimp
-              apply (clarsimp simp: objBits_def objBitsKO_def)
-             apply clarsimp
-            apply wpsimp
-           apply wpsimp
-          apply (clarsimp simp: sc_relation_def)
          apply (rule corres_assert_opt_assume_l)
          apply (rule corres_split_nor)
             apply (rule corres_split_nor)
                apply (rule corres_split_nor)
                   apply (rule corres_split_eqr)
-                     apply (rule_tac r'=sched_act_relation in corres_split_deprecated)
+                     apply (rule_tac r'=sched_act_relation in corres_split)
+                       apply (rule get_sa_corres)
                         apply (rule corres_when)
                          apply (case_tac rv; clarsimp simp: sched_act_relation_def sc_relation_def)
                         apply (rule rescheduleRequired_corres_weak)
-                       apply (rule get_sa_corres)
                       apply wpsimp
                      apply wpsimp
                     apply (rule gct_corres)
@@ -3915,10 +3902,22 @@ lemma schedContextDonate_corres:
             apply (rule tcbSchedDequeue_corres)
            apply (clarsimp simp: sc_relation_def)
           apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-         apply (wpsimp wp: tcbSchedDequeue_valid_queues hoare_vcg_all_lift
-                           tcbSchedDequeue_nonq)
-        apply (wpsimp wp: cong: if_cong)+
-    apply (frule invs_valid_objs)
+         apply (wpsimp wp: tcbSchedDequeue_valid_queues hoare_vcg_all_lift tcbSchedDequeue_nonq)
+           apply (rule corres_split_deprecated
+                      [OF threadset_corresT
+                          update_sc_no_reply_stack_update_ko_at'_corres
+                            [where f'="scTCB_update (\<lambda>_. Some thread)"]])
+                   apply (clarsimp simp: tcb_relation_def)
+                  apply (clarsimp simp: tcb_cap_cases_def)
+                 apply (clarsimp simp: tcb_cte_cases_def)
+                apply (clarsimp simp: sc_relation_def)
+               apply clarsimp
+              apply (clarsimp simp: objBits_def objBitsKO_def)
+             apply clarsimp
+            apply wpsimp
+           apply wpsimp
+          apply (wpsimp wp: hoare_drop_imp)+
+    apply (frule (1) valid_objs_ko_at)
     apply (fastforce simp: valid_obj_def valid_sched_context_def valid_bound_obj_def obj_at_def)
    apply (prop_tac "sc_at' scp s' \<and> tcb_at' thread s'")
     apply (fastforce elim: sc_at_cross tcb_at_cross simp: state_relation_def)

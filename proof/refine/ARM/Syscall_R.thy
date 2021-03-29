@@ -415,7 +415,7 @@ lemma pinv_corres:
             apply (rule corres_guard_imp)
               apply (rule corres_split_deprecated [OF _ gct_corres])
                 apply simp
-                apply (rule corres_split_deprecated [OF _ send_ipc_corres])
+                apply (rule corres_split_deprecated [OF _ sendIPC_corres])
                    apply (rule corres_trivial)
                    apply simp
                   apply simp
@@ -424,8 +424,9 @@ lemma pinv_corres:
                                    fault_tcbs_valid_states_to_except_set schact_is_rct_sane
                                    ct_in_state_def released_sc_tcb_at_def active_sc_tcb_at_def2)
              apply (intro conjI)
-              apply (fastforce elim: st_tcb_ex_cap)
-             apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+               apply (fastforce elim: st_tcb_ex_cap)
+              apply fastforce
+             apply (fastforce simp: pred_tcb_at_def obj_at_def dest: invs_cur_sc_tcb_symref)
             apply (clarsimp simp: pred_conj_def invs'_def cur_tcb'_def simple_sane_strg
                                   sch_act_simple_def)
            apply (rule corres_guard_imp)
