@@ -66,6 +66,8 @@ This module specifies the behavior of reply objects.
 
 > replyPop :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyPop replyPtr tcbPtr = do
+>     stateAssert sym_refs_asrt
+>         "replyPush: `sym_refs (state_refs_of' s)` must hold"
 >     reply <- getReply replyPtr
 >     tptr <- maybeToMonad $ replyTCB reply
 >     assert (tptr == tcbPtr) "replyPop: replyTCB must be equal to tcbPtr"
