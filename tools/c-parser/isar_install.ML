@@ -233,7 +233,8 @@ fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy 
                                                 \ global");
                              raise Fail "Bad global initialisation")
               val fakeTB = TermsTypes.TB {var_updator = error, var_accessor = error,
-                                          rcd_updator = error, rcd_accessor = error}
+                                          rcd_updator = error, rcd_accessor = error,
+                                          un_updator = error, un_accessor = error}
               fun varinfo s = stmt_translation.state_varlookup "" s mungedb
               val ei = expr_term lthy cse fakeTB varinfo rhs
               val ei = case gty of

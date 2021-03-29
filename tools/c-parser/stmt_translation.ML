@@ -711,6 +711,37 @@ in
   Const(fullname, ty) $ Kupd $ rcdterm
 end
 
+(* TODO scope the accessors *)
+fun un_accessor sg uninfo (uname, membname) unterm =
+  let
+    fun make_casename nm =
+      case String.explode nm of
+        c :: cs => String.implode (Char.toUpper c :: cs)
+      | _ => raise Fail "empty member name in union!"
+
+    val fullname = Sign.intern_const sg ((* uname ^ "." *)  prefix "get_" (make_casename membname))
+    val fldty = lookup_fld uninfo (uname, membname)
+  in
+    Const(fullname, type_of unterm --> fldty) $ unterm
+  end
+
+fun un_updator sg (_, membname) newvalue unterm =
+  let
+    fun make_casename nm =
+      case String.explode nm of
+        c :: cs => String.implode (Char.toUpper c :: cs)
+      | _ => raise Fail "empty member name in union!"
+
+    val unty = type_of unterm
+    val elemty = type_of newvalue
+
+    val constructor_name = Sign.intern_const sg (make_casename membname)
+    val constructor = Const (constructor_name, elemty --> unty)
+  in
+    constructor $ newvalue
+  end
+
+
 fun state_vlookup (fname_opt : string option) (s:MString.t) (state:CalculateState.mungedb) = let
 in
   case CNameTab.lookup state {varname = s, fnname = fname_opt} of
@@ -788,7 +819,9 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
       TB { var_updator = var_updator thy globty,
            var_accessor = var_accessor thy globty,
            rcd_updator = rcd_updator thy,
-           rcd_accessor = rcd_accessor thy rcdinfo}
+           rcd_accessor = rcd_accessor thy rcdinfo,
+           un_updator = un_updator thy,
+           un_accessor = un_accessor thy rcdinfo}
   val stmt_trans = stmt_term ctxt cse fname termbuilders
                              varinfo fninfo
                              statetype globty styargs ms

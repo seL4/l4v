@@ -798,7 +798,10 @@ fun expr_term ctxt cse tbuilders varinfo e : expr_info = let
   val expr_term = expr_term ctxt cse tbuilders varinfo
   val mk_rval = fn (f,cty) => mk_rval(f, cty, false, eleft e, eright e)
   val rval = rval_of
-  val TB {var_updator, var_accessor, rcd_updator, rcd_accessor, ...} =
+  val TB {var_updator, var_accessor,
+          rcd_updator, rcd_accessor,
+          un_updator, un_accessor,
+          ...} =
       tbuilders
   fun deref_action (ei : expr_info) : expr_info = let
     val ei = array_decay ei
@@ -1125,49 +1128,91 @@ in
         end
       | _ => error "Array dereference with impossible type"
     end
-  | StructDot (e0, fld) => let
-      val e0_val = expr_term e0
-      val e0_r = rval e0_val
-      val sname =
-          case ctype_of e0_val of
-            StructTy s => s
-          | _ => error "Expression on left of . doesn't have struct type"
-      fun heap_deref a = let
-          val struct_ty =
-              CalculateState.ctype_to_typ(thy, StructTy sname)
-          fun rval st =
-              mk_field_lvalue_ptr ctxt
-                 (a st,
-                  mk_qualified_field_name fld,
-                  struct_ty,
-                  CalculateState.ctype_to_typ(thy, tyinfo e))
-        in
-          deref_action (mk_rval(rval, Ptr (tyinfo e)))
-        end
-      fun addr_of_option f g =
-          case addr_of e0_val of
-            SOME a => f (heap_deref a)
-          | NONE => g
-      val addr = addr_of_option addr_of NONE
-      val lval = addr_of_option lval_of
-          (case lval_of e0_val of
-             SOME f => let
-                fun lval0 (value : term) st =
-                    f (rcd_updator (sname, fld) value (e0_r st)) st
+  | StructDot (e0, member) =>
+      let
+        val e0_val = expr_term e0
+        val e0_r = rval e0_val
+      in
+        case ctype_of e0_val of
+            StructTy sname =>
+              let
+                val struct_ty = CalculateState.ctype_to_typ(thy, StructTy sname)
+                fun heap_deref a =
+                  let
+                    fun rval st =
+                        mk_field_lvalue_ptr ctxt
+                          (a st,
+                            mk_qualified_field_name member,
+                            struct_ty,
+                            CalculateState.ctype_to_typ(thy, tyinfo e))
+                  in
+                    deref_action (mk_rval(rval, Ptr (tyinfo e)))
+                  end
+                fun addr_of_option f g =
+                    case addr_of e0_val of
+                      SOME a => f (heap_deref a)
+                    | NONE => g
+                val addr = addr_of_option addr_of NONE
+                val lval = addr_of_option lval_of
+                    (case lval_of e0_val of
+                      SOME f => let
+                          fun lval0 (value : term) st =
+                              f (rcd_updator (sname, member) value (e0_r st)) st
+                        in
+                          SOME lval0
+                        end
+                    | NONE => NONE)
+                fun rval st = addr_of_option (fn x => rval_of x st)
+                                            (rcd_accessor (sname, member) (e0_r st))
+                val lguard = lguards_of e0_val
+                val guard = guards_of e0_val
               in
-                SOME lval0
+                EI {lval = lval, addr = addr, rval = rval,
+                    cty = addr_of_option ctype_of (tyinfo e),
+                    ibool = false, lguard = lguard, guard = guard,
+                    left = eleft e, right = eright e}
               end
-           | NONE => NONE)
-      fun rval st = addr_of_option (fn x => rval_of x st)
-                                   (rcd_accessor (sname, fld) (e0_r st))
-      val lguard = lguards_of e0_val
-      val guard = guards_of e0_val
-    in
-      EI {lval = lval, addr = addr, rval = rval,
-          cty = addr_of_option ctype_of (tyinfo e),
-          ibool = false, lguard = lguard, guard = guard,
-          left = eleft e, right = eright e}
-    end
+          | UnionTy uname =>
+              let
+                val union_ty = CalculateState.ctype_to_typ(thy, UnionTy uname)
+                fun heap_deref a =
+                  let
+                    fun rval st =
+                        mk_field_lvalue_ptr ctxt
+                          (a st,
+                            mk_qualified_field_name member,
+                            union_ty,
+                            CalculateState.ctype_to_typ(thy, tyinfo e))
+                  in
+                    deref_action (mk_rval (rval, Ptr (tyinfo e)))
+                  end
+                fun addr_of_option f g =
+                    case addr_of e0_val of
+                      SOME a => f (heap_deref a)
+                    | NONE => g
+                val addr = addr_of_option addr_of NONE
+                val lval = addr_of_option lval_of
+                    (case lval_of e0_val of
+                      SOME f =>
+                        let
+                          fun lval0 (value : term) st =
+                              f (un_updator (uname, member) value (e0_r st)) st
+                        in
+                          SOME lval0
+                        end
+                    | NONE => NONE)
+                fun rval st = addr_of_option (fn x => rval_of x st)
+                                            (un_accessor (uname, member) (e0_r st))
+                val lguard = lguards_of e0_val
+                val guard = guards_of e0_val
+              in
+                EI {lval = lval, addr = addr, rval = rval,
+                    cty = addr_of_option ctype_of (tyinfo e),
+                    ibool = false, lguard = lguard, guard = guard,
+                    left = eleft e, right = eright e}
+              end
+          | _ => error "Lhs expression of . is not a struct or union type"
+      end
   | TypeCast(cty,e0) => typecast (thy, constify_abtype ecenv (node cty),
                                   expr_term e0)
   | Sizeof e0 => let

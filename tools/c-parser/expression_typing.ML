@@ -197,8 +197,7 @@ in
               |> the
               handle Option => Fail ("Failed to lookup member \""^fld^"\" in union \""^unname^"\"")
           in
-            (* TODO *)
-            Fail ("Union field access not implemented (yet)")
+            member_type
           end
       | _ => Fail "Attempt to field-dereference non-struct value"
     end

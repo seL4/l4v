@@ -261,7 +261,9 @@ datatype 'varinfo termbuilder =
          TB of {var_updator : bool -> 'varinfo -> term -> term -> term,
                 var_accessor : 'varinfo -> term -> term,
                 rcd_updator : string*string -> term -> term -> term,
-                rcd_accessor : string*string -> term -> term}
+                rcd_accessor : string*string -> term -> term,
+                un_updator : string*string -> term -> term -> term,
+                un_accessor : string*string -> term -> term}
                (* in updator functions, first term is the new value, second is
                   composite value being updated *)
 
