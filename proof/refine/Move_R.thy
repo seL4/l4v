@@ -468,4 +468,9 @@ lemma lookup_cap_and_slot_valid_fault3[wp]:
   apply (drule invs_valid_objs, fastforce)
   done
 
+(* An "excluded middle" lemma for sc_at_ppred *)
+lemma sc_at_ppred_exm:
+  "sc_at_ppred p P scp s = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n) scp s \<and> \<not> sc_at_ppred p (\<lambda>x. \<not> P x) scp s)"
+  by (fastforce simp: sc_at_pred_n_def obj_at_def is_sc_obj pred_neg_def)
+
 end

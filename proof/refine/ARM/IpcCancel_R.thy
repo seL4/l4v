@@ -188,17 +188,18 @@ lemma replyTCB_update_corres:
       apply (simp add: reply_relation_def)
   by (wpsimp simp: obj_at'_def replyPrev_same_def)+
 
-lemma reply_unlink_tcb_corres:
-  "\<lbrakk>st = Structures_A.BlockedOnReceive ep (Some rp) pl
-    \<or> st = Structures_A.BlockedOnReply rp\<rbrakk> \<Longrightarrow>
-   corres dc
+lemma replyUnlinkTcb_corres:
+  "corres dc
      (valid_tcbs and pspace_aligned and pspace_distinct
-       and st_tcb_at ((=) st) t and reply_tcb_reply_at ((=) (Some t)) rp)
-          (valid_tcbs' and valid_release_queue_iff)
-        (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "_ \<Longrightarrow> corres _ _ ?conc_guard _ _")
+       and st_tcb_at (\<lambda>st. \<exists>ep pl. st = Structures_A.BlockedOnReceive ep (Some rp) pl
+                           \<or> st = Structures_A.BlockedOnReply rp) t
+       and reply_tcb_reply_at ((=) (Some t)) rp)
+        (valid_tcbs' and valid_release_queue_iff)
+        (reply_unlink_tcb t rp) (replyUnlink rp t)" (is "corres _ _ ?conc_guard _ _")
   apply (rule_tac Q="?conc_guard
-              and st_tcb_at' (\<lambda>st. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp)
-                                 \<or> st = BlockedOnReply (Some rp)) t" in corres_cross_over_guard)
+         and st_tcb_at' (\<lambda>st. (\<exists>ep pl. st = BlockedOnReceive ep (receiver_can_grant pl) (Some rp))
+                               \<or> st = BlockedOnReply (Some rp)) t"
+         in corres_cross_over_guard)
    apply clarsimp
    apply (drule (1) st_tcb_at_coerce_concrete; clarsimp simp: state_relation_def)
    apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
@@ -333,10 +334,8 @@ lemma blocked_cancel_ipc_corres:
                                  and st_tcb_at' ((=) st') t"
                       in corres_split_deprecated [OF _ set_ep_corres])
             apply (rule corres_guard_imp)
-              apply (rule corres_split_deprecated [OF _ reply_unlink_tcb_corres])
-                 apply (rule sts_corres)
-                 apply simp
-                apply fastforce
+              apply (rule corres_split_deprecated [OF _ replyUnlinkTcb_corres])
+                apply (rule sts_corres, simp)
                apply wpsimp
               apply (wpsimp wp: replyUnlink_valid_objs')
              apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -391,17 +390,17 @@ lemma blocked_cancel_ipc_corres:
       apply (frule (1) Receive_or_Send_ep_at'[rotated], blast)
       apply (fastforce simp: valid_ep'_def)
      apply (wpsimp wp: getEndpoint_wp hoare_vcg_conj_lift get_simple_ko_wp)+
-   apply (frule (2) Receive_or_Send_ep_at)
-   apply (clarsimp simp: obj_at_def is_ep pred_tcb_at_def)
+   apply (frule (2) Receive_or_Send_ep_at, clarsimp)
    apply (rule conjI, clarsimp)
-    apply (drule st_tcb_recv_reply_state_refs)
-     apply (fastforce simp: pred_tcb_at_def obj_at_def)
+    apply (drule (1) st_tcb_recv_reply_state_refs)
     apply (clarsimp simp: sk_obj_at_pred_def obj_at_def)
    apply (rule conjI)
-    apply (erule (1) valid_objsE[where x=epPtr], clarsimp simp: valid_obj_def)
-   apply (erule disjE)
-    apply (fastforce dest!: sym_ref_BlockedOnReceive_RecvEP)
-   apply (fastforce dest!: sym_ref_BlockedOnSend_SendEP)
+    apply (clarsimp simp: obj_at_def)
+    apply (erule (1) valid_objsE[where x=epPtr])
+    apply (clarsimp simp: valid_obj_def)
+   apply (erule disjE; clarsimp simp: obj_at_def pred_tcb_at_def)
+    apply (frule (2) sym_ref_BlockedOnReceive_RecvEP[OF _ _ sym], simp)
+   apply (frule (2) sym_ref_BlockedOnSend_SendEP[OF _ _ sym], simp)
   apply clarsimp
   apply (rule context_conjI)
    apply (erule (1) Receive_or_Send_ep_at'[rotated])
@@ -689,15 +688,13 @@ lemma no_fail_sc_wtih_reply_None_helper:
   done
 
 lemma replyRemoveTCB_corres:
-  "\<lbrakk> st = Structures_A.thread_state.BlockedOnReply rp;
-     thread_state_relation st st' \<rbrakk> \<Longrightarrow>
-   corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_replies
-              and st_tcb_at ((=) st) t and (\<lambda>s. sym_refs (state_refs_of s)))
+  "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_replies
+              and st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReply rp)) t and (\<lambda>s. sym_refs (state_refs_of s)))
              (valid_objs' and valid_release_queue_iff and (\<lambda>s'. sym_refs (list_refs_of_replies' s')))
                 (reply_remove_tcb t rp) (replyRemoveTCB t)"
-  (is "\<lbrakk> _ ; _ \<rbrakk> \<Longrightarrow> corres _ ?abs_guard ?conc_guard _ _")
+  (is "corres _ ?abs_guard ?conc_guard _ _")
   apply add_sym_refs
-  apply (rule_tac Q="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
+  apply (rule_tac Q="st_tcb_at' ((=) (thread_state.BlockedOnReply (Some rp))) t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
   apply (clarsimp simp: reply_remove_tcb_def replyRemoveTCB_def isReply_def)
   apply (rule corres_guard_imp)
@@ -730,10 +727,10 @@ lemma replyRemoveTCB_corres:
     apply (simp only: bind_assoc[symmetric])
     apply (rule corres_symb_exec_r_sr)
        apply (rule corres_guard_imp)
-         apply (rule reply_unlink_tcb_corres[simplified dc_def])
-         apply (rule disjI2, simp)
-        apply (clarsimp dest!: valid_objs_valid_tcbs st_tcb_reply_state_refs
-                         simp: obj_at_def is_reply reply_tcb_reply_at_def)
+         apply (rule replyUnlinkTcb_corres[simplified dc_def])
+        apply (clarsimp dest!: valid_objs_valid_tcbs)
+        apply (frule (1) st_tcb_reply_state_refs)
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb is_reply reply_tcb_reply_at_def)
        apply simp
       apply (erule sr_inv_sc_with_reply_None_helper)
      apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
@@ -815,8 +812,7 @@ lemma replyRemoveTCB_corres:
                          apply (rule corres_symb_exec_r_sr)
                             apply (rule corres_guard_imp)
                              apply (rule corres_split[OF cleanReply_sc_with_reply_None_corres])
-                                apply (rule reply_unlink_tcb_corres[simplified dc_def])
-                                apply (rule disjI2, simp)
+                                apply (rule replyUnlinkTcb_corres[simplified dc_def])
                                apply wpsimp
                               apply wpsimp
                              apply simp
@@ -849,11 +845,14 @@ lemma replyRemoveTCB_corres:
                       apply (metis list.sel(1) list.sel(3) list.set_cases)
                      apply (clarsimp simp: getHeadScPtr_def reply_sc_reply_at_def obj_at_def is_reply
                                     split: reply_next.splits)
-                     apply (clarsimp dest!: valid_objs_valid_tcbs st_tcb_reply_state_refs
+                     apply (frule (1) st_tcb_reply_state_refs)
+                     apply (clarsimp dest!: valid_objs_valid_tcbs
                                       simp: obj_at_def is_reply reply_tcb_reply_at_def)
                      apply (clarsimp simp: opt_map_left_Some opt_map_def split: option.splits)
                      apply (rule context_conjI; clarsimp simp: vs_heap_simps obj_at_def)
-                     apply (metis list.sel(1) list.set_cases)
+                     apply (intro conjI)
+                      apply (metis list.sel(1) list.set_cases)
+                     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
                     apply clarsimp
                     apply (rule conjI)
                      apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
@@ -894,12 +893,12 @@ lemma replyRemoveTCB_corres:
                            apply (rule corres_symb_exec_r_sr)
                               apply (rule corres_guard_imp)
                                 apply (rule corres_split[OF cleanReply_sc_with_reply_None_corres])
-                                  apply (rule reply_unlink_tcb_corres[simplified dc_def])
-                                  apply (rule disjI2, simp)
+                                  apply (rule replyUnlinkTcb_corres[simplified dc_def])
                                  apply wpsimp
                                 apply wpsimp
-                               apply (fastforce dest: valid_objs_valid_tcbs st_tcb_reply_state_refs
-                                                simp: obj_at_def is_reply reply_tcb_reply_at_def)
+                               apply clarsimp
+                               apply (frule (1) st_tcb_reply_state_refs, frule valid_objs_valid_tcbs)
+                               apply (fastforce simp: obj_at_def is_reply reply_tcb_reply_at_def pred_tcb_at_def)
                               apply simp
                              apply (clarsimp cong: conj_cong)
                              apply (case_tac "replyPrev reply'"; simp)
@@ -1030,7 +1029,6 @@ lemma cancel_ipc_corres:
                       apply (rule replyRemoveTCB_corres)
                        apply simp
                       apply (clarsimp simp: thread_state_relation_def)
-                      apply simp
                      apply (clarsimp simp: invs_implies)
                     apply (clarsimp simp: invs'_implies)
                    apply (rule corres_guard_imp)
@@ -2297,12 +2295,11 @@ lemma cancel_all_ipc_corres_helper:
                 apply (corressimp corres: restart_thread_if_no_fault_corres)
                 apply (fastforce simp: obj_at_def)
                apply (rule corres_guard_imp)
-                 apply (rule corres_split_deprecated[OF _ reply_unlink_tcb_corres])
+                 apply (rule corres_split_deprecated[OF _ replyUnlinkTcb_corres])
                     apply (rule corres_guard_imp)
                       apply (rule restart_thread_if_no_fault_corres)
                      apply simp
                     apply simp
-                   apply fastforce
                   apply (wpsimp wp: reply_unlink_tcb_valid_sched_action)
                  apply wpsimp
                 apply (fastforce simp: vs_all_heap_simps pred_tcb_at_def obj_at_def
@@ -2538,8 +2535,8 @@ proof -
         apply (rule not_idle_tcb_in_RecvEp; (fastforce simp: obj_at_def)?)
        apply (clarsimp simp: vs_all_heap_simps reply_unlink_ts_pred_def)
        apply (subst identity_eq)
-       apply (fastforce dest!: st_tcb_recv_reply_state_refs invs_sym_refs
-                         simp: pred_tcb_at_def obj_at_def reply_at_ppred_def)
+       apply (erule st_tcb_recv_reply_state_refs[OF _ invs_sym_refs, rotated])
+       apply (fastforce simp: pred_tcb_at_def obj_at_def reply_at_ppred_def)
       apply (clarsimp simp: valid_ep_def)
      apply (clarsimp simp: ep_relation_def)
     apply (wpsimp simp: get_ep_queue_def)

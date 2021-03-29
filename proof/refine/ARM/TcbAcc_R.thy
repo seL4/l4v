@@ -1522,6 +1522,18 @@ lemma getObject_tcb_sp:
   "\<lbrace>P\<rbrace> getObject r \<lbrace>\<lambda>t::tcb. P and ko_at' t r\<rbrace>"
   by (wp getObject_obj_at'; simp)
 
+lemma threadGet_sp':
+  "\<lbrace>P\<rbrace> threadGet f p \<lbrace>\<lambda>t. obj_at' (\<lambda>t'. f t' = t) p and P\<rbrace>"
+  including no_pre
+  apply (simp add: threadGet_getObject)
+  apply wp
+  apply (rule hoare_strengthen_post)
+   apply (rule getObject_tcb_sp)
+  apply clarsimp
+  apply (erule obj_at'_weakenE)
+  apply simp
+  done
+
 lemma threadSet_valid_objs':
   "\<lbrace>valid_objs' and (\<lambda>s. \<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (f tcb) s)\<rbrace>
   threadSet f t
@@ -1770,6 +1782,13 @@ lemma asUser_valid_queues[wp]:
   apply (simp add: asUser_def split_def)
   apply (wp hoare_drop_imps | simp)+
   apply (wp threadSet_valid_queues hoare_drop_imps | simp)+
+  done
+
+lemma asUser_valid_release_queue[wp]:
+  "asUser t m \<lbrace>valid_release_queue\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp hoare_drop_imps | simp)+
+  apply (wp threadSet_valid_release_queue hoare_drop_imps | simp)+
   done
 
 lemma asUser_ifunsafe'[wp]:

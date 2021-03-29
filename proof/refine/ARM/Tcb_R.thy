@@ -417,21 +417,6 @@ lemma asUser_valid_tcbs' [wp]:
              | simp add: valid_tcb'_def tcb_cte_cases_def)+
   done
 
-lemma asUser_valid_release_queue[wp]:
-  "asUser t m \<lbrace>valid_release_queue\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wp hoare_drop_imps | simp)+
-  apply (wp threadSet_valid_release_queue hoare_drop_imps | simp)+
-  done
-
-lemma asUser_valid_release_queue'[wp]:
-  "asUser t m \<lbrace>valid_release_queue'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wp hoare_drop_imps | simp)+
-  apply (wp threadSet_valid_release_queue' threadGet_wp | simp)+
-  apply (clarsimp simp: valid_release_queue'_def obj_at'_real_def ko_wp_at'_def)
-  done
-
 lemma copyreg_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
@@ -604,7 +589,7 @@ lemma tcbSchedDequeue_not_queued:
   apply (rule_tac Q="\<lambda>rv. obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
                in hoare_post_imp)
    apply (clarsimp simp: obj_at'_def)
-  apply (wp tg_sp' [where P=\<top>, simplified] | simp)+
+  apply (wp threadGet_sp' [where P=\<top>, simplified] | simp)+
   done
 
 lemma threadSet_ct_in_state':
@@ -961,7 +946,7 @@ lemma threadSetPriority_onRunning_corres:
   apply (rule corres_symb_exec_l[OF _ _ thread_get_sp])
     apply (rule corres_symb_exec_l[OF _ _ thread_get_sp])
       apply (rule corres_symb_exec_l[OF _ _ gets_sp])
-        apply (rule corres_symb_exec_r[OF _ tg_sp'])
+        apply (rule corres_symb_exec_r[OF _ threadGet_sp'])
           apply (rule stronger_corres_guard_imp)
             apply (rule_tac F="t \<in> set (queues d p) = queued" in corres_gen_asm)
             apply (rule_tac r'="(=)" in corres_split_deprecated)

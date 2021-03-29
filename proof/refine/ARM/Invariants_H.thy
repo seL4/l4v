@@ -4151,6 +4151,11 @@ lemmas sym_refs_replyPrev_heap_ls
 
 (* end: sym_heap *)
 
+lemma no_replySC_valid_replies'_sc_asrt:
+  "replySCs_of s r = None \<Longrightarrow> valid_replies'_sc_asrt r s"
+  unfolding valid_replies'_sc_asrt_def
+  by (simp)
+
 (** sc_with_reply' **)
 
 definition sc_with_reply' where
