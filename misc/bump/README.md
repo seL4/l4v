@@ -76,6 +76,8 @@ merged. As soon as possible after it is merged, follow the bump script recipe
 below. If you think a proof update is required, or if you bump and regression
 subsequently fails, then flag the need for a verification patch.
 
+[testboard]: https://github.com/seL4/gh-testboard
+
 ## Verification patches
 
 A proof update for an seL4 update requires merging pull requests for both `l4v`
