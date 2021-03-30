@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# execute this in the root repo folder
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SEL4_DIR=seL4
+MANIFEST_DIR=.repo/manifests
+
+set -eo pipefail
+
+current_hash=$(grep '<project name="seL4"' "$MANIFEST_DIR/devel.xml" | sed -re 's/^.*revision="([0-9a-fA-F]+)".*$/\1/' | head -n1)
+current=$(git -C "$SEL4_DIR" log --oneline -n 1 "$current_hash")
+commits=$(git -C "$SEL4_DIR" log --oneline "$current_hash"..)
+latest=$(git -C "$SEL4_DIR" log --oneline -n 1)
+latest_hash=$(git -C "$SEL4_DIR" log --pretty=format:'%H' -n 1)
+
+echo "Manifest currently at: $current"
+echo "New commits:"
+echo "----"
+echo "$commits"
+echo
+
+read -p "Update manifest to $latest? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    echo >&2 "Exiting..."
+    exit 1
+fi
+
+echo "Generating new manifest..."
+python3 "$SCRIPT_DIR/ver-bump.py" -m "$MANIFEST_DIR/devel.xml" -r "$latest_hash"
+
+echo
+echo "Committing new manifest..."
+git -C "$MANIFEST_DIR" add devel.xml
+git -C "$MANIFEST_DIR" commit -m "Bump kernel revision to '$latest'"
+
+echo
+echo "Pushing new manifest..."
+git -C "$MANIFEST_DIR" push origin HEAD:master
