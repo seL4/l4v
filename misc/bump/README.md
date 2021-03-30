@@ -89,13 +89,15 @@ sure that everything is up to date, you can skip this step.
 
 Once you're happy that both PRs have been tested and reviewed appropriately,
 both can be merged. The seL4 PR should be merged first, followed without too
-much delay by the l4v PR. As soon as both PRs are merged, follow the bump script
-recipe below.
+much delay (see below) by the l4v PR. As soon as both PRs are merged, follow the
+bump script recipe below.
 
-Don't worry if it takes too long (Bamboo checks roughly every 5 min), the only
-adverse effect is a wasted test cycle that tests the seL4 PR without the l4v PR
-and/or a failure of the preprocess test. But do try to minimise the time the
-repositories are in an inconstent state with respect to each other.
+Timing: in between the three merges, the repos are in an inconsistent state with
+respect to each other. Don't worry if the merges take too long (Bamboo checks
+roughly every 5 min), the only adverse effect is a wasted test cycle that tests
+the seL4 PR without the l4v PR and/or a failure of the preprocess test. But do
+try to minimise the time the repositories are in an inconstent state with
+respect to each other, so that others can keep working.
 
 ## Using the bump script
 
@@ -124,3 +126,13 @@ To bump the manifest:
 
 6. In the root of the `repo` checkout (i.e. parent of `l4v` directory), run
    `./l4v/misc/bump/bump-ver-manifest` and follow the prompts.
+
+## Files in this directory
+
+* `bump-ver-manifest`: for interactive use, to update `verification-manifest`
+* `ver-bump.py`: python script that backs `bump-ver-manifest`
+* `bump-local-repos`: used in CI to update the branch `successful-decompile` in
+  [HOL4][] and [polyml][] repos. Not intended for manual or interactive use.
+
+[HOL4]: https://github.com/seL4/HOL/
+[polyml]: https://github.com/seL4/polyml/
