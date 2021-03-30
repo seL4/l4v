@@ -11,16 +11,16 @@ begin
 context kernel_all_substitute begin
 
 lemma ctzl_body_refines:
-  "simple_simpl_refines \<Gamma> (Guard ImpossibleSpec \<lbrace>\<acute>x \<noteq> 0\<rbrace>
-    (\<acute>ret__long :== ucast (bv_ctz (\<acute>x)))) ctzl_body"
+  "simple_simpl_refines \<Gamma> (Guard ImpossibleSpec \<lbrace>\<acute>x___unsigned_long \<noteq> 0\<rbrace>
+    (\<acute>ret__long :== ucast (bv_ctz (\<acute>x___unsigned_long)))) ctzl_body"
   apply (simp add: ctzl_body_def)
   apply (rule simple_simpl_refines_guarded_Basic_guarded_spec_body)
   apply (clarsimp simp: bv_ctz_def meq_def)
   done
 
 lemma clzl_body_refines:
-  "simple_simpl_refines \<Gamma> (Guard ImpossibleSpec \<lbrace>\<acute>x \<noteq> 0\<rbrace>
-    (\<acute>ret__long :== ucast (bv_clz (\<acute>x)))) clzl_body"
+  "simple_simpl_refines \<Gamma> (Guard ImpossibleSpec \<lbrace>\<acute>x___unsigned_long \<noteq> 0\<rbrace>
+    (\<acute>ret__long :== ucast (bv_clz (\<acute>x___unsigned_long)))) clzl_body"
   apply (simp add: clzl_body_def)
   apply (rule simple_simpl_refines_guarded_Basic_guarded_spec_body)
   apply (clarsimp simp: bv_clz_def meq_def)
