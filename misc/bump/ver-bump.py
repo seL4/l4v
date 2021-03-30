@@ -11,9 +11,11 @@ import sys
 import argparse
 import re
 
+
 def parseargs():
     """Parse script args"""
-    parser = argparse.ArgumentParser(description="Bump the seL4 revision in the verification manifest")
+    parser = argparse.ArgumentParser(
+        description="Bump the seL4 revision in the verification manifest")
     parser.add_argument('-m', '--manifest', required=True,
                         help='Path to the manifest file')
     parser.add_argument('-r', '--revision', required=True,
@@ -21,6 +23,7 @@ def parseargs():
 
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parseargs()
@@ -34,7 +37,7 @@ def main():
             if re.match('  \<project name="seL4" revision="[a-f0-9]{40}', line) and not found:
                 found = True
                 manifest.write(re.sub('revision="[a-f0-9]{40}',
-                        'revision="' + args.revision, line))
+                                      'revision="' + args.revision, line))
             else:
                 manifest.write(line)
 
@@ -44,6 +47,7 @@ def main():
 
         open(args.manifest, 'w').writelines(lines)
         exit(1)
+
 
 if __name__ == '__main__':
     sys.exit(main())
