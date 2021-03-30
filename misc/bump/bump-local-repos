@@ -1,0 +1,87 @@
+#! /bin/bash
+#
+# Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+
+# bumping some locally cloned repos
+
+# repos HOL4 and polyml exist as forks in the seL4 github org so that we can add
+# the branch "successful-decompile" which CI will bump on success.
+
+# three kinds of bump needed:
+#  - copy upstream master to master in clone in seL4 org
+#  - checkout master (= master in seL4 org, to begin a test)
+#  - push master to successful-decompile
+
+echo repos: ${BUMP_REPOS:=HOL4 HOL4/polyml}
+
+HOL=ssh://git@github.com/hol-theorem-prover/HOL
+POLY=ssh://git@github.com/polyml/polyml
+
+if [[ $1 == --checkout ]]
+then
+  BUMP_REMOTES=no
+  BUMP_PUSH_REMOTE=no
+  CHECKOUT=yes
+  CHECKOUT_BRANCH=$2
+  echo will checkout: ${CHECKOUT_BRANCH:=master}
+elif [[ $1 == --push ]]
+then
+  BUMP_REMOTES=no
+  BUMP_PUSH_BRANCH=$2
+fi
+
+echo remotes to fetch: ${BUMP_REMOTES:=$HOL $POLY}
+
+echo remote to push: ${BUMP_PUSH_REMOTE:=projects}
+
+if [[ $BUMP_PUSH_REMOTE != no ]]
+then
+  echo branch to push: ${BUMP_PUSH_BRANCH:=master}
+fi
+
+set -x
+
+for REPO in $BUMP_REPOS
+do
+  pushd $REPO
+
+  # repo may have left a detached git with no master
+  # creating branches will safely fail if they exist already
+
+  FIRST_KNOWN_REMOTE=$(git remote | head -n 1)
+  git fetch $FIRST_KNOWN_REMOTE
+  git branch master $FIRST_KNOWN_REMOTE/master
+  git branch recv-master master
+
+  if [[ $CHECKOUT == yes ]]
+  then
+    git checkout master
+  fi
+
+  if [[ $BUMP_REMOTES != no ]]
+  then
+    for REMOTE in $BUMP_REMOTES
+    do
+      # fetch remote master to here
+      # will fail safely if incompatible
+      if git fetch -n --dry-run $REMOTE master:recv-master
+      then
+        git fetch -n $REMOTE master:recv-master
+        git fetch . recv-master:master
+      fi
+    done
+  fi
+
+  echo 'Current status having fetched.'
+  git branch -v | cat
+
+  if [[ $BUMP_PUSH_REMOTE != no ]]
+  then
+    # push out again
+    git push $BUMP_PUSH_REMOTE master:$BUMP_PUSH_BRANCH
+  fi
+  popd
+done
