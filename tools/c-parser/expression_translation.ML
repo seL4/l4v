@@ -349,16 +349,20 @@ in
     in
       lmk_comb(@{const_name "Not"}, [ei'], Known bool, Signed Int, true)
     end
-  | Addr => let
-    in
-      case ctype_of ei of
+  | Addr =>
+      (case ctype_of ei of
         Ptr (Function _) => ei
-      | _ => (mk_rval(valOf (addr_of ei), Ptr (ctype_of ei), false, l, eiright ei)
-                |> add_ei_guards ei
-                   handle Option =>
-                          error (SourcePos.toString l ^
-                                 " taking address of value without one"))
-    end
+      | ty =>
+          let
+            val addr =
+              addr_of ei |> the
+                handle Option =>
+                  error (SourcePos.toString l ^
+                    " taking address of value without one")
+          in
+            mk_rval (addr, Ptr ty, false, l, eiright ei)
+            |> add_ei_guards ei
+          end)
   | BitNegate => let val ei' = strip_kb (intprom_ei thy ei)
                      val _ = tracing("After prom, argument to not has type "^
                                      tyname (ctype_of ei'))

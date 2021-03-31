@@ -148,10 +148,14 @@ datatype isa_type = refty of (isa_type option * int ctype)
 type isa_senv = isa_type rcd_env
 
 datatype var_sort =
-         Local of string | NSGlobal | AddressedGlobal | UntouchedGlobal
+  Local of string
+| NSGlobal
+| AddressedGlobal
+| UntouchedGlobal
+
 type isa_var = (nm_info * isa_type * var_sort)
 datatype isa_decl = vdecl of nm_info * isa_type * var_sort
-type staterep = isa_decl list
+type staterep = isa_decl list Symtab.table
 
 fun isa_type_to_cty (refty (_, c)) = c
   | isa_type_to_cty (recd(_, c)) = c
@@ -193,34 +197,32 @@ val translate_type = translate_inttype
    augment_decls below.
 
  *)
-fun translate_vi csenv = let
-  val untoucheds = calc_untouched_globals csenv
-  fun doit vi = let
+fun translate_vi csenv =
+  let
+    val untoucheds = calc_untouched_globals csenv
+    fun doit vi =
+      (case get_vi_type vi of
+        Function _ => NONE
+      | ty =>
+          let
+            val isaty = translate_type ty
+            val k = get_mname vi
+            val var_sort =
+                case get_vi_fname vi of
+                  SOME s => Local s
+                | NONE =>
+                  (if MSymTab.defined (get_addressed csenv) k then
+                      AddressedGlobal
+                    else if MSymTab.defined untoucheds k then
+                      UntouchedGlobal
+                    else
+                      NSGlobal)
+          in
+            SOME (get_vi_nm_info csenv vi, isaty, var_sort)
+          end)
   in
-    case get_vi_type vi of
-      Function _ => NONE
-    | ty => let
-        val isaty = translate_type ty
-        val k = get_mname vi
-        val var_sort =
-            case get_vi_fname vi of
-              SOME s => Local s
-            | NONE => let
-              in
-                if MSymTab.defined (get_addressed csenv) k then
-                  AddressedGlobal
-                else if MSymTab.defined untoucheds k then
-                  UntouchedGlobal
-                else
-                  NSGlobal
-              end
-      in
-        SOME (get_vi_nm_info csenv vi, isaty, var_sort)
-      end
+    doit
   end
-in
-  doit
-end
 
 fun isa_type_to_typ ctxt (ity : isa_type) = let
   fun m s = let
@@ -247,31 +249,46 @@ end
 fun ctype_to_typ (thy,c0ty) =
     isa_type_to_typ (thy2ctxt thy) (translate_inttype c0ty)
 
-fun create_state cse = let
-  val trans = translate_vi cse
-  fun innerfold (vi, acc) =
-      case trans vi of
-        NONE => acc
-      | SOME v => vdecl v :: acc
-  fun outerfold (_,vlist) acc = List.foldl innerfold acc vlist
-  val vs = Symtab.fold outerfold (get_vars cse) []
-in
-  vs
-end
+(*
+ * Program analysis return a table of variable occurences indexed by the variable name,
+ * We want a table of variable names, indexed by the function name they occur in.
+ *)
+fun create_state cse =
+  let
+    fun innerfold (vi, tab) =
+        case translate_vi cse vi of
+          NONE => tab
+        | SOME (v as (_,_,lorg)) =>
+            let 
+              val f =
+                case lorg of
+                  Local f => f
+                | _ => "<global>"
+            in
+              Symtab.cons_list (f,vdecl v) tab
+            end
+    fun outerfold (_,vlist) acc = List.foldl innerfold acc vlist
+    val tab = Symtab.fold outerfold (get_vars cse) Symtab.empty
+  in
+    tab
+  end
 
-fun split_vars thy (lvars, gvars) dlist = let
-  val split_vars = split_vars thy
-in
-  case dlist of
-    [] => (List.rev lvars, List.rev gvars)
-  | vdecl (s, ty, vsort) :: tail => let
-      val tuple = (s, isa_type_to_typ (thy2ctxt thy) ty, SOME (isa_type_to_cty ty), vsort)
-    in
-      case vsort of
-        Local _ => split_vars (tuple :: lvars, gvars) tail
-      | _ => split_vars (lvars, tuple :: gvars) tail
-    end
-end
+fun split_vars ctxt tab =
+  let
+    fun translate_vdecl (vdecl (s, ty, vsort)) =
+      (s, isa_type_to_typ ctxt ty, SOME (isa_type_to_cty ty), vsort);
+    val gvars = Symtab.lookup_list tab "<global>" |> map translate_vdecl
+    val lvars =
+      List.foldl
+        (fn ((key,vars),acc) =>
+          if key <> "<global>"
+          then map translate_vdecl vars @ acc
+          else acc)
+        []
+        (Symtab.dest tab)
+  in
+    (lvars, gvars)
+  end
 
 fun listvars f vns =
     case vns of
@@ -604,10 +621,10 @@ in
   recurse ([],[],[]) l
 end
 
-fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
-  val rest = state
+fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
   fun declare_vars thy = let
-    val (lvars, gvars) = split_vars thy ([], []) rest
+    val (lvars, gvars) = split_vars (thy2ctxt thy) all_vars
+
     open NameGeneration
     fun mk_globals_rcd thy = let
       val (_ (* utglobs *), nsglobs, _ (* adglobs *)) =
