@@ -3644,6 +3644,10 @@ crunches schedContextDonate
   (wp: threadSet_vrq_inv threadSet_vrq'_inv simp: crunch_simps)
 
 crunches schedContextDonate
+  for ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
+  (wp: threadSet_cap_to simp: tcb_cte_cases_def)
+
+crunches schedContextDonate
   for valid_irq_handlers'[wp]: "\<lambda>s. valid_irq_handlers' s"
   and valid_mdb'[wp]: valid_mdb'
   (ignore: threadSet

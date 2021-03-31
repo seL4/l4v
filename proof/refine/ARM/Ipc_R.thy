@@ -4730,7 +4730,6 @@ lemma replyPush_valid_idle':
      apply (wpsimp wp: threadGet_wp)+
   apply (clarsimp simp: tcb_at'_ex_eq_all valid_pspace'_def)
   apply (subgoal_tac "\<forall>kob. valid_reply' kob s \<longrightarrow> valid_reply' (replyTCB_update (\<lambda>_. Some callerPtr) kob) s")
-   apply (clarsimp simp: tcb_at'_ex_eq_all)
    apply (subgoal_tac "calleePtr \<noteq> idle_thread_ptr", simp)
     apply (subgoal_tac "y \<noteq> idle_sc_ptr", simp)
      apply (erule (3) not_idle_scTCB)
