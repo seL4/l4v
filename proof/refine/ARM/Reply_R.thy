@@ -191,15 +191,12 @@ lemma replyUnlink_valid_pspace'[wp]:
   done
 
 lemma replyUnlink_idle'[wp]:
-  "\<lbrace>valid_idle' and valid_pspace' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>valid_idle' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
    replyUnlink rptr tptr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding replyUnlink_def replyUnlink_assertion_def updateReply_def
   apply (wpsimp wp: hoare_vcg_imp_lift'
               simp: pred_tcb_at'_def)
-  apply normalise_obj_at'
-  apply (frule(1) reply_ko_at_valid_objs_valid_reply'[OF _ valid_pspace_valid_objs'])
-  apply (clarsimp simp: valid_reply'_def)
   done
 
 crunches replyUnlink
@@ -514,9 +511,7 @@ lemma objBits_sc_only_depends_on_scRefills:
   done
 
 lemma replyRemoveTCB_valid_idle':
-  "\<lbrace>valid_idle' and valid_pspace'\<rbrace>
-   replyRemoveTCB tptr
-   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  "replyRemoveTCB tptr \<lbrace>valid_idle'\<rbrace>"
   unfolding replyRemoveTCB_def
   apply (wpsimp wp: cleanReply_valid_pspace' updateReply_valid_pspace' hoare_vcg_if_lift
                     hoare_vcg_imp_lift' gts_wp' setObject_sc_idle' haskell_assert_wp
@@ -526,9 +521,6 @@ lemma replyRemoveTCB_valid_idle':
          ; simp?
          , normalise_obj_at'?
          , (solves \<open>clarsimp simp: valid_idle'_def idle_tcb'_def obj_at'_def isReply_def\<close>)?)
-     apply (frule(1) sc_ko_at_valid_objs_valid_sc'[OF _ valid_pspace_valid_objs']
-            , clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
-                             objBits_sc_only_depends_on_scRefills)+
   done
 
 lemma replyUnlink_sch_act[wp]:

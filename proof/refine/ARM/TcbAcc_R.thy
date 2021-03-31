@@ -4522,7 +4522,7 @@ crunches setQueue, scheduleTCB, tcbSchedDequeue
   (simp: crunch_simps wp: crunch_wps)
 
 lemma sts_valid_idle'[wp]:
-  "\<lbrace>valid_idle' and valid_pspace' and
+  "\<lbrace>valid_idle' and
     (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' ts)\<rbrace>
    setThreadState ts t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"

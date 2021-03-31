@@ -740,98 +740,69 @@ lemma isReply_awaiting_reply':
   "isReply st = awaiting_reply' st"
   by (case_tac st, (clarsimp simp add: isReply_def isBlockedOnReply_def)+)
 
-lemma doReply_invs[wp]:
-  "\<lbrace>tcb_at' t and reply_at' reply and invs' and sch_act_simple\<rbrace>
-   doReplyTransfer t reply grant
+lemma handleTimeout_invs':
+  "\<lbrace>invs' and st_tcb_at' active' tptr and sch_act_not tptr and ex_nonz_cap_to' tptr\<rbrace>
+   handleTimeout tptr timeout
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (clarsimp simp: handleTimeout_def)
+  apply wpsimp
+      apply (rename_tac tcb)
+      apply (rule_tac Q="\<lambda>_. invs'"
+                  and E="\<lambda>_. invs' and st_tcb_at' active' tptr and sch_act_not tptr
+                             and (\<lambda>s. False \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) tptr s)
+                             and ex_nonz_cap_to' tptr
+                             and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte
+                                                                               = cteCap (tcbTimeoutHandler tcb))
+                                                                        (tptr + n) s)"
+                   in hoare_post_impErr)
+        apply (rule sfi_invs_plus')
+       apply (wpsimp wp: getTCB_wp
+                   simp: isValidTimeoutHandler_def)+
+  apply (clarsimp simp: cte_wp_at'_obj_at' tcb_cte_cases_def  projectKOs obj_at'_def)
+  done
+
+crunches isValidTimeoutHandler
+  for inv[wp]: P
+
+lemma doReplyTransfer_invs'[wp]:
+  "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr and sch_act_simple\<rbrace>
+   doReplyTransfer sender replyPtr grant
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  (is "valid ?pre _ _")
   apply (simp add: doReplyTransfer_def liftM_def)
-  sorry (*
-  apply (rule hoare_seq_ext [OF _ gts_sp'])
-  apply (rule hoare_seq_ext [OF _ assert_sp])
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
-  apply (wp, wpc)
-        apply (wp)
-          apply (wp (once) sts_invs_minor'')
-          apply (simp)
-          apply (wp (once) sts_st_tcb')
-          apply (wp)[1]
-         apply (rule_tac Q="\<lambda>rv s. invs' s
-                                   \<and> t \<noteq> ksIdleThread s
-                                   \<and> st_tcb_at' awaiting_reply' t s"
-                 in hoare_post_imp)
-          apply (clarsimp)
-          apply (frule_tac t=t in invs'_not_runnable_not_queued)
-           apply (erule pred_tcb'_weakenE, case_tac st, clarsimp+)
-          apply (rule conjI, erule pred_tcb'_weakenE, case_tac st, clarsimp+)
-          apply (rule conjI, rule impI, erule pred_tcb'_weakenE, case_tac st)
-                  apply (clarsimp | drule(1) obj_at_conj')+
-          apply (clarsimp simp: invs'_def valid_state'_def ct_in_state'_def)
-          apply (drule(1) pred_tcb_at_conj')
-          apply (subgoal_tac "st_tcb_at' (\<lambda>_. False) (ksCurThread s) s")
-           apply (clarsimp)
-          apply (erule_tac P="\<lambda>st. awaiting_reply' st \<and> activatable' st"
-                  in pred_tcb'_weakenE)
-          apply (case_tac st, clarsimp+)
-         apply (wp cteDeleteOne_reply_pred_tcb_at)+
-        apply (clarsimp)
-        apply (rule_tac Q="\<lambda>_. (\<lambda>s. t \<noteq> ksIdleThread s)
-                          and cte_wp_at' (\<lambda>cte. \<exists>grant. cteCap cte = capability.ReplyCap t False grant) slot"
-                in hoare_strengthen_post [rotated])
-         apply (fastforce simp: cte_wp_at'_def)
-        apply (wp)
-        apply (rule hoare_strengthen_post [OF doIPCTransfer_non_null_cte_wp_at'])
-         apply (erule conjE)
-         apply assumption
-        apply (erule cte_wp_at_weakenE')
-        apply (fastforce)
-       apply (wp sts_invs_minor'' sts_st_tcb' static_imp_wp)
-             apply (rule_tac Q="\<lambda>rv s. invs' s \<and> sch_act_simple s
-                                   \<and> st_tcb_at' awaiting_reply' t s
-                                   \<and> t \<noteq> ksIdleThread s"
-                         in hoare_post_imp)
-              apply (clarsimp)
-              apply (frule_tac t=t in invs'_not_runnable_not_queued)
-               apply (erule pred_tcb'_weakenE, case_tac st, clarsimp+)
-              apply (rule conjI, erule pred_tcb'_weakenE, case_tac st, clarsimp+)
-              apply (rule conjI, rule impI, erule pred_tcb'_weakenE, case_tac st)
-                      apply (clarsimp | drule(1) obj_at_conj')+
-              apply (clarsimp simp: invs'_def valid_state'_def ct_in_state'_def)
-              apply (drule(1) pred_tcb_at_conj')
-              apply (subgoal_tac "st_tcb_at' (\<lambda>_. False) (ksCurThread s) s")
-               apply (clarsimp)
-              apply (erule_tac P="\<lambda>st. awaiting_reply' st \<and> activatable' st"
-                      in pred_tcb'_weakenE)
-              apply (case_tac st, clarsimp+)
-             apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 static_imp_wp
-                    | clarsimp simp add: inQ_def)+
-           apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t
-                                 and sch_act_simple and st_tcb_at' awaiting_reply' t"
-                   in hoare_strengthen_post [rotated])
-            apply (clarsimp)
-            apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def)
-             apply (rule conjI)
-              apply clarsimp
-             apply clarsimp
-             apply (drule idle_tcb_at'_split, clarsimp, drule (1) st_tcb_at'_eqD, simp)
-            apply clarsimp
-            apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def)
-             apply (erule pred_tcb'_weakenE, clarsimp)
-            apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def
-                                      obj_at'_def)
-            apply (rule conjI)
-             apply clarsimp
-             apply (frule invs'_not_runnable_not_queued)
-              apply (erule pred_tcb'_weakenE, clarsimp)
-             apply (frule (1) not_tcbQueued_not_ksQ)
-             apply simp
-            apply clarsimp
-           apply (wp cteDeleteOne_reply_pred_tcb_at hoare_drop_imp hoare_allI)+
-  apply (clarsimp simp add: isReply_awaiting_reply' cte_wp_at_ctes_of)
-  apply (auto dest!: st_tcb_idle'[rotated] simp:isCap_simps)
-  done *)
+  apply (rule hoare_seq_ext[OF _ get_reply_sp'], rename_tac reply)
+  apply (case_tac "replyTCB reply"; clarsimp; (solves wpsimp)?)
+  apply (rename_tac replyTCBPtr)
+  apply (rule hoare_seq_ext[OF _ gts_sp'])
+  apply (rule hoare_if; (solves wpsimp)?)
+  apply (rule_tac B="\<lambda>_. ?pre and tcb_at' replyTCBPtr and ex_nonz_cap_to' replyTCBPtr"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: replyRemove_invs')
+   apply (clarsimp cong: conj_cong
+                   simp: pred_tcb_at'_def)
+   apply (intro conjI impI; fastforce?)
+    apply (fastforce dest: invs_valid_idle'
+                     simp: isReply_def valid_idle'_def obj_at'_def projectKOs idle_tcb'_def)
+   apply (fastforce intro: if_live_then_nonz_capE'
+                     simp: ko_wp_at'_def obj_at'_def projectKOs isReply_def)
+  apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
+  apply (case_tac fault; clarsimp)
+   apply (wpsimp wp: doIPCTransfer_invs setThreadState_Running_invs')
+  apply (rule_tac Q="?pre and tcb_at' replyTCBPtr and ex_nonz_cap_to' replyTCBPtr
+                     and (\<lambda>s. replyTCBPtr \<noteq> ksIdleThread s)"
+               in hoare_weaken_pre[rotated])
+   using global'_no_ex_cap apply fastforce
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_fault_invs'\<close>)+
+  apply (rule hoare_seq_ext_skip)
+   apply clarsimp
+   apply (intro conjI impI)
+    apply (wpsimp wp: setThreadState_Restart_invs')
+   apply (wpsimp wp: sts_invs_minor')
+  apply (rule hoare_seq_ext[OF _ isRunnable_sp])
+  apply (wpsimp wp: possibleSwitchTo_invs' handleTimeout_invs' threadGet_wp hoare_drop_imps)
+  apply (fastforce simp: pred_tcb_at'_def obj_at'_def
+                  split: thread_state.splits)
+  done
 
 lemma ct_active_runnable' [simp]:
   "ct_active' s \<Longrightarrow> ct_in_state' runnable' s"

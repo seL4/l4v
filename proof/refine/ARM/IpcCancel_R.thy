@@ -1141,8 +1141,6 @@ lemma cancelSignal_invs':
        apply (fastforce simp: list_refs_of_replies'_def opt_map_def o_def split: option.splits)
       apply (rule conjI)
        apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
-      apply (rule conjI)
-       apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
       apply (case_tac "ntfnBoundTCB r")
        apply (clarsimp elim!: if_live_state_refsE)+
        apply (clarsimp dest!: idle'_only_sc_refs)
@@ -1249,18 +1247,11 @@ lemma blockedCancelIPC_if_live'[wp]:
   done
 
 lemma blockedCancelIPC_valid_idle':
-  "\<lbrace>valid_idle' and valid_pspace' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>valid_idle' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
    blockedCancelIPC st tptr epptr
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding blockedCancelIPC_def getBlockingObject_def
   apply (wpsimp wp: getEndpoint_wp)
-  apply (case_tac "remove1 tptr (epQueue ko)"; clarsimp; normalise_obj_at')
-   apply (clarsimp simp: valid_ep'_def)
-  apply (drule(1) ep_ko_at_valid_objs_valid_ep'[OF _ valid_pspace_valid_objs'])
-  apply (rename_tac ko a list)
-  apply (prop_tac "ko \<noteq> IdleEP \<longrightarrow> valid_ep' (epQueue_update (\<lambda>_. a # list) ko) s")
-   apply (clarsimp simp: nonempty_epQueue_remove1_valid_ep')
-  apply fastforce
   done
 
 crunches blockedCancelIPC
@@ -2734,15 +2725,11 @@ lemma replyUnlink_if_live_then_nonz_cap'[wp]:
   done
 
 lemma replyUnlink_valid_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s \<and> valid_pspace' s \<and> t \<noteq> ksIdleThread s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> t \<noteq> ksIdleThread s\<rbrace>
    replyUnlink r t
    \<lbrace>\<lambda>_ s. valid_idle' s\<rbrace>"
   unfolding replyUnlink_def updateReply_def
   apply (wpsimp wp: gts_wp' simp: valid_reply'_def)
-  apply (frule valid_pspace_valid_objs')
-  apply (frule(1) reply_ko_at_valid_objs_valid_reply')
-  apply (drule(1) ko_at'_inj)
-  apply (clarsimp simp: valid_reply'_def)
   done
 
 lemma replyUnlink_valid_irq_node'[wp]:
