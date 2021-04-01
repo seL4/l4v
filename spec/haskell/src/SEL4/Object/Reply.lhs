@@ -93,6 +93,8 @@ This module specifies the behavior of reply objects.
 
 > replyRemove :: PPtr Reply -> PPtr TCB -> Kernel ()
 > replyRemove replyPtr tcbPtr = do
+>     stateAssert sym_refs_asrt
+>         "replyRemove: `sym_refs (state_refs_of' s)` must hold"
 >     reply <- getReply replyPtr
 >     tptr <- maybeToMonad  $ replyTCB reply
 >     assert (tptr == tcbPtr) "replyRemove: replyTCB must be equal to tcbPtr"
