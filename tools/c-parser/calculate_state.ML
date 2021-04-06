@@ -472,11 +472,14 @@ fun mk_thy_types cse install thy = let
               informStr (2, "  union "^name^", with members: "^listvars #name members))
           struct_union_env
 
-      fun mk_ctype_instance (name, thy) = let
-        val struct_typ = Syntax.read_typ_global thy name
+      fun mk_ctype_instance su_name thy = let
+        val typ =
+          case su_name of
+            Union {name,...} => Syntax.read_typ_global thy name
+          | Struct {name,...} => Syntax.read_typ_global thy name
         (* establish the new ztype as a c_type, which requires no proof, as
             there are no axioms attached to c_type *)
-        val c_type_instance_t = Logic.mk_of_class (struct_typ, "CTypesDefs.c_type")
+        val c_type_instance_t = Logic.mk_of_class (typ, "CTypesDefs.c_type")
         val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
         val is_c_type_thm =
           Goal.prove_internal
@@ -487,32 +490,27 @@ fun mk_thy_types cse install thy = let
         val thy = Axclass.add_arity is_c_type_thm thy
         val _ =
           informStr
-            (2, "Proved  instance "^Syntax.string_of_typ (thy2ctxt thy) struct_typ^" :: c_type")
+            (2, "Proved  instance " ^ Syntax.string_of_typ (thy2ctxt thy) typ ^ " :: c_type")
       in
         thy
       end
-      fun define_isabelle_types (Struct {name,members}, thy) =
+      fun mk_record_or_union_datatype (Struct {name,members}) =
         let
-          val members' = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
+          val members = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
         in
-          (* TODO: shouldn't need to construct a singleton list here *)
-          RecursiveRecordPackage.define_record_type [{record_name=name, members=members'}] thy
+           RecursiveRecordPackage.Record {record_name=name,members=members}
         end
-       | define_isabelle_types (Union {name,members}, thy) =
+       | mk_record_or_union_datatype (Union {name,members}) =
         let
-          val members' = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
+          val members = map (fn {name,typ} => {name=name,typ=ctype_to_typ (thy,typ)}) members
         in
-          (* TODO: shouldn't need to construct a singleton list here *)
-          RecursiveRecordPackage.define_union_type [{union_name=name, members=members'}] thy
+          RecursiveRecordPackage.Union {union_name=name,members=members}
         end
     in
       thy
-      |> (fn thy => List.foldl define_isabelle_types thy struct_union_env)
-      |> (fn thy =>
-            List.foldl
-              mk_ctype_instance
-              thy
-              (map (fn Struct s => #name s | Union u => #name u) struct_union_env))
+      |> RecursiveRecordPackage.define_record_and_union_types
+        (map mk_record_or_union_datatype struct_union_env)
+      |> (fn thy => List.foldl (uncurry mk_ctype_instance) thy struct_union_env)
     end
   end
 
@@ -613,7 +611,7 @@ fun mk_thy_types cse install thy = let
       val (st', thy') =
           if install then
               array_type cse
-                         {element_type = ctype_to_typ(thy,cty), array_size =  n,
+                         {element_type = ctype_to_typ (thy, cty), array_size =  n,
                           state = st}
                          thy
           else
@@ -861,7 +859,7 @@ fun get_globals_data statety globty thy = let
 fun get_standard_globals statety globty thy = let
     val data = get_globals_data statety globty thy
     fun fld nm = let
-        val flds = filter (fn (fnm, ty) => Long_Name.base_name fnm = nm)
+        val flds = filter (fn (fnm, _) => Long_Name.base_name fnm = nm)
           (#fields data)
         val (fldnm, ty) = case flds of [v] => v
           | [] => error ("could not find " ^ nm ^ " in global fields.")

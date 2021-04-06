@@ -14,20 +14,23 @@
 
 signature RECURSIVE_RECORD_PACKAGE =
 sig
-  (* Constructs the translated type of C struct *)
-  (* no type variables allowed! *)
-  val define_record_type :
-    {record_name : string, members : {name : string, typ : typ} list} list -> theory -> theory
+  datatype record_or_union =
+    Union of {union_name : string, members : {name : string, typ : typ} list}
+  | Record of {record_name : string, members : {name : string, typ : typ} list}
 
   (* Constructs the translated type of C struct *)
-  val define_union_type :
-    {union_name : string, members : {name : string, typ : typ} list} list -> theory -> theory
+  (* no type variables allowed! *)
+  val define_record_and_union_types : record_or_union list -> theory -> theory
 
   val get_simpset : theory -> simpset
 end;
 
 structure RecursiveRecordPackage : RECURSIVE_RECORD_PACKAGE =
 struct
+
+datatype record_or_union =
+  Union of {union_name : string, members : {name : string, typ : typ} list}
+| Record of {record_name : string, members : {name : string, typ : typ} list}
 
 structure RecursiveRecordData = Theory_Data
 (
@@ -427,40 +430,15 @@ fun prove_union_rewrites ({union_name, members}, thy) =
 
 
 
-fun define_record_type records thy =
+fun define_record_and_union_types rcds_and_uns thy =
   let
-    (* define algebraic types *)
-    val fpT_names = map (Sign.full_name thy o Binding.name o #record_name) records
+    fun get_name (Record u) = #record_name u
+    | get_name (Union u) = #union_name u
 
-    fun spec_of {record_name, members} =
-      let
-        val b = Binding.name record_name
-        val field_bindings = map (fn {name,typ} => (Binding.name name, typ)) members
-        val case_bindings = [(( (Binding.empty, b), field_bindings), NoSyn)]
-      in
-        ((((([], b), NoSyn), case_bindings), (Binding.empty, Binding.empty, Binding.empty)), [])
-      end
-    val specs = map spec_of records
-  in
-    thy
-    |> Named_Target.theory_map
-       (BNF_FP_Def_Sugar.co_datatypes
-          BNF_FP_Rec_Sugar_Util.Least_FP
-          BNF_LFP.construct_lfp
-          (Ctr_Sugar.default_ctr_options, specs))
-    |> perhaps (try (BNF_LFP_Compat.datatype_compat_global fpT_names))
-    |> tap (fn _ => tracing("Defined struct types: "^
-                      String.concat (map (fn x => #record_name x ^ " ") records)))
-    |> (fn thy => List.foldl (uncurry define_record_functions) thy records)
-    |> (fn thy => List.foldl prove_record_rewrites thy records)
-  end
-
-fun define_union_type unions thy =
-  let
     (* define algebraic types *)
-    val fpT_names = map (Sign.full_name thy o Binding.name o #union_name) unions;
-  
-    fun spec_of {union_name, members} =
+    val fpT_names = map (Sign.full_name thy o Binding.name o get_name) rcds_and_uns
+
+    fun spec_of_un {union_name, members} =
       let
         val constructor = Binding.name union_name
         fun member_to_binding {name,typ} =
@@ -470,7 +448,34 @@ fun define_union_type unions thy =
         ((((([], constructor), NoSyn), case_bindings),
           (Binding.empty, Binding.empty, Binding.empty)), [])
       end
-    val specs = map spec_of unions;
+
+    fun spec_of_rcd {record_name,members} =
+      let
+        val b = Binding.name record_name
+        val field_bindings = map (fn {name,typ} => (Binding.name name, typ)) members
+        val case_bindings = [(( (Binding.empty, b), field_bindings), NoSyn)]
+      in
+        ((((([], b), NoSyn), case_bindings), (Binding.empty, Binding.empty, Binding.empty)), [])
+      end
+
+    fun spec_of (Union u) = spec_of_un u
+    | spec_of (Record r) = spec_of_rcd r
+
+    val specs = map spec_of rcds_and_uns
+
+    fun mk_trace_message rcds_and_uns =
+      let 
+        fun mk_trace_message_inner (Union {union_name,...}) = "union " ^ union_name
+        | mk_trace_message_inner (Record {record_name,...}) = "struct " ^ record_name
+      in
+        "Defined types: " ^ (String.concatWith " " (map mk_trace_message_inner rcds_and_uns))
+      end
+
+    fun define_fns (Record r) = define_record_functions r
+    | define_fns (Union u) = define_union_functions u
+
+    fun define_laws (Record r, thy) = prove_record_rewrites (r, thy)
+    | define_laws (Union u, thy) = prove_union_rewrites (u, thy)
   in
     thy
     |> Named_Target.theory_map
@@ -479,10 +484,9 @@ fun define_union_type unions thy =
           BNF_LFP.construct_lfp
           (Ctr_Sugar.default_ctr_options, specs))
     |> perhaps (try (BNF_LFP_Compat.datatype_compat_global fpT_names))
-    |> tap (fn _ => tracing("Defined union types: "^
-                      String.concat (map (fn x => #union_name x ^ " ") unions)))
-    |> (fn thy => List.foldl (uncurry define_union_functions) thy unions)
-    |> (fn thy => List.foldl prove_union_rewrites thy unions)
+    |> tap (fn _ => tracing(mk_trace_message rcds_and_uns))
+    |> (fn thy => List.foldl (uncurry define_fns) thy rcds_and_uns)
+    |> (fn thy => List.foldl define_laws thy rcds_and_uns)
   end
 
 (* Example use:
