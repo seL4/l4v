@@ -475,7 +475,7 @@ fun mk_thy_types cse install thy = let
       fun mk_ctype_instance su_name thy = let
         val typ =
           case su_name of
-            Union {name,...} => Syntax.read_typ_global thy name
+            Union {name,...} => Syntax.read_typ_global thy (suffix " option" name)
           | Struct {name,...} => Syntax.read_typ_global thy name
         (* establish the new ztype as a c_type, which requires no proof, as
             there are no axioms attached to c_type *)
@@ -487,7 +487,9 @@ fun mk_thy_types cse install thy = let
             []
             c_type_instance_ct
             (K (Class.intro_classes_tac (thy2ctxt thy) []))
+(*
         val thy = Axclass.add_arity is_c_type_thm thy
+*)
         val _ =
           informStr
             (2, "Proved  instance " ^ Syntax.string_of_typ (thy2ctxt thy) typ ^ " :: c_type")

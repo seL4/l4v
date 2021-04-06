@@ -18,56 +18,77 @@ section "C types setup"
 type_synonym field_name = string
 type_synonym qualified_field_name = "field_name list"
 
+type_synonym member_name = string
+
 type_synonym typ_name = string
 
 
-text \<open>A typ_desc wraps a typ_struct with a typ name.
-        A typ_struct is either a Scalar, with size, alignment and either a
+text \<open>A typ_desc wraps a typ_complex with a typ name.
+        A typ_complex is either a Scalar, with size, alignment and either a
         field accessor/updator pair (for typ_info) or a 'normalisor'
         (for typ_uinfo), or an Aggregate, with a list of typ_desc,
         field name pairs.\<close>
 
-datatype
-         'a typ_desc   = TypDesc "'a typ_struct" typ_name
-    and  'a typ_struct = TypScalar nat nat "'a" |
-                         TypAggregate "('a typ_desc,field_name) dt_pair list"
+datatype 'a typ_desc
+  = TypDesc "'a typ_complex" typ_name
+  and 'a typ_complex
+  = TypScalar nat nat "'a"
+  | TypAggregate "('a typ_desc,field_name) dt_pair list"
+  | TypUnion "('a typ_desc,member_name) dt_pair list"
+
 
 datatype_compat dt_pair
-datatype_compat typ_desc typ_struct
+datatype_compat typ_desc typ_complex
 
 (* These recreate the precise order of subgoals of the old datatype package *)
 lemma typ_desc_induct:
-  "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
-       \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
-       \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
-      \<Longrightarrow> P1 typ_desc"
+  "\<lbrakk> \<And>typ_complex list. P2 typ_complex \<Longrightarrow> P1 (TypDesc typ_complex list)
+   ; \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypUnion list)
+   ; P3 []
+   ; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list)
+   ; \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)
+   \<rbrakk> \<Longrightarrow> P1 typ_desc"
    by (rule compat_typ_desc.induct)
 
-lemma typ_struct_induct:
-    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
-       \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
-       \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
-      \<Longrightarrow> P2 typ_struct"
-   by (rule compat_typ_struct.induct)
+lemma typ_complex_induct:
+  "\<lbrakk>\<And>typ_complex list. P2 typ_complex \<Longrightarrow> P1 (TypDesc typ_complex list)
+   ; \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypUnion list)
+   ; P3 []
+   ; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list)
+   ; \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)
+   \<rbrakk> \<Longrightarrow> P2 typ_complex"
+   by (rule compat_typ_complex.induct)
 
 lemma typ_list_induct:
-    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
-      \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
-      \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
-     \<Longrightarrow> P3 list"
+  "\<lbrakk>\<And>typ_complex list. P2 typ_complex \<Longrightarrow> P1 (TypDesc typ_complex list)
+   ; \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypUnion list)
+   ; P3 []
+   ; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list)
+   ; \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)
+   \<rbrakk> \<Longrightarrow> P3 list"
    by (rule compat_typ_desc_char_list_dt_pair_list.induct)
 
 lemma typ_dt_pair_induct:
-    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
-      \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
-      \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
-     \<Longrightarrow> P4 dt_pair"
+  "\<lbrakk>\<And>typ_complex list. P2 typ_complex \<Longrightarrow> P1 (TypDesc typ_complex list)
+   ; \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list)
+   ; \<And>list. P3 list \<Longrightarrow> P2 (TypUnion list)
+   ; P3 []
+   ; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list)
+   ; \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)
+   \<rbrakk> \<Longrightarrow> P4 dt_pair"
    by (rule compat_typ_desc_char_list_dt_pair.induct)
 
 \<comment> \<open>Declare as default induct rule with old case names\<close>
-lemmas typ_desc_typ_struct_inducts [case_names
+lemmas typ_desc_typ_complex_inducts [case_names
   TypDesc TypScalar TypAggregate Nil_typ_desc Cons_typ_desc DTPair_typ_desc, induct type] =
-  typ_desc_induct typ_struct_induct typ_list_induct typ_dt_pair_induct
+  typ_desc_induct typ_complex_induct typ_list_induct typ_dt_pair_induct
 
 \<comment> \<open>Make sure list induct rule is tried first\<close>
 declare list.induct [induct type]
@@ -75,7 +96,7 @@ declare list.induct [induct type]
 type_synonym 'a typ_pair = "('a typ_desc,field_name) dt_pair"
 
 type_synonym typ_uinfo = "normalisor typ_desc"
-type_synonym typ_uinfo_struct = "normalisor typ_struct"
+type_synonym typ_uinfo_complex = "normalisor typ_complex"
 type_synonym typ_uinfo_pair = "normalisor typ_pair"
 
 record 'a field_desc =
@@ -83,7 +104,7 @@ record 'a field_desc =
   field_update :: "byte list \<Rightarrow> 'a \<Rightarrow> 'a"
 
 type_synonym 'a typ_info = "'a field_desc typ_desc"
-type_synonym 'a typ_info_struct = "'a field_desc typ_struct"
+type_synonym 'a typ_info_complex = "'a field_desc typ_complex"
 type_synonym 'a typ_info_pair = "'a field_desc typ_pair"
 
 definition fu_commutes :: "('b \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('c \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> bool" where
@@ -97,17 +118,22 @@ text \<open>size_td returns the sum of the sizes of all Scalar fields
    combos, but the intuition this way is clearer for anything non-trivial *)
 primrec
   size_td :: "'a typ_desc \<Rightarrow> nat" and
-  size_td_struct :: "'a typ_struct \<Rightarrow> nat" and
+  size_td_complex :: "'a typ_complex \<Rightarrow> nat" and
   size_td_list :: "'a typ_pair list \<Rightarrow> nat" and
+  size_td_list_max :: "'a typ_pair list \<Rightarrow> nat" and
   size_td_pair :: "'a typ_pair \<Rightarrow> nat"
 where
-  tz0: "size_td (TypDesc st nm) = size_td_struct st"
+  tz0: "size_td (TypDesc st nm) = size_td_complex st"
 
-| tz1: "size_td_struct (TypScalar n algn d) = n"
-| tz2: "size_td_struct (TypAggregate xs) = size_td_list xs"
+| tz1: "size_td_complex (TypScalar n algn d) = n"
+| tz2: "size_td_complex (TypAggregate xs) = size_td_list xs"
+| tz3: "size_td_complex (TypUnion xs) = size_td_list_max xs"
 
 | tz3: "size_td_list [] = 0"
 | tz4: "size_td_list (x#xs) = size_td_pair x + size_td_list xs"
+
+| tz3: "size_td_list_max [] = 0"
+| tz4: "size_td_list_max (x#xs) = max (size_td_pair x) (size_td_list_max xs)"
 
 | tz5: "size_td_pair (DTPair t n) = size_td t"
 
@@ -117,7 +143,7 @@ text \<open>access_ti overlays the byte-wise representation of an object
 
 primrec
   access_ti :: "'a typ_info \<Rightarrow> ('a \<Rightarrow> byte list \<Rightarrow> byte list)" and
-  access_ti_struct :: "'a typ_info_struct \<Rightarrow>
+  access_ti_struct :: "'a typ_info_complex \<Rightarrow>
     ('a \<Rightarrow> byte list \<Rightarrow> byte list)" and
   access_ti_list :: "'a typ_info_pair list \<Rightarrow>
     ('a \<Rightarrow> byte list \<Rightarrow> byte list)" and
@@ -127,6 +153,8 @@ where
 
 | fa1: "access_ti_struct (TypScalar n algn d) = field_access d"
 | fa2: "access_ti_struct (TypAggregate xs) = access_ti_list xs"
+(* for backwards compat, this is 6 *)
+| fa6: "access_ti_struct (TypUnion xs) = access_ti_list xs"
 
 | fa3: "access_ti_list [] = (\<lambda>v bs. [])"
 | fa4: "access_ti_list (x#xs) =
@@ -146,7 +174,7 @@ text \<open>update_ti updates an object, given a list of bytes (the
 
 primrec
   update_ti :: "'a typ_info \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" and
-  update_ti_struct :: "'a typ_info_struct \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" and
+  update_ti_struct :: "'a typ_info_complex \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" and
   update_ti_list :: "'a typ_info_pair list \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" and
   update_ti_pair :: "'a typ_info_pair \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)"
 where
@@ -170,7 +198,7 @@ definition update_ti_t :: "'a typ_info \<Rightarrow> (byte list \<Rightarrow> 'a
   "update_ti_t t \<equiv> \<lambda>bs. if length bs = size_td t then
       update_ti t bs else id"
 
-definition update_ti_struct_t :: "'a typ_info_struct \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" where
+definition update_ti_struct_t :: "'a typ_info_complex \<Rightarrow> (byte list \<Rightarrow> 'a \<Rightarrow> 'a)" where
   "update_ti_struct_t t \<equiv> \<lambda>bs. if length bs = size_td_struct t then
       update_ti_struct t bs else id"
 
@@ -192,7 +220,7 @@ definition field_desc :: "'a typ_info \<Rightarrow> 'a field_desc" where
 
 declare field_desc_def [simp add]
 
-definition field_desc_struct :: "'a typ_info_struct \<Rightarrow> 'a field_desc" where
+definition field_desc_struct :: "'a typ_info_complex \<Rightarrow> 'a field_desc" where
   "field_desc_struct t \<equiv> \<lparr> field_access = access_ti_struct t,
       field_update = update_ti_struct_t t \<rparr>"
 
@@ -215,7 +243,7 @@ declare field_desc_pair_def [simp add]
 
 primrec
   map_td :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow> 'a typ_desc \<Rightarrow> 'b typ_desc" and
-  map_td_struct :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow> 'a typ_struct  \<Rightarrow> 'b typ_struct" and
+  map_td_struct :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow> 'a typ_complex  \<Rightarrow> 'b typ_complex" and
   map_td_list :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow> 'a typ_pair list \<Rightarrow>
     'b typ_pair list" and
   map_td_pair :: "(nat \<Rightarrow> nat \<Rightarrow> 'a  \<Rightarrow> 'b) \<Rightarrow> 'a typ_pair \<Rightarrow> 'b typ_pair"
@@ -243,7 +271,7 @@ definition export_uinfo :: "'a typ_info \<Rightarrow> typ_uinfo" where
 
 primrec
   wf_desc :: "'a typ_desc \<Rightarrow> bool" and
-  wf_desc_struct :: "'a typ_struct \<Rightarrow> bool" and
+  wf_desc_struct :: "'a typ_complex \<Rightarrow> bool" and
   wf_desc_list :: "'a typ_pair list \<Rightarrow> bool" and
   wf_desc_pair :: "'a typ_pair \<Rightarrow> bool"
 where
@@ -260,7 +288,7 @@ where
 
 primrec
   wf_size_desc :: "'a typ_desc \<Rightarrow> bool" and
-  wf_size_desc_struct :: "'a typ_struct \<Rightarrow> bool" and
+  wf_size_desc_struct :: "'a typ_complex \<Rightarrow> bool" and
   wf_size_desc_list :: "'a typ_pair list \<Rightarrow> bool" and
   wf_size_desc_pair :: "'a typ_pair \<Rightarrow> bool"
 where
@@ -278,13 +306,13 @@ where
 
 
 definition
-  typ_struct :: "'a typ_desc \<Rightarrow> 'a typ_struct"
+  typ_complex :: "'a typ_desc \<Rightarrow> 'a typ_complex"
 where
-  "typ_struct t = (case t of TypDesc st sz \<Rightarrow> st)"
+  "typ_complex t = (case t of TypDesc st sz \<Rightarrow> st)"
 
-lemma typ_struct [simp]:
-  "typ_struct (TypDesc st sz) = st"
-  by (simp add: typ_struct_def)
+lemma typ_complex [simp]:
+  "typ_complex (TypDesc st sz) = st"
+  by (simp add: typ_complex_def)
 
 primrec
   typ_name :: "'a typ_desc \<Rightarrow> typ_name"
@@ -337,7 +365,7 @@ type_synonym 'a flr = "('a typ_desc \<times> nat) option"
 
 primrec
   field_lookup :: "'a typ_desc \<Rightarrow> qualified_field_name \<Rightarrow> nat \<Rightarrow> 'a flr" and
-  field_lookup_struct :: "'a typ_struct \<Rightarrow> qualified_field_name \<Rightarrow> nat \<Rightarrow>
+  field_lookup_struct :: "'a typ_complex \<Rightarrow> qualified_field_name \<Rightarrow> nat \<Rightarrow>
     'a flr" and
   field_lookup_list :: "'a typ_pair list \<Rightarrow> qualified_field_name \<Rightarrow> nat \<Rightarrow>
     'a flr" and
@@ -412,7 +440,7 @@ definition to_bytes_p :: "'a::c_type \<Rightarrow> byte list" where
 
 primrec
   align_td :: "'a typ_desc \<Rightarrow> nat" and
-  align_td_struct :: "'a typ_struct \<Rightarrow> nat" and
+  align_td_struct :: "'a typ_complex \<Rightarrow> nat" and
   align_td_list :: "'a typ_pair list \<Rightarrow> nat" and
   align_td_pair :: "'a typ_pair \<Rightarrow> nat"
 where
@@ -452,7 +480,7 @@ definition ptr_aligned :: "'a::c_type ptr \<Rightarrow> bool" where
 
 primrec
   td_set :: "'a typ_desc \<Rightarrow> nat \<Rightarrow> ('a typ_desc \<times> nat) set" and
-  td_set_struct :: "'a typ_struct \<Rightarrow> nat \<Rightarrow> ('a typ_desc \<times> nat) set" and
+  td_set_struct :: "'a typ_complex \<Rightarrow> nat \<Rightarrow> ('a typ_desc \<times> nat) set" and
   td_set_list :: "'a typ_pair list \<Rightarrow> nat \<Rightarrow> ('a typ_desc \<times> nat) set" and
   td_set_pair :: "'a typ_pair \<Rightarrow> nat \<Rightarrow> ('a typ_desc \<times> nat) set"
 where
@@ -530,7 +558,7 @@ where
   "fd_cons t \<equiv> fd_cons_desc (field_desc t) (size_td t)"
 
 definition
-  fd_cons_struct :: "'a typ_info_struct \<Rightarrow> bool"
+  fd_cons_struct :: "'a typ_info_complex \<Rightarrow> bool"
 where
   "fd_cons_struct t \<equiv> fd_cons_desc (field_desc_struct t) (size_td_struct t)"
 
@@ -565,7 +593,7 @@ lemma wf_fdp_list:
 
 primrec
   wf_fd :: "'a typ_info \<Rightarrow> bool" and
-  wf_fd_struct :: "'a typ_info_struct \<Rightarrow> bool" and
+  wf_fd_struct :: "'a typ_info_complex \<Rightarrow> bool" and
   wf_fd_list :: "'a typ_info_pair list \<Rightarrow> bool" and
   wf_fd_pair :: "'a typ_info_pair \<Rightarrow> bool"
 where
@@ -589,7 +617,7 @@ where
   "tf_set td \<equiv> {(s,f) | s f. \<exists>n. field_lookup td f 0 = Some (s,n)}"
 
 definition
-  tf_set_struct :: "'a typ_info_struct \<Rightarrow> ('a typ_info \<times> qualified_field_name) set"
+  tf_set_struct :: "'a typ_info_complex \<Rightarrow> ('a typ_info \<times> qualified_field_name) set"
 where
   "tf_set_struct td \<equiv> {(s,f) | s f. \<exists>n. field_lookup_struct td f 0 = Some (s,n)}"
 
@@ -611,7 +639,7 @@ record 'a leaf_desc =
 
 primrec
   lf_set :: "'a typ_info \<Rightarrow> qualified_field_name \<Rightarrow> 'a leaf_desc set" and
-  lf_set_struct :: "'a typ_info_struct \<Rightarrow> qualified_field_name \<Rightarrow> 'a leaf_desc set" and
+  lf_set_struct :: "'a typ_info_complex \<Rightarrow> qualified_field_name \<Rightarrow> 'a leaf_desc set" and
   lf_set_list :: "'a typ_info_pair list \<Rightarrow> qualified_field_name \<Rightarrow> 'a leaf_desc set" and
   lf_set_pair :: "'a typ_info_pair \<Rightarrow> qualified_field_name \<Rightarrow> 'a leaf_desc set"
 where
@@ -701,7 +729,7 @@ class mem_type = mem_type_sans_size +
 
 primrec
   aggregate :: "'a typ_desc \<Rightarrow> bool" and
-  aggregate_struct :: "'a typ_struct \<Rightarrow> bool"
+  aggregate_struct :: "'a typ_complex \<Rightarrow> bool"
 where
   "aggregate (TypDesc st tn) = aggregate_struct st"
 
@@ -764,7 +792,7 @@ where
 declare fold_td_def [simp]
 
 definition
-  fold_td_struct :: "typ_name \<Rightarrow> (typ_name \<Rightarrow> ('a \<times> field_name) list \<Rightarrow> 'a) \<Rightarrow> 'a typ_struct \<Rightarrow> 'a"
+  fold_td_struct :: "typ_name \<Rightarrow> (typ_name \<Rightarrow> ('a \<times> field_name) list \<Rightarrow> 'a) \<Rightarrow> 'a typ_complex \<Rightarrow> 'a"
 where
   "fold_td_struct tn f st \<equiv> (case st of
            TypScalar n algn d \<Rightarrow> d |

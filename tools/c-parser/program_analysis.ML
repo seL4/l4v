@@ -231,7 +231,6 @@ fun max_type ty1 ty2 =
       (Array(_, NONE), _) => ty2
     | (_, Array(_, NONE)) => ty1
     | _ => ty1
-    (* TODO: how should this react to unions? *)
 
 fun vars_compatible vi1 vi2 =
     get_mname vi1 <> get_mname vi2 orelse
