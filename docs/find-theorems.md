@@ -6,6 +6,9 @@
 
 # Using find_theorems effectively
 
+This command is for searching for theorems. If you are looking for a
+constant/function instead, look at [find_consts](find-consts.md).
+
 There is an introduction to the `find_theorems` command in the
 [Isabelle/HOL tutorial](http://isabelle.in.tum.de/documentation.html).
 Here we cover some additional material and useful patterns.
