@@ -36,7 +36,7 @@ existing task.
    This can start of by 'just' finding a specific magic number and refactoring or removing it.
 
 - **task: small; impact: quality of life** converge on crunches, deprecate crunch
-    <https://sel4.atlassian.net/browse/VER-918>
+    [VER-918](<https://sel4.atlassian.net/browse/VER-918>)
 
 ### Tier 2
 
@@ -99,7 +99,7 @@ existing task.
 
 - **task: small; impact: quality-of-life**
    refactor `Refine` into `DInvs` and `Refine`
-   <https://sel4.atlassian.net/browse/VER-1299>
+   [VER-1299](<https://sel4.atlassian.net/browse/VER-1299>)
 
 - **task: small; impact: quality-of-life**
    faster check for the kernel team if a change breaks their proof: if CRefine
@@ -111,11 +111,11 @@ existing task.
    make working with schematics less painful: `cong` rules for relation and
    guards in `corres`, `ccorres`, and `wp`. There are two sub-tasks, one quick
    (the rules), one longer (using them).
-   <https://sel4.atlassian.net/browse/VER-1300>
+   [VER-1300](<https://sel4.atlassian.net/browse/VER-1300>)
 
 - **task: small-medium; impact: quality of life**
   rework exception monad reasoning, has unnecessary complexity
-  <https://sel4.atlassian.net/browse/VER-594>
+  [VER-594](<https://sel4.atlassian.net/browse/VER-594>)
 
 ### Tier 2
 
@@ -137,10 +137,10 @@ existing task.
 
 - **task: small; impact: some quality of life** modernise Isabelle use, e.g.
     datatype accessors and discriminators, e.g.
-    <https://sel4.atlassian.net/browse/VER-1015>
+    [VER-1015](<https://sel4.atlassian.net/browse/VER-1015>)
 
 - **task: small; impact: quality of life** corres rule names are confusing
-    <https://sel4.atlassian.net/browse/VER-317>
+    [VER-317](<https://sel4.atlassian.net/browse/VER-317>)
   - some of this has happened, more to do be done
 
 - **task: small-medium, impact: quality of life**, arch-split interface locale
@@ -157,7 +157,7 @@ existing task.
 - **task: small, impact: quality of life, more automation**
    Automatically derive `fun/simp`, `case`, `exists` variants for
    discriminator-style definitions like `is_ntfn_cap` (and more complex ones).
-   <https://sel4.atlassian.net/browse/VER-1315>
+   [VER-1315](<https://sel4.atlassian.net/browse/VER-1315>)
 
 ### Tier 3
 
@@ -181,10 +181,10 @@ existing task.
 - **task: medium, maybe small after all?; impact: quality of life** An actually searchable output/state buffer (needs Scala experience)
 
 - **task: small-medium; impact: quality of life** clean up wp and move to AFP
-  <https://sel4.atlassian.net/browse/VER-596>
+  [VER-596](<https://sel4.atlassian.net/browse/VER-596>)
 
 - **task: small; impact: quality of life** add getter `wp` rules into the `wp` set
-    <https://sel4.atlassian.net/browse/VER-1311>
+    [VER-1311](<https://sel4.atlassian.net/browse/VER-1311>)
   - needs reworking some very old proofs (which should be cleaned up anyway)
   - not sure how many proofs will break
 
@@ -207,7 +207,7 @@ existing task.
      dependent on certain image
   - problem with transitivity: A depending on B which is abstract-only
      but in refine
-  - related to <https://sel4.atlassian.net/browse/VER-544>
+  - related to [VER-544](<https://sel4.atlassian.net/browse/VER-544>)
 
 - **task: small-medium, impact: quality of life** `unat (x + y) = unat x + unat y`
   - but want an automatic constraint reasoner to find that `x` is limited, `y` is
@@ -219,10 +219,10 @@ existing task.
   - simpproc? Eisbach?
 
 - **task: small-medium; impact: quality of life** policy and maybe checks on global declares (esp cong and split)
-    <https://sel4.atlassian.net/browse/VER-1240>
+    [VER-1240](<https://sel4.atlassian.net/browse/VER-1240>)
 
 - **task: small; impact: quality of life** don't include unused separation logic stuff in C semantics; clean up UMM
-    <https://sel4.atlassian.net/browse/VER-962>
+    [VER-962](<https://sel4.atlassian.net/browse/VER-962>)
 
 ### Tier 5
 
@@ -254,6 +254,6 @@ existing task.
   - subset for faster check?
 
 - **task: small-medium; impact: some quality of life** automate/improve the monadic rewrite framework
-    <https://sel4.atlassian.net/browse/VER-727>
+    [VER-727](<https://sel4.atlassian.net/browse/VER-727>)
   - something in the direction of `ccorres_rewrite`
   - use conversions maybe
