@@ -253,7 +253,7 @@ are preserved by your function.
 For tips on using locales in conjunction with the Arch locale, see
 the [Architecture Split][] page.
 
-[Architecture Split]: TODO
+[Architecture Split]: arch-split.md
 
 ### Type variables
 
