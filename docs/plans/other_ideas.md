@@ -19,10 +19,10 @@ Many of these are half-baked general ideas, coming out of brainstorming sessions
   - connects to multicore (may be solved there)
 
 - **task: medium+; impact: scale** generic page tables; could everything be like RISC-V?
-    <https://sel4.atlassian.net/browse/VER-866>
+    [VER-866](<https://sel4.atlassian.net/browse/VER-866>)
 
 - **task: medium; impact: scale** generic ASIDs, ASID pools, ASID table
-    <https://sel4.atlassian.net/browse/VER-865>
+    [VER-865](<https://sel4.atlassian.net/browse/VER-865>)
 
 ## Big tasks: improve proofs or tools
 
@@ -79,7 +79,7 @@ Many of these are half-baked general ideas, coming out of brainstorming sessions
 - **less pain** Isabelle indentation (mainly subgoal, multi-line reeindents)
 
 - **project** generate platform config proofs
-  <https://sel4.atlassian.net/browse/VER-967>
+  [VER-967](<https://sel4.atlassian.net/browse/VER-967>)
 
 - **task: unknown; impact: quality of life**
   Eisbach improvments. A specific example is adding flags, motivated by wanting to be able to do `wpsimp (trace)`
@@ -92,7 +92,7 @@ Many of these are half-baked general ideas, coming out of brainstorming sessions
   on the command line: Isabelle should say when it is finished with a theory
 
 - **task: unknown; impact: quality of life** speed up regression test more. SimplExport is now > 4h
-  eg <https://sel4.atlassian.net/browse/VER-1072>
+  eg [VER-1072](<https://sel4.atlassian.net/browse/VER-1072>)
 
 ## For discussion
 

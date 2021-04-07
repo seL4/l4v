@@ -73,7 +73,7 @@ benefit even without fully finishing them.
 ### Modularity
 
 - **project** generate platform config proofs
-  <https://sel4.atlassian.net/browse/VER-967>
+  [VER-967](<https://sel4.atlassian.net/browse/VER-967>)
 
 - **task: large, researchy; impact: scaling** Investigate modularising the proofs.
   - Provide some way to define "interfaces" between modules, consisting of the assumptions
@@ -117,10 +117,10 @@ benefit even without fully finishing them.
       for stating properties about the called function.
 
 - **task: medium+; impact: scale** generic page tables; could everything be like RISC-V?
-  <https://sel4.atlassian.net/browse/VER-866>
+  [VER-866](<https://sel4.atlassian.net/browse/VER-866>)
 
 - **task: medium; impact: scale** generic ASIDs, ASID pools, ASID table
-  <https://sel4.atlassian.net/browse/VER-865>
+  [VER-865](<https://sel4.atlassian.net/browse/VER-865>)
 
 ### Tools
 
@@ -141,7 +141,7 @@ benefit even without fully finishing them.
 
 - **task: medium; impact: quality of life** more principled/automatic deduplication, moving of lemmas. Is there a levity-light?
   - make Ed's dependency graph tool a real tool
-  - See also <https://sel4.atlassian.net/browse/VER-544>
+  - See also [VER-544](<https://sel4.atlassian.net/browse/VER-544>)
 
 - **task: medium; impact: quality of life** Improve and make better use of corres tactics
   - e.g. Dan's tactic in Eisbach
@@ -226,15 +226,15 @@ into the right direction.
    remove literate Haskell, move comments/docs to either C or abstract, or keep as actual comments
 
 - **task: small; impact: quality of life** don't include unused separation logic stuff in C semantics; clean up UMM
-    <https://sel4.atlassian.net/browse/VER-962>
+    [VER-962](<https://sel4.atlassian.net/browse/VER-962>)
 
 - **task: small-medium; impact: quality of life** rework exception monad reasoning, has unnecessary complexity
-    <https://sel4.atlassian.net/browse/VER-594>
+    [VER-594](<https://sel4.atlassian.net/browse/VER-594>)
 
 - **task: small; impact: quality of life** converge on crunches, deprecate crunch
-    <https://sel4.atlassian.net/browse/VER-918>
+    [VER-918](<https://sel4.atlassian.net/browse/VER-918>)
 
 - **task: small-medium; impact: some quality of life** automate/improve the monadic rewrite framework
-  <https://sel4.atlassian.net/browse/VER-727>
+  [VER-727](<https://sel4.atlassian.net/browse/VER-727>)
   - something in the direction of `ccorres_rewrite`
   - use conversions maybe
