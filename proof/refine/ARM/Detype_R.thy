@@ -1206,7 +1206,7 @@ lemma st_tcb:
 
 lemma irq_nodes_global:
     "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
-    by (simp add: global_refs'_def mult.commute mult.left_commute)
+    by (simp add: global_refs'_def mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
 
 lemma global_refs:
   "global_refs' s' \<inter> base_bits = {}"
@@ -1587,7 +1587,8 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
 
   show "valid_irq_node' (irq_node' s') ?s"
     using virq irq_nodes_range
-    by (simp add: valid_irq_node'_def mult.commute mult.left_commute ucast_ucast_mask_8)
+    by (simp add: valid_irq_node'_def mult.commute mult.left_commute ucast_ucast_mask_8
+                  cteSizeBits_def shiftl_t2n)
 
   show "valid_irq_handlers' ?s" using virqh
     apply (simp add: valid_irq_handlers'_def irq_issued'_def

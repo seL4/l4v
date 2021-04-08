@@ -342,7 +342,7 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
   apply (simp add: global_refs'_def cte_level_bits_def
-    mult.commute mult.left_commute)
+                   mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
   done
 
 lemma invoke_arch_irq_handler_corres:

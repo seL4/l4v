@@ -1248,7 +1248,8 @@ definition
   valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_irq_node' x \<equiv>
-  \<lambda>s. is_aligned x 12 \<and> (\<forall>irq :: irq. real_cte_at' (x + 16 * (ucast irq)) s)"
+  \<lambda>s. is_aligned x (size (0::irq) + cteSizeBits)
+      \<and> (\<forall>irq :: irq. real_cte_at' (x + (ucast irq << cteSizeBits)) s)"
 
 definition
   valid_refs' :: "word32 set \<Rightarrow> cte_heap \<Rightarrow> bool"
@@ -1272,7 +1273,7 @@ where
   {ksIdleThread s, idle_sc_ptr} \<union>
    page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
    (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
-   range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
+   range (\<lambda>irq :: irq. irq_node' s + (ucast irq << cteSizeBits))"
 
 definition
   valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool"

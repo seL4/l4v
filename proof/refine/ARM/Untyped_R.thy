@@ -697,7 +697,7 @@ lemma map_ensure_empty':
 
 lemma irq_nodes_global:
   "irq_node' s + (ucast (irq :: 10 word)) * 16 \<in> global_refs' s"
-  by (simp add: global_refs'_def mult.commute mult.left_commute)
+  by (simp add: global_refs'_def mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
 
 lemma valid_global_refsD2':
   "\<lbrakk>ctes_of s p = Some cte; valid_global_refs' s\<rbrakk> \<Longrightarrow>
@@ -3788,7 +3788,7 @@ lemma descendants_range_ex_cte':
    apply (case_tac "\<exists>irq. cteCap ctea = IRQHandlerCap irq")
      apply clarsimp
    apply (erule(1) in_empty_interE[OF _ _ subsetD,rotated -1])
-     apply (clarsimp simp:global_refs'_def)
+     apply (clarsimp simp:global_refs'_def cteSizeBits_def shiftl_t2n)
      apply (erule_tac A = "range P" for P in subsetD)
      apply (simp add:range_eqI field_simps)
    apply (case_tac ctea)
