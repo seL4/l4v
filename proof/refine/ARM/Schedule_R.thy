@@ -764,7 +764,7 @@ lemma arch_switchToIdleThread_corres:
   apply (simp add: arch_switch_to_idle_thread_def
                 ARM_H.switchToIdleThread_def)
   apply (corressimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args])
-  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb)
+  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb obj_at'_def)
   done
 
 lemma switchToIdleThread_corres:
@@ -893,7 +893,7 @@ lemma idle'_not_tcbQueued':
  shows "obj_at' (Not \<circ> tcbQueued) (ksIdleThread s) s"
  proof -
    from idle have stidle: "st_tcb_at' (Not \<circ> runnable') (ksIdleThread s) s"
-     by (clarsimp simp add: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
+     by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs idle_tcb'_def)
 
    with vq vq' show ?thesis
      by (rule valid_queues_not_runnable_not_queued)
@@ -911,15 +911,17 @@ proof -
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (clarsimp simp add: ct_not_inQ_ct idle'_activatable' idle'_not_tcbQueued'[simplified o_def]
+    apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
+    apply (frule (2) idle'_not_tcbQueued'[simplified o_def])
+    apply (clarsimp simp add: ct_not_inQ_ct idle'_activatable'
                               invs'_def cur_tcb'_def valid_state'_def valid_idle'_def
                               sch_act_wf ct_in_state'_def state_refs_of'_def
                               ps_clear_def valid_irq_node'_def
                               ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                               valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def valid_queues'_def
-                              all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
+                              pred_tcb_at'_def
                         cong: option.case_cong)
-    apply (clarsimp simp: obj_at'_def projectKOs)
+    apply (clarsimp simp: obj_at'_def projectKOs idle_tcb'_def)
     done
 qed
 
@@ -1988,7 +1990,7 @@ lemma switchToIdleThread_activatable_2[wp]:
                    ARM_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_idle'_def
-                        pred_tcb_at'_def obj_at'_def)
+                        pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
 lemma switchToThread_tcb_in_cur_domain':

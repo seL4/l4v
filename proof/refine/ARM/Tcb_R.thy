@@ -120,7 +120,7 @@ lemma activate_invs':
                in hoare_post_imp, clarsimp)
       apply (wp sch_act_simple_lift)+
     apply (clarsimp simp: valid_idle'_def invs'_def valid_state'_def
-                          pred_tcb_at'_def obj_at'_def
+                          pred_tcb_at'_def obj_at'_def idle_tcb'_def
                    elim!: pred_tcb'_weakenE)
    apply (wp gts_st_tcb')+
   apply (clarsimp simp: tcb_at_invs' ct_in_state'_def
