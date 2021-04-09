@@ -313,7 +313,7 @@ lemma do_user_op_respects:
     do_user_op uop tc
   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_def)
-  apply (wp | simp | wpc)+
+  apply wpsimp
            apply (rule dmo_device_update_respects_Write)
           apply (wp dmo_um_upd_machine_state
                     dmo_user_memory_update_respects_Write hoare_vcg_all_lift hoare_vcg_imp_lift

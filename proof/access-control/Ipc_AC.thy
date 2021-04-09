@@ -360,7 +360,8 @@ lemma set_mrs_respects_in_signalling':
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch)
   apply (clarsimp simp: st_tcb_def2 arch_tcb_set_registers_def)
-  apply (rule send_upd_ctxintegrity[OF disjI1], auto simp: st_tcb_def2 direct_send_def)
+  apply (rule send_upd_ctxintegrity[OF disjI1, simplified arch_tcb_context_set_def],
+         auto simp: st_tcb_def2 direct_send_def)
   done
 
 lemma as_user_set_register_respects:
@@ -2282,7 +2283,7 @@ lemma set_mrs_respects_in_ipc:
    apply simp
    apply wp+
   apply (clarsimp simp: arch_tcb_set_registers_def)
-  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce)
+  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def arch_tcb_context_set_def]; fastforce)
 
 lemma do_fault_transfer_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and

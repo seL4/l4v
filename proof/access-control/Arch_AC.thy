@@ -510,6 +510,14 @@ lemma invalidate_tlb_by_asid_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> invalidate_tlb_by_asid asid \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateLocalTLB_ASID_def)+
 
+lemma switchFpuOwner_respects[wp]:
+  "do_machine_op (switchFpuOwner new_owner cpu) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects simp: switchFpuOwner_def)
+
+lemma nativeThreadUsingFPU_respects[wp]:
+  "do_machine_op (nativeThreadUsingFPU t) \<lbrace>integrity aag X st\<rbrace>"
+  by (wpsimp wp: dmo_no_mem_respects simp: nativeThreadUsingFPU_def)
+
 crunch pas_refined[wp]: set_message_info "pas_refined aag"
 
 (* FIXME: move *)

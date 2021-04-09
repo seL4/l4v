@@ -676,6 +676,8 @@ lemma set_thread_state_restart_to_running_respects:
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac tro_tcb_activate[OF refl refl])
+    apply (simp add: arch_tcb_set_registers_def arch_tcb_context_get_def
+                     arch_tcb_context_set_def arch_tcb_get_registers_def)
     apply (simp add: tcb_bound_notification_reset_integrity_def)+
   done
 

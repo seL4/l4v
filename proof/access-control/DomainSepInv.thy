@@ -787,7 +787,7 @@ lemma set_object_tcb_context_update_domain_sep_inv:
 
 crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
   (ignore: set_object
-   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv
+   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv[simplified arch_tcb_context_set_def]
    simp: crunch_simps arch_tcb_set_registers_def)
 
 

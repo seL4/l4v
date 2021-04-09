@@ -1064,8 +1064,14 @@ definition asid_pool_integrity ::
    \<forall>x. pool' x \<noteq> pool x \<longrightarrow> pool' x = None
        \<and> aag_subjects_have_auth_to subjects aag Control (the (pool x))"
 
-
 subsubsection \<open>Definition of object integrity\<close>
+
+abbreviation (input) arch_tcb_set_next_ip_fault_ip :: "arch_tcb \<Rightarrow> arch_tcb" where
+  "arch_tcb_set_next_ip_fault_ip atcb \<equiv>
+     arch_tcb_set_registers
+       ((arch_tcb_get_registers atcb)(NextIP := (arch_tcb_get_registers atcb) FaultIP))
+       atcb"
+
 text \<open>
   The object integrity relation describes which modification to kernel objects are allowed by the
   policy aag when the system is controlled by subjects.
@@ -1175,10 +1181,7 @@ inductive integrity_obj_atomic for aag activate subjects l ko ko'
   (* If the activate flag is on, any thread in Restart state can be restarted *)
 | troa_tcb_activate:
     "\<lbrakk>ko = Some (TCB tcb); ko' = Some (TCB tcb');
-      tcb' = tcb\<lparr>tcb_arch := arch_tcb_context_set
-                        ((arch_tcb_context_get (tcb_arch tcb))(NextIP :=
-                                          (arch_tcb_context_get (tcb_arch tcb)) FaultIP)
-                        ) (tcb_arch tcb),
+      tcb' = tcb\<lparr>tcb_arch := arch_tcb_set_next_ip_fault_ip (tcb_arch tcb),
                    tcb_state := Running\<rparr>;
       tcb_state tcb = Restart;
       activate\<rbrakk> \<comment> \<open>Anyone can do this\<close>
@@ -1415,8 +1418,7 @@ where
                arch_tcb_context_get (tcb_arch tcb') = arch_tcb_context_get (tcb_arch tcb)) \<or>
         (tcb_state tcb' = Running \<and>
         arch_tcb_context_get (tcb_arch tcb')
-             = (arch_tcb_context_get (tcb_arch tcb))
-                   (NextIP := arch_tcb_context_get (tcb_arch tcb) FaultIP));
+             = arch_tcb_context_get (arch_tcb_set_next_ip_fault_ip (tcb_arch tcb)));
         tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
         reply_cap_deletion_integrity subjects aag (tcb_caller tcb) cap';
         reply_cap_deletion_integrity subjects aag (tcb_ctable tcb) ccap';
@@ -1436,10 +1438,7 @@ where
        \<Longrightarrow> integrity_obj_alt aag activate subjects l' ko ko'"
 | tro_alt_tcb_activate:
       "\<lbrakk>tro_tag TCBActivate; ko  = Some (TCB tcb); ko' = Some (TCB tcb');
-        tcb' = tcb \<lparr> tcb_arch := arch_tcb_context_set
-                              ((arch_tcb_context_get (tcb_arch tcb))(NextIP :=
-                                           (arch_tcb_context_get (tcb_arch tcb)) FaultIP)
-                               ) (tcb_arch tcb),
+        tcb' = tcb \<lparr> tcb_arch := arch_tcb_set_next_ip_fault_ip (tcb_arch tcb),
                      tcb_caller := cap', tcb_ctable := ccap',
                      tcb_state := Running, tcb_bound_notification := ntfn'\<rparr>;
         tcb_state tcb = Restart;
@@ -1912,7 +1911,8 @@ lemma tro_alt_trans_spec: (* this takes a long time to process *)
      We move them up here and solve manually *)
   apply (find_goal \<open>match premises in "tro_tag' TCBReply" and "tro_tag TCBActivate" \<Rightarrow> -\<close>)
   apply (clarsimp, rule tro_alt_tcb_reply[OF tro_tagI refl refl],
-         (rule exI; rule tcb.equality; simp add: arch_tcb_context_set_def); fastforce)
+         (rule exI; rule tcb.equality; simp add: arch_tcb_context_set_def);
+          fastforce simp: arch_tcb_get_registers_def arch_tcb_set_registers_def)
 
   apply (find_goal \<open>match premises in "tro_tag' TCBReceive" and "tro_tag TCBReply" \<Rightarrow> -\<close>)
   apply (clarsimp, rule tro_alt_tcb_reply[OF tro_tagI refl refl],
@@ -1932,12 +1932,13 @@ lemma tro_alt_trans_spec: (* this takes a long time to process *)
     done
 
   apply (find_goal \<open>match premises in "tro_tag TCBActivate" and "tro_tag' TCBRestart" \<Rightarrow> -\<close>)
-  apply (rule tro_alt_tcb_restart[OF tro_tagI],
-                 rule refl,
-                assumption,
-               (* somehow works better than tcb.equality *)
-               (simp only: tcb.splits; simp),
-              force+)[1]
+  subgoal
+    apply (rule tro_alt_tcb_restart[OF tro_tagI], rule refl, assumption)
+          apply (simp only: arch_tcb_context_get_def)
+          apply (rule tcb.equality; simp)
+          apply (force simp add: arch_tcb_set_registers_def arch_tcb_get_registers_def
+                                 arch_tcb_context_get_def arch_tcb_context_set_def)+
+    done
 
   apply (find_goal \<open>match premises in "tro_tag REp" and "tro_tag' REp" \<Rightarrow> -\<close>)
   subgoal by (erule integrity_obj_alt.intros, (rule refl | assumption)+)

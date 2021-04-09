@@ -598,6 +598,7 @@ lemma arch_finalise_cap_respects[wp]:
   done
 
 crunch respects[wp]: prepare_thread_delete "integrity aag X st"
+  (ignore: switchFpuOwner nativeThreadUsingFPU do_machine_op)
 
 lemma finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_cap cap
