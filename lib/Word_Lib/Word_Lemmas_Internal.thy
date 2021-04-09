@@ -409,4 +409,11 @@ lemma of_nat_le:
    \<Longrightarrow> (of_nat :: nat \<Rightarrow> 'a :: len word) a \<le> of_nat b"
   by (simp add: le_unat_uoi word_of_nat_le)
 
+lemma unat_minus_plus_one:
+  "unat (buffer :: 'a :: len word) < unat (max_word :: 'a :: len word)
+   \<Longrightarrow> unat (-(buffer + 1)) = 2 ^ LENGTH('a) - (unat (buffer + 1))"
+  apply (subst unat_minus')
+   using max_word_wrap apply blast
+  by (metis less_is_non_zero_p1 word_less_nat_alt word_overflow_unat)
+
 end
