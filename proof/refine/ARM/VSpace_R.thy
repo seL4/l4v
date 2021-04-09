@@ -2833,8 +2833,14 @@ lemma storePDE_ifunsafe [wp]:
 
 lemma storePDE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
+  apply (simp add: valid_idle'_def)
+  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: storePDE_def)
+   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
+   apply (clarsimp dest!: updateObject_default_result)
+   apply wpsimp
+  done
 
 crunches storePDE
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
@@ -3020,8 +3026,14 @@ lemma storePTE_ifunsafe [wp]:
 
 lemma storePTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
+  apply (simp add: valid_idle'_def)
+  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: storePTE_def)
+   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
+   apply (clarsimp dest!: updateObject_default_result)
+  apply wpsimp
+  done
 
 crunches storePTE
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
@@ -3211,8 +3223,13 @@ lemma setASIDPool_it' [wp]:
 
 lemma setASIDPool_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
+  apply (simp add: valid_idle'_def)
+  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
+   apply (clarsimp dest!: updateObject_default_result)
+   apply wpsimp
+  done
 
 lemma setASIDPool_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
