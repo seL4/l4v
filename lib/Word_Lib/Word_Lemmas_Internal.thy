@@ -404,4 +404,9 @@ lemma le_smaller_mask:
   "\<lbrakk> x \<le> mask n; n \<le> m \<rbrakk> \<Longrightarrow> x \<le> mask m"
   by (erule (1) order.trans[OF _ mask_mono])
 
+lemma of_nat_le:
+  "\<lbrakk>a \<le> unat (max_word :: 'a :: len word); b \<le> unat (max_word :: 'a :: len word); a \<le> b\<rbrakk>
+   \<Longrightarrow> (of_nat :: nat \<Rightarrow> 'a :: len word) a \<le> of_nat b"
+  by (simp add: le_unat_uoi word_of_nat_le)
+
 end
