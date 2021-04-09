@@ -259,7 +259,7 @@ fun create_state cse =
         case translate_vi cse vi of
           NONE => tab
         | SOME (v as (_,_,lorg)) =>
-            let 
+            let
               val f =
                 case lorg of
                   Local f => f
@@ -278,14 +278,7 @@ fun split_vars ctxt tab =
     fun translate_vdecl (vdecl (s, ty, vsort)) =
       (s, isa_type_to_typ ctxt ty, SOME (isa_type_to_cty ty), vsort);
     val gvars = Symtab.lookup_list tab "<global>" |> map translate_vdecl
-    val lvars =
-      List.foldl
-        (fn ((key,vars),acc) =>
-          if key <> "<global>"
-          then map translate_vdecl vars @ acc
-          else acc)
-        []
-        (Symtab.dest tab)
+    val lvars = Symtab.delete_safe "<global>" tab |> Symtab.map (K (map translate_vdecl))
   in
     (lvars, gvars)
   end
@@ -586,14 +579,15 @@ end
 
 fun simple s = {isa_name = MString.mk s, src_name = s, alias = false}
 
-fun pretty_recdef thy nm vars =
-    Pretty.big_list
-        ("Defining record: " ^ nm ^ " =")
-        (map (fn (nm,ity,_,_) =>
-                 Pretty.str (MString.dest (#isa_name nm) ^ " :: " ^
-                             Syntax.string_of_typ (thy2ctxt thy) ity))
-             vars)
-    |> Pretty.string_of |> tracing;
+fun pretty_recdef ctxt nm vars =
+  Pretty.big_list
+    ("Defining record: " ^ nm ^ " =")
+    (map
+      (fn (field_nm, field_typ) =>
+        Pretty.str (field_nm ^ " :: " ^ Syntax.string_of_typ ctxt field_typ))
+      vars)
+  |> Pretty.string_of
+  |> tracing;
 
 fun categorise_globals (alladdressed, popglobs) l = let
   fun recurse (acc as (ut, ns, ad)) l =
@@ -632,8 +626,12 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           categorise_globals (Config.get_global thy globals_all_addressed,
                               Config.get_global thy populate_globals)
                              gvars
-      val _ = if not (null gvars) then pretty_recdef thy "globals" nsglobs
-              else ()
+      fun extract_nm_typ (a,b,_,_) =
+        (a |> #isa_name |> MString.dest, b)
+      val _ =
+        if not (null gvars)
+        then nsglobs |> map extract_nm_typ |> pretty_recdef (thy2ctxt thy) "globals"
+        else ()
       val gflds =
           [(bnm global_heap_var, MemoryModelExtras.extended_heap_ty, NoSyn),
            (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
@@ -652,9 +650,43 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
     in
       (thy'', locale_params owners)
     end
-    val lvars = (simple global_exn_var_name,
-                 c_exntype_ty, NONE,
-                 Local "cparser'internal") :: lvars
+
+    val frame_spec =
+      let
+        val datatyp = (([], Binding.name "frame"), NoSyn)
+        val bindings =
+          map
+            (fn (fnname,vars) =>
+              let
+                val frame_binding = Binding.name (prefix "Frame_" fnname)
+                val field_bindings =
+                  map
+                    (fn (nminfo,typ,_,_) =>
+                      (nminfo |> #isa_name |> MString.dest |> Binding.name, typ))
+                    vars
+              in
+                (((Binding.empty, frame_binding), field_bindings : (binding * typ) list), NoSyn)
+              end)
+            (Symtab.dest lvars)
+      in
+        [( ((datatyp, bindings), (Binding.empty, Binding.empty, Binding.empty)), [] )]
+      end
+
+    val thy =
+      Named_Target.theory_map
+        (BNF_FP_Def_Sugar.co_datatypes
+          BNF_FP_Rec_Sugar_Util.Least_FP
+          BNF_LFP.construct_lfp
+          (Ctr_Sugar.default_ctr_options, frame_spec))
+        thy
+
+    val lvars =
+      Symtab.map
+        (K (fn vars => (simple global_exn_var_name,
+           c_exntype_ty,
+           NONE,
+           Local "cparser'internal") :: vars))
+        lvars
 
     (* In the past, the first variable named `x` got its own field named
        `x_'` in the local variables record. If there was another local later in
@@ -672,78 +704,85 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
        so as long as appropriately named definitions are in scope it'll "just
        work". *)
     fun mk_locals_aliases thy =
+      let
+        (* Returns a list of `(name, target)` pairs. We want to use the
+           `definition` command to alias `target` with `name`. For example, if
+           `unsigned x` and `int x` appear in the source (in that order), the
+           output should include
+
+           - `(x_', x___unsigned_')`, and
+           - `(x_'_update, x___unsigned_'_update)`
+
+           but shouldn't include anything for the `int` case. *)
+        fun map_aliases seen vs =
+            case vs of
+              [] => []
+            | ({src_name, isa_name = mangled_name, alias}, _, _, _) :: rest =>
+                let
+                  val acc = HoarePackage.varname (MString.dest mangled_name)
+                  val acc_alias = HoarePackage.varname src_name
+
+                  val upd = acc ^ Record.updateN
+                  val upd_alias = acc_alias ^ Record.updateN
+
+                  val pairs = [(acc_alias, acc), (upd_alias, upd)]
+                in
+                  if not alias orelse member (op =) seen src_name
+                  then map_aliases seen rest
+                  else pairs @ map_aliases (src_name :: seen) rest
+                end
+        val aliases = Symtab.map (K (map_aliases [])) lvars
+        fun define_alias_inner (alias, target) thy =
+          let
+            val target =
+                Long_Name.qualify NameGeneration.local_rcd_name target
+                |> Proof_Context.read_const {proper = false, strict = false}
+                    (Proof_Context.init_global thy)
+            val alias =
+              Binding.make (alias, @{here})
+              |> Binding.qualify false NameGeneration.local_rcd_name
+          in
+            Sign.add_abbrev "" (alias, target) thy |> snd
+          end
+        fun define_alias (_, aliases) = fold define_alias_inner aliases
+      in
+        thy |> Symtab.fold define_alias aliases
+      end
+      fun mk_locals_rcd thy =
         let
-          (* Returns a list of `(name, target)` pairs. We want to use the
-             `definition` command to alias `target` with `name`. For example, if
-             `unsigned x` and `int x` appear in the source (in that order), the
-             output should include
-
-             - `(x_', x___unsigned_')`, and
-             - `(x_'_update, x___unsigned_'_update)`
-
-             but shouldn't include anything for the `int` case. *)
-          fun map_aliases seen vs =
-              case vs of
-                [] => []
-              | ({src_name, isa_name = mangled_name, alias}, _, _, _) :: rest =>
-                  let
-                    val acc = HoarePackage.varname (MString.dest mangled_name)
-                    val acc_alias = HoarePackage.varname src_name
-
-                    val upd = acc ^ Record.updateN
-                    val upd_alias = acc_alias ^ Record.updateN
-
-                    val pairs = [(acc_alias, acc), (upd_alias, upd)]
-                  in
-                    if not alias orelse member (op =) seen src_name
-                    then map_aliases seen rest
-                    else pairs @ map_aliases (src_name :: seen) rest
-                  end
-          val aliases = map_aliases [] lvars
-          fun define_alias (alias, target) thy =
-              let
-                val target =
-                    Long_Name.qualify NameGeneration.local_rcd_name target
-                    |> Proof_Context.read_const {proper = false, strict = false}
-                        (Proof_Context.init_global thy)
-                val alias =
-                    Binding.qualify false NameGeneration.local_rcd_name
-                      (Binding.make (alias, @{here}))
-              in
-                Sign.add_abbrev "" (alias, target) thy |> snd
-              end
-        in
-          thy |> fold define_alias aliases
-        end
-    fun mk_locals_rcd thy =
-        let
-            (* the state information accumulated so far allows for local
-               variables of the same name and type to be declared in different
-               functions.  When we come to make an Isabelle record definition
-               we want to have just one field of the given name *)
-            fun map_elim_name seen vs =
-                case vs of
-                  [] => []
-                | ({isa_name = nm,...}, ty, _, _) :: rest => let
-                    val nm' = HoarePackage.varname (MString.dest nm)
-                  in
-                    if member (op =) seen nm' then map_elim_name seen rest
-                    else (bnm nm',ty,NoSyn) :: map_elim_name (nm'::seen) rest
-                  end
-            val lflds = map_elim_name [] lvars
-            val _ = pretty_recdef thy "myvars" lvars
-            val thy = Record.add_record {overloaded=false}
-                      ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
-                      (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
-                      lflds thy
-        in
-          (thy, Sign.intern_type thy NameGeneration.local_rcd_name)
-        end
+          (* the state information accumulated so far allows for local
+             variables of the same name and type to be declared in different
+             functions.  When we come to make an Isabelle record definition
+             we want to have just one field of the given name *)
+          fun map_elim_name_inner ({isa_name,...}, ty, _, _) (seen,out) =
+            let
+              val nm' = HoarePackage.varname (MString.dest isa_name)
+            in
+              if member (op =) seen nm'
+              then
+                (seen,out)
+              else
+                (nm' :: seen, (bnm nm',ty,NoSyn) :: out)
+            end
+        fun map_elim_name (_,vs) (seen,out) = fold map_elim_name_inner vs (seen,out)
+        val (_,lflds) = Symtab.fold map_elim_name lvars ([],[])
+        val _ =
+          lflds
+          |> map (fn (a,b,_) => (Binding.name_of a,b))
+          |> pretty_recdef (thy2ctxt thy) "myvars"
+        val thy = Record.add_record {overloaded=false}
+                  ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
+                  (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
+                  lflds thy
+      in
+        (thy, Sign.intern_type thy NameGeneration.local_rcd_name)
+      end
     val (thy, _) = mk_locals_rcd thy
     val thy = mk_locals_aliases thy
     val (thy, globs) = mk_globals_rcd thy
+    val flat_lvars = lvars |> Symtab.dest_list |> map snd
   in
-    (thy, lvars @ gvars, globs)
+    (thy, flat_lvars @ gvars, globs)
   end
 in
   declare_vars thy
