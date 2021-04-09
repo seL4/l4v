@@ -2797,7 +2797,10 @@ lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (wp setCTE_pred_tcb_at')+
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: setCTE_def)
+   apply (rule setObject_cte_obj_at_tcb'[where P="idle_tcb'", simplified])
+  apply wpsimp
   done
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
@@ -2816,7 +2819,7 @@ lemma updateMDB_idle'[wp]:
   apply (clarsimp simp add: updateMDB_def)
   apply (rule hoare_pre)
   apply (wp | simp add: valid_idle'_def)+
-  done
+  by fastforce
 
 lemma updateCap_idle':
  "\<lbrace>valid_idle'\<rbrace> updateCap p c \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"

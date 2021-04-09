@@ -1250,6 +1250,13 @@ lemma setObject_it[wp]:
   apply (wp x | simp)+
   done
 
+\<comment>\<open>
+  `idle_tcb_ps val` asserts that `val` is a pspace_storable value
+  which corresponds to an idle TCB.
+\<close>
+definition idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_tcb_ps val \<equiv> (\<exists>tcb. projectKO_opt (injectKO val) = Some tcb \<and> idle_tcb' tcb)"
+
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"
   assumes R: "\<And>ko s x y n. (updateObject v ko ptr y n s)
@@ -1260,12 +1267,9 @@ lemma setObject_idle':
        \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> updateObject v p q n ko
        \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
-                   (ptr = ksIdleThread s \<longrightarrow>
-                    (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None)
-                    \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None)) \<and>
-                   P s\<rbrace>
+                   (ptr = ksIdleThread s
+                        \<longrightarrow> (\<exists>val :: 'a. idle_tcb_ps val)
+                        \<longrightarrow> idle_tcb_ps v)\<rbrace>
                 setObject ptr v
               \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
   apply (simp add: valid_idle'_def pred_tcb_at'_def o_def)
@@ -1274,8 +1278,7 @@ lemma setObject_idle':
     apply (simp add: pred_tcb_at'_def obj_at'_real_def)
     apply (rule setObject_ko_wp_at [OF R n m])
    apply (wp z)
-  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
-  apply (drule_tac x=obj in spec, simp)
+  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def)
   apply (clarsimp simp add: project_inject)
   apply (drule_tac x=obja in spec, simp)
   done
@@ -1884,9 +1887,9 @@ lemma setEndpoint_idle'[wp]:
    setEndpoint p v
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding setEndpoint_def
-  apply (wp setObject_idle'[where P="\<top>"])
+  apply (wp setObject_idle')
        apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
 crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
@@ -2035,9 +2038,9 @@ lemma setNotification_ifunsafe'[wp]:
 lemma setNotification_idle'[wp]:
   "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setNotification p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding setNotification_def
-  apply (wp setObject_idle'[where P="\<top>"])
+  apply (wp setObject_idle')
         apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
 crunch it[wp]: setNotification "\<lambda>s. P (ksIdleThread s)"
