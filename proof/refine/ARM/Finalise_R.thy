@@ -2318,14 +2318,6 @@ lemma replyUnlink_invs'[wp]:
   unfolding invs'_def valid_state'_def valid_dom_schedule'_def
   by wpsimp
 
-lemma replyClear_invs'[wp]:
-  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
-   replyClear replyPtr tcbPtr
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding replyClear_def
-  apply wpsimp
-  sorry
-
 (* FIXME RT: unused? *)
 lemma in_list_refs_of_replies'_E:
   assumes in_list: "(p, tp) \<in> list_refs_of_replies' s replyPtr"
@@ -2750,6 +2742,17 @@ lemma replyRemove_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: replyRemove_if_live_then_nonz_cap' replyRemove_valid_idle')
+  done
+
+lemma replyClear_invs'[wp]:
+  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
+   replyClear replyPtr tcbPtr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding replyClear_def
+  apply (wpsimp wp: replyRemove_invs' gts_wp')
+  apply (rule if_live_then_nonz_capE')
+   apply fastforce
+  apply (fastforce simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
   done
 
 (* Ugh, required to be able to split out the abstract invs *)
