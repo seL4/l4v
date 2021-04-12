@@ -39,8 +39,15 @@ requalify_facts
   arch_post_cap_deletion_irq_node
   arch_post_cap_deletion_invs
   valid_arch_arch_tcb_set_registers
+  invs_irq_state_independent
+  invs_update_time_stamp_independent
+  invs_getCurrentTime_independent
 
 end
+
+declare invs_irq_state_independent[intro!, simp]
+declare invs_update_time_stamp_independent[intro!, simp]
+declare invs_getCurrentTime_independent[intro!, simp]
 
 definition
   "post_cap_delete_pre cap cs \<equiv> case cap of

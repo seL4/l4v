@@ -166,6 +166,8 @@ lemma mapME_x_wp:
 
 lemmas mapME_x_wp' = mapME_x_wp [OF _ subset_refl]
 
+lemmas mapME_x_wp_inv' = mapME_x_wp[where S=UNIV, simplified]
+
 lemma mapME_x_wp2:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
