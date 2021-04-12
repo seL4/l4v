@@ -984,6 +984,39 @@ lemma invs_irq_state_independent:
                      swp_def valid_irq_states_def
               split: option.split)
 
+lemma invs_getCurrentTime_independent:
+  "invs (s\<lparr>machine_state := machine_state s\<lparr>time_state := f (time_state (machine_state s))\<rparr>\<rparr>)
+   = invs s"
+  "invs (s\<lparr>machine_state := machine_state s\<lparr>last_machine_time :=
+                            g (last_machine_time (machine_state s)) (time_state (machine_state s))\<rparr>\<rparr>)
+   = invs s"
+  by (clarsimp simp: getCurrentTime_independent_A_def invs_def
+      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
+      only_idle_def if_unsafe_then_cap_def valid_irq_states_def
+      valid_global_refs_def valid_arch_state_def
+      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
+      valid_arch_caps_def valid_global_objs_def
+      valid_kernel_mappings_def equal_kernel_mappings_def
+      valid_asid_map_def vspace_at_asid_def
+      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
+      cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
+      swp_def valid_replies_pred_pspaceI; safe; clarsimp)+
+
+lemma invs_update_time_stamp_independent:
+  "invs (s\<lparr>cur_time := f (cur_time s)\<rparr>) = invs s"
+  "invs (s\<lparr>consumed_time := g (consumed_time s) (cur_time s)\<rparr>) = invs s"
+  by (clarsimp simp: update_time_stamp_independent_A_def invs_def
+      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
+      only_idle_def if_unsafe_then_cap_def valid_irq_states_def
+      valid_global_refs_def valid_arch_state_def
+      valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
+      valid_arch_caps_def valid_global_objs_def
+      valid_kernel_mappings_def equal_kernel_mappings_def
+      valid_asid_map_def vspace_at_asid_def
+      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
+      cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
+      swp_def valid_replies_pred_pspaceI; safe; clarsimp)+
+
 crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)
 
@@ -1034,26 +1067,14 @@ lemma hyp_live_default_object:
   "ty \<noteq> Untyped \<Longrightarrow> \<not> hyp_live (default_object ty dev us dm)"
   by (cases ty; simp add: hyp_live_def)
 
-end
-
-lemmas clearMemory_invs[wp] = RISCV64.clearMemory_invs
-
-lemmas invs_irq_state_independent[intro!, simp]
-    = RISCV64.invs_irq_state_independent
-
-lemmas init_arch_objects_invs_from_restricted
-    = RISCV64.init_arch_objects_invs_from_restricted
-
-lemmas caps_region_kernel_window_imp
-    = RISCV64.caps_region_kernel_window_imp
-
 lemmas init_arch_objects_wps
-    = RISCV64.init_arch_objects_cte_wp_at
-      RISCV64.init_arch_objects_valid_cap
-      RISCV64.init_arch_objects_cap_table
-      RISCV64.init_arch_objects_excap
-      RISCV64.init_arch_objects_pred_tcb_at
-      RISCV64.init_arch_objects_cur_thread
-      RISCV64.init_arch_objects_ct_in_state
+    = init_arch_objects_cte_wp_at
+      init_arch_objects_valid_cap
+      init_arch_objects_cap_table
+      init_arch_objects_excap
+      init_arch_objects_pred_tcb_at
+      init_arch_objects_cur_thread
+      init_arch_objects_ct_in_state
+end
 
 end

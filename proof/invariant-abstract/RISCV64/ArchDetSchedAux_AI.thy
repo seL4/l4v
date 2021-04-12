@@ -41,6 +41,84 @@ crunches init_arch_objects
   and valid_idle[wp, DetSchedAux_AI_assms]: "\<lambda>s. valid_idle s"
   (wp: crunch_wps)
 
+lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
+  "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))
+   \<Longrightarrow> valid_machine_time_2 x (last_machine_time s')"
+  apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
+  apply (rule word_of_nat_le)
+  apply (rule Lattices.linorder_class.min.coboundedI1)
+  apply linarith
+  done
+
+lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
+  "\<lbrace>valid_machine_time\<rbrace>
+   do_machine_op getCurrentTime
+   \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - getCurrentTime_buffer - 1)\<rbrace>"
+  supply minus_add_distrib[simp del]
+  apply (wpsimp simp: do_machine_op_def)
+  apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
+  apply (intro conjI)
+   apply (clarsimp simp: min_def, intro conjI impI)
+    subgoal
+      apply (rule_tac order.trans, assumption)
+      apply (rule_tac order.trans, assumption)
+      apply (rule preorder_class.eq_refl)
+      apply (subst group_add_class.diff_conv_add_uminus)
+      apply (subst minus_one_norm_num)
+      apply clarsimp
+      done
+   subgoal for s
+     apply (subst (asm) linorder_class.not_le)
+     apply (rule_tac order.trans, assumption)
+     apply (rule no_plus_overflow_unat_size2)
+     apply (rule_tac order.trans)
+      apply (rule add_le_mono)
+       apply (rule preorder_class.eq_refl, simp)
+      apply (rule unat_of_nat_closure)
+     apply (rule_tac order.trans)
+     apply (rule order_class.order.strict_implies_order, assumption)
+     by (metis unat_minus_one_word word_le_nat_alt word_n1_ge)
+  apply (clarsimp simp: min_def, intro conjI impI)
+   subgoal
+     apply (rule preorder_class.eq_refl)
+     apply (subst group_add_class.diff_conv_add_uminus)
+     apply (subst minus_one_norm_num)
+     apply clarsimp
+     apply (insert cur_time_bound_no_overflow')
+     done
+  subgoal for s
+    apply (subst (asm) linorder_class.not_le)
+    apply (rule_tac b="of_nat (unat (last_machine_time (machine_state s)) +
+      time_oracle (Suc (time_state (machine_state s))))" in order.trans[rotated])
+     apply (rule Word_Lemmas.word_of_nat_le)
+     apply (rule_tac order.trans)
+      apply (rule order.strict_implies_order, assumption)
+     apply (subst group_add_class.diff_conv_add_uminus)
+     apply (subst minus_one_norm_num)
+     apply clarsimp
+     apply (subst unat_sub)
+      apply (rule order.trans[OF word_up_bound])
+      apply (rule preorder_class.eq_refl)
+      apply simp
+     apply simp
+     apply (subst unat_minus_plus_one)
+      apply (insert cur_time_bound_no_overflow cur_time_bound_no_overflow')
+      apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
+     apply (insert cur_time_bound_no_overflow'_stronger)
+     apply (subst unat_add_lem')
+      apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def max_word_def)
+     apply fastforce
+    apply force
+    done
+  done
+
+lemma update_time_stamp_valid_machine_time[wp, DetSchedAux_AI_assms]:
+  "update_time_stamp \<lbrace>valid_machine_time\<rbrace>"
+  unfolding update_time_stamp_def
+  apply (wpsimp simp: do_machine_op_def)
+  apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
+  done
+
 end
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
@@ -195,9 +273,12 @@ lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
   by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
            comb: hoare_drop_imp)
 
+crunches perform_asid_control_invocation
+  for valid_machine_time[wp]: "valid_machine_time"
+
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
-    valid_sched and valid_idle\<rbrace>
+    valid_sched and valid_machine_time and valid_idle\<rbrace>
      perform_asid_control_invocation aci
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_pre)
@@ -205,15 +286,16 @@ lemma perform_asid_control_invocation_valid_sched:
                       (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci"
           in valid_sched_tcb_state_preservation_gen)
                  apply simp
-                 by (wpsimp wp: perform_asid_control_invocation_st_tcb_at
-                                perform_asid_control_invocation_pred_tcb_at_live
-                                perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
-                                perform_asid_control_etcb_at
-                                perform_asid_control_invocation_sc_at_pred_n
-                                perform_asid_control_invocation_valid_idle
-                                perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
-                                hoare_vcg_all_lift
-                          simp: ipc_queued_thread_state_live live_sc_def)+
+                 apply (wpsimp wp: perform_asid_control_invocation_st_tcb_at
+                                   perform_asid_control_invocation_pred_tcb_at_live
+                                   perform_asid_control_invocation_sc_at_pred_n_live[where Q="Not"]
+                                   perform_asid_control_etcb_at
+                                   perform_asid_control_invocation_sc_at_pred_n
+                                   perform_asid_control_invocation_valid_idle
+                                   perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
+                                   hoare_vcg_all_lift
+                             simp: ipc_queued_thread_state_live live_sc_def)+
+  done
 
 lemma kernelWCET_us_non_zero:
   "kernelWCET_us \<noteq> 0"
