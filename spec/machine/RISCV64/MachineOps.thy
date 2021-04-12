@@ -84,14 +84,6 @@ consts' timerPrecision :: "64 word"
 consts' max_ticks_to_us :: "64 word"
 consts' max_us_to_ticks :: "64 word"
 
- text \<open>
-   This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds.
- \<close>
- definition
-   MAX_PERIOD_US :: "64 word"
- where
-   "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
-
 end
 
 qualify RISCV64 (in Arch)
@@ -99,12 +91,23 @@ qualify RISCV64 (in Arch)
 type_synonym ticks = "64 word"
 type_synonym time  = "64 word"
 
+abbreviation max_time :: time where
+  "max_time \<equiv> max_word"
+
 axiomatization
   kernelWCET_us :: ticks
 where
   kernelWCET_us_pos: "0 < kernelWCET_us"
 and
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
+
+ text \<open>
+   This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds.
+ \<close>
+ definition
+   MAX_PERIOD_US :: "64 word"
+ where
+   "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
 
 axiomatization
   us_to_ticks :: "ticks \<Rightarrow> ticks"
@@ -115,10 +118,17 @@ and
 and
   us_to_ticks_nonzero: "y \<noteq> 0 \<Longrightarrow> us_to_ticks y \<noteq> 0"
 and
-  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks (kernelWCET_us)) \<le> unat (max_word :: ticks)"
+  kernelWCET_ticks_no_overflow: "4 * unat (us_to_ticks kernelWCET_us) \<le> unat max_time"
 and
-  us_to_ticks_mult: "unat n * unat (us_to_ticks a) \<le> unat (max_word :: ticks)
+  cur_time_bound_no_overflow: "3 * unat (us_to_ticks MAX_PERIOD_US) + unat (us_to_ticks kernelWCET_us)
+                               < unat max_time"
+and
+  us_to_ticks_mult: "unat n * unat (us_to_ticks a) \<le> unat max_time
                      \<Longrightarrow> n * us_to_ticks a = us_to_ticks (n * a)"
+and
+  cur_time_bound_nonzero: "0 < us_to_ticks kernelWCET_us + 3 * (us_to_ticks MAX_PERIOD_US)"
+
+definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
 
 axiomatization
   ticks_to_us :: "ticks \<Rightarrow> ticks"
@@ -143,6 +153,61 @@ lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
    using replicate_no_overflow apply fastforce
   using kernelWCET_ticks_no_overflow by force
 
+lemma cur_time_bound_nonzero':
+  "0 < kernelWCET_ticks + 3 * MAX_PERIOD"
+  apply (insert cur_time_bound_nonzero)
+  apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
+  done
+
+lemma cur_time_bound_no_overflow':
+  "unat kernelWCET_ticks + 3 * unat MAX_PERIOD = unat (kernelWCET_ticks + 3 * MAX_PERIOD)"
+  apply (prop_tac "3 * unat (us_to_ticks MAX_PERIOD_US) = unat (3 * us_to_ticks MAX_PERIOD_US)")
+   apply (prop_tac "3 * unat (us_to_ticks MAX_PERIOD_US) \<le> unat (max_word :: 64 word)")
+    using cur_time_bound_no_overflow apply linarith
+   apply (fastforce dest: replicate_no_overflow[where a="us_to_ticks MAX_PERIOD_US" and n=3])
+  apply (insert cur_time_bound_no_overflow)
+  apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
+  apply (subst unat_add_lem')
+   apply (clarsimp simp: max_word_def)
+  apply simp
+  done
+
+lemma MAX_PERIOD_mult:
+  "unat (3 * MAX_PERIOD) = 3 * unat MAX_PERIOD"
+  apply (insert cur_time_bound_no_overflow')
+  apply (metis (mono_tags, hide_lams) add_diff_cancel_left' add_leE order_refl unat_sub
+                                      word_le_nat_alt)
+  done
+
+lemma cur_time_bound_no_overflow'_stronger:
+  "unat (kernelWCET_ticks + 3 * MAX_PERIOD + 1) = unat kernelWCET_ticks + unat (3 * MAX_PERIOD) + 1"
+  apply (subst unat_add_lem')
+   apply (insert cur_time_bound_no_overflow' cur_time_bound_no_overflow)
+   apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def max_word_def)
+  apply (fastforce simp: MAX_PERIOD_mult)
+  done
+
+lemma cur_time_bound_minus:
+  "- kernelWCET_ticks - 3 * MAX_PERIOD - 1 \<le> - kernelWCET_ticks - 1"
+  apply (prop_tac "kernelWCET_ticks \<le> kernelWCET_ticks + 3 * MAX_PERIOD")
+   apply (clarsimp simp: word_le_nat_alt)
+   using cur_time_bound_no_overflow' apply force
+  apply (prop_tac "MAX_PERIOD * 3 \<le> - 1 - kernelWCET_ticks")
+   apply (metis le_minus mult.commute word_n1_ge)
+  apply (metis (no_types, hide_lams) ab_group_add_class.ab_diff_conv_add_uminus add.assoc
+               add.commute mult.commute word_sub_le)
+  done
+
+lemma cur_time_bound_minus':
+  "- kernelWCET_ticks - 3 * MAX_PERIOD - 1 < - kernelWCET_ticks"
+  apply (insert cur_time_bound_minus)
+  apply (prop_tac "kernelWCET_ticks \<noteq> 0")
+   using us_to_ticks_nonzero kernelWCET_ticks_def kernelWCET_us_pos apply fastforce
+  by (simp add: word_leq_minus_one_le)
+
+abbreviation (input) getCurrentTime_buffer where
+  "getCurrentTime_buffer \<equiv> kernelWCET_ticks + 3 * MAX_PERIOD"
+
 text \<open>
 This encodes the following assumptions:
   a) time increases monotonically,
@@ -156,7 +221,7 @@ where
     passed \<leftarrow> gets $ time_oracle o time_state;
     last' \<leftarrow> gets last_machine_time;
     last \<leftarrow> return (unat last');
-    current \<leftarrow> return  (min (2^64 -(unat kernelWCET_ticks + 1)) (last + passed));
+    current \<leftarrow> return (min (unat (-(getCurrentTime_buffer + 1))) (last + passed));
     modify (\<lambda>s. s\<lparr>last_machine_time := of_nat current\<rparr>);
     return (of_nat current)
   od"
