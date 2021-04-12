@@ -283,8 +283,8 @@ lemma complete_yield_to_bound_yt_tcb_at[wp]:
   by (wpsimp simp: obj_at_def
       wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq lookup_ipc_buffer_inv hoare_drop_imp)
 
-crunch pred_tcb_at_ct[wp]: do_machine_op,store_word_offs "\<lambda>s. pred_tcb_at proj P (cur_thread s) s"
-  (wp: crunch_wps hoare_vcg_if_lift2 simp: crunch_simps set_object_def)
+crunches do_machine_op, store_word_offs
+  for pred_tcb_at_ct[wp]: "\<lambda>s. Q (pred_tcb_at proj P (cur_thread s) s)"
 
 lemma set_mrs_pred_tcb_at_ct[wp]:
   "\<lbrace>(\<lambda>s. pred_tcb_at proj P (cur_thread s) s)\<rbrace>
@@ -1685,7 +1685,7 @@ lemma refill_reset_rr_invs[wp]:
   "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"
   unfolding refill_reset_rr_def by wpsimp
 
-lemma charge_budget_invs:
+lemma charge_budget_invs[wp]:
   "\<lbrace>invs\<rbrace>
    charge_budget consumed canTimeout
    \<lbrace>\<lambda>rv. invs\<rbrace>"

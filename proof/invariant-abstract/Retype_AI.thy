@@ -2246,16 +2246,39 @@ lemma cte_wp_at_irq_state_independent[intro!, simp]:
    = is_final_cap' x s"
   by (simp add: is_final_cap'_def)
 
-
-lemma zombies_final_irq_state_independent[intro!, simp]:
-  "zombies_final (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
-   = zombies_final s"
-  by (simp add: zombies_final_def)
-
-
 lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simp]:
   "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = ex_cte_cap_wp_to x y s"
   by (simp add: ex_cte_cap_wp_to_def)
+
+lemma cte_wp_at_machine_state_time_update_independent[intro!, simp]:
+  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>time_state := f (time_state (machine_state s))\<rparr>\<rparr>)
+   = is_final_cap' x s"
+  "is_final_cap' x (s\<lparr>machine_state := machine_state s\<lparr>last_machine_time :=
+                             g (last_machine_time (machine_state s)) (time_state (machine_state s))\<rparr>\<rparr>)
+   = is_final_cap' x s"
+  by (simp add: is_final_cap'_def)+
+
+lemma cte_wp_at_update_time_stamp_independent[intro!, simp]:
+  "is_final_cap' x (s\<lparr>cur_time := f (cur_time s)\<rparr>)
+   = is_final_cap' x s"
+  "is_final_cap' x (s\<lparr>consumed_time := g (consumed_time s) (cur_time s)\<rparr>)
+   = is_final_cap' x s"
+  by (simp add: is_final_cap'_def)+
+
+lemma ex_cte_cap_wp_to_machine_state_time_update_independent[intro!, simp]:
+  "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>time_state := f (time_state (machine_state s))\<rparr>\<rparr>)
+   = ex_cte_cap_wp_to x y s"
+  "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>last_machine_time :=
+                           g (last_machine_time (machine_state s)) (time_state (machine_state s))\<rparr>\<rparr>)
+   = ex_cte_cap_wp_to x y s"
+  by (simp add: ex_cte_cap_wp_to_def)+
+
+lemma ex_cte_cap_wp_to_update_time_stamp_independent[intro!, simp]:
+  "ex_cte_cap_wp_to x y (s\<lparr>cur_time := f (cur_time s)\<rparr>)
+   = ex_cte_cap_wp_to x y s"
+  "ex_cte_cap_wp_to x y (s\<lparr>consumed_time := g (consumed_time s) (cur_time s)\<rparr>)
+   = ex_cte_cap_wp_to x y s"
+  by (simp add: ex_cte_cap_wp_to_def)+
 
 end
