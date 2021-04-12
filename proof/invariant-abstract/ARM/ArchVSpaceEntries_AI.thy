@@ -1658,7 +1658,7 @@ lemma call_kernel_valid_pdpt[wp]:
      and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
       (call_kernel e) :: (unit,det_ext) s_monad
         \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
-  apply (cases e, simp_all add: call_kernel_def)
+  apply (cases e, simp_all add: call_kernel_def preemption_path_def)
        apply (rule hoare_seq_ext[rotated])
         apply (rule validE_valid)
         apply (rule_tac Q="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in handleE_wp[rotated])

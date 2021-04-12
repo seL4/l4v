@@ -116,10 +116,17 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
 
 context Arch begin global_naming ARM
 
+lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
+  "empty_fail preemption_point"
+  apply (wpsimp simp: mk_ef_def getActiveIRQ_def  preemption_point_def OR_choiceE_def andM_def
+                      ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)
+  done
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
-    setHardwareASID, set_current_pd, finalise_cap, preemption_point,
-    cap_swap_for_delete, decode_invocation
-  (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
+    setHardwareASID, set_current_pd, finalise_cap, preemption_point, reset_work_units,
+    update_work_units, cap_swap_for_delete, decode_invocation
+  (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def andM_def ifM_def
+         option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
 
