@@ -37,6 +37,7 @@ creating the "Capability" objects used at higher levels of the kernel.
 > import SEL4.Object.Instances()
 > import SEL4.Object.ObjectType
 > import SEL4.Object.Endpoint(cancelBadgedSends)
+> import SEL4.Object.SchedContext(preemptionPoint)
 > import {-# SOURCE #-} SEL4.Kernel.CSpace
 
 > import Data.Bits

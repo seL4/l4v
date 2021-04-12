@@ -22,6 +22,7 @@ This module defines the behavior of untyped objects.
 > import SEL4.Machine
 > import SEL4.Model
 > import SEL4.Object.Structures
+> import SEL4.Object.SchedContext(preemptionPoint)
 > import SEL4.Object.Instances()
 > import {-# SOURCE #-} SEL4.Object.CNode
 > import {-# SOURCE #-} SEL4.Kernel.CSpace

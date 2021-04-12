@@ -28,7 +28,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
 >         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
->         scReleased, setConsumed, refillResetRR
+>         scReleased, setConsumed, refillResetRR, preemptionPoint
 >     ) where
 
 \begin{impdetails}
@@ -44,6 +44,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Model.Preemption(KernelP, withoutPreemption)
 > import SEL4.Model.PSpace(getObject, readObject, setObject)
 > import SEL4.Model.StateData
+> import SEL4.Model.Preemption
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
@@ -55,6 +56,8 @@ This module uses the C preprocessor to select a target architecture.
 > import Data.List(delete)
 > import Data.Word(Word64)
 > import Data.Maybe
+
+> import Control.Monad.Except
 
 \end{impdetails}
 
@@ -671,7 +674,8 @@ This module uses the C preprocessor to select a target architecture.
 >     prevTime <- getCurTime
 >     curTime' <- doMachineOp getCurrentTime
 >     setCurTime curTime'
->     setConsumedTime (curTime' - prevTime)
+>     consumed <- getConsumedTime
+>     setConsumedTime (consumed + curTime' - prevTime)
 
 > maybeDonateSc :: PPtr TCB -> PPtr Notification -> Kernel ()
 > maybeDonateSc tcbPtr ntfnPtr = do
@@ -724,3 +728,26 @@ This module uses the C preprocessor to select a target architecture.
 >     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 >     setReprogramTimer True
 >     return tcbPtr
+
+In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
+
+> workUnitsLimit = 0x64
+
+> preemptionPoint :: KernelP ()
+> preemptionPoint = do
+>     withoutPreemption $ modifyWorkUnits (\op -> op + 1)
+>     workUnits <- withoutPreemption $ getWorkUnits
+>     when (workUnitsLimit <= workUnits) $ do
+>       withoutPreemption $ setWorkUnits 0
+>       preempt <- withoutPreemption $ doMachineOp (getActiveIRQ True)
+>       if isJust preempt
+>           then throwError ()
+>           else do
+>              withoutPreemption $ updateTimeStamp
+>              csc <- withoutPreemption $ getCurSc
+>              consumed <- withoutPreemption $ getConsumedTime
+>              test <- withoutPreemption $ andM (scActive csc) (refillSufficient csc consumed)
+>              domExp <- withoutPreemption $ isCurDomainExpired
+>              if (not test || domExp)
+>                   then throwError ()
+>                   else return ()
