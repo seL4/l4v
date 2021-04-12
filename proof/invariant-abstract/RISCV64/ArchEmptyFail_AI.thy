@@ -127,8 +127,14 @@ lemma empty_fail_pt_lookup_from_level[wp]:
   apply wpsimp
   done
 
+lemma preemption_point_empty_fail[wp, EmptyFail_AI_assms]:
+  "empty_fail preemption_point"
+  apply (wpsimp simp: mk_ef_def getActiveIRQ_def  preemption_point_def OR_choiceE_def andM_def
+                      ifM_def update_time_stamp_def getCurrentTime_def get_sc_active_def)
+  done
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
-    finalise_cap, preemption_point,
+    finalise_cap, reset_work_units, update_work_units,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
