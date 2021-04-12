@@ -4203,10 +4203,9 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma reset_untyped_cap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
-    (invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_untyped_inv_wcap ui
-      (Some (cap.UntypedCap dev ptr sz idx))
-         and ct_active and einvs
-         and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
+    (invs and valid_machine_time and (\<lambda>s. scheduler_action s = resume_cur_thread)
+     and valid_untyped_inv_wcap ui (Some (cap.UntypedCap dev ptr sz idx)) and ct_active and einvs
+     and (\<lambda>_. \<exists>ptr_base ptr' ty us slots dev'. ui = Invocations_A.Retype slot True
              ptr_base ptr' ty us slots dev))
      (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
      (reset_untyped_cap slot)
@@ -4242,6 +4241,7 @@ lemma reset_untyped_cap_corres:
                             o_def rev_map
                        del: capFreeIndex_update.simps)
            apply (rule_tac P="\<lambda>x. valid_objs and pspace_aligned and pspace_distinct
+                                  and cur_sc_tcb and valid_machine_time and active_sc_valid_refills
                           and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}
                           and cte_wp_at (\<lambda>a. is_untyped_cap a \<and> obj_ref_of a = ptr \<and> cap_bits a = sz
                               \<and> cap_is_device a = dev) slot"
@@ -4252,7 +4252,7 @@ lemma reset_untyped_cap_corres:
               apply (rule corres_guard_imp)
                 apply (rule corres_split_nor)
                    apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
-                       apply (rule preemption_corres)
+                       apply (rule preemptionPoint_corres)
                       apply simp
                      apply (simp add: getFreeRef_def getFreeIndex_def
                                       free_index_of_def)
@@ -4267,25 +4267,43 @@ lemma reset_untyped_cap_corres:
                       apply (erule order_less_le_trans)
                       apply simp
                      apply simp
-                    apply wp+
+                    apply (wpsimp wp: update_untyped_cap_valid_objs)
+                   apply (strengthen valid_pspace_valid_objs'
+                          | wpsimp wp: updateFreeIndex_valid_pspace_no_overlap')+
                   apply (rule corres_machine_op)
                   apply (rule corres_Id)
                     apply (simp add: shiftL_nat getFreeRef_def shiftl_t2n mult.commute
                                      reset_chunk_bits_def resetChunkBits_def)
                    apply simp
-                  apply wp+
-               apply (clarsimp simp: cte_wp_at_caps_of_state)
+                  apply (wpsimp wp: hoare_vcg_ex_lift doMachineOp_psp_no_overlap)+
+               apply (fastforce intro: valid_untyped_pspace_no_overlap
+                                 simp: cte_wp_at_caps_of_state valid_cap_def cap_aligned_def)
+               apply simp
               apply (clarsimp simp: getFreeRef_def valid_pspace'_def cte_wp_at_ctes_of
                                     valid_cap_def cap_aligned_def)
-              apply (erule aligned_add_aligned)
-               apply (rule is_aligned_weaken)
-                apply (rule is_aligned_mult_triv2)
-               apply (simp add: reset_chunk_bits_def)
-              apply (simp add: untyped_min_bits_def)
-             apply (rule hoare_pre)
+              apply (rule conjI impI)
+               apply (erule aligned_add_aligned)
+                apply (rule is_aligned_weaken)
+                 apply (rule is_aligned_mult_triv2)
+                apply (simp add: reset_chunk_bits_def)
+               apply (simp add: untyped_min_bits_def)
+              apply (clarsimp simp: getFreeIndex_def getFreeRef_def)
+              apply (subst is_aligned_weaken[OF is_aligned_mult_triv2])
+               apply (simp add: reset_chunk_bits_def minUntypedSizeBits_def)
+              apply (subst unat_mult_simple)
+               apply (clarsimp)
+               apply (rule order_less_trans[rotated],
+                      rule_tac n=sz in power_strict_increasing, simp+)
+               apply (rule nat_less_power_trans2, simp_all)[1]
+               apply (simp add: unat_of_nat)
               apply simp
+              apply (rule order_less_imp_le, rule nat_less_power_trans2)
+               apply (simp add: unat_of_nat)
+              apply simp
+             apply simp
+             apply (rule hoare_pre)
               apply (strengthen imp_consequent)
-              apply (wp preemption_point_inv set_cap_cte_wp_at
+              apply (wp set_cap_cte_wp_at
                         update_untyped_cap_valid_objs
                         set_cap_no_overlap | simp)+
              apply (clarsimp simp: exI cte_wp_at_caps_of_state)
@@ -4322,11 +4340,10 @@ lemma reset_untyped_cap_corres:
           apply (clarsimp simp add: valid_cap_def cap_aligned_def)
          apply (clarsimp simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
         apply (simp add: if_apply_def2)
-        apply (strengthen invs_valid_objs invs_psp_aligned invs_distinct)
+        apply (strengthen invs_valid_objs invs_psp_aligned invs_distinct invs_cur_sc_tcb)
         apply (wp hoare_vcg_const_imp_lift)
        apply (simp add: if_apply_def2)
-       apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
-                         invs_valid_pspace')
+       apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
        apply (wp hoare_vcg_const_imp_lift deleteObjects_cte_wp_at'[where p="cte_map slot"]
                  deleteObjects_invs'[where p="cte_map slot"]
                  deleteObjects_descendants[where p="cte_map slot"]
@@ -4342,7 +4359,7 @@ lemma reset_untyped_cap_corres:
    apply (frule if_unsafe_then_capD[OF caps_of_state_cteD], clarsimp+)
    apply (drule(1) ex_cte_cap_protects[OF _ caps_of_state_cteD
        empty_descendants_range_in _ order_refl], clarsimp+)
-   apply (intro conjI impI; auto)[1]
+   subgoal by (auto simp: valid_sched_def)
   apply (clarsimp simp: cte_wp_at_ctes_of descendants_range'_def2
                         empty_descendants_range_in')
   apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)
@@ -4529,13 +4546,13 @@ lemma resetUntypedCap_invs_etc:
                         pspace_no_overlap'_lift preemptionPoint_inv
                         updateFreeIndex_ct_in_state[unfolded ct_in_state'_def]
               | strengthen invs_pspace_aligned' invs_pspace_distinct'
-              | simp add: ct_in_state'_def
-                          sch_act_simple_def
+              | simp add: ct_in_state'_def getCurrentTime_independent_H_def ex_cte_cap_wp_to'_def
+                          time_state_independent_H_def sch_act_simple_def
               | rule hoare_vcg_conj_lift_R
               | wp (once) preemptionPoint_inv
               | wps
               | wp (once) ex_cte_cap_to'_pres)+
-     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
+     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps ex_cte_cap_wp_to'_def
                            conj_comms)
      apply (subgoal_tac "getFreeIndex ptr
             (rev [ptr , ptr + 2 ^ resetChunkBits .e. getFreeRef ptr idx - 1] ! i)
@@ -4623,7 +4640,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
+     (einvs and valid_machine_time and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
      (invs' and valid_untyped_inv' ui' and ct_active')
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
@@ -4642,7 +4659,7 @@ lemma inv_untyped_corres':
                   (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
-                 "schact_is_rct s"
+                 "schact_is_rct s" "valid_machine_time s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
@@ -5688,26 +5705,6 @@ crunches deleteObjects, updateFreeIndex
   for valid_irq_states'[wp]: "valid_irq_states'"
   (wp: doMachineOp_irq_states' crunch_wps
    simp: freeMemory_def no_irq_storeWord unless_def)
-
-lemma resetUntypedCap_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace>
-    resetUntypedCap slot
-  \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  (is "\<lbrace>?P\<rbrace> resetUntypedCap slot \<lbrace>?Q\<rbrace>,\<lbrace>?E\<rbrace>")
-  apply (simp add: resetUntypedCap_def)
-  apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp[where P=valid_irq_states' and E="?E", THEN hoare_post_impErr]
-             doMachineOp_irq_states' preemptionPoint_inv hoare_drop_imps
-     | simp add: no_irq_clearMemory if_apply_def2)+
-  done
-
-lemma inv_untyped_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> invokeUntyped ui
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeUntyped_def)
-  apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp resetUntypedCap_IRQInactive | wpc | simp)+
-  done
 
 end
 end

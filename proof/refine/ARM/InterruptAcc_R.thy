@@ -93,28 +93,274 @@ lemma work_units_and_irq_state_state_relationI [intro!]:
    \<in> state_relation"
   by (simp add: state_relation_def swp_def)
 
-lemma preemption_corres:
-  "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
-  apply (simp add: preemption_point_def preemptionPoint_def)
-  by (auto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def
-                 corres_underlying_def select_def bind_def get_def bindE_def select_f_def modify_def
-                 alternative_def throwError_def returnOk_def return_def lift_def doMachineOp_def split_def
-                 put_def getWorkUnits_def setWorkUnits_def modifyWorkUnits_def do_machine_op_def
+lemma update_work_units_corres[corres]:
+  "corres (dc \<oplus> dc) \<top> \<top> (liftE update_work_units) (liftE (modifyWorkUnits (\<lambda>op. op + 1)))"
+  apply (clarsimp simp: update_work_units_def modifyWorkUnits_def)
+  apply (rule corres_modify)
+  apply (clarsimp simp: state_relation_def)
+  done
 
-                 update_work_units_def wrap_ext_bool_det_ext_ext_def work_units_limit_def workUnitsLimit_def
-                 work_units_limit_reached_def OR_choiceE_def reset_work_units_def mk_ef_def
-           elim: state_relationE)
-  (* what? *)
-  (* who says our proofs are not automatic.. *)
+lemma getCurTime_corres[corres]:
+  "corres (=) \<top> \<top> (gets cur_time) getCurTime"
+  apply (simp add: getCurTime_def state_relation_def)
+  done
+
+lemma getCurTime_sp:
+  "\<lbrace>P\<rbrace> getCurTime \<lbrace>\<lambda>rv s. rv = ksCurTime s \<and> P s\<rbrace>"
+  apply wpsimp
+  done
+
+lemma updateTimeStamp_corres[corres]:
+  "corres dc \<top> \<top> update_time_stamp updateTimeStamp"
+  apply (clarsimp simp: update_time_stamp_def updateTimeStamp_def setConsumedTime_def)
+  apply (rule corres_split'[rotated 2, OF gets_sp getCurTime_sp])
+   apply corressimp
+  apply (rule corres_split'[where r'="(=)"])
+     apply (rule corres_guard_imp)
+       apply (rule corres_machine_op)
+       apply corressimp
+        apply (wpsimp simp: getCurrentTime_def)
+       apply simp
+      apply simp
+     apply simp
+    apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
+    apply (clarsimp simp: setCurTime_def)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF corres_modify])
+         apply (clarsimp simp: state_relation_def cdt_relation_def)
+        apply (clarsimp simp: setConsumedTime_def)
+        apply (rule_tac Q'="\<lambda>rv s. rv = ksConsumedTime s" in corres_symb_exec_r)
+           apply (rule corres_modify)
+           apply (clarsimp simp: state_relation_def cdt_relation_def)
+          apply (wpsimp simp: getConsumedTime_def)+
+  done
+
+lemma refillSufficient_corres:
+  "sc_ptr = scPtr
+   \<Longrightarrow> corres (=) (valid_objs and pspace_aligned and pspace_distinct
+                   and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
+                  valid_objs'
+              (get_sc_refill_sufficient sc_ptr consumed)
+              (refillSufficient scPtr consumed)"
+  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
+   apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
+  apply (clarsimp simp: get_sc_refill_sufficient_def refillSufficient_def getCurTime_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_symb_exec_r)
+       apply (rule_tac R="\<lambda>sc s. sc_refills sc \<noteq> []"
+                   and R'= "\<lambda>sc' s. valid_objs' s \<and> ko_at' sc' scPtr s \<and> refills = scRefills sc'"
+                    in corres_split[OF get_sc_corres])
+         apply (rename_tac sc sc')
+         apply clarsimp
+         apply (prop_tac "r_amount (refill_hd sc) = rAmount (refillHd sc')")
+          apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
+                                 refills_heads_equal_valid_sched_context')
+         apply (clarsimp simp: refill_sufficient_def sufficientRefills_def refillHd_def
+                               refill_capacity_def refillsCapacity_def MIN_BUDGET_def
+                               minBudget_def kernelWCETTicks_def)
+        apply (wpsimp wp: get_sc_inv'
+                    simp: getRefills_def)+
+   apply (fastforce dest: valid_objs_valid_sched_context_size
+                    simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  done
+
+lemma modifyWorkUnits_valid_objs'[wp]:
+  "modifyWorkUnits f \<lbrace>valid_objs'\<rbrace>"
+  apply (clarsimp simp: modifyWorkUnits_def)
+  apply wpsimp
+  done
+
+lemma setWorkUnits_corres[corres]:
+  "corres dc \<top> \<top> reset_work_units (setWorkUnits 0)"
+  apply (clarsimp simp: reset_work_units_def setWorkUnits_def)
+  apply (rule corres_modify)
+  apply (clarsimp simp: state_relation_def)
+  done
+
+crunches updateTimeStamp
+  for valid_objs'[wp]: valid_objs'
+
+lemma getCurSc_sp:
+  "\<lbrace>P\<rbrace> getCurSc \<lbrace>\<lambda>rv s. rv = ksCurSc s \<and> P s\<rbrace>"
+  apply (wpsimp wp: getCurSc_def)
+  done
+
+lemma getConsumedTime_sp:
+  "\<lbrace>P\<rbrace> getConsumedTime \<lbrace>\<lambda>rv s. rv = ksConsumedTime s \<and> P s\<rbrace>"
+  apply wpsimp
+  done
+
+lemma scActive_corres:
+  "corres (=) (sc_at scPtr and pspace_aligned and pspace_distinct)
+              \<top>
+          (get_sc_active scPtr)
+          (scActive scPtr)"
+  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
+   apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
+  apply (corressimp corres: get_sc_corres
+                      simp: sc_relation_def get_sc_active_def scActive_def active_sc_def)
+  done
+
+lemma getConsumedTime_corres[corres]:
+  "corres (=) \<top> \<top> (gets consumed_time) getConsumedTime"
+  apply (simp add: getConsumedTime_def state_relation_def)
+  done
+
+lemma isCurDomainExpired_corres[corres]:
+  "corres (=) \<top> \<top> (gets is_cur_domain_expired) isCurDomainExpired"
+  apply (simp add: is_cur_domain_expired_def isCurDomainExpired_def getDomainTime_def
+                   getConsumedTime_def)
+  apply (clarsimp simp: corres_underlying_def gets_def bind_def get_def return_def
+                        state_relation_def minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
+  done
+
+lemma get_sc_active_sp:
+  "\<lbrace>P\<rbrace>
+   get_sc_active sc_ptr
+   \<lbrace>\<lambda>rv s. P s
+           \<and> (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
+  apply (simp add: get_sc_active_def)
+  apply wpsimp
+  apply (clarsimp simp: obj_at_def active_sc_def)
+  done
+
+lemma scActive_sp:
+  "\<lbrace>P\<rbrace>
+   scActive scPtr
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> rv = (0 < scRefillMax sc))\<rbrace>"
+  apply (simp add: scActive_def)
+  apply (rule hoare_seq_ext[rotated])
+   apply (rule get_sc_sp')
+  apply (wp hoare_return_sp)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  done
+
+lemma preemptionPoint_corres:
+  "corres (dc \<oplus> dc)
+          (\<lambda>s. valid_objs s \<and> cur_sc_tcb s \<and> pspace_aligned s \<and> pspace_distinct s
+               \<and> active_sc_valid_refills s \<and> valid_machine_time s)
+          valid_objs'
+          preemption_point
+          preemptionPoint"
+  (is "corres _ ?abs ?conc _ _")
+  supply if_split[split del]
+  apply (simp add: preemption_point_def preemptionPoint_def)
+  apply (rule corres_splitEE_skip
+         ; corressimp corres: update_work_units_corres
+                        simp: update_work_units_def)
+  apply (clarsimp simp: bindE_def liftE_def)
+  apply (rule_tac Q'="\<lambda>rv s. rv = ksWorkUnitsCompleted s \<and> ?conc s" in corres_symb_exec_r[rotated])
+     apply (wpsimp simp: getWorkUnits_def)+
+  apply (rename_tac work_units)
+  apply (clarsimp simp: OR_choiceE_def whenE_def work_units_limit_reached_def bindE_def liftE_def)
+  apply (rule_tac Q="\<lambda>rv s. rv = s \<and> ?abs s" in corres_symb_exec_l[rotated])
+     apply wpsimp+
+  apply (rename_tac ex)
+  apply (rule_tac Q="\<lambda>s. ex = s \<and> work_units = work_units_completed s \<and> ?abs s"
+              and Q'="\<lambda>s. work_units = ksWorkUnitsCompleted s \<and> valid_objs' s"
+              in stronger_corres_guard_imp[rotated])
+    apply (clarsimp simp: state_relation_def)
+   apply simp
+  apply (rule_tac Q="\<lambda>rv s. \<exists>rv'' t. rv = (rv'', s) \<and> rv'' = (workUnitsLimit \<le> work_units) \<and> ?abs s"
+               in corres_symb_exec_l)
+     apply (case_tac rv; clarsimp)
+     apply (rename_tac bool state)
+     apply (rule_tac F="bool = (workUnitsLimit \<le> work_units) \<and> ?abs state" in corres_req)
+      apply simp
+     apply (rule corres_guard_imp)
+       apply (rule corres_if3)
+         apply clarsimp
+        apply (rule_tac P="?abs" and P'="?conc" in corres_inst)
+        apply (rule corres_split_skip)
+           apply (wpsimp simp: reset_work_units_def)
+          apply (wpsimp simp: setWorkUnits_def)
+         apply (corressimp corres: setWorkUnits_corres)
+        apply (rule corres_split_skip)
+           apply (wpsimp simp: cur_sc_tcb_def)
+          apply wpsimp
+         apply (corressimp corres: corres_machine_op)
+        apply (clarsimp split: if_split)
+        apply (subst liftE_bindE)+
+        apply (rule corres_split_skip; corressimp corres: updateTimeStamp_corres)
+        apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
+         apply (corressimp corres: getCurSc_corres)
+        apply (rule corres_split'[rotated 2, OF gets_sp getConsumedTime_sp])
+         apply (corressimp corres: getConsumedTime_corres)
+        apply (clarsimp simp: andM_def ifM_def bind_assoc)
+        apply (rule corres_split'[rotated 2, OF get_sc_active_sp scActive_sp])
+         apply (corressimp corres: scActive_corres)
+         apply (fastforce dest: valid_objs_valid_sched_context_size
+                          simp: cur_sc_tcb_def obj_at_def is_sc_obj_def sc_at_pred_n_def)
+        apply (clarsimp split: if_split)
+        apply (intro conjI impI)
+         apply (rule corres_guard_imp)
+           apply (rule corres_split[OF refillSufficient_corres]; simp)
+              apply (rule corres_split[OF isCurDomainExpired_corres])
+                apply (clarsimp simp: returnOk_def
+                               split: if_split)
+               apply wpsimp
+              apply (wpsimp simp: isCurDomainExpired_def)+
+          apply (prop_tac "is_active_sc (cur_sc s) s")
+           apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def)
+          apply (frule (1) active_sc_valid_refillsE)
+          apply (clarsimp simp: obj_at_def is_sc_obj_def sc_at_pred_n_def vs_all_heap_simps
+                                active_sc_def sc_valid_refills_def rr_valid_refills_def
+                         split: if_splits)
+         apply simp
+        apply corressimp
+       apply (fastforce intro: corres_returnOkTT)
+      apply (clarsimp split: if_split)
+     apply (clarsimp split: if_split)
+    apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
+                          wrap_ext_bool_det_ext_ext_def)
+   apply wpsimp
+   apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def get_def return_def
+                         work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
+  apply wpsimp
+  apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
+                        work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def )
+  done
+
+lemma updateTimeStamp_inv:
+   "\<lbrakk>updateTimeStamp_independent P; time_state_independent_H P; getCurrentTime_independent_H P\<rbrakk>
+    \<Longrightarrow> updateTimeStamp \<lbrace>P\<rbrace>"
+  apply (simp add: updateTimeStamp_def doMachineOp_def getCurrentTime_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (fastforce simp: time_state_independent_H_def getCurrentTime_independent_H_def in_monad)
+  apply (rule hoare_seq_ext_skip, wpsimp simp: setCurTime_def)
+   apply (clarsimp simp: updateTimeStamp_independent_def)
+   apply (drule_tac x="\<lambda>_. curTime'" in spec)
+   apply (drule_tac x=id in spec)
+   apply fastforce
+  apply (wpsimp simp: setConsumedTime_def)
+  apply (clarsimp simp: updateTimeStamp_independent_def)
+  apply (drule_tac x=id in spec)
+  apply (fastforce simp: update_time_stamp_independent_A_def)
+  done
 
 lemma preemptionPoint_inv:
   assumes "(\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s)"
           "irq_state_independent_H P"
-  shows "\<lbrace>P\<rbrace> preemptionPoint \<lbrace>\<lambda>_. P\<rbrace>" using assms
-  apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def)
-  apply (wpc
-          | wp hoare_whenE_wp hoare_seq_ext [OF _ select_inv] alternative_valid hoare_drop_imps
-          | simp)+
+          "updateTimeStamp_independent P"
+          "getCurrentTime_independent_H P"
+          "time_state_independent_H P"
+  shows "preemptionPoint \<lbrace>P\<rbrace>"
+  using assms
+  apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def
+                   setConsumedTime_def setCurTime_def)
+  apply (rule validE_valid)
+  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (clarsimp simp: whenE_def)
+  apply (intro conjI impI; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (rename_tac preempt)
+  apply (case_tac preempt; clarsimp)
+   apply (rule hoare_seq_ext_skipE)
+    apply (wpsimp wp: updateTimeStamp_inv)
+   apply (wpsimp wp: getRefills_wp hoare_drop_imps
+               simp: isCurDomainExpired_def getDomainTime_def refillSufficient_def)+
   done
 
 lemma ct_running_irq_state_independent[intro!, simp]:
@@ -137,29 +383,44 @@ lemma sch_act_simple_irq_state_independent[intro!, simp]:
    sch_act_simple s"
   by (simp add: sch_act_simple_def)
 
-lemma invs'_irq_state_independent [simp, intro!]:
+method invs'_independent_method
+  = (clarsimp simp: irq_state_independent_H_def invs'_def valid_state'_def
+                    valid_pspace'_def sch_act_wf_def
+                    valid_queues_def sym_refs_def state_refs_of'_def
+                    if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
+                    valid_idle'_def valid_global_refs'_def
+                    valid_arch_state'_def valid_irq_node'_def
+                    valid_irq_handlers'_def valid_irq_states'_def
+                    irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
+                    valid_queues'_def valid_pde_mappings'_def
+                    pspace_domain_valid_def cur_tcb'_def
+                    valid_machine_state'_def tcb_in_cur_domain'_def ex_cte_cap_wp_to'_def
+                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def valid_mdb'_def ct_in_state'_def
+                    valid_release_queue_def valid_release_queue'_def valid_dom_schedule'_def
+              cong: if_cong option.case_cong
+     , rule iffI[rotated]
+     , clarsimp
+     , case_tac "ksSchedulerAction s", simp_all
+     , clarsimp
+     , case_tac "ksSchedulerAction s", simp_all)
+
+lemma
+  shows invs'_irq_state_independent [simp, intro!]:
   "invs' (s\<lparr>ksMachineState := ksMachineState s
-                 \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>) =
-   invs' s"
-  apply (clarsimp simp: irq_state_independent_H_def invs'_def valid_state'_def
-          valid_pspace'_def sch_act_wf_def valid_dom_schedule'_def
-          valid_queues_def sym_refs_def state_refs_of'_def
-          if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
-          valid_idle'_def valid_global_refs'_def
-          valid_arch_state'_def valid_irq_node'_def
-          valid_irq_handlers'_def valid_irq_states'_def
-          irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
-          valid_queues'_def valid_pde_mappings'_def
-          pspace_domain_valid_def cur_tcb'_def
-          valid_machine_state'_def tcb_in_cur_domain'_def
-          ct_not_inQ_def ct_idle_or_in_cur_domain'_def
-          cong: if_cong option.case_cong)
-  apply (rule iffI[rotated])
-   apply (clarsimp)
-   apply (case_tac "ksSchedulerAction s", simp_all)
-  apply clarsimp
-  apply (case_tac "ksSchedulerAction s", simp_all)
-  done
+                 \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>)
+   = invs' s"
+  and invs'_updateTimeStamp_independent [simp, intro!]:
+  "invs' (s\<lparr>ksCurTime := f' (ksCurTime s), ksConsumedTime := g (ksConsumedTime s)\<rparr>)
+   = invs' s"
+  and invs'_getCurrentTime_independent [simp, intro!]:
+  "invs' (s\<lparr>ksMachineState
+            := ksMachineState s \<lparr>last_machine_time
+                                 := f'' (last_machine_time (ksMachineState s)) (time_state (ksMachineState s))\<rparr>\<rparr>)
+   = invs' s"
+  and invs'_time_state_independent [simp, intro!]:
+  "invs' (s\<lparr>ksMachineState := ksMachineState s \<lparr>time_state := f''' (time_state (ksMachineState s))\<rparr>\<rparr>)
+   = invs' s"
+  by invs'_independent_method+
 
 lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"

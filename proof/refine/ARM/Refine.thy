@@ -494,11 +494,9 @@ lemma kernel_corres':
              (do _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
-                               irq <- doMachineOp (getActiveIRQ True);
-                               when (isJust irq) $ do
-                                 _ \<leftarrow> mcsIRQ (fromJust irq);
-                                 handleInterrupt (fromJust irq)
-                               od
+                               irq_opt <- doMachineOp (getActiveIRQ True);
+                               mcsIRQ irq_opt;
+                               when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt)
                              od);
                  _ \<leftarrow> ThreadDecls_H.schedule;
                  activateThread
@@ -565,7 +563,6 @@ lemma kernel_corres:
         apply simp
        apply (simp add: kernelExitAssertions_def state_relation_def)
       apply (simp only: bind_assoc)
-      apply (rule kernel_corres')
   sorry (* FIXME RT: call_kernel_domain_time_inv_det_ext in DetSchedDomainTime_AI
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp

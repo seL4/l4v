@@ -2362,39 +2362,6 @@ lemma setCTE_weak_sch_act_wf[wp]:
   apply (wp hoare_vcg_all_lift hoare_convert_imp setCTE_pred_tcb_at' setCTE_tcb_in_cur_domain')
   done
 
-lemma refillSufficient_corres:
-  "sc_ptr = scPtr
-   \<Longrightarrow> corres (=) (valid_objs and pspace_aligned and pspace_distinct
-                   and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
-                  valid_objs'
-              (get_sc_refill_sufficient sc_ptr consumed)
-              (refillSufficient scPtr consumed)"
-  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
-   apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def sc_at_pred_n_def)
-  apply (clarsimp simp: get_sc_refill_sufficient_def refillSufficient_def getCurTime_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_symb_exec_r)
-       apply (rule_tac R="\<lambda>sc s. sc_refills sc \<noteq> []"
-                   and R'="\<lambda>sc' s. valid_objs' s \<and> ko_at' sc' scPtr s \<and> refills = scRefills sc'"
-                    in corres_split[OF get_sc_corres])
-         apply (rename_tac sc sc')
-         apply clarsimp
-         apply (prop_tac "r_amount (refill_hd sc) = rAmount (refillHd sc')")
-          apply (rule_tac s'=s' in refills_heads_equal_valid_sched_context'[THEN conjunct1, symmetric])
-            apply simp
-           apply (fastforce simp: obj_at'_def projectKOs valid_obj'_def)
-          apply (fastforce dest: sc_ko_at_valid_objs_valid_sc')
-         apply (clarsimp simp: refill_sufficient_def sufficientRefills_def refillHd_def
-                               refill_capacity_def refillsCapacity_def MIN_BUDGET_def
-                               minBudget_def kernelWCET_ticks_def kernelWCETTicks_def)
-        apply (wpsimp wp: get_sc_inv'
-                    simp: getRefills_def)+
-    apply (fastforce dest: valid_objs_valid_sched_context_size
-                     simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
-   apply (clarsimp simp: obj_at'_def projectKOs)
-   done
-
-
 lemma getTCBSc_corres:
   "corres (\<lambda>x y. \<exists>n. sc_relation x n y)
           (\<lambda>s. bound_sc_tcb_at (\<lambda>sc. \<exists>y. sc = Some y \<and> sc_at y s) t s)

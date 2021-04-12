@@ -1679,7 +1679,8 @@ lemma installTCBCap_corres_helper:
 lemma installTCBCap_corres:
   "\<lbrakk> newroot_rel slot_opt slot_opt'; slot_opt \<noteq> None \<longrightarrow> slot' = cte_map slot; n \<in> {0,1,3,4} \<rbrakk> \<Longrightarrow>
      corres (dc \<oplus> dc)
-            (\<lambda>s. einvs s \<and> simple_sched_action s \<and> cte_at (target, tcb_cnode_index n) s \<and>
+            (\<lambda>s. einvs s \<and> valid_machine_time s \<and> simple_sched_action s
+                 \<and> cte_at (target, tcb_cnode_index n) s \<and>
                  (\<forall>new_cap src_slot.
                    slot_opt = Some (new_cap, src_slot) \<longrightarrow>
                    (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap) \<and>
@@ -1807,7 +1808,7 @@ lemma installThreadBuffer_corres:
   assumes "case_option (g' = None) (\<lambda>(vptr,g''). \<exists>g'''. g' = Some (vptr, g''') \<and> newroot_rel g'' g''') g"
   and     "g \<noteq> None \<longrightarrow> sl' = cte_map slot"
   shows "corres (dc \<oplus> dc)
-         (einvs and simple_sched_action and tcb_at a
+         (einvs and valid_machine_time and simple_sched_action and tcb_at a
                 and (case_option \<top> (\<lambda>(_,sl). cte_at slot and
                         (case_option \<top> (\<lambda>(newCap,srcSlot). cte_at srcSlot and valid_cap newCap and
                                                             no_cap_to_obj_dr_emp newCap) sl)) g)
@@ -1927,7 +1928,7 @@ lemma tc_corres_caps:
                           case_option \<top> (no_cap_to_obj_dr_emp o fst) c"
   shows
     "corres (dc \<oplus> (=))
-    (einvs and simple_sched_action and tcb_at t and tcb_inv_wf tc_caps_inv)
+    (einvs and valid_machine_time and simple_sched_action and tcb_at t and tcb_inv_wf tc_caps_inv)
     (invs' and sch_act_simple and tcb_inv_wf' tc_caps_inv')
     (invoke_tcb tc_caps_inv)
     (invokeTCB tc_caps_inv')"
@@ -2293,7 +2294,7 @@ lemma tc_corres_sched:
   assumes "tcbinv_relation tc_inv_sched tc_inv_sched'"
   shows
     "corres (dc \<oplus> (=))
-    (einvs and simple_sched_action and tcb_inv_wf tc_inv_sched
+    (einvs and valid_machine_time and simple_sched_action and tcb_inv_wf tc_inv_sched
            and ct_released and ct_active and ct_not_in_release_q)
     (invs' and sch_act_simple and tcb_inv_wf' tc_inv_sched')
     (invoke_tcb tc_inv_sched)
@@ -2328,7 +2329,8 @@ lemma tc_corres_sched:
                 apply (rule_tac P=\<top> and P'=\<top> in corres_option_split; clarsimp)
                 apply wpfix
                 apply (rule sp_corres)
-               apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_sched s \<and> simple_sched_action s \<and>
+               apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_machine_time s \<and> valid_sched s
+                                        \<and> simple_sched_action s \<and>
                                         tcb_at t s \<and> ex_nonz_cap_to t s \<and>
                                         (\<forall>scPtr. sc_opt = Some (Some scPtr) \<longrightarrow>
                                                    ex_nonz_cap_to scPtr s \<and>
@@ -2377,8 +2379,9 @@ lemma tc_corres_sched:
          apply (wpsimp wp: setMCPriority_invs' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
         apply wpsimp
        apply (rule installTCBCap_corres; clarsimp)
-      apply (rule_tac Q="\<lambda>_ s. einvs s \<and> simple_sched_action s \<and> tcb_at t s \<and> ex_nonz_cap_to t s \<and>
-                               ct_active s \<and> ct_released s \<and> ct_not_in_release_q s \<and>
+      apply (rule_tac Q="\<lambda>_ s. einvs s \<and> valid_machine_time s \<and> simple_sched_action s \<and> tcb_at t s
+                               \<and> ex_nonz_cap_to t s \<and> ct_active s \<and> ct_released s
+                               \<and> ct_not_in_release_q s \<and>
                                (\<forall>scp. sc_opt = Some (Some scp) \<longrightarrow> ex_nonz_cap_to scp s \<and>
                                                                    sc_tcb_sc_at ((=) None) scp s \<and>
                                                                    bound_sc_tcb_at ((=) None) t s)"
@@ -2602,8 +2605,8 @@ lemma as_user_valid_tcbs[wp]:
 lemma tcbinv_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (dc \<oplus> (=))
-         (einvs and simple_sched_action and Tcb_AI.tcb_inv_wf ti and current_time_bounded 1
-                and ct_released and ct_active and ct_not_in_release_q)
+         (einvs and valid_machine_time and simple_sched_action and Tcb_AI.tcb_inv_wf ti
+                and current_time_bounded 1 and ct_released and ct_active and ct_not_in_release_q)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
@@ -3758,17 +3761,6 @@ crunches getThreadBufferSlot, setPriority, setMCPriority
   for irq_states'[wp]: valid_irq_states'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma inv_tcb_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> invokeTCB tcb_inv
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeTCB_def)
-  apply (rule hoare_pre)
-   apply (wpc |
-          wp withoutPreemption_R cteDelete_IRQInactive checkCap_inv
-             hoare_vcg_const_imp_lift_R cteDelete_irq_states'
-             hoare_vcg_const_imp_lift |
-          simp add: split_def)+
-  sorry
 
 end
 

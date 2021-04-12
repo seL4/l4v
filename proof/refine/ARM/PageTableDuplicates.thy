@@ -1794,7 +1794,7 @@ lemma cteRevoke_valid_duplicates'[wp]:
        \<and> sch_act_simple s \<rbrace>"
   apply (rule cteRevoke_preservation)
    apply (wp cteDelete_invs' cteDelete_valid_duplicates' cteDelete_sch_act_simple)
-     apply (simp add:cteDelete_def)+
+     apply (fastforce simp: cteDelete_def sch_act_simple_def)+
   done
 
 lemma mapM_x_storePTE_invalid_whole:
