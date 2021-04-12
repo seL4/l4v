@@ -544,8 +544,6 @@ definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def kernelWCET_ticks_pos2 by clarsimp
 
-definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
-
 definition "min_sched_context_bits = 8"
 
 (* RT : size of sched_context struct in C, excluding refills

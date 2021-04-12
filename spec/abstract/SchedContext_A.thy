@@ -13,11 +13,6 @@ begin
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
 definition
-  is_cur_domain_expired :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "is_cur_domain_expired = (\<lambda>s. domain_time  s < consumed_time s + MIN_BUDGET)"
-
-definition
   is_round_robin :: "obj_ref \<Rightarrow> (bool,'z::state_ext) s_monad"
 where
   "is_round_robin sc_ptr = do
@@ -467,17 +462,6 @@ where
   od"
 
 section "Global time"
-
-text \<open>Update current and consumed time.\<close>
-definition
-  update_time_stamp :: "(unit, 'z::state_ext) s_monad"
-where
-  "update_time_stamp = do
-    prev_time \<leftarrow> gets cur_time;
-    cur_time' \<leftarrow> do_machine_op getCurrentTime;
-    modify (\<lambda>s. s\<lparr> cur_time := cur_time' \<rparr>);
-    modify (\<lambda>s. s\<lparr> consumed_time := consumed_time s + cur_time' - prev_time \<rparr>)
-  od"
 
 text \<open>Currently, @{text update_restart_pc} can be defined generically up to
 the actual register numbers.\<close>

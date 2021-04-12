@@ -57,17 +57,6 @@ definition
 where without_preemption_def[simp]:
  "without_preemption \<equiv> liftE"
 
-text \<open>Allow preemption at this point.\<close>
-definition
-  preemption_point :: "(unit,'z::state_ext) p_monad" where
- "preemption_point \<equiv> doE liftE $ do_extended_op update_work_units;
-                         OR_choiceE (work_units_limit_reached)
-                           (doE liftE $ do_extended_op reset_work_units;
-                                irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
-                                case_option (returnOk ()) (K (throwError $ ())) irq_opt
-                           odE) (returnOk ())
-                     odE"
-
 text \<open>Lift one kind of exception monad into another by converting the error
 into various other kinds of error or return value.\<close>
 definition
