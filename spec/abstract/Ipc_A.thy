@@ -693,28 +693,21 @@ where
   "check_budget = do
      csc \<leftarrow> gets cur_sc;
      consumed \<leftarrow> gets consumed_time;
-     sc \<leftarrow> get_sched_context csc;
     \<comment> \<open>FIXME RT: maybe assert @{text refill_ready}?\<close>
-     capacity \<leftarrow> get_sc_refill_capacity csc consumed;
+     sufficient \<leftarrow> get_sc_refill_sufficient csc consumed;
 
-     full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc); \<comment> \<open>@{text \<open>= refill_full csc\<close>}\<close>
-
-     robin \<leftarrow> return (sc_period sc = sc_budget sc);
-
-     if capacity \<ge> MIN_BUDGET \<and> (robin \<or> \<not>full) then do
-       dom_exp \<leftarrow> gets is_cur_domain_expired;
-       if dom_exp then do
-         modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-         reschedule_required;
-         return False
-      od
-      else return True
-    od
-    else do
-      consumed \<leftarrow> gets consumed_time;
-      charge_budget consumed True;
-      return False
-    od
+     if sufficient
+     then do dom_exp \<leftarrow> gets is_cur_domain_expired;
+             if dom_exp then do modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+                                reschedule_required;
+                                return False
+                             od
+                        else return True
+          od
+     else do consumed \<leftarrow> gets consumed_time;
+             charge_budget consumed True;
+             return False
+          od
   od"
 
 definition

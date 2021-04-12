@@ -337,11 +337,6 @@ definition
 
 section \<open>Top-level event handling\<close>
 
-(* FIXME: move *)
-definition
-  kernel_irq_timer :: "irq" where
-  "kernel_irq_timer \<equiv> 0x1B" \<comment> \<open>27 for ARM MCS\<close>
-
 fun
   handle_event :: "event \<Rightarrow> (unit, 'z::state_ext) p_monad"
 where
@@ -424,33 +419,28 @@ text \<open>
   and switches back to the active thread.
 \<close>
 
+definition preemption_path where
+  "preemption_path \<equiv> do
+      irq \<leftarrow> do_machine_op (getActiveIRQ True);
+      when (irq = Some timerIRQ) update_time_stamp;
+      ct \<leftarrow> gets cur_thread;
+      schedulable \<leftarrow> is_schedulable ct;
+      if schedulable then do check_budget;
+                             return ()
+                          od
+      else do csc \<leftarrow> gets cur_sc;
+              active \<leftarrow> get_sc_active csc;
+              when active (do consumed \<leftarrow> gets consumed_time;
+                              charge_budget consumed False
+                           od)
+           od;
+      when (irq \<noteq> None) (handle_interrupt (the irq))
+   od"
+
 definition
   call_kernel :: "event \<Rightarrow> (unit, 'z::state_ext) s_monad" where
   "call_kernel ev \<equiv> do
-       handle_event ev <handle>
-           (\<lambda>_. without_preemption $ do
-                  irq \<leftarrow> do_machine_op $ getActiveIRQ True;
-                  when (irq \<noteq> None) $ do
-                    update_time_stamp;
-                    ct \<leftarrow> gets cur_thread;
-                    schedulable <- is_schedulable ct;
-                    if schedulable then do
-                      check_budget;
-                      return ()
-                    od
-                    else do
-                      csc \<leftarrow> gets cur_sc;
-                      sc \<leftarrow> get_sched_context csc;
-                      when (0 < sc_refill_max sc) $ do
-                        consumed \<leftarrow> gets consumed_time;
-                        capacity \<leftarrow> get_sc_refill_capacity csc consumed;
-                        charge_budget consumed False;
-                        return ()
-                      od
-                    od;
-                    handle_interrupt (the irq)
-                  od
-                od);
+       handle_event ev <handle> (\<lambda>_. without_preemption preemption_path);
        schedule;
        activate_thread
    od"
