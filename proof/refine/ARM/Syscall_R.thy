@@ -386,7 +386,7 @@ lemma setDomain_corres:
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
-     (einvs and valid_invocation i
+     (einvs and valid_machine_time and valid_invocation i
             and schact_is_rct
             and current_time_bounded 1
             and ct_active
@@ -1153,7 +1153,7 @@ lemma hinv_corres:
   "call \<longrightarrow> blocking \<Longrightarrow>
    cptr = to_bl cptr' \<Longrightarrow>
    corres (dc \<oplus> dc)
-          (einvs and schact_is_rct and ct_active and ct_released
+          (einvs and valid_machine_time and schact_is_rct and ct_active and ct_released
            and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and ct_not_in_release_q
            and current_time_bounded 1)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -1198,7 +1198,8 @@ lemma hinv_corres:
                apply wpsimp
               apply (clarsimp simp: invs'_def valid_state'_def)
              apply simp
-             apply (rule_tac Q="\<lambda>rv. einvs and schact_is_rct and valid_invocation rve
+             apply (rule_tac Q="\<lambda>rv. einvs and valid_machine_time and schact_is_rct
+                                 and valid_invocation rve
                                  and (\<lambda>s. thread = cur_thread s)
                                  and st_tcb_at active thread
                                  and ct_not_in_release_q and ct_released
@@ -1332,7 +1333,7 @@ lemma getCapReg_corres:
 
 lemma hs_corres:
   "corres (dc \<oplus> dc)
-          (einvs and schact_is_rct and ct_active and
+          (einvs and valid_machine_time and schact_is_rct and ct_active and
            ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
            ct_not_in_release_q and current_time_bounded 1)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -1587,7 +1588,7 @@ lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
 
 lemma hc_corres:
-  "corres (dc \<oplus> dc) (einvs and schact_is_rct and ct_active and
+  "corres (dc \<oplus> dc) (einvs and valid_machine_time and schact_is_rct and ct_active and
                       ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
                       ct_not_in_release_q and current_time_bounded 1)
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -1833,31 +1834,6 @@ proof -
   done *)
 qed
 
-lemma inv_irq_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> performIRQControl irqcontrol_invocation
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: performIRQControl_def)
-  apply (rule hoare_pre)
-   apply (wpc|wp|simp add: ARM_H.performIRQControl_def)+
-  done
-
-lemma inv_arch_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> Arch.performInvocation invocation
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: ARM_H.performInvocation_def performARMMMUInvocation_def)
-  apply wp
-  done
-
-lemma retype_pi_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> RetypeDecls_H.performInvocation blocking call canDonate v
-   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: Retype_H.performInvocation_def)
-  apply (rule hoare_pre)
-   apply (wpc
-          | wpsimp wp: inv_tcb_IRQInactive inv_cnode_IRQInactive inv_irq_IRQInactive
-                       inv_untyped_IRQInactive inv_arch_IRQInactive
-                 simp: stateAssertE_def stateAssert_def)+
-  done
 
 end
 

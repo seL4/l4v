@@ -3562,6 +3562,12 @@ lemma sc_at_cross:
   apply (case_tac z; simp)
   by (fastforce dest!: aligned_distinct_ko_at'I[where 'a=sched_context] elim: obj_at'_weakenE)
 
+lemma sc_at'_cross_rel:
+  "cross_rel (pspace_aligned and pspace_distinct and sc_at t) (sc_at' t)"
+  unfolding cross_rel_def state_relation_def
+  apply clarsimp
+  by (erule (3) sc_at_cross)
+
 lemma sc_obj_at_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ps: "pspace_aligned s" "pspace_distinct s"

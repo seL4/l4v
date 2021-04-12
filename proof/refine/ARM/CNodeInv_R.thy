@@ -540,6 +540,12 @@ lemma not_recursive_ctes_irq_state_independent[simp, intro!]:
   "not_recursive_ctes (s \<lparr> ksMachineState := ksMachineState s \<lparr> irq_state := x \<rparr>\<rparr>) = not_recursive_ctes s"
   by (simp add: not_recursive_ctes_def)
 
+lemma not_recursive_ctes_independent_simple[simp]:
+  "not_recursive_ctes (ksCurTime_update f s) = not_recursive_ctes s"
+  "not_recursive_ctes (ksConsumedTime_update f' s) = not_recursive_ctes s"
+  "not_recursive_ctes (ksMachineState_update f'' s) = not_recursive_ctes s"
+  by (simp add: not_recursive_ctes_def)+
+
 lemma capSwap_not_recursive:
   "\<lbrace>\<lambda>s. card (not_recursive_ctes s) \<le> n
      \<and> cte_wp_at' (\<lambda>cte. \<not> (isZombie (cteCap cte) \<and> capZombiePtr (cteCap cte) = p1)) p1 s
@@ -666,20 +672,62 @@ lemma finaliseSlot_recset_wf: "wf finaliseSlot_recset"
   by (intro wf_sum_wf wf_rdcall_finalise_ord_lift wf_measure
             wf_inv_image wf_lex_prod wf_less_than)
 
+crunches getRefills, isCurDomainExpired
+  for inv[wp]: P
+
 lemma in_preempt':
   "(Inr rv, s') \<in> fst (preemptionPoint s) \<Longrightarrow>
-   \<exists>f g. s' = ksWorkUnitsCompleted_update f
-      (s \<lparr> ksMachineState := ksMachineState s \<lparr> irq_state := g (irq_state (ksMachineState s)) \<rparr>\<rparr>)"
-  apply (simp add: preemptionPoint_def alternative_def in_monad eq_commute
-                   getActiveIRQ_def doMachineOp_def split_def
-                   select_f_def select_def getWorkUnits_def setWorkUnits_def
-                   modifyWorkUnits_def return_def returnOk_def
-              split: option.splits if_splits)
-   apply (erule disjE)
-     apply (cases "workUnitsLimit \<le> ksWorkUnitsCompleted s + 1", drule (1) mp,
-            rule exI[where x="\<lambda>x. 0"], rule exI[where x=Suc], force,
-            rule exI[where x="\<lambda>x. x + 1"], rule exI[where x=id], force)+
-  apply (rule exI[where x="\<lambda>x. x + 1"], rule exI[where x=id], force)
+   \<exists>f g h lasttime curtime consumed.
+     s' = ksWorkUnitsCompleted_update f
+             (s\<lparr>ksMachineState := ksMachineState s \<lparr>irq_state := g (irq_state (ksMachineState s)),
+                                                    time_state := h (time_state (ksMachineState s)),
+                                                    last_machine_time := lasttime\<rparr>,
+                                  ksCurTime := curtime,
+                                  ksConsumedTime := consumed\<rparr>)"
+  apply (simp add: preemptionPoint_def alternative_def andM_def ifM_def liftE_def bind_assoc)
+  apply (clarsimp simp: alternative_def in_monad eq_commute getActiveIRQ_def doMachineOp_def
+                        select_f_def select_def getWorkUnits_def setWorkUnits_def
+                        modifyWorkUnits_def return_def returnOk_def
+                        getConsumedTime_def scActive_def refillSufficient_def getCurSc_def
+                        getSchedContext_def updateTimeStamp_def getCurrentTime_def
+                        getCurTime_def setCurTime_def setConsumedTime_def
+         | clarsimp split: if_splits)+
+   apply (cases "workUnitsLimit \<le> ksWorkUnitsCompleted s + 1")
+    apply clarsimp
+    apply (case_tac x; clarsimp)
+    apply (rule exI[where x="\<lambda>x. 0"])
+    apply (rule exI[where x=Suc])
+    apply (clarsimp dest!: in_inv_by_hoareD[OF getObject_sc_inv]
+                           in_inv_by_hoareD[OF getRefills_inv]
+                           in_inv_by_hoareD[OF isCurDomainExpired_inv])
+    apply (rule exI[where x="\<lambda>x. x + 1"])
+    apply clarsimp
+    apply (rule_tac x="of_nat (min (unat (- getCurrentTime_buffer - 1))
+                                   (unat (last_machine_time (ksMachineState s))
+                                    + time_oracle (Suc (time_state (ksMachineState s)))))"
+                 in exI)
+    apply (rule_tac x="of_nat (min (unat (- getCurrentTime_buffer - 1))
+                                   (unat (last_machine_time (ksMachineState s))
+                                    + time_oracle (Suc (time_state (ksMachineState s)))))"
+                 in exI)
+    apply (rule_tac x="ksConsumedTime s
+                       + of_nat (min (unat (- getCurrentTime_buffer - 1))
+                                     (unat (last_machine_time (ksMachineState s))
+                                      + time_oracle (Suc (time_state (ksMachineState s)))))
+                                      - ksCurTime s"
+                 in exI)
+    apply simp
+   apply (rule exI[where x="\<lambda>x. x + 1"])
+   apply (rule exI[where x=id])+
+   apply (rule_tac x="last_machine_time (ksMachineState s)" in exI)
+   apply (rule_tac x="ksCurTime s" in exI)
+   apply (rule_tac x="ksConsumedTime s" in exI, force)
+  apply (rule exI[where x="\<lambda>x. x + 1"])
+  apply (rule exI[where x=id])+
+  apply (clarsimp simp: throwError_def return_def)
+  apply (rule_tac x="last_machine_time (ksMachineState s)" in exI)
+  apply (rule_tac x="ksCurTime s" in exI)
+  apply (rule_tac x="ksConsumedTime s" in exI, force)
   done
 
 lemma updateCap_implies_cte_at:
@@ -774,7 +822,10 @@ lemma finaliseSlot'_preservation:
     "\<And>sl1 sl2. \<lbrace>P\<rbrace> capSwapForDelete sl1 sl2 \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl cap. \<lbrace>P\<rbrace> updateCap sl cap \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s"
-  assumes irq: "irq_state_independent_H P"
+  assumes indep: "irq_state_independent_H P"
+                 "updateTimeStamp_independent P"
+                 "getCurrentTime_independent_H P"
+                 "time_state_independent_H P"
   shows
     "st \<turnstile> \<lbrace>P\<rbrace> finaliseSlot' slot exposed \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. P\<rbrace>"
 proof (induct rule: finalise_spec_induct)
@@ -788,7 +839,7 @@ proof (induct rule: finalise_spec_induct)
         apply (wp "1.hyps")
           apply (unfold Let_def split_def fst_conv snd_conv
                         case_Zombie_assert_fold haskell_fail_def)
-          apply (wp wp preemptionPoint_inv| simp add: o_def irq)+
+          apply (wp wp preemptionPoint_inv| simp add: o_def indep)+
            apply (wp hoare_drop_imps)
           apply (wp wp | simp)+
                apply (wp hoare_drop_imps | simp(no_asm))+
@@ -811,13 +862,16 @@ lemma cteDelete_preservation:
     "\<And>sl1 sl2. \<lbrace>P\<rbrace> capSwapForDelete sl1 sl2 \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl cap. \<lbrace>P\<rbrace> updateCap sl cap \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s"
-  assumes irq: "irq_state_independent_H P"
+  assumes indep: "irq_state_independent_H P"
+                 "updateTimeStamp_independent P"
+                 "getCurrentTime_independent_H P"
+                 "time_state_independent_H P"
   shows
     "\<lbrace>P\<rbrace> cteDelete p e \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (wp wp)
   apply (simp only: simp_thms cases_simp)
-  apply (wp finaliseSlot_preservation wp irq)
+  apply (wp finaliseSlot_preservation wp indep)
   apply simp
   done
 
@@ -5920,10 +5974,19 @@ definition
   "finalise_prop_stuff P
     = ((\<forall>s f. P (ksWorkUnitsCompleted_update f s) = P s)
     \<and> irq_state_independent_H P
+    \<and> updateTimeStamp_independent P
+    \<and> getCurrentTime_independent_H P
+    \<and> time_state_independent_H P
     \<and> (\<forall>s f. P (gsUntypedZeroRanges_update f s) = P s)
     \<and> (\<forall>s f. P (ksInterruptState_update f s) = P s)
     \<and> (\<forall>s f. P (ksMachineState_update (irq_state_update f) s) = P s)
-    \<and> (\<forall>s f. P (ksMachineState_update (irq_masks_update f) s) = P s))"
+    \<and> (\<forall>s f. P (ksMachineState_update (irq_masks_update f) s) = P s)
+    \<and> (\<forall>s f. P (s\<lparr>ksMachineState := ksMachineState s \<lparr>last_machine_time
+                                                      := f (last_machine_time (ksMachineState s)) (time_state (ksMachineState s))\<rparr>\<rparr>)
+             = P s)
+    \<and> (\<forall>s f. P (ksMachineState_update (time_state_update f) s) = P s)
+    \<and> (\<forall>s f. P (ksCurTime_update f s) = P s)
+    \<and> (\<forall>s f. P (ksConsumedTime_update f s) = P s))"
 
 lemma setCTE_no_cte_prop:
   "\<lbrace>no_cte_prop P\<rbrace> setCTE sl cte \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
@@ -6172,7 +6235,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply (wp hyps)
 
           apply ((wp preemptionPoint_invE preemptionPoint_invR
-              | clarsimp simp: sch_act_simple_def
+              | clarsimp simp: sch_act_simple_def ex_cte_cap_wp_to'_def
               | simp cong: kernel_state.fold_congs machine_state.fold_congs)+)[1]
          apply (rule spec_strengthen_postE [OF reduceZombie_invs''[OF _ stuff]])
           prefer 2
@@ -6319,7 +6382,8 @@ lemma finaliseSlot_cte_wp_at:
 
 lemmas reduceZombie_invs'
     = reduceZombie_invs''[where Q=\<top>, simplified no_cte_prop_top simp_thms
-         finalise_prop_stuff_def irq_state_independent_H_def,
+         finalise_prop_stuff_def irq_state_independent_H_def updateTimeStamp_independent_def
+         getCurrentTime_independent_H_def time_state_independent_H_def,
          OF drop_spec_validE TrueI,
          OF hoare_weaken_preE,
          OF finaliseSlot_invs'',
@@ -6633,15 +6697,18 @@ proof (induct rule: finalise_induct3)
     apply (rule hoare_pre_spec_validE)
      apply wp
          apply ((wp | simp)+)[1]
-     apply (wp "1.hyps")
-          apply (unfold Let_def split_def fst_conv
-                        snd_conv haskell_fail_def
-                        case_Zombie_assert_fold)
-          apply (wp capSwap_rvk_prog | simp only: withoutPreemption_def)+
-        apply (wp preemptionPoint_inv)[1]
-        apply force
-        apply force
-        apply (wp capSwap_rvk_prog | simp only: withoutPreemption_def)+
+        apply (wp "1.hyps")
+            apply (unfold Let_def split_def fst_conv
+                          snd_conv haskell_fail_def
+                          case_Zombie_assert_fold)
+            apply (wp capSwap_rvk_prog | simp only: withoutPreemption_def)+
+          apply (wp preemptionPoint_inv)[1]
+              apply force
+             apply force
+            apply (clarsimp simp: updateTimeStamp_independent_def)
+           apply (clarsimp simp: getCurrentTime_independent_H_def)
+          apply (clarsimp simp: time_state_independent_H_def)
+         apply (wp capSwap_rvk_prog | simp only: withoutPreemption_def)+
            apply (wp getCTE_wp | simp)+
             apply (rule hoare_strengthen_post [OF emptySlot_rvk_prog[where m=m]])
             apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def o_def
@@ -6920,7 +6987,7 @@ lemma rec_del_corres:
                             FinaliseSlotCall _ _ \<Rightarrow> (\<lambda>r r'. fst r = fst r'
                                                            \<and> cap_relation (snd r) (snd r') )
                           | _ \<Rightarrow> dc))
-      (einvs and simple_sched_action
+      (einvs and valid_machine_time and simple_sched_action
             and valid_rec_del_call args
             and cte_at (slot_rdcall args)
             and (\<lambda>s. \<not> exposed_rdcall args \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
@@ -7013,21 +7080,28 @@ next
                    apply (rename_tac nat)
                    apply (case_tac nat, simp_all)[1]
                   apply clarsimp
-                 apply (rule spec_corres_splitE'[OF preemption_corres])
+                 apply (rule spec_corres_splitE'[OF preemptionPoint_corres])
                    apply (rule "2.hyps"(2)[unfolded fun_app_def rec_del_concrete_unfold
                                                     finaliseSlot_def],
                           assumption+)
-                  apply (wp preemption_point_inv')[1]
-                  apply clarsimp+
+                  apply ((wpsimp wp: preemption_point_valid_machine_time
+                                     preemption_point_valid_list
+                                     preemption_point_valid_sched)+)[1]
+                  apply (wpsimp wp: preemption_point_inv)
+                 apply clarsimp+
                  apply (wp preemptionPoint_invR)
-                  apply simp
-                 apply clarsimp
-                apply simp
+                     apply simp
+                    apply clarsimp
+                   apply (clarsimp simp: sch_act_simple_def ex_cte_cap_wp_to'_def)
+                  apply (clarsimp simp: sch_act_simple_def ex_cte_cap_wp_to'_def)
+                 apply (clarsimp simp: sch_act_simple_def ex_cte_cap_wp_to'_def)
                 apply (wpsimp wp: rec_del_invs rec_del_cte_at reduce_zombie_cap_somewhere
                                   reduceZombie_invs reduce_zombie_cap_to
-                                  DetSchedSchedule_AI_det_ext.rec_del_valid_sched)
-               apply (wpsimp wp: reduceZombie_cap_to reduceZombie_sch_act_simple
-                                 reduceZombie_invs)
+                                  DetSchedSchedule_AI_det_ext.rec_del_valid_sched
+                       | strengthen invs_valid_objs invs_cur_sc_tcb invs_psp_aligned invs_distinct
+                                    valid_sched_active_sc_valid_refills)+
+               apply ((wpsimp wp: reduceZombie_cap_to reduceZombie_sch_act_simple
+                                 reduceZombie_invs | strengthen invs_valid_objs')+)[1]
               apply simp
               apply ((wp replace_cap_invs final_cap_same_objrefs
                         set_cap_cte_wp_at set_cap_cte_cap_wp_to
@@ -7048,7 +7122,7 @@ next
             apply (clarsimp simp: conj_comms)
            apply (wp | simp)+
            apply (rule hoare_strengthen_post)
-            apply (rule_tac Q="\<lambda>fin s. einvs s \<and> simple_sched_action s
+            apply (rule_tac Q="\<lambda>fin s. einvs s \<and> valid_machine_time s  \<and> simple_sched_action s
                                       \<and> replaceable s slot (fst fin) rv
                                       \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> fst fin
                                       \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
@@ -7325,7 +7399,7 @@ qed
 
 lemma cap_delete_corres:
   "corres (dc \<oplus> dc)
-      (einvs and simple_sched_action and cte_at ptr)
+      (einvs and valid_machine_time and simple_sched_action and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_delete ptr) (cteDelete (cte_map ptr) True)"
   unfolding cap_delete_def
@@ -7372,14 +7446,17 @@ termination cteRevoke
 lemma cteRevoke_preservation':
   assumes x: "\<And>ptr. \<lbrace>P\<rbrace> cteDelete ptr True \<lbrace>\<lambda>rv. P\<rbrace>"
   assumes y: "\<And>f s. P (ksWorkUnitsCompleted_update f s) = P s"
-  assumes irq: "irq_state_independent_H P"
+  assumes indep: "irq_state_independent_H P"
+                 "updateTimeStamp_independent P"
+                 "getCurrentTime_independent_H P"
+                 "time_state_independent_H P"
   shows      "s \<turnstile> \<lbrace>P\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>\<lambda>rv. P\<rbrace>"
 proof (induct rule: cteRevoke.induct)
   case (1 p s')
   show ?case
     apply (subst cteRevoke.simps)
     apply (wp "1.hyps")
-        apply (wp x y preemptionPoint_inv hoare_drop_imps irq | clarsimp)+
+        apply (wp x y preemptionPoint_inv hoare_drop_imps indep | clarsimp)+
     done
 qed
 
@@ -7394,7 +7471,8 @@ crunches cteRevoke
 lemma cteRevoke_invs':
   "\<lbrace>invs' and sch_act_simple\<rbrace> cteRevoke ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_strengthen_post)
-  apply (wpsimp wp: cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple)+
+   apply (wpsimp wp: cteRevoke_preservation cteDelete_invs' cteDelete_sch_act_simple
+               simp: sch_act_simple_def)+
   done
 
 declare cteRevoke.simps[simp del]
@@ -7565,7 +7643,7 @@ lemma cap_revoke_mdb_stuff4:
 
 lemma cap_revoke_corres':
   "spec_corres s (dc \<oplus> dc)
-      (einvs and simple_sched_action and cte_at ptr)
+      (einvs and valid_machine_time and simple_sched_action and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_revoke ptr) (\<lambda>s. cteRevoke (cte_map ptr) s)"
 proof (induct rule: cap_revoke.induct)
@@ -7686,12 +7764,16 @@ proof (induct rule: cap_revoke.induct)
     apply (clarsimp simp: whenE_def)
     apply (rule spec_corres_guard_imp)
       apply (rule spec_corres_splitE' [OF cap_delete_corres])
-        apply (rule spec_corres_splitE' [OF preemption_corres])
+        apply (rule spec_corres_splitE' [OF preemptionPoint_corres])
           apply (rule "1.hyps",
                    (simp add: cte_wp_at_def in_monad select_def next_revoke_cap_def select_ext_def
                      | assumption | rule conjI refl)+)[1]
-         apply (wp cap_delete_cte_at cteDelete_invs' cteDelete_sch_act_simple
-                   preemptionPoint_invR preemption_point_inv' | clarsimp)+
+         apply (wpsimp
+                | wp preemptionPoint_invR preemption_point_inv')+
+          apply (clarsimp simp: sch_act_simple_def)+
+         apply (wpsimp wp: cteDelete_invs' cteDelete_sch_act_simple
+                | strengthen invs_valid_objs invs_cur_sc_tcb invs_psp_aligned invs_distinct
+                             valid_sched_active_sc_valid_refills invs_valid_objs')+
      apply (clarsimp simp: cte_wp_at_cte_at)
      apply (drule next_childD, simp)
      apply (clarsimp, drule child_descendant)
@@ -8587,7 +8669,7 @@ declare corres_False' [simp]
 lemma inv_cnode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
    corres (dc \<oplus> dc)
-     (einvs and simple_sched_action and valid_cnode_inv ci)
+     (einvs and valid_machine_time and simple_sched_action and valid_cnode_inv ci)
      (invs' and sch_act_simple and valid_cnode_inv' ci')
      (invoke_cnode ci) (invokeCNode ci')"
   apply (simp add: invoke_cnode_def invokeCNode_def)
@@ -8749,55 +8831,9 @@ crunches finaliseCap
        no_irq_cleanByVA_PoU hoare_vcg_all_lift
    simp: crunch_simps armv_contextSwitch_HWASID_def o_def setCurrentPD_to_abs)
 
-lemma finaliseSlot_IRQInactive':
-  "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> finaliseSlot' a b
-  \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-proof (induct rule: finalise_spec_induct)
-  case (1 sl exp s)
-  show ?case
-    apply (rule hoare_pre_spec_validE)
-     apply (subst finaliseSlot'_simps_ext)
-     apply (simp only: split_def)
-     apply (wp "1.hyps")
-            apply (unfold Let_def split_def fst_conv snd_conv
-                          case_Zombie_assert_fold haskell_fail_def)
-            apply (wp getCTE_wp' preemptionPoint_invR | simp add: o_def)+
-            apply (rule hoare_post_imp [where Q="\<lambda>_. valid_irq_states'"])
-             apply simp
-            apply wp[1]
-           apply (rule spec_strengthen_postE)
-            apply (rule "1.hyps", (assumption|rule refl)+)
-           apply simp
-          apply (wp hoare_drop_imps hoare_vcg_all_lift | simp add: locateSlot_conv)+
-    done
-qed
-
-lemma finaliseSlot_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> finaliseSlot a b
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (unfold validE_E_def)
-  apply (rule hoare_post_impErr)
-  apply (rule use_spec(2) [OF finaliseSlot_IRQInactive', folded finaliseSlot_def])
-   apply (rule TrueI)
-  apply assumption
-  done
-
 lemma finaliseSlot_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> finaliseSlot a b \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   by (wp finaliseSlot_preservation | clarsimp)+
-
-lemma cteDelete_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: cteDelete_def split_def)
-  apply (wp hoare_whenE_wp)
-   apply (rule hoare_post_impErr)
-     apply (rule validE_E_validE)
-     apply (rule finaliseSlot_IRQInactive)
-    apply simp
-   apply simp
-  apply assumption
-  done
 
 lemma cteDelete_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
@@ -8810,47 +8846,6 @@ lemma cteDelete_irq_states':
     apply simp
    apply simp
   apply assumption
-  done
-
-lemma preemptionPoint_IRQInactive_spec:
-  "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> preemptionPoint
-  \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply wp
-  apply (rule hoare_pre, wp preemptionPoint_invR)
-   apply clarsimp+
-  done
-
-lemma cteRevoke_IRQInactive':
-  "s \<turnstile> \<lbrace>valid_irq_states'\<rbrace> cteRevoke x
-  \<lbrace>\<lambda>_. \<top>\<rbrace>, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-proof (induct rule: cteRevoke.induct)
-  case (1 p s')
-  show ?case
-    apply (subst cteRevoke.simps)
-    apply (wp "1.hyps" unlessE_wp hoare_whenE_wp preemptionPoint_IRQInactive_spec
-              cteDelete_IRQInactive cteDelete_irq_states' getCTE_wp')+
-    apply clarsimp
-    done
-qed
-
-lemma cteRevoke_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> cteRevoke x
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (unfold validE_E_def)
-  apply (rule use_spec)
-  apply (rule cteRevoke_IRQInactive')
-  done
-
-lemma inv_cnode_IRQInactive:
-  "\<lbrace>valid_irq_states'\<rbrace> invokeCNode cnode_inv
-  -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeCNode_def)
-  apply (rule hoare_pre)
-   apply (wp cteRevoke_IRQInactive finaliseSlot_IRQInactive
-             cteDelete_IRQInactive
-             hoare_whenE_wp
-           | wpc
-           | simp add:  split_def)+
   done
 
 end

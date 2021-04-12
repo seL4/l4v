@@ -4171,4 +4171,12 @@ lemma sc_with_reply'_NoneD:
                      \<and> rp \<in> set xs"
   by (clarsimp simp: sc_with_reply'_def the_pred_option_def split: if_split_asm)
 
+definition "updateTimeStamp_independent (P :: kernel_state \<Rightarrow> bool)
+  \<equiv> \<forall>f g s. P s \<longrightarrow> P (s\<lparr>ksCurTime := f (ksCurTime s), ksConsumedTime := g (ksConsumedTime s)\<rparr>)"
+
+lemma updateTimeStamp_independentI[intro!, simp]:
+  "\<lbrakk>\<And>s f g. P (s\<lparr>ksCurTime := f (ksCurTime s), ksConsumedTime := g (ksConsumedTime s)\<rparr>) = P s\<rbrakk>
+   \<Longrightarrow> updateTimeStamp_independent P"
+  by (simp add: updateTimeStamp_independent_def)
+
 end
