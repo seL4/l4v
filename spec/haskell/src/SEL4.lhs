@@ -41,10 +41,9 @@ faults, and system calls; the set of possible events is defined in
 > callKernel ev = do
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
->                       irq <- doMachineOp (getActiveIRQ True)
->                       when (isJust irq) $ do
->                           mcsIRQ (fromJust irq)
->                           handleInterrupt (fromJust irq))
+>                       irq_opt <- doMachineOp (getActiveIRQ True)
+>                       mcsIRQ irq_opt
+>                       when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt))
 >     schedule
 >     activateThread
 >     stateAssert kernelExitAssertions "Kernel exit conditions must hold"

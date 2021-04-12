@@ -1018,10 +1018,8 @@ On some architectures, the thread context may include registers that may be modi
 > checkBudget = do
 >     csc <- getCurSc
 >     consumed <- getConsumedTime
->     capacity <- refillCapacity csc consumed
->     full <- refillFull csc
->     robin <- isRoundRobin csc
->     if (capacity >= minBudget && (robin || not full))
+>     sufficient <- refillSufficient csc consumed
+>     if sufficient
 >         then do
 >             domExp <- isCurDomainExpired
 >             if domExp
@@ -1045,9 +1043,9 @@ On some architectures, the thread context may include registers that may be modi
 >         setThreadState Restart ct
 >     return result
 
-> mcsIRQ :: IRQ -> Kernel ()
-> mcsIRQ irq = do
->     when (irq == timerIRQ) $ updateTimeStamp
+> mcsIRQ :: Maybe IRQ -> Kernel ()
+> mcsIRQ irq_opt = do
+>     when (irq_opt == Just timerIRQ) $ updateTimeStamp
 >     curThread <- getCurThread
 >     isschedulable <- isSchedulable curThread
 >     if isschedulable
