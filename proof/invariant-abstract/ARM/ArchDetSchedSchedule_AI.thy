@@ -158,7 +158,7 @@ lemma activate_thread_valid_sched:
                  get_tcb_obj_ref_wp hoare_drop_imps)
 
 lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
-  "\<lbrace>invs and valid_sched and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+  "\<lbrace>invs and valid_sched and valid_machine_time and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and
     valid_arch_inv a\<rbrace>
      arch_perform_invocation a
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -206,92 +206,6 @@ lemma machine_state_detype[simp]:
 
 crunches handle_hypervisor_fault, handle_reserved_irq
   for valid_machine_time: valid_machine_time
-
-lemma valid_machine_time_getCurrentTime:
-  "\<And>s x s'. valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s)) \<Longrightarrow>
-            valid_machine_time_2 x (last_machine_time s')"
-  apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
-  apply (rule word_of_nat_le)
-  apply (rule Lattices.linorder_class.min.coboundedI1)
-  apply (subst unat_minus_one)
-   using kernelWCET_ticks_pos2 apply fastforce
-  apply (subst unat_minus')
-   using kernelWCET_ticks_pos2 apply fastforce
-  apply clarsimp
-  done
-
-lemma dmo_getCurrentTime_vmt_sp[wp]:
-  "\<lbrace>valid_machine_time\<rbrace>
-   do_machine_op getCurrentTime
-   \<lbrace>\<lambda>rv s. (cur_time s \<le> rv) \<and> (rv \<le> - kernelWCET_ticks - 1)\<rbrace>"
-  apply (wpsimp simp: do_machine_op_def)
-  apply (clarsimp simp: valid_machine_time_def getCurrentTime_def in_monad)
-  apply (intro conjI)
-   apply (clarsimp simp: min_def, intro conjI impI)
-  subgoal
-    apply (rule_tac order.trans, assumption)
-    apply (rule_tac order.trans, assumption)
-    apply (rule preorder_class.eq_refl)
-    apply (subst group_add_class.diff_conv_add_uminus)
-    apply (subst minus_one_norm_num)
-    apply clarsimp
-    apply (rule word_unat.Rep_inverse'[symmetric])
-    apply (subst unat_sub)
-     apply (rule order.trans[OF word_up_bound])
-     apply (rule preorder_class.eq_refl)
-     apply simp
-    apply simp
-    done
-  subgoal for s
-    apply (subst (asm) linorder_class.not_le)
-    apply (rule_tac order.trans, assumption)
-    apply (rule no_plus_overflow_unat_size2)
-    apply (rule_tac order.trans)
-     apply (rule add_le_mono)
-      apply (rule preorder_class.eq_refl, simp)
-     apply (rule unat_of_nat_closure)
-    apply (rule_tac order.trans)
-     apply (rule order_class.order.strict_implies_order, assumption)
-    apply simp
-    done
-  apply (clarsimp simp: min_def, intro conjI impI)
-  subgoal
-    apply (rule preorder_class.eq_refl)
-    apply (subst group_add_class.diff_conv_add_uminus)
-    apply (subst minus_one_norm_num)
-    apply clarsimp
-    apply (rule word_unat.Rep_inverse')
-    apply (subst unat_sub)
-     apply (rule order.trans[OF word_up_bound])
-     apply (rule preorder_class.eq_refl)
-     apply simp
-    apply simp
-    done
-  subgoal for s
-    apply (subst (asm) linorder_class.not_le)
-    apply (rule_tac b="of_nat (unat (last_machine_time (machine_state s)) +
-      time_oracle (Suc (time_state (machine_state s))))" in order.trans[rotated])
-     apply (rule Word_Lemmas.word_of_nat_le)
-     apply (rule_tac order.trans)
-      apply (rule order.strict_implies_order, assumption)
-     apply (subst group_add_class.diff_conv_add_uminus)
-     apply (subst minus_one_norm_num)
-     apply clarsimp
-     apply (subst unat_sub)
-      apply (rule order.trans[OF word_up_bound])
-      apply (rule preorder_class.eq_refl)
-      apply simp
-     apply simp
-    apply clarsimp
-    done
-  done
-
-lemma update_time_stamp_valid_machine_time[wp]:
-  "update_time_stamp \<lbrace>valid_machine_time\<rbrace>"
-  unfolding update_time_stamp_def
-  apply (wpsimp simp: do_machine_op_def)
-  apply (fastforce simp: getCurrentTime_def elim: valid_machine_time_getCurrentTime)
-  done
 
 (* Note: Proving that retype_region preserves bound_sc_tcb_at is much harder *)
 lemma retype_region_not_bound_sc[wp]:
