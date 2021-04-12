@@ -1307,17 +1307,6 @@ lemma ball_filterM_scheme:
   shows "distinct xs \<Longrightarrow> \<lbrace> (\<lambda>s. \<forall>t\<in>set xs. Q t s) and P\<rbrace> filterM f xs \<lbrace>\<lambda>_. P\<rbrace>"
   by (subst filterM_mapM) (wpsimp wp: ball_mapM_scheme[where Q=Q] x y)
 
-(* FIXME: Move *)
-lemma st_tcb_reply_state_refs:
-  "\<lbrakk>st_tcb_at ((=) (Structures_A.thread_state.BlockedOnReply rp)) thread s; sym_refs (state_refs_of s)\<rbrakk>
-  \<Longrightarrow> \<exists>reply. (kheap s rp = Some (kernel_object.Reply reply) \<and> reply_tcb reply = Some thread)"
-  apply (clarsimp simp: pred_tcb_at_def)
-  apply (drule (1) sym_refs_obj_atD[where p=thread])
-  apply (clarsimp simp: state_refs_of_def obj_at_def tcb_st_refs_of_def
-                 split: Structures_A.thread_state.splits)
-  apply (rename_tac ko; case_tac ko; clarsimp simp: get_refs_def2)
-  done
-
 (* FIXME move *)
 lemma set_filter_all[simp]: "set (filter (\<lambda>x. P x) xs @ filter (\<lambda>x. \<not> P x) xs) = set xs" by auto
 

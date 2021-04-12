@@ -525,10 +525,12 @@ lemma get_ntfn_valid_ntfn[wp]:
   done
 
 lemma get_ep_valid_ep[wp]:
-  "\<lbrace> invs and ep_at ep \<rbrace>
+  "\<lbrace> valid_objs \<rbrace>
    get_endpoint ep
    \<lbrace> valid_ep \<rbrace>"
-  by (wpsimp simp: ep_at_def2 valid_ep_def2 simp_del: valid_simple_obj_def)
+  apply (wpsimp simp: get_simple_ko_def get_object_def)
+  apply (auto simp: valid_obj_def)
+  done
 
 lemma get_sc_valid_sc:
   "\<lbrace> invs and sc_at sc \<rbrace>
@@ -2599,5 +2601,24 @@ lemma valid_replies_tcb_fault_update:
   by (auto simp: get_refs_def2 refs_of_def obj_at_def sc_replies_sc_at_def
                  replies_with_sc_tcb_fault_update
                  replies_blocked_tcb_fault_update)
+
+lemma st_tcb_reply_state_refs:
+  "\<lbrakk>st_tcb_at ((=) (BlockedOnReply rp)) thread s; sym_refs (state_refs_of s)\<rbrakk>
+  \<Longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some thread) rp s"
+  apply (clarsimp simp: pred_tcb_at_def)
+  apply (drule (1) sym_refs_obj_atD[where p=thread])
+  apply (clarsimp simp: state_refs_of_def obj_at_def tcb_st_refs_of_def reply_tcb_reply_at_def
+                 split: Structures_A.thread_state.splits)
+  apply (rename_tac ko; case_tac ko; clarsimp simp: get_refs_def2)
+  done
+
+lemma st_tcb_recv_reply_state_refs:
+  "\<lbrakk>st_tcb_at ((=) (BlockedOnReceive ep (Some reply) pl)) thread s; sym_refs (state_refs_of s)\<rbrakk>
+  \<Longrightarrow> reply_tcb_reply_at (\<lambda>x. x = Some thread) reply s"
+  apply (drule (1) sym_refs_st_tcb_atD[rotated])
+  apply (clarsimp simp: get_refs_def2 obj_at_def valid_tcb_state_def is_reply refs_of_def
+                        reply_tcb_reply_at_def
+                 split: thread_state.splits if_splits kernel_object.splits)
+  done
 
 end

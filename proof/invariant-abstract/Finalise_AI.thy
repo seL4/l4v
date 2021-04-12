@@ -655,14 +655,6 @@ lemma reply_tcb_state_refs:
                   split: thread_state.splits if_splits)
   done
 
-lemma st_tcb_recv_reply_state_refs:
-  "\<lbrakk>sym_refs (state_refs_of s); st_tcb_at ((=) (BlockedOnReceive ep (Some reply) pl)) thread s\<rbrakk>
-  \<Longrightarrow> \<exists>rep. (kheap s reply = Some (Reply rep) \<and> reply_tcb rep = Some thread)"
-  apply (drule (1) sym_refs_st_tcb_atD[rotated])
-  apply (clarsimp simp: get_refs_def2 obj_at_def valid_tcb_state_def is_reply refs_of_def
-                 split: thread_state.splits if_splits kernel_object.splits)
-  done
-
 lemma sym_refs_reply_sc_reply_at:
   "sym_refs (state_refs_of s) \<Longrightarrow>
    sc_replies_sc_at ((=) (reply_ptr # list)) sc_ptr s \<Longrightarrow>
