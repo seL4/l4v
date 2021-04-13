@@ -436,7 +436,7 @@ lemma as_user_valid_pdpt_objs[wp]:
 
 crunch valid_pdpt_objs[wp]: send_signal, send_ipc "valid_pdpt_objs"
   (wp: get_sched_context_wp mapM_wp' maybeM_inv hoare_vcg_if_lift2 hoare_drop_imps
-       transfer_caps_loop_pres
+       transfer_caps_loop_pres whileLoop_wp'
   simp: zipWithM_x_mapM
   ignore: set_thread_state_act set_object test_reschedule)
 
@@ -1156,7 +1156,7 @@ crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarr
 
 crunches check_budget_restart, invoke_sched_control_configure
   for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
-  (wp: hoare_drop_imps hoare_vcg_if_lift2
+  (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_wp'
   simp: Let_def ignore: commit_domain_time tcb_release_remove)
 
 lemma perform_invocation_valid_pdpt[wp]:
