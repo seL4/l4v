@@ -12,6 +12,8 @@ documentation for the l4v repository.
 This is work in progress and contributions are welcome. Feel encouraged to
 raise pull requests for more material and/or corrections.
 
+## Topics
+
 Current topics are:
 
 - [Setup](setup.md) for doing seL4 proofs
@@ -21,3 +23,10 @@ Current topics are:
 - [De-duplicating proofs](de-duplicating-proofs.md)
 - [Compacting proofs](compacting-proofs.md)
 - [Architecture Split](arch-split.md) Why and How-To
+
+## Plans
+
+The directory [plans/](plans/README.md) contains ideas and plans for
+proof-engineering improvements in this repo. They are at the idea stage, not
+fully worked out yet. Feel free to contribute new ideas, to make an existing one
+more concrete, or to pick one up and work on it.
