@@ -1068,8 +1068,8 @@ crunches
 
 crunches
   sched_context_unbind_yield_from, sched_context_unbind_all_tcbs, postpone,
-  refill_unblock_check, unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
-  sched_context_unbind_reply, schedule_tcb
+  unbind_from_sc, sched_context_maybe_unbind_ntfn, reply_unlink_sc,
+  sched_context_unbind_reply, schedule_tcb, refill_unblock_check
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
 
