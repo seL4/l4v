@@ -47,12 +47,11 @@ lemma ptr_add_assertion_irq_guard:
                 (hrs_htd \<acute>t_hrs)\<rbrace> c ;; m)"
   by (simp add: ptr_add_assertion_def sint_ucast_eq_uint is_down)
 
-
 lemma cte_at_irq_node':
   "invs' s \<Longrightarrow>
     cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 10 word)) s"
   by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
-                     cte_level_bits_def real_cte_at')
+                     cte_level_bits_def real_cte_at' cteSizeBits_def shiftl_t2n)
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
