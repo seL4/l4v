@@ -1445,7 +1445,7 @@ abbreviation refill_ready_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> 
 lemmas refill_ready_sc_def
   = refill_ready_def[where refill="scrc_refill_hd cfg" for cfg :: sc_refill_cfg]
 
-abbreviation is_refill_ready :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+abbreviation is_refill_ready :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "is_refill_ready scp s \<equiv> pred_map (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp"
 
 lemmas is_refill_ready_def =
@@ -1495,6 +1495,11 @@ lemma unat_le_mono:
 \<comment> \<open>unat is bounded above by unat max_word\<close>
 (* FIXME RT: move *)
 lemmas unat_bounded_above[simp] = unat_le_mono[OF max_word_max]
+
+definition
+  round_robin :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool"
+where
+  "round_robin sc_ptr s \<equiv> pred_map (\<lambda>cfg. scrc_period cfg = 0) (sc_refill_cfgs_of s) sc_ptr"
 
 \<comment>\<open>When the user creates a scheduling context with period = budget, we know that sporadic scheduling is
 vastly simplified. As an optimisation we set period=0 and sc_refill_max=MIN_REFILLS and adjust the

@@ -447,7 +447,7 @@ crunch (empty_fail) empty_fail[wp, intro!, simp]:
   (wp: empty_fail_whileLoop)
 
 crunch (empty_fail) empty_fail[wp, intro!, simp]: sc_and_timer
-  (wp: empty_fail_setDeadline simp: Let_def)
+  (wp: empty_fail_setDeadline empty_fail_whileLoop simp: Let_def)
 
 lemma empty_fail_tcb_ep_find_index[wp]:
   "empty_fail (tcb_ep_find_index t q n)"

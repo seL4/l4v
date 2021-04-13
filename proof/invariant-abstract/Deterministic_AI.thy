@@ -4073,7 +4073,7 @@ crunch valid_list[wp]: do_fault_transfer valid_list
   (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
 
 crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
-  (wp: mapM_wp hoare_drop_imp)
+  (wp: mapM_wp hoare_drop_imp whileLoop_wp')
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
@@ -4096,9 +4096,10 @@ crunches set_refills,refill_size
   for valid_list[wp]: valid_list
 
 lemma refill_budget_check_valid_list[wp]:
-  "\<lbrace>valid_list\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding refill_budget_check_def
-  by (wpsimp simp: is_round_robin_def)
+  "refill_budget_check usage \<lbrace>valid_list\<rbrace>"
+  unfolding refill_budget_check_defs
+  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps)
+  done
 
 lemma refill_budget_check_round_robin_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"

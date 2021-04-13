@@ -2083,15 +2083,6 @@ lemma set_refills_wp:
   unfolding set_refills_def
   by (wpsimp wp: update_sched_context_wp)
 
-lemma valid_irq_node_refill_unblock_check[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>valid_irq_node\<rbrace>"
-  unfolding refill_unblock_check_def
-  apply (wpsimp wp: set_refills_wp get_refills_wp
-              simp: is_round_robin_def)
-  apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table_def)
-  apply (drule_tac x=irq in spec, clarsimp)
-  done
-
 crunches maybe_donate_sc
   for equal_kernel_mappings[wp]: equal_kernel_mappings
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
@@ -2227,11 +2218,6 @@ crunch st_tcb_at[wp]: sched_context_resume "\<lambda>s. P (st_tcb_at P' t s)"
 
 crunch valid_replies_pred[wp]: refill_unblock_check "\<lambda>s.  valid_replies_pred P s"
   (wp: crunch_wps simp: crunch_simps is_round_robin_def)
-
-lemma refill_unblock_check_st_tcb_at[wp]:
-  "refill_unblock_check scptr \<lbrace> \<lambda>s. P (st_tcb_at P' t s) \<rbrace>"
-  unfolding refill_unblock_check_def
-  by (wpsimp wp: hoare_drop_imps cong: if_cong)
 
 lemma maybe_donate_sc_st_tcb_at[wp]:
   "maybe_donate_sc tcb_ptr ntfn_ptr \<lbrace> \<lambda>s. P (st_tcb_at P' t s) \<rbrace>"

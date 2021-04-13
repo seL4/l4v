@@ -790,6 +790,11 @@ lemma MIN_BUDGET_no_overflow:
 \<comment> \<open>Function definitions and lemmas for showing that the unat sum of the r_amounts of a refill list
     does not overflow, and is equal to the budget of the scheduling context\<close>
 
+definition
+  refills_unat_sum :: "refill list \<Rightarrow> nat"
+where
+  "refills_unat_sum refills = sum_list (map unat (map r_amount refills))"
+
 fun
   refill_list_to_intervals :: "refill list \<Rightarrow> (nat set) list"
 where
@@ -861,10 +866,9 @@ lemma disjoint_refill_list_to_intervals:
   done
 
 lemma refills_sum_unat_intervals:
-  "sum_list (map unat (map r_amount refills))
-   = sum_list (map card (refill_list_to_intervals refills))"
+  "refills_unat_sum refills = sum_list (map card (refill_list_to_intervals refills))"
   apply (induct refills rule: length_induct)
-  by (case_tac xs; simp)
+  by (case_tac xs; simp add: refills_unat_sum_def)
 
 fun
   refill_list_to_subset :: "refill list \<Rightarrow> nat set"
@@ -1017,7 +1021,7 @@ lemma no_overflow_ordered_disjoint_implies_refills_sum_unat_no_overflow:
   "\<lbrakk>refills \<noteq> [];
     no_overflow refills;
     ordered_disjoint refills\<rbrakk>
-   \<Longrightarrow> sum_list (map unat (map r_amount refills)) \<le> Suc (unat (max_word :: time))"
+   \<Longrightarrow> refills_unat_sum refills \<le> Suc (unat max_time)"
   apply (subst refills_sum_unat_intervals)
   apply (subst disjoint_interval_list_implies_sum_is_bounded; fastforce?)
    using disjoint_refill_list_to_intervals
@@ -1027,9 +1031,9 @@ lemma no_overflow_ordered_disjoint_implies_refills_sum_unat_no_overflow:
 
 lemma sum_list_helper:
   "sum_list (map card (refill_list_to_intervals refills))
-   = sum_list (map unat (map r_amount refills))"
+   = refills_unat_sum refills"
   apply (induction refills rule: length_induct)
-  by (case_tac xs, simp+)
+  by (case_tac xs; simp add: refills_unat_sum_def)
 
 lemma unat_sum_max_word:
   fixes w :: "'a::len word"
@@ -1068,7 +1072,7 @@ lemma exactly_max_word_plus_one_implies_unat_refills_sum_is_zero:
    prefer 2
    apply simp
   apply (frule disjoint_interval_list_implies_sum_is_bounded; assumption?)
-  apply (fastforce simp: sum_list_helper sum_exact_overflow)+
+  apply (fastforce simp: sum_list_helper sum_exact_overflow refills_unat_sum_def)+
   done
 
 lemma max_interval_helper:
@@ -1109,15 +1113,14 @@ lemma unat_sum_list_at_most_unat_max_word:
     no_overflow refills;
     ordered_disjoint refills;
     MIN_BUDGET \<le> refills_sum refills\<rbrakk>
-   \<Longrightarrow> sum_list (map unat (map r_amount refills)) \<le> unat (max_word :: time)"
+   \<Longrightarrow> refills_unat_sum refills \<le> unat max_time"
   supply map_map[simp del]
   apply (frule no_overflow_ordered_disjoint_implies_refills_sum_unat_no_overflow; assumption?)
   apply (frule no_overflow_ordered_disjoint_non_zero_refills_implies_card_not_equal_to_suc_max_word
          ; assumption?)
   apply (subst sum_list_helper[symmetric])
   apply (subst disjoint_interval_list_implies_sum_is_bounded; assumption?)
-  apply (subgoal_tac "sum_list (map unat (map r_amount refills))
-                    = card (refill_list_to_subset refills)")
+  apply (subgoal_tac "refills_unat_sum refills = card (refill_list_to_subset refills)")
    apply linarith
   apply (subst sum_list_helper[symmetric])
   apply (subst disjoint_interval_list_implies_sum_is_bounded)
@@ -1129,10 +1132,10 @@ lemma unat_sum_list_equals_budget:
     no_overflow refills;
     ordered_disjoint refills;
     MIN_BUDGET \<le> refills_sum refills\<rbrakk>
-   \<Longrightarrow> sum_list (map unat (map r_amount refills)) = unat (refills_sum refills)"
+   \<Longrightarrow> refills_unat_sum refills = unat (refills_sum refills)"
   supply map_map[simp del]
   apply (frule unat_sum_list_at_most_unat_max_word; assumption?)
-  by (fastforce simp: refills_sum_def intro: sum_list_bounded_le)
+  by (fastforce simp: refills_sum_def refills_unat_sum_def intro: sum_list_bounded_le)
 
 (* FIXME move *)
 lemma sorted_wrt_last_append:
@@ -1350,12 +1353,6 @@ lemma schedule_used_r_amount_head:
 lemma tail_nonempty_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 < length list"
   by (cases list, simp, simp)
-
-definition
-  round_robin :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "round_robin ptr s \<equiv> \<exists>ko sc n. kheap s ptr = Some ko \<and> ko = SchedContext sc n
-                         \<and> sc_budget sc = sc_period sc"
 
 lemma set_refills_sc_at_period[wp]:
   "\<lbrace>sc_at_period P p\<rbrace> set_refills sc_ptr refills \<lbrace>\<lambda>_. sc_at_period P p\<rbrace>"
@@ -1643,19 +1640,10 @@ lemma set_refills_active_sc_at[wp]:
   done
 
 lemma refill_unblock_check_active_sc_at[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>active_sc_at sc_ptr\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_def set_refills_def)
-  apply (wpsimp wp: update_sched_context_wp get_refills_wp
-              simp: is_round_robin_def)
-  apply (clarsimp simp: active_sc_at_def)
-  done
-
-lemma refill_unblock_check_not_active_sc_at[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>not (active_sc_at sc_ptr)\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_def set_refills_def)
-  apply (wpsimp wp: update_sched_context_wp get_refills_wp
-              simp: is_round_robin_def)
-  apply (clarsimp simp: active_sc_at_def pred_neg_def)
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. Q (active_sc_at sc_ptr s)\<rbrace>"
+  apply (clarsimp simp: refill_unblock_check_defs)
+  apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+              simp: active_sc_at_def)
   done
 
 lemma refill_update_invs:
@@ -1674,12 +1662,11 @@ lemma set_refills_bound_sc:
   by (wpsimp simp: set_refills_def)
 
 lemma refill_budget_check_bound_sc:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   refill_budget_check usage
-   \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
-  supply if_split[split del]
-  by (wpsimp simp: refill_budget_check_def is_round_robin_def
-               wp: set_refills_bound_sc)
+  "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
+  apply (wpsimp simp: refill_budget_check_defs is_round_robin_def merge_refills_def
+                  wp: whileLoop_wp' get_refills_wp set_refills_wp
+         | clarsimp simp: pred_tcb_at_def obj_at_def)+
+  done
 
 lemma refill_reset_rr_invs[wp]:
   "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"
@@ -1749,7 +1736,7 @@ lemma set_sc_obj_ref_active:
 
 crunches commit_time
   for sc_active: "active_sc_at sc_ptr"
-  (wp: set_sc_obj_ref_active crunch_wps simp: crunch_simps)
+  (wp: set_sc_obj_ref_active whileLoop_wp' crunch_wps simp: crunch_simps)
 
 lemma sc_badge_update_active[wp]:
   "set_sc_obj_ref sc_badge_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
