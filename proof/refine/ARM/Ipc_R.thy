@@ -3026,34 +3026,6 @@ lemma updateRefillHd_valid_objs':
                         length_replaceAt)
   done
 
-lemma refillPopHead_valid_objs'[wp]:
-  "refillPopHead scPtr \<lbrace>valid_objs'\<rbrace>"
-  apply (simp add: refillPopHead_def updateScPtr_def)
-  apply (wpsimp wp: refillNext_wp mapScPtr_wp)
-  apply (drule ko_at'_inj, assumption, clarsimp)
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (intro conjI; intro allI impI)
-   apply (drule ko_at'_inj, assumption, clarsimp)+
-   apply (intro conjI)
-    apply (fastforce simp: valid_sched_context'_def)
-   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-  apply (drule ko_at'_inj, assumption, clarsimp)+
-  apply (intro conjI)
-   apply (clarsimp simp: valid_sched_context'_def)
-   apply linarith
-  apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-  done
-
-lemma refillUnblockCheck_valid_objs'[wp]:
-  "refillUnblockCheck scPtr \<lbrace>valid_objs'\<rbrace>"
-  unfolding refillUnblockCheck_def
-  apply wpsimp
-          apply (rule_tac P="valid_objs' and active_sc_at' scPtr" in whileM_post_inv, clarsimp)
-           apply (wpsimp wp: updateRefillHd_valid_objs' refillReady_wp isRoundRobin_wp scActive_wp)+
-  apply (drule ko_at'_inj, assumption, clarsimp)+
-  apply (clarsimp simp: active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
-  done
-
 lemma getCTE_cap_to_refs[wp]:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs' (cteCap rv). ex_nonz_cap_to' r s\<rbrace>"
   apply (rule hoare_strengthen_post [OF getCTE_sp])
@@ -3159,13 +3131,6 @@ lemma maybeDonateSc_corres:
   apply (clarsimp simp: valid_ntfn'_def)
   apply (clarsimp simp: sym_refs_asrt_def)
   done
-
-crunches refillUnblockCheck
-  for valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
-  and valid_queues[wp]: valid_queues
-  and valid_queues'[wp]: valid_queues'
-  (wp: whileM_inv crunch_wps)
 
 lemma setReleaseQueue_valid_release_queue[wp]:
   "\<lbrace>\<lambda>s. \<forall>t. t \<in> set Q \<longrightarrow> obj_at' (tcbInReleaseQueue) t s\<rbrace>
@@ -3298,7 +3263,7 @@ lemma refillPopHead_bound_tcb_sc_at[wp]:
   "refillPopHead scPtr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t\<rbrace>"
   supply if_split [split del]
   unfolding refillPopHead_def
-  apply (wpsimp wp: updateScPtr_sc_obj_at')
+  apply (wpsimp wp: updateScPtr_sc_obj_at' getRefillNext_wp getMapScPtr_wp)
   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
 
 lemma updateRefillHd_bound_tcb_sc_at[wp]:
@@ -3310,7 +3275,7 @@ lemma updateRefillHd_bound_tcb_sc_at[wp]:
 
 crunches refillUnblockCheck
   for bound_tcb_sc_at[wp]: "obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t"
-  (wp: whileM_inv crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma maybeDonateSc_valid_release_queue[wp]:
   "\<lbrace>valid_objs' and valid_release_queue\<rbrace>
@@ -3321,7 +3286,7 @@ lemma maybeDonateSc_valid_release_queue[wp]:
   apply (rule_tac Q="\<lambda>_. valid_release_queue and valid_objs'
                          and obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) x2"
          in hoare_strengthen_post[rotated], clarsimp)
-  apply (wpsimp wp: getNotification_wp threadGet_wp schedContextDonate_valid_objs')+
+       apply (wpsimp wp: getNotification_wp threadGet_wp schedContextDonate_valid_objs')+
   by (clarsimp simp: obj_at'_def)
 
 lemma maybeDonateSc_valid_objs'[wp]:
@@ -3598,7 +3563,7 @@ crunches sendSignal
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and irqs_masked'[wp]: "irqs_masked'"
-  (wp: crunch_wps whileM_inv simp: crunch_simps o_def)
+  (wp: crunch_wps simp: crunch_simps o_def)
 
 lemma ct_in_state_activatable_imp_simple'[simp]:
   "ct_in_state' activatable' s \<Longrightarrow> ct_in_state' simple' s"
@@ -3856,7 +3821,7 @@ crunches doIPCTransfer
 
 crunches receiveIPC
   for gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift whileM_inv
+  (wp: crunch_wps transferCapsToSlots_pres1 hoare_vcg_all_lift
    simp: crunch_simps zipWithM_x_mapM ignore: constOnFailure)
 
 lemmas possibleSwitchToTo_cteCaps_of[wp]
@@ -4833,7 +4798,7 @@ end
 crunches sendFaultIPC, receiveIPC, receiveSignal
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  (wp: crunch_wps hoare_vcg_all_lift whileM_inv simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 global_interpretation sendFaultIPC: typ_at_all_props' "sendFaultIPC t cap f d"
   by typ_at_props'
