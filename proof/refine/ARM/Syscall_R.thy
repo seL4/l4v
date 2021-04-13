@@ -493,7 +493,7 @@ lemma pinv_corres:
 crunches sendSignal, setDomain
   for tcb_at'[wp]: "tcb_at' t"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T t s)"
-  (simp: crunch_simps wp: crunch_wps whileM_inv)
+  (simp: crunch_simps wp: crunch_wps)
 
 crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
          performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC,
@@ -501,7 +501,7 @@ crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps
-   wp: crunch_wps checkCap_inv hoare_vcg_all_lift whileM_inv
+   wp: crunch_wps checkCap_inv hoare_vcg_all_lift
    ignore: checkCapAt)
 
 end
