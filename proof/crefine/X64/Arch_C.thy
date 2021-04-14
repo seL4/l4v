@@ -5254,7 +5254,7 @@ proof -
                              split: thread_state.splits)
               apply (case_tac "tcbState obj"; clarsimp)
                apply (drule invs_valid_idle',
-                           clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)+
+                      clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs idle_tcb'_def)+
              apply (simp add: all_ex_eq_helper)
              apply vcg
             apply wp
