@@ -155,13 +155,13 @@ lemma preemptionPoint_ccorres:
      apply (rule ccorres_split_nothrow
                  [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
          apply (rule ccorres_from_vcg)
-	 apply (rule allI, rule conseqPre, vcg)
-	 apply (thin_tac "P" for P)+
-	 apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
-	 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-	                       carch_state_relation_def
-                               cmachine_state_relation_def)
-	apply ceqv
+     apply (rule allI, rule conseqPre, vcg)
+     apply (thin_tac "P" for P)+
+     apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
+     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                           carch_state_relation_def
+                           cmachine_state_relation_def)
+     apply ceqv
        apply (rule ccorres_liftE_Seq)
        apply (ctac (no_vcg) add: isIRQPending_ccorres)
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
