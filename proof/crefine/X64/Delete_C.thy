@@ -1025,7 +1025,7 @@ lemma cteRevoke_ccorres1:
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply vcg
            apply (wp preemptionPoint_invR)
-	          apply simp
+            apply simp
            apply simp
           apply (simp, rule ccorres_split_throws)
            apply (rule ccorres_return_C_errorE, simp+)[1]
