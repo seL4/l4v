@@ -475,7 +475,7 @@ proof -
 
   finally
     show ?thesis
-      by (simp add: cte_map_def)
+      by (simp add: cte_map_def shiftl_t2n)
 qed
 
 lemma cte_map_shift':
@@ -1447,11 +1447,11 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (subgoal_tac "of_bl (snd p) * 2^cte_level_bits < 2 ^ (cte_level_bits + length (snd p))")
     apply (rule conjI)
      apply (erule is_aligned_no_wrap')
-     apply assumption
+     apply (simp add: shiftl_t2n mult_ac)
     apply (subst add_diff_eq[symmetric])
     apply (rule word_plus_mono_right)
-     apply (erule word_le_minus_one_leq)
-    apply (erule is_aligned_no_wrap')
+     apply (simp add: shiftl_t2n mult_ac)
+     apply (erule is_aligned_no_wrap')
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
    apply (simp add: power_add)
@@ -1469,9 +1469,11 @@ lemma cte_at_cte_map_in_obj_bits:
    apply (rule conjI)
     apply (erule is_aligned_no_wrap')
     apply (simp add: word_bits_conv)
+     apply (simp add: shiftl_t2n mult_ac)
    apply (rule word_plus_mono_right)
     apply (drule word_le_minus_one_leq)
     apply simp
+     apply (simp add: shiftl_t2n mult_ac)
    apply (erule is_aligned_no_wrap')
    apply simp
   apply (simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1 cte_level_bits_def

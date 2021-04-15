@@ -230,7 +230,7 @@ next
      apply (subst S)
        apply simp
       apply simp
-     apply (simp add: cte_level_bits_def)
+     apply (simp add: cte_level_bits_def shiftl_t2n)
     apply unat_arith
     done
   have another:

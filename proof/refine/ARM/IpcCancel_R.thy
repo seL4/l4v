@@ -474,7 +474,7 @@ lemma cancel_signal_corres:
 
 lemma cte_map_tcb_2:
   "cte_map (t, tcb_cnode_index 2) = t + 2*2^cte_level_bits"
-  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1)
+  by (simp add: cte_map_def tcb_cnode_index_def to_bl_1 shiftl_t2n)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -490,7 +490,8 @@ proof -
     by (simp add: tcb_at_cte_at dom_tcb_cap_cases)
   hence "descendants_of' (t + 2*2^cte_level_bits) (ctes_of s') = {cte_map sl}"
     using sr desc
-    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def)
+    by (fastforce simp: state_relation_def cdt_relation_def cte_map_def tcb_cnode_index_def
+                        shiftl_t2n mult_ac)
   thus ?thesis
     using cte invs
     apply (clarsimp simp: descendants_of'_def)

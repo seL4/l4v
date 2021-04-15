@@ -729,7 +729,8 @@ proof -
        using pspace_aligned[simplified pspace_aligned_def]
        apply (drule_tac x=y in bspec, clarsimp)
        apply clarsimp
-       apply (case_tac "(of_bl ya::word32) * 2^cte_level_bits = 0", simp)
+       apply (case_tac "(of_bl ya::word32) * 2^cte_level_bits = 0")
+        apply (simp add: shiftl_t2n mult_ac)
         apply (rule ext)
         apply simp
         apply (rule conjI)
@@ -747,7 +748,7 @@ proof -
         apply clarsimp
         apply (erule_tac x="cte_relation bl" in allE)
         apply (erule impE)
-         apply (fastforce simp add: well_formed_cnode_n_def)
+         apply (fastforce simp add: well_formed_cnode_n_def shiftl_t2n cte_level_bits_def mult_ac)
         apply clarsimp
         apply (clarsimp simp add: cte_relation_def)
         apply (rule cap_relation_imp_CapabilityMap)
@@ -773,7 +774,7 @@ proof -
          apply (simp add: cte_level_bits_def)
         apply (simp add: word_bits_conv cte_level_bits_def)
         apply (drule_tac a="2::nat" in power_strict_increasing, simp+)
-       apply (rule ccontr, clarsimp)
+       apply (rule ccontr, clarsimp simp: shiftl_t2n mult_ac)
        apply (cut_tac a="y + of_bl ya * 2^cte_level_bits" and n=yc in gsCNodes)
        apply clarsimp
 
@@ -1010,7 +1011,7 @@ proof -
   apply clarsimp
   using pspace_aligned'[simplified pspace_aligned'_def]
   apply (drule_tac x=a in bspec, simp add: dom_def)
-  apply (simp add: objBitsKO_def cte_map_def)
+  apply (simp add: objBitsKO_def cte_map_def shiftl_t2n mult_ac)
   apply (rule conjI[rotated])
    apply (drule tcb_cap_cases_length)
    apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
@@ -1028,7 +1029,7 @@ proof -
    apply (simp add: ps_clear_def dom_def mask_2pm1[symmetric] x_power_minus_1)
    apply (simp add: objBitsKO_def)
    apply (drule_tac a="cte_map (a, b)" in equals0D)
-   apply (clarsimp simp add: cte_map_def)
+   apply (clarsimp simp add: cte_map_def shiftl_t2n mult_ac)
    apply (drule tcb_cap_cases_length)
    apply (erule impE)
     apply (rule word_plus_mono_right)

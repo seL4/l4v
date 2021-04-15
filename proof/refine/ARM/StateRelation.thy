@@ -16,9 +16,9 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 definition
   cte_map :: "cslot_ptr \<Rightarrow> word32"
 where
- "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref * 2 ^ cte_level_bits)"
+ "cte_map \<equiv> \<lambda>(oref, cref). oref + (of_bl cref << cte_level_bits)"
 
-lemmas cte_map_def' = cte_map_def[simplified cte_level_bits_def, simplified]
+lemmas cte_map_def' = cte_map_def[simplified cte_level_bits_def shiftl_t2n mult_ac, simplified]
 
 definition
   lookup_failure_map :: "ExceptionTypes_A.lookup_failure \<Rightarrow> Fault_H.lookup_failure"

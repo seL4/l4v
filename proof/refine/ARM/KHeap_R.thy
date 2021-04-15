@@ -3390,7 +3390,7 @@ lemma pspace_aligned_cross:
 
   \<comment>\<open>CNode\<close>
      apply (clarsimp simp: cte_map_def)
-     apply (simp only: cteSizeBits_def cte_level_bits_def)
+     apply (simp only: cteSizeBits_def cte_level_bits_def shiftl_t2n mult.commute)
      apply (rule is_aligned_add)
       apply (erule is_aligned_weaken, simp)
      apply (rule is_aligned_weaken)
