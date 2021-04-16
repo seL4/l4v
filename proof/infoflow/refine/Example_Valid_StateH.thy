@@ -2935,10 +2935,13 @@ lemma s0H_invs:
     apply simp
    apply simp
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKO_eq project_inject objBitsKO_def)
+   apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKO_eq project_inject
+                         objBitsKO_def idle_tcb'_def)
    apply (clarsimp simp: s0H_internal_def s0_ptrs_aligned idle_tcbH_def)
-   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def)
+   apply (rule conjI)
+    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
+    apply (simp add: objBitsKO_def)
+   apply (clarsimp simp: idle_tcb_ptr_def idle_thread_ptr_def)
   apply (rule conjI)
    apply (clarsimp simp: kdr_valid_global_refs') (* use axiomatization for now *)
   apply (rule conjI)
@@ -2965,7 +2968,7 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node'_def)
    apply (rule conjI)
-    apply (clarsimp simp: s0H_internal_def is_aligned_def s0_ptr_defs)
+    apply (clarsimp simp: s0H_internal_def is_aligned_def s0_ptr_defs word_size)
    apply (clarsimp simp: obj_at'_def projectKO_eq project_inject objBitsKO_def s0H_internal_def
                          shiftl_t2n[where n=4, simplified, symmetric]
                           kh0H_simps(1)[simplified cte_level_bits_def])
