@@ -264,28 +264,69 @@ where
                   (\<lambda>_. non_overlapping_merge_refills sc_ptr) ()"
 
 definition
+  head_time_buffer :: "ticks \<Rightarrow> (bool, 'z::state_ext) r_monad"
+where
+  "head_time_buffer usage \<equiv> do {
+    sc_ptr \<leftarrow> ogets cur_sc;
+    sc \<leftarrow> read_sched_context sc_ptr;
+    oreturn  (r_amount (refill_hd sc) \<le> usage
+              \<and> max_time - r_time (refill_hd sc) \<ge> 5 * MAX_PERIOD)
+  }"
+
+definition
+  handle_overrun_loop_body :: "ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad"
+where
+  "handle_overrun_loop_body usage \<equiv> do
+     sc_ptr \<leftarrow> gets cur_sc;
+     single \<leftarrow> refill_single sc_ptr;
+     sc \<leftarrow> get_sched_context sc_ptr;
+
+     usage' \<leftarrow> return (usage - r_amount (refill_hd sc));
+
+     if single
+        then set_refill_hd sc_ptr ((refill_hd sc)\<lparr>r_time := r_time (refill_hd sc) + sc_period sc\<rparr>)
+        else do old_head \<leftarrow> refill_pop_head sc_ptr;
+                full \<leftarrow> refill_full sc_ptr;
+                refills' \<leftarrow> get_refills sc_ptr;
+                set_refills sc_ptr $ schedule_used full refills'
+                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)
+             od;
+     return usage'
+   od"
+
+definition
+  handle_overrun_loop :: "ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad"
+where
+  "handle_overrun_loop usage
+    \<equiv> whileLoop (\<lambda>usage s. the (head_time_buffer usage s))
+                 (\<lambda>usage. handle_overrun_loop_body usage) usage"
+
+definition
   refill_budget_check :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_budget_check usage = do
-    sc_ptr \<leftarrow> gets cur_sc;
-    sc \<leftarrow> get_sched_context sc_ptr;
-    period \<leftarrow> return (sc_period sc);
-    refills \<leftarrow> return (sc_refills sc);
+  "refill_budget_check usage \<equiv> do
+     sc_ptr \<leftarrow> gets cur_sc;
 
-    robin \<leftarrow> is_round_robin sc_ptr;
-    assert (\<not>robin);
+     robin \<leftarrow> is_round_robin sc_ptr;
+     assert (\<not>robin);
 
-    usage' \<leftarrow> return $ min usage (r_amount (hd refills));
+     usage' \<leftarrow> handle_overrun_loop usage;
 
-    when (usage' > 0) $ do
-      used \<leftarrow> return \<lparr>r_time = r_time (hd refills) + period, r_amount = usage'\<rparr>;
-      adjusted_hd \<leftarrow> return \<lparr>r_time = r_time (hd refills) + usage',
-                             r_amount = r_amount (hd refills) - usage'\<rparr>;
-      full \<leftarrow> refill_full sc_ptr;
-      set_refills sc_ptr $ schedule_used full (adjusted_hd # (tl refills)) used;
-      head_insufficient_loop sc_ptr
-    od
+     refills \<leftarrow> get_refills sc_ptr;
+     new_head_amount \<leftarrow> return (r_amount (hd refills));
 
+     when (usage' > 0 \<and> usage' < new_head_amount) $ do
+       refills \<leftarrow> get_refills sc_ptr;
+       sc \<leftarrow> get_sched_context sc_ptr;
+       period \<leftarrow> return (sc_period sc);
+       used \<leftarrow> return \<lparr>r_time = r_time (hd refills) + period, r_amount = usage'\<rparr>;
+       adjusted_hd \<leftarrow> return \<lparr>r_time = r_time (hd refills) + usage',
+                              r_amount = r_amount (hd refills) - usage'\<rparr>;
+       full \<leftarrow> refill_full sc_ptr;
+       set_refills sc_ptr $ schedule_used full (adjusted_hd # (tl refills)) used
+     od;
+
+     head_insufficient_loop sc_ptr
    od"
 
 definition
