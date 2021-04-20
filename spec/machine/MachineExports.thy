@@ -76,16 +76,17 @@ requalify_facts
   MAX_PERIOD_US_def
   MAX_PERIOD_def
   us_to_ticks_mult
-  cur_time_bound_no_overflow
+  getCurrentTime_buffer_no_overflow
   kernelWCET_ticks_def
   replicate_no_overflow
-  cur_time_bound_nonzero
-  cur_time_bound_nonzero'
-  cur_time_bound_no_overflow'
-  cur_time_bound_minus
-  cur_time_bound_minus'
-  cur_time_bound_no_overflow'_stronger
+  getCurrentTime_buffer_nonzero
+  getCurrentTime_buffer_nonzero'
+  getCurrentTime_buffer_no_overflow'
+  getCurrentTime_buffer_no_overflow'_stronger
+  getCurrentTime_buffer_minus
+  getCurrentTime_buffer_minus'
   MAX_PERIOD_mult
+  MAX_PERIOD_mult'
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
