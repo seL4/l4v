@@ -650,7 +650,7 @@ lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:
 
 lemma handle_interrupt_corres:
   "corres dc
-     (einvs and current_time_bounded 1) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
+     (einvs and current_time_bounded 2) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc ?Q ?P' ?f ?g")
   apply (simp add: handle_interrupt_def handleInterrupt_def )
