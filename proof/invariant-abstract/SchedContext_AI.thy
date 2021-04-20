@@ -86,7 +86,8 @@ lemmas refill_unblock_check_defs
 
 lemmas refill_budget_check_defs
   = refill_budget_check_def non_overlapping_merge_refills_def merge_refills_def refill_pop_head_def
-    head_insufficient_loop_def
+    head_insufficient_loop_def handle_overrun_loop_def handle_overrun_loop_body_def
+    set_refill_hd_def update_refill_hd_def refill_single_def refill_size_def
 
 lemma refill_unblock_check_valid_objs[wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_objs\<rbrace>"
@@ -98,11 +99,23 @@ lemma schedule_used_non_nil:
   "schedule_used b ls u \<noteq> []"
   by (induction ls; clarsimp simp: Let_def schedule_used_def)
 
+lemma set_refills_wp:
+  "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
+               \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
+     set_refills sc_ptr refills
+   \<lbrace>\<lambda>r. P\<rbrace>"
+  unfolding set_refills_def
+  by (wpsimp wp: update_sched_context_wp)
+
+crunches head_insufficient_loop, handle_overrun_loop
+  for valid_objs[wp]: valid_objs
+  (wp: crunch_wps)
+
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
-  apply (wpsimp wp: set_refills_valid_objs hoare_drop_imps
-                    get_refills_wp whileLoop_wp' update_sched_context_wp
-              simp: refill_budget_check_defs)
+  apply (clarsimp simp: refill_budget_check_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (wpsimp wp: set_refills_valid_objs)
   done
 
 (* FIXME RT: move to Invariants_AI *)
@@ -384,10 +397,15 @@ crunches refill_budget_check
   for ex_nonz_cap_tp[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
   (simp: crunch_simps wp: crunch_wps)
 
+crunches head_insufficient_loop, handle_overrun_loop
+  for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
+  (wp: crunch_wps)
+
 lemma refill_budget_check_if_live_then_nonz_cap[wp]:
   "refill_budget_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  apply (clarsimp simp: refill_budget_check_defs)
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps)
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps
+                    hoare_vcg_all_lift hoare_vcg_if_lift2
+              simp: refill_budget_check_def)
   done
 
 crunches refill_budget_check
@@ -678,10 +696,15 @@ lemma valid_sched_context_domain_time_update[simp]:
   "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
   by (simp add: valid_sched_context_def valid_bound_obj_def split: option.splits)
 
+crunches head_insufficient_loop, handle_overrun_loop
+  for valid_replies_pred[wp]: "valid_replies_pred P"
+  (wp: crunch_wps)
+
 lemma refill_budget_check_valid_replies[wp]:
   "refill_budget_check usage \<lbrace> valid_replies_pred P \<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs
-                  wp: get_refills_wp whileLoop_wp' update_sched_context_wp hoare_drop_imps)
+  apply (wpsimp simp: refill_budget_check_def
+                  wp: get_refills_wp whileLoop_wp' update_sched_context_wp hoare_drop_imps
+                      hoare_vcg_all_lift hoare_vcg_if_lift2)
   done
 
 lemma commit_time_valid_replies[wp]:
@@ -773,17 +796,22 @@ crunches commit_domain_time
   and bound_sc_tcb_at [wp]: "\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s"
   (simp: valid_state_def)
 
-lemma set_refills_bound_sc_tcb_at [wp]:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
+lemma set_refills_bound_sc_tcb_at_ct[wp]:
+  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
    set_refills sc_ptr refills
-   \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
+   \<lbrace>\<lambda>_ s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   by (wpsimp simp: set_refills_def update_sched_context_def set_object_def get_object_def
                    pred_tcb_at_def obj_at_def)
 
-lemma refill_budget_check_bound_sc_tcb_at [wp]:
-  "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
-  unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+crunches handle_overrun_loop, head_insufficient_loop
+  for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
+  (wp: crunch_wps)
+
+lemma refill_budget_check_bound_sc_tcb_at_ct[wp]:
+  "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
+  unfolding refill_budget_check_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps hoare_vcg_all_lift
+                    hoare_vcg_if_lift2)
   done
 
 lemma commit_time_bound_sc_tcb_at [wp]:
@@ -813,10 +841,15 @@ lemma sc_consumed_update_valid_state [wp]:
   by (wpsimp simp: valid_state_def valid_pspace_def
                wp: update_sched_context_valid_objs_same valid_irq_node_typ)
 
+crunches head_insufficient_loop, handle_overrun_loop
+  for valid_idle[wp]: valid_idle
+  (wp: crunch_wps)
+
 lemma refill_budget_check_valid_idle:
   "refill_budget_check usage \<lbrace>valid_idle\<rbrace>"
-  unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  unfolding refill_budget_check_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps hoare_vcg_all_lift
+                    hoare_vcg_if_lift2)
   done
 
 lemma refill_budget_check_valid_state [wp]:
@@ -884,10 +917,15 @@ lemma set_refills_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> set_refills p r \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: set_refills_def wp: get_sched_context_wp)
 
+crunches head_insufficient_loop, handle_overrun_loop
+  for ct_in_state[wp]: "ct_in_state t"
+  (wp: crunch_wps)
+
 lemma refill_budget_check_ct_in_state[wp]:
   "refill_budget_check usage \<lbrace> ct_in_state t \<rbrace>"
-  unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
+  unfolding refill_budget_check_def
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps hoare_vcg_all_lift
+                    hoare_vcg_if_lift2)
   done
 
 (* FIXME: move *)

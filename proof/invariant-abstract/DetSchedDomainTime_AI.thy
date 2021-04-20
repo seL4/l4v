@@ -176,7 +176,8 @@ crunches awaken
   (wp: crunch_wps)
 
 crunch domain_list_inv[wp]: commit_time "\<lambda>s. P (domain_list s)"
-  (simp: Let_def wp: get_sched_context_wp get_refills_wp crunch_wps)
+  (simp: Let_def
+   wp: get_sched_context_wp get_refills_wp crunch_wps hoare_vcg_all_lift hoare_vcg_if_lift2)
 
 crunch domain_list_inv[wp]: refill_new "\<lambda>s. P (domain_list s)"
   (simp: Let_def crunch_simps wp: get_sched_context_wp get_refills_wp wp: crunch_wps)

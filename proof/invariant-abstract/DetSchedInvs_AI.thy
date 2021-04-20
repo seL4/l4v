@@ -2291,17 +2291,21 @@ abbreviation valid_ready_qs :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
-definition bounded_release_time_2 :: "time \<Rightarrow> time \<Rightarrow> bool" where
-  "bounded_release_time_2 curtime reltime \<equiv>
-     unat reltime \<le> unat curtime + unat kernelWCET_ticks + unat MAX_PERIOD"
+\<comment> \<open>This predicate is currently used only in refill_update_valid_refills, in particular,
+    to show that performing refill_update will not result in overflow.
+    The constant 2 is required because refill_update will schedule a refill at most MAX_PERIOD
+    from the head r_time, of r_amount at most MAX_PERIOD\<close>
+definition bounded_release_time_2 :: "time \<Rightarrow> bool" where
+  "bounded_release_time_2 reltime \<equiv>
+     unat reltime + 2 * unat MAX_PERIOD \<le> unat max_time"
 
-abbreviation cfg_bounded_release_time :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
-  "cfg_bounded_release_time t cfg \<equiv>
-     bounded_release_time_2 t (r_time (hd (scrc_refills cfg)))"
+abbreviation cfg_bounded_release_time :: "sc_refill_cfg \<Rightarrow> bool" where
+  "cfg_bounded_release_time cfg \<equiv>
+     bounded_release_time_2 (r_time (hd (scrc_refills cfg)))"
 
 abbreviation bounded_release_time :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "bounded_release_time scp s \<equiv>
-     pred_map (cfg_bounded_release_time (cur_time s)) (sc_refill_cfgs_of s) scp"
+     pred_map (cfg_bounded_release_time) (sc_refill_cfgs_of s) scp"
 
 lemmas cfg_bounded_release_time_def = bounded_release_time_2_def
 lemmas bounded_release_time_def = bounded_release_time_2_def
@@ -2312,7 +2316,7 @@ definition active_sc_valid_refills_2 :: "time \<Rightarrow> (obj_ref \<rightharp
   "active_sc_valid_refills_2 curtime sc_refill_cfgs \<equiv>
    \<forall>scp. pred_map active_scrc sc_refill_cfgs scp
          \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
-             \<and> pred_map (cfg_bounded_release_time curtime) sc_refill_cfgs scp"
+             \<and> pred_map cfg_bounded_release_time sc_refill_cfgs scp"
 
 abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
   "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (cur_time s) (sc_refill_cfgs_of s)"
@@ -3831,8 +3835,8 @@ abbreviation cur_sc_active where
 
 lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and m=f for f, rotated]
 
-abbreviation sc_bounded_release_time :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
-  "sc_bounded_release_time ct sc \<equiv> cfg_bounded_release_time ct (sc_refill_cfg_of sc)"
+abbreviation sc_bounded_release_time :: "sched_context \<Rightarrow> bool" where
+  "sc_bounded_release_time sc \<equiv> cfg_bounded_release_time (sc_refill_cfg_of sc)"
 
 locale valid_sched_pred_locale =
   fixes state_ext_t :: "'state_ext::state_ext itself"

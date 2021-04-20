@@ -599,7 +599,7 @@ lemma non_empty_sc_replies_nonz_cap:
 lemma valid_machine_time_refill_ready_buffer:
   "valid_machine_time s \<Longrightarrow> cur_time s \<le> cur_time s + kernelWCET_ticks"
   apply (clarsimp simp: valid_machine_time_def)
-  apply (insert cur_time_bound_minus)
+  apply (insert getCurrentTime_buffer_minus)
   by (metis (no_types, hide_lams) Groups.add_ac(2) olen_add_eqv plus_minus_no_overflow_ab
                                   uminus_add_conv_diff word_n1_ge word_plus_mono_right2)
 
@@ -806,14 +806,14 @@ lemma valid_sched_tcb_state_preservation_gen:
   apply (prop_tac "active_sc_valid_refills s'")
    subgoal for s rv s'
    unfolding active_sc_valid_refills_def
-   apply (frule use_valid[OF _ sc_refill_cfg2[where P="cfg_valid_refills and cfg_bounded_release_time (cur_time s)"]], intro conjI)
+   apply (frule use_valid[OF _ sc_refill_cfg2[where P="cfg_valid_refills and cfg_bounded_release_time"]], intro conjI)
      apply (clarsimp simp: pred_map_pred_conj)
     apply simp
    apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
    apply clarsimp
    apply (drule_tac x=scp
                 and P="\<lambda>p. is_active_sc p s'
-                           \<longrightarrow> pred_map (cfg_valid_refills and cfg_bounded_release_time (cur_time s))
+                           \<longrightarrow> pred_map (cfg_valid_refills and cfg_bounded_release_time)
                                         (sc_refill_cfgs_of s') p"
                  in spec)
    apply (clarsimp simp: bounded_release_time_def  word_le_nat_alt vs_all_heap_simps pred_conj_def)
@@ -1049,7 +1049,7 @@ lemma update_time_stamp_is_refill_ready[wp]:
     apply (subst olen_add_eqv)
     apply (subst add.commute)
     apply (rule no_plus_overflow_neg)
-    apply (insert cur_time_bound_minus')
+    apply (insert getCurrentTime_buffer_minus')
     apply fastforce
    apply wpsimp
   by simp

@@ -795,6 +795,14 @@ definition
 where
   "refills_unat_sum refills = sum_list (map unat (map r_amount refills))"
 
+lemma refills_unat_sum_member_bound:
+  "\<lbrakk>refills_unat_sum refills \<le> amount; refill \<in> set refills\<rbrakk> \<Longrightarrow> unat (r_amount refill) \<le> amount"
+  apply (clarsimp simp: refills_unat_sum_def)
+  apply (prop_tac "unat (r_amount refill) \<in> set (map unat (map r_amount refills))")
+   apply fastforce
+  apply (fastforce dest!: member_le_sum_list)
+  done
+
 fun
   refill_list_to_intervals :: "refill list \<Rightarrow> (nat set) list"
 where
@@ -1288,7 +1296,7 @@ lemma schedule_used_ordered_disjoint:
 lemma schedule_used_no_overflow:
   "\<lbrakk>no_overflow list; no_overflow [new];
     list \<noteq> [] \<longrightarrow> unat (r_time (last list)) + unat (r_amount (last list)) + unat (r_amount new)
-                   \<le> unat (max_word :: time)\<rbrakk>
+                   \<le> unat max_time\<rbrakk>
    \<Longrightarrow> no_overflow (schedule_used full list new)"
   apply (cases list)
    apply (clarsimp simp: schedule_used_def Let_def ordered_disjoint_def)
@@ -1653,19 +1661,6 @@ lemma refill_update_invs:
   unfolding refill_update_def
   apply (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
                     hoare_vcg_disj_lift)
-  done
-
-lemma set_refills_bound_sc:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
-   set_refills sc_ptr refills
-   \<lbrace>\<lambda>rv s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
-  by (wpsimp simp: set_refills_def)
-
-lemma refill_budget_check_bound_sc:
-  "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs is_round_robin_def merge_refills_def
-                  wp: whileLoop_wp' get_refills_wp set_refills_wp
-         | clarsimp simp: pred_tcb_at_def obj_at_def)+
   done
 
 lemma refill_reset_rr_invs[wp]:
