@@ -3053,7 +3053,7 @@ lemma cteInsert_ct'[wp]:
 lemma maybeDonateSc_corres:
   "corres dc (tcb_at tcb_ptr and ntfn_at ntfn_ptr and invs and weak_valid_sched_action
               and valid_ready_qs and active_sc_valid_refills and valid_release_q
-              and current_time_bounded 1 and ex_nonz_cap_to tcb_ptr)
+              and current_time_bounded 2 and ex_nonz_cap_to tcb_ptr)
              (tcb_at' tcb_ptr and ntfn_at' ntfn_ptr and invs' and ex_nonz_cap_to' tcb_ptr)
              (maybe_donate_sc tcb_ptr ntfn_ptr)
              (maybeDonateSc tcb_ptr ntfn_ptr)"
@@ -3086,7 +3086,7 @@ lemma maybeDonateSc_corres:
              apply (rule_tac Q="\<lambda>_. invs and valid_ready_qs and
                        active_sc_valid_refills and valid_release_q and
                        sc_not_in_release_q xa and active_sc_valid_refills and
-                       current_time_bounded 1 and sc_tcb_sc_at ((=) (Some tcb_ptr)) xa"
+                       current_time_bounded 2 and sc_tcb_sc_at ((=) (Some tcb_ptr)) xa"
                     in hoare_strengthen_post[rotated])
               apply (fastforce simp: sc_at_pred_n_def obj_at_def)
              apply (wpsimp wp: sched_context_donate_invs
@@ -3352,7 +3352,7 @@ lemma thread_state_tcb_in_WaitingNtfn'_q:
   done
 
 lemma sendSignal_corres:
-  "corres dc (einvs and ntfn_at ep and current_time_bounded 1) (invs' and ntfn_at' ep)
+  "corres dc (einvs and ntfn_at ep and current_time_bounded 2) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply add_sym_refs
@@ -3362,7 +3362,7 @@ lemma sendSignal_corres:
                  where
                  R  = "\<lambda>rv. einvs and ntfn_at ep and valid_ntfn rv and
                             ko_at (Structures_A.Notification rv) ep
-                            and current_time_bounded 1" and
+                            and current_time_bounded 2" and
                  R' = "\<lambda>rv'. invs' and ntfn_at' ep and
                              valid_ntfn' rv' and ko_at' rv' ep"])
        defer
@@ -3412,7 +3412,7 @@ lemma sendSignal_corres:
                       (=) Structures_A.thread_state.IdleThreadState) tptr and
                    ex_nonz_cap_to tptr and fault_tcb_at ((=) None) tptr and
                    valid_sched and scheduler_act_not tptr and active_sc_valid_refills
-                   and current_time_bounded 1"
+                   and current_time_bounded 2"
                  in hoare_strengthen_post[rotated])
            apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def pred_disj_def)
           apply (wpsimp wp: cancel_ipc_simple_except_awaiting_reply cancel_ipc_ex_nonz_cap_to_tcb)
@@ -4655,7 +4655,7 @@ lemma receiveSignal_corres:
  "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc ((invs and weak_valid_sched_action and scheduler_act_not thread and valid_ready_qs
                    and st_tcb_at active thread and active_sc_valid_refills and valid_release_q
-                   and current_time_bounded 1 and (\<lambda>s. thread = cur_thread s) and not_queued thread
+                   and current_time_bounded 2 and (\<lambda>s. thread = cur_thread s) and not_queued thread
                    and not_in_release_q thread and ex_nonz_cap_to thread) and valid_cap cap)
             (invs' and tcb_at' thread and ex_nonz_cap_to' thread and valid_cap' cap')
             (receive_signal thread cap isBlocking) (receiveSignal thread cap' isBlocking)"

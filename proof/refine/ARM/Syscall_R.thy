@@ -388,7 +388,7 @@ lemma pinv_corres:
    corres (dc \<oplus> (=))
      (einvs and valid_machine_time and valid_invocation i
             and schact_is_rct
-            and current_time_bounded 1
+            and current_time_bounded 2
             and ct_active
             and ct_released
             and ct_not_in_release_q
@@ -445,7 +445,7 @@ lemma pinv_corres:
          apply (clarsimp simp: liftME_def)
          apply (rule corres_guard_imp)
            apply (erule tcbinv_corres)
-          apply fastforce+
+          apply (fastforce simp: current_time_bounded_def)+
         \<comment> \<open>domain cap\<close>
         apply (clarsimp simp: invoke_domain_def)
         apply (rule corres_guard_imp)
@@ -1156,7 +1156,7 @@ lemma hinv_corres:
    corres (dc \<oplus> dc)
           (einvs and valid_machine_time and schact_is_rct and ct_active and ct_released
            and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and ct_not_in_release_q
-           and current_time_bounded 1)
+           and current_time_bounded 2)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (handle_invocation call blocking can_donate first_phase cptr)
           (handleInvocation call blocking can_donate first_phase cptr')"
@@ -1204,7 +1204,7 @@ lemma hinv_corres:
                                  and (\<lambda>s. thread = cur_thread s)
                                  and st_tcb_at active thread
                                  and ct_not_in_release_q and ct_released
-                                 and current_time_bounded 1"
+                                 and current_time_bounded 2"
                         in hoare_post_imp)
               apply (clarsimp simp: simple_from_active ct_in_state_def schact_is_rct_def
                              elim!: st_tcb_weakenE)
@@ -1336,7 +1336,7 @@ lemma hs_corres:
   "corres (dc \<oplus> dc)
           (einvs and valid_machine_time and schact_is_rct and ct_active and
            ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-           ct_not_in_release_q and current_time_bounded 1)
+           ct_not_in_release_q and current_time_bounded 2)
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
@@ -1591,7 +1591,7 @@ lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
 lemma hc_corres:
   "corres (dc \<oplus> dc) (einvs and valid_machine_time and schact_is_rct and ct_active and
                       ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-                      ct_not_in_release_q and current_time_bounded 1)
+                      ct_not_in_release_q and current_time_bounded 2)
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
