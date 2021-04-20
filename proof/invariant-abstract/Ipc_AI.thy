@@ -2075,14 +2075,6 @@ crunches sched_context_resume
   for valid_irq_node[wp]: valid_irq_node
   (wp: crunch_wps)
 
-lemma set_refills_wp:
-  "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
-               \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
-     set_refills sc_ptr refills
-   \<lbrace>\<lambda>r. P\<rbrace>"
-  unfolding set_refills_def
-  by (wpsimp wp: update_sched_context_wp)
-
 crunches maybe_donate_sc
   for equal_kernel_mappings[wp]: equal_kernel_mappings
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
