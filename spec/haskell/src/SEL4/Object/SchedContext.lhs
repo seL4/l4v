@@ -345,15 +345,49 @@ This module uses the C preprocessor to select a target architecture.
 > refillHeadOverlappingLoop scPtr =
 >        whileLoop (const (fromJust . runReaderT (refillHeadOverlapping scPtr))) (const (mergeRefills scPtr)) ()
 
+> headTimeBuffer :: Ticks -> KernelR Bool
+> headTimeBuffer usage = do
+>     scPtr <- readCurSc
+>     sc <- readSchedContext scPtr
+>     return $ rAmount (refillHd sc) <= usage && (maxBound :: Word64) - rTime (refillHd sc) >= 5 * usToTicks maxPeriodUs
+
+> handleOverrunLoopBody :: Ticks -> Kernel Ticks
+> handleOverrunLoopBody usage = do
+>     scPtr <- getCurSc
+>     single <- refillSingle scPtr
+>     sc <- getSchedContext scPtr
+
+>     usage' <- return (usage - rAmount (refillHd sc))
+
+>     if single
+>        then updateRefillHd scPtr $ \r -> r { rTime = rTime r + scPeriod sc}
+>        else do
+>          old_head <- refillPopHead scPtr
+>          let new = old_head { rTime = rTime old_head + scPeriod sc}
+>          scheduleUsed scPtr new
+
+>     return usage'
+
+> handleOverrunLoop :: Ticks -> Kernel Ticks
+> handleOverrunLoop usage =
+>     whileLoop (\usage -> fromJust . runReaderT (headTimeBuffer usage)) (\usage -> handleOverrunLoopBody usage) usage
+
 > refillBudgetCheck :: Ticks -> Kernel ()
 > refillBudgetCheck usage = do
 >     scPtr <- getCurSc
+
+>     active <- scActive scPtr
+>     assert active "CurSc should be active"
+
+>     roundRobin <- isRoundRobin scPtr
+>     assert (not roundRobin) "the current sc should not be round robin when this function is called"
+
+>     usage' <- handleOverrunLoop usage
+
 >     sc <- getSchedContext scPtr
->     assert (scRefillMax sc > 0) "CurSc should be active"
+>     newHeadAmount <- return (rAmount (refillHd sc))
 
->     usage' <- return (min usage (rAmount (refillHd sc)))
-
->     when (usage' > 0) $ do
+>     when (usage' > 0 && usage' < newHeadAmount) $ do
 >       used <- return Refill { rTime = rTime (refillHd sc) + (scPeriod sc),
 >                               rAmount = usage'}
 >       setRefillHd scPtr (Refill { rTime = rTime (refillHd sc) + usage',

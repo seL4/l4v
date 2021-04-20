@@ -220,6 +220,9 @@ Similarly, these functions access the idle thread pointer, the ready queue for a
 > getCurSc :: Kernel (PPtr SchedContext)
 > getCurSc = gets ksCurSc
 
+> readCurSc :: KernelR (PPtr SchedContext)
+> readCurSc = asks ksCurSc
+
 > setCurSc :: PPtr SchedContext -> Kernel ()
 > setCurSc scptr = modify (\ks -> ks { ksCurSc = scptr })
 
