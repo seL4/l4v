@@ -465,8 +465,8 @@ lemma refill_budget_check_refs_of[wp]:
   done
 
 lemma refill_budget_check_round_robin_invs[wp]:
-  "refill_budget_check_round_robin usage \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: refill_budget_check_round_robin_def
+  "refill_budget_check_round_robin u \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
                wp: hoare_drop_imp)
 
 lemma refill_budget_check_invs[wp]:
@@ -709,7 +709,8 @@ lemma refill_budget_check_valid_replies[wp]:
 
 lemma commit_time_valid_replies[wp]:
   "commit_time \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def
+  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def update_refill_tl_def
+                   update_refill_hd_def
                wp: hoare_drop_imps cong: sched_context.fold_congs)
 
 lemma sc_consumed_update_eq:
@@ -750,7 +751,8 @@ lemma commit_time_invs:
    apply (rename_tac csc sc consumed)
    apply (case_tac "0 < consumed"; simp split del: if_split add: bind_assoc)
     apply (wpsimp wp: commit_times_invs_helper hoare_vcg_ex_lift
-                simp: refill_budget_check_round_robin_def is_round_robin_def)
+                simp: refill_budget_check_round_robin_def is_round_robin_def
+                      update_refill_tl_def update_refill_hd_def)
    apply (clarsimp simp: obj_at_def is_sc_obj_def)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                        consumed_time_update_arch.state_refs_update
@@ -819,7 +821,7 @@ lemma commit_time_bound_sc_tcb_at [wp]:
    commit_time
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
   by (wpsimp simp: commit_time_def sc_consumed_update_eq[symmetric]
-                   refill_budget_check_round_robin_def
+                   refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
                wp: hoare_drop_imps)
 
 lemma refill_unblock_check_bound_sc_tcb_at [wp]:
@@ -860,17 +862,19 @@ lemma refill_budget_check_valid_state [wp]:
 lemma commit_time_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> commit_time \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: commit_time_def sc_consumed_update_eq[symmetric]
-                   refill_budget_check_round_robin_def
+                   refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
                wp: hoare_drop_imps)
 
 lemma commit_time_cur_tcb [wp]:
   "\<lbrace>cur_tcb\<rbrace> commit_time \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def
+  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def update_refill_tl_def
+                   update_refill_hd_def
                wp: hoare_drop_imps)
 
 lemma commit_time_fault_tcbs_valid_states[wp]:
   "commit_time \<lbrace>fault_tcbs_valid_states\<rbrace>"
-  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def
+  by (wpsimp simp: commit_time_def refill_budget_check_round_robin_def update_refill_tl_def
+                   update_refill_hd_def
                wp: hoare_drop_imps)
 
 crunches switch_sched_context
@@ -1525,11 +1529,10 @@ lemma maybe_add_empty_tail_invs[wp]:
   "\<lbrace>invs and K (sc_ptr \<noteq> idle_sc_ptr)\<rbrace>
    maybe_add_empty_tail sc_ptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wpsimp simp: maybe_add_empty_tail_def is_round_robin_def
-        split_del: if_split
-               wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
-                   hoare_vcg_disj_lift )
-     (clarsimp)
+  apply (wpsimp simp: maybe_add_empty_tail_def refill_add_tail_def is_round_robin_def
+                  wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
+                      hoare_vcg_disj_lift )
+  done
 
 lemma refill_new_invs[wp]:
   "\<lbrace>invs and K (sc_ptr \<noteq> idle_sc_ptr)\<rbrace>
