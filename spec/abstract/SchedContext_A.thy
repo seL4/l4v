@@ -128,15 +128,22 @@ where
   "set_refill_tl sc_ptr new = update_refill_tl sc_ptr (\<lambda>_. new)"
 
 definition
+  refill_add_tail :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "refill_add_tail sc_ptr new_refill = do
+     refills \<leftarrow> get_refills sc_ptr;
+     set_refills sc_ptr (refills @ [new_refill])
+   od"
+
+definition
   maybe_add_empty_tail :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "maybe_add_empty_tail sc_ptr = do
-     robin <- is_round_robin sc_ptr;
+     robin \<leftarrow> is_round_robin sc_ptr;
      when robin $ do
-       sc <- get_sched_context sc_ptr;
-       refills <- return (sc_refills sc);
-       empty_refill <- return \<lparr>r_time = r_time (hd refills), r_amount = 0\<rparr>;
-       set_sc_obj_ref sc_refills_update sc_ptr (refills @ [empty_refill])
+       refills \<leftarrow> get_refills sc_ptr;
+       empty_refill \<leftarrow> return \<lparr>r_time = r_time (hd refills), r_amount = 0\<rparr>;
+       refill_add_tail sc_ptr empty_refill
      od
    od"
 
@@ -144,13 +151,12 @@ definition
   refill_new :: "obj_ref \<Rightarrow> nat \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_new sc_ptr max_refills budget period = do
-     assert (MIN_BUDGET < budget);
      cur_time \<leftarrow> gets cur_time;
-     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
      set_sc_obj_ref sc_period_update sc_ptr period;
-     set_sc_obj_ref sc_refills_update sc_ptr [refill];
-     set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
      set_sc_obj_ref sc_budget_update sc_ptr budget;
+     set_sc_obj_ref sc_refill_max_update sc_ptr max_refills;
+     refill \<leftarrow> return \<lparr> r_time = cur_time, r_amount = budget \<rparr>;
+     set_sc_obj_ref sc_refills_update sc_ptr [refill];
      maybe_add_empty_tail sc_ptr
    od"
 
@@ -231,10 +237,8 @@ definition
 where
   "refill_budget_check_round_robin usage = do
     sc_ptr \<leftarrow> gets cur_sc;
-    sc \<leftarrow> get_sched_context sc_ptr;
-    refills \<leftarrow> return (sc_refills sc);
-    set_refills sc_ptr [\<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) - usage\<rparr>,
-                        \<lparr>r_time = r_time (hd (tl refills)), r_amount = r_amount (hd (tl refills)) + usage\<rparr>]
+    update_refill_hd sc_ptr (\<lambda>refill. refill\<lparr>r_amount := r_amount refill - usage\<rparr>);
+    update_refill_tl sc_ptr (\<lambda>refill. refill\<lparr>r_amount := r_amount refill + usage\<rparr>)
    od"
 
 definition
@@ -333,28 +337,28 @@ definition
   refill_update :: "obj_ref \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> nat \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
-
-     set_sc_obj_ref sc_budget_update sc_ptr new_budget;
-     set_sc_obj_ref sc_period_update sc_ptr new_period;
+     sc \<leftarrow> get_sched_context sc_ptr;
+     refill_hd \<leftarrow> return (hd (sc_refills sc));
      set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
+     set_refills sc_ptr [refill_hd];
+     set_sc_obj_ref sc_period_update sc_ptr new_period;
+     set_sc_obj_ref sc_budget_update sc_ptr new_budget;
+
+     ready \<leftarrow> get_sc_refill_ready sc_ptr;
+     when ready $ do cur_time \<leftarrow> gets cur_time;
+                     update_refill_hd sc_ptr (\<lambda>refill. refill\<lparr>r_time := cur_time\<rparr>)
+                  od;
 
      sc \<leftarrow> get_sched_context sc_ptr;
-     refills \<leftarrow> return (sc_refills sc);
-     refill_hd \<leftarrow> return (hd refills);
-     ready \<leftarrow> get_sc_refill_ready sc_ptr;
-     cur_time \<leftarrow> gets cur_time;
-     new_time \<leftarrow> return $ if ready then cur_time else (r_time refill_hd);
-     refill_hd \<leftarrow> return $ \<lparr>r_time = new_time, r_amount = r_amount refill_hd\<rparr>;
-
+     refill_hd \<leftarrow> return (hd (sc_refills sc));
      if new_budget \<le> r_amount refill_hd
-     then do set_refills sc_ptr [refill_hd\<lparr>r_amount := new_budget\<rparr>];
+     then do update_refill_hd sc_ptr (\<lambda>refill. refill\<lparr>r_amount := new_budget\<rparr>);
              maybe_add_empty_tail sc_ptr
           od
      else do unused \<leftarrow> return $ new_budget - r_amount refill_hd;
              new \<leftarrow> return \<lparr>r_time = r_time refill_hd + new_period, r_amount = unused\<rparr>;
-             set_refills sc_ptr ([refill_hd] @ [new])
+             refill_add_tail sc_ptr new
           od
-
     od"
 
 definition
