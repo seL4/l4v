@@ -4103,7 +4103,7 @@ lemma refill_budget_check_valid_list[wp]:
 
 lemma refill_budget_check_round_robin_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> refill_budget_check_round_robin usage \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding refill_budget_check_round_robin_def
+  unfolding refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
   by (wpsimp wp: hoare_drop_imps)
 
 crunch valid_list[wp]: update_restart_pc "valid_list"
@@ -4117,7 +4117,8 @@ lemma end_timeslice_valid_list[wp]:
 lemma charge_budget_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> charge_budget consumed canTimeout \<lbrace>\<lambda>_.valid_list\<rbrace>"
   by (wpsimp simp: charge_budget_def Let_def set_refills_def is_round_robin_def
-                   refill_budget_check_round_robin_def refill_reset_rr_def
+                   refill_budget_check_round_robin_def refill_reset_rr_def update_refill_tl_def
+                   update_refill_hd_def set_refill_tl_def set_refill_hd_def
                wp: assert_inv
       | intro conjI)+
 

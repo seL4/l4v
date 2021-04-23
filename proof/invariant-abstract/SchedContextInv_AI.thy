@@ -1658,14 +1658,17 @@ lemma refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr \<and> active_sc_at sc_ptr s\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding refill_update_def
+  unfolding refill_update_def refill_add_tail_def set_refills_def update_refill_tl_def
+            update_refill_hd_def
   apply (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    hoare_vcg_disj_lift)
+                    get_refills_wp hoare_vcg_disj_lift)
   done
 
 lemma refill_reset_rr_invs[wp]:
   "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"
-  unfolding refill_reset_rr_def by wpsimp
+  unfolding refill_reset_rr_def update_refill_tl_def update_refill_hd_def set_refill_tl_def
+            set_refill_hd_def
+  by wpsimp
 
 lemma charge_budget_invs[wp]:
   "\<lbrace>invs\<rbrace>
