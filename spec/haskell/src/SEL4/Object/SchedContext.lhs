@@ -228,14 +228,17 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillNew :: PPtr SchedContext -> Int -> Ticks -> Ticks -> Kernel ()
 > refillNew scPtr maxRefills budget period = do
->     sc <- getSchedContext scPtr
 >     curTime <- getCurTime
->     let sc' = sc { scPeriod = period,
->                    scRefillMax = maxRefills,
->                    scRefillHead = 0,
->                    scRefillCount = 1 }
->     setSchedContext scPtr sc'
->     assert (minBudget < budget) "budget must be greater than the minimum"
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scPeriod = period })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scBudget = budget })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillHead = 0 })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillCount = 1 })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillMax = maxRefills })
 >     setRefillHd scPtr (Refill { rTime = curTime, rAmount = budget })
 >     maybeAddEmptyTail scPtr
 
@@ -252,13 +255,18 @@ This module uses the C preprocessor to select a target architecture.
 > refillUpdate scPtr newPeriod newBudget newMaxRefills = do
 >     sc <- getSchedContext scPtr
 >     let head = refillHd sc
->     setSchedContext scPtr $
->         setRefillIndex 0 head $
->             sc { scPeriod = newPeriod,
->                  scBudget = newBudget,
->                  scRefillMax = newMaxRefills,
->                  scRefillHead = 0,
->                  scRefillCount = 1 }
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillHead = 0 })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillCount = 1 })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scRefillMax = newMaxRefills })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr $ setRefillIndex 0 head sc
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scPeriod = newPeriod })
+>     sc <- getSchedContext scPtr
+>     setSchedContext scPtr (sc { scBudget = newBudget })
 >     whenM (refillReady scPtr) $ do
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \r -> r { rTime = curTime }
@@ -307,6 +315,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > nonOverlappingMergeRefills :: PPtr SchedContext -> Kernel ()
 > nonOverlappingMergeRefills scPtr = do
+>     sc <- getSchedContext scPtr
+>     assert (1 < scRefillCount sc) "if head is insufficient, there must be at least 2 refills"
 >     old_head <- refillPopHead scPtr
 >     updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head,
 >                                            rAmount = rAmount head + rAmount old_head }
@@ -392,8 +402,8 @@ This module uses the C preprocessor to select a target architecture.
 > refillBudgetCheckRoundRobin :: Ticks -> Kernel ()
 > refillBudgetCheckRoundRobin usage = do
 >     scPtr <- getCurSc
->     updateRefillHd scPtr $ \r -> r { rTime = rTime r, rAmount = rAmount r - usage }
->     updateRefillTl scPtr $ \r -> r { rTime = rTime r, rAmount = rAmount r + usage }
+>     updateRefillHd scPtr $ \r -> r { rAmount = rAmount r - usage }
+>     updateRefillTl scPtr $ \r -> r { rAmount = rAmount r + usage }
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do

@@ -999,7 +999,9 @@ On some architectures, the thread context may include registers that may be modi
 > replaceAt i lst v =
 >     let x = take i lst;
 >         y = drop (i + 1) lst
->     in x ++ [v] ++ y
+>     in if (null lst || length lst <= i)
+>           then lst
+>           else x ++ [v] ++ y
 
 > chargeBudget :: Ticks -> Bool -> Bool -> Kernel ()
 > chargeBudget consumed canTimeoutFault isCurCPU = do
