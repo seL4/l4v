@@ -151,6 +151,14 @@ lemma heap_ls_last_None:
 definition sym_heap where
   "sym_heap hp hp' \<equiv> \<forall>p p'. hp p = Some p' \<longleftrightarrow> hp' p' = Some p"
 
+lemma sym_heapD1:
+  "sym_heap hp hp' \<Longrightarrow> hp p = Some p' \<Longrightarrow> hp' p' = Some p"
+  by (clarsimp simp: sym_heap_def)
+
+lemma sym_heapD2:
+  "sym_heap hp hp' \<Longrightarrow> hp' p' = Some p \<Longrightarrow> hp p = Some p'"
+  by (clarsimp simp: sym_heap_def)
+
 lemma sym_heap_symmetric:
   "sym_heap hp hp' \<longleftrightarrow> sym_heap hp' hp"
   unfolding sym_heap_def by blast
