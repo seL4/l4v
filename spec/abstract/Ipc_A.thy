@@ -659,10 +659,10 @@ definition
   refill_reset_rr :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_reset_rr csc_ptr = do
-     csc \<leftarrow> get_sched_context csc_ptr;
-     refills \<leftarrow> return (sc_refills csc);
-     set_refills csc_ptr [\<lparr>r_time = r_time (hd refills), r_amount = r_amount (hd refills) + r_amount (hd (tl refills))\<rparr>,
-                          \<lparr>r_time = r_time (hd (tl refills)), r_amount = 0\<rparr>]
+     refills \<leftarrow> get_refills csc_ptr;
+     set_refill_hd csc_ptr \<lparr>r_time = r_time (hd refills),
+                            r_amount = r_amount (hd refills) + r_amount (hd (tl refills))\<rparr>;
+     set_refill_tl csc_ptr \<lparr>r_time = r_time (hd (tl refills)), r_amount = 0\<rparr>
    od"
 
 definition
