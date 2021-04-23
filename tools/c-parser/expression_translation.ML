@@ -181,7 +181,7 @@ fun lmk_comb_raw (term_gen_fn, eis, result_type, is_result_kb) = let
   fun new_term s =
         term_gen_fn (map (fn e => rval_of e s) eis)
 
-  (* Caluculate the first and last source position of this expression. *)
+  (* Calculate the first and last source position of this expression. *)
   val (l, r) = (eileft (hd eis), eiright (List.last eis))
       handle Empty => (SourcePos.bogus, SourcePos.bogus)
 in

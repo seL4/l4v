@@ -11,6 +11,7 @@ imports
   "StaticFun"
   "IndirectCalls"
   "ModifiesProofs"
+  "Stack"
   "Lib.MLUtils"
   "HOL-Eisbach.Eisbach"
 keywords

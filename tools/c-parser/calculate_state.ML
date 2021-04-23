@@ -619,6 +619,16 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
   fun declare_vars thy = let
     val (lvars, gvars) = split_vars (thy2ctxt thy) all_vars
 
+    val local_vars_collected =
+      Symtab.fold
+        (fn (_, vs) =>
+          fold
+            (fn ({isa_name,...},T,_,_) =>
+              Symtab.update (MString.dest isa_name, T))
+            vs)
+        lvars
+        Symtab.empty
+
     open NameGeneration
     fun mk_globals_rcd thy = let
       val (_ (* utglobs *), nsglobs, _ (* adglobs *)) =
@@ -651,42 +661,138 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
       (thy'', locale_params owners)
     end
 
-    val frame_spec =
+    type frame_info = {name : string, vars: (string * string * typ) list}
+    val frames : frame_info list =
+      Symtab.fold
+        (fn (fnname,vars) => fn frames =>
+          let
+            val vars =
+              map
+                (fn ({isa_name,src_name,...},typ,_,_) =>
+                  (MString.dest isa_name, src_name, typ))
+                vars
+          in
+            { name = prefix "Frame_" fnname, vars = vars } :: frames
+          end)
+        lvars
+        []
+
+    (* Take the lvar table and create the frame datatype from it.
+     * The frame datatype has a variant per each function, which contain values for each local
+     * variable in that function.
+     *)
+    val mk_frame_dattyp =
       let
-        val datatyp = (([], Binding.name "frame"), NoSyn)
+        val datatyp = (([], Binding.make ("frame", @{here})), NoSyn)
         val bindings =
           map
-            (fn (fnname,vars) =>
+            (fn {name, vars} =>
               let
-                val frame_binding = Binding.name (prefix "Frame_" fnname)
+                val frame_binding = Binding.make (name, @{here})
                 val field_bindings =
-                  map
-                    (fn (nminfo,typ,_,_) =>
-                      (nminfo |> #isa_name |> MString.dest |> Binding.name, typ))
-                    vars
+                  map (fn (isa_name,_,typ) => (Binding.make (isa_name, @{here}), typ)) vars
               in
-                (((Binding.empty, frame_binding), field_bindings : (binding * typ) list), NoSyn)
+                (((Binding.empty, frame_binding), field_bindings), NoSyn)
               end)
-            (Symtab.dest lvars)
+            frames
+        val frame_spec =
+          [( ((datatyp, bindings), (Binding.empty, Binding.empty, Binding.empty)), [] )]
       in
-        [( ((datatyp, bindings), (Binding.empty, Binding.empty, Binding.empty)), [] )]
+        BNF_FP_Def_Sugar.co_datatypes
+          BNF_FP_Rec_Sugar_Util.Least_FP
+          BNF_LFP.construct_lfp
+          (Ctr_Sugar.default_ctr_options, frame_spec)
+      end
+
+    fun mk_frame_extractor (vname,T) lthy =
+      let
+        val frameT = Proof_Context.read_typ lthy "frame"
+        val extractT = frameT --> T
+        val var_upd_fn_name = vname ^ "_get"
+        val var_upd_fn_binding = Binding.make (var_upd_fn_name, @{here})
+        val free_fn_name = Free (var_upd_fn_name, extractT)
+        fun mk_eqn {name = constr_nm, vars} =
+          let
+            val constr = Proof_Context.read_const {proper = false, strict = false} lthy constr_nm
+            val lhs_pattern = fold (fn (_,n,T) => fn t => t $ Free (n, T)) vars constr
+            val lhs = free_fn_name $ lhs_pattern
+            fun mk_undefined T = Const (\<^const_name>\<open>undefined\<close>, T)
+            val rhs =
+              fold
+                (fn (isa_nm,n,T) =>
+                  (curry merge_options)
+                    (if vname = isa_nm
+                      then
+                        SOME (Free (n, T))
+                      else
+                        NONE))
+                vars
+                NONE |> the_default (mk_undefined T)
+          in
+            (((Binding.empty, []), HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs))), [], [])
+          end
+        val frame_eqns = map mk_eqn frames
+        val (_,lthy) =
+          BNF_LFP_Rec_Sugar.primrec
+            false (* debug prints *)
+            [] (* config options; i.e. transfer/nonexaustive/plugins *)
+            [ (var_upd_fn_binding, SOME extractT, NoSyn) ] (* name of the function *)
+            frame_eqns (* equations *)
+            lthy
+      in
+        lthy
+      end
+
+    fun mk_frame_updator (vname,T) lthy =
+      let
+        val frameT = Proof_Context.read_typ lthy "frame"
+        val updT = (T --> T) --> frameT --> frameT
+        val var_upd_fn_name = vname ^ Record.updateN
+        val var_upd_fn_binding =
+          Binding.make (var_upd_fn_name, @{here})
+          |> Binding.qualify false "frame"
+        val free_fn_name = Free (var_upd_fn_name, updT)
+        fun mk_eqn {name = constr_nm, vars} =
+          let
+            val constr = Proof_Context.read_const {proper = false, strict = false} lthy constr_nm
+            val lhs_pattern = fold (fn (_,n,T) => fn t => t $ Free (n, T)) vars constr
+            val lhs = free_fn_name $ Free ("f", T --> T) $ lhs_pattern
+            val rhs =
+              fold
+                (fn (isa_nm,n,T) => fn t =>
+                  let
+                    val s =
+                      if vname = isa_nm
+                      then
+                        (Free ("f", T --> T) $ Free (n, T))
+                      else
+                        Free (n, T)
+                  in
+                    t $ s
+                  end)
+                vars
+                constr
+          in
+            (((Binding.empty, []), HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs))), [], [])
+          end
+        val frame_eqns = map mk_eqn frames
+        val (_,lthy) =
+          BNF_LFP_Rec_Sugar.primrec
+            false (* debug prints *)
+            [] (* config options; i.e. transfer/nonexaustive/plugins *)
+            [ (var_upd_fn_binding, SOME updT, NoSyn) ] (* name of the function *)
+            frame_eqns (* equations *)
+            lthy
+      in
+        lthy
       end
 
     val thy =
       Named_Target.theory_map
-        (BNF_FP_Def_Sugar.co_datatypes
-          BNF_FP_Rec_Sugar_Util.Least_FP
-          BNF_LFP.construct_lfp
-          (Ctr_Sugar.default_ctr_options, frame_spec))
+        (mk_frame_dattyp
+          #> Symtab.fold mk_frame_updator local_vars_collected
+          #> Symtab.fold mk_frame_extractor local_vars_collected)
         thy
-
-    val lvars =
-      Symtab.map
-        (K (fn vars => (simple global_exn_var_name,
-           c_exntype_ty,
-           NONE,
-           Local "cparser'internal") :: vars))
-        lvars
 
     (* In the past, the first variable named `x` got its own field named
        `x_'` in the local variables record. If there was another local later in
@@ -724,29 +830,32 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
 
                   val upd = acc ^ Record.updateN
                   val upd_alias = acc_alias ^ Record.updateN
-
-                  val pairs = [(acc_alias, acc), (upd_alias, upd)]
                 in
                   if not alias orelse member (op =) seen src_name
                   then map_aliases seen rest
-                  else pairs @ map_aliases (src_name :: seen) rest
+                  else
+                    (acc_alias, acc) ::
+                    (upd_alias, upd) ::
+                    map_aliases (src_name :: seen) rest
                 end
-        val aliases = Symtab.map (K (map_aliases [])) lvars
+        (* make abbreviations for the long name variable accessor and updator functions. *)
         fun define_alias_inner (alias, target) thy =
           let
+            val ctxt = Proof_Context.init_global thy
             val target =
-                Long_Name.qualify NameGeneration.local_rcd_name target
-                |> Proof_Context.read_const {proper = false, strict = false}
-                    (Proof_Context.init_global thy)
+                target
+                |> Long_Name.qualify NameGeneration.local_rcd_name
+                |> Proof_Context.read_const {proper = false, strict = false} ctxt
             val alias =
               Binding.make (alias, @{here})
               |> Binding.qualify false NameGeneration.local_rcd_name
           in
             Sign.add_abbrev "" (alias, target) thy |> snd
           end
-        fun define_alias (_, aliases) = fold define_alias_inner aliases
+        fun define_alias (_, aliases) =
+          aliases |> map_aliases [] |> fold define_alias_inner
       in
-        thy |> Symtab.fold define_alias aliases
+        thy |> Symtab.fold define_alias lvars
       end
       fun mk_locals_rcd thy =
         let
@@ -764,16 +873,28 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
               else
                 (nm' :: seen, (bnm nm',ty,NoSyn) :: out)
             end
-        fun map_elim_name (_,vs) (seen,out) = fold map_elim_name_inner vs (seen,out)
-        val (_,lflds) = Symtab.fold map_elim_name lvars ([],[])
+        fun map_elim_name (_,vs) (seen,out) =
+          fold map_elim_name_inner vs (seen,out)
+
+        val stackT = Syntax.parse_typ (thy2ctxt thy) "frame stack"
+        val additional_flds =
+          [ (simple global_exn_var_name, c_exntype_ty, NONE, Local "cparser'internal"),
+          (simple "stack", stackT, NONE, Local "cparser'internal") ]
+
+        val lflds =
+          snd (Symtab.fold map_elim_name lvars ([],[])) @
+          snd (fold map_elim_name_inner additional_flds ([],[]))
         val _ =
           lflds
           |> map (fn (a,b,_) => (Binding.name_of a,b))
           |> pretty_recdef (thy2ctxt thy) "myvars"
-        val thy = Record.add_record {overloaded=false}
-                  ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
-                  (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
-                  lflds thy
+        val thy =
+          Record.add_record
+            {overloaded=false}
+            ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
+            (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
+            lflds
+            thy
       in
         (thy, Sign.intern_type thy NameGeneration.local_rcd_name)
       end
