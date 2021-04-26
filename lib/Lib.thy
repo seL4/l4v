@@ -2564,8 +2564,32 @@ lemma rsubst:
   "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
   by simp
 
+lemma rsubst2:
+  "\<lbrakk>P s x; s = t; x = y\<rbrakk> \<Longrightarrow> P t y"
+  by simp
+
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
   by blast
+
+lemma not_eqI:
+  "P x \<Longrightarrow> \<not> P y \<Longrightarrow> x \<noteq> y"
+  by blast
+
+lemma bool_to_bool_cases:
+  assumes "f = (\<lambda>x. True) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. False) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. x) \<Longrightarrow> P"
+  assumes "f = (\<lambda>x. \<not>x) \<Longrightarrow> P"
+  shows P
+  by (cases "f True"; cases "f False"; rule assms; rule ext; case_tac x; simp)
+
+lemma bool_to_bool_disj:
+  "f \<in> {\<lambda>x. True, \<lambda>x. False, \<lambda>x. x, \<lambda>x. \<not>x}"
+  by (rule bool_to_bool_cases[of f]; simp)
+
+lemma bool_to_boolE:
+  "P b \<Longrightarrow> (b \<Longrightarrow> c) \<Longrightarrow> (c \<Longrightarrow> b) \<Longrightarrow> P c"
+  by (auto intro: bool_to_bool_cases[of P])
 
 lemma option_Some_value_independent:
   "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
