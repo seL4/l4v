@@ -10,7 +10,11 @@ imports
 begin
 
 context begin interpretation Arch .
+
+requalify_consts
+  ptrFromPAddr addrFromPPtr
 requalify_facts
+  ptrFormPAddr_addFromPPtr
   aobj_ref_arch_cap
 
 end
