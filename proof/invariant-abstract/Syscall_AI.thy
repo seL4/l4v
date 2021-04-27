@@ -24,6 +24,7 @@ requalify_facts
   arch_post_cap_deletion_cur_thread
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
+  resetTimer_device_state_inv
 end
 
 lemmas [wp] =
