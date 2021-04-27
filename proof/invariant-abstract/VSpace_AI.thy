@@ -16,6 +16,7 @@ context begin interpretation Arch .
 requalify_facts
    pspace_respects_device_region_dmo
    cap_refs_respects_device_region_dmo
+   ackInterrupt_device_state_inv
 
 end
 
