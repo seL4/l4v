@@ -3045,13 +3045,16 @@ lemma schedContextResume_corres:
    apply (subgoal_tac "sc_tcb_sc_at (\<lambda>t. bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) (the t) s) ptr s ")
     apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def bound_sc_tcb_at_def is_tcb_def)
     apply (intro conjI impI; (clarsimp simp: invs_def valid_state_def; fail)?)
-           apply (fastforce dest!: invs_valid_objs elim!: valid_sched_context_size_objsI)+
-         apply (fastforce simp: is_schedulable_bool_def get_tcb_def is_sc_active_def vs_all_heap_simps)+
-        apply (prop_tac "is_active_sc ptr s")
-         apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def get_tcb_def
-                                is_sc_active_def)
-        apply (fastforce dest: active_sc_valid_refillsE
-                         simp: vs_all_heap_simps valid_refills_def rr_valid_refills_def)
+          apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
+         apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
+         apply (fastforce dest!: active_sc_valid_refillsE
+                           simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                          split: if_splits)
+        apply (fastforce simp: is_schedulable_bool_def get_tcb_def is_sc_active_def
+                               vs_all_heap_simps)
+       apply (prop_tac "is_active_sc ptr s")
+        apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def get_tcb_def
+                               is_sc_active_def)
        apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
                               valid_ready_queued_thread_2_def in_ready_q_def)+
      apply (clarsimp simp: is_schedulable_bool_def get_tcb_def)
