@@ -14,8 +14,8 @@ text \<open>
 theory ADT_IF
 imports
     Noninterference_Base
-    "Access.Syscall_AC"
-    "Access.ADT_AC"
+    "Access.ArchSyscall_AC"
+    "Access.ArchADT_AC"
     IRQMasks_IF FinalCaps Scheduler_IF UserOp_IF
 begin
 
@@ -923,7 +923,7 @@ where
 
 crunch cur_domain[wp]: kernel_entry_if "\<lambda>s. P (cur_domain s)"
 crunch idle_thread[wp]: kernel_entry_if "\<lambda>s::det_state. P (idle_thread s)"
-crunch cur_thread [wp]: kernel_entry_if "\<lambda>s. P (cur_thread s)"
+crunch cur_thread [wp]: kernel_entry_if "\<lambda>s::det_state. P (cur_thread s)"
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "\<lbrace>ct_active\<rbrace>
@@ -1199,7 +1199,7 @@ lemma handle_preemption_if_pas_refined[wp]:
   apply (wp handle_interrupt_pas_refined | simp)+
   done
 
-crunch cur_thread[wp]: handle_preemption_if "\<lambda>s. P (cur_thread s)"
+crunch cur_thread[wp]: handle_preemption_if "\<lambda>s::det_state. P (cur_thread s)"
 crunch cur_domain[wp]: handle_preemption_if " \<lambda>s. P (cur_domain s)"
 crunch idle_thread[wp]: handle_preemption_if "\<lambda>s::det_state. P (idle_thread s)"
 
@@ -1799,7 +1799,7 @@ lemma next_domain_domain_time_nonzero:
 
 lemma nonzero_gt_zero[simp]:
   "x \<noteq> (0::word32) \<Longrightarrow> x > 0"
-  apply(rule nonzero_unat_simp)
+  apply(rule nonzero_data_to_nat_simp)
   apply(simp add: unat_gt_0)
   done
 
@@ -3400,9 +3400,8 @@ lemma ADT_A_if_sub_big_steps_measuref_if:
   apply(erule sub_big_steps.induct)
    apply(clarsimp simp: big_step_R_def measuref_if_def)
   apply(clarsimp simp: big_step_R_def measuref_if_def split: if_splits)
-   apply(case_tac ba, simp_all, case_tac bc, simp_all add: Step_ADT_A_if')
-       apply(simp_all add: ADT_A_if_def global_automaton_if_def)
-  done
+  apply(case_tac ba, simp_all, case_tac bc)
+  by(fastforce simp: Step_ADT_A_if' ADT_A_if_def global_automaton_if_def)+
 
 lemma rah_simp:
   "(\<forall>b. b) = False"

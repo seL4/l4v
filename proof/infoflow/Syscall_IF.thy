@@ -198,13 +198,6 @@ lemma cancel_badged_sends_reads_respects_f:
   apply (simp add: invs_valid_objs invs_sym_refs)
   done
 
-lemma rec_del_subject_cur_thread:
-  "\<lbrace>is_subject aag \<circ> cur_thread\<rbrace> rec_del call \<lbrace>\<lambda>_. is_subject aag \<circ> cur_thread\<rbrace>"
-  apply (rule rec_del_preservation)
-  apply (simp add: comp_def | wp preemption_point_inv)+
-  done
-
-
 lemma cap_revoke_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st::det_ext state)\<rbrace>
    cap_revoke slot \<lbrace>\<lambda>_. only_timer_irq_inv irq st\<rbrace>"

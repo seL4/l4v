@@ -1235,7 +1235,7 @@ lemma empty_slot_silc_inv:
   "\<lbrace>silc_inv aag st and K (pasObjectAbs aag (fst slot) \<noteq> SilcLabel)\<rbrace>
    empty_slot slot free_irq
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding empty_slot_def
+  unfolding empty_slot_def post_cap_deletion_def
   apply(wp set_cap_silc_inv hoare_vcg_all_lift hoare_vcg_ex_lift
            slots_holding_overlapping_caps_lift get_cap_wp
            set_cdt_silc_inv dxo_wp_weak hoare_drop_imps
@@ -2830,7 +2830,6 @@ lemma do_ipc_transfer_silc_inv:
   apply clarsimp
   done
 
-
 lemma send_ipc_silc_inv:
   "\<lbrace>silc_inv aag st and invs and pas_refined aag
        and K (is_subject aag thread \<and> aag_has_auth_to aag SyncSend epptr \<and>
@@ -2861,7 +2860,7 @@ lemma send_ipc_silc_inv:
       apply (frule(1) sym_ref_endpoint_recvD[OF invs_sym_refs _ head_in_set],
              clarsimp simp: st_tcb_at_tcb_states_of_state_eq)
       apply (frule(2) aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed])
-      by (simp add: aag_has_auth_to_Control_eq_owns)
+      by (simp add: aag_has_Control_iff_owns)
     apply clarsimp
     apply (intro conjI[rotated] impI)
     subgoal (* no grant or grant reply case *)
@@ -2873,7 +2872,7 @@ lemma send_ipc_silc_inv:
              clarsimp simp: st_tcb_at_tcb_states_of_state_eq)
       apply (frule(1) tcb_states_of_state_to_auth)
       by (auto elim: send_ipc_valid_ep_helper
-          simp: aag_has_auth_to_Control_eq_owns
+          simp: aag_has_Control_iff_owns
           dest: tcb_states_of_state_to_auth
           aag_wellformed_grant_Control_to_recv_by_reply[OF _ _ _ pas_refined_wellformed];
           force dest: tcb_states_of_state_kheapD
@@ -2917,9 +2916,9 @@ lemma receive_ipc_base_silc_inv:
        (erule(1) receive_ipc_valid_ep_helper
        | (erule(1) silc_inv_cnode_onlyE,simp add: obj_at_def is_cap_table)
        | (drule(2) aag_wellformed_grant_Control_to_send[OF _ _ pas_refined_wellformed],
-          (simp add: aag_has_auth_to_Control_eq_owns | force dest: pas_refined_Control))
+          (simp add: aag_has_Control_iff_owns | force dest: pas_refined_Control))
        | (drule aag_wellformed_grant_Control_to_send_by_reply[OF _ _ _ pas_refined_wellformed],
-          blast, blast, blast, simp add: aag_has_auth_to_Control_eq_owns)))
+          blast, blast, blast, simp add: aag_has_Control_iff_owns)))
 
 
 lemma receive_ipc_silc_inv:

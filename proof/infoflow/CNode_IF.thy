@@ -432,17 +432,17 @@ lemma aag_cap_auth_ASIDPoolCap:
   "pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap r asid)) \<Longrightarrow>
    pas_refined aag s \<Longrightarrow> is_subject aag r"
 unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
-                   is_page_cap_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
+                   pas_refined_all_auth_is_owns is_page_cap_def)
+  done
 
 lemma aag_cap_auth_PageDirectory:
   "pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word (Some a))) \<Longrightarrow>
     pas_refined aag s \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
-                   is_page_cap_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
+                   pas_refined_all_auth_is_owns is_page_cap_def)
+  done
 
 lemma aag_cap_auth_ASIDPoolCap_asid:
   "pas_cap_cur_auth aag (ArchObjectCap (ASIDPoolCap r asid)) \<Longrightarrow>
@@ -453,7 +453,7 @@ lemma aag_cap_auth_ASIDPoolCap_asid:
   unfolding aag_cap_auth_def
   apply (rule is_subject_into_is_subject_asid)
   apply auto
-done
+  done
 
 lemma aag_cap_auth_PageCap_asid:
   "pas_cap_cur_auth aag (ArchObjectCap (PageCap dev word fun vmpage_size (Some (a, b))))
@@ -462,27 +462,27 @@ lemma aag_cap_auth_PageCap_asid:
   apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def
                         cap_links_asid_slot_def label_owns_asid_slot_def
                  intro: pas_refined_Control_into_is_subject_asid)
-done
+  done
 
 lemma aag_cap_auth_PageTableCap:
   "pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word option)) \<Longrightarrow>
    pas_refined aag s \<Longrightarrow> is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
-                   is_page_cap_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def
+                   pas_refined_all_auth_is_owns is_page_cap_def)
+  done
 
 lemma aag_cap_auth_PageTableCap_asid: "pas_cap_cur_auth aag (ArchObjectCap (PageTableCap word (Some (a, b)))) \<Longrightarrow> pas_refined aag s \<Longrightarrow> is_subject_asid aag a"
   apply (auto simp add: aag_cap_auth_def cap_auth_conferred_def
                    cap_links_asid_slot_def label_owns_asid_slot_def
                    intro: pas_refined_Control_into_is_subject_asid)
-done
+  done
 
 lemma aag_cap_auth_PageDirectoryCap:"pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word option)) \<Longrightarrow> pas_refined aag s \<Longrightarrow>
   is_subject aag word"
   unfolding aag_cap_auth_def
-  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def)
-done
+  apply (simp add: cli_no_irqs clas_no_asid cap_auth_conferred_def arch_cap_auth_conferred_def   pas_refined_all_auth_is_owns is_page_cap_def)
+  done
 
 
 lemma aag_cap_auth_PageDirectoryCap_asid:"pas_cap_cur_auth aag (ArchObjectCap (PageDirectoryCap word (Some a))) \<Longrightarrow> pas_refined aag s \<Longrightarrow>
