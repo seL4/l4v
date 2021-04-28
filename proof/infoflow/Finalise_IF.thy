@@ -48,7 +48,7 @@ lemma empty_slot_reads_respects:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "reads_respects aag l (K (aag_can_read aag (fst slot))) (empty_slot slot free_irq)"
-  unfolding empty_slot_def fun_app_def
+  unfolding empty_slot_def post_cap_deletion_def fun_app_def
   apply (simp add: bind_assoc[symmetric] cong: if_cong)
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc empty_slot_ext_def cong: if_cong)
@@ -351,6 +351,15 @@ lemma not_ep_queue_invisible:
   apply(auto simp: labels_are_invisible_def)
   done
 
+lemma ep_queued_st_tcb_at'':
+  "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
+         valid_objs s; sym_refs (state_refs_of s);
+         \<And>pl pl'. (rt = EPSend \<and> P (Structures_A.BlockedOnSend ptr pl)) \<or>
+                  (rt = EPRecv \<and> P (Structures_A.BlockedOnReceive ptr pl')) \<rbrakk>
+    \<Longrightarrow> st_tcb_at P t s"
+  apply (case_tac ep, simp_all)
+  apply (frule (1) sym_refs_ko_atD, fastforce simp: st_tcb_at_def obj_at_def refs_of_rev)+
+  done
 
 lemma ep_queues_are_invisible_or_eps_are_equal':
   "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag;
@@ -1290,7 +1299,7 @@ lemma finalise_cap_reads_respects:
                   | simp add: when_def split del: if_split
                          add: invs_valid_objs invs_sym_refs aag_cap_auth_def
                               cap_auth_conferred_def cap_rights_to_auth_def
-                              cap_links_irq_def aag_has_auth_to_Control_eq_owns
+                              cap_links_irq_def aag_has_Control_iff_owns
                               cte_wp_at_caps_of_state
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: if_split
@@ -1369,6 +1378,28 @@ lemma finalise_cap_only_timer_irq_inv:
   apply (wp only_timer_irq_pres | force)+
   done
 
+lemma finalise_cap_makes_halted:
+  "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
+         and cte_wp_at ((=) cap) slot\<rbrace>
+    finalise_cap cap ex
+   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+  apply (case_tac cap, simp_all)
+            apply (wp unbind_notification_valid_objs
+                 | clarsimp simp: o_def valid_cap_def cap_table_at_typ
+                                  is_tcb obj_at_def
+                 | clarsimp simp: halted_if_tcb_def
+                           split: option.split
+                 | intro impI conjI
+                 | rule hoare_drop_imp)+
+   apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb live_def
+                  dest!: final_zombie_not_live)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
+      apply (wp
+           | clarsimp simp: valid_cap_def split: option.split bool.split
+           | intro impI conjI)+
+  done
+
 lemma rec_del_spec_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes drop_spec_valid[wp_split del] drop_spec_validE[wp_split del]
@@ -1445,7 +1476,7 @@ next
                                                      | _ \<Rightarrow> True)
                                  \<and> (is_zombie (fst fin) \<or> fst fin = NullCap) \<and>
                                    (is_zombie (fst fin) \<or> fst fin = NullCap)" in hoare_vcg_conj_lift)
-           apply(wp finalise_cap_invs finalise_cap_replaceable Finalise_AC.finalise_cap_makes_halted
+           apply(wp finalise_cap_invs finalise_cap_replaceable finalise_cap_makes_halted
                     finalise_cap_auth'
                     finalise_cap_ret_is_subject finalise_cap_ret' finalise_cap_silc_inv
                     finalise_cap_ret_is_silc finalise_cap_only_timer_irq_inv)[1]
@@ -1826,7 +1857,7 @@ lemma transfer_caps_valid_ko_at_arm[wp]:
 
 lemma empty_slot_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> empty_slot s b\<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding empty_slot_def
+  unfolding empty_slot_def post_cap_deletion_def
   by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
                  set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
 

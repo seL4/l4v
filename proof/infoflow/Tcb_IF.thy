@@ -202,7 +202,7 @@ next
                    in hoare_vcg_conj_lift)
          apply (wp finalise_cap_invs[where slot=slot]
                    finalise_cap_replaceable[where sl=slot]
-                   Finalise_AC.finalise_cap_makes_halted[where slot=slot]
+                   Finalise_IF.finalise_cap_makes_halted[where slot=slot]
                    finalise_cap_P)[1]
 
          apply (rule finalise_cap_cases[where slot=slot])
@@ -506,10 +506,6 @@ lemma restart_reads_respects_f:
   apply (rule requiv_get_tcb_eq, simp+ |
          rule conjI | assumption | clarsimp simp: reads_equiv_f_def)+
   done
-
-crunch cur_thread: cancel_ipc "\<lambda> s. P (cur_thread s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
-
 
 lemma det_zipWithM:
   assumes "\<And> x y. \<lbrakk>x \<in> set xs; y \<in> set ys\<rbrakk> \<Longrightarrow> det (f x y)"

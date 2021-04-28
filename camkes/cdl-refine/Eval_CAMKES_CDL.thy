@@ -479,7 +479,7 @@ lemma cdl_state_asids_to_policy__eval:
                      \<and> (case obj_label_spec (cap_object asid_pool_cap) of
                            Some asid_pool_l \<Rightarrow>
                              generic_tag ''asid pool policy'' (asid_high, asid_pool_cap)
-                                 ((asid_pool_l, ASIDPoolMapsASID, asidl) \<in> policy_spec)
+                                 ((asid_pool_l, AAuth ASIDPoolMapsASID, asidl) \<in> policy_spec)
                          | _ \<Rightarrow> False)
                 | _ \<Rightarrow> False)"
 

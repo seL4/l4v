@@ -548,7 +548,7 @@ lemma init_arch_objects_reads_respects_g:
          equiv_valid_guard_imp[OF copy_global_mappings_reads_respects_g]
          copy_global_mappings_valid_arch_state copy_global_mappings_pspace_aligned
          hoare_vcg_ball_lift | wpc | simp)+
-  apply (fastforce simp: word_object_size_def)
+  apply clarsimp
   done
 
 lemma copy_global_mappings_globals_equiv:
@@ -913,7 +913,7 @@ lemma delete_objects_caps_no_overlap:
   "\<lbrace> invs and ct_active and (\<lambda> s. \<exists> slot idx.
     cte_wp_at ((=) (UntypedCap dev ptr sz idx)) slot s \<and> descendants_range_in {ptr..ptr + 2 ^ sz - 1} slot s) \<rbrace>
     delete_objects ptr sz
-  \<lbrace>\<lambda>_. caps_no_overlap ptr sz\<rbrace>"
+  \<lbrace>\<lambda>_ s :: det_ext state. caps_no_overlap ptr sz s\<rbrace>"
   apply(clarsimp simp: valid_def)
   apply(rule descendants_range_caps_no_overlapI)
     apply(erule use_valid | wp | simp add: descendants_range_def2 | blast)+
@@ -1110,6 +1110,17 @@ lemma untyped_cap_refs_in_kernel_window_helper:
 lemma invs_valid_global_objs_strg:
   "invs s \<longrightarrow> valid_global_objs s"
   by (clarsimp simp: invs_def valid_state_def)
+
+lemma retype_region_ret_pd_aligned:
+  "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects)\<rbrace>
+   retype_region ptr num_objects us tp dev
+   \<lbrace>\<lambda>rv. K (\<forall> ref \<in> set rv. tp = ArchObject PageDirectoryObj \<longrightarrow> is_aligned ref pd_bits)\<rbrace>"
+  apply(rule hoare_strengthen_post)
+  apply(rule hoare_weaken_pre)
+  apply(rule retype_region_aligned_for_init)
+   apply simp
+  apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
+  done
 
 lemma invoke_untyped_reads_respects_g_wcap:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff

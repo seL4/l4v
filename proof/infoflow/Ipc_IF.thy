@@ -157,7 +157,7 @@ lemma set_mrs_equiv_but_for_labels:
          apply(erule order_trans[rotated])
          apply(erule is_aligned_no_wrap')
          apply(rule mul_word_size_lt_msg_align_bits_ofnat)
-         apply(fastforce simp: msg_max_length_def msg_align_bits)
+         apply(fastforce simp: msg_max_length_def msg_align_bits')
         apply(erule order_trans)
         apply(subst p_assoc_help)
         apply(simp add: add.assoc)
@@ -176,7 +176,7 @@ lemma set_mrs_equiv_but_for_labels:
            apply(simp add: msg_max_length_def word_size_def)
           apply(simp add: msg_max_length_def word_size_def)
          apply(rule mul_add_word_size_lt_msg_align_bits_ofnat)
-          apply(simp add: msg_max_length_def msg_align_bits)
+          apply(simp add: msg_max_length_def msg_align_bits')
          apply simp
         apply(erule is_aligned_no_overflow')
        apply simp
@@ -866,7 +866,8 @@ lemma lookup_ipc_buffer_has_read_auth:
      apply (rule order_trans [OF _ pbfs_atleast_pageBits])
      apply (simp add: msg_align_bits pageBits_def)
     apply (drule (1) cap_auth_caps_of_state)
-    apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def vspace_cap_rights_to_auth_def vm_read_only_def)
+    apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
+                          vspace_cap_rights_to_auth_def vm_read_only_def)
     apply (drule bspec)
      apply (erule (3) ipcframe_subset_page)
     apply (clarsimp split: if_split_asm simp: vspace_cap_rights_to_auth_def is_page_cap_def)
@@ -894,17 +895,17 @@ lemma cptrs_in_ipc_buffer:
   "\<lbrakk>x \<in> set [buffer_cptr_index..<
              buffer_cptr_index + unat (mi_extra_caps mi)];
     is_aligned a msg_align_bits;
-    buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)\<rbrakk>
+    buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits)\<rbrakk>
    \<Longrightarrow>
      ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq>
      ptr_range (a :: word32) msg_align_bits"
   apply(rule ptr_range_subset)
      apply assumption
-    apply(simp add: msg_align_bits)
-   apply(simp add: msg_align_bits word_bits_def)
+    apply(simp add: msg_align_bits')
+   apply(simp add: msg_align_bits word_size_bits_def word_bits_def)
   apply(simp add: word_size_def)
   apply(subst upto_enum_step_shift_red[where us=2, simplified])
-     apply (simp add: msg_align_bits word_bits_def)+
+     apply (simp add: msg_align_bits word_bits_def word_size_bits_def)+
   done
 
 lemma for_each_byte_of_word_def2:
@@ -916,7 +917,7 @@ lemma aag_has_auth_to_read_cptrs:
   "\<lbrakk>x \<in> set [buffer_cptr_index..<
              buffer_cptr_index + unat (mi_extra_caps mi)];
     ipc_buffer_has_read_auth aag (pasSubject aag) (Some a);
-    buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)\<rbrakk>
+    buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits)\<rbrakk>
    \<Longrightarrow>
    for_each_byte_of_word (\<lambda> y. aag_can_read aag y)
      (a + of_nat x * of_nat word_size)"
@@ -933,7 +934,7 @@ lemma aag_has_auth_to_read_cptrs:
   done
 
 lemma get_extra_cptrs_rev:
-  "reads_equiv_valid_inv A aag (K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))
+  "reads_equiv_valid_inv A aag (K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits))))
       (get_extra_cptrs buffer mi)"
   unfolding get_extra_cptrs_def
   apply (rule gen_asm_ev)
@@ -944,7 +945,7 @@ lemma get_extra_cptrs_rev:
   done
 
 lemma lookup_extra_caps_rev:
-  shows "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread))  and (\<lambda> s. ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2)))
+  shows "reads_equiv_valid_inv A aag (pas_refined aag and (K (is_subject aag thread))  and (\<lambda> s. ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - word_size_bits)))
      (lookup_extra_caps thread buffer mi)"
   apply(rule gen_asm_ev)
   unfolding lookup_extra_caps_def fun_app_def
@@ -957,7 +958,7 @@ lemmas lookup_extra_caps_reads_respects_g =  reads_respects_g_from_inv[OF lookup
 
 lemma msg_in_ipc_buffer:
   "\<lbrakk>x = msg_max_length \<or> x < msg_max_length;
-    unat (mi_length mi) < 2 ^ (msg_align_bits - 2);
+    unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits);
     is_aligned a msg_align_bits\<rbrakk>
    \<Longrightarrow>
      ptr_range (a + of_nat x * of_nat word_size) 2 \<subseteq>
@@ -979,7 +980,7 @@ lemma msg_in_ipc_buffer:
 lemma aag_has_auth_to_read_msg:
   "\<lbrakk>x = msg_max_length \<or> x < msg_max_length;
     ipc_buffer_has_read_auth aag (pasSubject aag) (Some a);
-    unat (mi_length mi) < 2 ^ (msg_align_bits - 2)\<rbrakk>
+    unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits)\<rbrakk>
    \<Longrightarrow>
    for_each_byte_of_word (aag_can_read aag)
      (a + of_nat x * of_nat word_size)"
@@ -998,7 +999,7 @@ lemma aag_has_auth_to_read_msg:
 (* only called within do_reply_transfer for which access assumes sender
    and receiver in same domain *)
 lemma get_mrs_rev:
-  shows "reads_equiv_valid_inv A aag ((K (is_subject aag thread \<and> ipc_buffer_has_read_auth aag (pasSubject aag) buf \<and> unat (mi_length mi) < 2 ^ (msg_align_bits - 2)))) (get_mrs thread buf mi)"
+  shows "reads_equiv_valid_inv A aag ((K (is_subject aag thread \<and> ipc_buffer_has_read_auth aag (pasSubject aag) buf \<and> unat (mi_length mi) < 2 ^ (msg_align_bits - word_size_bits)))) (get_mrs thread buf mi)"
   apply (rule gen_asm_ev)
   unfolding get_mrs_def
   apply (wp mapM_ev'' load_word_offs_rev thread_get_rev
@@ -1218,7 +1219,7 @@ lemma captransfer_indices_in_range:
    prefer 2
    apply(rule word_less_sub_1)
    apply(rule_tac p=127 in mul_word_size_lt_msg_align_bits_ofnat)
-   apply(simp add: msg_align_bits)
+   apply(simp add: msg_align_bits')
   apply(rule_tac y="0x7F * word_size" in order_trans)
    apply(clarsimp simp: msg_max_length_def msg_max_extra_caps_def word_size_def)
    apply(drule_tac k=4 in word_mult_le_mono1)
@@ -1422,7 +1423,7 @@ lemma transfer_caps_reads_respects:
 lemma mrs_in_ipc_buffer:
   "\<lbrakk>is_aligned (buf :: word32) msg_align_bits;
     x \<in> set [length msg_registers + 1..<Suc n];
-    n < 2 ^ (msg_align_bits - 2)\<rbrakk>
+    n < 2 ^ (msg_align_bits - word_size_bits)\<rbrakk>
        \<Longrightarrow> ptr_range
            (buf + of_nat x * of_nat word_size) 2 \<subseteq> ptr_range buf msg_align_bits"
   apply(rule ptr_range_subset)
@@ -1431,7 +1432,7 @@ lemma mrs_in_ipc_buffer:
    apply(simp add: msg_align_bits word_bits_def)
   apply(simp add: word_size_def)
   apply(subst upto_enum_step_shift_red[where us=2, simplified])
-     apply (simp add: msg_align_bits word_bits_def)+
+     apply (simp add: msg_align_bits word_bits_def word_size_bits_def)+
   apply(simp add: image_def)
   apply(rule_tac x=x in bexI)
    apply(rule refl)
@@ -1441,7 +1442,7 @@ lemma mrs_in_ipc_buffer:
 lemma aag_has_auth_to_read_mrs:
   "\<lbrakk>aag_can_read_or_affect_ipc_buffer aag l (Some buf);
     x \<in> set [length msg_registers + 1..<Suc n];
-    n < 2 ^ (msg_align_bits - 2)\<rbrakk>
+    n < 2 ^ (msg_align_bits - word_size_bits)\<rbrakk>
        \<Longrightarrow> for_each_byte_of_word (\<lambda>x. aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x)
            (buf + of_nat x * of_nat word_size)"
   apply(simp add: for_each_byte_of_word_def2 aag_can_read_or_affect_ipc_buffer_def)
@@ -1500,7 +1501,7 @@ lemma as_user_reads_respects:
 lemma copy_mrs_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - 2))) (copy_mrs sender sbuf receiver rbuf n)"
+  "reads_respects aag l (K (aag_can_read_or_affect aag l sender \<and> aag_can_read_or_affect_ipc_buffer aag l sbuf \<and> unat n < 2 ^ (msg_align_bits - word_size_bits))) (copy_mrs sender sbuf receiver rbuf n)"
   unfolding copy_mrs_def fun_app_def
   apply(rule gen_asm_ev)
   apply(wp mapM_ev'' store_word_offs_reads_respects
@@ -1522,7 +1523,7 @@ lemma copy_mrs_reads_respects:
      apply(simp add: aag_can_read_or_affect_ipc_buffer_def)
     apply(simp add: msg_align_bits)
     apply(simp add: msg_align_bits word_bits_def)
-   apply(simp add: word_size_def)
+   apply(simp add: word_size_def word_size_bits_def)
   apply(subst upto_enum_step_shift_red[where us=2, simplified])
      apply (simp add: msg_align_bits word_bits_def aag_can_read_or_affect_ipc_buffer_def )+
   apply(fastforce simp: image_def)
@@ -1531,9 +1532,9 @@ lemma copy_mrs_reads_respects:
 lemma get_mi_length':
    "\<lbrace>\<top>\<rbrace> get_message_info sender
     \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
-            < 2 ^ (msg_align_bits - 2)\<rbrace>"
+            < 2 ^ (msg_align_bits - word_size_bits)\<rbrace>"
   apply(rule hoare_post_imp[OF _ get_mi_valid'])
-  apply(clarsimp simp: valid_message_info_def msg_align_bits msg_max_length_def word_le_nat_alt
+  apply(clarsimp simp: valid_message_info_def msg_align_bits' msg_max_length_def word_le_nat_alt
                        buffer_cptr_index_def msg_max_extra_caps_def)
   done
 
@@ -1895,7 +1896,7 @@ lemma send_ipc_reads_respects:
    apply (rule conjI)
     subgoal by (rule read_sync_ep_read_receivers_strong)
    apply (fastforce dest: aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed]
-                    simp: aag_has_auth_to_Control_eq_owns)
+                    simp: aag_has_Control_iff_owns)
   by (fastforce elim: send_ipc_valid_ep_helper reads_equivE equiv_forD
       intro: kheap_get_tcb_eq)
 
@@ -2264,6 +2265,10 @@ lemma valid_ep_send_enqueue: "\<lbrakk>ko_at (Endpoint (SendEP (t # ts))) a s; v
 
 crunch globals_equiv[wp]: complete_signal "globals_equiv st"
 
+lemma case_list_cons_cong:
+  "(case xxs of [] \<Rightarrow> f | x # xs \<Rightarrow> g xxs)
+ = (case xxs of [] \<Rightarrow> f | x # xs \<Rightarrow> g (x # xs))"
+  by (simp split: list.split)
 
 lemma receive_ipc_globals_equiv:
   notes do_nbrecv_failed_transfer_def[simp]
