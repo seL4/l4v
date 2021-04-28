@@ -5,7 +5,7 @@
  *)
 
 theory ExampleSystem
-imports Access
+imports ArchAccess_AC
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -550,11 +550,11 @@ declare AllowSend_def[simp] AllowRecv_def[simp]
 
 lemma domains_of_state_s1[simp]:
   "domains_of_state s1 = {}"
-  apply(rule equalityI)
-   apply(rule subsetI)
+  apply (rule equalityI)
+   apply (rule subsetI)
    apply clarsimp
-   apply(erule domains_of_state_aux.induct)
-   apply(simp add: s1_def exst1_def)
+   apply (erule domains_of_state_aux.induct)
+   apply (simp add: s1_def exst1_def)
   apply simp
   done
 
@@ -1054,11 +1054,11 @@ lemma Sys2AgentMap_simps:
 
 lemma domains_of_state_s2[simp]:
   "domains_of_state s2 = {}"
-  apply(rule equalityI)
-   apply(rule subsetI)
+  apply (rule equalityI)
+   apply (rule subsetI)
    apply clarsimp
-   apply(erule domains_of_state_aux.induct)
-   apply(simp add: s2_def exst1_def)
+   apply (erule domains_of_state_aux.induct)
+   apply (simp add: s2_def exst1_def)
   apply simp
   done
 
