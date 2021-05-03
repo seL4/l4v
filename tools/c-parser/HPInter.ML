@@ -284,9 +284,10 @@ fun compile_fninfos globloc cse styargs compfn lthy (fninfo : fninfo list) = let
           partition (asts,i::specs) t
       | _ :: t => partition acc t
   val (asts,toSpec) = partition ([],[]) fninfo
+  val xs = compfn asts lthy
+  val ys = map (mkSpecFunction (Proof_Context.theory_of lthy) globloc cse styargs) toSpec
 in
-  compfn asts lthy @
-  map (mkSpecFunction (Proof_Context.theory_of lthy) globloc cse styargs) toSpec
+  xs @ ys
 end
 
 fun rhs_extras rhs =
@@ -401,7 +402,6 @@ let
   val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
   val _ = Feedback.informStr (0, "Translated all functions")
   val globs = extract_fixes globals_elems
-
   val body_elems = map (create_bodyloc_elems globs thy) name_body
 
   fun add_body_defs ((elems, _ (* name-body *)), lthy) = let

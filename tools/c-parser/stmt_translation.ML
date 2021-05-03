@@ -176,6 +176,7 @@ fun stmt_term (ctxt : Proof.context)
               (termbuilders : varinfo termbuilder)
               (varinfo : MString.t -> varinfo option)
               (fninfo : HPInter.fninfo list)
+              (stacktype : Term.typ)
               (statetype : Term.typ)
               (globty : Term.typ)
               (styargs : Term.typ list)
@@ -183,7 +184,7 @@ fun stmt_term (ctxt : Proof.context)
               (stmt : Absyn.statement) : stmt_result = let
   val stmt_term =
       stmt_term ctxt cse fname termbuilders varinfo fninfo
-                statetype globty styargs ms
+                stacktype statetype globty styargs ms
   val sg = Proof_Context.theory_of ctxt
   val progname = Config.get_global sg CalculateState.current_C_filename
   val region = Region.make{left = sleft stmt, right = sright stmt}
@@ -499,7 +500,6 @@ in
       val actuals = map (fn e => (array_decay (strip_kb (expr_term e)), e)) args
       val gds = List.concat (map (fn (ei,_) => guards_of ei) actuals) @
                 callgds
-
       fun param_to_lval (param_name,ipty,pty) ((actual_info, actuale), st) = let
         val fullname =
             Sign.intern_const sg (suffix Record.updateN param_name)
@@ -532,7 +532,8 @@ in
           | (f::fs, ac::acs) => f (ac, mkinit fs acs)
           | _ => raise Fail "Catastrophic invariant failure XXX"
       val init = mk_abs(svar, mkinit (List.rev formal_fs) (List.rev actuals))
-      val return = mk_callreturn globty statetype
+      val stack_update = Proof_Context.intern_const ctxt "stack_'_update"
+      val return = mk_callreturn stacktype globty statetype stack_update
       val result = let
         val tvar = Free("t", statetype)
       in
@@ -772,10 +773,21 @@ in
   CNameTab.fold foldthis state Symtab.empty
 end
 
-fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty styargs ctxt decl = let
+fun fndefn_term
+  (state : CalculateState.mungedb)
+  cse
+  fninfo
+  rcdinfo
+  ms
+  globty
+  stacktype
+  styargs
+  ctxt
+  decl =
+let
   val thy = Proof_Context.theory_of ctxt
   open CalculateState
-  val statetype = hd styargs
+  val statetype = nth styargs 0
   val ((_ (* rettype *), fname), _ (* params *), _ (* prepost *), locbodyw) =
       decl
   val fname = node fname
@@ -797,7 +809,7 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
   end
   val stmt_trans = stmt_term ctxt cse fname termbuilders
                              varinfo fninfo
-                             statetype globty styargs ms
+                             stacktype statetype globty styargs ms
   val (body_f, body_parses) = trans_list stmt_trans styargs body
   val body_parse_terms = let
     val ctxt = thy2ctxt thy
@@ -857,7 +869,7 @@ end
      state :
      ast   : Absyn.ext_decl list
 *)
-fun define_functions (globty, styargs)
+fun define_functions (globty, stacktype, styargs)
                      (vdecls : CalculateState.mungedb)
                      cse
                      fninfo
@@ -869,7 +881,7 @@ let
   open TermsTypes CalculateState
   val fns = extract_defined_functions ast
   val function_info =
-      map (fndefn_term vdecls cse fninfo rcdinfo ms globty styargs ctxt) fns
+      map (fndefn_term vdecls cse fninfo rcdinfo ms globty stacktype styargs ctxt) fns
 in
   function_info
 end

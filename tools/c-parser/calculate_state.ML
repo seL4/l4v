@@ -94,15 +94,17 @@ struct
 
 open Basics Absyn TermsTypes NameGeneration ProgramAnalysis Feedback
 
-val bnm = Binding.name
-
 val (globals_all_addressed, populate_globals, record_globinits,
      current_C_filename) =
     let
-      val (gconfig, gsetup) = Attrib.config_bool (bnm "globals_all_addressed") (K false)
-      val (pconfig, psetup) = Attrib.config_bool (bnm "populate_globals") (K false)
-      val (rconfig, rsetup) = Attrib.config_bool (bnm "record_globinits") (K false)
-      val (Cfile_config, csetup) = Attrib.config_string (bnm "current_C_filename") (K "")
+      val (gconfig, gsetup) =
+        Attrib.config_bool (Binding.make ("globals_all_addressed",@{here})) (K false)
+      val (pconfig, psetup) =
+        Attrib.config_bool (Binding.make ("populate_globals",@{here})) (K false)
+      val (rconfig, rsetup) =
+        Attrib.config_bool (Binding.make ("record_globinits",@{here})) (K false)
+      val (Cfile_config, csetup) =
+        Attrib.config_string (Binding.make ("current_C_filename",@{here})) (K "")
     in
       Context.>>(Context.map_theory gsetup o Context.map_theory psetup o
                  Context.map_theory rsetup o Context.map_theory csetup);
@@ -117,7 +119,7 @@ fun define_enum_consts (CE {enumenv, ...}) thy = let
                          " to have value "^
                          Int.toString value^" (signed int)")
     val nm' = NameGeneration.enum_const_name nm
-    val binding = Binding.name nm'
+    val binding = Binding.make (nm',@{here})
     val ((_, (_, th)), lthy) =
         Local_Theory.define ((binding, NoSyn),
                              ((Thm.def_binding binding, []), rhs_v))
@@ -133,7 +135,7 @@ fun define_enum_consts (CE {enumenv, ...}) thy = let
   fun group_lemma (tynm, ths) lthy =
       (informStr (2, "Adding "^Int.toString (length ths)^
                      " enum definitions for type "^ tynm);
-       #2 (Local_Theory.note ((Binding.name(tynm ^ sfx), []), ths) lthy))
+       #2 (Local_Theory.note ((Binding.make (tynm ^ sfx, @{here}), []), ths) lthy))
   val lthy = Named_Target.theory_init thy
   val (tythms, lthy) = Symtab.fold define1 enumenv (Symtab.empty, lthy)
   val lthy = Symtab.fold group_lemma tythms lthy
@@ -643,17 +645,17 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         then nsglobs |> map extract_nm_typ |> pretty_recdef (thy2ctxt thy) "globals"
         else ()
       val gflds =
-          [(bnm global_heap_var, MemoryModelExtras.extended_heap_ty, NoSyn),
-           (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
-           (bnm (global_var ghost_state_name), gstate_ty, NoSyn)] @
+          [(Binding.make (global_heap_var,@{here}), MemoryModelExtras.extended_heap_ty, NoSyn),
+           (Binding.make (global_var phantom_state_name,@{here}), pmstate_ty, NoSyn),
+           (Binding.make (global_var ghost_state_name,@{here}), gstate_ty, NoSyn)] @
           map (fn ({isa_name,...}, ty, _, _) =>
-                  (bnm (global_var (MString.dest isa_name)), ty, NoSyn))
+                  (Binding.make (global_var (MString.dest isa_name),@{here}), ty, NoSyn))
               nsglobs @
           (if null owners then []
-           else [(bnm (global_var owned_by_fn_name), nat, NoSyn)])
+           else [(Binding.make (global_var owned_by_fn_name,@{here}), nat, NoSyn)])
       val thy =
           Record.add_record {overloaded=false}
-                           ([], bnm NameGeneration.global_rcd_name) NONE
+                           ([], Binding.make (NameGeneration.global_rcd_name,@{here})) NONE
                             gflds thy
       val fullrecname = Sign.intern_type thy NameGeneration.global_ext_type
       val thy'' = MemoryModelExtras.check_global_record_type fullrecname thy
@@ -871,7 +873,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
               then
                 (seen,out)
               else
-                (nm' :: seen, (bnm nm',ty,NoSyn) :: out)
+                (nm' :: seen, (Binding.make (nm',@{here}),ty,NoSyn) :: out)
             end
         fun map_elim_name (_,vs) (seen,out) =
           fold map_elim_name_inner vs (seen,out)
@@ -884,23 +886,27 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         val lflds =
           snd (Symtab.fold map_elim_name lvars ([],[])) @
           snd (fold map_elim_name_inner additional_flds ([],[]))
+        (* trace the fields for reference *)
         val _ =
           lflds
           |> map (fn (a,b,_) => (Binding.name_of a,b))
           |> pretty_recdef (thy2ctxt thy) "myvars"
+        (* define the record as an extension of \<open>state\<close> *)
         val thy =
           Record.add_record
             {overloaded=false}
-            ([("'g",["HOL.type"])], bnm NameGeneration.local_rcd_name)
+            ([("'g",["HOL.type"])], Binding.make (NameGeneration.local_rcd_name,@{here}))
             (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
             lflds
             thy
       in
-        (thy, Sign.intern_type thy NameGeneration.local_rcd_name)
+        thy
       end
-    val (thy, _) = mk_locals_rcd thy
-    val thy = mk_locals_aliases thy
-    val (thy, globs) = mk_globals_rcd thy
+    val (thy, globs) =
+      thy
+      |> mk_locals_rcd
+      |> mk_locals_aliases
+      |> mk_globals_rcd
     val flat_lvars = lvars |> Symtab.dest_list |> map snd
   in
     (thy, flat_lvars @ gvars, globs)

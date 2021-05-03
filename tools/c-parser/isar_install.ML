@@ -399,19 +399,18 @@ in
                 thy)
       open TermsTypes
       val (globty, styargs) = let
-        val globty0 = Type(Sign.intern_type thy
-                                            NameGeneration.global_rcd_name, [])
+        val globty0 = Type(Sign.intern_type thy NameGeneration.global_rcd_name, [])
         val globty = expand_tyabbrevs (thy2ctxt thy) globty0
-        val statetype0 =
-            Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
+        val statetype0 = Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
         val statetype = expand_tyabbrevs (thy2ctxt thy) statetype0
-            (* only happens if no local variables, = no functions declared,
-               = pretty bogus
-               (decl_only and bigstruct test cases are like this though) *)
-            handle TYPE _  => alpha
+          (* only happens if no local variables, = no functions declared,
+             = pretty bogus
+             (decl_only and bigstruct test cases are like this though) *)
+          handle TYPE _  => alpha
       in
         (globty, [statetype, int, StrictC_errortype_ty])
       end
+      val stacktype = Syntax.read_typ_global thy "frame stack"
       val toTranslate = Option.map (get_callees cse) roots_opt
       val toTranslate_s =
           case toTranslate of
@@ -430,7 +429,7 @@ in
       val fninfo : HPInter.fninfo list = HPInter.mk_fninfo thy cse toTranslateP ast
       val (nmdefs, thy) = define_function_names fninfo thy
       val compile_bodies =
-          stmt_translation.define_functions (globty, styargs)
+          stmt_translation.define_functions (globty, stacktype, styargs)
                                             mungedb
                                             cse
                                             fninfo
