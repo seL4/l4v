@@ -129,11 +129,6 @@ locale CNodeInv_AI =
     "\<And>P d cap. vs_cap_ref (update_cap_data P d cap) = vs_cap_ref cap"
   assumes weak_derived_cap_is_device:
     "\<And>c c'. \<lbrakk>weak_derived c' c\<rbrakk> \<Longrightarrow>  cap_is_device c = cap_is_device c'"
-  assumes in_preempt[simp,intro]:
-    "\<And>rv s' (s::'state_ext state).
-      (Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
-      (\<exists>f es. s' = s \<lparr> machine_state := machine_state s
-                     \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"
   assumes invs_irq_state_independent[intro!, simp]:
     "\<And>(s::'state_ext state) f.
       invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
@@ -902,70 +897,91 @@ lemma not_recursive_cspaces_irq_state_independent[intro!, simp]:
 
 context CNodeInv_AI begin
 
+lemma preemption_point_not_recursive_cspaces[wp]:
+  "preemption_point \<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>"
+  unfolding preemption_point_def
+  by (wpsimp wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp)
+
+lemma preemption_point_caps_of_state[wp]:
+  "preemption_point \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  unfolding preemption_point_def
+  by (wpsimp wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp)
+
 lemma rec_del_termination:
   "All (rec_del_dom :: rec_del_call \<times> 'state_ext state \<Rightarrow> bool)"
-  apply (rule rec_del.termination,
-         rule rec_del_recset_wf,
-         simp_all add: rec_del_recset_def wf_sum_def
-                       in_monad is_final_cap_def
-                       is_zombie_def rdcall_finalise_ord_lift_def
-                       mlex_prod_def,
-         drule in_preempt)
-  apply (case_tac exposed, simp_all)
-   apply (rule disjI1, rule map_prod_split_imageI)
-   apply (simp only: trans_state_update'[symmetric])
-   apply (clarsimp)
-   apply (case_tac aa, simp_all add: fail_def rec_del.psimps)[1]
-   apply (rename_tac word option nat)
-   apply (case_tac nat, simp_all)[1]
-   apply (clarsimp simp: in_monad rec_del.psimps)
-   apply (clarsimp simp: in_monad in_get_cap_cte_wp_at
-                         cte_wp_at_caps_of_state rec_del.psimps
-                  split: if_split_asm)
-    apply (erule use_valid [OF _ set_cap_caps_of_state])+
-    apply (simp add: fst_cte_ptrs_first_cte_of cong: if_cong)
-    apply (case_tac rv, simp_all)[1]
-    apply (clarsimp simp: in_monad fst_cte_ptrs_first_cte_of)
-   apply (case_tac new_cap, simp_all add: is_cap_simps)[1]
-    apply (case_tac rv, simp_all)[1]
-   apply (clarsimp simp: fst_cte_ptrs_first_cte_of)
-   apply (case_tac rv, simp_all)[1]
-   apply (clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
-  apply (rule disjI2, rule map_prod_split_imageI)
-  apply clarsimp
-  apply (case_tac aa, simp_all add: fail_def rec_del.psimps)[1]
-  apply (rename_tac word option nat)
-  apply (case_tac nat, simp_all)
-  apply (simp only: trans_state_update'[symmetric] not_recursive_cspaces_more_update)
-  apply (clarsimp simp: in_monad prod_eqI rec_del.psimps)
-  apply (erule use_valid [OF _ cap_swap_fd_not_recursive])
-  apply (frule use_valid [OF _ get_cap_cte_wp_at], simp)
-  apply (drule in_inv_by_hoareD [OF get_cap_inv])
-  apply clarsimp
-  apply (erule use_valid [OF _ hoare_vcg_conj_lift [OF set_zombie_not_recursive
-                                                      final_cap_still_at]])
-  apply (frule use_valid [OF _ finalise_cap_cases])
-   apply (fastforce simp add: cte_wp_at_eq_simp)
-  apply clarsimp
-  apply (case_tac rv, simp_all add: fst_cte_ptrs_def)
-    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
-                          fst_cte_ptrs_def
+  \<comment> \<open> rec_del.termination needs a well-formed measure and proofs that the 4 recursive calls
+       reduce this measure. \<close>
+  apply (rule rec_del.termination[where R=rec_del_recset])
+
+      \<comment> \<open> The measure is well-formed. \<close>
+      apply (rule rec_del_recset_wf)
+
+     \<comment> \<open> case 1: CTEDeleteCall --> FinaliseSlotCall \<close>
+     apply (simp add: rec_del_recset_def wf_sum_def rdcall_finalise_ord_lift_def mlex_prod_def)
+
+    \<comment> \<open> case 2: FinaliseSlotCall --> ReduceZombieCall \<close>
+    apply (simp add: rec_del_recset_def wf_sum_def rdcall_finalise_ord_lift_def mlex_prod_def)
+
+   \<comment> \<open> case 3: FinaliseSlotCall --> FinaliseSlotCall \<close>
+   apply (case_tac exposed; simp)
+
+    \<comment> \<open> FinaliseSlotCall _ True --> FinaliseSlotCall _ True \<close>
+    apply (simp add: rec_del_recset_def wf_sum_def rdcall_finalise_ord_lift_def mlex_prod_def)
+    apply (rule disjI1, rule map_prod_split_imageI, clarsimp)
+    apply (rename_tac oref cref exposed st1 fcap st2 is_final st3 pcap1 pcap2 st4 st5 success
+                      cl_info st6 st7)
+    apply (erule use_valid [OF _ preemption_point_caps_of_state])
+    apply (case_tac pcap1; simp add: fail_def rec_del.psimps)
+    apply (rename_tac word option nat)
+    apply (case_tac nat; simp)
+    apply (clarsimp simp: in_monad rec_del.psimps)
+    apply (clarsimp simp: in_monad in_get_cap_cte_wp_at
+                          cte_wp_at_caps_of_state rec_del.psimps
                    split: if_split_asm)
-   apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
-                         fst_cte_ptrs_def
-                  split: if_split_asm)
-   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
-          frule(1) use_valid [OF _ suspend_thread_cap],
-          frule(1) use_valid [OF _ prepare_thread_delete_thread_cap])
+     apply (erule use_valid [OF _ set_cap_caps_of_state])+
+     apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
+    apply (case_tac new_cap; simp add: is_cap_simps)
+     apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of)
+    apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
+
+   \<comment> \<open> FinaliseSlotCall _ False --> FinaliseSlotCall _ False \<close>
+   apply (simp add: rec_del_recset_def wf_sum_def rdcall_finalise_ord_lift_def mlex_prod_def)
+   apply (rule disjI2, rule map_prod_split_imageI, clarsimp)
+   apply (rename_tac oref cref exposed st1 fcap st2 is_final st3 pcap1 pcap2 st4 st5 success
+                     cl_info st6 st7)
+   apply (simp add: in_monad is_final_cap_def is_zombie_def)
+   apply (erule use_valid [OF _ preemption_point_not_recursive_cspaces])
+   apply (case_tac pcap1, simp_all add: fail_def rec_del.psimps)[1]
+   apply (rename_tac word option nat)
+   apply (case_tac nat, simp_all)
+   apply (clarsimp simp: in_monad prod_eqI rec_del.psimps)
+   apply (erule use_valid [OF _ cap_swap_fd_not_recursive])
+   apply (frule use_valid [OF _ get_cap_cte_wp_at, simplified])
+   apply (drule in_inv_by_hoareD [OF get_cap_inv], clarsimp)
+   apply (erule use_valid [OF _ hoare_vcg_conj_lift [OF set_zombie_not_recursive final_cap_still_at]])
+   apply (frule use_valid [OF _ finalise_cap_cases])
+    apply (fastforce simp add: cte_wp_at_eq_simp)
    apply clarsimp
-   apply (erule use_valid [OF _ prepare_thread_delete_not_recursive])
-   apply (erule use_valid [OF _ suspend_not_recursive])
-   apply (erule use_valid [OF _ unbind_notification_not_recursive])
-   apply simp
-  apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
-                        fst_cte_ptrs_def zombie_cte_bits_def
-                        tcb_cnode_index_def
-                 split: option.split_asm)
+   apply (case_tac fcap, simp_all add: fst_cte_ptrs_def)
+     apply (clarsimp simp: in_monad cte_wp_at_caps_of_state fst_cte_ptrs_def
+                    split: if_split_asm)
+    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state fst_cte_ptrs_def
+                   split: if_split_asm)
+    apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
+           frule(1) use_valid [OF _ suspend_thread_cap],
+           frule(1) use_valid [OF _ prepare_thread_delete_thread_cap])
+    apply clarsimp
+    apply (erule use_valid [OF _ prepare_thread_delete_not_recursive])
+    apply (erule use_valid [OF _ suspend_not_recursive])
+    apply (erule use_valid [OF _ unbind_notification_not_recursive])
+    apply simp
+   apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
+                         fst_cte_ptrs_def zombie_cte_bits_def
+                         tcb_cnode_index_def
+                  split: option.split_asm)
+
+  \<comment>\<open> case 4: ReduceZombieCall --> CTEDeleteCall \<close>
+  apply (simp add: rec_del_recset_def wf_sum_def rdcall_finalise_ord_lift_def mlex_prod_def)
   done
 
 lemma rec_del_dom: "\<And> (p :: rec_del_call \<times> 'state_ext state). rec_del_dom p"
@@ -995,7 +1011,7 @@ lemma rec_del_preservation':
     "\<And>sl cap. \<lbrace>P\<rbrace> set_cap sl cap \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl opt. \<lbrace>P\<rbrace> empty_slot sl opt \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>cap fin. \<lbrace>P\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. P\<rbrace>"
-    "\<And>cap fin. \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>"
+    "\<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>"
   shows
   "s \<turnstile> \<lbrace>P\<rbrace> rec_del call \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
 proof (induct rule: rec_del_induct)
@@ -2973,7 +2989,7 @@ lemma cap_revoke_termination:
    apply (drule_tac f="\<lambda>f. f (aa, ba)" in arg_cong)
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_to_rpo_def)
    apply (simp split: cap.split_asm)
-  apply (drule in_preempt, clarsimp simp: trans_state_update'[symmetric])
+   apply (erule (1) use_valid [OF _ preemption_point_caps_of_state])
   done
 
 lemma cap_revoke_dom: "\<And> (p :: (machine_word \<times> bool list) \<times> 'state_ext state). cap_revoke_dom p"

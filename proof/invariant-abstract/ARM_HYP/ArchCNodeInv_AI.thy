@@ -242,15 +242,6 @@ lemma vs_cap_ref_update_cap_data[simp, CNodeInv_AI_assms]:
          split: cap.split)
 
 
-lemma in_preempt[simp, intro, CNodeInv_AI_assms]:
-  "(Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
-  (\<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"
-  apply (clarsimp simp: preemption_point_def in_monad do_machine_op_def
-                        return_def returnOk_def throwError_def o_def
-                        select_f_def select_def getActiveIRQ_def)
-  done
-
-
 lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
@@ -848,7 +839,7 @@ lemma rec_del_rvk_prog [CNodeInv_AI_assms]:
 proof (induct rule: rec_del.induct,
        simp_all only: rec_del_fails)
   case (1 slot exposed s)
-  note wp = "1.hyps"[simplified rdcall_simps simp_thms]
+  note case1_hyps = "1.hyps"[simplified rdcall_simps simp_thms]
   show ?case
     apply (subst rec_del.simps)
     apply (simp only: rdcall_simps simp_thms split_def)
@@ -856,21 +847,21 @@ proof (induct rule: rec_del.induct,
      apply (simp(no_asm) del: o_apply)
      apply (wp empty_slot_rvk_prog)[1]
     apply (simp del: o_apply)
-    apply (rule wp)
+    apply (rule case1_hyps)
     done
 next
   case (2 sl exp s)
-  note wp = "2.hyps" [simplified rdcall_simps simp_thms]
+  note case2_hyps = "2.hyps" [simplified rdcall_simps simp_thms]
   show ?case
     apply (subst rec_del.simps)
     apply (simp only: rdcall_simps simp_thms split_def)
     apply (rule hoare_pre_spec_validE)
      apply wp
-         apply ((wp | simp)+)[1]
-        apply (wp wp | assumption)+
+         apply (simp, wp)
+        apply (wp case2_hyps)
           apply ((wp preemption_point_inv | simp)+)[1]
          apply (simp(no_asm))
-         apply (rule wp, assumption+)
+         apply (rule case2_hyps, assumption+)
         apply (wp final_cap_same_objrefs
                   set_cap_cte_wp_at_cases
                    | simp)+
@@ -888,7 +879,7 @@ next
        apply (clarsimp simp: is_cap_simps)
        apply (case_tac "is_zombie rv")
         apply (clarsimp simp: cap_to_rpo_def is_cap_simps fst_cte_ptrs_def)
-        apply (simp add: is_final_cap'_def)
+       apply (simp add: is_final_cap'_def)
        apply (case_tac rv, simp_all add: cap_to_rpo_def is_cap_simps gen_obj_refs_eq)[1]
        apply (rename_tac arch_cap)
        apply (case_tac arch_cap, simp_all)[1]
@@ -907,14 +898,14 @@ next
     done
 next
   case (4 ptr zb znum sl s)
-  note wp = "4.hyps"[simplified rdcall_simps]
+  note case4_hyps = "4.hyps"[simplified rdcall_simps]
   show ?case
     apply (subst rec_del.simps)
     apply wp
         apply (wp | simp)+
       apply (wp get_cap_wp)[1]
      apply (rule spec_strengthen_postE)
-      apply (rule wp, assumption+)
+      apply (rule case4_hyps, assumption+)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_defs)
      apply (strengthen rvk_prog_update_strg[unfolded fun_upd_def o_def])
      apply (clarsimp simp: cte_wp_at_caps_of_state cap_to_rpo_def)

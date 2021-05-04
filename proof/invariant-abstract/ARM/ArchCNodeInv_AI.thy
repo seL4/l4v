@@ -229,15 +229,6 @@ lemma vs_cap_ref_update_cap_data[simp, CNodeInv_AI_assms]:
          split: cap.split)
 
 
-lemma in_preempt[simp, intro, CNodeInv_AI_assms]:
-  "(Inr rv, s') \<in> fst (preemption_point s) \<Longrightarrow>
-  (\<exists>f es. s' = s \<lparr> machine_state := machine_state s \<lparr> irq_state := f (irq_state (machine_state s)) \<rparr>, exst := es\<rparr>)"
-  apply (clarsimp simp: preemption_point_def in_monad do_machine_op_def
-                        return_def returnOk_def throwError_def o_def
-                        select_f_def select_def getActiveIRQ_def)
-  done
-
-
 lemma invs_irq_state_independent[intro!, simp, CNodeInv_AI_assms]:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
