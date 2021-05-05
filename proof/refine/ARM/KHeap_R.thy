@@ -4316,4 +4316,51 @@ global_interpretation set_simple_ko: typ_at_pres "set_simple_ko C ptr ep"
 global_interpretation update_sk_obj_ref: typ_at_pres "update_sk_obj_ref C update ref new"
   unfolding typ_at_pres_def by wpsimp
 
+lemma getReprogramTimer_corres:
+  "corres (=) \<top> \<top> (gets reprogram_timer) getReprogramTimer"
+  by (clarsimp simp: getReprogramTimer_def state_relation_def)
+
+lemma setDomainTime_corres:
+  "dt = dt' \<Longrightarrow>
+  corres dc \<top> \<top> (modify (domain_time_update (\<lambda>_. dt))) (setDomainTime dt')"
+  apply (clarsimp simp: setDomainTime_def, rule corres_modify)
+  by (clarsimp simp: state_relation_def swp_def)
+
+lemma setConsumedTime_corres:
+  "ct = ct' \<Longrightarrow>
+  corres dc \<top> \<top> (modify (consumed_time_update (\<lambda>_. ct))) (setConsumedTime ct')"
+  apply (clarsimp simp: setConsumedTime_def, rule corres_modify)
+  by (clarsimp simp: state_relation_def swp_def)
+
+lemma setCurSc_corres:
+  "sc = sc' \<Longrightarrow>
+   corres dc \<top> \<top> (modify (cur_sc_update (\<lambda>_. sc))) (setCurSc sc')"
+  apply (clarsimp simp: setCurSc_def, rule corres_modify)
+  by (clarsimp simp: state_relation_def swp_def)
+
+lemma refillSingle_equiv:
+  "valid_refills' sc \<Longrightarrow>
+   (length (refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc)) = Suc 0)
+    = (scRefillHead sc = refillTailIndex sc)"
+  apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def refills_map_def)
+  apply (case_tac "scRefillCount sc = Suc 0"; simp)
+  apply (auto simp: Let_def)
+  done
+
+lemma refillSingle_corres:
+  "scp = scp' \<Longrightarrow>
+   corres (=) (sc_at scp) (obj_at' valid_refills' scp')
+     (refill_single scp)
+     (refillSingle scp')"
+  unfolding refill_single_def refillSingle_def
+  apply (simp add: refill_size_def get_refills_def)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule_tac R'="\<lambda>sc s. valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
+       apply (rule get_sc_corres)
+      apply (clarsimp simp: sc_relation_def)
+      apply (rule refillSingle_equiv; simp)
+     apply wpsimp+
+  apply (clarsimp simp: obj_at'_def)
+  done
+
 end
