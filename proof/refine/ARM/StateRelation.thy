@@ -1322,13 +1322,8 @@ lemma refills_tl_equal:
   apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
   done
 
-(* A standard (and active) scheduling context should have the following properties. They follow
-   from valid_sched_context' and sc_valid_refills as the following two lemmas show. *)
-abbreviation std_sc' where
-  "std_sc' ko \<equiv> 0 < scRefillCount ko \<and> scRefillMax ko \<le> length (scRefills ko) \<and> scRefillHead ko < scRefillMax ko"
-
-lemma std_sc'_normal:
-  "valid_sched_context' sc' s' \<Longrightarrow> 0 < scRefillMax sc' \<Longrightarrow> 0 < scRefillCount sc' \<Longrightarrow> std_sc' sc'"
+lemma valid_refills'_normal:
+  "valid_sched_context' sc' s' \<Longrightarrow> 0 < scRefillMax sc' \<Longrightarrow> 0 < scRefillCount sc' \<Longrightarrow> valid_refills' sc'"
   by (clarsimp simp: valid_sched_context'_def)
 
 lemma sc_valid_refills_scRefillCount:
@@ -1355,7 +1350,7 @@ lemma hd_refills_map:
   by (simp add: hd_map hd_wrap_slice)
 
 lemma refill_hd_relation:
-  "sc_relation sc n sc' \<Longrightarrow> std_sc' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
+  "sc_relation sc n sc' \<Longrightarrow> valid_refills' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
   apply (clarsimp simp: sc_relation_def refillHd_def refills_map_def valid_sched_context'_def hd_map)
   apply (subst hd_map, clarsimp simp: wrap_slice_def)
   apply (clarsimp simp: hd_wrap_slice)
@@ -1367,28 +1362,79 @@ lemma refill_hd_relation2:
        \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
   apply (frule refill_hd_relation)
    apply (frule (1) sc_refills_neq_zero_cross[THEN refills_map_non_empty_pos_count])
-   apply (erule std_sc'_normal; simp)
+   apply (erule valid_refills'_normal; simp)
   apply (clarsimp simp: refill_map_def)
   done
 
 lemma sc_refill_ready_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_ready time sc = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
    apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
 
 lemma sc_refill_capacity_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_capacity x sc = refillsCapacity x (scRefills sc') (scRefillHead sc')"
   apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refillsCapacity_def refill_capacity_def refillHd_def refill_map_def)
 
 lemma sc_refill_sufficient_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_sufficient x sc = sufficientRefills x (scRefills sc') (scRefillHead sc')"
   apply (frule (1) sc_refill_capacity_relation[where x=x])
   by (clarsimp simp: sufficientRefills_def refill_sufficient_def minBudget_def MIN_BUDGET_def
                         kernelWCETTicks_def)
+
+abbreviation next_index where
+  "next_index i mx \<equiv> if Suc i = mx then 0 else Suc i"
+
+lemma wrap_slice_prepend:
+  "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; 0 < count\<rbrakk>
+   \<Longrightarrow> wrap_slice start count mx xs =
+       (xs ! start) # wrap_slice (next_index start mx) (count - 1) mx xs"
+  apply (rule nth_equalityI, simp)
+  apply (rename_tac i)
+  apply (subst wrap_slice_index; simp)
+  apply (case_tac i; simp)
+  by (auto simp: wrap_slice_index)
+
+lemma tl_wrap_slice:
+  "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; 0 < count\<rbrakk>
+   \<Longrightarrow> tl (wrap_slice start count mx xs) = wrap_slice (next_index start mx) (count - 1) mx xs"
+  apply (subst wrap_slice_prepend; simp)
+  done
+
+lemma wrap_slice_1:
+  "\<lbrakk>start < mx; start < length xs\<rbrakk> \<Longrightarrow>
+   wrap_slice start (Suc 0) mx xs = [xs ! start]"
+  by (clarsimp simp: wrap_slice_def take_Suc hd_drop_conv_nth)
+
+lemma wrap_slice_2:
+  "\<lbrakk>2 \<le> mx; start < mx; mx \<le> length xs\<rbrakk> \<Longrightarrow>
+   wrap_slice start 2 mx xs = [(xs ! start), xs ! (next_index start mx)]"
+  apply (clarsimp simp: wrap_slice_def take_Suc hd_drop_conv_nth)
+  apply (intro conjI; intro allI impI)
+   apply (simp add: take_2 hd_drop_conv_nth)
+  apply (prop_tac "mx = Suc start", clarsimp)
+  apply (prop_tac "xs \<noteq> []", clarsimp)
+  apply (simp add: take_Suc hd_drop_conv_nth hd_conv_nth)
+  done
+
+lemma drop_wrap_slice:
+  "\<lbrakk>start < mx; mx \<le> length xs; n \<le> count; count \<le> mx\<rbrakk> \<Longrightarrow>
+  drop n (wrap_slice start count mx xs) =
+  wrap_slice (if start + n < mx then start + n else start + n - mx) (count - n) mx xs"
+  apply (clarsimp simp: wrap_slice_def)
+  by (fastforce simp: drop_take field_simps)
+
+lemma take_wrap_slice:
+  "\<lbrakk>start < mx; mx \<le> length xs; n \<le> count; count \<le> mx\<rbrakk> \<Longrightarrow>
+  take n (wrap_slice start count mx xs) = wrap_slice start n mx xs"
+  by (clarsimp simp: wrap_slice_def field_simps)
+
+lemma MIN_BUDGET_equiv:
+  "MIN_BUDGET = minBudget"
+  by (clarsimp simp: MIN_BUDGET_def minBudget_def kernelWCETTicks_def)
 
 end
 end
