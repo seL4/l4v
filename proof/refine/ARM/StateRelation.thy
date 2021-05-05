@@ -252,6 +252,23 @@ definition sc_relation ::
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
 
+
+(* Most sched contexts should satisfy these conditions. The lemma below (valid_refills'_common_usage)
+   illustrates a common situation where these conditions hold.
+
+   It seems clear that an abbreviation of this kind is useful, but it's not clear exactly which
+   conditions it should contain. For instance, it does not contain "0 < scRefillMax sc" which one
+   may argue is equally standard.
+*)
+abbreviation (input) valid_refills' where
+  "valid_refills' sc \<equiv> scRefillMax sc \<le> length (scRefills sc) \<and> scRefillHead sc < scRefillMax sc \<and>
+                    scRefillCount sc \<le> scRefillMax sc \<and> 0 < scRefillCount sc"
+
+lemma valid_refills'_common_usage:
+  "\<exists>n. sc_relation sc n sc' \<Longrightarrow> sc_active sc \<Longrightarrow> sc_valid_refills sc \<Longrightarrow> valid_sched_context' sc' s'
+   \<Longrightarrow> valid_refills' sc'"
+  by (clarsimp simp: sc_valid_refills_def valid_sched_context'_def active_sc_def sc_relation_def)
+
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
      reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
