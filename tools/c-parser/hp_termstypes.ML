@@ -33,7 +33,7 @@ sig
   val mk_VCGfn_name : theory -> string -> term
   val mk_basic_t : typ list -> term
   val mk_call_t : typ list -> term
-  val mk_callreturn : typ -> typ -> typ -> string -> term
+  val mk_callreturn : typ -> typ -> typ -> term -> term -> term
   val mk_catch_t : typ list -> term
   val mk_cbreak : theory -> typ list -> typ -> term
   val mk_ccatchbrk : theory -> typ list -> typ -> term
@@ -103,16 +103,15 @@ in
         sarg2 --> (s2p_arg --> (sarg3 --> (s2_to_com --> com_ty))))
 end
 
-fun mk_callreturn stackty globty statety stack_update_name = let
+fun mk_callreturn stackty globty statety stack_update stack_access = let
   val svar = Free("s", statety)
   val tvar = Free("t", statety)
   val gvar = Free("g", globty)
+  val stkvar = Free("stk", stackty)
   val gupdate = Const(suffix Record.updateN "StateSpace.state.globals",
                       (globty --> globty) --> (statety --> statety))
   val gaccess = Const(@{const_name "StateSpace.state.globals"},
                       statety --> globty)
-  val stack_update =
-    Const (stack_update_name, (stackty --> stackty) --> statety --> statety)
   val stack_pop = Const (@{const_name "Stack.pop_stack"}, stackty --> stackty)
 in
   Term.lambda svar (* :: statety *)
@@ -120,7 +119,10 @@ in
       (gupdate $
         (Term.lambda gvar (* :: globty *)
           (gaccess $ tvar)) $
-        (stack_update $ stack_pop $ svar)
+        (stack_update $
+          (Term.lambda stkvar
+            (stack_pop $ (stack_access $ tvar))) $
+          svar)
       )
     )
 end

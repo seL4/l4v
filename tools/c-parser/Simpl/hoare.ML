@@ -2098,14 +2098,14 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
          val d' = map_types (Envir.norm_type subst) d;
        in Const (@{const_name StateFun.update},uT')$d'$c'$n end;
 
-     fun modify_updatesR subst gT glob ((Const (upd,uT))$_$(Const _$Z)) =
-             mk_rupdR subst gT (upd,uT)$
-               (K_rec uT (mk_selR subst gT (upd,uT)$(glob$Bound 0)))$(glob$Bound 1)
-       | modify_updatesR subst gT glob ((Const (upd,uT))$_$s) =
-             mk_rupdR subst gT (upd,uT)$
-               (K_rec uT (mk_selR subst gT (upd,uT)$(glob$Bound 0)))$
+     fun modify_updatesR subst gT glob ((Const (upd,uT)) $ _ $ (Const _ $ _)) =
+             mk_rupdR subst gT (upd,uT) $
+               K_rec uT (mk_selR subst gT (upd,uT) $ (glob $ Bound 0)) $ (glob $ Bound 1)
+       | modify_updatesR subst gT glob ((Const (upd,uT)) $ _ $ s) =
+             mk_rupdR subst gT (upd,uT) $
+               K_rec uT (mk_selR subst gT (upd,uT) $ (glob $ Bound 0)) $
                modify_updatesR subst gT glob s
-       | modify_updatesR subst gT glob ((_$Z)) = (glob$Bound 1) (* may_not_modify *)
+       | modify_updatesR _ _ glob (_ $ _) = glob $ Bound 1 (* may_not_modify *)
        | modify_updatesR _ _ _ t = raise TERM ("gen_call_tac.modify_updatesR",[t]);
 
      fun modify_updatesF subst _ glob
@@ -2126,11 +2126,23 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
        | globalsT t = raise TERM ("gen_call_tac.globalsT",[t]);
 
 
-     fun mk_upd meqT mods (gupd$(Abs (dmy,dmyT,(glob$Bound 1)))$Bound 1) =
-       let val gT = (globalsT gupd);
-           val subst = mk_subst gT meqT;
-       in (gupd$(Abs (dmy,dmyT,incr_boundvars 1
-                   (modify_updates state_kind subst gT glob mods)))$Bound 1) end
+      fun mk_upd meqT mods (t as gupd $ (Abs (dmy,dmyT,(glob$Bound 1))) $ a) =
+        let
+          val gT = (globalsT gupd);
+          val subst = mk_subst gT meqT;
+        in
+          case a of
+            (* the old generation, just a variable *)
+            (Bound i) =>
+                (gupd $ (Abs (dmy,dmyT,incr_boundvars 1
+                  (modify_updates state_kind subst gT glob mods))) $ Bound i)
+            (* the new generation, which also modifies the stack a variable *)
+          | (stkupd $ stkpop $ Bound i) =>
+              (gupd $ (Abs (dmy,dmyT,incr_boundvars 1
+                (modify_updates state_kind subst gT glob mods))) $
+                  (stkupd $ stkpop $ Bound i))
+          | _ => raise TERM ("gen_call_tac.mk_upd",[t])
+        end
        | mk_upd meqT mods (upd$v$s) = upd$v$mk_upd meqT mods s
        | mk_upd _ _ t = raise TERM ("gen_call_tac.mk_upd",[t]);
 
@@ -2169,13 +2181,6 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
 
           val mods_nrm = modif_spec_nrm |> get_modifies |> get_updates;
           val return' = modify_return mods_nrm return;
-(*
-          val return' = if is_abr
-                        then let val mods_abr =
-                                   modif_spec_abr |> get_modifies |> get_updates;
-                             in modify_return mods_abr return end
-                        else return;*)
-
           val cret = Thm.cterm_of ctxt return';
           val (_,_,return'_var,_,_,_) = nth (Thm.prems_of ModRet) to_prove_prem
                                                   |> dest_hoare |> #2 |> dest_call;
@@ -2195,7 +2200,6 @@ fun gen_call_tac cont_tac mode cmode state_kind state_space ctxt asms spec_sfx
                 EVERY [trace_tac ctxt "modify_tac: splitting record",
                        state_split_simp_tac ctxt [] state_space i];
           val cnt = i + mxprem;
-
         in
             EVERY[trace_tac ctxt "call_tac -- modifies_tac --",
                   resolve_tac ctxt [ModRet'] i,

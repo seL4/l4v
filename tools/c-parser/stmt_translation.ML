@@ -526,61 +526,83 @@ in
                       " doesn't match declarations ("
                       ^Int.toString (length formal_fs)^")")
               else ()
-      fun mkinit formals actuals =
+      fun mkinit formals actuals v =
           case (formals, actuals) of
-            ([], []) => svar
-          | (f::fs, ac::acs) => f (ac, mkinit fs acs)
+            ([], []) => v
+          | (f::fs, ac::acs) => f (ac, mkinit fs acs v)
           | _ => raise Fail "Catastrophic invariant failure XXX"
-      val init = mk_abs(svar, mkinit (List.rev formal_fs) (List.rev actuals))
-      val stack_update = Proof_Context.intern_const ctxt "stack_'_update"
-      val return = mk_callreturn stacktype globty statetype stack_update
-      val result = let
-        val tvar = Free("t", statetype)
-      in
-        case lvalopt of
-          NONE => let
-            val skip_equivalent =
-                mk_basic_t styargs $ mk_abs(svar, svar)
-          in
-            mk_abs(svar, mk_abs(tvar, skip_equivalent))
-          end
-        | SOME e => let
-            val lhs_ei = expr_term e
-            val lhs_cty = ctype_of lhs_ei
-            val outlval = valOf (lval_of lhs_ei)
-                handle Option => error "Assigning function call to non-lvalue"
-            val (outname0, out_typ, out_ctyp) = valOf outname_info_opt
-                handle Option =>
-                       error ("Using return value from void function "^
-                              callname)
-            val outname = HoarePackage.varname outname0
-            fun outrval0 st = let
-              val fullname = Sign.intern_const sg outname
-            in
-              Const(fullname, type_of st --> out_typ) $ st
-            end
-            val out_einfo = mk_rval(outrval0, out_ctyp, false, sleft stmt,
-                                    sright stmt)
-            val outrval =
-                if lhs_cty = out_ctyp then outrval0
-                else if assignment_compatible(lhs_cty, out_ctyp,
-                                              (* expression is irrelevant *)
-                                              ewrap(Arbitrary (Signed Int),
-                                                    SourcePos.bogus,
-                                                    SourcePos.bogus))
-                then
-                  rval_of (typecast(sg,lhs_cty,out_einfo))
-                else
-                  error("Return type of function "^callname^
-                        " not compatible with value assigned to")
-            val uvar = Free("u", statetype)
-          in
-            mk_abs(svar,
-                   mk_abs(tvar,
-                          mk_basic_t styargs $
-                               mk_abs(uvar, outlval (outrval tvar) uvar)))
-          end
-      end
+
+      val stack_access =
+        Const (Proof_Context.intern_const ctxt "stack_'", statetype --> stacktype)
+      val stack_update =
+        Const
+          (Proof_Context.intern_const ctxt "stack_'_update",
+            (stacktype --> stacktype) --> statetype --> statetype)
+
+      val frameT = Proof_Context.read_typ ctxt "frame"
+      val newframe =
+        Proof_Context.read_const {proper = false, strict = true} ctxt (prefix "Frame_" callname)
+      val undef_args =
+        Term.type_of newframe |> Term.binder_types |> map (curry Const @{const_name undefined})
+
+      val push_stack =
+        Const (@{const_name "Stack.push_stack"}, frameT --> stacktype --> stacktype) $
+          Term.list_comb (newframe, undef_args)
+      val _ = @{print} (callname, push_stack)
+
+      val init =
+          mk_abs(svar, svar |> (fn x => stack_update $ push_stack $ x) |> mkinit (List.rev formal_fs) (List.rev actuals))
+      val return = mk_callreturn stacktype globty statetype stack_update stack_access
+      val result =
+        let
+          val tvar = Free("t", statetype)
+        in
+          case lvalopt of
+            NONE =>
+              let
+                val skip_equivalent = mk_basic_t styargs $ mk_abs(svar, svar)
+              in
+                mk_abs(svar, mk_abs(tvar, skip_equivalent))
+              end
+          | SOME e =>
+              let
+                val lhs_ei = expr_term e
+                val lhs_cty = ctype_of lhs_ei
+                val outlval = valOf (lval_of lhs_ei)
+                    handle Option => error "Assigning function call to non-lvalue"
+                val (outname0, out_typ, out_ctyp) = valOf outname_info_opt
+                    handle Option =>
+                           error ("Using return value from void function "^
+                                  callname)
+                val outname = HoarePackage.varname outname0
+                fun outrval0 st =
+                  let
+                    val fullname = Sign.intern_const sg outname
+                  in
+                    Const(fullname, type_of st --> out_typ) $ st
+                  end
+                val out_einfo = mk_rval(outrval0, out_ctyp, false, sleft stmt, sright stmt)
+                val outrval =
+                  if lhs_cty = out_ctyp
+                  then outrval0
+                  else if assignment_compatible(lhs_cty, out_ctyp,
+                                                (* expression is irrelevant *)
+                                                ewrap(Arbitrary (Signed Int),
+                                                      SourcePos.bogus,
+                                                      SourcePos.bogus))
+                  then
+                    rval_of (typecast(sg,lhs_cty,out_einfo))
+                  else
+                    error("Return type of function "^callname^
+                          " not compatible with value assigned to")
+                val uvar = Free("u", statetype)
+              in
+                mk_abs(svar,
+                  mk_abs(tvar,
+                    mk_basic_t styargs $
+                      mk_abs(uvar, outlval (outrval tvar) uvar)))
+              end
+        end
     in
       noparse
         (guard_it gds

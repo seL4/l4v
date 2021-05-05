@@ -822,10 +822,9 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
            - `(x_'_update, x___unsigned_'_update)`
 
            but shouldn't include anything for the `int` case. *)
-        fun map_aliases seen vs =
-            case vs of
-              [] => []
-            | ({src_name, isa_name = mangled_name, alias}, _, _, _) :: rest =>
+        fun process_aliases vs =
+          List.foldl
+            (fn (({src_name, isa_name = mangled_name, alias}, _, _, _),(seen,out)) =>
                 let
                   val acc = HoarePackage.varname (MString.dest mangled_name)
                   val acc_alias = HoarePackage.varname src_name
@@ -834,14 +833,17 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
                   val upd_alias = acc_alias ^ Record.updateN
                 in
                   if not alias orelse member (op =) seen src_name
-                  then map_aliases seen rest
+                  then
+                    (seen,out)
                   else
-                    (acc_alias, acc) ::
-                    (upd_alias, upd) ::
-                    map_aliases (src_name :: seen) rest
-                end
+                    (src_name :: seen,
+                      (acc_alias, acc) :: (upd_alias, upd) :: out)
+                end)
+            ([],[])
+            vs
+            |> snd
         (* make abbreviations for the long name variable accessor and updator functions. *)
-        fun define_alias_inner (alias, target) thy =
+        fun define_alias_inner (x as (alias, target)) thy =
           let
             val ctxt = Proof_Context.init_global thy
             val target =
@@ -854,10 +856,9 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           in
             Sign.add_abbrev "" (alias, target) thy |> snd
           end
-        fun define_alias (_, aliases) =
-          aliases |> map_aliases [] |> fold define_alias_inner
+        val aliases = Symtab.dest_list lvars |> map snd |> process_aliases
       in
-        thy |> Symtab.fold define_alias lvars
+        thy |> fold define_alias_inner aliases
       end
       fun mk_locals_rcd thy =
         let
