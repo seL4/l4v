@@ -2982,7 +2982,8 @@ lemma get_sc_released_corres:
   apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[rotated, OF gets_the_sp]; (solves wpsimp)?)
    apply (wpsimp wp: no_ofail_gets_the readRefillReady_no_ofail)
-  apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def)
+  apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def
+                 dest!: readObject_misc_ko_at')
   apply normalise_obj_at'
   apply (subgoal_tac "sc_active sc = (0 < scRefillMax v')")
    apply (case_tac "sc_active sc"; clarsimp)

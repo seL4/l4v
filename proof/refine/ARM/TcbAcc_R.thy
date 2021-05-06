@@ -20,7 +20,8 @@ declare complement_def[simp]
 
 lemma threadRead_SomeD:
   "threadRead f t s = Some y \<Longrightarrow> \<exists>tcb. ko_at' tcb t s \<and> y = f tcb"
-  by (fastforce simp: threadRead_def oliftM_def)
+  by (fastforce simp: threadRead_def oliftM_def dest!: readObject_misc_ko_at')
+
 
 (* Auxiliaries and basic properties of priority bitmap functions *)
 
@@ -490,8 +491,8 @@ lemma tcb_update_corres:
   apply (rule corres_guard_imp)
     apply (erule (3) tcb_update_corres', force)
   apply (clarsimp simp: getObject_def in_monad split_def obj_at'_def
-                        loadObject_default_def projectKOs objBits_simps'
-                        in_magnitude_check)
+                        loadObject_default_def projectKOs objBits_simps' in_magnitude_check
+                 dest!: readObject_misc_ko_at')
   done
 
 lemma assert_get_tcb_corres:

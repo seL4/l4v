@@ -43,7 +43,8 @@ lemma valid_sched_context_size'_scConsumed_update[simp]:
 lemma readSchedContext_SomeD:
   "readSchedContext scp s = Some sc'
    \<Longrightarrow> ksPSpace s scp = Some (KOSchedContext sc')"
-  by (clarsimp simp: readSchedContext_def asks_def obj_at'_def projectKOs)
+  by (clarsimp simp: readSchedContext_def asks_def obj_at'_def projectKOs
+              dest!: readObject_misc_ko_at')
 
 lemma sym_refs_tcbSchedContext:
   "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>

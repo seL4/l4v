@@ -2296,7 +2296,8 @@ lemma refillPopHead_valid_objs'[wp]:
   apply (clarsimp simp: readMapScPtr_def readRefillNext_def readSchedContext_def)
   apply (fastforce simp: obj_at'_def projectKOs vs_all_heap_simps pred_map_simps
                          valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
-                         scBits_simps)
+                         scBits_simps
+                  dest!: readObject_misc_ko_at')
   done
 
 lemma refillPopHead_invs'[wp]:
@@ -3440,7 +3441,7 @@ lemma refillReady_corres:
   apply (drule_tac x=s and y=sc_ptr in meta_spec2, clarsimp)
   apply (clarsimp simp: read_sc_refill_ready_simp readRefillReady_simp readSchedContext_def
                         read_sched_context_def
-                 split: option.splits)
+                 split: option.splits dest!: readObject_misc_ko_at')
   apply (frule active_sc_valid_refillsE[rotated])
    apply (fastforce simp: is_sc_active_kh_simp)
   apply (rename_tac n sc' sc)

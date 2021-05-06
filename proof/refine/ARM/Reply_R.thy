@@ -1333,7 +1333,7 @@ lemma updateReply_sr_inv:
   apply (clarsimp simp: setReply_def getReply_def getObject_def setObject_def projectKOs
                         updateObject_default_def loadObject_default_def split_def
                         in_monad return_def fail_def objBits_simps' in_magnitude_check
-                 split: if_split_asm option.split_asm)
+                 split: if_split_asm option.split_asm dest!: readObject_misc_ko_at')
   apply (rename_tac reply')
   apply (prop_tac "ko_at' reply' rp s'")
    apply (clarsimp simp: obj_at'_def objBits_simps' projectKOs)
@@ -1366,7 +1366,7 @@ lemma updateReply_sr_inv_next:
   apply (clarsimp simp: setReply_def getReply_def getObject_def setObject_def projectKOs
                         updateObject_default_def loadObject_default_def split_def
                         in_monad return_def fail_def objBits_simps' in_magnitude_check
-                 split: if_split_asm option.split_asm)
+                 split: if_split_asm option.split_asm dest!: readObject_misc_ko_at')
   apply (rename_tac reply')
   apply (frule (1) pspace_relation_reply_at[OF state_relation_pspace_relation])
   apply (clarsimp simp: obj_at_def is_reply obj_at'_def projectKOs)
