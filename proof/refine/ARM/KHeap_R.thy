@@ -202,7 +202,7 @@ method readObject_obj_at'_method
                     obj_at'_def projectKOs objBits_simps' scBits_pos_power2
              split: option.splits if_split_asm
 
-lemma readObject_misc_ko_at'[simp, dest!]:
+lemma readObject_misc_ko_at'[simp]:
   shows
   readObject_ko_at'_tcb: "readObject p s = Some (tcb :: tcb) \<Longrightarrow> ko_at' tcb p s" and
   readObject_ko_at'_ep: "readObject p s = Some (ep :: endpoint) \<Longrightarrow> ko_at' ep p s" and
@@ -222,7 +222,7 @@ lemma readObject_misc_obj_at'[simplified, simp]:
 
 lemma getObject_tcb_at':
   "\<lbrace> \<top> \<rbrace> getObject t \<lbrace>\<lambda>r::tcb. tcb_at' t\<rbrace>"
-  unfolding getObject_def by wpsimp (clarsimp elim!: ko_at_obj_at')
+  unfolding getObject_def by wpsimp
 
 lemma koType_objBitsKO:
   "\<lbrakk>koTypeOf k' = koTypeOf k; koTypeOf k = SchedContextT \<longrightarrow> objBitsKO k' = objBitsKO k\<rbrakk>
@@ -303,7 +303,8 @@ lemma corres_get_tcb [corres]:
    apply wp
   apply (simp add: get_object_def get_tcb_def gets_def gets_the_def getObject_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
-                        assert_def fail_def obj_at_def is_tcb)
+                        assert_def fail_def obj_at_def is_tcb
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def projectKOs)
   apply (drule bspec)
    apply blast
@@ -1156,7 +1157,8 @@ lemma get_ep_corres [corres]:
    apply wp
   apply (simp add: get_simple_ko_def getEndpoint_def get_object_def gets_the_def
                    getObject_def bind_assoc ep_at_def2)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ep partial_inv_def)
   apply (rename_tac ep' ep)
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def projectKOs)
@@ -1680,7 +1682,8 @@ lemma get_ntfn_corres:
    apply wp
   apply (simp add: get_simple_ko_def getNotification_def get_object_def
                    getObject_def bind_assoc gets_the_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ntfn partial_inv_def)
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
   apply (drule bspec)
@@ -1695,7 +1698,8 @@ lemma get_reply_corres:
    apply wp
   apply (simp add: get_simple_ko_def getReply_def get_object_def
                    getObject_def bind_assoc gets_the_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_reply partial_inv_def)
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
   apply (drule bspec)
@@ -1718,7 +1722,8 @@ lemma get_sc_corres:
    apply wp
   apply (simp add: get_sched_context_def getSchedContext_def get_object_def
                    getObject_def bind_assoc gets_the_def)
-  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
+  apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
                  split: Structures_A.kernel_object.splits)
   apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
@@ -1737,7 +1742,8 @@ lemma get_sc_corres_size:
                    getObject_def bind_assoc gets_the_def)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj
-                 split: Structures_A.kernel_object.splits)
+                 split: Structures_A.kernel_object.splits
+                 dest!: readObject_misc_ko_at')
   apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def projectKOs)
   apply (drule bspec)
    apply blast
@@ -1958,25 +1964,25 @@ lemma ovalid_threadRead:
   "o\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
     threadRead f t \<lbrace>P\<rbrace>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
-        split: option.split_asm)
+        split: option.split_asm dest!: readObject_misc_ko_at')
 
 lemma ovalid_readMapScPtr:
   "o\<lbrace>\<lambda>s. sc_at' scPtr s \<longrightarrow> (\<exists>sc. ko_at' sc scPtr s \<and> P (f sc) s)\<rbrace> readMapScPtr scPtr f \<lbrace>P\<rbrace>"
   apply (clarsimp simp: readMapScPtr_def oliftM_def obind_def obj_at'_def ovalid_def
                         readSchedContext_def
-                 split: option.split_asm)
+                 split: option.split_asm dest!: readObject_misc_ko_at')
   done
 
 lemma ovalid_threadRead_sp:
   "o\<lbrace>P\<rbrace> threadRead f ptr \<lbrace>\<lambda>rv s. \<exists>tcb :: tcb. ko_at' tcb ptr s \<and> f tcb = rv \<and> P s\<rbrace>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
-        split: option.split_asm)
+        split: option.split_asm dest!: readObject_misc_ko_at')
 
 lemma ovalid_readMapScPtr_sp:
   "o\<lbrace>P\<rbrace> readMapScPtr ptr f \<lbrace>\<lambda>rv s. \<exists>sc :: sched_context. ko_at' sc ptr s \<and> f sc = rv \<and> P s\<rbrace>"
   apply (clarsimp simp: readMapScPtr_def readSchedContext_def oliftM_def obind_def obj_at'_def
                         ovalid_def
-                 split: option.split_asm)
+                 split: option.split_asm dest!: readObject_misc_ko_at')
   done
 
 lemma no_fail_threadGet [wp]:
@@ -3811,7 +3817,8 @@ lemma getObject_sc_wp:
   "\<lbrace>\<lambda>s. sc_at' p s \<longrightarrow> (\<exists>t::sched_context. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
                      split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check)
+                     projectKOs obj_at'_def in_magnitude_check
+              dest!: readObject_misc_ko_at')
 
 lemma getMapScPtr_getObject:
   "getMapScPtr t f = do x \<leftarrow> getObject t;
@@ -3879,7 +3886,9 @@ lemma ovalid_readRefillReady[rule_format, simp]:
               (readRefillReady scp) P"
   unfolding readRefillReady_def readSchedContext_def ovalid_def
   by (fastforce simp: obind_def split: option.split_asm
-                dest: use_ovalid[OF ovalid_readCurTime])
+                dest: use_ovalid[OF ovalid_readCurTime]
+               dest!: readObject_misc_ko_at')
+
 
 lemma refillReady_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (rTime (refillHd ko) \<le> ksCurTime s + kernelWCETTicks) s\<rbrace> refillReady scp \<lbrace>P\<rbrace>"
@@ -4220,7 +4229,9 @@ lemma getObject_tcb_wp:
   "\<lbrace>\<lambda>s. tcb_at' p s \<longrightarrow> (\<exists>t::tcb. ko_at' t p s \<and> Q t s)\<rbrace> getObject p \<lbrace>Q\<rbrace>"
   by (clarsimp simp: getObject_def valid_def in_monad
                      split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check)
+                     projectKOs obj_at'_def in_magnitude_check
+              dest!: readObject_misc_ko_at')
+
 
 lemma threadSet_tcbSCs_of:
   "\<lbrace>\<lambda>s. P (\<lambda>a. if a = t then tcbSchedContext (f (the (tcbs_of' s a))) else tcbSCs_of s a)\<rbrace>

@@ -3325,7 +3325,7 @@ lemma getTCB_det:
   by (clarsimp simp: ko_wp_at'_def getObject_def split_def gets_the_def
                      bind_def gets_def return_def get_def fail_def assert_opt_def
                      no_ofailD[OF no_ofail_tcb_at'_readObject] obj_at'_def projectKOs
-              split: if_splits option.split)
+              split: if_splits option.split dest!: readObject_misc_ko_at')
 
 lemma threadSet_det:
   "tcb_at' ptr s
