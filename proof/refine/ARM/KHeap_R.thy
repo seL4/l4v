@@ -1938,60 +1938,28 @@ lemma no_ofail_threadRead[simp]:
                   split: option.split dest!: no_ofailD[OF no_ofail_obj_at'_readObject_tcb])
   done
 
-lemma no_ofail_readMapScPtr[simp]:
-  "no_ofail (obj_at' (P::sched_context \<Rightarrow> bool) p) (readMapScPtr p f)"
-  unfolding readMapScPtr_def oliftM_def no_ofail_def
-  apply clarsimp
-  apply (clarsimp simp: readMapScPtr_def readSchedContext_def obind_def oliftM_def oreturn_def
-                  split: option.split dest!: no_ofailD[OF no_ofail_obj_at'_readObject_sc])
-  done
-
 lemmas no_ofail_threadRead_tcb_at'[wp] = no_ofail_threadRead[where P=\<top>]
-lemmas no_ofail_readMapScPtr_sc_at'[wp] = no_ofail_readMapScPtr[where P=\<top>]
 
 lemma threadRead_tcb_at'':
   "bound (threadRead f t s) \<Longrightarrow> tcb_at' t s"
   by (clarsimp simp: threadRead_def oliftM_def elim!: obj_at'_weakenE)
 
-lemma readMapScPtr_sc_at'':
-  "bound (readMapScPtr t f s) \<Longrightarrow> sc_at' t s"
-  by (clarsimp simp: readMapScPtr_def readSchedContext_def oliftM_def elim!: obj_at'_weakenE)
-
 lemmas threadRead_tcb_at' = threadRead_tcb_at''[simplified]
-lemmas readMapScPtr_sc_at' = readMapScPtr_sc_at''[simplified]
 
 lemma ovalid_threadRead:
   "o\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
     threadRead f t \<lbrace>P\<rbrace>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
-        split: option.split_asm dest!: readObject_misc_ko_at')
-
-lemma ovalid_readMapScPtr:
-  "o\<lbrace>\<lambda>s. sc_at' scPtr s \<longrightarrow> (\<exists>sc. ko_at' sc scPtr s \<and> P (f sc) s)\<rbrace> readMapScPtr scPtr f \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: readMapScPtr_def oliftM_def obind_def obj_at'_def ovalid_def
-                        readSchedContext_def
-                 split: option.split_asm dest!: readObject_misc_ko_at')
-  done
+              dest!: readObject_misc_ko_at' split: option.split_asm)
 
 lemma ovalid_threadRead_sp:
   "o\<lbrace>P\<rbrace> threadRead f ptr \<lbrace>\<lambda>rv s. \<exists>tcb :: tcb. ko_at' tcb ptr s \<and> f tcb = rv \<and> P s\<rbrace>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
-        split: option.split_asm dest!: readObject_misc_ko_at')
-
-lemma ovalid_readMapScPtr_sp:
-  "o\<lbrace>P\<rbrace> readMapScPtr ptr f \<lbrace>\<lambda>rv s. \<exists>sc :: sched_context. ko_at' sc ptr s \<and> f sc = rv \<and> P s\<rbrace>"
-  apply (clarsimp simp: readMapScPtr_def readSchedContext_def oliftM_def obind_def obj_at'_def
-                        ovalid_def
-                 split: option.split_asm dest!: readObject_misc_ko_at')
-  done
+              dest!: readObject_misc_ko_at' split: option.split_asm)
 
 lemma no_fail_threadGet [wp]:
   "no_fail (tcb_at' t) (threadGet f t)"
   by (wpsimp simp: threadGet_def wp: no_ofail_gets_the)
-
-lemma no_fail_readMapScPtr [wp]:
-  "no_fail (sc_at' t) (getMapScPtr t f)"
-  by (wpsimp simp: getMapScPtr_def wp: no_ofail_gets_the)
 
 lemma no_fail_getThreadState [wp]:
   "no_fail (tcb_at' t) (getThreadState t)"
@@ -3820,22 +3788,6 @@ lemma getObject_sc_wp:
                      projectKOs obj_at'_def in_magnitude_check
               dest!: readObject_misc_ko_at')
 
-lemma getMapScPtr_getObject:
-  "getMapScPtr t f = do x \<leftarrow> getObject t;
-                        return (f x)
-                     od"
-  apply (simp add: getMapScPtr_def readSchedContext_def readMapScPtr_def getObject_def[symmetric])
-  done
-
-lemma getMapScPtr_wp:
-  "\<lbrace>\<lambda>s. \<forall>sc. ko_at' sc scPtr s \<longrightarrow> P (f sc) s\<rbrace>
-   getMapScPtr scPtr f
-   \<lbrace>P\<rbrace>"
-  apply (simp add: getMapScPtr_getObject)
-  apply (wp getObject_sc_wp)
-  apply (clarsimp simp: obj_at'_def)
-  done
-
 lemma getRefillNext_getSchedContext:
   "getRefillNext scPtr index = do sc \<leftarrow> getSchedContext scPtr;
                                   return $ if index = scRefillMax sc - 1 then 0 else index + 1
@@ -3852,15 +3804,15 @@ lemma getRefillNext_wp:
   apply (wpsimp wp: getObject_sc_wp)
   done
 
-lemma getRefillSize_getMapScPtr:
-  "getRefillSize scPtr = getMapScPtr scPtr scRefillCount"
-  apply (clarsimp simp: getRefillSize_def getMapScPtr_def readRefillSize_def)
+lemma getRefillSize_def2:
+  "getRefillSize scPtr = liftM scRefillCount (gets_the (readSchedContext scPtr))"
+  apply (clarsimp simp: getRefillSize_def readRefillSize_def liftM_def oliftM_def)
   done
 
 lemma getRefillSize_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko) s\<rbrace> getRefillSize scp \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: getRefillSize_getMapScPtr)
-  apply (wpsimp wp: getMapScPtr_wp)
+  apply (clarsimp simp: getRefillSize_def2)
+  apply (wpsimp wp: simp: readSchedContext_def)
   done
 
 lemma refillEmpty_wp:
