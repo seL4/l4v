@@ -3018,7 +3018,7 @@ lemma refillUnblockCheck_corres:
 
 lemma updateRefillHd_valid_objs':
   "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def2 updateScPtr_def)
+  apply (clarsimp simp: updateRefillHd_def2 updateSchedContext_def)
   apply (wpsimp wp: )
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
@@ -3249,12 +3249,12 @@ crunches schedContextResume
   for valid_queues'[wp]: valid_queues'
   (wp: crunch_wps)
 
-lemma updateScPtr_sc_obj_at':
+lemma updateSchedContext_sc_obj_at':
   "\<lbrace>if scPtr = scPtr' then (\<lambda>s. \<forall>ko. ko_at' ko scPtr' s \<longrightarrow> P (f ko)) else obj_at' P scPtr'\<rbrace>
-   updateScPtr scPtr f
+   updateSchedContext scPtr f
    \<lbrace>\<lambda>rv. obj_at' P scPtr'\<rbrace>"
   supply if_split [split del]
-  apply (simp add: updateScPtr_def)
+  apply (simp add: updateSchedContext_def)
   apply (wpsimp wp: set_sc'.obj_at')
   apply (clarsimp split: if_splits simp: obj_at'_real_def ko_wp_at'_def)
   done
@@ -3263,7 +3263,7 @@ lemma refillPopHead_bound_tcb_sc_at[wp]:
   "refillPopHead scPtr \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t\<rbrace>"
   supply if_split [split del]
   unfolding refillPopHead_def
-  apply (wpsimp wp: updateScPtr_sc_obj_at' getRefillNext_wp getMapScPtr_wp)
+  apply (wpsimp wp: updateSchedContext_sc_obj_at' getRefillNext_wp)
   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
 
 lemma updateRefillHd_bound_tcb_sc_at[wp]:

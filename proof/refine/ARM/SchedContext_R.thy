@@ -88,15 +88,15 @@ lemma setSchedContext_active_sc_at':
   apply (clarsimp simp: ko_wp_at'_def obj_at'_real_def)
   done
 
-lemma updateScPtr_invs':
+lemma updateSchedContext_invs':
   "\<lbrace>invs'
     and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> live_sc' (f ko) \<longrightarrow> ex_nonz_cap_to' scPtr s)
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s
                                         \<and> valid_sched_context_size' (f ko))\<rbrace>
-    updateScPtr scPtr f
+    updateSchedContext scPtr f
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: updateScPtr_def)
+  apply (simp add: updateSchedContext_def)
   by (wpsimp wp: setSchedContext_invs')
 
 lemma sym_refs_sc_trivial_update:
@@ -118,7 +118,7 @@ lemma live_sc'_ko_ex_nonz_cap_to':
   apply (erule if_live_then_nonz_capE')
   by (clarsimp simp: ko_wp_at'_def obj_at'_real_def projectKO_sc)
 
-lemma updateScPtr_refills_invs':
+lemma updateSchedContext_refills_invs':
   "\<lbrace>invs'
     and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s \<and> valid_sched_context_size' (f ko))
@@ -126,9 +126,9 @@ lemma updateScPtr_refills_invs':
     and (\<lambda>_. \<forall>ko. scTCB (f ko) = scTCB ko)
     and (\<lambda>_. \<forall>ko. scYieldFrom (f ko) = scYieldFrom ko)
     and (\<lambda>_. \<forall>ko. scReply (f ko) = scReply ko)\<rbrace>
-    updateScPtr scPtr f
+    updateSchedContext scPtr f
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: updateScPtr_def)
+  apply (simp add: updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_invs')
   apply (intro conjI)
    apply fastforce
@@ -137,12 +137,12 @@ lemma updateScPtr_refills_invs':
   apply (clarsimp simp: live_sc'_def)
   done
 
-lemma updateScPtr_active_sc_at':
+lemma updateSchedContext_active_sc_at':
   "\<lbrace>active_sc_at' scPtr'
     and (\<lambda>s. scPtr = scPtr' \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> 0 < scRefillMax ko \<longrightarrow> 0 < scRefillMax (f ko)))\<rbrace>
-    updateScPtr scPtr f
+    updateSchedContext scPtr f
     \<lbrace>\<lambda>rv. active_sc_at' scPtr'\<rbrace>"
-  apply (simp add: updateScPtr_def)
+  apply (simp add: updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_active_sc_at')
   apply (clarsimp simp: active_sc_at'_def obj_at'_real_def ko_wp_at'_def projectKO_sc)
   done
@@ -153,7 +153,7 @@ lemma invs'_ko_at_valid_sched_context':
   apply (drule (1) sc_ko_at_valid_objs_valid_sc', simp)
   done
 
-lemma updateScPtr_invs'_indep:
+lemma updateSchedContext_invs'_indep:
   "\<lbrace>invs' and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. valid_sched_context' ko s \<longrightarrow> valid_sched_context' (f ko) s)
     and (\<lambda>_. \<forall>ko. valid_sched_context_size' ko \<longrightarrow> valid_sched_context_size' (f ko))
@@ -161,9 +161,9 @@ lemma updateScPtr_invs'_indep:
                   \<and> scTCB (f ko) = scTCB ko
                   \<and> scYieldFrom (f ko) = scYieldFrom ko
                   \<and> scReply (f ko) = scReply ko )\<rbrace>
-    updateScPtr scPtr f
+    updateSchedContext scPtr f
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wpsimp wp: updateScPtr_invs')
+  apply (wpsimp wp: updateSchedContext_invs')
   apply (intro conjI; intro allI impI; (drule_tac x=ko in spec)+)
    apply (clarsimp simp: invs'_def valid_state'_def valid_objs'_def obj_at'_def)
    apply (erule if_live_then_nonz_capE')
