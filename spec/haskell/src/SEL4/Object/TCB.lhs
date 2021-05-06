@@ -1007,7 +1007,7 @@ On some architectures, the thread context may include registers that may be modi
 >     ifM (isRoundRobin scPtr)
 >       (refillResetRR scPtr)
 >       (refillBudgetCheck consumed)
->     updateScPtr scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
+>     updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     setConsumedTime 0
 >     whenM ((return isCurCPU) `andM` (getCurThread >>= isSchedulable)) $ do
 >       endTimeslice canTimeoutFault
