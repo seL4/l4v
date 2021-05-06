@@ -20,8 +20,8 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindTCB, schedContextBindTCB, schedContextResume,
 >         setSchedContext, updateTimeStamp, commitTime, rollbackTime,
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
->         refillBudgetCheckRoundRobin, updateScPtr, emptyRefill, scBitsFromRefillLength,
->         isCurDomainExpired, refillUnblockCheck, readMapScPtr, getMapScPtr,
+>         refillBudgetCheckRoundRobin, updateSchedContext, emptyRefill, scBitsFromRefillLength,
+>         isCurDomainExpired, refillUnblockCheck,
 >         readRefillReady, refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
@@ -152,16 +152,8 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     return $ scRefillCount sc == 0
 
-> readMapScPtr :: PPtr SchedContext -> (SchedContext -> a) -> KernelR a
-> readMapScPtr scPtr f = do
->     sc <- readSchedContext scPtr
->     return $ f sc
-
-> getMapScPtr :: PPtr SchedContext -> (SchedContext -> a) -> Kernel a
-> getMapScPtr scPtr f = getsJust (readMapScPtr scPtr f)
-
-> updateScPtr :: PPtr SchedContext -> (SchedContext -> SchedContext) -> Kernel ()
-> updateScPtr scPtr f = do
+> updateSchedContext :: PPtr SchedContext -> (SchedContext -> SchedContext) -> Kernel ()
+> updateSchedContext scPtr f = do
 >     sc <- getSchedContext scPtr
 >     setSchedContext scPtr (f sc)
 
@@ -173,17 +165,16 @@ This module uses the C preprocessor to select a target architecture.
 > getRefillNext :: PPtr SchedContext -> Int -> Kernel Int
 > getRefillNext scPtr index = getsJust (readRefillNext scPtr index)
 
-> -- Odd argument order plays well with `readMapScPtr`.
 > refillIndex :: Int -> SchedContext -> Refill
 > refillIndex index sc = scRefills sc !! index
 
-> -- Odd argument order plays well with `updateScPtr`.
+> -- Odd argument order plays well with `updateSchedContext`.
 > setRefillIndex :: Int -> Refill -> SchedContext -> SchedContext
 > setRefillIndex index refill sc =
 >     sc { scRefills = replaceAt index (scRefills sc) refill }
 
 > readRefillSize :: PPtr SchedContext -> KernelR Int
-> readRefillSize scPtr = readMapScPtr scPtr scRefillCount
+> readRefillSize scPtr = liftM scRefillCount $ readSchedContext scPtr
 
 > getRefillSize :: PPtr SchedContext -> Kernel Int
 > getRefillSize scPtr = getsJust (readRefillSize scPtr)
@@ -211,10 +202,10 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
->     refill <- getMapScPtr scPtr refillHd
->     oldHead <- getMapScPtr scPtr scRefillHead
+>     refill <- liftM refillHd $ getSchedContext scPtr
+>     oldHead <- liftM scRefillHead $ getSchedContext scPtr
 >     nextHead <- getRefillNext scPtr oldHead
->     updateScPtr scPtr $ \sc -> sc { scRefillHead = nextHead,
+>     updateSchedContext scPtr $ \sc -> sc { scRefillHead = nextHead,
 >                                     scRefillCount = scRefillCount sc - 1 }
 >     return refill
 
@@ -271,7 +262,7 @@ This module uses the C preprocessor to select a target architecture.
 >     whenM (refillReady scPtr) $ do
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \r -> r { rTime = curTime }
->     head <- getMapScPtr scPtr refillHd
+>     head <- liftM refillHd $ getSchedContext scPtr
 >     if (rAmount head >= newBudget)
 >       then do
 >         updateRefillHd scPtr $ \r -> r { rAmount = newBudget }
@@ -331,12 +322,12 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillHeadOverlapping :: PPtr SchedContext -> KernelR Bool
 > refillHeadOverlapping scPtr = do
->     head <- readMapScPtr scPtr refillHd
+>     head <- liftM refillHd $ readSchedContext scPtr
 >     let amount = rAmount head
 >     let tail = rTime head + amount
->     headIndex <- readMapScPtr scPtr scRefillHead
+>     headIndex <- liftM scRefillHead $ readSchedContext scPtr
 >     nextRefillIndex <- readRefillNext scPtr headIndex
->     nextRefill <- readMapScPtr scPtr (refillIndex nextRefillIndex)
+>     nextRefill <- liftM (refillIndex nextRefillIndex) $ readSchedContext scPtr
 >     let enough_time = rTime nextRefill <= tail
 >     refills <- readRefillSize scPtr
 >     return (refills > 1 && enough_time)
@@ -695,14 +686,14 @@ This module uses the C preprocessor to select a target architecture.
 > commitTime :: Kernel ()
 > commitTime = do
 >     scPtr <- getCurSc
->     refillMax <- getMapScPtr scPtr scRefillMax
+>     refillMax <- liftM scRefillMax $ getSchedContext scPtr
 >     when (refillMax > 0) $ do
 >       consumed <- getConsumedTime
 >       when (consumed > 0) $ do
 >         ifM (isRoundRobin scPtr)
 >           (refillBudgetCheckRoundRobin consumed)
 >           (refillBudgetCheck consumed)
->       updateScPtr scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
+>       updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     when (numDomains > 1) $ do
 >       consumed <- getConsumedTime
 >       domainTime <- getDomainTime
