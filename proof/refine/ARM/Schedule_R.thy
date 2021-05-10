@@ -3213,6 +3213,7 @@ lemma schedule_invs':
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (rule_tac Q="invs'" in hoare_weaken_pre)
     apply (rule_tac hoare_seq_ext[OF _ getCurThread_sp])
+    apply (rule_tac hoare_seq_ext[OF _ isSchedulable_sp])
     apply (rule_tac hoare_seq_ext[OF _ getSchedulerAction_sp])
     apply (rule hoare_seq_ext)
      apply (wpsimp wp: switchSchedContext_invs')
@@ -3227,7 +3228,7 @@ lemma schedule_invs':
             apply (wpsimp simp: isHighestPrio_def')
            apply (wpsimp wp: curDomain_wp)
           apply (wpsimp simp: scheduleSwitchThreadFastfail_def)
-         apply (rename_tac tPtr isSchedulable x idleThread targetPrio)
+         apply (rename_tac tPtr x idleThread targetPrio)
          apply (rule_tac Q="\<lambda>_. invs' and st_tcb_at' runnable' tPtr and (\<lambda>s. action = ksSchedulerAction s)
                                 and tcb_in_cur_domain' tPtr" in hoare_strengthen_post[rotated])
           apply (prop_tac "st_tcb_at' runnable' tPtr s \<Longrightarrow> obj_at' (\<lambda>a. activatable' (tcbState a)) tPtr s")
@@ -3236,13 +3237,13 @@ lemma schedule_invs':
            apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def valid_state'_def)
           apply fastforce
          apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
-        apply (rename_tac tPtr isSchedulable x idleThread)
+        apply (rename_tac tPtr x idleThread)
         apply (rule_tac Q="\<lambda>_. invs'
                                and st_tcb_at' runnable' tPtr and (\<lambda>s. action = ksSchedulerAction s)
                                and tcb_in_cur_domain' tPtr" in hoare_strengthen_post[rotated])
          apply (subst obj_at_ko_at'_eq[symmetric], simp)
         apply (wpsimp wp: threadGet_wp hoare_drop_imp hoare_vcg_ex_lift)
-       apply (rename_tac tPtr isSchedulable x)
+       apply (rename_tac tPtr x)
        apply (rule_tac Q="\<lambda>_. invs'
                               and st_tcb_at' runnable' tPtr and (\<lambda>s. action = ksSchedulerAction s)
                               and tcb_in_cur_domain' tPtr" in hoare_strengthen_post[rotated])
