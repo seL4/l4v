@@ -46,6 +46,10 @@ lemma readSchedContext_SomeD:
   by (clarsimp simp: readSchedContext_def asks_def obj_at'_def projectKOs
               dest!: readObject_misc_ko_at')
 
+lemma no_ofail_readSchedContext:
+  "no_ofail (sc_at' p) (readSchedContext p)"
+  unfolding readSchedContext_def by wpsimp
+
 lemma sym_refs_tcbSchedContext:
   "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
@@ -663,5 +667,136 @@ lemma schedContextDonate_bound_tcb_sc_at[wp]:
   "\<lbrace>\<top>\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
    unfolding schedContextDonate_def
    by (wpsimp wp: set_sc'.obj_at')
+
+(* FIXME RT: move *)
+lemmas sc_inv_state_eq' = getObject_sc_inv[THEN use_valid[rotated], rotated
+                                           , where s=s and P="(=) s" for s, OF _ refl]
+
+lemma sc_inv_state_eq:
+  "(a :: sched_context, s') \<in> fst (getSchedContext p s) \<Longrightarrow> s' = s"
+  apply (fastforce dest: sc_inv_state_eq' simp: getSchedContext_def)
+  done
+
+lemma getObject_idempotent:
+  "monadic_rewrite False True (sc_at' ptr)
+   (do rv \<leftarrow> (getObject ptr :: sched_context kernel);
+       getObject ptr
+    od)
+   (getObject ptr :: sched_context kernel)"
+  apply (clarsimp simp: monadic_rewrite_def)
+  apply (rule monad_state_eqI)
+    apply ((clarsimp simp: in_monad getObject_def split_def
+                           loadObject_default_def projectKOs scBits_pos_power2 objBits_simps'
+                           lookupAround2_known1 in_magnitude_check)+)[2]
+  apply (fastforce dest!: sc_inv_state_eq[simplified getSchedContext_def]
+                          no_fail_getObject_misc[simplified no_fail_def, rule_format]
+                    simp: snd_bind)
+  done
+
+lemma getSchedContext_setSchedContext_decompose:
+   "monadic_rewrite False True
+     (sc_at' scPtr and K (\<forall>sc. objBits (f sc) = objBits sc) and K (\<forall>sc. objBits (g sc) = objBits sc))
+     (do sc \<leftarrow> getSchedContext scPtr;
+         setSchedContext scPtr (g (f sc))
+      od)
+     (do sc \<leftarrow> getSchedContext scPtr;
+         setSchedContext scPtr (f sc);
+         sc \<leftarrow> getSchedContext scPtr;
+         setSchedContext scPtr (g sc)
+      od)"
+  apply (clarsimp simp: monadic_rewrite_def)
+  apply (rule monad_state_eqI)
+    apply (simp add: in_monad getSchedContext_def getObject_def)
+    apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
+    apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
+    apply (clarsimp simp: setSchedContext_def setObject_def obj_at'_def projectKOs objBits_simps'
+                          in_monad ARM_H.fromPPtr_def scBits_pos_power2 updateObject_default_def
+                          in_magnitude_check ps_clear_upd magnitudeCheck_assert split_def
+                     del: readObject_misc_ko_at'
+                   split: option.split_asm)
+     apply (rename_tac sc sc')
+     apply (rule_tac x="f sc" in exI)
+     apply (rule conjI;
+            fastforce simp: readObject_def obind_def omonad_defs split_def ARM_H.fromPPtr_def
+                            ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
+                            objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
+                     split: option.splits if_split_asm dest!: readObject_misc_ko_at')
+    apply (rename_tac sc p sc')
+    apply (rule_tac x="f sc" in exI)
+    apply (rule conjI)
+     apply (thin_tac "scBitsFromRefillLength' _=_")
+     apply (clarsimp simp: readObject_def obind_def omonad_defs fun_upd_def split_def ARM_H.fromPPtr_def
+                           ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
+                           objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
+                    split: option.splits if_split_asm)
+     apply (metis option.simps(3) word_le_less_eq word_le_not_less)
+    apply (clarsimp simp: split: option.splits)
+    apply (metis (no_types) array_rules(2) lookupAround2_char2 mcs(1) order.strict_trans2
+                            word_le_less_eq word_le_not_less)
+   apply (simp add: in_monad getSchedContext_def getObject_def)
+   apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
+   apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
+   apply (clarsimp simp: setSchedContext_def setObject_def projectKOs in_monad ps_clear_upd obj_at'_def
+                         split_def updateObject_default_def magnitudeCheck_assert ARM_H.fromPPtr_def
+                  dest!: readObject_misc_ko_at')
+
+   apply (frule no_failD[OF no_fail_getMiscObject(4)])
+  apply (simp add: snd_bind)
+  apply (rule iffI; clarsimp simp: snd_bind split_def setSchedContext_def; rename_tac sc s')
+   apply (frule sc_inv_state_eq, simp)
+   apply (rule_tac x="(sc, s)" in bexI[rotated], simp)
+   apply (rule disjI2)
+   apply (drule use_valid[OF _ get_sc_ko'], simp)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr s")
+    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
+    apply (rule_tac x=sc in exI, clarsimp simp: projectKO_opt_sc)
+   apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
+    apply simp
+   apply clarsimp
+  apply (frule sc_inv_state_eq, simp)
+  apply (rule_tac x="(sc, s)" in bexI[rotated], simp)
+  apply (drule use_valid[OF _ get_sc_ko'], simp)
+  apply (erule disjE; clarsimp)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (f sc)) scPtr s")
+    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
+    apply (rule_tac x=sc in exI, clarsimp simp: projectKO_opt_sc)
+   apply (drule_tac ob1="(f sc)" in no_failD[OF no_fail_setObject_other, rotated])
+    apply simp+
+
+  apply (rename_tac s'; erule disjE; clarsimp?)
+   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
+                 in use_valid[OF _ setObject_sc_wp])
+    apply simp+
+
+   apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
+    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
+   apply (frule_tac s="s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
+                 in no_failD[OF no_fail_getMiscObject(4)])
+   apply clarsimp
+
+ apply (rename_tac s')
+   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
+                 in use_valid[OF _ setObject_sc_wp])
+    apply simp+
+
+  apply (frule sc_inv_state_eq, simp)
+  apply (drule use_valid[OF _ get_sc_ko'], simp)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr
+                           (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
+   apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
+   apply (rule_tac x="f sc" in exI, clarsimp simp: projectKO_opt_sc)
+  apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
+   apply simp+
+  done
+
+lemmas getSchedContext_setSchedContext_decompose_decompose_ext
+  = getSchedContext_setSchedContext_decompose[where f="f x" and g="g y" for f g x y]
+lemmas getSchedContext_setSchedContext_decompose_decompose2
+  = getSchedContext_setSchedContext_decompose[where g="\<lambda>sc. g (h sc)" for g h]
+lemmas getSchedContext_setSchedContext_decompose_decompose_ext2
+  = getSchedContext_setSchedContext_decompose[where f="f x" and g="g y" for f g x y]
 
 end

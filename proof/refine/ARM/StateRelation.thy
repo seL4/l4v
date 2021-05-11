@@ -1149,6 +1149,15 @@ lemma scBits_inverse_sc_relation:
   using scBits_core_identity[of min_sched_context_bits, OF min_sched_context_bits_cond]
   by simp
 
+lemma scBits_inverse_sc:
+  assumes "sc_relation sc n sc'"
+  shows "refillAbsoluteMax' (scBitsFromRefillLength' (length (scRefills sc'))) = length (scRefills sc')"
+  using assms
+  apply (simp add: scRefills_length max_num_refills_eq_refillAbsoluteMax')
+  apply (rule arg_cong[where f=refillAbsoluteMax'])
+  apply (rule scBits_inverse_us)
+  by (simp add: sc_const_eq)
+
 lemma minRefillLength_ARM: "minRefillLength = 12"
   by (auto simp: minRefillLength_def minSchedContextBits_def refillAbsoluteMax'_def
                  schedContextStructSize_def refillSizeBytes_def shiftL_nat)
@@ -1222,39 +1231,113 @@ lemma sc_objBits_pos_power2:
   by (simp add: pageBits_def archObjSize_def pteBits_def pdeBits_def scBits_pos_power2
          split: arch_kernel_object.split)+
 
-(* possible alternative
+(* for handling refill buffer *)
 
-definition scBitsFromRefillLength2 :: "sched_context => nat"
-where
-  "scBitsFromRefillLength2 sc \<equiv>
-      (word_log2::machine_word \<Rightarrow> _) (of_nat ((length (scRefills sc)) * refillSizeBytes + schedContextStructSize))"
+lemma length_replaceAt:
+  "length (replaceAt i lst val) = length lst"
+  apply (clarsimp simp: replaceAt_def)
+  by (case_tac lst; simp)
 
-lemma word_clz_le:
-  "0 < unat p \<Longrightarrow> unat (p::'a::len word) \<le> unat (q::'a::len word) \<Longrightarrow> word_clz q \<le> word_clz p"
-  apply (clarsimp simp: word_clz_def word_size)
- oops
+lemma wrap_slice_index:
+  "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; index < count\<rbrakk>
+   \<Longrightarrow> (wrap_slice start count mx xs) ! index
+       = (if start + index < mx
+             then (xs ! (start + index))
+             else (xs ! (start + index - mx)))"
+  apply (clarsimp split: if_splits)
+  apply (intro conjI)
+   apply (clarsimp simp: wrap_slice_def)
+   apply (prop_tac "index < mx - start", linarith)
+   apply (prop_tac "(take (mx - start) (drop start xs) @ take (start + count - mx) xs) ! index
+                    = (take (mx - start) (drop start xs)) ! index")
+    apply (simp add: nth_append)
+   apply fastforce
+  apply (clarsimp simp: wrap_slice_def)
+  apply (cases "index < mx - start")
+   apply linarith
+  apply (drule not_less[THEN iffD1])+
+  apply (prop_tac "(take (mx - start) (drop start xs) @ take (start + count - mx) xs) ! index
+                   = (take (start + count - mx) xs) ! (index - (mx - start))")
+   apply (prop_tac "mx - start \<le> index", linarith)
+   apply (simp add: nth_append)
+  using less_imp_le_nat nat_le_iff_add apply auto
+  done
 
-lemma word_log2_mono_le:
-  "\<lbrakk>0 < unat p; 0 < unat q; unat (p::machine_word) \<le> unat (q::machine_word)\<rbrakk>
-         \<Longrightarrow> word_log2 p \<le> word_log2 q"
-  unfolding word_log2_def
-  apply (case_tac "size p = size q"; simp)
-   apply (simp add: word_clz_le diff_le_mono2)
-  by (simp add: word_size_bl)
+lemma wrap_slice_append:
+  "\<lbrakk>Suc count \<le> mx; start < mx; mx \<le> length xs\<rbrakk>
+   \<Longrightarrow> wrap_slice start (Suc count) mx xs
+       = wrap_slice start count mx xs @ [if (start + count < mx)
+                                            then (xs ! (start + count))
+                                            else (xs ! (start + count - mx))]"
+  apply (rule nth_equalityI)
+   apply simp
+  apply (rename_tac i)
+  apply (case_tac "i < count")
+   apply (prop_tac "(wrap_slice start count mx xs
+                     @ [if start + count < mx
+                           then xs ! (start + count)
+                           else xs ! (start + count - mx)]) ! i
+                    = (wrap_slice start count mx xs) ! i")
+    apply (metis length_wrap_slice Suc_leD less_imp_le_nat nth_append)
+   apply (simp add: wrap_slice_index)
+  apply (prop_tac "(wrap_slice start count mx xs
+                    @ [if start + count < mx
+                          then xs ! (start + count)
+                          else xs ! (start + count - mx)]) ! i
+                   = (if start + count < mx
+                         then xs ! (start + count)
+                         else xs ! (start + count - mx))")
+   apply (smt length_wrap_slice Suc_leD le_refl less_SucE less_imp_le_nat nth_append_length)
+  apply (simp add: wrap_slice_index)
+  apply (prop_tac "i = count", linarith)
+  apply simp
+  done
 
-lemma word_log2_power2:
-  "\<And>x. x < LENGTH('a) \<Longrightarrow> (word_log2::'a::len word \<Rightarrow> _) (2 ^ x) = x"
-  unfolding word_log2_def word_clz_def
-  apply (simp add: to_bl_2p)
-  apply (prop_tac "replicate (LENGTH('a) - Suc x) False @
-                   True # replicate x False = (replicate (LENGTH('a) - Suc x) False @
-                   [True]) @ replicate x False") apply simp
-  apply (simp only:)
-  apply (subst takeWhile_append1[where x=True])
-    apply simp+
-  apply (subst takeWhile_append2)
-  by (simp add: word_size)+
-*)
+lemma replaceAt_index:
+  "\<lbrakk>xs \<noteq> []; i < length xs; j < length xs\<rbrakk>
+   \<Longrightarrow> (replaceAt i xs new) ! j = (if i = j then new else (xs ! j))"
+  apply (clarsimp simp: replaceAt_def)
+  apply (intro conjI impI)
+    apply (fastforce simp: null_def)
+   apply (metis nth_list_update_eq upd_conv_take_nth_drop)
+  apply (case_tac "j < i")
+   apply (prop_tac "length (take i xs) = i", fastforce)
+   apply (simp add: nth_append)
+  apply (prop_tac "((take i xs @ [new]) @ drop (Suc i) xs) ! j
+                   = (drop (Suc i) xs) ! (j - (length (take i xs @ [new])))")
+   apply (fastforce simp: nth_append)
+  apply fastforce
+  done
+
+lemma wrap_slice_replaceAt_eq:
+  "\<lbrakk>if start + count \<le> mx
+       then (i < start \<or> start + count \<le> i)
+       else (start + count - mx \<le> i \<and> i < start);
+    count \<le> mx; start < mx; mx \<le> length xs; xs \<noteq> []; i < mx\<rbrakk>
+   \<Longrightarrow> wrap_slice start count mx xs = wrap_slice start count mx (replaceAt i xs new)"
+  supply length_replaceAt[simp]
+  apply (rule nth_equalityI)
+   apply clarsimp
+  apply (clarsimp split: if_splits)
+   apply (subst wrap_slice_index; simp)+
+   apply (clarsimp simp: replaceAt_index)
+  apply (subst wrap_slice_index; simp)+
+  apply (clarsimp simp: replaceAt_index)
+  done
+
+lemma refills_tl_equal:
+  "\<lbrakk>sc_relation sc n sc'; 0 < scRefillCount sc'; scRefillCount sc' \<le> scRefillMax sc';
+    scRefillMax sc' \<le> length (scRefills sc'); scRefillHead sc' < scRefillMax sc'\<rbrakk>
+   \<Longrightarrow> refill_tl sc = refill_map (refillTl sc')"
+  apply (clarsimp simp: sc_relation_def refillTl_def refills_map_def)
+  apply (subst last_conv_nth)
+   apply (prop_tac "0 < scRefillCount sc'", blast)
+   apply (metis length_wrap_slice Nat.add_0_right le0 le_eq_less_or_eq less_add_eq_less
+                less_imp_le_nat map_is_Nil_conv not_gr0 plus_nat.add_0 wrap_slice_empty)
+  apply (subst nth_map)
+   apply fastforce
+  apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
+  done
 
 end
 end
