@@ -548,7 +548,6 @@ in
       val push_stack =
         Const (@{const_name "Stack.push_stack"}, frameT --> stacktype --> stacktype) $
           Term.list_comb (newframe, undef_args)
-      val _ = @{print} (callname, push_stack)
 
       val init =
           mk_abs(svar, svar |> (fn x => stack_update $ push_stack $ x) |> mkinit (List.rev formal_fs) (List.rev actuals))

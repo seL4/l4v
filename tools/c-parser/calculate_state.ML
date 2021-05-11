@@ -626,7 +626,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         (fn (_, vs) =>
           fold
             (fn ({isa_name,...},T,_,_) =>
-              Symtab.update (MString.dest isa_name, T))
+              Symtab.update (Hoare.varname (MString.dest isa_name), T))
             vs)
         lvars
         Symtab.empty
@@ -671,7 +671,9 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
             val vars =
               map
                 (fn ({isa_name,src_name,...},typ,_,_) =>
-                  (MString.dest isa_name, src_name, typ))
+                  (HoarePackage.varname (MString.dest isa_name),
+                    HoarePackage.varname src_name,
+                    typ))
                 vars
           in
             { name = prefix "Frame_" fnname, vars = vars } :: frames
@@ -679,20 +681,27 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         lvars
         []
 
+    val frame_name = "frame"
+
     (* Take the lvar table and create the frame datatype from it.
      * The frame datatype has a variant per each function, which contain values for each local
      * variable in that function.
      *)
     val mk_frame_dattyp =
       let
-        val datatyp = (([], Binding.make ("frame", @{here})), NoSyn)
+        val datatyp = (([], Binding.make (frame_name, @{here})), NoSyn)
         val bindings =
           map
             (fn {name, vars} =>
               let
                 val frame_binding = Binding.make (name, @{here})
                 val field_bindings =
-                  map (fn (isa_name,_,typ) => (Binding.make (isa_name, @{here}), typ)) vars
+                  map
+                    (fn (isa_name,_,typ) =>
+                      (Binding.make (isa_name, @{here})
+                        |> Binding.qualify true frame_name,
+                      typ))
+                    vars
               in
                 (((Binding.empty, frame_binding), field_bindings), NoSyn)
               end)
@@ -706,53 +715,14 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           (Ctr_Sugar.default_ctr_options, frame_spec)
       end
 
-    fun mk_frame_extractor (vname,T) lthy =
-      let
-        val frameT = Proof_Context.read_typ lthy "frame"
-        val extractT = frameT --> T
-        val var_upd_fn_name = vname ^ "_get"
-        val var_upd_fn_binding = Binding.make (var_upd_fn_name, @{here})
-        val free_fn_name = Free (var_upd_fn_name, extractT)
-        fun mk_eqn {name = constr_nm, vars} =
-          let
-            val constr = Proof_Context.read_const {proper = false, strict = false} lthy constr_nm
-            val lhs_pattern = fold (fn (_,n,T) => fn t => t $ Free (n, T)) vars constr
-            val lhs = free_fn_name $ lhs_pattern
-            fun mk_undefined T = Const (\<^const_name>\<open>undefined\<close>, T)
-            val rhs =
-              fold
-                (fn (isa_nm,n,T) =>
-                  (curry merge_options)
-                    (if vname = isa_nm
-                      then
-                        SOME (Free (n, T))
-                      else
-                        NONE))
-                vars
-                NONE |> the_default (mk_undefined T)
-          in
-            (((Binding.empty, []), HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs))), [], [])
-          end
-        val frame_eqns = map mk_eqn frames
-        val (_,lthy) =
-          BNF_LFP_Rec_Sugar.primrec
-            false (* debug prints *)
-            [] (* config options; i.e. transfer/nonexaustive/plugins *)
-            [ (var_upd_fn_binding, SOME extractT, NoSyn) ] (* name of the function *)
-            frame_eqns (* equations *)
-            lthy
-      in
-        lthy
-      end
-
     fun mk_frame_updator (vname,T) lthy =
       let
-        val frameT = Proof_Context.read_typ lthy "frame"
+        val frameT = Proof_Context.read_typ lthy frame_name
         val updT = (T --> T) --> frameT --> frameT
         val var_upd_fn_name = vname ^ Record.updateN
         val var_upd_fn_binding =
           Binding.make (var_upd_fn_name, @{here})
-          |> Binding.qualify false "frame"
+          |> Binding.qualify true frame_name
         val free_fn_name = Free (var_upd_fn_name, updT)
         fun mk_eqn {name = constr_nm, vars} =
           let
@@ -789,13 +759,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         lthy
       end
 
-    val thy =
-      Named_Target.theory_map
-        (mk_frame_dattyp
-          #> Symtab.fold mk_frame_updator local_vars_collected
-          #> Symtab.fold mk_frame_extractor local_vars_collected)
-        thy
-
+    (* create update aliases *)
     (* In the past, the first variable named `x` got its own field named
        `x_'` in the local variables record. If there was another local later in
        the source in another function, also named `x` but of a different type
@@ -822,44 +786,103 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
            - `(x_'_update, x___unsigned_'_update)`
 
            but shouldn't include anything for the `int` case. *)
-        fun process_aliases vs =
-          List.foldl
-            (fn (({src_name, isa_name = mangled_name, alias}, _, _, _),(seen,out)) =>
-                let
-                  val acc = HoarePackage.varname (MString.dest mangled_name)
-                  val acc_alias = HoarePackage.varname src_name
 
-                  val upd = acc ^ Record.updateN
-                  val upd_alias = acc_alias ^ Record.updateN
-                in
-                  if not alias orelse member (op =) seen src_name
-                  then
-                    (seen,out)
-                  else
-                    (src_name :: seen,
-                      (acc_alias, acc) :: (upd_alias, upd) :: out)
-                end)
-            ([],[])
-            vs
-            |> snd
         (* make abbreviations for the long name variable accessor and updator functions. *)
-        fun define_alias_inner (x as (alias, target)) thy =
+        fun make_aliases ctxt getter updator acc acc_alias upd upd_alias thy =
+          let
+            (* state aliases *)
+            val var_acc_st =
+              acc
+              |> Long_Name.qualify NameGeneration.local_rcd_name
+              |> Proof_Context.read_const {proper = false, strict = false} ctxt
+            val b_acc_alias_st =
+              Binding.make (acc_alias, @{here})
+              |> Binding.qualify false NameGeneration.local_rcd_name
+
+            val var_upd_st =
+              upd
+              |> Long_Name.qualify NameGeneration.local_rcd_name
+              |> Proof_Context.read_const {proper = false, strict = false} ctxt
+            val b_upd_alias_st =
+              Binding.make (upd_alias, @{here})
+              |> Binding.qualify false NameGeneration.local_rcd_name
+
+            (* frame aliases *)
+            val var_acc_fm =
+              acc
+              |> Long_Name.qualify frame_name
+              |> Proof_Context.read_const {proper = false, strict = false} ctxt
+              |> (fn t => HOLogic.mk_comp (t, getter))
+            val b_acc_alias_fm =
+              Binding.make (acc_alias, @{here})
+              |> Binding.qualify false frame_name
+
+            val var_upd_fm =
+              upd
+              |> Long_Name.qualify frame_name
+              |> Proof_Context.read_const {proper = false, strict = false} ctxt
+              |> (fn t => HOLogic.mk_comp (updator, t))
+            val b_upd_alias_fm =
+              Binding.make (upd_alias, @{here})
+              |> Binding.qualify false frame_name
+          in
+            thy
+            |> Sign.add_abbrev "" (b_acc_alias_st, var_acc_st) |> snd
+            |> Sign.add_abbrev "" (b_upd_alias_st, var_upd_st) |> snd
+            |> Sign.add_abbrev "" (b_acc_alias_fm, var_acc_fm) |> snd
+            |> Sign.add_abbrev "" (b_upd_alias_fm, var_upd_fm) |> snd
+          end
+
+        (* make abbreviations for the long name variable accessor and updator functions. *)
+        fun define_aliases vs thy =
           let
             val ctxt = Proof_Context.init_global thy
-            val target =
-                target
-                |> Long_Name.qualify NameGeneration.local_rcd_name
-                |> Proof_Context.read_const {proper = false, strict = false} ctxt
-            val alias =
-              Binding.make (alias, @{here})
-              |> Binding.qualify false NameGeneration.local_rcd_name
+
+            val frameT = Proof_Context.read_typ ctxt "frame"
+            val stackT = Proof_Context.read_typ ctxt "frame stack"
+
+            val stack_get =
+              Proof_Context.read_const {proper = false, strict = false} ctxt "stack_'"
+            val stack_update =
+              Proof_Context.read_const {proper = false, strict = false} ctxt "stack_'_update"
+
+            val update_top_frame =
+              Const
+                (@{const_name top_frame_update_stack},
+                (frameT --> frameT) --> stackT --> stackT)
+            val get_top_frame =
+              Const
+                (@{const_name get_top_frame_stack},
+                stackT --> frameT)
+
+            val getter = HOLogic.mk_comp (get_top_frame, stack_get)
+            val updator = HOLogic.mk_comp (stack_update, update_top_frame)
           in
-            Sign.add_abbrev "" (alias, target) thy |> snd
-          end
-        val aliases = Symtab.dest_list lvars |> map snd |> process_aliases
+            List.foldl
+              (fn (({src_name, isa_name = mangled_name, alias},_,_,_), (seen,thy)) =>
+                  let
+                    val acc = HoarePackage.varname (MString.dest mangled_name)
+                    val acc_alias = HoarePackage.varname src_name
+
+                    val upd = acc ^ Record.updateN
+                    val upd_alias = acc_alias ^ Record.updateN
+                  in
+                    if not alias orelse member (op =) seen src_name
+                    then
+                      (seen, thy)
+                    else
+                      (src_name :: seen,
+                        make_aliases ctxt getter updator acc acc_alias upd upd_alias thy)
+                  end)
+                ([], thy)
+                vs
+                |> snd
+        end
       in
-        thy |> fold define_alias_inner aliases
+        thy
+        |> define_aliases (Symtab.dest_list lvars |> map snd)
       end
+
       fun mk_locals_rcd thy =
         let
           (* the state information accumulated so far allows for local
@@ -876,6 +899,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
               else
                 (nm' :: seen, (Binding.make (nm',@{here}),ty,NoSyn) :: out)
             end
+
         fun map_elim_name (_,vs) (seen,out) =
           fold map_elim_name_inner vs (seen,out)
 
@@ -892,7 +916,8 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           lflds
           |> map (fn (a,b,_) => (Binding.name_of a,b))
           |> pretty_recdef (thy2ctxt thy) "myvars"
-        (* define the record as an extension of \<open>state\<close> *)
+
+        (* define the record as an extension of state *)
         val thy =
           Record.add_record
             {overloaded=false}
@@ -903,8 +928,12 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
       in
         thy
       end
+
     val (thy, globs) =
       thy
+      |> Named_Target.theory_map
+        (mk_frame_dattyp
+          #> Symtab.fold mk_frame_updator local_vars_collected)
       |> mk_locals_rcd
       |> mk_locals_aliases
       |> mk_globals_rcd
