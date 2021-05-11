@@ -483,4 +483,40 @@ lemma sc_at_ppred_exm:
   "sc_at_ppred p P scp s = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n) scp s \<and> \<not> sc_at_ppred p (\<lambda>x. \<not> P x) scp s)"
   by (fastforce simp: sc_at_pred_n_def obj_at_def is_sc_obj pred_neg_def)
 
+lemma get_object_exs_valid:
+  "obj_at \<top> ptr s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_object ptr \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  apply (clarsimp simp: get_object_def assert_def return_def fail_def gets_def exs_valid_def get_def
+                        bind_def obj_at_def gets_the_def)
+  done
+
+lemma monadic_rewrite_rewrite_head:
+  "\<lbrakk>monadic_rewrite False True P f f'; monadic_rewrite False True P (f' >>= g) (h >>= j)\<rbrakk>
+   \<Longrightarrow> monadic_rewrite False True P (f >>= g) (h >>= j)"
+  apply (clarsimp simp: monadic_rewrite_def bind_def)
+  done
+
+lemma bind_assoc_group4:
+  "(do x \<leftarrow> a; y \<leftarrow> b x; z \<leftarrow> c y; w \<leftarrow> d z; f w od)
+   = (do w \<leftarrow> (do x \<leftarrow> a; y \<leftarrow> b x; z <- c y; d z od); f w od)"
+  apply (simp add: bind_assoc)
+  done
+
+(* FIXME RT: move *)
+lemmas update_sched_context_decompose_ext
+  = update_sched_context_decompose[where f="f x" and g="g y" for f g x y]
+lemmas update_sched_context_decompose2
+  = update_sched_context_decompose[where g="\<lambda>sc. g (h sc)" for g h]
+lemmas update_sched_context_decompose_ext2
+  = update_sched_context_decompose2[where f="f x" and g="g y" for f g x y]
+
+(* FIXME RT: move to ListLibLemmas.thy? *)
+lemma hd_drop_length_2_last:
+  "length list = 2 \<Longrightarrow> hd (tl list) = last list"
+  apply (prop_tac "\<exists>a b. list = [a,b]")
+   apply (cases list; simp)
+   apply (rename_tac a lista)
+   apply (case_tac lista; simp)
+  apply clarsimp
+  done
+
 end

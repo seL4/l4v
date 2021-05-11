@@ -368,14 +368,6 @@ lemma invoke_sched_context_corres:
      reused in Finalise and IpcCancel *)
   sorry
 
-(* FIXME RT: move *)
-lemmas update_sched_context_decompose_ext
-  = update_sched_context_decompose[where f="f x" and g="g y" for f g x y]
-lemmas update_sched_context_decompose2
-  = update_sched_context_decompose[where g="\<lambda>sc. g (h sc)" for g h]
-lemmas update_sched_context_decompose_ext2
-  = update_sched_context_decompose2[where f="f x" and g="g y" for f g x y]
-
 lemma refill_new_bundled:
    "refill_new sc_ptr max_refills budget period
     = (do cur_time \<leftarrow> gets cur_time;
@@ -389,152 +381,6 @@ lemma refill_new_bundled:
             update_sched_context_decompose_ext2[where f=sc_refills_update and g=sc_refill_max_update]
             update_sched_context_decompose_ext2[where f=sc_refill_max_update and g=sc_budget_update]
             update_sched_context_decompose_ext2[where f=sc_budget_update and g=sc_period_update]
-  apply (simp add: bind_assoc)
-  done
-
-(* FIXME RT: move *)
-lemmas sc_inv_state_eq' = getObject_sc_inv[THEN use_valid[rotated], rotated
-                                           , where s=s and P="(=) s" for s, OF _ refl]
-
-lemma sc_inv_state_eq:
-  "(a :: sched_context, s') \<in> fst (getSchedContext p s) \<Longrightarrow> s' = s"
-  apply (fastforce dest: sc_inv_state_eq' simp: getSchedContext_def)
-  done
-
-lemma no_ofail_readSchedContext:
-  "no_ofail (sc_at' p) (readSchedContext p)"
-  unfolding readSchedContext_def by wpsimp
-
-lemma getObject_idempotent:
-  "monadic_rewrite False True (sc_at' ptr)
-   (do rv \<leftarrow> (getObject ptr :: sched_context kernel);
-       getObject ptr
-    od)
-   (getObject ptr :: sched_context kernel)"
-  apply (clarsimp simp: monadic_rewrite_def)
-  apply (rule monad_state_eqI)
-    apply ((clarsimp simp: in_monad getObject_def split_def
-                           loadObject_default_def projectKOs scBits_pos_power2 objBits_simps'
-                           lookupAround2_known1 in_magnitude_check)+)[2]
-  apply (fastforce dest!: sc_inv_state_eq[simplified getSchedContext_def]
-                          no_fail_getObject_misc[simplified no_fail_def, rule_format]
-                    simp: snd_bind)
-  done
-
-lemma getSchedContext_setSchedContext_decompose:
-   "monadic_rewrite False True
-     (sc_at' scPtr and K (\<forall>sc. objBits (f sc) = objBits sc) and K (\<forall>sc. objBits (g sc) = objBits sc))
-     (do sc \<leftarrow> getSchedContext scPtr;
-         setSchedContext scPtr (g (f sc))
-      od)
-     (do sc \<leftarrow> getSchedContext scPtr;
-         setSchedContext scPtr (f sc);
-         sc \<leftarrow> getSchedContext scPtr;
-         setSchedContext scPtr (g sc)
-      od)"
-  apply (clarsimp simp: monadic_rewrite_def)
-  apply (rule monad_state_eqI)
-    apply (simp add: in_monad getSchedContext_def getObject_def)
-    apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
-    apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
-    apply (clarsimp simp: setSchedContext_def setObject_def obj_at'_def projectKOs objBits_simps'
-                          in_monad ARM_H.fromPPtr_def scBits_pos_power2 updateObject_default_def
-                          in_magnitude_check ps_clear_upd magnitudeCheck_assert split_def
-                     del: readObject_misc_ko_at'
-                   split: option.split_asm)
-     apply (rename_tac sc sc')
-     apply (rule_tac x="f sc" in exI)
-     apply (rule conjI;
-            fastforce simp: readObject_def obind_def omonad_defs split_def fromPPtr_def
-                            ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
-                            objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
-                     split: option.splits if_split_asm)
-    apply (rename_tac sc p sc')
-    apply (rule_tac x="f sc" in exI)
-    apply (clarsimp simp: lookupAround2_char2)
-    apply (rule conjI)
-     apply (clarsimp simp: readObject_def obind_def omonad_defs fun_upd_def split_def fromPPtr_def
-                           ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
-                           objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
-                    split: option.splits if_split_asm)
-     apply (metis option.simps(3) word_le_less_eq word_le_not_less)
-    apply (clarsimp simp: split: option.splits)
-    apply (metis (no_types) array_rules(2) lookupAround2_char2 mcs(1) order.strict_trans2
-                            word_le_less_eq word_le_not_less)
-   apply (simp add: in_monad getSchedContext_def getObject_def)
-   apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
-   apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
-   apply (clarsimp simp: setSchedContext_def setObject_def projectKOs in_monad ps_clear_upd obj_at'_def
-                         split_def ARM_H.fromPPtr_def updateObject_default_def magnitudeCheck_assert)
-
-  apply (frule no_failD[OF no_fail_getMiscObject(4)])
-  apply (simp add: snd_bind)
-  apply (rule iffI; clarsimp simp: snd_bind split_def setSchedContext_def; rename_tac sc s')
-   apply (frule sc_inv_state_eq, simp)
-   apply (rule_tac x="(sc, s)" in bexI[rotated], simp)
-   apply (rule disjI2)
-   apply (drule use_valid[OF _ get_sc_ko'], simp)
-   apply (clarsimp simp: obj_at'_def projectKOs)
-   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr s")
-    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
-    apply (rule_tac x=sc in exI, clarsimp simp: projectKO_opt_sc)
-   apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
-    apply simp
-   apply clarsimp
-  apply (frule sc_inv_state_eq, simp)
-  apply (rule_tac x="(sc, s)" in bexI[rotated], simp)
-  apply (drule use_valid[OF _ get_sc_ko'], simp)
-  apply (erule disjE; clarsimp)
-   apply (clarsimp simp: obj_at'_def projectKOs)
-   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (f sc)) scPtr s")
-    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
-    apply (rule_tac x=sc in exI, clarsimp simp: projectKO_opt_sc)
-   apply (drule_tac ob1="(f sc)" in no_failD[OF no_fail_setObject_other, rotated])
-    apply simp+
-
-  apply (rename_tac s'; erule disjE; clarsimp?)
-   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
-                 in use_valid[OF _ setObject_sc_wp])
-    apply simp+
-
-   apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
-    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
-   apply (frule_tac s="s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
-                 in no_failD[OF no_fail_getMiscObject(4)])
-   apply clarsimp
-
- apply (rename_tac s')
-   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
-                 in use_valid[OF _ setObject_sc_wp])
-    apply simp+
-
-  apply (frule sc_inv_state_eq, simp)
-  apply (drule use_valid[OF _ get_sc_ko'], simp)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr
-                           (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
-   apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
-   apply (rule_tac x="f sc" in exI, clarsimp simp: projectKO_opt_sc)
-  apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
-   apply simp+
-  done
-
-lemmas getSchedContext_setSchedContext_decompose_decompose_ext
-  = getSchedContext_setSchedContext_decompose[where f="f x" and g="g y" for f g x y]
-lemmas getSchedContext_setSchedContext_decompose_decompose2
-  = getSchedContext_setSchedContext_decompose[where g="\<lambda>sc. g (h sc)" for g h]
-lemmas getSchedContext_setSchedContext_decompose_decompose_ext2
-  = getSchedContext_setSchedContext_decompose[where f="f x" and g="g y" for f g x y]
-
-lemma monadic_rewrite_rewrite_head:
-  "\<lbrakk>monadic_rewrite False True P f f'; monadic_rewrite False True P (f' >>= g) (h >>= j)\<rbrakk>
-   \<Longrightarrow> monadic_rewrite False True P (f >>= g) (h >>= j)"
-  apply (clarsimp simp: monadic_rewrite_def bind_def)
-  done
-
-lemma bind_assoc_group4:
-  "(do x \<leftarrow> a; y \<leftarrow> b x; z \<leftarrow> c y; w \<leftarrow> d z; f w od)
-   = (do w \<leftarrow> (do x \<leftarrow> a; y \<leftarrow> b x; z <- c y; d z od); f w od)"
   apply (simp add: bind_assoc)
   done
 
@@ -600,107 +446,6 @@ lemma isRoundRobin_corres:
                       simp: sc_relation_def)
   done
 
-lemma get_object_exs_valid:
-  "obj_at \<top> ptr s \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_object ptr \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  apply (clarsimp simp: get_object_def assert_def return_def fail_def gets_def exs_valid_def get_def
-                        bind_def obj_at_def gets_the_def)
-  done
-
-lemma wrap_slice_index:
-  "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; index < count\<rbrakk>
-   \<Longrightarrow> (wrap_slice start count mx xs) ! index
-       = (if start + index < mx
-             then (xs ! (start + index))
-             else (xs ! (start + index - mx)))"
-  apply (clarsimp split: if_splits)
-  apply (intro conjI)
-   apply (clarsimp simp: wrap_slice_def)
-   apply (prop_tac "index < mx - start", linarith)
-   apply (prop_tac "(take (mx - start) (drop start xs) @ take (start + count - mx) xs) ! index
-                    = (take (mx - start) (drop start xs)) ! index")
-    apply (simp add: nth_append)
-   apply fastforce
-  apply (clarsimp simp: wrap_slice_def)
-  apply (cases "index < mx - start")
-   apply linarith
-  apply (drule not_less[THEN iffD1])+
-  apply (prop_tac "(take (mx - start) (drop start xs) @ take (start + count - mx) xs) ! index
-                   = (take (start + count - mx) xs) ! (index - (mx - start))")
-   apply (prop_tac "mx - start \<le> index", linarith)
-   apply (simp add: nth_append)
-  using less_imp_le_nat nat_le_iff_add apply auto
-  done
-
-lemma wrap_slice_append:
-  "\<lbrakk>Suc count \<le> mx; start < mx; mx \<le> length xs\<rbrakk>
-   \<Longrightarrow> wrap_slice start (Suc count) mx xs
-       = wrap_slice start count mx xs @ [if (start + count < mx)
-                                            then (xs ! (start + count))
-                                            else (xs ! (start + count - mx))]"
-  apply (rule nth_equalityI)
-   apply simp
-  apply (rename_tac i)
-  apply (case_tac "i < count")
-   apply (prop_tac "(wrap_slice start count mx xs
-                     @ [if start + count < mx
-                           then xs ! (start + count)
-                           else xs ! (start + count - mx)]) ! i
-                    = (wrap_slice start count mx xs) ! i")
-    apply (metis length_wrap_slice Suc_leD less_imp_le_nat nth_append)
-   apply (simp add: wrap_slice_index)
-  apply (prop_tac "(wrap_slice start count mx xs
-                    @ [if start + count < mx
-                          then xs ! (start + count)
-                          else xs ! (start + count - mx)]) ! i
-                   = (if start + count < mx
-                         then xs ! (start + count)
-                         else xs ! (start + count - mx))")
-   apply (smt length_wrap_slice Suc_leD le_refl less_SucE less_imp_le_nat nth_append_length)
-  apply (simp add: wrap_slice_index)
-  apply (prop_tac "i = count", linarith)
-  apply simp
-  done
-
-lemma replaceAt_index:
-  "\<lbrakk>xs \<noteq> []; i < length xs; j < length xs\<rbrakk>
-   \<Longrightarrow> (replaceAt i xs new) ! j = (if i = j then new else (xs ! j))"
-  apply (clarsimp simp: replaceAt_def)
-  apply (intro conjI impI)
-    apply (fastforce simp: null_def)
-   apply (metis nth_list_update_eq upd_conv_take_nth_drop)
-  apply (case_tac "j < i")
-   apply (prop_tac "length (take i xs) = i", fastforce)
-   apply (simp add: nth_append)
-  apply (prop_tac "((take i xs @ [new]) @ drop (Suc i) xs) ! j
-                   = (drop (Suc i) xs) ! (j - (length (take i xs @ [new])))")
-   apply (fastforce simp: nth_append)
-  apply fastforce
-  done
-
-lemma wrap_slice_replaceAt_eq:
-  "\<lbrakk>if start + count \<le> mx
-       then (i < start \<or> start + count \<le> i)
-       else (start + count - mx \<le> i \<and> i < start);
-    count \<le> mx; start < mx; mx \<le> length xs; xs \<noteq> []; i < mx\<rbrakk>
-   \<Longrightarrow> wrap_slice start count mx xs = wrap_slice start count mx (replaceAt i xs new)"
-  supply length_replaceAt[simp]
-  apply (rule nth_equalityI)
-   apply clarsimp
-  apply (clarsimp split: if_splits)
-   apply (subst wrap_slice_index; simp)+
-   apply (clarsimp simp: replaceAt_index)
-  apply (subst wrap_slice_index; simp)+
-  apply (clarsimp simp: replaceAt_index)
-  done
-
-lemma getMapScPtr_getSchedContext:
-  "getMapScPtr t f = do x \<leftarrow> getSchedContext t;
-                        return (f x)
-                     od"
-  apply (simp add: getMapScPtr_def readSchedContext_def readMapScPtr_def getObject_def[symmetric]
-                   getSchedContext_def)
-  done
-
 lemma refillAddTail_corres:
   "time = time' \<and> amount = amount'
    \<Longrightarrow> corres dc (pspace_aligned and pspace_distinct and sc_at sc_ptr)
@@ -712,16 +457,17 @@ lemma refillAddTail_corres:
   (is "_ \<Longrightarrow> corres _ _ (obj_at' (\<lambda>sc'. ?pred sc') sc_ptr) _ _")
   apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
   apply (clarsimp simp: refill_add_tail_def refillAddTail_def getRefillNext_getSchedContext
-                        getRefillSize_getMapScPtr getMapScPtr_getSchedContext)
+                        getRefillSize_def2 liftM_def get_refills_def)
 
   apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corressimp corres: get_sc_corres)
   apply (rename_tac sc')
 
-  apply (rule corres_symb_exec_r[OF _ get_sc_sp', rotated]; (solves wpsimp)?)+
+  apply (rule corres_symb_exec_r[OF _ gets_the_sp, rotated]; (solves wpsimp)?)+
+   apply (rule no_ofail_gets_the, wp no_ofail_readSchedContext, clarsimp)
   apply (rename_tac sc'')
   apply (rule_tac F="sc'' = sc'" in corres_req)
-   apply (clarsimp simp: obj_at'_def)
+   apply (clarsimp simp: obj_at'_def readSchedContext_def dest!: readObject_misc_ko_at')
   apply (clarsimp simp: pred_conj_def cong: conj_cong)
   apply (clarsimp simp: set_refills_def)
 
@@ -817,7 +563,7 @@ lemma maybeAddEmptyTail_corres:
   apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel])
    apply (fastforce intro: valid_objs_valid_sched_context_size
                      simp: obj_at_def is_sc_obj_def vs_all_heap_simps)
-  apply (clarsimp simp: maybe_add_empty_tail_def maybeAddEmptyTail_def)
+  apply (clarsimp simp: maybe_add_empty_tail_def maybeAddEmptyTail_def get_refills_def)
   apply (rule corres_split'[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
    apply (corressimp corres: isRoundRobin_corres)
    apply (fastforce intro: valid_objs_valid_sched_context_size
@@ -1117,29 +863,6 @@ lemma refillBudgetCheckRoundRobin_corres:
   apply simp
   done
 
-lemma refills_tl_equal:
-  "\<lbrakk>sc_relation sc n sc'; 0 < scRefillCount sc'; scRefillCount sc' \<le> scRefillMax sc';
-    scRefillMax sc' \<le> length (scRefills sc'); scRefillHead sc' < scRefillMax sc'\<rbrakk>
-   \<Longrightarrow> refill_tl sc = refill_map (refillTl sc')"
-  apply (clarsimp simp: sc_relation_def refillTl_def refills_map_def)
-  apply (subst last_conv_nth)
-   apply (prop_tac "0 < scRefillCount sc'", blast)
-   apply (metis length_wrap_slice Nat.add_0_right le0 le_eq_less_or_eq less_add_eq_less
-                less_imp_le_nat map_is_Nil_conv not_gr0 plus_nat.add_0 wrap_slice_empty)
-  apply (subst nth_map)
-   apply fastforce
-  apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
-  done
-
-lemma hd_drop_length_2_last:
-  "length list = 2 \<Longrightarrow> hd (tl list) = last list"
-  apply (prop_tac "\<exists>a b. list = [a,b]")
-   apply (cases list; simp)
-   apply (rename_tac a lista)
-   apply (case_tac lista; simp)
-  apply clarsimp
-  done
-
 lemma refillResetRR_corres:
   "csc_ptr = cscPtr
    \<Longrightarrow> corres dc (pspace_aligned and pspace_distinct and sc_at csc_ptr and is_active_sc csc_ptr
@@ -1231,7 +954,7 @@ lemma refillPopHead_corres:
   apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
   apply (clarsimp simp: refill_pop_head_def refillPopHead_def)
-  apply (clarsimp simp: getRefillNext_getSchedContext getMapScPtr_getSchedContext get_refills_def)
+  apply (clarsimp simp: getRefillNext_getSchedContext get_refills_def liftM_def)
 
   apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corressimp corres: get_sc_corres)
@@ -1267,7 +990,7 @@ lemma refillPopHead_corres:
    apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: pred_conj_def cong: conj_cong)
 
-  apply (clarsimp simp: updateScPtr_def bind_assoc)
+  apply (clarsimp simp: updateSchedContext_def bind_assoc)
   apply (rule corres_symb_exec_r[OF _ get_sc_sp', rotated]; (solves wpsimp)?)
   apply (rename_tac sc'')
   apply (rule_tac F="sc'' = sc'" in corres_req)
@@ -1323,15 +1046,6 @@ lemma refillPopHead_corres:
                          objBits_simps
                   split: if_splits)
   done
-
-lemma scBits_inverse_sc:
-  assumes "sc_relation sc n sc'"
-  shows "refillAbsoluteMax' (scBitsFromRefillLength' (length (scRefills sc'))) = length (scRefills sc')"
-  using assms
-  apply (simp add: scRefills_length max_num_refills_eq_refillAbsoluteMax')
-  apply (rule arg_cong[where f=refillAbsoluteMax'])
-  apply (rule scBits_inverse_us)
-  by (simp add: sc_const_eq)
 
 lemma refillNew_corres:
   "1 < max_refills
@@ -1506,7 +1220,7 @@ lemma refillUpdate_bundled:
          whenM (refillReady scPtr) $ do curTime \<leftarrow> getCurTime;
                                         updateRefillHd scPtr (rTime_update (\<lambda>_. curTime))
                                      od;
-         head \<leftarrow> getMapScPtr scPtr refillHd;
+         head \<leftarrow> liftM refillHd $ getSchedContext scPtr;
          if newBudget \<le> rAmount head then do updateRefillHd scPtr (rAmount_update (\<lambda>_. newBudget));
                                              maybeAddEmptyTail scPtr
                                           od
@@ -1681,7 +1395,7 @@ lemma refillUpdate_corres:
                        simp: sc_relation_def objBits_simps)
 
   apply (clarsimp simp: whenM_def ifM_def bind_assoc when_def getRefillNext_getSchedContext
-                        getRefillSize_getMapScPtr getMapScPtr_getSchedContext)
+                        getRefillSize_def2 liftM_def)
   apply (rule corres_split'[rotated 2, OF get_sc_refill_ready_inv refillReady_inv])
    apply (corressimp corres: refillReady_corres)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)

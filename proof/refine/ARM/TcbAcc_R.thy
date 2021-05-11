@@ -22,7 +22,6 @@ lemma threadRead_SomeD:
   "threadRead f t s = Some y \<Longrightarrow> \<exists>tcb. ko_at' tcb t s \<and> y = f tcb"
   by (fastforce simp: threadRead_def oliftM_def dest!: readObject_misc_ko_at')
 
-
 (* Auxiliaries and basic properties of priority bitmap functions *)
 
 lemma countLeadingZeros_word_clz[simp]:

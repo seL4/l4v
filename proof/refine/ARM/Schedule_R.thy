@@ -2131,12 +2131,6 @@ lemma invs'_ko_at_idle_sc_is_idle':
   apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)
   done
 
-(* FIXME RT: Move to Lib *)
-lemma length_replaceAt:
-  "length (replaceAt i lst val) = length lst"
-  apply (clarsimp simp: replaceAt_def)
-  by (case_tac lst; simp)
-
 lemma refillTailIndex_bounded:
   "valid_sched_context' ko s \<Longrightarrow> 0 < scRefillMax ko \<longrightarrow> refillTailIndex ko < scRefillMax ko"
   apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def Let_def split: if_split)
@@ -2290,7 +2284,7 @@ lemma refillPopHead_valid_objs'[wp]:
   "\<lbrace>valid_objs' and obj_at' (\<lambda>sc'. 1 < scRefillCount sc') scPtr \<rbrace>
    refillPopHead scPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: refillPopHead_def updateScPtr_def getRefillNext_def getMapScPtr_def)
+  apply (clarsimp simp: refillPopHead_def updateSchedContext_def getRefillNext_def)
   apply (wpsimp wp: set_sc_valid_objs')
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: readRefillNext_def readSchedContext_def)
@@ -2316,7 +2310,7 @@ lemma refillPopHead_invs'[wp]:
     apply (rename_tac sc)
     apply (intro conjI)
      apply (subgoal_tac "valid_sched_context' sc s")
-      apply (fastforce simp: valid_sched_context'_def dest!: readObject_misc_ko_at')
+      apply (fastforce simp: valid_sched_context'_def obj_at'_def dest!: readObject_misc_ko_at')
      apply (fastforce dest: invs'_ko_at_valid_sched_context')
     apply (subgoal_tac "valid_sched_context_size' sc")
      apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
@@ -2451,13 +2445,19 @@ lemma mergeRefills_valid_objs':
 crunches mergeRefills, nonOverlappingMergeRefills
   for active_sc_at'[wp]: "active_sc_at' scPtr"
 
+lemma no_ofail_refillHeadOverlapping:
+  "no_ofail (sc_at' scp) (refillHeadOverlapping scp)"
+  unfolding refillHeadOverlapping_def oreturn_def obind_def oliftM_def no_ofail_def
+            readRefillSize_def readRefillNext_def
+  by (clarsimp dest!: no_ofailD[OF no_ofail_readSchedContext])
+
 lemma refillHeadOverlapping_implies_count_greater_than_one:
   "\<lbrakk>the (refillHeadOverlapping scPtr s); sc_at' scPtr s;
     \<forall>sc. ko_at' sc scPtr s \<longrightarrow> valid_sched_context' sc s\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. 1 < scRefillCount sc) scPtr s"
-  apply (clarsimp simp: refillHeadOverlapping_def readMapScPtr_def readSchedContext_def
+  apply (clarsimp simp: refillHeadOverlapping_def readSchedContext_def oliftM_def
                         readRefillNext_def readRefillSize_def obind_def omonad_defs
-                 split: option.splits)
+                 split: option.splits dest!: readObject_misc_ko_at')
    apply (prop_tac "sc_at' scPtr s")
     apply (fastforce dest: no_ofail_sc_at'_readObject[unfolded no_ofail_def, rule_format])+
   apply (clarsimp simp: obj_at'_def projectKOs valid_sched_context'_def MIN_REFILLS_def)
@@ -2775,6 +2775,9 @@ lemma handleOverrunLoop_valid_objs':
     apply (intro hoare_vcg_conj_lift_pre_fix)
      apply (clarsimp simp: handleOverrunLoopBody_def)
      apply (wpsimp wp: updateRefillHd_valid_objs' simp: refillSingle_def)
+     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+     apply (fastforce simp: valid_sched_context'_def active_sc_at'_def obj_at'_def projectKOs refillTailIndex_def Let_def
+                     split: if_split_asm)
     apply (rule_tac f=ksCurSc in hoare_lift_Pf3)
      apply wpsimp+
   done
