@@ -369,86 +369,98 @@ in
       val _ = Output.state ("Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^
                        " globals elements")
-      val _ = app (fn e => Output.state ("-- " ^ HPInter.asm_to_string (Syntax.string_of_term ctxt) e))
-                  globs
+      val _ =
+        app
+          (fn e =>
+            Output.state ("-- " ^ HPInter.asm_to_string (Syntax.string_of_term ctxt) e))
+          globs
       val mungedb = mk_mungedb vdecls
       val thy = CalculateState.store_mungedb (s, mungedb) thy
       val thy =
-          define_global_initializers globloc "Defining untouched global constant "
-                                     NameGeneration.untouched_global_name
-                                     mungedb
-                                     cse
-                                     (calc_untouched_globals cse)
-                                     thy
+        define_global_initializers
+          globloc
+          "Defining untouched global constant "
+          NameGeneration.untouched_global_name
+          mungedb
+          cse
+          (calc_untouched_globals cse)
+          thy
       val thy =
-          if Config.get_global thy CalculateState.record_globinits then let
-              val globs0 = get_globals cse
-              val globs_types = map (fn vi => (get_mname vi, get_vi_type vi)) globs0
-              val glob_table = MSymTab.make globs_types
-            in
-              define_global_initializers
-                  globloc "Defining initializers for all globals "
-                  NameGeneration.global_initializer_name
-                  mungedb
-                  cse
-                  glob_table
-                  thy
-            end
-          else (Feedback.informStr (0,
-                    "Ignoring initialisations of modified globals (if any)");
-                thy)
+        if Config.get_global thy CalculateState.record_globinits
+        then
+          let
+            val globs0 = get_globals cse
+            val globs_types = map (fn vi => (get_mname vi, get_vi_type vi)) globs0
+            val glob_table = MSymTab.make globs_types
+          in
+            define_global_initializers
+                globloc "Defining initializers for all globals "
+                NameGeneration.global_initializer_name
+                mungedb
+                cse
+                glob_table
+                thy
+          end
+        else
+          (Feedback.informStr (0, "Ignoring initialisations of modified globals (if any)");
+            thy)
       open TermsTypes
-      val (globty, styargs) = let
-        val globty0 = Type(Sign.intern_type thy NameGeneration.global_rcd_name, [])
-        val globty = expand_tyabbrevs (thy2ctxt thy) globty0
-        val statetype0 = Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
-        val statetype = expand_tyabbrevs (thy2ctxt thy) statetype0
-          (* only happens if no local variables, = no functions declared,
-             = pretty bogus
-             (decl_only and bigstruct test cases are like this though) *)
-          handle TYPE _  => alpha
-      in
-        (globty, [statetype, int, StrictC_errortype_ty])
-      end
+      val (globty, styargs) =
+        let
+          val globty0 = Type(Sign.intern_type thy NameGeneration.global_rcd_name, [])
+          val globty = expand_tyabbrevs (thy2ctxt thy) globty0
+          val statetype0 = Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
+          val statetype = expand_tyabbrevs (thy2ctxt thy) statetype0
+            (* only happens if no local variables, = no functions declared,
+               = pretty bogus
+               (decl_only and bigstruct test cases are like this though) *)
+            handle TYPE _  => alpha
+        in
+          (globty, [statetype, int, StrictC_errortype_ty])
+        end
       val stacktype = Syntax.read_typ_global thy "frame stack"
       val toTranslate = Option.map (get_callees cse) roots_opt
       val toTranslate_s =
-          case toTranslate of
-              NONE => "all functions"
-            | SOME set => "functions " ^
-                          String.concatWith ", " (Binaryset.listItems set) ^
-                          " (derived from "^
-                          String.concatWith ", " (valOf roots_opt) ^ ")"
+        (case toTranslate of
+          NONE => "all functions"
+        | SOME set => "functions " ^
+                      String.concatWith ", " (Binaryset.listItems set) ^
+                      " (derived from "^
+                        String.concatWith ", " (valOf roots_opt) ^ ")")
       val _ =
-          Feedback.informStr (0, "Beginning function translation for " ^
-                    toTranslate_s)
+        Feedback.informStr
+          (0, "Beginning function translation for " ^ toTranslate_s)
       val toTranslateP =
-          case toTranslate of
-              NONE => (fn _ => true)
-            | SOME set => (fn s => Binaryset.member(set,s))
+        (case toTranslate of
+          NONE => (fn _ => true)
+        | SOME set => (fn s => Binaryset.member(set,s)))
       val fninfo : HPInter.fninfo list = HPInter.mk_fninfo thy cse toTranslateP ast
       val (nmdefs, thy) = define_function_names fninfo thy
       val compile_bodies =
-          stmt_translation.define_functions (globty, stacktype, styargs)
-                                            mungedb
-                                            cse
-                                            fninfo
-                                            rcdinfo
-                                            ms
+        stmt_translation.define_functions
+          (globty, stacktype, styargs)
+          mungedb
+          cse
+          fninfo
+          rcdinfo
+          ms
       val (loc2, thy) =
-          HPInter.make_function_definitions localename
-                                            cse
-                                            styargs
-                                            (List.rev nmdefs)
-                                            fninfo
-                                            compile_bodies
-                                            globloc
-                                            globs
-                                            thy
+        HPInter.make_function_definitions
+          localename
+          cse
+          styargs
+          (List.rev nmdefs)
+          fninfo
+          compile_bodies
+          globloc
+          globs
+          thy
       val thy =
-          if not (Symtab.is_empty (get_defined_functions cse)) then
-            Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs loc2
-          else thy (* like this is ever going to happen *)
+        if not (Symtab.is_empty (get_defined_functions cse))
+        then
+          Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs loc2
+        else
+          thy (* like this is ever going to happen *)
     in
       C_Installs.map (fn ss =>
         {c_filename = s, locale_names = [globloc, loc2],
@@ -460,7 +472,7 @@ in
         {c_filename = s, locale_names = [],
           options = (ms, install_typs, install_defs),
           additional_options = statetylist} :: ss) thy
-end handle e as TYPE (s,tys,tms) =>
+end (* handle e as TYPE (s,tys,tms) =>
          (Feedback.informStr (0, s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
                    String.concatWith
@@ -471,6 +483,7 @@ end handle e as TYPE (s,tys,tms) =>
                        ", "
                        (map (Syntax.string_of_typ @{context}) tys));
           raise e)
+*)
 
 fun install_C_file args thy =
     thy |> install_C_file0 args

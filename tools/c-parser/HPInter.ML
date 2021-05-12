@@ -398,10 +398,13 @@ let
           fninfo
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
+
   val lthy = Named_Target.init [] globloc thy
   val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
   val _ = Feedback.informStr (0, "Translated all functions")
+
   val globs = extract_fixes globals_elems
+
   val body_elems = map (create_bodyloc_elems globs thy) name_body
 
   fun add_body_defs ((elems, _ (* name-body *)), lthy) = let
@@ -443,8 +446,10 @@ let
           Local_Theory.exit_global lthy
         end
       else thy
+  handle e as TYPE _ => raise e
 
   val globloc_expr = ([(globloc, (("", false), (Expression.Named [], [])))], [])
+  handle e as TYPE _ => raise e
 
   (* three levels of folding - woohoo *)
   fun add_spec_locales ((name,specs), (localemap, thy)) = let
@@ -488,15 +493,17 @@ let
   in
     (speclocnames, thy)
   end
+  handle e as TYPE _ => raise e
+
   val (_ (* specloc_names *), thy) =
       List.foldl add_spec_locales (Symtab.empty, thy) name_specs
+  handle e as TYPE _ => raise e
 
   val (globloc, ctxt) =
       Expression.add_locale localename_b localename_b [] globloc_expr [] thy
-
+  handle e as TYPE _ => raise e
 in
   (globloc, Local_Theory.exit_global ctxt)
 end
-
 
 end (* struct *)

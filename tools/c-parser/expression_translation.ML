@@ -946,7 +946,11 @@ in
             | SOME (_, EnumC) => p (true, false, MString.mk s)
             | SOME (_, FunctionName) => p (false, true, MString.mk s)
       fun mk_ec s = let
-        val constname = Sign.intern_const thy s
+        val constname =
+         s
+         |> Long_Name.qualify "state"
+         |> Long_Name.qualify "frame"
+         |> Sign.intern_const thy
         fun rval _ = Const(constname, IntInfo.int)
       in
         mk_rval(rval, Signed Int)

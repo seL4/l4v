@@ -550,7 +550,14 @@ in
           Term.list_comb (newframe, undef_args)
 
       val init =
-          mk_abs(svar, svar |> (fn x => stack_update $ push_stack $ x) |> mkinit (List.rev formal_fs) (List.rev actuals))
+        let
+          val body =
+            svar
+            |> curry Term.$ (stack_update $ push_stack)
+            |> mkinit (List.rev formal_fs) (List.rev actuals)
+        in
+          Term.lambda svar body
+        end
       val return = mk_callreturn stacktype globty statetype stack_update stack_access
       val result =
         let
