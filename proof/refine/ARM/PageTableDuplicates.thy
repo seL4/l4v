@@ -2184,7 +2184,7 @@ crunch valid_duplicates' [wp]:
    wp: hoare_drop_imps)
 
 lemma activate_sch_valid_duplicates'[wp]:
-  "\<lbrace>\<lambda>s. ct_in_state' activatable' s \<and> vs_valid_duplicates' (ksPSpace s)\<rbrace>
+  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
      activateThread \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: activateThread_def getCurThread_def
              cong: if_cong Structures_H.thread_state.case_cong)
@@ -2227,6 +2227,59 @@ lemma handleRecv_valid_duplicates'[wp]:
               simp: ct_in_state'_def sch_act_sane_def)
   done
 
+lemma checkBudget_true:
+  "\<lbrace>P\<rbrace> checkBudget \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding checkBudget_def
+  apply wpsimp
+  apply (wpsimp wp: hoare_drop_imp)
+  apply wpsimp
+  apply (wpsimp wp: hoare_drop_imp)+
+  done
+
+lemma checkBudgetRestart_true:
+  "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding checkBudgetRestart_def
+  apply wpsimp
+  apply (rule_tac Q="\<lambda>rv s. rv \<longrightarrow> P s" in hoare_strengthen_post[rotated], clarsimp)
+  apply (wpsimp wp: checkBudget_true)+
+  done
+
+lemma checkBudgetRestart_gen:
+  "\<lbrace>R\<rbrace> checkBudgetRestart \<lbrace>\<lambda>_. Q\<rbrace> \<Longrightarrow>
+   \<lbrace>P and R\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. (rv \<longrightarrow> P s) \<and> (\<not>rv \<longrightarrow> Q s)\<rbrace>"
+  apply (wpsimp wp: checkBudgetRestart_true)
+  apply (wpsimp wp: hoare_drop_imp)+
+  done
+
+lemma setCurTime_invs'[wp]:
+  "setCurTime v \<lbrace>invs'\<rbrace>"
+  unfolding setCurTime_def
+  apply wp
+  apply (clarsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_machine_state'_def
+                        valid_irq_node'_def valid_release_queue_def valid_release_queue'_def)
+  apply (clarsimp simp: ct_not_inQ_def valid_dom_schedule'_def ct_idle_or_in_cur_domain'_def
+                        tcb_in_cur_domain'_def valid_queues'_def valid_queues_def valid_bitmapQ_def
+                        bitmapQ_def valid_queues_no_bitmap_def bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def)
+  done
+
+lemma updateTimeStamp_invs'[wp]:
+  "updateTimeStamp \<lbrace>invs'\<rbrace>"
+  unfolding updateTimeStamp_def
+  by (wpsimp wp: dmo_invs'_simple simp: getCurrentTime_def no_irq_def)
+
+lemma updateTimeStamp_sch_act_simple[wp]:
+  "updateTimeStamp \<lbrace>sch_act_simple\<rbrace>"
+  unfolding updateTimeStamp_def sch_act_simple_def
+  by (wpsimp wp: dmo_invs'_simple simp: setCurTime_def)
+
+crunches updateTimeStamp
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and pred_tcb_at'[wp]: "pred_tcb_at' p P t"
+  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
+  and tcb_at'[wp]: "tcb_at' t"
+
+crunches getCapReg, refillCapacity
+  for inv[wp]: P
 
 lemma handleEvent_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -2234,13 +2287,9 @@ lemma handleEvent_valid_duplicates':
    handleEvent e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (case_tac e; simp add: handleEvent_def)
-       apply (rename_tac syscall)
-       apply (case_tac syscall)
-  sorry (*
-                 apply (wp
-                   | simp add: active_from_running' simple_sane_strg cong: if_cong
-                   | wpc)+
-  done *)
+       apply (rename_tac syscall, case_tac syscall)
+  by (wpsimp wp: checkBudgetRestart_gen ct_in_state_thread_state_lift' |
+      erule active_from_running')+
 
 lemma callKernel_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -2248,21 +2297,9 @@ lemma callKernel_valid_duplicates':
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: callKernel_def)
-  apply (rule hoare_pre)
-   apply (wp activate_invs'  schedule_sch
-             schedule_sch_act_simple he_invs'
-          | simp add: no_irq_getActiveIRQ
-          | wp (once) hoare_drop_imps )+
-  sorry (* mcsIRQ
-   apply (rule hoare_post_impErr)
-     apply (rule valid_validE)
-     prefer 2
-     apply assumption
-    apply (wp handleEvent_valid_duplicates')
-   apply simp
-  apply simp
-  done *)
+  apply (simp add: callKernel_def mcsIRQ_def)
+  apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2 handleEvent_valid_duplicates')
+  done
 
 end
 

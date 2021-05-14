@@ -5926,7 +5926,8 @@ lemma si_blk_makes_simple':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ stateAssert_sp])
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
-  sorry (* si_blk_makes_simple' *) (*
+  sorry (* si_blk_makes_simple' *)
+  (*
   apply (case_tac xa, simp_all)
     apply (rename_tac list)
     apply (case_tac list, simp_all add: case_bool_If case_option_If
@@ -5948,7 +5949,8 @@ lemma si_blk_makes_runnable':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ stateAssert_sp])
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
-  sorry (* si_blk_makes_runnable' *) (*
+  sorry (* si_blk_makes_runnable' *)
+  (*
   apply (case_tac xa, simp_all)
     apply (rename_tac list)
     apply (case_tac list, simp_all add: case_bool_If case_option_If
