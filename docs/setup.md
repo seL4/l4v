@@ -6,14 +6,15 @@
 
 <!-- This file is also included on https://docs.sel4.systems/projects/buildsystem/host-dependencies.html  -->
 
-
 # Proof and Isabelle Dependencies
 
 ## Proof Dependencies
 
 ### Linux Packages - Debian
+
 On **Buster** or **Bullseye**, to run all proofs against the
 **ARMv7-A** architecture you will need to install the following packages:
+
 ```bash
 sudo apt-get install \
     python3 python3-pip python3-dev \
@@ -32,8 +33,10 @@ so you will need to install it from the [Haskell Stack
 website](https://docs.haskellstack.org/en/stable/README).
 
 ### Linux Packages - Ubuntu
+
 On **Ubuntu 18.04**, to run all proofs against the **ARMv7-A**
 architecture you will need to install the following packages:
+
 ```bash
 sudo apt-get install \
     python3 python3-pip python3-dev \
@@ -45,27 +48,33 @@ sudo apt-get install \
 ```
 
 ### Python
+
 The build system for the seL4 kernel requires several python packages:
+
 ```bash
 sudo pip3 install --upgrade pip
 sudo pip3 install sel4-deps
 ```
 
 ### Haskell Stack
+
 After installing
 [haskell-stack](https://docs.haskellstack.org/en/stable/README), make sure
 you've adjusted your `PATH` to include `$HOME/.local/bin`, and that you're
 running an up-to-date version:
+
 ```bash
 stack upgrade --binary-only
 which stack # should be $HOME/.local/bin/stack
 ```
 
 ### MacOS
+
 Other than the cross-compiler `gcc` toolchain, setup on MacOS should be similar
 to that on Ubuntu. To set up a cross-compiler, try the following:
+
 * Install `XCode` from the AppStore and its command line tools. If you are
-  running MacPorts, you have these already. Otherwise, after you have XCode
+  running MacPorts or homebrew, you have these already. Otherwise, after you have XCode
   installed, run `gcc --version` in a terminal window. If it reports a version,
   you're set. Otherwise it should pop up a window and prompt for installation
   of the command line tools.
@@ -85,6 +94,8 @@ structure, where `l4v` is the repository you are currently looking at:
 
 ```bash
 verification/
+    HOL4/
+    graph-refine/
     isabelle/
     l4v/
     seL4/
@@ -104,20 +115,20 @@ cp -i misc/etc/settings ~/.isabelle/etc/settings
 
 These commands perform the following steps:
 
- * create an Isabelle user settings directory.
- * install L4.verified Isabelle settings.
-   These settings initialise the Isabelle installation to use the standard
-   Isabelle `contrib` tools from the Munich Isabelle repository and set up
-   paths such that multiple Isabelle repository installations can be used
-   side by side without interfering with each other.
- * download `contrib` components from either the Munich or TS repository. This includes
-   Scala, a Java JDK, PolyML, and multiple external provers. You should
-   download these, even if you have these tools previously installed
-   elsewhere to make sure you have the right versions. Depending on your
-   internet connection, this may take some time.
- * compile and build the Isabelle PIDE jEdit interface.
- * build basic Isabelle images, including `HOL-Word` to ensure that
-   the installation works. This may take a few minutes.
+* create an Isabelle user settings directory.
+* install L4.verified Isabelle settings.
+  These settings initialise the Isabelle installation to use the standard
+  Isabelle `contrib` tools from the Munich Isabelle repository and set up
+  paths such that multiple Isabelle repository installations can be used
+  side by side without interfering with each other.
+* download `contrib` components from either the Munich or TS repository. This includes
+  Scala, a Java JDK, PolyML, and multiple external provers. You should
+  download these, even if you have these tools previously installed
+  elsewhere to make sure you have the right versions. Depending on your
+  internet connection, this may take some time.
+* compile and build the Isabelle PIDE jEdit interface.
+* build basic Isabelle images, including `HOL-Word` to ensure that
+  the installation works. This may take a few minutes.
 
 Alternatively, it is possible to use the official Isabelle2020 release
 bundle for your platform from the [Isabelle website][isabelle]. In this case, the
