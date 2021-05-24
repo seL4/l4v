@@ -52,9 +52,20 @@ and bi_might_raise trap (BI_Stmt s) = might_raise trap s
 
 fun var_updator sg globty k_upd (name, ty, _(*cty*), vsort) newvalue state = let
   open CalculateState NameGeneration
-  val pfx = case vsort of Local _ => local_rcd_name | _ => global_rcd_name
+  val qualify_fn =
+    case vsort of
+      Local _ =>
+        prefix "state_"
+        #> Long_Name.qualify "frame"
+        (*
+        Long_Name.qualify local_rcd_name
+        *)
+    | _ => Long_Name.qualify global_rcd_name
   val fullname =
-      Sign.intern_const sg (pfx ^ "." ^ suffix Record.updateN name)
+      name
+      |> suffix Record.updateN
+      |> qualify_fn
+      |> Sign.intern_const sg
   val statety = type_of state
   val newvalue' = if k_upd then K_rec ty $ newvalue else newvalue
 in
@@ -77,8 +88,14 @@ fun var_accessor sg globty (name, ty, _ (*cty *), vsort) state = let
   open CalculateState NameGeneration
 in
   case vsort of
-    Local _ => Const(Sign.intern_const sg (local_rcd_name ^ "." ^ name),
-                     type_of state --> ty) $ state
+    Local _ =>
+      let
+        val vname =
+          name
+          |> Long_Name.qualify local_rcd_name
+      in
+        Const (Sign.intern_const sg vname, type_of state --> ty) $ state
+      end
   | NSGlobal => let
       val glob_t = #acc (get_globals_data (type_of state) globty sg)
     in

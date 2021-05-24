@@ -779,8 +779,10 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
             (@{const_name get_top_frame_stack},
             stackT --> frameT)
 
-        val getter = HOLogic.mk_comp (get_top_frame, stack_get)
-        val updator = HOLogic.mk_comp (stack_update, update_top_frame)
+        fun getter t =
+          HOLogic.mk_comp (HOLogic.mk_comp (t, get_top_frame), stack_get)
+        fun updator t =
+          HOLogic.mk_comp (HOLogic.mk_comp (stack_update, update_top_frame), t)
 
         fun inner_fold (vname,_) lthy =
           let
@@ -788,43 +790,81 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
               vname
               |> Long_Name.qualify frame_name
               |> Proof_Context.read_const {proper = false, strict = false} lthy
-              |> (fn t => HOLogic.mk_comp (t, getter))
+              |> getter
               |> Logic.unvarify_types_global
             val acc_b =
-              Binding.make (vname,@{here})
-              |> Binding.qualify true "state"
-              |> Binding.qualify true frame_name
+              Binding.make ("state_" ^ vname, @{here})
+              |> Binding.qualify false frame_name
             val acc_def_b =
-              Binding.make (vname ^ "_def", @{here})
-              |> Binding.qualify true "state"
-              |> Binding.qualify true frame_name
+              Binding.make ("state_" ^ vname ^ "_def", @{here})
+              |> Binding.qualify false frame_name
 
+            val upd_s =
+              "state_" ^ vname ^ Record.updateN
+            val upd_b =
+              Binding.make (upd_s, @{here})
+              |> Binding.qualify false "frame"
             val upd_t =
               vname ^ Record.updateN
               |> Long_Name.qualify frame_name
               |> Proof_Context.read_const {proper = false, strict = false} lthy
-              |> (fn t => HOLogic.mk_comp (updator, t))
+              |> updator
               |> Logic.unvarify_types_global
-            val upd_b =
-              Binding.make (vname ^ Record.updateN, @{here})
-              |> Binding.qualify true "state"
-              |> Binding.qualify true frame_name
             val upd_def_b =
-              Binding.make (vname ^ Record.updateN ^ "_def", @{here})
-              |> Binding.qualify true "state"
-              |> Binding.qualify true frame_name
+              Binding.make (upd_s ^ "_def", @{here})
+              |> Binding.qualify false frame_name
 
-            val (a, lthy) =
-            lthy
-            |> Local_Theory.define ((acc_b, NoSyn), ((acc_def_b, []), acc_t))
-
-            val (b, lthy) =
+            val lthy =
               lthy
-              |> Local_Theory.define ((upd_b, NoSyn), ((upd_def_b, []), upd_t))
-
-            val _ = @{print} (a,b)
+              |> Local_Theory.define ((acc_b, NoSyn), ((acc_def_b, []), acc_t)) |> snd
+              |> Local_Theory.define ((upd_b, NoSyn), ((upd_def_b, []), upd_t)) |> snd
           in
             lthy
+          end
+      in
+        Symtab.fold inner_fold local_vars_collected lthy
+      end
+
+    fun mk_frame_lemmas local_vars_collected lthy =
+      let
+        fun inner_fold (nm, _) lthy =
+          let
+            val upd =
+              nm
+              |> suffix Record.updateN
+              |> prefix "state_"
+              |> Long_Name.qualify "frame"
+            val upd_t =
+              Proof_Context.read_const {proper = false, strict = false} lthy upd
+
+            val stripped_state_typ =
+              upd_t
+              |> Term.type_of
+              |> Term.strip_type
+            val state_T = snd stripped_state_typ
+            val globals_T =
+              nth (state_T |> Term.dest_Type |> snd) 0
+            val vx = Term.Var (("x",0), state_T)
+            val vf = Term.Var (("f",0), nth (fst stripped_state_typ) 0)
+            val globals_t = Const ("StateSpace.state.globals", state_T --> globals_T)
+            val lemma_t =
+              HOLogic.mk_eq (globals_t $ (upd_t $ vf $ vx), globals_t $ vx)
+
+            val lemma_ct =
+              lemma_t
+              |> HOLogic.mk_Trueprop
+              |> Thm.cterm_of lthy
+            val upd_def = Proof_Context.get_thm lthy (upd ^ "_def")
+            val lemma_th =
+              lemma_ct
+              |> Goal.init
+              |> simp_tac (lthy addsimps [upd_def]) 1 |> Seq.pull |> the |> fst
+              |> Goal.finish lthy
+          in
+            lthy
+            |> Local_Theory.declaration
+                {pervasive=false, syntax=false}
+                (K (Simplifier.map_ss (fn ss => ss addsimps [lemma_th])))
           end
       in
         Symtab.fold inner_fold local_vars_collected lthy
@@ -881,22 +921,19 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
 
             (* frame aliases *)
             val var_acc_fm =
-              acc
-              |> Long_Name.qualify "state"
+              "state_" ^ acc
               |> Long_Name.qualify frame_name
               |> Proof_Context.read_const {proper = false, strict = false} ctxt
             val b_acc_alias_fm =
-              Binding.make (acc_alias, @{here})
-              |> Binding.qualify true "state"
+              Binding.make ("state_" ^ acc_alias, @{here})
               |> Binding.qualify true frame_name
 
             val var_upd_fm =
-              upd
-              |> Long_Name.qualify "state"
+              "state_" ^ upd
               |> Long_Name.qualify frame_name
               |> Proof_Context.read_const {proper = false, strict = false} ctxt
             val b_upd_alias_fm =
-              Binding.make (upd_alias, @{here})
+              Binding.make ("state_" ^ upd_alias, @{here})
               |> Binding.qualify false frame_name
           in
             thy
@@ -965,7 +1002,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         val _ =
           lflds
           |> map (fn (a,b,_) => (Binding.name_of a,b))
-          |> pretty_recdef (thy2ctxt thy) "myvars"
+          |> pretty_recdef (thy2ctxt thy) NameGeneration.local_rcd_name
 
         (* define the record as an extension of state *)
         val thy =
@@ -986,6 +1023,7 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           #> Symtab.fold mk_frame_updator local_vars_collected)
       |> mk_locals_rcd
       |> Named_Target.theory_map (mk_frame_state_fns local_vars_collected)
+      |> Named_Target.theory_map (mk_frame_lemmas local_vars_collected)
       |> mk_locals_aliases
       |> mk_globals_rcd
     val flat_lvars = lvars |> Symtab.dest_list |> map snd
