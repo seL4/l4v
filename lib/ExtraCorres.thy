@@ -278,16 +278,17 @@ lemma wp_from_corres_unit:
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> state_relation \<and> Q s \<and> Q' s'\<rbrace>"
   by (auto intro!: wp_from_corres_u_unit)
 
-lemma corres_whileLoop_results_helper:
+lemma corres_whileLoop_results:
   assumes cond: "\<And>r r' s s'. \<lbrakk>rrel r r'; (s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> C r s = C' r' s'"
   assumes body_corres:
            "\<And>r r'. rrel r r'
-                    \<Longrightarrow> corres_underlying srel False nf' rrel (P and C r) (P' and C' r') (B r) (B' r')"
-  assumes body_inv: "\<And>r. \<lbrace>P and C r\<rbrace> B r \<lbrace>\<lambda>_. P\<rbrace>" "\<And>r'. \<lbrace>P' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
+                    \<Longrightarrow> corres_underlying srel False nf' rrel (P and A and C r) (P' and A' and C' r') (B r) (B' r')"
+  assumes body_inv: "\<And>r. \<lbrace>P and A and C r\<rbrace> B r \<lbrace>\<lambda>_. P\<rbrace>" "\<And>r'. \<lbrace>P' and A' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
+  assumes cross: "\<And>s s'. \<lbrakk>(s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> A s \<and> A' s'"
   shows "(rv', t') \<in> fst (whileLoop C' B' r' s')
          \<Longrightarrow> \<forall>s r. (s,s') \<in> srel \<and> rrel r r' \<and> P s \<and> P' s'
                    \<longrightarrow> (\<exists>rv t. (rv, t) \<in> fst (whileLoop C B r s) \<and> (t,t') \<in> srel \<and> rrel rv rv')"
-  apply (rule_tac r=r' and B=B' in in_whileLoop_induct)
+  apply (rule_tac r=r' and B=B' and C=C' in in_whileLoop_induct)
     apply simp
    apply clarsimp
    apply (rename_tac r_conc s_conc s_abs r_abs)
@@ -297,6 +298,8 @@ lemma corres_whileLoop_results_helper:
   apply (thin_tac "_ \<in> fst _")
   apply (rename_tac r s' r' t' r'' u')
   apply clarsimp
+  apply (prop_tac "A s \<and> A' s'")
+   apply (fastforce dest: cross)
   apply (rename_tac s r_abs)
   apply (insert body_corres)
   apply (drule_tac x=r_abs in meta_spec)
@@ -319,11 +322,15 @@ lemma corres_whileLoop_results_helper:
   apply (simp add: cond whileLoop_def whileLoop_results.intros)
   done
 
-lemma corres_whileLoop_no_fail_helper:
+lemmas corres_whileLoop_results_inv = corres_whileLoop_results[where A=\<top> and A'=\<top>, simplified]
+
+lemma whileLoop_no_fail:
   assumes body_guard: "\<And>r'. \<lbrace>P' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
   assumes nf': "\<And>r'. no_fail (P' and C' r') (B' r')"
-  assumes termin: "\<And>r' s'. P' s' \<Longrightarrow> whileLoop_terminates C' B' r' s'"
-  shows "P' s \<Longrightarrow> \<not> snd (whileLoop C' B' r' s)"
+  assumes termin: "\<And>r' s'. P' s' \<Longrightarrow> C' r' s' \<Longrightarrow> whileLoop_terminates C' B' r' s'"
+  shows "no_fail P' (whileLoop C' B' r')"
+  apply (simp add: no_fail_def)
+  apply (intro allI impI)
   apply (rule_tac I="\<lambda>_ s. P' s"
               and R="{((r', s'), r, s). C' r s \<and> (r', s') \<in> fst (B' r s)
                                         \<and> whileLoop_terminates C' B' r s}"
@@ -340,7 +347,47 @@ lemma corres_whileLoop_no_fail_helper:
   apply (fastforce intro: wf_subset[OF whileLoop_terminates_wf[where C=C' and B=B']])
   done
 
+(* note: I think that the relationship between I' and P' and A' could potentially be weakened *)
+(* note: A and A' can be as strong as you like so long as the cross assumption holds. *)
 lemma corres_whileLoop:
+  assumes cond:
+          "\<And>r r' s s'. \<lbrakk>rrel r r'; (s, s') \<in> srel; (P and A) s; (P' and A') s'\<rbrakk> \<Longrightarrow> C r s = C' r' s'"
+  assumes body_corres:
+          "\<And>r r'. rrel r r'
+                  \<Longrightarrow> corres_underlying srel False nf' rrel (P and A and C r) (P' and A' and C' r') (B r) (B' r')"
+  assumes body_guard: "\<And>r. \<lbrace>P and A and C r\<rbrace> B r \<lbrace>\<lambda>_. P\<rbrace>" "\<And>r'. \<lbrace>P' and A' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. P'\<rbrace>"
+  assumes rel: "rrel r r'"
+  assumes nf': "\<And>r'. no_fail (I' and C' r') (B' r')"
+  assumes termin: "\<And>r' s'. \<lbrakk>nf'; I' s'; C' r' s'\<rbrakk> \<Longrightarrow> whileLoop_terminates C' B' r' s'"
+  assumes body_guard3: "\<And>r'. \<lbrace>I' and C' r'\<rbrace> B' r' \<lbrace>\<lambda>_. I'\<rbrace>"
+  assumes cross: "\<And>s s'. \<lbrakk>(s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> A s \<and> A' s'"
+  assumes weaken: "\<And>s'. (P' and A') s' \<Longrightarrow> I' s'"
+  shows "corres_underlying srel False nf' rrel P P' (whileLoop C B r) (whileLoop C' B' r')"
+  apply (rule corres_cross_add_guard[where Q=A'])
+   apply (fastforce dest: cross)
+  apply (rule corres_no_failI)
+   apply (rule no_fail_pre)
+    apply (rule whileLoop_no_fail)
+      apply (rule body_guard3)
+     apply (rule nf')
+    apply (erule (2) termin)
+   apply (simp add: weaken)
+  apply clarsimp
+  apply (frule_tac C=C and C'=C' and A="A" and A'="A'" and B=B and rrel=rrel and srel=srel and
+                   P=P and P'=P'
+         in corres_whileLoop_results[rotated 5])
+       apply (erule (1) cond)
+        apply (fastforce dest: cross)
+       apply (fastforce dest: cross)
+      apply (erule body_corres)
+     apply (rule body_guard(1))
+    apply (rule body_guard(2))
+   apply (fastforce dest: cross)
+  apply (drule_tac x=a and y=r in spec2, clarsimp simp: rel)
+  apply (fastforce simp: rel)
+  done
+
+lemma corres_whileLoop_inv:
   assumes cond: "\<And>r r' s s'. \<lbrakk>rrel r r'; (s, s') \<in> srel; P s; P' s'\<rbrakk> \<Longrightarrow> C r s = C' r' s'"
   assumes body_corres:
            "\<And>r r'. rrel r r'
@@ -350,15 +397,7 @@ lemma corres_whileLoop:
   assumes nf': "\<And>r'. no_fail (P' and C' r') (B' r')"
   assumes termin: "\<And>r' s'. P' s' \<Longrightarrow> whileLoop_terminates C' B' r' s'"
   shows "corres_underlying srel False nf' rrel P P' (whileLoop C B r) (whileLoop C' B' r')"
-  apply (rule corres_no_failI)
-   apply (simp add: no_fail_def)
-   apply (intro allI impI)
-   apply (insert assms)
-   apply (rule corres_whileLoop_no_fail_helper; blast)
-  apply clarsimp
-  apply (frule_tac C=C and P=P and P'=P' and rrel=rrel and srel=srel
-                in corres_whileLoop_results_helper[rotated 4])
-      apply fastforce+
-  done
+  apply (rule corres_whileLoop[where A=\<top> and A'=\<top> and I'=P'])
+  using assms by simp+
 
 end
