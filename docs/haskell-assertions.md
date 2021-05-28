@@ -1,3 +1,11 @@
+<!--
+     Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
+
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
+# The role of assertions in Haskell
+
 This is a snapshot of a monologue by @mbrcknl about assertions and monadic failure generally, and more specifically about how we can use assertions in Haskell to transport information from abstract invariants to proofs of Haskell-to-C refinement.
 
 > :mag: **tl;dr**
