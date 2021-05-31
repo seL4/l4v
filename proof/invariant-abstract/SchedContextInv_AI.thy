@@ -1641,7 +1641,7 @@ abbreviation active_sc_at :: "obj_ref \<Rightarrow> 'z::state_ext state \<Righta
 lemmas active_sc_at_def = obj_at_def
 
 lemma set_refills_active_sc_at[wp]:
-  "set_refills sc_ptr refills \<lbrace>active_sc_at sc_ptr\<rbrace>"
+  "set_refills sc_ptr refills \<lbrace>\<lambda>s. P (active_sc_at sc_ptr s)\<rbrace>"
   apply (clarsimp simp: set_refills_def)
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: active_sc_at_def)
@@ -1649,9 +1649,9 @@ lemma set_refills_active_sc_at[wp]:
 
 lemma refill_unblock_check_active_sc_at[wp]:
   "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. Q (active_sc_at sc_ptr s)\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_defs)
+  apply (clarsimp simp: refill_unblock_check_defs simp del: update_refill_hd_def)
   apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
-              simp: active_sc_at_def)
+              simp: update_refill_hd_rewrite update_sched_context_set_refills_rewrite active_sc_at_def)
   done
 
 lemma refill_update_invs:
