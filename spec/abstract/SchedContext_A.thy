@@ -244,8 +244,7 @@ definition
 where
   "non_overlapping_merge_refills sc_ptr \<equiv> do
      old_head \<leftarrow> refill_pop_head sc_ptr;
-     update_refill_hd sc_ptr (r_amount_update (\<lambda>m. m + r_amount old_head));
-     update_refill_hd sc_ptr (r_time_update (\<lambda>t. t - r_amount old_head))
+     update_refill_hd sc_ptr (r_time_update (\<lambda>t. t - r_amount old_head) o (r_amount_update (\<lambda>m. m + r_amount old_head)))
    od"
 
 definition
@@ -277,15 +276,13 @@ where
 
      if single
 
-        then update_sched_context sc_ptr
-                         (\<lambda>sc. sc_refills_update (\<lambda>refills. (r_time_update (\<lambda>t. t + sc_period sc))
-                                                                    (hd refills) # (tl refills)) sc)
+        then update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + sc_period sc))
 \<comment>\<open>        then set_refill_hd sc_ptr ((refill_hd sc)\<lparr>r_time := r_time (refill_hd sc) + sc_period sc\<rparr>)\<close>
         else do old_head \<leftarrow> refill_pop_head sc_ptr;
                 full \<leftarrow> refill_full sc_ptr;
-                update_sched_context sc_ptr (\<lambda>sc. sc_refills_update
+                update_sched_context sc_ptr (sc_refills_update
                                                   (\<lambda>refills. schedule_used full refills
-                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)) sc)
+                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)))
 \<comment>\<open>                refills' \<leftarrow> get_refills sc_ptr;
                 set_refills sc_ptr $ schedule_used full refills'
                                                    (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)\<close>
@@ -318,8 +315,7 @@ where
        sc \<leftarrow> get_sched_context sc_ptr;
        period \<leftarrow> return (sc_period sc);
        used \<leftarrow> return \<lparr>r_time = r_time (hd (sc_refills sc)) + period, r_amount = usage'\<rparr>;
-       update_refill_hd sc_ptr (r_amount_update (\<lambda>m. m + usage'));
-       update_refill_hd sc_ptr (r_time_update (\<lambda>t. t - usage'));
+       update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + usage') o (r_amount_update (\<lambda>m. m - usage')));
        full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc);
        update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. schedule_used full refills used))
      od;
@@ -480,8 +476,8 @@ definition
   sched_context_zero_refill_max :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_zero_refill_max sc_ptr = do
-     set_sc_obj_ref sc_refill_max_update sc_ptr 0;
-     set_refills sc_ptr []
+     update_sched_context sc_ptr (sc_refills_update (\<lambda>_. []));
+     update_sched_context sc_ptr (sc_refill_max_update (\<lambda>_. 0))
    od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
