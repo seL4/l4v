@@ -22,14 +22,12 @@ This is a snapshot of a monologue by @mbrcknl about assertions and monadic failu
 First, let's talk about failure in `corres_underlying`. There are two settings, `nf` and `nf'` which control how `corres_underlying` treats the failure flag on each side of the correspondence.
 
 Concerning `nf`:
-
 * If `nf` is `True`, then we get to assume that the failure flag is not set on the abstract side.
 * If `nf` is False, `corres_underlying` doesn't care about the failure flag on the abstract side.
 
 Concerning `nf'`:
 * If `nf'` is `True`, then we have to prove that the failure flag is not set on the concrete side.
 * If `nf'` is `False`, then `corres_underlying` doesn't care about the failure flag on the concrete side.
-
 
 For `corres`, we take the strongest combination `(False, True)`. So we don't get to assume that the failure flag is not set on the abstract side, but we have to prove that the failure flag is not set on the concrete side.
 
