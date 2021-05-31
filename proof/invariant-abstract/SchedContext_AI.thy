@@ -89,9 +89,95 @@ lemmas refill_budget_check_defs
     head_insufficient_loop_def handle_overrun_loop_def handle_overrun_loop_body_def
     set_refill_hd_def update_refill_hd_def refill_single_def refill_size_def
 
+lemma update_sched_context_decompose:
+   "update_sched_context scp (\<lambda>sc. f (g sc))
+    = (do update_sched_context scp g; update_sched_context scp f od)"
+  apply (rule ext)
+  by (clarsimp simp: update_sched_context_def get_object_def set_object_def a_type_simps
+                     gets_def get_def put_def return_def fail_def assert_def bind_def
+                     gets_the_def assert_opt_def
+              split: Structures_A.kernel_object.splits option.splits)
+
+lemma update_refill_hd_rewrite:
+  "update_refill_hd sc_ptr f =
+   do refills \<leftarrow> get_refills sc_ptr;
+      set_refills sc_ptr (f (hd refills) # (tl refills))
+   od"
+  apply (rule monad_eqI)
+    apply (clarsimp simp: update_refill_hd_def update_sched_context_def get_refills_def
+                          get_sched_context_def set_refills_def in_monad)
+    apply (rename_tac ko; case_tac ko;
+           clarsimp simp: set_object_def get_object_def in_monad cong: sched_context.fold_congs)
+   apply (clarsimp simp: update_refill_hd_def update_sched_context_def get_refills_def
+                         get_sched_context_def set_refills_def in_monad)
+   apply (rename_tac ko ko'; case_tac ko;
+          clarsimp simp: set_object_def get_object_def in_monad
+                   cong: sched_context.fold_congs)
+  apply (clarsimp simp: update_refill_hd_def update_sched_context_def get_refills_def get_sched_context_def
+                        set_refills_def get_object_def snd_bind gets_the_def exec_gets assert_opt_def
+                 split: option.splits)
+  apply (rename_tac ko; case_tac ko;
+         clarsimp simp: set_object_def get_object_def gets_the_def in_monad a_type_def
+                        snd_gets snd_bind exec_gets return_def snd_assert snd_get exec_get snd_put)
+  done
+
+lemma update_refill_tl_rewrite:
+  "update_refill_tl sc_ptr f =
+   do refills \<leftarrow> get_refills sc_ptr;
+      set_refills sc_ptr (butlast refills @ [f (last refills)])
+   od"
+  apply (rule monad_eqI)
+    apply (clarsimp simp: update_refill_tl_def update_sched_context_def get_refills_def
+                          get_sched_context_def set_refills_def in_monad)
+    apply (rename_tac ko; case_tac ko;
+           clarsimp simp: set_object_def get_object_def in_monad cong: sched_context.fold_congs)
+   apply (clarsimp simp: update_refill_tl_def update_sched_context_def get_refills_def
+                         get_sched_context_def set_refills_def in_monad)
+   apply (rename_tac ko ko'; case_tac ko;
+          clarsimp simp: set_object_def get_object_def in_monad
+                   cong: sched_context.fold_congs)
+  apply (clarsimp simp: update_refill_tl_def update_sched_context_def get_refills_def get_sched_context_def
+                        set_refills_def get_object_def snd_bind gets_the_def exec_gets assert_opt_def
+                 split: option.splits)
+  apply (rename_tac ko; case_tac ko;
+         clarsimp simp: set_object_def get_object_def gets_the_def in_monad a_type_def
+                        snd_gets snd_bind exec_gets return_def snd_assert snd_get exec_get snd_put)
+  done
+
+lemma update_sched_context_set_refills_rewrite:
+  "update_sched_context sc_ptr (sc_refills_update f) =
+   do refills \<leftarrow> get_refills sc_ptr;
+      set_refills sc_ptr (f refills)
+   od"
+  apply (rule monad_eqI)
+    apply (clarsimp simp: update_sched_context_def get_refills_def
+                          get_sched_context_def set_refills_def in_monad)
+    apply (rename_tac ko; case_tac ko;
+           clarsimp simp: set_object_def get_object_def in_monad cong: sched_context.fold_congs)
+   apply (clarsimp simp:  update_sched_context_def get_refills_def
+                         get_sched_context_def set_refills_def in_monad)
+   apply (rename_tac ko ko'; case_tac ko;
+          clarsimp simp: set_object_def get_object_def in_monad
+                   cong: sched_context.fold_congs)
+  apply (clarsimp simp:  update_sched_context_def get_refills_def get_sched_context_def
+                        set_refills_def get_object_def snd_bind gets_the_def exec_gets assert_opt_def
+                 split: option.splits)
+  apply (rename_tac ko; case_tac ko;
+         clarsimp simp: set_object_def get_object_def gets_the_def in_monad a_type_def
+                        snd_gets snd_bind exec_gets return_def snd_assert snd_get exec_get snd_put)
+  done
+
+lemma update_refill_hd_valid_objs[wp]:
+  "update_refill_hd sc_ptr f \<lbrace>valid_objs\<rbrace>"
+  by (wpsimp simp: update_refill_hd_rewrite wp: set_refills_valid_objs)
+
+lemma update_refill_tl_valid_objs[wp]:
+  "update_refill_tl sc_ptr f \<lbrace>valid_objs\<rbrace>"
+  by (wpsimp simp: update_refill_tl_rewrite wp: set_refills_valid_objs)
+
 lemma refill_unblock_check_valid_objs[wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_objs\<rbrace>"
-  by (wpsimp wp: set_refills_valid_objs whileLoop_wp' get_refills_wp update_sched_context_wp
+  by (wpsimp wp: set_refills_valid_objs whileLoop_wp' get_refills_wp
                  hoare_drop_imps
            simp: refill_unblock_check_defs)
 
@@ -107,15 +193,28 @@ lemma set_refills_wp:
   unfolding set_refills_def
   by (wpsimp wp: update_sched_context_wp)
 
-crunches head_insufficient_loop, handle_overrun_loop
-  for valid_objs[wp]: valid_objs
-  (wp: crunch_wps)
+lemma refill_pop_head_valid_objs[wp]:
+  "refill_pop_head sc_ptr \<lbrace>valid_objs\<rbrace>"
+  unfolding refill_pop_head_def by wpsimp
+
+lemma head_insufficient_loop_valid_objs[wp]:
+  "head_insufficient_loop usage \<lbrace>valid_objs\<rbrace>"
+  unfolding head_insufficient_loop_def
+  by (wpsimp wp: whileLoop_wp' simp: non_overlapping_merge_refills_def update_refill_hd_def)
+
+lemma handle_overrun_loop_valid_objs[wp]:
+  "handle_overrun_loop usage \<lbrace>valid_objs\<rbrace>"
+  unfolding handle_overrun_loop_def handle_overrun_loop_body_def refill_single_def refill_size_def
+  apply (wpsimp wp: whileLoop_wp' update_sched_context_valid_objs_same hoare_vcg_all_lift)
+  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post[rotated])
+  apply (clarsimp simp: valid_sched_context_def)
+  by (wpsimp wp: get_refills_wp simp: valid_sched_context_def)+
 
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
   apply (clarsimp simp: refill_budget_check_def)
   apply (rule hoare_seq_ext_skip, solves wpsimp)+
-  apply (wpsimp wp: set_refills_valid_objs)
+  apply (wpsimp wp: set_refills_valid_objs simp: update_refill_hd_def)
   done
 
 (* FIXME RT: move to Invariants_AI *)
@@ -399,13 +498,13 @@ crunches refill_budget_check
 
 crunches head_insufficient_loop, handle_overrun_loop
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
-  (wp: crunch_wps)
+  (wp: crunch_wps update_sched_context_iflive_implies)
 
 lemma refill_budget_check_if_live_then_nonz_cap[wp]:
   "refill_budget_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps
                     hoare_vcg_all_lift hoare_vcg_if_lift2
-              simp: refill_budget_check_def)
+              simp: refill_budget_check_def update_refill_hd_def)
   done
 
 crunches refill_budget_check
@@ -458,27 +557,44 @@ lemma refill_budget_check_hyp_refs_of[wp]:
                   wp: hoare_drop_imp whileLoop_wp')
   done
 
+crunches head_insufficient_loop, handle_overrun_loop
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  (wp: crunch_wps update_sched_context_refs_of_same simp: crunch_simps ignore: update_sched_context)
+
 lemma refill_budget_check_refs_of[wp]:
   "refill_budget_check usage \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
+  unfolding refill_budget_check_def is_round_robin_def
+  apply (wpsimp wp: whileLoop_wp' update_sched_context_refs_of_same get_refills_wp
+                    hoare_drop_imps hoare_vcg_all_lift
+         split_del: if_split)
+      apply (rule_tac Q="\<lambda>_ s. P (state_refs_of s)" in hoare_strengthen_post[rotated])
+       apply clarsimp
+      apply (wpsimp wp:)+
   done
+
+lemma update_refill_hd_invs[wp]:
+  "update_refill_hd sc_ptr f \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: update_refill_hd_rewrite)
+
+lemma update_refill_tl_invs[wp]:
+  "update_refill_tl sc_ptr f \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: update_refill_tl_rewrite)
+
+lemma update_sched_context_sc_refills_update_invs[wp]:
+  "update_sched_context sc_ptr (sc_refills_update f) \<lbrace>invs\<rbrace>"
+  by (wpsimp simp: update_sched_context_set_refills_rewrite)
 
 lemma refill_budget_check_round_robin_invs[wp]:
   "refill_budget_check_round_robin u \<lbrace>invs\<rbrace>"
-  by (wpsimp simp: refill_budget_check_round_robin_def update_refill_tl_def update_refill_hd_def
-               wp: hoare_drop_imp)
+  unfolding refill_budget_check_round_robin_def
+  by (wpsimp simp: refill_budget_check_round_robin_def
+               wp: hoare_drop_imp update_sched_context_wp)
 
 lemma refill_budget_check_invs[wp]:
   "refill_budget_check usage \<lbrace>invs\<rbrace>"
+  unfolding refill_budget_check_def
   apply (wpsimp simp: refill_budget_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
-
-lemma refill_budget_check_valid_sc[wp]:
-  "refill_budget_check usage \<lbrace>valid_sched_context sc\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
+                  wp: hoare_drop_imp whileLoop_wp' hoare_vcg_if_lift2)
   done
 
 lemma update_sched_context_valid_irq_node [wp]:
@@ -550,6 +666,9 @@ lemma update_sched_context_cur_sc_tcb_no_change:
 lemmas sc_consumed_update_cur_sc_tcb[wp] =
   update_sched_context_cur_sc_tcb_no_change [where f = "(sc_consumed_update f)" for f, simplified]
 
+lemmas sc_refills_update_cur_sc_tcb[wp] =
+  update_sched_context_cur_sc_tcb_no_change [where f = "(sc_refills_update f)" for f, simplified]
+
 lemmas sc_yield_from_update_cur_sc_tcb[wp] =
   update_sched_context_cur_sc_tcb_no_change [where f = "(sc_yield_from_update f)" for f, simplified]
 
@@ -583,7 +702,7 @@ crunches refill_unblock_check
 lemma refill_unblock_check_if_live_then_nonz_cap[wp]:
   "refill_unblock_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
   apply (clarsimp simp: refill_unblock_check_defs)
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp update_sched_context_wp hoare_drop_imps)
+  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
   done
 
 crunches refill_unblock_check
@@ -622,7 +741,7 @@ crunches refill_unblock_check
   and valid_ioports[wp]: valid_ioports
   and cur_sc_tcb[wp]: cur_sc_tcb
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
-  (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2)
+  (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
 
 lemmas refill_unblock_check_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_unblock_check_typ_at]
@@ -698,12 +817,12 @@ lemma valid_sched_context_domain_time_update[simp]:
 
 crunches head_insufficient_loop, handle_overrun_loop
   for valid_replies_pred[wp]: "valid_replies_pred P"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: update_sched_context)
 
 lemma refill_budget_check_valid_replies[wp]:
   "refill_budget_check usage \<lbrace> valid_replies_pred P \<rbrace>"
   apply (wpsimp simp: refill_budget_check_def
-                  wp: get_refills_wp whileLoop_wp' update_sched_context_wp hoare_drop_imps
+                  wp: get_refills_wp whileLoop_wp' hoare_drop_imps
                       hoare_vcg_all_lift hoare_vcg_if_lift2)
   done
 
@@ -784,10 +903,17 @@ lemma cur_sc_update_invs:
         apply (auto simp: state_refs_of_def get_refs_def2)
   done
 
+lemma sc_refills_update_bound_sc_tcb_at [wp]:
+  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
+   update_sched_context p (sc_refills_update f)
+   \<lbrace>\<lambda>_ s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def
+                   obj_at_def)
+
 lemma sc_consumed_update_bound_sc_tcb_at [wp]:
-  "\<lbrace>\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
    update_sched_context p (sc_consumed_update f)
-   \<lbrace>\<lambda>_ s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s\<rbrace>"
+   \<lbrace>\<lambda>_ s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def
                    obj_at_def)
 
@@ -807,7 +933,7 @@ lemma set_refills_bound_sc_tcb_at_ct[wp]:
 
 crunches handle_overrun_loop, head_insufficient_loop
   for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: update_sched_context)
 
 lemma refill_budget_check_bound_sc_tcb_at_ct[wp]:
   "refill_budget_check usage \<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
@@ -841,11 +967,16 @@ lemma valid_state_consumed_time_update[iff]:
 lemma sc_consumed_update_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> update_sched_context p (sc_consumed_update f) \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
-               wp: update_sched_context_valid_objs_same valid_irq_node_typ)
+               wp: valid_irq_node_typ)
+
+lemma sc_refills_update_valid_state [wp]:
+  "\<lbrace>valid_state\<rbrace> update_sched_context p (sc_refills_update f) \<lbrace>\<lambda>_. valid_state\<rbrace>"
+  by (wpsimp simp: valid_state_def valid_pspace_def
+               wp: valid_irq_node_typ)
 
 crunches head_insufficient_loop, handle_overrun_loop
   for valid_idle[wp]: valid_idle
-  (wp: crunch_wps)
+  (wp: crunch_wps ignore: update_sched_context)
 
 lemma refill_budget_check_valid_idle:
   "refill_budget_check usage \<lbrace>valid_idle\<rbrace>"

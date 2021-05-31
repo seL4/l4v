@@ -56,6 +56,10 @@ lemma update_sched_context_valid_objs_same:
   apply (auto simp: valid_obj_def valid_sched_context_def a_type_def obj_at_def)
   done
 
+lemmas sc_refills_update_valid_objs[wp]
+  = update_sched_context_valid_objs_same[where f="sc_refills_update f" for f,
+                                         simplified valid_sched_context_def, simplified]
+
 lemmas sc_consumed_update_valid_objs[wp]
   = update_sched_context_valid_objs_same[where f="sc_consumed_update f" for f,
                                          simplified valid_sched_context_def, simplified]
