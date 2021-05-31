@@ -1006,7 +1006,7 @@ On some architectures, the thread context may include registers that may be modi
 > updateAt :: Int -> [a] -> (a -> a) -> [a]
 > updateAt i lst f =
 >     let x = take i lst;
->         u = lst !! (i + 1)
+>         u = lst !! (i + 1);
 >         y = drop (i + 1) lst
 >     in if (null lst || length lst <= i)
 >           then lst

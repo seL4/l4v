@@ -523,8 +523,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
 > schedContextZeroRefillMax scPtr = do
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr $ sc { scRefillMax = 0 }
+>     updateSchedContext scPtr $ (\sc -> sc { scRefillMax = 0 })
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
