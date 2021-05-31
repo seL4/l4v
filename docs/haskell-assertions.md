@@ -17,7 +17,7 @@ This is a snapshot of a monologue by @mbrcknl about assertions and monadic failu
 >   * if you assert `P'` in Haskell
 >   * and can derive `[| (s,s') : state_relation; P s |] ==> P' s'`
 >   * and can derive `P` in/from AInvs
->   * then you get `P'` for free in wp proofs in Haskell, can prove it from the abstract side in `corres`, and get to assume it in `ccorres` for C 
+>   * then you get `P'` for free in wp proofs in Haskell, can prove it from the abstract side in `corres`, and get to assume it in `ccorres` for C
 
 First, let's talk about failure in `corres_underlying`. There are two settings, `nf` and `nf'` which control how `corres_underlying` treats the failure flag on each side of the correspondence.
 
