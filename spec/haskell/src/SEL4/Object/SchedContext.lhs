@@ -209,7 +209,6 @@ This module uses the C preprocessor to select a target architecture.
 > refillAddTail scPtr refill = do
 >     sc <- getSchedContext scPtr
 >     assert (scRefillCount sc < scRefillMax sc) "cannot add beyond queue size"
->     newTail <- return $ refillNextIndex (refillTailIndex sc) sc
 >     updateSchedContext scPtr (\sc -> sc { scRefills = replaceAt (refillNextIndex (refillTailIndex sc) sc) (scRefills sc) refill, scRefillCount = scRefillCount sc + 1})
 
 > maybeAddEmptyTail :: PPtr SchedContext -> Kernel ()

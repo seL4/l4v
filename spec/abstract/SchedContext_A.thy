@@ -275,13 +275,13 @@ where
      usage' \<leftarrow> return (usage - r_amount (refill_hd sc));
 
      if single
-
         then update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + sc_period sc))
         else do old_head \<leftarrow> refill_pop_head sc_ptr;
                 full \<leftarrow> refill_full sc_ptr;
-                update_sched_context sc_ptr (sc_refills_update
-                                                  (\<lambda>refills. schedule_used full refills
-                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)))
+                update_sched_context sc_ptr
+                    (sc_refills_update
+                         (\<lambda>refills. schedule_used full refills
+                                                 (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)))
              od;
      return usage'
    od"
