@@ -259,7 +259,7 @@ crunch domain_time_inv[wp]: do_user_op "(\<lambda>s. P (domain_time s))"
 context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]:
-  get_cap, activate_thread, set_scheduler_action, tcb_sched_action
+  get_cap, activate_thread, set_scheduler_action, tcb_sched_action, thread_set_time_slice
   "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
@@ -425,11 +425,16 @@ lemma schedule_domain_time_left:
   done
 end
 
+lemma reschedule_required_choose_new_thread[wp]:
+  "\<lbrace> \<top> \<rbrace> reschedule_required
+   \<lbrace>\<lambda>x s. scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding reschedule_required_def set_scheduler_action_def
+  by (wp hoare_vcg_imp_lift | simp | wpc)+
+
 lemma reschedule_required_valid_domain_time:
   "\<lbrace> \<top> \<rbrace> reschedule_required
    \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  unfolding reschedule_required_def set_scheduler_action_def
-  by (wp hoare_vcg_imp_lift | simp | wpc)+
+  by (wpsimp wp: hoare_drop_imp reschedule_required_choose_new_thread)
 
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
 lemma hoare_false_imp:
