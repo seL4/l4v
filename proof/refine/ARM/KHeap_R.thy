@@ -1638,7 +1638,7 @@ lemma setSchedContext_corres:
 qed
 
 lemma setSchedContext_update_corres:
-  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
+  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' (sc'::sched_context))"
   assumes s: "objBits sc' = objBits (f' sc')"
   shows "corres dc
          (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
@@ -1748,6 +1748,46 @@ lemma get_sc_corres_size:
   apply (drule bspec)
    apply blast
   apply (clarsimp simp: other_obj_relation_def scBits_simps sc_relation_def objBits_simps)
+  done
+
+lemma update_sched_context_rewrite:
+  "monadic_rewrite False True (sc_obj_at n scp)
+    (update_sched_context scp f)
+      (do sc \<leftarrow> get_sched_context scp;
+          set_object scp (kernel_object.SchedContext (f sc) n) od)"
+  apply (clarsimp simp: update_sched_context_def get_sched_context_def bind_assoc)
+  apply (rule monadic_rewrite_bind_tail)
+   defer
+   apply (rule get_object_sp)
+  apply (case_tac obj; clarsimp simp: monadic_rewrite_refl3 set_object_def)
+  apply (rule monadic_rewrite_bind_tail)
+   defer
+   apply (rule get_object_sp)
+  apply (clarsimp simp: monadic_rewrite_def obj_at_def is_sc_obj_def)
+  done
+thm sc_at'_cross
+lemma updateSchedContext_corres:
+  assumes R': "\<forall>sc n sc'. sc_relation (f sc) n (f' (sc'::sched_context))"
+  assumes s: "\<forall>sc'. objBits sc' = objBits (f' sc')"
+  shows "corres dc
+         (sc_obj_at n ptr)
+         (sc_at' ptr and (\<lambda>s'. \<forall>sc' sc. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
+            (update_sched_context ptr f)
+            (updateSchedContext ptr f')"
+  unfolding  updateSchedContext_def
+  apply (insert R' s)
+  apply (rule corres_guard_imp)
+    apply (rule monadic_rewrite_corres[OF _ update_sched_context_rewrite[where n=n]])
+    apply (rule_tac R="\<lambda>sc s. kheap s ptr = Some (kernel_object.SchedContext sc n)"
+           and R'="\<lambda>sc' s'. ko_at' sc' ptr s' \<and>
+                      (\<forall>sc' sc. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc)))"
+           in corres_split[OF get_sc_corres_size[where n=n]])
+      apply (rename_tac sc sc')
+      apply (rule corres_guard_imp)
+        apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres)
+         apply (clarsimp simp: obj_at_def is_sc_obj)+
+     apply (wpsimp wp: get_sched_context_wp get_sc_ko' getObject_inv simp: getSchedContext_def)+
+   apply (clarsimp simp: obj_at_def is_sc_obj)+
   done
 
 lemma setObject_ko_wp_at:
@@ -3916,22 +3956,6 @@ lemma refillSufficient_wp:
   unfolding refillSufficient_def
   apply (wpsimp wp: getRefills_wp)
   by (clarsimp simp: sufficientRefills_def obj_at'_def)
-
-lemma update_sched_context_rewrite:
-  "monadic_rewrite False True (sc_obj_at n scp)
-    (update_sched_context scp f)
-      (do sc \<leftarrow> get_sched_context scp;
-          set_object scp (kernel_object.SchedContext (f sc) n) od)"
-  apply (clarsimp simp: update_sched_context_def get_sched_context_def bind_assoc)
-  apply (rule monadic_rewrite_bind_tail)
-   defer
-   apply (rule get_object_sp)
-  apply (case_tac obj; clarsimp simp: monadic_rewrite_refl3 set_object_def)
-  apply (rule monadic_rewrite_bind_tail)
-   defer
-   apply (rule get_object_sp)
-  apply (clarsimp simp: monadic_rewrite_def obj_at_def is_sc_obj_def)
-  done
 
 lemma get_sched_context_exs_valid:
   "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)

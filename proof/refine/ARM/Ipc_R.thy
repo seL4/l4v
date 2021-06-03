@@ -3024,12 +3024,12 @@ lemma refillUnblockCheck_corres:
 
 lemma updateRefillHd_valid_objs':
   "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def2 updateSchedContext_def)
-  apply (wpsimp wp: )
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
+  apply wpsimp
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def projectKO_sc
-                        length_replaceAt)
+                        length_updateAt)
   done
 
 lemma getCTE_cap_to_refs[wp]:
@@ -3276,7 +3276,7 @@ lemma updateRefillHd_bound_tcb_sc_at[wp]:
   "updateRefillHd scPtr f \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t\<rbrace>"
   supply if_split [split del]
   unfolding updateRefillHd_def
-  apply (wpsimp wp: set_sc'.obj_at')
+  apply (wpsimp wp: set_sc'.obj_at' simp: updateSchedContext_def)
   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
 
 crunches refillUnblockCheck

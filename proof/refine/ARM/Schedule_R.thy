@@ -2151,24 +2151,45 @@ lemma scRefills_length_replaceAt_Hd:
    0 < scRefillMax ko \<longrightarrow> (\<forall>val. length (replaceAt (scRefillHead ko) (scRefills ko) val) = length (scRefills ko))"
   by (clarsimp, subst length_replaceAt; clarsimp simp: valid_sched_context'_def)
 
+lemma length_updateAt:
+  "length (updateAt i lst f) = length lst"
+  apply (clarsimp simp: updateAt_def)
+  by (case_tac lst; simp)
+
+lemma scRefills_length_updateAt_0:
+  "valid_sched_context' ko s \<Longrightarrow> 0 < scRefillMax ko \<longrightarrow> (\<forall>f. length (updateAt 0 (scRefills ko) f) = length (scRefills ko))"
+  by (clarsimp, subst length_updateAt; clarsimp simp: valid_sched_context'_def)
+
+lemma scRefills_length_updateAt_Tail:
+  "valid_sched_context' ko s \<Longrightarrow>
+   0 < scRefillMax ko \<longrightarrow> (\<forall>val. length (updateAt (refillTailIndex ko) (scRefills ko) val) = length (scRefills ko))"
+  by (frule refillTailIndex_bounded, clarsimp, subst length_updateAt;
+      clarsimp simp: valid_sched_context'_def)
+
+lemma scRefills_length_updateAt_Hd:
+  "valid_sched_context' ko s \<Longrightarrow>
+   0 < scRefillMax ko \<longrightarrow> (\<forall>val. length (updateAt (scRefillHead ko) (scRefills ko) val) = length (scRefills ko))"
+  by (clarsimp, subst length_updateAt; clarsimp simp: valid_sched_context'_def)
+
+lemma
+  "\<lbrace>valid_objs'\<rbrace> updateSchedContext scp f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  unfolding updateSchedContext_def
+  apply (wpsimp wp: set_sc_valid_objs')
+oops
 lemma refillAddTail_valid_objs'[wp]:
   "refillAddTail scPtr t \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: refillAddTail_def)
-  apply (wpsimp wp: set_sc_valid_objs' getRefillNext_wp getRefillSize_wp)
+  apply (wpsimp wp: set_sc_valid_objs' getRefillNext_wp getRefillSize_wp
+              simp: updateSchedContext_def)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
   apply (frule scRefills_length_replaceAt_0, clarsimp)
-  apply (intro conjI; intro allI impI)
-   apply (intro conjI)
-    apply (clarsimp simp: valid_sched_context'_def)
-   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+  apply (drule ko_at'_inj, assumption, clarsimp)+
   apply (intro conjI)
-   apply (drule ko_at'_inj, assumption, clarsimp)+
    apply (frule refillTailIndex_bounded)
    apply (clarsimp simp: valid_sched_context'_def)
    apply (subst length_replaceAt)
    apply (subst length_replaceAt)
    apply clarsimp
-  apply (drule ko_at'_inj, assumption, clarsimp)+
   apply (frule refillTailIndex_bounded)
   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
   apply (subst length_replaceAt, linarith)
@@ -2177,55 +2198,38 @@ lemma refillAddTail_valid_objs'[wp]:
 lemma refillAddTail_invs'[wp]:
   "refillAddTail scPtr t \<lbrace>invs'\<rbrace>"
   apply (simp add: refillAddTail_def)
-  apply (wpsimp wp: setSchedContext_invs' getRefillNext_wp getRefillSize_wp)
+  apply (wpsimp wp: setSchedContext_invs' getRefillNext_wp getRefillSize_wp
+              simp: updateSchedContext_def)
   apply (frule (1) invs'_ko_at_idle_sc_is_idle')
   apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
   apply (frule scRefills_length_replaceAt_0, clarsimp)
-  apply (intro conjI; intro allI impI)
-   apply (intro conjI)
-     apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
-    apply (clarsimp simp: valid_sched_context'_def)
-   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
+  apply (drule ko_at'_inj, assumption, clarsimp)+
   apply (intro conjI)
     apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to')
-   apply (drule ko_at'_inj, assumption, clarsimp)+
    apply (frule refillTailIndex_bounded)
    apply (clarsimp simp: valid_sched_context'_def)
    apply (subst length_replaceAt)
    apply (subst length_replaceAt)
    apply clarsimp
-  apply (drule ko_at'_inj, assumption, clarsimp)+
   apply (frule refillTailIndex_bounded)
   apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def valid_sched_context'_def)
   apply (subst length_replaceAt, linarith)
   done
-
-lemma updateRefillTl_def2:
-  "updateRefillTl scp f
-   = updateSchedContext scp (\<lambda>sc. scRefills_update (\<lambda>_. replaceAt (refillTailIndex sc) (scRefills sc)
-       (f (refillTl sc))) sc)"
-  by (clarsimp simp: updateRefillTl_def updateSchedContext_def)
-
-lemma updateRefillHd_def2:
-  "updateRefillHd scp f
-   = updateSchedContext scp (\<lambda>sc. scRefills_update (\<lambda>_. replaceAt (scRefillHead sc) (scRefills sc)
-       (f (refillHd sc))) sc)"
-  by (clarsimp simp: updateRefillHd_def updateSchedContext_def)
 
 lemma refillBudgetCheckRoundRobin_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. active_sc_at' (ksCurSc s) s)\<rbrace>
    refillBudgetCheckRoundRobin consumed
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split [split del]
-  apply (simp add: refillBudgetCheckRoundRobin_def)
-  apply (wpsimp simp: updateRefillTl_def2 updateRefillHd_def2 wp: updateSchedContext_refills_invs')
+  apply (simp add: refillBudgetCheckRoundRobin_def updateRefillTl_def updateRefillHd_def)
+  apply (wpsimp simp:  wp: updateSchedContext_refills_invs')
     apply (rule_tac Q="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
      apply clarsimp
      apply (intro conjI)
       apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
      apply (intro allI impI)
      apply (frule (1) invs'_ko_at_valid_sched_context', clarsimp)
-     apply (frule scRefills_length_replaceAt_Tail)
+     apply (frule scRefills_length_updateAt_Tail)
      apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def
                            ko_wp_at'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
     apply (wpsimp wp: updateSchedContext_refills_invs' getCurTime_wp updateSchedContext_active_sc_at')
@@ -2235,7 +2239,7 @@ lemma refillBudgetCheckRoundRobin_invs'[wp]:
    apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
   apply (intro allI impI)
   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-  apply (frule scRefills_length_replaceAt_Hd)
+  apply (frule scRefills_length_updateAt_Hd)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -2248,15 +2252,15 @@ lemma scheduleUsed_valid_objs'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp simp: refillEmpty_def)
   apply (rule hoare_if)
    apply wpsimp
-  apply (wpsimp simp: setRefillTl_def updateRefillTl_def2 updateSchedContext_def
+  apply (wpsimp simp: setRefillTl_def updateRefillTl_def updateSchedContext_def
                   wp: updateSchedContext_refills_invs' refillFull_wp refillEmpty_wp)+
   apply (intro conjI; intro allI impI)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
-   apply (frule scRefills_length_replaceAt_Tail)
+   apply (frule scRefills_length_updateAt_Tail)
    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
-  apply (frule scRefills_length_replaceAt_Tail)
+  apply (frule scRefills_length_updateAt_Tail)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -2264,17 +2268,17 @@ lemma scheduleUsed_valid_objs'[wp]:
 lemma scheduleUsed_invs'[wp]:
   "scheduleUsed scPtr refill \<lbrace>invs'\<rbrace>"
   apply (simp add: scheduleUsed_def)
-  apply (wpsimp simp: setRefillTl_def updateRefillTl_def2
+  apply (wpsimp simp: setRefillTl_def updateRefillTl_def
                   wp: updateSchedContext_refills_invs' refillFull_wp refillEmpty_wp)+
   apply (prop_tac "\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko")
    apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
   apply (intro conjI; intro allI impI)
    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-   apply (frule scRefills_length_replaceAt_Tail)
+   apply (frule scRefills_length_updateAt_Tail)
    apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
    apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-  apply (frule scRefills_length_replaceAt_Tail)
+  apply (frule scRefills_length_updateAt_Tail)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
 
@@ -2288,10 +2292,9 @@ lemma refillPopHead_valid_objs'[wp]:
   apply (wpsimp wp: set_sc_valid_objs')
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: readRefillNext_def readSchedContext_def)
-  apply (fastforce simp: obj_at'_def projectKOs vs_all_heap_simps pred_map_simps scBits_simps
-                         valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
-                  dest!: readObject_misc_ko_at')
-  done
+  by (fastforce simp: obj_at'_def projectKOs scBits_simps refillNextIndex_def
+                      valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
+               dest!: readObject_misc_ko_at')
 
 lemma refillPopHead_invs'[wp]:
   "\<lbrace>invs' and obj_at' (\<lambda>sc'. 1 < scRefillCount sc') scPtr\<rbrace>
@@ -2300,21 +2303,6 @@ lemma refillPopHead_invs'[wp]:
   apply (simp add: refillPopHead_def)
   apply (wpsimp wp: updateSchedContext_invs' getRefillNext_wp)
   apply (subgoal_tac "(\<forall>ko. ko_at' ko idle_sc_ptr s \<longrightarrow> idle_sc' ko)")
-   apply (intro conjI; intro impI)
-    apply (intro conjI; intro allI impI)
-      apply (clarsimp simp: obj_at'_def)
-     apply (rule if_live_then_nonz_capE')
-     apply (erule invs_iflive')
-     apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKO_eq projectKO_sc live_sc'_def)
-    apply (drule ko_at'_inj, assumption, clarsimp)+
-    apply (rename_tac sc)
-    apply (intro conjI)
-     apply (subgoal_tac "valid_sched_context' sc s")
-      apply (fastforce simp: valid_sched_context'_def obj_at'_def dest!: readObject_misc_ko_at')
-     apply (fastforce dest: invs'_ko_at_valid_sched_context')
-    apply (subgoal_tac "valid_sched_context_size' sc")
-     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-    apply (fastforce dest: invs'_ko_at_valid_sched_context')
    apply (intro conjI; intro allI impI)
      apply (clarsimp simp: obj_at'_def)
     apply (rule if_live_then_nonz_capE')
@@ -2323,15 +2311,12 @@ lemma refillPopHead_invs'[wp]:
    apply (drule ko_at'_inj, assumption, clarsimp)+
    apply (rename_tac sc)
    apply (intro conjI)
-    apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
     apply (subgoal_tac "valid_sched_context' sc s")
-     apply (clarsimp simp: valid_sched_context'_def obj_at'_def)
-     apply linarith
-    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
+     apply (fastforce simp: valid_sched_context'_def obj_at'_def refillNextIndex_def dest!: readObject_misc_ko_at')
+    apply (fastforce dest: invs'_ko_at_valid_sched_context')
    apply (subgoal_tac "valid_sched_context_size' sc")
     apply (clarsimp simp: valid_sched_context_size'_def objBits_def objBitsKO_def)
-   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+   apply (fastforce dest: invs'_ko_at_valid_sched_context')
   apply (clarsimp cong: if_cong simp: sym_refs_sc_trivial_update)
   apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
   done
@@ -2344,16 +2329,14 @@ lemma refillPopHead_active_sc_at'[wp]:
 
 lemma refillAddTail_active_sc_at'[wp]:
   "refillAddTail scPtr refill \<lbrace>active_sc_at' scPtr'\<rbrace>"
-  apply (simp add: refillAddTail_def getRefillSize_def)
-  apply (wpsimp wp: setSchedContext_active_sc_at' hoare_drop_imps getRefillNext_wp)
-  apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+  apply (simp add: refillAddTail_def getRefillSize_def refillTailIndex_def)
+  apply (wpsimp wp: updateSchedContext_active_sc_at' hoare_drop_imps getRefillNext_wp)
   done
 
 lemma updateRefillTl_active_sc_at'[wp]:
   "updateRefillTl scPtr f \<lbrace>active_sc_at' scPtr'\<rbrace>"
   apply (simp add: updateRefillTl_def)
-  apply (wpsimp wp: setSchedContext_active_sc_at' hoare_drop_imps getRefillNext_wp)
-  apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+  apply (wpsimp wp: updateSchedContext_active_sc_at' hoare_drop_imps getRefillNext_wp)
   done
 
 crunches scheduleUsed
@@ -2365,20 +2348,20 @@ crunches refillPopHead
 
 lemma updateRefillHd_invs':
   "\<lbrace>invs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def2)
+  apply (clarsimp simp: updateRefillHd_def)
   apply (wpsimp wp: updateSchedContext_invs')
   apply (intro conjI; intro allI impI)
     apply (fastforce dest: invs'_ko_at_idle_sc_is_idle')
    apply (fastforce dest: live_sc'_ko_ex_nonz_cap_to' scRefills_length_replaceAt_Hd)
   apply (frule invs'_ko_at_valid_sched_context', simp, clarsimp)
-  apply (frule scRefills_length_replaceAt_Hd)
+  apply (frule scRefills_length_updateAt_Hd)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                        valid_sched_context_size'_def objBits_def objBitsKO_def)
+                        valid_sched_context_size'_def objBits_def objBitsKO_def)   
   done
 
 lemma updateRefillHd_active_sc_at'[wp]:
   "updateRefillHd scPtr f \<lbrace>active_sc_at' scPr\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def2)
+  apply (clarsimp simp: updateRefillHd_def)
   apply (wpsimp wp: updateSchedContext_active_sc_at')
   done
 
@@ -2386,7 +2369,7 @@ lemma updateRefillHd_active_sc_at'_ksCurSc[wp]:
   "updateRefillHd scPtr f \<lbrace>\<lambda>s. active_sc_at' (ksCurSc s) s\<rbrace>"
   apply (rule_tac f=ksCurSc in hoare_lift_Pf)
    apply wpsimp
-  apply (clarsimp simp: updateRefillHd_def2 updateSchedContext_def)
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
   apply wpsimp
   done
 
@@ -2434,10 +2417,10 @@ lemma mergeRefills_valid_objs':
   apply (clarsimp simp: mergeRefills_def updateRefillHd_def)
   apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> active_sc_at' scPtr s" in hoare_seq_ext[rotated])
    apply wpsimp
-  apply (wpsimp wp: set_sc_valid_objs')
+  apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: active_sc_at'_def)
-  apply (frule scRefills_length_replaceAt_Hd)
+  apply (frule scRefills_length_updateAt_Hd)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -2483,10 +2466,10 @@ lemma updateRefillHd_valid_objs':
    updateRefillHd scPtr f
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: updateRefillHd_def)
-  apply (wpsimp wp: set_sc_valid_objs')
+  apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: active_sc_at'_def)
-  apply (frule scRefills_length_replaceAt_Hd)
+  apply (frule scRefills_length_updateAt_Hd)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -2574,19 +2557,18 @@ lemma mergeRefills_if_live_then_nonz_cap'[wp]:
   "mergeRefills scPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (clarsimp simp: mergeRefills_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (wpsimp simp: updateRefillHd_def)
+  apply (wpsimp simp: updateRefillHd_def updateSchedContext_def)
   apply (fastforce intro: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)
   done
 
 lemma nonOverlappingMergeRefills_if_live_then_nonz_cap'[wp]:
   "nonOverlappingMergeRefills scPtr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: nonOverlappingMergeRefills_def)
+  apply (clarsimp simp: nonOverlappingMergeRefills_def updateRefillHd_def)
   apply (rule hoare_seq_ext_skip, wpsimp)+
-  apply (wpsimp simp: updateRefillHd_def)
-  apply (fastforce intro: if_live_then_nonz_capE'
-                    simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)
-  done
+  by (wpsimp simp: updateSchedContext_def,
+      fastforce intro: if_live_then_nonz_capE'
+                 simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)+
 
 crunches refillHeadOverlappingLoop, headInsufficientLoop
   for if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
@@ -2594,7 +2576,7 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop
 
 lemma updateRefillHd_if_live_then_nonz_cap'[wp]:
   "updateRefillHd scPtr f \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def)
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
   apply wpsimp
   apply (fastforce intro: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)
@@ -2608,6 +2590,7 @@ lemma setRefillHd_if_live_then_nonz_cap'[wp]:
 lemma scheduleUsed_if_live_then_nonz_cap'[wp]:
   "scheduleUsed scPtr refill \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   apply (wpsimp simp: scheduleUsed_def refillAddTail_def setRefillTl_def updateRefillTl_def
+                      updateSchedContext_def
                   wp: getRefillSize_wp refillFull_wp refillEmpty_wp getRefillNext_wp)
   apply (fastforce intro: if_live_then_nonz_capE'
                     simp: ko_wp_at'_def obj_at'_real_def projectKO_sc live_sc'_def)
@@ -2639,20 +2622,21 @@ lemma refillAddTail_valid_idle'[wp]:
 
 lemma updateRefillHd_valid_idle'[wp]:
   "updateRefillHd scPtr f \<lbrace>valid_idle'\<rbrace>"
-  apply (wpsimp simp: updateRefillHd_def)
+  apply (wpsimp simp: updateRefillHd_def updateSchedContext_def)
   apply (fastforce simp: valid_idle'_def obj_at'_def)
   done
 
 lemma scheduleUsed_valid_idle'[wp]:
   "scheduleUsed scPtr new \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: scheduleUsed_def  updateSchedContext_def getRefillNext_def)
-  apply (wpsimp simp: setRefillTl_def updateRefillTl_def wp: refillFull_wp refillEmpty_wp)
+  apply (clarsimp simp: scheduleUsed_def updateSchedContext_def getRefillNext_def)
+  apply (wpsimp simp: setRefillTl_def updateRefillTl_def updateSchedContext_def
+                  wp: refillFull_wp refillEmpty_wp)
   apply (fastforce simp: valid_idle'_def obj_at'_def projectKOs)
   done
 
 lemma mergeRefills_valid_idle'[wp]:
   "mergeRefills scPtr \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: mergeRefills_def updateRefillHd_def)
+  apply (clarsimp simp: mergeRefills_def updateRefillHd_def updateSchedContext_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (wpsimp simp: valid_idle'_def obj_at'_def)
   done
@@ -2660,9 +2644,10 @@ lemma mergeRefills_valid_idle'[wp]:
 lemma nonOverlappingMergeRefills_valid_idle'[wp]:
   "nonOverlappingMergeRefills scPtr \<lbrace>valid_idle'\<rbrace>"
   apply (clarsimp simp: nonOverlappingMergeRefills_def updateRefillHd_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_sc_sp']\<close> \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
-  apply (wpsimp simp: valid_idle'_def obj_at'_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (clarsimp simp: updateSchedContext_def,
+         rule hoare_seq_ext[OF _ get_sc_sp'],
+         wpsimp simp: valid_idle'_def obj_at'_def)+
   done
 
 crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
@@ -2672,7 +2657,7 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
 lemma refillUnblockCheck_valid_idle'[wp]:
   "refillUnblockCheck scPtr \<lbrace>valid_idle'\<rbrace>"
   apply (clarsimp simp: refillUnblockCheck_def isRoundRobin_def refillReady_def
-                        setReprogramTimer_def updateRefillHd_def)
+                        setReprogramTimer_def updateRefillHd_def updateSchedContext_def)
   apply (wpsimp wp: scActive_wp)
   apply (clarsimp simp: valid_idle'_def obj_at'_def)
   done
@@ -2710,10 +2695,18 @@ lemma nonOverlappingMergeRefills_valid_objs':
   apply (rule_tac B="\<lambda>_ s. valid_objs' s \<and> active_sc_at' scPtr s" in hoare_seq_ext[rotated])
    apply wpsimp
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-  apply (wpsimp wp: set_sc_valid_objs')
+  apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
+    apply (rule_tac Q="\<lambda>_. valid_objs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
+     apply clarsimp
+     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+     apply (clarsimp simp: active_sc_at'_def)
+     apply (frule scRefills_length_updateAt_Hd)
+     apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
+                           valid_sched_context_size'_def objBits_def objBitsKO_def)
+    apply (wpsimp wp: set_sc_valid_objs' setSchedContext_active_sc_at' simp: updateSchedContext_def)+
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: active_sc_at'_def)
-  apply (frule scRefills_length_replaceAt_Hd)
+  apply (frule scRefills_length_updateAt_Hd)
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def)
   done
@@ -2818,7 +2811,7 @@ lemma refillBudgetCheck_list_refs_of_replies'[wp]:
   apply (wpsimp wp: whileLoop_wp' hoare_drop_imps refillFull_wp refillEmpty_wp getRefillNext_wp
                      getRefillSize_wp hoare_vcg_all_lift hoare_vcg_if_lift2
               simp: o_def scheduleUsed_def refillAddTail_def setRefillHd_def updateRefillHd_def
-                    setRefillTl_def updateRefillTl_def)
+                    setRefillTl_def updateRefillTl_def updateSchedContext_def)
   done
 
 lemma refillBudgetCheck_if_live_then_nonz_cap'[wp]:
@@ -2830,7 +2823,7 @@ lemma refillBudgetCheck_if_live_then_nonz_cap'[wp]:
 
 lemma refillBudgetCheck_valid_idle'[wp]:
   "refillBudgetCheck usage \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: refillBudgetCheck_def isRoundRobin_def refillReady_def
+  apply (clarsimp simp: refillBudgetCheck_def isRoundRobin_def refillReady_def updateSchedContext_def
                         setReprogramTimer_def updateRefillHd_def setRefillHd_def)
   apply (rule hoare_seq_ext_skip, solves wpsimp)+
   apply wpsimp
@@ -2856,7 +2849,7 @@ lemma refillBudgetCheck_valid_machine_state'[wp]:
   apply (wpsimp wp: whileLoop_wp' hoare_vcg_all_lift hoare_vcg_disj_lift scActive_wp hoare_drop_imps
                     refillFull_wp refillEmpty_wp getRefillNext_wp  getRefillSize_wp
               simp: scheduleUsed_def refillAddTail_def setRefillTl_def updateRefillTl_def
-                    setRefillHd_def updateRefillHd_def)
+                    setRefillHd_def updateRefillHd_def updateSchedContext_def)
   done
 
 lemma refillBudgetCheck_ct_idle_or_in_cur_domain'[wp]:
