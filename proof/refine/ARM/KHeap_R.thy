@@ -1638,7 +1638,7 @@ lemma setSchedContext_corres:
 qed
 
 lemma setSchedContext_update_corres:
-  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc')"
+  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' (sc'::sched_context))"
   assumes s: "objBits sc' = objBits (f' sc')"
   shows "corres dc
          (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
@@ -4169,6 +4169,7 @@ lemma get_sched_context_no_fail:
                      gets_def obj_at_def is_sc_obj_def gets_the_def
               split: Structures_A.kernel_object.splits)
 
+(* FIXME RT: rename *)
 (* this let us cross the sc size information from concrete to abstract *)
 lemma ko_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"

@@ -1335,8 +1335,7 @@ lemma wrap_slice_replaceAt_eq:
   done
 
 lemma refills_tl_equal:
-  "\<lbrakk>sc_relation sc n sc'; 0 < scRefillCount sc'; scRefillCount sc' \<le> scRefillMax sc';
-    scRefillMax sc' \<le> length (scRefills sc'); scRefillHead sc' < scRefillMax sc'\<rbrakk>
+  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
    \<Longrightarrow> refill_tl sc = refill_map (refillTl sc')"
   apply (clarsimp simp: sc_relation_def refillTl_def refills_map_def)
   apply (subst last_conv_nth)

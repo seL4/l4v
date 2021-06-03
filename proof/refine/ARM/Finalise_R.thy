@@ -3473,7 +3473,7 @@ crunches schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotificatio
 lemma schedContextZeroRefillMax_unlive[wp]:
   "schedContextZeroRefillMax scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
   unfolding schedContextZeroRefillMax_def
-  apply (wpsimp wp: set_sc'.set_wp)
+  apply (wpsimp wp: set_sc'.set_wp simp: updateSchedContext_def)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
                         ps_clear_upd objBits_simps)
   done
@@ -4227,7 +4227,7 @@ lemma schedContextZeroRefillMax_invs'[wp]:
    schedContextZeroRefillMax scPtr
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp: schedContextZeroRefillMax_def)
-  apply (wpsimp wp: setSchedContext_invs')
+  apply (wpsimp wp: setSchedContext_invs' simp: updateSchedContext_def)
   apply (frule (1) invs'_ko_at_valid_sched_context')
   apply (fastforce intro!: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
@@ -4909,7 +4909,7 @@ lemma schedContextZeroRefillMax_corres:
   "corres dc (\<lambda>s. sc_at scPtr s) (sc_at' scPtr)
           (sched_context_zero_refill_max scPtr) (schedContextZeroRefillMax scPtr)"
   apply (clarsimp simp: sched_context_zero_refill_max_def schedContextZeroRefillMax_def
-                        set_refills_def sc_at_sc_obj_at)
+                        set_refills_def sc_at_sc_obj_at updateSchedContext_def)
   apply (rule corres_underlying_lift_ex1')
   apply (rule corres_guard_imp)
     apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])

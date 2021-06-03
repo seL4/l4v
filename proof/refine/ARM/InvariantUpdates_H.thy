@@ -488,4 +488,8 @@ lemma sch_act_sane_ksReprogramTimer[simp]:
   "sch_act_sane (ksReprogramTimer_update f s) = sch_act_sane s"
   by (simp add: sch_act_sane_def)
 
+lemma valid_obj'_scPeriod_update[simp]:
+  "valid_obj' (KOSchedContext (scPeriod_update (\<lambda>_. period) sc')) = valid_obj' (KOSchedContext sc')"
+  by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+
 end

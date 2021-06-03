@@ -2976,18 +2976,22 @@ lemma schedContextResume_corres:
      apply wp
     apply wp
    apply (subgoal_tac "sc_tcb_sc_at (\<lambda>t. bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) (the t) s) ptr s ")
-    apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def bound_sc_tcb_at_def is_tcb_def)
+    apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def bound_sc_tcb_at_def is_tcb_def
+                    cong: conj_cong)
     apply (intro conjI impI; (clarsimp simp: invs_def valid_state_def; fail)?)
-          apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
-         apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
-         apply (fastforce dest!: active_sc_valid_refillsE
-                           simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                          split: if_splits)
-        apply (fastforce simp: is_schedulable_bool_def get_tcb_def is_sc_active_def
-                               vs_all_heap_simps)
+           apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
+          apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
+          apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                                 opt_map_left_Some MIN_REFILLS_def
+                          dest!: active_sc_valid_refillsE split: if_split_asm)
+         apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_kh_simp)
+         apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                          dest: active_sc_valid_refillsE)
+        apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_def active_sc_def
+                               vs_all_heap_simps opt_map_left_Some)
        apply (prop_tac "is_active_sc ptr s")
         apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def get_tcb_def
-                               is_sc_active_def)
+                               is_sc_active_def opt_map_left_Some)
        apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
                               valid_ready_queued_thread_2_def in_ready_q_def)+
      apply (clarsimp simp: is_schedulable_bool_def get_tcb_def)
@@ -2997,16 +3001,24 @@ lemma schedContextResume_corres:
    apply (drule sym_refs_ko_atD[rotated], simp add: obj_at_def)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def refs_of_rev)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
-  apply (intro conjI impI allI)
-    apply (fastforce simp: sc_at_ppred_def obj_at_def is_sc_obj_def valid_obj_def
-                     dest: invs_valid_objs intro!: sc_at_cross)
-   apply clarsimp
-  apply (clarsimp simp: state_relation_def obj_at_def sc_at_ppred_def)
-  apply (drule (1) pspace_relation_absD)
-  apply (clarsimp split: if_splits)
-  apply (clarsimp simp: sc_relation_def split: kernel_object.splits)
-  apply (simp only: sc_relation_def eq_commute[where a="Some P" for P])
-  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_sc)
+  apply (rule context_conjI; clarsimp?)
+   apply (fastforce simp: sc_tcb_sc_at_def obj_at_def is_sc_obj_def valid_obj_def
+                    dest: invs_valid_objs intro!: sc_at_cross)
+  apply (rule conjI, erule valid_objs'_valid_tcbs')
+  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  apply (frule (2) sym_ref_sc_tcb[OF invs_sym_refs], clarsimp)
+  apply (prop_tac "scTCB ko = Some y")
+   apply (frule state_relation_sc_relation[where ptr=ptr])
+     apply (clarsimp simp: obj_at_simps is_sc_obj)
+     apply (erule (1) valid_sched_context_size_objsI[OF invs_valid_objs], simp)
+   apply (clarsimp simp: sc_relation_def projection_rewrites obj_at_simps opt_map_left_Some)
+  apply (frule_tac x=y in pspace_relation_absD[OF _ state_relation_pspace_relation]; simp)
+  apply (clarsimp simp: obj_at'_def projectKOs isSchedulable_bool_def projection_rewrites
+                        other_obj_relation_def tcb_relation_def)
+  apply (drule sym[where s="Some ptr"])
+  apply (clarsimp simp: projection_rewrites isScActive_def opt_map_left_Some)
+  apply (erule (1) valid_objsE')
+  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def opt_map_def)
   done
 
 lemma getScTime_wp:
@@ -3024,12 +3036,12 @@ lemma refillUnblockCheck_corres:
 
 lemma updateRefillHd_valid_objs':
   "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def2 updateSchedContext_def)
-  apply (wpsimp wp: )
+  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
+  apply wpsimp
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
                         valid_sched_context_size'_def objBits_def objBitsKO_def projectKO_sc
-                        length_replaceAt)
+                        length_updateAt)
   done
 
 lemma getCTE_cap_to_refs[wp]:
@@ -3276,7 +3288,7 @@ lemma updateRefillHd_bound_tcb_sc_at[wp]:
   "updateRefillHd scPtr f \<lbrace>obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) t\<rbrace>"
   supply if_split [split del]
   unfolding updateRefillHd_def
-  apply (wpsimp wp: set_sc'.obj_at')
+  apply (wpsimp wp: set_sc'.obj_at' simp: updateSchedContext_def)
   by (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
 
 crunches refillUnblockCheck
