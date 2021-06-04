@@ -1727,7 +1727,6 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + Arch + (* FIXME: 
   assumes scheduler_action_s0_internal: "scheduler_action s0_internal = resume_cur_thread"
   assumes ct_running_or_ct_idle_s0_internal: "ct_running s0_internal \<or> ct_idle s0_internal"
   assumes domain_time_s0_internal: "domain_time s0_internal > 0"
-  assumes num_domains_sanity: "num_domains > 1"
   assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and>
                                context_matches_state pl pr pxn um ds es s \<and> ct_running s
                                \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
@@ -1855,12 +1854,32 @@ lemma kernel_entry_if_domain_fields:
   apply(wp handle_event_domain_fields | simp)+
   done
 
+
+lemma kernel_entry_if_domain_time_sched_action:
+  "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
+   kernel_entry_if e tc
+   \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  apply (case_tac "e = Interrupt")
+   apply (simp add: kernel_entry_if_def)
+   apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
+      apply (rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
+       apply (wp | simp)+
+      apply (wp hoare_false_imp kernel_entry_if_domain_fields | fastforce)+
+  done
+
+end
+
+
 subsection \<open>to split generic preservation lemma\<close>
 
-lemma hoare_vcg_imp_lift':
-   "\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>
-        \<Longrightarrow> \<lbrace>\<lambda>s. P' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>"
-  apply(auto simp: valid_def)
+lemma handle_preemption_if_domain_time_sched_action:
+  "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
+   handle_preemption_if tc
+   \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  apply (simp add: handle_preemption_if_def)
+  apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
+   apply (rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
+    apply wpsimp+
   done
 
 lemma timer_tick_domain_time_sched_action:
@@ -1874,46 +1893,6 @@ lemma timer_tick_domain_time_sched_action:
 lemma gt_zero_nonzero[simp]:
   "(0::word32) < x \<Longrightarrow> x \<noteq> 0"
   by (metis word_not_simps(1))
-
-lemma handle_interrupt_domain_time_sched_action:
-  "num_domains > 1 \<Longrightarrow>
-   \<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
-   handle_interrupt e
-   \<lbrace>\<lambda>r s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  apply(simp add: handle_interrupt_def split del: if_split)
-  apply (rule hoare_pre)
-  apply (wp)
-   apply(case_tac "st \<noteq> IRQTimer")
-    apply(( wp hoare_vcg_imp_lift'
-          | simp add: handle_reserved_irq_def
-          | wpc)+)[1]
-   apply((wp timer_tick_domain_time_sched_action | simp)+)[1]
-  apply(wp| simp add: get_irq_state_def)+
-  done
-
-lemma kernel_entry_if_domain_time_sched_action:
-  "num_domains > 1 \<Longrightarrow>
-   \<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
-   kernel_entry_if e tc
-   \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  apply(case_tac "e = Interrupt")
-   apply (simp add: kernel_entry_if_def)
-   apply (wp handle_interrupt_domain_time_sched_action| wpc | simp)+
-     apply(rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
-      apply (wp | simp)+
-  apply(wp hoare_vcg_imp_lift' kernel_entry_if_domain_fields | simp)+
-  done
-
-lemma handle_preemption_if_domain_time_sched_action:
-  "num_domains > 1 \<Longrightarrow>
-   \<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
-   handle_preemption_if tc
-   \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-   apply (simp add: handle_preemption_if_def)
-   apply (wp handle_interrupt_domain_time_sched_action| wpc | simp)+
-     apply(rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
-      apply (wp | simp)+
-  done
 
 definition user_context_of :: "'k global_sys_state \<Rightarrow> user_context"
 where
@@ -1990,21 +1969,6 @@ lemmas schedule_if_idle_equiv[wp] =
                                            invs_pd_not_idle_thread,
                                         simplified]
 
-lemma not_in_global_refs_vs_lookup:
-  "\<lbrakk>(\<exists>\<unrhd>p) s; valid_vs_lookup s; valid_global_refs s;
-    valid_arch_state s; valid_global_objs s\<rbrakk> \<Longrightarrow>
-   p \<notin> global_refs s"
-  apply (clarsimp dest!: valid_vs_lookupD)
-  apply (drule(1) valid_global_refsD2)
-  apply (simp add: cap_range_def)
-  apply blast
-  done
-
-lemma ptrFromPAddr_add_helper:
-  "ptrFromPAddr (a + b) = ptrFromPAddr a + b"
-  apply(simp add: ptrFromPAddr_def)
-  done
-
 lemma dmo_user_memory_update_idle_equiv:
   "\<lbrace>idle_equiv st\<rbrace> do_machine_op (user_memory_update um) \<lbrace>\<lambda>y. idle_equiv st\<rbrace>"
   by (wpsimp wp: dmo_wp)
@@ -2032,9 +1996,6 @@ lemma Init_Fin_serial_weak_strengthen:
 lemma rel_terminate_weaken:
   "rel_terminate A s0 R I measuref \<Longrightarrow> J \<subseteq> I \<Longrightarrow> rel_terminate A s0 R J measuref"
   by (force simp: rel_terminate_def)
-
-end
-
 
 context valid_initial_state begin
 
@@ -2321,17 +2282,15 @@ lemma invs_if_Step_ADT_A_if:
            apply simp
            apply(erule use_valid)
             apply (rule current_aag_lift)
-             apply(wp kernel_entry_if_invs kernel_entry_silc_inv[where st'=s0_internal]
-                      kernel_entry_pas_refined[where st=s0_internal]
-                      kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
-                      kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
-                      kernel_entry_if_domain_fields
-                      kernel_entry_if_idle_equiv
-                      kernel_entry_if_domain_time_sched_action[OF num_domains_sanity]
-                      hoare_vcg_imp_lift'
-                      ct_idle_lift
-                  | clarsimp intro!: guarded_pas_is_subject_current_aag[rule_format]
-                  | intro conjI)+
+             apply (wp kernel_entry_if_invs kernel_entry_silc_inv[where st'=s0_internal]
+                       kernel_entry_pas_refined[where st=s0_internal]
+                       kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
+                       kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
+                       kernel_entry_if_domain_fields kernel_entry_if_idle_equiv
+                       kernel_entry_if_domain_time_sched_action
+                       hoare_false_imp ct_idle_lift
+                    | clarsimp intro!: guarded_pas_is_subject_current_aag[rule_format]
+                    | intro conjI)+
               apply (rule guarded_pas_is_subject_current_aag[rule_format],assumption+)
               apply (simp add: schact_is_rct_def)+
             apply (rule guarded_pas_is_subject_current_aag[rule_format],assumption+)
@@ -2353,15 +2312,15 @@ lemma invs_if_Step_ADT_A_if:
           apply (simp split: unit.splits)
           apply (erule use_valid)
            apply (rule current_aag_lift)
-            apply(wp hoare_vcg_const_imp_lift kernel_entry_if_invs
-                     kernel_entry_silc_inv[where st'=s0_internal]
-                     kernel_entry_pas_refined[where st=s0_internal]
-                     kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
-                     kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
-                     kernel_entry_if_domain_time_sched_action[OF num_domains_sanity]
-                     ct_idle_lift
-                 | clarsimp intro: guarded_pas_is_subject_current_aag
-                 | wp kernel_entry_if_domain_fields)+
+            apply (wp hoare_vcg_const_imp_lift kernel_entry_if_invs
+                      kernel_entry_silc_inv[where st'=s0_internal]
+                      kernel_entry_pas_refined[where st=s0_internal]
+                      kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
+                      kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
+                      kernel_entry_if_domain_time_sched_action
+                      ct_idle_lift
+                   | clarsimp intro: guarded_pas_is_subject_current_aag
+                   | wp kernel_entry_if_domain_fields)+
           apply (rule conjI, fastforce intro!: active_from_running)
           apply (simp add: schact_is_rct_def)
           apply (rule guarded_pas_is_subject_current_aag,assumption+)
@@ -2375,23 +2334,20 @@ lemma invs_if_Step_ADT_A_if:
          apply (wp handle_preemption_if_invs | simp)+
          apply (clarsimp simp add: idle_equiv_context_equiv)
          apply (erule use_valid)
-         apply (rule hoare_add_post[OF handle_preemption_context, OF TrueI],
-                simp,
-                rule hoare_drop_imps)
-           apply (wp handle_preemption_if_invs
-                     handle_preemption_if_domain_sep_inv
-                     handle_preemption_if_domain_time_sched_action[OF num_domains_sanity]
-                     handle_preemption_if_det_inv ct_idle_lift| simp add: non_kernel_IRQs_def)+
-        apply(simp add: kernel_schedule_if_def | elim exE conjE)+
-        apply(erule use_valid)
-         apply((wp schedule_if_ct_running_or_ct_idle
-                   schedule_if_domain_time_nonzero' schedule_if_domain_time_nonzero
-                   schedule_if_det_inv
-                   hoare_vcg_imp_lift'
-                | simp add: invs_valid_idle)+)[2]
-       apply(simp add: kernel_exit_A_if_def | elim exE conjE)+
-       apply(frule state_unchanged[OF kernel_exit_if_inv])
-       apply(frule use_valid[OF _ kernel_exit_if_det_inv])
+          apply (rule hoare_add_post[OF handle_preemption_context, OF TrueI], simp,
+                 rule hoare_drop_imps)
+          apply (wp handle_preemption_if_invs handle_preemption_if_domain_sep_inv
+                    handle_preemption_if_domain_time_sched_action
+                    handle_preemption_if_det_inv ct_idle_lift)
+         apply (fastforce simp: non_kernel_IRQs_def)
+        apply (simp add: kernel_schedule_if_def | elim exE conjE)+
+        apply (erule use_valid)
+         apply ((wp schedule_if_ct_running_or_ct_idle schedule_if_domain_time_nonzero'
+                    schedule_if_domain_time_nonzero schedule_if_det_inv hoare_false_imp
+                 | fastforce simp: invs_valid_idle)+)[2]
+       apply (simp add: kernel_exit_A_if_def | elim exE conjE)+
+       apply (frule state_unchanged[OF kernel_exit_if_inv])
+       apply (frule use_valid[OF _ kernel_exit_if_det_inv])
         apply simp
        apply(clarsimp)
        apply (elim disjE)

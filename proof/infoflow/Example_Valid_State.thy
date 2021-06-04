@@ -1818,32 +1818,31 @@ lemma Sys1_valid_initial_state_noenabled:
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   apply (unfold_locales, simp_all only: pasMaySendIrqs_Sys1PAS)
-                      apply (insert det_inv_invariant)[9]
-                      apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
-                     apply ((erule invariant_over_ADT_if.det_inv_abs_state
-                                   invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
-                                   invariant_over_ADT_if.check_active_irq_if_User_det_inv
-                                   invariant_over_ADT_if.do_user_op_if_det_inv
-                                   invariant_over_ADT_if.handle_preemption_if_det_inv
-                                   invariant_over_ADT_if.kernel_entry_if_Interrupt_det_inv
-                                   invariant_over_ADT_if.kernel_entry_if_det_inv
-                                   invariant_over_ADT_if.kernel_exit_if_det_inv
-                                   invariant_over_ADT_if.schedule_if_det_inv)+)[8]
-             apply (rule Sys1_pas_cur_domain)
-            apply (rule Sys1_pas_wellformed_noninterference)
-           apply (simp only: einvs_s0)
-           apply (simp add: Sys1_current_subject_idemp)
-           apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
-                            domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
-                            idle_equiv_refl)
-           apply (clarsimp simp: obj_valid_pdpt_kh0 valid_domain_list_2_def s0_internal_def exst0_def)
-          apply (simp add: det_inv_s0)
-         apply (simp add: s0_internal_def exst0_def)
-        apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq
-                         identity_eq[symmetric] tcb_states_of_state_s0)
-        apply (simp add: s0_ptr_defs s0_internal_def)
-       apply (simp add: s0_internal_def exst0_def)
-      apply (simp add: num_domains_def)
+                     apply (insert det_inv_invariant)[9]
+                     apply (erule(2) invariant_over_ADT_if.det_inv_abs_state)
+                    apply ((erule invariant_over_ADT_if.det_inv_abs_state
+                                  invariant_over_ADT_if.check_active_irq_if_Idle_det_inv
+                                  invariant_over_ADT_if.check_active_irq_if_User_det_inv
+                                  invariant_over_ADT_if.do_user_op_if_det_inv
+                                  invariant_over_ADT_if.handle_preemption_if_det_inv
+                                  invariant_over_ADT_if.kernel_entry_if_Interrupt_det_inv
+                                  invariant_over_ADT_if.kernel_entry_if_det_inv
+                                  invariant_over_ADT_if.kernel_exit_if_det_inv
+                                  invariant_over_ADT_if.schedule_if_det_inv)+)[8]
+            apply (rule Sys1_pas_cur_domain)
+           apply (rule Sys1_pas_wellformed_noninterference)
+          apply (simp only: einvs_s0)
+          apply (simp add: Sys1_current_subject_idemp)
+          apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
+                           domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
+                           idle_equiv_refl)
+          apply (clarsimp simp: obj_valid_pdpt_kh0 valid_domain_list_2_def s0_internal_def exst0_def)
+         apply (simp add: det_inv_s0)
+        apply (simp add: s0_internal_def exst0_def)
+       apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq
+                        identity_eq[symmetric] tcb_states_of_state_s0)
+       apply (simp add: s0_ptr_defs s0_internal_def)
+      apply (simp add: s0_internal_def exst0_def)
      apply (rule utf_det)
     apply (rule utf_non_empty)
    apply (rule utf_non_interrupt)

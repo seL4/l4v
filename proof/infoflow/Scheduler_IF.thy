@@ -2169,14 +2169,13 @@ lemma dec_domain_time_valid_sched_action[wp]:
 
 lemma timer_tick_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  shows
-      "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs and
-                                       valid_sched_action)
-            (when (Suc 0 < num_domains)
-                  (do x \<leftarrow> dec_domain_time;
-                      dom_time \<leftarrow> gets domain_time;
-                      when (dom_time = 0) reschedule_required
-                   od))"
+  shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs
+                                                         and valid_sched_action)
+                                 (when (Suc 0 < numDomains)
+                                    (do x \<leftarrow> dec_domain_time;
+                                        dom_time \<leftarrow> gets domain_time;
+                                        when (dom_time = 0) reschedule_required
+                                     od))"
   apply (rule equiv_valid_guard_imp)
    apply (wp when_ev | wp (once) hoare_drop_imps)+
        apply (clarsimp simp: scheduler_equiv_def)
