@@ -1939,7 +1939,7 @@ lemma timer_tick_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs
                                                          and valid_sched_action)
-                                 (when (Suc 0 < num_domains)
+                                 (when (Suc 0 < numDomains)
                                     (do x \<leftarrow> dec_domain_time;
                                         dom_time \<leftarrow> gets domain_time;
                                         when (dom_time = 0) reschedule_required
