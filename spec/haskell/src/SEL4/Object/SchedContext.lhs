@@ -223,16 +223,10 @@ This module uses the C preprocessor to select a target architecture.
 > refillNew :: PPtr SchedContext -> Int -> Ticks -> Ticks -> Kernel ()
 > refillNew scPtr maxRefills budget period = do
 >     curTime <- getCurTime
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scPeriod = period })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scBudget = budget })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillHead = 0 })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillCount = 1 })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillMax = maxRefills })
+>     updateSchedContext scPtr (\sc -> sc { scPeriod = period })
+>     updateSchedContext scPtr (\sc -> sc { scBudget = budget })
+>     updateSchedContext scPtr (\sc -> sc { scRefillMax = maxRefills })
+>     updateSchedContext scPtr (\sc -> sc { scRefillHead = 0, scRefillCount = 1 })
 >     setRefillHd scPtr (Refill { rTime = curTime, rAmount = budget })
 >     maybeAddEmptyTail scPtr
 
@@ -247,20 +241,12 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()
 > refillUpdate scPtr newPeriod newBudget newMaxRefills = do
->     sc <- getSchedContext scPtr
->     let head = refillHd sc
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillHead = 0 })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillCount = 1 })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scRefillMax = newMaxRefills })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr $ setRefillIndex 0 head sc
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scPeriod = newPeriod })
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr (sc { scBudget = newBudget })
+>     updateSchedContext scPtr $ \sc -> sc { scRefills = replaceAt 0 (scRefills sc) (refillHd sc) }
+>     updateSchedContext scPtr (\sc -> sc { scRefillHead = 0 })
+>     updateSchedContext scPtr (\sc -> sc { scRefillCount = 1 })
+>     updateSchedContext scPtr (\sc -> sc { scRefillMax = newMaxRefills })
+>     updateSchedContext scPtr (\sc -> sc { scPeriod = newPeriod })
+>     updateSchedContext scPtr (\sc -> sc { scBudget = newBudget })
 >     whenM (refillReady scPtr) $ do
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \r -> r { rTime = curTime }
