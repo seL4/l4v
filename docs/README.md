@@ -23,6 +23,7 @@ Current topics are:
 - [De-duplicating proofs](de-duplicating-proofs.md)
 - [Compacting proofs](compacting-proofs.md)
 - [Architecture Split](arch-split.md) Why and How-To
+- [Haskell Assertions](haskell-assertions.md): how to use assertions in Haskell to use information from AInvs on Haskell and C levels
 
 ## Plans
 
