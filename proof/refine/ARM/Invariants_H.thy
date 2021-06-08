@@ -31,6 +31,21 @@ end
 
 end
 
+section "Relationship of Executable Spec to Kernel Configuration"
+
+text \<open>
+  Some values are set per kernel configuration (e.g. number of domains), but other related
+  values (e.g. maximum domain) are derived from storage constraints (e.g. bytes used).
+  To relate the two, we must look at the values of kernel configuration constants.
+  To allow the proofs to work for all permitted values of these constants, their definitions
+  should only be unfolded in this section, and the derived properties kept to a minimum.\<close>
+
+lemma le_maxDomain_eq_less_numDomains:
+  shows "x \<le> unat maxDomain \<longleftrightarrow> x < Kernel_Config.numDomains"
+        "y \<le> maxDomain \<longleftrightarrow> unat y < Kernel_Config.numDomains"
+  by (auto simp: Kernel_Config.numDomains_def maxDomain_def word_le_nat_alt)
+
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariants on Executable Spec"
@@ -3377,4 +3392,5 @@ end
 add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
+
 end
