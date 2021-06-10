@@ -3083,7 +3083,7 @@ lemma sai_invs'[wp]:
           apply (clarsimp simp: valid_obj'_def valid_ntfn'_def
                          split: list.splits)
          apply (clarsimp simp: invs'_def valid_state'_def)
-         apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def
+         apply (clarsimp simp: st_tcb_at_refs_of_rev' valid_idle'_def pred_tcb_at'_def idle_tcb'_def
                         dest!: sym_refs_ko_atD' sym_refs_st_tcb_atD' sym_refs_obj_atD'
                         split: list.splits)
         apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
@@ -3689,7 +3689,7 @@ crunch cap_to'[wp]: doIPCTransfer "ex_nonz_cap_to' p"
 lemma st_tcb_idle':
   "\<lbrakk>valid_idle' s; st_tcb_at' P t s\<rbrakk> \<Longrightarrow>
    (t = ksIdleThread s) \<longrightarrow> P IdleThreadState"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
+  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
 crunch idle'[wp]: getThreadCallerSlot "valid_idle'"
 crunch idle'[wp]: getThreadReplySlot "valid_idle'"

@@ -2544,8 +2544,7 @@ lemma archThreadSet_valid_idle'[wp]:
   "archThreadSet f t \<lbrace>valid_idle'\<rbrace>"
   unfolding archThreadSet_def
   apply (wpsimp wp: setObject_tcb_idle' getObject_tcb_wp)
-  apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def)
-  apply normalise_obj_at'
+  apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
   done
 
 lemma archThreadSet_ko_wp_at_no_vcpu[wp]:

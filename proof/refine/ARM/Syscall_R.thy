@@ -821,18 +821,17 @@ lemma doReply_invs[wp]:
                    in hoare_strengthen_post [rotated])
             apply (clarsimp)
             apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
              apply (rule conjI)
               apply clarsimp
-             apply clarsimp
-             apply (drule idle_tcb_at'_split, clarsimp, drule (1) st_tcb_at'_eqD, simp)
+             apply (clarsimp simp: obj_at'_def idle_tcb'_def pred_tcb_at'_def)
             apply clarsimp
             apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
              apply (erule pred_tcb'_weakenE, clarsimp)
             apply (rule conjI)
-             apply (clarsimp simp add: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def
-                                      obj_at'_def)
+             apply (clarsimp simp : invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def
+                                    obj_at'_def idle_tcb'_def)
             apply (rule conjI)
              apply clarsimp
              apply (frule invs'_not_runnable_not_queued)
@@ -1142,7 +1141,7 @@ lemma get_mrs_length_rv[wp]:
 lemma st_tcb_at_idle_thread':
   "\<lbrakk> st_tcb_at' P (ksIdleThread s) s; valid_idle' s \<rbrakk>
         \<Longrightarrow> P IdleThreadState"
-  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
+  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
 crunch tcb_at'[wp]: replyFromKernel "tcb_at' t"
 
@@ -1338,7 +1337,7 @@ lemma hinv_invs'[wp]:
          apply (subgoal_tac "thread \<noteq> ksIdleThread s", simp_all)[1]
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap'')
          apply (clarsimp simp: valid_idle'_def valid_state'_def
-                               invs'_def pred_tcb_at'_def obj_at'_def)
+                               invs'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
         apply wp+
        apply (rule_tac Q="\<lambda>rv'. invs' and valid_invocation' rv
                                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
@@ -2115,7 +2114,7 @@ proof
   assume "ksCurThread s = ksIdleThread s"
   with vi have "ct_in_state' idle' s"
     unfolding ct_in_state'_def valid_idle'_def
-    by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+    by (clarsimp simp: pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
   with cts show False
     unfolding ct_in_state'_def

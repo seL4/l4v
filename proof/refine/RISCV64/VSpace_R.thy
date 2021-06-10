@@ -927,8 +927,14 @@ lemma storePTE_ifunsafe [wp]:
 
 lemma storePTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding valid_idle'_def
-  by (rule hoare_lift_Pf [where f="ksIdleThread"]; wp)
+  apply (simp add: valid_idle'_def)
+  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: storePTE_def)
+   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
+   apply (clarsimp dest!: updateObject_default_result)
+  apply wpsimp
+  done
 
 crunch arch' [wp]: storePTE "\<lambda>s. P (ksArchState s)"
 

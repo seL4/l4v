@@ -1182,10 +1182,10 @@ lemma vgicMaintenance_invs'[wp]:
              apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
              apply (rule conjI)
               apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
             apply wps
             apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift hoare_drop_imps
+hoare_vcg_ex_lift hoare_vcg_conj_lift
                    | wps)+
   apply (clarsimp cong: conj_cong imp_cong split: if_split)
   apply (strengthen st_tcb_ex_cap''[where P=active'])
@@ -1195,8 +1195,7 @@ lemma vgicMaintenance_invs'[wp]:
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
    apply (rule conjI)
     apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-   apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
   apply clarsimp
   done
 
@@ -1218,8 +1217,7 @@ lemma vppiEvent_invs'[wp]:
              apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
              apply (rule conjI)
               apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
             apply wps
             apply (wpsimp simp: if_apply_def2 vcpuUpdate_def
                           wp: hoare_vcg_const_imp_lift hoare_drop_imps

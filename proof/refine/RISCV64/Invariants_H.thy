@@ -842,11 +842,28 @@ definition sch_act_sane :: "kernel_state \<Rightarrow> bool" where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
-abbreviation
-  "idle_tcb_at' \<equiv> pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t))"
+definition
+  idle_tcb'_2 :: "Structures_H.thread_state \<times> machine_word option \<Rightarrow> bool"
+where
+  "idle_tcb'_2 \<equiv> \<lambda>(st, ntfn_opt).
+                    (idle' st \<and> ntfn_opt = None)"
 
-definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
-  "valid_idle' \<equiv> \<lambda>s. idle_tcb_at' (\<lambda>p. idle' (fst p) \<and> snd p = None) (ksIdleThread s) s"
+abbreviation
+  "idle_tcb' tcb \<equiv>
+      idle_tcb'_2 (tcbState tcb, tcbBoundNotification tcb)"
+
+lemmas idle_tcb'_def = idle_tcb'_2_def
+
+definition
+  valid_idle' :: "kernel_state \<Rightarrow> bool"
+where
+  "valid_idle' \<equiv>
+     \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s
+         \<and> idle_thread_ptr = ksIdleThread s"
+
+lemma valid_idle'_tcb_at':
+  "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s"
+  by (clarsimp simp: valid_idle'_def)
 
 definition valid_irq_node' :: "machine_word \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_irq_node' x \<equiv>
@@ -1492,7 +1509,7 @@ lemma valid_pspaceE' [elim]:
 lemma idle'_no_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def)
+                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -1613,7 +1630,7 @@ lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
       \<Longrightarrow> valid_idle' s'"
   apply (clarsimp simp: valid_idle'_def ex_nonz_cap_to'_def)
-  apply (erule pred_tcb_at'_pspaceI, assumption)
+  apply (erule obj_at'_pspaceI, assumption)
   done
 
 lemma obj_at'_weaken:
@@ -2913,10 +2930,6 @@ lemma not_pred_tcb_at'_strengthen:
 lemma obj_at'_ko_at'_prop:
   "ko_at' ko t s \<Longrightarrow> obj_at' P t s = P ko"
   by (drule obj_at_ko_at', clarsimp simp: obj_at'_def)
-
-lemma idle_tcb_at'_split:
-  "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
-  by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
 
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =

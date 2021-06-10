@@ -7630,7 +7630,7 @@ shows  "ccorres dc xfdc
                apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def
                dest!:invs_valid_idle' elim!: obj_atE')
              apply (drule(1) pspace_no_overlapD')
-             apply (erule_tac x = "ksIdleThread s" in in_empty_interE[rotated])
+             apply (rule_tac x = "ksIdleThread s" in in_empty_interE[rotated], simp)
               prefer 2
               apply (simp add:Int_ac)
              subgoal by (clarsimp simp: blah)

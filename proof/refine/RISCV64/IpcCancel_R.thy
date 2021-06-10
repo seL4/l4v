@@ -841,7 +841,7 @@ proof -
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
     apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: if_split cong: if_cong)
-    apply (rule conjI, clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
+    apply (rule conjI, clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
     apply (frule obj_at_valid_objs', clarsimp)
     apply (clarsimp simp: projectKOs valid_obj'_def)
     apply (rule conjI)
@@ -2512,7 +2512,7 @@ lemma cancelBadgedSends_filterM_helper':
   apply (intro conjI)
       apply (clarsimp simp: valid_pspace'_def valid_tcb'_def elim!: valid_objs_valid_tcbE dest!: st_tcb_ex_cap'')
      apply (fastforce dest!: st_tcb_ex_cap'')
-    apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
+    apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
    apply (erule delta_sym_refs)
     apply (fastforce elim!: obj_atE'
                       simp: state_refs_of'_def tcb_bound_refs'_def
