@@ -7151,7 +7151,8 @@ lemma refill_update_is_active_sc[wp]:
    \<lbrace>\<lambda>rv s. Q (is_active_sc scp s)\<rbrace>"
   unfolding refill_update_def refill_add_tail_def
             update_sched_context_set_refills_rewrite update_refill_hd_rewrite
-  by (wpsimp wp: hoare_drop_imps simp: set_refills_def)
+  apply (wpsimp wp: set_refills_wp hoare_drop_imps get_refills_wp update_sched_context_wp)
+  by (clarsimp simp: obj_at_def vs_all_heap_simps)
 
 lemma refill_new_is_active_sc[wp]:
   "\<lbrace>\<lambda>s. if scp = sc_ptr
@@ -15510,8 +15511,8 @@ lemma refill_update_not_active_sc:
    \<lbrace>\<lambda>rv s.  \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
   unfolding refill_update_def refill_add_tail_def update_refill_tl_def
             update_refill_hd_def update_sched_context_set_refills_rewrite
-  apply (wpsimp wp: hoare_drop_imps simp: set_refills_def)
-  by (clarsimp simp: active_sc_def)
+  apply (wpsimp wp: set_refills_wp get_refills_wp update_sched_context_wp)
+  by (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def)
 
 lemma refill_update_bounded_release_time:
   "\<lbrace>bounded_release_time scp and current_time_bounded 2
