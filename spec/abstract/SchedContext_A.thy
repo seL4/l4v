@@ -323,10 +323,8 @@ definition
   refill_update :: "obj_ref \<Rightarrow> ticks \<Rightarrow> ticks \<Rightarrow> nat \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "refill_update sc_ptr new_period new_budget new_max_refills = do
-     sc \<leftarrow> get_sched_context sc_ptr;
-     refill_hd \<leftarrow> return (hd (sc_refills sc));
+     update_sched_context sc_ptr (sc_refills_update (\<lambda>rfs. [hd rfs]));
      set_sc_obj_ref sc_refill_max_update sc_ptr new_max_refills;
-     set_refills sc_ptr [refill_hd];
      set_sc_obj_ref sc_period_update sc_ptr new_period;
      set_sc_obj_ref sc_budget_update sc_ptr new_budget;
 
