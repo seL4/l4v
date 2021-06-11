@@ -92,7 +92,7 @@ lemma asid_low_bits [simp]:
   "asidLowBits = asid_low_bits"
   by (simp add: asid_low_bits_def asidLowBits_def)
 
-lemma get_asid_pool_corres [corres]:
+lemma getObject_ASIDPool_corres [corres]:
   "p = p' \<Longrightarrow> corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (asid_pool_at' p')
           (get_asid_pool p) (getObject p')"
@@ -155,12 +155,12 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
                         projectKOs)
   done
 
-lemma get_asid_pool_corres':
+lemma getObject_ASIDPool_corres':
   "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (pspace_aligned' and pspace_distinct')
           (get_asid_pool p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_asid_pool_corres)
+         rule getObject_ASIDPool_corres)
    apply auto
   done
 
@@ -195,23 +195,23 @@ lemma storePTE_cte_wp_at'[wp]:
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
-lemma set_asid_pool_corres [corres]:
+lemma setObject_ASIDPool_corres [corres]:
   "p = p' \<Longrightarrow> a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and valid_etcbs) (asid_pool_at' p')
             (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
-  apply (corressimp search: set_other_obj_corres[where P="\<lambda>_. True"]
+  apply (corressimp search: setObject_other_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_obj_relation_def asid_pool_relation_def)
   apply (clarsimp simp: obj_at_simps )
   by (auto simp: obj_at_simps typ_at_to_obj_at_arches
           split: Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 
-lemma set_asid_pool_corres':
+lemma setObject_ASIDPool_corres':
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and valid_etcbs) (pspace_aligned' and pspace_distinct')
             (set_asid_pool p a) (setObject p a')"
-  apply (rule stronger_corres_guard_imp[OF set_asid_pool_corres])
+  apply (rule stronger_corres_guard_imp[OF setObject_ASIDPool_corres])
    apply auto
   done
 
@@ -222,7 +222,7 @@ lemma pde_relation_aligned_simp:
   by (clarsimp simp: pde_relation_aligned_def
               split: ARM_H.pde.splits if_splits)
 
-lemma get_pde_corres [corres]:
+lemma getObject_PDE_corres [corres]:
   "p = p' \<Longrightarrow> corres (pde_relation_aligned (p >> 2)) (pde_at p) (pde_at' p')
      (get_pde p) (getObject p')"
   apply (simp add: getObject_def get_pde_def get_pd_def get_object_def split_def bind_assoc)
@@ -445,12 +445,12 @@ lemma get_master_pde_corres [@lift_corres_args, corres]:
     done
   qed
 
-lemma get_pde_corres' :
+lemma getObject_PDE_corres' :
   "corres (pde_relation_aligned (p >> 2)) (pde_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pde p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pde_corres)
+         rule getObject_PDE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pde_atI')
@@ -474,7 +474,7 @@ lemma pte_relation_aligned_simp:
   by (clarsimp simp: pte_relation_aligned_def
               split: ARM_H.pte.splits if_splits)
 
-lemma get_pte_corres [corres]:
+lemma getObject_PTE_corres [corres]:
   "p = p' \<Longrightarrow> corres (pte_relation_aligned (p >> 2)) (pte_at p) (pte_at' p')
      (get_pte p) (getObject p')"
   apply (simp add: getObject_def get_pte_def get_pt_def get_object_def split_def bind_assoc)
@@ -671,12 +671,12 @@ lemma get_master_pte_corres [@lift_corres_args, corres]:
    done
   qed
 
-lemma get_pte_corres':
+lemma getObject_PTE_corres':
   "corres (pte_relation_aligned (p >> 2)) (pte_at p)
      (pspace_aligned' and pspace_distinct')
      (get_pte p) (getObject p)"
   apply (rule stronger_corres_guard_imp,
-         rule get_pte_corres)
+         rule getObject_PTE_corres)
    apply auto[1]
   apply clarsimp
   apply (rule aligned_distinct_relation_pte_atI')
@@ -693,8 +693,8 @@ lemma get_master_pte_corres':
    apply auto
   done
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
-lemma set_pd_corres [@lift_corres_args, corres]:
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
+lemma setObject_PD_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits)
                      and pspace_aligned and valid_etcbs)
@@ -774,7 +774,7 @@ lemma set_pd_corres [@lift_corres_args, corres]:
   done
 
 
-lemma set_pt_corres [@lift_corres_args, corres]:
+lemma setObject_PT_corres [@lift_corres_args, corres]:
   "pte_relation_aligned (p >> 2) pte pte' \<Longrightarrow>
          corres dc  (ko_at (ArchObj (PageTable pt)) (p && ~~ mask pt_bits)
                      and pspace_aligned and valid_etcbs)
@@ -852,12 +852,12 @@ lemma set_pt_corres [@lift_corres_args, corres]:
   done
 
 
-lemma store_pde_corres [@lift_corres_args, corres]:
+lemma storePDE_corres [@lift_corres_args, corres]:
   "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow>
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
   apply (simp add: store_pde_def storePDE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pd_corres[OF _ refl])
+     apply (erule setObject_PD_corres[OF _ refl])
     apply (clarsimp simp: exs_valid_def get_pd_def get_object_def exec_gets bind_assoc
                           obj_at_def pde_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -870,21 +870,21 @@ lemma store_pde_corres [@lift_corres_args, corres]:
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
-lemma store_pde_corres':
+lemma storePDE_corres':
   "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow>
   corres dc
      (pde_at p and pspace_aligned and valid_etcbs) (pspace_aligned' and pspace_distinct')
      (store_pde p pde) (storePDE p pde')"
-  apply (rule stronger_corres_guard_imp, rule store_pde_corres)
+  apply (rule stronger_corres_guard_imp, rule storePDE_corres)
    apply auto
   done
 
-lemma store_pte_corres [@lift_corres_args, corres]:
+lemma storePTE_corres [@lift_corres_args, corres]:
   "pte_relation_aligned (p>>2) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs) (pte_at' p) (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres[OF _ refl])
+     apply (erule setObject_PT_corres[OF _ refl])
     apply (clarsimp simp: exs_valid_def get_pt_def get_object_def
                           exec_gets bind_assoc obj_at_def pte_at_def)
     apply (clarsimp simp: a_type_def return_def
@@ -897,16 +897,16 @@ lemma store_pte_corres [@lift_corres_args, corres]:
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits if_split_asm)
   done
 
-lemma store_pte_corres':
+lemma storePTE_corres':
   "pte_relation_aligned (p >> 2) pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and valid_etcbs)
             (pspace_aligned' and pspace_distinct')
             (store_pte p pte) (storePTE p pte')"
-  apply (rule stronger_corres_guard_imp, rule store_pte_corres)
+  apply (rule stronger_corres_guard_imp, rule storePTE_corres)
    apply auto
   done
 
-lemma lookup_pd_slot_corres [simp]:
+lemma lookupPDSlot_corres [simp]:
   "lookupPDSlot pd vptr = lookup_pd_slot pd vptr"
   by (simp add: lookupPDSlot_def lookup_pd_slot_def pageBits_def ptBits_def pdeBits_def)
 
@@ -1028,7 +1028,7 @@ lemmas checkPTAt_corres [corresK] =
   corres_stateAssert_implied_frame[OF page_table_at_lift, folded checkPTAt_def]
 
 
-lemma lookup_pt_slot_corres [@lift_corres_args, corres]:
+lemma lookupPTSlot_corres [@lift_corres_args, corres]:
   "corres (lfr \<oplus> (=))
           (pde_at (lookup_pd_slot pd vptr) and pspace_aligned and valid_vspace_objs
           and (\<exists>\<rhd> (lookup_pd_slot pd vptr && ~~ mask pd_bits)) and
@@ -1105,7 +1105,7 @@ lemma arch_deriveCap_valid:
                    capUntypedPtr_def ARM_H.capUntypedPtr_def)
   done
 
-lemma arch_derive_corres [corres]:
+lemma arch_deriveCap_corres [corres]:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
   corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>
@@ -1125,7 +1125,7 @@ definition
 where
   "mapping_map \<equiv> pte_relation' \<otimes> (=) \<oplus> pde_relation' \<otimes> (=)"
 
-lemma create_mapping_entries_corres [corres]:
+lemma createMappingEntries_corres [corres]:
   "\<lbrakk> vm_rights' = vmrights_map vm_rights;
      attrib' = vmattributes_map attrib; base = base'; vptr = vptr'; pgsz = pgsz'; pd = pd' \<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> mapping_map)
@@ -1164,7 +1164,7 @@ lemma createMappingEntries_valid_slots' [wp]:
   apply auto
   done
 
-lemma ensure_safe_mapping_corres [corres]:
+lemma ensureSafeMapping_corres [corres]:
   "mapping_map m m' \<Longrightarrow>
   corres (ser \<oplus> dc) (valid_mapping_entries m)
                     (pspace_aligned' and pspace_distinct'

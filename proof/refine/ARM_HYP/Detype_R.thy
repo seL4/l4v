@@ -609,7 +609,7 @@ lemma cNodeNoPartialOverlap:
 declare wrap_ext_det_ext_ext_def[simp]
 
 
-lemma detype_corres:
+lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 2 \<Longrightarrow>
    corres dc
       (\<lambda>s. einvs s

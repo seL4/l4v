@@ -122,7 +122,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i)
@@ -150,7 +150,7 @@ lemma pac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated)
        prefer 2
-       apply (erule detype_corres)
+       apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
@@ -173,7 +173,7 @@ lemma pac_corres:
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
                apply (rule corres_split_deprecated)
                   prefer 2
-                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
@@ -393,7 +393,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -498,7 +498,7 @@ lemma flush_type_map:
                         ARM_H.isPageFlushLabel_def ARM_H.isPDFlushLabel_def
                  split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
-lemma resolve_vaddr_corres:
+lemma resolveVAddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
   corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
@@ -526,7 +526,7 @@ lemma resolve_vaddr_corres:
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
-lemma dec_arch_inv_page_flush_corres:
+lemma decodeARMPageFlush_corres:
   "ARM_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
@@ -782,7 +782,7 @@ lemma corres_splitEE':
 lemmas whenE_throwError_corres_terminal =
   whenE_throwError_corres[where m="returnOk ()" and m'="returnOk ()", OF _ _ corres_returnOkTT, simplified]
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -920,13 +920,13 @@ shows
            apply (rule corres_splitEE)
               prefer 2
               apply (fold ser_def)
-              apply (rule ensure_no_children_corres, rule refl)
+              apply (rule ensureNoChildren_corres, rule refl)
              apply (rule corres_splitEE)
                 prefer 2
-                apply (erule lsfc_corres, rule refl)
+                apply (erule lookupSlotForCNodeOp_corres, rule refl)
                apply (rule corres_splitEE)
                   prefer 2
-                  apply (rule ensure_empty_corres)
+                  apply (rule ensureEmptySlot_corres)
                   apply clarsimp
                  apply (rule corres_returnOk[where P="\<top>"])
                  apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
@@ -980,10 +980,10 @@ shows
            apply (rule corres_splitEE'[
                          OF corres_lookup_error[OF find_pd_for_asid_corres[where pd=undefined, OF refl]]])
              apply (rule whenE_throwError_corres; simp)
-             apply (rule corres_splitEE'[where r'=dc, OF check_vp_corres])
-               apply (rule corres_splitEE'[OF create_mapping_entries_corres]
+             apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
+               apply (rule corres_splitEE'[OF createMappingEntries_corres]
                       ; simp add: mask_vmrights_corres vm_attributes_corres)
-                 apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)
+                 apply (rule corres_splitEE'[OF ensureSafeMapping_corres], assumption)
                    apply (rule corres_returnOkTT)
                    \<comment> \<open>program split done, now prove resulting preconditions and Hoare triples\<close>
                    apply (simp add: archinv_relation_def page_invocation_map_def)
@@ -1013,7 +1013,7 @@ shows
     apply (cases "ARM_H.isPageFlushLabel (invocation_type (mi_label mi))")
      apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
      apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-        apply (rule dec_arch_inv_page_flush_corres,
+        apply (rule decodeARMPageFlush_corres,
                 clarsimp simp: ARM_H.isPageFlushLabel_def)+
     apply (clarsimp simp: ARM_H.isPageFlushLabel_def split del: if_split)
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
@@ -1066,7 +1066,7 @@ shows
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                in corres_gen_asm2)
-        apply (rule corres_split_deprecated[OF _ final_cap_corres[where ptr=slot]])
+        apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres)
@@ -1114,7 +1114,7 @@ shows
        apply (rule corres_split_deprecated[OF _ _ resolve_vaddr_valid_mapping_size])
          prefer 2
          apply clarsimp
-         apply (rule resolve_vaddr_corres[THEN corres_gen_asm])
+         apply (rule resolveVAddr_corres[THEN corres_gen_asm])
           apply simp
          apply (clarsimp simp: not_le)
         apply (case_tac rva)
@@ -1146,7 +1146,7 @@ shows
   apply clarsimp
   done
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)
@@ -1161,23 +1161,23 @@ lemma inv_arch_corres:
      apply simp
     apply (cases ai)
         apply (clarsimp simp: archinv_relation_def)
-        apply (erule corres_guard_imp [OF perform_page_table_corres])
+        apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply (clarsimp simp: archinv_relation_def)
-       apply (erule corres_guard_imp [OF perform_page_directory_corres])
+       apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
       apply (clarsimp simp: archinv_relation_def)
-      apply (erule corres_guard_imp [OF perform_page_corres])
+      apply (erule corres_guard_imp [OF performPageInvocation_corres])
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_guard_imp [OF pac_corres], rule refl)
+     apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)
-    apply (rule corres_guard_imp [OF pap_corres], rule refl)
+    apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply wp+

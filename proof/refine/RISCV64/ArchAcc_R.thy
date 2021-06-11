@@ -197,7 +197,7 @@ lemma corres_cross_over_asid_pool_at:
   apply assumption
   done
 
-lemma get_asid_pool_corres:
+lemma getObject_ASIDPool_corres:
   "p' = p \<Longrightarrow>
    corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
@@ -258,7 +258,7 @@ lemma storePTE_state_refs_of[wp]:
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
-lemma set_asid_pool_corres:
+lemma setObject_ASIDPool_corres:
   "a = inv ASIDPool a' o ucast \<Longrightarrow>
   corres dc (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
             (set_asid_pool p a) (setObject p a')"
@@ -272,7 +272,7 @@ lemma set_asid_pool_corres:
    apply wpsimp
   apply (rule corres_cross_over_asid_pool_at, fastforce)
   apply (rule corres_guard_imp)
-    apply (rule set_other_obj_corres [where P="\<lambda>ko::asidpool. True"])
+    apply (rule setObject_other_corres [where P="\<lambda>ko::asidpool. True"])
           apply simp
          apply (clarsimp simp: obj_at'_def)
          apply (erule map_to_ctes_upd_other, simp, simp)
@@ -333,7 +333,7 @@ lemma corres_cross_over_pte_at:
   apply assumption
   done
 
-lemma get_pte_corres:
+lemma getObject_PTE_corres:
   "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
           (get_pte p) (getObject p)"
   apply (rule corres_cross_over_pte_at, fastforce)
@@ -375,8 +375,8 @@ lemma one_less_2p_pte_bits[simp]:
   "(1::machine_word) < 2 ^ pte_bits"
   by (simp add: bit_simps)
 
-\<comment> \<open>set_other_obj_corres unfortunately doesn't work here\<close>
-lemma set_pt_corres:
+\<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
+lemma setObject_PT_corres:
   "pte_relation' pte pte' \<Longrightarrow>
    corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
               pspace_aligned and pspace_distinct) \<top>
@@ -450,13 +450,13 @@ lemma set_pt_corres:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma store_pte_corres:
+lemma storePTE_corres:
   "pte_relation' pte pte' \<Longrightarrow>
   corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_assume_pre, simp add: pte_at_def)
   apply (rule corres_symb_exec_l)
-     apply (erule set_pt_corres)
+     apply (erule setObject_PT_corres)
     apply (clarsimp simp: exs_valid_def gets_map_def fst_assert_opt in_omonad
                           exec_gets bind_assoc obj_at_def pte_at_def)
    apply (wpsimp simp: obj_at_def in_omonad)
@@ -559,14 +559,14 @@ lemma pteAtIndex_corres:
      \<top>
      (get_pte (pt_slot_offset level pt vptr))
      (pteAtIndex level' pt vptr)"
-  by (simp add: pteAtIndex_def) (rule get_pte_corres)
+  by (simp add: pteAtIndex_def) (rule getObject_PTE_corres)
 
 lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
 
-lemma lookup_pt_slot_from_level_corres:
+lemma lookupPTSlotFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
      (pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_table and
@@ -673,7 +673,7 @@ next
     done
 qed
 
-lemma lookup_pt_slot_corres:
+lemma lookupPTSlot_corres:
   "corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
           (pspace_aligned and pspace_distinct and valid_vspace_objs
              and valid_asid_table and \<exists>\<rhd>(max_pt_level,pt)
@@ -681,9 +681,9 @@ lemma lookup_pt_slot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corressimp corres: lookup_pt_slot_from_level_corres)
+  by (corressimp corres: lookupPTSlotFromLevel_corres)
 
-lemma pt_lookup_from_level_corres:
+lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (lfr \<oplus> (=))
           (pspace_aligned and pspace_distinct and valid_vspace_objs
@@ -703,7 +703,7 @@ proof (induct level arbitrary: level' pt pt')
 next
   case (minus level)
 
-  (* FIXME: unfortunate duplication from lookup_pt_slot_from_level_corres *)
+  (* FIXME: unfortunate duplication from lookupPTSlotFromLevel_corres *)
   from `0 < level`
   obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
   with `0 < level`
@@ -777,7 +777,7 @@ next
           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                 addr_from_ppn_def)
          apply (simp add: state_relation_def)
-        apply (simp, rule get_pte_corres)
+        apply (simp, rule getObject_PTE_corres)
        apply wpsimp+
      apply (simp add: bit0.neq_0_conv)
      apply (frule (5) vs_lookup_table_is_aligned)
@@ -834,8 +834,8 @@ lemma corres_gets_global_pt [corres]:
   apply (case_tac "riscvKSGlobalPTs (ksArchState s') maxPTLevel"; simp)
   done
 
-lemmas get_pte_corres'[corres] = get_pte_corres[@lift_corres_args]
-lemmas store_pte_corres'[corres] = store_pte_corres[@lift_corres_args]
+lemmas getObject_PTE_corres'[corres] = getObject_PTE_corres[@lift_corres_args]
+lemmas storePTE_corres'[corres] = storePTE_corres[@lift_corres_args]
 
 lemma copy_global_mappings_corres [@lift_corres_args, corres]:
   "corres dc (valid_global_arch_objs and pspace_aligned and pspace_distinct and pt_at pt)
@@ -888,7 +888,7 @@ lemma mdata_map_simps[simp]:
   "mdata_map (Some (asid, ref)) = Some (ucast asid, ref)"
   by (auto simp add: mdata_map_def)
 
-lemma arch_derive_corres:
+lemma arch_deriveCap_corres:
  "cap_relation (cap.ArchObjectCap c) (ArchObjectCap c') \<Longrightarrow>
   corres (ser \<oplus> (\<lambda>c c'. cap_relation c c'))
          \<top> \<top>
@@ -959,7 +959,7 @@ lemma find_vspace_for_asid_rewite:
   apply (simp add: liftE_bindE bind_assoc exec_gets opt_map_def asid_low_bits_of_def)
   done
 
-lemma find_vspace_for_asid_corres:
+lemma findVSpaceForASID_corres:
   assumes "asid' = ucast asid"
   shows "corres (lfr \<oplus> (=))
                 (valid_vspace_objs and valid_asid_table
@@ -981,7 +981,7 @@ lemma find_vspace_for_asid_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_asid_pool_corres[OF refl]])
+    apply (rule corres_split_deprecated [OF _ getObject_ASIDPool_corres[OF refl]])
       apply (rule_tac P="case_option \<top> pt_at (pool (ucast asid)) and pspace_aligned and pspace_distinct"
                  and P'="no_0_obj'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
