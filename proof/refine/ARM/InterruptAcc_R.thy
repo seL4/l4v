@@ -8,7 +8,7 @@ theory InterruptAcc_R
 imports TcbAcc_R
 begin
 
-lemma get_irq_slot_corres:
+lemma getIRQSlot_corres:
   "corres (\<lambda>sl sl'. sl' = cte_map sl) \<top> \<top> (get_irq_slot irq) (getIRQSlot irq)"
   apply (simp add: getIRQSlot_def get_irq_slot_def locateSlot_conv
                    liftM_def[symmetric])
@@ -23,7 +23,7 @@ crunch inv[wp]: getIRQSlot "P"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma set_irq_state_corres:
+lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>
    corres dc \<top> \<top> (set_irq_state state irq) (setIRQState state' irq)"
   apply (simp add: set_irq_state_def setIRQState_def
@@ -94,7 +94,7 @@ lemma work_units_and_irq_state_state_relationI [intro!]:
    \<in> state_relation"
   by (simp add: state_relation_def swp_def)
 
-lemma preemption_corres:
+lemma preemptionPoint_corres:
   "corres (dc \<oplus> dc) \<top> \<top> preemption_point preemptionPoint"
   apply (simp add: preemption_point_def preemptionPoint_def)
   by (auto simp: preemption_point_def preemptionPoint_def o_def gets_def liftE_def whenE_def getActiveIRQ_def

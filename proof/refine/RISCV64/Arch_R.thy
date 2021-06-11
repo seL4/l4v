@@ -127,7 +127,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i)
@@ -155,7 +155,7 @@ lemma pac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated)
        prefer 2
-       apply (erule detype_corres)
+       apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
@@ -178,7 +178,7 @@ lemma pac_corres:
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
                apply (rule corres_split_deprecated)
                   prefer 2
-                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
@@ -391,7 +391,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -449,7 +449,7 @@ lemma select_ext_fap:
 lemmas vmsz_aligned_imp_aligned
     = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
-lemma check_slot_corres:
+lemma checkSlot_corres:
   "(\<And>pte pte'. pte_relation' pte pte' \<Longrightarrow> test' pte' = test pte) \<Longrightarrow>
    corres (ser \<oplus> dc)
           (pte_at p and pspace_aligned and pspace_distinct) \<top>
@@ -457,7 +457,7 @@ lemma check_slot_corres:
           (checkSlot p test')"
   apply (simp add: check_slot_def checkSlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_pte_corres])
+    apply (rule corres_split_deprecated[OF _ getObject_PTE_corres])
       apply (rule corres_whenE, simp)
        apply (rule corres_trivial, simp)
       apply simp
@@ -511,7 +511,7 @@ lemma vmsz_aligned_user_region:
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
   by (word_bitwise, clarsimp simp: word_size)
 
-lemma decode_page_inv_corres:
+lemma decodeX64FrameInvocation_corres:
   "\<lbrakk>cap = arch_cap.FrameCap p R sz d opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -543,7 +543,7 @@ lemma decode_page_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres[OF refl])
+        apply (rule findVSpaceForASID_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE[where r'=dc])
           prefer 2
@@ -553,11 +553,11 @@ lemma decode_page_inv_corres:
           apply simp
          apply (rule corres_splitEE[where r'=dc])
             prefer 2
-            apply (rule check_vp_corres)
+            apply (rule checkVPAlignment_corres)
            apply (rule corres_splitEE)
               prefer 2
               apply (simp only: corres_liftE_rel_sum)
-              apply (rule lookup_pt_slot_corres)
+              apply (rule lookupPTSlot_corres)
              apply (clarsimp simp: unlessE_whenE)
              apply (rule corres_splitEE[where r'=dc])
                 prefer 2
@@ -569,7 +569,7 @@ lemma decode_page_inv_corres:
                   prefer 2
                   apply (cases opt; clarsimp)
                    apply (fold ser_def)
-                   apply (rule check_slot_corres)
+                   apply (rule checkSlot_corres)
                    apply fastforce
                   apply (rule corres_guard_imp)
                     apply (rule whenE_throwError_corres)
@@ -578,7 +578,7 @@ lemma decode_page_inv_corres:
                     apply (rule whenE_throwError_corres)
                       apply fastforce
                      apply presburger
-                    apply (rule check_slot_corres)
+                    apply (rule checkSlot_corres)
                     apply (case_tac pte; simp add: is_PageTablePTE_def RISCV64_H.isPageTablePTE_def)
                    apply blast
                   apply blast
@@ -637,7 +637,7 @@ lemma maybeVSpaceForASID_corres:
     apply (rule corres_split_catch)
        apply (rule corres_trivial, simp)
       apply (simp add: o_def)
-      apply (rule find_vspace_for_asid_corres, simp)
+      apply (rule findVSpaceForASID_corres, simp)
      apply wpsimp+
   done
 
@@ -645,7 +645,7 @@ crunches isFinalCapability
   for no_0_obj'[wp]: no_0_obj'
   (simp: crunch_simps wp: crunch_wps)
 
-lemma decode_page_table_inv_corres:
+lemma decodeX64PageTableInvocation_corres:
   "\<lbrakk>cap = arch_cap.PageTableCap p opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
     list_all2 (\<lambda>s s'. s' = cte_map s) (map snd excaps) (map snd excaps') \<rbrakk> \<Longrightarrow>
@@ -675,18 +675,18 @@ lemma decode_page_table_inv_corres:
      apply (rule corres_splitEE)
         prefer 2
         apply (rule corres_lookup_error)
-        apply (rule find_vspace_for_asid_corres[OF refl])
+        apply (rule findVSpaceForASID_corres[OF refl])
        apply (rule whenE_throwError_corres, simp, simp)
        apply (rule corres_splitEE)
           prefer 2
           apply (simp)
-          apply (rule lookup_pt_slot_corres)
+          apply (rule lookupPTSlot_corres)
          apply clarsimp
          apply (rule corres_splitEE)
             prefer 2
             apply simp
             apply datatype_schem
-            apply (rule get_pte_corres)
+            apply (rule getObject_PTE_corres)
            apply (simp add: unlessE_whenE)
            apply (rule corres_splitEE[where r'=dc])
               prefer 2
@@ -721,7 +721,7 @@ lemma decode_page_table_inv_corres:
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                                  in corres_gen_asm2)
-        apply (rule corres_split_deprecated[OF _ final_cap_corres[where ptr=slot]])
+        apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres; simp)
@@ -756,7 +756,7 @@ lemma decode_page_table_inv_corres:
   by (clarsimp split: invocation_label.splits arch_invocation_label.splits)
 
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -897,13 +897,13 @@ shows
                                 objBits_simps bindE_assoc split_def)
           apply (rule corres_splitEE)
              prefer 2
-             apply (rule ensure_no_children_corres, rule refl)
+             apply (rule ensureNoChildren_corres, rule refl)
             apply (rule corres_splitEE)
                prefer 2
-               apply (erule lsfc_corres, rule refl)
+               apply (erule lookupSlotForCNodeOp_corres, rule refl)
               apply (rule corres_splitEE)
                  prefer 2
-                 apply (rule ensure_empty_corres)
+                 apply (rule ensureEmptySlot_corres)
                  apply clarsimp
                 apply (rule corres_returnOk[where P="\<top>"])
                 apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
@@ -934,15 +934,15 @@ shows
    \<comment> \<open>PageCap\<close>
    apply (rename_tac word cap_rights vmpage_size option)
    apply (simp add: isCap_simps decodeRISCVMMUInvocation_def Let_def split del: if_split)
-   apply (rule decode_page_inv_corres; simp)
+   apply (rule decodeX64FrameInvocation_corres; simp)
 
   \<comment> \<open>PageTableCap\<close>
   apply (simp add: isCap_simps decodeRISCVMMUInvocation_def Let_def  split del: if_split)
-  apply (rule decode_page_table_inv_corres; simp)
+  apply (rule decodeX64PageTableInvocation_corres; simp)
   done
 
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai)
@@ -955,25 +955,25 @@ lemma inv_arch_corres:
   apply (cases ai)
      apply (clarsimp simp: archinv_relation_def performRISCVMMUInvocation_def)
      apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-         apply (rule perform_page_table_corres; wpsimp)
+         apply (rule performPageTableInvocation_corres; wpsimp)
         apply wpsimp+
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)
     apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-        apply (rule perform_page_corres; wpsimp)
+        apply (rule performPageInvocation_corres; wpsimp)
        apply wpsimp+
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply (clarsimp simp: archinv_relation_def)
    apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-       apply (rule pac_corres; wpsimp)
+       apply (rule performASIDControlInvocation_corres; wpsimp)
       apply wpsimp+
     apply (fastforce simp: valid_arch_inv_def)
    apply (fastforce simp: valid_arch_inv'_def)
   apply (clarsimp simp: archinv_relation_def)
   apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-      apply (rule pap_corres; wpsimp)
+      apply (rule performASIDPoolInvocation_corres; wpsimp)
      apply wpsimp+
    apply (fastforce simp: valid_arch_inv_def)
   apply (fastforce simp: valid_arch_inv'_def)

@@ -13,14 +13,14 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
-lemma get_mi_corres: "corres ((=) \<circ> message_info_map)
+lemma getMessageInfo_corres: "corres ((=) \<circ> message_info_map)
                       (tcb_at t and pspace_aligned and pspace_distinct) \<top>
                       (get_message_info t) (getMessageInfo t)"
   apply (rule corres_guard_imp)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
     apply (simp add: RISCV64_H.msgInfoRegister_def
              RISCV64.msgInfoRegister_def RISCV64_A.msg_info_register_def)
-    apply (rule corres_split_eqr [OF _ user_getreg_corres])
+    apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
   done
@@ -100,7 +100,7 @@ lemma valid_ipc_buffer_ptr'D2:
   apply simp
   done
 
-lemma load_ct_corres:
+lemma loadCapTransfer_corres:
   notes msg_max_words_simps = max_ipc_words_def msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def
                               capTransferDataSize_def msgExtraCapBits_def
   shows
@@ -128,7 +128,7 @@ lemma load_ct_corres:
               simp add: word_size_bits_def is_aligned_def)+
   done
 
-lemma get_recv_slot_corres:
+lemma getReceiveSlots_corres:
   "corres (\<lambda>xs ys. ys = map cte_map xs)
     (tcb_at receiver and valid_objs and pspace_aligned)
     (tcb_at' receiver and valid_objs' and pspace_aligned' and pspace_distinct' and
@@ -139,7 +139,7 @@ lemma get_recv_slot_corres:
    apply (simp add: getReceiveSlots_def)
   apply (simp add: getReceiveSlots_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ load_ct_corres])
+    apply (rule corres_split_deprecated [OF _ loadCapTransfer_corres])
       apply (rule corres_empty_on_failure)
       apply (rule corres_splitEE)
          prefer 2
@@ -151,7 +151,7 @@ lemma get_recv_slot_corres:
            prefer 2
            apply (rule corres_unify_failure)
             apply (simp add: ct_relation_def)
-            apply (erule lsfc_corres [OF _ refl])
+            apply (erule lookupSlotForCNodeOp_corres [OF _ refl])
            apply simp
           apply (simp add: split_def liftE_bindE unlessE_whenE)
           apply (rule corres_split_deprecated [OF _ get_cap_corres])
@@ -211,11 +211,11 @@ declare word_div_1 [simp]
 declare word_minus_one_le [simp]
 declare word64_minus_one_le [simp]
 
-lemma load_word_offs_corres':
+lemma loadWordUser_corres':
   "\<lbrakk> y < unat max_ipc_words; y' = of_nat y * 8 \<rbrakk> \<Longrightarrow>
   corres (=) \<top> (valid_ipc_buffer_ptr' a) (load_word_offs a y) (loadWordUser (a + y'))"
   apply simp
-  apply (erule load_word_offs_corres)
+  apply (erule loadWordUser_corres)
   done
 
 declare loadWordUser_inv [wp]
@@ -257,7 +257,7 @@ lemma corres_set_extra_badge:
           (\<lambda>_. msg_max_length + 2 + n < unat max_ipc_words))
          (set_extra_badge buffer b n) (setExtraBadge buffer b' n)"
   apply (rule corres_gen_asm2)
-  apply (drule store_word_offs_corres [where a=buffer and w=b])
+  apply (drule storeWordUser_corres [where a=buffer and w=b])
   apply (simp add: set_extra_badge_def setExtraBadge_def buffer_cptr_index_def
                    bufferCPtrOffset_def Let_def)
   apply (simp add: word_size word_size_def wordSize_def wordBits_def
@@ -393,7 +393,7 @@ lemma cte_refs'_maskedAsFull[simp]:
  done
 
 
-lemma tc_loop_corres:
+lemma transferCapsToSlots_corres:
   "\<lbrakk> list_all2 (\<lambda>(cap, slot) (cap', slot'). cap_relation cap cap'
              \<and> slot' = cte_map slot) caps caps';
       mi' = message_info_map mi \<rbrakk> \<Longrightarrow>
@@ -459,14 +459,14 @@ next
          prefer 2
          apply (rule unifyFailure_discard2)
           apply (case_tac mi, clarsimp)
-         apply (rule derive_cap_corres)
+         apply (rule deriveCap_corres)
           apply (simp add: remove_rights_def)
          apply clarsimp
         apply (rule corres_split_norE)
            apply (simp add: liftE_bindE)
            apply (rule corres_split_nor)
               prefer 2
-              apply (rule cins_corres, simp_all add: hd_map)[1]
+              apply (rule cteInsert_corres, simp_all add: hd_map)[1]
              apply (simp add: tl_map)
              apply (rule corres_rel_imp, rule Cons.hyps, simp_all)[1]
             apply (wp valid_case_option_post_wp hoare_vcg_const_Ball_lift
@@ -1008,7 +1008,7 @@ lemma grs_distinct'[wp]:
   apply simp
   done
 
-lemma tc_corres:
+lemma transferCaps_corres:
   "\<lbrakk> info' = message_info_map info;
     list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))
          caps caps' \<rbrakk>
@@ -1034,12 +1034,12 @@ lemma tc_corres:
                    getThreadCSpaceRoot)
   apply (rule corres_assume_pre)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_recv_slot_corres])
+    apply (rule corres_split_deprecated [OF _ getReceiveSlots_corres])
       apply (rule_tac x=recv_buf in option_corres)
        apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
        apply (case_tac info, simp)
       apply simp
-      apply (rule corres_rel_imp, rule tc_loop_corres,
+      apply (rule corres_rel_imp, rule transferCapsToSlots_corres,
              simp_all add: split_def)[1]
       apply (case_tac info, simp)
      apply (wp hoare_vcg_all_lift get_rs_cte_at static_imp_wp
@@ -1318,7 +1318,7 @@ lemma getMessageInfo_msgExtraCaps[wp]:
    apply wpsimp+
   done
 
-lemma lcs_corres:
+lemma lookupCapAndSlot_corres:
   "cptr = to_bl cptr' \<Longrightarrow>
   corres (lfr \<oplus> (\<lambda>a b. cap_relation (fst a) (fst b) \<and> snd b = cte_map (snd a)))
     (valid_objs and pspace_aligned and tcb_at thread)
@@ -1333,12 +1333,12 @@ lemma lcs_corres:
           apply (rule corres_returnOkTT, simp)
          apply simp
         apply wp+
-      apply (rule corres_rel_imp, rule lookup_slot_corres)
+      apply (rule corres_rel_imp, rule lookupSlotForThread_corres)
       apply (simp add: split_def)
      apply (wp | simp add: liftE_bindE[symmetric])+
   done
 
-lemma lec_corres:
+lemma lookupExtraCaps_corres:
   "\<lbrakk> info' = message_info_map info; buffer = buffer'\<rbrakk> \<Longrightarrow>
   corres (fr \<oplus> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x)))
    (valid_objs and pspace_aligned and tcb_at thread and (\<lambda>_. valid_message_info info))
@@ -1379,7 +1379,7 @@ lemma lec_corres:
            apply simp
           apply simp
           apply (rule corres_guard_imp)
-            apply (rule load_word_offs_corres')
+            apply (rule loadWordUser_corres')
              apply (clarsimp simp: buffer_cptr_index_def msg_max_length_def
                                    max_ipc_words valid_message_info_def
                                    msg_max_extra_caps_def word_le_nat_alt)
@@ -1395,7 +1395,7 @@ lemma lec_corres:
             apply simp
            apply simp
           apply simp
-          apply (rule corres_cap_fault [OF lcs_corres])
+          apply (rule corres_cap_fault [OF lookupCapAndSlot_corres])
           apply simp
          apply simp
          apply (wp | simp)+
@@ -1411,7 +1411,7 @@ lemma copyMRs_valid_mdb[wp]:
   "\<lbrace>valid_mdb'\<rbrace> copyMRs t buf t' buf' n \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   by (simp add: valid_mdb'_def copyMRs_ctes_of)
 
-lemma do_normal_transfer_corres:
+lemma doNormalTransfer_corres:
   "corres dc
   (tcb_at sender and tcb_at receiver and (pspace_aligned:: det_state \<Rightarrow> bool)
    and valid_objs and cur_tcb and valid_mdb and valid_list and pspace_distinct
@@ -1429,7 +1429,7 @@ lemma do_normal_transfer_corres:
   apply (simp add: do_normal_transfer_def doNormalTransfer_def)
   apply (rule corres_guard_imp)
 
-    apply (rule corres_split_mapr [OF _ get_mi_corres])
+    apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
       apply (rule_tac F="valid_message_info mi" in corres_gen_asm)
       apply (rule_tac r'="list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))"
                   in corres_split_deprecated)
@@ -1437,19 +1437,19 @@ lemma do_normal_transfer_corres:
          apply (rule corres_if[OF refl])
           apply (rule corres_split_catch)
              apply (rule corres_trivial, simp)
-            apply (rule lec_corres, simp+)
+            apply (rule lookupExtraCaps_corres, simp+)
            apply wp+
          apply (rule corres_trivial, simp)
         apply simp
-        apply (rule corres_split_eqr [OF _ copy_mrs_corres])
-          apply (rule corres_split_deprecated [OF _ tc_corres])
+        apply (rule corres_split_eqr [OF _ copyMRs_corres])
+          apply (rule corres_split_deprecated [OF _ transferCaps_corres])
               apply (rename_tac mi' mi'')
               apply (rule_tac F="mi_label mi' = mi_label mi"
                         in corres_gen_asm)
-              apply (rule corres_split_nor [OF _ set_mi_corres])
+              apply (rule corres_split_nor [OF _ setMessageInfo_corres])
                  apply (simp add: badge_register_def badgeRegister_def)
                  apply (fold dc_def)
-                 apply (rule user_setreg_corres)
+                 apply (rule asUser_setRegister_corres)
                 apply (case_tac mi', clarsimp)
                apply wp
              apply simp+
@@ -1469,11 +1469,11 @@ lemma corres_liftE_lift:
   by simp
 
 lemmas corres_ipc_thread_helper =
-  corres_split_eqrE [OF _  corres_liftE_lift [OF gct_corres]]
+  corres_split_eqrE [OF _  corres_liftE_lift [OF getCurThread_corres]]
 
 lemmas corres_ipc_info_helper =
   corres_split_maprE [where f = message_info_map, OF _
-                                corres_liftE_lift [OF get_mi_corres]]
+                                corres_liftE_lift [OF getMessageInfo_corres]]
 
 crunch typ_at'[wp]: doNormalTransfer "\<lambda>s. P (typ_at' T p s)"
 
@@ -1518,55 +1518,55 @@ lemma msgFromLookupFailure_map[simp]:
      = msg_from_lookup_failure lf"
   by (cases lf, simp_all add: lookup_failure_map_def msgFromLookupFailure_def)
 
-lemma getRestartPCs_corres:
+lemma asUser_getRestartPC_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
               (as_user t getRestartPC) (asUser t getRestartPC)"
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (rule corres_Id, simp, simp)
   apply (rule no_fail_getRestartPC)
   done
 
-lemma user_mapM_getRegister_corres:
+lemma asUser_mapM_getRegister_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (as_user t (mapM getRegister regs))
      (asUser t (mapM getRegister regs))"
-  apply (rule corres_as_user')
+  apply (rule asUser_corres')
   apply (rule corres_Id [OF refl refl])
   apply (rule no_fail_mapM)
   apply (simp add: getRegister_def)
   done
 
-lemma make_arch_fault_msg_corres:
+lemma makeArchFaultMessage_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
   (make_arch_fault_msg f t)
   (makeArchFaultMessage (arch_fault_map f) t)"
   apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ getRestartPCs_corres])
+    apply (rule corres_split_eqr[OF _ asUser_getRestartPC_corres])
       apply (rule corres_trivial, simp add: arch_fault_map_def)
      apply (wp+, auto)
   done
 
-lemma mk_ft_msg_corres:
+lemma makeFaultMessage_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (make_fault_msg ft t)
      (makeFaultMessage (fault_map ft) t)"
   apply (cases ft, simp_all add: makeFaultMessage_def split del: if_split)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_eqr [OF _ getRestartPCs_corres])
+       apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
          apply (rule corres_trivial, simp add: fromEnum_def enum_bool)
         apply (wp | simp)+
     apply (simp add: RISCV64_H.syscallMessage_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
+      apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
         apply (rule corres_trivial, simp)
        apply (wp | simp)+
    apply (simp add: RISCV64_H.exceptionMessage_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_eqr [OF _ user_mapM_getRegister_corres])
+     apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
-  apply (rule make_arch_fault_msg_corres)
+  apply (rule makeArchFaultMessage_corres)
   done
 
 lemma makeFaultMessage_inv[wp]:
@@ -1579,7 +1579,7 @@ lemma makeFaultMessage_inv[wp]:
   done
 
 lemmas threadget_fault_corres =
-          threadget_corres [where r = fault_rel_optionation
+          threadGet_corres [where r = fault_rel_optionation
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
@@ -1590,7 +1590,7 @@ lemma make_fault_msg_in_user_frame[wp]:
   apply (rename_tac af; case_tac af; wpsimp)
   done
 
-lemma do_fault_transfer_corres:
+lemma doFaultTransfer_corres:
   "corres dc
     (obj_at (\<lambda>ko. \<exists>tcb ft. ko = TCB tcb \<and> tcb_fault tcb = Some ft) sender
      and tcb_at receiver and case_option \<top> in_user_frame recv_buf
@@ -1622,17 +1622,17 @@ lemma do_fault_transfer_corres:
     apply (clarsimp simp: obj_at_def is_tcb)
    apply wp
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ mk_ft_msg_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ set_mi_corres])
-             apply (rule user_setreg_corres)
+      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
+        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
+          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
+             apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ mk_ft_msg_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ set_mi_corres])
-             apply (rule user_setreg_corres)
+      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
+        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
+          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
+             apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
   done
@@ -1685,7 +1685,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (simp add: word_bits_conv pbfs_less_wb'[unfolded word_bits_conv])
   done
 
-lemma dit_corres:
+lemma doIPCTransfer_corres:
   "corres dc
      (tcb_at s and tcb_at r and valid_objs and pspace_aligned
         and valid_list
@@ -1705,7 +1705,7 @@ lemma dit_corres:
                                     \<comment> \<open>\<exists>ft. tcb_fault tcb = Some ft\<close>) s sa"
                in corres_split')
      apply (rule corres_guard_imp)
-       apply (rule lipcb_corres')
+       apply (rule lookupIPCBuffer_corres')
       apply auto[2]
     apply (rule corres_split' [OF _ _ thread_get_sp threadGet_inv])
      apply (rule corres_guard_imp)
@@ -1716,12 +1716,12 @@ lemma dit_corres:
        apply (subst case_option_If)+
        apply (rule corres_if2)
          apply (simp add: fault_rel_optionation_def)
-        apply (rule corres_split_eqr [OF _ lipcb_corres'])
+        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
           apply (simp add: dc_def[symmetric])
-          apply (rule do_normal_transfer_corres)
+          apply (rule doNormalTransfer_corres)
          apply (wp | simp add: valid_pspace'_def)+
        apply (simp add: dc_def[symmetric])
-       apply (rule do_fault_transfer_corres)
+       apply (rule doFaultTransfer_corres)
       apply (clarsimp simp: obj_at_def)
      apply (erule ignore_if)
     apply (wp|simp add: obj_at_def is_tcb valid_pspace'_def)+
@@ -1845,14 +1845,14 @@ lemma handle_fault_reply_registers_corres:
     apply (clarsimp simp: arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def)
        apply (rule corres_split_deprecated)
        apply (rule corres_trivial, simp)
-      apply (rule corres_as_user')
+      apply (rule asUser_corres')
       apply(simp add: setRegister_def syscallMessage_def)
       apply(subst zipWithM_x_modify)+
       apply(rule corres_modify')
        apply (clarsimp simp: sanitise_register_corres|wp)+
   done
 
-lemma handle_fault_reply_corres:
+lemma handleFaultReply_corres:
   "ft' = fault_map ft \<Longrightarrow>
    corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
      (handle_fault_reply ft t label msg)
@@ -2106,7 +2106,7 @@ crunches handle_fault_reply
   for pspace_alignedp[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
 
-lemma do_reply_transfer_corres:
+lemma doReplyTransfer_corres:
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
            and cte_wp_at ((=) (cap.ReplyCap receiver False rights)) slot)
@@ -2117,7 +2117,7 @@ lemma do_reply_transfer_corres:
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
   apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
    apply (rule corres_guard_imp)
-     apply (rule gts_corres, (clarsimp simp add: st_tcb_at_tcb_at invs_distinct invs_psp_aligned)+)
+     apply (rule getThreadState_corres, (clarsimp simp add: st_tcb_at_tcb_at invs_distinct invs_psp_aligned)+)
   apply (rule_tac F = "awaiting_reply state" in corres_req)
    apply (clarsimp simp add: st_tcb_at_def obj_at_def is_tcb)
    apply (fastforce simp: invs_def valid_state_def intro: has_reply_cap_cte_wpD
@@ -2146,9 +2146,9 @@ lemma do_reply_transfer_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ threadget_fault_corres])
       apply (case_tac rv, simp_all add: fault_rel_optionation_def bind_assoc)[1]
-       apply (rule corres_split_deprecated [OF _ dit_corres])
+       apply (rule corres_split_deprecated [OF _ doIPCTransfer_corres])
          apply (rule corres_split_deprecated [OF _ cap_delete_one_corres])
-           apply (rule corres_split_deprecated [OF _ sts_corres])
+           apply (rule corres_split_deprecated [OF _ setThreadState_corres])
               apply (rule possibleSwitchTo_corres)
              apply simp
             apply (wp set_thread_state_runnable_valid_sched set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_st_tcb' sts_valid_queues sts_valid_objs' delete_one_tcbDomain_obj_at'
@@ -2180,11 +2180,11 @@ lemma do_reply_transfer_corres:
 
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ cap_delete_one_corres])
-      apply (rule corres_split_mapr [OF _ get_mi_corres])
-        apply (rule corres_split_eqr [OF _ lipcb_corres'])
-          apply (rule corres_split_eqr [OF _ get_mrs_corres])
+      apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
+        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
+          apply (rule corres_split_eqr [OF _ getMRs_corres])
             apply (simp(no_asm) del: dc_simp)
-            apply (rule corres_split_eqr [OF _ handle_fault_reply_corres])
+            apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
                apply (rule corres_split_deprecated [OF _ threadset_corresT])
                      apply (rule_tac Q="valid_sched and cur_tcb and tcb_at receiver and pspace_aligned and pspace_distinct"
                                  and Q'="tcb_at' receiver and cur_tcb'
@@ -2193,13 +2193,13 @@ lemma do_reply_transfer_corres:
                                    in corres_guard_imp)
                        apply (case_tac rvb, simp_all)[1]
                         apply (rule corres_guard_imp)
-                          apply (rule corres_split_deprecated [OF _ sts_corres])
+                          apply (rule corres_split_deprecated [OF _ setThreadState_corres])
                       apply (fold dc_def, rule possibleSwitchTo_corres)
                                apply simp
                               apply (wp static_imp_wp static_imp_conj_wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at'
                                         sts_st_tcb' sts_valid_queues | simp | force simp: valid_sched_def valid_sched_action_def valid_tcb_state'_def)+
                        apply (rule corres_guard_imp)
-                      apply (rule sts_corres)
+                      apply (rule setThreadState_corres)
                       apply (simp_all)[20]
                    apply (clarsimp simp add: tcb_relation_def fault_rel_optionation_def cteSizeBits_def
                                              tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
@@ -2234,7 +2234,7 @@ lemma do_reply_transfer_corres:
 
 (* when we cannot talk about reply cap rights explicitly (for instance, when a schematic ?rights
    would be generated too early *)
-lemma do_reply_transfer_corres':
+lemma doReplyTransfer_corres':
   "corres dc
      (einvs and tcb_at receiver and tcb_at sender
            and cte_wp_at (is_reply_cap_to receiver) slot)
@@ -2242,7 +2242,7 @@ lemma do_reply_transfer_corres':
             and valid_pspace' and cte_at' (cte_map slot))
      (do_reply_transfer sender receiver slot grant)
      (doReplyTransfer sender receiver (cte_map slot) grant)"
-  using do_reply_transfer_corres[of receiver sender _ slot]
+  using doReplyTransfer_corres[of receiver sender _ slot]
   by (fastforce simp add: cte_wp_at_reply_cap_to_ex_rights corres_underlying_def)
 
 lemma valid_pspace'_splits[elim!]:
@@ -2267,7 +2267,7 @@ lemma sts_valid_pspace_hangers:
 
 declare no_fail_getSlotCap [wp]
 
-lemma setup_caller_corres:
+lemma setupCallerCap_corres:
   "corres dc
      (st_tcb_at (Not \<circ> halted) sender and tcb_at receiver and
       st_tcb_at (Not \<circ> awaiting_reply) sender and valid_reply_caps and
@@ -2291,7 +2291,7 @@ lemma setup_caller_corres:
           apply (rule corres_symb_exec_r)
              apply (rule_tac F="rv = capability.NullCap"
                           in corres_gen_asm2, simp)
-             apply (rule cins_corres)
+             apply (rule cteInsert_corres)
                apply (simp split: if_splits)
               apply (simp add: cte_map_def tcbReplySlot_def
                                tcb_cnode_index_def cte_level_bits_def)
@@ -2310,7 +2310,7 @@ lemma setup_caller_corres:
         apply blast
        apply (rule no_fail_pre, wp)
        apply (clarsimp simp: cte_wp_at_ctes_of)
-      apply (rule sts_corres)
+      apply (rule setThreadState_corres)
       apply (simp split: option.split)
      apply (wp sts_valid_pspace_hangers
                  | simp add: cte_wp_at_ctes_of)+
@@ -2399,7 +2399,7 @@ crunch tcb_at'[wp]: possibleSwitchTo "tcb_at' t"
 crunch valid_pspace'[wp]: possibleSwitchTo valid_pspace'
   (wp: crunch_wps)
 
-lemma send_ipc_corres:
+lemma sendIPC_corres:
 (* call is only true if called in handleSyscall SysCall, which
    is always blocking. *)
   assumes "call \<longrightarrow> bl"
@@ -2414,7 +2414,7 @@ proof -
   apply (case_tac bl)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ get_ep_corres,
+     apply (rule corres_split_deprecated [OF _ getEndpoint_corres,
               where
               R="\<lambda>rv. einvs and st_tcb_at active t and ep_at ep and
                       valid_ep rv and obj_at (\<lambda>ob. ob = Endpoint rv) ep
@@ -2425,8 +2425,8 @@ proof -
        apply (case_tac rv)
          apply (simp add: ep_relation_def)
          apply (rule corres_guard_imp)
-           apply (rule corres_split_deprecated [OF _ sts_corres])
-              apply (rule set_ep_corres)
+           apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+              apply (rule setEndpoint_corres)
               apply (simp add: ep_relation_def)
              apply (simp add: fault_rel_optionation_def)
             apply wp+
@@ -2435,8 +2435,8 @@ proof -
          \<comment> \<open>concludes IdleEP if bl branch\<close>
         apply (simp add: ep_relation_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ sts_corres])
-             apply (rule set_ep_corres)
+          apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+             apply (rule setEndpoint_corres)
              apply (simp add: ep_relation_def)
             apply (simp add: fault_rel_optionation_def)
            apply wp+
@@ -2451,16 +2451,16 @@ proof -
         apply simp
        apply (clarsimp split del: if_split)
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated [OF _ set_ep_corres])
+         apply (rule corres_split_deprecated [OF _ setEndpoint_corres])
             apply (simp add: isReceive_def split del:if_split)
-            apply (rule corres_split_deprecated [OF _ gts_corres])
+            apply (rule corres_split_deprecated [OF _ getThreadState_corres])
               apply (rule_tac
                      F="\<exists>data. recv_state = Structures_A.BlockedOnReceive ep data"
                      in corres_gen_asm)
               apply (clarsimp simp: case_bool_If  case_option_If if3_fold
                           simp del: dc_simp split del: if_split cong: if_cong)
-              apply (rule corres_split_deprecated [OF _ dit_corres])
-                apply (rule corres_split_deprecated [OF _ sts_corres])
+              apply (rule corres_split_deprecated [OF _ doIPCTransfer_corres])
+                apply (rule corres_split_deprecated [OF _ setThreadState_corres])
                    apply (rule corres_split_deprecated [OF _ possibleSwitchTo_corres])
                        apply (fold when_def)[1]
 
@@ -2468,8 +2468,8 @@ proof -
                                 in corres_symmetric_bool_cases, blast)
                         apply (simp add: when_def dc_def[symmetric] split del: if_split)
                         apply (rule corres_if2, simp)
-                         apply (rule setup_caller_corres)
-                        apply (rule sts_corres, simp)
+                         apply (rule setupCallerCap_corres)
+                        apply (rule setThreadState_corres, simp)
                        apply (rule corres_trivial)
                        apply (simp add: when_def dc_def[symmetric] split del: if_split)
                       apply (simp split del: if_split add: if_apply_def2)
@@ -2505,7 +2505,7 @@ proof -
       apply wp+
     apply (clarsimp simp: ep_at_def2)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_ep_corres,
+    apply (rule corres_split_deprecated [OF _ getEndpoint_corres,
              where
              R="\<lambda>rv. einvs and st_tcb_at active t and ep_at ep and
                      valid_ep rv and obj_at (\<lambda>k. k = Endpoint rv) ep"
@@ -2532,15 +2532,15 @@ proof -
        apply fastforce
       apply (clarsimp split del: if_split)
       apply (rule corres_guard_imp)
-        apply (rule corres_split_deprecated [OF _ set_ep_corres])
-           apply (rule corres_split_deprecated [OF _ gts_corres])
+        apply (rule corres_split_deprecated [OF _ setEndpoint_corres])
+           apply (rule corres_split_deprecated [OF _ getThreadState_corres])
              apply (rule_tac
                 F="\<exists>data. recv_state = Structures_A.BlockedOnReceive ep data"
                     in corres_gen_asm)
              apply (clarsimp simp: isReceive_def case_bool_If
                         split del: if_split cong: if_cong)
-             apply (rule corres_split_deprecated [OF _ dit_corres])
-               apply (rule corres_split_deprecated [OF _ sts_corres])
+             apply (rule corres_split_deprecated [OF _ doIPCTransfer_corres])
+               apply (rule corres_split_deprecated [OF _ setThreadState_corres])
                    apply (rule possibleSwitchTo_corres)
                   apply (simp add: if_apply_def2)
                   apply (wp hoare_drop_imps)
@@ -2590,12 +2590,12 @@ lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"
   by (simp add: valid_sched_def valid_sched_action_def)
 
-lemma send_signal_corres:
+lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_ntfn_corres,
+    apply (rule corres_split_deprecated [OF _ getNotification_corres,
                 where
                 R  = "\<lambda>rv. einvs and ntfn_at ep and valid_ntfn rv and
                            ko_at (Structures_A.Notification rv) ep" and
@@ -2609,19 +2609,19 @@ lemma send_signal_corres:
     apply (clarsimp simp add: ntfn_relation_def)
     apply (case_tac "ntfnBoundTCB nTFN")
      apply clarsimp
-     apply (rule corres_guard_imp[OF set_ntfn_corres])
+     apply (rule corres_guard_imp[OF setNotification_corres])
        apply (clarsimp simp add: ntfn_relation_def)+
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF _ gts_corres])
+      apply (rule corres_split_deprecated[OF _ getThreadState_corres])
         apply (rule corres_if)
           apply (fastforce simp: receive_blocked_def receiveBlocked_def
                                  thread_state_relation_def
                           split: Structures_A.thread_state.splits
                                  Structures_H.thread_state.splits)
          apply (rule corres_split_deprecated[OF _ cancel_ipc_corres])
-           apply (rule corres_split_deprecated[OF _ sts_corres])
+           apply (rule corres_split_deprecated[OF _ setThreadState_corres])
               apply (simp add: badgeRegister_def badge_register_def)
-              apply (rule corres_split_deprecated[OF _ user_setreg_corres])
+              apply (rule corres_split_deprecated[OF _ asUser_setRegister_corres])
                 apply (rule possibleSwitchTo_corres)
                apply wp
              apply (clarsimp simp: thread_state_relation_def)
@@ -2634,7 +2634,7 @@ lemma send_signal_corres:
           apply wp
          apply (clarsimp simp: invs'_def valid_state'_def sch_act_wf_weak
                                valid_tcb_state'_def)
-        apply (rule set_ntfn_corres)
+        apply (rule setNotification_corres)
         apply (clarsimp simp add: ntfn_relation_def)
        apply (wp gts_wp gts_wp' | clarsimp)+
      apply (auto simp: valid_ntfn_def receive_blocked_def valid_sched_def invs_cur
@@ -2651,10 +2651,10 @@ lemma send_signal_corres:
     apply (rule corres_guard_imp)
       apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
       apply (simp add: list_case_helper split del: if_split)
-      apply (rule corres_split_deprecated [OF _ set_ntfn_corres])
-         apply (rule corres_split_deprecated [OF _ sts_corres])
+      apply (rule corres_split_deprecated [OF _ setNotification_corres])
+         apply (rule corres_split_deprecated [OF _ setThreadState_corres])
             apply (simp add: badgeRegister_def badge_register_def)
-            apply (rule corres_split_deprecated [OF _ user_setreg_corres])
+            apply (rule corres_split_deprecated [OF _ asUser_setRegister_corres])
               apply (rule possibleSwitchTo_corres)
              apply ((wp | simp)+)[1]
             apply (rule_tac Q="\<lambda>_. Invariants_H.valid_queues and valid_queues' and
@@ -2682,10 +2682,10 @@ lemma send_signal_corres:
    apply (rule corres_guard_imp)
      apply (rule_tac F="list \<noteq> []" in corres_gen_asm)
      apply (simp add: list_case_helper)
-     apply (rule corres_split_deprecated [OF _ set_ntfn_corres])
-        apply (rule corres_split_deprecated [OF _ sts_corres])
+     apply (rule corres_split_deprecated [OF _ setNotification_corres])
+        apply (rule corres_split_deprecated [OF _ setThreadState_corres])
            apply (simp add: badgeRegister_def badge_register_def)
-           apply (rule corres_split_deprecated [OF _ user_setreg_corres])
+           apply (rule corres_split_deprecated [OF _ asUser_setRegister_corres])
              apply (rule possibleSwitchTo_corres)
             apply (wp cur_tcb_lift | simp)+
          apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
@@ -2707,7 +2707,7 @@ lemma send_signal_corres:
   \<comment> \<open>ActiveNtfn\<close>
   apply (clarsimp simp add: ntfn_relation_def)
   apply (rule corres_guard_imp)
-    apply (rule set_ntfn_corres)
+    apply (rule setNotification_corres)
     apply (simp add: ntfn_relation_def combine_ntfn_badges_def
                      combine_ntfn_msgs_def)
    apply (simp add: invs_def valid_state_def valid_ntfn_def)
@@ -3095,17 +3095,17 @@ lemma sai_invs'[wp]:
                    split: thread_state.splits
                    dest!: global'_no_ex_cap st_tcb_ex_cap'' ko_at_valid_objs')+
 
-lemma rfk_corres:
+lemma replyFromKernel_corres:
   "corres dc (tcb_at t and invs) (invs')
              (reply_from_kernel t r) (replyFromKernel t r)"
   apply (case_tac r)
   apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
                         badge_register_def badgeRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ lipcb_corres])
-      apply (rule corres_split_deprecated [OF _ user_setreg_corres])
-        apply (rule corres_split_eqr [OF _ set_mrs_corres])
-           apply (rule set_mi_corres)
+    apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres])
+      apply (rule corres_split_deprecated [OF _ asUser_setRegister_corres])
+        apply (rule corres_split_eqr [OF _ setMRs_corres])
+           apply (rule setMessageInfo_corres)
            apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
                   | clarsimp simp: invs_distinct invs_psp_aligned)+
   apply fastforce
@@ -3120,7 +3120,7 @@ lemma rfk_invs':
 
 crunch nosch[wp]: replyFromKernel "\<lambda>s. P (ksSchedulerAction s)"
 
-lemma complete_signal_corres:
+lemma completeSignal_corres:
   "corres dc (ntfn_at ntfnptr and tcb_at tcb and pspace_aligned and valid_objs and pspace_distinct)
              (ntfn_at' ntfnptr and tcb_at' tcb and valid_pspace' and obj_at' isActive ntfnptr)
              (complete_signal ntfnptr tcb) (completeSignal ntfnptr tcb)"
@@ -3128,14 +3128,14 @@ lemma complete_signal_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac R'="\<lambda>ntfn. ntfn_at' ntfnptr and tcb_at' tcb and valid_pspace'
                          and valid_ntfn' ntfn and (\<lambda>_. isActive ntfn)"
-                                in corres_split_deprecated [OF _ get_ntfn_corres])
+                                in corres_split_deprecated [OF _ getNotification_corres])
       apply (rule corres_gen_asm2)
       apply (case_tac "ntfn_obj rv")
         apply (clarsimp simp: ntfn_relation_def isActive_def
                        split: ntfn.splits Structures_H.notification.splits)+
       apply (rule corres_guard2_imp)
        apply (simp add: badgeRegister_def badge_register_def)
-       apply (rule corres_split_deprecated[OF set_ntfn_corres user_setreg_corres])
+       apply (rule corres_split_deprecated[OF setNotification_corres asUser_setRegister_corres])
          apply (clarsimp simp: ntfn_relation_def)
         apply (wp set_simple_ko_valid_objs get_simple_ko_wp getNotification_wp | clarsimp simp: valid_ntfn'_def)+
   apply (clarsimp simp: valid_pspace'_def)
@@ -3144,14 +3144,14 @@ lemma complete_signal_corres:
   done
 
 
-lemma do_nbrecv_failed_transfer_corres:
+lemma doNBRecvFailedTransfer_corres:
   "corres dc (tcb_at thread and pspace_aligned and pspace_distinct) \<top>
              (do_nbrecv_failed_transfer thread)
              (doNBRecvFailedTransfer thread)"
   unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
-  by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
+  by (simp add: badgeRegister_def badge_register_def, rule asUser_setRegister_corres)
 
-lemma receive_ipc_corres:
+lemma receiveIPC_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'"
   shows "
    corres dc (einvs and valid_sched and tcb_at thread and valid_cap cap and ex_nonz_cap_to thread
@@ -3165,15 +3165,15 @@ lemma receive_ipc_corres:
   apply (rename_tac word1 word2 right)
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_ep_corres])
+    apply (rule corres_split_deprecated [OF _ getEndpoint_corres])
       apply (rule corres_guard_imp)
-        apply (rule corres_split_deprecated [OF _ gbn_corres])
+        apply (rule corres_split_deprecated [OF _ getBoundNotification_corres])
           apply (rule_tac r'="ntfn_relation" in corres_split_deprecated)
              apply (rule corres_if)
                apply (clarsimp simp: ntfn_relation_def Ipc_A.isActive_def Endpoint_H.isActive_def
                               split: Structures_A.ntfn.splits Structures_H.notification.splits)
               apply clarsimp
-              apply (rule complete_signal_corres)
+              apply (rule completeSignal_corres)
              apply (rule_tac P="einvs and valid_sched and tcb_at thread and
                                        ep_at word1 and valid_ep ep and
                                        obj_at (\<lambda>k. k = Endpoint ep) word1
@@ -3187,12 +3187,12 @@ lemma receive_ipc_corres:
                apply (simp add: ep_relation_def)
                apply (rule corres_guard_imp)
                  apply (case_tac isBlocking; simp)
-                  apply (rule corres_split_deprecated [OF _ sts_corres])
-                     apply (rule set_ep_corres)
+                  apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+                     apply (rule setEndpoint_corres)
                      apply (simp add: ep_relation_def)
                     apply simp
                    apply wp+
-                 apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
+                 apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres, simp)
                  apply simp
                 apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
                valid_tcb_state_def st_tcb_at_tcb_at)
@@ -3204,8 +3204,8 @@ lemma receive_ipc_corres:
         apply (clarsimp simp: valid_ep_def)
        apply (case_tac list, simp_all split del: if_split)[1]
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated [OF _ set_ep_corres])
-            apply (rule corres_split_deprecated [OF _ gts_corres])
+         apply (rule corres_split_deprecated [OF _ setEndpoint_corres])
+            apply (rule corres_split_deprecated [OF _ getThreadState_corres])
               apply (rule_tac
                        F="\<exists>data.
                            sender_state =
@@ -3214,7 +3214,7 @@ lemma receive_ipc_corres:
               apply (clarsimp simp: isSend_def case_bool_If
                                     case_option_If if3_fold
                          split del: if_split cong: if_cong)
-              apply (rule corres_split_deprecated [OF _ dit_corres])
+              apply (rule corres_split_deprecated [OF _ doIPCTransfer_corres])
                 apply (simp split del: if_split cong: if_cong)
                 apply (fold dc_def)[1]
                 apply (rule_tac P="valid_objs and valid_mdb and valid_list
@@ -3235,10 +3235,10 @@ lemma receive_ipc_corres:
                                         and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                              in corres_guard_imp [OF corres_if])
                     apply (simp add: fault_rel_optionation_def)
-                   apply (rule corres_if2 [OF _ setup_caller_corres sts_corres])
+                   apply (rule corres_if2 [OF _ setupCallerCap_corres setThreadState_corres])
                            apply simp
                           apply simp
-                         apply (rule corres_split_deprecated [OF _ sts_corres])
+                         apply (rule corres_split_deprecated [OF _ setThreadState_corres])
                             apply (rule possibleSwitchTo_corres)
                            apply simp
                           apply (wp sts_st_tcb_at' set_thread_state_runnable_weak_valid_sched_action
@@ -3268,17 +3268,17 @@ lemma receive_ipc_corres:
              apply (simp add: ep_relation_def)
              apply (rule_tac corres_guard_imp)
                apply (case_tac isBlocking; simp)
-                apply (rule corres_split_deprecated [OF _ sts_corres])
-                   apply (rule set_ep_corres)
+                apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+                   apply (rule setEndpoint_corres)
                    apply (simp add: ep_relation_def)
                   apply simp
                  apply wp+
-               apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
+               apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres, simp)
                apply simp
               apply (clarsimp simp: valid_tcb_state_def invs_distinct)
              apply (clarsimp simp add: valid_tcb_state'_def)
             apply (rule corres_option_split[rotated 2])
-              apply (rule get_ntfn_corres)
+              apply (rule getNotification_corres)
              apply clarsimp
             apply (rule corres_trivial, simp add: ntfn_relation_def default_notification_def
                                                   default_ntfn_def)
@@ -3297,7 +3297,7 @@ lemma receive_ipc_corres:
              split: option.splits)[1]
   done
 
-lemma receive_signal_corres:
+lemma receiveSignal_corres:
   "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc (invs and st_tcb_at active thread and valid_cap cap and ex_nonz_cap_to thread)
             (invs' and tcb_at' thread and valid_cap' cap')
@@ -3312,39 +3312,39 @@ lemma receive_signal_corres:
                             obj_at (\<lambda>k. k = Notification rv) word1" and
                             R'="\<lambda>rv'. invs' and tcb_at' thread and ntfn_at' word1 and
                             valid_ntfn' rv'"
-                         in corres_split_deprecated [OF _ get_ntfn_corres])
+                         in corres_split_deprecated [OF _ getNotification_corres])
       apply clarsimp
       apply (case_tac "ntfn_obj rv")
         \<comment> \<open>IdleNtfn\<close>
         apply (simp add: ntfn_relation_def)
         apply (rule corres_guard_imp)
           apply (case_tac isBlocking; simp)
-           apply (rule corres_split_deprecated [OF _ sts_corres])
-              apply (rule set_ntfn_corres)
+           apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+              apply (rule setNotification_corres)
               apply (simp add: ntfn_relation_def)
              apply simp
             apply wp+
-          apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres; simp)
+          apply (rule corres_guard_imp, rule doNBRecvFailedTransfer_corres; simp)
          apply (clarsimp simp: invs_distinct)
         apply simp
        \<comment> \<open>WaitingNtfn\<close>
        apply (simp add: ntfn_relation_def)
        apply (rule corres_guard_imp)
          apply (case_tac isBlocking; simp)
-          apply (rule corres_split_deprecated[OF _ sts_corres])
-             apply (rule set_ntfn_corres)
+          apply (rule corres_split_deprecated[OF _ setThreadState_corres])
+             apply (rule setNotification_corres)
              apply (simp add: ntfn_relation_def)
             apply simp
            apply wp+
          apply (rule corres_guard_imp)
-           apply (rule do_nbrecv_failed_transfer_corres; simp)
+           apply (rule doNBRecvFailedTransfer_corres; simp)
           apply (clarsimp simp: invs_distinct)+
        \<comment> \<open>ActiveNtfn\<close>
       apply (simp add: ntfn_relation_def)
       apply (rule corres_guard_imp)
         apply (simp add: badgeRegister_def badge_register_def)
-        apply (rule corres_split_deprecated [OF _ user_setreg_corres])
-          apply (rule set_ntfn_corres)
+        apply (rule corres_split_deprecated [OF _ asUser_setRegister_corres])
+          apply (rule setNotification_corres)
           apply (simp add: ntfn_relation_def)
          apply wp+
        apply (fastforce simp: invs_def valid_state_def valid_pspace_def
@@ -3369,7 +3369,7 @@ lemma tg_sp':
 
 declare lookup_cap_valid' [wp]
 
-lemma send_fault_ipc_corres:
+lemma sendFaultIPC_corres:
   "valid_fault f \<Longrightarrow> fr f f' \<Longrightarrow>
   corres (fr \<oplus> dc)
          (einvs and st_tcb_at active thread and ex_nonz_cap_to thread)
@@ -3396,7 +3396,7 @@ lemma send_fault_ipc_corres:
           apply (rule corres_guard_imp)
             apply (rule corres_if2 [OF refl])
              apply (simp add: dc_def[symmetric])
-             apply (rule corres_split_deprecated [OF send_ipc_corres threadset_corres], simp_all)[1]
+             apply (rule corres_split_deprecated [OF sendIPC_corres threadset_corres], simp_all)[1]
                apply (simp add: tcb_relation_def fault_rel_optionation_def exst_same_def)+
               apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
                         thread_set_typ_at ep_at_typ_at ex_nonz_cap_to_pres
@@ -3412,7 +3412,7 @@ lemma send_fault_ipc_corres:
           apply auto[1]
          apply (clarsimp simp: lookup_failure_map_def)
         apply wp+
-      apply (rule threadget_corres)
+      apply (rule threadGet_corres)
       apply (simp add: tcb_relation_def)
      apply wp+
    apply (fastforce elim: st_tcb_at_tcb_at)
@@ -3427,7 +3427,7 @@ lemma gets_the_noop_corres:
   apply (clarsimp simp: assert_opt_def return_def dest!: P)
   done
 
-lemma hdf_corres:
+lemma handleDoubleFault_corres:
   "corres dc (tcb_at thread and pspace_aligned and pspace_distinct)
              \<top>
              (handle_double_fault thread f ft)
@@ -3437,7 +3437,7 @@ lemma hdf_corres:
   apply (simp add: handle_double_fault_def handleDoubleFault_def)
   apply (rule corres_guard_imp)
     apply (subst bind_return [symmetric],
-           rule corres_split_deprecated[OF _ sts_corres])
+           rule corres_split_deprecated[OF _ setThreadState_corres])
       apply (rule corres_noop2)
          apply (simp add: exs_valid_def return_def)
         apply (rule hoare_eq_P)
@@ -4172,7 +4172,7 @@ crunches send_fault_ipc
   and pspace_distinct[wp]: "pspace_distinct :: det_ext state \<Rightarrow> _"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma hf_corres:
+lemma handleFault_corres:
   "fr f f' \<Longrightarrow>
    corres dc (einvs and st_tcb_at active thread and ex_nonz_cap_to thread
                    and (\<lambda>_. valid_fault f))
@@ -4186,9 +4186,9 @@ lemma hf_corres:
                rule corres_split_deprecated [where P="tcb_at thread",
                                   OF _ gets_the_noop_corres [where x="()"]])
        apply (rule corres_split_catch)
-          apply (rule hdf_corres)
+          apply (rule handleDoubleFault_corres)
          apply (rule_tac F="valid_fault f" in corres_gen_asm)
-         apply (rule send_fault_ipc_corres, assumption)
+         apply (rule sendFaultIPC_corres, assumption)
          apply simp
         apply wpsimp+
       apply (simp add: tcb_at_def)

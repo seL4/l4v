@@ -2523,7 +2523,7 @@ lemma pde_relation_aligned_eq:
   apply auto
   done
 
-lemma copy_global_corres:
+lemma copyGlobalMappings_corres:
   "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_directory_at pd)
              (valid_arch_state' and page_directory_at' pd)
           (copy_global_mappings pd)
@@ -2544,9 +2544,9 @@ lemma copy_global_corres:
                                               \<and> pde_at' (pd + (x << 2)) s"
                           in corres_mapM_list_all2, (simp add: pdeBits_def)+)
           apply (rule corres_guard_imp, rule corres_split_deprecated)
-               apply (erule store_pde_corres[OF _ refl])
+               apply (erule storePDE_corres[OF _ refl])
               apply (rule corres_rel_imp)
-               apply (rule_tac get_pde_corres[OF refl])
+               apply (rule_tac getObject_PDE_corres[OF refl])
               apply clarsimp
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce
@@ -5455,7 +5455,7 @@ lemma corres_retype_region_createNewCaps:
                           and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
                           in corres_mapM_list_all2[where r'=dc and S="(=)"])
                   apply simp+
-                apply (rule corres_guard_imp, rule copy_global_corres)
+                apply (rule corres_guard_imp, rule copyGlobalMappings_corres)
                  apply simp+
                apply (wp hoare_vcg_const_Ball_lift | simp)+
              apply (simp add: list_all2_same)

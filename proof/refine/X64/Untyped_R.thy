@@ -91,7 +91,7 @@ lemma corres_check_no_children:
      apply (rule corres_guard_imp[OF corres_splitEE])
          apply (rule corres_returnOkTT)
          apply simp
-        apply (rule ensure_no_children_corres)
+        apply (rule ensureNoChildren_corres)
         apply simp
        apply wp+
       apply simp+
@@ -139,7 +139,7 @@ lemma corres_whenE_throw_merge:
   \<Longrightarrow> corres r P P' f (doE _ \<leftarrow> whenE A (throwError e); _ \<leftarrow>  whenE B (throwError e); h odE)"
   by (auto simp: whenE_def split: if_splits)
 
-lemma dec_untyped_inv_corres:
+lemma decodeUntypedInvocation_corres:
   assumes cap_rel: "list_all2 cap_relation cs cs'"
   shows "corres
         (ser \<oplus> untypinv_relation)
@@ -367,7 +367,7 @@ next
                   apply (rule_tac P = "valid_cap (cap.CNodeCap r bits g) and invs" in corres_guard_imp [where P' = invs'])
                     apply (rule mapME_x_corres_inv [OF _ _ _ refl])
                       apply (simp del: ser_def)
-                      apply (rule ensure_empty_corres)
+                      apply (rule ensureEmptySlot_corres)
                       apply (clarsimp simp: is_cap_simps)
                      apply (simp, wp)
                     apply (simp, wp)
@@ -391,7 +391,7 @@ next
            apply (rule corres_returnOkTT)
            apply (rule crel)
           apply simp
-          apply (rule corres_splitEE[OF _ lsfc_corres])
+          apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
               apply simp
               apply (rule getSlotCap_corres,simp)
              apply (rule crel)
@@ -1432,7 +1432,7 @@ crunches create_cap_ext
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma clearUntypedFreeIndex_corres_noop_psp:
+lemma updateNewFreeIndex_noop_psp_corres:
   "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
     dc \<top> (cte_at' slot)
     (return ()) (updateNewFreeIndex slot)"
@@ -1445,7 +1445,7 @@ lemma clearUntypedFreeIndex_corres_noop_psp:
         | simp add: updateTrackedFreeIndex_def getSlotCap_def)+
   done
 
-lemma create_cap_corres:
+lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
 shows
   "\<lbrakk> cref' = cte_map (fst tup)
@@ -1564,7 +1564,7 @@ shows
          apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l])
           apply (rule corres_cong[OF refl refl _ refl refl, THEN iffD1])
            apply (rule bind_return[THEN fun_cong])
-          apply (rule corres_split_deprecated [OF _ set_cap_pspace_corres])
+          apply (rule corres_split_deprecated [OF _ setCTE_corres])
              apply (subst bind_return[symmetric],
                     rule corres_split_deprecated)
                 prefer 2
@@ -1572,7 +1572,7 @@ shows
                 apply (rule updateMDB_symb_exec_r)
                apply (simp add: dc_def[symmetric])
                apply (rule corres_split_noop_rhs[OF _ updateMDB_symb_exec_r])
-                apply (rule clearUntypedFreeIndex_corres_noop_psp)
+                apply (rule updateNewFreeIndex_noop_psp_corres)
                apply (wp getCTE_wp set_cdt_valid_objs set_cdt_cte_at
                          hoare_weak_lift_imp | simp add: o_def)+
     apply (clarsimp simp: cte_wp_at_cte_at)
@@ -2942,7 +2942,7 @@ lemma inv_untyped_corres_helper1:
   apply (fold mapM_x_def)
   apply (rule corres_list_all2_mapM_)
      apply (rule corres_guard_imp)
-       apply (erule create_cap_corres)
+       apply (erule insertNewCap_corres)
       apply (clarsimp simp: cte_wp_at_def is_cap_simps)
      apply (clarsimp simp: fun_upd_def cte_wp_at_ctes_of)
     apply clarsimp
@@ -3905,7 +3905,7 @@ lemma descendants_range_ex_cte':
   apply blast
   done
 
-lemma update_untyped_cap_corres:
+lemma updateCap_isUntypedCap_corres:
   "\<lbrakk>is_untyped_cap cap; isUntypedCap cap'; cap_relation cap cap'\<rbrakk>
    \<Longrightarrow> corres dc
          (cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_ref_of c = obj_ref_of cap \<and>
@@ -3931,7 +3931,7 @@ lemma update_untyped_cap_corres:
        apply (rule_tac F = " (cap.UntypedCap dev r bits f) = free_index_update (\<lambda>_. f) c"
                       in corres_gen_asm)
        apply simp
-       apply (rule set_untyped_cap_corres)
+       apply (rule setCTE_UntypedCap_corres)
          apply ((clarsimp simp: cte_wp_at_caps_of_state cte_wp_at_ctes_of)+)[3]
       apply (subst identity_eq)
       apply (wp getCTE_sp getCTE_get no_fail_getCTE)+
@@ -3956,7 +3956,7 @@ lemma updateFreeIndex_corres:
           apply (rule_tac F="isUntypedCap capa
                  \<and> cap_relation cap (capFreeIndex_update (\<lambda>_. idx) capa)"
                in corres_gen_asm2)
-          apply (rule update_untyped_cap_corres, simp+)
+          apply (rule updateCap_isUntypedCap_corres, simp+)
            apply (clarsimp simp: isCap_simps)
           apply simp
          apply (wp getSlotCap_wp)+
@@ -4321,7 +4321,7 @@ lemma ex_tupI:
 context begin interpretation Arch . (*FIXME: arch_split*)
 (* mostly stuff about PPtr/fromPPtr, which seems pretty soft *)
 
-lemma reset_untyped_cap_corres:
+lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
     (invs and valid_untyped_inv_wcap ui
@@ -4344,7 +4344,7 @@ lemma reset_untyped_cap_corres:
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
        apply (simp add: liftE_bindE bits_of_def split del: if_split)
-       apply (rule corres_split_deprecated[OF _ detype_corres])
+       apply (rule corres_split_deprecated[OF _ deleteObjects_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
             apply (simp add: bits_of_def shiftL_nat)
@@ -4374,7 +4374,7 @@ lemma reset_untyped_cap_corres:
               apply (rule corres_guard_imp)
                 apply (rule corres_split_nor)
                    apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
-                       apply (rule preemption_corres)
+                       apply (rule preemptionPoint_corres)
                       apply simp
                      apply (simp add: getFreeRef_def getFreeIndex_def
                                       free_index_of_def)
@@ -4992,7 +4992,7 @@ lemma inv_untyped_corres':
         apply (rule corres_split_norE)
            prefer 2
            apply (rule corres_whenE, simp)
-            apply (rule reset_untyped_cap_corres[where ui=ui and ui'=ui'])
+            apply (rule resetUntypedCap_corres[where ui=ui and ui'=ui'])
             apply (simp add: ui ui')
            apply simp
           apply simp

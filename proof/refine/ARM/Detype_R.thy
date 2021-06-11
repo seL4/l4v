@@ -615,7 +615,7 @@ lemma sym_refs_hyp_refs_triv[simp]: "sym_refs (state_hyp_refs_of s)"
   apply (case_tac ko; clarsimp)
   done
 
-lemma detype_corres:
+lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 2 \<Longrightarrow>
    corres dc
       (\<lambda>s. einvs s

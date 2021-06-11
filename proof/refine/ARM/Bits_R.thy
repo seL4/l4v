@@ -185,13 +185,13 @@ lemma tcb_in_valid_state':
   apply (fastforce simp add: valid_obj'_def valid_tcb'_def)
   done
 
-lemma gct_corres [corres]: "corres (=) \<top> \<top> (gets cur_thread) getCurThread"
+lemma getCurThread_corres [corres]: "corres (=) \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
 lemma gct_wp [wp]: "\<lbrace>\<lambda>s. P (ksCurThread s) s\<rbrace> getCurThread \<lbrace>P\<rbrace>"
   by (unfold getCurThread_def, wp)
 
-lemma git_corres [corres]:
+lemma getIdleThread_corres [corres]:
   "corres (=) \<top> \<top> (gets idle_thread) getIdleThread"
   by (simp add: getIdleThread_def state_relation_def)
 
