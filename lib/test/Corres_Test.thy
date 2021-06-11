@@ -178,15 +178,15 @@ context begin interpretation Arch .
 
 
 lemmas load_hw_asid_corres_args[corres] =
-  load_hw_asid_corres[@lift_corres_args]
+  loadHWASID_corres[@lift_corres_args]
 
 lemmas invalidate_asid_corres_args[corres] =
-  invalidate_asid_corres[@lift_corres_args]
+  invalidateASID_corres[@lift_corres_args]
 
 lemmas invalidate_hw_asid_entry_corres_args[corres] =
-  invalidate_hw_asid_entry_corres[@lift_corres_args]
+  invalidateHWASIDEntry_corres[@lift_corres_args]
 
-lemma invalidate_asid_entry_corres:
+lemma invalidateASIDEntry_corres:
   "corres dc (valid_vspace_objs and valid_asid_map
                 and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
                 and vspace_at_asid asid pd and valid_vs_lookup
@@ -218,10 +218,10 @@ crunch ksCurThread[wp]: invalidateASIDEntry, flushSpace "\<lambda>s. P (ksCurThr
 crunch obj_at'[wp]: invalidateASIDEntry, flushSpace "obj_at' P p"
 
 lemmas flush_space_corres_args[corres] =
-  flush_space_corres[@lift_corres_args]
+  flushSpace_corres[@lift_corres_args]
 
 lemmas invalidate_asid_entry_corres_args[corres] =
-  invalidate_asid_entry_corres[@lift_corres_args]
+  invalidateASIDEntry_corres[@lift_corres_args]
 
 
 lemma corres_inst_eq_ext:
@@ -229,10 +229,10 @@ lemma corres_inst_eq_ext:
   by (auto simp add: corres_inst_eq_def)
 
 lemma delete_asid_corresb:
-  notes [corres] = corres_gets_asid gct_corres set_asid_pool_corres and
+  notes [corres] = corres_gets_asid getCurThread_corres setObject_ASIDPool_corres and
     [@lift_corres_args, corres] =  get_asid_pool_corres_inv'
-    invalidate_asid_entry_corres
-    set_vm_root_corres
+    invalidateASIDEntry_corres
+    setVMRoot_corres
   notes [wp] = set_asid_pool_asid_map_unmap set_asid_pool_vs_lookup_unmap'
     set_asid_pool_vspace_objs_unmap'
     invalidate_asid_entry_invalidates
@@ -260,11 +260,11 @@ lemma delete_asid_corresb:
          continue (* function application *)
          continue (* corresK_when *)
          continue (* split *)
-             continue (* flush_space_corres *)
+             continue (* flushSpace_corres *)
             continue (* K_bind *)
             continue (* K_bind *)
             continue (* split *)
-                continue (* invalidate_asid_entry_corres *)
+                continue (* invalidateASIDEntry_corres *)
                continue (* K_bind *)
                continue (* return bind *)
                continue (* K_bind *)
@@ -272,12 +272,12 @@ lemma delete_asid_corresb:
                    continue (* backtracking *)
                continue (* split *)
                    continue (* function application *)
-                   continue (* set_asid_pool_corres *)
+                   continue (* setObject_ASIDPool_corres *)
                   continue (* K_bind *)
                   continue (* K_bind *)
                   continue (* split *)
-                      continue (* gct_corres *)
-                     continue (* set_vm_root_corres *)
+                      continue (* getCurThread_corres *)
+                     continue (* setVMRoot_corres *)
                     finish (* backtracking? *)
                     apply (corressimp simp: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+
@@ -328,8 +328,8 @@ lemma cte_wp_at_ex:
   by (simp add: cte_wp_at_def)
 
 (* Sadly broken:
-lemma set_vm_root_for_flush_corres:
-  notes [corres] = gct_corres getSlotCap_corres
+lemma setVMRootForFlush_corres:
+  notes [corres] = getCurThread_corres getSlotCap_corres
   shows
   "corres (=)
           (cur_tcb and vspace_at_asid asid pd
@@ -344,7 +344,7 @@ lemma set_vm_root_for_flush_corres:
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply corres
-         apply_debug (trace) (tags "corres_search") (corres_search search: arm_context_switch_corres)
+         apply_debug (trace) (tags "corres_search") (corres_search search: armv_contextSwitch_corres)
   continue (* step left *)
   continue (* if rule *)
   continue (* failed corres on first subgoal, trying next *)
@@ -371,8 +371,8 @@ lemma set_vm_root_for_flush_corres:
 
 text \<open>Note we can wrap it all up in corressimp\<close>
 
-lemma set_vm_root_for_flush_corres':
-  notes [corres] = gct_corres getSlotCap_corres
+lemma setVMRootForFlush_corres':
+  notes [corres] = getCurThread_corres getSlotCap_corres
   shows
   "corres (=)
           (cur_tcb and vspace_at_asid asid pd
@@ -386,7 +386,7 @@ lemma set_vm_root_for_flush_corres':
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
-  apply (corressimp search: arm_context_switch_corres
+  apply (corressimp search: armv_contextSwitch_corres
                         wp: get_cap_wp getSlotCap_wp
                       simp: isCap_simps)
   apply (rule context_conjI)
