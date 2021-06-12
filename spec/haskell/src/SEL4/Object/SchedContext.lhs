@@ -241,8 +241,6 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()
 > refillUpdate scPtr newPeriod newBudget newMaxRefills = do
->     sc <- getSchedContext scPtr
->     let head = refillHd sc
 >     updateSchedContext scPtr $ \sc -> sc { scRefills = replaceAt 0 (scRefills sc) (refillHd sc) }
 >     updateSchedContext scPtr (\sc -> sc { scRefillHead = 0 })
 >     updateSchedContext scPtr (\sc -> sc { scRefillCount = 1 })
