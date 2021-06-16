@@ -22,6 +22,7 @@ imports
   ShowTypes
   AutoLevity_Hooks
   Locale_Abbrev
+  Value_Type
 begin
 
 section "Detect unused meta-forall"
