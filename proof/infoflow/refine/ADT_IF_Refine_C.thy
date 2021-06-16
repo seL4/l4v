@@ -333,7 +333,7 @@ lemma kernelEntry_corres_C:
         apply (rule corres_split_deprecated[OF _ ccorres_corres_u_xf, simplified bind_assoc])
             prefer 3
             apply (rule corres_nofail)
-             apply (rule he_corres)
+             apply (rule handleEvent_corres)
             apply simp
            prefer 2
            apply (rule_tac Q'="UNIV" in ccorres_guard_imp)
@@ -642,7 +642,7 @@ lemma handlePreemption_if_def2:
 lemma handleInterrupt_no_fail: "no_fail (ex_abs (einvs) and invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) a \<noteq> irqstate.IRQInactive)) (handleInterrupt a)"
   apply (rule no_fail_pre)
   apply (rule corres_nofail)
-    apply (rule handle_interrupt_corres)
+    apply (rule handleInterrupt_corres)
    apply (erule FalseE)
   apply (fastforce simp: ex_abs_def)
   done
@@ -747,7 +747,7 @@ lemma schedule_if_corres_C:
          apply (rule ccorres_corres_u')
             apply (rule activateThread_ccorres)
            apply (rule corres_nofail)
-            apply (rule activate_corres)
+            apply (rule activateThread_corres)
            apply (erule FalseE)
           apply simp
          apply simp
