@@ -36,7 +36,7 @@ lemma kernel_entry_if_corres:
                       (kernel_entry_if event tc) (kernelEntry_if event tc)"
   apply (simp add: kernel_entry_if_def kernelEntry_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ gct_corres])
+    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
       apply (rule corres_split_deprecated)
          prefer 2
          apply simp
@@ -48,7 +48,7 @@ lemma kernel_entry_if_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split_deprecated [OF _ he_corres])
+        apply (rule corres_split_deprecated [OF _ handleEvent_corres])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
@@ -444,7 +444,7 @@ lemma corres_ex_abs_lift':
   apply fastforce
   done
 
-lemma gct_corres': "corres_underlying state_relation nf nf' (=) \<top> \<top> (gets cur_thread) getCurThread"
+lemma getCurThread_corres': "corres_underlying state_relation nf nf' (=) \<top> \<top> (gets cur_thread) getCurThread"
   by (simp add: getCurThread_def curthread_relation)
 
 lemma user_mem_corres':
@@ -666,7 +666,7 @@ lemma handle_preemption_if_corres:
          apply (rule corres_when)
           apply simp
          apply simp
-         apply (rule handle_interrupt_corres)
+         apply (rule handleInterrupt_corres)
         apply (wp handle_interrupt_valid_domain_time)+
       apply (rule dmo_getActiveIRQ_corres)
      apply (rule dmo_getActiveIRQ_wp)
@@ -744,7 +744,7 @@ lemma schedule_if_corres:
                         P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
            apply simp
           apply (clarsimp simp: state_relation_def)
-         apply (rule activate_corres)
+         apply (rule activateThread_corres)
         apply wp+
       apply (rule schedule_corres)
      apply (wp schedule_invs' schedule_domain_time_left)+
@@ -840,10 +840,10 @@ lemma kernel_exit_if_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[where r'="(=)"])
        apply simp
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
-      apply (rule gct_corres)
+      apply (rule getCurThread_corres)
      apply wp+
    apply clarsimp+
   done
