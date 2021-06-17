@@ -10565,16 +10565,6 @@ lemma non_overlapping_merge_refills_cur_sc_not_in_release_q:
   apply (fastforce split: if_splits)
   done
 
-lemma update_refill_head_wp:
-  "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
-               \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
-     update_refill_hd sc_ptr f
-   \<lbrace>\<lambda>r. P\<rbrace>"
-  unfolding set_refills_def
-oops
-
-thm set_tcb_sched_context_valid_release_q_not_queued
-
 lemma head_insufficient_loop_valid_release_q:
   "\<lbrace>\<lambda>s. valid_release_q s \<and> sc_not_in_release_q (cur_sc s) s \<and> cur_sc s = csc_ptr\<rbrace>
    head_insufficient_loop csc_ptr
