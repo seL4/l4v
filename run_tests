@@ -66,7 +66,8 @@ EXCLUDE["ARM"]=[
     "Bisim",
     "SepTactics",
     "TakeGrant",
-    "Sep_Algebra"
+    "Sep_Algebra",
+    "LibTest"
 ]
 
 EXCLUDE["X64"]=[
@@ -102,7 +103,8 @@ EXCLUDE["RISCV64"]=[
     "SepTactics",
     "TakeGrant",
     "Sep_Algebra",
-    "Refine"
+    "Refine",
+    "CBaseRefine"
 ]
 
 # Check EXCLUDE is exhaustive over the available architectures
