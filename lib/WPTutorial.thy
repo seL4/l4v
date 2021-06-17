@@ -210,7 +210,7 @@ added here.
 \<close>
 
 crunch machine_state_preserved:
-  setup_reply_master, set_simple_ko
+   set_thread_state, set_mcpriority
     "\<lambda>s. P (machine_state s)"
   (simp: split_def wp: crunch_wps)
 
