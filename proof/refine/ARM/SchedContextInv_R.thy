@@ -778,18 +778,6 @@ lemma getCurSc_sp:
   apply (wpsimp wp: hoare_return_sp)
   done
 
-lemma active_sc_at'_cross:
-  "\<lbrakk>(s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; is_active_sc sc_ptr s;
-    sc_at sc_ptr s\<rbrakk>
-   \<Longrightarrow> active_sc_at' sc_ptr s'"
-  apply (frule state_relation_pspace_relation)
-  apply (frule (3) sc_at_cross)
-  apply (clarsimp simp: pspace_relation_def obj_at_def is_sc_obj_def)
-  apply (drule_tac x=sc_ptr in bspec, blast)
-  apply (clarsimp simp: sc_relation_def vs_all_heap_simps active_sc_at'_def obj_at'_def projectKOs
-                        active_sc_def)
-  done
-
 lemma refillBudgetCheckRoundRobin_corres:
   "corres dc
           (\<lambda>s. pspace_aligned s \<and> pspace_distinct s \<and> active_sc_valid_refills s \<and> cur_sc_active s

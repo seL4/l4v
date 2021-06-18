@@ -252,22 +252,44 @@ definition sc_relation ::
      sc_badge sc = scBadge sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
 
+(* projection rewrite *)
 
-(* Most sched contexts should satisfy these conditions. The lemma below (valid_refills'_common_usage)
-   illustrates a common situation where these conditions hold.
+definition is_active_sc' where
+  "is_active_sc' p s' \<equiv> ((\<lambda>sc'. 0 < scRefillMax sc') |< scs_of' s') p"
 
-   It seems clear that an abbreviation of this kind is useful, but it's not clear exactly which
-   conditions it should contain. For instance, it does not contain "0 < scRefillMax sc" which one
-   may argue is equally standard.
-*)
-abbreviation (input) valid_refills' where
-  "valid_refills' sc \<equiv> scRefillMax sc \<le> length (scRefills sc) \<and> scRefillHead sc < scRefillMax sc \<and>
+lemma active_sc_at'_imp_is_active_sc':
+  "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
+  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq)
+
+lemma active_sc_at'_rewrite:
+  "active_sc_at' scp s = (is_active_sc' scp s \<and> sc_at' scp s)"
+  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq)
+
+(* valid_refills' *)
+
+(* Most sched contexts should satisfy these conditions. These are the conditions we need for
+   the refill list circular buffer to make sense. In other words, these are the constraints
+   we expect for wrap_slice to give what we want. *)
+
+abbreviation sc_valid_refills' where
+  "sc_valid_refills' sc \<equiv> scRefillMax sc \<le> length (scRefills sc) \<and> scRefillHead sc < scRefillMax sc \<and>
                     scRefillCount sc \<le> scRefillMax sc \<and> 0 < scRefillCount sc"
 
-lemma valid_refills'_common_usage:
-  "\<exists>n. sc_relation sc n sc' \<Longrightarrow> sc_active sc \<Longrightarrow> sc_valid_refills sc \<Longrightarrow> valid_sched_context' sc' s'
-   \<Longrightarrow> valid_refills' sc'"
-  by (clarsimp simp: sc_valid_refills_def valid_sched_context'_def active_sc_def sc_relation_def)
+definition valid_refills' where
+  "valid_refills' sc_ptr s' \<equiv> (sc_valid_refills' |< scs_of' s') sc_ptr"
+
+lemma valid_refills'_nonzero_scRefillCount:
+  "valid_refills' scp s' \<Longrightarrow> ((\<lambda>sc. 0 < scRefillCount sc) |< scs_of' s') scp"
+  by (clarsimp simp: valid_refills'_def split: option.splits)
+
+lemma valid_objs'_valid_refills':
+  "\<lbrakk>valid_objs' s'; sc_at' scp s'; is_active_sc' scp s'\<rbrakk> \<Longrightarrow> valid_refills' scp s'"
+  apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_opt_sc
+                 split: option.split_asm)
+  apply (case_tac ko; clarsimp)
+  apply (erule (1) valid_objsE')
+  by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def
+                     is_active_sc'_def opt_map_left_Some projectKO_opt_sc)
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
@@ -1365,16 +1387,6 @@ lemma length_refills_map[simp]:
   "\<lbrakk> mx \<le> length list; count \<le> mx \<rbrakk> \<Longrightarrow> length (refills_map start count mx list) = count"
   by (clarsimp simp: refills_map_def)
 
-
-(* A standard (and active) scheduling context should have the following properties. They follow
-   from valid_sched_context' and sc_valid_refills as the following two lemmas show. *)
-abbreviation std_sc' where
-  "std_sc' ko \<equiv> 0 < scRefillCount ko \<and> scRefillMax ko \<le> length (scRefills ko) \<and> scRefillHead ko < scRefillMax ko"
-
-lemma std_sc'_normal:
-  "valid_sched_context' sc' s' \<Longrightarrow> 0 < scRefillMax sc' \<Longrightarrow> 0 < scRefillCount sc' \<Longrightarrow> std_sc' sc'"
-  by (clarsimp simp: valid_sched_context'_def)
-
 lemma sc_valid_refills_scRefillCount:
   "\<lbrakk>sc_valid_refills sc; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> 0 < scRefillCount sc'"
   apply (clarsimp simp: valid_sched_context_def sc_relation_def)
@@ -1399,7 +1411,7 @@ lemma hd_refills_map:
   by (simp add: hd_map hd_wrap_slice)
 
 lemma refill_hd_relation:
-  "sc_relation sc n sc' \<Longrightarrow> std_sc' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
+  "sc_relation sc n sc' \<Longrightarrow> sc_valid_refills' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
   apply (clarsimp simp: sc_relation_def refillHd_def refills_map_def valid_sched_context'_def hd_map)
   apply (subst hd_map, clarsimp simp: wrap_slice_def)
   apply (clarsimp simp: hd_wrap_slice)
@@ -1411,24 +1423,24 @@ lemma refill_hd_relation2:
        \<and> rTime (refillHd sc') = r_time (refill_hd sc)"
   apply (frule refill_hd_relation)
    apply (frule (1) sc_refills_neq_zero_cross[THEN refills_map_non_empty_pos_count])
-   apply (erule std_sc'_normal; simp)
+   apply (simp add: valid_sched_context'_def)
   apply (clarsimp simp: refill_map_def)
   done
 
 lemma sc_refill_ready_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_ready time sc = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
    apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
 
 lemma sc_refill_capacity_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_capacity x sc = refillsCapacity x (scRefills sc') (scRefillHead sc')"
   apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refillsCapacity_def refill_capacity_def refillHd_def refill_map_def)
 
 lemma sc_refill_sufficient_relation:
-  "\<lbrakk>sc_relation sc n sc'; std_sc' sc'\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
   sc_refill_sufficient x sc = sufficientRefills x (scRefills sc') (scRefillHead sc')"
   apply (frule (1) sc_refill_capacity_relation[where x=x])
   by (clarsimp simp: sufficientRefills_def refill_sufficient_def minBudget_def MIN_BUDGET_def

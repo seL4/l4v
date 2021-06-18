@@ -4551,7 +4551,7 @@ lemma setCurSc_corres:
   by (clarsimp simp: state_relation_def swp_def)
 
 lemma refillSingle_equiv:
-  "valid_refills' sc \<Longrightarrow>
+  "sc_valid_refills' sc \<Longrightarrow>
    (length (refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc)) = Suc 0)
     = (scRefillHead sc = refillTailIndex sc)"
   apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def refills_map_def)
@@ -4561,18 +4561,30 @@ lemma refillSingle_equiv:
 
 lemma refillSingle_corres:
   "scp = scp' \<Longrightarrow>
-   corres (=) (sc_at scp) (obj_at' valid_refills' scp')
+   corres (=) (sc_at scp) (obj_at' sc_valid_refills' scp')
      (refill_single scp)
      (refillSingle scp')"
   unfolding refill_single_def refillSingle_def
   apply (simp add: refill_size_def get_refills_def)
   apply (rule stronger_corres_guard_imp)
-    apply (rule_tac R'="\<lambda>sc s. valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
+    apply (rule_tac R'="\<lambda>sc s. sc_valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
        apply (rule get_sc_corres)
       apply simp
       apply (metis (mono_tags, hide_lams) refillSingle_equiv sc_relation_def)
      apply wpsimp+
   apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma active_sc_at'_cross:
+  "\<lbrakk>(s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; is_active_sc sc_ptr s;
+    sc_at sc_ptr s\<rbrakk>
+   \<Longrightarrow> active_sc_at' sc_ptr s'"
+  apply (frule state_relation_pspace_relation)
+  apply (frule (3) sc_at_cross)
+  apply (clarsimp simp: pspace_relation_def obj_at_def is_sc_obj_def)
+  apply (drule_tac x=sc_ptr in bspec, blast)
+  apply (clarsimp simp: sc_relation_def vs_all_heap_simps active_sc_at'_def obj_at'_def projectKOs
+                        active_sc_def)
   done
 
 end

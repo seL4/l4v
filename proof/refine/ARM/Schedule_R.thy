@@ -3907,7 +3907,7 @@ lemma setNextInterrupt_corres_helper:
   "\<lbrakk>valid_objs' s'; (s, s') \<in> state_relation; active_sc_tcb_at t s;
     valid_objs s; active_sc_valid_refills s; pspace_aligned s; pspace_distinct s\<rbrakk>
     \<Longrightarrow> \<exists>tcb. ko_at' tcb t s' \<and> sc_at' (the (tcbSchedContext tcb)) s' \<and>
-        (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> valid_refills' ko)"
+        (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)"
   apply (subgoal_tac "\<exists>tcb'. ko_at' (tcb'  :: tcb) t s'", clarsimp)
    apply (clarsimp simp: pred_map_def vs_all_heap_simps)
    apply (rename_tac tcb' scp tcb sc n)
@@ -3920,12 +3920,8 @@ lemma setNextInterrupt_corres_helper:
      apply (frule_tac x=scp in pspace_relation_absD, erule state_relation_pspace_relation)
      apply (frule (1) valid_sched_context_size_objsI, clarsimp)
      apply (subgoal_tac "z = KOSchedContext ko", clarsimp)
-      apply (rule valid_refills'_common_usage, erule exI)
-        apply (clarsimp simp: active_sc_def vs_all_heap_simps pred_map_def is_tcb obj_at_def)
-       apply (subgoal_tac "valid_refills scp s", clarsimp simp: valid_refills_def2 obj_at_def)
-       apply (erule active_sc_valid_refillsE[rotated])
-       apply (clarsimp simp: active_sc_def vs_all_heap_simps pred_map_def is_tcb obj_at_def)
-      apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp, assumption)
+      apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
+      apply (clarsimp simp: valid_sched_context'_def sc_relation_def active_sc_def)
      apply (case_tac z; clarsimp simp: obj_at'_def projectKOs)
     apply (erule cross_relF [OF _ sc_at'_cross_rel], clarsimp simp: obj_at_def is_sc_obj)
     apply (erule (1) valid_sched_context_size_objsI)
@@ -3949,7 +3945,7 @@ lemma setNextInterrupt_corres:
         apply (rule corres_split_eqr [OF _ get_tcb_obj_ref_corres])
            apply (rule corres_assert_opt_assume_l)
            apply (rule corres_split [OF get_sc_corres])
-             apply (rule_tac F="valid_refills' rv'" in corres_gen_asm2)
+             apply (rule_tac F="sc_valid_refills' rv'" in corres_gen_asm2)
              apply (rule corres_split [OF corres_if])
                   apply (clarsimp simp: num_domains_def numDomains_def)
                  apply (rule corres_split [OF domain_time_corres])
@@ -3967,7 +3963,7 @@ lemma setNextInterrupt_corres:
                        apply (rule corres_assert_opt_assume_l)
                        apply simp
                        apply (rule corres_split [OF get_sc_corres])
-                         apply (rule_tac F="valid_refills' rv'c" in corres_gen_asm2)
+                         apply (rule_tac F="sc_valid_refills' rv'c" in corres_gen_asm2)
                          apply (rule corres_return_eq_same)
                          apply (clarsimp simp: refill_hd_relation refill_map_def)
                         apply wpsimp
@@ -3990,9 +3986,9 @@ lemma setNextInterrupt_corres:
   apply simp
   apply (subgoal_tac "(\<exists>tcb. ko_at' tcb (ksCurThread s') s' \<and>
                     sc_at' (the (tcbSchedContext tcb)) s' \<and>
-                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> valid_refills' ko)) \<and> (ksReleaseQueue s' \<noteq> [] \<longrightarrow> (\<exists>tcb. ko_at' tcb (hd (ksReleaseQueue s')) s' \<and>
+                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)) \<and> (ksReleaseQueue s' \<noteq> [] \<longrightarrow> (\<exists>tcb. ko_at' tcb (hd (ksReleaseQueue s')) s' \<and>
                     sc_at' (the (tcbSchedContext tcb)) s' \<and>
-                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> valid_refills' ko)))")
+                    (\<forall>ko. ko_at' ko (the (tcbSchedContext tcb)) s' \<longrightarrow> sc_valid_refills' ko)))")
    apply (safe, blast, blast)[1]
    apply (rule_tac x=tcb in exI, simp, safe, blast)[1]
   apply (intro conjI; clarsimp)
