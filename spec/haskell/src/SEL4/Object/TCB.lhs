@@ -26,13 +26,13 @@ This module uses the C preprocessor to select a target architecture.
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsIRQ, commitTime, awaken, switchSchedContext,
->         replaceAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
+>         replaceAt, updateAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget replaceAt tcbEPAppend tcbEPDequeue setTimeArg #-}
+% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget replaceAt updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -1002,6 +1002,15 @@ On some architectures, the thread context may include registers that may be modi
 >     in if (null lst || length lst <= i)
 >           then lst
 >           else x ++ [v] ++ y
+
+> updateAt :: Int -> [a] -> (a -> a) -> [a]
+> updateAt i lst f =
+>     let x = take i lst;
+>         u = lst !! i;
+>         y = drop (i + 1) lst
+>     in if (null lst || length lst <= i)
+>           then lst
+>           else x ++ [f u] ++ y
 
 > chargeBudget :: Ticks -> Bool -> Bool -> Kernel ()
 > chargeBudget consumed canTimeoutFault isCurCPU = do

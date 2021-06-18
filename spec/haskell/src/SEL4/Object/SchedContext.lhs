@@ -49,7 +49,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
-> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, replaceAt, setTimeArg, setMessageInfo, setMRs)
+> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, replaceAt, updateAt, setTimeArg, setMessageInfo, setMRs)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import SEL4.API.Invocation(SchedContextInvocation(..), SchedControlInvocation(..))
 
@@ -82,14 +82,11 @@ This module uses the C preprocessor to select a target architecture.
 > refillHd :: SchedContext -> Refill
 > refillHd sc = scRefills sc !! scRefillHead sc
 
+> updateRefillIndex :: PPtr SchedContext -> (Refill -> Refill) -> Int -> Kernel ()
+> updateRefillIndex scPtr f idx = updateSchedContext scPtr (\sc -> sc { scRefills = updateAt idx (scRefills sc) f})
+
 > updateRefillHd :: PPtr SchedContext -> (Refill -> Refill) -> Kernel ()
-> updateRefillHd scPtr f = do
->     sc <- getSchedContext scPtr
->     let refills = scRefills sc
->     let idx = scRefillHead sc
->     let head = refillHd sc
->     let sc' = sc { scRefills = replaceAt idx refills (f head) }
->     setSchedContext scPtr sc'
+> updateRefillHd scPtr f = updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (scRefillHead sc) (scRefills sc) f})
 
 > setRefillHd :: PPtr SchedContext -> Refill -> Kernel ()
 > setRefillHd scPtr new = updateRefillHd scPtr (\r -> new)
@@ -116,13 +113,7 @@ This module uses the C preprocessor to select a target architecture.
 > refillTl sc = scRefills sc !! refillTailIndex sc
 
 > updateRefillTl :: PPtr SchedContext -> (Refill -> Refill) -> Kernel ()
-> updateRefillTl scPtr f = do
->     sc <- getSchedContext scPtr
->     let refills = scRefills sc
->     let idx = refillTailIndex sc
->     let tail = refillTl sc
->     let sc' = sc { scRefills = replaceAt idx refills (f tail) }
->     setSchedContext scPtr sc'
+> updateRefillTl scPtr f = updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (refillTailIndex sc) (scRefills sc) f})
 
 > setRefillTl :: PPtr SchedContext -> Refill -> Kernel ()
 > setRefillTl scPtr new = updateRefillTl scPtr (\r -> new)
@@ -165,8 +156,15 @@ This module uses the C preprocessor to select a target architecture.
 > getRefillNext :: PPtr SchedContext -> Int -> Kernel Int
 > getRefillNext scPtr index = getsJust (readRefillNext scPtr index)
 
+> updateRefillNext :: PPtr SchedContext -> (Refill -> Refill) -> Int -> Kernel ()
+> updateRefillNext scPtr f index = do
+>     updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (refillNextIndex index sc) (scRefills sc) f})
+
 > refillIndex :: Int -> SchedContext -> Refill
 > refillIndex index sc = scRefills sc !! index
+
+> refillNextIndex :: Int -> SchedContext -> Int
+> refillNextIndex index sc = if (index == scRefillMax sc - 1) then 0 else index + 1
 
 > -- Odd argument order plays well with `updateSchedContext`.
 > setRefillIndex :: Int -> Refill -> SchedContext -> SchedContext
@@ -203,20 +201,16 @@ This module uses the C preprocessor to select a target architecture.
 > refillPopHead :: PPtr SchedContext -> Kernel Refill
 > refillPopHead scPtr = do
 >     refill <- liftM refillHd $ getSchedContext scPtr
->     oldHead <- liftM scRefillHead $ getSchedContext scPtr
->     nextHead <- getRefillNext scPtr oldHead
->     updateSchedContext scPtr $ \sc -> sc { scRefillHead = nextHead,
+>     updateSchedContext scPtr $ \sc -> sc { scRefillHead = refillNextIndex (scRefillHead sc) sc,
 >                                     scRefillCount = scRefillCount sc - 1 }
 >     return refill
 
 > refillAddTail :: PPtr SchedContext -> Refill -> Kernel ()
 > refillAddTail scPtr refill = do
 >     sc <- getSchedContext scPtr
->     sz <- getRefillSize scPtr
->     assert (sz < scRefillMax sc) "cannot add beyond queue size"
->     newTail <- getRefillNext scPtr (refillTailIndex sc)
->     refills <- return $ replaceAt newTail (scRefills sc) refill
->     setSchedContext scPtr (sc { scRefills = refills, scRefillCount = sz + 1 })
+>     assert (scRefillCount sc < scRefillMax sc) "cannot add beyond queue size"
+>     newTail <- return $ refillNextIndex (refillTailIndex sc) sc
+>     updateSchedContext scPtr (\sc -> sc { scRefills = replaceAt (refillNextIndex (refillTailIndex sc) sc) (scRefills sc) refill, scRefillCount = scRefillCount sc + 1})
 
 > maybeAddEmptyTail :: PPtr SchedContext -> Kernel ()
 > maybeAddEmptyTail scPtr = do
@@ -304,9 +298,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillResetRR :: PPtr SchedContext -> Kernel ()
 > refillResetRR scPtr = do
->     sc <- getSchedContext scPtr
->     setRefillHd scPtr (Refill { rTime = rTime (refillHd sc), rAmount = rAmount (refillHd sc) + rAmount (refillTl sc)})
->     setRefillTl scPtr (Refill { rTime = rTime (refillTl sc), rAmount = 0})
+>     updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (scRefillHead sc) (scRefills sc) (\hd -> hd { rAmount = rAmount hd + rAmount (refillTl sc)})})
+>     updateRefillTl scPtr (\last -> last { rAmount = 0})
 
 > refillHdInsufficient :: PPtr SchedContext -> KernelR Bool
 > refillHdInsufficient scPtr = do
@@ -318,8 +311,8 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     assert (1 < scRefillCount sc) "if head is insufficient, there must be at least 2 refills"
 >     old_head <- refillPopHead scPtr
->     updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head,
->                                            rAmount = rAmount head + rAmount old_head }
+>     updateRefillHd scPtr $ \head -> head { rAmount = rAmount head + rAmount old_head }
+>     updateRefillHd scPtr $ \head -> head { rTime = rTime head - rAmount old_head}
 
 > headInsufficientLoop :: PPtr SchedContext -> Kernel ()
 > headInsufficientLoop scPtr = whileLoop (const (fromJust . runReaderT (refillHdInsufficient scPtr))) (const (nonOverlappingMergeRefills scPtr)) ()
@@ -530,8 +523,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
 > schedContextZeroRefillMax scPtr = do
->     sc <- getSchedContext scPtr
->     setSchedContext scPtr $ sc { scRefillMax = 0 }
+>     updateSchedContext scPtr $ (\sc -> sc { scRefillMax = 0 })
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
