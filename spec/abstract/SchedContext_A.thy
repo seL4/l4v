@@ -104,10 +104,7 @@ where
 definition
   update_refill_hd :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "update_refill_hd sc_ptr f = do
-     refills \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (f (hd refills) # (tl refills))
-   od"
+  "update_refill_hd sc_ptr f = update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. f (hd refills) # (tl refills)))"
 
 definition
   set_refill_hd :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -117,10 +114,7 @@ where
 definition
   update_refill_tl :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "update_refill_tl sc_ptr f = do
-     refills \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (butlast refills @ [f (last refills)])
-   od"
+  "update_refill_tl sc_ptr f = update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. butlast refills @ [f (last refills)]))"
 
 definition
   set_refill_tl :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -130,10 +124,8 @@ where
 definition
   refill_add_tail :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "refill_add_tail sc_ptr new_refill = do
-     refills \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (refills @ [new_refill])
-   od"
+  "refill_add_tail sc_ptr new_refill =
+     update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. refills @ [new_refill]))"
 
 definition
   maybe_add_empty_tail :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
@@ -189,7 +181,7 @@ definition
 where
   "refill_pop_head sc_ptr \<equiv> do
      refills \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (tl refills);
+     update_sched_context sc_ptr (sc_refills_update tl);
      return (hd refills)
    od"
 
@@ -207,8 +199,7 @@ definition
 where
   "merge_refills sc_ptr \<equiv> do
      head \<leftarrow> refill_pop_head sc_ptr;
-     refills' \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (merge_refill head (hd refills') # (tl refills'))
+     update_refill_hd sc_ptr (merge_refill head)
    od"
 
 definition
@@ -226,8 +217,7 @@ where
     when (ready \<and> \<not>robin) $ do
       modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       ct \<leftarrow> gets cur_time;
-      refills \<leftarrow> get_refills sc_ptr;
-      set_refill_hd sc_ptr ((hd refills)\<lparr>r_time := ct + kernelWCET_ticks\<rparr>);
+      update_refill_hd sc_ptr (r_time_update (\<lambda>_. ct + kernelWCET_ticks));
       refill_head_overlapping_loop sc_ptr
     od
   od"
@@ -254,10 +244,7 @@ definition
 where
   "non_overlapping_merge_refills sc_ptr \<equiv> do
      old_head \<leftarrow> refill_pop_head sc_ptr;
-     refills' \<leftarrow> get_refills sc_ptr;
-     set_refills sc_ptr (\<lparr>r_time = r_time (hd refills') - r_amount old_head,
-                          r_amount = r_amount (hd refills') + r_amount old_head\<rparr>
-                        # tl refills')
+     update_refill_hd sc_ptr (r_time_update (\<lambda>t. t - r_amount old_head) o (r_amount_update (\<lambda>m. m + r_amount old_head)))
    od"
 
 definition
@@ -288,12 +275,13 @@ where
      usage' \<leftarrow> return (usage - r_amount (refill_hd sc));
 
      if single
-        then set_refill_hd sc_ptr ((refill_hd sc)\<lparr>r_time := r_time (refill_hd sc) + sc_period sc\<rparr>)
+
+        then update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + sc_period sc))
         else do old_head \<leftarrow> refill_pop_head sc_ptr;
                 full \<leftarrow> refill_full sc_ptr;
-                refills' \<leftarrow> get_refills sc_ptr;
-                set_refills sc_ptr $ schedule_used full refills'
-                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)
+                update_sched_context sc_ptr (sc_refills_update
+                                                  (\<lambda>refills. schedule_used full refills
+                                                   (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)))
              od;
      return usage'
    od"
@@ -320,14 +308,12 @@ where
      new_head_amount \<leftarrow> return (r_amount (hd refills));
 
      when (usage' > 0 \<and> usage' < new_head_amount) $ do
-       refills \<leftarrow> get_refills sc_ptr;
        sc \<leftarrow> get_sched_context sc_ptr;
        period \<leftarrow> return (sc_period sc);
-       used \<leftarrow> return \<lparr>r_time = r_time (hd refills) + period, r_amount = usage'\<rparr>;
-       adjusted_hd \<leftarrow> return \<lparr>r_time = r_time (hd refills) + usage',
-                              r_amount = r_amount (hd refills) - usage'\<rparr>;
-       full \<leftarrow> refill_full sc_ptr;
-       set_refills sc_ptr $ schedule_used full (adjusted_hd # (tl refills)) used
+       used \<leftarrow> return \<lparr>r_time = r_time (hd (sc_refills sc)) + period, r_amount = usage'\<rparr>;
+       update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + usage') o (r_amount_update (\<lambda>m. m - usage')));
+       full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc);
+       update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. schedule_used full refills used))
      od;
 
      head_insufficient_loop sc_ptr
@@ -486,8 +472,8 @@ definition
   sched_context_zero_refill_max :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "sched_context_zero_refill_max sc_ptr = do
-     set_sc_obj_ref sc_refill_max_update sc_ptr 0;
-     set_refills sc_ptr []
+     update_sched_context sc_ptr (sc_refills_update (\<lambda>_. []));
+     update_sched_context sc_ptr (sc_refill_max_update (\<lambda>_. 0))
    od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>
