@@ -327,7 +327,7 @@ This module uses the C preprocessor to select a target architecture.
 > mergeRefills :: PPtr SchedContext -> Kernel ()
 > mergeRefills scPtr = do
 >     old_head <- refillPopHead scPtr
->     updateRefillHd scPtr $ \head -> head { rTime = rAmount old_head,
+>     updateRefillHd scPtr $ \head -> head { rTime = rTime old_head,
 >                                            rAmount = rAmount head + rAmount old_head }
 
 > refillHeadOverlapping :: PPtr SchedContext -> KernelR Bool
