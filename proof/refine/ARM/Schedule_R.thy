@@ -3915,7 +3915,7 @@ lemma awaken_corres:
   apply (rule corres_cross[where Q'="\<lambda>s'. distinct (ksReleaseQueue s')"
                            , OF ksReleaseQueue_distinct_cross_rel], blast)
   apply (clarsimp simp: awaken_def Schedule_A.awaken_def runReaderT_def)
-  apply (rule corres_whileLoop; simp)
+  apply (rule corres_whileLoop_inv; simp)
        apply (simp add: releaseQNonEmptyAndReady_eq)
       apply (rule corres_guard_imp)
         apply (rule awakenBody_corres)
