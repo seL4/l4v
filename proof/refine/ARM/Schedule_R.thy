@@ -3915,7 +3915,7 @@ lemma awaken_corres:
   apply (rule corres_cross[where Q'="\<lambda>s'. distinct (ksReleaseQueue s')"
                            , OF ksReleaseQueue_distinct_cross_rel], blast)
   apply (clarsimp simp: awaken_def Schedule_A.awaken_def runReaderT_def)
-  apply (rule corres_whileLoop; simp)
+  apply (rule corres_whileLoop_inv; simp)
        apply (simp add: releaseQNonEmptyAndReady_eq)
       apply (rule corres_guard_imp)
         apply (rule awakenBody_corres)
@@ -3933,6 +3933,545 @@ lemma awaken_corres:
    apply (fastforce intro: no_fail_pre awakenBody_no_fail
                      dest: releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
   apply (fastforce intro!: awaken_terminates)
+  done
+
+(* BEGIN: headInsufficientLoop_corres *)
+
+lemma getRefills_sp:
+  "\<lbrace>P\<rbrace>
+   getRefills scPtr
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> (rv = scRefills sc))\<rbrace>"
+  apply (simp add: getRefills_def)
+  apply (rule hoare_seq_ext[rotated])
+   apply (rule get_sc_sp')
+  apply (wp hoare_return_sp)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  done
+
+lemma scRefills_update_corres:
+  "corres dc (sc_at scPtr and K (refills = refills_map (scRefillHead sc') (scRefillCount sc') (scRefillMax sc') refills'))
+             (ko_at' sc' scPtr and K (length refills' = length (scRefills sc')))
+          (set_sc_obj_ref sc_refills_update scPtr refills)
+          (setSchedContext scPtr (scRefills_update (\<lambda>_. refills') sc'))"
+  unfolding update_sched_context_def
+  apply (rule corres_gen_asm')
+  apply (rule corres_gen_asm2')
+  apply (rule corres_guard_imp)
+    apply (rule corres_symb_exec_l'[where Q'="\<lambda>r s. ko_at r scPtr s \<and> (\<exists>n. is_sc_obj n r)",
+                                    where P="\<lambda>s. obj_at \<top> scPtr s"])
+      apply (rule corres_guard_imp[where P'=R and Q'=R for R])
+        apply (rule_tac F="(\<exists>n. is_sc_obj n obj)" in corres_gen_asm)
+        apply (case_tac obj; simp add: is_sc_obj_def)
+        apply (rule setSchedContext_no_stack_update_corres[where f'="scRefills_update (\<lambda>_. refills')"])
+           apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def obj_at_def)+
+     apply (fastforce simp: exs_valid_def get_object_def in_monad obj_at_def)
+    apply (wpsimp wp: get_object_wp)
+   apply (fastforce simp: obj_at_def)
+  apply simp
+  done
+
+lemma updateRefillHd_corres:
+  "\<lbrakk>sc_ptr = scPtr;
+    \<forall>refill refill'. refill = refill_map refill' \<longrightarrow> f refill = refill_map (f' refill')\<rbrakk>
+   \<Longrightarrow> corres dc
+              (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr
+               and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
+              valid_objs'
+              (update_refill_hd sc_ptr f)
+              (updateRefillHd scPtr f')"
+  apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel])
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
+  apply (clarsimp simp: update_refill_hd_def get_refills_def set_refills_def updateRefillHd_def)
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (corressimp corres: get_sc_corres)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule scRefills_update_corres)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj)
+   apply (rename_tac sc' s s' n n' sc)
+   apply (clarsimp simp: pred_map_def vs_all_heap_simps active_sc_def)
+   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+   apply (clarsimp simp: sc_relation_def)
+   apply (frule refills_map_non_empty_pos_count)
+   apply (clarsimp simp: valid_sched_context'_def)
+   apply (prop_tac "scRefills sc' \<noteq> []")
+    apply clarsimp
+
+   apply (rule nth_equalityI)
+    apply (fastforce simp: refills_map_def length_replaceAt)
+   apply (case_tac "i=0")
+    apply (clarsimp simp: refills_map_def hd_map hd_wrap_slice length_replaceAt)
+    apply (rule_tac f=refill_map in arg_cong)
+    apply (clarsimp simp: wrap_slice_index length_replaceAt)
+    apply (fastforce simp: refillHd_def replaceAt_index)
+   apply (clarsimp simp: refills_map_def nth_tl length_replaceAt)
+   apply (rule_tac f=refill_map in arg_cong)
+   apply (rule_tac P="\<lambda>t. _ = t" in ssubst)
+    apply (erule (1) wrap_slice_index; simp add: length_replaceAt)
+   apply (fastforce simp: replaceAt_index wrap_slice_index)
+  apply (clarsimp simp: length_replaceAt)
+  done
+
+
+
+lemma sc_refills_length_relation:
+  "sc_relation sc n sc' \<Longrightarrow> scRefillMax  sc' \<le> length (scRefills  sc') \<and> scRefillHead  sc' < scRefillMax sc' \<and> scRefillCount sc' \<le> scRefillMax sc'  \<Longrightarrow>
+   length (sc_refills sc) = scRefillCount sc'"
+  by (clarsimp simp: sc_relation_def refills_map_def)
+
+lemma get_set_refills_helper:
+  "(do refills' <- get_refills scPtr;
+       set_refills scPtr (\<lparr>r_time = r_time (hd refills') - r_amount old_head,
+                           r_amount = r_amount (hd refills') + r_amount old_head\<rparr>
+                          # tl refills')
+    od) = update_refill_hd scPtr (\<lambda>x. \<lparr>r_time = r_time x - r_amount old_head, r_amount = r_amount x + r_amount old_head\<rparr>)"
+  by (rule ext, clarsimp simp: update_refill_hd_def)
+
+lemma set_refills_is_active_sc[wp]:
+  "set_refills s scPtr \<lbrace>is_active_sc scPtr'\<rbrace>"
+  apply (wpsimp wp: set_refills_wp)
+  by (clarsimp simp: pred_map_def vs_all_heap_simps obj_at_def)
+
+crunches refill_pop_head for is_active_sc[wp]: "is_active_sc scPtr"
+  (wp: crunch_wps)
+
+lemma refill_pop_head_sc_refills_sc_at[wp]:
+  "\<lbrace>sc_refills_sc_at (\<lambda>x. P (tl x)) scPtr\<rbrace>
+    refill_pop_head scPtr
+   \<lbrace>\<lambda>_. sc_refills_sc_at P scPtr\<rbrace>"
+  unfolding refill_pop_head_def
+  apply (wpsimp wp: get_refills_wp)
+  apply (clarsimp simp: sc_at_ppred_def obj_at_def)
+  done
+
+lemma refillPopHead_corres:
+  "sc_ptr = scPtr
+   \<Longrightarrow> corres (\<lambda>rs rs'. rs = refill_map rs')
+              (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr
+               and sc_refills_sc_at (\<lambda>rs. 1 < length rs) sc_ptr)
+              valid_objs'
+              (refill_pop_head sc_ptr) (refillPopHead scPtr)"
+  supply if_split[split del]
+  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
+  apply (clarsimp simp: refill_pop_head_def refillPopHead_def)
+  apply (clarsimp simp: getRefillNext_getSchedContext get_refills_def liftM_def updateSchedContext_def
+                        bind_assoc)
+  apply (rule corres_split'[OF _ _ get_sched_context_sp get_sc_sp'])
+   apply (rule corres_guard_imp[OF get_sc_corres]; simp)
+
+  apply (rule corres_symb_exec_r[OF _ get_sc_sp', rotated], wpsimp, wpsimp)
+  apply (rule corres_symb_exec_r[OF _ get_sc_sp', rotated], wpsimp, wpsimp)
+  apply (rule corres_symb_exec_r[OF _ get_sc_sp', rotated], wpsimp, wpsimp)
+  apply (rename_tac sc1 sc2 sc3 sc')
+  apply (rule_tac F="sc1 = sc2 \<and> sc2 = sc3 \<and> sc3 = sc'" in corres_req, clarsimp simp: obj_at'_def)
+  apply (clarsimp simp: pred_conj_def cong: conj_cong)
+
+  apply (rule_tac F="valid_refills' sc'" in corres_req[rotated])
+   apply (rule_tac r'=dc and P'="\<lambda>_ _. valid_refills' sc'" and P="\<lambda>_ _. True" in corres_underlying_split)
+      apply (clarsimp simp: set_refills_def update_sched_context_def)
+      apply (rule corres_guard_imp)
+        apply (rule corres_symb_exec_l'[where Q'="\<lambda>r s. ko_at r scPtr s \<and> (\<exists>n. is_sc_obj n r)",
+                                        where P="\<lambda>s. obj_at \<top> scPtr s"])
+          apply (rule_tac corres_guard_imp)
+            apply (rule_tac F="\<exists>n. is_sc_obj n obj" in corres_gen_asm)
+            apply (rule_tac F="valid_refills' sc'" in corres_gen_asm)
+            apply (case_tac obj; simp add: is_sc_obj_def)
+            apply (rule_tac sc'=sc' in setSchedContext_no_stack_update_corres)
+               apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def obj_at_def refills_map_def tl_map_simp tl_wrap_slice)
+               apply (subgoal_tac "min (scRefillCount sc') (scRefillMax sc') - Suc 0 = min (scRefillCount sc' - Suc 0) (scRefillMax sc')")
+                apply (subgoal_tac "next_index (scRefillHead sc') (scRefillMax sc') = min (if scRefillHead sc' = scRefillMax sc' - Suc 0 then 0
+                                  else scRefillHead sc' + 1)
+                              (scRefillMax sc')")
+                 apply simp
+                apply (fastforce simp: split: if_split )
+               apply fastforce
+              apply (clarsimp simp: objBits_def objBitsKO_def obj_at_def)+
+          apply assumption
+         apply (fastforce simp: exs_valid_def get_object_def in_monad obj_at_def)
+        apply (wpsimp wp: get_object_wp)
+       apply (fastforce simp: obj_at_def)
+      apply simp
+     apply wpsimp
+    apply wpsimp
+   apply clarsimp
+   apply (erule refill_hd_relation, simp)
+  apply clarsimp
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
+  apply (clarsimp simp: valid_sched_context'_def obj_at'_def projectKOs sc_relation_def
+                        pred_map_def obj_at_def vs_all_heap_simps active_sc_def)
+  done
+
+lemma nonOverlappingMergeRefills_corres:
+  "scPtr = scPtr' \<Longrightarrow>
+    corres dc (pspace_aligned and pspace_distinct and
+               sc_at scPtr and is_active_sc scPtr and
+               sc_refills_sc_at (\<lambda>refills. Suc 0 < length refills) scPtr)
+              (valid_objs')
+    (non_overlapping_merge_refills scPtr)
+    (nonOverlappingMergeRefills scPtr')"
+  unfolding nonOverlappingMergeRefills_def non_overlapping_merge_refills_def haskell_assert_def
+  apply (rule corres_cross[OF sc_at'_cross_rel[where t=scPtr']], simp)
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_symb_exec_r'[where Q'=\<top>])
+       apply (rule corres_assert_assume_r, simp)
+       apply (rule corres_split [OF refillPopHead_corres], simp)
+         apply (subst get_set_refills_helper)
+         apply (rule updateRefillHd_corres, simp)
+         apply (simp add: refill_map_def)
+        apply wpsimp+
+   apply (clarsimp simp: obj_at'_def sc_at_pred_n_def projectKOs obj_at_def is_sc_obj)
+   apply (case_tac "sc_refills sca"; simp)
+  apply clarsimp
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+  apply (clarsimp simp: obj_at'_def pred_map_def projectKOs vs_all_heap_simps obj_at_def is_sc_obj)
+  apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation], clarsimp)
+  apply (subgoal_tac "0 < scRefillMax ko")
+   apply (frule sc_refills_length_relation[symmetric])
+     apply (clarsimp simp: valid_sched_context'_def)
+    apply (clarsimp simp: valid_sched_context'_def)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (clarsimp simp: sc_relation_def active_sc_def)
+  done
+
+crunches nonOverlappingMergeRefills
+  for sc_at'[wp]: "sc_at' scp"
+
+(* Note: This is mainly useful as a measure for loop termination *)
+definition scRefillCount_of where
+  "scRefillCount_of scp s \<equiv> case ksPSpace s scp of Some ko \<Rightarrow> case ko of KOSchedContext sc \<Rightarrow> scRefillCount sc"
+
+lemma nonOverlappingMergeRefills_scRefillCount_of[wp]:
+  "\<lbrace>\<lambda>s. P (scRefillCount_of scp s - 1)\<rbrace>
+   nonOverlappingMergeRefills scp
+   \<lbrace>\<lambda>_ s. P (scRefillCount_of scp s)\<rbrace>"
+  unfolding nonOverlappingMergeRefills_def
+  apply (wpsimp simp: refillPopHead_def updateRefillHd_def setSchedContext_def
+                      getRefillNext_def updateSchedContext_def
+                  wp: set_sc'.setObject_wp)
+  apply (clarsimp simp: scRefillCount_of_def obj_at'_real_def ko_wp_at'_def projectKOs)
+  done
+
+lemma nonOMergeRefills_scRefillCount[wp]:
+  "\<lbrace>obj_at' (\<lambda>sc. P (scRefillCount sc - 1)) scPtr\<rbrace>
+   nonOverlappingMergeRefills scPtr
+   \<lbrace>\<lambda>_. obj_at' (\<lambda>sc. P (scRefillCount sc)) scPtr\<rbrace>"
+  apply (rule_tac Q="\<lambda>_. sc_at' scPtr and (\<lambda>s. P (scRefillCount_of scPtr s))" in hoare_strengthen_post)
+   apply wpsimp
+   apply (clarsimp simp: obj_at'_def scRefillCount_of_def projectKOs)+
+  done
+
+definition hILoop_measure where
+  "hILoop_measure scp \<equiv> measure (\<lambda>(r, s). scRefillCount_of scp s)"
+
+definition scRefillsSum where
+  "scRefillsSum sc \<equiv> refills_sum (refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc))"
+
+lemma readRefillNextD:
+  "readRefillNext scPtr i s = Some i' \<Longrightarrow>
+   obj_at' (\<lambda>sc. i' = (if i = scRefillMax sc - 1 then 0 else i + 1)) scPtr s"
+  unfolding readRefillNext_def
+  apply (clarsimp simp: obind_def)
+  apply (subgoal_tac "sc_at' scPtr s")
+   apply (frule no_ofailD[OF no_ofail_readSchedContext], clarsimp)
+  unfolding readSchedContext_def
+   apply (frule readObject_ko_at'_sc)
+   apply (clarsimp simp: obj_at'_def)
+  apply (clarsimp split: option.splits)
+  done
+
+lemma nonOMergeRefills_scRefillsSum_helper:
+  "\<lbrakk>y = (if scRefillHead obj = scRefillMax obj - 1 then 0 else scRefillHead obj + 1);
+    scRefillHead obj < scRefillMax obj; scRefillMax obj \<le> length (scRefills obj);
+    scRefillCount obj \<le> scRefillMax obj; 1 < scRefillCount obj\<rbrakk> \<Longrightarrow>
+   refills_sum (refills_map (scRefillHead obj) (scRefillCount obj) (scRefillMax obj) (scRefills obj))
+   =
+   refills_sum (refills_map y (scRefillCount obj - Suc 0) (scRefillMax obj)
+                (replaceAt y (scRefills obj)
+                 (rAmount_update (\<lambda>_. rAmount (scRefills obj ! y) + rAmount (scRefills obj ! scRefillHead obj))
+                 (rTime_update (\<lambda>_. rTime (scRefills obj ! y) - rAmount (scRefills obj ! scRefillHead obj)) (scRefills obj ! y)))))"
+  supply length_replaceAt [simp]
+  supply if_split [split del]
+  apply (clarsimp simp: refills_sum_def)
+  apply (rule sum_list_split_eq[where n=2 and m=1])
+   apply (clarsimp simp: take_map refills_map_def)
+   apply (clarsimp simp: take_wrap_slice wrap_slice_1)
+   apply (subst take_wrap_slice; simp?)
+    apply (fastforce split: if_split)
+   apply (clarsimp simp: wrap_slice_2)
+   apply (subst wrap_slice_1)
+     apply (fastforce split: if_split)
+    apply (fastforce split: if_split)
+   apply (case_tac "scRefillHead obj = scRefillMax obj - Suc 0"; simp)
+    apply (subst replaceAt_index; clarsimp simp: refill_map_def)
+   apply (subst replaceAt_index; fastforce simp: refill_map_def split: if_split)
+  apply (clarsimp simp: drop_map refills_map_def drop_wrap_slice)
+  apply (subst drop_wrap_slice; simp?)
+   apply (fastforce split: if_split)
+  apply (subst wrap_slice_replaceAt_eq[symmetric]; fastforce split: if_split simp: numeral_2_eq_2)
+  done
+
+lemma nonOMergeRefills_scRefillsSum[wp]:
+  "\<lbrace>\<lambda>s'. obj_at' (\<lambda>sc. scRefillsSum sc \<ge> minBudget) scPtr s' \<and>
+         obj_at' (\<lambda>obj. scRefillHead obj < (scRefillMax obj) \<and>
+                        scRefillMax obj \<le> length (scRefills obj) \<and>
+                        scRefillCount obj \<le> (scRefillMax obj)) scPtr s' \<and>
+         obj_at' (\<lambda>obj. 1 < scRefillCount obj) scPtr s'\<rbrace>
+    nonOverlappingMergeRefills scPtr
+   \<lbrace>\<lambda>_ s'. obj_at' (\<lambda>sc. scRefillsSum sc \<ge> minBudget) scPtr s'\<rbrace>"
+  apply (rule_tac Q="\<lambda>_. sc_at' scPtr and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> scRefillsSum ko \<ge> minBudget)" in hoare_strengthen_post[rotated])
+   apply (clarsimp simp: obj_at'_def)
+  apply wpsimp
+  unfolding nonOverlappingMergeRefills_def
+   apply (wpsimp simp: refillPopHead_def updateRefillHd_def setSchedContext_def
+                       updateSchedContext_def getRefillNext_def
+                   wp: set_sc'.setObject_wp)
+  apply (subgoal_tac "sc_at' scPtr s", clarsimp)
+   apply (subgoal_tac "scRefillsSum koe = scRefillsSum ko", clarsimp)
+    apply (clarsimp simp: obj_at'_def)
+   apply (clarsimp simp: obj_at'_def projectKOs scRefillsSum_def refillHd_def)
+   apply (rename_tac nexti obj)
+   apply (rule nonOMergeRefills_scRefillsSum_helper[symmetric])
+       apply (drule readRefillNextD, clarsimp simp: obj_at'_def projectKOs)
+      apply simp+
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma nonOMergeRefills_validsc'[wp]:
+  "nonOverlappingMergeRefills scPtr
+   \<lbrace>\<lambda>s'. obj_at' (\<lambda>sc. scRefillHead sc < scRefillMax sc \<and> scRefillMax sc \<le> length (scRefills sc) \<and> scRefillCount sc \<le> scRefillMax sc) scPtr s'\<rbrace>"
+  unfolding nonOverlappingMergeRefills_def
+  apply (rule_tac Q="\<lambda>_ s. sc_at' scPtr s \<and> (\<forall>sc. ko_at' sc scPtr s \<longrightarrow>
+                           scRefillHead sc < scRefillMax sc \<and>
+                           scRefillMax sc \<le> length (scRefills sc) \<and>
+                           scRefillCount sc \<le> scRefillMax sc)"
+         in hoare_strengthen_post[rotated])
+   apply (clarsimp simp: obj_at'_def)
+  apply (wpsimp simp: refillPopHead_def updateRefillHd_def setSchedContext_def
+                      updateSchedContext_def getRefillNext_def
+                  wp: set_sc'.setObject_wp)
+  apply (subgoal_tac "sc_at' scPtr s", clarsimp)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (drule readRefillNextD)
+   apply (fastforce simp: scRefillCount_of_def obj_at'_def projectKOs length_replaceAt)
+  apply clarsimp
+  done
+
+lemma scRefillsSum_eq_HeadAmount:
+  "scRefillCount sc = 1 \<Longrightarrow> scRefillMax sc \<noteq> 0 \<Longrightarrow>
+   scRefillHead sc < scRefillMax sc \<Longrightarrow>
+   scRefillMax sc \<le> length (scRefills sc) \<Longrightarrow>
+   scRefillsSum sc = rAmount (refillHd sc)"
+  apply (clarsimp simp: scRefillsSum_def refills_map_def wrap_slice_1)
+  apply (simp add: refill_map_def refillHd_def)
+  done
+
+lemma scRefillsSum_scRefillCountgt0:
+  "obj_at' (\<lambda>sc. minBudget \<le> scRefillsSum sc) scPtr s \<Longrightarrow>
+   obj_at' (\<lambda>obj. scRefillHead obj < scRefillMax obj \<and> scRefillMax obj \<le> length (scRefills obj)) scPtr s \<Longrightarrow>
+   obj_at' (\<lambda>obj. 0 < scRefillCount obj) scPtr s"
+  apply (subgoal_tac "sc_at' scPtr s")
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (case_tac "scRefillCount obj = 0"; simp)
+   apply (clarsimp simp: scRefillsSum_def refills_map_def)
+   apply (clarsimp simp: minBudget_def kernelWCETTicks_def kernelWCET_ticks_pos2)
+  using kernelWCET_ticks_pos2 apply fastforce
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma no_fail_setSchedContext[wp]:
+  "no_fail (obj_at' (\<lambda>k::sched_context. objBits k = objBits v) scPtr) (setSchedContext scPtr v)"
+  unfolding setSchedContext_def
+  by wpsimp
+
+lemma no_fail_updateScPtr[wp]:
+  "no_fail (obj_at' (\<lambda>k::sched_context. objBits k = objBits (f k)) scPtr) (updateSchedContext scPtr f)"
+  unfolding updateSchedContext_def
+  apply wpsimp
+  by (clarsimp simp: obj_at'_def projectKOs)
+
+lemma no_fail_readRefillNext:
+  "no_ofail (sc_at' scPtr) (readRefillNext scPtr i)"
+  unfolding readRefillNext_def
+  apply (wpsimp simp:  no_ofail_oreturn)
+    apply (fastforce intro: no_ofail_oreturn)
+   apply (wpsimp wp: no_ofail_readSchedContext)
+  apply (clarsimp simp: ovalid_def)
+  done
+
+lemma no_fail_refillPopHead[wp]:
+  "no_fail (sc_at' scPtr) (refillPopHead scPtr)"
+  unfolding refillPopHead_def getRefillNext_def
+  apply wpsimp
+  apply (frule_tac i1="scRefillHead koa" in no_ofailD[OF no_fail_readRefillNext])
+  apply (clarsimp simp: obj_at'_def objBits_def objBitsKO_def)
+  done
+
+lemma no_fail_nonOverlappingMergeRefills[wp]:
+  "no_fail (obj_at' (\<lambda>obj. 1 < scRefillCount obj) scPtr) (nonOverlappingMergeRefills scPtr)"
+  unfolding nonOverlappingMergeRefills_def
+  apply (wpsimp simp: updateRefillHd_def2)
+     apply (rule_tac Q="\<lambda>_. sc_at' scPtr" in hoare_strengthen_post[rotated])
+      apply (clarsimp simp: objBits_def objBitsKO_def obj_at'_def length_replaceAt)
+     apply wpsimp+
+  by (clarsimp simp: obj_at'_def)
+
+crunches non_overlapping_merge_refills
+  for is_active_sc[wp]: "is_active_sc scPtr"
+
+lemma refill_pop_head_length[wp]:
+  "\<lbrace>sc_refills_sc_at (\<lambda>refills. Suc n < length refills) scPtr\<rbrace>
+   refill_pop_head scPtr
+   \<lbrace>\<lambda>rv. sc_refills_sc_at (\<lambda>refills. n < length refills) scPtr\<rbrace>"
+  unfolding refill_pop_head_def
+  apply (wpsimp wp: set_refills_wp get_refills_wp)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  by fastforce
+
+lemma non_overlapping_merge_refills_length[wp]:
+  "\<lbrace>sc_refills_sc_at (\<lambda>refills. Suc n < length refills) scPtr\<rbrace>
+   non_overlapping_merge_refills scPtr
+   \<lbrace>\<lambda>rv. sc_refills_sc_at (\<lambda>refills. n < length refills) scPtr\<rbrace>"
+  unfolding non_overlapping_merge_refills_def
+  apply (wpsimp wp: get_refills_wp)
+   apply (rule_tac Q="\<lambda>_. sc_refills_sc_at (\<lambda>refills. n < length refills) scPtr" in hoare_strengthen_post[rotated])
+    apply (fastforce simp: obj_at_def sc_at_pred_n_def)
+   apply wpsimp+
+  done
+
+lemma head_insufficient_def2:
+  "sc_at scp s \<Longrightarrow>
+   head_insufficient scp s = Some (sc_at_pred (\<lambda>sc. r_amount (refill_hd sc) < MIN_BUDGET) scp s)"
+  unfolding head_insufficient_def
+  by (clarsimp simp: obind_def read_sched_context_def obj_at_def is_sc_obj sc_at_pred_n_def)
+
+lemma refillHdInsufficient_def2:
+  "sc_at' scp s \<Longrightarrow>
+   refillHdInsufficient scp s = Some (obj_at' (\<lambda>sc :: sched_context. rAmount (refillHd sc) < minBudget) scp s)"
+  unfolding refillHdInsufficient_def
+  apply (clarsimp simp: obind_def readSchedContext_def split: option.splits)
+  apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
+  apply (clarsimp simp: obj_at'_def dest!: readObject_misc_ko_at')
+  done
+
+lemma head_insufficient_equiv:
+  "pspace_relation (kheap s) (ksPSpace s') \<Longrightarrow> sc_at scPtr s \<Longrightarrow> sc_at' scPtr s' \<Longrightarrow>
+   obj_at' (\<lambda>sc. 0 < scRefillMax sc \<and> 0 < scRefillCount sc) scPtr s' \<Longrightarrow>
+   valid_objs' s' \<Longrightarrow>
+   head_insufficient scPtr s = refillHdInsufficient scPtr s'"
+  apply (clarsimp simp: head_insufficient_def2 refillHdInsufficient_def2)
+  apply (clarsimp simp: obj_at_def obj_at'_def sc_at_pred_n_def projectKOs is_sc_obj)
+  apply (subgoal_tac "sc_relation sc n obja")
+   apply (subst refill_hd_relation, assumption)
+    apply (frule_tac p = scPtr and k=obja in  sc_ko_at_valid_objs_valid_sc'[rotated])
+     apply (clarsimp simp: obj_at'_def projectKOs, erule conjE)
+    apply (erule valid_refills'_normal; simp)
+   apply (clarsimp simp: refillHd_def refill_map_def MIN_BUDGET_equiv)
+  apply (frule (1) pspace_relation_absD, clarsimp)
+  done
+
+lemma refillHdInsufficient_scRefillCountgt1:
+  "obj_at' (\<lambda>sc. minBudget \<le> scRefillsSum sc) scPtr s \<Longrightarrow>
+   the (refillHdInsufficient scPtr s)  \<Longrightarrow>
+   obj_at' (\<lambda>obj. scRefillHead obj < scRefillMax obj \<and> scRefillMax obj \<le> length (scRefills obj)) scPtr s \<Longrightarrow>
+   obj_at' (\<lambda>obj. Suc 0 < scRefillCount obj) scPtr s"
+  apply (subgoal_tac "sc_at' scPtr s")
+   apply (clarsimp simp: refillHdInsufficient_def2)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (case_tac "scRefillCount obj \<le> 1"; simp)
+   apply (case_tac "scRefillCount obj = 0"; simp)
+    apply (clarsimp simp: scRefillsSum_def refills_map_def)
+   apply (case_tac "scRefillCount obj = 1"; simp)
+   apply (clarsimp simp: scRefillsSum_def refills_map_def)
+   apply (case_tac "scRefillMax obj = 0"; simp)
+   apply (clarsimp simp: wrap_slice_1)
+   apply (fastforce simp: refill_map_def refillHd_def)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma nonOverlappingMergeRefills_terminates:
+  assumes A: "obj_at' (\<lambda>sc. 0 < scRefillCount sc) scPtr s'"
+  assumes B: "obj_at' (\<lambda>sc. scRefillsSum sc \<ge> minBudget) scPtr s'"
+  assumes C: "obj_at' (\<lambda>sc. scRefillHead sc < scRefillMax sc \<and> scRefillMax sc \<le> length (scRefills sc)
+                            \<and> scRefillCount sc \<le> scRefillMax sc) scPtr s'"
+  shows
+    "whileLoop_terminates
+     (\<lambda>_ s. the (refillHdInsufficient scPtr s))
+     (\<lambda>_. nonOverlappingMergeRefills scPtr) r' s'"
+  supply if_split [split del]
+  apply (rule_tac I="\<lambda>_ s. obj_at' (\<lambda>sc. scRefillsSum sc \<ge> minBudget) scPtr s \<and>
+                           obj_at' (\<lambda>sc. 0 < scRefillCount sc) scPtr s \<and>
+                           obj_at' (\<lambda>sc. scRefillHead sc < scRefillMax sc \<and>
+                                         scRefillMax sc \<le> length (scRefills sc) \<and>
+                                         scRefillCount sc \<le> scRefillMax sc) scPtr s"
+         in whileLoop_terminates_inv[where R="hILoop_measure scPtr"])
+  apply (simp add: A B C)
+  apply (wpsimp simp: hILoop_measure_def)
+  apply (intro conjI)
+  apply (erule (1) refillHdInsufficient_scRefillCountgt1)
+  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: refillHdInsufficient_def2 obj_at'_def projectKOs scRefillCount_of_def)
+  apply (simp add: hILoop_measure_def)
+  done
+
+lemma headInsufficientLoop_corres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr)
+             (valid_objs' and obj_at' (\<lambda>sc. minBudget \<le> scRefillsSum sc) scPtr)
+             (head_insufficient_loop sc_ptr) (headInsufficientLoop scPtr)"
+  unfolding head_insufficient_loop_def headInsufficientLoop_def runReaderT_def
+  apply (rule_tac A="\<top>"
+         and A'="sc_at' scPtr and active_sc_at' scPtr and
+                 obj_at' (\<lambda>sc. minBudget \<le> scRefillsSum sc) scPtr and
+                 obj_at' (\<lambda>sc. scRefillHead sc < scRefillMax sc \<and>
+                               scRefillMax sc \<le> length (scRefills sc) \<and>
+                               scRefillCount sc \<le> scRefillMax sc) scPtr"
+         and I'="obj_at' (\<lambda>sc. minBudget \<le> scRefillsSum sc) scPtr and sc_at' scPtr and
+                 obj_at' (\<lambda>sc. scRefillHead sc < scRefillMax sc \<and>
+                               scRefillMax sc \<le> length (scRefills sc) \<and>
+                               scRefillCount sc \<le> scRefillMax sc) scPtr"
+         in corres_whileLoop)
+           apply (subst head_insufficient_equiv, erule state_relation_pspace_relation, clarsimp)
+              apply (simp)
+             apply (clarsimp)
+             apply (frule scRefillsSum_scRefillCountgt0)
+              apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+             apply (clarsimp simp: active_sc_at'_def obj_at'_def)
+            apply (clarsimp simp: )
+           apply (clarsimp simp: )
+          apply simp
+          apply (rule stronger_corres_guard_imp)
+            apply (rule nonOverlappingMergeRefills_corres; simp)
+           apply (clarsimp simp: active_sc_at'_def head_insufficient_def2)
+           apply (frule (1) refillHdInsufficient_scRefillCountgt1, clarsimp simp: obj_at'_def)
+           apply (clarsimp simp: obj_at'_def projectKOs sc_at_pred_n_def obj_at_def is_sc_obj)
+           apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation], clarsimp)
+           apply (clarsimp simp: sc_relation_def refills_map_def)
+          apply clarsimp
+         apply wpsimp
+        apply (wpsimp wp: nonOverlappingMergeRefills_valid_objs')
+        apply (erule (1) refillHdInsufficient_scRefillCountgt1, clarsimp simp: obj_at'_def)
+       apply simp
+      apply wpsimp
+      apply (erule (1) refillHdInsufficient_scRefillCountgt1, clarsimp simp: obj_at'_def)
+     apply simp
+     apply (rule nonOverlappingMergeRefills_terminates)
+       apply (clarsimp)
+       apply (frule (1) refillHdInsufficient_scRefillCountgt1)
+        apply (clarsimp simp: obj_at'_def)
+       apply (clarsimp simp: obj_at'_def)
+      apply simp
+     apply simp
+    apply wpsimp
+    apply (erule (1) refillHdInsufficient_scRefillCountgt1, clarsimp simp: obj_at'_def)
+   apply simp
+   apply (subgoal_tac "active_sc_at' scPtr s'", clarsimp)
+    apply (clarsimp simp: obj_at'_def obj_at_def projectKOs is_sc_obj active_sc_at'_def sc_at_pred_n_def)
+    apply (erule (1) valid_objsE')
+    apply (clarsimp simp: valid_obj'_def valid_sched_context'_def)
+   apply (clarsimp simp: obj_at'_def obj_at_def projectKOs is_sc_obj active_sc_at'_def is_active_sc_def sc_at_pred_n_def)
+   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation], clarsimp)
+   apply (clarsimp simp: sc_relation_def active_sc_def)
+  apply simp
   done
 
 lemma setDeadline_corres:

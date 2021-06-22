@@ -569,4 +569,29 @@ lemma gets_the_exs_valid [wp]:
   "\<lbrace> \<lambda>s. h s \<noteq> None \<and> Q (the (h s)) s \<rbrace> gets_the h \<exists>\<lbrace> Q \<rbrace>"
   by (wpsimp simp: gets_the_def)
 
+
+lemmas take_1 = take_Suc[where n=0, simplified]
+
+lemma take_2:
+  "2 \<le> length xs \<Longrightarrow> take 2 xs = [hd xs, hd (drop 1 xs)]"
+  apply (case_tac xs; clarsimp)
+  apply (case_tac list; clarsimp)
+  done
+
+lemma sum_list_take_drop:
+  "sum_list a = sum_list (take n a) + sum_list (drop n a)"
+  by (rule trans[OF _ sum_list_append], simp)
+
+lemma sum_list_split_eq:
+  "sum_list (take n a) = sum_list (take m b) \<Longrightarrow>
+   sum_list (drop n a) = sum_list (drop m b) \<Longrightarrow>
+   sum_list a = sum_list b"
+  using sum_list_take_drop
+  by metis
+
+lemma set_refills_sc_refills_sc_at[wp]:
+  "\<lbrace>K (P v)\<rbrace> set_refills scPtr v \<lbrace>\<lambda>_. sc_refills_sc_at P scPtr\<rbrace>"
+  apply (wpsimp wp: set_refills_wp)
+  by (clarsimp simp: sc_at_pred_n_def obj_at_def)
+
 end
