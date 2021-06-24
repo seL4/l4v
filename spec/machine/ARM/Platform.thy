@@ -29,45 +29,35 @@ type_synonym paddr = word32
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition
-  pageColourBits :: nat where
+definition pageColourBits :: nat where
   "pageColourBits \<equiv> 2"
 
-definition
-  cacheLineBits :: nat where
+definition cacheLineBits :: nat where
   "cacheLineBits = 5"
 
-definition
-  cacheLine :: nat where
+definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
 (* Arch specific kernel base address used for haskell spec *)
-definition
-  pptrBase :: word32 where
+definition pptrBase :: word32 where
   "pptrBase \<equiv> 0xe0000000"
 
-definition
-  physBase :: word32 where
+definition physBase :: word32 where
   "physBase \<equiv> 0x10000000"
 
-definition
-  pptrBaseOffset :: word32 where
+definition pptrBaseOffset :: word32 where
   "pptrBaseOffset \<equiv> pptrBase - physBase"
 
-definition
-  ptrFromPAddr :: "paddr \<Rightarrow> word32" where
+definition ptrFromPAddr :: "paddr \<Rightarrow> word32" where
   "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
 
-definition
-  addrFromPPtr :: "word32 \<Rightarrow> paddr" where
+definition addrFromPPtr :: "word32 \<Rightarrow> paddr" where
   "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
 
-definition
-  minIRQ :: "irq" where
+definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 
-definition
-  maxIRQ :: "irq" where
+definition maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
 
 end
