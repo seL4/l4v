@@ -799,4 +799,46 @@ lemmas getSchedContext_setSchedContext_decompose_decompose2
 lemmas getSchedContext_setSchedContext_decompose_decompose_ext2
   = getSchedContext_setSchedContext_decompose[where f="f x" and g="g y" for f g x y]
 
+(* rewrite rules for updateSchedCOntext *)
+lemma updateSchedContext_decompose:
+   "monadic_rewrite False True
+     (sc_at' scPtr and K (\<forall>sc. objBits (f sc) = objBits sc) and K (\<forall>sc. objBits (g sc) = objBits sc))
+     (updateSchedContext scPtr (g o f))
+     (do updateSchedContext scPtr f;
+         updateSchedContext scPtr g
+      od)"
+  unfolding updateSchedContext_def bind_assoc o_def
+  using getSchedContext_setSchedContext_decompose by blast
+
+lemma updateSchedContext_decompose_fold:
+  "\<lbrakk>\<forall>f\<in> set fs. \<forall>sc. objBits (f sc) = objBits sc; \<forall>sc. objBits (f sc) = objBits sc\<rbrakk> \<Longrightarrow>
+   monadic_rewrite False True
+     (sc_at' scPtr)
+     (updateSchedContext scPtr (fold (o) fs f))
+     (do _ \<leftarrow> updateSchedContext scPtr f;
+        mapM_x (updateSchedContext scPtr) fs
+      od)"
+  apply (induction fs arbitrary: f)
+   apply (clarsimp simp: mapM_x_Nil)
+   apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_refl, simp)
+  apply (clarsimp simp: mapM_x_Cons)
+  apply (drule_tac x="a o f" in meta_spec)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply simp
+   apply (subst bind_assoc[symmetric])
+   apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_bind_head)
+    apply (rule updateSchedContext_decompose[simplified])
+   apply simp
+  apply simp
+  done
+
+lemmas updateSchedContext_decompose_x2 = updateSchedContext_decompose_fold[where fs="[g, h]" for f g h,
+ simplified mapM_x_Cons mapM_x_Nil fold_Cons fold_Nil id_def, simplified]
+
+lemmas updateSchedContext_decompose_x3 = updateSchedContext_decompose_fold[where fs="[g, h, k]" for f g h k,
+ simplified mapM_x_Cons mapM_x_Nil fold_Cons fold_Nil id_def, simplified]
+
 end

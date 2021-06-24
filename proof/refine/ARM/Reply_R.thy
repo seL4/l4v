@@ -1160,14 +1160,6 @@ lemma valid_objs'_replyNexts_of_reply_at':
 
 (** sc_with_reply and sc_replies_relations : crossing information **)
 
-lemma sc_replies_relation_prevs_list':
-  "\<lbrakk> sc_replies_relation s s';
-     kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
-    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
-  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (clarsimp simp: opt_map_left_Some sc_of_def)
-  done
-
 lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   "\<lbrakk> sc_replies_relation s s'; pspace_relation (kheap s) (ksPSpace s')\<rbrakk> \<Longrightarrow>
    (\<exists>sc n. kheap s scp = Some (kernel_object.SchedContext sc n) \<and> rp \<in> set (sc_replies sc))
