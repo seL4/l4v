@@ -1166,11 +1166,11 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_. do global_us_pd \<leftarrow> gets (arm_us_global_pd \<circ> arch_state);
-                 do_machine_op $ set_current_pd $ addrFromPPtr global_us_pd
+                 do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
               od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPD \<leftarrow> gets (armUSGlobalPD \<circ> ksArchState);
-                  doMachineOp $ setCurrentPD $ addrFromPPtr globalPD
+                  doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD
                od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])

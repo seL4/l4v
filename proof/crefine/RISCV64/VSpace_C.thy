@@ -877,14 +877,13 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
-lemma kpptr_to_paddr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call kpptr_to_paddr_'proc
-  \<lbrace> \<acute>ret__unsigned_long = RISCV64.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+lemma addrFromKPPtr_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: RISCV64.addrFromKPPtr_def RISCV64.addrFromKPPtr_def pptrBaseOffset_def
-                   RISCV64.kernelELFBase_def RISCV64.kernelELFPAddrBase_def
-                   RISCV64.kernelELFBaseOffset_def)
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def
+                   kernelELFBase_def kernelELFPAddrBase_def)
   done
 
 lemma isValidVTableRoot_def2:

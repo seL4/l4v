@@ -937,7 +937,7 @@ If the current thread has no page directory, or if it has an invalid ASID, the h
 #else
 >             globalPD <- gets (armKSGlobalPD . ksArchState)
 #endif
->             doMachineOp $ setCurrentPD $ addrFromPPtr globalPD)
+>             doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD)
 
 When cleaning the cache by user virtual address on ARM11, the active address space must be the one that contains the mappings being cleaned. The following function is used to temporarily switch to a given page directory and ASID, in order to clean the cache. It returns "True" if the address space was not the same as the current one, in which case the caller must switch back to the current address space once the cache is clean.
 

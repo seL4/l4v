@@ -665,10 +665,10 @@ lemma setVMRoot_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-            do_machine_op (setCurrentPD (addrFromPPtr global_pd))
+            do_machine_op (setCurrentPD (addrFromKPPtr global_pd))
          od)
         (do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
-            doMachineOp (setCurrentPD (addrFromPPtr globalPD))
+            doMachineOp (setCurrentPD (addrFromKPPtr globalPD))
          od)"
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
@@ -680,11 +680,11 @@ proof -
   have Q: "\<And>P P'. corres dc P P'
         (throwError ExceptionTypes_A.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-                  do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
+                  do_machine_op $ setCurrentPD $ addrFromKPPtr global_pd
                od))
         (throwError Fault_H.lookup_failure.InvalidRoot <catch>
          (\<lambda>_ . do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
-                  doMachineOp $ setCurrentPD $ addrFromPPtr globalPD
+                  doMachineOp $ setCurrentPD $ addrFromKPPtr globalPD
                od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
