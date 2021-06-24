@@ -3545,7 +3545,6 @@ lemma st_tcb_at_coerce_abstract:
   apply fastforce
   done
 
-end
 lemma st_tcb_at_coerce_concrete:
   assumes t: "st_tcb_at P t s"
   assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
@@ -3664,8 +3663,6 @@ lemma valid_tcb_state_cross:
   by (fastforce dest: ep_at_cross reply_at_cross ntfn_at_cross
                 simp: valid_bound_obj'_def valid_tcb_state_def valid_tcb_state'_def
                split: Structures_A.thread_state.split_asm option.split_asm)
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma state_refs_of_cross_eq:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
@@ -3917,6 +3914,184 @@ lemma refillSufficient_wp:
   apply (wpsimp wp: getRefills_wp)
   by (clarsimp simp: sufficientRefills_def obj_at'_def)
 
+(* projection rewrites *)
+
+lemma pred_map_rewrite:
+  "pred_map P proj = opt_pred P proj"
+  by (fastforce simp: pred_map_def2)
+
+abbreviation sc_of2 :: "Structures_A.kernel_object \<rightharpoonup> Structures_A.sched_context" where
+  "sc_of2 ko \<equiv> case ko of kernel_object.SchedContext sc n \<Rightarrow> Some sc | _ \<Rightarrow> None"
+
+abbreviation scs_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.sched_context" where
+  "scs_of2 \<equiv> (\<lambda>s. kheap s |> sc_of2)"
+
+lemma scs_of_rewrite:
+  "scs_of s = scs_of2 s"
+  by (fastforce simp: sc_heap_of_state_def sc_of_def opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "sc_replies_of2 s \<equiv> scs_of2 s ||> sc_replies"
+
+lemma sc_replies_of_rewrite:
+  "sc_replies_of s = sc_replies_of2 s"
+  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def sc_of_def opt_map_def map_project_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+definition
+  sc_replies_relation2_2 ::
+  "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
+  "sc_replies_relation2_2 sc_repls scRepl replPrevs \<equiv>
+     \<forall>p replies. sc_repls p = Some replies \<longrightarrow> heap_ls replPrevs (scRepl p) replies"
+
+abbreviation sc_replies_relation2 :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "sc_replies_relation2 s s' \<equiv>
+    sc_replies_relation2_2 (sc_replies_of2 s) (scReplies_of s') (replyPrevs_of s')"
+
+lemmas sc_replies_relation2_def = sc_replies_relation2_2_def
+
+lemma sc_replies_relation_rewrite:
+  "sc_replies_relation s s' = sc_replies_relation2 s s'"
+  unfolding sc_replies_relation_def sc_replies_relation2_def sc_replies_of_rewrite
+  by simp
+
+(* end : projection rewrites *)
+
+lemma sc_replies_relation_prevs_list':
+  "\<lbrakk> sc_replies_relation s s';
+     kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
+    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (clarsimp simp: opt_map_left_Some sc_of_def)
+  done
+
+(* updateSchedContext *)
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemma state_relation_sc_update:
+  assumes
+      R1: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+         P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
+           (\<forall>n. (((\<lambda>ko. obj_bits ko = min_sched_context_bits + n) |< kheap s) ptr) \<longrightarrow>
+           sc_relation (the ((scs_of2 s ||> f) ptr)) n (the ((scs_of' s' ||> f') ptr)))"
+  and R2: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+         P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
+           heap_ls (replyPrevs_of s')  (scReply (the ((scs_of' s' ||> f') ptr)))
+             (sc_replies (the ((scs_of2 s ||> f) ptr)))"
+  and sz: "\<forall>sc'::sched_context. objBits sc' = objBits (f' sc')"
+  shows
+  "\<lbrakk>(s, s') \<in> state_relation; P s; P' s'; sc_at ptr s; sc_at' ptr s'\<rbrakk> \<Longrightarrow>
+     (kheap_update (\<lambda>hp p. if p = ptr
+                           then
+                             case hp ptr of
+                                Some (kernel_object.SchedContext sc n)
+                                   \<Rightarrow> Some (kernel_object.SchedContext (f sc) n)
+                               | _ \<Rightarrow> hp ptr
+                           else hp p) s,
+     (ksPSpace_update (\<lambda>hp' p. if p = ptr
+                               then case hp' ptr of
+                                  Some (KOSchedContext sc')
+                                     \<Rightarrow> Some (KOSchedContext (f' sc'))
+                                 | _ \<Rightarrow> hp' ptr
+                                else hp' p)) s') \<in> state_relation"
+  supply pred_map_rewrite[simp] scs_of_rewrite[simp] opt_map_left_Some[simp]
+         sc_replies_of_rewrite[simplified, simp]
+  proof -
+  have z': "\<And>s. sc_at' ptr s
+               \<Longrightarrow> \<forall>sc'::sched_context. map_to_ctes ((\<lambda>hp' p. if p = ptr then case hp' ptr of
+                              Some (KOSchedContext sc') \<Rightarrow> Some (KOSchedContext (f' sc'))
+                            | _ \<Rightarrow> hp' ptr else hp' p) (ksPSpace s)) = map_to_ctes (ksPSpace s)"
+    by (clarsimp simp: obj_at_simps fun_upd_def[symmetric])
+  have z: "\<And>s sc'::sched_context. ko_at' sc' ptr s
+               \<Longrightarrow> map_to_ctes (ksPSpace s(ptr \<mapsto> KOSchedContext (f' sc'))) = map_to_ctes (ksPSpace s)"
+    by (clarsimp simp: obj_at_simps)
+  have S: "\<And>(v::'a::pspace_storable). (1 :: word32) < 2 ^ (objBits v)"
+    by (clarsimp simp: obj_at_simps objBits_defs pteBits_def pdeBits_def scBits_pos_power2
+                split: kernel_object.splits arch_kernel_object.splits)
+  assume H: "(s, s') \<in> state_relation" "P s" "P' s'" "sc_at ptr s" "sc_at' ptr s'"
+  show ?thesis
+    using H S sz
+  apply -
+    apply (insert R1[rule_format, OF H]
+                  R2[rule_format, OF H])
+    apply (clarsimp simp: state_relation_def)
+    apply (clarsimp simp: obj_at_def is_sc_obj)
+    apply (drule_tac x=n in meta_spec, clarsimp)
+    apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext _ n)) ptr s")
+     apply (clarsimp simp: obj_at_def obj_bits_def)
+    apply (clarsimp simp: obj_at'_def projectKOs fun_upd_def[symmetric]
+                          z[simplified obj_at'_def projectKO_eq projectKO_opts_defs])
+    apply (rename_tac n sc sc')
+    apply (rule conjI)
+     (* pspace_relation *)
+     apply (simp only: pspace_relation_def simp_thms
+                       pspace_dom_update[where x="kernel_object.SchedContext _ _"
+                                           and v="kernel_object.SchedContext _ _",
+                                         simplified a_type_def, simplified])
+     apply (simp only: dom_fun_upd2 simp_thms)
+     apply (elim conjE)
+     apply (frule bspec, erule domI)
+     apply (rule ballI, drule(1) bspec)
+     apply (drule domD)
+     apply (clarsimp simp: project_inject
+                    split: if_split_asm kernel_object.split_asm)
+     apply (drule_tac x=sc' in spec)
+     apply (rename_tac bb aa ba)
+     apply (drule_tac x="(aa, ba)" in bspec, simp)
+     apply (clarsimp simp: objBits_def)
+     apply (frule_tac ko'="kernel_object.SchedContext sc n" and x'=ptr in obj_relation_cut_same_type)
+        apply simp+
+     apply (erule obj_relation_cutsE)
+            apply ((simp split: if_split_asm)+)[8]
+    (* sc_replies_relation *)
+    apply (frule (1) sc_replies_relation_prevs_list'[simplified])
+    apply (subst replyPrevs_of_non_reply_update[simplified]; (simp add: typ_at'_def ko_wp_at'_def)?)
+    apply (simp add: sc_replies_relation_def)
+    apply (rule conjI)
+     (* ghost relation *)
+     apply (clarsimp simp add: ghost_relation_def)
+     apply (erule_tac x=ptr in allE)+
+     apply (clarsimp simp: obj_at_def a_type_def is_sc_obj
+                     split: Structures_A.kernel_object.splits if_split_asm)
+    apply (rule conjI)
+     (* cdt_relation *)
+     apply (clarsimp simp add: cte_wp_at_cases cdt_relation_def)
+    (* revokable_relation *)
+    apply (prop_tac "kheap_update
+                      (\<lambda>hp x.
+                          if x = ptr
+                          then case hp ptr of None \<Rightarrow> hp ptr
+                               | Some (kernel_object.SchedContext sc n) \<Rightarrow>
+                                   Some (kernel_object.SchedContext (f sc) n)
+                               | Some _ \<Rightarrow> hp ptr
+                          else hp x) s
+             = s\<lparr> kheap := (kheap s)(ptr \<mapsto> kernel_object.SchedContext (f sc) n)\<rparr>" )
+     apply (clarsimp simp: fun_upd_def)
+    apply (simp only: fun_upd_def)
+    apply (simp add: caps_of_state_after_update)
+    done
+qed
+
+(* update wp rules without ko_at' *)
+lemma updateSchedContext_wp:
+  "\<lbrace> \<lambda>s. sc_at' sc_ptr s \<longrightarrow>
+       Q (s\<lparr>ksPSpace := ksPSpace s(sc_ptr \<mapsto> KOSchedContext (f' (the (scs_of' s sc_ptr))))\<rparr>) \<rbrace>
+   updateSchedContext sc_ptr f'
+   \<lbrace> \<lambda>rv. Q \<rbrace>"
+  by (wpsimp simp: updateSchedContext_def wp: set_sc'.set_wp)
+     (clarsimp simp: obj_at'_def projectKOs opt_map_left_Some elim!: rsubst[where P=Q])
+
+lemma no_fail_setSchedContext[wp]:
+  "no_fail (sc_at' ptr and (\<lambda>s'. ((\<lambda>k::sched_context. objBits k = objBits new) |< scs_of' s') ptr)) (setSchedContext ptr new)"
+  unfolding setSchedContext_def by (wpsimp simp: opt_map_def obj_at'_def projectKOs)
+
+lemma no_fail_updateSchedContext[wp]:
+  "no_fail (sc_at' ptr and (\<lambda>s'. ((\<lambda>k::sched_context. objBits k = objBits (f k)) |< scs_of' s') ptr))
+         (updateSchedContext ptr f)"
+  by (wpsimp simp: updateSchedContext_def obj_at'_def projectKOs opt_map_def)
+
 lemma update_sched_context_rewrite:
   "monadic_rewrite False True (sc_obj_at n scp)
     (update_sched_context scp f)
@@ -3932,6 +4107,53 @@ lemma update_sched_context_rewrite:
    apply (rule get_object_sp)
   apply (clarsimp simp: monadic_rewrite_def obj_at_def is_sc_obj_def)
   done
+
+lemma updateSchedContext_corres_gen:
+  assumes
+      R1: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+           P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
+           (\<forall>n. (((\<lambda>ko. obj_bits ko = min_sched_context_bits + n) |< kheap s) ptr)\<longrightarrow>
+           sc_relation (the ((scs_of2 s ||> f) ptr)) n (the ((scs_of' s' ||> f') ptr)))"
+  and R2: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
+          P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
+           heap_ls (replyPrevs_of s')  (scReply (the ((scs_of' s' ||> f') ptr)))
+             (sc_replies (the ((scs_of2 s ||> f) ptr)))"
+  and sz: "\<forall>sc'::sched_context. objBits sc' = objBits (f' sc')"
+  shows "corres dc
+         (sc_at ptr and P)
+         (sc_at' ptr and P')
+            (update_sched_context ptr f)
+            (updateSchedContext ptr f')"
+  unfolding corres_underlying_def using sz
+  apply clarsimp
+  apply (rename_tac s s')
+  apply (drule obj_at_ko_at)
+  apply (drule obj_at_ko_at')
+  apply (clarsimp simp: is_sc_obj)
+  apply (rename_tac sc' n sc)
+  apply (rule conjI, clarsimp)
+   apply (erule use_valid[OF _ updateSchedContext_wp])
+   apply clarsimp
+   apply (rule_tac x="((), s\<lparr>kheap := kheap s(ptr \<mapsto>
+                  kernel_object.SchedContext (f sc) n)\<rparr>)" in bexI)
+    apply clarsimp
+    apply (drule state_relation_sc_update[OF R1 R2 sz, simplified])
+      apply ((fastforce simp: obj_at_def is_sc_obj obj_at'_def projectKOs)+)[4]
+    apply (clarsimp simp: obj_at_def obj_at'_def projectKOs fun_upd_def[symmetric] opt_map_left_Some)
+    apply (case_tac s; case_tac s'; fastforce)
+   apply (clarsimp simp: update_sched_context_def obj_at_def in_monad
+                         get_object_def set_object_def a_type_def)
+  apply (clarsimp intro!: no_failD[OF no_fail_updateSchedContext]
+                    simp: obj_at'_def projectKOs opt_map_def)
+  done
+
+lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> and P'=\<top>, simplified]
+
+declare opt_map_left_Some[simp]
+
+(* end : updateSchedContext *)
+
+end
 
 lemma get_sched_context_exs_valid:
   "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)
