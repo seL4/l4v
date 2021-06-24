@@ -56,11 +56,23 @@ definition paddrTop :: "32 word" where
 definition pptrBaseOffset :: word32 where
   "pptrBaseOffset \<equiv> pptrBase - physBase"
 
+definition kernelELFBase :: word32 where
+  "kernelELFBase \<equiv> pptrBase + (physBase && mask 22)"
+
+definition kernelELFPAddrBase :: word32 where
+  "kernelELFPAddrBase \<equiv> 0x80000000"
+
+definition kernelELFBaseOffset :: word32 where
+  "kernelELFBaseOffset \<equiv> kernelELFBase - kernelELFPAddrBase"
+
 definition ptrFromPAddr :: "paddr \<Rightarrow> word32" where
   "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
 
 definition addrFromPPtr :: "word32 \<Rightarrow> paddr" where
   "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
+
+definition addrFromKPPtr :: "word32 \<Rightarrow> paddr" where
+  "addrFromKPPtr kpptr \<equiv> kpptr - kernelELFBaseOffset"
 
 definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"

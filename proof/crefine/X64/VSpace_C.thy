@@ -1101,13 +1101,12 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
-lemma kpptr_to_paddr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call kpptr_to_paddr_'proc
-  \<lbrace> \<acute>ret__unsigned_long = X64.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+lemma addrFromKPPtr_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: X64.addrFromKPPtr_def X64.addrFromKPPtr_def
-                   X64.kernelELFBaseOffset_def)
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def)
   done
 
 (* A version of ccr3_relation in which the most significant bit is cleared.

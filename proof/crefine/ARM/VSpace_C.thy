@@ -705,24 +705,29 @@ lemma pde_case_isPageTablePDE:
   by (cases pde, simp_all add: isPageTablePDE_def)
 
 lemma ptrFromPAddr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call ptrFromPAddr_'proc
-  \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call ptrFromPAddr_'proc
+   \<lbrace>\<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: ARM.ptrFromPAddr_def pptrBaseOffset_def
-                   pptrBase_def physBase_def ARM.physBase_def)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
 lemma addrFromPPtr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call addrFromPPtr_'proc
-  \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def
-                   ARM.addrFromPPtr_def pptrBaseOffset_def
-                   pptrBase_def physBase_def ARM.physBase_def)
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
+lemma addrFromKPPtr_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
+  apply vcg
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def
+                   kernelELFBase_def physBase_def pptrBase_def mask_def)
+  done
 
 abbreviation
   "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C lookupPTSlot_ret_C.ptSlot_C ret__struct_lookupPTSlot_ret_C_'"

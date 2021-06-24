@@ -585,7 +585,7 @@ lemma invalidate_hw_asid_entry_dwp[wp]:
 done
 
 lemma set_current_pd_dwp[wp]:
-  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> set_current_pd (addrFromPPtr x) \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
+  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> set_current_pd paddr \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   by (clarsimp simp:set_current_pd_def writeTTBR0_def isb_def dsb_def,wp)
 
 lemma set_hardware_asid_dwp[wp]:
