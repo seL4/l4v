@@ -531,9 +531,8 @@ lemma refillAddTail_corres:
           apply linarith
          apply (fastforce simp: replaceAt_index)
         apply (fastforce simp: replaceAt_index)
-       apply (fastforce simp: refillTailIndex_def Let_def length_replaceAt)
-      apply force
-     apply (fastforce simp: objBits_simps length_replaceAt)
+       apply (fastforce simp: refillTailIndex_def Let_def)
+     apply (fastforce simp: objBits_simps)
     apply fastforce
    apply (clarsimp simp: obj_at_def)
   apply (clarsimp simp: obj_at'_def projectKOs)
@@ -640,42 +639,26 @@ lemma updateRefillHd_corres:
        apply (clarsimp simp: sc_relation_def)
        apply (case_tac "sc_refills sc = []")
         apply clarsimp
-       apply (intro conjI impI)
         apply (prop_tac "scRefills sc' \<noteq> []")
          apply clarsimp
         apply (rule nth_equalityI)
-         apply (fastforce simp: refills_map_def length_replaceAt)
+         apply (fastforce simp: refills_map_def)
 
         apply (case_tac "i=0")
          apply (clarsimp simp: refills_map_def)
          apply (subst hd_map, fastforce)
          apply (subst hd_wrap_slice; simp)
-         apply (subst nth_map)
-          apply (subst length_wrap_slice; simp?)
-          apply (metis length_replaceAt)
          apply (rule_tac f=refill_map in arg_cong)
          apply (subst wrap_slice_index; simp?)
-          apply (metis length_replaceAt)
          apply (fastforce simp: refillHd_def replaceAt_index)
-
         apply (clarsimp simp: refills_map_def nth_tl)
-        apply (subst nth_map)
-         apply (subst length_wrap_slice; simp?)
-         apply (metis length_replaceAt)
-
         apply (rule_tac f=refill_map in arg_cong)
         apply (rule_tac P="\<lambda>t. _ = t" in ssubst)
          apply (erule (1) wrap_slice_index)
-          apply (metis length_replaceAt)
-         apply simp
+         apply simp+
         apply (fastforce simp: replaceAt_index wrap_slice_index)
-
-       apply (metis length_replaceAt)
       apply fastforce
-     apply (clarsimp simp: objBits_simps length_replaceAt)
-    apply simp
-   apply (clarsimp simp: obj_at_def)
-  apply simp
+     apply (clarsimp simp: objBits_simps obj_at_def)+
   done
 
 lemma updateRefillTl_corres:
@@ -728,7 +711,6 @@ lemma updateRefillTl_corres:
        apply (clarsimp simp: sc_relation_def)
        apply (case_tac "sc_refills sc = []")
         apply clarsimp
-       apply (intro conjI impI)
         apply (prop_tac "scRefills sc' \<noteq> []", clarsimp)
 
         apply (rule nth_equalityI)
@@ -753,11 +735,7 @@ lemma updateRefillTl_corres:
           apply (metis One_nat_def nth_append_length)
 
          apply (clarsimp simp: refills_map_def)
-         apply (subst nth_map)
-          apply (subst length_wrap_slice; simp?)
-          apply (metis length_replaceAt)
          apply (subst wrap_slice_index; simp?)
-          apply (metis length_replaceAt)
          apply (clarsimp simp: refillTailIndex_def refillTl_def replaceAt_index)
          apply (subst last_conv_nth, fastforce)+
          apply simp
@@ -778,19 +756,13 @@ lemma updateRefillTl_corres:
           apply (fastforce simp: refills_map_def)
          apply (simp add: nth_append nth_butlast)
         apply (clarsimp simp: refills_map_def)
-        apply (subst nth_map)
-         apply (subst length_wrap_slice; simp?)
-         apply (metis length_replaceAt)
         apply (rule_tac f=refill_map in arg_cong)
         apply (subst wrap_slice_index; simp)
         apply (intro conjI impI)
          apply (subst wrap_slice_index; simp?)
-          apply (metis length_replaceAt)
          apply (fastforce simp: refillTailIndex_def Let_def replaceAt_index split: if_splits)
         apply (subst wrap_slice_index; simp?)
-         apply (metis length_replaceAt)
         apply (fastforce simp: refillTailIndex_def Let_def replaceAt_index split: if_splits)
-       apply (metis length_replaceAt)
       apply fastforce
      apply (clarsimp simp: objBits_simps length_replaceAt)
     apply simp
@@ -1127,11 +1099,9 @@ lemma refillNew_corres:
                    in setSchedContext_no_stack_update_corres)
          apply clarsimp
          apply (clarsimp simp: sc_relation_def)
-         apply (intro conjI impI)
-          apply (clarsimp simp: refills_map_def wrap_slice_def replaceAt_def refill_map_def null_def)
-         apply (fastforce simp: length_replaceAt)
+         apply (clarsimp simp: refills_map_def wrap_slice_def replaceAt_def refill_map_def null_def)
         apply fastforce
-       apply (clarsimp simp: objBits_simps scBits_simps length_replaceAt)
+       apply (clarsimp simp: objBits_simps scBits_simps)
       apply fastforce
      apply wpsimp
      apply (wpsimp wp: set_object_wp)
@@ -1139,32 +1109,29 @@ lemma refillNew_corres:
      apply (wpsimp wp: set_sc'.set_wp)
     apply (wpsimp wp: set_sc_valid_objs')
    apply (clarsimp simp: vs_all_heap_simps)
-  apply (fastforce dest!: valid_objs_ko_at
-                    simp: obj_at_def sc_at_pred_n_def active_sc_def valid_obj_def is_sc_obj_def
-                          valid_sched_context_def)
+   apply (fastforce dest!: valid_objs_ko_at
+                     simp: obj_at_def sc_at_pred_n_def active_sc_def valid_obj_def is_sc_obj_def
+                           valid_sched_context_def)
   apply clarsimp
   apply (intro conjI impI allI)
     apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs objBitsKO_def scBits_simps)
     apply (intro conjI impI allI)
-       apply (metis length_replaceAt)
       apply (metis length_replaceAt list.size(3) list_exhaust_size_eq0)
      apply (clarsimp simp: valid_refills_number'_def obj_at'_def projectKOs objBits_simps'
-                           ko_wp_at'_def length_replaceAt)
+                           ko_wp_at'_def)
      apply (rule le_trans, simp)
      apply (fastforce simp: scBits_inverse_sc)
     apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def obj_at'_def projectKOs
                           objBits_simps)
-    apply (fastforce simp: scBits_inverse_sc length_replaceAt)
+    apply (fastforce simp: scBits_inverse_sc)
    apply (frule (1) sc_ko_at_valid_objs_valid_sc')
    apply (clarsimp simp: valid_sched_context'_def)
-   apply (intro conjI impI)
-    apply (fastforce simp: length_replaceAt)
    apply (clarsimp simp: valid_refills_number'_def obj_at'_def projectKOs objBits_simps'
-                         ko_wp_at'_def length_replaceAt)
+                         ko_wp_at'_def)
    apply (rule le_trans, simp)
    apply (fastforce simp: scBits_inverse_sc)
   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                   simp: valid_sched_context_size'_def objBits_simps scBits_simps length_replaceAt)
+                   simp: valid_sched_context_size'_def objBits_simps scBits_simps)
   done
 
 lemma refill_update_bundled:
@@ -1313,9 +1280,8 @@ lemma refillUpdate_corres:
                              obj_at_def is_sc_obj_def)
     apply ((wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift | wpsimp wp: set_sc'.set_wp)+)[1]
     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-    apply (fastforce simp: valid_sched_context'_def length_replaceAt valid_refills_number'_def
-                           obj_at'_def projectKOs objBits_simps' ko_wp_at'_def scBits_inverse_sc
-                           valid_sched_context_size'_def)
+    apply (fastforce simp: valid_sched_context'_def valid_refills_number'_def obj_at'_def ko_wp_at'_def
+                           valid_sched_context_size'_def projectKOs objBits_simps' scBits_inverse_sc)
 
    apply (rule corres_assume_pre)
    apply (rule corres_guard_imp)
@@ -1328,7 +1294,7 @@ lemma refillUpdate_corres:
         apply (clarsimp simp: sc_relation_def)
         apply (prop_tac "max_refills \<le> length (replaceAt 0 (scRefills sc') (refillHd sc'))")
          apply (clarsimp simp: valid_refills_number'_def obj_at'_def projectKOs objBitsKO_def
-                               ko_wp_at'_def scBits_simps length_replaceAt)
+                               ko_wp_at'_def scBits_simps)
         apply (prop_tac "0 < scRefillCount sc' \<and> scRefillHead sc' < scRefillMax sc'
                          \<and> scRefillMax sc' \<le> length (scRefills sc') \<and> 0 < length (scRefills sc')")
          apply (prop_tac "sc_relation sc n sc'")
@@ -1336,20 +1302,18 @@ lemma refillUpdate_corres:
          apply (frule (1) sc_ko_at_valid_objs_valid_sc')
          apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
                           simp: valid_sched_context'_def active_sc_at'_def obj_at'_def)
-        apply (intro conjI impI)
-         apply (clarsimp simp: refills_map_def)
-         apply (rule nth_equalityI; clarsimp)
-         apply (subst hd_conv_nth)
-          apply (rule length_greater_0_conv[THEN iffD1])
-          apply (subst length_map)
-          apply (subst length_wrap_slice; simp)
-         apply (subst nth_map)
-          apply (subst length_wrap_slice; simp)
-         apply (subst wrap_slice_index; simp)+
-         apply (subst replaceAt_index; fastforce simp: refillHd_def)
-        apply (fastforce simp: length_replaceAt)
+        apply (clarsimp simp: refills_map_def)
+        apply (rule nth_equalityI; clarsimp)
+        apply (subst hd_conv_nth)
+         apply (rule length_greater_0_conv[THEN iffD1])
+         apply (subst length_map)
+         apply (subst length_wrap_slice; simp)
+        apply (subst nth_map)
+         apply (subst length_wrap_slice; simp)
+        apply (subst wrap_slice_index; simp)+
+        apply (subst replaceAt_index; fastforce simp: refillHd_def)
        apply fastforce
-      apply (fastforce simp: length_replaceAt objBits_simps)
+      apply (fastforce simp: objBits_simps)
      apply simp
     apply (clarsimp simp: obj_at_def)
    apply (clarsimp simp: obj_at'_def)
@@ -1367,9 +1331,8 @@ lemma refillUpdate_corres:
                              sc_at_pred_n_def)
     apply ((wpsimp wp: hoare_vcg_ex_lift hoare_vcg_conj_lift | wpsimp wp: set_sc'.set_wp)+)[1]
     apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-    apply (fastforce simp: valid_sched_context'_def length_replaceAt valid_refills_number'_def
-                           obj_at'_def projectKOs objBits_simps' valid_sched_context_size'_def
-                           ps_clear_def)
+    apply (fastforce simp: valid_sched_context'_def ps_clear_def valid_refills_number'_def
+                           obj_at'_def projectKOs objBits_simps' valid_sched_context_size'_def)
    apply (corressimp corres: update_sc_no_reply_stack_update_ko_at'_corres
                                [where f'="scPeriod_update (\<lambda>_. period)"]
                        simp: sc_relation_def objBits_simps)

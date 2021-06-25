@@ -1214,9 +1214,13 @@ lemma sc_objBits_pos_power2:
   by (simp add: pageBits_def archObjSize_def pteBits_def pdeBits_def scBits_pos_power2
          split: arch_kernel_object.split)+
 
+lemma valid_sc_size_sc_relation:
+  "\<lbrakk>valid_sched_context_size n; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> n = objBits sc' - minSchedContextBits"
+  by (clarsimp simp: sc_relation_def objBits_simps valid_sched_context_size_def scBits_simps)
+
 (* for handling refill buffer *)
 
-lemma length_replaceAt:
+lemma length_replaceAt[simp]:
   "length (replaceAt i lst val) = length lst"
   apply (clarsimp simp: replaceAt_def)
   by (case_tac lst; simp)
@@ -1321,6 +1325,46 @@ lemma refills_tl_equal:
    apply fastforce
   apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
   done
+
+(* FIXME RT: Move to Lib *)
+lemma last_take:
+  "\<lbrakk>ls \<noteq> []; 0 < n; n \<le>  length ls\<rbrakk> \<Longrightarrow>last (take n ls) = ls ! (n - 1)"
+  by (induct ls arbitrary: n; fastforce simp: take_Cons nth_Cons split: nat.splits)
+
+lemma take_drop_nth:
+  "\<lbrakk> 0 < n; n < length ls\<rbrakk> \<Longrightarrow> take 1 (drop n ls) = [ls ! n]"
+  apply (induct ls arbitrary: n; clarsimp simp: drop_Cons nth_Cons)
+  by (case_tac n; simp add: drop_Suc_nth)
+
+(* wrap_slice *)
+lemma wrap_slice_start_0:
+  "\<lbrakk>0 < count; mx \<le> length ls; count \<le> mx\<rbrakk> \<Longrightarrow> wrap_slice 0 count mx ls = take count ls"
+  by (clarsimp simp: wrap_slice_def)
+
+lemma butlast_wrap_slice:
+  "\<lbrakk>0 < count; start < mx; count \<le> mx; mx \<le> length list\<rbrakk> \<Longrightarrow>
+   butlast (wrap_slice start count mx list) =  wrap_slice start (count -1) mx list"
+  by (case_tac "start + count - 1 < mx"; clarsimp simp: wrap_slice_def butlast_conv_take add_ac)
+
+lemma last_wrap_slice:
+  "\<lbrakk>0 < count; start < mx; count \<le> mx; mx \<le> length list\<rbrakk>
+   \<Longrightarrow> last (wrap_slice start count mx list)
+           = list ! (if start + count - 1 < mx then start + count - 1 else start + count - mx -1)"
+  by (fastforce simp: wrap_slice_def last_take last_append not_le)
+
+lemma tl_wrap_slice:
+  "\<lbrakk>0 < count; mx \<le> length list; start < mx\<rbrakk> \<Longrightarrow>
+   tl (wrap_slice start count mx list) = wrap_slice (start + 1) (count - 1) mx list"
+  by (fastforce simp: wrap_slice_def tl_take tl_drop drop_Suc)
+
+lemma wrap_slice_max[simp]:
+  "wrap_slice start count start list = take count list"
+  by (clarsimp simp: wrap_slice_def)
+
+lemma length_refills_map[simp]:
+  "\<lbrakk> mx \<le> length list; count \<le> mx \<rbrakk> \<Longrightarrow> length (refills_map start count mx list) = count"
+  by (clarsimp simp: refills_map_def)
+
 
 (* A standard (and active) scheduling context should have the following properties. They follow
    from valid_sched_context' and sc_valid_refills as the following two lemmas show. *)

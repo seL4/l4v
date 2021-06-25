@@ -1160,19 +1160,32 @@ lemma valid_objs'_replyNexts_of_reply_at':
 
 (** sc_with_reply and sc_replies_relations : crossing information **)
 
+(* modified version of sc_replies_relation_prevs_list in StateRelation.thy;
+   updates only the abstract sc_relies; useful for the following few lemmas *)
+lemma sc_replies_relation_prevs_list':
+  "\<lbrakk> sc_replies_relation s s';
+     kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
+    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (clarsimp simp: sc_of_def opt_map_left_Some)
+  done
+
 lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   "\<lbrakk> sc_replies_relation s s'; pspace_relation (kheap s) (ksPSpace s')\<rbrakk> \<Longrightarrow>
    (\<exists>sc n. kheap s scp = Some (kernel_object.SchedContext sc n) \<and> rp \<in> set (sc_replies sc))
     = (\<exists>xs. heap_ls (replyPrevs_of s') (scReplies_of s' scp) xs \<and> rp \<in> set xs)"
   apply (rule iffI; clarsimp)
-   apply (fastforce dest: sc_replies_relation_prevs_list' heap_path_takeWhile_lookup_next)
+   apply (rule_tac x="the (sc_replies_of2 s scp)" in exI)
+  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
+  apply (drule_tac x=scp and y="sc_replies sc" in spec2)
+  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
   apply (case_tac "scReplies_of s' scp", simp)
   apply (rename_tac p)
   apply (drule pspace_relation_sc_at[where scp=scp])
    apply (clarsimp simp: projectKOs opt_map_left_Some)
-  apply (clarsimp simp: obj_at_def is_sc_obj)
-  apply (drule (1) sc_replies_relation_prevs_list', clarsimp simp: opt_map_left_Some)
-  apply (drule (1) heap_ls_unique, clarsimp)
+  apply (clarsimp simp: obj_at_simps is_sc_obj opt_map_left_Some)
+  apply (drule (1) sc_replies_relation_prevs_list', simp add: opt_map_left_Some)
+  apply (drule (1) heap_ls_unique, simp)
   done
 
 (* crossing equality for sc_with_reply *)

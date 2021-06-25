@@ -841,4 +841,22 @@ lemmas updateSchedContext_decompose_x2 = updateSchedContext_decompose_fold[where
 lemmas updateSchedContext_decompose_x3 = updateSchedContext_decompose_fold[where fs="[g, h, k]" for f g h k,
  simplified mapM_x_Cons mapM_x_Nil fold_Cons fold_Nil id_def, simplified]
 
+(* should other update wp rules for valid_objs/valid_objs' be in this form? *)
+lemma updateSchedContext_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and
+    (\<lambda>s. ((\<lambda>sc'. valid_obj' (injectKO sc') s \<longrightarrow> valid_obj' (injectKO (f' sc')) s)
+              |< scs_of' s) scp)\<rbrace>
+    updateSchedContext scp f'
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
+  by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
+                      obj_at'_def projectKOs scBits_simps objBits_simps opt_map_left_Some)
+
+lemma updateSchedContext_obj_at'[wp]:
+  "\<forall>sc'. objBits sc' = objBits (f' sc'::sched_context) \<Longrightarrow>
+   updateSchedContext scp f' \<lbrace>\<lambda>s. P (sc_at' p s)\<rbrace>"
+  apply (wpsimp simp: updateSchedContext_def wp: set_sc'.set_wp)
+  apply (clarsimp simp: obj_at'_def ps_clear_upd projectKOs objBits_simps)
+  done
+
 end
