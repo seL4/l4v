@@ -2082,12 +2082,12 @@ lemma gets_gets_the:
 
 (* FIXME: move *)
 lemma thread_get_gets_the:
-  "thread_get f t = gets_the (map_project f (get_tcb t))"
-  by (simp add: thread_get_def gets_the_map_project)
+  "thread_get f t = gets_the (get_tcb t ||> f)"
+  by (simp add: thread_get_def)
 
 (* FIXME: move *)
 lemma get_tcb_obj_ref_gets_the:
-  "get_tcb_obj_ref f t = gets_the (map_project f (get_tcb t))"
+  "get_tcb_obj_ref f t = gets_the (get_tcb t ||> f)"
   by (simp add: get_tcb_obj_ref_def thread_get_gets_the)
 
 (* FIXME: move *)
@@ -3854,5 +3854,626 @@ begin
   lemmas bound_sc_tcb_at_cur_thread [wp] = pre_conj.bound_sc_tcb_at_cur_thread [simplified]
   lemmas fault_tcb_at_cur_thread    [wp] = pre_conj.fault_tcb_at_cur_thread    [simplified]
 end
+
+(*** projection rewrite ***)
+
+lemma pred_map_rewrite:
+  "pred_map P proj = opt_pred P proj"
+  by (fastforce simp: pred_map_def2)
+
+primrec tcb_of2 :: "Structures_A.kernel_object \<rightharpoonup> tcb" where
+  "tcb_of2 (TCB tcb) = Some tcb"
+| "tcb_of2 (Endpoint _) = None"
+| "tcb_of2 (Notification _) = None"
+| "tcb_of2 (CNode _ _) = None"
+| "tcb_of2 (Reply _) = None"
+| "tcb_of2 (SchedContext _ _) = None"
+| "tcb_of2 (ArchObj _) = None"
+
+lemma tcb_of2_SomeD[dest!]:
+  "tcb_of2 ko = Some obj \<Longrightarrow> ko = TCB obj"
+  by (cases ko; simp)
+
+lemma tcb_of2_NoneD[simp]:
+  "tcb_of2 ko = None \<Longrightarrow> \<not> (\<exists>tcb. ko = TCB tcb)"
+  by (cases ko; simp)
+
+abbreviation tcbs_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.tcb" where
+  "tcbs_of2 \<equiv> (\<lambda>s. kheap s |> tcb_of2)"
+
+lemma tcbs_of_rewrite:
+  "tcbs_of s tp = tcbs_of2 s tp"
+  by (fastforce simp: tcb_heap_of_state_def tcb_of_def opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "etcb_of' ko \<equiv> (tcb_of2 ||> etcb_of) ko"
+
+abbreviation
+  "etcbs_of2 s \<equiv> kheap s |> etcb_of'"
+
+lemma etcbs_of_rewrite:
+  "etcbs_of s tp = etcbs_of2 s tp"
+  by (fastforce simp: tcbs_of_kh_def etcb_of_def etcbs_of_tcbs_def map_project_def
+                      tcb_of_def opt_map_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "tcb_faults_of2 s \<equiv> tcbs_of2 s ||> tcb_fault"
+
+lemma tcb_faults_of_rewrite:
+  "tcb_faults_of s tp = tcb_faults_of2 s tp"
+  by (fastforce simp: vs_all_heap_simps opt_map_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "tcb_sts_of2 s \<equiv> tcbs_of2 s ||> tcb_state"
+
+lemma tcb_sts_of_rewrite:
+  "tcb_sts_of s tp = tcb_sts_of2 s tp"
+  by (fastforce simp: vs_all_heap_simps opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "tcb_scs_of s \<equiv> tcbs_of2 s ||> tcb_sched_context"
+
+lemma tcb_scps_of_rewrite:
+  "tcb_scps_of s tp = tcb_scs_of s tp"
+  by (fastforce simp: vs_all_heap_simps opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+lemmas tcb_proj_rewrites = tcb_scps_of_rewrite tcb_sts_of_rewrite tcb_faults_of_rewrite
+                           tcbs_of_rewrite etcbs_of_rewrite
+
+primrec sc_of2 :: "Structures_A.kernel_object \<rightharpoonup> sched_context" where
+  "sc_of2 (TCB tcb) = None"
+| "sc_of2 (Endpoint _) = None"
+| "sc_of2 (Notification _) = None"
+| "sc_of2 (CNode _ _) = None"
+| "sc_of2 (Reply _) = None"
+| "sc_of2 (SchedContext sc _) = Some sc"
+| "sc_of2 (ArchObj _) = None"
+
+lemma sc_of2_SomeD[dest!]:
+  "sc_of2 ko = Some obj \<Longrightarrow> \<exists>n. ko = SchedContext obj n"
+  by (cases ko; simp)
+
+lemma sc_of2_NoneD[simp]:
+  "sc_of2 ko = None \<Longrightarrow> \<not> (\<exists>sc n. ko = SchedContext sc n)"
+  by (cases ko; simp)
+
+abbreviation scs_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.sched_context" where
+  "scs_of2 \<equiv> (\<lambda>s. kheap s |> sc_of2)"
+
+lemma scs_of_rewrite:
+  "scs_of s scp = scs_of2 s scp"
+  by (fastforce simp: sc_heap_of_state_def sc_of_def opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+lemma sc_at_ppred_rewrite:
+  "sc_at_ppred proj P scp s = (P |< scs_of2 s ||> proj) scp"
+  by (fastforce simp: opt_map_def sc_at_ppred_def obj_at_def
+              split: option.splits kernel_object.splits)
+
+lemma sc_at_pred_rewrite:
+  "sc_at_pred P scp s = (P |< scs_of2 s) scp"
+  by (fastforce simp: opt_map_def sc_at_pred_def obj_at_def
+              split: option.splits kernel_object.splits)
+ 
+lemmas sc_at_pred_rewrites = sc_at_pred_rewrite sc_at_ppred_rewrite
+
+abbreviation
+  "sc_tcbs_of2 s \<equiv> scs_of2 s ||> sc_tcb"
+
+lemma sc_tcbs_of_rewrite:
+  "sc_tcbs_of s scp = sc_tcbs_of2 s scp"
+  by (fastforce simp: sc_heap_of_state_def sc_tcbs_of_scs_def sc_of_def opt_map_def map_project_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  "sc_replies_of2 s \<equiv> scs_of2 s ||> sc_replies"
+
+lemma sc_replies_of_rewrite:
+  "sc_replies_of s scp = sc_replies_of2 s scp"
+  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def sc_of_def opt_map_def map_project_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+lemmas sc_proj_rewrites = sc_replies_of_rewrite sc_tcbs_of_rewrite sc_at_pred_rewrites scs_of_rewrite
+
+abbreviation
+  "sc_refills_of s \<equiv> scs_of2 s ||> sc_refills"
+
+abbreviation
+  "sc_refill_max_of s \<equiv> scs_of2 s ||> sc_refill_max"
+
+(* for refill_hd, this is a better version, but choosing to use hd for compatibility
+abbreviation
+  "sc_refill_hd_of s \<equiv> scs_of2 s ||> sc_refills |> hd_opt"
+*)
+
+abbreviation
+  "sc_refill_hd_of s \<equiv> scs_of2 s ||> sc_refills ||> hd"
+
+abbreviation
+  "sc_period_of s \<equiv> scs_of2 s ||> sc_period"
+
+abbreviation
+  "sc_budget_of s \<equiv> scs_of2 s ||> sc_budget"
+
+primrec ep_of2 :: "Structures_A.kernel_object \<rightharpoonup> endpoint" where
+  "ep_of2 (TCB tcb) = None"
+| "ep_of2 (Endpoint ep) = Some ep"
+| "ep_of2 (Notification _) = None"
+| "ep_of2 (CNode _ _) = None"
+| "ep_of2 (Reply _) = None"
+| "ep_of2 (SchedContext _ _) = None"
+| "ep_of2 (ArchObj _) = None"
+
+lemma ep_of2_SomeD[dest!]:
+  "ep_of2 ko = Some obj \<Longrightarrow> ko = Endpoint obj"
+  by (cases ko; simp)
+
+lemma ep_of2_NoneD[simp]:
+  "ep_of2 ko = None \<Longrightarrow> \<not> (\<exists>ep. ko = Endpoint ep)"
+  by (cases ko; simp)
+
+abbreviation eps_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.endpoint" where
+  "eps_of2 \<equiv> (\<lambda>s. kheap s |> ep_of2)"
+
+abbreviation send_q_of2 :: "endpoint \<rightharpoonup> obj_ref list" where
+  "send_q_of2 endpoint \<equiv> case endpoint of SendEP q  \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+abbreviation recv_q_of2 :: "endpoint \<rightharpoonup> obj_ref list" where
+  "recv_q_of2 endpoint \<equiv> case endpoint of RecvEP q  \<Rightarrow> Some q | _ \<Rightarrow> None"
+
+abbreviation "ep_send_qs_of2 s \<equiv> eps_of2 s |> send_q_of2"
+abbreviation "ep_recv_qs_of2 s \<equiv> eps_of2 s |> recv_q_of2"
+
+lemma eps_of_rewrite:
+  "eps_of s ep = eps_of2 s ep"
+  by (clarsimp simp: eps_of_def ep_of_def opt_map_def split: option.splits kernel_object.splits)
+
+lemma shows
+  ep_send_qs_of_rewrite: "ep_send_qs_of s ep = ep_send_qs_of2 s ep" and
+  ep_recv_qs_of_rewrite: "ep_recv_qs_of s ep = ep_recv_qs_of2 s ep"
+  by (fastforce simp: eps_of_def ep_send_qs_of_eps_def eps_of_rewrite opt_map_def ep_of_def
+                      send_q_of_def recv_q_of_def ep_recv_qs_of_eps_def
+               split: option.splits kernel_object.splits endpoint.splits)+
+
+lemmas ep_proj_rewrites = eps_of_rewrite ep_send_qs_of_rewrite ep_recv_qs_of_rewrite
+
+definition is_active_sc2 where
+  "is_active_sc2 p s \<equiv> ((\<lambda>sc. 0 < sc_refill_max sc) |< scs_of2 s) p"
+
+lemma is_active_sc_rewrite:
+  "is_active_sc scp s= is_active_sc2 scp s"
+  by (fastforce simp: is_active_sc2_def vs_all_heap_simps is_active_sc_def
+                      active_sc_def opt_map_red
+               split: option.split_asm Structures_A.kernel_object.splits)
+
+lemma is_sc_active_rewrite:
+  "is_sc_active scp s = is_active_sc2 scp s"
+  by (fastforce simp: is_sc_active_def2 is_active_sc2_def active_sc_def opt_map_red
+               split: option.split_asm Structures_A.kernel_object.splits)
+
+definition round_robin2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "round_robin2 sc_ptr s \<equiv> ((\<lambda>sc. sc_period sc = 0) |< scs_of2 s) sc_ptr"
+
+lemma round_robin_rewrite:
+  "round_robin scp s = round_robin2 scp s"
+  by (fastforce simp: round_robin_def round_robin2_def vs_all_heap_simps opt_map_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+(* if we change sc_refill_hd_of to use hd_opt, we need to provide refill list nonemptiness *)
+definition refills_neq_Nil where
+  "refills_neq_Nil p s \<equiv> ((\<lambda>sc. sc_refills sc \<noteq> []) |< scs_of2 s) p"
+
+definition is_refill_sufficient2 where
+  "is_refill_sufficient2 usage p s \<equiv> (refill_sufficient usage |< sc_refill_hd_of s) p"
+
+
+lemma is_refill_sufficient_rewrite:
+  "is_refill_sufficient usage p s = is_refill_sufficient2 usage p s"
+  by (fastforce simp: is_refill_sufficient2_def vs_all_heap_simps active_sc_def opt_map_red
+               split: option.split_asm Structures_A.kernel_object.splits)
+
+definition is_refill_ready2 where
+  "is_refill_ready2 p s \<equiv> (refill_ready (cur_time s) |< sc_refill_hd_of s) p"
+
+lemma is_refill_ready_rewrite:
+  "is_refill_ready scp s = is_refill_ready2 scp s"
+  by (fastforce simp: is_refill_ready2_def vs_all_heap_simps refill_ready'_def
+                      active_sc_def opt_map_red
+               split: option.split_asm Structures_A.kernel_object.splits)
+
+definition opt_flatten :: "'a option option \<Rightarrow> 'a option" where
+  "opt_flatten opt \<equiv> case opt of None \<Rightarrow> None
+  | Some v \<Rightarrow> (case v of None \<Rightarrow> None | Some v' \<Rightarrow> Some v')"
+
+abbreviation active_sc_tcb_at_pred2 :: "(obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "active_sc_tcb_at_pred2 tcb_scps scs \<equiv>  ((\<lambda>sc. 0 < sc_refill_max sc) |< opt_flatten o tcb_scps |> scs)"
+
+definition active_sc_tcb_at2 where
+  "active_sc_tcb_at2 tp s \<equiv> active_sc_tcb_at_pred2 (tcb_scs_of s) (scs_of2 s) tp"
+
+lemma active_sc_tcb_at_rewrite:
+  "active_sc_tcb_at tp s = active_sc_tcb_at2 tp s"
+  by (fastforce simp: opt_flatten_def vs_all_heap_simps is_sc_obj map_join_simps pred_map_rewrite
+                      obj_at_def active_sc_def opt_map_def active_sc_tcb_at2_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+definition budget_ready2 where
+  "budget_ready2 tp s \<equiv> ((\<lambda>scp. is_refill_ready2 scp s) |< (opt_flatten o tcb_scs_of s)) tp"
+
+(* refill list nonemptiness for tcb_sc *)
+definition tcb_refills_neq_Nil where
+  "tcb_refills_neq_Nil tp s \<equiv> ((\<lambda>sc. sc_refills sc \<noteq> []) |<
+                                        (opt_flatten o tcb_scs_of s) |> scs_of2 s) tp"
+
+lemma budget_ready_rewrite:
+  "budget_ready tp s = budget_ready2 tp s"
+  by (rule iffI;
+      fastforce simp: opt_flatten_def vs_all_heap_simps opt_map_red hd_opt_def
+                      is_refill_ready2_def refill_ready'_def budget_ready2_def
+               split: option.splits kernel_object.splits)
+
+definition budget_sufficient2 where
+  "budget_sufficient2 tp s \<equiv> ((\<lambda>scp. is_refill_sufficient2 0 scp s) |< (opt_flatten o tcb_scs_of s)) tp"
+
+lemma budget_sufficient_rewrite:
+  "budget_sufficient tp s = budget_sufficient2 tp s"
+  by (rule iffI;
+      fastforce simp: opt_flatten_def vs_all_heap_simps opt_map_red hd_opt_def
+                      is_refill_sufficient2_def refill_ready'_def budget_sufficient2_def
+               split: option.splits kernel_object.split_asm)
+
+abbreviation released_sc2 :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
+  "released_sc2 curtime sc \<equiv> 0 < sc_refill_max sc \<and> refill_ready curtime (refill_hd sc)
+                             \<and> refill_sufficient 0 (refill_hd sc)"
+
+abbreviation released_sc_tcb_at_pred2 :: "64 word \<Rightarrow> ('a \<Rightarrow> 'b option option) \<Rightarrow> ('b \<Rightarrow> sched_context option) \<Rightarrow> 'a \<Rightarrow> bool" where
+  "released_sc_tcb_at_pred2 curtime hp1 hp2 tp \<equiv>
+      ((released_sc2 curtime) |< (opt_flatten o hp1 |> hp2)) tp"
+
+definition released_sc_tcb_at2 where
+  "released_sc_tcb_at2 tp s \<equiv> released_sc_tcb_at_pred2 (cur_time s) (tcb_scs_of s) (scs_of2 s) tp"
+
+lemma released_sc_tcb_at2_def2:
+  "released_sc_tcb_at2 tp s = (active_sc_tcb_at2 tp and budget_ready2 tp and budget_sufficient2 tp) s"
+  unfolding released_sc_tcb_at2_def
+  by (fastforce simp: budget_ready2_def budget_sufficient2_def opt_map_red opt_flatten_def
+                     is_active_sc2_def is_refill_ready2_def is_refill_sufficient2_def
+                     active_sc_tcb_at2_def
+               split: option.splits kernel_object.splits)
+
+lemma released_sc_tcb_at_rewrite:
+  "released_sc_tcb_at tp s = released_sc_tcb_at2 tp s"
+  unfolding released_sc_tcb_at_def released_sc_tcb_at2_def2
+  by (fastforce simp:  budget_sufficient_rewrite[symmetric]
+                      budget_ready_rewrite[symmetric] active_sc_tcb_at_rewrite[symmetric])
+
+definition released_sc_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_sc_at2 scptr s \<equiv>  (released_sc2 (cur_time s) |< scs_of2 s) scptr"
+
+lemma released_sc_at2_def2:
+  "released_sc_at2 scp s = (is_active_sc2 scp and is_refill_ready2 scp and is_refill_sufficient2 0 scp) s"
+  unfolding released_sc_at2_def
+  by (fastforce simp: opt_map_red is_active_sc2_def is_refill_ready2_def is_refill_sufficient2_def
+               split: option.splits kernel_object.splits)
+
+lemma released_sc_at_rewrite:
+  "released_sc_at scp s = released_sc_at2 scp s"
+  by (fastforce simp: pred_map_rewrite vs_all_heap_simps opt_map_red active_sc_def released_sc_at2_def
+               split: option.splits kernel_object.splits)
+
+abbreviation sc_valid_refills2 :: "sched_context \<Rightarrow> bool" where
+  "sc_valid_refills2 sc \<equiv>
+       if sc_period sc = 0
+       then rr_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_budget sc)
+       else sp_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_period sc) (sc_budget sc)"
+
+definition
+  "valid_refills2 scp s \<equiv>
+     (sc_valid_refills2 |< scs_of2 s) scp"
+
+lemmas valid_refills2_defs = valid_refills2_def rr_valid_refills_def sp_valid_refills_def
+
+lemma valid_refills_rewrite:
+  "valid_refills scp s = valid_refills2 scp s"
+  by (fastforce simp: opt_map_red valid_refills2_def vs_all_heap_simps valid_refills_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+definition st_tcb_at2 where
+  "st_tcb_at2 P tp s \<equiv> (P |< tcbs_of2 s ||> tcb_state) tp"
+
+lemma st_tcb_at_rewrite:
+  "st_tcb_at P tp s = st_tcb_at2 P tp s"
+  by (fastforce simp: pred_tcb_at_def obj_at_def opt_map_red st_tcb_at2_def
+                 split: option.splits kernel_object.split_asm)
+
+definition bound_sc_tcb_at2 where
+  "bound_sc_tcb_at2 P tp s \<equiv> (P |< tcbs_of2 s ||> tcb_sched_context) tp"
+
+lemma bound_sc_tcb_at_rewrite:
+  "bound_sc_tcb_at P tp s = bound_sc_tcb_at2 P tp s"
+  by (fastforce simp: pred_tcb_at_def obj_at_def opt_map_red bound_sc_tcb_at2_def
+                 split: option.splits kernel_object.split_asm)
+
+lemma bound_sc_tcb_at_rewrite_pred_map:
+  "pred_map P (tcb_scps_of s) tp = bound_sc_tcb_at2 P tp s"
+  by (fastforce simp: pred_map_rewrite tcb_scps_of_rewrite bound_sc_tcb_at2_def)
+
+abbreviation bounded_release_time2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "bounded_release_time2 scp s \<equiv>
+      (bounded_release_time_2 |< sc_refill_hd_of s ||> r_time) scp"
+
+lemma bounded_release_time_rewrite:
+  "bounded_release_time scp s = bounded_release_time2 scp s"
+  by (fastforce simp: pred_map_rewrite opt_map_red vs_all_heap_simps
+               split: option.splits kernel_object.splits)
+
+abbreviation active_sc_valid_refills2_2 :: "time \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> bool" where
+  "active_sc_valid_refills2_2 curtime scs \<equiv>
+   \<forall>scp. ((\<lambda>sc. 0 < sc_refill_max sc) |< scs) scp
+         \<longrightarrow> (sc_valid_refills2 |< scs) scp
+             \<and> (bounded_release_time_2 |< scs ||> sc_refills ||> hd ||> r_time) scp"
+
+definition active_sc_valid_refills2 :: "'z state \<Rightarrow> bool" where
+  "active_sc_valid_refills2 s \<equiv> active_sc_valid_refills2_2 (cur_time s) (scs_of2 s)"
+
+lemma active_sc_valid_refills_rewrite:
+  "active_sc_valid_refills s = active_sc_valid_refills2 s"
+  by (clarsimp simp: active_sc_valid_refills2_def active_sc_valid_refills_2_def is_active_sc2_def
+                      opt_map_def is_active_sc_rewrite valid_refills2_def
+                      valid_refills_rewrite bounded_release_time_rewrite
+               split: option.splits kernel_object.splits)
+
+lemma active_sc_valid_refills2E:
+  "active_sc_valid_refills2 s \<Longrightarrow> is_active_sc2 scp s \<Longrightarrow> valid_refills2 scp s"
+  by (clarsimp simp: active_sc_valid_refills2_def is_active_sc2_def valid_refills2_def)
+
+abbreviation sc_refills_sc_at2 where
+  "sc_refills_sc_at2 P scp s \<equiv> ((\<lambda>sc. P (sc_refills sc)) |< scs_of2 s) scp"
+
+lemma sc_refills_sc_at_rewrite:
+  "sc_refills_sc_at P scp s = sc_refills_sc_at2 P scp s"
+  by (fastforce simp: sc_refills_sc_at_def obj_at_def is_sc_obj opt_map_red
+               split: option.splits Structures_A.kernel_object.split_asm)
+
+definition is_schedulable_bool2 where
+  "is_schedulable_bool2 t s \<equiv> (st_tcb_at2 runnable t s \<and> active_sc_tcb_at2 t s
+                               \<and> \<not> (in_release_queue t s))"
+
+lemma is_schedulable_bool_rewrite:
+  "is_schedulable_bool tp s = is_schedulable_bool2 tp s"
+  by (clarsimp simp: is_schedulable_bool_def2 is_schedulable_bool2_def
+                     is_sc_active_rewrite st_tcb_at_rewrite active_sc_tcb_at_rewrite)
+
+definition cur_sc_offset_ready2 :: "time \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "cur_sc_offset_ready2 usage s \<equiv>
+     ((\<lambda>refill. refill_ready_no_overflow usage (cur_time s) refill) |< sc_refill_hd_of s) (cur_sc s)"
+
+lemma cur_sc_offset_ready_rewrite:
+  "cur_sc_offset_ready usage s = cur_sc_offset_ready2 usage s"
+  by (fastforce simp: cur_sc_offset_ready2_def hd_opt_def opt_map_def vs_all_heap_simps
+               split: option.splits kernel_object.splits list.splits)
+
+definition "sc_ready_time2 \<equiv> r_time \<circ> hd \<circ> sc_refills"
+
+abbreviation "sc_ready_times_of2 s \<equiv> scs_of2 s ||> sc_ready_time2"
+
+lemma sc_ready_times_of_rewrite:
+  "sc_ready_times_of s = sc_ready_times_of2 s"
+  by (fastforce simp: tcb_ready_times_defs map_project_def vs_all_heap_simps opt_map_def sc_ready_time2_def
+               split: option.splits kernel_object.splits) 
+
+abbreviation "tcb_ready_times_of2 s \<equiv> opt_flatten o tcb_scs_of s |> scs_of2 s ||> sc_ready_time2"
+
+lemma tcb_ready_times_of_rewrite:
+  "tcb_ready_times_of s = tcb_ready_times_of2 s"
+  by (fastforce simp: tcb_ready_times_defs map_project_def vs_all_heap_simps opt_map_def
+                      opt_flatten_def map_join_def sc_ready_time2_def
+               split: option.splits kernel_object.splits) 
+
+abbreviation "tcb_ready_time2 tp s \<equiv> the (tcb_ready_times_of2 s tp)"
+
+lemma tcb_ready_time_rewrite:
+  "tcb_ready_time s = tcb_ready_time2 s"
+  using tcb_ready_times_of_rewrite by metis
+
+definition valid_ready_queued_thread2_2 where
+  "valid_ready_queued_thread2_2 curtime etcbs tcb_sts tcb_scps sc_refill_cfgs t d p \<equiv>
+    ((\<lambda>t. etcb_priority t = p \<and> etcb_domain t = d) |< etcbs) t
+    \<and>  (runnable |< tcb_sts) t
+    \<and> released_sc_tcb_at_pred2 curtime tcb_scps sc_refill_cfgs t"
+
+definition valid_ready_qs2_2 where
+  "valid_ready_qs2_2 queues curtime etcbs tcb_sts tcb_scps sc_refill_cfgs \<equiv>
+    \<forall>d p. (\<forall>t \<in> set (queues d p). valid_ready_queued_thread2_2 curtime etcbs tcb_sts tcb_scps
+                                                              sc_refill_cfgs t d p)
+          \<and> distinct (queues d p)"
+
+abbreviation valid_ready_qs2 :: "'z state \<Rightarrow> bool" where
+  "valid_ready_qs2 s \<equiv> valid_ready_qs2_2 (ready_queues s) (cur_time s) (etcbs_of2 s) (tcb_sts_of2 s) (tcb_scs_of s) (scs_of2 s)"
+
+lemma valid_ready_qs_rewrite:
+  "valid_ready_qs s = valid_ready_qs2 s"
+  apply (rule iffI;
+         clarsimp simp: valid_ready_qs_def valid_ready_qs2_2_def
+                        valid_ready_queued_thread2_2_def pred_map_rewrite;
+         rename_tac d p t; drule_tac x=d and y=p in spec2, clarsimp, drule_tac x=t in bspec, simp)
+  by (fastforce simp: opt_flatten_def opt_map_def vs_all_heap_simps active_sc_def
+                      pred_map_rewrite map_join_simps
+               split: option.splits kernel_object.splits)+
+
+definition sorted_release_q2_2  ::
+  "(obj_ref \<rightharpoonup> sched_context) \<Rightarrow> obj_ref list \<Rightarrow> bool"
+  where
+  "sorted_release_q2_2 tcb_sc_refill_cfgs
+   \<equiv> sorted_wrt (img_ord (tcb_sc_refill_cfgs ||> sc_ready_time2) opt_ord)"
+
+abbreviation sorted_release_q2 :: "'z state \<Rightarrow> bool" where
+  "sorted_release_q2 s \<equiv> sorted_release_q2_2 (opt_flatten o tcb_scs_of s |> scs_of2 s) (release_queue s)"
+
+lemma sorted_release_q_rewrite:
+  "sorted_release_q s = sorted_release_q2 s"
+  by (fastforce simp: sorted_release_q2_2_def sorted_release_q_2_def tcb_ready_times_of_rewrite)
+
+definition valid_release_q_except_set2_2 ::
+  "obj_ref set \<Rightarrow> obj_ref list \<Rightarrow> (obj_ref \<rightharpoonup> thread_state) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> bool"
+  where
+  "valid_release_q_except_set2_2 except queue tcb_sts tcb_scps scs \<equiv>
+    (\<forall>t \<in> set queue - except. (runnable |< tcb_sts) t
+                              \<and> active_sc_tcb_at_pred2 tcb_scps scs t)
+    \<and> distinct queue
+    \<and> sorted_release_q2_2 (opt_flatten o tcb_scps |> scs) queue"
+
+abbreviation valid_release_q_except_set2 :: "obj_ref set \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "valid_release_q_except_set2 except s \<equiv>
+      valid_release_q_except_set2_2 except (release_queue s) (tcb_sts_of2 s) (tcb_scs_of s) (scs_of2 s)"
+
+lemma valid_release_q_except_set_2_rewrite:
+  "valid_release_q_except_set except s = valid_release_q_except_set2 except s"
+  unfolding valid_release_q_except_set2_2_def valid_release_q_except_set_2_def
+            sorted_release_q_rewrite active_sc_tcb_at_rewrite tcb_sts_of_rewrite
+  by (simp add: pred_map_rewrite active_sc_tcb_at2_def)
+
+abbreviation "valid_release_q2_2 \<equiv> valid_release_q_except_set2_2 {}"
+abbreviation "valid_release_q2 s \<equiv> valid_release_q2_2 (release_queue s) (tcb_sts_of2 s) (tcb_scs_of s) (scs_of2 s)"
+
+lemma valid_release_q_rewrite:
+  "valid_release_q s = valid_release_q2 s"
+  unfolding valid_release_q_except_set2_2_def valid_release_q_except_set_2_def
+            sorted_release_q_rewrite active_sc_tcb_at_rewrite tcb_sts_of_rewrite
+  by (simp add: pred_map_rewrite active_sc_tcb_at2_def)
+
+lemmas valid_release_q2_except_set_def = valid_release_q_except_set2_2_def
+lemmas valid_release_q2_except_def = valid_release_q_except_set2_2_def
+lemmas valid_release_q2_def = valid_release_q_except_set2_2_def
+
+abbreviation released_if_bound_sc_tcb_at2_2 ::
+  "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> bool"
+  where
+  "released_if_bound_sc_tcb_at2_2 t curtime tcb_scps scs \<equiv>
+     tcb_scps t = Some None \<or> (released_sc_tcb_at_pred2 curtime tcb_scps scs) t"
+
+abbreviation released_if_bound_sc_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "released_if_bound_sc_tcb_at2 t s \<equiv> released_if_bound_sc_tcb_at2_2 t (cur_time s) (tcb_scs_of s) (scs_of2 s)"
+
+lemma released_if_bound_sc_tcb_at_rewrite:
+  "released_if_bound_sc_tcb_at tp s = released_if_bound_sc_tcb_at2 tp s"
+  by (clarsimp simp: released_sc_tcb_at_rewrite tcb_scps_of_rewrite pred_map_eq
+                     released_sc_tcb_at2_def)
+
+abbreviation active_if_bound_sc_tcb_at2_2 ::
+  "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> bool"
+  where
+  "active_if_bound_sc_tcb_at2_2 t tcb_scps scs \<equiv>
+    tcb_scps t = Some None \<or> active_sc_tcb_at_pred2 tcb_scps scs t"
+
+abbreviation active_if_bound_sc_tcb_at2 :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "active_if_bound_sc_tcb_at2 t s \<equiv> active_if_bound_sc_tcb_at2_2 t (tcb_scs_of s) (scs_of2 s)"
+
+lemma active_if_bound_sc_tcb_at_rewrite:
+  "active_if_bound_sc_tcb_at tp s = active_if_bound_sc_tcb_at2 tp s"
+  by (clarsimp simp: active_sc_tcb_at_rewrite tcb_scps_of_rewrite pred_map_eq
+                     active_sc_tcb_at2_def)
+
+(* ipc *)
+
+abbreviation blocked_on_send_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_send_tcb_at2 t s \<equiv>  (is_blocked_on_send |< tcb_sts_of2 s) t"
+
+abbreviation blocked_on_reply_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_reply_tcb_at2 t s \<equiv> (is_blocked_on_reply |< tcb_sts_of2 s) t"
+
+abbreviation blocked_on_recv_ntfn_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_recv_ntfn_tcb_at2 t s \<equiv> (is_blocked_on_recv_ntfn |< tcb_sts_of2 s) t"
+
+abbreviation blocked_on_send_recv_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "blocked_on_send_recv_tcb_at2 t s \<equiv> (is_blocked_on_send_recv |< tcb_sts_of2 s) t"
+
+lemma blocked_on_tcb_at_rewrite: shows
+  blocked_on_send_tcb_at_rewrite:
+     "blocked_on_send_tcb_at tp s = blocked_on_send_tcb_at2 tp s" and
+  blocked_on_reply_tcb_at_rewrite:
+     "blocked_on_reply_tcb_at tp s = blocked_on_reply_tcb_at2 tp s" and
+  blocked_on_recv_ntfn_tcb_at_rewrite:
+     "blocked_on_recv_ntfn_tcb_at tp s = blocked_on_recv_ntfn_tcb_at2 tp s" and
+  blocked_on_send_recv_tcb_at_rewrite:
+     "blocked_on_send_recv_tcb_at tp s = blocked_on_send_recv_tcb_at2 tp s"
+  by (clarsimp simp: pred_map_rewrite tcb_sts_of_rewrite)+
+
+abbreviation fault_tcb_at2 :: "(fault option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "fault_tcb_at2 P t s \<equiv>  (P |< tcb_faults_of2 s) t"
+
+abbreviation timeout_faulted_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "timeout_faulted_tcb_at2 \<equiv>  fault_tcb_at2 is_timeout_fault_opt"
+
+lemma timeout_faulted_tcb_at_rewrite:
+  "timeout_faulted_tcb_at tp s = timeout_faulted_tcb_at2 tp s"
+  unfolding pred_map_rewrite tcb_faults_of_rewrite by simp
+
+abbreviation valid_sender_sc_tcb_at2_2 ::
+  "obj_ref \<Rightarrow> time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> fault option) \<Rightarrow> (obj_ref \<rightharpoonup> sched_context) \<Rightarrow> bool"
+  where
+  "valid_sender_sc_tcb_at2_2 t curtime tcb_scps tcb_faults scs \<equiv>
+    (is_timeout_fault_opt |< tcb_faults) t \<and> active_sc_tcb_at_pred2 tcb_scps scs t
+    \<or> released_if_bound_sc_tcb_at2_2 t curtime tcb_scps scs"
+
+abbreviation valid_sender_sc_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "valid_sender_sc_tcb_at2 t s \<equiv> valid_sender_sc_tcb_at2_2 t (cur_time s) (tcb_scs_of s) (tcb_faults_of2 s) (scs_of2 s)"
+
+lemma valid_sender_sc_tcb_at_rewrite:
+  "valid_sender_sc_tcb_at tp s = valid_sender_sc_tcb_at2 tp s"
+  unfolding active_sc_tcb_at_rewrite released_sc_tcb_at_rewrite tcb_scps_of_rewrite
+            timeout_faulted_tcb_at_rewrite released_sc_tcb_at2_def
+  by (simp add: pred_map_eq active_sc_tcb_at2_def)
+
+abbreviation requires_released_if_bound_sc_tcb_at2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
+  "requires_released_if_bound_sc_tcb_at2 t s
+   \<equiv> blocked_on_recv_ntfn_tcb_at2 t s \<or> blocked_on_send_tcb_at2 t s \<and> \<not> timeout_faulted_tcb_at2 t s"
+
+lemma requires_released_if_bound_sc_tcb_at_rewrite:
+  "requires_released_if_bound_sc_tcb_at tp s = requires_released_if_bound_sc_tcb_at2 tp s"
+  unfolding blocked_on_tcb_at_rewrite timeout_faulted_tcb_at_rewrite by simp
+
+definition released_ipc_queued_thread2_2 where
+  "released_ipc_queued_thread2_2 t curtime tcb_sts tcb_scps tcb_faults scs \<equiv>
+    ((is_blocked_on_recv_ntfn |< tcb_sts) t \<longrightarrow> released_if_bound_sc_tcb_at2_2 t curtime tcb_scps scs)
+    \<and> ((is_blocked_on_send |< tcb_sts) t \<longrightarrow> valid_sender_sc_tcb_at2_2 t curtime tcb_scps tcb_faults scs)
+    \<and> ((is_blocked_on_reply |< tcb_sts) t \<longrightarrow> active_if_bound_sc_tcb_at2_2 t tcb_scps scs)"
+
+definition released_ipc_queues2_2 where
+  "released_ipc_queues2_2 curtime tcb_sts tcb_scps tcb_faults scs \<equiv>
+    \<forall>t. released_ipc_queued_thread2_2 t curtime tcb_sts tcb_scps tcb_faults scs"
+
+abbreviation released_ipc_queues_pred2 where
+  "released_ipc_queues_pred2 P \<equiv>
+    \<lambda>s. P (cur_time s) (tcb_sts_of2 s) (tcb_scs_of s) (tcb_faults_of2 s) (scs_of2 s)"
+abbreviation released_ipc_queued_thread2 :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "released_ipc_queued_thread2 t \<equiv> released_ipc_queues_pred2 (released_ipc_queued_thread2_2 t)"
+abbreviation released_ipc_queues2 :: "'z::state_ext state \<Rightarrow> bool" where
+  "released_ipc_queues2 \<equiv> released_ipc_queues_pred2 released_ipc_queues2_2"
+
+lemmas released_ipc_queues2_defs = released_ipc_queued_thread2_2_def released_ipc_queues2_2_def
+
+lemmas projection_rewrites = sc_proj_rewrites tcb_proj_rewrites ep_proj_rewrites
+                             sc_refills_sc_at_rewrite is_active_sc_rewrite
+                             valid_refills_rewrite round_robin_rewrite active_sc_tcb_at_rewrite
+                             is_refill_sufficient_rewrite is_refill_ready_rewrite
+                             budget_ready_rewrite budget_sufficient_rewrite released_sc_tcb_at_rewrite
+                             released_sc_at_rewrite valid_refills_rewrite st_tcb_at_rewrite
+                             bound_sc_tcb_at_rewrite bounded_release_time_rewrite
+                             active_sc_valid_refills_rewrite sc_refills_sc_at_rewrite
+                             cur_sc_offset_ready_rewrite sc_ready_times_of_rewrite
+                             tcb_ready_times_of_rewrite
+
+(* end : projection rerwite *)
+
+
+
+
+
 
 end
