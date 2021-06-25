@@ -3958,14 +3958,6 @@ lemma sc_replies_relation_rewrite:
 
 (* end : projection rewrites *)
 
-lemma sc_replies_relation_prevs_list':
-  "\<lbrakk> sc_replies_relation s s';
-     kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
-    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
-  apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (clarsimp simp: opt_map_left_Some sc_of_def)
-  done
-
 (* updateSchedContext *)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4046,7 +4038,7 @@ lemma state_relation_sc_update:
      apply (erule obj_relation_cutsE)
             apply ((simp split: if_split_asm)+)[8]
     (* sc_replies_relation *)
-    apply (frule (1) sc_replies_relation_prevs_list'[simplified])
+    apply (frule (2) sc_replies_relation_prevs_list[simplified])
     apply (subst replyPrevs_of_non_reply_update[simplified]; (simp add: typ_at'_def ko_wp_at'_def)?)
     apply (simp add: sc_replies_relation_def)
     apply (rule conjI)
@@ -4148,8 +4140,6 @@ lemma updateSchedContext_corres_gen:
   done
 
 lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> and P'=\<top>, simplified]
-
-declare opt_map_left_Some[simp]
 
 (* end : updateSchedContext *)
 
@@ -4579,8 +4569,8 @@ lemma refillSingle_corres:
   apply (rule stronger_corres_guard_imp)
     apply (rule_tac R'="\<lambda>sc s. valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
        apply (rule get_sc_corres)
-      apply (clarsimp simp: sc_relation_def)
-      apply (rule refillSingle_equiv; simp)
+      apply simp
+      apply (metis (mono_tags, hide_lams) refillSingle_equiv sc_relation_def)
      apply wpsimp+
   apply (clarsimp simp: obj_at'_def)
   done
