@@ -3589,14 +3589,6 @@ lemma invoke_cnode_invs[wp]:
 
 end
 
-crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
-
-
-(* FIXME: rename, move *)
-lemma omgwtfbbq[simp]:
-  "(\<forall>x. y \<noteq> x) = False"
-  by clarsimp
-
 
 lemma corres_underlying_lift_ex1:
   assumes c: "\<And>v. corres_underlying sr nf nf' r (P v and Q) P' a c"

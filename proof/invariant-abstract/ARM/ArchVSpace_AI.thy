@@ -3312,11 +3312,6 @@ lemma store_pde_unmap_page:
   apply (simp add: up_ucast_inj_eq)
   done
 
-(* FIXME: move to Invariants_A *)
-lemma pte_ref_pages_invalid_None[simp]:
-  "pte_ref_pages InvalidPTE = None"
-  by (simp add: pte_ref_pages_def)
-
 lemma store_pte_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace>
    store_pte p InvalidPTE
@@ -3332,11 +3327,6 @@ lemma store_pte_no_lookup_pages:
   by (fastforce simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
                      graph_of_def image_def
               split: if_split_asm)
-
-(* FIXME: move to Invariants_A *)
-lemma pde_ref_pages_invalid_None[simp]:
-  "pde_ref_pages InvalidPDE = None"
-  by (simp add: pde_ref_pages_def)
 
 lemma store_pde_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace> store_pde p InvalidPDE \<lbrace>\<lambda>_ s. \<not> (r \<unrhd> q) s\<rbrace>"
@@ -3977,10 +3967,6 @@ lemma dmo_ccr_invs[wp]:
      apply ((clarsimp | wp)+)[3]
   apply(erule use_valid, wp no_irq_cleanCacheRange_PoU no_irq, assumption)
   done
-
-(* FIXME: move to Invariants_A *)
-lemmas pte_ref_pages_simps[simp] =
-       pte_ref_pages_def[split_simps pte.split]
 
 lemma ex_pt_cap_eq:
   "(\<exists>ref cap. caps_of_state s ref = Some cap \<and>

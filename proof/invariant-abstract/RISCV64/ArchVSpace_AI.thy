@@ -12,11 +12,6 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
-(* FIXME: move to lib *)
-lemma throw_opt_wp[wp]:
-  "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  unfolding throw_opt_def by wpsimp auto
-
 context Arch begin global_naming RISCV64
 
 definition kernel_mappings_only :: "(pt_index \<Rightarrow> pte) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
@@ -28,7 +23,7 @@ lemma find_vspace_for_asid_wp[wp]:
         (\<forall>pt. vspace_for_asid asid s = Some pt \<longrightarrow> Q pt s) \<rbrace>
    find_vspace_for_asid asid \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding find_vspace_for_asid_def
-  by (wpsimp wp: throw_opt_wp)
+  by wpsimp
 
 crunch pspace_in_kernel_window[wp]: perform_page_invocation "pspace_in_kernel_window"
   (simp: crunch_simps wp: crunch_wps)

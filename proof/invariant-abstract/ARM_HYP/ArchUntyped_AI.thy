@@ -402,35 +402,6 @@ lemma store_pde_weaken:
             split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
-(* ARMHYP not needed anymore?
-lemma store_pde_nonempty_table:
-  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
-           \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
-                   rf \<in> {})
-           \<and> valid_pde_mappings pde\<rbrace>
-     store_pde pde_ptr pde
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
-  apply (clarsimp simp add: empty_table_def vspace_bits_defs)
-  done *)
-
-(*
-lemma valid_arch_state_global_pd: (* ARMHYP restate? *)
-  "\<lbrakk> valid_arch_state s; pspace_aligned s \<rbrakk>
-    \<Longrightarrow> obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd)) (arm_global_pd (arch_state s)) s
-           \<and> is_aligned (arm_global_pd (arch_state s)) pd_bits"
-  apply (clarsimp simp: valid_arch_state_def a_type_def
-                        pd_aligned pd_bits_def pageBits_def
-                 elim!: obj_at_weakenE)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.split_asm if_split_asm)
-  done
-*)
-lemma pd_shifting':
-  "is_aligned (pd :: word32) pd_bits \<Longrightarrow> pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits) && ~~ mask pd_bits = pd"
-  by (rule pd_shifting, simp add: vspace_bits_defs)
 
 lemma copy_global_mappings_nonempty_table: (* ARMHYP need change *)
   "is_aligned pd pd_bits \<Longrightarrow>

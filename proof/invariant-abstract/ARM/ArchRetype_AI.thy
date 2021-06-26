@@ -198,14 +198,6 @@ crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
 
-(* FIXME: move to VSpace_R *)
-lemma vs_refs_add_one'':
-  "p \<in> kernel_mapping_slots \<Longrightarrow>
-   vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
-   vs_refs (ArchObj (PageDirectory pd))"
- by (auto simp: vs_refs_def graph_of_def split: if_split_asm)
-
-
 lemma glob_vs_refs_add_one':
   "glob_vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
    glob_vs_refs (ArchObj (PageDirectory pd))

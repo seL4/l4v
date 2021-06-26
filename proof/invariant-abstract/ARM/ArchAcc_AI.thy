@@ -1240,15 +1240,6 @@ lemma set_object_caps_of_state:
   apply (auto simp: cte_wp_at_cases)
   done
 
-
-(* FIXME: Move to Invariants_A *)
-lemma pte_ref_pagesD:
-  "pte_ref_pages (pt y) = Some x \<Longrightarrow>
-   (VSRef (ucast y) (Some APageTable), x)
-   \<in> vs_refs_pages (ArchObj (PageTable pt))"
-  by (auto simp: pte_ref_pages_def vs_refs_pages_def graph_of_def)
-
-
 lemma set_pt_valid_vspace_objs[wp]:
   "valid (\<lambda>s. valid_vspace_objs s \<and> ((\<exists>\<rhd> p) s \<longrightarrow> (\<forall>x. valid_pte (pt x) s)))
              (set_pt p pt) (\<lambda>_. valid_vspace_objs)"
@@ -1593,19 +1584,6 @@ lemma set_pt_invs:
   done
 
 
-(* FIXME: move to Invariants_A *)
-lemma invs_valid_asid_table [elim!]:
-  "invs s \<Longrightarrow> valid_asid_table (arm_asid_table (arch_state s)) s"
-  by (simp add: invs_def valid_state_def valid_arch_state_def)
-
-
-(* FIXME: move to Invariants_A *)
-lemma valid_asid_table_ran:
-  "valid_asid_table asid_tbl s \<Longrightarrow> \<forall>p\<in>ran asid_tbl. asid_pool_at p s"
-  by (simp add: invs_def valid_state_def valid_arch_state_def
-                valid_asid_table_def)
-
-
 lemma vs_lookup_pages_pt_eq:
   "\<lbrakk>valid_vspace_objs s;
     \<forall>p\<in>ran (arm_asid_table (arch_state s)). asid_pool_at p s;
@@ -1621,10 +1599,6 @@ lemma vs_lookup_pages_pt_eq:
   apply (auto simp: obj_at_def pte_ref_pages_def data_at_def
                  split: pte.splits)
   done
-
-
-lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
-
 
 (* NOTE: we use vs_lookup in the precondition because in this case,
          both are equivalent, but vs_lookup is generally preserved
@@ -1851,16 +1825,6 @@ lemma set_asid_pool_table_caps [wp]:
   apply (wpsimp wp: set_object_wp_strong simp: a_type_def empty_table_def)
   apply (metis kernel_object_exhaust)
   done
-
-
-
-(* FIXME: Move to Invariants_A *)
-lemma vs_lookup_pages_stateI:
-  assumes 1: "(ref \<unrhd> p) s"
-  assumes ko: "\<And>ko p. ko_at ko p s \<Longrightarrow> obj_at (\<lambda>ko'. vs_refs_pages ko \<subseteq> vs_refs_pages ko') p s'"
-  assumes table: "graph_of (arm_asid_table (arch_state s)) \<subseteq> graph_of (arm_asid_table (arch_state s'))"
-  shows "(ref \<unrhd> p) s'"
-  using 1 vs_lookup_pages_sub [OF ko table] by blast
 
 lemma set_asid_pool_vs_lookup_unmap':
   "\<lbrace>valid_vs_lookup and
@@ -2708,54 +2672,26 @@ lemma store_pde_vspace_objs_unmap:
 lemma lookup_pd_slot_add_eq:
   "\<lbrakk> is_aligned pd pd_bits; is_aligned vptr 24; x \<in> set [0 , 4 .e. 0x3C] \<rbrakk>
   \<Longrightarrow> (x + lookup_pd_slot pd vptr && ~~ mask pd_bits) = pd"
-  apply (simp add: pd_bits_def pageBits_def add.commute add.left_commute lookup_pd_slot_def Let_def)
+    apply (simp add: pageBits_def add.commute add.left_commute lookup_pd_slot_def Let_def)
   apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
-  apply (subst add_mask_lower_bits, assumption)
-   prefer 2
-   apply simp
-  apply clarsimp
-  subgoal premises prems for _ n'
-    proof -
-    have H: "(0xF::word32) < 2 ^ 4"  by simp
-    from prems show ?thesis
-    apply (subst (asm) word_plus_and_or_coroll)
-     apply (rule word_eqI)
-     apply (thin_tac "is_aligned pd _")
-     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
-     subgoal for n
-       apply (spec "18 + n")
-       apply (frule test_bit_size[where n="18 + n"])
-       apply (simp add: word_size)
-       apply (insert H)[1]
-        apply (drule (1) order_le_less_trans)
-        apply (drule bang_is_le)
-        apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-        by (drule word_power_increasing; simp?)
-    apply simp
-    apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
-    apply (erule disjE)
-     apply (insert H)[1]
-      apply (drule (1) order_le_less_trans)
-      apply (drule bang_is_le)
-      apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-      apply (drule word_power_increasing; simp?)
-     apply (spec "18 + n'")
-     apply (frule test_bit_size[where n="18 + n'"])
-    by (simp add: word_size)
-    qed
- done
-
-
-lemma lookup_pd_slot_add:
-  "\<lbrakk> page_directory_at pd s; pspace_aligned s; is_aligned vptr 24; x \<in> set [0 , 4 .e. 0x3C] \<rbrakk>
-  \<Longrightarrow> (x + lookup_pd_slot pd vptr && ~~ mask pd_bits) = pd"
-  apply (clarsimp simp: obj_at_def pspace_aligned_def)
-  apply (drule bspec, blast)
-  apply (clarsimp simp: pd_bits_def pageBits_def a_type_def
-                  split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
-  apply (drule (1) lookup_pd_slot_add_eq [rotated])
-   apply (simp add: pd_bits_def pageBits_def)
-  apply (simp add: pd_bits_def pageBits_def)
+  apply (erule add_mask_lower_bits2)
+  apply (subgoal_tac "2 < pd_bits \<and> size vptr \<le> 18 + pd_bits")
+   apply (simp add: and_mask_0_iff_le_mask le_mask_iff)
+   apply (subst word_plus_and_or_coroll)
+    apply (subst word_bool_alg.conj.commute)
+    apply (rule aligned_mask_disjoint[where n=6])
+     apply (rule is_aligned_shiftl, rule is_aligned_shiftr, simp)
+    apply (rule order.trans, rule leq_high_bits_shiftr_low_bits_leq_bits[where high_bits=4])
+     apply (clarsimp simp: mask_def, simp)
+   apply (clarsimp simp: shiftr_over_or_dist word_or_zero)
+   apply (intro conjI)
+    apply (clarsimp simp: shiftl_shiftr3)
+    apply (subgoal_tac "xa >> pd_bits - 2 = 0", simp)
+    apply (rule shiftr_le_0, rule unat_less_helper)
+    apply (erule order.strict_trans1, simp)
+    apply (clarsimp simp: pd_bits_def pageBits_def)
+   apply (clarsimp simp: shiftl_shiftr2 shiftr_shiftr shiftr_zero_size)
+  apply (clarsimp simp: pd_bits_def pageBits_def word_bits_size word_bits_def)
   done
 
 
@@ -3117,18 +3053,6 @@ lemma set_pd_vms[wp]:
   apply (erule valid_machine_state_heap_updI)
   apply (fastforce simp: a_type_def obj_at_def
            split: Structures_A.kernel_object.splits arch_kernel_obj.splits)+
-  done
-
-
-(* FIXME: Move to Invariants_A *)
-lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
-  apply (clarsimp simp: vs_refs_pages_def vs_refs_def graph_of_def pde_ref_def pde_ref_pages_def
-                  split: kernel_object.splits arch_kernel_obj.splits pde.splits)
-  subgoal for "fun" a b
-  using
-    imageI[where A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref_pages (fun x)) = Some y}"
-             and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"]
-   by (clarsimp simp: pde_ref_def pde_ref_pages_def split: if_splits pde.splits)+
   done
 
 
