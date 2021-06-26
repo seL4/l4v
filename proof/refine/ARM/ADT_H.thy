@@ -10,7 +10,6 @@ theory ADT_H
 imports
   "AInvs.ADT_AI"
   Syscall_R
-  Init_R
 begin
 
 text \<open>

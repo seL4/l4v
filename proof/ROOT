@@ -38,14 +38,17 @@ session Refine in "refine" = BaseRefine +
     "$L4V_ARCH/Refine"
     "$L4V_ARCH/RAB_FN"
     "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
     "$L4V_ARCH/Refine"
     "$L4V_ARCH/RAB_FN"
     "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
   theories
     "$L4V_ARCH/Refine"
     "$L4V_ARCH/RAB_FN"
     "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
 
 (*
  * This theory is in a separate session because the proofs currently
