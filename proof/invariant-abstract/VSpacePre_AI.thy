@@ -60,12 +60,6 @@ lemma upto_enum_step_subtract:
   "x \<le> z \<Longrightarrow> [x, y .e. z] = (map ((+) x) [0, y - x .e. z - x])"
   by (auto simp add: upto_enum_step_def)
 
-(* FIXME: move *)
-lemma returnOk_E': "\<lbrace>P\<rbrace> returnOk r -,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: returnOk_def validE_E_def validE_def valid_def return_def)
-lemma throwError_R': "\<lbrace>P\<rbrace> throwError e \<lbrace>Q\<rbrace>,-"
-  by (clarsimp simp:throwError_def validE_R_def validE_def valid_def return_def)
-
 lemma invs_valid_irq_states[elim!]:
   "invs s \<Longrightarrow> valid_irq_states s"
   by(auto simp: invs_def valid_state_def)
@@ -85,14 +79,6 @@ lemma uint_ucast:
     apply (clarsimp simp only: word_neq_0_conv[symmetric])
    apply simp_all
   done
-
-(* FIXME: move *)
-lemma inj_on_domD: "\<lbrakk>inj_on f (dom f); f x = Some z; f y = Some z\<rbrakk> \<Longrightarrow> x = y"
-  by (erule inj_onD) clarsimp+
-
-lemma hoare_name_pre_state2:
-  "(\<And>s. \<lbrace>P and ((=) s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (auto simp: valid_def intro: hoare_name_pre_state)
 
 lemma pd_casting_shifting:
   "size x + n < len_of TYPE('a) \<Longrightarrow>

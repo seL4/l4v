@@ -2483,14 +2483,14 @@ lemma updateCap_corres:
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (simp add: is_cap_simps, elim disjE exE, simp_all)[1]
       apply (simp add: eq_commute)
-     apply (drule cte_wp_at_eqD, clarsimp)
+     apply (drule cte_wp_at_norm, clarsimp)
      apply (drule(1) pspace_relation_ctes_ofI, clarsimp+)
      apply (drule(1) capClass_ztc_relation)+
      apply (simp add: capRange_cap_relation obj_ref_of_relation[symmetric])
     apply (rule valid_capAligned, rule ctes_of_valid)
      apply (simp add: cte_wp_at_ctes_of)
     apply clarsimp
-   apply (drule cte_wp_at_eqD, clarsimp)
+   apply (drule cte_wp_at_norm, clarsimp)
    apply (drule(1) pspace_relation_ctes_ofI, clarsimp+)
    apply (simp add: is_cap_simps, elim disjE exE, simp_all add: isCap_simps)[1]
   apply clarsimp

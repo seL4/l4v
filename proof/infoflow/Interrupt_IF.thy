@@ -30,7 +30,7 @@ lemma invoke_irq_handler_reads_respects_f:
          hoare_vcg_ex_lift slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]| simp | simp add: get_irq_slot_def)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
    apply ((rule conjI, assumption) | clarsimp simp: conj_comms authorised_irq_hdl_inv_def)+
-   apply (drule_tac p="(a,b)" in cte_wp_at_eqD)
+   apply (drule_tac p="(a,b)" in cte_wp_at_norm)
    apply (elim exE conjE, rename_tac cap')
    apply (drule_tac cap=cap' in silc_invD)
      apply assumption

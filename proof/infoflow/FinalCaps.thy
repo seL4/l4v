@@ -842,7 +842,7 @@ lemma weak_derived_overlaps:
     Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}\<rbrakk> \<Longrightarrow>
     slot \<in> slots_holding_overlapping_caps cap s"
   apply(simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(erule exE, rename_tac cap')
   apply(rule_tac x=cap' in exI)
   apply(blast dest: weak_derived_overlaps')
@@ -1040,7 +1040,7 @@ lemma is_derived_overlaps:
     Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}\<rbrakk> \<Longrightarrow>
     slot \<in> slots_holding_overlapping_caps cap s"
   apply(simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(erule exE, rename_tac cap')
   apply(rule_tac x=cap' in exI)
   apply(blast dest: is_derived_overlaps')
@@ -1052,7 +1052,7 @@ lemma is_derived_overlaps2:
     Structures_A.obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {}\<rbrakk> \<Longrightarrow>
     slot \<in> slots_holding_overlapping_caps cap' s"
   apply(simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
-  apply(blast dest: cte_wp_at_eqD is_derived_overlaps')
+  apply(blast dest: cte_wp_at_norm is_derived_overlaps')
   done
 
 lemma disj_dup: "A \<and> B \<and> C \<and> C'\<Longrightarrow> A \<and> B \<and> C \<and> A \<and> B \<and> C'"
@@ -1082,7 +1082,7 @@ lemma cap_insert_silc_inv:
    apply fastforce
   apply (rule conjI)
   apply(rule impI)
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(elim conjE exE)
   apply(drule (1) cte_wp_at_eqD2)
   apply simp
@@ -1102,7 +1102,7 @@ lemma cte_wp_at_eq:
   assumes a: "\<And> cap. \<lbrace> cte_wp_at ((=) cap) slot \<rbrace> f \<lbrace> \<lambda>_. cte_wp_at ((=) cap) slot \<rbrace>"
   shows   "\<lbrace> cte_wp_at P slot \<rbrace> f \<lbrace> \<lambda>_. cte_wp_at P slot \<rbrace>"
   apply(clarsimp simp: valid_def)
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(elim exE conjE, rename_tac cap)
   apply(drule use_valid)
     apply(rule a)
@@ -2271,7 +2271,7 @@ lemma perform_page_table_invocation_silc_ionv_get_cap_helper:
                     pasObjectAbs aag (fst lslot) = SilcLabel))) \<circ> the_arch_cap\<rbrace>"
   apply(wp get_cap_wp)
   apply clarsimp
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(clarify)
   apply(drule (1) cte_wp_at_eqD2)
   apply(case_tac cap, simp_all add: is_pg_cap_def is_pt_cap_def)
@@ -2470,7 +2470,7 @@ lemma intra_label_cap_pres':
          f
      \<lbrace>\<lambda> _s. (intra_label_cap aag slot s) \<rbrace>"
   apply(clarsimp simp: valid_def intra_label_cap_def)
-  apply(drule cte_wp_at_eqD)
+  apply(drule cte_wp_at_norm)
   apply(elim exE conjE, rename_tac cap')
   apply(subgoal_tac "cap' = cap", blast)
   apply(drule use_valid[OF _ cte], fastforce)
@@ -2685,7 +2685,7 @@ lemma invoke_irq_handler_silc_inv:
              slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]
          | simp add: authorised_irq_hdl_inv_def get_irq_slot_def conj_comms)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
-   apply (drule cte_wp_at_eqD)
+   apply (drule cte_wp_at_norm)
    apply (elim exE conjE, rename_tac cap')
    apply (drule_tac cap=cap' in silc_invD)
      apply assumption

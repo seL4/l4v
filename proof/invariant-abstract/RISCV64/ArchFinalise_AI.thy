@@ -8,11 +8,6 @@ theory ArchFinalise_AI
 imports Finalise_AI
 begin
 
-(* FIXME: MOVE *)
-lemma hoare_validE_R_conjI:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"
-  by (auto simp: Ball_def validE_R_def validE_def valid_def)
-
 context Arch begin
 
 named_theorems Finalise_AI_asms
