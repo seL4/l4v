@@ -212,7 +212,7 @@ where
 
 | "perform_invocation _ _ _ (InvokeSchedControl i) =
    doE
-     liftE $ invoke_sched_control_configure i;
+     liftE $ invoke_sched_control_configure_flags i;
      returnOk []
    odE"
 
