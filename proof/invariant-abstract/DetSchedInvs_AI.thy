@@ -799,6 +799,7 @@ lemma sc_refill_cfg_of_updates[iff]:
   "\<And>f. sc_refill_cfg_of (sc_refills_update f sc) = scrc_refills_update f (sc_refill_cfg_of sc)"
   "\<And>f. sc_refill_cfg_of (sc_refill_max_update f sc) = scrc_refill_max_update f (sc_refill_cfg_of sc)"
   "\<And>f. sc_refill_cfg_of (sc_badge_update f sc) = sc_refill_cfg_of sc"
+  "\<And>f. sc_refill_cfg_of (sc_sporadic_update f sc) = sc_refill_cfg_of sc"
   "\<And>f. sc_refill_cfg_of (sc_yield_from_update f sc) = sc_refill_cfg_of sc"
   "\<And>f. sc_refill_cfg_of (sc_replies_update f sc) = sc_refill_cfg_of sc"
   by auto
