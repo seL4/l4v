@@ -1916,6 +1916,7 @@ lemma live_sc_update_simps[simp]:
  "live_sc (sc_period_update f sc) = live_sc sc"
  "live_sc (sc_refills_update g sc) = live_sc sc"
  "live_sc (sc_badge_update h sc) = live_sc sc"
+ "live_sc (sc_sporadic_update k sc) = live_sc sc"
   by (simp add: live_sc_def)+
 
 lemma caps_of_state_cte_wp_at:

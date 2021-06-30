@@ -1796,6 +1796,7 @@ lemmas update_sched_context_valid_sched_pred_invs[wp] =
   update_sched_context_valid_sched_pred_inv[where upd=sc_consumed_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_ntfn_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_badge_update, simplified]
+  update_sched_context_valid_sched_pred_inv[where upd=sc_sporadic_update, simplified]
   update_sched_context_valid_sched_pred_inv[where upd=sc_yield_from_update, simplified]
 
 lemmas update_sc_refills_valid_sched_pred[valid_sched_wp] =
@@ -17237,7 +17238,7 @@ lemma check_budget_valid_sched_misc[wp]:
   unfolding check_budget_def
   by (wpsimp wp: hoare_drop_imp)
 
-lemma pst_vs_for_invoke_sched_control_configure:
+lemma pst_vs_for_invoke_sched_control_configure_flags:
   "\<lbrace>valid_sched_except_blocked and valid_blocked_except target
     and st_tcb_at runnable target
     and (\<lambda>s. target \<noteq> idle_thread s)
@@ -17397,7 +17398,7 @@ crunches commit_time
   for cur_time_machine_state[wp]: "\<lambda>s. P (cur_time s) (machine_state s)"
   (wp: crunch_wps)
 
-lemma invoke_sched_control_configure_valid_sched:
+lemma invoke_sched_control_configure_flags_valid_sched:
   "\<lbrace>valid_sched
     and valid_sched_control_inv iv and schact_is_rct and invs
     and ct_not_in_release_q and ct_released and ct_not_queued
@@ -17406,56 +17407,55 @@ lemma invoke_sched_control_configure_valid_sched:
     and cur_sc_active
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
     and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)\<rbrace>
-   invoke_sched_control_configure iv
+   invoke_sched_control_configure_flags iv
    \<lbrace>\<lambda>_. valid_sched :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split[split del] return_bind[simp del]
-  apply (simp add: invoke_sched_control_configure_def)
+  apply (simp add: invoke_sched_control_configure_flags_def)
   apply (cases iv; simp)
-  apply (rename_tac sc_ptr budget period mrefills badge)
-
+  apply (rename_tac sc_ptr budget period mrefills badge flag)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (subst bind_assoc[symmetric])
   apply (clarsimp simp: obj_at_def)
-   apply (rule_tac B="\<lambda>rv s. valid_sched s
-                             \<and> MIN_REFILLS \<le> mrefills
-                             \<and> MIN_BUDGET \<le> budget
-                             \<and> budget \<le> period
-                             \<and> ex_nonz_cap_to sc_ptr s
-                             \<and> schact_is_rct s
-                             \<and> invs s
-                             \<and> sc_ptr \<noteq> idle_sc_ptr
-                             \<and> ct_not_in_release_q s
-                             \<and> ct_not_queued s
-                             \<and> cur_sc_active s
-                             \<and> current_time_bounded 5 s
-                             \<and> sc_refill_max_sc_at (\<lambda>rm. rm = sc_refill_max sc) sc_ptr s
-                             \<and> sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s
-                             \<and> period \<le> MAX_PERIOD
-                             \<and> cur_sc_offset_ready (consumed_time s) s
-                             \<and> cur_sc_offset_sufficient (consumed_time s) s
-                             \<and> cur_sc_in_release_q_imp_zero_consumed s
-                             \<and> consumed_time_bounded s"
-             in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_sc_badge_invs')
-    apply (wpsimp wp: update_sched_context_wp)
+  apply (rule_tac B="\<lambda>rv s. valid_sched s
+                            \<and> MIN_REFILLS \<le> mrefills
+                            \<and> MIN_BUDGET \<le> budget
+                            \<and> budget \<le> period
+                            \<and> ex_nonz_cap_to sc_ptr s
+                            \<and> schact_is_rct s
+                            \<and> invs s
+                            \<and> sc_ptr \<noteq> idle_sc_ptr
+                            \<and> ct_not_in_release_q s
+                            \<and> ct_not_queued s
+                            \<and> cur_sc_active s
+                            \<and> current_time_bounded 5 s
+                            \<and> sc_refill_max_sc_at (\<lambda>rm. rm = sc_refill_max sc) sc_ptr s
+                            \<and> sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s
+                            \<and> period \<le> MAX_PERIOD
+                            \<and> cur_sc_offset_ready (consumed_time s) s
+                            \<and> cur_sc_offset_sufficient (consumed_time s) s
+                            \<and> cur_sc_in_release_q_imp_zero_consumed s
+                            \<and> consumed_time_bounded s"
+            in hoare_seq_ext[rotated])
+   apply (wpsimp wp: update_sc_sporadic_invs')
+     apply (rule hoare_vcg_conj_lift)
+      apply (wpsimp wp: update_sched_context_wp)
+     apply (rule hoare_vcg_conj_lift)
+      apply (wpsimp wp: update_sched_context_wp)
+     apply wpsimp
+    apply (wpsimp wp: update_sc_badge_invs')
+    apply (rule hoare_vcg_conj_lift)
+     apply (wpsimp wp: update_sched_context_wp)
+    apply (rule hoare_vcg_conj_lift)
+     apply (wpsimp wp: update_sched_context_wp)
+    apply wpsimp
    apply clarsimp
    apply (intro conjI impI)
-    apply (frule invs_valid_global_refs)
-    apply (frule invs_valid_objs)
-    using idle_sc_no_ex_cap apply blast
-   apply (intro conjI impI allI)
-      apply (simp add: sc_at_pred_n_def obj_at_def)
-     apply (simp add: sc_at_pred_n_def obj_at_def)
-    apply (clarsimp simp: cur_sc_offset_ready_def obj_at_kh_kheap_simps pred_map_eq_normalise
-                          vs_all_heap_simps
-                   split: if_splits)
-    apply (clarsimp simp: cur_sc_offset_ready_def obj_at_kh_kheap_simps pred_map_eq_normalise
-                          vs_all_heap_simps
-                   split: if_splits)
-   apply (subgoal_tac "cur_sc_in_release_q_imp_zero_consumed s")
-   apply (clarsimp simp: vs_all_heap_simps cur_sc_in_release_q_imp_zero_consumed_def split: if_splits)
+      apply (frule invs_valid_global_refs)
+      apply (frule invs_valid_objs)
+      using idle_sc_no_ex_cap apply blast
+     apply (clarsimp simp: obj_at_def sc_refill_max_sc_at_def)
+    apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
    apply (erule ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed; clarsimp)
-   apply (clarsimp simp: current_time_bounded_def)
-
   apply (case_tac "sc_tcb sc = None")
    apply (clarsimp simp: bind_assoc valid_sched_def)
    apply (wpsimp wp: refill_new_valid_release_q refill_new_valid_ready_qs
@@ -17708,7 +17708,7 @@ lemma perform_invocation_valid_sched:
        apply (wpsimp wp: invoke_sched_context_valid_sched;
               clarsimp simp: tcb_at_kh_simps vs_all_heap_simps schact_is_rct_def
                       elim!: current_time_bounded_strengthen)
-      apply (wpsimp wp: invoke_sched_control_configure_valid_sched)
+      apply (wpsimp wp: invoke_sched_control_configure_flags_valid_sched)
      apply (wpsimp wp: invoke_cnode_valid_sched)
     apply (wpsimp wp: invoke_irq_handler_valid_sched;
            clarsimp simp: invs_valid_objs invs_valid_idle)
@@ -18228,12 +18228,12 @@ lemma invoke_sched_context_scheduler_act_sane[wp]:
   apply (case_tac iv; simp)
   by (wpsimp simp:  wp: hoare_vcg_if_lift2)+
 
-lemma invoke_sched_control_configure_scheduler_act_sane[wp]:
+lemma invoke_sched_control_configure_flags_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane\<rbrace>
-   invoke_sched_control_configure x8
+   invoke_sched_control_configure_flags x8
    \<lbrace>\<lambda>_. scheduler_act_sane :: 'state_ext state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
-  unfolding invoke_sched_control_configure_def
+  unfolding invoke_sched_control_configure_flags_def
   apply wpsimp
                apply (wpsimp wp: possible_switch_to_scheduler_act_sane' )
               apply (wpsimp wp:  hoare_vcg_if_lift2 hoare_vcg_imp_lift' )
@@ -19357,7 +19357,7 @@ lemma rec_del_current_time_bounded_5[wp]:
 
 crunches restart, install_tcb_frame_cap, install_tcb_cap, maybe_sched_context_unbind_tcb,
          maybe_sched_context_bind_tcb, bind_notification, invoke_sched_context,
-         invoke_sched_control_configure
+         invoke_sched_control_configure_flags
   for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
   and current_time_bounded[wp]: "current_time_bounded 5 :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps check_cap_inv simp: crunch_simps)
@@ -20616,7 +20616,7 @@ lemma invoke_tcb_valid_machine_time[wp]:
   done
 
 crunches cancel_badged_sends, invoke_irq_handler, invoke_domain, invoke_sched_context,
-         invoke_sched_control_configure
+         invoke_sched_control_configure_flags
   for valid_machine_time[wp]: "valid_machine_time :: det_state \<Rightarrow> _"
   (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
 
@@ -20852,13 +20852,13 @@ lemma commit_time_zero_consumed_time[wp]:
   unfolding commit_time_def
   by wpsimp
 
-lemma invoke_sched_control_configure_cur_sc_more_than_ready[wp]:
+lemma invoke_sched_control_configure_flags_cur_sc_more_than_ready[wp]:
   "\<lbrace>cur_sc_more_than_ready
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. sctcb = Some (cur_thread s)) (cur_sc s) s)\<rbrace>
-   invoke_sched_control_configure iv
+   invoke_sched_control_configure_flags iv
    \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
   supply if_split [split del]
-  unfolding invoke_sched_control_configure_def
+  unfolding invoke_sched_control_configure_flags_def
   apply (cases iv; simp)
   apply wpsimp
          apply (rule_tac Q="\<lambda>_ s. consumed_time s = 0" in hoare_strengthen_post[rotated])
@@ -22316,20 +22316,21 @@ lemma commit_time_cur_sc_more_than_ready[wp]:
 
 context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
 
-lemma invoke_sched_control_configure_cur_sc_in_release_q_imp_zero_consumed[wp]:
+lemma invoke_sched_control_configure_flags_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "\<lbrace>invs
     and valid_sched_control_inv iv
     and cur_sc_in_release_q_imp_zero_consumed
     and cur_sc_more_than_ready
     and current_time_bounded 0
     and cur_sc_tcb_are_bound\<rbrace>
-   invoke_sched_control_configure iv
+   invoke_sched_control_configure_flags iv
    \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
   supply if_split[split del]
   apply (cases iv, simp)
-  apply (rename_tac sc_ptr budget period mrefills badge)
-  apply (simp add: invoke_sched_control_configure_def)
+  apply (rename_tac sc_ptr budget period mrefills badge flags)
+  apply (simp add: invoke_sched_control_configure_flags_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (subst bind_assoc[symmetric])
   apply (rule_tac B="\<lambda>_ s. invs s
                            \<and> cur_sc_in_release_q_imp_zero_consumed s
                            \<and> cur_sc_more_than_ready s
@@ -22339,7 +22340,9 @@ lemma invoke_sched_control_configure_cur_sc_in_release_q_imp_zero_consumed[wp]:
                            \<and> sc_tcb_sc_at (\<lambda>rm. rm = sc_tcb sc) sc_ptr s
                            \<and> sc_refill_max_sc_at (\<lambda>rm. rm = sc_refill_max sc) sc_ptr s"
                  in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_sc_badge_invs')
+   apply (wpsimp wp: update_sc_sporadic_invs')
+     apply (wpsimp wp: update_sched_context_wp)
+    apply (wpsimp wp: update_sc_badge_invs')
     apply (wpsimp wp: update_sched_context_wp)
    apply clarsimp
    apply (intro conjI impI allI)
@@ -24140,7 +24143,7 @@ crunches commit_time, tcb_sched_action
   for sc_tcbs_of[wp]: "\<lambda>s. P (sc_tcbs_of s)"
   (ignore: update_sched_context wp: crunch_wps)
 
-lemma invoke_sched_control_configure_ct_ready_if_schedulable[wp]:
+lemma invoke_sched_control_configure_flags_ct_ready_if_schedulable[wp]:
   "\<lbrace>(\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s)
     and active_sc_valid_refills
     and cur_sc_active
@@ -24148,16 +24151,18 @@ lemma invoke_sched_control_configure_ct_ready_if_schedulable[wp]:
     and invs
     and current_time_bounded 5
     and valid_sched_control_inv iv\<rbrace>
-   invoke_sched_control_configure iv
+   invoke_sched_control_configure_flags iv
    \<lbrace>\<lambda>_. ct_ready_if_schedulable\<rbrace>"
   supply if_split [split del]
-  unfolding invoke_sched_control_configure_def
+  unfolding invoke_sched_control_configure_flags_def
   apply (case_tac iv; clarsimp)
-  apply (rename_tac sc_ptr budget period mrefills badge)
+  apply (rename_tac sc_ptr budget period mrefills badge flags)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (subst bind_assoc[symmetric])
   apply (wpsimp wp: sched_context_resume_ct_ready_if_schedulable)
-        apply (wpsimp wp: gts_wp)
        apply (wpsimp wp: gts_wp)
       apply (wpsimp wp: gts_wp)
+     apply (wpsimp wp: gts_wp)
      apply (rule_tac Q="\<lambda>_ s. ct_ready_if_schedulable s
                               \<and> current_time_bounded 5 s
                               \<and> MIN_BUDGET \<le> budget
@@ -24184,20 +24189,19 @@ lemma invoke_sched_control_configure_ct_ready_if_schedulable[wp]:
                              \<and> cur_sc_offset_sufficient (consumed_time s) s
                              \<and> MIN_BUDGET \<le> budget"
            in hoare_post_imp)
-     apply (subgoal_tac "budget_ready (cur_thread s) s")
-      apply (fastforce simp: ct_ready_if_schedulable_def current_time_bounded_def split: if_split)
-     apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
-     apply (erule (1) cur_sc_tcb_bound_ready)
-     apply simp
-    apply (wpsimp wp: update_sc_badge_invs' simp: sc_at_kh_simps)
-   apply (wpsimp wp: gts_wp assert_inv)
-  apply clarsimp
+    apply (subgoal_tac "budget_ready (cur_thread s) s")
+     apply (fastforce simp: ct_ready_if_schedulable_def current_time_bounded_def split: if_split)
+    apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
+    apply (erule (1) cur_sc_tcb_bound_ready)
+    apply simp
+   apply (wpsimp wp: update_sc_badge_invs' update_sc_sporadic_invs' simp: sc_at_kh_simps)
+  apply (wpsimp wp: gts_wp assert_inv)
   apply (subgoal_tac "cur_sc_chargeable s", simp)
    apply (intro conjI)
-      apply (erule (1) active_sc_valid_refillsE)
-     apply (erule (1) invs_cur_sc_tcb_symref)
-    apply (erule (1) ex_nonz_cap_to_not_idle_sc_ptr)
-   apply (fastforce simp: vs_all_heap_simps obj_at_def)
+       apply (erule (1) active_sc_valid_refillsE)
+      apply (erule (1) invs_cur_sc_tcb_symref)
+     apply (erule (1) ex_nonz_cap_to_not_idle_sc_ptr)
+    apply (fastforce simp: vs_all_heap_simps obj_at_def)+
   apply (erule (1) invs_cur_sc_chargeableE)
   done
 

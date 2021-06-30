@@ -279,9 +279,9 @@ crunch domain_list_inv[wp]: invoke_untyped "\<lambda>s::det_state. P (domain_lis
 crunch domain_list_inv[wp]: invoke_tcb "\<lambda>s::det_state. P (domain_list s)"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
-lemma invoke_sched_control_configure_domain_list[wp]:
- "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace> invoke_sched_control_configure iv \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  by (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_def)
+lemma invoke_sched_control_configure_flags_domain_list[wp]:
+ "\<lbrace>(\<lambda>s :: det_state. P (domain_list s))\<rbrace> invoke_sched_control_configure_flags iv \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
+  by (wpsimp wp: hoare_drop_imps simp: invoke_sched_control_configure_flags_def)
 
 lemma invoke_sched_context_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> invoke_sched_context i \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
@@ -590,11 +590,11 @@ lemma commit_time_domain_time_left[wp]:
   by (wpsimp simp: commit_time_def num_domains_def
                wp: commit_domain_time_domain_time_left hoare_drop_imp)
 
-lemma invoke_sched_control_configure_domain_time_inv[wp]:
+lemma invoke_sched_control_configure_flags_domain_time_inv[wp]:
   "\<lbrace>valid_domain_list and (\<lambda>s. consumed_time s < domain_time s)\<rbrace>
-      invoke_sched_control_configure i \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
+      invoke_sched_control_configure_flags i \<lbrace>\<lambda>_ s::det_state. 0 < domain_time s \<rbrace>"
   by (cases i)
-     (wpsimp simp: invoke_sched_control_configure_def split_def word_gt_0 tcb_release_remove_def
+     (wpsimp simp: invoke_sched_control_configure_flags_def split_def word_gt_0 tcb_release_remove_def
        split_del: if_split
        wp: hoare_vcg_if_lift2 hoare_drop_imp hoare_vcg_conj_lift
            commit_time_domain_time_left[simplified word_neq_0_conv[symmetric]]

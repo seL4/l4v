@@ -4192,7 +4192,7 @@ end
 
 context Deterministic_AI_1 begin
 
-crunch valid_list[wp]: invoke_tcb, invoke_sched_control_configure "valid_list"
+crunch valid_list[wp]: invoke_tcb, invoke_sched_control_configure_flags "valid_list"
  (wp: hoare_drop_imp check_cap_inv mapM_x_wp')
 
 end
