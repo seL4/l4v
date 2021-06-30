@@ -59,7 +59,7 @@ The following type enumerates all the kinds of invocations that clients can requ
 >          | IRQSetIRQHandler
 >          | IRQClearIRQHandler
 >          | DomainSetSet
->          | SchedControlConfigure
+>          | SchedControlConfigureFlags
 >          | SchedContextConsumed
 >          | SchedContextBind
 >          | SchedContextUnbind
