@@ -13,14 +13,6 @@ begin
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
 definition
-  is_round_robin :: "obj_ref \<Rightarrow> (bool,'z::state_ext) s_monad"
-where
-  "is_round_robin sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return (sc_period sc = 0)
-  od"
-
-definition
   get_tcb_sc :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
 where
   "get_tcb_sc tcb_ptr = do
@@ -102,11 +94,6 @@ where
   "set_refills sc_ptr refills = set_sc_obj_ref sc_refills_update sc_ptr refills"
 
 definition
-  update_refill_hd :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "update_refill_hd sc_ptr f = update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. f (hd refills) # (tl refills)))"
-
-definition
   set_refill_hd :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_refill_hd sc_ptr new = update_refill_hd sc_ptr (\<lambda>_. new)"
@@ -153,14 +140,6 @@ where
    od"
 
 definition
-  "can_merge_refill r1 r2 \<equiv> r_time r2 \<le> r_time r1 + r_amount r1"
-
-definition
-  merge_refill :: "refill \<Rightarrow> refill \<Rightarrow> refill"
-where
-  "merge_refill r1 r2 = \<lparr> r_time = r_time r1, r_amount = r_amount r2 + r_amount r1 \<rparr>"
-
-definition
   schedule_used :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "schedule_used sc_ptr new \<equiv> do
@@ -179,52 +158,6 @@ where
                        od
                od
    od"
-
-definition
-  refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
-where
-  "refill_pop_head sc_ptr \<equiv> do
-     refills \<leftarrow> get_refills sc_ptr;
-     update_sched_context sc_ptr (sc_refills_update tl);
-     return (hd refills)
-   od"
-
-definition
-  refill_head_overlapping :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
-where
-  "refill_head_overlapping sc_ptr \<equiv> do {
-    sc \<leftarrow> read_sched_context sc_ptr;
-    oreturn (length (sc_refills sc) > 1
-             \<and> r_time (hd (tl (sc_refills sc))) \<le> r_time (refill_hd sc) + r_amount (refill_hd sc))
-  }"
-
-definition
-  merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "merge_refills sc_ptr \<equiv> do
-     head \<leftarrow> refill_pop_head sc_ptr;
-     update_refill_hd sc_ptr (merge_refill head)
-   od"
-
-definition
-  refill_head_overlapping_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "refill_head_overlapping_loop sc_ptr
-     \<equiv> whileLoop (\<lambda>_ s. the ((refill_head_overlapping sc_ptr) s)) (\<lambda>_. merge_refills sc_ptr) ()"
-
-definition
-  refill_unblock_check :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "refill_unblock_check sc_ptr \<equiv> do
-    robin \<leftarrow> is_round_robin sc_ptr;
-    ready \<leftarrow> get_sc_refill_ready sc_ptr;
-    when (ready \<and> \<not>robin) $ do
-      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-      ct \<leftarrow> gets cur_time;
-      update_refill_hd sc_ptr (r_time_update (\<lambda>_. ct + kernelWCET_ticks));
-      refill_head_overlapping_loop sc_ptr
-    od
-  od"
 
 definition
   refill_budget_check_round_robin :: "ticks \<Rightarrow> (unit, 'z::state_ext) s_monad"

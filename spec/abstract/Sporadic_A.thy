@@ -1,0 +1,82 @@
+(*
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *)
+
+chapter "Scheduling Contexts and Control"
+
+theory Sporadic_A
+imports CSpaceAcc_A
+begin
+
+text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
+
+definition
+  is_round_robin :: "obj_ref \<Rightarrow> (bool,'z::state_ext) s_monad"
+where
+  "is_round_robin sc_ptr = do
+    sc \<leftarrow> get_sched_context sc_ptr;
+    return (sc_period sc = 0)
+  od"
+
+definition
+  refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
+where
+  "refill_pop_head sc_ptr \<equiv> do
+     refills \<leftarrow> get_refills sc_ptr;
+     update_sched_context sc_ptr (sc_refills_update tl);
+     return (hd refills)
+   od"
+
+definition
+  refill_head_overlapping :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
+where
+  "refill_head_overlapping sc_ptr \<equiv> do {
+    sc \<leftarrow> read_sched_context sc_ptr;
+    oreturn (length (sc_refills sc) > 1
+             \<and> r_time (hd (tl (sc_refills sc))) \<le> r_time (refill_hd sc) + r_amount (refill_hd sc))
+  }"
+
+definition
+  update_refill_hd :: "obj_ref \<Rightarrow> (refill \<Rightarrow> refill) \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "update_refill_hd sc_ptr f = update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. f (hd refills) # (tl refills)))"
+
+definition
+  "can_merge_refill r1 r2 \<equiv> r_time r2 \<le> r_time r1 + r_amount r1"
+
+definition
+  merge_refill :: "refill \<Rightarrow> refill \<Rightarrow> refill"
+where
+  "merge_refill r1 r2 = \<lparr> r_time = r_time r1, r_amount = r_amount r2 + r_amount r1 \<rparr>"
+
+definition
+  merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "merge_refills sc_ptr \<equiv> do
+     head \<leftarrow> refill_pop_head sc_ptr;
+     update_refill_hd sc_ptr (merge_refill head)
+   od"
+
+definition
+  refill_head_overlapping_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "refill_head_overlapping_loop sc_ptr
+     \<equiv> whileLoop (\<lambda>_ s. the ((refill_head_overlapping sc_ptr) s)) (\<lambda>_. merge_refills sc_ptr) ()"
+
+definition
+  refill_unblock_check :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "refill_unblock_check sc_ptr \<equiv> do
+    robin \<leftarrow> is_round_robin sc_ptr;
+    ready \<leftarrow> get_sc_refill_ready sc_ptr;
+    when (ready \<and> \<not>robin) $ do
+      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
+      ct \<leftarrow> gets cur_time;
+      update_refill_hd sc_ptr (r_time_update (\<lambda>_. ct + kernelWCET_ticks));
+      refill_head_overlapping_loop sc_ptr
+    od
+  od"
+
+end
