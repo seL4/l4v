@@ -593,7 +593,7 @@ where
 primrec
   valid_sched_control_inv :: "sched_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-    "valid_sched_control_inv (InvokeSchedControlConfigure scptr budget period mrefills badge)
+    "valid_sched_control_inv (InvokeSchedControlConfigureFlags scptr budget period mrefills badge flags)
      = (obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> valid_refills_number mrefills n) scptr
         and ex_nonz_cap_to scptr and K (MIN_REFILLS \<le> mrefills) \<comment> \<open>mrefills = MIN_REFILLS + extra_refills\<close>
         and K (budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET)
@@ -1421,9 +1421,9 @@ end
 
 lemma invoke_sched_control_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-     invoke_sched_control_configure i
+     invoke_sched_control_configure_flags i
    \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (cases i; wpsimp simp: invoke_sched_control_configure_def
+  by (cases i; wpsimp simp: invoke_sched_control_configure_flags_def
                   split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
 lemma invoke_sched_context_tcb[wp]:
@@ -1431,7 +1431,7 @@ lemma invoke_sched_context_tcb[wp]:
   by (simp add: tcb_at_typ invoke_sched_context_typ_at [where P=id, simplified])
 
 lemma invoke_sched_control_tcb[wp]:
-  "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_control_configure i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
+  "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_control_configure_flags i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
   by (simp add: tcb_at_typ invoke_sched_control_typ_at [where P=id, simplified])
 
 lemma invoke_sched_context_invs[wp]:
@@ -1449,12 +1449,17 @@ lemma invoke_sched_context_invs[wp]:
                    dest: if_live_then_nonz_capD2)
   done
 
-lemma update_sc_badge_valid_replies:
+lemma shows
+  update_sc_badge_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
    update_sched_context p (\<lambda>_. sc\<lparr>sc_badge := i \<rparr>)
+   \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>" and
+  update_sc_sporadic_valid_replies:
+  "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_sporadic := f \<rparr>)
    \<lbrace>\<lambda>rv. valid_replies_pred P\<rbrace>"
   by (wpsimp wp: update_sched_context_wp,
-      fastforce dest: ko_at_obj_congD)
+      fastforce dest: ko_at_obj_congD)+
 
 lemma update_sc_refills_period_refill_max_valid_replies:
   "\<lbrace>valid_replies_pred P and (\<lambda>s. (\<exists>n. ko_at (SchedContext sc n) p s))\<rbrace>
@@ -1470,12 +1475,17 @@ lemma update_sc_refills_valid_replies[wp]:
   by (wpsimp wp: update_sched_context_wp,
       fastforce dest: ko_at_obj_congD)
 
-lemma update_sc_badge_cur_sc_tcb:
+lemma shows
+  update_sc_badge_cur_sc_tcb:
   "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
    update_sched_context p (\<lambda>_. sc\<lparr>sc_badge := i\<rparr>)
+   \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>" and
+  update_sc_sporadic_cur_sc_tcb:
+  "\<lbrace>\<lambda>s. cur_sc_tcb s \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_sporadic := f\<rparr>)
    \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def cur_sc_tcb_def
-                   sc_tcb_sc_at_def obj_at_def)
+                   sc_tcb_sc_at_def obj_at_def)+
 
 lemma update_sc_badge_invs:
   "\<lbrace>\<lambda>s. invs s \<and> p \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
@@ -1484,6 +1494,18 @@ lemma update_sc_badge_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                   wp: update_sched_context_valid_idle update_sc_badge_cur_sc_tcb
                       update_sc_badge_valid_replies)
+  apply (auto simp: state_refs_of_def obj_at_def valid_obj_def live_def
+             elim!: delta_sym_refs if_live_then_nonz_capD
+             split: if_splits)
+  done
+
+lemma update_sc_sporadic_invs:
+  "\<lbrace>\<lambda>s. invs s \<and> p \<noteq> idle_sc_ptr \<and> (\<exists>n. ko_at (SchedContext sc n) p s)\<rbrace>
+   update_sched_context p (\<lambda>_. sc\<lparr>sc_sporadic := i\<rparr>)
+   \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                  wp: update_sched_context_valid_idle update_sc_sporadic_cur_sc_tcb
+                      update_sc_sporadic_valid_replies)
   apply (auto simp: state_refs_of_def obj_at_def valid_obj_def live_def
              elim!: delta_sym_refs if_live_then_nonz_capD
              split: if_splits)
@@ -1708,23 +1730,30 @@ lemma tcb_release_remove_bound_sc:
    \<lbrace>\<lambda>rv s. bound_sc_tcb_at bound (cur_thread s) s\<rbrace>"
   by (wpsimp simp: tcb_release_remove_def)
 
-lemma update_sc_badge_cur_sc_tcb':
+lemma
+  shows update_sc_badge_cur_sc_tcb':
   "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p (sc_badge_update (\<lambda>_. badge)) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  and update_sc_sporadic_cur_sc_tcb':
+  "\<lbrace>cur_sc_tcb\<rbrace> update_sched_context p (sc_sporadic_update (\<lambda>_. flag)) \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def
-                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)+
 
-lemma update_sc_badge_invs':
+lemma
+  shows update_sc_badge_invs':
   "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
       update_sched_context p (sc_badge_update (\<lambda>_. badge)) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
+  and update_sc_sporadic_invs':
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace>
+      update_sched_context p (sc_sporadic_update (\<lambda>_. flag)) \<lbrace>\<lambda>rv. invs\<rbrace>"
+  by (wpsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def
                   wp: update_sched_context_valid_objs_same valid_irq_node_typ
                       update_sched_context_iflive_implies
                       update_sched_context_refs_of_same
                       update_sc_but_not_sc_replies_valid_replies_2
                       update_sched_context_valid_idle
                       update_sc_badge_cur_sc_tcb'
-            simp_del: fun_upd_apply)
-  done
+                      update_sc_sporadic_cur_sc_tcb'
+            simp_del: fun_upd_apply)+
 
 lemma set_sc_obj_ref_active:
   "(\<And>sc. \<lbrakk> p=p'; sc_active sc \<rbrakk> \<Longrightarrow> sc_active (f (\<lambda>_. x) sc)) \<Longrightarrow>
@@ -1740,18 +1769,22 @@ lemma sc_badge_update_active[wp]:
   "set_sc_obj_ref sc_badge_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
   by (rule set_sc_obj_ref_active) simp
 
-lemma invoke_sched_control_configure_invs[wp]:
+lemma sc_sporadic_update_active[wp]:
+  "set_sc_obj_ref sc_sporadic_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
+  by (rule set_sc_obj_ref_active) simp
+
+lemma invoke_sched_control_configure_flags_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
-   invoke_sched_control_configure i
+   invoke_sched_control_configure_flags i
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   supply if_split[split del]
   apply (cases i)
-  apply (rename_tac sc_ptr budget period mrefills badge)
-  apply (clarsimp simp: invoke_sched_control_configure_def split_def)
+  apply (rename_tac sc_ptr budget period mrefills badge flag)
+  apply (clarsimp simp: invoke_sched_control_configure_flags_def split_def)
   apply (wpsimp simp: get_sched_context_def
                   wp: refill_update_invs commit_time_invs check_budget_invs
                       hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
-                      update_sc_badge_invs' get_object_wp commit_time_sc_active
+                      update_sc_badge_invs' update_sc_sporadic_invs' get_object_wp commit_time_sc_active
                       tcb_sched_action_obj_at tcb_release_remove_obj_at
                       gts_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift |
          wp (once) hoare_drop_imp)+
@@ -1783,9 +1816,9 @@ lemma decode_sched_context_inv_inv:
   done
 
 lemma decode_sched_control_inv_inv:
-  "\<lbrace>P\<rbrace> decode_sched_control_invocation label args excaps \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>P\<rbrace> decode_sched_control_invocation_flags label args excaps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: decode_sched_control_invocation_def whenE_def unlessE_def split del: if_split
+   apply (simp add: decode_sched_control_invocation_flags_def whenE_def unlessE_def split del: if_split
           | wp (once) hoare_drop_imp get_sk_obj_ref_inv assertE_wp | wpcw)+
   done
 
@@ -1849,9 +1882,9 @@ lemma decode_sched_control_inv_wf:
   "\<lbrace>invs and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
-   decode_sched_control_invocation label args excaps
+   decode_sched_control_invocation_flags label args excaps
    \<lbrace>valid_sched_control_inv\<rbrace>, -"
-  apply (wpsimp simp: decode_sched_control_invocation_def whenE_def unlessE_def assertE_def
+  apply (wpsimp simp: decode_sched_control_invocation_flags_def whenE_def unlessE_def assertE_def
            split_del: if_split)
   apply (erule ballE[where x="hd excaps"])
    prefer 2

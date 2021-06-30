@@ -2182,17 +2182,16 @@ lemma update_sched_context_valid_ioc [wp]:
   by (wpsimp simp: update_sched_context_def obj_at_def a_type_def is_tcb is_cap_table
                wp: set_object_valid_ioc_no_caps get_object_wp)
 
-lemma sc_consumed_update_iflive [wp]:
-  "update_sched_context ptr (sc_consumed_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
-
-lemma sc_refills_update_iflive [wp]:
-  "update_sched_context ptr (sc_refills_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
-
-lemma sc_badge_update_iflive [wp]:
-  "update_sched_context ptr (sc_badge_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)
+lemma shows
+  sc_consumed_update_iflive [wp]:
+    "update_sched_context ptr (sc_consumed_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>" and
+  sc_refills_update_iflive [wp]:
+    "update_sched_context ptr (sc_refills_update g) \<lbrace>if_live_then_nonz_cap\<rbrace>"and
+  sc_badge_update_iflive [wp]:
+    "update_sched_context ptr (sc_badge_update h) \<lbrace>if_live_then_nonz_cap\<rbrace>" and
+  sc_sporadic_update_iflive [wp]:
+    "update_sched_context ptr (sc_sporadic_update k) \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: live_sc_def wp: update_sched_context_iflive_implies)+
 
 lemma sc_replies_update_iflive [wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> ((\<forall>x. ((f x)\<noteq>[]) \<longrightarrow> (x\<noteq>[])) \<or> ex_nonz_cap_to ptr s)\<rbrace>

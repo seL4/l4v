@@ -293,7 +293,7 @@ context
 notes if_cong[cong]
 begin
 
-crunches invoke_sched_context, invoke_sched_control_configure
+crunches invoke_sched_context, invoke_sched_control_configure_flags
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
   (ignore: update_sk_obj_ref wp: crunch_wps)
 
