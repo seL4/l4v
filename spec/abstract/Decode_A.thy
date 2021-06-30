@@ -573,17 +573,18 @@ where
   "TIME_ARG_SIZE \<equiv> 2" (* sizeof(ticks_t) / sizeof(word_t) *)
 
 definition
-  decode_sched_control_invocation ::
+  decode_sched_control_invocation_flags ::
   "data \<Rightarrow> data list \<Rightarrow> cap list \<Rightarrow> (sched_control_invocation,'z::state_ext) se_monad"
 where
-  "decode_sched_control_invocation label args excaps \<equiv> doE
-    unlessE (gen_invocation_type label = SchedControlConfigure) $ throwError IllegalOperation;
+  "decode_sched_control_invocation_flags label args excaps \<equiv> doE
+    unlessE (gen_invocation_type label = SchedControlConfigureFlags) $ throwError IllegalOperation;
     whenE (length excaps = 0) $ throwError TruncatedMessage;
-    whenE (length args < TIME_ARG_SIZE*2 + 2) $ throwError TruncatedMessage;
+    whenE (length args < TIME_ARG_SIZE*2 + 3) $ throwError TruncatedMessage;
     budget_\<mu>s \<leftarrow> returnOk $ parse_time_arg 0 args;
     period_\<mu>s \<leftarrow> returnOk $ parse_time_arg TIME_ARG_SIZE args;
     extra_refills \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE);
     badge \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 1);
+    flags \<leftarrow> returnOk $ args ! (2 * TIME_ARG_SIZE + 2);
     target_cap \<leftarrow> returnOk $ hd excaps;
     whenE (\<not>is_sched_context_cap target_cap) $ throwError (InvalidCapability 1);
     sc_ptr \<leftarrow> returnOk $ obj_ref_of target_cap;
@@ -596,8 +597,9 @@ where
     whenE (unat extra_refills + MIN_REFILLS > max_refills_cap target_cap) $
       throwError (RangeError 0 (of_nat (max_refills_cap target_cap - MIN_REFILLS)));
     assertE (MIN_REFILLS \<le> unat extra_refills + MIN_REFILLS);
-    returnOk $ InvokeSchedControlConfigure sc_ptr
-       (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS) badge
+    returnOk $ InvokeSchedControlConfigureFlags sc_ptr
+       (us_to_ticks budget_\<mu>s) (us_to_ticks period_\<mu>s) (unat extra_refills + MIN_REFILLS)
+        badge flags
   odE"
 
 
@@ -801,7 +803,7 @@ where
   | SchedControlCap \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0
-      else liftME InvokeSchedControl $ decode_sched_control_invocation label args (map fst excaps)
+      else liftME InvokeSchedControl $ decode_sched_control_invocation_flags label args (map fst excaps)
   | CNodeCap ptr bits _ \<Rightarrow>
       if first_phase
       then throwError $ InvalidCapability 0

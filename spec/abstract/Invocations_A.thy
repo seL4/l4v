@@ -64,7 +64,7 @@ datatype sched_context_invocation =
   | InvokeSchedContextYieldTo obj_ref "obj_ref option"
 
 datatype sched_control_invocation =
-    InvokeSchedControlConfigure obj_ref ticks ticks nat badge
+    InvokeSchedControlConfigureFlags obj_ref ticks ticks nat badge data
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
