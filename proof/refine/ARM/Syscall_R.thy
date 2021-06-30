@@ -466,7 +466,7 @@ lemma pinv_corres:
         apply (rule corres_splitEE)
            prefer 2
            apply (simp)
-           apply (erule invoke_sched_control_configure_corres)
+           apply (erule invokeSchedControlConfigureFlags_corres)
           apply (rule corres_trivial, simp add: returnOk_def)
          apply (wpsimp+)[4]
      \<comment> \<open>CNodes\<close>
@@ -496,7 +496,7 @@ crunches sendSignal, setDomain
 
 crunches restart, bindNotification, performTransfer, invokeTCB, doReplyTransfer,
          performIRQControl, InterruptDecls_H.invokeIRQHandler, sendIPC,
-         invokeSchedContext, invokeSchedControlConfigure, handleFault
+         invokeSchedContext, invokeSchedControlConfigureFlags, handleFault
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   (simp: crunch_simps
@@ -519,7 +519,7 @@ global_interpretation sendIPC: typ_at_all_props' "sendIPC bl call bdg cg cgr cd 
   by typ_at_props'
 global_interpretation invokeSchedContext: typ_at_all_props' "invokeSchedContext i"
   by typ_at_props'
-global_interpretation invokeSchedControlConfigure: typ_at_all_props' "invokeSchedControlConfigure i"
+global_interpretation invokeSchedControlConfigureFlags: typ_at_all_props' "invokeSchedControlConfigureFlags i"
   by typ_at_props'
 global_interpretation handleFault: typ_at_all_props' "handleFault t ex"
   by typ_at_props'

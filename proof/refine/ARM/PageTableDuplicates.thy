@@ -2119,7 +2119,7 @@ lemma invokeTCB_valid_duplicates'[wp]:
       apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
-crunches invokeSchedContext, invokeSchedControlConfigure
+crunches invokeSchedContext, invokeSchedControlConfigureFlags
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift)
 
