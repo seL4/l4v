@@ -209,6 +209,7 @@ list of pointers to waiting threads;
 >     scReply :: Maybe (PPtr Reply),
 >     scNtfn :: Maybe (PPtr Notification),
 >     scBadge :: Word,
+>     scSporadic :: Bool,
 >     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,

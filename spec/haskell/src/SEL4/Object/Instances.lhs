@@ -53,7 +53,7 @@ The following are the instances of "Storable" for the four main types of kernel 
 \subsubsection{SchedContext objects}
 
 > instance PSpaceStorable SchedContext where
->     makeObject = SchedContext 0 0 0 Nothing Nothing Nothing 0 Nothing 0 0 0 []
+>     makeObject = SchedContext 0 0 0 Nothing Nothing Nothing 0 False Nothing 0 0 0 []
 >     injectKO   = KOSchedContext
 >     projectKO o = case o of
 >         KOSchedContext e -> return e
