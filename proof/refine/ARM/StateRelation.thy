@@ -250,6 +250,7 @@ definition sc_relation ::
      length (scRefills sc') = max_num_refills (min_sched_context_bits + n) \<and>
      sc_refill_max sc = scRefillMax sc' \<and>
      sc_badge sc = scBadge sc' \<and>
+     sc_sporadic sc = scSporadic sc' \<and>
      sc_yield_from sc = scYieldFrom sc'"
 
 (* projection rewrite *)

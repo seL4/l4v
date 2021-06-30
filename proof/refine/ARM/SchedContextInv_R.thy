@@ -49,7 +49,7 @@ where
   "valid_refills_number' max_refills n \<equiv> max_refills \<le> refillAbsoluteMax' n"
 
 primrec valid_sc_ctrl_inv' :: "sched_control_invocation \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_sc_ctrl_inv' (InvokeSchedControlConfigure scptr budget period mrefills badge) =
+  "valid_sc_ctrl_inv' (InvokeSchedControlConfigureFlags scptr budget period mrefills badge flags) =
      ((\<lambda>s. \<exists>n. sc_at'_n n scptr s \<and> valid_refills_number' mrefills n) and
       ex_nonz_cap_to' scptr and K (MIN_REFILLS \<le> mrefills) and
       K (budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET \<and>
@@ -71,8 +71,8 @@ primrec sc_inv_rel :: "Invocations_A.sched_context_invocation \<Rightarrow> sche
 
 primrec sc_ctrl_inv_rel ::
   "Invocations_A.sched_control_invocation \<Rightarrow> sched_control_invocation \<Rightarrow> bool" where
-  "sc_ctrl_inv_rel (Invocations_A.InvokeSchedControlConfigure sc_ptr budget period refills badge) sci' =
-    (sci' = InvokeSchedControlConfigure sc_ptr budget period refills badge)"
+  "sc_ctrl_inv_rel (Invocations_A.InvokeSchedControlConfigureFlags sc_ptr budget period refills badge flags) sci' =
+    (sci' = InvokeSchedControlConfigureFlags sc_ptr budget period refills badge flags)"
 
 lemma decodeSchedContext_Bind_wf:
   "\<lbrace>\<lambda>s. \<exists>n. valid_cap' (SchedContextCap sc_ptr n) s
@@ -136,7 +136,7 @@ lemma decodeSchedControlInvocation_wf:
    \<lbrace>valid_sc_ctrl_inv'\<rbrace>, -"
   apply (clarsimp simp: decodeSchedControlInvocation_def)
   apply (case_tac "genInvocationType label"; simp; (solves wpsimp)?)
-  apply (wpsimp simp: decodeSchedControl_Configure_def)
+  apply (wpsimp simp: decodeSchedControl_ConfigureFlags_def)
   apply (cases excaps; simp)
   apply (rename_tac a list, case_tac a; simp add: isSchedContextCap_def)
   apply (clarsimp simp: valid_cap'_def  ko_wp_at'_def scBits_simps valid_refills_number'_def
@@ -334,11 +334,11 @@ lemma decode_sc_inv_corres:
 lemma decode_sc_ctrl_inv_corres:
   "list_all2 cap_relation excaps excaps' \<Longrightarrow>
    corres (ser \<oplus> sc_ctrl_inv_rel) \<top> \<top>
-          (decode_sched_control_invocation (mi_label mi) args' excaps)
+          (decode_sched_control_invocation_flags (mi_label mi) args' excaps)
           (decodeSchedControlInvocation (mi_label mi) args' excaps')"
-  apply (clarsimp simp: decode_sched_control_invocation_def decodeSchedControlInvocation_def)
+  apply (clarsimp simp: decode_sched_control_invocation_flags_def decodeSchedControlInvocation_def)
   apply (cases "gen_invocation_type (mi_label mi)"
-         ; clarsimp simp: decodeSchedControl_Configure_def TIME_ARG_SIZE_def timeArgSize_def)
+         ; clarsimp simp: decodeSchedControl_ConfigureFlags_def TIME_ARG_SIZE_def timeArgSize_def)
   apply (cases excaps; clarsimp)
   apply (rename_tac cap list)
   apply (cases excaps'; clarsimp)
@@ -1013,15 +1013,15 @@ lemma refillUpdate_corres:
   done
 
 (* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
-lemma invoke_sched_control_configure_corres:
+lemma invokeSchedControlConfigureFlags_corres:
   "sc_ctrl_inv_rel sc_inv sc_inv' \<Longrightarrow>
    corres (=)
           (einvs and valid_sched_control_inv sc_inv and simple_sched_action and ct_active)
           (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
-          (invoke_sched_control_configure sc_inv)
-          (invokeSchedControlConfigure sc_inv')"
+          (invoke_sched_control_configure_flags sc_inv)
+          (invokeSchedControlConfigureFlags sc_inv')"
   apply (cases sc_inv)
-  apply (simp add: invoke_sched_control_configure_def invokeSchedControlConfigure_def)
+  apply (simp add: invoke_sched_control_configure_flags_def invokeSchedControlConfigureFlags_def)
   sorry
 
 end
