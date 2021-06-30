@@ -734,15 +734,16 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         SchedContextYieldTo -> decodeSchedContext_YieldTo scPtr buffer
 >         _ -> throw IllegalOperation
 
-> decodeSchedControl_Configure :: [Capability] -> [Word] ->
+> decodeSchedControl_ConfigureFlags :: [Capability] -> [Word] ->
 >     KernelF SyscallError SchedControlInvocation
-> decodeSchedControl_Configure excaps args = do
+> decodeSchedControl_ConfigureFlags excaps args = do
 >     when (length excaps == 0) $ throw TruncatedMessage
->     when (length args < timeArgSize * 2 + 2) $ throw TruncatedMessage
+>     when (length args < timeArgSize * 2 + 3) $ throw TruncatedMessage
 >     budgetUs <- return $ parseTimeArg 0 args
 >     periodUs <- return $ parseTimeArg timeArgSize args
 >     extraRefills <- return $ args !! (2 * timeArgSize)
 >     badge <- return $ args !! (2 * timeArgSize + 1)
+>     flags <- return $ args !! (2 * timeArgSize + 2)
 >     targetCap <- return $ head excaps
 >     when (not (isSchedContextCap targetCap)) $ throw (InvalidCapability 1)
 >     scPtr <- return $ capSchedContextPtr targetCap
@@ -754,14 +755,14 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >         throw (RangeError (fromIntegral minBudgetUs) (fromIntegral periodUs))
 >     when (fromIntegral extraRefills + minRefills > refillAbsoluteMax(targetCap)) $
 >         throw (RangeError 0 (fromIntegral (refillAbsoluteMax(targetCap) - minRefills)))
->     return $ InvokeSchedControlConfigure scPtr
->         (usToTicks budgetUs) (usToTicks periodUs) (fromIntegral extraRefills + minRefills) badge
+>     return $ InvokeSchedControlConfigureFlags scPtr
+>         (usToTicks budgetUs) (usToTicks periodUs) (fromIntegral extraRefills + minRefills) badge flags
 
 > decodeSchedControlInvocation :: Word -> [Word] -> [Capability] ->
 >         KernelF SyscallError SchedControlInvocation
 > decodeSchedControlInvocation label args excaps = do
 >     case genInvocationType label of
->         SchedControlConfigure -> decodeSchedControl_Configure excaps args
+>         SchedControlConfigureFlags -> decodeSchedControl_ConfigureFlags excaps args
 >         _ -> throw IllegalOperation
 
 > parseTimeArg :: Int -> [Word] -> Time
