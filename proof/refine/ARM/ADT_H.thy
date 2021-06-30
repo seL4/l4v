@@ -468,7 +468,8 @@ definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_con
      sc_refill_max = scRefillMax sc,
      sc_badge      = scBadge sc,
      sc_yield_from = scYieldFrom sc,
-     sc_replies    = heap_walk replyPrevs (scReply sc) []
+     sc_replies    = heap_walk replyPrevs (scReply sc) [],
+     sc_sporadic   = scSporadic sc
    \<rparr>"
 
 definition
