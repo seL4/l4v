@@ -383,6 +383,7 @@ where
   "sched_context_bind_tcb sc_ptr tcb_ptr = do
     set_tcb_obj_ref tcb_sched_context_update tcb_ptr (Some sc_ptr);
     set_sc_obj_ref sc_tcb_update sc_ptr (Some tcb_ptr);
+    if_sporadic_and_active_refill_unblock_check (Some sc_ptr);
     sched_context_resume sc_ptr;
     sched <- is_schedulable tcb_ptr;
     when sched $ do
@@ -429,8 +430,6 @@ where
          sc_tcb \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
          when (sc_tcb = None) $ do
            sched_context_donate sc_ptr tcb_ptr;
-           csc \<leftarrow> gets cur_sc;
-           when (sc_ptr \<noteq> csc) $ refill_unblock_check (sc_ptr);
            sched_context_resume sc_ptr
          od
        od)

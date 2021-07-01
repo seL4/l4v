@@ -108,7 +108,7 @@ where
 
     when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-      refill_unblock_check scp
+      if_constant_bandwidth_refill_unblock_check (Some scp)
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
@@ -279,7 +279,6 @@ where
     sched_context_resume sc_ptr;
     schedulable <- is_schedulable tcb_ptr;
     if schedulable then do
-      refill_unblock_check sc_ptr;
       sc \<leftarrow> get_sched_context sc_ptr;
       curtime \<leftarrow> gets cur_time;
       assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);

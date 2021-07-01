@@ -421,6 +421,8 @@ where
      if fault = None
      then do
        set_thread_state t Restart;
+       sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+       if_sporadic_cur_sc_assert_refill_unblock_check sc_opt;
        possible_switch_to t
      od
      else set_thread_state t Inactive
@@ -525,6 +527,8 @@ where
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
                       _ \<leftarrow> set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
+                                     sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+                                     if_sporadic_cur_sc_assert_refill_unblock_check sc_ptr;
                                      possible_switch_to t od) queue;
                       reschedule_required
                      od

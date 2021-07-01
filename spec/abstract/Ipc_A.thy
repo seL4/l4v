@@ -307,6 +307,8 @@ where
                   sched_context_donate (the thread_sc) dest
                 od;
                 set_thread_state dest Running;
+                dest_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+                if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
                 possible_switch_to dest
               od
        | (RecvEP [], _) \<Rightarrow> fail
@@ -333,8 +335,17 @@ where
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
            as_user tcb $ setRegister badge_register badge;
-           set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn
-         od
+           set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
+           maybe_donate_sc tcb ntfnptr;
+           sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb;
+           maybeM (\<lambda>scp. do
+             sc \<leftarrow> get_sched_context scp;
+             when (sc_sporadic sc \<and> sc_active sc) $ do
+               ntfn_scp \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfnptr;
+               when (sc_ptr = ntfn_scp) $ refill_unblock_check scp
+            od
+          od) sc_ptr
+        od
      | _ \<Rightarrow> fail
    od"
 
@@ -402,6 +413,8 @@ where
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
                         thread;
+              sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
+              if_sporadic_cur_sc_test_refill_unblock_check sc_ptr;
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
@@ -440,7 +453,9 @@ where
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
      schedulable <- is_schedulable dest;
-     when (schedulable) $ possible_switch_to dest
+     when (schedulable) $ possible_switch_to dest;
+     sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+     if_sporadic_active_cur_sc_assert_refill_unblock_check sc_ptr
    od"
 
 text \<open>Handle a message send operation performed on a notification object.
@@ -470,7 +485,9 @@ where
                       as_user tcb $ setRegister badge_register badge;
                       maybe_donate_sc tcb ntfnptr;
                       schedulable <- is_schedulable tcb;
-                      when (schedulable) $ possible_switch_to tcb
+                      when (schedulable) $ possible_switch_to tcb;
+                      sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb;
+                      if_sporadic_active_cur_sc_assert_refill_unblock_check sc_ptr
                     od
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
             od
@@ -514,7 +531,9 @@ where
        | ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ setRegister badge_register badge;
                      set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
-                     maybe_donate_sc thread ntfnptr
+                     maybe_donate_sc thread ntfnptr;
+                     sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+                     if_sporadic_cur_sc_test_refill_unblock_check sc_ptr
                    od
     od"
 
@@ -579,6 +598,8 @@ where
         BlockedOnReply r \<Rightarrow> do
           assert (r = reply);
           reply_remove receiver reply;
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt;
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
