@@ -37,7 +37,7 @@ crunch gt: crunch_foo2 "\<lambda>x. x > y"
 crunch_ignore (del: crunch_foo1)
 
 definition
-  "crunch_always_true (x :: nat) \<equiv> \<lambda>y :: nat. True"
+  "crunch_always_true (x :: nat) \<equiv> \<lambda>_. True"
 
 lemma crunch_foo1_at_2:
   "True \<Longrightarrow> \<lbrace>crunch_always_true 3 and crunch_always_true 2\<rbrace>
@@ -196,14 +196,91 @@ crunches crunch_foo3, crunch_foo4, crunch_foo5
 
 (* check that crunch can use wps to lift sub-predicates
    (and also that top-level constants can be ignored) *)
-consts f :: "(nat, unit) nondet_monad"
+consts crunch_foo11 :: "(nat, unit) nondet_monad"
 consts Q :: "bool \<Rightarrow> nat \<Rightarrow> bool"
 consts R :: "nat \<Rightarrow> bool"
 axiomatization
-  where test1: "\<lbrace>Q x\<rbrace> f \<lbrace>\<lambda>_. Q x\<rbrace>"
-  and test2: "\<lbrace>\<lambda>s. P (R s)\<rbrace> f \<lbrace>\<lambda>_ s. P (R s)\<rbrace>"
+  where test1: "\<lbrace>Q x\<rbrace> crunch_foo11 \<lbrace>\<lambda>_. Q x\<rbrace>"
+  and test2: "\<lbrace>\<lambda>s. P (R s)\<rbrace> crunch_foo11 \<lbrace>\<lambda>_ s. P (R s)\<rbrace>"
 
-crunch test3: f "\<lambda>s. Q (R s) s"
-  (wp: test1 wps: test2 ignore: f)
+crunch test3: crunch_foo11 "\<lambda>s. Q (R s) s"
+  (wp: test1 wps: test2 ignore: crunch_foo11)
+
+(* check that crunch can handle functions lifted between different state spaces *)
+record 'a state =
+  state' :: nat
+  ext :: 'a
+
+definition do_nat_op :: "(nat, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad" where
+  "do_nat_op f \<equiv>
+     do
+       s \<leftarrow> get;
+       (_,s') \<leftarrow> select_f (mk_ef (f (state' s)));
+       modify (\<lambda>state. state\<lparr>state' := s'\<rparr>)
+     od"
+
+lemma do_nat_op_ef:
+  "empty_fail f \<Longrightarrow> empty_fail (do_nat_op f)"
+  unfolding do_nat_op_def
+  apply (wpsimp wp: empty_fail_bind empty_fail_get empty_fail_select_f
+              simp: mk_ef_def)
+  done
+
+lemma do_nat_op_nf:
+  "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> state') (do_nat_op f)"
+  unfolding do_nat_op_def
+  apply wpsimp
+  apply (fastforce simp: mk_ef_def no_fail_def empty_fail_def)
+  done
+
+definition
+  "crunch_foo12_nat (x :: nat) = modify ((+) x)"
+
+consts wrap_ext_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad"
+consts unwrap_ext :: "'a state \<Rightarrow> nat state"
+
+definition do_extended_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a state,unit) nondet_monad" where
+  "do_extended_op eop \<equiv> do
+                         ex \<leftarrow> get;
+                         (_,es') \<leftarrow> select_f (mk_ef ((wrap_ext_op eop) ex));
+                         modify (\<lambda>state. state\<lparr>ext := (ext es')\<rparr>)
+                        od"
+
+axiomatization
+  where do_extended_op_ef[wp]: "empty_fail f \<Longrightarrow> empty_fail (do_extended_op f)"
+  and do_extended_op_nf[wp]: "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> unwrap_ext) (do_extended_op f)"
+
+definition
+  "crunch_foo12_ext (x :: nat) = modify (ext_update ((+) x))"
+
+definition
+  "crunch_foo12 x \<equiv>
+     do
+       do_extended_op (crunch_foo12_ext x);
+       do_nat_op (crunch_foo12_nat x)
+     od"
+
+crunches crunch_foo12
+  for (empty_fail) ef[wp]
+  and (no_fail) nf
+  (wp: empty_fail_bind)
+
+(* check that other side conditions can still be collected when mixed with lifted functions*)
+definition crunch_foo13_pre :: "('a state,unit) nondet_monad" where
+  "crunch_foo13_pre \<equiv> return ()"
+
+axiomatization
+  where crunch_foo13_pre_nf[wp]: "no_fail (crunch_always_true 0) crunch_foo13_pre"
+
+definition
+  "crunch_foo13 x \<equiv>
+     do
+       crunch_foo13_pre;
+       do_extended_op (crunch_foo12_ext x);
+       do_nat_op (crunch_foo12_nat x)
+     od"
+
+crunches crunch_foo13
+  for (no_fail) nf
 
 end

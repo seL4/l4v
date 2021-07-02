@@ -693,17 +693,39 @@ fun proof_failed_warnings const stack cfg wp ctxt t =
   else (warn_const_ignored const cfg ctxt; warn_helper_thms wp ctxt t;
         warn_stack const stack ctxt; all_tac t)
 
+fun collect_preconds (const, mapply, goal) current_goal pre extra ctxt =
+  let
+    val precond = get_inst_precond ctxt pre extra (mapply, goal);
+    val precond' = combine_preconds ctxt (get_precond current_goal) (the_list precond);
+  in Instance.put_precond precond' current_goal end
+  handle ERROR s =>
+    let
+      val default_precond = make_goal (read_const ctxt const) const pre extra ctxt
+        |> get_precond;
+      val goal_precond = Thm.concl_of goal |> HOLogic.dest_Trueprop |> get_precond;
+      val _ =
+        if not (Term.aconv_untyped (goal_precond, default_precond))
+        then (["Failed to collect preconditions from " ^
+               Proof_Context.markup_const ctxt const ^ "; continuing without them.",
+               "This might be due to monadic constants with different state spaces \
+                \being crunched."]
+              |> map Pretty.para |> Pretty.chunks |> Pretty.string_of |> warning;
+              debug_trace s)
+        else ()
+    in current_goal end;
+
 fun crunch cfg pre extra stack const' thms =
   let
     val ctxt = #ctxt cfg |> Context_Position.set_visible false;
     val const = real_const_from_name const' (#nmspce cfg) ctxt;
   in
     let
-      val _ = "crunching constant: " ^ const |> writeln;
+      val _ = "crunching constant: " ^ Proof_Context.markup_const ctxt const |> writeln;
       val const_term = read_const ctxt const;
       val goal = make_goal const_term const pre extra ctxt
                  handle exn => handle_int exn (raise WrongType);
-      val goal_prop = HOLogic.mk_Trueprop goal;
+      val _ = debug_trace_bl
+        [K (Pretty.str "goal: "), fn () => Syntax.pretty_term ctxt goal]
     in (* first check: has this constant already been done or supplied? *)
       case crunch_known_rule cfg const thms goal
         of SOME thm => (SOME thm, [])
@@ -725,19 +747,17 @@ fun crunch cfg pre extra stack const' thms =
           val ctxt'' = ctxt' addsimps ((#simps cfg) @ goals')
               |> Splitter.del_split split_if
 
-          fun collect_preconds pre =
-            let val preconds = map_filter (fn (x, SOME y) => SOME (x, y) | (_, NONE) => NONE) (map snd ms ~~ goals)
-                                                    |> map_filter (get_inst_precond ctxt'' pre extra);
-              val precond = combine_preconds ctxt'' (get_precond goal) preconds;
-            in Instance.put_precond precond goal |> HOLogic.mk_Trueprop end;
-          val goal_prop2 = if Instance.has_preconds then collect_preconds pre else goal_prop;
+          fun collect_preconds' pre =
+            let val preconds = map_filter (fn ((x, y), SOME z) => SOME (x, y, z) | (_, NONE) => NONE)
+                                          (ms ~~ goals);
+            in fold (fn pre' => fn goal => collect_preconds pre' goal pre extra ctxt'') preconds goal end;
+          val goal' = if Instance.has_preconds then collect_preconds' pre else goal;
+          val goal_prop = HOLogic.mk_Trueprop goal';
 
-          val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
-          val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
-
+          val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop
+          val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop);
           fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)
-
-          val thm = Goal.prove_future ctxt''' [] [] goal_prop2
+          val thm = Goal.prove_future ctxt''' [] [] goal_prop
               ( (*DupSkip.goal_prove_wrapper *) (fn _ =>
               resolve_tac ctxt''' [rule] 1
                 THEN maybe_cheat_tac ctxt'''
