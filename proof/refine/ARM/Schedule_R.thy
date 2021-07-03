@@ -17,7 +17,7 @@ lemma state_relation_sc_relation:
   supply projection_rewrites[simp]
   apply (clarsimp simp: obj_at_simps is_sc_obj)
   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
-  by (clarsimp simp: sc_relation_def scBits_simps opt_map_left_Some)
+  by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
 
 (* using the concrete side size *)
 lemma state_relation_sc_relation':
@@ -26,12 +26,12 @@ lemma state_relation_sc_relation':
   supply projection_rewrites[simp]
   apply (clarsimp simp: obj_at_simps is_sc_obj)
   apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
-  by (clarsimp simp: sc_relation_def scBits_simps opt_map_left_Some)
+  by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
 
 lemma state_relation_sc_replies_relation_sc:
   "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk>
    \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' ptr) (sc_replies (the ((scs_of2 s) ptr)))"
-  supply projection_rewrites[simp] opt_map_left_Some[simp]
+  supply projection_rewrites[simp] opt_map_red[simp]
   apply (clarsimp simp: obj_at_simps is_sc_obj)
   by (fastforce dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
 
@@ -2167,7 +2167,7 @@ lemma refillAddTail_valid_objs'[wp]:
   apply (wpsimp wp: set_sc_valid_objs' getRefillNext_wp getRefillSize_wp
               simp: updateSchedContext_def)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
-  apply (clarsimp simp: valid_obj'_def obj_at'_def projectKOs opt_map_left_Some)
+  apply (clarsimp simp: valid_obj'_def obj_at'_def projectKOs opt_map_red)
   apply (intro conjI)
    apply (frule refillTailIndex_bounded)
    apply (clarsimp simp: valid_sched_context'_def)
@@ -2387,7 +2387,7 @@ lemma mergeRefills_valid_objs':
    apply wpsimp
   apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
   apply (clarsimp simp: is_active_sc'_def valid_sched_context'_def obj_at_simps valid_obj'_def
-                        valid_sched_context_size'_def opt_map_left_Some active_sc_at'_rewrite
+                        valid_sched_context_size'_def opt_map_red active_sc_at'_rewrite
                  dest!: sc_ko_at_valid_objs_valid_sc')
   done
 
@@ -2434,7 +2434,7 @@ lemma updateRefillHd_valid_objs':
   apply (clarsimp simp: updateRefillHd_def)
   apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
   apply (clarsimp simp: is_active_sc'_def valid_sched_context'_def obj_at_simps valid_obj'_def
-                        valid_sched_context_size'_def opt_map_left_Some active_sc_at'_rewrite
+                        valid_sched_context_size'_def opt_map_red active_sc_at'_rewrite
                  dest!: sc_ko_at_valid_objs_valid_sc')
   done
 
@@ -2662,12 +2662,12 @@ lemma nonOverlappingMergeRefills_valid_objs':
   apply (wpsimp wp: set_sc_valid_objs' simp: updateSchedContext_def)
     apply (rule_tac Q="\<lambda>_. valid_objs' and active_sc_at' scPtr" in hoare_strengthen_post[rotated])
      apply (clarsimp simp: is_active_sc'_def valid_sched_context'_def obj_at_simps valid_obj'_def
-                           valid_sched_context_size'_def opt_map_left_Some active_sc_at'_rewrite
+                           valid_sched_context_size'_def opt_map_red active_sc_at'_rewrite
                     dest!: sc_ko_at_valid_objs_valid_sc')
     apply (wpsimp wp: set_sc_valid_objs' setSchedContext_active_sc_at' simp: updateSchedContext_def)+
   apply (clarsimp simp: active_sc_at'_rewrite obj_at'_def projectKOs)
   apply (fastforce simp: is_active_sc'_def valid_sched_context'_def obj_at_simps valid_obj'_def
-                         valid_sched_context_size'_def opt_map_left_Some
+                         valid_sched_context_size'_def opt_map_red
                   dest!: sc_ko_at_valid_objs_valid_sc')
   done
 
@@ -3470,7 +3470,7 @@ lemma refillReady_corres:
   apply (frule state_relation_sc_relation; (clarsimp simp: obj_at'_def obj_at_def projectKOs is_sc_obj))
      apply fastforce+
   apply (fastforce simp: kernelWCETTicks_def refill_ready_def state_relation_def refill_map_def
-                         obj_at_def opt_map_left_Some valid_refills'_def
+                         obj_at_def opt_map_red valid_refills'_def
                   dest!: refill_hd_relation)
   done
 

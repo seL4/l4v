@@ -850,7 +850,7 @@ lemma updateSchedContext_valid_objs'[wp]:
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      obj_at'_def projectKOs scBits_simps objBits_simps opt_map_left_Some)
+                      obj_at'_def projectKOs scBits_simps objBits_simps opt_map_red)
 
 lemma updateSchedContext_obj_at'[wp]:
   "\<forall>sc'. objBits sc' = objBits (f' sc'::sched_context) \<Longrightarrow>
