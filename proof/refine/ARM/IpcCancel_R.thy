@@ -561,15 +561,15 @@ lemma sr_inv_sc_with_reply_None_helper:
       apply simp
      apply simp
     apply (rule updateReply_sr_inv)
-     apply (fastforce simp: reply_relation_def opt_map_left_Some obj_at'_def projectKOs
+     apply (fastforce simp: reply_relation_def opt_map_red obj_at'_def projectKOs
                      dest!: sym_refs_replyNext_replyPrev_sym[where rp'=rp, THEN iffD2])
     apply clarsimp
     apply (frule_tac rp=prv_rp in sc_replies_relation_sc_with_reply_None)
         apply simp
-       apply (clarsimp simp: obj_at'_def projectKOs opt_map_left_Some)
+       apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
       apply (erule (7) sc_with_reply_replyPrev_None)
-       apply (clarsimp simp: obj_at'_def projectKOs opt_map_left_Some)+
-    apply (fastforce simp: projectKO_opt_sc obj_at'_def opt_map_left_Some projectKOs)
+       apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)+
+    apply (fastforce simp: projectKO_opt_sc obj_at'_def opt_map_red projectKOs)
    apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
   (* replyNext reply' = Some nxt_rp *)
   apply (rename_tac nxt_rp)
@@ -583,7 +583,7 @@ lemma sr_inv_sc_with_reply_None_helper:
      apply simp
     apply (rule updateReply_sr_inv)
      apply (clarsimp simp: reply_relation_def)
-    apply (clarsimp simp: projectKO_opt_sc obj_at'_def opt_map_left_Some projectKOs sc_replies_relation_def)
+    apply (clarsimp simp: projectKO_opt_sc obj_at'_def opt_map_red projectKOs sc_replies_relation_def)
     apply (rename_tac nreply')
     apply (rule heap_path_heap_upd_not_in, simp)
     apply (rename_tac scp replies)
@@ -594,7 +594,7 @@ lemma sr_inv_sc_with_reply_None_helper:
                            scs_of_kh_def map_project_def sc_of_def)
      apply (rename_tac ko; case_tac ko; simp)
     apply (erule (1) heap_ls_prev_not_in)
-    apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1] simp: opt_map_left_Some)
+    apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1] simp: opt_map_red)
    apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
   (* replyNext reply' = Some nxt_rp & replyPrev reply' = Some prv_rp *)
   apply (rename_tac prv_rp)
@@ -632,15 +632,15 @@ lemma sr_inv_sc_with_reply_None_helper:
     apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def)
   apply clarsimp
    apply (rule  conjI)
-    apply (fastforce simp: obj_at'_def projectKOs opt_map_left_Some
+    apply (fastforce simp: obj_at'_def projectKOs opt_map_red
                     elim!: state_relationE sc_with_reply_replyPrev_None sc_with_reply_replyNext_None)
-   apply (fastforce simp: obj_at'_def projectKOs opt_map_left_Some
+   apply (fastforce simp: obj_at'_def projectKOs opt_map_red
                    elim!: state_relationE sc_with_reply_replyNext_None)
   apply (prop_tac"sc_with_reply prv_rp s = None \<and> sc_with_reply nxt_rp s = None")
    apply (rule conjI)
-    apply (fastforce simp: obj_at'_def projectKOs opt_map_left_Some
+    apply (fastforce simp: obj_at'_def projectKOs opt_map_red
                     elim!: state_relationE sc_with_reply_replyPrev_None sc_with_reply_replyNext_None)
-   apply (fastforce simp: obj_at'_def projectKOs opt_map_left_Some
+   apply (fastforce simp: obj_at'_def projectKOs opt_map_red
                    elim!: state_relationE sc_with_reply_replyNext_None)
   apply (erule state_relationE)
   apply (clarsimp simp: sc_replies_relation_sc_with_reply_cross_eq)
@@ -648,7 +648,7 @@ lemma sr_inv_sc_with_reply_None_helper:
    apply (clarsimp simp: obj_at'_def projectKOs)
   apply (frule (1) reply_ko_at_valid_objs_valid_reply')
   apply (clarsimp simp: valid_reply'_def valid_bound_obj'_def)
-  apply (fastforce simp: obj_at'_def projectKOs opt_map_left_Some
+  apply (fastforce simp: obj_at'_def projectKOs opt_map_red
                   elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1]
                          sym_refs_replyNext_replyPrev_sym[THEN iffD2])
   done
@@ -721,7 +721,7 @@ lemma replyRemoveTCB_corres:
               (** sc_with_reply rp s = None **)
               apply (rule_tac F="replySC reply' = None" in corres_req)
                apply (fastforce dest!: sc_with_reply_None_reply_sc_reply_at dest: replySCs_of_cross
-                                 simp: obj_at'_def projectKOs opt_map_left_Some)
+                                 simp: obj_at'_def projectKOs opt_map_red)
               apply (clarsimp simp: replySC_None_not_head)
   subgoal for reply'
     apply (simp only: bind_assoc[symmetric])
@@ -795,7 +795,7 @@ lemma replyRemoveTCB_corres:
                           in corres_inst)
                    apply (rename_tac replysc)
                    apply (rule_tac F="replySC reply' = replysc" in corres_req)
-               apply (fastforce dest!: replySCs_of_cross simp: obj_at'_def projectKOs opt_map_left_Some)
+               apply (fastforce dest!: replySCs_of_cross simp: obj_at'_def projectKOs opt_map_red)
                    apply (case_tac "hd (sc_replies sc) = rp"; simp split del: if_split)
 
                    (* hd (sc_replies sc) = rp & replysc = Some scp: rp is at the head of the queue *)
@@ -848,7 +848,7 @@ lemma replyRemoveTCB_corres:
                      apply (frule (1) st_tcb_reply_state_refs)
                      apply (clarsimp dest!: valid_objs_valid_tcbs
                                       simp: obj_at_def is_reply reply_tcb_reply_at_def)
-                     apply (clarsimp simp: opt_map_left_Some opt_map_def split: option.splits)
+                     apply (clarsimp simp: opt_map_red opt_map_def split: option.splits)
                      apply (rule context_conjI; clarsimp simp: vs_heap_simps obj_at_def)
                      apply (intro conjI)
                       apply (metis list.sel(1) list.set_cases)
@@ -859,11 +859,11 @@ lemma replyRemoveTCB_corres:
                                       simp: valid_sched_context'_def valid_sched_context_size'_def
                                             objBits_simps)
                      apply (erule sym_refs_replyNext_replyPrev_sym[THEN iffD2])
-                     apply (clarsimp simp: opt_map_left_Some obj_at'_def projectKOs)
+                     apply (clarsimp simp: opt_map_red obj_at'_def projectKOs)
                     apply (frule (2) sym_refs_scReplies)
-                    apply (clarsimp simp: hd_opt_def projectKOs opt_map_left_Some sym_heap_def
+                    apply (clarsimp simp: hd_opt_def projectKOs opt_map_red sym_heap_def
                                    split: list.split_asm)
-                    apply (clarsimp simp: opt_map_left_Some obj_at'_def projectKOs split: reply_next.splits)
+                    apply (clarsimp simp: opt_map_red obj_at'_def projectKOs split: reply_next.splits)
 
                   (* rp is in the middle of the reply stack *)
                   (* hd (sc_replies sc) \<noteq> rp & rp \<in> set (sc_replies sc) *)
@@ -928,7 +928,7 @@ lemma replyRemoveTCB_corres:
                       apply simp
                      apply (clarsimp simp: valid_reply'_def)
                      apply (rule context_conjI)
-                      apply (clarsimp simp: obj_at'_def projectKOs opt_map_left_Some)
+                      apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
                      apply (clarsimp simp: obj_at_def del: opt_mapE)
                      apply (frule (1) valid_sched_context_objsI)
                      apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
@@ -946,7 +946,7 @@ lemma replyRemoveTCB_corres:
                      apply (erule reply_sc_reply_at)
                     apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
                    apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD2]
-                                     simp: opt_map_left_Some obj_at'_def projectKOs)
+                                     simp: opt_map_red obj_at'_def projectKOs)
                   apply (wpsimp simp: get_sk_obj_ref_def wp: get_reply_exs_valid)
                    apply (fastforce dest!: Reply_or_Receive_reply_at[rotated] simp: obj_at_def is_reply)
                   apply simp

@@ -2982,16 +2982,16 @@ lemma schedContextResume_corres:
            apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
           apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
           apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                                 opt_map_left_Some MIN_REFILLS_def
+                                 opt_map_red MIN_REFILLS_def
                           dest!: active_sc_valid_refillsE split: if_split_asm)
          apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_kh_simp)
          apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                           dest: active_sc_valid_refillsE)
         apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_def active_sc_def
-                               vs_all_heap_simps opt_map_left_Some)
+                               vs_all_heap_simps opt_map_red)
        apply (prop_tac "is_active_sc ptr s")
         apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def get_tcb_def
-                               is_sc_active_def opt_map_left_Some)
+                               is_sc_active_def opt_map_red)
        apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
                               valid_ready_queued_thread_2_def in_ready_q_def)+
      apply (clarsimp simp: is_schedulable_bool_def get_tcb_def)
@@ -3011,12 +3011,12 @@ lemma schedContextResume_corres:
    apply (frule state_relation_sc_relation[where ptr=ptr])
      apply (clarsimp simp: obj_at_simps is_sc_obj)
      apply (erule (1) valid_sched_context_size_objsI[OF invs_valid_objs], simp)
-   apply (clarsimp simp: sc_relation_def projection_rewrites obj_at_simps opt_map_left_Some)
+   apply (clarsimp simp: sc_relation_def projection_rewrites obj_at_simps opt_map_red)
   apply (frule_tac x=y in pspace_relation_absD[OF _ state_relation_pspace_relation]; simp)
   apply (clarsimp simp: obj_at'_def projectKOs isSchedulable_bool_def projection_rewrites
                         other_obj_relation_def tcb_relation_def)
   apply (drule sym[where s="Some ptr"])
-  apply (clarsimp simp: projection_rewrites isScActive_def opt_map_left_Some)
+  apply (clarsimp simp: projection_rewrites isScActive_def opt_map_red)
   apply (erule (1) valid_objsE')
   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def opt_map_def)
   done

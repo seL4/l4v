@@ -10556,7 +10556,7 @@ lemma update_refill_hd_valid_release_q:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   unfolding update_refill_hd_rewrite
   apply (wpsimp wp: set_refills_valid_release_q get_refills_wp)
-  by (fastforce simp: tcb_ready_times_defs vs_all_heap_simps obj_at_def opt_map_left_Some
+  by (fastforce simp: tcb_ready_times_defs vs_all_heap_simps obj_at_def opt_map_red
                       sc_heap_of_state_def  map_project_def map_join_def sc_refill_cfgs_of_scs_def)
 
 lemma non_overlapping_merge_refills_cur_sc_not_in_release_q:
