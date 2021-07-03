@@ -62,6 +62,7 @@ lemma opt_map_upd_Some:
 
 lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
 
+
 lemma case_opt_map_distrib:
   "((\<lambda>s. case_option None g (f s)) |> h)
    = ((\<lambda>s. case_option None (g |> h) (f s)))"
@@ -72,6 +73,22 @@ declare None_upd_eq[simp]
 (* None_upd_eq[simp] so that this pattern is by simp. Hopefully not too much slowdown. *)
 lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \<mapsto> v) |> g = f |> g"
   by simp
+
+(* opt_pred *)
+
+abbreviation
+  opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 50) where
+  "P |< proj \<equiv> (\<lambda>x. case_option False P (proj x))"
+
+lemma opt_pred_conj:
+  "((P1 |< hp) p \<and> (P2 |< hp) p) = (((P1 and P2) |< hp) p)"
+  by (fastforce simp: pred_conj_def split: option.splits)
+
+lemma opt_pred_disj:
+  "((P1 |< hp) p \<or> (P2 |< hp) p) = (((P1 or P2) |< hp) p)"
+  by (fastforce simp: pred_disj_def split: option.splits)
+
+(* obind, etc. *)
 
 definition
   obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> ('s,'b) lookup" (infixl "|>>" 53)
