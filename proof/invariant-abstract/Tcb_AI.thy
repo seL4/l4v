@@ -1860,7 +1860,7 @@ lemma set_simple_ko_sc_at_pred_n[wp]:
 crunches cancel_all_ipc
   for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P p s)"
   and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps is_round_robin_def)
 
 lemma valid_cap_not_ep_at_not_ep_cap:
   "\<lbrakk> r \<in> obj_refs cap; \<not> ep_at r s; s \<turnstile> cap \<rbrakk>

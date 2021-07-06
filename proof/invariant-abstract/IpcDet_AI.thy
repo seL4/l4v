@@ -1271,6 +1271,11 @@ crunches receive_ipc_preamble
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
+crunches if_cond_run_refill_unblock_check
+  for reply_tcb_reply_at[wp]: "reply_tcb_reply_at P ptr"
+  and reply_sc_reply_at[wp]: "reply_sc_reply_at P ptr"
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: is_round_robin_def)
+
 lemma ri_invs[wp]:
   fixes thread ep_cap is_blocking reply
   notes if_split[split del]
@@ -1374,6 +1379,14 @@ lemma ri_invs[wp]:
    apply (clarsimp simp: sym_refs_def)
    apply (drule_tac x=ep_ptr in spec; clarsimp simp: mk_ep_def split: if_splits;
           erule (1) TCBBlockedSend_in_state_refs_of_unique)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: hoare_vcg_ball_lift receive_ipc_preamble_rv_lift)
+    apply (rule hoare_vcg_conj_lift)
+     apply (wp misc_refill_unblock_check_obj_at_impossible')
+     apply simp
+    apply wpsimp
+   apply clarsimp
         (* thread_get tcb_fault *)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
     (* if not call and no fault: sender \<rightarrow> Running *)
@@ -1742,6 +1755,7 @@ lemma si_invs'_helper_no_reply:
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. st_tcb_at active tptr s \<and>
         st_tcb_at (\<lambda>st. \<exists>epptr pl. st = BlockedOnReceive epptr None pl) dest s \<and>
@@ -1762,13 +1776,16 @@ lemma si_invs'_helper_no_reply:
                      sched_context_donate (the caller_sc_opt) dest
                   od);
      y <- set_thread_state dest Running;
+     dest_sc <- get_tcb_obj_ref tcb_sched_context dest;
+     y \<leftarrow> if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
      possible_switch_to dest
   od
   \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp)
-   apply wpsimp
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
+      apply (wp hoare_vcg_all_lift hoare_drop_imps)
         apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: sts_only_idle valid_irq_node_typ sts_valid_replies
                          sts_fault_tcbs_valid_states valid_ioports_lift)
@@ -1793,10 +1810,12 @@ lemma si_invs'_helper_no_reply:
    apply (fastforce simp: st_tcb_at_def live_def elim!: if_live_then_nonz_capD)
   apply (simp add: when_def bind_assoc)
   apply (intro conjI)
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
+       apply (wp hoare_vcg_all_lift hoare_drop_imps)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies
                        sched_context_donate_sym_refs_BlockedOnReceive
-                       sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)
+                       sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)+
     apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def)
    apply (clarsimp, intro conjI)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -1839,9 +1858,12 @@ lemma si_invs'_helper_no_reply:
      apply (clarsimp simp: valid_obj_def valid_tcb_def)
     apply (fastforce simp: valid_objsE)
    apply (rule if_live_then_nonz_capD; simp add: pred_tcb_at_def obj_at_def live_def)
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: valid_irq_node_typ sts_only_idle sts_valid_replies
-                      sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
+    apply (wp hoare_vcg_all_lift hoare_drop_imps)
+   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
+                   wp: valid_irq_node_typ sts_only_idle sts_valid_replies
+                       sts_fault_tcbs_valid_states valid_ioports_lift hoare_drop_imps)
+  apply (clarsimp cong: conj_cong)
   apply (apply_conjunct \<open>rule replies_blocked_upd_tcb_st_valid_replies;
          clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def\<close>)
   apply (subgoal_tac "ex_nonz_cap_to dest s", clarsimp)
@@ -1866,6 +1888,7 @@ lemma si_invs'_helper_some_reply:
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. \<exists>rptr. st_tcb_at active tptr s \<and> st_tcb_at ((=) Inactive) dest s \<and>
         all_invs_but_fault_tcbs s \<and>
@@ -1885,13 +1908,16 @@ lemma si_invs'_helper_some_reply:
                       sched_context_donate (the caller_sc_opt) dest
                    od);
       y <- set_thread_state dest Running;
+      dest_sc <- get_tcb_obj_ref tcb_sched_context dest;
+      y \<leftarrow> if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
       possible_switch_to dest
    od
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> fault \<noteq> None"; clarsimp split del: if_split)
-   apply wpsimp
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def
+                   wp: hoare_vcg_all_lift hoare_drop_imps)
         apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
         apply (wpsimp wp: sts_invs_minor2)
     apply (wpsimp wp: hoare_vcg_conj_lift wp_del: reply_push_st_tcb_at)
@@ -1909,7 +1935,8 @@ lemma si_invs'_helper_some_reply:
      apply fastforce
     apply (drule (1) idle_no_ex_cap, clarsimp)
    apply (drule (1) idle_no_ex_cap, clarsimp)
-  apply wpsimp
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def
+                  wp: hoare_vcg_all_lift hoare_drop_imps)
     apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
     apply (wpsimp wp: sts_invs_minor2)
    apply (wpsimp wp: hoare_vcg_conj_lift sched_context_donate_invs
@@ -1975,6 +2002,7 @@ lemma si_invs'_helper_fault:
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. all_invs_but_sym_refs_and_fault_tcbs s \<and>
         fault_tcbs_valid_states_except_set {tptr} s \<and>
@@ -2004,6 +2032,8 @@ lemma si_invs'_helper_fault:
                                                        sched_context_donate (the thread_sc) dest
                                                    od);
       y <- set_thread_state dest Running;
+      dest_sc <- get_tcb_obj_ref tcb_sched_context dest;
+      y \<leftarrow> if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
       possible_switch_to dest
    od
    \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
@@ -2091,6 +2121,7 @@ lemma si_invs'_helper:
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. all_invs_but_sym_refs s \<and>
         Q s \<and> st_tcb_at active tptr s \<and> ex_nonz_cap_to tptr s \<and>
@@ -2120,10 +2151,13 @@ lemma si_invs'_helper:
                                                        sched_context_donate (the thread_sc) dest
                                                    od);
       y <- set_thread_state dest Running;
+      dest_sc <- get_tcb_obj_ref tcb_sched_context dest;
+      y \<leftarrow> if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
       possible_switch_to dest
    od
    \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
-  by (wpsimp wp: si_invs'_helper_fault simp: fault_tcbs_valid_states_to_except_set)
+  by (wpsimp wp: si_invs'_helper_fault
+           simp: fault_tcbs_valid_states_to_except_set if_cond_run_refill_unblock_check_def)
 
 lemma si_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -2134,6 +2168,7 @@ lemma si_invs':
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>p. \<lbrace>Q\<rbrace> refill_unblock_check p \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>invs and Q and st_tcb_at active tptr and ex_nonz_cap_to tptr and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at bound tptr s)
     and ex_nonz_cap_to epptr\<rbrace>
@@ -2236,6 +2271,7 @@ lemma si_invs'_fault:
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>p. \<lbrace>Q\<rbrace> refill_unblock_check p \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {tptr} and Q
     and st_tcb_at active tptr and ex_nonz_cap_to tptr
@@ -2333,6 +2369,7 @@ lemma hf_invs':
   assumes reply_push_Q[wp]: "\<And>a b c d. \<lbrace>Q\<rbrace> reply_push a b c d \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes sched_context_donate_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> sched_context_donate a b \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes reply_unlink_tcb_Q[wp]: "\<And>t r. \<lbrace>Q\<rbrace> reply_unlink_tcb t r \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>p. \<lbrace>Q\<rbrace> refill_unblock_check p \<lbrace>\<lambda>_. Q\<rbrace>"
   notes si_invs''[wp] = si_invs'_fault[where Q=Q]
   shows
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
@@ -2484,6 +2521,8 @@ lemma rai_invs':
   assumes schedule_tcb_Q[wp]: "\<And>t. \<lbrace>Q\<rbrace> schedule_tcb t \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes maybe_return_sc[wp]: "\<And>ntfn t. \<lbrace>Q\<rbrace> maybe_return_sc ntfn t \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes maybe_donate_sc[wp]: "\<And>t ntfn. \<lbrace>Q\<rbrace> maybe_donate_sc t ntfn \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes maybe_donate_sc[wp]: "\<And>t ntfn. \<lbrace>Q\<rbrace> maybe_donate_sc t ntfn \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check_Q[wp]: "\<And>p. \<lbrace>Q\<rbrace> refill_unblock_check p \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t
          and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
@@ -2546,7 +2585,8 @@ lemma rai_invs':
     apply (fastforce simp: idle_no_ex_cap obj_at_def st_tcb_at_def get_refs_def2
                     dest!: sym_refs_ko_atD bspec)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
-  apply wpsimp
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def
+                  wp: hoare_vcg_all_lift hoare_drop_imps)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
    apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)
   apply (fastforce simp: invs_def valid_state_def valid_pspace_def state_refs_of_def valid_obj_def

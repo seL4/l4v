@@ -715,12 +715,24 @@ lemma refill_unblock_check_if_live_then_nonz_cap[wp]:
   apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
   done
 
-crunches refill_unblock_check
+lemma refill_unblock_check_refs_of[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: refill_unblock_check_defs
+                  wp: hoare_drop_imp whileLoop_wp')
+  apply (clarsimp simp: state_refs_of_def)
+  done
+
+crunches refill_unblock_check, if_cond_run_refill_unblock_check
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
+  and iflive[wp]: if_live_then_nonz_cap
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and sc_at[wp]: "sc_at sc_ptr"
+  and tcb_at[wp]: "tcb_at tptr"
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
   and cte_wp_at[wp]: "cte_wp_at P c"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and no_cdt[wp]: "\<lambda>s. P (cdt s)"
   and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
@@ -738,6 +750,7 @@ crunches refill_unblock_check
   and v_ker_map[wp]: "valid_kernel_mappings"
   and equal_mappings[wp]: "equal_kernel_mappings"
   and valid_asid_map[wp]: "valid_asid_map"
+  and zombies[wp]: zombies_final
   and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
   and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
   and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
@@ -748,36 +761,19 @@ crunches refill_unblock_check
   and valid_replies[wp]: valid_replies
   and valid_idle[wp]: valid_idle
   and valid_irq_node[wp]: valid_irq_node
+  and valid_mdb[wp]: valid_mdb
+  and valid_objs[wp]: valid_objs
   and valid_ioports[wp]: valid_ioports
   and cur_sc_tcb[wp]: cur_sc_tcb
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
-  (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
+  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and ex_cap[wp]: "ex_nonz_cap_to p"
+  (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2
+   ignore: update_sched_context)
 
 lemmas refill_unblock_check_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_unblock_check_typ_at]
-
-lemma refill_unblock_check_zombies[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>zombies_final\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
-
-lemma refill_unblock_check_mdb [wp]:
-  "refill_unblock_check sc_ptr \<lbrace>valid_mdb\<rbrace>"
-  by (wpsimp wp: valid_mdb_lift)
-
-lemma refill_unblock_check_hyp_refs_of[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
-
-lemma refill_unblock_check_refs_of[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  apply (clarsimp simp: state_refs_of_def)
-  done
 
 lemma refill_unblock_check_valid_state [wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_state\<rbrace>"
@@ -788,6 +784,11 @@ lemma refill_unblock_check_invs [wp]:
   "refill_unblock_check sc_ptr \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: invs_def)
   done
+
+crunches if_cond_run_refill_unblock_check
+  for valid_state[wp]: valid_state
+  and invs[wp]: invs
+  (wp: crunch_wps simp: crunch_simps)
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -1028,7 +1029,8 @@ lemma switch_sched_context_invs [wp]:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp simp: get_tcb_queue_def wp: cur_sc_update_invs hoare_drop_imps)
+  apply (wpsimp simp: get_tcb_queue_def if_cond_run_refill_unblock_check_def
+                  wp: cur_sc_update_invs hoare_drop_imps)
   apply (clarsimp simp: valid_state_def)
   done
 
@@ -1090,6 +1092,7 @@ lemma refill_unblock_check_ct_in_state[wp]:
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
+                   if_cond_run_refill_unblock_check_def
              wp: hoare_drop_imp hoare_vcg_if_lift2)
 
 lemma set_next_interrupt_activatable:
@@ -1103,7 +1106,8 @@ lemma set_next_interrupt_activatable:
 lemma sc_and_timer_activatable:
   "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   apply (wpsimp simp: sc_and_timer_def switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
-           wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
+                      if_cond_run_refill_unblock_check_def
+                  wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
 crunches refill_new, refill_update
@@ -1292,7 +1296,7 @@ lemma set_tcb_queue_valid_replies[wp]:
 
 crunches sched_context_bind_tcb, update_sk_obj_ref
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: is_round_robin_def crunch_simps)
 
 crunches get_tcb_queue, get_sc_time, get_sc_obj_ref
   for inv[wp]: "P"

@@ -3961,7 +3961,7 @@ crunches
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
   for valid_list[wp]: valid_list
-  (wp: mapM_x_wp' hoare_drop_imp)
+  (wp: mapM_x_wp' hoare_drop_imp whileLoop_wp' simp: is_round_robin_def crunch_simps)
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
@@ -4066,14 +4066,10 @@ lemma copy_mrs_valid_list[wp]:
 
 context Deterministic_AI_1 begin
 
-crunch valid_list[wp]: make_fault_msg valid_list
-  (ignore: make_arch_fault_msg)
-
-crunch valid_list[wp]: do_fault_transfer valid_list
-  (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
-
-crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
-  (wp: mapM_wp hoare_drop_imp whileLoop_wp')
+crunches make_fault_msg, do_fault_transfer, transfer_caps,do_normal_transfer,do_ipc_transfer,
+         refill_unblock_check, if_cond_run_refill_unblock_check
+  for valid_list[wp]: valid_list
+  (simp: crunch_simps)
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
