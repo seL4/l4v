@@ -80,56 +80,37 @@ where
     od
   od"
 
-definition if_sporadic_cur_sc_assert_refill_unblock_check where
-  "if_sporadic_cur_sc_assert_refill_unblock_check sc_opt \<equiv>
+definition if_cond_run_refill_unblock_check where
+  "if_cond_run_refill_unblock_check sc_opt active asst \<equiv>
     maybeM (\<lambda>scp. do
       sc \<leftarrow> get_sched_context scp;
-      when (sc_sporadic sc) $ do
-        cur_sc_ptr \<leftarrow> gets cur_sc;
-        assert (scp \<noteq> cur_sc_ptr);
+      cur_sc_ptr \<leftarrow> gets cur_sc;
+      guard \<leftarrow> return (case active of
+                         None \<Rightarrow> (\<not> sc_sporadic sc)
+                       | Some True \<Rightarrow> sc_sporadic sc \<and> sc_active sc
+                       | Some False \<Rightarrow> sc_sporadic sc);
+      when (guard \<and> (if asst = Some False then scp \<noteq> cur_sc_ptr else True)) $ do
+        assert (if asst = Some True then scp \<noteq> cur_sc_ptr else True);
         refill_unblock_check scp
       od
     od) sc_opt"
 
-definition if_sporadic_cur_sc_test_refill_unblock_check where
-  "if_sporadic_cur_sc_test_refill_unblock_check sc_opt \<equiv>
-    maybeM (\<lambda>scp. do
-      sc \<leftarrow> get_sched_context scp;
-      cur_sc_ptr \<leftarrow> gets cur_sc;
-      when (sc_sporadic sc \<and> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp
-    od) sc_opt"
+abbreviation "if_sporadic_cur_sc_assert_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt (Some False) (Some True)"
 
-definition if_sporadic_and_active_refill_unblock_check where
-  "if_sporadic_and_active_refill_unblock_check sc_opt \<equiv>
-    maybeM (\<lambda>scp. do
-      sc \<leftarrow> get_sched_context scp;
-      when (sc_sporadic sc \<and> sc_active sc) $ refill_unblock_check scp
-    od) sc_opt"
+abbreviation "if_sporadic_and_active_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt (Some True) None"
 
-definition if_sporadic_active_cur_sc_test_refill_unblock_check where
-  "if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt \<equiv>
-    maybeM (\<lambda>scp. do
-      sc \<leftarrow> get_sched_context scp;
-      cur_sc_ptr \<leftarrow> gets cur_sc;
-      when (sc_sporadic sc \<and> sc_active sc \<and> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp
-    od) sc_opt"
+abbreviation "if_sporadic_cur_sc_test_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt (Some False) (Some False)"
 
-definition if_sporadic_active_cur_sc_assert_refill_unblock_check where
-  "if_sporadic_active_cur_sc_assert_refill_unblock_check sc_opt \<equiv>
-    maybeM (\<lambda>scp. do
-      sc \<leftarrow> get_sched_context scp;
-      when (sc_sporadic sc \<and> sc_active sc) $ do
-        cur_sc_ptr \<leftarrow> gets cur_sc;
-        assert (scp \<noteq> cur_sc_ptr);
-        refill_unblock_check scp
-      od
-    od) sc_opt"
+abbreviation "if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt (Some True) (Some False)"
 
-definition if_constant_bandwidth_refill_unblock_check where
-  "if_constant_bandwidth_refill_unblock_check sc_opt \<equiv>
-    maybeM (\<lambda>scp. do
-      sc \<leftarrow> get_sched_context scp;
-      when (\<not> sc_sporadic sc) $ refill_unblock_check scp
-    od) sc_opt"
+abbreviation "if_sporadic_active_cur_sc_assert_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt (Some True) (Some True)"
+
+abbreviation "if_constant_bandwidth_refill_unblock_check sc_opt \<equiv>
+                  if_cond_run_refill_unblock_check sc_opt None None"
 
 end
