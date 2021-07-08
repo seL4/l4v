@@ -722,10 +722,7 @@ lemma refill_unblock_check_refs_of[wp]:
   apply (clarsimp simp: state_refs_of_def)
   done
 
-crunches refill_unblock_check, if_sporadic_and_active_refill_unblock_check,
-         if_sporadic_cur_sc_assert_refill_unblock_check, if_constant_bandwidth_refill_unblock_check,
-         if_sporadic_cur_sc_test_refill_unblock_check, if_sporadic_active_cur_sc_test_refill_unblock_check,
-         if_sporadic_active_cur_sc_assert_refill_unblock_check
+crunches refill_unblock_check, if_cond_run_refill_unblock_check
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
   and iflive[wp]: if_live_then_nonz_cap
@@ -788,12 +785,10 @@ lemma refill_unblock_check_invs [wp]:
   apply (wpsimp simp: invs_def)
   done
 
-crunches if_sporadic_and_active_refill_unblock_check, if_sporadic_active_cur_sc_assert_refill_unblock_check,
-         if_sporadic_cur_sc_assert_refill_unblock_check, if_constant_bandwidth_refill_unblock_check,
-         if_sporadic_cur_sc_test_refill_unblock_check, if_sporadic_active_cur_sc_test_refill_unblock_check
+crunches if_cond_run_refill_unblock_check
   for valid_state[wp]: valid_state
   and invs[wp]: invs
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -1034,7 +1029,7 @@ lemma switch_sched_context_invs [wp]:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (wpsimp simp: get_tcb_queue_def if_constant_bandwidth_refill_unblock_check_def
+  apply (wpsimp simp: get_tcb_queue_def if_cond_run_refill_unblock_check_def
                   wp: cur_sc_update_invs hoare_drop_imps)
   apply (clarsimp simp: valid_state_def)
   done
@@ -1097,7 +1092,7 @@ lemma refill_unblock_check_ct_in_state[wp]:
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
-                   if_constant_bandwidth_refill_unblock_check_def
+                   if_cond_run_refill_unblock_check_def
              wp: hoare_drop_imp hoare_vcg_if_lift2)
 
 lemma set_next_interrupt_activatable:
@@ -1111,7 +1106,7 @@ lemma set_next_interrupt_activatable:
 lemma sc_and_timer_activatable:
   "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   apply (wpsimp simp: sc_and_timer_def switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
-                      if_constant_bandwidth_refill_unblock_check_def
+                      if_cond_run_refill_unblock_check_def
                   wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 

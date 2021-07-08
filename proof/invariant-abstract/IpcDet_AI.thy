@@ -1271,7 +1271,7 @@ crunches receive_ipc_preamble
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
-crunches if_sporadic_cur_sc_test_refill_unblock_check
+crunches if_cond_run_refill_unblock_check
   for reply_tcb_reply_at[wp]: "reply_tcb_reply_at P ptr"
   and reply_sc_reply_at[wp]: "reply_sc_reply_at P ptr"
   (wp: crunch_wps hoare_vcg_if_lift2 simp: is_round_robin_def)
@@ -1784,7 +1784,7 @@ lemma si_invs'_helper_no_reply:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> (\<exists>y. fault = Some y)"; simp)
-   apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def)
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
       apply (wp hoare_vcg_all_lift hoare_drop_imps)
         apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                      wp: sts_only_idle valid_irq_node_typ sts_valid_replies
@@ -1810,7 +1810,7 @@ lemma si_invs'_helper_no_reply:
    apply (fastforce simp: st_tcb_at_def live_def elim!: if_live_then_nonz_capD)
   apply (simp add: when_def bind_assoc)
   apply (intro conjI)
-   apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def)
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
        apply (wp hoare_vcg_all_lift hoare_drop_imps)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: sts_only_idle valid_irq_node_typ sts_valid_replies
@@ -1858,7 +1858,7 @@ lemma si_invs'_helper_no_reply:
      apply (clarsimp simp: valid_obj_def valid_tcb_def)
     apply (fastforce simp: valid_objsE)
    apply (rule if_live_then_nonz_capD; simp add: pred_tcb_at_def obj_at_def live_def)
-  apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def)
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def)
     apply (wp hoare_vcg_all_lift hoare_drop_imps)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                    wp: valid_irq_node_typ sts_only_idle sts_valid_replies
@@ -1916,7 +1916,7 @@ lemma si_invs'_helper_some_reply:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac "call \<or> fault \<noteq> None"; clarsimp split del: if_split)
-   apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def
+   apply (wpsimp simp: if_cond_run_refill_unblock_check_def
                    wp: hoare_vcg_all_lift hoare_drop_imps)
         apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
         apply (wpsimp wp: sts_invs_minor2)
@@ -1935,7 +1935,7 @@ lemma si_invs'_helper_some_reply:
      apply fastforce
     apply (drule (1) idle_no_ex_cap, clarsimp)
    apply (drule (1) idle_no_ex_cap, clarsimp)
-  apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def
                   wp: hoare_vcg_all_lift hoare_drop_imps)
     apply (strengthen invs_valid_objs, clarsimp cong: conj_cong)
     apply (wpsimp wp: sts_invs_minor2)
@@ -2157,7 +2157,7 @@ lemma si_invs'_helper:
    od
    \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
   by (wpsimp wp: si_invs'_helper_fault
-           simp: fault_tcbs_valid_states_to_except_set if_sporadic_cur_sc_test_refill_unblock_check_def)
+           simp: fault_tcbs_valid_states_to_except_set if_cond_run_refill_unblock_check_def)
 
 lemma si_invs':
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -2585,7 +2585,7 @@ lemma rai_invs':
     apply (fastforce simp: idle_no_ex_cap obj_at_def st_tcb_at_def get_refs_def2
                     dest!: sym_refs_ko_atD bspec)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
-  apply (wpsimp simp: if_sporadic_cur_sc_test_refill_unblock_check_def
+  apply (wpsimp simp: if_cond_run_refill_unblock_check_def
                   wp: hoare_vcg_all_lift hoare_drop_imps)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
    apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)

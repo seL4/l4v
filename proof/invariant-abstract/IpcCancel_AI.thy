@@ -2422,12 +2422,7 @@ lemma misc_refill_unblock_check_obj_at_impossible':
   "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
    if_constant_bandwidth_refill_unblock_check sc_opt
    \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  unfolding if_sporadic_cur_sc_assert_refill_unblock_check_def
-            if_sporadic_active_cur_sc_assert_refill_unblock_check_def
-            if_sporadic_cur_sc_test_refill_unblock_check_def
-            if_sporadic_active_cur_sc_test_refill_unblock_check_def
-            if_sporadic_and_active_refill_unblock_check_def
-            if_constant_bandwidth_refill_unblock_check_def
+  unfolding if_cond_run_refill_unblock_check_def
   by (wpsimp wp: sts_obj_at_impossible' refill_unblock_check_obj_at_impossible')+
 
 lemma restart_thread_if_no_fault_obj_at_impossible':

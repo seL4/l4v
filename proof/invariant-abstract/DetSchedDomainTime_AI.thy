@@ -156,7 +156,7 @@ crunch domain_list_inv[wp]: reply_remove, sched_context_unbind_tcb, sched_contex
   (wp: hoare_drop_imps get_simple_ko_wp)
 
 crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_x_wp' whileLoop_wp')
+  (wp: hoare_drop_imps mapM_x_wp' whileLoop_wp' simp: crunch_simps)
 
 crunch domain_list_inv[wp]: finalise_cap "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
@@ -516,7 +516,7 @@ crunch domain_time_consumed_time[wp]: do_ipc_transfer
 
 crunch domain_time_consumed_time[wp]: end_timeslice
   "\<lambda>s::det_state. P (domain_time s)(consumed_time s)"
-  (wp: crunch_wps maybeM_inv simp: zipWithM_x_mapM ignore: do_reply_transfer)
+  (wp: crunch_wps maybeM_inv simp: zipWithM_x_mapM crunch_simps ignore: do_reply_transfer)
 
 crunch valid_domain_list[wp]:
   charge_budget,check_budget
@@ -679,7 +679,6 @@ lemma switch_sched_context_domain_time_left[wp]:
    switch_sched_context
    \<lbrace>\<lambda>_ s :: det_state. 0 < domain_time s\<rbrace>"
   apply (wpsimp simp: switch_sched_context_def refill_unblock_check_defs
-                      if_constant_bandwidth_refill_unblock_check_def
                   wp: hoare_vcg_if_lift2 hoare_drop_imp whileLoop_wp' split_del: if_split)
   apply (clarsimp simp: word_gt_0)
   done

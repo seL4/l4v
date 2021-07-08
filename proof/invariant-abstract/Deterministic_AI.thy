@@ -4067,10 +4067,7 @@ lemma copy_mrs_valid_list[wp]:
 context Deterministic_AI_1 begin
 
 crunches make_fault_msg, do_fault_transfer, transfer_caps,do_normal_transfer,do_ipc_transfer,
-         refill_unblock_check, if_sporadic_and_active_refill_unblock_check,
-         if_sporadic_cur_sc_assert_refill_unblock_check, if_constant_bandwidth_refill_unblock_check,
-         if_sporadic_cur_sc_test_refill_unblock_check, if_sporadic_active_cur_sc_test_refill_unblock_check,
-         if_sporadic_active_cur_sc_assert_refill_unblock_check
+         refill_unblock_check, if_cond_run_refill_unblock_check
   for valid_list[wp]: valid_list
   (simp: crunch_simps)
 

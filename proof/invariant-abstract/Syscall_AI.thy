@@ -1385,9 +1385,7 @@ crunches check_budget_restart
 
 crunches
   possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply, postpone,
-  if_sporadic_active_cur_sc_assert_refill_unblock_check,
-  if_sporadic_cur_sc_test_refill_unblock_check,
-  if_sporadic_active_cur_sc_test_refill_unblock_check
+  if_cond_run_refill_unblock_check
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (rule: ct_in_state_thread_state_lift wp: crunch_wps simp: crunch_simps)
 
@@ -1443,13 +1441,9 @@ lemma do_reply_transfer_ct_active[wp]:
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (simp add: do_reply_transfer_def)
   apply (wpsimp wp: set_thread_state_ct_st hoare_vcg_all_lift hoare_drop_imps
-                    get_tcb_obj_ref_wp gts_wp thread_set_ct_in_state
-       | rule conjI)+
-          apply (wpsimp wp: thread_set_ct_in_state hoare_vcg_all_lift
-                      simp: if_sporadic_active_cur_sc_test_refill_unblock_check_def)+
-          apply (wp hoare_drop_imps)
-         apply (wp hoare_drop_imps)
-        apply (wpsimp wp: thread_set_ct_in_state gts_wp get_tcb_obj_ref_wp get_simple_ko_wp)+
+                    get_tcb_obj_ref_wp gts_wp | rule conjI)+
+              apply (wpsimp wp: thread_set_ct_in_state hoare_vcg_all_lift gts_wp
+                                get_simple_ko_wp)+
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
@@ -1529,7 +1523,7 @@ crunches
   sched_context_bind_tcb, sched_context_unbind_tcb, sched_context_yield_to
   for ct_in_state: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps ct_in_state_thread_state_lift ignore: set_tcb_obj_ref
-   simp: crunch_simps if_sporadic_and_active_refill_unblock_check_def)
+   simp: crunch_simps)
 
 crunches invoke_domain, invoke_sched_context
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
