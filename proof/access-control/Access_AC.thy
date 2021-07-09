@@ -153,8 +153,6 @@ locale Access_AC_1 =
   and clas_caps_of_state:
     "\<lbrakk> caps_of_state s slot = Some cap; pas_refined aag s \<rbrakk>
        \<Longrightarrow> cap_links_asid_slot aag (pasObjectAbs aag (fst slot)) cap"
-  and as_user_state_vrefs[wp]:
-    "as_user t (f' :: 'b user_monad) \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
 begin
 
 lemma cap_class_reply:
