@@ -2219,11 +2219,6 @@ lemma refillTailIndex_bounded:
   apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def Let_def split: if_split)
   by linarith
 
-lemma length_updateAt[simp]:
-  "length (updateAt i lst f) = length lst"
-  apply (clarsimp simp: updateAt_def)
-  by (case_tac lst; simp)
-
 lemma refillAddTail_valid_objs'[wp]:
   "refillAddTail scPtr t \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: refillAddTail_def)

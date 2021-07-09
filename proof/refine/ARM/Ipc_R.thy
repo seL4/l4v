@@ -3040,8 +3040,7 @@ lemma updateRefillHd_valid_objs':
   apply wpsimp
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                        valid_sched_context_size'_def objBits_def objBitsKO_def projectKO_sc
-                        length_updateAt)
+                        valid_sched_context_size'_def objBits_def objBitsKO_def projectKO_sc)
   done
 
 lemma getCTE_cap_to_refs[wp]:
