@@ -61,6 +61,7 @@ crunches handle_vm_fault
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and state_refs_of[Syscall_AC_assms, wp]: "\<lambda>s. P (state_refs_of s)"
+  (wp: as_user_getRestart_invs ignore: as_user)
 
 lemma handle_vm_fault_integrity[Syscall_AC_assms]:
   "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
@@ -177,7 +178,7 @@ global_interpretation Syscall_AC_1?: Syscall_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Syscall_AC_assms)
+    by (unfold_locales; (fact Syscall_AC_assms)?)
 qed
 
 end

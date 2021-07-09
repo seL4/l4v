@@ -104,12 +104,10 @@ lemma copy_global_mappings_integrity:
    apply wpsimp+
   done
 
-lemma state_vrefs_detype[Retype_AC_assms,simp]:
-  "state_vrefs (detype R s) = (\<lambda>x. if x \<in> R then {} else state_vrefs s x)"
+lemma state_vrefs_detype[Retype_AC_assms, dest]:
+  "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
   unfolding state_vrefs_def
-  apply (rule ext)
-  apply (clarsimp simp: detype_def)
-  done
+  by (clarsimp simp: detype_def split: if_splits)
 
 lemma sata_detype[Retype_AC_assms]:
   "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
@@ -118,8 +116,8 @@ lemma sata_detype[Retype_AC_assms]:
   apply (auto intro: state_asids_to_policy_aux.intros split: if_split_asm)
   done
 
-lemma untyped_min_bits_ge_2[Retype_AC_assms]: "2 \<le> untyped_min_bits"
-  by (simp add: untyped_min_bits_def)
+lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
+  by (simp add: word_size_bits_def untyped_min_bits_def)
 
 lemma clas_default_cap[Retype_AC_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
@@ -321,7 +319,7 @@ lemma storeWord_integrity_autarch:
 
 (* TODO: proof has mainly been copied from dmo_clearMemory_respects *)
 lemma dmo_freeMemory_respects[Retype_AC_assms]:
-  "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> 2 \<le> bits \<and>
+  "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
                               (\<forall>p \<in> ptr_range ptr bits. is_subject aag p))\<rbrace>
    do_machine_op (freeMemory ptr bits)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -332,7 +330,7 @@ lemma dmo_freeMemory_respects[Retype_AC_assms]:
   apply (erule use_valid)
    apply (wp mol_respects mapM_x_wp' storeWord_integrity_autarch)
    apply simp
-   apply (clarsimp simp: word_size_def word_bits_def
+   apply (clarsimp simp: word_size_def word_bits_def word_size_bits_def
                          upto_enum_step_shift_red[where us=2, simplified])
    apply (erule bspec)
    apply (erule set_mp [rotated])
@@ -359,7 +357,7 @@ lemma storeWord_respects:
 
 lemma dmo_clearMemory_respects'[Retype_AC_assms]:
   "\<lbrace>integrity aag X st and
-    K (is_aligned ptr bits \<and> bits < word_bits \<and> 2 \<le> bits \<and>
+    K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
        (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>
    do_machine_op (clearMemory ptr (2 ^ bits))
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
@@ -412,16 +410,18 @@ lemma init_arch_objects_integrity[Retype_AC_assms]:
 
 end
 
-
 global_interpretation Retype_AC_1?: Retype_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Retype_AC_assms)
+    by (unfold_locales; (fact Retype_AC_assms | wpsimp))
 qed
 
 
-requalify_facts
-  ARM_A.storeWord_respects
+context begin interpretation Arch .
+
+requalify_facts storeWord_respects
+
+end
 
 end
