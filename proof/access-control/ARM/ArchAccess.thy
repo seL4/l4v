@@ -65,14 +65,31 @@ definition state_vrefs where
 
 end
 
+context Arch_p_arch_update_eq begin global_naming ARM_A
 
-context pspace_update_eq begin interpretation Arch .
+interpretation Arch .
 
 lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
   by (simp add: state_vrefs_def pspace)
 
 end
 
+context Arch begin global_naming ARM_A
+
+lemma arch_update_state_vrefs[simp]:
+  "state_vrefs (arch_state_update f s) = state_vrefs s"
+  by (simp add: state_vrefs_def)
+
+lemmas state_vrefs_upd =
+  cur_thread_update.state_vrefs
+  cdt_update.state_vrefs
+  irq_node_update_arch.state_vrefs
+  interrupt_update.state_vrefs
+  revokable_update.state_vrefs
+  machine_state_update.state_vrefs
+  more_update.state_vrefs
+
+end
 
 context Arch begin
 
@@ -279,9 +296,11 @@ requalify_consts
 
 requalify_facts
   integrity_asids_updates
+  state_vrefs_upd
 
 end
 
+declare state_vrefs_upd[simp]
 declare integrity_asids_updates[simp]
 
 end

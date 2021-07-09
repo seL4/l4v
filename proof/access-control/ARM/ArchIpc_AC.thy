@@ -15,14 +15,6 @@ named_theorems Ipc_AC_assms
 declare make_fault_message_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunches deleted_irq_handler, send_signal
-  for state_vrefs[Ipc_AC_assms, wp]: "\<lambda>s. P (state_vrefs (s :: det_ext state))"
-  (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
-
-crunches deleted_irq_handler, send_signal
-  for arch_state[Ipc_AC_assms, wp]: "\<lambda>s. P (arch_state (s :: det_ext state))"
-  (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
-
 crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
@@ -96,8 +88,11 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   apply (elim conjE)
   apply (intro impI conjI)
      apply assumption+
+   apply clarsimp
    apply (erule integrity_trans)
    apply (clarsimp simp: ptr_range_off_off_mems integrity_def is_aligned_mask[symmetric])
+   apply (intro conjI impI)
+     apply (subst (asm) ptr_range_off_off_mems; clarsimp simp: word_size_def)+
   apply simp
   done
 
