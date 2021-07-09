@@ -233,20 +233,20 @@ lemma pt_walk_detype:
   done
 
 lemma vs_lookup_table:
-  "vs_lookup_table level asid vref (detype (untyped_range cap) s) = Some (level, p) \<Longrightarrow>
+  "vs_lookup_table level asid vref (detype S s) = Some (level, p) \<Longrightarrow>
    vs_lookup_table level asid vref s = Some (level, p)"
   by (fastforce simp: vs_lookup_table_def in_omonad asid_pools_of_detype pt_walk_detype
                split: if_split_asm)
 
 lemma vs_lookup_slot:
-  "(vs_lookup_slot level asid vref (detype (untyped_range cap) s) = Some (level, p)) ==>
+  "(vs_lookup_slot level asid vref (detype S s) = Some (level, p)) \<Longrightarrow>
    (vs_lookup_slot level asid vref s = Some (level, p))"
   by (fastforce simp: vs_lookup_slot_def in_omonad asid_pools_of_detype
                 split: if_split_asm
                 dest!: vs_lookup_table)
 
 lemma vs_lookup_target:
-  "(vs_lookup_target level asid vref (detype (untyped_range cap) s) = Some (level, p)) ==>
+  "(vs_lookup_target level asid vref (detype S s) = Some (level, p)) \<Longrightarrow>
    (vs_lookup_target level asid vref s = Some (level, p))"
   by (fastforce simp: vs_lookup_target_def in_omonad asid_pools_of_detype
                 split: if_split_asm
