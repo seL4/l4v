@@ -380,27 +380,6 @@ lemma isRoundRobin_corres:
                       simp: sc_relation_def)
   done
 
-(* updateAt *)
-
-lemma updateAt_index:
-  "\<lbrakk>xs \<noteq> []; i < length xs; j < length xs\<rbrakk>
-   \<Longrightarrow> (updateAt i xs f) ! j = (if i = j then f (xs ! i) else (xs ! j))"
-  by (fastforce simp: updateAt_def null_def nth_append)
-
-lemma wrap_slice_updateAt_eq:
-  "\<lbrakk>if start + count \<le> mx
-       then (i < start \<or> start + count \<le> i)
-       else (start + count - mx \<le> i \<and> i < start);
-    count \<le> mx; start < mx; mx \<le> length xs; xs \<noteq> []; i < mx\<rbrakk>
-   \<Longrightarrow> wrap_slice start count mx xs = wrap_slice start count mx (updateAt i xs new)"
-  apply (rule nth_equalityI)
-   apply clarsimp
-  by (subst wrap_slice_index; clarsimp simp: updateAt_index split: if_split_asm)+
-
-lemma take_updateAt_eq[simp]:
-  "n \<le> i \<Longrightarrow> take n (updateAt i ls f) = take n ls"
-  by (clarsimp simp: updateAt_def)
-
 lemma valid_obj'_scPeriod_update[simp]:
   "valid_obj' (KOSchedContext (scPeriod_update (\<lambda>_. period) sc')) = valid_obj' (KOSchedContext sc')"
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
@@ -474,24 +453,24 @@ lemma refillAddTail_corres:
       apply (erule disjE)
        apply (simp add: refillNextIndex_def refillTailIndex_def Let_def)
        apply (intro conjI impI;
-              clarsimp simp: Suc_diff_Suc wrap_slice_replaceAt_eq[symmetric] neq_Nil_lengthI
-                             nat_le_Suc_less refill_map_def replaceAt_index)
+              clarsimp simp: Suc_diff_Suc wrap_slice_updateAt_eq[symmetric] neq_Nil_lengthI
+                             nat_le_Suc_less refill_map_def updateAt_index)
       apply (erule disjE)
        apply clarsimp
        apply (rule conjI)
         apply (simp add: refillNextIndex_def refillTailIndex_def Let_def)
-        apply (clarsimp simp: wrap_slice_replaceAt_eq not_le)
-        apply (metis add_leE le_SucI le_refl lessI mult_is_add.mult_commute not_add_less2 not_less_eq wrap_slice_replaceAt_eq)
+        apply (clarsimp simp: wrap_slice_updateAt_eq not_le)
+        apply (metis add_leE le_SucI le_refl lessI mult_is_add.mult_commute not_add_less2 not_less_eq wrap_slice_updateAt_eq)
        apply (clarsimp simp: refillNextIndex_def refillTailIndex_def Let_def not_le)
-       apply (clarsimp simp: replaceAt_index refill_map_def)
+       apply (clarsimp simp: updateAt_index refill_map_def)
       apply clarsimp
       apply (rule conjI)
        apply (clarsimp simp: refillNextIndex_def refillTailIndex_def Let_def)
-       apply (intro conjI impI; (clarsimp simp: not_le wrap_slice_replaceAt_eq)?)
+       apply (intro conjI impI; (clarsimp simp: not_le wrap_slice_updateAt_eq)?)
        apply (metis add_leE le_refl le_simps(1) less_SucI mult_is_add.mult_commute nat_neq_iff
-                    not_less_eq trans_less_add2 wrap_slice_replaceAt_eq)
+                    not_less_eq trans_less_add2 wrap_slice_updateAt_eq)
       apply (clarsimp simp: refillNextIndex_def refillTailIndex_def Let_def not_le)
-      apply (clarsimp simp: replaceAt_index refill_map_def)
+      apply (clarsimp simp: updateAt_index refill_map_def)
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_left_Some
                      dest!: state_relation_sc_replies_relation_sc)
     apply (clarsimp simp: objBits_simps)
@@ -961,7 +940,7 @@ lemma refillUpdate_corres:
                    apply (rule setSchedContext_corres)
                     apply (unfold sc_relation_def; elim conjE exE; intro conjI; fastforce?)
                     apply (clarsimp simp: refills_map_def wrap_slice_start_0 hd_map neq_Nil_lengthI
-                                          refill_map_def replaceAt_def null_def refillHd_def hd_wrap_slice
+                                          refill_map_def updateAt_def null_def refillHd_def hd_wrap_slice
                                           valid_refills_number'_def max_num_refills_eq_refillAbsoluteMax')
                    apply (clarsimp simp: objBits_simps scBits_simps)
                   apply simp

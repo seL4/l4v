@@ -1242,10 +1242,15 @@ lemma valid_sc_size_sc_relation:
 
 (* for handling refill buffer *)
 
-lemma length_replaceAt[simp]:
-  "length (replaceAt i lst val) = length lst"
-  apply (clarsimp simp: replaceAt_def)
-  by (case_tac lst; simp)
+abbreviation replaceAt where
+  "replaceAt i xs new \<equiv> updateAt i xs (\<lambda>_. new)"
+
+lemmas replaceAt_def = updateAt_def
+
+lemma length_updateAt[simp]:
+  "length (updateAt i xs f) = length xs"
+  apply (clarsimp simp: updateAt_def)
+  by (case_tac xs; simp)
 
 lemma wrap_slice_index:
   "\<lbrakk>count \<le> mx; start < mx; mx \<le> length xs; index < count\<rbrakk>
@@ -1302,37 +1307,24 @@ lemma wrap_slice_append:
   apply simp
   done
 
-lemma replaceAt_index:
+lemma updateAt_index:
   "\<lbrakk>xs \<noteq> []; i < length xs; j < length xs\<rbrakk>
-   \<Longrightarrow> (replaceAt i xs new) ! j = (if i = j then new else (xs ! j))"
-  apply (clarsimp simp: replaceAt_def)
-  apply (intro conjI impI)
-    apply (fastforce simp: null_def)
-   apply (metis nth_list_update_eq upd_conv_take_nth_drop)
-  apply (case_tac "j < i")
-   apply (prop_tac "length (take i xs) = i", fastforce)
-   apply (simp add: nth_append)
-  apply (prop_tac "((take i xs @ [new]) @ drop (Suc i) xs) ! j
-                   = (drop (Suc i) xs) ! (j - (length (take i xs @ [new])))")
-   apply (fastforce simp: nth_append)
-  apply fastforce
-  done
+   \<Longrightarrow> (updateAt i xs f) ! j = (if i = j then f (xs ! i) else (xs ! j))"
+  by (fastforce simp: updateAt_def null_def nth_append)
 
-lemma wrap_slice_replaceAt_eq:
+lemma wrap_slice_updateAt_eq:
   "\<lbrakk>if start + count \<le> mx
        then (i < start \<or> start + count \<le> i)
        else (start + count - mx \<le> i \<and> i < start);
     count \<le> mx; start < mx; mx \<le> length xs; xs \<noteq> []; i < mx\<rbrakk>
-   \<Longrightarrow> wrap_slice start count mx xs = wrap_slice start count mx (replaceAt i xs new)"
-  supply length_replaceAt[simp]
+   \<Longrightarrow> wrap_slice start count mx xs = wrap_slice start count mx (updateAt i xs new)"
   apply (rule nth_equalityI)
    apply clarsimp
-  apply (clarsimp split: if_splits)
-   apply (subst wrap_slice_index; simp)+
-   apply (clarsimp simp: replaceAt_index)
-  apply (subst wrap_slice_index; simp)+
-  apply (clarsimp simp: replaceAt_index)
-  done
+  by (subst wrap_slice_index; clarsimp simp: updateAt_index split: if_split_asm)+
+
+lemma take_updateAt_eq[simp]:
+  "n \<le> i \<Longrightarrow> take n (updateAt i ls f) = take n ls"
+  by (clarsimp simp: updateAt_def)
 
 lemma refills_tl_equal:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
