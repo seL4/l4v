@@ -93,7 +93,8 @@ lemma cdt_NullCap:
   by (rule ccontr) (force dest: mdb_cte_atD simp: valid_mdb_def2)
 
 lemma setup_reply_master_pas_refined:
-  "\<lbrace>pas_refined aag and valid_mdb and K (is_subject aag t)\<rbrace>
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
+                    and valid_mdb and K (is_subject aag t)\<rbrace>
    setup_reply_master t
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: setup_reply_master_def)
@@ -103,6 +104,9 @@ lemma setup_reply_master_pas_refined:
 crunches possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
 
+crunches setup_reply_master
+  for pspace_aligned[wp]: pspace_aligned
+
 lemma restart_pas_refined:
   "\<lbrace>pas_refined aag and invs and tcb_at t and K (is_subject aag t)\<rbrace>
    restart t
@@ -110,16 +114,13 @@ lemma restart_pas_refined:
   apply (simp add: restart_def get_thread_state_def)
   apply (wp set_thread_state_pas_refined setup_reply_master_pas_refined thread_get_wp'
          | strengthen invs_mdb
-         | simp)+
+         | fastforce)+
   done
 
 lemma option_update_thread_set_safe_lift:
   "\<lbrakk> \<And>v. \<lbrace>P\<rbrace> thread_set (f v) t \<lbrace>\<lambda>rv. P\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>P\<rbrace> option_update_thread t f v \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: option_update_thread_def split: option.split)
-
-lemmas option_update_thread_pas_refined =
-  option_update_thread_set_safe_lift [OF thread_set_pas_refined]
 
 crunch integrity_autarch[wp]: thread_set_priority "integrity aag X st"
   (ignore: tcb_sched_action)
@@ -169,13 +170,13 @@ lemma (in is_extended') cte_wp_at[wp]: "I (cte_wp_at P a)"
   by (rule lift_inv, simp)
 
 lemma checked_insert_pas_refined:
-  "\<lbrace>pas_refined aag and valid_mdb and
-    K(\<not> is_master_reply_cap new_cap \<and> is_subject aag target \<and>
-      is_subject aag (fst src_slot) \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
+    K (\<not> is_master_reply_cap new_cap \<and> is_subject aag target \<and>
+         is_subject aag (fst src_slot) \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
    check_cap_at new_cap src_slot
      (check_cap_at (ThreadCap target) slot
         (cap_insert new_cap src_slot (target, ref)))
-   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (unfold check_cap_at_def)
   apply (wp cap_insert_pas_refined_same_object_as get_cap_wp)
   by (fastforce simp: cte_wp_at_caps_of_state)
@@ -248,7 +249,6 @@ lemma sbn_bind_respects:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
   done
-
 
 lemma bind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at ((=) None) t
@@ -332,7 +332,8 @@ lemma hoare_st_refl:
   done
 
 lemma bind_notification_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and K (\<forall>auth \<in> {Receive, Reset}. abs_has_auth_to aag auth t ntfn)\<rbrace>
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
+    K (\<forall>auth \<in> {Receive, Reset}. abs_has_auth_to aag auth t ntfn)\<rbrace>
    bind_notification t ntfn
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: bind_notification_def)
@@ -346,8 +347,14 @@ lemma invoke_tcb_ntfn_control_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (case_tac ntfn, simp_all del: K_def)
    apply (safe intro!: hoare_gen_asm)
-   apply (wp | simp add: authorised_tcb_inv_def)+
+   apply (wp | fastforce simp: authorised_tcb_inv_def)+
   done
+
+crunches suspend, restart
+  for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
+  and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
+  and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+  (wp: dxo_wp_weak)
 
 
 context Tcb_AC_1 begin
@@ -367,7 +374,11 @@ lemma invoke_tcb_pas_refined:
    apply assumption
   apply (rule hoare_gen_asm)
   apply (cases ti, simp_all add: authorised_tcb_inv_def)
-        apply (wp ita_wps hoare_drop_imps mapM_x_wp'
+        apply (wp ita_wps hoare_drop_imps
+                  hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+                                                                     and valid_vspace_objs
+                                                                     and valid_arch_state",
+                                        OF mapM_x_wp']
               | simp add: emptyable_def if_apply_def2 authorised_tcb_inv_def
               | rule ball_tcb_cap_casesI
               | wpc
