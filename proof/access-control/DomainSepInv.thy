@@ -1044,12 +1044,9 @@ lemma invoke_tcb_domain_sep_inv:
               hoare_vcg_const_imp_lift_R cap_delete_domain_sep_inv cap_delete_deletes
               dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at static_imp_wp
            | wpc | strengthen
-           | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def tcb_at_st_tcb_at
+           | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def
+                       tcb_cap_valid_def tcb_at_st_tcb_at
                   del: set_priority_extended.dxo_eq)+
-        apply (rule hoare_pre)
-         apply (simp add: option_update_thread_def tcb_cap_cases_def
-                | wpsimp wp: hoare_vcg_all_lift thread_set_emptyable thread_set_valid_cap
-                             static_imp_wp thread_set_cte_at  thread_set_no_cap_to_trivial)+
   done
 
 lemma perform_invocation_domain_sep_inv':
