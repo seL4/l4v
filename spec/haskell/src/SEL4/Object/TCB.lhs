@@ -26,13 +26,13 @@ This module uses the C preprocessor to select a target architecture.
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
 >         checkBudget, chargeBudget, checkBudgetRestart, mcsIRQ, commitTime, awaken, switchSchedContext,
->         replaceAt, updateAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
+>         updateAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
 >     ) where
 
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget replaceAt updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
+% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -995,21 +995,13 @@ On some architectures, the thread context may include registers that may be modi
 > getSanitiseRegisterInfo :: PPtr TCB -> Kernel Bool
 > getSanitiseRegisterInfo t = Arch.getSanitiseRegisterInfo t
 
-> replaceAt :: Int -> [a] -> a -> [a]
-> replaceAt i lst v =
->     let x = take i lst;
->         y = drop (i + 1) lst
->     in if (null lst || length lst <= i)
->           then lst
->           else x ++ [v] ++ y
-
 > updateAt :: Int -> [a] -> (a -> a) -> [a]
-> updateAt i lst f =
->     let x = take i lst;
->         u = lst !! i;
->         y = drop (i + 1) lst
->     in if (null lst || length lst <= i)
->           then lst
+> updateAt i ls f =
+>     let x = take i ls;
+>         u = ls !! i;
+>         y = drop (i + 1) ls
+>     in if (null ls || length ls <= i)
+>           then ls
 >           else x ++ [f u] ++ y
 
 > chargeBudget :: Ticks -> Bool -> Bool -> Kernel ()
