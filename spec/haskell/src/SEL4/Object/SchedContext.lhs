@@ -49,7 +49,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
-> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, replaceAt, updateAt, setTimeArg, setMessageInfo, setMRs)
+> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, updateAt, setTimeArg, setMessageInfo, setMRs)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import SEL4.API.Invocation(SchedContextInvocation(..), SchedControlInvocation(..))
 
@@ -169,7 +169,7 @@ This module uses the C preprocessor to select a target architecture.
 > -- Odd argument order plays well with `updateSchedContext`.
 > setRefillIndex :: Int -> Refill -> SchedContext -> SchedContext
 > setRefillIndex index refill sc =
->     sc { scRefills = replaceAt index (scRefills sc) refill }
+>     sc { scRefills = updateAt index (scRefills sc) (\x -> refill) }
 
 > readRefillSize :: PPtr SchedContext -> KernelR Int
 > readRefillSize scPtr = liftM scRefillCount $ readSchedContext scPtr
@@ -209,7 +209,8 @@ This module uses the C preprocessor to select a target architecture.
 > refillAddTail scPtr refill = do
 >     sc <- getSchedContext scPtr
 >     assert (scRefillCount sc < scRefillMax sc) "cannot add beyond queue size"
->     updateSchedContext scPtr (\sc -> sc { scRefills = replaceAt (refillNextIndex (refillTailIndex sc) sc) (scRefills sc) refill, scRefillCount = scRefillCount sc + 1})
+>     newTail <- return $ refillNextIndex (refillTailIndex sc) sc
+>     updateSchedContext scPtr (\sc -> sc { scRefills = updateAt (refillNextIndex (refillTailIndex sc) sc) (scRefills sc) (\x -> refill), scRefillCount = scRefillCount sc + 1})
 
 > maybeAddEmptyTail :: PPtr SchedContext -> Kernel ()
 > maybeAddEmptyTail scPtr = do
@@ -240,7 +241,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUpdate :: PPtr SchedContext -> Ticks -> Ticks -> Int -> Kernel ()
 > refillUpdate scPtr newPeriod newBudget newMaxRefills = do
->     updateSchedContext scPtr $ \sc -> sc { scRefills = replaceAt 0 (scRefills sc) (refillHd sc) }
+>     updateSchedContext scPtr $ \sc -> sc { scRefills = updateAt 0 (scRefills sc) (\x -> refillHd sc) }
 >     updateSchedContext scPtr (\sc -> sc { scRefillHead = 0 })
 >     updateSchedContext scPtr (\sc -> sc { scRefillCount = 1 })
 >     updateSchedContext scPtr (\sc -> sc { scRefillMax = newMaxRefills })
