@@ -79,7 +79,7 @@ lemma dmo_device_update_respects_Write:
   apply (rule integrity_device_state_update)
     apply simp
    apply clarify
-   apply (drule(1) bspec)
+   apply (drule (1) bspec)
    apply simp
   apply fastforce
   done
@@ -91,7 +91,7 @@ lemma dmo_um_upd_machine_state:
 lemma do_user_op_respects:
  "\<lbrace>invs and integrity aag X st and is_subject aag \<circ> cur_thread and pas_refined aag\<rbrace>
   do_user_op uop tc
-  \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_def)
   apply wpsimp+
            apply (rule dmo_device_update_respects_Write)
