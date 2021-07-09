@@ -22,8 +22,10 @@ NB: the @{term is_subject} assumption is not appropriate for some of
 
 locale Finalise_AC_1 =
   fixes aag :: "'a PAS"
-  assumes sbn_st_vrefs[wp]:
-    "\<And>P. set_bound_notification ref ntfn \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  assumes sbn_st_vrefs:
+    "\<And>P. \<lbrace>(\<lambda>s.  P (state_vrefs s)) and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+          set_bound_notification ref ntfn
+          \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
   and arch_finalise_cap_auth':
     "\<lbrace>pas_refined aag\<rbrace> arch_finalise_cap acap final \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   and arch_finalise_cap_obj_refs:
@@ -40,7 +42,9 @@ locale Finalise_AC_1 =
   and finalise_cap_valid_list[wp]:
     "finalise_cap param_a param_b \<lbrace>valid_list\<rbrace>"
   and arch_finalise_cap_pas_refined[wp]:
-    "arch_finalise_cap acap ex \<lbrace>pas_refined aag\<rbrace>"
+    "\<lbrace>pas_refined aag and invs and valid_arch_cap acap\<rbrace>
+     arch_finalise_cap acap ex
+     \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   and prepare_thread_delete_pas_refined[wp]:
     "prepare_thread_delete p \<lbrace>pas_refined aag\<rbrace>"
   and prepare_thread_delete_respects[wp]:
@@ -58,6 +62,12 @@ locale Finalise_AC_1 =
                                   and K (pas_cap_cur_auth aag (ArchObjectCap acap))\<rbrace>
      arch_finalise_cap acap final
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and arch_post_cap_deletion[wp]:
+    "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_ext state. pspace_aligned s\<rbrace>"
+  and arch_post_cap_deletion_valid_vspace_objs[wp]:
+    "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
+  and arch_post_cap_deletion_valid_arch_state[wp]:
+    "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
 begin
 
 lemma tcb_sched_action_dequeue_integrity':
@@ -226,41 +236,6 @@ lemma sbn_thread_states[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-
-context Finalise_AC_1 begin
-
-lemma sbn_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and
-    K (case ntfn of None \<Rightarrow> True
-                  | Some ntfn' \<Rightarrow> \<forall>auth \<in> {Receive, Reset}. abs_has_auth_to aag auth t ntfn')\<rbrace>
-   set_bound_notification t ntfn
-   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (simp add: pas_refined_def state_objs_to_policy_def)
-  apply (rule hoare_pre)
-   apply (wp tcb_domain_map_wellformed_lift | wps)+
-  apply (clarsimp dest!: auth_graph_map_memD)
-  apply (erule state_bits_to_policy.cases)
-  by (auto intro: state_bits_to_policy.intros auth_graph_map_memI
-           split: if_split_asm)
-
-lemma unbind_notification_pas_refined[wp]:
-  "unbind_notification tptr \<lbrace>pas_refined aag\<rbrace>"
-  apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_simple_ko_pas_refined | wpc | simp)+
-  done
-
-lemma unbind_maybe_notification_pas_refined[wp]:
-  "unbind_maybe_notification nptr \<lbrace>pas_refined aag\<rbrace>"
-  apply (clarsimp simp: unbind_maybe_notification_def)
-  apply (wp set_simple_ko_pas_refined | wpc | simp)+
-  done
-
-crunch pas_refined[wp]: fast_finalise "pas_refined aag"
-  (wp: crunch_wps simp: crunch_simps)
-
-end
-
-
 crunch valid_mdb[wp]: fast_finalise "valid_mdb :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -269,6 +244,67 @@ crunch valid_objs[wp]: fast_finalise "valid_objs :: det_ext state \<Rightarrow> 
 
 
 context Finalise_AC_1 begin
+
+lemma sbn_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
+    K (case ntfn of None \<Rightarrow> True
+                  | Some ntfn' \<Rightarrow> \<forall>auth \<in> {Receive, Reset}. abs_has_auth_to aag auth t ntfn')\<rbrace>
+   set_bound_notification t ntfn
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (simp add: pas_refined_def state_objs_to_policy_def)
+  apply (rule hoare_pre)
+   apply (wp tcb_domain_map_wellformed_lift sbn_st_vrefs | wps)+
+  apply (clarsimp dest!: auth_graph_map_memD)
+  apply (erule state_bits_to_policy.cases)
+  by (auto intro: state_bits_to_policy.intros auth_graph_map_memI
+           split: if_split_asm)
+
+lemma unbind_notification_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+   unbind_notification tptr
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: unbind_notification_def)
+  apply (wp set_simple_ko_pas_refined hoare_drop_imps | wpc | simp)+
+  done
+
+lemma unbind_maybe_notification_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+   unbind_maybe_notification nptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: unbind_maybe_notification_def)
+  apply (wp set_simple_ko_pas_refined hoare_drop_imps | wpc | simp)+
+  done
+
+lemma cancel_all_ipc_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+   cancel_all_ipc epptr
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: cancel_all_ipc_def get_ep_queue_def cong: endpoint.case_cong)
+  apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned
+                                         and valid_vspace_objs
+                                         and valid_arch_state"
+               in hoare_strengthen_post)
+   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp)+
+  done
+
+lemma cancel_all_signals_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and
+     valid_arch_state\<rbrace>
+   cancel_all_signals ntfnptr
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: cancel_all_signals_def cong: ntfn.case_cong)
+  apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned
+                                         and valid_vspace_objs
+                                         and valid_arch_state"
+               in hoare_strengthen_post)
+   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp)+
+  done
+
+crunches unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
+         fast_finalise, blocked_cancel_ipc, cap_move
+  for pspace_aligned[wp]: pspace_aligned
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_arch_state[wp]: valid_arch_state
+  (ignore: cap_move_ext tcb_sched_action reschedule_required wp: dxo_wp_weak mapM_x_inv_wp)
 
 crunches cap_delete_one
   for pas_refined_transferable[wp_transferable]: "pas_refined aag"
@@ -303,7 +339,6 @@ lemma reply_cap_descends_from_master0:
                         tcb_cap_cases_def is_cap_simps)
   done
 
-
 context Finalise_AC_1 begin
 
 lemma reply_cancel_ipc_pas_refined[wp]:
@@ -326,8 +361,14 @@ lemma deleting_irq_handler_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: deleting_irq_handler_def get_irq_slot_def)
   apply wp
-  apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
+  apply (fastforce simp: pas_refined_def irq_map_wellformed_aux_def)
   done
+
+crunches suspend
+  for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
+  and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
+  and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+  (wp: dxo_wp_weak select_wp hoare_drop_imps simp: crunch_simps)
 
 crunch pas_refined[wp]: suspend "pas_refined aag"
 
@@ -337,11 +378,13 @@ lemma finalise_cap_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (cases cap; simp only: finalise_cap.simps)
-  by (wpsimp wp: unbind_notification_invs
-           simp: aag_cap_auth_def cap_auth_conferred_def valid_cap_simps
-                 cap_links_irq_def pas_refined_Control[symmetric])+
+  apply (wpsimp wp: unbind_notification_invs
+             simp: aag_cap_auth_def cap_auth_conferred_def valid_cap_simps
+                   cap_links_irq_def pas_refined_Control[symmetric]
+         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
+  done
 
-lemma cancel_all_signals_respects [wp]:
+lemma cancel_all_signals_respects[wp]:
   "\<lbrace>integrity aag X st and valid_objs and (sym_refs \<circ> state_refs_of)
                        and K (aag_has_auth_to aag Reset epptr)\<rbrace>
    cancel_all_signals epptr
@@ -493,6 +536,7 @@ lemma reply_cancel_ipc_respects[wp]:
                       thread_set_not_state_valid_sched static_imp_wp thread_set_cte_wp_at_trivial
                       thread_set_pas_refined
                 simp: ran_tcb_cap_cases)+
+  apply (strengthen invs_psp_aligned invs_vspace_objs invs_arch_state, clarsimp)
   apply (rule conjI)
    apply (fastforce simp: cte_wp_at_caps_of_state intro:is_transferable.intros
                    dest!: reply_cap_descends_from_master0)
@@ -545,6 +589,7 @@ lemma suspend_respects[wp]:
     apply (rule hoare_conjI)
      apply (wp hoare_drop_imps)+
     apply wpsimp+
+  apply fastforce
   done
 
 end
@@ -807,7 +852,7 @@ next
        apply (drule appropriate_Zombie[symmetric, THEN trans, symmetric])
        apply (clarsimp simp: gen_obj_refs_eq)
        apply (erule_tac s = "{r}" in subst)
-       subgoal by (simp add:replaceable_zombie_not_transferable)
+       subgoal by (fastforce simp: replaceable_zombie_not_transferable)
       apply (simp add: is_final_cap_def)
       apply (wp get_cap_auth_wp [where aag = aag])+
     apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_comms)
@@ -830,10 +875,16 @@ next
     apply (rule hoare_pre_spec_validE)
      apply (rule split_spec_bindE)
       apply (rule split_spec_bindE[rotated])
+       apply (rule_tac Q'="\<lambda>rv s. invs s \<and> Q rv s" and Q="\<lambda>rv s. invs s \<and> Q rv s" for Q
+                    in spec_strengthen_postE[rotated])
+        apply assumption
+       apply (rule spec_valid_conj_liftE1)
+        apply (wpsimp wp: rec_del_invs)
        apply (rule "4.hyps", assumption+)
       apply (wpsimp wp: set_cap_integrity_autarch set_cap_pas_refined_not_transferable
                         get_cap_wp static_imp_wp)+
-      apply (clarsimp simp: cte_wp_at_caps_of_state clas_no_asid cli_no_irqs aag_cap_auth_def)
+      apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state
+                            cte_wp_at_caps_of_state clas_no_asid cli_no_irqs aag_cap_auth_def)
       apply (drule_tac auth=auth in sta_caps, simp+)
        apply (simp add: cap_auth_conferred_def aag_cap_auth_def)
       apply (drule(1) pas_refined_mem)
@@ -940,8 +991,12 @@ lemma set_eobject_integrity_autarch:
   apply (simp add: integrity_subjects_def)
   done
 
-crunch pas_refined[wp]: cancel_badged_sends "pas_refined aag"
-  (wp: crunch_wps simp: filterM_mapM crunch_simps ignore: filterM)
+lemma cancel_badged_sends_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+   cancel_badged_sends epptr badge
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  unfolding cancel_badged_sends_def
+  by (wpsimp simp: filterM_mapM wp: mapM_wp_inv set_thread_state_pas_refined get_simple_ko_wp)
 
 end
 
@@ -955,7 +1010,8 @@ lemma thread_set_pas_refined_triv_idleT:
   and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
   and ba: "\<And>tcb. Q (tcb_bound_notification tcb)
                   \<longrightarrow> tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
-  shows "\<lbrace>pas_refined aag and idle_tcb_at (\<lambda>(st, ntfn, arch). P st \<and> Q ntfn \<and> R arch) t\<rbrace>
+  shows "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
+                          and idle_tcb_at (\<lambda>(st, ntfn, arch). P st \<and> Q ntfn \<and> R arch) t\<rbrace>
          thread_set f t
          \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
@@ -965,12 +1021,18 @@ lemma thread_set_pas_refined_triv_idleT:
    apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
                    del: subsetI)
-  apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
-               for a cps cd vr ag in rsubst')
+  apply (subst state_vrefs_tcb_upd, fastforce+)
+   apply (clarsimp simp: tcb_at_def)
+  apply (subst state_vrefs_tcb_upd, fastforce+)
+   apply (clarsimp simp: tcb_at_def)
+  apply (rule conjI)
+   apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
+                for a cps cd vr ag in rsubst')
+    apply (drule get_tcb_SomeD)
+    apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
    apply (drule get_tcb_SomeD)
-   apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
-  apply (drule get_tcb_SomeD)
-  apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
+   apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
+  apply (clarsimp)
   done
 
 
@@ -1181,6 +1243,7 @@ lemma invoke_cnode_respects:
          | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
                           cnode_inv_auth_derivations_def
          | drule(2) auth_derived_caps_of_state_impls
+         | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
          | rule hoare_pre | rule cca_direct)+
   apply (auto simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def)
   done
