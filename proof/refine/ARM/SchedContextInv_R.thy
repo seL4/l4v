@@ -384,11 +384,6 @@ lemma valid_obj'_scPeriod_update[simp]:
   "valid_obj' (KOSchedContext (scPeriod_update (\<lambda>_. period) sc')) = valid_obj' (KOSchedContext sc')"
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
 
-(* it would be good to rewrite all getting wp rules in this form *)
-lemma getSchedContext_wp':
-  "\<lbrace>\<lambda>s. sc_at' p s  \<longrightarrow> P (the (scs_of' s p)) s\<rbrace> getSchedContext p \<lbrace>P\<rbrace>"
-  by (wpsimp simp: obj_at'_def projectKOs opt_map_left_Some)
-
 lemma ovalid_readRefillReady'[rule_format, simp]:
   "ovalid (\<lambda>s. sc_at' scp s \<longrightarrow> P (((\<lambda>sc'. rTime (refillHd sc') \<le> ksCurTime s + kernelWCETTicks) |< scs_of' s) scp) s)
               (readRefillReady scp) P"

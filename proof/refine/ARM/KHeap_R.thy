@@ -2192,6 +2192,11 @@ lemma obj_at'_ignoring_obj:
   "obj_at' (\<lambda>_ :: 'a :: pspace_storable. P) p s = (obj_at' (\<lambda>_ :: 'a. True) p s \<and> P)"
   by (rule iffI; clarsimp simp: obj_at'_def)
 
+lemma forall_ko_at'_equiv_projection:
+  "(\<lambda>s. \<forall>ko::'a::pspace_storable. ko_at' ko p s \<longrightarrow> P ko s) =
+   (\<lambda>s. obj_at' (\<lambda>_::'a::pspace_storable. True) p s \<longrightarrow> P (the ((ksPSpace s |> projectKO_opt) p)) s)"
+  by (fastforce simp: obj_at'_def projectKOs opt_map_left_Some)
+
 end
 
 locale pspace_only' =
@@ -2405,7 +2410,15 @@ lemma getObject_wp:
   apply fastforce
   done
 
+lemma getObject_wp':
+  "\<lbrace>\<lambda>s. obj_at' (\<lambda>_::'a. True) p s \<longrightarrow> P (the ((ksPSpace s |> projectKO_opt) p)) s\<rbrace>
+   getObject p
+   \<lbrace>P::'a \<Rightarrow> _ \<Rightarrow> _\<rbrace>"
+  apply (wpsimp wp: getObject_wp)
+  by (metis forall_ko_at'_equiv_projection)
+
 lemmas get_wp = getObject_wp[folded g_def]
+lemmas get_wp' = getObject_wp'[folded g_def]
 
 lemma loadObject_default_inv:
   "\<lbrace>P\<rbrace> gets_the $ loadObject_default addr addr' next obj \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -2750,6 +2763,12 @@ lemmas getNotification_wp = set_ntfn'.get_wp
 lemmas getTCB_wp = set_tcb'.get_wp
 lemmas getReply_wp[wp] = set_reply'.get_wp
 lemmas getSchedContext_wp[wp] = set_sc'.get_wp
+
+lemmas getEndpoint_wp' = set_ep'.get_wp'
+lemmas getNotification_wp' = set_ntfn'.get_wp'
+lemmas getTCB_wp' = set_tcb'.get_wp'
+lemmas getReply_wp' = set_reply'.get_wp'
+lemmas getSchedContext_wp' = set_sc'.get_wp'
 
 lemmas getObject_ep_inv = set_ep'.getObject_inv
 lemmas getObject_ntfn_inv = set_ntfn'.getObject_inv
