@@ -3956,6 +3956,78 @@ lemma sc_replies_relation_rewrite:
   unfolding sc_replies_relation_def sc_replies_relation2_def sc_replies_of_rewrite
   by simp
 
+definition is_active_sc2 where
+  "is_active_sc2 p s \<equiv> ((\<lambda>sc. 0 < sc_refill_max sc) |< scs_of2 s) p"
+
+lemma is_active_sc_rewrite:
+  "is_active_sc p s = is_active_sc2 p s"
+  by (fastforce simp: is_active_sc2_def vs_all_heap_simps is_active_sc_def
+                      active_sc_def opt_map_left_Some opt_map_def
+               split: option.split_asm Structures_A.kernel_object.splits)
+
+definition is_active_sc' where
+  "is_active_sc' p s' \<equiv> ((\<lambda>sc'. 0 < scRefillMax sc') |< scs_of' s') p"
+
+lemma active_sc_at'_imp_is_active_sc':
+  "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
+  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
+
+lemma active_sc_at'_rewrite:
+  "active_sc_at' scp s = (is_active_sc' scp s \<and> sc_at' scp s)"
+  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
+
+abbreviation
+  "valid_refills2 scp s \<equiv>
+     ((\<lambda>sc. if sc_period sc = 0 then rr_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_budget sc)
+      else sp_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_period sc) (sc_budget sc)) |<
+     scs_of2 s) scp"
+
+lemmas valid_refills2_def = rr_valid_refills_def sp_valid_refills_def
+
+lemma valid_refills_rewrite:
+  "valid_refills scp s = valid_refills2 scp s"
+  by (fastforce simp: opt_map_left_Some valid_refills2_def vs_all_heap_simps valid_refills_def
+               split: option.splits Structures_A.kernel_object.splits)
+
+definition
+  round_robin2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool"
+where
+  "round_robin2 sc_ptr s \<equiv> ((\<lambda>sc. sc_period sc = 0) |< scs_of2 s) sc_ptr"
+
+lemma round_robin_rewrite:
+  "round_robin scp s = round_robin2 scp s"
+  by (clarsimp simp: round_robin_def round_robin2_def vs_all_heap_simps opt_map_def
+              split: option.splits Structures_A.kernel_object.splits)
+
+abbreviation
+  sc_refills_sc_at2 where
+  "sc_refills_sc_at2 P scp s \<equiv> ((\<lambda>sc. P (sc_refills sc)) |< scs_of2 s) scp"
+
+lemma sc_refills_sc_at_rewrite:
+  "sc_refills_sc_at P scp s = sc_refills_sc_at2 P scp s"
+  by (fastforce simp: sc_refills_sc_at_def obj_at_def is_sc_obj opt_map_left_Some
+               split: option.splits Structures_A.kernel_object.split_asm)
+
+lemmas projection_rewrites = pred_map_rewrite scs_of_rewrite is_active_sc_rewrite
+                             sc_heap_of_state_def sc_of_def sc_refills_sc_at_rewrite
+                             active_sc_at'_rewrite valid_refills_rewrite round_robin_rewrite
+
+lemma is_active_sc'_cross:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes t: "is_active_sc2 ptr s"
+  shows "is_active_sc' ptr s'"
+  using assms
+  supply projection_rewrites[simp]
+  apply (clarsimp simp: projectKOs is_active_sc2_def is_active_sc'_def
+                 split: option.split_asm Structures_A.kernel_object.split_asm)
+  apply (drule (1) pspace_relation_absD, clarsimp split: if_split_asm)
+  by (case_tac z; simp add: sc_relation_def opt_map_left_Some)
+
+lemma set_refills_is_active_sc2[wp]:
+  "set_refills ptr new \<lbrace>is_active_sc2 ptr'\<rbrace>"
+  apply (wpsimp simp: is_active_sc2_def wp: set_refills_wp)
+  by (clarsimp simp: obj_at_def opt_map_def)
+
 (* end : projection rewrites *)
 
 (* updateSchedContext *)
