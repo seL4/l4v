@@ -384,28 +384,10 @@ lemma valid_obj'_scPeriod_update[simp]:
   "valid_obj' (KOSchedContext (scPeriod_update (\<lambda>_. period) sc')) = valid_obj' (KOSchedContext sc')"
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
 
-(* projection *)
-
 (* it would be good to rewrite all getting wp rules in this form *)
 lemma getSchedContext_wp':
   "\<lbrace>\<lambda>s. sc_at' p s  \<longrightarrow> P (the (scs_of' s p)) s\<rbrace> getSchedContext p \<lbrace>P\<rbrace>"
   by (wpsimp simp: obj_at'_def projectKOs opt_map_left_Some)
-
-lemma is_active_sc'_cross:
-  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
-  assumes t: "is_active_sc2 ptr s"
-  shows "is_active_sc' ptr s'"
-  using assms
-  supply projection_rewrites[simp]
-  apply (clarsimp simp: projectKOs is_active_sc2_def is_active_sc'_def
-                 split: option.split_asm Structures_A.kernel_object.split_asm)
-  apply (drule (1) pspace_relation_absD, clarsimp split: if_split_asm)
-  by (case_tac z; simp add: sc_relation_def opt_map_left_Some)
-
-lemma set_refills_is_active_sc2[wp]:
-  "set_refills ptr new \<lbrace>is_active_sc2 ptr'\<rbrace>"
-  apply (wpsimp simp: is_active_sc2_def wp: set_refills_wp)
-  by (clarsimp simp: obj_at_def opt_map_def)
 
 lemma ovalid_readRefillReady'[rule_format, simp]:
   "ovalid (\<lambda>s. sc_at' scp s \<longrightarrow> P (((\<lambda>sc'. rTime (refillHd sc') \<le> ksCurTime s + kernelWCETTicks) |< scs_of' s) scp) s)
@@ -417,12 +399,11 @@ lemma ovalid_readRefillReady'[rule_format, simp]:
                split: option.split_asm)+
 
 lemma refillReady_wp':
-  "\<lbrace>\<lambda>s. sc_at' scp s \<longrightarrow> P (((\<lambda>sc'. rTime (refillHd sc') \<le> ksCurTime s + kernelWCETTicks) |< scs_of' s) scp) s\<rbrace>
+  "\<lbrace>\<lambda>s. sc_at' scp s \<longrightarrow>
+        P (((\<lambda>sc'. rTime (refillHd sc') \<le> ksCurTime s + kernelWCETTicks) |< scs_of' s) scp) s\<rbrace>
     refillReady scp \<lbrace>P\<rbrace>"
   unfolding refillReady_def
   by wpsimp (drule use_ovalid[OF ovalid_readRefillReady'])
-
-(* end : projection *)
 
 lemma refillAddTail_corres:
   "time = time' \<and> amount = amount'
