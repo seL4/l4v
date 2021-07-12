@@ -9,20 +9,25 @@ on:
     branches:
       - master
       - rt
-  pull_request:
+  # this action needs access to secrets.
+  # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
+  pull_request_target:
 
 jobs:
-  aspec:
-    name: ASpec
+  all:
+    name: All
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, RISCV64]
+        arch: [ARM, ARM_HYP, RISCV64, X64]
     steps:
     - name: Proofs
-      uses: seL4/ci-actions/aws-proofs@aws-proofs
+      uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
         isa_branch: ts-2020
-        session: ASpec
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SSH: ${{ secrets.AWS_SSH }}
