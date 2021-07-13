@@ -143,7 +143,7 @@ status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
 def run_test(test, status_queue, kill_switch,
              verbose=False, stuck_timeout=None,
              timeout_scale=1.0, timeouts_enabled=True,
-             grace_period=0):
+             grace_period=0, github=False):
     '''
     Run a single test.
 
@@ -168,6 +168,8 @@ def run_test(test, status_queue, kill_switch,
 
     # Print command and path.
     if verbose:
+        if github:
+            print("::group::" + test.name)
         print("\n")
         if os.path.abspath(test.cwd) != os.path.abspath(os.getcwd()):
             path = " [%s]" % os.path.relpath(test.cwd)
@@ -315,6 +317,9 @@ def run_test(test, status_queue, kill_switch,
     output = output.decode(encoding='utf8', errors='replace')
     if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
         output = output + extra_timeout_output(test.name)
+
+    if verbose and github:
+        print("::endgroup::")
 
     status_queue.put({'name': test.name,
                       'status': test_status[0],
@@ -466,6 +471,8 @@ def main():
     if args.scale_timeouts <= 0:
         parser.error("--scale-timeouts value must be greater than 0")
 
+    github = os.environ.get("GITHUB_REPOSITORY") != None
+
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
     test_info = testspec.process_test_files(test_xml)
@@ -595,7 +602,7 @@ def main():
                         args=(t, status_queue, kill_switch,
                               args.verbose, args.stuck_timeout,
                               args.scale_timeouts, not args.no_timeouts,
-                              args.grace_period))
+                              args.grace_period, github))
                     wipe_tty_status()
                     print_test_line_start(t.name)
                     test_thread.start()
