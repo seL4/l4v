@@ -1020,11 +1020,6 @@ declare word_less_sub_le [simp del]
 declare ptrFormPAddr_addFromPPtr [simp]
 
 
-(* FIXME: move *)
-lemma valid_mask_vm_rights[simp]:
-  "mask_vm_rights V R \<in> valid_vm_rights"
-  by (simp add: mask_vm_rights_def)
-
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
   using dual_order.strict_trans2 by blast

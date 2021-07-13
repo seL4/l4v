@@ -418,8 +418,6 @@ lemma sep_map_o_conj:
   apply (clarsimp simp:sep_map_c_def sep_disj_sep_state_def
      sep_map_general_def sep_state_disj_def map_disj_def)
   apply (clarsimp simp:dom_object_to_sep_state)
-  apply (rule conjI)
-   apply blast
   apply (case_tac s,simp)
   apply (rule ext)
   apply (case_tac "x \<in> {ptr}\<times>UNIV")

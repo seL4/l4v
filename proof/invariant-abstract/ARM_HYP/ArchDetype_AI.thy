@@ -505,11 +505,6 @@ proof -
     done
 qed
 
-(* FIXME: move *)
-lemma not_emptyI:
-  "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
-  by auto
-
 lemma in_user_frame_eq:
   notes blah[simp del] =  atLeastAtMost_iff
           atLeastatMost_subset_iff atLeastLessThan_iff

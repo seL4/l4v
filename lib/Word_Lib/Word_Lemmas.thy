@@ -4280,6 +4280,10 @@ lemma word_shift_by_2:
   "x * 4 = (x::'a::len word) << 2"
   by (simp add: shiftl_t2n)
 
+lemma word_shift_by_3:
+  "x * 8 = (x::'a::len word) << 3"
+  by (simp add: shiftl_t2n)
+
 lemma le_2p_upper_bits:
   "\<lbrakk> (p::'a::len word) \<le> 2^n - 1; n < LENGTH('a) \<rbrakk> \<Longrightarrow>
   \<forall>n'\<ge>n. n' < LENGTH('a) \<longrightarrow> \<not> p !! n'"

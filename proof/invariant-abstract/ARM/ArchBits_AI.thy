@@ -37,6 +37,9 @@ lemmas valid_cap_def = valid_cap_def[simplified valid_arch_cap_def]
 lemmas valid_cap_simps =
   valid_cap_def[split_simps cap.split arch_cap.split]
 
+lemmas invs_valid_asid_table [elim!] = invs_arch_state[THEN vas_valid_asid_table]
+lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
+
 end
 
 end

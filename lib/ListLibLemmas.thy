@@ -1087,4 +1087,8 @@ lemma after_in_list_None_last:
   "\<lbrakk>after_in_list list x = None; x \<in> set list\<rbrakk> \<Longrightarrow> x = last list"
   by (induct list x rule: after_in_list.induct,(simp split: if_split_asm)+)
 
+lemma map2_append1:
+  "map2 f (as @ bs) cs = map2 f as (take (length as) cs) @ map2 f bs (drop (length as) cs)"
+  by (simp add: map_def zip_append1)
+
 end

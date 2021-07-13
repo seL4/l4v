@@ -1556,9 +1556,6 @@ lemma vs_lookup_pdI:
   apply (simp add: pde_ref_def)
   done
 
-(* FIXME: move *)
-lemma bexEI: "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x" by blast
-
 lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unrhd> p) s"
   apply (clarsimp simp: vs_lookup_pages_def vs_lookup_def Image_def
                  elim!: bexEI)
@@ -2542,8 +2539,8 @@ lemma valid_arch_mdb_eqI:
   assumes "valid_arch_mdb (is_original_cap s) (caps_of_state s)"
   assumes "caps_of_state s = caps_of_state s'"
   assumes "is_original_cap s = is_original_cap s'"
-  shows "valid_arch_mdb (is original_cap s') (caps_of_state s')"
-  by (clarsimp simp: valid_arch_mdb_def)
+  shows "valid_arch_mdb (is_original_cap s') (caps_of_state s')"
+  by (clarsimp)
 
 lemma arch_tcb_context_absorbs[simp]:
   "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"
@@ -2572,6 +2569,9 @@ proof -
     by (fastforce dest: ko elim: vs_lookup_pages1_stateI2)
   thus ?thesis by (rule rtrancl_mono)
 qed
+
+lemmas pte_ref_pages_simps[simp] = pte_ref_pages_def[split_simps pte.split]
+lemmas pde_ref_pages_simps[simp] = pde_ref_pages_def[split_simps pde.split]
 
 end
 

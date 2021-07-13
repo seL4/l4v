@@ -488,10 +488,6 @@ lemma valid_arch_state_global_pd:
                          arch_kernel_obj.split_asm if_split_asm)
   done
 
-lemma pd_shifting':
-  "is_aligned (pd :: word32) pd_bits \<Longrightarrow> pd + (vptr >> 20 << 2) && ~~ mask pd_bits = pd"
-  by (rule pd_shifting, simp add: pd_bits_def pageBits_def)
-
 lemma copy_global_mappings_nonempty_table:
   "is_aligned pd pd_bits \<Longrightarrow>
    \<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s) \<and>

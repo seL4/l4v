@@ -836,7 +836,7 @@ lemma do_user_op_if_invs:
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_if_def split_def)
-  apply (wp ct_running_machine_op select_wp device_update_invs | wp (once) dmo_invs | simp)+
+  apply (wp dmo_ct_in_state select_wp device_update_invs | wp (once) dmo_invs | simp)+
   apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def
                     restrict_map_def invs_def cur_tcb_def ptable_rights_s_def
                     ptable_lift_s_def)

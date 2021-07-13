@@ -17,8 +17,6 @@ lemma word_1FF_is_mask:
   "0x1FF = mask 9"
   by (simp add: mask_def)
 
-(*** FIXME end ***)
-
 subsection \<open>Constructing a virtual-memory view\<close>
 
 text \<open>
@@ -334,30 +332,11 @@ where
    | _ \<Rightarrow> None"
 
 
-(* FIXME: Lemma can be found in Untyped_R;
-   proof mostly copied from ArchAcc_R.pd_shifting *)
 lemma pd_shifting':
    "is_aligned pd pd_bits \<Longrightarrow>
     (pd + (vptr >> 21 << 3) && ~~ mask pd_bits) = (pd::word32)"
-  apply (simp add: pd_bits_def pageBits_def pde_bits_def)
-  apply (rule word_eqI[rule_format])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth)
-   apply (erule_tac x=na in allE)
-   apply (simp add: linorder_not_less)
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth
-                        word_ops_nth_size pd_bits_def linorder_not_less)
-  apply (rule iffI)
-   apply clarsimp
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply clarsimp
-  apply (erule_tac x=n in allE)
-  apply simp
-  done
+  unfolding pde_bits_def pd_bits_def pageBits_def
+  by (rule pd_shifting_gen; simp add: word_size)
 
 lemma lookup_pt_slot_fail:
   "is_aligned pd pd_bits \<Longrightarrow>

@@ -7230,7 +7230,7 @@ next
             apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
            apply (clarsimp simp: cte_wp_at_ctes_of)
            apply (frule cte_wp_valid_cap[unfolded cte_wp_at_eq_simp], clarsimp)
-           apply (drule cte_wp_at_eqD[where p="?target"], clarsimp)
+           apply (drule cte_wp_at_norm[where p="?target"], clarsimp)
            apply (erule disjE)
             apply (drule(1) pspace_relation_cte_wp_at
                                 [OF state_relation_pspace_relation],

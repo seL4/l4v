@@ -287,4 +287,17 @@ lemma typ_at_typs_of:
   "typ_at T p s = (typs_of s p = Some T)"
   by (auto simp: obj_at_def in_opt_map_eq)
 
+(* This generalises pd_shifting' in ARM and ARM_HYP *)
+lemma pd_shifting_gen:
+  "\<lbrakk>b \<le> a; size pd - c \<le> a - b; is_aligned pd c \<rbrakk> \<Longrightarrow> pd + (vptr >> a << b) && ~~ mask c = pd"
+  apply (subgoal_tac "(vptr >> a << b) && ~~ mask c = 0")
+   apply (subst word_plus_and_or_coroll)
+    apply (erule aligned_mask_disjoint)
+    apply (simp add: and_mask_0_iff_le_mask[symmetric])
+   apply (simp add: word_bool_alg.conj_disj_distrib2)
+  apply (simp add: shiftr_shiftl1 neg_mask_twice word_bool_alg.conj.assoc)
+  apply (rule shiftr_not_mask_0)
+  apply (fastforce simp: max_def word_size)
+  done
+
 end

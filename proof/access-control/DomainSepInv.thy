@@ -46,7 +46,7 @@ lemma cte_wp_at_not_domain_sep_inv_cap:
                  (\<exists> irq. cte_wp_at ((=) (IRQHandlerCap irq)) slot s)))) \<or>
    cte_wp_at ((=) DomainCap) slot s"
   apply (rule iffI)
-   apply (drule cte_wp_at_eqD)
+   apply (drule cte_wp_at_norm)
    apply clarsimp
    apply (case_tac c, simp_all add: domain_sep_inv_cap_def pred_neg_def)
    apply (auto elim: cte_wp_at_weakenE split: if_splits)
@@ -229,7 +229,7 @@ lemma cte_wp_at_weak_derived_domain_sep_inv_cap:
   apply (cases slot)
   apply (force simp: domain_sep_inv_def domain_sep_inv_cap_def
               split: cap.splits
-               dest: cte_wp_at_eqD weak_derived_irq_handler weak_derived_DomainCap)
+               dest: cte_wp_at_norm weak_derived_irq_handler weak_derived_DomainCap)
   done
 
 lemma is_derived_IRQHandlerCap:
@@ -250,7 +250,7 @@ lemma cte_wp_at_is_derived_domain_sep_inv_cap:
   apply (cases slot)
   apply (fastforce simp: domain_sep_inv_def domain_sep_inv_cap_def
                   split: cap.splits
-                   dest: cte_wp_at_eqD DomainCap_is_derived is_derived_IRQHandlerCap)
+                   dest: cte_wp_at_norm DomainCap_is_derived is_derived_IRQHandlerCap)
   done
 
 lemma domain_sep_inv_exst_update[simp]:

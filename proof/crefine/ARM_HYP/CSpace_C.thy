@@ -150,7 +150,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp add: return_def simp del: not_ex)
    apply (cases arch_cap)
-       by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex omgwtfbbq)+
+       by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex simp_thms(44))+
 
 (* FIXME: move to Wellformed_C (or move to_bool_bf out of Wellformed_C) *)
 lemma to_bool_mask_to_bool_bf:

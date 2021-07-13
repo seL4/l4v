@@ -746,17 +746,6 @@ lemma canonical_address_add:
   unfolding canonical_address_sign_extended
   by auto
 
-(* FIXME: move *)
-lemma validE_R_post_conjD1:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  by (fastforce simp add: validE_R_def validE_def valid_def)
-
-(* FIXME: move *)
-lemma validE_R_post_conjD2:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
-  by (fastforce simp add: validE_R_def validE_def valid_def)
-
-
 (* Lemmas about looking up entries in vspace tables.
    For each level of table, we prove a single private lemma which tells us
    everything we need to know in order to be able to say something about the

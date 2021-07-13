@@ -4356,11 +4356,6 @@ lemma store_pde_unmap_page:
   apply (simp add: up_ucast_inj_eq)
 done
 
-(* FIXME: move to Invariants_A *)
-lemma pte_ref_pages_invalid_None[simp]:
-  "pte_ref_pages InvalidPTE = None"
-  by (simp add: pte_ref_pages_def)
-
 lemma store_pte_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace>
    store_pte p InvalidPTE
@@ -4377,10 +4372,6 @@ lemma store_pte_no_lookup_pages:
                      graph_of_def image_def
               split: if_split_asm)
 
-(* FIXME: move to Invariants_A *)
-lemma pde_ref_pages_invalid_None[simp]:
-  "pde_ref_pages InvalidPDE = None"
-  by (simp add: pde_ref_pages_def)
 
 lemma store_pde_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace> store_pde p InvalidPDE \<lbrace>\<lambda>_ s. \<not> (r \<unrhd> q) s\<rbrace>"
@@ -4567,11 +4558,6 @@ crunches vcpu_enable, vcpu_write_reg, vcpu_update, vcpu_restore, vcpu_enable, vc
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
   (simp: crunch_simps when_def
      wp: crunch_wps set_object_pspace_respects_device_region pspace_respects_device_region_dmo)
-
-(* FIXME move to WordLemma *)
-lemma word_shift_by_3:
-  "x * 8 = (x::'a::len word) << 3"
-  by (simp add: shiftl_t2n)
 
 lemma perform_page_directory_invocation_invs[wp]:
   "\<lbrace>invs and valid_pdi pdi\<rbrace>
@@ -5015,10 +5001,6 @@ lemma dmo_ccr_invs[wp]:
      apply ((clarsimp | wp)+)[3]
   apply(erule use_valid, wp no_irq_cleanCacheRange_PoU no_irq, assumption)
   done
-
-(* FIXME: move to Invariants_A *)
-lemmas pte_ref_pages_simps[simp] =
-       pte_ref_pages_def[split_simps pte.split]
 
 lemma ex_pt_cap_eq:
   "(\<exists>ref cap. caps_of_state s ref = Some cap \<and>

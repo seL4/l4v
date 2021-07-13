@@ -94,7 +94,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | simp split: cap.split_asm)+)[11]
   including no_pre
   apply(rule hoare_pre, wp hoare_drop_imps arch_derive_cap_is_derived)
-  apply(clarify, drule cte_wp_at_eqD, clarify)
+  apply(clarify, drule cte_wp_at_norm, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
   apply(clarsimp simp: valid_cap_def)
