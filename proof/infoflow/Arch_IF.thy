@@ -1150,7 +1150,8 @@ lemma perform_asid_pool_invocation_reads_respects:
 lemma arch_perform_invocation_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and K (authorised_arch_inv aag ai) and valid_arch_inv ai and is_subject aag \<circ> cur_thread)
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
+                         authorised_arch_inv aag ai and valid_arch_inv ai and is_subject aag \<circ> cur_thread)
     (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
   apply(wp perform_page_table_invocation_reads_respects perform_page_directory_invocation_reads_respects perform_page_invocation_reads_respects perform_asid_control_invocation_reads_respects perform_asid_pool_invocation_reads_respects | wpc)+
@@ -2317,12 +2318,6 @@ lemma delete_asid_pool_valid_vspace_objs[wp]:
       apply (wpsimp wp: mapM_wp')+
   done
 
-crunch pspace_aligned[wp]: cap_swap_for_delete, set_cap, empty_slot "pspace_aligned" (ignore: empty_slot_ext wp: dxo_wp_weak)
-crunch pspace_aligned[wp]: finalise_cap "pspace_aligned"
-  (wp: mapM_x_wp' select_wp hoare_vcg_if_lift2 hoare_drop_imps modify_wp mapM_wp' dxo_wp_weak
-   simp: unless_def crunch_simps arch_update.pspace_aligned_update
-   ignore: tcb_sched_action reschedule_required)
-
 crunch valid_vspace_objs[wp]: cap_swap_for_delete "valid_vspace_objs"
 
 lemma set_asid_pool_arch_objs_unmap'':
@@ -2362,11 +2357,6 @@ lemma store_pte_valid_vspace_objs[wp]:
   apply (erule_tac x="p && ~~ mask pt_bits" in allE)
   apply auto
 done
-
-crunch valid_vspace_objs[wp]: finalise_cap "valid_vspace_objs"
-  (wp: mapM_wp' mapM_x_wp' select_wp hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps store_pde_vspace_objs_unmap
-   simp: crunch_simps pde_ref_def unless_def
-   ignore: tcb_sched_action reschedule_required)
 
 declare get_cap_global_refs[wp]
 

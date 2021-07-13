@@ -177,7 +177,7 @@ lemma set_mrs_equiv_but_for_labels:
           apply(simp add: msg_max_length_def word_size_def)
          apply(rule mul_add_word_size_lt_msg_align_bits_ofnat)
           apply(simp add: msg_max_length_def msg_align_bits')
-         apply simp
+         apply(simp add: word_size_def)
         apply(erule is_aligned_no_overflow')
        apply simp
       apply(wp set_object_equiv_but_for_labels hoare_vcg_all_lift static_imp_wp | simp)+
@@ -200,16 +200,20 @@ lemma valid_ntfn_WaitingNtfn_tl:
   apply(clarsimp simp: valid_ntfn_def split: option.splits)
   done
 
+(* FIXME: many redundant conditions *)
 lemma update_waiting_ntfn_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (valid_objs and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and ko_at (Notification ntfn) ntfnptr and (\<lambda>s. is_subject aag (cur_thread s)) and K (ntfn_obj ntfn = WaitingNtfn queue)) (update_waiting_ntfn ntfnptr queue bound_tcb badge)"
+  "reads_respects aag l (pspace_aligned and valid_vspace_objs and valid_arch_state and valid_objs and
+                         sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and
+                         ko_at (Notification ntfn) ntfnptr and (\<lambda>s. is_subject aag (cur_thread s)) and
+                         K (ntfn_obj ntfn = WaitingNtfn queue)) (update_waiting_ntfn ntfnptr queue bound_tcb badge)"
   unfolding update_waiting_ntfn_def fun_app_def
   apply (wp assert_sp possible_switch_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
   apply (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
             set_simple_ko_reads_respects set_thread_state_pas_refined
             set_simple_ko_valid_objs hoare_vcg_disj_lift set_simple_ko_pas_refined
-        | simp add: split_def)+
+         | simp add: split_def)+
   done
 
 lemma set_thread_state_ext_runnable_equiv_but_for_labels:
@@ -276,7 +280,8 @@ crunch etcb_at_cdom[wp]: set_thread_state_ext, set_thread_state, set_simple_ko
   (wp: crunch_wps)
 
 lemma update_waiting_ntfn_equiv_but_for_labels:
-  "\<lbrace> equiv_but_for_labels aag L st and pas_refined aag and valid_objs and
+  "\<lbrace> equiv_but_for_labels aag L st and pas_refined aag and
+     pspace_aligned and valid_vspace_objs and valid_arch_state and valid_objs and
      ko_at (Notification ntfn) ntfnptr and
      sym_refs \<circ> state_refs_of and
      (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
@@ -312,8 +317,8 @@ lemma update_waiting_ntfn_modifies_at_most:
           ({pasObjectAbs aag ntfnptr} \<union>
            all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr) \<union>
            \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag ntfnptr))))
-          (pas_refined aag and valid_objs and
-           ko_at (Notification ntfn) ntfnptr and
+          (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
+           valid_objs and ko_at (Notification ntfn) ntfnptr and
            (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
            sym_refs \<circ> state_refs_of and K (ntfn_obj ntfn = WaitingNtfn list))
           (update_waiting_ntfn ntfnptr list boundtcb badge)"
@@ -660,6 +665,10 @@ lemma receive_blockedD:
   "receive_blocked st \<Longrightarrow> \<exists>epptr pl. st = BlockedOnReceive epptr pl"
   by (cases st; simp add: receive_blocked_def)
 
+crunches blocked_cancel_ipc_nosts
+  for pspace_aligned[wp]: pspace_aligned
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_arch_state[wp]: valid_arch_state
 
 lemma send_signal_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -667,10 +676,11 @@ lemma send_signal_reads_respects:
         cancel_ipc_pas_refined[wp del]
   shows
   "reads_respects aag l (pas_refined aag and pas_cur_domain aag and
-    (\<lambda>s. is_subject aag (cur_thread s)) and valid_etcbs and ct_active and
-    (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs and
-    K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag))
-    (send_signal ntfnptr badge)"
+                         pspace_aligned and valid_vspace_objs and valid_arch_state and
+                         (\<lambda>s. is_subject aag (cur_thread s)) and valid_etcbs and ct_active and
+                         (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs and
+                         K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag))
+                        (send_signal ntfnptr badge)"
   unfolding send_signal_def fun_app_def
   subgoal
   proof (cases "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
@@ -1098,13 +1108,14 @@ lemma ball_subsetE:
 
 lemma transfer_caps_loop_reads_respects':
   "reads_respects aag l
-       (pas_refined aag and valid_mdb and valid_objs and
-         (\<lambda>s.(\<forall>cap\<in>set caps. valid_cap (fst cap) s
+       (pas_refined aag and pspace_aligned and valid_vspace_objs and
+        valid_arch_state and valid_mdb and valid_objs and
+        (\<lambda>s. (\<forall>cap\<in>set caps. valid_cap (fst cap) s
                            \<and> is_subject aag (fst (snd cap))
                            \<and> pas_cap_cur_auth aag (fst cap)
                            \<and> cte_wp_at (\<lambda>cp. fst cap \<noteq> NullCap
-                                         \<longrightarrow> cp \<noteq> fst cap
-                                         \<longrightarrow> cp = masked_as_full (fst cap) (fst cap)) (snd cap) s)
+                                          \<longrightarrow> cp \<noteq> fst cap
+                                          \<longrightarrow> cp = masked_as_full (fst cap) (fst cap)) (snd cap) s)
            \<and> (\<forall>slot\<in>set slots. is_subject aag (fst slot)
                              \<and> cte_wp_at ((=) NullCap) slot s
                              \<and> real_cte_at slot s)
@@ -1155,8 +1166,9 @@ lemma transfer_caps_loop_reads_respects':
 
 lemma transfer_caps_loop_reads_respects:
   "reads_respects aag l
-       (pas_refined aag and valid_mdb and valid_objs and
-         (\<lambda>s.(\<forall>cap\<in>set caps. valid_cap (fst cap) s
+       (pas_refined aag and pspace_aligned and valid_vspace_objs and
+        valid_arch_state and valid_mdb and valid_objs and
+        (\<lambda>s. (\<forall>cap\<in>set caps. valid_cap (fst cap) s
                            \<and> is_subject aag (fst (snd cap))
                            \<and> pas_cap_cur_auth aag (fst cap)
                            \<and> cte_wp_at (\<lambda>cp. fst cap \<noteq> NullCap \<longrightarrow> cp = fst cap) (snd cap) s)
@@ -1365,8 +1377,9 @@ lemma cancel_badged_sends_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gts_st_tcb_at[wp del]
   shows
-  "reads_respects aag l (pas_refined aag and valid_objs and (sym_refs \<circ> state_refs_of)
-                         and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag epptr))
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
+                         valid_arch_state and valid_objs and (sym_refs \<circ> state_refs_of) and
+                         (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag epptr))
       (cancel_badged_sends epptr badge)"
   apply (rule gen_asm_ev)+
   apply(simp add: cancel_badged_sends_def)
@@ -1406,13 +1419,15 @@ lemma get_receive_slots_rev:
   done
 
 lemma transfer_caps_reads_respects:
-  "reads_respects aag l (pas_refined aag and valid_mdb and valid_objs
-         and (\<lambda>s.(\<forall>cap\<in>set caps. s \<turnstile> fst cap
-                               \<and> is_subject aag (fst (snd cap))
-                               \<and> pas_cap_cur_auth aag (fst cap)
-                               \<and> cte_wp_at (\<lambda>cp. fst cap \<noteq> NullCap \<longrightarrow> cp = fst cap) (snd cap) s))
-         and K (is_subject aag receiver
-              \<and> ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer))
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
+                         valid_arch_state and valid_mdb and valid_objs and
+                         (\<lambda>s. (\<forall>cap\<in>set caps. s \<turnstile> fst cap
+                                            \<and> is_subject aag (fst (snd cap))
+                                            \<and> pas_cap_cur_auth aag (fst cap)
+                                            \<and> cte_wp_at (\<lambda>cp. fst cap \<noteq> NullCap \<longrightarrow> cp = fst cap)
+                                                        (snd cap) s)) and
+                         K (is_subject aag receiver \<and>
+                            ipc_buffer_has_read_auth aag (pasSubject aag) receive_buffer))
      (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
   apply (wp transfer_caps_loop_reads_respects get_receive_slots_rev get_receive_slots_authorised
@@ -1572,16 +1587,17 @@ lemma get_message_info_reads_respects:
 lemma do_normal_transfer_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and valid_mdb and valid_objs and
-          K (aag_can_read_or_affect aag l sender \<and>
-             ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and>
-             ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and>
-             (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver))))
-   (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf)"
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and
+                         valid_arch_state and valid_mdb and valid_objs and
+                         K (aag_can_read_or_affect aag l sender \<and>
+                            ipc_buffer_has_read_auth aag (pasObjectAbs aag sender) sbuf \<and>
+                            ipc_buffer_has_read_auth aag (pasObjectAbs aag receiver) rbuf \<and>
+                            (grant \<longrightarrow> (is_subject aag sender \<and> is_subject aag receiver))))
+                        (do_normal_transfer sender sbuf endpoint badge grant receiver rbuf)"
   apply(cases grant)
    apply(rule gen_asm_ev)
    apply(simp add: do_normal_transfer_def)
-   apply(wp get_message_info_rev lookup_extra_caps_rev
+   apply(wp copy_mrs_pas_refined get_message_info_rev lookup_extra_caps_rev
             as_user_set_register_reads_respects' set_message_info_reads_respects
             transfer_caps_reads_respects copy_mrs_reads_respects
             lookup_extra_caps_rev lookup_extra_caps_authorised
@@ -1721,8 +1737,8 @@ lemma ptr_in_obj_range:
 lemma do_ipc_transfer_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (valid_objs and valid_mdb
-                         and pas_refined aag and
+  "reads_respects aag l (pspace_aligned and valid_vspace_objs and valid_arch_state and
+                         valid_objs and valid_mdb and pas_refined aag and
                          K ((grant \<longrightarrow> (is_subject aag sender \<and>
                                        is_subject aag receiver)) \<and>
                            aag_can_read_or_affect aag l sender \<and>
@@ -2015,6 +2031,7 @@ lemma do_reply_transfer_reads_respects_f:
                     reads_respects_f[OF get_thread_state_rev]
                | simp add: invs_valid_objs invs_psp_aligned invs_valid_global_refs
                            invs_distinct invs_arch_state invs_valid_ko_at_arm
+                           invs_psp_aligned invs_vspace_objs invs_arch_state
                | rule conjI
                | elim conjE
                | assumption)+)[8]
@@ -2541,9 +2558,12 @@ lemma send_signal_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
   "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and
-      valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and
-      pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and ct_active and
-      is_subject aag \<circ> cur_thread and K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)) (send_signal ntfnptr badge)"
+                           pspace_aligned and valid_vspace_objs and valid_arch_state and
+                           valid_objs and valid_global_objs and valid_arch_state and
+                           valid_global_refs and pspace_distinct and valid_idle and ct_active and
+                           sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and
+                           K ((pasSubject aag, Notify, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag))
+                          (send_signal ntfnptr badge)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule send_signal_reads_respects[OF domains_distinct])
    apply(rule doesnt_touch_globalsI)

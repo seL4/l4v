@@ -195,7 +195,7 @@ lemma cancel_badged_sends_reads_respects_f:
    apply (rule reads_respects_f)
     apply (rule cancel_badged_sends_reads_respects[OF domains_distinct])
    apply (wp cancel_badged_sends_silc_inv[where st=st] | simp | elim conjE, assumption)+
-  apply (simp add: invs_valid_objs invs_sym_refs)
+  apply fastforce
   done
 
 lemma cap_revoke_only_timer_irq_inv:
@@ -283,7 +283,7 @@ lemma invoke_cnode_reads_respects_f_g:
 lemma arch_perform_invocation_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
-  "reads_respects_g aag l (ct_active and K (authorised_arch_inv aag ai)
+  "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai
               and is_subject aag \<circ> cur_thread and pas_refined aag and invs
               and authorised_for_globals_arch_inv ai and valid_arch_inv ai)
     (arch_perform_invocation ai)"

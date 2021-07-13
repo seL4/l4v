@@ -645,7 +645,6 @@ lemma bind_notification_reads_respects:
 lemmas thread_get_reads_respects_f = reads_respects_f[OF thread_get_reads_respects, where Q="\<top>", simplified, OF thread_get_inv]
 
 lemmas reschedule_required_reads_respects_f = reads_respects_f[OF reschedule_required_reads_respects, where Q="\<top>", simplified, OF _ reschedule_required_ext_extended.silc_inv]
-crunch pas_refined[wp]: restart "pas_refined aag"
 
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -671,12 +670,18 @@ lemma invoke_tcb_reads_respects_f:
         apply(solves\<open>auto simp: authorised_tcb_inv_def  det_getRegister reads_equiv_f_def
                         intro!: det_mapM[OF _ subset_refl]\<close>)
        apply(wp when_ev mapM_x_ev'' reschedule_required_reads_respects_f[where st=st]
-                as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift mapM_x_wp'
+                as_user_reads_respects_f[where st=st] hoare_vcg_ball_lift
                 restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift
                 suspend_reads_respects_f suspend_silc_inv hoare_drop_imp
                 restart_silc_inv restart_pas_refined
             | simp split del: if_split add: det_setRegister det_setNextPC
-            | strengthen invs_mdb)+
+            | strengthen invs_mdb
+            | (rule hoare_strengthen_post[where Q="\<lambda>_. silc_inv aag st and pas_refined aag
+                                                                       and pspace_aligned
+                                                                       and valid_vspace_objs
+                                                                       and valid_arch_state",
+                                          OF mapM_x_wp', rotated], fastforce)
+            | wp mapM_x_wp')+
        apply(solves\<open>auto simp: authorised_tcb_inv_def
                         idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC
                         det_getRegister\<close>)
@@ -728,11 +733,12 @@ lemma invoke_tcb_reads_respects_f:
                            cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
                            cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
                            checked_insert_no_cap_to hoare_vcg_const_imp_lift_R hoare_vcg_conj_lift
-                           as_user_reads_respects_f thread_set_mdb
+                           as_user_reads_respects_f thread_set_mdb cap_delete_invs
                       | wpc
                       | simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                                   tcb_at_st_tcb_at when_def
                       | strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                                   invs_psp_aligned invs_vspace_objs invs_arch_state
                       | solves auto)+)[7]
                     (* 9 subgoals here *)
           apply ((simp add: conj_comms,
@@ -759,11 +765,12 @@ lemma invoke_tcb_reads_respects_f:
                      cap_delete_deletes cap_delete_valid_cap cap_delete_cte_at
                      cap_delete_pas_refined' itr_wps(12) itr_wps(14) cap_insert_cte_at
                      checked_insert_no_cap_to hoare_vcg_const_imp_lift_R
-                     as_user_reads_respects_f
+                     as_user_reads_respects_f cap_delete_invs
                 |wpc
                 |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def
                            when_def st_tcb_at_triv
                 |strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                            invs_psp_aligned invs_vspace_objs invs_arch_state
                 |wp (once) hoare_drop_imp)+
     apply(simp add: option_update_thread_def tcb_cap_cases_def
          | wp static_imp_wp static_imp_conj_wp reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
