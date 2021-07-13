@@ -1441,8 +1441,9 @@ lemma update_restart_pc_silc_inv[wp]:
   done
 
 lemma finalise_cap_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
-      finalise_cap cap final
+  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
+                    and valid_mdb and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
+   finalise_cap cap final
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(case_tac cap)
             apply(wp cancel_ipc_silc_inv | simp split del: if_split add: suspend_def| clarsimp)+
@@ -1517,8 +1518,8 @@ lemma silc_inv_preserves_silc_dom_caps:
   done
 
 lemma finalise_cap_ret_is_silc:
-  "\<lbrace>silc_inv aag st and valid_mdb and cte_wp_at ((=) cap) slot and
-    pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
+  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb
+                    and cte_wp_at ((=) cap) slot and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap blah
    \<lbrace>\<lambda>rvb s. (\<not> cap_points_to_label aag (fst rvb) (pasObjectAbs aag (fst slot)) \<longrightarrow>
                  (\<exists> lslot. lslot
@@ -2597,7 +2598,7 @@ lemma perform_asid_pool_invocation_silc_inv:
 
 
 lemma arch_perform_invocation_silc_inv:
-  "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and K (authorised_arch_inv aag ai)\<rbrace>
+  "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding arch_perform_invocation_def
@@ -2794,14 +2795,15 @@ crunch silc_inv[wp]: copy_mrs, set_message_info "silc_inv aag st"
 
 
 lemma do_normal_transfer_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
-    K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
-      do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer
+  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
+                    and valid_objs and valid_mdb and pas_refined aag
+                    and K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
+   do_normal_transfer sender send_buffer ep badge grant receiver recv_buffer
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding do_normal_transfer_def
   apply(case_tac grant)
    apply ((wp transfer_caps_silc_inv copy_mrs_cte_wp_at hoare_vcg_ball_lift lec_valid_cap'
-              lookup_extra_caps_authorised
+              lookup_extra_caps_authorised copy_mrs_pas_refined
         | simp)+)[1]
   apply simp
   apply(wp transfer_caps_empty_inv | simp)+
@@ -2821,8 +2823,9 @@ lemma valid_ep_recv_dequeue':
   done
 
 lemma do_ipc_transfer_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
-       K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
+  "\<lbrace>silc_inv aag st and pspace_aligned and valid_vspace_objs and valid_arch_state
+                    and valid_objs and valid_mdb and pas_refined aag
+                    and K (grant \<longrightarrow> is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
      do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding do_ipc_transfer_def
@@ -3103,8 +3106,9 @@ lemma invoke_tcb_silc_inv:
    apply (wpsimp split: option.splits)
   (* just ThreadControl left *)
   apply (simp add: split_def cong: option.case_cong)
-  (* FIXME: very slow, ~5 mins *)
-  apply (wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_lift_R
+  (* slow, ~2 mins *)
+  apply (simp only: conj_ac cong: conj_cong imp_cong |
+         wp checked_insert_pas_refined checked_cap_insert_silc_inv hoare_vcg_all_lift_R
             hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
             cap_delete_silc_inv_not_transferable
             cap_delete_pas_refined' cap_delete_deletes
@@ -3116,7 +3120,6 @@ lemma invoke_tcb_silc_inv:
             check_cap_inv2[where Q="\<lambda>_. valid_sched"]
             check_cap_inv2[where Q="\<lambda>_. simple_sched_action"]
             checked_insert_no_cap_to
-
             thread_set_tcb_fault_handler_update_invs
             thread_set_pas_refined thread_set_emptyable thread_set_valid_cap
             thread_set_not_state_valid_sched thread_set_cte_at
@@ -3125,6 +3128,7 @@ lemma invoke_tcb_silc_inv:
         |simp add: emptyable_def tcb_cap_cases_def tcb_cap_valid_def st_tcb_at_triv
                    option_update_thread_def
         |strengthen use_no_cap_to_obj_asid_strg invs_mdb
+                    invs_psp_aligned invs_vspace_objs invs_arch_state
         |wp (once) hoare_drop_imps)+
   apply (clarsimp simp: authorised_tcb_inv_def emptyable_def)
   (* also slow, ~15s *)

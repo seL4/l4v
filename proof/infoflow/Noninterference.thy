@@ -461,6 +461,7 @@ lemma kernel_entry_if_integrity:
     apply clarsimp
    apply(drule tcb_at_invs, clarsimp simp:  tcb_at_def get_tcb_def
                                     split: kernel_object.splits option.splits)
+  apply(clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state)
   apply(rule conjI)
    apply assumption
   apply(rule state.equality, simp_all)

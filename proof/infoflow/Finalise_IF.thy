@@ -774,20 +774,23 @@ crunch sched_act[wp]: set_simple_ko "\<lambda>s. P (scheduler_action s)"
 lemma cancel_all_ipc_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and K (aag_can_read aag epptr)) (cancel_all_ipc epptr)"
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs
+                                         and valid_arch_state and K (aag_can_read aag epptr))
+                        (cancel_all_ipc epptr)"
   unfolding cancel_all_ipc_def fun_app_def
-  apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
-            set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp
-            set_thread_state_runnable_valid_sched_action
-            set_simple_ko_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret
-            get_epq_RecvEP_ret
-            get_simple_ko_reads_respects get_simple_ko_wp
-        | wpc
-        | clarsimp simp: ball_conj_distrib
-        | rule subset_refl
-        | wp (once) hoare_drop_imps
-        | assumption)+
-  done
+  by (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
+         set_thread_state_pas_refined hoare_vcg_ball_lift
+         set_thread_state_runnable_valid_sched_action
+         set_simple_ko_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret
+         get_epq_RecvEP_ret get_simple_ko_reads_respects get_simple_ko_wp
+      | wpc
+      | clarsimp simp: ball_conj_distrib
+      | rule subset_refl
+      | wp (once) hoare_drop_imps
+      | assumption
+      | rule hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+                                                                and valid_vspace_objs
+                                                                and valid_arch_state", OF mapM_x_wp])+
 
 fun ntfn_queue_invisible where
   "ntfn_queue_invisible aag l (WaitingNtfn list) =
@@ -853,18 +856,22 @@ lemma set_notification_equiv_but_for_labels:
 lemma cancel_all_signals_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "reads_respects aag l (pas_refined aag and K (aag_can_read aag ntfnptr)) (cancel_all_signals ntfnptr)"
+  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
+                                         and K (aag_can_read aag ntfnptr)) (cancel_all_signals ntfnptr)"
   unfolding cancel_all_signals_def
   by (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects
-         set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp
+         set_thread_state_pas_refined hoare_vcg_ball_lift
          set_thread_state_runnable_valid_sched_action
          set_simple_ko_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret
          get_simple_ko_reads_respects get_simple_ko_wp
-     | wpc
-     | clarsimp simp: ball_conj_distrib
-     | rule subset_refl
-     | wp (once) hoare_drop_imps
-     | simp)+
+      | wpc
+      | clarsimp simp: ball_conj_distrib
+      | rule subset_refl
+      | wp (once) hoare_drop_imps
+      | simp
+      | rule hoare_strengthen_post[where Q="\<lambda>_. pas_refined aag and pspace_aligned
+                                                                and valid_vspace_objs
+                                                                and valid_arch_state", OF mapM_x_wp])+
 
 lemma get_bound_notification_reads_respects':
   "reads_respects aag l (K(is_subject aag thread)) (get_bound_notification thread)"
@@ -1090,7 +1097,7 @@ lemma select_singleton_ev:
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def select_def)
 
 lemma thread_set_fault_pas_refined':
-  "\<lbrace>pas_refined aag\<rbrace>
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
      thread_set (tcb_fault_update fault) thread
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   by (wp thread_set_pas_refined | simp)+
@@ -1489,7 +1496,7 @@ next
           apply(clarsimp cong: conj_cong simp: conj_comms)
           apply(rename_tac word option nat)
           apply(drule_tac s="{word}" in sym)
-          apply clarsimp
+          apply(clarsimp simp: invs_psp_aligned invs_arch_state invs_vspace_objs)
           apply(rule conjI, fastforce)
           apply(clarsimp, rule conjI) apply (erule replaceable_zombie_not_transferable)(* WHY *)
            apply (rule conjI)

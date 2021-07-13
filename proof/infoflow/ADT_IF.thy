@@ -1194,10 +1194,11 @@ lemma handle_preemption_if_silc_inv[wp]:
   done
 
 lemma handle_preemption_if_pas_refined[wp]:
-  "\<lbrace>pas_refined aag\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (simp add: handle_preemption_if_def)
-  apply (wp handle_interrupt_pas_refined | simp)+
-  done
+  "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
+   handle_preemption_if tc
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  by (wpsimp wp: handle_interrupt_pas_refined getActiveIRQ_wp hoare_drop_imps
+           simp: handle_preemption_if_def if_fun_split)
 
 crunch cur_thread[wp]: handle_preemption_if "\<lambda>s::det_state. P (cur_thread s)"
 crunch cur_domain[wp]: handle_preemption_if " \<lambda>s. P (cur_domain s)"
@@ -1256,6 +1257,12 @@ lemma schedule_if_invs[wp]:
   apply(simp add: schedule_if_def | wp)+
    apply(rule hoare_strengthen_post[OF activate_invs] | simp | wp)+
   done
+
+crunches schedule
+  for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
+  and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
+  and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+  (wp: crunch_wps)
 
 crunch pas_refined[wp]: schedule_if "pas_refined aag"
 
@@ -2378,17 +2385,17 @@ lemma invs_if_Step_ADT_A_if:
          apply (rule hoare_add_post[OF handle_preemption_context, OF TrueI],
                 simp,
                 rule hoare_drop_imps)
-           apply (wp handle_preemption_if_invs
-                     handle_preemption_if_domain_sep_inv
+           apply (wp handle_preemption_if_invs handle_preemption_if_domain_sep_inv
                      handle_preemption_if_domain_time_sched_action[OF num_domains_sanity]
-                     handle_preemption_if_det_inv ct_idle_lift| simp add: non_kernel_IRQs_def)+
+                     handle_preemption_if_det_inv ct_idle_lift)
+         apply (fastforce simp: non_kernel_IRQs_def)
         apply(simp add: kernel_schedule_if_def | elim exE conjE)+
         apply(erule use_valid)
          apply((wp schedule_if_ct_running_or_ct_idle
                    schedule_if_domain_time_nonzero' schedule_if_domain_time_nonzero
                    schedule_if_det_inv
                    hoare_vcg_imp_lift'
-                | simp add: invs_valid_idle)+)[2]
+                | fastforce simp: invs_valid_idle)+)[2]
        apply(simp add: kernel_exit_A_if_def | elim exE conjE)+
        apply(frule state_unchanged[OF kernel_exit_if_inv])
        apply(frule use_valid[OF _ kernel_exit_if_det_inv])
