@@ -833,7 +833,7 @@ lemma bindScReply_corres:
         apply (erule (1) sc_replies_relation_prevs_list)
         apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_sc)
        apply (force dest!: sc_replies_relation_scReplies_of
-                     simp: obj_at'_def projectKOs opt_map_left_Some vs_heap_simps is_sc_obj
+                     simp: obj_at'_def projectKOs opt_map_red vs_heap_simps is_sc_obj
                            obj_at_def)
       apply wpsimp+
   done
@@ -1120,7 +1120,7 @@ lemma sym_refs_replySCs_of_None:
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (drule_tac tp=SCReply and y=rp and x=scp in sym_refsD[rotated])
    apply (force simp: state_refs_of'_def dest: pspace_alignedD' pspace_distinctD')
-  by (clarsimp simp: state_refs_of'_def refs_of_rev' opt_map_left_Some
+  by (clarsimp simp: state_refs_of'_def refs_of_rev' opt_map_red
               split: option.split_asm if_split_asm)
 
 (* cleanReply *)
@@ -1167,7 +1167,7 @@ lemma sc_replies_relation_prevs_list':
      kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
     \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (clarsimp simp: sc_of_def opt_map_left_Some)
+  apply (clarsimp simp: sc_of_def opt_map_red)
   done
 
 lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
@@ -1182,9 +1182,9 @@ lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
   apply (case_tac "scReplies_of s' scp", simp)
   apply (rename_tac p)
   apply (drule pspace_relation_sc_at[where scp=scp])
-   apply (clarsimp simp: projectKOs opt_map_left_Some)
-  apply (clarsimp simp: obj_at_simps is_sc_obj opt_map_left_Some)
-  apply (drule (1) sc_replies_relation_prevs_list', simp add: opt_map_left_Some)
+   apply (clarsimp simp: projectKOs opt_map_red)
+  apply (clarsimp simp: obj_at_simps is_sc_obj opt_map_red)
+  apply (drule (1) sc_replies_relation_prevs_list', simp add: opt_map_red)
   apply (drule (1) heap_ls_unique, simp)
   done
 
@@ -1469,7 +1469,7 @@ lemma updateReply_sr_inv_prev:
    apply (clarsimp simp: reply_relation_def)
   by (fastforce elim!: sc_replies_relation_sc_with_reply_None
                           [where r="replyPrev_update Map.empty reply'" for reply', simplified]
-                 simp: opt_map_left_Some obj_at'_def projectKOs)
+                 simp: opt_map_red obj_at'_def projectKOs)
 
 lemma updateReply_sr_inv_next:
   "sr_inv (P and (\<lambda>s. sc_with_reply rp s = None) and valid_replies
@@ -1519,7 +1519,7 @@ lemma cleanReply_sr_inv:
      apply (clarsimp simp: reply_relation_def)
     apply (fastforce elim!: sc_replies_relation_sc_with_reply_None
                               [where r="replyPrev_update Map.empty reply'" for reply', simplified]
-                     simp: opt_map_left_Some obj_at'_def projectKOs)
+                     simp: opt_map_red obj_at'_def projectKOs)
    apply wpsimp
   apply (clarsimp intro!: updateReply_sr_inv_next[simplified])
   done
@@ -1807,7 +1807,7 @@ proof -
       apply (drule (1) valid_sched_context_objsI)
       apply (clarsimp simp: valid_sched_context_def)
       apply (frule_tac nrp=nrp in next_reply_in_sc_replies[where rp=rp, OF state_relation_sc_replies_relation])
-            apply (simp add: obj_at'_def projectKOs objBits_simps' opt_map_left_Some)+
+            apply (simp add: obj_at'_def projectKOs objBits_simps' opt_map_red)+
       apply (clarsimp simp: vs_heap_simps)
      apply (drule_tac x=nextr in z)
      apply (clarsimp simp: state_relation_def obj_at_def is_reply obj_at'_def projectKOs)
@@ -1835,15 +1835,15 @@ proof -
       apply (clarsimp simp: reply_relation_def)
      apply (rule conjI)
       (* sc_replies_relation *)
-      apply (clarsimp simp: projectKO_opt_sc opt_map_left_Some)
+      apply (clarsimp simp: projectKO_opt_sc opt_map_red)
       apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
       apply (drule_tac x=p in spec)
       apply (intro conjI impI allI)
       (* p =  scp *)
-       apply (clarsimp simp: opt_map_left_Some sc_of_def)
+       apply (clarsimp simp: opt_map_red sc_of_def)
        apply (prop_tac "replyPrevs_of s' nrp = Some rp")
         apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
-        apply (clarsimp simp: opt_map_left_Some)
+        apply (clarsimp simp: opt_map_red)
        apply (prop_tac "scReply sc' \<noteq> Some rp")
         apply (drule heap_path_head; clarsimp)
        apply (frule (4) heap_ls_next_takeWhile_append_sym[OF _ _ _ _ reply_sym_heap_Prev_Next])
@@ -1860,10 +1860,10 @@ proof -
       apply (clarsimp simp: sc_of_def opt_map_Some)
       apply (rename_tac p sc2 ko)
       apply (case_tac ko; simp)
-      apply (clarsimp simp: opt_map_left_Some sc_of_def)
+      apply (clarsimp simp: opt_map_red sc_of_def)
       apply (prop_tac "replyPrevs_of s' nrp = Some rp")
        apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
-       apply (clarsimp simp: opt_map_left_Some)
+       apply (clarsimp simp: opt_map_red)
       apply (frule (2) heap_ls_next_in_list)
       apply (simp add: sc_with_reply_def the_pred_option_def
                 split: if_split_asm)

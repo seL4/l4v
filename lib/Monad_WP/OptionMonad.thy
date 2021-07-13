@@ -40,7 +40,7 @@ lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
 
-lemma opt_map_left_Some:
+lemma opt_map_red:
   "f x = Some y \<Longrightarrow> (f |> g) x = g y"
   by (clarsimp simp: opt_map_def)
 

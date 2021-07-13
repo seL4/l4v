@@ -4158,12 +4158,12 @@ lemma sym_refs_replyNext_replyPrev_sym:
     replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
   apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
    apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
-    apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
-   apply (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+    apply (clarsimp simp: map_set_def opt_map_red list_refs_of_reply'_def projectKO_opt_reply)
+   apply (clarsimp simp: opt_map_red map_set_def get_refs_def2 list_refs_of_reply'_def
                   split: option.split_asm)
   apply (drule_tac tp=ReplyPrev and y=rp and x=rp' in sym_refsD[rotated])
-   apply (clarsimp simp: map_set_def opt_map_left_Some list_refs_of_reply'_def projectKO_opt_reply)
-  by (clarsimp simp: opt_map_left_Some map_set_def get_refs_def2 list_refs_of_reply'_def
+   apply (clarsimp simp: map_set_def opt_map_red list_refs_of_reply'_def projectKO_opt_reply)
+  by (clarsimp simp: opt_map_red map_set_def get_refs_def2 list_refs_of_reply'_def
               split: option.split_asm)
 
 lemma reply_sym_heap_Next_Prev:

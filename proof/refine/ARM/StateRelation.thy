@@ -289,7 +289,7 @@ lemma valid_objs'_valid_refills':
   apply (case_tac ko; clarsimp)
   apply (erule (1) valid_objsE')
   by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def
-                     is_active_sc'_def opt_map_left_Some projectKO_opt_sc)
+                     is_active_sc'_def opt_map_red projectKO_opt_sc)
 
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
@@ -958,7 +958,7 @@ lemma list_refs_of_replies'_reftype[simp]:
 lemma replyNext_replyNexts_of_opt_map:
   "\<lbrakk>ksPSpace s' p = Some (KOReply reply); replyNext reply = Some (Next p')\<rbrakk>
     \<Longrightarrow> (replyNexts_of s' |> f s') p = f s' p'"
-  by (clarsimp simp: opt_map_left_Some projectKO_opt_reply split: option.split)
+  by (clarsimp simp: opt_map_red projectKO_opt_reply split: option.split)
 
 lemma replyPrevs_of_refs:
   "replyPrevs_of s' p = Some p' \<longleftrightarrow> (p', ReplyPrev) \<in> list_refs_of_replies' s' p"
@@ -973,13 +973,13 @@ lemma replyNexts_of_refs:
 lemma sym_replies_prev_then_next_id_p:
   "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyPrevs_of s' p = Some p'\<rbrakk>
    \<Longrightarrow> (replyPrevs_of s' |> replyNexts_of s') p = Some p"
-  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs opt_map_left_Some)
+  apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs opt_map_red)
   by (drule (1) sym_refsD[rotated], simp)
 
 lemma sym_replies_next_then_prev_id_p:
   "\<lbrakk>sym_refs (list_refs_of_replies' s'); replyNexts_of s' p = Some p'\<rbrakk>
    \<Longrightarrow> (replyNexts_of s' |> replyPrevs_of s') p = Some p"
-  supply opt_map_left_Some[simp]
+  supply opt_map_red[simp]
   apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs)
   by (drule (1) sym_refsD[rotated], simp)
 
