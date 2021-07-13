@@ -53,6 +53,7 @@ lemmas replies_with_sc_safe_kheap_updates[simp] =
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refill_max := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refills := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_badge := v\<rparr>", simplified]
+       replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_sporadic := v\<rparr>", simplified]
        replies_with_sc_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_consumed := v\<rparr>", simplified]
        replies_with_sc_kh_update_tcb[where f="\<lambda>sc v. sc\<lparr>tcb_arch := v\<rparr>"]
 
@@ -62,6 +63,7 @@ lemmas replies_blocked_safe_kheap_updates[simp] =
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refill_max := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_refills := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_badge := v\<rparr>"]
+       replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_sporadic := v\<rparr>"]
        replies_blocked_kh_update_sc[where f="\<lambda>sc v. sc\<lparr>sc_consumed := v\<rparr>"]
        replies_blocked_kh_update_tcb[where f="\<lambda>sc v. sc\<lparr>tcb_arch := v\<rparr>", simplified]
 

@@ -1154,7 +1154,7 @@ crunch valid_pdpt_objs[wp]: commit_domain_time "valid_pdpt_objs"
 crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
 
-crunches check_budget_restart, invoke_sched_control_configure
+crunches check_budget_restart, invoke_sched_control_configure_flags
   for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_wp'
   simp: Let_def ignore: commit_domain_time tcb_release_remove)

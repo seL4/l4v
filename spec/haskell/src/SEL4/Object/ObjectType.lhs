@@ -521,7 +521,7 @@ This function just dispatches invocations to the type-specific invocation functi
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeSchedControl invok) = do
->     withoutPreemption $ invokeSchedControlConfigure invok
+>     withoutPreemption $ invokeSchedControlConfigureFlags invok
 >     return $ []
 >
 > performInvocation _ _ _ (InvokeArchObject invok) = Arch.performInvocation invok

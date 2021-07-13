@@ -300,6 +300,10 @@ lemma refs_of_sc_badge_update[iff]:
   "refs_of_sc (sc_badge_update f sc) = refs_of_sc sc"
   by simp
 
+lemma refs_of_sc_sporadic_update[iff]:
+  "refs_of_sc (sc_sporadic_update f sc) = refs_of_sc sc"
+  by simp
+
 lemma refs_of_sc_period_update[iff]:
   "refs_of_sc (sc_period_update f sc) = refs_of_sc sc"
   by simp
@@ -316,17 +320,22 @@ lemma refs_of_sched_context_sc_badge_update[iff]:
   "refs_of (SchedContext (sc_badge_update f sc) n) = refs_of (SchedContext sc n)"
   by simp
 
+lemma refs_of_sched_context_sc_sporadic_update[iff]:
+  "refs_of (SchedContext (sc_sporadic_update f sc) n) = refs_of (SchedContext sc n)"
+  by simp
+
 lemma set_refills_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_refills ptr param_b \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace> "
   by (wpsimp simp: set_refills_def get_sched_context_def wp: hoare_vcg_all_lift get_object_wp)
 
-lemma valid_sc_sc_consumed_update[iff]:
+lemma
+  shows valid_sc_sc_consumed_update[iff]:
   "valid_sched_context (sc_consumed_update f sc) = valid_sched_context sc"
-  by (fastforce simp: valid_sched_context_def)
-
-lemma valid_sc_sc_badge_update[iff]:
-  "valid_sched_context (sc_badge_update f sc) = valid_sched_context sc"
-  by (fastforce simp: valid_sched_context_def)
+  and valid_sc_sc_badge_update[iff]:
+  "valid_sched_context (sc_badge_update g sc) = valid_sched_context sc"
+  and valid_sc_sc_sporadic_update[iff]:
+  "valid_sched_context (sc_sporadic_update h sc) = valid_sched_context sc"
+  by (fastforce simp: valid_sched_context_def)+
 
 lemma invs_consumed_time_update[iff]:
   "invs (consumed_time_update f s) = invs s"
@@ -436,6 +445,7 @@ lemma update_sc_but_not_sc_replies_valid_replies[wp]:
   "\<And>f. update_sched_context sc_ptr (sc_refills_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   "\<And>f. update_sched_context sc_ptr (sc_refill_max_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   "\<And>f. update_sched_context sc_ptr (sc_badge_update f) \<lbrace> valid_replies_pred P \<rbrace>"
+  "\<And>f. update_sched_context sc_ptr (sc_sporadic_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   "\<And>f. update_sched_context sc_ptr (sc_yield_from_update f) \<lbrace> valid_replies_pred P \<rbrace>"
   by (rule update_sc_but_not_sc_replies_valid_replies_2, simp)+
 

@@ -16,7 +16,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > module SEL4.Object.SchedContext (
 >         schedContextUnbindAllTCBs, invokeSchedContext,
->         invokeSchedControlConfigure, getSchedContext, readSchedContext,
+>         invokeSchedControlConfigureFlags, getSchedContext, readSchedContext,
 >         schedContextUnbindTCB, schedContextBindTCB, schedContextResume,
 >         setSchedContext, updateTimeStamp, commitTime, rollbackTime,
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
@@ -40,6 +40,7 @@ This module uses the C preprocessor to select a target architecture.
 > import SEL4.Machine.RegisterSet(PPtr(..), Word)
 > import SEL4.API.Failures(SyscallError(..))
 > import SEL4.API.Types(MessageInfo(..))
+> import SEL4.API.Types.Universal (schedContextSporadicFlag)
 > import {-# SOURCE #-} SEL4.Kernel.VSpace(lookupIPCBuffer)
 > import SEL4.Model.Failures
 > import SEL4.Model.Preemption(KernelP, withoutPreemption)
@@ -630,11 +631,12 @@ This module uses the C preprocessor to select a target architecture.
 >     setSchedContext scPtr (sc { scTCB = Just tcbPtr })
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 
-> invokeSchedControlConfigure :: SchedControlInvocation -> Kernel ()
-> invokeSchedControlConfigure iv = case iv of
->     InvokeSchedControlConfigure scPtr budget period mRefills badge -> do
+> invokeSchedControlConfigureFlags :: SchedControlInvocation -> Kernel ()
+> invokeSchedControlConfigureFlags iv = case iv of
+>     InvokeSchedControlConfigureFlags scPtr budget period mRefills badge flags -> do
 >         sc <- getSchedContext scPtr
 >         setSchedContext scPtr $ sc { scBadge = badge }
+>         setSchedContext scPtr $ sc { scSporadic = flags `testBit` schedContextSporadicFlag }
 >         when (scTCB sc /= Nothing) $ do
 >             tcbReleaseRemove $ fromJust $ scTCB sc
 >             tcbSchedDequeue $ fromJust $ scTCB sc
