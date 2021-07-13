@@ -8,7 +8,7 @@ theory ArchAccess
 imports Types
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming RISCV64
 
 subsection \<open>Arch-specific transformation of caps into authorities\<close>
 
@@ -19,53 +19,45 @@ definition vspace_cap_rights_to_auth :: "cap_rights \<Rightarrow> auth set" wher
 
 definition arch_cap_auth_conferred where
   "arch_cap_auth_conferred arch_cap \<equiv>
-     (if is_page_cap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) else {Control})"
+     (if is_FrameCap arch_cap then vspace_cap_rights_to_auth (acap_rights arch_cap) else {Control})"
 
 subsection \<open>Generating a policy from the current ASID distribution\<close>
 
-definition pte_ref where
-  "pte_ref pte \<equiv> case pte of
-     SmallPagePTE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSmallPage, vspace_cap_rights_to_auth rights)
-   | LargePagePTE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMLargePage, vspace_cap_rights_to_auth rights)
+(* FIXME AC: abbreviation for ptrFromPAddr *)
+(* FIXME AC: rename *)
+definition pte_ref2 where
+  "pte_ref2 level pte \<equiv> case pte of
+     PagePTE ppn atts rights
+       \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn),
+                pageBitsForSize (vmpage_size_of_level level),
+                vspace_cap_rights_to_auth rights)
+   | PageTablePTE ppn atts
+       \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn), 0, {Control})
    | _ \<Rightarrow> None"
 
-definition pde_ref2 where
-  "pde_ref2 pde \<equiv> case pde of
-     SectionPDE addr atts domain rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSection, vspace_cap_rights_to_auth rights)
-   | SuperSectionPDE addr atts rights
-       \<Rightarrow> Some (ptrFromPAddr addr, pageBitsForSize ARMSuperSection, vspace_cap_rights_to_auth rights)
-   | PageTablePDE addr atts domain
-       \<comment> \<open>The 0 is a hack, saying that we own only addr, although 12 would also be OK\<close>
-       \<Rightarrow> Some (ptrFromPAddr addr, 0, {Control})
-   | _ \<Rightarrow> None"
-
-\<comment> \<open>We exclude the global page tables from the authority graph. Alternatively, we could include them
-    and add a wellformedness constraint to policies that requires that every label has the necessary
-    authority to whichever label owns the global page tables, so that when a new page directory is
-    created and references to the global page tables are added to it, no new authority is gained.
-    Note: excluding the references to global page tables in this way brings in some ARM
-          arch-specific VM knowledge here\<close>
-definition vs_refs_no_global_pts :: "kernel_object \<Rightarrow> (obj_ref \<times> obj_ref \<times> aa_type \<times> auth) set"
+definition vs_refs_aux :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> (obj_ref \<times> obj_ref \<times> aa_type \<times> auth) set"
   where
-  "vs_refs_no_global_pts \<equiv> \<lambda>ko. case ko of
-     ArchObj (ASIDPool pool) \<Rightarrow> (\<lambda>(r,p). (p, ucast r, AASIDPool, Control)) ` graph_of pool
-   | ArchObj (PageDirectory pd) \<Rightarrow>
-       \<Union>(r,(p, sz, auth)) \<in> graph_of (pde_ref2 o pd) - {(x,y). (ucast (kernel_base >> 20) \<le> x)}.
-         (\<lambda>(p, a). (p, ucast r, APageDirectory, a)) ` (ptr_range p sz \<times> auth)
-   | ArchObj (PageTable pt) \<Rightarrow>
-       \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref o pt).
+  "vs_refs_aux level \<equiv> \<lambda>ko. case ko of
+     ASIDPool pool \<Rightarrow> (\<lambda>(r,p). (p, ucast r, AASIDPool, Control)) ` graph_of pool
+   | PageTable pt \<Rightarrow>
+       \<Union>(r,(p, sz, auth)) \<in> graph_of (pte_ref2 level o pt) - {(x,y). x \<in> kernel_mapping_slots \<and> level = max_pt_level}.
          (\<lambda>(p, a). (p, ucast r, APageTable, a)) ` (ptr_range p sz \<times> auth)
    | _ \<Rightarrow> {}"
 
 definition state_vrefs where
-  "state_vrefs s = case_option {} vs_refs_no_global_pts o kheap s"
+  "state_vrefs s \<equiv> \<lambda>p.
+     \<Union>{vs_refs_aux lvl ao | lvl ao bot asid vref. vs_lookup_table bot asid vref s = Some (lvl, p)
+                                                   \<and> aobjs_of s p = Some ao \<and> vref \<in> user_region}"
+
+lemma state_vrefsD:
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
+     aobjs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
+     \<Longrightarrow> x \<in> state_vrefs s p"
+  unfolding state_vrefs_def by fastforce
 
 end
 
-context Arch_p_arch_update_eq begin global_naming ARM_A
+context Arch_p_arch_update_eq begin global_naming RISCV64
 
 interpretation Arch .
 
@@ -74,11 +66,7 @@ lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
 
 end
 
-context Arch begin global_naming ARM_A
-
-lemma arch_update_state_vrefs[simp]:
-  "state_vrefs (arch_state_update f s) = state_vrefs s"
-  by (simp add: state_vrefs_def)
+context Arch begin global_naming RISCV64
 
 lemmas state_vrefs_upd =
   cur_thread_update.state_vrefs
@@ -96,14 +84,12 @@ context Arch begin
 primrec aobj_ref' where
   "aobj_ref' (ASIDPoolCap p as) = {p}"
 | "aobj_ref' ASIDControlCap = {}"
-| "aobj_ref' (PageCap isdev x rs sz as4) = ptr_range x (pageBitsForSize sz)"
-| "aobj_ref' (PageDirectoryCap x as2) = {x}"
+| "aobj_ref' (FrameCap ref cR sz dev as) = ptr_range ref (pageBitsForSize sz)"
 | "aobj_ref' (PageTableCap x as3) = {x}"
 
 fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
-  "acap_asid' (PageCap _ _ _ _ mapping) = fst ` set_option mapping"
+  "acap_asid' (FrameCap _ _ _ _ mapping) = fst ` set_option mapping"
 | "acap_asid' (PageTableCap _ mapping) = fst ` set_option mapping"
-| "acap_asid' (PageDirectoryCap _ asid_opt) = set_option asid_opt"
 | "acap_asid' (ASIDPoolCap _ asid)
      = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
 | "acap_asid' ASIDControlCap = UNIV"
@@ -115,7 +101,7 @@ inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
              \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asid_lookup:
     "\<lbrakk> asid_tab (asid_high_bits_of asid) = Some poolptr;
-       (pdptr, asid && mask asid_low_bits, AASIDPool, a) \<in> vrefs poolptr \<rbrakk>
+       (pdptr, ucast (asid && mask asid_low_bits), AASIDPool, a) \<in> vrefs poolptr \<rbrakk>
        \<Longrightarrow> (pasASIDAbs aag asid, a, pasObjectAbs aag pdptr)
              \<in> state_asids_to_policy_aux aag caps asid_tab vrefs"
 | sata_asidpool:
@@ -125,7 +111,8 @@ inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
 
 definition
   "state_asids_to_policy_arch aag caps astate vrefs \<equiv>
-     state_asids_to_policy_aux aag caps (arm_asid_table astate) vrefs"
+     state_asids_to_policy_aux aag caps (riscv_asid_table astate)
+                               (vrefs :: 64 word \<Rightarrow> (64 word \<times> 64 word \<times> aa_type \<times> auth) set)"
 declare state_asids_to_policy_arch_def[simp]
 
 section \<open>Arch-specific integrity definition\<close>
@@ -216,7 +203,7 @@ lemma integrity_asids_interrupt_states_update_r[simp]:
    integrity_asids aag subjects x st s"
   by simp
 
-(* FIXME AC: locale? *)
+(* FIXME AC - locale? *)
 lemmas integrity_asids_updates =
   integrity_asids_trans_state_l
   integrity_asids_trans_state_r
@@ -236,8 +223,13 @@ lemmas integrity_asids_updates =
 
 subsection \<open>Misc definitions\<close>
 
-definition ctxt_IP_update where
-  "ctxt_IP_update ctxt \<equiv> ctxt(NextIP := ctxt FaultIP)"
+fun ctxt_IP_update where
+  "ctxt_IP_update (UserContext ctxt) = UserContext (ctxt(NextIP := ctxt FaultIP))"
+
+lemma ctxt_IP_update_def:
+  "ctxt_IP_update ctxt =
+   (case ctxt of (UserContext ctxt') \<Rightarrow> UserContext (ctxt'(NextIP := ctxt' FaultIP)))"
+  by (cases ctxt; clarsimp)
 
 abbreviation arch_IP_update where
   "arch_IP_update arch \<equiv> arch_tcb_context_set (ctxt_IP_update (arch_tcb_context_get arch)) arch"
@@ -269,7 +261,7 @@ definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Righ
      None \<Rightarrow> {}
    | Some tcb \<Rightarrow>
      (case tcb_ipcframe tcb of
-        ArchObjectCap (PageCap False p' R vms _) \<Rightarrow>
+        ArchObjectCap (FrameCap p' R vms False _) \<Rightarrow>
           if AllowWrite \<in> R
           then (ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits)
           else {}

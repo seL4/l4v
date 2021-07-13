@@ -8,11 +8,15 @@ theory ArchIpc_AC
 imports Ipc_AC
 begin
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AC_assms
 
-declare make_fault_message_inv[Ipc_AC_assms]
+lemma make_fault_message_inv[Ipc_AC_assms, wp]:
+  "make_fault_msg ft t \<lbrace>P\<rbrace>"
+  apply (cases ft, simp_all split del: if_split)
+  by (wp as_user_inv getRestartPC_inv mapM_wp' make_arch_fault_msg_inv | simp add: getRegister_def)+
+
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
 crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x st"
@@ -31,8 +35,7 @@ lemma lookup_ipc_buffer_has_auth[Ipc_AC_assms, wp]:
    \<lbrace>\<lambda>rv _. ipc_buffer_has_auth aag receiver rv\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: lookup_ipc_buffer_def)
-   apply (wp get_cap_wp thread_get_wp'
-        | wpc)+
+   apply (wp get_cap_wp thread_get_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_auth_def get_tcb_ko_at[symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx="tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -49,7 +52,7 @@ lemma lookup_ipc_buffer_has_auth[Ipc_AC_assms, wp]:
   apply simp
   apply (drule (1) cap_auth_caps_of_state)
   apply (clarsimp simp: aag_cap_auth_def cap_auth_conferred_def arch_cap_auth_conferred_def
-                        vspace_cap_rights_to_auth_def vm_read_write_def is_page_cap_def)
+                        vspace_cap_rights_to_auth_def vm_read_write_def)
   apply (drule bspec)
    apply (erule (3) ipcframe_subset_page)
   apply simp
@@ -69,11 +72,11 @@ global_interpretation Ipc_AC_1?: Ipc_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Ipc_AC_assms)
+    by (unfold_locales; (fact Ipc_AC_assms)?)
 qed
 
 
-context Arch begin global_naming ARM_A
+context Arch begin global_naming RISCV64
 
 lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -82,18 +85,15 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
    store_word_offs buf r v
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: store_word_offs_def storeWord_def pred_conj_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_wp)
-  apply (unfold integrity_tcb_in_ipc_def)
-  apply (elim conjE)
-  apply (intro impI conjI)
-     apply assumption+
-   apply clarsimp
-   apply (erule integrity_trans)
-   apply (clarsimp simp: ptr_range_off_off_mems integrity_def is_aligned_mask[symmetric])
-   apply (intro conjI impI)
-     apply (subst (asm) ptr_range_off_off_mems; clarsimp simp: word_size_def)+
-  apply simp
+  apply (wp dmo_wp)
+  apply (clarsimp simp: integrity_tcb_in_ipc_def)
+  apply (erule integrity_trans)
+  apply (clarsimp simp: integrity_def)
+  apply (subgoal_tac "\<forall>i \<in> set [0..7].
+                      buf + of_nat r * of_nat word_size + of_int i \<in> ptr_range buf msg_align_bits")
+   apply (fastforce simp: word_rsplit_0 upto.simps atLeastAtMost_upto)
+  apply (fastforce simp add: unat_def word_size_def of_nat_nat[symmetric] word_of_nat_less
+                   simp del: of_nat_nat intro: ptr_range_off_off_mems)
   done
 
 crunches set_extra_badge
@@ -123,7 +123,8 @@ lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
    apply simp
    apply wp+
   apply (clarsimp simp: arch_tcb_set_registers_def)
-  by (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce)
+  apply (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce simp: arch_tcb_context_set_def)
+  done
 
 lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
   "\<lbrace>valid_objs and integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
@@ -133,7 +134,7 @@ lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
                                                    ptr_range buf' msg_align_bits)\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply (rule hoare_pre)
-  apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_auth_def get_tcb_ko_at [symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -158,10 +159,10 @@ lemma lookup_ipc_buffer_aligned[Ipc_AC_assms]:
   apply (frule (1) caps_of_state_valid_cap)
   apply (clarsimp simp: valid_cap_simps cap_aligned_def)
   apply (erule aligned_add_aligned)
-    apply (rule is_aligned_andI1)
-    apply (drule (1) valid_tcb_objs)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
-                   split: if_splits)
+   apply (rule is_aligned_andI1)
+   apply (drule (1) valid_tcb_objs)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def
+                  split: if_splits)
   apply (rule order_trans [OF _ pbfs_atleast_pageBits])
   apply (simp add: msg_align_bits pageBits_def)
   done
@@ -187,10 +188,15 @@ lemma handle_arch_fault_reply_integrity_tcb_in_fault_reply_TRFContext[Ipc_AC_ass
   "handle_arch_fault_reply vmf thread x y \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
   by (wp handle_arch_fault_reply_typ_at)
 
+crunches handle_arch_fault_reply
+  for pspace_aligned[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
+  and valid_vspace_objs[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
+  and valid_arch_state[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
+
 end
 
 
-context is_extended begin interpretation Arch . (*FIXME: arch_split*)
+context is_extended begin interpretation Arch .
 
 lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   assumes li:

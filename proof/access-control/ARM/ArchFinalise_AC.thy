@@ -46,7 +46,7 @@ lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
      \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
   by simp
 
-lemma arch_finalise_cap_respects[wp]:
+lemma arch_finalise_cap_respects[Finalise_AC_assms, wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap (ArchObjectCap cap)
                        and K (pas_cap_cur_auth aag (ArchObjectCap cap))\<rbrace>
    arch_finalise_cap cap final
@@ -66,7 +66,7 @@ global_interpretation Finalise_AC_1?: Finalise_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact Finalise_AC_assms | wp finalise_cap_replaceable))
+    by (unfold_locales; (fact Finalise_AC_assms | wpsimp wp: finalise_cap_replaceable))
 qed
 
 

@@ -78,9 +78,9 @@ crunches prepare_thread_delete, arch_finalise_cap
   (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
-  "get_tcb t s = Some y \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+  "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule ext)
-  apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def dest!: get_tcb_SomeD)
+  apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def tcb_at_def dest!: get_tcb_SomeD)
   done
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
@@ -134,7 +134,7 @@ global_interpretation CNode_AC_1?: CNode_AC_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact CNode_AC_assms)
+    by (unfold_locales; (fact CNode_AC_assms | simp add: CNode_AC_assms | wpsimp))
 qed
 
 
@@ -174,6 +174,9 @@ lemma arch_post_cap_deletion_pas_refined[CNode_AC_assms, wp]:
 lemma aobj_ref'_same_aobject[CNode_AC_assms]:
   "same_aobject_as ao' ao \<Longrightarrow> aobj_ref' ao = aobj_ref' ao'"
   by (cases ao; clarsimp split: arch_cap.splits)
+
+crunches set_untyped_cap_as_full
+  for valid_arch_state[CNode_AC_assms]: valid_arch_state
 
 end
 
@@ -304,7 +307,7 @@ global_interpretation CNode_AC_4?: CNode_AC_4
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact CNode_AC_assms)?)
+    by (unfold_locales; fact CNode_AC_assms)
 qed
 
 

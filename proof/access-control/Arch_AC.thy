@@ -67,8 +67,21 @@ lemma mapM_set'':
       apply (auto simp: neq_Nil_conv)
   done
 
+lemma as_user_state_vrefs[wp]:
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
+   as_user t f
+   \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
+  apply (simp add: as_user_def)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: state_vrefs_tcb_upd obj_at_def is_obj_defs
+                 elim!: rsubst[where P=P, OF _ ext]
+                 dest!: get_tcb_SomeD)
+  done
+
 lemma as_user_pas_refined[wp]:
-  "as_user t f \<lbrace>pas_refined aag\<rbrace>"
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and pas_refined aag\<rbrace>
+   as_user t f
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply wps
@@ -137,11 +150,16 @@ lemma is_subject_asid_into_loas:
 
 locale Arch_AC_1 =
   assumes set_mrs_state_vrefs[wp]:
-    "set_mrs thread buf msgs \<lbrace>\<lambda>s :: det_ext state. P (state_vrefs s)\<rbrace>"
+    "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and (\<lambda>s. P (state_vrefs s))\<rbrace>
+     set_mrs thread buf msgs
+     \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
   and mul_add_word_size_lt_msg_align_bits_ofnat:
-    "\<lbrakk> p < 2 ^ (msg_align_bits - word_size_bits); k < 4 \<rbrakk>
-       \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
-begin
+  "\<lbrakk> p < 2 ^ (msg_align_bits - word_size_bits); k < word_size \<rbrakk>
+     \<Longrightarrow> of_nat p * of_nat word_size + k < (2 :: obj_ref) ^ msg_align_bits"
+  and zero_less_word_size[simp]:
+    "0 < (word_size :: obj_ref)"
+
+context Arch_AC_1 begin
 
 lemmas mul_word_size_lt_msg_align_bits_ofnat =
   mul_add_word_size_lt_msg_align_bits_ofnat[where k=0, simplified]
@@ -177,7 +195,9 @@ lemma store_word_offs_integrity_autarch:
   done
 
 lemma set_mrs_pas_refined[wp]:
-  "set_mrs thread buf msgs \<lbrace>pas_refined aag\<rbrace>"
+  "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and pas_refined aag\<rbrace>
+   set_mrs thread buf msgs
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wp | wps)+
