@@ -1296,7 +1296,7 @@ lemma wrap_slice_append:
                    = (if start + count < mx
                          then xs ! (start + count)
                          else xs ! (start + count - mx))")
-   apply (smt length_wrap_slice Suc_leD le_refl less_SucE less_imp_le_nat nth_append_length)
+   apply (clarsimp simp: nth_append)
   apply (simp add: wrap_slice_index)
   apply (prop_tac "i = count", linarith)
   apply simp
