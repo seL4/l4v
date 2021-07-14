@@ -55,8 +55,8 @@ EXCLUDE["X64"]=[
 ]
 
 EXCLUDE["RISCV64"]=[
-    "Access",
     "AutoCorresSEL4",
+    "InfoFlow",
     "DSpec",
     "DBaseRefine",
     "CamkesDarpaReport",
