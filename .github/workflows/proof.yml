@@ -1,4 +1,4 @@
-# Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+# Copyright 2021, Proofcraft Pty Ltd
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -7,70 +7,31 @@ name: Proofs
 on:
   push:
     branches:
-      - master
       - rt
-  pull_request:
+  pull_request_target:
 
 jobs:
-  haskell:
-    name: Haskell
+  mcs:
+    name: MCS
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         arch: [ARM, RISCV64]
     steps:
-    - name: Cache ~/.stack
-      uses: actions/cache@v2
-      with:
-        path: ~/.stack
-        key: ${{ runner.os }}-stack-${{ github.sha }}
-        restore-keys: ${{ runner.os }}-stack-
-    - name: compile Haskell
-      uses: seL4/ci-actions/run-proofs@master
-      with:
-        L4V_ARCH: ${{ matrix.arch }}
-        session: HaskellKernel tests-xml-correct
-
-  ainvs:
-    name: AInvs
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ARM, RISCV64]
-    steps:
-    - name: Cache Isabelle Images
-      uses: actions/cache@v2
-      with:
-        path: cache/
-        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
-        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
-    - name: Run Proofs
-      uses: seL4/ci-actions/run-proofs@master
+    - name: Proofs
+      uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
         isa_branch: ts-2019
-        session: ExecSpec ASpecDoc AInvs
-
-  refine:
-    name: Refine
-    needs: ainvs
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ARM]
-    steps:
-    - name: Cache Isabelle Images
-      uses: actions/cache@v2
+        manifest: mcs.xml
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_SSH: ${{ secrets.AWS_SSH }}
+        GH_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    - name: Upload logs
+      uses: actions/upload-artifact@v2
       with:
-        path: cache/
-        key: ${{ runner.os }}-${{ matrix.arch }}-images-${{ github.sha }}
-        restore-keys: ${{ runner.os }}-${{ matrix.arch }}-images
-    - name: Run Proofs
-      uses: seL4/ci-actions/run-proofs@master
-      with:
-        L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2019
-        session: Refine
+        name: logs-${{ matrix.arch }}
+        path: logs.tar.xz
