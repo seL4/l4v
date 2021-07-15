@@ -610,7 +610,6 @@ lemma refillBudgetCheckRoundRobin_corres:
           (cur_sc_active and (\<lambda>s. sc_at (cur_sc s) s))
           (valid_objs' and (\<lambda>s'. sc_at' (ksCurSc s') s'))
           (refill_budget_check_round_robin usage) (refillBudgetCheckRoundRobin usage)"
-  supply projection_rewrites[simp]
   apply (subst is_active_sc_rewrite)
   apply (clarsimp simp: refill_budget_check_round_robin_def refillBudgetCheckRoundRobin_def)
   apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
@@ -629,7 +628,7 @@ lemma refillBudgetCheckRoundRobin_corres:
     apply (wpsimp wp: updateRefillHd_valid_objs')
    apply (clarsimp simp: obj_at_def is_active_sc2_def is_sc_obj opt_map_red
                   split: option.split_asm Structures_A.kernel_object.split_asm)
-  apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] scBits_simps ps_clear_upd)
+  apply (clarsimp simp: active_sc_at'_rewrite obj_at_simps fun_upd_def[symmetric] scBits_simps ps_clear_upd)
   apply (erule (1) valid_objsE')
   apply (clarsimp simp: is_active_sc'_def valid_obj'_def valid_sched_context'_def valid_refills'_def
                  split: option.split_asm)
@@ -697,7 +696,7 @@ lemma refillResetRR_corres:
    apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
   apply (rule_tac Q="\<lambda>s'. ((\<lambda>sc'. scRefillCount sc' = 2) |< scs_of' s') csc_ptr"
          in corres_cross_add_guard)
-   apply (clarsimp simp: obj_at'_def projectKOs round_robin2_def obj_at_def is_sc_obj
+   apply (clarsimp simp: obj_at'_def projectKOs round_robin2_def obj_at_def is_sc_obj valid_refills2_def
                          rr_valid_refills_def is_active_sc2_def is_active_sc'_def opt_map_red)
    apply (drule (1) pspace_relation_absD[where x=csc_ptr, OF _ state_relation_pspace_relation])
    apply (erule (1) valid_objsE')
@@ -715,7 +714,7 @@ lemma refillResetRR_corres:
       apply (fastforce elim!: sc_relation_refillResetRR[simplified])
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                      dest!: state_relation_sc_replies_relation_sc)
-     apply (clarsimp simp: objBits_simps)+
+     apply (clarsimp simp: objBits_simps valid_refills2_def)+
    apply (clarsimp simp: round_robin2_def obj_at_def is_sc_obj rr_valid_refills_def opt_map_red)
   by (clarsimp simp: objBits_simps)
 

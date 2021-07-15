@@ -3935,29 +3935,6 @@ lemma refillSufficient_wp:
 
 (* projection rewrites *)
 
-lemma pred_map_rewrite:
-  "pred_map P proj = opt_pred P proj"
-  by (fastforce simp: pred_map_def2)
-
-abbreviation sc_of2 :: "Structures_A.kernel_object \<rightharpoonup> Structures_A.sched_context" where
-  "sc_of2 ko \<equiv> case ko of kernel_object.SchedContext sc n \<Rightarrow> Some sc | _ \<Rightarrow> None"
-
-abbreviation scs_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Structures_A.sched_context" where
-  "scs_of2 \<equiv> (\<lambda>s. kheap s |> sc_of2)"
-
-lemma scs_of_rewrite:
-  "scs_of s = scs_of2 s"
-  by (fastforce simp: sc_heap_of_state_def sc_of_def opt_map_def
-              split: option.splits Structures_A.kernel_object.splits)
-
-abbreviation
-  "sc_replies_of2 s \<equiv> scs_of2 s ||> sc_replies"
-
-lemma sc_replies_of_rewrite:
-  "sc_replies_of s = sc_replies_of2 s"
-  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def sc_of_def opt_map_def map_project_def
-              split: option.splits Structures_A.kernel_object.splits)
-
 definition
   sc_replies_relation2_2 ::
   "(obj_ref \<rightharpoonup> obj_ref list) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> bool" where
@@ -3974,62 +3951,6 @@ lemma sc_replies_relation_rewrite:
   "sc_replies_relation s s' = sc_replies_relation2 s s'"
   unfolding sc_replies_relation_def sc_replies_relation2_def sc_replies_of_rewrite
   by simp
-
-definition is_active_sc2 where
-  "is_active_sc2 p s \<equiv> ((\<lambda>sc. 0 < sc_refill_max sc) |< scs_of2 s) p"
-
-lemma is_active_sc_rewrite:
-  "is_active_sc p s = is_active_sc2 p s"
-  by (fastforce simp: is_active_sc2_def vs_all_heap_simps is_active_sc_def
-                      active_sc_def opt_map_red opt_map_def
-               split: option.split_asm Structures_A.kernel_object.splits)
-
-definition is_active_sc' where
-  "is_active_sc' p s' \<equiv> ((\<lambda>sc'. 0 < scRefillMax sc') |< scs_of' s') p"
-
-lemma active_sc_at'_imp_is_active_sc':
-  "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
-  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
-
-lemma active_sc_at'_rewrite:
-  "active_sc_at' scp s = (is_active_sc' scp s \<and> sc_at' scp s)"
-  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
-
-abbreviation
-  "valid_refills2 scp s \<equiv>
-     ((\<lambda>sc. if sc_period sc = 0 then rr_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_budget sc)
-      else sp_valid_refills (sc_refills sc) (sc_refill_max sc) (sc_period sc) (sc_budget sc)) |<
-     scs_of2 s) scp"
-
-lemmas valid_refills2_def = rr_valid_refills_def sp_valid_refills_def
-
-lemma valid_refills_rewrite:
-  "valid_refills scp s = valid_refills2 scp s"
-  by (fastforce simp: opt_map_red valid_refills2_def vs_all_heap_simps valid_refills_def
-               split: option.splits Structures_A.kernel_object.splits)
-
-definition
-  round_robin2 :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool"
-where
-  "round_robin2 sc_ptr s \<equiv> ((\<lambda>sc. sc_period sc = 0) |< scs_of2 s) sc_ptr"
-
-lemma round_robin_rewrite:
-  "round_robin scp s = round_robin2 scp s"
-  by (clarsimp simp: round_robin_def round_robin2_def vs_all_heap_simps opt_map_def
-              split: option.splits Structures_A.kernel_object.splits)
-
-abbreviation
-  sc_refills_sc_at2 where
-  "sc_refills_sc_at2 P scp s \<equiv> ((\<lambda>sc. P (sc_refills sc)) |< scs_of2 s) scp"
-
-lemma sc_refills_sc_at_rewrite:
-  "sc_refills_sc_at P scp s = sc_refills_sc_at2 P scp s"
-  by (fastforce simp: sc_refills_sc_at_def obj_at_def is_sc_obj opt_map_red
-               split: option.splits Structures_A.kernel_object.split_asm)
-
-lemmas projection_rewrites = pred_map_rewrite scs_of_rewrite is_active_sc_rewrite
-                             sc_heap_of_state_def sc_of_def sc_refills_sc_at_rewrite
-                             active_sc_at'_rewrite valid_refills_rewrite round_robin_rewrite
 
 lemma is_active_sc'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
@@ -4080,7 +4001,7 @@ lemma state_relation_sc_update:
                                  | _ \<Rightarrow> hp' ptr
                                 else hp' p)) s') \<in> state_relation"
   supply pred_map_rewrite[simp] scs_of_rewrite[simp] opt_map_red[simp]
-         sc_replies_of_rewrite[simplified, simp]
+         sc_replies_relation_rewrite[simp]
   proof -
   have z': "\<And>s. sc_at' ptr s
                \<Longrightarrow> \<forall>sc'::sched_context. map_to_ctes ((\<lambda>hp' p. if p = ptr then case hp' ptr of
@@ -4099,7 +4020,7 @@ lemma state_relation_sc_update:
   apply -
     apply (insert R1[rule_format, OF H]
                   R2[rule_format, OF H])
-    apply (clarsimp simp: state_relation_def)
+    apply (simp add: state_relation_def)
     apply (clarsimp simp: obj_at_def is_sc_obj)
     apply (drule_tac x=n in meta_spec, clarsimp)
     apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext _ n)) ptr s")
@@ -4131,7 +4052,7 @@ lemma state_relation_sc_update:
     (* sc_replies_relation *)
     apply (frule (2) sc_replies_relation_prevs_list[simplified])
     apply (subst replyPrevs_of_non_reply_update[simplified]; (simp add: typ_at'_def ko_wp_at'_def)?)
-    apply (simp add: sc_replies_relation_def)
+    apply (simp add: sc_replies_relation2_def)
     apply (rule conjI)
      (* ghost relation *)
      apply (clarsimp simp add: ghost_relation_def)

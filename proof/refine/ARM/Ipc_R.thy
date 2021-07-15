@@ -3011,12 +3011,12 @@ lemma schedContextResume_corres:
    apply (frule state_relation_sc_relation[where ptr=ptr])
      apply (clarsimp simp: obj_at_simps is_sc_obj)
      apply (erule (1) valid_sched_context_size_objsI[OF invs_valid_objs], simp)
-   apply (clarsimp simp: sc_relation_def projection_rewrites obj_at_simps opt_map_red)
+   apply (clarsimp simp: sc_relation_def pred_map_rewrite obj_at_simps opt_map_red)
   apply (frule_tac x=y in pspace_relation_absD[OF _ state_relation_pspace_relation]; simp)
-  apply (clarsimp simp: obj_at'_def projectKOs isSchedulable_bool_def projection_rewrites
+  apply (clarsimp simp: obj_at'_def projectKOs isSchedulable_bool_def pred_map_rewrite
                         other_obj_relation_def tcb_relation_def)
   apply (drule sym[where s="Some ptr"])
-  apply (clarsimp simp: projection_rewrites isScActive_def opt_map_red)
+  apply (clarsimp simp: pred_map_rewrite isScActive_def opt_map_red)
   apply (erule (1) valid_objsE')
   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def opt_map_def)
   done
