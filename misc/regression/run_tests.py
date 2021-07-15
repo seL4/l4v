@@ -180,6 +180,7 @@ def run_test(test, status_queue, kill_switch,
         else:
             path = ""
         print("    command: %s%s" % (test.command, path))
+        sys.stdout.flush()
 
     # Determine where stdout should go. We can't print it live to stdout and
     # also capture it, unfortunately.
@@ -198,6 +199,7 @@ def run_test(test, status_queue, kill_switch,
         output = "Exception while running test:\n\n%s" % (traceback.format_exc())
         if verbose:
             print(output)
+            sys.stdout.flush()
         status_queue.put({'name': test.name,
                           'status': ERROR,
                           'output': output,
@@ -324,6 +326,7 @@ def run_test(test, status_queue, kill_switch,
 
     if verbose and github:
         print("::endgroup::")
+        sys.stdout.flush()
 
     status_queue.put({'name': test.name,
                       'status': test_status[0],
@@ -541,6 +544,7 @@ def main():
     if bad_names:
         sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" %
                          (", ".join(sorted(bad_names))))
+        sys.stderr.flush()
 
     if args.dry_run:
         if args.dot:

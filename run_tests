@@ -111,6 +111,8 @@ for arch in archs:
     elif "L4V_ARCH_IS_ARM" in os.environ:
         del os.environ["L4V_ARCH_IS_ARM"]
 
+    sys.stdout.flush()
+
     # Arguments:
     args  = ['./misc/regression/run_tests.py']            # Script name
     args += [r for t in EXCLUDE[arch] for r in ['-r', t]] # Exclusion list
