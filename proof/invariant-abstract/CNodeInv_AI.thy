@@ -187,7 +187,7 @@ locale CNodeInv_AI =
         \<Longrightarrow> (ptr, nat_to_cref (zombie_cte_bits zbits) m) \<in> cte_refs (Zombie ptr zbits n) irqn"
   assumes finalise_cap_emptyable[wp]:
     "\<And>sl c f.
-      \<lbrace>emptyable sl and (invs and valid_mdb)\<rbrace>
+      \<lbrace>emptyable sl and invs\<rbrace>
         finalise_cap c f
       \<lbrace>\<lambda>_. emptyable sl :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   assumes deleting_irq_handler_emptyable[wp]:

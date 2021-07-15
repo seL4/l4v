@@ -1,0 +1,27 @@
+# Copyright 2021, Proofcraft Pty Ltd
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Trigger docker deploy action in seL4/ci-actions on C parser changes
+
+name: Tigger
+
+on:
+  push:
+    branches:
+    - master
+    paths:
+    - 'tools/c-parser/**'
+  # for testing:
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    name: CParser Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.SSRG_BAMBOO_REPO }}
+          repository: seL4/ci-actions
+          event-type: cparser-deploy

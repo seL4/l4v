@@ -47,9 +47,13 @@ ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
 
-def output_color(color, s):
+def running_on_github():
+    return os.environ.get("GITHUB_REPOSITORY") != None
+
+
+def output_color(color, s, github=running_on_github()):
     """Wrap the given string in the given color."""
-    if sys.stdout.isatty():
+    if sys.stdout.isatty() or github:
         return color + s + ANSI_RESET
     return s
 
@@ -143,7 +147,7 @@ status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
 def run_test(test, status_queue, kill_switch,
              verbose=False, stuck_timeout=None,
              timeout_scale=1.0, timeouts_enabled=True,
-             grace_period=0):
+             grace_period=0, github=False):
     '''
     Run a single test.
 
@@ -168,12 +172,15 @@ def run_test(test, status_queue, kill_switch,
 
     # Print command and path.
     if verbose:
+        if github:
+            print("::group::" + test.name)
         print("\n")
         if os.path.abspath(test.cwd) != os.path.abspath(os.getcwd()):
             path = " [%s]" % os.path.relpath(test.cwd)
         else:
             path = ""
         print("    command: %s%s" % (test.command, path))
+        sys.stdout.flush()
 
     # Determine where stdout should go. We can't print it live to stdout and
     # also capture it, unfortunately.
@@ -192,6 +199,7 @@ def run_test(test, status_queue, kill_switch,
         output = "Exception while running test:\n\n%s" % (traceback.format_exc())
         if verbose:
             print(output)
+            sys.stdout.flush()
         status_queue.put({'name': test.name,
                           'status': ERROR,
                           'output': output,
@@ -315,6 +323,10 @@ def run_test(test, status_queue, kill_switch,
     output = output.decode(encoding='utf8', errors='replace')
     if test_status[0] in [STUCK, TIMEOUT, CPU_TIMEOUT]:
         output = output + extra_timeout_output(test.name)
+
+    if verbose and github:
+        print("::endgroup::")
+        sys.stdout.flush()
 
     status_queue.put({'name': test.name,
                       'status': test_status[0],
@@ -466,6 +478,8 @@ def main():
     if args.scale_timeouts <= 0:
         parser.error("--scale-timeouts value must be greater than 0")
 
+    github = running_on_github()
+
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
     test_info = testspec.process_test_files(test_xml)
@@ -530,6 +544,7 @@ def main():
     if bad_names:
         sys.stderr.write("Warning: These tests are excluded/removed, but do not exist: %s\n" %
                          (", ".join(sorted(bad_names))))
+        sys.stderr.flush()
 
     if args.dry_run:
         if args.dot:
@@ -595,7 +610,7 @@ def main():
                         args=(t, status_queue, kill_switch,
                               args.verbose, args.stuck_timeout,
                               args.scale_timeouts, not args.no_timeouts,
-                              args.grace_period))
+                              args.grace_period, github))
                     wipe_tty_status()
                     print_test_line_start(t.name)
                     test_thread.start()
