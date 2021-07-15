@@ -16,12 +16,6 @@ lemma mask_ptTranslationBits_ucast_ucast:
   "(asid && mask ptTranslationBits) = ucast (ucast asid :: 9 word)"
   by (word_eqI simp: ptTranslationBits_def)
 
-(* FIXME AC - table_index_offset_max_pt_level can be replaced with this more general lemma *)
-lemma table_index_offset_pt_bits_left:
-  "is_aligned pt_ref pt_bits \<Longrightarrow>
-   table_index (pt_slot_offset lvl pt_ref vref) = ucast (vref >> pt_bits_left lvl)"
-  by (simp add: table_index_plus_ucast pt_slot_offset_def pt_index_def mask_ptTranslationBits_ucast_ucast)
-
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; x \<notin> kernel_mappings;
      get_vspace_of_thread (kheap s) (arch_state s) tcb \<noteq> global_pt s;

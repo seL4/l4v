@@ -182,10 +182,8 @@ lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
   "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers s"
   by (clarsimp simp: auth_ipc_buffers_def get_tcb_def)
 
-(* FIXME AC: handle_arch_fault_reply_typ_at is likely malformed, it actually proves invariance *)
-lemma handle_arch_fault_reply_integrity_tcb_in_fault_reply_TRFContext[Ipc_AC_assms, wp]:
-  "handle_arch_fault_reply vmf thread x y \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
-  by (wp handle_arch_fault_reply_typ_at)
+declare handle_arch_fault_reply_inv[Ipc_AC_assms]
+declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
 end
 

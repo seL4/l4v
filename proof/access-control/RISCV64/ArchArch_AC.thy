@@ -861,15 +861,6 @@ lemma is_subject_asid_trans:
      \<Longrightarrow> is_subject aag y"
   by (subst aag_has_Control_iff_owns[symmetric]; simp)
 
-lemma graph_of_comp:
-  "\<lbrakk> g x = y; f y = Some z \<rbrakk> \<Longrightarrow> (x,z) \<in> graph_of (f \<circ> g)"
-  by (auto simp: graph_of_def)
-
-(* FIXME AC: move *)
-lemma rev_bexI_minus:
-  "\<lbrakk> x \<in> A; x \<notin> B; P x \<rbrakk> \<Longrightarrow> \<exists>x \<in> A - B. P x"
-  unfolding Bex_def by blast
-
 lemma pt_walk_is_subject:
   "\<lbrakk> pas_refined aag s; valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
      pt_walk level bot_level pt_ptr vptr (ptes_of s) = Some (level', pt);
@@ -899,7 +890,7 @@ lemma pt_walk_is_subject:
    apply (fastforce simp: pte_ref2_def)
   apply (fastforce simp: aobjs_of_Some pts_of_Some pptr_from_pte_def
                    dest: table_index_max_level_slots
-                   elim: rev_bexI rev_bexI_minus
+                   elim: rev_bexI bexI_minus[rotated]
                  intro!: pts_of_Some_alignedD)
   done
 
@@ -1323,19 +1314,6 @@ lemma pas_refined_asid_control_helper:
   apply (fastforce dest: sata_asidpool)
   done
 
-(* FIXME AC: include with retype_region_invs_extras *)
-lemma retype_region_invs_extras_vspace_objs:
-  "\<lbrace>invs and pspace_no_overlap_range_cover ptr sz and caps_no_overlap ptr sz
-         and caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}
-         and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
-         and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and>
-                         cap_is_device c = dev) slot s)
-         and K (ty = CapTableObject \<longrightarrow> 0 < us)
-         and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
-   retype_region ptr n us ty dev
-   \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  by (wp hoare_strengthen_post[OF retype_region_post_retype_invs], auto simp: post_retype_invs_def)
-
 lemma perform_asid_control_invocation_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and invs and valid_aci aci and ct_active
                     and K (authorised_asid_control_inv aag aci)\<rbrace>
@@ -1348,10 +1326,10 @@ lemma perform_asid_control_invocation_pas_refined:
          apply (wp cap_insert_pas_refined' static_imp_wp | simp)+
       apply ((wp retype_region_pas_refined'[where sz=pageBits]
                  hoare_vcg_ex_lift hoare_vcg_all_lift static_imp_wp hoare_wp_combs hoare_drop_imp
+                 retype_region_invs_extras(1)[where sz = pageBits]
                  retype_region_invs_extras(4)[where sz = pageBits]
                  retype_region_invs_extras(6)[where sz = pageBits]
-                 retype_region_invs_extras(1)[where sz = pageBits]
-                 retype_region_invs_extras_vspace_objs[where sz = pageBits]
+                 retype_region_invs_extras(7)[where sz = pageBits]
                  retype_region_cte_at_other'[where sz=pageBits]
                  max_index_upd_invs_simple max_index_upd_caps_overlap_reserved
                  hoare_vcg_ex_lift set_cap_cte_wp_at hoare_vcg_disj_lift set_free_index_valid_pspace
@@ -1417,15 +1395,6 @@ lemma perform_asid_control_invocation_pas_refined:
   apply (intro conjI; fastforce intro: empty_descendants_range_in)
   done
 
-(* FIXME AC: more general than pt_slot_offset_id, replace if possible *)
-lemma pt_slot_offset_id':
-  "\<lbrakk> is_aligned pt_ptr pt_bits; mask pt_bits && (xa << pte_bits) = xa << pte_bits \<rbrakk>
-     \<Longrightarrow> table_base (pt_ptr + (xa << pte_bits)) = pt_ptr"
-  apply (simp add: pt_slot_offset_def is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
-  apply (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist
-                   mask_shiftl_decompose word_bool_alg.conj_ac)
-  done
-
 lemma copy_global_mappings_integrity:
   "\<lbrace>integrity aag X st and K (is_aligned x pt_bits \<and> is_subject aag x)\<rbrace>
    copy_global_mappings x
@@ -1434,7 +1403,7 @@ lemma copy_global_mappings_integrity:
   apply (simp add: copy_global_mappings_def)
   apply (wp mapM_x_wp[OF _ subset_refl] store_pte_respects)
     apply (simp only: pt_index_def)
-    apply (subst pt_slot_offset_id')
+    apply (subst table_base_offset_id)
       apply simp
      apply (clarsimp simp: pte_bits_def word_size_bits_def pt_bits_def
                            table_size_def ptTranslationBits_def mask_def)
@@ -1492,17 +1461,6 @@ lemma store_pte_state_vrefs_unreachable:
     apply (fastforce simp: fun_upd_def aobjs_of_Some)
    apply clarsimp
   apply clarsimp
-  done
-
-(* FIXME AC: replace original, which has an unnecessary conjunct in the precondition *)
-lemma store_pte_valid_vs_lookup_unreachable:
-  "\<lbrace>valid_vs_lookup and pspace_aligned and valid_vspace_objs and valid_asid_table and
-    (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s)\<rbrace>
-   store_pte p pte
-   \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
-  unfolding valid_vs_lookup_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' store_pte_vs_lookup_target_unreachable)
-  apply (erule disjE; clarsimp)
   done
 
 lemma copy_global_mappings_state_vrefs:
@@ -1837,7 +1795,7 @@ lemma decode_page_table_invocation_authorised:
    apply (case_tac excaps; clarsimp)
    apply (rule conjI)
     apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
-    apply (subst pt_slot_offset_id)
+    apply (subst table_base_pt_slot_offset)
      apply (fastforce simp: cte_wp_at_caps_of_state
                       dest: caps_of_state_aligned_page_table pt_walk_is_aligned)
     apply (frule vs_lookup_table_vref_independent[OF vspace_for_asid_vs_lookup, simplified])
@@ -1880,7 +1838,7 @@ lemma decode_frame_invocation_authorised:
                           vm_kernel_only_def vm_read_only_def
                    split: if_splits)
   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
-  apply (subst pt_slot_offset_id)
+  apply (subst table_base_pt_slot_offset)
    apply (fastforce simp: cte_wp_at_caps_of_state
                     dest: caps_of_state_aligned_page_table pt_walk_is_aligned)
   apply (frule vs_lookup_table_vref_independent[OF vspace_for_asid_vs_lookup, simplified])

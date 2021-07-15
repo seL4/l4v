@@ -18,37 +18,6 @@ crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_devic
 crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
   (wp: crunch_wps cap_refs_respects_device_region_dmo)
 
-lemma update_cap_data_closedform:
-  "update_cap_data pres w cap =
-   (case cap of
-     EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask 28) rights) else NullCap
-   | NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask 28) rights) else NullCap
-   | CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> 3) && mask 5) + bits
-       then NullCap
-       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
-   | ThreadCap r \<Rightarrow> ThreadCap r
-   | DomainCap \<Rightarrow> DomainCap
-   | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
-   | NullCap \<Rightarrow> NullCap
-   | ReplyCap t m rights \<Rightarrow> ReplyCap t m rights
-   | IRQControlCap \<Rightarrow> IRQControlCap
-   | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
-   | Zombie r b n \<Rightarrow> Zombie r b n
-   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
-  apply (cases cap,
-         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
-                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
-                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
-                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                        arch_update_cap_data_def
-                  cong: if_cong)
-  apply (auto simp: word_bits_def)
-  done
-
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
   by (simp add: cap_asid_def)
@@ -234,7 +203,7 @@ qed
 
 lemma is_zombie_update_cap_data[simp, Ipc_AI_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
-  by (simp add: update_cap_data_closedform is_zombie_def
+  by (simp add: update_cap_data_closedform arch_update_cap_data_def is_zombie_def
          split: cap.splits)
 
 lemma valid_msg_length_strengthen [Ipc_AI_assms]:

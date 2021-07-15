@@ -12,40 +12,6 @@ context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AI_assms
 
-lemma update_cap_data_closedform:
-  "update_cap_data pres w cap =
-   (case cap of
-     EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask badge_bits) rights) else NullCap
-   | NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask badge_bits) rights) else NullCap
-   | CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits) + bits
-       then NullCap
-       else CNodeCap r bits
-                     ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) &&
-                                                    mask cnode_guard_size_bits)) (to_bl g''))
-                     ((w >> cnode_padding_bits + cnode_guard_size_bits) && mask 58))
-   | ThreadCap r \<Rightarrow> ThreadCap r
-   | DomainCap \<Rightarrow> DomainCap
-   | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
-   | NullCap \<Rightarrow> NullCap
-   | ReplyCap t m rights \<Rightarrow> ReplyCap t m rights
-   | IRQControlCap \<Rightarrow> IRQControlCap
-   | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
-   | Zombie r b n \<Rightarrow> Zombie r b n
-   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
-  apply (cases cap,
-         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
-                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
-                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
-                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                        arch_update_cap_data_def
-                  cong: if_cong)
-  apply (auto simp: word_bits_def)
-  done
-
 lemma cap_asid_PageCap_None[simp]:
   "cap_asid (ArchObjectCap (FrameCap r R pgsz dev None)) = None"
   by (simp add: cap_asid_def)
@@ -226,7 +192,7 @@ qed
 
 lemma is_zombie_update_cap_data[simp, Ipc_AI_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
-  by (simp add: update_cap_data_closedform is_zombie_def
+  by (simp add: update_cap_data_closedform arch_update_cap_data_def is_zombie_def
          split: cap.splits)
 
 lemma valid_msg_length_strengthen [Ipc_AI_assms]:
@@ -412,7 +378,7 @@ lemma setup_caller_cap_valid_global_objs[wp, Ipc_AI_assms]:
    apply (wp sts_obj_at_impossible | simp add: tcb_not_empty_table)+
   done
 
-crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info "P (typ_at T p s)"
+crunch inv[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register_info P
 
 lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
   "\<lbrace>valid_vspace_objs\<rbrace>

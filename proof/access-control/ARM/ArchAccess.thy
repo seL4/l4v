@@ -146,92 +146,22 @@ definition integrity_asids ::
 
 declare integrity_asids_def[simp]
 
-lemma integrity_asids_trans_state_l[simp]:
-  "integrity_asids aag subjects x (trans_state f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
+sublocale kheap_update: Arch_arch_update_eq "kheap_update f"
+  by unfold_locales simp
 
-lemma integrity_asids_trans_state_r[simp]:
-  "integrity_asids aag subjects x st (trans_state f s) =
-   integrity_asids aag subjects x st s"
-  by simp
+lemma (in Arch_arch_update_eq) integrity_asids_update[simp]:
+  "integrity_asids aag subjects x (f st) s = integrity_asids aag subjects x st s"
+  "integrity_asids aag subjects x st (f s) = integrity_asids aag subjects x st s"
+  by (auto simp: arch)
 
-lemma integrity_asids_cur_thread_update_l[simp]:
-  "integrity_asids aag subjects x (cur_thread_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_cur_thread_update_r[simp]:
-  "integrity_asids aag subjects x st (cur_thread_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_kheap_update_l[simp]:
-  "integrity_asids aag subjects x (kheap_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_kheap_update_r[simp]:
-  "integrity_asids aag subjects x st (kheap_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_machine_state_update_l[simp]:
-  "integrity_asids aag subjects x (machine_state_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_machine_state_update_r[simp]:
-  "integrity_asids aag subjects x st (machine_state_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_cdt_update_l[simp]:
-  "integrity_asids aag subjects x (cdt_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_cdt_update_r[simp]:
-  "integrity_asids aag subjects x st (cdt_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_is_original_cap_update_l[simp]:
-  "integrity_asids aag subjects x (is_original_cap_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_is_original_cap_update_r[simp]:
-  "integrity_asids aag subjects x st (is_original_cap_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_interrupt_states_update_l[simp]:
-  "integrity_asids aag subjects x (interrupt_states_update f st) s =
-   integrity_asids aag subjects x st s"
-  by simp
-
-lemma integrity_asids_interrupt_states_update_r[simp]:
-  "integrity_asids aag subjects x st (interrupt_states_update f s) =
-   integrity_asids aag subjects x st s"
-  by simp
-
-(* FIXME AC: locale? *)
 lemmas integrity_asids_updates =
-  integrity_asids_trans_state_l
-  integrity_asids_trans_state_r
-  integrity_asids_cur_thread_update_l
-  integrity_asids_cur_thread_update_r
-  integrity_asids_kheap_update_l
-  integrity_asids_kheap_update_r
-  integrity_asids_machine_state_update_l
-  integrity_asids_machine_state_update_r
-  integrity_asids_cdt_update_l
-  integrity_asids_cdt_update_r
-  integrity_asids_is_original_cap_update_l
-  integrity_asids_is_original_cap_update_r
-  integrity_asids_interrupt_states_update_l
-  integrity_asids_interrupt_states_update_r
+  cdt_update.integrity_asids_update
+  more_update.integrity_asids_update
+  kheap_update.integrity_asids_update
+  revokable_update.integrity_asids_update
+  interrupt_update.integrity_asids_update
+  cur_thread_update.integrity_asids_update
+  machine_state_update.integrity_asids_update
 
 
 subsection \<open>Misc definitions\<close>
