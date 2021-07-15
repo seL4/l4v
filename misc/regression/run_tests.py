@@ -47,9 +47,13 @@ ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
 
-def output_color(color, s):
+def running_on_github():
+    return os.environ.get("GITHUB_REPOSITORY") != None
+
+
+def output_color(color, s, github=running_on_github()):
     """Wrap the given string in the given color."""
-    if sys.stdout.isatty():
+    if sys.stdout.isatty() or github:
         return color + s + ANSI_RESET
     return s
 
@@ -471,7 +475,7 @@ def main():
     if args.scale_timeouts <= 0:
         parser.error("--scale-timeouts value must be greater than 0")
 
-    github = os.environ.get("GITHUB_REPOSITORY") != None
+    github = running_on_github()
 
     # Search for test files:
     test_xml = sorted(rglob(args.directory, "tests.xml"))
