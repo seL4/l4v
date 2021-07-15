@@ -54,7 +54,7 @@ lemma update_cap_objrefs [CNodeInv_AI_assms]:
   "\<lbrakk> update_cap_data P dt cap \<noteq> NullCap \<rbrakk> \<Longrightarrow>
      obj_refs (update_cap_data P dt cap) = obj_refs cap"
   by (case_tac cap,
-      simp_all add: update_cap_data_closedform
+      simp_all add: update_cap_data_closedform arch_update_cap_data_def
              split: if_split_asm)
 
 

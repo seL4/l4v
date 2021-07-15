@@ -12,11 +12,10 @@ context Arch begin global_naming ARM_A
 
 named_theorems Tcb_AC_assms
 
+declare arch_get_sanitise_register_info_inv[Tcb_AC_assms]
+
 crunches arch_post_modify_registers
   for pas_refined[Tcb_AC_assms, wp]: "pas_refined aag"
-
-crunches arch_get_sanitise_register_info
-  for inv[Tcb_AC_assms, wp]: P
 
 lemma arch_post_modify_registers_respects[Tcb_AC_assms]:
   "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>

@@ -204,6 +204,10 @@ lemma split_paired_Bex:
   "(\<exists>x \<in> A. P x) = (\<exists>x y. (x,y) \<in> A \<and> P (x,y))"
   by auto
 
+lemma bexI_minus:
+  "\<lbrakk> P x; x \<in> A; x \<notin> B \<rbrakk> \<Longrightarrow> \<exists>x \<in> A - B. P x"
+  unfolding Bex_def by blast
+
 lemma delete_remove1:
   "delete x xs = remove1 x xs"
   by (induct xs, auto)
@@ -765,6 +769,10 @@ lemma graph_of_SomeD:
   "\<lbrakk> graph_of f \<subseteq> graph_of g; f x = Some y \<rbrakk> \<Longrightarrow> g x = Some y"
   unfolding graph_of_def
   by auto
+
+lemma graph_of_comp:
+  "\<lbrakk> g x = y; f y = Some z \<rbrakk> \<Longrightarrow> (x,z) \<in> graph_of (f \<circ> g)"
+  by (auto simp: graph_of_def)
 
 lemma in_set_zip_refl :
   "(x,y) \<in> set (zip xs xs) = (y = x \<and> x \<in> set xs)"

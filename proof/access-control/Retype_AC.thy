@@ -174,6 +174,8 @@ locale Retype_AC_1 =
     "state_asids_to_policy aag (detype R s) \<subseteq> state_asids_to_policy aag s"
   and word_size_bits_untyped_min_bits:
     "word_size_bits \<le> untyped_min_bits"
+  and word_size_bits_reset_chunk_bits:
+    "word_size_bits \<le> reset_chunk_bits"
   and clas_default_cap:
     "\<And>tp. tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag l (default_cap tp p sz dev)"
   and cli_default_cap:
@@ -267,7 +269,6 @@ lemma integrity_irq_state_independent[intro!, simp]:
    integrity x y z s"
   by (simp add: integrity_def)
 
-(* FIXME AC: shouldn't use word-dependent definitions in a generic context *)
 lemma reset_untyped_cap_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs
                        and cte_wp_at is_untyped_cap slot
@@ -288,11 +289,10 @@ lemma reset_untyped_cap_integrity:
                 set_cap_integrity_autarch dmo_clearMemory_respects' | simp)+
      apply (clarsimp simp: cap_aligned_def is_cap_simps bits_of_def)
      apply (subst aligned_add_aligned, assumption, rule is_aligned_shiftl, simp+)
-     apply (simp add: word_size_bits_def reset_chunk_bits_def)
+     apply (simp add: word_size_bits_reset_chunk_bits)
      apply (clarsimp simp: arg_cong2[where f="(\<le>)", OF refl reset_chunk_bits_def])
      apply (drule bspec, erule subsetD[rotated])
-      apply (simp only: ptr_range_def, rule new_range_subset',
-        simp_all add: is_aligned_shiftl)[1]
+      apply (simp only: ptr_range_def, rule new_range_subset'; simp add: is_aligned_shiftl)
       apply (rule shiftl_less_t2n)
        apply (rule word_of_nat_less)
        apply simp

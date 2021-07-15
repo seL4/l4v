@@ -76,8 +76,8 @@ lemma cap_relation_NullCap:
   "cap_relation cap cap' \<Longrightarrow>
    (update_cap_data P x cap = cap.NullCap) = (RetypeDecls_H.updateCapData P x cap' = capability.NullCap)"
   apply (cases cap)
-            apply (simp_all add: mask_cap_def cap_rights_update_def update_cap_data_closedform word_bits_def
-                                 Let_def updateCapData_def isCap_simps
+            apply (simp_all add: Let_def mask_cap_def cap_rights_update_def update_cap_data_closedform
+                                 arch_update_cap_data_def word_bits_def updateCapData_def isCap_simps
                       split del: if_split)
      apply simp
     apply simp

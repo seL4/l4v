@@ -106,8 +106,8 @@ lemma perform_invocation_respects:
 declare AllowSend_def[simp] AllowRecv_def[simp]
 
 (* FIXME AC: the RISCV variant of arch_decode_inv_wf assumes "real_cte_at slot" whereas the
-             ARM variant does not. Just going to assume "real_cte_at slot" here for now even
-             though it's redundant for ARM. *)
+             ARM variant does not. Just going to assume "real_cte_at slot" here for now, but
+             we might want to avoid requalifying this lemma. *)
 lemma decode_invocation_authorised:
   "\<lbrace>pas_refined aag and valid_cap cap and invs and ct_active and (is_subject aag \<circ> cur_thread) and
     cte_wp_at ((=) cap) slot and ex_cte_cap_to slot and domain_sep_inv (pasMaySendIrqs aag) st' and

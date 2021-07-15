@@ -170,6 +170,9 @@ lemma sata_detype[Retype_AC_assms]:
 lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
+lemma word_size_bits_reset_chunk_bits[Retype_AC_assms]: "word_size_bits \<le> reset_chunk_bits"
+  by (simp add: word_size_bits_def reset_chunk_bits_def)
+
 lemma clas_default_cap[Retype_AC_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
   unfolding cap_links_asid_slot_def

@@ -952,31 +952,6 @@ lemma mapM_x_store_pte_final_cap[wp]:
   "mapM_x (swp store_pte InvalidPTE) slots \<lbrace>is_final_cap' cap\<rbrace>"
   by (wpsimp wp: final_cap_lift)
 
-lemma table_base_plus:
-  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
-   table_base (pt_ptr + (i << pte_bits)) = pt_ptr"
-  unfolding is_aligned_mask bit_simps
-  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
-
-lemma table_base_plus_ucast:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   table_base (pt_ptr + (ucast (i::pt_index) << pte_bits)) = pt_ptr"
-  by (fastforce intro!: table_base_plus ucast_leq_mask simp: bit_simps)
-
-lemma table_index_plus:
-  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
-   table_index (pt_ptr + (i << pte_bits)) = ucast i"
-  unfolding is_aligned_mask bit_simps
-  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
-
-lemma table_index_plus_ucast:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   table_index (pt_ptr + (ucast (i::pt_index) << pte_bits)) = i"
-  apply (drule table_index_plus[where i="ucast i"])
-   apply (rule ucast_leq_mask, simp add: bit_simps)
-  apply (simp add: is_down_def target_size_def source_size_def word_size ucast_down_ucast_id)
-  done
-
 lemma mapM_x_store_pte_empty[wp]:
   "\<lbrace> \<lambda>s. slots = [p , p + (1 << pte_bits) .e. p + (1 << pt_bits) - 1] \<and>
          is_aligned p pt_bits \<and> pt_at p s \<rbrace>
@@ -1792,12 +1767,10 @@ lemma store_pte_valid_arch_state_unreachable:
   unfolding valid_arch_state_def by (wpsimp wp: store_pte_valid_global_tables)
 
 lemma store_pte_valid_vs_lookup_unreachable:
-  "\<lbrace> valid_vs_lookup and pspace_aligned and valid_vspace_objs and valid_asid_table and
-     (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s) and
-     (\<lambda>s. \<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
-                          \<longrightarrow> asidopt \<noteq> None) \<rbrace>
+  "\<lbrace>valid_vs_lookup and pspace_aligned and valid_vspace_objs and valid_asid_table and
+    (\<lambda>s. \<forall>level. \<not> \<exists>\<rhd> (level, table_base p) s)\<rbrace>
    store_pte p pte
-   \<lbrace> \<lambda>_. valid_vs_lookup \<rbrace>"
+   \<lbrace>\<lambda>_. valid_vs_lookup\<rbrace>"
   unfolding valid_vs_lookup_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' store_pte_vs_lookup_target_unreachable)
   apply (erule disjE; clarsimp)

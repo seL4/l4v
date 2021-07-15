@@ -81,7 +81,7 @@ lemma pte_rights_of_kernel:
    apply (cases "level = max_pt_level")
     apply (drule pt_walk_level)
     apply (clarsimp simp flip: kernel_mappings_slots_eq)
-    apply (clarsimp simp: ptes_of_def table_index_offset_max_pt_level)
+    apply (clarsimp simp: ptes_of_def table_index_offset_pt_bits_left)
     apply (drule (2) equal_kernel_mappingsD)
     apply (drule (3) has_kernel_mappingsD)
     apply clarsimp
@@ -128,7 +128,7 @@ lemma global_pt_not_invalid_kernel:
      pte \<noteq> InvalidPTE; canonical_address p; valid_global_tables s;
      is_aligned (riscv_global_pt (arch_state s)) pt_bits\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
-  apply (clarsimp simp: pte_of_def table_index_offset_max_pt_level)
+  apply (clarsimp simp: pte_of_def table_index_offset_pt_bits_left)
   apply (fastforce simp flip: kernel_mappings_slots_eq dest: valid_global_tables_toplevel_pt)
   done
 
@@ -184,7 +184,7 @@ lemma some_get_page_info_umapsD:
    apply (rename_tac ppn pt)
    apply (frule pspace_aligned_pts_ofD, fastforce)
    apply (drule_tac x="table_index (pt_slot_offset level pt_ptr' p)" in bspec)
-   apply (clarsimp simp: table_index_offset_max_pt_level simp: kernel_mappings_slots_eq)
+   apply (clarsimp simp: table_index_offset_pt_bits_left simp: kernel_mappings_slots_eq)
    apply (erule (1) no_user_region_kernel_mappings)
   apply (clarsimp simp: pte_of_def)
   apply (subgoal_tac "valid_pte level (PagePTE ppn attr r) s")
