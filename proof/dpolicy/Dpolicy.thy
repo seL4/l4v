@@ -441,11 +441,11 @@ lemma cap_auth_conferred_transform:
   apply (case_tac arch_cap; clarsimp simp: is_page_cap_def)
   done
 
-lemma thread_states_transform:
-  "\<lbrakk> einvs s; (oref', auth) \<in> thread_states s oref \<rbrakk> \<Longrightarrow>
+lemma thread_st_auth_transform:
+  "\<lbrakk> einvs s; (oref', auth) \<in> thread_st_auth s oref \<rbrakk> \<Longrightarrow>
          (oref, auth, oref') \<in> cdl_state_objs_to_policy (transform s)"
   apply clarify
-  apply (simp add:thread_states_def tcb_states_of_state_def)
+  apply (simp add:thread_st_auth_def tcb_states_of_state_def)
   apply (cases "get_tcb oref s")
    apply simp+
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
@@ -542,13 +542,13 @@ lemma thread_bound_ntfn_cap_transform_tcb:
   done
 
 
-lemma thread_states_transform_rev:
+lemma thread_st_auth_transform_rev:
   "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap; is_thread_state_cap cap;
      oref \<in> cdl_obj_refs cap; auth \<in> cdl_cap_auth_conferred cap; (fst ptr) \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
-     (oref, auth) \<in> thread_states s (fst ptr)"
+     (oref, auth) \<in> thread_st_auth s (fst ptr)"
   apply (frule thread_state_cap_transform_tcb, simp)
   apply (case_tac ptr)
-  apply (clarsimp simp:thread_states_def tcb_states_of_state_def)
+  apply (clarsimp simp:thread_st_auth_def tcb_states_of_state_def)
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
   apply (clarsimp split:if_split_asm)
@@ -844,7 +844,7 @@ lemma state_objs_transform:
        apply (simp add:idle_thread_no_untyped_range)
       apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
      apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
-    apply (rule thread_states_transform, simp+)
+    apply (rule thread_st_auth_transform, simp+)
    apply (rule thread_bound_ntfns_transform, simp+)
 
     apply (simp add:fst_transform_cslot_ptr)
@@ -886,7 +886,7 @@ lemma state_objs_transform_rev:
     apply (rule_tac P="is_thread_state_cap cap" in case_split)
      apply simp
      apply (rule sta_ts)
-     apply (rule thread_states_transform_rev, simp+)
+     apply (rule thread_st_auth_transform_rev, simp+)
      apply (clarsimp simp:opt_cap_def transform_def transform_objects_def slots_of_def)
      apply (clarsimp simp: map_add_def object_slots_def)
     apply (rule_tac P="is_real_cap cap" in case_split[rotated])

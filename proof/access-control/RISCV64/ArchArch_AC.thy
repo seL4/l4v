@@ -303,11 +303,11 @@ lemma state_vrefs_store_NonPageTablePTE_wp:
   apply (subst state_vrefs_store_NonPageTablePTE'; fastforce simp: obj_at_def)
   done
 
-lemma store_pte_thread_states[wp]:
-  "store_pte p pte \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma store_pte_thread_st_auth[wp]:
+  "store_pte p pte \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   unfolding store_pte_def set_pt_def
   apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def obj_at_def
+  apply (clarsimp simp: get_tcb_def thread_st_auth_def tcb_states_of_state_def obj_at_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
@@ -448,10 +448,6 @@ lemma mapM_swp_store_pte_invs_unmap:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp wp: store_pte_invs simp: wellformed_pte_def)
 
-lemma FIXME_wordAND_wordNOT_mask_plus:
-   "x && ~~mask n = x \<Longrightarrow> (x + mask n) && ~~mask n = x"
-  by (metis AND_NOT_mask_plus_AND_mask_eq VSpaceEntries_AI.neg_mask_add_mask add_right_imp_eq word_bw_same(1))
-
 lemma store_pte_pas_refined:
   "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> table_base p \<notin> global_refs s \<and>
         (\<exists>slot ref. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) ref))) \<and>
@@ -530,7 +526,7 @@ lemma perform_pt_inv_unmap_pas_refined:
    apply (drule subsetD[OF upto_enum_step_subset], clarsimp)
    apply (drule neg_mask_mono_le[where n=pt_bits])
    apply (drule neg_mask_mono_le[where n=pt_bits])
-   apply (fastforce dest: FIXME_wordAND_wordNOT_mask_plus)
+   apply (fastforce dest: plus_mask_AND_NOT_mask_eq)
   apply (rule conjI; clarsimp)
    apply (fastforce simp: cte_wp_at_caps_of_state cap_range_def
                     dest: invs_valid_global_refs valid_global_refsD)
@@ -797,11 +793,11 @@ lemma store_pte_ekheap[wp]:
   apply simp
   done
 
-lemma set_asid_pool_thread_states[wp]:
-  "set_asid_pool p pool \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma set_asid_pool_thread_st_auth[wp]:
+  "set_asid_pool p pool \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_asid_pool_def)
   apply (wpsimp wp: set_object_wp_strong)
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
   done
@@ -1495,7 +1491,7 @@ crunches copy_global_mappings
   for tcb_domain_map_wellformed[wp]: "\<lambda>s. P (tcb_domain_map_wellformed aag s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
-  and thread_states[wp]: "\<lambda>s. P (thread_states s)"
+  and thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
   (wp: crunch_wps)
 
@@ -1589,7 +1585,7 @@ crunches store_asid_pool_entry
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
-  and thread_states[wp]: "\<lambda>s. P (thread_states s)"
+  and thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and thread_bound_ntfns[wp]: "\<lambda>s. P (thread_bound_ntfns s)"
 
 lemma store_asid_pool_entry_pas_refined:
@@ -1789,7 +1785,7 @@ lemma decode_page_table_invocation_authorised:
    apply (drule subsetD[OF upto_enum_step_subset], clarsimp)
    apply (drule neg_mask_mono_le[where n=pt_bits])
    apply (drule neg_mask_mono_le[where n=pt_bits])
-   apply (fastforce dest: FIXME_wordAND_wordNOT_mask_plus)
+   apply (fastforce dest: plus_mask_AND_NOT_mask_eq)
   apply (intro conjI; clarsimp)
    apply (clarsimp simp: authorised_page_table_inv_def)
    apply (case_tac excaps; clarsimp)

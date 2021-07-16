@@ -2442,6 +2442,10 @@ lemma AND_NOT_mask_plus_AND_mask_eq:
   "(w && ~~ (mask n)) + (w && mask n) = w"
   by (subst word_plus_and_or_coroll; word_eqI_solve)
 
+lemma plus_mask_AND_NOT_mask_eq:
+  "x && ~~mask n = x \<Longrightarrow> (x + mask n) && ~~mask n = x"
+  by (subst word_plus_and_or_coroll; word_eqI_solve)
+
 lemma mask_eqI:
   fixes x :: "'a :: len word"
   assumes m1: "x && mask n = y && mask n"

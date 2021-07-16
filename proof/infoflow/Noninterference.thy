@@ -791,7 +791,7 @@ lemma pas_refined_tcb_st_to_auth:
    (pasObjectAbs aag p, auth, pasObjectAbs aag ep) \<in> pasPolicy aag"
   apply (rule pas_refined_mem)
    apply (rule_tac s=s in sta_ts)
-   apply (simp add: thread_states_def tcb_states_of_state_def get_tcb_def)
+   apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
   apply assumption
   done
 

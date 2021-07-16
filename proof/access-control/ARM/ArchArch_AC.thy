@@ -243,8 +243,8 @@ lemma perform_page_table_invocation_pas_refined[wp]:
             hoare_vcg_all_lift set_cap_pas_refined_not_transferable
          | (wp hoare_vcg_imp_lift, unfold disj_not1)
          | simp add: mapM_x_mapM authorised_page_table_inv_def imp_conjR pte_ref_simps
-         | wpc | wps| blast | strengthen invs_vspace_objs invs_arch_state
-)+
+         | wpc | wps | blast | strengthen invs_vspace_objs invs_arch_state)+
+
 apply (clarsimp simp: invs_psp_aligned)
   apply (cases iv)
    apply (fastforce simp: cte_wp_at_caps_of_state Option.is_none_def

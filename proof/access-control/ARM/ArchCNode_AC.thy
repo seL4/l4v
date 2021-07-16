@@ -351,11 +351,11 @@ lemma store_pte_st_vrefs[wp]:
                      word_bw_assocs mask_def pt_bits_def pageBits_def)
   done
 
-lemma store_pte_thread_states[wp]:
-  "store_pte p pte \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma store_pte_thread_st_auth[wp]:
+  "store_pte p pte \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
   done
@@ -426,11 +426,11 @@ lemma store_pde_st_vrefs[wp]:
   apply (cases "pde_ref2 pde")
   by (auto simp: split_def insert_Diff_if Un_ac ucast_ucast_mask_shift_helper)
 
-lemma store_pde_thread_states[wp]:
-  "store_pde p pde \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma store_pde_thread_st_auth[wp]:
+  "store_pde p pde \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
   done
@@ -481,11 +481,11 @@ lemma set_asid_pool_st_vrefs[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-lemma set_asid_pool_thread_states[wp]:
-  "set_asid_pool p pool \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma set_asid_pool_thread_st_auth[wp]:
+  "set_asid_pool p pool \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_asid_pool_def)
   apply (wpsimp wp: set_object_wp_strong)
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm option.split)
   done

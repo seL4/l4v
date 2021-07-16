@@ -382,7 +382,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
         apply(rule sta_ts)
         apply(drule_tac P="send_blocked_on epptr" and s=s and t=t in ep_queued_st_tcb_at'')
             apply(simp)+
-        apply(simp add: thread_states_def split: option.splits)
+        apply(simp add: thread_st_auth_def split: option.splits)
         apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 send_blocked_on_tcb_st_to_auth)
        apply blast
       apply assumption
@@ -393,7 +393,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
        apply(rule sta_ts)
        apply(drule_tac P="send_blocked_on epptr" and s=s and t=t in ep_queued_st_tcb_at'')
            apply(simp)+
-       apply(simp add: thread_states_def split: option.splits)
+       apply(simp add: thread_st_auth_def split: option.splits)
        apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 send_blocked_on_tcb_st_to_auth)
       apply blast
      apply(erule conjE, assumption)
@@ -406,7 +406,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
        apply(rule sta_ts)
        apply(drule_tac P="receive_blocked_on epptr" and s=s and t=t in ep_queued_st_tcb_at'')
            apply(simp)+
-       apply(simp add: thread_states_def split: option.splits)
+       apply(simp add: thread_st_auth_def split: option.splits)
        apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
       apply blast
      apply assumption
@@ -417,7 +417,7 @@ lemma ep_queues_are_invisible_or_eps_are_equal':
       apply(rule sta_ts)
       apply(drule_tac P="receive_blocked_on epptr" and s=s and t=t in ep_queued_st_tcb_at'')
           apply(simp)+
-      apply(simp add: thread_states_def split: option.splits)
+      apply(simp add: thread_st_auth_def split: option.splits)
       apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
      apply blast
     apply(erule conjE, assumption)
@@ -824,7 +824,7 @@ lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
        apply(rule sta_ts)
        apply(drule_tac P="receive_blocked_on ntfnptr" and s=s and t=t in ntfn_queued_st_tcb_at')
            apply(simp)+
-       apply(simp add: thread_states_def split: option.splits)
+       apply(simp add: thread_st_auth_def split: option.splits)
        apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
       apply blast
      apply assumption
@@ -835,7 +835,7 @@ lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
       apply(rule sta_ts)
       apply(drule_tac P="receive_blocked_on ntfnptr" and s=s and t=t in ntfn_queued_st_tcb_at')
           apply(simp)+
-      apply(simp add: thread_states_def split: option.splits)
+      apply(simp add: thread_st_auth_def split: option.splits)
       apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
      apply blast
     apply(erule conjE, assumption)
@@ -1067,7 +1067,7 @@ lemma owns_thread_blocked_reads_endpoint:
   apply(rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply(drule sym, simp, rule pas_refined_mem)
     apply(rule_tac s=s in sta_ts)
-    apply(clarsimp simp: thread_states_def split: option.splits
+    apply(clarsimp simp: thread_st_auth_def split: option.splits
                    simp: tcb_states_of_state_def st_tcb_at_def get_tcb_def obj_at_def)
     apply fastforce
    apply assumption
