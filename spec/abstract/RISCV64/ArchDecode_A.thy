@@ -10,7 +10,6 @@ theory ArchDecode_A
 imports
   Interrupt_A
   InvocationLabels_A
-  "Word_Lib.Word_Lib"
   "ExecSpec.InvocationLabels_H"
 begin
 
