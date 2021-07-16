@@ -1566,9 +1566,6 @@ lemma set_aobject_cur_tcb [wp]:
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]) wp+
 
-crunch arch [wp]: set_object "\<lambda>s. P (arch_state s)"
-  (wp: get_object_wp)
-
 lemma set_aobject_valid_idle[wp]:
   "set_object ptr (ArchObj obj) \<lbrace>\<lambda>s. valid_idle s\<rbrace>"
   by (wpsimp wp: valid_idle_lift)
@@ -1581,16 +1578,10 @@ lemma set_aobject_reply_masters[wp]:
   "set_object ptr (ArchObj obj) \<lbrace>valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
-crunch arch [wp]: set_object "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-crunch idle [wp]: set_object "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps)
-
-crunch irq [wp]: set_object "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
-crunch interrupt_states[wp]: set_object "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps)
+lemma dmo_ct_in_state:
+  "do_machine_op f \<lbrace>ct_in_state P\<rbrace>"
+  apply (simp add: ct_in_state_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+  by wp+
 
 end

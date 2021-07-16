@@ -1261,12 +1261,6 @@ declare word_less_sub_le [simp del]
 declare ptrFormPAddr_addFromPPtr [simp]
 
 
-(* FIXME: move *)
-lemma valid_mask_vm_rights[simp]:
-  "mask_vm_rights V R \<in> valid_vm_rights"
-  by (simp add: mask_vm_rights_def)
-
-
 lemma vs_lookup_and_unique_refs:
   "\<lbrakk>(ref \<rhd> p) s; caps_of_state s cptr = Some cap; table_cap_ref cap = Some ref';
     p \<in> obj_refs cap; valid_vs_lookup s; unique_table_refs (caps_of_state s)\<rbrakk>

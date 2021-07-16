@@ -1822,4 +1822,16 @@ lemma get_tcb_ko_atD:
   "get_tcb t s = Some tcb \<Longrightarrow> ko_at (TCB tcb) t s"
   by auto
 
+(* FIXME: subsumes thread_set_ct_running *)
+lemma thread_set_ct_in_state:
+  "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
+  \<lbrace>ct_in_state st\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state st\<rbrace>"
+  apply (simp add: ct_in_state_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+   apply (wp thread_set_no_change_tcb_state; simp)
+  apply (simp add: thread_set_def)
+  apply wp
+  apply simp
+  done
+
 end

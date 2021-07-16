@@ -2268,7 +2268,7 @@ lemma isFinalCapability_corres':
                          gen_obj_refs_Int
                   split: cap_relation_split_asm arch_cap.split_asm)
   apply clarsimp
-  apply (drule_tac p="(a,b)" in cte_wp_at_eqD)
+  apply (drule_tac p="(a,b)" in cte_wp_at_norm)
   apply clarsimp
   apply (frule_tac slot="(a,b)" in pspace_relation_ctes_ofI, assumption)
     apply fastforce
