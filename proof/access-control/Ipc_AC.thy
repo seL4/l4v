@@ -300,7 +300,7 @@ lemma get_tcb_recv_blocked_implies_receive:
      \<Longrightarrow> abs_has_auth_to aag Receive t ep"
   apply (erule pas_refined_mem[rotated])
   apply (rule sta_ts)
-  apply (simp add: thread_states_def tcb_states_of_state_def)
+  apply (simp add: thread_st_auth_def tcb_states_of_state_def)
   apply (case_tac "tcb_state tcb", simp_all)
   done
 
@@ -1018,7 +1018,7 @@ lemma pas_refined_ep_recv:
   apply (clarsimp simp:st_tcb_at_tcb_states_of_state_eq)
   apply (rule pas_refined_mem[OF _ policy])
   apply (rule sta_ts[of epptr Receive])
-  apply (simp add:thread_states_def)
+  apply (simp add:thread_st_auth_def)
   done
 
 lemma send_ipc_valid_ep_helper:
@@ -1152,7 +1152,7 @@ lemma receive_ipc_sender_helper:
      \<Longrightarrow> abs_has_auth_to aag SyncSend thread ep"
   apply (erule pas_refined_mem[rotated])
   apply (rule sta_ts)
-  apply (simp add: thread_states_def tcb_states_of_state_def get_tcb_def)
+  apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
   done
 
 lemma receive_ipc_sender_can_grant_helper:
@@ -1161,7 +1161,7 @@ lemma receive_ipc_sender_can_grant_helper:
      \<Longrightarrow> is_subject aag thread"
   apply (frule pas_refined_mem[rotated,where x = "thread" and auth=Grant])
    apply (rule sta_ts)
-   apply (simp add:thread_states_def tcb_states_of_state_def get_tcb_def)
+   apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
   apply (frule(2) aag_wellformed_grant_Control_to_send[OF _ _ pas_refined_wellformed])
   apply (simp add:aag_has_Control_iff_owns)
   done
@@ -1232,7 +1232,7 @@ lemma receive_ipc_base_pas_refined:
           apply (clarsimp simp:st_tcb_at_def elim!:obj_atE)
           apply (frule pas_refined_mem[rotated,where x = "(hd list)" and auth=Call])
            apply (rule sta_ts)
-           apply (simp add:thread_states_def tcb_states_of_state_def get_tcb_def)
+           apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
           by (erule(2) aag_wellformed_reply[OF _ _ pas_refined_wellformed])
         ultimately show ?thesis
           using prems by (force dest:receive_ipc_valid_ep_helper)
@@ -1246,7 +1246,7 @@ lemma receive_ipc_base_pas_refined:
       apply (clarsimp simp:st_tcb_at_def elim!:obj_atE)
       apply (frule_tac x="hd x" in pas_refined_mem[rotated,where auth=Call])
        apply (rule sta_ts)
-       apply (simp add:thread_states_def tcb_states_of_state_def get_tcb_def)
+       apply (simp add:thread_st_auth_def tcb_states_of_state_def get_tcb_def)
       apply (frule aag_wellformed_grant_Control_to_send_by_reply[OF _ _ _ pas_refined_wellformed])
       by (force simp:aag_has_Control_iff_owns)+
   qed
@@ -1549,7 +1549,7 @@ lemma receive_ipc_base_integrity:
   apply (intro impI)
   apply (frule_tac x= "hd x" in pas_refined_mem[rotated,where auth=Call])
    apply (rule sta_ts)
-   apply (simp add: thread_states_def tcb_states_of_state_def get_tcb_def)
+   apply (simp add: thread_st_auth_def tcb_states_of_state_def get_tcb_def)
   apply (simp add: cap_rights_to_auth_def)
   apply (rule aag_has_Control_iff_owns[THEN iffD1], assumption)
   apply (erule aag_wellformed_grant_Control_to_send_by_reply[OF _ _ _ pas_refined_wellformed]; force)

@@ -94,19 +94,19 @@ crunches set_message_info
   and cdt[wp]: "\<lambda>s. P (cdt s)"
 
 crunches do_machine_op
-  for thread_states[wp]: "\<lambda>s. P (thread_states s)"
+  for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and state_vrefs[wp]: "\<lambda>s :: 'a :: state_ext state. P (state_vrefs s)"
 
 crunch integrity_autarch: set_message_info "integrity aag X st"
 
 (* FIXME: move *)
-lemma set_mrs_thread_states[wp]:
-  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma set_mrs_thread_st_auth[wp]:
+  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   supply if_split[split del]
   apply (simp add: set_mrs_def split_def set_object_def get_object_def)
   apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
               simp: zipWithM_x_mapM_x split_def store_word_offs_def)
-  apply (clarsimp simp: fun_upd_def[symmetric] thread_states_preserved)
+  apply (clarsimp simp: fun_upd_def[symmetric] thread_st_auth_preserved)
   done
 
 lemma set_mrs_thread_bound_ntfns[wp]:

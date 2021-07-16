@@ -94,6 +94,10 @@ definition
 where
   "pred_neg P \<equiv> \<lambda>x. \<not> P x"
 
+lemma pred_neg_simp[simp]:
+  "(not P) s \<longleftrightarrow> \<not> (P s)"
+  by (simp add: pred_neg_def)
+
 definition "K \<equiv> \<lambda>x y. x"
 
 definition

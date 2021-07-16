@@ -307,7 +307,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
   apply(clarsimp simp: all_with_auth_to_def)
   apply (erule pas_refined_mem[rotated])
   apply (rule sta_ts)
-  apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
+  apply(clarsimp simp: thread_st_auth_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
   apply(case_tac "tcb_state tcb", simp_all)
   done
 
@@ -371,7 +371,7 @@ lemma read_queued_thread_reads_ntfn:
      apply simp
     apply (erule pas_refined_mem[rotated])
     apply (rule sta_ts)
-    apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
+    apply(clarsimp simp: thread_st_auth_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
     apply (case_tac "tcb_state tcb", simp_all)[1]
    apply simp
   apply simp
@@ -1327,7 +1327,7 @@ lemma send_blocked_threads_have_SyncSend_auth:
   (pasObjectAbs aag x,SyncSend,pasObjectAbs aag ep) \<in> pasPolicy aag"
   apply(drule_tac auth="SyncSend" and x=x in pas_refined_mem[rotated])
    apply(rule sta_ts)
-   apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
+   apply(clarsimp simp: thread_st_auth_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
    apply(case_tac "tcb_state tcb", simp_all)
   done
 
@@ -1860,7 +1860,7 @@ lemma receive_blocked_threads_have_Receive_auth:
   (pasObjectAbs aag x,Receive,pasObjectAbs aag ep) \<in> pasPolicy aag"
   apply(drule_tac auth="Receive" and x=x in pas_refined_mem[rotated])
    apply(rule sta_ts)
-   apply(clarsimp simp: thread_states_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
+   apply(clarsimp simp: thread_st_auth_def split: option.split simp: tcb_states_of_state_def st_tcb_def2)
    apply(case_tac "tcb_state tcb", simp_all)
   done
 

@@ -211,10 +211,10 @@ lemma tcb_states_of_state_preserved:
      \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
   by (auto split: option.splits simp: tcb_states_of_state_def get_tcb_def)
 
-lemma thread_states_preserved:
+lemma thread_st_auth_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
-     \<Longrightarrow> thread_states (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_states s"
-  by (simp add: tcb_states_of_state_preserved thread_states_def)
+     \<Longrightarrow> thread_st_auth (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
+  by (simp add: tcb_states_of_state_preserved thread_st_auth_def)
 
 lemma thread_bound_ntfns_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
@@ -1002,8 +1002,8 @@ end
 
 context pspace_update_eq begin
 
-lemma thread_states[iff]: "thread_states (f s) = thread_states s"
-  by (simp add: thread_states_def pspace get_tcb_def swp_def tcb_states_of_state_def)
+lemma thread_st_auth[iff]: "thread_st_auth (f s) = thread_st_auth s"
+  by (simp add: thread_st_auth_def pspace get_tcb_def swp_def tcb_states_of_state_def)
 
 lemma thread_bound_ntfns[iff]: "thread_bound_ntfns (f s) = thread_bound_ntfns s"
   by (simp add: thread_bound_ntfns_def pspace get_tcb_def swp_def split: option.splits)
@@ -1178,7 +1178,7 @@ lemma tcb_states_of_state_to_auth:
    apply clarsimp
    apply (erule pas_refined_mem[rotated])
    apply (rule sta_ts)
-   apply (simp add:thread_states_def)
+   apply (simp add:thread_st_auth_def)
    done
 
 lemma tcb_states_of_state_to_auth':
@@ -1244,13 +1244,13 @@ lemma as_user_tcb_states[wp]:
   "as_user t f \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (simp add: as_user_def)
   apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: thread_states_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
 
 lemma as_user_thread_state[wp]:
-  "as_user t f \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
-  apply (simp add: thread_states_def)
+  "as_user t f \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
+  apply (simp add: thread_st_auth_def)
   apply wp
   done
 
@@ -1258,7 +1258,7 @@ lemma as_user_thread_bound_ntfn[wp]:
   "as_user t f \<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def thread_bound_ntfns_def)
   apply (wp get_object_wp)
-  apply (clarsimp simp: thread_states_def get_tcb_def
+  apply (clarsimp simp: thread_st_auth_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
 
@@ -1363,9 +1363,9 @@ lemma case_sum_wp:
      \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> case_sum f g x \<lbrace>Q\<rbrace>"
   by (cases x, simp_all)
 
-lemma st_tcb_at_to_thread_states:
-  "st_tcb_at P t s \<Longrightarrow> \<exists>st. P st \<and> thread_states s t = tcb_st_to_auth st"
-  by (fastforce simp: st_tcb_def2 thread_states_def tcb_states_of_state_def)
+lemma st_tcb_at_to_thread_st_auth:
+  "st_tcb_at P t s \<Longrightarrow> \<exists>st. P st \<and> thread_st_auth s t = tcb_st_to_auth st"
+  by (fastforce simp: st_tcb_def2 thread_st_auth_def tcb_states_of_state_def)
 
 lemma aag_Control_into_owns:
   "\<lbrakk> aag_has_auth_to aag Control p; pas_refined aag s \<rbrakk> \<Longrightarrow> is_subject aag p"
@@ -1397,7 +1397,7 @@ lemma owns_ep_owns_receivers:
      apply clarsimp
     apply clarsimp
    apply (rule refl)
-  apply (drule st_tcb_at_to_thread_states)
+  apply (drule st_tcb_at_to_thread_st_auth)
   apply (clarsimp simp: receive_blocked_on_def2)
   apply (drule spec[where x = Grant])
   apply (frule aag_wellformed_grant_Control_to_recv[OF _ _ pas_refined_wellformed])

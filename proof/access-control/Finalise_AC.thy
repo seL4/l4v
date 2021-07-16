@@ -228,11 +228,11 @@ lemma set_bound_notification_ekheap[wp]:
   apply (wp set_scheduler_action_wp | simp)+
   done
 
-lemma sbn_thread_states[wp]:
-  "set_bound_notification t ntfn \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma sbn_thread_st_auth[wp]:
+  "set_bound_notification t ntfn \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
-  apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
+  apply (clarsimp simp: get_tcb_def thread_st_auth_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
@@ -565,7 +565,7 @@ lemma cancel_ipc_respects[wp]:
           | wpc
           | simp (no_asm) add: blocked_cancel_ipc_def get_ep_queue_def get_blocking_object_def)+
   apply clarsimp
-  apply (frule st_tcb_at_to_thread_states, clarsimp+)
+  apply (frule st_tcb_at_to_thread_st_auth, clarsimp+)
   apply (fastforce simp: obj_at_def is_ep_def dest: pas_refined_mem[OF sta_ts_mem])
   done
 
@@ -1029,7 +1029,7 @@ lemma thread_set_pas_refined_triv_idleT:
    apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
                 for a cps cd vr ag in rsubst')
     apply (drule get_tcb_SomeD)
-    apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
+    apply (rule ext, clarsimp simp add: thread_st_auth_def get_tcb_def st tcb_states_of_state_def)
    apply (drule get_tcb_SomeD)
    apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
   apply (clarsimp)

@@ -85,7 +85,7 @@ lemma delete_asid_pas_refined[wp]:
     apply (rule exI, rule conjI, rule refl)+
     apply (erule state_bits_to_policy_vrefs_subseteq)
         apply clarsimp
-       apply (clarsimp simp: all_ext thread_states_def tcb_states_of_state_def get_tcb_def obj_at_def)
+       apply (clarsimp simp: all_ext thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def)
       apply (clarsimp simp: all_ext thread_bound_ntfns_def get_tcb_def obj_at_def)
      apply clarsimp
     apply (rule allI[OF state_vrefs_clear_asid_pool]; simp)

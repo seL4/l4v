@@ -86,6 +86,10 @@ lemma ko_at_weakenE:
   "\<lbrakk> ko_at k ptr s; P k \<rbrakk> \<Longrightarrow> obj_at P ptr s"
   by (erule obj_at_weakenE, simp)
 
+lemma ko_atD:
+  "ko_at obj pos s \<Longrightarrow> kheap s pos = Some obj"
+  by (blast elim: obj_atE)
+
 
 text \<open>An alternative formulation that allows abstraction over type:\<close>
 

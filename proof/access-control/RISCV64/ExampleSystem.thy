@@ -574,7 +574,7 @@ lemma "pas_refined Sys1PAS s1"
           apply (elim disjE conjE; solves\<open>clarsimp simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def\<close>)
          apply (drule s1_caps_of_state, clarsimp)
          apply (elim disjE; solves \<open>simp add: thread_bound_ntfns_def\<close>)
-        apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
+        apply (clarsimp simp: state_refs_of_def thread_st_auth_def tcb_states_of_state_1
                Sys1AuthGraph_def Sys1AgentMap_simps
                complete_AuthGraph_def
                Sys1AuthGraph_aux_def
@@ -1069,7 +1069,7 @@ lemma "pas_refined Sys2PAS s2"
        apply (clarsimp simp: state_refs_of_def s2_def kh2_def kh2_obj_def
                        split: if_splits)
        apply (clarsimp split:if_splits option.splits
-                       simp: thread_states_def tcb_states_of_state_def
+                       simp: thread_st_auth_def tcb_states_of_state_def
                              Sys2AgentMap_simps Sys2AuthGraph_def
                              complete_AuthGraph_def Sys2AuthGraph_aux_def
                       dest!: get_tcb_SomeD)

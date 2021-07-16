@@ -137,9 +137,9 @@ lemma retype_region_ret_is_subject:
 
 declare wrap_ext_det_ext_ext_def[simp]
 
-lemma thread_states_detype[simp]:
-  "thread_states (detype S s) = (\<lambda>x. if x \<in> S then {} else thread_states s x)"
-  by (rule ext, simp add: thread_states_def get_tcb_def detype_def tcb_states_of_state_def)
+lemma thread_st_auth_detype[simp]:
+  "thread_st_auth (detype S s) = (\<lambda>x. if x \<in> S then {} else thread_st_auth s x)"
+  by (rule ext, simp add: thread_st_auth_def get_tcb_def detype_def tcb_states_of_state_def)
 
 lemma thread_bound_ntfns_detype[simp]:
   "thread_bound_ntfns (detype S s) = (\<lambda>x. if x \<in> S then None else thread_bound_ntfns s x)"
@@ -385,9 +385,9 @@ end
 
 context retype_region_proofs begin
 
-lemma ts_eq[simp]: "thread_states s' = thread_states s"
+lemma ts_eq[simp]: "thread_st_auth s' = thread_st_auth s"
   apply (rule ext)
-  apply (simp add: s'_def ps_def thread_states_def get_tcb_def orthr tcb_states_of_state_def
+  apply (simp add: s'_def ps_def thread_st_auth_def get_tcb_def orthr tcb_states_of_state_def
             split: option.split Structures_A.kernel_object.split)
   apply (simp add: default_object_def default_tcb_def tyunt
             split: Structures_A.apiobject_type.split)

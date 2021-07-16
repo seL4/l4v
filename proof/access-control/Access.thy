@@ -200,9 +200,8 @@ definition irq_map_wellformed_aux where
 abbreviation irq_map_wellformed where
   "irq_map_wellformed aag s \<equiv> irq_map_wellformed_aux aag (interrupt_irq_node s)"
 
-(* FIXME: rename to thread_st_auth or similar since it outputs authorities *)
-definition thread_states where
-  "thread_states s \<equiv> case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
+definition thread_st_auth where
+  "thread_st_auth s \<equiv> case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition thread_bound_ntfns where
   "thread_bound_ntfns s \<equiv> \<lambda>p. case_option None tcb_bound_notification (get_tcb p s)"
@@ -231,7 +230,7 @@ inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs wher
      \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 
 definition state_objs_to_policy :: "det_ext state \<Rightarrow> (obj_ref \<times> auth \<times> obj_ref) set" where
-  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s)
+  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_st_auth s)
                                                  (thread_bound_ntfns s) (cdt s) (state_vrefs s)"
 
 
@@ -703,9 +702,6 @@ text \<open>
   \item we are allowed explicitly to take ownership of the slot, for now this only happens when
         we call someone: we are allowed to put a reply cap in its caller slot (slot number 3)
 \<close>
-
-(* FIXME MOVE *)
-notation parent_of_rtrancl ("_ \<Turnstile> _ \<rightarrow>* _" [60,0,60] 60)
 
 inductive cdt_direct_change_allowed for aag subjects tcbsts ptr where
   cdca_owned:

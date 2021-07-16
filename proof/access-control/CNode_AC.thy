@@ -256,11 +256,11 @@ lemma decode_cnode_inv_authorised:
   apply (intro allI impI is_cnode_into_is_subject; fastforce)
   done
 
-lemma set_cap_thread_states[wp]:
-  "set_cap cap ptr \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma set_cap_thread_st_auth[wp]:
+  "set_cap cap ptr \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (wpsimp wp: get_object_wp simp: set_cap_def split_def set_object_def)
   apply (fastforce simp: obj_at_def get_tcb_def tcb_states_of_state_def
-                         thread_states_def rsubst[where P=P, OF _ ext])
+                         thread_st_auth_def rsubst[where P=P, OF _ ext])
   done
 
 lemma set_cap_tcb_states_of_state[wp]:
@@ -468,12 +468,6 @@ lemma empty_slot_integrity[wp,wp_not_transferable]:
 
 end
 
-
-(* FIXME MOVE next to obj_atE *)
-lemma ko_atD:
-  "ko_at obj pos s \<Longrightarrow> kheap s pos = Some obj"
-  by (blast elim: obj_atE)
-
 lemma reply_masters_mdbD1:
  "\<lbrakk> reply_masters_mdb m cs ; cs slot = Some (ReplyCap t True R) \<rbrakk>
     \<Longrightarrow> m slot = None"
@@ -482,18 +476,13 @@ lemma reply_masters_mdbD1:
 lemma reply_cap_no_grand_parent:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* slot ; reply_mdb m cs ; cs slot = Some (ReplyCap t False R) \<rbrakk>
      \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
-  apply (clarsimp simp add:reply_mdb_def del:disjCI)
+  apply (clarsimp simp: reply_mdb_def del: disjCI)
   apply (erule(1) reply_caps_mdbE)
   apply (drule(1) reply_masters_mdbD1)
-  apply (erule rtrancl.cases,blast)
+  apply (erule rtrancl.cases, blast)
   apply (erule rtrancl.cases, simp add: cdt_parent_of_def)
   apply (simp add: cdt_parent_of_def)
   done
-
-(* FIXME MOVE to lib*)
-lemma pred_neg_simp[simp]:
-  "(not P) s \<longleftrightarrow> \<not> (P s)"
-  by (simp add:pred_neg_def)
 
 (* FIXME MOVE ? *)
 crunches set_cdt_list, update_cdt_list
@@ -502,7 +491,7 @@ crunches set_cdt_list, update_cdt_list
   and valid_mdb[wp]: "\<lambda>s. P (valid_mdb s)"
   and valid_objs[wp]: "\<lambda>s. P (valid_objs s)"
   and arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  and thread_states[wp]: "\<lambda>s. P (thread_states s)"
+  and thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and is_original_cap[wp]: "\<lambda>s. P (is_original_cap s)"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
@@ -1001,7 +990,7 @@ lemma aag_cap_auth_NullCap [simp]:
   unfolding aag_cap_auth_def
   by (simp add: clas_no_asid)
 
-crunch thread_states[wp]: set_cdt "\<lambda>s. P (thread_states s)"
+crunch thread_st_auth[wp]: set_cdt "\<lambda>s. P (thread_st_auth s)"
 crunch thread_bound_ntfns[wp]: set_cdt "\<lambda>s. P (thread_bound_ntfns s)"
 
 
@@ -1236,13 +1225,13 @@ lemma sts_thread_bound_ntfns[wp]:
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
-lemma sts_thread_states[wp]:
-  "\<lbrace>\<lambda>s. P ((thread_states s)(t := tcb_st_to_auth st))\<rbrace>
+lemma sts_thread_st_auth[wp]:
+  "\<lbrace>\<lambda>s. P ((thread_st_auth s)(t := tcb_st_to_auth st))\<rbrace>
    set_thread_state t st
-   \<lbrace>\<lambda>_ s. P (thread_states s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
-  apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
+  apply (clarsimp simp: get_tcb_def thread_st_auth_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
@@ -1268,18 +1257,18 @@ lemma set_simple_ko_tcb_states_of_state[wp]:
   apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply clarify
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                         partial_inv_def a_type_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm if_splits)
   done
 
-lemma set_simple_ko_thread_states[wp]:
-  "set_simple_ko f ptr val \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+lemma set_simple_ko_thread_st_auth[wp]:
+  "set_simple_ko f ptr val \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
   apply clarify
-  apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+  apply (clarsimp simp: thread_st_auth_def obj_at_def get_tcb_def tcb_states_of_state_def
                         partial_inv_def a_type_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm if_splits)
@@ -1362,12 +1351,12 @@ lemma thread_set_state_vrefs:
 end
 
 
-lemma thread_set_thread_states_trivT:
+lemma thread_set_thread_st_auth_trivT:
   assumes st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
-  shows "thread_set f t \<lbrace>\<lambda>s. P (thread_states s)\<rbrace>"
+  shows "thread_set f t \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: thread_set_def)
   apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: st get_tcb_def thread_states_def tcb_states_of_state_def
+  apply (clarsimp simp: st get_tcb_def thread_st_auth_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: kernel_object.split_asm)
   done
@@ -1394,7 +1383,7 @@ lemma thread_set_pas_refined_triv:
   by (wpsimp wp: tcb_domain_map_wellformed_lift thread_set_state_vrefs
            simp: pas_refined_def state_objs_to_policy_def
       | wps thread_set_caps_of_state_trivial[OF cps]
-            thread_set_thread_states_trivT[OF st]
+            thread_set_thread_st_auth_trivT[OF st]
             thread_set_thread_bound_ntfns_trivT[OF ntfn])+
 
 lemmas thread_set_pas_refined = thread_set_pas_refined_triv[OF ball_tcb_cap_casesI]
@@ -1435,7 +1424,7 @@ end
 
 
 lemma sta_ts_mem:
-  "\<lbrakk> thread_states s x = S; r \<in> S \<rbrakk> \<Longrightarrow> (x, snd r, fst r) \<in> state_objs_to_policy s"
+  "\<lbrakk> thread_st_auth s x = S; r \<in> S \<rbrakk> \<Longrightarrow> (x, snd r, fst r) \<in> state_objs_to_policy s"
   using sta_ts by force
 
 lemma get_cap_auth_wp:

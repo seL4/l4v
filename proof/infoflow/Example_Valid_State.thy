@@ -1051,9 +1051,9 @@ lemma Sys1_pas_refined:
         apply (elim disjE conjE, auto simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def)[1]
        apply (drule s0_caps_of_state, clarsimp)
        apply (elim disjE, simp_all)[1]
-      apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_s0
+      apply (clarsimp simp: state_refs_of_def thread_st_auth_def tcb_states_of_state_s0
              Sys1AuthGraph_def Sys1AgentMap_simps split: if_splits)
-      apply (clarsimp simp: state_refs_of_def thread_states_def thread_bounds_of_state_s0)
+      apply (clarsimp simp: state_refs_of_def thread_st_auth_def thread_bounds_of_state_s0)
      apply (simp add: s0_internal_def) (* this is OK because cdt is empty..*)
      apply (simp add: s0_internal_def) (* this is OK because cdt is empty..*)
     apply (clarsimp simp: state_vrefs_def
