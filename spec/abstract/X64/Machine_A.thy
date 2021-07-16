@@ -13,7 +13,6 @@ chapter "x64 Machine Instantiation"
 
 theory Machine_A
 imports
-  "Word_Lib.WordSetup"
   "Lib.NonDetMonad"
   "ExecSpec.MachineTypes"
   "ExecSpec.MachineOps"
