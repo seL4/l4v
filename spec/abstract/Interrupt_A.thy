@@ -74,7 +74,7 @@ definition timer_tick :: "unit det_ext_monad" where
        od
      od
      | _ \<Rightarrow> return ();
-     when (num_domains > 1) (do
+     when (numDomains > 1) (do
        dec_domain_time;
        dom_time \<leftarrow> gets domain_time;
        when (dom_time = 0) reschedule_required

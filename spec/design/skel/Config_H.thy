@@ -5,9 +5,9 @@
  *)
 
 theory Config_H
-imports Types_H
+imports Types_H Kernel_Config
 begin
 
-#INCLUDE_HASKELL SEL4/Config.lhs
+#INCLUDE_HASKELL SEL4/Config.lhs NOT numDomains
 
 end

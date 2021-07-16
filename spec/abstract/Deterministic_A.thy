@@ -117,9 +117,6 @@ record etcb =
  tcb_time_slice :: "nat"
  tcb_domain :: "domain"
 
-definition num_domains :: nat where
-  "num_domains \<equiv> 16"
-
 definition time_slice :: "nat" where
   "time_slice \<equiv> 5"
 

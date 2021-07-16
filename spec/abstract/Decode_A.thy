@@ -417,7 +417,7 @@ where
      whenE (gen_invocation_type label \<noteq> DomainSetSet) $ throwError IllegalOperation;
      domain \<leftarrow> (case args of
        x # xs \<Rightarrow> doE
-         whenE (unat x \<ge> num_domains) $ throwError $ InvalidArgument 0;
+         whenE (unat x \<ge> numDomains) $ throwError $ InvalidArgument 0;
          returnOk (ucast x)
        odE
        | _ \<Rightarrow> throwError TruncatedMessage);

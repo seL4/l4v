@@ -11,6 +11,7 @@ imports
   "ExecSpec.Arch_Structs_B"
   ExceptionTypes_A
   VMRights_A
+  ExecSpec.Kernel_Config
 begin
 
 context Arch begin global_naming RISCV64_A
