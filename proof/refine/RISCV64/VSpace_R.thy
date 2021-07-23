@@ -925,16 +925,15 @@ lemma storePTE_ifunsafe [wp]:
   apply simp
   done
 
+method valid_idle'_setObject uses simp =
+  simp add: valid_idle'_def, rule hoare_lift_Pf [where f="ksIdleThread"]; wpsimp?;
+  (wpsimp wp: obj_at_setObject2[where P="idle_tcb'", simplified] hoare_drop_imp
+        simp: simp
+   | clarsimp dest!: updateObject_default_result)+
+
+
 lemma storePTE_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: valid_idle'_def)
-  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
-   apply (clarsimp simp: storePTE_def)
-   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
-   apply (clarsimp dest!: updateObject_default_result)
-  apply wpsimp
-  done
+  "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePTE_def)
 
 crunch arch' [wp]: storePTE "\<lambda>s. P (ksArchState s)"
 
