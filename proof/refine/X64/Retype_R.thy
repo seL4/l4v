@@ -4203,10 +4203,10 @@ lemma createObjects_idle':
   apply (rule hoare_pre)
    apply (clarsimp simp add: valid_idle'_def pred_tcb_at'_def)
    apply (rule hoare_vcg_conj_lift)
-   apply (rule hoare_as_subst [OF createObjects'_it])
-   apply (wp createObjects_orig_obj_at'
-             createObjects_orig_cte_wp_at2'
-             hoare_vcg_all_lift | simp)+
+    apply (rule hoare_as_subst [OF createObjects'_it])
+    apply (wp createObjects_orig_obj_at'
+              createObjects_orig_cte_wp_at2'
+              hoare_vcg_all_lift | simp)+
   apply (clarsimp simp: valid_idle'_def projectKOs o_def
                         pred_tcb_at'_def valid_pspace'_def
                   cong: option.case_cong)

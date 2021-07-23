@@ -1020,10 +1020,7 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
-definition
-  idle_tcb'_2 :: "Structures_H.thread_state \<times> machine_word option
-                  \<Rightarrow> bool"
-where
+definition idle_tcb'_2 :: "Structures_H.thread_state \<times> machine_word option \<Rightarrow> bool" where
   "idle_tcb'_2 \<equiv> \<lambda>(st, ntfn_opt). (idle' st \<and> ntfn_opt = None)"
 
 abbreviation
@@ -1031,12 +1028,8 @@ abbreviation
 
 lemmas idle_tcb'_def = idle_tcb'_2_def
 
-definition
-  valid_idle' :: "kernel_state \<Rightarrow> bool"
-where
-  "valid_idle' \<equiv>
-     \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s
-         \<and> idle_thread_ptr = ksIdleThread s"
+definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
+  "valid_idle' \<equiv> \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_thread_ptr = ksIdleThread s"
 
 lemma valid_idle'_tcb_at':
   "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s"

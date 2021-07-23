@@ -2831,16 +2831,14 @@ lemma storePDE_ifunsafe [wp]:
   apply simp
   done
 
+method valid_idle'_setObject uses simp =
+  simp add: valid_idle'_def, rule hoare_lift_Pf [where f="ksIdleThread"]; wpsimp?;
+  (wpsimp wp: obj_at_setObject2[where P="idle_tcb'", simplified] hoare_drop_imp
+        simp: simp
+   | clarsimp dest!: updateObject_default_result)+
+
 lemma storePDE_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: valid_idle'_def)
-  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
-   apply (clarsimp simp: storePDE_def)
-   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
-   apply (clarsimp dest!: updateObject_default_result)
-   apply wpsimp
-  done
+  "\<lbrace>valid_idle'\<rbrace> storePDE p pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePDE_def)
 
 crunches storePDE
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
@@ -3025,15 +3023,7 @@ lemma storePTE_ifunsafe [wp]:
   done
 
 lemma storePTE_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: valid_idle'_def)
-  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
-   apply (clarsimp simp: storePTE_def)
-   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
-   apply (clarsimp dest!: updateObject_default_result)
-  apply wpsimp
-  done
+  "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by (valid_idle'_setObject simp: storePTE_def)
 
 crunches storePTE
   for arch'[wp]: "\<lambda>s. P (ksArchState s)"
@@ -3222,14 +3212,7 @@ lemma setASIDPool_it' [wp]:
   by (wp setObject_it updateObject_default_inv|simp)+
 
 lemma setASIDPool_idle [wp]:
-  "\<lbrace>valid_idle'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: valid_idle'_def)
-  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
-   apply (rule obj_at_setObject2[where P="idle_tcb'", simplified])
-   apply (clarsimp dest!: updateObject_default_result)
-   apply wpsimp
-  done
+  "\<lbrace>valid_idle'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>" by valid_idle'_setObject
 
 lemma setASIDPool_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
