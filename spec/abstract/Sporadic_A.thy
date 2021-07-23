@@ -80,6 +80,7 @@ where
     od
   od"
 
+(* below currently gives if-test (when) for assert *)
 definition if_cond_run_refill_unblock_check where
   "if_cond_run_refill_unblock_check sc_opt active asst \<equiv>
     maybeM (\<lambda>scp. do
@@ -89,10 +90,8 @@ definition if_cond_run_refill_unblock_check where
                          None \<Rightarrow> (\<not> sc_sporadic sc)
                        | Some True \<Rightarrow> sc_sporadic sc \<and> sc_active sc
                        | Some False \<Rightarrow> sc_sporadic sc);
-      when (guard \<and> (if asst = Some False then scp \<noteq> cur_sc_ptr else True)) $ do
-        assert (if asst = Some True then scp \<noteq> cur_sc_ptr else True);
-        refill_unblock_check scp
-      od
+      when (guard \<and> (if asst = Some False then scp \<noteq> cur_sc_ptr else True)) $ 
+        when (if asst = Some True then scp \<noteq> cur_sc_ptr else True) $ refill_unblock_check scp
     od) sc_opt"
 
 abbreviation "if_sporadic_cur_sc_assert_refill_unblock_check sc_opt \<equiv>
@@ -112,5 +111,11 @@ abbreviation "if_sporadic_active_cur_sc_assert_refill_unblock_check sc_opt \<equ
 
 abbreviation "if_constant_bandwidth_refill_unblock_check sc_opt \<equiv>
                   if_cond_run_refill_unblock_check sc_opt None None"
+
+(* check *)
+thm if_cond_run_refill_unblock_check_def[of _ "Some False" "Some True", simplified]
+thm if_cond_run_refill_unblock_check_def[of _ "Some True" "Some True", simplified]
+thm if_cond_run_refill_unblock_check_def[of _ "Some False" "Some False", simplified]
+thm if_cond_run_refill_unblock_check_def[of _ "Some True" "Some False", simplified]
 
 end

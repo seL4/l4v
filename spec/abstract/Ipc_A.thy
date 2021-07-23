@@ -342,7 +342,8 @@ where
              sc \<leftarrow> get_sched_context scp;
              when (sc_sporadic sc \<and> sc_active sc) $ do
                ntfn_scp \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfnptr;
-               when (sc_ptr = ntfn_scp) $ refill_unblock_check scp
+               cur_sc_ptr <- gets cur_sc;
+               when (sc_ptr = ntfn_scp \<and> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp
             od
           od) sc_ptr
         od
@@ -414,7 +415,7 @@ where
                         (sender_badge data) (sender_can_grant data)
                         thread;
               sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
-              if_sporadic_cur_sc_test_refill_unblock_check sc_ptr;
+              if_sporadic_cur_sc_assert_refill_unblock_check sc_ptr;
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
