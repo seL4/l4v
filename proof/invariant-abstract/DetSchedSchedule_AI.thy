@@ -21857,7 +21857,7 @@ lemma retype_region_not_pred_map_tcbs_of:
   apply (wpsimp)
   apply (clarsimp simp: tcbs_of_kh_foldr_opt map_set_in)
   using assms
-  apply (cases obj; clarsimp simp: default_object_def tcb_of_def tcb_heap.all_simps
+  apply (cases obj; clarsimp simp: default_object_def tcb_heap.all_simps
                                    pred_map_upd_stronger split: if_splits)
   done
 
