@@ -254,14 +254,15 @@ where
      \<equiv> whileLoop (\<lambda>_ s. the ((head_insufficient sc_ptr) s))
                   (\<lambda>_. non_overlapping_merge_refills sc_ptr) ()"
 
+definition "MAX_RELEASE_TIME = max_time - 5 * MAX_PERIOD"
+
 definition
   head_time_buffer :: "ticks \<Rightarrow> (bool, 'z::state_ext) r_monad"
 where
   "head_time_buffer usage \<equiv> do {
     sc_ptr \<leftarrow> ogets cur_sc;
     sc \<leftarrow> read_sched_context sc_ptr;
-    oreturn  (r_amount (refill_hd sc) \<le> usage
-              \<and> max_time - r_time (refill_hd sc) \<ge> 5 * MAX_PERIOD)
+    oreturn  (r_amount (refill_hd sc) \<le> usage \<and> r_time (refill_hd sc) < MAX_RELEASE_TIME)
   }"
 
 definition
@@ -307,7 +308,7 @@ where
      refills \<leftarrow> get_refills sc_ptr;
      new_head_amount \<leftarrow> return (r_amount (hd refills));
 
-     when (usage' > 0 \<and> usage' < new_head_amount) $ do
+     when (usage' > 0 \<and> r_time (hd refills) < MAX_RELEASE_TIME) $ do
        sc \<leftarrow> get_sched_context sc_ptr;
        period \<leftarrow> return (sc_period sc);
        used \<leftarrow> return \<lparr>r_time = r_time (hd (sc_refills sc)) + period, r_amount = usage'\<rparr>;
