@@ -1167,7 +1167,7 @@ lemma sc_replies_relation_prevs_list':
      kheap s scp = Some (kernel_object.SchedContext sc n)\<rbrakk>
     \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' scp) (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
-  apply (clarsimp simp: sc_of_def opt_map_red)
+  apply (clarsimp simp: opt_map_red)
   done
 
 lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
@@ -1178,7 +1178,7 @@ lemma sc_replies_relation_sc_with_reply_cross_eq_pred:
    apply (rule_tac x="the (sc_replies_of2 s scp)" in exI)
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
   apply (drule_tac x=scp and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
+  apply (clarsimp simp: opt_map_def projectKO_opt_sc split: option.splits)
   apply (case_tac "scReplies_of s' scp", simp)
   apply (rename_tac p)
   apply (drule pspace_relation_sc_at[where scp=scp])
@@ -1298,7 +1298,7 @@ lemma sc_with_reply_replyNext_Some:
   apply (clarsimp simp: obj_at_def is_sc_obj is_reply)
   apply (drule (1) sc_replies_relation_sc_with_reply_heap_path[rotated])
   apply (prop_tac "the (sc_replies_of s scp) = sc_replies sc")
-   apply (clarsimp simp: sc_replies_of_scs_def sc_of_def scs_of_kh_def opt_map_def map_project_def)
+   apply (clarsimp simp: sc_replies_of_scs_def scs_of_kh_def opt_map_def map_project_def)
   apply clarsimp
   apply (prop_tac "replyPrevs_of s' nxt_rp = Some rp")
    apply (erule (1) sym_refs_replyNext_replyPrev_sym[THEN iffD1])
@@ -1840,7 +1840,7 @@ proof -
       apply (drule_tac x=p in spec)
       apply (intro conjI impI allI)
       (* p =  scp *)
-       apply (clarsimp simp: opt_map_red sc_of_def)
+       apply (clarsimp simp: opt_map_red)
        apply (prop_tac "replyPrevs_of s' nrp = Some rp")
         apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
         apply (clarsimp simp: opt_map_red)
@@ -1857,10 +1857,7 @@ proof -
       (* p \<noteq> scp *)
       apply (rule heap_path_heap_upd_not_in)
        apply clarsimp
-      apply (clarsimp simp: sc_of_def opt_map_Some)
-      apply (rename_tac p sc2 ko)
-      apply (case_tac ko; simp)
-      apply (clarsimp simp: opt_map_red sc_of_def)
+      apply (clarsimp simp: opt_map_Some)
       apply (prop_tac "replyPrevs_of s' nrp = Some rp")
        apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
        apply (clarsimp simp: opt_map_red)
@@ -1868,7 +1865,6 @@ proof -
       apply (simp add: sc_with_reply_def the_pred_option_def
                 split: if_split_asm)
       apply blast
-     apply (rule conjI)
       apply (clarsimp simp add: ghost_relation_def)
       apply (erule_tac x=scp in allE)+
       apply (clarsimp simp: obj_at_def a_type_def

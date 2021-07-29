@@ -925,7 +925,7 @@ lemma sc_replies_relation_scReplies_of:
   "\<lbrakk>sc_replies_relation s s'; sc_at sc_ptr s; bound (scs_of' s' sc_ptr)\<rbrakk>
    \<Longrightarrow> (sc_replies_of s |> hd_opt) sc_ptr = scReplies_of s' sc_ptr"
   by (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def
-                      sc_of_def hd_opt_def obj_at_def is_sc_obj_def opt_map_def
+                      hd_opt_def obj_at_def is_sc_obj_def opt_map_def
                split: option.splits Structures_A.kernel_object.splits list.splits)
 
 lemma sc_replies_prevs_walk:
@@ -948,7 +948,7 @@ lemma sc_replies_relation_prevs_list:
     \<Longrightarrow> heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)"
   apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def scs_of_kh_def map_project_def)
   apply (drule_tac x=x and y="sc_replies sc" in spec2)
-  apply (clarsimp simp: sc_of_def opt_map_def projectKO_opt_sc split: option.splits)
+  apply (clarsimp simp: opt_map_def projectKO_opt_sc split: option.splits)
   done
 
 lemma list_refs_of_replies'_reftype[simp]:

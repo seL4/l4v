@@ -1343,7 +1343,7 @@ lemma set_other_obj_corres:
   apply (simp add: sc_replies_relation_def)
   apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
   apply (drule_tac x=p in spec)
-  apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
+  apply (rule conjI; clarsimp split: Structures_A.kernel_object.split_asm if_split_asm)
    apply(clarsimp simp: a_type_def is_other_obj_relation_type_def)
   apply (rename_tac sc n)
   apply (prop_tac "typ_at' (koTypeOf (injectKO ob')) ptr b")
@@ -1354,7 +1354,7 @@ lemma set_other_obj_corres:
   apply (drule replyPrevs_of_non_reply_update[simplified])
    apply (clarsimp simp: other_obj_relation_def; cases ob; cases "injectKO ob'";
           simp split: arch_kernel_obj.split_asm)
-  apply (clarsimp simp add: opt_map_def sc_of_def)
+  apply (clarsimp simp add: opt_map_def)
   done
 
 lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
@@ -1459,9 +1459,8 @@ lemma set_reply_corres: (* for reply update that doesn't touch the reply stack *
     apply (simp add: sc_replies_relation_def)
     apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
     apply (drule_tac x=p in spec)
-    apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
     by (subst replyPrevs_of_replyPrev_same_update[simplified, where ob'=ae', simplified];
-        simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
+        simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
   qed
 
 lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` replies_with_sc *)
@@ -1530,7 +1529,6 @@ lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` r
       (* sc_replies_relation *)
     apply (simp add: sc_replies_relation_def)
     apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
-    apply (rule conjI; clarsimp simp: sc_of_def split: Structures_A.kernel_object.split_asm if_split_asm)
     apply (drule_tac x=p in spec)
    apply (subgoal_tac "((scs_of' b)(ptr := sc_of' (KOReply r2)) |> scReply) p = scReplies_of b p")
      apply simp
@@ -1538,9 +1536,9 @@ lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` r
      apply (erule heap_path_heap_upd_not_in)
      apply (clarsimp simp: sc_at_pred_n_def obj_at_def replies_with_sc_def image_def)
      apply (drule_tac x=p in spec)
-     apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
-    apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
-   apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def sc_of_def)
+     apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
+    apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
+   apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
   done
   qed
 
@@ -1633,7 +1631,7 @@ lemma setSchedContext_corres:
       (* sc_replies_relation *)
     apply (clarsimp simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
     apply (drule_tac x=p in spec)
-    by (auto simp: typ_at'_def ko_wp_at'_def opt_map_def sc_of_def projectKO_opts_defs
+    by (auto simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
             split: if_splits)
 qed
 
@@ -3729,7 +3727,7 @@ lemma state_refs_of_cross_eq:
    apply (frule sc_replies_relation_scReplies_of)
      apply (fastforce simp: obj_at_def is_sc_obj_def)
     apply (clarsimp simp: opt_map_def)
-   apply (clarsimp simp: opt_map_def sc_replies_of_scs_def map_project_def scs_of_kh_def sc_of_def)
+   apply (clarsimp simp: opt_map_def sc_replies_of_scs_def map_project_def scs_of_kh_def)
   apply (clarsimp simp: reply_relation_def split: Structures_A.ntfn.splits)
   done
 
@@ -3947,7 +3945,7 @@ abbreviation scs_of2 :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> Struct
 
 lemma scs_of_rewrite:
   "scs_of s = scs_of2 s"
-  by (fastforce simp: sc_heap_of_state_def sc_of_def opt_map_def
+  by (fastforce simp: sc_heap_of_state_def opt_map_def
               split: option.splits Structures_A.kernel_object.splits)
 
 abbreviation
@@ -3955,7 +3953,7 @@ abbreviation
 
 lemma sc_replies_of_rewrite:
   "sc_replies_of s = sc_replies_of2 s"
-  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def sc_of_def opt_map_def map_project_def
+  by (fastforce simp: sc_heap_of_state_def sc_replies_of_scs_def opt_map_def map_project_def
               split: option.splits Structures_A.kernel_object.splits)
 
 definition
@@ -4028,7 +4026,7 @@ lemma sc_refills_sc_at_rewrite:
                split: option.splits Structures_A.kernel_object.split_asm)
 
 lemmas projection_rewrites = pred_map_rewrite scs_of_rewrite is_active_sc_rewrite
-                             sc_heap_of_state_def sc_of_def sc_refills_sc_at_rewrite
+                             sc_heap_of_state_def sc_refills_sc_at_rewrite
                              active_sc_at'_rewrite valid_refills_rewrite round_robin_rewrite
 
 lemma is_active_sc'_cross:
