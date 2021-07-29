@@ -1292,7 +1292,7 @@ proof -
   show ?thesis
     using sr pr
     unfolding sc_replies_relation_def
-    apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def sc_of_def
+    apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def
                    split: Structures_A.kernel_object.split_asm)
     apply (rename_tac sc n'; drule_tac x=p and y="sc_replies sc" in spec2)
     apply (clarsimp simp: foldr_upd_app_if[folded data_map_insert_def] split: if_split_asm)
@@ -1304,7 +1304,7 @@ proof -
      apply (erule notE)
      apply (clarsimp simp: pspace_relation_def)
      apply (simp add: obj_relation_retype_addrs_eq[OF not_unt tysc num_r orr cover,symmetric])
-    apply (clarsimp simp: scs_of_kh_def opt_map_Some sc_of_def sc_replies_of_scs_def map_project_Some)
+    apply (clarsimp simp: scs_of_kh_def opt_map_Some sc_replies_of_scs_def map_project_Some)
     apply (fold foldr_upd_app_if[folded data_map_insert_def])
     apply (simp only: retype_replyPrevs_of[OF pr vs vs' pn pn' ko tysc cover orr num_r, simplified])
     apply (clarsimp simp: pspace_relation_def)

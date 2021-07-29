@@ -591,8 +591,7 @@ lemma sr_inv_sc_with_reply_None_helper:
     apply (prop_tac "rp \<notin> set replies")
      apply (drule_tac sc=scp in valid_replies_sc_with_reply_None, simp)
      apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply sc_replies_of_scs_def
-                           scs_of_kh_def map_project_def sc_of_def)
-     apply (rename_tac ko; case_tac ko; simp)
+                           scs_of_kh_def map_project_def)
     apply (erule (1) heap_ls_prev_not_in)
     apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1] simp: opt_map_red)
    apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
@@ -782,7 +781,7 @@ lemma replyRemoveTCB_corres:
                                      simp: obj_at_def is_sc_obj_def state_relation_def obj_at'_def
                                            projectKOs opt_map_def)
                   apply (clarsimp simp: sc_replies_of_scs_def map_project_def opt_map_def
-                                        scs_of_kh_def sc_of_def)
+                                        scs_of_kh_def)
                  apply (fastforce dest!: state_relation_pspace_relation sc_at_cross
                                          valid_objs_valid_sched_context_size
                                    simp: obj_at_def is_sc_obj)
