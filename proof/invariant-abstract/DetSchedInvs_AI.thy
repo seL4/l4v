@@ -2294,6 +2294,16 @@ abbreviation valid_ready_qs :: "'z state \<Rightarrow> bool" where
 
 lemmas valid_ready_qs_def = valid_ready_qs_2_def valid_ready_queued_thread_2_def
 
+(* using etcb_eq for the sake of compatibility with valid_ready_qs *)
+(* it would be better to define directly with tcb, and flip the order of p and d *)
+abbreviation
+  "ready_qs_etcb_eq s \<equiv> \<forall>tp d p. tp \<in> set (ready_queues s d p) \<longrightarrow> etcb_eq p d tp s"
+
+lemma valid_ready_qs_etcb_eq[simp]:
+  "valid_ready_qs s \<Longrightarrow> ready_qs_etcb_eq s"
+  by (clarsimp simp: valid_ready_qs_def in_queues_2_def)
+
+
 \<comment> \<open>This predicate is currently used only in refill_update_valid_refills, in particular,
     to show that performing refill_update will not result in overflow.
     The constant 2 is required because refill_update will schedule a refill at most MAX_PERIOD

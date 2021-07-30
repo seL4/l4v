@@ -1140,6 +1140,13 @@ lemma valid_sched_action_weak_valid_sched_action:
 lemmas valid_sched_weak_valid_sched_action =
   valid_sched_valid_sched_action[THEN valid_sched_action_weak_valid_sched_action]
 
+lemma weak_valid_sched_action_no_sc_sched_act_not:
+  "\<lbrakk>weak_valid_sched_action s; pred_map_eq None (tcb_scps_of s) ref\<rbrakk> \<Longrightarrow> scheduler_act_not ref s"
+  by (auto simp: weak_valid_sched_action_def scheduler_act_not_def vs_all_heap_simps)
+
+lemmas valid_sched_action_no_sc_sched_act_not
+  = weak_valid_sched_action_no_sc_sched_act_not[OF valid_sched_action_weak_valid_sched_action]
+
 lemma simple_sched_act_not[simp]:
   "simple_sched_action s \<Longrightarrow> scheduler_act_not t s"
   by (clarsimp simp: simple_sched_action_def scheduler_act_not_def)
