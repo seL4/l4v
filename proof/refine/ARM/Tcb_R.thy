@@ -2078,7 +2078,7 @@ lemma schedContextBindTCB_corres:
          apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
          apply (rule threadset_corres; clarsimp simp: tcb_relation_def)
         apply (clarsimp simp: pred_conj_def)
-        apply ((wp set_tcb_sched_context_valid_ready_qs_not_queued
+        apply ((wp set_tcb_sched_context_valid_ready_qs
                    set_tcb_sched_context_valid_release_q_not_queued
                    set_tcb_sched_context_simple_weak_valid_sched_action
                | ((rule hoare_vcg_conj_lift)?, rule set_tcb_obj_ref_wp))+)[1]
@@ -2103,7 +2103,7 @@ lemma schedContextBindTCB_corres:
           apply (fastforce dest: idle_no_ex_cap)
          apply (fastforce dest: idle_sc_no_ex_cap)
         apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def
-                        elim!: valid_ready_qs_no_sc_not_queued)
+                        dest!: valid_ready_qs_no_sc_not_queued)
        apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def
                        elim!: valid_release_q_no_sc_not_in_release_q)
       apply (fastforce simp: sc_at_pred_def sc_at_ppred_def obj_at_def bound_sc_tcb_at_def
