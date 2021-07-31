@@ -10463,14 +10463,6 @@ lemma refill_budget_check_round_robin_valid_ready_qs_not_queued:
   apply (clarsimp simp: obj_at_def vs_all_heap_simps split: if_splits)
   done
 
-(* FIXME: Move *)
-lemma precondition_cases:
-  "\<lbrace>P and Q\<rbrace> f \<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace>(\<lambda>s. \<not>P s) and Q\<rbrace> f \<lbrace> R \<rbrace> \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace> R \<rbrace>"
-  apply (rule_tac Q="\<lambda>s. (P and Q) s \<or> ((\<lambda>s. \<not> P s) and Q) s" in hoare_weaken_pre)
-  apply (rule_tac Q="\<lambda>rv s. R rv s \<or> R rv s" in hoare_strengthen_post)
-  apply (rule hoare_vcg_disj_lift)
-  by force+
-
 lemma update_refill_hd_valid_release_q:
   "\<lbrace>\<lambda>s. valid_release_q s
         \<and> (\<forall>t. pred_map_eq (Some sc_ptr) (tcb_scps_of s) t
@@ -10742,8 +10734,8 @@ lemma commit_time_valid_release_q:
   apply (case_tac "sc_active sc"; simp add: bind_assoc)
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rename_tac csc sc consumed)
-  apply (rule_tac P="\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s" in precondition_cases)
-   apply (rule_tac P="\<lambda>s. sc_with_tcb_prop (cur_sc s) (\<lambda>s. in_release_q s) s" in precondition_cases)
+  apply (rule_tac P="\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s" in hoare_pre_tautI)
+   apply (rule_tac P="\<lambda>s. sc_with_tcb_prop (cur_sc s) (\<lambda>s. in_release_q s) s" in hoare_pre_tautI)
     apply (rule_tac Q="valid_release_q and (\<lambda>s. consumed_time s = consumed)
                        and K (consumed = 0)"
                     in hoare_weaken_pre[rotated])
@@ -10756,7 +10748,7 @@ lemma commit_time_valid_release_q:
                       and (\<lambda>s. sc_not_in_release_q (cur_sc s) s) and (\<lambda>s. cur_sc s = csc)"
                    in hoare_weaken_pre[rotated])
     apply (clarsimp, rule conjI, fastforce)
-    apply (clarsimp simp: obj_at_def)
+    apply (clarsimp simp: obj_at_def pred_neg_def)
     apply (subgoal_tac "t = ta", clarsimp)
     apply (rule_tac z="cur_sc s" in sym_refs_bound_sc_tcb_at_inj)
       apply (clarsimp simp: valid_state_def valid_pspace_def, assumption)
