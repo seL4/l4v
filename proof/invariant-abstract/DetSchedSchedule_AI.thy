@@ -7120,16 +7120,11 @@ lemma no_ofail_refill_head_overlapping:
   apply (clarsimp simp: obind_def obj_at_def read_sched_context_def)
   done
 
-lemma bound_refill_head_overlapping:
-  "kheap s sc_ptr = Some (SchedContext sc n) \<Longrightarrow> bound (refill_head_overlapping sc_ptr s)"
-  apply (clarsimp simp: refill_head_overlapping_def obind_def read_sched_context_def)
-  done
-
 lemma refill_head_overlapping_true_imp_length_at_least_two:
   "\<lbrakk>the (refill_head_overlapping sc_ptr s); pred_map \<top> (sc_refill_cfgs_of s) sc_ptr\<rbrakk>
    \<Longrightarrow> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr"
   apply (clarsimp simp: vs_all_heap_simps)
-  apply (frule bound_refill_head_overlapping)
+  apply (insert no_ofailD[OF no_ofail_refill_head_overlapping])
   apply (fastforce simp: refill_head_overlapping_def vs_all_heap_simps read_sched_context_def)
   done
 
@@ -7139,7 +7134,7 @@ lemma refill_head_overlapping_refills_overlapping:
                        \<le> r_time (hd (scrc_refills cfg)) + r_amount (hd (scrc_refills cfg)))
                  (sc_refill_cfgs_of s) sc_ptr"
   apply (clarsimp simp: vs_all_heap_simps)
-  apply (frule bound_refill_head_overlapping)
+  apply (insert no_ofailD[OF no_ofail_refill_head_overlapping])
   apply (clarsimp simp: refill_head_overlapping_def obind_def read_sched_context_def)
   done
 
@@ -7150,7 +7145,7 @@ lemma refill_head_overlapping_refills_not_overlapping:
                          \<le> r_time (hd (scrc_refills cfg)) + r_amount (hd (scrc_refills cfg))))
                   (sc_refill_cfgs_of s) sc_ptr"
   apply (clarsimp simp: vs_all_heap_simps)
-  apply (frule bound_refill_head_overlapping)
+  apply (insert no_ofailD[OF no_ofail_refill_head_overlapping])
   apply (clarsimp simp: refill_head_overlapping_def obind_def read_sched_context_def)
   done
 
