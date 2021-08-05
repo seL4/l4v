@@ -6180,9 +6180,8 @@ lemma doReplyTransfer_corres:
                       apply (clarsimp simp: obj_at_def sc_at_pred_n_def get_sched_context_exs_valid)
                      apply (rule get_sched_context_exs_valid)
                      apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-                    apply (wpsimp wp: get_sched_context_no_fail)
-                    apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj)
-                    apply (frule_tac sc=sc and n=n in valid_objs_valid_sched_context_size[OF invs_valid_objs], fastforce, simp)
+                    apply ((wpsimp simp: obj_at_def is_sc_obj_def
+                           | clarsimp split: Structures_A.kernel_object.splits)+)[1]
                    apply simp
                   apply clarsimp
                  apply (wpsimp wp: thread_get_wp')

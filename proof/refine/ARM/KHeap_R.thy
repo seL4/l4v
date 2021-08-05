@@ -3982,9 +3982,6 @@ lemma is_active_sc_rewrite:
                       active_sc_def opt_map_red opt_map_def
                split: option.split_asm Structures_A.kernel_object.splits)
 
-definition is_active_sc' where
-  "is_active_sc' p s' \<equiv> ((\<lambda>sc'. 0 < scRefillMax sc') |< scs_of' s') p"
-
 lemma active_sc_at'_imp_is_active_sc':
   "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
   by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
@@ -4233,30 +4230,6 @@ lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> 
 (* end : updateSchedContext *)
 
 end
-
-lemma get_sched_context_exs_valid:
-  "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)
-   \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_sched_context scp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
-  by (clarsimp simp: get_sched_context_def get_object_def obj_at_def bind_def is_sc_obj_def
-                     gets_def get_def return_def exs_valid_def gets_the_def
-              split: Structures_A.kernel_object.splits)
-
-lemma no_fail_simple_ko_at:
-  "no_fail (ntfn_at p) (get_notification p)"
-  "no_fail (ep_at p) (get_endpoint p)"
-  "no_fail (reply_at p) (get_reply p)"
-  by (wpsimp simp: get_simple_ko_def obj_at_def is_obj_defs a_type_def partial_inv_def
-               wp: get_object_wp split:  Structures_A.kernel_object.splits)+
-
-lemmas no_fail_get_notification[wp] = no_fail_simple_ko_at(1)
-lemmas no_fail_get_reply[wp] = no_fail_simple_ko_at(2)
-lemmas no_fail_get_endpoint[wp] = no_fail_simple_ko_at(3)
-
-lemma get_sched_context_no_fail:
-  "no_fail (\<lambda>s. sc_at ptr s) (get_sched_context ptr)"
-  by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
-                     gets_def obj_at_def is_sc_obj_def gets_the_def
-              split: Structures_A.kernel_object.splits)
 
 (* FIXME RT: rename *)
 (* this let us cross the sc size information from concrete to abstract *)
@@ -4675,6 +4648,18 @@ lemma active_sc_at'_cross:
   apply (drule_tac x=sc_ptr in bspec, blast)
   apply (clarsimp simp: sc_relation_def vs_all_heap_simps active_sc_at'_def obj_at'_def projectKOs
                         active_sc_def)
+  done
+
+lemma is_active_sc'2_cross:
+  "\<lbrakk>(s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; is_active_sc sc_ptr s;
+    sc_at sc_ptr s\<rbrakk>
+   \<Longrightarrow> is_active_sc' sc_ptr s'"
+  apply (frule state_relation_pspace_relation)
+  apply (frule (3) sc_at_cross)
+  apply (clarsimp simp: pspace_relation_def obj_at_def is_sc_obj_def)
+  apply (drule_tac x=sc_ptr in bspec, blast)
+  apply (clarsimp simp: sc_relation_def vs_all_heap_simps obj_at'_def projectKOs
+                        active_sc_def opt_map_red StateRelation.is_active_sc'_def)
   done
 
 end
