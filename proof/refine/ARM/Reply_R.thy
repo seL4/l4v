@@ -746,10 +746,8 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
       apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
        apply (rename_tac ko; case_tac ko; simp)
       apply simp
-     apply (wpsimp simp: obj_at_def is_sc_obj_def)+
-    apply (wpsimp wp: get_sched_context_no_fail)
-   apply (clarsimp simp: obj_at_def is_sc_obj_def)
-  apply simp
+     apply (wpsimp simp: obj_at_def is_sc_obj_def
+            | clarsimp split: Structures_A.kernel_object.splits)+
   done
 
 lemma bindScReply_corres:
@@ -1650,10 +1648,8 @@ lemma setSchedContext_scReply_update_None_corres:
           apply (rename_tac ko; case_tac ko; clarsimp)
          apply simp
         apply (wpsimp simp: obj_at_def is_sc_obj_def vs_heap_simps)
-       apply (wpsimp wp: get_sched_context_no_fail)
-      apply (clarsimp simp: obj_at_def is_sc_obj_def)
-     apply simp
-    apply wpsimp+
+       apply (wpsimp simp: obj_at_def is_sc_obj_def
+              | clarsimp split: Structures_A.kernel_object.splits)+
   done
 
 lemma replyPrevNext_update_commute:

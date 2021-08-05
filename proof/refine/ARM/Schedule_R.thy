@@ -2376,7 +2376,15 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop
   and valid_release_queue[wp]: valid_release_queue
   and valid_release_queue'[wp]: valid_release_queue'
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n T p s)"
   (wp: crunch_wps)
+
+end
+
+global_interpretation refillPopHead: typ_at_all_props' "refillPopHead scPtr"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma mergeRefills_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> active_sc_at' scPtr s \<and> obj_at' (\<lambda>sc'. Suc 0 < scRefillCount sc') scPtr s\<rbrace>
@@ -2675,39 +2683,6 @@ crunches refillHeadOverlappingLoop, headInsufficientLoop, handleOverrunLoop
   for active_sc_at'[wp]: "active_sc_at' scPtr"
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps)
-
-lemma head_insufficient_length_cross:
-  "\<lbrakk>(s,s') \<in> state_relation; valid_objs s; active_sc_valid_refills s; is_active_sc scPtr s;
-    \<not> round_robin scPtr s; the (head_insufficient scPtr s); pspace_aligned s; pspace_distinct s;
-    valid_objs' s'\<rbrakk>
-   \<Longrightarrow> obj_at' (\<lambda>sc'. Suc 0 < scRefillCount sc') scPtr s'"
-  apply (frule head_insufficient_length_at_least_two[rotated])
-  apply (frule (1) active_sc_valid_refillsE)
-  apply (clarsimp simp: vs_all_heap_simps)
-   apply (frule valid_refills_refills_unat_sum_equals_budget)
-     apply (clarsimp simp: round_robin_def vs_all_heap_simps)
-    apply (fastforce simp: sc_valid_refills_def round_robin_def vs_all_heap_simps)
-   apply (fastforce simp: sc_valid_refills_def round_robin_def vs_all_heap_simps word_le_nat_alt)
-  apply (clarsimp simp: vs_all_heap_simps)
-  apply (rename_tac sc n)
-  apply (prop_tac "valid_sched_context_size n")
-   apply (fastforce intro: valid_sched_context_size_objsI)
-  apply (prop_tac "sc_at' scPtr s'")
-   apply (fastforce intro!: sc_at_cross
-                      simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (rename_tac sc')
-  apply (prop_tac "sc_relation sc n sc'")
-   apply (frule state_relation_pspace_relation)
-   apply (clarsimp simp: pspace_relation_def vs_all_heap_simps)
-   apply (drule_tac x=scPtr in bspec, blast)
-   apply clarsimp
-  apply (prop_tac "valid_sched_context' sc' s'")
-   apply (frule sc_ko_at_valid_objs_valid_sc'[rotated])
-    apply (fastforce simp: obj_at'_def projectKOs)
-   apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc')
-  apply (auto simp: sc_relation_def refills_map_def valid_sched_context'_def)
-  done
 
 lemma headInsufficientLoop_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> active_sc_at' scPtr s\<rbrace>
@@ -3859,7 +3834,7 @@ lemma awaken_corres:
   apply (rule corres_cross[where Q'="\<lambda>s'. distinct (ksReleaseQueue s')"
                            , OF ksReleaseQueue_distinct_cross_rel], blast)
   apply (clarsimp simp: awaken_def Schedule_A.awaken_def runReaderT_def)
-  apply (rule corres_whileLoop_inv; simp)
+  apply (rule corres_whileLoop; simp)
        apply (simp add: releaseQNonEmptyAndReady_eq)
       apply (rule corres_guard_imp)
         apply (rule awakenBody_corres)

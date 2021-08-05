@@ -958,8 +958,8 @@ lemma replyRemoveTCB_corres:
                 apply (fastforce simp: obj_at_def is_reply partial_inv_def a_type_def)
                apply (wpsimp wp: get_sched_context_exs_valid)
                 apply (drule sc_with_reply_SomeD)
-                apply clarsimp+
-              apply wpsimp
+                apply (wpsimp simp: is_sc_obj_def
+                       | clarsimp split: Structures_A.kernel_object.splits)+
               apply (fastforce dest!: sc_with_reply_SomeD1 simp: sc_replies_sc_at_def obj_at_def)
              apply (wpsimp wp: get_sched_context_no_fail)
              apply (fastforce dest!: sc_with_reply_SomeD elim!: valid_sched_context_size_objsI
