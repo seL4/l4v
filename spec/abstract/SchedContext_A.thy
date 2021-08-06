@@ -161,20 +161,24 @@ where
   "merge_refill r1 r2 = \<lparr> r_time = r_time r1, r_amount = r_amount r2 + r_amount r1 \<rparr>"
 
 definition
-  schedule_used :: "bool \<Rightarrow> refill list \<Rightarrow> refill \<Rightarrow> refill list"
+  schedule_used :: "obj_ref \<Rightarrow> refill \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "schedule_used full original new
-    = (if original = []
-       then [new]
-       else if (can_merge_refill (last original) new)
-            then let new_last = \<lparr>r_time = r_time (last original),
-                                 r_amount = r_amount (last original) + r_amount new \<rparr>
-                 in (butlast original) @ [new_last]
-            else if \<not>full
-                 then original @ [new]
-                 else let new_last = \<lparr>r_time = r_time new - r_amount (last original),
-                                      r_amount = r_amount (last original) + r_amount new \<rparr>
-                      in (butlast original) @ [new_last])"
+  "schedule_used sc_ptr new \<equiv> do
+     refills \<leftarrow> get_refills sc_ptr;
+     if refills = []
+     then refill_add_tail sc_ptr new
+     else if (can_merge_refill (last refills) new)
+          then update_refill_tl sc_ptr (r_amount_update (\<lambda>amount. amount + r_amount new))
+          else do full \<leftarrow> refill_full sc_ptr;
+                  if \<not> full
+                  then refill_add_tail sc_ptr new
+                  else do update_refill_tl sc_ptr
+                                           (\<lambda>refill. refill\<lparr>r_time := r_time new - r_amount refill\<rparr>);
+                          update_refill_tl sc_ptr
+                                           (\<lambda>refill. refill\<lparr>r_amount := r_amount refill + r_amount new\<rparr>)
+                       od
+               od
+   od"
 
 definition
   refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
@@ -276,11 +280,7 @@ where
      if single
         then update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + sc_period sc))
         else do old_head \<leftarrow> refill_pop_head sc_ptr;
-                full \<leftarrow> refill_full sc_ptr;
-                update_sched_context sc_ptr
-                    (sc_refills_update
-                         (\<lambda>refills. schedule_used full refills
-                                                 (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)))
+                schedule_used sc_ptr (old_head\<lparr>r_time := r_time old_head + sc_period sc\<rparr>)
              od;
      return usage'
    od"
@@ -311,8 +311,7 @@ where
        period \<leftarrow> return (sc_period sc);
        used \<leftarrow> return \<lparr>r_time = r_time (hd (sc_refills sc)) + period, r_amount = usage'\<rparr>;
        update_refill_hd sc_ptr (r_time_update (\<lambda>t. t + usage') o (r_amount_update (\<lambda>m. m - usage')));
-       full \<leftarrow> return (size (sc_refills sc) = sc_refill_max sc);
-       update_sched_context sc_ptr (sc_refills_update (\<lambda>refills. schedule_used full refills used))
+       schedule_used sc_ptr used
      od;
 
      head_insufficient_loop sc_ptr
