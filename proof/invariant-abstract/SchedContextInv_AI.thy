@@ -673,6 +673,21 @@ lemma ordered_disjoint_non_adjacent:
     apply (fastforce simp: ordered_disjoint_def)+
   done
 
+lemma ordered_disjoint_no_overflow_implies_sorted:
+  "\<lbrakk>ordered_disjoint refills; no_overflow refills; k < length refills; l < length refills; k \<le> l\<rbrakk>
+   \<Longrightarrow> unat (r_time (refills ! k)) \<le> unat (r_time (refills ! l))"
+  apply (case_tac "k = l", simp)
+  by (frule ordered_disjoint_non_adjacent[where refills=refills and k=k and l=l]; clarsimp)
+
+lemma ordered_disjoint_last:
+  "\<lbrakk>ordered_disjoint list; no_overflow list; list \<noteq> []\<rbrakk>
+   \<Longrightarrow> \<forall>refill \<in> set list. unat (r_time refill) \<le> unat (r_time (last list))"
+  apply (clarsimp simp: in_set_conv_nth)
+  apply (subst last_conv_nth)
+   apply fastforce
+  apply (frule_tac k=i and l="length list - 1" in ordered_disjoint_no_overflow_implies_sorted; simp)
+  done
+
 (* FIXME maybe move? *)
 lemma refills_sum_cons[simp]: "refills_sum (a#rs) =  r_amount a + refills_sum rs"
   by (clarsimp simp: refills_sum_def)
@@ -802,6 +817,18 @@ lemma refills_unat_sum_member_bound:
    apply fastforce
   apply (fastforce dest!: member_le_sum_list)
   done
+
+lemma refills_unat_sum_cons:
+  "refills_unat_sum (a # b) = unat (r_amount a) + refills_unat_sum b"
+  by (clarsimp simp: refills_unat_sum_def)
+
+lemma refills_unat_sum_length_one[simp]:
+  "refills_unat_sum [a] = unat (r_amount a)"
+  by (clarsimp simp: refills_unat_sum_def)
+
+lemma refills_unat_sum_append:
+  "refills_unat_sum (a @ b) = refills_unat_sum a + refills_unat_sum b"
+  by (clarsimp simp: refills_unat_sum_def)
 
 fun
   refill_list_to_intervals :: "refill list \<Rightarrow> (nat set) list"
@@ -1171,18 +1198,6 @@ lemma refill_word_proof_helper:
   apply (rule unat_add_lem', simp add: max_word_def)
   done
 
-lemma schedule_used_length':
-  "length (schedule_used b x new) = length x \<or> length (schedule_used b x new) = length x + 1"
-  by (induct x; clarsimp simp: Let_def schedule_used_def)
-
-lemma schedule_used_length_max:
-  "length (schedule_used full x new) \<le> Suc (length x)"
-  using schedule_used_length' nat_le_linear by force
-
-lemma schedule_used_length_full:
-  "list \<noteq> [] \<longrightarrow> length (schedule_used True list new) = length list"
-  by (case_tac list; fastforce simp: Let_def schedule_used_def)
-
 lemma ordered_disjoint_append:
   "\<lbrakk>left \<noteq> [] \<longrightarrow> ordered_disjoint left;
     right \<noteq> [] \<longrightarrow> ordered_disjoint right;
@@ -1212,151 +1227,10 @@ lemma butlast_nonempty_length:
   "butlast list \<noteq> [] \<Longrightarrow> Suc 0 < length list"
   by (cases list, simp, force)
 
-lemma schedule_used_ordered_disjoint:
-  "\<lbrakk>ordered_disjoint list; no_overflow list;
-    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) \<le> unat (r_time new)\<rbrakk>
-   \<Longrightarrow> ordered_disjoint (schedule_used full list new)"
-  apply (cases list)
-   apply (clarsimp simp: schedule_used_def Let_def ordered_disjoint_def)
-  apply (rename_tac a lista)
-  apply (case_tac "can_merge_refill (last list) new")
-   apply (clarsimp simp: schedule_used_def Let_def)
-   apply (intro conjI impI)
-    apply (clarsimp simp: ordered_disjoint_def)
-   apply (rule_tac left="a # butlast lista"
-              and right="[\<lparr>r_time = r_time (last lista),
-                           r_amount = r_amount (last lista) + r_amount new\<rparr>]"
-               in ordered_disjoint_append)
-      apply (intro impI)
-      apply (rule ordered_disjoint_sublist; assumption?)
-      using sublist_butlast apply (metis butlast.simps(2))
-     apply (clarsimp simp: ordered_disjoint_def)
-    apply (intro impI)
-    apply clarsimp
-    apply (intro conjI impI)
-     apply (rule_tac j="unat (r_time (hd lista))" in le_trans)
-      apply (fastforce simp: ordered_disjoint_def hd_conv_nth)
-     apply (subst last_conv_nth; fastforce?)
-     apply (metis Nat.add_0_right hd_conv_nth length_butlast list.size(3) nat_le_iff_add)
-    apply (clarsimp simp: last_butlast_list)
-    apply (subst last_conv_nth; fastforce?)
-    apply (metis ordered_disjoint_def One_nat_def Suc_diff_Suc butlast_nonempty_length lessI
-                 ordered_disjoint_tail)
-   apply (fastforce simp: word_le_nat_alt)
-  apply (clarsimp simp: schedule_used_def)
-  apply (intro conjI impI)
-     apply (rule_tac left="[a]" and right="[new]" in ordered_disjoint_append)
-        apply (clarsimp simp: ordered_disjoint_def)
-       apply (clarsimp simp: ordered_disjoint_def)
-      apply (clarsimp simp: can_merge_refill_def)
-      apply (metis no_overflow_def list.set_intros(1) nat_le_linear unat_arith_simps(1)
-                   unat_plus_simple unat_sum_bound_equiv)
-     apply simp
-    apply (clarsimp simp: ordered_disjoint_def)
-   apply (rule_tac left="a # lista" and right="[new]" in ordered_disjoint_append)
-      apply simp
-     apply (clarsimp simp: ordered_disjoint_def)
-    apply (clarsimp simp: can_merge_refill_def)
-    apply (metis no_overflow_def last_in_set nat_le_linear no_overflow_tail unat_arith_simps(1)
-                 unat_plus_simple unat_sum_bound_equiv)
-   apply simp
-  apply (rule_tac left="a # butlast lista"
-              and right="[\<lparr>r_time = r_time new - r_amount (last lista),
-                           r_amount = r_amount (last lista) + r_amount new\<rparr>]"
-               in ordered_disjoint_append
-         ; fastforce?)
-    apply (metis ordered_disjoint_sublist butlast.simps(2) sublist_butlast)
-   apply (clarsimp simp: ordered_disjoint_def)
-  apply (clarsimp simp: can_merge_refill_def)
-  apply (prop_tac "unat (r_time (last lista) + r_amount (last lista))
-                   = unat (r_time (last lista)) + unat (r_amount (last lista))")
-   apply (subst unat_add_lem'; fastforce?)
-   apply (metis no_overflow_def Groups.add_ac(2) last_in_set le_simps(3) linorder_not_less
-                no_overflow_tail power_two_max_word_fold)
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (intro conjI impI)
-   apply (subst unat_sub)
-    apply (clarsimp simp: word_le_nat_alt)
-   apply (prop_tac "unat (r_time a) + unat (r_amount a) \<le> unat (r_time (hd lista))")
-    apply (metis ordered_disjoint_def One_nat_def butlast.simps(2) hd_conv_nth length_butlast lessI
-                 list.size(3) list.size(4) nth_Cons_0 nth_Cons_Suc semiring_norm(175))
-   apply (rule_tac j="unat (r_time (hd lista))" in le_trans; blast?)
-   apply (prop_tac "hd lista = last lista")
-    apply (metis hd_conv_nth last_conv_nth length_butlast list.size(3))
-   apply simp
-  apply (subst unat_sub)
-   apply (clarsimp simp: word_le_nat_alt)
-  apply (prop_tac "unat (r_time (last (butlast lista))) + unat (r_amount (last (butlast lista)))
-                   \<le> unat (r_time (last lista))")
-   apply (metis ordered_disjoint_def One_nat_def Suc_diff_Suc butlast_nonempty_length
-                last_butlast_list last_conv_nth lessI ordered_disjoint_tail)
-  apply simp
-  done
-
-lemma schedule_used_no_overflow:
-  "\<lbrakk>no_overflow list; no_overflow [new];
-    list \<noteq> [] \<longrightarrow> unat (r_time (last list)) + unat (r_amount (last list)) + unat (r_amount new)
-                   \<le> unat max_time\<rbrakk>
-   \<Longrightarrow> no_overflow (schedule_used full list new)"
-  apply (cases list)
-   apply (clarsimp simp: schedule_used_def Let_def ordered_disjoint_def)
-  apply (rename_tac a lista)
-  apply (case_tac "can_merge_refill (last list) new")
-   apply (clarsimp simp: schedule_used_def Let_def can_merge_refill_def)
-   apply (intro conjI impI)
-    apply (clarsimp simp: no_overflow_def)
-    apply (subst unat_add_lem'; fastforce?)
-    apply (clarsimp simp: max_word_def)
-   apply (rule_tac left="a # butlast lista"
-               and right="[\<lparr>r_time = r_time (last lista),
-                            r_amount = r_amount (last lista) + r_amount new\<rparr>]"
-                in no_overflow_append)
-     apply (metis no_overflow_sublist butlast.simps(2) sublist_butlast)
-    apply (clarsimp simp: no_overflow_def)
-    apply (subst unat_add_lem', simp add: max_word_def)
-    apply presburger
-   apply simp
-  apply (clarsimp simp: schedule_used_def)
-  apply (intro conjI impI)
-     apply (rule_tac left="[a]" and right="[new]" in no_overflow_append; fastforce?)
-    apply (clarsimp simp: no_overflow_def can_merge_refill_def)
-    apply (subst unat_add_lem')
-     apply (clarsimp simp: max_word_def)
-    apply (clarsimp simp: word_le_nat_alt not_le)
-    apply (subst unat_sub)
-     apply (clarsimp simp: max_word_def word_le_nat_alt)
-     apply (prop_tac "unat (r_time a + r_amount a) = unat (r_time a) + unat (r_amount a)")
-      apply (subst unat_add_lem', clarsimp simp: max_word_def)
-      apply blast
-     apply linarith
-    apply fastforce
-   apply (rule_tac left="a # lista" and right="[new]" in no_overflow_append; fastforce?)
-  apply (rule_tac left="a # butlast lista"
-              and right=" [\<lparr>r_time = r_time new - r_amount (last lista),
-                            r_amount = r_amount (last lista) + r_amount new\<rparr>]"
-               in no_overflow_append
-         ; fastforce?)
-   apply (metis no_overflow_sublist butlast.simps(2) sublist_butlast)
-  apply (clarsimp simp: no_overflow_def can_merge_refill_def)
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
-  apply (subst unat_sub)
-   apply (prop_tac "unat (r_time (last lista) + r_amount (last lista))
-                    = unat (r_time (last lista)) + unat (r_amount (last lista))")
-    apply (subst unat_add_lem', clarsimp simp: max_word_def)
-    apply blast
-   apply (simp add: unat_arith_simps)
-  apply linarith
-  done
-
 (* FIXME remove *)
 abbreviation "sc_at_period \<equiv> sc_period_sc_at"
 
 lemmas sc_at_period_def = sc_period_sc_at_def
-
-lemma schedule_used_r_amount_head:
-  "\<lbrakk>list \<noteq> []; sum_list (map unat (map r_amount (list @ [new]))) \<le> unat (max_word :: time)\<rbrakk>
-   \<Longrightarrow> r_amount (hd list) \<le> r_amount (hd (schedule_used full list new))"
-  by (cases list; fastforce simp: schedule_used_def unat_sum_bound_equiv)
 
 lemma tail_nonempty_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 < length list"

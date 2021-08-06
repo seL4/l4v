@@ -4086,8 +4086,9 @@ lemma postpone_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> postpone r \<lbrace>\<lambda>_.valid_list\<rbrace>"
    by (wpsimp simp: postpone_def wp: hoare_drop_imp)
 
-crunches set_refills,refill_size
+crunches set_refills,refill_size, schedule_used
   for valid_list[wp]: valid_list
+  (simp: schedule_used_defs wp: get_refills_wp)
 
 lemma refill_budget_check_valid_list[wp]:
   "refill_budget_check usage \<lbrace>valid_list\<rbrace>"
