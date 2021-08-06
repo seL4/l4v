@@ -9776,30 +9776,6 @@ lemma refill_unblock_check_budget_ready[wp]:
   apply (wpsimp wp: hoare_vcg_ex_lift)
   done
 
-(* FIXME: merge is_active_sc with existing notion *)
-lemma active_implies_valid_refills:
-  "is_active_sc scp s \<Longrightarrow> active_sc_valid_refills s \<Longrightarrow> valid_refills scp s"
-  unfolding active_sc_valid_refills_def
-  by (clarsimp simp: vs_all_heap_simps )
-
-lemma active_implies_valid_refills_tcb_at:
-  "active_sc_tcb_at t s
-   \<Longrightarrow> active_sc_valid_refills s
-   \<Longrightarrow> bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp \<and> valid_refills scp s) t s"
-  apply (prop_tac "bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp) t s", clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps is_tcb)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (erule active_implies_valid_refills[rotated])
-  apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps  active_sc_def)
-  done
-
-lemma active_sc_tcb_at_bound_valid_refills:
-  "active_sc_tcb_at t s
-   \<Longrightarrow> active_sc_valid_refills s
-   \<Longrightarrow> (\<forall>scp. bound_sc_tcb_at (\<lambda>p. p = Some scp) t s \<longrightarrow> valid_refills scp s)"
-  apply (drule (1) active_implies_valid_refills_tcb_at)
-  apply (clarsimp simp: tcb_at_kh_simps vs_all_heap_simps)
-  done
-
 lemma refill_unblock_check_budget_sufficient[wp]:
   "\<lbrace>budget_sufficient tcb_ptr and active_sc_tcb_at tcb_ptr and active_sc_valid_refills\<rbrace>
    refill_unblock_check sc_ptr
@@ -9880,7 +9856,7 @@ context DetSchedSchedule_AI begin
 lemma active_sc_tcb_at_budget_sufficient:
   "active_sc_tcb_at t s \<Longrightarrow> active_sc_valid_refills s \<Longrightarrow> budget_sufficient t (s :: 'z :: state_ext state)"
   by (fastforce simp: budget_sufficient_def2 active_sc_tcb_at_def2 is_sc_active_kh_simp
-                dest: valid_refills_refill_sufficient active_implies_valid_refills)
+                dest: valid_refills_refill_sufficient active_sc_valid_refillsE)
 
 lemma awaken_body_valid_ready_qs:
   "\<lbrace>\<lambda>s. valid_ready_qs s \<and> valid_release_q s \<and> active_sc_valid_refills s
@@ -10642,7 +10618,7 @@ lemma refill_budget_check_valid_ready_qs_offset_ready_and_sufficient:
    apply (clarsimp simp: pred_map2'_pred_maps)
    apply (wpsimp wp: hoare_vcg_ex_lift)
       apply (wpsimp wp: refill_budget_check_refill_ready_offset_ready_and_sufficient)
-      apply (clarsimp, strengthen active_implies_valid_refills)
+      apply (clarsimp, strengthen active_sc_valid_refillsE)
     apply (fastforce simp: vs_all_heap_simps split: if_splits)
   apply (clarsimp simp: budget_sufficient_def2)
   apply (wpsimp wp: hoare_vcg_ex_lift)
@@ -19470,7 +19446,7 @@ method handle_event_valid_sched_single
          | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
                       update_time_stamp_current_time_bounded_5)+
      , fastforce elim!: valid_sched_ct_not_queued active_from_running
-                 intro: active_implies_valid_refills)
+                 intro: active_sc_valid_refillsE)
 
 method handle_event_valid_sched_combined
   = ((wpsimp wp: handle_invocation_valid_sched handle_recv_valid_sched
@@ -19488,7 +19464,7 @@ method handle_event_valid_sched_combined
                  elim: active_from_running
                  simp: runnable_eq_active released_sc_tcb_at_def
                        active_sc_tcb_at_fold ct_in_state_def2[symmetric]
-                intro: active_implies_valid_refills)
+                intro: active_sc_valid_refillsE)
      , fastforce intro: schact_is_rct_ct_released)
 
 method handle_event_valid_sched_yield
@@ -19497,7 +19473,7 @@ method handle_event_valid_sched_yield
      , (wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
                    update_time_stamp_current_time_bounded_5)+
      , fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
-                intro!: active_implies_valid_refills)
+                intro!: active_sc_valid_refillsE)
 
 method handle_event_valid_sched_fault
   = ((wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
@@ -19512,7 +19488,7 @@ method handle_event_valid_sched_fault
                   ct_runnable_ct_not_blocked
      , simp
      , (fastforce simp: ct_active_imp_not_timeout is_timeout_fault_def
-                 intro: active_implies_valid_refills schact_is_rct_ct_released)?)
+                 intro: active_sc_valid_refillsE schact_is_rct_ct_released)?)
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs
@@ -19570,7 +19546,7 @@ lemma handle_event_valid_sched:
    apply (clarsimp simp: ct_in_state_def)
   apply (fastforce elim!: valid_sched_ct_not_queued
                     elim: invs_cur_sc_chargeableE ct_in_state_weaken
-                  intro!: active_implies_valid_refills)
+                  intro!: active_sc_valid_refillsE)
   done
 
 crunches activate_thread, schedule_choose_new_thread, awaken
