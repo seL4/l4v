@@ -139,4 +139,43 @@ since Google repo will overwrite this link when you synchronise repositories
 and Isabelle upgrades will have to be performed manually as development
 progresses.
 
+## PIDE Tools
+
+The following tools and tips can make writing proofs easier and more efficient
+when using the Isabelle PIDE jEdit interface.
+
+### WhiteSpace plugin
+
+The WhiteSpace plugin can highlight normally invisible whitespace characters
+such as tabs and spaces, and can remove trailing whitespace on save. To
+install and configure the WhiteSpace plug-in for jEdit, follow
+the instructions below.
+
+1. Go to Plugins -> Plugin manager -> Install.
+2. Search for `WhiteSpace` and install the plugin.
+3. Go to Plugins -> Plugin Options -> WhiteSpace -> On save actions.
+4. Check "Remove trailing whitespace" and click Apply.
+
+### Key bindings for Navigator
+
+The Isabelle PIDE provides "Back" and "Forward" actions that allow you to
+easily navigate to previous positions in your edit history. Follow the steps
+below to bind a key to the "Back" function. We recommend ``[ctrl]+[`]``.
+
+1. Go to Utilities -> Global Options -> jEdit -> Shortcuts.
+2. Select Action Set -> Plugin: Navigator.
+3. Set a shortcut for `Back`.
+
+### Go-to-error macro
+
+Run the following commands in the directory `verification/l4v/`:
+
+```
+mkdir -p ~/.isabelle/jedit/macros
+cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
+```
+
+You can add keybindings for this macro in the usual way, by going to
+Utilities -> Global Options -> jEdit -> Shortcuts.
+
 [isabelle]: http://isabelle.in.tum.de
