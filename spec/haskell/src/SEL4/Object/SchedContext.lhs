@@ -29,7 +29,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
->         nonOverlappingMergeRefills, headInsufficientLoop
+>         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime
 >     ) where
 
 \begin{impdetails}
@@ -326,11 +326,14 @@ This module uses the C preprocessor to select a target architecture.
 > refillHeadOverlappingLoop scPtr =
 >        whileLoop (const (fromJust . runReaderT (refillHeadOverlapping scPtr))) (const (mergeRefills scPtr)) ()
 
+> maxReleaseTime :: Word64
+> maxReleaseTime = (maxBound :: Word64) - 5 * usToTicks maxPeriodUs
+
 > headTimeBuffer :: Ticks -> KernelR Bool
 > headTimeBuffer usage = do
 >     scPtr <- readCurSc
 >     sc <- readSchedContext scPtr
->     return $ rAmount (refillHd sc) <= usage && (maxBound :: Word64) - rTime (refillHd sc) >= 5 * usToTicks maxPeriodUs
+>     return $ rAmount (refillHd sc) <= usage && rTime (refillHd sc) < maxReleaseTime
 
 > handleOverrunLoopBody :: Ticks -> Kernel Ticks
 > handleOverrunLoopBody usage = do
@@ -366,9 +369,8 @@ This module uses the C preprocessor to select a target architecture.
 >     usage' <- handleOverrunLoop usage
 
 >     sc <- getSchedContext scPtr
->     newHeadAmount <- return (rAmount (refillHd sc))
 
->     when (usage' > 0 && usage' < newHeadAmount) $ do
+>     when (usage' > 0 && rTime (refillHd sc) < maxReleaseTime) $ do
 >       used <- return Refill { rTime = rTime (refillHd sc) + (scPeriod sc),
 >                               rAmount = usage'}
 >       setRefillHd scPtr (Refill { rTime = rTime (refillHd sc) + usage',
