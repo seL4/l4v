@@ -181,9 +181,17 @@ lemma refill_unblock_check_valid_objs[wp]:
                  hoare_drop_imps
            simp: refill_unblock_check_defs)
 
+lemmas schedule_used_defs
+  = schedule_used_def can_merge_refill_def update_refill_tl_def refill_add_tail_def
+
 lemma schedule_used_non_nil:
-  "schedule_used b ls u \<noteq> []"
-  by (induction ls; clarsimp simp: Let_def schedule_used_def)
+  "\<lbrace>\<top>\<rbrace>
+   schedule_used sc_ptr new
+   \<lbrace>\<lambda>_ s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s\<rbrace>"
+  apply (wpsimp wp: get_refills_wp update_sched_context_wp
+              simp: schedule_used_defs)
+  apply (clarsimp simp: obj_at_def sc_at_ppred_def)
+  done
 
 lemma set_refills_wp:
   "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
@@ -202,13 +210,20 @@ lemma head_insufficient_loop_valid_objs[wp]:
   unfolding head_insufficient_loop_def
   by (wpsimp wp: whileLoop_wp' simp: non_overlapping_merge_refills_def update_refill_hd_def)
 
+lemma schedule_used_valid_objs[wp]:
+  "schedule_used sc_ptr new \<lbrace>valid_objs\<rbrace>"
+  apply (wpsimp wp: get_refills_wp update_sched_context_valid_objs_same
+              simp: schedule_used_defs)
+  apply (clarsimp simp: obj_at_def sc_at_ppred_def valid_sched_context_def)
+  done
+
 lemma handle_overrun_loop_valid_objs[wp]:
   "handle_overrun_loop usage \<lbrace>valid_objs\<rbrace>"
   unfolding handle_overrun_loop_def handle_overrun_loop_body_def refill_single_def refill_size_def
-  apply (wpsimp wp: whileLoop_wp' update_sched_context_valid_objs_same hoare_vcg_all_lift)
-  apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post[rotated])
-  apply (clarsimp simp: valid_sched_context_def)
-  by (wpsimp wp: get_refills_wp simp: valid_sched_context_def)+
+            update_refill_hd_def
+  apply (wpsimp wp: whileLoop_wp'
+              simp: valid_sched_context_def)
+  done
 
 lemma refill_budget_check_valid_objs[wp]:
   "refill_budget_check usage \<lbrace>valid_objs\<rbrace>"
@@ -549,23 +564,13 @@ crunches refill_budget_check
   and valid_ioc[wp]: "valid_ioc"
   and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and zombies_final[wp]: zombies_final
+  and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (simp: Let_def wp: crunch_wps)
-
-lemma refill_budget_check_zombies[wp]:
-  "refill_budget_check usage \<lbrace>zombies_final\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
 
 lemma refill_budget_check_mdb [wp]:
   "refill_budget_check usage \<lbrace>valid_mdb\<rbrace>"
   by (wpsimp wp: valid_mdb_lift)
-
-lemma refill_budget_check_hyp_refs_of[wp]:
-  "refill_budget_check usage \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_budget_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
 
 crunches head_insufficient_loop, handle_overrun_loop
   for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
@@ -577,9 +582,6 @@ lemma refill_budget_check_refs_of[wp]:
   apply (wpsimp wp: whileLoop_wp' update_sched_context_refs_of_same get_refills_wp
                     hoare_drop_imps hoare_vcg_all_lift
          split_del: if_split)
-      apply (rule_tac Q="\<lambda>_ s. P (state_refs_of s)" in hoare_strengthen_post[rotated])
-       apply clarsimp
-      apply (wpsimp wp:)+
   done
 
 lemma update_refill_hd_invs[wp]:
@@ -599,6 +601,10 @@ lemma refill_budget_check_round_robin_invs[wp]:
   unfolding refill_budget_check_round_robin_def
   by (wpsimp simp: refill_budget_check_round_robin_def
                wp: hoare_drop_imp update_sched_context_wp)
+
+crunches schedule_used
+  for invs[wp]: invs
+  (simp: schedule_used_defs wp: crunch_wps)
 
 lemma refill_budget_check_invs[wp]:
   "refill_budget_check usage \<lbrace>invs\<rbrace>"
