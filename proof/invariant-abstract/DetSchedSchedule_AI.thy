@@ -13923,7 +13923,6 @@ lemma send_signal_WN_sym_refs_helper:
   done
 
 lemma send_signal_WaitingNtfn_helper:
-  notes not_not_in_eq_in[iff] shows
   "ntfn_obj ntfn = WaitingNtfn wnlist \<Longrightarrow>
    \<lbrace>ko_at (Notification ntfn) ntfnptr and
     st_tcb_at ((=) (BlockedOnNotification ntfnptr)) (hd wnlist) and
@@ -14217,7 +14216,6 @@ lemma maybe_return_sc_released_if_bound_sc_tcb_at[wp]:
 context DetSchedSchedule_AI begin
 
 lemma send_signal_BOR_helper:
-  notes not_not_in_eq_in[iff] shows
   "ntfn_obj ntfn = IdleNtfn
    \<Longrightarrow> ntfn_bound_tcb ntfn = Some tcbptr
    \<Longrightarrow> \<lbrace>st_tcb_at ((=) (BlockedOnReceive ep r_opt pl)) tcbptr and
@@ -17154,18 +17152,6 @@ lemma pst_vs_for_invoke_sched_control_configure_flags:
   apply (clarsimp simp: in_release_queue_def not_in_release_q_def valid_blocked_thread_def
                         vs_all_heap_simps)
   done
-
-lemma valid_blocked_except_set_in_ready_q:
-  "\<lbrakk>valid_blocked_except tcbptr s; in_ready_q tcbptr s\<rbrakk> \<Longrightarrow> valid_blocked s"
-  apply (clarsimp simp: valid_blocked_defs)
-  apply (case_tac "t = tcbptr")
-   apply (fastforce iff: not_not_in_eq_in[symmetric])
-  apply (drule_tac x=t in spec; simp)
-  done
-
-lemma valid_blocked_except_cur_thread:
-  "valid_blocked_except_set {cur_thread s} s = valid_blocked s"
-  using valid_blocked_defs by simp
 
 lemma refill_budget_check_sc_refill_max_sc_at:
   "refill_budget_check usage \<lbrace>sc_refill_max_sc_at P sc_ptr\<rbrace>"
