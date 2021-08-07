@@ -1407,24 +1407,46 @@ lemma valid_objs_WaitingNtfn_distinct:
   apply (fastforce simp: valid_ntfn_def)
   done
 
-lemma valid_blocked_except_set_no_active_sc_sum:
-  "valid_blocked_except_set {tcbptr} s
-   \<Longrightarrow> \<not> active_sc_tcb_at tcbptr s
-   \<Longrightarrow> valid_blocked s"
-  by (auto simp: valid_blocked_defs)
+(* valid_blocked_except \<rightarrow> valid_blocked lemmas *)
 
-lemma not_not_in_eq_in: "\<not> not_in_release_q t s \<longleftrightarrow> in_release_queue t s"
-  by (clarsimp simp: in_release_queue_def not_in_release_q_def)
+lemma valid_blocked_except_cur_thread[simp]:
+  "valid_blocked_except_set {cur_thread s} s = valid_blocked s"
+  using valid_blocked_defs by simp
 
-lemma valid_blocked_except_set_in_release_queue_sum:
-  "valid_blocked_except_set {tcbptr} s
-   \<Longrightarrow> in_release_queue tcbptr s
-   \<Longrightarrow> valid_blocked s"
-  apply (clarsimp simp: valid_blocked_defs)
-  apply (case_tac "t = tcbptr")
-   apply (fastforce iff: not_not_in_eq_in[symmetric])
-  apply (drule_tac x=t in spec; simp)
+lemma valid_blocked_except_set_not_schedulable:
+  "\<lbrakk>valid_blocked_except tcbptr s; \<not> is_schedulable_bool tcbptr s\<rbrakk> \<Longrightarrow> valid_blocked s"
+  apply (clarsimp simp: valid_blocked_defs is_schedulable_bool_def2)
+  apply (case_tac "t = tcbptr"; drule_tac x=t in spec; simp add: tcb_at_kh_simps runnable_eq_active)
   done
+
+lemma shows
+  not_runnable_not_schedulable: "\<not> st_tcb_at runnable t s \<Longrightarrow> \<not> is_schedulable_bool t s" and
+  not_active_sc_not_schedulable: "\<not> active_sc_tcb_at t s \<Longrightarrow> \<not> is_schedulable_bool t s" and
+  in_release_q_not_schedulable: "in_release_q t s \<Longrightarrow> \<not> is_schedulable_bool t s"
+  by (clarsimp simp: is_schedulable_bool_def2)+
+
+lemma no_bound_sc_not_schedulable:
+  "bound_sc_tcb_at ((=) None) t s \<Longrightarrow> \<not> is_schedulable_bool t s"
+  by (clarsimp simp: is_schedulable_bool_def2 active_sc_tcb_at_def2 pred_tcb_at_def obj_at_def)
+
+lemmas valid_blocked_except_set_in_release_q =
+         valid_blocked_except_set_not_schedulable[OF _ in_release_q_not_schedulable]
+
+lemmas valid_blocked_except_set_no_sc_bound_sum =
+         valid_blocked_except_set_not_schedulable[OF _ no_bound_sc_not_schedulable]
+
+lemmas valid_blocked_except_set_no_active_sc_sum =
+         valid_blocked_except_set_not_schedulable[OF _ not_active_sc_not_schedulable]
+
+lemma valid_blocked_except_set_in_ready_q:
+  "\<lbrakk>valid_blocked_except tcbptr s; in_ready_q tcbptr s\<rbrakk> \<Longrightarrow> valid_blocked s"
+  by (fastforce simp: valid_blocked_defs)
+
+lemma valid_blocked_except_set_switch_thread:
+  "\<lbrakk>valid_blocked_except tcbptr s; scheduler_action s = switch_thread tcbptr\<rbrakk> \<Longrightarrow> valid_blocked s"
+  by (fastforce simp: valid_blocked_defs)
+
+(* end : valid_blocked_except \<rightarrow> valid_blocked lemmas *)
 
 lemma schedulable_unfold2:
   "((is_schedulable_opt tp s) = Some X)
