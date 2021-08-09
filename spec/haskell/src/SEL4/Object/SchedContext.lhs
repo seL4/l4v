@@ -269,19 +269,15 @@ This module uses the C preprocessor to select a target architecture.
 >     if empty
 >         then refillAddTail scPtr new
 >         else do
->          full <- refillFull scPtr
 >          if (rTime (refillTl sc) + rAmount (refillTl sc) >= rTime new)
->               then do
->                 let tl = refillTl sc
->                 let tl' = tl { rAmount = rAmount tl + rAmount new}
->                 setRefillTl scPtr tl'
->               else if (not full)
->                         then refillAddTail scPtr new
->                         else do
->                           let tl = refillTl sc
->                           let tl' = tl { rTime = rTime new - rAmount tl,
->                                          rAmount = rAmount tl + rAmount new }
->                           setRefillTl scPtr tl'
+>               then updateRefillTl scPtr (\last -> last { rAmount = rAmount last + rAmount new })
+>               else do
+>                 full <- refillFull scPtr
+>                 if (not full)
+>                    then refillAddTail scPtr new
+>                    else do
+>                      updateRefillTl scPtr (\last -> last { rTime = rTime new - rAmount last})
+>                      updateRefillTl scPtr (\last -> last { rAmount = rAmount last + rAmount new})
 
 > refillResetRR :: PPtr SchedContext -> Kernel ()
 > refillResetRR scPtr = do
