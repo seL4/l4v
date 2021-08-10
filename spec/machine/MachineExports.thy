@@ -88,6 +88,13 @@ requalify_facts
   MAX_PERIOD_mult
   MAX_PERIOD_mult'
 
+definition "MAX_RELEASE_TIME = max_time - 5 * MAX_PERIOD"
+
+lemma unat_MAX_RELEASE_TIME:
+  "unat MAX_RELEASE_TIME = unat max_time - 5 * unat MAX_PERIOD"
+  apply (clarsimp simp: MAX_RELEASE_TIME_def unat_sub MAX_PERIOD_mult')
+  done
+
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 
 lemma Suc_unat_mask_div_obfuscated:

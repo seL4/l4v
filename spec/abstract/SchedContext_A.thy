@@ -254,8 +254,6 @@ where
      \<equiv> whileLoop (\<lambda>_ s. the ((head_insufficient sc_ptr) s))
                   (\<lambda>_. non_overlapping_merge_refills sc_ptr) ()"
 
-definition "MAX_RELEASE_TIME = max_time - 5 * MAX_PERIOD"
-
 definition
   head_time_buffer :: "ticks \<Rightarrow> (bool, 'z::state_ext) r_monad"
 where
