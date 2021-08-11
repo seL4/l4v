@@ -2620,4 +2620,40 @@ lemma st_tcb_recv_reply_state_refs:
                  split: thread_state.splits if_splits kernel_object.splits)
   done
 
+lemma get_sched_context_exs_valid:
+  "\<exists>sc n. kheap s scp = Some (SchedContext sc n)
+   \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_sched_context scp \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
+  by (clarsimp simp: get_sched_context_def get_object_def obj_at_def bind_def
+                     gets_def get_def return_def exs_valid_def gets_the_def)
+
+lemma no_fail_simple_ko_at:
+  "no_fail (ntfn_at p) (get_notification p)"
+  "no_fail (ep_at p) (get_endpoint p)"
+  "no_fail (reply_at p) (get_reply p)"
+  by (wpsimp simp: get_simple_ko_def obj_at_def is_obj_defs a_type_def partial_inv_def
+               wp: get_object_wp split: kernel_object.splits)+
+
+lemmas no_fail_get_notification[wp] = no_fail_simple_ko_at(1)
+lemmas no_fail_get_reply[wp] = no_fail_simple_ko_at(2)
+lemmas no_fail_get_endpoint[wp] = no_fail_simple_ko_at(3)
+
+lemma get_sched_context_no_fail[wp]:
+  "no_fail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (get_sched_context scp)"
+  by (clarsimp simp: get_sched_context_def no_fail_def bind_def get_object_def return_def get_def
+                     gets_def obj_at_def gets_the_def)
+
+lemma set_object_no_fail[wp]:
+  "no_fail (obj_at (\<lambda>k. a_type obj = a_type k) ptr) (set_object ptr obj)"
+  apply (clarsimp simp: set_object_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma update_sched_context_no_fail[wp]:
+  "no_fail (\<lambda>s. \<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n)) (update_sched_context sc_ptr f)"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (wpsimp wp: get_object_wp)
+  apply (clarsimp simp: obj_at_def a_type_def)
+  done
+
 end
