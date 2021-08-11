@@ -62,6 +62,30 @@ lemma opt_map_upd_Some:
 
 lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
 
+lemma opt_map_Some_comp:
+  "f ||> h o g = f ||> g ||> h"
+  by (fastforce simp: opt_map_def split: option.split)
+
+lemma opt_map_unfold_l:
+  "(f |> g) x = (id |> g) (f x)"
+  by (clarsimp simp: opt_map_def)
+
+(* LHS is the same as (f ||> id) *)
+lemma opt_map_unit_r:
+  "(f |> Some) x = f x"
+  by (clarsimp simp: opt_map_def split: option.split)
+
+lemma opt_map_unit_l:
+  "(Some |> f) x = f x"
+  by (clarsimp simp: opt_map_def split: option.split)
+
+lemma opt_map_zero_l:
+  "(Map.empty |> g) x = None"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_zero_r:
+  "(f |> Map.empty) x = None"
+  by (clarsimp simp: opt_map_def split: option.split)
 
 lemma case_opt_map_distrib:
   "((\<lambda>s. case_option None g (f s)) |> h)
