@@ -116,12 +116,16 @@ lemma opt_predD:
   "(P |< proj) x \<Longrightarrow> \<exists>y. proj x = Some y \<and> P y"
   by (clarsimp split: option.splits)
 
-lemma opt_pred_unfold:
-  "(P |< f |> g)=  ((P |< g) |< f)"
+lemma opt_predE:
+  "\<lbrakk>(P |< proj) x; \<And>y. \<lbrakk>proj x = Some y; P y\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (clarsimp split: option.splits)
+
+lemma opt_pred_unfold_map:
+  "(P |< f |> g) = ((P |< g) |< f)"
   by (fastforce simp: opt_map_def split: option.splits)
 
 lemma opt_pred_unfold_proj:
-  "(P |< f ||> g)=  ((\<lambda>x. P (g x)) |< f)"
+  "(P |< f ||> g)=  (P o g |< f)"
   by (clarsimp simp: opt_map_def split: option.splits)
 
 (* obind, etc. *)
