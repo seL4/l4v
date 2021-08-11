@@ -112,6 +112,18 @@ lemma opt_pred_disj:
   "((P1 |< hp) p \<or> (P2 |< hp) p) = (((P1 or P2) |< hp) p)"
   by (fastforce simp: pred_disj_def split: option.splits)
 
+lemma opt_predD:
+  "(P |< proj) x \<Longrightarrow> \<exists>y. proj x = Some y \<and> P y"
+  by (clarsimp split: option.splits)
+
+lemma opt_pred_unfold:
+  "(P |< f |> g)=  ((P |< g) |< f)"
+  by (fastforce simp: opt_map_def split: option.splits)
+
+lemma opt_pred_unfold_proj:
+  "(P |< f ||> g)=  ((\<lambda>x. P (g x)) |< f)"
+  by (clarsimp simp: opt_map_def split: option.splits)
+
 (* obind, etc. *)
 
 definition
