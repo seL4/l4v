@@ -1330,6 +1330,7 @@ lemma invs_getCurrentTime_independent:
 lemma invs_update_time_stamp_independent:
   "invs (s\<lparr>cur_time := f (cur_time s)\<rparr>) = invs s"
   "invs (s\<lparr>consumed_time := g (consumed_time s) (cur_time s)\<rparr>) = invs s"
+  "invs (s\<lparr>domain_time := h (domain_time)\<rparr>) = invs s"
   by (clarsimp simp: update_time_stamp_independent_A_def invs_def
       valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
       only_idle_def if_unsafe_then_cap_def valid_irq_states_def
@@ -1337,7 +1338,7 @@ lemma invs_update_time_stamp_independent:
       valid_irq_node_def valid_irq_handlers_def valid_machine_state_def
       valid_arch_caps_def valid_global_objs_def
       valid_kernel_mappings_def equal_kernel_mappings_def
-      valid_asid_map_def vspace_at_asid_def
+      valid_asid_map_def vspace_at_asid_def ex_cte_cap_wp_to_def
       pspace_in_kernel_window_def cap_refs_in_kernel_window_def
       cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_replies_pred_pspaceI; safe; clarsimp)+

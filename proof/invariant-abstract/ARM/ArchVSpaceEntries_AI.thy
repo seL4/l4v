@@ -1150,14 +1150,13 @@ lemma perform_page_directory_valid_pdpt[wp]:
 crunch valid_pdpt_objs[wp]: invoke_sched_context "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: mapM_x_wp' hoare_drop_imps hoare_vcg_if_lift2 simp: is_schedulable_def)
 
-crunch valid_pdpt_objs[wp]: commit_domain_time "valid_pdpt_objs"
 crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
 
 crunches check_budget_restart, invoke_sched_control_configure_flags
   for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_wp'
-  simp: Let_def ignore: commit_domain_time tcb_release_remove)
+  simp: Let_def ignore: tcb_release_remove)
 
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs and
@@ -1628,7 +1627,9 @@ lemma handle_invocation_valid_pdpt[wp]:
                  intro!: st_tcb_ex_cap)
   done
 
-crunch valid_pdpt[wp]: update_time_stamp "valid_pdpt_objs::det_state \<Rightarrow> _"
+crunches update_time_stamp, check_domain_time
+  for valid_pdpt[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
+  (simp: crunch_simps)
 
 crunch valid_pdpt[wp]: sc_and_timer "valid_pdpt_objs::det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2)
@@ -1652,12 +1653,17 @@ lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (u
   apply (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
   done
 
+crunches check_domain_time
+  for pred_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at bound (cur_thread s) s"
+  and ct_running[wp]: ct_running
+  (simp: crunch_simps wp: crunch_wps)
+
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs
      and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
-      (call_kernel e) :: (unit,det_ext) s_monad
-        \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
+   call_kernel e
+   \<lbrace>\<lambda>_ s :: det_state. valid_pdpt_objs s\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def preemption_path_def)
        apply (rule hoare_seq_ext[rotated])
         apply (rule validE_valid)
