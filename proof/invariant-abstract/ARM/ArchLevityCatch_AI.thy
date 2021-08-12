@@ -55,47 +55,6 @@ lemma asid_high_bits_of_add:
               simp: asid_low_bits_def word_bits_def nth_ucast)
   done
 
-lemma preemption_point_success [simp,intro]:
-  "\<lbrakk>((Inr (), s') \<in> fst (preemption_point s))\<rbrakk>
-   \<Longrightarrow> \<exists>f g es lasttime curtime consumed.
-              s' = s\<lparr>machine_state :=
-                     machine_state s\<lparr>irq_state := f (irq_state (machine_state s)),
-                                     time_state := g (time_state (machine_state s)),
-                                     last_machine_time := lasttime\<rparr>,
-                     cur_time := curtime,
-                     consumed_time := consumed,
-                     exst := es \<rparr>"
-  apply (clarsimp simp: in_monad preemption_point_def do_machine_op_def
-                        select_f_def select_def getActiveIRQ_def alternative_def
-                        do_extended_op_def OR_choiceE_def mk_ef_def
-                        get_sc_refill_sufficient_def get_sched_context_def return_def
-                        refill_sufficient_def get_object_def get_sc_active_def
-                        update_time_stamp_def getCurrentTime_def andM_def ifM_def
-                 split: if_split_asm)
-  apply safe
-        apply ((case_tac x; clarsimp simp: fail_def return_def;
-               rule_tac x=Suc in exI, rule_tac x=Suc in exI, rule_tac x="exst bb" in exI,
-               rule_tac x="of_nat (min (unat (- getCurrentTime_buffer - 1))
-                                       (unat (last_machine_time (machine_state s))
-                                        + time_oracle (Suc (time_state (machine_state s)))))"
-                in exI,
-               rule_tac x="of_nat (min (unat (- getCurrentTime_buffer - 1))
-                                       (unat (last_machine_time (machine_state s))
-                                        + time_oracle (Suc (time_state (machine_state s)))))"
-                in exI,
-               rule_tac x="consumed_time s +
-                           of_nat
-                             (min (unat (- getCurrentTime_buffer - 1))
-                                  (unat (last_machine_time (machine_state s))
-                                   + time_oracle (Suc (time_state (machine_state s)))))
-                             - cur_time s"
-                in exI, force)+)[3]
-     apply (rule_tac x=id in exI, rule_tac x=id in exI, rule_tac x="exst b" in exI,
-            rule_tac x="last_machine_time (machine_state s)" in exI,
-            rule_tac x="cur_time s" in exI,
-            rule_tac x="consumed_time s" in exI, force)+
-  done
-
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
 
