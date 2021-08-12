@@ -1040,7 +1040,7 @@ lemma update_time_stamp_is_refill_ready[wp]:
   unfolding update_time_stamp_def
   apply (wpsimp wp: dmo_getCurrentTime_wp)
      prefer 2
-     apply (rule_tac Q="(is_refill_ready scp and (\<lambda>s. cur_time s = prev_time))"
+     apply (rule_tac Q="(is_refill_ready scp and (\<lambda>s. cur_time s = previous_time))"
             in hoare_weaken_pre[rotated], assumption)
      apply wpsimp
     apply (clarsimp simp: vs_all_heap_simps refill_ready_def)
@@ -1060,9 +1060,9 @@ lemma update_time_stamp_cur_time_monotonic:
    \<lbrace>\<lambda>_ s. val \<le> cur_time s\<rbrace>"
   supply minus_add_distrib[simp del]
   apply (clarsimp simp: update_time_stamp_def)
-  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac previous_time)
   apply (rule_tac B="\<lambda>rv s. cur_time s \<le> rv \<and> rv \<le> - getCurrentTime_buffer - 1
-                            \<and> cur_time s = val \<and> cur_time s = prev_time"
+                            \<and> cur_time s = val \<and> cur_time s = previous_time"
                in hoare_seq_ext[rotated])
    apply (wpsimp wp: dmo_getCurrentTime_sp)+
   done

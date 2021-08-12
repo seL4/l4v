@@ -1378,7 +1378,7 @@ lemma non_empty_tail_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 \<le> length list"
   using le0 list.sel(2) not_less_eq_eq by blast
 
-crunches commit_domain_time, get_sched_context
+crunches get_sched_context
   for sc_at[wp]: "sc_at p"
   and ko_sc_at[wp]: "\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s"
   and ko_sc_at'[wp]: "\<lambda>s. ko_at (SchedContext sc n) p s"

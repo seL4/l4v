@@ -12,7 +12,6 @@ begin
 context begin interpretation Arch .
 requalify_facts
   aobj_ref_arch_cap
-  preemption_point_success
 end
 
 (*FIXME: Move or remove *)
