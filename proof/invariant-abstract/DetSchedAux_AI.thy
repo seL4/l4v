@@ -1558,9 +1558,22 @@ lemma valid_refills_def2:
   "valid_refills scp s = (\<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_valid_refills sc)"
   by (clarsimp simp: valid_refills_def vs_all_heap_simps)
 
+(* this is not really an "E" lemma... *)
 lemma active_sc_valid_refillsE:
   "pred_map active_scrc (sc_refill_cfgs_of s) scp \<Longrightarrow> active_sc_valid_refills s \<Longrightarrow> valid_refills scp s"
   by (clarsimp simp: active_sc_valid_refills_def)
+
+lemma active_sc_valid_refills_tcb_at:
+  "\<lbrakk>active_sc_valid_refills s; active_sc_tcb_at tp s\<rbrakk> \<Longrightarrow> valid_refills_tcb_at tp s"
+  apply (clarsimp simp: active_sc_tcb_at_def2 valid_refills_tcb_at_def op_equal)
+  by (rule_tac x=scp in exI, clarsimp elim!: active_sc_valid_refillsE)
+
+lemma valid_refills_tcb_at_bound_sc:
+  "\<lbrakk>valid_refills_tcb_at tp s; bound_sc_tcb_at ((=) (Some scp)) tp s\<rbrakk> \<Longrightarrow> valid_refills scp s"
+  by (clarsimp simp: valid_refills_tcb_at_def pred_tcb_at_def obj_at_def dest!: sym[of "Some _"])
+
+lemmas active_sc_tcb_at_valid_refills
+  = active_sc_valid_refills_tcb_at[THEN valid_refills_tcb_at_bound_sc]
 
 \<comment> \<open>ordered_disjoint is trivial on lists of length 1\<close>
 lemma ordered_disjoint_length1[simp]:
