@@ -129,6 +129,15 @@ lemma pred_map_def:
   "pred_map P m x \<longleftrightarrow> (\<exists>y. m x = Some y \<and> P y)"
   by (simp add: pred_map_def2 split: option.splits)
 
+lemma pred_map_if:
+  "pred_map (\<lambda>x. if P x then Q x else R x) p q =
+   (if pred_map P p q then pred_map Q p q else pred_map R p q)"
+  by (fastforce simp: pred_map_def split: if_splits)
+
+lemma pred_map_conj:
+  "pred_map (P and Q ) p q = (pred_map P p q \<and> pred_map Q p q)"
+  by (fastforce simp: pred_map_def split: if_splits)
+
 \<comment> \<open>We use a separate constant for object equality assertions,
     to get nicer simplification rules.\<close>
 definition pred_map_eq :: "'b \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> 'a \<Rightarrow> bool" where
