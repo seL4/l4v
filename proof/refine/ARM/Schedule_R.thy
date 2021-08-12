@@ -1634,7 +1634,7 @@ lemma isSchedulable_bool_cross_rel:
   apply (rule cross_rel_imp[OF isScActive_cross_rel[where t=t]])
    apply (rule cross_rel_imp[OF tcbInReleaseQueue_cross_rel[where t=t]])
     apply (rule cross_rel_imp[OF runnable_cross_rel[where t=t]])
-     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj)
+     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj[simplified pred_conj_def])
     apply (clarsimp simp: is_schedulable_bool_def2)+
   done
 
@@ -3461,7 +3461,7 @@ lemma readTCBRefillReady_simp:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_objs s;
     active_sc_tcb_at t s; active_sc_valid_refills s; valid_objs' s'\<rbrakk>
    \<Longrightarrow> read_tcb_refill_ready t s = readTCBRefillReady t s'"
-  apply (frule (1) active_implies_valid_refills_tcb_at)
+  apply (frule (1) active_sc_valid_refills_tcb_at)
   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
   apply (rename_tac scp tcb sc n)
   apply (prop_tac "tcb_at' t s' \<and> sc_at' scp s'")
@@ -3499,7 +3499,8 @@ lemma readTCBRefillReady_simp:
    apply (drule_tac x=sc_ptr in bspec, blast)
    apply (fastforce simp: obj_at'_def projectKOs split: if_splits)
   apply (frule refill_hd_relation2)
-    apply (clarsimp simp: vs_all_heap_simps valid_refills_def rr_valid_refills_def
+    apply (clarsimp simp: valid_refills_tcb_at_def valid_refills_def rr_valid_refills_def
+                          pred_tcb_at_def obj_at_def vs_all_heap_simps
                    split: if_splits)
    apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
                      simp: obj_at'_def projectKOs)

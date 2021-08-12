@@ -1240,7 +1240,7 @@ lemma hinv_corres:
    apply (clarsimp simp: valid_pspace'_def schact_is_rct_def)
    apply (frule state_relation_schact, simp)
    apply (subgoal_tac "isSchedulable_bool (ksCurThread s') s'")
-    apply (clarsimp simp: isSchedulable_bool_def pred_map_conj)
+    apply (clarsimp simp: isSchedulable_bool_def pred_map_conj[simplified pred_conj_def])
     apply (frule(1) st_tcb_at_idle_thread', simp)
    apply (frule curthread_relation, simp)
    apply (frule_tac t1="cur_thread s" in cross_relF[OF _ isSchedulable_bool_cross_rel];
