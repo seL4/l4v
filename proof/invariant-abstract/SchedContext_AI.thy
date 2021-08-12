@@ -39,7 +39,7 @@ lemma set_refills_valid_objs:
   apply (clarsimp simp: valid_sched_context_def)
   done
 
-crunches commit_domain_time, set_next_interrupt, set_refills, refill_budget_check
+crunches set_next_interrupt, set_refills, refill_budget_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
@@ -50,7 +50,7 @@ crunches commit_domain_time, set_next_interrupt, set_refills, refill_budget_chec
   (wp: crunch_wps simp: Let_def)
 
 crunch reprogram_timer[wp]: commit_time "\<lambda>s. P (reprogram_timer s)"
-  (wp: crunch_wps hoare_vcg_if_lift2 ignore: commit_domain_time)
+  (wp: crunch_wps hoare_vcg_if_lift2)
 
 crunches refill_unblock_check
   for consumed_time[wp]: "\<lambda>s. P (consumed_time s)"
@@ -816,10 +816,6 @@ lemma cur_tcb_domain_time_update[simp]:
   "cur_tcb (domain_time_update f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
-lemma commit_domain_time_valid_replies[wp]:
-  "commit_domain_time \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp simp: commit_domain_time_def)
-
 (* FIXME: move *)
 lemma valid_sched_context_domain_time_update[simp]:
   "valid_sched_context p (domain_time_update f s) = valid_sched_context p s"
@@ -859,13 +855,12 @@ lemma commit_times_invs_helper:
          consumed_time s = consumed \<and>
          cur_sc s = csc\<rbrace>
        do y <- update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed sc + consumed\<rparr>);
-          y <- commit_domain_time;
           modify (consumed_time_update (\<lambda>_. 0))
        od
        \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                       consumed_time_update_arch.state_refs_update
-                      commit_domain_time_def sc_consumed_update_eq[symmetric]
+                      sc_consumed_update_eq[symmetric]
                   wp: valid_irq_node_typ hoare_vcg_imp_lift')
   done
 
@@ -884,17 +879,15 @@ lemma commit_time_invs:
                       update_refill_tl_def update_refill_hd_def)
    apply (clarsimp simp: obj_at_def is_sc_obj_def)
    apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                       consumed_time_update_arch.state_refs_update
-                       commit_domain_time_def sc_consumed_update_eq[symmetric])
+                       consumed_time_update_arch.state_refs_update sc_consumed_update_eq[symmetric])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                      consumed_time_update_arch.state_refs_update
-                      commit_domain_time_def)
+                      consumed_time_update_arch.state_refs_update)
   done
 
 crunches switch_sched_context
   for cur_time[wp]: "\<lambda>s. P (cur_time s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def)
 
 lemma cur_sc_update_invs:
   "\<lbrace>\<lambda>s. valid_state s \<and> cur_tcb s \<and>
@@ -926,13 +919,6 @@ lemma sc_consumed_update_bound_sc_tcb_at [wp]:
    \<lbrace>\<lambda>_ s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def get_object_def pred_tcb_at_def
                    obj_at_def)
-
-crunches commit_domain_time
-  for valid_state [wp]: valid_state
-  and cur_tcb [wp]: cur_tcb
-  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
-  and bound_sc_tcb_at [wp]: "\<lambda>s. bound_sc_tcb_at ((=) (Some sc)) (cur_thread s) s"
-  (simp: valid_state_def)
 
 lemma set_refills_bound_sc_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. bound_sc_tcb_at P (cur_thread s) s\<rbrace>
@@ -1020,7 +1006,7 @@ lemma commit_time_fault_tcbs_valid_states[wp]:
 
 crunches switch_sched_context
   for fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
-  (wp: crunch_wps hoare_vcg_if_lift2 simp: Let_def ignore: commit_domain_time)
+  (wp: crunch_wps hoare_vcg_if_lift2)
 
 lemma switch_sched_context_invs [wp]:
   "\<lbrace>valid_state and cur_tcb\<rbrace> switch_sched_context \<lbrace>\<lambda>rv. invs\<rbrace>"

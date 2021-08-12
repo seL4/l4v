@@ -163,6 +163,36 @@ lemma cur_time_independent_A_conjI[intro!]:
    \<Longrightarrow> cur_time_independent_A (\<lambda>s. P s \<and> Q s)"
   by (auto simp: cur_time_independent_A_def)
 
+definition domain_time_independent_A :: "('z state \<Rightarrow> bool) \<Rightarrow> bool" where
+  "domain_time_independent_A P \<equiv> \<forall>f s. P s \<longrightarrow> P (s\<lparr>domain_time := f (domain_time s)\<rparr>)"
+
+lemma domain_time_independent_AI[intro!, simp]:
+  "\<lbrakk>\<And>s f. P (s\<lparr>domain_time := f (domain_time s)\<rparr>) = P s\<rbrakk>
+   \<Longrightarrow> domain_time_independent_A P"
+  by (simp add: domain_time_independent_A_def)
+
+lemma domain_time_independent_A_conjI[intro!]:
+  "\<lbrakk>domain_time_independent_A P; domain_time_independent_A Q\<rbrakk>
+   \<Longrightarrow> domain_time_independent_A (P and Q)"
+  "\<lbrakk>domain_time_independent_A P; domain_time_independent_A Q\<rbrakk>
+   \<Longrightarrow> domain_time_independent_A (\<lambda>s. P s \<and> Q s)"
+  by (auto simp: domain_time_independent_A_def)
+
+definition reprogram_timer_independent_A :: "('z state \<Rightarrow> bool) \<Rightarrow> bool" where
+  "reprogram_timer_independent_A P \<equiv> \<forall>f s. P s \<longrightarrow> P (s\<lparr>reprogram_timer := f (reprogram_timer s)\<rparr>)"
+
+lemma reprogram_timer_independent_AI[intro!, simp]:
+  "\<lbrakk>\<And>s f. P (s\<lparr>reprogram_timer := f (reprogram_timer s)\<rparr>) = P s\<rbrakk>
+   \<Longrightarrow> reprogram_timer_independent_A P"
+  by (simp add: reprogram_timer_independent_A_def)
+
+lemma reprogram_timer_independent_A_conjI[intro!]:
+  "\<lbrakk>reprogram_timer_independent_A P; reprogram_timer_independent_A Q\<rbrakk>
+   \<Longrightarrow> reprogram_timer_independent_A (P and Q)"
+  "\<lbrakk>reprogram_timer_independent_A P; reprogram_timer_independent_A Q\<rbrakk>
+   \<Longrightarrow> reprogram_timer_independent_A (\<lambda>s. P s \<and> Q s)"
+  by (auto simp: reprogram_timer_independent_A_def)
+
 definition update_time_stamp_independent_A :: "('z state \<Rightarrow> bool) \<Rightarrow> bool" where
   "update_time_stamp_independent_A P \<equiv>
       \<forall>f s. P s \<longrightarrow> P (s\<lparr>consumed_time := f (consumed_time s) (cur_time s)\<rparr>)"
@@ -199,6 +229,7 @@ locale CSpace_AI_preemption_point_wp =
     "\<And>P :: 'state_ext state \<Rightarrow> bool.
       update_time_stamp_independent_A P \<Longrightarrow> cur_time_independent_A P \<Longrightarrow>
       time_state_independent_A P \<Longrightarrow> getCurrentTime_independent_A P \<Longrightarrow>
+      domain_time_independent_A P \<Longrightarrow>
       valid P update_time_stamp (\<lambda>_. P)"
 
 context CSpace_AI_preemption_point_wp begin
@@ -206,7 +237,7 @@ context CSpace_AI_preemption_point_wp begin
 lemma preemption_point_inv:
   fixes P :: "'state_ext state \<Rightarrow> bool"
   shows "\<lbrakk>irq_state_independent_A P; time_state_independent_A P; getCurrentTime_independent_A P;
-          update_time_stamp_independent_A P; cur_time_independent_A P;
+          update_time_stamp_independent_A P; cur_time_independent_A P; domain_time_independent_A P;
          \<And>f s. P (trans_state f s) = P s\<rbrakk>
          \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: preemption_point_def get_sc_refill_sufficient_def get_sc_active_def)

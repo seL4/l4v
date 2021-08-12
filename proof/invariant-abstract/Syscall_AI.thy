@@ -54,6 +54,10 @@ crunches awaken
   for invs[wp]: invs
   (wp: crunch_wps simp: tcb_release_dequeue_def)
 
+crunches check_domain_time
+  for invs[wp]: invs
+  (simp: crunch_simps)
+
 lemma set_scheduler_action_valid_state_cur_tcb [wp]:
   "\<lbrace>invs\<rbrace> set_scheduler_action action \<lbrace>\<lambda>_ s. valid_state s \<and> cur_tcb s\<rbrace>"
   apply (wpsimp simp: set_scheduler_action_def)
@@ -100,13 +104,13 @@ lemma schedule_choose_new_thread_valid_state_cur_tcb [wp]:
                wp: set_scheduler_action_valid_state_cur_tcb switch_to_idle_thread_invs
                    guarded_switch_to_invs hoare_drop_imps)
 
-lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>rv. invs\<rbrace>"
-  supply if_split[split del]
-  apply (simp add: Schedule_A.schedule_def)
-  apply (wp switch_to_thread_invs hoare_drop_imps
-            hoare_strengthen_post[OF awaken_invs] sc_and_timer_invs
-         | simp add: if_apply_def2 set_scheduler_action_def invs_def
-         | wpc)+
+lemma schedule_invs[wp]:
+  "schedule \<lbrace>invs\<rbrace>"
+  apply (simp add: schedule_def)
+  apply (wpsimp wp: switch_to_thread_invs hoare_drop_imps sc_and_timer_invs
+              simp: if_apply_def2 set_scheduler_action_def)
+    apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post)
+     apply (wpsimp simp: invs_def)+
   done
 
 lemma invs_domain_time_update[simp]:
