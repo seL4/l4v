@@ -3748,6 +3748,10 @@ lemma active_sc_tcb_at_fold:
   apply (fastforce simp: pred_tcb_at_def sc_at_pred_n_def obj_at_def vs_all_heap_simps is_sc_active_def2 split: option.splits)
   done
 
+(* valid_refills for tcb_scps_of *)
+definition
+  "valid_refills_tcb_at tp s \<equiv> \<exists>scp. bound_sc_tcb_at ((=) (Some scp)) tp s \<and> valid_refills scp s"
+
 \<comment> \<open>Locales that generate various traditional obj_at lemmas from valid_sched_pred etc.\<close>
 
 locale released_ipc_queues_pred_pre_conj_locale =
