@@ -3975,17 +3975,12 @@ global_interpretation reset_work_units_ext_extended: is_extended "reset_work_uni
 
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; time_state_independent_A P; getCurrentTime_independent_A P;
-    update_time_stamp_independent_A P; cur_time_independent_A P;
+    domain_time_independent_A P; update_time_stamp_independent_A P; cur_time_independent_A P;
     \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: preemption_point_def)
-  apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, wpsimp simp: update_work_units_def)
-  apply (rule valid_validE)
-  apply (rule OR_choiceE_weak_wp)
-  apply (rule alternative_valid; (solves wpsimp)?)
-  apply (wpsimp simp: reset_work_units_def
-                  wp: hoare_vcg_all_lift hoare_drop_imps update_time_stamp_wp)
+  apply (wpsimp simp: reset_work_units_def update_work_units_def
+                  wp: OR_choiceE_weak_wp alternative_valid update_time_stamp_wp hoare_drop_imps)
   done
 
 locale Deterministic_AI_1 =
@@ -4167,7 +4162,8 @@ crunches cap_delete_one, restart
 
 context notes if_cong[cong] begin
 
-crunch valid_list[wp]: update_time_stamp "valid_list"
+crunches update_time_stamp, check_domain_time
+  for valid_list[wp]: valid_list
   (wp: get_object_wp)
 
 crunch valid_list[wp]: reply_from_kernel "valid_list"
