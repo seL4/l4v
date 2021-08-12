@@ -6927,23 +6927,6 @@ lemma update_sched_context_valid_refills_no_budget_update:
   apply (wpsimp wp: update_sched_context_wp)
   by (clarsimp simp: vs_all_heap_simps obj_at_def)
 
-(* FIXME RT: move *)
-lemma pred_map_If:
-  "pred_map (\<lambda>x. if P x then Q x else R x) p q =
-   (if pred_map P p q then pred_map Q p q else pred_map R p q)"
-  apply (rule iffI)
-  apply (clarsimp simp: pred_map_def)
-  apply (clarsimp simp: pred_map_def split: if_splits, fastforce, fastforce)
-  done
-
-(* FIXME RT: move *)
-lemma pred_map_conj:
-  "pred_map (\<lambda>x. P x \<and> Q x) p q = (pred_map P p q \<and> pred_map Q p q)"
-  apply (rule iffI)
-  apply (clarsimp simp: pred_map_def)
-  apply (clarsimp simp: pred_map_def split: if_splits)
-  done
-
 lemma maybe_add_empty_tail_valid_sched_misc[wp]:
   "maybe_add_empty_tail sc_ptr
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s)
@@ -16415,10 +16398,6 @@ lemma refill_budget_check_round_robin_released_ipc_queues:
   apply (wpsimp wp: set_refills_released_ipc_queues)
   apply (fastforce simp: cur_sc_not_blocked_def pred_map_ipc_queued_thread_state_iff)
   done
-
-(* FIXME RT: move *)
-lemma released_imp_active: "released_sc_tcb_at t s \<Longrightarrow> active_sc_tcb_at t s"
-  by (fastforce simp: pred_map2'_pred_maps elim!: pred_map_weakenE)
 
 lemma refill_pop_head_released_ipc_queues:
   "\<lbrace>\<lambda>s. released_ipc_queues s \<and> cur_sc_not_blocked s \<and> sc_ptr = cur_sc s\<rbrace>
