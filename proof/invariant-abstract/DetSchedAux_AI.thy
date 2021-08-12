@@ -1575,6 +1575,17 @@ lemma valid_refills_tcb_at_bound_sc:
 lemmas active_sc_tcb_at_valid_refills
   = active_sc_valid_refills_tcb_at[THEN valid_refills_tcb_at_bound_sc]
 
+lemma released_sc_tcb_at_valid_refills:
+  "\<lbrakk>active_sc_valid_refills s; released_sc_tcb_at tp s;
+     bound_sc_tcb_at ((=) (Some scp)) tp s\<rbrakk>
+    \<Longrightarrow> valid_refills scp s"
+  by (fastforce elim!: active_sc_tcb_at_valid_refills simp: released_sc_tcb_at_def)
+
+lemma released_sc_at_valid_refills:
+  "\<lbrakk>active_sc_valid_refills s; released_sc_at scp s\<rbrakk>
+    \<Longrightarrow> valid_refills scp s"
+  by (fastforce elim!: active_sc_valid_refillsE simp: released_sc_at_def)
+
 \<comment> \<open>ordered_disjoint is trivial on lists of length 1\<close>
 lemma ordered_disjoint_length1[simp]:
   "ordered_disjoint [a]"
