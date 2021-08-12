@@ -101,7 +101,7 @@ lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \
 (* opt_pred *)
 
 abbreviation
-  opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 50) where
+  opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 55) where
   "P |< proj \<equiv> (\<lambda>x. case_option False P (proj x))"
 
 lemma opt_pred_conj:
@@ -121,11 +121,11 @@ lemma opt_predE:
   by (clarsimp split: option.splits)
 
 lemma opt_pred_unfold_map:
-  "(P |< f |> g) = ((P |< g) |< f)"
+  "(P |< (f |> g)) = ((P |< g) |< f)"
   by (fastforce simp: opt_map_def split: option.splits)
 
 lemma opt_pred_unfold_proj:
-  "(P |< f ||> g)=  (P o g |< f)"
+  "(P |< (f ||> g))=  (P o g |< f)"
   by (clarsimp simp: opt_map_def split: option.splits)
 
 (* obind, etc. *)
