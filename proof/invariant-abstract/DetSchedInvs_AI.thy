@@ -1585,6 +1585,10 @@ lemma released_sc_tcb_at_lift:
 abbreviation released_sc_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
   "released_sc_at scptr s \<equiv> pred_map (released_sc (cur_time s)) (sc_refill_cfgs_of s) scptr"
 
+lemma released_sc_at_def:
+  "released_sc_at scp s = (is_active_sc scp s \<and> is_refill_ready scp s \<and> is_refill_sufficient 0 scp s)"
+  by (clarsimp simp: pred_map_conj[simplified pred_conj_def])
+
 lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
   assumes "\<And>sc. P sc = P' (sc_refill_cfg_of sc)"
   shows "sc_at_pred P scp s = pred_map P' (sc_refill_cfgs_of s) scp"
