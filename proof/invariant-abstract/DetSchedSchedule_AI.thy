@@ -8047,7 +8047,7 @@ lemma is_refill_sufficient_alt:
 
 lemma refill_unblock_check_is_refill_sufficient[wp]:
   "unat MIN_BUDGET + unat usage \<le> unat max_time
-   \<Longrightarrow> \<lbrace>is_refill_sufficient usage sc_ptr' and valid_refills sc_ptr'\<rbrace>
+   \<Longrightarrow> \<lbrace>is_refill_sufficient usage sc_ptr' and (\<lambda>s. sc_ptr' = sc_ptr \<longrightarrow> valid_refills sc_ptr' s)\<rbrace>
        refill_unblock_check sc_ptr
        \<lbrace>\<lambda>_. is_refill_sufficient usage sc_ptr'\<rbrace>"
   supply round_robin_def[simp add]
@@ -9777,7 +9777,8 @@ lemma refill_unblock_check_budget_ready[wp]:
   done
 
 lemma refill_unblock_check_budget_sufficient[wp]:
-  "\<lbrace>budget_sufficient tcb_ptr and active_sc_tcb_at tcb_ptr and active_sc_valid_refills\<rbrace>
+  "\<lbrace>budget_sufficient tcb_ptr and active_sc_valid_refills
+    and (\<lambda>s. \<forall>scp. bound_sc_tcb_at ((=) (Some scp)) tcb_ptr s \<longrightarrow> valid_refills scp s)\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>xc s. budget_sufficient tcb_ptr s\<rbrace>"
   apply (clarsimp simp: budget_sufficient_def2)
@@ -9797,7 +9798,7 @@ lemma refill_unblock_check_released_sc_tcb_at[wp]:
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>r. released_sc_tcb_at x\<rbrace>"
   unfolding released_sc_tcb_at_def
-  by wpsimp
+  by wpsimp (fastforce elim!: active_sc_tcb_at_valid_refills)
 
 lemma refill_unblock_check_valid_ready_qs[wp]:
   "\<lbrace>valid_ready_qs and active_sc_valid_refills\<rbrace>
@@ -9806,6 +9807,7 @@ lemma refill_unblock_check_valid_ready_qs[wp]:
   apply (clarsimp simp: valid_ready_qs_def)
   apply (wpsimp simp: Ball_def released_sc_tcb_at_def
                   wp: hoare_vcg_all_lift hoare_vcg_imp_lift'' refill_unblock_check_active_sc_tcb_at)
+  apply (fastforce elim!: active_sc_tcb_at_valid_refills)
   done
 
 context DetSchedSchedule_AI begin
@@ -12754,7 +12756,7 @@ lemma refill_unblock_check_released_if_bound[wp]:
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t\<rbrace>"
   unfolding released_sc_tcb_at_def
-  by (wpsimp wp: hoare_vcg_disj_lift)
+  by (wpsimp wp: hoare_vcg_disj_lift) (fastforce elim!: active_sc_tcb_at_valid_refills)
 
 crunches reply_push
   for valid_machine_time[wp]: valid_machine_time
@@ -15063,7 +15065,7 @@ lemma refill_unblock_check_budget_sufficient_ct[wp]:
    \<lbrace>\<lambda>xc s. budget_sufficient (cur_thread s) s\<rbrace>"
   apply (rule_tac Q="\<lambda>_ s. \<forall>t. t = cur_thread s \<longrightarrow> budget_sufficient t s" in hoare_strengthen_post[rotated],
          clarsimp)
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift) (fastforce elim!: active_sc_tcb_at_valid_refills)
 
 lemma refill_unblock_check_active_sc_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. active_sc_tcb_at (cur_thread s) s\<rbrace>
