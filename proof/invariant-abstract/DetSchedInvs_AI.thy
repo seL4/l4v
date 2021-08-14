@@ -607,7 +607,7 @@ definition tcbs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarro
   "tcbs_of_kh kh \<equiv> kh |> tcb_of"
 
 abbreviation tcbs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> tcb" where
-  "tcbs_of s \<equiv> tcbs_of_kh (kheap s)"
+  "tcbs_of s \<equiv> kheap s |> tcb_of"
 
 lemmas tcb_heap_of_state_def = tcbs_of_kh_def[of "kheap s" for s :: "'z state"]
 
@@ -620,7 +620,7 @@ definition tcb_sts_of_tcbs :: "('obj_ref \<rightharpoonup> tcb) \<Rightarrow> 'o
   "tcb_sts_of_tcbs \<equiv> map_project tcb_state"
 
 abbreviation "tcb_sts_of_kh kh \<equiv> tcb_sts_of_tcbs (tcbs_of_kh kh)"
-abbreviation "tcb_sts_of s \<equiv> tcb_sts_of_kh (kheap s)"
+abbreviation "tcb_sts_of s \<equiv> tcbs_of s ||> tcb_state"
 
 global_interpretation tcb_sts:
   map_project_opt_map_cons_def_locale _ tcb_of tcbs_of_kh TCB tcb_state tcb_sts_of_tcbs
@@ -632,7 +632,7 @@ definition tcb_scps_of_tcbs :: "('obj_ref \<rightharpoonup> tcb) \<Rightarrow> '
   "tcb_scps_of_tcbs \<equiv> map_project tcb_sched_context"
 
 abbreviation "tcb_scps_of_kh kh \<equiv> tcb_scps_of_tcbs (tcbs_of_kh kh)"
-abbreviation "tcb_scps_of s \<equiv> tcb_scps_of_kh (kheap s)"
+abbreviation "tcb_scps_of s \<equiv> tcbs_of s ||> tcb_sched_context"
 
 global_interpretation tcb_scps:
   map_project_opt_map_cons_def_locale _ tcb_of tcbs_of_kh TCB tcb_sched_context tcb_scps_of_tcbs
@@ -644,7 +644,7 @@ definition tcb_faults_of_tcbs :: "('obj_ref \<rightharpoonup> tcb) \<Rightarrow>
   "tcb_faults_of_tcbs \<equiv> map_project tcb_fault"
 
 abbreviation "tcb_faults_of_kh kh \<equiv> tcb_faults_of_tcbs (tcbs_of_kh kh)"
-abbreviation "tcb_faults_of s \<equiv> tcb_faults_of_kh (kheap s)"
+abbreviation "tcb_faults_of s \<equiv> tcbs_of s ||> tcb_fault"
 
 global_interpretation tcb_faults:
   map_project_opt_map_cons_def_locale _ tcb_of tcbs_of_kh TCB tcb_fault tcb_faults_of_tcbs
@@ -672,7 +672,7 @@ definition etcbs_of_tcbs :: "('obj_ref \<rightharpoonup> tcb) \<Rightarrow> 'obj
   "etcbs_of_tcbs \<equiv> map_project etcb_of"
 
 abbreviation "etcbs_of_kh kh \<equiv> etcbs_of_tcbs (tcbs_of_kh kh)"
-abbreviation "etcbs_of s \<equiv> etcbs_of_kh (kheap s)"
+abbreviation "etcbs_of s \<equiv> tcbs_of s ||> etcb_of"
 
 global_interpretation etcbs:
   map_project_opt_map_cons_def_locale _ tcb_of tcbs_of_kh TCB etcb_of etcbs_of_tcbs
@@ -738,7 +738,7 @@ definition scs_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow
   "scs_of_kh kh \<equiv> kh |> sc_of"
 
 abbreviation scs_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> sched_context" where
-  "scs_of s \<equiv> scs_of_kh (kheap s)"
+  "scs_of s \<equiv> kheap s |> sc_of"
 
 lemmas sc_heap_of_state_def = scs_of_kh_def[of "kheap s" for s :: "'z state"]
 
@@ -769,7 +769,7 @@ definition sc_refill_cfgs_of_scs :: "('obj_ref \<rightharpoonup> sched_context) 
   "sc_refill_cfgs_of_scs \<equiv> map_project sc_refill_cfg_of"
 
 abbreviation "sc_refill_cfgs_of_kh kh \<equiv> sc_refill_cfgs_of_scs (scs_of_kh kh)"
-abbreviation "sc_refill_cfgs_of s \<equiv> sc_refill_cfgs_of_kh (kheap s)"
+abbreviation "sc_refill_cfgs_of s \<equiv> scs_of s ||> sc_refill_cfg_of"
 
 global_interpretation sc_refill_cfgs:
   map_project_opt_map_cons2_def_locale _ sc_of scs_of_kh SchedContext sc_refill_cfg_of sc_refill_cfgs_of_scs
@@ -806,7 +806,7 @@ definition sc_tcbs_of_scs :: "('obj_ref \<rightharpoonup> sched_context) \<Right
   "sc_tcbs_of_scs \<equiv> map_project sc_tcb"
 
 abbreviation "sc_tcbs_of_kh kh \<equiv> sc_tcbs_of_scs (scs_of_kh kh)"
-abbreviation "sc_tcbs_of s \<equiv> sc_tcbs_of_kh (kheap s)"
+abbreviation "sc_tcbs_of s \<equiv> scs_of s ||> sc_tcb"
 
 global_interpretation sc_tcbs:
   map_project_opt_map_cons2_def_locale _ sc_of scs_of_kh SchedContext sc_tcb sc_tcbs_of_scs
@@ -818,7 +818,7 @@ definition sc_replies_of_scs :: "('obj_ref \<rightharpoonup> sched_context) \<Ri
   "sc_replies_of_scs \<equiv> map_project sc_replies"
 
 abbreviation "sc_replies_of_kh kh \<equiv> sc_replies_of_scs (scs_of_kh kh)"
-abbreviation "sc_replies_of s \<equiv> sc_replies_of_kh (kheap s)"
+abbreviation "sc_replies_of s \<equiv> scs_of s ||> sc_replies"
 
 global_interpretation sc_replies:
   map_project_opt_map_cons2_def_locale _ sc_of scs_of_kh SchedContext sc_replies sc_replies_of_scs
@@ -862,7 +862,7 @@ definition eps_of_kh :: "('obj_ref \<rightharpoonup> kernel_object) \<Rightarrow
   "eps_of_kh kh \<equiv> kh |> ep_of"
 
 abbreviation eps_of :: "'z state \<Rightarrow> obj_ref \<rightharpoonup> endpoint" where
-  "eps_of s \<equiv> eps_of_kh (kheap s)"
+  "eps_of s \<equiv> kheap s |> ep_of"
 
 lemmas eps_of_def = eps_of_kh_def[of "kheap s" for s :: "'z state"]
 
@@ -878,10 +878,10 @@ definition ep_recv_qs_of_eps :: "('obj_ref \<rightharpoonup> endpoint) \<Rightar
   "ep_recv_qs_of_eps eps \<equiv> eps |> recv_q_of"
 
 abbreviation "ep_send_qs_of_kh kh \<equiv> ep_send_qs_of_eps (eps_of_kh kh)"
-abbreviation "ep_send_qs_of s \<equiv> ep_send_qs_of_kh (kheap s)"
+abbreviation "ep_send_qs_of s \<equiv> eps_of s |> send_q_of"
 
 abbreviation "ep_recv_qs_of_kh kh \<equiv> ep_recv_qs_of_eps (eps_of_kh kh)"
-abbreviation "ep_recv_qs_of s \<equiv> ep_recv_qs_of_kh (kheap s)"
+abbreviation "ep_recv_qs_of s \<equiv> eps_of s |> recv_q_of"
 
 global_interpretation ep_send_qs:  opt_map_opt_map_cons_def_locale _ ep_of eps_of_kh Endpoint send_q_of SendEP ep_send_qs_of_eps
   using ep_send_qs_of_eps_def send_q_of_None send_q_of_Some by unfold_locales
@@ -1023,7 +1023,7 @@ named_theorems obj_at_kh_kheap_simps
 
 lemma get_tcb_simp[obj_at_kh_kheap_simps]:
   "get_tcb t s = tcbs_of s t"
-  by (rule sym, clarsimp simp: get_tcb_def vs_heap_simps split: option.splits kernel_object.splits)
+  by (rule sym, clarsimp simp: get_tcb_def vs_heap_simps opt_map_def split: option.splits kernel_object.splits)
 
 \<comment> \<open>Does not fire reliably in the forwards direction, due the presence of the obj_at
     rule below, but is sometimes needed in the reverse direction.\<close>
@@ -1039,7 +1039,7 @@ lemma obj_at_kh_simp[obj_at_kh_kheap_simps]:
 
 lemma pred_tcb_at_kh_simp:
   "pred_tcb_at proj P t s = pred_map P (map_project (proj \<circ> tcb_to_itcb) (tcbs_of s)) t"
-  by (auto simp: pred_map_map_project vs_heap_simps pred_tcb_at_def obj_at_def)
+  by (auto simp: pred_map_map_project vs_heap_simps pred_tcb_at_def obj_at_def opt_map_red)
 
 \<comment> \<open>Does not fire reliably in the forwards direction, due the presence of the pred_tcb_at
     rule above, but is sometimes needed in the reverse direction.\<close>
@@ -1063,7 +1063,7 @@ end
 
 lemma sc_at_ppred_kh_simp:
   "sc_at_ppred proj P scp s = pred_map P (map_project proj (scs_of s)) scp"
-  by (auto simp: pred_map_map_project vs_heap_simps sc_at_ppred_def obj_at_def)
+  by (auto simp: pred_map_map_project vs_heap_simps sc_at_ppred_def obj_at_def opt_map_red)
 
 lemma sc_at_ppred_kh_eq_simp:
   "sc_at_ppred proj ((=) v) scp s = pred_map_eq v (map_project proj (scs_of s)) scp"
@@ -1074,7 +1074,7 @@ lemmas sc_at_ppred_kh_simps = sc_at_ppred_kh_simp sc_at_ppred_kh_eq_simp
 lemma sc_at_ppred_to_pred_map_sc_refill_cfgs_of:
   assumes "\<And>sc. scrc_f (sc_refill_cfg_of sc) = sc_f sc"
   shows "sc_at_ppred sc_f P scp s = pred_map (\<lambda>rc. P (scrc_f rc)) (sc_refill_cfgs_of s) scp"
-  by (auto simp: sc_at_ppred_def obj_at_def vs_all_heap_simps assms)
+  by (auto simp: sc_at_ppred_def obj_at_def vs_all_heap_simps assms opt_map_red pred_map_def)
 
 context
   notes sc_at_kh_simps' =
@@ -1205,13 +1205,13 @@ lemma sym_refs_retract_sc_tcbs[simp, elim!]:
   "sym_refs (state_refs_of s) \<Longrightarrow> heap_refs_retract (sc_tcbs_of s) (tcb_scps_of s)"
   apply (clarsimp simp: heap_refs_inv_defs)
   by (frule_tac x=p and y=r and tp=TCBSchedContext in sym_refsE
-      ; clarsimp simp: in_state_refs_of_iff refs_of_rev vs_all_heap_simps)
+      ; clarsimp simp: in_state_refs_of_iff refs_of_rev vs_all_heap_simps pred_map_simps opt_map_red)
 
 lemma sym_refs_retract_tcb_scps[simp, elim!]:
   "sym_refs (state_refs_of s) \<Longrightarrow> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)"
   apply (clarsimp simp: heap_refs_inv_defs)
   by (frule_tac x=p and y=r and tp=SCTcb in sym_refsE
-      ; clarsimp simp: in_state_refs_of_iff refs_of_rev vs_all_heap_simps)
+      ; clarsimp simp: in_state_refs_of_iff refs_of_rev vs_all_heap_simps pred_map_simps opt_map_red)
 
 lemma sym_refs_inv_tcb_scps[simp, elim!]:
   "sym_refs (state_refs_of s) \<Longrightarrow> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)"
@@ -1376,10 +1376,10 @@ lemma proj_tcbs_of_lift:
          f \<lbrace>\<lambda>rv s. P (map_project (proj \<circ> tcb_to_itcb) (tcbs_of s))\<rbrace>"
   apply (rule validI; elim conjE rsubst[of P])
   apply (rule map_eqI; rule iffI; rule ccontr; clarsimp simp: map_project_simps vs_heap_simps; rename_tac t tcb)
-     apply (frule use_valid, rule_tac N=Not and P=\<top> and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
-    apply (frule use_valid, rule_tac N=id and P=\<top> and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb)
-   apply (frule use_valid, rule_tac N=id and P="\<lambda>st. st = proj (tcb_to_itcb tcb)" and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (frule use_valid, rule_tac N=Not and P="\<lambda>st. st = proj (tcb_to_itcb tcb)" and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def)
+     apply (frule use_valid, rule_tac N=Not and P=\<top> and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb opt_map_red)
+    apply (frule use_valid, rule_tac N=id and P=\<top> and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb opt_map_red)
+   apply (frule use_valid, rule_tac N=id and P="\<lambda>st. st = proj (tcb_to_itcb tcb)" and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def opt_map_red)
+  apply (frule use_valid, rule_tac N=Not and P="\<lambda>st. st = proj (tcb_to_itcb tcb)" and t=t in assms; clarsimp simp: pred_tcb_at_def obj_at_def opt_map_red)
   done
 
 lemmas tcb_sts_of_lift =
@@ -1394,10 +1394,10 @@ lemma proj_scs_of_lift:
   shows "\<lbrace>\<lambda>s. P (map_project proj (scs_of s)) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (map_project proj (scs_of s))\<rbrace>"
   apply (rule validI; elim conjE rsubst[of P])
   apply (rule map_eqI; rule iffI; rule ccontr; clarsimp simp: map_project_simps vs_heap_simps; rename_tac scp sc n)
-     apply (frule use_valid, rule_tac N=Not and P=\<top> and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def)
-    apply (frule use_valid, rule_tac N=id and P=\<top> and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def)
-   apply (frule use_valid, rule_tac N=id and P="\<lambda>scpo. scpo = proj sc" and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def)
-  apply (frule use_valid, rule_tac N=Not and P="\<lambda>scpo. scpo = proj sc" and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def)
+     apply (frule use_valid, rule_tac N=Not and P=\<top> and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def opt_map_red)
+    apply (frule use_valid, rule_tac N=id and P=\<top> and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def opt_map_red)
+   apply (frule use_valid, rule_tac N=id and P="\<lambda>scpo. scpo = proj sc" and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def opt_map_red)
+  apply (frule use_valid, rule_tac N=Not and P="\<lambda>scpo. scpo = proj sc" and scp=scp in assms; clarsimp simp: sc_at_ppred_def obj_at_def opt_map_red)
   done
 
 lemmas sc_refill_cfgs_of_lift =
@@ -1419,7 +1419,7 @@ lemmas active_scrc_def = active_sc_def
 
 lemma is_sc_active_kh_simp[obj_at_kh_kheap_simps]:
   "is_sc_active scp s = pred_map active_scrc (sc_refill_cfgs_of s) scp"
-  by (auto simp: is_sc_active_def vs_all_heap_simps
+  by (auto simp: is_sc_active_def vs_all_heap_simps opt_map_def pred_map_simps
           split: option.splits kernel_object.splits)
 
 abbreviation is_active_sc :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> bool" where
@@ -1591,7 +1591,7 @@ lemma released_sc_at_def:
 lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
   assumes "\<And>sc. P sc = P' (sc_refill_cfg_of sc)"
   shows "sc_at_pred P scp s = pred_map P' (sc_refill_cfgs_of s) scp"
-  by (auto simp: sc_at_pred_def obj_at_def vs_all_heap_simps assms)
+  by (auto simp: sc_at_pred_def obj_at_def vs_all_heap_simps assms pred_map_simps opt_map_red)
 
 lemmas sc_at_released_kh_simps[obj_at_kh_kheap_simps] =
   sc_at_pred_to_pred_map_sc_refill_cfgs_of[where P="sc_released curtime" and P'="released_sc curtime" for curtime, simplified sc_released_def if_bool_simps, simplified]
@@ -1605,14 +1605,16 @@ abbreviation bound_sc_obj_tcb_at :: "(sc_refill_cfg \<Rightarrow> bool) \<Righta
 lemma is_schedulable_opt_Some:
   "is_schedulable_opt t s = Some X \<Longrightarrow>
           st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> (in_release_queue t s) \<longleftrightarrow> X"
-  by (clarsimp simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
-              split: option.splits)
+  by (fastforce simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
+                      opt_map_def pred_map_simps map_join_def
+               split: option.splits)
 
 lemma is_schedulable_bool_def2:
   "is_schedulable_bool t s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s
                                \<and> \<not> (in_release_queue t s))"
-  by (clarsimp simp: is_schedulable_bool_def vs_all_heap_simps obj_at_kh_kheap_simps
-              split: option.splits)
+  by (fastforce simp: is_schedulable_bool_def vs_all_heap_simps obj_at_kh_kheap_simps
+                      opt_map_def pred_map_simps map_join_def
+               split: option.splits)
 
 \<comment> \<open>Like refill_ready', but using unat addition to avoid the need to reason about overflow.\<close>
 definition refill_ready_no_overflow :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
@@ -1797,7 +1799,8 @@ lemma update_sched_context_bound_sc_obj_tcb_at:
          \<lbrace>\<lambda>_ s. bound_sc_obj_tcb_at (P (h s)) t s\<rbrace>"
   apply (rule hoare_lift_Pf2[where f=h, OF _ h])
   apply (wpsimp wp: update_sched_context_wp)
-  by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps g)
+  by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps g pred_map_simps map_join_def opt_map_def
+          split: option.splits)
 
 lemmas update_sched_context_bound_sc_obj_tcb_at_simple
   = update_sched_context_bound_sc_obj_tcb_at[where h="\<lambda>_. undefined" and P="\<lambda>_. P" for P, OF hoare_vcg_prop]
@@ -1826,7 +1829,7 @@ lemma set_refills_bound_sc_obj_tcb_at_refills:
               \<and> (pred_map_eq (Some scp) (tcb_scps_of s) t \<longrightarrow> P (g s) refills)\<rbrace>
          set_refills scp refills
          \<lbrace>\<lambda>_ s. bound_sc_obj_tcb_at (\<lambda>sc. P (g s) (scrc_refills sc)) t s\<rbrace>"
-  by (wpsimp wp: set_refills_bound_sc_obj_tcb_at[OF assms] simp: vs_all_heap_simps)
+  by (wpsimp wp: set_refills_bound_sc_obj_tcb_at[OF assms] simp: vs_all_heap_simps pred_map_simps opt_map_def map_join_def)
 
 lemmas set_refills_bound_sc_obj_tcb_at_refills_simple
   = set_refills_bound_sc_obj_tcb_at_refills[where g="\<lambda>_. undefined" and P="\<lambda>_. P" for P, OF hoare_vcg_prop]
@@ -1834,13 +1837,24 @@ lemmas set_refills_bound_sc_obj_tcb_at_refills_simple
 lemmas set_refills_bound_sc_obj_tcb_at_refills_cur_time
   = set_refills_bound_sc_obj_tcb_at_refills[where g=cur_time, OF update_sched_context_cur_time]
 
+lemma temp_bound_sc_obj_tcb_at_simp:
+  "bound_sc_obj_tcb_at (P (g s)) t s
+   = (\<exists>ref'.
+               (\<exists>y. kheap s t = Some (TCB y) \<and>
+                    tcb_sched_context y = Some ref') \<and>
+               (\<exists>y. (\<exists>e. kheap s ref' = Some (SchedContext y e)) \<and>
+                    P (g s) (sc_refill_cfg_of y)))"
+  by (fastforce simp: opt_map_def pred_map_def map_join_def
+               split: option.splits kernel_object.splits)
+
+
 lemma bound_sc_obj_tcb_at_set_object_no_change_sc':
   assumes f: "\<And>x. P x (sc_refill_cfg_of (f sc)) = P x (sc_refill_cfg_of sc)"
   assumes g: "\<And>P. update_sched_context scp f \<lbrace>\<lambda>s. P (g s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. N (bound_sc_obj_tcb_at (P (g s)) t s) \<and> ko_at (SchedContext sc n) scp s\<rbrace>
          set_object scp (SchedContext (f sc) n)
          \<lbrace>\<lambda>rv s. N (bound_sc_obj_tcb_at (P (g s)) t s)\<rbrace>"
-  apply (simp add: vs_all_heap_simps)
+  apply (simp add: temp_bound_sc_obj_tcb_at_simp)
   apply (rule hoare_vcg_ex_lift_N_pre_conj[of N], rename_tac scp')
   apply (rule hoare_vcg_conj_lift_N_pre_conj[of N]
          , wpsimp wp: set_object_wp simp: obj_at_def)
@@ -1890,7 +1904,7 @@ lemma bound_sc_obj_tcb_at_set_object_no_change_tcb':
          set_object tptr (TCB (f tcb))
          \<lbrace>\<lambda>rv s. N (bound_sc_obj_tcb_at (P (g s)) t s)\<rbrace>"
   supply if_split[split del]
-  apply (simp add: vs_all_heap_simps)
+  apply (simp add: temp_bound_sc_obj_tcb_at_simp)
   apply (wpsimp wp: set_object_wp simp_del: fun_upd_apply)
   apply (drule use_valid[rotated, OF g]
          , fastforce simp: in_monad thread_set_def get_tcb_ko_at set_object_def get_object_def
@@ -1999,7 +2013,7 @@ abbreviation idle_thread_is_idle where
 
 lemma valid_idle_idle_thread_is_idle[simp, elim!]:
   "valid_idle s \<Longrightarrow> idle_thread_is_idle s"
-  by (auto simp: valid_idle_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
+  by (auto simp: valid_idle_def pred_tcb_at_def obj_at_def vs_all_heap_simps pred_map_simps opt_map_def)
 
 definition in_queue_2 where
   "in_queue_2 q t \<equiv> t \<in> set q"
@@ -2108,7 +2122,7 @@ lemma get_tcb_obj_ref_gets_the:
 lemma get_sched_context_gets_the:
   "get_sched_context scp = gets_the (\<lambda>s. scs_of s scp)"
   apply (rule ext)
-  by (auto simp: get_sched_context_def gets_the_def get_object_def gets_def get_def
+  by (auto simp: get_sched_context_def gets_the_def get_object_def gets_def get_def opt_map_red
                  bind_def return_def fail_def assert_opt_def assert_def sc_heap.all_simps
           split: option.splits kernel_object.splits
           intro: ccontr)
@@ -2137,7 +2151,7 @@ lemma get_sc_refill_ready_gets_the:
    = gets_the (\<lambda>s. map_project (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp)"
   apply (rule ext)
   apply (clarsimp simp: get_sc_refill_ready_def gets_the_def exec_gets)
-  by (simp add: read_sc_refill_ready_simp read_sched_context_def obind_def
+  by (simp add: read_sc_refill_ready_simp read_sched_context_def obind_def opt_map_def
                 sc_refill_cfgs.all_simps assert_opt_def map_project_simps omonad_defs
          split: option.splits kernel_object.splits)
 
@@ -2145,7 +2159,7 @@ lemma get_sc_refill_sufficient_gets_the:
   "get_sc_refill_sufficient scp usage = gets_the (\<lambda>s. map_project (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp)"
   apply (simp add: get_sc_refill_sufficient_def get_sched_context_gets_the
                    gets_the_map_project[symmetric])
-  by (auto intro!: arg_cong[where f=gets_the] map_eqI simp: map_project_simps vs_all_heap_simps)
+  by (auto intro!: arg_cong[where f=gets_the] map_eqI simp: map_project_simps vs_all_heap_simps opt_map_red)
 
 (* FIXME: Move up. Perhaps use more widely, to get rid of pred_map2? *)
 definition tcb_sc_refill_cfgs_2 ::
@@ -2185,7 +2199,7 @@ lemma bound_sc_obj_tcb_at_eqI:
           "tcb_sched_context tcb = Some scp"
           "kheap s scp = Some (SchedContext sc n)"
   shows "bound_sc_obj_tcb_at ((=) (sc_refill_cfg_of sc)) t s"
-  using assms by (auto simp: vs_all_heap_simps)
+  using assms by (auto simp: vs_all_heap_simps pred_map_def map_join_def opt_map_def)
 
 lemma budget_sufficient_has_ready_time:
   assumes "bound_sc_obj_tcb_at P t s"
@@ -2593,7 +2607,7 @@ lemma released_ipc_queuesE:
 (* FIXME RT: generalise this pattern *)
 lemma active_bound_sc_tcb_at:
   "active_if_bound_sc_tcb_at t s \<Longrightarrow> pred_map_eq (Some scp) (tcb_scps_of s) t \<Longrightarrow> active_sc_tcb_at t s"
-  by (clarsimp simp: vs_all_heap_simps)
+  by (clarsimp simp: vs_all_heap_simps pred_map_simps)
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_ipc_queues :: valid_sched_t where
@@ -2645,7 +2659,7 @@ lemma valid_ep_distinct_queue:
 (* FIXME RT: move *)
 lemma pred_map_P_not_idle:
   "\<lbrakk>valid_idle s; pred_map P (tcb_sts_of s) t; \<And>st. idle st \<Longrightarrow> \<not> P st\<rbrakk> \<Longrightarrow> t \<noteq> idle_thread s"
-  by (clarsimp simp: vs_all_heap_simps valid_idle_def pred_tcb_at_def obj_at_def)
+  by (clarsimp simp: vs_all_heap_simps valid_idle_def pred_tcb_at_def obj_at_def pred_map_def)
 
 (* FIXME RT: move *)
 lemma in_tcb_st_refs_of_iff:
@@ -2737,6 +2751,8 @@ lemma released_ipc_queues_pred_lift:
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (fault_tcb_at P t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (fault_tcb_at P t s)\<rbrace>"
   assumes "\<And>N P scp. \<lbrace>\<lambda>s. N (sc_refill_cfg_sc_at P scp s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (sc_refill_cfg_sc_at P scp s)\<rbrace>"
   shows "\<lbrace>\<lambda>s. released_ipc_queues_pred P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. released_ipc_queues_pred P\<rbrace>"
+  apply (rule released_ipc_queues_pred_lift_f)
+  by (intro assms valid_sched_heap_proj_lifts)+
   by (rule released_ipc_queues_pred_lift_f; intro assms valid_sched_heap_proj_lifts)
 
 lemmas released_ipc_queues_pred_lift' =
