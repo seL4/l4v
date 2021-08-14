@@ -60,10 +60,27 @@ lemma opt_map_upd_Some:
   "f(x \<mapsto> v) |> g = (f |> g)(x := g v)"
   by (auto simp: opt_map_def)
 
-lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
+lemma opt_map_Some_upd_None:
+  "f(x := None) ||> g = (f ||> g)(x := None)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_Some_upd_Some:
+  "f(x \<mapsto> v) ||> g = (f ||> g)(x \<mapsto> g v)"
+  by (simp add: opt_map_upd_Some)
+
+lemmas opt_map_upd[simp]
+  = opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_None opt_map_Some_upd_Some
+
+lemma opt_map_upd_triv[simp]:
+  "t k = Some x \<Longrightarrow> (t |> f)(k := f x) = t |> f"
+  by (rule ext) (clarsimp simp add: opt_map_red)
+
+lemma opt_map_Some_upd_triv[simp]:
+  "t k = Some x \<Longrightarrow> (t ||> f)(k \<mapsto> f x) = t ||> f"
+  by (rule ext) (clarsimp simp add: opt_map_red)
 
 lemma opt_map_Some_comp[simp]:
-  "f ||> h o g = f ||> g ||> h"
+  "f ||> g ||> h = f ||> h o g"
   by (fastforce simp: opt_map_def split: option.split)
 
 lemma opt_map_fold_l:
