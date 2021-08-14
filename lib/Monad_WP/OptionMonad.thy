@@ -71,21 +71,21 @@ lemma opt_map_fold_l:
   by (clarsimp simp: opt_map_def)
 
 (* LHS is the same as (f ||> id) *)
-lemma opt_map_unit_r[simp]:
-  "(f |> Some) x = f x"
-  by (clarsimp simp: opt_map_def split: option.split)
+lemma opt_map_Some_id_r[simp]:
+  "f |> Some = f"
+  by (fastforce simp: opt_map_def split: option.split)
 
-lemma opt_map_unit_l[simp]:
-  "(Some |> f) x = f x"
+lemma opt_map_Some_id_l[simp]:
+  "Some |> f = f"
   by (clarsimp simp: opt_map_def split: option.split)
 
 lemma opt_map_zero_l[simp]:
-  "(Map.empty |> g) x = None"
+  "Map.empty |> g = Map.empty"
   by (clarsimp simp: opt_map_def)
 
 lemma opt_map_zero_r[simp]:
-  "(f |> Map.empty) x = None"
-  by (clarsimp simp: opt_map_def split: option.split)
+  "f |> Map.empty = Map.empty"
+  by (fastforce simp: opt_map_def split: option.split)
 
 lemma case_opt_map_distrib:
   "((\<lambda>s. case_option None g (f s)) |> h)
