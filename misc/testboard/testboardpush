@@ -53,12 +53,15 @@ def subprocess_output(*args, **kwargs):
         return out
 
 # github remotes are of the form git@github.com:user/repo
-# but repo expects an ssh URL, e.g. ssh://git@github.com/user/repo
+# but repo expects an URL, e.g. ssh://git@github.com/user/repo
+# Since the test runner will not have ssh permissions to github,
+# we use a https URL instead -- this means the target repo needs
+# to be public.
 def fixup_github(remote):
     git_url = 'git@github.com:'
     url, repo = remote
     if url.startswith(git_url):
-        return 'ssh://git@github.com/' + url[len(git_url):], repo
+        return 'https://github.com/' + url[len(git_url):], repo
     else:
         return remote
 
