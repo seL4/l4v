@@ -174,7 +174,6 @@ termination revoke_cap_simple
 
 declare revoke_cap_simple.simps [simp del]
 declare KHeap_DR.resolve_address_bits.simps [simp del]
-declare CSpace_A.resolve_address_bits'.simps [simp del]
 
 lemma dcorres_revoke_cap_simple_helper:
   "\<lbrakk> dcorres r P P'

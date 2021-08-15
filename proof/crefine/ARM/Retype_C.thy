@@ -6538,9 +6538,8 @@ lemma insertNewCap_preserves_bytes_flip:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call insertNewCap_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' t s}"
-  by (rule allI, rule conseqPost,
-    rule insertNewCap_preserves_bytes[rule_format],
-    auto elim: byte_regions_unmodified_flip_eq)
+  by (rule allI, rule conseqPost, rule insertNewCap_preserves_bytes[rule_format])
+     (auto elim: byte_regions_unmodified_flip_eq)
 
 lemma copyGlobalMappings_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call copyGlobalMappings_'proc
@@ -6549,21 +6548,18 @@ lemma copyGlobalMappings_preserves_bytes:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (clarsimp simp only: whileAnno_def)
   apply (subst whileAnno_def[symmetric, where V=undefined
-       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
-         \<and> byte_regions_unmodified' s t}" for s])
+               and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+                          \<and> byte_regions_unmodified' s t}" for s])
   apply (rule conseqPre, vcg)
-  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
-    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
-    (simp_all add: h_t_valid_field)+)
-  done
+    by (safe intro!: byte_regions_unmodified_hrs_mem_update
+             elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+        (simp_all add: h_t_valid_field)+)
 
 lemma cleanByVA_PoU_preserves_bytes:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_PoU_'proc
       {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
          \<and> byte_regions_unmodified' s t}"
-  apply (rule allI, rule conseqPost,
-    rule cleanByVA_PoU_preserves_kernel_bytes[rule_format])
-   apply simp_all
+  apply (rule allI, rule conseqPost, rule cleanByVA_PoU_preserves_kernel_bytes[rule_format]; simp)
   apply (clarsimp simp: byte_regions_unmodified_def)
   done
 
@@ -6574,13 +6570,12 @@ lemma cleanCacheRange_PoU_preserves_bytes:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (clarsimp simp only: whileAnno_def)
   apply (subst whileAnno_def[symmetric, where V=undefined
-       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
-         \<and> byte_regions_unmodified' s t}" for s])
+               and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+                          \<and> byte_regions_unmodified' s t}" for s])
   apply (rule conseqPre, vcg exspec=cleanByVA_PoU_preserves_bytes)
-  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
-    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
-    (simp_all add: h_t_valid_field)+)
-  done
+    by (safe intro!: byte_regions_unmodified_hrs_mem_update
+              elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+        (simp_all add: h_t_valid_field)+)
 
 lemma hrs_htd_update_canon:
   "hrs_htd_update (\<lambda>_. f (hrs_htd hrs)) hrs = hrs_htd_update f hrs"
@@ -6595,20 +6590,20 @@ lemma Arch_createObject_preserves_bytes:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply clarsimp
   apply (rule conseqPre, vcg exspec=cap_small_frame_cap_new_modifies
-    exspec=cap_frame_cap_new_modifies
-    exspec=cap_page_table_cap_new_modifies
-    exspec=copyGlobalMappings_preserves_bytes
-    exspec=addrFromPPtr_modifies
-    exspec=cleanCacheRange_PoU_preserves_bytes
-    exspec=cap_page_directory_cap_new_modifies)
+                             exspec=cap_frame_cap_new_modifies
+                             exspec=cap_page_table_cap_new_modifies
+                             exspec=copyGlobalMappings_preserves_bytes
+                             exspec=addrFromPPtr_modifies
+                             exspec=cleanCacheRange_PoU_preserves_bytes
+                             exspec=cap_page_directory_cap_new_modifies)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
-    (simp_all add: h_t_valid_field hrs_htd_update)+)
-  apply (safe intro!: ptr_retyp_d ptr_retyps_out)
-  apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
-    split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
-   apply (rule byte_regions_unmodified_flip, simp)
+         (simp_all add: h_t_valid_field hrs_htd_update)+)
+            apply (safe intro!: ptr_retyp_d ptr_retyps_out)
+            apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                            split: object_type.split_asm apiobject_type.split_asm)
+  apply (rule byte_regions_unmodified_flip, simp)
   apply (rule byte_regions_unmodified_trans[rotated],
-    assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
+         assumption, simp_all add: hrs_htd_update_canon hrs_htd_update)
   done
 
 lemma ptr_arr_retyps_eq_outside_dom:
@@ -6625,20 +6620,19 @@ lemma createObject_preserves_bytes:
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply clarsimp
   apply (rule conseqPre, vcg exspec=Arch_createObject_preserves_bytes
-    exspec=cap_thread_cap_new_modifies
-    exspec=cap_endpoint_cap_new_modifies
-    exspec=cap_notification_cap_new_modifies
-    exspec=cap_cnode_cap_new_modifies
-    exspec=cap_untyped_cap_new_modifies)
+                             exspec=cap_thread_cap_new_modifies
+                             exspec=cap_endpoint_cap_new_modifies
+                             exspec=cap_notification_cap_new_modifies
+                             exspec=cap_cnode_cap_new_modifies
+                             exspec=cap_untyped_cap_new_modifies)
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
-    (simp_all add: h_t_valid_field hrs_htd_update)+)
-  apply (safe intro!: ptr_retyp_d ptr_retyps_out trans[OF ptr_retyp_d ptr_retyp_d]
-                      ptr_arr_retyps_eq_outside_dom)
-  apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
-                       objBits_simps' cte_C_size power_add ctcb_offset_defs
-    split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
-   apply (erule notE, erule subsetD[rotated],
-     rule intvl_start_le intvl_sub_offset, simp)+
+         (simp_all add: h_t_valid_field hrs_htd_update)+)
+     apply (safe intro!: ptr_retyp_d ptr_retyps_out trans[OF ptr_retyp_d ptr_retyp_d]
+                         ptr_arr_retyps_eq_outside_dom)
+      apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                           objBits_simps' cte_C_size power_add ctcb_offset_defs
+                      split: object_type.split_asm apiobject_type.split_asm)
+    apply (erule notE, erule subsetD[rotated], rule intvl_start_le intvl_sub_offset, simp)+
   done
 
 lemma offset_intvl_first_chunk_subsets:
