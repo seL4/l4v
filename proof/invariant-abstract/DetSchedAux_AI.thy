@@ -24,12 +24,17 @@ lemmas [wp] =
 
 lemma set_cap_valid_sched_pred[wp]:
   "set_cap cap slot \<lbrace>valid_sched_pred_strong P\<rbrace>"
-  by (wpsimp simp: set_cap_def obj_at_kh_kheap_simps vs_all_heap_simps
-               wp: set_object_wp get_object_wp)
+  apply (wpsimp simp: set_cap_def obj_at_def wp: set_object_wp get_object_wp)
+  apply (fold fun_upd_def o_def opt_map_def)
+  apply (rename_tac ko; case_tac ko;
+         clarsimp simp: vs_all_heap_simps scs_of_kh_def tcbs_of_kh_def eps_of_kh_def
+                        ep_send_qs_of_eps_def ep_recv_qs_of_eps_def
+                 split: option.splits; intro conjI impI; clarsimp)
+  done
 
 crunches create_cap, cap_insert
   for valid_sched_pred[wp]: "valid_sched_pred_strong P::'z::state_ext state \<Rightarrow> _"
-  (wp: dxo_wp_weak crunch_wps)
+  (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
 
 crunches update_cdt_list
   for valid_sched_pred[wp]: "valid_sched_pred_strong P"
@@ -46,7 +51,12 @@ lemma store_word_offs_valid_sched_pred[wp]:
 lemma set_mrs_valid_sched_pred[wp]:
   "set_mrs thread buf msgs \<lbrace>valid_sched_pred_strong P\<rbrace>"
   apply (wpsimp simp: set_mrs_def wp: zipWithM_x_inv' set_object_wp)
-  by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps)
+  apply (fold fun_upd_def o_def opt_map_def)
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: vs_all_heap_simps scs_of_kh_def tcbs_of_kh_def eps_of_kh_def
+                        ep_send_qs_of_eps_def ep_recv_qs_of_eps_def
+                 split: option.splits)
+  done
 
 global_interpretation set_mrs: valid_sched_pred_locale _ "set_mrs r t mrs"
   by unfold_locales wp
@@ -119,7 +129,7 @@ lemma init_arch_objects_tcb_heap[wp]:
    apply (rule_tac N=N and P="\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P tcb" and p=ref in init_arch_objects_obj_at_non_arch)
    apply (clarsimp simp: non_arch_obj_def)
   apply (rule_tac f=N in arg_cong)
-  by (auto simp: obj_at_kh_kheap_simps pred_map_simps vs_heap_simps)
+  by (auto simp: obj_at_def pred_map_simps opt_map_red)
 
 lemma init_arch_objects_sc_heap[wp]:
   "init_arch_objects t p n s r \<lbrace>\<lambda>s. P (scs_of s)\<rbrace>"
@@ -128,46 +138,69 @@ lemma init_arch_objects_sc_heap[wp]:
    apply (rule_tac N=N and P="\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> P sc" and p=ref in init_arch_objects_obj_at_non_arch)
    apply (clarsimp simp: non_arch_obj_def)
   apply (rule_tac f=N in arg_cong)
-  by (auto simp: obj_at_kh_kheap_simps pred_map_simps vs_heap_simps)
+  by (auto simp: obj_at_def pred_map_simps opt_map_red)
 
 lemma delete_objects_etcb_at[wp]:
   "delete_objects a b \<lbrace>\<lambda>s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (wpsimp simp: detype_def wrap_ext_det_ext_ext_def)
-  apply (simp add: pred_map_simps vs_heap_simps etcb_at'_def)
+  apply (simp add: pred_map_simps tcb_of_None etcb_at'_def opt_map_def split: option.splits)
   done
 
 declare delete_objects_st_tcb_at[wp]
+
+(* FIXME : Move to Lib *)
+lemma opt_map_Some_eta_fold[simp]:
+  "f |> (\<lambda>x. Some (g x)) = f ||> g"
+  by (simp add: o_def)
+
+(* FIXME : Move to Lib *)
+lemma opt_map_foldr_upd[simp]:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f)|> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> g x | _ \<Rightarrow> None))) ptrs (f |> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+(* FIXME : Move to Lib *)
+lemma opt_map_Some_foldr_upd[simp]:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f) ||> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> Some (g x) | _ \<Rightarrow>  None))) ptrs (f ||> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+(* FIXME : Move to Lib *)
+lemma opt_map_if_l:
+  "(if P then f else f') |> g = (if P then f |> g else f' |> g)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_if_r:
+  "f |> (if P then g else g') = (if P then f |> g else f |> g')"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_upd_triv_None[simp]:
+  "t k = None \<Longrightarrow> (t |> f)(k := None) = t |> f"
+  by (rule ext) (clarsimp simp add: opt_map_def)
+
 
 crunches reset_untyped_cap
   for etcb_at[wp]: "etcb_at P t :: 'z::state_ext state \<Rightarrow> _"
   (wp: preemption_point_inv mapME_x_inv_wp crunch_wps
    simp: unless_def)
 
-lemma foldr_kh_eq:
-  "foldr (\<lambda>p kh. kh(p \<mapsto> ko')) ptrs kh t = Some ko \<Longrightarrow>
-  if t \<in> set ptrs then ko = ko' else kh t = Some ko"
-  by (simp add: foldr_fun_upd_value split: if_splits)
-
-lemma TCB_default_objectD[dest!]:
-  "\<lbrakk>  TCB tcb = default_object t dev c dm; t \<noteq> Untyped \<rbrakk> \<Longrightarrow> tcb = default_tcb dm"
-  by (simp add: default_object_def split: apiobject_type.splits)
-
 declare tcb_state_merge_tcb_state_default[simp]
 
 lemma retype_region_etcb_at[wp]:
   "\<lbrace>etcb_at P t\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
+  supply opt_mapE[rule del]
   apply (simp add: retype_region_def)
   apply wp
-  apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
-  apply (clarsimp simp:  etcb_at'_def etcb_of_def pred_map_simps vs_heap_simps)
-  apply (drule foldr_kh_eq)
-  apply (auto simp: etcb_of_def split: if_split_asm option.splits elim!: rsubst[where P=P])
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcbs_of_kh_def etcb_of_def
+                        opt_map_def etcb_at'_def pred_map_simps foldr_fun_upd_value
+                        default_object_def
+              simp del: fun_upd_apply split: if_splits option.splits apiobject_type.splits)
   done
 
 lemma etcb_at_def2:
   "etcb_at P t s \<equiv> tcb_at t s \<longrightarrow> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> P (etcb_of tcb)) t s"
-  by (auto simp add: atomize_eq etcb_at'_def obj_at_kh_kheap_simps pred_map_simps vs_heap_simps is_tcb)
+  by (auto simp add: atomize_eq etcb_at'_def obj_at_def opt_map_red pred_map_simps vs_heap_simps is_tcb)
 
 lemma retype_region_etcb_at_other:
   assumes ptrv: "t \<notin> set (retype_addrs ptr' ty n us)"
@@ -253,8 +286,9 @@ lemma retype_region_active_sc_props[wp]:
         \<longrightarrow> pred_map (P (cur_time s) (consumed_time s)) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding retype_region_def
   apply wp
-  apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
-  apply (case_tac type; simp add: default_object_def)
+  apply (clarsimp simp: vs_all_heap_simps foldr_fun_upd_value pred_map_simps
+                  split: if_split_asm simp del: fun_upd_apply)
+  apply (case_tac type; simp add: default_object_def opt_map_red)
   apply (clarsimp simp: active_sc_def default_sched_context_def)
   done
 
@@ -275,7 +309,7 @@ lemma delete_objects_pred_map_sc_refill_cfgs_of[wp]:
         \<longrightarrow> pred_map (P (consumed_time s) (cur_time s)) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding delete_objects_def2
   apply wpsimp
-  by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
+  by (clarsimp simp: detype_def vs_all_heap_simps pred_map_def split: if_splits)
 
 lemma delete_objects_active_sc_valid_refills[wp]:
   "delete_objects base sz \<lbrace>active_sc_valid_refills\<rbrace>"
@@ -283,7 +317,8 @@ lemma delete_objects_active_sc_valid_refills[wp]:
   apply (wpsimp wp: hoare_vcg_all_lift)
   unfolding delete_objects_def2
   apply wpsimp
-  apply (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
+  apply (fastforce simp: detype_def vs_all_heap_simps pred_map_simps opt_map_def
+                  split: if_splits option.splits)
   done
 
 lemma (in DetSchedAux_AI) delete_objects_pred_map_sc_refill_cfgs_of_cur_sc[wp]:
@@ -372,7 +407,7 @@ lemma ex_nonz_cap_to_iff_not_idle_thread_ptr:
 
 lemma bound_sc_obj_tcb_at_False_ex_nonz_cap_to_iff_not_idle_thread_ptr:
   "\<lbrakk> bound_sc_obj_tcb_at P t s; invs s \<rbrakk> \<Longrightarrow> ex_nonz_cap_to t s \<longleftrightarrow> t \<noteq> idle_thread_ptr"
-  by (clarsimp simp: vs_all_heap_simps ex_nonz_cap_to_iff_not_idle_thread_ptr
+  by (clarsimp simp: vs_all_heap_simps ex_nonz_cap_to_iff_not_idle_thread_ptr pred_map_simps map_join_def
               split: option.splits)
 
 lemma ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc:
@@ -404,8 +439,8 @@ lemma bound_sc_obj_tcb_at_nonz_cap_lift:
   apply (clarsimp simp: pred_tcb_at_def sc_at_ppred_def obj_at_def)
   apply (frule (3) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc)
   apply (frule_tac scp=p in ex_nonz_cap_to_not_idle_sc_ptr, assumption)
-  apply (frule use_valid, rule_tac P="\<lambda>scpo. scpo = Some p" in bound_sc; clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (frule use_valid, rule_tac scp=p in sc_refill_cfg; clarsimp simp: sc_at_ppred_def obj_at_def)
+  apply (frule use_valid, rule_tac P="\<lambda>scpo. scpo = Some p" in bound_sc; clarsimp simp: pred_tcb_at_def obj_at_def pred_map_def)
+  apply (frule use_valid, rule_tac scp=p in sc_refill_cfg; clarsimp simp: sc_at_ppred_def obj_at_def pred_map_def vs_all_heap_simps)
   done
 
 lemma set_cap_obj_at_impossible_cur_time:
@@ -490,7 +525,28 @@ lemma retype_region_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: retype_region_def)
   apply wp
-  apply (clarsimp simp del: fun_upd_apply)
+  apply (clarsimp simp:
+split: simp del: fun_upd_apply)
+apply (unfold o_def, simp)
+apply (cases d; clarsimp simp: default_object_def default_tcb_def default_sched_context_def
+)
+
+apply (clarsimp simp: foldr_upd_app_if)
+
+apply (case_tac "tcb_of (default_object d dev c (cur_domain s))";
+       case_tac "sc_of (default_object d dev c (cur_domain s))"; clarsimp)
+
+apply (clarsimp simp: foldr_fun_upd_value)
+
+
+
+apply (subst opt_map_foldr_upd_None)
+
+
+apply (cases d; clarsimp simp: default_object_def default_tcb_def)
+apply 
+apply simp
+apply (subst opt_map_Some_foldr_upd_Some)
   apply (blast intro: valid_blocked_fold_update)
   done
 
@@ -553,8 +609,8 @@ end
 
 lemma etcb_at_tcb_at_pred_map:
   "\<lbrakk> etcb_at P ref s; tcb_at ref s \<rbrakk> \<Longrightarrow> pred_map P (etcbs_of s) ref"
-  by (fastforce elim!: etcb_at'_pred_map
-                 simp: obj_at_kh_kheap_simps pred_map_simps vs_heap_simps is_tcb)
+  by (clarsimp elim!: etcb_at'_pred_map
+                 simp: obj_at_def etcb_at'_def pred_map_simps vs_heap_simps is_tcb)
 
 lemmas etcb_at_pred_tcb_at_pred_map =
   etcb_at_tcb_at_pred_map[OF _ pred_tcb_at_tcb_at[where P=Q for Q]]
@@ -568,23 +624,30 @@ lemma heap_eq_x_pred_map_eq_lift:
   subgoal for y using assms[of y] by (fastforce simp: pred_map_eq_def pred_map_def)
   done
 
+
+lemma bound_sc_obj_tcb_at_rewrite:
+  "bound_sc_obj_tcb_at P t s = pred_map P (map_join (tcb_scps_of s) |> (scs_of s ||> sc_refill_cfg_of)) t"
+  by (clarsimp simp: pred_map_def opt_map_def vs_all_heap_simps map_join_def
+              split: option.splits)
+
+(* temporary *)
+lemma pred_map_unfold_proj:
+  "pred_map P (f ||> g) =  pred_map (P o g) f"
+  by (fastforce simp: pred_map_def opt_map_def split: option.splits)
+
 (* FIXME: move *)
 lemma heap_eq_x_pred_map_lift:
   assumes "\<And>P. pred_map P heap x = pred_map P heap' x"
   shows "heap x = heap' x"
   using assms by (auto simp: pred_map_eq_def intro: heap_eq_x_pred_map_eq_lift[where x=x])
 
-(* FIXME: move *)
-lemma pred_map_compose':
-  "pred_map P (map_project f m) = pred_map (P \<circ> f) m"
-  by (fastforce simp: pred_map_compose)
-
 lemma tcb_ready_times_of_eq_bound_sc_obj_tcb_at_lift:
-  assumes "\<And>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s
+  assumes P: "\<And>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s
                  = bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s'"
   shows "tcb_ready_times_of s t = tcb_ready_times_of s' t"
   apply (rule heap_eq_x_pred_map_eq_lift[where x=t], rename_tac rt)
-  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def sc_ready_times_2_def pred_map_eq_def pred_map_compose')
+  apply (clarsimp simp: tcb_sc_refill_cfgs_2_def sc_ready_times_2_def pred_map_eq_def
+                        pred_map_unfold_proj[of _ _ sc_ready_time])
   apply (rule rsubst[where P="\<lambda>P. bound_sc_obj_tcb_at P t s = bound_sc_obj_tcb_at P t s'"])
   apply (rule_tac rt=rt in assms)
   by fastforce
@@ -698,8 +761,12 @@ lemma valid_sched_tcb_state_preservation_gen:
     apply simp
    apply (erule sorted_release_q_2_eq_lift[THEN iffD1, rotated])
    apply (drule (1) bspec, clarsimp)
-   apply (prop_tac "\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s"
-          , fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps, clarsimp)
+   apply (prop_tac "\<exists>rt. bound_sc_obj_tcb_at (\<lambda>sc. sc_ready_time sc = rt) t s")
+subgoal
+          , fastforce simp: obj_at_kh_kheap_simps vs_all_heap_simps)
+
+sorry
+apply clarsimp
    apply (frule (1) runnable_nonz_cap_to)
    apply (frule use_valid,
           (rule_tac t=t and I=I and P="\<lambda>sc. sc_ready_time sc = rt" in bound_sc_obj_tcb_at_nonz_cap_lift

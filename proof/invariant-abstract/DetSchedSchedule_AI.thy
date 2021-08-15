@@ -1497,7 +1497,7 @@ lemma set_tcb_sched_context_valid_release_q_not_queued:
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
   apply (wpsimp wp: valid_sched_wp simp: valid_release_q_def vs_all_heap_simps not_in_release_q_def)
   apply (clarsimp elim!: sorted_release_qE simp: sc_ready_time_eq_iff)
-  by (clarsimp simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps)
+  by (clarsimp simp: tcb_ready_times_defs  opt_map_simps map_join_simps)
 
 lemma valid_release_q_no_sc_not_in_release_q:
   "\<lbrakk>valid_release_q s; pred_map_eq None (tcb_scps_of s) ref\<rbrakk> \<Longrightarrow> not_in_release_q ref s"
@@ -1516,7 +1516,7 @@ lemma set_tcb_sched_context_valid_release_q:
                   wp: get_object_wp split: option.splits)
   by (clarsimp simp: valid_release_q_def vs_all_heap_simps in_release_q_def dest!: get_tcb_SomeD;
       fastforce elim!: sorted_release_qE split: option.splits
-                 simp: tcb_ready_times_defs map_project_def map_join_def opt_map_def)
+                 simp: tcb_ready_times_defs  map_join_def opt_map_def)
 
 lemma set_tcb_sched_context_simple_weak_valid_sched_action:
   "\<lbrace>weak_valid_sched_action and simple_sched_action\<rbrace>
@@ -1948,10 +1948,10 @@ lemma set_refills_valid_release_q:
   apply (rule conjI, fastforce)
   apply (erule sorted_release_qE)
   apply (rule option_eqI)
-   apply (clarsimp simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+   apply (clarsimp simp: tcb_ready_times_defs  opt_map_simps map_join_simps vs_all_heap_simps)
    apply fastforce
   apply (drule (1) bspec)
-  apply (clarsimp simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+  apply (clarsimp simp: tcb_ready_times_defs  opt_map_simps map_join_simps vs_all_heap_simps)
   by (case_tac "ref' = sc_ptr"; fastforce)
 
 lemma set_refills_sc_tcb_sc_at[wp]:
@@ -3156,7 +3156,7 @@ lemma tcb_release_enqueue_wp':
    tcb_release_enqueue t
    \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (wpsimp simp: tcb_release_enqueue_def wp: mapM_get_sc_time_wp get_sc_time_wp)
-  apply (drule mp, fastforce simp: sc_ready_times_2_def map_project_simps)
+  apply (drule mp, fastforce simp: sc_ready_times_2_def )
   apply (erule_tac x=rt in allE)
   apply (intro conjI; clarsimp dest!: map_Some_implies_map_the)
    apply (auto simp: map_is_Nil_conv[symmetric, where f=fst] tcb_release_enqueue_upd_def
@@ -4022,7 +4022,7 @@ lemma sched_context_zero_refill_max_valid_sched_unbound_sc:
   apply (wpsimp wp: valid_sched_wp simp: valid_sched_def)
   apply (intro conjI)
         apply (clarsimp simp: valid_ready_queued_thread_2_def vs_all_heap_simps heap_upd_def elim!: valid_ready_qsE)
-       apply (fastforce simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps map_project_simps
+       apply (fastforce simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps 
                               heap_upd_def pred_map_simps sc_ready_time_eq_iff
                        split: if_splits
                        elim!: valid_release_qE sorted_release_qE)
@@ -4894,7 +4894,7 @@ lemma tcb_release_enqueue_upd_def2:
 
 lemma sc_ready_times_2_Some:
   "hp t = Some scrc \<Longrightarrow> sc_ready_times_2 hp t = Some (sc_ready_time scrc)"
-  by (simp add: sc_ready_times_2_def map_project_simps)
+  by (simp add: sc_ready_times_2_def )
 
 lemma transp_img_ord:
   "transp cmp \<Longrightarrow> transp (img_ord f cmp)"
@@ -9921,7 +9921,7 @@ lemma read_release_q_non_empty_and_ready_True_simp:
   apply (clarsimp dest!: read_release_q_non_empty_and_ready_SomeD read_sched_context_SomeD
                          read_tcb_refill_ready_SomeD read_sc_refill_ready_SomeD
                          read_tcb_obj_ref_SomeD)
-  by (clarsimp simp: vs_all_heap_simps map_project_simps map_join_simps opt_map_simps)
+  by (clarsimp simp: vs_all_heap_simps  map_join_simps opt_map_simps)
 
 
 lemma valid_release_q_read_tcb_sched_context_bound:
@@ -10435,7 +10435,7 @@ lemma update_refill_hd_valid_release_q:
   unfolding update_refill_hd_rewrite
   apply (wpsimp wp: set_refills_valid_release_q get_refills_wp)
   by (fastforce simp: tcb_ready_times_defs vs_all_heap_simps obj_at_def opt_map_red
-                      sc_heap_of_state_def  map_project_def map_join_def sc_refill_cfgs_of_scs_def)
+                      sc_heap_of_state_def   map_join_def sc_refill_cfgs_of_scs_def)
 
 lemma non_overlapping_merge_refills_cur_sc_not_in_release_q:
   "non_overlapping_merge_refills csc_ptr \<lbrace>\<lambda>s. sc_not_in_release_q (cur_sc s) s\<rbrace>"
@@ -10508,7 +10508,7 @@ lemma sorted_release_q_sc_not_in_sc_update:
   apply (rule sorted_wrt_img_ord_eq_lift; simp?)
   apply (rename_tac tp; drule_tac x=tp in bspec, simp)
   apply (case_tac "tcb_ready_times_of s tp"; clarsimp)
-  by (fastforce simp: vs_all_heap_simps tcb_ready_times_defs map_project_def map_join_def opt_map_def
+  by (fastforce simp: vs_all_heap_simps tcb_ready_times_defs  map_join_def opt_map_def
                split: option.splits)+
 
 lemma valid_release_q_sc_not_in_sc_update:
@@ -11144,7 +11144,7 @@ lemma update_sched_context_tcb_ready_times_idem:
                     [where g=g and f=f and h=h and k=k, OF assms(2-4), THEN hoare_drop_assertion])
   using assms
   by (fastforce simp: heap_upd_def tcb_ready_times_defs
-                      map_project_simps opt_map_simps map_join_simps vs_all_heap_simps
+                       opt_map_simps map_join_simps vs_all_heap_simps
                split: if_splits
                elim!: rsubst[of P]
               intro!: option_eqI[where opt'="map_project _ _ _"])
@@ -11505,7 +11505,7 @@ lemma in_release_q_has_ready_time:
   assumes "t \<in> set (release_queue s)"
   shows "\<exists>rt. tcb_ready_times_of s t = Some rt"
   using assms valid_release_q_active_sc[OF assms]
-  by (auto simp: tcb_ready_times_defs map_project_simps opt_map_simps map_join_simps vs_all_heap_simps)
+  by (auto simp: tcb_ready_times_defs  opt_map_simps map_join_simps vs_all_heap_simps)
 
 lemma in_release_q_opt_ord_conv:
   fixes s :: "'z state"
@@ -15444,7 +15444,7 @@ lemma set_sc_obj_ref_tcb_ready_times_other:
   \<lbrace>\<lambda>_ s. P (tcb_ready_times_of s t)\<rbrace>"
   apply (wpsimp wp: update_sched_context_wp)
   by (fastforce simp: heap_upd_def tcb_ready_times_defs obj_at_def
-                      map_project_simps opt_map_simps map_join_simps vs_all_heap_simps
+                       opt_map_simps map_join_simps vs_all_heap_simps
                split: if_splits
                elim!: rsubst[of P]
               intro!: option_eqI[where opt'="map_project _ _ _"])
@@ -15457,17 +15457,17 @@ lemma maybe_add_empty_tail_tcb_ready_times_other:
   unfolding maybe_add_empty_tail_def refill_add_tail_def get_refills_def
   apply (wpsimp wp: update_sched_context_wp is_round_robin_wp set_refills_wp)
   apply (erule rsubst[of P])
-  apply (clarsimp simp: tcb_ready_times_defs map_project_simps map_join_simps map_project_def map_join_def
+  apply (clarsimp simp: tcb_ready_times_defs  map_join_simps  map_join_def
                         vs_all_heap_simps opt_map_simps
                  split: if_splits)
   apply (case_tac "(tcb_scps_of s |> id |> sc_refill_cfgs_of s) t"; simp)
-   apply (clarsimp simp: tcb_ready_times_defs map_project_simps map_join_simps map_project_def map_join_def
+   apply (clarsimp simp: tcb_ready_times_defs  map_join_simps  map_join_def
                          vs_all_heap_simps opt_map_simps obj_at_def
                   split: if_splits)
    apply (rename_tac scp')
    apply (frule_tac x=scp' in spec, fastforce)
   apply (rule sym)
-  apply (clarsimp simp: tcb_ready_times_defs map_project_simps map_join_simps map_project_def map_join_def
+  apply (clarsimp simp: tcb_ready_times_defs  map_join_simps  map_join_def
                         vs_all_heap_simps opt_map_simps obj_at_def
                  split: if_splits)
   apply (rename_tac sc n scp' tcb sc' n')
@@ -16540,10 +16540,10 @@ lemma refill_reset_rr_valid_release_q[wp]:
                      hoare_vcg_all_lift
           | wpsimp wp: set_refills_wp)+
    apply (clarsimp simp: obj_at_def vs_all_heap_simps tcb_ready_times_defs
-                         map_project_simps map_join_simps opt_map_simps sc_at_pred_n_def)
+                          map_join_simps opt_map_simps sc_at_pred_n_def)
   apply (wpsimp wp: set_refills_valid_release_q get_refills_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
   apply (clarsimp simp: obj_at_def vs_all_heap_simps tcb_ready_times_defs
-                        map_project_simps map_join_simps opt_map_simps sc_at_pred_n_def)
+                         map_join_simps opt_map_simps sc_at_pred_n_def)
   apply (metis butlast.simps(2) hd_append2 list.sel(1) list_length_2 neq_Nil_conv)
   done
 
@@ -17032,7 +17032,7 @@ lemma update_sched_context_tcb_ready_time:
    \<lbrace>\<lambda>_ s. P (tcb_ready_time t s)\<rbrace>"
   apply (wpsimp simp: update_sched_context_def set_object_def
                   wp: get_object_wp split_del: if_split)
-  by (auto simp: vs_all_heap_simps tcb_ready_times_defs obj_at_def opt_map_def map_project_def
+  by (auto simp: vs_all_heap_simps tcb_ready_times_defs obj_at_def opt_map_def 
                  map_join_def tcb_scps_of_tcbs_def tcbs_of_kh_def sc_refill_cfgs_of_scs_def
                  scs_of_kh_def
           split: option.split)
