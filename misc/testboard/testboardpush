@@ -72,7 +72,7 @@ def main(argv):
         if args.quiet:
             return
         for line in msg.split('\n'):
-            sys.stdout.write('[log] ' + line + '\n')
+            sys.stdout.write('> ' + line + '\n')
     def debug(msg):
         if not args.debug:
             return
