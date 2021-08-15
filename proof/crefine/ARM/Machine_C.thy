@@ -441,8 +441,8 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop)
      apply (simp add: cleanInvalidateCacheRange_RAM_def doMachineOp_bind
-                      empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanInvalidateL2Range
-                      empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
+                      empty_fail_dsb empty_fail_cleanInvalidateL2Range
+                      empty_fail_cleanInvalByVA)
      apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
       apply (ctac (no_vcg) add: dsb_ccorres)
        apply (ctac (no_vcg) add: cleanInvalidateL2Range_ccorres)
@@ -474,8 +474,7 @@ lemma cleanCacheRange_RAM_ccorres:
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
            (Call cleanCacheRange_RAM_'proc)"
   apply (cinit' lift: start_' end_' pstart_')
-   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind
-                    empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanL2Range)
+   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind empty_fail_dsb empty_fail_cleanL2Range)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop2, simp)
    apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
@@ -537,8 +536,7 @@ lemma invalidateCacheRange_RAM_ccorres:
    apply (clarsimp simp: word_sle_def whileAnno_def split del: if_split)
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: invalidateCacheRange_RAM_def doMachineOp_bind when_def
-                    if_split_empty_fail empty_fail_cleanCacheRange_RAM
-                    empty_fail_invalidateL2Range empty_fail_cacheRangeOp empty_fail_invalidateByVA
+                    if_split_empty_fail empty_fail_invalidateL2Range empty_fail_invalidateByVA
                     empty_fail_dsb dmo_if
               split del: if_split)
    apply (rule ccorres_split_nothrow_novcg)

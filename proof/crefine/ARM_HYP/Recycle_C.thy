@@ -681,7 +681,7 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
                         update_pte_map_to_ptes carray_map_relation_upd_triv)
        apply (rule cmap_relation_updI, simp_all)[1]
        apply (simp add: cpte_relation_def Let_def pte_lift_def
-                        fcp_beta pte_get_tag_def pte_tag_defs)
+                        pte_get_tag_def pte_tag_defs)
        apply (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps update_pte_map_tos)
       apply csymbr

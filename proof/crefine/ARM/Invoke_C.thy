@@ -1745,7 +1745,7 @@ lemma resetUntypedCap_ccorres:
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
-                    Collect_True extra_sle_sless_unfolds)
+                    Collect_True)
    apply (rule ccorres_getCTE, rename_tac cte)
    apply (rule ccorres_move_c_guard_cte)
    apply (rule ccorres_symb_exec_r)

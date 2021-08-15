@@ -587,8 +587,8 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop)
      apply (simp add: cleanInvalidateCacheRange_RAM_def doMachineOp_bind
-                      empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanInvalidateL2Range
-                      empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
+                      empty_fail_dsb empty_fail_cleanInvalidateL2Range
+                      empty_fail_cleanInvalByVA)
      apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
       apply (ctac (no_vcg) add: dsb_ccorres)
        apply (ctac (no_vcg) add: plat_cleanInvalidateL2Range_ccorres)
@@ -620,8 +620,7 @@ lemma cleanCacheRange_RAM_ccorres:
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
            (Call cleanCacheRange_RAM_'proc)"
   apply (cinit' lift: start_' end_' pstart_')
-   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind
-                    empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanL2Range)
+   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind empty_fail_dsb empty_fail_cleanL2Range)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop2, simp)
    apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
