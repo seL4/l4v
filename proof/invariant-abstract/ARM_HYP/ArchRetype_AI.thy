@@ -1152,8 +1152,11 @@ lemma invs_irq_state_independent:
       swp_def valid_irq_states_def split: option.split)
   done
 
-crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
-  (wp: crunch_wps ignore_del: cleanByVA_PoU storeWord clearMemory)
+crunches cleanByVA, cleanCacheRange_PoC, dsb, cleanCacheRange_PoC, cleanL2Range, cleanByVA_PoU,
+  storeWord, clearMemory
+  for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
+  (wp: crunch_wps
+   ignore_del: cleanByVA_PoU storeWord clearMemory cleanL2Range cleanCacheRange_PoC dsb cleanByVA)
 
 crunch underlying_mem_0[wp]: clearMemory
     "\<lambda>s. underlying_memory s p = 0"

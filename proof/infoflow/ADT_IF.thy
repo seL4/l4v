@@ -3133,6 +3133,9 @@ lemma irq_state_inv_trivE':
   apply simp
   done
 
+crunch irq_state[wp]: cleanCacheRange_PoU "\<lambda>s. P (irq_state s)"
+  (ignore_del: cleanCacheRange_PoU cleanByVA_PoU)
+
 crunch irq_state_of_state[wp]: init_arch_objects "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp ignore: do_machine_op)
 

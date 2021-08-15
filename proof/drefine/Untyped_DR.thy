@@ -631,6 +631,10 @@ lemma page_objects_default_object:
      \<Longrightarrow> \<exists>vmsz. (default_object ty dev us = ArchObj (DataPage dev vmsz) \<and> pageBitsForSize vmsz = obj_bits_api ty us)"
   by (auto simp: default_object_def default_arch_object_def obj_bits_api_def pageBitsForSize_def)
 
+crunches cleanByVA, cleanCacheRange_RAM
+  for mem[wp]: "\<lambda>s. P (underlying_memory s)"
+  (ignore_del: cleanByVA cleanL2Range)
+
 lemma clearMemory_unused_corres_noop:
   "\<lbrakk> ty \<in> ArchObject ` {SmallPageObj, LargePageObj, SectionObj, SuperSectionObj};
        range_cover ptr sz (obj_bits_api ty us) n;
@@ -645,12 +649,12 @@ lemma clearMemory_unused_corres_noop:
   (is "\<lbrakk> ?def; ?szv; ?in \<rbrakk> \<Longrightarrow> dcorres dc \<top> ?P ?f ?g")
   apply (drule page_objects_default_object[where us=us and dev = dev], clarsimp)
   apply (rename_tac pgsz)
-  apply (simp add: clearMemory_def do_machine_op_bind
-                   cleanCacheRange_PoU_def ef_storeWord
-                   mapM_x_mapM dom_mapM)
+  apply (simp add: clearMemory_def do_machine_op_bind cleanCacheRange_PoC_def
+                   cleanCacheRange_RAM_def cleanL2Range_def dsb_def mapM_x_mapM)
   apply (subst do_machine_op_bind)
-  apply (clarsimp simp:  ef_storeWord
-                   mapM_x_mapM dom_mapM cleanCacheRange_PoU_def cleanByVA_PoU_def)+
+    apply (clarsimp simp:  ef_storeWord)
+   apply (clarsimp simp: cacheRangeOp_def cleanByVA_def split_def)
+  apply (simp add: dom_mapM ef_storeWord)
   apply (rule corres_guard_imp, rule corres_split_noop_rhs)
       apply (rule dcorres_machine_op_noop, wp)
      apply (rule corres_mapM_to_mapM_x)

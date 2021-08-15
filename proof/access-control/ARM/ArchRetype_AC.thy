@@ -370,7 +370,8 @@ lemma dmo_clearMemory_respects'[Retype_AC_assms]:
   apply clarsimp
   apply (erule use_valid)
    apply wp
-    apply (simp add: cleanByVA_PoU_def)
+    apply (simp add: cleanCacheRange_RAM_def cleanCacheRange_PoC_def cacheRangeOp_def cleanL2Range_def
+                     cleanByVA_def split_def dsb_def)
     apply (wp mol_respects mapM_x_wp' storeWord_respects)+
    apply (simp add: word_size_bits_def)
    apply (clarsimp simp: word_size_def word_bits_def upto_enum_step_shift_red[where us=2, simplified])
