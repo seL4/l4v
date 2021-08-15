@@ -41,6 +41,8 @@ parser.add_argument('--debug', action='store_true',
                     help="Print verbose debugging messages")
 parser.add_argument('--repo_dir', default='.',
                     help="Directory of repo")
+parser.add_argument('-n', '--dry-run', action='store_true',
+                    help="Do not push, just construct manifest")
 
 # In Python 3, subprocess returns bytes instead of (Unicode) str.
 # We don't worry about that here, since our subprocesses are
@@ -294,12 +296,15 @@ def main(argv):
         except subprocess.CalledProcessError:
             fatal("Failed to commit to the test board repository.")
 
-        # Now attempt to push it.
-        # This may fail if someone else has pushed a commit in the meantime.
-        try:
-            subprocess.check_call(['git', 'push', '--set-upstream', 'origin', args.testboard_branch], cwd=testboard_repo)
-        except subprocess.CalledProcessError:
-            fatal("Failed to push to test board.")
+        if args.dry_run:
+            log("Dry run, skipping push.")
+        else:
+            # Now attempt to push it.
+            # This may fail if someone else has pushed a commit in the meantime.
+            try:
+                subprocess.check_call(['git', 'push', '--set-upstream', 'origin', args.testboard_branch], cwd=testboard_repo)
+            except subprocess.CalledProcessError:
+                fatal("Failed to push to test board.")
 
         testboard_oneline = subprocess_output(['git', 'log', '--oneline'], cwd=testboard_repo).strip()
         log("Done. Your test board commit is:\n  " + testboard_oneline)
