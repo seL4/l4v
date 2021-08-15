@@ -132,12 +132,12 @@ assumes cleanInvalidate_D_PoC_ccorres:
 assumes cleanInvalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (cleanInvalidateL2Range w1 w2))
-           (Call cleanInvalidateL2Range_'proc)"
+           (Call plat_cleanInvalidateL2Range_'proc)"
 
 assumes invalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (invalidateL2Range w1 w2))
-           (Call invalidateL2Range_'proc)"
+           (Call plat_invalidateL2Range_'proc)"
 
 assumes cleanL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
@@ -193,7 +193,7 @@ assumes maskInterrupt_ccorres:
            (Call maskInterrupt_'proc)"
 
 assumes invalidateLocalTLB_VAASID_spec:
- "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateMVA_'proc) UNIV"
+ "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateLocalTLB_VAASID_'proc) UNIV"
 
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
