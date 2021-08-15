@@ -52,6 +52,14 @@ lemma opt_map_assoc:
   "f |> (g |> h) = f |> g |> h"
   by (fastforce simp: opt_map_def split: option.splits)
 
+lemma opt_map_if_l:
+  "(if P then f else f') |> g = (if P then f |> g else f' |> g)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_if_r:
+  "f |> (if P then g else g') = (if P then f |> g else f |> g')"
+  by (auto simp: opt_map_def)
+
 lemma opt_map_upd_None:
   "f(x := None) |> g = (f |> g)(x := None)"
   by (auto simp: opt_map_def)
@@ -60,24 +68,39 @@ lemma opt_map_upd_Some:
   "f(x \<mapsto> v) |> g = (f |> g)(x := g v)"
   by (auto simp: opt_map_def)
 
-lemma opt_map_Some_upd_None:
-  "f(x := None) ||> g = (f ||> g)(x := None)"
-  by (auto simp: opt_map_def)
-
 lemma opt_map_Some_upd_Some:
   "f(x \<mapsto> v) ||> g = (f ||> g)(x \<mapsto> g v)"
   by (simp add: opt_map_upd_Some)
 
 lemmas opt_map_upd[simp]
-  = opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_None opt_map_Some_upd_Some
+  = opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_Some
 
-lemma opt_map_upd_triv[simp]:
+lemma opt_map_upd_triv:
   "t k = Some x \<Longrightarrow> (t |> f)(k := f x) = t |> f"
   by (rule ext) (clarsimp simp add: opt_map_red)
 
-lemma opt_map_Some_upd_triv[simp]:
+lemma opt_map_Some_upd_triv:
   "t k = Some x \<Longrightarrow> (t ||> f)(k \<mapsto> f x) = t ||> f"
   by (rule ext) (clarsimp simp add: opt_map_red)
+
+lemma opt_map_upd_triv_None:
+  "t k = None \<Longrightarrow> (t |> f)(k := None) = t |> f"
+  by (rule ext) (clarsimp simp add: opt_map_def)
+
+lemmas opt_map_upd_triv_simps = opt_map_upd_triv opt_map_Some_upd_triv opt_map_upd_triv_None
+
+lemma opt_map_foldr_upd:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f)|> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> g x | _ \<Rightarrow> None))) ptrs (f |> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+lemma opt_map_Some_foldr_upd:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f) ||> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> Some (g x) | _ \<Rightarrow>  None))) ptrs (f ||> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+lemmas opt_map_foldr_upd_simps
+  = opt_map_foldr_upd opt_map_Some_foldr_upd
 
 lemma opt_map_Some_comp[simp]:
   "f ||> g ||> h = f ||> h o g"
@@ -103,6 +126,10 @@ lemma opt_map_zero_l[simp]:
 lemma opt_map_zero_r[simp]:
   "f |> Map.empty = Map.empty"
   by (fastforce simp: opt_map_def split: option.split)
+
+lemma opt_map_Some_eta_fold:
+  "f |> (\<lambda>x. Some (g x)) = f ||> g"
+  by (simp add: o_def)
 
 lemma case_opt_map_distrib:
   "((\<lambda>s. case_option None g (f s)) |> h)
