@@ -36,6 +36,9 @@ lemma delete_objects_irq_masks[wp]:
   apply(wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
+crunch irq_masks[wp]: cleanCacheRange_PoU "\<lambda>s. P (irq_masks s)"
+   (ignore_del: cleanCacheRange_PoU)
+
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv

@@ -68,7 +68,7 @@ lemma performPageTableInvocationUnmap_ccorres:
         apply (ctac add: unmapPageTable_ccorres)
           apply csymbr
           apply (simp add: storePTE_def' swp_def)
-          apply (ctac add: clearMemory_setObject_PTE_ccorres[simplified objBits_InvalidPTE,
+          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[simplified objBits_InvalidPTE,
                               unfolded dc_def, simplified])
          apply wp
         apply (simp del: Collect_const)

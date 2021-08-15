@@ -479,7 +479,7 @@ definition
   where
  "clearMemory ptr bytelength \<equiv>
   do mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1];
-     cleanCacheRange_PoU ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
+     cleanCacheRange_RAM ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
   od"
 
 definition

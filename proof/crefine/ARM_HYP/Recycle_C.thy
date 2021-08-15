@@ -367,7 +367,7 @@ lemma clearMemory_PageCap_ccorres:
        subgoal by (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
       subgoal by simp
      apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+     apply (ctac add: cleanCacheRange_RAM_ccorres[unfolded dc_def])
     apply wp
    apply (simp add: guard_is_UNIV_def unat_of_nat
                     word_bits_def capAligned_def word_of_nat_less)
@@ -628,7 +628,7 @@ lemma page_directory_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n)[1]
   done
 
-lemma clearMemory_setObject_PTE_ccorres:
+lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc (page_table_at' ptr
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
@@ -637,7 +637,7 @@ lemma clearMemory_setObject_PTE_ccorres:
                        [ptr , ptr + 2 ^ objBits ARM_HYP_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
-       (Call clearMemory_'proc)"
+       (Call clearMemory_PT_'proc)"
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)

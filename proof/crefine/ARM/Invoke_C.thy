@@ -1572,7 +1572,7 @@ lemma clearMemory_untyped_ccorres:
                             carch_state_relation_def cmachine_state_relation_def)
 
      apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+     apply (ctac add: cleanCacheRange_RAM_ccorres[unfolded dc_def])
     apply wp
    apply (simp add: guard_is_UNIV_def unat_of_nat
                     word_bits_def capAligned_def word_of_nat_less)
@@ -1679,6 +1679,57 @@ lemma byte_regions_unmodified_actually_heap_list:
   apply (clarsimp split: if_split_asm)
   done
 
+lemma cleanByVA_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost,
+    rule cleanByVA_preserves_kernel_bytes[rule_format])
+   apply simp_all
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_PoC_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoC_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (clarsimp simp only: whileAnno_def)
+  apply (subst whileAnno_def[symmetric, where V=undefined
+       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}" for s])
+  apply (rule conseqPre, vcg exspec=cleanByVA_preserves_bytes)
+  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
+    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+    (simp_all add: h_t_valid_field)+)
+  done
+
+lemma cleanL2Range_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call plat_cleanL2Range_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule cleanL2Range_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma dsb_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule dsb_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_RAM_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1, rule allI)
+  apply (rule conseqPre)
+   apply (vcg exspec=cleanL2Range_preserves_bytes exspec=cleanCacheRange_PoC_preserves_bytes exspec=dsb_preserves_bytes)
+  apply (fastforce elim!: byte_regions_unmodified_trans)
+  done
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
         untypedBits_defs[simp]
@@ -1760,7 +1811,7 @@ lemma resetUntypedCap_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply wp
         apply simp
-        apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
+        apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
        apply (rule_tac P="reset_chunk_bits \<le> capBlockSize (cteCap cte)
              \<and> of_nat (capFreeIndex (cteCap cte)) - 1
                  < (2 ^ capBlockSize (cteCap cte) :: addr)"
@@ -1853,7 +1904,7 @@ lemma resetUntypedCap_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply (wp hoare_vcg_ex_lift doMachineOp_psp_no_overlap)
               apply clarsimp
-              apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
+              apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
              apply clarify
              apply (rule conjI)
               apply (clarsimp simp: invs_valid_objs' cte_wp_at_ctes_of
@@ -1926,7 +1977,7 @@ lemma resetUntypedCap_ccorres:
              apply (simp add: is_aligned_def addr_card_def card_word)
              apply clarsimp
 
-            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_preserves_bytes
+            apply (rule conseqPre, vcg exspec=cleanCacheRange_RAM_preserves_bytes
               exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth

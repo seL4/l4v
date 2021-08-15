@@ -85,6 +85,12 @@ lemma cleanCacheRange_PoU_ev:
   apply (wp machine_op_lift_ev | simp add: cleanByVA_PoU_def)+
   done
 
+lemma cleanCacheRange_RAM_ev:
+  "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (cleanCacheRange_RAM vstart vend pstart)"
+  unfolding cleanCacheRange_RAM_def cleanCacheRange_PoC_def cacheRangeOp_def cleanL2Range_def
+            dsb_def cleanByVA_def
+  by (wpsimp wp: machine_op_lift_ev mapM_x_ev')
+
 lemma modify_underlying_memory_update_0_ev:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top>
           (modify
@@ -107,7 +113,7 @@ lemma clearMemory_ev:
   apply simp
   apply(rule equiv_valid_guard_imp)
    apply(rule bind_ev)
-     apply(rule cleanCacheRange_PoU_ev)
+     apply(rule cleanCacheRange_RAM_ev)
     apply(rule mapM_x_ev[OF storeWord_ev])
     apply(rule wp_post_taut | simp)+
   done
@@ -201,7 +207,7 @@ lemma dmo_cleanCacheRange_PoU_reads_respects:
 
 crunch irq_state[wp]: clearMemory "\<lambda>s. P (irq_state s)"
   (wp: crunch_wps simp: crunch_simps storeWord_def cleanByVA_PoU_def
-   ignore_del: clearMemory)
+   ignore_del: clearMemory cleanL2Range dsb cleanByVA)
 
 lemma dmo_clearMemory_reads_respects:
   "reads_respects aag l \<top> (do_machine_op (clearMemory ptr bits))"
@@ -479,7 +485,10 @@ lemma dmo_clearMemory_globals_equiv:
   apply(wp)
   apply clarsimp
   apply(erule use_valid)
-  apply(wp mapM_x_wp' storeWord_globals_equiv mol_globals_equiv | simp add: cleanByVA_PoU_def)+
+   apply(wpsimp wp: mapM_x_wp' storeWord_globals_equiv mol_globals_equiv
+                simp: cleanCacheRange_RAM_def cleanL2Range_def dsb_def cleanCacheRange_PoC_def
+                     cleanByVA_def)
+  apply simp
   done
 
 lemma dmo_clearMemory_reads_respects_g:
