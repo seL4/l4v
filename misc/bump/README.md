@@ -95,11 +95,11 @@ much delay (see below) by the l4v PR. As soon as both PRs are merged, follow the
 bump script recipe below.
 
 Timing: in between the three merges, the repos are in an inconsistent state with
-respect to each other. Don't worry if the merges take too long (Bamboo checks
-roughly every 5 min), the only adverse effect is a wasted test cycle that tests
-the seL4 PR without the l4v PR and/or a failure of the preprocess test. But do
-try to minimise the time the repositories are in an inconstent state with
-respect to each other, so that others can keep working.
+respect to each other. Don't worry if the merges take too long, the only adverse
+effect is a wasted test cycle that tests the seL4 PR without the l4v PR and/or a
+failure of the preprocess test. But do try to minimise the time the repositories
+are in an inconsistent state with respect to each other, so that others can keep
+working.
 
 ## Using the bump script
 
