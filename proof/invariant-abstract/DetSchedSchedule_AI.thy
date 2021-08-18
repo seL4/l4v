@@ -24704,13 +24704,7 @@ lemma preemption_path_cur_sc_more_than_ready:
   (is "valid (?cond) _ _")
   apply (clarsimp simp: preemption_path_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_. ?cond" in hoare_seq_ext[rotated])
-   apply wpsimp
-  apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
-  apply (rule_tac B="\<lambda>_. cur_sc_more_than_ready and invs" in hoare_seq_ext[rotated])
-   apply wpsimp
-   apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def cur_sc_more_than_ready_def)
-  apply wpsimp
+  apply (wpsimp wp: is_schedulable_wp | intro conjI impI)+
   done
 
 lemma preemption_path_ct_ready_if_schedulable:
@@ -24738,7 +24732,6 @@ lemma preemption_path_ct_ready_if_schedulable:
    apply (rename_tac tcb, case_tac "tcb_state tcb"; clarsimp)
   apply (rule hoare_if)
    apply (wpsimp wp: check_budget_ct_ready_if_schedulable)
-
    apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def2 cur_sc_chargeable_def
                     dest: consumed_time_bounded_helper[OF _ current_time_bounded_strengthen])
   apply (wpsimp wp: charge_budget_ready_if_schedulable)
