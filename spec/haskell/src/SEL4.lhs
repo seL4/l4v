@@ -25,7 +25,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert)
 > import SEL4.Model.Preemption(withoutPreemption)
 > import SEL4.Object.Structures
-> import SEL4.Object.TCB(asUser, mcsIRQ)
+> import SEL4.Object.TCB(asUser, mcsPreemptionPoint)
 > import SEL4.Object.Interrupt(handleInterrupt)
 > import Control.Monad.Except
 > import Data.Maybe
@@ -42,7 +42,7 @@ faults, and system calls; the set of possible events is defined in
 >     runExceptT $ handleEvent ev
 >         `catchError` (\_ -> withoutPreemption $ do
 >                       irq_opt <- doMachineOp (getActiveIRQ True)
->                       mcsIRQ irq_opt
+>                       mcsPreemptionPoint irq_opt
 >                       when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt))
 >     schedule
 >     activateThread

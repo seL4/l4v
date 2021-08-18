@@ -770,15 +770,12 @@ In preemptible code, the kernel may explicitly mark a preemption point with the 
 >     workUnits <- withoutPreemption $ getWorkUnits
 >     when (workUnitsLimit <= workUnits) $ do
 >       withoutPreemption $ setWorkUnits 0
+>       withoutPreemption $ updateTimeStamp
 >       preempt <- withoutPreemption $ doMachineOp (getActiveIRQ True)
->       if isJust preempt
->           then throwError ()
->           else do
->              withoutPreemption $ updateTimeStamp
->              csc <- withoutPreemption $ getCurSc
->              consumed <- withoutPreemption $ getConsumedTime
->              test <- withoutPreemption $ andM (scActive csc) (refillSufficient csc consumed)
->              domExp <- withoutPreemption $ isCurDomainExpired
->              if (not test || domExp)
->                   then throwError ()
->                   else return ()
+>       csc <- withoutPreemption $ getCurSc
+>       consumed <- withoutPreemption $ getConsumedTime
+>       test <- withoutPreemption $ andM (scActive csc) (refillSufficient csc consumed)
+>       domExp <- withoutPreemption $ isCurDomainExpired
+>       if (not test || domExp || isJust preempt)
+>          then throwError ()
+>          else return ()
