@@ -19488,7 +19488,8 @@ method handle_event_valid_sched_combined
                  elim: active_from_running
                  simp: runnable_eq_active released_sc_tcb_at_def
                        active_sc_tcb_at_fold ct_in_state_def2[symmetric]
-                intro: active_implies_valid_refills)
+                       vs_all_heap_simps pred_tcb_at_def obj_at_def ct_in_state_def
+                intro: active_implies_valid_refills invs_strengthen_cur_sc_tcb_are_bound)
      , fastforce intro: schact_is_rct_ct_released)
 
 method handle_event_valid_sched_yield
@@ -20116,26 +20117,23 @@ lemma handle_event_scheduler_act_sane:
              apply ((wpsimp wp: handle_invocation_schact_sane check_budget_restart_true
                                  check_budget_restart_false
                     | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
-             apply (clarsimp simp: is_schedulable_bool_def2 )
-             apply (strengthen schat_is_rct_ct_active_sc)
-             apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
-             apply (fastforce elim: active_from_running)
+             apply (fastforce dest!: schat_is_rct_ct_active_sc
+                               simp: is_schedulable_bool_def2 vs_all_heap_simps pred_tcb_at_def
+                                     obj_at_def ct_in_state_def)
             apply ((wpsimp simp: handle_call_def handle_send_def
-                            wp: handle_invocation_schact_sane check_budget_restart_true
-                                check_budget_restart_false
+                             wp: handle_invocation_schact_sane check_budget_restart_true
+                                 check_budget_restart_false
                    | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
-            apply (clarsimp simp: is_schedulable_bool_def2 )
-            apply (strengthen schat_is_rct_ct_active_sc)
-            apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
-            apply (fastforce elim: active_from_running)
+            apply (fastforce dest!: schat_is_rct_ct_active_sc
+                              simp: is_schedulable_bool_def2 vs_all_heap_simps pred_tcb_at_def
+                                    obj_at_def ct_in_state_def)
            apply ((wpsimp simp: handle_call_def handle_send_def
                            wp: handle_invocation_schact_sane check_budget_restart_true
                                check_budget_restart_false
                   | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
-           apply (clarsimp simp: is_schedulable_bool_def2 )
-           apply (strengthen schat_is_rct_ct_active_sc)
-           apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
-           apply (fastforce elim: active_from_running)
+           apply (fastforce dest!: schat_is_rct_ct_active_sc
+                             simp: is_schedulable_bool_def2 vs_all_heap_simps pred_tcb_at_def
+                                   obj_at_def ct_in_state_def)
           apply ((wpsimp simp: handle_call_def handle_send_def
                           wp: handle_invocation_schact_sane check_budget_restart_true
                               check_budget_restart_false
@@ -23513,18 +23511,10 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_combined
                    wp: hoare_vcg_conj_lift check_budget_restart_true_cur_sc_more_than_ready
           | wp check_budget_restart_true check_budget_restart_false
                handle_invocation_current_time_bounded_5)+)
-      , clarsimp cong: conj_cong
-      , (intro conjI impI
-         ; (solves \<open>clarsimp simp: current_time_bounded_def schact_is_rct_def\<close>)?)
-      , (rule invs_strengthen_cur_sc_tcb_are_bound; blast+)
-      , clarsimp simp: is_schedulable_bool_def2
-      , intro conjI impI
-      , clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def
-      , (case_tac "tcb_state tcb"; clarsimp?)
-      , clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps active_sc_def
-      , prop_tac "cur_sc_tcb_are_bound s"
-      , rule invs_strengthen_cur_sc_tcb_are_bound, blast+
-      , clarsimp simp: vs_all_heap_simps)
+      , frule (1) invs_strengthen_cur_sc_tcb_are_bound
+      , fastforce dest: ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed
+                  simp: current_time_bounded_def vs_all_heap_simps pred_tcb_at_def
+                        obj_at_def is_schedulable_bool_def2 ct_in_state_def)
 
 lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
   "\<lbrace>\<lambda>s. invs s
@@ -23542,10 +23532,9 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
   apply (cases e; simp)
 
   subgoal for syscall
-    by (case_tac syscall; simp
-        ; cur_sc_in_release_q_imp_zero_consumed_syscall_single?
-          , cur_sc_in_release_q_imp_zero_consumed_syscall_combined?) \<comment> \<open>takes 30 seconds or so\<close>
-        fastforce+
+    by (case_tac syscall; cur_sc_in_release_q_imp_zero_consumed_syscall_single?
+        , cur_sc_in_release_q_imp_zero_consumed_syscall_combined?) \<comment> \<open>takes 30 seconds or so\<close>
+       fastforce+
 
       apply (wpsimp wp: check_budget_restart_if_lift
                         update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
@@ -24599,7 +24588,7 @@ method he_ctris_two_phase_ff
  = (fastforce intro!: schact_is_rct_ct_released
                       schat_is_rct_ct_active_sc
                 simp: runnable_eq_active ct_in_state_def in_release_queue_def not_in_release_q_def
-                      is_schedulable_bool_def2
+                      is_schedulable_bool_def2 vs_all_heap_simps obj_at_def pred_tcb_at_def
                 elim: invs_cur_sc_chargeableE)
 
 lemma handle_event_ct_ready_if_schedulable[wp]:
@@ -24841,7 +24830,8 @@ lemma call_kernel_valid_sched:
   apply (frule schat_is_rct_ct_active_sc; simp add: schact_is_rct_def)
   apply (strengthen invs_strengthen_cur_sc_tcb_are_bound; simp add: schact_is_rct_def)
   apply (frule ct_in_state_weaken[where P=activatable], simp)
-  apply (fastforce simp: ct_in_state_def runnable_eq_active)
+  apply (fastforce simp: ct_in_state_def runnable_eq_active vs_all_heap_simps obj_at_def
+                         pred_tcb_at_def)
   done
 
 lemma schedule_ct_activateable:

@@ -1365,7 +1365,7 @@ lemma tcb_sched_action_cur_sc_tcb [wp]:
   "\<lbrace>cur_sc_tcb\<rbrace> tcb_sched_action action thread \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: tcb_sched_action_def set_tcb_queue_def)
 
-lemma reschedule_required_cur_sc_tcb [wp]:
+lemma reschedule_required_cur_sc_tcb_inv:
   "\<lbrace>cur_sc_tcb\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
   by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
                    set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
@@ -1382,13 +1382,21 @@ lemma sched_context_bind_tcb_invs[wp]:
                     update_sched_context_valid_objs_same valid_ioports_lift
                     update_sched_context_iflive_update update_sched_context_refs_of_update
                     update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
-                    hoare_vcg_all_lift hoare_vcg_conj_lift | wp set_tcb_obj_ref_wp)+
+                    hoare_vcg_all_lift hoare_vcg_conj_lift
+                    reschedule_required_cur_sc_tcb_inv
+         | wp set_tcb_obj_ref_wp)+
   apply (fastforce simp: obj_at_def tcb_cap_cases_def tcb_st_refs_of_def is_sc_obj_def
                          pred_tcb_at_def sc_tcb_sc_at_def valid_sched_context_def
                          is_tcb valid_idle_def state_refs_of_def get_refs_def2
                    elim: ex_cap_to_after_update' delta_sym_refs valid_objs_valid_sched_context_size
                   dest!: symreftype_inverse' split: if_splits)
   done
+
+lemma reschedule_required_cur_sc_tcb[wp]:
+  "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
+  by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
+                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
+                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
 
 lemma maybe_sched_context_bind_tcb_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. tcb_at tcb s \<and> (bound_sc_tcb_at (\<lambda>x. x \<noteq> Some sc) tcb s \<longrightarrow>

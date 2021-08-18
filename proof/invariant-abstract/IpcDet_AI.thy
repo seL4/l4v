@@ -1225,26 +1225,14 @@ lemma maybe_return_sc_sc_at_ppred:
                       get_object_def)
   by (auto simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def get_tcb_SomeD)
 
-lemma reschedule_required_cur_sc_tcb':
-  "\<lbrace>\<lambda>s. sc_tcb_sc_at \<top> (cur_sc s) s\<rbrace> reschedule_required \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  supply set_scheduler_action_cur_sc_tcb [wp del]
-  unfolding reschedule_required_def
-  by (wpsimp simp: reschedule_required_def set_scheduler_action_def tcb_sched_action_def
-                   set_tcb_queue_def get_tcb_queue_def thread_get_def is_schedulable_def
-                   cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
-
 lemma maybe_return_sc_cur_sc_tcb[wp]:
   "\<lbrace>cur_sc_tcb and (\<lambda>s. sym_refs (state_refs_of s)) and valid_objs\<rbrace>
-    maybe_return_sc ntfn_ptr thread
+   maybe_return_sc ntfn_ptr thread
    \<lbrace>\<lambda>_. cur_sc_tcb\<rbrace>"
-  supply reschedule_required_cur_sc_tcb' [wp]
-  supply reschedule_required_cur_sc_tcb [wp del]
   apply (wpsimp simp: maybe_return_sc_def update_sched_context_def
                       set_tcb_obj_ref_def set_object_def
                       get_tcb_obj_ref_def thread_get_def get_sk_obj_ref_def get_simple_ko_def
                       get_object_def)
-  apply (case_tac "thread = cur_thread s"; simp)
-   apply (fastforce split: if_split simp: sc_at_pred_n_def obj_at_def cur_sc_tcb_def)
   apply (clarsimp split: if_split simp: sc_at_pred_n_def obj_at_def cur_sc_tcb_def)
   apply (intro conjI allI impI; clarsimp?)
   apply (frule get_tcb_SomeD, clarsimp)

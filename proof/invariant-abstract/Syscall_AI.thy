@@ -475,8 +475,8 @@ lemma do_reply_invs[wp]:
   done
 
 lemma pinv_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s \<and>
-        scheduler_action s = resume_cur_thread\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> valid_invocation i s
+        \<and> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s\<rbrace>
      perform_invocation blocking call can_donate i
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (cases i
@@ -484,7 +484,7 @@ lemma pinv_invs[wp]:
                 simp: ct_in_state_def)
    apply (auto simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def pred_tcb_at_def
                      obj_at_def sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric]
-                     if_live_then_nonz_capD2 live_def)
+                     if_live_then_nonz_capD2 live_def)[1]
   done
 
 end
@@ -539,8 +539,8 @@ context Syscall_AI begin
 
 lemma pinv_tcb[wp]:
   "\<And>tptr blocking call can_donate i.
-    \<lbrace>\<lambda>s. invs s \<and> st_tcb_at active tptr s \<and> ct_active s \<and> valid_invocation i s \<and>
-         scheduler_action s = resume_cur_thread\<rbrace>
+    \<lbrace>\<lambda>s. invs s \<and> st_tcb_at active tptr s \<and> ct_active s \<and> valid_invocation i s
+         \<and> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s\<rbrace>
     perform_invocation blocking call can_donate i
     \<lbrace>\<lambda>rv. tcb_at tptr :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac i, simp_all split:option.splits)
@@ -1060,11 +1060,18 @@ lemma sts_schedulable_scheduler_action:
                   split: option.splits kernel_object.splits)
   done
 
+lemma set_thread_state_bound_sc_tcb_at_some_cur_thread[wp]:
+  "set_thread_state ref ts \<lbrace>\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def set_scheduler_action_def)
+  apply (wpsimp wp: set_object_wp is_schedulable_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_schedulable_bool_def')
+  done
+
 lemma hinv_invs':
   fixes Q :: "'state_ext state \<Rightarrow> bool" and calling blocking
   assumes perform_invocation_Q[wp]:
     "\<And>block class can_donate i.
-      \<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
+      \<lbrace>invs and Q and ct_active and (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)
        and valid_invocation i\<rbrace>
         perform_invocation block class can_donate i
       \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -1078,7 +1085,7 @@ lemma hinv_invs':
   assumes sts_Q[wp]:
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-    "\<lbrace>invs and Q and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    "\<lbrace>invs and Q and (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s) and
       (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
        handle_invocation calling blocking can_donate first_phase cptr
      \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
@@ -1114,7 +1121,7 @@ lemmas hinv_invs[wp] = hinv_invs'
 lemma hinv_tcb[wp]:
   "\<And>t calling blocking can_donate first_phase cptr.
     \<lbrace>\<lambda>s. st_tcb_at active t s \<and> invs s \<and> ct_active s \<and>
-         scheduler_action s = resume_cur_thread \<and>
+         bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s \<and>
          is_schedulable_bool (cur_thread s) s\<rbrace>
       handle_invocation calling blocking can_donate first_phase cptr
     \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1134,7 +1141,7 @@ lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>
 
 lemma hs_tcb_on_err:
   "\<lbrace>st_tcb_at active t and invs and ct_active and
-    (\<lambda>s. scheduler_action s = resume_cur_thread) and
+    (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
      handle_send blocking
    -,\<lbrace>\<lambda>e. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1143,7 +1150,7 @@ lemma hs_tcb_on_err:
   done
 
 lemma hs_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+  "\<lbrace>invs and (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
      handle_send blocking
    \<lbrace>\<lambda>r. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1300,7 +1307,7 @@ lemma do_reply_transfer_nonz_cap:
       | rule conjI)+
 
 lemma hc_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and
+  "\<lbrace>invs and (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s) and
     (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
      handle_call
    \<lbrace>\<lambda>rv. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1491,7 +1498,7 @@ lemma retype_region_ct_in_state:
 
 lemma invoke_untyped_ct_active[wp]:
   "\<lbrace>invs and valid_untyped_inv ui and ct_active and
-    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+    (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)\<rbrace>
      invoke_untyped ui
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
@@ -1535,7 +1542,7 @@ where
 lemma perform_invocation_not_blocking_not_calling_ct_active[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and
     (\<lambda>s. fault_tcb_at ((=) None) (cur_thread s) s \<and>
-         scheduler_action s = resume_cur_thread) and
+         bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s) and
     K (safe_invocation i)\<rbrace>
      perform_invocation False False can_donate i
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1550,7 +1557,7 @@ lemma decode_invocation_safe_invocation[wp]:
   by (wpsimp simp: o_def split_def)
 
 lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> scheduler_action s = resume_cur_thread \<and>
+  "\<lbrace>\<lambda>s. invs s \<and> ct_active s \<and> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s \<and>
         is_schedulable_bool (cur_thread s) s\<rbrace>
      handle_invocation False False can_donate True cptr
    \<lbrace>\<lambda>_. ct_active :: 'state_ext state \<Rightarrow> bool\<rbrace>"
@@ -1566,7 +1573,7 @@ lemma handle_invocation_not_blocking_not_calling_first_phase_ct_active[wp]:
 lemma he_invs[wp]:
   "\<And>e.
     \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
-         scheduler_action s = resume_cur_thread \<and>
+         bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s \<and>
          is_schedulable_bool (cur_thread s) s\<rbrace>
       handle_event e
     \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"

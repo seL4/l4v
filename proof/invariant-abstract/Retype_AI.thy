@@ -1921,9 +1921,15 @@ lemma cur_tcb:
   apply (simp add: s'_def)
   done
 
+lemma schduler_action_s':
+  "scheduler_action s' = scheduler_action s"
+  by (simp add: s'_def ps_def)
+
 lemma cur_sc_tcb:
   "cur_sc_tcb s \<Longrightarrow> cur_sc_tcb s'"
-  apply (simp add: cur_sc_tcb_def sc_tcb_sc_at_def, rule obj_at_pres)
+  apply (simp add: cur_sc_tcb_def sc_tcb_sc_at_def schduler_action_s')
+  apply (cases "scheduler_action s"; clarsimp)
+  apply (rule obj_at_pres)
   apply (simp add: s'_def)
   done
 

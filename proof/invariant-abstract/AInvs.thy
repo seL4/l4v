@@ -45,6 +45,7 @@ lemma akernel_invs:
   unfolding call_kernel_def preemption_path_def
   apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
                     update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
+  apply (fastforce intro: cur_sc_tcb_invs)
   done
 
 (*FIXME: should have (scheduler_action s = resume_cur_thread) as a postcondition*)

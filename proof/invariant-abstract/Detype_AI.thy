@@ -481,8 +481,7 @@ locale Detype_AI_2 =
        descendants_range cap ptr s;
        invs s;
        untyped_children_in_mdb s;
-       ct_active s;
-       scheduler_action s = resume_cur_thread
+       ct_active s
       \<rbrakk>
      \<Longrightarrow> (invs and untyped_children_in_mdb)
                (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
@@ -739,7 +738,7 @@ lemma cut_tcb_detype[detype_invs_lemmas]:
   done
 
 lemma cut_sc_tcb_detype[detype_invs_lemmas]:
-  assumes ct_act: "ct_active s \<and> scheduler_action s = resume_cur_thread"
+  assumes ct_act: "ct_active s"
   shows "cur_sc_tcb (detype (untyped_range cap) s)" (* CT_ACT *)
   apply (insert ct_act invs)
   apply (clarsimp simp: detype_def)
@@ -914,7 +913,7 @@ end
 
 context detype_locale_gen_2 begin
 lemma invariants:
-  assumes ct_act: "ct_active s \<and> scheduler_action s = resume_cur_thread"
+  assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
   using detype_invs_lemmas detype_invs_assms ct_act
