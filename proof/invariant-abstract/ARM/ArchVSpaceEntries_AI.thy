@@ -765,8 +765,7 @@ crunch valid_pdpt[wp]: reset_untyped_cap "valid_pdpt_objs"
   (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_pdpt[wp]:
-  "\<lbrace>valid_pdpt_objs and invs and ct_active and valid_untyped_inv ui and
-    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>valid_pdpt_objs and invs and ct_active and valid_untyped_inv ui\<rbrace>
        invoke_untyped ui
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q)
@@ -1161,8 +1160,7 @@ crunches check_budget_restart, invoke_sched_control_configure_flags
 
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs and
-    invocation_duplicates_valid i and
-    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+    invocation_duplicates_valid i\<rbrace>
    perform_invocation blocking call can_donate i
    \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (cases i, simp_all)
@@ -1615,12 +1613,11 @@ lemma set_thread_state_duplicates_valid[wp]:
 
 lemma handle_invocation_valid_pdpt[wp]:
   "\<lbrace>\<lambda>s. valid_pdpt_objs s \<and> invs s \<and> ct_active s \<and>
-        scheduler_action s = resume_cur_thread \<and>
         is_schedulable_bool (cur_thread s) s\<rbrace>
      handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>rv. valid_pdpt_objs::det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: handle_invocation_def)
-  apply (wp syscall_valid set_thread_state_ct_st sts_schedulable_scheduler_action
+  apply (wp syscall_valid set_thread_state_ct_st
          | simp add: split_def cong: conj_cong | wpc
          | wp (once) hoare_drop_imps)+
   apply (fastforce simp: ct_in_state_def fault_tcbs_valid_states_active
@@ -1654,7 +1651,6 @@ lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (u
 
 lemma call_kernel_valid_pdpt[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_pdpt_objs
-     and (\<lambda>s. scheduler_action s = resume_cur_thread)
      and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
       (call_kernel e) :: (unit,det_ext) s_monad
         \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
@@ -1664,13 +1660,11 @@ lemma call_kernel_valid_pdpt[wp]:
         apply (rule_tac Q="\<lambda>_. (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x)" in handleE_wp[rotated])
          apply (rule_tac B="\<lambda>_. invs and ct_running and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
-           (\<lambda>s. scheduler_action s = resume_cur_thread) and
            (\<lambda>s. is_schedulable_bool (cur_thread s) s)" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: hoare_vcg_ex_lift)
          apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            (\<lambda>s. \<forall>x\<in>ran (kheap s). obj_valid_pdpt x) and
-           (\<lambda>s. rv \<longrightarrow> scheduler_action s = resume_cur_thread) and
            (\<lambda>s. rv \<longrightarrow> (is_schedulable_bool (cur_thread s) s))" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: check_budget_restart_true)
