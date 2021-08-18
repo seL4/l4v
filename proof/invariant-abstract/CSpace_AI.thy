@@ -209,19 +209,14 @@ lemma preemption_point_inv:
           update_time_stamp_independent_A P; cur_time_independent_A P;
          \<And>f s. P (trans_state f s) = P s\<rbrakk>
          \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (clarsimp simp: preemption_point_def)
+  apply (clarsimp simp: preemption_point_def get_sc_refill_sufficient_def get_sc_active_def)
   apply (rule validE_valid)
   apply (rule hoare_seq_ext_skipE, wpsimp)
   apply (rule valid_validE)
   apply (rule OR_choiceE_weak_wp)
   apply (rule alternative_valid; (solves wpsimp)?)
   apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
-  apply (rename_tac irq_opt)
-  apply (case_tac irq_opt; clarsimp?, (solves wpsimp)?)
-  apply (rule valid_validE)
-  apply (rule hoare_seq_ext_skip
-         , solves \<open>wpsimp wp: update_time_stamp_wp simp: get_sc_refill_sufficient_def get_sc_active_def\<close>)+
+  apply (rule hoare_seq_ext_skipE, solves \<open>wpsimp wp: update_time_stamp_wp\<close>)+
   apply wpsimp
   done
 

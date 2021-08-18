@@ -3984,9 +3984,8 @@ lemma preemption_point_inv':
   apply (rule valid_validE)
   apply (rule OR_choiceE_weak_wp)
   apply (rule alternative_valid; (solves wpsimp)?)
-  apply (rule validE_valid)
-  apply (rule hoare_seq_ext_skipE, (solves \<open>wpsimp simp: reset_work_units_def\<close>)?)+
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps update_time_stamp_wp)
+  apply (wpsimp simp: reset_work_units_def
+                  wp: hoare_vcg_all_lift hoare_drop_imps update_time_stamp_wp)
   done
 
 locale Deterministic_AI_1 =
