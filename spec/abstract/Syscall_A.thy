@@ -429,9 +429,11 @@ definition preemption_path where
                           od
       else do csc \<leftarrow> gets cur_sc;
               active \<leftarrow> get_sc_active csc;
-              when active (do consumed \<leftarrow> gets consumed_time;
-                              charge_budget consumed False
-                           od)
+              if active
+                  then do consumed \<leftarrow> gets consumed_time;
+                          charge_budget consumed False
+                       od
+                  else modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr>)
            od;
       when (irq \<noteq> None) (handle_interrupt (the irq))
    od"
