@@ -495,7 +495,7 @@ lemma kernel_corres':
                       handleEvent event `~catchError~`
                         (\<lambda>_. withoutPreemption $ do
                                irq_opt <- doMachineOp (getActiveIRQ True);
-                               mcsIRQ irq_opt;
+                               mcsPreemptionPoint irq_opt;
                                when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt)
                              od);
                  _ \<leftarrow> ThreadDecls_H.schedule;
