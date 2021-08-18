@@ -25,7 +25,7 @@ This module uses the C preprocessor to select a target architecture.
 >         decodeDomainInvocation,
 >         archThreadSet, archThreadGet,
 >         decodeSchedContextInvocation, decodeSchedControlInvocation,
->         checkBudget, chargeBudget, checkBudgetRestart, mcsIRQ, commitTime, awaken, switchSchedContext,
+>         checkBudget, chargeBudget, checkBudgetRestart, mcsPreemptionPoint, commitTime, awaken, switchSchedContext,
 >         updateAt, tcbEPAppend, tcbEPDequeue, setTimeArg, isBlocked, isStopped
 >     ) where
 
@@ -1047,9 +1047,8 @@ On some architectures, the thread context may include registers that may be modi
 >         setThreadState Restart ct
 >     return result
 
-> mcsIRQ :: Maybe IRQ -> Kernel ()
-> mcsIRQ irq_opt = do
->     when (irq_opt == Just timerIRQ) $ updateTimeStamp
+> mcsPreemptionPoint :: Maybe IRQ -> Kernel ()
+> mcsPreemptionPoint irq_opt = do
 >     curThread <- getCurThread
 >     isschedulable <- isSchedulable curThread
 >     if isschedulable
