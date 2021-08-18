@@ -20813,14 +20813,11 @@ lemma preemption_point_cur_sc_offset_sufficient[wp]:
   apply (clarsimp simp: validE_R_def)
   apply (rule hoare_seq_ext_skipE, wpsimp)
   apply (clarsimp simp: validE_R_def)
-  apply (rule hoare_seq_ext_skipE, wpsimp)
-  apply (rename_tac irq_opt)
-  apply (case_tac irq_opt; clarsimp, (solves wpsimp)?)
-  apply (rule_tac Q=\<top> in hoare_weaken_preE[rotated], clarsimp)
-  apply (subst liftE_bindE[symmetric])+
-  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (rule_tac B="\<top>\<top>" in hoare_vcg_seqE)
+   apply (rule hoare_seq_ext_skipE, wpsimp)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def vs_all_heap_simps)
   apply wpsimp
-  apply (clarsimp simp: obj_at_def vs_all_heap_simps)
   done
 
 lemma preemption_point_cur_sc_offset_ready[wp]:
@@ -20836,11 +20833,6 @@ lemma preemption_point_cur_sc_offset_ready[wp]:
   apply (rule alternative_valid; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule hoare_seq_ext_skipE, wpsimp)+
-  apply (rename_tac irq_opt)
-  apply (case_tac irq_opt; clarsimp?, (solves wpsimp)?)
-  apply (rule_tac Q="?pre" in hoare_weaken_preE[rotated], clarsimp)
-  apply (subst liftE_bindE[symmetric])+
-  apply (rule hoare_seq_ext_skipE, wpsimp)
   apply wpsimp
   done
 
@@ -24676,17 +24668,14 @@ lemma preemption_path_cur_sc_in_release_q_imp_zero_consumed:
    preemption_path
    \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed :: det_state \<Rightarrow> _\<rbrace>"
   (is "valid (?cond and _) _ _")
-  apply (clarsimp simp: preemption_path_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_. ?cond and current_time_bounded 5 and cur_sc_in_release_q_imp_zero_consumed"
-               in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_timestamp_cur_sc_in_release_q_imp_zero_consumed
-                     update_time_stamp_current_time_bounded_5)
+  apply (rule_tac R1="cur_sc_in_release_q_imp_zero_consumed" in hoare_pre_add[THEN iffD2])
    apply (fastforce intro: cur_sc_chargeable_cur_sc_in_release_q_imp_zero_consumed)
+  apply (clarsimp simp: preemption_path_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
-  apply (rule_tac B="\<lambda>_. invs and active_sc_valid_refills and valid_release_q
-                         and consumed_time_bounded and cur_sc_more_than_ready
+  apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed and invs and active_sc_valid_refills and valid_release_q
+                         and cur_sc_more_than_ready
                          and current_time_bounded 2 and cur_sc_in_release_q_imp_zero_consumed"
                in hoare_seq_ext)
    apply (wpsimp wp: handle_interrupt_cur_sc_in_release_q_imp_zero_consumed)
@@ -24717,7 +24706,6 @@ lemma preemption_path_cur_sc_more_than_ready:
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule_tac B="\<lambda>_. ?cond" in hoare_seq_ext[rotated])
    apply wpsimp
-  apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
   apply (rule_tac B="\<lambda>_. cur_sc_more_than_ready and invs" in hoare_seq_ext[rotated])
    apply wpsimp
@@ -24735,9 +24723,6 @@ lemma preemption_path_ct_ready_if_schedulable:
   (is "valid (?cond and _ ) _ _")
   apply (clarsimp simp: preemption_path_def)
   apply (rule hoare_seq_ext_skip, wpsimp simp: ct_in_state_def)
-  apply (rule_tac B="\<lambda>_. ?cond and current_time_bounded 5" in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_time_stamp_ct_ready_if_schedulable update_time_stamp_valid_sched
-                     update_time_stamp_current_time_bounded_5)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
   apply (rule_tac B="\<lambda>_. ct_not_blocked_on_receive and ct_not_blocked_on_ntfn
@@ -24753,6 +24738,7 @@ lemma preemption_path_ct_ready_if_schedulable:
    apply (rename_tac tcb, case_tac "tcb_state tcb"; clarsimp)
   apply (rule hoare_if)
    apply (wpsimp wp: check_budget_ct_ready_if_schedulable)
+
    apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def2 cur_sc_chargeable_def
                     dest: consumed_time_bounded_helper[OF _ current_time_bounded_strengthen])
   apply (wpsimp wp: charge_budget_ready_if_schedulable)
@@ -24771,8 +24757,6 @@ lemma preemption_path_valid_sched:
   (is "valid (?cond and _ ) _ _")
   apply (clarsimp simp: preemption_path_def)
   apply (rule hoare_seq_ext_skip, wpsimp simp: ct_in_state_def)
-  apply (rule_tac B="\<lambda>_. ?cond and current_time_bounded 5" in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_time_stamp_valid_sched update_time_stamp_current_time_bounded_5)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
   apply (rule_tac B="\<lambda>_. invs and valid_sched and scheduler_act_sane and current_time_bounded 2"
