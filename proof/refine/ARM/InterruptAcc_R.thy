@@ -263,63 +263,64 @@ lemma preemptionPoint_corres:
     apply (clarsimp simp: state_relation_def)
    apply simp
   apply (rule_tac Q="\<lambda>rv s. \<exists>rv'' t. rv = (rv'', s) \<and> rv'' = (workUnitsLimit \<le> work_units) \<and> ?abs s"
-               in corres_symb_exec_l)
-     apply (case_tac rv; clarsimp)
-     apply (rename_tac bool state)
-     apply (rule_tac F="bool = (workUnitsLimit \<le> work_units) \<and> ?abs state" in corres_req)
-      apply simp
-     apply (rule corres_guard_imp)
-       apply (rule corres_if3)
-         apply clarsimp
-        apply (rule_tac P="?abs" and P'="?conc" in corres_inst)
-        apply (rule corres_split_skip)
-           apply (wpsimp simp: reset_work_units_def)
-          apply (wpsimp simp: setWorkUnits_def)
-         apply (corressimp corres: setWorkUnits_corres)
-        apply (rule corres_split_skip)
-           apply (wpsimp simp: cur_sc_tcb_def)
-          apply wpsimp
-         apply (corressimp corres: corres_machine_op)
-        apply (clarsimp split: if_split)
-        apply (subst liftE_bindE)+
-        apply (rule corres_split_skip; corressimp corres: updateTimeStamp_corres)
-        apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
-         apply (corressimp corres: getCurSc_corres)
-        apply (rule corres_split'[rotated 2, OF gets_sp getConsumedTime_sp])
-         apply (corressimp corres: getConsumedTime_corres)
-        apply (clarsimp simp: andM_def ifM_def bind_assoc)
-        apply (rule corres_split'[rotated 2, OF get_sc_active_sp scActive_sp])
-         apply (corressimp corres: scActive_corres)
-         apply (fastforce dest: valid_objs_valid_sched_context_size
-                          simp: cur_sc_tcb_def obj_at_def is_sc_obj_def sc_at_pred_n_def)
-        apply (clarsimp split: if_split)
-        apply (intro conjI impI)
-         apply (rule corres_guard_imp)
-           apply (rule corres_split[OF refillSufficient_corres]; simp)
-              apply (rule corres_split[OF isCurDomainExpired_corres])
-                apply (clarsimp simp: returnOk_def
-                               split: if_split)
-               apply wpsimp
-              apply (wpsimp simp: isCurDomainExpired_def)+
-          apply (prop_tac "is_active_sc (cur_sc s) s")
-           apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def)
-          apply (frule (1) active_sc_valid_refillsE)
-          apply (clarsimp simp: obj_at_def is_sc_obj_def sc_at_pred_n_def vs_all_heap_simps
-                                active_sc_def sc_valid_refills_def rr_valid_refills_def
-                         split: if_splits)
-         apply simp
-        apply corressimp
-       apply (fastforce intro: corres_returnOkTT)
-      apply (clarsimp split: if_split)
-     apply (clarsimp split: if_split)
-    apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
-                          wrap_ext_bool_det_ext_ext_def)
+               in corres_symb_exec_l[rotated])
+     apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
+                           wrap_ext_bool_det_ext_ext_def)
+    apply wpsimp
+    apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def get_def return_def
+                          work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
    apply wpsimp
-   apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def get_def return_def
-                         work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
-  apply wpsimp
   apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
-                        work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def )
+                        work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
+  apply (case_tac rv; clarsimp)
+  apply (rename_tac bool state)
+  apply (rule_tac F="bool = (workUnitsLimit \<le> work_units) \<and> ?abs state" in corres_req)
+   apply simp
+  apply (rule corres_guard_imp)
+    apply (rule corres_if3)
+      apply clarsimp
+     apply (rule_tac P="?abs" and P'="?conc" in corres_inst)
+     apply (rule corres_split_skip)
+        apply (wpsimp simp: reset_work_units_def)
+       apply (wpsimp simp: setWorkUnits_def)
+      apply (corressimp corres: setWorkUnits_corres)
+     apply (rule corres_split_skip)
+        apply wpsimp
+       apply wpsimp
+      apply (corressimp corres: updateTimeStamp_corres)
+     apply (rule corres_split_skip)
+        apply (wpsimp simp: cur_sc_tcb_def)
+       apply wpsimp
+      apply (corressimp corres: corres_machine_op)
+     apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
+      apply (corressimp corres: getCurSc_corres)
+     apply (rule corres_split'[rotated 2, OF gets_sp getConsumedTime_sp])
+      apply (corressimp corres: getConsumedTime_corres)
+     apply (clarsimp simp: andM_def ifM_def bind_assoc)
+     apply (rule corres_split'[rotated 2, OF get_sc_active_sp scActive_sp])
+      apply (corressimp corres: scActive_corres)
+      apply (fastforce dest: valid_objs_valid_sched_context_size
+                       simp: cur_sc_tcb_def obj_at_def is_sc_obj_def sc_at_pred_n_def)
+     apply (clarsimp split: if_split)
+     apply (intro conjI impI)
+      apply (rule corres_guard_imp)
+      apply (rule corres_split[OF refillSufficient_corres]; simp)
+          apply (rule corres_split[OF isCurDomainExpired_corres])
+            apply (clarsimp simp: returnOk_def
+                           split: if_split)
+           apply wpsimp
+          apply (wpsimp simp: isCurDomainExpired_def)+
+       apply (prop_tac "is_active_sc (cur_sc s) s")
+        apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def)
+       apply (frule (1) active_sc_valid_refillsE)
+       apply (clarsimp simp: obj_at_def is_sc_obj_def sc_at_pred_n_def vs_all_heap_simps
+                             active_sc_def sc_valid_refills_def rr_valid_refills_def
+                      split: if_splits)
+      apply simp
+     apply corressimp
+    apply (fastforce intro: corres_returnOkTT)
+   apply (clarsimp split: if_split)
+  apply (clarsimp split: if_split)
   done
 
 lemma updateTimeStamp_inv:
@@ -359,8 +360,9 @@ lemma preemptionPoint_inv:
   apply (case_tac preempt; clarsimp)
    apply (rule hoare_seq_ext_skipE)
     apply (wpsimp wp: updateTimeStamp_inv)
-   apply (wpsimp wp: getRefills_wp hoare_drop_imps
-               simp: isCurDomainExpired_def getDomainTime_def refillSufficient_def)+
+  apply (rule hoare_seq_ext_skipE, solves wpsimp)+
+  apply (wpsimp wp: getRefills_wp hoare_drop_imps
+              simp: isCurDomainExpired_def getDomainTime_def refillSufficient_def)
   done
 
 lemma ct_running_irq_state_independent[intro!, simp]:

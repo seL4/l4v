@@ -2297,7 +2297,7 @@ lemma callKernel_valid_duplicates':
     (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    callKernel e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: callKernel_def mcsIRQ_def)
+  apply (simp add: callKernel_def mcsPreemptionPoint_def)
   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2 handleEvent_valid_duplicates')
   done
 
