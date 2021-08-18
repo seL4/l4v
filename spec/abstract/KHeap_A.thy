@@ -658,19 +658,14 @@ where
      liftE $ do_extended_op update_work_units;
      OR_choiceE work_units_limit_reached
      (doE liftE $ do_extended_op reset_work_units;
+          liftE $ update_time_stamp;
           irq_opt \<leftarrow> liftE $ do_machine_op (getActiveIRQ True);
-          if (\<exists>y. irq_opt = Some y)
-             then throwError ()
-             else do update_time_stamp;
-                     cur_sc \<leftarrow> gets cur_sc;
-                     consumed \<leftarrow> gets consumed_time;
-                     test \<leftarrow> andM (get_sc_active cur_sc)
-                                  (get_sc_refill_sufficient cur_sc consumed);
-                     exp \<leftarrow> gets is_cur_domain_expired;
-                     if \<not> test \<or> exp
-                        then throwError ()
-                        else returnOk ()
-                  od
+          cur_sc \<leftarrow> liftE $ gets cur_sc;
+          consumed \<leftarrow> liftE $ gets consumed_time;
+          test \<leftarrow> liftE $ andM (get_sc_active cur_sc)
+                               (get_sc_refill_sufficient cur_sc consumed);
+          exp \<leftarrow> liftE $ gets is_cur_domain_expired;
+          whenE (\<not>test \<or> exp \<or> irq_opt \<noteq> None) $ throwError ()
       odE)
      (returnOk ())
    odE"
