@@ -1058,10 +1058,11 @@ On some architectures, the thread context may include registers that may be modi
 >         else do
 >             scPtr <- getCurSc
 >             sc <- getSchedContext scPtr
->             when (scRefillMax sc > 0) $ do
->                 consumedTime <- getConsumedTime
->                 capacity <- refillCapacity scPtr consumedTime
->                 chargeBudget consumedTime False True
+>             if (scRefillMax sc > 0)
+>                 then do
+>                   consumedTime <- getConsumedTime
+>                   chargeBudget consumedTime False True
+>                 else setConsumedTime 0
 
 > switchSchedContext :: Kernel ()
 > switchSchedContext = do
