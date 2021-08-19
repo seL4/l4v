@@ -212,10 +212,9 @@ crunch valid_vspace_objs'[wp]: reset_untyped_cap "valid_vspace_objs'"
   (wp: mapME_x_inv_wp crunch_wps simp: crunch_simps unless_def)
 
 lemma invoke_untyped_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
-          and valid_untyped_inv ui\<rbrace>
-       invoke_untyped ui
-   \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
+  "\<lbrace>valid_vspace_objs' and invs and ct_active and valid_untyped_inv ui\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q)
       apply (wp init_arch_objects_valid_vspace | simp)+
      apply (auto simp: post_retype_invs_def split: if_split_asm)[1]
@@ -305,8 +304,7 @@ lemma invs_valid_caps[elim]:
   by (fastforce intro: valid_objs_caps)
 
 lemma perform_invocation_valid_vspace_objs'[wp]:
-  "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs' and
-    (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs'\<rbrace>
    perform_invocation blocking call can_donate i
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   by (cases i; wpsimp wp: send_signal_interrupt_states simp: arch_perform_invocation_def)
@@ -316,12 +314,11 @@ crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_obj
   (simp: crunch_simps wp: crunch_wps)
 
 lemma handle_invocation_valid_vspace_objs'[wp]:
-  "\<lbrace>\<lambda>s. valid_vspace_objs' s \<and> invs s \<and> ct_active s \<and>
-        scheduler_action s = resume_cur_thread \<and> is_schedulable_bool (cur_thread s) s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_vspace_objs' s \<and> invs s \<and> ct_active s \<and> is_schedulable_bool (cur_thread s) s\<rbrace>
    handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: handle_invocation_def)
-  apply (wp syscall_valid set_thread_state_ct_st sts_schedulable_scheduler_action
+  apply (wp syscall_valid set_thread_state_ct_st
          | simp add: split_def cong: conj_cong | wpc
          | wp (once) hoare_drop_imps)+
   apply (fastforce simp: ct_in_state_def)
@@ -345,22 +342,20 @@ lemma schedule_valid_vspace_objs'[wp]:
 
 (* FIXME RT: clean up the duplication here (also in ARM); factor out handle_event? *)
 lemma call_kernel_valid_vspace_objs'[wp]:
-  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs' and
-    (\<lambda>s. scheduler_action s = resume_cur_thread) and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
-      (call_kernel e) :: (unit,unit) s_monad
+  "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs'
+    and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
+   (call_kernel e) :: (unit,unit) s_monad
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def preemption_path_def)
        apply (rule hoare_seq_ext[rotated])
         apply (rule validE_valid)
         apply (rule_tac Q="\<lambda>_. valid_vspace_objs'" in handleE_wp[rotated])
          apply (rule_tac B="\<lambda>_. invs and ct_running and valid_vspace_objs' and
-           (\<lambda>s. scheduler_action s = resume_cur_thread) and
            (\<lambda>s. is_schedulable_bool (cur_thread s) s)" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: hoare_vcg_ex_lift)
          apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            valid_vspace_objs' and
-           (\<lambda>s. rv \<longrightarrow> scheduler_action s = resume_cur_thread) and
            (\<lambda>s. rv \<longrightarrow> (is_schedulable_bool (cur_thread s) s))" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: check_budget_restart_true)

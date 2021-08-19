@@ -608,7 +608,7 @@ context begin interpretation Arch .
 lemma delete_objects_invs[wp]:
   "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at ((=) (cap.UntypedCap dev ptr bits f)) slot s
     \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
-    invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+    invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
   apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)

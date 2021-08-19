@@ -710,7 +710,6 @@ lemma perform_asid_control_invocation_non_cspace_obj_at:
   "\<lbrace>obj_at P t
       and ex_nonz_cap_to t
       and ct_active
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and invs
       and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci
@@ -745,7 +744,6 @@ lemma perform_asid_control_invocation_st_tcb_at:
   "\<lbrace>pred_tcb_at proj P t
       and ex_nonz_cap_to t
       and ct_active
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and invs
       and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci
@@ -757,7 +755,6 @@ lemma perform_asid_control_invocation_sc_at_pred_n:
   "\<lbrace>sc_at_pred_n N proj P scp
       and ex_nonz_cap_to scp
       and ct_active
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and invs
       and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci
@@ -793,7 +790,7 @@ lemma aci_invs':
   assumes retype_region_Q[wp]:"\<And>a b c d e. \<lbrace>Q\<rbrace> retype_region a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes set_cap_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
-  "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci\<rbrace>
+  "\<lbrace>invs and Q and ct_active and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
   proof -
   have cap_insert_invsQ:
@@ -930,7 +927,7 @@ lemmas aci_invs[wp] =
   aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma invoke_arch_invs[wp]:
-  "\<lbrace>invs and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_arch_inv ai\<rbrace>
+  "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def arch_perform_invocation_def)
@@ -1319,7 +1316,6 @@ lemma arch_pinv_st_tcb_at:
   "\<lbrace>pred_tcb_at proj P t
       and ex_nonz_cap_to t
       and ct_active
-      and (\<lambda>s. scheduler_action s = resume_cur_thread)
       and invs
       and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
@@ -1335,7 +1331,7 @@ crunches arch_perform_invocation
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_ct_active:
-  "\<lbrace>invs and valid_arch_inv ai and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
+  "\<lbrace>invs and valid_arch_inv ai and ct_active\<rbrace>
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. ct_active\<rbrace>" (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (wpsimp wp: ct_in_state_thread_state_lift'[where Pre="\<lambda>_. ?P"]
