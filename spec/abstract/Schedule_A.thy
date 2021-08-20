@@ -106,7 +106,7 @@ where
     scp \<leftarrow> assert_opt sc_opt;
     sc' \<leftarrow> get_sched_context cur_sc;
 
-    when (scp \<noteq> cur_sc \<and> 0 < sc_refill_max sc') $ do
+    when (scp \<noteq> cur_sc) $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
       refill_unblock_check scp
      od;
