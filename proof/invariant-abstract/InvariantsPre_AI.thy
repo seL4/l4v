@@ -293,7 +293,7 @@ lemma delta_sym_refs_insert_only:
   using diff by (auto simp: y z symrefrel split: if_splits)
 
 abbreviation (input)
-  "bound a \<equiv> a \<noteq> None"
+  "bound a \<equiv> \<exists>y. a = Some y"
 
 lemma inj_ObjRef[simp]: "inj ObjRef" by (auto intro!: injI)
 lemma inj_IRQRef[simp]: "inj IRQRef" by (auto intro!: injI)
