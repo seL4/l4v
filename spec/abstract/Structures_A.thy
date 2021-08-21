@@ -310,10 +310,12 @@ threads waiting to receive or be idle. Whenever threads would be waiting to
 send and receive simultaneously messages are transferred immediately.
 \<close>
 
-datatype endpoint
-           = IdleEP
-           | SendEP "obj_ref list"
-           | RecvEP "obj_ref list"
+datatype endpoint =
+    IdleEP
+  | SendEP (ep_queue: "obj_ref list")
+  | RecvEP (ep_queue: "obj_ref list")
+  where
+    "ep_queue IdleEP = []"
 
 text \<open>Notifications are sets of binary semaphores (stored in the
 \emph{badge word}). Unlike endpoints, threads may choose to block waiting to
