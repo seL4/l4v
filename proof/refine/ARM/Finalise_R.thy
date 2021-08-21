@@ -4634,7 +4634,7 @@ lemma fast_finalise_corres:
     (* EndpointCap *)
     apply clarsimp
     apply (rule corres_guard_imp)
-      apply (rule cancel_all_ipc_corres)
+      apply (rule cancelAllIPC_corres)
      apply (simp add: valid_cap_def)
     apply (simp add: valid_cap'_def)
    (* NotificationCap *)
