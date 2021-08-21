@@ -3793,16 +3793,11 @@ lemma cancel_all_ipc_loop_valid_sched:
   apply (rule hoare_gen_asm, rule ball_mapM_x_scheme[OF _ cancel_all_ipc_loop_body_valid_sched])
   by (wpsimp wp: cancel_all_ipc_loop_body_blocked_on_send_recv gts_wp')
 
-(* Can this be made more general? *)
-lemma case_IdleEP_helper:
-  "(case x of IdleEP \<Rightarrow> f | _ \<Rightarrow> g) = (if x=IdleEP then f else g)"
-  by (case_tac x; simp)
-
 lemma cancel_all_ipc_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s \<and> valid_objs s \<and> valid_idle s \<and> sym_refs (state_refs_of s)\<rbrace>
    cancel_all_ipc epptr
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  unfolding cancel_all_ipc_def case_IdleEP_helper
+  unfolding cancel_all_ipc_def endpoint.case_eq_if
   apply (wpsimp wp: reschedule_valid_sched_const cancel_all_ipc_loop_valid_sched
                     get_simple_ko_wp get_ep_queue_wp'
               simp: obj_at_def)
