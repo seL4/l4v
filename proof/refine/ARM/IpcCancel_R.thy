@@ -2336,73 +2336,6 @@ lemma in_send_ep_queue_TCBBlockedSend:
   apply (fastforce simp: state_refs_of_def)
   done
 
-lemma in_recv_ep_queue_TCBBlockedRecv:
-  "\<lbrakk>kheap s epptr = Some (Endpoint (Structures_A.RecvEP queue)); t \<in> set queue; invs s\<rbrakk>
-   \<Longrightarrow> (epptr, TCBBlockedRecv) \<in> state_refs_of s t"
-  apply (prop_tac "valid_ep (Structures_A.RecvEP queue) s")
-   apply (fastforce simp: valid_objs_def valid_obj_def dest!: invs_valid_objs)
-  apply (clarsimp simp: state_refs_of_def valid_ep_def split: option.splits)
-  apply (intro conjI impI allI; (fastforce simp: obj_at_def)?)
-  apply (prop_tac "(t, EPRecv) \<in> state_refs_of s epptr", clarsimp simp: state_refs_of_def)
-  apply (clarsimp simp: sym_refs_def dest!: invs_sym_refs)
-  apply (fastforce simp: state_refs_of_def)
-  done
-
-lemma in_send_ep_queue_thread_state:
-  "\<lbrakk>ko_at' (Structures_H.SendEP queue) epPtr s; t \<in> set queue;
-    sym_refs (state_refs_of' s); valid_objs' s\<rbrakk>
-   \<Longrightarrow> st_tcb_at' isBlockedOnSend t s"
-  apply (prop_tac "valid_ep' (SendEP queue) s")
-   apply (fastforce simp: valid_objs'_def valid_obj'_def obj_at'_def projectKOs)
-  apply (clarsimp simp: valid_ep'_def)
-  apply (prop_tac "(t, EPSend) \<in> state_refs_of' s epPtr")
-   apply (clarsimp simp: state_refs_of'_def obj_at'_def projectKOs)
-  apply (clarsimp simp: sym_refs_def obj_at'_def)
-  apply (fastforce simp: state_refs_of'_def tcb_bound_refs'_def st_tcb_at'_def get_refs_def2
-                         isBlockedOnSend_def obj_at'_def projectKOs
-                  split: if_splits thread_state.splits)
-  done
-
-lemma in_recv_ep_queue_thread_state:
-  "\<lbrakk>ko_at' (Structures_H.RecvEP queue) epPtr s; t \<in> set queue;
-    sym_refs (state_refs_of' s); valid_objs' s\<rbrakk>
-   \<Longrightarrow> st_tcb_at' isBlockedOnReceive t s"
-  apply (prop_tac "valid_ep' (RecvEP queue) s")
-   apply (fastforce simp: valid_objs'_def valid_obj'_def obj_at'_def projectKOs)
-  apply (clarsimp simp: valid_ep'_def)
-  apply (prop_tac "(t, EPRecv) \<in> state_refs_of' s epPtr")
-   apply (clarsimp simp: state_refs_of'_def obj_at'_def projectKOs)
-  apply (clarsimp simp: sym_refs_def obj_at'_def)
-  apply (fastforce simp: state_refs_of'_def tcb_bound_refs'_def st_tcb_at'_def get_refs_def2
-                         isBlockedOnReceive_def obj_at'_def projectKOs
-                  split: if_splits thread_state.splits)
-  done
-
-lemma IdleEP_versus_SendEP_and_RecvEP:
-  "\<lbrakk>ep = Structures_A.IdleEP \<Longrightarrow> P;
-    \<And>q. ep = Structures_A.SendEP q \<or> ep = Structures_A.RecvEP q \<Longrightarrow> P\<rbrakk>
-   \<Longrightarrow> P"
-  using Structures_A.endpoint.exhaust by auto
-
-lemma not_IdleEP_case_split:
-  "ep \<noteq> Structures_A.IdleEP
-   \<Longrightarrow> (case ep of Structures_A.IdleEP \<Rightarrow> f
-                 | _ \<Rightarrow> g)
-       = g"
-  by (cases ep; clarsimp?)
-
-lemma not_IdleEP_case_split':
-  "ep \<noteq> Structures_H.IdleEP
-   \<Longrightarrow> (case ep of Structures_H.IdleEP \<Rightarrow> f
-                 | _ \<Rightarrow> g)
-       = g"
-  by (cases ep; clarsimp?)
-
-lemma get_ep_queue_Send_or_Recv:
-  "ep = Structures_A.SendEP q \<or> ep = Structures_A.RecvEP q
-   \<Longrightarrow> get_ep_queue ep = return q"
-  by (fastforce simp: get_ep_queue_def split: Structures_A.endpoint.splits)
-
 lemma cancel_all_ipc_corres:
   "corres dc (invs and valid_sched and ep_at ep_ptr) (invs' and ep_at' ep_ptr)
              (cancel_all_ipc ep_ptr) (cancelAllIPC ep_ptr)"
@@ -2470,68 +2403,31 @@ proof -
     apply (rename_tac ep ep')
     apply (case_tac "ep = Structures_A.IdleEP \<or> ep' = Structures_H.IdleEP")
      apply (case_tac ep; case_tac ep'; simp add: ep_relation_def get_ep_queue_def)
-    apply (simp add: not_IdleEP_case_split not_IdleEP_case_split' del: K_bind_def)
-    apply (rule_tac ep=ep in IdleEP_versus_SendEP_and_RecvEP; fastforce?)
-    apply (rule corres_symb_exec_l)
-       apply (rule_tac F="q = queue \<and> distinct queue \<and> epQueue ep' = queue"
-                    in corres_gen_asm)
-       apply (simp only: )
-       apply (rule corres_guard_imp)
-         apply (rule P)
-         apply simp
-        apply simp
-       apply simp
-       apply (intro conjI impI allI; fastforce?)
-       apply (elim disjE)
-        apply (clarsimp simp: ep_relation_def)
-        apply (prop_tac "valid_ep' (Structures_H.SendEP queue) s")
-         apply (fastforce intro: ep_ko_at_valid_objs_valid_ep')
-        apply (clarsimp simp: valid_ep'_def)+
-       apply (clarsimp simp: ep_relation_def)
-       apply (prop_tac "valid_ep' (Structures_H.RecvEP (epQueue ep')) s")
-        apply (fastforce intro: ep_ko_at_valid_objs_valid_ep')
-       apply (clarsimp simp: valid_ep'_def
-                      split: endpoint.splits)
-       apply (simp add: get_ep_queue_def)
-       apply (case_tac ep; wpsimp?)
-      apply (clarsimp simp: get_ep_queue_Send_or_Recv)
-      apply wpsimp
-      apply (elim disjE)
-       apply (prop_tac "valid_ep (Structures_A.SendEP q) s")
-        apply (fastforce intro: valid_objs_ko_at
-                          dest: invs_valid_objs
-                          simp: obj_at_def valid_obj_def)
-       apply (intro conjI impI allI ballI; fastforce?)
-          apply (fastforce dest!: in_send_ep_queue_TCBBlockedSend
-                            simp: vs_all_heap_simps obj_at_def
-                                  state_refs_of_def tcb_st_refs_of_def refs_of_def get_refs_def2
-                           split: option.splits Structures_A.thread_state.splits
-                                  Structures_A.kernel_object.splits)
-         apply (rule not_idle_tcb_in_SendEp; (fastforce simp: obj_at_def)?)
-        apply (fastforce dest!: in_send_ep_queue_TCBBlockedSend
-                          simp: vs_all_heap_simps state_refs_of_def tcb_st_refs_of_def
-                                get_refs_def2 obj_at_def reply_unlink_ts_pred_def
-                         split: Structures_A.thread_state.splits)
-       apply (simp add: valid_ep_def)
-      apply (clarsimp simp: ep_relation_def)
-     apply (prop_tac "valid_ep (Structures_A.RecvEP q) s")
-      apply (fastforce intro: valid_objs_ko_at
-                        dest: invs_valid_objs
-                        simp: obj_at_def valid_obj_def)
-     apply (intro conjI impI allI ballI; fastforce?)
-         apply (fastforce dest!: in_recv_ep_queue_TCBBlockedRecv
-                           simp: vs_all_heap_simps obj_at_def
-                                 state_refs_of_def tcb_st_refs_of_def refs_of_def get_refs_def2
-                          split: option.splits Structures_A.thread_state.splits
-                                 Structures_A.kernel_object.splits)
-        apply (rule not_idle_tcb_in_RecvEp; (fastforce simp: obj_at_def)?)
-       apply (clarsimp simp: vs_all_heap_simps reply_unlink_ts_pred_def)
-       apply (subst identity_eq)
-       apply (erule st_tcb_recv_reply_state_refs[OF _ invs_sym_refs, rotated])
-       apply (fastforce simp: pred_tcb_at_def obj_at_def reply_at_ppred_def)
-      apply (clarsimp simp: valid_ep_def)
-     apply (clarsimp simp: ep_relation_def)
-    apply (wpsimp simp: get_ep_queue_def)
+    apply (simp add: endpoint.case_eq_if Structures_A.endpoint.case_eq_if del: K_bind_def)
+    apply (simp add: get_ep_queue_def Structures_A.endpoint.case_eq_if)
+    apply (rule_tac F="epQueue ep' = ep_queue ep \<and> distinct (ep_queue ep)" in corres_req)
+     apply (rule conjI; clarsimp)
+      apply (case_tac ep; clarsimp simp: ep_relation_def)
+     apply (drule (1) valid_objs_ko_at[OF invs_valid_objs])
+     apply (case_tac ep; clarsimp simp: valid_obj_def valid_ep_def)
+    apply simp
+    apply (rule corres_guard_imp)
+      apply (rule P[simplified])
+      apply simp
+     apply (clarsimp; rule conjI; (fastforce simp: invs_def)?)
+     apply clarsimp
+     apply (prop_tac "t \<noteq> idle_thread s")
+      apply (case_tac ep;
+             fastforce simp: obj_at_def invs_def valid_state_def valid_pspace_def
+                      dest!: not_idle_tcb_in_SendEp not_idle_tcb_in_RecvEp)
+     apply (prop_tac "st_tcb_at is_blocked_on_send_recv t s")
+      apply (case_tac ep; erule_tac t=t in ep_queued_st_tcb_at; (fastforce simp: invs_def)?)
+     apply (clarsimp simp: pred_tcb_at_disj tcb_at_kh_simps[symmetric] reply_unlink_ts_pred_def
+                           conj_disj_distribR is_blocked_on_receive_def is_blocked_on_send_def)
+     apply (fastforce simp: pred_tcb_at_def obj_at_def
+                     elim!: st_tcb_recv_reply_state_refs[OF _ invs_sym_refs, simplified op_equal])
+    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_objs'_valid_tcbs')
+    apply (fastforce dest!: ep_ko_at_valid_objs_valid_ep' simp: valid_ep'_def split: endpoint.split_asm)
     done
 qed
 
