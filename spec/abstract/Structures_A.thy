@@ -383,24 +383,33 @@ datatype thread_state
   = Running
   | Inactive
   | Restart
-  | BlockedOnReceive obj_ref "obj_ref option" receiver_payload
+  | is_blocked_on_receive: BlockedOnReceive obj_ref (reply_object: "obj_ref option") receiver_payload
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply obj_ref
   | BlockedOnNotification obj_ref
   | IdleThreadState
+  where
+  "reply_object (BlockedOnReply reply) = Some reply"
+  | "reply_object Running = None"
+  | "reply_object Inactive = None"
+  | "reply_object Restart = None"
+  | "reply_object (BlockedOnSend _ _) = None"
+  | "reply_object (BlockedOnNotification _) = None"
+  | "reply_object IdleThreadState = None"
 
 (* FIXME RT: generating the following discriminators and selectors automatically breaks
              unrelated proofs in strange ways *)
-
+(*
 fun reply_object where
   "reply_object (BlockedOnReceive _ reply_opt _) = reply_opt"
 | "reply_object (BlockedOnReply reply) = Some reply"
 | "reply_object _ = None"
-
+*)
+(*
 definition is_blocked_on_receive where
  "is_blocked_on_receive st \<equiv>
     \<exists>ep reply_opt receiver_data. st = BlockedOnReceive ep reply_opt receiver_data"
-
+*)
 definition is_blocked_on_send :: "thread_state \<Rightarrow> bool" where
   "is_blocked_on_send st \<equiv> \<exists>ep sender_data. st = BlockedOnSend ep sender_data"
 
