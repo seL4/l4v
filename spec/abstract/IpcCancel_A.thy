@@ -276,9 +276,8 @@ text \<open>Getting and setting endpoint queues.\<close>
 definition
   get_ep_queue :: "endpoint \<Rightarrow> (obj_ref list,'z::state_ext) s_monad"
 where
- "get_ep_queue ep \<equiv> case ep of SendEP q \<Rightarrow> return q
-                              | RecvEP q \<Rightarrow> return q
-                              | _ \<Rightarrow> fail"
+ "get_ep_queue ep \<equiv> case ep of IdleEP \<Rightarrow> fail
+                              | _ \<Rightarrow> return (ep_queue ep)"
 
 primrec (nonexhaustive)
   update_ep_queue :: "endpoint \<Rightarrow> obj_ref list \<Rightarrow> endpoint"
