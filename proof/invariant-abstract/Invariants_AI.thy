@@ -693,10 +693,7 @@ definition
 where
   "valid_ep ep s \<equiv> case ep of
     IdleEP \<Rightarrow> True
-  | SendEP ts \<Rightarrow>
-      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)
-  | RecvEP ts \<Rightarrow>
-      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
+  | _ \<Rightarrow> (\<lambda>ts. ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts) (ep_queue ep)"
 
 definition
   valid_sched_context :: "sched_context \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"

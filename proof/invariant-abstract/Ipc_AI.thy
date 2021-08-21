@@ -2042,13 +2042,6 @@ crunches do_ipc_transfer
 
 end
 
-definition
-  "queue_of ep \<equiv> case ep of
-     Structures_A.IdleEP \<Rightarrow> []
-   | Structures_A.SendEP q \<Rightarrow> q
-   | Structures_A.RecvEP q \<Rightarrow> q"
-
-
 primrec
   threads_of_ntfn :: "ntfn \<Rightarrow> obj_ref list"
 where
@@ -2062,7 +2055,7 @@ primrec (nonexhaustive)
 where
   "threads_of (Notification x) = threads_of_ntfn (ntfn_obj x)"
 | "threads_of (TCB x)           = []"
-| "threads_of (Endpoint x)      = queue_of x"
+| "threads_of (Endpoint x)      = ep_queue x"
 
 
 (*
@@ -2792,13 +2785,13 @@ crunch mdb[wp]: set_message_info valid_mdb
 
 lemma ep_queue_cap_to:
   "\<lbrakk> ko_at (Endpoint ep) p s; invs s;
-     \<lbrakk> live (Endpoint ep) \<longrightarrow> queue_of ep \<noteq> [] \<rbrakk>
-        \<Longrightarrow> t \<in> set (queue_of ep) \<rbrakk>
+     \<lbrakk> live (Endpoint ep) \<longrightarrow> ep_queue ep \<noteq> [] \<rbrakk>
+        \<Longrightarrow> t \<in> set (ep_queue ep) \<rbrakk>
      \<Longrightarrow> ex_nonz_cap_to t s"
   apply (frule sym_refs_ko_atD, fastforce)
   apply (erule obj_at_valid_objsE, fastforce)
   apply (clarsimp simp: valid_obj_def)
-  apply (cases ep, simp_all add: queue_of_def valid_ep_def live_def
+  apply (cases ep, simp_all add: ep_queue_def valid_ep_def live_def
                                  st_tcb_at_refs_of_rev)
    apply (drule(1) bspec)
    apply (erule st_tcb_ex_cap, clarsimp+)

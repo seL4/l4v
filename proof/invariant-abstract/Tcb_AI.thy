@@ -1723,34 +1723,19 @@ lemma set_ep_minor_invs:
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 
-lemma monadic_rewrite_queue_of:
-  "monadic_rewrite False True (K (ep \<noteq> IdleEP))
-                   (return (queue_of ep)) (case_endpoint fail return return ep)"
-  by (cases ep; clarsimp simp: queue_of_def monadic_rewrite_def)
-
-lemma valid_ep_def':
-  "valid_ep ep s = (ep \<noteq> IdleEP \<longrightarrow>  queue_of ep \<noteq> [] \<and> distinct (queue_of ep) \<and>
-                                     (\<forall>t \<in> set (queue_of ep). tcb_at t s))"
-  by (cases ep; fastforce simp: valid_ep_def queue_of_def)
-
-lemma update_ep_queue_triv: "ep \<noteq> IdleEP \<Longrightarrow> update_ep_queue ep (queue_of ep) = ep"
-  by (cases ep; clarsimp simp: queue_of_def)
-
 lemma reorder_ep_invs[wp]:
   "\<lbrace>invs and st_tcb_at (\<lambda>st. ep_blocked st = Some nptr) tptr\<rbrace> reorder_ep nptr tptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp only: reorder_ep_def get_ep_queue_def)
+  apply (simp only: reorder_ep_def get_ep_queue_def endpoint.case_eq_if if_cancel)
+  apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp set_ep_minor_invs hoare_drop_imps tcb_ep_dequeue_rv_wf'
             tcb_ep_dequeue_valid_ep tcb_ep_dequeue_inv tcb_ep_dequeue_rv_wf''
             tcb_ep_append_valid_ep tcb_ep_append_inv tcb_ep_append_rv_wf''')
-    apply (rule monadic_rewrite_refine_valid[OF monadic_rewrite_queue_of, where P''=\<top>,simplified])
-    apply (wp get_simple_ko_wp)+
   apply (clarsimp cong: conj_cong)
-  apply (rename_tac ep)
+  apply (rename_tac ep s)
   apply (frule valid_objs_ko_at[rotated], fastforce)
-  apply (clarsimp simp: valid_obj_def valid_ep_def' pred_tcb_at_def obj_at_def cong: conj_cong)
-  apply (subgoal_tac "tptr \<in> set (queue_of ep)")
-   apply (rule context_conjI, clarsimp simp: queue_of_def)
-   apply (clarsimp simp: update_ep_queue_triv)
+  apply (clarsimp simp: valid_obj_def valid_ep_def endpoint.case_eq_if pred_tcb_at_def obj_at_def cong: conj_cong)
+  apply (subgoal_tac "tptr \<in> set (ep_queue ep)")
+   apply (rule context_conjI; clarsimp)
    apply (intro conjI allI)
     apply (erule_tac x="idle_thread s" in ballE)
      apply (frule_tac p=nptr in sym_refs_ko_atD[OF _ invs_sym_refs, rotated])
@@ -1758,12 +1743,12 @@ lemma reorder_ep_invs[wp]:
      apply (clarsimp simp: refs_of_rev obj_at_def is_tcb_def)
      apply (erule_tac x="(idle_thread s, typ)" in ballE; simp)
      apply (fastforce simp: refs_of_rev valid_idle_def pred_tcb_at_def obj_at_def dest: invs_valid_idle)
-    apply (case_tac ep; clarsimp simp: queue_of_def)
+    apply (case_tac ep; clarsimp simp: ep_queue_def)
    apply (fastforce simp: if_live_then_nonz_cap_def obj_at_def live_def live_ntfn_def dest: invs_iflive)
   apply (frule invs_sym_refs)
   apply (drule_tac p=tptr in sym_refs_ko_atD[rotated])
    apply (simp add: obj_at_def)
-  apply (clarsimp simp: ep_blocked_def obj_at_def queue_of_def
+  apply (clarsimp simp: ep_blocked_def obj_at_def ep_queue_def
                  split: if_splits endpoint.splits thread_state.splits)
   done
 

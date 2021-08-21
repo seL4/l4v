@@ -1081,6 +1081,8 @@ lemma ep_redux_simps:
   by (fastforce split: list.splits option.splits
                  simp: valid_ep_def valid_ntfn_def valid_bound_obj_def)+
 
+lemma update_ep_queue_triv[simp]: "ep \<noteq> IdleEP \<Longrightarrow> update_ep_queue ep (ep_queue ep) = ep"
+  by (cases ep; clarsimp simp: ep_queue_def)
 
 crunch arch[wp]: set_simple_ko "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
