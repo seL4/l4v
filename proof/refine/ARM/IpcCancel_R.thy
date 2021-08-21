@@ -2258,7 +2258,7 @@ lemma cancelAllIPC_loop_body_valid_queues:
   apply (wpsimp wp: sts_valid_queues sts_st_tcb_at'_cases hoare_drop_imps)
   done
 
-lemma cancel_all_ipc_corres_helper:
+lemma cancelAllIPC_corres_helper:
   "distinct list \<Longrightarrow>
    corres dc
           ((\<lambda>s. \<forall>t \<in> set list. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
@@ -2336,7 +2336,7 @@ lemma in_send_ep_queue_TCBBlockedSend:
   apply (fastforce simp: state_refs_of_def)
   done
 
-lemma cancel_all_ipc_corres:
+lemma cancelAllIPC_corres:
   "corres dc (invs and valid_sched and ep_at ep_ptr) (invs' and ep_at' ep_ptr)
              (cancel_all_ipc ep_ptr) (cancelAllIPC ep_ptr)"
 proof -
@@ -2361,7 +2361,7 @@ proof -
       apply (rule corres_split_deprecated[OF _ set_ep_corres])
          apply clarsimp
          apply (rule corres_split_deprecated[OF rescheduleRequired_corres])
-           apply (erule cancel_all_ipc_corres_helper)
+           apply (erule cancelAllIPC_corres_helper)
           apply (rule_tac Q="?abs_guard list" in hoare_weaken_pre)
            apply (rule hoare_strengthen_post)
             apply (rule ball_mapM_x_scheme)
