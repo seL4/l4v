@@ -133,7 +133,7 @@ where
 text \<open>The Page capability confers the authority to map, unmap and flush the
   memory page.\<close>
 definition
-perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
+perform_page_invocation :: "page_invocation \<Rightarrow> (data list,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> case iv of
     PageMap cap ct_slot entries vspace \<Rightarrow> do
       set_cap cap ct_slot;
@@ -144,25 +144,23 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
       asid \<leftarrow> case cap of
                   ArchObjectCap (PageCap _ _ _ _ _ (Some (as, _))) \<Rightarrow> return as
                 | _ \<Rightarrow> fail;
-      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid
+      invalidate_page_structure_cache_asid (addrFromPPtr vspace) asid;
+      return []
     od
   | PageUnmap cap ct_slot \<Rightarrow>
       (case cap of
-        PageCap dev base rights map_type sz mapped \<Rightarrow>
-            (case mapped of
+        PageCap dev base rights map_type sz mapped \<Rightarrow> do
+            case mapped of
               Some _ \<Rightarrow> (case map_type of
                           VMVSpaceMap \<Rightarrow> perform_page_invocation_unmap cap ct_slot
                         | _ \<Rightarrow> fail)
-            | None \<Rightarrow> return ())
+            | None \<Rightarrow> return ();
+            return []
+        od
       | _ \<Rightarrow> fail)
 \<^cancel>\<open>| PageIOMap asid cap ct_slot entries \<Rightarrow> undefined\<close>
-  | PageGetAddr ptr \<Rightarrow> do
-      paddr \<leftarrow> return $ fromPAddr $ addrFromPPtr ptr;
-      ct \<leftarrow> gets cur_thread;
-      msg_transferred \<leftarrow> set_mrs ct Nothing [paddr];
-      msg_info \<leftarrow> return $ MI msg_transferred 0 0 0;
-      set_message_info ct msg_info
-    od"
+  | PageGetAddr ptr \<Rightarrow>
+      return [addrFromPPtr ptr]"
 
 text \<open>PageTable capabilities confer the authority to map and unmap page tables.\<close>
 definition
@@ -286,7 +284,7 @@ definition
           InvokePageTable oper \<Rightarrow> arch_no_return $ perform_page_table_invocation oper
         | InvokePageDirectory oper \<Rightarrow> arch_no_return $ perform_page_directory_invocation oper
         | InvokePDPT oper \<Rightarrow> arch_no_return $ perform_pdpt_invocation oper
-        | InvokePage oper \<Rightarrow> arch_no_return $ perform_page_invocation oper
+        | InvokePage oper \<Rightarrow> perform_page_invocation oper
         | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
         | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper
         | InvokeIOPort oper \<Rightarrow> perform_io_port_invocation oper
