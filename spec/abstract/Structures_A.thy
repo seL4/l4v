@@ -397,6 +397,8 @@ datatype thread_state
   | "reply_object (BlockedOnNotification _) = None"
   | "reply_object IdleThreadState = None"
 
+declare thread_state.distinct_disc[rule del]
+
 (* FIXME RT: generating the following discriminators and selectors automatically breaks
              unrelated proofs in strange ways *)
 (*
