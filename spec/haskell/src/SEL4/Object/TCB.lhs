@@ -1026,12 +1026,7 @@ On some architectures, the thread context may include registers that may be modi
 >     if sufficient
 >         then do
 >             domExp <- isCurDomainExpired
->             if domExp
->                 then do
->                     setReprogramTimer True
->                     rescheduleRequired
->                     return False
->                 else return True
+>             return (not domExp)
 >         else do
 >             consumed <- getConsumedTime
 >             chargeBudget consumed True True

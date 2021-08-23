@@ -672,8 +672,7 @@ This module uses the C preprocessor to select a target architecture.
 > isCurDomainExpired :: Kernel Bool
 > isCurDomainExpired = do
 >     domainTime <- getDomainTime
->     consumedTime <- getConsumedTime
->     return $! domainTime < consumedTime + minBudget
+>     return $! domainTime == 0
 
 > commitTime :: Kernel ()
 > commitTime = do
@@ -686,11 +685,6 @@ This module uses the C preprocessor to select a target architecture.
 >           (refillBudgetCheckRoundRobin consumed)
 >           (refillBudgetCheck consumed)
 >       updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
->     when (numDomains > 1) $ do
->       consumed <- getConsumedTime
->       domainTime <- getDomainTime
->       time' <- return $ if (domainTime < consumed) then 0 else (domainTime - consumed)
->       setDomainTime time'
 >     setConsumedTime 0
 
 > rollbackTime :: Kernel ()
@@ -709,6 +703,10 @@ This module uses the C preprocessor to select a target architecture.
 >     setCurTime curTime'
 >     consumed <- getConsumedTime
 >     setConsumedTime (consumed + curTime' - prevTime)
+>     domainTime <- getDomainTime
+>     if (curTime' - prevTime + minBudget >= domainTime)
+>         then setDomainTime 0
+>         else setDomainTime (domainTime - (curTime' - prevTime))
 
 > maybeDonateSc :: PPtr TCB -> PPtr Notification -> Kernel ()
 > maybeDonateSc tcbPtr ntfnPtr = do
