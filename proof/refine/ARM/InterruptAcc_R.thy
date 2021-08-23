@@ -105,6 +105,11 @@ lemma getCurTime_corres[corres]:
   apply (simp add: getCurTime_def state_relation_def)
   done
 
+lemma getDomainTime_corres[corres]:
+  "corres (=) \<top> \<top> (gets domain_time) getDomainTime"
+  apply (simp add: getDomainTime_def state_relation_def)
+  done
+
 lemma getCurTime_sp:
   "\<lbrace>P\<rbrace> getCurTime \<lbrace>\<lambda>rv s. rv = ksCurTime s \<and> P s\<rbrace>"
   apply wpsimp
@@ -113,6 +118,8 @@ lemma getCurTime_sp:
 lemma updateTimeStamp_corres[corres]:
   "corres dc \<top> \<top> update_time_stamp updateTimeStamp"
   apply (clarsimp simp: update_time_stamp_def updateTimeStamp_def setConsumedTime_def)
+  apply (prop_tac "minBudget = MIN_BUDGET")
+   apply (clarsimp simp: minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
   apply (rule corres_split'[rotated 2, OF gets_sp getCurTime_sp])
    apply corressimp
   apply (rule corres_split'[where r'="(=)"])
@@ -130,9 +137,15 @@ lemma updateTimeStamp_corres[corres]:
          apply (clarsimp simp: state_relation_def cdt_relation_def)
         apply (clarsimp simp: setConsumedTime_def)
         apply (rule_tac Q'="\<lambda>rv s. rv = ksConsumedTime s" in corres_symb_exec_r)
-           apply (rule corres_modify)
-           apply (clarsimp simp: state_relation_def cdt_relation_def)
-          apply (wpsimp simp: getConsumedTime_def)+
+           apply (rule corres_guard_imp)
+             apply (rule corres_split[OF corres_modify])
+                apply (simp add: state_relation_def cdt_relation_def)
+               apply (rule corres_guard_imp)
+                 apply (rule corres_rel_imp)
+                  apply (rule corres_split[OF getDomainTime_corres])
+                    apply (fastforce intro: setDomainTime_corres
+                                      simp: num_domains_def)
+                   apply (wpsimp simp: getConsumedTime_def)+
   done
 
 lemma refillSufficient_corres:
@@ -211,8 +224,8 @@ lemma isCurDomainExpired_corres[corres]:
   "corres (=) \<top> \<top> (gets is_cur_domain_expired) isCurDomainExpired"
   apply (simp add: is_cur_domain_expired_def isCurDomainExpired_def getDomainTime_def
                    getConsumedTime_def)
-  apply (clarsimp simp: corres_underlying_def gets_def bind_def get_def return_def
-                        state_relation_def minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
+  apply (clarsimp simp: corres_underlying_def gets_def bind_def get_def return_def num_domains_def
+                        state_relation_def)
   done
 
 lemma get_sc_active_sp:
@@ -324,7 +337,8 @@ lemma preemptionPoint_corres:
   done
 
 lemma updateTimeStamp_inv:
-   "\<lbrakk>updateTimeStamp_independent P; time_state_independent_H P; getCurrentTime_independent_H P\<rbrakk>
+   "\<lbrakk>updateTimeStamp_independent P; time_state_independent_H P; getCurrentTime_independent_H P;
+     domain_time_independent_H P\<rbrakk>
     \<Longrightarrow> updateTimeStamp \<lbrace>P\<rbrace>"
   apply (simp add: updateTimeStamp_def doMachineOp_def getCurrentTime_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
@@ -335,10 +349,10 @@ lemma updateTimeStamp_inv:
    apply (drule_tac x="\<lambda>_. curTime'" in spec)
    apply (drule_tac x=id in spec)
    apply fastforce
-  apply (wpsimp simp: setConsumedTime_def)
+  apply (wpsimp simp: setConsumedTime_def setDomainTime_def getDomainTime_def)
   apply (clarsimp simp: updateTimeStamp_independent_def)
   apply (drule_tac x=id in spec)
-  apply (fastforce simp: update_time_stamp_independent_A_def)
+  apply (fastforce simp: update_time_stamp_independent_A_def domain_time_independent_H_def)
   done
 
 lemma preemptionPoint_inv:
@@ -347,6 +361,7 @@ lemma preemptionPoint_inv:
           "updateTimeStamp_independent P"
           "getCurrentTime_independent_H P"
           "time_state_independent_H P"
+          "domain_time_independent_H P"
   shows "preemptionPoint \<lbrace>P\<rbrace>"
   using assms
   apply (simp add: preemptionPoint_def setWorkUnits_def getWorkUnits_def modifyWorkUnits_def

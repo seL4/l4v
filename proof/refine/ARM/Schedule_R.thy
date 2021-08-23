@@ -1777,8 +1777,8 @@ lemma domain_time_corres:
   by (simp add: getDomainTime_def state_relation_def)
 
 lemma \<mu>s_to_ms_equiv:
-  "\<mu>s_to_ms = usToMs"
-  by (simp add: usToMs_def \<mu>s_to_ms_def)
+  "\<mu>s_in_ms = usInMs"
+  by (simp add: usInMs_def \<mu>s_in_ms_def)
 
 lemma us_to_ticks_equiv:
   "us_to_ticks = usToTicks"
@@ -3131,6 +3131,9 @@ lemma awaken_invs':
   apply (fastforce intro!: releaseQNonEmptyAndReady_implies_releaseQNonEmpty)
   done
 
+crunches checkDomainTime
+  for invs'[wp]: invs'
+
 lemma schedule_invs':
   "\<lbrace>invs'\<rbrace>
    ThreadDecls_H.schedule
@@ -3140,6 +3143,7 @@ lemma schedule_invs':
   apply (simp add: schedule_def)
   apply (rule_tac hoare_seq_ext, rename_tac t)
    apply (rule_tac Q="invs'" in hoare_weaken_pre)
+    apply (rule hoare_seq_ext_skip, wpsimp)
     apply (rule_tac hoare_seq_ext[OF _ getCurThread_sp])
     apply (rule_tac hoare_seq_ext[OF _ isSchedulable_sp])
     apply (rule_tac hoare_seq_ext[OF _ getSchedulerAction_sp])

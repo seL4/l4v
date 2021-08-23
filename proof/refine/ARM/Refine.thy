@@ -288,6 +288,12 @@ lemma do_user_op_sched_act:
   apply (wp select_wp | simp add: split_def)+
   done
 
+lemma do_user_op_domain_time:
+  "do_user_op f tc \<lbrace>\<lambda>s. 0 < domain_time s\<rbrace>"
+  unfolding do_user_op_def
+  apply (wp select_wp | simp add: split_def)+
+  done
+
 lemma do_user_op_invs2:
   "\<lbrace>einvs  and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list \<rbrace>
@@ -298,7 +304,7 @@ lemma do_user_op_invs2:
    (\<lambda>s. scheduler_action s = resume_cur_thread) and (invs and ct_running) and
    (\<lambda>s. 0 < domain_time s) and valid_domain_list"
    in hoare_strengthen_post)
-  apply (wp do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act
+  apply (wp do_user_op_valid_list do_user_op_valid_sched do_user_op_sched_act do_user_op_domain_time
     do_user_op_invs | simp | force)+
   done
 
@@ -322,7 +328,8 @@ lemma valid_sched_init[simp]:
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
-  by (simp add: init_A_st_def ext_init_def valid_domain_list_def)
+  apply (simp add: init_A_st_def ext_init_def valid_domain_list_def)
+  sorry
 
 lemma akernel_invariant:
   "ADT_A uop \<Turnstile> full_invs"
@@ -816,6 +823,7 @@ lemma ckernel_invariant:
    apply (frule ckernel_init_domain_time)
    apply (frule ckernel_init_domain_list)
    apply (fastforce simp: Init_H_def valid_domain_list'_def)
+
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
 
   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
