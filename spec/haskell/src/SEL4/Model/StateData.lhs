@@ -258,8 +258,8 @@ These functions access and modify the current domain and the number of ticks rem
 > curDomain :: Kernel Domain
 > curDomain = gets ksCurDomain
 
-> usToMs :: Word64
-> usToMs = 1000
+> usInMs :: Word64
+> usInMs = 1000
 
 > nextDomain :: Kernel ()
 > nextDomain = modify (\ks ->
@@ -268,7 +268,7 @@ These functions access and modify the current domain and the number of ticks rem
 >   in ks { ksWorkUnitsCompleted = 0,
 >           ksDomScheduleIdx = ksDomScheduleIdx',
 >           ksCurDomain = dschDomain next,
->           ksDomainTime = usToTicks ((dschLength next) * usToMs),
+>           ksDomainTime = usToTicks ((dschLength next) * usInMs),
 >           ksReprogramTimer = True })
 
 > getDomainTime :: Kernel Word64

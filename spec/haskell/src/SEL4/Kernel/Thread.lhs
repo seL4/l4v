@@ -339,9 +339,17 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 >     then return (targetPrio < curPrio)
 >     else return True
 
+> checkDomainTime :: Kernel ()
+> checkDomainTime = do
+>     exp <- isCurDomainExpired
+>     when exp $ do
+>           setReprogramTimer True
+>           rescheduleRequired
+
 > schedule :: Kernel ()
 > schedule = do
 >     awaken
+>     checkDomainTime
 >     curThread <- getCurThread
 >     isSchedulable <- isSchedulable curThread
 >     action <- getSchedulerAction
@@ -722,4 +730,3 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 
 %
-
