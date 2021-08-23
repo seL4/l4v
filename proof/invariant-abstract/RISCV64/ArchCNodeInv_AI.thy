@@ -582,12 +582,7 @@ next
      apply (wp replace_cap_invs | simp)
      apply ((wp replace_cap_invs | simp)+)[1]
        apply (wp "2.hyps")
-         apply (wp preemption_point_Q | simp)+
-         apply (wp preemption_point_inv, simp+)
-         apply (wp preemption_point_Q)
-         apply ((wp preemption_point_inv irq_state_independent_A_conjI irq_state_independent_AI
-                    invs_irq_state_independent
-               | simp add: valid_rec_del_call_def irq_state_independent_A_def)+)[1]
+         apply (wpsimp wp: preemption_point_Q hoare_vcg_imp_lift')
         apply (simp(no_asm))
         apply (rule spec_strengthen_postE)
         apply (rule "2.hyps"[simplified rec_del_call.simps slot_rdcall.simps conj_assoc], assumption+)
