@@ -4232,4 +4232,14 @@ lemma updateTimeStamp_independentI[intro!, simp]:
    \<Longrightarrow> updateTimeStamp_independent P"
   by (simp add: updateTimeStamp_independent_def)
 
+definition "domain_time_independent_H (P :: kernel_state \<Rightarrow> bool)
+  \<equiv> \<forall>f s. P s \<longrightarrow>
+           P (s\<lparr>ksDomainTime := f (ksDomainTime s)\<rparr>)"
+
+lemma domain_time_independent_HI[intro!, simp]:
+   "\<lbrakk>\<And>s f. P (s\<lparr>ksDomainTime := f (ksDomainTime s)\<rparr>)
+            = P s\<rbrakk>
+    \<Longrightarrow> domain_time_independent_H P"
+   by (simp add: domain_time_independent_H_def)
+
 end
