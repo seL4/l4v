@@ -518,16 +518,6 @@ where
   od"
 
 
-definition
-  commit_domain_time :: "(unit, 'z::state_ext) s_monad"
-where
-  "commit_domain_time = do
-    consumed \<leftarrow> gets consumed_time;
-    domain_time \<leftarrow> gets domain_time;
-    time' \<leftarrow> return (if domain_time < consumed then 0 else domain_time - consumed);
-    modify (\<lambda>s. s\<lparr>domain_time := time'\<rparr>)
-  od"
-
 text \<open> Update time consumption of current scheduling context and current domain. \<close>
 definition
   commit_time :: "(unit, 'z::state_ext) s_monad"
@@ -545,8 +535,6 @@ where
       od;
       update_sched_context csc (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
     od;
-    when (num_domains > 1) $
-      commit_domain_time;
     modify (\<lambda>s. s\<lparr>consumed_time := 0\<rparr> )
   od"
 
