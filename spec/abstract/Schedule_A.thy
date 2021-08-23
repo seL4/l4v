@@ -51,7 +51,7 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := thread \<rparr>)
    od"
 
-definition "\<mu>s_to_ms = 1000"
+definition "\<mu>s_in_ms = 1000"
 
 definition
   next_domain :: "(unit, 'z::state_ext) s_monad" where
@@ -61,7 +61,7 @@ definition
       let next_dom = (domain_list s)!domain_index'
       in s\<lparr> domain_index := domain_index',
             cur_domain := fst next_dom,
-            domain_time := us_to_ticks (snd next_dom * \<mu>s_to_ms),
+            domain_time := us_to_ticks (snd next_dom * \<mu>s_in_ms),
             reprogram_timer := True\<rparr>);
     do_extended_op $ modify (\<lambda>s. s \<lparr>work_units_completed := 0\<rparr>)
   od"
@@ -202,8 +202,19 @@ definition
    od"
 
 definition
+  check_domain_time :: "(unit, 'z::state_ext) s_monad"
+where
+  "check_domain_time \<equiv> do
+     exp \<leftarrow> gets is_cur_domain_expired;
+     when exp $ do modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
+                   reschedule_required
+                od
+   od"
+
+definition
   "schedule \<equiv> do
      awaken;
+     check_domain_time;
      ct \<leftarrow> gets cur_thread;
      ct_schedulable \<leftarrow> is_schedulable ct;
      action \<leftarrow> gets scheduler_action;

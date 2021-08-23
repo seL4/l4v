@@ -698,11 +698,7 @@ where
 
      if sufficient
      then do dom_exp \<leftarrow> gets is_cur_domain_expired;
-             if dom_exp then do modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
-                                reschedule_required;
-                                return False
-                             od
-                        else return True
+             return (\<not>dom_exp)
           od
      else do consumed \<leftarrow> gets consumed_time;
              charge_budget consumed True;
