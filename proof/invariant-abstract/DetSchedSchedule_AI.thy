@@ -23678,7 +23678,7 @@ lemma suspend_st_tcb_at_halted:
    \<lbrace>\<lambda>yb s. st_tcb_at (\<lambda>ts. P ts \<or> halted ts) t s\<rbrace>"
   apply (cases "t = thread")
    apply (wpsimp wp: hoare_disjI2 suspend_makes_halted
-               simp: pred_disj_def pred_tcb_at_disj[symmetric])
+               simp: pred_disj_def pred_tcb_at_disj)
   apply (wpsimp wp: suspend_st_tcb_at_other)
   done
 

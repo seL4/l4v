@@ -3501,8 +3501,8 @@ lemma has_reply_cap_cte_lift:
   by (simp add: cte_wp_at_caps_of_state, rule ctes)
 
 lemma pred_tcb_at_disj:
-  "(pred_tcb_at proj P t s \<or> pred_tcb_at proj Q t s) = pred_tcb_at proj (\<lambda>a. P a \<or> Q a) t s"
-  by (fastforce simp add: pred_tcb_at_def obj_at_def)
+  "pred_tcb_at proj (\<lambda>x. P x \<or> P' x) p s = (pred_tcb_at proj (\<lambda>x. P x) p s \<or> pred_tcb_at proj (\<lambda>x. P' x) p s)"
+  by (fastforce simp: pred_tcb_at_def obj_at_def)
 
 lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   unfolding empty_cnode_def
