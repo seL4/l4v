@@ -2269,7 +2269,7 @@ lemma updateTimeStamp_invs'[wp]:
 
 lemma updateTimeStamp_sch_act_simple[wp]:
   "updateTimeStamp \<lbrace>sch_act_simple\<rbrace>"
-  unfolding updateTimeStamp_def sch_act_simple_def
+  unfolding updateTimeStamp_def sch_act_simple_def setDomainTime_def
   by (wpsimp wp: dmo_invs'_simple simp: setCurTime_def)
 
 crunches updateTimeStamp
