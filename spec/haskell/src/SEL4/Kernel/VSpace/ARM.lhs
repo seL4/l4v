@@ -1493,11 +1493,19 @@ notion of the largest permitted object size, and checks it appropriately.
 > performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performARMMMUInvocation i = withoutPreemption $ do
 >     case i of
->         InvokePageDirectory oper -> performPageDirectoryInvocation oper
->         InvokePageTable oper -> performPageTableInvocation oper
+>         InvokePageDirectory oper -> do
+>             performPageDirectoryInvocation oper
+>             return []
+>         InvokePageTable oper -> do
+>             performPageTableInvocation oper
+>             return []
 >         InvokePage oper -> performPageInvocation oper
->         InvokeASIDControl oper -> performASIDControlInvocation oper
->         InvokeASIDPool oper -> performASIDPoolInvocation oper
+>         InvokeASIDControl oper -> do
+>             performASIDControlInvocation oper
+>             return []
+>         InvokeASIDPool oper -> do
+>             performASIDPoolInvocation oper
+>             return []
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
 #endif
@@ -1505,7 +1513,6 @@ notion of the largest permitted object size, and checks it appropriately.
 >         InvokeIOSpace _ -> fail "performARMMMUInvocation: not an MMU invocation"
 >         InvokeIOPageTable _ -> fail "performARMMMUInvocation: not an MMU invocation"
 #endif
->     return $ []
 
 > performPageDirectoryInvocation :: PageDirectoryInvocation -> Kernel ()
 > performPageDirectoryInvocation (PageDirectoryFlush typ start end pstart pd asid) =
@@ -1571,7 +1578,7 @@ the PT/PD is consistent.
 >                                 (i * bit (pageBitsForSize(ARMSection))) }
 #endif
 
-> performPageInvocation :: PageInvocation -> Kernel ()
+> performPageInvocation :: PageInvocation -> Kernel [Word]
 >
 > performPageInvocation (PageMap asid cap ctSlot entries) = do
 >     updateCap ctSlot cap
@@ -1602,6 +1609,7 @@ the PT/PD is consistent.
 >                                     (VPtr $ (fromPPtr (last slots)) + (bit pdeBits - 1))
 >                                     (addrFromPPtr (head slots))
 >             when tlbFlush $ invalidateTLBByASID asid
+>     return []
 >
 > performPageInvocation (PageUnmap cap ctSlot) = do
 >     case capVPMappedAddress cap of
@@ -1611,25 +1619,19 @@ the PT/PD is consistent.
 >     ArchObjectCap cap <- getSlotCap ctSlot
 >     updateCap ctSlot (ArchObjectCap $
 >                            cap { capVPMappedAddress = Nothing })
+>     return []
 >
-> performPageInvocation (PageFlush typ start end pstart pd asid) =
+> performPageInvocation (PageFlush typ start end pstart pd asid) = do
 >     when (start < end) $ do
 >         root_switched <- setVMRootForFlush pd asid
 >         doMachineOp $ doFlush typ start end pstart
 >         when root_switched $ do
 >             tcb <- getCurThread
 >             setVMRoot tcb
+>     return []
 >
 > performPageInvocation (PageGetAddr ptr) = do
->     let paddr = fromPAddr $ addrFromPPtr ptr
->     ct <- getCurThread
->     msgTransferred <- setMRs ct Nothing [paddr]
->     msgInfo <- return $ MI {
->             msgLength = msgTransferred,
->             msgExtraCaps = 0,
->             msgCapsUnwrapped = 0,
->             msgLabel = 0 }
->     setMessageInfo ct msgInfo
+>     return [fromPAddr $ addrFromPPtr ptr]
 
 > performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
 > performASIDControlInvocation (MakePool frame slot parent base) = do
