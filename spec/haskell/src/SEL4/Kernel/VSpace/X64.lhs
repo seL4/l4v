@@ -1019,15 +1019,24 @@ Checking virtual address for page size dependent alignment:
 > performX64MMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 > performX64MMUInvocation i = withoutPreemption $ do
 >     case i of
->         InvokePDPT oper -> performPDPTInvocation oper
->         InvokePageDirectory oper -> performPageDirectoryInvocation oper
->         InvokePageTable oper -> performPageTableInvocation oper
+>         InvokePDPT oper -> do
+>             performPDPTInvocation oper
+>             return []
+>         InvokePageDirectory oper -> do
+>             performPageDirectoryInvocation oper
+>             return []
+>         InvokePageTable oper -> do
+>             performPageTableInvocation oper
+>             return []
 >--         InvokeIOPageTable oper -> performIOPageTableInvocation oper
 >         InvokePage oper -> performPageInvocation oper
->         InvokeASIDControl oper -> performASIDControlInvocation oper
->         InvokeASIDPool oper -> performASIDPoolInvocation oper
+>         InvokeASIDControl oper -> do
+>             performASIDControlInvocation oper
+>             return []
+>         InvokeASIDPool oper -> do
+>             performASIDPoolInvocation oper
+>             return []
 >         _ -> fail "Unreachable"
->     return $ []
 
 > performPDPTInvocation :: PDPTInvocation -> Kernel ()
 > performPDPTInvocation (PDPTMap cap ctSlot pml4e pml4Slot vspace) = do
@@ -1121,7 +1130,7 @@ Checking virtual address for page size dependent alignment:
 >     pd <- getObject slot
 >     return $ pd /= InvalidPDE
 
-> performPageInvocation :: PageInvocation -> Kernel ()
+> performPageInvocation :: PageInvocation -> Kernel [Word]
 > performPageInvocation (PageMap cap ctSlot entries vspace) = do
 >     updateCap ctSlot cap
 >     case entries of
@@ -1133,16 +1142,19 @@ Checking virtual address for page size dependent alignment:
 >         ArchObjectCap (PageCap _ _ _ _ _ (Just (as, _))) -> return as
 >         _ -> fail "impossible"
 >     invalidatePageStructureCacheASID (addrFromPPtr vspace) asid
+>     return []
 >
-> performPageInvocation (PageUnmap cap ctSlot) =
+> performPageInvocation (PageUnmap cap ctSlot) = do
 >     when (isJust $ capVPMappedAddress cap) $ case capVPMapType cap of
->         VMVSpaceMap -> performPageInvocationUnmap cap ctSlot
+>         VMVSpaceMap -> do
+>             performPageInvocationUnmap cap ctSlot
 >         _ -> fail "mapped cap has incorrect map type"
-
+>     return []
 
 >-- performPageInvocation (PageIOMap cap cptr vtdpte slot) = do
 >--     updateCap cptr cap
 >--     storeIOPTE slot vtdpte
+>--     return []
 >--
 >-- performPageInvocation (PageIOUnmap (ArchObjectCap cap@PageCap {}) ctSlot) = do
 >--     case capVPMappedAddress cap of
@@ -1152,18 +1164,11 @@ Checking virtual address for page size dependent alignment:
 >--     ArchObjectCap cap <- getSlotCap ctSlot
 >--     updateCap ctSlot (ArchObjectCap $
 >--                           cap { capVPMappedAddress = Nothing })
+>--     return []
 >-- performPageInvocation (PageIOUnmap _ _)  = fail "impossible" -}
 >
 > performPageInvocation (PageGetAddr ptr) = do
->     let paddr = fromPAddr $ addrFromPPtr ptr
->     ct <- getCurThread
->     msgTransferred <- setMRs ct Nothing [paddr]
->     msgInfo <- return $ MI {
->             msgLength = msgTransferred,
->             msgExtraCaps = 0,
->             msgCapsUnwrapped = 0,
->             msgLabel = 0 }
->     setMessageInfo ct msgInfo
+>     return [fromPAddr $ addrFromPPtr ptr]
 
 > performPageInvocationUnmap :: ArchCapability -> PPtr CTE -> Kernel ()
 > performPageInvocationUnmap cap ctSlot = do
@@ -1175,7 +1180,6 @@ Checking virtual address for page size dependent alignment:
 >     updateCap ctSlot (ArchObjectCap $
 >                           cap { capVPMappedAddress = Nothing,
 >                                 capVPMapType = VMNoMap })
->
 
 > performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
 > performASIDControlInvocation (MakePool frame slot parent base) = do
