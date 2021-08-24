@@ -16151,25 +16151,13 @@ lemmas rec_del_invs''_CTEDeleteCall = rec_del_invs''
                                        simplified pred_conj_def,
                                        THEN use_specE']
 
-lemma tcb_release_enqueue_not_in_release_q:
-  "\<lbrace>not_in_release_q t' and (\<lambda>s. t \<noteq> t')\<rbrace>
-   tcb_release_enqueue t
-   \<lbrace>\<lambda>rv. not_in_release_q t'\<rbrace>"
-  unfolding tcb_release_enqueue_def
-  apply wpsimp
-     apply (rule_tac Q="\<lambda>_ _. not_in_release_q_2 (qs) t' \<and> (t \<noteq> t')" in hoare_strengthen_post[rotated])
-      apply (fastforce simp: not_in_release_q_def in_queue_2_def intro: in_set_zip1)
-     apply wpsimp+
-  done
-
 lemma tcb_release_enqueue_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and (\<lambda>s. tcb_ptr \<noteq> cur_thread s)\<rbrace>
    tcb_release_enqueue tcb_ptr
    \<lbrace>\<lambda>xa. ct_not_in_release_q\<rbrace>"
   unfolding postpone_def
   apply (rule hoare_weaken_pre, wps)
-  apply (wpsimp wp: tcb_release_enqueue_not_in_release_q)+
-  done
+  by wpsimp+
 
 context DetSchedSchedule_AI begin
 
@@ -18321,7 +18309,7 @@ lemma postpone_not_queued_other:
    postpone sc_ptr
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: postpone_def)
-  by (wpsimp wp: tcb_release_enqueue_not_in_release_q get_sc_obj_ref_wp tcb_dequeue_not_queued)
+  by (wpsimp wp: get_sc_obj_ref_wp tcb_dequeue_not_queued)
 
 lemma sched_context_resume_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> \<not> heap_ref_eq (cur_thread s) sc_ptr (sc_tcbs_of s)\<rbrace>
@@ -18685,7 +18673,7 @@ lemma postpone_not_in_release_q_other:
    postpone sc_ptr
    \<lbrace>\<lambda>_. not_in_release_q t\<rbrace>"
   apply (simp add: postpone_def)
-  apply (wpsimp wp: tcb_release_enqueue_not_in_release_q get_sc_obj_ref_wp)
+  apply (wpsimp wp: get_sc_obj_ref_wp)
   by (simp add: sc_at_ppred_def obj_at_def)
 
 lemma sched_context_resume_not_in_release_q_other:
