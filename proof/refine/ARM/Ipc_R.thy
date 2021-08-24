@@ -5930,53 +5930,6 @@ lemma gts_st_tcb':
   apply simp
   done
 
-lemma si_blk_makes_simple':
-  "\<lbrace>st_tcb_at' simple' t and K (t \<noteq> t')\<rbrace>
-     sendIPC True call bdg cg cgr cd t' ep
-   \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (simp add: sendIPC_def)
-  apply (rule hoare_seq_ext [OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_inv'])
-  sorry (* si_blk_makes_simple' *)
-  (*
-  apply (case_tac xa, simp_all)
-    apply (rename_tac list)
-    apply (case_tac list, simp_all add: case_bool_If case_option_If
-                             split del: if_split cong: if_cong)
-    apply (rule hoare_pre)
-     apply (wp sts_st_tcb_at'_cases setupCallerCap_pred_tcb_unchanged
-               hoare_drop_imps)
-    apply (clarsimp simp: pred_tcb_at' del: disjCI)
-   apply (wp sts_st_tcb_at'_cases)
-   apply clarsimp
-  apply (wp sts_st_tcb_at'_cases)
-  apply clarsimp
-  done *)
-
-lemma si_blk_makes_runnable':
-  "\<lbrace>st_tcb_at' runnable' t and K (t \<noteq> t')\<rbrace>
-     sendIPC True call bdg cg cgr cd t' ep
-   \<lbrace>\<lambda>rv. st_tcb_at' runnable' t\<rbrace>"
-  apply (simp add: sendIPC_def)
-  apply (rule hoare_seq_ext [OF _ stateAssert_sp])
-  apply (rule hoare_seq_ext [OF _ get_ep_inv'])
-  sorry (* si_blk_makes_runnable' *)
-  (*
-  apply (case_tac xa, simp_all)
-    apply (rename_tac list)
-    apply (case_tac list, simp_all add: case_bool_If case_option_If
-                             split del: if_split cong: if_cong)
-    apply (rule hoare_pre)
-     apply (wp sts_st_tcb_at'_cases setupCallerCap_pred_tcb_unchanged
-               hoare_vcg_const_imp_lift hoare_drop_imps
-              | simp)+
-    apply (clarsimp del: disjCI simp: pred_tcb_at' elim!: pred_tcb'_weakenE)
-   apply (wp sts_st_tcb_at'_cases)
-   apply clarsimp
-  apply (wp sts_st_tcb_at'_cases)
-  apply clarsimp
-  done *)
-
 crunches possibleSwitchTo, completeSignal
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
 
