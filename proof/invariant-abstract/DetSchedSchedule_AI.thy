@@ -3750,14 +3750,6 @@ lemma TCBSignal_in_state_refs_of:
                      pred_tcb_at_def obj_at_def
               split: option.splits kernel_object.splits thread_state.splits if_splits)
 
-(* not used? *)
-lemma pred_map_eq_pred_mapE:
- "pred_map_eq x h t
-  \<Longrightarrow> P x
-  \<Longrightarrow> pred_map P h t"
-  unfolding pred_map_def pred_map_eq_def
-  by simp
-
 lemma ipc_queued_thread_in_ep_queueE:
   "sym_refs (state_refs_of s)
    \<Longrightarrow> ep_at_pred (\<lambda>ep. ep_queue_of ep \<noteq> None \<and> t \<in> set (the (ep_queue_of ep))) epptr s
@@ -14690,7 +14682,7 @@ lemma receive_ipc_valid_sched:
    apply (intro conjI)
     apply (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise)
     apply (frule valid_sched_released_ipc_queues, drule_tac t=sender in released_ipc_queues_blocked_on_send_E1)
-     apply (clarsimp elim!: pred_map_eq_pred_mapE)
+     apply (clarsimp simp: pred_map_simps)
     apply (fastforce simp: vs_all_heap_simps is_timeout_fault_opt_def)
    apply (erule (1) not_idle_thread', clarsimp)
   apply (rule hoare_if[rotated])
@@ -15426,19 +15418,6 @@ lemma refill_new_sc_tcb_sc_at[wp]:
   unfolding refill_new_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
-  done
-
-lemma sched_context_resume_cond_released_sc_tcb_at':
-  "\<lbrace>bound_sc_tcb_at ((=) (Some sc_ptr)) tcbptr
-    and sc_tcb_sc_at ((=) (Some tcbptr)) sc_ptr
-    and st_tcb_at runnable tcbptr
-    and active_sc_tcb_at tcbptr\<rbrace>
-   sched_context_resume sc_ptr
-   \<lbrace>\<lambda>rv s :: 'state_ext state. not_in_release_q tcbptr s \<longrightarrow> released_sc_tcb_at tcbptr s \<rbrace>"
-  unfolding sched_context_resume_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' thread_get_wp is_schedulable_wp postpone_in_release_q)+
-  apply (safe; clarsimp simp: obj_at_def pred_tcb_at_def sc_at_pred_n_def
-                              is_schedulable_bool_def2 is_tcb vs_all_heap_simps)
   done
 
 lemma set_refills_ep_at_pred[wp]:
@@ -17538,18 +17517,24 @@ lemma invoke_sched_control_configure_flags_valid_sched:
                              \<and> sc_tcb_sc_at (\<lambda>tcb. tcb = sc_tcb sc) sc_ptr s
                              \<and> sc_ptr \<noteq> idle_sc_ptr"
            in hoare_seq_ext[rotated])
-    apply (simp only: valid_sched_def cong: conj_cong)
-    apply (wpsimp wp: sched_context_resume_valid_ready_qs sched_context_resume_valid_release_q
-                      sched_context_resume_valid_sched_action_with_sym_refs
-                      sched_context_resume_valid_blocked_except_set
-                      sched_context_resume_sc_tcb_sc_at
-                      hoare_vcg_const_imp_lift sched_context_resume_cond_released_sc_tcb_at')
-    apply (intro conjI impI)
-        apply (erule invs_sym_refs)
-       apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
-      apply (fastforce simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def)
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-    apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
+      apply (simp only: valid_sched_def cong: conj_cong)
+      apply (wpsimp wp: sched_context_resume_valid_ready_qs sched_context_resume_valid_release_q
+                        sched_context_resume_valid_sched_action_with_sym_refs
+                        sched_context_resume_valid_blocked_except_set
+                        hoare_vcg_const_imp_lift)
+        apply (rule_tac Q="\<lambda>_ s. active_sc_tcb_at tcb_ptr s
+                                 \<and> (runnable thread_state2 \<longrightarrow> active_sc_tcb_at tcb_ptr s
+                                        \<longrightarrow> not_in_release_q tcb_ptr s \<longrightarrow> released_sc_tcb_at tcb_ptr s)"
+               in hoare_strengthen_post[rotated])
+         apply clarsimp
+        apply (wpsimp wp: sched_context_resume_cond_released_sc_tcb_at)
+       apply (wpsimp wp: sched_context_resume_sc_tcb_sc_at)
+      apply (clarsimp; intro conjI impI)
+          apply (erule invs_sym_refs)
+         apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
+        apply (fastforce simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def)
+       apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+      apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
 
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (simp add: return_bind)
@@ -17563,7 +17548,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
    apply (wpsimp wp: possible_switch_to_valid_sched_weak[simplified valid_sched_def, simplified])
    apply (clarsimp split: if_split)
    apply (intro conjI impI)
-     apply (erule (1) pred_map_eq_pred_mapE)
+     apply (clarsimp simp: pred_map_simps)
     apply (frule invs_valid_idle)
     apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
    apply (clarsimp simp: vs_all_heap_simps runnable_eq_active elim!: valid_blockedE')
@@ -18500,7 +18485,7 @@ lemma do_reply_transfer_ct_not_in_release_q[wp]:
                             \<and> heap_refs_retract (tcb_scps_of s) (sc_tcbs_of s)"
            in hoare_seq_ext[rotated])
    apply (wpsimp wp: refill_unblock_check_valid_sched_except_blocked hoare_vcg_disj_lift)
-   apply (clarsimp simp: pred_map_eq_pred_mapE)
+   apply (clarsimp simp: pred_map_simps)
   apply (wpsimp wp: postpone_ct_not_in_release_q)
   apply (frule (1) heap_refs_retractD)
   by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
@@ -18620,10 +18605,7 @@ lemma sched_context_resume_not_in_release_q_other:
   "\<lbrace>not_in_release_q t and sc_tcb_sc_at (\<lambda>sc_tcb. sc_tcb \<noteq> Some t) sc_ptr\<rbrace>
    sched_context_resume sc_ptr
    \<lbrace>\<lambda>_. not_in_release_q t\<rbrace>"
-  apply (simp add: sched_context_resume_def)
-  by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps hoare_vcg_if_lift
-                 postpone_not_in_release_q_other
-           simp: if_fun_split)
+  by (wpsimp wp: sched_context_resume_not_in_release_q simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma sched_context_bind_tcb_not_in_release_q_other:
   "\<lbrace>not_in_release_q t and K (t \<noteq> tcb_ptr)\<rbrace>
