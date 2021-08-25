@@ -25,7 +25,7 @@ its abstract specification.
 The approach used for the proof is described in the TPHOLS '09
 [paper][5].
 
-  [paper]: https://ts.data61.csiro.au/publications/nictaabstracts/Winwood_KSACN_09.abstract  "Mind the gap: A verification framework for low-level C"
+  [paper]: https://trustworthy.systems/publications/nictaabstracts/Winwood_KSACN_09.abstract  "Mind the gap: A verification framework for low-level C"
 
 Building
 --------
