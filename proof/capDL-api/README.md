@@ -19,7 +19,7 @@ scheduling. These proofs are used by the [system initialiser
 proof](../../sys-init), as described in the [ICFEM '13 paper][Boyton_13]
 and Andrew Boyton's PhD thesis.
 
-  [Boyton_13]: https://ts.data61.csiro.au/publications/nictaabstracts/Boyton_ABFGGKLS_13.abstract "Formally Verified System Initialisation"
+  [Boyton_13]: https://trustworthy.systems/publications/nictaabstracts/Boyton_ABFGGKLS_13.abstract "Formally Verified System Initialisation"
 
 Building
 --------
