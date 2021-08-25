@@ -69,7 +69,7 @@ text \<open>
 
   As mentioned earlier, AutoCorres does not handle C code directly. The first
   step is to apply the
-  C-Parser\footnote{\url{https://ts.data61.csiro.au/software/TS/c-parser}} to
+  C-Parser\footnote{\url{https://trustworthy.systems/software/TS/c-parser}} to
   obtain a SIMPL translation. We do this using the \texttt{install-C-file}
   command in Isabelle, as shown.
 
