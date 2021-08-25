@@ -8,7 +8,7 @@ abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
   [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
-  [2]: https://ts.data61.csiro.au/software/TS/c-parser/
+  [2]: https://trustworthy.systems/software/TS/c-parser/
 
 
 
@@ -96,7 +96,7 @@ This package contains:
 
     * Michael Norrish's C parser, used to translate C code into Isabelle:
 
-        https://ts.data61.csiro.au/software/TS/c-parser/
+        https://trustworthy.systems/software/TS/c-parser/
 
     * Norbert Schirmer's Simpl language and associated VCG tool. The
       C parser translates C into Schirmer's Simpl language:
