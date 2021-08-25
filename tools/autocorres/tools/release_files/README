@@ -324,7 +324,7 @@ L1 (SimplConv), L2 (LocalVarExtract) and TS (TypeStrengthen) were described in
     David Greenaway, June Andronick, Gerwin Klein
     Proceedings of the Third International
             Conference on Interactive Theorem Proving (ITP), August 2012.
-    https://ts.data61.csiro.au/publications/nicta_full_text/5662.pdf
+    https://trustworthy.systems/publications/nicta_full_text/5662.pdf
 
 HL (heap abstraction) and WA (word abstraction) were described in
 
@@ -333,11 +333,11 @@ HL (heap abstraction) and WA (word abstraction) were described in
     David Greenaway, Japheth Lim, June Andronick, Gerwin Klein
     Proceedings of the 35th ACM SIGPLAN Conference on
             Programming Language Design and Implementation. ACM, June 2014.
-    https://ts.data61.csiro.au/publications/nicta_full_text/7629.pdf
+    https://trustworthy.systems/publications/nicta_full_text/7629.pdf
 
 A more comprehensive source is
 
     "Automated proof-producing abstraction of C code"
     David Greenaway
     PhD thesis, March 2015.
-    https://ts.data61.csiro.au/publications/nicta_full_text/8758.pdf
+    https://trustworthy.systems/publications/nicta_full_text/8758.pdf
