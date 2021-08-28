@@ -303,8 +303,9 @@ lemma kernelWCET_us_non_zero:
 
 lemma kernelWCET_ticks_non_zero:
   "kernelWCET_ticks \<noteq> 0"
-  using kernelWCET_us_non_zero us_to_ticks_nonzero
-  by (fastforce simp: kernelWCET_ticks_def)
+  apply (clarsimp simp: kernelWCET_ticks_def)
+  using kernelWCET_pos'
+  by simp
 
 end
 end
