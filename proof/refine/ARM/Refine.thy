@@ -328,8 +328,9 @@ lemma valid_sched_init[simp]:
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
+  apply (insert domain_time_pos)
   apply (simp add: init_A_st_def ext_init_def valid_domain_list_def)
-  sorry
+  done
 
 lemma akernel_invariant:
   "ADT_A uop \<Turnstile> full_invs"

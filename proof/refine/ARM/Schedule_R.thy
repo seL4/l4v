@@ -1749,7 +1749,7 @@ lemma domain_time_corres:
   "corres (=) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
-lemma \<mu>s_to_ms_equiv:
+lemma \<mu>s_in_ms_equiv:
   "\<mu>s_in_ms = usInMs"
   by (simp add: usInMs_def \<mu>s_in_ms_def)
 
@@ -1767,7 +1767,7 @@ lemma next_domain_corres:
   apply (clarsimp simp: next_domain_def nextDomain_def reset_work_units_equiv modify_modify)
   apply (rule corres_modify)
   apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def cdt_relation_def
-                   \<mu>s_to_ms_equiv us_to_ticks_equiv)
+                   \<mu>s_in_ms_equiv us_to_ticks_equiv)
   done
 
 lemma next_domain_valid_sched[wp]:
