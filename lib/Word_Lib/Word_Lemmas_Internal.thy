@@ -416,4 +416,24 @@ lemma unat_minus_plus_one:
    using max_word_wrap apply blast
   by (metis less_is_non_zero_p1 word_less_nat_alt word_overflow_unat)
 
+lemma unat_max_word:
+  "2 ^ LENGTH('a) - 1 = unat (max_word :: 'a :: len word)"
+  apply (rule Suc_inject)
+  apply (simp add: power_two_max_word_fold)
+  done
+
+lemma unat_add_lem'':
+  "(unat (x :: 'a :: len word) + unat y \<le> unat (max_word :: 'a :: len word))
+   \<Longrightarrow> unat (x + y) = unat x + unat y"
+  apply (rule unat_add_lem')
+  apply (clarsimp simp: less_Suc_eq_le[symmetric] unat_max_word[symmetric])
+  done
+
+lemma unat_mult_lem':
+  "unat (x :: 'a :: len word) * unat y \<le> unat (max_word :: 'a :: len word)
+   \<Longrightarrow> unat (x * y) = unat x * unat y"
+  apply (rule unat_mult_lem[THEN iffD1])
+  apply (clarsimp simp: max_word_def)
+  by (meson le_def le_trans unat_lt2p)
+
 end
