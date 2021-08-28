@@ -51,8 +51,6 @@ definition
      modify (\<lambda>s. s \<lparr> cur_thread := thread \<rparr>)
    od"
 
-definition "\<mu>s_in_ms = 1000"
-
 definition
   next_domain :: "(unit, 'z::state_ext) s_monad" where
   "next_domain \<equiv> do
