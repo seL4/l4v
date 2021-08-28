@@ -8865,10 +8865,10 @@ lemma handle_overrun_loop_window:
     apply (wpsimp wp: handle_overrun_loop_body_window)
     apply (fastforce intro!: head_time_buffer_implies_no_overflow
                       dest!: head_time_buffer_true_imp_unat_buffer[THEN iffD1, rotated]
-                       simp: vs_all_heap_simps  unat_MAX_RELEASE_TIME)
+                       simp: vs_all_heap_simps unat_MAX_RELEASE_TIME)
    apply (wpsimp wp: handle_overrun_loop_body_ordered_disjoint)
    apply (fastforce dest: head_time_buffer_true_imp_unat_buffer[THEN iffD1, rotated]
-                    simp: vs_all_heap_simps MAX_RELEASE_TIME_def MAX_PERIOD_mult' unat_sub)
+                    simp: vs_all_heap_simps MAX_RELEASE_TIME_def MAX_PERIOD_mult unat_sub)
   apply (wpsimp wp: handle_overrun_loop_body_refills_unat_sum_equals_budget)
   done
 
@@ -8949,8 +8949,9 @@ lemma handle_overrun_loop_head_bound:
     apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
    apply (clarsimp simp: obj_at_def vs_all_heap_simps word_le_nat_alt)
    apply (rename_tac sc n)
-   apply (subst unat_add_lem', clarsimp simp: max_word_def)
-   apply (insert MAX_PERIOD_mult'[where n=4]; simp)
+   apply (subst unat_add_lem')
+    apply (clarsimp simp: max_word_def)
+   apply (insert MAX_PERIOD_mult[where n=4]; simp)
    apply (clarsimp simp: window_def)
    apply (subst unat_add_lem')
     apply (clarsimp simp: max_word_def word_le_nat_alt)
@@ -9016,7 +9017,7 @@ lemma handle_overrun_loop_head_bound:
    apply (drule_tac x="hd (tl (sc_refills scb))" in bspec)
     apply (simp add: list.set_sel(2))
    apply (clarsimp simp: window_def MAX_RELEASE_TIME_def unat_sub word_le_nat_alt)
-   apply (fastforce simp: MAX_PERIOD_mult'[where n=5])
+   apply (fastforce simp: MAX_PERIOD_mult[where n=5])
   apply clarsimp
   apply (subst unat_sub)
    apply (clarsimp simp: window_def MAX_RELEASE_TIME_def unat_sub word_le_nat_alt)
