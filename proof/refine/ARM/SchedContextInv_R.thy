@@ -142,10 +142,17 @@ lemma decodeSchedControlInvocation_wf:
   apply (clarsimp simp: valid_cap'_def  ko_wp_at'_def scBits_simps valid_refills_number'_def
                         MAX_PERIOD_def maxPeriodUs_def usToTicks_def us_to_ticks_mono
                         MIN_BUDGET_def kernelWCET_ticks_def timeArgSize_def minBudgetUs_def
-                        MIN_REFILLS_def minRefills_def not_less)
-  apply (insert us_to_ticks_mult)
-  using kernelWCET_ticks_no_overflow apply clarsimp
-  using mono_def apply blast
+                        MIN_REFILLS_def minRefills_def not_less
+                  cong: conj_cong)
+  apply (insert getCurrentTime_buffer_bound)
+  apply (intro conjI impI; (fastforce intro: us_to_ticks_mono)?)
+   apply (rule_tac order_trans[OF MIN_BUDGET_helper])
+   apply (rule us_to_ticks_mono)
+    apply blast
+   apply (fastforce intro: order_trans[OF mult_le_mono1]
+                     simp: word_le_nat_alt)
+  apply (fastforce intro: order_trans[OF mult_le_mono1] us_to_ticks_mono
+                    simp: word_le_nat_alt)
   done
 
 lemma decodeSchedcontext_Bind_corres:
