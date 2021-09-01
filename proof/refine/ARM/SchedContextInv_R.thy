@@ -164,10 +164,10 @@ lemma decodeSchedcontext_Bind_corres:
      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
-  apply (rule corres_splitEE_skip; (solves wpsimp)?)
-   apply (corressimp simp: sc_relation_def)
   apply (case_tac cap; clarsimp)
    apply (clarsimp simp: bindE_assoc)
+   apply (rule corres_splitEE_skip; (solves wpsimp)?)
+    apply (corressimp simp: sc_relation_def)
    apply (rule corres_splitEE''[where r'="(=)"]; (solves wpsimp)?)
     apply (corressimp corres: get_ntfn_corres
                         simp: get_sk_obj_ref_def ntfn_relation_def valid_cap_def valid_cap'_def
@@ -177,6 +177,8 @@ lemma decodeSchedcontext_Bind_corres:
                         simp: get_sk_obj_ref_def sc_relation_def)
    apply (clarsimp simp: returnOk_def)
   apply (clarsimp simp: bindE_assoc get_tcb_obj_ref_def)
+  apply (rule corres_splitEE_skip; (solves wpsimp)?)
+   apply (corressimp simp: sc_relation_def)
   apply (rule corres_splitEE''[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
