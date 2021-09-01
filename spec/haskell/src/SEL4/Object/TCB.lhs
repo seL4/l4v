@@ -673,15 +673,16 @@ The domain cap is invoked to set the domain of a given TCB object to a given val
 >     when (length excaps == 0) $ throw TruncatedMessage
 >     let cap = head excaps
 >     sc <- withoutFailure $ getSchedContext scPtr
->     when (scTCB sc /= Nothing || scNtfn sc /= Nothing) $ throw IllegalOperation
 >     case cap of
 >         ThreadCap tcbPtr -> do
+>             when (scTCB sc /= Nothing) $ throw IllegalOperation
 >             scPtrOpt <- withoutFailure $ threadGet tcbSchedContext tcbPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
 >             released <- withoutFailure $ scReleased scPtr
 >             blocked <- withoutFailure $ isBlocked tcbPtr
 >             when (blocked && not released) $ throw IllegalOperation
 >         NotificationCap ntfnPtr _ _ _ -> do
+>             when (scNtfn sc /= Nothing) $ throw IllegalOperation
 >             scPtrOpt <- withoutFailure $ liftM ntfnSc $ getNotification ntfnPtr
 >             when (scPtrOpt /= Nothing) $ throw IllegalOperation
 >         _ -> throw (InvalidCapability 1)
