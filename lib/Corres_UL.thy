@@ -537,6 +537,13 @@ lemmas corres_when2 =
                 and Q="\<top>" and Q'="\<top>" and r=dc, unfolded if_apply_def2, simplified,
                 folded when_def]
 
+lemma corres_if_split:
+  "\<lbrakk> G = G';
+     G \<Longrightarrow> corres_underlying sr nf nf' r P P' a c;
+     \<not>G \<Longrightarrow> corres_underlying sr nf nf' r P P' b d \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' (if G then a else b) (if G' then c else d)"
+  by (clarsimp simp: corres_underlying_def)
+
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
 lemma snd_liftM [simp]:
