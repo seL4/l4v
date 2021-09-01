@@ -401,12 +401,12 @@ lemma refillReady_wp':
   by wpsimp (drule use_ovalid[OF ovalid_readRefillReady'])
 
 lemma refillAddTail_corres:
-  "time = time' \<and> amount = amount'
+  "new = refill_map new'
    \<Longrightarrow> corres dc (sc_at sc_ptr)
                  (sc_at' sc_ptr and
                   (\<lambda>s'. ((\<lambda>sc'. scRefillCount sc' < scRefillMax sc' \<and> sc_valid_refills' sc') |< scs_of' s') sc_ptr))
-                 (refill_add_tail sc_ptr \<lparr>r_time = time, r_amount = amount\<rparr>)
-                 (refillAddTail sc_ptr (Refill time' amount'))"
+                 (refill_add_tail sc_ptr new)
+                 (refillAddTail sc_ptr new')"
   supply projection_rewrites[simp]
   apply (clarsimp simp: refill_add_tail_def refillAddTail_def getRefillNext_getSchedContext
                         getRefillSize_def2 liftM_def get_refills_def)
@@ -1266,6 +1266,90 @@ lemma headInsufficientLoop_corres:
     apply (fastforce dest: head_insufficient_length_greater_than_one)
    apply (wpsimp wp: nonOverlappingMergeRefills_valid_objs')
   apply (fastforce intro!: non_overlapping_merge_refills_terminates)
+  done
+
+lemma refillEmpty_sp:
+  "\<lbrace>P\<rbrace>refillEmpty scp \<lbrace>\<lambda>rv s. P s \<and> (\<forall>ko. ko_at' ko scp s \<longrightarrow> rv = (scRefillCount ko = 0))\<rbrace>"
+  apply (wpsimp wp: refillEmpty_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma refillFull_sp:
+  "\<lbrace>P\<rbrace> refillFull scp \<lbrace>\<lambda>rv s. P s \<and> (\<forall>ko. ko_at' ko scp s \<longrightarrow> rv = (scRefillCount ko = scRefillMax ko))\<rbrace>"
+  apply (wpsimp wp: refillFull_wp)
+  apply (clarsimp simp: obj_at'_def)
+  done
+
+lemma refillFull_corres:
+  "sc_ptr = scPtr
+   \<Longrightarrow> corres (=) (sc_at sc_ptr and pspace_aligned and pspace_distinct)
+                  (valid_refills' scPtr)
+                  (refill_full sc_ptr)
+                  (refillFull scPtr)"
+  apply (rule_tac Q="sc_at' scPtr" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
+  apply (clarsimp simp: refill_full_def refillFull_def)
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (corressimp corres: get_sc_corres)
+  apply (corressimp corres: corres_return_eq_same)
+  apply (fastforce simp: sc_relation_def obj_at_simps valid_refills'_def opt_map_red)
+  done
+
+lemma update_refill_tl_is_active_sc2[wp]:
+  "update_refill_tl sc_ptr f \<lbrace>is_active_sc2 sc_ptr'\<rbrace>"
+  apply (clarsimp simp: update_refill_tl_def)
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: is_active_sc2_def obj_at_def opt_map_def)
+  done
+
+end
+
+global_interpretation updateRefillTl: typ_at_all_props' "updateRefillTl scPtr f"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemma scheduleUsed_corres:
+  "\<lbrakk>sc_ptr = scPtr; new = refill_map new'\<rbrakk> \<Longrightarrow>
+    corres dc (sc_at sc_ptr and is_active_sc2 sc_ptr and pspace_aligned and pspace_distinct)
+              valid_objs'
+              (schedule_used sc_ptr new)
+              (scheduleUsed scPtr new')"
+  apply (clarsimp simp: schedule_used_def scheduleUsed_def get_refills_def bind_assoc)
+  apply (rule_tac Q="sc_at' scPtr" in corres_cross_add_guard)
+   apply (fastforce intro: sc_at_cross)
+  apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
+   apply (fastforce intro: is_active_sc'_cross)
+  apply (rule_tac Q="valid_refills' scPtr" in corres_cross_add_guard)
+   apply (fastforce intro: valid_objs'_valid_refills'
+                     simp: is_active_sc'_def)
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (corressimp corres: get_sc_corres)
+  apply (rename_tac sc sc')
+  apply (rule corres_symb_exec_r[rotated, OF assert_sp]; (solves wpsimp)?)
+   apply wpsimp
+   apply (clarsimp simp: is_active_sc'_def obj_at_simps opt_map_red)
+  apply (rule corres_symb_exec_r[rotated, OF refillEmpty_sp]
+         ; (solves \<open>wpsimp simp: refillEmpty_def\<close>)?)
+  apply (rule_tac F="empty = (sc_refills sc = [])" in corres_req)
+   apply (fastforce dest: length_sc_refills_cross[where P="\<lambda>l. 0 = l"]
+                    simp: valid_refills'_def obj_at_simps opt_map_red)
+  apply (rule corres_if_split; (solves simp)?)
+   apply (corressimp corres: refillAddTail_corres simp: refill_map_def)
+   apply (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red)
+  apply (rule_tac F="sc_valid_refills' sc'" in corres_req)
+   apply (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red)
+  apply (rule corres_if_split; (solves simp)?)
+    apply (fastforce dest: refills_tl_equal
+                     simp: refill_map_def can_merge_refill_def)
+   apply (corressimp corres: updateRefillTl_corres
+                       simp: refill_map_def)
+  apply (rule corres_split'[rotated 2, OF refill_full_sp refillFull_sp])
+   apply (corressimp corres: refillFull_corres)
+  apply (rule corres_if_split; (solves simp)?)
+   apply (corressimp corres: refillAddTail_corres)
+   apply (clarsimp simp: refill_map_def obj_at_simps opt_map_red)
+  apply (corressimp corres: updateRefillTl_corres simp: refill_map_def)
   done
 
 (* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
