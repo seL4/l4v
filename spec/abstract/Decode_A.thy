@@ -493,9 +493,9 @@ where
       whenE (length excaps = 0) $ throwError TruncatedMessage;
       cap \<leftarrow> returnOk $ hd excaps;
       sc \<leftarrow> liftE $ get_sched_context sc_ptr;
-      whenE (sc_tcb sc \<noteq> None \<or> sc_ntfn sc \<noteq> None) $ throwError IllegalOperation;
       case cap of
         ThreadCap tcb_ptr \<Rightarrow> doE
+          whenE (sc_tcb sc \<noteq> None) $ throwError IllegalOperation;
           sc_ptr_opt \<leftarrow> liftE $ get_tcb_obj_ref tcb_sched_context tcb_ptr;
           whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation;
           released \<leftarrow> liftE $ get_sc_released sc_ptr;
@@ -504,6 +504,7 @@ where
             throwError IllegalOperation
         odE
       | NotificationCap ntfn_ptr _ _ \<Rightarrow> doE
+          whenE (sc_ntfn sc \<noteq> None) $ throwError IllegalOperation;
           sc_ptr_opt \<leftarrow> liftE $ get_ntfn_obj_ref ntfn_sc ntfn_ptr;
           whenE (sc_ptr_opt \<noteq> None) $ throwError IllegalOperation
         odE
