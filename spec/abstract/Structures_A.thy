@@ -459,6 +459,9 @@ where
 | "obj_bits (Notification ntfn) = ntfn_bits"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
+definition
+  "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}" (* FIXME mask_range *)
+
 primrec (nonexhaustive)
   obj_size :: "cap \<Rightarrow> machine_word"
 where

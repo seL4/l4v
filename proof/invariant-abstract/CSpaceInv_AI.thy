@@ -101,12 +101,37 @@ lemma assert_get_tcb_sp:
 crunch inv[wp]: get_cap "P"
   (simp: crunch_simps)
 
+crunch inv[wp]: getTouchedAddresses "P"
+  (simp: crunch_simps)
+
+lemma dmo_getTouchedAddresses_inv[wp]:
+ "do_machine_op getTouchedAddresses \<lbrace>P\<rbrace>"
+  apply (wpsimp simp:getTouchedAddresses_def do_machine_op_def in_gets)
+  done
+  
+(* FIXME: get Corey's fix, and you wont need to ignore anything
+   edit: well apparenly not lol *)
+crunch inv[wp]: get_cap_x "P"
+  (simp: crunch_simps ignore: getTouchedAddresses do_machine_op wp: crunch_wps)
+
+crunch inv[wp]: get_cap_x "P"
+  (simp: crunch_simps)
 
 declare resolve_address_bits'.simps [simp del]
 
+interpretation touch_object_tainv:
+  touched_addresses_inv "touch_object obj"
+  apply unfold_locales
+  apply (simp only:touch_object_def2)
+  apply (clarsimp simp:do_machine_op_def addTouchedAddresses_def)
+  apply wpsimp
+  apply (subst (asm) in_modify)
+  apply (clarsimp simp:ta_agnostic_P_def)
+  done
 
-lemma rab_inv[wp]:
-  "\<lbrace>P\<rbrace> resolve_address_bits slot \<lbrace>\<lambda>rv. P\<rbrace>"
+interpretation rab_tainv:
+  touched_addresses_inv "resolve_address_bits slot"
+  apply unfold_locales
 unfolding resolve_address_bits_def
 proof (induct slot rule: resolve_address_bits'.induct)
   case (1 z cap cref)
@@ -114,9 +139,9 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply (clarsimp simp add: valid_def)
   apply (subst (asm) resolve_address_bits'.simps)
   apply (cases cap)
-            apply (auto simp: in_monad)[5]
-       defer
-       apply (auto simp: in_monad)[6]
+             apply (auto simp: in_monad)[5]
+        defer
+        apply (auto simp: in_monad)[6]
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply (case_tac "nat + length list = 0")
@@ -128,13 +153,16 @@ proof (induct slot rule: resolve_address_bits'.induct)
        apply (simp only: split: if_split_asm)
         apply (simp add: returnOk_def return_def)
        apply (drule in_bindE_L, elim disjE conjE exE)+
-        apply (simp only: split: if_split_asm)
-         prefer 2
+         apply (simp only: split: if_split_asm)
+          prefer 2
+          apply (clarsimp simp: in_monad)
+         apply (drule (9) 1) (* get the IH into context *)
+          apply (rule "1.prems")
          apply (clarsimp simp: in_monad)
-        apply (drule (8) 1)
+         apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+         apply (drule(1) touch_object_tainv.in_inv_by_hoare [OF _ "1.prems"])
+         apply (auto simp: in_monad valid_def)[1]
         apply (clarsimp simp: in_monad)
-        apply (drule in_inv_by_hoareD [OF get_cap_inv])
-        apply (auto simp: in_monad valid_def)[1]
        apply (clarsimp simp: in_monad)
       apply (clarsimp simp: in_monad)
      apply (clarsimp simp: in_monad)
@@ -149,17 +177,24 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply (simp only: split: if_split_asm)
    prefer 2
    apply (clarsimp simp: in_monad)
-   apply (drule in_inv_by_hoareD [OF get_cap_inv])
+   apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+   apply (drule(1) touch_object_tainv.in_inv_by_hoare [OF _ "1.prems"])
    apply simp
   apply (drule (8) "1")
   apply (clarsimp simp: in_monad valid_def)
-  apply (drule in_inv_by_hoareD [OF get_cap_inv])
-  apply (auto simp: in_monad)
+   apply (rule "1.prems")
+  apply clarsimp
+  apply (clarsimp simp: in_monad)
+  apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+  apply (drule(1) touch_object_tainv.in_inv_by_hoare [OF _ "1.prems"])
+  apply clarsimp
+  apply (drule(3) post_by_hoare)
   done
 qed
 
-crunch inv [wp]: lookup_slot_for_thread P
+(* now we have rab_tainv, can we use crunch for these other things? *)
 
+crunch inv [wp]: lookup_slot_for_thread P
 
 crunch inv [wp]: lookup_cap P
 

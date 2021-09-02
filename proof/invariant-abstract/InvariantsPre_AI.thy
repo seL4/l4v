@@ -23,6 +23,29 @@ declare ranI [intro]
 
 section "Locale Setup"
 
+abbreviation
+  ms_touched_addresses_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
+    'a abstract_state_scheme \<Rightarrow> 'a abstract_state_scheme" where
+ "ms_touched_addresses_update f s \<equiv> s\<lparr>machine_state :=
+    machine_state.touched_addresses_update f (machine_state s)\<rparr>"
+
+definition ta_agnostic_P :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
+ "ta_agnostic_P P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
+
+definition ta_agnostic_Pm :: "(machine_state \<Rightarrow> bool) \<Rightarrow> bool" where
+ "ta_agnostic_Pm P \<equiv> \<forall>s ta. P (s\<lparr>machine_state.touched_addresses := ta\<rparr>) = P s"
+
+locale touched_addresses_inv =
+  fixes m :: "('z::state_ext state, 'r) nondet_monad"
+  assumes ta_agnostic: "\<And>P. ta_agnostic_P P \<Longrightarrow> m \<lbrace>P\<rbrace>"
+begin
+lemma in_inv_by_hoare:
+ "\<lbrakk>(x, s') \<in> fst (m s); ta_agnostic_P P; P s \<rbrakk> \<Longrightarrow>
+  P s'"
+  using post_by_hoare2 ta_agnostic by fastforce
+  
+end
+
 locale pspace_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
   assumes pspace: "kheap (f s) = kheap s"

@@ -20,6 +20,36 @@ for kernel objects.\<close>
 section "General Object Access"
 
 definition
+  touch_objects :: "obj_ref set \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "touch_objects ptrs \<equiv> do
+     kh \<leftarrow> gets kheap;
+     assert (\<forall>ptr \<in> ptrs. kh ptr \<noteq> None);
+     objs \<leftarrow> return {(ptr, obj) | ptr obj. ptr \<in> ptrs \<and> kh ptr = Some obj};
+     ranges \<leftarrow> return $ (\<lambda>(ptr, obj). obj_range ptr obj) ` objs;
+     do_machine_op $ addTouchedAddresses $ \<Union> ranges
+   od"
+
+definition
+  touch_object :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "touch_object ptr \<equiv> touch_objects {ptr}"
+
+lemma touch_object_def2:
+  "touch_object ptr = do
+     kh \<leftarrow> gets kheap;
+     assert (kh ptr \<noteq> None);
+     obj \<leftarrow> return $ the $ kh ptr;
+     do_machine_op $ addTouchedAddresses (obj_range ptr obj)
+   od"
+  unfolding touch_object_def touch_objects_def
+  apply (simp add: split_def)
+  apply (rule bind_cong, rule refl)
+  apply (rule fun_cong, rule bind_cong, rule refl)
+  apply (clarsimp simp: simpler_gets_def assert_def fail_def split: if_split_asm)
+  done
+
+definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
   "get_object ptr \<equiv> do
@@ -38,6 +68,33 @@ where
      put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
    od"
 
+text \<open>versions of get_object and set_object that obey the touched_addresses
+      pattern (for tracking cache stuff). This is temporary, for testing out
+      the effects of the new feature on a smaller scale.\<close>
+
+definition
+  get_object_x :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
+where
+  "get_object_x ptr \<equiv> do
+     kh \<leftarrow> gets kheap;
+     assert (kh ptr \<noteq> None);
+     obj \<leftarrow> return $ the $ kh ptr;
+     ta \<leftarrow> do_machine_op getTouchedAddresses;
+     assert (obj_range ptr obj \<subseteq> ta);
+     return obj
+   od"
+
+definition
+  set_object_x :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_object_x ptr obj \<equiv> do
+     kobj <- get_object ptr;
+     assert (a_type kobj = a_type obj);
+     ta \<leftarrow> do_machine_op $ getTouchedAddresses;
+     assert (obj_range ptr obj \<subseteq> ta);
+     s \<leftarrow> get;
+     put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
+   od"
 
 section "TCBs"
 
