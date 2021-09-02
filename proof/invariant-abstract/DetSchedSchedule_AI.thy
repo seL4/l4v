@@ -4957,6 +4957,17 @@ lemma tcb_release_enqueue_valid_release_q[wp]:
   apply (erule sorted_tcb_release_enqueue_upd)
   by (auto simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps vs_all_heap_simps)
 
+lemma tcb_release_enqueue_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action and scheduler_act_not tptr\<rbrace>
+   tcb_release_enqueue tptr
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  unfolding tcb_release_enqueue_def
+  apply (rule hoare_seq_ext[OF _ get_sc_time_sp'])
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ mapM_get_sc_time_sp'])
+  apply wpsimp
+  by (fastforce simp: weak_valid_sched_action_def scheduler_act_not_def dest!: in_set_zip1)
+
 lemma tcb_release_enqueue_valid_sched_action[wp]:
   "\<lbrace>\<lambda>s. valid_sched_action s \<and> scheduler_act_not thread s\<rbrace>
    tcb_release_enqueue thread
@@ -4964,36 +4975,6 @@ lemma tcb_release_enqueue_valid_sched_action[wp]:
   apply (wpsimp wp: valid_sched_wp)
   by (auto simp: valid_sched_action_def weak_valid_sched_action_def scheduler_act_not_def
                  tcb_release_enqueue_upd_def insort_filter_def)
-
-(* FIXME maybe move *)
-lemma not_in_release_q_set_lift:
- "set A = set B \<Longrightarrow> not_in_release_q_2 A t = not_in_release_q_2 B t"
-  by (clarsimp simp: not_in_release_q_2_def in_queue_2_def)
-
-(* FIXME move *)
-lemma distinct_shuffle_left:
-  "distinct (A @ x # B) = distinct (x # A @ B)"
-  by fastforce
-
-lemma tcb_release_enqueue_set_ident:
-  "length qs = length r \<Longrightarrow>
-   set (map fst (filter (\<lambda>(_, t'). t' \<le> time) (zip qs r))
-        @ tcb_ptr
-        # map fst (filter (\<lambda>(_, t'). \<not> t' \<le> time) (zip qs r)))
-   = set (tcb_ptr # qs)"
-  apply (subgoal_tac "set qs = (fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> t' \<le> time} \<union>
-                                fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> \<not> t' \<le> time}) ")
-   apply simp
-  apply (clarsimp simp: image_def Collect_disj_eq[symmetric])
-  apply (subgoal_tac "\<And>y. ((\<exists>b. (y, b) \<in> set (zip qs r) \<and> b \<le> time) \<or>
-              (\<exists>b. (y, b) \<in> set (zip qs r) \<and> \<not> b \<le> time)) = (\<exists>b. (y, b) \<in> set (zip qs r))")
-   apply (simp)
-   apply (clarsimp simp: set_eq_subset subset_eq)
-   apply (intro conjI)
-    apply (fastforce elim: length_eq_pair_in_set_zip)
-   apply (fastforce dest: in_set_zip1)
-  apply fastforce
-  done
 
 lemma tcb_release_enqueue_valid_blocked_except_set:
   "\<lbrace>valid_blocked_except_set (insert tcb_ptr S)\<rbrace>
@@ -5139,6 +5120,20 @@ lemma postpone_valid_ready_qs:
   unfolding postpone_def
   by (wpsimp wp: tcb_sched_dequeue_valid_ready_qs get_sc_obj_ref_wp)
 
+lemma postpone_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action and (\<lambda>s. \<forall>tp. sc_tcb_sc_at ((=) (Some tp)) scp s \<longrightarrow> scheduler_act_not tp s)\<rbrace>
+   postpone scp
+   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  unfolding postpone_def
+  by (wpsimp wp: get_sc_obj_ref_wp) (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
+
+lemma postpone_valid_sched_action:
+  "\<lbrace>valid_sched_action and (\<lambda>s. \<forall>tp. sc_tcb_sc_at ((=) (Some tp)) scp s \<longrightarrow> scheduler_act_not tp s)\<rbrace>
+   postpone scp
+   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  unfolding postpone_def
+  by (wpsimp wp: get_sc_obj_ref_wp) (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
+
 lemma postpone_valid_release_q:
   "\<lbrace> valid_release_q and
      (\<lambda>s. \<forall> tp. sc_tcb_sc_at ((=) (Some tp)) sc_ptr s \<longrightarrow>
@@ -5166,50 +5161,13 @@ lemma sched_context_resume_valid_release_q[wp]:
                      is_sc_active_kh_simp vs_all_heap_simps
               dest!: get_tcb_SomeD split: option.splits)
 
-lemma tcb_release_enqueue_weak_valid_sched_action:
-  "\<lbrace>weak_valid_sched_action and scheduler_act_not tcb_ptr\<rbrace>
-   tcb_release_enqueue tcb_ptr
+lemma sched_context_resume_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action and (\<lambda>s. \<forall>tp. sc_tcb_sc_at ((=) (Some tp)) scp s \<longrightarrow> scheduler_act_not tp s)\<rbrace>
+   sched_context_resume scp
    \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
-  apply (clarsimp simp: tcb_release_enqueue_def assert_opt_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_time_sp])
-  apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply wpsimp
-   apply (rule_tac Q="\<lambda>rv s. weak_valid_sched_action_2 {} (cur_time s) (scheduler_action s) (tcb_ptr # qs) (tcb_sts_of s) (tcb_scps_of s) (sc_refill_cfgs_of s)
-           \<and> length qs = length rv" in hoare_strengthen_post)
-    apply (wpsimp wp: mapM_wp_inv_length)
-   apply (clarsimp simp: weak_valid_sched_action_def)
-   apply (subgoal_tac "set qs = (fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> t' \<le> time} \<union>
-                                 fst ` {x \<in> set (zip qs r). case x of (uu_, t') \<Rightarrow> \<not> t' \<le> time}) ")
-    apply simp
-   apply (clarsimp simp: image_def Collect_disj_eq[symmetric])
-   apply (subgoal_tac "\<And>y. ((\<exists>b. (y, b) \<in> set (zip qs r) \<and> b \<le> time) \<or>
-               (\<exists>b. (y, b) \<in> set (zip qs r) \<and> \<not> b \<le> time)) = (\<exists>b. (y, b) \<in> set (zip qs r))")
-    apply (simp)
-    apply (clarsimp simp: set_eq_subset subset_eq)
-    apply safe[1]
-     apply (fastforce elim: length_eq_pair_in_set_zip)
-    apply (fastforce dest: in_set_zip1)
-   apply fastforce
-  apply (clarsimp simp: weak_valid_sched_action_def scheduler_act_not_def)
-  done
-
-lemma postpone_valid_sched_action:
-  "\<lbrace>valid_sched_action and (\<lambda>s. \<forall>y. sc_tcb_sc_at ((=) (Some y)) sc_ptr s \<longrightarrow> scheduler_act_not y s)\<rbrace>
-   postpone sc_ptr
-   \<lbrace>\<lambda>_. valid_sched_action\<rbrace> "
-  unfolding postpone_def valid_sched_action_def
-  apply (wpsimp wp: get_sc_obj_ref_wp tcb_release_enqueue_weak_valid_sched_action)
-  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
-  done
-
-lemma postpone_weak_valid_sched_action:
-  "\<lbrace>weak_valid_sched_action and (\<lambda>s. \<forall>y. sc_tcb_sc_at ((=) (Some y)) sc_ptr s \<longrightarrow> scheduler_act_not y s)\<rbrace>
-   postpone sc_ptr
-   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace> "
-  unfolding postpone_def
-  apply (wpsimp wp: get_sc_obj_ref_wp tcb_release_enqueue_weak_valid_sched_action)
-  apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
-  done
+  unfolding sched_context_resume_def
+  by (wpsimp wp: postpone_valid_sched_action is_schedulable_wp
+           simp: thread_get_def)
 
 lemma sched_context_resume_valid_sched_action:
   "\<lbrace>valid_sched_action and (\<lambda>s. \<forall>y. sc_tcb_sc_at ((=) (Some y)) sc_ptr s \<longrightarrow> scheduler_act_not y s)\<rbrace>
@@ -5219,44 +5177,6 @@ lemma sched_context_resume_valid_sched_action:
   apply (wpsimp wp: postpone_valid_sched_action thread_get_wp is_schedulable_wp)
   by (fastforce simp: obj_at_def is_schedulable_bool_def is_tcb
                dest!: get_tcb_SomeD split: option.splits)
-
-lemma sched_context_resume_valid_sched_action_with_sym_refs:
-  "\<lbrace>valid_sched_action and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
-   sched_context_resume sc_ptr
-   \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  unfolding sched_context_resume_def
-  apply (wpsimp wp: postpone_valid_sched_action thread_get_wp is_schedulable_wp
-              simp: get_tcb_queue_def)
-  apply (clarsimp simp: obj_at_def scheduler_act_not_def valid_sched_action_def
-                        weak_valid_sched_action_def sc_at_pred_n_def vs_all_heap_simps)
-  apply (frule sym_ref_sc_tcb; simp?)
-  by force
-
-lemma postpone_weak_valid_sched_action_with_invs:
-  "\<lbrace>weak_valid_sched_action and sc_scheduler_act_not sc_ptr and invs\<rbrace>
-   postpone sc_ptr
-   \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace> "
-  unfolding postpone_def
-  by (wpsimp wp: get_sc_obj_ref_wp tcb_release_enqueue_weak_valid_sched_action)
-     (drule (3) sc_with_tcb_prop_rev[rotated], clarsimp)
-
-lemma postpone_valid_sched_action_with_invs:
-  "\<lbrace>valid_sched_action and sc_scheduler_act_not sc_ptr and invs\<rbrace>
-   postpone sc_ptr
-   \<lbrace>\<lambda>_. valid_sched_action\<rbrace> "
-  unfolding postpone_def valid_sched_action_def
-  by (wpsimp wp: get_sc_obj_ref_wp tcb_release_enqueue_weak_valid_sched_action)
-     (drule (3) sc_with_tcb_prop_rev[rotated], clarsimp)
-
-lemma sched_context_resume_valid_sched_action_with_invs:
-  "\<lbrace>valid_sched_action and sc_scheduler_act_not sc_ptr and invs\<rbrace>
-   sched_context_resume sc_ptr
-   \<lbrace>\<lambda>_. valid_sched_action\<rbrace> "
-  unfolding sched_context_resume_def
-  apply (wpsimp wp: postpone_valid_sched_action_with_invs thread_get_wp is_schedulable_wp)
-  apply (fastforce simp: obj_at_def is_schedulable_bool_def is_tcb
-                  dest!: get_tcb_SomeD split: option.splits)
-  done
 
 lemma weak_valid_sched_action_contrap:
   "weak_valid_sched_action s \<Longrightarrow> (simple_sched_action s \<or>
@@ -17497,7 +17417,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
   apply (rule_tac B="\<lambda>rv s. valid_sched_except_blocked s
                             \<and> budget \<le> period \<and> period \<le> MAX_PERIOD \<and> current_time_bounded 5 s
                             \<and> valid_blocked_except tcb_ptr s \<and> consumed_time_bounded s
-                            \<and> invs s
+                            \<and> invs s \<and> schact_is_rct s
                             \<and> pred_map_eq (Some sc_ptr) (tcb_scps_of s) tcb_ptr
                             \<and> sc_tcb_sc_at (\<lambda>tcb. tcb = sc_tcb sc) sc_ptr s
                             \<and> active_sc_tcb_at tcb_ptr s
@@ -17509,7 +17429,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
    apply (simp only: valid_sched_def cong: conj_cong)
    apply (rule_tac B="\<lambda>rv s. valid_sched_except_blocked s
                              \<and> budget \<le> period \<and> period \<le> MAX_PERIOD \<and> current_time_bounded 5 s
-                             \<and> valid_blocked_except tcb_ptr s
+                             \<and> valid_blocked_except tcb_ptr s \<and> schact_is_rct s
                              \<and> invs s \<and> consumed_time_bounded s
                              \<and> (runnable thread_state2
                                 \<longrightarrow> not_in_release_q tcb_ptr s \<longrightarrow> released_sc_tcb_at tcb_ptr s)
@@ -17519,7 +17439,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
            in hoare_seq_ext[rotated])
       apply (simp only: valid_sched_def cong: conj_cong)
       apply (wpsimp wp: sched_context_resume_valid_ready_qs sched_context_resume_valid_release_q
-                        sched_context_resume_valid_sched_action_with_sym_refs
+                        sched_context_resume_valid_sched_action
                         sched_context_resume_valid_blocked_except_set
                         hoare_vcg_const_imp_lift)
         apply (rule_tac Q="\<lambda>_ s. active_sc_tcb_at tcb_ptr s
@@ -17530,12 +17450,11 @@ lemma invoke_sched_control_configure_flags_valid_sched:
         apply (wpsimp wp: sched_context_resume_cond_released_sc_tcb_at)
        apply (wpsimp wp: sched_context_resume_sc_tcb_sc_at)
       apply (clarsimp; intro conjI impI)
-          apply (erule invs_sym_refs)
+          apply (clarsimp simp: op_equal schact_is_rct_def)
          apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
         apply (fastforce simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def)
        apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
       apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
-
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (simp add: return_bind)
    apply (clarsimp split: if_split)
