@@ -1559,7 +1559,7 @@ abbreviation budget_sufficient :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> 
 
 \<comment> \<open>Threads with scheduling contexts that have been released: all three conditions at once\<close>
 abbreviation released_sc :: "time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
-  "released_sc curtime sc \<equiv> active_scrc sc \<and> refill_ready_sc curtime sc \<and> refill_sufficient_sc 0 sc"
+  "released_sc curtime sc \<equiv> active_scrc sc \<and> refill_ready_sc curtime sc"
 abbreviation released_sc_tcb_at_pred :: "time \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "released_sc_tcb_at_pred curtime \<equiv> pred_map2' (released_sc curtime)"
 abbreviation released_sc_tcb_at_kh :: "time \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
@@ -1570,8 +1570,7 @@ abbreviation released_sc_tcb_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow>
 lemma released_sc_tcb_at_def:
   "released_sc_tcb_at_pred curtime tcb_scps sc_refill_cfgs t
     \<longleftrightarrow> active_sc_tcb_at_pred tcb_scps sc_refill_cfgs t
-        \<and> budget_ready_pred curtime tcb_scps sc_refill_cfgs t
-        \<and> budget_sufficient_pred tcb_scps sc_refill_cfgs t"
+        \<and> budget_ready_pred curtime tcb_scps sc_refill_cfgs t"
   by (simp add: pred_map2_conj)
 
 lemma released_sc_tcb_at_lift:
@@ -1586,7 +1585,7 @@ abbreviation released_sc_at :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> boo
   "released_sc_at scptr s \<equiv> pred_map (released_sc (cur_time s)) (sc_refill_cfgs_of s) scptr"
 
 lemma released_sc_at_def:
-  "released_sc_at scp s = (is_active_sc scp s \<and> is_refill_ready scp s \<and> is_refill_sufficient 0 scp s)"
+  "released_sc_at scp s = (is_active_sc scp s \<and> is_refill_ready scp s)"
   by (clarsimp simp: pred_map_conj[simplified pred_conj_def])
 
 lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
@@ -1595,7 +1594,7 @@ lemma sc_at_pred_to_pred_map_sc_refill_cfgs_of:
   by (auto simp: sc_at_pred_def obj_at_def vs_all_heap_simps assms)
 
 lemmas sc_at_released_kh_simps[obj_at_kh_kheap_simps] =
-  sc_at_pred_to_pred_map_sc_refill_cfgs_of[where P="sc_released curtime" and P'="released_sc curtime" for curtime, simplified sc_released_def, simplified]
+  sc_at_pred_to_pred_map_sc_refill_cfgs_of[where P="sc_released curtime" and P'="released_sc curtime" for curtime, simplified sc_released_def if_bool_simps, simplified]
 
 \<comment> \<open>Sometimes, it will be useful to work with a generalisation of all 4 of the preceding predicates\<close>
 abbreviation bound_sc_obj_tcb_at_kh :: "(sc_refill_cfg \<Rightarrow> bool) \<Rightarrow> (obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> bool" where
@@ -3590,7 +3589,6 @@ lemma valid_ready_qs_in_ready_qD:
    in_ready_q tcb_ptr s \<Longrightarrow>
    st_tcb_at runnable tcb_ptr s \<and>
    active_sc_tcb_at tcb_ptr s \<and>
-   budget_sufficient tcb_ptr s \<and>
    budget_ready tcb_ptr s"
   by (clarsimp simp: released_sc_tcb_at_def valid_ready_qs_def in_ready_q_def
                      obj_at_kh_kheap_simps)
