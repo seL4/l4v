@@ -525,4 +525,8 @@ lemma list_length_2:
 
 lemmas add_le_mono_left = order_trans[OF add_le_mono[OF order_refl], rotated]
 
+lemma hd_tl_nth:
+  "Suc 0 < length list \<Longrightarrow> hd (tl list) = list ! 1"
+  by (cases list; simp add: hd_conv_nth)
+
 end
