@@ -16,8 +16,11 @@ endif
 include kernel.mk
 
 # called by ../../Makefile
+# build/$L4V_ARCH/generated/mode/machine/ only generated for some
+# L4V_ARCH, but ROOT file needs it always
 cspec: ${UMM_TYPES} ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_theories
+	mkdir -p build/$L4V_ARCH/generated/mode/machine/
 
 clean:
 	rm -rf ${KERNEL_BUILD_ROOT}
