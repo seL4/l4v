@@ -432,7 +432,7 @@ definition
   sc_released :: "time \<Rightarrow> sched_context \<Rightarrow> bool"
 where
   "sc_released curtime sc \<equiv>
-    sc_active sc \<and> sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc"
+    sc_active sc \<and> sc_refill_ready curtime sc"
 
 definition
   get_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
