@@ -3314,28 +3314,12 @@ crunches awaken
   and in_cur_domain[wp]: "in_cur_domain t"
   (wp: crunch_wps)
 
-(* FIXME RT: replace possible_switch_to_valid_ready_qs with this. *)
-lemma possible_switch_to_valid_ready_qs'':
-  "\<lbrace>\<lambda>s. valid_ready_qs s \<and> pred_map runnable (tcb_sts_of s) target \<and> released_if_bound_sc_tcb_at target s\<rbrace>
-   possible_switch_to target
-   \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  by (wpsimp simp: possible_switch_to_def obj_at_kh_kheap_simps vs_all_heap_simps
-               wp: thread_get_wp' get_tcb_obj_ref_wp)
-
 lemma possible_switch_to_valid_ready_qs:
-  "\<lbrace>valid_ready_qs and st_tcb_at runnable target and
-    ((bound_sc_tcb_at (\<lambda>sc. sc = None) target) or
-     (active_sc_tcb_at target and budget_ready target and budget_sufficient target))\<rbrace>
-    possible_switch_to target \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  apply (wpsimp wp: possible_switch_to_valid_ready_qs'')
-  by (clarsimp simp: obj_at_kh_kheap_simps pred_map_eq_normalise vs_all_heap_simps)
-
-lemma possible_switch_to_valid_ready_qs':
   "\<lbrace>valid_ready_qs
-    and (\<lambda>s. \<forall>tcb. ko_at (TCB tcb) target s \<and>
-      tcb_domain tcb \<noteq> cur_domain s \<or>
-      (tcb_domain tcb = cur_domain s \<and> scheduler_action s \<noteq> resume_cur_thread)
-       \<longrightarrow> (runnable (tcb_state tcb) \<and> released_sc_tcb_at target s))\<rbrace>
+    and (\<lambda>s. bound_sc_tcb_at ((=) None) target s \<or>
+     (\<forall>tcb. ko_at (TCB tcb) target s \<and>
+      (tcb_domain tcb \<noteq> cur_domain s \<or> scheduler_action s \<noteq> resume_cur_thread)
+       \<longrightarrow> (runnable (tcb_state tcb) \<and> released_sc_tcb_at target s)))\<rbrace>
    possible_switch_to target
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
   unfolding possible_switch_to_def gets_the_def
@@ -3347,7 +3331,7 @@ lemma possible_switch_to_valid_ready_qs':
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (wpsimp wp: hoare_vcg_if_lift2)
-  apply (clarsimp simp: obj_at_def pred_tcb_at_def)
+  apply (clarsimp simp: obj_at_def pred_tcb_at_def dest!: sym[of _ "tcb_sched_context _"])
   done
 
 \<comment> \<open>set_simple_ko functions\<close>
@@ -9829,10 +9813,10 @@ lemma awaken_body_valid_ready_qs:
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
     apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps)
    apply (wpsimp simp: valid_release_q_def obj_at_kh_kheap_simps released_sc_tcb_at_def)
-   apply (fastforce intro!: active_sc_tcb_at_budget_sufficient
-                      simp: valid_release_q_def obj_at_kh_kheap_simps)
+   apply (clarsimp intro!: active_sc_tcb_at_budget_sufficient)
   apply (wpsimp wp: possible_switch_to_valid_ready_qs
               simp: released_sc_tcb_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma awaken_body_valid_sched_action:
@@ -12840,9 +12824,11 @@ lemma send_ipc_valid_ready_qs:
   apply (rule hoare_seq_ext[OF _ gsc_sp], simp add: pred_conj_def obj_at_kh_kheap_simps pred_map_eq_normalise)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> released_if_bound_sc_tcb_at dest s" in hoare_seq_ext)
-   apply (wpsimp wp: possible_switch_to_valid_ready_qs'' set_thread_state_valid_ready_qs
-                     set_thread_state_pred_map_tcb_sts_of)
-  apply (simp add: pred_conj_def obj_at_def)
+   apply (rule_tac B="\<lambda>_ s. valid_ready_qs s \<and> released_if_bound_sc_tcb_at dest s
+                            \<and> st_tcb_at runnable dest s" in hoare_seq_ext[rotated])
+    apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of set_thread_state_valid_ready_qs)
+   apply (wpsimp wp: possible_switch_to_valid_ready_qs)
+   apply (clarsimp simp: obj_at_def released_sc_tcb_at_def tcb_at_kh_simps[symmetric] pred_tcb_at_def)
   apply (intro hoare_if[rotated] hoare_when_cases)
      apply clarsimp
     apply (wpsimp wp: sched_context_donate_released_if_bound_callee get_tcb_obj_ref_wp
