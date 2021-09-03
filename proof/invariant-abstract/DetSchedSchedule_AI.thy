@@ -6315,18 +6315,6 @@ lemma postpone_in_release_q:
   apply (drule_tac s="Some tcbptr" in sym, simp)
   done
 
-(* FIXME : Move *)
-lemma valid_refills_refill_sufficient:
-  "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
-  by (fastforce simp: valid_refills_def rr_valid_refills_def vs_all_heap_simps obj_at_def
-                        refill_sufficient_defs split: if_splits)
-
-(* FIXME : Move *)
-lemma valid_refills_tcb_at_budget_sufficient:
-  "valid_refills_tcb_at tp s \<Longrightarrow> budget_sufficient tp s"
-  by (fastforce simp: valid_refills_tcb_at_def budget_sufficient_def2 obj_at_def op_equal
-              intro!: valid_refills_refill_sufficient)
-
 lemma sched_context_resume_schedulable_imp_ready:
   "\<lbrace>bound_sc_tcb_at ((=) (Some scp)) t
     and sc_tcb_sc_at ((=) (Some t)) scp
@@ -6374,7 +6362,7 @@ lemma sched_context_bind_tcb_valid_sched:
                      split: if_splits)
       apply (fastforce simp: valid_sched_def runnable_eq_active
                       elim!: valid_blockedE'
-                             valid_refills_tcb_at_budget_sufficient[OF active_sc_valid_refills_tcb_at])
+                             valid_refills_budget_sufficient[OF active_sc_valid_refills_tcb_at])
      apply (wpsimp wp: sched_context_resume_valid_sched_except_blocked
                        sched_context_resume_schedulable_imp_ready)
     apply (rule_tac Q="\<lambda>r. valid_sched_except_blocked and sc_not_in_release_q scptr and
@@ -11964,7 +11952,7 @@ lemma restart_valid_sched:
                      split: if_splits)
       apply (fastforce simp: valid_sched_def runnable_eq_active
                       elim!: valid_blockedE'
-                             valid_refills_tcb_at_budget_sufficient[OF active_sc_valid_refills_tcb_at])
+                             valid_refills_budget_sufficient[OF active_sc_valid_refills_tcb_at])
 
        apply (wpsimp wp: sched_context_resume_valid_sched_except_blocked
                          sched_context_resume_valid_blocked_except_set
