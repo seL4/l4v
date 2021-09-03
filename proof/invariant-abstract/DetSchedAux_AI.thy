@@ -1575,6 +1575,19 @@ lemma valid_refills_tcb_at_bound_sc:
 lemmas active_sc_tcb_at_valid_refills
   = active_sc_valid_refills_tcb_at[THEN valid_refills_tcb_at_bound_sc]
 
+lemma valid_refills_refill_sufficient:
+  "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
+  by (fastforce simp: valid_refills_def rr_valid_refills_def vs_all_heap_simps obj_at_def
+                        refill_sufficient_defs split: if_splits)
+
+lemma valid_refills_budget_sufficient:
+  "valid_refills_tcb_at tp s \<Longrightarrow> budget_sufficient tp s"
+  by (fastforce simp: valid_refills_tcb_at_def budget_sufficient_def2 obj_at_def op_equal
+              intro!: valid_refills_refill_sufficient)
+
+lemmas active_valid_budget_sufficient
+  = valid_refills_budget_sufficient[OF active_sc_valid_refills_tcb_at]
+
 lemma released_sc_tcb_at_valid_refills:
   "\<lbrakk>active_sc_valid_refills s; released_sc_tcb_at tp s;
      bound_sc_tcb_at ((=) (Some scp)) tp s\<rbrakk>
