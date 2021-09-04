@@ -352,7 +352,8 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
 
 lemma setDomain_corres:
   "corres dc
-     (valid_tcbs and pspace_aligned and pspace_distinct and weak_valid_sched_action and tcb_at tptr)
+     (valid_tcbs and pspace_aligned and pspace_distinct and weak_valid_sched_action
+      and active_sc_valid_refills and tcb_at tptr)
      (invs' and (\<lambda>_. new_dom \<le> maxDomain))
      (set_domain tptr new_dom)
      (setDomain tptr new_dom)"

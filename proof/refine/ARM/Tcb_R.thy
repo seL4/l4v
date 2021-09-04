@@ -202,7 +202,7 @@ lemma restart_corres:
                    prefer 4
                    apply (rule schedContextResume_corres)
                   apply (wpsimp wp: is_schedulable_wp isSchedulable_wp)+
-               apply (rule_tac Q="\<lambda>rv. invs and valid_sched_action and tcb_at t" in hoare_strengthen_post)
+               apply (rule_tac Q="\<lambda>rv. invs and valid_sched_action and active_sc_valid_refills and tcb_at t" in hoare_strengthen_post)
                 apply (wpsimp wp: sched_context_resume_valid_sched_action)
                apply fastforce
               apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t" in hoare_strengthen_post)
@@ -923,7 +923,8 @@ lemma threadSetPriority_valid_tcbs'[wp]:
   done
 
 lemma threadSetPriority_onRunning_corres:
-  "corres dc (valid_pspace and weak_valid_sched_action and tcb_at t and K (prio \<le> maxPriority))
+  "corres dc (valid_pspace and weak_valid_sched_action and active_sc_valid_refills
+              and tcb_at t and K (prio \<le> maxPriority))
              (\<lambda>s. invs' s \<and> tcb_at' t s)
              (do d <- thread_get tcb_domain t;
                  p <- thread_get tcb_priority t;
@@ -1820,7 +1821,7 @@ lemma installThreadBuffer_corres:
                apply (rule corres_split_deprecated[OF _ gct_corres], clarsimp)
                  apply (rule corres_when[OF refl rescheduleRequired_corres])
                 apply (rule_tac Q="\<lambda>_. valid_objs and weak_valid_sched_action
-                                                  and pspace_aligned and pspace_distinct"
+                                       and active_sc_valid_refills and pspace_aligned and pspace_distinct"
                              in hoare_strengthen_post[rotated], fastforce)
                 apply wp
                apply (rule_tac Q="\<lambda>_. valid_objs' and valid_release_queue_iff
@@ -1851,7 +1852,8 @@ lemma installThreadBuffer_corres:
        apply ((wp cap_delete_deletes cap_delete_valid_sched cap_delete_cte_at cap_delete_deletes_fh
                   hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_disj_lift_R
                | strengthen use_no_cap_to_obj_asid_strg is_aligned_tcb_ipc_buffer_update invs_valid_objs2
-                            invs_psp_aligned_strg invs_distinct[atomized] valid_sched_weak_strg)+)[1]
+                            invs_psp_aligned_strg invs_distinct[atomized] valid_sched_weak_strg
+                            valid_sched_active_sc_valid_refills)+)[1]
       apply (rule_tac Q="\<lambda>_ s. invs' s \<and> tcb_at' a s \<and>
                                (g''' \<noteq> None \<longrightarrow> valid_cap' (fst (the g''')) s) \<and>
                                cte_wp_at' (\<lambda>a. cteCap a = capability.NullCap)
@@ -1909,7 +1911,8 @@ lemma tc_corres_caps:
                           case_option \<top> (no_cap_to_obj_dr_emp o fst) c"
   shows
     "corres (dc \<oplus> (=))
-    (einvs and valid_machine_time and simple_sched_action and tcb_at t and tcb_inv_wf tc_caps_inv)
+    (einvs and valid_machine_time and simple_sched_action and active_sc_valid_refills
+     and tcb_at t and tcb_inv_wf tc_caps_inv)
     (invs' and sch_act_simple and tcb_inv_wf' tc_caps_inv')
     (invoke_tcb tc_caps_inv)
     (invokeTCB tc_caps_inv')"
@@ -1988,7 +1991,7 @@ lemma schedContextUnbindTCB_corres:
                       apply (wpsimp simp: set_tcb_obj_ref_def)
                      apply (wp | rule tcb_release_remove_corres tcbSchedDequeue_corres
                                       corres_when[OF refl rescheduleRequired_corres] gct_corres)+
-        apply (prop_tac "invs s \<and> (\<exists>y. sc_tcb sc = Some y \<and> tcb_at y s)
+        apply (prop_tac "invs s \<and> (\<exists>y. sc_tcb sc = Some y \<and> tcb_at y s) \<and> active_sc_valid_refills s
                                 \<and> weak_valid_sched_action s \<and> sc_at scp s")
          apply assumption
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def sc_relation_def)
@@ -2036,7 +2039,7 @@ crunches sched_context_resume
 
 lemma schedContextBindTCB_corres:
   "corres dc (invs and valid_sched and simple_sched_action and bound_sc_tcb_at ((=) None) t
-                   and sc_tcb_sc_at ((=) None) ptr and ex_nonz_cap_to t and ex_nonz_cap_to ptr)
+              and active_sc_valid_refills and sc_tcb_sc_at ((=) None) ptr and ex_nonz_cap_to t and ex_nonz_cap_to ptr)
              (invs' and ex_nonz_cap_to' t and ex_nonz_cap_to' ptr)
              (sched_context_bind_tcb ptr t) (schedContextBindTCB ptr t)"
   apply (simp only: sched_context_bind_tcb_def schedContextBindTCB_def)
@@ -2057,7 +2060,7 @@ lemma schedContextBindTCB_corres:
                  apply (wpsimp simp: is_schedulable_def)
                 apply (wpsimp wp: threadGet_wp getTCB_wp simp: isSchedulable_def inReleaseQueue_def)
                apply (rule schedContextResume_corres)
-              apply (rule_tac Q="\<lambda>rv. invs and weak_valid_sched_action and
+              apply (rule_tac Q="\<lambda>rv. invs and weak_valid_sched_action and active_sc_valid_refills and
                                       sc_tcb_sc_at ((=) (Some t)) ptr and
                                       bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) t"
                            in hoare_strengthen_post[rotated], fastforce)
@@ -2320,6 +2323,7 @@ lemma tc_corres_sched:
                             in hoare_strengthen_post[rotated])
                 apply (clarsimp simp: obj_at_def split: option.splits)
                 apply (frule invs_valid_objs)
+                apply (frule valid_sched_active_sc_valid_refills)
                 apply (erule (1) valid_objsE)
                 apply (clarsimp simp: valid_obj_def valid_tcb_def obj_at_def is_sc_obj_def
                                       invs_def valid_state_def valid_pspace_def)
@@ -2620,7 +2624,8 @@ lemma tcbinv_corres:
            apply simp
           apply (rule TcbAcc_R.rescheduleRequired_corres)
          apply (solves \<open>wpsimp wp: hoare_drop_imp\<close>)+
-   apply (clarsimp simp: invs_valid_tcbs valid_sched_weak_strg invs_psp_aligned)
+   apply (clarsimp simp: invs_valid_tcbs valid_sched_weak_strg invs_psp_aligned
+                         valid_sched_active_sc_valid_refills)
   apply (clarsimp simp: invs_valid_queues' invs_queues invs'_valid_tcbs' invs_valid_release_queue)
   done
 
@@ -2981,8 +2986,7 @@ lemma get_sc_released_corres:
    apply (wpsimp wp: no_ofail_gets_the readRefillReady_no_ofail)
   apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def
                  dest!: readObject_misc_ko_at')
-  apply normalise_obj_at'
-  apply (subgoal_tac "sc_active sc = (0 < scRefillMax v')")
+  apply (subgoal_tac "sc_active sc = (0 < scRefillMax sca)")
    apply (case_tac "sc_active sc"; clarsimp)
    apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
     apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
@@ -2992,6 +2996,7 @@ lemma get_sc_released_corres:
                              rr_valid_refills_def sp_valid_refills_def obj_at_def
                              valid_obj'_def obj_at'_def projectKOs readCurTime_def ogets_def
                              state_relation_def
+                      dest!: readObject_ko_at'_sc
                       split: if_splits)+
   apply (clarsimp simp: refill_ready_def readCurTime_def ogets_def sc_relation_def active_sc_def)
   done
