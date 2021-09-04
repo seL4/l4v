@@ -2070,6 +2070,8 @@ lemma bind_sc_reply_invs[wp]:
 crunches bind_sc_reply
   for pspace_distinct[wp]: pspace_distinct
   and pspace_aligned[wp]: pspace_aligned
+  and active_sc_valid_refills[wp]: active_sc_valid_refills
+  (ignore: update_sched_context)
 
 lemma bind_sc_reply_valid_objs[wp]:
   "\<lbrace>valid_objs and reply_at reply_ptr and sc_at sc_ptr and
@@ -2084,7 +2086,7 @@ lemma bind_sc_reply_valid_objs[wp]:
 lemma replyPush_corres:
   "can_donate = can_donate' \<Longrightarrow>
    corres dc (valid_replies and pspace_aligned and pspace_distinct and valid_objs
-              and K (caller \<noteq> idle_thread_ptr) and tcb_at callee
+              and K (caller \<noteq> idle_thread_ptr) and tcb_at callee and active_sc_valid_refills
               and st_tcb_at (\<lambda>st. reply_object st = None) caller and ex_nonz_cap_to reply_ptr
               and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
               and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
@@ -2429,6 +2431,7 @@ lemma sendIPC_corres:
   assumes "call \<longrightarrow> bl"
   shows
   "corres dc (all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {t} and valid_list
+              and active_sc_valid_refills
               and valid_sched_action and ep_at ep and ex_nonz_cap_to t and st_tcb_at active t
               and scheduler_act_not t and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s))
              invs'
@@ -2441,7 +2444,7 @@ lemma sendIPC_corres:
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split [OF get_ep_corres, where
               R="\<lambda>rv. all_invs_but_fault_tcbs and valid_list and st_tcb_at active t
-                      and ep_at ep and valid_sched_action
+                      and ep_at ep and valid_sched_action and active_sc_valid_refills
                       and valid_ep rv and obj_at (\<lambda>ob. ob = Endpoint rv) ep
                       and ex_nonz_cap_to t and scheduler_act_not t
                       and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s)"
@@ -2519,7 +2522,7 @@ lemma sendIPC_corres:
                           apply (wpsimp wp: thread_get_wp')
                          apply (wpsimp wp: threadGet_wp)
                         apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct
-                                 and tcb_at t' and valid_sched_action"
+                                 and tcb_at t' and valid_sched_action and active_sc_valid_refills"
                                in hoare_strengthen_post[rotated])
                          apply clarsimp
                         apply (wpsimp wp: set_thread_state_valid_sched_action sched_context_donate_valid_sched_action
@@ -2535,7 +2538,7 @@ lemma sendIPC_corres:
                    apply (wpsimp wp: threadGet_wp)
                   apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
                            scheduler_act_not t and valid_sched_action and valid_replies and
-                           st_tcb_at active t and tcb_at t' and scheduler_act_not t' and
+                           st_tcb_at active t and tcb_at t' and scheduler_act_not t' and active_sc_valid_refills and
                            (\<lambda>s. reply_opt \<noteq> None \<longrightarrow> reply_at (the reply_opt) s \<and>
                                 ex_nonz_cap_to (the reply_opt) s \<and>
                                 reply_tcb_reply_at (\<lambda>tptr. tptr = None) (the reply_opt) s \<and>
@@ -2587,7 +2590,7 @@ lemma sendIPC_corres:
                  apply wpsimp
                 apply (wpfix add: reply_object.simps(1))
                 apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
-                         valid_replies and
+                         valid_replies and active_sc_valid_refills and
                          scheduler_act_not t and valid_sched_action
                          and st_tcb_at active t and tcb_at t' and
                          if_live_then_nonz_cap and scheduler_act_not t' and
@@ -2978,24 +2981,22 @@ lemma schedContextResume_corres:
    apply (subgoal_tac "sc_tcb_sc_at (\<lambda>t. bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) (the t) s) ptr s ")
     apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def bound_sc_tcb_at_def is_tcb_def
                     cong: conj_cong)
-    apply (intro conjI impI; (clarsimp simp: invs_def valid_state_def; fail)?)
-           apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
-          apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
-          apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                                 opt_map_red MIN_REFILLS_def
-                          dest!: active_sc_valid_refillsE split: if_split_asm)
-         apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_kh_simp)
-         apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                          dest: active_sc_valid_refillsE)
-        apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_def active_sc_def
-                               vs_all_heap_simps opt_map_red)
-       apply (prop_tac "is_active_sc ptr s")
-        apply (fastforce simp: vs_all_heap_simps is_schedulable_bool_def get_tcb_def
-                               is_sc_active_def opt_map_red)
-       apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
-                              valid_ready_queued_thread_2_def in_ready_q_def)+
-     apply (clarsimp simp: is_schedulable_bool_def get_tcb_def)
-    apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_def split: option.splits)
+
+    apply (intro conjI; (clarsimp simp: invs_def valid_state_def; fail)?)
+     apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
+    apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
+    apply (rename_tac t; prop_tac "budget_sufficient t s")
+     apply (erule active_valid_budget_sufficient)
+     apply (clarsimp simp: vs_all_heap_simps)
+    apply (intro conjI impI)
+        apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                               opt_map_red MIN_REFILLS_def
+                        dest!: active_sc_valid_refillsE split: if_split_asm)
+       apply (clarsimp simp: is_schedulable_bool_def get_tcb_def is_sc_active_kh_simp)
+       apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                        dest: active_sc_valid_refillsE)
+      apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
+                             valid_ready_queued_thread_2_def in_ready_q_def)+
    apply (clarsimp simp: sc_at_ppred_def obj_at_def)
    apply (drule invs_sym_refs)
    apply (drule sym_refs_ko_atD[rotated], simp add: obj_at_def)
@@ -4103,7 +4104,7 @@ lemma valid_tcb'_SchedContext_update_empty[elim!]:
 lemma maybeReturnSc_corres:
   "corres dc
    (ntfn_at ntfnPtr and tcb_at thread and valid_tcbs and pspace_aligned
-      and scheduler_act_not thread
+      and scheduler_act_not thread and active_sc_valid_refills
       and pspace_distinct and weak_valid_sched_action
       and not_queued thread and not_in_release_q thread
       and (\<lambda>s. sym_refs (state_refs_of s)))
@@ -4677,7 +4678,7 @@ lemma receiveIPC_corres:
 lemma scheduleTCB_corres:
   "corres dc
           (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct
-           and tcb_at tcbPtr)
+           and tcb_at tcbPtr and active_sc_valid_refills)
           (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
           (schedule_tcb tcbPtr)
           (scheduleTCB tcbPtr)"
@@ -4809,7 +4810,7 @@ lemma send_fault_ipc_corres:
   assumes "cap_relation cap cap'"
   shows
   "corres (fr \<oplus> (=))
-          (invs and valid_list and valid_sched_action
+          (invs and valid_list and valid_sched_action and active_sc_valid_refills
                 and st_tcb_at active thread and scheduler_act_not thread
                 and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at (\<lambda>sc. sc \<noteq> None) thread s)
                 and valid_cap cap and K (valid_fault_handler cap) and K (valid_fault f))
@@ -5808,7 +5809,7 @@ lemma sfi_invs_plus':
 
 lemma hf_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_action
+  shows "corres dc (invs and valid_list and valid_sched_action and active_sc_valid_refills
                          and scheduler_act_not t and st_tcb_at active t
                          and ex_nonz_cap_to t and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
@@ -5858,7 +5859,7 @@ lemma hf_corres:
 
 lemma handleTimeout_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_action
+  shows "corres dc (invs and valid_list and valid_sched_action and active_sc_valid_refills
                          and scheduler_act_not t and st_tcb_at active t
                          and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
                    invs'

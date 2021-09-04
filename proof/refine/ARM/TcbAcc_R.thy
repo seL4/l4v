@@ -2407,7 +2407,8 @@ lemma no_ofail_read_sc_refill_ready:
   by (clarsimp simp: omonad_defs obind_def dest!: no_ofailD[OF no_ofail_read_sched_context])
 
 lemma rescheduleRequired_corres_weak:
-  "corres dc (valid_tcbs and weaker_valid_sched_action and pspace_aligned and pspace_distinct)
+  "corres dc (valid_tcbs and weaker_valid_sched_action and pspace_aligned and pspace_distinct
+              and active_sc_valid_refills)
              (valid_tcbs' and Invariants_H.valid_queues and valid_queues' and valid_release_queue_iff)
              reschedule_required rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
@@ -2418,6 +2419,7 @@ lemma rescheduleRequired_corres_weak:
   apply (rule corres_split'[where r'=dc, rotated]; (solves \<open>wpsimp\<close>)?)
    apply (corressimp corres: set_sa_corres)
   apply (case_tac action; clarsimp?)
+  apply (rename_tac tp)
   apply (rule corres_split'[OF _ _ is_schedulable_sp isSchedulable_inv, rotated 2])
    apply (corressimp corres: isSchedulable_corres)
    apply (clarsimp simp: weaker_valid_sched_action_def obj_at_def vs_all_heap_simps is_tcb_def)
@@ -2451,7 +2453,12 @@ lemma rescheduleRequired_corres_weak:
     apply simp
    apply (wpsimp wp: get_sched_context_no_fail simp: get_sc_refill_ready_def)
    apply (clarsimp intro!: no_ofailD[OF no_ofail_read_sc_refill_ready] simp: obj_at_def is_sc_obj)
-
+  apply (rule_tac F=sufficient in corres_req)
+   apply (clarsimp simp: obj_at_def is_schedulable_opt_def get_tcb_def)
+   apply (drule_tac tp=tp in active_valid_budget_sufficient)
+    apply (clarsimp simp: vs_all_heap_simps is_sc_active_def)
+   apply (clarsimp simp: return_def vs_all_heap_simps
+                         obj_at_def pred_tcb_at_def weaker_valid_sched_action_def)
   apply (rule corres_symb_exec_l[OF _ _ assert_sp, rotated])
     apply (clarsimp simp: exs_valid_def return_def vs_all_heap_simps
                           obj_at_def pred_tcb_at_def weaker_valid_sched_action_def)
@@ -2462,7 +2469,8 @@ lemma rescheduleRequired_corres_weak:
   done
 
 lemma rescheduleRequired_corres:
-  "corres dc (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct)
+  "corres dc (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct
+              and active_sc_valid_refills)
              (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
              reschedule_required rescheduleRequired"
   by (rule corres_guard_imp[OF rescheduleRequired_corres_weak])

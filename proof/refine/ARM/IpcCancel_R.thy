@@ -2063,7 +2063,8 @@ definition
        od"
 
 lemma restart_thread_if_no_fault_corres:
-  "corres dc (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct and valid_tcbs)
+  "corres dc (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
+              and valid_tcbs and active_sc_valid_refills)
              (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')
              (restart_thread_if_no_fault t)
              (restartThreadIfNoFault t)"
@@ -2516,6 +2517,7 @@ lemma ntfn_cancel_corres:
      apply (wpsimp wp: hoare_vcg_const_Ball_lift)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (erule (1) obj_at_valid_objsE)
+   apply (frule valid_sched_active_sc_valid_refills)
    apply (clarsimp simp: valid_obj_def valid_ntfn_def not_idle_tcb_in_waitingntfn
                          valid_sched_weak_valid_sched_action
                   dest!: valid_objs_valid_tcbs)

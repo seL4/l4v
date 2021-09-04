@@ -3333,7 +3333,8 @@ lemma weak_sch_act_wf_at_cross:
 
 lemma possibleSwitchTo_corres:
   "corres dc
-    (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct and valid_tcbs)
+    (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
+     and valid_tcbs and active_sc_valid_refills)
     (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')
       (possible_switch_to t)
       (possibleSwitchTo t)"
@@ -3693,7 +3694,7 @@ lemma isRunnable_no_fail[wp]:
 
 lemma awakenBody_corres:
   "corres dc ((pspace_aligned and pspace_distinct and valid_objs and valid_sched_action
-               and valid_tcbs and valid_release_q)
+               and valid_tcbs and valid_release_q and active_sc_valid_refills)
               and (\<lambda>s. release_queue s \<noteq> []))
              (valid_objs' and valid_queues and valid_queues' and valid_release_queue_iff)
              awaken_body
@@ -4335,7 +4336,7 @@ crunches tcbReleaseRemove
 
 lemma schedContextDonate_corres:
   "corres dc (sc_at scp and tcb_at thread and weak_valid_sched_action and pspace_aligned and
-              pspace_distinct and valid_objs)
+              pspace_distinct and valid_objs and active_sc_valid_refills)
              (valid_objs' and valid_queues and valid_queues' and
               valid_release_queue and valid_release_queue')
              (sched_context_donate scp thread)
