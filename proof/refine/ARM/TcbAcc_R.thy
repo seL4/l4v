@@ -2453,7 +2453,7 @@ lemma rescheduleRequired_corres_weak:
     apply simp
    apply (wpsimp wp: get_sched_context_no_fail simp: get_sc_refill_ready_def)
    apply (clarsimp intro!: no_ofailD[OF no_ofail_read_sc_refill_ready] simp: obj_at_def is_sc_obj)
-  apply (rule_tac F="sufficient = True" in corres_req)
+  apply (rule_tac F=sufficient in corres_req)
    apply (clarsimp simp: obj_at_def is_schedulable_opt_def get_tcb_def)
    apply (drule_tac tp=tp in active_valid_budget_sufficient)
     apply (clarsimp simp: vs_all_heap_simps is_sc_active_def)
