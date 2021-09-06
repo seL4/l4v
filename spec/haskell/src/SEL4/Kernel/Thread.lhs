@@ -347,6 +347,14 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 >           setReprogramTimer True
 >           rescheduleRequired
 
+> scAndTimer :: Kernel ()
+> scAndTimer = do
+>     switchSchedContext
+>     reprogram <- getReprogramTimer
+>     when reprogram $ do
+>         setNextInterrupt
+>         setReprogramTimer False
+
 > schedule :: Kernel ()
 > schedule = do
 >     stateAssert sch_act_wf_asrt
@@ -397,12 +405,9 @@ If the current thread is no longer runnable, has used its entire timeslice, an I
 >         ChooseNewThread -> do
 >             when isSchedulable $ tcbSchedEnqueue curThread
 >             scheduleChooseNewThread
->
->     switchSchedContext
->     reprogram <- getReprogramTimer
->     when reprogram $ do
->         setNextInterrupt
->         setReprogramTimer False
+
+>     scAndTimer
+
 
 
 
