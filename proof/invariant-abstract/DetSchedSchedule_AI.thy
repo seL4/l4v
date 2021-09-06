@@ -3303,7 +3303,7 @@ lemma possible_switch_to_valid_sched_strong:
   apply (wpsimp wp: set_scheduler_action_swt_valid_sched'
                     tcb_sched_enqueue_valid_sched reschedule_valid_sched_except_blocked_const
                     reschedule_required_valid_blocked thread_get_wp')
-  apply (prop_tac "pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) target")
+  apply (prop_tac "pred_map bound (tcb_scps_of s) target")
    apply (clarsimp simp: pred_map_def tcb_at_kh_simps)
   apply (clarsimp simp: released_sc_tcb_at_def tcb_at_kh_simps[symmetric])
   apply (prop_tac "budget_sufficient target s")
@@ -5184,7 +5184,7 @@ lemma sched_context_resume_valid_sched_except_blocked:
   apply (wpsimp wp: postpone_valid_sched_except_blocked is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
               simp: sched_context_resume_def get_refills_def)
   apply (clarsimp simp: obj_at_def)
-  apply (prop_tac "heap_ref_eq y scp (sc_tcbs_of s)")
+  apply (rename_tac y tcb tp; prop_tac "heap_ref_eq y scp (sc_tcbs_of s)")
    apply (clarsimp simp: vs_all_heap_simps)
   apply (frule (1) heap_refs_retract_atD, clarsimp simp: vs_all_heap_simps valid_sched_def)
   apply (prop_tac "\<not> released_sc_tcb_at tp s")
