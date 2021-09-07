@@ -609,12 +609,11 @@ lemma copyGlobalMappings_ksPSpace_stable:
       apply (rule ccontr)
       apply clarsimp
       apply (drule(1) pspace_alignedD')
-      apply (drule is_aligned_weaken[where y = 2])
-       apply (case_tac y, simp_all add: objBits_simps' pageBits_def)
-      apply (simp add: archObjSize_def pageBits_def
-                       pteBits_def pdeBits_def
-                  split: arch_kernel_object.splits)
-      sorry
+      apply (drule is_aligned_weaken[where y = 2]; simp?)
+      apply (fastforce simp: archObjSize_def pageBits_def pteBits_def pdeBits_def objBits_simps'
+                             scBits_at_least_2
+                      split: arch_kernel_object.splits kernel_object.splits)
+      done
     have ptr_eqD:
       "\<And>p a b. \<lbrakk>p + a = ptr + b;is_aligned p pdBits;
             a < 2^ pdBits; b < 2^pdBits \<rbrakk>
