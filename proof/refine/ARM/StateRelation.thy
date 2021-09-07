@@ -1203,19 +1203,25 @@ lemma scBits_max:
 (*  using assms
   by (clarsimp simp: valid_sched_context_size'_def maxUntypedSizeBits_def)*) sorry
 
-lemma scBits_pos':
-  "0 < scBitsFromRefillLength' us"
+lemma scBits_at_least_2:
+  "2 \<le> scBitsFromRefillLength' us"
 proof -
   note sc_const_eq[simp]
   have "log 2 (of_nat sizeof_sched_context_t)
            \<le> log 2 (of_nat (us * refill_size_bytes + sizeof_sched_context_t))"
     apply (simp only: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
     by (simp only: log_le_cancel_iff[where a="2::real", THEN iffD2])
-  moreover have "0 < log 2 (of_nat sizeof_sched_context_t)"
+  moreover have "1 < log 2 (of_nat sizeof_sched_context_t)"
     by (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
   ultimately show ?thesis
-    by (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
+    apply (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
+    by linarith
 qed
+
+lemma scBits_pos':
+  "0 < scBitsFromRefillLength' us"
+  using scBits_at_least_2
+  by (metis gr0I not_numeral_le_zero)
 
 lemma scBits_pos:
 (*  assumes "valid_sched_context_size' sc'"*)
