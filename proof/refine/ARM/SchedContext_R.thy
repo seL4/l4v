@@ -964,7 +964,7 @@ lemma updateRefillTl_corres:
     \<forall>refill refill'. refill = refill_map refill' \<longrightarrow> f refill = (refill_map (f' refill'))\<rbrakk>
    \<Longrightarrow> corres dc
               (sc_at sc_ptr and is_active_sc2 sc_ptr)
-              (sc_at' scPtr and valid_objs')
+              (sc_at' scPtr and valid_refills' scPtr)
               (update_refill_tl sc_ptr f)
               (updateRefillTl scPtr f')"
   supply projection_rewrites[simp]
@@ -972,10 +972,9 @@ lemma updateRefillTl_corres:
    apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
   apply (clarsimp simp: update_refill_tl_def updateRefillTl_def)
   apply (rule corres_guard_imp)
-    apply (rule updateSchedContext_corres_gen[where P=\<top> and P'="valid_objs' and is_active_sc' scPtr"])
+    apply (rule updateSchedContext_corres_gen[where P=\<top> and P'="valid_refills' scPtr and is_active_sc' scPtr"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
-      apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def)
-      apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def valid_sched_context'_def)
+      apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def valid_refills'_def)
       apply (clarsimp simp: sc_relation_updateRefillTl opt_map_red)
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                      dest!: state_relation_sc_replies_relation_sc)
