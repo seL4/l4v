@@ -3939,7 +3939,7 @@ lemma refillPopHead_corres:
   "corres (\<lambda>refill refill'. refill = refill_map refill')
               (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr
                and sc_refills_sc_at (\<lambda>refills. 1 < length refills) sc_ptr)
-              valid_objs'
+              (valid_refills' sc_ptr)
               (refill_pop_head sc_ptr) (refillPopHead sc_ptr)"
   (is "corres _ ?abs ?conc _ _")
   supply if_split[split del]
@@ -3959,20 +3959,17 @@ lemma refillPopHead_corres:
   apply (rule_tac F="refill_hd sc = refill_map (refillHd sc')" in corres_req)
    apply (clarsimp simp: obj_at_def is_sc_obj obj_at'_def projectKOs)
    apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-   apply (clarsimp elim!: refill_hd_relation)
-   apply (erule (1) valid_objsE')
-   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def is_active_sc'_def opt_map_red)
+   apply (clarsimp elim!: refill_hd_relation simp: valid_refills'_def opt_map_red)
   apply (rule corres_guard_imp)
     apply (rule corres_split'[OF updateSchedContext_corres_gen[where
                                     P="(\<lambda>s. ((\<lambda>sc. 1 < length (sc_refills sc)) |< scs_of2 s) sc_ptr)"
-                                and P'="valid_objs' and is_active_sc' sc_ptr"]])
+                                and P'="valid_refills' sc_ptr and is_active_sc' sc_ptr"]])
          apply (clarsimp, drule (2) state_relation_sc_relation)
          apply (clarsimp simp: sc_relation_def refills_map_def tl_map obj_at_simps is_sc_obj opt_map_red)
-         apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def valid_sched_context'_def)
+         apply (clarsimp simp: valid_refills'_def opt_map_red)
          apply (subst tl_wrap_slice; clarsimp simp: min_def split: if_split)
          apply (rule conjI impI; clarsimp simp: refillNextIndex_def wrap_slice_start_0 split: if_splits)
-        apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
-                        dest!: state_relation_sc_replies_relation_sc)
+        apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red dest!: state_relation_sc_replies_relation_sc)
         apply clarsimp
        apply (clarsimp simp: objBits_simps)
       apply simp
