@@ -2407,15 +2407,13 @@ lemma no_ofail_refillHeadOverlapping:
   by (clarsimp dest!: no_ofailD[OF no_ofail_readSchedContext])
 
 lemma refillHeadOverlapping_implies_count_greater_than_one:
-  "\<lbrakk>the (refillHeadOverlapping scPtr s); sc_at' scPtr s;
-    \<forall>sc. ko_at' sc scPtr s \<longrightarrow> valid_sched_context' sc s\<rbrakk>
-   \<Longrightarrow> obj_at' (\<lambda>sc. 1 < scRefillCount sc) scPtr s"
+  "\<lbrakk>the (refillHeadOverlapping scPtr s); sc_at' scPtr s\<rbrakk>
+   \<Longrightarrow> ((\<lambda>sc. 1 < scRefillCount sc) |< scs_of' s) scPtr"
   apply (clarsimp simp: refillHeadOverlapping_def readSchedContext_def oliftM_def
                         readRefillNext_def readRefillSize_def obind_def omonad_defs
                  split: option.splits dest!: readObject_misc_ko_at')
-   apply (prop_tac "sc_at' scPtr s")
-    apply (fastforce dest: no_ofail_sc_at'_readObject[unfolded no_ofail_def, rule_format])+
-  apply (clarsimp simp: obj_at'_def projectKOs valid_sched_context'_def MIN_REFILLS_def)
+   apply (fastforce dest: no_ofail_sc_at'_readObject[unfolded no_ofail_def, rule_format])
+  apply (clarsimp simp: obj_at_simps opt_map_red MIN_REFILLS_def)
   done
 
 lemma refillHeadOverlappingLoop_valid_objs':
@@ -2425,10 +2423,9 @@ lemma refillHeadOverlappingLoop_valid_objs':
   (is "valid ?pre _ _")
   apply (clarsimp simp: refillHeadOverlappingLoop_def)
   apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"] mergeRefills_valid_objs')
-  apply (clarsimp simp: runReaderT_def)
-    apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                           refillHeadOverlapping_implies_count_greater_than_one
-                     simp: obj_at'_def active_sc_at'_def projectKOs)
+    apply (clarsimp simp: runReaderT_def)
+    apply (fastforce dest: refillHeadOverlapping_implies_count_greater_than_one
+                     simp: obj_at_simps active_sc_at'_rewrite opt_map_red)
    apply simp
   apply simp
   done
