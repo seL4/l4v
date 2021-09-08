@@ -10,33 +10,6 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* using the abstract side size *)
-lemma state_relation_sc_relation:
-  "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk> \<Longrightarrow>
-   sc_relation (the ((scs_of2 s) ptr)) (obj_bits (the (kheap s ptr)) - min_sched_context_bits) (the ((scs_of' s') ptr))"
-  supply projection_rewrites[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
-  apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
-  by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
-
-(* using the concrete side size *)
-lemma state_relation_sc_relation':
-  "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk> \<Longrightarrow>
-   sc_relation (the ((scs_of2 s) ptr)) (objBits (the (scs_of' s' ptr)) - minSchedContextBits) (the ((scs_of' s') ptr))"
-  supply projection_rewrites[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
-  apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
-  by (clarsimp simp: sc_relation_def scBits_simps opt_map_red)
-
-lemma state_relation_sc_replies_relation_sc:
-  "\<lbrakk>(s, s') \<in> state_relation; sc_at ptr s; sc_at' ptr s'\<rbrakk>
-   \<Longrightarrow> heap_ls (replyPrevs_of s') (scReplies_of s' ptr) (sc_replies (the ((scs_of2 s) ptr)))"
-  supply projection_rewrites[simp] opt_map_red[simp]
-  apply (clarsimp simp: obj_at_simps is_sc_obj)
-  by (fastforce dest!: sc_replies_relation_prevs_list[OF state_relation_sc_replies_relation])
-
-(* end : projection rerwite *)
-
 declare static_imp_wp[wp_split del]
 
 (* Levity: added (20090713 10:04:12) *)
@@ -3951,6 +3924,75 @@ lemma setNextInterrupt_corres:
    apply (clarsimp simp: valid_release_q_def)
   apply (clarsimp simp: state_relation_def release_queue_relation_def)
   done
+
+(* refillUnblockCheck_corres *)
+
+lemma isRoundRobin_corres:
+  "corres (=) (sc_at sc_ptr) (sc_at' sc_ptr)
+              (is_round_robin sc_ptr) (isRoundRobin sc_ptr)"
+  apply (clarsimp simp: is_round_robin_def isRoundRobin_def)
+  apply (corressimp corres: get_sc_corres
+                      simp: sc_relation_def)
+  done
+
+lemma refillPopHead_corres:
+  "corres (\<lambda>refill refill'. refill = refill_map refill')
+              (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr
+               and sc_refills_sc_at (\<lambda>refills. 1 < length refills) sc_ptr)
+              valid_objs'
+              (refill_pop_head sc_ptr) (refillPopHead sc_ptr)"
+  (is "corres _ ?abs ?conc _ _")
+  supply if_split[split del]
+  supply projection_rewrites[simp]
+  apply (subst is_active_sc_rewrite)
+  apply (rule corres_cross[where Q' = "sc_at' sc_ptr", OF sc_at'_cross_rel], fastforce)
+  apply (rule_tac Q="is_active_sc' sc_ptr" in corres_cross_add_guard)
+   apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
+  apply (clarsimp simp: refill_pop_head_def refillPopHead_def)
+  apply (clarsimp simp: getRefillNext_getSchedContext get_refills_def liftM_def)
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (rule corres_guard_imp)
+     apply (rule get_sc_corres)
+    apply simp
+   apply simp
+  apply (rename_tac sc')
+  apply (rule_tac F="refill_hd sc = refill_map (refillHd sc')" in corres_req)
+   apply (clarsimp simp: obj_at_def is_sc_obj obj_at'_def projectKOs)
+   apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+   apply (clarsimp elim!: refill_hd_relation)
+   apply (erule (1) valid_objsE')
+   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def is_active_sc'_def opt_map_red)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split'[OF updateSchedContext_corres_gen[where
+                                    P="(\<lambda>s. ((\<lambda>sc. 1 < length (sc_refills sc)) |< scs_of2 s) sc_ptr)"
+                                and P'="valid_objs' and is_active_sc' sc_ptr"]])
+         apply (clarsimp, drule (2) state_relation_sc_relation)
+         apply (clarsimp simp: sc_relation_def refills_map_def tl_map obj_at_simps is_sc_obj opt_map_red)
+         apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def valid_sched_context'_def)
+         apply (subst tl_wrap_slice; clarsimp simp: min_def split: if_split)
+         apply (rule conjI impI; clarsimp simp: refillNextIndex_def wrap_slice_start_0 split: if_splits)
+        apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
+                        dest!: state_relation_sc_replies_relation_sc)
+        apply clarsimp
+       apply (clarsimp simp: objBits_simps)
+      apply simp
+     apply (wpsimp wp: update_sched_context_wp)
+    apply (wpsimp wp: updateSchedContext_wp)
+   apply (clarsimp simp: sc_refills_sc_at_def obj_at_def opt_map_red)
+  apply simp
+  done
+
+lemma refillPopHead_valid_refills'[wp]:
+  "\<lbrace>\<lambda>s. valid_refills' scPtr' s
+        \<and> (scPtr = scPtr' \<longrightarrow> obj_at' (\<lambda>sc'. Suc 0 < scRefillCount sc') scPtr s)\<rbrace>
+   refillPopHead scPtr
+   \<lbrace>\<lambda>_. valid_refills' scPtr'\<rbrace>"
+  apply (clarsimp simp: refillPopHead_def updateSchedContext_def setSchedContext_def)
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (fastforce simp: valid_refills'_def obj_at'_def projectKOs opt_map_def refillNextIndex_def)
+  done
+
+(* schedule_corres *)
 
 lemma schedule_corres:
   "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
