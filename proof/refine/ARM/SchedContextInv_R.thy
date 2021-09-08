@@ -933,7 +933,7 @@ lemma nonOverlappingMergeRefills_corres:
     corres dc (pspace_aligned and pspace_distinct and sc_at sc_ptr and is_active_sc sc_ptr
                 and valid_objs
                 and (\<lambda>s. pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr))
-              valid_objs'
+              (valid_refills' sc_ptr)
     (non_overlapping_merge_refills sc_ptr)
     (nonOverlappingMergeRefills scPtr)"
   apply (clarsimp simp: non_overlapping_merge_refills_def nonOverlappingMergeRefills_def)
@@ -970,8 +970,6 @@ lemma nonOverlappingMergeRefills_corres:
      apply (wpsimp simp: updateRefillHd_def simp: objBits_simps)
     apply (simp add: is_active_sc_rewrite[symmetric])
    apply blast
-  apply wpsimp
-  apply (fastforce intro: valid_objs'_valid_refills')
   done
 
 lemma head_insufficient_simp:
@@ -992,7 +990,7 @@ lemma refillHdInsufficient_simp:
 
 lemma head_insufficient_equiv:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_objs s;
-    pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) scPtr; valid_objs' s'\<rbrakk>
+    pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) scPtr; valid_refills' scPtr s'\<rbrakk>
    \<Longrightarrow> head_insufficient scPtr s = refillHdInsufficient scPtr s'"
   apply (prop_tac "sc_at scPtr s")
    apply (fastforce dest: valid_objs_valid_sched_context_size
@@ -1002,10 +1000,9 @@ lemma head_insufficient_equiv:
   apply (frule state_relation_sc_relation; simp?)
   apply (subst head_insufficient_simp; simp?)
   apply (subst refillHdInsufficient_simp; simp)
-  apply (frule refill_hd_relation2[where s'=s'])
-    apply (fastforce simp: vs_all_heap_simps opt_map_def)
-   apply (clarsimp simp: sc_ko_at_valid_objs_valid_sc' opt_map_def projectKOs obj_at'_def)
-  apply (clarsimp simp: obj_at_def sc_at_ppred_def obj_at'_def projectKOs minBudget_def
+  apply (frule refill_hd_relation)
+   apply (fastforce simp: vs_all_heap_simps valid_refills'_def opt_map_def obj_at_simps)
+  apply (clarsimp simp: obj_at_def sc_at_ppred_def obj_at'_def projectKOs minBudget_def refill_map_def
                         MIN_BUDGET_def kernelWCETTicks_def opt_map_def vs_all_heap_simps)
   done
 
@@ -1089,7 +1086,7 @@ lemma headInsufficientLoop_corres:
                                     (sc_refill_cfgs_of s) sc_ptr)
                   and (\<lambda>s. pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
                                     (sc_refill_cfgs_of s) sc_ptr))
-                 valid_objs'
+                 (valid_refills' sc_ptr)
                  (head_insufficient_loop sc_ptr)
                  (headInsufficientLoop scPtr)"
   apply (clarsimp simp: head_insufficient_loop_def headInsufficientLoop_def runReaderT_def)
