@@ -507,7 +507,7 @@ lemma getCurSc_sp:
 lemma refillBudgetCheckRoundRobin_corres:
   "corres dc
           (cur_sc_active and (\<lambda>s. sc_at (cur_sc s) s))
-          (valid_objs' and (\<lambda>s'. sc_at' (ksCurSc s') s'))
+          ((\<lambda>s'. valid_refills' (ksCurSc s') s') and (\<lambda>s'. sc_at' (ksCurSc s') s'))
           (refill_budget_check_round_robin usage) (refillBudgetCheckRoundRobin usage)"
   supply projection_rewrites[simp]
   apply (subst is_active_sc_rewrite)
@@ -529,7 +529,6 @@ lemma refillBudgetCheckRoundRobin_corres:
    apply (clarsimp simp: obj_at_def is_active_sc2_def is_sc_obj opt_map_red
                   split: option.split_asm Structures_A.kernel_object.split_asm)
   apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] scBits_simps ps_clear_upd)
-  apply (erule (1) valid_objsE')
   apply (clarsimp simp: is_active_sc'_def valid_obj'_def valid_sched_context'_def valid_refills'_def
                  split: option.split_asm)
   done
@@ -898,6 +897,13 @@ lemma updateRefillHd_valid_refills'[wp]:
   apply (clarsimp simp: valid_refills'_def obj_at'_def projectKOs opt_map_def)
   done
 
+lemma updateRefillTl_valid_refills'[wp]:
+  "updateRefillTl scPtr f \<lbrace>valid_refills' scPtr'\<rbrace>"
+  apply (clarsimp simp: updateRefillTl_def updateSchedContext_def setSchedContext_def)
+  apply (wpsimp wp: setObject_sc_wp)
+  apply (clarsimp simp: valid_refills'_def obj_at'_def projectKOs opt_map_def)
+  done
+
 lemma refill_pop_head_is_active_sc[wp]:
   "refill_pop_head sc_ptr \<lbrace>is_active_sc sc_ptr'\<rbrace>"
   apply (wpsimp simp: refill_pop_head_def wp: update_sched_context_wp)
@@ -1151,7 +1157,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma scheduleUsed_corres:
   "\<lbrakk>sc_ptr = scPtr; new = refill_map new'\<rbrakk> \<Longrightarrow>
     corres dc (sc_at sc_ptr and is_active_sc2 sc_ptr and pspace_aligned and pspace_distinct)
-              valid_objs'
+              (valid_refills' scPtr)
               (schedule_used sc_ptr new)
               (scheduleUsed scPtr new')"
   apply (clarsimp simp: schedule_used_def scheduleUsed_def get_refills_def bind_assoc)
