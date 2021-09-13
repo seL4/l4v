@@ -173,8 +173,8 @@ where
        if rest = [] then
          returnOk ((oref,offset), [])
        else doE
-         liftE $ touch_object oref;
-         next_cap \<leftarrow> liftE $ get_cap_x (oref, offset);
+         liftE (touch_object oref);
+         next_cap \<leftarrow> liftE (get_cap_x (oref, offset));
          if is_cnode_cap next_cap then
            resolve_address_bits' z (next_cap, rest)
          else

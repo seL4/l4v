@@ -29,21 +29,48 @@ abbreviation
  "ms_touched_addresses_update f s \<equiv> s\<lparr>machine_state :=
     machine_state.touched_addresses_update f (machine_state s)\<rparr>"
 
-definition ta_agnostic_P :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
- "ta_agnostic_P P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
+definition ta_agnostic :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
+ "ta_agnostic P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
 
-definition ta_agnostic_Pm :: "(machine_state \<Rightarrow> bool) \<Rightarrow> bool" where
- "ta_agnostic_Pm P \<equiv> \<forall>s ta. P (s\<lparr>machine_state.touched_addresses := ta\<rparr>) = P s"
+abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state \<Rightarrow> bool)" where
+  "ignore_ta P \<equiv> \<lambda>s. \<forall>ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>)"
 
 locale touched_addresses_inv =
   fixes m :: "('z::state_ext state, 'r) nondet_monad"
-  assumes ta_agnostic: "\<And>P. ta_agnostic_P P \<Longrightarrow> m \<lbrace>P\<rbrace>"
+  assumes tainv: "\<And>P. m \<lbrace>ignore_ta P\<rbrace>"
 begin
+lemma agnostic_preserved:
+  "ta_agnostic P \<Longrightarrow> m \<lbrace>P\<rbrace>"
+  unfolding ta_agnostic_def
+  using tainv [of P] by simp
+
 lemma in_inv_by_hoare:
- "\<lbrakk>(x, s') \<in> fst (m s); ta_agnostic_P P; P s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk>(x, s') \<in> fst (m s); ignore_ta P s\<rbrakk> \<Longrightarrow>
+  ignore_ta P s'"
+  using tainv apply -
+  unfolding valid_def
+  apply (drule_tac x=P in meta_spec)
+  apply (drule_tac x=s in spec, clarsimp)
+  apply (drule_tac x="(x, s')" in bspec, assumption)
+  apply clarsimp
+  done
+
+
+lemma in_inv_by_agnostic:
+  "\<lbrakk>(x, s') \<in> fst (m s); ta_agnostic P; P s\<rbrakk> \<Longrightarrow>
   P s'"
-  using post_by_hoare2 ta_agnostic by fastforce
-  
+  apply (drule in_inv_by_hoare [where P=P])
+   apply (clarsimp simp:ta_agnostic_def)+
+  done
+end
+
+locale touched_addresses_P_inv = touched_addresses_inv m for m::"('z::state_ext state, 'r) nondet_monad" +
+  fixes P :: "'z state \<Rightarrow> bool"
+  assumes ta_agnostic: "ta_agnostic P"
+begin
+lemma m_inv [wp]:
+  "m \<lbrace>P\<rbrace>"
+  by (rule agnostic_preserved [OF ta_agnostic])
 end
 
 locale pspace_update_eq =
