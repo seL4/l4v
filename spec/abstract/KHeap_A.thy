@@ -84,6 +84,11 @@ where
      return obj
    od"
 
+lemma simpler_do_machine_op_getTouchedAddresses_def:
+  "do_machine_op getTouchedAddresses \<equiv> gets (\<lambda>s. machine_state.touched_addresses $ machine_state s)"
+  by (clarsimp simp: bind_def do_machine_op_def getTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def select_f_def return_def)
+
 definition
   set_object_x :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
 where

@@ -80,17 +80,34 @@ lemma get_cap_det:
   apply (cases p)
   apply (clarsimp simp add: in_monad get_cap_def get_object_def
                      split: kernel_object.split_asm)
-   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def)
+   apply (clarsimp simp add:bind_def return_def assert_opt_def simpler_gets_def)
   apply (simp add: bind_def simpler_gets_def return_def assert_opt_def)
+  done
+
+lemma get_cap_x_det:
+  "(r,s') \<in> fst (get_cap_x p s) \<Longrightarrow> get_cap_x p s = ({(r,s)}, False)"
+  apply (cases p)
+  apply (clarsimp simp add: in_monad get_cap_x_def get_object_x_def simpler_do_machine_op_getTouchedAddresses_def
+                     split: kernel_object.split_asm)
+   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def select_f_def simpler_modify_def)
+  apply (clarsimp simp add: bind_def select_f_def simpler_gets_def return_def simpler_modify_def)
   done
 
 lemma get_object_bcorres_any[wp]:
   "bcorres_underlying (trans_state e) (get_object a) (get_object a)"
   by (wpsimp simp: get_object_def)
 
+lemma get_object_x_bcorres_any[wp]:
+  "bcorres_underlying (trans_state e) (get_object_x a) (get_object_x a)"
+  by (wpsimp simp: get_object_x_def simpler_do_machine_op_getTouchedAddresses_def)
+
 lemma get_cap_bcorres_any:
   "bcorres_underlying (trans_state e) (get_cap x) (get_cap x)"
   by (wpsimp simp: get_cap_def)
+
+lemma get_cap_x_bcorres_any:
+  "bcorres_underlying (trans_state e) (get_cap_x x) (get_cap_x x)"
+  by (wpsimp simp: get_cap_x_def)
 
 lemma get_cap_helper:
   "(fst (get_cap cref (trans_state e x)) =
