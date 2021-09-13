@@ -15569,18 +15569,6 @@ lemma sched_context_yield_to_valid_sched:
   apply (clarsimp simp: is_schedulable_bool_def2)
   apply (case_tac schedulable; clarsimp?, (solves \<open>wpsimp\<close>)?)
 
-  apply (rule hoare_seq_ext_skip)
-   apply ((wpsimp wp: hoare_vcg_conj_lift refill_unblock_check_valid_sched is_schedulable_wp
-                      refill_unblock_check_sc_tcb_sc_at
-                      refill_unblock_check_active_sc_valid_refills refill_unblock_check_ct_released
-                      refill_unblock_check_ct_in_state[simplified ct_in_state_def]
-           | wps)+)[1]
-    apply (intro conjI; (solves \<open>clarsimp simp: valid_sched_def\<close>)?)
-   apply (rule allI, rename_tac t)
-   apply (clarsimp simp: vs_all_heap_simps sc_at_pred_n_def obj_at_def)
-   apply (frule invs_sym_refs)
-   apply (frule_tac tp=t in sym_ref_tcb_sc, blast, blast, simp)
-
   apply (intro hoare_seq_ext[OF _ get_sched_context_sp]
                hoare_seq_ext[OF _ gets_sp]
                hoare_seq_ext[OF _ assert_sp]
@@ -22681,8 +22669,6 @@ lemma sched_context_yield_to_cur_sc_in_release_q_imp_zero_consumed[wp]:
    using strengthen_cur_sc_offset_ready strengthen_cur_sc_offset_sufficient apply blast
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext_skip, wpsimp)+
-  apply (rule hoare_if; wpsimp)
   done
 
 lemma sched_context_unbind_tcb_cur_sc_not_in_release_q[wp]:
