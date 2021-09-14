@@ -21,7 +21,7 @@ This module uses the C preprocessor to select a target architecture.
 >         setSchedContext, updateTimeStamp, commitTime, rollbackTime,
 >         refillHd, refillTl, minBudget, minBudgetUs, refillCapacity, refillBudgetCheck,
 >         refillBudgetCheckRoundRobin, updateSchedContext, emptyRefill, scBitsFromRefillLength,
->         isCurDomainExpired, refillUnblockCheck,
+>         isCurDomainExpired, refillUnblockCheck,ifCondRefillUnblockCheck,
 >         readRefillReady, refillReady, tcbReleaseEnqueue, tcbReleaseDequeue, refillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
