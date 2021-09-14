@@ -1062,18 +1062,17 @@ On some architectures, the thread context may include registers that may be modi
 
 > switchSchedContext :: Kernel ()
 > switchSchedContext = do
->     scPtr <- getCurSc
+>     curScPtr <- getCurSc
 >     ct <- getCurThread
->     scOpt <- threadGet tcbSchedContext ct
->     csc <- return $ fromJust scOpt
->     sc <- getSchedContext scPtr
->     when (csc /= scPtr && scRefillMax sc /= 0) $ do
+>     ctScOpt <- threadGet tcbSchedContext ct
+>     ctScPtr <- return $ fromJust ctScOpt
+>     when (ctScPtr /= curScPtr) $ do
 >         setReprogramTimer True
->         refillUnblockCheck csc
+>         refillUnblockCheck ctScPtr
 >     reprogram <- getReprogramTimer
 >     when reprogram $ do
 >         commitTime
->     setCurSc csc
+>     setCurSc ctScPtr
 
 > readTCBRefillReady :: PPtr TCB -> KernelR Bool
 > readTCBRefillReady tcbPtr = do
