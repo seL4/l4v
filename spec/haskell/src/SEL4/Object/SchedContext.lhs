@@ -393,6 +393,19 @@ This module uses the C preprocessor to select a target architecture.
 >         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
 >         refillHeadOverlappingLoop scPtr
 
+> ifCondRefillUnblockCheck :: Maybe (PPtr SchedContext) -> Maybe Bool -> Maybe Bool -> Kernel ()
+> ifCondRefillUnblockCheck scOpt act ast = do
+>       when (scOpt /= Nothing) $ do
+>           scPtr <- return $ fromJust scOpt
+>           sc <- getSchedContext scPtr
+>           curScPtr <- getCurSc
+>           guard <- return $ (case act of
+>                        Nothing -> not $ scSporadic sc
+>                        Just True -> scSporadic sc && 0 < scRefillMax sc
+>                        Just False -> scSporadic sc && 0 < scRefillMax sc)
+>           when (guard && (if ast == Just False then scPtr /= curScPtr else True)) $
+>               when (if ast == Just True then scPtr /= curScPtr else True) $ refillUnblockCheck scPtr
+
 > schedContextUpdateConsumed :: PPtr SchedContext -> Kernel Time
 > schedContextUpdateConsumed scPtr = do
 >     sc <- getSchedContext scPtr
