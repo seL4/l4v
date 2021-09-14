@@ -4176,6 +4176,8 @@ crunch valid_list[wp]: sched_context_resume,suspend "valid_list"
 crunch valid_list[wp]: sched_context_bind_ntfn valid_list
 crunch valid_list[wp]: sched_context_yield_to valid_list
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps)
+crunch valid_list[wp]: refill_unblock_check valid_list
+  (wp: hoare_drop_imps crunch_wps simp: crunch_simps is_round_robin_def)
 crunch valid_list[wp]: invoke_sched_context valid_list
 
 crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
@@ -4200,8 +4202,6 @@ lemma delete_objects_valid_list[wp]: "\<lbrace>valid_list\<rbrace> delete_object
 
 lemmas mapM_x_def_bak = mapM_x_def[symmetric]
 
-crunch valid_list[wp]: refill_unblock_check valid_list
-  (wp: hoare_drop_imps crunch_wps simp: crunch_simps is_round_robin_def)
 crunch valid_list[wp]: maybe_donate_sc valid_list (wp: maybeM_inv)
 
 locale Deterministic_AI_2 = Deterministic_AI_1 +

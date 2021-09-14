@@ -1382,7 +1382,8 @@ crunches check_budget_restart
    simp: crunch_simps)
 
 crunches
-  possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply, postpone
+  possible_switch_to, do_ipc_transfer, maybe_donate_sc, handle_fault_reply, postpone,
+  if_cond_refill_unblock_check
   for ct_in_state[wp]: "ct_in_state P :: 'state_ext state \<Rightarrow> _"
   (rule: ct_in_state_thread_state_lift wp: crunch_wps simp: crunch_simps)
 
@@ -1511,9 +1512,8 @@ lemma invoke_untyped_ct_active[wp]:
             empty_descendants_range_in)+))
   done
 
-crunches test_possible_switch_to, sched_context_resume
+crunches test_possible_switch_to, sched_context_resume, if_cond_refill_unblock_check
   for cur_thread[wp]: "\<lambda>s :: 'state_ext state. P (cur_thread s)"
-  and pred_tcb_at[wp]: "\<lambda>s :: 'state_ext state. pred_tcb_at proj' P t s"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches
