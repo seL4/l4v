@@ -4104,6 +4104,34 @@ lemma refillUnblockCheck_corres':
       apply (clarsimp simp: obj_at_simps valid_refills'_def ps_clear_domE scBits_simps opt_map_red)
   done
 
+lemma ifCondRefillUnblockCheck_corres:
+  "corres dc
+     (\<lambda>s. case_option True
+                      (\<lambda>scp. sc_at scp s \<and> active_sc_valid_refills s
+                           \<and> pspace_aligned s \<and> pspace_distinct s
+                           \<and> (((\<lambda>sc. case_option (sc_active sc) \<top> act) |< scs_of2 s) scp)) scp_opt)
+     (\<lambda>s. case_option True (\<lambda>scp. case_option (valid_refills' scp s) (\<lambda>_. valid_objs' s) act) scp_opt)
+        (if_cond_refill_unblock_check scp_opt act ast) (ifCondRefillUnblockCheck scp_opt act ast)"
+  unfolding if_cond_refill_unblock_check_def ifCondRefillUnblockCheck_def
+  apply (cases scp_opt; simp add: maybeM_def)
+  apply (rename_tac scp)
+  apply (rule corres_cross[OF sc_at'_cross_rel], fastforce)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF get_sc_corres _ get_sched_context_wp getSchedContext_wp])
+    apply (rule corres_split[OF getCurSc_corres])
+      apply (rule corres_when)
+       apply (clarsimp simp: active_sc_def sc_relation_def case_bool_if option.case_eq_if)
+      apply (rule corres_when)
+       apply fastforce
+      apply (rule refillUnblockCheck_corres')
+     apply wpsimp+
+   apply (drule_tac scp=scp in active_sc_valid_refillsE[rotated, simplified is_active_sc_rewrite];
+          clarsimp simp: case_bool_if option.case_eq_if opt_map_red obj_at_def is_active_sc2_def
+                         vs_all_heap_simps valid_refills_def rr_valid_refills_def active_sc_def
+                  split: if_split_asm)
+  apply (clarsimp simp: case_bool_if option.case_eq_if split: if_split_asm)
+  by (fastforce elim!: valid_objs'_valid_refills' simp: is_active_sc'_def opt_map_red obj_at_simps)
+
 lemma getCurTime_sp:
   "\<lbrace>P\<rbrace> getCurTime \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurTime s)\<rbrace>"
   by (wpsimp simp: getCurTime_def)
