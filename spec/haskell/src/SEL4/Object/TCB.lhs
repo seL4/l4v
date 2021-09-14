@@ -1068,7 +1068,7 @@ On some architectures, the thread context may include registers that may be modi
 >     ctScPtr <- return $ fromJust ctScOpt
 >     when (ctScPtr /= curScPtr) $ do
 >         setReprogramTimer True
->         refillUnblockCheck ctScPtr
+>         ifCondRefillUnblockCheck (Just ctScPtr) Nothing Nothing
 >     reprogram <- getReprogramTimer
 >     when reprogram $ do
 >         commitTime
