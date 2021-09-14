@@ -2654,6 +2654,10 @@ lemma refillUnblockCheck_invs':
   apply wpsimp
   done
 
+crunches ifCondRefillUnblockCheck
+  for invs'[wp]: invs'
+  (wp: hoare_vcg_if_lift2 crunch_wps simp: crunch_simps)
+
 lemma nonOverlappingMergeRefills_valid_objs':
   "\<lbrace>\<lambda>s. valid_objs' s \<and> sc_at' scPtr s\<rbrace>
    nonOverlappingMergeRefills scPtr
