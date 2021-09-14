@@ -430,6 +430,7 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     threadSet (\tcb -> tcb { tcbSchedContext = Just scPtr }) tcbPtr
 >     setSchedContext scPtr $ sc { scTCB = Just tcbPtr }
+>     ifCondRefillUnblockCheck (Just scPtr) (Just True) (Just False)
 >     schedContextResume scPtr
 >     schedulable <- isSchedulable tcbPtr
 >     when schedulable $ do
