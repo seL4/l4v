@@ -581,7 +581,7 @@ crunches refill_budget_check, if_cond_refill_unblock_check
   and valid_objs[wp]: valid_objs
   and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
   and ex_cap[wp]: "ex_nonz_cap_to p"
-  and valid_replies[wp]: valid_replies
+  and valid_replies[wp]: "\<lambda>s. P (valid_replies s)"
   and valid_idle[wp]: valid_idle
   and valid_ioports[wp]: valid_ioports
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2
@@ -1221,7 +1221,7 @@ lemma set_tcb_queue_valid_replies[wp]:
 
 crunches sched_context_bind_tcb, update_sk_obj_ref
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: is_round_robin_def crunch_simps)
 
 crunches get_tcb_queue, get_sc_time, get_sc_obj_ref
   for inv[wp]: "P"
