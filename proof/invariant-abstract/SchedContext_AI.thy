@@ -532,12 +532,24 @@ lemma refill_budget_check_if_live_then_nonz_cap[wp]:
               simp: refill_budget_check_def update_refill_hd_def)
   done
 
-crunches refill_budget_check
+lemma refill_unblock_check_refs_of[wp]:
+  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  apply (wpsimp simp: refill_unblock_check_defs
+                  wp: hoare_drop_imp whileLoop_wp')
+  apply (clarsimp simp: state_refs_of_def)
+  done
+
+crunches refill_budget_check, if_cond_refill_unblock_check
   for aligned[wp]: pspace_aligned
   and distinct[wp]: pspace_distinct
+  and iflive[wp]: if_live_then_nonz_cap
+  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and sc_at[wp]: "sc_at sc_ptr"
+  and tcb_at[wp]: "tcb_at tptr"
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
   and cte_wp_at[wp]: "cte_wp_at P c"
   and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   and no_cdt[wp]: "\<lambda>s. P (cdt s)"
   and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
@@ -562,27 +574,18 @@ crunches refill_budget_check
   and cur_tcb[wp]: "cur_tcb"
   and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
   and valid_ioc[wp]: "valid_ioc"
-  and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
   and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   and zombies_final[wp]: zombies_final
   and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
-  (simp: Let_def wp: crunch_wps)
-
-lemma refill_budget_check_mdb [wp]:
-  "refill_budget_check usage \<lbrace>valid_mdb\<rbrace>"
-  by (wpsimp wp: valid_mdb_lift)
-
-crunches head_insufficient_loop, handle_overrun_loop
-  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
-  (wp: crunch_wps update_sched_context_refs_of_same simp: crunch_simps ignore: update_sched_context)
-
-lemma refill_budget_check_refs_of[wp]:
-  "refill_budget_check usage \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  unfolding refill_budget_check_def is_round_robin_def
-  apply (wpsimp wp: whileLoop_wp' update_sched_context_refs_of_same get_refills_wp
-                    hoare_drop_imps hoare_vcg_all_lift
-         split_del: if_split)
-  done
+  and valid_mdb[wp]: valid_mdb
+  and valid_objs[wp]: valid_objs
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and ex_cap[wp]: "ex_nonz_cap_to p"
+  and valid_replies[wp]: valid_replies
+  and valid_idle[wp]: valid_idle
+  and valid_ioports[wp]: valid_ioports
+  (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2
+   ignore: update_sched_context)
 
 lemma update_refill_hd_invs[wp]:
   "update_refill_hd sc_ptr f \<lbrace>invs\<rbrace>"
@@ -711,79 +714,13 @@ lemma sc_consumed_update_sym_refs[wp]:
    \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
   by (wpsimp wp: update_sched_context_refs_of_same)
 
-crunches refill_unblock_check
-  for ex_nonz_cap_to[wp]: "\<lambda>s. ex_nonz_cap_to ptr s"
-  (simp: crunch_simps is_round_robin_def wp: crunch_wps)
-
-lemma refill_unblock_check_if_live_then_nonz_cap[wp]:
-  "refill_unblock_check usage \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_defs)
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
-  done
-
-crunches refill_unblock_check
-  for aligned[wp]: pspace_aligned
-  and distinct[wp]: pspace_distinct
-  and sc_at[wp]: "sc_at sc_ptr"
-  and cte_wp_at[wp]: "cte_wp_at P c"
-  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
-  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
-  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
-  and valid_irq_handlers[wp]: valid_irq_handlers
-  and valid_global_objs[wp]: "valid_global_objs"
-  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
-  and valid_arch_caps[wp]: "valid_arch_caps"
-  and only_idle[wp]: "only_idle"
-  and ifunsafe[wp]: "if_unsafe_then_cap"
-  and valid_arch[wp]: "valid_arch_state"
-  and valid_irq_states[wp]: "valid_irq_states"
-  and vms[wp]: "valid_machine_state"
-  and valid_vspace_objs[wp]: "valid_vspace_objs"
-  and valid_global_refs[wp]: "valid_global_refs"
-  and v_ker_map[wp]: "valid_kernel_mappings"
-  and equal_mappings[wp]: "equal_kernel_mappings"
-  and valid_asid_map[wp]: "valid_asid_map"
-  and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
-  and cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
-  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
-  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  and cur_tcb[wp]: "cur_tcb"
-  and fault_tcbs_valid_states [wp]: fault_tcbs_valid_states
-  and valid_ioc[wp]: "valid_ioc"
-  and valid_replies[wp]: valid_replies
-  and valid_idle[wp]: valid_idle
-  and valid_irq_node[wp]: valid_irq_node
-  and valid_ioports[wp]: valid_ioports
+crunches refill_unblock_check, if_cond_refill_unblock_check
+  for valid_irq_node[wp]: valid_irq_node
   and cur_sc_tcb[wp]: cur_sc_tcb
-  and pred_tcb_at[wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
   (simp: Let_def is_round_robin_def wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
 
 lemmas refill_unblock_check_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_unblock_check_typ_at]
-
-lemma refill_unblock_check_zombies[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>zombies_final\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
-
-lemma refill_unblock_check_mdb [wp]:
-  "refill_unblock_check sc_ptr \<lbrace>valid_mdb\<rbrace>"
-  by (wpsimp wp: valid_mdb_lift)
-
-lemma refill_unblock_check_hyp_refs_of[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  done
-
-lemma refill_unblock_check_refs_of[wp]:
-  "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_wp')
-  apply (clarsimp simp: state_refs_of_def)
-  done
 
 lemma refill_unblock_check_valid_state [wp]:
   "refill_unblock_check sc_ptr \<lbrace>valid_state\<rbrace>"
@@ -794,6 +731,11 @@ lemma refill_unblock_check_invs [wp]:
   "refill_unblock_check sc_ptr \<lbrace>invs\<rbrace>"
   apply (wpsimp simp: invs_def)
   done
+
+crunches if_cond_refill_unblock_check
+  for valid_state[wp]: valid_state
+  and invs[wp]: invs
+  (wp: crunch_wps simp: crunch_simps)
 
 declare domain_time_update.state_refs_update[simp]
 
@@ -831,7 +773,7 @@ crunches head_insufficient_loop, handle_overrun_loop
   for valid_replies_pred[wp]: "valid_replies_pred P"
   (wp: crunch_wps ignore: update_sched_context)
 
-lemma refill_budget_check_valid_replies[wp]:
+lemma refill_budget_check_valid_replies_pred[wp]:
   "refill_budget_check usage \<lbrace> valid_replies_pred P \<rbrace>"
   apply (wpsimp simp: refill_budget_check_def
                   wp: get_refills_wp whileLoop_wp' hoare_drop_imps
@@ -958,6 +900,10 @@ lemma refill_unblock_check_bound_sc_tcb_at [wp]:
   apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps)
   done
 
+crunches if_cond_refill_unblock_check
+  for bound_sc_tcb_at_ct[wp]: "\<lambda>s. bound_sc_tcb_at P (cur_thread s) s"
+  (wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
+
 lemma set_next_interrupt_invs[wp]: "\<lbrace>invs\<rbrace> set_next_interrupt \<lbrace>\<lambda>rv. invs\<rbrace>"
   by (wpsimp wp: hoare_drop_imp get_sched_context_wp dmo_setDeadline
            simp: set_next_interrupt_def)
@@ -975,17 +921,6 @@ lemma sc_refills_update_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> update_sched_context p (sc_refills_update f) \<lbrace>\<lambda>_. valid_state\<rbrace>"
   by (wpsimp simp: valid_state_def valid_pspace_def
                wp: valid_irq_node_typ)
-
-crunches head_insufficient_loop, handle_overrun_loop
-  for valid_idle[wp]: valid_idle
-  (wp: crunch_wps ignore: update_sched_context)
-
-lemma refill_budget_check_valid_idle:
-  "refill_budget_check usage \<lbrace>valid_idle\<rbrace>"
-  unfolding refill_budget_check_def
-  apply (wpsimp wp: whileLoop_wp' get_refills_wp hoare_drop_imps hoare_vcg_all_lift
-                    hoare_vcg_if_lift2)
-  done
 
 lemma refill_budget_check_valid_state [wp]:
   "\<lbrace>valid_state\<rbrace> refill_budget_check usage \<lbrace>\<lambda>_. valid_state\<rbrace>"
@@ -1082,6 +1017,7 @@ lemma refill_unblock_check_ct_in_state[wp]:
 lemma switch_sched_context_ct_in_state[wp]:
   "\<lbrace> ct_in_state t \<rbrace> switch_sched_context \<lbrace> \<lambda>rv. ct_in_state t \<rbrace>"
   by (wpsimp simp: switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
+                   if_cond_refill_unblock_check_def
              wp: hoare_drop_imp hoare_vcg_if_lift2)
 
 lemma set_next_interrupt_activatable:
@@ -1095,7 +1031,8 @@ lemma set_next_interrupt_activatable:
 lemma sc_and_timer_activatable:
   "\<lbrace>ct_in_state activatable\<rbrace> sc_and_timer \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   apply (wpsimp simp: sc_and_timer_def switch_sched_context_def get_tcb_queue_def get_sc_obj_ref_def
-           wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
+                      if_cond_refill_unblock_check_def
+                  wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
 crunches refill_new, refill_update
