@@ -106,7 +106,7 @@ where
 
     when (scp \<noteq> cur_sc) $ do
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-      refill_unblock_check scp
+      if_constant_bandwidth_refill_unblock_check (Some scp)
      od;
 
     reprogram \<leftarrow> gets reprogram_timer;
