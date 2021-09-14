@@ -11733,22 +11733,19 @@ lemma switch_sched_context_valid_sched:
      and (\<lambda>s. \<forall>a. bound_sc_tcb_at ((=) (Some a)) (cur_thread s) s \<longrightarrow> a \<noteq> cur_sc s \<longrightarrow> ct_not_in_release_q s)\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_. valid_sched :: ('state_ext state) \<Rightarrow> _\<rbrace>"
-  apply (clarsimp simp: switch_sched_context_def assert_opt_def)
+  apply (clarsimp simp: switch_sched_context_def assert_opt_def if_cond_refill_unblock_check_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_opt; clarsimp simp: bind_assoc)
-  apply (wpsimp wp: commit_time_valid_sched hoare_drop_imp assert_inv)
-      apply (wpsimp wp: refill_unblock_check_valid_sched)
-     apply (wpsimp wp: refill_unblock_check_valid_sched hoare_drop_imp)
-    apply wpsimp+
+  apply (wpsimp wp: commit_time_valid_sched hoare_drop_imp assert_inv refill_unblock_check_valid_sched)
   apply (clarsimp cong: conj_cong)
-  apply (intro conjI; (simp add: current_time_bounded_def)?)
-   apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
-   apply (subgoal_tac "t = cur_thread s", simp)
-   apply (erule (1) heap_refs_inj_eq[rotated])
-   apply (rule sym_refs_inj_tcb_scps, clarsimp simp: valid_state_def valid_pspace_def)
-  apply (clarsimp simp: valid_state_def)
+  apply (intro conjI impI; (simp add: current_time_bounded_def)?)
+    apply (clarsimp simp: tcb_at_kh_simps pred_map_eq_normalise)
+    apply (subgoal_tac "t = cur_thread s", simp)
+    apply (erule (1) heap_refs_inj_eq[rotated])
+    apply (rule sym_refs_inj_tcb_scps, clarsimp simp: valid_state_def valid_pspace_def)
+   apply (clarsimp simp: valid_state_def)+
   done
 
 lemma sc_and_timer_valid_sched:
