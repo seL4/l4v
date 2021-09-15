@@ -266,7 +266,7 @@ lemma decodeIRQControlInvocation_corres:
                dest!: not_le_imp_less
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
-  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def[symmetric])
+  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq)
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
@@ -325,6 +325,7 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                             not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -342,6 +343,7 @@ lemma decode_irq_control_valid'[wp]:
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma valid_globals_ex_cte_cap_irq:
