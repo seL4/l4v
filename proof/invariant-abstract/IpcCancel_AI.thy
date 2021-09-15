@@ -11,6 +11,7 @@ begin
 context begin interpretation Arch .
 
 requalify_facts
+  arch_stit_invs
   arch_post_cap_deletion_pred_tcb_at
 
 end
