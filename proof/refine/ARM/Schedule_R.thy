@@ -2932,22 +2932,7 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
   by (wpsimp simp: setReleaseQueue_def)
 
 crunches tcbReleaseDequeue
-  for valid_pspace'[wp]: valid_pspace'
-  and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
-  and valid_global_refs'[wp]: valid_global_refs'
-  and valid_arch_state'[wp]: valid_arch_state'
-  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
-  and valid_irq_states'[wp]: valid_irq_states'
-  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  and pspace_domain_valid[wp]: pspace_domain_valid
-  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  and valid_machine_state'[wp]: valid_machine_state'
+  for sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
 end
@@ -2956,108 +2941,6 @@ global_interpretation tcbReleaseDequeue: typ_at_all_props' tcbReleaseDequeue
   by typ_at_props'
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-
-crunches tcbReleaseDequeue
-  for cur_tcb'[wp]: cur_tcb'
-  (simp: crunch_simps cur_tcb'_def wp: crunch_wps threadSet_cur ignore: threadSet)
-
-lemma tcbInReleaseQueue_update_tcb_cte_cases:
-  "(a, b) \<in> ran tcb_cte_cases \<Longrightarrow> a (tcbInReleaseQueue_update f tcb) = a tcb"
-  unfolding tcb_cte_cases_def
-  by (case_tac tcb; fastforce simp: tcbInReleaseQueue_update_def)
-
-lemma tcbInReleaseQueue_update_ctes_of[wp]:
-  "threadSet (tcbInReleaseQueue_update f) x \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
-  by (wpsimp wp: threadSet_ctes_ofT simp: tcbInReleaseQueue_update_tcb_cte_cases)
-
-crunches tcbReleaseDequeue
-  for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  and valid_idle'[wp]: valid_idle'
-  and valid_irq_handlers'[wp]: valid_irq_handlers'
-  and valid_pde_mappings'[wp]: valid_pde_mappings'
-  and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
-  and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
-  (ignore: threadSet
-     simp: crunch_simps tcbInReleaseQueue_update_tcb_cte_cases
-       wp: crunch_wps threadSet_idle' threadSet_irq_handlers' threadSet_ct_idle_or_in_cur_domain'
-           threadSet_ifunsafe'T)
-
-lemma tcbReleaseDequeue_valid_objs'[wp]:
-  "tcbReleaseDequeue \<lbrace>valid_objs'\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_objs')
-
-lemma tcbReleaseDequeue_sch_act_wf[wp]:
-  "tcbReleaseDequeue \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_sch_act)
-
-lemma tcbReleaseDequeue_if_live_then_nonz_cap'[wp]:
-  "tcbReleaseDequeue \<lbrace>if_live_then_nonz_cap'\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def tcbInReleaseQueue_update_tcb_cte_cases wp: threadSet_iflive'T)
-  by auto
-
-lemma tcbReleaseDequeue_ct_not_inQ[wp]:
-  "tcbReleaseDequeue \<lbrace>ct_not_inQ\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_not_inQ)
-
-lemma tcbReleaseDequeue_valid_queues[wp]:
-  "tcbReleaseDequeue \<lbrace>valid_queues\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_queues)
-  by (auto simp: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
-                 bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def inQ_def)
-
-lemma tcbReleaseDequeue_valid_queues'[wp]:
-  "tcbReleaseDequeue \<lbrace>valid_queues'\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_queues')
-  by (auto simp: valid_queues'_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
-                 bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def inQ_def)
-
-lemma tcbReleaseDequeue_valid_release_queue[wp]:
-  "\<lbrace>valid_release_queue and (\<lambda>s. distinct (ksReleaseQueue s))\<rbrace>
-   tcbReleaseDequeue
-   \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_release_queue)
-  apply (clarsimp simp: valid_release_queue_def)
-  by (case_tac "ksReleaseQueue s"; simp)
-
-lemma tcbReleaseDequeue_valid_release_queue'[wp]:
-  "\<lbrace>valid_release_queue' and (\<lambda>s. ksReleaseQueue s \<noteq> [])\<rbrace>
-   tcbReleaseDequeue
-   \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  apply (wpsimp simp: setReprogramTimer_def setReleaseQueue_def wp: threadSet_valid_release_queue')
-  apply (clarsimp simp: valid_release_queue'_def split: list.splits)
-  by (metis list.exhaust_sel set_ConsD)
-
-lemma tcbReleaseDequeue_invs'[wp]:
-  "\<lbrace>invs'
-    and (\<lambda>s. ksReleaseQueue s \<noteq> [])
-    and distinct_release_queue\<rbrace>
-   tcbReleaseDequeue
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_state'_def
-               wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
-                   cteCaps_of_ctes_of_lift)
-
-lemma tcbReleaseDequeue_ksCurThread[wp]:
-  "\<lbrace>\<lambda>s. P (hd (ksReleaseQueue s)) (ksCurThread s)\<rbrace>
-   tcbReleaseDequeue
-   \<lbrace>\<lambda>r s. P r (ksCurThread s)\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp simp: setReprogramTimer_def setReleaseQueue_def)
-
-lemma tcbReleaseDequeue_runnable'[wp]:
-  "\<lbrace>\<lambda>s. st_tcb_at' runnable' (hd (ksReleaseQueue s)) s\<rbrace>
-   tcbReleaseDequeue
-   \<lbrace>\<lambda>r s. st_tcb_at' runnable' r s\<rbrace>"
-  unfolding tcbReleaseDequeue_def
-  by (wpsimp simp: setReprogramTimer_def wp: threadSet_pred_tcb_no_state)
 
 crunches setReprogramTimer, possibleSwitchTo
   for ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
