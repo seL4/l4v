@@ -58,6 +58,7 @@ record
   irq_state :: nat
   underlying_memory :: "word64 \<Rightarrow> word8"
   device_state :: "word64 \<Rightarrow> word8 option"
+  touched_addresses :: "machine_word set" (* a promise not to touch anything outside this set *)
   machine_state_rest :: RISCV64.machine_state_rest
 
 consts irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
@@ -102,6 +103,7 @@ definition
                          irq_state = 0,
                          underlying_memory = init_underlying_memory,
                          device_state = Map.empty,
+                         touched_addresses = {},
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/RISCV64.hs CONTEXT RISCV64 ONLY VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits pageBitsForSize
