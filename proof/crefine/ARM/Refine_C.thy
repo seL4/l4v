@@ -704,8 +704,8 @@ lemma entry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (rule corres_split_deprecated)
          prefer 2
-         apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
-         apply simp
+         apply (rule setTCBContext_C_corres, rule ccontext_rel_to_C, simp)
+        apply simp
         apply (rule corres_split_deprecated)
            prefer 2
            apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
@@ -714,9 +714,9 @@ lemma entry_corres_C:
           apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-            apply (rule getContext_corres, simp)
+            apply (rule getContext_corres[unfolded o_def], simp)
            apply (wp threadSet_all_invs_triv' callKernel_cur)+
-   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
+   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply simp
   done
 
@@ -1110,10 +1110,10 @@ lemma kernel_all_subset_kernel:
   apply (intro conjI)
    apply (simp_all add: kernel_global.kernel_call_C_def
                     kernel_call_C_def kernelEntry_C_def
-                    setArchTCB_C_def
+                    setTCBContext_C_def
                     kernel_global.kernelEntry_C_def
                      exec_C_Basic
-                    kernel_global.setArchTCB_C_def
+                    kernel_global.setTCBContext_C_def
                     kernel_call_H_def kernelEntry_def
                     getContext_C_def
                     check_active_irq_C_def checkActiveIRQ_C_def
