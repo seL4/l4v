@@ -426,6 +426,7 @@ locale Syscall_AC_wps =
   assumes respects[wp]: "f \<lbrace>integrity aag X st\<rbrace>"
   and pas_refined[wp]: "f \<lbrace>pas_refined aag\<rbrace>"
 
+
 locale Syscall_AC_1 =
   fixes aag :: "'a PAS"
   assumes invs_irq_state_update[simp]:
@@ -513,48 +514,51 @@ locale Syscall_AC_1 =
               set_thread_state thread Structures_A.thread_state.Running
      od
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-begin
 
-interpretation prepare_thread_delete: gpd_wps' "prepare_thread_delete p"
-  by simp
-interpretation arch_finalise_cap: gpd_wps' "arch_finalise_cap acap final"
-  by simp
-interpretation cap_move: gpd_wps' "cap_move new_cap src_slot dest_slot"
-  by simp
-interpretation cancel_badged_sends: gpd_wps' "cancel_badged_sends epptr badge"
-  by simp
 
-interpretation arch_post_modify_registers: gpd_wps "arch_post_modify_registers cur t"
+sublocale Syscall_AC_1 \<subseteq> prepare_thread_delete: gpd_wps' "prepare_thread_delete p"
   by simp
-interpretation arch_perform_invocation: gpd_wps "arch_perform_invocation ai"
+sublocale Syscall_AC_1 \<subseteq> arch_finalise_cap: gpd_wps' "arch_finalise_cap acap final"
   by simp
-interpretation arch_invoke_irq_control: gpd_wps "arch_invoke_irq_control ivk"
+sublocale Syscall_AC_1 \<subseteq> cap_move: gpd_wps' "cap_move new_cap src_slot dest_slot"
   by simp
-interpretation arch_invoke_irq_handler: gpd_wps "arch_invoke_irq_handler ihi"
-  by simp
-interpretation arch_mask_irq_signal: gpd_wps "arch_mask_irq_signal irq"
-  by simp
-interpretation handle_reserved_irq: gpd_wps "handle_reserved_irq irq"
-  by simp
-interpretation handle_arch_fault_reply: gpd_wps "handle_arch_fault_reply vmf thread x y"
-  by simp
-interpretation handle_hypervisor_fault: gpd_wps "handle_hypervisor_fault t hf_t"
-  by simp
-interpretation handle_vm_fault: gpd_wps "handle_vm_fault t vmf_t"
+sublocale Syscall_AC_1 \<subseteq> cancel_badged_sends: gpd_wps' "cancel_badged_sends epptr badge"
   by simp
 
-interpretation arch_switch_to_thread: Syscall_AC_wps "arch_switch_to_thread t" aag
+sublocale Syscall_AC_1 \<subseteq> arch_post_modify_registers: gpd_wps "arch_post_modify_registers cur t"
   by simp
-interpretation arch_switch_to_idle_thread: Syscall_AC_wps "arch_switch_to_idle_thread" aag
+sublocale Syscall_AC_1 \<subseteq> arch_perform_invocation: gpd_wps "arch_perform_invocation ai"
   by simp
-interpretation arch_activate_idle_thread: Syscall_AC_wps "arch_activate_idle_thread t" aag
+sublocale Syscall_AC_1 \<subseteq> arch_invoke_irq_control: gpd_wps "arch_invoke_irq_control ivk"
   by simp
-interpretation arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
+sublocale Syscall_AC_1 \<subseteq> arch_invoke_irq_handler: gpd_wps "arch_invoke_irq_handler ihi"
   by simp
-interpretation handle_reserved_irq: Syscall_AC_wps "handle_reserved_irq irq" aag
+sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: gpd_wps "arch_mask_irq_signal irq"
   by simp
-interpretation handle_hypervisor_fault: Syscall_AC_wps "handle_hypervisor_fault t hf_t" aag
+sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: gpd_wps "handle_reserved_irq irq"
   by simp
+sublocale Syscall_AC_1 \<subseteq> handle_arch_fault_reply: gpd_wps "handle_arch_fault_reply vmf thread x y"
+  by simp
+sublocale Syscall_AC_1 \<subseteq> handle_hypervisor_fault: gpd_wps "handle_hypervisor_fault t hf_t"
+  by simp
+sublocale Syscall_AC_1 \<subseteq> handle_vm_fault: gpd_wps "handle_vm_fault t vmf_t"
+  by simp
+
+sublocale Syscall_AC_1 \<subseteq> arch_switch_to_thread: Syscall_AC_wps "arch_switch_to_thread t" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_switch_to_idle_thread: Syscall_AC_wps "arch_switch_to_idle_thread" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "arch_activate_idle_thread t" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: Syscall_AC_wps "handle_reserved_irq irq" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> handle_hypervisor_fault: Syscall_AC_wps "handle_hypervisor_fault t hf_t" aag
+  by simp
+
+
+context Syscall_AC_1 begin
 
 lemma handle_interrupt_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
