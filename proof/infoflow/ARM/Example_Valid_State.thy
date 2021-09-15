@@ -6,7 +6,7 @@
 
 theory Example_Valid_State
 imports
-  "Noninterference"
+  "ArchNoninterference"
   "Lib.Distinct_Cmd"
 begin
 
@@ -589,7 +589,7 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = Low_mcp,
-     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
+     tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -618,7 +618,7 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = High_mcp,
-     tcb_arch = \<lparr> tcb_context = undefined \<rparr>\<rparr>"
+     tcb_arch = \<lparr>tcb_context = undefined\<rparr>\<rparr>"
 
 definition
   High_etcb :: etcb
@@ -646,7 +646,7 @@ where
      tcb_fault         = None,
      tcb_bound_notification     = None,
      tcb_mcpriority    = default_priority,
-     tcb_arch = \<lparr> tcb_context = empty_context \<rparr>\<rparr>"
+     tcb_arch = \<lparr>tcb_context = empty_context\<rparr>\<rparr>"
 
 
 definition
@@ -834,7 +834,7 @@ definition machine_state0 :: "machine_state" where
                      underlying_memory = const 0,
                      device_state = Map.empty,
                      exclusive_state = undefined,
-                     machine_state_rest = undefined \<rparr>"
+                     machine_state_rest = undefined\<rparr>"
 
 definition arch_state0 :: "arch_state" where
   "arch_state0 \<equiv> \<lparr>arm_asid_table = Map.empty,
@@ -859,7 +859,7 @@ where
     interrupt_states = (\<lambda>_. irq_state.IRQInactive) (timer_irq := irq_state.IRQTimer),
     arch_state = arch_state0,
      exst = exst0
-    \<rparr>"
+   \<rparr>"
 
 
 subsubsection \<open>Defining the policy graph\<close>
@@ -929,7 +929,7 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
     pasMayActivate = True,
     pasMayEditReadyQueues = True, pasMaySendIrqs = False,
     pasDomainAbs = ((\<lambda>_. {partition_label High})(0 := {partition_label Low}))
-    \<rparr>"
+   \<rparr>"
 
 subsubsection \<open>Proof of pas_refined for Sys1\<close>
 
@@ -1812,10 +1812,10 @@ text \<open>One invariant we need on s0 is that there exists
 
 lemma Sys1_valid_initial_state_noenabled:
   assumes extras_s0: "step_restrict s0"
-  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc ms s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn ms s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, ms) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc ms. utf t pl pr pxn (tc, ms) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc ms e f g. (e,f,g) \<in> utf t pl pr pxn (tc, ms) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"

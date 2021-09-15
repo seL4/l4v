@@ -5,7 +5,7 @@
  *)
 
 theory PolicyExample
-imports Noninterference
+imports ArchNoninterference
 begin
 
 (* This first example_auth_graphample shows how notifications and endpoints differ.
@@ -58,13 +58,12 @@ lemma C_in_subjectReads_NTFN1:
 
 lemma RM_in_subjectReads_NTFN1:
   "partition_label RM \<in> subjectReads example_auth_graph (partition_label NTFN1)"
-  apply(rule read_sync_ep_read_receivers, auto intro: EP_in_subjectReads_NTFN1[simplified])
-  done
+  by (rule read_sync_ep_read_receivers; fastforce intro: EP_in_subjectReads_NTFN1)
 
 lemma NTFN2_in_subjectReads_NTFN1:
   "partition_label NTFN2 \<in> subjectReads example_auth_graph (partition_label NTFN1)"
-  apply(rule reads_read_queued_thread_read_ep[where t="partition_label RM" and a="partition_label NTFN2"], auto intro: RM_in_subjectReads_NTFN1[simplified])
-  done
+  apply (rule reads_read_queued_thread_read_ep[where t="partition_label RM" and a="partition_label NTFN2"])
+  by (auto intro: RM_in_subjectReads_NTFN1[simplified])
 
 lemmas subjectReads_NTFN1' = reads_lrefl[of "partition_label NTFN1"]
                             CTR_in_subjectReads_NTFN1
@@ -93,7 +92,7 @@ lemma EP_in_subjectReads_NTFN2:
 
 lemma CTR_in_subjectReads_NTFN2:
   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label NTFN2)"
-  apply(rule read_sync_ep_read_senders[where ep="partition_label EP" and a="partition_label EP"], auto intro: EP_in_subjectReads_NTFN2[simplified])
+  apply(rule read_sync_ep_read_senders[where ep="partition_label EP"], auto intro: EP_in_subjectReads_NTFN2[simplified])
   done
 
 lemma C_in_subjectReads_NTFN2:
@@ -134,9 +133,7 @@ lemma EP_in_subjectReads_CTR:
 lemma RM_in_subjectReads_CTR:
   "partition_label RM \<in> subjectReads example_auth_graph (partition_label CTR)"
   apply(clarsimp)
-  apply(rule_tac ep="partition_label EP" and auth="SyncSend" in read_sync_ep_read_receivers)
-     apply blast
-    apply blast
+  apply(rule_tac ep="partition_label EP" in read_sync_ep_read_receivers)
    apply(rule EP_in_subjectReads_CTR[simplified])
   apply fastforce
   done
@@ -186,8 +183,8 @@ lemma EP_in_subjectReads_C:
 lemma RM_in_subjectReads_C:
   "partition_label RM \<in> subjectReads example_auth_graph (partition_label C)"
   apply(clarsimp)
-  apply(rule_tac a="partition_label CTR" in read_sync_ep_read_receivers[OF _ _ EP_in_subjectReads_C[simplified]])
-    apply simp+
+  apply(rule read_sync_ep_read_receivers[OF EP_in_subjectReads_C[simplified]])
+  apply simp
   done
 
 lemma CTR_in_subjectReads_C:
@@ -219,7 +216,7 @@ lemma subjectReads_C:
 lemma CTR_in_subjectReads_EP:
   "partition_label CTR \<in> subjectReads example_auth_graph (partition_label EP)"
   apply(clarsimp)
-  apply(rule_tac a="partition_label RM" and ep="partition_label EP" in read_sync_ep_read_senders)
+  apply(rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
      apply simp+
   done
 
@@ -237,7 +234,7 @@ lemma C_in_subjectReads_EP:
 
 lemma RM_in_subjectReads_EP:
   "partition_label RM \<in> subjectReads example_auth_graph (partition_label EP)"
-  apply(rule read_sync_ep_read_receivers[OF _ _ reads_lrefl])
+  apply(rule read_sync_ep_read_receivers[OF reads_lrefl])
   apply(auto)
   done
 
@@ -274,7 +271,7 @@ lemma EP_in_subjectReads_RM:
 
 lemma CTR_in_subjectReads_RM:
    "partition_label CTR \<in> subjectReads example_auth_graph (partition_label RM)"
-  apply(rule read_sync_ep_read_senders[where a="partition_label RM" and ep="partition_label EP", OF _ _ EP_in_subjectReads_RM], auto)
+  apply(rule read_sync_ep_read_senders[where ep="partition_label EP", OF EP_in_subjectReads_RM], auto)
   done
 
 lemma C_in_subjectReads_RM:
