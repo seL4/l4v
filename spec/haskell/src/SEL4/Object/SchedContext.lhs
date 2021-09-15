@@ -369,8 +369,8 @@ This module uses the C preprocessor to select a target architecture.
 >     when (usage' > 0 && rTime (refillHd sc) < maxReleaseTime) $ do
 >       used <- return Refill { rTime = rTime (refillHd sc) + (scPeriod sc),
 >                               rAmount = usage'}
->       setRefillHd scPtr (Refill { rTime = rTime (refillHd sc) + usage',
->                                   rAmount = rAmount (refillHd sc) - usage' })
+>       updateRefillHd scPtr $ \r -> r { rAmount = rAmount r - usage' }
+>       updateRefillHd scPtr $ \r -> r { rTime = rTime r + usage' }
 >       scheduleUsed scPtr used
 
       Ensure that the rAmount of the head refill is at least minBudget
