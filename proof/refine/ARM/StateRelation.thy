@@ -292,6 +292,12 @@ lemma valid_objs'_valid_refills':
   by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def
                      is_active_sc'_def opt_map_red projectKO_opt_sc)
 
+lemma maxReleaseTime_equiv:
+  "maxReleaseTime = MAX_RELEASE_TIME"
+  apply (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word maxPeriodUs_def
+                        usToTicks_def MAX_PERIOD_def)
+  done
+
 definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.reply \<Rightarrow> bool" where
   "reply_relation \<equiv> \<lambda>reply reply'.
      reply_sc reply = replySC reply' \<and> reply_tcb reply = replyTCB reply'"
