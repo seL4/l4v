@@ -13,6 +13,7 @@ context begin interpretation Arch .
 requalify_facts
   valid_arch_arch_tcb_context_set
   as_user_inv
+  getRegister_inv
   user_getreg_inv
 
 declare user_getreg_inv[wp]

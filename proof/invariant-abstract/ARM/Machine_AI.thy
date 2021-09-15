@@ -773,4 +773,14 @@ lemmas msgRegisters_A_unfold
 
 end
 
+context begin interpretation Arch .
+
+requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
+
+end
+
 end
