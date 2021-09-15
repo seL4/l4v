@@ -1497,7 +1497,8 @@ definition sp_valid_refills :: "refill list \<Rightarrow> nat \<Rightarrow> tick
       \<and> MIN_BUDGET \<le> budget
       \<and> budget \<le> period
       \<and> MIN_REFILLS \<le> refill_max
-      \<and> period \<le> MAX_PERIOD)"
+      \<and> period \<le> MAX_PERIOD
+      \<and> (\<forall>refill \<in> set refills. 0 < unat (r_amount refill)))"
 
 \<comment> \<open>unat is monotonic on le\<close>
 lemma unat_le_mono:
