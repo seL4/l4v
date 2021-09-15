@@ -671,6 +671,13 @@ lemma finalise_cap_auth:
 end
 
 
+lemma aag_cap_auth_recycle_EndpointCap:
+  "\<lbrakk> pas_refined aag s; has_cancel_send_rights (EndpointCap word1 word2 f) \<rbrakk>
+     \<Longrightarrow> pas_cap_cur_auth aag (EndpointCap word1 word2 f) = is_subject aag word1"
+  unfolding aag_cap_auth_def
+  by (auto simp: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
+                 has_cancel_send_rights_def cap_rights_to_auth_def all_rights_def pas_refined_refl)
+
 lemma aag_cap_auth_Zombie:
   "pas_refined aag s \<Longrightarrow> pas_cap_cur_auth aag (Zombie word a b) = is_subject aag word"
   unfolding aag_cap_auth_def
