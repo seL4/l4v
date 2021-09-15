@@ -1989,6 +1989,7 @@ lemma decodeWriteRegisters_corres:
    corres (ser \<oplus> tcbinv_relation) (invs and tcb_at t) (invs' and tcb_at' t)
      (decode_write_registers args (cap.ThreadCap t))
      (decodeWriteRegisters args (ThreadCap t))"
+  including no_take_bit
   apply (simp add: decode_write_registers_def decodeWriteRegisters_def)
   apply (cases args, simp_all)
   apply (case_tac list, simp_all)
@@ -2648,9 +2649,8 @@ lemma decodeSetTLSBase_corres:
   "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
           (decode_set_tls_base w (cap.ThreadCap t))
           (decodeSetTLSBase w (capability.ThreadCap t))"
-  apply (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
-                 split: list.split)
-  by (rule sym, rule ucast_id)
+  by (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
+               split: list.split)
 
 lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';

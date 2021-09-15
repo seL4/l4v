@@ -830,13 +830,13 @@ lemma copyGlobalMappings_ksPSpace_concrete:
      apply (rule le_less_trans[OF word_and_le1])
      apply simp
     apply (frule_tac d1 = "pptrBase >> 20 << 2" in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:ARM.pptrBase_def pptrBase_def)
-    apply (simp add:field_simps pdeBits_def)
+     apply (simp add: pptrBase_def)
+    apply (simp add: pdeBits_def)
     apply (frule_tac d1 = "0x3FFF" and p1="ptr" in is_aligned_add_helper[THEN conjunct2])
      apply (simp add: pdeBits_def)
     apply (frule_tac d1 = "pptrBase >> 20 << 2" and p1 = "ptr"
-      in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:ARM.pptrBase_def pptrBase_def pdeBits_def)
+                     in is_aligned_add_helper[THEN conjunct2])
+     apply (simp add: pptrBase_def pdeBits_def)
     apply (simp add: pdeBits_def)
     apply (cut_tac copyGlobalMappings_ksPSpace_sameD)
        apply simp

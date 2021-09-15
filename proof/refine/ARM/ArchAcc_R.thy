@@ -120,7 +120,6 @@ lemma getObject_ASIDPool_corres [corres]:
   apply (simp add: return_def)
   apply (simp add: in_magnitude_check objBits_simps
                    archObjSize_def pageBits_def)
-  apply clarsimp
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
@@ -245,7 +244,6 @@ lemma getObject_PDE_corres [corres]:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pde_relation_def)
@@ -497,7 +495,6 @@ lemma getObject_PTE_corres [corres]:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)

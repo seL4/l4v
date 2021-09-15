@@ -7,6 +7,7 @@
 theory Detype_R
 imports Retype_R
 begin
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 text \<open>Establishing that the invariants are maintained
@@ -402,35 +403,30 @@ lemma map_to_ctes_delete:
 
 lemma word_range_card:
   "base \<le>base + h \<Longrightarrow> card {base..base + (h::word32)} = (unat h) + 1"
-proof (induct h)
-  case 1 show ?case by simp
+proof (induct h rule: word_induct2)
+  case zero show ?case by simp
 next
-  case (2 h)
+  case (suc h)
   have interval_plus_one_word32:
     "\<And>base ceil. \<lbrakk>base \<le> ceil + 1;ceil \<le> ceil + 1\<rbrakk> \<Longrightarrow>
                  {base..ceil + 1} = {base .. ceil } \<union> {ceil + (1::word32)}"
     by (auto intro:order_antisym simp:not_le inc_le)
   show ?case
+    using suc plus_one_helper2[where n = h and x = h,simplified]
     apply (subst add.commute[where a = 1])
     apply (subst add.assoc[symmetric])
     apply (subst interval_plus_one_word32)
-      using 2
       apply (simp add: field_simps)
      apply (subst add.assoc)
      apply (rule word_plus_mono_right)
-      using 2 plus_one_helper2[where n = h and x = h,simplified]
       apply (simp add: field_simps)
-     using 2
      apply (simp add: field_simps)
-    apply (subst card_Un_disjoint,simp+)
-     using 2
+    apply (subst card_Un_disjoint; simp)
      apply (clarsimp simp: field_simps)
-    using 2
-    apply (subst 2)
-    apply (erule word_plus_mono_right2)
-     using 2 plus_one_helper2[where n = h and x = h,simplified]
+    apply (subst suc)
+     apply (erule word_plus_mono_right2)
      apply (simp add: field_simps)
-     apply simp
+    apply simp
     apply (simp add: unatSuc)
     done
 qed
@@ -2037,7 +2033,8 @@ proof -
     fix obj src a m
     show "\<And>s'. \<lbrakk>cte_check obj src a m; ksPSpace s' a = Some obj\<rbrakk> \<Longrightarrow> src \<in> {a..a + 2 ^ objBitsKO obj - 1}"
       by (case_tac obj)
-         (auto simp add: cte_check_def objBits_simps' field_simps
+         (auto simp add: cte_check_def objBits_simps' diff_eq_eq
+                         add.commute[where b=a]
                          word_plus_mono_right is_aligned_no_wrap'
                          tcbVTableSlot_def tcbCTableSlot_def tcbReplySlot_def
                          tcbCallerSlot_def tcbIPCBufferSlot_def )
@@ -4056,6 +4053,7 @@ lemma createNewCaps_ret_len:
               | intro conjI impI)+)+
    done
 
+
 lemma no_overlap_check:
   "\<lbrakk>range_cover ptr sz bits n; pspace_no_overlap' ptr sz s;
     pspace_aligned' s;n\<noteq> 0\<rbrakk>
@@ -4064,6 +4062,7 @@ lemma no_overlap_check:
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"
+  including no_0_dvd
   apply (clarsimp split:option.splits simp:assert_def lookupAround2_char1 not_less)
   apply (rule ccontr)
   apply (frule(1) pspace_no_overlapD')
@@ -4407,7 +4406,7 @@ lemma createObjects'_page_directory_at':
   apply (rule createObjects'_wp_subst)
    apply simp
   apply (clarsimp simp:valid_def)
-  apply (frule use_valid[OF _  createObjects_ko_at_strg[where 'b = pde]])
+  apply (frule use_valid[OF _  createObjects_ko_at_strg[where 'a = pde]])
       apply (simp add:objBits_simps archObjSize_def pdeBits_def)
      apply simp
     apply (simp add:projectKO_def projectKO_opt_pde return_def)
@@ -4628,8 +4627,8 @@ lemma new_cap_addrs_def2:
   "n < 2 ^ 32
    \<Longrightarrow> new_cap_addrs (Suc n) ptr obj
    = map (\<lambda>n. ptr + (n << objBitsKO obj)) [0.e.of_nat n]"
-  by (simp add:new_cap_addrs_def upto_enum_word unat_of_nat
-    Fun.comp_def)
+  including no_take_bit
+  by (simp add:new_cap_addrs_def upto_enum_word unat_of_nat Fun.comp_def)
 
 lemma createTCBs_tcb_at':
   "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -4734,7 +4733,7 @@ proof -
         done
 
   show ?thesis
-  using assms
+  including no_take_bit using assms
   apply (clarsimp simp:valid_pspace'_def)
   apply (frule range_cover.aligned)
   apply (frule(3) pspace_no_overlap'_tail)
@@ -5201,6 +5200,7 @@ lemma createNewObjects_def2:
           apply (simp add:range_cover_def objSize_eq_capBits)+
          done
       show ?case
+      including no_take_bit
       apply simp
       using snoc.prems
       apply (subst upto_enum_inc_1)
@@ -5486,7 +5486,7 @@ lemma createNewObjects_Cons:
       case Nil thus ?case by simp
     next
       case (Cons x xs)
-      thus ?case by (simp add:unat_of_nat32)
+      thus ?case including no_take_bit by (simp add:unat_of_nat32)
     qed
 
     show ?thesis
