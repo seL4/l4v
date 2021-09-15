@@ -835,6 +835,16 @@ lemma no_fail_bind [wp]:
   apply simp
   done
 
+lemma no_fail_skip:
+  "\<lbrakk>no_fail P f; f \<lbrace>P\<rbrace>; \<And>rv. no_fail P (g rv)\<rbrakk> \<Longrightarrow> no_fail P (f >>= (\<lambda>rv. g rv))"
+  apply (rule no_fail_pre)
+   apply wpsimp
+    apply fastforce+
+  done
+
+lemmas no_fail_bind'
+  = no_fail_bind[where P=P and Q=P for P, simplified pred_conj_def, simplified]
+
 text \<open>Empty results implies non-failure\<close>
 
 lemma empty_fail_modify [simp, wp]:
