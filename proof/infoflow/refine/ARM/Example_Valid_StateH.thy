@@ -5,7 +5,7 @@
  *)
 
 theory Example_Valid_StateH
-imports "InfoFlow.Example_Valid_State" ADT_IF_Refine
+imports "InfoFlow.Example_Valid_State" ArchADT_IF_Refine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -2553,7 +2553,7 @@ lemma sameRegionAs_s0H:
       apply (rule s0_ptrs_aligned)
      apply simp
     apply clarsimp
-   apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: if_split_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' split: if_split_asm)
   apply (clarsimp simp: kh0H_all_obj_def' split: if_split_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
@@ -2570,7 +2570,7 @@ lemma sameRegionAs_s0H:
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
     apply (elim disjE, simp_all add: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps)[1]
         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: if_split_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: if_split_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' split: if_split_asm)
       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: if_split_asm)
      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned ARM_H.sameRegionAs_def isCap_simps split: if_split_asm)
     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: if_split_asm)
@@ -2584,7 +2584,7 @@ lemma sameRegionAs_s0H:
    apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
    apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: if_split_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: if_split_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' split: if_split_asm)
     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: if_split_asm)
    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: if_split_asm)
    apply (drule(2) ucast_shiftr_2)
@@ -3050,6 +3050,7 @@ lemma kh0_pspace_dom:
              pd_offs_range Low_pd_ptr \<union>
              pt_offs_range High_pt_ptr \<union>
              pt_offs_range Low_pt_ptr"
+  supply nonzero_gt_zero[simp] gt_zero_nonzero[simp]
   apply (rule equalityI)
    apply (simp add: dom_def pspace_dom_def)
    apply clarsimp
@@ -3383,14 +3384,15 @@ lemma step_restrict_s0:
   done
 
 lemma Sys1_valid_initial_state_noenabled:
-  assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um ds es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, ds, es) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc ms s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn ms s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, ms) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc ms. utf t pl pr pxn (tc, ms) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc ms e f g. (e,f,g) \<in> utf t pl pr pxn (tc, ms) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
   by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty utf_non_interrupt det_inv_invariant det_inv_s0])
+
 end
 
 end

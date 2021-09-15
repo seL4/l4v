@@ -6,7 +6,7 @@
 
 theory Include_IF_C
 imports
-    "InfoFlow.Noninterference"
+    "InfoFlow.ArchNoninterference"
     "InfoFlow.Noninterference_Base_Refinement"
     "InfoFlow.Example_Valid_State"
 begin

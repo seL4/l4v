@@ -6,15 +6,13 @@
 
 theory Noninterference_Refinement
 imports
-  "InfoFlow.Noninterference"
-  "ADT_IF_Refine_C"
+  "InfoFlow.ArchNoninterference"
+  "ArchADT_IF_Refine_C"
   "InfoFlow.Noninterference_Base_Refinement"
 begin
 
 (* FIXME: fp is currently ignored by ADT_C_if *)
 consts fp :: bool
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma internal_R_ADT_A_if:
   "internal_R (ADT_A_if uop) R = R"
@@ -46,8 +44,6 @@ lemma LI_trans:
   apply simp
   done
 
-end
-
 context kernel_m begin
 
 definition big_step_ADT_C_if where
@@ -67,8 +63,6 @@ lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
   done
 
 end
-
-context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma LI_sub_big_steps':
   "\<lbrakk>(s',as) \<in> sub_big_steps C (internal_R C R) s;
@@ -108,6 +102,7 @@ lemma LI_sub_big_steps':
    done
 
 lemma LI_rel_terminate:
+  fixes s0
   assumes ex_abs: "\<And>s'. s' \<in> Ic \<Longrightarrow> (\<exists>s. s \<in> Ia \<and> (s, s') \<in> S)"
   assumes rel_correct: "\<And>s s' s0''. \<lbrakk>(internal_R C R)\<^sup>+\<^sup>+ s0'' s'; s0''\<in>Init C s0; (s, s') \<in> S\<rbrakk> \<Longrightarrow> \<exists>s0'\<in>Init A s0. (internal_R A R)\<^sup>+\<^sup>+ s0' s"
   assumes init_rel_correct: "\<And>s0''. s0'' \<in> Init C s0 \<Longrightarrow> \<exists>s0' \<in> Init A s0. (s0', s0'') \<in> S"
@@ -191,7 +186,6 @@ lemma LI_rel_terminate:
   apply simp
   done
 
-end
 
 locale valid_initial_state_C = valid_initial_state + kernel_m +
   assumes ADT_C_if_serial:
