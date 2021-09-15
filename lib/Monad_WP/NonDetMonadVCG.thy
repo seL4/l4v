@@ -1322,6 +1322,15 @@ lemma hoare_vcg_weaken_imp:
    \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s\<rbrace>"
   by (clarsimp simp: valid_def split_def)
 
+lemma hoare_vcg_imp_lift_pre_add:
+  "\<lbrakk> \<lbrace>P and Q\<rbrace> f \<lbrace>\<lambda>rv s. R rv s\<rbrace>; f \<lbrace>\<lambda>s. \<not> Q s\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q s \<longrightarrow> R rv s\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (rule hoare_vcg_imp_lift')
+    apply fastforce
+   apply fastforce
+  apply (clarsimp simp: pred_conj_def valid_def)
+  done
+
 lemma hoare_vcg_ex_lift:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>"
   by (clarsimp simp: valid_def, blast)
