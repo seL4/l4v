@@ -910,17 +910,15 @@ lemma sc_relation_updateRefillHd:
 lemma updateRefillHd_corres:
   "\<lbrakk>sc_ptr = scPtr; \<forall>refill refill'. refill = refill_map refill' \<longrightarrow> f refill = (refill_map (f' refill'))\<rbrakk>
    \<Longrightarrow> corres dc
-        (sc_at sc_ptr and is_active_sc2 sc_ptr)
+        (sc_at sc_ptr)
         (valid_refills' sc_ptr and sc_at' sc_ptr)
         (update_refill_hd sc_ptr f)
         (updateRefillHd scPtr f')"
   supply projection_rewrites[simp]
-  apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
-   apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
   apply (clarsimp simp: update_refill_hd_def updateRefillHd_def)
   apply (rule corres_guard_imp)
     apply (rule updateSchedContext_corres_gen[where P=\<top>
-      and P'="valid_refills' sc_ptr and is_active_sc' scPtr"])
+      and P'="valid_refills' sc_ptr"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
       apply (fastforce simp: is_sc_obj obj_at_simps is_active_sc'_def opt_map_red valid_refills'_def
                       elim!: sc_relation_updateRefillHd)
@@ -963,16 +961,14 @@ lemma updateRefillTl_corres:
   "\<lbrakk>sc_ptr = scPtr;
     \<forall>refill refill'. refill = refill_map refill' \<longrightarrow> f refill = (refill_map (f' refill'))\<rbrakk>
    \<Longrightarrow> corres dc
-              (sc_at sc_ptr and is_active_sc2 sc_ptr)
+              (sc_at sc_ptr)
               (sc_at' scPtr and valid_refills' scPtr)
               (update_refill_tl sc_ptr f)
               (updateRefillTl scPtr f')"
   supply projection_rewrites[simp]
-  apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
-   apply (fastforce dest!: is_active_sc'_cross[OF state_relation_pspace_relation])
   apply (clarsimp simp: update_refill_tl_def updateRefillTl_def)
   apply (rule corres_guard_imp)
-    apply (rule updateSchedContext_corres_gen[where P=\<top> and P'="valid_refills' scPtr and is_active_sc' scPtr"])
+    apply (rule updateSchedContext_corres_gen[where P=\<top> and P'="valid_refills' scPtr"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
       apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def valid_refills'_def)
       apply (clarsimp simp: sc_relation_updateRefillTl opt_map_red)
