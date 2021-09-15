@@ -385,8 +385,6 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillUnblockCheck :: PPtr SchedContext -> Kernel ()
 > refillUnblockCheck scPtr = do
->       scactive <- scActive scPtr
->       assert scactive "scPtr should be active"
 >       roundRobin <- isRoundRobin scPtr
 >       ready <- refillReady scPtr
 >       when ((not roundRobin) && ready) $ do
