@@ -13,10 +13,36 @@ context Arch begin global_naming ARM_HYP
 named_theorems Ipc_AI_assms
 
 
-crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
-
-crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
-  (wp: crunch_wps cap_refs_respects_device_region_dmo)
+lemma update_cap_data_closedform:
+  "update_cap_data pres w cap =
+   (case cap of
+     cap.EndpointCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (cap.EndpointCap r (w && mask 28) rights) else cap.NullCap
+   | cap.NotificationCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (cap.NotificationCap r (w && mask 28) rights) else cap.NullCap
+   | cap.CNodeCap r bits guard \<Rightarrow>
+       if word_bits < unat ((w >> 3) && mask 5) + bits
+       then cap.NullCap
+       else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
+   | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
+   | cap.DomainCap \<Rightarrow> cap.DomainCap
+   | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
+   | cap.NullCap \<Rightarrow> cap.NullCap
+   | cap.ReplyCap t m rights \<Rightarrow> cap.ReplyCap t m rights
+   | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
+   | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
+   | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
+   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
+  apply (cases cap,
+         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
+                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
+                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
+                        simp_thms cap_rights.simps Let_def split_def
+                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
+                        arch_update_cap_data_def
+                  cong: if_cong)
+  apply (auto simp: word_bits_def)
+  done
 
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
@@ -211,6 +237,7 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: word32)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
+  including no_take_bit
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 
@@ -431,7 +458,6 @@ lemma dmo_addressTranslateS1CPR_cap_refs_respects_device_region[wp]:
 crunch aligned                   [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_aligned"
 crunch distinct                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_distinct"
 crunch vmdb                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_mdb"
-crunch vmdb                      [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_mdb"
 crunch ifunsafe                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "if_unsafe_then_cap"
 crunch iflive                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "if_live_then_nonz_cap"
 crunch state_refs_of             [wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (state_refs_of s)"
@@ -460,7 +486,6 @@ crunch valid_objs                [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch valid_ioc                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_ioc"
 crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
 crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_nonz_cap_to p"
-crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
 
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
@@ -477,10 +502,10 @@ crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "c
 end
 
 interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming ARM_HYP
 

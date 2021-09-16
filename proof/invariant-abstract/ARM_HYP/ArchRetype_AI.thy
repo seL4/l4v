@@ -651,12 +651,10 @@ lemma vs_lookup_pages':
 lemma hyp_refs_eq:
   "ARM_HYP.state_hyp_refs_of s' = ARM_HYP.state_hyp_refs_of s"
   unfolding s'_def ps_def
-  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
-                    simp: orthr
-                   split: option.splits)
-  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
-                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
-                                 default_arch_tcb_def)
+  apply (rule ext)
+  apply (clarsimp simp: state_hyp_refs_of_def orthr split: option.splits)
+  apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
+                             default_arch_tcb_def)
   apply (rename_tac ao)
   apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
                         arch_kernel_obj.case ARM_A.default_vcpu_def

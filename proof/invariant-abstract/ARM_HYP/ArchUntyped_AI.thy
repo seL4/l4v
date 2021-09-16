@@ -18,9 +18,7 @@ lemma of_bl_nat_to_cref[Untyped_AI_assms]:
   apply (clarsimp intro!: less_mask_eq
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
-  apply (subst unat_of_nat)
-  apply (erule order_le_less_trans [OF mod_less_eq_dividend])
-  done
+  by (simp add: take_bit_nat_def)
 
 
 lemma cnode_cap_ex_cte[Untyped_AI_assms]:
@@ -208,11 +206,6 @@ proof -
 qed
 
 
-crunch pdistinct[wp]: do_machine_op "pspace_distinct"
-crunch vmdb[wp]: do_machine_op "valid_mdb"
-crunch mdb[wp]: do_machine_op "\<lambda>s. P (cdt s)"
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
-
 lemma cap_refs_in_kernel_windowD2:
   "\<lbrakk> cte_wp_at P p (s::'state_ext::state_ext state); cap_refs_in_kernel_window s \<rbrakk>
        \<Longrightarrow> \<exists>cap. P cap \<and> region_in_kernel_window (cap_range cap) s"
@@ -366,22 +359,6 @@ lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   apply (drule(1) cap_refs_in_kernel_windowD)
   apply blast
   done
-
-crunch irq_node[wp]: store_pde "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
-(* make these available in the generic theory? *)
-lemma init_arch_objects_irq_node[wp]:
-  "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
-  by (wp init_arch_objects_hoare_lift, simp)
-
-lemma init_arch_objects_excap[wp]:
-  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
-  by (wp ex_cte_cap_to_pres init_arch_objects_irq_node init_arch_objects_cte_wp_at)
-(**)
-
-crunch nonempty_table[wp]: do_machine_op
-  "\<lambda>s. P' (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)"
 
 lemma store_pde_weaken:
   "\<lbrace>\<lambda>s. page_directory_at (p && ~~ mask pd_bits) s \<longrightarrow> P s\<rbrace> store_pde p e \<lbrace>Q\<rbrace> =

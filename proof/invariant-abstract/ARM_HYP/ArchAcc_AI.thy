@@ -74,7 +74,7 @@ lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<r
 bundle pagebits =
   pd_bits_def[simp] pt_bits_def[simp] pde_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split]
   pte.splits[split]
 
@@ -651,11 +651,11 @@ lemma page_directory_pde_at_lookupI:
 
 (* FIXME move to Word_Lemmas? *)
 lemma word_FFF_is_mask:
-  "0xFFF = mask 12"
+  "(0xFFF::'a::len word) = mask 12"
   by (simp add: mask_def)
 
 lemma word_1FF_is_mask:
-  "0x1FF = mask 9"
+  "(0x1FF::'a::len word) = mask 9"
   by (simp add: mask_def)
 
 
@@ -1901,10 +1901,6 @@ lemma set_asid_pool_reply_masters [wp]:
 
 
 crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
-  (wp: crunch_wps)
-
-
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps)
 
 
