@@ -151,8 +151,6 @@ lemma set_cap_valid_vs_lookup:
   apply (auto simp: cte_wp_at_caps_of_state)[1]
   done
 
-crunch arch[wp]: set_cap "\<lambda>s. P (arch_state s)" (simp: split_def)
-
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s
          \<and> ((is_pt_cap cap \<or> is_pd_cap cap) \<longrightarrow> cap_asid cap = None
@@ -311,15 +309,11 @@ lemma set_cap_hyp_refs_of [wp]:
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp get_object_wp | wpc)+
-  apply (auto elim!: rsubst[where P=P]
-               simp: ARM_HYP.state_hyp_refs_of_def obj_at_def
-             intro!: ext
-             split: if_split_asm)
-  done
+  by (fastforce elim!: rsubst[where P=P]
+                simp: state_hyp_refs_of_def obj_at_def
+                split: if_split_asm)
 
-lemma state_hyp_refs_of_revokable[simp]:
-  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
-  by (simp add: state_hyp_refs_of_def)
+lemmas state_hyp_refs_of_revokable = state_hyp_refs_update
 
 lemma is_valid_vtable_root_is_arch_cap:
   "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"

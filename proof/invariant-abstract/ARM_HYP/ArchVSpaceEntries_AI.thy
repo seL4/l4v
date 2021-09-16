@@ -319,12 +319,8 @@ lemma store_pde_non_master_valid_pdpt:
     apply (fastforce simp:ran_def)
    apply (drule bspec)
     apply fastforce
-   apply (case_tac "pd pa")
-    apply (simp_all add: vspace_bits_defs)
-     apply (case_tac pde,simp_all)
-    apply (case_tac pde,simp_all)
-   apply (case_tac pde,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)+
+   apply (rename_tac p')
+   apply (case_tac "pd p'"; cases pde; clarsimp simp: vspace_bits_defs)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pde_update)
    apply (drule(1) valid_pdpt_objs_pdD,simp)
@@ -363,7 +359,7 @@ lemma store_pte_non_master_valid_pdpt:
    apply (case_tac "pt pa")
      apply simp
     apply (case_tac pte,simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq vspace_bits_defs)
+    apply (clarsimp simp: vspace_bits_defs)
    apply (case_tac pte,simp_all)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pte_update)
@@ -797,7 +793,7 @@ lemma store_pte_valid_pdpt:
     apply (case_tac pte)
      apply simp+
     apply (case_tac "pta p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply clarsimp
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pte_update)
     apply (drule (1) valid_pdpt_objs_ptD,simp)
@@ -901,9 +897,9 @@ lemma store_pde_valid_pdpt:
      apply simp
     apply (case_tac pde,simp_all)
      apply (case_tac "pda p",simp_all)
-     apply (clarsimp simp: is_aligned_neg_mask_eq)
+     apply clarsimp
     apply (case_tac "pda p",simp_all)
-    apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply clarsimp
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pde_update)
     apply simp+
@@ -1179,9 +1175,7 @@ lemma ensure_safe_mapping_ensures[wp]:
      apply (clarsimp simp :upto_enum_def upto_enum_step_def
          Fun.comp_def upto_0_to_n2)
      apply (cut_tac x = "of_nat x" and n = 3 in word_power_nonzero_32)
-        apply (simp add:word_of_nat_less word_bits_def)+
-      apply (simp add: of_nat_neq_0)
-     apply simp
+         apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0 del: word_of_nat_eq_0_iff)+
      done
     have neq_pt_offset: "\<And>z zs xa (p::word32). \<lbrakk>[0 , 8 .e. 0x78] = z # zs;
         xa \<in> set zs;is_aligned p 7 \<rbrakk> \<Longrightarrow>
@@ -1260,7 +1254,6 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply clarsimp
          apply (frule_tac x = xa in mask_out_same_pt)
           apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-          apply (erule notE)
           apply (subst shiftl_t2n[where n = 3,simplified field_simps,simplified,symmetric])
           apply (rule shiftl_less_t2n[where m = 7,simplified])
            apply (simp add:word_of_nat_less)
@@ -1272,7 +1265,7 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply (intro conjI impI)
              apply (clarsimp simp: pte_bits_def)
             apply (drule(1) valid_pdpt_objs_ptD)
-            apply (clarsimp simp:  word_bool_alg.conj_assoc)
+            apply (clarsimp simp: bit.conj_assoc)
             apply (frule align_entry_ptD,simp)
             apply (clarsimp simp: is_aligned_neg_mask_eq[of _ 4] pte_bits_def)
            apply clarsimp
@@ -1313,40 +1306,36 @@ lemma ensure_safe_mapping_ensures[wp]:
   apply (subst mapME_x_Cons)
   apply simp
   apply wp
-   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22. obj_at
-       (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
-       pd (ucast (x && mask pd_bits >> 3)) = pde.InvalidPDE)
-       (hd (x21 # x22) && ~~ mask pd_bits) s" in hoare_post_imp_R)
+   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22.
+                                 obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
+                                                   pd (ucast (x && mask pd_bits >> 3)) = InvalidPDE)
+                               (x21 && ~~ mask pd_bits) s" in hoare_post_imp_R)
     apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
         apply (wp get_master_pde_wp| wpc | simp)+
        apply clarsimp
        apply (frule_tac x = xa in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-        apply (erule notE)
         apply (subst shiftl_t2n[where n = 3,simplified field_simps,simplified,symmetric])
         apply (rule shiftl_less_t2n[where m = 7,simplified])
          apply (simp add:word_of_nat_less)
         apply simp
        apply (frule_tac x = z in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-       apply (clarsimp simp:field_simps obj_at_def
-           split:pde.splits)
+       apply (clarsimp simp: field_simps obj_at_def split: pde.splits)
        apply (drule(1) valid_pdpt_objs_pdD)
        apply (intro conjI impI; clarsimp simp: pde_bits_def)
           apply (frule align_entry_pdD,simp)
-          apply (clarsimp simp: is_aligned_neg_mask_eq pde_bits_def)
+          apply (clarsimp simp: pde_bits_def)
          apply (frule(1) align_entry_pdD)
-         apply (simp add:is_aligned_neg_mask_eq)
+         apply simp
         apply (frule(1) align_entry_pdD)
-        apply (simp add:is_aligned_neg_mask_eq)
+        apply simp
        apply (frule(1) align_entry_pdD)
        apply (erule(4) invalid_pdeI[OF _ neq_pd_offset])
       apply (wp hoare_drop_imps |wpc|simp)+
-    apply (clarsimp simp:upto_enum_def upto_enum_step_def
-        upto_0_to_n2 Fun.comp_def distinct_map)
+    apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2 Fun.comp_def distinct_map)
    apply (intro exI conjI,fastforce+)
-   apply (simp add:obj_at_def hd_map_simp
-     upto_0_to_n2 upto_enum_def upto_enum_step_def)
+   apply (simp add:obj_at_def hd_map_simp upto_0_to_n2 upto_enum_def upto_enum_step_def)
    apply (frule_tac x = 1 in bspec,fastforce+)
   apply (wp get_master_pde_wp | simp | wpc)+
   done
@@ -1540,12 +1529,12 @@ lemma set_thread_state_duplicates_valid[wp]:
 lemma handle_invocation_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and invs and ct_active\<rbrace>
         handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
-  apply (simp add: handle_invocation_def)
-  apply (wp syscall_valid set_thread_state_ct_st
+  unfolding handle_invocation_def
+  (* take long: *)
+  by (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
                | wp (once) hoare_drop_imps)+
-  apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
-  done
+     (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
 
 
 crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
