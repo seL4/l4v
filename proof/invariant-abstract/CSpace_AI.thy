@@ -4106,9 +4106,13 @@ lemma guarded_lookup_valid_cap:
   apply assumption
   done
 
-crunch inv[wp]: lookup_slot_for_cnode_op "P"
-  (wp:  simp: crunch_simps)
+crunches lookup_slot_for_cnode_op
+  for tainv[wp]: "ignore_ta P"
+  (simp: crunch_simps)
 
+interpretation lookup_slot_for_cnode_op_tainv:
+  touched_addresses_inv "lookup_slot_for_cnode_op bl cap ref depth"
+  by unfold_locales (rule lookup_slot_for_cnode_op_tainv)
 
 lemma lsfco_cte_at[wp]:
   "\<lbrace>invs and valid_cap cap\<rbrace>
