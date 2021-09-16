@@ -9,7 +9,7 @@ chapter "Platform Definitions"
 theory Platform
 imports
   "Lib.Lib"
-  "Word_Lib.Word_Enum"
+  "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
 begin
