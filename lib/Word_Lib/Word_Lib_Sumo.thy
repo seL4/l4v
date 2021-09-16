@@ -61,6 +61,12 @@ begin
   declare of_int_and_nat[simp del]
 end
 
+bundle no_0_dvd
+begin
+  declare word_of_int_eq_0_iff[simp del]
+  declare word_of_nat_eq_0_iff[simp del]
+end
+
 lemmas bshiftr1_def = bshiftr1_eq
 lemmas is_down_def = is_down_eq
 lemmas is_up_def = is_up_eq
