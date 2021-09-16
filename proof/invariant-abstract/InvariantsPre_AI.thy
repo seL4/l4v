@@ -55,7 +55,6 @@ lemma in_inv_by_hoare:
   apply clarsimp
   done
 
-
 lemma in_inv_by_agnostic:
   "\<lbrakk>(x, s') \<in> fst (m s); ta_agnostic P; P s\<rbrakk> \<Longrightarrow>
   P s'"
