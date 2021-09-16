@@ -242,10 +242,6 @@ interpretation valid_objs_tainv:
 *)
 end
 
-find_theorems name:valid_cap_tainv
-
-find_theorems name:valid_objs_tainv
-
 lemma obj_at_tcb_update:
   "\<lbrakk> tcb_at t s; \<And>x y. P (TCB x) = P (TCB y)\<rbrakk> \<Longrightarrow>
   obj_at P t' (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = obj_at P t' s"

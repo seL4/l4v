@@ -199,8 +199,6 @@ qed
 
 lemmas rab_cte_cap_to = use_spec(2) [OF rab_cte_cap_to']
 
-thm touch_object_tainv
-
 lemma Inr_in_liftE_simp' [monad_eq]:
   "((Inr rv, x) \<in> fst ((liftE $ fn) s)) = ((rv, x) \<in> fst (fn s))"
   by (simp add: in_monad)
