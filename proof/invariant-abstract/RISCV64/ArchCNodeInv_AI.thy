@@ -652,13 +652,14 @@ next
         apply (erule disjE)
          apply (simp only: zobj_refs.simps mem_simps)
         apply clarsimp+
-       apply (drule sym, simp)
-       apply (drule sym, simp)
-       apply clarsimp
-       apply (simp add: unat_eq_0)
-       apply (drule of_bl_eq_0)
-        apply (drule zombie_cte_bits_less, simp add: word_bits_def)
-       apply (clarsimp simp: cte_wp_at_caps_of_state)
+       subgoal
+         apply (drule sym, simp)
+         apply (drule sym, simp)
+         apply clarsimp
+         apply (simp add: unat_eq_0)
+         apply (drule of_bl_eq_0)
+          apply (drule zombie_cte_bits_less, simp add: word_bits_def)
+         by (clarsimp simp: cte_wp_at_caps_of_state)
       apply (drule_tac s="appropriate_cte_cap c" for c in sym)
       apply (clarsimp simp: is_cap_simps appropriate_Zombie gen_obj_refs_eq)
      apply (simp add: is_final_cap_def)

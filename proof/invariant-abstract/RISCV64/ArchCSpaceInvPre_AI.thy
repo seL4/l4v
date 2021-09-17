@@ -389,9 +389,7 @@ lemma set_cap_hyp_refs_of [wp]:
             simp: state_hyp_refs_of_def obj_at_def
             split: if_split_asm)
 
-lemma state_hyp_refs_of_revokable[simp]:
-  "state_hyp_refs_of (s \<lparr> is_original_cap := m \<rparr>) = state_hyp_refs_of s"
-  by (rule revokable_update.state_hyp_refs_update)
+lemmas state_hyp_refs_of_revokable = state_hyp_refs_update
 
 lemma is_valid_vtable_root_is_arch_cap:
   "is_valid_vtable_root cap \<Longrightarrow> is_arch_cap cap"
