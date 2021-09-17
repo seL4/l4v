@@ -1422,12 +1422,35 @@ lemma get_cap_wp:
 
 *)
 
-lemma xyz:
+lemma bind_first_equiv_succeeds_imp:
   "\<lbrakk>(\<And> r1. (x1 s = (r1, False) \<Longrightarrow> x2 s = (r1, False)));
-   (do q1 <- x1; y q1 od) s = (r2, False) \<rbrakk> \<Longrightarrow>
-   (do q2 <- x2; y q2 od) s = (r2, False)"
+   (do q <- x1; y q od) s = (r2, False) \<rbrakk> \<Longrightarrow>
+   (do q <- x2; y q od) s = (r2, False)"
   apply (clarsimp simp:bind_def)
   apply (cases "x1 s", clarsimp)
+  done
+
+lemma bind_first_imp:
+  "\<lbrakk>(do q <- x; y1 q od) s = (r, False);
+    (\<And> q s r1. y1 q s = (r1, False) \<Longrightarrow> y2 q s = (r1, False)) \<rbrakk> \<Longrightarrow>
+   (do q <- x; y2 q od) s = (r, False)"
+  apply (clarsimp simp:bind_def)
+  using SUP_cong apply fastforce
+  done
+
+lemma bind_assert_succeeds_imp:
+  "(do z <- assert x; y od) s = (r, False) \<Longrightarrow> 
+   y s = (r, False)"
+  by (metis assert_def not_snd_bindI1 return_bind snd_assert snd_conv)
+
+lemma get_object_x_subset_get_object:
+  "get_object_x oref s = (z, False) \<Longrightarrow> get_object oref s = (z, False)"
+  apply (clarsimp simp: get_object_x_def get_object_def)
+  apply (erule bind_first_imp)+
+  apply (clarsimp simp:simpler_do_machine_op_getTouchedAddresses_def)
+  apply (subst (asm) exec_gets)
+  apply (drule bind_assert_succeeds_imp)
+  apply simp
   done
 
 (* pretty sure this is true *)
@@ -1435,8 +1458,9 @@ lemma get_cap_x_subset_get_cap:
   "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
   apply (clarsimp simp:get_cap_x_def get_cap_def)
   apply (cases p, rename_tac oref cref, clarsimp)
-  (* hello *)
-  sorry
+  apply (rule bind_first_equiv_succeeds_imp, rule get_object_x_subset_get_object, assumption)
+  apply simp
+  done
 
 lemma get_cap_x_wp:
   "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at ((=) cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap_x p \<lbrace>Q\<rbrace>"
