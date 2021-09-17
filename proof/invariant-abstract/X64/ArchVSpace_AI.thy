@@ -166,10 +166,6 @@ lemma dmo_vspace_at_asid [wp]:
   apply (simp add: vspace_at_asid_def)
   done
 
-crunch inv: find_vspace_for_asid "P"
-  (simp: assertE_def crunch_simps wp: crunch_wps)
-
-
 lemma find_vspace_for_asid_vspace_at_asid [wp]:
   "\<lbrace>\<top>\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>pd. vspace_at_asid asid pd\<rbrace>, -"
   apply (simp add: find_vspace_for_asid_def assertE_def split del: if_split)
@@ -382,10 +378,6 @@ lemma valid_global_objs_arch_update:
     \<and> x64_global_pts (f (arch_state s)) = x64_global_pts (arch_state s)
      \<Longrightarrow> valid_global_objs (arch_state_update f s) = valid_global_objs s"
   by (simp add: valid_global_objs_def second_level_tables_def)
-
-
-crunch pred_tcb_at [wp]: find_vspace_for_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
-  (simp: crunch_simps)
 
 
 lemma find_vspace_for_asid_assert_wp:
@@ -2841,9 +2833,6 @@ lemma update_aobj_zombies[wp]:
 crunch is_final_cap' [wp]: store_pde "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pd)
 
-crunch is_final_cap' [wp]: store_pte "is_final_cap' cap"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_pt)
-
 crunch is_final_cap' [wp]: store_pdpte "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pdpt)
 
@@ -3310,8 +3299,6 @@ lemma vs_lookup_invs_ref_is_unique: "\<lbrakk> (ref \<rhd> p) s; (ref' \<rhd> p)
   apply (erule (1) ref_is_unique)
   apply (erule reachable_pd_not_global)
   by (auto elim: invs_valid_kernel_mappings intro!: valid_objs_caps)
-
-crunch global_refs: store_pde "\<lambda>s. P (global_refs s)"
 
 crunch invs[wp]: pte_check_if_mapped, pde_check_if_mapped "invs"
 

@@ -214,7 +214,7 @@ bundle pagebits =
   pml4_bits_def[simp] pml4_shift_bits_def[simp]
   table_size_def[simp] ptTranslationBits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split] pdpte.splits[split] pml4e.splits[split]
   pte.splits[split]
 
@@ -2466,10 +2466,6 @@ lemma set_asid_pool_cur_tcb [wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
   unfolding cur_tcb_def
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
-
-
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: get_object_wp)
 
 
 lemma set_asid_pool_valid_arch [wp]:
