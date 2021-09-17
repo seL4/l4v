@@ -1416,9 +1416,26 @@ lemma get_cap_wp:
   apply simp
   done
 
+
+(*
+ - x1 succeeds \<Longrightarrow> x2 succeeds
+
+*)
+
+lemma xyz:
+  "\<lbrakk>(\<And> r1. (x1 s = (r1, False) \<Longrightarrow> x2 s = (r1, False)));
+   (do q1 <- x1; y q1 od) s = (r2, False) \<rbrakk> \<Longrightarrow>
+   (do q2 <- x2; y q2 od) s = (r2, False)"
+  apply (clarsimp simp:bind_def)
+  apply (cases "x1 s", clarsimp)
+  done
+
 (* pretty sure this is true *)
 lemma get_cap_x_subset_get_cap:
- "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
+  "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
+  apply (clarsimp simp:get_cap_x_def get_cap_def)
+  apply (cases p, rename_tac oref cref, clarsimp)
+  (* hello *)
   sorry
 
 lemma get_cap_x_wp:
