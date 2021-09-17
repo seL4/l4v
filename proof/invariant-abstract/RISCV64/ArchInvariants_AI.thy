@@ -1452,7 +1452,7 @@ lemma vref_for_level_idem:
 
 lemma vref_for_level_max[simp]:
   "vref_for_level (vref_for_level vref level') level = vref_for_level vref (max level level')"
-  by (simp add: vref_for_level_def pt_bits_left_mono neg_mask_twice word_bool_alg.conj_ac)
+  by (simp add: vref_for_level_def pt_bits_left_mono neg_mask_twice bit.conj_ac)
 
 lemma vref_for_level_pt_index:
   "vref_for_level vref level = vref_for_level vref' level \<Longrightarrow>
@@ -1567,7 +1567,7 @@ lemma pte_refs_of_eqI:
 lemma pt_index_mask_pt_bits[simp]:
   "(pt_index level vref << pte_bits) && mask pt_bits = pt_index level vref << pte_bits"
   by (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist mask_shiftl_decompose
-                word_bool_alg.conj_ac)
+                bit.conj_ac)
 
 lemma table_base_offset_id:
   "\<lbrakk> is_aligned pt_ptr pt_bits; (idx << pte_bits) && mask pt_bits = idx << pte_bits \<rbrakk>
@@ -2207,7 +2207,7 @@ lemma valid_vspace_objs_strongD:
   apply (rename_tac level pt_ptr)
   apply (frule vs_lookup_splitD, assumption)
    apply (simp add: less_imp_le)
-  apply clarsimp
+  apply (elim exE)
   apply (drule_tac x=pt in meta_spec)
   apply clarsimp
   apply (subst (asm) pt_walk.simps)

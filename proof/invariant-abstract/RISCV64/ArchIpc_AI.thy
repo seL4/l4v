@@ -200,6 +200,7 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: machine_word)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
+  including no_take_bit
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 
@@ -442,10 +443,10 @@ crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "c
 end
 
 interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming RISCV64
 

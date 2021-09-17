@@ -178,7 +178,7 @@ lemma safe_parent_for_arch_not_arch:
   by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
 
 lemma safe_parent_cap_range_arch:
-  "\<And>cap pcap. safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
+  "safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
   by (clarsimp simp: safe_parent_for_arch_def cap_range_def)
 
 definition

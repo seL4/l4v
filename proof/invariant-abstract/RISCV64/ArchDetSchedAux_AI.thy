@@ -57,7 +57,6 @@ crunch ekheap[wp]: do_machine_op "\<lambda>s. P (ekheap s)"
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (wp)
   apply (simp add: detype_def detype_ext_def wrap_ext_det_ext_ext_def etcb_at_def|wp)+
   done
 

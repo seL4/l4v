@@ -1068,11 +1068,11 @@ lemma perform_pt_inv_unmap_invs[wp]:
    apply (subst table_base_plus[simplified shiftl_t2n mult_ac], assumption)
     apply (simp add: mask_def bit_simps)
     apply unat_arith
-    apply (simp add: unat_of_nat)
+    apply (subst (asm) unat_of_nat, simp)
    apply (subst table_base_plus[simplified shiftl_t2n mult_ac], assumption)
     apply (simp add: mask_def bit_simps)
     apply unat_arith
-    apply (simp add: unat_of_nat)
+    apply (subst (asm) unat_of_nat, simp)
    apply (rule conjI; clarsimp)
     apply (drule valid_global_refsD2, clarsimp)
     apply (simp add: cap_range_def)
