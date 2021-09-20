@@ -547,6 +547,13 @@ definition "MIN_BUDGET = 2 * kernelWCET_ticks"
 
 lemma MIN_BUDGET_pos: "0 < MIN_BUDGET" using MIN_BUDGET_def kernelWCET_ticks_pos2 by clarsimp
 
+lemma MIN_BUDGET_le_MAX_PERIOD':
+  "MIN_BUDGET \<le> MAX_PERIOD"
+  apply (insert getCurrentTime_buffer_bound MIN_BUDGET_le_MAX_PERIOD)
+  apply (clarsimp simp: MIN_BUDGET_def MAX_PERIOD_def kernelWCET_ticks_def)
+  apply (fastforce intro: order_trans[OF MIN_BUDGET_helper] us_to_ticks_mono)
+  done
+
 definition "min_sched_context_bits = 8"
 
 (* RT : size of sched_context struct in C, excluding refills
