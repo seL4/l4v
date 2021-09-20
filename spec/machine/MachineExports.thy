@@ -92,6 +92,7 @@ requalify_facts
   MIN_BUDGET_helper
   \<mu>s_in_ms_def
   us_to_ticks_helper
+  MIN_BUDGET_le_MAX_PERIOD
 
 definition "MAX_RELEASE_TIME = max_time - 5 * MAX_PERIOD"
 
