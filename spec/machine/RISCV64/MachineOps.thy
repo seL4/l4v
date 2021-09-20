@@ -161,6 +161,10 @@ have getCurrentTime_buffer_pos:
                            timer_unit_def max_word_def)+
   done
 
+have MIN_BUDGET_le_MAX_PERIOD:
+  "2 * kernelWCET_us \<le> MAX_PERIOD_US"
+  by (simp add: kernelWCET_us_def MAX_PERIOD_US_def)
+
 end
 
 axiomatization
@@ -203,6 +207,8 @@ and
   domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
 and
   getCurrentTime_buffer_pos: "0 < us_to_ticks kernelWCET_us + 5 * us_to_ticks MAX_PERIOD_US"
+and
+  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
 
 definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
 
