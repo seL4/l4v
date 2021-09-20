@@ -319,12 +319,19 @@ lemmas valid_list_inits[simp] = valid_list_init[simplified]
 lemma valid_sched_init[simp]:
   "valid_sched init_A_st"
   apply (simp add: valid_sched_def init_A_st_def ext_init_def)
-  apply (clarsimp simp:  init_kheap_def
-                    obj_at_def  idle_thread_ptr_def init_globals_frame_def
-                    init_global_pd_def  ct_not_in_q_def not_queued_def
-                    valid_sched_action_def is_activatable_def
-                    ct_in_cur_domain_2_def  valid_idle_etcb_def etcb_at'_def)
-  sorry
+  apply (insert getCurrentTime_buffer_bound MIN_BUDGET_le_MAX_PERIOD')
+  apply (clarsimp simp: init_kheap_def obj_at_def idle_thread_ptr_def init_globals_frame_def
+                        init_global_pd_def ct_not_in_q_def valid_sched_action_def is_activatable_def
+                        ct_in_cur_domain_2_def valid_idle_etcb_def etcb_at'_def
+                        valid_ready_qs_def ready_or_release_2_def in_queues_2_def
+                        idle_sc_ptr_def valid_blocked_defs default_domain_def minBound_word
+                        released_ipc_queues_defs active_reply_scs_def active_if_reply_sc_at_def
+                        active_sc_def MIN_REFILLS_def)
+  apply (auto simp: vs_all_heap_simps active_sc_valid_refills_def cfg_valid_refills_def
+                    rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
+                    default_sched_context_def MAX_PERIOD_def
+             intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper])
+  done
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
