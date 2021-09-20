@@ -83,7 +83,9 @@ definition
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd),
   idle_sc_ptr \<mapsto> SchedContext (default_sched_context
                                  \<lparr>sc_tcb := Some idle_thread_ptr,
-                                  sc_refills := [\<lparr>r_time = 0, r_amount = 0\<rparr>],
+                                  sc_refills := [\<lparr>r_time = 0, r_amount = MAX_PERIOD\<rparr>,
+                                                 \<lparr>r_time = MAX_PERIOD, r_amount = 0\<rparr>],
+                                  sc_budget := MAX_PERIOD,
                                   sc_refill_max := MIN_REFILLS\<rparr>) 0
   )"
 
