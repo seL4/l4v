@@ -26,10 +26,7 @@ lemma set_cap_valid_sched_pred[wp]:
   "set_cap cap slot \<lbrace>valid_sched_pred_strong P\<rbrace>"
   apply (wpsimp simp: set_cap_def obj_at_def wp: set_object_wp get_object_wp)
   apply (fold fun_upd_def o_def opt_map_def)
-  apply (rename_tac ko; case_tac ko;
-         clarsimp simp: vs_all_heap_simps scs_of_kh_def tcbs_of_kh_def eps_of_kh_def
-                        ep_send_qs_of_eps_def ep_recv_qs_of_eps_def
-                 split: option.splits; intro conjI impI; clarsimp)
+  apply (fastforce simp: opt_map_upd_triv_simps opt_map_red split: option.splits)
   done
 
 crunches create_cap, cap_insert
@@ -53,9 +50,7 @@ lemma set_mrs_valid_sched_pred[wp]:
   apply (wpsimp simp: set_mrs_def wp: zipWithM_x_inv' set_object_wp)
   apply (fold fun_upd_def o_def opt_map_def)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: vs_all_heap_simps scs_of_kh_def tcbs_of_kh_def eps_of_kh_def
-                        ep_send_qs_of_eps_def ep_recv_qs_of_eps_def
-                 split: option.splits)
+  apply (fastforce simp: opt_map_upd_triv_simps opt_map_red split: option.splits)
   done
 
 global_interpretation set_mrs: valid_sched_pred_locale _ "set_mrs r t mrs"
@@ -523,6 +518,14 @@ lemma valid_blocked_fold_update:
 
 lemma retype_region_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
+  apply (simp add: retype_region_def)
+  apply wp
+thm valid_blocked_fold_update opt_map_foldr_upd_simps
+  apply_trace (clarsimp simp del: fun_upd_apply)
+apply (drule valid_blocked_fold_update)
+  apply (blast intro: valid_blocked_fold_update)
+  done
+
   apply (simp add: retype_region_def)
   apply wp
   apply (clarsimp simp:
