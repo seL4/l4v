@@ -2038,7 +2038,8 @@ crunches sched_context_resume
   (wp: crunch_wps)
 
 lemma schedContextBindTCB_corres:
-  "corres dc (invs and valid_sched and simple_sched_action and bound_sc_tcb_at ((=) None) t
+  "corres dc (valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s))
+              and valid_sched and simple_sched_action and bound_sc_tcb_at ((=) None) t
               and active_sc_valid_refills and sc_tcb_sc_at ((=) None) ptr and ex_nonz_cap_to t and ex_nonz_cap_to ptr)
              (invs' and ex_nonz_cap_to' t and ex_nonz_cap_to' ptr)
              (sched_context_bind_tcb ptr t) (schedContextBindTCB ptr t)"
@@ -2060,7 +2061,8 @@ lemma schedContextBindTCB_corres:
                  apply (wpsimp simp: is_schedulable_def)
                 apply (wpsimp wp: threadGet_wp getTCB_wp simp: isSchedulable_def inReleaseQueue_def)
                apply (rule schedContextResume_corres)
-              apply (rule_tac Q="\<lambda>rv. invs and weak_valid_sched_action and active_sc_valid_refills and
+              apply (rule_tac Q="\<lambda>rv. valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)) and
+                                      weak_valid_sched_action and active_sc_valid_refills and
                                       sc_tcb_sc_at ((=) (Some t)) ptr and
                                       bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) t"
                            in hoare_strengthen_post[rotated], fastforce)
@@ -2071,13 +2073,12 @@ lemma schedContextBindTCB_corres:
                          in update_sc_no_reply_stack_update_ko_at'_corres; clarsimp?)
              apply (clarsimp simp: sc_relation_def)
             apply (clarsimp simp: objBits_def objBitsKO_def)
-           apply (simp add: pred_conj_def invs_def valid_state_def  cong: conj_cong)
-           apply (wpsimp wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
+           apply ((wpsimp wp: valid_irq_node_typ obj_set_prop_at get_sched_context_wp ssc_refs_of_Some
                              update_sched_context_valid_objs_same valid_ioports_lift
                              update_sched_context_iflive_update update_sched_context_refs_of_update
                              update_sched_context_cur_sc_tcb_None update_sched_context_valid_idle
-                       simp: invs'_def valid_state'_def valid_pspace_def
-                  | rule hoare_vcg_conj_lift update_sched_context_wp)+
+                  | rule hoare_vcg_conj_lift update_sched_context_wp)+)[1]
+          apply (wpsimp simp: invs'_def valid_state'_def)
          apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
          apply (rule threadset_corres; clarsimp simp: tcb_relation_def)
         apply (clarsimp simp: pred_conj_def)
@@ -2094,23 +2095,19 @@ lemma schedContextBindTCB_corres:
                  threadSet_ct_idle_or_in_cur_domain' threadSet_cur threadSet_valid_replies'
               | clarsimp simp: tcb_cte_cases_def cteCaps_of_def
               | rule hoare_vcg_conj_lift threadSet_wp refl)+
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def)
+   apply (clarsimp simp: valid_sched_def cong: conj_cong)
    apply (intro conjI impI allI; (solves clarsimp)?)
-              apply (fastforce simp: valid_obj_def obj_at_def sc_at_ppred_def is_sc_obj_def)
-             apply (clarsimp simp: valid_sched_context_def obj_at_def pred_tcb_at_def is_tcb_def)
-            apply (clarsimp simp: pred_tcb_at_def sc_at_ppred_def fun_upd_def)
-            apply (fastforce elim: ex_cap_to_after_update simp: obj_at_def tcb_cap_cases_def)
-           apply (fastforce simp: obj_at_def pred_tcb_at_def sc_at_ppred_def
-                                  tcb_st_refs_of_def state_refs_of_def
-                            elim: delta_sym_refs split: if_splits)
-          apply (fastforce dest: idle_no_ex_cap)
-         apply (fastforce dest: idle_sc_no_ex_cap)
+           apply (fastforce simp: valid_obj_def obj_at_def sc_at_ppred_def is_sc_obj_def)
+          apply (clarsimp simp: valid_sched_context_def obj_at_def pred_tcb_at_def is_tcb_def)
+         apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def
+                         dest!: valid_ready_qs_no_sc_not_queued)
         apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def
-                        dest!: valid_ready_qs_no_sc_not_queued)
-       apply (fastforce simp: tcb_at_kh_simps pred_map_eq_def
-                       elim!: valid_release_q_no_sc_not_in_release_q)
-      apply (fastforce simp: sc_at_pred_def sc_at_ppred_def obj_at_def bound_sc_tcb_at_def
-                      split: if_splits)
+                        elim!: valid_release_q_no_sc_not_in_release_q)
+       apply (fastforce simp: sc_at_pred_def sc_at_ppred_def obj_at_def bound_sc_tcb_at_def
+                       split: if_splits)
+      apply (fastforce simp: obj_at_def pred_tcb_at_def sc_at_ppred_def
+                             tcb_st_refs_of_def state_refs_of_def
+                       elim: delta_sym_refs split: if_splits)
      apply (clarsimp simp: weak_valid_sched_action_def simple_sched_action_def)
     apply (clarsimp simp: sc_at_ppred_def obj_at_def bound_sc_tcb_at_def)
    apply (clarsimp simp: sc_at_ppred_def obj_at_def bound_sc_tcb_at_def)
@@ -2121,16 +2118,16 @@ lemma schedContextBindTCB_corres:
                            sc_at_ppred_def obj_at'_def projectKO_eq projectKO_tcb projectKO_sc)
      apply (intro conjI allI impI; (solves \<open>clarsimp simp: inQ_def comp_def\<close>)?)
               apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def projectKO_eq)
-             apply (clarsimp simp: tcb_cte_cases_def)
-            apply (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
-                                   obj_at'_def projectKO_eq projectKO_sc projectKO_tcb)
-           apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
-                            simp: objBits_def objBitsKO_def valid_obj_size'_def
-                                  valid_sched_context_size'_def)
-          apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def)
-         apply (clarsimp simp: idle_tcb'_2_def)
-        apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
-       apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
+             apply (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
+                                    obj_at'_def projectKO_eq projectKO_sc projectKO_tcb)
+            apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
+                             simp: objBits_def objBitsKO_def valid_obj_size'_def
+                                   valid_sched_context_size'_def)
+           apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
+          apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
+         apply (clarsimp simp: tcb_cte_cases_def)
+        apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def)
+       apply (clarsimp simp: idle_tcb'_2_def)
       apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
      apply simp
     apply (fastforce simp: invs'_def valid_state'_def dest: global'_sc_no_ex_cap)
