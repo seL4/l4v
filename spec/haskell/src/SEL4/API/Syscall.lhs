@@ -229,6 +229,8 @@ The following function implements the "Send" and "Call" system calls. It determi
 
 > handleInvocation :: Bool -> Bool -> Bool -> Bool -> CPtr -> KernelP ()
 > handleInvocation isCall isBlocking canDonate firstPhase cptr = do
+>     stateAssert ct_not_inQ_asrt
+>        "Assert that `ct_not_inQ s` holds"
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall
@@ -285,4 +287,3 @@ While the system call is running, the thread's state is set to "Restart", so any
 >     if isReplyCap cap
 >         then return cap
 >         else throw $ CapFault cref True (MissingCapability { missingCapBitsLeft = 0 })
-
