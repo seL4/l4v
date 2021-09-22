@@ -1647,7 +1647,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       using Word.word_of_int and ucast_def apply metis
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

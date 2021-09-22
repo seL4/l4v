@@ -184,7 +184,7 @@ lemma word_upcast_shiftr:
 
 lemma word_upcast_neg_msb:
   "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (simp only: ucast_def msb_word_of_int, clarsimp)
   apply (drule bin_nth_uint_imp)
   by simp
 
@@ -199,10 +199,10 @@ lemma scast_ucast_up_eq_ucast:
   shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
   using assms
   apply (subst scast_eq_ucast; simp)
-  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (simp only: ucast_def msb_word_of_int, clarsimp)
   apply (drule bin_nth_uint_imp)
   apply simp
-  by (meson Word.nth_ucast order.strict_trans test_bit_lenD word_eq_iff)
+  by (metis Word.of_nat_unat nat_less_le unat_ucast_up_simp)
 
 lemma not_max_word_iff_less:
   "w \<noteq> max_word \<longleftrightarrow> w < max_word"
@@ -235,7 +235,7 @@ lemma and_not_max_word:
 
 lemma mask_not_max_word:
   "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (simp add: mask_eq_mask mask_eq_exp_minus_1)
+  by (simp add: mask_eq_exp_minus_1)
 
 lemmas and_mask_not_max_word =
   and_not_max_word[OF mask_not_max_word]
@@ -518,9 +518,8 @@ lemma mask_eq_ucast_shiftl:
 
 (* FIXME: replace by mask_mono *)
 lemma mask_le_mono:
-  "m \<le> n \<Longrightarrow> mask m \<le> mask n"
-  apply (subst and_mask_eq_iff_le_mask[symmetric])
-  by (auto intro: word_eqI simp: word_size)
+  "m \<le> n \<Longrightarrow> mask m \<le> (mask n::'a::len word)"
+  by (rule mask_mono)
 
 (* FIXME: move to Word *)
 lemma word_and_mask_eq_le_mono:

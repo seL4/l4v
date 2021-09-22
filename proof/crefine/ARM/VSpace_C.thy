@@ -1163,6 +1163,7 @@ lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
        (findFreeHWASID) (Call findFreeHWASID_'proc)"
+  including no_take_bit
   apply (cinit)
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
@@ -1193,13 +1194,13 @@ lemma findFreeHWASID_ccorres:
               apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
                                trans[OF msb_nth nth_ucast] bang_big word_size
                                uint_up_ucast is_up_def source_size_def
-                               target_size_def word_size)
-              apply (simp add: uint_nat unat_of_nat)
-              apply (rule conjI, unat_arith, simp)
+                               target_size_def)
+              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
               apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def)
+                               throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-             apply (simp add: minus_one_norm)
+              apply (uint_arith, simp add: take_bit_nat_def)
+             apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
             apply clarsimp
@@ -1258,8 +1259,7 @@ lemma findFreeHWASID_ccorres:
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
                              target_size_def)
-            apply (simp add: uint_nat)
-            apply unat_arith
+            apply uint_arith
             subgoal by simp
            apply wp
           apply vcg
@@ -2145,6 +2145,7 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive

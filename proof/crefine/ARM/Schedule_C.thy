@@ -534,7 +534,7 @@ lemma schedule_ccorres:
 
                 apply (drule (1) obj_at_cslift_tcb)+
                 apply (clarsimp simp: typ_heap_simps ctcb_relation_def to_bool_def split: if_split)
-                apply (solves unat_arith)
+                apply (solves \<open>unat_arith, rule iffI; simp\<close>)
                apply ceqv
               apply clarsimp
               apply (rule ccorres_cond_seq)

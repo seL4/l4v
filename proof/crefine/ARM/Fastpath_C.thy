@@ -401,6 +401,7 @@ lemma lookup_fp_ccorres':
       by (simp add: cap_get_tag_def cong: if_cong)
 
     show ?case
+    including no_take_bit
     supply if_cong[cong] option.case_cong[cong]
     apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)
@@ -1698,9 +1699,8 @@ shows
         apply (simp add: msgRegisters_ccorres[symmetric] length_msgRegisters)
         apply (simp add: n_msgRegisters_def msgRegisters_unfold)
         apply (drule(1) order_less_le_trans)
-        apply (clarsimp simp: "StrictC'_register_defs" msgRegistersC_def fupdate_def
-          | drule nat_less_cases' | erule disjE)+
-       apply (simp add: min.absorb2)
+        apply ((clarsimp simp: "StrictC'_register_defs" msgRegistersC_def fupdate_def
+                | drule nat_less_cases' | erule disjE)+)[2]
       apply (rule allI, rule conseqPre, vcg)
       apply (simp)
      apply (simp add: length_msgRegisters n_msgRegisters_def word_bits_def hoare_TrueI)+
@@ -2141,7 +2141,7 @@ proof -
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
                  apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
-                         del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
+                             del: Collect_const More_Word_Operations.ptr_add_def cong: call_ignore_cong)
                  apply csymbr
                  apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                   apply (rename_tac asidMap)
@@ -2925,7 +2925,7 @@ lemma fastpath_reply_recv_ccorres:
                    apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
                                     ccap_relation_reply_helper
                                     ptr_add_assertion_positive
-                           del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
+                               cong: call_ignore_cong)
                    apply (rule ccorres_move_array_assertion_pd
                           | (rule ccorres_flip_Guard ccorres_flip_Guard2,
                              rule ccorres_move_array_assertion_pd)
@@ -3610,7 +3610,6 @@ lemma fastpath_callKernel_SysCall_corres:
                  apply (rule monadic_rewrite_alternative_l)
                 apply (rule monadic_rewrite_if_rhs[rotated])
                  apply (rule monadic_rewrite_alternative_l)
-                apply (simp add: isRight_case_sum)
                 apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
                  apply (rename_tac asidMap)
                  apply (rule monadic_rewrite_if_rhs[rotated])

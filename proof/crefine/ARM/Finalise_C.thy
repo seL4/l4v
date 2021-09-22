@@ -987,7 +987,7 @@ lemma invalidateASIDEntry_ccorres:
                         split: if_split)
         apply csymbr
         apply (rule ccorres_Guard)+
-        apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+        apply (rule_tac P="pde_stored_asid stored_hw_asid___struct_pde_C \<noteq> None" in ccorres_gen_asm)
         apply (ctac(no_simp) add: invalidateHWASIDEntry_ccorres)
         apply (clarsimp simp: pde_stored_asid_def unat_ucast
                        split: if_split_asm)
@@ -1028,6 +1028,7 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 17 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1965,9 +1966,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1985,7 +1984,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 lemma Zombie_new_spec:

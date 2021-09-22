@@ -106,32 +106,11 @@ lemma byte_to_word_heap_upd_outside_range:
                    split: if_split_asm)
   done
 
+(* FIXME cleanup: remove this lemma, replace with upto_intvl_eq *)
 lemma intvl_range_conv:
   "\<lbrakk> is_aligned (ptr :: 'a :: len word) bits; bits < len_of TYPE('a) \<rbrakk> \<Longrightarrow>
    {ptr ..+ 2 ^ bits} = {ptr .. ptr + 2 ^ bits - 1}"
-  apply (rule set_eqI)
-  apply (rule iffI)
-   apply (frule intvl_le_lower)
-     apply (simp add:field_simps)
-    apply (rule iffD2[OF power_strict_increasing_iff, rotated])
-     apply simp
-    apply simp
-   apply (frule intvl_less_upper)
-     apply (simp add:field_simps)
-    apply (rule iffD2[OF power_strict_increasing_iff, rotated])
-     apply simp
-    apply simp
-   apply (simp add:field_simps)
-  apply (subgoal_tac "\<exists>x'. x = ptr + of_nat x' \<and> x' < 2 ^ len_of TYPE('a)")
-   apply clarsimp
-   apply (drule(1) word_le_minus_mono_left [where x=ptr])
-   apply (simp only: p_assoc_help add_diff_cancel2)
-   apply (clarsimp simp: intvl_def)
-   apply (rule_tac x="x'" in exI)
-   apply (clarsimp simp: word_less_nat_alt unat_of_nat)
-  apply (rule_tac x="unat (x - ptr)" in exI)
-  apply simp
-  done
+  by (rule upto_intvl_eq)
 
 lemma byte_to_word_heap_upd_neq:
   assumes   alb: "is_aligned base 2"
@@ -1030,6 +1009,7 @@ proof -
   have horrible_helper:
     "\<And>v p. v \<le> 3 \<Longrightarrow> (3 - unat (p && mask 2 :: word32) = v) =
                      (p && mask 2 = 3 - of_nat v)"
+    including no_take_bit
     apply (simp add: unat_arith_simps unat_of_nat)
     apply (cut_tac p=p in unat_mask_2_less_4)
     apply arith
@@ -1114,7 +1094,7 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=2 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2
+     apply (auto simp add: eval_nat_numeral horrible_helper2 simp del: unsigned_numeral
                  elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp

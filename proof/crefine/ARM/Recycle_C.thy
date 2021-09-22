@@ -392,6 +392,7 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_PT_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
@@ -414,8 +415,9 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
                         word_bits_def page_table_at_rf_sr_dom_s)
       apply (clarsimp simp add: ptBits_def pageBits_def pteBits_def
                       cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp only: field_simps)
       apply (simp add: upto_enum_step_def objBits_simps ptBits_def pageBits_def
-                       field_simps linorder_not_less[symmetric] archObjSize_def
+                       linorder_not_less[symmetric] archObjSize_def
                        upto_enum_word split_def pteBits_def)
       apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -892,6 +894,7 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)
