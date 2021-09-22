@@ -91,6 +91,7 @@ crunch inQ[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (inQ d p) t s)"
 crunch tcbInReleaseQueue[wp]: clearUntypedFreeIndex "\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)"
 crunch tcbDomain[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 crunch tcbPriority[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
+crunch tcbQueued[wp]: clearUntypedFreeIndex "obj_at' (\<lambda>tcb. P (tcbQueued tcb)) t"
 
 lemma emptySlot_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
@@ -1378,18 +1379,6 @@ crunches emptySlot
   for pspace_domain_valid[wp]: "pspace_domain_valid"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-
-lemma deletedIRQHandler_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> deletedIRQHandler irq \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF deletedIRQHandler_nosch])
-  apply (rule hoare_weaken_pre)
-   apply (wps deletedIRQHandler_ct)
-   apply (simp add: deletedIRQHandler_def setIRQState_def)
-   apply (wp)
-  apply (simp add: comp_def)
-  done
-
-crunch ct_not_inQ[wp]: emptySlot "ct_not_inQ"
 
 crunch tcbDomain[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 

@@ -527,7 +527,6 @@ lemma  valid_objs: "valid_objs' s'"
   and       virqh: "valid_irq_handlers' s'"
   and       virqs: "valid_irq_states' s'"
   and   no_0_objs: "no_0_obj' s'"
-  and    ctnotinQ: "ct_not_inQ s'"
   and    pde_maps: "valid_pde_mappings' s'"
   and irqs_masked: "irqs_masked' s'"
   and        ctcd: "ct_idle_or_in_cur_domain' s'"
@@ -1672,20 +1671,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
                      [where n=bits and n'=pageBits])
     apply (case_tac ko, simp_all add: objBits_simps)
     apply (auto simp add: x_power_minus_1)
-    done
-
-  from sa_simp ctnotinQ
-  show "ct_not_inQ state'"
-    apply (clarsimp simp: ct_not_inQ_def pred_tcb_at'_def)
-    apply (drule obj_at'_and
-                   [THEN iffD2, OF conjI,
-                    OF ct_act [unfolded ct_in_state'_def pred_tcb_at'_def]])
-    apply (clarsimp simp: obj_at'_real_def)
-    apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
-     apply (clarsimp simp: projectKOs)
-     apply (case_tac "tcbState obj")
-            apply (clarsimp simp: projectKOs)+
-    apply (clarsimp dest!: ex_nonz_cap_notRange)
     done
 
   from ctcd show "ct_idle_or_in_cur_domain' state'"

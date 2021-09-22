@@ -562,10 +562,8 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   done
 
 lemma tcbSchedEnqueue_invs'[wp]:
-  "\<lbrace>invs'
-    and st_tcb_at' runnable' t
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
-     tcbSchedEnqueue t
+  "\<lbrace>invs' and st_tcb_at' runnable' t\<rbrace>
+   tcbSchedEnqueue t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (wpsimp wp: tcbSchedEnqueue_ct_not_inQ valid_irq_node_lift irqs_masked_lift
@@ -655,10 +653,8 @@ lemma tcbSchedAppend_valid_release_queue'[wp]:
   done
 
 lemma tcbSchedAppend_invs'[wp]:
-  "\<lbrace>invs'
-    and st_tcb_at' runnable' t
-    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)\<rbrace>
-     tcbSchedAppend t
+  "\<lbrace>invs' and st_tcb_at' runnable' t\<rbrace>
+   tcbSchedAppend t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
@@ -668,22 +664,6 @@ lemma tcbSchedAppend_invs'[wp]:
         | simp add: cteCaps_of_def o_def
         | auto elim!: st_tcb_ex_cap'' valid_objs'_maxDomain valid_objs'_maxPriority split: thread_state.split_asm simp: valid_pspace'_def)+
   done
-
-lemma tcbSchedEnqueue_invs'_not_ResumeCurrentThread:
-  "\<lbrace>invs'
-    and st_tcb_at' runnable' t
-    and (\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread)\<rbrace>
-     tcbSchedEnqueue t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by wpsimp
-
-lemma tcbSchedAppend_invs'_not_ResumeCurrentThread:
-  "\<lbrace>invs'
-    and st_tcb_at' runnable' t
-    and (\<lambda>s. ksSchedulerAction s \<noteq> ResumeCurrentThread)\<rbrace>
-     tcbSchedAppend t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by wpsimp
 
 lemma tcb_at'_has_tcbDomain:
  "tcb_at' t s \<Longrightarrow> \<exists>p. obj_at' (\<lambda>tcb. tcbDomain tcb = p) t s"
@@ -1285,9 +1265,9 @@ lemma not_tcbQueued_not_ksQ:
   done
 
 lemma ct_not_ksQ:
-  "\<lbrakk> invs' s; ksSchedulerAction s = ResumeCurrentThread \<rbrakk>
+  "\<lbrakk> ct_not_inQ s; valid_queues s; ksSchedulerAction s = ResumeCurrentThread \<rbrakk>
    \<Longrightarrow> \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)"
-  apply (clarsimp simp: invs'_def valid_state'_def ct_not_inQ_def)
+  apply (clarsimp simp: ct_not_inQ_def)
   apply (frule(1) valid_queues_not_tcbQueued_not_ksQ)
   apply (fastforce)
   done
@@ -1952,47 +1932,19 @@ lemma scheduleChooseNewThread_corres:
    apply auto
   done
 
-lemma ssa_all_invs_but_ct_not_inQ':
-  "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and
-   (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)\<rbrace>
-   setSchedulerAction sa \<lbrace>\<lambda>rv. all_invs_but_ct_not_inQ'\<rbrace>"
-proof -
-  show ?thesis
-    apply (simp add: setSchedulerAction_def)
-    apply wp
-    apply (clarsimp simp add: invs'_def valid_state'_def cur_tcb'_def valid_dom_schedule'_def
-                              Invariants_H.valid_queues_def
-                              state_refs_of'_def ps_clear_def
-                              valid_irq_node'_def valid_queues'_def valid_release_queue_def
-                              valid_release_queue'_def tcb_in_cur_domain'_def
-                              ct_idle_or_in_cur_domain'_def bitmapQ_defs valid_queues_no_bitmap_def
-                        cong: option.case_cong)
-    done
-qed
-
 lemma ssa_ct_not_inQ:
   "\<lbrace>\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s\<rbrace>
    setSchedulerAction sa \<lbrace>\<lambda>rv. ct_not_inQ\<rbrace>"
   by (simp add: setSchedulerAction_def ct_not_inQ_def, wp, clarsimp)
 
-lemma ssa_all_invs_but_ct_not_inQ''[simplified]:
-  "\<lbrace>\<lambda>s. (all_invs_but_ct_not_inQ' s \<and> sch_act_wf sa s)
-    \<and> (sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)
-    \<and> (sa = ResumeCurrentThread \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)\<rbrace>
-   setSchedulerAction sa \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp only: all_invs_but_not_ct_inQ_check' [symmetric])
-  apply (rule hoare_elim_pred_conj)
-  apply (wp hoare_vcg_conj_lift [OF ssa_all_invs_but_ct_not_inQ' ssa_ct_not_inQ])
-  apply clarsimp
-  done
-
 lemma ssa_invs':
   "\<lbrace>invs' and sch_act_wf sa and
-    (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s) and
-    (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)\<rbrace>
-   setSchedulerAction sa \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp ssa_all_invs_but_ct_not_inQ'')
-  apply (clarsimp simp add: invs'_def valid_state'_def)
+    (\<lambda>s. sa = ResumeCurrentThread \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)\<rbrace>
+   setSchedulerAction sa
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp ssa_ct_not_inQ)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def ct_idle_or_in_cur_domain'_def
+                        valid_dom_schedule'_def cur_tcb'_def)
   done
 
 lemma getDomainTime_wp[wp]: "\<lbrace>\<lambda>s. P (ksDomainTime s) s \<rbrace> getDomainTime \<lbrace> P \<rbrace>"
@@ -2924,20 +2876,6 @@ lemma possibleSwitchTo_utr[wp]:
   "possibleSwitchTo t \<lbrace>untyped_ranges_zero'\<rbrace>"
   by (wpsimp simp: cteCaps_of_def o_def wp: untyped_ranges_zero_lift)
 
-lemma possibleSwitchTo_all_invs_but_ct_not_inQ':
-  "\<lbrace>\<lambda>s. all_invs_but_ct_not_inQ' s \<and> st_tcb_at' runnable' t s
-        \<and> valid_objs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s
-        \<and> sch_act_simple s \<and> ex_nonz_cap_to' t s\<rbrace>
-   possibleSwitchTo t
-   \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply wp
-   apply (rule hoare_use_eq_irq_node', wp)
-   apply (wpsimp wp: typ_at_lift_valid_irq_node' valid_irq_handlers_lift' valid_dom_schedule'_lift
-                     cteCaps_of_ctes_of_lift irqs_masked_lift)
-  apply clarsimp
-  apply (intro conjI; fastforce?)
-  by (metis fold_list_refs_of_replies')
-
 lemma possibleSwitchTo_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' tptr\<rbrace>
    possibleSwitchTo tptr
@@ -3025,9 +2963,7 @@ lemma schedule_invs':
                       switchToThread_tcb_in_cur_domain')
                apply (rule hoare_pre_cont)
               apply (wpsimp wp: switchToThread_invs hoare_vcg_disj_lift switchToThread_tcb_in_cur_domain')
-             apply (rule_tac hoare_strengthen_post, rule switchToThread_ct_not_queued_2)
              apply (clarsimp simp: pred_neg_def o_def)
-            apply clarsimp
             apply (wpsimp simp: isHighestPrio_def')
            apply (wpsimp wp: curDomain_wp)
           apply (wpsimp simp: scheduleSwitchThreadFastfail_def)
@@ -3051,7 +2987,7 @@ lemma schedule_invs':
                               and st_tcb_at' runnable' tPtr and (\<lambda>s. action = ksSchedulerAction s)
                               and tcb_in_cur_domain' tPtr" in hoare_strengthen_post[rotated])
         apply (subst obj_at_ko_at'_eq[symmetric], simp)
-       apply (wpsimp wp: tcbSchedEnqueue_invs'_not_ResumeCurrentThread isSchedulable_wp)+
+       apply (wpsimp wp: tcbSchedEnqueue_invs' isSchedulable_wp)+
     apply (subgoal_tac "sch_act_wf (ksSchedulerAction s) s")
      apply (fastforce split: if_split dest: isSchedulable_bool_runnableE)
     apply clarsimp
@@ -5052,7 +4988,6 @@ lemma refillBudgetCheck_corres:
 lemma schedule_corres:
   "corres dc (invs and valid_sched and valid_list) invs' (Schedule_A.schedule) ThreadDecls_H.schedule"
   supply tcbSchedEnqueue_invs'[wp del]
-  supply tcbSchedEnqueue_invs'_not_ResumeCurrentThread[wp del]
   supply setSchedulerAction_direct[wp]
   supply if_split[split del]
   apply (clarsimp simp: Schedule_A.schedule_def Thread_H.schedule_def)

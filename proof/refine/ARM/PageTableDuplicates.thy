@@ -2150,7 +2150,9 @@ lemma hi_valid_duplicates'[wp]:
       handleInvocation isCall isBlocking canDonate firstPhase cptr
    \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s) \<rbrace>"
   apply (simp add: handleInvocation_def split_def
-                   ts_Restart_case_helper')
+                   ts_Restart_case_helper' ct_not_inQ_asrt_def)
+  apply (rule validE_valid)
+  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
   apply (wpsimp wp: syscall_valid' setThreadState_nonqueued_state_update rfk_invs' ct_in_state'_set
                     hoare_drop_imp)
   apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
