@@ -7,7 +7,7 @@
 (* License: BSD, terms see file ./LICENSE *)
 
 theory Addr_Type
-imports "HOL-Library.Word"
+imports "Word_Lib.WordSetup"
 begin
 
 type_synonym addr_bitsize = "32"
