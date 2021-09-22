@@ -318,7 +318,7 @@ lemma s_footprintD2:
   "(x,SIndexTyp n) \<in> s_footprint (p::'a::mem_type ptr) \<Longrightarrow>
       n < length (typ_slice_t (typ_uinfo_t TYPE('a)) (unat (x - ptr_val p)))"
   by (clarsimp simp: s_footprint)
-     (metis len32 len_of_addr_card less_trans max_size take_bit_nat_eq_self_iff)
+     (metis addr_bitsize_def addr_card less_trans max_size take_bit_nat_eq_self)
 
 lemma s_footprint_restrict:
   "x \<in> s_footprint p \<Longrightarrow> (s |` s_footprint p) x = s x"
@@ -1520,15 +1520,12 @@ lemma lift_t_field_ind:
    apply(simp add: size_of_def)
    apply(drule td_set_field_lookupD[where k="(c,da)"])
    apply(drule td_set_offset_size)
-   apply (metis add.commute add_leD1 len32 len_of_addr_card less_le_trans max_size nat_less_le
-                size_of_def take_bit_nat_eq_self_iff)
+   apply (metis (full_types) add.commute add_le_cancel_right le_trans take_bit_nat_less_eq_self)
   apply(rule intvl_sub_offset)
   apply(simp add: size_of_def)
   apply(drule td_set_field_lookupD)
   apply(drule td_set_offset_size)
-  by (metis add.commute len32 len_of_addr_card less_le_trans max_size nat_le_iff_add nat_less_le
-            size_of_def take_bit_nat_eq_self_iff)
-
+  by (metis (full_types) add.commute add_le_cancel_right le_trans take_bit_nat_less_eq_self)
 
 
 (* case where 'b contains a field of type of 'a *)
@@ -1553,7 +1550,7 @@ lemma field_of_t_less_size:
   done
 
 lemma addr_card_unat_minus:
-  "x \<noteq> 0 \<Longrightarrow> unat (- x) = addr_card - unat x" for x::"32 word"
+  "x \<noteq> 0 \<Longrightarrow> unat (- x) = addr_card - unat x" for x::addr
   by (simp add: unat_minus addr_card word_size)
 
 lemma field_of_t_nmem:
@@ -1562,7 +1559,7 @@ lemma field_of_t_nmem:
   apply(clarsimp simp: field_of_t_def field_of_def intvl_def)
   apply(drule td_set_offset_size)
   apply(simp add: addr_card_unat_minus size_of_def)
-  by (metis (no_types) Nat.add_diff_assoc add.commute add_leD1 len32 len_of_addr_card less_trans
+  by (metis (no_types) addr_bitsize_def addr_card diff_diff_cancel le_diff_conv le_less_trans
                        max_size nat_less_le size_of_def take_bit_nat_eq_self_iff)
 
 lemma field_of_t_init_neq_disjoint:
