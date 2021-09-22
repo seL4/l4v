@@ -424,3 +424,9 @@ invocations, we assert various conditions that hold in the abstract.
 
 > tcs_cross_asrt2 :: KernelState -> Bool
 > tcs_cross_asrt2 _ = True
+
+A few places in the proofs would like to know that ct_not_inQ holds. We add an assertion that it
+does hold. We may prove that this assertion is true using ct_not_inQ_cross.
+
+> ct_not_inQ_asrt :: KernelState -> Bool
+> ct_not_inQ_asrt _ = True
