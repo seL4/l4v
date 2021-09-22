@@ -153,18 +153,8 @@ lemma Arch_maskCapRights_ccorres [corres]:
        by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex simp_thms(44))+
 
 lemma to_bool_mask_to_bool_bf:
-  "to_bool (x && mask (Suc 0)) = to_bool_bf (x::word32)"
-  apply (simp add: to_bool_bf_def to_bool_def)
-  apply (rule iffI)
-   prefer 2
-   apply simp
-  apply (subgoal_tac "x && mask (Suc 0) < 2^(Suc 0)")
-   apply simp
-   apply (drule word_less_cases [where y=2])
-   apply auto[1]
-  apply (rule and_mask_less')
-  apply simp
-  done
+  "to_bool (x && 1) = to_bool_bf (x::word32)"
+  by (simp add: to_bool_bf_def to_bool_def)
 
 lemma to_bool_cap_rights_bf:
   "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
@@ -356,7 +346,7 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: cap_reply_cap_lift_def)
       apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                        to_bool_reply_cap_bf
-                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
+                       to_bool_mask_to_bool_bf[simplified] to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -1798,6 +1788,7 @@ lemma untypedZeroRange_idx_forward_helper:
     \<Longrightarrow> (case (untypedZeroRange cap, untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap))
        of (Some (a, b), Some (a', b')) \<Rightarrow> {a' ..+ unat (b' + 1 - a')} \<subseteq> {a ..+ unat (b + 1 - a)}
         | _ \<Rightarrow> True)"
+  including no_take_bit
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
                         isCap_simps valid_cap_simps' capAligned_def untypedBits_defs
@@ -1840,6 +1831,7 @@ lemma untypedZeroRange_idx_backward_helper:
                of Some (a, b) \<Rightarrow> {a ..+ unat (b + 1 - a)}
                 | None \<Rightarrow> {})
   )"
+  including no_take_bit
   apply (clarsimp split: option.split, intro impI conjI allI)
    apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
@@ -2397,7 +2389,6 @@ lemma Arch_sameRegionAs_spec:
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all add: word_bits_def)[1]
      apply clarsimp
-     apply (thin_tac "unat x = y" for x y)
 
      apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
      apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
@@ -2447,7 +2438,6 @@ lemma Arch_sameRegionAs_spec:
       apply (simp add: pageBitsForSize_def)
       apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
      apply clarsimp
-     apply (thin_tac "unat x = y" for x y)
 
      apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
      apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
@@ -2951,6 +2941,7 @@ lemma sameRegionAs_spec:
                      capAligned capb \<and> (\<exists>s. s \<turnstile>' capa)\<rbrace>
   Call sameRegionAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (sameRegionAs capa capb) \<rbrace>"
+  including no_take_bit
   apply vcg
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2)

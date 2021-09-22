@@ -370,6 +370,7 @@ proof -
 
   ultimately show ?thesis
     unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
+    including no_take_bit
     apply -
     apply (clarsimp simp: field_simps objBits_simps' size_of_def)
     apply (drule intvlD)
@@ -380,10 +381,10 @@ proof -
       apply simp
      apply simp
     apply (rule word_plus_mono_right)
-   apply (simp add: word_le_nat_alt unat_of_nat)
-  apply (erule is_aligned_no_wrap')
-  apply simp
-  done
+     apply (simp add: word_le_nat_alt unat_of_nat)
+    apply (erule is_aligned_no_wrap')
+    apply simp
+    done
 qed
 
 lemma valid_untyped_cap_ctcb_member:

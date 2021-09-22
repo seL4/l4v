@@ -129,7 +129,7 @@ context kernel_m begin
 
 lemma ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def fcp_beta)
+  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def)
   apply (rule arg_cong [where f=uc])
   apply (simp add: register_to_H_def inv_def)
   done
@@ -149,7 +149,7 @@ where
 
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def intro: ext)
+  by (auto simp: ccontext_relation_def from_user_context_C_def)
 
 context kernel_m begin
 
@@ -260,9 +260,6 @@ definition
    else if p = Ptr 1 then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
-
-
-declare max_word_neq_0[simp]
 
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
@@ -1234,9 +1231,10 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-using assms
-by (clarsimp simp: cstate_relation_def Let_def observable_memory_def
-  valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+  including no_take_bit
+  using assms
+  by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
+                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
 definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
