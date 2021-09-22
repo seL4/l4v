@@ -1470,8 +1470,7 @@ lemma threadSet_invs_trivialT:
        (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))) \<and>
        ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s)) \<and>
        (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<longrightarrow> t \<in> set (ksReleaseQueue s)) \<and>
-       ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s) \<and>
-       (\<forall>tcb. tcbQueued (F tcb) \<and> ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> tcbQueued tcb \<or> t \<noteq> ksCurThread s)\<rbrace>
+       ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)\<rbrace>
    threadSet F t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -

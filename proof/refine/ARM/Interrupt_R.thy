@@ -628,18 +628,6 @@ lemma threadState_case_if:
   (if state = Structures_H.thread_state.Running then f else g)"
   by (case_tac state,auto)
 
-lemma tcbSchedAppend_invs_but_ct_not_inQ':
-  "\<lbrace>invs' and st_tcb_at' runnable' t \<rbrace>
-   tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
-             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
-             untyped_ranges_zero_lift
-        | simp add: cteCaps_of_def o_def
-        | fastforce elim!: st_tcb_ex_cap'' split: thread_state.split_asm)+
-  done
-
 lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
 
 lemma doMachineOp_ackDeadlineIRQ_invs'[wp]:

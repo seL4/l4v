@@ -4953,23 +4953,6 @@ lemma createNewCaps_invs':
   (is "\<lbrace>?P and K ?Q\<rbrace> ?f \<lbrace>\<lambda>rv. invs'\<rbrace>")
 proof (rule hoare_gen_asm, erule conjE)
   assume cover: "range_cover ptr sz (APIType_capBits ty us) n" and not_0: "n \<noteq> 0"
-    have cnc_ct_not_inQ:
-    "\<lbrace>ct_not_inQ and valid_pspace' and pspace_no_overlap' ptr sz
-      and K (ty = APIObjectType ArchTypes_H.SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
-     createNewCaps ty ptr n us dev \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-    unfolding ct_not_inQ_def
-    apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
-                             \<longrightarrow> (obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s
-                                  \<and> valid_pspace' s \<and> pspace_no_overlap' ptr sz s
-             \<and> (ty = APIObjectType ArchTypes_H.SchedContextObject \<longrightarrow> sc_size_bounds us))"
-                    in hoare_pre_imp, clarsimp)
-    apply (rule hoare_convert_imp [OF createNewCaps_nosch])
-    apply (rule hoare_weaken_pre)
-     apply (wps createNewCaps_ct)
-     apply (wp createNewCaps_obj_at')
-    using cover not_0
-    apply (fastforce simp: valid_pspace'_def)
-    done
   show "\<lbrace>?P\<rbrace>
      createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -4992,7 +4975,7 @@ proof (rule hoare_gen_asm, erule conjE)
                createNewCaps_valid_queues'
                createNewCaps_valid_release_queue
                createNewCaps_valid_release_queue'
-               createNewCaps_pred_tcb_at' cnc_ct_not_inQ
+               createNewCaps_pred_tcb_at'
                createNewCaps_ct_idle_or_in_cur_domain'
                createNewCaps_sch_act_wf
                createNewCaps_urz[where sz=sz]

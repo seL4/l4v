@@ -5230,9 +5230,6 @@ crunch valid_machine_state'[wp]: insertNewCap valid_machine_state'
 crunch pspace_domain_valid[wp]: insertNewCap pspace_domain_valid
   (wp: crunch_wps)
 
-crunch ct_not_inQ[wp]: insertNewCap "ct_not_inQ"
-  (wp: crunch_wps)
-
 crunch tcbState_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbState tcb)) t"
   (wp: crunch_simps hoare_drop_imps)
 crunch tcbDomain_inv[wp]: insertNewCap "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"

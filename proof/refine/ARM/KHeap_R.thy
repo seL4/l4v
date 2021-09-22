@@ -3747,6 +3747,29 @@ lemma state_refs_of_cross:
       \<Longrightarrow> P (state_refs_of' s')"
   by (clarsimp simp: state_refs_of_cross_eq elim!: rsubst[where P=P])
 
+lemma ct_not_inQ_cross:
+  "\<lbrakk>(s,s') \<in> state_relation; ct_not_in_q s; valid_queues' s'; cur_tcb s; pspace_aligned s;
+    pspace_distinct s\<rbrakk>
+   \<Longrightarrow> ct_not_inQ s'"
+  apply (frule (3) cur_tcb_cross)
+  apply (clarsimp simp: ct_not_inQ_def ct_not_in_q_def)
+  apply (prop_tac "scheduler_action s = resume_cur_thread")
+   apply (clarsimp simp: state_relation_def)
+   apply (metis sched_act_relation.simps Structures_A.scheduler_action.exhaust
+                scheduler_action.simps)
+  apply (clarsimp simp: not_queued_def)
+  apply (rule ccontr)
+  apply (prop_tac "obj_at' tcbQueued (ksCurThread s') s'")
+   apply (clarsimp simp: obj_at_simps cur_tcb'_def)
+  apply (frule curthread_relation)
+  apply (frule state_relation_ready_queues_relation)
+  apply (clarsimp simp: valid_queues'_def inQ_def ready_queues_relation_def obj_at_simps)
+  by (metis Structures_H.kernel_object.case(6))
+
+method add_ct_not_inQ =
+  rule_tac Q="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
+  fastforce intro!: ct_not_inQ_cross simp: valid_sched_def
+
 lemma ready_qs_runnable_cross:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_ready_qs s\<rbrakk>
    \<Longrightarrow> ready_qs_runnable s'"

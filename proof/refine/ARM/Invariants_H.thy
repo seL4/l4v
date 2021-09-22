@@ -1184,6 +1184,9 @@ definition
  "ct_not_inQ \<equiv> \<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                      \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s"
 
+defs ct_not_inQ_asrt_def:
+  "ct_not_inQ_asrt \<equiv> \<lambda>s. ct_not_inQ s"
+
 abbreviation
   "idle' \<equiv> \<lambda>st. st = Structures_H.IdleThreadState"
 
@@ -1419,7 +1422,6 @@ where
                       \<and> valid_queues' s
                       \<and> valid_release_queue s
                       \<and> valid_release_queue' s
-                      \<and> ct_not_inQ s
                       \<and> ct_idle_or_in_cur_domain' s
                       \<and> valid_pde_mappings' s
                       \<and> pspace_domain_valid s
@@ -1489,26 +1491,6 @@ abbreviation
 abbreviation
   "ct_running' \<equiv> ct_in_state' (\<lambda>st. st = Structures_H.Running)"
 
-abbreviation(input)
- "all_invs_but_ct_not_inQ'
-    \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s
-           \<and> sym_refs (list_refs_of_replies' s)
-           \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
-           \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
-           \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
-           \<and> ct_idle_or_in_cur_domain' s
-           \<and> valid_pde_mappings' s
-           \<and> pspace_domain_valid s
-           \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
-
-lemma all_invs_but_not_ct_inQ_check':
-  "(all_invs_but_ct_not_inQ' and ct_not_inQ) = invs'"
-  by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
-
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
@@ -1519,7 +1501,6 @@ definition
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
            \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
            \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
-           \<and> ct_not_inQ s
            \<and> valid_pde_mappings' s
            \<and> pspace_domain_valid s
            \<and> ksCurDomain s \<le> maxDomain

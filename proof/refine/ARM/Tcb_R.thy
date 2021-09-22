@@ -254,17 +254,13 @@ lemma restart_invs':
   apply (simp add: isStopped_def2)
   apply (wp setThreadState_nonqueued_state_update isSchedulable_wp
             cancelIPC_simple setThreadState_st_tcb sch_act_simple_lift)
-       apply (rule_tac Q="\<lambda>_. invs' and
-                          (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)"
-              in hoare_strengthen_post[rotated])
+       apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
         apply wpsimp
         apply (clarsimp simp: isSchedulable_bool_def pred_map_pred_conj[simplified pred_conj_def]
                               projectKO_opt_tcb pred_map_def pred_tcb_at'_def
                               obj_at'_real_def ko_wp_at'_def)
        apply (wpsimp wp: hoare_vcg_imp_lift')
-      apply (rule_tac Q="\<lambda>_. invs' and
-                         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t)"
-             in hoare_strengthen_post[rotated])
+      apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
        apply (fastforce elim: isSchedulable_bool_runnableE)
       apply (wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
                         hoare_vcg_if_lift2)
@@ -276,7 +272,6 @@ lemma restart_invs':
    apply assumption
   apply (clarsimp simp: pred_tcb_at' invs'_def valid_state'_def
                         ct_in_state'_def)
-  apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
   done
 
 crunches "ThreadDecls_H.restart"
@@ -732,15 +727,6 @@ lemma threadSetPriority_invs':
   by (fastforce simp: tcb_cte_cases_def invs'_def valid_state'_def inQ_def obj_at'_def
                       valid_queues_def valid_queues_no_bitmap_def valid_release_queue'_def)+
 
-lemma tcbSchedEnqueue_all_invs_but_ct_not_inQ':
-  "\<lbrace>all_invs_but_ct_not_inQ' and st_tcb_at' runnable' t\<rbrace>
-   tcbSchedEnqueue t
-   \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
-  apply (wp valid_irq_node_lift valid_irq_handlers_lift' untyped_ranges_zero_lift)
-  apply (auto elim!: st_tcb_ex_cap'' simp: o_def)
-  done
-
 crunches reorderEp, threadSetPriority
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   (wp: crunch_wps threadSet_st_tcb_at2)
@@ -750,10 +736,7 @@ lemma threadSetPriority_onRunning_invs':
     threadSetPriority_onRunning t p
     \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp only: threadSetPriority_onRunning_def)
-  apply (wpsimp wp: tcbSchedEnqueue_all_invs_but_ct_not_inQ' hoare_vcg_const_imp_lift
-                    rescheduleRequired_all_invs_but_ct_not_inQ hoare_vcg_all_lift)
-       apply (rule_tac Q="\<lambda>_. invs' and st_tcb_at' runnable' t" in hoare_strengthen_post[rotated])
-        apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def comp_def)
+  apply (wpsimp wp: hoare_vcg_const_imp_lift rescheduleRequired_invs' hoare_vcg_all_lift)
        apply (wpsimp wp: threadGet_wp threadSetPriority_invs' tcbSchedDequeue_not_queued)+
   apply (drule invs_queues')
   apply (fastforce simp: ready_qs_runnable_def valid_queues'_def inQ_def
@@ -1457,8 +1440,7 @@ lemma threadSet_invs_trivialT2:
         \<and> (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))
         \<and> ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s))
         \<and> (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko \<longrightarrow> t \<in> set (ksReleaseQueue s))
-        \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)
-        \<and> (\<forall>tcb. tcbQueued (F tcb) \<and> ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> tcbQueued tcb \<or> t \<noteq> ksCurThread s)\<rbrace>
+        \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)\<rbrace>
         threadSet F t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
@@ -2491,7 +2473,6 @@ lemma tc_caps_invs':
 
 lemma schedContextBindTCB_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> ex_nonz_cap_to' tcbPtr s \<and> ex_nonz_cap_to' scPtr s \<and>
-        (ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> tcbPtr) \<and>
         bound_sc_tcb_at' (\<lambda>sc. sc = None) tcbPtr s \<and> obj_at' (\<lambda>sc. scTCB sc = None) scPtr s\<rbrace>
    schedContextBindTCB scPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -2505,9 +2486,7 @@ lemma schedContextBindTCB_invs':
      apply (wp hoare_vcg_imp_lift')
      apply (wp hoare_drop_imps)
     apply (wpsimp wp: hoare_vcg_imp_lift' simp: ifCondRefillUnblockCheck_def)
-   apply (rule_tac Q="\<lambda>_ s. invs' s \<and> (tcb_at' tcbPtr s \<longrightarrow>
-                           (\<not> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> tcbPtr))"
-          in hoare_strengthen_post[rotated], simp)
+   apply (rule_tac Q="\<lambda>_ s. invs' s" in hoare_strengthen_post[rotated], simp)
    apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
    apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_sch_act threadSet_iflive'
              threadSet_cap_to threadSet_ifunsafe'T  threadSet_idle'T threadSet_ctes_ofT
@@ -2518,7 +2497,6 @@ lemma schedContextBindTCB_invs':
              threadSet_valid_replies'
           | clarsimp simp: tcb_cte_cases_def cteCaps_of_def)+
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
-  (* slow: around 70s *)
   by (fastforce simp: valid_idle'_def idle_tcb'_2_def pred_tcb_at'_def obj_at'_def projectKOs
                       objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
                       valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
