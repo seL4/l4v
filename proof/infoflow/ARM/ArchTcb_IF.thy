@@ -34,10 +34,6 @@ lemma cap_ne_global_pd:
   apply blast
   done
 
-lemma valid_ko_at_arch_irq_state_independent_A[Tcb_IF_assms, simp, intro!]:
-  "irq_state_independent_A (valid_ko_at_arch)"
-  by (auto simp: irq_state_independent_A_def valid_ko_at_arch_def)
-
 lemma valid_arch_caps_vs_lookup[Tcb_IF_assms]:
   "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
   by (simp add: valid_arch_caps_def)
@@ -61,7 +57,7 @@ lemma no_cap_to_idle_thread''[Tcb_IF_assms]:
 
 crunches arch_post_modify_registers
   for globals_equiv[Tcb_IF_assms, wp]: "globals_equiv st"
-  and valid_ko_at_arch[Tcb_IF_assms, wp]: valid_ko_at_arch
+  and valid_arch_state[Tcb_IF_assms, wp]: valid_arch_state
 
 lemma arch_post_modify_registers_reads_respects_f[Tcb_IF_assms, wp]:
   "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"

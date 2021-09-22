@@ -424,7 +424,7 @@ lemma ct_running_not_idle:
   by (clarsimp simp add: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
 
 lemma kernel_entry_if_globals_equiv_scheduler:
-  "\<lbrace>globals_equiv_scheduler st and valid_ko_at_arch and invs
+  "\<lbrace>globals_equiv_scheduler st and valid_arch_state and invs
                                and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)
                                and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
    kernel_entry_if e tc
@@ -467,7 +467,7 @@ lemma kernel_entry_if_partitionIntegrity:
     apply (wp kernel_entry_silc_inv[where st'=st'], simp add: schact_is_rct_simple)
    apply (fastforce simp: pas_refined_pasMayActivate_update pas_refined_pasMayEditReadyQueues_update
                           globals_equiv_scheduler_refl silc_dom_equiv_def equiv_for_refl
-                          invs_valid_ko_at_arch domain_fields_equiv_def ct_active_not_idle')
+                          domain_fields_equiv_def ct_active_not_idle')
   apply (fastforce simp: partitionIntegrity_def)
   done
 
@@ -525,7 +525,7 @@ lemma pas_refined_pasMayActivate_update[simp]:
   done
 
 lemma activate_thread_globals_equiv_scheduler:
-  "\<lbrace>globals_equiv_scheduler st and valid_ko_at_arch and valid_idle\<rbrace>
+  "\<lbrace>globals_equiv_scheduler st and valid_arch_state and valid_idle\<rbrace>
    activate_thread
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   by (wp globals_equiv_scheduler_inv' activate_thread_globals_equiv | force | fastforce)+
@@ -587,7 +587,7 @@ lemma schedule_if_partitionIntegrity:
                silc_dom_equiv_from_silc_inv_valid'[where P="\<top>" and st=st]
                domain_fields_equiv_lift schedule_cur_domain schedule_domain_fields
             | simp add: silc_inv_def partitionIntegrity_def guarded_pas_domain_def
-                        invs_valid_idle invs_valid_ko_at_arch silc_dom_equiv_def)+
+                        invs_valid_idle silc_dom_equiv_def)+
     apply (fastforce simp: equiv_for_refl dest: domains_distinct[THEN pas_domains_distinct_inj])
    apply (fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)+
   done
@@ -1946,7 +1946,7 @@ end
 lemma set_thread_state_runnable_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows "reads_respects_g aag (l :: 'a subject_label)
-                          (valid_ko_at_arch and K (runnable ts)) (set_thread_state t ts)"
+                          (valid_arch_state and K (runnable ts)) (set_thread_state t ts)"
   apply (rule gen_asm_ev)
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g[OF set_thread_state_runnable_reads_respects[OF domains_distinct]])
@@ -2032,12 +2032,12 @@ lemma activate_thread_reads_respects_g:
   apply (rule conjI)
    apply (blast intro: requiv_g_cur_thread_eq)
   apply (frule invs_valid_idle)
-  apply (simp add: invs_valid_ko_at_arch)
+  apply simp
   apply (rule conjI)
    apply blast
   apply (rule impI)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_idle_def)
-  apply (fastforce simp: invs_valid_ko_at_arch det_getRestartPC)
+  apply (fastforce simp: det_getRestartPC)
   done
 
 lemma cur_thread_update_reads_respects_g':

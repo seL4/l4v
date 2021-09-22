@@ -125,7 +125,7 @@ lemma thread_set_context_globals_equiv[Scheduler_IF_assms]:
   apply (subgoal_tac "t \<noteq> arm_global_pd (arch_state s)")
    apply (clarsimp simp: idle_equiv_def globals_equiv_def tcb_at_def2 get_tcb_def idle_context_def)
    apply (clarsimp split: option.splits kernel_object.splits)
-  apply (drule arm_global_pd_not_tcb[OF invs_valid_ko_at_arch])
+  apply (drule arm_global_pd_not_tcb[OF invs_arch_state])
   apply clarsimp
   done
 

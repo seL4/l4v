@@ -160,8 +160,6 @@ locale Ipc_IF_1 =
     "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
   and arch_get_sanitise_register_info_reads_respects[wp]:
     "reads_respects aag l \<top> (arch_get_sanitise_register_info t)"
-  and handle_arch_fault_reply_valid_ko_at_arch[wp]:
-    "handle_arch_fault_reply vmf t x y \<lbrace>valid_ko_at_arch\<rbrace>"
   and arch_get_sanitise_register_info_valid_global_objs[wp]:
     "arch_get_sanitise_register_info t \<lbrace>\<lambda>s :: det_state. valid_global_objs s\<rbrace>"
   and handle_arch_fault_reply_valid_global_objs[wp]:
@@ -175,7 +173,7 @@ locale Ipc_IF_1 =
      lookup_ipc_buffer True t
      \<lbrace>\<lambda>rv s :: det_state. rv = Some buf' \<longrightarrow> is_aligned buf' msg_align_bits\<rbrace>"
   and handle_arch_fault_reply_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+    "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_arch_fault_reply vmf thread x y
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
 begin
@@ -1609,8 +1607,6 @@ lemma lookup_ipc_buffer_has_read_auth':
   apply (drule sym, simp)
   done
 
-crunch valid_ko_at_arch[wp]: handle_fault_reply valid_ko_at_arch
-
 end
 
 context Ipc_IF_2 begin
@@ -1652,7 +1648,7 @@ lemma do_reply_transfer_reads_respects_f:
                        cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                        reads_respects_f[OF get_thread_state_rev]
                   | simp add: invs_valid_objs invs_psp_aligned invs_valid_global_refs
-                              invs_distinct invs_arch_state invs_valid_ko_at_arch
+                              invs_distinct invs_arch_state
                               invs_psp_aligned invs_vspace_objs invs_arch_state
                   | rule conjI
                   | elim conjE
@@ -1707,7 +1703,7 @@ section "globals_equiv"
 subsection "Sync IPC"
 
 lemma setup_caller_cap_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and valid_global_objs\<rbrace>
    setup_caller_cap sender receiver grant
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding setup_caller_cap_def
@@ -1721,7 +1717,7 @@ lemma set_extra_badge_globals_equiv:
   by (wp store_word_offs_globals_equiv)
 
 lemma transfer_caps_loop_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
    transfer_caps_loop ep rcv_buffer n caps slots mi
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
 proof (induct caps arbitrary: slots n mi)
@@ -1740,8 +1736,8 @@ next
          apply (rule Cons.hyps)
         apply (simp)
         apply (wp cap_insert_globals_equiv'')
-       apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arch and valid_global_objs"
-                   and E="\<lambda>_. globals_equiv st and valid_ko_at_arch and valid_global_objs"
+       apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
+                   and E="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                     in hoare_post_impErr)
          apply (simp add: whenE_def, rule conjI)
           apply (rule impI, wp)+
@@ -1752,14 +1748,14 @@ next
 qed
 
 lemma transfer_caps_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
    transfer_caps info caps endpoint receiver recv_buffer
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding transfer_caps_def
   by (wp transfer_caps_loop_globals_equiv | wpc | simp)+
 
 lemma copy_mrs_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
    copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding copy_mrs_def including no_pre
@@ -1769,7 +1765,7 @@ lemma copy_mrs_globals_equiv:
       apply (wp store_word_offs_globals_equiv)+
     apply fastforce
    apply simp
-   apply (rule_tac Q="\<lambda>_. globals_equiv s and valid_ko_at_arch and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
+   apply (rule_tac Q="\<lambda>_. globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
                 in hoare_strengthen_post)
     apply (wp mapM_wp' as_user_globals_equiv)
     apply (simp)
@@ -1785,7 +1781,7 @@ lemma validE_to_valid:
   done
 
 lemma do_normal_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
    do_normal_transfer sender sbuf endpoint badge grant receiver rbuf
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_normal_transfer_def
@@ -1797,7 +1793,7 @@ lemma do_normal_transfer_globals_equiv:
   done
 
 lemma do_fault_transfer_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)\<rbrace>
    do_fault_transfer badge sender receiver buf
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding do_fault_transfer_def
@@ -1812,9 +1808,6 @@ lemma do_fault_transfer_globals_equiv:
 
 lemma set_collection: "a = {x. x\<in>a}"
   by simp
-
-crunch valid_ko_at_arch[wp]: do_ipc_transfer "valid_ko_at_arch"
-  (wp: make_arch_fault_msg_inv)
 
 lemma valid_ep_send_enqueue:
   "\<lbrakk> ko_at (Endpoint (SendEP (t # ts))) a s; valid_objs s \<rbrakk>
@@ -1835,14 +1828,14 @@ lemma case_list_cons_cong:
 context Ipc_IF_1 begin
 
 lemma do_ipc_transfer_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_objs and valid_arch_state and valid_global_refs
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_objs and valid_arch_state and valid_global_refs
                      and pspace_distinct and pspace_aligned
                      and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s)\<rbrace>
    do_ipc_transfer sender ep badge grant receiver
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding do_ipc_transfer_def
   apply (wp do_normal_transfer_globals_equiv do_fault_transfer_globals_equiv | wpc)+
-    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arch and valid_global_objs and
+    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs and
                            (\<lambda>sa. receiver \<noteq> idle_thread sa) and
                            (\<lambda>sa. (\<forall>rb. recv_buffer = Some rb
                                  \<longrightarrow> auth_ipc_buffers sa receiver = ptr_range rb msg_align_bits) \<and>
@@ -1862,7 +1855,7 @@ lemma send_ipc_globals_equiv:
   unfolding send_ipc_def
   apply (wp set_simple_ko_globals_equiv set_thread_state_globals_equiv
             setup_caller_cap_globals_equiv | wpc)+
-        apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arch and valid_global_objs"
+        apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_global_objs"
                      in hoare_strengthen_post[rotated])
          apply (fastforce)
         apply (wp set_thread_state_globals_equiv dxo_wp_weak | simp)+
@@ -1877,7 +1870,7 @@ lemma send_ipc_globals_equiv:
                            (\<lambda>s. sym_refs (state_refs_of s)) and valid_idle"
                 in hoare_strengthen_post)
     apply (wp get_simple_ko_sp)
-   apply (clarsimp simp: valid_arch_state_ko_at_arch)+
+   apply (clarsimp)+
    apply (rule context_conjI)
     apply (rule valid_ep_recv_dequeue')
      apply (simp)+
@@ -1898,7 +1891,7 @@ lemma receive_ipc_globals_equiv:
              setup_caller_cap_globals_equiv dxo_wp_weak as_user_globals_equiv
           | wpc
           | simp split del: if_split)+
-             apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_ko_at_arch
+             apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_arch_state
                                                                               and valid_global_objs"])
               apply (wp do_ipc_transfer_globals_equiv as_user_globals_equiv)
              apply clarsimp
@@ -1910,8 +1903,7 @@ lemma receive_ipc_globals_equiv:
   apply (rule hoare_pre)
    apply (wpc)
               apply (rule fail_wp | rule return_wp)+
-  by (auto intro: valid_arch_state_ko_at_arch valid_ep_send_enqueue
-            simp: neq_Nil_conv cong: case_list_cons_cong)
+  by (auto intro: valid_ep_send_enqueue simp: neq_Nil_conv cong: case_list_cons_cong)
 
 end
 
@@ -1939,10 +1931,10 @@ lemma update_waiting_ntfn_globals_equiv:
   supply possible_switch_to_extended.dxo_eq[simp del]
   apply (wpsimp wp: set_thread_state_globals_equiv as_user_globals_equiv
                     set_notification_globals_equiv dxo_wp_weak)
-  by (auto intro: valid_arch_state_ko_at_arch simp: neq_Nil_conv)
+  by (auto simp: neq_Nil_conv)
 
 lemma cancel_ipc_blocked_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and st_tcb_at receive_blocked a\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and st_tcb_at receive_blocked a\<rbrace>
    cancel_ipc a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_ipc_def
@@ -1971,11 +1963,10 @@ lemma send_signal_globals_equiv:
   apply clarsimp
   apply (frule (1) sym_refs_ko_atD)
   apply (intro allI impI conjI)
-           prefer 8
+           prefer 4
            apply clarsimp
            apply (frule_tac t="idle_thread sa" and P="\<lambda>ref. \<not> idle ref" in ntfn_queued_st_tcb_at')
-  by (auto intro: valid_arch_state_ko_at_arch
-            simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def)
+  by (auto simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def)
 
 
 (* FIXME: belongs in Arch_IF *)
@@ -1986,14 +1977,12 @@ lemma receive_signal_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
   apply (rule hoare_pre)
-   apply (wp set_notification_globals_equiv set_thread_state_globals_equiv
-             as_user_globals_equiv get_simple_ko_wp
-          | wpc)+
-  apply (simp add: valid_arch_state_ko_at_arch)
+   apply (wpsimp wp: set_notification_globals_equiv set_thread_state_globals_equiv
+                     as_user_globals_equiv get_simple_ko_wp)+
   done
 
 lemma handle_double_fault_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    handle_double_fault tptr ex1 ex2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding handle_double_fault_def
@@ -2013,19 +2002,6 @@ lemma send_fault_ipc_valid_global_objs:
      apply (simp add: Let_def)
      apply (wp send_ipc_valid_global_objs | wpc)+
     apply (rule_tac Q'="\<lambda>_. valid_global_objs" in hoare_post_imp_R)
-     apply (wp | simp)+
-  done
-
-crunch valid_ko_at_arch[wp]: send_ipc "valid_ko_at_arch"
-  (wp: hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak)
-
-lemma send_fault_ipc_valid_ko_at_arch[wp]:
-  "send_fault_ipc a b \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding send_fault_ipc_def
-  apply wp
-     apply (simp add: Let_def)
-     apply (wp send_ipc_valid_ko_at_arch | wpc)+
-    apply (rule_tac Q'="\<lambda>_. valid_ko_at_arch" in hoare_post_imp_R)
      apply (wp | simp)+
   done
 
@@ -2049,10 +2025,14 @@ lemma send_fault_ipc_globals_equiv:
                             valid_global_objs and K (valid_fault fault) and valid_idle and
                             (\<lambda>s. sym_refs (state_refs_of s))" in hoare_post_imp_R)
      apply (wp | simp)+
-    apply (clarsimp simp: valid_arch_state_ko_at_arch)
+    apply (clarsimp)
     apply (rule valid_tcb_fault_update)
      apply (wp | simp)+
   done
+
+crunches send_fault_ipc
+  for valid_arch_state[wp]: valid_arch_state
+  (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
 
 lemma handle_fault_globals_equiv:
   "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
@@ -2062,13 +2042,13 @@ lemma handle_fault_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_fault_def
   apply (wp handle_double_fault_globals_equiv)
-    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arch" and
-                    E="\<lambda>_. globals_equiv st and valid_ko_at_arch" in hoare_post_impErr)
-      apply (wp send_fault_ipc_globals_equiv | simp add: valid_arch_state_ko_at_arch)+
+    apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state" and
+                    E="\<lambda>_. globals_equiv st and valid_arch_state" in hoare_post_impErr)
+      apply (wp send_fault_ipc_globals_equiv | simp)+
   done
 
 lemma handle_fault_reply_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    handle_fault_reply fault thread x y
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (cases fault; wpsimp wp: as_user_globals_equiv handle_arch_fault_reply_globals_equiv)
@@ -2084,13 +2064,12 @@ lemma do_reply_transfer_globals_equiv:
   apply (wp set_thread_state_globals_equiv cap_delete_one_globals_equiv do_ipc_transfer_globals_equiv
             thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak
          | wpc | simp split del: if_split)+
-     apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arch and valid_objs and valid_arch_state
+     apply (rule_tac Q="\<lambda>_. globals_equiv st and valid_arch_state and valid_objs and valid_arch_state
                                              and valid_global_refs and pspace_distinct
                                              and pspace_aligned and valid_global_objs
                                              and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle"
                   in hoare_strengthen_post)
-      apply (wp gts_wp
-             | fastforce simp: valid_arch_state_ko_at_arch pred_tcb_at_def obj_at_def valid_idle_def)+
+      apply (wp gts_wp | fastforce simp: pred_tcb_at_def obj_at_def valid_idle_def)+
   done
 
 lemma handle_reply_globals_equiv:
@@ -2116,11 +2095,7 @@ lemma reply_from_kernel_globals_equiv:
    reply_from_kernel thread x
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding reply_from_kernel_def
-  apply (wp set_message_info_globals_equiv set_mrs_globals_equiv
-           as_user_globals_equiv | simp add: split_def)+
-  apply (insert length_msg_lt_msg_max)
-  apply (simp add: valid_arch_state_ko_at_arch)
-  done
+  by (wpsimp wp: set_message_info_globals_equiv set_mrs_globals_equiv as_user_globals_equiv)
 
 
 section "reads_respects_g"
@@ -2231,7 +2206,7 @@ subsection "Replies"
 
 lemma handle_fault_reply_reads_respects_g:
   "reads_respects_g aag l
-     (valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s) and K (is_subject aag thread))
+     (valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s) and K (is_subject aag thread))
      (handle_fault_reply fault thread x y)"
   apply (rule equiv_valid_guard_imp[OF reads_respects_g])
     apply (rule handle_fault_reply_reads_respects)

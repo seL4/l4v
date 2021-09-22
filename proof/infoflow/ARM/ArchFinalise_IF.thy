@@ -313,35 +313,21 @@ lemma set_irq_state_globals_equiv[Finalise_IF_assms]:
   done
 
 lemma set_notification_globals_equiv[Finalise_IF_assms]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    set_notification ptr ntfn
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding set_simple_ko_def
   apply (wp set_object_globals_equiv get_object_wp)
-  apply (fastforce simp: valid_ko_at_arch_def obj_at_def)
+  apply (fastforce simp: obj_at_def valid_arch_state_def)
   done
-
-lemma set_asid_pool_valid_ko_at_arch[wp]:
-  "\<lbrace>valid_ko_at_arch\<rbrace> set_asid_pool a b\<lbrace>\<lambda>_.valid_ko_at_arch\<rbrace>"
-  unfolding set_asid_pool_def
-  apply (wpsimp wp: set_object_wp_strong simp: a_type_def)
-  apply (fastforce simp: valid_ko_at_arch_def get_tcb_ko_at obj_at_def)
-  done
-
-crunches thread_set, prepare_thread_delete, arch_post_cap_deletion, arch_finalise_cap
-  for valid_ko_at_arch[Finalise_IF_assms, wp]: "valid_ko_at_arch"
-  (wp: hoare_vcg_if_lift2 hoare_drop_imps select_wp modify_wp mapM_wp' dxo_wp_weak
-   simp: unless_def crunch_simps arm_global_pd_not_tcb
-   ignore: empty_slot_ext)
 
 lemma delete_asid_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    delete_asid asid pd
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding delete_asid_def
-  by (wp set_vm_root_globals_equiv set_asid_pool_globals_equiv invalidate_asid_entry_globals_equiv
-         flush_space_globals_equiv invalidate_asid_entry_valid_ko_at_arch
-      | wpc | simp add: valid_arch_state_ko_at_arch)+
+  by (wpsimp wp: set_vm_root_globals_equiv set_asid_pool_globals_equiv
+                 invalidate_asid_entry_globals_equiv flush_space_globals_equiv)
 
 lemma pagebitsforsize_ge_2[simp]:
   "2 \<le> pageBitsForSize vmpage_size"
@@ -377,25 +363,15 @@ crunch globals_equiv[Finalise_IF_assms, wp]: prepare_thread_delete "globals_equi
   (wp: dxo_wp_weak)
 
 lemma set_bound_notification_globals_equiv[Finalise_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    set_bound_notification ref ts
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_bound_notification_def
   apply (wp set_object_globals_equiv dxo_wp_weak |simp)+
   apply (intro impI conjI allI)
-  by (clarsimp simp: valid_ko_at_arch_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def
+  by (clarsimp simp: valid_arch_state_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def
                dest: get_tcb_SomeD
               split: option.splits kernel_object.splits)+
-
-lemma set_bound_notification_valid_ko_at_arch[Finalise_IF_assms, wp]:
-  "set_bound_notification ref ts \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding set_bound_notification_def
-  apply (wp set_object_valid_ko_at_arch dxo_wp_weak |simp)+
-  apply (fastforce simp: valid_ko_at_arch_def get_tcb_ko_at obj_at_def)
-  done
-
-crunch valid_ko_at_arch[Finalise_IF_assms, wp]: set_original, set_cdt valid_ko_at_arch
-  (simp: valid_ko_at_arch_def)
 
 end
 
