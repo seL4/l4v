@@ -188,7 +188,7 @@ lemma handleEvent_ccorres:
   apply (rule ccorres_guard_imp2)
    apply (simp add: handleEvent_def callKernel_C_body_if_def)
    apply (wpc, simp_all)[1]
-       apply (wpc, simp_all add: handleSyscall_C_body_if_def syscall_from_H_def liftE_def
+       apply (wpc, simp_all add: handleSyscall_C_body_if_def syscall_from_H_def liftE_def mask_def
                                  ccorres_cond_univ_iff syscall_defs ccorres_cond_empty_iff)[1]
               \<comment> \<open>SysCall\<close>
               apply (simp add: handleCall_def)
@@ -437,6 +437,7 @@ lemma corres_select_f':
 
 lemma corres_dmo_getExMonitor_C:
   "corres_underlying rf_sr nf nf' (=) \<top> \<top> (doMachineOp getExMonitor) (doMachineOp_C getExMonitor)"
+  supply subst_all [simp del]
   apply (clarsimp simp: doMachineOp_def doMachineOp_C_def)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="\<lambda>ms ms'. exclusive_state ms = exclusive_state ms' \<and> machine_state_rest ms = machine_state_rest ms'
@@ -899,6 +900,7 @@ lemma c_to_haskell:
      handlePreemption_H_if schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV
      check_active_irq_C_if (do_user_op_C_if uop) (kernel_call_C_if fp) handle_preemption_C_if schedule_C_if
      kernel_exit_C_if UNIV (ADT_C_if fp uop) (lift_snd_rel rf_sr) False"
+  supply subst_all [simp del]
   apply (simp add: global_automata_refine_def)
   apply (intro conjI)
     apply (rule haskell_invs)
