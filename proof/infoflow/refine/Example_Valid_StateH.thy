@@ -525,14 +525,17 @@ lemma pt_offs_range_correct:
   "x \<in> pt_offs_range High_pt_ptr \<Longrightarrow> \<exists>y. x = High_pt_ptr + (ucast (y:: 8 word) << 2)"
   by (simp_all add: pt_offs_range_correct' s0_ptrs_aligned)
 
+(* FIXME: move to Word_Lib *)
 lemma bl_to_bin_le2p_aux:
   "bl_to_bin_aux bs w \<le> (w + 1) * (2 ^ length bs) - 1"
   apply (induct bs arbitrary: w)
    apply clarsimp
   apply clarsimp
+  apply (rule conjI; clarsimp)
   apply (drule meta_spec, erule xtr8 [rotated], simp add: Bit_def)+
   done
 
+(* FIXME: move to Word_Lib *)
 lemma bl_to_bin_le2p: "bl_to_bin bs \<le> (2 ^ length bs) - 1"
   apply (unfold bl_to_bin_def)
   apply (rule xtr3)
@@ -541,25 +544,10 @@ lemma bl_to_bin_le2p: "bl_to_bin bs \<le> (2 ^ length bs) - 1"
   apply simp
   done
 
+(* FIXME: move to Word_Lib *)
 lemma of_bl_length_le:
   "length x = k \<Longrightarrow> k < len_of TYPE('a) \<Longrightarrow> (of_bl x :: 'a :: len word) \<le> 2 ^ k - 1"
-  apply (unfold of_bl_def word_less_alt word_numeral_alt)
-  apply safe
-  apply (simp (no_asm) add: word_of_int_power_hom word_uint.eq_norm wi_hom_sub[where b=1, simplified] word_le_def
-                       del: word_of_int_numeral)
-  apply (subst mod_pos_pos_trivial)
-    apply (rule bl_to_bin_ge0)
-   apply (rule order_less_trans)
-    apply (rule bl_to_bin_lt2p)
-   apply simp
-  apply (subst mod_pos_pos_trivial)
-    apply fastforce
-   apply (rule order_less_trans)
-    apply (rule less_1_helper)
-    apply (rule order_refl)
-   apply simp
-  apply (rule bl_to_bin_le2p)
-  done
+  by (simp add: of_bl_length_less)
 
 lemma cnode_offs_min':
   "\<lbrakk>is_aligned ptr 14; length x = 10\<rbrakk> \<Longrightarrow> (ptr::word32) \<le> ptr + of_bl x * 0x10"
@@ -617,30 +605,15 @@ lemma cnode_offs_in_range:
   "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<in> cnode_offs_range Silc_cnode_ptr"
   by (simp_all add: cnode_offs_in_range' s0_ptrs_aligned)
 
+(* FIXME: move to Word_Lib *)
 lemma le_mask_eq: "x \<le> 2 ^ n - 1 \<Longrightarrow> x AND mask n = (x :: 'a :: len word)"
-  apply (unfold word_less_alt word_numeral_alt)
-  apply (clarsimp simp add: and_mask_mod_2p word_of_int_power_hom wi_hom_sub[where b=1, simplified] word_le_def
-                            word_uint.eq_norm
-                  simp del: word_of_int_numeral)
-  apply (drule xtr6 [rotated])
-  apply (rule int_mod_le)
-  apply auto
-  done
+  by (metis and_mask_eq_iff_le_mask mask_2pm1)
 
+(* FIXME: move to Word_Lib *)
 lemma word_div_mult':
-  fixes c :: word32
+  fixes c :: "'a::len word"
   shows "\<lbrakk>0 < c; a \<le> b * c \<rbrakk> \<Longrightarrow> a div c \<le> b"
-  apply (simp add: word_le_nat_alt unat_div)
-  apply (simp add: less_Suc_eq_le[symmetric])
-  apply (subst td_gal_lt [symmetric])
-   apply (simp add: word_less_nat_alt)
-  apply (erule order_less_le_trans)
-  apply (subst unat_word_ariths)
-  apply (unfold word_bits_len_of)
-  apply (rule_tac y="Suc (unat b * unat c)" in order_trans)
-   apply simp
-  apply (simp add: word_less_nat_alt)
-  done
+  using div_lt_mult word_le_not_less by blast
 
 lemma cnode_offs_range_correct':
   "\<lbrakk>x \<in> cnode_offs_range ptr; is_aligned ptr 14\<rbrakk>
@@ -3213,44 +3186,45 @@ lemma s0_pspace_rel:
   apply (simp add: pspace_relation_def s0_internal_def s0H_internal_def kh0H_dom kh0_pspace_dom)
   apply clarsimp
   apply (drule kh0_SomeD)
+  apply (rename_tac y)
   apply (elim disjE)
                 apply (clarsimp simp: pageBits_def)
                apply (clarsimp simp: kh0H_obj_def split del: if_split)
-               apply (cut_tac x=ya in pd_offs_in_range(3))
+               apply (cut_tac x=y in pd_offs_in_range(3))
                apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def)
               apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def
                                     tcb_relation_def arch_tcb_relation_def fault_rel_optionation_def
                                     word_bits_def the_nat_to_bl_simps)+
            apply (clarsimp simp: kh0H_obj_def High_pt_def High_pt'H_def High_pt'_def split del: if_split)
-           apply (cut_tac x=ya in pt_offs_in_range(2))
+           apply (cut_tac x=y in pt_offs_in_range(2))
            apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)
           apply (clarsimp simp: kh0H_obj_def Low_pt_def Low_pt'H_def Low_pt'_def split del: if_split)
-          apply (cut_tac x=ya in pt_offs_in_range(1))
+          apply (cut_tac x=y in pt_offs_in_range(1))
           apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)
          apply (clarsimp simp: kh0H_obj_def High_pd_def High_pd'H_def High_pd'_def split del: if_split)
-         apply (cut_tac x=ya in pd_offs_in_range(2))
+         apply (cut_tac x=y in pd_offs_in_range(2))
          apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def pde_relation'_def)
         apply (clarsimp simp: kh0H_obj_def Low_pd_def Low_pd'H_def Low_pd'_def split del: if_split)
-        apply (cut_tac x=ya in pd_offs_in_range(1))
+        apply (cut_tac x=y in pd_offs_in_range(1))
         apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def pde_relation'_def)
        apply (clarsimp simp: kh0H_obj_def irq_cnode_def cte_map_def cte_relation_def well_formed_cnode_n_def split: if_split_asm)
       apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def ntfn_relation_def)
      apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
      apply (cut_tac dom_caps(1))[1]
      apply (frule_tac m="Silc_caps" in domI)
-     apply (cut_tac x=ya in cnode_offs_in_range(3))
+     apply (cut_tac x=y in cnode_offs_in_range(3))
       apply simp
      apply (clarsimp simp: cnode_offs_range_def Silc_cte_def Silc_cte'_def Silc_capsH_def the_nat_to_bl_simps Silc_caps_def cte_level_bits_def empty_cte_def split: if_split_asm)
     apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
     apply (cut_tac dom_caps(2))[1]
     apply (frule_tac m="High_caps" in domI)
-    apply (cut_tac x=ya in cnode_offs_in_range(2))
+    apply (cut_tac x=y in cnode_offs_in_range(2))
      apply simp
     apply (clarsimp simp: cnode_offs_range_def High_cte_def High_cte'_def High_capsH_def the_nat_to_bl_simps High_caps_def cte_level_bits_def empty_cte_def split: if_split_asm)
    apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
    apply (cut_tac dom_caps(3))[1]
    apply (frule_tac m="Low_caps" in domI)
-   apply (cut_tac x=ya in cnode_offs_in_range(1))
+   apply (cut_tac x=y in cnode_offs_in_range(1))
     apply simp
    apply (clarsimp simp: cnode_offs_range_def Low_cte_def Low_cte'_def Low_capsH_def the_nat_to_bl_simps Low_caps_def cte_level_bits_def empty_cte_def split: if_split_asm)
   apply (clarsimp simp: kh0H_obj_def irq_cnode_def cte_map_def cte_relation_def well_formed_cnode_n_def empty_cte_def dom_def split: if_split_asm)
