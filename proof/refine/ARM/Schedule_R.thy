@@ -2368,18 +2368,25 @@ lemma whileM_wp_gen:
   using termin
   by (wpsimp wp: whileLoop_wp[where I=I])
 
-crunches refillHeadOverlappingLoop, headInsufficientLoop
+crunches refillBudgetCheck, refillUnblockCheck
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
   and valid_release_queue'[wp]: valid_release_queue'
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n T p s)"
+  and active_sc_at'[wp]: "active_sc_at' scPtr"
   (wp: crunch_wps)
 
 end
 
-global_interpretation refillPopHead: typ_at_all_props' "refillPopHead scPtr"
+global_interpretation refillPopHead: typ_at_all_props' "refillPopHead scPtr" by typ_at_props'
+global_interpretation mergeRefills: typ_at_all_props' "mergeRefills scPtr" by typ_at_props'
+global_interpretation scheduleUsed: typ_at_all_props' "scheduleUsed scPtr new" by typ_at_props'
+global_interpretation updateRefillHd: typ_at_all_props' "updateRefillHd scPtr v" by typ_at_props'
+global_interpretation setRefillHd: typ_at_all_props' "setRefillHd scPtr v" by typ_at_props'
+global_interpretation handleOverrunLoop: typ_at_all_props' "handleOverrunLoop v" by typ_at_props'
+global_interpretation nonOverlappingMergeRefills: typ_at_all_props' "nonOverlappingMergeRefills scPtr"
   by typ_at_props'
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -2397,11 +2404,6 @@ lemma mergeRefills_valid_objs':
                         valid_sched_context_size'_def opt_map_red
                  dest!: sc_ko_at_valid_objs_valid_sc')
   done
-
-crunches mergeRefills, nonOverlappingMergeRefills, scheduleUsed
-  for active_sc_at'[wp]: "active_sc_at' scPtr"
-  and sc_at'[wp]: "\<lambda>s. P (sc_at' scPtr s)"
-  (simp: objBits_simps)
 
 lemma no_ofail_refillHeadOverlapping:
   "no_ofail (sc_at' scp) (refillHeadOverlapping scp)"
@@ -2459,13 +2461,7 @@ lemma refillUnblockCheck_valid_objs'[wp]:
   done
 
 crunches refillUnblockCheck, refillBudgetCheck
-  for valid_queues[wp]: valid_queues
-  and valid_queues'[wp]: valid_queues'
-  and valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
-  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
-  and pspace_aligned'[wp]: pspace_aligned'
+  for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
   and no_0_obj'[wp]: no_0_obj'
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -2669,10 +2665,6 @@ lemma handleOverrunLoop_valid_objs':
     apply (rule_tac f=ksCurSc in hoare_lift_Pf3)
      apply wpsimp+
   done
-
-crunches handleOverrunLoop, setRefillHd
-  for sc_at'[wp]: "sc_at' scPtr"
-  (wp: crunch_wps simp: objBits_simps)
 
 lemma refillBudgetCheck_valid_objs':
   "refillBudgetCheck usage \<lbrace>valid_objs'\<rbrace>"
