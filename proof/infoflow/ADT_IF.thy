@@ -1678,7 +1678,7 @@ lemma schedule_if_globals_equiv_scheduler[wp]:
   apply (simp add: schedule_if_def)
   apply wp
     apply (wp globals_equiv_scheduler_inv'[where P="invs"] activate_thread_globals_equiv)
-    apply (simp add: invs_valid_ko_at_arch invs_valid_idle)
+    apply (simp add: invs_arch_state invs_valid_idle)
    apply (wp | simp)+
   done
 

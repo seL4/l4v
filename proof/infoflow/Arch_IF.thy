@@ -369,8 +369,7 @@ crunch irq_state_of_state[wp]: cancel_badged_sends "\<lambda>s. P (irq_state_of_
 
 
 locale Arch_IF_1 =
-  fixes valid_ko_at_arch :: "det_state \<Rightarrow> bool"
-  and aag :: "'a PAS"
+  fixes aag :: "'a PAS"
   assumes arch_post_cap_deletion_valid_global_refs:
     "arch_post_cap_deletion acap \<lbrace>\<lambda>s :: det_state. valid_global_refs s\<rbrace>"
   and arch_post_cap_deletion_irq_state_of_state[wp]:
@@ -399,30 +398,22 @@ locale Arch_IF_1 =
   and store_word_offs_reads_respects:
     "reads_respects aag l \<top> (store_word_offs ptr offs v)"
   and set_endpoint_globals_equiv:
-    "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_endpoint ptr ep
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and set_cap_globals_equiv'':
-    "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_cap cap p
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and set_thread_state_globals_equiv:
-    "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
      set_thread_state ref ts
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and as_user_globals_equiv:
     "\<And>f :: unit user_monad.
-     \<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+     \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
      as_user tptr f
      \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_endpoint_valid_ko_at_arch[wp]:
-    "set_endpoint ptr ep \<lbrace>valid_ko_at_arch\<rbrace>"
-  and set_cap_valid_ko_at_arch[wp]:
-    "set_cap cap p \<lbrace>valid_ko_at_arch\<rbrace>"
-  and set_thread_state_valid_ko_at_arch[wp]:
-    "set_thread_state ref ts \<lbrace>valid_ko_at_arch\<rbrace>"
-  and valid_ko_at_arch_exst_update[simp]:
-    "\<And>f. valid_ko_at_arch (trans_state f s) = valid_ko_at_arch s"
 begin
 
 crunch valid_global_refs[wp]: empty_slot "\<lambda>s :: det_state. valid_global_refs s"
@@ -483,10 +474,8 @@ lemma set_mrs_reads_respects:
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-crunch valid_ko_at_arch[wp]: set_untyped_cap_as_full valid_ko_at_arch
-
 lemma cap_insert_globals_equiv'':
-  "\<lbrace>globals_equiv s and valid_global_objs and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_insert_def
@@ -494,13 +483,13 @@ lemma cap_insert_globals_equiv'':
                  set_cap_globals_equiv'' dxo_wp_weak hoare_drop_imps)
 
 lemma set_message_info_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    set_message_info thread info
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_message_info_def by (wp as_user_globals_equiv)
 
 lemma cancel_badged_sends_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
    cancel_badged_sends epptr badge
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace> "
   unfolding cancel_badged_sends_def

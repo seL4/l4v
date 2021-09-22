@@ -19,14 +19,14 @@ lemma globals_equiv_irq_state_update[Syscall_IF_assms, simp]:
   by (auto simp: globals_equiv_def idle_equiv_def)
 
 lemma thread_set_globals_equiv'[Syscall_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
    thread_set f tptr
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding thread_set_def
   apply (wp set_object_globals_equiv)
   apply simp
   apply (intro impI conjI allI)
-  apply (fastforce simp: valid_ko_at_arch_def obj_at_def get_tcb_def)+
+  apply (fastforce simp: obj_at_def get_tcb_def valid_arch_state_def)+
   done
 
 lemma arch_perform_invocation_reads_respects_g[Syscall_IF_assms]:
@@ -96,7 +96,7 @@ lemma handle_hypervisor_fault_reads_respects[Syscall_IF_assms]:
   by (cases hypfault_type; wpsimp)
 
 lemma handle_vm_fault_globals_equiv[Syscall_IF_assms]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    handle_vm_fault thread vmfault_type
    \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   apply (cases vmfault_type)

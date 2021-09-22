@@ -242,9 +242,6 @@ lemma arch_get_sanitise_register_info_reads_respects[Ipc_IF_assms, wp]:
 
 declare arch_get_sanitise_register_info_inv[Ipc_IF_assms]
 
-crunches handle_arch_fault_reply
-  for arch_get_sanitise_register_info[Ipc_IF_assms, wp]: "valid_ko_at_arch"
-
 lemma lookup_ipc_buffer_ptr_range'[Ipc_IF_assms]:
   "\<lbrace>valid_objs\<rbrace>
    lookup_ipc_buffer True thread
@@ -270,7 +267,7 @@ lemma lookup_ipc_buffer_aligned'[Ipc_IF_assms]:
   done
 
 lemma handle_arch_fault_reply_globals_equiv[Ipc_IF_assms]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
    handle_arch_fault_reply vmf thread x y
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (wpsimp simp: handle_arch_fault_reply_def)+

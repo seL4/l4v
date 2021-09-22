@@ -39,7 +39,7 @@ locale Syscall_IF_1 =
                               machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
           globals_equiv st s"
   and thread_set_globals_equiv':
-    "\<And>f. \<lbrace>globals_equiv s and valid_ko_at_arch and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
+    "\<And>f. \<lbrace>globals_equiv s and valid_arch_state and (\<lambda>s. tptr \<noteq> idle_thread s)\<rbrace>
           thread_set f tptr
           \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and sts_authorised_for_globals_inv:
@@ -65,7 +65,7 @@ locale Syscall_IF_1 =
   and handle_hypervisor_fault_reads_respects:
     "reads_respects aag l \<top> (handle_hypervisor_fault thread hypfault_type)"
   and handle_vm_fault_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
+    "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
      handle_vm_fault thread vmfault_type
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and handle_hypervisor_fault_globals_equiv:
@@ -103,7 +103,7 @@ lemma invoke_cnode_globals_equiv:
             cap_delete_globals_equiv cap_swap_globals_equiv hoare_vcg_all_lift
             cancel_badged_sends_globals_equiv
          | wpc | wp (once) hoare_drop_imps | simp add: invs_valid_global_objs)+
-  apply (case_tac cinv; clarsimp simp: invs_valid_ko_at_arch real_cte_emptyable_strg)
+  apply (case_tac cinv; clarsimp simp: real_cte_emptyable_strg)
   done
 
 end
@@ -386,8 +386,7 @@ next
     apply (rule equiv_valid_guard_imp)
      apply (wpc | simp | wp reads_respects_f_g'[OF invoke_irq_control_reads_respects_g]
                             invoke_irq_control_silc_inv)+
-    by (simp add: invs_def valid_state_def
-                  authorised_invocation_def valid_arch_state_ko_at_arch)
+    by (simp add: invs_def valid_state_def authorised_invocation_def)
 next
   case InvokeIRQHandler
   then show ?thesis
@@ -408,7 +407,7 @@ qed
 end
 
 
-crunch valid_ko_at_arch[wp]: reply_from_kernel "valid_ko_at_arch" (simp: crunch_simps)
+crunch valid_arch_state[wp]: reply_from_kernel valid_arch_state (simp: crunch_simps)
 
 lemma syscall_reads_respects_f_g:
   assumes reads_res_m_fault:
@@ -486,7 +485,7 @@ lemma authorised_for_globals_triv:
 lemma set_thread_state_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
-    "reads_respects_g aag (l :: 'a subject_label) (is_subject aag \<circ> cur_thread and valid_ko_at_arch)
+    "reads_respects_g aag (l :: 'a subject_label) (is_subject aag \<circ> cur_thread and valid_arch_state)
                       (set_thread_state ref ts)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
@@ -592,7 +591,7 @@ lemma handle_invocation_reads_respects_g:
                                          is_subject aag (cur_thread s) \<and> rv \<noteq> idle_thread s"
                             in hoare_post_imp_R)
                 apply (wp pinv_invs perform_invocation_silc_inv)
-               apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_ko_at_arch)
+               apply (simp add: invs_def valid_state_def valid_pspace_def)
               apply (wpsimp wp: reads_respects_f_g'
                                 set_thread_state_reads_respects_g[OF domains_distinct])
              apply (wp when_ev set_thread_state_only_timer_irq_inv[where st=st']
@@ -617,7 +616,7 @@ lemma handle_invocation_reads_respects_g:
   apply (rule conjI)
    apply (clarsimp simp: requiv_g_cur_thread_eq simp: reads_equiv_f_g_conj)
   apply (clarsimp simp: det_getRegister invs_sym_refs invs_def valid_state_def
-                        valid_arch_state_ko_at_arch valid_pspace_vo valid_pspace_distinct)
+                        valid_pspace_vo valid_pspace_distinct)
   apply (rule context_conjI)
    apply (simp add: ct_active_cur_thread_not_idle_thread)
   apply (clarsimp simp: valid_pspace_def ct_in_state_def)
@@ -646,7 +645,7 @@ lemma delete_caller_cap_reads_respects_f:
   by (rule cap_delete_one_reads_respects_f[OF domains_distinct])
 
 lemma delete_caller_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    delete_caller_cap x
    \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding delete_caller_cap_def
@@ -822,7 +821,7 @@ lemma equiv_valid_hoist_guard:
 
 lemma as_user_reads_respects_g:
   "reads_respects_g aag k
-     (valid_ko_at_arch and (\<lambda>s. thread \<noteq> idle_thread s) and K (det f \<and> is_subject aag thread))
+     (valid_arch_state and (\<lambda>s. thread \<noteq> idle_thread s) and K (det f \<and> is_subject aag thread))
      (as_user thread f)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g)
@@ -858,7 +857,7 @@ lemma handle_interrupt_globals_equiv:
   done
 
 lemma handle_vm_fault_reads_respects_g:
-  "reads_respects_g aag l (K (is_subject aag t) and (valid_ko_at_arch and (\<lambda>s. t \<noteq> idle_thread s)))
+  "reads_respects_g aag l (K (is_subject aag t) and (valid_arch_state and (\<lambda>s. t \<noteq> idle_thread s)))
                     (handle_vm_fault t vmfault_type)"
   apply (rule reads_respects_g)
    apply (rule handle_vm_fault_reads_respects)
@@ -949,7 +948,7 @@ lemma activate_thread_reads_respects:
       | clarsimp simp: st_tcb_at_def obj_at_def is_tcb_def)+
 
 lemma activate_thread_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_idle\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_idle\<rbrace>
    activate_thread
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding activate_thread_def

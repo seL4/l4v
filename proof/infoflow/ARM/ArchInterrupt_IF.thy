@@ -29,14 +29,13 @@ lemma arch_invoke_irq_control_reads_respects[Interrupt_IF_assms]:
   done
 
 lemma arch_invoke_irq_control_globals_equiv[Interrupt_IF_assms]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
    arch_invoke_irq_control ai
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct ai)
   apply (simp add: setIRQTrigger_def)
-  apply (wp set_irq_state_valid_ko_at_arch set_irq_state_globals_equiv
-            set_irq_state_valid_global_objs cap_insert_globals_equiv'' dmo_mol_globals_equiv
-         | simp)+
+  apply (wpsimp wp: set_irq_state_globals_equiv set_irq_state_valid_global_objs
+                    cap_insert_globals_equiv'' dmo_mol_globals_equiv)
   done
 
 lemma arch_invoke_irq_handler_globals_equiv[Interrupt_IF_assms, wp]:

@@ -24,13 +24,7 @@ locale Finalise_IF_1 =
     "pas_domains_distinct aag
      \<Longrightarrow> reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state ref ts)"
   and set_bound_notification_globals_equiv:
-    "\<lbrace>globals_equiv s and valid_ko_at_arch\<rbrace> set_bound_notification ref nopt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  and set_bound_notification_valid_ko_at_arch[wp]:
-    "set_bound_notification ref nopt \<lbrace>valid_ko_at_arch\<rbrace>"
-  and set_original_valid_ko_at_arch[wp]:
-    "set_original slot v \<lbrace>valid_ko_at_arch\<rbrace>"
-  and set_cdt_valid_ko_at_arch[wp]:
-    "set_cdt ct \<lbrace>valid_ko_at_arch\<rbrace>"
+    "\<lbrace>globals_equiv s and valid_arch_state\<rbrace> set_bound_notification ref nopt \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and set_thread_state_runnable_reads_respects:
     "\<lbrakk> pas_domains_distinct aag; runnable ts \<rbrakk> \<Longrightarrow> reads_respects aag l \<top> (set_thread_state ref ts)"
   and set_bound_notification_none_reads_respects:
@@ -56,7 +50,7 @@ locale Finalise_IF_1 =
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   and set_notification_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+    "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      set_notification ntfnptr ntfn
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_post_cap_deletion_globals_equiv[wp]:
@@ -70,14 +64,6 @@ locale Finalise_IF_1 =
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and prepare_thread_delete_globals_equiv[wp]:
     "prepare_thread_delete t \<lbrace>globals_equiv st\<rbrace>"
-  and thread_set_valid_ko_at_arch[wp]:
-    "\<And>f. thread_set f t \<lbrace>valid_ko_at_arch\<rbrace>"
-  and prepare_thread_delete_valid_ko_at_arch[wp]:
-    "prepare_thread_delete t \<lbrace>valid_ko_at_arch\<rbrace>"
-  and arch_post_cap_deletion_valid_ko_at_arch[wp]:
-    "arch_post_cap_deletion acap \<lbrace>valid_ko_at_arch\<rbrace>"
-  and arch_finalise_cap_valid_ko_at_arch[wp]:
-    "arch_finalise_cap acap ex \<lbrace>valid_ko_at_arch\<rbrace>"
 begin
 
 lemma set_irq_state_reads_respects:
@@ -1003,7 +989,6 @@ context Finalise_IF_1 begin
 
 lemma reply_cancel_ipc_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  notes gets_ev[wp del] thread_set_valid_ko_at_arch[wp del]
   shows "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs
                                                  and tcb_at tptr and K (is_subject aag tptr))
                           (reply_cancel_ipc tptr)"
@@ -1428,14 +1413,14 @@ lemma globals_equiv_interrupt_states_update:
   by (auto simp: globals_equiv_def idle_equiv_def)
 
 lemma cancel_all_ipc_globals_equiv':
-  "cancel_all_ipc epptr \<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>"
+  "cancel_all_ipc epptr \<lbrace>globals_equiv st and valid_arch_state\<rbrace>"
   unfolding cancel_all_ipc_def
   by (wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
          set_simple_ko_globals_equiv hoare_vcg_all_lift get_object_inv dxo_wp_weak
       | wpc | simp | wp (once) hoare_drop_imps)+
 
 lemma cancel_all_ipc_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    cancel_all_ipc epptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_ipc_globals_equiv'])
@@ -1443,27 +1428,15 @@ lemma cancel_all_ipc_globals_equiv:
 crunch valid_global_objs: fast_finalise "valid_global_objs"
   (wp: crunch_wps dxo_wp_weak ignore: reschedule_required)
 
-lemma tcb_sched_action_enqueue_valid_ko_at_arch[wp]:
-  "tcb_sched_action tcb_sched_enqueue word \<lbrace>valid_ko_at_arch\<rbrace>"
-  by (wpsimp simp: tcb_sched_action_def etcb_at_def)
-
-lemma tcb_sched_action_dequeue_valid_ko_at_arch[wp]:
-  "tcb_sched_action tcb_sched_dequeue word \<lbrace>valid_ko_at_arch\<rbrace>"
-  by (wpsimp simp: tcb_sched_action_def etcb_at_def)
-
-crunch valid_ko_at_arch[wp]: set_message_info "valid_ko_at_arch"
-crunch valid_ko_at_arch[wp]: set_extra_badge "valid_ko_at_arch"
-crunch valid_ko_at_arch[wp]: copy_mrs "valid_ko_at_arch" (wp: mapM_wp')
-
 lemma cancel_all_signals_globals_equiv':
-  "cancel_all_signals epptr \<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>"
+  "cancel_all_signals epptr \<lbrace>globals_equiv st and valid_arch_state\<rbrace>"
   unfolding cancel_all_signals_def
   by (wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
          set_simple_ko_globals_equiv hoare_vcg_all_lift get_object_inv dxo_wp_weak
       | wpc | simp | wp (once) hoare_drop_imps)+
 
 lemma cancel_all_signals_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    cancel_all_signals epptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   by (fastforce intro: hoare_strengthen_post[OF cancel_all_signals_globals_equiv'])
@@ -1472,32 +1445,22 @@ lemma cancel_all_signals_globals_equiv:
 context Finalise_IF_1 begin
 
 lemma unbind_notification_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    unbind_notification t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_notification_def
   by (wpsimp wp: gbn_wp set_bound_notification_globals_equiv set_notification_globals_equiv)
 
 lemma unbind_maybe_notification_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    unbind_maybe_notification a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unbind_maybe_notification_def
   by (wpsimp wp: gbn_wp set_bound_notification_globals_equiv
                  set_notification_globals_equiv get_simple_ko_wp)
 
-lemma unbind_notification_valid_ko_at_arch[wp]:
-  "unbind_notification t \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding unbind_notification_def
-  by (wpsimp wp: gbn_wp set_bound_notification_valid_ko_at_arch)+
-
-lemma unbind_maybe_notification_valid_ko_at_arch[wp]:
-  "unbind_maybe_notification a \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding unbind_maybe_notification_def
-  by (wpsimp wp: gbn_wp set_bound_notification_valid_ko_at_arch get_simple_ko_wp)
-
 lemma fast_finalise_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    fast_finalise cap final
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (cases cap)
@@ -1505,21 +1468,10 @@ lemma fast_finalise_globals_equiv:
                     unbind_maybe_notification_globals_equiv
               simp: when_def split_del: if_split)+
 
-crunch valid_ko_at_arch[wp]: fast_finalise "valid_ko_at_arch"
-  (wp: mapM_x_wp' dxo_wp_weak ignore: reschedule_required)
-
-crunch valid_ko_at_arch[wp]: cap_insert "valid_ko_at_arch"
-  (wp: hoare_drop_imps dxo_wp_weak simp: crunch_simps simp_del: cap_insert_ext_extended.dxo_eq)
-
-lemma transfer_caps_valid_ko_at_arch[wp]:
-  "transfer_caps a b c d e \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding transfer_caps_def
-  by (wpsimp wp: transfer_caps_loop_pres cap_insert_valid_ko_at_arch)
-
 crunch globals_equiv[wp]: deleted_irq_handler "globals_equiv st"
 
 lemma empty_slot_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace> empty_slot s b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace> empty_slot s b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding empty_slot_def post_cap_deletion_def
   by (wpsimp wp: set_cap_globals_equiv'' set_original_globals_equiv hoare_vcg_if_lift2
                  set_cdt_globals_equiv dxo_wp_weak hoare_drop_imps hoare_vcg_all_lift)
@@ -1530,19 +1482,13 @@ crunch globals_equiv: cap_delete_one "globals_equiv st"
 (*FIXME: Lots of this stuff should be in arch *)
 crunch globals_equiv[wp]: deleting_irq_handler "globals_equiv st"
 
-crunch valid_ko_at_arch[wp]: finalise_cap "valid_ko_at_arch"
-  (wp: hoare_vcg_if_lift2 hoare_drop_imps select_wp modify_wp mapM_wp' dxo_wp_weak
-   simp: unless_def crunch_simps
-   ignore: empty_slot_ext)
-
-crunch valid_ko_at_arch[wp]: setup_reply_master "valid_ko_at_arch"
-
 crunch globals_equiv[wp]: cancel_ipc "globals_equiv st"
-  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 cancel_signal_valid_ko_at_arch
-   simp: unless_def)
+  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma suspend_globals_equiv[ wp]:
-  "\<lbrace>globals_equiv st and (\<lambda>s. t \<noteq> idle_thread s) and valid_ko_at_arch\<rbrace> suspend t \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv st and (\<lambda>s. t \<noteq> idle_thread s) and valid_arch_state\<rbrace>
+   suspend t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding suspend_def update_restart_pc_def
   apply (wp tcb_sched_action_extended.globals_equiv dxo_wp_weak)
        apply simp
@@ -1558,6 +1504,9 @@ lemma suspend_globals_equiv[ wp]:
   apply auto
   done
 
+crunches unbind_notification
+  for valid_arch_state[wp]: valid_arch_state
+
 lemma finalise_cap_globals_equiv:
   "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
                      and valid_global_objs and valid_arch_state and pspace_aligned
@@ -1569,7 +1518,7 @@ lemma finalise_cap_globals_equiv:
          cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
          arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
          unbind_notification_globals_equiv liftM_wp when_def
-      | clarsimp simp: valid_arch_state_ko_at_arch | intro impI conjI)+
+      | clarsimp | intro impI conjI)+
 
 end
 

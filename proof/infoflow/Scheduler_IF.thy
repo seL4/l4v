@@ -2341,10 +2341,10 @@ lemma activate_thread_reads_respects_scheduler[wp]:
                  [where P'="\<lambda>s. \<not> reads_scheduler_cur_domain aag l s \<and>
                                 guarded_pas_domain aag s \<and> invs s"])
      apply ((wp scheduler_equiv_lift'[where P="invs and silc_inv aag st"]
-                globals_equiv_scheduler_inv'[where P="valid_ko_at_arch and valid_idle"]
+                globals_equiv_scheduler_inv'[where P="valid_arch_state and valid_idle"]
                 set_thread_state_globals_equiv gts_wp
              | wpc
-             | clarsimp simp: restart_not_idle invs_valid_ko_at_arch silc_inv_not_cur_thread
+             | clarsimp simp: restart_not_idle silc_inv_not_cur_thread
              | force)+)[1]
     apply (wp gts_wp| wpc | simp)+
     apply (clarsimp simp: guarded_pas_domain_def restart_not_idle invs_valid_idle)

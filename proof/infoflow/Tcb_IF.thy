@@ -18,7 +18,7 @@ crunches cancel_ipc, restart, deleting_irq_handler, suspend, cap_swap_for_delete
 section "globals equiv"
 
 lemma setup_reply_master_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    setup_reply_master t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding setup_reply_master_def
@@ -27,7 +27,7 @@ lemma setup_reply_master_globals_equiv:
   done
 
 lemma restart_globals_equiv[wp]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    restart t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding restart_def
@@ -38,14 +38,11 @@ lemma globals_equiv_ioc_update[simp]:
   by (simp add: globals_equiv_def idle_equiv_def)
 
 lemma cap_swap_for_delete_globals_equiv[wp]:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    cap_swap_for_delete a b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cap_swap_for_delete_def cap_swap_def set_original_def
   by (wp modify_wp set_cdt_globals_equiv set_cap_globals_equiv'' dxo_wp_weak | simp)+
-
-crunch valid_ko_at_arch[wp]: cap_swap_for_delete, restart "valid_ko_at_arch"
-  (wp: dxo_wp_weak simp_del: cap_swap_ext_extended.dxo_eq possible_switch_to_extended.dxo_eq)
 
 lemma rec_del_preservation2':
   assumes finalise_cap_P: "\<And>cap final. \<lbrace>R cap and P\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. P\<rbrace>"
@@ -133,7 +130,7 @@ next
   show ?case
     apply (simp add: spec_validE_def)
     apply (rule hoare_pre, wp cap_swap_for_delete_P cap_swap_for_delete_Q)
-    apply (clarsimp simp: invs_valid_ko_at_arch)
+    apply (clarsimp)
     done
 next
   case (4 ptr bits n slot s)
@@ -182,9 +179,7 @@ lemma rec_del_preservation2:
 
 locale Tcb_IF_1 =
   fixes aag :: "'a subject_label PAS"
-  assumes valid_ko_at_arch_irq_state_independent_A[simp, intro!]:
-    "irq_state_independent_A valid_ko_at_arch"
-  and valid_arch_caps_vs_lookup:
+  assumes valid_arch_caps_vs_lookup:
     "valid_arch_caps s \<Longrightarrow> valid_vs_lookup s"
   and no_cap_to_idle_thread':
     "valid_global_refs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
@@ -192,20 +187,24 @@ locale Tcb_IF_1 =
     "valid_global_refs s \<Longrightarrow> caps_of_state s ref \<noteq> Some (ThreadCap (idle_thread s))"
   and arch_post_modify_registers_globals_equiv[wp]:
     "arch_post_modify_registers cur t \<lbrace>globals_equiv s\<rbrace>"
-  and arch_post_modify_registers_valid_ko_at_arch[wp]:
-    "arch_post_modify_registers cur t \<lbrace>valid_ko_at_arch\<rbrace>"
+  and arch_post_modify_registers_valid_arch_state[wp]:
+    "arch_post_modify_registers cur t \<lbrace>\<lambda>s :: det_state. valid_arch_state s\<rbrace>"
   and arch_post_modify_registers_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_post_modify_registers cur t)"
   and arch_get_sanitise_register_info_reads_respects_f[wp]:
     "reads_respects_f aag l \<top> (arch_get_sanitise_register_info t)"
 begin
 
+crunches cap_swap_for_delete
+  for valid_arch_state[wp]: valid_arch_state
+  (wp: dxo_wp_weak)
+
 lemma rec_del_globals_equiv:
   "\<lbrace>\<lambda>s. invs s \<and> globals_equiv st s \<and> emptyable (slot_rdcall call) s \<and> valid_rec_del_call call s\<rbrace>
    rec_del call
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (wp finalise_cap_globals_equiv
-            rec_del_preservation2[where Q="valid_ko_at_arch"
+            rec_del_preservation2[where Q="valid_arch_state"
                                     and R="\<lambda>cap s. valid_global_objs s \<and> valid_arch_state s
                                                  \<and> pspace_aligned s \<and> valid_vspace_objs s
                                                  \<and> valid_global_refs s  \<and> valid_vs_lookup s
@@ -213,11 +212,11 @@ lemma rec_del_globals_equiv:
              apply simp
             apply (wp set_cap_globals_equiv'')
             apply simp
-           apply (wp set_cap_valid_ko_at_arch empty_slot_globals_equiv)+
+           apply (wp empty_slot_globals_equiv)+
           apply simp
-         apply (wp empty_slot_valid_ko_at_arch)+
+         apply (wp)+
        apply simp
-      apply (simp add: invs_valid_ko_at_arch)
+      apply fastforce
      apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_vs_lookup
                            valid_pspace_def no_cap_to_idle_thread'')
     apply (wp preemption_point_inv | simp)+
@@ -248,19 +247,14 @@ crunch idle_thread'[wp]: restart "\<lambda>s. P (idle_thread s)"
   (wp: dxo_wp_weak)
 
 lemma bind_notification_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    bind_notification t ntfnptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding bind_notification_def
   by (wp set_bound_notification_globals_equiv set_notification_globals_equiv | wpc | simp)+
 
-lemma bind_notification_valid_ko_at_arch[wp]:
-  "bind_notification t ntfnptr \<lbrace>valid_ko_at_arch\<rbrace>"
-  unfolding bind_notification_def
-  by (wp set_bound_notification_valid_ko_at_arch | wpc | simp)+
-
 lemma invoke_tcb_NotificationControl_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch\<rbrace>
+  "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    invoke_tcb (NotificationControl t ntfn)
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (case_tac ntfn, simp_all)
@@ -307,22 +301,22 @@ lemma invoke_tcb_globals_equiv:
   supply reschedule_required_ext_extended.dxo_eq[simp del]
   apply (case_tac ti; (solves \<open>(wp mapM_x_wp' as_user_globals_equiv
                                    invoke_tcb_NotificationControl_globals_equiv
-                                | simp add: invs_valid_ko_at_arch
+                                | simp
                                 | intro conjI impI
                                 | clarsimp simp: no_cap_to_idle_thread)+\<close>)?)
    apply wpsimp
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
-       apply (rule_tac Q="\<lambda>_. valid_ko_at_arch and globals_equiv st and
+       apply (rule_tac Q="\<lambda>_. valid_arch_state and globals_equiv st and
                               (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
         apply ((wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv
-                | simp add: invs_valid_ko_at_arch
+                | simp
                 | intro conjI impI
                 | clarsimp simp: no_cap_to_idle_thread)+)[6]
   apply (simp del: invoke_tcb.simps tcb_inv_wf.simps)
   apply (wp invoke_tcb_thread_preservation cap_delete_globals_equiv
             cap_insert_globals_equiv'' thread_set_globals_equiv set_mcpriority_globals_equiv
-         | clarsimp simp: invs_valid_ko_at_arch split del: if_split)+
+         | fastforce)+
   done
 
 end

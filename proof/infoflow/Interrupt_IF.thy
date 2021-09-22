@@ -20,7 +20,7 @@ locale Interrupt_IF_1 =
     "reads_respects aag l (K (arch_authorised_irq_ctl_inv aag irq_ctl_inv))
                     (arch_invoke_irq_control irq_ctl_inv)"
   and arch_invoke_irq_control_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs\<rbrace>
+    "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
      arch_invoke_irq_control ai
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and arch_invoke_irq_handler_globals_equiv[wp]:
@@ -73,21 +73,21 @@ lemma invoke_irq_control_reads_respects:
   done
 
 lemma invoke_irq_control_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch and valid_global_objs\<rbrace> invoke_irq_control a
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
+   invoke_irq_control a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-   apply (wp set_irq_state_valid_ko_at_arch set_irq_state_globals_equiv cap_insert_globals_equiv''
-             set_irq_state_valid_global_objs arch_invoke_irq_control_globals_equiv
-          | simp)+
+   apply (wpsimp wp: set_irq_state_globals_equiv cap_insert_globals_equiv''
+                     set_irq_state_valid_global_objs arch_invoke_irq_control_globals_equiv)+
   done
 
 lemma invoke_irq_handler_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arch  and valid_global_objs\<rbrace>
-    invoke_irq_handler a
+  "\<lbrace>globals_equiv st and valid_arch_state and valid_global_objs\<rbrace>
+   invoke_irq_handler a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-  by (wpsimp wp: modify_wp cap_insert_globals_equiv'' cap_delete_one_globals_equiv
-                 cap_delete_one_valid_ko_at_arch cap_delete_one_valid_global_objs)+
+  by (wpsimp wp: modify_wp cap_insert_globals_equiv''
+                 cap_delete_one_globals_equiv cap_delete_one_valid_global_objs)+
 
 subsection "reads_respects_g"
 
@@ -102,11 +102,10 @@ lemma invoke_irq_handler_reads_respects_f_g:
     apply (rule invoke_irq_handler_reads_respects_f[OF domains_distinct])
    apply (rule doesnt_touch_globalsI)
    apply (wp invoke_irq_handler_globals_equiv | simp)+
-  apply (simp add: invs_valid_ko_at_arch invs_valid_global_objs)
   by auto
 
 lemma invoke_irq_control_reads_respects_g:
-  "reads_respects_g aag l (valid_global_objs and valid_ko_at_arch
+  "reads_respects_g aag l (valid_global_objs and valid_arch_state
                                              and K (authorised_irq_ctl_inv aag i))
                     (invoke_irq_control i)"
   apply (rule equiv_valid_guard_imp[OF reads_respects_g])
