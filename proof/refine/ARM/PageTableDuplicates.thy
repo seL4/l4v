@@ -2084,7 +2084,7 @@ lemma tc_caps_valid_duplicates':
 
 crunches schedContextBindTCB
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma tc_sched_valid_duplicates':
   "\<lbrace>invs' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and

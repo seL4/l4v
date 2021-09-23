@@ -396,6 +396,7 @@ lemma pinv_corres:
             and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call can_donate i) (performInvocation block call can_donate i')"
+  supply current_time_bounded_strengthen[of 2 _ 0, elim!]
   apply (simp add: performInvocation_def)
   apply add_sym_refs
   apply (case_tac i)
