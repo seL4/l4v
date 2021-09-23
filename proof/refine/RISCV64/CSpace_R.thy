@@ -748,6 +748,7 @@ lemma cteMove_corres:
               cte_wp_at' (\<lambda>c. cteCap c = NullCap) (cte_map ptr'))
           (cap_move cap ptr ptr') (cteMove cap' (cte_map ptr) (cte_map ptr'))"
   (is "corres _ ?P ?P' _ _")
+  supply subst_all [simp del]
   apply (simp add: cap_move_def cteMove_def const_def)
   apply (rule corres_symb_exec_r)
      defer
@@ -3834,6 +3835,7 @@ lemma create_reply_master_corres:
 lemma cte_map_nat_to_cref:
   "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
    cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
+  including no_take_bit
   apply (clarsimp simp: cte_map_def nat_to_cref_def shiftl_t2n
                  dest!: less_is_drop_replicate)
   apply (subst mult_ac)
@@ -4702,6 +4704,7 @@ lemma cteInsert_simple_corres:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _ and _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
+  supply subst_all [simp del]
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ get_cap_corres])

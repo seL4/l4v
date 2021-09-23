@@ -611,7 +611,7 @@ lemma dec_dom_inv_wf[wp]:
    apply (simp add:null_def)
   apply (simp add:valid_cap'_def)
   apply (simp add:not_le)
-  apply (simp add:ucast_nat_def[symmetric])
+  apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
   apply (rule word_of_nat_le)
   apply (simp add:numDomains_def maxDomain_def)
   done

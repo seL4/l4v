@@ -537,7 +537,7 @@ lemma kernel_corres':
             apply (rule corres_underlying_trivial)
             apply (rule no_fail_getActiveIRQ)
            apply clarsimp
-           apply (rule_tac x=irqa in option_corres)
+           apply (rule_tac x=irq in option_corres)
             apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
             apply (simp add: when_def)
            apply (rule corres_when[simplified dc_def], simp)
