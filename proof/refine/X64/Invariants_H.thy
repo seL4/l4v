@@ -3492,30 +3492,8 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
 lemma mask_wordRadix_less_wordBits:
   assumes sz: "wordRadix \<le> size w"
   shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
-proof -
-  note pow_num = semiring_numeral_class.power_numeral
-
-  { assume "wordRadix = size w"
-    hence ?thesis
-      by (fastforce intro!: unat_lt2p[THEN order_less_le_trans]
-                    simp: wordRadix_def wordBits_def' word_size)
-  } moreover {
-    assume "wordRadix < size w"
-    hence ?thesis unfolding wordRadix_def wordBits_def' mask_def
-    apply simp
-    apply (subst unat_less_helper, simp_all)
-    apply (rule word_and_le1[THEN order_le_less_trans])
-    apply (simp add: word_size bintrunc_mod2p)
-    apply (subst int_mod_eq', simp_all)
-     apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-     apply (simp del: pow_num)
-    apply (subst int_mod_eq', simp_all)
-    apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-    apply (simp del: pow_num)
-    done
-  }
-  ultimately show ?thesis using sz by fastforce
-qed
+  using word_unat_mask_lt[where m=wordRadix and w=w] assms
+  by (simp add: wordRadix_def wordBits_def')
 
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
