@@ -237,6 +237,14 @@ lemma sshiftr_numeral [simp]:
    apply (simp_all add: word_size bit_drop_bit_eq nth_sshiftr bit_signed_take_bit_iff min_def not_le not_less less_Suc_eq_le ac_simps)
   done
 
+lemma sshiftr_numeral_Suc_0 [simp]:
+  \<open>(numeral k >>> Suc 0 :: 'a::len word) =
+    word_of_int (drop_bit (Suc 0) (signed_take_bit (LENGTH('a) - 1) (numeral k)))\<close>
+  apply (rule word_eqI)
+  apply (cases \<open>LENGTH('a)\<close>)
+   apply (simp_all add: word_size bit_drop_bit_eq nth_sshiftr bit_signed_take_bit_iff min_def not_le not_less less_Suc_eq_le ac_simps)
+  by (metis dual_order.antisym le_Suc_eq)
+
 setup \<open>
   Context.theory_map (fold SMT_Word.add_word_shift' [
     (\<^term>\<open>shiftl :: 'a::len word \<Rightarrow> _\<close>, "bvshl"),
@@ -346,6 +354,10 @@ lemma rev_shiftr: "word_reverse w >> n = word_reverse (w << n)"
 lemma shiftl_numeral [simp]:
   \<open>numeral k << numeral l = (push_bit (numeral l) (numeral k) :: 'a::len word)\<close>
   by (fact shiftl_word_eq)
+
+lemma shiftl_numeral_Suc_0 [simp]:
+  \<open>numeral k << Suc 0 = (numeral (k * num.Bit0 num.One) :: 'a::len word)\<close>
+  by (subst shiftl_word_eq) simp
 
 lemma shiftl_zero_size: "size x \<le> n \<Longrightarrow> x << n = 0"
   for x :: "'a::len word"
