@@ -3088,7 +3088,7 @@ lemma maybeDonateSc_corres:
   "corres dc (tcb_at tcb_ptr and ntfn_at ntfn_ptr and weak_valid_sched_action
               and valid_ready_qs and active_sc_valid_refills and valid_release_q
               and valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s))
-              and current_time_bounded 2 and ex_nonz_cap_to tcb_ptr)
+              and current_time_bounded 0 and ex_nonz_cap_to tcb_ptr)
              (tcb_at' tcb_ptr and ntfn_at' ntfn_ptr and ex_nonz_cap_to' tcb_ptr
               and valid_objs' and valid_queues and valid_queues' and valid_release_queue_iff)
              (maybe_donate_sc tcb_ptr ntfn_ptr)
@@ -3109,21 +3109,14 @@ lemma maybeDonateSc_corres:
             apply (rule corres_when)
              apply (clarsimp simp: sc_relation_def)
             apply (rule corres_split_deprecated[OF _ schedContextDonate_corres])
-              apply (rule corres_split_deprecated[OF _ getCurSc_corres])
-                apply (rule corres_split_deprecated[OF _ corres_when])
                     apply (rule schedContextResume_corres, simp)
                   apply clarsimp
-                  apply (rule refillUnblockCheck_corres)
-                 apply (wpsimp wp: refill_unblock_check_valid_release_q
-                                   refill_unblock_check_active_sc_valid_refills)
-                apply (wpsimp wp: refillUnblockCheck_invs')
-               apply wpsimp
               apply wpsimp
              apply (rule_tac Q="\<lambda>_. valid_objs and valid_ready_qs and
                        pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)) and
                        active_sc_valid_refills and valid_release_q and
-                       sc_not_in_release_q xa and active_sc_valid_refills and
-                       current_time_bounded 2 and sc_tcb_sc_at ((=) (Some tcb_ptr)) xa"
+                       sc_not_in_release_q xa and
+                       current_time_bounded 0 and sc_tcb_sc_at ((=) (Some tcb_ptr)) xa"
                     in hoare_strengthen_post[rotated])
               apply (fastforce simp: sc_at_pred_n_def obj_at_def)
              apply (wpsimp wp: sched_context_donate_sym_refs
@@ -3311,7 +3304,7 @@ lemma maybeDonateSc_valid_release_queue[wp]:
   by (clarsimp simp: obj_at'_def)
 
 lemma maybeDonateSc_valid_objs'[wp]:
-  "\<lbrace>valid_objs' and valid_release_queue'\<rbrace>
+  "\<lbrace>valid_objs'\<rbrace>
    maybeDonateSc tptr nptr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   unfolding maybeDonateSc_def
@@ -3336,7 +3329,7 @@ lemma maybeDonateSc_valid_queues[wp]:
   by (clarsimp simp: obj_at'_def)
 
 lemma maybeDonateSc_valid_queues'[wp]:
-  "\<lbrace>valid_queues' and valid_objs'\<rbrace>
+  "\<lbrace>valid_queues'\<rbrace>
    maybeDonateSc tptr nptr
    \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
   unfolding maybeDonateSc_def
@@ -3390,7 +3383,7 @@ lemma cancelIPC_valid_idle'[wp]:
   done
 
 lemma sendSignal_corres:
-  "corres dc (einvs and ntfn_at ep and current_time_bounded 2) (invs' and ntfn_at' ep)
+  "corres dc (einvs and ntfn_at ep and current_time_bounded 0) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply add_sym_refs
@@ -3401,7 +3394,7 @@ lemma sendSignal_corres:
                  where
                  R  = "\<lambda>rv. einvs and ntfn_at ep and valid_ntfn rv and
                             ko_at (Structures_A.Notification rv) ep
-                            and current_time_bounded 2" and
+                            and current_time_bounded 0" and
                  R' = "\<lambda>rv'. invs' and valid_idle' and ntfn_at' ep and
                              valid_ntfn' rv' and ko_at' rv' ep"])
        defer
@@ -3451,7 +3444,7 @@ lemma sendSignal_corres:
                       (=) Structures_A.thread_state.IdleThreadState) tptr and
                    ex_nonz_cap_to tptr and fault_tcb_at ((=) None) tptr and
                    valid_sched and scheduler_act_not tptr and active_sc_valid_refills
-                   and current_time_bounded 2"
+                   and current_time_bounded 0"
                  in hoare_strengthen_post[rotated])
            apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def pred_disj_def)
            apply (rule conjI, fastforce)
@@ -3604,7 +3597,7 @@ lemma replyRemoveTCB_irqs_masked'[wp]:
   unfolding replyRemoveTCB_def
   by (wpsimp wp: hoare_drop_imps gts_wp'|rule conjI)+
 
-crunches sendSignal
+crunches sendSignal, refillUnblockCheck
   for ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and irqs_masked'[wp]: "irqs_masked'"
@@ -4790,7 +4783,7 @@ lemma receiveSignal_corres:
  "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc ((invs and weak_valid_sched_action and scheduler_act_not thread and valid_ready_qs
                    and st_tcb_at active thread and active_sc_valid_refills and valid_release_q
-                   and current_time_bounded 2 and (\<lambda>s. thread = cur_thread s) and not_queued thread
+                   and current_time_bounded 0 and (\<lambda>s. thread = cur_thread s) and not_queued thread
                    and not_in_release_q thread and ex_nonz_cap_to thread) and valid_cap cap)
             (invs' and tcb_at' thread and ex_nonz_cap_to' thread and valid_cap' cap')
             (receive_signal thread cap isBlocking) (receiveSignal thread cap' isBlocking)"
