@@ -805,10 +805,11 @@ lemma threadSet_cte_wp_at'T:
   shows "\<lbrace>\<lambda>s. P' (cte_wp_at' P p s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P' (cte_wp_at' P p s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (rule hoare_seq_ext [where B="\<lambda>rv s. P' (cte_wp_at' P p s) \<and> obj_at' ((=) rv) t s"])
+   apply (rename_tac tcb)
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def in_monad objBits_simps'
                           obj_at'_def in_magnitude_check prod_eq_iff)
-    apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
+    apply (case_tac tcb, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def)
   apply (wp getObject_tcb_wp)
   apply (clarsimp simp: obj_at'_def)
