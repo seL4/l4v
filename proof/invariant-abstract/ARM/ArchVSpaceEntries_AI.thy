@@ -692,7 +692,7 @@ crunch valid_pdpt_objs[wp]: reorder_ntfn, reorder_ep, thread_set_priority, set_p
   (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_pdpt_objs[wp]: invoke_tcb, invoke_domain "valid_pdpt_objs::det_state \<Rightarrow> _"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
+  (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
        ignore: check_cap_at set_object tcb_release_enqueue test_possible_switch_to)
 
 crunch valid_pdpt_objs[wp]: invoke_irq_handler "valid_pdpt_objs"
