@@ -265,7 +265,7 @@ lemma decodeIRQControlInvocation_corres:
                dest!: not_le_imp_less
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
-  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def[symmetric])
+  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq)
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
@@ -324,6 +324,7 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                             not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -341,6 +342,7 @@ lemma decode_irq_control_valid'[wp]:
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma valid_globals_ex_cte_cap_irq:
@@ -666,13 +668,11 @@ lemma timerTick_corres:
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)
               apply (unfold thread_set_time_slice_def)
-              apply (fold dc_def)
               apply (rule ethread_set_corres, simp+)
               apply (clarsimp simp: etcb_relation_def)
              apply simp
              apply (rule corres_split_deprecated [OF _ ethread_set_corres])
                       apply (rule corres_split_deprecated [OF _ tcbSchedAppend_corres])
-                        apply (fold dc_def)
                         apply (rule rescheduleRequired_corres)
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
@@ -697,18 +697,12 @@ lemma timerTick_corres:
             threadSet_tcbDomain_triv threadSet_valid_queues' threadSet_valid_objs'| simp)+
          apply (wp threadGet_wp gts_wp gts_wp')+
        apply (clarsimp simp: cur_tcb_def tcb_at_is_etcb_at valid_sched_def valid_sched_action_def)
-       apply (subgoal_tac "is_etcb_at thread s \<and> tcb_at thread s \<and> valid_etcbs s \<and> weak_valid_sched_action s")
         prefer 2
-        apply assumption
        apply clarsimp
-      apply (wp gts_wp')+
      apply (clarsimp simp add:cur_tcb_def valid_sched_def
          valid_sched_action_def valid_etcbs_def is_tcb_def
          is_etcb_at_def st_tcb_at_def obj_at_def
          dest!:get_tcb_SomeD)
-     apply (simp split:Structures_A.kernel_object.splits)
-     apply (drule_tac x = "cur_thread s" in spec)
-     apply clarsimp
     apply (clarsimp simp: invs'_def valid_state'_def
     sch_act_wf_weak
     cur_tcb'_def inQ_def
@@ -717,7 +711,6 @@ lemma timerTick_corres:
        valid_idle'_def ct_idle_or_in_cur_domain'_def
        obj_at'_def projectKO_eq)
    apply simp
-  apply simp
   done
 
 lemma corres_return_VGICMaintenance [corres]:
@@ -911,8 +904,10 @@ lemma vppiEvent_corres:
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
     (vppi_event irq) (vppiEvent irq)"
   unfolding vppi_event_def vppiEvent_def isRunnable_def
+  supply [[simproc del: defined_all]]
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_gets_current_vcpu], simp)
+    apply (rule corres_split_deprecated[OF _ corres_gets_current_vcpu])
+      apply (clarsimp simp del: subst_all (* avoid destroying useful name of rv *))
       (* we only care about the one case we do something: active current vcpu *)
       apply (rule_tac R="hsCurVCPU = None" in corres_cases')
        apply (rule corres_trivial, simp)

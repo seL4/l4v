@@ -120,7 +120,6 @@ lemma getObject_ASIDPool_corres [@lift_corres_args, corres]:
   apply (simp add: return_def)
   apply (simp add: in_magnitude_check objBits_simps
                    archObjSize_def pageBits_def)
-  apply clarsimp
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
@@ -278,7 +277,6 @@ lemma getObject_PDE_corres [@lift_corres_args, corres]:
   apply (frule_tac s'=ba in in_magnitude_check, simp add: objBits_simps archObjSize_def vspace_bits_defs)
    apply assumption
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def vspace_bits_defs)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pde_relation_def)

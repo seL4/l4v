@@ -66,9 +66,9 @@ lemma APIType_map2_CapTable[simp]:
                 kernel_object.split arch_kernel_object.splits)
 
 lemma alignUp_H[simp]:
-  "Untyped_H.alignUp = Word_Lib.alignUp"
+  "Untyped_H.alignUp = More_Word_Operations.alignUp"
   apply (rule ext)+
-  apply (clarsimp simp:Untyped_H.alignUp_def Word_Lib.alignUp_def mask_def)
+  apply (clarsimp simp:Untyped_H.alignUp_def More_Word_Operations.alignUp_def mask_def)
   done
 
 (* MOVE *)
@@ -259,6 +259,7 @@ next
 
   note word_unat_power [symmetric, simp del]
   show ?thesis
+    including no_take_bit
     apply (rule corres_name_pre)
     apply clarsimp
     apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap d w n idx)) (cte_map slot) s'")
@@ -760,6 +761,7 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
+  including no_take_bit
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
                 split del: if_split cong: if_cong list.case_cong)
@@ -3016,6 +3018,7 @@ lemma createNewCaps_range_helper:
           \<and> (\<forall>p. capClass (capfn p) = PhysicalClass
                  \<and> capUntypedPtr (capfn p) = p
                  \<and> capBits (capfn p) = (APIType_capBits tp us))\<rbrace>"
+  including no_0_dvd
   apply (simp add: createNewCaps_def toAPIType_def Arch_createNewCaps_def
                split del: if_split cong: option.case_cong)
   apply (rule hoare_grab_asm)+
@@ -3026,8 +3029,7 @@ lemma createNewCaps_range_helper:
           apply (case_tac apiobject_type, simp_all split del: if_split)
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_def
-                objBits_simps archObjSize_def ptr_add_def o_def)
+              apply (clarsimp simp: APIType_capBits_def objBits_simps archObjSize_def ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -3063,8 +3065,7 @@ lemma createNewCaps_range_helper2:
   apply (rule hoare_assume_pre)
   apply (rule hoare_strengthen_post)
    apply (rule createNewCaps_range_helper)
-  apply (clarsimp simp: capRange_def interval_empty ptr_add_def
-                        word_unat_power[symmetric]
+  apply (clarsimp simp: capRange_def ptr_add_def word_unat_power[symmetric]
                   simp del: atLeastatMost_subset_iff
                  dest!: less_two_pow_divD)
   apply (rule conjI)
@@ -4248,6 +4249,7 @@ lemma resetUntypedCap_corres:
      (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
      (reset_untyped_cap slot)
      (resetUntypedCap (cte_map slot))"
+  including no_take_bit
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
@@ -4486,6 +4488,7 @@ lemma resetUntypedCap_invs_etc:
       and pspace_no_overlap' ptr sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   (is "\<lbrace>invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?asm\<rbrace>
     ?f \<lbrace>\<lambda>_. invs' and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
+  including no_0_dvd no_take_bit
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
   apply (rule hoare_vcg_seqE[rotated])
@@ -5487,14 +5490,14 @@ lemma invokeUntyped_invs'':
         Q' s"
 
     obtain cref reset ptr tp us slots dev
-      where pf:
-      "invokeUntyped_proofs s cref reset (ptr && ~~ mask sz) ptr tp us slots
-          sz idx dev"
+      where pf: "invokeUntyped_proofs s cref reset (ptr && ~~ mask sz) ptr tp us slots sz idx dev"
       and ui: "ui = Invocations_H.Retype cref reset (ptr && ~~ mask sz) ptr tp us slots dev"
       using vui1 misc
       apply (cases ui, simp only: Invocations_H.untyped_invocation.simps)
       apply (frule(2) invokeUntyped_proofs.intro)
-      apply (clarsimp simp: cte_wp_at_ctes_of word_bw_assocs)
+      apply clarsimp
+      apply (unfold cte_wp_at_ctes_of)
+      apply (drule meta_mp; clarsimp)
       done
 
     note vui = vui1[simplified ui Invocations_H.untyped_invocation.simps]

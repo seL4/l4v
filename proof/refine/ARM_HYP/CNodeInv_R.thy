@@ -5969,6 +5969,7 @@ lemma valid_cap'_handy_bits:
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> n < 2 ^ word_bits"
   "\<lbrakk> s \<turnstile>' Zombie r zb n; n \<noteq> 0 \<rbrakk> \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: word32)"
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> zBits zb < word_bits"
+  including no_0_dvd no_take_bit
   apply (insert zombieCTEs_le[where zb=zb],
          simp_all add: valid_cap'_def)
    apply (clarsimp elim!: order_le_less_trans)
@@ -6008,6 +6009,7 @@ lemma ex_Zombie_to2:
   "\<lbrakk> ctes_of s p = Some cte; cteCap cte = Zombie p' b n;
        n \<noteq> 0; valid_objs' s \<rbrakk>
       \<Longrightarrow> ex_cte_cap_to' (p' + (2^cteSizeBits * of_nat n - 2^cteSizeBits)) s"
+  including no_take_bit no_0_dvd
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
@@ -6622,7 +6624,6 @@ lemma rvk_prog_modify_map:
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
   apply simp
-  apply (erule meta_allE, drule meta_mp, rule refl)
   apply (erule disjE)
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
@@ -7233,6 +7234,7 @@ next
   have pred_conj_assoc: "\<And>P Q R. (P and (Q and R)) = (P and Q and R)"
     by (rule ext, simp)
   show ?case
+    including no_take_bit no_0_dvd
     apply (simp only: rec_del_concrete_unfold cap_relation.simps)
     apply (simp add: reduceZombie_def Let_def
                      liftE_bindE
@@ -8022,7 +8024,7 @@ lemma m_cap:
 lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
-  apply (case_tac "isReplyCap src_cap")
+  apply (case_tac "isReplyCap src_cap"; clarsimp)
    apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
           ; fastforce simp: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps
                       split: if_split_asm)+
