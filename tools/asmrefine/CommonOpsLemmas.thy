@@ -38,8 +38,9 @@ lemma is_up_u32_word_size: "is_up UCAST(32 \<rightarrow> machine_word_len)"
 lemma is_up_i32_word_size: "is_up UCAST(32 signed \<rightarrow> machine_word_len)"
   by (clarsimp simp add: is_up_def source_size target_size)
 
+(* This proof is a bit convoluted so that it happens to work with word_bits = 32 and 64 *)
 lemma unat_word32_less_2p_word_bits: "unat (x :: 32 word) < 2 ^ word_bits"
-  by (fact unat_less_2p_word_bits)
+  unfolding word_bits_def by (rule upcast_unat_less_2p_length, rule is_up_u32_word_size)
 
 lemma unat_sword32_less_2p_word_bits: "unat (x :: 32 signed word) < 2 ^ word_bits"
   by (rule upcast_unat_less_2p_length[OF is_up_i32_word_size, simplified word_bits_def[symmetric]])
