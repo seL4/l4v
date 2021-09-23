@@ -8,6 +8,9 @@ theory Word_Lemmas_64_Internal
 imports Word_Lib_Sumo Word_64
 begin
 
+(* This is why Word_Lib_Sumo doesn't really work: *)
+lemmas word_and_max_simps = word_and_max_simps word64_and_max_simp
+
 lemmas unat_add_simple = iffD1[OF unat_add_lem[where 'a = 64, folded word_bits_def]]
 
 lemma unat_length_4_helper:
