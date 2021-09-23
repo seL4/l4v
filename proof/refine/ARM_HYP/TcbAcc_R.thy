@@ -16,8 +16,6 @@ declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare empty_fail_sequence_x[simp]
 declare storeWordUser_typ_at' [wp]
-declare of_nat_power [simp del]
-declare word_neq_0_conv [simp del]
 declare complement_def[simp]
 
 (* Auxiliaries and basic properties of priority bitmap functions *)
@@ -795,7 +793,7 @@ lemma threadSet_cte_wp_at'T:
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad
                           obj_at'_def objBits_simps' in_magnitude_check prod_eq_iff)
-    apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
+    apply (case_tac tcb, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
                          projectKOs)
   apply (wp getObject_tcb_wp)
