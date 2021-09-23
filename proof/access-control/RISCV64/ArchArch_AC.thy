@@ -1440,15 +1440,16 @@ lemma store_pte_state_vrefs_unreachable:
   apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (erule rsubst[where P=P])
   apply (rule all_ext)
+  apply (rule allI, rename_tac x)
   apply safe
    apply (subst (asm) state_vrefs_def, clarsimp)
    apply (rule state_vrefsD)
-      apply (subst vs_lookup_table_unreachable_upd_idem)
-          apply fastforce+
-    apply (drule vs_lookup_level)
-    apply (prop_tac "x \<noteq> table_base p", clarsimp)
-    apply (fastforce simp: fun_upd_def aobjs_of_Some opt_map_def)
-   apply clarsimp
+      apply (subst vs_lookup_table_unreachable_upd_idem; fastforce)
+     apply (drule vs_lookup_level)
+     apply (prop_tac "x \<noteq> table_base p", clarsimp)
+     apply (fastforce simp: fun_upd_def aobjs_of_Some opt_map_def)
+    apply clarsimp
+   apply fastforce
   apply (subst (asm) state_vrefs_def, clarsimp)
   apply (rule state_vrefsD)
      apply (subst (asm) vs_lookup_table_unreachable_upd_idem; fastforce)
@@ -1533,8 +1534,9 @@ lemma store_asid_pool_entry_state_vrefs:
      apply (rule_tac level=asid_pool_level in state_vrefsD)
         apply (simp only: fun_upd_def)
         apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
-         apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
-                                valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+          apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
+                                 valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+         apply fastforce
         apply fastforce
        apply fastforce
       apply (fastforce simp: ako_asid_pools_of)
@@ -1544,21 +1546,24 @@ lemma store_asid_pool_entry_state_vrefs:
        apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
          apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
                                 valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
-       apply clarsimp
-      apply fastforce
+        apply clarsimp
+       apply fastforce
+      apply (fastforce simp: pts_of_Some)
      apply (fastforce simp: pts_of_Some)
     apply (fastforce simp: pts_of_Some)
    apply (clarsimp simp: obj_at_def)
    apply (subst (asm) state_vrefs_def, clarsimp)
+   apply (rename_tac asida vref)
    apply (rule_tac asid=asida in state_vrefsD)
       apply (simp only: fun_upd_def)
       apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
-         apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at obj_at_def
-                                valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+        apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at obj_at_def
+                               valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+       apply fastforce
+      apply (prop_tac "asid \<noteq> asida")
+       apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def asid_pools_of_ko_at obj_at_def
+                       split: if_splits)
       apply fastforce
-     apply (prop_tac "asid \<noteq> asida")
-      apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def asid_pools_of_ko_at obj_at_def
-                      split: if_splits)
      apply fastforce
     apply fastforce
    apply clarsimp

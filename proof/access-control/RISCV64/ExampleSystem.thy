@@ -21,7 +21,7 @@ where
 
 lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = Some (to_bl x)"
   apply (clarsimp simp: nat_to_bl_def to_bl_def)
-  apply (auto simp: uint_nat le_def word_size)
+  apply (auto simp: le_def word_size)
   done
 
 
