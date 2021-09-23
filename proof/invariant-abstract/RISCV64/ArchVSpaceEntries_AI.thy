@@ -160,7 +160,7 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   done
 
 crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
-  (wp: check_cap_inv crunch_wps simp: crunch_simps
+  (wp: check_cap_inv crunch_wps simp: crunch_simps is_round_robin_def
        ignore: check_cap_at update_sk_obj_ref)
 
 crunch valid_vspace_objs'[wp]: invoke_domain "valid_vspace_objs'"
