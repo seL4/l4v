@@ -90,7 +90,7 @@ lemma array_assertion_abs_tcb_ctes_add':
   apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion')
   apply (simp add: ptr_add_assertion_positive, rule disjCI2)
   apply (erule array_assertion_shrink_right)
-  apply (cases strong, simp_all add: unat_def)
+  apply (cases strong, simp_all add: unat_def del: nat_uint_eq)
   done
 
 lemmas array_assertion_abs_tcb_ctes_add

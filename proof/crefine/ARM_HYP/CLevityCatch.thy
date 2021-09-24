@@ -53,7 +53,7 @@ lemma no_overlap_new_cap_addrs_disjoint:
      pspace_no_overlap' ptr sz s \<rbrakk> \<Longrightarrow>
    set (new_cap_addrs n ptr ko) \<inter> dom (ksPSpace s) = {}"
   apply (erule disjoint_subset [OF new_cap_addrs_subset, where sz1=sz])
-  apply (clarsimp simp: Word_Lib.ptr_add_def field_simps)
+  apply (clarsimp simp: More_Word_Operations.ptr_add_def field_simps)
   apply (rule pspace_no_overlap_disjoint')
   apply auto
   done

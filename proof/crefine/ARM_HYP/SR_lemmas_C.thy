@@ -2481,10 +2481,12 @@ where
 
 lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_SCTLR) = fromEnum VCPURegSCTLR"
+  including no_take_bit
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
 
 lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"
+  including no_take_bit
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
 
 end

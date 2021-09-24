@@ -1021,7 +1021,7 @@ lemma invalidateASIDEntry_ccorres:
                         split: if_split)
         apply csymbr
         apply (rule ccorres_Guard)+
-        apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+        apply (rule_tac P="pde_stored_asid stored_hw_asid___struct_pde_C \<noteq> None" in ccorres_gen_asm)
         apply (ctac(no_simp) add: invalidateHWASIDEntry_ccorres)
         apply (clarsimp simp: pde_stored_asid_def unat_ucast
                        split: if_split_asm)
@@ -1062,6 +1062,7 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 17 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1657,9 +1658,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1677,7 +1676,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 lemma Zombie_new_spec:
@@ -1704,7 +1703,7 @@ lemma irq_opt_relation_Some_ucast:
   apply (simp only: unat_arith_simps)
   by (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
 
-lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
+lemmas upcast_ucast_id = More_Word.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
@@ -2012,9 +2011,6 @@ lemma dissociateVCPUTCB_ccorres:
      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tptr }
        \<inter> {s. vcpu_' s = vcpu_Ptr vcpuptr }) hs
      (dissociateVCPUTCB vcpuptr tptr) (Call dissociateVCPUTCB_'proc)"
-  (* FIXME ARMHYP TODO. Note that invs' may be too strong, depending on from where it's called.
-     There is a definite assertion that the VCPU and TCB are associated when calling this function,
-     so I put that in *)
   supply dc_simp[simp del]
   apply (cinit lift: tcb_' vcpu_')
    apply (rule ccorres_pre_archThreadGet, rename_tac tcbVCPU)
@@ -2077,7 +2073,6 @@ lemma dissociateVCPUTCB_ccorres:
             apply ceqv
            apply (subst asUser_bind_distrib; simp)
            apply (rule ccorres_split_nothrow[where r'="(=)" and xf'=ret__unsigned_long_'])
-               apply clarsimp
                apply (ctac add: getRegister_ccorres)
               apply ceqv
             apply (erule sanitiseSetRegister_ccorres, simp)
@@ -2771,9 +2766,9 @@ lemma finaliseCap_ccorres:
      apply (subst add.commute, subst unatSuc, assumption)+
      apply (intro impI, rule conjI)
       subgoal
-        apply (subst word_bool_alg.conj_disj_distrib2)
+        apply (subst bit.conj_disj_distrib2)
         apply (subst zero_OR_eq, fastforce)
-        by (fastforce simp: is_aligned_neg_mask_weaken)
+        by fastforce
      subgoal
        apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
        apply (rule trans, rule unat_power_lower32[symmetric])
@@ -2809,7 +2804,7 @@ lemma finaliseCap_ccorres:
                         mask_def)
        apply (simp add: cte_level_bits_def tcbCTableSlot_def
                         Kernel_C.tcbCTable_def tcbCNodeEntries_def
-                        word_bool_alg.conj_disj_distrib2
+                        bit.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
