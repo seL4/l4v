@@ -234,13 +234,13 @@ proof (induct args rule: resolve_address_bits'.induct)
      apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
      apply simp
      apply clarsimp
-     apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_objs_preserved])
+     apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_objs.m_inv])
      apply (frule(1) post_by_hoare [OF get_cap_x_valid])
      apply (erule allE, erule impE, blast)
      apply (drule (1) bspec, simp)
     apply (clarsimp simp: in_monad)
     apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
-    apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_cap_preserved])
+    apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_cap.m_inv])
     apply (clarsimp simp add: valid_cap_def)
     done
 qed
@@ -4111,7 +4111,7 @@ crunches lookup_slot_for_cnode_op
   (simp: crunch_simps)
 
 interpretation lookup_slot_for_cnode_op_tainv:
-  touched_addresses_inv "lookup_slot_for_cnode_op bl cap ref depth"
+  touched_addresses_invE "lookup_slot_for_cnode_op bl cap ref depth"
   by unfold_locales (rule lookup_slot_for_cnode_op_tainv)
 
 lemma lsfco_cte_at[wp]:

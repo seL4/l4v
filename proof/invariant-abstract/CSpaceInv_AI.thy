@@ -220,27 +220,11 @@ lemma valid_cap_tcb_update [simp]:
   apply (simp add: a_type_def)
   done
 
+sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ valid_objs
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
 
-context touched_addresses_inv begin
-
-lemma valid_cap_preserved [wp]:
-  "m \<lbrace>valid_cap c\<rbrace>"
-  by (simp add: agnostic_preserved ta_agnostic_def)
-
-lemma valid_objs_preserved [wp]:
-  "m \<lbrace>valid_objs\<rbrace>"
-  by (simp add: agnostic_preserved ta_agnostic_def)
-
-(*
-interpretation valid_cap_tainv:
-  "touched_addresses_P_inv m (valid_cap c)"
-  by unfold_locales (simp add:ta_agnostic_def)
-
-interpretation valid_objs_tainv:
-  touched_addresses_P_inv m "valid_objs"
-  by unfold_locales (simp add:ta_agnostic_def)
-*)
-end
+sublocale touched_addresses_inv \<subseteq> valid_cap:touched_addresses_P_inv _ "valid_cap c"
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
 
 lemma obj_at_tcb_update:
   "\<lbrakk> tcb_at t s; \<And>x y. P (TCB x) = P (TCB y)\<rbrakk> \<Longrightarrow>
