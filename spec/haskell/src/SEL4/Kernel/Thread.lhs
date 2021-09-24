@@ -348,6 +348,8 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > schedule :: Kernel ()
 > schedule = do
+>     stateAssert sch_act_wf_asrt
+>         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >     awaken
 >     checkDomainTime
 >     curThread <- getCurThread

@@ -430,3 +430,9 @@ does hold. We may prove that this assertion is true using ct_not_inQ_cross.
 
 > ct_not_inQ_asrt :: KernelState -> Bool
 > ct_not_inQ_asrt _ = True
+
+An assert that will say that `sch_act_wf (ksSchedulerAction s) s` holds. We may prove this assertion
+is true using the rule sch_act_wf_cross.
+
+> sch_act_wf_asrt :: KernelState -> Bool
+> sch_act_wf_asrt _ = True

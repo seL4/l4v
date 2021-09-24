@@ -151,6 +151,8 @@ If a notification object is deleted, then pending receive operations must be can
 > cancelAllSignals ntfnPtr = do
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do
@@ -256,4 +258,3 @@ The following functions are specialisations of the "getObject" and "setObject" f
 >     case ntfnObj ntfn of
 >         WaitingNtfn qs -> Just qs
 >         _ -> Nothing
-

@@ -120,11 +120,16 @@ During the unbounded capability clearing operation, the capability to the slots 
 When the last capability to an endpoint is deleted, any IPC operations currently using it are aborted.
 
 > finaliseCap (EndpointCap { capEPPtr = ptr }) final _ = do
->     when final $ cancelAllIPC ptr
+>     when final $ do
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         cancelAllIPC ptr
 >     return (NullCap, NullCap)
 
 > finaliseCap (NotificationCap { capNtfnPtr = ptr }) final _ = do
 >     when final $ do
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >         schedContextMaybeUnbindNtfn ptr
 >         unbindMaybeNotification ptr
 >         cancelAllSignals ptr
@@ -136,6 +141,8 @@ When the last capability to an endpoint is deleted, any IPC operations currently
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert (valid_replies'_sc_asrt ptr)
 >             "Assert that `valid_replies'` holds"
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >         tptrOpt <- liftM replyTCB (getReply ptr)
 >         when (tptrOpt /= Nothing) $ do
 >             replyClear ptr (fromJust tptrOpt)
