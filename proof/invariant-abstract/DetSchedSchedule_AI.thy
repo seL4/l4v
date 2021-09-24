@@ -7110,54 +7110,6 @@ lemma merge_refills_refills_unat_sum:
   apply (case_tac list; simp)
   done
 
-lemma merge_refills_hd_r_time:
-  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. r_time (scrc_refill_hd cfg) \<le> P (cur_time s))
-                   (sc_refill_cfgs_of s) sc_ptr
-        \<and> (sc_ptr' = sc_ptr \<longrightarrow> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg))
-                                         (sc_refill_cfgs_of s) sc_ptr)\<rbrace>
-   merge_refills sc_ptr'
-   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. r_time (scrc_refill_hd cfg) \<le> P (cur_time s))
-                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
-  apply merge_refills_simple
-  done
-
-lemma refill_head_overlapping_loop_hd_r_time:
-  "refill_head_overlapping_loop sc_ptr'
-   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. r_time (hd (scrc_refills cfg)) \<le> P (cur_time s))
-                 (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
-  apply (clarsimp simp: refill_head_overlapping_loop_def)
-  apply (cases "sc_ptr'\<noteq>sc_ptr")
-   apply refill_head_overlapping_loop_simple
-  apply (wpsimp wp: whileLoop_wp'; fastforce?)
-  apply (wpsimp wp: merge_refills_hd_r_time)
-  apply (fastforce intro!: refill_head_overlapping_true_imp_length_at_least_two
-                     simp: vs_all_heap_simps)
-  done
-
-lemma merge_refills_hd_r_time_unat:
-  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) \<le> P (cur_time s))
-                      (sc_refill_cfgs_of s) sc_ptr
-        \<and> (sc_ptr' = sc_ptr \<longrightarrow> pred_map (\<lambda>cfg. Suc 0 < length (scrc_refills cfg))
-                                         (sc_refill_cfgs_of s) sc_ptr)\<rbrace>
-   merge_refills sc_ptr'
-   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. unat (r_time (scrc_refill_hd cfg)) \<le> P (cur_time s))
-                   (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
-  apply merge_refills_simple
-  done
-
-lemma refill_head_overlapping_loop_hd_r_time_unat:
-  "refill_head_overlapping_loop sc_ptr'
-   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. unat (r_time (hd (scrc_refills cfg))) \<le> P (cur_time s))
-                              (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
-  apply (clarsimp simp: refill_head_overlapping_loop_def)
-  apply (cases "sc_ptr'\<noteq>sc_ptr")
-   apply refill_head_overlapping_loop_simple
-  apply (wpsimp wp: whileLoop_wp'; fastforce?)
-  apply (wpsimp wp: merge_refills_hd_r_time_unat)
-  apply (fastforce intro!: refill_head_overlapping_true_imp_length_at_least_two
-                     simp: vs_all_heap_simps)
-  done
-
 lemma merge_refills_is_refill_ready:
   "merge_refills sc_ptr' \<lbrace>is_refill_ready sc_ptr\<rbrace>"
   apply merge_refills_simple
@@ -7315,23 +7267,6 @@ lemma merge_refills_ordered_disjoint:
   apply (clarsimp simp: ordered_disjoint_def)
   apply (metis (no_types, lifting) hd_conv_nth length_greater_0_conv length_ineq_not_Nil(1)
                length_tl nth_tl numeral_nat(7) tail_nonempty_length)
-  done
-
-lemma refill_head_overlapping_loop_ordered_disjoint:
-  "\<lbrace>\<lambda>s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr
-        \<and> (sc_ptr' = sc_ptr \<longrightarrow> pred_map (\<lambda>cfg. refills_unat_sum (scrc_refills cfg) \<le> unat max_time)
-                                         (sc_refill_cfgs_of s) sc_ptr)\<rbrace>
-   refill_head_overlapping_loop sc_ptr'
-   \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. ordered_disjoint (scrc_refills cfg)) (sc_refill_cfgs_of s) sc_ptr\<rbrace>"
-  (is "valid ?pre _ _")
-  apply (clarsimp simp: refill_head_overlapping_loop_def)
-  apply (cases "sc_ptr' \<noteq> sc_ptr")
-   apply refill_head_overlapping_loop_simple
-  apply (wpsimp wp: valid_whileLoop[where I="\<lambda>_. ?pre"]
-         ; fastforce?)
-  apply (wpsimp wp: merge_refills_refills_unat_sum merge_refills_ordered_disjoint)
-  apply (fastforce intro!: refill_head_overlapping_true_imp_length_at_least_two
-                     simp: vs_all_heap_simps)
   done
 
 lemma refill_head_overlapping_loop_ordered_disjoint_strong:
