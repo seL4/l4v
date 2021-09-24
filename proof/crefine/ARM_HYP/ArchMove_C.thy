@@ -128,7 +128,7 @@ lemma ucast_helper_not_maxword:
   apply (rule ucast_up_mono_le)
     apply simp
    apply simp
-  by (simp add: max_word_def)
+  by (simp add: mask_def)
 
 lemmas ucast_helper_simps_32 =
   ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]

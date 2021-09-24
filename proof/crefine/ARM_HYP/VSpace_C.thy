@@ -82,6 +82,7 @@ lemma checkVPAlignment_ccorres:
 proof -
   note [split del] = if_split
   show ?thesis
+  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -1245,6 +1246,7 @@ lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
        (findFreeHWASID) (Call findFreeHWASID_'proc)"
+  including no_take_bit
   apply (cinit)
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
@@ -1277,12 +1279,12 @@ lemma findFreeHWASID_ccorres:
                                trans[OF msb_nth nth_ucast] bang_big word_size
                                uint_up_ucast is_up_def source_size_def
                                target_size_def)
-              apply (simp add: uint_nat unat_of_nat)
-              apply (rule conjI, unat_arith, simp)
+              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
               apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def)
+                               throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-             apply (simp add: minus_one_norm)
+              apply (uint_arith, simp add: take_bit_nat_def)
+             apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
             apply clarsimp
@@ -1341,8 +1343,7 @@ lemma findFreeHWASID_ccorres:
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
                              target_size_def)
-            apply (simp add: uint_nat)
-            apply unat_arith
+            apply uint_arith
             subgoal by simp
            apply wp
           apply vcg
@@ -1665,6 +1666,7 @@ lemma vcpu_write_reg_ccorres:
              \<inter> \<lbrace> \<acute>value = v \<rbrace>) hs
      (vcpuWriteReg vcpuptr reg v)
      (Call vcpu_write_reg_'proc)"
+  including no_take_bit
   supply Collect_const[simp del] dc_simp[simp del]
   apply (cinit lift: vcpu_' reg_' value_')
    apply (rule ccorres_assert)
@@ -1744,6 +1746,7 @@ lemma vcpu_restore_reg_range_ccorres:
      (UNIV \<inter> \<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuRestoreRegRange vcpuptr start end) (Call vcpu_restore_reg_range_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
@@ -1781,6 +1784,7 @@ lemma vcpu_save_reg_range_ccorres:
      (UNIV \<inter> \<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuSaveRegRange vcpuptr start end) (Call vcpu_save_reg_range_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
@@ -1817,6 +1821,7 @@ lemma vcpu_read_reg_ccorres:
        (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace>) hs
      (vcpuReadReg vcpuptr reg)
      (Call vcpu_read_reg_'proc)"
+  including no_take_bit
   supply Collect_const[simp del]
   apply (cinit lift: vcpu_' reg_')
    apply (rule ccorres_assert)
@@ -1886,6 +1891,7 @@ lemma restore_virt_timer_ccorres:
      (vcpu_at' vcpuptr)
      (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (restoreVirtTimer vcpuptr) (Call restore_virt_timer_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
     apply csymbr
@@ -1998,6 +2004,7 @@ lemma save_virt_timer_ccorres:
      (vcpu_at' vcpuptr)
      (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (saveVirtTimer vcpuptr) (Call save_virt_timer_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
     apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
@@ -2147,6 +2154,7 @@ lemma vcpu_restore_ccorres:
         and vcpu_at' vcpuPtr)
        (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr vcpuPtr}) hs
      (vcpuRestore vcpuPtr) (Call vcpu_restore_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_' simp: whileAnno_def)
    apply (simp add: doMachineOp_bind uncurry_def split_def doMachineOp_mapM_x)+
    apply (clarsimp simp: bind_assoc)
@@ -2280,6 +2288,7 @@ lemma vcpu_save_ccorres:
       (UNIV \<inter> {s. vcpu_' s = case_option NULL (vcpu_Ptr \<circ> fst) v}
             \<inter> {s. active_' s = case_option 0 (from_bool \<circ> snd) v}) hs
     (vcpuSave v) (Call vcpu_save_'proc)"
+  including no_take_bit
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: vcpu_' active_' simp: whileAnno_def)
    apply wpc
@@ -2877,6 +2886,7 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -3328,6 +3338,7 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive

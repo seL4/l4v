@@ -909,6 +909,7 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 4\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned' (w_' s) (gen_framesize_to_H (sz_' s)))}"
+  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1018,6 +1019,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
            \<inter> {s. pd_' s = pde_Ptr pd}) []
      (createSafeMappingEntries base vaddr vsz vrights attr pd)
      (Call createSafeMappingEntries_PDE_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (subgoal_tac "vsz = ARMSuperSection
                        \<longrightarrow> lookup_pd_slot pd vaddr \<le> lookup_pd_slot pd vaddr + 0x3C")
@@ -1115,15 +1117,13 @@ lemma createSafeMappingEntries_PDE_ccorres:
                apply (simp add: upto_enum_word unat_of_nat vmsz_aligned_def
                                 superSectionPDEOffsets_def table_bits_defs
                                 vmsz_aligned'_def split: if_split_asm)
-               apply (clarsimp simp: upto_enum_step_def upto_enum_word typ_heap_simps' add.commute
-                              split: if_split)
-                apply (clarsimp simp: upto_enum_step_def upto_enum_word typ_heap_simps' add.commute
-                              split: if_split)
-               apply (clarsimp simp: upto_enum_step_def upto_enum_word typ_heap_simps'
-                             split: if_split)
+                apply (clarsimp simp add: typ_heap_simps' add.commute)
+                apply (simp add: upto_enum_step_def upto_enum_word)
+               apply (clarsimp simp add: typ_heap_simps' add.commute)
+               apply (simp add: upto_enum_step_def upto_enum_word)
               apply simp
              apply (rule conseqPre, vcg)
-             apply (clarsimp simp: if_1_0_0)
+             apply clarsimp
             apply simp
             apply (wp getPDE_wp | wpc)+
             apply simp
@@ -1141,7 +1141,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                  in HoarePartial.reannotateWhileNoGuard)
        apply (rule HoarePartial.While[OF order_refl])
         apply (rule conseqPre, vcg)
-        apply (clarsimp simp: if_1_0_0)
+        apply clarsimp
        apply clarsimp
       apply vcg
      apply (clarsimp simp: pde_range_relation_def)
@@ -1232,6 +1232,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
            \<inter> {s. pd_' s = pde_Ptr pd}) []
      (createSafeMappingEntries base vaddr vsz vrights attr pd)
      (Call createSafeMappingEntries_PTE_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: base_' vaddr_' frameSize_' vmRights_' attr_' pd_')
    apply (simp add: createSafeMappingEntries_def createMappingEntries_def
@@ -1417,7 +1418,8 @@ lemma createSafeMappingEntries_PTE_ccorres:
   done
 
 lemma ptr_add_uint_of_nat [simp]:
-    "a  +\<^sub>p uint (of_nat b :: word32) = a  +\<^sub>p (int b)"
+  "a  +\<^sub>p uint (of_nat b :: word32) = a  +\<^sub>p (int b)"
+  including no_take_bit
   by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 
@@ -1586,6 +1588,7 @@ lemma performPageInvocationMapPTE_ccorres:
              \<inter> {s. isLeft mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPTE_'proc)"
+  including no_take_bit
   supply pageBitsForSize_le_32 [simp]
   apply (rule ccorres_gen_asm2)
   apply (rule ccorres_gen_asm)
@@ -1960,6 +1963,7 @@ lemma performPageInvocationMapPDE_ccorres:
              \<inter> {s. isRight mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPDE_'proc)"
+  including no_take_bit
   supply pageBitsForSize_le_32 [simp]
   apply (rule ccorres_gen_asm2)
   apply (rule ccorres_gen_asm)
@@ -2587,6 +2591,7 @@ lemma decodeARMFrameInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMFrameInvocation_'proc)"
+  including no_take_bit no_0_dvd
   supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
@@ -3070,7 +3075,8 @@ lemma decodeARMFrameInvocation_ccorres:
                          framesize_from_H_eq_eqs of_bool_nth[simplified of_bool_from_bool]
                          vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
                          length_ineq_not_Nil numeral_2_eq_2 does_not_throw_def
-                         ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def)
+                         ARM_HYP.pptrBase_def
+                   simp del: unsigned_numeral)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule(1) slotcap_in_mem_PageDirectory)
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
@@ -3113,8 +3119,6 @@ lemma maskCapRights_eq_Untyped [simp]:
   apply (simp add: ARM_HYP_H.maskCapRights_def isPageCap_def Let_def split: arch_capability.splits)
   done
 
-
-declare Word_Lemmas.from_bool_mask_simp [simp]
 
 lemma isPDFlush_fold:
  "(label = ArchInvocationLabel arch_invocation_label.ARMPDUnify_Instruction \<or>
@@ -3247,6 +3251,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageDirectoryInvocation_'proc)"
+  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
@@ -3366,23 +3371,19 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (rule ccorres_stateAssert)
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
-               apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                 rel_option_alt_def to_option_def
-                 mask_def[unfolded Word.shiftl_1,symmetric]
-                 split:option.splits if_splits)
+               apply (clarsimp simp: page_base_def resolve_ret_rel_def rel_option_alt_def
+                                     to_option_def mask_def[unfolded shiftl_1,symmetric]
+                               split: option.splits if_splits)
                apply (simp add: framesize_from_to_H)
               apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp: throwError_def return_def
-                syscall_error_rel_def exception_defs
-                syscall_error_to_H_cases false_def)
-              apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                rel_option_alt_def to_option_def
-                mask_def[unfolded Word.shiftl_1,symmetric]
-                split:option.splits if_splits)
+              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def exception_defs
+                                    syscall_error_to_H_cases false_def)
+              apply (clarsimp simp: page_base_def resolve_ret_rel_def rel_option_alt_def to_option_def
+                                    mask_def[unfolded shiftl_1,symmetric]
+                              split: option.splits if_splits)
               apply (cut_tac sz = a in pbfs_less_wb')
-              apply (clarsimp simp add:framesize_from_to_H word_bits_def
-                framesize_from_H_mask)
+              apply (clarsimp simp add:framesize_from_to_H word_bits_def framesize_from_H_mask)
               apply (rule word_of_nat_less)
               apply (simp add:pbfs_less_wb')
              apply (simp add:performARMMMUInvocations)
@@ -3546,7 +3547,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
     typ_heap_simps' shiftl_t2n[where n=2] field_simps
     elim!: ccap_relationE)
   apply (intro conjI impI allI)
-   by (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
+  by (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
      to_option_def rel_option_alt_def to_bool_def
      typ_heap_simps'
@@ -3697,7 +3698,7 @@ lemma decodeARMMMUInvocation_ccorres:
                                         from_bool_0)
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
-                   apply (clarsimp simp: max_word_def asid_high_bits_def)
+                   apply (clarsimp simp: asid_high_bits_def)
                   apply (clarsimp simp: rf_sr_armKSASIDTable from_bool_def
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
@@ -4022,7 +4023,7 @@ lemma decodeARMMMUInvocation_ccorres:
                  apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
                 apply (rule plus_one_helper2 [OF order_refl])
                 apply (rule notI, drule max_word_wrap)
-                apply (clarsimp simp: max_word_def asid_low_bits_def)
+                apply (clarsimp simp: asid_low_bits_def)
                apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
                apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
                                      cap_asid_pool_cap_lift_def
@@ -4252,6 +4253,7 @@ lemma writeVCPUReg_ccorres:
             \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>
             \<inter> \<lbrace>\<acute>value = val\<rbrace>) hs
     (writeVCPUReg vcpuptr reg val) (Call writeVCPUReg_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_' field_' value_')
    apply clarsimp
    apply (rule ccorres_pre_getCurVCPU, rename_tac cvcpuopt)
@@ -4296,6 +4298,7 @@ lemma readVCPUReg_ccorres:
       (vcpu_at' vcpuptr and no_0_obj')
       (UNIV \<inter> \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>) hs
     (readVCPUReg vcpuptr reg) (Call readVCPUReg_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_' field_')
    apply clarsimp
    apply (rule ccorres_pre_getCurVCPU, rename_tac cvcpuopt)
@@ -4555,6 +4558,7 @@ lemma invokeVCPUInjectIRQ_ccorres:
        hs
        (liftE (invokeVCPUInjectIRQ vcpuptr idx virq))
        (Call invokeVCPUInjectIRQ_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: vcpu_' index_' virq_')
    supply not_None_eq[simp del]
@@ -4595,7 +4599,7 @@ lemma virq_virq_pending_EN_new_spec:
   apply (hoare_rule HoarePartial.ProcNoRec1) (* force vcg to unfold non-recursive procedure *)
   apply vcg
   apply (clarsimp simp: virq_to_H_def makeVIRQ_def virq_virq_pending_def)
-  by (simp add: word_bool_alg.disj_commute  word_bool_alg.disj_assoc word_bool_alg.disj_ac)
+  by (simp add: bit.disj_commute  bit.disj_assoc bit.disj_ac)
 
 lemma decodeVCPUInjectIRQ_ccorres:
   notes if_cong[cong] Collect_const[simp del]
@@ -4614,6 +4618,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
        (decodeVCPUInjectIRQ args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUInjectIRQ_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: length_' cap_' buffer_'
                 simp: decodeVCPUInjectIRQ_def Let_def shiftL_nat )
@@ -5062,6 +5067,7 @@ proof -
                  split: if_splits)
 
   show ?thesis
+    including no_take_bit
     apply (rule ccorres_grab_asm)
     apply (cinit' lift: length_' cap_' buffer_')
      apply (clarsimp simp: decodeVCPUAckVPPI_def)
