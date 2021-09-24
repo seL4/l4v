@@ -529,7 +529,6 @@ lemma  valid_objs: "valid_objs' s'"
   and   no_0_objs: "no_0_obj' s'"
   and    pde_maps: "valid_pde_mappings' s'"
   and irqs_masked: "irqs_masked' s'"
-  and        ctcd: "ct_idle_or_in_cur_domain' s'"
   and         cdm: "ksCurDomain s' \<le> maxDomain"
   and         vds: "valid_dom_schedule' s'"
   using invs
@@ -1637,13 +1636,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
   show "irqs_masked' state'"
     by (simp add: irqs_masked'_def)
 
-  from sa_simp ct_act
-  show "sch_act_wf (ksSchedulerAction s') state'"
-    apply (simp add: sch_act_simple_def)
-    apply (case_tac "ksSchedulerAction s'", simp_all add: ct_in_state'_def)
-    apply (fastforce dest!: st_tcb elim!: pred_tcb'_weakenE)
-    done
-
   from invs
   have "pspace_domain_valid s'" by (simp add: invs'_def valid_state'_def)
   thus "pspace_domain_valid state'"
@@ -1671,24 +1663,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
                      [where n=bits and n'=pageBits])
     apply (case_tac ko, simp_all add: objBits_simps)
     apply (auto simp add: x_power_minus_1)
-    done
-
-  from ctcd show "ct_idle_or_in_cur_domain' state'"
-    apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-    apply (intro impI)
-    apply (elim disjE impE)
-     apply simp+
-    apply (intro impI)
-    apply (rule disjI2)
-    apply (drule obj_at'_and
-                   [THEN iffD2, OF conjI,
-                    OF ct_act [unfolded ct_in_state'_def st_tcb_at'_def]])
-    apply (clarsimp simp: obj_at'_real_def)
-    apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
-     apply (clarsimp simp: projectKOs)
-     apply (case_tac "tcbState obj")
-            apply (clarsimp simp: projectKOs)+
-    apply (clarsimp dest!: ex_nonz_cap_notRange elim!: ko_wp_at'_weakenE)
     done
 
   from cdm show "ksCurDomain s' \<le> maxDomain" .

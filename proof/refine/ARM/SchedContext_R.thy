@@ -451,7 +451,7 @@ global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContext
   by typ_at_props'
 
 lemma schedContextCancelYieldTo_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' t\<rbrace>
+  "\<lbrace>invs' and tcb_at' t\<rbrace>
    schedContextCancelYieldTo t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def
@@ -478,7 +478,7 @@ lemma setConsumed_invs':
       | strengthen tcb_at_invs')+
 
 lemma schedContextCompleteYieldTo_invs'[wp]:
-  "\<lbrace>invs' and sch_act_simple and tcb_at' thread\<rbrace>
+  "\<lbrace>invs' and tcb_at' thread\<rbrace>
    schedContextCompleteYieldTo thread
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextCompleteYieldTo_def

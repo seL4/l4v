@@ -58,12 +58,8 @@ lemma setIRQState_invs[wp]:
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
                         valid_irq_handlers'_def irq_issued'_def
                         cteCaps_of_def valid_irq_masks'_def
-                        bitmapQ_defs valid_queues_no_bitmap_def)
-  apply (rule conjI, clarsimp)
-  apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
-  apply (rule conjI)
-   apply fastforce
-  apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+                        bitmapQ_defs valid_queues_no_bitmap_def irqs_masked'_def)
+  apply fastforce
   done
 
 lemma getIRQSlot_real_cte[wp]:
@@ -414,12 +410,7 @@ method invs'_independent_method
                     valid_machine_state'_def tcb_in_cur_domain'_def ex_cte_cap_wp_to'_def
                     ct_not_inQ_def ct_idle_or_in_cur_domain'_def valid_mdb'_def ct_in_state'_def
                     valid_release_queue_def valid_release_queue'_def valid_dom_schedule'_def
-              cong: if_cong option.case_cong
-     , rule iffI[rotated]
-     , clarsimp
-     , case_tac "ksSchedulerAction s", simp_all
-     , clarsimp
-     , case_tac "ksSchedulerAction s", simp_all)
+              cong: if_cong option.case_cong)
 
 lemma
   shows invs'_irq_state_independent [simp, intro!]:
