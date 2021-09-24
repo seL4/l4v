@@ -131,6 +131,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >         let epptr = capEPPtr cap
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)
 >             NullCap -> return Nothing
@@ -271,6 +273,8 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 > cancelAllIPC epptr = do
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert sch_act_wf_asrt
+>             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >         ep <- getEndpoint epptr
 >         case ep of
 >             IdleEP ->
@@ -297,6 +301,8 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 > cancelBadgedSends epptr badge = do
 >     stateAssert sym_refs_asrt
 >         "Assert that `sym_refs (state_refs_of' s)` holds"
+>     stateAssert sch_act_wf_asrt
+>         "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
 >     ep <- getEndpoint epptr
 >     case ep of
 >         IdleEP -> return ()
@@ -365,4 +371,3 @@ The following two functions are specialisations of "getObject" and
 >     qs' <- tcbEPDequeue tptr qs
 >     qs'' <- tcbEPAppend tptr qs'
 >     setEndpoint epPtr (updateEpQueue ep qs'')
-
