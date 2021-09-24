@@ -48,25 +48,6 @@ proof -
     done
 qed
 
-lemma invs_no_cicd'_machine:
-  assumes mask: "irq_masks (f (ksMachineState s)) =
-                 irq_masks (ksMachineState s)"
-  assumes vms: "valid_machine_state' (ksMachineState_update f s) =
-                valid_machine_state' s"
-  shows "invs_no_cicd' (ksMachineState_update f s) = invs_no_cicd' s"
-proof -
-  show ?thesis
-    apply (cases "ksSchedulerAction s")
-    apply (simp_all add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def cur_tcb'_def
-                         ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                         valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
-                         vms ct_not_inQ_def valid_dom_schedule'_def
-                         state_refs_of'_def ps_clear_def
-                         valid_irq_node'_def mask
-                   cong: option.case_cong)
-    done
-qed
-
 lemma pspace_no_overlap_queues [simp]:
   "pspace_no_overlap' w sz (ksReadyQueues_update f s) = pspace_no_overlap' w sz s"
   by (simp add: pspace_no_overlap'_def)

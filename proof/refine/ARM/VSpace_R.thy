@@ -2545,22 +2545,6 @@ lemma storeHWASID_invs:
              ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
   done
 
-lemma storeHWASID_invs_no_cicd':
-  "\<lbrace>invs_no_cicd' and
-   (\<lambda>s. armKSASIDMap (ksArchState s) asid = None \<and>
-        armKSHWASIDTable (ksArchState s) hw_asid = None)\<rbrace>
-  storeHWASID asid hw_asid
-  \<lbrace>\<lambda>x. invs_no_cicd'\<rbrace>"
-  apply (rule hoare_add_post)
-    apply (rule storeHWASID_valid_arch')
-   apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
-  apply (simp add: storeHWASID_def)
-  apply (wp findPDForASIDAssert_pd_at_wp)
-  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_arch_state'_def
-             valid_global_refs'_def global_refs'_def valid_machine_state'_def valid_dom_schedule'_def
-             ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-  done
-
 lemma findFreeHWASID_invs:
   "\<lbrace>invs'\<rbrace> findFreeHWASID \<lbrace>\<lambda>asid. invs'\<rbrace>"
   apply (rule hoare_add_post)
@@ -2584,40 +2568,10 @@ lemma findFreeHWASID_invs:
   apply clarsimp
   done
 
-lemma findFreeHWASID_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> findFreeHWASID \<lbrace>\<lambda>asid. invs_no_cicd'\<rbrace>"
-  apply (rule hoare_add_post)
-    apply (rule findFreeHWASID_valid_arch)
-   apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
-  apply (simp add: findFreeHWASID_def invalidateHWASIDEntry_def invalidateASID_def
-                   doMachineOp_def split_def
-              cong: option.case_cong)
-  apply (wp findPDForASIDAssert_pd_at_wp | wpc)+
-  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_arch_state'_def
-             valid_global_refs'_def global_refs'_def valid_machine_state'_def valid_dom_schedule'_def
-             ct_not_inQ_def
-           split del: if_split)
-  apply (intro conjI)
-    apply (fastforce dest: no_irq_use [OF no_irq_invalidateLocalTLB_ASID])
-   apply clarsimp
-   apply (drule_tac x=p in spec)
-   apply (drule use_valid)
-    apply (rule_tac p=p in invalidateLocalTLB_ASID_underlying_memory)
-    apply blast
-   apply clarsimp
-  done
-
 lemma getHWASID_invs [wp]:
   "\<lbrace>invs'\<rbrace> getHWASID asid \<lbrace>\<lambda>hw_asid. invs'\<rbrace>"
   apply (simp add: getHWASID_def)
   apply (wp storeHWASID_invs findFreeHWASID_invs|wpc)+
-  apply simp
-  done
-
-lemma getHWASID_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> getHWASID asid \<lbrace>\<lambda>hw_asid. invs_no_cicd'\<rbrace>"
-  apply (simp add: getHWASID_def)
-  apply (wp storeHWASID_invs_no_cicd' findFreeHWASID_invs_no_cicd'|wpc)+
   apply simp
   done
 
@@ -2643,17 +2597,6 @@ lemma armv_contextSwitch_invs [wp]:
               | wp)+
   done
 
-lemma armv_contextSwitch_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def setCurrentPD_to_abs)
-  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_set_current_pd no_irq)
-  apply (rule hoare_post_imp[rotated], rule getHWASID_invs_no_cicd')
-  apply clarsimp
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-    apply (clarsimp simp: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs | wp)+
-  done
-
 lemma dmo_setCurrentPD_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wpsimp wp: dmo_invs' no_irq_set_current_pd no_irq simp: setCurrentPD_to_abs)
@@ -2663,20 +2606,8 @@ lemma dmo_setCurrentPD_invs'[wp]:
                           machine_rest_lift_def split_def | wp)+
   done
 
-lemma dmo_setCurrentPD_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setCurrentPD addr) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_current_pd no_irq  simp: setCurrentPD_to_abs)
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid)
-  apply (clarsimp simp: set_current_pd_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
-                        machine_rest_lift_def split_def | wp)+
-  done
-
 crunch invs[wp]: setVMRoot "invs'"
   (wp: crunch_wps simp: crunch_simps ignore: doMachineOp)
-
-crunch invs_no_cicd': setVMRoot "invs_no_cicd'"
-  (wp: crunch_wps dmo_setCurrentPD_invs_no_cicd' simp: crunch_simps ignore: doMachineOp)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps

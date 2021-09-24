@@ -2752,7 +2752,7 @@ lemma replyRemove_invs':
   done
 
 lemma replyClear_invs'[wp]:
-  "\<lbrace>invs' and sch_act_not tcbPtr and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
    replyClear replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding replyClear_def
@@ -2764,7 +2764,7 @@ lemma replyClear_invs'[wp]:
 
 (* Ugh, required to be able to split out the abstract invs *)
 lemma finaliseCap_True_invs'[wp]:
-  "\<lbrace>invs' and sch_act_simple\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "finaliseCap cap final True \<lbrace>invs'\<rbrace>"
   unfolding finaliseCap_def sym_refs_asrt_def
   apply (wpsimp wp: irqs_masked_lift simp: Let_def split_del: if_split)
   apply clarsimp
@@ -3148,7 +3148,7 @@ lemma schedContextUnbindTCB_invs'[wp]:
         apply (wpsimp wp: tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
                           tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
   apply (fastforce dest: sym_refs_obj_atD'
-                   simp: invs_queues invs_weak_sch_act_wf invs_valid_objs' invs'_valid_tcbs'
+                   simp: invs_queues invs_valid_objs' invs'_valid_tcbs'
                          sym_refs_asrt_def if_cancel_eq_True ko_wp_at'_def refs_of_rev'
                          pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
@@ -3570,12 +3570,15 @@ lemmas schedContextZeroRefillMax_removeable'
   = prepares_delete_helper'' [OF schedContextZeroRefillMax_unlive
                                    [where p=scPtr and scPtr=scPtr for scPtr]]
 
+crunches schedContextMaybeUnbindNtfn
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+
 end
 
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
        \<and> (final_matters' cap \<longrightarrow> (final = isFinal cap slot (cteCaps_of s)))
-       \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> sch_act_simple s\<rbrace>
+       \<and> sch_act_simple s\<rbrace>
      finaliseCap cap final flag
    \<lbrace>\<lambda>rv s. (isNullCap (fst rv) \<and> removeable' slot s cap
                 \<and> (snd rv \<noteq> NullCap \<longrightarrow> snd rv = cap \<and> cap_has_cleanup' cap
@@ -3602,7 +3605,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                      unbindMaybeNotification_obj_at'_ntfnBound
                      unbindMaybeNotification_obj_at'_no_change
                simp: isZombie_Null)
-    apply (strengthen invs_valid_objs' invs_sch_act_wf')
+    apply (strengthen invs_valid_objs')
     apply (wpsimp wp: schedContextMaybeUnbindNtfn_obj_at'_ntfnSc
                       prepares_delete_helper'' [OF replyClear_makes_unlive]
                       hoare_vcg_if_lift_strong simp: isZombie_Null)+
@@ -3633,17 +3636,19 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                        not_Final_removeable finaliseCap_def,
          simp_all add: removeable'_def)
      (* ThreadCap *)
-     apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
-     apply (clarsimp simp: valid_cap'_def)
-     apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
-     apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def)
-    (* EndpointCap *)
-    apply fastforce
+      apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
+      apply (clarsimp simp: valid_cap'_def)
+      apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
+      apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def)
+     (* NotificationCap *)
+     apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
+     (* EndpointCap *)
+    apply (fastforce simp: sch_act_wf_asrt_def)
    (* ArchObjectCap *)
-   apply (fastforce simp: obj_at'_def)
+   apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
   (* ReplyCap *)
   apply (rule conjI; clarsimp)
-   apply (clarsimp simp: obj_at'_def)
+   apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
   apply (frule (1) obj_at_replyTCBs_of[OF ko_at_obj_at', simplified])
   apply (frule valid_replies'_no_tcb, clarsimp)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_reply'_def projectKOs opt_map_def
@@ -4619,6 +4624,7 @@ lemma fast_finaliseCap_corres:
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
            (finaliseCap cap' final' True)"
+  apply add_sch_act_wf
   apply (cases cap, simp_all add: finaliseCap_def isCap_simps final_matters'_def
                                   corres_liftM2_simp[unfolded liftM_def]
                                   o_def dc_def[symmetric] when_def
@@ -4626,12 +4632,14 @@ lemma fast_finaliseCap_corres:
                        split del: if_split cong: if_cong)
     (* EndpointCap *)
     apply clarsimp
+    apply (rule corres_stateAssert_assume; (simp add: sch_act_wf_asrt_def)?)
     apply (rule corres_guard_imp)
       apply (rule cancelAllIPC_corres)
      apply (simp add: valid_cap_def)
     apply (simp add: valid_cap'_def)
    (* NotificationCap *)
    apply clarsimp
+   apply (rule corres_stateAssert_assume; (simp add: sch_act_wf_asrt_def)?)
    apply (rule corres_guard_imp)
      apply (rule corres_split_deprecated[OF _ sched_context_maybe_unbind_ntfn_corres])
        apply (rule corres_split_deprecated[OF _ unbindMaybeNotification_corres])
@@ -4642,9 +4650,10 @@ lemma fast_finaliseCap_corres:
   (* ReplyCap *)
   apply clarsimp
   apply (rename_tac rptr rs)
-  apply (add_sym_refs, add_valid_replies rptr simp: valid_cap_def)
+  apply (add_sym_refs, add_valid_replies rptr simp: valid_cap_def, add_sch_act_wf)
   apply (rule corres_stateAssert_assume; (simp add: sym_refs_asrt_def)?)
   apply (rule corres_stateAssert_assume; simp?)
+  apply (rule corres_stateAssert_assume; (simp add: sch_act_wf_asrt_def)?)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[OF _ getReply_TCB_corres])
       apply (simp split del: if_split)

@@ -397,22 +397,6 @@ lemma dmo_invs':
   apply assumption
   done
 
-lemma dmo_invs_no_cicd':
-  assumes masks: "\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
-  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). \<forall>p.
-             pointerInUserData p s \<or> pointerInDeviceData p s \<or>
-             underlying_memory m' p = underlying_memory m p) and
-          invs_no_cicd'\<rbrace> doMachineOp f \<lbrace>\<lambda>r. invs_no_cicd'\<rbrace>"
-  apply (simp add: doMachineOp_def split_def)
-  apply wp
-  apply clarsimp
-  apply (subst invs_no_cicd'_machine)
-    apply (drule use_valid)
-      apply (rule_tac P="\<lambda>m. m = irq_masks (ksMachineState s)" in masks, simp+)
-   apply (fastforce simp add: valid_machine_state'_def)
-  apply assumption
-  done
-
 lemma dmo_lift':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> doMachineOp f
@@ -1455,7 +1439,7 @@ lemma threadSet_valid_dom_schedule':
 
 lemma threadSet_invs_trivialT:
   assumes x: "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-  assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
+  assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
   assumes w: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes a1: "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
   assumes a2: "\<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb"
@@ -1470,11 +1454,10 @@ lemma threadSet_invs_trivialT:
        (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p))) \<and>
        ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s)) \<and>
        (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<longrightarrow> t \<in> set (ksReleaseQueue s)) \<and>
-       ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)\<rbrace>
+       ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
    threadSet F t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  from z have domains: "\<And>tcb. tcbDomain (F tcb) = tcbDomain tcb" by blast
   note threadSet_sch_actT_P[where P=False, simplified]
   have y: "\<forall>tcb. tcb_st_refs_of' (tcbState (F tcb)) = tcb_st_refs_of' (tcbState tcb) \<and>
                  valid_tcb_state' (tcbState (F tcb)) = valid_tcb_state' (tcbState tcb)"
@@ -1501,11 +1484,11 @@ proof -
               threadSet_valid_queues'
               threadSet_cur
               untyped_ranges_zero_lift
-           | clarsimp simp: y z a1 a2 a3 domains cteCaps_of_def | rule refl)+
+           | clarsimp simp: y z a1 a2 a3 cteCaps_of_def | rule refl)+
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def valid_release_queue_def
                          valid_release_queue'_def o_def)
   apply (intro conjI impI allI
-         ; clarsimp simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3
+         ; clarsimp simp: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a1 a2 a3
                           valid_queues_def valid_queues_no_bitmap_def obj_at'_def
          ; blast)
   done
@@ -5345,7 +5328,6 @@ lemma sts_invs_minor':
                    \<and> (\<forall>rptr. st' = BlockedOnReply rptr \<longrightarrow>
                              st = BlockedOnReply rptr)) t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
-      and sch_act_not t
       and valid_tcb_state' st
       and invs'\<rbrace>
    setThreadState st t
@@ -5365,7 +5347,6 @@ lemma sts_invs':
       and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s \<longrightarrow> (is_reply_linked rptr s) \<longrightarrow> st = BlockedOnReply (Some rptr))
       and tcb_at' t
       and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
-      and (\<lambda>s. \<not>runnable' st \<longrightarrow> sch_act_not t s)
       and valid_tcb_state' st
       and invs'\<rbrace>
    setThreadState st t

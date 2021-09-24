@@ -3854,7 +3854,7 @@ lemma setThreadState_Running_invs':
 
 lemma setThreadState_BlockedOnReceive_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ep_at' eptr s \<and> ex_nonz_cap_to' t s \<and>
-        valid_bound_reply' rptr s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s \<and>
+        valid_bound_reply' rptr s \<and> t \<noteq> ksIdleThread s \<and>
         st_tcb_at' (Not \<circ> is_BlockedOnReply) t s\<rbrace>
    setThreadState (BlockedOnReceive eptr cg rptr) t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -4410,6 +4410,25 @@ lemma receiveIPC_corres_helper:
           od)"
   by (case_tac replyCap; simp add: bind_assoc)
 
+lemma maybeReturnSc_sch_act_wf_not_thread[wp]:
+  "maybeReturnSc ntnfnPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (clarsimp simp: maybeReturnSc_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_sch_act\<close>)+
+  apply wpsimp
+  done
+
+lemma receiveIPC_preamble_sch_act_wf:
+  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> sym_refs (state_refs_of' s)\<rbrace>
+   receiveIPC_preamble replyCap thread
+   \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (clarsimp simp: receiveIPC_preamble_def)
+  apply wpsimp
+  apply (fastforce dest: sym_ref_replyTCB_Receive_or_Reply
+                   simp: st_tcb_at'_def obj_at_simps)
+  done
+
 lemma receiveIPC_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'" and "cap_relation reply_cap replyCap"
     and "is_reply_cap reply_cap \<or> (reply_cap = cap.NullCap)"
@@ -4424,6 +4443,7 @@ lemma receiveIPC_corres:
              (invs' and tcb_at' thread and valid_cap' cap' and valid_cap' replyCap)
              (receive_ipc thread cap isBlocking reply_cap) (receiveIPC thread cap' isBlocking replyCap)"
     (is "corres _ (_ and ?tat and ?tex and ?slot3 and ?rrefs) _ _ _")
+  apply add_sch_act_wf
   supply if_split [split del]
   apply (insert assms)
   apply (rule corres_cross_add_abs_guard[where Q="K (thread \<noteq> idle_thread_ptr)"])
@@ -4435,6 +4455,8 @@ lemma receiveIPC_corres:
   apply (case_tac cap, simp_all add: isEndpointCap_def)
   apply (rename_tac epptr badge right)
   apply (rule corres_stateAssert_assume)
+   apply (rule corres_stateAssert_assume[rotated])
+    apply (clarsimp simp: sch_act_wf_asrt_def)
    apply (rule stronger_corres_guard_imp)
      apply (subst receiveIPC_corres_helper)
      apply (clarsimp simp: receive_ipc_preamble_def[symmetric] receiveIPC_preamble_def[symmetric])
@@ -4456,7 +4478,8 @@ lemma receiveIPC_corres:
                apply (rule_tac P="einvs and ?tat and ?slot3 and ?tex and ep_at epptr
                         and valid_ep ep and ko_at (Endpoint ep) epptr
                         and receive_ipc_preamble_rv reply_cap replyOpt and ?rrefs" and
-                      P'="invs' and tcb_at' thread and ep_at' epptr
+                      P'="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+                          and tcb_at' thread and ep_at' epptr
                           and valid_ep' ep' and valid_bound_reply' replyOpt"
                       in corres_inst)
                apply (rule_tac P'="valid_bound_obj' valid_replies'_sc_asrt replyOpt" and
@@ -4640,7 +4663,8 @@ lemma receiveIPC_corres:
        apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def case_option_ext)
       apply (wpsimp wp: receive_ipc_preamble_invs receive_ipc_preamble_valid_sched
                         receive_ipc_preamble_rv hoare_vcg_ball_lift)
-     apply (rule_tac Q="\<lambda>replyOpt. ep_at' epptr and tcb_at' thread and invs' and
+     apply (rule_tac Q="\<lambda>replyOpt. ep_at' epptr and tcb_at' thread and invs'
+                                   and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                             (\<lambda>_. thread \<noteq> idle_thread_ptr) and valid_bound_reply' replyOpt"
             in hoare_strengthen_post[rotated])
       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def split: if_split)[1]
@@ -4659,7 +4683,7 @@ lemma receiveIPC_corres:
       apply (clarsimp simp: pred_tcb_at'_def, frule obj_at_ko_at'[where p=thread], clarsimp)
       apply (frule tcb_ko_at_valid_objs_valid_tcb', clarsimp)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_tcb'_def)
-     apply wpsimp
+     apply (wpsimp wp: receiveIPC_preamble_sch_act_wf)
     apply clarsimp
     apply (clarsimp simp: valid_cap_def valid_idle_def invs_def valid_state_def valid_sched_def)
    apply (clarsimp simp: valid_cap'_def)
@@ -4976,8 +5000,7 @@ crunches doNBRecvFailedTransfer
 
 (* t = ksCurThread s *)
 lemma rai_invs'[wp]:
-  "\<lbrace>invs' and sch_act_not t
-          and st_tcb_at' active' t
+  "\<lbrace>invs' and st_tcb_at' active' t
           and ex_nonz_cap_to' t
           and valid_cap' cap
           and (\<lambda>s. \<forall>r \<in> zobj_refs' cap. ex_nonz_cap_to' r s)
@@ -5476,12 +5499,12 @@ lemma ri_invs' [wp]:
   receiveIPC t cap isBlocking replyCap
   \<lbrace>\<lambda>_. invs'\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   supply if_split [split del]
-  apply (clarsimp simp: receiveIPC_def sym_refs_asrt_def split: if_split)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (clarsimp simp: receiveIPC_def sym_refs_asrt_def sch_act_wf_asrt_def split: if_split)
+  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext)
    apply (rule hoare_seq_ext)
     \<comment> \<open>After getEndpoint, the following holds regardless of the type of ep\<close>
-    apply (rule_tac B="\<lambda>ep s. invs' s \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
+    apply (rule_tac B="\<lambda>ep s. invs' s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
                               sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
                               st_tcb_at' simple' t s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s \<and>
                               (\<forall>x. replyOpt = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and>
@@ -5517,7 +5540,7 @@ lemma ri_invs' [wp]:
      apply (wpsimp wp: replyPush_invs' completeSignal_invs' sts_invs' setThreadState_st_tcb
                        threadGet_wp)
                apply (rename_tac sender queue senderState badge canGrant canGrantReply)
-               apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_not sender
+               apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' t and sch_act_not sender
                                       and st_tcb_at' (Not \<circ> is_replyState) sender
                                       and (\<lambda>s. sender \<noteq> ksIdleThread s)
                                       and sym_heap_tcbSCs and sym_heap_scReplies
@@ -5581,6 +5604,13 @@ lemma ri_invs' [wp]:
                       (capEPPtr cap) s)")
    apply (fastforce simp: valid_idle'_def idle_tcb'_def pred_tcb_at'_def obj_at'_def projectKOs
                           isCap_simps isSend_def)
+  apply (clarsimp split: if_splits)
+  apply (prop_tac "(\<exists>y. replyTCB ko = Some y) \<and> ko_at' ko x s \<longrightarrow> sch_act_not (the (replyTCB ko)) s")
+   apply clarsimp
+   apply (frule_tac tp="the (replyTCB ko)" in sym_ref_replyTCB_Receive_or_Reply)
+     apply blast
+    apply fastforce
+   apply (fastforce simp: st_tcb_at'_def obj_at_simps sch_act_wf_def split: thread_state.splits)
   apply (fastforce simp: opt_map_def obj_at'_def projectKOs valid_cap'_def split: if_split)
   done
 
@@ -6234,6 +6264,8 @@ lemma doReplyTransfer_corres:
       apply (intro conjI)
          apply (erule cross_relF[OF _ tcb_at'_cross_rel[where t=sender]], fastforce)
         apply (erule (1) st_tcb_ex_cap'', simp)
+       apply (prop_tac "sch_act_wf (ksSchedulerAction s') s'")
+        apply (fastforce dest: sch_act_wf_cross)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (wpsimp wp: get_simple_ko_wp)+
    apply (clarsimp split: option.split simp: invs_def valid_state_def valid_pspace_def)

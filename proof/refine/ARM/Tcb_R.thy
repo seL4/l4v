@@ -114,14 +114,11 @@ abbreviation
   "ct_idle' \<equiv> ct_in_state' idle'"
 
 lemma activate_invs':
-  "\<lbrace>invs' and sch_act_simple\<rbrace>
-     activateThread
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "activateThread \<lbrace>invs'\<rbrace>"
   apply (simp add: activateThread_def)
   apply (wpsimp wp: activateIdle_invs' sts_invs_minor' schedContextCompleteYieldTo_invs'
                     hoare_vcg_imp_lift')
-     apply (wpsimp wp: schedContextCompleteYieldTo_invs' simp: sch_act_simple_def)
-    apply (wpsimp wp: threadGet_wp gts_wp')+
+     apply (wpsimp wp: threadGet_wp gts_wp')+
   apply (frule st_tcb_at'_valid_idle'_helper')
   apply (drule_tac x="ksCurThread s" in spec)
   by (fastforce simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def sch_act_simple_def)
@@ -517,7 +514,7 @@ proof -
 qed
 
 lemma readreg_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' src and ex_nonz_cap_to' src\<rbrace>
+  "\<lbrace>invs' and tcb_at' src and ex_nonz_cap_to' src\<rbrace>
      invokeTCB (tcbinvocation.ReadRegisters src susp n arch)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (simp add: invokeTCB_def performTransfer_def | wp
@@ -525,7 +522,7 @@ lemma readreg_invs':
                  dest!: global'_no_ex_cap)+
 
 lemma writereg_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
+  "\<lbrace>invs' and tcb_at' dest and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.WriteRegisters dest resume values arch)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (simp add: invokeTCB_def performTransfer_def  | wp restart_invs' | rule conjI
@@ -534,7 +531,7 @@ lemma writereg_invs':
                  dest!: global'_no_ex_cap)+
 
 lemma copyreg_invs'':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' src and tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
+  "\<lbrace>invs' and tcb_at' src and tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs' and tcb_at' dest\<rbrace>"
   supply if_split [split del] if_weak_cong[cong]
@@ -543,7 +540,7 @@ lemma copyreg_invs'':
   by (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap split: if_split)
 
 lemma copyreg_invs':
-  "\<lbrace>invs' and sch_act_simple and tcb_at' src and
+  "\<lbrace>invs' and tcb_at' src and
           tcb_at' dest and ex_nonz_cap_to' src and ex_nonz_cap_to' dest\<rbrace>
      invokeTCB (tcbinvocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -1393,11 +1390,12 @@ lemma threadcontrol_corres_helper1:
   by (wpsimp wp: thread_set_weak_valid_sched_action)
 
 lemma threadcontrol_corres_helper2:
-  "is_aligned a msg_align_bits \<Longrightarrow> \<lbrace>invs' and tcb_at' t\<rbrace>
-      threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t
-           \<lbrace>\<lambda>x s. Invariants_H.valid_queues s \<and> valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp threadSet_invs_trivial
-      | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
+  "is_aligned a msg_align_bits \<Longrightarrow>
+   \<lbrace>invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' t\<rbrace>
+   threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t
+   \<lbrace>\<lambda>_ s. Invariants_H.valid_queues s \<and> valid_queues' s \<and> weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  by (wp threadSet_invs_trivial threadSet_sch_act
+      | strengthen  invs_valid_queues' invs_queues sch_act_wf_weak
       | clarsimp dest!: invs_valid_release_queue' simp: inQ_def valid_release_queue'_def obj_at'_def)+
 
 lemma threadcontrol_corres_helper3:
@@ -1410,22 +1408,24 @@ lemma threadcontrol_corres_helper3:
 
 lemma threadcontrol_corres_helper4:
   "isArchObjectCap ac \<Longrightarrow>
-  \<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4)) and valid_cap' ac \<rbrace>
-    checkCapAt ac (cte_map (ab, ba))
-      (checkCapAt (capability.ThreadCap a) (cte_map slot)
-         (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
-  \<lbrace>\<lambda>x. Invariants_H.valid_queues and valid_queues' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>"
-  apply (wp
-       | strengthen  invs_valid_queues' invs_queues invs_weak_sch_act_wf
-       | clarsimp simp: )+
-  by (case_tac ac;
-      clarsimp simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
-                     isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def
-                     cte_level_bits_def)
+  \<lbrace>invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+   and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) (cte_map (a, tcb_cnode_index 4))
+   and valid_cap' ac \<rbrace>
+  checkCapAt ac (cte_map (ab, ba))
+    (checkCapAt (capability.ThreadCap a) (cte_map slot)
+       (assertDerived (cte_map (ab, ba)) ac (cteInsert ac (cte_map (ab, ba)) (cte_map (a, tcb_cnode_index 4)))))
+  \<lbrace>\<lambda>_. Invariants_H.valid_queues and valid_queues' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>"
+  apply (wpsimp | strengthen invs_valid_queues' invs_queues sch_act_wf_weak)+
+  apply (wp checkCap_inv assertDerived_wp_weak)+
+  apply (case_tac ac;
+          clarsimp simp: capBadge_def isArchObjectCap_def isNotificationCap_def isEndpointCap_def
+                         isReplyCap_def isIRQControlCap_def tcb_cnode_index_def cte_map_def cte_wp_at'_def
+                         cte_level_bits_def)
+  done
 
 lemma threadSet_invs_trivialT2:
   assumes x: "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
-  assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
+  assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb"
   assumes a: "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
   assumes s: "\<forall>tcb. tcbSchedContext (F tcb) = tcbSchedContext tcb"
   assumes y: "\<forall>tcb. tcbYieldTo (F tcb) = tcbYieldTo tcb"
@@ -1440,11 +1440,10 @@ lemma threadSet_invs_trivialT2:
         \<and> (\<forall>ko d p. ko_at' ko t s \<and> inQ d p (F ko) \<and> \<not> inQ d p ko \<longrightarrow> t \<in> set (ksReadyQueues s (d, p)))
         \<and> ((\<exists>tcb. tcbInReleaseQueue tcb \<and> \<not> tcbInReleaseQueue (F tcb)) \<longrightarrow> t \<notin> set (ksReleaseQueue s))
         \<and> (\<forall>ko. ko_at' ko t s \<and> tcbInReleaseQueue (F ko) \<and> \<not> tcbInReleaseQueue ko \<longrightarrow> t \<in> set (ksReleaseQueue s))
-        \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s \<and> t \<noteq> ksCurThread s)\<rbrace>
+        \<and> ((\<exists>tcb. \<not> tcbQueued tcb \<and> tcbQueued (F tcb)) \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
         threadSet F t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  from z have domains: "\<And>tcb. tcbDomain (F tcb) = tcbDomain tcb" by blast
   note threadSet_sch_actT_P[where P=False, simplified]
   have r: "\<forall>tcb. tcb_st_refs_of' (tcbState (F tcb)) = tcb_st_refs_of' (tcbState tcb) \<and>
                  valid_tcb_state' (tcbState (F tcb)) = valid_tcb_state' (tcbState tcb)"
@@ -1472,7 +1471,7 @@ proof -
                threadSet_valid_queues' threadSet_valid_release_queue'
                threadSet_cur
                untyped_ranges_zero_lift
-            | clarsimp simp: r y z a s domains cteCaps_of_def | rule refl)+
+            | clarsimp simp: r y z a s cteCaps_of_def | rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def valid_release_queue'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def  o_def)
    by (intro conjI; fastforce)
@@ -2593,19 +2592,14 @@ lemma tc_sched_invs':
   done
 
 lemma setSchedulerAction_invs'[wp]:
-  "\<lbrace>invs' and sch_act_wf sa
-          and (\<lambda>s. sa = ResumeCurrentThread
-                     \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s)
-          and (\<lambda>s. sa = ResumeCurrentThread
-          \<longrightarrow> ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s)\<rbrace>
-    setSchedulerAction sa
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs' and sch_act_wf sa\<rbrace>
+   setSchedulerAction sa
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: setSchedulerAction_def)
   apply wp
   apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def valid_dom_schedule'_def
                 valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs cur_tcb'_def
                 ct_not_inQ_def valid_release_queue_def valid_release_queue'_def)
-  apply (simp add: ct_idle_or_in_cur_domain'_def)
   done
 
 (* FIXME RT: move to...? *)
@@ -2704,7 +2698,7 @@ lemma setTLSBase_invs'[wp]:
   by (wpsimp simp: invokeTCB_def)
 
 lemma tcbinv_invs':
-  "\<lbrace>invs' and sch_act_simple and ct_in_state' runnable' and tcb_inv_wf' ti\<rbrace>
+  "\<lbrace>invs' and sch_act_simple and tcb_inv_wf' ti\<rbrace>
      invokeTCB ti
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (case_tac ti; simp only:)
