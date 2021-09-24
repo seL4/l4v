@@ -39,6 +39,7 @@ locale touched_addresses_inv =
   fixes m :: "('z::state_ext state, 'r) nondet_monad"
   assumes tainv: "\<And>P. m \<lbrace>ignore_ta P\<rbrace>"
 begin
+
 lemma agnostic_preserved:
   "ta_agnostic P \<Longrightarrow> m \<lbrace>P\<rbrace>"
   unfolding ta_agnostic_def
@@ -62,6 +63,17 @@ lemma in_inv_by_agnostic:
    apply (clarsimp simp:ta_agnostic_def)+
   done
 end
+
+locale touched_addresses_invE = touched_addresses_inv m for
+                                m::"('z::state_ext state, 'ra + 'rb) nondet_monad"
+begin
+lemma validE_tainv[wp]:
+  "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
+  by (simp add: hoare_valid_validE tainv)
+end
+
+sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
+  by unfold_locales
 
 locale touched_addresses_P_inv = touched_addresses_inv m for m::"('z::state_ext state, 'r) nondet_monad" +
   fixes P :: "'z state \<Rightarrow> bool"
