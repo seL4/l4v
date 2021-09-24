@@ -1200,6 +1200,9 @@ where
 | "sch_act_wf ChooseNewThread     = \<top>"
 | "sch_act_wf (SwitchToThread t)  = (\<lambda>s. st_tcb_at' runnable' t s \<and> tcb_in_cur_domain' t s)"
 
+defs sch_act_wf_asrt_def:
+  "sch_act_wf_asrt \<equiv> \<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+
 definition
   sch_act_simple :: "kernel_state \<Rightarrow> bool"
 where
@@ -1410,7 +1413,7 @@ definition
 definition
   valid_state' :: "kernel_state \<Rightarrow> bool"
 where
-  "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
+  "valid_state' \<equiv> \<lambda>s. valid_pspace' s
                       \<and> valid_queues s
                       \<and> sym_refs (list_refs_of_replies' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
@@ -1424,7 +1427,6 @@ where
                       \<and> valid_queues' s
                       \<and> valid_release_queue s
                       \<and> valid_release_queue' s
-                      \<and> ct_idle_or_in_cur_domain' s
                       \<and> valid_pde_mappings' s
                       \<and> pspace_domain_valid s
                       \<and> ksCurDomain s \<le> maxDomain
@@ -1493,34 +1495,6 @@ abbreviation
 abbreviation
   "ct_running' \<equiv> ct_in_state' (\<lambda>st. st = Structures_H.Running)"
 
-definition
-  "all_invs_but_ct_idle_or_in_cur_domain'
-    \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s
-           \<and> sym_refs (list_refs_of_replies' s)
-           \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
-           \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
-           \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
-           \<and> valid_irq_states' s \<and> irqs_masked' s \<and> valid_machine_state' s
-           \<and> cur_tcb' s \<and> valid_queues' s \<and> valid_release_queue s \<and> valid_release_queue' s
-           \<and> valid_pde_mappings' s
-           \<and> pspace_domain_valid s
-           \<and> ksCurDomain s \<le> maxDomain
-           \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
-
-lemmas invs_no_cicd'_def = all_invs_but_ct_idle_or_in_cur_domain'_def
-
-lemma all_invs_but_ct_idle_or_in_cur_domain_check':
-  "(all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain') = invs'"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def pred_conj_def
-                conj_left_commute conj_commute invs'_def valid_state'_def)
-
-abbreviation (input)
-  "invs_no_cicd' \<equiv> all_invs_but_ct_idle_or_in_cur_domain'"
-
-lemma invs'_to_invs_no_cicd'_def:
-  "invs' = (all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain')"
-  by (fastforce simp: invs'_def all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def )
 end
 
 locale mdb_next =
@@ -3839,10 +3813,6 @@ lemma invs_unsafe_then_cap' [elim!]:
   "invs' s \<Longrightarrow> if_unsafe_then_cap' s"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_sch_act_wf' [elim!]:
-  "invs' s \<Longrightarrow> sch_act_wf (ksSchedulerAction s) s"
-  by (simp add: invs'_def valid_state'_def)
-
 lemma invs_queues [elim!]:
   "invs' s \<Longrightarrow> valid_queues s"
   by (simp add: invs'_def valid_state'_def)
@@ -3870,10 +3840,6 @@ lemma invs_valid_idle'[elim!]:
 lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
-
-lemma invs'_invs_no_cicd:
-  "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
-  by (simp add: invs'_to_invs_no_cicd'_def)
 
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
@@ -3909,9 +3875,6 @@ lemma invs'_gsCNodes_update[simp]:
              valid_irq_handlers'_def irq_issued'_def irqs_masked'_def valid_machine_state'_def
              valid_dom_schedule'_def
              cur_tcb'_def)
-  apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def tcb_in_cur_domain'_def ct_idle_or_in_cur_domain'_def
-                       ct_not_inQ_def)
   done
 
 lemma invs'_gsUserPages_update[simp]:
@@ -3920,9 +3883,6 @@ lemma invs'_gsUserPages_update[simp]:
              bitmapQ_defs valid_queues'_def valid_release_queue_def valid_release_queue'_def
              valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
              valid_machine_state'_def cur_tcb'_def valid_dom_schedule'_def)
-  apply (cases "ksSchedulerAction s'")
-  apply (simp_all add: ct_in_state'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                       ct_not_inQ_def)
   done
 
 lemma pred_tcb'_neq_contra:

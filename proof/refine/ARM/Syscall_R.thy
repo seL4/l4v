@@ -828,50 +828,15 @@ lemma tcbSchedEnqueue_valid_action:
   apply clarsimp
   done
 
-abbreviation (input) "all_invs_but_sch_extra \<equiv>
-    \<lambda>s. valid_pspace' s \<and> valid_queues s \<and>
-    sym_refs (list_refs_of_replies' s) \<and>
-    if_live_then_nonz_cap' s \<and>
-    if_unsafe_then_cap' s \<and>
-    valid_idle' s \<and>
-    valid_global_refs' s \<and>
-    valid_arch_state' s \<and>
-    valid_irq_node' (irq_node' s) s \<and>
-    valid_irq_handlers' s \<and>
-    valid_irq_states' s \<and>
-    irqs_masked' s \<and>
-    valid_machine_state' s \<and>
-    cur_tcb' s \<and>
-    untyped_ranges_zero' s \<and>
-    valid_queues' s \<and>
-    valid_release_queue s \<and>
-    valid_release_queue' s \<and>
-    valid_pde_mappings' s \<and> pspace_domain_valid s \<and>
-    ksCurDomain s \<le> maxDomain \<and> valid_dom_schedule' s \<and>
-    (\<forall>x. ksSchedulerAction s = SwitchToThread x \<longrightarrow> st_tcb_at' runnable' x s)"
-
-lemma rescheduleRequired_all_invs_but_extra:
-  "\<lbrace>\<lambda>s. all_invs_but_sch_extra s\<rbrace>
-    rescheduleRequired \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-  apply (wp add: rescheduleRequired_ct_not_inQ irqs_masked_lift cur_tcb_lift
-                 rescheduleRequired_sch_act' rescheduleRequired_valid_queues
-                 rescheduleRequired_valid_queues'
-                 valid_irq_node_lift valid_irq_handlers_lift'')
-  apply (auto simp: o_def)
-  done
-
-lemma threadSet_all_invs_but_sch_extra:
-  "\<lbrace> tcb_at' t and (\<lambda>s. (\<forall>p. t \<notin> set (ksReadyQueues s p))) and
-     all_invs_but_sch_extra and sch_act_simple and
-     K (ds \<le> maxDomain) \<rbrace>
+lemma threadSet_tcbDomain_update_invs':
+  "\<lbrace>invs' and  tcb_at' t and (\<lambda>s. (\<forall>p. t \<notin> set (ksReadyQueues s p))) and K (ds \<le> maxDomain) \<rbrace>
    threadSet (tcbDomain_update (\<lambda>_. ds)) t
-   \<lbrace>\<lambda>_. all_invs_but_sch_extra \<rbrace>"
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
+  apply (clarsimp simp: invs'_def valid_state'_def)
   apply (wp threadSet_valid_pspace'T_P[where P = False and Q = \<top> and Q' = \<top>])
-  apply (simp add:tcb_cte_cases_def)+
+  apply (simp add: tcb_cte_cases_def)+
    apply (wp threadSet_valid_pspace'T_P
              threadSet_state_refs_of'T_P[where f'=id and P'=False and Q=\<top> and g'=id and Q'=\<top>]
              threadSet_idle'T threadSet_global_refsT threadSet_cur irqs_masked_lift
@@ -879,9 +844,8 @@ lemma threadSet_all_invs_but_sch_extra:
              threadSet_valid_queues'_no_state threadSet_valid_queues threadSet_valid_dom_schedule'
              threadSet_iflive'T threadSet_ifunsafe'T untyped_ranges_zero_lift
              threadSet_valid_release_queue threadSet_valid_release_queue'
-          | simp add: tcb_cte_cases_def cteCaps_of_def o_def
+          | simp add: tcb_cte_cases_def cteCaps_of_def o_def invs'_def valid_state'_def
           | intro allI)+
-   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_no_state | simp)+
   by (fastforce simp: sch_act_simple_def o_def cteCaps_of_def valid_release_queue'_def obj_at'_def)
 
 lemma threadSet_not_curthread_ct_domain:
@@ -892,39 +856,17 @@ lemma threadSet_not_curthread_ct_domain:
   done
 
 lemma setDomain_invs':
-  "\<lbrace> invs' and sch_act_simple and tcb_at' ptr and K (domain \<le> maxDomain)\<rbrace>
+  "\<lbrace>invs' and tcb_at' ptr and K (domain \<le> maxDomain)\<rbrace>
    setDomain ptr domain
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  supply rescheduleRequired_invs' [wp del]
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: setDomain_def)
-  apply (wp add: hoare_when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
-                 tcbSchedEnqueue_valid_action hoare_vcg_if_lift2 valid_irq_handlers_lift')
-      apply (wpsimp wp: isSchedulable_wp)
-     apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
-      \<and> (ptr \<noteq> curThread \<longrightarrow> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
-      in hoare_strengthen_post[rotated])
-      apply (clarsimp simp:invs'_def valid_state'_def st_tcb_at'_def[symmetric] valid_pspace'_def)
-      apply (intro conjI allI impI)
-         apply (erule valid_objs'_valid_tcbs')
-        apply (clarsimp simp: comp_def)
-       apply (clarsimp simp: isSchedulable_bool_def pred_map_conj)
-       apply (erule st_tcb_ex_cap''[where P=runnable', rotated], fastforce)
-       apply (clarsimp simp: pred_tcb_at'_equiv pred_map_def opt_map_def)
-      apply (clarsimp simp: isSchedulable_bool_def pred_tcb_at'_equiv pred_map_def opt_map_def)
-     apply (rule hoare_strengthen_post[OF hoare_vcg_conj_lift])
-       apply (rule threadSet_all_invs_but_sch_extra)
-      prefer 2
-      apply clarsimp
-      apply assumption
-     apply (wp static_imp_wp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
-               threadSet_tcbDomain_update_ct_not_inQ | simp)+
-    apply (rule_tac Q = "\<lambda>r s. invs' s \<and> curThread = ksCurThread s \<and> sch_act_simple s
-                             \<and> domain \<le> maxDomain
-                             \<and> (\<forall>d p. ptr \<notin> set (ksReadyQueues s (d, p)))"
-      in hoare_strengthen_post[rotated])
-     apply (clarsimp simp:invs'_def valid_state'_def)
-    apply (wp hoare_vcg_imp_lift tcbSchedDequeue_nonq hoare_vcg_all_lift)+
-  apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def)+
+  apply (rule hoare_seq_ext[OF _ getCurThread_sp])
+  apply (rule_tac B="\<lambda>_ s. ?P s \<and> (\<forall>p. ptr \<notin> set (ksReadyQueues s p))" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: tcbSchedDequeue_nonq hoare_vcg_all_lift)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_tcbDomain_update_invs')
+  apply (wpsimp wp: tcbSchedEnqueue_invs' isSchedulable_wp)
+  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps st_tcb_at'_def obj_at_simps)
   done
 
 lemma performInv_invs'[wp]:
@@ -1077,10 +1019,6 @@ lemma st_tcb_at_idle_thread':
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
 
 crunch tcb_at'[wp]: replyFromKernel "tcb_at' t"
-
-lemma invs_weak_sch_act_wf_strg:
-  "invs' s \<longrightarrow> weak_sch_act_wf (ksSchedulerAction s) s"
-  by clarsimp
 
 (* FIXME: move *)
 lemma rct_sch_act_simple[simp]:
