@@ -358,18 +358,8 @@ lemma wordFromRights_mask_0:
 lemma wordFromRights_mask_eq:
   "wordFromRights rghts && mask 4 = wordFromRights rghts"
   apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
+             in bit.conj_disj_distrib)
   apply (simp add: wordFromRights_mask_0)
-  done
-
-lemma loadWordUser_user_word_at:
-  "\<lbrace>\<lambda>s. \<forall>rv. user_word_at rv x s \<longrightarrow> Q rv s\<rbrace> loadWordUser x \<lbrace>Q\<rbrace>"
-  apply (simp add: loadWordUser_def user_word_at_def
-                   doMachineOp_def split_def)
-  apply wp
-  apply (clarsimp simp: pointerInUserData_def
-                        loadWord_def in_monad upto0_7_def
-                        is_aligned_mask)
   done
 
 lemma mapM_loadWordUser_user_words_at:
@@ -1746,8 +1736,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       apply (subst Word_Lemmas.of_int_uint_ucast)
-       apply (rule refl)
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

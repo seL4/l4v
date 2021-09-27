@@ -69,7 +69,7 @@ proof -
   apply (cinit lift: irq_' slot_' cap_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
@@ -93,9 +93,9 @@ proof -
   apply (clarsimp simp: cte_wp_at_ctes_of badge_derived'_def
                         Collect_const_mem unat_gt_0 valid_cap_simps' X64.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply auto
   done
 qed
 
@@ -108,7 +108,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp add: ucast_up_ucast is_up)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
@@ -121,7 +121,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply (auto simp add:Word.uint_up_ucast)
   apply (case_tac "of_int (uint irq) \<noteq> 0 \<longrightarrow> 0 < unat irq")
    by (auto simp: Collect_const_mem unat_eq_0)
 
@@ -641,7 +641,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      apply (subst ucast_nat_def[symmetric])
      apply (subst unat_of_nat)
      apply simp
-    apply (simp add: ucast_nat_def[symmetric])
+    supply Word.of_nat_unat[simp del]
+    apply (simp flip: ucast_nat_def)
     apply (subgoal_tac "of_nat (unat irq + 0x10) = of_nat (unat irq) + 0x10")
      apply (erule subst)
      apply (subst unat_of_nat)
@@ -663,6 +664,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
   have irq64_helper_three:
     "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
         toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq)) \<le> SCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ"
+    including no_take_bit
+    supply Word.of_nat_unat[simp del]
     apply (subst toEnum_of_nat)
      apply (simp add: unat_ucast)
     apply (simp add: unat_ucast Kernel_C.maxIRQ_def)
@@ -684,6 +687,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
        irq + 0x10 =
        UCAST(8 \<rightarrow> 64) (toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq)))"
+    supply Word.of_nat_unat[simp del]
     apply (subgoal_tac "unat irq \<le> 107")
      defer
      apply simp
@@ -872,7 +876,7 @@ from assms show ?thesis
                apply (rule impI)
                apply (rule TrueI)
               apply (rule_tac irq1="yf" in irq64_helper_two)
-              apply (simp add: unat_def)
+              apply (simp only: unat_def)
              apply (vcg exspec=isIRQActive_modifies)
             (* X64IRQIssueIRQHandlerMSI *)
             (* Much of the proof below is copied from the IOAPIC case above \<up> *)
@@ -968,7 +972,7 @@ from assms show ?thesis
                           apply (intro conjI impI)
                             apply (rule TrueI)+
                           apply (rule_tac irq1="yf" in irq64_helper_two)
-                          apply (simp add: unat_def)
+                          apply (simp only: unat_def)
                          apply (vcg exspec=getSyscallArg_modifies, wp)
                        apply (vcg exspec=getSyscallArg_modifies, wp)
                      apply (vcg exspec=getSyscallArg_modifies, wp)

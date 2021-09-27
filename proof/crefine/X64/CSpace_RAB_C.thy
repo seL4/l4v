@@ -97,13 +97,7 @@ lemma valid_cap_cte_at':
   apply (erule spec)
   done
 
-lemma mask_64_max_word [simp]:
-  shows "mask 64 = (max_word :: machine_word)"
-  unfolding mask_def
-  by (simp add: max_word_def)
-
-declare ucast_id [simp]
-declare resolveAddressBits.simps [simp del]
+declare mask_64_max_word [simp]
 
 lemma rightsFromWord_wordFromRights:
   "rightsFromWord (wordFromRights rghts) = rghts"
@@ -251,14 +245,15 @@ next
       "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) =
       (option_map cteCap (ctes_of s p) = Some a
        \<and> b = s)"
-       apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
-       apply rule
+      apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
+      apply rule
        apply (clarsimp simp: in_getCTE_cte_wp_at' cte_wp_at_ctes_of)
-       apply clarsimp
-       apply (subgoal_tac "cte_wp_at' ((=) z) p s")
+      apply clarsimp
+      apply (rename_tac s p z)
+      apply (subgoal_tac "cte_wp_at' ((=) z) p s")
        apply (clarsimp simp: getCTE_def cte_wp_at'_def)
-       apply (simp add: cte_wp_at_ctes_of)
-       done
+      apply (simp add: cte_wp_at_ctes_of)
+      done
 
     note ih = ind.hyps[simplified, simplified in_monad
         getSlotCap_in_monad locateSlot_conv stateAssert_def, simplified]

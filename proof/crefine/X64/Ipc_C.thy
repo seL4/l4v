@@ -976,6 +976,7 @@ lemma setMR_ccorres:
              \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
              \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []
      (setMR thread buf offset v) (Call setMR_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: offset_' reg___unsigned_long_' receiver_' receiveIPCBuffer_')
    apply (rule ccorres_cond2'[where R=\<top>])
@@ -1008,17 +1009,17 @@ lemma setMR_ccorres:
     apply wp
    apply (simp del: Collect_const)
    apply (vcg exspec=setRegister_modifies)
+  supply Word.of_int_uint[simp del]
   apply (simp add: Collect_const_mem option_to_0_def
                    unat_gt_0 option_to_ptr_def)
-  apply (intro impI conjI allI, simp_all)
+  apply (intro impI conjI allI; simp?)
           apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
           apply (erule aligned_add_aligned)
            apply (simp only: word_size_def is_aligned_mult_triv2[where n=3, simplified])
           apply (simp add: msg_align_bits_def word_size_bits_def)
          apply (simp add: n_msgRegisters_def length_msgRegisters msgLengthBits_def mask_def)
-        apply (simp add: msg_align_bits word_size_def msgMaxLength_def
-                         length_msgRegisters n_msgRegisters_def uint_nat unat_word_ariths
-                         unat_of_nat32)
+        apply (simp add: msg_align_bits word_size_def msgMaxLength_def unat_of_nat
+                         length_msgRegisters n_msgRegisters_def uint_nat unat_word_ariths)
        apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
                         word_less_nat_alt unat_of_nat)
       apply (simp add: unat_word_ariths msg_align_bits msgMaxLength_def
@@ -1261,6 +1262,7 @@ lemma copyMRs_register_loop_helper:
       (CALL setRegister(tcb_ptr_to_ctcb_ptr receiver,
                ucast (index msgRegistersC (unat \<acute>i)),
                \<acute>ret__unsigned_long)))"
+  including no_take_bit
   apply clarsimp
   apply (rule ccorres_guard_imp)
     apply ctac
@@ -1514,6 +1516,7 @@ lemma copyMRsFault_ccorres_exception:
            hs
            (mapM_x (\<lambda>(x, y). setMR receiver recvBuffer x y) (zip [0..<120] msg))
            (Call copyMRsFault_'proc)"
+  including no_take_bit
   apply (unfold K_def)
   apply (intro ccorres_gen_asm)
   apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
@@ -1594,11 +1597,12 @@ proof -
     by (simp | erule in_set_zipE)+
   have msg_aux: "\<forall>p. elem p (zip [4..<120] (drop 4 msg))
                     \<longrightarrow> (\<lambda>(x1,y1). setMR receiver None x1 y1) p = (\<lambda>_ . return (length msgRegisters)) p"
-    by (fastforce simp add: numeral_eqs setMR_def less_than_4 n_msgRegisters_def length_msgRegisters)
+    by (fastforce simp add: numeral_eqs setMR_def less_than_4 n_msgRegisters_def length_msgRegisters
+                  simp del: unsigned_numeral)
   have mapM_x_return_gen: "\<And>v w xs. mapM_x (\<lambda>_. return v) xs = return w" (* FIXME mapM_x_return *)
     by (induct_tac xs; simp add: mapM_x_Nil mapM_x_Cons)
   show ?thesis
-  including no_pre
+  including no_pre no_take_bit
   apply (unfold K_def)
   apply (intro ccorres_gen_asm)
   apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
@@ -1628,7 +1632,7 @@ proof -
           apply (simp add: n_msgRegisters_def)
          apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies exspec=getRegister_modifies)
          apply simp
-        apply (simp add: setMR_def split del: if_split)
+        apply (simp add: setMR_def)
         apply (rule hoare_pre)
          apply (wp asUser_obj_at_elsewhere | wpc)+
         apply simp
@@ -2329,6 +2333,7 @@ lemma setExtraBadge_ccorres:
            hs
            (setExtraBadge buffer badge n)
            (Call setExtraBadge_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: bufferPtr_' badge_' i_')
    apply (unfold storeWordUser_def)
@@ -2618,6 +2623,7 @@ proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
   note if_split[split]
   case Nil
   thus ?case
+    including no_take_bit
     apply (simp only: transferCapsToSlots.simps)
     apply (rule ccorres_guard_imp2)
      apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
@@ -2641,6 +2647,7 @@ next
   let ?S="\<lbrace>\<acute>i=of_nat n \<and> mi=message_info_to_H \<acute>info\<rbrace>"
   have n3: "n \<le> 3" using Cons.prems by simp
   hence of_nat_n3[intro!]: "of_nat n \<le> (3 :: machine_word)"
+    including no_take_bit
     by (simp add: word_le_nat_alt unat_of_nat)
   have drop_n_foo: "\<And>xs n y ys. drop n xs = y # ys
      \<Longrightarrow> \<exists>xs'. length xs' = n \<and> xs = xs' @ (y # ys)"
@@ -2736,6 +2743,7 @@ next
   note extra_sle_sless_unfolds [simp del]
   from Cons.prems
   show ?case
+    including no_take_bit
     apply (clarsimp simp: Let_def word_sle_def[where b=5] split_def
                     cong: call_ignore_cong
                 simp del: Collect_const)
@@ -3194,8 +3202,8 @@ proof -
   let ?curr = "\<lambda>s. current_extra_caps_' (globals s)"
   let ?EXCNONE = "{s. ret__unsigned_long_' s = scast EXCEPTION_NONE}"
   let ?interpret = "\<lambda>v n. take n (array_to_list (excaprefs_C v))"
-  note if_split[split del]
   show ?thesis
+  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit(no_subst_asm) lift: thread_' bufferPtr_' info_' simp: whileAnno_def)
    apply (clarsimp simp add: getExtraCPtrs_def lookupCapAndSlot_def
@@ -3204,7 +3212,7 @@ proof -
    apply (simp add: liftE_bindE del: Collect_const)
    apply wpc
    apply (rename_tac word1 word2 word3 word4)
-   apply (simp del: Collect_const wordSize_def)
+   apply (simp del: Collect_const)
    apply wpc
     apply (simp add: option_to_ptr_def option_to_0_def)
     apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
@@ -3316,12 +3324,11 @@ proof -
             apply (rule takeWhile_eq, simp_all)[1]
              apply (drule_tac f="\<lambda>xs. xs ! m" in arg_cong)
              apply (clarsimp simp: split_def NULL_ptr_val[symmetric])
-            apply (simp add: word_less_nat_alt min.absorb2)
            apply (clarsimp simp: array_to_list_def)
            apply (rule takeWhile_eq, simp_all)[1]
             apply (drule_tac f="\<lambda>xs. xs ! m" in arg_cong)
             apply (clarsimp simp: split_def NULL_ptr_val[symmetric])
-           apply (simp add: min.absorb1 word_less_nat_alt)
+           apply (simp add: word_less_nat_alt)
           apply simp
          apply (simp add: mapME_def[symmetric] split_def
                           liftE_bindE[symmetric])
@@ -3386,7 +3393,6 @@ lemma doNormalTransfer_ccorres [corres]:
                       receiver receiveBuffer)
     (Call doNormalTransfer_'proc)"
 proof -
-  note if_split[split del]
   have word_0_le_helper:
     "\<And>i :: sword32. \<lbrakk> i <s (1 << unat (scast seL4_MsgExtraCapBits :: word32)) - 1; 0 <=s i \<rbrakk>
            \<Longrightarrow> 0 <=s i + 1"
@@ -3394,7 +3400,7 @@ proof -
                                  word_sless_msb_less msb_nth)
     apply (clarsimp simp: word_eq_iff)
     apply (drule bang_is_le)
-    apply unat_arith
+    apply (unat_arith; simp add: take_bit_nat_def)
     done
 
   show ?thesis
@@ -3638,12 +3644,13 @@ lemma copyMRsFaultReply_ccorres_exception:
            (Call copyMRsFaultReply_'proc)"
 proof -
   show ?thesis
+    including no_take_bit
     apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
-apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
+     apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Exception_def)
      apply ccorres_rewrite
@@ -3752,12 +3759,13 @@ lemma copyMRsFaultReply_ccorres_syscall:
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
   show ?thesis
+    including no_take_bit
     apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'
                         id___anonymous_enum_'
                         length___unsigned_long_'
                   simp: whileAnno_def)
-apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
+     apply (ctac(no_vcg) add: Arch_getSanitiseRegisterInfo_ccorres)
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Syscall_def)
      apply ccorres_rewrite
@@ -4095,7 +4103,7 @@ lemma handleFaultReply_ccorres [corres]:
    apply clarsimp
    apply (vcg exspec=getRegister_modifies)
   apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
-                        message_info_to_H_def to_bool_def scast_def
+                        message_info_to_H_def to_bool_def
                         length_exceptionMessage length_syscallMessage
                         min_def word_less_nat_alt true_def
                         obj_at'_def
