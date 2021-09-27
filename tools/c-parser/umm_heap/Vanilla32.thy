@@ -340,27 +340,36 @@ lemma word_typ_name [simp]:
   "typ_name (typ_info_t TYPE('a::len8 word)) = ''word'' @ nat_to_bin_string (len_of TYPE('a))"
   by simp
 
+lemma nat_to_bin_string_word_sizes [simp]:
+  "nat_to_bin_string  8 = ''00010''"
+  "nat_to_bin_string 16 = ''000010''"
+  "nat_to_bin_string 32 = ''0000010''"
+  "nat_to_bin_string 64 = ''00000010''"
+  by (simp_all add: nat_to_bin_string.simps)
+
 lemma typ_name_words [simp]:
    "typ_name (typ_uinfo_t TYPE(8 word))  = ''word00010''"
    "typ_name (typ_uinfo_t TYPE(16 word)) = ''word000010''"
    "typ_name (typ_uinfo_t TYPE(32 word)) = ''word0000010''"
    "typ_name (typ_uinfo_t TYPE(64 word)) = ''word00000010''"
+   (* these do not fire in a simple simp, because typ_info_word takes precedence (innermost term): *)
    "typ_name (typ_info_t  TYPE(8 word))  = ''word00010''"
    "typ_name (typ_info_t  TYPE(16 word)) = ''word000010''"
    "typ_name (typ_info_t  TYPE(32 word)) = ''word0000010''"
    "typ_name (typ_info_t  TYPE(64 word)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def nat_to_bin_string.simps)
+  by (auto simp: typ_uinfo_t_def)
 
 lemma typ_name_swords [simp]:
    "typ_name (typ_uinfo_t TYPE(8 sword))  = ''word00010''"
    "typ_name (typ_uinfo_t TYPE(16 sword)) = ''word000010''"
    "typ_name (typ_uinfo_t TYPE(32 sword)) = ''word0000010''"
    "typ_name (typ_uinfo_t TYPE(64 sword)) = ''word00000010''"
+   (* these do not fire in a simple simp, because typ_info_word takes precedence (innermost term): *)
    "typ_name (typ_info_t  TYPE(8 sword))  = ''word00010''"
    "typ_name (typ_info_t  TYPE(16 sword)) = ''word000010''"
    "typ_name (typ_info_t  TYPE(32 sword)) = ''word0000010''"
    "typ_name (typ_info_t  TYPE(64 sword)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def nat_to_bin_string.simps)
+  by (auto simp: typ_uinfo_t_def)
 
 lemma ptr_arith[simp]:
   "(x +\<^sub>p a = y +\<^sub>p a) = ((x::('a::c_type) ptr) = (y::'a ptr))"
