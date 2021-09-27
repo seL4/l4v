@@ -642,7 +642,7 @@ lemma replyRemoveTCB_sch_act_wf:
 lemma replyRemoveTCB_invs':
   "replyRemoveTCB tptr \<lbrace>invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_dom_schedule'_def
-  apply (wpsimp wp: replyRemoveTCB_sym_refs_list_refs_of_replies' replyRemoveTCB_valid_idle'
+  apply (wpsimp wp: replyRemoveTCB_sym_refs_list_refs_of_replies'
                     valid_irq_node_lift valid_irq_handlers_lift' valid_irq_states_lift'
                     irqs_masked_lift replyRemoveTCB_sch_act_wf
               simp: cteCaps_of_def)

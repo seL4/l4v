@@ -1341,6 +1341,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: deleteObjects_def2)
   apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (wp hoare_drop_imps|simp)+
   apply clarsimp
   apply (simp add:deletionIsSafe_def)
@@ -2147,7 +2148,7 @@ lemma hi_valid_duplicates'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper' ct_not_inQ_asrt_def)
   apply (rule validE_valid)
-  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
   apply (wpsimp wp: syscall_valid' setThreadState_nonqueued_state_update rfk_invs' ct_in_state'_set
                     hoare_drop_imp)
   apply (fastforce simp add: tcb_at_invs' ct_in_state'_def

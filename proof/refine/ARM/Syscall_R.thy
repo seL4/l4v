@@ -742,7 +742,7 @@ lemma handleTimeout_invs':
   apply wpsimp
       apply (rename_tac tcb)
       apply (rule_tac Q="\<lambda>_. invs'"
-                  and E="\<lambda>_. invs' and st_tcb_at' active' tptr and sch_act_not tptr
+                  and E="\<lambda>_. invs' and valid_idle' and st_tcb_at' active' tptr and sch_act_not tptr
                              and (\<lambda>s. False \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) tptr s)
                              and ex_nonz_cap_to' tptr
                              and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte
@@ -752,7 +752,7 @@ lemma handleTimeout_invs':
         apply (rule sfi_invs_plus')
        apply (wpsimp wp: getTCB_wp
                    simp: isValidTimeoutHandler_def)+
-  apply (clarsimp simp: cte_wp_at'_obj_at' tcb_cte_cases_def  projectKOs obj_at'_def)
+  apply (clarsimp simp: cte_wp_at'_obj_at' tcb_cte_cases_def  projectKOs obj_at'_def valid_idle'_asrt_def)
   done
 
 crunches isValidTimeoutHandler
@@ -786,8 +786,7 @@ lemma doReplyTransfer_invs'[wp]:
   apply (case_tac fault; clarsimp)
    apply (wpsimp wp: doIPCTransfer_invs setThreadState_Running_invs')
    apply (fastforce simp: pred_tcb_at'_def obj_at'_def)
-  apply (rule_tac Q="?pre and st_tcb_at' ((=) Inactive) receiver
-                          and ex_nonz_cap_to' receiver and (\<lambda>s. receiver \<noteq> ksIdleThread s)"
+  apply (rule_tac Q="?pre and st_tcb_at' ((=) Inactive) receiver and ex_nonz_cap_to' receiver"
                in hoare_weaken_pre[rotated])
   using global'_no_ex_cap apply fastforce
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_fault_invs' threadSet_st_tcb_at2\<close>)+
@@ -1087,9 +1086,12 @@ lemma handleInvocation_corres:
           (handle_invocation call blocking can_donate first_phase cptr)
           (handleInvocation call blocking can_donate first_phase cptr')"
   apply add_ct_not_inQ
+  apply add_valid_idle'
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
   apply (rule corres_stateAssertE_add_assertion[rotated])
    apply (clarsimp simp: ct_not_inQ_asrt_def)
+  apply (rule corres_stateAssertE_add_assertion[rotated])
+   apply (clarsimp simp: valid_idle'_asrt_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
       apply (rule corres_split [OF getMessageInfo_corres])
@@ -1175,7 +1177,6 @@ lemma handleInvocation_corres:
    apply (frule state_relation_schact, simp)
    apply (subgoal_tac "isSchedulable_bool (ksCurThread s') s'")
     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj[simplified pred_conj_def])
-    apply (frule(1) st_tcb_at_idle_thread', simp)
    apply (frule curthread_relation, simp)
    apply (frule_tac t1="cur_thread s" in cross_relF[OF _ isSchedulable_bool_cross_rel];
           simp add: invs_def valid_state_def valid_pspace_def)
@@ -1214,12 +1215,12 @@ lemma hinv_invs'[wp]:
   "\<lbrace>invs' and ct_isSchedulable and
           (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
           (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
-     handleInvocation calling blocking can_donate first_phase cptr
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   handleInvocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper' ct_not_inQ_asrt_def)
   apply (rule validE_valid)
-  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
             hoare_vcg_all_lift static_imp_wp)
          apply simp
@@ -1227,10 +1228,7 @@ lemma hinv_invs'[wp]:
           apply (wp gts_imp' | simp)+
         apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R[rotated])
          apply clarsimp
-         apply (subgoal_tac "thread \<noteq> ksIdleThread s", simp_all)[1]
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap'')
-         apply (clarsimp simp: valid_idle'_def valid_state'_def
-                               invs'_def pred_tcb_at'_def obj_at'_def idle_tcb'_def)
         apply wp+
        apply (rule_tac Q="\<lambda>rv'. invs' and ct_not_inQ and valid_invocation' rv
                                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
@@ -1241,7 +1239,7 @@ lemma hinv_invs'[wp]:
         apply (fastforce dest: ct_not_ksQ)
        apply (wp sts_invs_minor' setThreadState_st_tcb setThreadState_rct setThreadState_ct_not_inQ | simp)+
     apply (clarsimp)
-    apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
+  apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
                               simple_sane_strg
                               sch_act_simple_def
                        elim!: pred_tcb'_weakenE st_tcb_ex_cap''
@@ -1713,16 +1711,16 @@ proof
 qed
 
 lemma ct_running_not_idle'[simp]:
-  "\<lbrakk>invs' s; ct_running' s\<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
+  "\<lbrakk>valid_idle' s; ct_running' s\<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   apply (rule ct_not_idle')
-   apply (fastforce simp: invs'_def valid_state'_def ct_in_state'_def
+   apply (fastforce simp: ct_in_state'_def
                    elim: pred_tcb'_weakenE)+
   done
 
 lemma ct_active_not_idle'[simp]:
-  "\<lbrakk>invs' s; ct_active' s\<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
+  "\<lbrakk>valid_idle' s; ct_active' s\<rbrakk> \<Longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   apply (rule ct_not_idle')
-   apply (fastforce simp: invs'_def valid_state'_def ct_in_state'_def
+   apply (fastforce simp: ct_in_state'_def
                    elim: pred_tcb'_weakenE)+
   done
 
@@ -1738,7 +1736,7 @@ lemma he_invs'[wp]:
    handleEvent event
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  have nidle: "\<And>s. invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
+  have nidle: "\<And>s. valid_idle' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
     by (clarsimp)
   show ?thesis
     apply (case_tac event, simp_all add: handleEvent_def)

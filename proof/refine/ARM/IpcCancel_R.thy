@@ -1111,28 +1111,23 @@ lemma cancelSignal_invs':
         by (auto simp: symreftype_inverse' list_refs_of_replies'_def
                        get_refs_def2 opt_map_def
                 split: option.splits)
-       apply (rule conjI)
         apply (frule obj_at_valid_objs', clarsimp)
         apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
         apply (frule st_tcb_at_state_refs_ofD')
         apply (frule ko_at_state_refs_ofD')
         apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
-       apply (clarsimp simp: valid_idle'_def)
-       apply (clarsimp simp: idle_tcb'_def obj_at'_def projectKOs st_tcb_at'_def)
-      apply (frule obj_at_valid_objs', clarsimp)
-      apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
-      apply (rule conjI, clarsimp split: option.splits)
-      apply (frule st_tcb_at_state_refs_ofD')
-      apply (frule ko_at_state_refs_ofD')
-      apply (rule conjI)
-       apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
-      apply (rule conjI)
-       apply (clarsimp split: if_split_asm)
-       apply (fastforce simp: list_refs_of_replies'_def opt_map_def o_def split: option.splits)
-      apply (rule conjI)
+       apply (frule obj_at_valid_objs', clarsimp)
+       apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
+       apply (rule conjI, clarsimp split: option.splits)
+       apply (frule st_tcb_at_state_refs_ofD')
+       apply (frule ko_at_state_refs_ofD')
+       apply (rule conjI)
+        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+       apply (rule conjI)
+        apply (clarsimp split: if_split_asm)
+        apply (fastforce simp: list_refs_of_replies'_def opt_map_def o_def split: option.splits)
        apply (fastforce simp: get_refs_def elim!: if_live_state_refsE split: option.splits)
-      apply (clarsimp elim!: if_live_state_refsE dest!: idle'_only_sc_refs)
-      done
+       done
   qed
 
 lemma ep_redux_simps3:
@@ -1270,13 +1265,9 @@ lemma blockedCancelIPC_invs':
    apply (wpsimp wp: getEndpoint_wp)
    apply (clarsimp simp: obj_at'_def)
   unfolding invs'_def valid_state'_def decompose_list_refs_of_replies' valid_dom_schedule'_def
-  apply (wpsimp wp: valid_irq_node_lift typ_at_lifts blockedCancelIPC_valid_idle'
+  apply (wpsimp wp: valid_irq_node_lift typ_at_lifts
                     valid_irq_handlers_lift' valid_irq_states_lift' irqs_masked_lift
               simp: cteCaps_of_def pred_tcb_at'_def)
-  apply normalise_obj_at'
-  apply (rename_tac tcb ep)
-  apply (case_tac "tcbState tcb"; clarsimp simp: epBlocked_def obj_at'_def projectKOs)
-   apply (clarsimp simp: valid_idle'_def idle_tcb'_def obj_at_simps)+
   done
 
 lemma threadSet_fault_invs':
@@ -1887,7 +1878,7 @@ lemma asUser_sch_act_simple[wp]:
   done
 
 lemma (in delete_one_conc) suspend_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and tcb_at' t\<rbrace>
    ThreadDecls_H.suspend t
    \<lbrace>\<lambda>rv. invs'\<rbrace>" (is "valid ?pre _ _")
   apply (simp add: suspend_def updateRestartPC_def getThreadState_def)
@@ -1907,7 +1898,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   done
 
 lemma (in delete_one_conc) suspend_objs':
-  "\<lbrace>invs' and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
+  "\<lbrace>invs' and tcb_at' t\<rbrace>
    suspend t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
   apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
    apply (wp suspend_invs')
@@ -2001,9 +1992,9 @@ crunches schedContextCancelYieldTo
   (wp: crunch_wps simp: crunch_simps)
 
 lemma (in delete_one_conc_pre) suspend_nonq:
-  "\<lbrace>Invariants_H.valid_queues and (\<lambda>s. t \<noteq> ksIdleThread s) and K (t = t')\<rbrace>
-     suspend t
-   \<lbrace>\<lambda>rv s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
+  "\<lbrace>Invariants_H.valid_queues and K (t = t')\<rbrace>
+   suspend t
+   \<lbrace>\<lambda>_ s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: suspend_def unless_def)
   unfolding updateRestartPC_def
@@ -3126,8 +3117,7 @@ lemma cancelBadgedSends_filterM_helper':
           by (auto simp: state_refs_of'_def symreftype_inverse' projectKOs
                          tcb_bound_refs'_def obj_at'_def get_refs_def2 tcb_st_refs_of'_def
                   split: option.splits if_splits thread_state.splits)
-         by (fastforce simp: valid_pspace'_def valid_tcb'_def valid_idle'_def
-                             pred_tcb_at'_def obj_at'_def idle_tcb'_def subsetD
+         by (fastforce simp: valid_pspace'_def valid_tcb'_def pred_tcb_at'_def obj_at'_def subsetD
                       elim!: valid_objs_valid_tcbE' st_tcb_ex_cap'')+
 
 lemmas cancelBadgedSends_filterM_helper
