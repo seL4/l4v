@@ -3845,6 +3845,34 @@ method add_ct_idle_or_in_cur_domain' =
   rule_tac Q="\<lambda>s'. ct_idle_or_in_cur_domain' s'" in corres_cross_add_guard,
   fastforce intro!: ct_idle_or_in_cur_domain'_cross simp: valid_sched_def
 
+lemma valid_idle'_cross:
+  "\<lbrakk>(s,s') \<in> state_relation; valid_idle s; pspace_aligned s; pspace_distinct s; valid_objs s\<rbrakk>
+   \<Longrightarrow> valid_idle' s'"
+  apply (clarsimp simp: valid_idle'_def valid_idle_def pred_tcb_at_def obj_at_def)
+  apply (prop_tac "ksIdleThread s' = idle_thread s")
+   apply (clarsimp simp: state_relation_def)
+  apply clarsimp
+  apply (prop_tac "tcb_at' (ksIdleThread s') s'")
+   apply (fastforce intro!: tcb_at_cross simp: obj_at_def state_relation_def is_tcb_def)
+  apply (prop_tac "sc_at' (idle_sc_ptr) s'")
+   apply (fastforce intro!: sc_at_cross valid_objs_valid_sched_context_size
+                      simp: obj_at_def state_relation_def is_sc_obj_def)
+  apply (frule state_relation_pspace_relation)
+  apply (clarsimp simp: pspace_relation_def)
+  apply (intro conjI)
+   apply (drule_tac x="idle_thread s" in bspec, fastforce)
+   apply (drule_tac x="(idle_thread s, other_obj_relation)" in bspec, fastforce)
+   apply (clarsimp simp: obj_at_simps idle_tcb'_def tcb_relation_def)
+  apply (drule_tac x="idle_sc_ptr" in bspec, fastforce)
+  apply (drule_tac x="(idle_sc_ptr, sc_relation_cut)" in bspec)
+   apply (fastforce intro: valid_objs_valid_sched_context_size)
+  by (fastforce dest: sc_replies_prevs_walk
+                simp: heap_walk_Nil_None obj_at_simps sc_relation_def state_relation_def)
+
+method add_valid_idle' =
+  rule_tac Q="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
+  fastforce intro!: valid_idle'_cross
+
 lemma ready_qs_runnable_cross:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_ready_qs s\<rbrakk>
    \<Longrightarrow> ready_qs_runnable s'"

@@ -2094,14 +2094,18 @@ lemma replyPush_corres:
               and (\<lambda>s. reply_ptr \<notin> fst ` replies_with_sc s)
               and (\<lambda>s. sym_refs (\<lambda>p. if p = caller
                                      then tcb_non_st_state_refs_of s caller
-                                     else state_refs_of s p)))
+                                     else state_refs_of s p))
+              and valid_idle)
    (valid_release_queue_iff and valid_objs' and valid_queues and valid_queues'
     and valid_replies'_sc_asrt reply_ptr)
    (reply_push caller callee reply_ptr can_donate)
    (replyPush caller callee reply_ptr can_donate')"
+  apply add_valid_idle'
   unfolding reply_push_def replyPush_def
   apply clarsimp
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified, rotated])
+    apply (clarsimp simp: valid_idle'_asrt_def)
    apply (rule stronger_corres_guard_imp)
      apply (simp add: get_tcb_obj_ref_def)
      apply (rule corres_split_eqr [OF _ threadget_corres])
@@ -2407,8 +2411,7 @@ lemma replyPush_valid_queues[wp]:
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   supply if_split [split del]
   unfolding replyPush_def updateReply_def bind_assoc
-  apply (rule hoare_seq_ext[OF _ stateAssert_inv])
-  apply simp
+  apply (intro hoare_seq_ext[OF _ stateAssert_sp] | simp)+
   apply (rule hoare_seq_ext[OF _ threadGet_sp'])
   apply (rule hoare_seq_ext[OF _ threadGet_sp'])
   apply (rule hoare_seq_ext[OF _ get_reply_sp'])
@@ -2438,9 +2441,12 @@ lemma sendIPC_corres:
              (send_ipc bl call bg cg cgr cd t ep) (sendIPC bl call bg cg cgr cd t ep)"
   apply (insert assms)
   apply add_sym_refs
-  apply (unfold send_ipc_def sendIPC_def Let_def)
-  apply (rule corres_stateAssert_assume)
-   apply (clarsimp split del: if_split)
+  apply add_valid_idle'
+  apply (clarsimp simp: send_ipc_def sendIPC_def Let_def split del: if_split)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: sym_refs_asrt_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: valid_idle'_asrt_def)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split [OF get_ep_corres, where
               R="\<lambda>rv. all_invs_but_fault_tcbs and valid_list and st_tcb_at active t
@@ -2546,7 +2552,7 @@ lemma sendIPC_corres:
                                 the reply_opt \<notin> fst ` replies_with_sc s \<and>
                                 sym_refs (state_refs_of s)) and
                            K (t \<noteq> idle_thread_ptr) and
-                           (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s)"
+                           (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s) and valid_idle"
                          in hoare_strengthen_post[rotated])
                    apply (prop_tac "reply_opt \<noteq> None
                                     \<longrightarrow> sym_refs
@@ -2607,7 +2613,7 @@ lemma sendIPC_corres:
                                      then {r \<in> state_refs_of s x.
                                              snd r = TCBBound \<or> snd r = TCBSchedContext \<or>
                                              snd r = TCBYieldTo \<or> snd r = TCBReply}
-                                     else state_refs_of s x))"
+                                     else state_refs_of s x)) and valid_idle"
                        in hoare_strengthen_post[rotated])
                  apply (clarsimp split: option.splits cong: conj_cong)
                  apply (intro conjI)
@@ -2713,7 +2719,6 @@ lemma sendIPC_corres:
    apply (frule cross_relF[OF _ tcb_at'_cross_rel[where t=t]]; clarsimp)
    apply (frule cross_relF[OF _ ep_at'_cross_rel[where t=ep]]; clarsimp)
    apply (frule cross_relF[OF _ sch_act_not_cross_rel[where t=t]]; clarsimp)
-  apply (clarsimp simp: sym_refs_asrt_def)
   done
 
 end
@@ -3365,11 +3370,29 @@ lemma thread_state_tcb_in_WaitingNtfn'_q:
   apply (clarsimp simp: valid_ntfn'_def)
   done
 
+lemma cancelSignal_valid_idle':
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> threadPtr \<noteq> ksIdleThread s\<rbrace>
+   cancelSignal threadPtr ntfnPtr
+   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  apply (clarsimp simp: cancelSignal_def)
+  apply (wpsimp wp: getNotification_wp)
+  done
+
+lemma cancelIPC_valid_idle'[wp]:
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> tptr \<noteq> ksIdleThread s\<rbrace>
+   cancelIPC tptr
+   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  apply (clarsimp simp: cancelIPC_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: threadSet_idle'\<close>)+
+  apply (wpsimp wp: blockedCancelIPC_valid_idle' replyRemoveTCB_valid_idle' cancelSignal_valid_idle')
+  done
+
 lemma sendSignal_corres:
   "corres dc (einvs and ntfn_at ep and current_time_bounded 2) (invs' and ntfn_at' ep)
              (send_signal ep bg) (sendSignal ep bg)"
   apply (simp add: send_signal_def sendSignal_def Let_def)
   apply add_sym_refs
+  apply add_valid_idle'
   apply (rule corres_stateAssert_assume)
    apply (rule corres_guard_imp)
      apply (rule corres_split_deprecated [OF _ get_ntfn_corres,
@@ -3377,7 +3400,7 @@ lemma sendSignal_corres:
                  R  = "\<lambda>rv. einvs and ntfn_at ep and valid_ntfn rv and
                             ko_at (Structures_A.Notification rv) ep
                             and current_time_bounded 2" and
-                 R' = "\<lambda>rv'. invs' and ntfn_at' ep and
+                 R' = "\<lambda>rv'. invs' and valid_idle' and ntfn_at' ep and
                              valid_ntfn' rv' and ko_at' rv' ep"])
        defer
        apply (wp get_simple_ko_ko_at get_ntfn_ko')+
@@ -3440,7 +3463,7 @@ lemma sendSignal_corres:
            apply (fold fun_upd_def, simp)
           apply (wpsimp wp: cancel_ipc_simple_except_awaiting_reply cancel_ipc_ex_nonz_cap_to_tcb)
          apply (clarsimp cong: conj_cong simp: pred_conj_def valid_tcb_state'_def pred_tcb_at'_eq_commute)
-         apply (rule_tac Q="\<lambda>_. invs' and tcb_at' a and ntfn_at' ep and
+         apply (rule_tac Q="\<lambda>_. invs' and valid_idle' and tcb_at' a and ntfn_at' ep and
                                 (\<lambda>s. a \<noteq> ksIdleThread s) and ex_nonz_cap_to' a and
                                 st_tcb_at' simple' a"
                 in hoare_strengthen_post[rotated])
@@ -3530,10 +3553,17 @@ lemma sendSignal_corres:
    apply (frule_tac t="hd list" in thread_state_tcb_in_WaitingNtfn'_q; assumption?)
     apply (clarsimp simp: valid_ntfn'_def)
    apply (intro conjI)
-      apply clarsimp
-     apply (clarsimp simp: valid_ntfn'_def)
-    apply (erule (4) ex_nonz_cap_to'_tcb_in_WaitingNtfn'_q)
-    apply (clarsimp simp: valid_ntfn'_def)
+        apply clarsimp
+       apply (clarsimp simp: valid_ntfn'_def)
+      apply (erule (4) ex_nonz_cap_to'_tcb_in_WaitingNtfn'_q)
+      apply (clarsimp simp: valid_ntfn'_def)
+     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def is_BlockedOnNotification_def)
+    apply (clarsimp simp: valid_ntfn'_def split: list.splits)
+    apply (intro conjI impI)
+       apply (metis hd_Cons_tl list.set_intros(1) list.set_intros(2))
+      apply (metis hd_Cons_tl list.set_intros(2))
+     using distinct_tl apply fastforce
+    using distinct_tl apply fastforce
    apply (case_tac list; clarsimp simp: valid_ntfn'_def split: list.splits option.splits)
   \<comment> \<open>ActiveNtfn\<close>
   apply (clarsimp simp add: ntfn_relation_def Let_def)
@@ -3590,7 +3620,6 @@ lemma setThreadState_nonqueued_state_update:
   "\<lbrace>\<lambda>s. invs' s \<and> st_tcb_at' simple' t s
                \<and> simple' st
                \<and> (st \<noteq> Inactive \<longrightarrow> ex_nonz_cap_to' t s)
-               \<and> (t = ksIdleThread s \<longrightarrow> idle' st)
                \<and> (\<not> runnable' st \<longrightarrow> sch_act_simple s)\<rbrace>
   setThreadState st t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
@@ -3854,7 +3883,7 @@ lemma setThreadState_Running_invs':
 
 lemma setThreadState_BlockedOnReceive_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> tcb_at' t s \<and> ep_at' eptr s \<and> ex_nonz_cap_to' t s \<and>
-        valid_bound_reply' rptr s \<and> t \<noteq> ksIdleThread s \<and>
+        valid_bound_reply' rptr s \<and>
         st_tcb_at' (Not \<circ> is_BlockedOnReply) t s\<rbrace>
    setThreadState (BlockedOnReceive eptr cg rptr) t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -4255,8 +4284,10 @@ lemma maybe_return_sc_weak_valid_sched_action:
   apply (fastforce simp: weak_valid_sched_action_def scheduler_act_not_def vs_all_heap_simps)
   done
 
-lemma maybeReturnSc_invs':
-  "\<lbrace>invs' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace> maybeReturnSc nptr tptr \<lbrace>\<lambda>_. invs'\<rbrace>"
+lemma maybeReturnSc_invs'_and_valid_idle':
+  "\<lbrace>invs' and valid_idle' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
+   maybeReturnSc nptr tptr
+   \<lbrace>\<lambda>_. invs' and valid_idle'\<rbrace>"
   apply (wpsimp wp: setSchedContext_invs' simp: maybeReturnSc_def)
       apply (clarsimp simp add: invs'_def valid_state'_def split del: if_split)
       apply (wp threadSet_valid_pspace'T threadSet_sch_actT_P[where P=False, simplified]
@@ -4279,10 +4310,26 @@ lemma maybeReturnSc_invs':
      apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
       apply (fastforce simp: obj_at'_def projectKOs)
      apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
-    apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
-   apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def)
-  apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+     apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
+    apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def)
+   apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
+  apply (clarsimp simp: valid_idle'_def obj_at'_def projectKOs sym_refs_asrt_def)
+  apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
+   apply (fastforce simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
   done
+
+lemma
+  shows
+  maybeReturnSc_invs':
+  "\<lbrace>invs' and valid_idle' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
+   maybeReturnSc nptr tptr
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  and maybeReturnSc_valid_idle':
+  "\<lbrace>invs' and valid_idle' and (\<lambda>s. tptr \<noteq> ksIdleThread s)\<rbrace>
+   maybeReturnSc nptr tptr
+   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  by (fastforce intro: hoare_strengthen_post[OF maybeReturnSc_invs'_and_valid_idle'])+
 
 crunches doIPCTransfer
   for pspace_aligned'[wp]: pspace_aligned'
@@ -4429,6 +4476,16 @@ lemma receiveIPC_preamble_sch_act_wf:
                    simp: st_tcb_at'_def obj_at_simps)
   done
 
+lemma receiveIPC_preamble_valid_idle':
+  "\<lbrace>\<lambda>s. valid_idle' s \<and> thread \<noteq> ksIdleThread s \<and> sym_refs (state_refs_of' s)\<rbrace>
+   receiveIPC_preamble replyCap thread
+   \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
+  apply (clarsimp simp: receiveIPC_preamble_def)
+  apply wpsimp
+  apply (fastforce dest: sym_ref_replyTCB_Receive_or_Reply
+                   simp: st_tcb_at'_def obj_at_simps valid_idle'_def idle_tcb'_def)
+  done
+
 lemma receiveIPC_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'" and "cap_relation reply_cap replyCap"
     and "is_reply_cap reply_cap \<or> (reply_cap = cap.NullCap)"
@@ -4444,6 +4501,7 @@ lemma receiveIPC_corres:
              (receive_ipc thread cap isBlocking reply_cap) (receiveIPC thread cap' isBlocking replyCap)"
     (is "corres _ (_ and ?tat and ?tex and ?slot3 and ?rrefs) _ _ _")
   apply add_sch_act_wf
+  apply add_valid_idle'
   supply if_split [split del]
   apply (insert assms)
   apply (rule corres_cross_add_abs_guard[where Q="K (thread \<noteq> idle_thread_ptr)"])
@@ -4457,6 +4515,8 @@ lemma receiveIPC_corres:
   apply (rule corres_stateAssert_assume)
    apply (rule corres_stateAssert_assume[rotated])
     apply (clarsimp simp: sch_act_wf_asrt_def)
+   apply (rule corres_stateAssert_assume[rotated])
+    apply (clarsimp simp: valid_idle'_asrt_def)
    apply (rule stronger_corres_guard_imp)
      apply (subst receiveIPC_corres_helper)
      apply (clarsimp simp: receive_ipc_preamble_def[symmetric] receiveIPC_preamble_def[symmetric])
@@ -4478,7 +4538,7 @@ lemma receiveIPC_corres:
                apply (rule_tac P="einvs and ?tat and ?slot3 and ?tex and ep_at epptr
                         and valid_ep ep and ko_at (Endpoint ep) epptr
                         and receive_ipc_preamble_rv reply_cap replyOpt and ?rrefs" and
-                      P'="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+                      P'="invs' and valid_idle' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
                           and tcb_at' thread and ep_at' epptr
                           and valid_ep' ep' and valid_bound_reply' replyOpt"
                       in corres_inst)
@@ -4637,7 +4697,7 @@ lemma receiveIPC_corres:
                apply (frule (1) valid_objs_ko_at[OF invs_valid_objs])
                apply (clarsimp simp: valid_obj_def)
               apply (wpsimp wp: hoare_cte_wp_caps_of_state_lift valid_case_option_post_wp hoare_vcg_ball_lift)
-             apply (wpsimp wp: maybeReturnSc_invs' valid_case_option_post_wp)
+             apply (wpsimp wp: maybeReturnSc_invs' maybeReturnSc_valid_idle' valid_case_option_post_wp)
             apply simp
             apply (wpsimp wp: get_simple_ko_wp)
            apply simp
@@ -4663,7 +4723,7 @@ lemma receiveIPC_corres:
        apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def case_option_ext)
       apply (wpsimp wp: receive_ipc_preamble_invs receive_ipc_preamble_valid_sched
                         receive_ipc_preamble_rv hoare_vcg_ball_lift)
-     apply (rule_tac Q="\<lambda>replyOpt. ep_at' epptr and tcb_at' thread and invs'
+     apply (rule_tac Q="\<lambda>replyOpt. ep_at' epptr and tcb_at' thread and invs' and valid_idle'
                                    and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and
                             (\<lambda>_. thread \<noteq> idle_thread_ptr) and valid_bound_reply' replyOpt"
             in hoare_strengthen_post[rotated])
@@ -4673,9 +4733,9 @@ lemma receiveIPC_corres:
              clarsimp)
        apply (clarsimp simp: valid_bound_ntfn'_def case_option_ext)
        apply (intro conjI; intro allI impI)
-        apply (intro conjI; intro allI impI)
+        apply (intro conjI)
          apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-        apply clarsimp
+        apply fastforce
        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
       apply (intro conjI; clarsimp)
         apply (clarsimp simp: valid_idle'_def)
@@ -4683,10 +4743,10 @@ lemma receiveIPC_corres:
       apply (clarsimp simp: pred_tcb_at'_def, frule obj_at_ko_at'[where p=thread], clarsimp)
       apply (frule tcb_ko_at_valid_objs_valid_tcb', clarsimp)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_tcb'_def)
-     apply (wpsimp wp: receiveIPC_preamble_sch_act_wf)
+     apply (wpsimp wp: receiveIPC_preamble_sch_act_wf receiveIPC_preamble_valid_idle')
     apply clarsimp
     apply (clarsimp simp: valid_cap_def valid_idle_def invs_def valid_state_def valid_sched_def)
-   apply (clarsimp simp: valid_cap'_def)
+   apply (clarsimp simp: valid_cap'_def valid_idle'_def)
   apply (simp add: sym_refs_asrt_def)
   done
 
@@ -5000,7 +5060,7 @@ crunches doNBRecvFailedTransfer
 
 (* t = ksCurThread s *)
 lemma rai_invs'[wp]:
-  "\<lbrace>invs' and st_tcb_at' active' t
+  "\<lbrace>invs' and valid_idle' and st_tcb_at' active' t
           and ex_nonz_cap_to' t
           and valid_cap' cap
           and (\<lambda>s. \<forall>r \<in> zobj_refs' cap. ex_nonz_cap_to' r s)
@@ -5020,7 +5080,7 @@ lemma rai_invs'[wp]:
     apply (fastforce simp: valid_idle'_def idle_tcb'_def valid_tcb_state'_def  valid_ntfn'_def
                            valid_bound_obj'_def valid_obj'_def valid_cap'_def isCap_simps
                            pred_tcb_at'_def obj_at'_def projectKOs
-                     dest: invs_valid_idle' invs_valid_objs' split: option.splits)
+                     dest: invs_valid_objs' split: option.splits)
    \<comment> \<open>ActiveNtfn\<close>
    apply (wpsimp wp: maybeDonateSc_invs' setNotification_invs' hoare_vcg_imp_lift')
    apply (fastforce simp: valid_obj'_def valid_ntfn'_def isCap_simps
@@ -5041,12 +5101,17 @@ lemma rai_invs'[wp]:
   apply (rule conjI, clarsimp)
   apply (rule conjI, clarsimp)
   apply (rule context_conjI)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def
-                         idle_tcb'_def obj_at'_def projectKOs)
-  apply (drule_tac ko=ep in sym_refs_ko_atD'[rotated])
-   apply (fastforce simp: obj_at'_def projectKOs)
-  apply (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def refs_of_rev' get_refs_def ko_wp_at'_def
-             split: thread_state.splits option.splits)
+   apply (drule_tac ko=ep in sym_refs_ko_atD'[rotated])
+    apply (fastforce simp: obj_at'_def projectKOs)
+   apply (fastforce simp: tcb_bound_refs'_def refs_of_rev' get_refs_def ko_wp_at'_def
+                   split: option.splits)
+  apply (intro conjI)
+   apply (drule_tac ko=ep in sym_refs_ko_atD'[rotated])
+    apply (fastforce simp: obj_at'_def projectKOs)
+   apply (fastforce simp: tcb_bound_refs'_def refs_of_rev' get_refs_def ko_wp_at'_def
+                   split: option.splits)
+  apply (clarsimp simp: valid_idle'_def idle_tcb'_def)
+  apply (case_tac "tcbState obj"; clarsimp simp: obj_at_simps)
   done
 
 lemma updateReply_reply_at'_wp:
@@ -5146,9 +5211,8 @@ lemma replyPush_if_live_then_nonz_cap':
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   supply if_split [split del]
-  unfolding replyPush_def  bind_assoc
-  apply (rule hoare_seq_ext[OF _ stateAssert_inv])
-  apply simp
+  apply (clarsimp simp: replyPush_def bind_assoc)
+  apply (intro hoare_seq_ext[OF _ stateAssert_inv])
   apply (rule hoare_seq_ext[OF _ threadGet_sp'])
   apply (rule hoare_seq_ext[OF _ threadGet_sp'])
   apply (wpsimp wp: schedContextDonate_if_live_then_nonz_cap' bindScReply_if_live_then_nonz_cap')
@@ -5234,7 +5298,7 @@ lemma replyPush_sch_act_wf:
   by (wpsimp wp: sts_sch_act' hoare_vcg_all_lift hoare_vcg_if_lift hoare_drop_imps)
 
 lemma replyPush_invs':
-  "\<lbrace>invs' and sym_heap_tcbSCs and sym_heap_scReplies and
+  "\<lbrace>invs' and valid_idle' and sym_heap_tcbSCs and sym_heap_scReplies and
     st_tcb_at' (Not \<circ> is_replyState) callerPtr and
     sch_act_not callerPtr and ex_nonz_cap_to' callerPtr and ex_nonz_cap_to' calleePtr and
     ex_nonz_cap_to' replyPtr and (\<lambda>s. replyTCBs_of s replyPtr = None)\<rbrace>
@@ -5242,7 +5306,7 @@ lemma replyPush_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_pspace'_def
   apply (wpsimp wp: replyPush_sch_act_wf replyPush_if_live_then_nonz_cap'
-                    replyPush_valid_idle' replyPush_sym_refs_list_refs_of_replies'
+                    replyPush_sym_refs_list_refs_of_replies'
               simp: valid_pspace'_def)
   apply (frule global'_no_ex_cap; clarsimp simp: valid_pspace'_def)
   done
@@ -5488,6 +5552,16 @@ lemma cancelIPC_sym_heap_scReplies [wp]:
   unfolding cancelIPC_def
   by (wpsimp wp: gts_wp', simp add: comp_def)
 
+lemma replyTCB_is_not_ksIdleThread:
+  "\<lbrakk>ko_at' reply replyPtr s; the (replyTCB reply) = ksIdleThread s; replyTCB reply = Some tcb;
+    valid_idle' s; sym_refs (state_refs_of' s)\<rbrakk>
+   \<Longrightarrow> False"
+  apply (frule sym_ref_replyTCB_Receive_or_Reply)
+    apply blast
+   apply fastforce
+  apply (clarsimp simp: st_tcb_at'_def obj_at_simps valid_idle'_def idle_tcb'_def)
+  done
+
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
   "\<lbrace>invs' and sch_act_not t
@@ -5499,12 +5573,14 @@ lemma ri_invs' [wp]:
   receiveIPC t cap isBlocking replyCap
   \<lbrace>\<lambda>_. invs'\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   supply if_split [split del]
-  apply (clarsimp simp: receiveIPC_def sym_refs_asrt_def sch_act_wf_asrt_def split: if_split)
+  apply (clarsimp simp: receiveIPC_def sym_refs_asrt_def sch_act_wf_asrt_def valid_idle'_asrt_def
+                 split: if_split)
   apply (intro hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext)
    apply (rule hoare_seq_ext)
     \<comment> \<open>After getEndpoint, the following holds regardless of the type of ep\<close>
-    apply (rule_tac B="\<lambda>ep s. invs' s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
+    apply (rule_tac B="\<lambda>ep s. invs' s \<and> valid_idle' s \<and> sch_act_wf (ksSchedulerAction s) s
+                              \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
                               sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
                               st_tcb_at' simple' t s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s \<and>
                               (\<forall>x. replyOpt = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and>
@@ -5528,7 +5604,7 @@ lemma ri_invs' [wp]:
        apply (clarsimp simp: pred_tcb_at')
        apply (erule valid_objsE'[OF invs_valid_objs'])
         apply (fastforce simp: obj_at'_def projectKOs)
-       apply (fastforce simp: valid_obj'_def valid_ep'_def pred_tcb_at'_def obj_at'_def )
+       apply (fastforce simp: valid_obj'_def valid_ep'_def pred_tcb_at'_def obj_at'_def)
       \<comment> \<open>IdleEP\<close>
       apply (wpsimp wp: completeSignal_invs' setEndpoint_invs' setThreadState_BlockedOnReceive_invs'
                         maybeReturnSc_invs' updateReply_replyTCB_invs' getNotification_wp gbn_wp'
@@ -5540,7 +5616,9 @@ lemma ri_invs' [wp]:
      apply (wpsimp wp: replyPush_invs' completeSignal_invs' sts_invs' setThreadState_st_tcb
                        threadGet_wp)
                apply (rename_tac sender queue senderState badge canGrant canGrantReply)
-               apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' t and sch_act_not sender
+               apply (rule_tac Q="\<lambda>_. invs' and valid_idle'
+                                      and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' t
+                                      and sch_act_not sender
                                       and st_tcb_at' (Not \<circ> is_replyState) sender
                                       and (\<lambda>s. sender \<noteq> ksIdleThread s)
                                       and sym_heap_tcbSCs and sym_heap_scReplies
@@ -5551,8 +5629,8 @@ lemma ri_invs' [wp]:
                 apply (clarsimp simp: pred_tcb_at'_eq_commute)
                 apply (fastforce simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def
                                        is_BlockedOnReply_def is_BlockedOnReceive_def)
-               apply (wpsimp wp: hoare_vcg_imp_lift' setEndpoint_invs' maybeReturnSc_invs' hoare_vcg_all_lift
-                                 getNotification_wp gbn_wp')+
+               apply (wpsimp wp: hoare_vcg_imp_lift' setEndpoint_invs' maybeReturnSc_invs'
+                                 maybeReturnSc_valid_idle' hoare_vcg_all_lift getNotification_wp gbn_wp')+
      apply (clarsimp split: if_split cong: conj_cong imp_cong)
      apply (drule pred_tcb_at', clarsimp)
      apply (rename_tac sender queue ntfna ntfnb ntfnc)
@@ -5568,7 +5646,7 @@ lemma ri_invs' [wp]:
                                       | a # list \<Rightarrow> Structures_H.endpoint.SendEP queue) s", clarsimp)
        apply (intro conjI)
           apply (erule sch_act_wf_not_runnable_sch_act_not, fastforce, clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
-         apply (frule (1) st_tcb_idle'[OF invs_valid_idle'], clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
+         apply (frule (1) st_tcb_idle', clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
         apply (erule st_tcb_ex_cap''; clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
        apply (clarsimp simp: valid_ep'_def pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def
                       split: list.splits)
@@ -5611,7 +5689,9 @@ lemma ri_invs' [wp]:
      apply blast
     apply fastforce
    apply (fastforce simp: st_tcb_at'_def obj_at_simps sch_act_wf_def split: thread_state.splits)
-  apply (fastforce simp: opt_map_def obj_at'_def projectKOs valid_cap'_def split: if_split)
+  apply (fastforce simp: opt_map_def obj_at'_def projectKOs valid_cap'_def
+                 intro!: replyTCB_is_not_ksIdleThread
+                  split: if_split)
   done
 
 lemma bindScReply_st_tcb_at'[wp]:
@@ -5629,8 +5709,7 @@ lemma replyPush_st_tcb_at'_not_caller:
   by (wpsimp wp: sts_st_tcb_at'_cases_strong hoare_vcg_imp_lift)
 
 lemma replyUnlink_invs':
-  "\<lbrace>\<lambda>s. invs' s \<and> tcbPtr \<noteq> ksIdleThread s
-        \<and> (replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
+  "\<lbrace>\<lambda>s. invs' s \<and> (replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_dom_schedule'_def
@@ -5653,7 +5732,7 @@ crunches doIPCTransfer
   (wp: setCTE_pred_tcb_at' getCTE_wp mapM_wp' simp: cte_wp_at'_def zipWithM_x_mapM)
 
 lemma si_invs'_helper2:
-  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_not t s \<and> st_tcb_at' active' t s \<and>
+  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> sch_act_not t s \<and> st_tcb_at' active' t s \<and>
         st_tcb_at' (Not \<circ> is_BlockedOnReply) d s \<and>
         ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' d s \<and>
         sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
@@ -5670,8 +5749,10 @@ lemma si_invs'_helper2:
           scOptSrc <- threadGet tcbSchedContext t;
           schedContextDonate (the scOptSrc) d
         od)
-  \<lbrace>\<lambda>b s. invs' s \<and> tcb_at' d s \<and> ex_nonz_cap_to' d s \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) d s\<rbrace>"
-  apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs' sts_invs_minor'
+  \<lbrace>\<lambda>b s. invs' s \<and> tcb_at' d s \<and> ex_nonz_cap_to' d s
+         \<and> st_tcb_at' (Not \<circ> is_BlockedOnReply) d s\<rbrace>"
+  apply (wpsimp wp: ex_nonz_cap_to_pres' schedContextDonate_invs' replyPush_invs'
+                    replyPush_valid_idle' sts_invs_minor' schedContextDonate_valid_idle'
                     replyPush_st_tcb_at'_not_caller sts_st_tcb' threadGet_wp)
   apply (frule_tac P'="(\<lambda>st'. \<forall>rptr. st' \<noteq> BlockedOnReply rptr)" in pred_tcb'_weakenE)
    apply (clarsimp simp: is_BlockedOnReply_def)
@@ -5680,19 +5761,11 @@ lemma si_invs'_helper2:
   apply (frule_tac P'="Not \<circ> is_replyState" in pred_tcb'_weakenE)
    apply (fastforce simp: is_BlockedOnReply_def is_BlockedOnReceive_def)
   apply (frule invs_valid_objs')
-  apply (frule invs_valid_idle')
-  apply (subgoal_tac "t \<noteq> ksIdleThread s")
-   apply (clarsimp simp: tcb_at'_ex_eq_all o_def)
-   apply (intro conjI)
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb)
-   apply (rule not_idle_scTCB, clarsimp, clarsimp, clarsimp)
-    apply (frule not_idle_tcbSC[where p=t], clarsimp, clarsimp)
-      apply (clarsimp simp: valid_idle'_def)
-     apply (clarsimp simp: valid_state'_def pred_tcb_at'_def obj_at'_def valid_tcb_state'_def)
-    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb)
-   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
-   apply (clarsimp simp: valid_tcb'_def pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def projectKO_tcb)
-  apply (fastforce simp: invs'_def valid_state'_def dest: global'_no_ex_cap)
+  apply (prop_tac "t \<noteq> ksIdleThread s")
+   apply (clarsimp simp: valid_idle'_def idle_tcb'_def pred_tcb_at'_def obj_at'_real_def
+                         ko_wp_at'_def)
+  apply (clarsimp simp: tcb_at'_ex_eq_all o_def)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
   done
 
 lemma replyUnlink_obj_at_tcb_none:
@@ -5712,8 +5785,8 @@ lemma si_invs'2[wp]:
    sendIPC bl call ba cg cgr cd t ep
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   supply if_split[split del]
-  apply (simp add: sendIPC_def)
-  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
+  apply (simp add: sendIPC_def valid_idle'_asrt_def)
+  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (rename_tac ep')
   apply (case_tac ep')
@@ -5725,7 +5798,7 @@ lemma si_invs'2[wp]:
             apply (wpsimp wp: si_invs'_helper2)
            apply wpsimp
           apply (wpsimp wp: threadGet_wp)
-         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
+         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
                                   st_tcb_at' (Not \<circ> is_BlockedOnReply) a s \<and>
                                   ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and>
                                   (\<forall>x. replyObject recvState = Some x \<longrightarrow>
@@ -5741,7 +5814,7 @@ lemma si_invs'2[wp]:
                           dest!: global'_no_ex_cap)
          apply (wpsimp wp: replyUnlink_invs' replyUnlink_st_tcb_at' replyUnlink_obj_at_tcb_none
                            hoare_vcg_ex_lift hoare_vcg_imp_lift')
-        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
+        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
                                  st_tcb_at' is_BlockedOnReceive a s \<and>
                                  ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and> a \<noteq> t \<and>
                                  sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
@@ -5813,21 +5886,21 @@ lemma si_invs'2[wp]:
   done
 
 lemma sfi_invs_plus':
-  "\<lbrace>invs' and st_tcb_at' active' t
+  "\<lbrace>invs' and valid_idle' and st_tcb_at' active' t
           and sch_act_not t
           and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
           and ex_nonz_cap_to' t
           and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. \<exists>cte. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>
-      sendFaultIPC t cap f canDonate
+   sendFaultIPC t cap f canDonate
    \<lbrace>\<lambda>_. invs'\<rbrace>,
-   \<lbrace>\<lambda>_. invs' and st_tcb_at' active' t
+   \<lbrace>\<lambda>_. invs' and valid_idle' and st_tcb_at' active' t
               and sch_act_not t
               and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
               and ex_nonz_cap_to' t
               and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>"
   apply (simp add: sendFaultIPC_def)
   apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
-            threadSet_cap_to'
+            threadSet_cap_to' threadSet_idle'
            | wpc | simp)+
   apply (intro conjI impI allI; (fastforce simp: inQ_def)?)
    apply (clarsimp simp: invs'_def valid_state'_def valid_release_queue'_def obj_at'_def)
@@ -5841,8 +5914,11 @@ lemma hf_corres:
                          and ex_nonz_cap_to t and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
                    (handle_fault t f) (handleFault t f')"
+  apply add_valid_idle'
   using assms
   apply (simp add: handle_fault_def handleFault_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: valid_idle'_asrt_def)
   apply (rule corres_gen_asm)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated)
@@ -5892,8 +5968,11 @@ lemma handleTimeout_corres:
                    invs'
                    (handle_timeout t f) (handleTimeout t f')"
   (is "corres _ ?G ?G' _ _")
+  apply add_valid_idle'
   using assms
   apply (clarsimp simp: handle_timeout_def handleTimeout_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: valid_idle'_asrt_def)
   apply (rule corres_gen_asm)
   apply (rule_tac Q="?G" and Q'="?G' and obj_at' (isEndpointCap \<circ> cteCap \<circ> tcbTimeoutHandler) t"
                in stronger_corres_guard_imp)
@@ -5933,9 +6012,10 @@ lemma hf_invs' [wp]:
           and ex_nonz_cap_to' t\<rbrace>
    handleFault t f
    \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: handleFault_def handleNoFaultHandler_def sendFaultIPC_def)
+  apply (simp add: handleFault_def handleNoFaultHandler_def sendFaultIPC_def valid_idle'_asrt_def)
+  apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (wpsimp wp: sts_invs_minor' threadSet_invs_trivialT threadSet_pred_tcb_no_state getTCB_wp
-                    threadGet_wp threadSet_cap_to' hoare_vcg_all_lift hoare_vcg_imp_lift'
+                    threadGet_wp threadSet_cap_to' hoare_vcg_all_lift hoare_vcg_imp_lift' threadSet_idle'
         | fastforce simp: tcb_cte_cases_def)+
   apply (clarsimp simp: invs'_def valid_state'_def inQ_def)
   apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s \<and> t \<noteq> ksIdleThread s")
@@ -6218,7 +6298,6 @@ lemma doReplyTransfer_corres:
                                     and (st_tcb_at' (\<lambda>st. st = Inactive) recvr)"
                     in hoare_strengthen_post[rotated])
               apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-              apply (fastforce dest: global'_no_ex_cap simp: invs'_def valid_state'_def split: if_split)
              apply wpsimp
             apply (wpsimp wp: sts_invs')
                 apply (rule_tac Q="\<lambda>_. invs' and sch_act_not recvr and ex_nonz_cap_to' recvr and tcb_at' recvr

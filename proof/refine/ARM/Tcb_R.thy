@@ -42,16 +42,6 @@ lemma invs'_live_sc'_ex_nonz_cap_to':
   apply (clarsimp simp: invs'_def valid_state'_def if_live_then_nonz_cap'_def)
   by (fastforce simp: obj_at'_real_def ko_wp_at'_def projectKO_sc)
 
-lemma st_tcb_at'_valid_idle'_helper:
-  "st_tcb_at' P t s \<Longrightarrow> invs' s \<Longrightarrow> t = ksIdleThread s \<longrightarrow> P (IdleThreadState)"
-  by (clarsimp simp: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
-                     idle_tcb'_def)
-
-lemma st_tcb_at'_valid_idle'_helper':
-  "invs' s \<Longrightarrow> \<forall>t. t = ksIdleThread s \<longrightarrow> st_tcb_at' idle' t s"
-  by (clarsimp simp: invs'_def valid_state'_def valid_idle'_def pred_tcb_at'_def obj_at'_def
-                     idle_tcb'_def)
-
 lemma activate_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable' and sch_act_simple)
             activate_thread activateThread"
@@ -118,8 +108,6 @@ lemma activate_invs':
   apply (wpsimp wp: activateIdle_invs' sts_invs_minor' schedContextCompleteYieldTo_invs'
                     hoare_vcg_imp_lift')
      apply (wpsimp wp: threadGet_wp gts_wp')+
-  apply (frule st_tcb_at'_valid_idle'_helper')
-  apply (drule_tac x="ksCurThread s" in spec)
   by (fastforce simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def sch_act_simple_def)
 
 declare not_psubset_eq[dest!] (* FIXME: remove, not a good dest rule *)
@@ -676,8 +664,7 @@ lemma reorderNtfn_invs':
 lemma set_ep_minor_invs':
   "\<lbrace>invs' and obj_at' (\<lambda>ep. ep_q_refs_of' ep = ep_q_refs_of' val) ptr
           and valid_ep' val
-          and (\<lambda>s. live' (KOEndpoint val) \<longrightarrow> ex_nonz_cap_to' ptr s)
-          and (\<lambda>s. ptr \<noteq> ksIdleThread s)\<rbrace>
+          and (\<lambda>s. live' (KOEndpoint val) \<longrightarrow> ex_nonz_cap_to' ptr s)\<rbrace>
    setEndpoint ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def valid_dom_schedule'_def)
@@ -709,7 +696,7 @@ lemma reorderEp_invs':
   apply (frule_tac ko=obj and p=tptr in sym_refs_ko_atD'[rotated])
    apply (clarsimp simp: obj_at'_def projectKO_eq projectKO_tcb)
   apply (case_tac "tcbState obj"; clarsimp simp: epBlocked_def split: ntfn.splits if_splits)
-    apply (auto simp: invs'_def valid_state'_def valid_idle'_def if_live_then_nonz_cap'_def
+    apply (auto simp: invs'_def valid_state'_def if_live_then_nonz_cap'_def
                       refs_of_rev' get_refs_def ko_wp_at'_def obj_at'_def projectKO_eq projectKO_tcb
                split: option.splits)
   done
@@ -1945,8 +1932,11 @@ lemma schedContextUnbindTCB_corres:
   "corres dc (invs and valid_sched and sc_tcb_sc_at ((\<noteq>) None) scp) invs'
              (sched_context_unbind_tcb scp) (schedContextUnbindTCB scp)"
   apply add_sym_refs
-  apply (simp only: sched_context_unbind_tcb_def schedContextUnbindTCB_def)
+  apply add_valid_idle'
+  apply (simp only: sched_context_unbind_tcb_def schedContextUnbindTCB_def valid_idle'_asrt_def)
   apply (rule corres_stateAssert_assume)
+  apply simp
+  apply (rule corres_stateAssert_assume[rotated], simp)
    apply (rule_tac Q="\<lambda>s. \<exists>n. invs s \<and> valid_sched s \<and>
                               obj_at (\<lambda>ko. \<exists>sc y. ko = kernel_object.SchedContext sc n \<and>
                                                   sc_tcb sc = Some y \<and> tcb_at y s) scp s"
@@ -2151,15 +2141,14 @@ lemma schedContextBindTCB_corres:
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def pred_tcb_at'_def
                            sc_at_ppred_def obj_at'_def projectKO_eq projectKO_tcb projectKO_sc)
      apply (intro conjI allI impI; (solves \<open>clarsimp simp: inQ_def comp_def\<close>)?)
-              apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def projectKO_eq)
-             apply (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
-                                    obj_at'_def projectKO_eq projectKO_sc projectKO_tcb)
-            apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
-                             simp: objBits_def objBitsKO_def valid_obj_size'_def
-                                   valid_sched_context_size'_def)
-           apply (clarsimp simp: tcb_cte_cases_def)
+             apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def projectKO_eq)
+            apply (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
+                                   obj_at'_def projectKO_eq projectKO_sc projectKO_tcb)
+           apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
+                            simp: objBits_def objBitsKO_def valid_obj_size'_def
+                                  valid_sched_context_size'_def)
           apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def)
-         apply (clarsimp simp: idle_tcb'_2_def)
+         apply (fastforce elim: ex_cap_to'_after_update simp: ko_wp_at'_def tcb_cte_cases_def)
         apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
        apply (clarsimp simp: valid_release_queue'_def obj_at'_def projectKO_eq projectKO_tcb)
       apply (clarsimp simp: untyped_ranges_zero_inv_def cteCaps_of_def comp_def)
@@ -2317,8 +2306,11 @@ lemma tc_corres_sched:
   using assms
   apply -
   apply add_sym_refs
+  apply add_valid_idle'
   apply (simp add: invokeTCB_def liftE_bindE bind_assoc maybeM_def)
   apply (rule corres_stateAssertE_add_assertion)
+  apply (rule corres_stateAssertE_add_assertion[rotated])
+   apply (clarsimp simp: valid_idle'_asrt_def)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split_norE)
         apply (rule corres_split_nor)
@@ -2579,15 +2571,15 @@ lemma tc_sched_invs':
     apply (wpsimp wp: installTCBCap_invs' installTCBCap_fh_ex_nonz_cap_to'
                       installTCBCap_fh_bound_sc_tcb_at' installTCBCap_fh_sc_tcb_sc_at'
                       hoare_vcg_all_lift hoare_vcg_ball_lift2 hoare_vcg_const_imp_lift)
-   apply (wpsimp simp: stateAssertE_def)
+   apply (wpsimp simp: stateAssertE_def)+
   apply (clarsimp cong: conj_cong)
   apply (subgoal_tac "sc_opt = Some None \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> Some idle_sc_ptr) t s")
    apply (fastforce simp: tcs_cross_asrt1_def comp_def isValidFaultHandler_def
                           isCap_simps pred_tcb_at'_def obj_at'_def projectKOs)
   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def
-                        pred_tcb_at'_def obj_at'_def tcs_cross_asrt1_def)
+                        pred_tcb_at'_def obj_at'_def tcs_cross_asrt1_def valid_idle'_asrt_def)
   apply (frule_tac p=t and ko="ko :: tcb" for ko in sym_refs_ko_atD'[rotated])
-   apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs dest!: global'_no_ex_cap)
+   apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs valid_idle'_def dest!: global'_no_ex_cap)
   done
 
 lemma setSchedulerAction_invs'[wp]:

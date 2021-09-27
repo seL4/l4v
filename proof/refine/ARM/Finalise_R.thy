@@ -2287,8 +2287,7 @@ lemma schedContextUnbindNtfn_invs'[wp]:
    unfolding schedContextUnbindNtfn_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
                      typ_at_lifts valid_ntfn_lift' valid_pde_mappings_lift')
-  by (auto simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def live_ntfn'_def
-                 valid_idle'_def o_def
+  by (auto simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def live_ntfn'_def o_def
           elim!: if_live_then_nonz_capE')
 
 crunches schedContextMaybeUnbindNtfn
@@ -2296,8 +2295,7 @@ crunches schedContextMaybeUnbindNtfn
   (simp: crunch_simps wp: crunch_wps ignore: setReply)
 
 lemma replyUnlink_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)
-    and (\<lambda>s. replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_dom_schedule'_def
@@ -2732,14 +2730,11 @@ lemma replyRemove_valid_idle'[wp]:
 
 lemma replyPop_invs':
   "\<lbrace>invs' and obj_at' (\<lambda>reply. replyNext reply \<noteq> None) replyPtr
-          and ex_nonz_cap_to' tcbPtr
-          and (\<lambda>s. \<forall>scPtr. obj_at' (\<lambda>r. replyNext r = Some (Head scPtr)) replyPtr s
-                           \<longrightarrow> obj_at' (\<lambda>sc. scTCB sc \<noteq> Some idle_thread_ptr) scPtr s)\<rbrace>
+          and ex_nonz_cap_to' tcbPtr\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
-  apply (wpsimp wp: replyPop_iflive replyPop_valid_idle' simp: valid_pspace'_def)
-  apply (fastforce dest: global'_no_ex_cap)
+  apply (wpsimp wp: replyPop_iflive simp: valid_pspace'_def)
   done
 
 lemma replyRemove_invs':
@@ -2748,13 +2743,10 @@ lemma replyRemove_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def
   apply (wpsimp wp: replyRemove_if_live_then_nonz_cap' replyRemove_valid_idle')
-  apply (fastforce dest: global'_no_ex_cap)
   done
 
 lemma replyClear_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. tcbPtr \<noteq> ksIdleThread s)\<rbrace>
-   replyClear replyPtr tcbPtr
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "replyClear replyPtr tcbPtr \<lbrace>invs'\<rbrace>"
   unfolding replyClear_def
   apply (wpsimp wp: replyRemove_invs' gts_wp')
   apply (rule if_live_then_nonz_capE')
@@ -2768,11 +2760,6 @@ lemma finaliseCap_True_invs'[wp]:
   unfolding finaliseCap_def sym_refs_asrt_def
   apply (wpsimp wp: irqs_masked_lift simp: Let_def split_del: if_split)
   apply clarsimp
-  apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
-   apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
-  apply (drule (2) sym_ref_replyTCB_Receive_or_Reply)
-  apply (auto intro!: if_live_then_nonz_capE'
-                simp: projectKOs pred_tcb_at'_def obj_at'_def ko_wp_at'_def)[1]
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -3106,7 +3093,7 @@ lemma setSchedContext_pde_mappings'[wp]:
   by (wp valid_pde_mappings_lift')
 
 lemma schedContextUnbindTCB_invs'_helper:
-  "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr
+  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr
                 \<and> ko_at' sc scPtr s
                 \<and> scTCB sc = Some tcbPtr
                 \<and> bound_sc_tcb_at' ((=) (Some scPtr)) tcbPtr s
@@ -3127,16 +3114,15 @@ lemma schedContextUnbindTCB_invs'_helper:
          | clarsimp simp: tcb_cte_cases_def cteCaps_of_def valid_dom_schedule'_def)+
   apply (frule ko_at_valid_objs'_pre[where p=scPtr], clarsimp)
   (* slow 60s *)
-  apply (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
-               elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size'] ps_clear_domE
-              split: option.splits
-               simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def objBits_def objBitsKO_def
-                     projectKO_eq projectKO_tcb projectKO_ntfn projectKO_reply projectKO_sc
-                     tcb_cte_cases_def valid_sched_context'_def valid_sched_context_size'_def
-                     valid_bound_obj'_def valid_obj'_def valid_obj_size'_def valid_idle'_def
-                     valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
-                     idle_tcb'_def state_refs_of'_def comp_def)
-  done
+  by (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
+            elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size'] ps_clear_domE
+           split: option.splits
+            simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def objBits_def objBitsKO_def
+                  projectKO_eq projectKO_tcb projectKO_ntfn projectKO_reply projectKO_sc
+                  tcb_cte_cases_def valid_sched_context'_def valid_sched_context_size'_def
+                  valid_bound_obj'_def valid_obj'_def valid_obj_size'_def valid_idle'_def
+                  valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
+                  idle_tcb'_def state_refs_of'_def comp_def valid_idle'_asrt_def)
 
 lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -3145,7 +3131,7 @@ lemma schedContextUnbindTCB_invs'[wp]:
         apply (wpsimp wp: tcbReleaseRemove_invs' tcbReleaseRemove_not_queued
                           tcbSchedDequeue_nonq tcbSchedDequeue_invs' hoare_vcg_all_lift)+
   apply (fastforce dest: sym_refs_obj_atD'
-                   simp: invs_queues invs_valid_objs' invs'_valid_tcbs'
+                   simp: invs_queues invs_valid_objs' invs'_valid_tcbs' valid_idle'_asrt_def
                          sym_refs_asrt_def if_cancel_eq_True ko_wp_at'_def refs_of_rev'
                          pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb)
   done
@@ -4217,9 +4203,7 @@ lemma unbindFromSC_invs'[wp]:
   done
 
 lemma schedContextZeroRefillMax_invs'[wp]:
-  "\<lbrace>invs' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
-   schedContextZeroRefillMax scPtr
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "schedContextZeroRefillMax scPtr \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: schedContextZeroRefillMax_def)
   apply (wpsimp wp: setSchedContext_invs' simp: updateSchedContext_def)
   apply (frule (1) invs'_ko_at_valid_sched_context')
@@ -4239,9 +4223,7 @@ lemma schedContextUnbindYieldFrom_invs'[wp]:
   done
 
 lemma schedContextUnbindReply_invs'[wp]:
-  "\<lbrace>invs' and K (scPtr \<noteq> idle_sc_ptr)\<rbrace>
-   schedContextUnbindReply scPtr
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "schedContextUnbindReply scPtr \<lbrace>invs'\<rbrace>"
   unfolding schedContextUnbindReply_def
   apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_None_invs'
                     hoare_vcg_imp_lift typ_at_lifts)
@@ -4273,15 +4255,12 @@ lemma finaliseCap_invs:
   apply (rule hoare_pre)
    apply (wpsimp wp: hoare_vcg_all_lift)
   apply (case_tac cap; clarsimp simp: isCap_simps)
-    apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleThread)
-    apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
-     apply clarsimp
-    apply (clarsimp dest!: invs_valid_idle' simp: valid_cap'_def valid_idle'_def)
-   apply (frule sym_ref_replyTCB_Receive_or_Reply; simp add: sym_refs_asrt_def)
-   apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
-    apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
-   apply (fastforce intro!: if_live_then_nonz_capE'
-                      simp: projectKOs pred_tcb_at'_def obj_at'_def ko_wp_at'_def)
+   apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleThread)
+   apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
+    apply clarsimp
+   apply (clarsimp dest!: simp: valid_cap'_def valid_idle'_def valid_idle'_asrt_def)
+  apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
+   apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
   apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleSC)
   apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
    apply clarsimp
@@ -4717,9 +4696,11 @@ lemma schedContextUnbindTCB_corres:
              (invs' and obj_at' (\<lambda>sc. bound (scTCB sc)) sc_ptr)
           (sched_context_unbind_tcb sc_ptr) (schedContextUnbindTCB sc_ptr)"
   apply (clarsimp simp: sched_context_unbind_tcb_def schedContextUnbindTCB_def
-                        sym_refs_asrt_def)
+                        sym_refs_asrt_def valid_idle'_asrt_def)
   apply add_sym_refs
+  apply add_valid_idle'
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
+   apply (rule corres_stateAssert_add_assertion[rotated], simp)
   apply (rule corres_guard_imp)
      apply (rule corres_split[OF get_sc_corres])
        apply (rename_tac sc sc')
@@ -4968,9 +4949,12 @@ lemma finalise_cap_corres:
        (* CNodeCap *)
        apply (fastforce simp: final_matters'_def shiftL_nat zbits_map_def)
       (* ThreadCap *)
+      apply add_valid_idle'
       apply (rename_tac tptr)
       apply (clarsimp simp: final_matters'_def getThreadCSpaceRoot
                             liftM_def[symmetric] o_def zbits_map_def)
+      apply (rule corres_stateAssert_add_assertion[rotated])
+       apply (clarsimp simp: valid_idle'_asrt_def)
       apply (rule_tac P="K (tptr \<noteq> idle_thread_ptr)" and P'="K (tptr \<noteq> idle_thread_ptr)"
              in corres_add_guard)
        apply clarsimp

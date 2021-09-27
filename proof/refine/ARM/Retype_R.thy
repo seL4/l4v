@@ -5349,8 +5349,6 @@ proof -
                 createObjects_release_queue
                 assms | simp add: objBits_def )+
       apply (rule hoare_vcg_conj_lift)
-       apply (simp add: createObjects_def)
-       apply (wp createObjects_idle')
       apply (wp createObjects_no_cte_ifunsafe' irqs_masked_lift
                 createObjects_idle' createObjects_no_cte_valid_global
                 createObjects_valid_arch createObjects_irq_state
@@ -5364,8 +5362,6 @@ proof -
             | simp)+
     apply clarsimp
     apply ((intro conjI; assumption?); simp add: valid_pspace'_def objBits_def)
-    apply (fastforce simp add: no_cte no_tcb split_def split: option.splits)
-    apply (clarsimp simp: invs'_def no_tcb valid_state'_def no_cte  split: option.splits)
     done
 qed
 

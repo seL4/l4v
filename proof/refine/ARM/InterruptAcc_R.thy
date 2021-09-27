@@ -52,7 +52,7 @@ lemma setIRQState_invs[wp]:
   apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
                         Invariants_H.valid_queues_def valid_queues'_def valid_release_queue_def
                         valid_release_queue'_def valid_dom_schedule'_def
-                        valid_idle'_def valid_irq_node'_def
+                        valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
@@ -401,7 +401,7 @@ method invs'_independent_method
                     valid_pspace'_def valid_replies'_def sch_act_wf_def
                     valid_queues_def sym_refs_def state_refs_of'_def
                     if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
-                    valid_idle'_def valid_global_refs'_def
+                    valid_global_refs'_def
                     valid_arch_state'_def valid_irq_node'_def
                     valid_irq_handlers'_def valid_irq_states'_def
                     irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
