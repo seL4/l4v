@@ -1584,12 +1584,10 @@ lemma dmo_ct_in_state:
   apply (rule hoare_lift_Pf [where f=cur_thread])
   by wp+
 
-(* to do: make a ms_touched_addresses accessor *)
 lemma dmo_addTouchedAddresses_wp:
   "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update (\<lambda>ta. S \<union> ta) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
+  apply (simp add: simpler_do_machine_op_addTouchedAddresses_def)
   apply (wp select_f_wp)
-  apply (clarsimp simp: addTouchedAddresses_def in_monad)
   apply (case_tac "machine_state s", simp)
   done
 
@@ -1606,7 +1604,5 @@ lemma touch_object_wp':
   apply (wp touch_object_wp)
   apply (clarsimp simp:obj_at_def)
   done
-
-
 
 end

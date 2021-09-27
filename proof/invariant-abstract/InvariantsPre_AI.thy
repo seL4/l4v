@@ -23,12 +23,6 @@ declare ranI [intro]
 
 section "Locale Setup"
 
-abbreviation
-  ms_touched_addresses_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
-    'a abstract_state_scheme \<Rightarrow> 'a abstract_state_scheme" where
- "ms_touched_addresses_update f s \<equiv> s\<lparr>machine_state :=
-    machine_state.touched_addresses_update f (machine_state s)\<rparr>"
-
 definition ta_agnostic :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
  "ta_agnostic P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
 
@@ -72,6 +66,7 @@ lemma validE_tainv[wp]:
   by (simp add: hoare_valid_validE tainv)
 end
 
+(* does this actually do anything? *)
 sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
   by unfold_locales
 

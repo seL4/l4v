@@ -76,7 +76,6 @@ definition
   addTouchedAddresses :: "machine_word set \<Rightarrow> unit machine_monad"
   where "addTouchedAddresses da \<equiv> modify (\<lambda>s. s\<lparr>touched_addresses := da \<union> touched_addresses s\<rparr>)"
 
-
 text \<open>This instruction is required in the simulator, only.\<close>
 definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where
