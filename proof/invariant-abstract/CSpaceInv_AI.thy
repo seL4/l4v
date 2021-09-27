@@ -101,6 +101,7 @@ lemma assert_get_tcb_sp:
 crunch inv[wp]: get_cap "P"
   (simp: crunch_simps)
 
+
 declare resolve_address_bits'.simps [simp del]
 
 crunches getTouchedAddresses
@@ -128,7 +129,7 @@ interpretation touch_object_tainv:
   touched_addresses_inv "touch_object obj"
   by unfold_locales wp
 
-lemma resolve_address_bits_tainv [wp]:
+lemma resolve_address_bits_tainv[wp]:
   "resolve_address_bits slot \<lbrace>ignore_ta P\<rbrace>"
 unfolding resolve_address_bits_def
 proof (induct slot rule: resolve_address_bits'.induct)
@@ -187,26 +188,27 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply clarsimp
   apply (drule(2) post_by_hoare, simp)
   done
-  qed
+qed
 
-interpretation rab_tainv:
+interpretation resolve_address_bits_tainv:
   touched_addresses_inv "resolve_address_bits slot"
   by (unfold_locales, rule resolve_address_bits_tainv)
 
 crunches lookup_cap
   for tainv [wp]: "ignore_ta P"
 
-interpretation lookup_slot_for_thread_tainv:
-  touched_addresses_inv "lookup_slot_for_thread obj cap"
-  by (unfold_locales, rule lookup_slot_for_thread_tainv)
-
 interpretation lookup_cap_tainv:
   touched_addresses_inv "lookup_cap obj cap"
   by (unfold_locales, rule lookup_cap_tainv)
 
+interpretation lookup_slot_for_thread_tainv:
+  touched_addresses_inv "lookup_slot_for_thread obj cap"
+  by (unfold_locales, rule lookup_slot_for_thread_tainv)
+
 lemma cte_at_tcb_update:
   "tcb_at t s \<Longrightarrow> cte_at slot (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = cte_at slot s"
   by (clarsimp simp add: cte_at_cases obj_at_def is_tcb)
+
 
 lemma valid_cap_tcb_update [simp]:
   "tcb_at t s \<Longrightarrow> (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) \<turnstile> cap = s \<turnstile> cap"
@@ -220,6 +222,8 @@ lemma valid_cap_tcb_update [simp]:
   apply (simp add: a_type_def)
   done
 
+(* adding 'valid_objs' and 'valid_cap' to touched_addresses_P_inv - providing
+   lemmas about these properties being ta_agnostic. *)
 sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ valid_objs
   by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
 
@@ -1400,12 +1404,8 @@ lemma get_cap_wp:
   apply simp
   done
 
-
-(*
- - x1 succeeds \<Longrightarrow> x2 succeeds
-
-*)
-
+(* generalised bind lemmas to prove a subset relation between get_cap and get_cap_x.
+   these will be removed when we get rid of get_cap_x etc. *)
 lemma bind_first_equiv_succeeds_imp:
   "\<lbrakk>(\<And> r1. (x1 s = (r1, False) \<Longrightarrow> x2 s = (r1, False)));
    (do q <- x1; y q od) s = (r2, False) \<rbrakk> \<Longrightarrow>
@@ -1437,7 +1437,6 @@ lemma get_object_x_subset_get_object:
   apply simp
   done
 
-(* pretty sure this is true *)
 lemma get_cap_x_subset_get_cap:
   "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
   apply (clarsimp simp:get_cap_x_def get_cap_def)
@@ -1445,6 +1444,8 @@ lemma get_cap_x_subset_get_cap:
   apply (rule bind_first_equiv_succeeds_imp, rule get_object_x_subset_get_object, assumption)
   apply simp
   done
+
+(* end of temporary subset machinery  *)
 
 lemma get_cap_x_wp:
   "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at ((=) cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap_x p \<lbrace>Q\<rbrace>"

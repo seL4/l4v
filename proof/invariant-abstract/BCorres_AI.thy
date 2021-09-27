@@ -80,7 +80,7 @@ lemma get_cap_det:
   apply (cases p)
   apply (clarsimp simp add: in_monad get_cap_def get_object_def
                      split: kernel_object.split_asm)
-   apply (clarsimp simp add:bind_def return_def assert_opt_def simpler_gets_def)
+   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def)
   apply (simp add: bind_def simpler_gets_def return_def assert_opt_def)
   done
 
