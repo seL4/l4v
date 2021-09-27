@@ -484,6 +484,8 @@ Switching to the idle thread is similar, except that we call a different archite
 > switchToIdleThread = do
 >         stateAssert ready_qs_runnable
 >             "Threads in the ready queues are runnable'"
+>         stateAssert valid_idle'_asrt
+>             "Assert that `valid_idle' s` holds"
 >         thread <- getIdleThread
 >         Arch.switchToIdleThread
 >         setCurThread thread

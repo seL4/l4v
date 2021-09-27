@@ -49,6 +49,8 @@ The parameters of this function are the fault and a pointer to the thread which 
 When a thread faults, the kernel attempts to send a fault IPC to the fault handler endpoint. This has the side-effect of suspending the thread, placing it in the "BlockedOnFault" state until the recipient of the fault IPC replies to it. If the IPC fails, we call "handleDoubleFault" instead.
 
 > handleFault tptr ex = do
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
 >     tcb <- getObject tptr
 >     scOpt <- threadGet tcbSchedContext tptr
 >     hasFh <- sendFaultIPC tptr (cteCap (tcbFaultHandler tcb)) ex (scOpt /= Nothing) `catchFailure` const (return False)
@@ -58,6 +60,8 @@ When a thread faults, the kernel attempts to send a fault IPC to the fault handl
 
 > handleTimeout :: PPtr TCB -> Fault -> Kernel ()
 > handleTimeout tptr timeout = do
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
 >     valid <- isValidTimeoutHandler tptr
 >     assert valid "no valid timeout handler"
 >     tcb <- getObject tptr
@@ -86,4 +90,3 @@ The kernel stores a copy of the fault in the thread's TCB, and performs an IPC s
 
 > handleNoFaultHandler :: PPtr TCB -> Kernel ()
 > handleNoFaultHandler tptr = setThreadState Inactive tptr
-

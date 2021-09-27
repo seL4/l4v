@@ -58,6 +58,8 @@ This module specifies the behavior of reply objects.
 > replyPush callerPtr calleePtr replyPtr canDonate = do
 >     stateAssert (valid_replies'_sc_asrt replyPtr)
 >         "replyPush: valid_replies'_sc holds for replyPtr"
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
 >     scPtrOptDonated <- threadGet tcbSchedContext callerPtr
 >     scPtrOptCallee <- threadGet tcbSchedContext calleePtr
 

@@ -231,6 +231,8 @@ The following function implements the "Send" and "Call" system calls. It determi
 > handleInvocation isCall isBlocking canDonate firstPhase cptr = do
 >     stateAssert ct_not_inQ_asrt
 >        "Assert that `ct_not_inQ s` holds"
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
 >     thread <- withoutPreemption getCurThread
 >     info <- withoutPreemption $ getMessageInfo thread
 >     syscall

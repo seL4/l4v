@@ -436,3 +436,9 @@ is true using the rule sch_act_wf_cross.
 
 > sch_act_wf_asrt :: KernelState -> Bool
 > sch_act_wf_asrt _ = True
+
+An assert that will say that `valid_idle' s` holds. We may prove this assertion
+is true using the rule valid_idle'_cross.
+
+> valid_idle'_asrt :: KernelState -> Bool
+> valid_idle'_asrt _ = True
