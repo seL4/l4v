@@ -49,6 +49,8 @@ The normal (blocking) version of the send operation will remove a recipient from
 > sendIPC blocking call badge canGrant canGrantReply canDonate thread epptr = do
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert valid_idle'_asrt
+>             "Assert that `valid_idle' s` holds"
 >         ep <- getEndpoint epptr
 >         case ep of
 
@@ -133,6 +135,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert sch_act_wf_asrt
 >             "Assert that `sch_act_wf (ksSchedulerAction s) s` holds"
+>         stateAssert valid_idle'_asrt
+>             "Assert that `valid_idle' s` holds"
 >         replyOpt <- (case replyCap of
 >             ReplyCap r _ -> return (Just r)
 >             NullCap -> return Nothing
