@@ -73,7 +73,7 @@ lemma setSchedContext_valid_idle'[wp]:
   by (auto simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)[1]
 
 lemma setSchedContext_invs':
-  "\<lbrace>invs' and K (scPtr = idle_sc_ptr \<longrightarrow> idle_sc' sc)
+  "\<lbrace>invs'
     and (\<lambda>s. live_sc' sc \<longrightarrow> ex_nonz_cap_to' scPtr s)
     and valid_sched_context' sc
     and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
@@ -94,7 +94,6 @@ lemma setSchedContext_active_sc_at':
 
 lemma updateSchedContext_invs':
   "\<lbrace>invs'
-    and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> live_sc' (f ko) \<longrightarrow> ex_nonz_cap_to' scPtr s)
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s
                                         \<and> valid_sched_context_size' (f ko))\<rbrace>
@@ -124,7 +123,6 @@ lemma live_sc'_ko_ex_nonz_cap_to':
 
 lemma updateSchedContext_refills_invs':
   "\<lbrace>invs'
-    and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
     and (\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> valid_sched_context' (f ko) s \<and> valid_sched_context_size' (f ko))
     and (\<lambda>_. \<forall>ko. scNtfn (f ko) = scNtfn ko)
     and (\<lambda>_. \<forall>ko. scTCB (f ko) = scTCB ko)
@@ -134,9 +132,6 @@ lemma updateSchedContext_refills_invs':
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: updateSchedContext_def)
   apply (wpsimp wp: setSchedContext_invs')
-  apply (intro conjI)
-   apply fastforce
-  apply clarsimp
   apply (erule (1) live_sc'_ko_ex_nonz_cap_to')
   apply (clarsimp simp: live_sc'_def)
   done
@@ -158,7 +153,7 @@ lemma invs'_ko_at_valid_sched_context':
   done
 
 lemma updateSchedContext_invs'_indep:
-  "\<lbrace>invs' and (\<lambda>s. scPtr = idle_sc_ptr \<longrightarrow> (\<forall>ko. ko_at' ko scPtr s \<longrightarrow> idle_sc' (f ko)))
+  "\<lbrace>invs'
     and (\<lambda>s. \<forall>ko. valid_sched_context' ko s \<longrightarrow> valid_sched_context' (f ko) s)
     and (\<lambda>_. \<forall>ko. valid_sched_context_size' ko \<longrightarrow> valid_sched_context_size' (f ko))
     and (\<lambda>s. \<forall>ko. scNtfn (f ko) = scNtfn ko

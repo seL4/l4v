@@ -1252,6 +1252,9 @@ where
          \<and> idle_sc_at' idle_sc_ptr s
          \<and> idle_thread_ptr = ksIdleThread s"
 
+defs valid_idle'_asrt_def:
+  "valid_idle'_asrt \<equiv> \<lambda>s. valid_idle' s"
+
 lemma valid_idle'_tcb_at':
   "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
   by (clarsimp simp: valid_idle'_def)
@@ -1417,7 +1420,6 @@ where
                       \<and> valid_queues s
                       \<and> sym_refs (list_refs_of_replies' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
-                      \<and> valid_idle' s
                       \<and> valid_global_refs' s \<and> valid_arch_state' s
                       \<and> valid_irq_node' (irq_node' s) s
                       \<and> valid_irq_handlers' s
@@ -3833,10 +3835,6 @@ lemma invs_sym_list_refs_of_replies'[elim!]:
   "invs' s \<Longrightarrow> sym_refs (list_refs_of_replies' s)"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_valid_idle'[elim!]:
-  "invs' s \<Longrightarrow> valid_idle' s"
-  by (fastforce simp: invs'_def valid_state'_def)
-
 lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
@@ -3905,7 +3903,6 @@ lemmas invs'_implies =
   invs_pspace_distinct'
   invs_arch_state'
   invs_valid_global'
-  invs_valid_idle'
   invs_mdb'
   invs_valid_objs'
   invs_valid_objs_size'

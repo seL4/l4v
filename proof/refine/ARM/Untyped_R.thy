@@ -5297,7 +5297,6 @@ lemma insertNewCap_invs':
           and K (\<not> isZombie cap) and (\<lambda>s. descendants_range' cap parent (ctes_of s))
           and caps_overlap_reserved' (untypedRange cap)
           and ex_cte_cap_to' slot
-          and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
           and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -5336,7 +5335,6 @@ lemma zipWithM_x_insertNewCap_invs'':
         \<and> (\<forall>tup \<in> set ls. \<not> isZombie (snd tup))
         \<and> (\<forall>tup \<in> set ls. ex_cte_cap_to' (fst tup) s)
         \<and> (\<forall>tup \<in> set ls. descendants_range' (snd tup) parent (ctes_of s))
-        \<and> (\<forall>tup \<in> set ls. ksIdleThread s \<notin> capRange (snd tup))
         \<and> (\<forall>tup \<in> set ls. caps_overlap_reserved' (capRange (snd tup)) s)
         \<and> distinct_sets (map capRange (map snd ls))
         \<and> (\<forall>irq. IRQHandlerCap irq \<in> set (map snd ls) \<longrightarrow> irq_issued' irq s)
@@ -5385,22 +5383,13 @@ lemma createNewCaps_cap_to':
   apply fastforce
   done
 
-lemma createNewCaps_idlethread[wp]:
-  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> createNewCaps tp ptr sz us d \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
-  apply (simp add: createNewCaps_def toAPIType_def
-            split: ARM_H.object_type.split
-                   apiobject_type.split)
-  apply safe
-          apply (wp mapM_x_wp' | simp)+
-  done
-
 lemma createNewCaps_idlethread_ranges[wp]:
   "\<lbrace>\<lambda>s. 0 < n \<and> range_cover ptr sz (APIType_capBits tp us) n
            \<and> ksIdleThread s \<notin> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}
          \<and> (tp = APIObjectType SchedContextObject \<longrightarrow> sc_size_bounds us)\<rbrace>
      createNewCaps tp ptr n us d
    \<lbrace>\<lambda>rv s. \<forall>cap\<in>set rv. ksIdleThread s \<notin> capRange cap\<rbrace>"
-  apply (rule hoare_as_subst [OF createNewCaps_idlethread])
+  apply (rule hoare_as_subst [OF createNewCaps_it])
   apply (rule hoare_assume_pre)
   apply (rule hoare_chain, rule createNewCaps_range_helper2)
    apply fastforce
@@ -5624,9 +5613,6 @@ lemma invokeUntyped_invs'':
       apply (simp add: blah word_and_le2)
      apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
      apply (simp add: blah word_and_le2)
-    apply (frule valid_global_refsD2', clarsimp)
-    apply (clarsimp simp: global_refs'_def)
-    apply (erule notE, erule subsetD[rotated], simp add: blah word_and_le2)
   done
 qed
 

@@ -5329,7 +5329,6 @@ lemma sts_invs_minor':
                        st' \<noteq> Inactive \<and> \<not> idle' st')
                    \<and> (\<forall>rptr. st' = BlockedOnReply rptr \<longrightarrow>
                              st = BlockedOnReply rptr)) t
-      and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and valid_tcb_state' st
       and invs'\<rbrace>
    setThreadState st t
@@ -5348,7 +5347,6 @@ lemma sts_invs':
   "\<lbrace>(\<lambda>s. st \<noteq> Inactive \<and> \<not> idle' st \<longrightarrow> ex_nonz_cap_to' t s)
       and (\<lambda>s. \<forall>rptr. st_tcb_at' ((=) (BlockedOnReply (Some rptr))) t s \<longrightarrow> (is_reply_linked rptr s) \<longrightarrow> st = BlockedOnReply (Some rptr))
       and tcb_at' t
-      and (\<lambda>s. t = ksIdleThread s \<longrightarrow> idle' st)
       and valid_tcb_state' st
       and invs'\<rbrace>
    setThreadState st t
