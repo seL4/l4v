@@ -1674,6 +1674,7 @@ lemma clearMemory_untyped_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits" in ccorres_gen_asm)
@@ -1723,6 +1724,7 @@ lemma reset_untyped_inner_offs_helper:
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
+  including no_0_dvd
   apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
@@ -1803,6 +1805,7 @@ lemma byte_regions_unmodified_actually_heap_list:
 
 lemma ucast_64_32[simp]:
   "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
+  including no_take_bit
   by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
 
 lemma resetUntypedCap_ccorres:
@@ -1815,6 +1818,7 @@ lemma resetUntypedCap_ccorres:
      []
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
+  including no_take_bit no_0_dvd
   using [[ceqv_simpl_sequence = true]]
   supply if_cong[cong]
   apply (cinit lift: srcSlot_')
@@ -2355,6 +2359,7 @@ lemma invokeUntyped_Retype_ccorres:
           (ptr + of_nat (shiftL (length destSlots)
               (APIType_capBits newType us)))) >> 4"
       using cover range_cover_sz'[OF cover]
+      including no_take_bit
       apply (simp add: getFreeIndex_def shiftl_t2n
                        unat_of_nat_eq shiftL_nat)
       apply (rule less_mask_eq)
@@ -2372,6 +2377,7 @@ lemma invokeUntyped_Retype_ccorres:
          (liftxf errstate id (K ()) ret__unsigned_long_') (\<lambda>s'. s' = s) ?P'
          [] (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
             (Call invokeUntyped_Retype_'proc)"
+      including no_take_bit
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
                           userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
                     simp: when_def)
@@ -2857,6 +2863,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  including no_take_bit
   supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' current_extra_caps_' call_' buffer_'

@@ -11,8 +11,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches unmapPageTable, unmapPageDirectory, unmapPDPT
-  for ctes_of[wp]:  "\<lambda>s. P (ctes_of s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps)
 
 end
@@ -164,8 +163,8 @@ lemma clearMemory_setObject_PDE_ccorres:
     apply (erule (1) page_directory_at_rf_sr_dom_s[unfolded pdBits_def bit_simps, simplified])
    apply (clarsimp simp add: bit_simps
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps
-                    field_simps linorder_not_less[symmetric] archObjSize_def
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
+                    linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
   apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -306,8 +305,8 @@ lemma clearMemory_setObject_PDPTE_ccorres:
     apply (erule (1) pd_pointer_table_at_rf_sr_dom_s[unfolded pdptBits_def bit_simps, simplified])
    apply (clarsimp simp add: bit_simps
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps
-                    field_simps linorder_not_less[symmetric] archObjSize_def
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
+                    linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
   apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -733,6 +732,7 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -983,7 +983,7 @@ lemma addrFromPPtr_mask_middle_pml4ShiftBits:
   "\<lbrakk>is_aligned p pageBits; p \<in> kernel_mappings\<rbrakk> \<Longrightarrow>
    addrFromPPtr p && (mask pml4ShiftBits << pageBits) = addrFromPPtr p"
   apply (clarsimp simp: mask_shiftl_decompose kernel_mappings_def)
-  apply (subst word_bool_alg.conj.assoc[symmetric])
+  apply (subst word_bw_assocs[symmetric])
   apply (subst is_aligned_neg_mask_eq)
    apply (rule aligned_already_mask)
    apply (erule is_aligned_addrFromPPtr)
@@ -1366,6 +1366,7 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
+  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1454,8 +1455,8 @@ lemma ccorres_pre_getObject_pte:
   done
 
 lemma ptr_add_uint_of_nat [simp]:
-    "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
-  by (clarsimp simp: CTypesDefs.ptr_add_def)
+  "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
+  including no_take_bit by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
 
@@ -1966,7 +1967,7 @@ lemma addrFromPPtr_mask_middle_shiftBits:
   "\<lbrakk>is_aligned p (pageBitsForSize sz); p \<in> kernel_mappings\<rbrakk> \<Longrightarrow>
    addrFromPPtr p && (mask (shiftBitsForSize sz) << (pageBitsForSize sz)) = addrFromPPtr p"
   apply (clarsimp simp: mask_shiftl_decompose kernel_mappings_def)
-  apply (subst word_bool_alg.conj.assoc[symmetric])
+  apply (subst word_bw_assocs[symmetric])
   apply (subst is_aligned_neg_mask_eq)
    apply (rule aligned_already_mask)
    apply (clarsimp simp: is_aligned_addrFromPPtr_pageBitsForSize)
@@ -2317,6 +2318,7 @@ lemma decodeX64FrameInvocation_ccorres:
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86FrameInvocation_'proc)"
+  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def )
@@ -2757,6 +2759,7 @@ lemma decodeX64FrameInvocation_ccorres:
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply clarsimp
   apply (frule cap_get_tag_PageCap_frame)
+  supply unsigned_numeral[simp del]
   apply (clarsimp simp: word_less_nat_alt vm_attribs_relation_def attribsFromWord_def
                         framesize_from_H_eqs of_bool_nth[simplified of_bool_from_bool]
                         vm_page_size_defs neq_Nil_conv excaps_in_mem_def hd_conv_nth
@@ -2833,7 +2836,6 @@ lemma le_mask_asid_bits_helper:
   apply (clarsimp simp: asid_bits_def asid_low_bits_def asid_high_bits_def nth_shiftl)
   done
 
-declare Word_Lemmas.from_bool_mask_simp [simp]
 
 lemma injection_handler_liftE:
   "injection_handler a (liftE f) = liftE f"
@@ -3889,7 +3891,7 @@ lemma decodeX64MMUInvocation_ccorres:
                                         from_bool_0)
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
-                   apply (fastforce simp: max_word_def asid_high_bits_def)
+                   apply (fastforce simp: asid_high_bits_def)
                   apply (clarsimp simp: rf_sr_x86KSASIDTable from_bool_def
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
@@ -4202,7 +4204,7 @@ lemma decodeX64MMUInvocation_ccorres:
                apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
               apply (rule plus_one_helper2 [OF order_refl])
               apply (rule notI, drule max_word_wrap)
-              apply (fastforce simp: max_word_def asid_low_bits_def)
+              apply (fastforce simp: asid_low_bits_def)
              apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
@@ -4418,14 +4420,12 @@ lemma decodeX64MMUInvocation_ccorres:
 lemma ucast_ucast_first_port_is_ucast:
   "cap_lift y = Some (Cap_io_port_cap x) \<Longrightarrow> UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) (capIOPortFirstPort_CL x))
           = UCAST(64 \<rightarrow> 32) (capIOPortFirstPort_CL x)"
-  apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm)
-  by word_bitwise
+  by (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm) word_bitwise
 
 lemma ucast_ucast_last_port_is_ucast:
   "cap_lift y = Some (Cap_io_port_cap x) \<Longrightarrow> UCAST(16 \<rightarrow> 32) (UCAST(64 \<rightarrow> 16) (capIOPortLastPort_CL x))
           = UCAST(64 \<rightarrow> 32) (capIOPortLastPort_CL x)"
-  apply (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm)
-  by word_bitwise
+  by (clarsimp simp: cap_lift_def Let_def cap_tag_defs mask_def split: if_split_asm) word_bitwise
 
 lemma ensurePortOperationAllowed_ccorres:
   "cap = IOPortCap f l \<Longrightarrow> ccorres (syscall_error_rel \<currency> dc)
@@ -4793,7 +4793,8 @@ lemma first_last_highbits_eq_port_set:
          \<Longrightarrow> \<exists>port::16 word.
                 unat f \<le> unat port \<and> unat port \<le> unat l
               \<and> arr.[unat (port >> 6)] !! unat (port && 0x3F)"
-    apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
+  including no_take_bit
+  apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(l && ~~ mask 6) + of_nat i" in exI)
   apply (clarsimp simp: neg_mask_test_bit mask_def[where n=6, simplified, symmetric])
@@ -4807,8 +4808,7 @@ lemma first_last_highbits_eq_port_set:
      apply (subst unat_plus_simple[THEN iffD1])
       apply (clarsimp simp: AND_NOT_mask_plus_AND_mask_eq word_and_le2)
      apply (subst unat_plus_simple[THEN iffD1])
-      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow',
-                     simp add: is_aligned_neg_mask2)
+      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow', simp)
       apply (rule word_less_sub_1, simp)
      by (simp add: unat_of_nat word_shiftr_eq_mask)
   apply (rule conjI)
@@ -4844,6 +4844,7 @@ lemma port_set_in_first_word:
            0 < unat (arr.[unat (f >> 6)] && ~~ mask (unat (f && mask 6)))\<rbrakk>
        \<Longrightarrow> \<exists>port::16 word. unat f \<le> unat port \<and> unat port \<le> unat l \<and>
               arr.[unat (port >> 6)] !! unat (port && mask 6)"
+  including no_take_bit
   apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(f && ~~ mask 6) + of_nat i" in exI)
@@ -4940,6 +4941,7 @@ lemma isIOPortRangeFree_spec:
         ret__unsigned_long_' t = from_bool
           (\<forall>port. first_port_' \<sigma> \<le> port \<and> port \<le> last_port_' \<sigma>
                    \<longrightarrow> \<not> port_array \<sigma>.[unat (port >> wordRadix)] !! unat (port && mask wordRadix))}"
+  including no_take_bit
   apply (rule allI)
   subgoal for \<sigma>
   apply (hoare_rule HoarePartial.ProcNoRec1)
@@ -4960,13 +4962,13 @@ lemma isIOPortRangeFree_spec:
   apply (rule conseqPre, vcg)
     apply (all \<open>clarsimp simp: hrs_simps false_def from_bool_0 wordRadix_def is_up is_down
                                unat_ucast_upcast uint_up_ucast sint_ucast_eq_uint up_ucast_inj_eq
-                               not_max_word_simps[THEN ucast_increment, simplified max_word_def]
+                               not_max_word_simps[THEN ucast_increment]
                                ucast_cmp_ucast ucast_cmp_ucast[where 'a=16 and y="0x40", simplified]\<close>)
     subgoal for mem htd first_port last_port low_word
       (* Loop invariant is preserved. *)
       apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb], simp)
       apply (simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
-                       Word_Lemmas.sint_eq_uint uint_nat)
+                       Most_significant_bit.sint_eq_uint)
       apply (frule less_le_trans[OF _ ucast_le_ucast[THEN iffD2],
                                  OF _ _ shiftr_le_mask[unfolded mask_def]]; simp)
       apply (intro conjI impI allI; (simp add: unat_arith_simps; fail)?)
@@ -4985,7 +4987,7 @@ lemma isIOPortRangeFree_spec:
          apply (frule and_mask_eq_iff_shiftr_0[where w="of_nat i", THEN iffD2])
          apply (subst mask_eq_ucast_shiftr)
           apply (simp add: word_ao_dist)
-          apply (rule arg_cong2[where f=bitOR]; rule and_mask_eq_iff_le_mask[THEN iffD2])
+          apply (rule arg_cong2[where f=Bit_Operations.or]; rule and_mask_eq_iff_le_mask[THEN iffD2])
            apply (rule le_mask_shiftl_le_mask, simp)
            apply (erule order_trans[where y="0x3FF", OF less_imp_le], simp add: mask_def)
           apply (erule order_trans[OF less_imp_le[OF of_nat_mono_maybe], rotated]; simp add: mask_def)
@@ -5001,6 +5003,7 @@ lemma isIOPortRangeFree_spec:
                               shiftr_over_and_dist shiftr_over_or_dist
                               shiftr_mask2)
          done
+      subgoal by uint_arith simp
       subgoal for port
         (* Continue to next loop iteration. *)
         apply (case_tac "ucast port < low_word << 6"; (simp add: unat_arith_simps; fail)?)
@@ -5025,11 +5028,12 @@ lemma isIOPortRangeFree_spec:
      (* Invariant plus loop termination condition is sufficient to establish VCG postcondition. *)
      apply (frule neg_msb_le_mono[OF _ word_upcast_neg_msb], simp)
      apply (simp add: word_sless_iff_less word_sle_iff_le word_upcast_neg_msb
-                      Word_Lemmas.sint_eq_uint uint_nat)
+                      Most_significant_bit.sint_eq_uint)
      apply (cut_tac word_and_mask_le_2pm1[of last_port 6], simp)
      apply (cut_tac shiftr_le_mask[of last_port 6, simplified mask_def], simp)
      apply (intro conjI allI impI; (simp add: unat_arith_simps; fail)?)
-     apply (drule word_exists_nth; clarsimp simp: word_size ucast_less_ucast_weak)
+       subgoal by uint_arith
+      apply (drule word_exists_nth; clarsimp simp: word_size ucast_less_ucast_weak)
       subgoal for i
         (* return false. *)
         apply (rule exI[of _ "last_port && ~~ mask 6 || of_nat i"])
@@ -5076,7 +5080,8 @@ lemma isIOPortRangeFree_spec:
     apply (cut_tac unat_shiftr_less_2p[of 6 10 "first_port_' \<sigma>"]; simp)
     apply (cut_tac unat_and_mask_less_2p[of 6 "first_port_' \<sigma>"]; simp)
     apply (cut_tac unat_and_mask_less_2p[of 6 "last_port_' \<sigma>"]; simp)
-    apply (simp add: uint_nat mask_def[where n=6] mask_def[where n=64] less_Suc_eq_le Suc_le_eq)
+    apply (simp add: uint_nat mask_def[where n=6] mask_def[where n=64] less_Suc_eq_le Suc_le_eq
+                del: Word.of_nat_unat)
     apply (clarsimp intro!: word_less_imp_sless
                       simp: unat_ucast_no_overflow_le word_upcast_neg_msb msb_nth zero_sle_ucast_up
                             is_down unat_eq_0

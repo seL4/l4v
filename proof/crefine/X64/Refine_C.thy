@@ -149,7 +149,7 @@ lemma handleVMFaultEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
+         apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -157,7 +157,6 @@ lemma handleVMFaultEvent_ccorres:
          apply simp
         apply (wp hv_inv_ex')
        apply (simp add: guard_is_UNIV_def)
-       apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
       apply ceqv
      apply clarsimp
@@ -229,7 +228,6 @@ lemmas syscall_defs =
 lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
-
 
 
 lemma handleSyscall_ccorres:
@@ -1014,6 +1012,7 @@ lemma refinement2_both:
    apply (rule ext)
    apply (clarsimp simp: user_mem'_def option_to_0_def split:if_splits)
   apply (simp add: ADT_H_def)
+  supply subst_all [simp del]
   apply (clarsimp simp: rel_semi_def global_automaton_def relcomp_unfold
                         in_lift_state_relation_eq)
 

@@ -268,6 +268,7 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="capAligned (ArchObjectCap (PageCap ptr undefined mt sz False None))"
                 in ccorres_gen_asm)
@@ -693,8 +694,8 @@ lemma clearMemory_setObject_PTE_ccorres:
     apply (erule (1) page_table_at_rf_sr_dom_s[unfolded ptBits_def bit_simps, simplified])
    apply (clarsimp simp add: bit_simps
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps
-                    field_simps linorder_not_less[symmetric] archObjSize_def
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
+                    linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
   apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -1295,6 +1296,7 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

@@ -282,7 +282,7 @@ lemma memset_spec:
                                                       (t_hrs_' (globals s))\<rparr>}"
             and V1=undefined in subst [OF whileAnno_def])
   apply vcg
-    apply (clarsimp simp add: hrs_mem_update_def split: if_split_asm)
+    apply (clarsimp simp add: hrs_mem_update_def del: mod_0_imp_dvd split: if_split_asm)
     apply (subst (asm) word_mod_2p_is_mask [where n=3, simplified], simp)
     apply (subst (asm) word_mod_2p_is_mask [where n=3, simplified], simp)
     apply (rule conjI)
@@ -598,6 +598,7 @@ qed
 lemma h_t_array_valid_retyp:
   "0 < n \<Longrightarrow> n * size_of TYPE('a) < addr_card
     \<Longrightarrow> h_t_array_valid (ptr_arr_retyps n p htd) (p :: ('a :: wf_type) ptr) n"
+  including no_take_bit
   apply (clarsimp simp: ptr_arr_retyps_def h_t_array_valid_def
                         valid_footprint_def)
   apply (simp add: htd_update_list_index intvlI mult.commute)
@@ -861,7 +862,7 @@ next
     \<Longrightarrow> \<exists>quot rem. k = quot * size_of TYPE('a) + rem \<and> rem < size_of TYPE('a) \<and> quot < nptrs"
     apply (intro exI conjI, rule div_mult_mod_eq[symmetric])
      apply simp
-    apply (simp add: Misc_Arithmetic.td_gal_lt)
+    apply (simp add: More_Divides.td_gal_lt)
     done
 
   have gd: "\<And>p'. p' \<in> ?S \<Longrightarrow> gd p'"
@@ -1013,7 +1014,7 @@ proof -
      apply (simp add: size_of)
      apply (cases y, clarsimp simp: and_not_mask shiftl_t2n)
     apply (simp add: shiftr_div_2n')
-    apply (rule Misc_Arithmetic.td_gal_lt[THEN iffD1], simp)
+    apply (rule More_Divides.td_gal_lt[THEN iffD1], simp)
     apply (drule word_leq_minus_one_le[OF yuck])
     apply (rule unat_less_helper, simp)
     done
@@ -1294,7 +1295,7 @@ proof (rule ctes_of_retype)
     apply -
     apply (drule(1) pspace_no_overlap_disjoint')
     apply (frule new_cap_addrs_subset)
-    apply (clarsimp simp: Word_Lib.ptr_add_def field_simps)
+    apply (clarsimp simp: More_Word_Operations.ptr_add_def field_simps)
     apply fastforce
     done
 qed
@@ -1479,6 +1480,7 @@ lemma zero_ranges_ptr_retyps:
     \<Longrightarrow> valid_objs' s
     \<Longrightarrow> zero_ranges_are_zero (gsUntypedZeroRanges s)
        (hrs_htd_update (ptr_retyps_gen n p arr) hrs)"
+  including no_take_bit
   apply (clarsimp simp: zero_ranges_are_zero_def untyped_ranges_zero_inv_def
                         hrs_htd_update)
   apply (drule(1) bspec, clarsimp)
@@ -3230,15 +3232,13 @@ declare Collect_const_mem [simp]
 lemma createNewCaps_untyped_if_helper:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (sz < word_bits \<and> gbits < word_bits) \<and> True  \<longrightarrow>
              (\<not> gbits \<le> sz) = (s' \<in> \<lbrace>of_nat sz < (of_nat gbits :: machine_word)\<rbrace>)"
+  including no_take_bit
   by (clarsimp simp: not_le unat_of_nat64 word_less_nat_alt lt_word_bits_lt_pow)
 
 lemma true_mask1 [simp]:
   "true && mask (Suc 0) = true"
   unfolding true_def
   by (simp add: bang_eq cong: conj_cong)
-
-(* Levity: added (20090419 09:44:40) *)
-declare shiftl_mask_is_0 [simp]
 
 lemma to_bool_simps [simp]:
   "to_bool true" "\<not> to_bool false"
@@ -3248,18 +3248,6 @@ lemma to_bool_simps [simp]:
 lemma heap_list_update':
   "\<lbrakk> n = length v; length v \<le> 2 ^ word_bits \<rbrakk> \<Longrightarrow> heap_list (heap_update_list p v h) n p = v"
   by (simp add: heap_list_update addr_card_wb)
-
-lemma heap_update_field':
-  "\<lbrakk>field_ti TYPE('a :: packed_type) f = Some t; c_guard p;
-  export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
-  \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) v hp =
-  heap_update p (update_ti_t t (to_bytes_p v) (h_val hp p)) hp"
-  apply (erule field_ti_field_lookupE)
-  apply (subst packed_heap_super_field_update [unfolded typ_uinfo_t_def])
-     apply assumption+
-  apply (drule export_size_of [simplified typ_uinfo_t_def])
-  apply (simp add: update_ti_t_def)
-  done
 
 lemma h_t_valid_clift_Some_iff':
   "td \<Turnstile>\<^sub>t p = (clift (hp, td) p = Some (h_val hp p))"
@@ -3510,6 +3498,7 @@ qed
 
 lemma tcb_ptr_orth_cte_ptrs:
   "{ptr_val p..+size_of TYPE(tcb_C)} \<inter> {ctcb_ptr_to_tcb_ptr p..+5 * size_of TYPE(cte_C)} = {}"
+  including no_take_bit
   apply (rule disjointI)
   apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def intvl_def field_simps size_of_def ctcb_offset_defs)
   apply unat_arith
@@ -3519,6 +3508,7 @@ lemma tcb_ptr_orth_cte_ptrs:
 
 lemma tcb_ptr_orth_cte_ptrs':
   "ptr_span (tcb_Ptr (regionBase + 0x400)) \<inter> ptr_span (Ptr regionBase :: (cte_C[5]) ptr) = {}"
+  including no_take_bit
   apply (rule disjointI)
   apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def size_td_array
                         intvl_def field_simps size_of_def ctcb_offset_def)
@@ -3707,8 +3697,9 @@ proof -
     "region_is_bytes (ptr_val p) (size_of TYPE(tcb_C)) x"
     "region_is_bytes' (ctcb_ptr_to_tcb_ptr p) (5 * size_of TYPE(cte_C))
         (ptr_retyps_gen 1 p False (hrs_htd (t_hrs_' (globals x))))"
-     using al region_is_bytes_subset[OF empty] tcb_ptr_to_ctcb_ptr_in_range'
-     apply (simp add: objBits_simps kotcb_def)
+    using al region_is_bytes_subset[OF empty] tcb_ptr_to_ctcb_ptr_in_range'
+    including no_take_bit
+    apply (simp add: objBits_simps kotcb_def)
     apply (clarsimp simp: region_is_bytes'_def)
     apply (subst(asm) ptr_retyps_gen_out)
      apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs intvl_def)
@@ -3751,6 +3742,7 @@ proof -
                 {k. k < 5}
          then Some (from_bytes (replicate (size_of TYPE(cte_C)) 0)) else cslift x y)"
     using cgp unfolding heap_updates_defs
+    including no_take_bit
     apply (simp add: ptr_retyp_to_array[simplified] hrs_comm[symmetric] Let_def)
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard],
            simp_all add: hrs_htd_update empty_smaller[simplified])
@@ -4500,14 +4492,15 @@ proof
 qed
 
 lemma range_cover_bound_weak:
-  "\<lbrakk>n \<noteq> 0;range_cover ptr sz us n\<rbrakk> \<Longrightarrow>
-  ptr + (of_nat n * 2 ^ us - 1) \<le> (ptr && ~~ mask sz) + 2 ^ sz - 1"
- apply (frule range_cover_cell_subset[where x = "of_nat (n - 1)"])
-  apply (simp add:range_cover_not_zero)
- apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat (n - 1)"])
-  apply (simp add:range_cover_not_zero)
- apply (clarsimp simp: field_simps)
- done
+  "\<lbrakk> n \<noteq> 0; range_cover ptr sz us n \<rbrakk> \<Longrightarrow>
+    ptr + (of_nat n * 2 ^ us - 1) \<le> (ptr && ~~ mask sz) + 2 ^ sz - 1"
+  including no_0_dvd
+  apply (frule range_cover_cell_subset[where x = "of_nat (n - 1)"])
+   apply (simp add:range_cover_not_zero)
+  apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat (n - 1)"])
+   apply (simp add:range_cover_not_zero)
+  apply (clarsimp simp: field_simps)
+  done
 
 lemma pspace_no_overlap_underlying_zero:
   "pspace_no_overlap' ptr sz \<sigma>
@@ -5051,6 +5044,7 @@ lemma ghost_assertion_size_logic_no_unat:
     \<Longrightarrow> (s, \<sigma>) \<in> rf_sr
     \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>)) = 0 \<or>
             of_nat sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>))"
+  including no_take_bit
   apply (rule ghost_assertion_size_logic'[rotated])
    apply (simp add: rf_sr_def)
   apply (simp add: unat_of_nat)
@@ -7213,7 +7207,7 @@ lemma intvl_mult_is_union:
    apply (rule_tac x="k div n" in bexI)
     apply (rule_tac x="k mod n" in exI)
     apply (simp only: Abs_fnat_hom_mult Abs_fnat_hom_add, simp)
-   apply (simp add: Misc_Arithmetic.td_gal_lt[symmetric] mult.commute)
+   apply (simp add: More_Divides.td_gal_lt[symmetric] mult.commute)
   apply (rule_tac x="xa * n + k" in exI, simp)
   apply (subst add.commute, rule order_less_le_trans, erule add_less_mono1)
   apply (case_tac m, simp_all)
@@ -7747,8 +7741,8 @@ lemma createObject_child:
     apply (simp add: X64_H.capUntypedSize_def bit_simps)+
     apply (case_tac arch_capability,
            auto simp: X64_H.capUntypedSize_def bit_simps
-                      is_aligned_no_wrap' field_simps
-               split: arch_capability.split)+
+                      is_aligned_no_wrap' add.commute[where b=ptr]
+               split: arch_capability.split)
   done
 
 lemma createObject_parent_helper:
@@ -7874,6 +7868,7 @@ lemma range_cover_bound'':
 lemma caps_no_overlap''_cell:
   "\<lbrakk>range_cover ptr sz us n;caps_no_overlap'' ptr sz s;p < n\<rbrakk>
     \<Longrightarrow> caps_no_overlap'' (ptr + (of_nat p << us)) us s"
+  including no_take_bit
   apply (clarsimp simp:caps_no_overlap''_def)
   apply (drule(1) bspec)
   apply (subgoal_tac  "{ptr + (of_nat p << us)..(ptr + (of_nat p << us) && ~~ mask us) + 2 ^ us - 1}
@@ -8295,6 +8290,7 @@ lemma offset_intvl_first_chunk_subsets_unat:
         \<and> {p + (i << bits) ..+ 2 ^ bits}
             \<inter> {p + ((i + 1) << bits) ..+ unat (n' - (i + 1)) * 2 ^ bits}
             = {}"
+  including no_take_bit
   apply (subgoal_tac "unat (n' - (i + 1)) = unat n' - unat (i + 1)
         \<and> unat (n' - i) = unat n' - unat i")
    apply (frule(1) offset_intvl_first_chunk_subsets)
@@ -8313,6 +8309,7 @@ lemma retype_offs_region_actually_is_zero_bytes:
     \<Longrightarrow> region_actually_is_zero_bytes ptr
             (num_ret * 2 ^ APIType_capBits newType userSize) s'"
   using word_unat_mask_lt[where w=ptr and m=sz]
+  including no_take_bit
   apply -
   apply (frule range_cover.sz(1))
   apply (drule(2) ctes_of_untyped_zero_rf_sr)
@@ -8462,6 +8459,7 @@ shows  "ccorres dc xfdc
      (createNewObjects newType srcSlot destSlots ptr userSize isdev)
      (Call createNewObjects_'proc)"
   unfolding from_bool_to_bool_iff
+  including no_take_bit
   supply if_cong[cong]
   apply (rule ccorres_gen_asm_state)
   apply clarsimp
@@ -8557,7 +8555,7 @@ shows  "ccorres dc xfdc
                  ptr.. (ptr && ~~ mask sz) + 2 ^ sz  - 1} srcSlot (ctes_of s)"
               in hoare_pre(1))
              apply wp
-            apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_comms
+            apply (clarsimp simp:createObject_hs_preconds_def conj_comms add.commute[where b=ptr]
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'
                    invs_pspace_canonical' invs_ksCurDomain_maxDomain')
             apply (subst intvl_range_conv)
@@ -8570,7 +8568,7 @@ shows  "ccorres dc xfdc
             apply (simp add: range_cover_not_in_neqD canonical_address_neq_mask)
             apply (intro conjI)
                     apply (drule_tac p = n in range_cover_no_0)
-                      apply (simp add:shiftl_t2n field_simps)+
+                      apply (simp add:shiftl_t2n mult.commute)+
                    apply (cut_tac x=num in unat_lt2p, simp)
                    apply (simp add: unat_arith_simps unat_of_nat, simp split: if_split)
                               apply (intro impI, erule order_trans[rotated], simp)
@@ -8598,18 +8596,18 @@ shows  "ccorres dc xfdc
               apply (frule_tac x="of_nat n" in range_cover_bound3)
                apply (rule word_of_nat_less)
                apply (simp add: range_cover.unat_of_nat_n)
-              apply (clarsimp simp:field_simps shiftl_t2n blah)
+              apply (clarsimp simp: shiftl_t2n blah mult.commute)
              apply (erule disjoint_subset[rotated])
              apply (rule_tac p1 = n in subset_trans[OF _ range_cover_subset])
                 apply (simp add: upto_intvl_eq is_aligned_add range_cover.aligned is_aligned_shiftl)
-                apply (simp add:field_simps shiftl_t2n)
+                apply (simp add: shiftl_t2n mult.commute)
                apply simp+
             apply (erule caps_overlap_reserved'_subseteq)
             apply (frule_tac x = "of_nat n" in range_cover_bound3)
              apply (rule word_of_nat_less)
              apply (simp add: range_cover.unat_of_nat_n)
-            apply (clarsimp simp: field_simps shiftl_t2n blah)
-           apply (clarsimp simp: createObject_c_preconds_def field_simps from_bool_to_bool_iff
+            apply (clarsimp simp:  shiftl_t2n blah mult.commute)
+           apply (clarsimp simp: createObject_c_preconds_def add.commute[where b=ptr] from_bool_to_bool_iff
                            cong: region_is_bytes_cong)
            apply vcg
           apply (clarsimp simp: cte_C_size conj_comms untypedBits_defs)
@@ -8633,7 +8631,7 @@ shows  "ccorres dc xfdc
          subgoal by (simp add:word_unat.Rep_inverse')
         apply clarsimp
         apply (rule conseqPre, vcg exspec=insertNewCap_preserves_bytes_flip
-            exspec=createObject_preserves_bytes)
+                                   exspec=createObject_preserves_bytes)
         apply (clarsimp simp del: imp_disjL)
         apply (frule(1) offset_intvl_first_chunk_subsets_unat,
           erule order_less_le_trans)
@@ -8678,8 +8676,8 @@ shows  "ccorres dc xfdc
        apply (subst upt_enum_offset_trivial)
          apply (rule word_leq_le_minus_one[OF word_of_nat_le])
           apply (fold_subgoals (prefix))[3]
-          subgoal premises prems using prems
-                    by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+
+          subgoal premises prems using prems including no_0_dvd
+             by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+
        apply (simp add: intvl_range_conv aligned_add_aligned[OF range_cover.aligned]
               is_aligned_shiftl_self range_cover_sz')
        apply (subst intvl_range_conv)
@@ -8847,7 +8845,7 @@ shows  "ccorres dc xfdc
       apply (erule cte_wp_at_weakenE')
       apply (clarsimp simp:blah word_and_le2 shiftl_t2n field_simps)
       apply (frule range_cover_bound''[where x = "of_nat (length destSlots) - 1"])
-       subgoal by (simp add: range_cover_not_zero[rotated])
+       subgoal including no_0_dvd by (simp add: range_cover_not_zero[rotated])
       subgoal by (simp add:field_simps)
      subgoal by (erule range_cover_subset[where p=0, simplified]; simp)
     apply clarsimp

@@ -769,6 +769,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
+  including no_take_bit
   apply (cinit lift: thread_' isReceiver_')
    apply (rule ccorres_split_nothrow)
        apply simp
