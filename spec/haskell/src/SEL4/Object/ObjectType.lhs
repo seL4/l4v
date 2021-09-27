@@ -165,6 +165,8 @@ A "CNodeCap" is replaced with the appropriate "Zombie". No other action is neede
 Threads are treated as special capability nodes; they also become zombies when their final capabilities are deleted, but they must first be suspended to prevent them being scheduled during deletion.
 
 > finaliseCap (ThreadCap { capTCBPtr = tptr}) True _ = do
+>     stateAssert valid_idle'_asrt
+>         "Assert that `valid_idle' s` holds"
 >     cte_ptr <- getThreadCSpaceRoot tptr
 >     unbindNotification tptr
 >     unbindFromSC tptr
