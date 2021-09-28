@@ -1167,6 +1167,3 @@ fun emit_C_everything_relative ctxt csenv fname = let
 \<close>
 
 end
-
-
-
