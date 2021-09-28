@@ -260,12 +260,6 @@ lemma unat_of_nat_pageBitsForSize_32 [simp]:
   apply simp
   done
 
-(* FIXME move to Word_Lib *)
-lemma shiftl_t2n':
-  "w << n = w * (2 ^ n)"
-  for w :: "'a::len word"
-  by (simp add: shiftl_t2n)
-
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (FrameCap ptr undefined sz False None))
            and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
