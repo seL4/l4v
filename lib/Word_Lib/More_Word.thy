@@ -13,6 +13,8 @@ theory More_Word
     More_Divides
 begin
 
+declare word_induct2[case_names zero suc, induct type]
+
 lemma unat_power_lower [simp]:
   "unat ((2::'a::len word) ^ n) = 2 ^ n" if "n < LENGTH('a::len)"
   using that by transfer simp
