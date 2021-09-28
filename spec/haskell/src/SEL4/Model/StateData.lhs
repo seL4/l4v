@@ -442,3 +442,9 @@ is true using the rule valid_idle'_cross.
 
 > valid_idle'_asrt :: KernelState -> Bool
 > valid_idle'_asrt _ = True
+
+An assert that will say that `cur_tcb' s` holds. We may prove this assertion
+is true using the rule cur_tcb'_cross.
+
+> cur_tcb'_asrt :: KernelState -> Bool
+> cur_tcb'_asrt _ = True
