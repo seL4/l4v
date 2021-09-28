@@ -1083,7 +1083,6 @@ definition
 where
  "valid_queues_no_bitmap \<equiv> \<lambda>s.
    (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)
-          \<and> distinct (ksReadyQueues s (d, p))
           \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
 
 defs ready_qs_runnable_def:
@@ -1138,16 +1137,14 @@ lemmas bitmapQ_defs = valid_bitmapQ_def valid_bitmapQ_except_def bitmapQ_def
 
 (* valid_queues is too strong sometimes *)
 definition valid_inQ_queues :: "KernelStateData_H.kernel_state \<Rightarrow> bool" where
-  "valid_inQ_queues \<equiv>
-     \<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and> distinct (ksReadyQueues s (d, p))"
+  "valid_inQ_queues \<equiv> \<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s)"
 
 definition
   (* when in the middle of updates, a particular queue might not be entirely valid *)
   valid_inQ_queues_except :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_inQ_queues_except t'
-   \<equiv> \<lambda>s. (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). t \<noteq> t' \<longrightarrow> obj_at' (inQ d p) t s)
-          \<and> distinct (ksReadyQueues s (d, p)))"
+   \<equiv> \<lambda>s. (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). t \<noteq> t' \<longrightarrow> obj_at' (inQ d p) t s))"
 
 definition
   valid_queues' :: "kernel_state \<Rightarrow> bool"
@@ -1414,33 +1411,32 @@ definition
        \<and> ksDomScheduleIdx s < length (ksDomSchedule (newKernelState undefined))"
 
 definition
-  valid_state' :: "kernel_state \<Rightarrow> bool"
+  invs' :: "kernel_state \<Rightarrow> bool"
 where
-  "valid_state' \<equiv> \<lambda>s. valid_pspace' s
-                      \<and> valid_queues s
-                      \<and> sym_refs (list_refs_of_replies' s)
-                      \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
-                      \<and> valid_global_refs' s \<and> valid_arch_state' s
-                      \<and> valid_irq_node' (irq_node' s) s
-                      \<and> valid_irq_handlers' s
-                      \<and> valid_irq_states' s
-                      \<and> valid_machine_state' s
-                      \<and> irqs_masked' s
-                      \<and> valid_queues' s
-                      \<and> valid_release_queue s
-                      \<and> valid_release_queue' s
-                      \<and> valid_pde_mappings' s
-                      \<and> pspace_domain_valid s
-                      \<and> ksCurDomain s \<le> maxDomain
-                      \<and> valid_dom_schedule' s
-                      \<and> untyped_ranges_zero' s"
+  "invs' \<equiv> \<lambda>s. valid_pspace' s
+                \<and> valid_queues s
+                \<and> sym_refs (list_refs_of_replies' s)
+                \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
+                \<and> valid_global_refs' s \<and> valid_arch_state' s
+                \<and> valid_irq_node' (irq_node' s) s
+                \<and> valid_irq_handlers' s
+                \<and> valid_irq_states' s
+                \<and> valid_machine_state' s
+                \<and> irqs_masked' s
+                \<and> valid_queues' s
+                \<and> valid_release_queue s
+                \<and> valid_release_queue' s
+                \<and> valid_pde_mappings' s
+                \<and> pspace_domain_valid s
+                \<and> ksCurDomain s \<le> maxDomain
+                \<and> valid_dom_schedule' s
+                \<and> untyped_ranges_zero' s"
 
 definition
   "cur_tcb' s \<equiv> tcb_at' (ksCurThread s) s"
 
-definition
-  invs' :: "kernel_state \<Rightarrow> bool" where
-  "invs' \<equiv> valid_state' and cur_tcb'"
+defs cur_tcb'_asrt_def:
+  "cur_tcb'_asrt \<equiv> \<lambda>s. cur_tcb' s"
 
 subsection "Derived concepts"
 
@@ -3728,7 +3724,6 @@ lemma pred_tcb_at'_imp:
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =
      (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)). obj_at' (inQ d p) t s) \<and>
-                distinct (ksReadyQueues s (d, p)) \<and>
                 (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
   apply (rule ext, rule iffI)
   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_and pred_tcb_at'_def o_def
@@ -3753,49 +3748,37 @@ lemma cte_at_valid_cap_sizes_0:
   apply simp
   done
 
-lemma invs_valid_stateI' [elim!]:
-  "invs' s \<Longrightarrow> valid_state' s"
-  by (simp add: invs'_def)
-
-lemma tcb_at_invs' [elim!]:
-  "invs' s \<Longrightarrow> tcb_at' (ksCurThread s) s"
-  by (simp add: invs'_def cur_tcb'_def)
-
 lemma invs_valid_objs' [elim!]:
   "invs' s \<Longrightarrow> valid_objs' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma invs_valid_objs_size' [elim!]:
   "invs' s \<Longrightarrow> valid_objs_size' s"
-  by (fastforce simp: invs'_def valid_state'_def)
+  by (fastforce simp: invs'_def)
 
 lemma invs_pspace_aligned' [elim!]:
   "invs' s \<Longrightarrow> pspace_aligned' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma invs_pspace_distinct' [elim!]:
   "invs' s \<Longrightarrow> pspace_distinct' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma invs_valid_pspace' [elim!]:
   "invs' s \<Longrightarrow> valid_pspace' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_arch_state' [elim!]:
   "invs' s \<Longrightarrow> valid_arch_state' s"
-  by (simp add: invs'_def valid_state'_def)
-
-lemma invs_cur' [elim!]:
-  "invs' s \<Longrightarrow> cur_tcb' s"
   by (simp add: invs'_def)
 
 lemma invs_mdb' [elim!]:
   "invs' s \<Longrightarrow> valid_mdb' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma invs_valid_replies'[elim!]:
   "invs' s \<Longrightarrow> valid_replies' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma valid_mdb_no_loops [elim!]:
   "valid_mdb_ctes m \<Longrightarrow> no_loops m"
@@ -3804,40 +3787,40 @@ lemma valid_mdb_no_loops [elim!]:
 lemma invs_no_loops [elim!]:
   "invs' s \<Longrightarrow> no_loops (ctes_of s)"
   apply (rule valid_mdb_no_loops)
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def)
   done
 
 lemma invs_iflive'[elim!]:
   "invs' s \<Longrightarrow> if_live_then_nonz_cap' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_unsafe_then_cap' [elim!]:
   "invs' s \<Longrightarrow> if_unsafe_then_cap' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_queues [elim!]:
   "invs' s \<Longrightarrow> valid_queues s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_queues'[elim!]:
   "invs' s \<Longrightarrow> valid_queues' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_valid_release_queue [elim!]:
   "invs' s \<Longrightarrow> valid_release_queue s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_valid_release_queue' [elim!]:
   "invs' s \<Longrightarrow> valid_release_queue' s"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_sym_list_refs_of_replies'[elim!]:
   "invs' s \<Longrightarrow> sym_refs (list_refs_of_replies' s)"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
-  by (fastforce simp: invs'_def valid_state'_def)
+  by (fastforce simp: invs'_def)
 
 lemma invs'_bitmapQ_no_L1_orphans:
   "invs' s \<Longrightarrow> bitmapQ_no_L1_orphans s"
@@ -3845,7 +3828,7 @@ lemma invs'_bitmapQ_no_L1_orphans:
 
 lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
-  by (simp add: invs'_def valid_state'_def)
+  by (simp add: invs'_def)
 
 (* FIXME RT: not going to work any more like this:
 lemma simple_st_tcb_at_state_refs_ofD':
@@ -3863,11 +3846,11 @@ lemma cur_tcb'_machine_state [simp]:
 
 lemma invs_no_0_obj'[elim!]:
   "invs' s \<Longrightarrow> no_0_obj' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  by (simp add: invs'_def valid_pspace'_def)
 
 lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+  apply (clarsimp simp: invs'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs
              valid_queues'_def valid_release_queue_def valid_release_queue'_def valid_irq_node'_def
              valid_irq_handlers'_def irq_issued'_def irqs_masked'_def valid_machine_state'_def
@@ -3877,7 +3860,7 @@ lemma invs'_gsCNodes_update[simp]:
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+  apply (clarsimp simp: invs'_def valid_queues_def valid_queues_no_bitmap_def
              bitmapQ_defs valid_queues'_def valid_release_queue_def valid_release_queue'_def
              valid_irq_node'_def valid_irq_handlers'_def irq_issued'_def irqs_masked'_def
              valid_machine_state'_def cur_tcb'_def valid_dom_schedule'_def)
@@ -3889,14 +3872,14 @@ lemma pred_tcb'_neq_contra:
 
 lemma invs'_ksDomSchedule:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomSchedule s = KernelStateData_H.ksDomSchedule (newKernelState undefined)"
-unfolding invs'_def valid_state'_def valid_dom_schedule'_def by clarsimp
+unfolding invs'_def valid_dom_schedule'_def by clarsimp
 
 lemma invs'_ksDomScheduleIdx:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomScheduleIdx s < length (KernelStateData_H.ksDomSchedule (newKernelState undefined))"
-unfolding invs'_def valid_state'_def valid_dom_schedule'_def by clarsimp
+unfolding invs'_def valid_dom_schedule'_def by clarsimp
 
 lemmas invs'_implies =
-  invs_cur' invs_iflive'
+  invs_iflive'
   invs_unsafe_then_cap'
   invs_no_0_obj'
   invs_pspace_aligned'
@@ -3906,7 +3889,6 @@ lemmas invs'_implies =
   invs_mdb'
   invs_valid_objs'
   invs_valid_objs_size'
-  invs_valid_stateI'
   invs_valid_pspace'
   invs_queues
   invs_queues'

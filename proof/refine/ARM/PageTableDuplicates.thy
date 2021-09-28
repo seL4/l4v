@@ -2035,7 +2035,7 @@ lemma performArchInvocation_valid_duplicates':
                          descendants_range'_def2 empty_descendants_range_in')
    apply (intro conjI; clarsimp)
    apply (drule(1) cte_cap_in_untyped_range, fastforce simp:cte_wp_at_ctes_of, simp_all)[1]
-    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+    apply (clarsimp simp: invs'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
    apply clarsimp
   apply (rename_tac asidpool_invocation)
   apply (case_tac asidpool_invocation)
@@ -2109,11 +2109,11 @@ lemma invokeTCB_valid_duplicates'[wp]:
   apply (case_tac ti; simp only:)
           apply (simp add: invokeTCB_def)
           apply wp
-          apply (clarsimp simp: invs'_def valid_state'_def
+          apply (clarsimp simp: invs'_def
                          dest!: global'_no_ex_cap)
          apply (simp add: invokeTCB_def)
          apply wp
-         apply (clarsimp simp: invs'_def valid_state'_def
+         apply (clarsimp simp: invs'_def
                         dest!: global'_no_ex_cap)
         apply (wpsimp wp: tc_caps_valid_duplicates' split: option.splits)
        apply (wpsimp wp: tc_sched_valid_duplicates')
@@ -2156,11 +2156,9 @@ lemma hi_valid_duplicates'[wp]:
   apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
   apply (wpsimp wp: syscall_valid' setThreadState_nonqueued_state_update rfk_invs' ct_in_state'_set
                     hoare_drop_imp)
-  apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
-                             simple_sane_strg
-                             sch_act_simple_def
-                      elim!: pred_tcb'_weakenE st_tcb_ex_cap''
-                       dest: st_tcb_at_idle_thread')+
+  apply (fastforce simp: ct_in_state'_def simple_sane_strg sch_act_simple_def
+                  elim!: pred_tcb'_weakenE st_tcb_ex_cap''
+                   dest: st_tcb_at_idle_thread')
   done
 
 crunches activateIdleThread, schedContextCompleteYieldTo
@@ -2210,9 +2208,14 @@ lemma hs_valid_duplicates'[wp]:
 
 lemma hc_valid_duplicates'[wp]:
   "\<lbrace>invs' and ct_active' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
-     handleCall
-   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  by (simp add: handleCall_def getCapReg_def | wp)+
+   handleCall
+   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (clarsimp simp: handleCall_def)
+  apply (rule validE_valid)
+  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (wpsimp simp: getCapReg_def)
+  apply (clarsimp simp: cur_tcb'_def cur_tcb'_asrt_def)
+  done
 
 lemma handleRecv_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
@@ -2258,10 +2261,9 @@ lemma setCurTime_invs'[wp]:
   "setCurTime v \<lbrace>invs'\<rbrace>"
   unfolding setCurTime_def
   apply wp
-  apply (clarsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_machine_state'_def
+  apply (clarsimp simp: invs'_def valid_machine_state'_def
                         valid_irq_node'_def valid_release_queue_def valid_release_queue'_def)
-  apply (clarsimp simp: ct_not_inQ_def valid_dom_schedule'_def ct_idle_or_in_cur_domain'_def
-                        tcb_in_cur_domain'_def valid_queues'_def valid_queues_def valid_bitmapQ_def
+  apply (clarsimp simp: valid_dom_schedule'_def valid_queues'_def valid_queues_def valid_bitmapQ_def
                         bitmapQ_def valid_queues_no_bitmap_def bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def)
   done
 

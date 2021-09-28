@@ -871,7 +871,7 @@ lemma cap_move_corres:
                         set_original_def bind_assoc modify_def
          |(rule bind_execI[where f="cap_move_ext x y z x'" for x y z x'], clarsimp simp: mdb_move_abs'.cap_move_ext_det_def2 update_cdt_list_def set_cdt_list_def put_def) | rule refl )+
   apply (clarsimp simp: put_def)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def)
   apply (frule updateCap_dynamic_duo, fastforce, fastforce)
   apply (frule(2) updateCap_dynamic_duo [OF _ conjunct1 conjunct2])
   apply (subgoal_tac "no_0 (ctes_of b)")
@@ -3274,13 +3274,13 @@ lemma cteInsert_invs:
   and ex_cte_cap_to' dest and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
                     valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
                     valid_release_queue'_lift irqs_masked_lift cteInsert_norq
               simp: st_tcb_at'_def)
   apply (subst fold_list_refs_of_replies')
-  by (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
+  by (auto simp: invs'_def valid_pspace'_def elim: valid_capAligned)
 
 lemma derive_cap_corres:
  "\<lbrakk>cap_relation c c'; cte = cte_map slot \<rbrakk> \<Longrightarrow>
@@ -4071,7 +4071,7 @@ lemma arch_update_setCTE_invs:
   "\<lbrace>cte_wp_at' (is_arch_update' cap) p and cte_wp_at' ((=) oldcte) p and invs' and valid_cap' cap\<rbrace>
   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift
             ct_idle_or_in_cur_domain'_lift
             arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
@@ -5397,13 +5397,13 @@ lemma cteInsert_simple_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_pre)
-   apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
    apply (wp cur_tcb_lift sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift
              valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
              valid_release_queue'_lift irqs_masked_lift cteInsert_simple_mdb'
              cteInsert_valid_globals_simple cteInsert_norq | simp add: pred_tcb_at'_def)+
    apply (subst fold_list_refs_of_replies')
-  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def
+  apply (auto simp: invs'_def valid_pspace'_def valid_dom_schedule'_def
                     is_simple_cap'_def untyped_derived_eq_def o_def
               elim: valid_capAligned)
   done
@@ -5810,7 +5810,7 @@ lemma updateFreeIndex_forward_invs':
           \<and> is_aligned (of_nat idx :: word32) minUntypedSizeBits) o cteCap) src s\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: valid_pspace'_def, wp updateFreeIndex_forward_valid_objs'
