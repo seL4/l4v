@@ -1621,6 +1621,8 @@ the PT/PD is consistent.
 >             setVMRoot tcb
 >
 > performPageInvocation (PageGetAddr ptr) = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     let paddr = fromPAddr $ addrFromPPtr ptr
 >     ct <- getCurThread
 >     msgTransferred <- setMRs ct Nothing [paddr]
@@ -1682,4 +1684,3 @@ The kernel model's ARM targets use an external simulation of the physical addres
 #endif
 
 FIXME ARMHYP IOPTE IOPDE - here or in IOSpace?
-

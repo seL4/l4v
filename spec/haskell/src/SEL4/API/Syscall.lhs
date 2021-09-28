@@ -184,6 +184,8 @@ The "Call" system call is similar to "Send", but it also requests a reply. For k
 
 > handleCall :: KernelP ()
 > handleCall = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     cptr <- withoutPreemption $ getCapReg capRegister
 >     handleInvocation True True True False cptr
 
