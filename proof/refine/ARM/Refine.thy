@@ -130,7 +130,7 @@ lemma typ_at_DeviceDataI:
   done
 
 lemma pointerInUserData_relation:
-  "\<lbrakk> (s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
+  "\<lbrakk> (s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> pointerInUserData p s' = in_user_frame p s"
   apply (simp add: pointerInUserData_def in_user_frame_def)
   apply (rule iffI)
@@ -139,7 +139,7 @@ lemma pointerInUserData_relation:
   apply (drule_tac sz = sz and
                    n = "(p && mask (pageBitsForSize sz)) >> pageBits"
     in typ_at_AUserDataI [where s = s and s' = s'])
-      apply (fastforce simp: valid_state'_def)+
+      apply fastforce+
    apply (rule shiftr_less_t2n')
     apply (simp add: pbfs_atleast_pageBits mask_twice)
    apply (case_tac sz, simp_all)[1]
@@ -156,7 +156,7 @@ lemma pointerInUserData_relation:
   done
 
 lemma pointerInDeviceData_relation:
-  "\<lbrakk> (s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
+  "\<lbrakk> (s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> pointerInDeviceData p s' = in_device_frame p s"
   apply (simp add: pointerInDeviceData_def in_device_frame_def)
   apply (rule iffI)
@@ -165,7 +165,7 @@ lemma pointerInDeviceData_relation:
   apply (drule_tac sz = sz and
                    n = "(p && mask (pageBitsForSize sz)) >> pageBits"
     in typ_at_ADeviceDataI [where s = s and s' = s'])
-      apply (fastforce simp: valid_state'_def)+
+      apply (fastforce simp: invs'_def)+
    apply (rule shiftr_less_t2n')
     apply (simp add: pbfs_atleast_pageBits mask_twice)
    apply (case_tac sz, simp_all)[1]
@@ -182,7 +182,7 @@ lemma pointerInDeviceData_relation:
   done
 
 lemma user_mem_relation:
-  "\<lbrakk>(s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
+  "\<lbrakk>(s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> user_mem' s' = user_mem s"
   apply (rule ext)
   apply (clarsimp simp: user_mem_def user_mem'_def pointerInUserData_relation pointerInDeviceData_relation)
@@ -190,7 +190,7 @@ lemma user_mem_relation:
   done
 
 lemma device_mem_relation:
-  "\<lbrakk>(s,s') \<in> state_relation; valid_state' s'; valid_state s\<rbrakk>
+  "\<lbrakk>(s,s') \<in> state_relation; invs' s'; valid_state s\<rbrakk>
    \<Longrightarrow> device_mem' s' = device_mem s"
   unfolding device_mem_def device_mem'_def
   by (rule ext) (clarsimp simp: pointerInUserData_relation pointerInDeviceData_relation)
@@ -417,7 +417,7 @@ lemma kernelEntry_invs':
             threadSet_invs_trivial threadSet_ct_running' select_wp
             TcbAcc_R.dmo_invs' static_imp_wp
             callKernel_domain_time_left
-         | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
+         | clarsimp simp: user_memory_update_def no_irq_def
                           valid_domain_list'_def valid_release_queue'_def
                     dest!: invs_valid_release_queue'
          | fastforce simp: obj_at'_def)+
@@ -447,13 +447,12 @@ proof -
   from invs invs' rel have [simp]: "absKState s' = abs_state s"
     by - (rule absKState_correct', simp_all)
   from invs have valid: "valid_state s" by auto
-  from invs' have valid': "valid_state' s'" by auto
   have "in_user_frame y s \<or> in_device_frame y s "
     by (rule ptable_rights_imp_frame[OF valid rights[simplified]
                                              trans[simplified]])
   thus ?thesis
-   by (auto simp add: pointerInUserData_relation[OF rel valid' valid]
-     pointerInDeviceData_relation[OF rel valid' valid])
+   by (auto simp add: pointerInUserData_relation[OF rel invs' valid]
+     pointerInDeviceData_relation[OF rel invs' valid])
 qed
 
 
@@ -462,7 +461,7 @@ lemma device_update_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
    apply (simp add: doMachineOp_def device_memory_update_def simpler_modify_def select_f_def
                     gets_def get_def bind_def valid_def return_def)
-   by (clarsimp simp: invs'_def valid_state'_def valid_irq_states'_def valid_machine_state'_def
+   by (clarsimp simp: invs'_def valid_irq_states'_def valid_machine_state'_def
                       valid_dom_schedule'_def)
 
 lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G

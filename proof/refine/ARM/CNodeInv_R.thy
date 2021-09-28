@@ -208,7 +208,7 @@ lemma decodeCNodeInvocation_corres:
                                hoare_vcg_all_lift_R hoare_vcg_all_lift lsfco_cte_at' hoare_drop_imps
                                     | clarsimp)+
         subgoal by (auto elim!: valid_cnode_capI)
-       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+       apply (clarsimp simp: invs'_def valid_pspace'_def)
       \<comment> \<open>Revoke\<close>
       apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                        isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
@@ -220,7 +220,7 @@ lemma decodeCNodeInvocation_corres:
           apply simp
          apply wp+
        apply (auto elim!: valid_cnode_capI)[1]
-      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+      apply (clarsimp simp: invs'_def valid_pspace'_def)
      \<comment> \<open>Delete\<close>
      apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                       isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
@@ -233,7 +233,7 @@ lemma decodeCNodeInvocation_corres:
          apply simp
         apply wp+
       apply (auto elim!: valid_cnode_capI)[1]
-     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+     apply (clarsimp simp: invs'_def valid_pspace'_def)
    \<comment> \<open>CancelBadgedSends\<close>
     apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                      isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
@@ -250,7 +250,7 @@ lemma decodeCNodeInvocation_corres:
       apply (rule hoare_trivE_R[where P="\<top>"])
       apply (simp add: cte_wp_at_ctes_of pred_conj_def cong: conj_cong)
      apply (fastforce elim!: valid_cnode_capI simp: invs_def valid_state_def valid_pspace_def)
-    apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+    apply (clarsimp simp: invs'_def valid_pspace'_def)
    \<comment> \<open>Rotate\<close>
    apply (frule list_all2_lengthD)
    apply (clarsimp simp: list_all2_Cons1)
@@ -317,7 +317,7 @@ lemma decodeCNodeInvocation_corres:
           apply (wp lsfco_cte_at' lookup_cap_valid lookup_cap_valid' hoare_drop_imps
                     | simp add: if_apply_def2 del: de_Morgan_conj split del: if_split)+
     apply (auto elim!: valid_cnode_capI)[1]
-   apply (clarsimp dest!: list_all2_lengthD simp: invs'_def valid_state'_def valid_pspace'_def)
+   apply (clarsimp dest!: list_all2_lengthD simp: invs'_def valid_pspace'_def)
   \<comment> \<open>Errors\<close>
   apply (elim disjE)
      apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
@@ -5037,7 +5037,7 @@ lemma cteSwap_invs'[wp]:
     K (c1 \<noteq> c2)\<rbrace>
   cteSwap c c1 c' c2
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def pred_conj_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def pred_conj_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_conj_lift sch_act_wf_lift
              valid_queues_lift cur_tcb_lift
@@ -5506,7 +5506,7 @@ lemma make_zombie_invs':
                              \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
     updateCap sl cap
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+  apply (simp add: invs'_def valid_pspace'_def valid_mdb'_def
                    valid_irq_handlers'_def irq_issued'_def valid_dom_schedule'_def)
   apply (wp updateCap_ctes_of_wp sch_act_wf_lift valid_queues_lift cur_tcb_lift
             updateCap_iflive' updateCap_ifunsafe' updateCap_idle'
@@ -7150,8 +7150,7 @@ next
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_def)
      apply (subst split_paired_Ex[symmetric])
      apply (solves \<open>auto\<close>)[1]
-    apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def valid_pspace'_def
-                          sch_act_wf_weak)
+    apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_pspace'_def sch_act_wf_weak)
     apply (frule(1) ctes_of_valid')
     apply fastforce
     done
@@ -8442,7 +8441,7 @@ lemma cteMove_valid_pspace' [wp]:
   apply (simp add: pred_conj_def valid_pspace'_def valid_mdb'_def)
   apply (wp sch_act_wf_lift valid_queues_lift
     cur_tcb_lift updateCap_no_0  updateCap_ctes_of_wp getCTE_wp | simp)+
-  apply (clarsimp simp: invs'_def valid_state'_def)+
+  apply (clarsimp simp: invs'_def)+
   apply (clarsimp dest!: cte_at_cte_wp_atD)
   apply (rule_tac x = cte in exI)
   apply clarsimp
@@ -8575,22 +8574,19 @@ lemma cteMove_urz [wp]:
   done
 
 lemma cteMove_invs' [wp]:
-  "\<lbrace>\<lambda>x. invs' x \<and> ex_cte_cap_to' word2 x \<and>
-            cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 x \<and>
-            cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c) \<longrightarrow> capability = cteCap c) word1 x \<and>
-            cte_wp_at' (\<lambda>c. (cteCap c) \<noteq> NullCap) word1 x \<and>
-            x \<turnstile>' capability \<and>
-            cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) word2 x\<rbrace>
+  "\<lbrace>\<lambda>s. invs' s \<and> ex_cte_cap_to' word2 s \<and>
+            cte_wp_at' (\<lambda>c. weak_derived' (cteCap c) capability) word1 s \<and>
+            cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c) \<longrightarrow> capability = cteCap c) word1 s \<and>
+            cte_wp_at' (\<lambda>c. (cteCap c) \<noteq> NullCap) word1 s \<and>
+            s \<turnstile>' capability \<and>
+            cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) word2 s\<rbrace>
      cteMove capability word1 word2
    \<lbrace>\<lambda>y. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def pred_conj_def valid_dom_schedule'_def)
-  apply (rule hoare_pre)
-   apply ((rule hoare_vcg_conj_lift, (wp cteMove_ifunsafe')[1])
-                  | rule hoare_vcg_conj_lift[rotated])+
-      apply (unfold cteMove_def)
-      apply (wp cur_tcb_lift valid_queues_lift hoare_drop_imps
-                sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)+
-  apply (clarsimp simp: o_def)
+  apply (simp add: invs'_def pred_conj_def valid_dom_schedule'_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix
+          ; solves \<open>wpsimp wp: cteMove_urz cteMove_ifunsafe'
+                    | wpsimp simp: cteMove_def o_def
+                               wp: valid_queues_lift hoare_drop_imps\<close>)
   done
 
 lemma cteMove_cte_wp_at:
@@ -8663,7 +8659,7 @@ lemma invokeCNode_corres:
             apply simp+
          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         elim!: cte_wp_at_cte_at)
-        apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+        apply (clarsimp simp: invs'_def valid_pspace'_def)
        apply clarsimp
        apply (rule corres_guard_imp)
          apply (erule cteMove_corres)
@@ -8683,7 +8679,7 @@ lemma invokeCNode_corres:
        apply (erule (1) cteSwap_corres [OF refl refl], simp+)
       apply (simp add: invs_def valid_state_def valid_pspace_def
                        real_cte_tcb_valid valid_cap_def2)
-     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
+     apply (clarsimp simp: invs'_def valid_pspace'_def
                            cte_wp_at_ctes_of weak_derived'_def)
     apply (simp split del: if_split)
     apply (rule_tac F = "cte_map p1 \<noteq> cte_map p3" in corres_req)
@@ -8753,8 +8749,7 @@ lemma updateCap_noop_invs:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot\<rbrace>
      updateCap slot cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def
-                   valid_pspace'_def valid_mdb'_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def valid_pspace'_def valid_mdb'_def)
   apply (rule hoare_pre)
    apply (wp updateCap_ctes_of_wp updateCap_iflive'
              updateCap_ifunsafe' updateCap_idle'
@@ -8795,7 +8790,7 @@ lemma invokeCNode_invs' [wp]:
   apply (cases cinv; clarsimp)
     apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def isCap_simps badge_derived'_def)
     apply (erule(1) valid_irq_handlers_ctes_ofD)
-    apply (clarsimp simp: invs'_def valid_state'_def)
+    apply (clarsimp simp: invs'_def)
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (intro conjI impI; clarsimp elim!: weak_derived_sym')
   apply (clarsimp simp: cte_wp_at_ctes_of elim!: weak_derived_sym')

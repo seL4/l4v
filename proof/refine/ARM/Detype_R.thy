@@ -528,7 +528,7 @@ lemma  valid_objs: "valid_objs' s'"
   and         cdm: "ksCurDomain s' \<le> maxDomain"
   and         vds: "valid_dom_schedule' s'"
   using invs
-  by (auto simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
+  by (auto simp add: invs'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
 
 abbreviation
   "base_bits \<equiv> {base .. base + (2 ^ bits - 1)}"
@@ -1395,7 +1395,7 @@ lemma (in delete_locale) delete_invs':
                 (\<lambda>m x. if base \<le> x \<and> x \<le> base + (2 ^ bits - 1) then 0 else m x) ms)
               state')" (is "invs' (?state'')")
 using vds
-proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not simp here *)
+proof (simp add: invs'_def valid_pspace'_def (* FIXME: do not simp here *)
                  valid_mdb'_def valid_mdb_ctes_def,
        safe)
   interpret Arch . (*FIXME: arch_split*)
@@ -1483,15 +1483,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
   have "ksIdleThread s' \<notin> ?ran"
     apply (simp add: cte_wp_at_ctes_of valid_global_refs'_def valid_refs'_def)
     apply blast
-    done
-
-  from tcb_at_invs' [OF invs] ct_act
-  show "cur_tcb' ?s" unfolding cur_tcb'_def
-    apply (clarsimp simp: cur_tcb'_def ct_in_state'_def)
-    apply (drule st_tcb)
-      apply simp
-     apply simp
-    apply (simp add: pred_tcb_at'_def)
     done
 
   let ?ctes' = ctes'
@@ -1632,12 +1623,12 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
     by (simp add: irqs_masked'_def)
 
   from invs
-  have "pspace_domain_valid s'" by (simp add: invs'_def valid_state'_def)
+  have "pspace_domain_valid s'" by (simp add: invs'_def)
   thus "pspace_domain_valid state'"
     by (simp add: pspace_domain_valid_def)
 
   from invs
-  have "valid_machine_state' s'" by (simp add: invs'_def valid_state'_def)
+  have "valid_machine_state' s'" by (simp add: invs'_def)
   thus "valid_machine_state' ?state''"
     apply (clarsimp simp: valid_machine_state'_def)
     apply (drule_tac x=p in spec)
@@ -1663,7 +1654,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def (* FIXME: do not s
   from cdm show "ksCurDomain s' \<le> maxDomain" .
 
   from invs
-  have urz: "untyped_ranges_zero' s'" by (simp add: invs'_def valid_state'_def)
+  have urz: "untyped_ranges_zero' s'" by (simp add: invs'_def)
   show "untyped_ranges_zero_inv (cteCaps_of state')
     (gsUntypedZeroRanges s')"
     apply (simp add: untyped_zero_ranges_cte_def
@@ -1807,7 +1798,7 @@ lemma deleteObjects_st_tcb_at':
      apply (fastforce elim: ko_wp_at'_weakenE)
     apply (erule if_live_then_nonz_capD' [rotated])
      apply (clarsimp simp: projectKOs)
-    apply (clarsimp simp: invs'_def valid_state'_def)
+    apply (clarsimp simp: invs'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
                   field_simps ko_wp_at'_def ps_clear_def
                   cong:if_cong

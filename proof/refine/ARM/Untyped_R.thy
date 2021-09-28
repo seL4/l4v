@@ -720,7 +720,7 @@ lemma cte_cap_in_untyped_range:
      apply (clarsimp dest!: isCapDs)
     apply (rule_tac x=x in notemptyI)
     apply (simp add: subsetD [OF cte_refs_capRange])
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
+   apply (clarsimp simp: invs'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
   apply (frule_tac p=cref and p'=crefa in untyped_mdbD', assumption)
       apply (simp_all add: isUntypedCap_def)
     apply (frule valid_capAligned)
@@ -728,7 +728,7 @@ lemma cte_cap_in_untyped_range:
      apply (case_tac cap; simp)
     apply blast
    apply (case_tac cap; simp)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
+  apply (clarsimp simp: invs'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
   done
 
 lemma cap_case_CNodeCap_True_throw:
@@ -3620,7 +3620,7 @@ lemma updateFreeIndex_clear_invs':
         \<and> descendants_of' src (ctes_of s) = {}\<rbrace>
    updateFreeIndex src idx
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-  apply (clarsimp simp:invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (clarsimp simp:invs'_def valid_dom_schedule'_def)
   apply (wp updateFreeIndex_valid_pspace_no_overlap')
    apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
    apply (wp updateFreeIndex_valid_pspace_no_overlap' sch_act_wf_lift valid_queues_lift
@@ -3672,7 +3672,7 @@ lemma cte_wp_at_pspace_no_overlapI':
   apply (case_tac cte,clarsimp)
   apply (frule ctes_of_valid_cap')
     apply (simp add:invs_valid_objs')
-  apply (clarsimp simp:valid_cap'_def invs'_def valid_state'_def valid_pspace'_def
+  apply (clarsimp simp:valid_cap'_def invs'_def valid_pspace'_def
     valid_untyped'_def simp del:usableUntypedRange.simps)
   apply (unfold pspace_no_overlap'_def)
   apply (intro allI impI)
@@ -3782,7 +3782,7 @@ lemma descendants_range_ex_cte':
     invs' s';ctes_of s' p = Some cte;isUntypedCap (cteCap cte)\<rbrakk> \<Longrightarrow> q \<notin> S"
    apply (frule invs_valid_objs')
    apply (frule invs_mdb')
-   apply (clarsimp simp:invs'_def valid_state'_def)
+   apply (clarsimp simp: invs'_def)
    apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of)
     apply (frule_tac cte = "cte" in  valid_global_refsD')
     apply simp
@@ -3990,7 +3990,7 @@ lemma caps_no_overlap'[simp]: "caps_no_overlap'' ptr sz s"
     lemma cref_inv: "cref \<notin> usable_range"
       apply (insert misc cte_wp_at')
       apply (drule if_unsafe_then_capD')
-        apply (simp add: invs'_def valid_state'_def)
+        apply (simp add: invs'_def)
        apply simp
       apply (erule ex_cte_no_overlap')
       done
@@ -4827,7 +4827,7 @@ lemma inv_untyped_corres':
 
     have maxDomain:"ksCurDomain s' \<le> maxDomain"
       using invs'
-      by (simp add:invs'_def valid_state'_def)
+      by (simp add:invs'_def)
 
     have sz_mask_less:
       "unat (ptr && mask sz) < 2 ^ sz"
@@ -5306,7 +5306,7 @@ lemma insertNewCap_invs':
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule insertNewCap_nullcap)
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp insertNewCap_valid_pspace' sch_act_wf_lift
              valid_queues_lift cur_tcb_lift tcb_in_cur_domain'_lift

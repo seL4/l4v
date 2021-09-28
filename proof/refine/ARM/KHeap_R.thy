@@ -2979,7 +2979,7 @@ lemma set_ntfn_minor_invs':
       and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)\<rbrace>
    setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (clarsimp simp add: invs'_def valid_state'_def cteCaps_of_def valid_dom_schedule'_def)
+  apply (clarsimp simp add: invs'_def cteCaps_of_def valid_dom_schedule'_def)
   apply (wpsimp wp: irqs_masked_lift valid_irq_node_lift untyped_ranges_zero_lift
               simp: o_def)
   done
@@ -3596,6 +3596,10 @@ lemma cur_tcb_cross:
   apply (erule (3) tcb_at_cross)
   done
 
+method add_cur_tcb' =
+  rule_tac Q="\<lambda>s'. cur_tcb' s'" in corres_cross_add_guard,
+  fastforce intro!: cur_tcb_cross
+
 lemma reply_at_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ps: "pspace_aligned s" "pspace_distinct s"
@@ -3876,6 +3880,10 @@ lemma valid_idle'_cross:
 method add_valid_idle' =
   rule_tac Q="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
   fastforce intro!: valid_idle'_cross
+
+lemma ksReadyQueues_distinct_cross:
+   "\<lbrakk>(s,s') \<in> state_relation; valid_ready_qs s\<rbrakk> \<Longrightarrow> \<forall>d p. distinct (ksReadyQueues s' (d, p))"
+   by (clarsimp simp: valid_ready_qs_def state_relation_def ready_queues_relation_def)
 
 lemma ready_qs_runnable_cross:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_ready_qs s\<rbrakk>

@@ -259,6 +259,7 @@ lemma decodeSchedContext_YieldTo_corres:
           invs'
           (decode_sched_context_yield_to sc_ptr args')
           (decodeSchedContext_YieldTo sc_ptr args')"
+  apply add_cur_tcb'
   apply (clarsimp simp: decode_sched_context_yield_to_def decodeSchedContext_YieldTo_def)
   apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
   apply (rule corres_splitEE'')
@@ -293,7 +294,7 @@ lemma decodeSchedContext_YieldTo_corres:
        apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def)
       apply fastforce
-     apply fastforce
+     apply (fastforce simp: cur_tcb'_def)
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
   apply (rule corres_splitEE_skip; corressimp)

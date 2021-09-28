@@ -641,7 +641,7 @@ lemma replyRemoveTCB_sch_act_wf:
 
 lemma replyRemoveTCB_invs':
   "replyRemoveTCB tptr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_dom_schedule'_def
+  unfolding invs'_def valid_dom_schedule'_def
   apply (wpsimp wp: replyRemoveTCB_sym_refs_list_refs_of_replies'
                     valid_irq_node_lift valid_irq_handlers_lift' valid_irq_states_lift'
                     irqs_masked_lift replyRemoveTCB_sch_act_wf
@@ -926,7 +926,7 @@ lemma updateReply_replyTCB_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wpsimp wp: updateReply_iflive'_weak updateReply_valid_objs'
                     updateReply_list_refs_of_replies'_inv updateReply_valid_replies'
-           simp: invs'_def valid_state'_def valid_pspace'_def valid_reply'_def
+           simp: invs'_def valid_pspace'_def valid_reply'_def
           split: option.split_asm)
    by (auto simp: obj_at'_def projectKOs opt_map_def)
 
@@ -1062,7 +1062,7 @@ lemma updateReply_replyNext_None_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> replySCs_of s rptr \<noteq> None\<rbrace>
    updateReply rptr (replyNext_update (\<lambda>_. None))
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp only: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp only: invs'_def valid_pspace'_def)
   apply (wpsimp wp: updateReply_valid_objs' updateReply_iflive')
   apply (clarsimp simp: obj_at'_def projectKOs valid_reply'_def live_reply'_def
                   dest: pspace_alignedD' pspace_distinctD')

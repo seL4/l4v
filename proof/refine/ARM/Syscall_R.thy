@@ -381,7 +381,7 @@ lemma setDomain_corres:
   apply (frule invs'_valid_tcbs', clarsimp)
   apply (frule obj_at_ko_at', clarsimp)
   apply (frule tcb_ko_at_valid_objs_valid_tcb', fastforce)
-  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_tcb'_def invs'_def valid_state'_def)
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def valid_tcb'_def invs'_def)
   done
 
 lemma performInvocation_corres:
@@ -827,7 +827,7 @@ lemma threadSet_tcbDomain_update_invs':
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (clarsimp simp: invs'_def)
   apply (wp threadSet_valid_pspace'T_P[where P = False and Q = \<top> and Q' = \<top>])
   apply (simp add: tcb_cte_cases_def)+
    apply (wp threadSet_valid_pspace'T_P
@@ -837,7 +837,7 @@ lemma threadSet_tcbDomain_update_invs':
              threadSet_valid_queues'_no_state threadSet_valid_queues threadSet_valid_dom_schedule'
              threadSet_iflive'T threadSet_ifunsafe'T untyped_ranges_zero_lift
              threadSet_valid_release_queue threadSet_valid_release_queue'
-          | simp add: tcb_cte_cases_def cteCaps_of_def o_def invs'_def valid_state'_def
+          | simp add: tcb_cte_cases_def cteCaps_of_def o_def invs'_def
           | intro allI)+
   by (fastforce simp: sch_act_simple_def o_def cteCaps_of_def valid_release_queue'_def obj_at'_def)
 
@@ -1085,6 +1085,7 @@ lemma handleInvocation_corres:
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (handle_invocation call blocking can_donate first_phase cptr)
           (handleInvocation call blocking can_donate first_phase cptr')"
+  apply add_cur_tcb'
   apply add_ct_not_inQ
   apply add_valid_idle'
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
@@ -1128,7 +1129,7 @@ lemma handleInvocation_corres:
                apply (wpsimp wp: hoare_drop_imp)
               apply (rule_tac Q="tcb_at' thread and invs'" in hoare_post_imp_dc2)
                apply wpsimp
-              apply (clarsimp simp: invs'_def valid_state'_def)
+              apply (clarsimp simp: invs'_def)
              apply simp
              apply (rule_tac Q="\<lambda>rv. einvs and valid_machine_time and schact_is_rct
                                  and valid_invocation rve
@@ -1166,8 +1167,7 @@ lemma handleInvocation_corres:
    apply fastforce
   apply (clarsimp cong: conj_cong)
   apply (subgoal_tac "is_schedulable_bool (cur_thread s) s")
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
-                         cur_tcb'_def)
+   apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def)
    apply (frule valid_objs'_valid_tcbs')
    apply (frule ct_active_cross, fastforce, fastforce, simp)
    apply (clarsimp simp: ct_in_state'_def cong: conj_cong)
@@ -1239,11 +1239,9 @@ lemma hinv_invs'[wp]:
         apply (fastforce dest: ct_not_ksQ)
        apply (wp sts_invs_minor' setThreadState_st_tcb setThreadState_rct setThreadState_ct_not_inQ | simp)+
     apply (clarsimp)
-  apply (fastforce simp add: tcb_at_invs' ct_in_state'_def
-                              simple_sane_strg
-                              sch_act_simple_def
-                       elim!: pred_tcb'_weakenE st_tcb_ex_cap''
-                        dest: st_tcb_at_idle_thread')+
+  apply (fastforce simp: ct_in_state'_def simple_sane_strg sch_act_simple_def
+                  elim!: pred_tcb'_weakenE st_tcb_ex_cap''
+                   dest: st_tcb_at_idle_thread')+
   done
 
 (* NOTE: This is a good candidate for corressimp at some point. For now there are some missing
@@ -1267,11 +1265,13 @@ lemma handleSend_corres:
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
+  apply add_cur_tcb'
   apply (simp add: handle_send_def handleSend_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_liftEE[OF getCapReg_corres])
       apply (simp, rule handleInvocation_corres; simp)
      apply (wpsimp simp: getCapReg_def)+
+  apply (clarsimp simp: cur_tcb'_def)
   done
 
 lemma hs_invs'[wp]:
@@ -1380,7 +1380,7 @@ lemma handleRecv_isBlocking_corres:
     apply (rule handleRecv_isBlocking_corres')
    apply (clarsimp simp: ct_in_state_def)
    apply (fastforce elim!: st_tcb_weakenE st_tcb_ex_cap)
-  apply (clarsimp simp: ct_in_state'_def invs'_def valid_state'_def)
+  apply (clarsimp simp: ct_in_state'_def invs'_def)
   apply (frule(1) st_tcb_ex_cap'')
   apply (auto elim: pred_tcb'_weakenE)
   done
@@ -1458,7 +1458,7 @@ lemma hy_invs':
   apply (wp ct_in_state_thread_state_lift'
             rescheduleRequired_invs'
             tcbSchedAppend_invs' | simp)+
-  apply (clarsimp simp add: invs'_def valid_state'_def ct_in_state'_def sch_act_wf_weak cur_tcb'_def
+  apply (clarsimp simp add: invs'_def ct_in_state'_def sch_act_wf_weak cur_tcb'_def
                    valid_pspace_valid_objs' valid_objs'_maxDomain tcb_in_cur_domain'_def)
   sorry (*
   apply (simp add:ct_active_runnable'[unfolded ct_in_state'_def])
@@ -1523,11 +1523,15 @@ lemma handleCall_corres:
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
          handle_call handleCall"
+  apply add_cur_tcb'
   apply (simp add: handle_call_def handleCall_def liftE_bindE handleInvocation_corres)
+  apply (rule corres_stateAssertE_add_assertion[rotated])
+   apply (clarsimp simp: cur_tcb'_asrt_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getCapReg_corres])
       apply (simp, rule handleInvocation_corres; simp)
      apply (wpsimp simp: getCapReg_def)+
+  apply (clarsimp simp: cur_tcb'_def)
   done
 
 lemma hc_invs'[wp]:
@@ -1536,7 +1540,12 @@ lemma hc_invs'[wp]:
       ct_isSchedulable\<rbrace>
    handleCall
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding handleCall_def getCapReg_def by wpsimp
+  apply (clarsimp simp: handleCall_def)
+  apply (rule validE_valid)
+  apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
+  apply (wpsimp simp: getCapReg_def)
+  apply (clarsimp simp: cur_tcb'_def cur_tcb'_asrt_def)
+  done
 
 lemma cteInsert_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> cteInsert newCap srcSlot destSlot \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
@@ -1579,6 +1588,7 @@ proof -
                (invs' and ct_running'
                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
                (handle_recv isBlocking canGrant) (handleRecv isBlocking canGrant)"
+    apply add_cur_tcb'
     apply add_ct_not_inQ
     apply (rule corres_guard_imp [OF handleRecv_isBlocking_corres])
      apply (fastforce simp: ct_in_state_def ct_in_state'_def
