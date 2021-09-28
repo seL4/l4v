@@ -600,7 +600,7 @@ lemma rel_tr_refinement_rev_comm_repeat[simplified K_bind_def]:
   done
 
 lemma alternative_distrib_lhs_bind:
-  "(f OR g) >>= h = ((f >>= h) OR (g >>= h))"
+  "(f \<sqinter> g) >>= h = ((f >>= h) \<sqinter> (g >>= h))"
   by (simp add: bind_def alternative_def)
 
 lemma shuttle_modify_commit_step[simplified K_bind_def]:

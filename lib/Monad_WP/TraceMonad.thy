@@ -127,7 +127,7 @@ subsection "Nondeterminism"
 text \<open>
   Basic nondeterministic functions. @{text "select A"} chooses an element
   of the set @{text A}, does not change the state, and does not fail
-  (even if the set is empty). @{text "f OR g"} executes @{text f} or
+  (even if the set is empty). @{text "f \<sqinter> g"} executes @{text f} or
   executes @{text g}. It retuns the union of results of @{text f} and
   @{text g}, and may have failed if either may have failed.
 \<close>
@@ -140,12 +140,9 @@ where
 definition
   alternative :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow>
                   ('s,'a) tmonad"
-  (infixl "OR" 20)
+  (infixl "\<sqinter>" 20)
 where
-  "f OR g \<equiv> \<lambda>s. (f s \<union> g s)"
-
-text \<open> Alternative notation for @{text OR} \<close>
-notation (xsymbols)  alternative (infixl "\<sqinter>" 20)
+  "f \<sqinter> g \<equiv> \<lambda>s. (f s \<union> g s)"
 
 
 text \<open> The @{text selet_f} function was left out here until we figure

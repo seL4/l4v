@@ -108,7 +108,7 @@ subsection "Nondeterminism"
 text \<open>
   Basic nondeterministic functions. @{text "select A"} chooses an element
   of the set @{text A}, does not change the state, and does not fail
-  (even if the set is empty). @{text "f OR g"} executes @{text f} or
+  (even if the set is empty). @{text "f \<sqinter> g"} executes @{text f} or
   executes @{text g}. It retuns the union of results of @{text f} and
   @{text g}, and may have failed if either may have failed.
 \<close>
@@ -116,17 +116,12 @@ definition
   select :: "'a set \<Rightarrow> ('s,'a) nondet_monad" where
   "select A \<equiv> \<lambda>s. (A \<times> {s}, False)"
 
-(* FIXME isa: at the end of the update, retire "OR", use \<sqinter> everywhere instead *)
 definition
   alternative :: "('s,'a) nondet_monad \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow>
                   ('s,'a) nondet_monad"
-  (infixl "OR" 20)
+  (infixl "\<sqinter>" 20)
 where
-  "f OR g \<equiv> \<lambda>s. (fst (f s) \<union> fst (g s), snd (f s) \<or> snd (g s))"
-
-text \<open>Alternative notation for @{text OR}\<close>
-notation (xsymbols)  alternative (infixl "\<sqinter>" 20)
-
+  "f \<sqinter> g \<equiv> \<lambda>s. (fst (f s) \<union> fst (g s), snd (f s) \<or> snd (g s))"
 
 text \<open>A variant of @{text select} that takes a pair. The first component
   is a set as in normal @{text select}, the second component indicates
