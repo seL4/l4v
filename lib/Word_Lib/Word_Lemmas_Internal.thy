@@ -636,4 +636,25 @@ lemma ucast_up_less_bounded_iff_less_ucast_down':
    apply (simp add: less_ucast_ucast_less')
   using assms by (rule ucast_up_less_bounded_implies_less_ucast_down')
 
+lemma word_of_int_word_of_nat_eqD:
+  "\<lbrakk> word_of_int x = (word_of_nat y :: 'a :: len word); 0 \<le> x; x < 2^LENGTH('a); y < 2^LENGTH('a) \<rbrakk>
+   \<Longrightarrow> nat x = y"
+  by (metis nat_eq_numeral_power_cancel_iff of_nat_inj word_of_int_nat zless2p zless_nat_conj)
+
+lemma ucast_down_0:
+  "\<lbrakk> UCAST('a::len \<rightarrow> 'b::len) x = 0; unat x < 2^LENGTH('b) \<rbrakk> \<Longrightarrow> x = 0"
+  by (metis Word.of_nat_unat unat_0 unat_eq_of_nat word_unat_eq_iff)
+
+lemma uint_minus_1_eq:
+  \<open>uint (- 1 :: 'a word) = 2 ^ LENGTH('a::len) - 1\<close>
+  by transfer (simp add: take_bit_minus_one_eq_mask mask_eq_exp_minus_1)
+
+lemma FF_eq_minus_1:
+  \<open>0xFF = (- 1 :: 8 word)\<close>
+  by simp
+
+lemma shiftl_t2n':
+  "w << n = w * (2 ^ n)" for w :: "'a::len word"
+  by (simp add: shiftl_t2n)
+
 end

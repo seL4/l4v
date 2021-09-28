@@ -1480,6 +1480,10 @@ proof -
     done
 qed
 
+lemma bin_sc_pos:
+  "0 \<le> i \<Longrightarrow> 0 \<le> bin_sc n b i"
+  by (metis bin_sign_sc sign_Pls_ge_0)
+
 code_identifier
   code_module Bits_Int \<rightharpoonup>
   (SML) Bit_Operations and (OCaml) Bit_Operations and (Haskell) Bit_Operations and (Scala) Bit_Operations
