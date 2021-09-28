@@ -262,8 +262,6 @@ definition
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
 
-declare max_word_not_0[simp]
-
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
    cscheduler_action_relation a p \<longleftrightarrow> cscheduler_action_to_H p = a"
@@ -272,7 +270,7 @@ lemma csch_act_rel_to_H:
                          cscheduler_action_to_H_def)
   apply safe
      apply (simp_all add: tcb_ptr_to_ctcb_ptr_def ctcb_ptr_to_tcb_ptr_def
-                          ctcb_offset_defs is_aligned_mask mask_def max_word_def
+                          ctcb_offset_defs is_aligned_mask mask_def
                           objBits_defs)
   subgoal by word_bitwise simp
   by word_bitwise simp
@@ -1191,7 +1189,7 @@ lemma cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-  using assms
+  using assms including no_take_bit
   by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
                      newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
