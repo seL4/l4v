@@ -1425,7 +1425,7 @@ lemma emptySlot_invs'[wp]:
             \<and> (\<forall>sl'. info \<noteq> NullCap \<longrightarrow> sl' \<noteq> sl \<longrightarrow> cteCaps_of s sl' \<noteq> Some info)\<rbrace>
      emptySlot sl info
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (rule hoare_pre)
    apply (wp valid_arch_state_lift' valid_irq_node_lift cur_tcb_lift valid_replies'_lift)
   apply (clarsimp simp: cte_wp_at_ctes_of o_def)
@@ -1528,8 +1528,7 @@ lemma empty_slot_corres:
   apply (simp add: exec_gets exec_get exec_put del: fun_upd_apply | subst bind_def)+
   apply (clarsimp simp: state_relation_def)
   apply (drule updateMDB_the_lot, fastforce, fastforce, fastforce)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
-                         valid_mdb'_def valid_mdb_ctes_def)
+   apply (clarsimp simp: invs'_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
   apply (elim conjE)
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply clarsimp
@@ -1565,7 +1564,7 @@ lemma empty_slot_corres:
    apply (rule mdb_empty.intro)
    apply (rule mdb_ptr.intro)
     apply (rule vmdb.intro)
-    subgoal by (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def)
+    subgoal by (simp add: invs'_def valid_pspace'_def valid_mdb'_def)
    apply (rule mdb_ptr_axioms.intro)
    subgoal by simp
   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
@@ -1602,7 +1601,7 @@ lemma empty_slot_corres:
       prefer 2
       apply(drule_tac cte="CTE s_cap s_node" in valid_mdbD2')
         subgoal by (clarsimp simp: valid_mdb_ctes_def no_0_def)
-       subgoal by (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
+       subgoal by (clarsimp simp: invs'_def valid_pspace'_def)
       apply(clarsimp)
       apply(rule cte_map_inj_eq)
            apply(assumption)
@@ -2212,8 +2211,8 @@ lemma tcb_bound_refs'_not_Bound:
   by (clarsimp simp: tcb_bound_refs'_def get_refs_def split: option.splits)
 
 lemma unbindNotification_invs[wp]:
-  "\<lbrace>invs'\<rbrace> unbindNotification tcb \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
+  "unbindNotification tcb \<lbrace>invs'\<rbrace>"
+  apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ gbn_sp'])
   apply (case_tac ntfnPtr, clarsimp, wp, clarsimp)
   apply clarsimp
@@ -2246,8 +2245,8 @@ lemma ntfn_bound_tcb_at':
   done
 
 lemma unbindMaybeNotification_invs[wp]:
-  "\<lbrace>invs'\<rbrace> unbindMaybeNotification ntfnptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: unbindMaybeNotification_def invs'_def valid_state'_def valid_dom_schedule'_def)
+  "unbindMaybeNotification ntfnptr \<lbrace>invs'\<rbrace>"
+  apply (simp add: unbindMaybeNotification_def invs'_def valid_dom_schedule'_def)
   apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (wpsimp wp: sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues
                     valid_irq_node_lift irqs_masked_lift setBoundNotification_ct_not_inQ
@@ -2264,7 +2263,7 @@ lemma setNotification_invs':
     and valid_ntfn' ntfn\<rbrace>
     setNotification ntfnPtr ntfn
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add:  invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (simp add:  invs'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -2282,7 +2281,7 @@ lemma schedContextUnbindNtfn_valid_objs'[wp]:
 
 lemma schedContextUnbindNtfn_invs'[wp]:
   "schedContextUnbindNtfn scPtr \<lbrace>invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def
+  unfolding invs'_def valid_pspace'_def valid_dom_schedule'_def
   apply wpsimp \<comment> \<open>this handles valid_objs' separately\<close>
    unfolding schedContextUnbindNtfn_def
    apply (wpsimp wp: getNotification_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
@@ -2298,7 +2297,7 @@ lemma replyUnlink_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. replyTCBs_of s replyPtr = Some tcbPtr \<longrightarrow> \<not> is_reply_linked replyPtr s)\<rbrace>
    replyUnlink replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def valid_dom_schedule'_def
+  unfolding invs'_def valid_dom_schedule'_def
   by wpsimp
 
 (* FIXME RT: unused? *)
@@ -2733,7 +2732,7 @@ lemma replyPop_invs':
           and ex_nonz_cap_to' tcbPtr\<rbrace>
    replyPop replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
+  unfolding invs'_def
   apply (wpsimp wp: replyPop_iflive simp: valid_pspace'_def)
   done
 
@@ -2741,7 +2740,7 @@ lemma replyRemove_invs':
   "\<lbrace>invs' and ex_nonz_cap_to' tcbPtr\<rbrace>
    replyRemove replyPtr tcbPtr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding invs'_def valid_state'_def
+  unfolding invs'_def
   apply (wpsimp wp: replyRemove_if_live_then_nonz_cap' replyRemove_valid_idle')
   done
 
@@ -2771,7 +2770,6 @@ lemma invs_asid_update_strg':
    invs' (s\<lparr>ksArchState := armKSASIDTable_update
             (\<lambda>_. tab (asid := None)) (ksArchState s)\<rparr>)"
   apply (simp add: invs'_def)
-  apply (simp add: valid_state'_def)
   apply (simp add: valid_global_refs'_def global_refs'_def valid_arch_state'_def
                    valid_asid_table'_def valid_machine_state'_def ct_idle_or_in_cur_domain'_def
                    tcb_in_cur_domain'_def valid_dom_schedule'_def)
@@ -2785,7 +2783,7 @@ lemma invalidateASIDEntry_invs' [wp]:
   apply (wp loadHWASID_wp | simp)+
   apply (clarsimp simp: fun_upd_def[symmetric])
   apply (rule conjI)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
+   apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
    apply (rule conjI)
     apply (simp add: valid_global_refs'_def
                      global_refs'_def)
@@ -2797,7 +2795,7 @@ lemma invalidateASIDEntry_invs' [wp]:
                     valid_asid_map'_def
                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
    subgoal by (auto elim!: subset_inj_on)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
   apply (rule conjI)
    apply (simp add: valid_global_refs'_def
                     global_refs'_def)
@@ -3093,7 +3091,7 @@ lemma setSchedContext_pde_mappings'[wp]:
   by (wp valid_pde_mappings_lift')
 
 lemma schedContextUnbindTCB_invs'_helper:
-  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> scPtr \<noteq> idle_sc_ptr
+  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> cur_tcb' s \<and> scPtr \<noteq> idle_sc_ptr
                 \<and> ko_at' sc scPtr s
                 \<and> scTCB sc = Some tcbPtr
                 \<and> bound_sc_tcb_at' ((=) (Some scPtr)) tcbPtr s
@@ -3102,7 +3100,7 @@ lemma schedContextUnbindTCB_invs'_helper:
       setSchedContext scPtr $ scTCB_update (\<lambda>_. Nothing) sc
    od
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding schedContextUnbindTCB_def invs'_def valid_state'_def
+  unfolding schedContextUnbindTCB_def invs'_def
   apply (wp threadSet_valid_queues_no_state threadSet_valid_queues'_no_state
             threadSet_valid_release_queue threadSet_valid_release_queue'
             threadSet_not_inQ threadSet_idle' threadSet_iflive' threadSet_ifunsafe'T
@@ -3124,6 +3122,10 @@ lemma schedContextUnbindTCB_invs'_helper:
                   valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
                   idle_tcb'_def state_refs_of'_def comp_def valid_idle'_asrt_def)
 
+crunches tcbReleaseRemove, tcbSchedDequeue
+  for cur_tcb'[wp]: cur_tcb'
+  (wp: cur_tcb_lift)
+
 lemma schedContextUnbindTCB_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> scPtr \<noteq> idle_sc_ptr\<rbrace> schedContextUnbindTCB scPtr \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding schedContextUnbindTCB_def
@@ -3133,7 +3135,7 @@ lemma schedContextUnbindTCB_invs'[wp]:
   apply (fastforce dest: sym_refs_obj_atD'
                    simp: invs_queues invs_valid_objs' invs'_valid_tcbs' valid_idle'_asrt_def
                          sym_refs_asrt_def if_cancel_eq_True ko_wp_at'_def refs_of_rev'
-                         pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb)
+                         pred_tcb_at'_def obj_at'_def projectKO_eq projectKO_tcb cur_tcb'_asrt_def)
   done
 
 (* FIXME RT: bound_tcb_at' is an outdated name? *)
@@ -3620,7 +3622,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
       apply (frule capAligned_capUntypedPtr [OF valid_capAligned], simp)
       apply (clarsimp simp: valid_cap'_def)
       apply (drule valid_globals_cte_wpD'_idleThread[rotated], clarsimp)
-      apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def)
+      apply (fastforce simp: invs'_def valid_pspace'_def)
      (* NotificationCap *)
      apply (fastforce simp: obj_at'_def sch_act_wf_asrt_def)
      (* EndpointCap *)
@@ -3916,21 +3918,13 @@ lemma cteDeleteOne_queues[wp]:
   done
 
 lemma valid_inQ_queues_lift:
-  assumes tat: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb\<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>valid_inQ_queues\<rbrace> f \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  proof -
-    show ?thesis
-      apply (clarsimp simp: valid_def valid_inQ_queues_def)
-      apply safe
-       apply (rule use_valid [OF _ tat], assumption)
-       apply (drule spec, drule spec, erule conjE, erule bspec)
-       apply (rule ccontr)
-       apply (erule notE[rotated], erule(1) use_valid [OF _ prq])
-      apply (erule use_valid [OF _ prq])
-      apply simp
-      done
-  qed
+  assumes tat: "\<And>d p tcb. f \<lbrace>obj_at' (inQ d p) tcb\<rbrace>"
+  and     prq: "\<And>P. f \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace>"
+  shows   "f \<lbrace>valid_inQ_queues\<rbrace>"
+  apply (insert assms)
+  apply (clarsimp simp: valid_inQ_queues_def)
+  apply (fastforce intro: hoare_vcg_all_lift hoare_vcg_ball_lift2)
+  done
 
 lemma emptySlot_valid_inQ_queues [wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
@@ -3982,12 +3976,11 @@ lemma removeFromBitmap_valid_inQ_queues_except[wp]:
   by (wpsimp simp: bitmap_fun_defs)+
 
 lemma setQueue_valid_inQ_queues_except_dequeue_wp:
-  "\<lbrace>\<lambda>s. valid_inQ_queues_except t s \<and> (\<forall>t' \<in> set ts. obj_at' (inQ d p) t' s)
-        \<and> t \<notin> set ts \<and> distinct ts\<rbrace>
+  "\<lbrace>\<lambda>s. valid_inQ_queues_except t s \<and> (\<forall>t' \<in> set ts. obj_at' (inQ d p) t' s)\<rbrace>
    setQueue d p ts
    \<lbrace>\<lambda>_. valid_inQ_queues_except t\<rbrace>"
   unfolding setQueue_def valid_inQ_queues_except_def null_def
-  by wp force
+  by wpsimp
 
 lemma valid_queues_no_bitmap_correct_queueI[intro]:
   "valid_inQ_queues s \<Longrightarrow> correct_queue t s"
@@ -4197,7 +4190,7 @@ lemma unbindFromSC_invs'[wp]:
   apply (rule_tac x=ko in exI, clarsimp)
   apply (frule sym_refs_tcbSchedContext; assumption?)
   apply (subgoal_tac "ex_nonz_cap_to' idle_sc_ptr s")
-   apply (fastforce simp: invs'_def valid_state'_def global'_sc_no_ex_cap)
+   apply (fastforce simp: invs'_def global'_sc_no_ex_cap)
   apply (fastforce intro!: if_live_then_nonz_capE'
                      simp: projectKOs obj_at'_def ko_wp_at'_def live_sc'_def)
   done
@@ -4227,7 +4220,7 @@ lemma schedContextUnbindReply_invs'[wp]:
   unfolding schedContextUnbindReply_def
   apply (wpsimp wp: setSchedContext_invs' updateReply_replyNext_None_invs'
                     hoare_vcg_imp_lift typ_at_lifts)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def sym_refs_asrt_def)
+  apply (clarsimp simp: invs'_def valid_pspace'_def sym_refs_asrt_def)
   apply (frule (1) ko_at_valid_objs', clarsimp simp: projectKOs)
   apply (frule (2) sym_refs_scReplies)
   apply (intro conjI)
@@ -4260,7 +4253,7 @@ lemma finaliseCap_invs:
     apply clarsimp
    apply (clarsimp dest!: simp: valid_cap'_def valid_idle'_def valid_idle'_asrt_def)
   apply (subgoal_tac "ex_nonz_cap_to' (ksIdleThread s) s")
-   apply (fastforce simp: invs'_def valid_state'_def global'_no_ex_cap)
+   apply (fastforce simp: invs'_def global'_no_ex_cap)
   apply (frule invs_valid_global', drule(1) valid_globals_cte_wpD'_idleSC)
   apply (frule valid_capAligned, drule capAligned_capUntypedPtr)
    apply clarsimp
@@ -4383,6 +4376,7 @@ lemma arch_finalise_cap_corres:
                  (final_matters' (ArchObjectCap cap') \<longrightarrow>
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
            (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
+  apply add_cur_tcb'
   apply (cases cap;
         clarsimp simp: arch_finalise_cap_def ARM_H.finaliseCap_def
                        final_matters'_def case_bool_If liftM_def[symmetric]
@@ -4696,11 +4690,12 @@ lemma schedContextUnbindTCB_corres:
              (invs' and obj_at' (\<lambda>sc. bound (scTCB sc)) sc_ptr)
           (sched_context_unbind_tcb sc_ptr) (schedContextUnbindTCB sc_ptr)"
   apply (clarsimp simp: sched_context_unbind_tcb_def schedContextUnbindTCB_def
-                        sym_refs_asrt_def valid_idle'_asrt_def)
+                        sym_refs_asrt_def valid_idle'_asrt_def cur_tcb'_asrt_def)
   apply add_sym_refs
   apply add_valid_idle'
+  apply add_cur_tcb'
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
-   apply (rule corres_stateAssert_add_assertion[rotated], simp)
+   apply (rule corres_stateAssert_add_assertion[rotated], simp)+
   apply (rule corres_guard_imp)
      apply (rule corres_split[OF get_sc_corres])
        apply (rename_tac sc sc')
@@ -4772,7 +4767,7 @@ lemma unbindFromSC_corres:
    apply (rule_tac x=ko in exI, clarsimp)
    apply (frule sym_refs_tcbSchedContext; assumption?)
    apply (subgoal_tac "ex_nonz_cap_to' y s")
-    apply (fastforce simp: invs'_def obj_at'_def valid_state'_def global'_sc_no_ex_cap)
+    apply (fastforce simp: invs'_def obj_at'_def global'_sc_no_ex_cap)
    apply (fastforce intro!: if_live_then_nonz_capE'
                       simp: projectKOs obj_at'_def ko_wp_at'_def live_sc'_def)
   apply (clarsimp simp: sym_refs_asrt_def)

@@ -330,7 +330,7 @@ lemma pac_corres:
   apply (drule (1) cte_cap_in_untyped_range)
        apply (fastforce simp add: cte_wp_at_ctes_of)
       apply assumption+
-    apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+    apply (clarsimp simp: invs'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
    apply fastforce+
   done
 
@@ -1121,7 +1121,7 @@ shows
        apply (wp hoare_drop_imps)+
     apply (clarsimp simp: valid_cap_simps mask_2pm1 linorder_not_le split: option.split)
     apply (intro conjI; (clarsimp)?)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
+   apply (clarsimp simp: invs'_def valid_pspace'_def
                   split: option.splits)
   apply clarsimp
   done
@@ -1132,6 +1132,7 @@ lemma inv_arch_corres:
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
      (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (Arch.performInvocation ai')"
+  apply add_cur_tcb'
   apply (clarsimp simp: arch_perform_invocation_def
                         ARM_H.performInvocation_def
                         performARMMMUInvocation_def)
@@ -1207,7 +1208,7 @@ lemma performASIDControlInvocation_tcb_at':
   apply clarsimp
   apply (drule(1) cte_cap_in_untyped_range,
     fastforce simp add: cte_wp_at_ctes_of, assumption, simp_all)
-   apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+   apply (clarsimp simp: invs'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
   apply clarsimp
   done
 
@@ -1856,7 +1857,7 @@ lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
             armKSASIDTable_update (\<lambda>_. (armKSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
   apply (clarsimp simp: valid_arch_state'_def)

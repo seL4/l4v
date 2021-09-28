@@ -79,7 +79,7 @@ lemma setSchedContext_invs':
     and (\<lambda>_. valid_sched_context_size' sc)\<rbrace>
     setSchedContext scPtr sc
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_pde_mappings_lift' untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
   done
 
@@ -164,7 +164,7 @@ lemma updateSchedContext_invs'_indep:
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wpsimp wp: updateSchedContext_invs')
   apply (intro conjI; intro allI impI; (drule_tac x=ko in spec)+)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_objs'_def obj_at'_def)
+   apply (clarsimp simp: invs'_def valid_objs'_def obj_at'_def)
    apply (erule if_live_then_nonz_capE')
    apply (clarsimp simp: ko_wp_at'_def projectKO_eq projectKO_sc live_sc'_def)
   apply (frule (1) invs'_ko_at_valid_sched_context', simp)
@@ -214,11 +214,6 @@ end
 
 crunches sched_context_update_consumed
   for in_user_Frame[wp]: "in_user_frame buffer"
-
-lemma schedContextUpdateConsumed_tcb_at'CT[wp]:
-  "schedContextUpdateConsumed scp \<lbrace>\<lambda>s. tcb_at' (ksCurThread s) s\<rbrace>"
-  unfolding schedContextUpdateConsumed_def
-  by (wpsimp | wps)+
 
 lemma schedContextUpdateConsumed_valid_ipc_buffer_ptr'[wp]:
   "schedContextUpdateConsumed scp \<lbrace>valid_ipc_buffer_ptr' x\<rbrace>"
@@ -306,7 +301,7 @@ lemma schedContextUpdateConsumed_if_unsafe_then_cap'[wp]:
 
 lemma schedContextUpdateConsumed_invs'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
@@ -449,8 +444,7 @@ lemma schedContextCancelYieldTo_invs':
   "\<lbrace>invs' and tcb_at' t\<rbrace>
    schedContextCancelYieldTo t
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def setSchedContext_def
-                   valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def setSchedContext_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift
               simp: cteCaps_of_def o_def)
@@ -468,9 +462,11 @@ crunches setConsumed
 
 lemma setConsumed_invs':
   "setConsumed scp buffer \<lbrace>invs'\<rbrace>"
-  apply (simp add: setConsumed_def)
-  by (wpsimp wp: schedContextUpdateConsumed_invs'
-      | strengthen tcb_at_invs')+
+  apply (simp add: setConsumed_def cur_tcb'_asrt_def)
+  apply (wpsimp wp: schedContextUpdateConsumed_invs'
+              simp: cur_tcb'_def
+         | wps)+
+  done
 
 lemma schedContextCompleteYieldTo_invs'[wp]:
   "\<lbrace>invs' and tcb_at' thread\<rbrace>
@@ -482,16 +478,20 @@ lemma schedContextCompleteYieldTo_invs'[wp]:
            simp: sch_act_simple_def)
 
 lemma setConsumed_corres:
- "corres dc ((\<lambda>s. tcb_at (cur_thread s) s) and case_option \<top> in_user_frame buf and sc_at scp)
-            (\<lambda>s. tcb_at' (ksCurThread s) s \<and> case_option \<top> valid_ipc_buffer_ptr' buf s \<and> sc_at' scp s)
+ "corres dc (case_option \<top> in_user_frame buf and sc_at scp
+             and cur_tcb and pspace_aligned and pspace_distinct)
+            (case_option \<top> valid_ipc_buffer_ptr' buf and sc_at' scp)
             (set_consumed scp buf)
             (setConsumed scp buf)"
+  apply add_cur_tcb'
   apply (simp add: set_consumed_def setConsumed_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: cur_tcb'_asrt_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ schedContextUpdateConsumed_corres])
       apply (rule corres_split_deprecated [OF _ gct_corres], simp)
         apply (rule corres_split_deprecated [OF set_mi_corres set_mrs_corres])
-  by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def)+
+  by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def cur_tcb_def cur_tcb'_def | wps)+
 
 lemma get_tcb_yield_to_corres:
   "corres (=) (pspace_aligned and pspace_distinct and tcb_at t) \<top>
@@ -517,6 +517,7 @@ lemma tcb_yield_to_update_corres:
 lemma complete_yield_to_corres:
   "corres dc (invs and tcb_at thread) (invs' and tcb_at' thread)
     (complete_yield_to thread) (schedContextCompleteYieldTo thread)"
+  apply add_cur_tcb'
   apply (simp add: complete_yield_to_def schedContextCompleteYieldTo_def)
   apply (subst maybeM_when)
   apply (rule corres_guard_imp)
@@ -550,10 +551,10 @@ lemma complete_yield_to_corres:
    apply (subgoal_tac "valid_tcb thread tcb s", clarsimp simp: valid_tcb_def)
    apply (fastforce simp: obj_at'_def valid_tcb_valid_obj elim: valid_objs_ko_at
                     dest: invs_valid_objs)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def cur_tcb'_def
+  apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def
                         obj_at'_real_def ko_wp_at'_def pred_tcb_at'_def projectKO_tcb)
-  apply (subgoal_tac "valid_tcb' obja s", clarsimp simp: valid_tcb'_def)
-   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def pred_tcb_at'_def valid_bound_obj'_def)
+  apply (subgoal_tac "valid_tcb' obj s", clarsimp simp: valid_tcb'_def cur_tcb'_def)
+   apply (fastforce simp: obj_at'_real_def ko_wp_at'_def)
   apply (fastforce simp: valid_objs'_def valid_obj'_def)
   done
 

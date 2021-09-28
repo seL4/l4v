@@ -710,7 +710,7 @@ lemma lookup_slot_corres:
    prefer 2
    apply (rule hoare_vcg_precond_impE)
     apply (rule resolveAddressBits_cte_at')
-   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+   apply (simp add: invs'_def valid_pspace'_def)
   apply (simp add: returnOk_def split_def)
   done
 

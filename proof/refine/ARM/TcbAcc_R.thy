@@ -97,7 +97,6 @@ definition
 where
  "valid_queues_no_bitmap_except t' \<equiv> \<lambda>s.
    (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). t \<noteq> t' \<longrightarrow> obj_at' (inQ d p) t s)
-    \<and>  distinct (ksReadyQueues s (d, p))
     \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
 
 lemma valid_queues_no_bitmap_exceptI[intro]:
@@ -1463,7 +1462,7 @@ proof -
                  valid_tcb_state' (tcbState (F tcb)) = valid_tcb_state' (tcbState tcb)"
     by (auto simp: z)
   show ?thesis
-    apply (simp add: invs'_def valid_state'_def split del: if_split)
+    apply (simp add: invs'_def split del: if_split)
     apply (rule hoare_pre)
      apply (wp x w v u b
               threadSet_valid_pspace'T
@@ -1673,7 +1672,7 @@ lemma corres_as_user:
   apply (rule corres_guard_imp)
     apply (rule corres_as_user' [OF y])
    apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (simp add: invs'_def valid_pspace'_def)
   done
 
 lemma asUser_inv:
@@ -3540,7 +3539,6 @@ lemma tcbSchedEnqueueOrAppend_valid_queues:
   assumes f_set[simp]: "\<And>ts. t \<in> set (f ts)"
   assumes f_set_insert[simp]: "\<And>ts. set (f ts) = insert t (set ts)"
   assumes f_not_empty[simp]: "\<And>ts. f ts \<noteq> []"
-  assumes f_distinct: "\<And>ts. \<lbrakk> distinct ts ; t \<notin> set ts \<rbrakk> \<Longrightarrow> distinct (f ts)"
   shows "\<lbrace>Invariants_H.valid_queues and valid_tcbs' \<rbrace>
     do queued \<leftarrow> threadGet tcbQueued t;
        unless queued $
@@ -3572,7 +3570,7 @@ proof -
          setQueue d p (f ts)
      \<lbrace>\<lambda>rv. valid_queues_no_bitmap_except t\<rbrace>"
     unfolding setQueue_def valid_queues_no_bitmap_except_def null_def
-    by (wp, auto intro: f_distinct)
+    by (wp, auto)
 
   have threadSet_valid_queues_could_run:
    "\<And>f. \<lbrace> valid_queues_no_bitmap_except t and
@@ -4567,7 +4565,7 @@ lemma lipcb_corres:
                (tcb_at' t and invs')
                (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   using lipcb_corres'
-  by (rule corres_guard_imp, auto simp: invs'_def valid_state'_def)
+  by (rule corres_guard_imp, auto simp: invs'_def)
 
 crunch inv[wp]: lookupIPCBuffer P
   (wp: crunch_wps)
@@ -5333,7 +5331,7 @@ lemma sts_invs_minor':
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def pred_tcb_at'_eq_commute)
   apply (intro conjI impI)
@@ -5351,7 +5349,7 @@ lemma sts_invs':
       and invs'\<rbrace>
    setThreadState st t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_dom_schedule'_def)
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
   by metis
@@ -5449,7 +5447,7 @@ proof -
 
   show ?thesis
     apply (wp dmo_invs' no_irq_storeWord no_irq)
-    apply (clarsimp simp: storeWord_def invs'_def valid_state'_def)
+    apply (clarsimp simp: storeWord_def invs'_def)
     apply (clarsimp simp: valid_machine_state'_def pointerInUserData_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
@@ -5858,7 +5856,7 @@ lemma tcbReleaseDequeue_invs'[wp]:
     and distinct_release_queue\<rbrace>
    tcbReleaseDequeue
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (wpsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def
+  by (wpsimp simp: invs'_def valid_dom_schedule'_def
                wp: valid_irq_node_lift irqs_masked_lift untyped_ranges_zero_lift
                    cteCaps_of_ctes_of_lift)
 
@@ -6040,7 +6038,7 @@ lemma tcbReleaseRemove_ct_not_inQ[wp]:
 
 lemma tcbReleaseRemove_invs':
   "tcbReleaseRemove tcbPtr \<lbrace>invs'\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_dom_schedule'_def)
+  apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
                     untyped_ranges_zero_lift tcbReleaseRemove_valid_queues valid_replies'_lift
               simp: cteCaps_of_def o_def)

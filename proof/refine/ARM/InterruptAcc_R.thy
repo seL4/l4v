@@ -49,7 +49,7 @@ lemma setIRQState_invs[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs'_def valid_state'_def cur_tcb'_def
+  apply (clarsimp simp: invs'_def cur_tcb'_def
                         Invariants_H.valid_queues_def valid_queues'_def valid_release_queue_def
                         valid_release_queue'_def valid_dom_schedule'_def
                         valid_irq_node'_def
@@ -66,7 +66,7 @@ lemma getIRQSlot_real_cte[wp]:
   "\<lbrace>invs'\<rbrace> getIRQSlot irq \<lbrace>real_cte_at'\<rbrace>"
   apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
   apply wp
-  apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
+  apply (clarsimp simp: invs'_def valid_irq_node'_def
                         cte_level_bits_def ucast_nat_def)
   done
 
@@ -397,7 +397,7 @@ lemma sch_act_simple_irq_state_independent[intro!, simp]:
   by (simp add: sch_act_simple_def)
 
 method invs'_independent_method
-  = (clarsimp simp: irq_state_independent_H_def invs'_def valid_state'_def
+  = (clarsimp simp: irq_state_independent_H_def invs'_def
                     valid_pspace'_def valid_replies'_def sch_act_wf_def
                     valid_queues_def sym_refs_def state_refs_of'_def
                     if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
@@ -408,7 +408,7 @@ method invs'_independent_method
                     valid_queues'_def valid_pde_mappings'_def
                     pspace_domain_valid_def cur_tcb'_def
                     valid_machine_state'_def tcb_in_cur_domain'_def ex_cte_cap_wp_to'_def
-                    ct_not_inQ_def ct_idle_or_in_cur_domain'_def valid_mdb'_def ct_in_state'_def
+                    valid_mdb'_def ct_in_state'_def
                     valid_release_queue_def valid_release_queue'_def valid_dom_schedule'_def
               cong: if_cong option.case_cong)
 

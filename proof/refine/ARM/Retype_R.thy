@@ -4960,7 +4960,7 @@ proof (rule hoare_gen_asm, erule conjE)
      createNewCaps ty ptr n us dev
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (simp add: invs'_def valid_state'_def valid_dom_schedule'_def
+  apply (simp add: invs'_def valid_dom_schedule'_def
                    pointerInUserData_def typ_at'_def)
     apply (rule hoare_pre)
      apply (wp createNewCaps_valid_pspace [OF not_0 cover]
@@ -5326,8 +5326,7 @@ proof -
     done
   show ?thesis
     apply (rule hoare_grab_asm)+
-    apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def)
-    apply wp
+    apply (clarsimp simp: invs'_def valid_dom_schedule'_def)
      apply (rule hoare_pre)
       apply (rule hoare_vcg_conj_lift)
        apply (simp add: createObjects_def,wp createObjects_valid_pspace_untyped')

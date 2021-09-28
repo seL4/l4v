@@ -129,7 +129,7 @@ lemma decode_irq_handler_valid'[wp]:
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (drule (1) valid_irq_handlers_ctes_ofD)
-    apply (simp add: invs'_def valid_state'_def)
+    apply (simp add: invs'_def)
    apply (simp add: irq_issued'_def)
   apply clarsimp
   done
@@ -423,7 +423,7 @@ lemma isnt_irq_handler_strg:
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> ARM_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (cases i; wpsimp wp: dmo_maskInterrupt simp: ARM_H.invokeIRQHandler_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_dom_schedule'_def valid_irq_masks'_def
+  apply (clarsimp simp: invs'_def valid_dom_schedule'_def valid_irq_masks'_def
                         valid_machine_state'_def ct_not_inQ_def
                         ct_in_current_domain_ksMachineState)
   done
@@ -489,7 +489,7 @@ lemma arch_invoke_irq_control_corres:
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                          is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
                          safe_parent_for_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
+  apply (clarsimp simp: invs'_def valid_pspace'_def IRQHandler_valid
                         IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
   apply (case_tac ctea)
@@ -512,7 +512,7 @@ lemma invoke_irq_control_corres:
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                           cte_wp_at_caps_of_state is_simple_cap_def
                           is_cap_simps safe_parent_for_def)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
+   apply (clarsimp simp: invs'_def valid_pspace'_def
                          IRQHandler_valid  IRQHandler_valid' is_simple_cap'_def
                          isCap_simps)
    apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
@@ -566,7 +566,7 @@ lemma arch_invoke_irq_control_invs'[wp]:
   apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac ctea)
   apply (auto dest: valid_irq_handlers_ctes_ofD
-              simp: invs'_def valid_state'_def IRQ_def)
+              simp: invs'_def IRQ_def)
   done
 
 lemma invoke_irq_control_invs'[wp]:
@@ -579,7 +579,7 @@ lemma invoke_irq_control_invs'[wp]:
                         safe_parent_for'_def sameRegionAs_def3)
   apply (case_tac ctea)
   apply (auto dest: valid_irq_handlers_ctes_ofD
-              simp: invs'_def valid_state'_def)
+              simp: invs'_def)
   done
 
 lemma get_irq_state_corres:

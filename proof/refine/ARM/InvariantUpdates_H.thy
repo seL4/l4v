@@ -38,7 +38,7 @@ lemma invs'_machine:
 proof -
   show ?thesis
     apply (cases "ksSchedulerAction s")
-    apply (simp_all add: invs'_def valid_state'_def cur_tcb'_def ct_in_state'_def
+    apply (simp_all add: invs'_def cur_tcb'_def ct_in_state'_def
                          ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                          valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
                          vms ct_not_inQ_def valid_dom_schedule'_def
@@ -318,7 +318,7 @@ lemma ct_in_state_ksSched[simp]:
 
 lemma invs'_wu[simp]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-  apply (simp add: invs'_def cur_tcb'_def valid_state'_def valid_queues_def
+  apply (simp add: invs'_def cur_tcb'_def valid_queues_def
                    valid_queues'_def valid_release_queue_def valid_release_queue'_def
                    valid_irq_node'_def valid_machine_state'_def ct_not_inQ_def
                    ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def bitmapQ_defs
@@ -378,7 +378,7 @@ lemma sch_act_simple_ksReadyQueuesL2Bitmap[simp]:
 
 lemma ksDomainTime_invs[simp]:
   "invs' (ksDomainTime_update f s) = invs' s"
-  by (simp add: invs'_def cur_tcb'_def valid_state'_def
+  by (simp add: invs'_def cur_tcb'_def
                 valid_release_queue_def valid_release_queue'_def
                 valid_machine_state'_def ct_not_inQ_def
                 ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def valid_dom_schedule'_def)
@@ -409,7 +409,7 @@ lemma ct_not_inQ_update_stt[simp]:
 
 lemma invs'_update_cnt[elim!]:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
-  by (clarsimp simp: invs'_def cur_tcb'_def valid_state'_def valid_dom_schedule'_def
+  by (clarsimp simp: invs'_def cur_tcb'_def valid_dom_schedule'_def
                      valid_release_queue_def valid_release_queue'_def
                      valid_irq_node'_def valid_machine_state'_def ct_not_inQ_def
                      ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
