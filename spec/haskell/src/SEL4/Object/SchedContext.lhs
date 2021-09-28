@@ -420,6 +420,8 @@ This module uses the C preprocessor to select a target architecture.
 
 > setConsumed :: PPtr SchedContext -> Maybe (PPtr Word) -> Kernel ()
 > setConsumed scPtr buffer = do
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     consumed <- schedContextUpdateConsumed scPtr
 >     tptr <- getCurThread
 >     sent <- setMRs tptr buffer (setTimeArg consumed)
@@ -449,6 +451,8 @@ This module uses the C preprocessor to select a target architecture.
 >     stateAssert sym_refs_asrt "Assert that `sym_refs (state_refs_of' s)` holds"
 >     stateAssert valid_idle'_asrt
 >         "Assert that `valid_idle' s` holds"
+>     stateAssert cur_tcb'_asrt
+>         "Assert that `cur_tcb' s` holds"
 >     sc <- getSchedContext scPtr
 >     let tptrOpt = scTCB sc
 >     assert (tptrOpt /= Nothing) "schedContextUnbind: option of TCB pointer must not be Nothing"
