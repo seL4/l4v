@@ -48,7 +48,7 @@ imports
   Word_Lemmas_Prefix
 begin
 
-declare word_induct2[induct type]
+declare word_induct2[case_names zero suc, induct type]
 declare word_nat_cases[cases type]
 
 declare signed_take_bit_Suc [simp]
