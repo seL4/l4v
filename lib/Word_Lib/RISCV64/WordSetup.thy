@@ -7,8 +7,8 @@
 
 theory WordSetup (* part of non-AFP Word_Lib *)
 imports
-  Distinct_Prop
   Word_Lemmas_64_Internal
+  Distinct_Prop
 begin
 
 (* Distinct_Prop lemmas that need word lemmas: *)
