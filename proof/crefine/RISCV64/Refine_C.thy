@@ -40,13 +40,6 @@ lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
-lemma Arch_finaliseInterrupt_ccorres:
-  "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
-  apply (rule ccorres_from_vcg)
-  apply (rule allI, rule conseqPre, vcg)
-  apply (simp add: return_def)
-  done
-
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
            (invs' and sch_act_simple)
@@ -74,17 +67,15 @@ proof -
       apply vcg
      apply vcg
     apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
-    apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
-      apply (ctac (no_vcg) add: schedule_ccorres)
-       apply (rule ccorres_stateAssert_after)
-       apply (rule ccorres_add_return2)
-       apply (ctac (no_vcg) add: activateThread_ccorres)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply (wp schedule_sch_act_wf schedule_invs'
+     apply (ctac (no_vcg) add: schedule_ccorres)
+      apply (rule ccorres_stateAssert_after)
+      apply (rule ccorres_add_return2)
+      apply (ctac (no_vcg) add: activateThread_ccorres)
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: return_def)
+      apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> RISCV64.maxIRQ) \<and> rv \<noteq> Some 0x3FF" in hoare_post_imp)
     apply (clarsimp simp: non_kernel_IRQs_def)
@@ -265,9 +256,7 @@ lemma handleSyscall_ccorres:
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def)
-                     apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                   apply wp
@@ -303,9 +292,7 @@ lemma handleSyscall_ccorres:
                     apply (rule ccorres_Guard)?
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                     apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
@@ -340,9 +327,7 @@ lemma handleSyscall_ccorres:
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                     apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                   apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                    apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
