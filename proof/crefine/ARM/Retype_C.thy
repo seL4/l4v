@@ -2486,18 +2486,6 @@ declare Collect_const_mem [simp]
 (* Levity: added (20090419 09:44:40) *)
 declare shiftl_mask_is_0 [simp]
 
-lemma heap_update_field':
-  "\<lbrakk>field_ti TYPE('a :: packed_type) f = Some t; c_guard p;
-  export_uinfo t = export_uinfo (typ_info_t TYPE('b :: packed_type))\<rbrakk>
-  \<Longrightarrow> heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) v hp =
-  heap_update p (update_ti_t t (to_bytes_p v) (h_val hp p)) hp"
-  apply (erule field_ti_field_lookupE)
-  apply (subst packed_heap_super_field_update [unfolded typ_uinfo_t_def])
-     apply assumption+
-  apply (drule export_size_of [simplified typ_uinfo_t_def])
-  apply (simp add: update_ti_t_def)
-  done
-
 lemma option_noneI: "\<lbrakk> \<And>x. a = Some x \<Longrightarrow> False \<rbrakk> \<Longrightarrow> a = None"
   apply (case_tac a)
    apply clarsimp
