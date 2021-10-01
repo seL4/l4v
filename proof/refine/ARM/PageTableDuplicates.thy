@@ -2045,7 +2045,7 @@ lemma performArchInvocation_valid_duplicates':
 
 crunches restart
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunches setPriority, setMCPriority
   for valid_duplicates'[wp]: "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"

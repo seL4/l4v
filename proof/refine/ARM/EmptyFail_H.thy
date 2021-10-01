@@ -193,7 +193,7 @@ crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.post
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
-  refillUnblockCheck, schedContextResume
+  refillUnblockCheck, schedContextResume, ifCondRefillUnblockCheck
   (simp: Let_def wp: empty_fail_whileLoop)
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
