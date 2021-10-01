@@ -35,6 +35,7 @@ definition
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
       set_thread_state thread Restart;
+      if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt;
       maybeM sched_context_resume sc_opt;
       test_possible_switch_to thread
     od
