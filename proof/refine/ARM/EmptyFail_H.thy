@@ -196,7 +196,7 @@ notes option.case_cong_weak[cong]
 begin
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
-  refillUnblockCheck, schedContextResume
+  refillUnblockCheck, schedContextResume, ifCondRefillUnblockCheck
   (simp: Let_def wp: empty_fail_whileLoop)
 end
 
