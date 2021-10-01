@@ -4159,7 +4159,7 @@ lemma fast_finalise_valid_list[wp]:
 
 crunches cap_delete_one, restart
   for valid_list[wp]: "valid_list"
-  (wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv simp: crunch_simps)
+  (wp: hoare_drop_imp hoare_vcg_all_lift maybeM_inv crunch_wps simp: crunch_simps)
 
 context notes if_cong[cong] begin
 
