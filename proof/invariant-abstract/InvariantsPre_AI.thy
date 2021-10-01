@@ -64,6 +64,11 @@ begin
 lemma validE_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
   by (simp add: hoare_valid_validE tainv)
+
+lemma agnostic_preservedE_R:
+  "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -"
+  unfolding ta_agnostic_def
+  by (simp add: agnostic_preserved ta_agnostic_def valid_validE_R)
 end
 
 (* does this actually do anything? *)

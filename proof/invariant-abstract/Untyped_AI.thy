@@ -248,9 +248,9 @@ lemma lookup_cap_gets:
   apply simp
   done
 
-
 lemma dui_sp_helper:
-  "(\<And>s. P s \<Longrightarrow> valid_objs s) \<Longrightarrow>
+  "ta_agnostic P \<Longrightarrow>
+   (\<And>s. P s \<Longrightarrow> valid_objs s) \<Longrightarrow>
    \<lbrace>P\<rbrace> if val = 0 then returnOk root_cap
        else doE node_slot \<leftarrow>
                   lookup_target_slot root_cap (to_bl (args ! 2)) (unat (args ! 3));
@@ -262,6 +262,7 @@ lemma dui_sp_helper:
   apply (wp get_cap_wp)
    apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_objs and P"]
           ; wpsimp simp: cte_wp_at_caps_of_state)
+   apply (erule lookup_slot_for_cnode_op_tainv.agnostic_preservedE_R)
   apply simp
   done
 
