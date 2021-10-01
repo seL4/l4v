@@ -154,6 +154,7 @@ The invoked thread will return to the instruction that caused it to enter the ke
 >     when stopped $ do
 >         cancelIPC target
 >         setThreadState Restart target
+>         ifCondRefillUnblockCheck scOpt (Just True) (Just False)
 >         when (isJust scOpt) $ schedContextResume (fromJust scOpt)
 >         schedulable <- isSchedulable target
 >         when schedulable $ possibleSwitchTo target
