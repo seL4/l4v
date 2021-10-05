@@ -3091,20 +3091,11 @@ abbreviation simple_sched_action :: "'z state \<Rightarrow> bool" where
 
 lemmas simple_sched_action_def = simple_sched_action_2_def
 
-definition schact_is_rct_2 :: "scheduler_action \<Rightarrow> bool" where
-  "schact_is_rct_2 schact \<equiv> schact = resume_cur_thread"
-
 abbreviation schact_is_rct :: "'z state \<Rightarrow> bool" where
-  "schact_is_rct s \<equiv> schact_is_rct_2 (scheduler_action s)"
-
-lemmas schact_is_rct_def = schact_is_rct_2_def
-
-lemma schact_is_rct[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_action s = resume_cur_thread"
-  apply (simp add: schact_is_rct_def)
-  done
+  "schact_is_rct s \<equiv> scheduler_action s = resume_cur_thread"
 
 lemma schact_is_rct_simple[elim!]: "schact_is_rct s \<Longrightarrow> simple_sched_action s"
-  apply (simp add: simple_sched_action_def schact_is_rct_def)
+  apply (simp add: simple_sched_action_def)
   done
 
 definition scheduler_act_not_2 where
@@ -3597,7 +3588,7 @@ lemma valid_ready_qs_in_ready_qD:
 lemma invs_cur_sc_tcb_symref:
   "invs s \<Longrightarrow> schact_is_rct s \<Longrightarrow> bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) (cur_thread s) s"
   apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs], simp)
-  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
+  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def)
   done
 
 lemma sym_refs_pred_map_eq_iff_sc_tcb_sc_at:
@@ -3649,11 +3640,11 @@ lemma invs_cur_sc_chargeableE:
      apply (subst (asm) sym_refs_pred_map_eq_iff_sc_tcb_sc_at[OF eq_commute refl invs_sym_refs], simp)+
      apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
    apply (subst sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl invs_sym_refs]; simp)
-  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def schact_is_rct_def)
+  apply (simp add: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def)
   done
 
 lemma schact_is_rct_sane[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_act_sane s"
-  apply (simp add: simple_sched_action_def schact_is_rct_def scheduler_act_not_def)
+  apply (simp add: simple_sched_action_def scheduler_act_not_def)
   done
 
 \<comment> \<open>The current thread and current sc are bound (assuming sym_refs))\<close>

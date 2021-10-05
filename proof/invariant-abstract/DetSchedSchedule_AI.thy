@@ -12082,11 +12082,10 @@ lemma schedule_valid_sched_helper:
 
   (* resume_cur_thread *)
   subgoal for ct ct_schedulable
-    apply (fold schact_is_rct_def)
     apply (wpsimp wp: sc_and_timer_valid_sched)
     apply (clarsimp simp: is_schedulable_bool_def2)
     apply (intro conjI impI allI; (solves \<open>clarsimp\<close>)?)
-    apply (clarsimp simp: invs_def cur_sc_tcb_def schact_is_rct)
+    apply (clarsimp simp: invs_def cur_sc_tcb_def)
     apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric]; simp?)
      apply (clarsimp simp: valid_state_def valid_pspace_def)
     apply (clarsimp simp: tcb_at_kh_simps pred_map_def)
@@ -17569,7 +17568,7 @@ lemma tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed[wp_unsafe]:
 lemma ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed:
   "schact_is_rct s \<Longrightarrow> invs s \<Longrightarrow> ct_not_in_release_q s \<Longrightarrow> cur_sc_in_release_q_imp_zero_consumed s"
   apply (frule invs_cur_sc_tcb)
-  apply (clarsimp simp: schact_is_rct_def cur_sc_tcb_def obj_at_kh_kheap_simps pred_map_eq_normalise
+  apply (clarsimp simp: cur_sc_tcb_def obj_at_kh_kheap_simps pred_map_eq_normalise
                         cur_sc_in_release_q_imp_zero_consumed_def)
   apply (frule (2) heap_refs_retract_eq[OF invs_retract_tcb_scps], clarsimp)
   done
@@ -17693,26 +17692,25 @@ lemma invoke_sched_control_configure_flags_valid_sched:
    apply (frule invs_sym_refs)
    apply (clarsimp simp: active_sc_def cong: conj_cong)
    apply (intro conjI impI allI)
-                   apply (clarsimp split: if_splits simp: MIN_REFILLS_def)
-                  apply (clarsimp simp: current_time_bounded_def)
-                 apply clarsimp
-                 apply (subgoal_tac "heap_ref_eq t sc_ptr (sc_tcbs_of s)")
-                  apply (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
-                 apply (erule heap_refs_retractD[rotated])
-                 apply (erule sym_refs_retract_tcb_scps)
-                apply (clarsimp simp: schact_is_rct_simple)
-               apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
-              apply (clarsimp simp: current_time_bounded_def)
-             apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
+                 apply (clarsimp split: if_splits simp: MIN_REFILLS_def)
+                apply (clarsimp simp: current_time_bounded_def)
+               apply clarsimp
+               apply (subgoal_tac "heap_ref_eq t sc_ptr (sc_tcbs_of s)")
+                apply (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
+               apply (erule heap_refs_retractD[rotated])
+               apply (erule sym_refs_retract_tcb_scps)
+              apply (clarsimp simp: schact_is_rct_simple)
+              apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
+             apply (clarsimp simp: current_time_bounded_def)
             apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
-           apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
-           apply (clarsimp split: if_splits simp: MIN_REFILLS_def)
-          apply (clarsimp split: if_splits simp: MIN_REFILLS_def current_time_bounded_def)
-         apply (subgoal_tac "heap_ref_eq t sc_ptr (sc_tcbs_of s)")
-          apply (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
-         apply (erule heap_refs_retractD[rotated])
-         apply (erule sym_refs_retract_tcb_scps)
-        apply (clarsimp simp: schact_is_rct_simple)
+           apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
+          apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
+          apply (clarsimp split: if_splits simp: MIN_REFILLS_def)
+         apply (clarsimp split: if_splits simp: MIN_REFILLS_def current_time_bounded_def)
+        apply (subgoal_tac "heap_ref_eq t sc_ptr (sc_tcbs_of s)")
+         apply (clarsimp simp: sc_at_kh_simps vs_all_heap_simps)
+        apply (erule heap_refs_retractD[rotated])
+        apply (erule sym_refs_retract_tcb_scps)
        apply (clarsimp simp add: sc_at_pred_n_def obj_at_def)
       apply (clarsimp simp: current_time_bounded_def)
      apply (clarsimp simp: sc_at_pred_n_def obj_at_def split: if_splits)
@@ -17737,7 +17735,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
    apply (wpsimp wp: tcb_release_remove_valid_sched_except_blocked tcb_release_remove_valid_blocked
                      tcb_release_remove_ready_or_release
                      hoare_vcg_conj_lift tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed)
-   apply (clarsimp simp: valid_sched_valid_sched_except_blocked current_time_bounded_def)
+   apply (clarsimp simp: valid_sched_def valid_sched_valid_sched_except_blocked current_time_bounded_def)
 
   apply (rule_tac B="\<lambda>rv s. iscc_valid_sched_predicate sc_ptr tcb_ptr mrefills budget s
                             \<and> budget \<le> period \<and> period \<le> MAX_PERIOD \<and> current_time_bounded 3 s
@@ -17756,7 +17754,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
    apply clarsimp
    apply (intro conjI)
     apply (clarsimp simp: valid_sched_def split: if_splits)
-    using valid_blocked_except_set_in_ready_q apply blast
+    apply (metis valid_blocked_except_set_in_ready_q)
    apply (clarsimp simp: valid_sched_def)
 
   apply clarsimp
@@ -17782,11 +17780,9 @@ lemma invoke_sched_control_configure_flags_valid_sched:
                      commit_time_sc_refill_max_sc_at
                      commit_time_active_sc_valid_refills)
    apply (simp add: sc_at_pred_n_def obj_at_def cur_sc_more_than_ready_def current_time_bounded_def)
-   apply (intro conjI impI)
-    apply (clarsimp simp: vs_all_heap_simps obj_at_def)
-    apply (frule invs_sym_refs)
-    apply (frule sym_ref_tcb_sc; blast?)
-    apply simp
+   apply (clarsimp simp: vs_all_heap_simps obj_at_def)
+   apply (frule invs_sym_refs)
+   apply (frule sym_ref_tcb_sc; blast?)
    apply (clarsimp simp: vs_all_heap_simps obj_at_def)
 
   apply (rule_tac B="\<lambda>rv s. valid_sched_except_blocked s
@@ -17825,7 +17821,7 @@ lemma invoke_sched_control_configure_flags_valid_sched:
         apply (wpsimp wp: sched_context_resume_cond_released_sc_tcb_at)
        apply (wpsimp wp: sched_context_resume_sc_tcb_sc_at)
       apply (clarsimp; intro conjI impI)
-          apply (clarsimp simp: op_equal schact_is_rct_def)
+          apply (clarsimp simp: op_equal)
          apply (clarsimp simp: pred_map_eq_def pred_map_def obj_at_kh_kheap_simps)
         apply (fastforce simp: sc_at_pred_n_def obj_at_def pred_tcb_at_def)
        apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
@@ -17837,10 +17833,11 @@ lemma invoke_sched_control_configure_flags_valid_sched:
     apply (rule_tac Q="valid_sched" in hoare_weaken_pre)
      apply (simp add: valid_sched_def)
      apply (wpsimp wp: reschedule_valid_sched_const[simplified valid_sched_def, simplified])
-    using valid_blocked_except_cur_thread valid_sched_def apply force
-   apply (simp add: valid_sched_def)
+    apply (clarsimp simp: valid_sched_def valid_idle_def pred_tcb_at_def obj_at_def
+                          vs_all_heap_simps runnable_eq_active
+                   elim!: valid_blockedE')
    apply (wpsimp wp: possible_switch_to_valid_sched_weak[simplified valid_sched_def, simplified])
-   apply (clarsimp split: if_split)
+   apply (clarsimp simp: valid_sched_def split: if_split)
    apply (intro conjI impI)
      apply (clarsimp simp: pred_map_simps)
     apply (frule invs_valid_idle)
@@ -17928,7 +17925,7 @@ lemma perform_invocation_valid_sched:
             apply (clarsimp simp: valid_sched_valid_sched_except_blocked valid_blockedD
                                   valid_idle_idle_thread_is_idle[OF invs_valid_idle]
                                   ct_active_imp_not_timeout)
-            apply (fastforce simp: vs_all_heap_simps
+            apply (fastforce simp: vs_all_heap_simps valid_sched_def valid_blocked_thread_def
                             elim!: current_time_bounded_strengthen invs_retract_tcb_scps)
            apply (wpsimp wp: send_signal_valid_sched)
            apply (fastforce elim!: ct_in_state_weaken current_time_bounded_strengthen)
@@ -17938,9 +17935,9 @@ lemma perform_invocation_valid_sched:
          apply (fastforce simp: tcb_at_kh_simps vs_all_heap_simps
                          elim!: current_time_bounded_strengthen )
         apply (wpsimp wp: invoke_domain_valid_sched)
-        apply (clarsimp simp: vs_all_heap_simps schact_is_rct_def)
+        apply (clarsimp simp: vs_all_heap_simps)
        apply (wpsimp wp: invoke_sched_context_valid_sched;
-              clarsimp simp: tcb_at_kh_simps vs_all_heap_simps schact_is_rct_def
+              clarsimp simp: tcb_at_kh_simps vs_all_heap_simps
                       elim!: current_time_bounded_strengthen)
       apply (wpsimp wp: invoke_sched_control_configure_flags_valid_sched)
      apply (wpsimp wp: invoke_cnode_valid_sched)
@@ -18243,7 +18240,6 @@ lemma handle_yield_valid_sched:
   apply (wpsimp wp: charge_budget_valid_sched get_refills_wp
               simp: invs_retract_tcb_scps)
   apply (intro conjI)
-     apply (clarsimp)
     apply (drule ct_not_blocked_cur_sc_not_blocked; simp)
    apply (rule_tac y=" unat MAX_PERIOD + unat MAX_PERIOD" in order_trans[rotated])
     apply (clarsimp simp: current_time_bounded_def)
@@ -18633,7 +18629,7 @@ lemma test_reschedule_not_ct_schact_is_rct[wp]:
    apply (clarsimp simp: pred_conj_def)
    apply (metis (mono_tags, lifting) hoare_assume_pre)
   apply (case_tac action; (solves \<open>wpsimp\<close>)?)
-  apply (wpsimp simp: schact_is_rct_def)
+  apply wpsimp
   apply (metis (mono_tags, lifting) pred_andE pred_conj_assoc scheduler_action.distinct(2)
                valid_pre_satisfies_post)
   done
@@ -18880,8 +18876,6 @@ lemma handle_invocation_scheduler_act_sane[wp]:
      apply (subst validE_R_def[symmetric])
      apply wpsimp+
   apply (intro conjI)
-     apply (erule schact_is_rct_sane)
-    apply (erule schact_is_rct_simple)
    apply (simp add: pred_tcb_at_def obj_at_def ct_in_state_def)
   apply (erule invs_valid_objs)
   done
@@ -18998,8 +18992,6 @@ lemma perform_invocation_first_phase_ct_not_queued:
   apply (cases i; (wpsimp wp: send_ipc_not_queued | wps)+)
 
     \<comment> \<open>Discharge preconditions for InvokeEndpoint\<close>
-    apply (intro conjI)
-     apply (erule schact_is_rct_sane)
     apply (clarsimp simp: obj_at_def is_ep_def vs_all_heap_simps)
     apply (frule RecvEP_queued_ipc_queued_thread, fastforce)
     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def vs_all_heap_simps)
@@ -19329,7 +19321,8 @@ lemma perform_invocation_first_phase_released_if_bound:
    \<lbrace>\<lambda>_ s :: 'state_ext state. released_if_bound_sc_tcb_at t s\<rbrace>"
   apply (cases i; simp, (solves \<open>wpsimp\<close>)?)
      apply (wpsimp wp: hoare_disjI2)
-     apply (wpsimp, fastforce)
+    apply wpsimp
+    apply (fastforce simp: valid_sched_def)
    apply (wpsimp wp: hoare_disjI2)
   apply (wpsimp wp: hoare_disjI2)
   done
@@ -19454,7 +19447,7 @@ lemma check_budget_ct_in_state:
 
 lemma valid_sched_ct_not_queued:
   "\<lbrakk>valid_sched s; schact_is_rct s\<rbrakk> \<Longrightarrow> ct_not_queued s"
-  by (fastforce simp: valid_sched_def ct_not_in_q_def schact_is_rct_def)
+  by (fastforce simp: valid_sched_def ct_not_in_q_def)
 
 lemma ct_not_blocked_cur_sc_not_blocked_trivial:
   "cur_sc_tcb_only_sym_bound s \<and> ct_not_blocked s \<Longrightarrow> cur_sc_not_blocked s"
@@ -19773,7 +19766,8 @@ method handle_event_valid_sched_single
          | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
                       update_time_stamp_current_time_bounded_5)+
      , fastforce elim!: valid_sched_ct_not_queued active_from_running
-                 intro: active_sc_valid_refillsE)
+                 intro: active_sc_valid_refillsE
+                  simp: valid_sched_def ct_not_in_q_def)
 
 method handle_event_valid_sched_combined
   = ((wpsimp wp: handle_invocation_valid_sched handle_recv_valid_sched
@@ -19789,7 +19783,7 @@ method handle_event_valid_sched_combined
      , subgoal_tac "ct_released s"
      , fastforce dest: valid_sched_ct_not_queued
                  elim: active_from_running
-                 simp: runnable_eq_active released_sc_tcb_at_def
+                 simp: runnable_eq_active released_sc_tcb_at_def valid_sched_def ct_not_in_q_def
                        active_sc_tcb_at_fold ct_in_state_def2[symmetric]
                 intro: active_sc_valid_refillsE)
      , fastforce intro: schact_is_rct_ct_released)
@@ -19800,7 +19794,8 @@ method handle_event_valid_sched_yield
      , (wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
                    update_time_stamp_current_time_bounded_5)+
      , fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
-                intro!: active_sc_valid_refillsE)
+                intro!: active_sc_valid_refillsE
+                  simp: valid_sched_def ct_not_in_q_def)
 
 method handle_event_valid_sched_fault
   = ((wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
@@ -19811,10 +19806,11 @@ method handle_event_valid_sched_fault
                    current_time_bounded_strengthen[where n=2 and k=5, simplified])+
      , frule active_from_running
      , clarsimp simp: valid_fault_def ct_in_state_def2[symmetric] is_timeout_fault_def
-     , strengthen schact_is_rct_sane valid_sched_ct_not_queued
-                  ct_runnable_ct_not_blocked
-     , simp
-     , (fastforce simp: ct_active_imp_not_timeout is_timeout_fault_def
+                      valid_sched_def ct_not_in_q_def
+     , (strengthen schact_is_rct_sane valid_sched_ct_not_queued
+                   ct_runnable_ct_not_blocked)?
+     , simp?
+     , (fastforce simp: ct_active_imp_not_timeout is_timeout_fault_def valid_sched_def ct_not_in_q_def
                  intro: active_sc_valid_refillsE schact_is_rct_ct_released)?)
 
 lemma handle_event_valid_sched:
@@ -19839,7 +19835,7 @@ lemma handle_event_valid_sched:
        by (case_tac syscall, simp_all add: handle_send_def handle_call_def liftE_bindE
            , (handle_event_valid_sched_single
               | handle_event_valid_sched_combined
-              | handle_event_valid_sched_yield)+) \<comment> \<open>takes 30 seconds or so\<close>
+              | handle_event_valid_sched_yield)+) \<comment> \<open>takes 2 minutes or so\<close>
 
       apply (find_goal \<open>match premises in "_ = Interrupt" \<Rightarrow> \<open>-\<close>\<close>)
       defer
@@ -19860,13 +19856,10 @@ lemma handle_event_valid_sched:
                           and current_time_bounded 5" in hoare_strengthen_post[rotated])
      apply (clarsimp simp: if_split)
      apply (intro conjI allI impI)
-            apply fastforce
-           apply (fastforce intro: invs_cur_sc_chargeableE)
-          apply (fastforce elim: ct_in_state_weaken)
-         apply fastforce
-        apply (fastforce intro: invs_cur_sc_chargeableE)
-       apply (fastforce elim: ct_in_state_weaken)
-      apply fastforce
+         apply (fastforce intro: invs_cur_sc_chargeableE)
+        apply (fastforce elim: ct_in_state_weaken)
+       apply (fastforce intro: invs_cur_sc_chargeableE)
+      apply (fastforce elim: ct_in_state_weaken)
      apply (fastforce elim!: current_time_bounded_strengthen)
     apply (wpsimp wp: update_time_stamp_current_time_bounded_5)
    apply wpsimp
@@ -20421,7 +20414,7 @@ lemma handle_event_scheduler_act_sane:
                     | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
              apply (clarsimp simp: is_schedulable_bool_def2 )
              apply (strengthen schat_is_rct_ct_active_sc)
-             apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
+             apply (clarsimp simp: ct_in_state_def2[symmetric] runnable_eq_active)
              apply (fastforce elim: active_from_running)
             apply ((wpsimp simp: handle_call_def handle_send_def
                             wp: handle_invocation_schact_sane check_budget_restart_true
@@ -20429,7 +20422,7 @@ lemma handle_event_scheduler_act_sane:
                    | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
             apply (clarsimp simp: is_schedulable_bool_def2 )
             apply (strengthen schat_is_rct_ct_active_sc)
-            apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
+            apply (clarsimp simp: ct_in_state_def2[symmetric] runnable_eq_active)
             apply (fastforce elim: active_from_running)
            apply ((wpsimp simp: handle_call_def handle_send_def
                            wp: handle_invocation_schact_sane check_budget_restart_true
@@ -20437,28 +20430,26 @@ lemma handle_event_scheduler_act_sane:
                   | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
            apply (clarsimp simp: is_schedulable_bool_def2 )
            apply (strengthen schat_is_rct_ct_active_sc)
-           apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
+           apply (clarsimp simp: ct_in_state_def2[symmetric] runnable_eq_active)
            apply (fastforce elim: active_from_running)
           apply ((wpsimp simp: handle_call_def handle_send_def
                           wp: handle_invocation_schact_sane check_budget_restart_true
                               check_budget_restart_false
                  | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
-          apply fastforce
          apply ((wpsimp simp: handle_call_def handle_send_def
                          wp: handle_invocation_schact_sane check_budget_restart_true
                              check_budget_restart_false
                 | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
-         apply fastforce
         apply (wpsimp simp: handle_call_def handle_send_def
                         wp: handle_invocation_schact_sane check_budget_restart_true
                             check_budget_restart_false
                | strengthen ct_runnable_ct_not_blocked active_from_running)+
     done
-      apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
-     apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
+      apply (wpsimp wp: check_budget_restart_if_lift)
+     apply (wpsimp wp: check_budget_restart_if_lift)
     apply (wpsimp wp: hoare_drop_imp, fastforce)
-   apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
-  apply (wpsimp, fastforce)
+   apply (wpsimp wp: check_budget_restart_if_lift)
+  apply wpsimp
   done
 
 end
@@ -23823,7 +23814,7 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_single
                               \<and> ct_active s
                               \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
                               \<and> consumed_time_bounded s"
-           in hoare_weaken_preE[rotated], simp
+           in hoare_weaken_preE[rotated], fastforce simp add: valid_sched_def
      , rule_tac B="\<lambda>_s. invs s \<and> valid_sched s \<and> schact_is_rct s \<and> ct_not_queued s
                                \<and> ct_not_in_release_q s \<and> valid_machine_time s \<and> cur_sc_active s
                                \<and> ct_active s
@@ -23843,7 +23834,7 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_single
      , drule invs_sym_refs
      , (intro conjI impI; blast?)?
      , (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
-     , (clarsimp simp: current_time_bounded_def)?)
+     , (clarsimp simp: current_time_bounded_def valid_sched_def)?)
 
 method cur_sc_in_release_q_imp_zero_consumed_syscall_combined
   = (clarsimp simp: validE_R_def
@@ -23863,6 +23854,7 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_combined
       , wpsimp wp: update_timestamp_cur_sc_in_release_q_imp_zero_consumed
                    update_time_stamp_current_time_bounded_5
       , fastforce dest: invs_cur_sc_chargeableE
+                  simp: valid_sched_def
       , clarsimp simp: current_time_bounded_2_def
       , (wpsimp wp: handle_invocation_valid_sched
                     check_budget_restart_cur_sc_in_release_q_imp_zero_consumed
@@ -23875,7 +23867,7 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_combined
                handle_invocation_current_time_bounded_5)+)
       , clarsimp cong: conj_cong
       , (intro conjI impI
-         ; (solves \<open>clarsimp simp: current_time_bounded_def schact_is_rct_def\<close>)?)
+         ; (solves \<open>clarsimp simp: current_time_bounded_def\<close>)?)
       , (rule invs_strengthen_cur_sc_tcb_are_bound; blast+)
       , clarsimp simp: is_schedulable_bool_def2
       , intro conjI impI
@@ -23905,16 +23897,17 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
     by (case_tac syscall; simp
         ; cur_sc_in_release_q_imp_zero_consumed_syscall_single?
           , cur_sc_in_release_q_imp_zero_consumed_syscall_combined?) \<comment> \<open>takes 30 seconds or so\<close>
-        fastforce+
 
       apply (wpsimp wp: check_budget_restart_if_lift
                         update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
       apply (fastforce dest: invs_cur_sc_chargeableE valid_sched_valid_release_q
-                             ct_active_not_receive_blocked_helper)
+                             ct_active_not_receive_blocked_helper
+                       simp: valid_sched_def)
      apply (wpsimp wp: check_budget_restart_if_lift
                        update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
      apply (fastforce dest: invs_cur_sc_chargeableE valid_sched_valid_release_q
-                            ct_active_not_receive_blocked_helper)
+                            ct_active_not_receive_blocked_helper
+                      simp: valid_sched_def)
 
    subgoal \<comment>\<open>handle_interrupt\<close>
     apply (clarsimp simp: validE_R_def)
@@ -23923,7 +23916,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
                              \<and> ct_active s
                              \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
                              \<and> consumed_time_bounded s"
-                   in hoare_weaken_pre[rotated], simp)
+                   in hoare_weaken_pre[rotated], fastforce simp: valid_sched_def)
      apply (rule hoare_seq_ext_skip, wpsimp simp: ct_in_state_def)
       apply (rule_tac B="\<lambda>_s. invs s \<and> valid_sched s \<and> schact_is_rct s \<and> ct_not_queued s
                               \<and> ct_not_in_release_q s \<and> valid_machine_time s \<and> cur_sc_active s
@@ -23942,19 +23935,19 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
        apply (rule invs_strengthen_cur_sc_tcb_are_bound, blast+)
       apply (intro conjI impI; blast?)
        apply (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
-        apply (erule invs_sym_refs)
-        apply (erule schact_is_rct_sane)
+       apply (erule invs_sym_refs)
       apply (rule invs_cur_sc_chargeableE; assumption?)
-     apply (rule ct_not_blocked_cur_sc_not_blocked)
-         apply (rule invs_cur_sc_chargeableE; assumption?)
-     apply (erule ct_runnable_ct_not_blocked)
+      apply (rule ct_not_blocked_cur_sc_not_blocked)
+       apply (rule invs_cur_sc_chargeableE; assumption?)
+      apply (erule ct_runnable_ct_not_blocked)
      apply (clarsimp simp: current_time_bounded_def)+
      done
 
    apply (wpsimp wp: check_budget_restart_if_lift
                      update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
    apply (fastforce dest: invs_cur_sc_chargeableE valid_sched_valid_release_q
-                          ct_active_not_receive_blocked_helper)
+                          ct_active_not_receive_blocked_helper
+                    simp: valid_sched_def)
 
   \<comment> \<open>handle_hypervisor_fault\<close>
   apply wpsimp
@@ -23964,7 +23957,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
     apply (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
     apply (erule invs_sym_refs)
    apply fastforce
-  apply fastforce
+  apply (fastforce simp: valid_sched_def)
   done
 
 lemma handle_no_fault_ct_ready_if_schedulable[wp]:
@@ -24560,7 +24553,7 @@ lemma perform_unsafe_invocation_ct_ready_if_schedulable:
    \<lbrace>\<lambda>_ s :: det_state. ct_ready_if_schedulable s\<rbrace>"
   apply (cases i; simp)
       apply wpsimp
-      apply (clarsimp simp: current_time_bounded_def)
+      apply (clarsimp simp: current_time_bounded_def valid_sched_def)
      apply wpsimp
     apply (strengthen ct_ready_if_schedulable_streng)
     apply (wp_pre, rule hoare_lift_Pf2[where f=cur_thread, rotated])
@@ -25229,9 +25222,9 @@ lemma call_kernel_valid_sched:
                       handle_event_scheduler_act_sane)
    apply (wpsimp wp: handle_event_valid_sched handle_event_scheduler_act_sane
                      handle_event_cur_sc_in_release_q_imp_zero_consumed)
-  apply (clarsimp simp: schact_is_rct_def is_schedulable_bool_def2)
-  apply (frule schat_is_rct_ct_active_sc; simp add: schact_is_rct_def)
-  apply (strengthen invs_strengthen_cur_sc_tcb_are_bound; simp add: schact_is_rct_def)
+  apply (clarsimp simp: is_schedulable_bool_def2)
+  apply (frule schat_is_rct_ct_active_sc; simp)
+  apply (strengthen invs_strengthen_cur_sc_tcb_are_bound; simp)
   apply (frule ct_in_state_weaken[where P=activatable], simp)
   apply (fastforce simp: ct_in_state_def runnable_eq_active)
   done
