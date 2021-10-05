@@ -452,7 +452,7 @@ lemma pinv_corres:
           apply (rule corres_split_deprecated [OF _ setDomain_corres])
             apply (rule corres_trivial, simp)
            apply (wp)+
-         apply ((clarsimp | fastforce)+)[3]
+         apply ((clarsimp | fastforce simp: valid_sched_def)+)[3]
        \<comment> \<open>SchedContext\<close>
        apply (rule corres_guard_imp)
          apply (rule corres_splitEE)
@@ -1201,7 +1201,7 @@ lemma hinv_corres:
                                  and ct_not_in_release_q and ct_released
                                  and current_time_bounded 2"
                         in hoare_post_imp)
-              apply (clarsimp simp: simple_from_active ct_in_state_def schact_is_rct_def
+              apply (clarsimp simp: simple_from_active ct_in_state_def
                              elim!: st_tcb_weakenE)
              apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action
                        set_thread_state_active_valid_sched set_thread_state_schact_is_rct_strong)
@@ -1238,7 +1238,7 @@ lemma hinv_corres:
    apply (clarsimp simp: ct_in_state'_def cong: conj_cong)
    apply (frule pred_tcb'_weakenE [where P=active' and P'=simple'], clarsimp)
    apply (frule(1) st_tcb_ex_cap'', fastforce)
-   apply (clarsimp simp: valid_pspace'_def schact_is_rct_def)
+   apply (clarsimp simp: valid_pspace'_def)
    apply (frule state_relation_schact, simp)
    apply (subgoal_tac "isSchedulable_bool (ksCurThread s') s'")
     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj[simplified pred_conj_def])

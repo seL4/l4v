@@ -246,7 +246,7 @@ lemma pac_corres:
     apply (wp deleteObjects_descendants[where p="makePoolParent i'"]
               deleteObjects_cte_wp_at'
               deleteObjects_null_filter[where p="makePoolParent i'"])
-   apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children schact_is_rct)
+   apply (clarsimp simp:invs_mdb max_free_index_def invs_untyped_children)
    apply (subgoal_tac "detype_locale x y sa" for x y)
     prefer 2
     apply (simp add:detype_locale_def)
@@ -266,7 +266,7 @@ lemma pac_corres:
    apply (frule_tac ptr = "(aa,ba)" in detype_invariants [rotated 3])
         apply fastforce
        apply simp
-       apply (clarsimp simp: schact_is_rct)
+       apply clarsimp
       apply (simp add: cte_wp_at_caps_of_state)
      apply (simp add: is_cap_simps)
     apply (simp add:empty_descendants_range_in descendants_range_def2)

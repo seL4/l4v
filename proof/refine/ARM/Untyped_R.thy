@@ -4657,7 +4657,11 @@ lemma inv_untyped_corres':
     let ?ui' = "Invocations_H.untyped_invocation.Retype
                   (cte_map cref) reset ptr_base ptr ao' us (map cte_map slots) dev"
 
-    assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
+    assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s"
+                 "valid_sched_2 True True True (cur_time s) (cur_domain s) (cur_thread s)
+                                (idle_thread s) (ready_queues s) (release_queue s) resume_cur_thread
+                                (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s)
+                                (sc_refill_cfgs_of s) (sc_replies_of s)"
                  "schact_is_rct s" "valid_machine_time s"
     and   invs': "invs' s'" "ct_active' s'"
     and      sr: "(s, s') \<in> state_relation"
@@ -5046,7 +5050,7 @@ lemma inv_untyped_corres':
       apply (clarsimp simp only: pred_conj_def invs ui if_apply_def2)
       apply (strengthen vui)
       apply (cut_tac vui invs invs')
-      apply (clarsimp simp: cte_wp_at_caps_of_state schact_is_rct_def)
+      apply (clarsimp simp: cte_wp_at_caps_of_state)
      apply (cut_tac vui' invs')
      apply (clarsimp simp: ui cte_wp_at_ctes_of if_apply_def2 ui')
      done

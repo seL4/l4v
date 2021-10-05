@@ -416,12 +416,7 @@ crunches sc_and_timer
   (wp: crunch_wps)
 
 lemmas ssa_schact_is_rct_obvious[wp] = set_scheduler_action_obvious
-                                         [where a=resume_cur_thread,
-                                          simplified schact_is_rct_def[symmetric]]
-
-lemma schact_is_rct_simps[simp]:
-  "schact_is_rct_2 resume_cur_thread"
-  by (simp add: schact_is_rct_def)
+                                         [where a=resume_cur_thread]
 
 lemma schedule_sched_act_rct[wp]:
   "\<lbrace>\<top>\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
