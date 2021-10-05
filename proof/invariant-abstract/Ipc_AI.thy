@@ -56,18 +56,17 @@ lemma lsfco_cte_at:
 declare do_machine_op_tcb[wp]
 
 lemma load_ct_inv[wp]:
-  "\<lbrace>P\<rbrace> load_cap_transfer buf \<lbrace>\<lambda>rv. P\<rbrace>"
+  "load_cap_transfer buf \<lbrace>P\<rbrace>"
   apply (simp add: load_cap_transfer_def)
   apply (wp dmo_inv mapM_wp' loadWord_inv)
   done
 
-lemma get_recv_slot_inv[wp]:
-  "\<lbrace> P \<rbrace> get_receive_slots receiver buf \<lbrace>\<lambda>rv. P \<rbrace>"
-  apply (case_tac buf)
-   apply simp
-  apply (simp add: split_def whenE_def)
-  apply (wp | simp)+
-  done
+crunches get_receive_slots
+  for tainv[wp]: "ignore_ta P"
+
+interpretation get_receive_slots_tainv:
+  touched_addresses_inv "get_receive_slots oref orefo"
+  by unfold_locales wp
 
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
@@ -1242,7 +1241,11 @@ lemma transfer_cap_typ_at[wp]:
     \<lbrace>\<lambda>s::'state_ext state. P (typ_at T p s)\<rbrace>
       transfer_caps mi caps ep receiver recv_buf
     \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (wpsimp wp: cap_insert_typ_at hoare_drop_imps simp: transfer_caps_def)
+  apply (wpsimp simp:transfer_caps_def)
+  apply (rule get_receive_slots_tainv.agnostic_preserved)
+   apply (clarsimp simp: ta_agnostic_def)
+  apply simp
+  done
 
 lemma transfer_cap_tcb[wp]:
   "\<And>mi caps ep receiver recv_buf.
@@ -1511,20 +1514,27 @@ lemma copy_mrs_ep_at[wp]:
 crunch cte_wp_at[wp]: copy_mrs "cte_wp_at P p"
   (wp: crunch_wps)
 
+crunches lookup_extra_caps
+  for tainv[wp]: "ignore_ta P"
+  (wp: crunch_wps mapME_wp' simp: crunch_simps)
 
-crunch inv[wp]: lookup_extra_caps "P"
-  (wp: crunch_wps mapME_wp' simp: crunch_simps ignore: mapME)
+interpretation lookup_extra_caps_tainv:
+  touched_addresses_inv "lookup_extra_caps x y z"
+  by unfold_locales wp
 
 lemma lookup_extra_caps_srcs[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps thread buf info \<lbrace>transfer_caps_srcs\<rbrace>,-"
   apply (simp add: lookup_extra_caps_def lookup_cap_and_slot_def
                    split_def lookup_slot_for_thread_def)
-  apply (wp mapME_set[where R=valid_objs] get_cap_wp resolve_address_bits_real_cte_at
-             | simp add: cte_wp_at_caps_of_state
-             | wp (once) hoare_drop_imps
-             | clarsimp simp: objs_valid_tcb_ctable)+
+  apply (wp mapME_set[where R=valid_objs] get_cap_wp)
+       apply (simp add: cte_wp_at_caps_of_state)
+       apply (wp hoare_drop_imps resolve_address_bits_real_cte_at)
+      apply (wpsimp simp: objs_valid_tcb_ctable)
+     apply wpsimp
+       apply (rule resolve_address_bits_tainv.agnostic_preservedE_R)
+       apply (clarsimp simp: ta_agnostic_def)
+      apply wpsimp+
   done
-
 
 lemma mapME_length:
   "\<lbrace>\<lambda>s. P (length xs)\<rbrace> mapME m xs \<lbrace>\<lambda>ys s. P (length ys)\<rbrace>, -"
@@ -1535,9 +1545,13 @@ lemma mapME_length:
    apply (wp | simp | assumption)+
   done
 
+sublocale touched_addresses_inv \<subseteq> typ_at:touched_addresses_P_inv _ "\<lambda>s. P (typ_at T p s)"
+  by unfold_locales (simp add:ta_agnostic_def)
+
 context Ipc_AI begin
 
-crunch typ_at[wp]: do_normal_transfer "\<lambda>s::'state_ext state. P (typ_at T p s)"
+crunches do_normal_transfer
+  for typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
 
 lemma do_normal_tcb[wp]:
   "\<And>t sender send_buf ep badge can_grant receiver recv_buf.
@@ -1612,6 +1626,42 @@ lemma set_mrs_valid_globals[wp]:
   by (wp set_mrs_thread_set_dmo thread_set_global_refs_triv
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
 
+sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ pspace_aligned
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> distinct:touched_addresses_P_inv _ pspace_distinct
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> vmdb:touched_addresses_P_inv _ valid_mdb
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> cte_wp_at:touched_addresses_P_inv _ "cte_wp_at P p"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> cap_table_at:touched_addresses_P_inv _ "cap_table_at a b"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> ifunsafe:touched_addresses_P_inv _ "if_unsafe_then_cap"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> iflive:touched_addresses_P_inv _ "if_live_then_nonz_cap"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> state_refs_of:touched_addresses_P_inv _ "\<lambda>s. P (state_refs_of s)"
+  by unfold_locales (clarsimp simp: ta_agnostic_def state_refs_of_def)
+
+sublocale touched_addresses_inv \<subseteq> ct:touched_addresses_P_inv _ cur_tcb
+  by unfold_locales (clarsimp simp: ta_agnostic_def cur_tcb_def)
+
+sublocale touched_addresses_inv \<subseteq> zombies:touched_addresses_P_inv _ zombies_final
+  by unfold_locales (clarsimp simp: ta_agnostic_def zombies_final_def is_final_cap'_def2)
+
+sublocale touched_addresses_inv \<subseteq> it:touched_addresses_P_inv _ "\<lambda>s. P (idle_thread s)"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> valid_globals:touched_addresses_P_inv _ valid_global_refs
+  by unfold_locales (clarsimp simp: ta_agnostic_def)
+
 context Ipc_AI begin
 
 crunch aligned[wp]: do_ipc_transfer "pspace_aligned :: 'state_ext state \<Rightarrow> bool"
@@ -1620,11 +1670,10 @@ crunch aligned[wp]: do_ipc_transfer "pspace_aligned :: 'state_ext state \<Righta
 crunch "distinct"[wp]: do_ipc_transfer "pspace_distinct :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
 
-crunch vmdb[wp]: set_message_info "valid_mdb :: 'state_ext state \<Rightarrow> bool"
-
-crunch vmdb[wp]: do_ipc_transfer "valid_mdb :: 'state_ext state \<Rightarrow> bool"
+crunches set_message_info, do_normal_transfer, do_ipc_transfer
+  for vmdb[wp]: "valid_mdb :: 'state_ext state \<Rightarrow> bool"
   (ignore: as_user simp: crunch_simps ball_conj_distrib
-       wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_mdb)
+       wp: crunch_wps hoare_vcg_const_Ball_lift)
 
 crunch ifunsafe[wp]: do_ipc_transfer "if_unsafe_then_cap :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM ignore: transfer_caps_loop)

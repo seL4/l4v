@@ -191,7 +191,7 @@ proof (induct slot rule: resolve_address_bits'.induct)
 qed
 
 interpretation resolve_address_bits_tainv:
-  touched_addresses_inv "resolve_address_bits slot"
+  touched_addresses_invE "resolve_address_bits slot"
   by (unfold_locales, rule resolve_address_bits_tainv)
 
 crunches lookup_cap
