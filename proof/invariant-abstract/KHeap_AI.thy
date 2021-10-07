@@ -1081,6 +1081,11 @@ locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
+(* any monad that is `tainv` will of course hold the above properties too *)
+sublocale touched_addresses_inv \<subseteq> non_aobj_non_cap_non_mem_op m
+  by (unfold_locales; rule agnostic_preserved; clarsimp simp: ta_agnostic_def)
+
+
 lemma shows
   sts_caps_of_state[wp]:
     "set_thread_state t st \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
