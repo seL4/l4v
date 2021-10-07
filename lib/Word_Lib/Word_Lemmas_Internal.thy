@@ -400,7 +400,7 @@ lemma le_smaller_mask:
 lemma of_nat_le:
   "\<lbrakk>a \<le> unat (max_word :: 'a :: len word); b \<le> unat (max_word :: 'a :: len word); a \<le> b\<rbrakk>
    \<Longrightarrow> (of_nat :: nat \<Rightarrow> 'a :: len word) a \<le> of_nat b"
-  by (simp add: le_unat_uoi word_of_nat_le)
+  by (metis le_unat_uoi word_of_nat_le)
 
 lemma unat_minus_plus_one:
   "unat (buffer :: 'a :: len word) < unat (max_word :: 'a :: len word)
@@ -425,9 +425,7 @@ lemma unat_add_lem'':
 lemma unat_mult_lem':
   "unat (x :: 'a :: len word) * unat y \<le> unat (max_word :: 'a :: len word)
    \<Longrightarrow> unat (x * y) = unat x * unat y"
-  apply (rule unat_mult_lem[THEN iffD1])
-  apply (clarsimp simp: max_word_def)
-  by (meson le_def le_trans unat_lt2p)
+  by (metis le_unat_uoi word_arith_nat_mult)
 
 (* The strange phrasing and ordering of assumptions is to support using this as a
    conditional simp rule when y is a concrete value. For example, as a simp rule,

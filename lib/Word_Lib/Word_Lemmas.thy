@@ -1916,7 +1916,7 @@ lemma no_plus_overflow_unat_size2:
 
 lemma power_two_max_word_fold:
   "2 ^ LENGTH('a::len) = Suc (unat (max_word :: 'a word))"
-  by (clarsimp simp: max_word_minus unat_minus_one_word)
+  by (clarsimp simp: unat_minus_one_word)
 
 lemma word_sub_move:
   "\<lbrakk>w + x \<le> z; x \<le> x + w\<rbrakk> \<Longrightarrow> w \<le> z - (x::'a::len word)"
@@ -1925,20 +1925,10 @@ lemma word_sub_move:
 
 lemma unat_sum_boundE:
   "x \<le> x + (y::'a::len word) \<Longrightarrow> unat x + unat y \<le> unat (max_word::'a::len word)"
-  apply (clarsimp simp: no_olen_add_nat max_word_def)
-  apply (subst word_of_int_nat, simp)
-  apply (subst unat_of_nat, simp)
-  apply (subst nat_diff_distrib; simp)
-  apply (subst nat_power_eq; simp)
-  done
+  by (metis unat_plus_simple word_less_eq_iff_unsigned word_n1_ge)
 
 lemma unat_sum_bound_equiv:
   "(unat x + unat y \<le> unat (max_word::'a::len word)) = (x \<le> x + (y::'a::len word))"
-  apply (clarsimp simp: no_olen_add_nat max_word_def)
-  apply (subst word_of_int_nat, simp)
-  apply (subst unat_of_nat, simp)
-  apply (subst nat_diff_distrib; simp)
-  apply (subst nat_power_eq; simp)
-  by (simp add: nat_le_Suc_less)
+  by (metis le_unat_uoi unat_plus_simple unat_sum_boundE word_arith_nat_add)
 
 end

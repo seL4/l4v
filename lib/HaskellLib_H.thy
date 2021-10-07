@@ -13,9 +13,9 @@ theory HaskellLib_H
 imports
   Lib
   NatBitwise
-  More_Numeral_Type
-  NonDetMonadVCG
-  OptionMonadWP
+  "More_Numeral_Type"
+  "Monad_WP/WhileLoopRules"
+  "Monad_WP/OptionMonadWP"
 begin
 
 abbreviation (input) "flip \<equiv> swp"
@@ -324,7 +324,9 @@ lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id
 definition
   infix_apply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'b \<Rightarrow> 'c" ("_ `~_~` _" [81, 100, 80] 80) where
   infix_apply_def[simp]:
- "a `~f~` b \<equiv> f a b"
+ "infix_apply a f b \<equiv> f a b"
+
+term "return $ a `~b~` c d"
 
 definition
   zip3 :: "'a list \<Rightarrow> 'b list \<Rightarrow> 'c list \<Rightarrow> ('a \<times> 'b \<times> 'c) list" where
