@@ -1809,7 +1809,7 @@ lemma descendants_of_eq':
   This turned out to be the least-annoying way to deal with
   the subgoal @{term
     "ps' |> reply_of' |> replyNext_of = replyNexts_of s'"
-  } which shows up in the proof of `cap_update_corres`.
+  } which shows up in the proof of `updateCap_corres`.
 
   `ps'` here comes from `ksPSpace s''`, where `s''` is the new state
   after `setObject`. Unforutnately, @{thm setObject_cte_replies_of'} is

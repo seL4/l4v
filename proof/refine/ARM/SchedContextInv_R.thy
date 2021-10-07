@@ -176,11 +176,11 @@ lemma decodeSchedcontext_Bind_corres:
    apply (rule corres_splitEE_skip; (solves wpsimp)?)
     apply (corressimp simp: sc_relation_def)
    apply (rule corres_splitEE''[where r'="(=)"]; (solves wpsimp)?)
-    apply (corressimp corres: get_ntfn_corres
+    apply (corressimp corres: getNotification_corres
                         simp: get_sk_obj_ref_def ntfn_relation_def valid_cap_def valid_cap'_def
                           wp: hoare_vcg_all_lift)
    apply (rule corres_splitEE_skip; (solves wpsimp)?)
-    apply (corressimp corres: get_ntfn_corres
+    apply (corressimp corres: getNotification_corres
                         simp: get_sk_obj_ref_def sc_relation_def)
    apply (clarsimp simp: returnOk_def)
   apply (clarsimp simp: bindE_assoc get_tcb_obj_ref_def)
@@ -189,14 +189,14 @@ lemma decodeSchedcontext_Bind_corres:
   apply (rule corres_splitEE''[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def)
       apply (clarsimp simp: valid_cap_def)
      apply (clarsimp simp: valid_cap'_def)
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
   apply (rule corres_splitEE_skip; (solves \<open>wpsimp simp: valid_cap'_def obj_at'_def\<close>)?)
-   apply (corressimp corres: get_ntfn_corres
+   apply (corressimp corres: getNotification_corres
                        simp: get_sk_obj_ref_def sc_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
@@ -247,7 +247,7 @@ lemma decodeSchedContext_UnbindObject_corres:
      apply (corressimp simp: sc_relation_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
   apply (rule corres_splitEE'')
-     apply (corressimp corres: gct_corres)
+     apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
   apply corressimp
@@ -270,7 +270,7 @@ lemma decodeSchedContext_YieldTo_corres:
      apply (corressimp simp: sc_relation_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
   apply (rule corres_splitEE'')
-     apply (corressimp corres: gct_corres)
+     apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
   apply (rule corres_splitEE_skip; (solves wpsimp)?)
@@ -279,7 +279,7 @@ lemma decodeSchedContext_YieldTo_corres:
   apply (rule corres_splitEE''[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def)
       apply (fastforce dest: invs_valid_objs valid_objs_ko_at
                        simp: valid_obj_def valid_sched_context_def)
@@ -290,7 +290,7 @@ lemma decodeSchedContext_YieldTo_corres:
   apply (rule corres_splitEE''[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def)
       apply fastforce
      apply fastforce
@@ -300,7 +300,7 @@ lemma decodeSchedContext_YieldTo_corres:
   apply (rule corres_splitEE''[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
-       apply (rule threadget_corres)
+       apply (rule threadGet_corres)
        apply (clarsimp simp: tcb_relation_def)
       apply fastforce
      apply fastforce
@@ -333,7 +333,7 @@ lemma decode_sc_inv_corres:
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
   apply (rule corres_splitEE'')
-     apply (corressimp corres: gct_corres)
+     apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
   apply (rule corres_splitEE_skip; corressimp)

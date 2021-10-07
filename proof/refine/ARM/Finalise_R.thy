@@ -4490,12 +4490,12 @@ lemma unbindMaybeNotification_corres:
        apply (rule corres_return_trivial)
       apply (rename_tac tcbPtr)
       apply (simp add: bind_assoc)
-      apply (rule corres_split_deprecated[OF sbn_corres])
+      apply (rule corres_split_deprecated[OF setBoundNotification_corres])
         apply (simp add: update_sk_obj_ref_def)
         apply (rule_tac P="ko_at (Notification ntfnA) ntfnptr" in corres_symb_exec_l)
            apply (rename_tac ntfnA')
            apply (rule_tac F="ntfnA = ntfnA'" in corres_gen_asm)
-           apply (rule set_ntfn_corres)
+           apply (rule setNotification_corres)
            apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
           apply (wpsimp simp: obj_at_def is_ntfn wp: get_simple_ko_wp getNotification_wp)+
    apply (frule invs_valid_objs)
@@ -4556,7 +4556,7 @@ lemma sched_context_maybe_unbind_ntfn_corres:
    apply (simp add: invs_psp_aligned invs_distinct)
   apply add_sym_refs
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_ntfn_corres])
+    apply (rule corres_split_deprecated[OF _ getNotification_corres])
       apply (rename_tac ntfnA ntfnH)
       apply (rule corres_option_split)
         apply (simp add: ntfn_relation_def)
@@ -4570,8 +4570,8 @@ lemma sched_context_maybe_unbind_ntfn_corres:
                 in corres_symb_exec_r'[THEN corres_guard_imp])
             apply (rule_tac F="scNtfn rv = Some ntfn_ptr" in corres_gen_asm2)
             apply clarsimp
-            apply (rule corres_split_deprecated[OF _ get_ntfn_corres])
-              apply (rule corres_split_deprecated[OF _ set_ntfn_corres])
+            apply (rule corres_split_deprecated[OF _ getNotification_corres])
+              apply (rule corres_split_deprecated[OF _ setNotification_corres])
                  apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
                           in update_sc_no_reply_stack_update_ko_at'_corres)
                     apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
@@ -4609,7 +4609,7 @@ lemma replyClear_corres:
           (replyClear rptr tp)"
   apply (clarsimp simp: replyClear_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ gts_corres])
+    apply (rule corres_split_deprecated[OF _ getThreadState_corres])
       apply (rename_tac st st')
       apply (rule_tac R="is_blocked_on_receive st" in corres_cases_lhs;
              clarsimp simp: thread_state_relation_def is_blocked_thread_state_defs)
@@ -4736,7 +4736,7 @@ lemma schedContextUnbindTCB_corres:
        apply (rule corres_assert_assume_r)
        apply (prop_tac "scTCB sc' = sc_tcb sc"; clarsimp)
         apply (clarsimp simp: sc_relation_def)
-       apply (rule corres_split[OF gct_corres])
+       apply (rule corres_split[OF getCurThread_corres])
          apply (rule corres_split[OF corres_when], clarsimp simp: sc_relation_def)
             apply (rule rescheduleRequired_corres)
            apply (rule corres_split[OF tcbSchedDequeue_corres])
@@ -4964,7 +4964,7 @@ lemma finaliseCap_corres:
    apply (subst can_fast_finalise_finaliseCap,
           clarsimp simp: can_fast_finalise_def split: cap.splits)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF fast_finalise_corres[where sl=sl]]; assumption?)
+     apply (rule corres_split[OF fast_finaliseCap_corres[where sl=sl]]; assumption?)
         apply simp
        apply (simp only: K_bind_def)
        apply (rule corres_returnTT)

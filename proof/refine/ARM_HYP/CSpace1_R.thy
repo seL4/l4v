@@ -7086,7 +7086,7 @@ lemma capSwapForDelete_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
       apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
-        apply (rule cap_swap_corres, rule refl, rule refl, clarsimp+)
+        apply (rule cteSwap_corres, rule refl, rule refl, clarsimp+)
        apply (wp get_cap_wp getCTE_wp')+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (drule (1) caps_of_state_valid_cap)+

@@ -515,7 +515,7 @@ lemma threadGet_corres:
   done
 
 lemmas get_tcb_obj_ref_corres
-  = threadget_corres[where 'a="obj_ref option", folded get_tcb_obj_ref_def]
+  = threadGet_corres[where 'a="obj_ref option", folded get_tcb_obj_ref_def]
 
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: threadGet_def getObject_tcb_inv | wp)+
@@ -1643,7 +1643,7 @@ lemma asUser_corres':
     apply (rule corres_guard_imp)
       apply (simp add: threadGet_getObject)
       apply (rule corres_bind_return)
-      apply (rule corres_split_deprecated[OF _ assert_get_tcb_corres])
+      apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
         apply (simp add: tcb_relation_def arch_tcb_relation_def)
        apply wpsimp+
     done
@@ -2150,7 +2150,7 @@ proof -
                apply (rule corres_split_noop_rhs2)
                    apply (rule corres_split_noop_rhs2)
                      apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def)
-                    apply (fastforce intro: addToBitmap_corres_noop)
+                    apply (fastforce intro: addToBitmap_noop_corres)
                    apply wp+
                  apply (simp add: tcb_sched_enqueue_def split del: if_split)
                  apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
@@ -2415,9 +2415,9 @@ lemma rescheduleRequired_corres_weak:
   apply (rule corres_split'[OF _ _ gets_sp, rotated 2])
     apply (clarsimp simp: getSchedulerAction_def)
     apply (rule gets_sp)
-   apply (corressimp corres: get_sa_corres)
+   apply (corressimp corres: getSchedulerAction_corres)
   apply (rule corres_split'[where r'=dc, rotated]; (solves \<open>wpsimp\<close>)?)
-   apply (corressimp corres: set_sa_corres)
+   apply (corressimp corres: setSchedulerAction_corres)
   apply (case_tac action; clarsimp?)
   apply (rename_tac tp)
   apply (rule corres_split'[OF _ _ is_schedulable_sp isSchedulable_inv, rotated 2])
@@ -2646,7 +2646,7 @@ lemma setObject_tcbState_update_corres:
           (ko_at' tcb' t)
           (set_object t (TCB (tcb\<lparr>tcb_state := ts\<rparr>)))
           (setObject t (tcbState_update (\<lambda>_. ts') tcb'))"
-  apply (rule tcb_update_corres')
+  apply (rule setObject_update_TCB_corres')
      apply (simp add: tcb_relation_def)
     apply (rule ball_tcb_cap_casesI; clarsimp)
    apply (rule ball_tcb_cte_casesI; clarsimp)
@@ -2703,11 +2703,11 @@ lemma setThreadState_corres:
   apply (simp add: set_thread_state_def setThreadState_def threadSet_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc)
-    apply (rule corres_split_deprecated[OF _ assert_get_tcb_corres])
+    apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
       apply (rule corres_split_deprecated[OF _ setObject_tcbState_update_corres])
           apply (simp add: set_thread_state_act_def scheduleTCB_def)
-          apply (rule corres_split_deprecated[OF _ gct_corres])
-            apply (rule corres_split_deprecated[OF _ get_sa_corres])
+          apply (rule corres_split_deprecated[OF _ getCurThread_corres])
+            apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
               apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
                 apply (rule corres_split_deprecated corres_when)+
                  apply (rename_tac sched_act sched_act' dont_care dont_care')

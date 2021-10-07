@@ -1673,7 +1673,7 @@ lemma setSchedContext_no_stack_update_corres:
   apply (drule (2) sc_replies_relation_prevs_list)
   by fastforce
 
-lemma get_ntfn_corres:
+lemma getNotification_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
      (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)

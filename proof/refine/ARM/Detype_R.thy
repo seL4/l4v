@@ -872,7 +872,7 @@ lemma detype_sc_replies_relation:
                  split: if_splits Structures_A.kernel_object.splits)
   done
 
-lemma detype_corres:
+lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 2 \<Longrightarrow>
    corres dc
       (\<lambda>s. einvs s

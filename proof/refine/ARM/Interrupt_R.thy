@@ -472,7 +472,7 @@ lemma setIRQTrigger_corres:
             | simp add: dc_def)+
   done
 
-lemma arch_invoke_irq_control_corres:
+lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
           (invs' and arch_irq_control_inv_valid' ivk')

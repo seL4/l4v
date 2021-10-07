@@ -360,7 +360,7 @@ lemma setDomain_corres:
   apply (rule corres_gen_asm2)
   apply (simp add: set_domain_def setDomain_def thread_set_domain_def)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split[OF gct_corres])
+    apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split[OF tcbSchedDequeue_corres])
         apply (rule corres_split[OF threadset_corresT])
              apply (clarsimp simp: tcb_relation_def)
@@ -1144,7 +1144,7 @@ crunches replyFromKernel
   and valid_release_queue'[wp]: valid_release_queue'
   (simp: crunch_simps wp: crunch_wps)
 
-(* Note: the preconditions on the abstract side are based on those of pinv_corres. *)
+(* Note: the preconditions on the abstract side are based on those of performInvocation_corres. *)
 lemma handleInvocation_corres:
   "call \<longrightarrow> blocking \<Longrightarrow>
    cptr = to_bl cptr' \<Longrightarrow>
@@ -1164,14 +1164,14 @@ lemma handleInvocation_corres:
                apply (rule corres_when[OF _ handleFault_corres]; simp)
               apply (simp only: split_def)
               apply (rule corres_split_deprecated [OF _ getMRs_corres])
-                 apply (rule decode_invocation_corres; simp)
+                 apply (rule decodeInvocation_corres; simp)
                   apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                  apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                 apply simp
                apply wp
               apply (drule sym[OF conjunct1], simp, wp)
              apply (clarsimp simp: when_def)
-             apply (rule rfk_corres)
+             apply (rule replyFromKernel_corres)
             apply (rule corres_split [OF setThreadState_corres], simp)
               apply (rule corres_splitEE [OF _ performInvocation_corres])
                   apply simp
@@ -1322,13 +1322,13 @@ lemma getCapReg_corres:
           (get_cap_reg cap_register) (getCapReg ARM_H.capRegister)"
   apply (simp add: get_cap_reg_def getCapReg_def cap_register_def capRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF gct_corres], simp)
+    apply (rule corres_split[OF getCurThread_corres], simp)
       apply (rule corres_rel_imp)
-       apply (rule user_getreg_corres)
+       apply (rule asUser_getRegister_corres)
       apply (wpsimp simp: ct_in_state_def ct_in_state'_def)+
   done
 
-lemma hs_corres:
+lemma handleSend_corres:
   "corres (dc \<oplus> dc)
           (einvs and valid_machine_time and schact_is_rct and ct_active and
            ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
@@ -1592,7 +1592,7 @@ lemma handleCall_corres:
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
          handle_call handleCall"
-  apply (simp add: handle_call_def handleCall_def liftE_bindE hinv_corres)
+  apply (simp add: handle_call_def handleCall_def liftE_bindE handleInvocation_corres)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getCapReg_corres])
       apply (simp, rule handleInvocation_corres; simp)

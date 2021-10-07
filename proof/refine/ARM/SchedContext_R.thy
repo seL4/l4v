@@ -494,8 +494,8 @@ lemma setConsumed_corres:
   apply (simp add: set_consumed_def setConsumed_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ schedContextUpdateConsumed_corres])
-      apply (rule corres_split_deprecated [OF _ gct_corres], simp)
-        apply (rule corres_split_deprecated [OF set_mi_corres set_mrs_corres])
+      apply (rule corres_split_deprecated [OF _ getCurThread_corres], simp)
+        apply (rule corres_split_deprecated [OF setMessageInfo_corres setMRs_corres])
   by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def)+
 
 lemma get_tcb_yield_to_corres:
@@ -505,7 +505,7 @@ lemma get_tcb_yield_to_corres:
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: get_tcb_obj_ref_def getBoundNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule threadget_corres)
+    apply (rule threadGet_corres)
     apply (simp add: tcb_relation_def)+
   done
 
@@ -528,7 +528,7 @@ lemma complete_yield_to_corres:
     apply (rule corres_split_deprecated [OF _ get_tcb_yield_to_corres], simp)
       apply (rule corres_when2[OF refl])
       apply (clarsimp, wpfix)
-      apply (rule corres_split_deprecated[OF _ lipcb_corres], simp)
+      apply (rule corres_split_deprecated[OF _ lookupIPCBuffer_corres], simp)
         apply (rule corres_split_deprecated[OF _ setConsumed_corres])
           apply (clarsimp simp: schedContextCancelYieldTo_def)
           apply (rule corres_symb_exec_r'[where Q'=\<top>])

@@ -619,7 +619,7 @@ lemma entry_corres:
          apply (clarsimp simp: tcb_cte_cases_def)
         apply (rule corres_split_deprecated [OF _ kernel_corres])
           apply (rule corres_split_eqr [OF _ getCurThread_corres])
-            apply (rule threadget_corres)
+            apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
