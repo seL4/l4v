@@ -989,10 +989,18 @@ lemma sts_valid_arch_inv:
 
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
+crunches decode_asid_control_invocation
+  for inv[wp]: "P"
+  (wp: crunch_wps simp: crunch_simps)
 
+crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
+  for inv[wp]: "P"
+  (wp: crunch_wps simp: crunch_simps)
+
+(*
 crunch inv [wp]: arch_decode_invocation "P"
   (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
-
+*)
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
 
