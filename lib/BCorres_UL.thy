@@ -267,6 +267,34 @@ lemma gets_the_bcorres_underlying[wp]:
   "(\<And>s. f' (t s) = f s) \<Longrightarrow> bcorres_underlying t (gets_the f) (gets_the f')"
   by (wpsimp simp: gets_the_def)
 
+lemma maybeM_bcorres_underlying[wp]:
+  "(\<And>p. opt = Some p \<Longrightarrow> bcorres_underlying t (f p) (f' p)) \<Longrightarrow> bcorres_underlying t (maybeM f opt) (maybeM f' opt)"
+  by (wpsimp simp: maybeM_def)
+
+lemma whileLoop_results_bcorres_helper':
+  "\<lbrakk>(Some (x, s), Some (x', s')) \<in> whileLoop_results C B;
+    \<And>r s. C r s = C' r (t s);
+    \<And>r s r' s'. (r', s') \<in> fst (B r s) \<longleftrightarrow> (r', t s') \<in> fst (B' r (t s))\<rbrakk>
+       \<Longrightarrow> (Some (x, t s), Some (x', t s')) \<in> whileLoop_results C' B'"
+  supply whileLoop_results.intros[intro]
+  apply (induct "Some (x, s)" "Some (x', s')" arbitrary: x s x' s' rule: whileLoop_results.induct)
+  by auto
+
+lemma whileLoop_results_bcorres_helper:
+  "\<lbrakk>(Some (x, s), Some (x', s')) \<in> whileLoop_results C B;
+    \<And>r s. C r s = C' r (t s); \<And>r. bcorres_underlying t (B r) (B' r)\<rbrakk>
+       \<Longrightarrow> (Some (x, t s), Some (x', t s')) \<in> whileLoop_results C' B'"
+  supply whileLoop_results.intros[intro]
+  apply (induct "Some (x, s)" "Some (x', s')" arbitrary: x s x' s' rule: whileLoop_results.induct)
+   apply clarsimp
+  by (fastforce simp: bcorres_underlying_def s_bcorres_underlying_def)
+
+lemma whileLoop_bcorres_underlying[wp]:
+  "\<lbrakk>\<And>r s. C r s = C' r (t s); \<And>r. bcorres_underlying t (B r) (B' r)\<rbrakk> \<Longrightarrow>
+       bcorres_underlying t (whileLoop C B x) (whileLoop C' B' x)"
+  by (clarsimp simp: bcorres_underlying_def whileLoop_def s_bcorres_underlying_def
+                     whileLoop_results_bcorres_helper)
+
 ML \<open>
 structure CrunchBCorresInstance : CrunchInstance =
 struct
