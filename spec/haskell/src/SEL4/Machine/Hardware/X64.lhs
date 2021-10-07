@@ -76,17 +76,36 @@ than add an additional pointer type we just give a different translation functio
 
 > type PAddr = Platform.PAddr
 
-> ptrFromPAddr :: PAddr -> PPtr a
-> ptrFromPAddr = Platform.ptrFromPAddr
-
-> addrFromPPtr :: PPtr a -> PAddr
-> addrFromPPtr = Platform.addrFromPPtr
-
-> addrFromKPPtr :: PPtr a -> PAddr
-> addrFromKPPtr = Platform.addrFromKPPtr
-
 > fromPAddr :: PAddr -> Word
 > fromPAddr = Platform.fromPAddr
+
+> paddrBase :: PAddr
+> paddrBase = Platform.paddrBase
+
+> pptrBase :: VPtr
+> pptrBase = Platform.pptrBase
+
+> pptrTop :: VPtr
+> pptrTop = Platform.pptrTop
+
+> kernelELFPAddrBase :: PAddr
+> kernelELFPAddrBase = Platform.kernelELFPAddrBase
+
+> kernelELFBase :: VPtr
+> kernelELFBase = Platform.kernelELFBase
+
+> pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
+
+> ptrFromPAddr :: PAddr -> PPtr a
+> ptrFromPAddr addr = PPtr $ fromPAddr addr + pptrBaseOffset
+
+> addrFromPPtr :: PPtr a -> PAddr
+> addrFromPPtr addr = toPAddr $ fromPPtr addr - pptrBaseOffset
+
+> kernelELFBaseOffset = (fromVPtr kernelELFBase) - (fromPAddr kernelELFPAddrBase)
+
+> addrFromKPPtr :: PPtr a -> PAddr
+> addrFromKPPtr (PPtr addr) = toPAddr $ addr - kernelELFBaseOffset
 
 \subsection{Hardware Access}
 
@@ -556,15 +575,6 @@ Page entries -- any of PTEs, PDEs or PDPTEs.
 
 > data VMAttributes = VMAttributes {
 >     x64WriteThrough, x64PAT, x64CacheDisabled :: Bool }
-
-> pptrBase :: VPtr
-> pptrBase = VPtr Platform.pptrBase
-
-> kpptrBase :: VPtr
-> kpptrBase = VPtr Platform.kpptrBase
-
-> pptrUserTop :: VPtr
-> pptrUserTop = Platform.pptrUserTop
 
 > -- This firstValidIODomain and numIODomainBits calculated as part of the boot code.
 > -- Right now, for simplicity, we assume it is constant

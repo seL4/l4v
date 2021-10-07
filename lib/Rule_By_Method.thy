@@ -222,7 +222,7 @@ fun pos_closure (scan : 'a context_parser) :
 val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') => {vars = b, prop = b'})
 
 fun tac m ctxt =
-  Method.NO_CONTEXT_TACTIC ctxt
+  NO_CONTEXT_TACTIC ctxt
     (Method.evaluate_runtime m ctxt []);
 
 (* Declare as a mixed attribute to avoid any partial evaluation *)

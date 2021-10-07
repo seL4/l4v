@@ -9,7 +9,7 @@ chapter \<open>ARM-specific definitions for abstract datatype for the abstract s
 theory ArchADT_AI
 imports
   "Lib.Simulation"
-  "../Invariants_AI"
+  Invariants_AI
 begin
 context Arch begin global_naming ARM
 
@@ -264,9 +264,9 @@ lemma get_pt_entry_None_iff_get_pte_fail:
                       pt_ref")
    apply (simp (no_asm_simp) add: fail_def return_def)
    apply clarsimp
-   apply (simp add: mask_add_aligned pt_bits_def pageBits_def)
-   apply (cut_tac and_mask_shiftl_comm[of 8 2 "vptr >> 12"])
-    apply (simp_all add: word_size mask_def AND_twice)
+  apply (simp add: mask_add_aligned pt_bits_def pageBits_def)
+  apply (cut_tac and_mask_shiftl_comm[of 8 2 "vptr >> 12"])
+   apply (simp_all add: word_size mask_def)
   done
 
 lemma get_pt_entry_Some_eq_get_pte:
@@ -284,17 +284,15 @@ lemma get_pt_entry_Some_eq_get_pte:
                       pt_ref")
    apply (simp (no_asm_simp) add: fail_def return_def)
    apply (clarsimp simp: mask_add_aligned pt_bits_def pageBits_def
-              word_size
-              and_mask_shiftr_comm and_mask_shiftl_comm shiftr_shiftr AND_twice)
-   apply (cut_tac shiftl_shiftr_id[of 2 "(vptr >> 12)"])
+                         word_size and_mask_shiftr_comm and_mask_shiftl_comm shiftr_shiftr)
+   apply (cut_tac shiftl_shiftr_id[of 2 "vptr >> 12"])
      apply (simp add: word_bits_def)+
    apply (cut_tac shiftr_less_t2n'[of vptr 12 30])
      apply (simp add: word_bits_def)
     apply (simp add: mask_eq_iff)
     apply (cut_tac lt2p_lem[of 32 vptr])
      apply (cut_tac word_bits_len_of, simp+)
-  apply (simp add: mask_add_aligned pt_bits_def pageBits_def
-                   word_size and_mask_shiftl_comm  AND_twice)
+  apply (simp add: mask_add_aligned pt_bits_def pageBits_def word_size and_mask_shiftl_comm)
   done
 
 definition
@@ -326,31 +324,10 @@ where
    | Some (SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,24, attrs, rights)
    | _ \<Rightarrow> None"
 
-
-(* FIXME: Lemma can be found in Untyped_R;
-   proof mostly copied from ArchAcc_R.pd_shifting *)
 lemma pd_shifting':
-   "is_aligned pd pd_bits \<Longrightarrow>
-    (pd + (vptr >> 20 << 2) && ~~ mask pd_bits) = (pd::word32)"
-  apply (simp add: pd_bits_def pageBits_def)
-  apply (rule word_eqI[rule_format])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth)
-   apply (erule_tac x=na in allE)
-   apply (simp add: linorder_not_less)
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth
-                        word_ops_nth_size pd_bits_def linorder_not_less)
-  apply (rule iffI)
-   apply clarsimp
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply clarsimp
-  apply (erule_tac x=n in allE)
-  apply simp
-  done
+ "is_aligned pd pd_bits \<Longrightarrow> (pd + (vptr >> 20 << 2) && ~~ mask pd_bits) = (pd::word32)"
+  unfolding pd_bits_def pageBits_def
+  by (rule pd_shifting_gen; simp add: word_size)
 
 lemma lookup_pt_slot_fail:
   "is_aligned pd pd_bits \<Longrightarrow>

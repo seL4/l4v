@@ -6,9 +6,9 @@
 
 theory Finalise_AI
 imports
-  "./$L4V_ARCH/ArchIpcCancel_AI"
-  "./$L4V_ARCH/ArchInterruptAcc_AI"
-  "./$L4V_ARCH/ArchRetype_AI"
+  ArchIpcCancel_AI
+  ArchInterruptAcc_AI
+  ArchRetype_AI
 begin
 
 definition
@@ -913,13 +913,6 @@ lemma pred_tcb_at_def2:
 
 (* sseefried: 'st_tcb_at_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
 lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
-
-lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> C) \<and> C" by blast
-(* FIXME: move *)
-lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> P \<and> B)"
-  by simp
-(* FIXME: move *)
-lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
 lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 

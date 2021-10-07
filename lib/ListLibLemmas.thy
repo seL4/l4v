@@ -1075,4 +1075,8 @@ lemma hd_middle_last:
   "length l > 1 \<Longrightarrow> l = hd l # (butlast (tl l) @ [last l])"
   by (case_tac l; simp)
 
+lemma map2_append1:
+  "map2 f (as @ bs) cs = map2 f as (take (length as) cs) @ map2 f bs (drop (length as) cs)"
+  by (simp add: map_def zip_append1)
+
 end

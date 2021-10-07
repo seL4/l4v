@@ -475,7 +475,7 @@ lemma is_default_cap_cap_transform [simp]:
   "well_formed_cap cap \<Longrightarrow> is_default_cap (cap_transform t cap) = is_default_cap cap"
   apply (clarsimp simp: is_default_cap_def well_formed_cap_def cap_type_def default_cap_def
                         cap_transform_def cap_has_object_def)
-  apply (cases cap, simp_all add: cap_object_simps update_cap_object_def cnode_cap_size_def)
+  apply (cases cap, simp_all add: update_cap_object_def cnode_cap_size_def)
   done
 
 lemma default_cap_cap_transform:

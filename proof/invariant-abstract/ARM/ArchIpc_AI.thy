@@ -5,45 +5,12 @@
  *)
 
 theory ArchIpc_AI
-imports "../Ipc_AI"
+imports Ipc_AI
 begin
 
 context Arch begin global_naming ARM
 
 named_theorems Ipc_AI_assms
-
-lemma update_cap_data_closedform:
-  "update_cap_data pres w cap =
-   (case cap of
-     cap.EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.EndpointCap r (w && mask 28) rights) else cap.NullCap
-   | cap.NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.NotificationCap r (w && mask 28) rights) else cap.NullCap
-   | cap.CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> 3) && mask 5) + bits
-       then cap.NullCap
-       else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
-   | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
-   | cap.DomainCap \<Rightarrow> cap.DomainCap
-   | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
-   | cap.NullCap \<Rightarrow> cap.NullCap
-   | cap.ReplyCap t rights \<Rightarrow> cap.ReplyCap t rights
-   | cap.SchedContextCap s n \<Rightarrow> cap.SchedContextCap s n
-   | cap.SchedControlCap \<Rightarrow> cap.SchedControlCap
-   | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
-   | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
-   | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
-   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
-  apply (cases cap,
-         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
-                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
-                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
-                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                        arch_update_cap_data_def
-                  cong: if_cong)
-  apply (auto simp: word_bits_def)
-  done
 
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
@@ -231,7 +198,7 @@ qed
 
 lemma is_zombie_update_cap_data[simp, Ipc_AI_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
-  by (simp add: update_cap_data_closedform is_zombie_def
+  by (simp add: update_cap_data_closedform is_zombie_def arch_update_cap_data_def
          split: cap.splits)
 
 lemma valid_msg_length_strengthen [Ipc_AI_assms]:
@@ -239,6 +206,7 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: word32)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
+  including no_take_bit
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 
@@ -440,10 +408,10 @@ lemmas make_arch_fault_msg_valid_replies = make_arch_fault_msg_inv
 end
 
 global_interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming ARM
 

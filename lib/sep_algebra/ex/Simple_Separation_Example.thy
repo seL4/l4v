@@ -15,8 +15,8 @@ chapter "Example from HOL/Hoare/Separation"
 theory Simple_Separation_Example
 imports
   "HOL-Hoare.Hoare_Logic_Abort"
-  "../Sep_Heap_Instance"
-  "../Sep_Tactics"
+  Sep_Heap_Instance
+  Sep_Tactics
 begin
 
 declare [[syntax_ambiguity_warning = false]]
@@ -139,7 +139,7 @@ lemma "VARS H p q r
     apply fastforce
    apply clarsimp
    apply (case_tac ps, simp)
-   apply (rename_tac p ps')
+   apply (rename_tac p q ps qs p' ps')
    apply (clarsimp simp: sep_conj_exists sep_conj_ac)
    apply (subst points_to, sep_solve)
    apply (rule_tac x = "ps'" in exI)

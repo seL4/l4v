@@ -24,17 +24,11 @@ instance Bounded IRQ where
     minBound = IRQ 0
     maxBound = IRQ 31
 
-kernelBase :: VPtr
-kernelBase = VPtr 0xf0000000
+physBase :: PAddr
+physBase = PAddr 0x80000000
 
-physBase = 0x80000000
-physMappingOffset = 0xf0000000 - physBase
-
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (PAddr addr) = PPtr $ addr + physMappingOffset
-
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr ptr) = PAddr $ ptr - physMappingOffset
+pptrBase :: VPtr
+pptrBase = VPtr 0xf0000000
 
 pageColourBits :: Int
 pageColourBits = 0 -- qemu has no cache

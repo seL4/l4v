@@ -9,7 +9,7 @@ X64-specific VSpace invariants
 *)
 
 theory ArchVSpace_AI
-imports "../VSpacePre_AI"
+imports VSpacePre_AI
 begin
 
 context Arch begin global_naming X64
@@ -165,10 +165,6 @@ lemma dmo_vspace_at_asid [wp]:
   apply wp
   apply (simp add: vspace_at_asid_def)
   done
-
-crunch inv: find_vspace_for_asid "P"
-  (simp: assertE_def crunch_simps wp: crunch_wps)
-
 
 lemma find_vspace_for_asid_vspace_at_asid [wp]:
   "\<lbrace>\<top>\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>pd. vspace_at_asid asid pd\<rbrace>, -"
@@ -382,10 +378,6 @@ lemma valid_global_objs_arch_update:
     \<and> x64_global_pts (f (arch_state s)) = x64_global_pts (arch_state s)
      \<Longrightarrow> valid_global_objs (arch_state_update f s) = valid_global_objs s"
   by (simp add: valid_global_objs_def second_level_tables_def)
-
-
-crunch pred_tcb_at [wp]: find_vspace_for_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
-  (simp: crunch_simps)
 
 
 lemma find_vspace_for_asid_assert_wp:
@@ -622,44 +614,6 @@ lemma lookup_pdpt_slot_is_aligned:
   apply (rule is_aligned_shiftl)
   apply (simp add: bit_simps)
   done
-
-(* FIXME x64: need pd, pt versions of this *)
-lemma lookup_pd_slot_is_aligned:
-  "\<lbrace>(\<exists>\<rhd> pm) and K (vmsz_aligned vptr sz) and K (is_aligned pm pml4_bits)
-    and valid_arch_state and valid_vspace_objs and equal_kernel_mappings
-    and pspace_aligned and valid_global_objs\<rbrace>
-     lookup_pd_slot pm vptr
-   \<lbrace>\<lambda>rv s. is_aligned rv word_size_bits\<rbrace>,-"
-  oops (*
-  apply (simp add: lookup_pd_slot_def)
-  apply (rule hoare_pre)
-   apply (wp get_pdpte_wp hoare_vcg_all_lift_R | wpc | simp)+
-   apply (wp (once) hoare_drop_imps)
-   apply (wp hoare_vcg_all_lift_R hoare_vcg_ex_lift_R)
-  apply (clarsimp simp: get_pd_index_def bit_simps)
-  apply (subgoal_tac "is_aligned (ptrFromPAddr x) word_size_bits")
-  apply (clarsimp simp: lookup_pml4_slot_eq)
-  apply (frule(2) valid_arch_objsD[rotated])
-  apply simp
-  apply (rule is_aligned_add)
-   apply (case_tac "ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits) \<in> kernel_mapping_slots")
-    apply (frule kernel_mapping_slots_empty_pml4eI)
-     apply (simp add: obj_at_def)+
-    apply (erule_tac x="ptrFromPAddr x" in allE)
-    apply (simp add: pml4e_ref_def)
-    apply (erule is_aligned_weaken[OF is_aligned_global_pdpt])
-      apply ((simp add: invs_psp_aligned invs_arch_objs invs_arch_state
-                        pdpt_bits_def pageBits_def bit_simps
-                 split: vmpage_size.split)+)[3]
-   apply (drule_tac x="ucast (lookup_pml4_slot pm vptr && mask pml4_bits >> word_size_bits)" in bspec, simp)
-   apply (clarsimp simp: obj_at_def a_type_def)
-   apply (simp split: Structures_A.kernel_object.split_asm if_split_asm
-                     arch_kernel_obj.split_asm)
-   apply (erule is_aligned_weaken[OF pspace_alignedD], simp)
-   apply (simp add: obj_bits_def bit_simps  split: vmpage_size.splits)
-  apply (rule is_aligned_shiftl)
-  apply (simp add: bit_simps)
-  done *)
 
 (* FIXME: remove *)
 lemmas page_directory_at_aligned_pd_bits = is_aligned_pd
@@ -2858,9 +2812,6 @@ lemma update_aobj_zombies[wp]:
 crunch is_final_cap' [wp]: store_pde "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pd)
 
-crunch is_final_cap' [wp]: store_pte "is_final_cap' cap"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_pt)
-
 crunch is_final_cap' [wp]: store_pdpte "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pdpt)
 
@@ -3327,8 +3278,6 @@ lemma vs_lookup_invs_ref_is_unique: "\<lbrakk> (ref \<rhd> p) s; (ref' \<rhd> p)
   apply (erule (1) ref_is_unique)
   apply (erule reachable_pd_not_global)
   by (auto elim: invs_valid_kernel_mappings intro!: valid_objs_caps)
-
-crunch global_refs: store_pde "\<lambda>s. P (global_refs s)"
 
 crunch invs[wp]: pte_check_if_mapped, pde_check_if_mapped "invs"
 

@@ -14,8 +14,7 @@ imports
   VSpace_H
   FaultHandlerDecls_H
   SchedContext_H
-  "./$L4V_ARCH/ArchTCB_H"
-begin
+  ArchTCB_H
 
 context begin interpretation Arch .
 requalify_consts

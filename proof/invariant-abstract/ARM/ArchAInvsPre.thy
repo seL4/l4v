@@ -5,7 +5,7 @@
  *)
 
 theory ArchAInvsPre
-imports "../AInvsPre"
+imports AInvsPre
 begin
 
 context Arch begin
@@ -100,7 +100,7 @@ lemma get_pd_of_thread_reachable:
 
 lemma is_aligned_ptrFromPAddrD:
 "\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
-  apply (clarsimp simp: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
+  apply (clarsimp simp: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
   apply (erule is_aligned_addD2)
   apply (rule is_aligned_weaken[where x = 24])
    apply (simp add: is_aligned_def)
@@ -149,8 +149,7 @@ lemma some_get_page_info_umapsD:
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def )[1]
      apply (simp add: get_pt_info_def get_pt_entry_def)
      apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
-     apply (clarsimp simp: obj_at_def
-      split: pte.splits,intro exI conjI,simp_all)[1]
+     apply (clarsimp simp: obj_at_def split: pte.splits,intro exI conjI,simp_all)[1]
       apply (frule obj_bits_data_at)
       apply (clarsimp simp: pspace_aligned_def data_at_def)
       apply (drule_tac x = "(ptrFromPAddr b)" in  bspec )
@@ -159,21 +158,19 @@ lemma some_get_page_info_umapsD:
      apply (frule (1) data_at_aligned)
      apply (intro exI conjI, simp_all add: pageBits_def is_aligned_ptrFromPAddrD)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
-   apply clarsimp
    apply (frule obj_bits_data_at)
    apply (intro exI conjI, simp_all add: pageBits_def)[1]
    apply (clarsimp simp: pspace_aligned_def data_at_def)
     apply (drule_tac x = "(ptrFromPAddr b)" in  bspec)
     apply (fastforce simp: obj_at_def)
    apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-  apply clarsimp
   apply (frule obj_bits_data_at)
   apply (intro exI conjI, simp_all add: pageBits_def)[1]
   apply (clarsimp simp: pspace_aligned_def data_at_def)
    apply (drule_tac x = "(ptrFromPAddr b)" in  bspec)
    apply (fastforce simp: obj_at_def)
   apply (clarsimp dest!: is_aligned_ptrFromPAddrD)
-  done (*FIXME: ugly proof by Xin,Gao. needs general lemmas *)
+  done
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -188,10 +185,10 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-lemma is_aligned_physMappingOffset:
-"is_aligned physMappingOffset (pageBitsForSize sz)"
-  by (case_tac sz, simp_all add: physMappingOffset_def
-                   kernelBase_addr_def physBase_def is_aligned_def)[1]
+lemma is_aligned_pptrBaseOffset:
+"is_aligned pptrBaseOffset (pageBitsForSize sz)"
+  by (case_tac sz, simp_all add: pptrBaseOffset_def
+                   pptrBase_def physBase_def is_aligned_def)[1]
 
 global_naming Arch
 named_theorems AInvsPre_asms
@@ -230,7 +227,7 @@ lemma (* ptable_rights_imp_frame *)[AInvsPre_asms]:
   apply (rule_tac x=sz in exI)
   apply (drule_tac x = sz in spec)
   apply (subst add.assoc[symmetric])
-  apply (frule is_aligned_add_helper[OF aligned_add_aligned[OF _ is_aligned_physMappingOffset]])
+  apply (frule is_aligned_add_helper[OF aligned_add_aligned[OF _ is_aligned_pptrBaseOffset]])
     apply (rule le_refl)
    apply (rule_tac w = x in and_mask_less')
     apply (case_tac sz, simp_all add: word_bits_conv)[1]
@@ -248,5 +245,5 @@ requalify_facts
   ARM.user_mem_dom_cong
   ARM.device_mem_dom_cong
   ARM.device_frame_in_device_region
-  ARM.is_aligned_physMappingOffset
+  ARM.is_aligned_pptrBaseOffset
 end

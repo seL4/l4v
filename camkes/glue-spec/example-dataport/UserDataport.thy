@@ -5,7 +5,7 @@
  *)
 (*<*)
 theory UserDataport
-imports "../UserStubs" GenDataportBase
+imports "UserStubs" GenDataportBase
 begin
 
 (* Stub to expose existing static UserStubs.thy. This is to avoid having to

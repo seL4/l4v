@@ -5,7 +5,7 @@
  *)
 
 theory KHeap_AI
-imports "./$L4V_ARCH/ArchKHeap_AI"
+imports ArchKHeap_AI
 begin
 
 context begin interpretation Arch .
@@ -1876,13 +1876,6 @@ lemma set_ntfn_minor_invs:
                   dest!: obj_at_state_refs_ofD)
   done
 *)
-lemma dmo_aligned[wp]:
-  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pspace_aligned_def)
-  done
-
 
 lemma do_machine_op_result[wp]:
   "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow>
@@ -2657,5 +2650,12 @@ lemma update_sched_context_no_fail[wp]:
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def)
   done
+  by (wpsimp wp: valid_idle_lift)
+
+lemma dmo_ct_in_state:
+  "do_machine_op f \<lbrace>ct_in_state P\<rbrace>"
+  apply (simp add: ct_in_state_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+  by wp+
 
 end

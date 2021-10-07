@@ -4,12 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* License: BSD, terms see file ./LICENSE *)
-
+(* FIXME: rename this theory, not about 32 any more *)
 theory Vanilla32
-imports "./$L4V_ARCH/Word_Mem_Encoding" "Word_Lib.Word_Lib" CTypes
+imports Word_Mem_Encoding CTypes
 begin
-
 
 
 overloading typ_info_word \<equiv> typ_info_t begin
@@ -294,25 +292,25 @@ lemma align_td_ptr [simp]: "align_td (typ_info_t TYPE('a::c_type ptr)) = addr_al
 lemma ptr_add_word32_signed [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 4 * of_int x"
-  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_word32 [simp]:
   fixes a :: "32 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 4 * x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) simp
 
 lemma ptr_add_word64_signed [simp]:
   fixes a :: "64 word ptr"
   shows "ptr_val (a +\<^sub>p x) = ptr_val a + 8 * of_int x"
-  by (cases a) (simp add: CTypesDefs.ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_word64 [simp]:
   fixes a :: "64 word ptr"
   shows "ptr_val (a +\<^sub>p uint x) = ptr_val a + 8 * x"
-  by (cases a) (simp add: ptr_add_def scast_id)
+  by (cases a) (simp add: ptr_add_def)
 
 lemma ptr_add_0_id[simp]:"x +\<^sub>p 0 = x"
-  by (simp add:CTypesDefs.ptr_add_def)
+  by (simp add: ptr_add_def)
 
 lemma from_bytes_ptr_to_bytes_ptr:
   "from_bytes (to_bytes (v::addr_bitsize word) bs) = (Ptr v :: 'a::c_type ptr)"
@@ -342,27 +340,36 @@ lemma word_typ_name [simp]:
   "typ_name (typ_info_t TYPE('a::len8 word)) = ''word'' @ nat_to_bin_string (len_of TYPE('a))"
   by simp
 
+lemma nat_to_bin_string_word_sizes [simp]:
+  "nat_to_bin_string  8 = ''00010''"
+  "nat_to_bin_string 16 = ''000010''"
+  "nat_to_bin_string 32 = ''0000010''"
+  "nat_to_bin_string 64 = ''00000010''"
+  by (simp_all add: nat_to_bin_string.simps)
+
 lemma typ_name_words [simp]:
    "typ_name (typ_uinfo_t TYPE(8 word))  = ''word00010''"
    "typ_name (typ_uinfo_t TYPE(16 word)) = ''word000010''"
    "typ_name (typ_uinfo_t TYPE(32 word)) = ''word0000010''"
    "typ_name (typ_uinfo_t TYPE(64 word)) = ''word00000010''"
+   (* these do not fire in a simple simp, because typ_info_word takes precedence (innermost term): *)
    "typ_name (typ_info_t  TYPE(8 word))  = ''word00010''"
    "typ_name (typ_info_t  TYPE(16 word)) = ''word000010''"
    "typ_name (typ_info_t  TYPE(32 word)) = ''word0000010''"
    "typ_name (typ_info_t  TYPE(64 word)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def nat_to_bin_string.simps)
+  by (auto simp: typ_uinfo_t_def)
 
 lemma typ_name_swords [simp]:
    "typ_name (typ_uinfo_t TYPE(8 sword))  = ''word00010''"
    "typ_name (typ_uinfo_t TYPE(16 sword)) = ''word000010''"
    "typ_name (typ_uinfo_t TYPE(32 sword)) = ''word0000010''"
    "typ_name (typ_uinfo_t TYPE(64 sword)) = ''word00000010''"
+   (* these do not fire in a simple simp, because typ_info_word takes precedence (innermost term): *)
    "typ_name (typ_info_t  TYPE(8 sword))  = ''word00010''"
    "typ_name (typ_info_t  TYPE(16 sword)) = ''word000010''"
    "typ_name (typ_info_t  TYPE(32 sword)) = ''word0000010''"
    "typ_name (typ_info_t  TYPE(64 sword)) = ''word00000010''"
-  by (auto simp: typ_uinfo_t_def nat_to_bin_string.simps)
+  by (auto simp: typ_uinfo_t_def)
 
 lemma ptr_arith[simp]:
   "(x +\<^sub>p a = y +\<^sub>p a) = ((x::('a::c_type) ptr) = (y::'a ptr))"

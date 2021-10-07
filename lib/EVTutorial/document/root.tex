@@ -1,0 +1,44 @@
+%
+% Copyright 2020, The University of Melbourne (ABN 84 002 705 224)
+%
+% SPDX-License-Identifier: CC-BY-SA-4.0
+%
+
+\documentclass[11pt,a4paper]{article}
+\usepackage{isabelle,isabellesym}
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+% urls in roman style, theory text in math-similar italics
+\urlstyle{rm}
+\isabellestyle{it}
+
+
+\begin{document}
+
+\title{EquivValid Tutorial\thanks{\copyright~The University of Melbourne (ABN 84 002 705 224); licensed under Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)}}
+% Remove footnote mark for copyright notice.
+%   https://tex.stackexchange.com/a/14866
+\renewcommand\footnotemark{}
+\author{Robert Sison}
+\maketitle
+
+\tableofcontents
+
+% sane default for proof documents
+\parindent 0pt\parskip 0.5ex
+
+% generated text of all theories
+\input{session}
+
+% optional bibliography
+\bibliographystyle{alpha}
+\bibliography{root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

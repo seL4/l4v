@@ -9,7 +9,7 @@
 *)
 
 theory ArchRetype_AI
-imports "../Retype_AI"
+imports Retype_AI
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -188,14 +188,6 @@ crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_
 
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
-
-
-(* FIXME: move to VSpace_R *) (* ARMHYP remove *)
-lemma vs_refs_add_one'':
-  "p \<in> {} \<Longrightarrow>
-   vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
-   vs_refs (ArchObj (PageDirectory pd))"
- by (auto simp: vs_refs_def graph_of_def split: if_split_asm)
 
 
 lemma glob_vs_refs_add_one':
@@ -659,11 +651,9 @@ lemma vs_lookup_pages':
 lemma hyp_refs_eq:
   "ARM_HYP.state_hyp_refs_of s' = ARM_HYP.state_hyp_refs_of s"
   unfolding s'_def ps_def
-  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
-                    simp: orthr
-                   split: option.splits)
-  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
-                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
+  apply (rule ext)
+  apply (clarsimp simp: state_hyp_refs_of_def orthr split: option.splits)
+  apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
                                  default_arch_tcb_def)
   apply (rename_tac ao)
   apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
@@ -1160,8 +1150,11 @@ lemma invs_irq_state_independent:
       swp_def valid_irq_states_def split: option.split)
   done
 
-crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
-  (wp: crunch_wps ignore_del: cleanByVA_PoU storeWord clearMemory)
+crunches cleanByVA, cleanCacheRange_PoC, dsb, cleanCacheRange_PoC, cleanL2Range, cleanByVA_PoU,
+  storeWord, clearMemory
+  for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
+  (wp: crunch_wps
+   ignore_del: cleanByVA_PoU storeWord clearMemory cleanL2Range cleanCacheRange_PoC dsb cleanByVA)
 
 crunch underlying_mem_0[wp]: clearMemory
     "\<lambda>s. underlying_memory s p = 0"
@@ -1206,24 +1199,13 @@ lemma valid_arch_mdb_detype:
          (\<lambda>p. if fst p \<in> untyped_range cap then None else caps_of_state s p)"
   by auto
 
-end
-
-lemmas clearMemory_invs[wp] = ARM_HYP.clearMemory_invs
-
-lemmas invs_irq_state_independent[intro!, simp]
-    = ARM_HYP.invs_irq_state_independent
-
-lemmas init_arch_objects_invs_from_restricted
-    = ARM_HYP.init_arch_objects_invs_from_restricted
-
-lemmas caps_region_kernel_window_imp
-    = ARM_HYP.caps_region_kernel_window_imp
-
 lemmas init_arch_objects_wps
-    = ARM_HYP.init_arch_objects_cte_wp_at
-      ARM_HYP.init_arch_objects_valid_cap
-      ARM_HYP.init_arch_objects_cap_table
-      ARM_HYP.init_arch_objects_excap
-      ARM_HYP.init_arch_objects_st_tcb_at
+    = init_arch_objects_cte_wp_at
+      init_arch_objects_valid_cap
+      init_arch_objects_cap_table
+      init_arch_objects_excap
+      init_arch_objects_st_tcb_at
+
+end
 
 end

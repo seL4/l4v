@@ -121,7 +121,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i)
@@ -149,7 +149,7 @@ lemma pac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated)
        prefer 2
-       apply (erule detype_corres)
+       apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
@@ -172,7 +172,7 @@ lemma pac_corres:
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
                apply (rule corres_split_deprecated)
                   prefer 2
-                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
@@ -410,7 +410,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def parity_mask_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -518,7 +518,7 @@ lemma flush_type_map:
                         ARM_HYP_H.isPageFlushLabel_def ARM_HYP_H.isPDFlushLabel_def
                  split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
-lemma resolve_vaddr_corres:
+lemma resolveVAddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
   corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
@@ -550,7 +550,7 @@ lemma resolve_vaddr_corres:
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
   done
 
-lemma dec_arch_inv_page_flush_corres:
+lemma decodeARMPageFlush_corres:
   "ARM_HYP_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
@@ -812,7 +812,7 @@ lemma get_vcpu_LR_corres[corres]:
   "corres (r \<oplus> (\<lambda>vcpu lr. vgic_lr (vcpu_vgic vcpu) = lr)) (vcpu_at v) (vcpu_at' v)
              (liftE (get_vcpu v)) (liftE (liftM (vgicLR \<circ> vcpuVGIC) (getObject v)))"
   apply simp
-  apply (rule corres_rel_imp, rule get_vcpu_corres)
+  apply (rule corres_rel_imp, rule getObject_vcpu_corres)
   apply (rename_tac vcpu', case_tac vcpu')
   apply (clarsimp simp: vcpu_relation_def vgic_map_def)
   done
@@ -822,7 +822,7 @@ lemma vgi_mask[simp]:
   "vgicIRQActive = vgic_irq_active"
   by (auto simp: vgicIRQMask_def vgic_irq_mask_def vgic_irq_active_def vgicIRQActive_def)
 
-lemma dec_vcpu_inv_corres:
+lemma decodeARMVCPUInvocation_corres:
   notes if_split [split del]
   shows
   "\<lbrakk>acap_relation arch_cap arch_cap'; list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -892,7 +892,7 @@ lemma corres_splitEE':
 lemmas vmsz_aligned_imp_aligned
     = vmsz_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN is_aligned_weaken]
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp] [[goals_limit = 1]]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -1030,13 +1030,13 @@ shows
             apply (rule corres_splitEE)
                prefer 2
                apply (fold ser_def)
-               apply (rule ensure_no_children_corres, rule refl)
+               apply (rule ensureNoChildren_corres, rule refl)
               apply (rule corres_splitEE)
                  prefer 2
-                 apply (erule lsfc_corres, rule refl)
+                 apply (erule lookupSlotForCNodeOp_corres, rule refl)
                 apply (rule corres_splitEE)
                    prefer 2
-                   apply (rule ensure_empty_corres)
+                   apply (rule ensureEmptySlot_corres)
                    apply clarsimp
                   apply (rule corres_returnOk[where P="\<top>"])
                   apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
@@ -1082,21 +1082,21 @@ shows
                              \<or> (\<exists>asid' vaddr'. map_data = Some (asid', vaddr') \<and> (asid',vaddr') \<noteq> (asid,vaddr))"
                    in corres_symmetric_bool_cases[where Q=\<top> and Q'=\<top>, OF refl])
            apply (erule disjE
-                  ; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM_HYP.kernelBase_def
+                  ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM_HYP.pptrBase_def
                             split: option.splits)
           apply clarsimp
           apply (rule corres_splitEE'[where r'=dc and P=\<top> and P'=\<top>])
              apply (case_tac map_data
-                    ; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM_HYP.kernelBase_def
+                    ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM_HYP.pptrBase_def
                                      corres_returnOkTT)
             \<comment> \<open>pd=undefined as vspace_at_asid not used in find_pd_for_asid_corres and avoid unresolved schematics\<close>
             apply (rule corres_splitEE'[
                           OF corres_lookup_error[OF find_pd_for_asid_corres[where pd=undefined, OF refl]]])
               apply (rule whenE_throwError_corres; simp)
-              apply (rule corres_splitEE'[where r'=dc, OF check_vp_corres])
-                apply (rule corres_splitEE'[OF create_mapping_entries_corres]
+              apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
+                apply (rule corres_splitEE'[OF createMappingEntries_corres]
                        ; simp add: mask_vmrights_corres vm_attributes_corres)
-                  apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)
+                  apply (rule corres_splitEE'[OF ensureSafeMapping_corres], assumption)
                     apply (rule corres_returnOkTT)
                     \<comment> \<open>program split done, now prove resulting preconditions and Hoare triples\<close>
                     apply (simp add: archinv_relation_def page_invocation_map_def)
@@ -1126,7 +1126,7 @@ shows
      apply (cases "ARM_HYP_H.isPageFlushLabel (invocation_type (mi_label mi))")
       apply (clarsimp simp: ARM_HYP_H.isPageFlushLabel_def split del: if_split)
       apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: if_split)
-         apply (rule dec_arch_inv_page_flush_corres,
+         apply (rule decodeARMPageFlush_corres,
                 clarsimp simp: ARM_HYP_H.isPageFlushLabel_def)+
      apply (clarsimp simp: ARM_HYP_H.isPageFlushLabel_def split del: if_split)
      apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
@@ -1143,7 +1143,7 @@ shows
      apply (simp split: cap.split arch_cap.split option.split,
             intro conjI allI impI, simp_all)[1]
      apply (rule whenE_throwError_corres_initial, simp)
-      apply (simp add: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
+      apply (simp add: kernel_base_def ARM_HYP.pptrBase_def pptrBase_def)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE)
           prefer 2
@@ -1179,7 +1179,7 @@ shows
       apply (rule corres_symb_exec_r_conj)
          apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                   in corres_gen_asm2)
-         apply (rule corres_split_deprecated[OF _ final_cap_corres[where ptr=slot]])
+         apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
            apply (drule mp)
             apply (clarsimp simp: isCap_simps final_matters'_def)
            apply (rule whenE_throwError_corres)
@@ -1210,7 +1210,7 @@ shows
       apply (rule whenE_throwError_corres, simp)
        apply clarsimp
       apply (rule whenE_throwError_corres, simp)
-       apply (clarsimp simp: kernel_base_def ARM_HYP.kernelBase_def kernelBase_def)
+       apply (clarsimp simp: kernel_base_def ARM_HYP.pptrBase_def pptrBase_def)
       apply (rule case_option_corresE)
        apply (rule corres_trivial)
        apply clarsimp
@@ -1225,7 +1225,7 @@ shows
         apply (rule corres_split_deprecated[OF _ _ resolve_vaddr_valid_mapping_size])
           prefer 2
           apply clarsimp
-          apply (rule resolve_vaddr_corres[THEN corres_gen_asm])
+          apply (rule resolveVAddr_corres[THEN corres_gen_asm])
            apply simp
           apply (clarsimp simp: not_le)
          apply (case_tac rva)
@@ -1254,7 +1254,7 @@ shows
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                    split: option.splits)
    apply clarsimp
-  apply (simp, rule corres_guard_imp[OF dec_vcpu_inv_corres]; simp)
+  apply (simp, rule corres_guard_imp[OF decodeARMVCPUInvocation_corres]; simp)
   done
 
 
@@ -1266,26 +1266,26 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: get_vcpu_corres set_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres wp: get_vcpu_wp)
   apply clarsimp
   done
 
 lemma [wp]:"no_fail \<top> getSCTLR"
   by (clarsimp simp: getSCTLR_def)
 
-lemma invoke_vcpu_read_register_corres:
+lemma invokeVCPUReadReg_corres:
   "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')
                  (invoke_vcpu_read_register v r)
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: get_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
 
 
-lemma invoke_vcpu_write_register_corres:
+lemma invokeVCPUWriteReg_corres:
   "corres (=) (vcpu_at vcpu) (vcpu_at' vcpu and no_0_obj')
         (do y \<leftarrow> invoke_vcpu_write_register vcpu r v;
                  return []
@@ -1294,19 +1294,19 @@ lemma invoke_vcpu_write_register_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
+  apply (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
 
-lemma archThreadSet_corres_vcpu_Some[corres]:
+lemma archThreadSet_VCPU_Some_corres[corres]:
   "corres dc (tcb_at t) (tcb_at' t)
     (arch_thread_set (tcb_vcpu_update (\<lambda>_. Some v)) t) (archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t)"
   apply (rule archThreadSet_corres)
   apply (simp add: arch_tcb_relation_def)
   done
 
-lemma associate_vcpu_tcb_corres:
+lemma associateVCPUTCB_corres:
   "corres (=) (invs and vcpu_at v and tcb_at t)
                (invs' and vcpu_at' v and tcb_at' t)
                (do y \<leftarrow> associate_vcpu_tcb v t;
@@ -1315,7 +1315,7 @@ lemma associate_vcpu_tcb_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: get_vcpu_corres set_vcpu_corres
+  apply (corressimp search: getObject_vcpu_corres setObject_VCPU_corres
                        wp: get_vcpu_wp getVCPU_wp
                      simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
@@ -1352,7 +1352,7 @@ lemma associate_vcpu_tcb_corres:
   apply (simp add: valid_vcpu'_def typ_at_tcb')
   done
 
-lemma invoke_vcpu_ack_vppi_corres:
+lemma invokeVCPUAckVPPI_corres:
   "corres (=) (vcpu_at vcpu) (vcpu_at' vcpu)
         (do y \<leftarrow> invoke_vcpu_ack_vppi vcpu vppi;
                  return []
@@ -1360,13 +1360,13 @@ lemma invoke_vcpu_ack_vppi_corres:
         (invokeVCPUAckVPPI vcpu vppi)"
   unfolding invokeVCPUAckVPPI_def invoke_vcpu_ack_vppi_def write_vcpu_register_def
             writeVCPUReg_def
-  by (corressimp corres: set_vcpu_corres get_vcpu_corres wp: get_vcpu_wp)
+  by (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
      (auto simp: vcpu_relation_def split: option.splits)
 
-lemma perform_vcpu_invocation_corres:
-  notes inv_corres = invokeVCPUInjectIRQ_corres invoke_vcpu_read_register_corres
-                     invoke_vcpu_write_register_corres associate_vcpu_tcb_corres
-                     invoke_vcpu_ack_vppi_corres
+lemma performARMVCPUInvocation_corres:
+  notes inv_corres = invokeVCPUInjectIRQ_corres invokeVCPUReadReg_corres
+                     invokeVCPUWriteReg_corres associateVCPUTCB_corres
+                     invokeVCPUAckVPPI_corres
   shows "corres (=) (einvs and ct_active and valid_vcpu_invocation iv)
                        (invs' and ct_active' and valid_vcpuinv' (vcpu_invocation_map iv))
                 (perform_vcpu_invocation iv) (performARMVCPUInvocation (vcpu_invocation_map iv))"
@@ -1375,15 +1375,15 @@ lemma perform_vcpu_invocation_corres:
      apply (rule inv_corres [THEN corres_guard_imp]; simp add: invs_no_0_obj')+
   done
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   assumes "archinv_relation ai ai'"
   shows   "corres (dc \<oplus> (=))
                   (einvs and ct_active and valid_arch_inv ai)
                   (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
                   (arch_perform_invocation ai) (Arch.performInvocation ai')"
 proof -
-  note invocation_corres =  perform_page_table_corres perform_page_directory_corres
-                            pac_corres pap_corres perform_page_corres perform_vcpu_invocation_corres
+  note invocation_corres =  performPageTableInvocation_corres performPageDirectoryInvocation_corres
+                            performASIDControlInvocation_corres performASIDPoolInvocation_corres performPageInvocation_corres performARMVCPUInvocation_corres
   from assms show ?thesis
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp
@@ -1549,10 +1549,10 @@ lemma sts_valid_arch_inv':
   apply (case_tac vcpui; wpsimp simp: valid_vcpuinv'_def)
   done
 
-lemma less_kernelBase_valid_pde_offset':
-  "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
+lemma less_pptrBase_valid_pde_offset':
+  "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 25; x \<le> 0x0F \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 8) + (vptr >> 21 << 3)) && mask pdBits)"
-  apply (clarsimp simp: ARM_HYP.kernelBase_def kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: ARM_HYP.pptrBase_def pptrBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def pt_index_bits_def
                         vspace_bits_defs)
   apply (drule word_le_minus_one_leq, simp)
@@ -1571,26 +1571,26 @@ lemma less_kernelBase_valid_pde_offset':
   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   done
 
-lemmas less_kernelBase_valid_pde_offset''
-    = less_kernelBase_valid_pde_offset'[where x=0, simplified pd_bits_def pdBits_def pdeBits_def, simplified]
+lemmas less_pptrBase_valid_pde_offset''
+    = less_pptrBase_valid_pde_offset'[where x=0, simplified pd_bits_def pdBits_def pdeBits_def, simplified]
 
 lemma createMappingEntries_valid_pde_slots':
   "\<lbrace>K (vmsz_aligned' vptr sz \<and> is_aligned pd pdBits
-                \<and> vptr < kernelBase)\<rbrace>
+                \<and> vptr < pptrBase)\<rbrace>
      createMappingEntries base vptr sz vm_rights attrib pd
    \<lbrace>\<lambda>rv s. valid_pde_slots' rv\<rbrace>,-"
   apply (simp add: createMappingEntries_def valid_pde_slots'_def)
   apply (cases sz, simp_all)
      apply (wp | simp)+
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned vspace_bits_defs)
-   apply (erule less_kernelBase_valid_pde_offset'')
+   apply (erule less_pptrBase_valid_pde_offset'')
   apply (rule hoare_pre, wp)
   apply (clarsimp simp: vmsz_aligned'_def superSectionPDEOffsets_def vspace_bits_defs del: ballI)
   apply (simp add: lookup_pd_slot_def Let_def vspace_bits_defs)
   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
                         lookup_pd_slot_def Let_def field_simps
                         mask_add_aligned)
-  apply (erule less_kernelBase_valid_pde_offset' [simplified pdBits_def pdeBits_def, simplified])
+  apply (erule less_pptrBase_valid_pde_offset' [simplified pdBits_def pdeBits_def, simplified])
    apply simp
   apply simp
   done
@@ -1616,12 +1616,12 @@ lemma findPDForASID_aligned[wp]:
   done
 
 lemma findPDForASID_valid_offset'[wp]:
-  "\<lbrace>valid_objs' and K (vptr < kernelBase)\<rbrace> findPDForASID p
+  "\<lbrace>valid_objs' and K (vptr < pptrBase)\<rbrace> findPDForASID p
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 21 << 3) && mask pd_bits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
   apply (simp add: mask_add_aligned vspace_bits_defs)
-  apply (erule less_kernelBase_valid_pde_offset'')
+  apply (erule less_pptrBase_valid_pde_offset'')
   done
 
 lemma eq_arch_update':
@@ -1725,7 +1725,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:ptrFromPAddr_def is_aligned_mask
-    physMappingOffset_def kernelBase_addr_def ARM_HYP.physBase_def physBase_def)
+    pptrBaseOffset_def pptrBase_def ARM_HYP.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])

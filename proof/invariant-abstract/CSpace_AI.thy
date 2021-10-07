@@ -9,7 +9,7 @@ CSpace refinement
 *)
 
 theory CSpace_AI
-imports "./$L4V_ARCH/ArchCSpacePre_AI"
+imports ArchCSpacePre_AI
 begin
 
 context begin interpretation Arch .
@@ -88,18 +88,6 @@ lemma irq_state_independent_A_conjI[intro!]:
   "\<lbrakk>irq_state_independent_A P; irq_state_independent_A Q\<rbrakk>
    \<Longrightarrow> irq_state_independent_A (\<lambda>s. P s \<and> Q s)"
   by (auto simp: irq_state_independent_A_def)
-
-(* FIXME: move *)
-lemma select_modify_comm:
-  "(do b \<leftarrow> select S; _ \<leftarrow> modify f; use b od) =
-   (do _ \<leftarrow> modify f; b \<leftarrow> select S; use b od)"
-  by (simp add: bind_def split_def select_def simpler_modify_def image_def)
-
-(* FIXME: move *)
-lemma select_f_modify_comm:
-  "(do b \<leftarrow> select_f S; _ \<leftarrow> modify f; use b od) =
-   (do _ \<leftarrow> modify f; b \<leftarrow> select_f S; use b od)"
-  by (simp add: bind_def split_def select_f_def simpler_modify_def image_def)
 
 (* FIXME: move *)
 lemma gets_machine_state_modify:
@@ -689,10 +677,6 @@ lemmas final_matters_simps[simp]
     = final_matters_def[split_simps cap.split]
 
 
-(* FIXME: replace everywhere *)
-lemmas cte_wp_at_eqD = cte_wp_at_norm
-
-
 lemma no_True_set_nth:
   "(True \<notin> set xs) = (\<forall>n < length xs. xs ! n = False)"
   apply (induct xs)
@@ -706,12 +690,6 @@ lemma no_True_set_nth:
   apply (erule_tac x="Suc n" in allE)
   apply clarsimp
   done
-
-
-lemma map2_append1:
-  "map2 f (as @ bs) cs = map2 f as (take (length as) cs) @ map2 f bs (drop (length as) cs)"
-  by (simp add: map_def zip_append1)
-
 
 lemma set_cap_caps_of_state_monad:
   "(v, s') \<in> fst (set_cap cap p s) \<Longrightarrow> caps_of_state s' = (caps_of_state s (p \<mapsto> cap))"
@@ -1032,11 +1010,6 @@ lemma mdb_set_cap:
   by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
                split: if_split_asm)
      (simp add: tcb_cap_cases_def return_def fail_def split: if_split_asm kernel_object.split_asm)
-
-(* FIXME: rename *)
-lemma yes_indeed [simp]:
-  "(None \<in> range Some) = False"
-  by auto
 
 lemma master_cap_obj_refs:
   "cap_master_cap c = cap_master_cap c' \<Longrightarrow> obj_refs c = obj_refs c'"
@@ -3970,11 +3943,6 @@ lemma ct_from_words_inv [wp]:
 
 (* FIXME: move *)
 crunch inv[wp]: stateAssert P
-
-(* FIXME: move *)
-lemma inter_UNIV_minus[simp]:
-  "x \<inter> (UNIV - y) = x-y" by blast
-
 
 lemma not_Null_valid_imp [simp]:
   "(cap \<noteq> cap.NullCap \<longrightarrow> s \<turnstile> cap) = (s \<turnstile> cap)"

@@ -144,6 +144,8 @@ lemma capRemovable_spec:
   "\<forall>cap s.  \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> (isZombie cap \<or> cap = NullCap) \<and> capAligned cap\<rbrace>
      Call capRemovable_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capRemovable cap (ptr_val (slot_' s)))}"
+  including no_0_dvd
+  supply if_cong[cong]
   apply vcg
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
   apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
@@ -154,7 +156,7 @@ lemma capRemovable_spec:
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap[THEN iffD2])
   apply (case_tac slot)
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def get_capZombieBits_CL_def
-                        isCap_simps unat_eq_0 unat_eq_1
+                        isCap_simps unat_eq_1 unat_eq_0
                         less_mask_eq ccap_zombie_radix_less2
              split: if_split_asm)
   done
@@ -163,8 +165,9 @@ lemma capCyclicZombie_spec:
   "\<forall>cap s.  \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> isZombie cap \<and> capAligned cap\<rbrace>
      Call capCyclicZombie_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capCyclicZombie cap (ptr_val (slot_' s)))}"
+  supply if_cong[cong]
   apply vcg
-  apply (clarsimp simp: if_1_0_0 from_bool_0)
+  apply (clarsimp simp: from_bool_0)
   apply (frule(1) cap_get_tag_isCap [THEN iffD2], simp)
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (simp add: ccap_zombie_radix_less4)
@@ -370,6 +373,7 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
       {s. array_assertion (cte_Ptr (capZombiePtr cap)) (capZombieNumber cap - 1)
            (hrs_htd (t_hrs_' (globals s))) \<longrightarrow> s \<in> Q'} hs
       (cutMon ((=) s) (locateSlotCap cap n >>= a)) c"
+  including no_take_bit
   apply (simp add: locateSlot_conv in_monad cutMon_walk_bind)
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_guard_imp2)
@@ -418,6 +422,7 @@ lemma reduceZombie_ccorres1:
      (invs' and sch_act_simple and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
      (cutMon ((=) s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
+  including no_take_bit
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0 del: Collect_const)
    apply (rule_tac P="capZombieNumber cap < 2 ^ word_bits" in ccorres_gen_asm)
@@ -797,7 +802,7 @@ lemma finaliseSlot_ccorres:
                    apply (auto simp: isCap_simps capCyclicZombie_def)[1]
                   apply ceqv
                  apply csymbr
-                 apply (simp add: if_1_0_0 from_bool_0)
+                 apply (simp add: from_bool_0)
                  apply (rule ccorres_split_throws)
                   apply (rule ccorres_drop_cutMon,
                          rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -833,7 +838,7 @@ lemma finaliseSlot_ccorres:
                                in ccorres_from_vcg[where P'=UNIV])
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: return_def)
-                  apply (simp add: if_1_0_0 from_bool_def false_def)
+                  apply (simp add: from_bool_def false_def)
                   apply fastforce
                  apply ceqv
                 apply (simp only: from_bool_0 simp_thms Collect_False
@@ -1000,7 +1005,7 @@ lemma cteRevoke_ccorres1:
         apply csymbr
         apply (rule ccorres_cutMon)
         apply (simp add: whenE_def cutMon_walk_if cutMon_walk_bindE
-                         from_bool_0 if_1_0_0
+                         from_bool_0
                     del: Collect_const cong: if_cong call_ignore_cong)
         apply (rule ccorres_if_lhs)
          apply (rule ccorres_cond_true)
@@ -1023,7 +1028,7 @@ lemma cteRevoke_ccorres1:
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply vcg
            apply (wp preemptionPoint_invR)
-	          apply simp
+            apply simp
            apply simp
           apply (simp, rule ccorres_split_throws)
            apply (rule ccorres_return_C_errorE, simp+)[1]

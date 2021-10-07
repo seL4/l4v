@@ -9,15 +9,13 @@ chapter \<open>ARM_HYP-specific definitions for abstract datatype for the abstra
 theory ArchADT_AI
 imports
   "Lib.Simulation"
-  "../Invariants_AI"
+  Invariants_AI
 begin
 context Arch begin global_naming ARM_HYP
 
 lemma word_1FF_is_mask:
-  "0x1FF = mask 9"
+  "(0x1FF::'a::len word) = mask 9"
   by (simp add: mask_def)
-
-(*** FIXME end ***)
 
 subsection \<open>Constructing a virtual-memory view\<close>
 
@@ -260,48 +258,46 @@ lemma get_pt_entry_None_iff_get_pte_fail:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
    get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt_ref vptr = None \<longleftrightarrow>
    get_pte (pt_ref + ((vptr >> 12) && 0x1FF << 3)) s = ({}, True)"
-apply (clarsimp simp add: get_pt_entry_def get_arch_obj_def
-             split: option.splits Structures_A.kernel_object.splits
-                    arch_kernel_obj.splits)
-apply (clarsimp simp add: get_pte_def get_pt_def bind_def return_def assert_def
-  get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask mask_eqs)
-apply (subgoal_tac "pt_ref + ((vptr >> 12) && 0x1FF << 3) -
-                    (pt_ref + ((vptr >> 12) && 0x1FF << 3) && mask pt_bits) =
-                    pt_ref")
- apply (simp (no_asm_simp) add: fail_def return_def)
- apply clarsimp
-apply (simp add: mask_add_aligned pt_bits_def pageBits_def pte_bits_def)
-apply (cut_tac and_mask_shiftl_comm[of 9 3 "vptr >> 12"])
- apply (simp_all add: word_size mask_def AND_twice)
-done
+  apply (clarsimp simp: get_pt_entry_def get_arch_obj_def
+                  split: option.splits Structures_A.kernel_object.splits
+                         arch_kernel_obj.splits)
+  apply (clarsimp simp: get_pte_def get_pt_def bind_def return_def assert_def
+                        get_object_def simpler_gets_def fail_def split_def mask_out_sub_mask mask_eqs)
+  apply (subgoal_tac "pt_ref + ((vptr >> 12) && 0x1FF << 3) -
+                      (pt_ref + ((vptr >> 12) && 0x1FF << 3) && mask pt_bits) =
+                      pt_ref")
+   apply (simp (no_asm_simp) add: fail_def return_def)
+   apply clarsimp
+  apply (simp add: mask_add_aligned pt_bits_def pageBits_def pte_bits_def)
+  apply (cut_tac and_mask_shiftl_comm[of 9 3 "vptr >> 12"])
+   apply (simp_all add: word_size mask_def)
+  done
 
 lemma get_pt_entry_Some_eq_get_pte:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
    get_pt_entry (\<lambda>obj. get_arch_obj (kheap s obj)) pt_ref vptr = Some x \<longleftrightarrow>
    get_pte (pt_ref + ((vptr >> 12) && mask 9 << 3)) s = ({(x,s)}, False)"
-  apply (clarsimp simp add: get_pt_entry_def get_arch_obj_def
-             split: option.splits Structures_A.kernel_object.splits
-                    arch_kernel_obj.splits)
-  apply (clarsimp simp add: get_pte_def get_pt_def bind_def return_def
-            assert_def get_object_def simpler_gets_def fail_def split_def
-            mask_out_sub_mask mask_eqs)
+  apply (clarsimp simp: get_pt_entry_def get_arch_obj_def
+                  split: option.splits Structures_A.kernel_object.splits
+                         arch_kernel_obj.splits)
+  apply (clarsimp simp: get_pte_def get_pt_def bind_def return_def
+                        assert_def get_object_def simpler_gets_def fail_def split_def
+                        mask_out_sub_mask mask_eqs)
   apply (subgoal_tac "pt_ref + ((vptr >> 12) && mask 9 << 3) -
                       (pt_ref + ((vptr >> 12) && mask 9 << 3) && mask pt_bits) =
                       pt_ref")
    apply (simp (no_asm_simp) add: fail_def return_def)
-   apply (clarsimp simp add: mask_add_aligned vspace_bits_defs
-              word_size
-              and_mask_shiftr_comm and_mask_shiftl_comm shiftr_shiftr AND_twice)
-   apply (cut_tac shiftl_shiftr_id[of 3 "(vptr >> 12)"])
+   apply (clarsimp simp: mask_add_aligned pt_bits_def pageBits_def
+                         word_size and_mask_shiftr_comm and_mask_shiftl_comm shiftr_shiftr)
+   apply (cut_tac shiftl_shiftr_id[of 3 "vptr >> 12"])
      apply (simp add: vspace_bits_defs)+
    apply (cut_tac shiftr_less_t2n'[of vptr 12 29])
      apply (simp add: vspace_bits_defs)
     apply (simp add: mask_eq_iff)
     apply (cut_tac lt2p_lem[of 32 vptr])
      apply (cut_tac word_bits_len_of, simp+)
-  apply (simp add: mask_add_aligned vspace_bits_defs
-                   word_size and_mask_shiftl_comm  AND_twice)
-done
+  apply (simp add: mask_add_aligned vspace_bits_defs word_size and_mask_shiftl_comm)
+  done
 
 definition
   "get_pt_info ahp pt_ref vptr \<equiv>
@@ -334,30 +330,11 @@ where
    | _ \<Rightarrow> None"
 
 
-(* FIXME: Lemma can be found in Untyped_R;
-   proof mostly copied from ArchAcc_R.pd_shifting *)
 lemma pd_shifting':
    "is_aligned pd pd_bits \<Longrightarrow>
     (pd + (vptr >> 21 << 3) && ~~ mask pd_bits) = (pd::word32)"
-  apply (simp add: pd_bits_def pageBits_def pde_bits_def)
-  apply (rule word_eqI[rule_format])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth)
-   apply (erule_tac x=na in allE)
-   apply (simp add: linorder_not_less)
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth
-                        word_ops_nth_size pd_bits_def linorder_not_less)
-  apply (rule iffI)
-   apply clarsimp
-   apply (drule test_bit_size)+
-   apply (simp add: word_size)
-  apply clarsimp
-  apply (erule_tac x=n in allE)
-  apply simp
-  done
+  unfolding pde_bits_def pd_bits_def pageBits_def
+  by (rule pd_shifting_gen; simp add: word_size)
 
 lemma lookup_pt_slot_fail:
   "is_aligned pd pd_bits \<Longrightarrow>

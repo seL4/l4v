@@ -10,10 +10,10 @@ Invariant preservation for all syscalls.
 
 theory Syscall_AI
 imports
-  "./$L4V_ARCH/ArchBCorres2_AI"
-  "./$L4V_ARCH/ArchTcb_AI"
-  "./$L4V_ARCH/ArchArch_AI"
-  "./$L4V_ARCH/ArchInterrupt_AI"
+  ArchBCorres2_AI
+  ArchTcb_AI
+  ArchArch_AI
+  ArchInterrupt_AI
 begin
 
 context begin interpretation Arch .
@@ -25,6 +25,7 @@ requalify_facts
   arch_post_cap_deletion_state_refs_of
   arch_invoke_irq_handler_typ_at
   getCurrentTime_invs
+  resetTimer_device_state_inv
 end
 
 lemmas [wp] =

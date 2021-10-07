@@ -17,18 +17,14 @@ abbreviation
               ret__struct_resolveAddressBits_ret_C_')"
 
 lemma rab_failure_case_ccorres:
-  fixes v :: "word32" and ist :: "cstate \<Rightarrow> cstate" and f :: int
-  defines "call_part \<equiv> (call ist f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>)
-             (\<lambda>ts s'. Basic (\<lambda>s.
-                  globals_update (current_lookup_fault_'_update
-                     (\<lambda>_. ret__struct_lookup_fault_C_' s')) s)))"
-  assumes spec: "\<Gamma>\<turnstile> G' call_part {s. v \<noteq> scast EXCEPTION_NONE \<and> lookup_failure_rel e v (errstate s)}"
-  and     mod:  "\<And>s. \<Gamma>\<turnstile> {s'. (s, s') \<in> rf_sr} call_part {s'. (s, s') \<in> rf_sr}"
+  assumes spec: "\<Gamma>\<turnstile> G' call_part {s. resolveAddressBits_ret_C.status_C v \<noteq> scast EXCEPTION_NONE
+                                      \<and> lookup_failure_rel e (resolveAddressBits_ret_C.status_C v)
+                                                           (errstate s)}"
+  assumes mod:  "\<And>s. \<Gamma>\<turnstile> {s'. (s, s') \<in> rf_sr} call_part {s'. (s, s') \<in> rf_sr}"
   shows "ccorres (lookup_failure_rel \<currency> r) rab_xf \<top> G' (SKIP # hs)
    (throwError e)
    (call_part ;;
-    \<acute>ret___struct_resolveAddressBits_ret_C :==
-      resolveAddressBits_ret_C.status_C_update (\<lambda>_. v) \<acute>ret___struct_resolveAddressBits_ret_C;;
+    \<acute>ret___struct_resolveAddressBits_ret_C :== v;;
     return_C ret__struct_resolveAddressBits_ret_C_'_update ret___struct_resolveAddressBits_ret_C_')"
   apply (rule ccorres_rhs_assoc)+
   apply (rule ccorres_symb_exec_r [where R=\<top>, OF _ spec])
@@ -79,7 +75,7 @@ next
   fix s s'
   assume "(s, s') \<in> rf_sr" and "(G and P) s" and "s' \<in> G'"
   thus "(G and (\<lambda>_. \<exists>s. P s)) s \<and> s' \<in> G'"
-    by (clarsimp elim!: exI)
+    by fastforce
 qed
 
 (* MOVE, generalise *)
@@ -100,10 +96,6 @@ lemma valid_cap_cte_at':
   apply (rule real_cte_at')
   apply (erule spec)
   done
-
-
-declare ucast_id [simp]
-declare resolveAddressBits.simps [simp del]
 
 
 lemma rightsFromWord_wordFromRights:
@@ -185,11 +177,11 @@ proof (cases "isCNodeCap cap'")
       \<comment> \<open>Exception stuff\<close>
     apply (rule ccorres_split_throws)
     apply (simp add: Collect_const cap_get_tag_isCap isCap_simps ccorres_cond_iffs
-                     resolveAddressBits.simps scast_id)
+                     resolveAddressBits.simps)
     apply (rule ccorres_from_vcg_throws [where P = \<top> and P' = UNIV])
     apply (rule allI)
     apply (rule conseqPre)
-    apply (simp add: throwError_def return_def split)
+    apply (simp add: throwError_def return_def)
     apply vcg
     apply (clarsimp simp add: exception_defs lookup_fault_lift_def)
     apply (simp split: if_split)
@@ -251,14 +243,15 @@ next
       "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) =
       (option_map cteCap (ctes_of s p) = Some a
        \<and> b = s)"
-       apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
-       apply rule
+      apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
+      apply rule
        apply (clarsimp simp: in_getCTE_cte_wp_at' cte_wp_at_ctes_of)
-       apply clarsimp
-       apply (subgoal_tac "cte_wp_at' ((=) z) p s")
+      apply clarsimp
+      apply (rename_tac s p z)
+      apply (subgoal_tac "cte_wp_at' ((=) z) p s")
        apply (clarsimp simp: getCTE_def cte_wp_at'_def)
-       apply (simp add: cte_wp_at_ctes_of)
-       done
+      apply (simp add: cte_wp_at_ctes_of)
+      done
 
     note ih = ind.hyps[simplified, simplified in_monad
         getSlotCap_in_monad locateSlot_conv stateAssert_def, simplified]
@@ -427,14 +420,14 @@ next
       apply (simp add: cap_simps)
       done
 
-    note if_cong[cong]
+    note if_cong[cong] option.case_cong[cong]
     show ?case
       using ind.prems
       apply -
       apply (rule iffD1 [OF ccorres_expand_while_iff])
       apply (subst resolveAddressBits.simps)
       apply (unfold case_into_if)
-      apply (simp add: Let_def ccorres_cond_iffs split del: if_split)
+      apply (simp add: Let_def ccorres_cond_iffs)
       apply (rule ccorres_rhs_assoc)+
       apply (cinitlift nodeCap_' n_bits_')
       apply (erule_tac t = nodeCapa in ssubst)
@@ -519,7 +512,6 @@ next
        apply (vcg strip_guards=true)
       apply (rule conjI)
       \<comment> \<open>Haskell guard\<close>
-       apply (thin_tac "unat n_bits = guard")
        apply (clarsimp simp del: imp_disjL) \<comment> \<open>take a while\<close>
        apply (intro impI conjI allI)
            apply fastforce

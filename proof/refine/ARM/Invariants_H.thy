@@ -570,17 +570,17 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned ref sz \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned ref sz \<and> ref < pptrBase)
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
 abbreviation (input)
-  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
+  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61)
 where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
 
@@ -1250,11 +1250,18 @@ lemma valid_idle'_tcb_at':
   "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
   by (clarsimp simp: valid_idle'_def)
 
-definition
-  valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
- "valid_irq_node' x \<equiv>
-  \<lambda>s. is_aligned x 12 \<and> (\<forall>irq :: irq. real_cte_at' (x + 16 * (ucast irq)) s)"
+lemmas idle_tcb'_def = idle_tcb'_2_def
+
+definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
+  "valid_idle' \<equiv> \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_thread_ptr = ksIdleThread s"
+
+lemma valid_idle'_tcb_at':
+  "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s"
+  by (clarsimp simp: valid_idle'_def)
+
+definition valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool" where
+ "valid_irq_node' x \<equiv> \<lambda>s. is_aligned x (size (0::irq) + cteSizeBits)
+                          \<and> (\<forall>irq :: irq. real_cte_at' (x + (ucast irq << cteSizeBits)) s)"
 
 definition
   valid_refs' :: "word32 set \<Rightarrow> cte_heap \<Rightarrow> bool"
@@ -1278,7 +1285,7 @@ where
   {ksIdleThread s, idle_sc_ptr} \<union>
    page_directory_refs' (armKSGlobalPD (ksArchState s)) \<union>
    (\<Union>pt \<in> set (armKSGlobalPTs (ksArchState s)). page_table_refs' pt) \<union>
-   range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
+   range (\<lambda>irq :: irq. irq_node' s + (ucast irq << cteSizeBits))"
 
 definition
   valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool"
@@ -2050,6 +2057,7 @@ lemma sc_at'_n_pspaceI:
 
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  supply if_cong[cong]
   apply (clarsimp simp: cte_wp_at'_def getObject_def readObject_def gets_the_def)
   apply (drule equalityD2)
   apply (clarsimp simp: in_monad loadObject_cte gets_def asks_def
@@ -4004,30 +4012,8 @@ lemma superSectionPDE_offsets_eq:  "superSectionPDE_offsets = superSectionPDEOff
 lemma mask_wordRadix_less_wordBits:
   assumes sz: "wordRadix \<le> size w"
   shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
-proof -
-  note pow_num = semiring_numeral_class.power_numeral
-
-  { assume "wordRadix = size w"
-    hence ?thesis
-      by (fastforce intro!: unat_lt2p[THEN order_less_le_trans]
-                    simp: wordRadix_def wordBits_def' word_size)
-  } moreover {
-    assume "wordRadix < size w"
-    hence ?thesis unfolding wordRadix_def wordBits_def' mask_def
-    apply simp
-    apply (subst unat_less_helper, simp_all)
-    apply (rule word_and_le1[THEN order_le_less_trans])
-    apply (simp add: word_size bintrunc_mod2p)
-    apply (subst int_mod_eq', simp_all)
-     apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-     apply (simp del: pow_num)
-    apply (subst int_mod_eq', simp_all)
-    apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-    apply (simp del: pow_num)
-    done
-  }
-  ultimately show ?thesis using sz by fastforce
-qed
+  using word_unat_mask_lt[where m=wordRadix and w=w] assms
+  by (simp add: wordRadix_def wordBits_def')
 
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"

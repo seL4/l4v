@@ -5,7 +5,7 @@
  *)
 
 theory ArchTcbAcc_AI
-imports "../TcbAcc_AI"
+imports TcbAcc_AI
 begin
 
 context Arch begin global_naming ARM
@@ -53,18 +53,6 @@ lemma cap_master_cap_tcb_cap_valid_arch:
            elim: pred_tcb_weakenE
           split: option.splits cap.splits arch_cap.splits
                  Structures_A.thread_state.splits)
-
-
-crunch device_state_inv[wp]: invalidateLocalTLB_ASID "\<lambda>ms. P (device_state ms)"
-  (ignore: ignore_failure)
-
-crunch device_state_inv[wp]: invalidateLocalTLB_VAASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: setHardwareASID "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: isb "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: dsb "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: storeWord "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: cleanByVA_PoU "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: cleanL2Range "\<lambda>ms. P (device_state ms)"
 
 lemma storeWord_invs[wp, TcbAcc_AI_assms]:
   "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"

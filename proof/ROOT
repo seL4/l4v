@@ -26,158 +26,168 @@ chapter "Proofs"
  * Refinement proof.
  *)
 
-session Refine = BaseRefine +
+session Refine in "refine" = BaseRefine +
   description \<open>Refinement between Haskell and Abstract spec.\<close>
   sessions
     Lib
     CorresK
     AInvs
+  directories
+    "$L4V_ARCH"
   theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/RAB_FN"
-    "refine/$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
   theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
-    "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/RAB_FN"
-    "refine/$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
   theories
-    "refine/$L4V_ARCH/Refine"
-    "refine/$L4V_ARCH/RAB_FN"
-    "refine/$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Refine"
+    "$L4V_ARCH/RAB_FN"
+    "$L4V_ARCH/EmptyFail_H"
+    "$L4V_ARCH/Init_R"
 
 (*
  * This theory is in a separate session because the proofs currently
  * only work for ARM.
  *)
-session RefineOrphanage = Refine +
+session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
   theories
-    "refine/$L4V_ARCH/Orphanage"
+    "Orphanage"
 
-session BaseRefine2 = BaseRefine +
-  description \<open>Intermediate point in refinement proof. Useful for machines with small RAM.\<close>
-  theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "refine/$L4V_ARCH/Untyped_R"
-    "refine/$L4V_ARCH/Schedule_R"
-  theories
-   "refine/$L4V_ARCH/Untyped_R"
-   "refine/$L4V_ARCH/Schedule_R"
-
-session BaseRefine = AInvs +
+session BaseRefine in "refine/base" = AInvs +
   description \<open>Background theory and libraries for refinement proof.\<close>
   sessions
     Lib
     CorresK
   theories
-    "refine/$L4V_ARCH/Include"
+    "Include"
 
-session AInvs = ASpec +
+session AInvs in "invariant-abstract" = ASpec +
+  directories
+    "$L4V_ARCH"
   theories [condition = "SKIP_AINVS_PROOFS", quick_and_dirty, skip_proofs]
-    "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "KernelInit_AI"
+    "$L4V_ARCH/ArchDetSchedSchedule_AI"
   theories [condition = "AINVS_QUICK_AND_DIRTY", quick_and_dirty]
-    "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "KernelInit_AI"
+    "$L4V_ARCH/ArchDetSchedSchedule_AI"
   theories
-    "invariant-abstract/KernelInit_AI"
-    "invariant-abstract/$L4V_ARCH/ArchDetSchedSchedule_AI"
+    "KernelInit_AI"
+    "$L4V_ARCH/ArchDetSchedSchedule_AI"
 
 (*
  * C Refinement proof.
  *)
 
-session CRefineSyscall = CBaseRefine +
+session CRefineSyscall in "crefine/intermediate" = CBaseRefine +
+  sessions
+    CRefine
   theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "crefine/$L4V_ARCH/Syscall_C"
+    "Intermediate_C"
   theories
-    "crefine/$L4V_ARCH/Syscall_C"
+    "Intermediate_C"
 
-session CRefine = CBaseRefine +
+session CRefine in "crefine" = CBaseRefine +
+  directories
+    "lib"
+    "$L4V_ARCH"
   theories [condition = "CREFINE_QUICK_AND_DIRTY", quick_and_dirty]
-    "crefine/$L4V_ARCH/Refine_C"
+    "Refine_C"
   theories
-    "crefine/$L4V_ARCH/Refine_C"
+    "Refine_C"
 
-session CBaseRefine = CSpec +
+session CBaseRefine in "crefine/base" = CSpec +
   sessions
     CLib
     Refine
     AutoCorres
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
     (* crefine/lib/AutoCorres_C explains why L4VerifiedLinks is included here. *)
-    "crefine/lib/L4VerifiedLinks"
-    "crefine/Include_C"
+    "L4VerifiedLinks"
+    "Include_C"
   theories
-    "crefine/lib/L4VerifiedLinks"
-    "crefine/Include_C"
+    "L4VerifiedLinks"
+    "Include_C"
 
-session AutoCorresCRefine = CRefine +
+session AutoCorresCRefine in "crefine/autocorres-test" = CRefine +
   theories
-    "crefine/$L4V_ARCH/AutoCorresTest"
+    "AutoCorresTest"
 
 (*
  * CapDL Refinement
  *)
 
-session DBaseRefine = AInvs +
+session DBaseRefine in "drefine/base" = AInvs +
   sessions
     DSpec
   theories
-    "drefine/Include_D"
+    "Include_D"
 
-session DRefine = DBaseRefine +
+session DRefine in "drefine" = DBaseRefine +
   theories
-    "drefine/Refine_D"
+    "Refine_D"
 
-session DPolicy = DRefine +
+session DPolicy in "dpolicy" = DRefine +
   sessions
     Access
   theories
-    "access-control/Dpolicy"
+    "Dpolicy"
 
 (*
  * Infoflow and Access
  *)
 
 session Access in "access-control" = AInvs +
+  directories
+    "$L4V_ARCH"
   theories
-    "ADT_AC"
+    "ArchADT_AC"
     "ExampleSystem"
 
 session InfoFlow in "infoflow" = Access +
+  directories
+    "$L4V_ARCH"
   theories
     "InfoFlow_Image_Toplevel"
 
-session InfoFlowCBase = CRefine +
+session InfoFlowCBase in "infoflow/refine/base" = CRefine +
   sessions
     Refine
     Access
     InfoFlow
   theories [condition = "SKIP_DUPLICATED_PROOFS", quick_and_dirty, skip_proofs]
-    "infoflow/Include_IF_C"
+    "Include_IF_C"
   theories
-    "infoflow/Include_IF_C"
+    "Include_IF_C"
 
-session InfoFlowC = InfoFlowCBase +
+session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
+  directories
+    "$L4V_ARCH"
   theories
-    "infoflow/Noninterference_Refinement"
-    "infoflow/Example_Valid_StateH"
+    "Noninterference_Refinement"
+    "Example_Valid_StateH"
 
 (*
  * capDL
  *)
 
-session SepDSpec = DSpec +
+session SepDSpec in "sep-capDL" = DSpec +
   sessions
     Sep_Algebra
     SepTactics
   theories
-    "sep-capDL/Frame_SD"
+    "Frame_SD"
 
 session DSpecProofs in "capDL-api" = SepDSpec +
   sessions
     AInvs
   theories
+    "Sep_Tactic_Examples"
     "API_DP"
 
 (*
@@ -194,28 +204,21 @@ session Bisim in bisim = AInvs +
     "build"
     "Makefile"
 
-(*
- * Separation Logic
- *)
-
-session SepTacticsExamples = SepTactics +
-  sessions
-    SepDSpec
-  theories
-    "capDL-api/Sep_Tactic_Examples"
-
 
 (*
  * Binary Verification Input Step
 *)
-session SimplExportAndRefine = CSpec +
+session SimplExportAndRefine in "asmrefine" = SimplExport +
+  sessions
+    SimplExport
   theories
-    "asmrefine/SEL4SimplExport"
-    "asmrefine/SEL4GraphRefine"
+    "SEL4GraphRefine"
 
-session SimplExportOnly = CSpec +
+session SimplExport in "asmrefine/export" = CSpec +
+  directories
+    "$L4V_ARCH"
   theories
-    "asmrefine/SEL4SimplExport"
+    "SEL4SimplExport"
 
 (*
  * Libraries

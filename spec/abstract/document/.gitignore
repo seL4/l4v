@@ -4,5 +4,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-/VERSION
+/VERSION.tex
+/git-root.tex
 /gitrev.tex

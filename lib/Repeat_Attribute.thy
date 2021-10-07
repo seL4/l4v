@@ -69,7 +69,7 @@ experiment begin
     the context if necessary, in this case by adding P to the simp set.
   \<close>
   lemma
-    assumes P[REPEAT[simplified], REPEAT [simp]]: "P \<or> False"
+    assumes P[REPEAT [simplified], REPEAT [simp]]: "P \<or> False"
     shows P
     by simp
 

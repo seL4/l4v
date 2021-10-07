@@ -10,7 +10,7 @@ Refinement for handleEvent and syscalls
 
 theory ArchSyscall_AI
 imports
-  "../Syscall_AI"
+  Syscall_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -52,7 +52,7 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding handle_vm_fault_def by (cases flt; wpsimp)
 
-crunch inv[wp]: getRegister, read_sbadaddr "P"
+crunch inv[wp]: getRegister, read_stval "P"
   (ignore_del: getRegister)
 
 lemma hv_inv_ex [Syscall_AI_assms]:

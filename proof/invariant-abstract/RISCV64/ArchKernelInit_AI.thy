@@ -6,9 +6,9 @@
 
 theory ArchKernelInit_AI
 imports
-  "../ADT_AI"
-  "../Tcb_AI"
-  "../Arch_AI"
+  ADT_AI
+  Tcb_AI
+  Arch_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -247,7 +247,7 @@ lemma translate_address_kernel_window:
   apply (simp add: kernel_window_1G is_aligned_pt_slot_offset_pte)
   apply (simp add: bit_simps addr_from_ppn_def shiftl_shiftl)
   apply (simp add: ptrFromPAddr_def addrFromPPtr_def)
-  apply (simp add: baseOffset_def pAddr_base_def)
+  apply (simp add: pptrBaseOffset_def paddrBase_def)
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (rule conjI)
    apply (rule is_aligned_add)
@@ -283,10 +283,10 @@ lemma translate_address_kernel_elf_window:
   apply (simp add: elf_window_1M is_aligned_pt_slot_offset_pte)
   apply (simp add: bit_simps addr_from_ppn_def shiftl_shiftl)
   apply (simp add: ptrFromPAddr_def addrFromPPtr_def)
-  apply (simp add: addrFromKPPtr_def kernelBaseOffset_def paddrLoad_def kernelELFBase_def)
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def kernelELFBase_def)
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (rule conjI)
-   apply (simp add: pptrBase_def baseOffset_def pAddr_base_def canonical_bit_def is_aligned_def)
+   apply (simp add: pptrBase_def pptrBaseOffset_def paddrBase_def canonical_bit_def is_aligned_def)
   apply (simp add: kernel_elf_base_def kernelELFBase_def)
   apply (subst word_plus_and_or_coroll)
    apply (simp add: canonical_bit_def word_size mask_def)
@@ -451,7 +451,7 @@ lemma replies_with_sc_empty[simp]:
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
-  supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
+  supply is_aligned_def[THEN iffD2, simp]
   supply image_cong_simp [cong del]
   supply pptr_base_num[simp] kernel_elf_base_def[simp]
   apply (simp add: invs_def)

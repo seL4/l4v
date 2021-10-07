@@ -58,7 +58,7 @@ lemma c_guard_align_of:
        c_guard (Ptr (of_nat (align_of TYPE('a))) :: 'a ptr)"
   unfolding c_guard_def
   apply (simp add: ptr_aligned_def unat_of_nat c_null_guard_def)
-  apply (clarsimp simp: intvl_def word_bits_conv)
+  apply (clarsimp simp: intvl_def word_bits_conv take_bit_nat_eq_self)
   apply (drule trans[rotated], rule sym, rule Abs_fnat_hom_add)
   apply (subst(asm) of_nat_neq_0, simp_all)
   done
@@ -109,55 +109,55 @@ lemma field_access_take_drop_general:
       length bs = size_td_pair x \<longrightarrow>
       take (size_td s) (drop (n - m) (access_ti_pair x v bs)) =
         access_ti s v (take (size_td s) (drop (n - m) bs))"
-apply (induct t and st and ts and x)
-     apply auto
- apply(thin_tac "All P" for P)+
- apply(subst (asm) take_all)
-  apply(drule wf_fd_cons_structD)
-  apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
- apply simp
-apply(clarsimp simp: min_def)?
-apply(frule wf_fd_cons_pairD)
-apply(clarsimp simp: fd_cons_pair_def fd_cons_desc_def fd_cons_length_def)
-apply(clarsimp split: option.splits)
- apply(subst drop_all)
-  apply clarsimp
-  apply(drule field_lookup_offset_le, clarsimp)
-  apply(case_tac dt_pair)
-  apply(clarsimp simp: fd_cons_length_def)
-  apply arith
- apply simp
- apply(rotate_tac -3)
- apply(drule_tac x=s in spec)
- apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
- apply(drule_tac x=n in spec)
- apply(erule impE)
-  apply fast
- apply(subgoal_tac "(size_td_pair dt_pair - (n - m)) = 0")
-  apply simp
-  apply(case_tac dt_pair, simp)
-  apply(drule field_lookup_offset_le, clarsimp)
- apply(case_tac dt_pair, simp)
- apply(drule field_lookup_offset_le, clarsimp)
- apply simp
-apply(subgoal_tac "(size_td s - (size_td_pair dt_pair - (n - m))) = 0")
- prefer 2
- apply clarsimp
- apply(drule td_set_pair_field_lookup_pairD)
- apply(drule td_set_pair_offset_size_m)
- apply simp
-apply simp
-apply(drule_tac x=s in spec)
-apply(drule_tac x=m in spec)
-apply(drule_tac x=n in spec)
-apply(drule mp, fast)
-apply(frule(1) wf_fd_field_lookup)
-apply (case_tac "size_td s = 0")
- apply (simp add: ex_with_length)
-apply(rule trans, drule spec, erule mp)
- apply simp
-apply(simp add: take_drop)
-done
+ apply (induct t and st and ts and x)
+       apply auto[4]
+    apply(thin_tac "All P" for P)+
+    apply(drule wf_fd_cons_structD)
+    apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
+   apply simp
+   apply(clarsimp simp: min_def)?
+   apply(frule wf_fd_cons_pairD)
+   apply(clarsimp simp: fd_cons_pair_def fd_cons_desc_def fd_cons_length_def)
+   apply(clarsimp split: option.splits)
+    apply(subst drop_all)
+     apply clarsimp
+     apply(drule field_lookup_offset_le, clarsimp)
+     apply(case_tac dt_pair)
+     apply(clarsimp simp: fd_cons_length_def)
+     apply arith
+    apply simp
+    apply(rotate_tac -3)
+    apply(drule_tac x=s in spec)
+    apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
+    apply(drule_tac x=n in spec)
+    apply(erule impE)
+     apply fast
+    apply(subgoal_tac "(size_td_pair dt_pair - (n - m)) = 0")
+     apply simp
+     apply(case_tac dt_pair, simp)
+     apply(drule field_lookup_offset_le, clarsimp)
+    apply(case_tac dt_pair, simp)
+    apply(drule field_lookup_offset_le, clarsimp)
+    apply simp
+   apply(subgoal_tac "(size_td s - (size_td_pair dt_pair - (n - m))) = 0")
+    prefer 2
+    apply clarsimp
+    apply(drule td_set_pair_field_lookup_pairD)
+    apply(drule td_set_pair_offset_size_m)
+    apply simp
+   apply simp
+   apply(drule_tac x=s in spec)
+   apply(drule_tac x=m in spec)
+   apply(drule_tac x=n in spec)
+   apply(drule mp, fast)
+   apply(frule(1) wf_fd_field_lookup)
+   apply (case_tac "size_td s = 0")
+    apply (simp add: ex_with_length)
+   apply(rule trans, drule spec, erule mp)
+    apply simp
+   apply(simp add: take_drop)
+  apply auto
+  done
 
 lemma field_lookup_to_bytes:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a :: mem_type)) f 0

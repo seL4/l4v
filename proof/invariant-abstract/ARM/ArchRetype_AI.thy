@@ -9,7 +9,7 @@
 *)
 
 theory ArchRetype_AI
-imports "../Retype_AI"
+imports Retype_AI
 begin
 
 context Arch begin global_naming ARM
@@ -113,7 +113,7 @@ lemma get_master_pde_valid[wp]:
   apply (rule ucast_mono_le)
    apply (rule le_shiftr)
    apply (clarsimp simp: word_bw_comms)
-   apply (clarsimp simp: word_bool_alg.conj_assoc[symmetric])
+   apply (clarsimp simp: and.assoc[symmetric])
    apply (subst word_bw_comms, rule word_and_le2)
   apply (rule shiftr_less_t2n)
   apply (clarsimp simp: pd_bits_def pageBits_def and_mask_less'[where n=14, simplified])
@@ -193,14 +193,6 @@ crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_
 
 crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
   (wp: crunch_wps)
-
-(* FIXME: move to VSpace_R *)
-lemma vs_refs_add_one'':
-  "p \<in> kernel_mapping_slots \<Longrightarrow>
-   vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
-   vs_refs (ArchObj (PageDirectory pd))"
- by (auto simp: vs_refs_def graph_of_def split: if_split_asm)
-
 
 lemma glob_vs_refs_add_one':
   "glob_vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
@@ -820,10 +812,8 @@ lemma hyp_refs_eq:
   "ARM.state_hyp_refs_of s' = ARM.state_hyp_refs_of s"
   unfolding s'_def ps_def
   apply (rule ext)
-  apply (clarsimp simp: state_hyp_refs_of_def orthr
-                   split: option.splits)
-  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
-                                 hyp_refs_of_def tcb_hyp_refs_def
+  apply (clarsimp simp: state_hyp_refs_of_def orthr split: option.splits)
+  apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
                                  default_arch_tcb_def)
   done
 
@@ -1343,8 +1333,11 @@ lemma invs_update_time_stamp_independent:
       cur_tcb_def cur_sc_tcb_def sym_refs_def state_refs_of_def
       swp_def valid_replies_pred_pspaceI; safe; clarsimp)+
 
-crunch irq_masks_inv[wp]: cleanByVA_PoU, storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
-  (wp: crunch_wps ignore_del: cleanByVA_PoU storeWord clearMemory)
+crunches cleanByVA, cleanCacheRange_PoC, dsb, cleanCacheRange_PoC, cleanL2Range, cleanByVA_PoU,
+  storeWord, clearMemory
+  for irq_masks_inv[wp]: "\<lambda>s. P (irq_masks s)"
+  (wp: crunch_wps
+   ignore_del: cleanByVA_PoU storeWord clearMemory cleanL2Range cleanCacheRange_PoC dsb cleanByVA)
 
 crunch underlying_mem_0[wp]: clearMemory
     "\<lambda>s. underlying_memory s p = 0"

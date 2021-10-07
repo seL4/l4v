@@ -382,7 +382,7 @@ lemma page_table_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n)[1]
   done
 
-lemma clearMemory_setObject_PTE_ccorres:
+lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc (page_table_at' ptr
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
@@ -391,7 +391,8 @@ lemma clearMemory_setObject_PTE_ccorres:
                        [ptr , ptr + 2 ^ pteBits .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
-       (Call clearMemory_'proc)"
+       (Call clearMemory_PT_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
@@ -414,8 +415,9 @@ lemma clearMemory_setObject_PTE_ccorres:
                         word_bits_def page_table_at_rf_sr_dom_s)
       apply (clarsimp simp add: ptBits_def pageBits_def pteBits_def
                       cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp only: field_simps)
       apply (simp add: upto_enum_step_def objBits_simps ptBits_def pageBits_def
-                       field_simps linorder_not_less[symmetric] archObjSize_def
+                       linorder_not_less[symmetric] archObjSize_def
                        upto_enum_word split_def pteBits_def)
       apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -428,7 +430,7 @@ lemma clearMemory_setObject_PTE_ccorres:
                         update_pte_map_to_ptes carray_map_relation_upd_triv)
        apply (rule cmap_relation_updI, simp_all)[1]
        apply (simp add: cpte_relation_def Let_def pte_lift_def
-                        fcp_beta pte_get_tag_def pte_tag_defs)
+                        pte_get_tag_def pte_tag_defs)
        apply (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps update_pte_map_tos)
       apply csymbr
@@ -643,7 +645,7 @@ lemma cancelBadgedSends_ccorres:
           apply (induct_tac list)
            apply (rule allI)
            apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
-           apply (rule ccorres_tmp_lift2 [OF _ _ refl])
+           apply (rule ccorres_tmp_lift2 [OF _ _ Int_lower1])
             apply ceqv
            apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_rhs_assoc2)
@@ -892,6 +894,7 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

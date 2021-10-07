@@ -109,7 +109,7 @@ lemma decodeDomainInvocation_ccorres:
               and sysargs_rel args buffer)
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
@@ -117,7 +117,7 @@ lemma decodeDomainInvocation_ccorres:
            >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
   supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: length___unsigned_long_' excaps_' call_' invLabel_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' call_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -571,18 +571,19 @@ lemma decodeCNodeInvocation_ccorres:
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
+  supply if_cong[cong]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
    apply (rule ccorres_fail')
-  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' excaps_'
+  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' current_extra_caps_'
                                      call_' invLabel_' buffer_')
    apply (clarsimp simp: word_less_nat_alt decodeCNodeInvocation_def
                          list_case_If2 invocation_eq_use_types
@@ -1566,41 +1567,6 @@ shows
    apply (clarsimp simp: proj_d_def)
    done
 
-lemma cte_size_inter_empty:
-notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-  Int_atLeastAtMost atLeastatMost_empty_iff
-shows "\<lbrakk>invs' s;ctes_of s p = Some cte;isUntypedCap (cteCap cte);p\<notin> capRange (cteCap cte) \<rbrakk>
-  \<Longrightarrow> {p .. p + mask cteSizeBits} \<inter> capRange (cteCap cte) = {}"
-  apply (frule ctes_of_valid')
-   apply fastforce
-  apply (clarsimp simp:isCap_simps valid_cap'_def valid_untyped'_def)
-  apply (frule ctes_of_ko_at_strong)
-   apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-   apply (simp add:objBits_simps)
-  apply clarsimp
-  apply (drule_tac x = ptr in spec)
-  apply (clarsimp simp:ko_wp_at'_def)
-  apply (erule impE)
-   apply (erule pspace_alignedD',fastforce)
-  apply (frule pspace_distinctD')
-   apply fastforce
-  apply (clarsimp simp:capAligned_def)
-  apply (drule_tac p = v0 and p' = ptr in aligned_ranges_subset_or_disjoint)
-   apply (erule pspace_alignedD',fastforce)
-  apply (subst (asm) intvl_range_conv[where bits = cteSizeBits])
-    apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    apply (simp add: objBits_simps)
-   apply (simp add: word_bits_def objBits_defs)
-  apply (erule disjE)
-   apply (simp add: obj_range'_def field_simps objBits_defs mask_def)
-   apply blast
-  apply (subgoal_tac "p \<in> {p .. p + mask cteSizeBits}")
-   prefer 2
-   apply (clarsimp simp:blah)
-   apply (rule is_aligned_no_wrap'[where sz=cteSizeBits])
-    apply (erule is_aligned_weaken[OF ctes_of_is_aligned])
-    by (auto simp: obj_range'_def field_simps objBits_simps' mask_def)
-
 lemma region_is_typelessI:
   "\<lbrakk>hrs_htd (t_hrs_' (globals t)) = hrs_htd (hrs_htd_update (typ_clear_region ptr sz) h) \<rbrakk>
          \<Longrightarrow> region_is_typeless ptr (2^sz) t"
@@ -1612,11 +1578,6 @@ lemma region_is_typelessI:
 lemma rf_sr_cpspace_relation:
   "(s,s') \<in> rf_sr \<Longrightarrow> cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s)) (t_hrs_' (globals s'))"
   by (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
-
-lemma rf_sr_htd_safe_kernel_data_refs:
-  "(s, s') \<in> rf_sr \<Longrightarrow> htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' (globals s')))"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                     kernel_data_refs_domain_eq_rotate)
 
 lemma cNodeNoOverlap_retype_have_size:
   "\<not> cNodeOverlap cns (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + of_nat num * 2 ^ bits - 1)
@@ -1684,6 +1645,7 @@ lemma clearMemory_untyped_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits" in ccorres_gen_asm)
@@ -1733,6 +1695,7 @@ lemma reset_untyped_inner_offs_helper:
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
+  including no_0_dvd
   apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
@@ -1813,7 +1776,22 @@ lemma byte_regions_unmodified_actually_heap_list:
 
 lemma ucast_64_32[simp]:
   "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
+  including no_take_bit
   by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
+
+text \<open>
+@{term resetUntypedCap_'proc} retypes the @{term Untyped} region as bytes, and then enters
+a loop which progressively zeros the memory, ultimately establishing @{term zero_ranges_are_zero}
+for the full @{term Untyped} range. Since @{term zero_ranges_are_zero} also requires
+@{term region_actually_is_bytes}, the loop must remember that we retyped the whole range before
+entering the loop. It is sufficient to know that @{term hrs_htd} is preserved, and for most
+contents of the loop, this is straightforward. On RISCV64, @{term preemptionPoint_'proc} contains
+inline assembly, so we must appeal to the axiomatisation of inline assembly to show that
+@{term hrs_htd} is preserved.
+\<close>
+lemma preemptionPoint_hrs_htd:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call preemptionPoint_'proc \<lbrace>hrs_htd \<acute>t_hrs = hrs_htd \<^bsup>\<sigma>\<^esup>t_hrs\<rbrace>"
+  by (rule allI, rule conseqPre, vcg, clarsimp simp: asm_spec_enabled elim!: asm_specE)
 
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
@@ -1825,7 +1803,9 @@ lemma resetUntypedCap_ccorres:
      []
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
+  including no_take_bit no_0_dvd
   using [[ceqv_simpl_sequence = true]]
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
                     Collect_True extra_sle_sless_unfolds)
@@ -2066,7 +2046,7 @@ lemma resetUntypedCap_ccorres:
              apply (cut_tac is_aligned_mult_triv2[of _ 8, simplified])
              apply (erule is_aligned_weaken, simp)
             apply clarsimp
-            apply (rule conseqPre, vcg exspec=preemptionPoint_modifies)
+            apply (rule conseqPre, vcg exspec=preemptionPoint_hrs_htd)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
                                   less_Suc_eq_le getFreeRef_def
@@ -2260,11 +2240,9 @@ lemma invokeUntyped_Retype_ccorres:
            \<inter>  {s. newType_' s = object_type_from_H newType }
            \<inter>  {s. unat (userSize_' s) = us }
            \<inter>  {s. deviceMemory_' s = from_bool isdev}
-           \<inter>  \<lbrace>\<acute>destSlots = slot_range_C (cte_Ptr cnodeptr) start
-                                          (of_nat (length destSlots)) \<and>
-                (\<forall>n<length destSlots.
-                    destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)\<rbrace>
-            )
+           \<inter>  {s. destCNode_' s = cte_Ptr cnodeptr}
+           \<inter>  {s. destOffset_' s = start \<and> (\<forall>n < length destSlots. destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)}
+           \<inter>  {s. destLength_' s = of_nat (length destSlots)})
      []
      (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
      (Call invokeUntyped_Retype_'proc)"
@@ -2359,6 +2337,7 @@ lemma invokeUntyped_Retype_ccorres:
           (ptr + of_nat (shiftL (length destSlots)
               (APIType_capBits newType us)))) >> 4"
       using cover range_cover_sz'[OF cover]
+      including no_take_bit
       apply (simp add: getFreeIndex_def shiftl_t2n
                        unat_of_nat_eq shiftL_nat)
       apply (rule less_mask_eq)
@@ -2376,19 +2355,16 @@ lemma invokeUntyped_Retype_ccorres:
          (liftxf errstate id (K ()) ret__unsigned_long_') (\<lambda>s'. s' = s) ?P'
          [] (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
             (Call invokeUntyped_Retype_'proc)"
+      including no_take_bit
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
-                          userSize_' deviceMemory_' destSlots_'
-                    simp: when_def)
+                         userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
+                   simp: when_def)
        apply (rule ccorres_move_c_guard_cte)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
        apply (rename_tac ptr_fetch,
          rule_tac P="ptr_fetch = ptr_base" in ccorres_gen_asm2)
        apply csymbr
-       apply csymbr
-       apply (rule ccorres_move_c_guard_cte)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
        apply csymbr
        apply (simp add: from_bool_0 del: Collect_const)
        apply (rule_tac xf'=xfdc and r'=dc in ccorres_splitE)
@@ -2428,7 +2404,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (cut_tac some_range_cover_arithmetic)
              apply (case_tac cte', clarsimp simp: modify_map_def fun_eq_iff split: if_split)
-             apply (simp add: mex_def meq_def ptr_base_eq del: split_paired_Ex)
+             apply (simp add: mex_def meq_def ptr_base_eq)
              apply (rule exI, strengthen refl, simp)
              apply (strengthen globals.fold_congs, simp add: field_simps)
             apply ceqv
@@ -2719,9 +2695,10 @@ lemma checkFreeIndex_ccorres:
      apply (rule context_conjI)
       apply (clarsimp simp:cap_get_tag_isCap)
       apply assumption
-     apply (clarsimp simp:ccap_relation_def isCap_simps cap_untyped_cap_lift_def
-            cap_lift_def cap_to_H_def
-            split:if_splits)
+     apply (clarsimp simp: ccap_relation_def isCap_simps cap_untyped_cap_lift_def cap_lift_def
+                           cap_to_H_def
+                     split: if_splits
+                     cong: if_cong)
     apply (rule ensureNoChildren_wp[where P = dc])
    apply clarsimp
    apply (vcg exspec=ensureNoChildren_modifies)
@@ -2857,7 +2834,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []
@@ -2865,8 +2842,10 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  including no_take_bit
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' current_extra_caps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2
                       invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -3102,14 +3081,12 @@ lemma decodeUntypedInvocation_ccorres_helper:
                  apply csymbr
                  apply csymbr
                  apply csymbr
-                 apply csymbr
                  apply (simp add: mapM_locate_eq liftE_bindE
                                   injection_handler_sequenceE mapME_x_sequenceE
                                   whileAnno_def injection_bindE[OF refl refl]
                                   bindE_assoc injection_handler_returnOk)
                  (* gsCNodes assertion *)
                  apply (rule ccorres_stateAssert)
-                 apply csymbr
                  apply (simp add: liftE_bindE[symmetric])
                  apply (rule_tac P="capAligned rv" in ccorres_gen_asm)
                  apply (subgoal_tac "args ! 5 \<le> args ! 4 + args ! 5")
@@ -3268,8 +3245,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                               apply (frule iffD2[OF olen_add_eqv])
                               apply (frule(1) isUntypedCap_ccap_relation_helper)
                               apply (clarsimp simp: unat_plus_simple[THEN iffD1])
-                              apply (case_tac slots,simp)
-                              apply clarsimp
                               apply (subst upto_enum_word)
                               apply (subst nth_map_upt)
                                apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
@@ -3476,7 +3451,7 @@ shows
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []

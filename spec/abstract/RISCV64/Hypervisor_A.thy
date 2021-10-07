@@ -7,7 +7,7 @@
 chapter "Handle Hypervisor Fault Events"
 
 theory Hypervisor_A
-imports "../Exceptions_A"
+imports Exceptions_A
 begin
 
 context Arch begin global_naming RISCV64_A

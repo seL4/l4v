@@ -11,7 +11,7 @@ Arch-specific functions for the abstract model of CSpace.
 chapter "Architecture-specific TCB functions"
 
 theory ArchTcb_A
-imports "../KHeap_A"
+imports KHeap_A
 begin
 
 context Arch begin global_naming X64_A

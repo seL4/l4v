@@ -67,6 +67,20 @@ lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
   unfolding valid_inQ_queues_def
   by simp
 
+lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
+  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
+  by (simp add: valid_inQ_queues_def)
+
+lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL1Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
+lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
+  "valid_inQ_queues (ksReadyQueuesL2Bitmap_update f s) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
@@ -260,7 +274,7 @@ lemma replyUnlink_valid_tcbs'[wp]:
               simp: valid_tcb_state'_def )
   done
 
-lemma blocked_cancel_ipc_corres:
+lemma blocked_cancelIPC_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr reply_opt p' \<or>
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st';
      st = Structures_A.BlockedOnSend epPtr p \<longrightarrow> reply_opt = None \<rbrakk> \<Longrightarrow>
@@ -274,7 +288,7 @@ lemma blocked_cancel_ipc_corres:
    apply (case_tac st; clarsimp simp: getBlockingObject_def epBlocked_def)
   apply (simp add: blocked_cancel_ipc_def blockedCancelIPC_def gbep_ret)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_ep_corres])
+    apply (rule corres_split_deprecated [OF _ getEndpoint_corres])
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
       apply (rule corres_assert_assume[rotated])
        apply (clarsimp split: endpoint.splits)
@@ -313,8 +327,8 @@ lemma blocked_cancel_ipc_corres:
               simp split del: if_split add: if_return_closure bind_assoc cong: if_cong)
          \<comment>\<open>reply_opt = None\<close>
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ set_ep_corres])
-             apply (rule sts_corres)
+          apply (rule corres_split_deprecated [OF _ setEndpoint_corres])
+             apply (rule setThreadState_corres)
              apply simp
             apply (simp add: ep_relation_def split: list.split)
            apply wpsimp+
@@ -332,10 +346,10 @@ lemma blocked_cancel_ipc_corres:
                      and R'="\<lambda>_. ep_at' epPtr and obj_at' (\<lambda>r. replyTCB r = Some t) a
                                  and valid_objs' and valid_release_queue_iff
                                  and st_tcb_at' ((=) st') t"
-                      in corres_split_deprecated [OF _ set_ep_corres])
+                      in corres_split_deprecated [OF _ setEndpoint_corres])
             apply (rule corres_guard_imp)
               apply (rule corres_split_deprecated [OF _ replyUnlinkTcb_corres])
-                apply (rule sts_corres, simp)
+                apply (rule setThreadState_corres, simp)
                apply wpsimp
               apply (wpsimp wp: replyUnlink_valid_objs')
              apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb)
@@ -376,8 +390,8 @@ lemma blocked_cancel_ipc_corres:
       \<comment>\<open>BlockedOnSend\<close>
       apply (rename_tac list)
       apply (rule corres_guard_imp)
-        apply (rule corres_split_deprecated [OF _ set_ep_corres])
-           apply (rule sts_corres)
+        apply (rule corres_split_deprecated [OF _ setEndpoint_corres])
+           apply (rule setThreadState_corres)
            apply simp
           apply (simp add: ep_relation_def split: list.split)
          apply (simp add: valid_tcb_state_def pred_conj_def)
@@ -413,7 +427,7 @@ lemma blocked_cancel_ipc_corres:
   apply (fastforce dest!: sym_ref_BlockedOnSend_SendEP' simp: ko_wp_at'_def)
   done
 
-lemma cancel_signal_corres:
+lemma cancelSignal_corres:
   "corres dc
           (invs and valid_ready_qs and st_tcb_at ((=) (Structures_A.BlockedOnNotification ntfn)) t)
           (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) t)
@@ -425,7 +439,7 @@ lemma cancel_signal_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_ntfn_corres])
+    apply (rule corres_split_deprecated [OF _ getNotification_corres])
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
       apply (case_tac "ntfn_obj ntfna"; simp add: ntfn_relation_def isWaitingNtfn_def)
       apply (case_tac "ntfna", case_tac "ntfnaa")
@@ -434,13 +448,13 @@ lemma cancel_signal_corres:
       apply (rename_tac list bound_tcb sc)
       apply (rule_tac R="remove1 t list = []" in corres_cases')
        apply (simp del: dc_simp)
-       apply (rule corres_split_deprecated [OF _ set_ntfn_corres])
+       apply (rule corres_split_deprecated [OF _ setNotification_corres])
           apply (rule sts_corres)
           apply simp
          apply (simp add: ntfn_relation_def)
         apply (wp abs_typ_at_lifts)+
       apply (simp add: list_case_If del: dc_simp)
-      apply (rule corres_split_deprecated [OF _ set_ntfn_corres])
+      apply (rule corres_split_deprecated [OF _ setNotification_corres])
          apply (rule sts_corres)
          apply simp
         apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
@@ -1001,15 +1015,15 @@ lemma cancel_ipc_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ gts_corres])
-      apply (rule corres_split_deprecated[OF _ threadset_corres])
+    apply (rule corres_split_deprecated [OF _ getThreadState_corres])
+      apply (rule corres_split_deprecated[OF _ threadet_corres])
                    apply (rule_tac P="invs and valid_ready_qs and st_tcb_at ((=) state) t" and
                                    P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
                    apply (case_tac state, simp_all add: isTS_defs list_case_If gbep_ret')[1]
                       apply (rule corres_guard_imp)
                         apply (rename_tac epPtr reply pl)
                         apply (rule_tac st = "Structures_A.thread_state.BlockedOnReceive epPtr reply pl"
-                               in blocked_cancel_ipc_corres[simplified])
+                               in blocked_cancelIPC_corres[simplified])
                           apply simp
                          apply (clarsimp simp: thread_state_relation_def)
                          apply simp+
@@ -1018,7 +1032,7 @@ lemma cancel_ipc_corres:
                      apply (rule corres_guard_imp)
                        apply (rename_tac epPtr data)
                        apply (rule_tac st = "Structures_A.thread_state.BlockedOnSend epPtr data"
-                              in blocked_cancel_ipc_corres[where reply_opt=None, simplified])
+                              in blocked_cancelIPC_corres[where reply_opt=None, simplified])
                         apply simp
                        apply (clarsimp simp: thread_state_relation_def)
                        apply simp
@@ -1031,7 +1045,7 @@ lemma cancel_ipc_corres:
                      apply (clarsimp simp: invs_implies)
                     apply (clarsimp simp: invs'_implies)
                    apply (rule corres_guard_imp)
-                     apply (rule cancel_signal_corres)
+                     apply (rule cancelSignal_corres)
                     apply simp+
                   apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
                  apply simp+
@@ -2359,7 +2373,7 @@ proof -
          rescheduleRequired
      od)" (is "\<And>list. _ \<Longrightarrow> corres _ (?abs_guard list) (?conc_guard list) _ _")
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF _ set_ep_corres])
+      apply (rule corres_split_deprecated[OF _ setEndpoint_corres])
          apply clarsimp
          apply (rule corres_split_deprecated[OF rescheduleRequired_corres])
            apply (erule cancelAllIPC_corres_helper)
@@ -2482,18 +2496,18 @@ lemma ntfn_cancel_corres_helper:
     apply (auto simp: valid_tcb_state'_def)
   done
 
-lemma ntfn_cancel_corres:
+lemma cancelAllSignals_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
   apply add_sym_refs
   apply (rule corres_stateAssert_add_assertion)
   apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
-   apply (rule corres_guard_imp [OF get_ntfn_corres])
+   apply (rule corres_guard_imp [OF getNotification_corres])
     apply simp+
   apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ set_ntfn_corres])
+    apply (rule corres_split_deprecated [OF _ setNotification_corres])
        apply (rule corres_split_deprecated [OF rescheduleRequired_corres])
          apply (rule ntfn_cancel_corres_helper)
         apply (clarsimp simp: dc_def)
@@ -3277,7 +3291,7 @@ lemma in_send_ep_queue_TCBBlockedSend':
   apply (fastforce simp: ko_wp_at'_def obj_at'_def projectKOs state_refs_of'_def)
   done
 
-lemma cancel_badged_sends_corres:
+lemma cancelBadgedSends_corres:
   "corres dc (invs and valid_sched and ep_at epptr)
              (invs' and ep_at' epptr)
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
@@ -3285,7 +3299,7 @@ lemma cancel_badged_sends_corres:
   apply (clarsimp simp: cancel_badged_sends_def cancelBadgedSends_def)
   apply (rule corres_stateAssert_add_assertion)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated[OF _ get_ep_corres get_simple_ko_sp get_ep_sp'
+     apply (rule corres_split_deprecated[OF _ getEndpoint_corres get_simple_ko_sp get_ep_sp'
                               , where Q="invs and valid_sched"
                                   and Q'="invs' and (\<lambda>s. sym_refs (state_refs_of' s))"])
      apply simp_all
@@ -3293,11 +3307,11 @@ lemma cancel_badged_sends_corres:
    apply (rename_tac queue)
    apply (simp add: filterM_mapM list_case_return cong: list.case_cong)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor[OF _ set_ep_corres])
+     apply (rule corres_split_nor[OF _ setEndpoint_corres])
         apply (rule_tac F="distinct queue" in corres_gen_asm)
         apply (rule corres_split_eqr)
            apply (rule corres_split_deprecated[OF rescheduleRequired_corres])
-             apply (rule set_ep_corres)
+             apply (rule setEndpoint_corres)
              apply (simp split: list.split add: ep_relation_def)
             apply (wp weak_sch_act_wf_lift_linear)+
           apply (rule_tac P="\<lambda>s. valid_sched s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s"
@@ -3313,7 +3327,7 @@ lemma cancel_badged_sends_corres:
                  ; (solves fastforce)?)
               apply (clarsimp simp: liftM_def[symmetric])
               apply (rule corres_guard_imp)
-                apply (rule corres_split_deprecated [OF _ gts_corres])
+                apply (rule corres_split_deprecated [OF _ getThreadState_corres])
                   apply (rule_tac F="\<exists>pl. st = Structures_A.BlockedOnSend epptr pl"
                                in corres_gen_asm)
                   apply (rule corres_if2[where Q=\<top> and Q'=\<top>])

@@ -8,10 +8,10 @@ chapter "Retyping Objects"
 
 theory ArchRetypeDecls_H
 imports
-  "../FaultMonad_H"
-  "../EndpointDecls_H"
-  "../KernelInitMonad_H"
-  "../PSpaceFuns_H"
+  FaultMonad_H
+  EndpointDecls_H
+  KernelInitMonad_H
+  PSpaceFuns_H
   ArchObjInsts_H
 begin
 

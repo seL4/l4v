@@ -82,6 +82,7 @@ lemma checkVPAlignment_ccorres:
 proof -
   note [split del] = if_split
   show ?thesis
+  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -621,8 +622,8 @@ lemma generic_frame_cap_get_capFIsMapped_spec:
        Call generic_frame_cap_get_capFIsMapped_'proc
        \<lbrace>\<acute>ret__unsigned_long = (if generic_frame_cap_get_capFMappedASID_CL (cap_lift \<^bsup>s\<^esup>cap) \<noteq> 0 then 1 else 0)\<rbrace>"
   apply vcg
-  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast])
-done
+  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast] cong: if_cong)
+  done
 
 
 
@@ -777,24 +778,29 @@ lemma pde_case_isPageTablePDE:
   by (cases pde, simp_all add: isPageTablePDE_def)
 
 lemma ptrFromPAddr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call ptrFromPAddr_'proc
-  \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call ptrFromPAddr_'proc
+   \<lbrace>\<acute>ret__ptr_to_void = Ptr (ptrFromPAddr (paddr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: ARM_HYP.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM_HYP.physBase_def)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
 lemma addrFromPPtr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call addrFromPPtr_'proc
-  \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def
-                   ARM_HYP.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM_HYP.physBase_def)
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
+lemma addrFromKPPtr_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
+  apply vcg
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def
+                   kernelELFBase_def physBase_def pptrBase_def mask_def)
+  done
 
 abbreviation
   "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C lookupPTSlot_ret_C.ptSlot_C ret__struct_lookupPTSlot_ret_C_'"
@@ -1240,6 +1246,7 @@ lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
        (findFreeHWASID) (Call findFreeHWASID_'proc)"
+  including no_take_bit
   apply (cinit)
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
@@ -1272,12 +1279,12 @@ lemma findFreeHWASID_ccorres:
                                trans[OF msb_nth nth_ucast] bang_big word_size
                                uint_up_ucast is_up_def source_size_def
                                target_size_def)
-              apply (simp add: uint_nat unat_of_nat)
-              apply (rule conjI, unat_arith, simp)
+              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
               apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def)
+                               throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-             apply (simp add: minus_one_norm)
+              apply (uint_arith, simp add: take_bit_nat_def)
+             apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
             apply clarsimp
@@ -1336,8 +1343,7 @@ lemma findFreeHWASID_ccorres:
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
                              target_size_def)
-            apply (simp add: uint_nat)
-            apply unat_arith
+            apply uint_arith
             subgoal by simp
            apply wp
           apply vcg
@@ -1660,6 +1666,7 @@ lemma vcpu_write_reg_ccorres:
              \<inter> \<lbrace> \<acute>value = v \<rbrace>) hs
      (vcpuWriteReg vcpuptr reg v)
      (Call vcpu_write_reg_'proc)"
+  including no_take_bit
   supply Collect_const[simp del] dc_simp[simp del]
   apply (cinit lift: vcpu_' reg_' value_')
    apply (rule ccorres_assert)
@@ -1739,6 +1746,7 @@ lemma vcpu_restore_reg_range_ccorres:
      (UNIV \<inter> \<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuRestoreRegRange vcpuptr start end) (Call vcpu_restore_reg_range_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
@@ -1776,6 +1784,7 @@ lemma vcpu_save_reg_range_ccorres:
      (UNIV \<inter> \<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuSaveRegRange vcpuptr start end) (Call vcpu_save_reg_range_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
@@ -1812,6 +1821,7 @@ lemma vcpu_read_reg_ccorres:
        (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace>) hs
      (vcpuReadReg vcpuptr reg)
      (Call vcpu_read_reg_'proc)"
+  including no_take_bit
   supply Collect_const[simp del]
   apply (cinit lift: vcpu_' reg_')
    apply (rule ccorres_assert)
@@ -1881,6 +1891,7 @@ lemma restore_virt_timer_ccorres:
      (vcpu_at' vcpuptr)
      (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (restoreVirtTimer vcpuptr) (Call restore_virt_timer_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
     apply csymbr
@@ -1983,7 +1994,7 @@ lemma vcpuUpdate_vTimer_pcount_ccorres:
                             cmachine_state_relation_def update_vcpu_map_to_vcpu
                             typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
       apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def                              cvcpu_vppi_masked_relation_def
+             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
              ; (rule refl)?)
   apply (simp add: objBits_simps archObjSize_def machine_bits_defs)+
   done
@@ -1993,6 +2004,7 @@ lemma save_virt_timer_ccorres:
      (vcpu_at' vcpuptr)
      (UNIV \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (saveVirtTimer vcpuptr) (Call save_virt_timer_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_save_reg_ccorres)
     apply (ctac (no_vcg) add: vcpu_hw_write_reg_ccorres)
@@ -2032,6 +2044,7 @@ lemma vcpu_disable_ccorres:
        and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
      (UNIV \<inter>  {s. vcpu_' s = option_to_ptr v}) hs
      (vcpuDisable v) (Call vcpu_disable_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (rule ccorres_split_nothrow_novcg)
@@ -2141,6 +2154,7 @@ lemma vcpu_restore_ccorres:
         and vcpu_at' vcpuPtr)
        (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr vcpuPtr}) hs
      (vcpuRestore vcpuPtr) (Call vcpu_restore_'proc)"
+  including no_take_bit
   apply (cinit lift: vcpu_' simp: whileAnno_def)
    apply (simp add: doMachineOp_bind uncurry_def split_def doMachineOp_mapM_x)+
    apply (clarsimp simp: bind_assoc)
@@ -2274,6 +2288,8 @@ lemma vcpu_save_ccorres:
       (UNIV \<inter> {s. vcpu_' s = case_option NULL (vcpu_Ptr \<circ> fst) v}
             \<inter> {s. active_' s = case_option 0 (from_bool \<circ> snd) v}) hs
     (vcpuSave v) (Call vcpu_save_'proc)"
+  including no_take_bit
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: vcpu_' active_' simp: whileAnno_def)
    apply wpc
     (* v = None *)
@@ -2377,6 +2393,7 @@ lemma vcpu_switch_ccorres_Some:
                      and valid_arch_state' and vcpu_at' v)
     (UNIV \<inter> {s. new_' s = vcpu_Ptr v}) hs
         (vcpuSwitch (Some v)) (Call vcpu_switch_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: new_')
     (* v \<noteq> None *)
    apply simp
@@ -2688,7 +2705,7 @@ lemma ccorres_seq_IF_False:
 
 lemma ptrFromPAddr_mask6_simp[simp]:
   "ptrFromPAddr ps && mask 6 = ps && mask 6"
-  unfolding ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def ARM_HYP.physBase_def
+  unfolding ptrFromPAddr_def pptrBaseOffset_def pptrBase_def ARM_HYP.physBase_def
   by (subst add.commute, subst mask_add_aligned ; simp add: is_aligned_def)
 
 lemma doFlush_ccorres:
@@ -2869,6 +2886,7 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -3198,6 +3216,7 @@ lemma ccorres_return_void_C':
 lemma is_aligned_cache_preconds:
   "\<lbrakk>is_aligned rva n; n \<ge> 7\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x7F \<and>
           addrFromPPtr rva \<le> addrFromPPtr rva + 0x7F \<and> rva && mask 6 = addrFromPPtr rva && mask 6"
+  supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
    apply (drule is_aligned_no_overflow, simp, unat_arith)[1]
@@ -3315,10 +3334,11 @@ lemmas ccorres_move_array_assertion_pde_16
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
                           and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
-                                           \<and> vptr < kernelBase))
+                                           \<and> vptr < pptrBase))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive
@@ -3550,7 +3570,7 @@ lemma unmapPage_ccorres:
                      apply (simp add: vmsz_aligned'_def vmsz_aligned_def)
                      apply (clarsimp simp: lookup_pd_slot_def Let_def table_bits_defs
                                         mask_add_aligned field_simps)
-                     apply (erule less_kernelBase_valid_pde_offset' [simplified table_bits_defs])
+                     apply (erule less_pptrBase_valid_pde_offset' [simplified table_bits_defs])
                       apply (simp add: vmsz_aligned'_def)
                      apply (simp add: word_le_nat_alt unat_of_nat)
                     apply (simp add: length_superSectionPDEOffsets)
@@ -3948,37 +3968,38 @@ lemma makeUserPDE_spec:
        HAP_CL = hap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        MemAttr_CL = memattr_from_cacheable (to_bool \<^bsup>s\<^esup>cacheable)
     \<rparr>) \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: hap_from_vm_rights_mask split: if_splits)
   apply (intro conjI impI allI | clarsimp )+
     apply (simp only: pde_pde_section_lift pde_pde_section_lift_def)
     apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
     apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def)
+                          Kernel_C.ARMLargePage_def)
     apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
    apply (simp only: pde_pde_section_lift pde_pde_section_lift_def)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
    apply (clarsimp simp: Kernel_C.ARMSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)
-    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                         Kernel_C.ARMLargePage_def)
+   apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
+                    split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (clarsimp)
   apply (intro conjI impI allI)
    apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
    apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
    apply (drule is_aligned_weaken[where y = 21])
     apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
+                          Kernel_C.ARMLargePage_def)+
    apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
      split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   apply (simp add:pde_pde_section_lift pde_pde_section_lift_def)
   apply (simp add: vmsz_aligned'_def gen_framesize_to_H_def hap_from_vm_rights_mask)
   apply (drule is_aligned_weaken[where y = 21])
    apply (clarsimp simp: Kernel_C.ARMSuperSection_def Kernel_C.ARMSmallPage_def
-       Kernel_C.ARMLargePage_def is_aligned_neg_mask_eq)+
-   apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
-     split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
+                         Kernel_C.ARMLargePage_def)+
+  apply (fastforce simp:mask_def hap_from_vm_rights_mask  memattr_from_cacheable_def
+                   split:if_splits dest!:mask_eq1_nochoice intro: is_aligned_neg_mask_weaken)
   done
 
 lemma makeUserPTE_spec:

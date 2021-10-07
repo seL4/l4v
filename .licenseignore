@@ -53,6 +53,7 @@ internal/*
 
 spec/abstract/document/*/ARCH.tex
 spec/abstract/document/gitrev.tex
+spec/abstract/document/git-root.tex
 
 spec/haskell/cabal.sandbox.config
 spec/haskell/.cabal-sandbox/*

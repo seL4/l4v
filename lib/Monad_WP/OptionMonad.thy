@@ -12,8 +12,8 @@
 
 theory OptionMonad (* FIXME: this is really a Reader_Option_Monad *)
   imports
-    "../Lib" (* FIXME: reduce dependencies *)
-    "Less_Monad_Syntax"
+    Lib (* FIXME: reduce dependencies *)
+    Less_Monad_Syntax
 begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"

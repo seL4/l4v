@@ -5,7 +5,7 @@
  *)
 
 theory ArchEmptyFail_AI
-imports "../EmptyFail_AI"
+imports EmptyFail_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -13,7 +13,7 @@ context Arch begin global_naming RISCV64
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_sbadaddr resetTimer_impl sbadaddr_val
+  (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_stval resetTimer_impl stval_val
         pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
@@ -171,8 +171,8 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
 
 context Arch begin global_naming RISCV64
 
-crunch (empty_fail) empty_fail[wp]: read_sbadaddr
-  (ignore_del: read_sbadaddr)
+crunch (empty_fail) empty_fail[wp]: read_stval
+  (ignore_del: read_stval)
 
 lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"

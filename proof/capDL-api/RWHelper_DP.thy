@@ -16,7 +16,7 @@ lemma eq_on_subset:
   by (auto simp:eq_on_def)
 
 definition WritingOf :: "(('a \<Rightarrow>'b option) \<Rightarrow> ('a \<Rightarrow> 'b option)) \<Rightarrow> 'a set"
-where "WritingOf f \<equiv> SUP s:UNIV. {ptr. (f s) ptr \<noteq> s ptr} "
+where "WritingOf f \<equiv> UN s:UNIV. {ptr. (f s) ptr \<noteq> s ptr} "
 
 definition IsReadingEstimateOf :: "'a set \<Rightarrow> (('a \<Rightarrow> 'b option) \<Rightarrow> ('a \<Rightarrow> 'b option)) \<Rightarrow> 'a set \<Rightarrow> bool"
   where "IsReadingEstimateOf m f estimate \<equiv> (\<forall>s s'. (eq_on m s s') \<longrightarrow> (eq_on estimate (f s) (f s')))"

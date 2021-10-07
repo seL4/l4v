@@ -10,9 +10,8 @@ Arch Functions for cancelling IPC.
 
 chapter \<open>Arch IPC Cancelling\<close>
 
-
 theory ArchIpcCancel_A
-imports "../CSpaceAcc_A"
+imports CSpaceAcc_A
 begin
 
 context Arch begin global_naming X64_A

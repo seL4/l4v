@@ -7,7 +7,7 @@
 theory Interrupt_H
 imports
   RetypeDecls_H
-  "./$L4V_ARCH/ArchInterrupt_H"
+  ArchInterrupt_H
   Notification_H
   CNode_H
   KI_Decls_H

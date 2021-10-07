@@ -105,7 +105,7 @@ lemma set_cap_device_and_range_aligned:
   apply (wp set_cap_device_and_range)
   done
 
-lemma pac_corres:
+lemma performASIDControlInvocation_corres:
   "asid_ci_map i = i' \<Longrightarrow>
   corres dc
          (einvs and ct_active and valid_aci i and schact_is_rct)
@@ -133,7 +133,7 @@ lemma pac_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated)
        prefer 2
-       apply (erule detype_corres)
+       apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
@@ -156,7 +156,7 @@ lemma pac_corres:
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
                apply (rule corres_split_deprecated)
                   prefer 2
-                  apply (rule cins_corres_simple, simp, rule refl, rule refl)
+                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
                  apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
@@ -374,7 +374,7 @@ lemma vm_attributes_corres:
   by (clarsimp simp: attribsFromWord_def attribs_from_word_def
                      Let_def vmattributes_map_def)
 
-lemma check_vp_corres:
+lemma checkVPAlignment_corres:
   "corres (ser \<oplus> dc) \<top> \<top>
           (check_vp_alignment sz w)
           (checkVPAlignment sz w)"
@@ -478,7 +478,7 @@ lemma flush_type_map:
                         ARM_H.isPageFlushLabel_def ARM_H.isPDFlushLabel_def
                  split: ARM_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
-lemma resolve_vaddr_corres:
+lemma resolveVAddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
   corres (=) (pspace_aligned and valid_vspace_objs and page_directory_at pd
                  and (\<exists>\<rhd> (lookup_pd_slot pd vaddr && ~~ mask pd_bits)))
@@ -762,7 +762,7 @@ lemma corres_splitEE':
 lemmas whenE_throwError_corres_terminal =
   whenE_throwError_corres[where m="returnOk ()" and m'="returnOk ()", OF _ _ corres_returnOkTT, simplified]
 
-lemma dec_arch_inv_corres:
+lemma arch_decodeInvocation_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
   (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
      check_vp_wpR should probably be generalised to replace check_vp_inv. *)
@@ -900,13 +900,13 @@ shows
            apply (rule corres_splitEE)
               prefer 2
               apply (fold ser_def)
-              apply (rule ensure_no_children_corres, rule refl)
+              apply (rule ensureNoChildren_corres, rule refl)
              apply (rule corres_splitEE)
                 prefer 2
-                apply (erule lsfc_corres, rule refl)
+                apply (erule lookupSlotForCNodeOp_corres, rule refl)
                apply (rule corres_splitEE)
                   prefer 2
-                  apply (rule ensure_empty_corres)
+                  apply (rule ensureEmptySlot_corres)
                   apply clarsimp
                  apply (rule corres_returnOk[where P="\<top>"])
                  apply (clarsimp simp add: archinv_relation_def asid_ci_map_def split_def)
@@ -949,21 +949,21 @@ shows
          apply (rule_tac P="map_data = None \<and> kernel_base \<le> vaddr + 2 ^ pageBitsForSize vmpage_size - 1
                             \<or> (\<exists>asid' vaddr'. map_data = Some (asid', vaddr') \<and> (asid',vaddr') \<noteq> (asid,vaddr))"
                   in corres_symmetric_bool_cases[where Q=\<top> and Q'=\<top>, OF refl])
-          apply (erule disjE; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM.kernelBase_def
+          apply (erule disjE; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM.pptrBase_def
                                       split: option.splits)
          apply clarsimp
          apply (rule corres_splitEE'[where r'=dc and P=\<top> and P'=\<top>])
             apply (case_tac map_data
-                   ; clarsimp simp: whenE_def kernel_base_def kernelBase_def ARM.kernelBase_def
+                   ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM.pptrBase_def
                                     corres_returnOkTT)
            \<comment> \<open>pd=undefined as vspace_at_asid not used in find_pd_for_asid_corres and avoid unresolved schematics\<close>
            apply (rule corres_splitEE'[
                          OF corres_lookup_error[OF find_pd_for_asid_corres[where pd=undefined, OF refl]]])
              apply (rule whenE_throwError_corres; simp)
-             apply (rule corres_splitEE'[where r'=dc, OF check_vp_corres])
-               apply (rule corres_splitEE'[OF create_mapping_entries_corres]
+             apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
+               apply (rule corres_splitEE'[OF createMappingEntries_corres]
                       ; simp add: mask_vmrights_corres vm_attributes_corres)
-                 apply (rule corres_splitEE'[OF ensure_safe_mapping_corres], assumption)
+                 apply (rule corres_splitEE'[OF ensureSafeMapping_corres], assumption)
                    apply (rule corres_returnOkTT)
                    \<comment> \<open>program split done, now prove resulting preconditions and Hoare triples\<close>
                    apply (simp add: archinv_relation_def page_invocation_map_def)
@@ -1010,7 +1010,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def ARM.kernelBase_def kernelBase_def)
+     apply (simp add: kernel_base_def ARM.pptrBase_def pptrBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1046,7 +1046,7 @@ shows
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                in corres_gen_asm2)
-        apply (rule corres_split_deprecated[OF _ final_cap_corres[where ptr=slot]])
+        apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres)
@@ -1079,7 +1079,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def ARM.kernelBase_def kernelBase_def)
+      apply (clarsimp simp: kernel_base_def ARM.pptrBase_def pptrBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1094,7 +1094,7 @@ shows
        apply (rule corres_split_deprecated[OF _ _ resolve_vaddr_valid_mapping_size])
          prefer 2
          apply clarsimp
-         apply (rule resolve_vaddr_corres[THEN corres_gen_asm])
+         apply (rule resolveVAddr_corres[THEN corres_gen_asm])
           apply simp
          apply (clarsimp simp: not_le)
         apply (case_tac rva)
@@ -1126,7 +1126,7 @@ shows
   apply clarsimp
   done
 
-lemma inv_arch_corres:
+lemma arch_performInvocation_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and ct_active and valid_arch_inv ai and schact_is_rct)
@@ -1141,23 +1141,23 @@ lemma inv_arch_corres:
      apply simp
     apply (cases ai)
         apply (clarsimp simp: archinv_relation_def)
-        apply (erule corres_guard_imp [OF perform_page_table_corres])
+        apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply (clarsimp simp: archinv_relation_def)
-       apply (erule corres_guard_imp [OF perform_page_directory_corres])
+       apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
       apply (clarsimp simp: archinv_relation_def)
-      apply (erule corres_guard_imp [OF perform_page_corres])
+      apply (erule corres_guard_imp [OF performPageInvocation_corres])
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_guard_imp [OF pac_corres], rule refl)
+     apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)
-    apply (rule corres_guard_imp [OF pap_corres], rule refl)
+    apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply wp+
@@ -1375,10 +1375,10 @@ lemma sts_valid_arch_inv':
   apply (simp add: o_def)
   done
 
-lemma less_kernelBase_valid_pde_offset':
-  "\<lbrakk> vptr < kernelBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
+lemma less_pptrBase_valid_pde_offset':
+  "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: ARM.kernelBase_def kernelBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: ARM.pptrBase_def pptrBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule word_le_minus_one_leq, simp add: pdeBits_def)
   apply (drule le_shiftr[where u=vptr and n=20])
@@ -1396,8 +1396,8 @@ lemma less_kernelBase_valid_pde_offset':
   apply (simp add: shiftl_t2n unat_arith_simps iffD1[OF unat_mult_lem])
   done
 
-lemmas less_kernelBase_valid_pde_offset''
-    = less_kernelBase_valid_pde_offset'[where x=0, simplified]
+lemmas less_pptrBase_valid_pde_offset''
+    = less_pptrBase_valid_pde_offset'[where x=0, simplified]
 
 lemma createMappingEntries_valid_pde_slots':
   "\<lbrace>K (vmsz_aligned vptr sz \<and> is_aligned pd pdBits
@@ -1408,7 +1408,7 @@ lemma createMappingEntries_valid_pde_slots':
   apply (cases sz, simp_all)
      apply (wp | simp)+
    apply (clarsimp simp: lookup_pd_slot_def Let_def mask_add_aligned)
-   apply (erule less_kernelBase_valid_pde_offset'')
+   apply (erule less_pptrBase_valid_pde_offset'')
   apply (rule hoare_pre, wp)
   apply (clarsimp simp: vmsz_aligned_def superSectionPDEOffsets_def pdeBits_def del: ballI)
   apply (subst p_0x3C_shift[symmetric])
@@ -1421,7 +1421,7 @@ lemma createMappingEntries_valid_pde_slots':
   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
                         lookup_pd_slot_def Let_def field_simps
                         mask_add_aligned pdeBits_def)
-  apply (erule less_kernelBase_valid_pde_offset'
+  apply (erule less_pptrBase_valid_pde_offset'
     [unfolded pdBits_def pageBits_def pdeBits_def, simplified], simp+)
   done
 
@@ -1446,12 +1446,12 @@ lemma findPDForASID_aligned[wp]:
   done
 
 lemma findPDForASID_valid_offset'[wp]:
-  "\<lbrace>valid_objs' and K (vptr < kernelBase)\<rbrace> findPDForASID p
+  "\<lbrace>valid_objs' and K (vptr < pptrBase)\<rbrace> findPDForASID p
    \<lbrace>\<lambda>rv s. valid_pde_mapping_offset' (rv + (vptr >> 20 << 2) && mask pdBits)\<rbrace>,-"
   apply (rule hoare_gen_asmE)
   apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
   apply (simp add: mask_add_aligned)
-  apply (erule less_kernelBase_valid_pde_offset'')
+  apply (erule less_pptrBase_valid_pde_offset'')
   done
 
 lemma eq_arch_update':
@@ -1557,7 +1557,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:ptrFromPAddr_def is_aligned_mask
-    physMappingOffset_def kernelBase_addr_def ARM.physBase_def physBase_def)
+    pptrBaseOffset_def pptrBase_def ARM.physBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])

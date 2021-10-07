@@ -10,7 +10,7 @@ Refinement for handleEvent and syscalls
 
 theory ArchSyscall_AI
 imports
-  "../Syscall_AI"
+  Syscall_AI
 begin
 
 context Arch begin global_naming X64

@@ -5,7 +5,7 @@
  *)
 
 theory Invariants_AI
-imports "./$L4V_ARCH/ArchInvariants_AI"
+imports ArchInvariants_AI
 begin
 
 context begin interpretation Arch .
@@ -3686,8 +3686,8 @@ lemma real_cte_at_typ_valid:
    \<Longrightarrow> \<lbrace>real_cte_at p\<rbrace> f \<lbrace>\<lambda>rv. real_cte_at p\<rbrace>"
   by (simp add: cap_table_at_typ)
 
-lemma dmo_aligned:
-  "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+lemma dmo_aligned[wp]:
+  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pspace_aligned_def)
@@ -4588,6 +4588,10 @@ lemma sym_refs_bound_sc_tcb_at_inj:
   apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
   apply (subst (asm) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl], assumption)
   by (clarsimp simp: sc_at_pred_n_def obj_at_def)
+
+lemma valid_mask_vm_rights[simp]:
+  "mask_vm_rights V R \<in> valid_vm_rights"
+  by (simp add: mask_vm_rights_def)
 
 lemmas invs_implies =
   invs_equal_kernel_mappings

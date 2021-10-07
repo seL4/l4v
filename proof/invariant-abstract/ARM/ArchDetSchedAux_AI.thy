@@ -5,7 +5,7 @@
  *)
 
 theory ArchDetSchedAux_AI
-imports "../DetSchedAux_AI"
+imports DetSchedAux_AI
 begin
 
 

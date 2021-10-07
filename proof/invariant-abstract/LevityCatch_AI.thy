@@ -6,11 +6,15 @@
 
 theory LevityCatch_AI
 imports
-  "./$L4V_ARCH/ArchLevityCatch_AI"
+  ArchLevityCatch_AI
 begin
 
 context begin interpretation Arch .
+
+requalify_consts
+  ptrFromPAddr addrFromPPtr
 requalify_facts
+  ptrFormPAddr_addFromPPtr
   aobj_ref_arch_cap
 end
 

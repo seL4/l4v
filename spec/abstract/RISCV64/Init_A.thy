@@ -7,7 +7,9 @@
 chapter "An Initial Kernel State"
 
 theory Init_A
-imports "../Retype_A" "Lib.SplitRule"
+imports
+  Retype_A
+  "Lib.SplitRule"
 begin
 
 context Arch begin global_naming RISCV64_A

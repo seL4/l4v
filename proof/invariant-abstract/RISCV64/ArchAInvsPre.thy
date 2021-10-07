@@ -5,7 +5,7 @@
  *)
 
 theory ArchAInvsPre
-imports "../AInvsPre"
+imports AInvsPre
 begin
 
 context Arch begin
@@ -81,7 +81,7 @@ lemma pte_rights_of_kernel:
    apply (cases "level = max_pt_level")
     apply (drule pt_walk_level)
     apply (clarsimp simp flip: kernel_mappings_slots_eq)
-    apply (clarsimp simp: ptes_of_def table_index_offset_max_pt_level)
+    apply (clarsimp simp: ptes_of_def table_index_offset_pt_bits_left)
     apply (drule (2) equal_kernel_mappingsD)
     apply (drule (3) has_kernel_mappingsD)
     apply clarsimp
@@ -128,7 +128,7 @@ lemma global_pt_not_invalid_kernel:
      pte \<noteq> InvalidPTE; canonical_address p; valid_global_tables s;
      is_aligned (riscv_global_pt (arch_state s)) pt_bits\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
-  apply (clarsimp simp: pte_of_def table_index_offset_max_pt_level)
+  apply (clarsimp simp: pte_of_def table_index_offset_pt_bits_left)
   apply (fastforce simp flip: kernel_mappings_slots_eq dest: valid_global_tables_toplevel_pt)
   done
 
@@ -157,7 +157,7 @@ lemma data_at_aligned:
 lemma is_aligned_ptrFromPAddr_n_eq:
   "sz \<le> canonical_bit \<Longrightarrow> is_aligned (ptrFromPAddr x) sz = is_aligned x sz"
   apply (rule iffI)
-   apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+   apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
    apply (drule is_aligned_addD2)
     apply (erule is_aligned_weaken[rotated])
     apply (simp add: is_aligned_def)
@@ -184,7 +184,7 @@ lemma some_get_page_info_umapsD:
    apply (rename_tac ppn pt)
    apply (frule pspace_aligned_pts_ofD, fastforce)
    apply (drule_tac x="table_index (pt_slot_offset level pt_ptr' p)" in bspec)
-   apply (clarsimp simp: table_index_offset_max_pt_level simp: kernel_mappings_slots_eq)
+   apply (clarsimp simp: table_index_offset_pt_bits_left simp: kernel_mappings_slots_eq)
    apply (erule (1) no_user_region_kernel_mappings)
   apply (clarsimp simp: pte_of_def)
   apply (subgoal_tac "valid_pte level (PagePTE ppn attr r) s")
@@ -243,13 +243,13 @@ lemma ptable_rights_imp_frame[AInvsPre_asms]:
   apply (frule is_aligned_add_helper[OF _ and_mask_less', THEN conjunct2, of _ _ x])
    apply (simp only: pbfs_less_wb'[simplified word_bits_def])
   apply (clarsimp simp: data_at_def ptrFromPAddr_def addrFromPPtr_def field_simps)
-  apply (subgoal_tac "p_addr + (baseOffset + (x && mask (pageBitsForSize sz)))
-                        && ~~ mask (pageBitsForSize sz) = p_addr + baseOffset")
+  apply (subgoal_tac "p_addr + (pptrBaseOffset + (x && mask (pageBitsForSize sz)))
+                        && ~~ mask (pageBitsForSize sz) = p_addr + pptrBaseOffset")
    apply simp
   apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
-     apply (case_tac sz; simp add: is_aligned_def baseOffset_def pptrBase_def pAddr_base_def
+     apply (case_tac sz; simp add: is_aligned_def pptrBaseOffset_def pptrBase_def paddrBase_def
                                    canonical_bit_def bit_simps)
     apply simp
    apply (rule and_mask_less')

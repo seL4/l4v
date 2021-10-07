@@ -108,7 +108,7 @@ lemma decodeDomainInvocation_ccorres:
               and sysargs_rel args buffer)
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
@@ -116,7 +116,7 @@ lemma decodeDomainInvocation_ccorres:
            >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
   supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: length___unsigned_long_' excaps_' call_' invLabel_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' current_extra_caps_' call_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -580,18 +580,19 @@ lemma decodeCNodeInvocation_ccorres:
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode)
   (Call decodeCNodeInvocation_'proc)"
+  supply if_cong[cong]
   apply (cases "\<not>isCNodeCap cp")
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
    apply (rule ccorres_fail')
-  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' excaps_'
+  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' current_extra_caps_'
                                      call_' invLabel_' buffer_')
    apply (clarsimp simp: word_less_nat_alt decodeCNodeInvocation_def
                          list_case_If2 invocation_eq_use_types
@@ -635,9 +636,8 @@ lemma decodeCNodeInvocation_ccorres:
                        del: Collect_const cong: call_ignore_cong)
            apply (rule ccorres_split_throws)
             apply (rule ccorres_rhs_assoc | csymbr)+
-            apply (simp add: invocationCatch_use_injection_handler
-                                  [symmetric, unfolded o_def]
-                             if_1_0_0 dc_def[symmetric]
+            apply (simp add: invocationCatch_use_injection_handler[symmetric, unfolded o_def]
+                             dc_def[symmetric]
                         del: Collect_const cong: call_ignore_cong)
             apply (rule ccorres_Cond_rhs_Seq)
              apply (simp add:if_P del: Collect_const)
@@ -647,8 +647,7 @@ lemma decodeCNodeInvocation_ccorres:
              apply (simp add: syscall_error_to_H_cases)
             apply (simp add: linorder_not_less del: Collect_const cong: call_ignore_cong)
             apply csymbr
-            apply (simp add: if_1_0_0 interpret_excaps_test_null
-                             excaps_map_def
+            apply (simp add: if_1_0_0 interpret_excaps_test_null excaps_map_def
                         del: Collect_const)
             apply (rule ccorres_Cond_rhs_Seq)
              apply (simp add: throwError_bind invocationCatch_def)
@@ -1618,11 +1617,6 @@ lemma rf_sr_cpspace_relation:
   "(s,s') \<in> rf_sr \<Longrightarrow> cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s)) (t_hrs_' (globals s'))"
   by (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
 
-lemma rf_sr_htd_safe_kernel_data_refs:
-  "(s, s') \<in> rf_sr \<Longrightarrow> htd_safe (- kernel_data_refs) (hrs_htd (t_hrs_' (globals s')))"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                     kernel_data_refs_domain_eq_rotate)
-
 lemma cNodeNoOverlap_retype_have_size:
   "\<not> cNodeOverlap cns (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + of_nat num * 2 ^ bits - 1)
     \<Longrightarrow> cnodes_retype_have_size {ptr .. ptr + of_nat num * 2 ^ bits - 1} anysz cns"
@@ -1679,7 +1673,7 @@ lemma pspace_no_overlap_underlying_zero_update:
 lemma addrFromPPtr_mask:
   "n \<le> 28
     \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def physMappingOffset_def kernelBase_addr_def
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def
                    ARM_HYP.physBase_def)
   apply word_bitwise
   apply simp
@@ -1699,6 +1693,7 @@ lemma clearMemory_untyped_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits"
@@ -1730,9 +1725,8 @@ lemma clearMemory_untyped_ccorres:
       apply (drule(1) rf_sr_rep0)
       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                             carch_state_relation_def cmachine_state_relation_def)
-
      apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+     apply (ctac add: cleanCacheRange_RAM_ccorres[unfolded dc_def])
     apply wp
    apply (simp add: guard_is_UNIV_def unat_of_nat
                     word_bits_def capAligned_def word_of_nat_less)
@@ -1761,6 +1755,7 @@ lemma reset_untyped_inner_offs_helper:
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
+  including no_0_dvd
   apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
@@ -1840,9 +1835,60 @@ lemma byte_regions_unmodified_actually_heap_list:
   apply (clarsimp split: if_split_asm)
   done
 
+lemma cleanByVA_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost,
+    rule cleanByVA_preserves_kernel_bytes[rule_format])
+   apply simp_all
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_PoC_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_PoC_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+  apply (clarsimp simp only: whileAnno_def)
+  apply (subst whileAnno_def[symmetric, where V=undefined
+       and I="{t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}" for s])
+  apply (rule conseqPre, vcg exspec=cleanByVA_preserves_bytes)
+  apply (safe intro!: byte_regions_unmodified_hrs_mem_update
+    elim!: byte_regions_unmodified_trans byte_regions_unmodified_trans[rotated],
+    (simp_all add: h_t_valid_field)+)
+  done
+
+lemma cleanL2Range_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call plat_cleanL2Range_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule cleanL2Range_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma dsb_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule dsb_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_RAM_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> byte_regions_unmodified' s t}"
+  apply (hoare_rule HoarePartial.ProcNoRec1, rule allI)
+  apply (rule conseqPre)
+   apply (vcg exspec=cleanL2Range_preserves_bytes exspec=cleanCacheRange_PoC_preserves_bytes exspec=dsb_preserves_bytes)
+  apply (fastforce elim!: byte_regions_unmodified_trans)
+  done
+
 lemma resetUntypedCap_ccorres:
   notes upt.simps[simp del] Collect_const[simp del] replicate_numeral[simp del]
-        untypedBits_defs[simp]
+        untypedBits_defs[simp] if_cong[cong] option.case_cong[cong]
   shows
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and sch_act_simple and ct_active' and cte_wp_at' (isUntypedCap o cteCap) slot
@@ -1851,6 +1897,7 @@ lemma resetUntypedCap_ccorres:
      []
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
+  including no_take_bit no_0_dvd
   using [[ceqv_simpl_sequence = true]]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
@@ -1920,7 +1967,7 @@ lemma resetUntypedCap_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply wp
         apply simp
-        apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
+        apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
        apply (rule_tac P="reset_chunk_bits \<le> capBlockSize (cteCap cte)
              \<and> of_nat (capFreeIndex (cteCap cte)) - 1
                  < (2 ^ capBlockSize (cteCap cte) :: addr)"
@@ -2013,7 +2060,7 @@ lemma resetUntypedCap_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply (wp hoare_vcg_ex_lift doMachineOp_psp_no_overlap)
               apply clarsimp
-              apply (vcg exspec=cleanCacheRange_PoU_preserves_bytes)
+              apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
              apply clarify
              apply (rule conjI)
               apply (clarsimp simp: invs_valid_objs' cte_wp_at_ctes_of
@@ -2086,7 +2133,7 @@ lemma resetUntypedCap_ccorres:
              apply (simp add: is_aligned_def addr_card_def card_word)
              apply clarsimp
 
-            apply (rule conseqPre, vcg exspec=cleanCacheRange_PoU_preserves_bytes
+            apply (rule conseqPre, vcg exspec=cleanCacheRange_RAM_preserves_bytes
               exspec=preemptionPoint_modifies)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
@@ -2279,11 +2326,9 @@ lemma invokeUntyped_Retype_ccorres:
            \<inter>  {s. newType_' s = object_type_from_H newType }
            \<inter>  {s. unat (userSize_' s) = us }
            \<inter>  {s. deviceMemory_' s = from_bool isdev}
-           \<inter>  \<lbrace>\<acute>destSlots = slot_range_C (cte_Ptr cnodeptr) start
-                                          (of_nat (length destSlots)) \<and>
-                (\<forall>n<length destSlots.
-                    destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)\<rbrace>
-            )
+           \<inter>  {s. destCNode_' s = cte_Ptr cnodeptr}
+           \<inter>  {s. destOffset_' s = start \<and> (\<forall>n < length destSlots. destSlots ! n = cnodeptr + (start + of_nat n) * 2^cteSizeBits)}
+           \<inter>  {s. destLength_' s = of_nat (length destSlots)})
      []
      (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
      (Call invokeUntyped_Retype_'proc)"
@@ -2366,6 +2411,7 @@ lemma invokeUntyped_Retype_ccorres:
           (ptr + of_nat (shiftL (length destSlots)
               (APIType_capBits newType us)))) >> 4"
       using cover range_cover_sz'[OF cover]
+      including no_take_bit
       apply (simp add: getFreeIndex_def shiftl_t2n
                        unat_of_nat_eq shiftL_nat)
       apply (rule less_mask_eq)
@@ -2383,8 +2429,9 @@ lemma invokeUntyped_Retype_ccorres:
          (liftxf errstate id (K ()) ret__unsigned_long_') (\<lambda>s'. s' = s) ?P'
          [] (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
             (Call invokeUntyped_Retype_'proc)"
+      including no_take_bit
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
-                          userSize_' deviceMemory_' destSlots_'
+                          userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
                     simp: when_def)
        apply (rule ccorres_move_c_guard_cte)
        apply csymbr
@@ -2392,10 +2439,6 @@ lemma invokeUntyped_Retype_ccorres:
        apply (rename_tac ptr_fetch,
          rule_tac P="ptr_fetch = ptr_base" in ccorres_gen_asm2)
        apply csymbr
-       apply csymbr
-       apply (rule ccorres_move_c_guard_cte)
-       apply csymbr
-       apply (rule ccorres_abstract_cleanup)
        apply csymbr
        apply (simp add: from_bool_0 del: Collect_const)
        apply (rule_tac xf'=xfdc and r'=dc in ccorres_splitE)
@@ -2433,7 +2476,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (cut_tac some_range_cover_arithmetic)
              apply (case_tac cte', clarsimp simp: modify_map_def fun_eq_iff split: if_split)
-             apply (simp add: mex_def meq_def ptr_base_eq del: split_paired_Ex)
+             apply (simp add: mex_def meq_def ptr_base_eq)
              apply (rule exI, strengthen refl, simp)
              apply (strengthen globals.fold_congs, simp add: field_simps)
             apply ceqv
@@ -2703,6 +2746,7 @@ lemma checkFreeIndex_ccorres:
         ;; \<acute>reset :== scast false)
     (\<acute>freeIndex :== 0
         ;; \<acute>reset :== scast true)))"
+  supply if_cong[cong]
   apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_split_nothrow_case_sum)
@@ -2846,7 +2890,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []
@@ -2854,8 +2898,10 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
+  including no_take_bit
+  supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
-  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' current_extra_caps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2
                       invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -3082,14 +3128,12 @@ lemma decodeUntypedInvocation_ccorres_helper:
                  apply csymbr
                  apply csymbr
                  apply csymbr
-                 apply csymbr
                  apply (simp add: mapM_locate_eq liftE_bindE
                                   injection_handler_sequenceE mapME_x_sequenceE
                                   whileAnno_def injection_bindE[OF refl refl]
                                   bindE_assoc injection_handler_returnOk)
                  (* gsCNodes assertion *)
                  apply (rule ccorres_stateAssert)
-                 apply csymbr
                  apply (simp add: liftE_bindE[symmetric])
                  apply (rule_tac P="capAligned rv" in ccorres_gen_asm)
                  apply (subgoal_tac "args ! 5 \<le> args ! 4 + args ! 5")
@@ -3243,8 +3287,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                               apply (frule iffD2[OF olen_add_eqv])
                               apply (frule(1) isUntypedCap_ccap_relation_helper)
                               apply (clarsimp simp: unat_plus_simple[THEN iffD1])
-                              apply (case_tac slots,simp)
-                              apply clarsimp
                               apply (subst upto_enum_word)
                               apply (subst nth_map_upt)
                                apply (clarsimp simp: field_simps Suc_unat_diff_1 unat_plus_simple[THEN iffD1])
@@ -3446,7 +3488,7 @@ shows
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. excaps_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []

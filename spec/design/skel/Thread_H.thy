@@ -10,7 +10,7 @@ theory Thread_H
 imports
   ThreadDecls_H
   CSpace_H
-  "./$L4V_ARCH/ArchThread_H"
+  ArchThread_H
   FaultHandler_H
   Config_H
 begin

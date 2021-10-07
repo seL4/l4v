@@ -6,9 +6,17 @@ name: Proofs
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
     branches:
       - rt
+  # this action needs access to secrets.
+  # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
 
 jobs:
   mcs:
@@ -23,7 +31,7 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2019
+        isa_branch: ts-2021
         manifest: mcs.xml
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

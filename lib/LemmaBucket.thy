@@ -472,6 +472,10 @@ lemma strenghten_False_imp:
   "\<not>P \<Longrightarrow> P \<longrightarrow> Q"
   by blast
 
+lemma None_in_range_Some [simp]:
+  "(None \<in> range Some) = False"
+  by auto
+
 lemma foldl_fun_or_alt:
   "foldl (\<lambda>x y. x \<or> f y) b ls = foldl (\<or>) b (map f ls)"
   apply (induct ls)
@@ -528,5 +532,33 @@ lemmas add_le_mono_left = order_trans[OF add_le_mono[OF order_refl], rotated]
 lemma hd_tl_nth:
   "Suc 0 < length list \<Longrightarrow> hd (tl list) = list ! 1"
   by (cases list; simp add: hd_conv_nth)
+
+lemma inj_on_domD: "\<lbrakk>inj_on f (dom f); f x = Some z; f y = Some z\<rbrakk> \<Longrightarrow> x = y"
+  by (erule inj_onD) clarsimp+
+
+lemma not_emptyI:
+  "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B \<noteq> {}"
+  by auto
+
+lemma add_mask_lower_bits2:
+  "\<lbrakk>is_aligned (x :: 'a :: len word) n; p && ~~ mask n = 0\<rbrakk> \<Longrightarrow> x + p && ~~ mask n = x"
+  apply (subst word_plus_and_or_coroll)
+   apply (simp add: aligned_mask_disjoint and_mask_0_iff_le_mask)
+  apply (clarsimp simp: bit.conj_disj_distrib2)
+  done
+
+(* FIXME: move to GenericLib *)
+lemma if3_fold2:
+  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)"
+  by (rule z3_rule)
+
+lemma inter_UNIV_minus[simp]:
+  "x \<inter> (UNIV - y) = x-y" by blast
+
+lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> C) \<and> C" by blast
+
+lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> P \<and> B)" by simp
+
+lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
 end

@@ -5,7 +5,7 @@
  *)
 
 theory VSpaceEntries_AI
-imports "./$L4V_ARCH/ArchSyscall_AI"
+imports ArchSyscall_AI
 begin
 
 definition valid_entries :: " ('b \<Rightarrow> ('a::len) word \<Rightarrow> 'c set) \<Rightarrow> (('a::len) word \<Rightarrow> 'b) \<Rightarrow> bool"

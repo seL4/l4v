@@ -1115,10 +1115,6 @@ crunch valid_duplicates'[wp]:
  flushPage "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch valid_duplicates'[wp]:
- findPDForASID "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps simp: crunch_simps unless_def)
-
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> vmsz_aligned' vptr sz \<and> sz \<noteq> ARMSuperSection\<rbrace>
    lookupPTSlot pd vptr
@@ -1163,15 +1159,11 @@ lemma flushPage_valid_arch_state'[wp]:
                    hoare_vcg_conj_lift
                    hoare_vcg_ex_lift
                    valid_case_option_post_wp'
-               simp:  crunch_simps unless_def)+
+               simp: crunch_simps unless_def
+               cong: option.case_cong_weak)+
   apply (rule_tac x=x in exI)
   apply (clarsimp split: option.splits)
   done
-
-crunch valid_arch_state'[wp]:
- flushPage valid_arch_state'
-  (wp: crunch_wps getHWASID_valid_arch' simp: crunch_simps unless_def
-   ignore: doMachineOp)
 
 crunch valid_arch_state'[wp]:
  flushTable "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -1263,7 +1255,6 @@ lemma unmapPageTable_valid_duplicates'[wp]:
    apply (simp add:unmapPageTable_def)
    apply (wp|wpc|simp)+
       apply (wp storePDE_no_duplicates')+
-   apply simp
   apply (simp add:pageTableMapped_def)
    apply (wp getPDE_wp |wpc|simp)+
    apply (rule hoare_post_imp_R[where Q' = "\<lambda>r s. vs_valid_duplicates' (ksPSpace s)"])
@@ -1371,12 +1362,10 @@ lemma mapM_x_storePTE_invalid_whole:
   mapM_x (swp storePTE ARM_HYP_H.pte.InvalidPTE)
   [word , word + 2 ^ pte_bits .e. word + 2 ^ pt_bits - 1]
   \<lbrace>\<lambda>y s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (wp mapM_x_storePTE_update_helper
-    [where word = word and sz = ptBits and ptr = word])
-  apply (clarsimp simp:valid_cap'_def capAligned_def pageBits_def
-    ptBits_def is_aligned_neg_mask_eq objBits_simps
-    archObjSize_def)
-  apply (simp add:mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
+  apply (wp mapM_x_storePTE_update_helper[where word = word and sz = ptBits and ptr = word])
+  apply (clarsimp simp: valid_cap'_def capAligned_def pageBits_def
+                        ptBits_def objBits_simps archObjSize_def)
+  apply (simp add: mask_def field_simps vspace_bits_defs is_aligned_neg_mask_eq')
   done
 
 crunch valid_objs'[wp]:
@@ -1477,7 +1466,7 @@ lemma the_ith_mapM_x_reduce:
 
 lemma upto_enum_nat_Cons:
   "a \<le> b \<Longrightarrow> [a .e. b] = a # [Suc a .e. b]"
-  by (simp add: upt_rec)
+  by (simp add: upt_rec cong: if_weak_cong)
 
 lemma map_zip_the_i:
   "distinct xs \<Longrightarrow>
@@ -1502,7 +1491,7 @@ lemma mapM_x_zip_the_i:
 lemma upto_enum_word_of_nat:
   "\<lbrakk> a < 2^LENGTH('a); b < 2^LENGTH('a) \<rbrakk> \<Longrightarrow>
   [of_nat a::'a::len word .e. of_nat b] = map of_nat [a .e. b]"
-  by (simp add: upto_enum_word unat_of_nat_eq)
+  by (simp add: upto_enum_word take_bit_nat_eq_self)
 
 lemma map_shift_of_nat:
   "\<lbrakk> a < 2^LENGTH('a); b < 2^LENGTH('a) \<rbrakk> \<Longrightarrow>

@@ -509,19 +509,19 @@ where valid_cap'_def:
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' (if d then UserDataDeviceT else UserDataT)
     (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase) \<and>
+            0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < pptrBase) \<and>
     rghts \<noteq> VMNoAccess
   | PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
-            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
+            0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < pptrBase)
   | PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata
   | VCPUCap v \<Rightarrow> typ_at' (ArchT VCPUT) v s))"
 
 abbreviation (input)
-  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
+  valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61)
 where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
 
@@ -1110,12 +1110,20 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
-abbreviation "idle_tcb_at' \<equiv> pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundNotification t))"
+definition idle_tcb'_2 :: "Structures_H.thread_state \<times> machine_word option \<Rightarrow> bool" where
+  "idle_tcb'_2 \<equiv> \<lambda>(st, ntfn_opt). (idle' st \<and> ntfn_opt = None)"
 
-definition
-  valid_idle' :: "kernel_state \<Rightarrow> bool"
-where
-  "valid_idle' \<equiv> \<lambda>s. idle_tcb_at' (\<lambda>p. idle' (fst p) \<and> snd p = None) (ksIdleThread s) s"
+abbreviation
+  "idle_tcb' tcb \<equiv> idle_tcb'_2 (tcbState tcb, tcbBoundNotification tcb)"
+
+lemmas idle_tcb'_def = idle_tcb'_2_def
+
+definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
+  "valid_idle' \<equiv> \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_thread_ptr = ksIdleThread s"
+
+lemma valid_idle'_tcb_at':
+  "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s"
+  by (clarsimp simp: valid_idle'_def)
 
 definition
   valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1949,7 +1957,7 @@ lemma valid_pspaceE' [elim]:
 lemma idle'_no_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def)
+                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -1988,6 +1996,7 @@ lemma obj_at'_pspaceI:
 
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
+  supply if_cong[cong]
   apply (clarsimp simp add: cte_wp_at'_def getObject_def)
   apply (drule equalityD2)
   apply (clarsimp simp: in_monad loadObject_cte gets_def
@@ -2064,11 +2073,11 @@ lemma valid_mdb'_pspaceI:
 
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
-  unfolding state_refs_of'_def ps_clear_def by simp
+  unfolding state_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma state_hyp_refs_of'_pspaceI:
   "P (state_hyp_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_hyp_refs_of' s')"
-  unfolding state_hyp_refs_of'_def ps_clear_def by simp
+  unfolding state_hyp_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
@@ -2087,7 +2096,7 @@ lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
       \<Longrightarrow> valid_idle' s'"
   apply (clarsimp simp: valid_idle'_def ex_nonz_cap_to'_def)
-  apply (erule pred_tcb_at'_pspaceI, assumption)
+  apply (erule obj_at'_pspaceI, assumption)
   done
 
 lemma obj_at'_weaken:
@@ -2500,7 +2509,8 @@ lemma locateSlot_conv:
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
                                 bind_assoc exec_get locateSlotTCB_def
                                 objBits_simps
-                         split: zombie_type.split)
+                         split: zombie_type.split
+                         cong: option.case_cong)
   done
 
 lemma typ_at_tcb':
@@ -2664,7 +2674,7 @@ lemma typ_at_lift_valid_cap':
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball
-              split del: if_splits)
+              split del: if_split)
        apply (wp hoare_vcg_const_Ball_lift P typ_at_lift_valid_untyped'
                  hoare_vcg_all_lift typ_at_lift_cte')+
   done
@@ -3020,7 +3030,7 @@ lemma valid_global_refs_update' [iff]:
 
 lemma valid_arch_state_update' [iff]:
   "valid_arch_state' (f s) = valid_arch_state' s"
-  by (simp add: valid_arch_state'_def arch)
+  by (simp add: valid_arch_state'_def arch cong: option.case_cong)
 
 lemma valid_idle_update' [iff]:
   "valid_idle' (f s) = valid_idle' s"
@@ -3428,10 +3438,6 @@ lemma not_pred_tcb_at'_strengthen:
   "pred_tcb_at' f (Not \<circ> P) p s \<Longrightarrow> \<not> pred_tcb_at' f P p s"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
 
-lemma idle_tcb_at'_split:
-  "idle_tcb_at' (\<lambda>p. P (fst p) \<and> Q (snd p)) t s \<Longrightarrow> st_tcb_at' P t s \<and> bound_tcb_at' Q t s"
-  by (clarsimp simp: pred_tcb_at'_def dest!: obj_at'_conj_distrib)
-
 lemma valid_queues_no_bitmap_def':
   "valid_queues_no_bitmap =
      (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
@@ -3662,30 +3668,8 @@ lemma superSectionPDE_offsets_eq[simp]:  "superSectionPDE_offsets = superSection
 lemma mask_wordRadix_less_wordBits:
   assumes sz: "wordRadix \<le> size w"
   shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
-proof -
-  note pow_num = semiring_numeral_class.power_numeral
-
-  { assume "wordRadix = size w"
-    hence ?thesis
-      by (fastforce intro!: unat_lt2p[THEN order_less_le_trans]
-                    simp: wordRadix_def wordBits_def' word_size)
-  } moreover {
-    assume "wordRadix < size w"
-    hence ?thesis unfolding wordRadix_def wordBits_def' mask_def
-    apply simp
-    apply (subst unat_less_helper, simp_all)
-    apply (rule word_and_le1[THEN order_le_less_trans])
-    apply (simp add: word_size bintrunc_mod2p)
-    apply (subst int_mod_eq', simp_all)
-     apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-     apply (simp del: pow_num)
-    apply (subst int_mod_eq', simp_all)
-    apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-    apply (simp del: pow_num)
-    done
-  }
-  ultimately show ?thesis using sz by fastforce
-qed
+  using word_unat_mask_lt[where m=wordRadix and w=w] assms
+  by (simp add: wordRadix_def wordBits_def')
 
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"

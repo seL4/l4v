@@ -555,8 +555,9 @@ lemma generic_frame_cap_get_capFIsMapped_spec:
        Call generic_frame_cap_get_capFIsMapped_'proc
        \<lbrace>\<acute>ret__unsigned_long = (if generic_frame_cap_get_capFMappedASID_CL (cap_lift \<^bsup>s\<^esup>cap) \<noteq> 0 then 1 else 0)\<rbrace>"
   apply vcg
-  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast])
-done
+  apply (clarsimp simp: generic_frame_cap_get_capFMappedASID_CL_def if_distrib [where f=scast]
+                  cong: if_cong)
+  done
 
 
 
@@ -704,24 +705,29 @@ lemma pde_case_isPageTablePDE:
   by (cases pde, simp_all add: isPageTablePDE_def)
 
 lemma ptrFromPAddr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call ptrFromPAddr_'proc
-  \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call ptrFromPAddr_'proc
+   \<lbrace>\<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: ARM.ptrFromPAddr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
 lemma addrFromPPtr_spec:
-  "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call addrFromPPtr_'proc
-  \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def
-                   ARM.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def ARM.physBase_def)
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def physBase_def)
   done
 
+lemma addrFromKPPtr_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
+  apply vcg
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def
+                   kernelELFBase_def physBase_def pptrBase_def mask_def)
+  done
 
 abbreviation
   "lookupPTSlot_xf \<equiv> liftxf errstate lookupPTSlot_ret_C.status_C lookupPTSlot_ret_C.ptSlot_C ret__struct_lookupPTSlot_ret_C_'"
@@ -1157,6 +1163,7 @@ lemma findFreeHWASID_ccorres:
   "ccorres (=) ret__unsigned_char_'
        (valid_arch_state' and valid_pde_mappings') UNIV []
        (findFreeHWASID) (Call findFreeHWASID_'proc)"
+  including no_take_bit
   apply (cinit)
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
@@ -1187,13 +1194,13 @@ lemma findFreeHWASID_ccorres:
               apply (simp add: word_sint_msb_eq not_msb_from_less word_of_nat_less
                                trans[OF msb_nth nth_ucast] bang_big word_size
                                uint_up_ucast is_up_def source_size_def
-                               target_size_def word_size)
-              apply (simp add: uint_nat unat_of_nat)
-              apply (rule conjI, unat_arith, simp)
+                               target_size_def)
+              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
               apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def)
+                               throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-             apply (simp add: minus_one_norm)
+              apply (uint_arith, simp add: take_bit_nat_def)
+             apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
             apply clarsimp
@@ -1252,8 +1259,7 @@ lemma findFreeHWASID_ccorres:
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
                              target_size_def)
-            apply (simp add: uint_nat)
-            apply unat_arith
+            apply uint_arith
             subgoal by simp
            apply wp
           apply vcg
@@ -1997,6 +2003,7 @@ lemma ccorres_return_void_C':
 lemma is_aligned_cache_preconds:
   "\<lbrakk>is_aligned rva n; n \<ge> 6\<rbrakk> \<Longrightarrow> rva \<le> rva + 0x3F \<and>
           addrFromPPtr rva \<le> addrFromPPtr rva + 0x3F \<and> rva && mask 5 = addrFromPPtr rva && mask 5"
+  supply if_cong[cong]
   apply (drule is_aligned_weaken, simp)
   apply (rule conjI)
    apply (drule is_aligned_no_overflow, simp, unat_arith)[1]
@@ -2134,10 +2141,11 @@ lemmas ccorres_move_array_assertion_pde_16
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
                           and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
-                                           \<and> vptr < kernelBase))
+                                           \<and> vptr < pptrBase))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive
@@ -2364,7 +2372,7 @@ lemma unmapPage_ccorres:
                      apply (simp add: vmsz_aligned'_def vmsz_aligned_def)
                      apply (clarsimp simp: lookup_pd_slot_def Let_def
                                         mask_add_aligned field_simps)
-                     apply (erule less_kernelBase_valid_pde_offset')
+                     apply (erule less_pptrBase_valid_pde_offset')
                       apply (simp add: vmsz_aligned'_def)
                      apply (simp add: word_le_nat_alt unat_of_nat)
                     apply (simp add: upto_enum_step_def)
@@ -2752,6 +2760,7 @@ lemma makeUserPDE_spec:
        C_CL = 0,
        B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
     \<rparr>) \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp:ap_from_vm_rights_mask split:if_splits)
   apply (intro conjI impI allI | clarsimp )+

@@ -7,8 +7,10 @@
 chapter "Fault Handlers"
 
 theory FaultHandler_H
-imports FaultHandlerDecls_H TCB_H
-  "./$L4V_ARCH/ArchFaultHandler_H"
+imports
+  FaultHandlerDecls_H
+  TCB_H
+  ArchFaultHandler_H
 begin
 
 context begin interpretation Arch .

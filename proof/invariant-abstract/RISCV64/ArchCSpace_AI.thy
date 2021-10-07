@@ -9,7 +9,7 @@ Architecture-specific CSpace invariants
 *)
 
 theory ArchCSpace_AI
-imports "../CSpace_AI"
+imports CSpace_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -410,7 +410,7 @@ lemma tcb_cnode_index_def2 [CSpace_AI_assms]:
   apply (clarsimp simp: to_bl_nth word_size word_bits_def)
   apply (subst of_nat_ucast[where 'a=machine_word_len and 'b=3])
    apply (simp add: is_down_def target_size_def source_size_def word_size)
-  apply (simp add: nth_ucast)
+  apply (simp add: nth_ucast del: unsigned_of_nat)
   apply fastforce
   done
 

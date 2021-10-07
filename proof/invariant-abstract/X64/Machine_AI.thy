@@ -9,7 +9,7 @@ Properties of machine operations.
 *)
 
 theory Machine_AI
-imports "../Bits_AI"
+imports Bits_AI
 begin
 
 
@@ -462,6 +462,16 @@ lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
 
 end
+end
+
+context begin interpretation Arch .
+
+requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
+
 end
 
 end

@@ -8,8 +8,7 @@
 
 theory ArchMove_R
 imports
-  "../Move_R"
-
+  Move_R
 begin
 
 (* Use one of these forms everywhere, rather than choosing at random. *)

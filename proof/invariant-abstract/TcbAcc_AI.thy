@@ -5,7 +5,7 @@
  *)
 
 theory TcbAcc_AI
-imports "$L4V_ARCH/ArchCSpace_AI"
+imports ArchCSpace_AI
 begin
 
 context begin interpretation Arch .
@@ -13,6 +13,7 @@ context begin interpretation Arch .
 requalify_facts
   valid_arch_arch_tcb_context_set
   as_user_inv
+  getRegister_inv
   user_getreg_inv
   state_hyp_refs_of_tcb_sched_context_update
   state_hyp_refs_of_tcb_yield_to_update
@@ -2659,5 +2660,17 @@ lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
 
 global_interpretation set_thread_state: non_sc_op "set_thread_state t st"
   by unfold_locales (wpsimp simp: sc_at_pred_n_def wp: sts_obj_at_impossible')
+
+(* FIXME: subsumes thread_set_ct_running *)
+lemma thread_set_ct_in_state:
+  "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
+  \<lbrace>ct_in_state st\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state st\<rbrace>"
+  apply (simp add: ct_in_state_def)
+  apply (rule hoare_lift_Pf [where f=cur_thread])
+   apply (wp thread_set_no_change_tcb_state; simp)
+  apply (simp add: thread_set_def)
+  apply wp
+  apply simp
+  done
 
 end

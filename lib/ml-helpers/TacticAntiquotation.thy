@@ -46,7 +46,7 @@ fun method_binding kind method_text ctxt =
       val ml_body =
             if kind = "inline_method"
             then method_val
-            else "(fn st => Method.NO_CONTEXT_TACTIC " ^
+            else "(fn st => NO_CONTEXT_TACTIC " ^
                    (* XXX: as above *)
                    "(Context.the_local_context ()) (" ^ method_val ^ " []) st)";
       in

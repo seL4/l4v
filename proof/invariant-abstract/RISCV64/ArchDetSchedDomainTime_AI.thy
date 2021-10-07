@@ -5,7 +5,7 @@
  *)
 
 theory ArchDetSchedDomainTime_AI
-imports "../DetSchedDomainTime_AI"
+imports DetSchedDomainTime_AI
 begin
 
 context Arch begin global_naming RISCV64

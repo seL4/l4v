@@ -531,7 +531,7 @@ lemma threadSet_queued_ccorres [corres]:
    apply (rule rf_sr_tcb_update_no_queue_gen, assumption+, simp, simp_all)
    apply (rule ball_tcb_cte_casesI, simp_all)
    apply (simp add: ctcb_relation_def cthread_state_relation_def)
-   apply (case_tac "tcbState ko", simp_all add: Word_Lemmas.from_bool_mask_simp)[1]
+   apply (case_tac "tcbState ko"; simp)
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp simp: typ_heap_simps)
   done
@@ -1803,7 +1803,7 @@ lemma scheduler_action_case_switch_to_if:
 lemma tcb_at_1:
   "tcb_at' t s \<Longrightarrow> tcb_ptr_to_ctcb_ptr t \<noteq> tcb_Ptr 1"
   apply (drule is_aligned_tcb_ptr_to_ctcb_ptr)
-  apply (clarsimp simp add: is_aligned_def max_word_def ctcb_size_bits_def)
+  apply (clarsimp simp add: is_aligned_def ctcb_size_bits_def)
   done
 
 lemma rescheduleRequired_ccorres:
@@ -1828,8 +1828,7 @@ lemma rescheduleRequired_ccorres:
         apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
         subgoal by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                               cscheduler_action_relation_def
-                              carch_state_relation_def cmachine_state_relation_def
-                              max_word_def)
+                              carch_state_relation_def cmachine_state_relation_def)
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply wp+
@@ -1927,8 +1926,8 @@ lemma ksReadyQueuesL1Bitmap_word_log2_max:
     by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
 
 lemma clzl_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
-       \<lbrace>\<acute>ret__long = of_nat (word_clz (x_' s)) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0} Call clzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_clz (x___unsigned_long_' s))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply clarsimp
   apply (rule_tac x="ret__long_'_update f x" for f in exI)
@@ -1962,6 +1961,7 @@ proof -
   (* FIXME generalise *)
   have word_clz_sint_upper[simp]:
     "\<And>(w::machine_word). sint (of_nat (word_clz w) :: 32 signed word) \<le> 2147483679"
+    including no_take_bit
     apply (subst sint_eq_uint)
      apply (rule not_msb_from_less)
      apply simp
@@ -1998,6 +1998,7 @@ proof -
     "\<And>(w::32 word). \<lbrakk> w \<noteq> 0 ; word_log2 w < l2BitmapSize \<rbrakk> \<Longrightarrow>
        unat (of_nat l2BitmapSize - (1::32 word) - of_nat (word_log2 w))
      = invertL1Index (word_log2 w)"
+    including no_take_bit
     apply (subst unat_sub)
      apply (clarsimp simp: l2BitmapSize_def')
      apply (rule word_of_nat_le)
@@ -2008,6 +2009,7 @@ proof -
     done
 
   show ?thesis
+  including no_take_bit
   apply (cinit lift: dom_')
    apply (clarsimp split del: if_split)
    apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
@@ -2118,13 +2120,14 @@ lemma possibleSwitchTo_ccorres:
           \<inter> UNIV) []
      (possibleSwitchTo t )
      (Call possibleSwitchTo_'proc)"
+  including no_take_bit
   supply if_split [split del]
   supply Collect_const [simp del]
   supply dc_simp [simp del]
   supply prio_and_dom_limit_helpers[simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-         ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+         ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: target_')
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_curDomain, rename_tac curDom)
@@ -2139,13 +2142,14 @@ lemma possibleSwitchTo_ccorres:
         apply (frule (1) obj_at_cslift_tcb, clarsimp simp: typ_heap_simps')
         apply (drule ctcb_relation_unat_tcbDomain_C)
         apply unat_arith
+        apply fastforce
         done
      apply (rule ccorres_cond2[where R=\<top>], simp)
       apply (ctac add: tcbSchedEnqueue_ccorres)
      apply (rule_tac R="\<lambda>s. sact = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                      in ccorres_cond)
        apply (fastforce dest!: rf_sr_cscheduler_action_relation pred_tcb_at' tcb_at_not_NULL
-                        simp: cscheduler_action_relation_def max_word_def weak_sch_act_wf_def
+                        simp: cscheduler_action_relation_def weak_sch_act_wf_def
                         split: scheduler_action.splits)
       apply (ctac add: rescheduleRequired_ccorres)
         apply (ctac add: tcbSchedEnqueue_ccorres)
@@ -2175,7 +2179,7 @@ lemma scheduleTCB_ccorres':
        rescheduleRequired
   od)
   (Call scheduleTCB_'proc)"
-  apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
+  apply (cinit' lift: tptr_')
    apply (rule ccorres_rhs_assoc2)+
    apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)
        defer
@@ -2196,7 +2200,7 @@ lemma scheduleTCB_ccorres':
                                  \<and> (\<forall>t. ksSchedulerAction s = SwitchToThread t \<longrightarrow> tcb_at' t s)"
                            and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def if_1_0_0 split del: if_split)
+           apply (clarsimp simp: return_def split del: if_split)
            apply (clarsimp simp: from_bool_0 rf_sr_ksCurThread)
            apply (rule conjI)
             apply (clarsimp simp: st_tcb_at'_def)
@@ -2206,8 +2210,7 @@ lemma scheduleTCB_ccorres':
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
              apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def max_word_def
-                                  tcb_at_not_NULL
+                                  cscheduler_action_relation_def                                  tcb_at_not_NULL
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  cscheduler_action_relation_def)
@@ -2262,7 +2265,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                  apply (fold_subgoals (prefix))[6]
                  subgoal premises prems using prems
                          by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                       cscheduler_action_relation_def max_word_def
+                                       cscheduler_action_relation_def
                                        tcb_at_not_NULL[OF obj_tcb_at'] st_tcb_at'_def
                                 split: scheduler_action.split_asm)+
            apply (clarsimp simp: rf_sr_def cstate_relation_def cscheduler_action_relation_def
@@ -2300,7 +2303,7 @@ lemma rescheduleRequired_ccorres_valid_queues'_simple:
         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                               cscheduler_action_relation_def
                               carch_state_relation_def cmachine_state_relation_def
-                              max_word_def)
+                              )
        apply wp
       apply (simp add: guard_is_UNIV_def)
      apply wp+
@@ -2353,7 +2356,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
              apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def max_word_def
+                                  cscheduler_action_relation_def
                                   tcb_at_not_NULL
                            split: scheduler_action.split_asm)
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def

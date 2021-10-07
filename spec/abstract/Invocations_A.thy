@@ -11,7 +11,7 @@ Data types for syscall invocations
 chapter "Kernel Object Invocations"
 
 theory Invocations_A
-imports "./$L4V_ARCH/ArchInvocation_A"
+imports ArchInvocation_A
 begin
 
 context begin interpretation Arch .

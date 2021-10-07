@@ -9,7 +9,7 @@ chapter "Register Set"
 theory RegisterSet_H
 imports
   "Lib.HaskellLib_H"
-  "../../machine/X64/MachineOps"
+  MachineOps
 begin
 context Arch begin global_naming X64_H
 

@@ -27,23 +27,24 @@ instance Bounded IRQ where
 newtype PAddr = PAddr { fromPAddr :: Word }
     deriving (Integral, Real, Show, Eq, Num, Bits, FiniteBits, Ord, Enum, Bounded)
 
+
 pptrUserTop :: VPtr
 pptrUserTop = VPtr 0x00007fffffffffff
 
-pptrBase :: Word
-pptrBase = 0xffffff8000000000
+paddrBase :: PAddr
+paddrBase = PAddr 0x0
 
-kpptrBase :: Word
-kpptrBase = 0xffffffff80000000
+pptrBase :: VPtr
+pptrBase = VPtr 0xffffff8000000000
 
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr (PAddr addr) = PPtr $ addr + pptrBase
+pptrTop :: VPtr
+pptrTop = VPtr 0xffffffff80000000
 
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr (PPtr ptr) = PAddr $ ptr - pptrBase
+kernelELFPAddrBase :: PAddr
+kernelELFPAddrBase = PAddr 0x00100000
 
-addrFromKPPtr :: PPtr a -> PAddr
-addrFromKPPtr (PPtr ptr) = PAddr $ ptr - kpptrBase
+kernelELFBase :: VPtr
+kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase)
 
 pageColourBits :: Int
 pageColourBits = 0 -- qemu has no cache

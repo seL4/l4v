@@ -9,7 +9,7 @@ imports
   "AsmRefine.ProveGraphRefine"
   "CSpec.Substitute"
   "SEL4GlobalsSwap"
-  "SEL4SimplExport"
+  "SimplExport.SEL4SimplExport"
 begin
 
 declare ptr_add_assertion_uint [simp del]
@@ -61,14 +61,21 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
 ML \<open>
+val broken = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"];
+val slow = ["Kernel_C.init_freemem"];
+
 val dbg = ProveSimplToGraphGoals.new_debug
   {
     \<comment>\<open> VER-1166 \<close>
-    skips = ["Kernel_C.reserve_region", "Kernel_C.merge_regions", "Kernel_C.arch_init_freemem"],
+    skips = broken @ slow,
     only = [],
     timeout = NONE
   };
 \<close>
+
+context
+includes no_take_bit
+begin
 
 (* If this fails, it can be debugged with the assistance of the
    script in TestGraphRefine.thy *)
@@ -88,6 +95,8 @@ val _ = ProveSimplToGraphGoals.print dbg "timeouts:" #timeouts;
 ML \<open>
 val _ = ProveSimplToGraphGoals.print dbg "successes:" #successes;
 \<close>
+
+end
 
 end
 

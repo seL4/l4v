@@ -5,7 +5,7 @@
  *)
 
 theory ArchArch_AI
-imports "../Arch_AI"
+imports Arch_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -68,7 +68,7 @@ lemma check_vp_inv: "\<lbrace>P\<rbrace> check_vp_alignment sz w \<lbrace>\<lamb
 
 lemma p2_low_bits_max:
   "(2 ^ asid_low_bits - 1) = (max_word :: asid_low_index)"
-  by (simp add: asid_low_bits_def max_word_def)
+  by (simp add: asid_low_bits_def)
 
 lemma dom_ucast_eq:
   "is_aligned y asid_low_bits \<Longrightarrow>
@@ -117,7 +117,7 @@ lemma dom_ucast_eq:
 
 lemma asid_high_bits_max_word:
   "(2 ^ asid_high_bits - 1) = (max_word :: asid_high_index)"
-  by (simp add: asid_high_bits_def max_word_def)
+  by (simp add: asid_high_bits_def)
 
 
 lemma dom_ucast_eq_8:
@@ -795,7 +795,7 @@ lemma aci_invs':
   shows
   "\<lbrace>invs and Q and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci \<lbrace>\<lambda>y s. invs s \<and> Q s\<rbrace>"
-  proof -
+proof -
   have cap_insert_invsQ:
        "\<And>cap src dest ap asid.
         \<lbrace>Q and (invs and valid_cap cap and tcb_cap_valid cap dest and
@@ -820,7 +820,7 @@ lemma aci_invs':
         apply (wp cap_insert_ap_invs)
         apply simp
         apply (rule hoare_pre)
-        apply (rule cap_insert_Q)
+      apply (rule cap_insert_Q, assumption)
         apply (auto simp: cte_wp_at_caps_of_state)
         done
   show ?thesis
@@ -830,8 +830,7 @@ lemma aci_invs':
   apply (rename_tac word1 a b aa ba word2)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift)
-     apply (wp cap_insert_invsQ hoare_vcg_ex_lift
-             | simp)+
+         apply (wp cap_insert_invsQ hoare_vcg_ex_lift | simp)+
     apply (simp add: valid_cap_def |
            strengthen real_cte_tcb_valid safe_parent_strg
                       invs_vobjs_strgs
@@ -865,7 +864,6 @@ lemma aci_invs':
     apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
              split del: if_split)
-  apply (strengthen refl)
   apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state)+
@@ -898,21 +896,18 @@ lemma aci_invs':
     apply (rule subset_refl)
    apply fastforce
   apply (clarsimp simp: field_simps)
-  apply (intro conjI impI,
-     simp_all add:free_index_of_def valid_cap_simps valid_untyped_def
-     empty_descendants_range_in range_cover_full clear_um_def max_free_index_def,
-     (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
-
+    apply (intro conjI impI;
+           simp add: free_index_of_def valid_cap_simps valid_untyped_def
+                     empty_descendants_range_in range_cover_full clear_um_def max_free_index_def;
+           clarsimp simp:valid_untyped_def valid_cap_simps)
+       apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (erule(1) cap_to_protected)
     apply (simp add:empty_descendants_range_in descendants_range_def2)+
-
-   apply clarsimp
    apply (drule invs_arch_state)+
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
    apply (drule (1) subsetD)+
    apply (clarsimp simp: in_opt_map_eq)
    apply (erule notE, erule is_aligned_no_overflow)
-
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
   apply (thin_tac "cte_wp_at ((=) cap.NullCap) p s" for p s)
   apply (subst(asm) eq_commute,
@@ -1041,11 +1036,6 @@ declare word_less_sub_le [simp del]
 declare ptrFormPAddr_addFromPPtr [simp]
 
 
-(* FIXME: move *)
-lemma valid_mask_vm_rights[simp]:
-  "mask_vm_rights V R \<in> valid_vm_rights"
-  by (simp add: mask_vm_rights_def)
-
 lemma le_user_vtop_less_pptr_base[simp]:
   "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
   using dual_order.strict_trans2 by blast
@@ -1104,7 +1094,7 @@ lemma decode_fr_inv_map_wf[wp]:
   unfolding decode_fr_inv_map_def Let_def
   apply (wpsimp wp: check_vp_wpR split_del: if_split)
   apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
-  apply (rename_tac s pt_ptr asid vref level pt_slot ab ba ys)
+  apply (rename_tac s pt_ptr asid vref pt_slot level ab ba ys)
   apply (prop_tac "args!0 \<in> user_region")
    apply (clarsimp simp: user_region_def not_le)
    apply (rule user_vtop_canonical_user)
@@ -1190,9 +1180,9 @@ lemma decode_frame_invocation_wf[wp]:
 
 lemma neg_mask_user_region:
   "p \<in> user_region \<Longrightarrow> p && ~~mask n \<in> user_region"
-  apply (simp add: user_region_def canonical_user_def word_bool_alg.conj_ac
+  apply (simp add: user_region_def canonical_user_def bit.conj_ac
               flip: and_mask_0_iff_le_mask)
-  apply (subst word_bool_alg.conj_assoc[symmetric])
+  apply (subst bit.conj_assoc[symmetric])
   apply simp
   done
 
@@ -1207,7 +1197,7 @@ lemma decode_pt_inv_map_wf[wp]:
   apply wpsimp
   apply (clarsimp simp: valid_arch_inv_def valid_pti_def pte_at_eq invalid_pte_at_def
                         wellformed_pte_def valid_cap_def cte_wp_at_caps_of_state)
-  apply (rename_tac level p)
+  apply (rename_tac p level)
   apply (prop_tac "args!0 \<in> user_region")
    apply (simp add: wellformed_mapdata_def user_region_def user_vtop_canonical_user)
   apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def

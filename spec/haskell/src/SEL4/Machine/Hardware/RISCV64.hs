@@ -80,17 +80,39 @@ data HypFaultType
 
 type PAddr = Platform.PAddr
 
-ptrFromPAddr :: PAddr -> PPtr a
-ptrFromPAddr = Platform.ptrFromPAddr
-
-addrFromPPtr :: PPtr a -> PAddr
-addrFromPPtr = Platform.addrFromPPtr
-
 fromPAddr :: PAddr -> Word
 fromPAddr = Platform.fromPAddr
 
+paddrBase :: PAddr
+paddrBase = Platform.PAddr 0x0
+
+pptrBase :: VPtr
+pptrBase = VPtr 0xFFFFFFC000000000
+
+pptrTop :: VPtr
+pptrTop = VPtr 0xFFFFFFFF80000000
+
+kernelELFPAddrBase :: PAddr
+kernelELFPAddrBase = toPAddr $ (fromPAddr Platform.physBase) + 0x4000000
+
+kernelELFBase :: VPtr
+kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase .&. (mask 30))
+
+pptrUserTop :: VPtr
+pptrUserTop = pptrBase
+
+pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
+
+ptrFromPAddr :: PAddr -> PPtr a
+ptrFromPAddr addr = PPtr $ fromPAddr addr + pptrBaseOffset
+
+addrFromPPtr :: PPtr a -> PAddr
+addrFromPPtr addr = toPAddr $ fromPPtr addr - pptrBaseOffset
+
+kernelELFBaseOffset = (fromVPtr kernelELFBase) - (fromPAddr kernelELFPAddrBase)
+
 addrFromKPPtr :: PPtr a -> PAddr
-addrFromKPPtr = Platform.addrFromKPPtr
+addrFromKPPtr (PPtr addr) = toPAddr $ addr - kernelELFBaseOffset
 
 {- Hardware Access -}
 
@@ -258,16 +280,6 @@ data PTE
         pteUser :: Bool }
     deriving (Show, Eq)
 
-pptrBase :: VPtr
-pptrBase = Platform.pptrBase
-
-pptrUserTop :: VPtr
-pptrUserTop = Platform.pptrUserTop
-
-physBase :: PAddr
-physBase = toPAddr Platform.physBase
-
-
 {- Simulator callbacks -}
 
 pageColourBits :: Int
@@ -342,8 +354,8 @@ maxPeriodUs = undefined
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
 
-read_sbadaddr :: MachineMonad Word
-read_sbadaddr = error "Unimplemented - machine op"
+read_stval :: MachineMonad Word
+read_stval = error "Unimplemented - machine op"
 
 plic_complete_claim :: IRQ -> MachineMonad ()
 plic_complete_claim = error "Unimplemented - machine op"

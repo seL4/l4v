@@ -398,9 +398,11 @@ lemma lookup_fp_ccorres':
 
     have cap_get_tag_update_1:
       "\<And>f cap. cap_get_tag (cap_C.words_C_update (\<lambda>w. Arrays.update w (Suc 0) (f w)) cap) = cap_get_tag cap"
-      by (simp add: cap_get_tag_def)
+      by (simp add: cap_get_tag_def cong: if_cong)
 
     show ?case
+    including no_take_bit
+    supply if_cong[cong] option.case_cong[cong]
     apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)
     apply (elim conjE)
@@ -1697,9 +1699,8 @@ shows
         apply (simp add: msgRegisters_ccorres[symmetric] length_msgRegisters)
         apply (simp add: n_msgRegisters_def msgRegisters_unfold)
         apply (drule(1) order_less_le_trans)
-        apply (clarsimp simp: "StrictC'_register_defs" msgRegistersC_def fupdate_def
-          | drule nat_less_cases' | erule disjE)+
-       apply (simp add: min.absorb2)
+        apply ((clarsimp simp: "StrictC'_register_defs" msgRegistersC_def fupdate_def
+                | drule nat_less_cases' | erule disjE)+)[2]
       apply (rule allI, rule conseqPre, vcg)
       apply (simp)
      apply (simp add: length_msgRegisters n_msgRegisters_def word_bits_def hoare_TrueI)+
@@ -1881,6 +1882,7 @@ proof -
   (* FIXME indentation is wonky in this proof, fix will come in a future patch, hopefully when
      automatic indentation is improved *)
   show ?thesis
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -2139,7 +2141,7 @@ proof -
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
                  apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
-                         del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
+                             del: Collect_const More_Word_Operations.ptr_add_def cong: call_ignore_cong)
                  apply csymbr
                  apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                   apply (rename_tac asidMap)
@@ -2699,6 +2701,7 @@ lemma fastpath_reply_recv_ccorres:
   show ?thesis
   using [[goals_limit = 1]]
   supply option.case_cong_weak[cong del]
+  supply if_cong[cong]
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -2922,7 +2925,7 @@ lemma fastpath_reply_recv_ccorres:
                    apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
                                     ccap_relation_reply_helper
                                     ptr_add_assertion_positive
-                           del: Collect_const Word_Lib.ptr_add_def cong: call_ignore_cong)
+                               cong: call_ignore_cong)
                    apply (rule ccorres_move_array_assertion_pd
                           | (rule ccorres_flip_Guard ccorres_flip_Guard2,
                              rule ccorres_move_array_assertion_pd)
@@ -3394,6 +3397,7 @@ lemma schedule_rewrite_ct_not_runnable':
                  \<and> fastpathBestSwitchCandidate t s)
             (schedule)
             (do setSchedulerAction ResumeCurrentThread; switchToThread t od)"
+  supply subst_all [simp del]
   apply (simp add: schedule_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans)
@@ -3494,9 +3498,13 @@ lemma setCTE_obj_at'_tcbIPCBuffer:
   unfolding setCTE_def
   by (rule setObject_cte_obj_at_tcb', simp+)
 
+context
+notes if_cong[cong]
+begin
 crunches cteInsert, asUser
   for obj_at'_tcbIPCBuffer[wp]: "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
+end
 
 crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
   (wp: hoare_drop_imps)
@@ -3524,6 +3532,7 @@ lemma fastpath_callKernel_SysCall_corres:
                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                 and (\<lambda>s. ksDomainTime s \<noteq> 0))
      (callKernel (SyscallEvent SysCall)) (fastpaths SysCall)"
+  supply if_cong[cong]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
@@ -3601,7 +3610,6 @@ lemma fastpath_callKernel_SysCall_corres:
                  apply (rule monadic_rewrite_alternative_l)
                 apply (rule monadic_rewrite_if_rhs[rotated])
                  apply (rule monadic_rewrite_alternative_l)
-                apply (simp add: isRight_case_sum)
                 apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
                  apply (rename_tac asidMap)
                  apply (rule monadic_rewrite_if_rhs[rotated])
@@ -4045,6 +4053,7 @@ lemma schedule_known_rewrite:
       (do Arch.switchToThread t;
           setCurThread t;
           setSchedulerAction ResumeCurrentThread od)"
+  supply subst_all [simp del]
   apply (simp add: schedule_def)
   apply (simp only: switchToThread_def)
   apply (rule monadic_rewrite_imp)
@@ -4439,24 +4448,19 @@ lemma tcbSchedEnqueue_tcbIPCBuffer:
 crunch obj_at'_tcbIPCBuffer[wp]: rescheduleRequired "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps tcbSchedEnqueue_tcbIPCBuffer simp: rescheduleRequired_def)
 
+context
+notes if_cong[cong]
+begin
 crunch obj_at'_tcbIPCBuffer[wp]: setThreadState "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps threadSet_obj_at'_really_strongest)
-
-crunch obj_at'_tcbIPCBuffer[wp]: getCTE "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
-
-crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps)
-
-crunch obj_at'_tcbIPCBuffer[wp]: transferCapsToSlots "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps transferCapsToSlots_pres1 simp: crunch_simps ignore: constOnFailure)
-
-crunch obj_at'_tcbIPCBuffer[wp]: asUser "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
-  (wp: crunch_wps)
 
 crunch obj_at'_tcbIPCBuffer[wp]: handleFault "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
   (wp: crunch_wps constOnFailure_wp tcbSchedEnqueue_tcbIPCBuffer threadSet_obj_at'_really_strongest
    simp: zipWithM_x_mapM)
+end
+
+crunch obj_at'_tcbIPCBuffer[wp]: emptySlot "obj_at' (\<lambda>tcb. P (tcbIPCBuffer tcb)) t"
+  (wp: crunch_wps)
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
@@ -4465,6 +4469,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
   supply option.case_cong_weak[cong del]
+  supply if_cong[cong]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)

@@ -5,7 +5,7 @@
  *)
 
 theory ArchInterruptDecls_H
-imports "../RetypeDecls_H" "../CNode_H"
+imports RetypeDecls_H CNode_H
 begin
 
 context Arch begin global_naming RISCV64_H

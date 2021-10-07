@@ -5,7 +5,7 @@
  *)
 
 theory ArchUntyped_AI
-imports "../Untyped_AI"
+imports Untyped_AI
 begin
 
 context Arch begin global_naming RISCV64
@@ -18,9 +18,7 @@ lemma of_bl_nat_to_cref[Untyped_AI_assms]:
   apply (clarsimp intro!: less_mask_eq
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
-  apply (subst unat_of_nat)
-  apply (erule order_le_less_trans [OF mod_less_eq_dividend])
-  done
+  by (simp add: take_bit_nat_def)
 
 
 lemma cnode_cap_ex_cte[Untyped_AI_assms]:

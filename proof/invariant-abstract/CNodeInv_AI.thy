@@ -10,7 +10,7 @@ recursive revoke and delete operations.
 *)
 
 theory CNodeInv_AI
-imports "./$L4V_ARCH/ArchIpc_AI"
+imports ArchIpc_AI
 begin
 
 
@@ -890,7 +890,7 @@ lemma rec_del_termination:
    apply (erule use_valid [OF _ preemption_point_caps_of_state])
    apply (case_tac aa, simp_all add: fail_def rec_del.psimps)[1]
    apply (rename_tac word option nat)
-   apply (case_tac nat, simp_all)[1]
+    apply (case_tac nat; simp)
    apply (clarsimp simp: in_monad rec_del.psimps)
    apply (clarsimp simp: in_monad in_get_cap_cte_wp_at cte_wp_at_caps_of_state rec_del.psimps
                   split: if_split_asm)
@@ -957,7 +957,7 @@ lemma rec_del_preservationE':
     "\<And>sl cap. \<lbrace>P\<rbrace> set_cap sl cap \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>sl opt. \<lbrace>P\<rbrace> empty_slot sl opt \<lbrace>\<lambda>rv. P\<rbrace>"
     "\<And>cap fin. \<lbrace>P\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. P\<rbrace>"
-    "\<And>cap fin. \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
+    "\<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>\<lambda>rv. E\<rbrace>"
   shows
   "s \<turnstile> \<lbrace>P\<rbrace> rec_del call \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. E\<rbrace>"
 proof (induct rule: rec_del_induct)
@@ -3040,14 +3040,6 @@ lemma invoke_cnode_invs[wp]:
   done
 
 end
-
-crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
-
-
-(* FIXME: rename, move *)
-lemma omgwtfbbq[simp]:
-  "(\<forall>x. y \<noteq> x) = False"
-  by clarsimp
 
 
 lemma corres_underlying_lift_ex1:

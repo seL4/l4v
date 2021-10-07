@@ -13,7 +13,7 @@ This list is almost certainly incomplete; add rules here as they are needed.
 theory OptionMonadWP
 imports
   OptionMonadND
-  "wp/WP"
+  WP
 begin
 
 declare K_def [simp]

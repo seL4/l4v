@@ -128,21 +128,21 @@ lemma decodeInvocation_ccorres:
               and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
               and sysargs_rel args buffer)
        (UNIV \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. invLabel_' s = label}
-                   \<inter> {s. unat (length___unsigned_long_' s) = length args}
-                   \<inter> {s. capIndex_' s = cptr}
-                   \<inter> {s. slot_' s = cte_Ptr slot}
-                   \<inter> {s. excaps_' s = extraCaps'}
-                   \<inter> {s. ccap_relation cp (cap_' s)}
-                   \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. call_' s = from_bool isCall}
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. capIndex_' s = cptr}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+             \<inter> {s. ccap_relation cp (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall id)
        (Call decodeInvocation_'proc)"
   apply (cinit' lift: call_' block_' invLabel_' length___unsigned_long_'
-                      capIndex_' slot_' excaps_' cap_' buffer_')
+                      capIndex_' slot_' current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap decodeInvocation_def
               cong: if_cong StateSpace.state.fold_congs
@@ -362,7 +362,7 @@ lemma wordFromRights_mask_0:
 lemma wordFromRights_mask_eq:
   "wordFromRights rghts && mask 4 = wordFromRights rghts"
   apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
+             in bit.conj_disj_distrib)
   apply (simp add: wordFromRights_mask_0)
   done
 
@@ -609,7 +609,7 @@ lemma sendFaultIPC_ccorres:
             \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
       [] (sendFaultIPC tptr fault)
          (Call sendFaultIPC_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] if_cong[cong]
   apply (cinit lift: tptr_' cong: call_ignore_cong)
    apply (simp add: liftE_bindE del:Collect_const cong:call_ignore_cong)
    apply (rule ccorres_symb_exec_r)
@@ -803,7 +803,7 @@ lemma getMRs_length:
     apply simp
     apply (wp mapM_length)
    apply (simp add: min_def length_msgRegisters)
-  apply (clarsimp simp: n_msgRegisters_def)
+  apply (clarsimp simp: n_msgRegisters_def cong: if_cong)
   apply (simp add: getMRs_def)
   apply (rule hoare_pre, wp)
     apply simp
@@ -1254,7 +1254,7 @@ lemma not_obj_at'_ntfn:
   done
 
 lemma handleRecv_ccorres:
-  notes rf_sr_upd_safe[simp del]
+  notes rf_sr_upd_safe[simp del] if_cong[cong]
   shows
   "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
@@ -1645,8 +1645,8 @@ lemma ucast_maxIRQ_is_not_less:
 
 (* FIXME ARMHYP: move *)
 lemma ctzl_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call ctzl_'proc
-       \<lbrace>\<acute>ret__long = of_nat (word_ctz (x_' s)) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0} Call ctzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_ctz (x___unsigned_long_' s)) \<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply clarsimp
   apply (rule_tac x="ret__long_'_update f x" for f in exI)
@@ -1729,6 +1729,7 @@ lemma gic_vcpu_num_list_regs_cross_over:
   "\<lbrakk> of_nat (armKSGICVCPUNumListRegs (ksArchState s)) = gic_vcpu_num_list_regs_' t;
      valid_arch_state' s \<rbrakk>
    \<Longrightarrow> gic_vcpu_num_list_regs_' t \<le> 0x3F"
+  including no_take_bit
   apply (drule sym, simp)
   apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   apply (clarsimp simp: word_le_nat_alt unat_of_nat)
@@ -1811,13 +1812,15 @@ lemma  ccorres_vgicMaintenance:
   (is "ccorres _ _ ?PRE _ _ _ _")
 proof -
 
-  have unat_of_nat_ctz_plus_32s[simp]:
+  have unat_of_nat_ctz_plus_32s:
     "unat (of_nat (word_ctz w) + (0x20 :: int_sword)) = word_ctz w + 32" for w :: machine_word
+    including no_take_bit
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
-  have unat_of_nat_ctz_plus_32[simp]:
+  have unat_of_nat_ctz_plus_32:
     "unat (of_nat (word_ctz w) + (0x20 :: machine_word)) = word_ctz w + 32" for w :: machine_word
+    including no_take_bit
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_mw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
@@ -1826,17 +1829,15 @@ proof -
      \<Longrightarrow> (0 :: int_sword) <=s of_nat (eisr_calc eisr0 eisr1)
         \<and> of_nat (eisr_calc eisr0 eisr1) <s (0x40 :: int_sword)"
     for eisr0 :: machine_word and eisr1
-    supply int_unat[simp del]
-    using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
-    apply (clarsimp simp: eisr_calc_def sint_word_ariths sbintrunc_If word_sint_msb_eq
-                          word_sless_alt word_sle_def word_size uint_nat
-                    split: if_splits)
-    apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr0) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
-                           uint_nat)
-     apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr1 + 32) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
-                           uint_nat)+
+    including no_take_bit
+    using word_ctz_le[where w=eisr0] word_ctz_less[where w=eisr1]
+    apply (clarsimp simp: word_sless_alt word_sle_def)
+    apply (rule conjI) (* 0 \<le> *)
+     apply (subst sint_of_nat_ge_zero; simp)
+     apply (clarsimp simp: sint_of_nat_ge_zero eisr_calc_def split: if_splits)
+    (* \<le> 64 *)
+    apply (subst int_eq_sint)
+     apply (clarsimp simp: sint_of_nat_ge_zero eisr_calc_def split: if_splits)+
     done
 
   have eisr_calc_le:
@@ -1846,13 +1847,17 @@ proof -
     using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
     by (clarsimp simp: eisr_calc_def split: if_splits)
 
-  have of_nat_word_ctz_0x21helper[simp]:
-    "0x21 + of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
+  have of_nat_word_ctz_0x21helper:
+    "0x21 + word_of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
+    including no_take_bit
     apply (subst unat_arith_simps, simp)
-    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
-    using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
+    apply (subst unat_add_lem'; clarsimp simp: unat_of_nat_ctz_smw)
+    using word_ctz_le[where w=w, simplified]
+    by simp
 
   show ?thesis
+    including no_take_bit
+    supply if_cong[cong]
     apply (cinit)
      apply (rule ccorres_pre_getCurVCPU, rename_tac vcpuPtr_opt)
      apply wpc
@@ -1895,7 +1900,7 @@ proof -
             apply clarsimp
             apply (rule conseqPre, vcg)
             apply clarsimp
-    subgoal for _ eisr1 using sint_ctz_32[where x=eisr1] by clarsimp
+    subgoal for _ eisr1 using sint_ctz_32[where x=eisr1] by (clarsimp simp: of_int_and_nat)
            apply ceqv
           apply clarsimp
           apply (simp add: if_to_top_of_bind)
@@ -1908,7 +1913,8 @@ proof -
     subgoal for _ eisr0 eisr1
       using word_ctz_not_minus_1[where w=eisr1] word_ctz_not_minus_1[where w=eisr0]
       by (clarsimp split: if_splits simp: eisr_calc_def word_le_nat_alt unat_of_nat_eq
-                                          unat_of_nat_ctz_mw of_nat_eq_signed_scast)
+                                          unat_of_nat_ctz_mw of_nat_eq_signed_scast
+                                          of_nat_word_ctz_0x21helper unat_of_nat_ctz_plus_32)
 
           apply (rule ccorres_Cond_rhs_Seq)
 
@@ -1980,7 +1986,7 @@ proof -
                    apply (rule ccorres_move_const_guards)+
                    apply (rule vgicUpdateLR_ccorres_armHSCurVCPU ; clarsimp simp: word_ctz_le)
                     apply (fastforce dest: word_ctz_less
-                                     simp: eisr_calc_def unat_of_nat_ctz_smw)
+                                     simp: eisr_calc_def unat_of_nat_ctz_smw unat_of_nat_ctz_plus_32s)
                    apply (erule eisr_calc_le)
                   apply ceqv
 
@@ -2009,7 +2015,7 @@ proof -
                             seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
                             eisr_calc_def mask_eq_iff
                       split: if_splits
-             ; fastforce simp: uint_nat unat_of_nat_ctz_mw
+             ; fastforce simp: uint_nat unat_of_nat_ctz_mw unat_of_nat_ctz_plus_32
                         dest: word_ctz_less[where w=eisr1] word_ctz_less[where w=eisr0])
       done
 
@@ -2147,6 +2153,7 @@ lemma  ccorres_VPPIEvent:
   (is "ccorres _ _ ?PRE _ _ _ _")
 proof -
   show ?thesis
+    including no_take_bit
     apply (cinit lift: irq_')
      apply (rule_tac P="irqVPPIEventIndex irq \<noteq> None" in ccorres_gen_asm)
      apply (rule ccorres_pre_getCurVCPU, rename_tac vcpuPtr_opt)
@@ -2375,7 +2382,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       using Word.word_of_int and ucast_def apply metis
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

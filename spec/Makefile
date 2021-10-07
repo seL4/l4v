@@ -23,7 +23,7 @@ report-regression:
 #
 
 # Spec heaps.
-HEAPS += ASpec ASpecDoc ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
+HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 # Additional dependencies
 
@@ -31,18 +31,25 @@ HEAPS += ASpec ASpecDoc ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 # and therefore depends on `design-spec`.
 CKernel CSpec: c-kernel design-spec
 
+ExecSpec DSpec : design-spec
+
+ASPEC_VERSION_FILE=abstract/document/VERSION.tex
+ASPEC_GITREV_FILE=abstract/document/gitrev.tex
+GIT_ROOT_FILE=abstract/document/git-root.tex
+
 # NOTE: The abstract spec imports Events from Haskell hence the dependency
-ASpec ExecSpec DSpec : design-spec
+ASpec: ASpec-files design-spec
 
-ASPEC_DOC_GITREV_FILE=abstract/document/gitrev.tex
-ASPEC_DOC_VERSION_FILE=abstract/document/VERSION
+ASpec-files: $(ASPEC_VERSION_FILE) $(GIT_ROOT_FILE) $(ASPEC_GITREV_FILE)
 
-ASpecDoc: design-spec $(ASPEC_DOC_VERSION_FILE) $(ASPEC_DOC_GITREV_FILE)
-
-$(ASPEC_DOC_VERSION_FILE): $(SEL4_VERSION)
+$(ASPEC_VERSION_FILE): $(SEL4_VERSION)
 	cp $< $@
 
-$(ASPEC_DOC_GITREV_FILE): .FORCE
+$(GIT_ROOT_FILE):
+	git rev-parse --show-toplevel > $@
+	perl -p -i -e "s/\n//" $@
+
+$(ASPEC_GITREV_FILE): .FORCE
 	git rev-parse --short=15 HEAD > $@ || echo unknown > $@
 	git diff --no-ext-diff --quiet || echo "*" >> $@
 	git diff --no-ext-diff --quiet --cached || echo "+" >> $@

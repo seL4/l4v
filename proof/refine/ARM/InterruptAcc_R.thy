@@ -8,7 +8,7 @@ theory InterruptAcc_R
 imports TcbAcc_R
 begin
 
-lemma get_irq_slot_corres:
+lemma getIRQSlot_corres:
   "corres (\<lambda>sl sl'. sl' = cte_map sl) \<top> \<top> (get_irq_slot irq) (getIRQSlot irq)"
   apply (simp add: getIRQSlot_def get_irq_slot_def locateSlot_conv
                    liftM_def[symmetric])
@@ -21,7 +21,7 @@ lemma get_irq_slot_corres:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma set_irq_state_corres:
+lemma setIRQState_corres:
   "irq_state_relation state state' \<Longrightarrow>
    corres dc \<top> \<top> (set_irq_state state irq) (setIRQState state' irq)"
   apply (simp add: set_irq_state_def setIRQState_def
@@ -71,7 +71,7 @@ lemma getIRQSlot_real_cte[wp]:
   apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
   apply wp
   apply (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
-                        cte_level_bits_def ucast_nat_def)
+                        cte_level_bits_def ucast_nat_def cteSizeBits_def shiftl_t2n)
   done
 
 lemma getIRQSlot_cte_at[wp]:

@@ -212,7 +212,7 @@ lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (U_shiftl_S_abs_S' (x 
 lemma "\<lbrace>\<lambda>s. 0 \<le> n \<and> n < 32\<rbrace>
          U_shiftl_S_abs_S' (x::word32) (n::int)
        \<lbrace>\<lambda>r s. r = x << nat n\<rbrace>!"
-  by (wpsimp simp: U_shiftl_S_abs_S'_def UINT_MAX_def unat_of_int)
+  by (wpsimp simp: U_shiftl_S_abs_S'_def unat_of_int)
 
 lemma "n <s 0 \<Longrightarrow> \<not> no_fail \<top> (U_shiftl_S_no_abs' (x :: word32) (n :: sword32))"
   by (monad_eq simp: U_shiftl_S_no_abs'_def no_fail_def word_sle_def word_sless_alt)
@@ -229,11 +229,11 @@ lemma "x < 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_US' (x :: i
   by (monad_eq simp: S_shiftl_U_abs_US'_def no_fail_def)
 lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_US' (x :: int) (n :: nat))"
   by (monad_eq simp: S_shiftl_U_abs_US'_def no_fail_def)
-lemma "x << nat n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_US' (x :: int) (n :: nat))"
+lemma "x << n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_US' (x :: int) (n :: nat))"
   by (monad_eq simp: S_shiftl_U_abs_US'_def no_fail_def INT_MAX_def)
-lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 \<le> x \<and> x << nat n \<le> INT_MAX\<rbrace>
+lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 \<le> x \<and> x << n \<le> INT_MAX\<rbrace>
          S_shiftl_U_abs_US' (x::int) (n::nat)
-       \<lbrace>\<lambda>r s. r = x << nat n\<rbrace>!"
+       \<lbrace>\<lambda>r s. r = x << n\<rbrace>!"
   apply (wpsimp simp: S_shiftl_U_abs_US'_def INT_MAX_def shiftl_nat_def shiftl_int_def)
   apply (subst unat_of_int)
     apply simp
@@ -253,11 +253,14 @@ lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_U' (x 
   apply (monad_eq simp: S_shiftl_U_abs_U'_def no_fail_def)
   oops \<comment> \<open>C parser issue: Jira VER-509\<close>
 lemma "sint x << n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_abs_U' (x :: sword32) (n :: nat))"
+  supply Word.of_nat_unat[simp del]
   by (monad_eq simp: S_shiftl_U_abs_U'_def no_fail_def shiftl_int_def INT_MAX_def
                      nat_int_comparison(2) int_unat_nonneg)
-lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x \<and> sint x << nat n \<le> INT_MAX\<rbrace>
+
+lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x \<and> sint x << n \<le> INT_MAX\<rbrace>
          S_shiftl_U_abs_U' (x::sword32) (n::nat)
-       \<lbrace>\<lambda>r s. r = x << nat n\<rbrace>!"
+       \<lbrace>\<lambda>r s. r = x << n\<rbrace>!"
+  supply Word.of_nat_unat[simp del]
   by (wpsimp simp: S_shiftl_U_abs_U'_def INT_MAX_def shiftl_int_def
                    nat_int_comparison(2) int_unat_nonneg)
 
@@ -291,11 +294,13 @@ lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_no_abs' (x
   apply (monad_eq simp: S_shiftl_U_no_abs'_def no_fail_def)
   oops \<comment> \<open>C parser issue: Jira VER-509\<close>
 lemma "sint x << unat n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_U_no_abs' (x :: sword32) (n :: word32))"
+  supply Word.of_nat_unat[simp del]
   by (monad_eq simp: S_shiftl_U_no_abs'_def no_fail_def shiftl_int_def INT_MAX_def
                      nat_int_comparison(2) int_unat_nonneg)
 lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x \<and> sint x << unat n \<le> INT_MAX\<rbrace>
          S_shiftl_U_no_abs' (x::sword32) (n::word32)
        \<lbrace>\<lambda>r s. r = x << unat n\<rbrace>!"
+  supply Word.of_nat_unat[simp del]
   by (wpsimp simp: S_shiftl_U_no_abs'_def INT_MAX_def shiftl_int_def
                    nat_int_comparison(2) int_unat_nonneg)
 
@@ -337,11 +342,13 @@ lemma "32 <=s n \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_U' (x ::
   apply (monad_eq simp: S_shiftl_S_abs_U'_def no_fail_def word_sle_def word_sless_alt)
   oops \<comment> \<open>C parser issue: Jira VER-509\<close>
 lemma "sint x << unat n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_U' (x :: sword32) (n :: sword32))"
+  supply Word.of_nat_unat[simp del]
   by (monad_eq simp: S_shiftl_S_abs_U'_def no_fail_def shiftl_int_def INT_MAX_def
                      nat_int_comparison(2) int_unat_nonneg)
 lemma "\<lbrace>\<lambda>s. 0 <=s n \<and> n <s 32 \<and> 0 <=s x \<and> sint x << unat n \<le> INT_MAX\<rbrace>
          S_shiftl_S_abs_U' (x::sword32) (n::sword32)
        \<lbrace>\<lambda>r s. r = x << unat n\<rbrace>!"
+  supply Word.of_nat_unat[simp del]
   by (wpsimp simp: S_shiftl_S_abs_U'_def INT_MAX_def shiftl_int_def
                    nat_int_comparison(2) int_unat_nonneg)
 
@@ -351,22 +358,22 @@ lemma "n < 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_S' (x :: in
   by (monad_eq simp: S_shiftl_S_abs_S'_def no_fail_def)
 lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_S' (x :: int) (n :: int))"
   by (monad_eq simp: S_shiftl_S_abs_S'_def no_fail_def)
-lemma "x << n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_S' (x :: int) (n :: int))"
+lemma "x << nat n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_abs_S' (x :: int) (n :: int))"
   by (monad_eq simp: S_shiftl_S_abs_S'_def no_fail_def INT_MAX_def)
-lemma "\<lbrace>\<lambda>s. 0 \<le> n \<and> n < 32 \<and> 0 \<le> x \<and> x << n \<le> INT_MAX\<rbrace>
+lemma "\<lbrace>\<lambda>s. 0 \<le> n \<and> n < 32 \<and> 0 \<le> x \<and> x << nat n \<le> INT_MAX\<rbrace>
          S_shiftl_S_abs_S' (x::int) (n::int)
        \<lbrace>\<lambda>r s. r = x << nat n\<rbrace>!"
   apply (wpsimp simp: S_shiftl_S_abs_S'_def INT_MAX_def shiftl_nat_def shiftl_int_def)
   apply (subst unat_of_int)
     apply simp
-   apply (drule le_less_trans[where x="x*2^n" and z="2^32"])
+   apply (drule le_less_trans[where x="x*2^nat n" and z="2^32"])
     apply simp
-   apply (subst mult_less_cancel_left_pos[where c="2^n", symmetric])
+   apply (subst mult_less_cancel_left_pos[where c="2^nat n", symmetric])
     apply simp
    apply (subst (asm) mult.commute)
    apply (erule less_le_trans)
    apply simp
-  apply (simp add: le_unat_uoi[where z="32"])
+  apply (simp add: unat_of_int_32)
   apply (simp flip: nat_mult_distrib nat_power_eq nat_numeral)
   done
 
@@ -378,11 +385,13 @@ lemma "32 <=s n \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_no_abs' (x :
   apply (monad_eq simp: S_shiftl_S_no_abs'_def no_fail_def)
   oops \<comment> \<open>C parser issue: Jira VER-509\<close>
 lemma "sint x << unat n > INT_MAX \<Longrightarrow> \<not> no_fail \<top> (S_shiftl_S_no_abs' (x :: sword32) (n :: sword32))"
+  supply Word.of_nat_unat[simp del]
   by (monad_eq simp: S_shiftl_S_no_abs'_def no_fail_def shiftl_int_def INT_MAX_def
                      nat_int_comparison(2) int_unat_nonneg)
 lemma "\<lbrace>\<lambda>s. 0 <=s n \<and> n <s 32 \<and> 0 <=s x \<and> sint x << unat n \<le> INT_MAX\<rbrace>
          S_shiftl_S_no_abs' (x::sword32) (n::sword32)
        \<lbrace>\<lambda>r s. r = x << unat n\<rbrace>!"
+  supply Word.of_nat_unat[simp del]
   by (wpsimp simp: S_shiftl_S_no_abs'_def INT_MAX_def shiftl_int_def
                    nat_int_comparison(2) int_unat_nonneg)
 
@@ -447,14 +456,14 @@ lemma "x < 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftr_U_abs_US' (x :: i
   by (monad_eq simp: S_shiftr_U_abs_US'_def no_fail_def)
 lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftr_U_abs_US' (x :: int) (n :: nat))"
   by (monad_eq simp: S_shiftr_U_abs_US'_def no_fail_def)
-lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 \<le> x\<rbrace> S_shiftr_U_abs_US' (x::int) (n::nat) \<lbrace>\<lambda>r s. r = x >> nat n\<rbrace>!"
+lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 \<le> x\<rbrace> S_shiftr_U_abs_US' (x::int) (n::nat) \<lbrace>\<lambda>r s. r = x >> n\<rbrace>!"
   by (wpsimp simp: S_shiftr_U_abs_US'_def)
 
 lemma "x <s 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftr_U_abs_U' (x :: sword32) (n :: nat))"
   by (monad_eq simp: S_shiftr_U_abs_U'_def no_fail_def word_sle_def word_sless_alt)
 lemma "n \<ge> 32 \<Longrightarrow> \<not> no_fail \<top> (S_shiftr_U_abs_U' (x :: sword32) (n :: nat))"
   by (monad_eq simp: S_shiftr_U_abs_U'_def no_fail_def)
-lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x\<rbrace> S_shiftr_U_abs_U' (x::sword32) (n::nat) \<lbrace>\<lambda>r s. r = x >> nat n\<rbrace>!"
+lemma "\<lbrace>\<lambda>s. n < 32 \<and> 0 <=s x\<rbrace> S_shiftr_U_abs_U' (x::sword32) (n::nat) \<lbrace>\<lambda>r s. r = x >> n\<rbrace>!"
   by (wpsimp simp: S_shiftr_U_abs_U'_def)
 
 lemma "x < 0 \<Longrightarrow> \<not> no_fail \<top> (S_shiftr_U_abs_S' (x :: int) (n :: word32))"

@@ -7,7 +7,7 @@
 theory ML_Goal_Test
 imports
   ML_Goal
-  "ml-helpers/MLUtils"
+  MLUtils
 begin
 experiment begin
 

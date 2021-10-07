@@ -9,7 +9,7 @@ Properties of machine operations.
 *)
 
 theory Machine_AI
-imports "../Bits_AI"
+imports Bits_AI
 begin
 
 
@@ -274,7 +274,7 @@ lemma no_fail_cleanCacheRange_RAM[simp, wp]:
 
 lemma no_fail_invalidateCacheRange_I[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def, wp no_fail_invalidateByVA_I)
+  by (simp add: invalidateCacheRange_I_def, wp no_fail_invalidate_I_PoU)
 
 lemma no_fail_invalidateCacheRange_RAM[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_RAM s e p)"
@@ -634,7 +634,7 @@ lemma no_irq_cleanCacheRange_RAM[simp, wp]:
 
 lemma no_irq_invalidateCacheRange_I[simp, wp]:
   "no_irq (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def, wp no_irq_invalidateByVA_I)
+  by (simp add: invalidateCacheRange_I_def, wp no_irq_invalidate_I_PoU)
 
 lemma no_irq_when:
   "\<lbrakk>P \<Longrightarrow> no_irq f\<rbrakk> \<Longrightarrow> no_irq (when P f)"
@@ -853,7 +853,7 @@ lemma empty_fail_cleanCacheRange_RAM[simp, intro!]:
 
 lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
   "empty_fail (invalidateCacheRange_I s e p)"
-  by (simp add: invalidateCacheRange_I_def empty_fail_invalidateByVA_I)
+  by (simp add: invalidateCacheRange_I_def empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_invalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (invalidateCacheRange_RAM s e p)"
@@ -879,6 +879,16 @@ lemma empty_fail_clearMemory [simp, intro!]:
 
 
 end
+end
+
+context begin interpretation Arch .
+
+requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
+
 end
 
 end

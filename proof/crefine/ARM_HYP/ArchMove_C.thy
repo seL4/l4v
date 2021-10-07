@@ -8,7 +8,7 @@
 (* Arch specific lemmas that should be moved into theory files before CRefine *)
 
 theory ArchMove_C
-imports "../Move_C"
+imports Move_C
 begin
 
 (* FIXME move: need a theory on top of CSpec that arches can share *)
@@ -128,7 +128,7 @@ lemma ucast_helper_not_maxword:
   apply (rule ucast_up_mono_le)
     apply simp
    apply simp
-  by (simp add: max_word_def)
+  by (simp add: mask_def)
 
 lemmas ucast_helper_simps_32 =
   ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
@@ -158,7 +158,7 @@ lemma setCTE_asidpool':
    apply (simp add: updateObject_cte)
    apply (clarsimp simp: updateObject_cte typeError_def magnitudeCheck_def in_monad
                   split: kernel_object.splits if_splits option.splits)
-  apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
+  apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
   done
 
 lemma udpateCap_asidpool':

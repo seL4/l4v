@@ -811,6 +811,7 @@ lemma unbindNotification_ccorres:
   "ccorres dc xfdc
     (invs') (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}) []
     (unbindNotification tcb) (Call unbindNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: tcb_')
    apply (rule_tac xf'=ntfnPtr_'
                     and r'="\<lambda>rv rv'. rv' = option_to_ptr rv \<and> rv \<noteq> Some 0"
@@ -843,6 +844,7 @@ lemma unbindNotification_ccorres:
 lemma unbindMaybeNotification_ccorres:
   "ccorres dc xfdc (invs') (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr}) []
         (unbindMaybeNotification ntfnptr) (Call unbindMaybeNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule ccorres_rhs_assoc2)
@@ -1032,6 +1034,7 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. asid_wf base \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1287,14 +1290,17 @@ next
   have level: "level < maxPTLevel" by simp
   then
   have [simp]: "maxPT - (1 + of_nat level) < maxPT" (is "?i < maxPT")
+    including no_take_bit
     by (simp add: maxPTLevel_def maxPT_def unat_arith_simps  unat_of_nat)
 
   from level
   have [simp]: "idx ?i < 0x40"
+    including no_take_bit
     by (simp add: idx_def maxPT_def maxPTLevel_def unat_word_ariths unat_arith_simps unat_of_nat)
 
   from level
   have [simp]: "pt + vshift vaddr ?i * 8 = ptSlotIndex (Suc level) pt vaddr"
+    including no_take_bit
     by (simp add: ptSlotIndex_def vshift_def maxPT_def ptIndex_def idx_def ptBitsLeft_def
                   bit_simps mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n)
 
@@ -1308,6 +1314,7 @@ next
     by (simp add: bit_simps mask_def)
 
   show ?case
+    supply if_cong[cong] option.case_cong[cong]
     apply (simp add: Suc(2) lookupPTFromLevel.simps whileAnno_def cong: if_weak_cong)
     apply (rule ccorres_assertE)
     apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
@@ -1617,9 +1624,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1637,7 +1642,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 (* 6 = wordRadix,
@@ -1657,7 +1662,7 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 
-lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
+lemmas upcast_ucast_id = More_Word.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask 6 = x; ucast x \<noteq> irqInvalid;
@@ -1792,6 +1797,7 @@ lemma Arch_finaliseCap_ccorres:
                         \<inter> {s. final_' s = from_bool is_final}) []
    (Arch.finaliseCap cp is_final) (Call Arch_finaliseCap_'proc)"
   (is "ccorres _ _ ?abstract_pre ?c_pre _ _ _")
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: RISCV64_H.finaliseCap_def cap_get_tag_isCap_ArchObject)
@@ -2112,7 +2118,7 @@ lemma finaliseCap_ccorres:
                         mask_def)
        apply (simp add: cte_level_bits_def tcbCTableSlot_def
                         Kernel_C.tcbCTable_def tcbCNodeEntries_def
-                        word_bool_alg.conj_disj_distrib2
+                        bit.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])

@@ -8,7 +8,7 @@
 (* Arch generic lemmas that should be moved into theory files before CRefine *)
 
 theory Move_C
-imports Include_C
+imports CBaseRefine.Include_C
 begin
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
@@ -184,7 +184,7 @@ lemma word_upcast_shiftr:
 
 lemma word_upcast_neg_msb:
   "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (simp only: ucast_def msb_word_of_int, clarsimp)
   apply (drule bin_nth_uint_imp)
   by simp
 
@@ -199,10 +199,10 @@ lemma scast_ucast_up_eq_ucast:
   shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
   using assms
   apply (subst scast_eq_ucast; simp)
-  apply (clarsimp simp: ucast_def msb_word_of_int)
+  apply (simp only: ucast_def msb_word_of_int, clarsimp)
   apply (drule bin_nth_uint_imp)
   apply simp
-  by (meson Word.nth_ucast order.strict_trans test_bit_lenD word_eq_iff)
+  by (metis Word.of_nat_unat nat_less_le unat_ucast_up_simp)
 
 lemma not_max_word_iff_less:
   "w \<noteq> max_word \<longleftrightarrow> w < max_word"
@@ -222,7 +222,7 @@ lemma ucast_increment:
   using assms
   apply (simp add: not_max_word_iff_less word_less_alt)
   apply (erule less_le_trans)
-  apply (simp add: max_word_def)
+  apply simp
   done
 
 lemma max_word_gt_0:
@@ -235,7 +235,7 @@ lemma and_not_max_word:
 
 lemma mask_not_max_word:
   "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (metis shiftl_1_not_0 shiftl_mask_is_0 word_bool_alg.conj_one_right)
+  by (simp add: mask_eq_exp_minus_1)
 
 lemmas and_mask_not_max_word =
   and_not_max_word[OF mask_not_max_word]
@@ -518,9 +518,8 @@ lemma mask_eq_ucast_shiftl:
 
 (* FIXME: replace by mask_mono *)
 lemma mask_le_mono:
-  "m \<le> n \<Longrightarrow> mask m \<le> mask n"
-  apply (subst and_mask_eq_iff_le_mask[symmetric])
-  by (auto intro: word_eqI simp: word_size)
+  "m \<le> n \<Longrightarrow> mask m \<le> (mask n::'a::len word)"
+  by (rule mask_mono)
 
 (* FIXME: move to Word *)
 lemma word_and_mask_eq_le_mono:
@@ -1346,5 +1345,17 @@ lemma tcbSchedEnqueue_queued_queues_inv:
   apply (wpsimp simp: if_apply_def2 wp: threadGet_wp)
   apply normalise_obj_at'
   done
+
+(* FIXME BV: generalise *)
+lemma word_clz_1[simp]:
+  "word_clz (1::32 word) = 31"
+  "word_clz (1::64 word) = 63"
+  by (clarsimp simp: word_clz_def to_bl_def)+
+
+(* FIXME BV: generalise *)
+lemma word_ctz_0[simp]:
+  "word_ctz (0::32 word) = 32"
+  "word_ctz (0::64 word) = 64"
+  by (clarsimp simp: word_ctz_def to_bl_def)+
 
 end

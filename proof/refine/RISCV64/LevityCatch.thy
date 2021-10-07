@@ -6,7 +6,7 @@
 
 theory LevityCatch
 imports
-  Include
+  "BaseRefine.Include"
   "Lib.AddUpdSimps"
   "Lib.LemmaBucket"
   "Lib.SimpStrategy"

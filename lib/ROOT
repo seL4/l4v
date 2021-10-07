@@ -10,6 +10,11 @@ session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
     "HOL-Eisbach"
+  directories
+    "ml-helpers"
+    "subgoal_focus"
+    "Monad_WP"
+    "Monad_WP/wp"
   theories
     Lib
     Apply_Trace_Cmd
@@ -24,14 +29,12 @@ session Lib (lib) = Word_Lib +
     GenericLib
     ProvePart
     Corres_Adjust_Preconds
-    AutoLevity_Base
     Requalify
     Value_Abbreviation
     Eisbach_Methods
     HaskellLib_H
     Eval_Bool
     Bisim_UL
-    Extend_Locale
     Solves_Tac
     Crunch
     Crunch_Instances_NonDet
@@ -50,6 +53,10 @@ session Lib (lib) = Word_Lib +
     "ml-helpers/TermPatternAntiquote"
     "ml-helpers/TacticAntiquotation"
     "ml-helpers/MLUtils"
+    "ml-helpers/TacticTutorial"
+    "ml-helpers/MkTermAntiquote_Tests"
+    "ml-helpers/TacticAntiquotation_Test"
+    "ml-helpers/TermPatternAntiquote_Tests"
     FP_Eval
     "subgoal_focus/Subgoal_Methods"
     Insulin
@@ -75,6 +82,7 @@ session Lib (lib) = Word_Lib +
     DetWPLib
     Guess_ExI
     GenericTag
+    ML_Goal_Test
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
@@ -122,14 +130,14 @@ session CLib (lib) in clib = CParser +
     BitFieldProofsLib
     XPres
 
-session CorresK = Lib +
+session CorresK in "CorresK" = Lib +
   sessions
     ASpec
     ExecSpec
   theories
     CorresK_Lemmas
 
-session LibTest (lib) = Refine +
+session LibTest (lib) in test = Refine +
   sessions
     Lib
     CLib
@@ -154,10 +162,6 @@ session LibTest (lib) = Refine +
     Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
-    "ml-helpers/TacticTutorial"
-    "ml-helpers/MkTermAntiquote_Tests"
-    "ml-helpers/TacticAntiquotation_Test"
-    "ml-helpers/TermPatternAntiquote_Tests"
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test
@@ -177,6 +181,8 @@ session AutoLevity (lib) = HOL +
 session Concurrency (lib) in concurrency = HOL +
   sessions
     Lib
+  directories
+    "examples"
   theories
     Atomicity_Lib
     Triv_Refinement

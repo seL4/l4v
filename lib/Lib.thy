@@ -20,7 +20,7 @@ imports
   Eval_Bool
   NICTATools
   Heap_List
-  "HOL-Word.Word"
+  "Word_Lib.WordSetup"
 begin
 
 (* FIXME: eliminate *)
@@ -93,6 +93,10 @@ definition
   pred_neg :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" ("not _" [40] 40)
 where
   "pred_neg P \<equiv> \<lambda>x. \<not> P x"
+
+lemma pred_neg_simp[simp]:
+  "(not P) s \<longleftrightarrow> \<not> (P s)"
+  by (simp add: pred_neg_def)
 
 definition "K \<equiv> \<lambda>x y. x"
 
@@ -203,6 +207,10 @@ lemma split_paired_Ball:
 lemma split_paired_Bex:
   "(\<exists>x \<in> A. P x) = (\<exists>x y. (x,y) \<in> A \<and> P (x,y))"
   by auto
+
+lemma bexI_minus:
+  "\<lbrakk> P x; x \<in> A; x \<notin> B \<rbrakk> \<Longrightarrow> \<exists>x \<in> A - B. P x"
+  unfolding Bex_def by blast
 
 lemma delete_remove1:
   "delete x xs = remove1 x xs"
@@ -766,6 +774,10 @@ lemma graph_of_SomeD:
   unfolding graph_of_def
   by auto
 
+lemma graph_of_comp:
+  "\<lbrakk> g x = y; f y = Some z \<rbrakk> \<Longrightarrow> (x,z) \<in> graph_of (f \<circ> g)"
+  by (auto simp: graph_of_def)
+
 lemma in_set_zip_refl :
   "(x,y) \<in> set (zip xs xs) = (y = x \<and> x \<in> set xs)"
   by (induct xs) auto
@@ -1292,7 +1304,7 @@ lemma set_neqI:
   by clarsimp
 
 lemma set_pair_UN:
-  "{x. P x} = UNION {xa. \<exists>xb. P (xa, xb)} (\<lambda>xa. {xa} \<times> {xb. P (xa, xb)})"
+  "{x. P x} = \<Union> ((\<lambda>xa. {xa} \<times> {xb. P (xa, xb)}) ` {xa. \<exists>xb. P (xa, xb)})"
   by fastforce
 
 lemma singleton_elemD: "S = {x} \<Longrightarrow> x \<in> S"
@@ -1997,15 +2009,15 @@ lemma dom_eqD:
   "\<lbrakk> f x = Some v; dom f = S \<rbrakk> \<Longrightarrow> x \<in> S"
   by clarsimp
 
-lemma exception_set_finite_1:
+lemma exception_set_finite1:
   "finite {x. P x} \<Longrightarrow> finite {x. (x = y \<longrightarrow> Q x) \<and> P x}"
   by (simp add: Collect_conj_eq)
 
-lemma exception_set_finite_2:
+lemma exception_set_finite2:
   "finite {x. P x} \<Longrightarrow> finite {x. x \<noteq> y \<longrightarrow> P x}"
   by (simp add: imp_conv_disj)
 
-lemmas exception_set_finite = exception_set_finite_1 exception_set_finite_2
+lemmas exception_set_finite = exception_set_finite1 exception_set_finite2
 
 lemma exfEI:
   "\<lbrakk> \<exists>x. P x; \<And>x. P x \<Longrightarrow> Q (f x) \<rbrakk> \<Longrightarrow> \<exists>x. Q x"
@@ -2690,11 +2702,7 @@ lemma int_shiftl_less_cancel:
 lemma int_shiftl_lt_2p_bits:
   "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
   apply (clarsimp simp: shiftl_int_def)
-  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
-  apply (drule_tac z="2^i" in less_le_trans)
-   apply simp
-  apply simp
-  done
+  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
 \<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
 
 lemma int_eq_test_bit:
@@ -2716,7 +2724,7 @@ text \<open>Support for defining enumerations on datatypes derived from enumerat
 lemma distinct_map_enum:
   "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>
    \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
-  by (simp add: distinct_map enum_distinct inj_onI)
+  by (simp add: distinct_map inj_onI)
 
 \<comment>\<open>
   Helps transform facts with multiple instances of a variable so that

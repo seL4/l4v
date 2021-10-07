@@ -54,7 +54,7 @@ fun get_methods ctxt = get_methods_global (Proof_Context.theory_of ctxt)
 
 fun try_one_method m ctxt n goal
     = can (Timeout.apply (Time.fromSeconds 5)
-        (Goal.restrict n 1 #> Method.NO_CONTEXT_TACTIC ctxt
+        (Goal.restrict n 1 #> NO_CONTEXT_TACTIC ctxt
             (Method.evaluate_runtime m ctxt [])
             #> Seq.hd
     )) goal
@@ -69,7 +69,7 @@ fun independent_subgoals goal verbose = let
         t Termtab.empty
     val goals = Thm.prems_of goal
     val goal_vars = map get_vars goals
-    val count_vars = fold (fn t1 => fn t2 => Termtab.join (K (+))
+    val count_vars = fold (fn t1 => fn t2 => Termtab.join (K (op +))
         (Termtab.map (K (K 1)) t1, t2)) goal_vars Termtab.empty
     val indep_vars = Termtab.forall (fst #> Termtab.lookup count_vars
         #> (fn n => n = SOME 1))

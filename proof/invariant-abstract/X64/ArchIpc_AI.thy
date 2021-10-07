@@ -5,50 +5,12 @@
  *)
 
 theory ArchIpc_AI
-imports "../Ipc_AI"
+imports Ipc_AI
 begin
 
 context Arch begin global_naming X64
 
 named_theorems Ipc_AI_assms
-
-crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
-
-crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
-  (wp: crunch_wps cap_refs_respects_device_region_dmo)
-
-lemma update_cap_data_closedform:
-  "update_cap_data pres w cap =
-   (case cap of
-     EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask badge_bits) rights) else NullCap
-   | NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask badge_bits) rights) else NullCap
-   | CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits) + bits
-       then NullCap
-       else CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits))
-                                         (to_bl g''))
-                             ((w >> 6) && mask 58))
-   | ThreadCap r \<Rightarrow> ThreadCap r
-   | DomainCap \<Rightarrow> DomainCap
-   | UntypedCap d p n idx \<Rightarrow> UntypedCap d p n idx
-   | NullCap \<Rightarrow> NullCap
-   | ReplyCap t m rights \<Rightarrow> ReplyCap t m rights
-   | IRQControlCap \<Rightarrow> IRQControlCap
-   | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
-   | Zombie r b n \<Rightarrow> Zombie r b n
-   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
-  apply (cases cap,
-         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
-                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
-                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
-                        simp_thms cap_rights.simps Let_def split_def
-                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
-                        arch_update_cap_data_def cnode_padding_bits_def cnode_guard_size_bits_def
-                  cong: if_cong)
-  apply (auto simp: cnode_padding_bits_def cnode_guard_size_bits_def)
-  done
 
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap d r R typ pgsz None)) = None"
@@ -94,7 +56,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[11]
   apply(wp arch_derive_cap_is_derived)
-  apply(clarify, drule cte_wp_at_eqD, clarify)
+  apply(clarify, drule cte_wp_at_norm, clarify)
   apply(frule(1) cte_wp_at_valid_objs_valid_cap)
   apply(erule cte_wp_at_weakenE)
   apply(clarsimp simp: valid_cap_def)
@@ -235,7 +197,7 @@ qed
 
 lemma is_zombie_update_cap_data[simp, Ipc_AI_assms]:
   "is_zombie (update_cap_data P data cap) = is_zombie cap"
-  by (clarsimp simp: update_cap_data_closedform is_zombie_def Let_def
+  by (clarsimp simp: update_cap_data_closedform arch_update_cap_data_def is_zombie_def Let_def
          split: cap.splits arch_cap.splits)
 
 lemma valid_msg_length_strengthen [Ipc_AI_assms]:
@@ -243,6 +205,7 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: machine_word)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
+  including no_take_bit
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 
@@ -449,10 +412,10 @@ crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register
 end
 
 interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming X64
 

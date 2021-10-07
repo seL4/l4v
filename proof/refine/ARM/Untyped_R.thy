@@ -68,9 +68,9 @@ lemma APIType_map2_CapTable[simp]:
                 kernel_object.split arch_kernel_object.splits)
 
 lemma alignUp_H[simp]:
-  "Untyped_H.alignUp = Word_Lib.alignUp"
+  "Untyped_H.alignUp = More_Word_Operations.alignUp"
   apply (rule ext)+
-  apply (clarsimp simp:Untyped_H.alignUp_def Word_Lib.alignUp_def mask_def)
+  apply (clarsimp simp:Untyped_H.alignUp_def More_Word_Operations.alignUp_def mask_def)
   done
 
 (* MOVE *)
@@ -93,7 +93,7 @@ lemma corres_check_no_children:
      apply (rule corres_guard_imp[OF corres_splitEE])
          apply (rule corres_returnOkTT)
          apply simp
-        apply (rule ensure_no_children_corres)
+        apply (rule ensureNoChildren_corres)
         apply simp
        apply wp+
       apply simp+
@@ -141,7 +141,7 @@ lemma corres_whenE_throw_merge:
   \<Longrightarrow> corres r P P' f (doE _ \<leftarrow> whenE A (throwError e); _ \<leftarrow>  whenE B (throwError e); h odE)"
   by (auto simp: whenE_def split: if_splits)
 
-lemma dec_untyped_inv_corres:
+lemma decodeUntypedInvocation_corres:
   assumes cap_rel: "list_all2 cap_relation cs cs'"
   shows "corres
         (ser \<oplus> untypinv_relation)
@@ -259,6 +259,7 @@ next
 
   note word_unat_power [symmetric, simp del]
   show ?thesis
+    including no_take_bit
     apply (rule corres_name_pre)
     apply clarsimp
     apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap d w n idx)) (cte_map slot) s'")
@@ -370,7 +371,7 @@ next
                   apply (rule_tac P = "valid_cap (cap.CNodeCap r bits g) and invs" in corres_guard_imp [where P' = invs'])
                     apply (rule mapME_x_corres_inv [OF _ _ _ refl])
                       apply (simp del: ser_def)
-                      apply (rule ensure_empty_corres)
+                      apply (rule ensureEmptySlot_corres)
                       apply (clarsimp simp: is_cap_simps)
                      apply (simp, wp)
                     apply (simp, wp)
@@ -394,7 +395,7 @@ next
            apply (rule corres_returnOkTT)
            apply (rule crel)
           apply simp
-          apply (rule corres_splitEE[OF _ lsfc_corres])
+          apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
               apply simp
               apply (rule getSlotCap_corres,simp)
              apply (rule crel)
@@ -697,7 +698,7 @@ lemma map_ensure_empty':
 
 lemma irq_nodes_global:
   "irq_node' s + (ucast (irq :: 10 word)) * 16 \<in> global_refs' s"
-  by (simp add: global_refs'_def mult.commute mult.left_commute)
+  by (simp add: global_refs'_def mult.commute mult.left_commute cteSizeBits_def shiftl_t2n)
 
 lemma valid_global_refsD2':
   "\<lbrakk>ctes_of s p = Some cte; valid_global_refs' s\<rbrakk> \<Longrightarrow>
@@ -754,6 +755,7 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
+  including no_take_bit
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
                 split del: if_split cong: if_cong list.case_cong)
@@ -1399,7 +1401,7 @@ crunches create_cap_ext
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma clearUntypedFreeIndex_corres_noop_psp:
+lemma updateNewFreeIndex_noop_psp_corres:
   "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False True
     dc \<top> (cte_at' slot)
     (return ()) (updateNewFreeIndex slot)"
@@ -1420,7 +1422,7 @@ crunches set_cap, set_cdt
   and reprogram_timer[wp]: "\<lambda>s. P (reprogram_timer s)"
   (wp: crunch_wps)
 
-lemma create_cap_corres:
+lemma insertNewCap_corres:
 notes if_cong[cong del] if_weak_cong[cong]
 shows
   "\<lbrakk> cref' = cte_map (fst tup)
@@ -1540,7 +1542,7 @@ shows
          apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l])
           apply (rule corres_cong[OF refl refl _ refl refl, THEN iffD1])
            apply (rule bind_return[THEN fun_cong])
-          apply (rule corres_split_deprecated [OF _ set_cap_pspace_corres])
+          apply (rule corres_split_deprecated [OF _ setCTE_corres])
              apply (subst bind_return[symmetric],
                     rule corres_split_deprecated)
                 prefer 2
@@ -1548,7 +1550,7 @@ shows
                 apply (rule updateMDB_symb_exec_r)
                apply (simp add: dc_def[symmetric])
                apply (rule corres_split_noop_rhs[OF _ updateMDB_symb_exec_r])
-                apply (rule clearUntypedFreeIndex_corres_noop_psp)
+                apply (rule updateNewFreeIndex_noop_psp_corres)
                apply (wp getCTE_wp set_cdt_valid_objs set_cdt_cte_at
                          hoare_weak_lift_imp | simp add: o_def)+
     apply (clarsimp simp: cte_wp_at_cte_at)
@@ -2847,7 +2849,7 @@ lemma inv_untyped_corres_helper1:
   apply (fold mapM_x_def)
   apply (rule corres_list_all2_mapM_)
      apply (rule corres_guard_imp)
-       apply (erule create_cap_corres)
+       apply (erule insertNewCap_corres)
       apply (clarsimp simp: cte_wp_at_def is_cap_simps)
      apply (clarsimp simp: fun_upd_def cte_wp_at_ctes_of)
     apply clarsimp
@@ -2970,6 +2972,7 @@ lemma createNewCaps_range_helper:
           \<and> (\<forall>p. capClass (capfn p) = PhysicalClass
                  \<and> capUntypedPtr (capfn p) = p
                  \<and> capBits (capfn p) = (APIType_capBits tp us))\<rbrace>"
+  including no_0_dvd
   apply (simp add: createNewCaps_def toAPIType_def Arch_createNewCaps_def
                split del: if_split cong: option.case_cong)
   apply (rule hoare_grab_asm)+
@@ -2981,8 +2984,7 @@ lemma createNewCaps_range_helper:
               \<comment>\<open>Untyped\<close>
               apply (rule hoare_pre, wp)
               apply (frule range_cover_not_zero[rotated -1],simp)
-              apply (clarsimp simp: APIType_capBits_def
-                                    objBits_simps archObjSize_def ptr_add_def o_def)
+              apply (clarsimp simp: APIType_capBits_def objBits_simps archObjSize_def ptr_add_def o_def)
               apply (subst upto_enum_red')
                apply unat_arith
               apply (clarsimp simp: o_def fromIntegral_def toInteger_nat fromInteger_nat)
@@ -3787,7 +3789,7 @@ lemma descendants_range_ex_cte':
    apply (case_tac "\<exists>irq. cteCap ctea = IRQHandlerCap irq")
      apply clarsimp
    apply (erule(1) in_empty_interE[OF _ _ subsetD,rotated -1])
-     apply (clarsimp simp:global_refs'_def)
+     apply (clarsimp simp:global_refs'_def cteSizeBits_def shiftl_t2n)
      apply (erule_tac A = "range P" for P in subsetD)
      apply (simp add:range_eqI field_simps)
    apply (case_tac ctea)
@@ -3811,7 +3813,7 @@ lemma descendants_range_ex_cte':
   apply blast
   done
 
-lemma update_untyped_cap_corres:
+lemma updateCap_isUntypedCap_corres:
   "\<lbrakk>is_untyped_cap cap; isUntypedCap cap'; cap_relation cap cap'\<rbrakk>
    \<Longrightarrow> corres dc
          (cte_wp_at (\<lambda>c. is_untyped_cap c \<and> obj_ref_of c = obj_ref_of cap \<and>
@@ -3837,7 +3839,7 @@ lemma update_untyped_cap_corres:
        apply (rule_tac F = " (cap.UntypedCap dev r bits f) = free_index_update (\<lambda>_. f) c"
                       in corres_gen_asm)
        apply simp
-       apply (rule set_untyped_cap_corres)
+       apply (rule setCTE_UntypedCap_corres)
          apply ((clarsimp simp: cte_wp_at_caps_of_state cte_wp_at_ctes_of)+)[3]
       apply (subst identity_eq)
       apply (wp getCTE_sp getCTE_get no_fail_getCTE)+
@@ -3862,7 +3864,7 @@ lemma updateFreeIndex_corres:
           apply (rule_tac F="isUntypedCap capa
                  \<and> cap_relation cap (capFreeIndex_update (\<lambda>_. idx) capa)"
                in corres_gen_asm2)
-          apply (rule update_untyped_cap_corres, simp+)
+          apply (rule updateCap_isUntypedCap_corres, simp+)
            apply (clarsimp simp: isCap_simps)
           apply simp
          apply (wp getSlotCap_wp)+
@@ -4199,7 +4201,7 @@ lemma ex_tupI:
 context begin interpretation Arch . (*FIXME: arch_split*)
 (* mostly stuff about PPtr/fromPPtr, which seems pretty soft *)
 
-lemma reset_untyped_cap_corres:
+lemma resetUntypedCap_corres:
   "untypinv_relation ui ui'
     \<Longrightarrow> corres (dc \<oplus> dc)
     (invs and valid_machine_time and (\<lambda>s. scheduler_action s = resume_cur_thread)
@@ -4209,6 +4211,7 @@ lemma reset_untyped_cap_corres:
      (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
      (reset_untyped_cap slot)
      (resetUntypedCap (cte_map slot))"
+  including no_take_bit
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
@@ -4220,7 +4223,7 @@ lemma reset_untyped_cap_corres:
                   split del: if_split)
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
-       apply (rule corres_split_deprecated[OF _ detype_corres])
+       apply (rule corres_split_deprecated[OF _ deleteObjects_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)
             apply (simp add: bits_of_def shiftL_nat)
@@ -4463,6 +4466,7 @@ lemma resetUntypedCap_invs_etc:
       and pspace_no_overlap' ptr sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   (is "\<lbrace>invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?asm\<rbrace>
     ?f \<lbrace>\<lambda>_. invs' and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
+  including no_0_dvd no_take_bit
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
   apply (rule hoare_vcg_seqE[rotated])
@@ -4875,7 +4879,7 @@ lemma inv_untyped_corres':
         apply (rule corres_split_norE)
            prefer 2
            apply (rule corres_whenE, simp)
-            apply (rule reset_untyped_cap_corres[where ui=ui and ui'=ui'])
+            apply (rule resetUntypedCap_corres[where ui=ui and ui'=ui'])
             apply (simp add: ui ui')
            apply simp
           apply simp
@@ -5471,14 +5475,14 @@ lemma invokeUntyped_invs'':
         Q' s"
 
     obtain cref reset ptr tp us slots dev
-      where pf:
-      "invokeUntyped_proofs s cref reset (ptr && ~~ mask sz) ptr tp us slots
-          sz idx dev"
+      where pf: "invokeUntyped_proofs s cref reset (ptr && ~~ mask sz) ptr tp us slots sz idx dev"
       and ui: "ui = Invocations_H.Retype cref reset (ptr && ~~ mask sz) ptr tp us slots dev"
       using vui1 misc
       apply (cases ui, simp only: Invocations_H.untyped_invocation.simps)
       apply (frule(2) invokeUntyped_proofs.intro)
-      apply (clarsimp simp: cte_wp_at_ctes_of word_bw_assocs)
+      apply clarsimp
+      apply (unfold cte_wp_at_ctes_of)
+      apply (drule meta_mp; clarsimp)
       done
 
     note vui = vui1[simplified ui Invocations_H.untyped_invocation.simps]

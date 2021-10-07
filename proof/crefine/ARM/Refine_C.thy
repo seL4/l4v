@@ -7,7 +7,7 @@
 chapter "Toplevel Refinement Statement"
 
 theory Refine_C
-imports Init_C Fastpath_C "../lib/CToCRefine"
+imports Init_C Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -22,14 +22,11 @@ declare liftE_handle [simp]
 
 lemma schedule_sch_act_wf:
   "\<lbrace>invs'\<rbrace> schedule \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-apply (rule hoare_post_imp)
+  apply (rule hoare_post_imp)
  apply (erule invs_sch_act_wf')
-apply (rule schedule_invs')
-done
+  apply (rule schedule_invs')
+  done
 
-(* FIXME: This is cheating since ucast from 10 to 16 will never give us 0xFFFF.
-          However type of 10 word is from irq oracle so it is the oracle that matters not this lemma.
-   (Xin) *)
 lemma ucast_not_helper_cheating:
   fixes a:: "10 word"
   assumes a: "ucast a \<noteq> (0xFFFF :: word16)"
@@ -37,35 +34,18 @@ lemma ucast_not_helper_cheating:
   by (word_bitwise,simp)
 
 lemma ucast_helper_not_maxword:
-  "UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF"
-  apply (subgoal_tac "UCAST(10 \<rightarrow> 32) x \<le> UCAST(10 \<rightarrow> 32) max_word")
-   apply (rule notI)
-   defer
-  apply (rule ucast_up_mono_le)
-    apply simp
-   apply simp
-  by (simp add: max_word_def)
+  \<open>UCAST(10 \<rightarrow> 32) x \<noteq> 0xFFFF\<close>
+  by transfer (simp add: take_bit_eq_mod)
 
 lemmas ucast_helper_simps_32 =
   ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
-
-lemma Arch_finaliseInterrupt_ccorres:
-  "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
-  apply (cinit')
-   apply (rule ccorres_return_Skip)
-  apply clarsimp
-  done
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
            (invs' and sch_act_simple)
            UNIV []
            (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
-  proof -
-  have unifyhelp :
-    "\<And>s t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr>) =
-      ret__unsigned_short_' (t::globals myvars)"
-      by simp
+proof -
   show ?thesis
   apply (cinit')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
@@ -73,7 +53,7 @@ lemma handleInterruptEntry_ccorres:
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule_tac P="rv \<noteq> Some 0xFFFF" in ccorres_gen_asm)
     apply wpc
-     apply (simp add: irqInvalid_def ucast_helper_simps_32)
+     apply (simp add: irqInvalid_def ucast_helper_simps_32 mask_def)
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_stateAssert_after)
@@ -84,13 +64,11 @@ lemma handleInterruptEntry_ccorres:
          apply (clarsimp simp: return_def)
         apply (wp schedule_sch_act_wf schedule_invs'
              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
-      apply (simp add: ucast_not_helper_cheating irqInvalid_def)
+      apply simp
       apply vcg
      apply vcg
-    apply (clarsimp simp: irqInvalid_def ucast_ucast_b is_up ucast_not_helper_cheating ucast_helper_simps_32)
-    apply (rule ccorres_rhs_assoc)
+    apply (clarsimp simp: irqInvalid_def ucast_ucast_b is_up ucast_helper_simps_32 mask_def)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
        apply (rule ccorres_stateAssert_after)
        apply (rule ccorres_add_return2)
@@ -163,7 +141,7 @@ lemma handleVMFaultEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
+         apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -171,7 +149,6 @@ lemma handleVMFaultEvent_ccorres:
          apply simp
         apply (wp hv_inv_ex')
        apply (simp add: guard_is_UNIV_def)
-       apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
       apply ceqv
      apply clarsimp
@@ -244,6 +221,7 @@ lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
+
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
            (invs' and
@@ -279,11 +257,9 @@ lemma handleSyscall_ccorres:
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv)
-                      apply (clarsimp simp: max_word_minus[symmetric] ucast_def max_word_def)
+                      apply (clarsimp simp: ucast_def uint_minus_1_eq)
                      defer
-                     apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                   apply wp
@@ -318,16 +294,14 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                      apply (case_tac rv)
-                      apply (clarsimp simp: ucast_helper_simps_32)
+                      apply (clarsimp simp: ucast_helper_simps_32 mask_def)
                      apply (clarsimp simp only: ucast_helper_simps_32)
                      apply (intro iffI)
                       apply clarsimp
                       apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in
                                ucast_leq_mask; simp add: mask_def)
                      apply simp
-                     apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
@@ -362,13 +336,11 @@ lemma handleSyscall_ccorres:
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                     apply (case_tac rv, clarsimp)
-                    apply (clarsimp simp: ucast_not_helper_cheating ucast_ucast_b is_up ucast_helper_simps_32)
+                    apply (clarsimp simp: ucast_ucast_b is_up ucast_helper_simps_32 mask_def)
                    apply (clarsimp simp: ucast_helper_simps_32)
                    apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in
                                ucast_leq_mask; simp add: mask_def)
-                  apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                    apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
@@ -467,9 +439,9 @@ lemma handleSyscall_ccorres:
                         isReply_def ct_not_ksQ)
    apply (rule conjI, fastforce)
    prefer 2
-   apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in
-           ucast_leq_mask; simp add: mask_def)
-   by (auto simp: ucast_helper_simps_32 syscall_from_H_def Kernel_C.SysSend_def split: option.split_asm)
+   apply (cut_tac 'b=32 and x=a and n=10 and 'a=10 in ucast_leq_mask)
+   by (auto simp: ucast_helper_simps_32 mask_def syscall_from_H_def Kernel_C.SysSend_def
+            split: option.split_asm)
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
@@ -732,7 +704,7 @@ lemma entry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (rule corres_split_deprecated)
          prefer 2
-         apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
+         apply (rule setTCBContext_C_corres, rule ccontext_rel_to_C, simp)
          apply simp
         apply (rule corres_split_deprecated)
            prefer 2
@@ -742,9 +714,9 @@ lemma entry_corres_C:
           apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              prefer 2
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-            apply (rule getContext_corres, simp)
+            apply (rule getContext_corres[unfolded o_def], simp)
            apply (wp threadSet_all_invs_triv' callKernel_cur)+
-   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
+   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply simp
   done
 
@@ -998,8 +970,8 @@ lemma check_active_irq_corres_C:
          apply (rule TrueI)
         apply simp
        apply (clarsimp simp: ucast_helper_simps_32 irqInvalid_def ucast_up_ucast_id
-                             is_up_def source_size_def target_size_def word_size
-                       split: option.splits )
+                             is_up_def source_size_def target_size_def word_size mask_def
+                       split: option.splits)
       apply (rule no_fail_dmo')
       apply (rule no_fail_getActiveIRQ)
      apply (rule hoare_TrueI)+
@@ -1034,6 +1006,7 @@ lemma refinement2_both:
    apply (rule ext)
    apply (clarsimp simp: user_mem'_def option_to_0_def split:if_splits)
   apply (simp add: ADT_H_def)
+  supply subst_all [simp del]
   apply (clarsimp simp: rel_semi_def global_automaton_def relcomp_unfold
                         in_lift_state_relation_eq)
 
@@ -1137,10 +1110,10 @@ lemma kernel_all_subset_kernel:
   apply (intro conjI)
    apply (simp_all add: kernel_global.kernel_call_C_def
                     kernel_call_C_def kernelEntry_C_def
-                    setArchTCB_C_def
+                    setTCBContext_C_def
                     kernel_global.kernelEntry_C_def
                      exec_C_Basic
-                    kernel_global.setArchTCB_C_def
+                    kernel_global.setTCBContext_C_def
                     kernel_call_H_def kernelEntry_def
                     getContext_C_def
                     check_active_irq_C_def checkActiveIRQ_C_def

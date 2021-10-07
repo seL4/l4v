@@ -770,6 +770,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
+  including no_take_bit
   apply (cinit lift: thread_' isReceiver_')
    apply (rule ccorres_split_nothrow)
        apply simp
@@ -924,7 +925,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
        apply clarsimp
       apply clarsimp
       apply wp
-     apply (clarsimp simp: if_1_0_0 Collect_const_mem)
+     apply (clarsimp simp: Collect_const_mem)
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt )
       apply (frule ccap_relation_page_is_device)
@@ -932,12 +933,11 @@ lemma lookupIPCBuffer_ccorres[corres]:
       apply (frule ccap_relation_frame_tags)
       apply clarsimp
       apply (rule conjI,clarsimp)
-       apply (simp add: to_bool_neq_0 cap_get_tag_PageCap_small_frame
-                        cap_get_tag_PageCap_frame cap_frame_cap_lift
-                 split: if_splits)
+       apply (clarsimp simp: cap_get_tag_PageCap_small_frame cap_frame_cap_lift
+                       split: if_splits)
       apply (erule disjE)
        apply ((clarsimp simp: cap_small_frame_cap_lift cap_get_tag_PageCap_frame
-                              to_bool_neq_0 cap_get_tag_PageCap_small_frame
+                              cap_get_tag_PageCap_small_frame
                        split: if_splits)+)[2]
      apply (rule ccontr)
      apply clarsimp
@@ -1018,6 +1018,7 @@ lemma getMRs_user_word:
       \<and> msgLength info \<le> msgMaxLength \<and> i >= scast n_msgRegisters\<rbrace>
   getMRs thread (Some buffer) info
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 4 + 4))\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)

@@ -6,7 +6,7 @@
 
 theory ArchBCorres2_AI
 imports
-  "../BCorres2_AI"
+  BCorres2_AI
 begin
 
 context Arch begin global_naming ARM

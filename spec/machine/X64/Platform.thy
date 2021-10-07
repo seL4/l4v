@@ -9,9 +9,9 @@ chapter "Platform Definitions"
 theory Platform
 imports
   "Lib.Lib"
-  "Word_Lib.Word_Enum"
+  "Word_Lib.WordSetup"
   "Lib.Defs"
-  "../Setup_Locale"
+  Setup_Locale
 begin
 
 context Arch begin global_naming X64
@@ -28,8 +28,8 @@ definition
   "pptrBase = 0xffffff8000000000"
 
 definition
-  kpptrBase :: word64 where
-  "kpptrBase = 0xffffffff80000000"
+  kernelELFBaseOffset :: word64 where
+  "kernelELFBaseOffset = 0xffffffff80000000"
 
 definition
   pptrUserTop :: word64 where
@@ -53,7 +53,7 @@ definition
 
 definition
   addrFromKPPtr :: "word64 \<Rightarrow> paddr" where
-  "addrFromKPPtr pptr \<equiv> pptr - kpptrBase"
+  "addrFromKPPtr pptr \<equiv> pptr - kernelELFBaseOffset"
 
 definition
   pageColourBits :: "nat" where

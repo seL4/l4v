@@ -9,7 +9,8 @@ Lemmas on arch get/set object etc
 *)
 
 theory ArchAcc_AI
-imports "../SubMonad_AI" "ArchVSpaceLookup_AI" "Lib.Crunch_Instances_NonDet"
+imports
+  SubMonad_AI ArchVSpaceLookup_AI "Lib.Crunch_Instances_NonDet"
 begin
 
 
@@ -213,7 +214,7 @@ bundle pagebits =
   pml4_bits_def[simp] pml4_shift_bits_def[simp]
   table_size_def[simp] ptTranslationBits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split] pdpte.splits[split] pml4e.splits[split]
   pte.splits[split]
 
@@ -744,17 +745,6 @@ lemma canonical_address_add:
   using assms sign_extended_add
   unfolding canonical_address_sign_extended
   by auto
-
-(* FIXME: move *)
-lemma validE_R_post_conjD1:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  by (fastforce simp add: validE_R_def validE_def valid_def)
-
-(* FIXME: move *)
-lemma validE_R_post_conjD2:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
-  by (fastforce simp add: validE_R_def validE_def valid_def)
-
 
 (* Lemmas about looking up entries in vspace tables.
    For each level of table, we prove a single private lemma which tells us
@@ -2478,10 +2468,6 @@ lemma set_asid_pool_cur_tcb [wp]:
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: get_object_wp)
-
-
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
@@ -2850,11 +2836,11 @@ lemma as_user_inv:
     done
 qed
 
-lemma user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: getRegister_def)
-  done
+crunches getRegister
+  for inv[wp]: P
+  (simp: getRegister_def)
+
+lemmas user_getreg_inv[wp] = as_user_inv[OF getRegister_inv]
 
 end
 

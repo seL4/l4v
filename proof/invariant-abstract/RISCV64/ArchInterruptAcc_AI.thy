@@ -9,7 +9,7 @@
 *)
 
 theory ArchInterruptAcc_AI
-imports "../InterruptAcc_AI"
+imports InterruptAcc_AI
 begin
 
 context Arch begin global_naming RISCV64

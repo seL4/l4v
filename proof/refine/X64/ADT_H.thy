@@ -596,7 +596,7 @@ shows
   apply (clarsimp simp add: ucast_of_nat_small is_aligned_mask mask_2pm1[symmetric])
   apply (frule (1) is_aligned_AND_less_0)
   apply (clarsimp simp add: word_plus_and_or_coroll le_word_or2)
-  apply (simp add: word_bool_alg.disj_assoc le_word_or2)
+  apply (simp add: or.assoc le_word_or2)
   apply (simp add: word_plus_and_or_coroll[symmetric])
   apply (subgoal_tac "x + y \<le> x + mask (obj_bits ko)", simp)
   apply (rule word_add_le_mono2)
@@ -1282,7 +1282,7 @@ proof -
    apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
      apply (fastforce simp: cte_level_bits_def objBits_defs)+
   apply (case_tac "b = [False, False, False]")
-   apply (simp add: is_aligned_neg_mask_eq)
+   apply simp
   apply (frule_tac b=b and c=cte_level_bits in bin_to_bl_of_bl_eq)
     apply (fastforce simp: tcb_cap_cases_length cte_level_bits_def objBits_defs)+
   apply (subgoal_tac "ksPSpace s' (cte_map (a, b)) = None")
@@ -1764,8 +1764,6 @@ lemma cte_at_has_cap: "cte_at slot s \<Longrightarrow> \<exists>c. cte_wp_at ((=
       apply (simp split: if_split_asm)
        apply (rule r_into_rtrancl)
        apply (erule next_slot_mdb_next)
-      apply (drule_tac x="a" in meta_spec)
-      apply simp
       apply (rule trans)
        apply (rule r_into_rtrancl)
        apply (rule next_slot_mdb_next)

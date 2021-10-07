@@ -10,6 +10,14 @@ imports
   "CTranslationNICTA"
 begin
 
+lemma hoarep_false_pre:
+  "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> {} f Q,A"
+  by (clarsimp intro!: hoare_complete simp: HoarePartialDef.valid_def)
+
+lemma hoarep_false_pre_gen:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> {} f (Q s),(A s)"
+  by (rule allI, rule hoarep_false_pre)
+
 lemma Cond_true:
   "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> P t Q, A \<Longrightarrow> \<Gamma> \<turnstile>\<^bsub>/F\<^esub> (P \<inter> b) Cond b t f Q, A"
   apply (rule hoare_complete)
@@ -80,7 +88,7 @@ lemma Normal_resultE:
   done
 
 lemma Abrupt_result:
-  "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t' \<Longrightarrow> \<exists>t. s = Normal t \<or> s = Abrupt t"
+  "\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t' \<Longrightarrow> (\<exists>t. s = Normal t) \<or> s = Abrupt t'"
 proof (induct c arbitrary: s)
   case While
   thus ?case
@@ -89,11 +97,11 @@ qed (fastforce elim: exec_elim_cases)+
 
 lemma Abrupt_resultE [consumes 1, case_names normal abrupt]:
   "\<lbrakk>\<Gamma> \<turnstile> \<langle>c, s\<rangle> \<Rightarrow> Abrupt t';
-  \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Normal t\<rangle> \<Rightarrow> Abrupt t'; s = Normal t \<rbrakk> \<Longrightarrow> P;
-  \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Abrupt t\<rangle> \<Rightarrow> Abrupt t'; s = Abrupt t \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+    \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Normal t\<rangle> \<Rightarrow> Abrupt t'; s = Normal t\<rbrakk> \<Longrightarrow> P;
+    \<And>t. \<lbrakk>\<Gamma> \<turnstile> \<langle>c, Abrupt t\<rangle> \<Rightarrow> Abrupt t'; s = Abrupt t\<rbrakk> \<Longrightarrow> P\<rbrakk>
+   \<Longrightarrow> P"
   apply (frule Abrupt_result)
-  apply auto
-  done
+  by auto
 
 lemma Fault_result:
   assumes ex: "\<Gamma> \<turnstile> \<langle>a, s\<rangle> \<Rightarrow> t"
@@ -167,8 +175,8 @@ lemma ceqv_sym [sym]:
 lemma exec_eq_is_valid_eq0:
   fixes P :: "'a set"
   assumes eq: "\<And>t t'. (\<Gamma> \<turnstile> \<langle>a, Normal t\<rangle> \<Rightarrow> t') = (\<Gamma> \<turnstile> \<langle>a', Normal t\<rangle> \<Rightarrow> t')"
-  and     vl: "\<Gamma> \<turnstile> P a Q"
-  shows   "\<Gamma> \<turnstile> P a' Q"
+  and     vl: "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P a Q,A"
+  shows   "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P a' Q,A"
   using vl
   apply -
   apply (drule hoare_sound)
@@ -184,7 +192,7 @@ lemma exec_eq_is_valid_eq0:
 lemma exec_eq_is_valid_eq:
   fixes P :: "'a set"
   assumes eq: "\<And>t t'. (\<Gamma> \<turnstile> \<langle>a, Normal t\<rangle> \<Rightarrow> t') = (\<Gamma> \<turnstile> \<langle>a', Normal t\<rangle> \<Rightarrow> t')"
-  shows     vl: "(\<Gamma> \<turnstile> P a Q) = (\<Gamma> \<turnstile> P a' Q)"
+  shows     vl: "hoarep \<Gamma> {} F P a Q A = hoarep \<Gamma> {} F P a' Q A"
   apply rule
    apply (erule exec_eq_is_valid_eq0 [OF eq])
   apply (erule exec_eq_is_valid_eq0 [OF eq [symmetric]])
@@ -270,34 +278,32 @@ lemma exec_Seq_Skip_simps:
   apply (case_tac s', auto intro: exec.intros)
   done
 
-lemma exec_normal:
-  assumes asms: "s' \<in> P'"
-  and     ce: "\<Gamma> \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> Normal t'"
-  and valid': "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> P' c Q', A'"
-  shows   "t' \<in> Q'"
-  using valid' ce asms
-  apply -
-  apply (drule hoare_sound)
-  apply (clarsimp elim: exec_Normal_elim_cases
-    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+lemma hoarep_exec:
+  assumes pre: "s \<in> P"
+  assumes exec: "\<Gamma>\<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> t"
+  assumes hoare: "\<Gamma>\<turnstile>\<^bsub>/F\<^esub> P c Q,A"
+  shows "(\<exists>f \<in> F. t = Fault f) \<or> (\<exists>t' \<in> Q. t = Normal t') \<or> (\<exists>t' \<in> A. t = Abrupt t')"
+  using pre hoare_sound[OF hoare] exec
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def image_def)
   apply (drule spec, drule spec, drule (1) mp)
-  apply auto
-  done
+  by auto
 
-lemma exec_abrupt:
-  assumes asms: "s' \<in> P'"
-  and     ce: "\<Gamma> \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> Abrupt t'"
-  and valid': "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> P' c Q', A'"
-  shows   "t' \<in> A'"
-  using valid' ce asms
-  apply -
-  apply (drule hoare_sound)
-  apply (clarsimp elim: exec_Normal_elim_cases
-    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
-  apply (drule spec, drule spec, drule (1) mp)
-  apply auto
-  done
+lemmas hoarep_exec'
+  = hoarep_exec[where s=s' and P=P' and A=A' and Q=Q' for s' P' Q' A']
 
+lemmas exec_normal = hoarep_exec'[where t="Normal t'" for t', simplified]
+lemmas exec_abrupt = hoarep_exec'[where t="Abrupt t'" for t', simplified]
+lemmas exec_fault = hoarep_exec'[where t="Fault f" for f, simplified]
+lemmas exec_stuck = hoarep_exec[where t=Stuck, simplified]
+
+lemma hoarep_exec_gen:
+  assumes h: "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/F s\<^esub> (P s) c (Q s),(A s)"
+  assumes e: "\<Gamma>\<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> t"
+  shows "s \<in> P x \<longrightarrow> (\<exists>f \<in> F x. t = Fault f) \<or> (\<exists>t' \<in> Q x. t = Normal t') \<or> (\<exists>t' \<in> A x. t = Abrupt t')"
+  by (rule impI, erule hoarep_exec[OF _ e spec[OF h]])
+
+lemmas hoarep_exec_call_body
+  = hoarep_exec_gen[OF _ exec_Call_body_aux[THEN iffD2]]
 
 (* Used so we don't simp it in ctac *)
 definition

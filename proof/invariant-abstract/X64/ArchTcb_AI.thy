@@ -5,7 +5,7 @@
  *)
 
 theory ArchTcb_AI
-imports "../Tcb_AI"
+imports Tcb_AI
 begin
 
 context Arch begin global_naming X64

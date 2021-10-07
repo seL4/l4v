@@ -107,21 +107,11 @@ lemma Arch_maskCapRights_ccorres [corres]:
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp add: return_def simp del: not_ex)
    apply (cases arch_cap)
-         by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex omgwtfbbq)+
+         by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex simp_thms(44))+
 
 lemma to_bool_mask_to_bool_bf:
-  "to_bool (x && mask (Suc 0)) = to_bool_bf (x::machine_word)"
-  apply (simp add: to_bool_bf_def to_bool_def)
-  apply (rule iffI)
-   prefer 2
-   apply simp
-  apply (subgoal_tac "x && mask (Suc 0) < 2^(Suc 0)")
-   apply simp
-   apply (drule word_less_cases [where y=2])
-   apply auto[1]
-  apply (rule and_mask_less')
-  apply simp
-  done
+  "to_bool (x && 1) = to_bool_bf (x::machine_word)"
+  by (simp add: to_bool_bf_def to_bool_def)
 
 lemma to_bool_cap_rights_bf:
   "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
@@ -171,8 +161,6 @@ lemma isArchCap_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call isArchCap_'proc \<lbrace>\<acute>ret__unsigned_long = from_bool (isArchCap_tag (cap_get_tag (cap_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: from_bool_def isArchCap_tag_def bool.split)
-  apply (clarsimp simp: word_mod_2p_is_mask[where n=1, simplified] mask_def)
-  apply word_bitwise
   done
 
 lemma maskCapRights_ccorres [corres]:
@@ -315,7 +303,7 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: cap_reply_cap_lift_def)
       apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                        to_bool_reply_cap_bf
-                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
+                       to_bool_mask_to_bool_bf[simplified] to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -787,7 +775,7 @@ lemma update_freeIndex':
         apply (case_tac cte', simp)
         apply (clarsimp simp: ccap_relation_def cap_lift_def cap_get_tag_def cap_to_H_def)
         apply (thin_tac _)+
-        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist word_bool_alg.conj.assoc)
+        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist and.assoc)
         apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=machine_word_len]], simp)
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
@@ -1739,6 +1727,7 @@ lemma untypedZeroRange_idx_forward_helper:
     \<Longrightarrow> (case (untypedZeroRange cap, untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap))
        of (Some (a, b), Some (a', b')) \<Rightarrow> {a' ..+ unat (b' + 1 - a')} \<subseteq> {a ..+ unat (b + 1 - a)}
         | _ \<Rightarrow> True)"
+  including no_take_bit
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
                         isCap_simps valid_cap_simps' capAligned_def untypedBits_defs
@@ -1781,6 +1770,7 @@ lemma untypedZeroRange_idx_backward_helper:
                of Some (a, b) \<Rightarrow> {a ..+ unat (b + 1 - a)}
                 | None \<Rightarrow> {})
   )"
+  including no_take_bit
   apply (clarsimp split: option.split, intro impI conjI allI)
    apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
@@ -1833,7 +1823,7 @@ lemma heap_list_zero_Ball_intvl:
 lemma untypedZeroRange_not_device:
   "untypedZeroRange cap = Some r
     \<Longrightarrow> \<not> capIsDevice cap"
-  by (clarsimp simp: untypedZeroRange_def)
+  by (clarsimp simp: untypedZeroRange_def cong: if_cong)
 
 lemma updateTrackedFreeIndex_noop_ccorres:
   "ccorres dc xfdc (cte_wp_at' ((\<lambda>cap. isUntypedCap cap
@@ -2187,15 +2177,12 @@ lemma heap_modify_Array_element:
 
 lemma fupdate_word_set_or_clear_max_word:
   "fupdate i (word_set_or_clear b max_word) arr = Arrays.update arr i (if b then max_word else 0)"
-  by (simp add: fupdate_def word_set_or_clear_def)
+  by (simp add: fupdate_def word_set_or_clear_def cong: if_cong)
 
 lemma h_t_valid_Array_element':
-  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < CARD('b) \<rbrakk>
+  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < int CARD('b) \<rbrakk>
     \<Longrightarrow> htd \<Turnstile>\<^sub>t ((ptr_coerce p :: 'a ptr) +\<^sub>p n)"
-  apply (drule_tac n="nat n" and coerce=False in h_t_valid_Array_element')
-   apply simp
-  apply (simp add: array_ptr_index_def)
-  done
+  by (fact h_t_valid_Array_element)
 
 lemma Arch_postCapDeletion_ccorres:
   "ccorres dc xfdc
@@ -2265,6 +2252,7 @@ lemma emptySlot_ccorres:
           []
           (emptySlot slot info)
           (Call emptySlot_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: slot_' cleanupInfo_' simp: case_Null_If)
 
   \<comment> \<open>--- handle the clearUntypedFreeIndex\<close>
@@ -2491,6 +2479,7 @@ lemma Arch_sameRegionAs_spec:
                    ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
     Call Arch_sameRegionAs_'proc
     \<lbrace>  \<acute>ret__unsigned_long = from_bool (Arch.sameRegionAs capa capb) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply clarsimp
   apply (simp add: RISCV64_H.sameRegionAs_def)
@@ -2560,6 +2549,7 @@ lemma cap_get_capSizeBits_spec:
                         cap_lift_domain_cap cap_get_tag_scast
                         objBits_defs wordRadix_def
                         c_valid_cap_def cl_valid_cap_def
+                 cong: option.case_cong
                  dest!: sym [where t = "ucast (cap_get_tag cap)" for cap])
   apply (clarsimp split: option.splits cap_CL.splits dest!: cap_lift_Some_CapD)
   done
@@ -2567,6 +2557,7 @@ lemma cap_get_capSizeBits_spec:
 lemma ccap_relation_get_capSizeBits_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass; capAligned hcap \<rbrakk>
    \<Longrightarrow> 2 ^ get_capSizeBits_CL (cap_lift ccap) = capUntypedSize hcap"
+  supply if_cong[cong]
   apply (cases hcap;
          (match premises in "hcap = ArchObjectCap c" for c \<Rightarrow> \<open>cases c\<close>)?;
          (frule (1) ccap_rel_cap_get_tag_cases_generic)?;
@@ -2803,6 +2794,7 @@ lemma sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and> ccap_relation capb \<acute>cap_b \<and> capAligned capb\<rbrace>
   Call sameRegionAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (sameRegionAs capa capb) \<rbrace>"
+  including no_take_bit
   apply vcg
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2 ccap_relation_c_valid_cap)
@@ -2944,7 +2936,7 @@ lemma framesize_to_H_eq:
 lemma capFSize_range:
   "\<And>cap. cap_get_tag cap = scast cap_frame_cap \<Longrightarrow> c_valid_cap cap \<Longrightarrow>
    capFSize_CL (cap_frame_cap_lift cap) \<le> 2"
-  apply (simp add: cap_frame_cap_lift_def c_valid_cap_def cl_valid_cap_def)
+  apply (simp add: cap_frame_cap_lift_def c_valid_cap_def cl_valid_cap_def cong: option.case_cong)
   apply (clarsimp simp: cap_frame_cap_lift)
   apply (drule word_less_sub_1, simp)
   done
@@ -3115,6 +3107,7 @@ lemma isMDBParentOf_spec:
             (\<exists>s. s \<turnstile>' (cteCap ctea)) }
    Call isMDBParentOf_'proc
    \<lbrace> \<acute>ret__unsigned_long = from_bool (isMDBParentOf ctea cteb) \<rbrace>"
+  supply if_cong[cong]
   apply (intro allI, rule conseqPre)
    apply vcg
   apply (clarsimp simp: isMDBParentOf_def)
@@ -3196,6 +3189,7 @@ lemma updateCapData_spec:
   "\<forall>cap. \<Gamma> \<turnstile> \<lbrace> ccap_relation cap \<acute>cap \<and> preserve = to_bool (\<acute>preserve) \<and> newData = \<acute>newData\<rbrace>
   Call updateCapData_'proc
   \<lbrace>  ccap_relation (updateCapData preserve newData cap) \<acute>ret__struct_cap_C \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre)
   apply vcg
   apply (clarsimp simp: if_1_0_0)

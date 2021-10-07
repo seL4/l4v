@@ -32,10 +32,16 @@
 
 theory WPI
 imports
-  "../../Eisbach_Methods"
-  "../NonDetMonadLemmas"
-  "WPEx"
+  Eisbach_Methods
+  NonDetMonadLemmas
+  WPEx
 begin
+
+(* used in other contexts as well *)
+lemma bool_function_four_cases:
+  "f = Not \<or> f = id \<or> f = (\<lambda>_. True) \<or> f = (\<lambda>_. False)"
+  by (auto simp add: fun_eq_iff all_bool_eq)
+
 
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
 
@@ -102,11 +108,6 @@ private lemma
   by (simp add: atomic_def )
 
 
-
-
-private lemma bool_function_four_cases:
-  "f = Not \<or> f = id \<or> f = (\<lambda>_. True) \<or> f = (\<lambda>_. False)"
-  by (auto simp add: fun_eq_iff all_bool_eq)
 
 private lemma
   atomic_impE_preserved:

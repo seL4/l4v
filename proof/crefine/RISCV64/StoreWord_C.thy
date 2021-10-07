@@ -996,6 +996,7 @@ proof -
   have horrible_helper:
     "\<And>v p. v \<le> 7 \<Longrightarrow> (7 - unat (p && mask 3 :: machine_word) = v) =
                      (p && mask 3 = 7 - of_nat v)"
+    including no_take_bit
     apply (simp add: unat_arith_simps unat_of_nat)
     apply (cut_tac p=p in unat_mask_3_less_8)
     apply arith
@@ -1092,7 +1093,7 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=3 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2
+     apply (auto simp add: eval_nat_numeral horrible_helper2 simp del: unsigned_numeral
                  elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp
@@ -1113,8 +1114,8 @@ lemma storeWord_ccorres':
      (doMachineOp $ storeWord ptr val)
      (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (val' s)))) s))"
-  apply (clarsimp simp: storeWordUser_def simp del: Collect_const
-             split del: if_split)
+  supply if_cong[cong]
+  apply (clarsimp simp: storeWordUser_def simp del: Collect_const)
   apply (rule ccorres_from_vcg_nofail)
   apply (rule allI)
   apply (rule conseqPre, vcg)

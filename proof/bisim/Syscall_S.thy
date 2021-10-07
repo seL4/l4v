@@ -284,8 +284,8 @@ lemma send_fault_ipc_bisim:
       apply (simp add: Let_def)
       apply (rule hoare_vcg_seqE)
        apply (rule hoare_vcg_seqE)
-        apply wpc
-                  apply wp+
+        apply (wpc; wp)
+       apply wp
        apply simp
        apply (rule hoare_post_imp_R [OF lc_sep])
        apply (clarsimp simp: separate_cap_def)
@@ -293,10 +293,6 @@ lemma send_fault_ipc_bisim:
        apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
        apply (erule separate_capE, simp_all)[1]
          apply (wp | simp)+
-     apply clarsimp
-     apply assumption
-     \<comment> \<open>det_ont\<close>
-    apply (simp add: Let_def cong: cap.case_cong)
     apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)
       apply (erule separate_capE, simp_all)[1]
@@ -421,7 +417,6 @@ lemma handle_invocation_bisim:
                  apply (rule handle_fault_bisim)
                 apply simp
                 apply (rule bisim_split_reflE_eq)
-                  apply simp
                   apply (rule decode_invocation_bisim)
                  apply wp+
                apply (simp, rule bisim_refl')
@@ -546,27 +541,9 @@ lemma separate_state_more_update[simp]:
 
 lemma cap_delete_one_sep [wp]:
   "\<lbrace>separate_state\<rbrace> cap_delete_one cptr \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  unfolding cap_delete_one_def
-  apply (simp add: unless_when)
-  apply (wp get_cap_wp')
-     apply (simp add: empty_slot_def post_cap_deletion_def)
-     apply (wp | simp)+
-     (* ugh *)
-       apply (rule separate_state_pres)
-       apply (rule hoare_pre)
-        apply (wps set_cdt_typ_at)
-        apply (wp)
-       apply assumption
-      apply (wp get_cap_inv hoare_drop_imps)+
-    apply (simp add: conj_comms)
-    apply (rule separate_state_pres)
-    apply (rule hoare_pre)
-     apply (wps)
-     apply wp
-    apply simp
-   apply (wp get_cap_wp')+
-  apply simp
-  done
+  unfolding cap_delete_one_def empty_slot_def post_cap_deletion_def
+  by (wpsimp wp: get_cap_wp' hoare_drop_imps |
+      rule separate_state_pres, rule hoare_pre, (wps set_cdt_typ_at; wp), assumption)+
 
 lemma bisim_caller_cap:
   assumes bs: "bisim R P P' a (f NullCap)"
@@ -720,9 +697,11 @@ lemma activate_thread_separate_state [wp]:
 
 lemma schedule_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  apply (simp add: schedule_def switch_to_thread_def arch_switch_to_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def)
-  apply (wp select_inv separate_state_pres' alternative_valid | wpc | simp add: arch_activate_idle_thread_def |  strengthen imp_consequent)+
-  done
+  unfolding schedule_def switch_to_thread_def arch_switch_to_thread_def
+            switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def
+  by (wpsimp wp: select_inv separate_state_pres' alternative_valid
+             simp: arch_activate_idle_thread_def |
+      strengthen imp_consequent)+
 
 lemma set_message_info_sep_pres [wp]:
       "\<lbrace>\<lambda>s. P (typ_at t p s) (caps_of_state s)\<rbrace>

@@ -6,10 +6,10 @@
 
 theory CProof
 imports
-  "umm_heap/SepFrame"
+  SepFrame
   "Simpl-VCG.Vcg"
-  "umm_heap/StructSupport"
-  "umm_heap/ArrayAssertion"
+  StructSupport
+  ArrayAssertion
 begin
 
 (* name generation is the only thing this theory wants, but that
@@ -422,12 +422,35 @@ lemma asm_specE:
 
 lemmas state_eqE = arg_cong[where f="\<lambda>s. (globals s, state.more s)", elim_format]
 
-lemmas asm_store_eq_helper
-    = arg_cong2[where f="(=)" and a="asm_store f v s"]
-      arg_cong2[where f="(=)" and c="asm_store f v s"] for f v s
-
 definition asm_semantics_ok_to_ignore :: "'a itself \<Rightarrow> bool \<Rightarrow> string \<Rightarrow> bool" where
   "asm_semantics_ok_to_ignore ti volatile specifier
     = (\<forall>xs gl. snd ` asm_semantics specifier xs (gl :: (heap_mem \<times> 'a)) = {gl})"
+
+lemma asm_spec_preserves:
+  assumes spec: "\<And>t v' (gl'::heap_mem \<times> 'a).
+                 \<lbrakk> gdata (asm_store gdata gl' (globals \<sigma>)) = gdata (globals \<sigma>);
+                   globals t = globals (lhs v' (globals_update (asm_store gdata gl') \<sigma>)) \<rbrakk>
+                 \<Longrightarrow> t \<in> Q"
+  shows "\<Gamma> \<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Spec (asm_spec (ti::'a itself) gdata vol spec lhs vs) Q, A"
+  apply (rule HoarePartial.Spec, simp)
+  apply (intro conjI allI impI asm_spec_enabled)
+  apply (elim asm_specE state_eqE)
+  apply clarsimp
+  apply (erule (1) spec)
+  done
+
+lemma hoarep_Seq:
+  assumes a: "A \<subseteq> C"
+  assumes b: "B \<subseteq> C"
+  assumes c: "hoarep \<Gamma> \<Theta> F P c Q A"
+  assumes d: "hoarep \<Gamma> \<Theta> F Q d R B"
+  shows "hoarep \<Gamma> \<Theta> F P (Seq c d) R C"
+proof -
+  note post = HoarePartialDef.conseqPost[OF _ subset_refl]
+  show ?thesis
+  by (rule hoarep.Seq[OF post[OF c a] post[OF d b]])
+qed
+
+lemmas hoarep_Seq_nothrow = hoarep_Seq[OF empty_subsetI subset_refl]
 
 end

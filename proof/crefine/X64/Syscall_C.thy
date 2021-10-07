@@ -127,21 +127,21 @@ lemma decodeInvocation_ccorres:
               and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
               and sysargs_rel args buffer)
        (UNIV \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. call_' s = from_bool isCall}
-                   \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. invLabel_' s = label}
-                   \<inter> {s. unat (length___unsigned_long_' s) = length args}
-                   \<inter> {s. capIndex_' s = cptr}
-                   \<inter> {s. slot_' s = cte_Ptr slot}
-                   \<inter> {s. excaps_' s = extraCaps'}
-                   \<inter> {s. ccap_relation cp (cap_' s)}
-                   \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. call_' s = from_bool isCall}
+             \<inter> {s. block_' s = from_bool isBlocking}
+             \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. capIndex_' s = cptr}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+             \<inter> {s. ccap_relation cp (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall id)
        (Call decodeInvocation_'proc)"
   apply (cinit' lift: call_' block_' invLabel_' length___unsigned_long_'
-                      capIndex_' slot_' excaps_' cap_' buffer_')
+                      capIndex_' slot_' current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap decodeInvocation_def
               cong: if_cong StateSpace.state.fold_congs
@@ -358,18 +358,8 @@ lemma wordFromRights_mask_0:
 lemma wordFromRights_mask_eq:
   "wordFromRights rghts && mask 4 = wordFromRights rghts"
   apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
+             in bit.conj_disj_distrib)
   apply (simp add: wordFromRights_mask_0)
-  done
-
-lemma loadWordUser_user_word_at:
-  "\<lbrace>\<lambda>s. \<forall>rv. user_word_at rv x s \<longrightarrow> Q rv s\<rbrace> loadWordUser x \<lbrace>Q\<rbrace>"
-  apply (simp add: loadWordUser_def user_word_at_def
-                   doMachineOp_def split_def)
-  apply wp
-  apply (clarsimp simp: pointerInUserData_def
-                        loadWord_def in_monad upto0_7_def
-                        is_aligned_mask)
   done
 
 lemma mapM_loadWordUser_user_words_at:
@@ -590,7 +580,7 @@ lemma sendFaultIPC_ccorres:
             \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr tptr})
       [] (sendFaultIPC tptr fault)
          (Call sendFaultIPC_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] if_cong[cong]
   apply (cinit lift: tptr_' cong: call_ignore_cong)
    apply (simp add: liftE_bindE del:Collect_const cong:call_ignore_cong)
    apply (rule ccorres_symb_exec_r)
@@ -755,6 +745,7 @@ lemma getMRs_length:
   "\<lbrace>\<lambda>s. msgLength mi \<le> 120\<rbrace> getMRs thread buffer mi
   \<lbrace>\<lambda>args s. if buffer = None then length args = min (unat n_msgRegisters) (unat (msgLength mi))
             else length args = unat (msgLength mi)\<rbrace>"
+  supply if_cong[cong]
   apply (cases buffer)
    apply (simp add: getMRs_def)
    apply (rule hoare_pre, wp)
@@ -1224,6 +1215,7 @@ lemma handleRecv_ccorres:
        []
        (handleRecv isBlocking)
        (Call handleRecv_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: isBlocking_')
    apply (rule ccorres_pre_getCurThread)
    apply (ctac)
@@ -1593,8 +1585,8 @@ lemma ucast_maxIRQ_is_not_less:
 
 (* FIXME ARMHYP: move *)
 lemma ctzl_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call ctzl_'proc
-       \<lbrace>\<acute>ret__long = of_nat (word_ctz (x_' s)) \<rbrace>"
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0} Call ctzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_ctz (x___unsigned_long_' s)) \<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply clarsimp
   apply (rule_tac x="ret__long_'_update f x" for f in exI)
@@ -1744,8 +1736,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       apply (subst Word_Lemmas.of_int_uint_ucast)
-       apply (rule refl)
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

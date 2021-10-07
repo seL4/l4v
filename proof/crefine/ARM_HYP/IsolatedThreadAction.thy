@@ -808,6 +808,7 @@ lemma vcpuDisable_isolatable:
 
 lemma vcpuSwitch_isolatable:
   "thread_actions_isolatable idx (vcpuSwitch v)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp: vcpuSwitch_def when_def split: option.splits)
   apply (safe intro!:
                thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
@@ -966,6 +967,7 @@ lemma doIPCTransfer_simple_rewrite:
          y \<leftarrow> setMessageInfo rcvr ((messageInfoFromWord msgInfo) \<lparr>msgCapsUnwrapped := 0\<rparr>);
          asUser rcvr (setRegister ARM_HYP_H.badgeRegister badge)
       od)"
+  supply if_cong[cong]
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: doIPCTransfer_def bind_assoc doNormalTransfer_def
                    getMessageInfo_def
@@ -1420,6 +1422,7 @@ lemma assert_isolatable:
 
 lemma cteInsert_isolatable:
   "thread_actions_isolatable idx (cteInsert cap src dest)"
+  supply if_cong[cong]
   apply (simp add: cteInsert_def updateCap_def updateMDB_def
                    Let_def setUntypedCapAsFull_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
@@ -1750,6 +1753,7 @@ lemma updateMDB_isolatable:
 
 lemma clearUntypedFreeIndex_isolatable:
   "thread_actions_isolatable idx (clearUntypedFreeIndex slot)"
+  supply option.case_cong[cong]
   apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
   apply (rule thread_actions_isolatable_bind)
     apply (rule getCTE_isolatable)
@@ -1787,6 +1791,7 @@ lemmas fastpath_isolate_rewrites
 
 lemma lookupIPCBuffer_isolatable:
   "thread_actions_isolatable idx (lookupIPCBuffer w t)"
+  supply if_cong[cong]
   apply (simp add: lookupIPCBuffer_def)
   apply (rule thread_actions_isolatable_bind)
   apply (clarsimp simp: put_tcb_state_regs_tcb_def threadGet_isolatable
@@ -1795,11 +1800,10 @@ lemma lookupIPCBuffer_isolatable:
    apply (rule thread_actions_isolatable_bind)
     apply (clarsimp simp: thread_actions_isolatable_return
                           getCTE_isolatable
-                          assert_isolatable
                    split: capability.split arch_capability.split bool.split)+
     apply (rule thread_actions_isolatable_if)
     apply (rule thread_actions_isolatable_bind)
-      apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
+      apply (simp add: thread_actions_isolatable_return | wp)+
   done
 
 lemma setThreadState_rewrite_simple:

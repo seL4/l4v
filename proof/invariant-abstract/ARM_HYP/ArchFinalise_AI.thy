@@ -5,7 +5,7 @@
  *)
 
 theory ArchFinalise_AI
-imports "../Finalise_AI"
+imports Finalise_AI
 begin
 
 context Arch begin
@@ -1290,7 +1290,7 @@ lemma arch_finalise_cap_replaceable:
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
   by (cases cap; simp add: arch_finalise_cap_vcpu arch_finalise_cap_replaceable1)
 
-lemma (* finalise_cap_replaceable *) [Finalise_AI_asms]:
+lemma finalise_cap_replaceable [Finalise_AI_asms]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
         \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
@@ -1671,11 +1671,6 @@ crunch caps_of_state [wp]: vcpu_finalise "\<lambda>s. P (caps_of_state s)"
 
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
-
-(* FIXME: MOVE *)
-lemma hoare_validE_R_conjI:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"
-  by (auto simp: Ball_def validE_R_def validE_def valid_def)
 
 lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) p s) \<rbrace>"

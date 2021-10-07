@@ -69,6 +69,7 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
+  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -273,6 +274,7 @@ lemma handleVMFault_ccorres:
            []
            (handleVMFault thread vm_fault)
            (Call handleVMFault_'proc)"
+  supply if_cong[cong]
   (* FIXME x64: make this a real ac_init *)
   apply (rule corres_to_ccorres_rv_spec_errglobals[OF _ _ refl],
          rule handleVMFault'_ac_corres[simplified o_def])
@@ -884,6 +886,7 @@ lemma findVSpaceForASID_ccorres:
        []
        (findVSpaceForASID asid)
        (Call findVSpaceForASID_'proc)"
+  supply if_cong[cong]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_')
    apply (rule ccorres_assertE)+
@@ -1099,12 +1102,12 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
-lemma kpptr_to_paddr_spec:
+lemma addrFromKPPtr_spec:
   "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call kpptr_to_paddr_'proc
-  \<lbrace> \<acute>ret__unsigned_long = X64_H.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: X64_H.addrFromKPPtr_def X64.addrFromKPPtr_def X64.kpptrBase_def)
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def)
   done
 
 (* A version of ccr3_relation in which the most significant bit is cleared.
@@ -1200,7 +1203,7 @@ lemma setVMRoot_ccorres:
       (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
       (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) hs
       (setVMRoot thread) (Call setVMRoot_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] if_cong[cong]
   apply (cinit lift: tcb_')
    apply (rule ccorres_move_array_assertion_tcb_ctes)
    apply (rule ccorres_move_c_guard_tcb_ctes)
@@ -1396,6 +1399,7 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -1797,6 +1801,7 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM Collect_True

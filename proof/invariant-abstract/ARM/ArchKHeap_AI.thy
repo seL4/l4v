@@ -5,7 +5,7 @@
  *)
 
 theory ArchKHeap_AI
-imports "../KHeapPre_AI"
+imports KHeapPre_AI
 begin
 
 context Arch begin global_naming ARM
@@ -317,7 +317,8 @@ lemma set_object_pt_not_vs_lookup_pages:
    apply (clarsimp simp: obj_at_def split:if_split_asm)
    apply (case_tac "pa=p")
     apply (clarsimp simp: vs_refs_pages_def graph_of_def)
-    apply (erule_tac x=ab in allE)
+    apply (rename_tac slot pte)
+    apply (erule_tac x=slot in allE)
     apply (drule_tac R="vs_lookup_pages1 s" in rtranclD)
     apply clarsimp
     apply (drule tranclD)
@@ -338,7 +339,8 @@ lemma set_object_pt_not_vs_lookup_pages:
   apply (clarsimp simp: obj_at_def split:if_split_asm)
   apply (case_tac "pa=p")
    apply (clarsimp simp: vs_refs_pages_def graph_of_def)
-   apply (erule_tac x=rs in allE)
+   apply (rename_tac vs slot pte)
+   apply (erule_tac x=vs in allE)
    apply (clarsimp simp: vs_lookup_pages_def)
    apply (drule(1) ImageI, erule (1) notE)
   apply clarsimp

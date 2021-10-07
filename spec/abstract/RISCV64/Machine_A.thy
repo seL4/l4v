@@ -77,11 +77,11 @@ definition data_to_cptr :: "data \<Rightarrow> cap_ref"
 
 definition combine_ntfn_badges :: "data \<Rightarrow> data \<Rightarrow> data"
   where
-  "combine_ntfn_badges \<equiv> bitOR"
+  "combine_ntfn_badges \<equiv> semiring_bit_operations_class.or"
 
 definition combine_ntfn_msgs :: "data \<Rightarrow> data \<Rightarrow> data"
   where
-  "combine_ntfn_msgs \<equiv> bitOR"
+  "combine_ntfn_msgs \<equiv> semiring_bit_operations_class.or"
 
 
 text \<open>These definitions will be unfolded automatically in proofs.\<close>

@@ -1750,6 +1750,7 @@ proof -
     "image (\<lambda>n. ptr + 2 ^ obj_bits_api (APIType_map2 ty) us * n)
            {x. x \<le> of_nat n - 1} =
      set (retype_addrs ptr (APIType_map2 ty) n us)"
+    including no_take_bit
   apply (clarsimp simp: retype_addrs_def image_def Bex_def ptr_add_def
                         Collect_eq)
   apply (rule iffI)
@@ -1783,6 +1784,7 @@ proof -
   have al': "is_aligned ptr (obj_bits_api (APIType_map2 ty) us)"
      by (simp add: obj_bits_api ko)
   show ?thesis
+  including no_take_bit
   apply (simp add: when_def retype_region2_def createObjects'_def
                    createObjects_def aligned obj_bits_api[symmetric]
                    ko[symmetric] al' shiftl_t2n data_map_insert_def[symmetric]
@@ -1803,9 +1805,9 @@ proof -
                           obj_bits_api[symmetric] shiftl_t2n upto_enum_red'
                            range_cover.unat_of_nat_n[OF cover])
        apply (rule corres_split_nor[OF corres_trivial])
-          apply (clarsimp simp: retype_addrs_fold[symmetric]
-                   ptr_add_def upto_enum_red' not_zero'
-                   range_cover.unat_of_nat_n[OF cover] word_le_sub1)
+          apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
+                                range_cover.unat_of_nat_n[OF cover] word_le_sub1
+                          simp del: word_of_nat_eq_0_iff)
          apply (rule_tac f=g in arg_cong)
          apply clarsimp
          apply (rename_tac x eps ps)
@@ -1940,7 +1942,7 @@ lemma createObjects_ko_at_strg:
   fixes ptr :: word32
   assumes    cover: "range_cover ptr sz ((objBitsKO ko) + gbits) n"
   assumes    not_0: "n\<noteq> 0"
-  assumes       pi: "\<And>s. projectKO_opt ko  = Some val"
+  assumes       pi: "projectKO_opt ko  = Some val"
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
              createObjects ptr n ko gbits
          \<lbrace>\<lambda>r s. \<forall>x \<in> set r. \<forall>offs < 2 ^ gbits. ko_at' val (x + (offs << objBitsKO ko)) s\<rbrace>"
@@ -1951,9 +1953,11 @@ proof -
     apply (simp add:word_le_sub1)
     done
   note unat_of_nat_shiftl = range_cover.unat_of_nat_n_shift[OF cover,where gbits = gbits,simplified]
+  note word_of_nat_eq_0_iff[simp del]
   have in_new:"\<And>idx offs. \<lbrakk>idx \<le> of_nat n - 1;offs<2 ^ gbits\<rbrakk>
     \<Longrightarrow> ptr + (idx << objBitsKO ko + gbits) + (offs << objBitsKO ko)
         \<in> set (new_cap_addrs (n * 2 ^ gbits) ptr ko)"
+       including no_take_bit
       apply (insert range_cover_not_zero[OF not_0 cover] not_0)
       apply (clarsimp simp:new_cap_addrs_def image_def)
       apply (rule_tac x ="unat (2 ^ gbits * idx + offs)" in bexI)
@@ -2536,7 +2540,7 @@ lemma init_arch_objects_APIType_map2:
             split: apiobject_type.split)
   done
 
-lemma copy_global_corres:
+lemma copyGlobalMappings_corres:
   "corres dc (valid_arch_state and valid_etcbs and pspace_aligned and page_directory_at pd)
              (valid_arch_state' and page_directory_at' pd)
           (copy_global_mappings pd)
@@ -2887,30 +2891,26 @@ lemma obj_range'_subset:
   by (rule new_range_subset, auto)
 
 lemma obj_range'_subset_strong:
-  "\<lbrakk>range_cover ptr sz (objBitsKO val) n; ptr' \<in> set (new_cap_addrs n ptr val)\<rbrakk>
-   \<Longrightarrow> obj_range' ptr' val \<subseteq> {ptr..ptr + (of_nat n * 2 ^ objBitsKO val) - 1}"
-  unfolding obj_range'_def
-  apply (frule(1) obj_range'_subset)
-  apply (simp add:obj_range'_def)
-  apply (intro conjI impI)
-  apply (erule(1) impE)
-  apply clarsimp
-  apply (case_tac "n = 0")
-   apply (clarsimp simp:new_cap_addrs_def)
-  proof -
-    assume cover:"range_cover ptr sz (objBitsKO val) n"
-      and  mem_p:"ptr' \<in> set (new_cap_addrs n ptr val)"
-      and  not_0:"n\<noteq> 0"
+  assumes "range_cover ptr sz (objBitsKO val) n"
+      and "ptr' \<in> set (new_cap_addrs n ptr val)"
+  shows "obj_range' ptr' val \<subseteq> {ptr..ptr + (of_nat n * 2 ^ objBitsKO val) - 1}"
+proof -
+  {
+    assume cover: "range_cover ptr sz (objBitsKO val) n"
+      and  mem_p: "ptr' \<in> set (new_cap_addrs n ptr val)"
+      and  not_0: "n\<noteq> 0"
     note n_less = range_cover.range_cover_n_less[OF cover]
-    have unat_of_nat_m1: "unat (of_nat n - (1::word32)) < n"
-      using not_0 n_less
-       by (simp add:unat_of_nat_minus_1)
-    have decomp:"of_nat n * 2 ^ objBitsKO val = of_nat (n - 1) * 2 ^ objBitsKO val + (2 :: word32) ^ objBitsKO val"
-      apply (simp add:distrib_right[where b = "1 :: 32 word",simplified,symmetric])
+    have unat_of_nat_m1: "unat (of_nat n - (1::machine_word)) < n"
+      using not_0 n_less by (simp add:unat_of_nat_minus_1)
+    have decomp:
+      "of_nat n * 2 ^ objBitsKO val =
+       of_nat (n - 1) * 2 ^ objBitsKO val + (2 :: machine_word) ^ objBitsKO val"
+      apply (simp add:distrib_right[where b = "1 :: machine_word",simplified,symmetric])
       using not_0 n_less
       apply simp
       done
-    show "ptr' + 2 ^ objBitsKO val - 1 \<le> ptr + of_nat n * 2 ^ objBitsKO val - 1"
+    have "ptr' + 2 ^ objBitsKO val - 1 \<le> ptr + of_nat n * 2 ^ objBitsKO val - 1"
+      using cover including no_take_bit
       apply (subst decomp)
       apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
@@ -2923,31 +2923,34 @@ lemma obj_range'_subset_strong:
           using n_less not_0
             apply (simp add:unat_of_nat_minus_1)
            apply (rule p2_gt_0[THEN iffD2])
-           using cover
            apply (simp add:word_bits_def range_cover_def)
           apply (simp only: word_bits_def[symmetric])
           apply (clarsimp simp: unat_of_nat_minus_1[OF n_less(1) not_0])
           apply (rule nat_less_power_trans2
             [OF range_cover.range_cover_le_n_less(2),OF cover, folded word_bits_def])
           apply (simp add:unat_of_nat_m1 less_imp_le)
-         using cover
          apply (simp add:range_cover_def word_bits_def)
         apply (rule machine_word_plus_mono_right_split[where sz = sz])
-        using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::word32))"]
+          using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::machine_word))"]
         apply (clarsimp simp:unat_of_nat_m1)
-       using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
       apply (subst add.commute[where a = "2^objBitsKO val - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
-     using cover
      apply (clarsimp simp:range_cover_def word_bits_def)
-     apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2])
-       apply simp+
+        apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2]; simp)
+       apply simp
+      by (meson assms(1) is_aligned_add is_aligned_mult_triv2 is_aligned_no_overflow' range_cover_def)
+  }
+  with assms show ?thesis
+    unfolding obj_range'_def
+    apply -
+    apply (frule(1) obj_range'_subset)
+    apply (simp add: obj_range'_def)
+    apply (cases "n = 0"; clarsimp simp:new_cap_addrs_def)
    done
-  qed
-
+qed
 
 lemma caps_no_overlapD'':
   "\<lbrakk>cte_wp_at' (\<lambda>cap. cteCap cap = c) q s;caps_no_overlap'' ptr sz s\<rbrakk>
@@ -3295,13 +3298,13 @@ proof -
     done
   have not_0': "(2::word32) ^ (objBitsKO val + gbits) * of_nat n \<noteq> 0"
     apply (rule range_cover_not_zero_shift[OF not_0,unfolded shiftl_t2n,OF _ le_refl])
-    apply (rule range_cover_rel[OF cover])
-      apply simp+
+    apply (rule range_cover_rel[OF cover]; simp)
     done
   have "gbits < word_bits"
     using cover
     by (simp add:range_cover_def word_bits_def)
   thus ?thesis
+    including no_take_bit
   apply -
   apply (insert not_0 cover ptr_in)
   apply (frule range_cover.range_cover_le_n_less[OF _ le_refl])
@@ -3343,7 +3346,7 @@ proof -
       apply (rule word_of_nat_less)
       using unat_of_nat_shift
       apply (simp add:shiftl_t2n field_simps)
-     apply unat_arith
+      apply (meson less_exp objBitsKO_bounded2 of_nat_less_pow_32 word_gt_a_gt_0)
    using upbound
    apply (simp add:word_bits_def)
    apply (rule machine_word_plus_mono_right_split[where sz = sz])
@@ -3998,7 +4001,7 @@ lemma createObjects_makeObject_not_tcbQueued:
   shows "\<lbrace>\<lambda>s. pspace_no_overlap' ptr sz s \<and> pspace_aligned' s \<and> pspace_distinct' s\<rbrace>
            createObjects ptr n tcb 0
          \<lbrace>\<lambda>rv s. \<forall>addr\<in>set rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb \<and> tcbState tcb = Structures_H.thread_state.Inactive) addr s\<rbrace>"
-  apply (rule hoare_strengthen_post[OF createObjects_ko_at_strg[where 'b=tcb]])
+  apply (rule hoare_strengthen_post[OF createObjects_ko_at_strg[where 'a=tcb]])
   using assms
   apply (auto simp: obj_at'_def projectKO_opt_tcb objBitsKO_def
                     objBits_def makeObject_tcb)
@@ -4160,6 +4163,7 @@ lemma createObjects_idle':
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
    apply (clarsimp simp add: valid_idle'_def pred_tcb_at'_def)
+   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_as_subst [OF createObjects'_it])
    apply (wp createObjects_orig_obj_at'
              createObjects_orig_cte_wp_at2'
@@ -4453,7 +4457,8 @@ lemma createNewCaps_vms:
    \<lbrace>\<lambda>archCaps. valid_machine_state'\<rbrace>"
   apply (clarsimp simp: valid_machine_state'_def pointerInDeviceData_def
                         Arch_createNewCaps_def createNewCaps_def pointerInUserData_def
-                        typ_at'_def createObjects_def doMachineOp_return_foo)
+                        typ_at'_def createObjects_def doMachineOp_return_foo
+                  split del: if_split)
   apply (rule hoare_pre)
    apply (wpc
          | wp hoare_vcg_const_Ball_lift hoare_vcg_disj_lift
@@ -5296,6 +5301,7 @@ lemma corres_retype_region_createNewCaps:
                 init_arch_objects (APIType_map2 (Inr ty)) y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
+  including no_take_bit
   apply (rule_tac F="range_cover y sz
                        (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and>
                      n \<noteq> 0 \<and>
@@ -5504,7 +5510,7 @@ lemma corres_retype_region_createNewCaps:
                           and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
                           in corres_mapM_list_all2[where r'=dc and S="(=)"])
                   apply simp+
-                apply (rule corres_guard_imp, rule copy_global_corres)
+                apply (rule corres_guard_imp, rule copyGlobalMappings_corres)
                  apply simp+
                apply (wp hoare_vcg_const_Ball_lift | simp)+
              apply (simp add: list_all2_same)

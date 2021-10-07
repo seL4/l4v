@@ -5,7 +5,7 @@
  *)
 
 theory factorial
-imports "CParser.CTranslation" "$L4V_ARCH/imports/MachineWords"
+imports "CParser.CTranslation" MachineWords
 begin
 
 declare hrs_simps [simp add]
@@ -47,11 +47,7 @@ lemma fac_list_length [simp]:
 
 lemma fac_list_unfold:
   "unat n \<noteq> 0 \<Longrightarrow> fac_list (unat n) = fac (unat n) # fac_list (unat (n - 1))"
-  apply(case_tac "unat n")
-   apply clarsimp
-  apply(subst unat_minus_one)
-   apply clarsimp+
-  done
+  by (metis Suc_unat_minus_one fac_list.simps(2) unat_eq_zero)
 
 primrec
   sep_list :: "machine_word list \<Rightarrow> machine_word ptr \<Rightarrow> heap_assert"
@@ -333,9 +329,6 @@ lemma (in factorial_global_addresses) mem_safe_factorial:
    apply(simp_all add: restrict_map_def call_def block_def whileAnno_def
                        free_body_def alloc_body_def factorial_body_def creturn_def
                 split: if_split_asm option.splits)
-  apply((erule disjE)?, simp,
-        (thin_tac "C=x" for x, (thin_tac "\<Gamma> x = y" for x y)+,
-        force simp: intra_sc)?)+
-  done
+  by (force simp: intra_sc)
 
 end

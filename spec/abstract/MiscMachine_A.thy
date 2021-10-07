@@ -11,7 +11,7 @@ Utilities for the machine level which are not machine-dependent.
 chapter "Machine Accessor Functions"
 
 theory MiscMachine_A
-imports "./$L4V_ARCH/Machine_A" "ExecSpec.MachineExports"
+imports Machine_A "ExecSpec.MachineExports"
 begin
 
 context begin interpretation Arch .

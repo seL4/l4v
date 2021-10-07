@@ -4,36 +4,36 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
+(* See http://mlton.org/FunctionalRecordUpdate *)
 structure FunctionalRecordUpdate =
 struct
 local
-  fun next g (f, z) x = g (f x, z)
-  fun  f1 (f, z) x = f (z x)
-  fun  f2 z = next  f1 z
-  fun  f3 z = next  f2 z
-  fun  f4 z = next  f3 z
-  fun  f5 z = next  f4 z
-  fun  f6 z = next  f5 z
-  fun  f7 z = next  f6 z
-  fun  f8 z = next  f7 z
-  fun  f9 z = next  f8 z
-  fun f10 z = next  f9 z
-  fun f11 z = next f10 z
-  fun f12 z = next f11 z
-  fun f13 z = next f12 z
-  fun f14 z = next f13 z
-  fun f15 z = next f14 z
-  fun f16 z = next f15 z
-  fun f17 z = next f16 z
-  fun f18 z = next f17 z
-  fun f19 z = next f18 z
-  fun f20 z = next f19 z
-  fun f21 z = next f20 z
-  fun f22 z = next f21 z
-  fun f23 z = next f22 z
-  fun f24 z = next f23 z
-  fun f25 z = next f24 z
-  fun f26 z = next f25 z
+  fun  f1 (f,z) x =   f (z x)
+  fun  f2 (f,z) x =  f1 (f x, z)
+  fun  f3 (f,z) x =  f2 (f x, z)
+  fun  f4 (f,z) x =  f3 (f x, z)
+  fun  f5 (f,z) x =  f4 (f x, z)
+  fun  f6 (f,z) x =  f5 (f x, z)
+  fun  f7 (f,z) x =  f6 (f x, z)
+  fun  f8 (f,z) x =  f7 (f x, z)
+  fun  f9 (f,z) x =  f8 (f x, z)
+  fun f10 (f,z) x =  f9 (f x, z)
+  fun f11 (f,z) x = f10 (f x, z)
+  fun f12 (f,z) x = f11 (f x, z)
+  fun f13 (f,z) x = f12 (f x, z)
+  fun f14 (f,z) x = f13 (f x, z)
+  fun f15 (f,z) x = f14 (f x, z)
+  fun f16 (f,z) x = f15 (f x, z)
+  fun f17 (f,z) x = f16 (f x, z)
+  fun f18 (f,z) x = f17 (f x, z)
+  fun f19 (f,z) x = f18 (f x, z)
+  fun f20 (f,z) x = f19 (f x, z)
+  fun f21 (f,z) x = f20 (f x, z)
+  fun f22 (f,z) x = f21 (f x, z)
+  fun f23 (f,z) x = f22 (f x, z)
+  fun f24 (f,z) x = f23 (f x, z)
+  fun f25 (f,z) x = f24 (f x, z)
+  fun f26 (f,z) x = f25 (f x, z)
 
   fun  c0 from =  from
   fun  c1 from =  c0 (from  f1)
@@ -64,6 +64,7 @@ local
   fun c26 from = c25 (from f26)
 in
 
+(* see http://mlton.org/Fold *)
 structure Fold =
 struct
   fun fold (a,f) g = g (a,f)
@@ -109,6 +110,7 @@ fun makeUpdate25 z = makeUpdate c25 z
 fun makeUpdate26 z = makeUpdate c26 z
 
 fun $$ (a,f) = f a
+
 fun U s v z =
     Fold.step0 (fn (vars,ops) =>
                    (fn out => vars (s (ops()) (out,fn _ => v)),ops))

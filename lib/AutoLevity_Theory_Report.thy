@@ -371,7 +371,7 @@ fun file_of_thy thy =
     val path = Resources.master_directory thy;
     val name = Context.theory_name thy;
     val path' = Path.append path (Path.basic (name ^ ".thy"))
-  in Path.smart_implode path' end;
+  in Path.implode_symbolic path' end;
 
 fun entry_of_thy thy = ({name = Context.theory_name thy, file = file_of_thy thy} : theory_entry)
 
@@ -397,9 +397,9 @@ fun get_reports_for_thy thy =
     val lemmas =  Facts.dest_static false parent_facts (Global_Theory.facts_of thy)
     |> map_filter (fn (xnm, thms) =>
        let
-          val {pos, theory_name, ...} = Name_Space.the_entry fact_space xnm;
+          val {theory_long_name, pos, ...} = Name_Space.the_entry fact_space xnm;
           in
-            if theory_name = thy_nm then
+            if theory_long_name = thy_nm then
             let
              val thms' = map (Thm.transfer thy) thms;
 
@@ -429,9 +429,9 @@ fun get_reports_for_thy thy =
     fun get_deps_of kind space xnms = xnms
     |> map_filter (fn xnm =>
       let
-          val {pos, theory_name, ...} = Name_Space.the_entry space xnm;
+          val {theory_long_name, pos, ...} = Name_Space.the_entry space xnm;
           in
-            if theory_name = thy_nm then
+            if theory_long_name = thy_nm then
             let
               val specs = Defs.specifications_of defs (kind, xnm);
 

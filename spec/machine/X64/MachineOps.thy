@@ -10,7 +10,7 @@ theory MachineOps
 imports
   "Word_Lib.WordSetup"
   "Lib.NonDetMonad"
-  "../MachineMonad"
+  MachineMonad
 begin
 
 section "Wrapping and Lifting Machine Operations"

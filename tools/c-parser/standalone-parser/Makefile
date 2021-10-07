@@ -42,14 +42,6 @@ standalone-tokenizer stp_all: $(TOKENIZERS)
 
 include $(STP_PFX)/../Makefile
 
-# This is only used for ARM_HYP and ARM since the former is a copy of the latter
-UMM_HEAP_ARM_HYP=$(realpath $(STP_PFX)/../umm_heap)/ARM_HYP
-UMM_HEAP_ARM=$(realpath $(STP_PFX)/../umm_heap/ARM)
-
-$(UMM_HEAP_ARM_HYP)/% : $(UMM_HEAP_ARM)/%
-	mkdir -p $(UMM_HEAP_ARM_HYP)
-	cp -p $< $@
-
 STP_CLEAN_TARGETS := $(STPARSERS) $(TOKENIZERS) $(STP_PFX)/c-parser.o $(STP_PFX)/table.ML
 
 $(STP_PFX)/table.ML: $(ISABELLE_HOME)/src/Pure/General/table.ML
@@ -141,6 +133,5 @@ clean: stp_clean
 
 stp_clean:
 	-/bin/rm -f $(STP_CLEAN_TARGETS)
-	-/bin/rm -fr $(UMM_HEAP_ARM_HYP)
 
 endif

@@ -9,7 +9,7 @@ ARM_HYP-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
-imports "../CSpacePre_AI"
+imports CSpacePre_AI
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -150,23 +150,6 @@ lemma unique_table_caps_upd_eqD:
   apply (simp add: if_distrib split:if_splits)
   done
 
-lemma set_untyped_cap_as_full_not_final_not_pg_cap:
-  "\<lbrace>\<lambda>s. (\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)
-      \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
-  set_untyped_cap_as_full src_cap cap src
-  \<lbrace>\<lambda>_ s.(\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
-  apply (rule hoare_pre)
-  apply (wp hoare_vcg_ex_lift)
-   apply (rule_tac Q = "cte_wp_at Q slot"
-               and Q'="cte_wp_at ((=) src_cap) src" for Q slot in P_bool_lift' )
-    apply (wp set_untyped_cap_as_full_cte_wp_at)
-    subgoal by (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
-   apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
-   apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
-  done
-
 lemma arch_derived_is_device:
   "\<lbrakk>cap_master_arch_cap c = cap_master_arch_cap c';
         is_derived_arch (ArchObjectCap c) (ArchObjectCap c')\<rbrakk>
@@ -194,14 +177,13 @@ lemma valid_arch_mdb_simple:
 lemma valid_arch_mdb_free_index_update:
   "\<lbrakk>m src = Some capa;m' = m (src\<mapsto> capa\<lparr>free_index :=x\<rparr>) \<rbrakk> \<Longrightarrow>
    valid_arch_mdb c (m') = valid_arch_mdb c (m)"
-  by (clarsimp simp:valid_arch_mdb_def)
+  by clarsimp
 
 lemma set_cap_update_free_index_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s) \<and> is_untyped_cap src_cap\<rbrace>
          set_cap (free_index_update f src_cap) src
    \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  apply (clarsimp simp: valid_arch_mdb_def, wpsimp)
-  done
+  by wpsimp
 
 lemma set_untyped_cap_as_full_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>
@@ -249,7 +231,7 @@ lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_
 
 lemma safe_parent_for_arch_not_arch':
   "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch c cap"
-  by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
+  by clarsimp
 
 lemma safe_parent_arch_is_parent:
   "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap;
@@ -259,7 +241,7 @@ lemma safe_parent_arch_is_parent:
 
 lemma safe_parent_for_arch_no_obj_refs:
   "safe_parent_for_arch cap c \<Longrightarrow> obj_refs cap = {}"
-  by (clarsimp simp: safe_parent_for_arch_def)
+  by clarsimp
 
 lemma valid_arch_mdb_same_master_cap:
   "\<lbrakk>valid_arch_mdb ioc cs; cs sl = Some cap; cap_master_cap cap' = cap_master_cap cap\<rbrakk> \<Longrightarrow>

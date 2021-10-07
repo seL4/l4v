@@ -9,7 +9,7 @@ Properties of machine operations.
 *)
 
 theory Machine_AI
-imports "../Bits_AI"
+imports Bits_AI
 begin
 
 
@@ -775,6 +775,16 @@ lemmas msgRegisters_A_unfold
         [unfolded upto_enum_def, simplified,
          unfolded fromEnum_def enum_register, simplified,
          unfolded toEnum_def enum_register, simplified]
+
+end
+
+context begin interpretation Arch .
+
+requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
 
 end
 

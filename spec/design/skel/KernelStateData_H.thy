@@ -14,8 +14,8 @@ theory KernelStateData_H
 imports
   PSpaceStruct_H
   Structures_H
-  "../machine/$L4V_ARCH/MachineOps"
-  "./$L4V_ARCH/ArchStateData_H"
+  MachineOps
+  ArchStateData_H
 begin
 
 context begin interpretation Arch .

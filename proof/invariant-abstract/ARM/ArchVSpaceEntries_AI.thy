@@ -5,7 +5,7 @@
  *)
 
 theory ArchVSpaceEntries_AI
-imports "../VSpaceEntries_AI"
+imports VSpaceEntries_AI
 begin
 
 
@@ -310,12 +310,8 @@ lemma store_pde_non_master_valid_pdpt:
     apply (fastforce simp:ran_def)
    apply (drule bspec)
     apply fastforce
-   apply (case_tac "pd pa")
-    apply simp_all
-     apply (case_tac pde,simp_all)
-    apply (case_tac pde,simp_all)
-   apply (case_tac pde,simp_all)
-    apply (clarsimp)+
+   apply (rename_tac p')
+   apply (case_tac "pd p'"; cases pde; clarsimp)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pde_update)
    apply (drule(1) valid_pdpt_objs_pdD,simp)
@@ -354,7 +350,7 @@ lemma store_pte_non_master_valid_pdpt:
    apply (case_tac "pt pa")
      apply simp
     apply (case_tac pte,simp_all)
-    apply (clarsimp)
+    apply clarsimp
    apply (case_tac pte,simp_all)
   apply (simp add:fun_upd_def)
   apply (rule entries_align_pte_update)
@@ -909,7 +905,7 @@ lemma store_pte_valid_pdpt:
     apply (case_tac pte)
      apply simp+
     apply (case_tac "pta p",simp_all)
-    apply (clarsimp)
+    apply clarsimp
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pte_update)
     apply (drule (1) valid_pdpt_objs_ptD,simp)
@@ -1003,9 +999,9 @@ lemma store_pde_valid_pdpt:
      apply simp
     apply (case_tac pde,simp_all)
      apply (case_tac "pda p",simp_all)
-     apply (clarsimp)
+     apply clarsimp
     apply (case_tac "pda p",simp_all)
-    apply (clarsimp)
+    apply clarsimp
    apply (simp add:fun_upd_def)
    apply (rule entries_align_pde_update)
     apply simp+
@@ -1282,9 +1278,7 @@ lemma ensure_safe_mapping_ensures[wp]:
      apply (clarsimp simp :upto_enum_def upto_enum_step_def
          Fun.comp_def upto_0_to_n2)
      apply (cut_tac x = "of_nat x" and n = 2 in word_power_nonzero_32)
-        apply (simp add:word_of_nat_less word_bits_def)+
-      apply (simp add: of_nat_neq_0)
-     apply simp
+        apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0 del: word_of_nat_eq_0_iff)+
      done
     have neq_pt_offset: "\<And>z zs xa (p::word32). \<lbrakk>[0 , 4 .e. 0x3C] = z # zs;
         xa \<in> set zs;is_aligned p 6 \<rbrakk> \<Longrightarrow>
@@ -1363,7 +1357,6 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply clarsimp
          apply (frule_tac x = xa in mask_out_same_pt)
           apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-          apply (erule notE)
           apply (subst shiftl_t2n[where n = 2,simplified field_simps,simplified,symmetric])
           apply (rule shiftl_less_t2n[where m = 6,simplified])
            apply (simp add:word_of_nat_less)
@@ -1385,11 +1378,9 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply (frule align_entry_ptD,simp)
          apply simp
         apply (wp hoare_drop_imps |wpc|simp)+
-      apply (clarsimp simp:upto_enum_def upto_enum_step_def
-        upto_0_to_n2 Fun.comp_def distinct_map)
+      apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2 Fun.comp_def distinct_map)
      apply (intro exI conjI,fastforce+)
-     apply (simp add:obj_at_def hd_map_simp
-         upto_0_to_n2 upto_enum_def upto_enum_step_def)
+     apply (simp add:obj_at_def hd_map_simp upto_0_to_n2 upto_enum_def upto_enum_step_def)
      apply (frule_tac x = 1 in bspec,fastforce+)
     apply ((wp hoare_drop_imps |wpc|simp)+)[1]
    apply (simp add:page_inv_entries_pre_def page_inv_entries_safe_def
@@ -1404,34 +1395,32 @@ lemma ensure_safe_mapping_ensures[wp]:
        | wp | intro conjI impI)+)[1]
     apply simp
     apply wp[1]
-   apply (simp split:list.splits add:page_inv_entries_pre_def mapME_singleton)
+   apply (simp split: list.splits add:page_inv_entries_pre_def mapME_singleton)
    apply (wp get_master_pde_wp | wpc | simp)+
-   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def
-     split:pde.splits)
-  apply (simp split:list.splits if_splits
-    add:page_inv_entries_pre_def Let_def page_inv_entries_safe_def)
+   apply (clarsimp simp: obj_at_def page_inv_entries_safe_def
+                   split: pde.splits)
+  apply (simp split: list.splits if_splits
+              add: page_inv_entries_pre_def Let_def page_inv_entries_safe_def)
   apply (elim conjE exE)
   apply (subst mapME_x_Cons)
   apply simp
   apply wp
-   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22. obj_at
-       (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
-       pd (ucast (x && mask pd_bits >> 2)) = pde.InvalidPDE)
-       (hd (x21 # x22) && ~~ mask pd_bits) s" in hoare_post_imp_R)
+   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22.
+                                 obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
+                                                   pd (ucast (x && mask pd_bits >> 2)) = InvalidPDE)
+                               (x21 && ~~ mask pd_bits) s" in hoare_post_imp_R)
     apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
         apply (wp get_master_pde_wp| wpc | simp)+
        apply clarsimp
        apply (frule_tac x = xa in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-        apply (erule notE)
         apply (subst shiftl_t2n[where n = 2,simplified field_simps,simplified,symmetric])
         apply (rule shiftl_less_t2n[where m = 6,simplified])
          apply (simp add:word_of_nat_less)
         apply simp
        apply (frule_tac x = z in mask_out_same_pd)
         apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2)
-       apply (clarsimp simp:field_simps obj_at_def
-           split:pde.splits)
+       apply (clarsimp simp: field_simps obj_at_def split: pde.splits)
        apply (drule(1) valid_pdpt_objs_pdD)
        apply (intro conjI impI)
           apply clarsimp
@@ -1446,11 +1435,9 @@ lemma ensure_safe_mapping_ensures[wp]:
        apply clarsimp
        apply (erule(4) invalid_pdeI[OF _ neq_pd_offset])
       apply (wp hoare_drop_imps |wpc|simp)+
-    apply (clarsimp simp:upto_enum_def upto_enum_step_def
-        upto_0_to_n2 Fun.comp_def distinct_map)
+    apply (clarsimp simp:upto_enum_def upto_enum_step_def upto_0_to_n2 Fun.comp_def distinct_map)
    apply (intro exI conjI,fastforce+)
-   apply (simp add:obj_at_def hd_map_simp
-     upto_0_to_n2 upto_enum_def upto_enum_step_def)
+   apply (simp add:obj_at_def hd_map_simp upto_0_to_n2 upto_enum_def upto_enum_step_def)
    apply (frule_tac x = 1 in bspec,fastforce+)
   apply (wp get_master_pde_wp | simp | wpc)+
   done

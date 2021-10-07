@@ -9,7 +9,7 @@ chapter "Initialisation"
 theory KernelInit_H
 imports
   KI_Decls_H
-  "./$L4V_ARCH/ArchRetype_H"
+  ArchRetype_H
   Retype_H
   Config_H
   Thread_H

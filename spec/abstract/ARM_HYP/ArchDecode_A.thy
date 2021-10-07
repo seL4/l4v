@@ -12,7 +12,7 @@ chapter "Decoding Architecture-specific System Calls"
 
 theory ArchDecode_A
 imports
-  "../Interrupt_A"
+  Interrupt_A
 begin
 context Arch begin global_naming ARM_A
 

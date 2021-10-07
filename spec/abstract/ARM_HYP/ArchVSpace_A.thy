@@ -12,8 +12,8 @@ chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
 imports
-  "../Retype_A"
-  "ArchTcb_A"
+  Retype_A
+  ArchTcb_A
 begin
 
 context Arch begin global_naming ARM_A
@@ -537,7 +537,7 @@ where
           gicIndices \<leftarrow> return [0..<num_list_regs];
 
           mapM (\<lambda>vreg. do
-                    val \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_lr (of_int vreg);
+                    val \<leftarrow> do_machine_op $ get_gic_vcpu_ctrl_lr (of_nat vreg);
                     vgic_update_lr vr vreg val
                   od)
             gicIndices;
@@ -561,7 +561,7 @@ where
      do_machine_op $ do
          set_gic_vcpu_ctrl_vmcr (vgic_vmcr vgic);
          set_gic_vcpu_ctrl_apr (vgic_apr vgic);
-         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_int (fst p)) (snd p))
+         mapM (\<lambda>p. set_gic_vcpu_ctrl_lr (of_nat (fst p)) (snd p))
               (map (\<lambda>i. (i, (vgic_lr vgic) i)) gicIndices)
      od;
     \<comment> \<open>restore banked VCPU registers except SCTLR (that's in VCPUEnable)\<close>
@@ -643,7 +643,7 @@ definition
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_us_pd \<leftarrow> gets (arm_us_global_pd o arch_state);
-       do_machine_op $ set_current_pd $ addrFromPPtr global_us_pd
+       do_machine_op $ set_current_pd $ addrFromKPPtr global_us_pd
     od)
 od"
 

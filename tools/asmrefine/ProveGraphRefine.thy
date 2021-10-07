@@ -120,11 +120,11 @@ lemma drop_sign_isomorphism_ariths:
                     word_arith_power_alt
                     uint_word_of_int
                     uint_div_alt sdiv_word_def sdiv_int_def
-               del: word_uint.Rep_inject)
+               del: word_uint.Rep_inject of_int_power)
 
 lemma drop_sign_isomorphism_bitwise:
   "drop_sign (x AND y) = drop_sign x AND drop_sign y"
-  "drop_sign (bitOR x y) = bitOR (drop_sign x) (drop_sign y)"
+  "drop_sign (x OR y) = (drop_sign x) OR (drop_sign y)"
   "drop_sign (x XOR y) = drop_sign x XOR drop_sign y"
   "drop_sign (~~ y) = ~~ drop_sign y"
   "drop_sign (shiftl x n) = shiftl (drop_sign x) n"
@@ -143,8 +143,7 @@ lemma drop_sign_isomorphism_bitwise:
 
 lemma drop_sign_of_nat:
   "drop_sign (of_nat n) = of_nat n"
-  by (simp add: drop_sign_def ucast_of_nat is_down_def
-                target_size_def source_size_def word_size)
+  by (metis down_cast_same drop_sign_def is_up_is_down_remove_sign(2) scast_of_nat)
 
 lemma drop_sign_to_bl:
   "to_bl (drop_sign w) = to_bl w"
@@ -161,7 +160,7 @@ lemma drop_sign_number[simp]:
   "drop_sign (numeral n) = numeral n"
   "drop_sign (- numeral n) = - numeral n"
   "drop_sign 0 = 0" "drop_sign 1 = 1"
-  by (simp_all add: drop_sign_def ucast_def)
+  by (simp_all add: drop_sign_def ucast_def del: unsigned_numeral)
 
 lemma drop_sign_minus_1[simp]:
   "drop_sign (-1) = (-1)"
@@ -172,7 +171,7 @@ lemma drop_sign_projections:
   "uint x = uint (drop_sign x)"
   "sint x = sint (drop_sign x)"
   apply (simp_all add: sint_drop_sign_isomorphism)
-  apply (auto simp: unat_def uint_up_ucast drop_sign_def is_up_def
+  apply (auto simp: unat_ucast_upcast uint_up_ucast drop_sign_def is_up_def
                     source_size_def target_size_def word_size)
   done
 
@@ -273,12 +272,8 @@ lemma fold_of_nat_eq_Ifs[simplified word_bits_conv]:
     \<Longrightarrow> foldr (\<lambda>n v. if x = of_nat n then f n else v) [0 ..< m] (f m)
         = f (unat (machine_word_truncate_nat m x))"
   apply (rule fold_of_nat_eq_Ifs_proof)
-   apply (simp_all add: machine_word_truncate_nat_def unat_of_nat word_bits_def)
+   apply (simp_all add: machine_word_truncate_nat_def word_bits_def take_bit_nat_eq_self)
   done
-
-lemma of_int_sint_scast:
-  "of_int (sint x) = scast x"
-  by (simp add: scast_def word_of_int)
 
 lemma less_is_non_zero_p1':
   fixes a :: "'a :: len word"
@@ -401,7 +396,6 @@ fun eqsubst_either_wrap_tac ctxt thms = (eqsubst_asm_wrap_tac ctxt thms
 \<close>
 
 
-
 ML \<open>
 structure ProveSimplToGraphGoals = struct
 
@@ -484,7 +478,7 @@ fun prove_ptr_safe reason ctxt = DETERM o
                    ptr_safe_Array_element unat_less_helper unat_def[symmetric]
                    ptr_safe_Array_element_0
                    h_t_valid_Array_element' h_t_valid_field
-                   nat_uint_less_helper})
+                   nat_uint_less_helper upcast_less_unat_less})
         THEN_ALL_NEW except_tac ctxt
             ("prove_ptr_safe: failed for " ^ reason)
     )
@@ -767,8 +761,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 
 fun graph_refine_proof_tacs csenv ctxt = let
-    (* FIXME: fix shiftr_no and sshiftr_no in Word *)
-    val ctxt = ctxt delsimps @{thms shiftr_no sshiftr_no shiftl_numeral}
+    val ctxt = ctxt delsimps @{thms shiftl_numeral}
         |> Splitter.del_split @{thm if_split}
         |> Simplifier.del_cong @{thm if_weak_cong}
 
@@ -840,7 +833,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         field_lvalue_offset_eq array_ptr_index_def ptr_add_def
                         mask_def unat_less_helper
                         word_sle_def[THEN iffD2] word_sless_alt[THEN iffD2]
-                        drop_sign_isomorphism max_word_minus
+                        drop_sign_isomorphism
                         ptr_equalities_to_ptr_val
                         word_neq_0_conv_neg_conv
                         ucast_nat_def of_int_sint_scast of_int_uint_ucast
@@ -953,6 +946,8 @@ fun new_debug (config: debug_config): debug = {
   failures = Unsynchronized.ref [],
   timeouts = Unsynchronized.ref []
 }
+
+fun no_debug (): debug = new_debug { skips = [], only = [], timeout = NONE };
 
 fun insert (dbg: debug) field x = change (field dbg) (curry (op ::) x)
 

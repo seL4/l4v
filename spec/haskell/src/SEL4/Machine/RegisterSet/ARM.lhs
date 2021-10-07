@@ -99,6 +99,10 @@ This module defines the ARM register set.
 > vcpuRegNum :: Int
 > vcpuRegNum = fromEnum (maxBound :: VCPUReg)
 
+> vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
+> vcpuRegSavedWhenDisabled VCPURegSCTLR = True
+> vcpuRegSavedWhenDisabled _ = False
+
 #endif
 
 > initContext :: [(Register, Word)]

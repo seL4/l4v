@@ -69,7 +69,7 @@ proof -
   apply (cinit lift: irq_' slot_' cap_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
@@ -93,9 +93,9 @@ proof -
   apply (clarsimp simp: cte_wp_at_ctes_of badge_derived'_def
                         Collect_const_mem unat_gt_0 valid_cap_simps' RISCV64.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply auto
   done
 qed
 
@@ -108,7 +108,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp add: ucast_up_ucast is_up)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
@@ -121,7 +121,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply (auto simp add:Word.uint_up_ucast)
   apply (case_tac "of_int (uint irq) \<noteq> 0 \<longrightarrow> 0 < unat irq")
    by (auto simp: Collect_const_mem unat_eq_0)
 
@@ -151,11 +151,11 @@ lemma decodeIRQHandlerInvocation_ccorres:
        (UNIV
             \<inter> {s. invLabel_' s = label}
             \<inter> {s. irq_' s = ucast irq}
-            \<inter> {s. excaps_' s = extraCaps'}) []
+            \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}) []
      (decodeIRQHandlerInvocation label irq extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
-  apply (cinit' lift: invLabel_' irq_' excaps_'
+  apply (cinit' lift: invLabel_' irq_' current_extra_caps_'
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
@@ -490,7 +490,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (UNIV \<inter> {s. invLabel_' s = label}
            \<inter> {s. unat (length___unsigned_long_' s) = length args}
            \<inter> {s. srcSlot_' s = cte_Ptr srcSlot}
-           \<inter> {s. excaps_' s = extraCaps'}
+           \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
            \<inter> {s. buffer_' s = option_to_ptr buffer})
      []
      (Arch.decodeIRQControlInvocation label args srcSlot (map fst extraCaps)
@@ -498,7 +498,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      (Call Arch_decodeIRQControlInvocation_'proc)"
   supply maxIRQ_casts[simp]
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
-  apply (cinit' lift: invLabel_' length___unsigned_long_' srcSlot_' excaps_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' srcSlot_' current_extra_caps_' buffer_'
                 simp: ArchInterrupt_H.RISCV64_H.decodeIRQControlInvocation_def)
    apply (simp add: invocation_eq_use_types
               cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -663,7 +663,7 @@ lemma decodeIRQControlInvocation_ccorres:
        (UNIV
             \<inter> {s. invLabel_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
             \<inter> {s. unat (length___unsigned_long_' s) = length args}
-            \<inter> {s. excaps_' s = extraCaps'}
+            \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
@@ -671,7 +671,7 @@ lemma decodeIRQControlInvocation_ccorres:
   supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
   supply maxIRQ_ucast_toEnum_eq[simp] maxIRQ_ucast_toEnum_irq_t[simp] maxIRQ_irqInvalid[simp]
   supply maxIRQ_ucast_toEnum_irq_t2[simp]
-  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
+  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs)

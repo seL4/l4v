@@ -751,7 +751,7 @@ lemma set_cap_not_quite_corres':
                 done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-lemma cap_move_corres:
+lemma cteMove_corres:
   assumes cr: "cap_relation cap cap'"
   notes trans_state_update'[symmetric,simp]
   shows
@@ -764,6 +764,7 @@ lemma cap_move_corres:
               cte_wp_at' (\<lambda>c. cteCap c = NullCap) (cte_map ptr'))
           (cap_move cap ptr ptr') (cteMove cap' (cte_map ptr) (cte_map ptr'))"
   (is "corres _ ?P ?P' _ _")
+  supply subst_all [simp del]
   apply (simp add: cap_move_def cteMove_def const_def)
   apply (rule corres_symb_exec_r)
      defer
@@ -2884,7 +2885,10 @@ lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (wp setCTE_pred_tcb_at')+
+   apply (intro hoare_vcg_conj_lift; (solves \<open>wpsimp\<close>)?)
+   apply (clarsimp simp: setCTE_def)
+   apply (rule setObject_cte_obj_at_tcb'[where P="idle_tcb'", simplified])
+  apply wpsimp
   done
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
@@ -2903,7 +2907,7 @@ lemma updateMDB_idle'[wp]:
   apply (clarsimp simp add: updateMDB_def)
   apply (rule hoare_pre)
   apply (wp | simp add: valid_idle'_def)+
-  done
+  by fastforce
 
 lemma updateCap_idle':
  "\<lbrace>valid_idle'\<rbrace> updateCap p c \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
@@ -3471,7 +3475,7 @@ lemma cteInsert_invs:
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
   done
 
-lemma derive_cap_corres:
+lemma deriveCap_corres:
  "\<lbrakk>cap_relation c c'; cte = cte_map slot \<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> cap_relation)
          (cte_at slot)
@@ -3482,14 +3486,14 @@ lemma derive_cap_corres:
             apply (simp_all add: returnOk_def Let_def is_zombie_def isCap_simps
                           split: sum.splits)
    apply (rule_tac Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. True" in
-               corres_initial_splitE [OF ensure_no_children_corres])
+               corres_initial_splitE [OF ensureNoChildren_corres])
       apply simp
      apply clarsimp
     apply wp+
   apply clarsimp
   apply (rule corres_rel_imp)
    apply (rule corres_guard_imp)
-     apply (rule arch_derive_corres)
+     apply (rule arch_deriveCap_corres)
      apply (clarsimp simp: o_def)+
   done
 
@@ -3575,7 +3579,7 @@ lemma lookup_cap_corres:
      (lookupCap thread epcptr')"
   apply (simp add: lookup_cap_def lookupCap_def lookupCapAndSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ lookup_slot_corres])
+    apply (rule corres_splitEE [OF _ lookupSlotForThread_corres])
       apply (simp add: split_def)
       apply (subst bindE_returnOk[symmetric])
       apply (rule corres_splitEE)
@@ -3588,7 +3592,7 @@ lemma lookup_cap_corres:
    apply auto
   done
 
-lemma ensure_empty_corres:
+lemma ensureEmptySlot_corres:
   "q = cte_map p \<Longrightarrow>
    corres (ser \<oplus> dc) (invs and cte_at p) invs'
                      (ensure_empty p) (ensureEmptySlot q)"
@@ -3606,7 +3610,7 @@ lemma ensureEmpty_inv[wp]:
   "\<lbrace>P\<rbrace> ensureEmptySlot p \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: ensureEmptySlot_def unlessE_whenE whenE_def | wp)+
 
-lemma lsfc_corres:
+lemma lookupSlotForCNodeOp_corres:
   "\<lbrakk>cap_relation c c'; ptr = to_bl ptr'\<rbrakk>
   \<Longrightarrow> corres (ser \<oplus> (\<lambda>cref cref'. cref' = cte_map cref))
             (valid_objs and pspace_aligned and valid_cap c)
@@ -3702,7 +3706,7 @@ lemma deriveCap_untyped_derived:
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps untyped_derived_eq_def)
   done
 
-lemma set_cap_pspace_corres:
+lemma setCTE_corres:
   "cap_relation cap (cteCap cte) \<Longrightarrow>
    corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True dc
       (pspace_distinct and pspace_aligned and valid_objs and cte_at p)
@@ -4023,7 +4027,7 @@ lemma create_reply_master_corres:
     apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap)+
   apply (rule corres_guard_imp)
     apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l'])
-     apply (rule set_cap_pspace_corres)
+     apply (rule setCTE_corres)
      apply simp
     apply wp
    apply (clarsimp simp: cte_wp_at_cte_at valid_pspace_def)
@@ -4033,6 +4037,7 @@ lemma create_reply_master_corres:
 lemma cte_map_nat_to_cref:
   "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
    cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
+  including no_take_bit
   apply (clarsimp simp: cte_map_def nat_to_cref_def
                  dest!: less_is_drop_replicate)
   apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])
@@ -4117,7 +4122,7 @@ proof -
     by (simp add: noReplyCapsFor_def)
 qed
 
-lemma setup_reply_master_corres:
+lemma setupReplyMaster_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
        (setup_reply_master t) (setupReplyMaster t)"
   apply (simp add: setupReplyMaster_def setup_reply_master_def)
@@ -4921,7 +4926,7 @@ lemma maskedAsFull_revokable_safe_parent:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma cins_corres_simple:
+lemma cteInsert_simple_corres:
   assumes "cap_relation c c'" "src' = cte_map src" "dest' = cte_map dest"
   notes trans_state_update'[symmetric,simp]
   shows "corres dc
@@ -4939,6 +4944,7 @@ lemma cins_corres_simple:
   (is "corres _ (?P and (\<lambda>s. cte_wp_at _ _ s)) (?P' and cte_wp_at' _ _ and _) _ _")
   using assms
   unfolding cap_insert_def cteInsert_def
+  supply subst_all [simp del]
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ get_cap_corres])
@@ -5068,7 +5074,7 @@ lemma cins_corres_simple:
          apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
           subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
          apply (erule (5) cte_map_inj)
-         apply (rule set_untyped_cap_as_full_corres)
+         apply (rule setUntypedCapAsFull_corres)
          apply simp+
           apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb set_untyped_cap_as_full_valid_list
              set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
@@ -5124,7 +5130,7 @@ lemma cins_corres_simple:
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
-  (* exact reproduction of proof in cins_corres,
+  (* exact reproduction of proof in cteInsert_corres,
      as it does not used is_derived *)
   apply(simp add: cdt_list_relation_def del: split_paired_All split_paired_Ex)
   apply(subgoal_tac "no_mloop (cdt a) \<and> finite_depth (cdt a)")

@@ -5,7 +5,7 @@
  *)
 (*<*)
 theory UserSimple
-imports "../UserStubs" GenSimpleBase
+imports "UserStubs" GenSimpleBase
 begin
 
 (* Stub to expose existing static UserStubs.thy. This is to avoid having to

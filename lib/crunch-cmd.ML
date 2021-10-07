@@ -599,7 +599,7 @@ fun wp ctxt rules = WeakestPre.apply_rules_tac_n false ctxt rules
 
 fun wpsimp ctxt wp_rules simp_rules =
   let val ctxt' = Config.put Method.old_section_parser true ctxt
-  in Method.NO_CONTEXT_TACTIC ctxt'
+  in NO_CONTEXT_TACTIC ctxt'
        (Method_Closure.apply_method ctxt' @{method wpsimp} [] [wp_rules, [], simp_rules] [] ctxt' [])
   end
 
@@ -616,7 +616,7 @@ fun crunch_rule cfg const goal extra thms =
     (* second option: produce a terminal rule via wpsimp *)
     fun wpsimp' rules = wpsimp ctxt (map snd (thms @ #wp_rules cfg) @ rules) (#simps cfg)
     val vgoal_prop = goal |> var_precond |> HOLogic.mk_Trueprop
-    val ctxt' = Variable.auto_fixes goal_prop (Variable.auto_fixes vgoal_prop ctxt)
+    val ctxt' = Proof_Context.augment goal_prop (Proof_Context.augment vgoal_prop ctxt)
     val wp_seq = seq_try_apply (Goal.prove ctxt' [] [] goal_prop)
                                (fn _ => TRY (wpsimp' []))
       |> Seq.map (singleton (Proof_Context.export ctxt' ctxt))
@@ -732,7 +732,7 @@ fun crunch cfg pre extra stack const' thms =
           | NONE => let (* not already known, find a crunch rule. *)
           val (ms, rule) = crunch_rule cfg const goal extra thms
             (* and now crunch *)
-          val ctxt' = Variable.auto_fixes goal ctxt;
+          val ctxt' = Proof_Context.augment goal ctxt;
           val ms = ms
             |> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) ctxt', t))
             |> subtract (fn (a, b) => a = (fst b)) (crunch_ignores cfg ctxt)
@@ -754,7 +754,7 @@ fun crunch cfg pre extra stack const' thms =
           val goal' = if Instance.has_preconds then collect_preconds' pre else goal;
           val goal_prop = HOLogic.mk_Trueprop goal';
 
-          val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop
+          val ctxt''' = ctxt'' |> Proof_Context.augment goal_prop
           val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop);
           fun wp' wp_rules = wp ctxt (map snd (thms @ #wp_rules cfg) @ goals' @ wp_rules)
           val thm = Goal.prove_future ctxt''' [] [] goal_prop

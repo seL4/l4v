@@ -7,8 +7,8 @@
 theory WPBang
 imports
   WP
-  "../../ProvePart"
-  "../NonDetMonadVCG"
+  ProvePart
+  NonDetMonadVCG
 begin
 
 lemma conj_meta_forward:

@@ -124,7 +124,7 @@ parser.add_argument('--no-cleanup', action='store_true',
 parser.add_argument('-r', '--repository', metavar='REPO',
                     type=str, help='Path to the L4.verified repository base.', default=None)
 parser.add_argument('--archs', metavar='ARCH,...',
-                    type=str, default='ARM,ARM_HYP,X64',
+                    type=str, default='ARM,ARM_HYP,X64,RISCV64',
                     help='L4V_ARCHs to include (comma-separated)')
 args = parser.parse_args()
 
@@ -215,12 +215,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         os.path.join(target_dir, "autocorres", "CONTRIBUTORS"))
 
     # License files.
-    shutil.copyfile(
-        os.path.join(args.repository, "LICENSE_BSD2.txt"),
-        os.path.join(target_dir, "LICENSE_BSD2.txt"))
-    shutil.copyfile(
-        os.path.join(args.repository, "LICENSE_GPLv2.txt"),
-        os.path.join(target_dir, "LICENSE_GPLv2.txt"))
+    shutil.copytree(
+        os.path.join(args.repository, "LICENSES"),
+        os.path.join(target_dir, "LICENSES"))
 
     # Extract dependent sessions in lib. FIXME: rather kludgy
     print('Extracting sessions from lib/ROOT...')

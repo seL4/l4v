@@ -8,7 +8,7 @@
 
 theory Bisim_UL
 imports
-  "Monad_WP/NonDetMonadVCG"
+  NonDetMonadVCG
   Corres_UL
   EmptyFailLib
 begin
@@ -534,13 +534,8 @@ lemma bisim_splitE_req:
     apply simp
     apply assumption+
    apply (frule (1) use_valid [OF _ v1 [unfolded validE_R_def validE_def]])
-   apply clarsimp
-   apply (case_tac x)
-    apply (clarsimp simp: in_monad)
-    apply (rule_tac x = "(Inl y', t')" in bexI)
-    apply fastforce
-   apply (fastforce simp: in_monad)
-   apply clarsimp
+   apply (clarsimp split: sum.splits)
+    apply (fastforce simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
    apply (rule bisim_underlyingE1 [OF bd])
     apply simp
     apply assumption+
@@ -548,19 +543,14 @@ lemma bisim_splitE_req:
    apply (rule_tac x = "(r'', t'')" in bexI)
     apply clarsimp
    apply (fastforce simp: in_monad)
-
    apply (clarsimp simp: in_monad split_def)
    apply (erule bisim_underlyingE2)
     apply simp
     apply assumption+
    apply (frule (1) use_valid [OF _ v1 [unfolded validE_R_def validE_def]])
    apply clarsimp
-   apply (case_tac r)
-    apply (clarsimp simp: in_monad)
-    apply (rule_tac x = "(Inl aa, s'')" in bexI)
-    apply fastforce
-   apply (fastforce simp: in_monad)
-   apply clarsimp
+   apply (clarsimp split: sum.splits)
+    apply (fastforce simp: in_monad bind_def throwError_def return_def split: sum.splits prod.splits)
    apply (rule bisim_underlyingE2 [OF bd])
     apply simp
     apply assumption+

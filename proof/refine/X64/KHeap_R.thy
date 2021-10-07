@@ -652,7 +652,7 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: ps_clear_def3 field_simps)
   apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 11))"])
   apply (clarsimp simp: ps_clear_def3[where na=11] is_aligned_mask
-                        word_bw_assocs)
+                        word_bw_assocs field_simps)
   done
 
 lemma ctes_of_canonical:
@@ -837,7 +837,7 @@ lemma no_fail_getEndpoint [wp]:
    apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
-lemma get_ep_corres:
+lemma getEndpoint_corres:
   "corres ep_relation (ep_at ptr) (ep_at' ptr)
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
@@ -943,7 +943,7 @@ where
   "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
   "exst_same' _ _ = True"
 
-lemma set_other_obj_corres:
+lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
   assumes z: "\<And>s. obj_at' P ptr s
@@ -1020,21 +1020,21 @@ lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       is_other_obj_relation_type_def
                       a_type_def objBits_simps other_obj_relation_def
                       archObjSize_def pageBits_def
-lemma set_ep_corres:
+lemma setEndpoint_corres:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
-    apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+    apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
-lemma set_ntfn_corres:
+lemma setNotification_corres:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
-       apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+       apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 
@@ -1054,7 +1054,7 @@ lemma no_fail_getNotification [wp]:
    apply (clarsimp split: option.split_asm simp: objBits_simps' archObjSize_def)
   done
 
-lemma get_ntfn_corres:
+lemma getNotification_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
      (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)
@@ -1213,6 +1213,13 @@ lemma setObject_it[wp]:
   apply (wp x | simp)+
   done
 
+\<comment>\<open>
+  `idle_tcb_ps val` asserts that `val` is a pspace_storable value
+  which corresponds to an idle TCB.
+\<close>
+definition idle_tcb_ps :: "('a :: pspace_storable) \<Rightarrow> bool" where
+  "idle_tcb_ps val \<equiv> (\<exists>tcb. projectKO_opt (injectKO val) = Some tcb \<and> idle_tcb' tcb)"
+
 lemma setObject_idle':
   fixes v :: "'a :: pspace_storable"
   assumes R: "\<And>ko s x y n. (updateObject v ko ptr y n s)
@@ -1223,12 +1230,9 @@ lemma setObject_idle':
        \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> updateObject v p q n ko
        \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
-                   (ptr = ksIdleThread s \<longrightarrow>
-                    (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None)
-                    \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None)) \<and>
-                   P s\<rbrace>
+                   (ptr = ksIdleThread s
+                        \<longrightarrow> (\<exists>val :: 'a. idle_tcb_ps val)
+                        \<longrightarrow> idle_tcb_ps v)\<rbrace>
                 setObject ptr v
               \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
   apply (simp add: valid_idle'_def pred_tcb_at'_def o_def)
@@ -1237,8 +1241,7 @@ lemma setObject_idle':
     apply (simp add: pred_tcb_at'_def obj_at'_real_def)
     apply (rule setObject_ko_wp_at [OF R n m])
    apply (wp z)
-  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
-  apply (drule_tac x=obj in spec, simp)
+  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def idle_tcb_ps_def)
   apply (clarsimp simp add: project_inject)
   apply (drule_tac x=obja in spec, simp)
   done
@@ -1771,9 +1774,9 @@ lemma setEndpoint_idle'[wp]:
    setEndpoint p v
    \<lbrace>\<lambda>_. valid_idle'\<rbrace>"
   unfolding setEndpoint_def
-  apply (wp setObject_idle'[where P="\<top>"])
+  apply (wp setObject_idle')
        apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
 crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
@@ -1912,9 +1915,9 @@ lemma setNotification_ifunsafe'[wp]:
 lemma setNotification_idle'[wp]:
   "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setNotification p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding setNotification_def
-  apply (wp setObject_idle'[where P="\<top>"])
+  apply (wp setObject_idle')
         apply (simp add: objBits_simps' updateObject_default_inv)+
-  apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: projectKOs idle_tcb_ps_def)
   done
 
 crunch it[wp]: setNotification "\<lambda>s. P (ksIdleThread s)"

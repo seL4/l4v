@@ -50,7 +50,6 @@ lemma guarded_spec_body_wp [vcg_hoare]:
   apply (auto simp: image_def Bex_def)
   done
 
-
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"

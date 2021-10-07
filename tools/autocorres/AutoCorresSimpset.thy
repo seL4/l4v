@@ -30,6 +30,8 @@ val AUTOCORRES_SIMPSET =
     (* oversimplifies Spec sets prior to L2 stage
        (we will control this explicitly in L2Peephole) *)
     @ @{thms CollectPairFalse})
+    (* avoid take_bit terms in word abstraction and user simps *)
+    @ @{thms of_int_and_nat}
   addsimps (
     (* Needed for L2corres_spec *)
     @{thms globals_surj}

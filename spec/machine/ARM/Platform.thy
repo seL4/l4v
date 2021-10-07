@@ -11,7 +11,7 @@ imports
   "Lib.Defs"
   "Lib.Lib"
   "Word_Lib.WordSetup"
-  "../Setup_Locale"
+  Setup_Locale
 begin
 
 context Arch begin global_naming ARM
@@ -29,49 +29,47 @@ type_synonym paddr = word32
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
 
-definition
-  pageColourBits :: nat where
+definition pageColourBits :: nat where
   "pageColourBits \<equiv> 2"
 
-definition
-  cacheLineBits :: nat where
+definition cacheLineBits :: nat where
   "cacheLineBits = 5"
 
-definition
-  cacheLine :: nat where
+definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
-definition
-  kernelBase_addr :: word32 where
-  "kernelBase_addr \<equiv> 0xe0000000"
-
 (* Arch specific kernel base address used for haskell spec *)
-definition
-  kernelBase :: word32 where
-  "kernelBase \<equiv> 0xe0000000"
+definition pptrBase :: word32 where
+  "pptrBase \<equiv> 0xe0000000"
 
-definition
-  physBase :: word32 where
+definition physBase :: word32 where
   "physBase \<equiv> 0x10000000"
 
-definition
-  physMappingOffset :: word32 where
-  "physMappingOffset \<equiv> kernelBase_addr - physBase"
+definition pptrBaseOffset :: word32 where
+  "pptrBaseOffset \<equiv> pptrBase - physBase"
 
-definition
-  ptrFromPAddr :: "paddr \<Rightarrow> word32" where
-  "ptrFromPAddr paddr \<equiv> paddr + physMappingOffset"
+definition kernelELFBase :: word32 where
+  "kernelELFBase \<equiv> pptrBase + (physBase && mask 22)"
 
-definition
-  addrFromPPtr :: "word32 \<Rightarrow> paddr" where
-  "addrFromPPtr pptr \<equiv> pptr - physMappingOffset"
+definition kernelELFPAddrBase :: word32 where
+  "kernelELFPAddrBase \<equiv> 0x10000000"
 
-definition
-  minIRQ :: "irq" where
+definition kernelELFBaseOffset :: word32 where
+  "kernelELFBaseOffset \<equiv> kernelELFBase - kernelELFPAddrBase"
+
+definition ptrFromPAddr :: "paddr \<Rightarrow> word32" where
+  "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
+
+definition addrFromPPtr :: "word32 \<Rightarrow> paddr" where
+  "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
+
+definition addrFromKPPtr :: "word32 \<Rightarrow> paddr" where
+  "addrFromKPPtr kpptr \<equiv> kpptr - kernelELFBaseOffset"
+
+definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 
-definition
-  maxIRQ :: "irq" where
+definition maxIRQ :: "irq" where
   "maxIRQ \<equiv> 0x9F"
 
 definition

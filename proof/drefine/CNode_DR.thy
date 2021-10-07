@@ -174,6 +174,7 @@ lemma insert_cap_sibling_corres:
               \<and> valid_mdb s \<and> valid_idle s \<and> valid_objs s \<and> cap_aligned cap)
         (insert_cap_sibling (transform_cap cap) (transform_cslot_ptr src) (transform_cslot_ptr sibling))
         (cap_insert cap src sibling)"
+  supply if_cong[cong]
   apply (simp add: cap_insert_def[folded cap_insert_dest_original_def])
   apply (simp add: insert_cap_sibling_def insert_cap_orphan_def bind_assoc
                    option_return_modify_modify
@@ -265,6 +266,7 @@ lemma insert_cap_child_corres:
         (insert_cap_child (transform_cap cap) (transform_cslot_ptr src) (transform_cslot_ptr child))
         (cap_insert cap src child)"
   supply revokable_cap_insert_dest_original[simp]
+  supply if_cong[cong]
   apply (simp add: cap_insert_def[folded cap_insert_dest_original_def])
   apply (simp add: insert_cap_child_def insert_cap_orphan_def bind_assoc
                    option_return_modify_modify
@@ -407,6 +409,7 @@ proof -
     "\<And>p p' S. p \<noteq> p' \<Longrightarrow> insert p S - {p'} = insert p (S - {p'})"
     by auto
   show ?thesis
+    supply if_cong[cong]
     apply (simp add: cap_move_def move_cap_def cap_move_swap_ext_def swap_parents_def
                 del: fun_upd_apply)
     apply (rule stronger_corres_guard_imp)
@@ -696,6 +699,7 @@ lemma cap_revoke_corres_helper:
   proof (induct rule: cap_revoke.induct)
     case (1 slot' sfix)
   show ?case
+  supply if_cong[cong]
   apply (subst cap_revoke.simps)
   apply (rule monadic_rewrite_corres2[where P =\<top>,simplified])
    apply (rule Finalise_DR.monadic_trancl_preemptible_step)
@@ -819,7 +823,7 @@ lemma revoke_cap_spec_corres:
   apply (subst revoke_cap_def)
   apply (rule boolean_exception_corres)
   unfolding K_def
-  apply (clarsimp simp: liftE_bindE)
+  apply (clarsimp simp: liftE_bindE cong: if_cong)
   apply (rule cap_revoke_corres_helper)
   done
 
@@ -900,6 +904,7 @@ lemma dcorres_ep_cancel_badge_sends:
   "dcorres dc \<top> (valid_state and valid_etcbs)
     (CSpace_D.cancel_badged_sends epptr word2)
     (IpcCancel_A.cancel_badged_sends epptr word2)"
+  supply if_cong[cong]
   apply (clarsimp simp:IpcCancel_A.cancel_badged_sends_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
@@ -911,7 +916,7 @@ lemma dcorres_ep_cancel_badge_sends:
        apply (rule corres_guard_imp[OF filter_modify_empty_corres])
          apply (clarsimp simp:invs_def)
          apply (frule_tac epptr = epptr in get_endpoint_pick ,simp add:obj_at_def)
-         apply (cut_tac ep = epptr and s = "transform s'a" in is_thread_blocked_on_sth)
+         apply (cut_tac ep = epptr and s = "transform s'" in is_thread_blocked_on_sth)
          apply (drule_tac x = x in eqset_imp_iff)
          apply (clarsimp simp: valid_state_def valid_ep_abstract_def none_is_sending_ep_def
                                none_is_receiving_ep_def)
@@ -935,7 +940,7 @@ lemma dcorres_ep_cancel_badge_sends:
                  apply (simp add:valid_ep_def)
                 apply (simp add:inj_on_def)
                apply (simp add:is_thread_blocked_on_sth[simplified])
-               apply (subgoal_tac "valid_idle s' \<and> valid_etcbs s'")
+               apply (subgoal_tac "valid_idle s'a \<and> valid_etcbs s'a")
                 apply (clarsimp simp: ntfn_waiting_set_lift ep_waiting_set_send_lift
                                       ep_waiting_set_recv_lift)
                 apply (subst ntfn_waiting_set_upd_kh)
@@ -961,7 +966,7 @@ lemma dcorres_ep_cancel_badge_sends:
                                     get_thread_state_def)
               apply (rule_tac
                 Q'="\<lambda>s. valid_idle s \<and> valid_etcbs s \<and> not_idle_thread a s
-                      \<and> idle_thread s = idle_thread s'a \<and>
+                      \<and> idle_thread s = idle_thread s' \<and>
                 st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.thread_state.BlockedOnSend epptr pl) a s"
                 in corres_guard_imp[where Q=\<top>])
                 apply (rule dcorres_absorb_gets_the)
@@ -990,7 +995,7 @@ lemma dcorres_ep_cancel_badge_sends:
                                dest!: get_tcb_rev)
                 apply (rule ext)
                 apply (frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp)
-                apply (case_tac "a=idle_thread s'", simp add: not_idle_thread_def)
+                apply (case_tac "a=idle_thread s'a", simp add: not_idle_thread_def)
                 apply (drule (2) transform_objects_tcb)
                 apply (clarsimp simp: transform_current_thread_def transform_def)
                 apply (clarsimp simp: not_idle_thread_def transform_tcb_def transform_def
@@ -999,7 +1004,7 @@ lemma dcorres_ep_cancel_badge_sends:
                apply simp+
              apply (clarsimp simp:bind_assoc not_idle_thread_def)
              apply (wp sts_st_tcb_at_neq)
-              apply (rule_tac Q="\<lambda>r a. valid_idle a \<and> idle_thread a = idle_thread s'a \<and>
+              apply (rule_tac Q="\<lambda>r a. valid_idle a \<and> idle_thread a = idle_thread s' \<and>
                 st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.thread_state.BlockedOnSend epptr pl) y a
                \<and> y \<noteq> idle_thread a \<and> valid_etcbs a" in hoare_strengthen_post)
                apply wp
@@ -1127,6 +1132,7 @@ lemma set_asid_pool_empty'_helper:
   "n < 1023 \<Longrightarrow>
    (if x = ucast ((1 :: word32) + of_nat n) then None else if x \<le> of_nat n then None else ap x) =
    (if (x :: 10 word) \<le> 1 + of_nat n then None else ap x)"
+  including no_take_bit
   apply (frule of_nat_mono_maybe[where x="2^10 - 1" and 'a=10, simplified])
   apply (subgoal_tac "ucast (1 + of_nat n :: word32) = (1 + of_nat n :: 10 word)")
    prefer 2
@@ -1269,7 +1275,7 @@ lemma dcorres_set_asid_pool_empty:
      apply (clarsimp simp del:set_map simp: suffix_def)
     apply (wp | clarsimp simp:swp_def)+
    apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
-   apply (clarsimp simp:unat_ucast upto_enum_def unat_of_nat)
+  apply (clarsimp simp: upto_enum_def take_bit_nat_eq_self)
   done
 
 declare fun_upd_apply[simp]
@@ -1316,18 +1322,14 @@ lemma dcorres_clear_object_caps_asid_pool:
    apply clarsimp
   apply (clarsimp simp:invs_def valid_state_def valid_cap_def obj_at_def a_type_def
                        valid_pspace_def dest!: cte_wp_valid_cap)
-  apply (clarsimp split:Structures_A.kernel_object.split_asm
+  by (clarsimp split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm if_splits)
-  done
 
 lemmas valid_idle_invs_strg = invs_valid_idle_strg
 
 crunch idle[wp] : invalidate_tlb_by_asid "\<lambda>s. P (idle_thread s)"
 
 crunch st_tcb_at[wp]: invalidate_tlb_by_asid "st_tcb_at P thread"
-
-crunch idle [wp]: cancel_badged_sends "\<lambda>s::'z::state_ext state. P (idle_thread s)"
-  (wp: crunch_wps dxo_wp_weak filterM_preserved simp: crunch_simps)
 
 lemma dcorres_storeWord_mapM_x_cvt:
   "\<forall>x\<in>set ls. within_page buf x sz
@@ -1570,8 +1572,8 @@ lemma copy_global_mappings_dwp:
       apply (rule dcorres_to_wp)
       apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
         apply (clarsimp simp:kernel_mapping_slots_def)
-        apply (simp add:ucast_def kernel_base_def pd_bits_def pageBits_def)
-        apply (simp add:mask_add_aligned)
+          apply (simp add: kernel_base_def pd_bits_def pageBits_def)
+          apply (simp add: mask_add_aligned)
         apply (subst less_mask_eq,simp)
          apply (simp add:shiftl_t2n)
          apply (subst mult.commute)
@@ -1579,7 +1581,6 @@ lemma copy_global_mappings_dwp:
         apply (simp add:shiftl_shiftr1 word_size)
         apply (subst less_mask_eq,simp)
          apply unat_arith
-        apply (fold ucast_def)
         apply (subst ucast_le_migrate[symmetric])
           apply (simp add:word_size,unat_arith)
          apply (simp add:word_size)+
@@ -1681,6 +1682,7 @@ lemma dcorres_clear_object_caps_pt:
   "dcorres dc \<top> (invs and  cte_wp_at ((=) (cap.ArchObjectCap (arch_cap.PageTableCap w option))) (a, b))
     (clear_object_caps w)
     (mapM_x (swp store_pte ARM_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
+  including no_take_bit
   apply (clarsimp simp: clear_object_caps_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (subgoal_tac "\<exists>ptx. (ko_at (ArchObj (arch_kernel_obj.PageTable ptx)) w) s'")
@@ -1939,8 +1941,12 @@ lemma dcorres_gba_no_effect:
    apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
   done
 
+context
+notes if_cong[cong]
+begin
 crunch valid_etcbs[wp]: cancel_badged_sends valid_etcbs
 (wp: mapM_x_wp hoare_drop_imps hoare_unless_wp ignore: filterM)
+end
 
 lemma cap_revoke_valid_etcbs[wp]:
   "\<lbrace> valid_etcbs \<rbrace> cap_revoke cap \<lbrace> \<lambda>_. valid_etcbs \<rbrace>"
@@ -1977,6 +1983,7 @@ lemma invoke_cnode_corres:
                and valid_pdpt_objs and valid_etcbs)
      (CNode_D.invoke_cnode (translate_cnode_invocation cnodeinv))
      (CSpace_A.invoke_cnode cnodeinv)"
+  supply if_cong[cong]
   apply (simp add: CSpace_A.invoke_cnode_def CNode_D.invoke_cnode_def
                    translate_cnode_invocation_def
                 split: Invocations_A.cnode_invocation.split

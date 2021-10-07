@@ -76,6 +76,24 @@ assumes cleanByVA_PoU_preserves_kernel_bytes:
          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
              \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
 
+assumes cleanByVA_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanByVA_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+             \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
+
+assumes cleanL2Range_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call plat_cleanL2Range_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+             \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
+
+assumes dsb_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+         \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+             \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
+
 assumes invalidateByVA_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
            (doMachineOp (invalidateByVA w1 w2))
@@ -114,12 +132,12 @@ assumes cleanInvalidate_D_PoC_ccorres:
 assumes cleanInvalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (cleanInvalidateL2Range w1 w2))
-           (Call cleanInvalidateL2Range_'proc)"
+           (Call plat_cleanInvalidateL2Range_'proc)"
 
 assumes invalidateL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
            (doMachineOp (invalidateL2Range w1 w2))
-           (Call invalidateL2Range_'proc)"
+           (Call plat_invalidateL2Range_'proc)"
 
 assumes cleanL2Range_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace>) []
@@ -175,7 +193,7 @@ assumes maskInterrupt_ccorres:
            (Call maskInterrupt_'proc)"
 
 assumes invalidateLocalTLB_VAASID_spec:
- "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateMVA_'proc) UNIV"
+ "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateLocalTLB_VAASID_'proc) UNIV"
 
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
@@ -423,8 +441,8 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop)
      apply (simp add: cleanInvalidateCacheRange_RAM_def doMachineOp_bind
-                      empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanInvalidateL2Range
-                      empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
+                      empty_fail_dsb empty_fail_cleanInvalidateL2Range
+                      empty_fail_cleanInvalByVA)
      apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
       apply (ctac (no_vcg) add: dsb_ccorres)
        apply (ctac (no_vcg) add: cleanInvalidateL2Range_ccorres)
@@ -456,8 +474,7 @@ lemma cleanCacheRange_RAM_ccorres:
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
            (Call cleanCacheRange_RAM_'proc)"
   apply (cinit' lift: start_' end_' pstart_')
-   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind
-                    empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanL2Range)
+   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind empty_fail_dsb empty_fail_cleanL2Range)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop2, simp)
    apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
@@ -519,8 +536,7 @@ lemma invalidateCacheRange_RAM_ccorres:
    apply (clarsimp simp: word_sle_def whileAnno_def split del: if_split)
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: invalidateCacheRange_RAM_def doMachineOp_bind when_def
-                    if_split_empty_fail empty_fail_cleanCacheRange_RAM
-                    empty_fail_invalidateL2Range empty_fail_cacheRangeOp empty_fail_invalidateByVA
+                    if_split_empty_fail empty_fail_invalidateL2Range empty_fail_invalidateByVA
                     empty_fail_dsb dmo_if
               split del: if_split)
    apply (rule ccorres_split_nothrow_novcg)

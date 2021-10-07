@@ -167,7 +167,7 @@ where
 
 (* There is a clean object there that has the same caps in the same slots, restricted to the slots "slots" *)
 definition
-  sep_map_S' :: "(cdl_object_id \<times> cdl_cnode_index set) \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S' _" [76,71] 76)
+  sep_map_S' :: "(cdl_object_id \<times> cdl_cnode_index set) \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S'' _" [76,71] 76)
 where
   "p \<mapsto>S' object \<equiv> let (obj_id, slots) = p in sep_map_general obj_id object (Slot ` slots)"
 
@@ -296,7 +296,7 @@ lemma offset_slot':
   "\<lbrakk>slot < 2^radix\<rbrakk> \<Longrightarrow> offset slot radix = unat slot"
   by (clarsimp simp: offset_def Word.less_mask_eq)
 
-lemmas word_bits_def = Word_Setup_32.word_bits_def
+lemmas word_bits_def = Word_32.word_bits_def
 
 lemma offset_slot:
   "\<lbrakk>slot < 2^radix; radix < word_bits\<rbrakk> \<Longrightarrow> offset (of_nat slot) radix = slot"

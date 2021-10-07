@@ -57,10 +57,10 @@ fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
   in if rhs'' aconv rhs
     then (Termtab.insert (K true) (tm, tm) convs,
         ctxt
-        |> Local_Theory.open_target |> snd
+        |> Local_Theory.begin_nested |> snd
         |> Local_Theory.abbrev Syntax.mode_default ((Binding.name cname, NoSyn), get_lhs def_thm)
         |> snd |> Local_Theory.note ((Binding.name (cname ^ "_def"), []), [def_thm])
-        |> snd |> Local_Theory.close_target
+        |> snd |> Local_Theory.end_nested
     )
 
   else let
@@ -68,11 +68,11 @@ fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
 
       val pre_def_ctxt = ctxt
       val b = Binding.name cname
-      val ctxt = Local_Theory.open_target ctxt |> snd
+      val ctxt = Local_Theory.begin_nested ctxt |> snd
       val ((tm', _), ctxt) = Local_Theory.define
           ((b, NoSyn), ((Thm.def_binding b, []), rhs'')) ctxt
       val tm'' = Morphism.term (Proof_Context.export_morphism ctxt pre_def_ctxt) tm'
-      val ctxt = Local_Theory.close_target ctxt
+      val ctxt = Local_Theory.end_nested ctxt
 
       val lhs_argTs = get_lhs def_thm |> strip_comb |> snd |> map fastype_of;
       val abs_tm = list_abs (map (pair "_") lhs_argTs, tm'')
@@ -340,6 +340,10 @@ end
 \<close>
 
 cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
+
+ML \<open>
+  Feedback.verbosity_level := ~1;
+\<close>
 
 local_setup \<open>
 SubstituteSpecs.take_all_actions

@@ -721,7 +721,7 @@ fun define_globals_list (mungedb:CalculateState.mungedb) globloc globty thy = le
     val sT = @{typ string}
     val gdT = Type (@{type_name global_data}, [globty])
 
-    val ctxt = Named_Target.begin (globloc, Position.none) thy
+    val ctxt = Target_Context.context_begin_named_cmd [] (globloc, Position.none) thy
 
     fun glob (_, _, _, Local _) = error "define_globals_list: Local"
       | glob (nm, typ, _, UntouchedGlobal) = let

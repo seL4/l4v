@@ -11,7 +11,7 @@ Higher level functions for manipulating virtual address spaces
 chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
-imports "../Retype_A"
+imports Retype_A
 begin
 
 context Arch begin global_naming ARM_A
@@ -325,7 +325,7 @@ definition
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
        global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-       do_machine_op $ set_current_pd $ addrFromPPtr global_pd
+       do_machine_op $ set_current_pd $ addrFromKPPtr global_pd
     od)
 od"
 

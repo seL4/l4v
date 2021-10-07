@@ -9,7 +9,7 @@
 
 theory KernelInit_AI
 imports
-  "./$L4V_ARCH/ArchKernelInit_AI"
+  ArchKernelInit_AI
 begin
 
 axiomatization where

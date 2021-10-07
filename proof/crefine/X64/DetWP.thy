@@ -5,7 +5,7 @@
  *)
 
 theory DetWP
-imports "Lib.DetWPLib" "../Include_C"
+imports "Lib.DetWPLib" "CBaseRefine.Include_C"
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -56,6 +56,7 @@ lemma det_wp_loadObject_default [wp]:
 
 lemma det_wp_getTCB [wp]:
   "det_wp (tcb_at' t) (getObject t :: tcb kernel)"
+  supply option.case_cong[cong]
   apply (simp add: getObject_def split_def)
   apply (rule det_wp_pre)
    apply (wp|wpc)+

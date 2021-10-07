@@ -17,7 +17,7 @@ imports
   "Refine.RAB_FN"
   "CLib.MonadicRewrite_C"
 
-  "../lib/CToCRefine"
+  CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -39,13 +39,6 @@ done
 lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
-
-lemma Arch_finaliseInterrupt_ccorres:
-  "ccorres dc xfdc \<top> UNIV [] (return a) (Call Arch_finaliseInterrupt_'proc)"
-  apply (rule ccorres_from_vcg)
-  apply (rule allI, rule conseqPre, vcg)
-  apply (simp add: return_def)
-  done
 
 lemma handleInterruptEntry_ccorres:
   "ccorres dc xfdc
@@ -74,9 +67,7 @@ proof -
       apply vcg
      apply vcg
     apply (clarsimp simp: irqInvalid_def ucast_8_32_neq Kernel_C.irqInvalid_def)
-    apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-     apply (rule ccorres_add_return, ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
        apply (rule ccorres_stateAssert_after)
        apply (rule ccorres_add_return2)
@@ -149,7 +140,7 @@ lemma handleVMFaultEvent_ccorres:
           apply clarsimp
          apply clarsimp
          apply (rule ccorres_cond_univ)
-         apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
+         apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
          apply (rule_tac xf'=xfdc in ccorres_call)
             apply (ctac (no_vcg) add: handleFault_ccorres)
            apply simp
@@ -157,7 +148,6 @@ lemma handleVMFaultEvent_ccorres:
          apply simp
         apply (wp hv_inv_ex')
        apply (simp add: guard_is_UNIV_def)
-       apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
       apply ceqv
      apply clarsimp
@@ -231,7 +221,6 @@ lemma ct_active_not_idle'_strengthen:
   by clarsimp
 
 
-
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc
            (invs' and
@@ -239,6 +228,7 @@ lemma handleSyscall_ccorres:
                (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
            (UNIV \<inter> {s. syscall_' s = syscall_from_H sysc }) []
            (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: syscall_')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: handleE_def handleE'_def)
@@ -266,9 +256,7 @@ lemma handleSyscall_ccorres:
                  apply (rule ccorres_split_nothrow_novcg)
                      apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def)
-                     apply (rule ccorres_add_return2)
                      apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                      apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                     apply ceqv
                    apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                   apply wp
@@ -304,9 +292,7 @@ lemma handleSyscall_ccorres:
                     apply (rule ccorres_Guard)?
                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                       apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                     apply (rule ccorres_add_return2)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                     apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                    apply ceqv
                   apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
@@ -341,9 +327,7 @@ lemma handleSyscall_ccorres:
                    apply (rule ccorres_Guard)?
                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                     apply (case_tac rv; clarsimp simp: Kernel_C.irqInvalid_def irqInvalid_def)
-                   apply (rule ccorres_add_return2)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                    apply (ctac (no_vcg) add: Arch_finaliseInterrupt_ccorres, wp)
                   apply ceqv
                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
@@ -809,6 +793,7 @@ lemma user_memory_update_corres_C:
      (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
+  supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    prefer 2
@@ -1012,6 +997,7 @@ lemma refinement2_both:
    apply (rule ext)
    apply (clarsimp simp: user_mem'_def option_to_0_def split:if_splits)
   apply (simp add: ADT_H_def)
+  supply subst_all [simp del]
   apply (clarsimp simp: rel_semi_def global_automaton_def relcomp_unfold
                         in_lift_state_relation_eq)
 

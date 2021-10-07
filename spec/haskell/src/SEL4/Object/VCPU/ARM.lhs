@@ -30,7 +30,7 @@ hypervisor extensions on ARM.
 > import SEL4.API.InvocationLabels.ARM
 > import SEL4.API.Invocation
 > import SEL4.API.Invocation.ARM as ArchInv
-> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegNum)
+> import SEL4.Machine.RegisterSet.ARM (Register(..), VCPUReg(..), vcpuRegNum, vcpuRegSavedWhenDisabled)
 > import SEL4.API.Types
 > import SEL4.API.InvocationLabels
 > import SEL4.API.Failures.TARGET
@@ -172,9 +172,8 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >         _ -> (False, False)
 >
 >     if onCurVCPU
->         then if reg == VCPURegSCTLR
->                 then if active then doMachineOp getSCTLR
->                                else vcpuReadReg vcpuPtr VCPURegSCTLR
+>         then if vcpuRegSavedWhenDisabled reg && not active
+>                 then vcpuReadReg vcpuPtr reg
 >                 else doMachineOp $ readVCPUHardwareReg reg
 >         else vcpuReadReg vcpuPtr reg
 
@@ -186,9 +185,8 @@ Currently, there is only one VCPU register available for reading/writing by the 
 >         _ -> (False, False)
 >
 >     if onCurVCPU
->         then if reg == VCPURegSCTLR
->                 then if active then doMachineOp $ setSCTLR val
->                                else vcpuWriteReg vcpuPtr reg val
+>         then if vcpuRegSavedWhenDisabled reg && not active
+>                 then vcpuWriteReg vcpuPtr reg val
 >                 else doMachineOp $ writeVCPUHardwareReg reg val
 >         else vcpuWriteReg vcpuPtr reg val
 

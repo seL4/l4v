@@ -53,9 +53,9 @@ CParser: c-parser-deps
 # then build it using Isabelle.
 #
 cparser_test: c-parser-deps testfiles/$(L4V_ARCH)/ROOT .FORCE
-	$(ISABELLE) build -d $(L4V_ROOT_DIR) -d testfiles/$(L4V_ARCH) -b -v CParserTest
+	$(ISABELLE) build -d $(L4V_ROOT_DIR) -d testfiles/$(L4V_ARCH) -v CParserTest
 testfiles/$(L4V_ARCH)/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
-	python3 ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser
+	python3 ../../misc/scripts/gen_isabelle_root.py -i testfiles -i testfiles/$(L4V_ARCH) -o testfiles/$(L4V_ARCH)/ROOT -s CParserTest -b CParser --dir ".." --dir "imports"
 all_tests_$(L4V_ARCH).thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
 	python3 ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles -i testfiles/$(L4V_ARCH)
 

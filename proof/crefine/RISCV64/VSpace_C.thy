@@ -70,6 +70,7 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
+  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -251,7 +252,7 @@ lemma handleVMFault_ccorres:
     prefer 3 apply simp
    apply (simp add: handleVMFault_def handleVMFault'_def liftE_bindE condition_const
                     ucast_ucast_mask bind_assoc)
-   apply (rule corres_split_deprecated[OF _ read_sbadaddr_ccorres[ac]], drule sym, clarsimp)
+   apply (rule corres_split_deprecated[OF _ read_stval_ccorres[ac]], drule sym, clarsimp)
       apply (wpc; simp add: vm_fault_type_from_H_def vm_fault_defs_C
                             true_def false_def bind_assoc)
            apply (rule returnVMFault_corres;
@@ -327,7 +328,7 @@ lemma ptrFromPAddr_spec:
   Call ptrFromPAddr_'proc
   \<lbrace>  \<acute>ret__ptr_to_void =  Ptr (ptrFromPAddr (paddr_' s) ) \<rbrace>"
   apply vcg
-  apply (simp add: RISCV64.ptrFromPAddr_def RISCV64.pptrBase_def baseOffset_def pAddr_base_def
+  apply (simp add: RISCV64.ptrFromPAddr_def RISCV64.pptrBase_def pptrBaseOffset_def paddrBase_def
                    canonical_bit_def)
   done
 
@@ -336,7 +337,7 @@ lemma addrFromPPtr_spec:
   Call addrFromPPtr_'proc
   \<lbrace>  \<acute>ret__unsigned_long =  (addrFromPPtr (ptr_val (pptr_' s)) ) \<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def baseOffset_def pAddr_base_def
+  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def pptrBaseOffset_def paddrBase_def
                    canonical_bit_def)
   done
 
@@ -490,6 +491,7 @@ proof (induct level arbitrary: pt)
 
   case 0
   show ?case
+    including no_take_bit
     apply (simp only: ptSlot_upd_def lookupPTSlotFromLevel.simps(1))
     apply (cinitlift pt_' vptr_', simp only:)
     apply (rule ccorres_rhs_assoc)+
@@ -531,9 +533,11 @@ proof (induct level arbitrary: pt)
            of_nat ptTranslationBits * of_nat level +
            of_nat pt_bits :: machine_word) =
      ptTranslationBits + ptTranslationBits * level + pt_bits"
+    including no_take_bit
     by (simp add: bit_simps word_less_nat_alt maxPTLevel_def unat_word_ariths unat_of_nat_eq)
 
   show ?case
+    including no_take_bit
     apply (simp only: lookupPTSlotFromLevel.simps)
     apply (subst ptSlot_upd_def)
     \<comment> \<open>cinitlift will not fully eliminate pt and vptr,
@@ -877,13 +881,13 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
-lemma kpptr_to_paddr_spec:
+lemma addrFromKPPtr_spec:
   "\<forall>s. \<Gamma> \<turnstile>  {s}
-  Call kpptr_to_paddr_'proc
-  \<lbrace> \<acute>ret__unsigned_long = RISCV64_H.addrFromKPPtr (ptr_val (pptr_' s)) \<rbrace>"
+   Call addrFromKPPtr_'proc
+   \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: RISCV64_H.addrFromKPPtr_def RISCV64.addrFromKPPtr_def RISCV64.kernelBaseOffset_def
-                   RISCV64.kernelELFBase_def RISCV64.paddrLoad_def)
+  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def
+                   kernelELFBase_def kernelELFPAddrBase_def)
   done
 
 lemma isValidVTableRoot_def2:
@@ -993,8 +997,8 @@ lemma ccorres_seq_IF_False:
 (* FIXME x64: needed? *)
 lemma ptrFromPAddr_mask6_simp[simp]:
   "ptrFromPAddr ps && mask 6 = ps && mask 6"
-  unfolding ptrFromPAddr_def pptrBase_def baseOffset_def RISCV64.pptrBase_def canonical_bit_def
-             pAddr_base_def
+  unfolding ptrFromPAddr_def pptrBase_def pptrBaseOffset_def RISCV64.pptrBase_def canonical_bit_def
+             paddrBase_def
   by (subst add.commute, subst mask_add_aligned ; simp add: is_aligned_def)
 
 (* FIXME: move *)
@@ -1065,6 +1069,7 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
+  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -1271,7 +1276,7 @@ lemma checkMappingPPtr_def2:
     then returnOk()
     else throw InvalidRoot)"
   unfolding checkMappingPPtr_def
-  by (cases pte; simp add: isPagePTE_def unlessE_def)
+  by (cases pte; simp add: isPagePTE_def unlessE_def cong: if_cong)
 
 lemma pte_pte_invalid_new_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace>
@@ -1296,6 +1301,7 @@ lemma unmapPage_ccorres:
        \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace> \<inter> \<lbrace> \<acute>pptr___unsigned_long = pptr \<rbrace>)
       hs
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid___unsigned_long_' vptr_' pptr___unsigned_long_')
    apply (simp add: ignoreFailure_liftM)
@@ -1386,6 +1392,7 @@ lemma cap_to_H_Frame_unfold:
    d = to_bool device_C \<and>
    R = vmrights_to_H vmrights_C \<and>
    m = (if asid_C = 0 then None else Some (asid_C, mappedAddr_C))"
+  supply if_cong[cong]
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits)
    apply (simp split: if_split_asm)
   apply (rename_tac fcap, case_tac fcap, simp)
@@ -1480,6 +1487,7 @@ lemma performPageInvocationUnmap_ccorres:
 lemma RISCVGetWriteFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetWriteFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply (simp add: vmrights_to_H_def writable_from_vm_rights_def Kernel_C.VMKernelOnly_def
                    Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
@@ -1489,6 +1497,7 @@ lemma RISCVGetWriteFromVMRights_spec:
 lemma RISCVGetReadFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call RISCVGetReadFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
+  supply if_cong[cong]
   apply vcg
   apply (simp add: vmrights_to_H_def readable_from_vm_rights_def Kernel_C.VMKernelOnly_def
                    Kernel_C.VMReadOnly_def Kernel_C.VMReadWrite_def)
@@ -1536,6 +1545,7 @@ lemma makeUserPTE_spec:
         pte_CL.write_CL = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
         pte_CL.read_CL = readable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
         pte_CL.valid_CL = 1\<rparr> \<rbrace>"
+  supply if_cong[cong]
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_def user_from_vm_rights_mask writable_from_vm_rights_mask
                         readable_from_vm_rights_mask)
@@ -1685,7 +1695,7 @@ lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simpli
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) ((unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms
+  using assms including no_take_bit
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1695,8 +1705,7 @@ lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simp
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms
-  using assms
+  using assms including no_take_bit
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1715,6 +1724,7 @@ proof -
     "\<And>n. n < 256 \<Longrightarrow> ?enum n = 0x800 + of_nat n * 8"
     by (auto simp: upto_enum_word_nth word_shiftl_add_distrib shiftl_t2n)
   show ?thesis
+    including no_take_bit
     apply (cinit lift: newLvl1pt_' simp: ptIndex_maxPTLevel_pptrBase ptTranslationBits_def)
      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState, rename_tac globalPT)
      apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])

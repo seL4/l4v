@@ -11,6 +11,8 @@ session AsmRefine = CParser +
     Word_Lib
     Lib
     CLib
+  directories
+    "$L4V_ARCH"
   theories
     GraphProof
     ProveGraphRefine

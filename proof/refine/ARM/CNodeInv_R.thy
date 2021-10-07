@@ -73,8 +73,8 @@ lemma cap_relation_NullCap:
   "cap_relation cap cap' \<Longrightarrow>
    (update_cap_data P x cap = cap.NullCap) = (RetypeDecls_H.updateCapData P x cap' = capability.NullCap)"
   apply (cases cap)
-            apply (simp_all add: mask_cap_def cap_rights_update_def update_cap_data_closedform word_bits_def
-                                 Let_def updateCapData_def isCap_simps
+            apply (simp_all add: Let_def mask_cap_def cap_rights_update_def update_cap_data_closedform
+                                 arch_update_cap_data_def word_bits_def updateCapData_def isCap_simps
                       split del: if_split)
      apply simp
     apply simp
@@ -151,7 +151,7 @@ lemma cancelSendRightsEq:
                   split: cap.splits bool.splits if_splits |
          case_tac x)+
 
-lemma dec_cnode_inv_corres:
+lemma decodeCNodeInvocation_corres:
   "\<lbrakk> cap_relation (cap.CNodeCap w n list) cap'; list_all2 cap_relation cs cs';
      length list \<le> 32 \<rbrakk> \<Longrightarrow>
   corres
@@ -170,9 +170,9 @@ lemma dec_cnode_inv_corres:
                   split del: if_split
                        cong: if_cong list.case_cong)
        apply (rule corres_guard_imp)
-         apply (rule corres_splitEE [OF _ lsfc_corres])
-             apply (rule corres_splitEE [OF _ ensure_empty_corres])
-                apply (rule corres_splitEE [OF _ lsfc_corres])
+          apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
+              apply (rule corres_splitEE [OF _ ensureEmptySlot_corres])
+                 apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
                     apply (simp(no_asm) add: liftE_bindE del: de_Morgan_conj split del: if_split)
                     apply (rule corres_split_deprecated [OF _ get_cap_corres'])
                        prefer 2
@@ -194,7 +194,7 @@ lemma dec_cnode_inv_corres:
                            prefer 2
                            apply (simp add: returnOk_def del: imp_disjL)
                            apply (rule conjI[rotated], rule impI)
-                            apply (rule derive_cap_corres)
+                              apply (rule deriveCap_corres)
                              apply (clarsimp simp: cap_relation_mask
                                                    cap_map_update_data
                                             split: option.split)
@@ -212,7 +212,7 @@ lemma dec_cnode_inv_corres:
       \<comment> \<open>Revoke\<close>
       apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                        isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
-      apply (rule corres_guard_imp, rule corres_splitEE [OF _ lsfc_corres])
+       apply (rule corres_guard_imp, rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
             apply (simp add: split_beta)
             apply (rule corres_returnOkTT)
             apply simp
@@ -225,7 +225,7 @@ lemma dec_cnode_inv_corres:
      apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                       isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [OF _ lsfc_corres])
+        apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
            apply (simp add: split_beta)
            apply (rule corres_returnOkTT)
            apply simp
@@ -238,7 +238,7 @@ lemma dec_cnode_inv_corres:
     apply (simp add: decode_cnode_invocation_def decodeCNodeInvocation_def
                      isCap_simps Let_def unlessE_whenE del: ser_def split del: if_split)
     apply (rule corres_guard_imp)
-      apply (rule corres_splitEE [OF _ lsfc_corres])
+      apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
           apply (simp(no_asm) add: split_beta liftE_bindE)
           apply (rule corres_split_deprecated [OF _ get_cap_corres'])
              apply (rule corres_split_norE)
@@ -257,9 +257,9 @@ lemma dec_cnode_inv_corres:
    apply (simp add: le_diff_conv2 split_def decode_cnode_invocation_def decodeCNodeInvocation_def
                     isCap_simps Let_def unlessE_whenE whenE_whenE_body
                del: disj_not1 ser_def split del: if_split)
-   apply (rule corres_guard_imp, rule corres_splitEE [OF _ lsfc_corres])
+   apply (rule corres_guard_imp, rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
          apply (rename_tac dest_slot destSlot)
-         apply (rule corres_splitEE [OF _ lsfc_corres])+
+         apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])+
                  apply (rule_tac R = "\<lambda>s. cte_at pivot_slot s \<and> cte_at dest_slot s
                                         \<and> cte_at src_slot s \<and> invs s" in
                                  whenE_throwError_corres' [where R' = \<top>])
@@ -300,7 +300,7 @@ lemma dec_cnode_inv_corres:
                     apply (drule (2) cte_map_inj_eq, clarsimp+)[1]
                    apply (rule corres_guard_imp)
                      apply (erule corres_whenE)
-                      apply (rule ensure_empty_corres)
+                      apply (rule ensureEmptySlot_corres)
                       apply clarsimp
                      apply simp
                     apply clarsimp
@@ -334,7 +334,7 @@ lemma dec_cnode_inv_corres:
                          cnode_invok_case_cleanup
               split del: if_split cong: if_cong)
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE[OF _ lsfc_corres])
+     apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
          apply (rule corres_trivial, clarsimp split: list.split_asm)
         apply simp+
       apply wp+
@@ -344,7 +344,7 @@ lemma dec_cnode_inv_corres:
                         isCNodeCap_CNodeCap split_def unlessE_whenE
              split del: if_split cong: if_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ lsfc_corres wp_post_tautE wp_post_tautE])
+    apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres wp_post_tautE wp_post_tautE])
       apply (clarsimp simp: list_all2_Cons1 split: list.split_asm)
      apply simp
     apply simp
@@ -5855,6 +5855,7 @@ lemma valid_cap'_handy_bits:
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> n < 2 ^ word_bits"
   "\<lbrakk> s \<turnstile>' Zombie r zb n; n \<noteq> 0 \<rbrakk> \<Longrightarrow> of_nat n - 1 < (2 ^ (zBits zb) :: word32)"
   "s \<turnstile>' Zombie r zb n \<Longrightarrow> zBits zb < word_bits"
+  including no_0_dvd no_take_bit
   apply (insert zombieCTEs_le[where zb=zb],
          simp_all add: valid_cap'_def)
    apply (clarsimp elim!: order_le_less_trans)
@@ -5894,6 +5895,7 @@ lemma ex_Zombie_to2:
   "\<lbrakk> ctes_of s p = Some cte; cteCap cte = Zombie p' b n;
        n \<noteq> 0; valid_objs' s \<rbrakk>
       \<Longrightarrow> ex_cte_cap_to' (p' + (2^cteSizeBits * of_nat n - 2^cteSizeBits)) s"
+  including no_take_bit no_0_dvd
   apply (simp add: ex_cte_cap_to'_def cte_wp_at_ctes_of)
   apply (intro exI, rule conjI, assumption)
   apply (simp add: image_def)
@@ -6602,7 +6604,6 @@ lemma rvk_prog_modify_map:
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
   apply simp
-  apply (erule meta_allE, drule meta_mp, rule refl)
   apply (erule disjE)
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
@@ -6641,12 +6642,18 @@ lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSi
 lemmas emptySlot_rvk_prog' = emptySlot_rvk_prog[unfolded o_def]
 lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of hoare_vcg_all_lift
        getObject_inv loadObject_default_inv
    simp: crunch_simps unless_def o_def
    ignore: setCTE threadSet)
+end
+
+end
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
     "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
@@ -6985,9 +6992,9 @@ proof (induct rule: rec_del.induct,
                                  whenE_liftE)
         apply (rule corres_when, simp)
         apply simp
-        apply (rule empty_slot_corres)
-       apply (wpsimp wp: rec_del_invs rec_del_valid_list DetSchedSchedule_AI_det_ext.rec_del_valid_sched rec_del_cte_at finaliseSlot_invs hoare_drop_imps
-                 preemption_point_inv'
+        apply (rule emptySlot_corres)
+       apply (wpsimp wp: rec_del_invs rec_del_valid_list rec_del_valid_sched rec_del_cte_at
+                         finaliseSlot_invs hoare_drop_imps preemption_point_inv'
             | simp)+
     done
 next
@@ -7011,10 +7018,10 @@ next
                 simp add: returnOk_def)
         apply (rule spec_corres_splitE')
            apply simp
-           apply (rule final_cap_corres[where ptr=slot])
+           apply (rule isFinalCapability_corres[where ptr=slot])
           apply (rule spec_corres_splitE')
              apply simp
-             apply (rule finalise_cap_corres[where sl=slot])
+             apply (rule finaliseCap_corres[where sl=slot])
                apply simp
               apply simp
              apply simp
@@ -7032,13 +7039,13 @@ next
                apply (erule conjunct2)
               apply (rule drop_spec_corres,
                      simp add: liftME_def[symmetric] o_def dc_def[symmetric])
-              apply (rule cap_update_corres)
+              apply (rule updateCap_corres)
                apply simp
               apply (simp(no_asm_use) add: cap_cyclic_zombie_def split: cap.split_asm)
               apply (simp add: is_cap_simps)
              apply (rule spec_corres_splitE')
                 apply simp
-                apply (rule cap_update_corres, erule conjunct1)
+                apply (rule updateCap_corres, erule conjunct1)
                 apply (case_tac "fst rvb", auto simp: isCap_simps is_cap_simps)[1]
                apply (rule spec_corres_splitE)
                   apply (rule iffD1 [OF spec_corres_liftME2[where fn="\<lambda>v. (True, NullCap)"]])
@@ -7188,7 +7195,7 @@ next
        apply (clarsimp simp: cte_wp_at_def)
        apply (drule(1) zombies_finalD2, clarsimp+)
       apply (fold dc_def)
-      apply (rule corres_guard_imp, rule cap_swap_for_delete_corres)
+      apply (rule corres_guard_imp, rule capSwapForDelete_corres)
          apply (simp add: cte_map_replicate)
         apply simp
        apply clarsimp
@@ -7213,6 +7220,7 @@ next
   have pred_conj_assoc: "\<And>P Q R. (P and (Q and R)) = (P and Q and R)"
     by (rule ext, simp)
   show ?case
+    including no_take_bit no_0_dvd
     apply (simp only: rec_del_concrete_unfold cap_relation.simps)
     apply (simp add: reduceZombie_def Let_def
                      liftE_bindE
@@ -7271,7 +7279,7 @@ next
              apply (rule corres_symb_exec_r)
                 apply (rule_tac F="cteCap endCTE = capability.NullCap"
                             in corres_gen_asm2, simp)
-                apply (rule cap_update_corres)
+                apply (rule updateCap_corres)
                  apply simp
                 apply (simp add: is_cap_simps)
                apply (rule_tac Q="\<lambda>rv. cte_at' (cte_map ?target)" in valid_prove_more)
@@ -7284,7 +7292,7 @@ next
             apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
            apply (clarsimp simp: cte_wp_at_ctes_of)
            apply (frule cte_wp_valid_cap[unfolded cte_wp_at_eq_simp], clarsimp)
-           apply (drule cte_wp_at_eqD[where p="?target"], clarsimp)
+           apply (drule cte_wp_at_norm[where p="?target"], clarsimp)
            apply (erule disjE)
             apply (drule(1) pspace_relation_cte_wp_at
                                 [OF state_relation_pspace_relation],
@@ -7734,7 +7742,7 @@ proof (induct rule: cap_revoke.induct)
      apply (rule cap_revoke_mdb_stuff4, (simp add: in_get_cap_cte_wp_at)+)
     apply (clarsimp simp: whenE_def)
     apply (rule spec_corres_guard_imp)
-      apply (rule spec_corres_splitE' [OF cap_delete_corres])
+      apply (rule spec_corres_splitE' [OF cteDelete_corres])
         apply (rule spec_corres_splitE' [OF preemptionPoint_corres])
           apply (rule "1.hyps",
                    (simp add: cte_wp_at_def in_monad select_def next_revoke_cap_def select_ext_def
@@ -7752,7 +7760,7 @@ proof (induct rule: cap_revoke.induct)
     done
 qed
 
-lemmas cap_revoke_corres = use_spec_corres [OF cap_revoke_corres']
+lemmas cteRevoke_corres = use_spec_corres [OF cteRevoke_corres']
 
 end
 
@@ -7997,7 +8005,7 @@ lemma m_cap:
 lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
-  apply (case_tac "isReplyCap src_cap")
+  apply (case_tac "isReplyCap src_cap"; clarsimp)
    apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
          ; fastforce simp: sameRegionAs_def ARM_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done
@@ -8637,7 +8645,7 @@ crunch ksDomainTime[wp]: updateCap "\<lambda>s. P (ksDomainTime s)"
 
 declare corres_False' [simp]
 
-lemma inv_cnode_corres:
+lemma invokeCNode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
    corres (dc \<oplus> dc)
      (einvs and valid_machine_time and simple_sched_action and valid_cnode_inv ci)
@@ -8647,18 +8655,18 @@ lemma inv_cnode_corres:
   apply (cases ci, simp_all)
         apply clarsimp
         apply (rule corres_guard_imp)
-          apply (rule cins_corres)
+          apply (rule cteInsert_corres)
             apply simp+
          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         elim!: cte_wp_at_cte_at)
         apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
        apply clarsimp
        apply (rule corres_guard_imp)
-         apply (erule cap_move_corres)
+         apply (erule cteMove_corres)
         apply (clarsimp simp: cte_wp_at_caps_of_state real_cte_tcb_valid)
        apply (clarsimp simp: cte_wp_at_ctes_of)
        apply (rule cap_revoke_corres)
-     apply (rule corres_guard_imp [OF cap_delete_corres])
+     apply (rule corres_guard_imp [OF cteDelete_corres])
       apply (clarsimp simp: cte_at_typ cap_table_at_typ)
      apply simp
     apply (rename_tac cap1 cap2 p1 p2 p3)
@@ -8668,7 +8676,7 @@ lemma inv_cnode_corres:
      apply (rule corres_guard_imp)
        apply (rule_tac F="wellformed_cap cap1 \<and> wellformed_cap cap2"
               in corres_gen_asm)
-       apply (erule (1) cap_swap_corres [OF refl refl], simp+)
+       apply (erule (1) cteSwap_corres [OF refl refl], simp+)
       apply (simp add: invs_def valid_state_def valid_pspace_def
                        real_cte_tcb_valid valid_cap_def2)
      apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
@@ -8683,9 +8691,9 @@ lemma inv_cnode_corres:
      apply simp
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF cap_move_corres])
+      apply (rule corres_split_deprecated [OF cteMove_corres])
          apply assumption
-        apply (erule cap_move_corres)
+        apply (erule cteMove_corres)
        apply wp
        apply (simp add: cte_wp_at_caps_of_state)
        apply (wp cap_move_caps_of_state cteMove_cte_wp_at [simplified o_def])+
@@ -8713,7 +8721,7 @@ lemma inv_cnode_corres:
                 simp add: is_cap_simps)
    apply (clarsimp simp: when_def unless_def isCap_simps)
    apply (rule corres_guard_imp)
-     apply (rule cancel_badged_sends_corres)
+     apply (rule cancelBadgedSends_corres)
     apply (simp add: valid_cap_def)
    apply (simp add: valid_cap'_def)
   apply (clarsimp)

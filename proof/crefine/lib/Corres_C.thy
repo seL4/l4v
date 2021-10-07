@@ -7,7 +7,7 @@
 theory Corres_C
 imports
   "CLib.CCorresLemmas"
-  "../$L4V_ARCH/SR_lemmas_C"
+  SR_lemmas_C
 begin
 
 abbreviation

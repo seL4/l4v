@@ -10,9 +10,8 @@ Functions for cancelling IPC.
 
 chapter "IPC Cancelling"
 
-
 theory IpcCancel_A
-imports "./$L4V_ARCH/ArchIpcCancel_A"
+imports ArchIpcCancel_A
 begin
 
 context begin interpretation Arch .

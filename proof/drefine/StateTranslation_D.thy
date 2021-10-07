@@ -453,7 +453,8 @@ lemma transform_intent_isnot_UntypedIntent:
    apply(unfold transform_intent_untyped_retype_def)
    apply (clarsimp split: list.split, safe, simp_all)[1]
    apply (clarsimp simp: transform_type_def)
-   apply (simp add: linorder_not_less eval_nat_numeral le_Suc_eq unat_arith_simps)
+   apply (simp add: unat_arith_simps)
+   apply (simp add: eval_nat_numeral linorder_not_less le_Suc_eq)
   apply(erule disjE)
    apply(auto simp: transform_intent_def option_map_def
               split: gen_invocation_labels.split invocation_label.split arch_invocation_label.split
@@ -663,9 +664,7 @@ where
       Some $ bin_to_bl bits (of_nat n)"
 
 lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = Some (to_bl x)"
-  apply (clarsimp simp: nat_to_bl_def to_bl_def)
-  apply (auto simp: uint_nat le_def word_size)
-  done
+  by (clarsimp simp: nat_to_bl_def to_bl_def le_def word_size)
 
 (* FIXME: MOVE *)
 definition
@@ -1091,6 +1090,7 @@ lemma transform_objects_ms_underlying_mem:
   "transform_objects s =
    transform_objects (s \<lparr> machine_state :=
      undefined \<lparr> underlying_memory := underlying_memory (machine_state s) \<rparr> \<rparr>)"
+  supply option.case_cong[cong]
   apply (rule ext)
   apply (simp add: transform_objects_def map_add_def option_map_def
             split: option.split)

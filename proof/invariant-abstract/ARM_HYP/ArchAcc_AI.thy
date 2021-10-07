@@ -9,8 +9,9 @@ Lemmas on arch get/set object etc
 *)
 
 theory ArchAcc_AI
-imports "../SubMonad_AI"
- "Lib.Crunch_Instances_NonDet"
+imports
+  SubMonad_AI
+  "Lib.Crunch_Instances_NonDet"
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -73,7 +74,7 @@ lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<r
 bundle pagebits =
   pd_bits_def[simp] pt_bits_def[simp] pde_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split]
   pte.splits[split]
 
@@ -650,11 +651,11 @@ lemma page_directory_pde_at_lookupI:
 
 (* FIXME move to Word_Lemmas? *)
 lemma word_FFF_is_mask:
-  "0xFFF = mask 12"
+  "(0xFFF::'a::len word) = mask 12"
   by (simp add: mask_def)
 
 lemma word_1FF_is_mask:
-  "0x1FF = mask 9"
+  "(0x1FF::'a::len word) = mask 9"
   by (simp add: mask_def)
 
 
@@ -1903,10 +1904,6 @@ crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-
 crunch idle [wp]: set_asid_pool "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
@@ -2560,8 +2557,8 @@ lemma is_aligned_addrFromPPtr_n:
   "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM_HYP.addrFromPPtr p) n"
   apply (simp add: Platform.ARM_HYP.addrFromPPtr_def)
   apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: physMappingOffset_def physBase_def
-                   kernelBase_addr_def pageBits_def)
+  apply (simp add: pptrBaseOffset_def physBase_def
+                   pptrBase_def pageBits_def)
   apply (erule is_aligned_weaken[rotated])
   apply (simp add: is_aligned_def)
   done
@@ -2573,8 +2570,8 @@ lemma is_aligned_addrFromPPtr:
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
   \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add:ptrFromPAddr_def physMappingOffset_def
-    kernelBase_addr_def physBase_def)
+  apply (simp add:ptrFromPAddr_def pptrBaseOffset_def
+    pptrBase_def physBase_def)
   apply (erule aligned_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    apply (simp add:is_aligned_def)
@@ -3210,11 +3207,11 @@ proof -
     done
 qed
 
-lemma user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: getRegister_def)
-  done
+crunches getRegister
+  for inv[wp]: P
+  (simp: getRegister_def)
+
+lemmas user_getreg_inv[wp] = as_user_inv[OF getRegister_inv]
 
 end
 

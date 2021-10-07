@@ -12,9 +12,9 @@ chapter "Function Declarations for Threads"
 
 theory ArchThreadDecls_H
 imports
-  "../Structures_H"
-  "../FaultMonad_H"
-  "../KernelInitMonad_H"
+  Structures_H
+  FaultMonad_H
+  KernelInitMonad_H
 begin
 
 context Arch begin global_naming RISCV64_H

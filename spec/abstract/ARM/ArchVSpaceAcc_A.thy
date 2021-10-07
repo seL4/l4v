@@ -11,7 +11,7 @@ Accessor functions for architecture specific parts of the specification.
 chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
-imports "../KHeap_A"
+imports KHeap_A
 begin
 
 context Arch begin global_naming ARM_A
@@ -29,6 +29,9 @@ text \<open>The high bits of a virtual ASID.\<close>
 definition
   asid_high_bits_of :: "asid \<Rightarrow> 7 word" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
+
+locale_abbrev
+  "asid_table \<equiv> \<lambda>s. arm_asid_table (arch_state s)"
 
 
 section "Kernel Heap Accessors"

@@ -354,7 +354,7 @@ ML \<open>
      val sep_impi = (REPEAT_ALL_NEW  (sep_match_trivial_tac ctxt)) THEN' assume_tac ctxt
      val schemsolve = sep_rule_tac (eresolve0_tac [@{thm boxsolve}]) ctxt
      val hoare_post = (resolve0_tac [(rotate_prems ~1 @{thm hoare_strengthen_post})])
-     val wp_pre_tac = SELECT_GOAL (Method.NO_CONTEXT_TACTIC ctxt
+     val wp_pre_tac = SELECT_GOAL (NO_CONTEXT_TACTIC ctxt
                       (Method_Closure.apply_method ctxt @{method wp_pre} [] [] [] ctxt []))
    in
      (wp THEN' (TRY o sep_flatten ctxt) THEN' (TRY o (hoare_post THEN' (schemsolve ORELSE' sep_impi))) THEN'

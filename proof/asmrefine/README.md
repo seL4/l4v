@@ -28,8 +28,8 @@ in the [tools directory](../../tools/asmrefine).
 Important Theories
 ------------------
 
-The [`SEL4SimplExport`](SEL4SimplExport.thy) theory, when executed, exports the
-kernel's C semantics into the graph refinement language used by the external
-graph refinement toolset. The [`SEL4GraphRefine`](SEL4GraphRefine.thy) theory
-establishes that this exported graph semantics is a formal refinement of
+The [`SEL4SimplExport`](export/SEL4SimplExport.thy) theory, when executed,
+exports the kernel's C semantics into the graph refinement language used by the
+external graph refinement toolset. The [`SEL4GraphRefine`](SEL4GraphRefine.thy)
+theory establishes that this exported graph semantics is a formal refinement of
 the kernel's C semantics.

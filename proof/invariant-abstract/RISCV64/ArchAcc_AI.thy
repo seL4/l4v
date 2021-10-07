@@ -9,7 +9,7 @@ Lemmas on arch get/set object etc
 *)
 
 theory ArchAcc_AI
-imports "../SubMonad_AI" "Lib.Crunch_Instances_NonDet"
+imports SubMonad_AI "Lib.Crunch_Instances_NonDet"
 begin
 
 context non_vspace_op
@@ -552,7 +552,7 @@ lemmas set_asid_pool_typ_ats [wp] = abs_typ_at_lifts [OF set_asid_pool_typ_at]
 bundle pagebits =
   pt_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pte.splits[split]
 
 
@@ -2953,15 +2953,15 @@ proof -
     done
 qed
 
-lemma user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: getRegister_def)
-  done
+crunches getRegister
+  for inv[wp]: P
+  (simp: getRegister_def)
 
-lemma dmo_read_sbadaddr_inv[wp]:
-  "do_machine_op read_sbadaddr \<lbrace>P\<rbrace>"
-  by (rule dmo_inv) (simp add: read_sbadaddr_def)
+lemmas user_getreg_inv[wp] = as_user_inv[OF getRegister_inv]
+
+lemma dmo_read_stval_inv[wp]:
+  "do_machine_op read_stval \<lbrace>P\<rbrace>"
+  by (rule dmo_inv) (simp add: read_stval_def)
 
 lemma cur_tcb_more_update[iff]:
   "cur_tcb (trans_state f s) = cur_tcb s"

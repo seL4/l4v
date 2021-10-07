@@ -479,7 +479,7 @@ lemma cdl_state_asids_to_policy__eval:
                      \<and> (case obj_label_spec (cap_object asid_pool_cap) of
                            Some asid_pool_l \<Rightarrow>
                              generic_tag ''asid pool policy'' (asid_high, asid_pool_cap)
-                                 ((asid_pool_l, ASIDPoolMapsASID, asidl) \<in> policy_spec)
+                                 ((asid_pool_l, AAuth ASIDPoolMapsASID, asidl) \<in> policy_spec)
                          | _ \<Rightarrow> False)
                 | _ \<Rightarrow> False)"
 
@@ -529,13 +529,15 @@ lemma bintrunc_1_1:
 lemmas word_rel_simps_small =
   order_refl (* shortcut *)
   rel_simps simp_thms
-  word_less_alt word_le_def word_uint_eq_iff uint_eq_0 uint_1
+  word_less_alt word_le_def word_uint_eq_iff uint_0_eq uint_1
   (* need bintrunc to reduce numerals mod word size *)
   uint_bintrunc bintrunc_numeral_simps bintrunc_1_1
   numeral_One BIT_bin_simps BIT_special_simps
   (* evaluating word size for bintrunc -- yuck *)
   len_num0 len_num1 len_bit0 len_bit1
   arith_simps mult_1_right pred_numeral_simps numeral_plus_one
+  arith_special
+
 
 (* test for simpset *)
 ML \<open>
@@ -581,9 +583,10 @@ lemma pow_2_numeral:
 (* needed to evaluate "ptr + 2^sz" expressions *)
 lemmas word_pow_arith_simps =
   pow_2_numeral uint_word_arith_bintrs
-  uint_eq_0 uint_1 uint_bintrunc bintrunc_Sucs numeral_One
+  uint_0_eq uint_1 uint_bintrunc bintrunc_Suc_numeral numeral_One
   arith_simps arith_special
   nat_0 nat_one_as_int[symmetric] nat_numeral nat_numeral_diff_1 mult_1_right
+
 
 lemmas object_slots_eval_simps
          [simplified fun_upds_to_map_of] = (* NB: convert Map.empty for FP_Eval compatibility *)

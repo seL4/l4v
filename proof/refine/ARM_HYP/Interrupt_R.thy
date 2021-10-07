@@ -92,7 +92,7 @@ where
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma decode_irq_handler_corres:
+lemma decodeIRQHandlerInvocation_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> irq_handler_inv_relation) invs invs'
@@ -152,7 +152,7 @@ lemma isIRQActive_wp:
   apply (clarsimp simp: irq_issued'_def)
   done
 
-lemma arch_check_irq_corres:
+lemma checkIRQ_corres:
   "corres (ser \<oplus> dc) \<top> \<top> (arch_check_irq irq) (checkIRQ irq)"
   unfolding arch_check_irq_def checkIRQ_def rangeCheck_def
   apply (rule corres_guard_imp)
@@ -193,7 +193,7 @@ lemma arch_check_irq_maxIRQ_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_maxIRQ_valid)
 
-lemma arch_decode_irq_control_corres:
+lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp))
@@ -215,13 +215,13 @@ lemma arch_decode_irq_control_corres:
   \<comment> \<open> ARM_HYPIRQIssueIRQHandler \<close>
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE[OF _ arch_check_irq_corres])
+     apply (rule corres_splitEE[OF _ checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
        apply (rule corres_split_eqr[OF _ is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
-         apply (rule corres_splitEE[OF _ lsfc_corres])
-             apply (rule corres_splitEE[OF _ ensure_empty_corres])
+         apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
+             apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
                 apply (rule corres_returnOkTT)
                 apply (clarsimp simp: arch_irq_control_inv_relation_def )
                apply ((wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv
@@ -239,7 +239,7 @@ lemma irqhandler_simp[simp]:
 
 lemmas unat_le_mono = word_le_nat_alt [THEN iffD1]
 
-lemma decode_irq_control_corres:
+lemma decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp)) (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
@@ -260,20 +260,20 @@ lemma decode_irq_control_corres:
      apply (subgoal_tac "length args \<le> 2", clarsimp split: list.split)
      apply arith
     apply (simp add: minIRQ_def o_def)
-    apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres])[1]
-   apply (auto intro!: corres_guard_imp[OF arch_decode_irq_control_corres]
+    apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres])[1]
+   apply (auto intro!: corres_guard_imp[OF arch_decodeIRQControlInvocation_corres]
                dest!: not_le_imp_less
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
-  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def[symmetric])
+  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq)
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
     apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
     apply (rule corres_split_eqr[OF _ is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
-      apply (rule corres_splitEE[OF _ lsfc_corres])
-          apply (rule corres_splitEE[OF _ ensure_empty_corres])
+      apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
+          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
              apply (rule corres_returnOkTT)
              apply (clarsimp simp: arch_irq_control_inv_relation_def )
             apply (wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv
@@ -324,6 +324,7 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp add: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                             not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -341,6 +342,7 @@ lemma decode_irq_control_valid'[wp]:
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat)
+  apply (rule order.trans, rule unat_ucast_le, assumption)
   done
 
 lemma valid_globals_ex_cte_cap_irq:
@@ -358,7 +360,7 @@ lemma valid_globals_ex_cte_cap_irq:
     mult.commute mult.left_commute)
   done
 
-lemma invoke_irq_handler_corres:
+lemma invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
    corres dc (einvs and irq_handler_inv_valid i)
              (invs' and irq_handler_inv_valid' i')
@@ -371,10 +373,10 @@ lemma invoke_irq_handler_corres:
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ get_irq_slot_corres])
+     apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
        apply simp
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
-         apply (rule cins_corres, simp+)
+         apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
@@ -389,7 +391,7 @@ lemma invoke_irq_handler_corres:
     apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
    apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_irq_slot_corres])
+    apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
       apply simp
       apply (rule cap_delete_one_corres)
      apply wp+
@@ -469,7 +471,7 @@ lemma setIRQTrigger_corres:
             | simp add: dc_def)+
   done
 
-lemma arch_invoke_irq_control_corres:
+lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
           (invs' and arch_irq_control_inv_valid' ivk')
@@ -479,8 +481,8 @@ lemma arch_invoke_irq_control_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (rule corres_split_nor)
-          apply (rule cins_corres_simple; simp)
-         apply (rule set_irq_state_corres)
+          apply (rule cteInsert_simple_corres; simp)
+         apply (rule setIRQState_corres)
          apply (simp add: irq_state_relation_def)
         apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
       apply (rule setIRQTrigger_corres)
@@ -496,7 +498,7 @@ lemma arch_invoke_irq_control_corres:
   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   done
 
-lemma invoke_irq_control_corres:
+lemma performIRQControl_corres:
   "irq_control_inv_relation i i' \<Longrightarrow>
    corres (dc \<oplus> dc) (einvs and irq_control_inv_valid i)
              (invs' and irq_control_inv_valid' i')
@@ -504,8 +506,8 @@ lemma invoke_irq_control_corres:
      (performIRQControl i')"
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor [OF _ set_irq_state_corres])
-        apply (rule cins_corres_simple)
+     apply (rule corres_split_nor [OF _ setIRQState_corres])
+        apply (rule cteInsert_simple_corres)
           apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
@@ -518,7 +520,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  by (clarsimp simp: arch_invoke_irq_control_corres)
+  by (clarsimp simp: arch_performIRQControl_corres)
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"
 
@@ -576,7 +578,7 @@ lemma invoke_irq_control_invs'[wp]:
               simp: invs'_def valid_state'_def)
   done
 
-lemma get_irq_state_corres:
+lemma getIRQState_corres:
   "corres irq_state_relation \<top> \<top>
        (get_irq_state irq) (getIRQState irq)"
   apply (simp add: get_irq_state_def getIRQState_def getInterruptState_def)
@@ -597,7 +599,7 @@ lemma num_domains[simp]:
   apply(simp add: num_domains_def numDomains_def)
   done
 
-lemma dec_domain_time_corres:
+lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
   apply (simp add:dec_domain_time_def corres_underlying_def
     decDomainTime_def simpler_modify_def)
@@ -637,19 +639,20 @@ lemma timerTick_corres:
   "corres dc (cur_tcb and valid_sched)
              invs'
              timer_tick timerTick"
+  supply if_weak_cong[cong]
   apply (simp add: timerTick_def timer_tick_def)
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated [OF _ gct_corres])
+  apply (rule corres_split_deprecated [OF _ getCurThread_corres])
       apply simp
-      apply (rule corres_split_deprecated [OF _ gts_corres])
+      apply (rule corres_split_deprecated [OF _ getThreadState_corres])
         apply (rename_tac state state')
         apply (rule corres_split_deprecated[where r' = dc ])
            apply simp
            apply (rule corres_when,simp)
-           apply (rule corres_split_deprecated[OF _ dec_domain_time_corres])
-             apply (rule corres_split_deprecated[OF _ domain_time_corres])
+           apply (rule corres_split_deprecated[OF _ decDomainTime_corres])
+             apply (rule corres_split_deprecated[OF _ getDomainTime_corres])
                apply (rule corres_when,simp)
                apply (rule rescheduleRequired_corres)
               apply (wp hoare_drop_imp)+
@@ -665,13 +668,11 @@ lemma timerTick_corres:
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)
               apply (unfold thread_set_time_slice_def)
-              apply (fold dc_def)
               apply (rule ethread_set_corres, simp+)
               apply (clarsimp simp: etcb_relation_def)
              apply simp
              apply (rule corres_split_deprecated [OF _ ethread_set_corres])
                       apply (rule corres_split_deprecated [OF _ tcbSchedAppend_corres])
-                        apply (fold dc_def)
                         apply (rule rescheduleRequired_corres)
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
@@ -696,18 +697,12 @@ lemma timerTick_corres:
             threadSet_tcbDomain_triv threadSet_valid_queues' threadSet_valid_objs'| simp)+
          apply (wp threadGet_wp gts_wp gts_wp')+
        apply (clarsimp simp: cur_tcb_def tcb_at_is_etcb_at valid_sched_def valid_sched_action_def)
-       apply (subgoal_tac "is_etcb_at thread s \<and> tcb_at thread s \<and> valid_etcbs s \<and> weak_valid_sched_action s")
         prefer 2
-        apply assumption
        apply clarsimp
-      apply (wp gts_wp')+
      apply (clarsimp simp add:cur_tcb_def valid_sched_def
          valid_sched_action_def valid_etcbs_def is_tcb_def
          is_etcb_at_def st_tcb_at_def obj_at_def
          dest!:get_tcb_SomeD)
-     apply (simp split:Structures_A.kernel_object.splits)
-     apply (drule_tac x = "cur_thread s" in spec)
-     apply clarsimp
     apply (clarsimp simp: invs'_def valid_state'_def
     sch_act_wf_weak
     cur_tcb'_def inQ_def
@@ -716,7 +711,6 @@ lemma timerTick_corres:
        valid_idle'_def ct_idle_or_in_cur_domain'_def
        obj_at'_def projectKO_eq)
    apply simp
-  apply simp
   done
 
 lemma corres_return_VGICMaintenance [corres]:
@@ -840,14 +834,14 @@ proof -
                  apply (rename_tac eisr0 eisr1 flags)
                  apply (rule corres_split_deprecated[OF _ corres_gets_numlistregs])
                    apply (rule corres_split_deprecated[where r'="\<lambda>rv rv'. rv' = arch_fault_map rv"])
-                      apply (rule corres_split_eqr[OF _ gct_corres])
-                        apply (rule corres_split_deprecated[OF _ gts_corres])
+                      apply (rule corres_split_eqr[OF _ getCurThread_corres])
+                        apply (rule corres_split_deprecated[OF _ getThreadState_corres])
                           apply (fold dc_def)
                           apply (rule corres_when)
                            apply clarsimp
                            apply (rename_tac threadState threadState')
                            apply (case_tac threadState; simp)
-                          apply (rule hf_corres)
+                          apply (rule handleFault_corres)
                           apply clarsimp
                          apply clarsimp
                          apply (wp gts_wp)
@@ -905,13 +899,15 @@ proof -
     done
 qed
 
-lemma vppi_event_corres:
+lemma vppiEvent_corres:
   "corres dc einvs
     (\<lambda>s. invs' s \<and> sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
     (vppi_event irq) (vppiEvent irq)"
   unfolding vppi_event_def vppiEvent_def isRunnable_def
+  supply [[simproc del: defined_all]]
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_gets_current_vcpu], simp)
+    apply (rule corres_split_deprecated[OF _ corres_gets_current_vcpu])
+      apply (clarsimp simp del: subst_all (* avoid destroying useful name of rv *))
       (* we only care about the one case we do something: active current vcpu *)
       apply (rule_tac R="hsCurVCPU = None" in corres_cases')
        apply (rule corres_trivial, simp)
@@ -923,12 +919,12 @@ lemma vppi_event_corres:
 
       apply (rule corres_split_dc[OF _ corres_machine_op])
          apply (rule corres_split_dc[OF _ vcpuUpdate_corres])
-            apply (rule corres_split_eqr[OF _ gct_corres])
-              apply (rule corres_split_deprecated[OF _ gts_corres], rename_tac gts gts')
+            apply (rule corres_split_eqr[OF _ getCurThread_corres])
+              apply (rule corres_split_deprecated[OF _ getThreadState_corres], rename_tac gts gts')
                 apply (fold dc_def)
                 apply (rule corres_when)
                  apply (case_tac gts; fastforce)
-                apply (rule hf_corres, simp)
+                apply (rule handleFault_corres, simp)
                apply (wp gts_st_tcb_at hoare_vcg_imp_lift')
               apply (wp gts_st_tcb_at' hoare_vcg_imp_lift')
              (* on both sides, we check that the current thread is runnable, then have to know it
@@ -983,14 +979,14 @@ lemma handle_reserved_irq_corres[corres]:
                         irq_vppi_event_index_def non_kernel_IRQs_def IRQ_def irqVGICMaintenance_def
                         irqVTimerEvent_def)
   apply (rule conjI; clarsimp)
-   apply (rule corres_guard_imp, rule vppi_event_corres)
+   apply (rule corres_guard_imp, rule vppiEvent_corres)
      apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
   apply (rule conjI; clarsimp)
    apply (rule corres_guard_imp)
      apply (fastforce intro: vgic_maintenance_corres simp: unat_arith_simps)+
   done
 
-lemma handle_interrupt_corres:
+lemma handleInterrupt_corres:
   "corres dc
      (einvs)
      (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive) and
@@ -1001,7 +997,7 @@ lemma handle_interrupt_corres:
   apply (simp add: handle_interrupt_def handleInterrupt_def)
   apply (rule conjI[rotated]; rule impI)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ get_irq_state_corres,
+     apply (rule corres_split_deprecated [OF _ getIRQState_corres,
                               where R="\<lambda>rv. einvs"
                                 and R'="\<lambda>rv. invs' and ?P' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
@@ -1015,7 +1011,7 @@ lemma handle_interrupt_corres:
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
     apply (simp add: getSlotCap_def bind_assoc)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF _ get_irq_slot_corres])
+      apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
         apply simp
         apply (rule corres_split_deprecated [OF _ get_cap_corres,
                                  where R="\<lambda>rv. einvs and valid_cap rv"
@@ -1023,7 +1019,7 @@ lemma handle_interrupt_corres:
           apply (rule corres_split'[where r'=dc])
              apply (case_tac xb, simp_all add: doMachineOp_return)[1]
               apply (clarsimp simp add: when_def doMachineOp_return)
-              apply (rule corres_guard_imp, rule send_signal_corres)
+              apply (rule corres_guard_imp, rule sendSignal_corres)
                apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
             apply (clarsimp simp: arch_mask_irq_signal_def maskIrqSignal_def)
             apply (rule corres_split_deprecated)
@@ -1181,8 +1177,7 @@ lemma vgicMaintenance_invs'[wp]:
              apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
              apply (rule conjI)
               apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
             apply wps
             apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift hoare_drop_imps
                    | wps)+
@@ -1194,8 +1189,7 @@ lemma vgicMaintenance_invs'[wp]:
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
    apply (rule conjI)
     apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-   apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
   apply clarsimp
   done
 
@@ -1217,8 +1211,7 @@ lemma vppiEvent_invs'[wp]:
              apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq)
              apply (rule conjI)
               apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
-             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def runnable'_eq pred_tcb_at'_def)
+             apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
             apply wps
             apply (wpsimp simp: if_apply_def2 vcpuUpdate_def
                           wp: hoare_vcg_const_imp_lift hoare_drop_imps

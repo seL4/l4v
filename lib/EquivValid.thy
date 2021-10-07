@@ -267,6 +267,30 @@ lemma modify_ev2:
   apply(clarsimp simp: equiv_valid_2_def in_monad)
   using assms by auto
 
+lemma modify_ev:
+  "equiv_valid I A B
+     (\<lambda> s. \<forall> s t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  by auto
+
+lemma modify_ev':
+  "equiv_valid I A B
+     (\<lambda> s. \<forall> t. I s t \<and> A s t \<longrightarrow> I (f s) (f t) \<and> B (f s) (f t))
+     (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  by auto
+
+lemma modify_ev'':
+  assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P t\<rbrakk> \<Longrightarrow> I (f s) (f t) \<and> B (f s) (f t)"
+  shows "equiv_valid I A B P (modify f)"
+  apply(clarsimp simp:equiv_valid_def2)
+  apply(rule modify_ev2)
+  using assms by auto
+
+
 lemma put_ev2:
   assumes "\<And> s t. \<lbrakk>I s t; A s t; P s; P' t\<rbrakk> \<Longrightarrow> R () () \<and> I x x' \<and> B x x'"
   shows
@@ -693,17 +717,19 @@ lemma bind_spec_ev:
   shows "spec_equiv_valid_inv s' I A (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
   using reads_res_1
   apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def valid_def bind_def split_def)
+  apply (rename_tac t a b aa ba ab bb ac bc)
   apply (erule_tac x=t in allE)
   apply clarsimp
   apply (erule_tac x="(a, b)" in ballE)
-  apply (erule_tac x="(ab, bb)" in ballE)
-  apply clarsimp
-  apply (cut_tac rv="ab" and s''="b" in reads_res_2)
-   apply assumption
-  apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
-  apply(erule_tac x=bb in allE)
-  using hoare
-  apply (fastforce simp: valid_def)+
+   apply (erule_tac x="(ab, bb)" in ballE)
+    apply clarsimp
+    apply (cut_tac reads_res_2)
+     prefer 2
+     apply assumption
+    apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
+    apply(erule_tac x=bb in allE)
+    using hoare
+    apply (fastforce simp: valid_def)+
   done
 
 lemma bindE_spec_ev:

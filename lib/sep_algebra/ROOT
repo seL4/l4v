@@ -11,6 +11,9 @@ session Sep_Algebra (lib) = Word_Lib +
     "HOL-Eisbach"
     "HOL-Hoare"
     Lib
+  directories
+    "ex"
+    "ex/capDL"
   theories
     "Generic_Separation_Algebras"
     "MonadSep"

@@ -191,10 +191,14 @@ lemma empty_fail_getObject_sc [intro!, wp, simp]:
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.postpone"
   (simp: getSchedContext_def)
 
+context
+notes option.case_cong_weak[cong]
+begin
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
   refillUnblockCheck, schedContextResume
   (simp: Let_def wp: empty_fail_whileLoop)
+end
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)

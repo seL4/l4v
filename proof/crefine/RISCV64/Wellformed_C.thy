@@ -42,6 +42,10 @@ type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym registers_count = 35
 type_synonym registers_array = "machine_word[registers_count]"
 
+type_synonym register_idx_len = 8
+type_synonym register_idx = "register_idx_len word"
+type_synonym int_literal_len = "32 signed"
+
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"
 abbreviation "tcb_cnode_Ptr \<equiv> Ptr :: addr \<Rightarrow> tcb_cnode_array ptr"
@@ -311,9 +315,7 @@ lemma to_bool_bf_and [simp]:
 
 lemma to_bool_bf_to_bool_mask:
   "w && mask (Suc 0) = w \<Longrightarrow> to_bool_bf w = to_bool (w::word64)"
-  apply (auto simp add: to_bool_bf_def to_bool_def mask_eq_iff_w2p word_size)
-  apply (auto simp add: mask_def dest: word_less_cases)
-  done
+  by (metis mask_Suc_0 bool_mask mask_1 to_bool_0 to_bool_1 to_bool_bf_def word_gt_0)
 
 definition
   mdb_node_to_H :: "mdb_node_CL \<Rightarrow> mdbnode"

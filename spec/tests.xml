@@ -31,14 +31,13 @@
         </set>
 
         <set depends="ASpec">
-            <test name="ASpecDoc">make ASpecDoc</test>
             <test name="ASepSpec">make ASepSpec</test>
         </set>
     </set>
 
     <set>
         <!-- Build Haskell kernel code. -->
-        <test name="HaskellKernel" cwd="haskell" cpu-timeout="1800">make</test>
+        <test name="HaskellKernel" cwd="haskell" cpu-timeout="2700">make</test>
     </set>
 
 </testsuite>

@@ -9,10 +9,10 @@ chapter "Retyping Objects"
 theory ArchRetypeDecls_H
 imports
   ArchLabelFuns_H
-  "../FaultMonad_H"
-  "../EndpointDecls_H"
-  "../KernelInitMonad_H"
-  "../PSpaceFuns_H"
+  FaultMonad_H
+  EndpointDecls_H
+  KernelInitMonad_H
+  PSpaceFuns_H
   ArchObjInsts_H
 begin
 context Arch begin global_naming ARM_H

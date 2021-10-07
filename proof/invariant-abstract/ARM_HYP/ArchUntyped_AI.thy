@@ -5,7 +5,7 @@
  *)
 
 theory ArchUntyped_AI
-imports "../Untyped_AI"
+imports Untyped_AI
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -18,9 +18,7 @@ lemma of_bl_nat_to_cref[Untyped_AI_assms]:
   apply (clarsimp intro!: less_mask_eq
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
-  apply (subst unat_of_nat)
-  apply (erule order_le_less_trans [OF mod_less_eq_dividend])
-  done
+  by (simp add: take_bit_nat_def)
 
 
 lemma cnode_cap_ex_cte[Untyped_AI_assms]:
@@ -208,11 +206,6 @@ proof -
 qed
 
 
-crunch pdistinct[wp]: do_machine_op "pspace_distinct"
-crunch vmdb[wp]: do_machine_op "valid_mdb"
-crunch mdb[wp]: do_machine_op "\<lambda>s. P (cdt s)"
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
-
 lemma cap_refs_in_kernel_windowD2:
   "\<lbrakk> cte_wp_at P p (s::'state_ext::state_ext state); cap_refs_in_kernel_window s \<rbrakk>
        \<Longrightarrow> \<exists>cap. P cap \<and> region_in_kernel_window (cap_range cap) s"
@@ -367,22 +360,6 @@ lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   apply blast
   done
 
-crunch irq_node[wp]: store_pde "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
-(* make these available in the generic theory? *)
-lemma init_arch_objects_irq_node[wp]:
-  "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
-  by (wp init_arch_objects_hoare_lift, simp)
-
-lemma init_arch_objects_excap[wp]:
-  "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
-  by (wp ex_cte_cap_to_pres init_arch_objects_irq_node init_arch_objects_cte_wp_at)
-(**)
-
-crunch nonempty_table[wp]: do_machine_op
-  "\<lambda>s. P' (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)"
-
 lemma store_pde_weaken:
   "\<lbrace>\<lambda>s. page_directory_at (p && ~~ mask pd_bits) s \<longrightarrow> P s\<rbrace> store_pde p e \<lbrace>Q\<rbrace> =
    \<lbrace>P\<rbrace> store_pde p e \<lbrace>Q\<rbrace>"
@@ -402,35 +379,6 @@ lemma store_pde_weaken:
             split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
-(* ARMHYP not needed anymore?
-lemma store_pde_nonempty_table:
-  "\<lbrace>\<lambda>s. \<not> (obj_at (nonempty_table {}) r s)
-           \<and> (\<forall>rf. pde_ref pde = Some rf \<longrightarrow>
-                   rf \<in> {})
-           \<and> valid_pde_mappings pde\<rbrace>
-     store_pde pde_ptr pde
-   \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table {}) r s)\<rbrace>"
-  apply (simp add: store_pde_def set_pd_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def nonempty_table_def a_type_def)
-  apply (clarsimp simp add: empty_table_def vspace_bits_defs)
-  done *)
-
-(*
-lemma valid_arch_state_global_pd: (* ARMHYP restate? *)
-  "\<lbrakk> valid_arch_state s; pspace_aligned s \<rbrakk>
-    \<Longrightarrow> obj_at (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd)) (arm_global_pd (arch_state s)) s
-           \<and> is_aligned (arm_global_pd (arch_state s)) pd_bits"
-  apply (clarsimp simp: valid_arch_state_def a_type_def
-                        pd_aligned pd_bits_def pageBits_def
-                 elim!: obj_at_weakenE)
-  apply (clarsimp split: Structures_A.kernel_object.split_asm
-                         arch_kernel_obj.split_asm if_split_asm)
-  done
-*)
-lemma pd_shifting':
-  "is_aligned (pd :: word32) pd_bits \<Longrightarrow> pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits) && ~~ mask pd_bits = pd"
-  by (rule pd_shifting, simp add: vspace_bits_defs)
 
 lemma copy_global_mappings_nonempty_table: (* ARMHYP need change *)
   "is_aligned pd pd_bits \<Longrightarrow>

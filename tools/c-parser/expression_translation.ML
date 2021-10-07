@@ -245,9 +245,9 @@ in
       val oldity = TermsTypes.IntInfo.ity2wty oldty
       val newity = TermsTypes.IntInfo.ity2wty newty
       fun tf t = if is_signed oldty then
-                   Const(@{const_name "scast"}, oldity --> newity) $ t
+                   Const(@{const_name "signed"}, oldity --> newity) $ t
                  else
-                   Const(@{const_name "ucast"}, oldity --> newity) $ t
+                   Const(@{const_name "unsigned"}, oldity --> newity) $ t
 
       (* strictly, "overflow" here results in an implementation-defined value, or an
          "implementation-defined signal" (???) [6.3.1.3].
@@ -360,13 +360,13 @@ in
                                  " taking address of value without one"))
     end
   | BitNegate => let val ei' = strip_kb (intprom_ei thy ei)
-                     val _ = tracing("After prom, argument to bitNOT has type "^
+                     val _ = tracing("After prom, argument to not has type "^
                                      tyname (ctype_of ei'))
                      val result =
-                         lmk_comb(@{const_name "bitNOT"},
+                         lmk_comb(@{const_name "not"},
                                   [ei'], First, ctype_of ei', false)
                  in
-                   tracing("bitNOT result has type "^tyname (ctype_of result));
+                   tracing("not result has type "^tyname (ctype_of result));
                    result
                  end
 end handle TYPE (s,tys,tms) => raise TYPE ("unop_term: "^s, tys, tms)
@@ -588,7 +588,7 @@ in
       end
     in
       if is_result_signed (ei1, ei2) then
-        add_guard div_zero_check (check_signed_binop(@{const_name "sdiv"}, mk_sdiv, ei1, ei2))
+        add_guard div_zero_check (check_signed_binop(@{const_name "signed_divide"}, mk_sdiv, ei1, ei2))
       else
         add_guard div_zero_check (mk_arithop(@{const_name "divide"}, ei1, ei2))
     end
@@ -600,13 +600,13 @@ in
       end
     in
       if is_result_signed (ei1, ei2) then
-        add_guard div_zero_check (check_signed_binop(@{const_name "smod"}, mk_smod, ei1, ei2))
+        add_guard div_zero_check (check_signed_binop(@{const_name "signed_modulo"}, mk_smod, ei1, ei2))
       else
         add_guard div_zero_check (mk_arithop(@{const_name "modulo"}, ei1, ei2))
     end
-  | BitwiseAnd => mk_arithop(@{const_name "bitAND"}, ei1, ei2)
-  | BitwiseOr => mk_arithop(@{const_name "bitOR"}, ei1, ei2)
-  | BitwiseXOr => mk_arithop(@{const_name "bitXOR"}, ei1, ei2)
+  | BitwiseAnd => mk_arithop(@{const_name "and"}, ei1, ei2)
+  | BitwiseOr => mk_arithop(@{const_name "or"}, ei1, ei2)
+  | BitwiseXOr => mk_arithop(@{const_name "xor"}, ei1, ei2)
   | LShift => let
       (* "the integer promotions are performed on each of the operands" *)
       val ei1' = intprom_ei thy ei1

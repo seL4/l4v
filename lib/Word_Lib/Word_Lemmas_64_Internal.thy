@@ -5,8 +5,11 @@
  *)
 
 theory Word_Lemmas_64_Internal
-imports Word_Lemmas_64
+imports Word_Lib_Sumo Word_64
 begin
+
+(* This is why Word_Lib_Sumo doesn't really work: *)
+lemmas word_and_max_simps = word_and_max_simps word64_and_max_simp
 
 lemmas unat_add_simple = iffD1[OF unat_add_lem[where 'a = 64, folded word_bits_def]]
 
@@ -31,7 +34,6 @@ lemma machine_word_and_3F_less_40:
   "(w :: machine_word) && 0x3F < 0x40"
   by (rule word_and_less', simp)
 
-(* FIXME: move to GenericLib *)
 lemmas unat64_eq_of_nat = unat_eq_of_nat[where 'a=64, folded word_bits_def]
 
 lemma unat_mask_3_less_8:
@@ -43,11 +45,11 @@ lemma unat_mask_3_less_8:
 
 lemma scast_specific_plus64:
   "scast (of_nat (word_ctz x) + 0x20 :: 64 signed word) = of_nat (word_ctz x) + (0x20 :: machine_word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
+  by (metis of_nat_add of_nat_numeral scast_of_nat)
 
 lemma scast_specific_plus64_signed:
   "scast (of_nat (word_ctz x) + 0x20 :: machine_word) = of_nat (word_ctz x) + (0x20 :: 64 signed word)"
-  by (simp add: scast_down_add is_down_def target_size_def source_size_def word_size)
+  by (metis scast_scast_id(2) scast_specific_plus64)
 
 lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
                           mask_len_id[where 'a=64, simplified]

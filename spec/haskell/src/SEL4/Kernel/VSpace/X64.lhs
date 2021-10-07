@@ -43,9 +43,6 @@ The x64-specific invocations are imported with the "ArchInv" prefix. This is nec
 
 All virtual addresses above "pptrUserTop" cannot be mapped by user-level tasks. With the exception of one page, at "globalsBase", they cannot be read; the globals page is mapped read-only.
 
-> kernelBase :: VPtr
-> kernelBase = VPtr 0xffffffff80000000
-
 > globalsBase :: VPtr
 > globalsBase = VPtr 0xffffc000
 

@@ -5,12 +5,13 @@
  *)
 
 theory IpcCancel_AI
-imports "./$L4V_ARCH/ArchSchedule_AI"
+imports ArchSchedule_AI
 begin
 
 context begin interpretation Arch .
 
 requalify_facts
+  arch_stit_invs
   arch_post_cap_deletion_pred_tcb_at
   arch_post_cap_deletion_cur_thread
   as_user_hyp_refs_of

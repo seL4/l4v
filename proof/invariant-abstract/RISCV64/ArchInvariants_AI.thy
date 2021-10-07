@@ -5,7 +5,7 @@
  *)
 
 theory ArchInvariants_AI
-imports "../InvariantsPre_AI" "Lib.Apply_Trace_Cmd"
+imports InvariantsPre_AI "Lib.Apply_Trace_Cmd"
 begin
 
 (* setup *)
@@ -1468,7 +1468,7 @@ lemma vref_for_level_idem:
 
 lemma vref_for_level_max[simp]:
   "vref_for_level (vref_for_level vref level') level = vref_for_level vref (max level level')"
-  by (simp add: vref_for_level_def pt_bits_left_mono neg_mask_twice word_bool_alg.conj_ac)
+  by (simp add: vref_for_level_def pt_bits_left_mono neg_mask_twice bit.conj_ac)
 
 lemma vref_for_level_pt_index:
   "vref_for_level vref level = vref_for_level vref' level \<Longrightarrow>
@@ -1583,11 +1583,16 @@ lemma pte_refs_of_eqI:
 lemma pt_index_mask_pt_bits[simp]:
   "(pt_index level vref << pte_bits) && mask pt_bits = pt_index level vref << pte_bits"
   by (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist mask_shiftl_decompose
-                word_bool_alg.conj_ac)
+                bit.conj_ac)
 
-lemma pt_slot_offset_id[simp]:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow> pt_slot_offset level pt_ptr vref && ~~ mask pt_bits = pt_ptr"
-  by (simp add: pt_slot_offset_def is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
+lemma table_base_offset_id:
+  "\<lbrakk> is_aligned pt_ptr pt_bits; (idx << pte_bits) && mask pt_bits = idx << pte_bits \<rbrakk>
+     \<Longrightarrow> table_base (pt_ptr + (idx << pte_bits)) = pt_ptr"
+  by (simp add: is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
+
+lemma table_base_pt_slot_offset[simp]:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow> table_base (pt_slot_offset level pt_ptr vref) = pt_ptr"
+  by (simp add: pt_slot_offset_def table_base_offset_id)
 
 lemma pt_slot_offset_0[simp]:
   "pt_slot_offset level p 0 = p"
@@ -1851,12 +1856,36 @@ lemma pt_slot_offset_vref_id[simp]:
    pt_slot_offset level pt vref"
   by (rule vref_for_level_pt_slot_offset) (simp add: max_def)
 
-lemma table_index_offset_max_pt_level:
+lemma table_base_plus:
+  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
+   table_base (pt_ptr + (i << pte_bits)) = pt_ptr"
+  unfolding is_aligned_mask bit_simps
+  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+
+lemma table_base_plus_ucast:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   table_base (pt_ptr + (ucast (i::pt_index) << pte_bits)) = pt_ptr"
+  by (fastforce intro!: table_base_plus ucast_leq_mask simp: bit_simps)
+
+lemma table_index_plus:
+  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
+   table_index (pt_ptr + (i << pte_bits)) = ucast i"
+  unfolding is_aligned_mask bit_simps
+  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+
+lemma table_index_plus_ucast:
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   table_index (pt_ptr + (ucast (i::pt_index) << pte_bits)) = i"
+  apply (drule table_index_plus[where i="ucast i"])
+   apply (rule ucast_leq_mask, simp add: bit_simps)
+  apply (simp add: is_down_def target_size_def source_size_def word_size ucast_down_ucast_id)
+  done
+
+lemma table_index_offset_pt_bits_left:
   "is_aligned pt_ref pt_bits \<Longrightarrow>
-   table_index (pt_slot_offset max_pt_level pt_ref vref) = ucast (vref >> pt_bits_left max_pt_level)"
-  unfolding pt_slot_offset_def ucast_eq_mask pt_index_def pt_bits_left_def bit_simps
-            level_defs is_aligned_mask
-  by (subst word_plus_and_or_coroll; word_bitwise, simp add: word_size)
+   table_index (pt_slot_offset lvl pt_ref vref) = ucast (vref >> pt_bits_left lvl)"
+  by (simp add: table_index_plus_ucast pt_slot_offset_def pt_index_def
+                ptTranslationBits_def ucast_ucast_mask[where 'a=9, simplified, symmetric])
 
 lemma vs_lookup_slot_level:
   "vs_lookup_slot bot_level asid vref s = Some (level, p) \<Longrightarrow>
@@ -2136,7 +2165,7 @@ lemma is_aligned_addrFromPPtr_n:
   "\<lbrakk> is_aligned p n; n \<le> canonical_bit \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
   apply (simp add: addrFromPPtr_def)
   apply (erule aligned_sub_aligned; simp add: canonical_bit_def)
-  apply (simp add: baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+  apply (simp add: pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
   apply (erule is_aligned_weaken[rotated])
   apply (simp add: is_aligned_def)
   done
@@ -2148,7 +2177,7 @@ lemma is_aligned_addrFromPPtr[intro!]:
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz \<le> canonical_bit\<rbrakk>
    \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add: ptrFromPAddr_def baseOffset_def pptrBase_def pAddr_base_def canonical_bit_def)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
   apply (erule aligned_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    apply (simp add: is_aligned_def)
@@ -2194,7 +2223,7 @@ lemma valid_vspace_objs_strongD:
   apply (rename_tac level pt_ptr)
   apply (frule vs_lookup_splitD, assumption)
    apply (simp add: less_imp_le)
-  apply clarsimp
+  apply (elim exE)
   apply (drule_tac x=pt in meta_spec)
   apply clarsimp
   apply (subst (asm) pt_walk.simps)
@@ -2563,7 +2592,7 @@ lemma pool_for_asid_kheap_upd[simp]:
 lemma table_index_max_level_slots:
   "\<lbrakk> vref \<in> user_region; is_aligned pt pt_bits \<rbrakk>
    \<Longrightarrow> table_index (pt_slot_offset max_pt_level pt vref) \<notin> kernel_mapping_slots"
-  apply (simp add: kernel_mapping_slots_def table_index_offset_max_pt_level not_le user_region_def)
+  apply (simp add: kernel_mapping_slots_def table_index_offset_pt_bits_left not_le user_region_def)
   apply (simp add: pt_bits_left_def level_defs bit_simps canonical_user_def)
   apply word_bitwise
   apply (simp add: word_size canonical_bit_def word_bits_def)

@@ -296,11 +296,7 @@ lemma septract_cancel:
 
 lemma sep_coimpl_mp_zero:
   "(P \<leadsto>* Q) s \<Longrightarrow> P s   \<Longrightarrow> Q (0)"
-  apply (clarsimp simp: sep_coimpl_def sep_conj_def)
-  apply (erule_tac x=s in allE)
-  apply (clarsimp, erule_tac x="0" in allE)
-  apply (clarsimp simp: pred_neg_def)
-  done
+  by (clarsimp simp: sep_coimpl_def sep_conj_def)
 
 lemma sep_neg_not:
   "(P \<leadsto>* sep_false) s \<Longrightarrow> \<not>P s"
@@ -586,7 +582,7 @@ lemma sep_snake_boxD:
 lemma septract_wandD:
   "(( R \<longrightarrow>* (not Q)) -* Q) s \<Longrightarrow> (not R) s"
   apply (erule sep_septraction_snake)
-  by (simp add: sep_antimp_contrapos)
+  using sep_antimp_contrapos by blast
 
 lemma sep_impl_septractD:
   "(P \<longrightarrow>* Q) s \<Longrightarrow> (R -* (not Q)) s \<Longrightarrow> ((R and not P) -* (not Q)) s"

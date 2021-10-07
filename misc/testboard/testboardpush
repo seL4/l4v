@@ -41,6 +41,8 @@ parser.add_argument('--debug', action='store_true',
                     help="Print verbose debugging messages")
 parser.add_argument('--repo_dir', default='.',
                     help="Directory of repo")
+parser.add_argument('-n', '--dry-run', action='store_true',
+                    help="Do not push, just construct manifest")
 
 # In Python 3, subprocess returns bytes instead of (Unicode) str.
 # We don't worry about that here, since our subprocesses are
@@ -53,12 +55,19 @@ def subprocess_output(*args, **kwargs):
         return out
 
 # github remotes are of the form git@github.com:user/repo
-# but repo expects an ssh URL, e.g. ssh://git@github.com/user/repo
+# but repo expects an URL, e.g. ssh://git@github.com/user/repo
+# Since the test runner will not have ssh permissions to github,
+# we use a https URL instead -- this means the target repo needs
+# to be public.
 def fixup_github(remote):
     git_url = 'git@github.com:'
+    ssh_url = 'ssh://' + git_url[:-1] + '/'
+    https_url = 'https://github.com/'
     url, repo = remote
     if url.startswith(git_url):
-        return 'ssh://git@github.com/' + url[len(git_url):], repo
+        return https_url + url[len(git_url):], repo
+    elif url.startswith(ssh_url):
+        return https_url + url[len(ssh_url):], repo
     else:
         return remote
 
@@ -69,7 +78,7 @@ def main(argv):
         if args.quiet:
             return
         for line in msg.split('\n'):
-            sys.stdout.write('[log] ' + line + '\n')
+            sys.stdout.write('> ' + line + '\n')
     def debug(msg):
         if not args.debug:
             return
@@ -291,15 +300,21 @@ def main(argv):
         except subprocess.CalledProcessError:
             fatal("Failed to commit to the test board repository.")
 
-        # Now attempt to push it.
-        # This may fail if someone else has pushed a commit in the meantime.
-        try:
-            subprocess.check_call(['git', 'push', '--set-upstream', 'origin', args.testboard_branch], cwd=testboard_repo)
-        except subprocess.CalledProcessError:
-            fatal("Failed to push to test board.")
+        if args.dry_run:
+            log("Dry run, skipping push.")
+        else:
+            # Now attempt to push it.
+            # This may fail if someone else has pushed a commit in the meantime.
+            try:
+                subprocess.check_call(['git', 'push', '--set-upstream', 'origin', args.testboard_branch], cwd=testboard_repo)
+            except subprocess.CalledProcessError:
+                fatal("Failed to push to test board.")
 
-        testboard_oneline = subprocess_output(['git', 'log', '--oneline'], cwd=testboard_repo).strip()
+        testboard_oneline = subprocess_output(['git', 'log', '--oneline', '-n', '1'], cwd=testboard_repo).strip()
+        short_sha = testboard_oneline.split(' ',1)[0]
         log("Done. Your test board commit is:\n  " + testboard_oneline)
+        if not args.dry_run:
+            log("Github link: https://github.com/seL4/gh-testboard/commit/" + short_sha)
     finally:
         shutil.rmtree(testboard_repo)
 

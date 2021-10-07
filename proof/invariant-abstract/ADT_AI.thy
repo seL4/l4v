@@ -8,7 +8,7 @@ chapter \<open>Abstract datatype for the abstract specification\<close>
 
 theory ADT_AI
 imports
-  "./$L4V_ARCH/ArchADT_AI"
+  ArchADT_AI
 begin
 
 context begin interpretation Arch .

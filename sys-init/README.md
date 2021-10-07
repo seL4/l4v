@@ -49,8 +49,8 @@ Important Theories
   [`WellFormed_SI`](WellFormed_SI.thy).
 
 * Two example capDL specifications that are "well-formed" are found in
-  [`ExampleSpec_SI`](ExampleSpec_SI.thy) and
-  [`ExampleSpecIRQ_SI`](ExampleSpecIRQ_SI.thy). The former is a simple
+  [`ExampleSpec_SI`](examples/ExampleSpec_SI.thy) and
+  [`ExampleSpecIRQ_SI`](examples/ExampleSpecIRQ_SI.thy). The former is a simple
   capDL spec, and the latter a more complicated specifications with IRQ
   support.
 

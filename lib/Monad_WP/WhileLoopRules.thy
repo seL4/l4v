@@ -369,7 +369,6 @@ proof -
       apply (drule use_validNF [OF _ inv_holds])
        apply simp
       apply clarsimp
-      apply blast
       done
   }
 

@@ -1008,6 +1008,7 @@ proof -
   have horrible_helper:
     "\<And>v p. v \<le> 3 \<Longrightarrow> (3 - unat (p && mask 2 :: word32) = v) =
                      (p && mask 2 = 3 - of_nat v)"
+    including no_take_bit
     apply (simp add: unat_arith_simps unat_of_nat)
     apply (cut_tac p=p in unat_mask_2_less_4)
     apply arith
@@ -1092,7 +1093,7 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=2 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2
+     apply (auto simp add: eval_nat_numeral horrible_helper2 simp del: unsigned_numeral
                  elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp

@@ -49,6 +49,10 @@ Each simulator must define a monad that encapsulates the state of the underlying
 Depending on the architecture, real physical addresses may be the same as the addresses the kernel uses to access kernel objects, or they may be offset by a constant. The "PAddr" type is used to represent a real physical address; functions are provided that convert between this and the kernel pointer type, "PPtr".
 
 > type PAddr = Arch.PAddr
+> fromPAddr = Arch.fromPAddr
+
+> pptrBaseOffset :: Word
+> pptrBaseOffset = (fromVPtr Arch.pptrBase) - (fromPAddr Arch.paddrBase)
 
 > ptrFromPAddr :: PAddr -> PPtr a
 > ptrFromPAddr = Arch.ptrFromPAddr
@@ -56,7 +60,8 @@ Depending on the architecture, real physical addresses may be the same as the ad
 > addrFromPPtr :: PPtr a -> PAddr
 > addrFromPPtr = Arch.addrFromPPtr
 
-> fromPAddr = Arch.fromPAddr
+> addrFromKPPtr :: PPtr a -> PAddr
+> addrFromKPPtr = Arch.addrFromKPPtr
 
 \subsubsection{Interrupts}
 

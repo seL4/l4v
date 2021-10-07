@@ -260,6 +260,7 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   supply image_cong_simp [cong del]
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="capAligned (ArchObjectCap (PageCap False ptr undefined sz None))"
@@ -367,7 +368,7 @@ lemma clearMemory_PageCap_ccorres:
        subgoal by (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
       subgoal by simp
      apply csymbr
-     apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+     apply (ctac add: cleanCacheRange_RAM_ccorres[unfolded dc_def])
     apply wp
    apply (simp add: guard_is_UNIV_def unat_of_nat
                     word_bits_def capAligned_def word_of_nat_less)
@@ -375,11 +376,11 @@ lemma clearMemory_PageCap_ccorres:
                         capAligned_def word_of_nat_less)
   apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
   by (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified]
-                        is_aligned_no_overflow'[where n=16, simplified]
-                        is_aligned_no_overflow'[where n=20, simplified]
-                        is_aligned_no_overflow'[where n=24, simplified] pageBits_def
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0
-                        pageBitsForSize_def split: vmpage_size.splits)
+                     is_aligned_no_overflow'[where n=16, simplified]
+                     is_aligned_no_overflow'[where n=21, simplified]
+                     is_aligned_no_overflow'[where n=25, simplified] pageBits_def
+                     is_aligned_mask[symmetric] mask_AND_less_0
+                     pageBitsForSize_def split: vmpage_size.splits)
 
 lemma coerce_memset_to_heap_update_asidpool:
   "heap_update_list x (replicateHider 4096 0)
@@ -628,7 +629,7 @@ lemma page_directory_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n)[1]
   done
 
-lemma clearMemory_setObject_PTE_ccorres:
+lemma clearMemory_PT_setObject_PTE_ccorres:
   "ccorres dc xfdc (page_table_at' ptr
                 and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
                 and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
@@ -637,7 +638,8 @@ lemma clearMemory_setObject_PTE_ccorres:
                        [ptr , ptr + 2 ^ objBits ARM_HYP_H.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
-       (Call clearMemory_'proc)"
+       (Call clearMemory_PT_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
@@ -663,8 +665,9 @@ lemma clearMemory_setObject_PTE_ccorres:
          done
       apply (clarsimp simp add: table_bits_defs
                       cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp only: field_simps)
       apply (simp add: upto_enum_step_def objBits_simps table_bits_defs
-                       field_simps linorder_not_less[symmetric] archObjSize_def
+                       linorder_not_less[symmetric] archObjSize_def
                        upto_enum_word split_def)
       apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -681,7 +684,7 @@ lemma clearMemory_setObject_PTE_ccorres:
                         update_pte_map_to_ptes carray_map_relation_upd_triv)
        apply (rule cmap_relation_updI, simp_all)[1]
        apply (simp add: cpte_relation_def Let_def pte_lift_def
-                        fcp_beta pte_get_tag_def pte_tag_defs)
+                        pte_get_tag_def pte_tag_defs)
        apply (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps update_pte_map_tos)
       apply csymbr
@@ -691,9 +694,9 @@ lemma clearMemory_setObject_PTE_ccorres:
    apply (clarsimp simp: guard_is_UNIV_def table_bits_defs)
   apply (clarsimp simp: ptBits_def pageBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp add: table_bits_defs)
-  apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] table_bits_defs
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0)
-  apply (erule is_aligned_no_wrap', simp)
+  apply (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified] table_bits_defs
+                        is_aligned_mask[symmetric] mask_AND_less_0
+                        add.commute[where b="addrFromPPtr ptr"])
   done
 
 lemma ccorres_make_xfdc:
@@ -983,7 +986,7 @@ lemma cancelBadgedSends_ccorres:
           apply (induct_tac list)
            apply (rule allI)
            apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
-           apply (rule ccorres_tmp_lift2 [OF _ _ refl])
+           apply (rule ccorres_tmp_lift2 [OF _ _ Int_lower1])
             apply ceqv
            apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_rhs_assoc2)
@@ -1271,6 +1274,7 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)
@@ -1344,4 +1348,5 @@ lemma ccap_relation_isDeviceCap2:
   apply (frule cap_get_tag_UntypedCap)
   apply (simp add:cap_get_tag_isCap to_bool_def)
   done
+
 end

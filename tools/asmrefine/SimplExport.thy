@@ -47,9 +47,9 @@ val ops = Symtab.make [
     (@{const_name "times"}, ("Times", true)),
     (@{const_name "modulo_class.modulo"}, ("Modulus", true)),
     (@{const_name "divide_class.divide"}, ("DividedBy", true)),
-    (@{const_name "bitAND"}, ("BWAnd", true)),
-    (@{const_name "bitOR"}, ("BWOr", true)),
-    (@{const_name "bitXOR"}, ("BWXOR", true)),
+    (@{const_name "and"}, ("BWAnd", true)),
+    (@{const_name "or"}, ("BWOr", true)),
+    (@{const_name "xor"}, ("BWXOR", true)),
     (@{const_name "conj"}, ("And", true)),
     (@{const_name "disj"}, ("Or", true)),
     (@{const_name "implies"}, ("Implies", true)),
@@ -61,9 +61,9 @@ val ops = Symtab.make [
     (@{const_name "word_sless"}, ("SignedLess", false)),
     (@{const_name "word_sle"}, ("SignedLessEquals", false)),
     (@{const_name "Not"}, ("Not", true)),
-    (@{const_name "bitNOT"}, ("BWNot", true)),
-    (@{const_name "ucast"}, ("WordCast", false)),
-    (@{const_name "scast"}, ("WordCastSigned", false)),
+    (@{const_name "not"}, ("BWNot", true)),
+    (@{const_name "unsigned"}, ("WordCast", false)),
+    (@{const_name "signed"}, ("WordCastSigned", false)),
     (@{const_name "True"}, ("True", true)),
     (@{const_name "False"}, ("False", true)),
     (@{const_name "If"}, ("IfThenElse", false)),
@@ -342,7 +342,7 @@ update only words from memory and local values.\<close>
 
 ML \<open>
 fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size_td_array
-        field_lvalue_offset_eq align_td_array' word_of_int scast_def[symmetric]
+        field_lvalue_offset_eq align_td_array' scast_def[symmetric]
         ucast_def[symmetric]
         sint_sbintrunc' word_smod_numerals word_sdiv_numerals sdiv_int_def smod_int_def}
   |> Simplifier.rewrite
@@ -737,12 +737,12 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
         = convert_op ctxt params "Or" "Bool" [HOLogic.mk_eq (v, x), betapply (S, x)]
   | convert_ph3 _ _ (Free ("symbol_table", _) $ s)
         = "Symbol " ^ HOLogic.dest_string s ^ " " ^ machine_word
-  | convert_ph3 ctxt params (Const (@{const_name of_nat}, T) $ (Const (@{const_name unat}, _) $ x))
+  | convert_ph3 ctxt params (Const (@{const_name of_nat}, T) $ (Const (@{const_name unsigned}, _) $ x))
         = let
             val t1 = fastype_of x
             val t2 = range_type T
           in if t1 = t2 then convert_ph3 ctxt params x
-            else convert_ph3 ctxt params (Const (@{const_name ucast}, t1 --> t2) $ x)
+            else convert_ph3 ctxt params (Const (@{const_name unsigned}, t1 --> t2) $ x)
           end
   | convert_ph3 ctxt params (t as (Const (@{const_name of_nat}, _) $ _))
         = convert_ph3 ctxt params (ptr_simp_term ctxt "of_nat" t t)
@@ -754,7 +754,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
         | _ => convert_ph3 ctxt params (ptr_simp_term ctxt "power" t t))
   | convert_ph3 ctxt params (Const (@{const_name ptr_coerce}, _) $ p)
         = convert_ph3 ctxt params p
-  | convert_ph3 ctxt params (t as (Const (@{const_name word_of_int}, _) $ _))
+  | convert_ph3 ctxt params (t as (Const (@{const_name of_int}, _) $ _))
     = if head_of t = int_to_ghost_key then convert_ph3 ctxt params (convert_ghost_key ctxt t)
      else let
         val thy = Proof_Context.theory_of ctxt
@@ -762,7 +762,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
             #> HOLogic.dest_eq) @{thms word_uint.Rep_inverse word_sint.Rep_inverse}) [] t
       in if t' aconv t then convert_ph3 ctxt params (ptr_simp_term ctxt "word_of_int" t t)
         else convert_ph3 ctxt params t' end
-  | convert_ph3 ctxt params (t as (Const (@{const_name sdiv}, _) $ _ $ _))
+  | convert_ph3 ctxt params (t as (Const (@{const_name signed_divide}, _) $ _ $ _))
     = convert_ph3 ctxt params (ptr_simp_term ctxt "sdiv" t t)
   | convert_ph3 ctxt _ (t as (Const (@{const_name numeral}, _) $ _))
     = let
@@ -1167,5 +1167,3 @@ fun emit_C_everything_relative ctxt csenv fname = let
 \<close>
 
 end
-
-

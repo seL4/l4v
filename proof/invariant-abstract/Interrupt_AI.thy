@@ -9,7 +9,7 @@ Refinement for interrupt controller operations
 *)
 
 theory Interrupt_AI
-imports "./$L4V_ARCH/ArchIpc_AI"
+imports ArchIpc_AI
 begin
 
 

@@ -9,7 +9,7 @@ VSpace refinement
 *)
 
 theory VSpacePre_AI
-imports "$L4V_ARCH/ArchTcbAcc_AI"
+imports ArchTcbAcc_AI
 begin
 
 context begin interpretation Arch .
@@ -60,35 +60,15 @@ lemma upto_enum_step_subtract:
   "x \<le> z \<Longrightarrow> [x, y .e. z] = (map ((+) x) [0, y - x .e. z - x])"
   by (auto simp add: upto_enum_step_def)
 
-(* FIXME: move *)
-lemma returnOk_E': "\<lbrace>P\<rbrace> returnOk r -,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: returnOk_def validE_E_def validE_def valid_def return_def)
-lemma throwError_R': "\<lbrace>P\<rbrace> throwError e \<lbrace>Q\<rbrace>,-"
-  by (clarsimp simp:throwError_def validE_R_def validE_def valid_def return_def)
-
 lemma invs_valid_irq_states[elim!]:
   "invs s \<Longrightarrow> valid_irq_states s"
   by(auto simp: invs_def valid_state_def)
 
+(* FIXME: move to Word_Lib *)
 lemma uint_ucast:
-  "(x :: ('a :: len) word) < 2 ^ len_of TYPE ('b)
-    \<Longrightarrow> uint (ucast x :: ('b :: len) word) = uint x"
-  apply (simp add: ucast_def)
-  apply (subst word_uint.Abs_inverse)
-   apply (simp add: uints_num word_less_alt word_le_def)
-   apply (frule impI[where P="True"])
-   apply (subst(asm) uint_2p)
-    apply (clarsimp simp only: word_neq_0_conv[symmetric])
-   apply simp_all
-  done
-
-(* FIXME: move *)
-lemma inj_on_domD: "\<lbrakk>inj_on f (dom f); f x = Some z; f y = Some z\<rbrakk> \<Longrightarrow> x = y"
-  by (erule inj_onD) clarsimp+
-
-lemma hoare_name_pre_state2:
-  "(\<And>s. \<lbrace>P and ((=) s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  by (auto simp: valid_def intro: hoare_name_pre_state)
+  "(x :: 'a :: len word) < 2 ^ LENGTH('b) \<Longrightarrow> uint (ucast x :: 'b :: len word) = uint x"
+  by (metis Word.of_nat_unat mod_less of_nat_numeral semiring_1_class.of_nat_power unat_less_helper
+            unat_ucast)
 
 lemma pd_casting_shifting:
   "size x + n < len_of TYPE('a) \<Longrightarrow>
@@ -97,12 +77,7 @@ lemma pd_casting_shifting:
   apply (simp add: nth_ucast nth_shiftr nth_shiftl word_size)
   done
 
-lemma aligned_already_mask:
-  "is_aligned x n \<Longrightarrow> is_aligned (x && msk) n"
-  apply (simp add: is_aligned_mask word_bw_assocs)
-  apply (subst word_bw_comms, subst word_bw_assocs[symmetric])
-  apply simp
-  done
+lemmas aligned_already_mask = is_aligned_andI1
 
 lemma set_upto_enum_step_4:
   "set [0, 4 .e. x :: word32]

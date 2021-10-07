@@ -11,7 +11,7 @@ Functions for fault handling.
 chapter \<open>arch fault related functions\<close>
 
 theory ArchFault_A
-imports "../Structures_A" "../Tcb_A"
+imports Structures_A Tcb_A
 begin
 
 context Arch begin global_naming X64_A

@@ -207,7 +207,7 @@ lemma decodeSchedcontext_Bind_corres:
           apply (clarsimp simp: returnOk_def)
          apply (subst corres_liftE_rel_sum)
          apply (rule corres_rel_imp)
-          apply (rule gts_isBlocked_corres)
+          apply (rule isBlocked_corres)
          apply simp
         apply wpsimp
        apply wpsimp

@@ -9,9 +9,9 @@
 
 theory ArchKernelInit_AI
 imports
-  "../ADT_AI"
-  "../Tcb_AI"
-  "../Arch_AI"
+  ADT_AI
+  Tcb_AI
+  Arch_AI
 begin
 
 context Arch begin global_naming X64 (*FIXME: arch_split*)
@@ -58,7 +58,7 @@ lemma descendants_empty [simp]:
   "descendants_of x Map.empty = {}"
   by (clarsimp simp: descendants_of_def)
 
-lemma [simp]: "\<not>is_reply_cap Structures_A.NullCap"
+lemma reply_Null [simp]: "\<not>is_reply_cap NullCap"
   by (simp add: is_reply_cap_def)
 
 declare cap_range_NullCap [simp]
@@ -122,9 +122,8 @@ lemma init_irq_ptrs_eq:
   apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
          safe intro!: plus_one_helper2,
-         simp_all add: ucast_le_ucast[where 'a=8 and 'b=64,simplified] up_ucast_inj_eq,
-         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq
-                       max_word_def)
+         simp_all add: ucast_le_ucast[where 'a=8 and 'b=64,simplified] up_ucast_inj_eq ucast_leq_mask,
+         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq mask_eq_exp_minus_1)
   done
 
 lemma in_kernel_base:
@@ -238,7 +237,7 @@ done
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
-  supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
+  supply is_aligned_def[THEN iffD2, simp]
   supply image_cong_simp [cong del]
   apply (simp add: invs_def)
   apply (rule conjI)

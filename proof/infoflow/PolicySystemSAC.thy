@@ -6,7 +6,7 @@
 
 theory PolicySystemSAC
 imports
-  Noninterference
+  ArchNoninterference
   "Access.ExampleSystem"
 begin
 
@@ -40,7 +40,7 @@ definition complete_AgentAuthGraph where
   "complete_AgentAuthGraph g \<equiv>
      g \<union> {(y,a,y) | a y. True}
        \<union> {(x,a,y) | x a y. (x,Control,y) \<in> g }
-       \<union> {(x,a,y)|x a y. \<exists> z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g} "
+       \<union> {(x,a,y)|x a y. \<exists>z. (x,Control,z) \<in> g \<and> (z, Control,y) \<in> g} "
 declare complete_AgentAuthGraph_def [simp]
 
 abbreviation partition_label where
@@ -126,8 +126,8 @@ lemma abdrm_reads_ep : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partiti
   done
 
 lemma abdrm_reads_sc : "x \<in> {NicA, NicB, NicD, RM} \<Longrightarrow> partition_label SC \<in> subjectReads SACAuthGraph (partition_label x)"
-    apply (rule_tac auth = "Receive" and b = "partition_label SC" and a = "partition_label RM" and ep = "partition_label EP" in read_sync_ep_read_senders)
-      apply (simp, simp, simp del: SACAuthGraph_def add: abdrm_reads_ep, simp)
+    apply (rule_tac b = "partition_label SC" and ep = "partition_label EP" in read_sync_ep_read_senders)
+      apply (simp del: SACAuthGraph_def add: abdrm_reads_ep, simp)
 done
 
 lemma abd_reads_rm : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label RM \<in> subjectReads SACAuthGraph (partition_label x)"
@@ -255,8 +255,7 @@ lemma c_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partitio
 done
 
 lemma c_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NicC)"
-  apply (rule_tac auth = SyncSend and a = "partition_label SC" and ep = "partition_label EP" in read_sync_ep_read_receivers)
-   apply (simp, simp)
+  apply (rule_tac ep = "partition_label EP" in read_sync_ep_read_receivers)
    apply (rule c_reads_ep)
    apply (simp)
 done
@@ -319,8 +318,8 @@ lemma r_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partitio
 done
 
 lemma r_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label R)"
-    apply (rule_tac a="partition_label RM" and auth="Receive" and ep="partition_label EP" and b="partition_label SC" in read_sync_ep_read_senders)
-    apply (simp, simp, rule r_reads_ep, simp)
+    apply (rule_tac ep="partition_label EP" and b="partition_label SC" in read_sync_ep_read_senders)
+    apply (rule r_reads_ep, simp)
 done
 
 lemma r_reads_a : "partition_label NicA \<in> subjectReads SACAuthGraph (partition_label R)"
@@ -408,7 +407,7 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
 subsection \<open>RM reads/affects\<close>
 
 lemma rm_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label RM)"
-  apply (rule_tac a="partition_label RM" and auth="Receive" and ep="partition_label EP" in read_sync_ep_read_senders)
+  apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
   apply (simp_all add:reads_ep)
 done
 
@@ -492,7 +491,7 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
 subsection \<open>SC\<close>
 
 lemma sc_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label SC)"
-  apply (rule_tac a="partition_label SC" and ep="partition_label EP" and auth="SyncSend" and b="partition_label RM" in read_sync_ep_read_receivers)
+  apply (rule_tac ep="partition_label EP" and b="partition_label RM" in read_sync_ep_read_receivers)
   apply (simp_all add:reads_ep)
 done
 
@@ -549,13 +548,13 @@ done
 subsection \<open>EP\<close>
 
 lemma ep_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label EP)"
-  apply (rule_tac a="partition_label EP" and ep="partition_label EP" and auth="Receive" in read_sync_ep_read_senders)
-  apply (simp, simp, rule reads_lrefl, simp_all)
+  apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
+  apply (rule reads_lrefl, simp_all)
 done
 
 lemma ep_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label EP)"
-  apply (rule_tac a="partition_label SC" and ep="partition_label EP" and b="partition_label RM" and auth="SyncSend" in read_sync_ep_read_receivers)
-  apply (simp, simp, rule reads_lrefl, simp)
+  apply (rule_tac ep="partition_label EP" and b="partition_label RM" in read_sync_ep_read_receivers)
+  apply (rule reads_lrefl, simp)
 done
 
 lemma ep_reads_c : "partition_label NicC \<in> subjectReads SACAuthGraph (partition_label EP)"
@@ -627,8 +626,8 @@ subsection \<open>NTFN1,2,3\<close>
 subsubsection \<open>NTFN1 reads SC, EP, RM, R\<close>
 
 lemma ntfn1_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
-  apply (rule_tac ep="partition_label NTFN1" and auth="SyncSend" and a="partition_label NTFN1" in read_sync_ep_read_receivers)
-  apply (simp, simp, rule reads_lrefl, simp)
+  apply (rule_tac ep="partition_label NTFN1" in read_sync_ep_read_receivers)
+  apply (rule reads_lrefl, simp)
 done
 
 lemma ntfn1_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
@@ -637,15 +636,15 @@ lemma ntfn1_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (part
 done
 
 lemma ntfn1_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN1)"
-  apply (rule_tac b="partition_label RM" and ep="partition_label EP" and auth="SyncSend" and a="partition_label SC" in read_sync_ep_read_receivers)
-  apply (simp, simp, rule ntfn1_reads_ep, simp)
+  apply (rule_tac b="partition_label RM" and ep="partition_label EP" in read_sync_ep_read_receivers)
+  apply (rule ntfn1_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN2 reads SC, EP, RM, R\<close>
 
 lemma ntfn2_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
-  apply (rule_tac ep="partition_label NTFN2" and auth="SyncSend" and a="partition_label NTFN2" in read_sync_ep_read_receivers)
-  apply (simp, simp, rule reads_lrefl, simp)
+  apply (rule_tac ep="partition_label NTFN2" in read_sync_ep_read_receivers)
+  apply (rule reads_lrefl, simp)
 done
 
 lemma ntfn2_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
@@ -654,15 +653,15 @@ lemma ntfn2_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (part
 done
 
 lemma ntfn2_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN2)"
-  apply (rule_tac b="partition_label SC" and ep="partition_label EP" and auth="Reset" and a="partition_label EP" in read_sync_ep_read_senders)
-  apply (simp, simp, rule ntfn2_reads_ep, simp)
+  apply (rule_tac b="partition_label SC" and ep="partition_label EP" in read_sync_ep_read_senders)
+  apply (rule ntfn2_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN3 reads SC, EP, RM, R\<close>
 
 lemma ntfn3_reads_r : "partition_label R \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
-  apply (rule_tac ep="partition_label NTFN3" and auth="SyncSend" and a="partition_label NTFN3" in read_sync_ep_read_receivers)
-  apply (simp, simp, rule reads_lrefl, simp)
+  apply (rule_tac ep="partition_label NTFN3" in read_sync_ep_read_receivers)
+  apply (rule reads_lrefl, simp)
 done
 
 lemma ntfn3_reads_rm : "partition_label RM \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
@@ -676,8 +675,8 @@ lemma ntfn3_reads_ep : "partition_label EP \<in> subjectReads SACAuthGraph (part
 done
 
 lemma ntfn3_reads_sc : "partition_label SC \<in> subjectReads SACAuthGraph (partition_label NTFN3)"
-  apply (rule_tac ep="partition_label EP" and auth="Receive" and a="partition_label RM" in read_sync_ep_read_senders)
-  apply (simp, simp, rule ntfn3_reads_ep, simp)
+  apply (rule_tac ep="partition_label EP" in read_sync_ep_read_senders)
+  apply (rule ntfn3_reads_ep, simp)
 done
 
 subsubsection \<open>NTFN1,2,3 reads C\<close>

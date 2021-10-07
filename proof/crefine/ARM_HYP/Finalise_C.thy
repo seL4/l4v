@@ -791,6 +791,7 @@ lemma unbindNotification_ccorres:
   "ccorres dc xfdc
     (invs') (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}) []
     (unbindNotification tcb) (Call unbindNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: tcb_')
    apply (rule_tac xf'=ntfnPtr_'
                     and r'="\<lambda>rv rv'. rv' = option_to_ptr rv \<and> rv \<noteq> Some 0"
@@ -824,6 +825,7 @@ lemma unbindNotification_ccorres:
 lemma unbindMaybeNotification_ccorres:
   "ccorres dc xfdc (invs') (UNIV \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr}) []
         (unbindMaybeNotification ntfnptr) (Call unbindMaybeNotification_'proc)"
+  supply option.case_cong[cong]
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule ccorres_rhs_assoc2)
@@ -1019,7 +1021,7 @@ lemma invalidateASIDEntry_ccorres:
                         split: if_split)
         apply csymbr
         apply (rule ccorres_Guard)+
-        apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+        apply (rule_tac P="pde_stored_asid stored_hw_asid___struct_pde_C \<noteq> None" in ccorres_gen_asm)
         apply (ctac(no_simp) add: invalidateHWASIDEntry_ccorres)
         apply (clarsimp simp: pde_stored_asid_def unat_ucast
                        split: if_split_asm)
@@ -1060,6 +1062,7 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 17 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1132,7 +1135,7 @@ lemma deleteASIDPool_ccorres:
             apply (erule is_aligned_add_less_t2n)
               apply (subst(asm) Suc_unat_diff_1)
                apply (simp add: asid_low_bits_def)
-              apply (simp add: unat_power_lower asid_low_bits_word_bits)
+              apply (simp add: asid_low_bits_word_bits)
               apply (erule of_nat_less_pow_32 [OF _ asid_low_bits_word_bits])
              apply (simp add: asid_low_bits_def asid_bits_def)
             apply (simp add: asid_bits_def)
@@ -1432,7 +1435,7 @@ lemma pageTableMapped_pd:
   done
 
 lemma unmapPageTable_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < kernelBase))
+  "ccorres dc xfdc (invs' and (\<lambda>s. asid \<le> mask asid_bits \<and> vaddr < pptrBase))
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vaddr_' s = vaddr} \<inter> {s. pt_' s = Ptr ptPtr}) []
       (unmapPageTable asid vaddr ptPtr) (Call unmapPageTable_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1462,7 +1465,7 @@ lemma unmapPageTable_ccorres:
    apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
              in hoare_post_imp)
     apply (clarsimp simp: lookup_pd_slot_def Let_def
-                          mask_add_aligned less_kernelBase_valid_pde_offset''
+                          mask_add_aligned less_pptrBase_valid_pde_offset''
                           page_directory_at'_def table_bits_defs)
    apply (wp pageTableMapped_pd)
   apply (clarsimp simp: word_sle_def lookup_pd_slot_def
@@ -1655,9 +1658,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1675,7 +1676,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 lemma Zombie_new_spec:
@@ -1702,7 +1703,7 @@ lemma irq_opt_relation_Some_ucast:
   apply (simp only: unat_arith_simps)
   by (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
 
-lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
+lemmas upcast_ucast_id = More_Word.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
@@ -2010,9 +2011,6 @@ lemma dissociateVCPUTCB_ccorres:
      (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tptr }
        \<inter> {s. vcpu_' s = vcpu_Ptr vcpuptr }) hs
      (dissociateVCPUTCB vcpuptr tptr) (Call dissociateVCPUTCB_'proc)"
-  (* FIXME ARMHYP TODO. Note that invs' may be too strong, depending on from where it's called.
-     There is a definite assertion that the VCPU and TCB are associated when calling this function,
-     so I put that in *)
   supply dc_simp[simp del]
   apply (cinit lift: tcb_' vcpu_')
    apply (rule ccorres_pre_archThreadGet, rename_tac tcbVCPU)
@@ -2075,7 +2073,6 @@ lemma dissociateVCPUTCB_ccorres:
             apply ceqv
            apply (subst asUser_bind_distrib; simp)
            apply (rule ccorres_split_nothrow[where r'="(=)" and xf'=ret__unsigned_long_'])
-               apply clarsimp
                apply (ctac add: getRegister_ccorres)
               apply ceqv
             apply (erule sanitiseSetRegister_ccorres, simp)
@@ -2256,7 +2253,7 @@ lemma capFSize_eq: "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capab
   apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                             case_option_over_if gen_framesize_to_H_def
-                            ARM_HYP_H.kernelBase_def
+                            ARM_HYP.pptrBase_def
                             framesize_to_H_def valid_cap'_def
                      elim!: ccap_relationE simp del: Collect_const)
   apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap) \<noteq> scast Kernel_C.ARMSmallPage")
@@ -2279,6 +2276,7 @@ lemma Arch_finaliseCap_ccorres:
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
                         \<inter> {s. final_' s = from_bool is_final}) []
    (Arch.finaliseCap cp is_final) (Call Arch_finaliseCap_'proc)"
+  supply if_cong[cong]
   apply (cinit lift: cap_' final_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: ARM_HYP_H.finaliseCap_def cap_get_tag_isCap_ArchObject)
@@ -2322,7 +2320,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule small_frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply (simp add: split_def)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -2338,7 +2336,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule small_frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                        elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
        apply (simp add: split_def)
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
@@ -2356,7 +2354,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply simp
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -2373,7 +2371,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                    elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
        apply clarsimp
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
@@ -2580,7 +2578,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if gen_framesize_to_H_def
-                              Kernel_C.ARMSmallPage_def ARM_HYP_H.kernelBase_def
+                              Kernel_C.ARMSmallPage_def ARM_HYP.pptrBase_def
                               if_split
                        elim!: ccap_relationE simp del: Collect_const)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
@@ -2768,9 +2766,9 @@ lemma finaliseCap_ccorres:
      apply (subst add.commute, subst unatSuc, assumption)+
      apply (intro impI, rule conjI)
       subgoal
-        apply (subst word_bool_alg.conj_disj_distrib2)
+        apply (subst bit.conj_disj_distrib2)
         apply (subst zero_OR_eq, fastforce)
-        by (fastforce simp: is_aligned_neg_mask_weaken)
+        by fastforce
      subgoal
        apply (simp add: shiftL_nat ccap_relation_NullCap_iff)
        apply (rule trans, rule unat_power_lower32[symmetric])
@@ -2806,7 +2804,7 @@ lemma finaliseCap_ccorres:
                         mask_def)
        apply (simp add: cte_level_bits_def tcbCTableSlot_def
                         Kernel_C.tcbCTable_def tcbCNodeEntries_def
-                        word_bool_alg.conj_disj_distrib2
+                        bit.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])

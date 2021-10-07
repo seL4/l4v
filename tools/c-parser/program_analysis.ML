@@ -1100,11 +1100,13 @@ structure TypeTab = Table(type key = int ctype
 
 datatype lvstate = LV | RV
 
-
+datatype 'a eact = E of ExprDatatype.expr | RAS of 'a (* Restore address status *)
+fun map_ras _ (E x) = E x
+  | map_ras f (RAS x) = RAS (f x)
 
 (* fname is a string option; NONE corresponds to an expression appearing at
    the global level, as can happen in the initialisation of a global *)
-fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
+fun process_exprs lvstate fname (env as CSE {senv, ...}) exprs = let
   fun inc ((fm,greads), k) = (TypeTab.map_default (k,0) (fn i => i + 1) fm, greads)
   (* count_fncalls not only counts function calls in the accompanying fmap,
      but is also a general traversal of the expression, where other stuff
@@ -1112,7 +1114,6 @@ fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
   datatype addr_status = Rvalue | BrackLeft | UnderAddr | BL_Addr | Lvalue
                        | BrackLeftLV | SzOf
   fun lvadstat BrackLeftLV = true | lvadstat Lvalue = true | lvadstat _ = false
-  datatype eact = E of expr | RAS of addr_status (* Restore Address Status *)
   fun rval (env,fmap,_) = (env,fmap,Rvalue)
   fun count_fncalls (ef as (env,fmap,_)) elist =
       case elist of
@@ -1312,10 +1313,10 @@ fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
       | _ => raise eFail (e, "count_fncall: Can't handle expr type: "^
                              expr_string e)
 
+  fun adstat_of_lvstate lvs = case lvs of LV => Lvalue | RV => Rvalue
   val (env', (counts, globalreads)) =
-      count_fncalls (env, (TypeTab.empty, Binaryset.empty expr_compare),
-                     if lvstate = LV then Lvalue else Rvalue)
-                    [E e]
+      count_fncalls (env, (TypeTab.empty, Binaryset.empty expr_compare), adstat_of_lvstate lvstate)
+                    (map (map_ras adstat_of_lvstate) exprs)
   fun foldthis (rettype,count) (acc : csenv) =
       if count <= 0 then acc
       else let
@@ -1331,6 +1332,8 @@ fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
 in
   (TypeTab.fold foldthis counts env', globalreads)
 end
+
+fun process_expr lvstate fname env e = process_exprs lvstate fname env [E e]
 
 fun get_modified env e = let
   (* e is an lvalue expression on the left of an assignment.  Return the
@@ -1817,9 +1820,9 @@ in
     end
   | Assign(e1,e2) =>
     let
-      val (e, grs1) = pexlv e e1
-      val (e, grs2) = pex e e2
-      val grs = Binaryset.union(grs1,grs2)
+      (* The lvalue and rvalue need to be processed together for the the
+         embedded function call analysis to work. *)
+      val (e, grs) = process_exprs LV (SOME fname) e [E e1, RAS RV, E e2]
       val modified = get_modified e e1
       val e =
           case modified of

@@ -207,7 +207,7 @@ definition
   \<and> tcb_queue_relation getNext getPrev hp queue NULL qhead"
 
 fun
-  register_from_H :: "register \<Rightarrow> machine_word"
+  register_from_H :: "register \<Rightarrow> register_idx"
   where
     "register_from_H RISCV64.LR = scast Kernel_C.LR"
 |   "register_from_H RISCV64.SP = scast Kernel_C.SP"
@@ -717,7 +717,7 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard riscvKSGlobalPT_Ptr \<and>
        ptr_span riscvKSGlobalPT_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
-       kernel_data_refs = (- domain) \<and>
+       -domain \<subseteq> kernel_data_refs \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
        cdom_schedule_relation (ksDomSchedule astate)
                               Kernel_C.kernel_all_global_addresses.ksDomSchedule \<and>

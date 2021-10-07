@@ -73,12 +73,10 @@ EXCLUDE["ARM"]=[
 EXCLUDE["X64"]=[
     "Access",
     "AutoCorresSEL4",
-    "CamkesDarpaReport",
     "CamkesGlueProofs",
     "DBaseRefine",
     "DSpec",
     "RefineOrphanage",
-    "SepTacticsExamples",
     "SimplExportAndRefine",
     "AsmRefine"
 ]

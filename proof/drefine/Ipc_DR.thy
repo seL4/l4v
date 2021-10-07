@@ -48,7 +48,7 @@ done
 
 lemma do_normal_transfer_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> Ipc_A.do_normal_transfer a b c d e f g \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
-  apply (simp add:do_normal_transfer_def set_message_info_def)
+  apply (simp add:do_normal_transfer_def set_message_info_def cong: if_cong)
   apply (wp as_user_cur_thread_idle_thread |wpc|clarsimp)+
   apply (wps | wp transfer_caps_it copy_mrs_it)+
   apply clarsimp
@@ -487,7 +487,7 @@ lemma set_scheduler_action_transform_inv:
 
 lemma possible_switch_to_dcorres:
   "dcorres dc P P' (return ()) (possible_switch_to t)"
-  apply (clarsimp simp: possible_switch_to_def)
+  apply (clarsimp simp: possible_switch_to_def cong: if_cong)
   apply (rule dcorres_symb_exec_r)+
         apply (rule corres_guard1_imp, rule corres_if_rhs)
           apply (rule tcb_sched_action_dcorres[THEN corres_trivial])
@@ -589,8 +589,8 @@ lemma recv_signal_corres:
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp:obj_at_def is_ntfn_def)
      apply (case_tac "ntfn_obj rv"; simp)
-       apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def cap_object_simps
-                             valid_ntfn_abstract_def none_is_waiting_ntfn_def )
+       apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                             none_is_waiting_ntfn_def )
        apply (case_tac is_blocking; simp)
         apply (rule corres_guard_imp)
           apply (rule corres_alternate1)
@@ -606,8 +606,8 @@ lemma recv_signal_corres:
         apply simp
        apply simp
       (* WaitingNtfn *)
-      apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def
-                            valid_ntfn_abstract_def none_is_waiting_ntfn_def cap_object_simps)
+      apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                            none_is_waiting_ntfn_def)
       apply (case_tac is_blocking; simp)
        apply (rule corres_guard_imp)
          apply (rule corres_alternate1)
@@ -623,8 +623,8 @@ lemma recv_signal_corres:
        apply simp
       apply simp
      (* Active NTFN *)
-     apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def
-                           valid_ntfn_abstract_def none_is_waiting_ntfn_def cap_object_simps)
+     apply (clarsimp simp: ntfn_waiting_set_lift valid_state_def valid_ntfn_abstract_def
+                           none_is_waiting_ntfn_def)
      apply (rule corres_alternate2)
      apply (rule corres_guard_imp )
        apply (rule corres_dummy_return_l)
@@ -1089,17 +1089,16 @@ lemma evalMonad_get_extra_cptrs:
   done
 
 lemma dcorres_symb_exec_r_evalMonad:
-assumes wp:"\<And>sa. \<lbrace>(=) sa\<rbrace> f \<lbrace>\<lambda>r. (=) sa\<rbrace>"
-assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P ((=) s) h (g rv)"
-shows "\<lbrakk>empty_when_fail f;weak_det_spec ((=) s) f\<rbrakk> \<Longrightarrow> dcorres r P ((=) s) h (f>>=g)"
+  assumes wp:"\<And>sa. \<lbrace>(=) sa\<rbrace> f \<lbrace>\<lambda>r. (=) sa\<rbrace>"
+  assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P ((=) s) h (g rv)"
+  shows "\<lbrakk> empty_when_fail f; weak_det_spec ((=) s) f \<rbrakk> \<Longrightarrow> dcorres r P ((=) s) h (f>>=g)"
   apply (rule_tac Q'="\<lambda>r. (=) s and K_bind (evalMonad f s = Some r)" in corres_symb_exec_r)
   apply (rule dcorres_expand_pfx)
   using corres
   apply (clarsimp simp:corres_underlying_def)
-    apply fastforce
-  apply (wp wp,simp,rule evalMonad_wp)
+    apply (wp wp, simp, rule evalMonad_wp)
   apply (simp add:wp)+
-done
+  done
 
 lemma dcorres_store_word_offs_spec:
   "\<lbrakk>within_page buf (base + of_nat (x * word_size)) sz\<rbrakk> \<Longrightarrow>
@@ -1116,6 +1115,7 @@ lemma dcorres_set_extra_badge:
                  2 + msg_max_length + n < max_ipc_length) and valid_etcbs)
            (corrupt_ipc_buffer rcv in_receive)
            (set_extra_badge rcv_buffer w n)"
+  supply if_cong[cong]
   apply (clarsimp simp:set_extra_badge_def corrupt_ipc_buffer_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
@@ -1291,8 +1291,6 @@ lemma cap_insert_cte_wp_at_masked_as_full:
     apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (clarsimp simp:cte_wp_at_caps_of_state)+
   done
-
-declare cap_object_simps[simp]
 
 lemma is_ep_cap_transform_simp[simp]:
   "Types_D.is_ep_cap (transform_cap cap) = is_ep_cap cap"
@@ -1478,19 +1476,19 @@ lemma get_ipc_buffer_words_receive_slots:
       in is_aligned_weaken[OF is_aligned_after_mask])
        apply (case_tac sz,simp_all add:msg_align_bits)
        apply (simp add:mask_add_aligned)
-         apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+         apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
   apply (subst evalMonad_compose)
    apply (simp add:empty_when_fail_loadWord weak_det_spec_loadWord)+
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-       apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+       apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
   apply (subst evalMonad_compose)
    apply (simp add:empty_when_fail_loadWord weak_det_spec_loadWord)+
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-  apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+  apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
 done
 
 (* FIXME: MOVE *)
@@ -1711,8 +1709,6 @@ lemma dcorres_lookup_extra_caps:
   apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
     prefer 3
            apply simp
-           apply (erule conjE)
-           apply (drule_tac t="of_bl y" in sym, simp)
     apply (rule dcorres_lookup_cap_and_slot[simplified])
     apply (clarsimp simp:transform_cap_list_def)+
     apply wp
@@ -1731,8 +1727,7 @@ lemma dcorres_lookup_extra_caps:
       apply clarsimp
       apply clarify
       apply (drule evalMonad_get_extra_cptrs)
-      apply (simp del:get_extra_cptrs.simps
-        add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
+       apply (simp del:get_extra_cptrs.simps add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
       apply (simp add: word_bits_def del:get_extra_cptrs.simps)
    apply (wp evalMonad_wp)
    apply (case_tac buffer)
@@ -1753,10 +1748,10 @@ lemma dcorres_lookup_extra_caps:
      apply (simp add:weak_det_spec_load_word_offs)
    apply (clarsimp simp:valid_state_def valid_pspace_def cur_tcb_def)+
   apply (wp|clarsimp)+
-done
+  done
 
 lemma dcorres_copy_mrs':
-  notes hoare_post_taut[wp]
+  notes hoare_post_taut[wp] if_cong[cong]
   shows
   "dcorres dc \<top> ((\<lambda>s. evalMonad (lookup_ipc_buffer in_receive recv) s = Some rv)
     and valid_idle and not_idle_thread thread and not_idle_thread recv and tcb_at recv
@@ -1820,6 +1815,7 @@ lemma dcorres_set_mrs':
     and valid_objs and pspace_aligned and pspace_distinct and valid_etcbs)
     (corrupt_ipc_buffer recv in_receive)
     (set_mrs recv rv msgs)"
+  supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:corrupt_ipc_buffer_def)
     apply (case_tac rv)
@@ -2128,6 +2124,7 @@ lemma dcorres_set_thread_state_Restart:
                KHeap_D.set_cap (recver, tcb_pending_op_slot) RestartCap
             od)
            (set_thread_state recver Structures_A.thread_state.Restart)"
+  supply option.case_cong[cong] if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (case_tac "\<not> tcb_at recver s'")
    apply (clarsimp simp:set_thread_state_def)
@@ -2382,6 +2379,7 @@ lemma dcorres_receive_sync:
                       set_endpoint ep (Structures_A.endpoint.RecvEP (queue @ [thread]))
                    od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread))"
+  supply if_cong[cong]
   apply (clarsimp simp: receive_sync_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (case_tac rv)
@@ -2469,9 +2467,9 @@ lemma dcorres_receive_sync:
          apply (clarsimp simp:valid_state_def st_tcb_at_def obj_at_def valid_pspace_def)
          apply (drule valid_objs_valid_ep_simp)
           apply (simp add:is_ep_def)
-         apply (clarsimp simp:valid_ep_def valid_simple_obj_def a_type_def
+         apply (clarsimp simp:valid_ep_def a_type_def
                      split:Structures_A.endpoint.splits list.splits)
-        apply (clarsimp simp:valid_state_def valid_pspace_def valid_simple_obj_def a_type_def)+
+        apply (clarsimp simp:valid_state_def valid_pspace_def a_type_def)+
    apply (rule dcorres_to_wp[where Q=\<top>,simplified])
    apply (rule corres_dummy_set_sync_ep)
   (* RecvEP *)
@@ -2678,7 +2676,7 @@ lemma send_sync_ipc_corres:
   apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
   apply (clarsimp simp: bind_assoc neq_Nil_conv split del:if_split)
-  apply (rule_tac P1="\<top>" and P'="(=) s'a" and x1 = y
+  apply (rule_tac P1="\<top>" and P'="(=) s'" and x1 = y
          in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx]])
       defer
       apply (simp+)[3]

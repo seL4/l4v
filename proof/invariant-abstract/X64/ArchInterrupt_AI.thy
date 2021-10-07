@@ -5,7 +5,7 @@
  *)
 
 theory ArchInterrupt_AI
-imports "../Interrupt_AI"
+imports Interrupt_AI
 begin
 
 context Arch begin global_naming X64
@@ -123,7 +123,7 @@ lemma arch_decode_irq_control_valid[wp]:
           | wp hoare_vcg_imp_lift_R[where P="\<lambda>rv s. x64_num_ioapics (arch_state s) \<noteq> 0"]
           | wp (once) hoare_drop_imps)+
   apply ( safe; auto simp: word_le_not_less[symmetric] word_leq_minus_one_le
-                           ucast_id irq_plus_min_ge_min irq_plus_min_le_max ioapicIRQLines_def
+                           irq_plus_min_ge_min irq_plus_min_le_max ioapicIRQLines_def
                            minUserIRQ_def maxUserIRQ_def word_add_le_mono1 word_add_le_mono2
                            word_le_plus irq_ineq_one irq_ineq_two irq_ineq_three irq_ineq_four
         | cap_hammer | word_hammer)+
@@ -193,6 +193,8 @@ lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
+
+crunch typ_at[wp]: arch_invoke_irq_handler "\<lambda>s. P (typ_at T p s)"
 
 lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
   assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
@@ -264,7 +266,7 @@ lemma updateIRQState_invs[wp]:
                         vs_lookup_pages1_def valid_table_caps_def empty_table_def second_level_tables_def
                         valid_global_objs_def valid_kernel_mappings_def valid_asid_map_def
                         valid_x64_irq_state_def valid_ioports_def all_ioports_issued_def
-                        issued_ioports_def Word_Lemmas.word_not_le[symmetric])
+                        issued_ioports_def word_not_le[symmetric])
   done
 
 lemma no_irq_ioapicMapPinToVector: "no_irq (ioapicMapPinToVector a b c d e)"

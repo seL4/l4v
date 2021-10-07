@@ -14,8 +14,8 @@ theory Syscall_A
 imports
   "ExecSpec.Event_H"
   Decode_A
-  "./$L4V_ARCH/Init_A"
-  "./$L4V_ARCH/Hypervisor_A"
+  Init_A
+  Hypervisor_A
 begin
 
 context begin interpretation Arch .

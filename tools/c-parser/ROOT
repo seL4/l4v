@@ -6,16 +6,18 @@
 
 chapter "C-Parser"
 
-session "Simpl-VCG" = Word_Lib +
+session "Simpl-VCG" in Simpl = Word_Lib +
   sessions
     "HOL-Statespace"
   theories
-    "Simpl/Vcg"
+    "Vcg"
 
 session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
-    "HOL-Word"
     "Lib"
+  directories
+    "umm_heap"
+    "umm_heap/$L4V_ARCH"
   theories
     "CTranslation"

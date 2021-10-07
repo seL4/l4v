@@ -965,7 +965,7 @@ lemma cte_wp_at_ctes_of:
    apply (simp add: field_simps)
   apply (clarsimp split: if_split_asm del: disjCI)
    apply (simp add: ps_clear_def3 field_simps)
-  apply (rule disjI2, rule exI[where x="(p - (p && ~~ mask 9))"])
+  apply (rule disjI2, rule exI[where x="p - (p && ~~ mask 9)"])
   apply (clarsimp simp: ps_clear_def3[where na=9] is_aligned_mask
                         word_bw_assocs field_simps)
   done
@@ -1150,7 +1150,7 @@ lemma no_fail_getMiscObject [wp]:
   "no_fail (sc_at' ptr) (getSchedContext ptr)"
   by (wpsimp simp: getEndpoint_def getNotification_def getReply_def getSchedContext_def)+
 
-lemma get_ep_corres [corres]:
+lemma getEndpoint_corres [corres]:
   "corres ep_relation (ep_at ptr) (ep_at' ptr)
      (get_endpoint ptr) (getEndpoint ptr)"
   apply (rule corres_no_failI)
@@ -1290,7 +1290,7 @@ lemma replyPrevs_of_replyPrev_same_update:
   apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
   by (cases ko; fastforce simp add: replyPrev_same_def project_inject projectKO_opts_defs opt_map_def)
 
-lemma set_other_obj_corres:
+lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
   assumes x: "updateObject ob' = updateObject_default ob'"
   assumes z: "\<And>s. obj_at' P ptr s
@@ -1362,21 +1362,21 @@ lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       a_type_def objBits_simps other_obj_relation_def
                       archObjSize_def pageBits_def
 
-lemma set_ep_corres [corres]:
+lemma setEndpoint_corres [corres]:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
-    apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+    apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
-lemma set_ntfn_corres [corres]:
+lemma setNotification_corres [corres]:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
-       apply (corres_search search: set_other_obj_corres[where P="\<lambda>_. True"])
+       apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 

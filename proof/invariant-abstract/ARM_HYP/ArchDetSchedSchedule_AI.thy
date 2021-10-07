@@ -5,7 +5,7 @@
  *)
 
 theory ArchDetSchedSchedule_AI
-imports "../DetSchedSchedule_AI"
+imports DetSchedSchedule_AI
 begin
 
 context Arch begin global_naming ARM_HYP

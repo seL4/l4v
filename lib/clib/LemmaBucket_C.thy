@@ -23,9 +23,8 @@ lemma hrs_mem_f: "f (hrs_mem s) = hrs_mem (hrs_mem_update f s)"
   done
 
 lemma hrs_mem_heap_update:
-     "heap_update p v (hrs_mem s) = hrs_mem (hrs_mem_update (heap_update p v) s)"
-  apply (rule hrs_mem_f)
-  done
+  "heap_update p v (hrs_mem s) = hrs_mem (hrs_mem_update (heap_update p v) s)"
+  by (rule hrs_mem_f)
 
 lemma addr_card_wb:
   "addr_card = 2 ^ word_bits"
@@ -188,7 +187,7 @@ next
     apply (rule set_eqI)
     apply clarsimp
     apply (rename_tac w)
-    apply (case_tac w)
+    apply (case_tac w rule: word_nat_cases)
     apply (rename_tac m)
     apply (rule_tac x=m in exI)
     apply simp
@@ -210,10 +209,7 @@ lemma upto_intvl_eq':
     apply (subst field_simps [symmetric], rule word_plus_mono_right)
      apply simp
     apply assumption
-   apply (subst Word_Lemmas.of_nat_mono_maybe_le [symmetric])
-     apply simp
-    apply simp
-   apply simp
+   apply (rule of_nat_mono_maybe_le; simp)
   apply clarsimp
   apply (rule_tac x = "unat (xa - x)" in exI)
   apply simp
@@ -221,13 +217,8 @@ lemma upto_intvl_eq':
   apply (rule nat_diff_less)
    apply (subst (asm) word_le_nat_alt, erule order_le_less_trans)
    apply (subst add_diff_eq[symmetric], subst unat_plus_if')
-   apply (simp add: no_olen_add_nat)
-   apply (simp add: le_eq_less_or_eq)
-   apply (erule disjE)
-    apply (subst unat_minus_one)
-     apply (erule (1) of_nat_neq_0)
-    apply (simp add: unat_of_nat)
-   apply (erule ssubst, rule unat_lt2p)
+   apply (simp add: no_olen_add_nat le_eq_less_or_eq)
+   apply (metis gt0_iff_gem1 unat_less_helper unat_ucast_less_no_overflow unsigned_0 unsigned_less)
   apply (simp add: word_le_nat_alt)
   done
 
@@ -275,8 +266,8 @@ next
 qed
 
 lemma intvl_nowrap:
-  fixes x :: "'a::len word"
-  shows "\<lbrakk>y \<noteq> 0; unat y + z \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> x \<notin> {x + y ..+ z}"
+  "\<lbrakk>y \<noteq> 0; unat y + z \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> x \<notin> {x + y ..+ z}" for x :: "'a::len word"
+  supply unsigned_of_nat[simp del]
   apply clarsimp
   apply (drule intvlD)
   apply clarsimp
@@ -391,7 +382,7 @@ proof (rule disjointI, rule notI)
 
   also have "\<dots> \<le> c" by (rule abc)
   also have "\<dots> \<le> c + of_nat ky" using cld dlt ky
-    by - (rule word_random [OF _ iffD1 [OF Word_Lemmas.of_nat_mono_maybe_le]], simp+ )
+    by (meson less_imp_le of_nat_mono_maybe word_random)
   finally show False using ac by simp
 qed
 
@@ -413,6 +404,7 @@ lemma intvl_off_disj:
   and    zoff: "z + off < 2 ^ word_bits"
   shows   "{x ..+ y} \<inter> {x + of_nat off ..+ z} = {}"
   using ylt zoff
+  supply unsigned_of_nat[simp del]
   apply (cases "off = 0")
    apply simp
   apply (rule contrapos_pp [OF TrueI])
@@ -461,9 +453,7 @@ qed
 
 lemma typ_slice_t_self:
   "td \<in> fst ` set (typ_slice_t td m)"
-  apply (cases td)
-  apply (simp split: if_split)
-  done
+  by (fact ladder_set_self)
 
 lemma drop_heap_list_le2:
   "heap_list h n (x + of_nat k)
@@ -777,6 +767,7 @@ proof -
          \<Longrightarrow> unat (of_nat x * of_nat (size_of TYPE('a)) + (of_nat k :: addr))
                  = x * size_of TYPE('a) + k"
     using size
+    supply unsigned_of_nat[simp del]
     apply (case_tac "size_of TYPE('a)", simp_all)
     apply (case_tac "CARD('b)", simp_all)
     apply (subst unat_add_lem[THEN iffD1])
@@ -855,7 +846,7 @@ lemma typ_slice_list_cut:
   apply (intro conjI impI)
    apply simp
   apply (subgoal_tac "\<exists>n'. n = n' + m")
-   apply clarsimp
+   apply (clarsimp simp add: div_add1_eq)
   apply (rule_tac x="n - m" in exI)
   apply simp
   done
@@ -881,6 +872,7 @@ lemma typ_slice_t_array:
 lemma h_t_valid_Array_element':
   "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); coerce \<or> n < CARD('b) \<rbrakk>
     \<Longrightarrow> htd \<Turnstile>\<^sub>t array_ptr_index p coerce n"
+  supply unsigned_of_nat[simp del]
   apply (clarsimp simp only: h_t_valid_def valid_footprint_def Let_def
                              c_guard_def c_null_guard_def)
   apply (subgoal_tac "\<exists>offs. array_ptr_index p coerce n = ptr_add (ptr_coerce p) (of_nat offs)
@@ -958,10 +950,7 @@ lemma ptr_safe_Array_element:
 
 lemma from_bytes_eq:
   "from_bytes [x] = x"
-  apply (clarsimp simp:from_bytes_def update_ti_t_def typ_info_word)
-  apply (simp add:word_rcat_def)
-  apply (simp add:bin_rcat_def)
-  by (metis len8 word_of_int_uint word_ubin.Abs_norm)
+  by (clarsimp simp:from_bytes_def update_ti_t_def typ_info_word word_rcat_def)
 
 lemma bytes_disjoint:"(x::('a::c_type) ptr) \<noteq> y \<Longrightarrow> {ptr_val x + a ..+ 1} \<inter> {ptr_val y + a ..+ 1} = {}"
   by (clarsimp simp:intvl_def)
@@ -1076,7 +1065,7 @@ lemma neq_imp_bytes_disjoint:
     apply (subgoal_tac "(ptr_val x + j && ~~ mask n) = (ptr_val y + i && ~~ mask n)")
      apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
      apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
-     apply (clarsimp simp: is_aligned_neg_mask_eq)
+     apply clarsimp
     apply simp
    apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
   apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
@@ -1206,7 +1195,7 @@ proof (rule classical)
       by blast
 
   then obtain k' where mv: "mv = ptr_val p' + of_nat k'" and klt: "k' < size_td (typ_info_t TYPE('b))"
-    by (clarsimp dest!: intvlD simp: size_of_def typ_uinfo_size)
+    by (clarsimp dest!: intvlD simp: size_of_def)
 
   let ?mv = "ptr_val p' + of_nat k'"
 

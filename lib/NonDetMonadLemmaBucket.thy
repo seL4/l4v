@@ -6,9 +6,9 @@
 
 theory NonDetMonadLemmaBucket
 imports
-  "Monad_WP/NonDetMonadVCG"
-  "MonadEq"
-  "Monad_WP/WhileLoopRulesCompleteness"
+  NonDetMonadVCG
+  MonadEq
+  WhileLoopRulesCompleteness
   "Word_Lib.Distinct_Prop"
 begin
 setup \<open>AutoLevity_Base.add_attribute_test "wp" WeakestPre.is_wp_rule\<close>
@@ -3218,5 +3218,44 @@ lemma hoare_strengthen_pre_via_assert_backward:
   assumes pos: "\<lbrace> P and E \<rbrace> f \<lbrace> Q \<rbrace>"
   shows "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
   by (rule hoare_strengthen_pre_via_assert_forward[OF pos _ neg], simp)
+
+lemma returnOk_E': "\<lbrace>P\<rbrace> returnOk r -,\<lbrace>E\<rbrace>"
+  by (clarsimp simp: returnOk_def validE_E_def validE_def valid_def return_def)
+
+lemma throwError_R': "\<lbrace>P\<rbrace> throwError e \<lbrace>Q\<rbrace>,-"
+  by (clarsimp simp:throwError_def validE_R_def validE_def valid_def return_def)
+
+lemma select_modify_comm:
+  "(do b \<leftarrow> select S; _ \<leftarrow> modify f; use b od) =
+   (do _ \<leftarrow> modify f; b \<leftarrow> select S; use b od)"
+  by (simp add: bind_def split_def select_def simpler_modify_def image_def)
+
+lemma select_f_modify_comm:
+  "(do b \<leftarrow> select_f S; _ \<leftarrow> modify f; use b od) =
+   (do _ \<leftarrow> modify f; b \<leftarrow> select_f S; use b od)"
+  by (simp add: bind_def split_def select_f_def simpler_modify_def image_def)
+
+lemma hoare_validE_R_conjI:
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"
+  apply (clarsimp simp: Ball_def validE_R_def validE_def valid_def)
+  by (case_tac a; fastforce)
+
+lemma validE_R_post_conjD1:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
+  apply (clarsimp simp: validE_R_def validE_def valid_def)
+  by (case_tac a; fastforce)
+
+lemma validE_R_post_conjD2:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
+  apply (clarsimp simp: validE_R_def validE_def valid_def)
+  by (case_tac a; fastforce)
+
+lemma throw_opt_wp[wp]:
+  "\<lbrace>if v = None then E ex else Q (the v)\<rbrace> throw_opt ex v \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  unfolding throw_opt_def by wpsimp auto
+
+lemma hoare_name_pre_state2:
+  "(\<And>s. \<lbrace>P and ((=) s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (auto simp: valid_def intro: hoare_name_pre_state)
 
 end

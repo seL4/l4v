@@ -9,7 +9,7 @@ Top level architecture related proofs.
 *)
 
 theory Arch_AI
-imports "./$L4V_ARCH/ArchUntyped_AI" "./$L4V_ARCH/ArchFinalise_AI"
+imports ArchUntyped_AI ArchFinalise_AI
 begin
 
 declare detype_arch_state[simp]
@@ -62,11 +62,11 @@ qed
 
 
 lemma ucast_assocs:
-  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow>
-   assocs (fn o (ucast :: ('a :: len) word \<Rightarrow> ('b :: len) word))
-     = map (\<lambda>(x, y). (ucast x, y)) (filter (\<lambda>(x, y). x < 2 ^ len_of TYPE('a)) (assocs fn))"
-  apply (simp add: assocs_def enum_word_def
-                   split_def filter_map)
+  "LENGTH('a) < LENGTH('b) \<Longrightarrow>
+   assocs (fn o (ucast :: 'a :: len word \<Rightarrow> 'b :: len word))
+     = map (\<lambda>(x, y). (ucast x, y)) (filter (\<lambda>(x, y). x < 2 ^ LENGTH('a)) (assocs fn))"
+  including no_take_bit
+  apply (simp add: assocs_def enum_word_def split_def filter_map)
   apply (rule map_cong)
    apply (simp add: o_def)
    apply (rule trans [OF _ filter_cong [OF refl]],
@@ -84,19 +84,16 @@ lemma ucast_assocs:
 
 
 lemma ucast_le_migrate:
-  fixes x :: "('a :: len) word"
-  fixes y :: "('b :: len) word"
-  shows
-  "\<lbrakk> y < 2 ^ (size x); size x < size y \<rbrakk> \<Longrightarrow>
-    (ucast x \<le> y) = (x \<le> ucast y)"
-  apply (simp add: word_le_def ucast_def)
+  "\<lbrakk> y < 2 ^ size x; size x < size y \<rbrakk> \<Longrightarrow> (ucast x \<le> y) = (x \<le> ucast y)"
+  for x :: "'a :: len word" and y :: "'b :: len word"
+  including no_take_bit
+  apply (simp add: word_le_def ucast_def del: Word.of_int_uint)
   apply (subst word_uint.Abs_inverse)
    apply (simp add: uints_num word_size)
    apply (rule order_less_le_trans, rule uint_lt2p)
    apply simp
   apply (subst word_uint.Abs_inverse)
-   apply (simp add: uints_num word_size word_less_alt
-                    uint_2p_alt)
+   apply (simp add: uints_num word_size word_less_alt uint_2p_alt)
   apply simp
   done
 

@@ -155,13 +155,13 @@ lemma preemptionPoint_ccorres:
      apply (rule ccorres_split_nothrow
                  [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
          apply (rule ccorres_from_vcg)
-	 apply (rule allI, rule conseqPre, vcg)
-	 apply (thin_tac "P" for P)+
-	 apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
-	 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-	                       carch_state_relation_def
-                               cmachine_state_relation_def)
-	apply ceqv
+     apply (rule allI, rule conseqPre, vcg)
+     apply (thin_tac "P" for P)+
+     apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
+     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                           carch_state_relation_def
+                           cmachine_state_relation_def)
+     apply ceqv
        apply (rule ccorres_liftE_Seq)
        apply (ctac (no_vcg) add: isIRQPending_ccorres)
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -604,7 +604,7 @@ lemma nat_less_4_cases:
 lemma msgRegisters_scast:
   "n < unat (scast n_msgRegisters :: machine_word) \<Longrightarrow>
   unat (scast (index msgRegistersC n)::machine_word) = unat (index msgRegistersC n)"
-  apply (simp add: kernel_all_global_addresses.msgRegisters_def fupdate_def update_def n_msgRegisters_def fcp_beta
+  apply (simp add: kernel_all_global_addresses.msgRegisters_def fupdate_def update_def n_msgRegisters_def
                    Kernel_C.R10_def Kernel_C.R8_def Kernel_C.R9_def Kernel_C.R15_def)
   by (auto dest!: nat_less_4_cases)
 
@@ -769,6 +769,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
+  including no_take_bit
   apply (cinit lift: thread_' isReceiver_')
    apply (rule ccorres_split_nothrow)
        apply simp
@@ -833,7 +834,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
           apply (ctac add: ccorres_return_C)
          apply clarsimp
         apply (frule cap_get_tag_isCap_unfolded_H_cap)
-        apply (clarsimp simp: if_1_0_0 Collect_const_mem isCap_simps word_less_nat_alt
+        apply (clarsimp simp: Collect_const_mem isCap_simps word_less_nat_alt
                               option_to_ptr_def from_bool_0 option_to_0_def ccap_relation_def
                               c_valid_cap_def cl_valid_cap_def cap_frame_cap_lift)
        apply (rule ccorres_cond_true_seq)
@@ -844,7 +845,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                              dumb_bool_for_all
                       split: capability.splits arch_capability.splits bool.splits)
       apply wpsimp
-     apply (clarsimp simp: if_1_0_0 Collect_const_mem)
+     apply (clarsimp simp: Collect_const_mem)
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt )
       apply (frule ccap_relation_page_is_device)
@@ -928,6 +929,7 @@ lemma getMRs_user_word:
       \<and> msgLength info \<le> msgMaxLength \<and> i >= scast n_msgRegisters\<rbrace>
   getMRs thread (Some buffer) info
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 8 + 8))\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)
@@ -1053,8 +1055,7 @@ lemma getMRs_length:
 
 lemma index_msgRegisters_less':
   "n < 4 \<Longrightarrow> index msgRegistersC n < 0x18"
-  by (simp add: msgRegistersC_def fupdate_def Arrays.update_def
-                fcp_beta "StrictC'_register_defs")
+  by (simp add: msgRegistersC_def fupdate_def Arrays.update_def "StrictC'_register_defs")
 
 lemma index_msgRegisters_less:
   "n < 4 \<Longrightarrow> index msgRegistersC n <s 0x18"

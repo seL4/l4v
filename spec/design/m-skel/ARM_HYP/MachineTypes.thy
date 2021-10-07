@@ -10,7 +10,7 @@ theory MachineTypes
 imports
   "Word_Lib.WordSetup"
   "Lib.OptionMonadND"
-  "../Setup_Locale"
+  Setup_Locale
   Platform
 begin
 context Arch begin global_naming ARM_HYP

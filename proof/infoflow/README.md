@@ -34,7 +34,7 @@ Important Theories
 The top-level theory where noninterference is proved for the seL4
 abstract specification is [`Noninterference`](Noninterference.thy); it
 is transferred to the C implementation via refinement in the theory
-[`Noninterference_Refinement`](Noninterference_Refinement.thy). The base
+[`Noninterference_Refinement`](refine/Noninterference_Refinement.thy). The base
 theory where noninterference is (generically) defined is
 [`Noninterference_Base`](Noninterference_Base.thy). The bottom-level
 theory where confidentiality is formalised over the seL4 abstract

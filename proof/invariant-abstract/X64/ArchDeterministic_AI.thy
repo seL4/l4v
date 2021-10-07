@@ -5,7 +5,7 @@
  *)
 
 theory ArchDeterministic_AI
-imports "../Deterministic_AI"
+imports Deterministic_AI
 begin
 
 context Arch begin global_naming X64
@@ -116,7 +116,6 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 
 end
-
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2
   proof goal_cases
   interpret Arch .

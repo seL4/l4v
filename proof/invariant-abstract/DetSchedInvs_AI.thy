@@ -5,7 +5,7 @@
  *)
 
 theory DetSchedInvs_AI
-imports "$L4V_ARCH/ArchDeterministic_AI"
+imports ArchDeterministic_AI
 begin
 
 context begin interpretation Arch .

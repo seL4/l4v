@@ -9,7 +9,7 @@ CSpace invariants
 *)
 
 theory CSpaceInv_AI
-imports "./$L4V_ARCH/ArchCSpaceInvPre_AI"
+imports ArchCSpaceInvPre_AI
 begin
 
 context begin interpretation Arch .
@@ -613,8 +613,7 @@ lemma set_cap_live[wp]:
      set_cap cap p \<lbrace>\<lambda>rv s. P (obj_at live p' s)\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
   apply (wp get_object_wp | wpc)+
-  apply (auto simp: obj_at_def live_def) (* FIXME: ARMHYP *)
-  done
+  by (fastforce simp: obj_at_def live_def)
 
 
 lemma set_cap_cap_to:

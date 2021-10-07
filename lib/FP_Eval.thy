@@ -7,7 +7,7 @@
 theory FP_Eval
 imports
   HOL.HOL
-  "ml-helpers/TermPatternAntiquote"
+  TermPatternAntiquote
 begin
 
 text \<open>

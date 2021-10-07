@@ -12,8 +12,7 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches unmapPageTable
-  for ctes_of[wp]:  "\<lambda>s. P (ctes_of s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps)
 
 end
@@ -27,7 +26,7 @@ lemma storePTE_def':
 
 lemma objBits_InvalidPTE:
   "objBits RISCV64_H.InvalidPTE = word_size_bits"
-  by (simp add: objBits_simps archObjSize_def word_size_bits_def bit_simps)
+  by (simp add: objBits_simps bit_simps)
 
 lemma objBits_InvalidPTE_pte_bits:
   "objBits RISCV64_H.InvalidPTE = pte_bits"
@@ -353,7 +352,7 @@ proof -
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                          size_of_def pageBits_def
-                  elim!: ptr_retyp_htd_safe_neg)
+                         ptr_retyp_htd_safe_neg)
   apply clarsimp
   apply (cut_tac helper[rule_format])
    prefer 2
@@ -409,7 +408,7 @@ lemma ucast_x3_shiftr_asid_low_bits:
    \<Longrightarrow> UCAST(7 \<rightarrow> 64) (UCAST(16 \<rightarrow> 7) (UCAST(64 \<rightarrow> 16) base >> asid_low_bits)) = base >> asid_low_bits"
   apply (simp add: ucast_shiftr word_le_mask_eq asid_bits_def)
   apply (subst le_max_word_ucast_id)
-   apply (simp add: max_word_def)
+   apply simp
    apply (drule_tac n=asid_low_bits in le_shiftr)
    apply (simp add: asid_low_bits_def asid_bits_def mask_def )+
   done
@@ -431,6 +430,7 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -724,13 +724,14 @@ lemma lookupPTSlot_bitsLeft_less_64:
 (* FIXME move *)
 lemma addrFromPPtr_in_user_region:
   "p \<in> kernel_mappings \<Longrightarrow> addrFromPPtr p \<in> user_region"
-  apply (simp add: kernel_mappings_def addrFromPPtr_def baseOffset_def pAddr_base_def
+  supply if_cong[cong]
+  apply (simp add: kernel_mappings_def addrFromPPtr_def pptrBaseOffset_def paddrBase_def
                    user_region_def pptr_base_def RISCV64.pptrBase_def canonical_user_def)
   apply (clarsimp simp: canonical_bit_def mask_def)
   apply (subst diff_minus_eq_add[symmetric])
   apply (cut_tac n=p in max_word_max)
-  apply (simp add: max_word_def)
   apply unat_arith
+  apply simp
   done
 
 lemma page_table_at'_kernel_mappings:
@@ -754,7 +755,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        hs
@@ -762,10 +763,10 @@ lemma decodeRISCVPageTableInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVPageTableInvocation_'proc)"
    (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre ?pre' _ _ _")
-  supply Collect_const[simp del] if_cong[cong]
+  supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_'
+                      current_extra_caps_' cap_' buffer_'
                 simp: decodeRISCVMMUInvocation_def invocation_eq_use_types
                       decodeRISCVPageTableInvocation_def)
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
@@ -968,7 +969,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
        apply csymbr
      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
         apply vcg
-       apply (solves \<open>clarsimp simp: isCap_simps hd_conv_nth RISCV64_H.pptrUserTop_def
+       apply (solves \<open>clarsimp simp: isCap_simps hd_conv_nth RISCV64.pptrUserTop_def'
                                      pptrUserTop_def' not_less length_le_helper\<close>)
         apply (fold not_None_def) (* avoid expanding capPTMappedAddress  *)
         apply clarsimp
@@ -1174,6 +1175,7 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
+  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1227,8 +1229,8 @@ lemma ccorres_pre_getObject_pte:
   done
 
 lemma ptr_add_uint_of_nat [simp]:
-    "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
-  by (clarsimp simp: CTypesDefs.ptr_add_def)
+  "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
+  including no_take_bit by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
 
@@ -1242,8 +1244,8 @@ lemma obj_at_pte_aligned:
 
 lemma addrFromPPtr_mask_6:
   "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
-  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def baseOffset_def canonical_bit_def
-                   pAddr_base_def)
+  apply (simp add: addrFromPPtr_def RISCV64.pptrBase_def pptrBaseOffset_def canonical_bit_def
+                   paddrBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -1332,7 +1334,7 @@ lemma vaddr_segment_nonsense3_folded:
 lemma vmsz_aligned_addrFromPPtr':
   "vmsz_aligned (addrFromPPtr p) sz
        = vmsz_aligned p sz"
-  apply (simp add: vmsz_aligned_def RISCV64.addrFromPPtr_def baseOffset_def pAddr_base_def)
+  apply (simp add: vmsz_aligned_def RISCV64.addrFromPPtr_def pptrBaseOffset_def paddrBase_def)
   apply (subgoal_tac "is_aligned RISCV64.pptrBase (pageBitsForSize sz)")
    apply (rule iffI)
     apply (drule(1) aligned_add_aligned)
@@ -1490,6 +1492,7 @@ lemma canonical_address_cap_frame_cap:
 
 lemma of_nat_pageBitsForSize_eq:
   "(x = of_nat (pageBitsForSize sz)) = (unat x = pageBitsForSize sz)" for x::machine_word
+  including no_take_bit
   by (auto simp: of_nat_pageBitsForSize)
 
 lemma ccap_relation_FrameCap_IsMapped:
@@ -1566,15 +1569,16 @@ lemma decodeRISCVFrameInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVFrameInvocation_'proc)"
+  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_'
+                      current_extra_caps_' cap_' buffer_'
                 simp: decodeRISCVMMUInvocation_def)
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeRISCVFrameInvocation_def
                del: Collect_const
@@ -1728,7 +1732,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
               apply (clarsimp simp: ccap_relation_FrameCap_Size framesize_from_to_H)
               apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                  apply vcg
-                apply (solves \<open>clarsimp simp: RISCV64_H.pptrUserTop_def pptrUserTop_def' p_assoc_help\<close>)
+                apply (solves \<open>clarsimp simp: pptrUserTop_def' p_assoc_help\<close>)
                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
                apply (simp add: syscall_error_to_H_cases)
               (* check vaddr alignment *)
@@ -2234,7 +2238,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
@@ -2242,7 +2246,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
        (Call decodeRISCVMMUInvocation_'proc)"
   supply ccorres_prog_only_cong[cong]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      extraCaps___struct_extra_caps_C_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
                     RISCV64_H.decodeInvocation_def
@@ -2359,7 +2363,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                                         from_bool_0)
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
-                   apply (fastforce simp: max_word_def asid_high_bits_def)
+                   apply (fastforce simp: asid_high_bits_def)
                   apply (clarsimp simp: rf_sr_riscvKSASIDTable from_bool_def
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
@@ -2676,7 +2680,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
               apply (rule plus_one_helper2 [OF order_refl])
               apply (rule notI, drule max_word_wrap)
-              apply (fastforce simp: max_word_def asid_low_bits_def)
+              apply (fastforce simp: asid_low_bits_def)
              apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
@@ -2933,7 +2937,7 @@ lemma Arch_decodeInvocation_ccorres:
        (UNIV \<inter> {s. label___unsigned_long_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps___struct_extra_caps_C_' s = extraCaps'}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
              \<inter> {s. call_' s = from_bool isCall }) []
@@ -2945,7 +2949,7 @@ proof -
   note trim_call = ccorres_trim_returnE[rotated 2, OF ccorres_call]
   from assms show ?thesis
     apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' slot_'
-                        extraCaps___struct_extra_caps_C_' cap_' buffer_' call_')
+                        current_extra_caps_' cap_' buffer_' call_')
      apply (simp only: cap_get_tag_isCap_ArchObject RISCV64_H.decodeInvocation_def)
        apply (rule trim_call[OF decodeRISCVMMUInvocation_ccorres], simp+)[1]
     apply (clarsimp simp: o_def excaps_in_mem_def slotcap_in_mem_def)

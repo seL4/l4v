@@ -8,7 +8,7 @@ chapter "Machine Operations"
 
 theory MachineOps
 imports
-  "../MachineMonad"
+  MachineMonad
 begin
 
 section "Wrapping and Lifting Machine Operations"
@@ -441,7 +441,8 @@ where
 definition
   invalidateCacheRange_I :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
 where
-  "invalidateCacheRange_I vstart vend pstart \<equiv> cacheRangeOp invalidateByVA_I vstart vend pstart"
+  "invalidateCacheRange_I vstart vend pstart \<equiv> invalidate_I_PoU"
+  (* for other than A53 and A35: "cacheRangeOp invalidateByVA_I vstart vend pstart" *)
 
 definition
   branchFlushRange :: "machine_word \<Rightarrow> machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
@@ -478,7 +479,7 @@ definition
   where
  "clearMemory ptr bytelength \<equiv>
   do mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1];
-     cleanCacheRange_PoU ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
+     cleanCacheRange_RAM ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
   od"
 
 definition

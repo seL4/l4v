@@ -612,12 +612,12 @@ end
 fun mk_sdiv(t1,t2) = let
   val ty = type_of t1
 in
-  Const(@{const_name "sdiv"}, ty --> ty --> ty) $ t1 $ t2
+  Const(@{const_name "signed_divide"}, ty --> ty --> ty) $ t1 $ t2
 end
 fun mk_smod(t1,t2) = let
   val ty = type_of t1
 in
-  Const(@{const_name "smod"}, ty --> ty --> ty) $ t1 $ t2
+  Const(@{const_name "signed_modulo"}, ty --> ty --> ty) $ t1 $ t2
 end
 
 fun mk_uminus t = let

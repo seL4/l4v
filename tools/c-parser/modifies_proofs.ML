@@ -226,23 +226,31 @@ in
   Seq.of_list res
 end
 
+fun seq_all_new i = let
+  fun before_all_new s t = t THEN_ALL_NEW s
+in
+  fn (x::xs) => fold before_all_new xs x i
+   | [] => all_tac
+end
+
 fun modifies_tactic mod_inv_prop ctxt = let
   val mip_intros = [mod_inv_prop] RL @{thms modifies_inv_intros}
-  val gsurj = Proof_Context.get_thm ctxt "globals.surjective"
-  val geqs = map (fn t => [gsurj, gsurj] MRS t) @{thms asm_store_eq_helper}
-  val gsp = Proof_Context.get_thms ctxt "globals.splits"
+  val globals_equality = Proof_Context.get_thms ctxt "globals.equality"
+  fun asm_spec_tactic i =
+    seq_all_new i [
+      resolve_tac ctxt @{thms asm_spec_preserves},
+      asm_lr_simp_tac (ctxt addsimps @{thms mex_def meq_def})
+    ]
 in
-  EVERY [
-    HoarePackage.hoare_rule_tac ctxt @{thms HoarePartial.ProcNoRec1} 1,
-    REPEAT_ALL_NEW (resolve_tac ctxt (@{thms allI} @ mip_intros)) 1,
-    ALLGOALS (modifies_vcg_tactic ctxt),
-    ALLGOALS (clarsimp_tac ctxt),
-    ALLGOALS (TRY o resolve_tac ctxt @{thms asm_spec_enabled}),
-    ALLGOALS (clarsimp_tac
-                (ctxt addSEs @{thms asm_specE state_eqE} addsimps (gsp @ @{thms state.splits}))),
-    ALLGOALS (clarsimp_tac (ctxt addsimps geqs)),
-    ALLGOALS (TRY o REPEAT_ALL_NEW (resolve_tac ctxt [exI])),
-    ALLGOALS (asm_full_simp_tac ctxt)
+  seq_all_new 1 [
+    HoarePackage.hoare_rule_tac ctxt @{thms HoarePartial.ProcNoRec1},
+    REPEAT_ALL_NEW (resolve_tac ctxt (@{thms allI} @ mip_intros)),
+    asm_spec_tactic ORELSE' modifies_vcg_tactic ctxt,
+    TRY o clarsimp_tac ctxt,
+    TRY o REPEAT_ALL_NEW (resolve_tac ctxt [exI]),
+    resolve_tac ctxt globals_equality,
+    asm_lr_simp_tac ctxt,
+    resolve_tac ctxt @{thms surjective_pairing}
   ]
 end
 
@@ -421,12 +429,12 @@ end
 fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
   if Config.get_global thy calculate_modifies_proofs then
     let
-      val lthy = Named_Target.init globloc thy
+      val lthy = Named_Target.init [] globloc thy
     in
       lthy
-        |> Local_Theory.open_target |> snd
+        |> Local_Theory.begin_nested |> snd
         |> prove_all_modifies_goals_local csenv includeP tyargs
-        |> Local_Theory.close_target
+        |> Local_Theory.end_nested
         |> Local_Theory.exit_global
     end
   else

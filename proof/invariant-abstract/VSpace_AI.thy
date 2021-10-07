@@ -9,7 +9,7 @@ Architecture-independent VSpace invariant proofs
 *)
 
 theory VSpace_AI
-imports "./$L4V_ARCH/ArchVSpace_AI"
+imports ArchVSpace_AI
 begin
 context begin interpretation Arch .
 
@@ -17,6 +17,8 @@ requalify_facts
    pspace_respects_device_region_dmo
    cap_refs_respects_device_region_dmo
    dmo_setDeadline
+   ackInterrupt_device_state_inv
+
 end
 
 lemmas device_region_dmos = pspace_respects_device_region_dmo

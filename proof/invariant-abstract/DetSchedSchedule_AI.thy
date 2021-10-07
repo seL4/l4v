@@ -5,7 +5,7 @@
  *)
 
 theory DetSchedSchedule_AI
-imports "$L4V_ARCH/ArchDetSchedDomainTime_AI"
+imports ArchDetSchedDomainTime_AI
 begin
 
 context begin interpretation Arch .

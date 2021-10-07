@@ -7,7 +7,7 @@
 chapter "Fault Handlers"
 
 theory ArchFaultHandler_H
-imports "../TCB_H" "../Structures_H"
+imports TCB_H Structures_H
 begin
 
 context Arch begin global_naming ARM_HYP_H

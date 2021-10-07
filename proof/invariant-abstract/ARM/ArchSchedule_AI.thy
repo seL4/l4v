@@ -5,7 +5,7 @@
  *)
 
 theory ArchSchedule_AI
-imports "../Schedule_AI"
+imports Schedule_AI
 begin
 
 context Arch begin global_naming ARM
@@ -66,9 +66,6 @@ lemma arch_stit_tcb_at[wp, Schedule_AI_asms]:
   apply (simp add: arch_switch_to_idle_thread_def )
   apply wp
   done
-
-crunch st_tcb_at[wp]: set_vm_root "st_tcb_at P t"
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)

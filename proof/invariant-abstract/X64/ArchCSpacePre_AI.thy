@@ -9,7 +9,7 @@ X64-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
-imports "../CSpacePre_AI"
+imports CSpacePre_AI
 begin
 
 context Arch begin global_naming X64
@@ -159,24 +159,6 @@ lemma unique_table_caps_upd_eqD:
     apply (rule_tac p = p' in fun_upd_Some_rev)
     apply simp+
   apply (simp add: if_distrib split:if_splits)
-  done
-
-(* FIXME: unused *)
-lemma set_untyped_cap_as_full_not_final_not_pg_cap:
-  "\<lbrace>\<lambda>s. (\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)
-      \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
-  set_untyped_cap_as_full src_cap cap src
-  \<lbrace>\<lambda>_ s.(\<exists>a b. (a, b) \<noteq> dest \<and> \<not> is_pg_cap cap'
-            \<and> cte_wp_at (\<lambda>cap. gen_obj_refs cap = gen_obj_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
-  apply (rule hoare_pre)
-  apply (wp hoare_vcg_ex_lift)
-   apply (rule_tac Q = "cte_wp_at Q slot"
-               and Q'="cte_wp_at ((=) src_cap) src" for Q slot in P_bool_lift' )
-    apply (wp set_untyped_cap_as_full_cte_wp_at)
-    subgoal by (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
-   apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
-   apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)
   done
 
 lemma arch_derived_is_device:

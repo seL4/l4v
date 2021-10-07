@@ -260,12 +260,6 @@ lemma unat_of_nat_pageBitsForSize_32 [simp]:
   apply simp
   done
 
-(* FIXME move *)
-lemma shiftl_t2n':
-  "w << n = w * (2 ^ n)"
-  for w :: "'a::len word"
-  by (simp add: shiftl_t2n)
-
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (FrameCap ptr undefined sz False None))
            and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
@@ -276,6 +270,7 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
+  including no_take_bit
   supply pageBitsForSize_bounded[simp del]
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="capAligned (ArchObjectCap (FrameCap ptr undefined sz False None))"
@@ -580,8 +575,8 @@ lemma clearMemory_setObject_PTE_ccorres:
     apply (simp add: bit_simps)
    apply (clarsimp simp add: bit_simps
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps
-                    field_simps linorder_not_less[symmetric] archObjSize_def
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
+                    linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
   apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -871,7 +866,7 @@ lemma cancelBadgedSends_ccorres:
           apply (induct_tac list)
            apply (rule allI)
            apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
-           apply (rule ccorres_tmp_lift2 [OF _ _ refl])
+           apply (rule ccorres_tmp_lift2 [OF _ _ Int_lower1])
             apply ceqv
            apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_rhs_assoc2)
@@ -1173,6 +1168,7 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
+  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

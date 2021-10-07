@@ -5,9 +5,10 @@ session Simpl (AFP) = HOL +
   sessions
     "HOL-Library"
     "HOL-Statespace"
+  directories
+    "ex"
   theories
     Simpl
   document_files
-    "mathpartir.sty"
     "root.bib"
     "root.tex"

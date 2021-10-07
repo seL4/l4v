@@ -10,9 +10,8 @@ Arch Functions for cancelling IPC.
 
 chapter \<open>Arch IPC Cancelling\<close>
 
-
 theory ArchIpcCancel_A
-imports "../Sporadic_A"
+imports Sporadic_A
 begin
 
 context Arch begin global_naming ARM_A

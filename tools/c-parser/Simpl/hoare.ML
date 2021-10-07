@@ -539,7 +539,7 @@ fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false
 
 fun add_declaration name decl thy =
   thy
-  |> Named_Target.init name
+  |> Named_Target.init [] name
   |> Local_Theory.declaration {syntax = false, pervasive = false} decl
   |> Local_Theory.exit
   |> Proof_Context.theory_of;
@@ -814,18 +814,18 @@ fun expression_no_pos (expr, fixes) : Expression.expression =
 
 fun add_locale name expr elems thy =
   thy
-  |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
+  |> Expression.add_locale (Binding.name name) (Binding.name name) [] expr elems
   |> snd
   |> Local_Theory.exit;
 
 fun add_locale' name expr elems thy =
   thy
-  |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
+  |> Expression.add_locale (Binding.name name) (Binding.name name) [] expr elems
   ||> Local_Theory.exit;
 
 fun add_locale_cmd name expr elems thy =
   thy
-  |> Expression.add_locale_cmd (Binding.name name) (Binding.name name)
+  |> Expression.add_locale_cmd (Binding.name name) (Binding.name name) []
     (expression_no_pos expr) elems
   |> snd
   |> Local_Theory.exit;
@@ -888,7 +888,7 @@ fun apply_in_context thy lexp f t =
 
 fun add_abbrev loc mode name spec thy =
   thy
-  |> Named_Target.init loc
+  |> Named_Target.init [] loc
   |> (fn lthy => let val t = Syntax.read_term (Local_Theory.target_of lthy) spec;
       in Local_Theory.abbrev mode ((Binding.name name, NoSyn), t) lthy end)
   |> #2
@@ -1060,7 +1060,7 @@ fun procedures_definition locname procs thy =
         fun add_decl_and_def lname ctxt =
             ctxt
             |> Proof_Context.theory_of
-            |> Named_Target.init lname
+            |> Named_Target.init [] lname
             |> Local_Theory.declaration {syntax = false, pervasive = false} parameter_info_decl
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
@@ -1073,7 +1073,7 @@ fun procedures_definition locname procs thy =
          |-> add_decl_and_def
       end;
 
-   fun mk_def_eq _ read_term name =
+   fun mk_def_eq thy read_term name =
       if has_body name
       then
          let
@@ -1088,8 +1088,9 @@ fun procedures_definition locname procs thy =
            val Free (gamma,_) = read_term programN;
            val eq = HOLogic.Trueprop$
                      HOLogic.mk_eq (Free (gamma,fastype_of nt --> fastype_of rhs)$nt,rhs)
+           val consts = Sign.consts_of thy;
            val eqs =
-             YXML.string_of_body (Term_XML.Encode.term (map_types (K dummyT) eq));
+            YXML.string_of_body (Term_XML.Encode.term consts (Consts.dummy_types consts eq));
            val assms = Element.Assumes [((Binding.name (suffix bodyP name'), []),[(eqs,[])])]
          in [assms]
          end

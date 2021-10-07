@@ -4,6 +4,141 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
+signature FUN_RM =
+sig
+  (* Statement lists. *)
+  type stmt_list
+  val stmt_list_of : Absyn.statement list -> stmt_list
+  val of_stmt_list : stmt_list -> Absyn.statement list
+  val @@ : stmt_list * stmt_list -> stmt_list
+  val @> : stmt_list * Absyn.statement list -> Absyn.statement list
+  val empty : stmt_list -> bool
+  (* A monad for extracting function calls that are embedded in expressions. *)
+  type 'rv fun_rm
+  val run : 'a fun_rm -> stmt_list * 'a
+  val run' : unit fun_rm -> Absyn.statement list
+  val scope_pre : 'a fun_rm -> ('a -> 'b fun_rm) -> (stmt_list * 'b) fun_rm
+  val scope_stmts : unit fun_rm -> Absyn.statement list fun_rm
+  val scope_rv : 'a fun_rm -> 'a fun_rm
+  val add_stmts : stmt_list -> unit fun_rm
+  val add_stmts_fst : (stmt_list * 'a) -> 'a fun_rm
+  val add_stmt : Absyn.statement -> unit fun_rm
+  val next_sym : string -> int fun_rm
+  val return : 'a -> 'a fun_rm
+  val pass : ('a -> unit fun_rm) -> 'a -> 'a fun_rm
+  val >- : 'a fun_rm * ('a -> 'b fun_rm) -> 'b fun_rm
+  val <:> : 'a fun_rm * 'b fun_rm -> ('a * 'b) fun_rm
+  val >> : unit fun_rm * 'b fun_rm -> 'b fun_rm
+  val <$ : ('a -> 'b) * 'a fun_rm -> 'b fun_rm
+  val $> : 'a fun_rm * ('a -> 'b) -> 'b fun_rm
+  val mmap : ('a -> 'b fun_rm) -> 'a list -> 'b list fun_rm
+end
+
+structure FunRm :> FUN_RM =
+struct
+
+infix @@ @> >- <*> <$ $> <:> >>
+
+fun (f >- g) (syms, stmts) = let
+  val (syms', stmts', rv_f) = f (syms, stmts)
+in
+  g rv_f (syms', stmts')
+end
+
+fun return v (syms, stmts) = (syms, stmts, v)
+fun f <*> g = f >- (fn f' => g >- return o f')
+fun f <$ g = return f <*> g
+fun f $> g = g <$ f
+fun f <:> g = pair <$ f <*> g
+fun f >> g = snd <$ (f <:> g)
+fun pass f x = f x >> return x
+
+fun mmap _ [] = return []
+  | mmap f (h::t) = cons <$ f h <*> mmap f t
+
+(* A difference list that is most likely a premature optimisation.
+   The `option` allows testing for emptiness. *)
+type stmt_list = (Absyn.statement list ->  Absyn.statement list) option
+fun stmt_list_of xs = if null xs then NONE else SOME (fn ys => xs @ ys)
+fun empty NONE = true
+  | empty _ = false
+fun NONE @> ys = ys
+  | (SOME xs) @> ys = xs ys
+fun NONE @@ ys = ys
+  | xs @@ NONE = xs
+  | (SOME xs) @@ (SOME ys) = SOME (xs o ys)
+fun of_stmt_list xs = xs @> []
+
+(* A state monad for extracting function calls that are embedded in expressions.
+   Expressions rendered to SIMPL cannot contain SIMPL procedure calls. We therefore
+   extract any function calls embedded in an expression to new statements placed just
+   before whichever statement contained the expression. We replace each original function
+   call with a temporary variable which takes the value returned by the extracted function.
+   `fun_rm` provides support for tracking the temporary variables used, and the new
+   statements emitted for the extracted function calls.
+   The state consists of a bag of symbols used for temporary variables and
+   a list of accumulated program statements. Since we always append statements to the tail
+   of the list, we store the list of statements as a difference list. This accumulation
+   of statements effectively makes this a writer monad, but it's more convenient to
+   implement as a state monad. *)
+type 'rv fun_rm = int Symtab.table * stmt_list -> int Symtab.table * stmt_list * 'rv
+
+fun add_stmts new_stmts (syms, stmts) = (syms, stmts @@ new_stmts, ())
+fun add_stmts_fst (stmts, rv) = add_stmts stmts >> return rv
+fun add_stmt s = add_stmts (stmt_list_of [s])
+
+fun next_sym name (syms, stmts) = let
+  val i = case Symtab.lookup syms name of NONE => 1 | SOME i => i + 1
+in
+  (Symtab.update (name, i) syms, stmts, i)
+end
+
+fun run f = let
+  (* Once we're done executing the action, we don't need the symbol table any more,
+     since the temporary variables won't be referenced again. *)
+  val (_, stmts, rv) = f (Symtab.empty, NONE)
+in
+  (stmts, rv)
+end
+
+(* When extracting function calls embedded in expressions with conditional and
+   short-circuit operators, we might need to generate conditional statements.
+   Procedure calls extracted from sub-expressions that are only conditionally
+   evaluated in the C semantics should be scoped to the appropriate branch of
+   such a conditional statement.
+   The `scope` operator allows inner scopes to be embedded in outer scopes for
+   this purpose. *)
+fun scope_pre alloc f (outer_syms, outer_stmts) = let
+  (* The `alloc` action is executed in the outer scope before `f` is executed
+     in the inner scope. Any variables allocated by `alloc` remain free to be
+     allocated by `f` in the inner scope, but are not free on return to the
+     outer scope. This is a hack to preserve compatibility with older proofs in
+     some obscure cases. It can be used to allocate variables that are to be
+     assigned only at the end of the inner scope, without preventing the inner
+     scope from first using those variables for its own purposes. *)
+  val (outer_syms', outer_stmts', vars) = alloc (outer_syms, outer_stmts)
+  (* We assume that any variables allocated in the inner scope are not live on
+     return to the outer scope, so we can drop the inner scope's symbol table.
+     This means that `scope` can also be useful for avoiding unnecessary variable
+     allocations in unconditionally evaluated subexpressions, when it's known that
+     any variables allocated by the inner scope will only be used in statements
+     that will be immediately emitted by the outer scope. *)
+  val (_, inner_stmts, rv) = f vars (outer_syms, NONE)
+in
+  (* Return the statements accumulated inside the scope, and continue with the
+     symbol table and statements for the outer scope.
+     It's the outer scope's responsibility to do something appropriate with the
+     returned statements. *)
+  (outer_syms', outer_stmts', (inner_stmts, rv))
+end
+
+val run' = of_stmt_list o #1 o run
+fun scope_plain f = scope_pre (return ()) (K f)
+fun scope_stmts f = scope_plain f $> of_stmt_list o #1
+fun scope_rv f = scope_plain f >- add_stmts_fst
+
+end
+
 signature SYNTAX_TRANSFORMS =
 sig
   type program = Absyn.ext_decl list
@@ -203,247 +338,198 @@ end
 (* set up little state-transformer monad *)
 open NameGeneration
 
-infix >> >-
-fun (f >- g) m = let
-  val (m',result) = f m
-in
-  g result m'
-end
-fun (f >> g) = f >- (fn _ => g)
-fun return v m = (m,v)
-fun mmap f list =
-    case list of
-      [] => return []
-    | h::t => f h >- (fn h' => mmap f t >- (fn t' => return (h'::t')))
+infix @> >- <:> >> <$ $>
+fun x @> y = FunRm.@> (x,y)
+fun f >- g = FunRm.>- (f,g)
+fun f <:> g = FunRm.<:> (f,g)
+fun f >> g = FunRm.>> (f,g)
+fun f <$ g = FunRm.<$ (f,g)
+fun f $> g = FunRm.$> (f,g)
 
-fun new_var (ty,l,r) (embmap, calls) = let
-  val rtype_n = tyname ty
-
-  val temp_i = case Symtab.lookup embmap rtype_n of
-                 NONE => 1
-               | SOME i => i + 1
-  val nm = embret_var_name (rtype_n, temp_i)
-  val mvinfo = MungedVar{munge = nm, owned_by = NONE}
-  val temp = ewrap(Var (MString.dest nm, ref (SOME (ty, mvinfo))), l, r)
-  val emb' = Symtab.update (rtype_n, temp_i) embmap
-in
-  ((emb',calls), temp)
-end
-
-
-fun add_stmts stmts (embmap,sts) = ((embmap, sts @ stmts), ())
-fun add_stmt st = add_stmts [st]
-
-fun new_call cse fn_e args (l,r) = let
-  open ProgramAnalysis
-  val (_, (rty, _)) = fndes_callinfo cse fn_e
-in
-  new_var (rty, eleft fn_e, eright fn_e) >- (fn temp =>
-  add_stmt (swrap(EmbFnCall(temp,fn_e,args), l, r)) >>
-  return temp)
-end
-
-val bogus_empty = sbogwrap EmptyStmt
-
-fun poscond v stmts =
-    sbogwrap(IfStmt(v,sbogwrap(Block (map BI_Stmt stmts)),bogus_empty))
-fun negcond v stmts =
-    sbogwrap(IfStmt(v,bogus_empty,sbogwrap(Block (map BI_Stmt stmts))))
-fun assign (v, e) = sbogwrap(Assign(v,ebogwrap(MKBOOL e)))
-
-
-
-fun ex_remove_embfncalls cse e = let
-  val doit = ex_remove_embfncalls cse
-  fun w e0 = ewrap(e0,eleft e,eright e)
-in
-  case enode e of
-    BinOp(bop,e1,e2) => let
-      val scp = bop = LogOr orelse bop = LogAnd
+fun ex_remove_embfncalls cse = let
+  fun new_var (ty,l,r) = let
+    val rtype_n = tyname ty
+    fun mk_var temp_i = let
+      val nm = embret_var_name (rtype_n, temp_i)
+      val mvinfo = MungedVar {munge = nm, owned_by = NONE}
     in
-      if scp andalso eneeds_sc_protection e2 then
-        guard_translate cse e
-      else
-        doit e1 >- (fn e1' =>
-        doit e2 >- (fn e2' =>
-        return (w(BinOp(bop,e1',e2')))))
+      ewrap(Var (MString.dest nm, ref (SOME (ty, mvinfo))), l, r)
     end
-  | UnOp(uop,e) => doit e >- (fn e' => return (w(UnOp(uop, e'))))
-  | CondExp (g,t,e) => let
-    in
-      if eneeds_sc_protection t orelse eneeds_sc_protection e then let
+  in
+    FunRm.next_sym rtype_n $> mk_var
+  end
+
+  fun new_call (l,r) fn_e args = let
+    open ProgramAnalysis
+    val (_, (rty, _)) = fndes_callinfo cse fn_e
+  in
+    new_var (rty, eleft fn_e, eright fn_e)
+    >- FunRm.pass (fn v => FunRm.add_stmt (swrap(EmbFnCall(v,fn_e,args), l, r)))
+  end
+
+  fun ex_remove_embfncalls e = let
+    fun w e0 = ewrap(e0, eleft e, eright e)
+  in
+    case enode e of
+      BinOp(bop,e1,e2) => let
+        val scp = bop = LogOr orelse bop = LogAnd
+      in
+        if scp andalso eneeds_sc_protection e2 then
+          guard_translate e
+        else
+          ex_remove_embfncalls e1 <:> ex_remove_embfncalls e2
+          $> (fn (e1',e2') => w(BinOp(bop,e1',e2')))
+      end
+    | UnOp(uop,e) =>  ex_remove_embfncalls e $> (fn e' => w(UnOp(uop,e')))
+    | CondExp (g,t,e) => let
+      in
+        if eneeds_sc_protection t orelse eneeds_sc_protection e
+        then let
           val t_ty = ProgramAnalysis.cse_typing cse t
           val e_ty = ProgramAnalysis.cse_typing cse e
           val branch_type = unify_types(t_ty, e_ty)
-              handle Fail _ => t_ty (* error will have already been reported
-                                       in process_decls pass *)
-          val sbw = sbogwrap
-          val (g',gsts) = expr_remove_embfncalls cse g
-          val (t',tsts) = expr_remove_embfncalls cse t
-          val (e',ests) = expr_remove_embfncalls cse e
-          fun create_if v = let
-            val tbr = sbw(Block (map BI_Stmt (tsts @ [sbw(Assign(v,t'))])))
-            val ebr = sbw(Block (map BI_Stmt (ests @ [sbw(Assign(v,e'))])))
+          fun create_if v g' = let
+            fun ex e = ex_remove_embfncalls e >- (fn e => FunRm.add_stmt (sbogwrap(Assign(v,e))))
+            fun bl e = FunRm.scope_stmts (ex e) $> sbogwrap o Block o map BI_Stmt
           in
-            add_stmts (gsts @ [sbw(IfStmt(g',tbr,ebr))]) >>
-            return v
+            bl t <:> bl e >- (fn (t',e') => FunRm.add_stmt (sbogwrap(IfStmt(g',t',e'))))
+            >> FunRm.return v
           end
         in
-          new_var (branch_type,eleft g,eright g) >- create_if
+          (* The variable is only used in the assignment at the end of each branch,
+             so it's safe for the branches to use the same variable prior to the assignment.
+             We allow this for compatibility with existing proofs. *)
+          FunRm.scope_pre (new_var (branch_type, eleft g, eright g))
+                          (fn v => FunRm.scope_rv (ex_remove_embfncalls g) >- create_if v)
+          >- FunRm.add_stmts_fst
         end
-      else
-        doit g >- (fn g' =>
-        doit t >- (fn t' =>
-        doit e >- (fn e' =>
-        return (w(CondExp (g',t',e'))))))
-    end
-  | Var _ => return e
-  | Constant _ => return e
-  | StructDot (e,fld) => doit e >- (fn e' => return (w(StructDot(e',fld))))
-  | ArrayDeref(e1,e2) => doit e1 >- (fn e1' =>
-                         doit e2 >- (fn e2' =>
-                         return (w(ArrayDeref(e1',e2')))))
-  | Deref e => doit e >- return o w o Deref
-  | TypeCast(ty,e) => doit e >- (fn e' => return (w(TypeCast(ty,e'))))
-  | Sizeof _ => return e
-  | SizeofTy _ => return e
-  | CompLiteral (ty,dis) => mmap (di_rm_efncalls cse) dis >- (fn dis' =>
-                            return (w(CompLiteral(ty,dis'))))
-  | EFnCall(fn_e,args) => let
-    in
-      mmap doit args >- (fn args' =>
-      new_call cse fn_e args' (eleft e, eright e) >- (fn temp =>
-      return temp))
-    end
-  | Arbitrary _ => return e
-  | _ => raise Fail ("ex_remove_embfncalls: couldn't handle: " ^ expr_string e)
-end
-and i_rm_efncalls cse i =
-    case i of
-      InitE e => ex_remove_embfncalls cse e >- return o InitE
-    | InitList dis => mmap (di_rm_efncalls cse) dis >- return o InitList
-and di_rm_efncalls cse (d,i) = i_rm_efncalls cse i >- (fn i' => return (d,i'))
-and linearise cse v e = let
-  val lin = linearise cse v
-in
-  case enode e of
-    BinOp(LogAnd, e1, e2) => lin e1 @ [poscond v (lin e2)]
-  | BinOp(LogOr, e1, e2) => lin e1 @ [negcond v (lin e2)]
-  | _ => let
-      val (e',sts) = expr_remove_embfncalls cse e
-    in
-      sts @ [assign(v,e')]
-    end
-end
-and guard_translate cse e = let
-  fun stage2 guardvar = let
+        else
+          ex_remove_embfncalls g <:> ex_remove_embfncalls t <:> ex_remove_embfncalls e
+          $> (fn ((g',t'),e') => w(CondExp(g',t',e')))
+      end
+    | Var _ => FunRm.return e
+    | Constant _ => FunRm.return e
+    | StructDot (e,fld) => ex_remove_embfncalls e $> (fn e' => w(StructDot(e',fld)))
+    | ArrayDeref(e1,e2) => ex_remove_embfncalls e1 <:> ex_remove_embfncalls e2 $> w o ArrayDeref
+    | Deref e => ex_remove_embfncalls e $> w o Deref
+    | TypeCast(ty,e) => ex_remove_embfncalls e $> (fn e' => w(TypeCast(ty,e')))
+    | Sizeof _ => FunRm.return e
+    | SizeofTy _ => FunRm.return e
+    | CompLiteral (ty,dis) => FunRm.mmap di_rm_efncalls dis $> (fn dis' => w(CompLiteral(ty,dis')))
+    | EFnCall(fn_e,args) => FunRm.mmap ex_remove_embfncalls args
+                            >- new_call (eleft e, eright e) fn_e
+    | Arbitrary _ => FunRm.return e
+    | _ => raise Fail ("ex_remove_embfncalls: couldn't handle: " ^ expr_string e)
+  end
+  and i_rm_efncalls i =
+      case i of
+        InitE e => InitE <$ ex_remove_embfncalls e
+      | InitList dis => InitList <$ FunRm.mmap di_rm_efncalls dis
+  and di_rm_efncalls (d,i) = pair d <$ i_rm_efncalls i
+  and linearise e v = let
+    fun lin e1 e2 p = FunRm.scope_rv (linearise e1 v)
+                      >> FunRm.scope_stmts (linearise e2 v) >- FunRm.add_stmt o p v
+    fun pos v stmts = sbogwrap(IfStmt(v,sbogwrap(Block (map BI_Stmt stmts)),sbogwrap EmptyStmt))
+    fun neg v stmts = sbogwrap(IfStmt(v,sbogwrap EmptyStmt,sbogwrap(Block (map BI_Stmt stmts))))
+    fun assign v e = sbogwrap(Assign(v,ebogwrap(MKBOOL e)))
   in
-    add_stmts (linearise cse guardvar e) >>
-    return guardvar
+    case enode e of
+        BinOp(LogAnd, e1, e2) => lin e1 e2 pos
+      | BinOp(LogOr, e1, e2) => lin e1 e2 neg
+      | _ => ex_remove_embfncalls e >- FunRm.add_stmt o assign v
+  end
+  and guard_translate e =
+      (* The variable is assigned at the end of each branch, and then immediately read
+         in the condition for the next branch. It's otherwise unused by `linearise`,
+         so it's safe for the branches to use the same variable prior to the assignment.
+         We allow this for compatibility with existing proofs. *)
+      FunRm.scope_pre (new_var (Signed Int, eleft e, eright e))
+                      (FunRm.pass (linearise e))
+      >- FunRm.add_stmts_fst
+in
+  ex_remove_embfncalls
+end
+
+fun decl_remove_embfncalls _ (* cse *) d = (d, [])
+
+fun bitem_remove_embfncalls cse = let
+  val decl_remove_embfncalls = decl_remove_embfncalls cse
+  fun bitem_remove_embfncalls bi =
+      case bi of
+        BI_Decl dw => let
+          val (d', sts) = decl_remove_embfncalls (node dw)
+        in
+          (map BI_Stmt sts @ [BI_Decl (wrap(d', left dw, right dw))])
+        end
+      | BI_Stmt st => map BI_Stmt (stmt_remove_embfncalls st)
+  and stmt_remove_embfncalls st = let
+    val ex_remove_embfncalls = ex_remove_embfncalls cse
+    fun w s = swrap(s, sleft st, sright st)
+    val bog_empty = swrap(EmptyStmt,bogus,bogus)
+    fun mk_single [] = bog_empty
+      | mk_single [st] = st
+      | mk_single rest = swrap(Block(map BI_Stmt rest), sleft (hd rest),
+                               sright (List.last rest))
+  in
+    case snode st of
+      Assign(e1,e2) =>
+        FunRm.run' (ex_remove_embfncalls e1 <:> ex_remove_embfncalls e2
+                    >- FunRm.add_stmt o w o Assign)
+    | AssignFnCall(tgt,fnm,args) =>
+        (* don't need to consider tgt as parser ensures this is always a simple
+           object reference (field reference or variable) *)
+        FunRm.run' (FunRm.mmap ex_remove_embfncalls args
+                    >- (fn args' => FunRm.add_stmt (w(AssignFnCall(tgt,fnm,args')))))
+    | Block bilist =>
+        [w(Block (List.concat (map bitem_remove_embfncalls bilist)))]
+    | Chaos e => FunRm.run' (ex_remove_embfncalls e >- FunRm.add_stmt o w o Chaos)
+    | While(g,spec,body) => let
+        val (gsts, g') = FunRm.run (ex_remove_embfncalls g)
+        val body' = stmt_remove_embfncalls body
+      in
+        if FunRm.empty gsts andalso length body' = 1 then
+          [w(While(g',spec,hd body'))]
+        else
+          gsts @> [w(While(g', spec, swrap(Block (map BI_Stmt (body' @ FunRm.of_stmt_list gsts)),
+                                          sleft body,
+                                          sright body)))]
+      end
+    | Trap(tty, s) => let
+        val s' = stmt_remove_embfncalls s
+      in
+        [w(Trap(tty,mk_single s'))]
+      end
+    | Return (SOME e) => FunRm.run' (ex_remove_embfncalls e >- FunRm.add_stmt o w o Return o SOME)
+    | Return NONE => [st]
+    | ReturnFnCall (fnm, args) =>
+        FunRm.run' (FunRm.mmap ex_remove_embfncalls args
+                    >- (fn args' => FunRm.add_stmt (w(ReturnFnCall(fnm,args')))))
+    | Break => [st]
+    | Continue => [st]
+    | IfStmt(g,tst,est) => let
+        val (gsts, g') = FunRm.run (ex_remove_embfncalls g)
+        val tst' = stmt_remove_embfncalls tst
+        val est' = stmt_remove_embfncalls est
+      in
+        gsts @> [w(IfStmt(g', mk_single tst', mk_single est'))]
+      end
+    | Switch(g,cases) => let
+        val (gsts, g') = FunRm.run (ex_remove_embfncalls g)
+        fun mapthis (labs,bis) =
+            (labs, List.concat (map bitem_remove_embfncalls bis))
+      in
+        gsts @> [w(Switch(g', map mapthis cases))]
+      end
+    | EmptyStmt => [st]
+    | Auxupd _ => [st]
+    | Ghostupd _ => [st]
+    | Spec _ => [st]
+    | AsmStmt _ => [st]
+    | LocalInit _ => [st]
+    | _ => raise Fail ("stmt_remove_embfncalls: Couldn't handle " ^ stmt_type st)
   end
 in
-  new_var (Signed Int,eleft e,eright e) >- stage2
-end
-and expr_remove_embfncalls cse e = let
-  val ((_, sts), e') = ex_remove_embfncalls cse e (Symtab.empty, [])
-in
-  (e', sts)
-end
-
-fun decl_remove_embfncalls _ (*cse*) d = (d, [])
-
-fun bitem_remove_embfncalls cse bi =
-    case bi of
-      BI_Decl dw => let
-        val (d',sts) = decl_remove_embfncalls cse (node dw)
-      in
-        (map BI_Stmt sts @ [BI_Decl (wrap(d',left dw,right dw))])
-      end
-    | BI_Stmt st => map BI_Stmt (stmt_remove_embfncalls cse st)
-and stmt_remove_embfncalls cse st = let
-  val expr_remove_embfncalls = expr_remove_embfncalls cse
-  val stmt_remove_embfncalls = stmt_remove_embfncalls cse
-  fun w s = swrap(s,sleft st, sright st)
-  val bog_empty = swrap(EmptyStmt,bogus,bogus)
-  fun mk_single [] = bog_empty
-    | mk_single [st] = st
-    | mk_single rest = swrap(Block(map BI_Stmt rest), sleft (hd rest),
-                             sright (List.last rest))
-in
-  case snode st of
-    Assign(e1,e2) => let
-      val (e1',sts1) = expr_remove_embfncalls e1
-      val (e2',sts2) = expr_remove_embfncalls e2
-    in
-      sts1 @ sts2 @ [w(Assign(e1',e2'))]
-    end
-  | AssignFnCall(tgt,fnm,args) => let
-      (* don't need to consider tgt as parser ensures this is always a simple
-         object reference (field reference or variable) *)
-      val ((_, sts), args') =
-          mmap (ex_remove_embfncalls cse) args (Symtab.empty, [])
-    in
-      sts @ [w(AssignFnCall(tgt,fnm,args'))]
-    end
-  | Block bilist =>
-      [w(Block (List.concat (map (bitem_remove_embfncalls cse) bilist)))]
-  | Chaos e =>
-    let
-      val (e',sts) = expr_remove_embfncalls e
-    in
-      sts @ [w(Chaos e')]
-    end
-  | While(g,spec,body) => let
-      val (g', gsts) = expr_remove_embfncalls g
-      val body' = stmt_remove_embfncalls body
-    in
-      if null gsts andalso length body' = 1 then
-        [w(While(g',spec,hd body'))]
-      else
-        gsts @ [w(While(g',spec, swrap(Block (map BI_Stmt (body' @ gsts)),
-                                       sleft body,
-                                       sright body)))]
-    end
-  | Trap(tty, s) => let
-      val s' = stmt_remove_embfncalls s
-    in
-      [w(Trap(tty,mk_single s'))]
-    end
-  | Return (SOME e) => let
-      val (e', sts) = expr_remove_embfncalls e
-    in
-      sts @ [w(Return(SOME e'))]
-    end
-  | Return NONE => [st]
-  | ReturnFnCall (fnm, args) => let
-      val ((_, sts), args') =
-          mmap (ex_remove_embfncalls cse) args (Symtab.empty, [])
-    in
-      sts @ [w(ReturnFnCall(fnm,args'))]
-    end
-  | Break => [st]
-  | Continue => [st]
-  | IfStmt(g,tst,est) => let
-      val (g',gsts) = expr_remove_embfncalls g
-      val tst' = stmt_remove_embfncalls tst
-      val est' = stmt_remove_embfncalls est
-    in
-      gsts @ [w(IfStmt(g',mk_single tst', mk_single est'))]
-    end
-  | Switch(g,cases) => let
-      val (g',gsts) = expr_remove_embfncalls g
-      fun mapthis (labs,bis) =
-          (labs, List.concat (map (bitem_remove_embfncalls cse) bis))
-    in
-      gsts @ [w(Switch(g',map mapthis cases))]
-    end
-  | EmptyStmt => [st]
-  | Auxupd _ => [st]
-  | Ghostupd _ => [st]
-  | Spec _ => [st]
-  | AsmStmt _ => [st]
-  | LocalInit _ => [st]
-  | _ => raise Fail ("stmt_remove_embfncalls: Couldn't handle " ^ stmt_type st)
+  bitem_remove_embfncalls
 end
 
 fun extdecl_remove_embfncalls cse e =

@@ -136,6 +136,8 @@ notation
   parent_of ("_ \<Turnstile> _ \<leadsto> _" [60,0,60] 60)
 and
   parent_of_trancl ("_ \<Turnstile> _ \<rightarrow> _" [60,0,60] 60)
+and
+  parent_of_rtrancl ("_ \<Turnstile> _ \<rightarrow>* _" [60,0,60] 60)
 
 text \<open>The set of descendants of a particular slot in the CDT.\<close>
 definition

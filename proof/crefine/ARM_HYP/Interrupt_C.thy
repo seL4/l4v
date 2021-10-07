@@ -52,7 +52,7 @@ lemma cte_at_irq_node':
   "invs' s \<Longrightarrow>
     cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 10 word)) s"
   by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
-                     cte_level_bits_def real_cte_at')
+                     cte_level_bits_def real_cte_at' cteSizeBits_def shiftl_t2n)
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
@@ -69,7 +69,7 @@ proof -
   apply (cinit lift: irq_' slot_' cap_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
@@ -93,9 +93,9 @@ proof -
   apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def
                         Collect_const_mem unat_gt_0 valid_cap_simps' ARM_HYP.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply auto
   done
 qed
 
@@ -108,23 +108,22 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply simp
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
       apply vcg
-     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
-        gs_set_assn_Delete_cstate_relation[unfolded o_def])
+     apply (rule conseqPre, vcg,
+            clarsimp simp: rf_sr_def gs_set_assn_Delete_cstate_relation[unfolded o_def])
     apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
     apply wp
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
-  apply (simp add: of_int_uint_ucast[symmetric])
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (case_tac "of_int (uint irq) \<noteq> 0 \<longrightarrow> 0 < unat irq")
-   by (auto simp: Collect_const_mem unat_eq_0)
+  by (auto simp: Collect_const_mem unat_eq_0)
 
 lemma ntfn_case_can_send:
   "(case cap of NotificationCap x1 x2 x3 x4 \<Rightarrow> f x3
@@ -151,11 +150,11 @@ lemma decodeIRQHandlerInvocation_ccorres:
        (UNIV
             \<inter> {s. invLabel_' s = label}
             \<inter> {s. irq_' s = ucast irq}
-            \<inter> {s. excaps_' s = extraCaps'}) []
+            \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}) []
      (decodeIRQHandlerInvocation label irq extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
-  apply (cinit' lift: invLabel_' irq_' excaps_'
+  apply (cinit' lift: invLabel_' irq_' current_extra_caps_'
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
@@ -325,6 +324,7 @@ lemma invokeIRQControl_expanded_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: maxIRQ_def Kernel_C.maxIRQ_def)
    apply unat_arith
+   apply simp
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
                         cap_to_H_def c_valid_cap_def cl_valid_cap_def
                         word_bw_assocs mask_twice maxIRQ_def Kernel_C.maxIRQ_def ucast_ucast_a
@@ -426,12 +426,12 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
        (UNIV
             \<inter> {s. invLabel_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
             \<inter> {s. unat (length___unsigned_long_' s) = length args}
-            \<inter> {s. excaps_' s = extraCaps'}
+            \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (Arch.decodeIRQControlInvocation label args slot (map fst extraCaps)
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
-  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
+  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: ARM_HYP_H.decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
                cong: StateSpace.state.fold_congs globals.fold_congs)
@@ -599,13 +599,13 @@ lemma decodeIRQControlInvocation_ccorres:
        (UNIV
             \<inter> {s. invLabel_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
             \<inter> {s. unat (length___unsigned_long_' s) = length args}
-            \<inter> {s. excaps_' s = extraCaps'}
+            \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   supply gen_invocation_type_eq[simp]
-  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
+  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)

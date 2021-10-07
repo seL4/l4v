@@ -318,10 +318,7 @@ lemma (in pedal_coast_clique)
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
-  apply  vcg
-  apply  simp
-  apply vcg
-  apply simp
+  apply (vcg,force)+
   done
 
 lemma (in pedal_coast_clique)
@@ -332,10 +329,7 @@ lemma (in pedal_coast_clique)
                                   measure (\<lambda>p. if p = coast_'proc then 1 else 0))
                       (\<lambda>(s,p). (\<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M,p))"])
   apply simp_all
-  apply  vcg
-  apply  simp
-  apply vcg
-  apply simp
+  apply (vcg,force)+
   done
 
 
@@ -347,11 +341,7 @@ lemma (in pedal_coast_clique)
   apply(hoare_rule HoareTotal_ProcRec2
      [where ?r= "measure (\<lambda>(s,p). \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M + (if p = coast_'proc then 1 else 0))"])
   apply simp_all
-  apply  vcg
-  apply  simp
-  apply  arith
-  apply vcg
-  apply simp
+  apply (vcg,force)+
   done
 
 
@@ -362,11 +352,8 @@ lemma (in pedal_coast_clique)
      [where ?r= "(\<lambda>(s,p). \<^bsup>s\<^esup>N) <*mlex*> (\<lambda>(s,p). \<^bsup>s\<^esup>M) <*mlex*>
                  measure (\<lambda>(s,p). if p = coast_'proc then 1 else 0)"])
    apply  simp_all
-   apply  vcg
-   apply  simp
-   apply vcg
-   apply simp
-   done
+   apply (vcg,force)+
+  done
 
 
 lemma (in pedal_coast_clique)
@@ -376,11 +363,8 @@ lemma (in pedal_coast_clique)
      [where ?r= "measure (\<lambda>s. \<^bsup>s\<^esup>N + \<^bsup>s\<^esup>M) <*lex*>
                  measure (\<lambda>p. if p = coast_'proc then 1 else 0)"])
    apply simp_all
-   apply  vcg
-   apply  simp
-   apply vcg
-   apply simp
-   done
+   apply (vcg,force)+
+  done
 
 
 end

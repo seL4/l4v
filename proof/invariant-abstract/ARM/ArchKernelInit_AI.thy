@@ -9,9 +9,9 @@
 
 theory ArchKernelInit_AI
 imports
-  "../ADT_AI"
-  "../Tcb_AI"
-  "../Arch_AI"
+  ADT_AI
+  Tcb_AI
+  Arch_AI
 begin
 
 context Arch begin global_naming ARM (*FIXME: arch_split*)
@@ -61,11 +61,10 @@ lemma descendants_empty [simp]:
   "descendants_of x Map.empty = {}"
   by (clarsimp simp: descendants_of_def)
 
-lemma [simp]: "\<not>is_reply_cap Structures_A.NullCap"
+lemma reply_Null [simp]: "\<not>is_reply_cap NullCap"
   by (simp add: is_reply_cap_def)
 
-lemma [simp]: "cap_range Structures_A.NullCap = {}"
-  by (simp add: cap_range_def)
+declare  cap_range_NullCap[simp]
 
 lemma pde_mapping_bits_shift:
   fixes x :: "12 word"
@@ -74,7 +73,6 @@ lemma pde_mapping_bits_shift:
   apply (unfold word_less_alt)
   apply simp
   apply (unfold word_mult_def)
-  apply simp
   apply (subst int_word_uint)
   apply (subst mod_pos_pos_trivial)
     apply simp
@@ -94,10 +92,8 @@ lemma pde_mapping_bits_shift:
   done
 
 lemma mask_pde_mapping_bits:
-  "mask 20 = 2^pde_mapping_bits - 1"
+  "(mask 20 :: machine_word) = 2^pde_mapping_bits - 1"
   by (simp add: mask_def pde_mapping_bits_def)
-
-
 
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
@@ -157,10 +153,10 @@ lemma init_irq_ptrs_eq:
   apply (rule ccontr)
   apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
-         safe intro!: plus_one_helper2,
-         simp_all add: ucast_le_ucast_10_32 up_ucast_inj_eq,
-         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq
-                       max_word_def)
+         safe intro!: plus_one_helper2;
+         simp add: ucast_le_ucast_10_32 up_ucast_inj_eq cte_level_bits_def minus_1_eq_mask
+                   ucast_leq_mask;
+         simp add: mask_eq_exp_minus_1)
   done
 
 lemma in_kernel_base:
@@ -424,8 +420,8 @@ lemma invs_A:
    apply (clarsimp simp: valid_ao_at_def obj_at_def empty_table_def pde_ref_def
                          valid_pde_mappings_def valid_vso_at_def)
    apply (simp add: kernel_base_def kernel_mapping_slots_def idle_sc_ptr_def
-                    Platform.ARM.addrFromPPtr_def physMappingOffset_def
-                    kernelBase_addr_def physBase_def pageBits_def is_aligned_def)
+                    Platform.ARM.addrFromPPtr_def pptrBaseOffset_def
+                    pptrBase_def physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs valid_kernel_mappings_if_pd_def pde_ref_def
                     ran_def)

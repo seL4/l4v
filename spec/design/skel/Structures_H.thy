@@ -13,10 +13,10 @@ chapter "Kernel Data Structures"
 theory Structures_H
 imports
   Config_H
-  "./$L4V_ARCH/State_H"
+  State_H
   Fault_H
   Types_H
-  "./$L4V_ARCH/ArchStructures_H"
+  ArchStructures_H
 begin
 
 context begin interpretation Arch .

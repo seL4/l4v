@@ -7,7 +7,7 @@
 section "Normalising Word Numerals"
 
 theory Norm_Words
-imports "Signed_Words"
+  imports Bits_Int Signed_Words
 begin
 
 text \<open>
@@ -18,7 +18,7 @@ text \<open>
 lemma neg_num_bintr:
   "(- numeral x :: 'a::len word) =
   word_of_int (bintrunc (LENGTH('a)) (-numeral x))"
-  by (simp only: word_ubin.Abs_norm word_neg_numeral_alt)
+  by transfer simp
 
 ML \<open>
   fun is_refl (Const (@{const_name Pure.eq}, _) $ x $ y) = (x = y)
@@ -59,8 +59,6 @@ simproc_setup
 
 simproc_setup
   unsigned_norm_neg1 ("-numeral (num.Bit1 num)::'a::len word") = \<open>unsigned_norm true\<close>
-
-declare word_pow_0 [simp]
 
 lemma minus_one_norm:
   "(-1 :: 'a :: len word) = of_nat (2 ^ LENGTH('a) - 1)"

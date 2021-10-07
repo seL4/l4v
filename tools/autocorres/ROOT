@@ -14,14 +14,16 @@ session AutoCorres = CParser +
     Lib
     CLib
   theories
+    "DataStructures"
     "AutoCorres"
 
-session AutoCorresSEL4 = CBaseRefine +
+session AutoCorresSEL4 in "test-seL4" = CBaseRefine +
   sessions
     "HOL-Library"
     "HOL-Computational_Algebra"
     Lib
     CLib
     CParser
+    AutoCorres
   theories
     "TestSEL4"

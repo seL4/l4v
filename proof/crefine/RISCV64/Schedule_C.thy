@@ -365,8 +365,8 @@ lemma isHighestPrio_ccorres:
   supply prio_and_dom_limit_helpers[simp]
   supply Collect_const_mem [simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-          ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+          ccorres_IF_True[simp] if_cong[cong]
   apply (cinit lift: dom_' prio_')
    apply clarsimp
    apply (rule ccorres_move_const_guard)
@@ -402,8 +402,8 @@ lemma schedule_ccorres:
   supply prio_and_dom_limit_helpers[simp]
   supply Collect_const_mem [simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
-  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] if_1_0_0[simp]
-         ccorres_IF_True[simp]
+  supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
+         ccorres_IF_True[simp] if_cong[cong]
   apply (cinit)
    apply (rule ccorres_pre_getCurThread)
    apply (rule ccorres_pre_getSchedulerAction)
@@ -563,7 +563,7 @@ lemma schedule_ccorres:
 
                 apply (drule (1) obj_at_cslift_tcb)+
                 apply (clarsimp simp: typ_heap_simps ctcb_relation_def to_bool_def split: if_split)
-                apply (solves unat_arith)
+                apply (solves \<open>unat_arith, rule iffI; simp\<close>)
                apply ceqv
               apply clarsimp
               apply (rule ccorres_cond_seq)
@@ -691,6 +691,7 @@ lemma threadSet_timeSlice_ccorres [corres]:
 
 lemma timerTick_ccorres:
   "ccorres dc xfdc invs' UNIV [] timerTick (Call timerTick_'proc)"
+  supply subst_all [simp del]
   apply (cinit)
    apply (rule ccorres_pre_getCurThread)
    apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])

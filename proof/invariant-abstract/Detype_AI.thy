@@ -5,7 +5,7 @@
  *)
 
 theory Detype_AI
-imports "./$L4V_ARCH/ArchRetype_AI" IpcCancel_AI
+imports ArchRetype_AI IpcCancel_AI
 begin
 
 context begin interpretation Arch .
@@ -897,9 +897,7 @@ lemma valid_ioc_detype[detype_invs_lemmas]: "valid_ioc (detype (untyped_range ca
       done
   qed
 
-(* FIXME: consider to source out. *)
-lemma p2pm1_to_mask: "\<And>p n. p + 2 ^ n - 1 = p + mask n" (* SIMP *)
-  by (simp add: mask_2pm1 field_simps)
+lemmas p2pm1_to_mask = add_mask_fold
 
 lemma valid_irq_states_detype[detype_invs_lemmas]: "valid_irq_states
           (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
@@ -1017,8 +1015,6 @@ lemma of_nat_le_pow:
   apply simp
   done
 
-lemma maxword_len_conv': "(x::machine_word) + max_word = x - 1" by (simp add: max_word_def)
-
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
@@ -1032,7 +1028,7 @@ lemma (in Detype_AI) mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: mapM_x_map comp_def upto_enum_word maxword_len_conv' del: upt.simps)
+  apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
   apply (simp add: Suc_unat_mask_div_obfuscated[simplified mask_2pm1] min_def)
   apply (subst mapM_x_storeWord)
    apply (erule is_aligned_weaken [OF _ sz2])
@@ -1057,6 +1053,7 @@ lemma (in Detype_AI) mapM_storeWord_clear_um:
 lemma intvl_range_conv':
   "\<lbrakk>is_aligned (ptr::'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>
    (\<exists>k. x = ptr + of_nat k \<and> k < 2 ^ bits) \<longleftrightarrow> (ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
+  including no_take_bit
   apply (rule iffI)
    apply (clarsimp simp: x_power_minus_1 mask_2pm1[symmetric])
    apply (frule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
@@ -1391,16 +1388,6 @@ lemma range_cover_compare_offset:
 lemma range_cover_sz':
   "range_cover (a :: 'a :: len word) b bits d \<Longrightarrow> bits < len_of TYPE('a)"
   by (clarsimp simp:range_cover_def)
-
-
-(* FIXME: move to GenericLib *)
-lemma if3_fold2:
-  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)" by simp
-
-(* FIXME: move *)
-lemma not_emptyI:
-  "\<And>x A B. \<lbrakk>x\<in>A; x\<in>B\<rbrakk> \<Longrightarrow> A \<inter> B\<noteq> {}"
-  by auto
 
 
 end

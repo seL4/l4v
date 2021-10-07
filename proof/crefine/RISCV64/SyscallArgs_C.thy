@@ -602,11 +602,6 @@ lemma nat_less_4_cases:
   "(x::nat) < 4 \<Longrightarrow> x=0 \<or> x=1 \<or> x=2 \<or> x=3"
   by clarsimp
 
-lemma msgRegisters_scast:
-  "n < unat (scast n_msgRegisters :: machine_word) \<Longrightarrow>
-  unat (scast (index msgRegistersC n)::machine_word) = unat (index msgRegistersC n)"
-  by (simp add: kernel_all_global_addresses.msgRegisters_def fupdate_def update_def n_msgRegisters_def)
-
 lemma asUser_cur_obj_at':
   assumes f: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb. P (atcbContextGet (tcbArch tcb))) (ksCurThread s) s \<and> t = ksCurThread s\<rbrace>
@@ -768,6 +763,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
+  including no_take_bit
   apply (cinit lift: thread_' isReceiver_')
    apply (rule ccorres_split_nothrow)
        apply simp
@@ -927,6 +923,7 @@ lemma getMRs_user_word:
       \<and> msgLength info \<le> msgMaxLength \<and> i >= scast n_msgRegisters\<rbrace>
   getMRs thread (Some buffer) info
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 8 + 8))\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_assume_pre)
   apply (elim conjE)
   apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)
@@ -1057,7 +1054,6 @@ lemma index_msgRegisters_less':
 
 lemma index_msgRegisters_less:
   "n < 4 \<Longrightarrow> index msgRegistersC n <s 35"
-  "n < 4 \<Longrightarrow> index msgRegistersC n < 35"
   using index_msgRegisters_less'
   by (simp_all add: word_sless_msb_less)
 
@@ -1130,15 +1126,15 @@ lemma getSyscallArg_ccorres_foo:
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: rf_sr_ksCurThread)
        apply (drule (1) obj_at_cslift_tcb)
-       apply (clarsimp simp: typ_heap_simps' msgRegisters_scast)
+       apply (clarsimp simp: typ_heap_simps')
        apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                              msgRegisters_ccorres atcbContextGet_def
                              carch_tcb_relation_def cregs_relation_def)
        apply (subst (asm) msgRegisters_ccorres)
         apply (clarsimp simp: n_msgRegisters_def)
-       apply (simp add: n_msgRegisters_def word_less_nat_alt)
-       apply (simp add: index_msgRegisters_less unat_less_helper)
-      apply wp[1]
+        apply (clarsimp simp: n_msgRegisters_def word_less_nat_alt word_upcast_0_sle)
+       apply (clarsimp simp: index_msgRegisters_less' ucast_up_less_bounded_iff_less_ucast_down')
+       apply wp[1]
      apply (wp getMRs_tcbContext)
     apply simp
    apply (rule ccorres_seq_skip [THEN iffD2])

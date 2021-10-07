@@ -275,9 +275,7 @@ lemma to_bool_bf_and [simp]:
 
 lemma to_bool_bf_to_bool_mask:
   "w && mask (Suc 0) = w \<Longrightarrow> to_bool_bf w = to_bool (w::word32)"
-  apply (auto simp add: to_bool_bf_def to_bool_def mask_eq_iff_w2p word_size)
-  apply (auto simp add: mask_def dest: word_less_cases)
-  done
+  by (metis One_nat_def mask_eq1_nochoice fold_eq_0_to_bool mask_1 to_bool_bf_0 to_bool_bf_def)
 
 definition
   mdb_node_to_H :: "mdb_node_CL \<Rightarrow> mdbnode"

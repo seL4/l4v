@@ -7,7 +7,7 @@
 theory KernelInit_A (* FIXME: unused, out of date *)
 imports
   Tcb_A
-  "./$L4V_ARCH/ArchVSpace_A"
+  ArchVSpace_A
 begin
 
 section \<open>Generic stuff\<close>
@@ -174,7 +174,7 @@ definition "L2CC_PPTR  \<equiv> 0xfff02000 :: word32"
 definition "UART_PADDR \<equiv> 0x43f90000 :: word32"
 definition "UART_PPTR  \<equiv> 0xfff03000 :: word32"
 
-definition "BASE_OFFSET = physMappingOffset"
+definition "BASE_OFFSET = pptrBaseOffset"
 
 section \<open>Functions cloned and modified for separation logic to work\<close>
 
@@ -974,8 +974,8 @@ definition
 
 definition
   paddr_to_pptr_reg :: "(paddr \<times> paddr) \<Rightarrow> (paddr \<times> paddr)" where
-  "paddr_to_pptr_reg p_reg \<equiv> (fst p_reg + physMappingOffset,
-                              snd p_reg + physMappingOffset)"
+  "paddr_to_pptr_reg p_reg \<equiv> (fst p_reg + pptrBaseOffset,
+                              snd p_reg + pptrBaseOffset)"
 
 definition
   init_kernel :: "paddr \<Rightarrow> paddr \<Rightarrow> word32 \<Rightarrow> vspace_ref \<Rightarrow> (unit,'z::state_ext) ki_monad" where
