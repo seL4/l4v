@@ -275,6 +275,7 @@ lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
 
 crunches perform_asid_control_invocation
   for valid_machine_time[wp]: "valid_machine_time"
+  and cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread) and invs and valid_aci aci and
@@ -295,6 +296,22 @@ lemma perform_asid_control_invocation_valid_sched:
                                    perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
                                    hoare_vcg_all_lift
                              simp: ipc_queued_thread_state_live live_sc_def)+
+  done
+
+lemma perform_asid_control_invocation_cur_sc_active:
+  "\<lbrace>cur_sc_active and invs and ct_active and schact_is_rct and valid_aci aci\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. cur_sc_active\<rbrace>"
+  apply (subst cur_sc_active_rewrite)+
+  apply (rule hoare_weaken_pre)
+   apply (rule_tac f=cur_sc in hoare_lift_Pf2)
+    apply (rule perform_asid_control_invocation_non_cspace_obj_at)
+    apply (clarsimp simp: cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def)
+   apply wpsimp
+  apply (fastforce intro!: if_live_then_nonz_capD
+                     simp: invs_def valid_state_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def
+                           ct_in_state_def pred_tcb_at_def valid_idle_def schact_is_rct_def
+                           live_def live_sc_def)
   done
 
 lemma kernelWCET_us_non_zero:
