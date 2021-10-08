@@ -1017,39 +1017,40 @@ lemma scRefills_length:
 lemma scBits_core_ub:
   assumes cond: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_size - 1)"
   assumes min: "min_size \<le> us"
-  shows "nat \<lceil>log 2
-          (of_nat
-            (((2::nat) ^ us - sizeof_sched_context_t) div
-             refill_size_bytes *
-             refill_size_bytes +
-             sizeof_sched_context_t))\<rceil> \<le> us" (is "nat \<lceil>log 2 (of_nat ?F)\<rceil> \<le> _")
-  apply (clarsimp simp del: of_nat_add of_nat_mult)
+  shows "ceil_log
+          ((2 ^ us - sizeof_sched_context_t) div
+            refill_size_bytes *
+            refill_size_bytes +
+            sizeof_sched_context_t) \<le> us" (is "ceil_log ?F \<le> _")
 proof -
-  have pos: "(0::real) < (2::nat) ^ us" using assms by simp
+  have min_pos: "0 < min_size"
+    using cond refill_size_bytes_def
+    by (metis add_lessD1 diff_0_eq_0 gr0I less_one plus_nat.add_0 power.simps(1) power_zero_numeral)
   have s0: "sizeof_sched_context_t \<le> (2::nat) ^ us"
     using le_trans[OF _  power_increasing[OF min]] cond
     by (metis HOL_Lemmas.nat_power_minus_less add_lessD1 arith_special(3) le_simps(1) nat_le_iff_add)
-  have P1: "?F \<le> (2::nat) ^us"
+  have P1: "?F \<le> 2 ^us"
   proof -
-    have h1: "?F \<le> ((2::nat) ^ us
+    have h1: "?F \<le> (2 ^ us
                          - sizeof_sched_context_t) + sizeof_sched_context_t" by simp
     thus ?thesis using s0 by linarith
   qed
-  have P2: "(0::real) < ?F" by (simp add: refill_size_bytes_def sizeof_sched_context_t_def)
-  thus "log 2 (of_nat ?F) \<le> of_nat us"
-    using log_le_cancel_iff[where a="2::real", OF _ P2 pos, THEN iffD2] P1
-    using log2_of_power_le by force
+  thus "ceil_log ?F \<le> us"
+    apply -
+    apply (rule_tac b="ceil_log (2^us)" in ord_le_eq_trans)
+     apply (rule ceil_log_le_mono[OF P1])
+    using min_pos min ceil_log_exp
+    by simp
 qed
 
 lemma scBits_core_lb:
   assumes cond: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_size - 1)"
   assumes min: "min_size \<le> us"
-  shows "us - 1 < nat \<lceil>log 2
-          (of_nat
-            (((2::nat) ^ us - sizeof_sched_context_t) div
-             refill_size_bytes *
-             refill_size_bytes +
-             sizeof_sched_context_t))\<rceil>" (is "us - 1 < nat \<lceil>log 2 (of_nat ?F)\<rceil>")
+  shows "us - 1 < ceil_log
+          ((2 ^ us - sizeof_sched_context_t) div
+            refill_size_bytes *
+            refill_size_bytes +
+            sizeof_sched_context_t)" (is "us - 1 < ceil_log ?F")
 proof -
    have s0: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (us - 1)"
     apply (rule less_le_trans[where y="(2::nat)^(min_size - 1)", OF cond])
@@ -1072,59 +1073,65 @@ proof -
       using diff_less_mono2[where l="2^us"] us_diff Lib.nat_power_minus_less s0
       by linarith
   qed
+  have h1: "?F = (2::nat)^us - ((2^us - sizeof_sched_context_t) mod refill_size_bytes)"
+  proof -
+    have p1: "((2^us - sizeof_sched_context_t) div refill_size_bytes * refill_size_bytes)
+                = (2::nat)^us - sizeof_sched_context_t
+                    - ((2^us - sizeof_sched_context_t) mod refill_size_bytes)"
+      by (simp add: minus_mod_eq_div_mult)
+    thus ?thesis
+    proof -
+      have "sizeof_sched_context_t \<le> (2::nat) ^ us
+                                        - (2 ^ us - sizeof_sched_context_t) mod
+                                                                          refill_size_bytes"
+      proof -
+        have s0n: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ us" using s0
+          using HOL_Lemmas.nat_power_minus_less by blast
+        have " sizeof_sched_context_t <  (2::nat) ^ us - refill_size_bytes" using s0n
+          using less_diff_conv by blast
+        then have "sizeof_sched_context_t
+                      < (2::nat) ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes"
+          apply -
+          apply (drule less_le_trans[where z=" 2 ^ us -
+               ((2::nat) ^ us - sizeof_sched_context_t) mod refill_size_bytes"])
+           apply (simp add: refill_size_bytes_def) by blast
+        thus ?thesis using le_simps(1) by blast
+      qed
+      then have " (2::nat) ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes
+                       - sizeof_sched_context_t + sizeof_sched_context_t
+                   = 2 ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes "
+        using le_add_diff_inverse2[where b=sizeof_sched_context_t] by blast
+      thus ?thesis
+        using diff_right_commute[where c=sizeof_sched_context_t]
+        by (simp add: p1)
+    qed
+  qed
   have P1: "(2::nat)^us - refill_size_bytes < ?F"
   proof -
     have s01: "refill_size_bytes < (2::nat) ^ us" using step by linarith
     have s02: "sizeof_sched_context_t < (2::nat) ^ us" using step by linarith
-    have h1: "?F = (2::nat)^us - ((2^us - sizeof_sched_context_t) mod refill_size_bytes)"
-    proof -
-      have p1: "((2^us - sizeof_sched_context_t) div refill_size_bytes * refill_size_bytes)
-                  = (2::nat)^us - sizeof_sched_context_t
-                      - ((2^us - sizeof_sched_context_t) mod refill_size_bytes)"
-        by (simp add: minus_mod_eq_div_mult)
-      thus ?thesis
-      proof -
-        have "sizeof_sched_context_t \<le> (2::nat) ^ us
-                                          - (2 ^ us - sizeof_sched_context_t) mod
-                                                                            refill_size_bytes"
-        proof -
-          have s0n: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ us" using s0
-            using HOL_Lemmas.nat_power_minus_less by blast
-          have " sizeof_sched_context_t <  (2::nat) ^ us - refill_size_bytes" using s0n
-            using less_diff_conv by blast
-          then have "sizeof_sched_context_t
-                        < (2::nat) ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes"
-            apply -
-            apply (drule less_le_trans[where z=" 2 ^ us -
-                 ((2::nat) ^ us - sizeof_sched_context_t) mod refill_size_bytes"])
-             apply (simp add: refill_size_bytes_def) by blast
-          thus ?thesis using le_simps(1) by blast
-        qed
-        then have " (2::nat) ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes
-                         - sizeof_sched_context_t + sizeof_sched_context_t
-                     = 2 ^ us - (2 ^ us - sizeof_sched_context_t) mod refill_size_bytes "
-          using le_add_diff_inverse2[where b=sizeof_sched_context_t] by blast
-        thus ?thesis
-          using diff_right_commute[where c=sizeof_sched_context_t]
-          by (simp add: p1)
-      qed
-    qed
     thus ?thesis
       using diff_less_mono2[OF mod_less_divisor] s01
       by (simp add: refill_size_bytes_def)
   qed
   then have "2 ^ (us - 1) < ?F" using step P1 by linarith
   thus ?thesis
-    using less_log2_of_power real_nat_ceiling_ge less_le_trans of_nat_less_iff
-    by metis
+    apply -
+    apply (rule ceil_log_le_bound)
+    using min gt_or_eq_0 min_pos apply blast
+     apply blast
+    using h1
+    by linarith
 qed
-
 
 lemma scBits_core_identity:
   assumes cond: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_size - 1)"
   assumes min: "min_size \<le> us"
-  shows "nat \<lceil>log 2 ((((2::nat) ^ us - sizeof_sched_context_t) div refill_size_bytes
-                         * refill_size_bytes + sizeof_sched_context_t))\<rceil>
+  shows "ceil_log
+          (((2::nat) ^ us - sizeof_sched_context_t) div
+            refill_size_bytes *
+            refill_size_bytes +
+            sizeof_sched_context_t)
           = us"
 proof -
   have min_pos: "0 < min_size"
@@ -1209,24 +1216,24 @@ lemma scBits_max:
 (*  using assms
   by (clarsimp simp: valid_sched_context_size'_def maxUntypedSizeBits_def)*) sorry
 
-lemma scBits_at_least_2:
-  "2 \<le> scBitsFromRefillLength' us"
+lemma scBits_at_least_6:
+  "6 \<le> scBitsFromRefillLength' us"
 proof -
   note sc_const_eq[simp]
-  have "log 2 (of_nat sizeof_sched_context_t)
-           \<le> log 2 (of_nat (us * refill_size_bytes + sizeof_sched_context_t))"
+  have "ceil_log (sizeof_sched_context_t)
+           \<le> ceil_log (us * refill_size_bytes + sizeof_sched_context_t)"
     apply (simp only: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
-    by (simp only: log_le_cancel_iff[where a="2::real", THEN iffD2])
-  moreover have "1 < log 2 (of_nat sizeof_sched_context_t)"
-    by (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
+    by (simp add: ceil_log_le_mono)
+  moreover have "ceil_log (sizeof_sched_context_t) = 6"
+    apply (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified] ceil_log_def)
+    by (fastforce intro!: discrete_log_eqI)
   ultimately show ?thesis
-    apply (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
-    by linarith
+    by (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
 qed
 
 lemma scBits_pos':
   "0 < scBitsFromRefillLength' us"
-  using scBits_at_least_2
+  using scBits_at_least_6
   by (metis gr0I not_numeral_le_zero)
 
 lemma scBits_pos:
