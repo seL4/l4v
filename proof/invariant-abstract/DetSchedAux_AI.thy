@@ -1129,6 +1129,30 @@ lemma invoke_untyped_valid_sched:
                              simp: ipc_queued_thread_state_live live_sc_def)+
   done
 
+lemma cur_sc_active_rewrite:
+   "cur_sc_active s = obj_at (\<lambda>obj. \<exists>sc n. obj = SchedContext sc n \<and> sc_active sc) (cur_sc s) s"
+   apply (fastforce simp: obj_at_def is_active_sc_def vs_all_heap_simps active_sc_def)
+   done
+
+lemma invoke_untyped_cur_sc_active:
+  "\<lbrace>cur_sc_active and invs and ct_active and schact_is_rct and valid_untyped_inv ui\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_ s :: 'state_ext state. cur_sc_active s\<rbrace>"
+  apply (subst cur_sc_active_rewrite)+
+  apply (rule hoare_weaken_pre)
+   apply (rule_tac f=cur_sc in hoare_lift_Pf2)
+    apply (rule hoare_weaken_pre)
+     apply (rule invoke_untyped_non_cspace_obj_at)
+      apply (clarsimp simp: cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def)
+     apply fastforce
+    apply simp
+   apply wpsimp
+  apply (fastforce intro!: if_live_then_nonz_capD
+                     simp: invs_def valid_state_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def
+                           ct_in_state_def pred_tcb_at_def valid_idle_def schact_is_rct_def
+                           live_def live_sc_def)
+  done
+
 end
 
 \<comment> \<open>Miscellaneous\<close>

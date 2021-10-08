@@ -3864,6 +3864,14 @@ abbreviation cur_sc_active where
 
 lemmas cur_sc_active_lift = hoare_lift_Pf[where f=cur_sc and P=is_active_sc and m=f for f, rotated]
 
+lemma cur_sc_active_active_sc_tcb_at_cur_thread:
+  "\<lbrakk>cur_sc_active s; cur_sc_tcb s; schact_is_rct s; sym_refs (state_refs_of s)\<rbrakk>
+   \<Longrightarrow> active_sc_tcb_at (cur_thread s) s"
+  apply (clarsimp simp: vs_all_heap_simps cur_sc_tcb_def sc_at_pred_n_def schact_is_rct_def
+                        obj_at_def active_sc_def)
+  apply (fastforce dest: sym_ref_sc_tcb)
+  done
+
 abbreviation sc_bounded_release_time :: "sched_context \<Rightarrow> bool" where
   "sc_bounded_release_time sc \<equiv> cfg_bounded_release_time (sc_refill_cfg_of sc)"
 
