@@ -47,7 +47,7 @@ end
 definition scBitsFromRefillLength' :: "nat => nat"
 where
   "scBitsFromRefillLength' us \<equiv>
-       nat (ceiling (log 2 (us * refillSizeBytes + schedContextStructSize)))"
+       ceil_log (us * refillSizeBytes + schedContextStructSize)"
 
 abbreviation scBitsFromRefillLength where
 "scBitsFromRefillLength sc\<equiv> scBitsFromRefillLength' (length $ scRefills sc)"
