@@ -1961,77 +1961,6 @@ lemma tc_corres_caps:
                         isValidFaultHandler_def isValidVTableRoot_def | intro conjI)+
   done
 
-lemma schedContextUnbindTCB_corres:
-  "corres dc (invs and valid_sched and sc_tcb_sc_at ((\<noteq>) None) scp) invs'
-             (sched_context_unbind_tcb scp) (schedContextUnbindTCB scp)"
-  apply add_sym_refs
-  apply add_valid_idle'
-  apply add_cur_tcb'
-  apply (simp only: sched_context_unbind_tcb_def schedContextUnbindTCB_def valid_idle'_asrt_def
-                    cur_tcb'_asrt_def)
-  apply (rule corres_stateAssert_assume)
-  apply simp
-  apply (rule corres_stateAssert_assume[rotated], simp)+
-   apply (rule_tac Q="\<lambda>s. \<exists>n. invs s \<and> valid_sched s \<and>
-                              obj_at (\<lambda>ko. \<exists>sc y. ko = kernel_object.SchedContext sc n \<and>
-                                                  sc_tcb sc = Some y \<and> tcb_at y s) scp s"
-                in stronger_corres_guard_imp)
-     apply (rule corres_underlying_lift_ex1')
-     apply clarsimp
-     apply (rule corres_split')
-        apply (rule corres_guard_imp[OF get_sc_corres_size])
-         apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def dest: invs_valid_objs)
-        apply (erule conjunct1)
-       apply (rule corres_assert_opt_assume_l)
-       apply (rule corres_assert_assume_r)
-       apply (rule_tac F="sc_tcb sc \<noteq> None" in corres_gen_asm)
-       apply (rule_tac F="\<exists>y. scTCB sca = Some y" in corres_gen_asm2)
-       apply clarsimp
-       apply (rule stronger_corres_guard_imp)
-         apply (rule corres_split_eqr)
-            apply (clarsimp simp: sc_relation_def)
-            apply (rule_tac r'=dc in corres_split_deprecated)+
-                        apply (rule_tac f'="scTCB_update Map.empty"
-                                     in update_sc_no_reply_stack_update_ko_at'_corres;
-                               clarsimp simp: sc_relation_def objBits_def objBitsKO_def)
-                       apply (clarsimp simp: set_tcb_obj_ref_thread_set sc_relation_def)
-                       apply (rule threadset_corres; clarsimp simp: tcb_relation_def)
-                      apply (wpsimp simp: set_tcb_obj_ref_def)
-                     apply (wp | rule tcb_release_remove_corres tcbSchedDequeue_corres
-                                      corres_when[OF refl rescheduleRequired_corres] getCurThread_corres)+
-        apply (prop_tac "invs s \<and> (\<exists>y. sc_tcb sc = Some y \<and> tcb_at y s) \<and> active_sc_valid_refills s
-                                \<and> weak_valid_sched_action s \<and> sc_at scp s")
-         apply assumption
-        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def sc_relation_def)
-       apply (prop_tac "invs' s' \<and> obj_at' ((=) sca) scp s'")
-        apply assumption
-       apply clarsimp
-       apply (frule tcb_at_cross[rotated 3]; fastforce simp: obj_at'_def sc_relation_def)
-      apply wp
-      apply (fastforce dest: invs_valid_objs simp: valid_obj_def obj_at_def is_sc_obj_def)
-     apply wp
-     apply clarsimp
-     apply (prop_tac "invs' s \<and> obj_at' (\<lambda>sc. scTCB sc \<noteq> None) scp s")
-      apply assumption
-     apply (clarsimp simp: obj_at'_def)
-    apply (clarsimp simp: obj_at_def sc_at_ppred_def neq_commute)
-    apply (drule invs_valid_objs)
-    apply (erule (1) valid_objsE)
-    apply (clarsimp simp: valid_obj_def valid_sched_context_def valid_bound_obj_def obj_at_def)
-   apply (subgoal_tac "sc_at_pred (\<lambda>sc. sc_tcb sc \<noteq> None) scp s")
-    apply clarsimp
-    apply (subgoal_tac "obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp s'")
-     apply (clarsimp simp: sc_at_pred_def obj_at_def obj_at'_def)
-    apply (prop_tac "sc_at scp s")
-     apply (clarsimp simp: sc_at_pred_def obj_at_def obj_at'_def is_sc_obj_def)
-     apply (fastforce dest: invs_valid_objs simp: valid_obj_def)
-    apply (fastforce simp: sc_relation_def sc_at_pred_def obj_at_def obj_at'_def projectKO_eq
-                    split: if_splits kernel_object.splits
-                    dest!: sc_at_cross[rotated 3] pspace_relation_absD)
-   apply (clarsimp simp: obj_at_def sc_at_ppred_def neq_commute)
-  apply (clarsimp simp: sym_refs_asrt_def)
-  done
-
 lemma sched_context_resume_weak_valid_sched_action:
   "\<lbrace>\<lambda>s. weak_valid_sched_action s \<and>
         (\<forall>ya. sc_tcb_sc_at ((=) (Some ya)) scp s \<longrightarrow> scheduler_act_not ya s)\<rbrace>
@@ -2331,6 +2260,36 @@ crunches schedContextYieldTo, schedContextCompleteYieldTo
   for tcb_at'[wp]: "tcb_at' tcbPtr"
   (wp: crunch_wps)
 
+(* RT FIXME : Move *)
+lemma neq_None_bound: "((\<noteq>) None) = bound"
+  using cases_simp_option option.simps(3) by metis
+
+(* RT FIXME : Move *)
+lemma sc_tcb_sc_at_bound_cross:
+  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); valid_objs s; pspace_aligned s; pspace_distinct s;
+    sc_tcb_sc_at ((\<noteq>) None) scp s\<rbrakk>
+  \<Longrightarrow> obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp s'"
+  apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
+  apply (frule (1) pspace_relation_absD)
+  apply clarsimp
+  apply (prop_tac "valid_sched_context_size n", fastforce simp: valid_obj_def)
+  apply (clarsimp simp: if_split_asm)
+  apply (rename_tac z; case_tac z; simp)
+  apply (drule (3) aligned_distinct_ko_at'I[where 'a=sched_context], simp)
+  apply (clarsimp simp: obj_at'_def sc_relation_def projectKOs)
+  by (metis not_None_eq)
+
+lemma schedContextUnbindTCB_corres':
+  "corres dc (invs and valid_sched and sc_tcb_sc_at ((\<noteq>) None) scp) invs'
+             (sched_context_unbind_tcb scp) (schedContextUnbindTCB scp)"
+  apply (rule corres_cross_add_guard[where Q="obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp"])
+   apply (fastforce elim: sc_tcb_sc_at_bound_cross dest!: state_relation_pspace_relation
+                    simp: invs_def valid_state_def valid_pspace_def)
+
+  apply (simp add: neq_None_bound)
+  apply (rule schedContextUnbindTCB_corres[simplified])
+  done
+
 lemma tc_corres_sched:
   fixes t slot sc_fault_h p_auth mcp_auth sc_opt sl' sc_fault_h' sc_opt'
   defines "tc_inv_sched \<equiv> tcb_invocation.ThreadControlSched t slot sc_fault_h mcp_auth p_auth sc_opt"
@@ -2366,7 +2325,7 @@ lemma tc_corres_sched:
                       apply (rule_tac P=\<top> and P'=\<top> in corres_option_split; clarsimp)
                       apply (rule corres_option_split; clarsimp?)
                        apply (rule_tac P=\<top> and P'=\<top> in corres_option_split; clarsimp)
-                       apply (rule schedContextUnbindTCB_corres)
+                       apply (rule schedContextUnbindTCB_corres')
                       apply (rule corres_when[OF _ schedContextBindTCB_corres], fastforce)
                      apply (simp only: mapTCBPtr_threadGet get_tcb_obj_ref_def)
                      apply (rule threadGet_corres, clarsimp simp: tcb_relation_def)
