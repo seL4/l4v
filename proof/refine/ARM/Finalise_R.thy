@@ -4692,7 +4692,7 @@ global_interpretation delete_one
   done
 
 lemma schedContextUnbindTCB_corres:
-  "corres dc (einvs and sc_tcb_sc_at bound sc_ptr)
+  "corres dc (invs and valid_sched and sc_tcb_sc_at bound sc_ptr)
              (invs' and obj_at' (\<lambda>sc. bound (scTCB sc)) sc_ptr)
           (sched_context_unbind_tcb sc_ptr) (schedContextUnbindTCB sc_ptr)"
   apply (clarsimp simp: sched_context_unbind_tcb_def schedContextUnbindTCB_def
