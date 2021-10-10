@@ -3758,11 +3758,6 @@ lemma state_refs_of_cross_eq:
 
 end
 
-method add_sym_refs =
-  rule_tac Q="(\<lambda>s. sym_refs (state_refs_of' s))" in corres_cross_add_guard
-  , (frule invs_sym_refs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?
-  , fastforce dest: state_refs_of_cross_eq
-
 lemma state_refs_of_cross:
   "\<lbrakk>P (state_refs_of s); (s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s\<rbrakk>
       \<Longrightarrow> P (state_refs_of' s')"
@@ -3786,10 +3781,6 @@ lemma ct_not_inQ_cross:
   apply (frule state_relation_ready_queues_relation)
   apply (clarsimp simp: valid_queues'_def inQ_def ready_queues_relation_def obj_at_simps)
   by (metis Structures_H.kernel_object.case(6))
-
-method add_ct_not_inQ =
-  rule_tac Q="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
-  fastforce intro!: ct_not_inQ_cross simp: valid_sched_def
 
 lemma sch_act_wf_cross:
   "\<lbrakk>(s,s') \<in> state_relation; valid_sched_action s; cur_tcb s; pspace_aligned s; pspace_distinct s\<rbrakk>
@@ -3834,10 +3825,6 @@ lemma sch_act_wf_cross:
                         etcb_at'_def vs_all_heap_simps)
   done
 
-method add_sch_act_wf =
-  rule_tac Q="\<lambda>s'. sch_act_wf (ksSchedulerAction s') s'" in corres_cross_add_guard,
-  fastforce intro!: sch_act_wf_cross simp: valid_sched_def
-
 lemma ct_idle_or_in_cur_domain'_cross:
   "\<lbrakk>(s,s') \<in> state_relation; ct_in_cur_domain s; cur_tcb s; pspace_aligned s; pspace_distinct s\<rbrakk>
    \<Longrightarrow> ct_idle_or_in_cur_domain' s'"
@@ -3866,10 +3853,6 @@ lemma ct_idle_or_in_cur_domain'_cross:
   apply (clarsimp simp: other_obj_relation_def tcb_relation_def state_relation_def)
   done
 
-method add_ct_idle_or_in_cur_domain' =
-  rule_tac Q="\<lambda>s'. ct_idle_or_in_cur_domain' s'" in corres_cross_add_guard,
-  fastforce intro!: ct_idle_or_in_cur_domain'_cross simp: valid_sched_def
-
 lemma valid_idle'_cross:
   "\<lbrakk>(s,s') \<in> state_relation; valid_idle s; pspace_aligned s; pspace_distinct s; valid_objs s\<rbrakk>
    \<Longrightarrow> valid_idle' s'"
@@ -3894,10 +3877,6 @@ lemma valid_idle'_cross:
   by (fastforce dest: sc_replies_prevs_walk
                 simp: heap_walk_Nil_None obj_at_simps sc_relation_def state_relation_def)
 
-method add_valid_idle' =
-  rule_tac Q="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
-  fastforce intro!: valid_idle'_cross
-
 lemma ksReadyQueues_distinct_cross:
    "\<lbrakk>(s,s') \<in> state_relation; valid_ready_qs s\<rbrakk> \<Longrightarrow> \<forall>d p. distinct (ksReadyQueues s' (d, p))"
    by (clarsimp simp: valid_ready_qs_def state_relation_def ready_queues_relation_def)
@@ -3909,13 +3888,6 @@ lemma ready_qs_runnable_cross:
   by (fastforce simp: state_relation_def ready_queues_relation_def
                       in_ready_q_def st_tcb_at_runnable_cross
                 dest: valid_ready_qs_in_ready_qD)
-
-method add_ready_qs_runnable =
-  rule_tac Q=ready_qs_runnable
-        in corres_cross_add_guard
-  , (clarsimp simp: pred_conj_def)?
-  , (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?
-  , fastforce dest: ready_qs_runnable_cross
 
 lemma replyTCBs_of_cross:
   "\<lbrakk>(s, s') \<in> state_relation; reply_tcb_reply_at P rptr s\<rbrakk>
@@ -3957,10 +3929,6 @@ lemma valid_replies_sc_cross:
    apply (fastforce simp: sk_obj_at_pred_def2)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
-
-method add_valid_replies for rptr uses simp =
-  rule_tac Q="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard
-  , fastforce elim: valid_replies_sc_cross simp: simp
 
 lemma getCurThread_sp:
   "\<lbrace>P\<rbrace> getCurThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurThread s)\<rbrace>"
@@ -4827,5 +4795,39 @@ lemma is_active_sc'2_cross:
   apply (clarsimp simp: sc_relation_def vs_all_heap_simps obj_at'_def projectKOs
                         active_sc_def opt_map_red StateRelation.is_active_sc'_def)
   done
+
+\<comment> \<open>Some methods to add invariants to the concrete guard of a corres proof. Often used for properties
+    that are asserted to hold in the Haskell definition.\<close>
+
+method add_sym_refs =
+  rule_tac Q="\<lambda>s'. sym_refs (state_refs_of' s')" in corres_cross_add_guard,
+  (frule invs_sym_refs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
+  fastforce dest: state_refs_of_cross_eq
+
+method add_ct_not_inQ =
+  rule_tac Q="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
+  fastforce intro!: ct_not_inQ_cross simp: valid_sched_def
+
+method add_sch_act_wf =
+  rule_tac Q="\<lambda>s'. sch_act_wf (ksSchedulerAction s') s'" in corres_cross_add_guard,
+  fastforce intro!: sch_act_wf_cross simp: valid_sched_def
+
+method add_ct_idle_or_in_cur_domain' =
+  rule_tac Q="\<lambda>s'. ct_idle_or_in_cur_domain' s'" in corres_cross_add_guard,
+  fastforce intro!: ct_idle_or_in_cur_domain'_cross simp: valid_sched_def
+
+method add_valid_idle' =
+  rule_tac Q="\<lambda>s'. valid_idle' s'" in corres_cross_add_guard,
+  fastforce intro!: valid_idle'_cross
+
+method add_ready_qs_runnable =
+  rule_tac Q=ready_qs_runnable in corres_cross_add_guard,
+  (clarsimp simp: pred_conj_def)?,
+  (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
+  fastforce dest: ready_qs_runnable_cross
+
+method add_valid_replies for rptr uses simp =
+  rule_tac Q="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard,
+  fastforce elim: valid_replies_sc_cross simp: simp
 
 end
