@@ -3958,7 +3958,7 @@ crunches
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
   for valid_list[wp]: valid_list
-  (wp: mapM_x_wp' hoare_drop_imp)
+  (wp: mapM_x_wp' hoare_drop_imp whileLoop_wp' simp: is_round_robin_def crunch_simps)
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 

@@ -103,6 +103,8 @@ lemma cancel_all_signals_st_tcb_at_helper:
   defines "V \<equiv> \<lambda>q s. if t \<in> set q then P (P' Restart) else P (st_tcb_at P' t s)"
   shows "\<lbrace>V q\<rbrace>
           mapM_x (\<lambda>t. do set_thread_state t Restart;
+                         sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+                         if_sporadic_cur_sc_assert_refill_unblock_check sc_opt;
                          possible_switch_to t
                       od) q
          \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
@@ -1824,6 +1826,8 @@ lemma cancel_all_signals_invs_helper:
                   \<and> (\<forall>x\<in>set q. st_tcb_at (Not \<circ> (halted or awaiting_reply)) x s
                                 \<and> fault_tcb_at ((=) None) x s))\<rbrace>
      mapM_x (\<lambda>t. do y \<leftarrow> set_thread_state t Structures_A.thread_state.Restart;
+                    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context t;
+                    y \<leftarrow> if_sporadic_cur_sc_assert_refill_unblock_check sc_opt;
                     possible_switch_to t od) q
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2391,10 +2395,44 @@ lemma cancel_all_unlive_helper':
 crunch obj_at[wp]: possible_switch_to "\<lambda>s. P (obj_at Q p s)"
   (wp: crunch_wps simp: crunch_simps)
 
+lemma refill_unblock_check_obj_at_impossible':
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  unfolding refill_unblock_check_def
+  by (wpsimp wp: whileLoop_wp' update_sched_context_wp get_refills_wp
+           simp: refill_head_overlapping_loop_def merge_refills_def update_refill_hd_def
+                 refill_pop_head_def is_round_robin_def
+    | clarsimp elim!: rsubst[where P=P] simp: obj_at_def)+
+
+lemma misc_refill_unblock_check_obj_at_impossible':
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_sporadic_cur_sc_assert_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_sporadic_active_cur_sc_assert_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_sporadic_cur_sc_test_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_sporadic_and_active_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk> \<Longrightarrow>
+   if_constant_bandwidth_refill_unblock_check sc_opt
+   \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  unfolding if_cond_refill_unblock_check_def
+  by (wpsimp wp: sts_obj_at_impossible' refill_unblock_check_obj_at_impossible')+
+
+
 lemma restart_thread_if_no_fault_obj_at_impossible':
-  "(\<And>tcb. \<not> P' (TCB tcb)) \<Longrightarrow> restart_thread_if_no_fault t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  "\<lbrakk>\<And>tcb. \<not> P' (TCB tcb); \<And>sc n. \<not> P' (SchedContext sc n)\<rbrakk>
+   \<Longrightarrow> restart_thread_if_no_fault t \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding restart_thread_if_no_fault_def
-  by (wpsimp wp: sts_obj_at_impossible' hoare_drop_imps)
+  by (wpsimp wp: sts_obj_at_impossible' hoare_drop_imps misc_refill_unblock_check_obj_at_impossible')
 
 lemmas
   restart_thread_if_no_fault_obj_at_impossible =
@@ -2447,7 +2485,7 @@ lemma cancel_all_signals_unlive[wp]:
         | simp add: unbind_maybe_notification_def)+
      apply (rule_tac Q="\<lambda>_. obj_at (is_ntfn and Not \<circ> live) ntfnptr" in hoare_post_imp)
       apply (fastforce elim: obj_at_weakenE)
-     apply (wp mapM_x_wp' sts_obj_at_impossible
+     apply (wp mapM_x_wp' sts_obj_at_impossible misc_refill_unblock_check_obj_at_impossible'
       | simp add: is_ntfn)+
     apply (wpsimp simp: set_simple_ko_def set_object_def get_object_def)
    apply wpsimp

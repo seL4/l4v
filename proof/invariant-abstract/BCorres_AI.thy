@@ -59,7 +59,7 @@ crunch_ignore (bcorres)
   (add: NonDetMonad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
-        lookup_error_on_failure getActiveIRQ
+        lookup_error_on_failure getActiveIRQ maybeM
         gets_the liftME zipWithM_x unlessE mapME_x handleE forM_x)
 
 lemma bcorres_select_ext[wp]:
@@ -151,6 +151,14 @@ lemma get_sc_refill_ready_bcorres[wp]:
   "bcorres (get_sc_refill_ready scp) (get_sc_refill_ready scp)"
   by (wpsimp simp: get_sc_refill_ready_def gets_the_def)
 
+lemma refill_head_overlapping_truncate[simp]:
+  "refill_head_overlapping a (truncate_state s) = refill_head_overlapping a s"
+  by (simp add: refill_head_overlapping_def obind_def omonad_defs)
+
+crunch (bcorres)bcorres[wp]:
+  refill_unblock_check
+  truncate_state
+
 crunch (bcorres)bcorres[wp]:
   cancel_all_ipc, bind_notification, cancel_all_signals
   truncate_state
@@ -160,11 +168,11 @@ crunch (bcorres)bcorres[wp]: get_tcb_obj_ref, get_sk_obj_ref truncate_state
 
 lemma unbind_maybe_notification_bcorres[wp]:
   "bcorres (unbind_maybe_notification a) (unbind_maybe_notification a)"
-  by (wpsimp simp: unbind_maybe_notification_def maybeM_def)
+  by (wpsimp simp: unbind_maybe_notification_def)
 
 lemma unbind_notification_bcorres[wp]:
   "bcorres (unbind_notification a) (unbind_notification a)"
-  by (wpsimp simp: unbind_notification_def maybeM_def)
+  by (wpsimp simp: unbind_notification_def)
 
 (*
 lemma fast_finalise_bcorres[wp]:
