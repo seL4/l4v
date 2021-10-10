@@ -72,3 +72,30 @@ In summary, assertions in Haskell can allow us to transport information from `AI
 We still sometimes need to prove invariants at the Haskell level. This happens when the Haskell spec contains some information that's not present in the abstract spec. For example, Haskell contains a flag in the TCB that indicates whether a thread is in the run queue. We'll need to show that this flag is consistent with the actual queue contents before we can show that a Haskell function that looks at that flag is a refinement of an abstract function that checks whether the thread is in the release queue.
 
 You might wonder whether the same thing happens at the C level. And yes it would, if the C contained information not present in the Haskell spec. We avoid that, by making sure that the Haskell spec has all the information in the C.
+
+# Cross lemmas and asserts
+
+Suppose that we have two sorts of states, an abstract state `s`, and a concrete state `s'`, and that these states are related; that is `(s,s') \<in> state_relation`.  A cross lemma is, informally, a lemma which allows us to "cross" information from one state to the other, and so has a form something like
+
+`lemma cross_lemma_example:
+  [| (s,s') \<in> state_relation; P s |] ==> Q s'`
+
+(though, for example, we might also wish to make further assumptions about the state `s'`).
+
+As discussed above, we have invariants for both the abstract and concrete states. Often, we will formulate a property for the abstract state, and have an analogous property for the concrete state, and will be able to use a cross lemma to cross the property from the abstract state to the concrete state.
+
+As an example, we have `sym_refs (state_refs_of s)` as part of `invs`. We also have the predicate `sym_refs (state_refs_of' s')` in Refine. We can use the cross lemma `state_refs_of_cross_eq` to give us `sym_refs (state_refs_of' s')` whenever we have `sym_refs (state_refs_of s)` (under some mild assumption).
+
+Whenever we have an invariant `P` of the abstract state, and can derive `Q` via a cross lemma, then `Q` will be an invariant of the concrete state.
+
+When proving a Hoare triple statement about a Haskell invariant, it is often useful or necessary to assume that some other Haskell property holds. When this other property can be derived via a cross lemma, we can use asserts and cross lemmas in the following way to reduce duplication of proofs for invariants.
+
+Suppose that we have the rule `cross_lemma_example`, and that we would like to assume that `Q` holds when proving a Hoare triple about some Haskell property for the function `f`. We can simply add a Haskell assert that `Q` holds to the function `f`. As mentioned above, we are free to assume that the asserted property holds in any Hoare triple proof about `f`. When we prove the `corres` rule for `f`, we will need to show that the assert is true. This can be shown using the cross lemma, as long as the abstract and concrete guards are sufficiently strong for it to be applicable.
+
+# Some implementation details.
+
+Again taking the rule `cross_lemma_example`, suppose we'd like to add an assert that `Q` holds to the function `f`. This can be done by defining a function `Q_asrt` in the Haskell. An example of this is `sym_refs_asrt` in `l4v/spec/haskell/src/SEL4/Model/StateData.lhs`. We then ask that this definition is not exported, but that a `consts'` statement with name `Q_asrt` be produced. This is done in the associated `skel` file. For `sym_refs_asrt`, we add `sym_refs_asrt` to the last two lines of `l4v/spec/design/skel/KernelStateData_H.thy`. We then add this assert to the Haskell definition of `f`; there are many example of `sym_refs_asrt` that you can follow. Finally, in an Isabelle theory file, we write out a `defs'` statement which defines `Q_asrt` to be the statement that the property `Q` holds. For `sym_refs_asrt`, `sym_refs_asrt_def` is defined in `Invariants_H.thy`.
+
+It is often easiest to place the assert as early as possible in the Haskell function. At the beginning of the Hoare triple proof, `rule hoare_seq_ext[OF _ assert_sp]` can then be used to easily "grab" the assert, and `Q_asrt_def` can be used to say that `Q` does hold.
+
+In the `corres` proof for `f`, we would like to add `Q` to the concrete guard. We have found it convenient to write short Eisbach methods to do this, since an assert is often added to many functions. These methods use `corres_cross_add_guard` to add `Q` to the concrete guard, and then use the cross lemma to cross the information over. For `sym_refs_asrt`, we have `add_sym_refs`. We try to collect these methods at the very end of `KHeap_R.thy`. Again, it is normally easiest to add the invariant to the concrete guard early in the `corres` proof. Then `corres_stateAssert_add_assertion` can be used once the `corres` proof has reached the assert in the Haskell function.
