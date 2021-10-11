@@ -19,6 +19,8 @@ locale Schedule_AI =
       "\<And>t'. \<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. (tcb_at t' :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stt_sc_at[wp]:
+      "\<And>t' sc_ptr. arch_switch_to_thread t' \<lbrace>(sc_at sc_ptr :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stt_runnable:
       "\<And>t. \<lbrace>st_tcb_at Q t\<rbrace> arch_switch_to_thread t
             \<lbrace>\<lambda>r . (st_tcb_at Q t :: 'a state \<Rightarrow> bool)\<rbrace>"
@@ -29,6 +31,8 @@ locale Schedule_AI =
       "\<And>t'. \<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. (invs :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stit_tcb [wp]:
       "\<And>t'. \<lbrace>tcb_at t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
+    assumes arch_stit_sc_at [wp]:
+      "\<And>sc_ptr. arch_switch_to_idle_thread \<lbrace>(sc_at sc_ptr :: 'a state \<Rightarrow> bool)\<rbrace>"
     assumes arch_stit_scheduler_action:
       "\<And>t'. \<lbrace>\<lambda>s::'a state. P (scheduler_action s)\<rbrace>
              arch_switch_to_idle_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
