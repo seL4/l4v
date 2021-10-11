@@ -383,6 +383,11 @@ lemma ksDomainTime_invs[simp]:
                 valid_machine_state'_def ct_not_inQ_def
                 ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def valid_dom_schedule'_def)
 
+lemma ksSchedulerAction_invs'[simp]:
+  "invs' (ksSchedulerAction_update f s) = invs' s"
+  by (auto simp: invs'_def valid_release_queue_def valid_release_queue'_def
+                 valid_machine_state'_def  valid_irq_node'_def valid_dom_schedule'_def)
+
 lemma valid_machine_state'_ksDomainTime[simp]:
   "valid_machine_state' (ksDomainTime_update f s) = valid_machine_state' s"
   by (simp add:valid_machine_state'_def)
