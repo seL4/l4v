@@ -69,6 +69,12 @@ lemma agnostic_preservedE_R:
   "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -"
   unfolding ta_agnostic_def
   by (simp add: agnostic_preserved ta_agnostic_def valid_validE_R)
+
+lemma agnostic_preservedE:
+  "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding ta_agnostic_def
+  by (simp add: agnostic_preserved ta_agnostic_def valid_validE)
+
 end
 
 (* does this actually do anything? *)
@@ -77,7 +83,7 @@ sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
 
 locale touched_addresses_P_inv = touched_addresses_inv m for m::"('z::state_ext state, 'r) nondet_monad" +
   fixes P :: "'z state \<Rightarrow> bool"
-  assumes ta_agnostic: "ta_agnostic P"
+  assumes ta_agnostic [simp]: "ta_agnostic P"
 begin
 lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"

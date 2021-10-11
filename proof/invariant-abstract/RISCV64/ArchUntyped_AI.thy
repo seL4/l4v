@@ -8,50 +8,6 @@ theory ArchUntyped_AI
 imports Untyped_AI
 begin
 
-(* todo: move these *)
-lemma ta_agnostic_conj:
-  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
-  ta_agnostic (\<lambda>s. P1 s \<and> P2 s)"
-  by (clarsimp simp:ta_agnostic_def)
-
-lemma ta_agnostic_predconj:
-  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
-  ta_agnostic (P1 and P2)"
-  by (clarsimp simp:ta_agnostic_def)
-
-lemma ta_agnostic_null[simp]:
-  "ta_agnostic (\<lambda>s. P)"
-  by (clarsimp simp:ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ valid_state
-  apply unfold_locales
-  apply (clarsimp simp: valid_state_def)
-  apply (intro ta_agnostic_predconj
-        | clarsimp simp: valid_pspace_def valid_objs.ta_agnostic valid_machine_state_def
-        | fastforce simp:ta_agnostic_def
-        | fastforce simp add: machine_state_update.state_refs_update ta_agnostic_def
-        | fastforce simp: valid_irq_states_def valid_irq_masks_def ta_agnostic_def)+
-  done
-
-(*FIXME: This doesn't currently (directly) expose the ta_agnostic lemma we are after here *)
-sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ invs
-  apply unfold_locales
-  apply (simp only: invs_def)
-  apply (intro ta_agnostic_predconj)
-   apply (simp add: valid_state.ta_agnostic)
-  apply (clarsimp simp: cur_tcb_def tcb_at_def get_tcb_def ta_agnostic_def)
-  done
-
-sublocale touched_addresses_inv \<subseteq> cte_wp_at: touched_addresses_P_inv _ "cte_wp_at P p"
-  by unfold_locales (simp add: ta_agnostic_def)
-
-(* this is a bit of a hack to make lemmas like `invs.ta_agnostic` available
-   without specifying a (meaningful) monad. so now we can use base.invs.ta_agnostic for
-   example. *)
-interpretation base:
-  touched_addresses_inv "return ()"
-  by unfold_locales wp
-
 context Arch begin global_naming RISCV64
 
 named_theorems Untyped_AI_assms

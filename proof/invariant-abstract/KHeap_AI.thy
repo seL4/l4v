@@ -1610,4 +1610,58 @@ lemma touch_object_wp':
   apply (clarsimp simp:obj_at_def)
   done
 
+
+
+
+
+
+
+
+
+subsection "TA Agnostic for invs"
+
+lemma ta_agnostic_conj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. P1 s \<and> P2 s)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_predconj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (P1 and P2)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_null[simp]:
+  "ta_agnostic (\<lambda>s. P)"
+  by (clarsimp simp:ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ valid_pspace
+                                + valid_irq_states: touched_addresses_P_inv _ valid_irq_states
+                                + valid_machine_state: touched_addresses_P_inv _ valid_machine_state
+                                + cte_wp_at: touched_addresses_P_inv _ "cte_wp_at P p"
+  apply unfold_locales
+  apply (simp add:ta_agnostic_def valid_irq_states_def valid_machine_state_def)+
+  done
+
+sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ valid_state
+  apply unfold_locales
+  apply (clarsimp simp: valid_state_def)
+  apply (intro ta_agnostic_predconj)
+  apply (solves \<open>clarsimp | clarsimp simp: ta_agnostic_def\<close>)+
+  done
+
+sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ invs
+  apply unfold_locales
+  apply (simp only:invs_def)
+  apply (intro ta_agnostic_predconj)
+   apply simp
+  apply (clarsimp simp: cur_tcb_def tcb_at_def get_tcb_def ta_agnostic_def)
+  done
+
+(* this is a bit of a hack to make lemmas like `invs.ta_agnostic` available
+   without specifying a (meaningful) monad. so now we can use base.invs.ta_agnostic for
+   example. *)
+interpretation base:
+  touched_addresses_inv "return ()"
+  by unfold_locales wp
+
 end
