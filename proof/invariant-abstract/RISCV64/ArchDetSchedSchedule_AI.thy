@@ -147,6 +147,15 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
                       wp: perform_asid_control_invocation_valid_sched)+
   done
 
+lemma arch_perform_invocation_cur_sc_active[wp, DetSchedSchedule_AI_assms]:
+  "\<lbrace>cur_sc_active and invs and ct_active and schact_is_rct and valid_arch_inv i\<rbrace>
+   arch_perform_invocation i
+   \<lbrace>\<lambda>_. cur_sc_active\<rbrace>"
+  apply (cases i, simp_all add: arch_perform_invocation_def)
+      apply (wpsimp simp: valid_arch_inv_def invs_valid_idle
+                      wp: perform_asid_control_invocation_cur_sc_active)+
+  done
+
 lemma handle_vm_fault_st_tcb_cur_thread [wp]:
   "\<lbrace> \<lambda>s. st_tcb_at P (cur_thread s) s \<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. st_tcb_at P (cur_thread s) s \<rbrace>"
   apply (fold ct_in_state_def)
