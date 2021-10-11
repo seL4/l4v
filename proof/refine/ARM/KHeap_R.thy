@@ -3974,6 +3974,10 @@ lemma getReprogramTimer_sp:
   "\<lbrace>P\<rbrace> getReprogramTimer \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksReprogramTimer s)\<rbrace>"
   by (wpsimp simp: getReprogramTimer_def)
 
+lemma getIdleThread_sp:
+  "\<lbrace>P\<rbrace> getIdleThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksIdleThread s)\<rbrace>"
+  by wpsimp
+
 lemma getReprogramTimer_wp[wp]:
   "\<lbrace>\<lambda>s. P (ksReprogramTimer s) s\<rbrace> getReprogramTimer \<lbrace>P\<rbrace>"
   by (wpsimp simp: getReprogramTimer_def)
@@ -3999,6 +4003,10 @@ lemma getCurTime_wp[wp]:
 lemma curDomain_wp[wp]:
   "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
   unfolding curDomain_def
+  by wpsimp
+
+lemma curDomain_sp:
+  "\<lbrace>P\<rbrace> curDomain \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurDomain s)\<rbrace>"
   by wpsimp
 
 lemma getReleaseQueue_wp[wp]:

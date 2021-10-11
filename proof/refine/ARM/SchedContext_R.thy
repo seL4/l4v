@@ -173,23 +173,23 @@ lemma updateSchedContext_invs'_indep:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma scConsumed_update_corres:
-  "x = y \<Longrightarrow>
-   corres dc (sc_at scPtr) (ko_at' sc' scPtr)
-          (set_sc_obj_ref sc_consumed_update scPtr x)
-          (setSchedContext scPtr (scConsumed_update (\<lambda>_. y) sc'))"
-  unfolding update_sched_context_def
-  apply (rule corres_guard_imp)
-    apply (rule corres_symb_exec_l'[where Q'="\<lambda>r s. ko_at r scPtr s \<and> (\<exists>n. is_sc_obj n r)",
-                                    where P="\<lambda>s. obj_at \<top> scPtr s"])
-      apply (rule corres_guard_imp[where P'=R and Q'=R for R])
-        apply (rule_tac F="(\<exists>n. is_sc_obj n obj)" in corres_gen_asm)
-        apply (case_tac obj; simp add: is_sc_obj_def)
-        apply (rule setSchedContext_no_stack_update_corres[where f'="scConsumed_update (\<lambda>_. y)"])
-           apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def obj_at_def)+
-     apply (fastforce simp: exs_valid_def get_object_def in_monad obj_at_def)
-    apply (wpsimp wp: get_object_wp)
-   apply (fastforce simp: obj_at_def)
-  apply simp
+  "\<lbrakk>\<forall>x y. x = y \<longrightarrow> f x = f' y\<rbrakk> \<Longrightarrow>
+    corres dc (sc_at scPtr) (ko_at' sc' scPtr)
+          (update_sched_context scPtr (sc_consumed_update f))
+          (setSchedContext scPtr (scConsumed_update f' sc'))"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
+    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
+    apply (fastforce intro: get_object_exs_valid
+                      simp: obj_at_def)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def)
+  apply (rename_tac obj)
+  apply (case_tac obj; clarsimp;
+         (solves \<open>fastforce simp: obj_at_simps is_sc_obj_def corres_underlying_def\<close>)?)
+  apply (corressimp corres: setSchedContext_no_stack_update_corres
+                              [where f="sc_consumed_update f" and f'="scConsumed_update f'" ])
+  apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def obj_at_def)
   done
 
 lemma schedContextUpdateConsumed_corres:
