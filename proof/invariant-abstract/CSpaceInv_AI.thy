@@ -198,11 +198,11 @@ crunches lookup_cap
   for tainv [wp]: "ignore_ta P"
 
 interpretation lookup_cap_tainv:
-  touched_addresses_inv "lookup_cap obj cap"
+  touched_addresses_invE "lookup_cap obj cap"
   by (unfold_locales, rule lookup_cap_tainv)
 
 interpretation lookup_slot_for_thread_tainv:
-  touched_addresses_inv "lookup_slot_for_thread obj cap"
+  touched_addresses_invE "lookup_slot_for_thread obj cap"
   by (unfold_locales, rule lookup_slot_for_thread_tainv)
 
 lemma cte_at_tcb_update:

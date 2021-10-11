@@ -1518,7 +1518,7 @@ crunches lookup_extra_caps
   (wp: crunch_wps mapME_wp' simp: crunch_simps)
 
 interpretation lookup_extra_caps_tainv:
-  touched_addresses_inv "lookup_extra_caps x y z"
+  touched_addresses_invE "lookup_extra_caps x y z"
   by unfold_locales wp
 
 lemma lookup_extra_caps_srcs[wp]:
@@ -1625,41 +1625,22 @@ lemma set_mrs_valid_globals[wp]:
   by (wp set_mrs_thread_set_dmo thread_set_global_refs_triv
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
 
+
 sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ pspace_aligned
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> distinct:touched_addresses_P_inv _ pspace_distinct
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> vmdb:touched_addresses_P_inv _ valid_mdb
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> cte_wp_at:touched_addresses_P_inv _ "cte_wp_at P p"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> cap_table_at:touched_addresses_P_inv _ "cap_table_at a b"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> ifunsafe:touched_addresses_P_inv _ "if_unsafe_then_cap"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> iflive:touched_addresses_P_inv _ "if_live_then_nonz_cap"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> state_refs_of:touched_addresses_P_inv _ "\<lambda>s. P (state_refs_of s)"
-  by unfold_locales (clarsimp simp: ta_agnostic_def state_refs_of_def)
-
-sublocale touched_addresses_inv \<subseteq> ct:touched_addresses_P_inv _ cur_tcb
-  by unfold_locales (clarsimp simp: ta_agnostic_def cur_tcb_def)
-
-sublocale touched_addresses_inv \<subseteq> zombies:touched_addresses_P_inv _ zombies_final
-  by unfold_locales (clarsimp simp: ta_agnostic_def zombies_final_def is_final_cap'_def2)
-
-sublocale touched_addresses_inv \<subseteq> it:touched_addresses_P_inv _ "\<lambda>s. P (idle_thread s)"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> valid_globals:touched_addresses_P_inv _ valid_global_refs
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
+                                + distinct:touched_addresses_P_inv _ pspace_distinct
+                                + vmdb:touched_addresses_P_inv _ valid_mdb
+                                + cap_table_at:touched_addresses_P_inv _ "cap_table_at a b"
+                                + ifunsafe:touched_addresses_P_inv _ if_unsafe_then_cap
+                                + iflive:touched_addresses_P_inv _ if_live_then_nonz_cap
+                                + state_refs_of:touched_addresses_P_inv _ "\<lambda>s. P1 (state_refs_of s)"
+                                + ct:touched_addresses_P_inv _ cur_tcb
+                                + zombies:touched_addresses_P_inv _ zombies_final
+                                + it:touched_addresses_P_inv _ "\<lambda>s. P2 (idle_thread s)"
+                                + valid_globals:touched_addresses_P_inv _ valid_global_refs
+  apply unfold_locales
+  apply (simp add: ta_agnostic_def state_refs_of_def cur_tcb_def zombies_final_def
+                   is_final_cap'_def2)+
+  done
 
 context Ipc_AI begin
 
@@ -1716,21 +1697,14 @@ crunch reply_masters[wp]: copy_mrs valid_reply_masters
   (wp: crunch_wps)
 
 sublocale touched_addresses_inv \<subseteq> reply:touched_addresses_P_inv _ valid_reply_caps
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> reply_masters:touched_addresses_P_inv _ valid_reply_masters
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> valid_idle:touched_addresses_P_inv _ valid_idle
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> arch:touched_addresses_P_inv _ "\<lambda>s. P (arch_state s)"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> irq_node:touched_addresses_P_inv _ "\<lambda>s. P (interrupt_irq_node s)"
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
+                                + reply_masters:touched_addresses_P_inv _ valid_reply_masters
+                                + valid_idle:touched_addresses_P_inv _ valid_idle
+                                + arch:touched_addresses_P_inv _ "\<lambda>s. P1 (arch_state s)"
+                                + irq_node:touched_addresses_P_inv _ "\<lambda>s. P2 (interrupt_irq_node s)"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
+
 
 crunches do_ipc_transfer
   for reply[wp]: "valid_reply_caps :: 'state_ext state \<Rightarrow> bool"
@@ -1740,6 +1714,7 @@ crunches do_ipc_transfer
   and typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
   and irq_node[wp]: "\<lambda>s::'state_ext state. P (interrupt_irq_node s)"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: ball_conj_distrib zipWithM_x_mapM)
+
 
 (* FIXME: move to KHeap_AI? *)
 interpretation
@@ -1843,10 +1818,8 @@ lemma set_mrs_only_idle [wp]:
   by (simp add: get_tcb_rev)
 
 sublocale touched_addresses_inv \<subseteq> only_idle:touched_addresses_P_inv _ only_idle
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> pspace_in_kernel_window:touched_addresses_P_inv _ pspace_in_kernel_window
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
+                                + pspace_in_kernel_window:touched_addresses_P_inv _ pspace_in_kernel_window
+  by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
 
@@ -1883,10 +1856,9 @@ lemmas set_mrs_cap_refs_respects_device_region[wp]
                                 simplified tcb_cap_cases_def, simplified]
 
 sublocale touched_addresses_inv \<subseteq> cap_refs_in_kernel_window:touched_addresses_P_inv _ cap_refs_in_kernel_window
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> valid_ioc:touched_addresses_P_inv _ valid_ioc
-  by unfold_locales (clarsimp simp: ta_agnostic_def)
+                                + valid_ioc:touched_addresses_P_inv _ valid_ioc
+                                + tcb_at:touched_addresses_P_inv _ "tcb_at r"
+  by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
 
@@ -2070,9 +2042,12 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
   "cte_wp_at ((=) (cap.ReplyCap tcb v R)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
+sublocale touched_addresses_inv \<subseteq> st_tcb_at:touched_addresses_P_inv _ "st_tcb_at P t"
+  by unfold_locales (simp add:ta_agnostic_def)
+
 context Ipc_AI begin
 
-crunch st_tcb_at[wp]: do_ipc_transfer "st_tcb_at  P t :: 'state_ext state \<Rightarrow> bool"
+crunch st_tcb_at[wp]: do_ipc_transfer "st_tcb_at P t :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps transfer_caps_loop_pres simp: zipWithM_x_mapM)
 
 end
@@ -2492,6 +2467,9 @@ lemmas (in Ipc_AI) transfer_caps_loop_cap_to[wp]
 
 crunch cap_to[wp]: set_extra_badge "ex_nonz_cap_to p"
 
+sublocale touched_addresses_inv \<subseteq> ex_nonz_cap_to:touched_addresses_P_inv _ "ex_nonz_cap_to p"
+  by unfold_locales (clarsimp simp:ta_agnostic_def ex_nonz_cap_to_def)
+
 context Ipc_AI begin
 
 crunch cap_to[wp]: do_ipc_transfer "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> bool"
@@ -2670,6 +2648,8 @@ lemma setup_caller_cap_refs_respects_device_region[wp]:
   apply (simp add: tcb_at_def get_tcb_def)
   done
 
+sublocale touched_addresses_inv \<subseteq> cap_refs_respects_device_region:touched_addresses_P_inv _ cap_refs_respects_device_region
+  by unfold_locales (simp add:ta_agnostic_def)
 
 
 context Ipc_AI begin
@@ -3083,6 +3063,9 @@ lemma ep_queue_cap_to:
   apply (erule st_tcb_ex_cap, clarsimp+)
   done
 
+sublocale touched_addresses_inv \<subseteq> has_reply_cap:touched_addresses_P_inv _ "has_reply_cap t"
+  by unfold_locales (simp add:ta_agnostic_def has_reply_cap_def)
+
 context Ipc_AI_cont begin
 
 lemma si_invs':
@@ -3198,7 +3181,21 @@ lemma si_invs':
   apply (auto dest!: st_tcb_at_state_refs_ofD simp: idle_no_ex_cap idle_not_queued' idle_no_refs)
   done
 
+(*FIXME: move this to ta_agnostic_conj and stuff *)
+lemma ta_agnostic_neg [simp]:
+  "ta_agnostic P \<Longrightarrow> ta_agnostic (\<lambda>s. \<not>P s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+lemma hf_invs'_helper:
+  "ta_agnostic Q \<Longrightarrow>
+   ta_agnostic (\<lambda>s. \<not> has_reply_cap t s \<and> invs s \<and> Q s)"
+  apply (intro ta_agnostic_conj; simp)
+  done
+  
+declare [[wp_trace=true]]
 lemma hf_invs':
+  assumes ta_agnostic_Q: "ta_agnostic Q"
   assumes set_endpoint_Q[wp]: "\<And>a b.\<lbrace>Q\<rbrace> set_endpoint a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes sts_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes ext_Q[wp]: "\<And>a b. \<lbrace>Q and valid_objs\<rbrace> do_extended_op (possible_switch_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
@@ -3206,6 +3203,8 @@ lemma hf_invs':
   assumes do_ipc_transfer_Q[wp]: "\<And>a b c d e. \<lbrace>Q and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes thread_set_Q[wp]: "\<And>a b. \<lbrace>Q\<rbrace> thread_set a b \<lbrace>\<lambda>_.Q\<rbrace>"
   notes si_invs''[wp] = si_invs'[where Q=Q]
+  notes lookup_cap_Qinv[wp] = lookup_cap_tainv.agnostic_preserved [OF ta_agnostic_Q]
+  notes ta_agnostic_Qinv'[wp] = lookup_cap_tainv.agnostic_preserved [OF hf_invs'_helper [OF ta_agnostic_Q]]
   shows
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t and (\<lambda>_. valid_fault f)\<rbrace>
    handle_fault t f
@@ -3233,7 +3232,11 @@ lemma hf_invs':
               split: Structures_A.thread_state.splits)
   done
 
-lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI TrueI,simplified]
+lemma ta_agnostic_top[simp]:
+  "ta_agnostic \<top>"
+  by (simp add: ta_agnostic_def)
+
+lemmas hf_invs[wp] = hf_invs'[where Q=\<top>,simplified hoare_post_taut, OF ta_agnostic_top TrueI TrueI TrueI TrueI TrueI TrueI, simplified]
 
 end
 
