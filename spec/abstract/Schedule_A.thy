@@ -209,6 +209,43 @@ where
                 od
    od"
 
+abbreviation (input)
+  schedule_switch_thread_branch :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "schedule_switch_thread_branch candidate ct ct_schedulable \<equiv> do
+     when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
+
+     it \<leftarrow> gets idle_thread;
+     target_prio \<leftarrow> thread_get tcb_priority candidate;
+
+     \<comment> \<open>Infoflow does not like asking about the idle thread's priority or domain.\<close>
+     ct_prio \<leftarrow> if ct \<noteq> it then thread_get tcb_priority ct else return 0;
+     \<comment> \<open>When to look at the bitmaps. This optimisation is used in the C fast path,
+         but there we know @{text cur_thread} is not idle.\<close>
+     fastfail \<leftarrow> schedule_switch_thread_fastfail ct it ct_prio target_prio;
+
+     cur_dom \<leftarrow> gets cur_domain;
+     highest \<leftarrow> gets (is_highest_prio cur_dom target_prio);
+     if fastfail \<and> \<not>highest
+        then do \<comment> \<open>Candidate is not best candidate, choose a new thread\<close>
+                tcb_sched_action tcb_sched_enqueue candidate;
+                set_scheduler_action choose_new_thread;
+                schedule_choose_new_thread
+             od
+        else if ct_schedulable \<and> ct_prio = target_prio
+                then do \<comment> \<open>Current thread was runnable and candidate is not strictly better
+                            want current thread to run next, so append the candidate to end of queue
+                            and choose again\<close>
+                        tcb_sched_action tcb_sched_append candidate;
+                        set_scheduler_action choose_new_thread;
+                        schedule_choose_new_thread
+                     od
+                else do switch_to_thread candidate;
+                        \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
+                        set_scheduler_action resume_cur_thread
+                     od
+  od"
+
 definition
   "schedule \<equiv> do
      awaken;
@@ -218,46 +255,11 @@ definition
      action \<leftarrow> gets scheduler_action;
      (case action
        of resume_cur_thread \<Rightarrow> return ()
-       | choose_new_thread \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
-           schedule_choose_new_thread
-         od
-       | switch_thread candidate \<Rightarrow> do
-           when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
-
-           it \<leftarrow> gets idle_thread;
-           target_prio \<leftarrow> thread_get tcb_priority candidate;
-
-           \<comment> \<open>Infoflow does not like asking about the idle thread's priority or domain.\<close>
-           ct_prio \<leftarrow> if ct \<noteq> it then thread_get tcb_priority ct else return 0;
-           \<comment> \<open>When to look at the bitmaps. This optimisation is used in the C fast path,
-              but there we know @{text cur_thread} is not idle.\<close>
-           fastfail \<leftarrow> schedule_switch_thread_fastfail ct it ct_prio target_prio;
-
-           cur_dom \<leftarrow> gets cur_domain;
-           highest \<leftarrow> gets (is_highest_prio cur_dom target_prio);
-           if fastfail \<and> \<not>highest
-           then do
-               \<comment> \<open>Candidate is not best candidate, choose a new thread\<close>
-               tcb_sched_action tcb_sched_enqueue candidate;
-               set_scheduler_action choose_new_thread;
-               schedule_choose_new_thread
-             od
-           else if ct_schedulable \<and> ct_prio = target_prio
-           then do
-               \<comment> \<open>Current thread was runnable and candidate is not strictly better
-                  want current thread to run next, so append the candidate to end of queue
-                  and choose again\<close>
-               tcb_sched_action tcb_sched_append candidate;
-               set_scheduler_action choose_new_thread;
-               schedule_choose_new_thread
-             od
-           else do
-             switch_to_thread candidate;
-             \<comment> \<open>Duplication assists in wp proof under different scheduler actions\<close>
-             set_scheduler_action resume_cur_thread
-           od
-        od);
+        | choose_new_thread \<Rightarrow> do
+            when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
+            schedule_choose_new_thread
+          od
+        | switch_thread candidate \<Rightarrow> schedule_switch_thread_branch candidate ct ct_schedulable);
      sc_and_timer
    od"
 
