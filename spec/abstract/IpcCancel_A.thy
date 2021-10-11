@@ -556,6 +556,7 @@ definition blocked_cancel_ipc ::
    od"
 
 text \<open> Unbind TCB, if there is one bound. \<close>
+(* FIXME RT: remove check on whether sc_ptr ~= idle_sc_ptr - see VER-1413 *)
 definition
   sched_context_unbind_all_tcbs :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
