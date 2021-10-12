@@ -17,6 +17,7 @@ session Lib (lib) = Word_Lib +
     "Monad_WP/wp"
   theories
     Lib
+    Log
     Apply_Trace_Cmd
     AddUpdSimps
     EmptyFailLib
