@@ -18410,6 +18410,15 @@ lemma sched_context_bind_ntfn_valid_sched_pred_strong[wp]:
   unfolding sched_context_bind_ntfn_def
   by wpsimp
 
+crunches sched_context_cancel_yield_to
+  for sc_tcb_sc_at[wp]: "sc_tcb_sc_at P scp"
+  (wp: get_tcb_obj_ref_wp)
+
+lemma sched_context_cancel_yield_to_sc_tcb_sc_at_not_ct[wp]:
+  "sched_context_cancel_yield_to sp \<lbrace> \<lambda> s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s\<rbrace>"
+  apply (simp add: sched_context_cancel_yield_to_def)
+  by (wpsimp wp: hoare_drop_imp)
+
 lemma sched_context_yield_to_scheduler_act_sane[wp]:
   "\<lbrace>scheduler_act_sane
     and (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)\<rbrace>
@@ -18426,12 +18435,12 @@ lemma sched_context_yield_to_scheduler_act_sane[wp]:
    apply (clarsimp simp: bind_assoc assert_opt_def)
    apply (rule hoare_seq_ext_skip, wpsimp)
    apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext_skip, wpsimp)
    apply (rule hoare_seq_ext_skip)
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift'
                 simp: set_consumed_def)
    apply (wpsimp wp: set_object_wp update_sched_context_wp
                simp: set_tcb_obj_ref_def)
-   apply (fastforce simp: sc_at_pred_n_def get_tcb_def obj_at_def split: if_splits)
   apply (rule hoare_seq_ext[OF _ gsct_sp], rename_tac sc_tcb_opt)
   apply (case_tac sc_tcb_opt; clarsimp?)
   apply (rule hoare_seq_ext_skip)

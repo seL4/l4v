@@ -30,11 +30,6 @@ lemma set_consumed_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   by (wpsimp simp: set_consumed_def)
 
-lemma set_consumed_refs_of:
-  "\<lbrace>\<comment> \<open>(\<lambda>s. kheap s tptr = Some (TCB tcb) \<and> tcb_yield_to tcb = Some scp) and\<close> (\<lambda>s. P (state_refs_of s))\<rbrace>
-        set_consumed scptr args \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-
 lemma set_mrs_tcb_at_ct[wp]:
   "\<lbrace>\<lambda>s. tcb_at (cur_thread s) s\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. tcb_at (cur_thread s) s\<rbrace>"
   apply (simp add: set_mrs_redux zipWithM_x_mapM split_def
@@ -89,16 +84,11 @@ lemma set_mrs_ex_nonz_ct[wp]:
   done
 
 
-crunches set_message_info, set_mrs,set_consumed
- for ct[wp]: "\<lambda>s. P (cur_thread s)"
- and tcb_at_ct[wp]: "\<lambda>s. tcb_at (cur_thread s) s"
- and ex_nonz_cap_to_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
-(wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp
-ignore: set_object as_user simp: zipWithM_x_mapM)
-
-crunches set_message_info, set_mrs
- for cap_refs_in_kernel_window[wp]: "cap_refs_in_kernel_window"
- and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+crunches set_message_info, set_mrs, set_consumed
+  for tcb_at_ct[wp]: "\<lambda>s. tcb_at (cur_thread s) s"
+  and ex_nonz_cap_to_ct[wp]: "\<lambda>s. ex_nonz_cap_to (cur_thread s) s"
+  (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp
+   ignore: set_object as_user simp: zipWithM_x_mapM)
 
 lemma set_consumed_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
@@ -108,71 +98,25 @@ lemma set_consumed_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace> set_consumed scptr args \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   by (wpsimp simp: set_consumed_def ran_tcb_cap_cases)
 
-(*
-lemma set_consumed_refs_of_ct[wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s)(cur_thread s)\<rbrace>
-      set_consumed scptr args \<lbrace>\<lambda>rv s. P (state_refs_of s)(cur_thread s)\<rbrace>"
-  by (wpsimp simp: set_consumed_def)
-*)
-
 crunch it_ct[wp]: set_thread_state_act "\<lambda>s. P (idle_thread s) (cur_thread s)"
 
 crunches set_consumed
- for aligned[wp]: pspace_aligned
- and distinct[wp]: pspace_distinct
-(* and sc_at[wp]: "sc_at sc_ptr"*)
- and tcb_at[wp]: "tcb_at t"
- and cte_wp_at[wp]: "cte_wp_at P c"
- and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
- and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
- and no_cdt[wp]: "\<lambda>s. P (cdt s)"
- and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
- and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
- and valid_global_objs[wp]: "valid_global_objs"
- and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
- and valid_arch_caps[wp]: "valid_arch_caps"
- and only_idle[wp]: "only_idle"
- and ifunsafe[wp]: "if_unsafe_then_cap"
- and valid_arch[wp]: "valid_arch_state"
- and valid_irq_states[wp]: "valid_irq_states"
- and vms[wp]: "valid_machine_state"
- and valid_vspace_objs[wp]: "valid_vspace_objs"
- and valid_global_refs[wp]: "valid_global_refs"
- and v_ker_map[wp]: "valid_kernel_mappings"
- and equal_mappings[wp]: "equal_kernel_mappings"
- and valid_asid_map[wp]: "valid_asid_map"
- and pspace_in_kernel_window[wp]: "pspace_in_kernel_window"
- and pspace_respects_device_region[wp]: "pspace_respects_device_region"
- and cur_tcb[wp]: "cur_tcb"
- and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
- and valid_ioc[wp]: "valid_ioc"
- and it[wp]: "\<lambda>s. P (idle_thread s)"
- and it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
- and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
- and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
- and valid_irq_handlers[wp]: "valid_irq_handlers"
- and valid_mdb[wp]: valid_mdb
- and valid_idle[wp]: valid_idle
- and zombies[wp]: zombies_final
+  for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_global_refs[wp]: "valid_global_refs"
+  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: Let_def tcb_yield_to_noncap zipWithM_x_mapM
-    wp: hoare_drop_imps crunch_wps maybeM_inv ignore: lookup_ipc_buffer)
-
+   wp: hoare_drop_imps crunch_wps maybeM_inv ignore: lookup_ipc_buffer)
 
 crunches complete_yield_to
  for aligned[wp]: pspace_aligned
  and distinct[wp]: pspace_distinct
-(* and sc_at[wp]: "sc_at sc_ptr"*)
  and tcb_at[wp]: "tcb_at t"
- and cte_wp_at[wp]: "cte_wp_at P c"
- and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
- and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
  and no_cdt[wp]: "\<lambda>s. P (cdt s)"
  and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
  and no_revokable[wp]: "\<lambda>s. P (is_original_cap s)"
  and valid_global_objs[wp]: "valid_global_objs"
  and valid_global_vspace_mappings[wp]: "valid_global_vspace_mappings"
  and valid_arch_caps[wp]: "valid_arch_caps"
-(* and only_idle[wp]: "only_idle"*)
  and ifunsafe[wp]: "if_unsafe_then_cap"
  and valid_arch[wp]: "valid_arch_state"
  and valid_irq_states[wp]: "valid_irq_states"
@@ -187,11 +131,7 @@ crunches complete_yield_to
  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
  and pspace_respects_device_region[wp]: "pspace_respects_device_region"
  and cur_tcb[wp]: "cur_tcb"
-(* and ex_nonz_cap_to[wp]: "ex_nonz_cap_to t"
- and valid_idle[wp]: valid_idle*)
  and valid_ioc[wp]: "valid_ioc"
- and it[wp]: "\<lambda>s. P (idle_thread s)"
- and typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
  and interrupt_states[wp]: "\<lambda>s. P (interrupt_states s)"
  and valid_irq_handlers[wp]: "valid_irq_handlers"
  and valid_mdb[wp]: valid_mdb
@@ -199,58 +139,55 @@ crunches complete_yield_to
   (wp: maybeM_inv hoare_drop_imp sts_only_idle sts_valid_idle
    ignore: set_tcb_obj_ref get_sched_context)
 
-lemma complete_yield_to_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def get_tcb_obj_ref_def maybeM_def
-      wp: lookup_ipc_buffer_inv hoare_drop_imp)
+lemma valid_idle_sc_update:
+  "\<lbrakk>valid_idle s; ko_at (SchedContext sc n) p s;
+     sc_period sc = sc_period sc';
+     sc_tcb sc = sc_tcb sc';
+     sc_ntfn sc = sc_ntfn sc';
+     sc_refill_max sc = sc_refill_max sc';
+     sc_badge sc = sc_badge sc';
+     sc_yield_from sc = sc_yield_from sc';
+     sc_replies sc = sc_replies sc' \<rbrakk>
+   \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc' n)\<rparr>)"
+  by (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
-lemma complete_yield_to_valid_idle[wp]:
-  "\<lbrace>\<lambda>s. valid_idle s \<and> sym_refs (state_refs_of s)\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def maybeM_def get_tcb_obj_ref_def)
+lemma sched_context_cancel_yield_to_valid_idle[wp]:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> sym_refs (state_refs_of s)\<rbrace>
+   sched_context_cancel_yield_to tcb_ptr
+   \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
+  unfolding sched_context_cancel_yield_to_def  maybeM_def get_tcb_obj_ref_def
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
   apply (case_tac yt_opt; simp)
    apply wpsimp
-  apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  apply (wpsimp wp: update_sched_context_valid_idle)
-  apply (rule conjI[rotated])
-   apply (clarsimp simp: obj_at_def valid_idle_def pred_tcb_at_def)
+  apply (wpsimp wp: update_sched_context_valid_idle thread_get_wp')
+  apply (clarsimp simp: obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp: sym_refs_def)
   apply (erule_tac x = tcb_ptr in allE)
   apply (auto simp: valid_idle_def obj_at_def state_refs_of_def default_sched_context_def)
   done
 
-lemma complete_yield_to_only_idle[wp]:
-  "\<lbrace>only_idle\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. only_idle\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def maybeM_def get_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac yt_opt; simp)
-   apply wpsimp
-  apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  by (wpsimp wp: sts_only_idle)
+lemma sched_context_cancel_yield_to_only_idle[wp]:
+  "sched_context_cancel_yield_to tcb_ptr \<lbrace>only_idle\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def maybeM_def get_tcb_obj_ref_def)
 
+lemma sched_context_cancel_yield_to_iflive[wp]:
+  "sched_context_cancel_yield_to tcb_ptr \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def maybeM_def get_tcb_obj_ref_def)
 
-lemma complete_yield_to_iflive[wp]:
-  "\<lbrace>if_live_then_nonz_cap\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def maybeM_def get_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac yt_opt; simp)
-   apply wpsimp
-  apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  by wpsimp
-
-lemma complete_yield_to_ex_nonz[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def maybeM_def get_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac yt_opt; simp)
-   apply wpsimp
-  apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  by wpsimp
+lemma sched_context_cancel_yield_to_ex_nonz_cap_to[wp]:
+  "sched_context_cancel_yield_to tcb_ptr \<lbrace>ex_nonz_cap_to p\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def maybeM_def get_tcb_obj_ref_def)
 
 crunches complete_yield_to
- for ct[wp]: "\<lambda>s. P (cur_thread s)"
- and it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
-  (wp: maybeM_inv lookup_ipc_buffer_inv hoare_drop_imps crunch_wps)
+  for valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_live[wp]: if_live_then_nonz_cap
+  and ex_nonz[wp]: "ex_nonz_cap_to p"
+  (wp: crunch_wps set_tcb_obj_ref_wp update_sched_context_wp simp: crunch_simps)
+
+crunches complete_yield_to
+ for it_ct[wp]: "\<lambda>s. P (idle_thread s) (cur_thread s)"
+  (wp: maybeM_inv lookup_ipc_buffer_inv hoare_drop_imps crunch_wps simp: crunch_simps)
 
 lemma set_thread_state_bound_yt_tcb_at[wp]:
   "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_thread_state p ts \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
@@ -274,14 +211,19 @@ lemma sssc_sc_yf_update_bound_yt_tcb_at_ct[wp]:
   unfolding update_sched_context_def set_object_def
   by (wpsimp simp: pred_tcb_at_def obj_at_def  wp: get_object_wp)
 
+lemma sched_context_cancel_yield_to_bound_yt_tcb_at[wp]:
+  "\<lbrace> bound_yt_tcb_at P t and K (t \<noteq> tcb_ptr) \<rbrace>
+   sched_context_cancel_yield_to tcb_ptr
+   \<lbrace>\<lambda>rv. bound_yt_tcb_at P t \<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (clarsimp simp: sched_context_cancel_yield_to_def)
+  by (wpsimp simp: obj_at_def wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq  hoare_drop_imp)
+
 lemma complete_yield_to_bound_yt_tcb_at[wp]:
   "\<lbrace> bound_yt_tcb_at P t and K (t \<noteq> tcb_ptr) \<rbrace>
    complete_yield_to tcb_ptr
    \<lbrace>\<lambda>rv. bound_yt_tcb_at P t \<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (clarsimp simp: complete_yield_to_def)
-  by (wpsimp simp: obj_at_def
-      wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq lookup_ipc_buffer_inv hoare_drop_imp)
+  by (wpsimp simp: complete_yield_to_def wp: lookup_ipc_buffer_inv hoare_drop_imp)
 
 crunches do_machine_op, store_word_offs
   for pred_tcb_at_ct[wp]: "\<lambda>s. Q (pred_tcb_at proj P (cur_thread s) s)"
@@ -372,13 +314,13 @@ lemma set_consumed_sc_tcb_sc_at_inv'_none[wp]:
 
 lemma sched_context_unbind_yield_from_sc_tcb_sc_at[wp]:
   "sched_context_unbind_yield_from scptr \<lbrace>sc_tcb_sc_at P scptr\<rbrace>"
-  unfolding sched_context_unbind_yield_from_def
-  by (wpsimp simp: complete_yield_to_def wp: update_sched_context_sc_at_pred_n_no_change hoare_drop_imps)
+  unfolding sched_context_unbind_yield_from_def complete_yield_to_def sched_context_cancel_yield_to_def
+  by (wpsimp wp: update_sched_context_sc_at_pred_n_no_change hoare_drop_imps)
 
 lemma complete_yield_to_bound_yt_tcb_a_ct[wp]:
   "\<lbrace> (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s) \<rbrace>
       complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. bound_yt_tcb_at ((=) None) (cur_thread s) s \<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def)
+  apply (clarsimp simp: complete_yield_to_def sched_context_cancel_yield_to_def)
   apply (wpsimp simp: obj_at_def set_tcb_obj_ref_def set_object_def fun_upd_idem
       wp: hoare_vcg_ex_lift sbn_st_tcb_at_neq lookup_ipc_buffer_inv hoare_drop_imp)
        apply (rule_tac Q="\<lambda>_ s. bound_yt_tcb_at ((=) None) (cur_thread s) s" in hoare_strengthen_post)
@@ -448,7 +390,7 @@ lemma set_consumed_sc_tcb_sc_at_not_ct[wp]:
 
 lemma complete_yield_to_sc_tcb_sc_at[wp]:
   "complete_yield_to tcb_ptr \<lbrace>sc_tcb_sc_at P scp \<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def)
+  apply (clarsimp simp: complete_yield_to_def sched_context_cancel_yield_to_def)
   by (wpsimp wp: update_sched_context_sc_at_pred_n_no_change hoare_drop_imps)
 
 crunches set_thread_state_act
@@ -456,26 +398,15 @@ crunches set_thread_state_act
 
 lemma sts_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (wpsimp simp: set_thread_state_def wp: set_object_wp)
-  apply (clarsimp dest!: get_tcb_SomeD)
-  by (rule ex_cap_to_after_update[folded fun_upd_apply]; clarsimp simp: obj_at_def ran_tcb_cap_cases)
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp)
 
 lemma set_tcb_yt_ex_nonz_cap_to_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> set_tcb_obj_ref tcb_yield_to_update p v \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  supply if_weak_cong[cong del]
-  apply (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
-  apply (clarsimp dest!: get_tcb_SomeD)
-  by (rule ex_cap_to_after_update[folded fun_upd_apply]; clarsimp simp: obj_at_def ran_tcb_cap_cases)
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp)
 
 lemma complete_yield_to_ex_nonz_ct[wp]:
   "\<lbrace>\<lambda>s. ex_nonz_cap_to (cur_thread s) s\<rbrace> complete_yield_to tcb_ptr \<lbrace>\<lambda>rv s. ex_nonz_cap_to (cur_thread s) s\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def maybeM_def get_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ thread_get_sp])
-  apply (case_tac yt_opt; simp)
-   apply wpsimp
-  apply (rule hoare_seq_ext[OF _ lookup_ipc_buffer_inv])
-  by wpsimp
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp)
 
 lemma set_yf_sc_yf_sc_at:
   "\<lbrace>K (scp'= scp)\<rbrace>
@@ -485,23 +416,39 @@ lemma set_yf_sc_yf_sc_at:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
+lemma set_consumed_sc_yf_sc_at_inv'_none[wp]:
+  "set_consumed sp buf \<lbrace> \<lambda>s. sc_yf_sc_at P scp s\<rbrace>"
+  apply (simp add: set_consumed_def sched_context_update_consumed_def)
+  by (wpsimp wp: update_sched_context_wp hoare_drop_imp simp: sc_yf_sc_at_def)
+     (fastforce simp: obj_at_def)
+
+lemma sched_context_cancel_yield_to_sc_yf_sc_at_None:
+  "\<lbrace>sc_yf_sc_at ((=) (Some tptr)) scp and invs\<rbrace>
+   sched_context_cancel_yield_to tptr
+   \<lbrace>\<lambda>rv. sc_yf_sc_at ((=) None) scp\<rbrace>"
+  unfolding sched_context_cancel_yield_to_def
+  apply (clarsimp simp: sc_at_pred_n_eq_commute)
+  apply (wpsimp wp: set_yf_sc_yf_sc_at thread_get_wp simp: get_tcb_obj_ref_def)
+  apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
+  by (fastforce dest!: sym_ref_sc_yf[OF invs_sym_refs])
+
 lemma complete_yield_to_sc_yf_sc_at_None:
   "\<lbrace>sc_yf_sc_at ((=) (Some tptr)) scp and invs\<rbrace>
    complete_yield_to tptr
    \<lbrace>\<lambda>rv. sc_yf_sc_at ((=) None) scp\<rbrace>"
-  unfolding complete_yield_to_def
-  apply (clarsimp simp: sc_at_pred_n_eq_commute)
-  apply (wpsimp wp: set_yf_sc_yf_sc_at thread_get_wp simp: get_tcb_obj_ref_def)
+  unfolding complete_yield_to_def maybeM_def
+  apply (wpsimp wp: sched_context_cancel_yield_to_sc_yf_sc_at_None thread_get_wp'
+              simp: get_tcb_obj_ref_def)
   apply (clarsimp simp: obj_at_def sc_at_pred_n_def)
   apply (subgoal_tac "bound_yt_tcb_at (\<lambda>b. b = (Some scp)) tptr s")
    apply (clarsimp simp: obj_at_def sc_at_pred_n_def pred_tcb_at_def)
   apply (subgoal_tac "(scp, TCBYieldTo) \<in> state_refs_of s tptr")
    apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
                   split: option.splits)
-   apply (case_tac x2; clarsimp simp: get_refs_def split: option.splits)
+   apply ( clarsimp simp: get_refs_def split: option.splits)
   apply (rule sym_refsE; clarsimp)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def state_refs_of_def refs_of_def
-                 split: option.splits)
+                 split: option.splits dest!: sym[of "Some _"])
   done
 
 crunches sched_context_resume (* FIXME: investigate why wps doesn't work in the lemma below *)
