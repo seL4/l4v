@@ -202,10 +202,13 @@ lemma set_message_info_st_tcb_at[wp]:
   "set_message_info a b \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
    by (wpsimp simp: set_message_info_def)
 
+lemma sched_context_cancel_yield_to_st_tcb_at[wp]:
+  "sched_context_cancel_yield_to scptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
+
 lemma complete_yield_to_st_tcb_at[wp]:
   "complete_yield_to scptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def set_consumed_def get_sc_obj_ref_def
-         wp: set_thread_state_st_tcb_at set_message_info_st_tcb_at hoare_drop_imp)
+  by (wpsimp simp: complete_yield_to_def set_consumed_def wp: hoare_drop_imp)
 
 lemma sched_context_unbind_yield_from_st_tcb_at[wp]:
   "sched_context_unbind_yield_from scptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
@@ -1567,9 +1570,7 @@ lemma reply_remove_tcb_inactive [wp]:
   by (wpsimp simp: reply_remove_tcb_def)
 
 lemma sched_context_cancel_yield_to_invs:
-  "\<lbrace>invs and st_tcb_at (\<lambda>st. st \<in> {Running, Inactive, Restart}) t\<rbrace>
-   sched_context_cancel_yield_to thread
-   \<lbrace>\<lambda>_. invs\<rbrace>"
+  "sched_context_cancel_yield_to thread \<lbrace>invs\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (rule hoare_seq_ext[OF _ gyt_sp])
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
@@ -2614,29 +2615,7 @@ lemma complete_yield_to_invs:
     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (drule (1) if_live_then_nonz_capD; clarsimp simp: live_def)
-  apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
-                  wp: sts_only_idle valid_irq_node_typ update_sched_context_valid_idle)
-  apply (rule conjI)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def split del: if_split)
-   apply (rule pspace_valid_objsE, simp, simp)
-   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_bound_obj_def ran_tcb_cap_cases
-                   split del: if_split)
-   apply (drule sym, clarsimp simp: is_sc_obj_def obj_at_def split del: if_split)
-   apply (case_tac ko; clarsimp split del: if_split)
-   apply (rename_tac n sc)
-   apply (subgoal_tac "sc_yield_from sc = Some tcb_ptr")
-    apply (erule delta_sym_refs)
-     apply (clarsimp split: if_split_asm simp: st_tcb_at_def)
-    apply (clarsimp split: if_split_asm simp:  split del: if_split)
-        apply ((fastforce simp: state_refs_of_def get_refs_def2 dest!: symreftype_inverse')+)[4]
-   apply (fastforce dest!: sym_ref_tcb_yt)
-  apply (rule conjI[rotated])
-   apply (clarsimp dest!: idle_no_ex_cap)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def sym_refs_def)
-  apply (erule_tac x = tcb_ptr in allE)
-  apply (erule_tac x = "(idle_sc_ptr, TCBYieldTo)" in ballE)
-   apply (auto simp: state_refs_of_def valid_idle_def obj_at_def get_refs_def2
-                     default_sched_context_def)
+  apply (wpsimp wp: sched_context_cancel_yield_to_invs)
   done
 
 crunches

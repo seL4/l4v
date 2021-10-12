@@ -1050,6 +1050,10 @@ lemma set_mrs_valid_objs[wp]:
 crunch valid_objs[wp]: set_consumed valid_objs
   (wp: crunch_wps simp: crunch_simps ignore: update_sched_context)
 
+lemma sched_context_cancel_yield_to_valid_objs[wp]:
+  "\<lbrace>valid_objs\<rbrace> sched_context_cancel_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def | wp (once) hoare_drop_imps)+
+
 lemma complete_yield_to_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
@@ -1715,15 +1719,21 @@ lemma set_tcb_yt_update_bound_tcb_at[wp]:
   "set_tcb_obj_ref tcb_yield_to_update scp tcb \<lbrace>bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp)
 
+lemma sched_context_cancel_yield_to_bound_tcb_at[wp]:
+  "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_cancel_yield_to scptr \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
+
 lemma complete_yield_to_bound_tcb_at[wp]:
   "\<lbrace>bound_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def set_consumed_def get_sc_obj_ref_def
-               wp: set_thread_state_bound_tcb_at set_message_info_st_tcb_at hoare_drop_imp)
+  by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
+
+lemma sched_context_cancel_yield_to_bound_sc_tcb_at[wp]:
+  "\<lbrace>bound_sc_tcb_at P t\<rbrace> sched_context_cancel_yield_to scptr \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
+  by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
 
 lemma complete_yield_to_bound_sc_tcb_at[wp]:
   "\<lbrace>bound_sc_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
-  by (wpsimp simp: complete_yield_to_def set_consumed_def get_sc_obj_ref_def
-               wp: set_thread_state_bound_sc_tcb_at set_message_info_st_tcb_at hoare_drop_imp)
+  by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
 
 lemma ssc_bound_yt_tcb_at[wp]:
   "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
@@ -1767,12 +1777,21 @@ lemma unbind_from_sc_bound_sc_tcb_at:
                  sc_at_typ typ_at_eq_kheap_obj
           dest!: bound_sc_tcb_bound_sc_at)
 
+lemma sched_context_cancel_yield_to_unbinds:
+  "\<lbrace>tcb_at t\<rbrace>
+     sched_context_cancel_yield_to t
+   \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) t\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def)
+  apply (wpsimp wp: syt_bound_tcb_at' maybeM_wp gbn_wp)
+  apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
+  done
+
 lemma complete_yield_to_unbinds:
   "\<lbrace>tcb_at t\<rbrace>
      complete_yield_to t
    \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) t\<rbrace>"
-  apply (clarsimp simp: complete_yield_to_def)
-  apply (wpsimp simp: complete_yield_to_def wp: syt_bound_tcb_at' maybeM_wp gbn_wp)
+  unfolding complete_yield_to_def
+  apply (wpsimp wp: sched_context_cancel_yield_to_unbinds gbn_wp set_consumed_obj_at_trivial)
   apply (clarsimp simp: obj_at_def pred_tcb_at_def is_tcb)
   done
 
@@ -1805,6 +1824,49 @@ lemma set_sc_obj_ref_not_live:
                    get_sched_context_def obj_at_def live_def live_sc_def
                wp: get_object_wp)
 
+lemma sched_context_cancel_yield_to_not_live:
+  "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb
+                        \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
+    and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
+     sched_context_cancel_yield_to tcb
+   \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
+  apply (clarsimp simp: sched_context_cancel_yield_to_def get_tcb_obj_ref_def)
+  apply (wpsimp wp: thread_get_wp' set_sc_obj_ref_not_live
+                    set_tcb_obj_ref_obj_at_trivial
+                    set_consumed_obj_at_trivial
+                    get_object_wp hoare_vcg_all_lift
+         | wp (once) hoare_drop_imps)+
+  apply (auto simp: obj_at_def live_def live_sc_def dest: sym_ref_sc_yf)
+  done
+
+crunches sched_context_update_consumed, set_message_info, store_word_offs
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  (simp: crunch_simps wp: crunch_wps ignore: update_sched_context set_object)
+
+lemma state_refs_of_tcb_arch_update[simp]:
+  "kheap s thread = Some (TCB tcb) \<Longrightarrow>
+      state_refs_of
+              (s\<lparr>kheap := kheap s(thread \<mapsto>
+                   TCB (tcb_arch_update f tcb))\<rparr>) = state_refs_of s"
+  by (clarsimp simp: state_refs_of_def get_refs_def2 refs_of_def obj_at_def is_tcb
+              split: option.split intro!: ext)
+
+lemma set_mrs_state_refs_of[wp]:
+  "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
+  unfolding set_mrs_def option.case_eq_if
+  supply if_split[split del]
+  apply (cases buf)
+   apply (simp add: set_mrs_redux)
+   apply (wpsimp wp: thread_set_wp)
+   apply (clarsimp dest!: get_tcb_SomeD)
+  apply (simp add: set_mrs_redux zipWithM_x_mapM)
+  apply (wpsimp wp: mapM_wp' thread_set_wp)
+  apply (clarsimp dest!: get_tcb_SomeD)
+  done
+
+crunches set_consumed
+  for state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+
 lemma complete_yield_to_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb
                         \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
@@ -1816,7 +1878,8 @@ lemma complete_yield_to_not_live:
                     set_tcb_obj_ref_obj_at_trivial
                     set_consumed_obj_at_trivial
                     get_object_wp hoare_vcg_all_lift
-         | wp (once) hoare_drop_imps)+
+                    sched_context_cancel_yield_to_not_live
+       | wp (once) hoare_drop_imps)+
   apply (auto simp: obj_at_def live_def live_sc_def dest: sym_ref_sc_yf)
   done
 
