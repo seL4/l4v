@@ -1611,13 +1611,6 @@ lemma touch_object_wp':
   done
 
 
-
-
-
-
-
-
-
 subsection "TA Agnostic for invs"
 
 lemma ta_agnostic_conj:
@@ -1638,9 +1631,7 @@ sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_in
                                 + valid_irq_states: touched_addresses_P_inv _ valid_irq_states
                                 + valid_machine_state: touched_addresses_P_inv _ valid_machine_state
                                 + cte_wp_at: touched_addresses_P_inv _ "cte_wp_at P p"
-  apply unfold_locales
-  apply (simp add:ta_agnostic_def valid_irq_states_def valid_machine_state_def)+
-  done
+  by unfold_locales (simp add:ta_agnostic_def valid_irq_states_def valid_machine_state_def)+
 
 sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ valid_state
   apply unfold_locales

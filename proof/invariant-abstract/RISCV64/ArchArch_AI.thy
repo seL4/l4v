@@ -990,7 +990,7 @@ lemma sts_valid_arch_inv:
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
 crunches decode_asid_control_invocation
-  for inv[wp]: "P"
+  for tainv[wp]: "ignore_ta P"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
