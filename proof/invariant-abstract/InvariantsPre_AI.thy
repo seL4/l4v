@@ -77,9 +77,12 @@ lemma agnostic_preservedE:
 
 end
 
-(* does this actually do anything? *)
+(*FIXME: does this actually do anything? *)
 sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
   by unfold_locales
+
+(*TODO: how do we get the sublocale-interpretations of touched_addresses_P_inv to map into things
+  like agnostic_preservedE_R above?  *)
 
 locale touched_addresses_P_inv = touched_addresses_inv m for m::"('z::state_ext state, 'r) nondet_monad" +
   fixes P :: "'z state \<Rightarrow> bool"

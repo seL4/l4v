@@ -200,6 +200,7 @@ qed
 
 lemmas rab_cte_cap_to = use_spec(2) [OF rab_cte_cap_to']
 
+
 lemma resolve_address_bits_real_cte_at:
   "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
   resolve_address_bits args

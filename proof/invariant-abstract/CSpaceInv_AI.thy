@@ -129,7 +129,7 @@ interpretation touch_object_tainv:
   touched_addresses_inv "touch_object obj"
   by unfold_locales wp
 
-lemma resolve_address_bits_tainv[wp]:
+lemma rab_tainv[wp]:
   "resolve_address_bits slot \<lbrace>ignore_ta P\<rbrace>"
 unfolding resolve_address_bits_def
 proof (induct slot rule: resolve_address_bits'.induct)
@@ -192,7 +192,7 @@ qed
 
 interpretation resolve_address_bits_tainv:
   touched_addresses_invE "resolve_address_bits slot"
-  by (unfold_locales, rule resolve_address_bits_tainv)
+  by (unfold_locales, rule rab_tainv)
 
 crunches lookup_cap
   for tainv [wp]: "ignore_ta P"
@@ -222,13 +222,9 @@ lemma valid_cap_tcb_update [simp]:
   apply (simp add: a_type_def)
   done
 
-(* adding 'valid_objs' and 'valid_cap' to touched_addresses_P_inv - providing
-   lemmas about these properties being ta_agnostic. *)
 sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ valid_objs
-  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
-
-sublocale touched_addresses_inv \<subseteq> valid_cap:touched_addresses_P_inv _ "valid_cap c"
-  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
+                                + valid_cap:touched_addresses_P_inv _ "valid_cap c"
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+
 
 lemma obj_at_tcb_update:
   "\<lbrakk> tcb_at t s; \<And>x y. P (TCB x) = P (TCB y)\<rbrakk> \<Longrightarrow>
