@@ -15,6 +15,7 @@ imports
   FaultHandlerDecls_H
   SchedContext_H
   ArchTCB_H
+begin
 
 context begin interpretation Arch .
 requalify_consts

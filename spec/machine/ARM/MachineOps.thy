@@ -172,19 +172,19 @@ have getCurrentTime_buffer_bound:
 have kernelWCET_pos': "0 < (kernelWCET_us * ticks_per_timer_unit) div timer_unit"
   apply (clarsimp simp: word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
-         | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def max_word_def)+
+         | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
 have MIN_BUDGET_pos': "0 < 2 * ((kernelWCET_us * ticks_per_timer_unit) div timer_unit)"
   apply (clarsimp simp: word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
-         | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def max_word_def)+
+         | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
 have domain_time_pos: "0 < ((15 * \<mu>s_in_ms) * ticks_per_timer_unit) div timer_unit"
   apply (clarsimp simp: word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
-         | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def timer_unit_def max_word_def)+
+         | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
 have getCurrentTime_buffer_pos:
@@ -193,7 +193,7 @@ have getCurrentTime_buffer_pos:
   apply (clarsimp simp: word_less_nat_alt)
   apply (subst unat_add_lem'' | subst unat_mult_lem' | subst unat_div
          | fastforce simp: kernelWCET_us_def MAX_PERIOD_US_def ticks_per_timer_unit_def
-                           timer_unit_def max_word_def)+
+                           timer_unit_def unat_minus_one_word)+
   done
 
 have MIN_BUDGET_le_MAX_PERIOD:
@@ -262,8 +262,8 @@ abbreviation (input) getCurrentTime_buffer where
 
 lemma replicate_no_overflow:
   "n * unat (a :: ticks) \<le> unat (upper_bound :: ticks)
-   \<Longrightarrow> unat (word_of_int n * a) = n * unat a"
-  by (metis (mono_tags, hide_lams) le_unat_uoi of_nat_mult word_of_nat word_unat.Rep_inverse)
+   \<Longrightarrow> unat (word_of_nat n * a) = n * unat a"
+  using le_unat_uoi by fastforce
 
 lemma kernelWCET_ticks_pos2: "0 < 2 * kernelWCET_ticks"
   apply (simp add: kernelWCET_ticks_def)
@@ -303,7 +303,7 @@ lemma MAX_PERIOD_mult:
    apply (prop_tac "5 * (unat MAX_PERIOD_US * unat ticks_per_timer_unit) \<le> unat max_time")
     apply linarith
    apply (metis (no_types, hide_lams) le_trans mult.commute mult_le_mono1)
-  by (metis word_of_nat word_unat.Rep_inverse)
+  by simp
 
 lemma getCurrentTime_buffer_no_overflow':
   "unat kernelWCET_ticks + 5 * unat MAX_PERIOD = unat getCurrentTime_buffer"
@@ -365,6 +365,7 @@ lemma us_to_ticks_zero:
 lemma unat_div_helper:
   "a * ticks_per_timer_unit \<le> b * ticks_per_timer_unit
    \<Longrightarrow> unat (a * ticks_per_timer_unit div timer_unit) \<le> unat (b * ticks_per_timer_unit div timer_unit)"
+  including no_take_bit
   by (simp add: word_le_nat_alt div_le_mono uno_simps(2) word_arith_nat_div)
 
 lemma us_to_ticks_mono:
@@ -392,7 +393,7 @@ lemma MIN_BUDGET_helper:
   apply (insert MIN_BUDGET_bound)
   apply (rule_tac order_trans[OF divide_le_helper])
    apply (subst unat_mult_lem' | simp)+
-  by (metis (no_types, hide_lams) Rat.sign_simps(5) Rat.sign_simps(6) order_refl)
+  by (simp add: mult.assoc)
 
 
 text \<open>
