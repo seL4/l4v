@@ -2429,44 +2429,6 @@ lemma asUser_valid_inQ_queues[wp]:
   apply wp
   done
 
-lemma sc_relation_tcb_yield_to_update:
-  "sc_relation sc n sc'
-   \<Longrightarrow> sc_relation (sc_yield_from_update Map.empty (sc)) n (scYieldFrom_update Map.empty sc')"
-  by (clarsimp simp: sc_relation_def)
-
-lemma sched_context_cancel_yield_to_corres:
-  "corres dc
-          (pspace_aligned and pspace_distinct and valid_objs and tcb_at t)
-          \<top>
-          (sched_context_cancel_yield_to t)
-          (schedContextCancelYieldTo t)" (is "corres _ ?abs_guard _ _ _")
-  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
-   apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
-  apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def maybeM_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_tcb_yield_to_corres gyt_sp threadGet_sp
-                             , where Q="?abs_guard"])
-    defer
-    apply (simp add: obj_at_def is_tcb_def)
-   apply simp
-  apply (case_tac scPtrOpt; clarsimp?)
-  apply (rule corres_guard_imp)
-    apply (subst bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[OF _ update_sc_no_reply_stack_update_corres])
-         apply (rule tcb_yield_to_update_corres)
-         apply (simp add: sc_relation_tcb_yield_to_update)
-        apply simp
-       apply (clarsimp simp: objBits_simps')
-      apply simp
-     apply wpsimp
-    apply wpsimp
-   apply (clarsimp simp: valid_objs_def obj_at_def is_tcb_def)
-   apply (fastforce simp: valid_obj_def valid_tcb_def valid_bound_obj_def pred_tcb_at_def obj_at_def
-                   dest!: bspec
-                   split: option.splits)
-  apply clarsimp
-  done
-
 crunches ThreadDecls_H.suspend
   (* FIXME RT: VER-1016 *)
   for tcb_at'_better[wp]: "\<lambda>s. P (tcb_at' t s)"
