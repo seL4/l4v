@@ -2650,7 +2650,6 @@ lemma update_sched_context_no_fail[wp]:
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def)
   done
-  by (wpsimp wp: valid_idle_lift)
 
 lemma dmo_ct_in_state:
   "do_machine_op f \<lbrace>ct_in_state P\<rbrace>"
