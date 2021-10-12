@@ -345,6 +345,17 @@ where
 text \<open>yield\_to related functions\<close>
 
 definition
+  sched_context_cancel_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "sched_context_cancel_yield_to thread \<equiv> do
+     yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
+     maybeM (\<lambda>sc_ptr. do
+       set_sc_obj_ref sc_yield_from_update sc_ptr None;
+       set_tcb_obj_ref tcb_yield_to_update thread None
+     od) yt_opt
+   od"
+
+definition
   complete_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "complete_yield_to tcb_ptr \<equiv> do
@@ -352,8 +363,7 @@ where
      maybeM (\<lambda>sc_ptr. do
          buf \<leftarrow> lookup_ipc_buffer True tcb_ptr;
          set_consumed sc_ptr buf;
-         set_sc_obj_ref sc_yield_from_update sc_ptr None;
-         set_tcb_obj_ref tcb_yield_to_update tcb_ptr None
+         sched_context_cancel_yield_to tcb_ptr
        od) yt_opt
     od"
 
@@ -479,17 +489,6 @@ where
   "update_restart_pc thread_ptr =
         as_user thread_ptr (getRegister nextInstructionRegister
                             >>= setRegister faultRegister)"
-
-definition
-  sched_context_cancel_yield_to :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "sched_context_cancel_yield_to thread \<equiv> do
-     yt_opt \<leftarrow> get_tcb_obj_ref tcb_yield_to thread;
-     maybeM (\<lambda>sc_ptr. do
-       set_sc_obj_ref sc_yield_from_update sc_ptr None;
-       set_tcb_obj_ref tcb_yield_to_update thread None
-     od) yt_opt
-   od"
 
 text \<open>Suspend a thread, cancelling any pending operations and preventing it
 from further execution by setting it to the Inactive state.\<close>
