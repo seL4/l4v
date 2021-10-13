@@ -3818,7 +3818,7 @@ lemma rescheduleRequired_oa_queued':
 
 crunches cancelAllIPC, cancelAllSignals, unbindMaybeNotification
   for tcbDomain_obj_at': "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma cancelAllIPC_valid_queues[wp]:
   "\<lbrace>valid_queues and valid_tcbs'\<rbrace>
@@ -4337,7 +4337,9 @@ lemma interrupt_cap_null_or_ntfn:
   done
 
 lemma (in delete_one) deletingIRQHandler_corres:
-  "corres dc (einvs and simple_sched_action) (invs')
+  "corres dc
+          (einvs and simple_sched_action and current_time_bounded 2)
+          invs'
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
@@ -4346,7 +4348,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"
              and P="cte_wp_at (\<lambda>cp. is_ntfn_cap cp \<or> cp = cap.NullCap) slot
-                 and einvs and simple_sched_action"
+                 and einvs and simple_sched_action and current_time_bounded 2"
              and P'="invs' and cte_wp_at' (\<lambda>cte. cteCap cte = rv)
                  (cte_map slot)" in corres_req)
           apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
@@ -4593,7 +4595,7 @@ lemma fast_finaliseCap_corres:
   "\<lbrakk> final_matters' cap' \<longrightarrow> final = final'; cap_relation cap cap';
      can_fast_finalise cap \<rbrakk>
    \<Longrightarrow> corres dc
-           (\<lambda>s. invs s \<and> valid_sched s \<and> s \<turnstile> cap
+           (\<lambda>s. invs s \<and> valid_sched s \<and> s \<turnstile> cap \<and> current_time_bounded 2 s
                        \<and> cte_wp_at ((=) cap) sl s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap')
            (fast_finalise cap final)
@@ -4652,7 +4654,9 @@ lemma finaliseCap_true_removable[wp]:
   by (cases cap; wpsimp simp: finaliseCap_def isCap_simps capRemovable_def)
 
 lemma cap_delete_one_corres:
-  "corres dc (einvs and simple_sched_action and cte_wp_at can_fast_finalise slot)
+  "corres dc
+        (einvs and simple_sched_action and cte_wp_at can_fast_finalise slot
+         and current_time_bounded 2)
         (invs' and cte_at' (cte_map slot))
         (cap_delete_one slot) (cteDeleteOne (cte_map slot))"
   apply (simp add: cap_delete_one_def cteDeleteOne_def'
@@ -4925,7 +4929,8 @@ lemma finaliseCap_corres:
           flag \<longrightarrow> can_fast_finalise cap \<rbrakk>
      \<Longrightarrow> corres (\<lambda>x y. cap_relation (fst x) (fst y) \<and> cap_relation (snd x) (snd y))
            (\<lambda>s. einvs s \<and> s \<turnstile> cap \<and> (final_matters cap \<longrightarrow> final = is_final_cap' cap s)
-                       \<and> cte_wp_at ((=) cap) sl s \<and> simple_sched_action s)
+                \<and> cte_wp_at ((=) cap) sl s \<and> simple_sched_action s
+                \<and> current_time_bounded 2 s)
            (\<lambda>s. invs' s \<and> s \<turnstile>' cap'
                    \<and> (final_matters' cap' \<longrightarrow>
                         final' = isFinal cap' (cte_map sl) (cteCaps_of s))

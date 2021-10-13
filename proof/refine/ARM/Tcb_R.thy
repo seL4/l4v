@@ -8,9 +8,6 @@ theory Tcb_R
 imports CNodeInv_R
 begin
 
-global_interpretation refillUnblockCheck: typ_at_all_props' "refillUnblockCheck scp"
-  by typ_at_props'
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma asUser_setNextPC_corres:
@@ -1664,7 +1661,7 @@ lemma installTCBCap_corres:
   "\<lbrakk> newroot_rel slot_opt slot_opt'; slot_opt \<noteq> None \<longrightarrow> slot' = cte_map slot; n \<in> {0,1,3,4} \<rbrakk> \<Longrightarrow>
      corres (dc \<oplus> dc)
             (\<lambda>s. einvs s \<and> valid_machine_time s \<and> simple_sched_action s
-                 \<and> cte_at (target, tcb_cnode_index n) s \<and>
+                 \<and> cte_at (target, tcb_cnode_index n) s \<and> current_time_bounded 2 s \<and>
                  (\<forall>new_cap src_slot.
                    slot_opt = Some (new_cap, src_slot) \<longrightarrow>
                    (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap) \<and>
@@ -1793,7 +1790,7 @@ lemma installThreadBuffer_corres:
   and     "g \<noteq> None \<longrightarrow> sl' = cte_map slot"
   shows "corres (dc \<oplus> dc)
          (einvs and valid_machine_time and simple_sched_action and tcb_at a
-                and (case_option \<top> (\<lambda>(_,sl). cte_at slot and
+                and (case_option \<top> (\<lambda>(_,sl). cte_at slot and current_time_bounded 2 and
                         (case_option \<top> (\<lambda>(newCap,srcSlot). cte_at srcSlot and valid_cap newCap and
                                                             no_cap_to_obj_dr_emp newCap) sl)) g)
                 and K (case_option True (\<lambda>(x,v).
@@ -1914,7 +1911,7 @@ lemma tc_corres_caps:
   shows
     "corres (dc \<oplus> (=))
     (einvs and valid_machine_time and simple_sched_action and active_sc_valid_refills
-     and tcb_at t and tcb_inv_wf tc_caps_inv)
+     and tcb_at t and tcb_inv_wf tc_caps_inv and current_time_bounded 2)
     (invs' and sch_act_simple and tcb_inv_wf' tc_caps_inv')
     (invoke_tcb tc_caps_inv)
     (invokeTCB tc_caps_inv')"
@@ -2499,9 +2496,19 @@ crunches finaliseCap, capSwapForDelete
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv cteDelete_preservation)
 
+lemma updateRefillHd_sc_tcb_sc_at'[wp]:
+  "updateRefillHd scp f \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
+  apply (wpsimp simp: updateRefillHd_def wp: updateSchedContext_wp)
+  by (clarsimp simp: obj_at'_def ps_clear_upd projectKOs opt_map_red objBits_simps)
+
+lemma refillPopHead_sc_tcb_sc_at'[wp]:
+  "refillPopHead scp \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
+  apply (wpsimp simp: refillPopHead_def wp: updateSchedContext_wp)
+  by (clarsimp simp: obj_at'_def ps_clear_upd projectKOs opt_map_red objBits_simps)
+
 crunches cteInsert, emptySlot, cancelAllIPC
   for sc_tcb_sc_at'[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps ignore: updateRefillHd)
 
 lemma installTCBCap_fh_sc_tcb_sc_at':
   "\<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s) \<and> invs' s \<and> tcb_at' target s \<and>

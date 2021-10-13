@@ -1576,27 +1576,6 @@ lemma sc_replies_update_takeWhile_sc_with_reply:
   apply (clarsimp simp add: the_pred_option_def Ex1_def)
   by (fastforce dest!: valid_replies_sc_replies_unique simp: obj_at_def sc_replies_sc_at_def)+
 
-(* FIXME RT: maybe move *)
-lemma update_sched_context_not_tcb_at[wp]:
-  "update_sched_context ref f \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
-  apply (clarsimp simp: update_sched_context_def)
-  apply (wpsimp wp: set_object_wp get_object_wp)
-  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
-  done
-
-lemma update_sched_context_valid_tcb[wp]:
-  "update_sched_context scp f \<lbrace>valid_tcb ptr tcb\<rbrace>"
-  apply (clarsimp simp: update_sched_context_def)
-  apply (wpsimp wp: set_object_typ_ats get_object_wp)
-  done
-
-lemma update_sched_context_valid_tcbs[wp]:
-  "update_sched_context ref f \<lbrace>valid_tcbs\<rbrace>"
-  unfolding valid_tcbs_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-  done
-(* end: maybe move *)
-
 lemma sc_replies_update_takeWhile_middle_sym_refs:
   "\<lbrakk> hd (sc_replies sc) \<noteq> rp; rp \<in> set (sc_replies sc) \<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. P (state_refs_of s) \<and> obj_at (\<lambda>ko. \<exists>n. ko = kernel_object.SchedContext sc n) scp s\<rbrace>

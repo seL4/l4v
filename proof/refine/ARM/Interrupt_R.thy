@@ -358,7 +358,7 @@ lemma arch_invokeIRQHandler_corres:
 
 lemma invokeIRQHandler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
-   corres dc (einvs and irq_handler_inv_valid i and simple_sched_action)
+   corres dc (einvs and irq_handler_inv_valid i and simple_sched_action and current_time_bounded 2)
              (invs' and irq_handler_inv_valid' i' and sch_act_simple)
      (invoke_irq_handler i)
      (InterruptDecls_H.invokeIRQHandler i')"
@@ -373,7 +373,7 @@ lemma invokeIRQHandler_corres:
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
-                                  \<and> (a, b) \<noteq> irq_slot
+                                  \<and> (a, b) \<noteq> irq_slot \<and> current_time_bounded 2 s
                                   \<and> cte_wp_at (is_derived (cdt s) (a, b) cap) (a, b) s"
                       in hoare_post_imp)
          apply fastforce

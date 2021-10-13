@@ -292,6 +292,17 @@ lemma valid_objs'_valid_refills':
   by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def
                      is_active_sc'_def opt_map_red projectKO_opt_sc)
 
+lemma
+  valid_refills'_ksSchedulerAction_update[simp]:
+  "valid_refills' scp (ksSchedulerAction_update g s) = valid_refills' scp s" and
+  valid_refills'_ksReadyQueues_update[simp]:
+  "valid_refills' scp (ksReadyQueues_update f s) = valid_refills' scp s" and
+  valid_refills'_ksReadyQueuesL1Bitmap_update[simp]:
+  "valid_refills' scp (ksReadyQueuesL1Bitmap_update f' s) = valid_refills' scp s" and
+  valid_refills'_ksReadyQueuesL2Bitmap_update[simp]:
+  "valid_refills' scp (ksReadyQueuesL2Bitmap_update f'' s) = valid_refills' scp s"
+  by (clarsimp simp: valid_refills'_def)+
+
 lemma maxReleaseTime_equiv:
   "maxReleaseTime = MAX_RELEASE_TIME"
   apply (clarsimp simp: maxReleaseTime_def MAX_RELEASE_TIME_def maxBound_max_word maxPeriodUs_def

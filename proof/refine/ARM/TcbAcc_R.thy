@@ -307,8 +307,28 @@ lemma possible_switch_to_valid_tcbs[wp]:
               simp: set_scheduler_action_def get_tcb_obj_ref_def)+
   done
 
-crunches restart_thread_if_no_fault
+lemma update_sched_context_ko_at_TCB[wp]:
+  "update_sched_context ref f \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
+  done
+
+lemma update_sched_context_valid_tcb[wp]:
+  "update_sched_context scp f \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (wpsimp wp: set_object_typ_ats get_object_wp)
+  done
+
+lemma update_sched_context_valid_tcbs[wp]:
+  "update_sched_context ref f \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
+
+crunches refill_unblock_check, restart_thread_if_no_fault
   for valid_tcbs[wp]: valid_tcbs
+  (simp: is_round_robin_def crunch_simps wp: whileLoop_wp)
 
 definition valid_tcbs' :: "kernel_state \<Rightarrow> bool" where
   "valid_tcbs' s' \<equiv> \<forall>ptr tcb. ksPSpace s' ptr = Some (KOTCB tcb) \<longrightarrow> valid_tcb' tcb s'"
