@@ -15639,9 +15639,6 @@ lemma sched_context_yield_to_valid_sched:
   unfolding sched_context_yield_to_def assert_opt_def
   apply (rule hoare_seq_ext[OF _ gscyf_sp])
   apply (rule hoare_seq_ext[OF _ sched_context_yield_to_valid_sched_helper], simp)
-  apply (rule hoare_seq_ext[OF _ gsct_sp])
-  apply (case_tac sc_tcb_opt; clarsimp)
-  apply (rename_tac tcb_ptr)
 
   apply (rule hoare_seq_ext_skip)
    apply ((wpsimp wp: sched_context_resume_schedulable_imp_ready
@@ -15651,6 +15648,10 @@ lemma sched_context_yield_to_valid_sched:
            | wps)+)[1]
    apply (frule invs_sym_refs)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+
+  apply (rule hoare_seq_ext[OF _ gsct_sp])
+  apply (case_tac sc_tcb_opt; clarsimp)
+  apply (rename_tac tcb_ptr)
 
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
   apply (clarsimp simp: is_schedulable_bool_def2)
@@ -18441,8 +18442,6 @@ lemma sched_context_yield_to_scheduler_act_sane[wp]:
                 simp: set_consumed_def)
    apply (wpsimp wp: set_object_wp update_sched_context_wp
                simp: set_tcb_obj_ref_def)
-  apply (rule hoare_seq_ext[OF _ gsct_sp], rename_tac sc_tcb_opt)
-  apply (case_tac sc_tcb_opt; clarsimp?)
   apply (rule hoare_seq_ext_skip)
    apply ((wpsimp wp:sched_context_resume_sc_tcb_sc_at | wps)+)[1]
   by (wpsimp wp: set_scheduler_action_wp hoare_vcg_all_lift hoare_drop_imps
@@ -22702,13 +22701,11 @@ lemma sched_context_yield_to_cur_sc_in_release_q_imp_zero_consumed[wp]:
    apply (wpsimp simp: get_sc_obj_ref_def complete_yield_to_def set_tcb_obj_ref_def
                    wp: update_sched_context_wp set_object_wp hoare_drop_imps)
   apply clarsimp
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule_tac B="\<lambda>_ s. cur_sc_in_release_q_imp_zero_consumed s" in hoare_seq_ext[rotated])
    apply (wpsimp wp: sched_context_resume_cur_sc_in_release_q_imp_zero_consumed)
    apply (clarsimp simp: heap_refs_inv_def cur_sc_more_than_ready_def)
    using strengthen_cur_sc_offset_ready strengthen_cur_sc_offset_sufficient apply blast
-  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
   done
 
