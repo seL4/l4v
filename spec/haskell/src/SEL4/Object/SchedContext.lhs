@@ -609,12 +609,7 @@ This module uses the C preprocessor to select a target architecture.
 >     InvokeSchedContextUnbind scPtr -> do
 >         schedContextUnbindAllTCBs scPtr
 >         schedContextUnbindNtfn scPtr
->         sc <- getSchedContext scPtr
->         let replyPtrOpt = scReply sc
->         when (replyPtrOpt /= Nothing) $ do
->             let replyPtr = fromJust replyPtrOpt
->             updateReply replyPtr (\reply -> reply { replyNext = Nothing })
->             setSchedContext scPtr $ sc { scReply = Nothing }
+>         schedContextUnbindReply scPtr
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer
 
