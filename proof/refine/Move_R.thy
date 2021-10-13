@@ -460,13 +460,6 @@ lemma maybeM_when:
   unfolding maybeM_def
   by (clarsimp split: option.splits)
 
-(* FIXME RT: move this to Lib or similar *)
-lemma bind_dummy_ret_val:
-  "do y \<leftarrow> a;
-      b
-   od = do a; b od"
-  by simp
-
 (* FIXME RT: This should replace lookup_cap_and_slot_valid_fault2 *)
 lemma lookup_cap_and_slot_valid_fault3[wp]:
   "\<lbrace>invs and K (p = to_bl p')\<rbrace>
