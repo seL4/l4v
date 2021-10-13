@@ -284,10 +284,11 @@ where
       assert (sc_yf_opt = None)
     od;
 
+    sched_context_resume sc_ptr;
+
     sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
     tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
 
-    sched_context_resume sc_ptr;
     schedulable <- is_schedulable tcb_ptr;
     if schedulable then do
       sc \<leftarrow> get_sched_context sc_ptr;
