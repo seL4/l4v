@@ -295,6 +295,8 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                     if isNothing fault
 >                         then do
 >                             setThreadState Restart t
+>                             scOpt <- threadGet tcbSchedContext t
+>                             ifCondRefillUnblockCheck scOpt (Just False) (Just True)
 >                             possibleSwitchTo t
 >                         else setThreadState Inactive t)
 >                 rescheduleRequired
