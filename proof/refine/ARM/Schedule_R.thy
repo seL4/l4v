@@ -28,7 +28,7 @@ crunches tcbReleaseDequeue
   for sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (simp: crunch_simps wp: crunch_wps)
 
-crunches refillUnblockCheck, refillBudgetCheck, refillBudgetCheckRoundRobin
+crunches refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refillBudgetCheckRoundRobin
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
   and valid_release_queue[wp]: valid_release_queue
@@ -2376,7 +2376,7 @@ lemma refillUnblockCheck_valid_machine_state'[wp]:
   done
 
 lemma refillUnblockCheck_list_refs_of_replies'[wp]:
-  "refillUnblockCheck scPtr \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
+  "refillUnblockCheck scPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   apply (clarsimp simp: refillUnblockCheck_def valid_mdb'_def refillHeadOverlappingLoop_def
                         mergeRefills_def updateRefillHd_def refillPopHead_def updateSchedContext_def
                         setReprogramTimer_def refillReady_def isRoundRobin_def)
