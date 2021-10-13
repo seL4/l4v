@@ -159,6 +159,8 @@ If a notification object is deleted, then pending receive operations must be can
 >                 setNotification ntfnPtr (ntfn { ntfnObj = IdleNtfn })
 >                 forM_ queue (\t -> do
 >                     setThreadState Restart t
+>                     scOpt <- threadGet tcbSchedContext t
+>                     ifCondRefillUnblockCheck scOpt (Just False) (Just True)
 >                     possibleSwitchTo t)
 >                 rescheduleRequired
 >             _ -> return ()
