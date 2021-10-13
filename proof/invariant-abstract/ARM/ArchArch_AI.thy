@@ -843,8 +843,6 @@ proof -
                          range_cover_full clear_um_def max_free_index_def,
      (clarsimp simp:valid_untyped_def valid_cap_simps)+)[1]
 
-       apply (simp add: cte_wp_at_def)
-
     apply (erule(1) cap_to_protected)
     apply (simp add:empty_descendants_range_in descendants_range_def2)+
 

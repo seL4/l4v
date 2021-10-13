@@ -1329,6 +1329,7 @@ lemma retype_region_invs_extras:
      and region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}
      and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>c.  {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)} \<subseteq> cap_range c \<and> cap_is_device c = dev) slot s)
      and K (ty = CapTableObject \<longrightarrow> 0 < us)
+     and K (ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us \<and> us \<le> untyped_max_bits)
      and K (range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
       retype_region ptr n us ty dev \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   apply (wp hoare_strengthen_post [OF retype_region_post_retype_invs],

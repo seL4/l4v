@@ -116,7 +116,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
                         gets_def put_def bind_def get_def return_def select_f_def
                         gets_the_def assert_opt_def get_tcb_def
                  split: option.split_asm kernel_object.split_asm)
-  apply (rename_tac v; subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
+  apply (rename_tac v s; subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
   done
 
@@ -429,8 +429,6 @@ lemma thread_set_valid_idle_trivial:
 
 
 crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
-
-crunch arch [wp]: thread_set "\<lambda>s. P (arch_state s)"
 
 
 lemma thread_set_caps_of_state_trivial:
@@ -922,8 +920,6 @@ lemma fold_fun_upd:
    apply simp
   apply clarsimp
   done
-
-crunch obj_at[wp]: store_word_offs "\<lambda>s. P (obj_at Q p s)"
 
 lemma load_word_offs_P[wp]:
   "\<lbrace>P\<rbrace> load_word_offs a x \<lbrace>\<lambda>_. P\<rbrace>"
@@ -2660,17 +2656,5 @@ lemma replies_blocked_upd_tcb_st_not_BlockedonReply:
 
 global_interpretation set_thread_state: non_sc_op "set_thread_state t st"
   by unfold_locales (wpsimp simp: sc_at_pred_n_def wp: sts_obj_at_impossible')
-
-(* FIXME: subsumes thread_set_ct_running *)
-lemma thread_set_ct_in_state:
-  "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb) \<Longrightarrow>
-  \<lbrace>ct_in_state st\<rbrace> thread_set f t \<lbrace>\<lambda>rv. ct_in_state st\<rbrace>"
-  apply (simp add: ct_in_state_def)
-  apply (rule hoare_lift_Pf [where f=cur_thread])
-   apply (wp thread_set_no_change_tcb_state; simp)
-  apply (simp add: thread_set_def)
-  apply wp
-  apply simp
-  done
 
 end

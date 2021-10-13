@@ -2175,13 +2175,10 @@ shows
   apply (fastforce simp: valid_list_2_def list_remove_removed intro: list_remove_distinct)+
   done
 
-lemma cap_move_valid_list [wp]:
 
-  notes split_paired_All[simp del] if_weak_cong[cong]
-  shows
-  "\<lbrace>valid_list\<rbrace>
-  cap_move cap src dest
-  \<lbrace>\<lambda>_. valid_list\<rbrace>"
+lemma cap_move_valid_list [wp]:
+  "\<lbrace>valid_list\<rbrace> cap_move cap src dest \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  supply split_paired_All[simp del]
   apply (case_tac "src = dest")
    apply (simp add: cap_move_def)
    apply(simp add: set_cdt_def cap_move_ext_def
@@ -2196,7 +2193,10 @@ lemma cap_move_valid_list [wp]:
                   update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
   apply(wp)
    apply (simp del: fun_upd_apply split del: if_split)
+   apply (unfold valid_list_2_def)
+   apply (simp del: fun_upd_apply cong: option.case_cong split del: if_split)
    apply (wp set_cap_caps_of_state3)+
+  apply (fold valid_list_2_def)
   apply (rule mdb_move_abs_simple.valid_list_post)
   apply (rule mdb_move_abs_simple.intro; simp)
   done

@@ -67,7 +67,10 @@ lemma arch_stit_tcb_at[wp, Schedule_AI_asms]:
   apply wp
   done
 
-crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
+crunches set_vm_root
+  for ct[wp]:  "\<lambda>s. P (cur_thread s)"
+  and st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
+  and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_stit_activatable[wp, Schedule_AI_asms]:
@@ -83,9 +86,6 @@ lemma stit_activatable[Schedule_AI_asms]:
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_idle_def
                  elim!: pred_tcb_weaken_strongerE)
   done
-
-crunch scheduler_action[wp]: do_machine_op "\<lambda>s. P (scheduler_action s)"
-crunch scheduler_action[wp]: set_vm_root "\<lambda>s. P (scheduler_action s)"
 
 lemma arch_stt_scheduler_action [wp, Schedule_AI_asms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"

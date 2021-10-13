@@ -1303,60 +1303,60 @@ lemma retype_addrs_obj_range_subset_strong:
   apply clarsimp
   apply (case_tac "n = 0")
    apply (clarsimp simp:retype_addrs_def)
-  proof -
-    assume cover:"range_cover ptr sz (obj_bits_api ty us) n"
-      and  mem_p:"p \<in> set (retype_addrs ptr ty n us)"
-      and  not_0:"n\<noteq> 0"
-      and  tyunt:"ty\<noteq> Untyped"
-      and  tysc : "ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us"
-    note n_less = range_cover.range_cover_n_less[OF cover]
-    have unat_of_nat_m1: "unat (of_nat n - (1::machine_word)) < n"
-      using not_0 n_less
-       by (simp add:unat_of_nat_minus_1)
-    have decomp:"of_nat n * 2 ^ obj_bits_api ty us = of_nat (n - 1) * 2 ^ (obj_bits (default_object ty dev us dm))
-      + (2 :: machine_word) ^ obj_bits (default_object ty dev us dm)"
-      apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
-      using not_0 n_less
-      apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3[where dm=0] tyunt tysc
-                 cong: obj_bits_cong)
-      done
-    show  "p + 2 ^ obj_bits (default_object ty dev us dm) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
-      using cover
-      apply (subst decomp)
-      apply (simp add:add.assoc[symmetric])
-      apply (simp add:p_assoc_help)
-      apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
-       using mem_p not_0
-         apply (clarsimp simp: retype_addrs_def ptr_add_def shiftl_t2n tyunt tysc
-                               obj_bits_dev_irr)
-         apply (rule word_plus_mono_right)
-          apply (rule word_mult_le_mono1[OF word_of_nat_le])
+proof -
+  assume cover:"range_cover ptr sz (obj_bits_api ty us) n"
+    and  mem_p:"p \<in> set (retype_addrs ptr ty n us)"
+    and  not_0:"n\<noteq> 0"
+    and  tyunt:"ty\<noteq> Untyped"
+    and  tysc : "ty = SchedContextObject \<longrightarrow> min_sched_context_bits \<le> us"
+  note n_less = range_cover.range_cover_n_less[OF cover]
+  have unat_of_nat_m1: "unat (of_nat n - (1::machine_word)) < n"
+    using not_0 n_less
+    by (simp add:unat_of_nat_minus_1)
+  have decomp:"of_nat n * 2 ^ obj_bits_api ty us = of_nat (n - 1) * 2 ^ (obj_bits (default_object ty dev us dm))
+    + (2 :: machine_word) ^ obj_bits (default_object ty dev us dm)"
+    apply (simp add:distrib_right[where b = "1::'a::len word",simplified,symmetric])
+    using not_0 n_less
+    apply (simp add: unat_of_nat_minus_1 obj_bits_api_def3[where dm=0] tyunt tysc
+               cong: obj_bits_cong)
+    done
+  show  "p + 2 ^ obj_bits (default_object ty dev us dm) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
+    using cover
+    apply (subst decomp)
+    apply (simp add:add.assoc[symmetric])
+    apply (simp add:p_assoc_help)
+    apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
+    using mem_p not_0
+       apply (clarsimp simp: retype_addrs_def ptr_add_def shiftl_t2n tyunt tysc
+                             obj_bits_dev_irr)
+       apply (rule word_plus_mono_right)
+        apply (rule word_mult_le_mono1[OF word_of_nat_le])
           using n_less not_0
-            apply (simp add:unat_of_nat_minus_1)
-           apply (rule p2_gt_0[THEN iffD2])
-           apply (simp add: word_bits_def range_cover_def obj_bits_dev_irr tyunt)
-          apply (simp only: word_bits_def[symmetric])
-          using not_0 n_less
-          apply (clarsimp simp: unat_of_nat_minus_1 obj_bits_dev_irr tyunt)
-          apply (subst unat_power_lower)
-            apply (simp add:range_cover_def)
-          apply (rule nat_less_power_trans2[OF range_cover.range_cover_le_n_less(2),OF cover, folded word_bits_def])
-          apply (simp add:unat_of_nat_m1 less_imp_le)
-         apply (simp add:range_cover_def word_bits_def)
-        apply (rule machine_word_plus_mono_right_split[where sz = sz])
+          apply (simp add:unat_of_nat_minus_1)
+         apply (rule p2_gt_0[THEN iffD2])
+         apply (simp add: word_bits_def range_cover_def obj_bits_dev_irr tyunt)
+        apply (simp only: word_bits_def[symmetric])
+        using not_0 n_less
+        apply (clarsimp simp: unat_of_nat_minus_1 obj_bits_dev_irr tyunt)
+        apply (subst unat_power_lower)
+         apply (simp add:range_cover_def)
+        apply (rule nat_less_power_trans2[OF range_cover.range_cover_le_n_less(2),OF cover, folded word_bits_def])
+         apply (simp add:unat_of_nat_m1 less_imp_le)
+        apply (simp add:range_cover_def word_bits_def)
+       apply (rule machine_word_plus_mono_right_split[where sz = sz])
         using range_cover.range_cover_compare[OF cover,where p = "unat (of_nat n - (1::machine_word))"]
         apply (clarsimp simp:unat_of_nat_m1)
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
       apply (subst add.commute[where a = "2^(obj_bits (default_object ty dev us dm)) - 1"])
-     apply (subst p_assoc_help[symmetric])
-     apply (rule is_aligned_no_overflow)
-     apply (insert cover)
-     apply (clarsimp simp:range_cover_def)
-     apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2])
-        apply (simp add: obj_bits_dev_irr range_cover_def tyunt)+
-      by (meson is_aligned_add is_aligned_mult_triv2 is_aligned_no_overflow')
-  qed
+      apply (subst p_assoc_help[symmetric])
+      apply (rule is_aligned_no_overflow)
+      apply (insert cover)
+      apply (clarsimp simp:range_cover_def)
+      apply (erule aligned_add_aligned[OF _  is_aligned_mult_triv2])
+      apply (simp add: obj_bits_dev_irr range_cover_def tysc tyunt)+
+    by (meson is_aligned_add is_aligned_mult_triv2 is_aligned_no_overflow')
+qed
 
 
 lemma retype_addrs_mem_subset_ptr_bits:

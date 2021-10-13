@@ -12,6 +12,39 @@ context Arch begin global_naming ARM
 
 named_theorems Ipc_AI_assms
 
+lemma update_cap_data_closedform:
+  "update_cap_data pres w cap =
+   (case cap of
+     cap.EndpointCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (cap.EndpointCap r (w && mask 28) rights) else cap.NullCap
+   | cap.NotificationCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (cap.NotificationCap r (w && mask 28) rights) else cap.NullCap
+   | cap.CNodeCap r bits guard \<Rightarrow>
+       if word_bits < unat ((w >> 3) && mask 5) + bits
+       then cap.NullCap
+       else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
+   | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
+   | cap.DomainCap \<Rightarrow> cap.DomainCap
+   | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
+   | cap.NullCap \<Rightarrow> cap.NullCap
+   | cap.ReplyCap t rights \<Rightarrow> cap.ReplyCap t rights
+   | cap.SchedContextCap s n \<Rightarrow> cap.SchedContextCap s n
+   | cap.SchedControlCap \<Rightarrow> cap.SchedControlCap
+   | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
+   | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
+   | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
+   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
+  apply (cases cap,
+         simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
+                        is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
+                        cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
+                        simp_thms cap_rights.simps Let_def split_def
+                        the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
+                        arch_update_cap_data_def
+                  cong: if_cong)
+  apply (auto simp: word_bits_def)
+  done
+
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap dev r R pgsz None)) = None"
   by (simp add: cap_asid_def)
@@ -57,7 +90,7 @@ lemma derive_cap_is_derived [Ipc_AI_assms]:
                     | erule cte_wp_at_weakenE
                     | simp split: cap.split_asm)+)[13]
   apply (wp hoare_drop_imps arch_derive_cap_is_derived)
-  apply (clarify, drule cte_wp_at_eqD, clarify)
+  apply (clarify, drule cte_wp_at_norm, clarify)
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
   apply (erule cte_wp_at_weakenE)
   apply (clarsimp simp: valid_cap_def)

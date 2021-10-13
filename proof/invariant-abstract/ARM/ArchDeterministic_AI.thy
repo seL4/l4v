@@ -24,10 +24,10 @@ declare get_cap_inv[Deterministic_AI_assms]
 end
 
 global_interpretation Deterministic_AI_1?: Deterministic_AI_1
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming ARM
 
@@ -108,17 +108,17 @@ crunches cleanByVA_PoU, cleanCacheRange_PoU
 
 crunches storeWord, clearMemory, freeMemory, ackDeadlineIRQ, ackInterrupt, maskInterrupt, setDeadline
   for machine_times[wp, machine_ops_last_machine_time']: "\<lambda>ms. P (last_machine_time ms) (time_state ms)"
-  (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory)
+  (wp: crunch_wps simp: crunch_simps ignore_del: storeWord maskInterrupt clearMemory cleanL2Range cleanByVA)
 
 lemmas machine_ops_last_machine_time = machine_ops_last_machine_time'
 lemmas arch_machine_ops_last_machine_time = arch_machine_ops_last_machine_time'
 
 end
 global_interpretation Deterministic_AI_2?: Deterministic_AI_2
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
-  qed
+qed
 
 end
 

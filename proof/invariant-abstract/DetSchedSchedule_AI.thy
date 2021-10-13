@@ -42,10 +42,11 @@ lemma current_time_bounded_strengthen:
 
 lemma update_time_stamp_current_time_bounded_5:
   "\<lbrace>\<top>\<rbrace> update_time_stamp \<lbrace>\<lambda>_. current_time_bounded 5\<rbrace>"
+  including no_take_bit
   supply minus_add_distrib[simp del]
   apply (clarsimp simp: update_time_stamp_def getCurrentTime_def)
   apply wpsimp
-  apply (clarsimp simp: current_time_bounded_def max_word_def)
+  apply (clarsimp simp: current_time_bounded_def)
   apply (rule_tac y="unat (-(getCurrentTime_buffer + 1))
                      + unat kernelWCET_ticks + 5 * unat MAX_PERIOD"
                in order_trans)
@@ -58,11 +59,11 @@ lemma update_time_stamp_current_time_bounded_5:
   apply (meson le_trans min.cobounded1 unat_of_nat_closure)
   apply (subst unat_minus_plus_one)
    apply (insert getCurrentTime_buffer_no_overflow getCurrentTime_buffer_no_overflow')
-   apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def max_word_def)
-  apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
+  apply (clarsimp)
   apply (insert getCurrentTime_buffer_no_overflow'_stronger getCurrentTime_buffer_no_overflow
                 getCurrentTime_buffer_no_overflow' MAX_PERIOD_mult)
-  by (fastforce simp: kernelWCET_ticks_def MAX_PERIOD_def max_word_def)
+  by (fastforce simp: kernelWCET_ticks_def MAX_PERIOD_def unat_minus_one_word)
 
 lemma as_user_cur_sc_chargeable[wp]:
   "as_user f d \<lbrace>cur_sc_chargeable\<rbrace>"
@@ -3723,7 +3724,7 @@ lemma merge_refills_refills_unat_sum:
   apply (subst unat_add_lem')
    apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
     apply (fastforce intro: member_le_sum_list)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
   apply (case_tac list; simp)
   done
 
@@ -3742,10 +3743,9 @@ lemma merge_refills_hd_r_amount:
   apply (subst unat_add_lem')
    apply (case_tac "sc_refills sc"; clarsimp?)
    apply (rename_tac list)
-   apply (clarsimp simp: max_word_def)
    apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
     apply (fastforce intro: member_le_sum_list)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
   apply fastforce
   done
 
@@ -3956,7 +3956,7 @@ lemma refill_unblock_check_bounded_release_time:
    apply (wpsimp wp: set_refills_wp get_refills_wp)
    apply (clarsimp simp: vs_all_heap_simps bounded_release_time_def unat_plus_gt_trans)
    apply (subst unat_add_lem')
-    apply (clarsimp simp: max_word_def word_le_nat_alt obj_at_def current_time_bounded_def)
+    apply (clarsimp simp: word_le_nat_alt obj_at_def current_time_bounded_def unat_minus_one_word)
    apply (clarsimp simp: current_time_bounded_def)
   apply (clarsimp simp: refill_head_overlapping_loop_def)
   apply (wpsimp wp: valid_whileLoop[where I="?post"]
@@ -4050,9 +4050,8 @@ lemma merge_refills_no_overflow_helper:
   apply merge_refills_simple
   apply (clarsimp simp: refills_unat_sum_def pred_map_simps)
   apply (subst unat_add_lem')
-   apply (case_tac "sc_refills sc"; clarsimp)
-   apply (case_tac list; clarsimp?)
-   apply (clarsimp simp: max_word_def)
+   apply (case_tac "sc_refills sc"; clarsimp simp: unat_minus_one_word)
+   apply (case_tac list; clarsimp)
   apply (case_tac "sc_refills sc"; clarsimp)
   apply (case_tac list; clarsimp?)
   done
@@ -4079,7 +4078,7 @@ lemma merge_refills_no_overflow:
      apply (rename_tac list)
      apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
       apply (fastforce intro: member_le_sum_list)
-     apply (clarsimp simp: max_word_def)
+     apply (clarsimp simp: unat_minus_one_word)
     apply (case_tac "sc_refills sc"; clarsimp)
     apply (case_tac list; clarsimp?)
    apply (blast intro: no_overflow_sublist)
@@ -4124,11 +4123,11 @@ lemma refill_head_overlapping_loop_ordered_disjoint_strong:
      apply simp
     apply (clarsimp simp: word_le_nat_alt)
     apply (subst unat_add_lem'[symmetric])
-     apply (clarsimp simp: refills_unat_sum_def max_word_def)
+     apply (clarsimp simp: refills_unat_sum_def unat_minus_one_word)
     apply (subst unat_add_lem')
-     apply (clarsimp simp: max_word_def refills_unat_sum_def)
+     apply (clarsimp simp: unat_minus_one_word refills_unat_sum_def)
     apply (subst unat_add_lem'[symmetric])
-     apply (clarsimp simp: refills_unat_sum_def max_word_def)
+     apply (clarsimp simp: refills_unat_sum_def unat_minus_one_word)
     apply linarith
    apply simp
   apply (intro hoare_vcg_conj_lift_pre_fix)
@@ -4164,7 +4163,7 @@ lemma refill_unblock_check_no_overflow_helper:
       apply (fastforce intro: member_le_sum_list)
      apply (clarsimp simp: word_le_nat_alt)
     apply (subst unat_add_lem')
-     apply (clarsimp simp: max_word_def)
+     apply (clarsimp simp: unat_minus_one_word)
     apply linarith
    using no_overflow_sublist apply blast
   apply simp
@@ -4178,7 +4177,7 @@ lemma refill_unblock_check_no_overflow_helper2:
                             # tl (sc_refills sc))
        \<le> unat max_time"
   apply (clarsimp simp: refills_unat_sum_def no_overflow_def current_time_bounded_def)
-  apply (subst unat_add_lem', simp add: max_word_def)
+  apply (subst unat_add_lem', simp add: unat_minus_one_word)
   apply (clarsimp simp: word_le_nat_alt)
   apply (case_tac "sc_refills sc"; clarsimp)
   done
@@ -4368,7 +4367,7 @@ lemma refill_unblock_check_valid_refills[wp]:
       using last_tl apply blast
      apply (prop_tac "unat (cur_time s + kernelWCET_ticks)
                       = unat (cur_time s) + unat kernelWCET_ticks")
-      apply (subst unat_add_lem', simp add: max_word_def, simp)
+      apply (subst unat_add_lem', simp add: unat_minus_one_word, simp)
      apply fastforce
     apply (wpsimp wp: refill_head_overlapping_loop_hd_r_amount set_refills_wp get_refills_wp)
     apply (clarsimp simp: vs_all_heap_simps sc_valid_refills_def obj_at_def refills_unat_sum_def)
@@ -7861,7 +7860,7 @@ lemma merge_refills_ordered_disjoint:
    apply (blast intro: ordered_disjoint_sublist)
   apply clarsimp
   apply (subst unat_add_lem')
-   apply (clarsimp simp: max_word_def refills_unat_sum_def)
+   apply (clarsimp simp: unat_minus_one_word refills_unat_sum_def)
    apply (case_tac "sc_refills sc"; clarsimp)
    apply (rename_tac list)
    apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
@@ -7970,7 +7969,7 @@ lemma non_overlapping_merge_refills_refills_unat_sum:
   apply (subst unat_add_lem')
    apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
     apply (fastforce intro: member_le_sum_list)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
   apply (case_tac list; simp)
   done
 
@@ -7988,10 +7987,10 @@ lemma non_overlapping_merge_refills_refills_unat_sum_lower_bound:
   apply (clarsimp simp: refills_unat_sum_def)
   apply (subst unat_add_lem')
    apply (case_tac "sc_refills sc"; clarsimp)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
    apply (case_tac list; clarsimp)
   apply (case_tac "sc_refills sc"; clarsimp)
-  apply (clarsimp simp: max_word_def)
+  apply (clarsimp simp: unat_minus_one_word)
   apply (case_tac list; clarsimp)
   done
 
@@ -8059,7 +8058,7 @@ lemma non_overlapping_merge_refills_refills_unat_sum_equals_budget:
   apply (subst unat_add_lem')
    apply (prop_tac "unat (r_amount (hd list)) \<le> sum_list (map unat (map r_amount list))")
     apply (fastforce intro: member_le_sum_list)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
   apply (case_tac list; simp)
   done
 
@@ -8097,7 +8096,7 @@ lemma head_insufficient_loop_refills_unat_sum_equals_budget:
   apply (clarsimp simp: add_ac refills_unat_sum_def)
   apply (subst unat_add_lem')
    apply (prop_tac "unat (sc_budget sc) \<le> unat max_time", fastforce)
-   apply (clarsimp simp: max_word_def)
+   apply (clarsimp simp: unat_minus_one_word)
   apply presburger
   done
 
@@ -8116,7 +8115,7 @@ lemma non_overlapping_merge_refills_ordered_disjoint_helper:
     apply fastforce
    apply (prop_tac "unat (r_amount a) \<le> unat (r_time r1)")
     apply (fastforce simp: ordered_disjoint_def)
-   apply (subst unat_add_lem', clarsimp simp: max_word_def)
+   apply (subst unat_add_lem', clarsimp simp: unat_minus_one_word)
    apply (clarsimp simp: ordered_disjoint_def)
    apply (drule_tac x=1 in spec)
    apply (simp add: hd_conv_nth)
@@ -8195,7 +8194,7 @@ lemma non_overlapping_merge_refills_no_overflow_helper:
      apply (fastforce simp: ordered_disjoint_def)
     apply (subst unat_sub)
      apply (clarsimp simp: word_le_nat_alt)
-    apply (subst unat_add_lem', clarsimp simp: max_word_def)
+    apply (subst unat_add_lem', clarsimp simp:  unat_minus_one_word)
     apply linarith
    apply (meson no_overflow_tail)
   apply simp
@@ -8337,8 +8336,7 @@ lemma head_insufficient_loop_hd_r_time:
     apply (clarsimp simp: word_le_nat_alt ordered_disjoint_def)
     apply (drule_tac x=0 in spec)
     apply clarsimp
-    subgoal by (metis Groups.add_ac(2) One_nat_def Suc_diff_Suc ab_semigroup_add_class.add_ac(1)
-                      hd_conv_nth le_iff_add length_ineq_not_Nil(1) length_tl nth_tl zero_less_Suc)
+    apply (metis add_leE hd_conv_nth hd_tl_nth numeral_nat(7))
    apply (rename_tac sc n)
    apply (rule_tac y="unat (r_time (hd (tl (sc_refills sc))))" in order_trans
           ; fastforce?)
@@ -8589,13 +8587,13 @@ lemma refill_update_valid_refills:
                         MIN_REFILLS_def)
   apply (intro conjI)
         apply (subst unat_add_lem')
-         apply (clarsimp simp: max_word_def)
+         apply (clarsimp simp:  unat_minus_one_word)
         apply (meson add_le_cancel_left linorder_not_less order_trans word_le_less_eq
                      word_less_nat_alt)
        apply (fastforce simp: word_le_nat_alt)
       apply (subst unat_sub; fastforce?)
       apply (subst unat_add_lem')
-       apply (clarsimp simp: max_word_def)
+       apply (clarsimp simp:  unat_minus_one_word)
       apply (prop_tac "unat new_budget - unat (r_amount (refill_hd sc)) \<le> unat new_period")
        using diff_le_self le_trans unat_le_mono apply blast
       apply fastforce
@@ -8765,7 +8763,7 @@ lemma unat_add_subtract_cancel:
   "\<lbrakk>unat (a :: 64 word) + unat b \<le> unat max_time; b \<le> c\<rbrakk>
    \<Longrightarrow> unat (a + b) + unat (c - b) = unat a + unat c"
   apply (subst unat_sub; assumption?)
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
+  apply (subst unat_add_lem', clarsimp simp: unat_minus_one_word)
   apply (clarsimp simp: word_le_nat_alt)
   done
 
@@ -8839,7 +8837,7 @@ lemma schedule_used_no_overflow:
          ; fastforce?)
    apply (metis no_overflow_sublist butlast.simps(2) sublist_butlast)
   apply (clarsimp simp: no_overflow_def can_merge_refill_def)
-  apply (subst unat_add_lem', clarsimp simp: max_word_def)
+  apply (subst unat_add_lem', clarsimp simp: unat_minus_one_word)
   apply (subst unat_sub)
    apply (prop_tac "unat (r_time (last lista) + r_amount (last lista))
                     = unat (r_time (last lista)) + unat (r_amount (last lista))")
@@ -9312,7 +9310,7 @@ lemma handle_overrun_loop_body_ordered_disjoint:
     apply (blast intro: ordered_disjoint_sublist)
    apply (blast intro: no_overflow_sublist)
   apply (clarsimp simp: word_le_nat_alt)
-  apply (subst unat_add_lem'; fastforce simp: max_word_def window_def last_tl)
+  apply (subst unat_add_lem'; fastforce simp: unat_minus_one_word window_def last_tl)
   done
 
 lemma hoare_vcg_imp_lift_pre_add:
@@ -9488,14 +9486,14 @@ lemma handle_overrun_loop_head_bound:
    apply (clarsimp simp: obj_at_def vs_all_heap_simps word_le_nat_alt)
    apply (rename_tac sc n)
    apply (subst unat_add_lem')
-    apply (clarsimp simp: max_word_def)
+    apply (clarsimp simp: unat_minus_one_word)
    apply (insert MAX_PERIOD_mult[where n=4]; simp)
    apply (clarsimp simp: window_def)
    apply (subst unat_add_lem')
-    apply (clarsimp simp: max_word_def word_le_nat_alt)
+    apply (clarsimp simp: unat_minus_one_word word_le_nat_alt)
    apply (frule head_time_buffer_true_imp_unat_buffer[THEN iffD1, rotated])
     apply (fastforce simp: vs_all_heap_simps obj_at_kh_kheap_simps)
-   apply (fastforce simp: max_word_def unat_MAX_RELEASE_TIME less_not_refl2 tail_nonempty_length)
+   apply (fastforce simp: unat_minus_one_word unat_MAX_RELEASE_TIME less_not_refl2 tail_nonempty_length)
 
   apply (intro hoare_vcg_conj_lift_pre_fix; (solves handle_overrun_loop_simple)?)
    defer
@@ -11235,7 +11233,6 @@ lemma commit_time_valid_release_q:
    apply (rule_tac Q="valid_release_q and (\<lambda>s. \<exists>tp. bound_sc_tcb_at ((=) (Some (cur_sc s))) tp s)
                       and (\<lambda>s. sc_not_in_release_q (cur_sc s) s) and (\<lambda>s. cur_sc s = csc)"
                    in hoare_weaken_pre[rotated])
-    apply (clarsimp, rule conjI, fastforce)
     apply (clarsimp simp: obj_at_def pred_neg_def)
     apply (subgoal_tac "t = ta", clarsimp)
     apply (rule_tac z="cur_sc s" in sym_refs_bound_sc_tcb_at_inj)
@@ -19125,9 +19122,8 @@ lemma send_ipc_released_if_bound[wp]:
     apply wpsimp+
   apply (subgoal_tac "st_tcb_at (not active) t s")
    apply (clarsimp simp: pred_tcb_at_def obj_at_def pred_neg_def)
-  apply (erule ep_queued_st_tcb_at; clarsimp?)
-   apply (rule refl)
-  apply (clarsimp simp: pred_neg_def)
+  apply (erule ep_queued_st_tcb_at; clarsimp)
+  apply (rule refl)
   done
 
 lemma send_fault_ipc_no_donation_released_if_bound[wp]:
@@ -23095,6 +23091,8 @@ lemma fast_finalise_release_q_not_blocked_on_reply[wp]:
   "fast_finalise cap final
    \<lbrace>\<lambda>s :: det_state. \<forall>t\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) t\<rbrace>"
   apply (cases cap; (clarsimp simp: when_def, intro conjI impI)?; (solves \<open>wpsimp\<close>)?)
+   apply wpsimp
+   apply (clarsimp simp: pred_neg_def)
   apply (wpsimp wp: gts_wp' get_simple_ko_wp cancel_all_ipc_valid_sched cancel_all_ipc_invs)
   done
 
@@ -23102,8 +23100,12 @@ lemma sched_context_cancel_yield_to_release_q_not_blocked_on_reply[wp]:
   "sched_context_cancel_yield_to thread
    \<lbrace>\<lambda>s. \<forall>t\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
-  apply (wpsimp wp: hoare_vcg_ball_lift2 get_tcb_obj_ref_wp)
+  apply (wpsimp wp: hoare_vcg_ball_lift2 get_tcb_obj_ref_wp simp: pred_neg_def)
   done
+
+crunches update_restart_pc
+  for release_q[wp]: "\<lambda>s. P (release_queue s)"
+  and tcb_sts_of[wp]: "\<lambda>s. P (tcb_sts_of s)"
 
 lemma suspend_release_q_not_blocked_on_reply[wp]:
   "suspend thread
@@ -23111,9 +23113,10 @@ lemma suspend_release_q_not_blocked_on_reply[wp]:
   apply (clarsimp simp: suspend_def)
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: update_restart_pc_def\<close>)+
   apply (rule hoare_seq_ext_skip)
-   apply (wpsimp wp: hoare_vcg_ball_lift2 set_thread_state_pred_map_tcb_sts_of
-               simp: vs_all_heap_simps pred_neg_def is_blocked_on_reply_def)
+   apply (wpsimp wp: hoare_vcg_ball_lift2 simp: vs_all_heap_simps)
   apply (wpsimp wp: tcb_release_remove_wp)
+   apply (wpsimp wp: hoare_vcg_ball_lift2 set_thread_state_pred_map_tcb_sts_of)
+  apply (clarsimp simp: pred_neg_def)
   using tcb_sched_act_set_simps(3) apply blast
   done
 
@@ -23121,7 +23124,7 @@ lemma unbind_from_sc_release_q_not_blocked_on_reply[wp]:
   "unbind_from_sc tcb_ptr
    \<lbrace>\<lambda>s. \<forall>t\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) t\<rbrace>"
   unfolding unbind_from_sc_def maybeM_def
-  by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
+  by (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift simp: pred_neg_def)
 
 lemma unbind_from_sc_heap_refs_inv_sc_tcbs[wp]:
   "unbind_from_sc tcb_ptr \<lbrace>\<lambda>s. heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)\<rbrace>"
@@ -23163,6 +23166,7 @@ crunches cap_delete_one
 lemma finalise_cap_release_q_not_blocked_on_reply[wp]:
   "finalise_cap cap final
    \<lbrace>\<lambda>s :: det_state. \<forall>x\<in>set (release_queue s). pred_map (not is_blocked_on_reply) (tcb_sts_of s) x\<rbrace>"
+  supply pred_neg_simp[simp del]
   apply (cases cap; (clarsimp simp: when_def, intro conjI impI)?; (solves \<open>wpsimp\<close>)?)
     apply (wpsimp wp: gts_wp' get_simple_ko_wp)
    apply (wpsimp simp: deleting_irq_handler_def sched_context_unbind_all_tcbs_def)+
@@ -23173,6 +23177,7 @@ lemma finalise_cap_release_q_bound_to_sc[wp]:
         \<and> (\<forall>t\<in>set (release_queue s). pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) t)\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s :: det_state. (\<forall>t\<in>set (release_queue s). pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) t)\<rbrace>"
+  supply pred_neg_simp[simp del]
   apply (cases cap; (clarsimp simp: when_def, intro conjI impI)?; (solves \<open>wpsimp\<close>)?)
     apply (wpsimp wp: gts_wp' get_simple_ko_wp)
    apply (wpsimp simp: deleting_irq_handler_def sched_context_unbind_all_tcbs_def)+
@@ -23306,6 +23311,7 @@ lemma install_tcb_frame_cap_cur_sc_in_release_q_imp_zero_consumed_pred[wp]:
    install_tcb_frame_cap target slot buffer
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_in_release_q_imp_zero_consumed_pred s\<rbrace>, -"
   unfolding install_tcb_frame_cap_def
+  supply pred_neg_simp[simp del]
   apply (cases buffer; clarsimp?, (solves \<open>wpsimp\<close>)?)
   apply (clarsimp simp: validE_R_def)
   apply (rule_tac B="\<lambda>_. cur_sc_in_release_q_imp_zero_consumed_pred"
@@ -23456,6 +23462,7 @@ lemma invoke_tcb_cur_sc_in_release_q_imp_zero_consumed[wp]:
    apply (case_tac ntfnptr_opt; wpsimp simp: bind_notification_def)
 
   \<comment> \<open>iv = ThreadControlSched\<close>
+  supply pred_neg_simp[simp del]
   apply (rename_tac target a b fault_handler mcp priority sc)
   apply (clarsimp simp: validE_R_def)
   apply (rule_tac Q="\<lambda>s. cur_sc_in_release_q_imp_zero_consumed_pred s
@@ -23530,6 +23537,7 @@ lemma invoke_cnode_cur_sc_in_release_q_imp_zero_consumed_pred[wp]:
    invoke_cnode i
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_in_release_q_imp_zero_consumed_pred s\<rbrace>, -"
   unfolding invoke_cnode_def
+  supply pred_neg_simp[simp del]
   apply (cases i; clarsimp)
        apply wpsimp
       apply wpsimp
@@ -24291,7 +24299,7 @@ lemma invoke_tcb_ct_ready_if_schedulable[wp]:
     and current_time_bounded 2 and active_sc_valid_refills\<rbrace>
    invoke_tcb iv
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
-  supply if_split [split del]
+  supply if_split [split del] pred_neg_simp[simp del]
   apply (cases iv; simp)
           subgoal
           apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift' restart_ct_ready_if_schedulable)
@@ -24542,7 +24550,7 @@ lemma invoke_cnode_released_if_bound[wp]:
   "\<lbrace>released_if_bound_sc_tcb_at t and st_tcb_at active t and valid_machine_time and invs\<rbrace>
    invoke_cnode i
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t :: det_state \<Rightarrow> _\<rbrace>" (is "\<lbrace>?P active\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply if_split [split del]
+  supply if_split [split del] pred_neg_simp[simp del]
   unfolding invoke_cnode_def
   apply (cases i; (solves \<open>wpsimp\<close>)?; simp)
    apply (rule_tac Q="\<lambda>_. ?P (not ipc_queued_thread_state) and invs" in hoare_post_imp, simp)

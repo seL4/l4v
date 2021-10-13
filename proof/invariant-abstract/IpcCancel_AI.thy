@@ -2623,7 +2623,7 @@ lemma complete_yield_to_invs:
                    split del: if_split)
    apply (drule sym, clarsimp simp: is_sc_obj_def obj_at_def split del: if_split)
    apply (case_tac ko; clarsimp split del: if_split)
-   apply (rename_tac sc n)
+   apply (rename_tac n sc)
    apply (subgoal_tac "sc_yield_from sc = Some tcb_ptr")
     apply (erule delta_sym_refs)
      apply (clarsimp split: if_split_asm simp: st_tcb_at_def)

@@ -98,7 +98,7 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
     apply (subst (asm) linorder_class.not_le)
     apply (rule_tac b="of_nat (unat (last_machine_time (machine_state s)) +
       time_oracle (Suc (time_state (machine_state s))))" in order.trans[rotated])
-     apply (rule Word_Lemmas.word_of_nat_le)
+     apply (rule word_of_nat_le)
      apply (rule_tac order.trans)
       apply (rule order.strict_implies_order, assumption)
      apply (subst group_add_class.diff_conv_add_uminus)
@@ -114,7 +114,7 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
       apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
      apply (insert getCurrentTime_buffer_no_overflow'_stronger)
      apply (subst unat_add_lem')
-      apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def max_word_def)
+      apply (metis no_olen_add_nat word_add_no_overflow word_le_less_eq word_less_iff_unsigned)
      apply fastforce
     apply force
     done

@@ -919,8 +919,7 @@ lemma refill_list_to_subset_empty_imp_all_r_amounts_zero:
   apply (induct refills rule: length_induct)
   apply (rename_tac xs)
   apply (case_tac xs; clarsimp?)
-  apply (fastforce simp: unat_eq_1)
-  done
+  using unat_eq_0 by blast
 
 lemma all_r_amounts_zero_imp_card_zero:
   "\<lbrakk>\<forall>refill \<in> set refills. r_amount refill = 0; l < length refills\<rbrakk>
@@ -1075,8 +1074,7 @@ lemma sum_list_helper:
 lemma unat_sum_max_word:
   fixes w :: "'a::len word"
   shows "unat w + unat v = Suc (unat (max_word :: 'a word)) \<Longrightarrow> w + v = 0"
-  using unat_word_ariths(1)
-  by (metis max_word_eq plus_1_eq_Suc unat_1 word_pow_0 word_unat.Rep_eqD zadd_diff_inverse)
+  by (metis arith_special(10) plus_1_eq_Suc unsigned_1 word_arith_nat_add)
 
 lemma unat_sum_list_of_words:
   fixes list :: "'a::len word list"
@@ -1095,8 +1093,8 @@ lemma sum_exact_overflow:
   apply (drule_tac x=list in spec)
   apply simp
   using unat_sum_list_of_words
-  by (metis (no_types, hide_lams) unat_sum_max_word arith_simps(49)
-             plus_nat.simps(2) rdmods(5) unat_eq_1(1) unat_eq_1(2) unat_word_ariths(1))
+  by (metis (mono_tags, hide_lams) arith_special(10) list.map(2) plus_1_eq_Suc sum_list_simps(2)
+                                   unat_word_ariths(1) unsigned_1 unsigned_eq_0_iff)
 
 lemma exactly_max_word_plus_one_implies_unat_refills_sum_is_zero:
   "\<lbrakk>no_overflow refills;
@@ -1142,8 +1140,7 @@ lemma no_overflow_ordered_disjoint_non_zero_refills_implies_card_not_equal_to_su
    apply (rule max_interval_helper; fastforce?)
     apply (erule no_overflow_refill_list_to_subset_finite)
    apply (rule no_overflow_implies_refill_list_to_subset_max_bounded; fastforce?)
-  using MIN_BUDGET_pos apply (simp add: unat_eq_1(1))
-  done
+  using MIN_BUDGET_pos by (simp add: unat_eq_zero)
 
 lemma unat_sum_list_at_most_unat_max_word:
   "\<lbrakk>refills \<noteq> [];
@@ -1197,8 +1194,7 @@ lemma refill_word_proof_helper:
                  word_le_plus_either)
    apply (simp add: unat_plus_simple unat_sub word_le_imp_diff_le
                     word_le_plus_either word_le_nat_alt)
-  apply (rule unat_add_lem', simp add: max_word_def)
-  done
+  using unat_add_lem'' by blast
 
 lemma ordered_disjoint_append:
   "\<lbrakk>left \<noteq> [] \<longrightarrow> ordered_disjoint left;
