@@ -22,12 +22,12 @@ crunches arch_post_cap_deletion,
 
 (* effects on last_machine_time *)
 crunches setIRQTrigger, maskInterrupt, storeWord, freeMemory, ackDeadlineIRQ, clearMemory,
-         ackInterrupt, hwASIDFlush, read_sbadaddr, setVSpaceRoot, sfence, plic_complete_claim
+         ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, plic_complete_claim
   for machine_times[wp]: "\<lambda>s. P (last_machine_time s) (time_state s)"
 
 lemma misc_dmo_valid_sched_pred_strong[wp]:
   "do_machine_op ackDeadlineIRQ  \<lbrace>valid_sched_pred_strong Q\<rbrace>"
-  "do_machine_op read_sbadaddr  \<lbrace>valid_sched_pred_strong Q\<rbrace>"
+  "do_machine_op read_stval  \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "do_machine_op sfence \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (plic_complete_claim a) \<lbrace>valid_sched_pred_strong Q\<rbrace>"
   "\<And>a. do_machine_op (hwASIDFlush a)  \<lbrace>valid_sched_pred_strong Q\<rbrace>"

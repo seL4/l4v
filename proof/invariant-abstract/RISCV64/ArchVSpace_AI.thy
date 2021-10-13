@@ -1297,6 +1297,7 @@ lemma unmap_page_not_target:
   supply pt_bits_left_not_asid_pool_size[simp]
          vs_lookup_slot_pool_for_asid[simp]
          pool_for_asid_vs_lookup[simp]
+  supply subst_all [simp del]
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def vspace_for_asid_def obind_def vs_lookup_slot_def
