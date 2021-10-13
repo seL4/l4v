@@ -2305,6 +2305,12 @@ proof -
     by simp
 qed
 
+lemma bind_dummy_ret_val:
+  "do y \<leftarrow> a;
+      b
+   od = do a; b od"
+  by simp
+
 lemma zipWithM_x_Nil2 :
   "zipWithM_x f xs [] = return ()"
   by (simp add: zipWithM_x_mapM mapM_Nil)
