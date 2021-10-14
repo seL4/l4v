@@ -286,33 +286,37 @@ where
 
     sched_context_resume sc_ptr;
 
-    sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
-    tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
+    return_now \<leftarrow> do
+      sc_tcb_opt \<leftarrow> get_sc_obj_ref sc_tcb sc_ptr;
+      tcb_ptr \<leftarrow> assert_opt sc_tcb_opt;
 
-    schedulable <- is_schedulable tcb_ptr;
-    if schedulable then do
-      sc \<leftarrow> get_sched_context sc_ptr;
-      curtime \<leftarrow> gets cur_time;
-      assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);
-      ct_ptr \<leftarrow> gets cur_thread;
-      prios \<leftarrow> thread_get tcb_priority tcb_ptr;
-      ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
-      if prios < ct_prios
-      then do
-        tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
-        set_consumed sc_ptr buffer
+      schedulable <- is_schedulable tcb_ptr;
+      if schedulable then do
+        sc \<leftarrow> get_sched_context sc_ptr;
+        curtime \<leftarrow> gets cur_time;
+        assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);
+        ct_ptr \<leftarrow> gets cur_thread;
+        prios \<leftarrow> thread_get tcb_priority tcb_ptr;
+        ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
+        if prios < ct_prios
+        then do
+          tcb_sched_action tcb_sched_dequeue tcb_ptr;
+          tcb_sched_action tcb_sched_enqueue tcb_ptr; \<comment> \<open>@{text \<open>schedulable & dequeued & sufficient & ready\<close>}\<close>
+          return True
+        od
+        else do
+          set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
+          set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
+          tcb_sched_action tcb_sched_dequeue tcb_ptr;
+          tcb_sched_action tcb_sched_enqueue ct_ptr;
+          tcb_sched_action tcb_sched_enqueue tcb_ptr;
+          reschedule_required;
+          return False
+        od
       od
-      else do
-        set_sc_obj_ref sc_yield_from_update sc_ptr (Some ct_ptr);
-        set_tcb_obj_ref tcb_yield_to_update ct_ptr (Some sc_ptr);
-        tcb_sched_action tcb_sched_dequeue tcb_ptr;
-        tcb_sched_action tcb_sched_enqueue ct_ptr;
-        tcb_sched_action tcb_sched_enqueue tcb_ptr;
-        reschedule_required
-      od
-    od
-    else set_consumed sc_ptr buffer
+      else return True
+    od;
+    when return_now $ set_consumed sc_ptr buffer
   od"
 
 
