@@ -1250,15 +1250,6 @@ lemma valid_idle'_tcb_at':
   "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_sc_at' idle_sc_ptr s"
   by (clarsimp simp: valid_idle'_def)
 
-lemmas idle_tcb'_def = idle_tcb'_2_def
-
-definition valid_idle' :: "kernel_state \<Rightarrow> bool" where
-  "valid_idle' \<equiv> \<lambda>s. obj_at' idle_tcb' (ksIdleThread s) s \<and> idle_thread_ptr = ksIdleThread s"
-
-lemma valid_idle'_tcb_at':
-  "valid_idle' s \<Longrightarrow> obj_at' idle_tcb' (ksIdleThread s) s"
-  by (clarsimp simp: valid_idle'_def)
-
 definition valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "valid_irq_node' x \<equiv> \<lambda>s. is_aligned x (size (0::irq) + cteSizeBits)
                           \<and> (\<forall>irq :: irq. real_cte_at' (x + (ucast irq << cteSizeBits)) s)"

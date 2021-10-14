@@ -2843,7 +2843,7 @@ lemma tcbReleaseEnqueue_corres:
                apply wpfix
                apply (rule_tac P="\<lambda>s. valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s
                                       \<and> active_sc_valid_refills s
-                                      \<and> (\<forall>x \<in> set (y#ys). active_sc_tcb_at x s)"
+                                      \<and> (\<forall>x \<in> set (y#xs). active_sc_tcb_at x s)"
                             in corres_guard1_imp)
                 apply (rule getScTime_corres, simp)
               apply wpsimp
@@ -5948,7 +5948,7 @@ lemma doReplyTransfer_corres:
      invs'
      (do_reply_transfer sender reply grant)
      (doReplyTransfer sender reply grant)"
-  supply if_split [split del]
+  supply if_split [split del] subst_all[simp del]
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF getReply_TCB_corres])

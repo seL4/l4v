@@ -2363,7 +2363,7 @@ lemma tc_corres_sched:
                  apply (rule hoare_post_taut)
                 apply (rule_tac P=\<top> and P'=\<top> in corres_option_split; clarsimp)
                 apply wpfix
-                apply (rule setPriority_corres)
+                apply (rule setPriority)
                apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_machine_time s \<and> valid_sched s
                                         \<and> simple_sched_action s \<and> current_time_bounded 2 s \<and>
                                         tcb_at t s \<and> ex_nonz_cap_to t s \<and>
@@ -2991,8 +2991,7 @@ lemma decodeSetMCPriority_wf[wp]:
   apply (wpsimp wp: checkPrio_lt_ct_weak simp: emptyTCSched_def)
   apply (clarsimp simp: maxPriority_def numPriorities_def emptyTCSched_def)
   using max_word_max [of \<open>UCAST(32 \<rightarrow> 8) x\<close> for x]
-  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
-  by (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
+  by (simp add: max_word_mask numeral_eq_Suc mask_Suc)
 
 lemma decodeSetMCPriority_inv[wp]:
   "\<lbrace>P\<rbrace> decodeSetMCPriority args cap extras \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -3018,7 +3017,7 @@ lemma decodeSetSchedParams_wf:
   apply (wpsimp wp: checkPrio_lt_ct_weak gts_wp' threadGet_wp)
   apply (clarsimp simp: maxPriority_def numPriorities_def pred_tcb_at'_def obj_at'_def projectKOs)
   using max_word_max [of \<open>UCAST(32 \<rightarrow> 8) x\<close> for x]
-  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
+  apply (auto simp: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 (* FIXME RT: move to...? *)

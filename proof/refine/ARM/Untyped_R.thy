@@ -4214,7 +4214,7 @@ lemma resetUntypedCap_corres:
   including no_take_bit
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
-                   liftE_bindE)
+                   liftE_bindE cong: if_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
        apply (rule_tac F="cap = cap.UntypedCap dev ptr sz idx
@@ -4223,6 +4223,7 @@ lemma resetUntypedCap_corres:
                   split del: if_split)
        apply (rule corres_if[OF refl])
         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], simp)
+       apply (simp split del: if_split)
        apply (rule corres_split_deprecated[OF _ deleteObjects_corres])
            apply (rule corres_if)
              apply (simp add: reset_chunk_bits_def resetChunkBits_def)

@@ -137,7 +137,7 @@ lemma mapM_x_storePTE_updates:
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePTE_def setObject_def)
   apply (wp | simp add:split_def updateObject_default_def)+
-  apply clarsimp
+  apply (clarsimp cong: if_cong)
   apply (intro conjI ballI)
    apply (drule(1) bspec)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def objBits_defs
@@ -434,7 +434,7 @@ lemma mapM_x_storePDE_updates:
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: storePDE_def setObject_def)
   apply (wp | simp add:split_def updateObject_default_def)+
-  apply clarsimp
+  apply (clarsimp cong: if_cong)
   apply (intro conjI ballI)
    apply (drule(1) bspec)
    apply (clarsimp simp:typ_at'_def ko_wp_at'_def
@@ -1074,6 +1074,7 @@ lemma createObject_valid_duplicates'[wp]:
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
   RetypeDecls_H.createObject ty ptr us d
   \<lbrace>\<lambda>xa s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (rule hoare_gen_asm)
   apply (simp add:createObject_def)
   apply (rule hoare_pre)
@@ -2189,7 +2190,7 @@ lemma activate_sch_valid_duplicates'[wp]:
 crunches receiveSignal, receiveIPC, handleYield, "VSpace_H.handleVMFault", handleHypervisorFault,
          lookupReply, checkBudgetRestart
   for valid_duplicates'[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma hs_valid_duplicates'[wp]:
   "\<lbrace>invs' and ct_active' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
@@ -2280,6 +2281,7 @@ lemma handleEvent_valid_duplicates':
     sch_act_simple and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
    handleEvent e
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  supply if_cong[cong]
   apply (case_tac e; simp add: handleEvent_def)
        apply (rename_tac syscall, case_tac syscall)
   by (wpsimp wp: checkBudgetRestart_gen ct_in_state_thread_state_lift' |

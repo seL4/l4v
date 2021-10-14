@@ -970,6 +970,10 @@ lemma cte_wp_at_ctes_of:
                         word_bw_assocs field_simps)
   done
 
+(* FIXME rt merge: move to Word_lib *)
+lemma max_word_minus_1[simp]: "0xFFFFFFFF + 2^x = (2^x - 1::32 word)"
+  by simp
+
 lemma ctes_of'_after_update:
   "ko_wp_at' (same_caps' val) p s \<Longrightarrow> ctes_of (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> val)\<rparr>) x = ctes_of s x"
   apply (clarsimp simp only: ko_wp_at'_def map_to_ctes_def Let_def)
@@ -4000,7 +4004,7 @@ lemmas valid_refills2_def = rr_valid_refills_def sp_valid_refills_def
 
 lemma valid_refills_rewrite:
   "valid_refills scp s = valid_refills2 scp s"
-  by (fastforce simp: opt_map_red valid_refills2_def vs_all_heap_simps valid_refills_def
+  by (fastforce simp: opt_map_red vs_all_heap_simps valid_refills_def
                split: option.splits Structures_A.kernel_object.splits)
 
 definition
@@ -4091,12 +4095,11 @@ lemma state_relation_sc_update:
   assume H: "(s, s') \<in> state_relation" "P s" "P' s'" "sc_at ptr s" "sc_at' ptr s'"
   show ?thesis
     using H S sz
-  apply -
+    apply -
     apply (insert R1[rule_format, OF H]
                   R2[rule_format, OF H])
     apply (clarsimp simp: state_relation_def)
     apply (clarsimp simp: obj_at_def is_sc_obj)
-    apply (drule_tac x=n in meta_spec, clarsimp)
     apply (prop_tac "obj_at (same_caps (kernel_object.SchedContext _ n)) ptr s")
      apply (clarsimp simp: obj_at_def obj_bits_def)
     apply (clarsimp simp: obj_at'_def projectKOs fun_upd_def[symmetric]
@@ -4146,7 +4149,7 @@ lemma state_relation_sc_update:
                                | Some _ \<Rightarrow> hp ptr
                           else hp x) s
              = s\<lparr> kheap := (kheap s)(ptr \<mapsto> kernel_object.SchedContext (f sc) n)\<rparr>" )
-     apply (clarsimp simp: fun_upd_def)
+     apply (clarsimp simp: fun_upd_def cong: if_cong)
     apply (simp only: fun_upd_def)
     apply (simp add: caps_of_state_after_update)
     done

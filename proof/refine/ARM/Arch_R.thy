@@ -1401,7 +1401,7 @@ lemmas less_pptrBase_valid_pde_offset''
 
 lemma createMappingEntries_valid_pde_slots':
   "\<lbrace>K (vmsz_aligned vptr sz \<and> is_aligned pd pdBits
-                \<and> vptr < kernelBase)\<rbrace>
+                \<and> vptr < pptrBase)\<rbrace>
      createMappingEntries base vptr sz vm_rights attrib pd
    \<lbrace>\<lambda>rv s. valid_pde_slots' rv\<rbrace>,-"
   apply (simp add: createMappingEntries_def valid_pde_slots'_def)

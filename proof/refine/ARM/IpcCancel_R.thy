@@ -67,20 +67,6 @@ lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
   unfolding valid_inQ_queues_def
   by simp
 
-lemma valid_inQ_queues_ksSchedulerAction_update[simp]:
-  "valid_inQ_queues (ksSchedulerAction_update f s) = valid_inQ_queues s"
-  by (simp add: valid_inQ_queues_def)
-
-lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
-  "valid_inQ_queues (ksReadyQueuesL1Bitmap_update f s) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
-lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
-  "valid_inQ_queues (ksReadyQueuesL2Bitmap_update f s) = valid_inQ_queues s"
-  unfolding valid_inQ_queues_def
-  by simp
-
 defs capHasProperty_def:
   "capHasProperty ptr P \<equiv> cte_wp_at' (\<lambda>c. P (cteCap c)) ptr"
 end
@@ -1016,7 +1002,7 @@ lemma cancel_ipc_corres:
    apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated [OF _ getThreadState_corres])
-      apply (rule corres_split_deprecated[OF _ threadet_corres])
+      apply (rule corres_split_deprecated[OF _ threadset_corres])
                    apply (rule_tac P="invs and valid_ready_qs and st_tcb_at ((=) state) t" and
                                    P'="invs' and st_tcb_at' ((=) statea) t" in corres_inst)
                    apply (case_tac state, simp_all add: isTS_defs list_case_If gbep_ret')[1]
@@ -1433,10 +1419,6 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
                     sts_pred_tcb_neq' hoare_drop_imps
                   | wpc | simp add: o_def if_fun_split)+
   done *)
-
-crunches cancelIPC
-  for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  (wp: crunch_wps simp: crunch_simps pred_tcb_at'_def)
 
 (* FIXME move *)
 lemma setBoundNotification_not_ntfn:
@@ -1914,8 +1896,6 @@ lemma tcbSchedDequeue_t_notksQ:
   apply (auto simp: obj_at'_real_def ko_wp_at'_def)
   done
 
-crunch ct_idle_or_in_cur_domain'[wp]: tcbSchedDequeue ct_idle_or_in_cur_domain'
-
 lemma asUser_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> asUser s t \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   unfolding sch_act_simple_def
@@ -2126,46 +2106,9 @@ lemma reply_unlink_tcb_tcb_sts_of_other:
   apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
   done
 
-crunches inReleaseQueue
-  for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (sa s) s"
-  and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
-  and cur_tcb'[wp]: cur_tcb'
-  and if_live_then_nonz_cap'[wp]: if_live_then_nonz_cap'
 
 crunches possibleSwitchTo
-  for valid_pspace'[wp]: valid_pspace'
-  and valid_queues[wp]: valid_queues
-  and valid_tcbs'[wp]: valid_tcbs'
-  and cap_to'[wp]: "ex_nonz_cap_to' p"
-  and ifunsafe'[wp]: "if_unsafe_then_cap'"
-  and global_refs'[wp]: valid_global_refs'
-  and valid_machine_state'[wp]: valid_machine_state'
-  and cur[wp]: cur_tcb'
-  and valid_queues'[wp]: valid_queues'
-  and valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
-  and refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  and replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
-  and idle'[wp]: "valid_idle'"
-  and valid_arch'[wp]: valid_arch_state'
-  and irq_node'[wp]: "\<lambda>s. P (irq_node' s)"
-  and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
-  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
-  and irq_states' [wp]: valid_irq_states'
-  and pde_mappings' [wp]: valid_pde_mappings'
-  and pspace_domain_valid[wp]: "pspace_domain_valid"
-  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
-  and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
-  and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
-  and valid_objs'[wp]: valid_objs'
-  and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
-  and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
-  and valid_irq_handlers'[wp]: valid_irq_handlers'
-  (wp: crunch_wps cur_tcb_lift valid_irq_handlers_lift'' simp: crunch_simps)
+  for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
 global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
   by typ_at_props'
@@ -2244,7 +2187,6 @@ lemma cancelAllIPC_loop_body_weak_sch_act_wf:
   apply (clarsimp simp: cancelAllIPC_loop_body_def restartThreadIfNoFault_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_st_tcb_at')
-   apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   apply (wpsimp wp: sts_st_tcb_at'_cases hoare_drop_imps)
   apply (clarsimp simp: weak_sch_act_wf_def pred_neg_def st_tcb_at'_def obj_at'_def)
   done
@@ -2286,12 +2228,13 @@ lemma cancelAllIPC_corres_helper:
   unfolding cancel_all_ipc_loop_body_def cancelAllIPC_loop_body_def
   apply (rule_tac S="{t. (fst t = snd t) \<and> fst t \<in> set list}" in corres_mapM_x_scheme)
           apply clarsimp
+          apply (rename_tac t)
           apply (rule corres_guard_imp)
             apply (rule corres_split_deprecated[OF _ getThreadState_corres], rename_tac st st')
-              apply (rule_tac P="\<lambda>s. blocked_on_send_recv_tcb_at y s \<and> y \<noteq> idle_thread s
-                                     \<and> reply_unlink_ts_pred y s \<and> valid_sched s \<and> valid_tcbs s
+              apply (rule_tac P="\<lambda>s. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
+                                     \<and> reply_unlink_ts_pred t s \<and> valid_sched s \<and> valid_tcbs s
                                      \<and> pspace_aligned s \<and> pspace_distinct s
-                                     \<and> st_tcb_at ((=) st) y s"
+                                     \<and> st_tcb_at ((=) st) t s"
                           and P'="\<lambda>s. valid_queues s \<and> valid_queues' s \<and> valid_tcbs' s
                                       \<and> valid_release_queue_iff s"
                            in corres_inst)
@@ -3351,7 +3294,7 @@ lemma cancelBadgedSends_corres:
 
              apply (wpsimp wp: gts_wp)
             apply (wpsimp wp: sts_st_tcb_at'_cases threadGet_wp gts_wp')
-            apply (clarsimp simp: obj_at'_def)
+            apply (clarsimp simp: obj_at'_def pred_neg_def)
            apply (wpsimp wp: restart_thread_if_no_fault_valid_sched_blocked_on_send[where epptr=epptr]
                              gts_wp)
 
@@ -3382,7 +3325,7 @@ lemma cancelBadgedSends_corres:
          apply (rule_tac Q="\<lambda>t s. tcb_at' t s \<and> st_tcb_at' (not runnable') t s"
                       in ball_mapM_scheme)
            apply (wpsimp wp: sts_st_tcb_at'_cases threadGet_wp gts_wp')
-           apply (clarsimp simp: obj_at'_def)
+           apply (clarsimp simp: obj_at'_def pred_neg_def)
           apply (wpsimp wp: sts_st_tcb_at'_cases threadGet_wp gts_wp')
           apply (fastforce simp: valid_tcb_state'_def obj_at'_def projectKOs st_tcb_at'_def
                                  pred_neg_def weak_sch_act_wf_def)

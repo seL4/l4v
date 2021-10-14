@@ -6890,6 +6890,8 @@ lemmas rec_del_concrete_unfold
   = rec_del_concrete.simps red_zombie_will_fail.simps
     if_True if_False ball_simps simp_thms
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma cap_relation_removables:
   "\<lbrakk> cap_relation cap cap'; isNullCap cap' \<or> isZombie cap';
       s \<turnstile> cap; cte_at slot s; invs s \<rbrakk>
@@ -6897,7 +6899,7 @@ lemma cap_relation_removables:
                \<and> cap_cyclic_zombie cap slot = capCyclicZombie cap' (cte_map slot)"
   apply (clarsimp simp: capRemovable_def isCap_simps
                         capCyclicZombie_def cap_cyclic_zombie_def
-                 split: cap_relation_split_asm arch_cap.split_asm)
+                 split: cap_relation_split_asm  arch_cap.split_asm)
   apply (rule iffD1 [OF conj_commute], rule context_conjI)
    apply (rule iffI)
     apply (clarsimp simp: cte_map_replicate)

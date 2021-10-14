@@ -1028,7 +1028,7 @@ proof -
     by (metis add_lessD1 diff_0_eq_0 gr0I less_one plus_nat.add_0 power.simps(1) power_zero_numeral)
   have s0: "sizeof_sched_context_t \<le> (2::nat) ^ us"
     using le_trans[OF _  power_increasing[OF min]] cond
-    by (metis HOL_Lemmas.nat_power_minus_less add_lessD1 arith_special(3) le_simps(1) nat_le_iff_add)
+    by (meson Many_More.nat_power_minus_less add_lessD1 less_or_eq_imp_le one_le_numeral)
   have P1: "?F \<le> 2 ^us"
   proof -
     have h1: "?F \<le> (2 ^ us
@@ -1086,7 +1086,7 @@ proof -
                                                                           refill_size_bytes"
       proof -
         have s0n: "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ us" using s0
-          using HOL_Lemmas.nat_power_minus_less by blast
+          using nat_power_minus_less by blast
         have " sizeof_sched_context_t <  (2::nat) ^ us - refill_size_bytes" using s0n
           using less_diff_conv by blast
         then have "sizeof_sched_context_t
@@ -1402,7 +1402,7 @@ lemma sc_valid_refills_scRefillCount:
   "\<lbrakk>sc_valid_refills sc; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> 0 < scRefillCount sc'"
   apply (clarsimp simp: valid_sched_context_def sc_relation_def)
   apply (case_tac "scRefillCount sc'"; simp)
-  by (clarsimp simp: refills_map_def sc_valid_refills_def rr_valid_refills_def)
+  by (clarsimp simp: refills_map_def sc_valid_refills_def rr_valid_refills_def split: if_splits)
 
 lemma sc_refills_neq_zero_cross:
   "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []\<rbrakk>

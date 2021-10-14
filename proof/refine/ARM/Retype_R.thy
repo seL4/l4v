@@ -1678,6 +1678,7 @@ proof -
     "image (\<lambda>n. ptr + 2 ^ obj_bits_api (APIType_map2 ty) us * n) {x. x \<le> of_nat n - 1} =
      set (retype_addrs ptr (APIType_map2 ty) n us)"
     including no_take_bit
+    apply (clarsimp simp: retype_addrs_def image_def Bex_def ptr_add_def Collect_eq)
     apply (rule iffI)
      apply (clarsimp simp: field_simps word_le_nat_alt)
      apply (rule_tac x="unat x" in exI)
@@ -2143,13 +2144,6 @@ qed
 lemmas capFreeIndex_update_valid_untyped' =
   capFreeIndex_update_valid_cap'[unfolded valid_cap'_def,simplified,THEN conjunct2,THEN conjunct1]
 
-crunches copyGlobalMappings
-  for sc_at'_n[wp]: "sc_at'_n n p"
-  (simp: crunch_simps wp: crunch_wps)
-
-crunches threadSet
-  for sc_at'_n[wp]: "sc_at'_n n p"
-
 lemma createNewCaps_valid_cap:
   fixes ptr :: word32
   assumes cover: "range_cover ptr sz (APIType_capBits ty us) n "
@@ -2587,7 +2581,7 @@ lemma copyGlobalMappings_corres:
               apply (drule(1) pde_relation_aligned_eq)
               apply fastforce
              apply (wp hoare_vcg_const_Ball_lift | simp)+
-       apply (simp add: kernel_base_def ARM.pptrBase_def pptrBase_def list_all2_refl pageBits_def)
+       apply (simp add: kernel_base_def pptrBase_def list_all2_refl pageBits_def)
       apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
      apply wp+
    apply (clarsimp simp: valid_arch_state_def)
@@ -3417,7 +3411,7 @@ proof -
       apply (rule word_of_nat_less)
       using unat_of_nat_shift
       apply (simp add:shiftl_t2n field_simps)
-      apply (meson less_exp objBitsKO_bounded2 of_nat_less_pow_32 word_gt_a_gt_0)
+      apply (meson less_exp objBitsKO_bounded of_nat_less_pow_32 word_gt_a_gt_0)
    using upbound
    apply (simp add:word_bits_def)
    apply (rule machine_word_plus_mono_right_split[where sz = sz])

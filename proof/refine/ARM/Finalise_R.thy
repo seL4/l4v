@@ -3581,6 +3581,8 @@ lemmas schedContextZeroRefillMax_removeable'
   = prepares_delete_helper'' [OF schedContextZeroRefillMax_unlive
                                    [where p=scPtr and scPtr=scPtr for scPtr]]
 
+end
+
 lemma (in delete_one_conc_pre) finaliseCap_replaceable:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
        \<and> (final_matters' cap \<longrightarrow> (final = isFinal cap slot (cteCaps_of s)))
@@ -3669,9 +3671,6 @@ lemma cteDeleteOne_cte_wp_at_preserved:
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of x)
   done
 
-crunch ctes_of[wp]: cancelSignal "\<lambda>s. P (ctes_of s)"
-  (simp: crunch_simps wp: crunch_wps)
-
 lemma cancelIPC_cteCaps_of[wp]:
   "cancelIPC t \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cancelIPC_def Let_def capHasProperty_def locateSlot_conv)
@@ -3691,8 +3690,6 @@ lemma cancelIPC_cte_wp_at'[wp]:
   apply (simp add: tree_cte_cteCap_eq[unfolded o_def])
   apply wpsimp
   done
-
-crunch cte_wp_at'[wp]: tcbSchedDequeue "cte_wp_at' P p"
 
 crunches schedContextCancelYieldTo, tcbReleaseRemove
   for cte_wp_at'[wp]: "cte_wp_at' P p"
@@ -5239,7 +5236,7 @@ lemma cteDeleteOne_ct_not_ksQ:
   done *)
   oops (* FIXME RT: this lemma is probably not needed since we have ct_queues_cross
                     in fact this is not used at all in Refine (perhaps it is needed in
-                    CRefine?) *)
+                    CRefine?) GK: not needed in CRefine, can be deleted if we don't need it here *)
 
 end
 

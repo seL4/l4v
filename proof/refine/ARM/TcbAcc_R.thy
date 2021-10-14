@@ -1723,9 +1723,6 @@ lemma asUser_getRegister_corres:
   apply (clarsimp simp: getRegister_def)
   done
 
-crunch inv[wp]: getRegister "P"
-  (ignore_del: getRegister)
-
 lemma user_getreg_inv'[wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   by (wp asUser_inv)
@@ -2281,7 +2278,7 @@ lemma isSchedulable_corres:
    apply (fastforce intro: tcb_at_cross)
   unfolding is_schedulable_def isSchedulable_def fun_app_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
+    apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
       apply (rename_tac tcb_abs tcb_conc)
       apply (rule corres_if[OF _ corres_return_eq_same])
         apply (clarsimp simp: tcb_relation_def Option.is_none_def)
@@ -2307,6 +2304,7 @@ lemma isSchedulable_corres:
    apply (fastforce simp: valid_tcb_def valid_bound_obj_def obj_at_def split: option.splits)
   apply (fastforce simp: valid_tcbs'_def valid_tcb'_def obj_at'_def projectKOs)
   done
+
 
 lemma get_simple_ko_exs_valid:
   "\<lbrakk>inj C; \<exists>ko. ko_at (C ko) p s \<and> is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"

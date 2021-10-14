@@ -1253,6 +1253,7 @@ lemma sc_replies_middle_reply_sc_None:
   "\<lbrakk>sym_refs (state_refs_of s); valid_replies s; sc_with_reply rp s = Some scp;
     (sc_replies_of s |> hd_opt) scp \<noteq> Some rp; sc_at scp s; reply_at rp s\<rbrakk> \<Longrightarrow>
    reply_sc_reply_at ((=) None) rp s"
+  supply subst_all[simp del]
   apply (clarsimp simp: obj_at_def is_sc_obj_def is_reply)
   apply (rename_tac ko n reply; case_tac ko; clarsimp)
   apply (rename_tac sc n)

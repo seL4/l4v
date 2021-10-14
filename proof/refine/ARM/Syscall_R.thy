@@ -533,11 +533,6 @@ lemma pinv_tcb'[wp]:
   unfolding performInvocation_def
   by (cases i; simp; wpsimp wp: invokeArch_tcb_at' stateAssertE_inv simp: pred_tcb_at')
 
-crunches setThreadState
-  for obj_at_ntfn[wp]: "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
-  (wp: obj_at_setObject2 crunch_wps
-   simp: crunch_simps updateObject_default_def in_monad)
-
 lemma sts_mcpriority_tcb_at'[wp]:
   "\<lbrace>mcpriority_tcb_at' P t\<rbrace>
     setThreadState st t'
@@ -679,8 +674,6 @@ proof -
     done
 qed
 
-crunch cte_wp_at' [wp]: setMessageInfo "cte_wp_at' P p"
-
 lemma copyMRs_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P ptr\<rbrace> copyMRs sender sendBuf receiver recvBuf n \<lbrace>\<lambda>_. cte_wp_at' P ptr\<rbrace>"
   unfolding copyMRs_def
@@ -784,6 +777,7 @@ lemma doReplyTransfer_invs'[wp]:
    apply (clarsimp simp: pred_tcb_at'_def)
    apply (fastforce intro: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def projectKOs isReply_def)
+  apply simp
   apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
   apply (rule_tac B="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver"
          in hoare_seq_ext)
