@@ -484,8 +484,8 @@ lemma sched_context_yield_to_invs:
            split_del: if_split
                   wp: valid_irq_node_typ hoare_vcg_if_lift2 thread_get_inv hoare_drop_imp
                       valid_ioports_lift update_sched_context_valid_idle)
-  apply (intro conjI)
-     apply (clarsimp simp: cur_tcb_def)
+  apply (clarsimp cong: conj_cong)
+  apply (intro conjI; clarsimp simp: cur_tcb_def)
     apply (clarsimp simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
     apply (fastforce dest!: valid_objs_valid_sched_context_size)
    apply (erule delta_sym_refs)
@@ -497,7 +497,8 @@ lemma sched_context_yield_to_invs:
                    split: option.splits)
    apply (clarsimp simp: sc_at_pred_n_def obj_at_def state_refs_of_def refs_of_def get_refs_def
                   split: option.splits)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def valid_idle_def pred_tcb_at_def)
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def in_state_refs_of_iff pred_tcb_at_def
+                        refs_of_simps get_refs_def2)
   apply (clarsimp dest!: idle_sc_no_ex_cap)
   done
 
