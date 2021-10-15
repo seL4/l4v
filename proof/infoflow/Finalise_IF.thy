@@ -58,8 +58,7 @@ locale Finalise_IF_1 =
   and set_irq_state_globals_equiv:
     "set_irq_state state irq \<lbrace>globals_equiv st\<rbrace>"
   and arch_finalise_cap_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned
-                       and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+    "\<lbrace>globals_equiv st and invs and valid_arch_cap acap\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and prepare_thread_delete_globals_equiv[wp]:
@@ -1508,9 +1507,8 @@ crunches unbind_notification
   for valid_arch_state[wp]: valid_arch_state
 
 lemma finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
-                     and valid_global_objs and valid_arch_state and pspace_aligned
-                     and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and invs and valid_cap cap
+                     and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)\<rbrace>
    finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap; simp)
@@ -1518,7 +1516,7 @@ lemma finalise_cap_globals_equiv:
          cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
          arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
          unbind_notification_globals_equiv liftM_wp when_def
-      | clarsimp | intro impI conjI)+
+      | clarsimp simp: valid_cap_def | intro impI conjI)+
 
 end
 
