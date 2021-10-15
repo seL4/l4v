@@ -737,10 +737,10 @@ definition
 where
   "invoke_sched_control_configure_flags iv \<equiv>
   case iv of InvokeSchedControlConfigureFlags sc_ptr budget period mrefills badge flag \<Rightarrow> do
-    sc \<leftarrow> get_sched_context sc_ptr;
     set_sc_obj_ref sc_badge_update sc_ptr badge;
     set_sc_obj_ref sc_sporadic_update sc_ptr (flag !! sc_sporadic_flag);
 
+    sc \<leftarrow> get_sched_context sc_ptr;
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
       tcb_release_remove tcb_ptr;
