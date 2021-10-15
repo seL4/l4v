@@ -247,7 +247,7 @@ lemma sbn_bind_respects:
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
+  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def integrity_asids_kh_upds)
   done
 
 lemma bind_notification_respects:

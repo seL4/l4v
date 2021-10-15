@@ -412,6 +412,24 @@ lemma init_arch_objects_integrity[Retype_AC_assms]:
               simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 
+lemma integrity_asids_detype[Retype_AC_assms]:
+  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  shows
+    "integrity_asids aag subjects x a (detype refs s) s' =
+     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag subjects x a s (detype refs s') =
+     integrity_asids aag subjects x a s s'"
+  by auto
+
+lemma retype_region_integrity_asids[Retype_AC_assms]:
+  "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
+     \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits)
+                            else kheap s a\<rparr>)"
+  by clarsimp
+
 end
 
 global_interpretation Retype_AC_1?: Retype_AC_1

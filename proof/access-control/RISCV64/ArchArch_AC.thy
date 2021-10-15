@@ -1209,19 +1209,19 @@ proof -
 qed
 
 lemma integrity_asid_table_entry_update':
-  "\<lbrakk> integrity aag X st s; atable = riscv_asid_table (arch_state s);
+  "\<lbrakk> integrity aag X st s; atable = riscv_asid_table (arch_state s); is_subject aag v;
      (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid \<longrightarrow> is_subject_asid aag asid') \<rbrakk>
      \<Longrightarrow> integrity aag X st (s\<lparr>arch_state :=
                                arch_state s\<lparr>riscv_asid_table := \<lambda>a. if a = asid_high_bits_of asid
-                                                                    then v
+                                                                    then (Some v)
                                                                     else atable a\<rparr>\<rparr>)"
   by (clarsimp simp: integrity_def)
 
 lemma asid_table_entry_update_integrity:
- "\<lbrace>integrity aag X st and (\<lambda>s. atable = riscv_asid_table (arch_state s))
+ "\<lbrace>integrity aag X st and (\<lambda>s. atable = riscv_asid_table (arch_state s)) and K (is_subject aag v)
                       and K (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
                                      \<longrightarrow> is_subject_asid aag asid')\<rbrace>
-  modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := atable(asid_high_bits_of asid := v)\<rparr>\<rparr>)
+  modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := atable(asid_high_bits_of asid := Some v)\<rparr>\<rparr>)
   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by wpsimp (blast intro: integrity_asid_table_entry_update')
 
@@ -1244,7 +1244,9 @@ lemma perform_asid_control_invocation_respects:
   apply (clarsimp simp: authorised_asid_control_inv_def ptr_range_def add.commute range_cover_def
                         obj_bits_api_def default_arch_object_def pageBits_def word_bits_def)
   apply (subst is_aligned_neg_mask_eq[THEN sym], assumption)
-  apply (clarsimp simp: and_mask_eq_iff_shiftr_0 mask_zero word_size_bits_def )
+  apply (clarsimp simp: and_mask_eq_iff_shiftr_0 mask_zero word_size_bits_def)
+  apply (frule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: mask_def)
   done
 
 lemma state_vrefs_asid_pool_map:
