@@ -4658,5 +4658,8 @@ lemma ethread_set_corresT:
 lemmas ethread_set_corres =
     ethread_set_corresT [OF _ all_tcbI, OF _ ball_tcb_cte_casesI]
 
+lemma archTcbUpdate_aux2: "(\<lambda>tcb. tcb\<lparr> tcbArch := f (tcbArch tcb)\<rparr>) = tcbArch_update f"
+  by (rule ext, case_tac tcb, simp)
+
 end
 end
