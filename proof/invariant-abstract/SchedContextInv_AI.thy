@@ -1241,11 +1241,12 @@ crunch typ_at[wp]: commit_time "\<lambda>s. P (typ_at T p s)"
 end
 
 lemma invoke_sched_control_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>
-     invoke_sched_control_configure_flags i
-   \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  by (cases i; wpsimp simp: invoke_sched_control_configure_flags_def
-                  split_del: if_split wp: hoare_vcg_if_lift2 hoare_drop_imp)
+  "invoke_sched_control_configure_flags i \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  apply (cases i;
+         wpsimp simp: invoke_sched_control_configure_flags_def
+                  wp: hoare_vcg_if_lift2 hoare_drop_imp update_sched_context_wp)
+  apply (fastforce simp: obj_at_def a_type_def)
+  done
 
 lemma invoke_sched_context_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -1594,6 +1595,9 @@ lemma sc_sporadic_update_active[wp]:
   "set_sc_obj_ref sc_sporadic_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
   by (rule set_sc_obj_ref_active) simp
 
+crunches refill_new
+  for st_tcb_at[wp]: "\<lambda>s. \<not> st_tcb_at P tcb_ptr s"
+
 lemma invoke_sched_control_configure_flags_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
    invoke_sched_control_configure_flags i
@@ -1602,13 +1606,12 @@ lemma invoke_sched_control_configure_flags_invs[wp]:
   apply (cases i)
   apply (rename_tac sc_ptr budget period mrefills badge flag)
   apply (clarsimp simp: invoke_sched_control_configure_flags_def split_def)
-  apply (wpsimp simp: get_sched_context_def
-                  wp: refill_update_invs commit_time_invs check_budget_invs
-                      hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
-                      update_sc_badge_invs' update_sc_sporadic_invs' get_object_wp commit_time_sc_active
-                      tcb_sched_action_obj_at tcb_release_remove_obj_at
-                      gts_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift |
-         wp (once) hoare_drop_imp)+
+  apply (wpsimp wp: refill_update_invs commit_time_invs check_budget_invs
+                    hoare_vcg_if_lift2 tcb_sched_action_bound_sc tcb_release_remove_bound_sc
+                    update_sc_badge_invs' update_sc_sporadic_invs' get_object_wp commit_time_sc_active
+                    tcb_sched_action_obj_at tcb_release_remove_obj_at
+                    gts_wp hoare_vcg_const_imp_lift hoare_vcg_all_lift
+         | wp (once) hoare_drop_imps)+
   apply (auto simp: invs_def valid_state_def valid_pspace_def idle_sc_no_ex_cap obj_at_def active_sc_def)
   done
 
