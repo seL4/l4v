@@ -644,28 +644,27 @@ This module uses the C preprocessor to select a target architecture.
 > invokeSchedControlConfigureFlags :: SchedControlInvocation -> Kernel ()
 > invokeSchedControlConfigureFlags iv = case iv of
 >     InvokeSchedControlConfigureFlags scPtr budget period mRefills badge flags -> do
+>         updateSchedContext scPtr (\sc -> sc { scBadge = badge })
+>         updateSchedContext scPtr (\sc -> sc { scSporadic = flags `testBit` schedContextSporadicFlag })
 >         sc <- getSchedContext scPtr
->         setSchedContext scPtr $ sc { scBadge = badge }
->         setSchedContext scPtr $ sc { scSporadic = flags `testBit` schedContextSporadicFlag }
 >         when (scTCB sc /= Nothing) $ do
 >             tcbReleaseRemove $ fromJust $ scTCB sc
 >             tcbSchedDequeue $ fromJust $ scTCB sc
 >             curSc <- getCurSc
->             when (curSc == scPtr) $ do
->                 budgetEnough <- checkBudget
->                 when budgetEnough $ commitTime
+>             when (curSc == scPtr) $ commitTime
 
->         runnable <- isRunnable $ fromJust $ scTCB sc
 >         if period == budget
->             then refillNew scPtr minRefills budget 0
->             else do
->               sc <- getSchedContext scPtr
->               if scRefillMax sc > 0 && scTCB sc /= Nothing && runnable
->                   then refillUpdate scPtr period budget mRefills
->                   else refillNew scPtr mRefills budget period
+>            then refillNew scPtr minRefills budget 0
+>            else if (0 < scRefillMax sc && scTCB sc /= Nothing)
+>                    then do
+>                      runnable <- isRunnable $ fromJust $ scTCB sc
+>                      if runnable
+>                         then refillUpdate scPtr period budget mRefills
+>                         else refillNew scPtr mRefills budget period
+>                    else refillNew scPtr mRefills budget period
 
->         sc <- getSchedContext scPtr
->         when (scTCB sc /= Nothing && scRefillMax sc > 0) $ do
+>         when (scTCB sc /= Nothing) $ do
+>             runnable <- isRunnable $ fromJust $ scTCB sc
 >             schedContextResume scPtr
 >             ctPtr <- getCurThread
 >             if (fromJust $ scTCB sc) == ctPtr
