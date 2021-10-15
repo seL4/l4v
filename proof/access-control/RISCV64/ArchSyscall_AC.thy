@@ -96,7 +96,7 @@ lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
   apply (cases "is_subject aag thread")
    apply (cut_tac aag=aag in integrity_update_autarch, simp+)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
+  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def integrity_asids_kh_upds opt_map_def)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac tro_tcb_activate[OF refl refl])
     apply (simp add: tcb_bound_notification_reset_integrity_def ctxt_IP_update_def

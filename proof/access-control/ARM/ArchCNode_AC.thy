@@ -141,7 +141,7 @@ qed
 context Arch begin global_naming ARM_A
 
 lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
-  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x s\<rbrace>"
+  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
   unfolding integrity_asids_def by wpsimp
 
 crunches set_original

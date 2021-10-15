@@ -246,9 +246,9 @@ lemma decode_cnode_inv_authorised:
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
-               simp: simp_thms fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
-          | wp (once) get_cap_cur_auth)+
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
+              simp: simp_thms fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
+         | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
                                \<longrightarrow> (\<forall>x\<in>obj_refs (excaps ! n). is_subject aag x))")
@@ -500,7 +500,7 @@ crunches set_cdt_list, update_cdt_list
 
 locale CNode_AC_2 = CNode_AC_1 +
   assumes integrity_asids_set_cap_Nullcap:
-    "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x (s :: det_ext state)\<rbrace>"
+    "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a (s :: det_ext state)\<rbrace>"
   and set_original_state_asids_to_policy[wp]:
     "\<And>P. set_original slot v \<lbrace>\<lambda>s. P (state_asids_to_policy aag s)\<rbrace>"
   and set_original_state_objs_to_policy[wp]:
@@ -1189,7 +1189,7 @@ lemma sts_respects_restart_ep:
   apply (simp add: set_thread_state_def)
   apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def get_tcb_def)
+  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def get_tcb_def integrity_asids_kh_upds)
   apply (rule_tac tro_tcb_restart [OF refl refl])
     apply (fastforce dest!: get_tcb_SomeD)
    apply (fastforce dest!: get_tcb_SomeD)
@@ -1205,7 +1205,7 @@ lemma set_endpoint_respects:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def tro_ep)
+  apply (clarsimp simp: integrity_def tro_ep integrity_asids_kh_upds)
   done
 
 end
@@ -1415,7 +1415,7 @@ lemma set_ntfn_respects:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def tro_ntfn)
+  apply (clarsimp simp: integrity_def tro_ntfn integrity_asids_kh_upds)
   done
 
 crunch integrity_autarch: thread_set "integrity aag X st"

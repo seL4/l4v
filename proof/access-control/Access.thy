@@ -860,7 +860,7 @@ definition integrity_subjects ::
    \<and> (\<forall>x. integrity_device aag subjects x (tcb_states_of_state s) (tcb_states_of_state s')
                            (device_state (machine_state s) x)
                            (device_state (machine_state s') x))
-   \<and> (\<forall>x. integrity_asids aag subjects x s s')"
+   \<and> (\<forall>x a. integrity_asids aag subjects x a s s')"
 
 abbreviation "integrity pas \<equiv> integrity_subjects {pasSubject pas} pas (pasMayActivate pas)"
 

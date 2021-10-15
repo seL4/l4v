@@ -208,7 +208,7 @@ locale Retype_AC_1 =
        \<Longrightarrow> pas_refined aag (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
                                            then Some (default_object ty dev us)
                                            else kheap s x\<rparr>)"
-  assumes dmo_freeMemory_respects:
+  and dmo_freeMemory_respects:
     "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits
                                    \<and> (\<forall>p \<in> ptr_range ptr bits. is_subject aag p))\<rbrace>
      do_machine_op (freeMemory ptr bits)
@@ -224,13 +224,25 @@ locale Retype_AC_1 =
                          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
      init_arch_objects new_type ptr num_objects obj_sz refs
      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  and integrity_asids_detype:
+    "\<forall>r \<in> R. pasObjectAbs aag r \<in> subjects
+     \<Longrightarrow> integrity_asids aag subjects p a (detype R s) st = integrity_asids aag subjects p a s st"
+    "\<forall>r \<in> R. pasObjectAbs aag r \<in> subjects
+     \<Longrightarrow> integrity_asids aag subjects p a s (detype R st) = integrity_asids aag subjects p a s st"
+  and retype_region_integrity_asids:
+    "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
+       \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} p a s st \<rbrakk>
+       \<Longrightarrow> integrity_asids aag {pasSubject aag} p a s
+             (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                              then Some (default_object typ dev o_bits)
+                              else kheap s a\<rparr>)"
 begin
 
 lemma detype_integrity:
   "\<lbrakk> integrity aag X st s; \<forall>r\<in>refs. is_subject aag r \<rbrakk>
      \<Longrightarrow> integrity aag X st (detype refs s)"
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
+  apply (clarsimp simp: integrity_def integrity_asids_detype)
   apply (clarsimp simp: detype_def detype_ext_def integrity_def)
   done
 
@@ -315,12 +327,12 @@ lemma retype_region_integrity:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp only: retype_region_def retype_region_ext_extended.dxo_eq)
-  apply (simp only: retype_addrs_def  retype_region_ext_def
+  apply (simp only: retype_addrs_def retype_region_ext_def
                     foldr_upd_app_if' fun_app_def K_bind_def)
   apply wp
   apply (clarsimp simp: not_less)
   apply (erule integrity_trans)
-  apply (clarsimp simp add: integrity_def)
+  apply (clarsimp simp: integrity_def retype_region_integrity_asids)
   apply (fastforce intro: tro_lrefl tre_lrefl
                     dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                     simp: image_def p_assoc_help power_sub)
