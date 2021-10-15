@@ -86,7 +86,6 @@ lemma states_equiv_forI:
 definition for_each_byte_of_word :: "(obj_ref \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> bool" where
   "for_each_byte_of_word P w \<equiv> \<forall>y\<in>{w..w + (word_size - 1)}. P y"
 
-
 locale InfoFlow_IF_1 =
   fixes aag :: "'a PAS"
   assumes equiv_asids_refl:
@@ -98,8 +97,7 @@ locale InfoFlow_IF_1 =
   and equiv_asids_identical_kheap_updates:
     "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
        \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
-  (* FIXME IF: names of the following two lemmas are too similar *)
-  and equiv_asids_trivial:
+  and equiv_asids_False:
   "(\<And>x. P x \<Longrightarrow> False) \<Longrightarrow> equiv_asids P x y"
   and equiv_asids_triv:
     "\<lbrakk> equiv_asids R s s'; kheap t = kheap s; kheap t' = kheap s';
@@ -427,7 +425,7 @@ lemma affects_equiv_def2:
   by (auto simp: affects_equiv_def
            dest: equiv_forD
           elim!: states_equiv_forE
-         intro!: states_equiv_forI equiv_forI equiv_asids_trivial)
+         intro!: states_equiv_forI equiv_forI equiv_asids_False)
 
 lemma affects_equivE:
   assumes sef: "affects_equiv aag l s s'"
