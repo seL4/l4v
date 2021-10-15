@@ -976,18 +976,18 @@ locale ADT_IF_1 =
     "\<lbrace>idle_equiv st and invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   and do_user_op_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> do_user_op_if uop tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and kernel_entry_if_valid_vspace_objs'[wp]:
-    "\<lbrace>valid_vspace_objs' and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+  and kernel_entry_if_valid_vspace_objs_if[wp]:
+    "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
      kernel_entry_if e tc
-     \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+     \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
   and handle_preemption_if_valid_pdpt_objs[wp]:
-    "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs' s\<rbrace>"
+    "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
   and schedule_if_valid_pdpt_objs[wp]:
-    "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs' s\<rbrace>"
+    "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
   and do_user_op_if_valid_pdpt_objs[wp]:
-    "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs' s\<rbrace>"
-  and valid_vspace_objs'_ms_update[simp]:
-    "\<And>f. valid_vspace_objs' (machine_state_update f s) = valid_vspace_objs' s"
+    "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs_if s\<rbrace>"
+  and valid_vspace_objs_if_ms_update[simp]:
+    "\<And>f. valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
   (* FIXME IF: precludes ARM_HYP *)
   and non_kernel_IRQs_empty:
     "(non_kernel_IRQs :: irq set) = {}"
@@ -1505,7 +1505,7 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch_sp
                                pas_refined (current_aag s) s \<and>
                                guarded_pas_domain (current_aag s) s \<and>
                                idle_equiv s0_internal s \<and>
-                               valid_domain_list s \<and> valid_vspace_objs' s"
+                               valid_domain_list s \<and> valid_vspace_objs_if s"
   assumes Invs_s0_internal: "Invs s0_internal"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   assumes scheduler_action_s0_internal: "scheduler_action s0_internal = resume_cur_thread"
@@ -2030,7 +2030,7 @@ lemma invs_if_Step_ADT_A_if:
       apply simp
       apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
        apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
-                              (\<lambda>b. valid_vspace_objs' b \<and> valid_list b \<and> valid_sched b \<and>
+                              (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
                                    only_timer_irq_inv timer_irq s0_internal b \<and>
                                    silc_inv initial_aag s0_internal b \<and>
                                    pas_refined initial_aag b \<and>
@@ -2052,7 +2052,7 @@ lemma invs_if_Step_ADT_A_if:
      apply simp
      apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
       apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
-                             (\<lambda>b. valid_vspace_objs' b \<and> valid_list b \<and> valid_sched b \<and>
+                             (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
                                   only_timer_irq_inv timer_irq s0_internal b \<and>
                                   silc_inv initial_aag s0_internal b \<and>
                                   pas_refined initial_aag b \<and>
