@@ -205,9 +205,7 @@ lemma rec_del_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (wp finalise_cap_globals_equiv
             rec_del_preservation2[where Q="valid_arch_state"
-                                    and R="\<lambda>cap s. valid_global_objs s \<and> valid_arch_state s
-                                                 \<and> pspace_aligned s \<and> valid_vspace_objs s
-                                                 \<and> valid_global_refs s  \<and> valid_vs_lookup s
+                                    and R="\<lambda>cap s. invs s \<and> valid_cap cap s
                                                  \<and> (\<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)"])
              apply simp
             apply (wp set_cap_globals_equiv'')
@@ -217,8 +215,9 @@ lemma rec_del_globals_equiv:
          apply (wp)+
        apply simp
       apply fastforce
-     apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_vs_lookup
-                           valid_pspace_def no_cap_to_idle_thread'')
+     apply (fastforce simp: invs_def valid_state_def valid_arch_caps_vs_lookup
+                            valid_pspace_def no_cap_to_idle_thread''
+                      dest: caps_of_state_valid)
     apply (wp preemption_point_inv | simp)+
   done
 
@@ -305,7 +304,7 @@ lemma invoke_tcb_globals_equiv:
                                 | intro conjI impI
                                 | clarsimp simp: no_cap_to_idle_thread)+\<close>)?)
    apply wpsimp
-       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
+       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arch_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_arch_state and globals_equiv st and
                               (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)"
                     in hoare_strengthen_post)
