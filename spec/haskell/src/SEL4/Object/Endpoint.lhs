@@ -323,6 +323,8 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                         if isNothing fault
 >                             then do
 >                                 setThreadState Restart t
+>                                 scOpt <- threadGet tcbSchedContext t
+>                                 ifCondRefillUnblockCheck scOpt (Just False) (Just True)
 >                                 possibleSwitchTo t
 >                             else setThreadState Inactive t
 >                         return False
