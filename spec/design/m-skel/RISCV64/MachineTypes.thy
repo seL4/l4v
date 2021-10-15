@@ -60,7 +60,10 @@ record
   device_state :: "word64 \<Rightarrow> word8 option"
   machine_state_rest :: RISCV64.machine_state_rest
 
-consts irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+axiomatization
+  irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+where
+  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= RISCV64.maxIRQ"
 
 end_qualify
 
