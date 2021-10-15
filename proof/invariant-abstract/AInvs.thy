@@ -674,26 +674,27 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
   apply (simp add: invoke_sched_control_configure_flags_def)
   apply (cases iv; clarsimp)
   apply (rename_tac sc_ptr budget period mrefills badge flag)
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s
+                           \<and> ex_nonz_cap_to sc_ptr s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: update_sc_badge_invs')
+   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
+                    simp: sc_at_pred_n_def obj_at_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: update_sc_sporadic_invs')
+   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
+                    simp: sc_at_pred_n_def obj_at_def)
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s
                            \<and> ex_nonz_cap_to sc_ptr s
                            \<and> sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s"
                in hoare_seq_ext[rotated])
-   apply (wpsimp wp: update_sc_badge_invs')
-    apply (wpsimp wp: update_sched_context_wp)
-   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
-                    simp: sc_at_pred_n_def obj_at_def)
-  apply (rule hoare_seq_ext_skip)
-   apply (wpsimp wp: update_sc_sporadic_invs')
-    apply (wpsimp wp: update_sched_context_wp)
-   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
-                    simp: sc_at_pred_n_def obj_at_def)
-  apply (rule hoare_seq_ext_skip)
    apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp wp: commit_time_invs\<close>)?)
-   apply (rule hoare_when_cases, simp)
    apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated], simp)
-    apply (rule hoare_seq_ext_skip, wpsimp)+
-    apply wpsimp
+    apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+   apply (rule hoare_when_cases, simp)
+   apply (rule hoare_seq_ext_skip, wpsimp)+
+   apply wpsimp
   apply (rule hoare_seq_ext_skip)
    apply (wpsimp wp: refill_update_invs gts_wp)
    apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr)
@@ -702,8 +703,8 @@ lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule_tac B="\<lambda>_ s. in_release_q (cur_thread s) s \<longrightarrow> tcb_ptr = cur_thread s"
                in hoare_seq_ext[rotated])
-   apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_ct_not_in_release_q)+
-   apply (metis option.sel pred_map_simps(1) sc_at_kh_simps(4) sc_at_pred_n_eq_commute)
+   apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_ct_not_in_release_q)
+   apply (clarsimp simp: vs_all_heap_simps sc_at_pred_n_def obj_at_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_if)
    apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
