@@ -178,12 +178,12 @@ proof goal_cases
 qed
 
 
-context Arch begin global_naming ARM
-
 lemmas invs_imps =
-  invs_valid_vs_lookup invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state
-  invs_valid_global_objs invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs
-  invs_cur invs_kernel_mappings
+  invs_sym_refs invs_psp_aligned invs_distinct invs_arch_state invs_valid_global_objs
+  invs_arch_state invs_valid_objs invs_valid_global_refs tcb_at_invs invs_cur invs_kernel_mappings
+
+
+context Arch begin global_naming ARM
 
 lemma cte_wp_at_page_directory_not_in_globals:
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageDirectoryCap word optiona))) slot s;
@@ -1571,6 +1571,20 @@ lemma arch_perform_invocation_globals_equiv:
               simp: invs_def valid_state_def valid_arch_inv_def invs_valid_vs_lookup)
   done
 
+lemma arch_perform_invocation_reads_respects_g:
+  assumes domains_distinct: "pas_domains_distinct aag"
+  shows "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
+                                           and authorised_for_globals_arch_inv ai and invs
+                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
+                          (arch_perform_invocation ai)"
+  apply (rule equiv_valid_guard_imp)
+   apply (rule reads_respects_g)
+    apply (rule arch_perform_invocation_reads_respects[OF domains_distinct])
+   apply (rule doesnt_touch_globalsI)
+   apply (wp arch_perform_invocation_globals_equiv)
+   apply (simp add: invs_valid_vs_lookup invs_def valid_state_def valid_pspace_def)+
+  done
+
 lemma find_pd_for_asid_authority3:
   "\<lbrace>\<lambda>s. \<forall>pd. (pspace_aligned s \<and> valid_vspace_objs s \<longrightarrow> is_aligned pd pd_bits) \<and> (\<exists>\<rhd> pd) s
              \<longrightarrow> Q pd s\<rbrace>
@@ -1760,7 +1774,6 @@ requalify_facts
   thread_set_globals_equiv
   arch_post_modify_registers_cur_domain
   arch_post_modify_registers_cur_thread
-  invs_imps
   length_msg_lt_msg_max
   set_mrs_globals_equiv
   arch_perform_invocation_globals_equiv
@@ -1769,6 +1782,7 @@ requalify_facts
   make_arch_fault_msg_inv
   check_valid_ipc_buffer_inv
   arch_tcb_update_aux2
+  arch_perform_invocation_reads_respects_g
 
 declare
   arch_post_cap_deletion_valid_global_objs[wp]
