@@ -118,7 +118,7 @@ lemma owns_mapping_owns_asidpool:
   apply simp
   done
 
-lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
+lemma partitionIntegrity_subjectAffects_aobj':
   "\<lbrakk> kheap s x = Some (ArchObj ao); ao \<noteq> ao'; pas_refined aag s;
      silc_inv aag st s; pas_wellformed_noninterference aag;
      arch_integrity_obj_atomic (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
@@ -137,6 +137,65 @@ lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
   apply simp
   apply (frule (1) pas_wellformed_noninterference_control_to_eq)
   by (fastforce elim!: silc_inv_cnode_onlyE obj_atE simp: is_cap_table_def)
+
+lemma inte_obj_arch:
+  assumes inte_obj: "(integrity_obj_atomic aag activate subjects l)\<^sup>*\<^sup>* ko ko'"
+  assumes "ko = Some (ArchObj ao)"
+  assumes "ko \<noteq> ko'"
+  shows "integrity_obj_atomic aag activate subjects l ko ko'"
+proof (cases "l \<in> subjects")
+  case True
+  then show ?thesis by (fastforce intro: integrity_obj_atomic.intros)
+next
+  case False
+  note l = this
+  have "\<forall>ao'. ko = Some (ArchObj ao) \<longrightarrow>
+              ko \<noteq> ko' \<longrightarrow>
+              integrity_obj_atomic aag activate subjects l ko ko'"
+    using inte_obj
+  proof (induct rule: rtranclp_induct)
+    case base
+    then show ?case by clarsimp
+  next
+    case (step y z)
+    have "\<exists>ao'. ko' = Some (ArchObj ao')"
+      using False inte_obj assms
+      by (auto elim!: rtranclp_induct integrity_obj_atomic.cases)
+    then show ?case using step.hyps
+      by (fastforce intro: troa_arch arch_troa_asidpool_clear integrity_obj_atomic.intros
+                    elim!: integrity_obj_atomic.cases arch_integrity_obj_atomic.cases)
+  qed
+  then show ?thesis
+    using assms by fastforce
+qed
+
+lemma partitionIntegrity_subjectAffects_aobj[Noninterference_assms]:
+  assumes par_inte: "partitionIntegrity aag s s'"
+  and "kheap s x = Some (ArchObj ao)"
+      "kheap s x \<noteq> kheap s' x"
+      "silc_inv aag st s"
+      "pas_refined aag s"
+      "pas_wellformed_noninterference aag"
+  notes inte_obj = par_inte[THEN partitionIntegrity_integrity, THEN integrity_subjects_obj,
+                            THEN spec[where x=x], simplified integrity_obj_def, simplified]
+  shows "subject_can_affect_label_directly aag (pasObjectAbs aag x)"
+proof (cases "pasObjectAbs aag x = pasSubject aag")
+  case True
+  then show ?thesis by (simp add: subjectAffects.intros(1))
+next
+  case False
+  obtain ao' where ao': "kheap s' x = Some (ArchObj ao')"
+    using assms False inte_obj_arch[OF inte_obj]
+    by (auto elim: integrity_obj_atomic.cases)
+  have arch_tro:
+    "arch_integrity_obj_atomic (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
+                               {pasSubject aag} (pasObjectAbs aag x) ao ao'"
+    using assms False ao' inte_obj_arch[OF inte_obj]
+    by (auto elim: integrity_obj_atomic.cases)
+  show ?thesis
+    using assms ao' arch_tro
+    by (fastforce dest: partitionIntegrity_subjectAffects_aobj')
+qed
 
 lemma partitionIntegrity_subjectAffects_asid[Noninterference_assms]:
   "\<lbrakk> partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
@@ -313,6 +372,11 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
   apply clarsimp
   apply (simp add: scheduler_equiv_def)
   done
+
+lemma integrity_asids_update_reference_state[Noninterference_assms]:
+  "is_subject aag t
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
+  by clarsimp
 
 end
 

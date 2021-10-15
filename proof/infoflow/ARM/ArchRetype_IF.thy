@@ -489,6 +489,7 @@ lemma reset_untyped_cap_reads_respects_g:
       apply (strengthen invs_valid_global_objs)
       apply (wp add: delete_objects_invs_ex hoare_vcg_const_imp_lift
                      delete_objects_pspace_no_overlap_again
+                     delete_objects_valid_arch_state
                      only_timer_irq_inv_pres[where P=\<top> and Q=\<top>]
                 del: Untyped_AI.delete_objects_pspace_no_overlap
              | simp)+
@@ -506,7 +507,7 @@ lemma reset_untyped_cap_reads_respects_g:
   apply (drule ex_cte_cap_protects[OF _ _ _ _ order_refl], erule caps_of_state_cteD)
      apply (clarsimp simp: descendants_range_def2 empty_descendants_range_in)
     apply clarsimp+
-  apply (fastforce simp: untyped_min_bits_def)
+  apply (fastforce simp: untyped_min_bits_def ptr_range_def)
   done
 
 lemma retype_region_ret_pd_aligned:
@@ -596,7 +597,7 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
                split del: if_split)
     apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
     apply (strengthen refl)
-    apply (strengthen invs_valid_global_objs)
+    apply (strengthen invs_valid_global_objs invs_arch_state)
     apply (clarsimp simp: authorised_untyped_inv_def conj_comms invoke_untyped_proofs.simps)
     apply (simp add: arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                        field_simps invoke_untyped_proofs.idx_le_new_offs
@@ -654,7 +655,7 @@ lemma reset_untyped_cap_globals_equiv:
              preemption_point_inv | simp add: unless_def)+
      apply (rule valid_validE)
      apply (rule_tac P="cap_aligned cap \<and> is_untyped_cap cap" in hoare_gen_asm)
-     apply (rule_tac Q="\<lambda>_ s. valid_global_objs s \<and> globals_equiv st s"
+     apply (rule_tac Q="\<lambda>_ s. valid_global_objs s \<and> valid_arch_state s \<and> globals_equiv st s"
                   in hoare_strengthen_post)
       apply (rule validE_valid, rule mapME_x_wp')
       apply (rule hoare_pre)
@@ -664,7 +665,7 @@ lemma reset_untyped_cap_globals_equiv:
                           cap_aligned_def bits_of_def
                           free_index_of_def)
     apply (clarsimp simp: reset_chunk_bits_def)
-    apply (strengthen invs_valid_global_objs)
+    apply (strengthen invs_valid_global_objs invs_arch_state)
     apply (wp delete_objects_invs_ex hoare_vcg_const_imp_lift get_cap_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state descendants_range_def2 is_cap_simps bits_of_def
              split del: if_split)

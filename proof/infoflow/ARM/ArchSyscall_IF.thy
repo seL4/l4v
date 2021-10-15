@@ -29,20 +29,6 @@ lemma thread_set_globals_equiv'[Syscall_IF_assms]:
   apply (fastforce simp: obj_at_def get_tcb_def valid_arch_state_def)+
   done
 
-lemma arch_perform_invocation_reads_respects_g[Syscall_IF_assms]:
-  assumes domains_distinct: "pas_domains_distinct aag"
-  shows "reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
-                                           and authorised_for_globals_arch_inv ai and invs
-                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
-                          (arch_perform_invocation ai)"
-  apply (rule equiv_valid_guard_imp)
-   apply (rule reads_respects_g)
-    apply (rule arch_perform_invocation_reads_respects[OF domains_distinct])
-   apply (rule doesnt_touch_globalsI)
-   apply (wp arch_perform_invocation_globals_equiv)
-   apply (simp add: invs_valid_vs_lookup invs_def valid_state_def valid_pspace_def)+
-  done
-
 lemma sts_authorised_for_globals_inv[Syscall_IF_assms]:
   "set_thread_state d f \<lbrace>authorised_for_globals_inv oper\<rbrace>"
   unfolding authorised_for_globals_inv_def authorised_for_globals_arch_inv_def

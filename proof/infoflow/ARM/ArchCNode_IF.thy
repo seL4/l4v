@@ -45,7 +45,7 @@ lemma set_cap_globals_equiv':
   done
 
 lemma set_cap_globals_equiv[CNode_IF_assms]:
-  "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    set_cap cap p
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_cap_def
