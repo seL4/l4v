@@ -3590,6 +3590,23 @@ lemma st_tcb_at_runnable_cross:
   apply (drule (3) st_tcb_at_coerce_concrete)
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
 
+lemma bound_sc_tcb_at_cross:
+  assumes t: "bound_sc_tcb_at P t s"
+  assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
+  shows "tcb_at' t s' \<and> P (tcbSCs_of s' t)"
+  using assms
+  apply (clarsimp simp: state_relation_def pred_tcb_at_def obj_at_def projectKOs)
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross[rotated], fastforce simp: state_relation_def)
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def projectKOs opt_map_red)
+  apply (erule (1) pspace_dom_relatedE)
+  apply (erule (1) obj_relation_cutsE, simp_all)
+   apply (clarsimp simp: st_tcb_at'_def obj_at'_def other_obj_relation_def tcb_relation_def
+                  split: Structures_A.kernel_object.split_asm if_split_asm)+
+  done
+
 lemma cur_tcb_cross:
   "\<lbrakk> cur_tcb s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk> \<Longrightarrow> cur_tcb' s'"
   apply (clarsimp simp: cur_tcb'_def cur_tcb_def state_relation_def)

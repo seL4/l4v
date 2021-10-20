@@ -473,4 +473,8 @@ lemma valid_obj'_scPeriod_update[simp]:
   "valid_obj' (KOSchedContext (scPeriod_update (\<lambda>_. period) sc')) = valid_obj' (KOSchedContext sc')"
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
 
+lemma valid_sched_context_size'_scReply_update[simp]:
+  "valid_sched_context_size' (scReply_update f sc) = valid_sched_context_size' sc"
+  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+
 end

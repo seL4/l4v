@@ -927,6 +927,35 @@ lemma ghost_relation_typ_at:
 
 (* more replyNext/replyPrev related lemmas *)
 
+lemma sc_replies_relation_replyNext_None:
+  "\<lbrakk>sc_replies_relation s s'; reply_at rp s; replies_of' s' rp \<noteq> None;
+    \<forall>p'. replyPrevs_of s' p' \<noteq> Some rp; \<forall>p'. scReplies_of s' p' \<noteq> Some rp\<rbrakk>
+     \<Longrightarrow> sc_replies_relation s (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto> KOReply r)\<rparr>)"
+  apply (clarsimp simp: sc_replies_relation_def)
+  apply (rename_tac scp replies)
+  apply (drule_tac x=scp and y=replies in spec2)
+  apply simp
+  apply (clarsimp simp: projectKO_opts_defs obj_at'_def opt_map_red obj_at_def is_reply vs_all_heap_simps)
+  apply (rename_tac ko scp sc reply n)
+  apply (case_tac ko; clarsimp)
+  apply (intro conjI; clarsimp)
+  apply (rename_tac sc reply n)
+  apply (rule heap_path_heap_upd_not_in, simp)
+  apply clarsimp
+  apply (frule split_list)
+  apply (elim exE)
+  apply (simp only:)
+  apply (case_tac ys; simp only:)
+   apply (clarsimp simp: opt_map_red)
+  apply (prop_tac "\<exists>ls x. a # list = ls @ [x]")
+   using append_butlast_last_id apply fastforce
+  apply (elim exE conjE, simp only:)
+  apply (prop_tac "(ls @ [x]) @ rp # zs = ls @ x # rp # zs", simp)
+  apply (simp only:)
+  apply (frule_tac z=x in heap_path_non_nil_lookup_next)
+  apply (clarsimp simp: opt_map_red)
+  done
+
 lemma sc_replies_relation_scReplies_of:
   "\<lbrakk>sc_replies_relation s s'; sc_at sc_ptr s; bound (scs_of' s' sc_ptr)\<rbrakk>
    \<Longrightarrow> (sc_replies_of s |> hd_opt) sc_ptr = scReplies_of s' sc_ptr"
