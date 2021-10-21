@@ -812,7 +812,9 @@ lemma set_reply_sc_valid_replies_already_BlockedOnReply:
   by wpsimp
 
 lemma reply_sc_update_None_reply_sc_reply_at_None[wp]:
-  "set_reply_obj_ref reply_sc_update t None \<lbrace>reply_sc_reply_at (\<lambda>sc. sc = None) reply_ptr\<rbrace>"
+  "\<lbrace>\<lambda>s. rp \<noteq> reply_ptr \<longrightarrow> reply_sc_reply_at ((=) None) reply_ptr s\<rbrace>
+   set_reply_obj_ref reply_sc_update rp None
+   \<lbrace>\<lambda>_. reply_sc_reply_at ((=) None) reply_ptr\<rbrace>"
   apply (wpsimp wp: update_sk_obj_ref_wp)
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
   done
