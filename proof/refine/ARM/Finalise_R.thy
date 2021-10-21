@@ -4554,15 +4554,10 @@ lemma sched_context_maybe_unbind_ntfn_corres:
      apply (wpsimp wp: get_simple_ko_wp getNotification_wp split: option.splits)+
   done
 
-lemma replyRemove_corres:
-  "corres dc (invs and tcb_at tptr) (invs' and K (rptr' = rptr))
-      (reply_remove tptr rptr) (replyRemove rptr' tptr)"
-  apply (clarsimp simp: reply_remove_def replyRemove_def)
-  sorry
-
 lemma replyClear_corres:
   "corres dc
-          (invs and valid_ready_qs and st_tcb_at is_reply_state tp)
+          (invs and valid_ready_qs and st_tcb_at is_reply_state tp
+           and active_sc_valid_refills and weak_valid_sched_action)
           (invs' and st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tp)
           (do
              state \<leftarrow> get_thread_state tp;
@@ -4581,11 +4576,18 @@ lemma replyClear_corres:
       apply (rule_tac R="is_blocked_on_reply st" in corres_cases_lhs;
              clarsimp simp: is_blocked_thread_state_defs)
        apply (wpfix add: Structures_H.thread_state.sel)
-       apply (rule replyRemove_corres)
+       apply (rule corres_guard_imp)
+         apply (rule_tac st="Structures_A.BlockedOnReply reply"
+                     and st'="BlockedOnReply (Some reply)"
+               in replyRemove_corres)
+          apply simp
+         apply simp
+        apply simp
+       apply simp
       apply (rule corres_False'[where P'=\<top>])
      apply (wpsimp wp: gts_wp gts_wp')+
-   apply (clarsimp simp: simp: pred_tcb_at_def obj_at_def is_obj_defs)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def is_obj_defs invs_def valid_pspace_def valid_state_def)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def invs'_def valid_pspace'_def opt_map_Some_eta_fold)
   done
 
 lemma fast_finaliseCap_corres:

@@ -6074,7 +6074,7 @@ lemma doReplyTransfer_corres:
       apply (case_tac ts; simp add: isReply_def)
       apply (rule stronger_corres_guard_imp)
         apply (rule corres_assert_assume_l)
-        apply (rule corres_split [OF replyRemove_corres])
+        apply (rule corres_split [OF replyRemove_corres], (rule refl)+)
           apply (rule corres_split [OF threadget_fault_corres])
             apply (rule corres_split)
                apply (rule_tac P="tcb_at sender and tcb_at recvr and valid_objs and pspace_aligned and
@@ -6325,7 +6325,9 @@ lemma doReplyTransfer_corres:
                in hoare_strengthen_post[rotated])
          apply (clarsimp simp: obj_at'_def invs'_def valid_pspace'_def)
         apply (wpsimp simp: valid_pspace'_def wp: replyRemove_invs')
-       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def cong: conj_cong)
+       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
+                             valid_sched_action_weak_valid_sched_action
+                       cong: conj_cong)
        apply (rename_tac recvr ts_reply s s')
        apply (subgoal_tac "ts_reply = reply", simp)
         apply (rule conjI, fastforce)
