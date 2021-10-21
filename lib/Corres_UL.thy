@@ -1679,4 +1679,35 @@ lemma corres_symb_exec_r_sr:
   apply (drule_tac x="(s, t')" in bspec, simp)
   by clarsimp
 
+lemma corres_symb_exec_r_sr_strong:
+  assumes z: "corres_underlying sr nf nf' r P Q' x y"
+  assumes sr: "sr_inv_ul sr P P' m"
+  assumes ex: "\<And>s. P s \<Longrightarrow> \<lbrace> \<lambda>s'. (s, s') \<in> sr \<and> P' s' \<rbrace> m \<lbrace>\<lambda>_. Q'\<rbrace>"
+  assumes nf: "\<And>s. \<lbrakk> P s; nf' \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') m"
+  shows "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>_. y))"
+  using sr z ex nf
+  unfolding corres_underlying_def sr_inv_ul_def
+  apply (clarsimp simp: corres_underlying_def bind_def)
+  apply (rename_tac s s')
+  apply (rule conjI; clarsimp simp: in_monad)
+   apply (drule_tac x=s and y=s' in spec2, clarsimp)
+   apply (rename_tac t' rv' s'')
+   apply (drule_tac x="(s, t')" in bspec, simp)
+   apply clarsimp
+   apply (drule use_valid[OF _ ex], simp)
+   apply clarsimp
+   apply clarsimp
+   apply (drule_tac x="(rv', s'')" in bspec, simp)
+   apply simp
+  apply (drule_tac x=s and y=s' in spec2, clarsimp simp: no_failD[OF nf] valid_def)
+  apply (rename_tac t')
+  apply (drule_tac x=s in meta_spec)
+  apply (drule_tac x=s in meta_spec)
+  apply (drule_tac x=t' in spec, clarsimp)
+  apply (drule_tac x=s' in spec, clarsimp)
+  apply (drule bspec[of "fst _"], simp)
+  apply clarsimp
+  apply (drule_tac x="(s, t')" in bspec, simp)
+  by clarsimp
+
 end
