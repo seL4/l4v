@@ -56,7 +56,7 @@ lemma activateThread_corres:
       apply (rule corres_split_deprecated [OF _ get_tcb_yield_to_corres])
         apply (rule corres_split_deprecated[OF _ corres_when, rotated])
             apply clarsimp
-           apply (rule complete_yield_to_corres)
+           apply (rule schedContextCompleteYieldTo_corres)
           prefer 3
           apply (rule_tac R="\<lambda>ts s. (activatable ts) \<and> invs s \<and> st_tcb_at ((=) ts) thread s"
                       and R'="\<lambda>ts s. (activatable' ts) \<and> invs' s \<and> st_tcb_at' (\<lambda>ts'. ts' = ts) thread s"

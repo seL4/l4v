@@ -4751,7 +4751,7 @@ lemma unbindFromSC_corres:
            apply (rule corres_when2; clarsimp simp: sc_relation_def)
            apply (case_tac rv, case_tac rv', simp)
            apply (wpfix add: Structures_A.sched_context.select_convs sched_context.sel)
-           apply (rule complete_yield_to_corres)
+           apply (rule schedContextCompleteYieldTo_corres)
           apply (wpsimp wp: abs_typ_at_lifts)+
         apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
          apply (auto simp: valid_obj_def valid_sched_context_def
@@ -4876,7 +4876,7 @@ lemma schedContextUnbindYieldFrom_corres:
        apply (wpfix add: sched_context.sel)
        apply (rule corres_when)
         apply (clarsimp simp: sc_relation_def)
-       apply (rule complete_yield_to_corres)
+       apply (rule schedContextCompleteYieldTo_corres)
       apply wpsimp+
     apply (fastforce dest!: invs_valid_objs valid_objs_ko_at
                       simp: valid_obj_def valid_sched_context_def)

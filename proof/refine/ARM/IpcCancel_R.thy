@@ -2452,7 +2452,7 @@ lemma (in delete_one) suspend_corres:
              apply (rule corres_split_deprecated[OF _ setThreadState_corres])
                 apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres'])
                   apply (rule corres_split_deprecated[OF _ tcb_release_remove_corres])
-                    apply (rule sched_context_cancel_yield_to_corres)
+                    apply (rule schedContextCancelYieldTo_corres)
                    apply wpsimp+
             apply (case_tac state; clarsimp?)
            apply (clarsimp simp: update_restart_pc_def updateRestartPC_def)

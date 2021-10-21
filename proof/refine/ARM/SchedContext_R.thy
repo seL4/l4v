@@ -519,7 +519,7 @@ lemma sc_relation_tcb_yield_to_update:
    \<Longrightarrow> sc_relation (sc_yield_from_update Map.empty (sc)) n (scYieldFrom_update Map.empty sc')"
   by (clarsimp simp: sc_relation_def)
 
-lemma sched_context_cancel_yield_to_corres:
+lemma schedContextCancelYieldTo_corres:
   "corres dc
           (pspace_aligned and pspace_distinct and valid_objs and tcb_at t)
           \<top>
@@ -552,7 +552,7 @@ lemma sched_context_cancel_yield_to_corres:
   apply clarsimp
   done
 
-lemma complete_yield_to_corres:
+lemma schedContextCompleteYieldTo_corres:
   "corres dc (invs and tcb_at thread) (invs' and tcb_at' thread)
     (complete_yield_to thread) (schedContextCompleteYieldTo thread)"
   apply add_cur_tcb'
@@ -564,7 +564,7 @@ lemma complete_yield_to_corres:
       apply (clarsimp, wpfix)
       apply (rule corres_split_deprecated[OF _ lookupIPCBuffer_corres], simp)
         apply (rule corres_split_deprecated[OF _ setConsumed_corres])
-          apply (rule sched_context_cancel_yield_to_corres[simplified dc_def])
+          apply (rule schedContextCancelYieldTo_corres[simplified dc_def])
          apply wpsimp
         apply wpsimp
        apply wpsimp
