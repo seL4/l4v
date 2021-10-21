@@ -292,9 +292,6 @@ where
 
       schedulable <- is_schedulable tcb_ptr;
       if schedulable then do
-        sc \<leftarrow> get_sched_context sc_ptr;
-        curtime \<leftarrow> gets cur_time;
-        assert (sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc);
         ct_ptr \<leftarrow> gets cur_thread;
         prios \<leftarrow> thread_get tcb_priority tcb_ptr;
         ct_prios \<leftarrow> thread_get tcb_priority ct_ptr;
