@@ -568,8 +568,8 @@ This module uses the C preprocessor to select a target architecture.
 >     if schedulable
 >         then do
 >             ctPtr <- getCurThread
->             curprio <- threadGet tcbPriority ctPtr
 >             prio <- threadGet tcbPriority tptr
+>             curprio <- threadGet tcbPriority ctPtr
 >             if prio < curprio
 >                 then do
 >                     tcbSchedDequeue tptr
