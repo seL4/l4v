@@ -172,9 +172,11 @@ lemma decodeInvocation_corres:
            (invs and valid_sched and valid_list
                  and valid_cap cap and cte_at slot and cte_wp_at ((=) cap) slot
                  and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> fst x \<and> cte_at (snd x) s)
+                 and case_option \<top> in_user_frame buffer
                  and (\<lambda>s. length args < 2 ^ word_bits))
            (invs' and valid_cap' cap' and cte_at' slot'
             and (\<lambda>s. \<forall>x\<in>set excaps'. s \<turnstile>' fst x \<and> cte_at' (snd x) s)
+            and case_option \<top> valid_ipc_buffer_ptr' buffer
             and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
       (decode_invocation first_phase (mi_label mi) args cptr slot cap excaps buffer)
       (RetypeDecls_H.decodeInvocation (msgLabel mi') args' cptr' slot' cap' excaps' first_phase buffer)"
@@ -546,6 +548,9 @@ lemma sts_mcpriority_tcb_at'[wp]:
                | simp add: pred_tcb_at'_def)+
   done
 
+crunches setThreadState
+  for valid_ipc_buffer_ptr'[wp]: "valid_ipc_buffer_ptr' buf"
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma sts_valid_inv'[wp]:
@@ -562,11 +567,11 @@ lemma sts_valid_inv'[wp]:
        \<comment>\<open>start InvokeSchedContext\<close>
        apply (rename_tac schedcontextinvocation)
        apply (case_tac schedcontextinvocation; simp)
-           apply wpsimp
+           apply (wpsimp wp: hoare_case_option_wp)
           apply (rename_tac bindCap, case_tac bindCap; wpsimp)
          apply (rename_tac bindCap, case_tac bindCap; wpsimp)
         apply wpsimp
-       apply ((wpsimp | wps)+)[1]
+       apply ((wpsimp wp: hoare_case_option_wp| wps)+)[1]
        \<comment>\<open>end InvokeSchedContext\<close>
       apply (rename_tac schedcontrolinvocation)
       apply (case_tac schedcontrolinvocation; wpsimp wp: hoare_vcg_ex_lift)
@@ -613,6 +618,7 @@ lemma decode_inv_wf'[wp]:
   "\<lbrace>valid_cap' cap and invs' and sch_act_simple
           and cte_wp_at' ((=) cap \<circ> cteCap) slot and real_cte_at' slot
           and (\<lambda>s. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s)
+          and case_option \<top> valid_ipc_buffer_ptr' buffer
           and (\<lambda>s. \<forall>r\<in>cte_refs' cap (irq_node' s). ex_cte_cap_to' r s)
           and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs' (fst cap) (irq_node' s). ex_cte_cap_to' r s)
           and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>zobj_refs' (fst cap). ex_nonz_cap_to' r s)
@@ -1106,7 +1112,7 @@ lemma handleInvocation_corres:
                   apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                  apply (fastforce simp: list_all2_map2 list_all2_map1 elim: list_all2_mono)
                 apply simp
-               apply wp
+               apply (wpsimp wp: hoare_case_option_wp)
               apply (drule sym[OF conjunct1], simp, wp)
              apply (clarsimp simp: when_def)
              apply (rule replyFromKernel_corres)
@@ -1154,10 +1160,15 @@ lemma handleInvocation_corres:
             apply (wp setThreadState_nonqueued_state_update
                       setThreadState_st_tcb setThreadState_rct setThreadState_ct_not_inQ)
            apply clarsimp
-           apply (wp lec_caps_to lsft_ex_cte_cap_to
-                  | simp add: split_def liftE_bindE[symmetric]
+           apply (wp | simp add: split_def liftE_bindE[symmetric]
                               ct_in_state'_def ball_conj_distrib
-                  | rule hoare_vcg_E_elim)+
+                     | rule hoare_vcg_E_elim)+
+          apply (rule hoare_vcg_conj_lift)
+           apply (rule hoare_strengthen_post[OF lookup_ipc_buffer_in_user_frame])
+           apply meson
+          apply (wp lookup_ipc_buffer_in_user_frame
+                 | simp add: split_def liftE_bindE[symmetric]
+                             ball_conj_distrib)+
    apply (clarsimp simp: msg_max_length_def word_bits_def)
    apply (frule schact_is_rct_sane)
    apply (frule invs_valid_objs)
