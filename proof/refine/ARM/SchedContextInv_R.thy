@@ -11,7 +11,8 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec valid_sc_inv' :: "sched_context_invocation \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_sc_inv' (InvokeSchedContextConsumed scptr args) = (sc_at' scptr and ex_nonz_cap_to' scptr)"
+  "valid_sc_inv' (InvokeSchedContextConsumed scptr args) =
+     (sc_at' scptr and ex_nonz_cap_to' scptr and case_option \<top> valid_ipc_buffer_ptr' args)"
 | "valid_sc_inv' (InvokeSchedContextBind scptr cap) =
      (ex_nonz_cap_to' scptr and valid_cap' cap and
         (case cap of
@@ -38,8 +39,9 @@ primrec valid_sc_inv' :: "sched_context_invocation \<Rightarrow> kernel_state \<
          | _ \<Rightarrow> \<bottom>))"
 | "valid_sc_inv' (InvokeSchedContextUnbind scptr) = (sc_at' scptr and ex_nonz_cap_to' scptr)"
 | "valid_sc_inv' (InvokeSchedContextYieldTo scptr args) =
-     (\<lambda>s. ex_nonz_cap_to' scptr s \<and>
-          (\<forall>ct. ct = ksCurThread s \<longrightarrow>
+     (\<lambda>s. ex_nonz_cap_to' scptr s
+          \<and> case_option \<top> valid_ipc_buffer_ptr' args s
+          \<and> (\<forall>ct. ct = ksCurThread s \<longrightarrow>
                 bound_yt_tcb_at' ((=) None) ct s \<and>
                 obj_at' (\<lambda>sc. \<exists>t. scTCB sc = Some t \<and> t \<noteq> ct) scptr s))"
 
@@ -105,7 +107,8 @@ lemma decodeSchedContext_UnbindObject_wf:
   done
 
 lemma decodeSchedContext_YieldTo_wf:
-  "\<lbrace>\<lambda>s. \<exists>n. valid_cap' (SchedContextCap sc_ptr n) s \<and> ex_nonz_cap_to' sc_ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. \<exists>n. valid_cap' (SchedContextCap sc_ptr n) s \<and> ex_nonz_cap_to' sc_ptr s
+        \<and> case_option \<top> valid_ipc_buffer_ptr' args s\<rbrace>
    decodeSchedContext_YieldTo sc_ptr args
    \<lbrace>valid_sc_inv'\<rbrace>, -"
   apply (clarsimp simp: decodeSchedContext_YieldTo_def)
@@ -118,6 +121,7 @@ lemma decodeSchedContext_YieldTo_wf:
 lemma decodeSchedContextInvocation_wf:
   "\<lbrace>\<lambda>s. \<exists>n. valid_cap' (SchedContextCap sc_ptr n) s
         \<and> ex_nonz_cap_to' sc_ptr s
+        \<and> case_option \<top> valid_ipc_buffer_ptr' args s
         \<and> (\<forall>cap\<in>set excaps. \<forall>r\<in>zobj_refs' cap. ex_nonz_cap_to' r s)
         \<and> (\<forall>x\<in>set excaps. valid_cap' x s)\<rbrace>
    decodeSchedContextInvocation label sc_ptr excaps args
@@ -314,8 +318,10 @@ lemma decodeSchedContext_YieldTo_corres:
 lemma decode_sc_inv_corres:
   "list_all2 cap_relation excaps excaps' \<Longrightarrow>
    corres (ser \<oplus> sc_inv_rel)
-          (invs and valid_sched and sc_at sc_ptr and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x))
-          (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s))
+          (invs and valid_sched and sc_at sc_ptr and (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x)
+           and case_option \<top> in_user_frame args')
+          (invs' and (\<lambda>s. \<forall>x\<in>set excaps'. valid_cap' x s)
+           and case_option \<top> valid_ipc_buffer_ptr' args')
           (decode_sched_context_invocation (mi_label mi) sc_ptr excaps args')
           (decodeSchedContextInvocation (mi_label mi) sc_ptr excaps' args')"
   apply (clarsimp simp: decode_sched_context_invocation_def decodeSchedContextInvocation_def
