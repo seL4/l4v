@@ -507,7 +507,7 @@ primrec
   valid_sched_context_inv :: "sched_context_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
     "valid_sched_context_inv (InvokeSchedContextConsumed scptr args)
-     = (sc_at scptr and ex_nonz_cap_to scptr)"
+     = (sc_at scptr and ex_nonz_cap_to scptr and case_option \<top> in_user_frame args)"
   | "valid_sched_context_inv (InvokeSchedContextBind scptr cap)
      = (ex_nonz_cap_to scptr and valid_cap cap and
           (case cap of ThreadCap t \<Rightarrow>
@@ -531,6 +531,7 @@ where
   | "valid_sched_context_inv (InvokeSchedContextYieldTo scptr args)
      = (\<lambda>s. ex_nonz_cap_to scptr s
             \<and> bound_yt_tcb_at ((=) None) (cur_thread s) s
+            \<and> case_option \<top> in_user_frame args s
             \<and> sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scptr s)"
 
 definition
@@ -1644,6 +1645,7 @@ lemma decode_sched_control_inv_inv:
 
 lemma decode_sched_context_inv_wf:
   "\<lbrace>invs and sc_at sc_ptr and ex_nonz_cap_to sc_ptr and
+     case_option \<top> in_user_frame args and
      (\<lambda>s. \<forall>x\<in>set excaps. s \<turnstile> x) and
      (\<lambda>s. \<forall>x\<in>set excaps. \<forall>r\<in>zobj_refs x. ex_nonz_cap_to r s)\<rbrace>
      decode_sched_context_invocation label sc_ptr excaps args

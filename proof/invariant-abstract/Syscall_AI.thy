@@ -645,13 +645,11 @@ lemma sts_valid_sched_context_inv[wp]:
   "\<lbrace>valid_sched_context_inv i and K (\<not> ipc_queued_thread_state st)\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>rv. valid_sched_context_inv i\<rbrace>"
-  by (cases i
-      ; wpsimp split: cap.splits
-      ; intro conjI
-      ; (wpsimp wp: sts_obj_at_impossible set_thread_state_bound_sc_tcb_at hoare_vcg_imp_lift
-                    sts_st_tcb_at_cases_strong
-              simp: pred_conj_def
-         | wps)+)
+  apply (cases i; wpsimp split: cap.splits; (intro conjI)?)
+  by (wpsimp wp: sts_obj_at_impossible set_thread_state_bound_sc_tcb_at hoare_vcg_imp_lift
+                    sts_st_tcb_at_cases_strong hoare_case_option_wp
+           simp: pred_conj_def
+    | wps)+
 
 lemma sts_valid_cnode_inv[wp]:
   "\<lbrace>valid_cnode_inv i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_cnode_inv i\<rbrace>"
@@ -718,6 +716,7 @@ lemma decode_inv_wf[wp]:
   "\<lbrace>valid_cap cap and invs and cte_wp_at ((=) cap) slot
            and real_cte_at slot
            and ex_cte_cap_to slot
+           and case_option \<top> in_user_frame buffer
            and (\<lambda>s::'state_ext state. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
            and (\<lambda>s. \<forall>cap \<in> set excaps. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
            and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> (fst x))
