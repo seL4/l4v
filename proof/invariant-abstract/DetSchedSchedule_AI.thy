@@ -16760,7 +16760,7 @@ lemma handle_invocation_cur_sc_chargeable:
      apply (rule validE_cases_valid, clarsimp)
      apply (subst validE_R_def[symmetric])
      apply wpsimp+
-  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_tcb invs_valid_objs)
   done
 
 crunches check_domain_time
@@ -18929,11 +18929,7 @@ lemma handle_invocation_scheduler_act_sane[wp]:
      apply (rule validE_cases_valid, clarsimp)
      apply (subst validE_R_def[symmetric])
      apply wpsimp+
-  apply (intro conjI)
-     apply (erule schact_is_rct_sane)
-    apply (erule schact_is_rct_simple)
-   apply (simp add: pred_tcb_at_def obj_at_def ct_in_state_def)
-  apply (erule invs_valid_objs)
+  apply (fastforce simp: ct_in_state_def)
   done
 
 lemma postpone_not_in_release_q_other:
@@ -20380,7 +20376,7 @@ lemma handle_invocation_ct_not_blocked[wp]:
                   ex_cte_cap_wp_to (\<lambda>_. True) (snd r) s \<and>
                   real_cte_at (snd r) s \<and>
                   (\<forall>r\<in>zobj_refs (fst r). ex_nonz_cap_to r s) \<and> invs s" in hoare_post_imp_R[rotated])
-      apply (clarsimp simp: ct_in_state_def cong: conj_cong)
+      apply (clarsimp simp: ct_in_state_def invs_valid_objs cong: conj_cong)
       apply wpsimp+
   done
 
