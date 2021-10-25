@@ -461,7 +461,7 @@ lemma performInvocation_corres:
          apply (rule corres_splitEE)
             prefer 2
             apply (simp)
-            apply (erule invoke_sched_context_corres)
+            apply (erule invokeSchedContext_corres)
            apply (rule corres_trivial, simp add: returnOk_def)
           apply (wpsimp+)[4]
       \<comment> \<open>SchedControl\<close>

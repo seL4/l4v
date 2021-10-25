@@ -482,4 +482,14 @@ lemma valid_sched_context_size'_scReply_update[simp]:
   "valid_sched_context_size' (scReply_update f sc) = valid_sched_context_size' sc"
   by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
 
+lemma valid_tcb_yield_to_update[elim!]:
+  "valid_tcb tp tcb s \<Longrightarrow> sc_at scp s \<Longrightarrow> valid_tcb tp (tcb_yield_to_update (\<lambda>_. Some scp) tcb) s"
+  by (auto simp: valid_tcb_def tcb_cap_cases_def)
+
+lemma valid_ipc_buffer_ptr'_ks_updates[simp]:
+  "valid_ipc_buffer_ptr' buf (ksSchedulerAction_update f s) = valid_ipc_buffer_ptr' buf s"
+  "valid_ipc_buffer_ptr' buf (ksReprogramTimer_update g s) = valid_ipc_buffer_ptr' buf s"
+  "valid_ipc_buffer_ptr' buf (ksReleaseQueue_update h s) = valid_ipc_buffer_ptr' buf s"
+  by (simp add: valid_ipc_buffer_ptr'_def)+
+
 end
