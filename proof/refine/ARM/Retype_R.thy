@@ -153,7 +153,7 @@ lemma valid_obj_makeObject_sched_context [simp]:
   unfolding valid_obj'_def valid_sched_context'_def
   using refillAbsoluteMax'_lb sc_size_bounds_def minRefillLength_ARM
   by (clarsimp simp: valid_sc_size'_makeObject_sc')
-     (clarsimp simp: makeObject_sc; fastforce)
+     (clarsimp simp: makeObject_sc scBits_inverse_us)
 
 lemma valid_obj_makeObject_user_data [simp]:
   "valid_obj' (KOUserData) s"

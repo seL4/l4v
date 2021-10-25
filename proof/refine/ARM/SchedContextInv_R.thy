@@ -1085,6 +1085,141 @@ lemma refillUpdate_corres:
    apply clarsimp+
   done
 
+crunches maybeAddEmptyTail, setRefillHd
+  for invs'[wp]: invs'
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma refillNew_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> (\<exists>n. sc_at'_n n scPtr s \<and> valid_refills_number' maxRefills n)
+        \<and> ex_nonz_cap_to' scPtr s \<and> MIN_REFILLS \<le> maxRefills\<rbrace>
+   refillNew scPtr maxRefills budget period
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>?Q\<rbrace>")
+  apply (clarsimp simp: refillNew_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+    apply (wpsimp wp: updateSchedContext_invs')
+    apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                     simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+   apply (wpsimp wp: updateSchedContext_wp)
+   apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+    apply (wpsimp wp: updateSchedContext_invs')
+    apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                     simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+   apply (wpsimp wp: updateSchedContext_wp)
+   apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext)
+   apply wpsimp
+  apply (rule hoare_seq_ext)
+   apply wpsimp
+
+  apply (clarsimp simp: pred_conj_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. active_sc_at' scPtr\<rbrace>" for P f \<Rightarrow> -\<close>)
+   apply (wpsimp wp: updateSchedContext_wp)
+   apply (clarsimp simp: active_sc_at'_def obj_at_simps MIN_REFILLS_def ps_clear_def)
+  apply (clarsimp simp: updateSchedContext_def bind_assoc)
+  apply (subst bind_dummy_ret_val)+
+  apply (rule hoare_weaken_pre)
+   apply (rule_tac P'="?P" and P''="sc_at' scPtr" and Q="?Q"
+                in monadic_rewrite_refine_valid[OF getSchedContext_setSchedContext_decompose];
+          (solves wpsimp)?)
+   apply (wpsimp wp: setSchedContext_invs')
+   apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                    simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps
+                          ko_wp_at'_def valid_refills_number'_def)
+  apply (clarsimp simp: obj_at_simps ko_wp_at'_def)
+  apply (case_tac ko; clarsimp)
+  done
+
+lemma refillUpdate_invs':
+  "\<lbrace>\<lambda>s. invs' s \<and> (\<exists>n. sc_at'_n n scPtr s \<and> valid_refills_number' newMaxRefills n)
+        \<and> ex_nonz_cap_to' scPtr s \<and> MIN_REFILLS \<le> newMaxRefills\<rbrace>
+   refillUpdate  scPtr newPeriod newBudget newMaxRefills
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (clarsimp simp: refillUpdate_def)
+  apply (simp flip: bind_assoc)
+  apply (rule_tac B="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_seq_ext)
+   apply (wpsimp wp: updateRefillHd_invs')
+  apply (clarsimp simp: pred_conj_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. active_sc_at' scPtr\<rbrace>" for P f \<Rightarrow> -\<close>)
+   apply (wpsimp wp: updateSchedContext_wp refillReady_wp
+               simp: updateRefillHd_def)
+   apply (clarsimp simp: active_sc_at'_def obj_at_simps MIN_REFILLS_def ps_clear_def)
+  apply (rule_tac B="\<lambda>_. invs'" in hoare_seq_ext)
+   apply wpsimp
+  apply (rule_tac B="\<lambda>_. invs' and active_sc_at' scPtr" in hoare_seq_ext)
+   apply (wpsimp wp: updateRefillHd_invs' refillReady_wp)
+  apply (clarsimp simp: pred_conj_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. active_sc_at' scPtr\<rbrace>" for P f \<Rightarrow> -\<close>)
+   apply (wpsimp wp: updateSchedContext_wp refillReady_wp
+               simp: updateRefillHd_def)
+   apply (clarsimp simp: active_sc_at'_def obj_at_simps MIN_REFILLS_def ps_clear_def)
+  apply (rule_tac B="\<lambda>_. invs' and ex_nonz_cap_to' scPtr" in hoare_seq_ext)
+   apply (wpsimp wp: updateSchedContext_invs')
+   apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                    simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps)
+  apply (clarsimp simp: pred_conj_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. ex_nonz_cap_to' scPtr\<rbrace>" for P f \<Rightarrow> -\<close>)
+   apply (wpsimp wp: updateSchedContext_ex_nonz_cap_to' refillReady_wp
+               simp: updateRefillHd_def)
+  apply (rule_tac B="\<lambda>_. invs' and ex_nonz_cap_to' scPtr" in hoare_seq_ext)
+   apply (wpsimp wp: updateSchedContext_invs')
+   apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                    simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps)
+  apply (simp add: bind_assoc)
+  apply (clarsimp simp: pred_conj_def)
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+   apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. ex_nonz_cap_to' scPtr\<rbrace>" for P f \<Rightarrow> -\<close>)
+   apply (wpsimp wp: updateSchedContext_ex_nonz_cap_to')
+
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+    apply (wpsimp wp: updateSchedContext_invs')
+    apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                     simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+   apply (wpsimp wp: updateSchedContext_wp)
+   apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+  apply (rule_tac B="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)"
+               in hoare_seq_ext[rotated])
+   apply (clarsimp simp: pred_conj_def)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+     apply (wpsimp wp: updateSchedContext_invs')
+     apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                      simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+    apply (wpsimp wp: updateSchedContext_wp)
+    apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+   apply (wpsimp wp: updateSchedContext_wp)
+  apply (rule_tac B="\<lambda>_. ?P and (\<lambda>s'. ((\<lambda>sc'. scRefillHead sc' = 0) |< scs_of' s') scPtr)
+                            and (\<lambda>s'. ((\<lambda>sc'. scRefillCount sc' = 1) |< scs_of' s') scPtr)"
+               in hoare_seq_ext[rotated])
+   apply (clarsimp simp: pred_conj_def)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
+      apply (wpsimp wp: updateSchedContext_invs')
+      apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                     simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+     apply (wpsimp wp: updateSchedContext_wp)
+     apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+    apply (wpsimp wp: updateSchedContext_wp)
+    apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+   apply (wpsimp wp: updateSchedContext_wp)
+  apply (wpsimp wp: updateSchedContext_invs')
+  apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                   simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps
+                         ko_wp_at'_def valid_refills_number'_def opt_map_red)
+  done
+
 (* FIXME RT: preconditions can be reduced, this is what is available at the call site: *)
 lemma invokeSchedControlConfigureFlags_corres:
   "sc_ctrl_inv_rel sc_inv sc_inv' \<Longrightarrow>

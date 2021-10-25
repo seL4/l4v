@@ -20,13 +20,6 @@ lemma live_sc'_scRefillCount_update[simp]:
   "live_sc' (scRefillCount_update f koc) = live_sc' koc"
   by (clarsimp simp: live_sc'_def)
 
-lemma valid_sched_context'_scRefills_update:
-  "valid_sched_context' koc s
-   \<Longrightarrow> (MIN_REFILLS \<le> length (f (scRefills koc))
-        \<and> scRefillMax koc \<le> length (f (scRefills koc)))
-   \<Longrightarrow> valid_sched_context' (scRefills_update f koc) s"
-  by (clarsimp simp: valid_sched_context'_def)
-
 lemma valid_sched_context'_updates[simp]:
   "\<And>f. valid_sched_context' sc' (ksReprogramTimer_update f s) = valid_sched_context' sc' s"
   "\<And>f. valid_sched_context' sc' (ksReleaseQueue_update f s) = valid_sched_context' sc' s"
