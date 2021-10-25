@@ -112,7 +112,6 @@ lemma activate_invs':
   apply (simp add: activateThread_def)
   apply (wpsimp wp: activateIdle_invs' sts_invs_minor' schedContextCompleteYieldTo_invs'
                     hoare_vcg_imp_lift')
-     apply (wpsimp wp: threadGet_wp gts_wp')+
   by (fastforce simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def sch_act_simple_def)
 
 declare not_psubset_eq[dest!] (* FIXME: remove, not a good dest rule *)

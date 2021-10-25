@@ -4210,12 +4210,9 @@ lemma schedContextZeroRefillMax_invs'[wp]:
   done
 
 lemma schedContextUnbindYieldFrom_invs'[wp]:
-  "\<lbrace>invs' and sch_act_simple\<rbrace>
-   schedContextUnbindYieldFrom scPtr
-   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "schedContextUnbindYieldFrom scPtr \<lbrace>invs'\<rbrace>"
   apply (clarsimp simp: schedContextUnbindYieldFrom_def)
   apply wpsimp
-  apply (fastforce dest: invs'_ko_at_valid_sched_context' simp: valid_sched_context'_def)
   done
 
 lemma schedContextUnbindReply_invs'[wp]:
