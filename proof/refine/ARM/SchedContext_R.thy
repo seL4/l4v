@@ -441,9 +441,7 @@ global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContext
   by typ_at_props'
 
 lemma schedContextCancelYieldTo_invs':
-  "\<lbrace>invs' and tcb_at' t\<rbrace>
-   schedContextCancelYieldTo t
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "schedContextCancelYieldTo t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def setSchedContext_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
                     untyped_ranges_zero_lift
@@ -469,9 +467,7 @@ lemma setConsumed_invs':
   done
 
 lemma schedContextCompleteYieldTo_invs'[wp]:
-  "\<lbrace>invs' and tcb_at' thread\<rbrace>
-   schedContextCompleteYieldTo thread
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "schedContextCompleteYieldTo thread \<lbrace>invs'\<rbrace>"
   unfolding schedContextCompleteYieldTo_def
   by (wpsimp wp: schedContextCancelYieldTo_invs' setConsumed_invs'
                  hoare_drop_imp hoare_vcg_if_lift2
