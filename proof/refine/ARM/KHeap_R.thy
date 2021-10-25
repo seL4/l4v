@@ -3607,6 +3607,39 @@ lemma bound_sc_tcb_at_cross:
                   split: Structures_A.kernel_object.split_asm if_split_asm)+
   done
 
+lemma bound_yt_tcb_at_cross:
+  assumes t: "bound_yt_tcb_at P t s"
+  assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
+  shows "obj_at' (\<lambda>tcb'. \<exists>tcb. tcb_relation tcb tcb' \<and> P (tcb_yield_to tcb)) t s'"
+  using assms
+  apply (clarsimp simp: state_relation_def pred_tcb_at_def obj_at_def projectKOs)
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross[rotated], fastforce simp: state_relation_def)
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (erule (1) pspace_dom_relatedE)
+  apply (erule (1) obj_relation_cutsE, simp_all)
+   apply (clarsimp simp: st_tcb_at'_def obj_at'_def other_obj_relation_def tcb_relation_def
+                  split: Structures_A.kernel_object.split_asm if_split_asm)+
+  apply fastforce
+  done
+
+lemma sc_tcb_sc_at_bound_cross:
+  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); valid_objs s; pspace_aligned s; pspace_distinct s;
+    sc_tcb_sc_at ((\<noteq>) None) scp s\<rbrakk>
+  \<Longrightarrow> obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp s'"
+  apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
+  apply (frule (1) pspace_relation_absD)
+  apply clarsimp
+  apply (prop_tac "valid_sched_context_size n")
+   apply (erule (1) valid_sched_context_size_objsI)
+  apply (clarsimp simp: if_split_asm)
+  apply (rename_tac z; case_tac z; simp)
+  apply (drule (3) aligned_distinct_ko_at'I[where 'a=sched_context], simp)
+  apply (clarsimp simp: obj_at'_def sc_relation_def projectKOs)
+  by (metis not_None_eq)
+
 lemma cur_tcb_cross:
   "\<lbrakk> cur_tcb s; pspace_aligned s; pspace_distinct s; (s,s') \<in> state_relation \<rbrakk> \<Longrightarrow> cur_tcb' s'"
   apply (clarsimp simp: cur_tcb'_def cur_tcb_def state_relation_def)

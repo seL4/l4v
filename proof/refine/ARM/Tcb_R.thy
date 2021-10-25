@@ -2259,25 +2259,6 @@ crunches schedContextYieldTo, schedContextCompleteYieldTo
   for tcb_at'[wp]: "tcb_at' tcbPtr"
   (wp: crunch_wps)
 
-(* RT FIXME : Move *)
-lemma neq_None_bound: "((\<noteq>) None) = bound"
-  using cases_simp_option option.simps(3) by metis
-
-(* RT FIXME : Move *)
-lemma sc_tcb_sc_at_bound_cross:
-  "\<lbrakk>pspace_relation (kheap s) (ksPSpace s'); valid_objs s; pspace_aligned s; pspace_distinct s;
-    sc_tcb_sc_at ((\<noteq>) None) scp s\<rbrakk>
-  \<Longrightarrow> obj_at' (\<lambda>sc. \<exists>y. scTCB sc = Some y) scp s'"
-  apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def)
-  apply (frule (1) pspace_relation_absD)
-  apply clarsimp
-  apply (prop_tac "valid_sched_context_size n", fastforce simp: valid_obj_def)
-  apply (clarsimp simp: if_split_asm)
-  apply (rename_tac z; case_tac z; simp)
-  apply (drule (3) aligned_distinct_ko_at'I[where 'a=sched_context], simp)
-  apply (clarsimp simp: obj_at'_def sc_relation_def projectKOs)
-  by (metis not_None_eq)
-
 lemma schedContextUnbindTCB_corres':
   "corres dc (invs and valid_sched and sc_tcb_sc_at ((\<noteq>) None) scp) invs'
              (sched_context_unbind_tcb scp) (schedContextUnbindTCB scp)"
