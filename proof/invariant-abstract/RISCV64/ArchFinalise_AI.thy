@@ -527,11 +527,6 @@ lemma arch_thread_sym_refs[wp]:
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply wp
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
-  apply (subst arch_tcb_update_aux3)
-  apply (subst sym_refs_update_some_tcb[where f="tcb_arch_update f"])
-    apply assumption
-   apply (clarsimp simp: refs_of_def)
-  apply assumption
   done
 
 lemma as_user_unlive_hyp[wp]:
