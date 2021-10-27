@@ -4388,6 +4388,10 @@ lemma refill_unblock_check_valid_refills[wp]:
   apply (case_tac "sc_refills sc"; clarsimp)
   done
 
+crunches if_cond_refill_unblock_check
+  for valid_refills[wp]: "valid_refills sc_ptr"
+  (simp: crunch_simps)
+
 lemma refill_unblock_check_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
     and current_time_bounded 2\<rbrace>
