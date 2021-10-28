@@ -130,7 +130,7 @@ These commands perform the following steps:
 * build basic Isabelle images to ensure that
   the installation works. This may take a few minutes.
 
-Alternatively, it is possible to use the official Isabelle2020 release
+Alternatively, it is possible to use the official Isabelle2021 release
 bundle for your platform from the [Isabelle website][isabelle]. In this case, the
 installation steps above can be skipped, and you would replace the directory
 `verification/isabelle/` with a symbolic link to the Isabelle home directory
