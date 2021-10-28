@@ -137,3 +137,11 @@
 - Remove unused assumptions from field_lookup rules
 - Use python3 in scripts
 - Use SPDX identifiers for licensing information
+
+## 1.18
+
+- Builds with Isabelle2021
+- improve inline assembly support in modifies proofs
+- always use fresh names for generated temporary variables.
+  This fixes a problem that could make some function call expressions unprovable. (VER-1389)
+- improve compile time performance for functional record update definitions
