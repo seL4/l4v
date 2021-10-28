@@ -12,7 +12,7 @@
 set -e
 
 case $(uname) in
-  Darwin* ) TAR=gnutar ; SEDIOPT="-i ''" ;;
+  Darwin* ) TAR=gtar ; SEDIOPT="-i ''" ;;
   * ) TAR=tar ; SEDIOPT=-i ;;
 esac
 
@@ -88,7 +88,7 @@ git -C "${TOPLEVEL_DIR}" ls-files -z | tr '\0' '\n' |
   (cd "$outputdir/src" ; tar xf -)
 
 echo "Getting theory dependencies"
-CPARSER_DEPS=$(tempfile)
+CPARSER_DEPS=$(mktemp)
 for ARCH in $RELEASE_ARCHS; do
     L4V_ARCH=$ARCH misc/scripts/thydeps -I ./isabelle -d . -b . -r CParser
 done |
@@ -100,13 +100,15 @@ if grep -q -vE '^(lib/|tools/c-parser/)' "$CPARSER_DEPS"; then
     exit 1
 fi
 
-echo "Copying misc files"
-grep '^lib/' "$CPARSER_DEPS" |
-    xargs '-d\n' cp -v --parents -t "$outputdir/src"
+echo "Copying lib files"
+for f in $(grep '^lib/' "$CPARSER_DEPS")
+do
+    mkdir -p "$(dirname "$outputdir/src/$f")"
+    cp -v $f "$outputdir/src/$f"
+done
 
 # other misc files
-cp -v --parents -t "$outputdir/src" \
-   lib/Word_Lib/ROOT
+cp -v lib/Word_Lib/ROOT "$outputdir/src/lib/Word_Lib/"
 
 echo "Creating ROOTS file"
 cat >"$outputdir/src/ROOTS" <<EOF
