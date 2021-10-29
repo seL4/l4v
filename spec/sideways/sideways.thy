@@ -85,6 +85,16 @@ axiomatization do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs
 
 axiomatization store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
+axiomatization padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+
+axiomatization empty_fch :: fch
+axiomatization fch_flush_cycles :: "fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
+
+axiomatization do_pch_flush :: "pch \<Rightarrow> address set \<Rightarrow> pch"
+\<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
+
+axiomatization pch_flush_cycles :: "pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
+
 (*
   read process:
   - time step from read_time
@@ -121,10 +131,16 @@ definition
   | IReadTime \<Rightarrow>
       s\<lparr>regs := store_time (tm s) (regs s),
         tm := tm s + 1\<rparr>
+  | IPadToTime t \<Rightarrow>     \<comment> \<open>TODO: is it possible that this changes anything other than regs? what about going backwards?\<close>
+      s\<lparr>regs := padding_regs_impact t (regs s),
+        tm := t\<rparr>
+  | IFlushL1 \<Rightarrow>
+      s\<lparr>fch := empty_fch,
+        tm := tm s + fch_flush_cycles (fch s)\<rparr>
+  | IFlushL2 as \<Rightarrow>
+      s\<lparr>pch := do_pch_flush (pch s) as,
+        tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 
-  
-
-"
 
 
 
@@ -136,6 +152,8 @@ definition
                             IRead a  \<Rightarrow> a \<in> ta
                           | IWrite a \<Rightarrow> a \<in> ta
                           | _        \<Rightarrow> True }"
+
+
 
 (* these are the programs that could have created this ta *)
 definition
