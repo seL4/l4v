@@ -466,6 +466,7 @@ lemma decode_cnode_inv_wf[wp]:
              apply (fastforce simp: is_untyped_update_cap_data
                                     weak_derived_update_cap_data[OF _ weak_derived_refl])
             apply (wp get_cap_cte_wp_at ensure_empty_cte_wp_at)+
+           apply (wpsimp)
         apply simp
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
        \<comment> \<open>Revoke\<close>

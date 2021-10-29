@@ -361,12 +361,16 @@ lemma get_mi_valid[wp]:
 
 end
 
+
+sublocale touched_addresses_inv \<subseteq> pspace_respects_device_region:touched_addresses_P_inv _ pspace_respects_device_region
+  by unfold_locales (simp add:ta_agnostic_def)
+
 crunches get_extra_cptr
   for inv[wp]: P
   (wp: dmo_inv loadWord_inv)
 crunches set_extra_badge
-  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
-  and cap_refs_respects_device_region[wp]: "cap_refs_respects_device_region"
+  for pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   (wp: crunch_wps pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo)
 
 lemma get_extra_cptrs_inv[wp]:
