@@ -77,10 +77,13 @@ axiomatization read_impact :: cache_impact
 axiomatization write_impact :: cache_impact
   where pch_partitioned_write: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (write_impact a1 f p) a2"
 
-axiomatization read_time  :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
-axiomatization write_time :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
+axiomatization read_cycles  :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
+axiomatization write_cycles :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
 
 axiomatization do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
+axiomatization do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
+
+axiomatization store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
 (*
   read process:
@@ -91,7 +94,7 @@ axiomatization do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs 
 (* now we make some basic isntructions, which contain addresses etc *)
 datatype instr = IRead address
                | IWrite address
-               | IRegs
+               | IRegs "regs \<Rightarrow> regs"
                | IFlushL1
                | IFlushL2 "address set"
                | IReadTime
@@ -104,8 +107,24 @@ definition
     IRead a \<Rightarrow> let (f2, p2) = read_impact a (fch s) (pch s) in
       s\<lparr>fch := f2,
         pch := p2,
-        tm  := tm s + read_time (fch s a) (pch s a),
-        regs := do_read a (other_state s) (regs s)\<rparr>"
+        tm  := tm s + read_cycles (fch s a) (pch s a),
+        regs := do_read a (other_state s) (regs s)\<rparr>
+  | IWrite a \<Rightarrow> let (f2, p2) = write_impact a (fch s) (pch s) in
+      s\<lparr>fch := f2,
+        pch := p2,
+        tm  := tm s + write_cycles (fch s a) (pch s a),
+        other_state := do_write a (other_state s) (regs s)\<rparr>
+  | IRegs m \<Rightarrow>
+      s\<lparr>regs := m (regs s),
+        tm := tm s + 1 \<rparr> \<comment> \<open>we increment by the smallest possible amount - different instruction
+                            lengths can be encoded with strings of consecutive IRegs intructions.\<close>
+  | IReadTime \<Rightarrow>
+      s\<lparr>regs := store_time (tm s) (regs s),
+        tm := tm s + 1\<rparr>
+
+  
+
+"
 
 
 
