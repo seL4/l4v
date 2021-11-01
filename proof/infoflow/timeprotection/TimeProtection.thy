@@ -1,11 +1,11 @@
 (*
  * Copyright 2021, UNSW (ABN 57 195 873 179),
- * and The University of Melbourne (ABN 84 002 705 224).
+ * Copyright 2021, The University of Melbourne (ABN 84 002 705 224).
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory sideways
+theory TimeProtection
 imports "Word_Lib.WordSetup"
 begin
 
@@ -42,10 +42,9 @@ outputs:
   - new pch
   - time taken
 
-
 *)
 
-
+\<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
 typedecl fch_cachedness
 typedecl pch_cachedness
 type_synonym fch = "address \<Rightarrow> fch_cachedness"
@@ -58,8 +57,8 @@ typedecl other_state
 
 
 record state =
-  fch :: fch
-  pch :: pch
+  fch :: fch \<comment> \<open> flushable cache\<close>
+  pch :: pch \<comment> \<open> partitionable cache \<close>
   tm :: time
   regs :: regs
   other_state :: other_state
