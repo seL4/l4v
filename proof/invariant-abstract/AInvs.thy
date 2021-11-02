@@ -43,23 +43,34 @@ lemma thread_set_tcb_arch_ct_not_running[wp]:
 text \<open>The top-level invariance\<close>
 
 lemma akernel_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
-        scheduler_action s = resume_cur_thread \<and>
-        (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
-   call_kernel e
-   \<lbrace>\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> schact_is_rct s \<and> cur_sc_active s \<and> ct_not_in_release_q s
+        \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   (call_kernel e) :: (unit, unit) s_monad
+   \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   unfolding call_kernel_def preemption_path_def
   apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
                     update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
+  apply (fastforce intro: schact_is_rct_ct_active_sc
+                    simp: schedulable_def2 ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
-(*FIXME: should have (scheduler_action s = resume_cur_thread) as a postcondition*)
+lemma akernel_invs_det_ext:
+  "\<lbrace>\<lambda>s. invs s \<and> schact_is_rct s \<and> cur_sc_active s \<and> ct_not_in_release_q s
+        \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   (call_kernel e) :: (unit, det_ext) s_monad
+   \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
+  unfolding call_kernel_def preemption_path_def
+  apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
+                    update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
+  apply (fastforce intro: schact_is_rct_ct_active_sc
+                    simp: schedulable_def2 ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
 lemma kernel_entry_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
-        scheduler_action s = resume_cur_thread \<and>
-        (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
-  (kernel_entry e us) :: (user_context,unit) s_monad
-  \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
+  "\<lbrace>\<lambda>s. invs s \<and> schact_is_rct s \<and> cur_sc_active s \<and> ct_not_in_release_q s
+          \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   (kernel_entry e us) :: (user_context, unit) s_monad
+   \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
             static_imp_wp hoare_vcg_disj_lift hoare_vcg_imp_lift'
