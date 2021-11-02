@@ -228,17 +228,6 @@ lemma absKState_correct:
 
 text \<open>The top-level invariance\<close>
 
-lemma call_kernel_sched_act_rct[wp]:
-  "\<lbrace> einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and
-     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
-   call_kernel e
-   \<lbrace>\<lambda>_ s. scheduler_action s = resume_cur_thread\<rbrace>"
-  apply (simp add: call_kernel_def)
-  apply (wp activate_thread_sched_act | simp)+
-  sorry (*
-  apply (clarsimp simp: active_from_running)
-  done *)
-
 lemma kernel_entry_invs:
   "\<lbrace>einvs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
     and (\<lambda>s. 0 < domain_time s) and valid_domain_list and (ct_running or ct_idle)
@@ -622,6 +611,7 @@ lemma entry_corres:
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
            apply wp+
+  sorry (*
          apply (rule hoare_strengthen_post, rule akernel_invs, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial
@@ -631,7 +621,6 @@ lemma entry_corres:
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def)
-  sorry (*
   apply (clarsimp simp: ct_in_state'_def)
   done *)
 
