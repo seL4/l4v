@@ -190,6 +190,8 @@ The IPC receive operation is essentially the same as the send operation, but wit
 >                   let canGrant = blockingIPCCanGrant senderState
 >                   let canGrantReply = blockingIPCCanGrantReply senderState
 >                   doIPCTransfer sender (Just epptr) badge canGrant thread
+>                   scOpt <- threadGet tcbSchedContext sender
+>                   ifCondRefillUnblockCheck scOpt (Just False) (Just True)
 >                   let call = blockingIPCIsCall senderState
 >                   fault <- threadGet tcbFault sender
 >                   if (call || isJust fault)
