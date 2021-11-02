@@ -4593,6 +4593,12 @@ lemma valid_mask_vm_rights[simp]:
   "mask_vm_rights V R \<in> valid_vm_rights"
   by (simp add: mask_vm_rights_def)
 
+lemma cur_sc_tcb_sc_at_cur_sc:
+  "\<lbrakk>valid_objs s; cur_sc_tcb s\<rbrakk> \<Longrightarrow> sc_at (cur_sc s) s"
+  apply (fastforce intro: valid_objs_valid_sched_context_size
+                    simp: cur_sc_tcb_def sc_at_pred_n_def obj_at_def is_sc_obj_def)
+  done
+
 lemmas invs_implies =
   invs_equal_kernel_mappings
   invs_arch_state
