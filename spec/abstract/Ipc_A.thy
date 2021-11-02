@@ -307,6 +307,8 @@ where
                   sched_context_donate (the thread_sc) dest
                 od;
                 set_thread_state dest Running;
+                dest_sc \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+                if_sporadic_cur_sc_test_refill_unblock_check dest_sc;
                 possible_switch_to dest
               od
        | (RecvEP [], _) \<Rightarrow> fail
