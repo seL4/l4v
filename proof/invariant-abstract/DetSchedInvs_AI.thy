@@ -3660,6 +3660,16 @@ lemma schact_is_rct_sane[elim!]: "schact_is_rct s \<Longrightarrow> scheduler_ac
 abbreviation cur_sc_tcb_are_bound :: "'z state \<Rightarrow> bool" where
   "cur_sc_tcb_are_bound s \<equiv> heap_ref_eq (cur_sc s) (cur_thread s) (tcb_scps_of s)"
 
+lemma cur_sc_tcb_rev:
+  "\<lbrakk>cur_sc_tcb s; sym_refs (state_refs_of s); scheduler_action s = resume_cur_thread\<rbrakk>
+   \<Longrightarrow> bound_sc_tcb_at ((=) (Some (cur_sc s))) (cur_thread s) s"
+  by (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
+     (drule (2) sym_ref_sc_tcb, clarsimp simp: pred_tcb_at_def obj_at_def)
+
+lemma invs_strengthen_cur_sc_tcb_are_bound:
+  "\<lbrakk>schact_is_rct s; cur_sc_tcb s; sym_refs (state_refs_of s)\<rbrakk> \<Longrightarrow> cur_sc_tcb_are_bound s"
+  by (fastforce intro: cur_sc_tcb_rev simp: schact_is_rct_def tcb_at_kh_simps[symmetric])
+
 abbreviation ct_not_blocked where
   "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
 
@@ -3869,6 +3879,26 @@ lemma cur_sc_active_active_sc_tcb_at_cur_thread:
   apply (clarsimp simp: vs_all_heap_simps cur_sc_tcb_def sc_at_pred_n_def schact_is_rct_def
                         obj_at_def active_sc_def)
   apply (fastforce dest: sym_ref_sc_tcb)
+  done
+
+lemma it_not_in_release_qI:
+  "\<lbrakk>valid_release_q s; valid_idle s\<rbrakk> \<Longrightarrow> not_in_release_q (idle_thread s) s"
+  apply (clarsimp simp: not_in_release_q_def valid_release_q_def)
+  apply (drule_tac x="idle_thread s" in bspec; clarsimp)
+  apply (clarsimp simp: valid_idle_def vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  done
+
+lemma cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable:
+  "\<lbrakk>cur_sc_active s; ct_not_in_release_q s; invs s; schact_is_rct s\<rbrakk>
+   \<Longrightarrow> ct_running s \<longrightarrow> ct_schedulable s"
+  apply (clarsimp simp: schedulable_def2)
+  apply (rule conjI)
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (frule invs_cur_sc_tcb)
+  apply (frule invs_sym_refs)
+  apply (clarsimp simp: vs_all_heap_simps cur_sc_tcb_def sc_at_pred_n_def obj_at_def
+                        schact_is_rct_def cur_tcb_def is_tcb_def)
+  apply (fastforce dest!: sym_ref_sc_tcb)
   done
 
 abbreviation sc_bounded_release_time :: "sched_context \<Rightarrow> bool" where
