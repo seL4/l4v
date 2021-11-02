@@ -404,6 +404,8 @@ where
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
                         thread;
+              sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context sender;
+              if_sporadic_cur_sc_assert_refill_unblock_check sc_ptr;
               fault \<leftarrow> thread_get tcb_fault sender;
               if sender_is_call data \<or> fault \<noteq> None
               then
