@@ -20413,7 +20413,7 @@ lemma handle_interrupt_scheduler_act_sane[wp]:
   unfolding handle_interrupt_def
   by (wpsimp wp: hoare_drop_imp send_signal_scheduler_act_sane hoare_vcg_if_lift2)
 
-lemmas schat_is_rct_ct_active_sc = invs_cur_sc_tcb_symref[THEN cur_sc_active_ct_active_sc[rotated]]
+lemmas schact_is_rct_ct_active_sc = invs_cur_sc_tcb_symref[THEN cur_sc_active_ct_active_sc[rotated]]
 
 lemma handle_event_scheduler_act_sane:
   "\<lbrace>schact_is_rct
@@ -20435,7 +20435,7 @@ lemma handle_event_scheduler_act_sane:
                                  check_budget_restart_false
                     | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
              apply (clarsimp simp: schedulable_def2 )
-             apply (strengthen schat_is_rct_ct_active_sc)
+             apply (strengthen schact_is_rct_ct_active_sc)
              apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
              apply (fastforce elim: active_from_running)
             apply ((wpsimp simp: handle_call_def handle_send_def
@@ -20443,7 +20443,7 @@ lemma handle_event_scheduler_act_sane:
                                 check_budget_restart_false
                    | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
             apply (clarsimp simp: schedulable_def2 )
-            apply (strengthen schat_is_rct_ct_active_sc)
+            apply (strengthen schact_is_rct_ct_active_sc)
             apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
             apply (fastforce elim: active_from_running)
            apply ((wpsimp simp: handle_call_def handle_send_def
@@ -20451,7 +20451,7 @@ lemma handle_event_scheduler_act_sane:
                                check_budget_restart_false
                   | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
            apply (clarsimp simp: schedulable_def2 )
-           apply (strengthen schat_is_rct_ct_active_sc)
+           apply (strengthen schact_is_rct_ct_active_sc)
            apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
            apply (fastforce elim: active_from_running)
           apply ((wpsimp simp: handle_call_def handle_send_def
@@ -24979,7 +24979,7 @@ method he_ctris_two_phase_wp
 
 method he_ctris_two_phase_ff
  = (fastforce intro!: schact_is_rct_ct_released
-                      schat_is_rct_ct_active_sc
+                      schact_is_rct_ct_active_sc
                 simp: runnable_eq_active ct_in_state_def in_release_queue_def not_in_release_q_def
                       schedulable_def2
                 elim: invs_cur_sc_chargeableE)
@@ -25220,7 +25220,7 @@ lemma call_kernel_valid_sched:
    apply (wpsimp wp: handle_event_valid_sched handle_event_scheduler_act_sane
                      handle_event_cur_sc_in_release_q_imp_zero_consumed)
   apply (clarsimp simp: schact_is_rct_def schedulable_def2)
-  apply (frule schat_is_rct_ct_active_sc; simp add: schact_is_rct_def)
+  apply (frule schact_is_rct_ct_active_sc; simp add: schact_is_rct_def)
   apply (strengthen invs_strengthen_cur_sc_tcb_are_bound; simp add: schact_is_rct_def)
   apply (frule ct_in_state_weaken[where P=activatable], simp)
   apply (fastforce simp: ct_in_state_def runnable_eq_active)
