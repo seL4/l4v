@@ -82,7 +82,7 @@ correct material in here!
 ## Constants
 
 * constant names in the abstract spec follow usual Isabelle conventions and are
-  `underscore_case` unless they are datatype constructores, which are
+  `underscore_case` unless they are datatype constructors, which are
   `CamelCase`
 
 * constant names in Haskell and the design specification use Haskell conventions
