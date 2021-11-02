@@ -10701,9 +10701,21 @@ crunches check_domain_time, refill_budget_check, refill_budget_check_round_robin
    ignore: update_sched_context)
 
 lemma commit_time_sc_tcb_sc_at[wp]:
-  "commit_time \<lbrace>\<lambda>s. sc_tcb_sc_at P sc_ptr s\<rbrace>"
-   unfolding commit_time_def
-   by (wpsimp wp: hoare_drop_imps)
+  "commit_time \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
+  (is "_ \<lbrace>?pred\<rbrace>")
+  apply (clarsimp simp: commit_time_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule_tac B="\<lambda>_. ?pred" in hoare_seq_ext)
+   apply wpsimp
+  apply clarsimp
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule_tac B="\<lambda>_. ?pred" in hoare_seq_ext)
+   apply (wpsimp wp: update_sched_context_wp)
+   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  apply (wpsimp wp: update_sched_context_wp)
+  done
 
 crunches commit_time
   for ct_not_in_q[wp]: "ct_not_in_q"
@@ -12385,8 +12397,12 @@ lemma cancel_ipc_sc_tcb_sc_at_eq[wp]:
                wp: get_simple_ko_wp get_ep_queue_wp hoare_vcg_all_lift hoare_drop_imps
                    update_sched_context_sc_tcb_sc_at)
 
+crunches blocked_cancel_ipc, cancel_signal, test_reschedule
+  for bound_sc_tcb_at'[wp]: "\<lambda>s. Q (bound_sc_tcb_at P t s)"
+  (wp: crunch_wps)
+
 lemma cancel_ipc_bound_sc_tcb_at[wp]:
-  "cancel_ipc thread \<lbrace>bound_sc_tcb_at P thread\<rbrace>"
+  "cancel_ipc tptr \<lbrace>\<lambda>s. Q (bound_sc_tcb_at P t s)\<rbrace>"
   unfolding cancel_ipc_def
   apply (wpsimp simp: reply_remove_tcb_def
                   wp: gts_wp thread_set_wp get_sk_obj_ref_wp)
@@ -17481,12 +17497,9 @@ lemma tcb_release_remove_valid_blocked:
   apply (fastforce simp: in_release_q_def in_ready_q_def tcb_sched_act_in_queues_2_simps)
   done
 
-lemma tcb_release_remove_sc_tcb_at[wp]:
-  "\<lbrace>sc_tcb_sc_at (\<lambda>a. a = Some tcb_ptr) sc_ptr\<rbrace>
-   tcb_release_remove tcb_ptr
-   \<lbrace>\<lambda>rv. sc_tcb_sc_at (\<lambda>a. a = Some tcb_ptr) sc_ptr\<rbrace>"
-   unfolding tcb_release_remove_def
-   by wpsimp
+lemma tcb_release_remove_sc_tcb_sc_at[wp]:
+  "tcb_release_remove tcb_ptr \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
+  by (wpsimp simp: tcb_release_remove_def)
 
 lemma update_sched_context_tcb_ready_time:
   "\<lbrace>\<lambda>s. P (tcb_ready_time t s) \<and> (\<forall>x. sc_refills (f x) = sc_refills x)\<rbrace>
