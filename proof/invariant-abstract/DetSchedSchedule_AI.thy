@@ -112,11 +112,6 @@ lemma update_sk_obj_ref_lift:
   apply (wpsimp simp: update_sk_obj_ref_def get_simple_ko_wp | assumption)+
   done
 
-(* FIXME: move *)
-lemma invs_cur_sc_tcb [elim!]:
-  "invs s \<Longrightarrow> cur_sc_tcb s"
-  by (clarsimp simp: invs_def)
-
 (* This rule can cause problems with the simplifier if rule unification chooses a Q that does not
    specify proj. If necessary, this can be worked around by manually specifying proj. *)
 lemma update_sched_context_sc_at_pred_n_indep:

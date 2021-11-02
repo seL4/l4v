@@ -3965,6 +3965,10 @@ lemma invs_cur [elim!]:
   "invs s \<Longrightarrow> cur_tcb s"
   by (simp add: invs_def)
 
+lemma invs_cur_sc_tcb [elim!]:
+  "invs s \<Longrightarrow> cur_sc_tcb s"
+  by (clarsimp simp: invs_def)
+
 lemma invs_distinct [elim!]:
   "invs s \<Longrightarrow> pspace_distinct s"
   by (simp add: invs_def valid_state_def valid_pspace_def)
