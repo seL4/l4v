@@ -3246,6 +3246,11 @@ lemma hoare_validE_R_conjI:
   apply (clarsimp simp: Ball_def validE_R_def validE_def valid_def)
   by (case_tac a; fastforce)
 
+lemma hoare_validE_E_conjI:
+  "\<lbrakk> \<lbrace>P\<rbrace> f -, \<lbrace>Q\<rbrace> ; \<lbrace>P\<rbrace> f -, \<lbrace>Q'\<rbrace> \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
+  apply (clarsimp simp: Ball_def validE_E_def validE_def valid_def)
+  by (case_tac a; fastforce)
+
 lemma validE_R_post_conjD1:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q r s \<and> R r s\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   apply (clarsimp simp: validE_R_def validE_def valid_def)
