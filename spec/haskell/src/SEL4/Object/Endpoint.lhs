@@ -110,6 +110,8 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 The receiving thread has now completed its blocking operation and can run. If the receiving thread has higher priority than the current thread, the scheduler is instructed to switch to it immediately.
 
 >                 setThreadState Running dest
+>                 scOpt <- threadGet tcbSchedContext dest
+>                 ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 >                 possibleSwitchTo dest
 
 Empty receive endpoints are invalid.
