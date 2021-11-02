@@ -7,7 +7,7 @@
 theory Invariants_H
 imports
   LevityCatch
-  "AInvs.ArchDetSchedSchedule_AI"
+  "AInvs.AInvs"
   "Lib.AddUpdSimps"
   ArchMove_R
 begin
