@@ -1498,7 +1498,7 @@ lemma refill_unblock_check_active_sc_at[wp]:
   done
 
 lemma refill_update_invs:
-  "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr \<and> active_sc_at sc_ptr s\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding refill_update_def refill_add_tail_def set_refills_def update_refill_tl_def
