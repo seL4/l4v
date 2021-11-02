@@ -41,8 +41,9 @@ outputs:
   - new fch
   - new pch
   - time taken
-
 *)
+
+
 
 \<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
 typedecl fch_cachedness
@@ -94,6 +95,55 @@ axiomatization do_pch_flush :: "pch \<Rightarrow> address set \<Rightarrow> pch"
 
 axiomatization pch_flush_cycles :: "pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+
+(*
+
+  KSHARED
+  - some concrete set of addresses that spans various colours
+  - kernel steps may access these addresses - therefore there are time flows through pch
+  - we make the pch of all these addresses deterministic at domain-switch
+  - we may say that kshared includes all of the collision sets within itself
+
+
+
+
+  UWR u (CURRENTLY RUNNNING)
+  - all of fch
+  - pch (for addresses in colour(u))
+    - user transitions: only above
+    - kernel transitions: also addresses in kshared
+  - tm 
+  - all of regs
+  - other_state (according to external UWR u)
+
+  UWR u (NOT RUNNNING)
+  - none of fch
+  - pch (for addresses in colour(u))
+    - user transitions: only above
+    - kernel transitions: also addresses in kshared
+  - none of tm
+  - none of regs
+  - other_state (according to external UWR u)
+
+
+  every step maintains external UWR u
+
+*)
+
+(*
+ - if we have some types of step:
+   - kentry
+   - kexit 
+   - etc
+
+ - 
+
+ - for any step, touched_addresses is only in the current domain
+
+*)
+
+
+
 (*
   read process:
   - time step from read_time
@@ -110,6 +160,37 @@ datatype instr = IRead address
                | IPadToTime time
 
 
+primrec
+  instr_step :: "instr \<Rightarrow> state \<Rightarrow> state" where
+ "instr_step (IRead a) s = (let (f2, p2) = read_impact a (fch s) (pch s) in
+      s\<lparr>fch := f2,
+        pch := p2,
+        tm  := tm s + read_cycles (fch s a) (pch s a),
+        regs := do_read a (other_state s) (regs s)\<rparr>)"
+  | "instr_step (IWrite a) s = (let (f2, p2) = write_impact a (fch s) (pch s) in
+      s\<lparr>fch := f2,
+        pch := p2,
+        tm  := tm s + write_cycles (fch s a) (pch s a),
+        other_state := do_write a (other_state s) (regs s)\<rparr>)"
+  | "instr_step (IRegs m) s =
+      s\<lparr>regs := m (regs s),
+        tm := tm s + 1 \<rparr>" \<comment> \<open>we increment by the smallest possible amount - different instruction
+                            lengths can be encoded with strings of consecutive IRegs intructions.\<close>
+  | "instr_step IReadTime s =
+      s\<lparr>regs := store_time (tm s) (regs s),
+        tm := tm s + 1\<rparr>"
+  | "instr_step (IPadToTime t) s =     \<comment> \<open>TODO: is it possible that this changes anything other than regs? what about going backwards?\<close>
+      s\<lparr>regs := padding_regs_impact t (regs s),
+        tm := t\<rparr>"
+  | "instr_step IFlushL1 s =
+      s\<lparr>fch := empty_fch,
+        tm := tm s + fch_flush_cycles (fch s)\<rparr>"
+  | "instr_step (IFlushL2 as) s =
+      s\<lparr>pch := do_pch_flush (pch s) as,
+        tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
+
+
+(*
 definition
   instr_step :: "instr \<Rightarrow> state \<Rightarrow> state" where
  "instr_step i s \<equiv> case i of
@@ -139,11 +220,17 @@ definition
   | IFlushL2 as \<Rightarrow>
       s\<lparr>pch := do_pch_flush (pch s) as,
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
-
-
-
+*)
 
 type_synonym program = "instr list"
+
+primrec instr_multistep :: "program \<Rightarrow> state \<Rightarrow> state" where
+  "instr_multistep [] s = s"
+| "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
+
+
+
+
 
 definition
   instrs_obeying_ta :: "address set \<Rightarrow> instr set" where
@@ -159,6 +246,18 @@ definition
   programs_obeying_ta :: "address set \<Rightarrow> program set" where
  "programs_obeying_ta ta \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta ta) p}"
 
+
+(*
+
+  s  -->  t
+          
+  |       ||||
+  v       vvvv
+          
+  s'      t'
+
+
+*)
 
 
 
