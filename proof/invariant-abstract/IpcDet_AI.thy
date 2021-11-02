@@ -1273,6 +1273,11 @@ crunches receive_ipc_preamble
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
+crunches if_cond_refill_unblock_check
+  for reply_tcb_reply_at[wp]: "reply_tcb_reply_at P ptr"
+  and reply_sc_reply_at[wp]: "reply_sc_reply_at P ptr"
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: is_round_robin_def)
+
 lemma ri_invs[wp]:
   fixes thread ep_cap is_blocking reply
   notes if_split[split del]
@@ -1376,7 +1381,14 @@ lemma ri_invs[wp]:
    apply (clarsimp simp: sym_refs_def)
    apply (drule_tac x=ep_ptr in spec; clarsimp simp: mk_ep_def split: if_splits;
           erule (1) TCBBlockedSend_in_state_refs_of_unique)
-        (* thread_get tcb_fault *)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: hoare_vcg_ball_lift receive_ipc_preamble_rv_lift)
+    apply (rule hoare_vcg_conj_lift)
+     apply (wp misc_refill_unblock_check_obj_at_impossible')
+     apply simp
+    apply wpsimp
+   apply clarsimp        (* thread_get tcb_fault *)
   apply (rule hoare_seq_ext[OF _ thread_get_sp])
     (* if not call and no fault: sender \<rightarrow> Running *)
   apply (rule hoare_if[rotated]
