@@ -6,7 +6,7 @@
 
 theory KHeap_R
 imports
-  "AInvs.ArchDetSchedSchedule_AI"
+  "AInvs.AInvs"
   Machine_R
 begin
 

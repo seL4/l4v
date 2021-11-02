@@ -8,7 +8,7 @@
 
 theory Move_R
 imports
-  "AInvs.ArchDetSchedSchedule_AI"
+  "AInvs.AInvs"
 
 begin
 
