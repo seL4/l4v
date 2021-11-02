@@ -666,4 +666,557 @@ lemma call_kernel_cur_sc_active:
   apply (wpsimp wp: handle_event_preemption_path_schact_is_rct_imp_cur_sc_active)
   done
 
+lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>ct_not_in_release_q and invs and schact_is_rct and valid_sched_control_inv iv\<rbrace>
+   invoke_sched_control_configure_flags iv
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (simp add: invoke_sched_control_configure_flags_def)
+  apply (cases iv; clarsimp)
+  apply (rename_tac sc_ptr budget period mrefills badge flag)
+  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s
+                           \<and> ex_nonz_cap_to sc_ptr s
+                           \<and> sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: update_sc_badge_invs')
+    apply (wpsimp wp: update_sched_context_wp)
+   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
+                    simp: sc_at_pred_n_def obj_at_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: update_sc_sporadic_invs')
+    apply (wpsimp wp: update_sched_context_wp)
+   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr
+                    simp: sc_at_pred_n_def obj_at_def)
+  apply (rule hoare_seq_ext_skip)
+   apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp wp: commit_time_invs\<close>)?)
+   apply (rule hoare_when_cases, simp)
+   apply (rule_tac Q="sc_tcb_sc_at (\<lambda>to. to = sc_tcb sc) sc_ptr" in hoare_weaken_pre[rotated], simp)
+    apply (rule hoare_seq_ext_skip, wpsimp)+
+    apply wpsimp
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp wp: refill_update_invs gts_wp)
+   apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ assert_opt_sp])
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule_tac B="\<lambda>_ s. in_release_q (cur_thread s) s \<longrightarrow> tcb_ptr = cur_thread s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_ct_not_in_release_q)+
+   apply (metis option.sel pred_map_simps(1) sc_at_kh_simps(4) sc_at_pred_n_eq_commute)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_if)
+   apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+    apply (clarsimp simp: schact_is_rct_def)
+   apply (wpsimp wp: reschedule_cnt)
+  apply (wpsimp wp: hoare_drop_imps)
+  done
+
+crunches cancel_badged_sends
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+  (wp: crunch_wps preemption_point_inv check_cap_inv filterM_preserved cap_revoke_preservation
+   simp: crunch_simps)
+
+lemma invoke_cnode_ct_not_in_release_q[wp]:
+  "invoke_cnode iv \<lbrace>ct_not_in_release_q\<rbrace>"
+  by (clarsimp simp: invoke_cnode_def)
+     (cases iv; clarsimp; (intro conjI impI)?; wpsimp)
+
+crunches install_tcb_frame_cap
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+  (wp: crunch_wps preemption_point_inv ignore: check_cap_at simp: check_cap_at_def)
+
+crunches maybe_sched_context_unbind_tcb, bind_notification
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+  (wp: crunch_wps)
+
+lemma restart_ct_not_in_release_q_active:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> st_tcb_at active thread s\<rbrace>
+   restart thread
+   \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
+  apply (clarsimp simp: restart_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_when_cases)
+   apply fast
+  apply (wpsimp wp: hoare_pre_cont)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  by auto
+
+crunches test_possible_switch_to
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+
+crunches if_cond_refill_unblock_check
+  for bound_sc_tcb_at_ct'[wp]: "\<lambda>s. Q (bound_sc_tcb_at P (cur_thread s) s)"
+  (wp: crunch_wps hoare_vcg_if_lift2 ignore: update_sched_context)
+
+lemma restart_ct_not_in_release_q_not_cur_thread:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> thread \<noteq> cur_thread s
+        \<and> bound_sc_tcb_at bound (cur_thread s) s \<and> invs s\<rbrace>
+   restart thread
+   \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
+  apply (clarsimp simp: restart_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_when_cases, simp)
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> thread \<noteq> cur_thread s
+                           \<and> bound_sc_tcb_at ((=) sc_opt) thread s \<and> invs s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (wpsimp wp: sched_context_resume_ct_not_in_release_q)
+  apply (frule invs_sym_refs)
+  apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  apply (metis kernel_object.inject(5) option.inject sym_ref_tcb_sc)
+  done
+
+lemma sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> tcb_ptr \<noteq> cur_thread s\<rbrace>
+   sched_context_bind_tcb sc_ptr tcb_ptr
+   \<lbrace>\<lambda>_ s. schact_is_rct s  \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: sched_context_bind_tcb_def)
+  apply wpsimp
+         apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+          apply (clarsimp simp: schact_is_rct_def)
+         apply (wpsimp wp: reschedule_cnt)
+        apply wpsimp
+       apply (wpsimp wp: is_schedulable_wp)
+      apply (wpsimp wp: hoare_drop_imps sched_context_resume_ct_not_in_release_q
+                        update_sched_context_wp set_object_wp
+                  simp: set_tcb_obj_ref_def)+
+  apply (clarsimp simp: vs_all_heap_simps pred_map_simps obj_at_def)
+  done
+
+lemma invoke_tcb_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s \<and> tcb_inv_wf iv s \<and> ct_active s\<rbrace>
+   invoke_tcb iv
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>, -"
+  apply (cases iv; clarsimp;
+         (solves \<open>wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift mapM_x_inv_wp\<close>)?)
+
+   apply (find_goal \<open>match premises in \<open>_ = NotificationControl _ _ \<close> \<Rightarrow> \<open>-\<close>\<close>)
+      apply (rename_tac t ntfn)
+      apply (case_tac ntfn; wpsimp wp: hoare_vcg_imp_lift')
+
+     apply (find_goal \<open>match premises in \<open>_ = Resume _ \<close> \<Rightarrow> \<open>-\<close>\<close>)
+     apply (rename_tac thread)
+     apply (rule valid_validE_R)
+     apply (rule_tac P="\<lambda>s. thread = cur_thread s" in hoare_pre_tautI)
+      apply (wpsimp wp: restart_ct_not_in_release_q_active hoare_drop_imps)
+      apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb_def ct_in_state_def
+                      split: kernel_object.splits)
+     apply (wpsimp wp: restart_ct_not_in_release_q_not_cur_thread hoare_drop_imps)
+     apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                      simp: obj_at_def pred_tcb_at_def vs_all_heap_simps)
+
+    apply (find_goal \<open>match premises in \<open>_ = WriteRegisters _  _ _ _ \<close> \<Rightarrow> \<open>-\<close>\<close>)
+    apply (rename_tac dest resume_target vals arch)
+    apply (rule valid_validE_R)
+    apply (rule_tac P="\<lambda>s. dest = cur_thread s" in hoare_pre_tautI)
+     apply (wpsimp wp: hoare_vcg_imp_lift' restart_ct_not_in_release_q_active
+                       hoare_vcg_disj_lift
+            | intro conjI impI)+
+      apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb_def ct_in_state_def
+                      split: kernel_object.splits)
+    apply (wpsimp wp: hoare_vcg_imp_lift' restart_ct_not_in_release_q_not_cur_thread
+           | intro conjI impI)+
+     apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                      simp: obj_at_def pred_tcb_at_def vs_all_heap_simps)
+
+   apply (find_goal \<open>match premises in \<open>_ = CopyRegisters _  _ _ _ _ _ _\<close> \<Rightarrow> \<open>-\<close>\<close>)
+   apply (rule valid_validE_R)
+   apply (rename_tac dest src suspend_source resume_target transfer_frame transfer_integer transfer_arch)
+   apply (rule validE_valid)
+   apply (subst liftE_validE)
+   apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s \<and> cur_sc_tcb_are_bound s \<and> invs s
+                            \<and> ex_nonz_cap_to src s \<and> ex_nonz_cap_to dest s"
+                in hoare_seq_ext[rotated])
+    apply (wpsimp wp: suspend_invs)
+    apply (frule invs_strengthen_cur_sc_tcb_are_bound, fastforce+)
+    using idle_no_ex_cap idle_thread_idle_thread_ptr
+    apply (metis invs_valid_global_refs invs_valid_idle invs_valid_objs)
+   apply (rule_tac B="\<lambda>_ s. in_release_q (cur_thread s) s \<longrightarrow> dest = cur_thread s"
+                in hoare_seq_ext[rotated])
+    apply (wpsimp wp: hoare_vcg_imp_lift' restart_ct_not_in_release_q_not_cur_thread)
+    apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                     simp: obj_at_def pred_tcb_at_def vs_all_heap_simps)
+   apply (rule hoare_seq_ext_skip)
+    apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp_inv)
+   apply (rule hoare_seq_ext_skip)
+    apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp_inv)
+   apply (rule hoare_seq_ext[OF _ gets_sp])
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (rule hoare_seq_ext)
+    apply (rule return_inv)
+   apply (rule hoare_when_cases, simp)
+   apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+    apply (clarsimp simp: schact_is_rct_def)
+   apply (wpsimp wp: reschedule_cnt)
+
+  \<comment> \<open>iv = ThreadControlSched\<close>
+  apply (rename_tac target a b fault_handler mcp priority sc)
+  apply (clarsimp simp: validE_R_def)
+  apply (rule_tac Q="\<lambda>s. ct_not_in_release_q s
+                         \<and> invs s \<and> schact_is_rct s \<and> tcb_at target s
+                         \<and> (case sc of None \<Rightarrow> \<lambda>_. True
+                                     | Some None \<Rightarrow> \<lambda>s. True
+                                     | Some (Some scptr) \<Rightarrow> (bound_sc_tcb_at ((=) None) target)
+                                                             and sc_tcb_sc_at ((=) None) scptr) s"
+               in hoare_weaken_preE[rotated])
+   apply (clarsimp split: option.splits)
+  apply (rule_tac B="\<lambda>_ s. ct_not_in_release_q s
+                           \<and> bound_sc_tcb_at bound (cur_thread s) s
+                           \<and> tcb_at target s
+                           \<and> (case sc of None \<Rightarrow> \<lambda>_. True
+                                       | Some None \<Rightarrow> \<lambda>s. True
+                                       | Some (Some scptr) \<Rightarrow> (bound_sc_tcb_at ((=) None) target)
+                                                               and sc_tcb_sc_at ((=) None) scptr) s"
+               in hoare_vcg_seqE[rotated])
+   apply (rule hoare_weaken_preE)
+    apply (subst validE_R_def[symmetric])
+    apply (rule hoare_vcg_conj_lift_R)
+     apply wpsimp
+    apply (rule hoare_vcg_conj_lift_R)
+     apply (rule valid_validE_R)
+     apply (rule_tac f=cur_thread in hoare_lift_Pf2)
+      apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_bound_sc_tcb_at)
+     apply wpsimp
+    apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_sc_tcb_sc_at)
+    apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                     simp: obj_at_def pred_tcb_at_def vs_all_heap_simps
+                    split: option.splits)
+  apply (rule hoare_seq_ext_skipE)
+   apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_sc_tcb_sc_at)
+   apply (clarsimp split: option.splits)
+  apply (rule hoare_seq_ext_skipE)
+   apply (wpsimp wp: hoare_case_option_wp install_tcb_cap_sc_tcb_sc_at)
+   apply (clarsimp split: option.splits)
+  apply (subst liftE_bindE)
+  apply (clarsimp simp: maybeM_def)
+  apply (case_tac sc; clarsimp)
+   apply wpsimp
+  apply (clarsimp split: option.splits)
+  apply (intro conjI)
+   apply (wpsimp wp: hoare_drop_imps)
+  apply (clarsimp simp: maybe_sched_context_bind_tcb_def bind_assoc)
+  apply (wpsimp wp: sched_context_bind_tcb_schact_is_rct_imp_ct_not_in_release_q hoare_vcg_if_lift2)
+    apply (wpsimp wp: hoare_drop_imps)
+   apply wpsimp
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+crunches invoke_irq_handler
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+
+lemma perform_invocation_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s \<and> valid_invocation iv s \<and> ct_active s\<rbrace>
+   perform_invocation block call can_donate iv
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>, -"
+  apply (cases iv; simp, (solves \<open>wpsimp wp: hoare_drop_imps\<close>)?)
+    apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def split: if_splits)
+   apply (wpsimp wp: invoke_tcb_schact_is_rct_imp_ct_not_in_release_q)
+  apply (wpsimp wp: invoke_sched_control_configure_flags_schact_is_rct_imp_ct_not_in_release_q)
+  done
+
+lemma handle_invocation_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s.  ct_not_in_release_q s \<and> cur_sc_active s \<and> invs s \<and> schact_is_rct s \<and> ct_active s\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (clarsimp simp: handle_invocation_def)
+  apply (subst liftE_bindE)
+  apply (rule hoare_seq_ext[OF _  gets_sp])
+  apply (subst liftE_bindE)
+  apply (rule_tac B="\<lambda>rv. ?P and (\<lambda>s. cur_thread s = thread) and K (valid_message_info rv)"
+               in hoare_seq_ext[rotated])
+   apply wpsimp
+  apply (rule validE_valid)
+  apply (rule_tac P_flt="\<lambda>_. ?Q" and P_err="\<lambda>_. ?Q"
+              and P_no_err="\<lambda>rv. ?P and (\<lambda>s. cur_thread s = thread) and valid_invocation rv"
+               in syscall_valid)
+      apply (wpsimp wp: hoare_vcg_imp_lift')
+     apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (rule hoare_weaken_preE)
+     apply (rule hoare_vcg_E_elim)
+      apply (wpsimp wp: handle_invocation_ct_not_in_release_qE_E hoare_drop_impE_E)
+     apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
+              apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
+             apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
+            apply (wpsimp wp: gts_wp')+
+      apply (clarsimp simp: validE_R_def)
+      apply (rule_tac Q="\<lambda>_. ?Q" and E="\<lambda>_. ?Q" in hoare_post_impErr[rotated]; fastforce?)
+      apply (rule hoare_vcg_E_elim)
+       apply (wpsimp wp: handle_invocation_ct_not_in_release_qE_E hoare_drop_impE_E)
+      apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
+     apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q)
+     apply (wpsimp wp: ct_in_state_set set_thread_state_schact_is_rct_strong)
+    apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread
+                      simp: ct_in_state_def)
+   apply (wp hoare_vcg_E_conj | simp add: split_def)+
+  by fastforce
+
+lemma charge_budget_schact_is_rct_imp_ct_not_in_release_q[wp]:
+  "charge_budget consumed canTimeout \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: charge_budget_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (rule hoare_when_cases, simp)
+  apply wpsimp
+      apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+       apply (clarsimp simp: schact_is_rct_def)
+      apply (wpsimp wp: reschedule_cnt hoare_drop_imps)+
+  done
+
+crunches handle_yield, check_budget
+  for schact_is_rct_imp_ct_not_in_release_q[wp]: "\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s"
+
+lemma check_budget_restart_schact_is_rct_imp_ct_not_in_release_q[wp]:
+  "check_budget_restart \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: check_budget_restart_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+crunches receive_ipc, handle_fault
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma maybe_donate_sc_ct_not_in_release_q_thread_bound:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> thread = cur_thread s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
+   maybe_donate_sc thread sc_ptr
+   \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
+  apply (clarsimp simp: maybe_donate_sc_def)
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_when_cases, simp)
+  apply (wpsimp wp: hoare_pre_cont)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma receive_signal_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> thread = cur_thread s\<rbrace>
+   receive_signal thread cap is_blocking
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: receive_signal_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (case_tac "ntfn_obj ntfn"; clarsimp?, (solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
+  apply (rule hoare_vcg_imp_lift_pre_add; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (wpsimp wp: maybe_donate_sc_ct_not_in_release_q_thread_bound set_simple_ko_wp)
+  apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                   simp: obj_at_def pred_tcb_at_def vs_all_heap_simps sk_obj_at_pred_def)
+  done
+
+lemma handle_recv_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s\<rbrace>
+   handle_recv is_blocking can_reply
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: handle_recv_def Let_def)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule catch_wp)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply clarsimp
+  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (case_tac ep_cap; clarsimp; (solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+   apply fastforce
+  apply (wpsimp wp: receive_signal_schact_is_rct_imp_ct_not_in_release_q get_sk_obj_ref_wp)
+  done
+
+method handle_event_schact_is_rct_imp_ct_not_in_release_q for e
+  = rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift',
+    rule_tac B="\<lambda>rv s. (rv \<longrightarrow> (ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s
+                                \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+                                \<and> cur_sc_active s ))
+                       \<and> (\<not>rv \<longrightarrow> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s))"
+          in hoare_seq_ext[rotated],
+    intro hoare_vcg_conj_lift_pre_fix,
+    wpsimp wp: check_budget_restart_true,
+    rule check_budget_restart_false,
+    wpsimp,
+    clarsimp simp: whenE_def,
+    (intro conjI impI; (solves wpsimp)?),
+    wpsimp wp: handle_invocation_schact_is_rct_imp_ct_not_in_release_q
+               handle_recv_schact_is_rct_imp_ct_not_in_release_q,
+    ((cases e;
+     fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+               simp: obj_at_def pred_tcb_at_def vs_all_heap_simps schedulable_def2 ct_in_state_def
+                     runnable_eq_active)?)
+
+method handle_event_schact_is_rct_imp_ct_not_in_release_q_misc for e
+  = clarsimp simp: liftE_def bind_assoc,
+    rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift',
+    rule_tac B="\<lambda>rv s. (rv \<longrightarrow> ((schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s
+                                \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+                                \<and> cur_sc_active s))
+                       \<and> (\<not>rv \<longrightarrow> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s))"
+          in hoare_seq_ext[rotated],
+    intro hoare_vcg_conj_lift_pre_fix,
+    wpsimp wp: check_budget_restart_true,
+    rule check_budget_restart_false,
+    wpsimp,
+    wpsimp wp: hoare_vcg_imp_lift'
+
+method handle_event_schact_is_rct_imp_ct_not_in_release_q_yield for e
+  = clarsimp simp: liftE_def bind_assoc,
+    rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift',
+    rule_tac B="\<lambda>rv s. (rv \<longrightarrow> ((schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s
+                                \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+                                \<and> cur_sc_active s))
+                       \<and> (\<not>rv \<longrightarrow> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s))"
+          in hoare_seq_ext[rotated],
+    intro hoare_vcg_conj_lift_pre_fix,
+    wpsimp wp: check_budget_restart_true,
+    rule check_budget_restart_false,
+    wpsimp,
+    clarsimp simp: whenE_def,
+    (intro conjI impI; (solves wpsimp)?)
+
+lemma handle_interrupt_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s
+         \<and> ct_not_blocked_on_receive s \<and> ct_not_blocked_on_ntfn s\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: handle_interrupt_def)
+  apply (rule hoare_if; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext, wpsimp)
+  apply (case_tac st; clarsimp?, (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (clarsimp split: if_splits)
+  done
+
+lemma handle_event_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s \<and> cur_sc_active s
+        \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (cases e; (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
+  apply (rename_tac syscall)
+
+       \<comment> \<open>SyscallEvent\<close>
+       subgoal for syscall
+       by (case_tac syscall, simp_all add: handle_send_def handle_call_def liftE_bindE;
+           (handle_event_schact_is_rct_imp_ct_not_in_release_q e
+            | handle_event_schact_is_rct_imp_ct_not_in_release_q_yield e))
+
+      apply (find_goal \<open>match premises in "_ = Interrupt" \<Rightarrow> \<open>-\<close>\<close>)
+      defer
+
+      apply (handle_event_schact_is_rct_imp_ct_not_in_release_q_misc e)+
+
+  \<comment> \<open>Interrupt\<close>
+  apply (clarsimp simp: liftE_def bind_assoc)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+    apply (clarsimp simp: ct_in_state_def)
+   apply simp
+  apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift')
+  apply (rule_tac B="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> cur_sc_active s
+                           \<and> ct_not_blocked_on_receive s \<and> ct_not_blocked_on_ntfn s"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp wp: cur_sc_active_lift)
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
+                   split: thread_state.splits)
+  apply (wpsimp wp: handle_interrupt_schact_is_rct_imp_ct_not_in_release_q)
+  done
+
+lemma preemption_path_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s
+        \<and> ct_not_blocked_on_receive s \<and> ct_not_blocked_on_ntfn s\<rbrace>
+   preemption_path
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: preemption_path_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp simp: ct_in_state_def\<close>)+
+  apply (wpsimp wp: handle_interrupt_schact_is_rct_imp_ct_not_in_release_q)
+  done
+
+lemma handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s \<and> cur_sc_active s
+        \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   handle_event e <handle> (\<lambda>_. liftE preemption_path)
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (rule validE_valid)
+  apply (rule_tac F="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> ct_not_blocked s"
+               in handleE_wp)
+   apply (wpsimp wp: preemption_path_schact_is_rct_imp_ct_not_in_release_q)
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (rename_tac tcb, case_tac "tcb_state tcb"; clarsimp)
+  apply (rule hoare_vcg_E_elim[where P=P and P'=P for P, simplified])
+   apply (intro hoare_validE_E_conjI)
+     apply (rule valid_validE_E)
+     apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_not_in_release_q)
+    apply wpsimp
+    apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable
+                      simp: schact_is_rct_def)
+   apply (rule_tac Q'="\<lambda>_. ct_not_blocked" in hoare_post_imp_E)
+    apply wpsimp
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
+                    split: thread_state.splits)
+   apply simp
+  apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_not_in_release_q)
+  done
+
+crunches awaken, check_domain_time, sc_and_timer, tcb_sched_action
+  for ct_not_in_release_q[wp]: ct_not_in_release_q
+  (wp: crunch_wps)
+
+lemma schedule_switch_thread_branch_ct_not_in_release_q:
+  "\<lbrace>valid_release_q and valid_idle and ready_or_release and (\<lambda>s. ct_schdble = ct_schedulable s)
+    and (not_in_release_q candidate) and (\<lambda>s. ct = cur_thread s)\<rbrace>
+   schedule_switch_thread_branch candidate ct ct_schdble
+   \<lbrace>\<lambda>_ s :: det_state. ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: schedule_switch_thread_fastfail_def)
+  apply (rule_tac B="\<lambda>_. valid_release_q and valid_idle and ready_or_release
+                         and (not_in_release_q candidate)"
+               in hoare_seq_ext[rotated])
+   apply (wpsimp simp: schedulable_def2)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (wpsimp wp: schedule_choose_new_thread_ct_not_in_release_q
+                    switch_to_thread_active_sc_tcb_at_cur_thread thread_get_wp)
+  done
+
+lemma schedule_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)\<rbrace>
+   schedule
+   \<lbrace>\<lambda>_ s :: det_state. ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: schedule_def)
+  apply (rule hoare_seq_ext_skip, wpsimp wp: awaken_valid_sched hoare_vcg_imp_lift')
+  apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
+  apply (rule hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
+  apply (rule hoare_seq_ext[OF _ gets_sp], rename_tac action)
+  apply (rule hoare_seq_ext)
+   apply wpsimp
+  apply (case_tac action; clarsimp)
+    apply wpsimp
+    apply (fastforce simp: schact_is_rct_def)
+   apply (subst bind_dummy_ret_val)+
+   apply (rule hoare_weaken_pre)
+    apply (rule schedule_switch_thread_branch_ct_not_in_release_q)
+   apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                         not_in_release_q_def)
+  apply (wpsimp wp: schedule_choose_new_thread_ct_not_in_release_q)
+  by (fastforce simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                      not_in_release_q_def schedulable_def2)
+
+lemma call_kernel_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> cur_sc_active s \<and> invs s \<and> schact_is_rct s \<and> valid_sched s
+        \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
+        \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
+   call_kernel e
+   \<lbrace>\<lambda>_ s :: det_state. ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: call_kernel_def)
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext)
+   apply (wpsimp wp: cur_sc_active_lift)
+  apply (rule hoare_seq_ext[OF schedule_ct_not_in_release_q])
+  apply (intro hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: handle_event_preemption_path_valid_sched)
+   apply wpsimp
+   apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable)
+  apply (wpsimp wp: handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q)
+  done
+
 end

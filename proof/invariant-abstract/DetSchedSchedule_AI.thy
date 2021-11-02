@@ -18121,6 +18121,8 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault =
             and valid_release_q\<rbrace>
        handle_hypervisor_fault t fault
        \<lbrace>\<lambda>_. cur_sc_in_release_q_imp_zero_consumed :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes handle_hypervisor_fault_ct_not_in_release_q[wp]:
+    "\<And>t fault. handle_hypervisor_fault t fault \<lbrace>ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
 
 locale DetSchedSchedule_AI_handle_hypervisor_fault_det_ext =
   DetSchedSchedule_AI_handle_hypervisor_fault "TYPE (det_ext)"
@@ -18573,7 +18575,7 @@ lemma postpone_not_queued_other:
 lemma sched_context_resume_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> \<not> heap_ref_eq (cur_thread s) sc_ptr (sc_tcbs_of s)\<rbrace>
    sched_context_resume sc_ptr
-   \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
   unfolding sched_context_resume_def
   by (wpsimp wp: postpone_ct_not_in_release_q get_tcb_queue_wp is_schedulable_wp
            simp: thread_get_def vs_all_heap_simps obj_at_kh_kheap_simps)
@@ -18628,7 +18630,7 @@ lemma update_waiting_ntfn_ct_not_in_release_q[wp]:
   unfolding update_waiting_ntfn_def by (wpsimp wp: maybeM_inv)
 
 lemma send_signal_ct_not_in_release_q[wp]:
-  "\<lbrace>ct_not_in_release_q and ct_not_blocked and invs\<rbrace>
+  "\<lbrace>ct_not_in_release_q and ct_not_blocked_on_ntfn and ct_not_blocked_on_receive and invs\<rbrace>
    send_signal ntfnptr badge
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_signal_def
@@ -19019,7 +19021,10 @@ lemma perform_invocation_first_phase_ct_not_in_release_q:
    perform_invocation block call can_donate i
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (rule hoare_gen_asm)
-  by (cases i; (wpsimp | wps)+)
+  apply (cases i; (wpsimp | wps)+)
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
+                   split: thread_state.splits)
+  done
 
 lemma perform_invocation_first_phase_ct_not_queued:
   "\<lbrace>ct_not_in_release_q and ct_not_queued and invs and ct_active and valid_invocation i
