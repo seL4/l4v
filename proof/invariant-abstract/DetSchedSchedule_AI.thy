@@ -11930,12 +11930,6 @@ lemma enqueue_thread_queued_ct:
                   split: option.splits dest!: get_tcb_SomeD)
   done
 
-lemma cur_sc_tcb_rev:
-  "\<lbrakk>cur_sc_tcb s; sym_refs (state_refs_of s); scheduler_action s = resume_cur_thread\<rbrakk>
-     \<Longrightarrow> bound_sc_tcb_at ((=) (Some (cur_sc s))) (cur_thread s) s"
-  by (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def)
-     (drule (2) sym_ref_sc_tcb, clarsimp simp: pred_tcb_at_def obj_at_def)
-
 lemma valid_refills_cur_thread_update[simp]:
   "valid_refills ptr (s\<lparr>cur_thread := param_a\<rparr>) = valid_refills ptr s"
   by (clarsimp simp: valid_refills_def)
@@ -12082,15 +12076,6 @@ lemma awaken_in_release_q:
   using read_release_q_non_empty_and_ready_True_simp
         valid_release_q_read_release_q_non_empty_and_ready_bound
   by fastforce
-
-lemma it_not_in_release_qI:
-  "valid_release_q s \<Longrightarrow>
-   valid_idle s \<Longrightarrow>
-   not_in_release_q (idle_thread s) s"
-  apply (clarsimp simp: not_in_release_q_def valid_release_q_def)
-  apply (drule_tac x="idle_thread s" in bspec; clarsimp)
-  apply (clarsimp simp: valid_idle_def vs_all_heap_simps pred_tcb_at_def obj_at_def)
-  done
 
 lemma switch_to_thread_eq_idle_thread:
   "\<lbrace>\<lambda>s. t = idle_thread s\<rbrace> switch_to_thread t \<lbrace>\<lambda>_ s :: 'state_ext state. cur_thread s = idle_thread s\<rbrace>"
@@ -18020,18 +18005,13 @@ lemma cur_sc_tcb_bound_ready:
   apply (simp add: word_le_nat_alt unat_add_lem)
   by (frule cur_time_no_overflow, simp add: unat_plus_simple)
 
-lemma invs_strengthen_cur_sc_tcb_are_bound:
-  "\<lbrakk>schact_is_rct s; invs s\<rbrakk> \<Longrightarrow> cur_sc_tcb_are_bound s"
-  by (fastforce simp: tcb_at_kh_simps[symmetric]
-               intro: cur_sc_tcb_rev)
-
 lemma schact_is_rct_ct_released:
   "\<lbrakk>schact_is_rct s; cur_sc_active s; valid_sched s; invs s;
     cur_sc_offset_ready k s; current_time_bounded j s\<rbrakk>
    \<Longrightarrow> ct_released s"
   apply (subgoal_tac "active_sc_tcb_at (cur_thread s) s")
   apply (clarsimp simp: released_sc_tcb_at_def)
-    apply (erule cur_sc_tcb_bound_ready[OF _ invs_strengthen_cur_sc_tcb_are_bound], clarsimp, simp+)
+   apply (erule (1) cur_sc_tcb_bound_ready[OF _ invs_strengthen_cur_sc_tcb_are_bound], fastforce+)
   apply (erule (2) cur_sc_active_ct_active_sc[OF _ invs_cur_sc_tcb_symref])
   done
 
@@ -23849,7 +23829,7 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_single
             cong: conj_cong
      , (rename_tac s)?
      , prop_tac "cur_sc_tcb_are_bound s"
-     , rule invs_strengthen_cur_sc_tcb_are_bound, blast+
+     , rule invs_strengthen_cur_sc_tcb_are_bound, fastforce+
      , drule invs_sym_refs
      , (intro conjI impI; blast?)?
      , (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
@@ -23886,14 +23866,14 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_combined
       , clarsimp cong: conj_cong
       , (intro conjI impI
          ; (solves \<open>clarsimp simp: current_time_bounded_def schact_is_rct_def\<close>)?)
-      , (rule invs_strengthen_cur_sc_tcb_are_bound; blast+)
+      , (rule invs_strengthen_cur_sc_tcb_are_bound; fastforce+)
       , clarsimp simp: schedulable_def2
       , intro conjI impI
       , clarsimp simp: pred_tcb_at_def obj_at_def ct_in_state_def
       , (case_tac "tcb_state tcb"; clarsimp?)
       , clarsimp simp: sc_at_pred_n_def obj_at_def vs_all_heap_simps active_sc_def
       , prop_tac "cur_sc_tcb_are_bound s"
-      , rule invs_strengthen_cur_sc_tcb_are_bound, blast+
+      , rule invs_strengthen_cur_sc_tcb_are_bound, fastforce+
       , clarsimp simp: vs_all_heap_simps)
 
 lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
@@ -23915,7 +23895,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
     by (case_tac syscall; simp
         ; cur_sc_in_release_q_imp_zero_consumed_syscall_single?
           , cur_sc_in_release_q_imp_zero_consumed_syscall_combined?) \<comment> \<open>takes 30 seconds or so\<close>
-        fastforce+
+       fastforce+
 
       apply (wpsimp wp: check_budget_restart_if_lift
                         update_timestamp_cur_sc_in_release_q_imp_zero_consumed)
@@ -23949,7 +23929,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
                           check_budget_valid_sched)
        apply (clarsimp cong: conj_cong)
       apply (prop_tac "cur_sc_tcb_are_bound s")
-       apply (rule invs_strengthen_cur_sc_tcb_are_bound, blast+)
+       apply (rule invs_strengthen_cur_sc_tcb_are_bound, fastforce+)
       apply (intro conjI impI; blast?)
        apply (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
         apply (erule invs_sym_refs)
@@ -23969,7 +23949,7 @@ lemma handle_event_cur_sc_in_release_q_imp_zero_consumed:
   \<comment> \<open>handle_hypervisor_fault\<close>
   apply wpsimp
   apply (prop_tac "cur_sc_tcb_are_bound s")
-   apply (rule invs_strengthen_cur_sc_tcb_are_bound; blast)
+   apply (rule invs_strengthen_cur_sc_tcb_are_bound; fastforce?)
   apply (intro conjI impI)
     apply (rule cur_sc_tcb_are_bound_cur_sc_in_release_q_imp_zero_consumed; assumption?)
     apply (erule invs_sym_refs)
