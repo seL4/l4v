@@ -9,7 +9,7 @@ The main theorem
 *)
 
 theory AInvs
-imports ArchAInvsPre
+imports ArchDetSchedSchedule_AI
 begin
 
 lemma st_tcb_at_nostate_upd:
