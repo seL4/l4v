@@ -1219,4 +1219,74 @@ lemma call_kernel_ct_not_in_release_q:
   apply (wpsimp wp: handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q)
   done
 
+lemma set_thread_state_Running_schact_is_rct:
+  "\<lbrace>\<lambda>s. schact_is_rct s \<and> active_sc_tcb_at (cur_thread s) s \<and> ct_not_in_release_q s\<rbrace>
+   set_thread_state thread Running
+   \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
+  apply (rule_tac B="\<lambda>_ s. ?pre s \<and> st_tcb_at ((=) Running) thread s" in hoare_seq_ext[rotated])
+   apply (wpsimp simp: set_scheduler_action_def
+                   wp: is_schedulable_wp hoare_vcg_if_lift2 set_object_wp)
+   apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  apply (intro hoare_seq_ext[OF _ gets_sp])
+  apply (rule hoare_seq_ext[OF _ is_schedulable_sp'])
+  apply (rule hoare_when_cases)
+   apply (clarsimp simp: schact_is_rct_def)
+  apply (fastforce intro: st_tcb_weakenE hoare_pre_cont hoare_weaken_pre
+                    simp: schedulable_def2)
+  done
+
+lemma activate_thread_schact_is_rct:
+  "\<lbrace>\<lambda>s. schact_is_rct s \<and> invs s \<and> cur_sc_active s \<and> ct_not_in_release_q s\<rbrace>
+   activate_thread
+   \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  apply (clarsimp simp: activate_thread_def)
+  apply (wpsimp wp: set_thread_state_Running_schact_is_rct gts_wp hoare_drop_imp hoare_vcg_all_lift
+              simp: schedulable_def2)
+  apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread)
+  done
+
+crunches sc_and_timer
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (wp: crunch_wps)
+
+lemmas ssa_schact_is_rct_obvious[wp] = set_scheduler_action_obvious
+                                         [where a=resume_cur_thread,
+                                          simplified schact_is_rct_def[symmetric]]
+
+lemma schact_is_rct_simps[simp]:
+  "schact_is_rct_2 resume_cur_thread"
+  by (simp add: schact_is_rct_def)
+
+lemma schedule_schact_is_rct[wp]:
+  "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>_ s. schact_is_rct s\<rbrace>"
+  unfolding schedule_def
+  by wpsimp
+
+lemma call_kernel_schact_is_rct:
+  "\<lbrace>\<lambda>s. schact_is_rct s \<and> invs s \<and> valid_sched s \<and> cur_sc_active s \<and> ct_not_in_release_q s
+        \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
+        \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
+   call_kernel e
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s\<rbrace>"
+  apply (clarsimp simp: call_kernel_def)
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext[OF activate_thread_schact_is_rct])
+  apply (rule_tac B="\<lambda>_ s. invs s \<and> valid_sched s
+                           \<and> (schact_is_rct s \<longrightarrow> cur_sc_active s)
+                           \<and> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+               in hoare_seq_ext[rotated])
+   apply (intro hoare_vcg_conj_lift_pre_fix)
+      apply wpsimp
+    apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable
+                      simp: schact_is_rct_def)
+     apply (wpsimp wp: handle_event_preemption_path_valid_sched)
+    apply (wpsimp wp: handle_event_preemption_path_schact_is_rct_imp_cur_sc_active)
+   apply (wpsimp wp: handle_event_preemption_path_schact_is_rct_imp_ct_not_in_release_q)
+  apply (wpsimp wp: schedule_cur_sc_active schedule_ct_not_in_release_q)
+  done
+
 end
