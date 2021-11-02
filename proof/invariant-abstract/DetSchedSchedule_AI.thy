@@ -19599,7 +19599,7 @@ lemma invoke_untyped_current_time_bounded_3[wp]:
                   wp: mapM_x_wp_inv)
   done
 
-crunches finalise_cap, send_signal, do_reply_transfer
+crunches finalise_cap, send_signal, do_reply_transfer, schedule, activate_thread
   for consumed_time_bounded[wp]: "consumed_time_bounded :: 'state_ext state \<Rightarrow> _"
   and current_time_bounded_5[wp]: "current_time_bounded 5 :: 'state_ext state \<Rightarrow> _"
   (wp: crunch_wps)

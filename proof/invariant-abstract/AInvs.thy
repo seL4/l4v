@@ -1289,4 +1289,12 @@ lemma call_kernel_schact_is_rct:
   apply (wpsimp wp: schedule_cur_sc_active schedule_ct_not_in_release_q)
   done
 
+lemma call_kernel_consumed_time_bounded:
+  "\<lbrace>\<lambda>s. consumed_time_bounded s \<and> valid_machine_time s\<rbrace>
+   call_kernel e
+   \<lbrace>\<lambda>_ s :: det_state. consumed_time_bounded s\<rbrace>"
+  apply (clarsimp simp: call_kernel_def)
+  apply (wpsimp wp: preemption_path_consumed_time_bounded)
+  done
+
 end
