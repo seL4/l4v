@@ -25035,7 +25035,7 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
   apply (wpsimp wp: handle_fault_ct_ready_if_schedulable_not_blocked_on_receive)
   done
 
-lemma c_active_sc_cur_sc_active:
+lemma ct_active_sc_cur_sc_active:
   "cur_sc_chargeable s \<Longrightarrow> active_sc_tcb_at (cur_thread s) s \<Longrightarrow> cur_sc_active (s::det_state)"
   apply (frule (1) cur_sc_chargeable_when_ct_active_sc)
   apply (rule ct_active_sc_cur_sc_active, simp)
