@@ -22,8 +22,24 @@ correct material in here!
 
 ## General
 
- * in general, the [Isabelle naming conventions][1] apply
- * names should be descriptive of the content. Do not use `foo_5`.
+* in general, the [Isabelle naming conventions][1] apply
+* names should be descriptive of the content. Do not use `foo_5`.
+* small definitions and lemmas can have short mathematical (single or
+  two-letter) parameter or variable names, such as `x` and `y`, but if either
+  the definition becomes longer, the number of parameters larger, or consistency
+  with other definitions requires it, parameter names should have longer names
+  that indicate their purpose.
+* for short names the following conventions apply:
+  * generic (type `'a`) variables are `x`, `y`, `z`, etc. Example: `x <= x`.
+  * natural numbers are `n`, `m`, `i`, etc. Example: `n < Suc n`
+  * names for functions are `f`, `g`, `h`, etc.
+  * names for lists end in `s`, e.g. `xs`, `ys`. The `s` stands for "sequence" and
+    expresses plural. Example: `map f (xs @ ys) = map f xs @ map f ys`
+  * names for sets are generally `A`, `S`, i.e. single letter and upper case, unless
+    a longer name makes more sense.
+  * prefer `x'` over `x2` if you need a name multiple times (`x2` under some
+    circumstances will be transformed into `?x2.0` which is harder to work with),
+    but don't overuse `'`, i.e. `x'''` is not a good name.
 
 [1]: https://isabelle.systems/conventions/naming.html
 
