@@ -364,11 +364,88 @@ lemma notrunning_simplesteps:
 
 *)
 
+definition all_addrs_of :: "domain \<Rightarrow> address set" where
+  "all_addrs_of d = {a. addr_domain a = d}"
 
+(* d running \<rightarrow> d running *)
+lemma d_running: "\<lbrakk>
+   \<comment> \<open>we have two programs derived from the same touched_addresses -
+     these have to be the same program (so we need to know that the choice depends on stuff in
+     other_state in the external uwr)\<close>
+   p \<in> programs_obeying_ta ta;
+   \<comment> \<open>that touched_addresses ONLY contains addresses in d\<close>
+   ta \<subseteq> all_addrs_of d;
+   \<comment> \<open>initial states s and t hold uwr_running\<close>
+   (s, t) \<in> uwr d;
+   current_domain' s = d;
+   \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
+   \<comment> \<open>we execute the program on both states\<close>
+   s' = instr_multistep p s;
+   t' = instr_multistep p t;
+   current_domain' s' = d
+   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' = d\<close>
+   \<rbrakk> \<Longrightarrow>
+   \<comment> \<open>new states s' and t' hold uwr_running\<close>
+   (s', t') \<in> uwr d"
+  oops
 
+(* d running \<rightarrow> d not running *)
+lemma context_switch_from_d:
+  "\<lbrakk>p \<in> programs_obeying_ta ta;
+   ta \<subseteq> all_addrs_of d;
+   (s, t) \<in> uwr d;
+   current_domain' s = d;
+   \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
+   s' = instr_multistep p s;
+   t' = instr_multistep p t;
+   current_domain' s' \<noteq> d
+   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
+   \<rbrakk> \<Longrightarrow>
+   (s', t') \<in> uwr d"
+  oops
 
+(* d not running \<rightarrow> d not running *)
+lemma d_not_running: "\<lbrakk>
+   \<comment> \<open>we have two programs derived from touched_addresses - may not be the same touched_addresses\<close>
+   p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
+   p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;
+   \<comment> \<open>we may not have concrete touched_addresses -
+     we may overapprox this to the whole currently running domain.
+     NB: I think it's enough just to require it not contain any of d's addresses. -robs.\<close>
+   \<comment> \<open>these touched_addresses does NOT contain any addresses from d\<close>
+   ta\<^sub>s \<inter> all_addrs_of d = {};
+   ta\<^sub>t \<inter> all_addrs_of d = {};
+   \<comment> \<open>initial states s and t hold uwr_notrunning\<close>
+   (s, t) \<in> uwr d;
+   current_domain' s \<noteq> d;
+   \<comment> \<open>NB: external_uwr should give us current_domain' t \<noteq> d\<close>
+   \<comment> \<open>we execute both programs\<close>
+   s' = instr_multistep p\<^sub>s s;
+   t' = instr_multistep p\<^sub>t t;
+   current_domain' s' \<noteq> d
+   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
+   \<rbrakk> \<Longrightarrow>
+   \<comment> \<open>new state s' and t' hold uwr_notrunning\<close>
+   (s', t') \<in> uwr d"
+  apply(clarsimp simp:uwr_def)
+  oops
 
-
+(* d not running \<rightarrow> d running *)
+lemma context_switch_to_d:
+  "\<lbrakk>p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
+   p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;
+   ta\<^sub>s \<inter> all_addrs_of d = {};
+   ta\<^sub>t \<inter> all_addrs_of d = {};
+   (s, t) \<in> uwr d;
+   current_domain' s \<noteq> d;
+   \<comment> \<open>external_uwr should give us current_domain' t \<noteq> d\<close>
+   s' = instr_multistep (p\<^sub>s @ [IFlushL1, IPadToTime detTime]) s;
+   t' = instr_multistep (p\<^sub>t @ [IFlushL1, IPadToTime detTime]) t;
+   current_domain' s' = d
+   \<comment> \<open>external_uwr should oblige us to prove current_domain' t' = d\<close>
+   \<rbrakk> \<Longrightarrow>
+   (s', t') \<in> uwr d"
+  oops
 
 end
 end
