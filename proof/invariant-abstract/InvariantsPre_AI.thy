@@ -302,6 +302,9 @@ lemma delta_sym_refs_insert_only:
 abbreviation (input)
   "bound a \<equiv> \<exists>y. a = Some y"
 
+lemma neq_None_bound: "((\<noteq>) None) = bound"
+  using option.exhaust_sel by auto
+
 lemma inj_ObjRef[simp]: "inj ObjRef" by (auto intro!: injI)
 lemma inj_IRQRef[simp]: "inj IRQRef" by (auto intro!: injI)
 lemma inj_ArchRef[simp]: "inj ArchRef" by (auto intro!: injI)
