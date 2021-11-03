@@ -95,6 +95,23 @@ axiomatization do_pch_flush :: "pch \<Rightarrow> address set \<Rightarrow> pch"
 
 axiomatization pch_flush_cycles :: "pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+typedecl domain
+typedecl colour
+axiomatization addr_domain :: "address \<Rightarrow> domain" \<comment> \<open>for each address, this is the security domain\<close>
+axiomatization addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
+axiomatization colour_domain :: "colour \<Rightarrow> domain" where
+    colours_not_shared: "colour_domain c1 \<noteq> colour_domain c2 \<Longrightarrow> c1 \<noteq> c2"
+and addr_domain_valid: "addr_domain a = colour_domain (addr_colour a)" \<comment> \<open>do we assert this here
+  or just put it in the type so it has to be asserted before instantiation? or assert it differently
+  later?\<close>
+
+axiomatization current_domain :: "other_state \<Rightarrow> domain"
+definition current_domain' where "current_domain' s = current_domain (other_state s)"
+
+
+axiomatization external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+where external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
+\<comment> \<open>we will probably needs lots more info about this external uwr later on\<close>
 
 (*
 
@@ -129,6 +146,58 @@ axiomatization pch_flush_cycles :: "pch \<Rightarrow> address set \<Rightarrow> 
   every step maintains external UWR u
 
 *)
+
+definition pch_same_for_domain :: "domain \<Rightarrow> pch \<Rightarrow> pch \<Rightarrow> bool" where
+ "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> p1 a = p2 a"
+
+definition uwr_running :: "domain \<Rightarrow> (state \<times> state) set" where
+  "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
+                            \<and> pch_same_for_domain d (pch s1) (pch s2)
+                            \<and> tm s1 = tm s2
+                            \<and> regs s1 = regs s2
+                            \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
+\<comment> \<open>how do we know we have the same program?\<close>
+
+
+definition uwr_notrunning :: "domain \<Rightarrow> (state \<times> state) set" where
+  "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain d (pch s1) (pch s2)
+                               \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
+\<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
+
+definition uwr :: "domain \<Rightarrow> (state \<times> state) set" where
+  "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
+                      then (s1, s2) \<in> uwr_running d
+                      else (s1, s2) \<in> uwr_notrunning d }"
+
+(* notes about confidentiality properties with this model:
+   
+  for some step (let's say the user step for example), for a step of the NOT CURRENTLY RUNNING
+  domain d:
+  - we have two programs derived from touched_addresses - may not be the same touched_addresses (? ? ?)
+    - we may not have concrete touched_addresses-es - we may overapprox this to the whole currently running domain
+  - these touched_addresses does NOT contain any addresses from d
+  - initial states s and t hold uwr_notrunning
+  - we execute both programs
+  - new state s' and t' hold uwr_notrunning
+  - this will rely on infoflow properties of external_uwr
+
+  ...and for a step of the CURRENTLY RUNNING domain d:
+  - we have two programs derived from the same touched_addresses
+    - these have to be the same program (so we need to know that the choice depends on stuff in
+      other_state in the external uwr)
+  - that touched_addresses ONLY contains addresses in d
+  - initial states s and t hold uwr_running
+  - we execute the program on both states
+  - new states s' and t' hold uwr_running
+  - this will rely on infoflow properties of external_uwr
+  
+  
+
+
+*)
+
+
+
 
 (*
  - if we have some types of step:
