@@ -57,9 +57,9 @@ typedecl other_state
 typedecl domain
 typedecl colour
 
-record ('fch,'pch) state =
-  fch :: 'fch \<comment> \<open> flushable cache\<close>
-  pch :: 'pch \<comment> \<open> partitionable cache \<close>
+record ('fch_cachedness,'pch_cachedness) state =
+  fch :: "'fch_cachedness fch" \<comment> \<open> flushable cache\<close>
+  pch :: "'pch_cachedness pch" \<comment> \<open> partitionable cache \<close>
   tm :: time
   regs :: regs
   other_state :: other_state
@@ -148,8 +148,7 @@ definition pch_same_for_domain :: "domain \<Rightarrow> 'pch_cachedness pch \<Ri
  "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> p1 a = p2 a"
 
 definition uwr_running :: "domain \<Rightarrow>
-  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
-   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
   "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
                             \<and> pch_same_for_domain d (pch s1) (pch s2)
@@ -160,16 +159,14 @@ definition uwr_running :: "domain \<Rightarrow>
 
 
 definition uwr_notrunning :: "domain \<Rightarrow>
-  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
-   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
   "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain d (pch s1) (pch s2)
                                \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
 \<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
 
 definition uwr :: "domain \<Rightarrow>
-  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
-   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
   "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
                       then (s1, s2) \<in> uwr_running d
@@ -237,8 +234,8 @@ datatype instr = IRead address
 
 primrec
   instr_step :: "instr \<Rightarrow>
-    ('fch_cachedness fch, 'pch_cachedness pch) state \<Rightarrow>
-    ('fch_cachedness fch, 'pch_cachedness pch) state" where
+    ('fch_cachedness, 'pch_cachedness) state \<Rightarrow>
+    ('fch_cachedness, 'pch_cachedness) state" where
  "instr_step (IRead a) s = (let (f2, p2) = read_impact a (fch s) (pch s) in
       s\<lparr>fch := f2,
         pch := p2,
@@ -302,8 +299,8 @@ definition
 type_synonym program = "instr list"
 
 primrec instr_multistep :: "program \<Rightarrow>
-  ('fch_cachedness fch, 'pch_cachedness pch) state \<Rightarrow>
-  ('fch_cachedness fch, 'pch_cachedness pch) state" where
+  ('fch_cachedness, 'pch_cachedness) state \<Rightarrow>
+  ('fch_cachedness, 'pch_cachedness) state" where
   "instr_multistep [] s = s"
 | "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
 
