@@ -46,72 +46,68 @@ outputs:
 
 
 \<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
-typedecl fch_cachedness
-typedecl pch_cachedness
-type_synonym fch = "address \<Rightarrow> fch_cachedness"
-type_synonym pch = "address \<Rightarrow> pch_cachedness"
+type_synonym 'fch_cachedness fch = "address \<Rightarrow> 'fch_cachedness"
+type_synonym 'pch_cachedness pch = "address \<Rightarrow> 'pch_cachedness"
+type_synonym ('fch,'pch) cache_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'pch \<Rightarrow> 'fch \<times> 'pch"
 
 type_synonym time = nat
 
 typedecl regs
 typedecl other_state
+typedecl domain
+typedecl colour
 
-
-record state =
-  fch :: fch \<comment> \<open> flushable cache\<close>
-  pch :: pch \<comment> \<open> partitionable cache \<close>
+record ('fch,'pch) state =
+  fch :: 'fch \<comment> \<open> flushable cache\<close>
+  pch :: 'pch \<comment> \<open> partitionable cache \<close>
   tm :: time
   regs :: regs
   other_state :: other_state
 
 
 
+locale time_protection =
+  fixes collision_set :: "address \<Rightarrow> address set"
 
-type_synonym cache_impact = "address \<Rightarrow> fch \<Rightarrow> pch \<Rightarrow> fch \<times> pch"
+  fixes read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) cache_impact"
+  assumes pch_partitioned_read: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (read_impact a1 f p) a2"
 
-axiomatization collision_set :: "address \<Rightarrow> address set"
+  fixes write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) cache_impact"
+  assumes pch_partitioned_write: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (write_impact a1 f p) a2"
 
-axiomatization read_impact :: cache_impact
-  where pch_partitioned_read: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (read_impact a1 f p) a2"
+  fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
 
-axiomatization write_impact :: cache_impact
-  where pch_partitioned_write: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (write_impact a1 f p) a2"
+  fixes do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
+  fixes do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
 
-axiomatization read_cycles  :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
-axiomatization write_cycles :: "fch_cachedness \<Rightarrow> pch_cachedness \<Rightarrow> time"
+  fixes store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
-axiomatization do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
-axiomatization do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
+  fixes padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
-axiomatization store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  fixes empty_fch :: "'fch_cachedness fch"
+  fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
-axiomatization padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
+  \<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
 
-axiomatization empty_fch :: fch
-axiomatization fch_flush_cycles :: "fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
-
-axiomatization do_pch_flush :: "pch \<Rightarrow> address set \<Rightarrow> pch"
-\<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
-
-axiomatization pch_flush_cycles :: "pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
-
-typedecl domain
-typedecl colour
-axiomatization addr_domain :: "address \<Rightarrow> domain" \<comment> \<open>for each address, this is the security domain\<close>
-axiomatization addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
-axiomatization colour_domain :: "colour \<Rightarrow> domain" where
-    colours_not_shared: "colour_domain c1 \<noteq> colour_domain c2 \<Longrightarrow> c1 \<noteq> c2"
-and addr_domain_valid: "addr_domain a = colour_domain (addr_colour a)" \<comment> \<open>do we assert this here
+  fixes addr_domain :: "address \<Rightarrow> domain" \<comment> \<open>for each address, this is the security domain\<close>
+  fixes addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
+  fixes colour_domain :: "colour \<Rightarrow> domain"
+  assumes colours_not_shared: "colour_domain c1 \<noteq> colour_domain c2 \<Longrightarrow> c1 \<noteq> c2"
+  assumes addr_domain_valid: "addr_domain a = colour_domain (addr_colour a)" \<comment> \<open>do we assert this here
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
+  fixes current_domain :: "other_state \<Rightarrow> domain"
 
-axiomatization current_domain :: "other_state \<Rightarrow> domain"
-definition current_domain' where "current_domain' s = current_domain (other_state s)"
-
-
-axiomatization external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
-where external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
+  fixes external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  assumes external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
 \<comment> \<open>we will probably needs lots more info about this external uwr later on\<close>
+
+  fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
+begin
+
+definition current_domain' where "current_domain' s = current_domain (other_state s)"
 
 (*
 
@@ -147,10 +143,14 @@ where external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow>
 
 *)
 
-definition pch_same_for_domain :: "domain \<Rightarrow> pch \<Rightarrow> pch \<Rightarrow> bool" where
+definition pch_same_for_domain :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+  where
  "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> p1 a = p2 a"
 
-definition uwr_running :: "domain \<Rightarrow> (state \<times> state) set" where
+definition uwr_running :: "domain \<Rightarrow>
+  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
+   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  where
   "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
                             \<and> pch_same_for_domain d (pch s1) (pch s2)
                             \<and> tm s1 = tm s2
@@ -159,12 +159,18 @@ definition uwr_running :: "domain \<Rightarrow> (state \<times> state) set" wher
 \<comment> \<open>how do we know we have the same program?\<close>
 
 
-definition uwr_notrunning :: "domain \<Rightarrow> (state \<times> state) set" where
+definition uwr_notrunning :: "domain \<Rightarrow>
+  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
+   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  where
   "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain d (pch s1) (pch s2)
                                \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
 \<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
 
-definition uwr :: "domain \<Rightarrow> (state \<times> state) set" where
+definition uwr :: "domain \<Rightarrow>
+  (('fch_cachedness fch, 'pch_cachedness pch) state \<times>
+   ('fch_cachedness fch, 'pch_cachedness pch) state) set"
+  where
   "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
                       then (s1, s2) \<in> uwr_running d
                       else (s1, s2) \<in> uwr_notrunning d }"
@@ -230,7 +236,9 @@ datatype instr = IRead address
 
 
 primrec
-  instr_step :: "instr \<Rightarrow> state \<Rightarrow> state" where
+  instr_step :: "instr \<Rightarrow>
+    ('fch_cachedness fch, 'pch_cachedness pch) state \<Rightarrow>
+    ('fch_cachedness fch, 'pch_cachedness pch) state" where
  "instr_step (IRead a) s = (let (f2, p2) = read_impact a (fch s) (pch s) in
       s\<lparr>fch := f2,
         pch := p2,
@@ -293,7 +301,9 @@ definition
 
 type_synonym program = "instr list"
 
-primrec instr_multistep :: "program \<Rightarrow> state \<Rightarrow> state" where
+primrec instr_multistep :: "program \<Rightarrow>
+  ('fch_cachedness fch, 'pch_cachedness pch) state \<Rightarrow>
+  ('fch_cachedness fch, 'pch_cachedness pch) state" where
   "instr_multistep [] s = s"
 | "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
 
@@ -363,5 +373,5 @@ lemma notrunning_simplesteps:
 
 
 
-
+end
 end
