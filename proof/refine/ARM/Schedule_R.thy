@@ -5135,7 +5135,7 @@ lemma schedule_corres:
   apply (case_tac "action = resume_cur_thread"; clarsimp)
    apply (corressimp corres: scAndTimer_corres)
    subgoal by (fastforce intro: valid_sched_context_size_objsI
-                          dest: schat_is_rct_ct_active_sc
+                          dest: schact_is_rct_ct_active_sc
                           simp: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def is_sc_obj_def
                                 valid_state_def valid_sched_def)
 
