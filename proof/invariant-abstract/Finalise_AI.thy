@@ -1051,19 +1051,19 @@ crunch valid_objs[wp]: set_consumed valid_objs
   (wp: crunch_wps simp: crunch_simps ignore: update_sched_context)
 
 lemma sched_context_cancel_yield_to_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> sched_context_cancel_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "sched_context_cancel_yield_to t \<lbrace>valid_objs\<rbrace>"
   by (wpsimp simp: sched_context_cancel_yield_to_def | wp (once) hoare_drop_imps)+
 
 lemma complete_yield_to_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> complete_yield_to t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "complete_yield_to t \<lbrace>valid_objs\<rbrace>"
   by (wpsimp simp: complete_yield_to_def | wp (once) hoare_drop_imps)+
 
 lemma sched_context_unbind_tcb_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> sched_context_unbind_tcb t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "sched_context_unbind_tcb t \<lbrace>valid_objs\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def | wp (once) hoare_drop_imps)+
 
 lemma unbind_from_sc_valid_objs[wp]:
-  "\<lbrace>valid_objs\<rbrace> unbind_from_sc t \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
+  "unbind_from_sc t \<lbrace>valid_objs\<rbrace>"
   by (wpsimp simp: unbind_from_sc_def wp: maybeM_inv)
 
 lemma unbind_from_sc_invs[wp]:
@@ -1720,38 +1720,38 @@ lemma set_tcb_yt_update_bound_tcb_at[wp]:
   by (wpsimp simp: set_tcb_obj_ref_def pred_tcb_at_def obj_at_def get_tcb_rev wp: set_object_wp)
 
 lemma sched_context_cancel_yield_to_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_cancel_yield_to scptr \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
+  "sched_context_cancel_yield_to scptr \<lbrace>bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
 
 lemma complete_yield_to_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
+  "complete_yield_to scptr \<lbrace>bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
 
 lemma sched_context_cancel_yield_to_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> sched_context_cancel_yield_to scptr \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
+  "sched_context_cancel_yield_to scptr \<lbrace>bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_cancel_yield_to_def wp: hoare_drop_imp)
 
 lemma complete_yield_to_bound_sc_tcb_at[wp]:
-  "\<lbrace>bound_sc_tcb_at P t\<rbrace> complete_yield_to scptr \<lbrace>\<lambda>rv. bound_sc_tcb_at P t\<rbrace>"
+  "complete_yield_to scptr \<lbrace>bound_sc_tcb_at P t\<rbrace>"
   by (wpsimp simp: complete_yield_to_def wp: hoare_drop_imp)
 
 lemma ssc_bound_yt_tcb_at[wp]:
-  "\<lbrace>bound_yt_tcb_at P t\<rbrace> set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>\<lambda>_. bound_yt_tcb_at P t\<rbrace>"
+  "set_tcb_obj_ref tcb_sched_context_update tcb ntfn \<lbrace>bound_yt_tcb_at P t\<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp set_object_wp)
   apply (auto simp: pred_tcb_at_def obj_at_def get_tcb_def)
   done
 
 lemma sched_context_unbind_tcb_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> sched_context_unbind_tcb a \<lbrace>\<lambda>y. bound_tcb_at P t\<rbrace>"
+  "sched_context_unbind_tcb a \<lbrace>bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
 
 lemma sched_context_unbind_tcb_bound_yt_tcb_at[wp]:
-  "\<lbrace>bound_yt_tcb_at P t\<rbrace> sched_context_unbind_tcb a \<lbrace>\<lambda>y. bound_yt_tcb_at P t\<rbrace>"
+  "sched_context_unbind_tcb a \<lbrace>bound_yt_tcb_at P t\<rbrace>"
   by (wpsimp simp: sched_context_unbind_tcb_def wp: get_sched_context_wp)
 
 lemma unbind_from_sc_bound_tcb_at[wp]:
-  "\<lbrace>bound_tcb_at P t\<rbrace> unbind_from_sc x \<lbrace>\<lambda>rv. bound_tcb_at P t\<rbrace>"
+  "unbind_from_sc x \<lbrace>bound_tcb_at P t\<rbrace>"
   by (wpsimp simp: unbind_from_sc_def wp: hoare_drop_imps hoare_vcg_all_lift)
 
 lemma sched_context_unbind_tcb_bound_sc_tcb_at_None:
@@ -1779,7 +1779,7 @@ lemma unbind_from_sc_bound_sc_tcb_at:
 
 lemma sched_context_cancel_yield_to_unbinds:
   "\<lbrace>tcb_at t\<rbrace>
-     sched_context_cancel_yield_to t
+   sched_context_cancel_yield_to t
    \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) t\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def)
   apply (wpsimp wp: syt_bound_tcb_at' maybeM_wp gbn_wp)
@@ -1788,7 +1788,7 @@ lemma sched_context_cancel_yield_to_unbinds:
 
 lemma complete_yield_to_unbinds:
   "\<lbrace>tcb_at t\<rbrace>
-     complete_yield_to t
+   complete_yield_to t
    \<lbrace>\<lambda>rv. bound_yt_tcb_at ((=) None) t\<rbrace>"
   unfolding complete_yield_to_def
   apply (wpsimp wp: sched_context_cancel_yield_to_unbinds gbn_wp set_consumed_obj_at_trivial)
@@ -1818,7 +1818,7 @@ lemma set_sc_obj_ref_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_tcb sc = None
                         \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
     and K (t = sc)\<rbrace>
-     set_sc_obj_ref sc_yield_from_update t None
+   set_sc_obj_ref sc_yield_from_update t None
    \<lbrace>\<lambda>_. obj_at (Not \<circ> live) sc\<rbrace>"
   by (wpsimp simp: update_sched_context_def set_object_def
                    get_sched_context_def obj_at_def live_def live_sc_def
@@ -1828,7 +1828,7 @@ lemma sched_context_cancel_yield_to_not_live:
   "\<lbrace>obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> sc_yield_from sc = Some tcb
                         \<and> sc_tcb sc = None \<and> sc_ntfn sc = None \<and> sc_replies sc = []) sc
     and valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
-     sched_context_cancel_yield_to tcb
+   sched_context_cancel_yield_to tcb
    \<lbrace>\<lambda>yc a. obj_at (Not \<circ> live) sc a\<rbrace>"
   apply (clarsimp simp: sched_context_cancel_yield_to_def get_tcb_obj_ref_def)
   apply (wpsimp wp: thread_get_wp' set_sc_obj_ref_not_live
