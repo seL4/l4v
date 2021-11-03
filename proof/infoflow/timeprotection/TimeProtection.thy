@@ -316,6 +316,35 @@ definition
  "programs_obeying_ta ta \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta ta) p}"
 
 
+
+
+(* TODO URGENT: we aren't talking about kernel shared here, and we really need to be.
+  The uwr needs to show a different slice of the pch to nonrunning domains (due to kernel
+  shared stuff). the statements like `ta \<subseteq> all_addr_in_domain d` need to be adjusted too. *)
+
+definition all_addr_in_domain :: "domain \<Rightarrow> address set" where
+  "all_addr_in_domain d \<equiv> {a. addr_domain a = d}"
+
+lemma running_simplesteps:
+  "\<lbrakk> (s, t) \<in> uwr d;
+     current_domain' s = d; \<comment> \<open>d is running\<close>
+     ta \<subseteq> all_addr_in_domain d; \<comment> \<open>ta is sensible for this domain\<close>
+     p \<in> programs_obeying_ta ta \<comment> \<open>some program (same for both runs)\<close>
+     \<rbrakk> \<Longrightarrow>
+   (instr_multistep p s, instr_multistep p t) \<in> uwr d"
+  oops
+
+lemma notrunning_simplesteps:
+  "\<lbrakk> (s, t) \<in> uwr d;
+     current_domain' s \<noteq> d; \<comment> \<open>d is not running\<close>
+     ta \<union> all_addr_in_domain d = {}; \<comment> \<open>ta doesn't have anything in this domain (is there a better way to phrase this?)\<close>
+     p1 \<in> programs_obeying_ta ta; \<comment> \<open>some program for s\<close>
+     p2 \<in> programs_obeying_ta ta \<comment> \<open>some program for t\<close>
+     \<rbrakk> \<Longrightarrow>
+   (instr_multistep p1 s, instr_multistep p2 t) \<in> uwr d"
+  oops
+
+
 (*
 
   s  -->  t
