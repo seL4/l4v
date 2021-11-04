@@ -603,6 +603,10 @@ crunches schedContextDonate, schedContextUnbindAllTCBs, unbindFromSC,
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 
+lemma setSchedContext_ct_in_state'[wp]:
+  "setSchedContext ptr sc \<lbrace>ct_in_state' P\<rbrace>"
+  by (rule ct_in_state_thread_state_lift'; wpsimp)
+
 crunches setSchedContext
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: weak_sch_act_wf_lift)
