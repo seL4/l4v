@@ -109,16 +109,29 @@ locale time_protection =
   assumes external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
 \<comment> \<open>we will probably needs lots more info about this external uwr\<close>
 
+  
+  
+  assumes do_write_maintains_external_uwr_out:
+    "addr_domain a \<noteq> d \<and> addr_domain a \<noteq> Sched \<Longrightarrow>
+     (s, do_write a s r) \<in> external_uwr d"
+  
+  (*NOTE: we can only invoke this if we have already equalised the "regs" fields *)
+  assumes do_write_maintains_external_uwr_in:
+    "addr_domain a = d \<or> addr_domain a = Sched \<Longrightarrow>
+     (s, t) \<in> external_uwr d \<Longrightarrow>
+     (do_write a s r, do_write a t r) \<in> external_uwr d"
+
+
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 begin
 
 \<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
-definition kernel_shared_specific :: "address set" where
-  "kernel_shared_specific \<equiv> {a. addr_domain a = Sched}"
+definition kernel_shared_precise :: "address set" where
+  "kernel_shared_precise \<equiv> {a. addr_domain a = Sched}"
 
 \<comment> \<open> the kernel shared memory, including cache colliding addresses \<close>
 definition kernel_shared_expanded :: "address set" where
-  "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_specific. a \<in> collision_set z}"
+  "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
 
 
 
@@ -166,6 +179,10 @@ definition pch_same_for_domain_and_shared :: "domain \<Rightarrow> 'pch_cachedne
   where
  "pch_same_for_domain_and_shared d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<or> a \<in> kernel_shared_expanded \<longrightarrow> p1 a = p2 a"
 
+definition pch_same_for_domain_except_shared :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+  where
+ "pch_same_for_domain_except_shared d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<and> a \<notin> kernel_shared_expanded \<longrightarrow> p1 a = p2 a"
+
 definition uwr_running :: "domain \<Rightarrow>
   (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
@@ -180,7 +197,7 @@ definition uwr_running :: "domain \<Rightarrow>
 definition uwr_notrunning :: "domain \<Rightarrow>
   (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
-  "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain d (pch s1) (pch s2)
+  "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain_except_shared d (pch s1) (pch s2)
                                \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
 \<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
 
@@ -364,7 +381,7 @@ lemma d_running: "\<lbrakk>
      other_state in the external uwr)\<close>
    p \<in> programs_obeying_ta ta;
    \<comment> \<open>that touched_addresses ONLY contains addresses in d\<close>
-   ta \<subseteq> all_addrs_of d;
+   ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise;
    \<comment> \<open>initial states s and t hold uwr_running\<close>
    (s, t) \<in> uwr d;
    current_domain' s = d;
@@ -379,10 +396,11 @@ lemma d_running: "\<lbrakk>
    (s', t') \<in> uwr d"
   oops
 
+(*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
 lemma context_switch_from_d:
   "\<lbrakk>p \<in> programs_obeying_ta ta;
-   ta \<subseteq> all_addrs_of d;
+   ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise;
    (s, t) \<in> uwr d;
    current_domain' s = d;
    \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
@@ -403,8 +421,8 @@ lemma d_not_running: "\<lbrakk>
      we may overapprox this to the whole currently running domain.
      NB: I think it's enough just to require it not contain any of d's addresses. -robs.\<close>
    \<comment> \<open>these touched_addresses does NOT contain any addresses from d\<close>
-   ta\<^sub>s \<inter> all_addrs_of d = {};
-   ta\<^sub>t \<inter> all_addrs_of d = {};
+   ta\<^sub>s \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
+   ta\<^sub>t \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
    \<comment> \<open>initial states s and t hold uwr_notrunning\<close>
    (s, t) \<in> uwr d;
    current_domain' s \<noteq> d;
@@ -424,8 +442,8 @@ lemma d_not_running: "\<lbrakk>
 lemma context_switch_to_d:
   "\<lbrakk>p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
    p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;
-   ta\<^sub>s \<inter> all_addrs_of d = {};
-   ta\<^sub>t \<inter> all_addrs_of d = {};
+   ta\<^sub>s \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
+   ta\<^sub>t \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
    (s, t) \<in> uwr d;
    current_domain' s \<noteq> d;
    \<comment> \<open>external_uwr should give us current_domain' t \<noteq> d\<close>
