@@ -2338,6 +2338,17 @@ lemma isRunnable_sp:
   apply (fastforce simp: obj_at'_def split: Structures_H.thread_state.splits)
   done
 
+lemma isRunnable_sp':
+  "\<lbrace>P\<rbrace>
+   isRunnable tcb_ptr
+   \<lbrace>\<lambda>rv s. (rv = st_tcb_at' active' tcb_ptr s) \<and> P s\<rbrace>"
+  apply (clarsimp simp: isRunnable_def getThreadState_def)
+  apply (wpsimp wp: hoare_case_option_wp getObject_tcb_wp
+              simp: threadGet_getObject)
+  apply (fastforce simp: obj_at'_def st_tcb_at'_def
+                  split: Structures_H.thread_state.splits)
+  done
+
 lemma inReleaseQueue_sp:
   "\<lbrace>P\<rbrace>
    inReleaseQueue tcb_ptr
@@ -6070,5 +6081,18 @@ crunches tcbReleaseRemove, tcbSchedDequeue
   for sch_act_simple[wp]: sch_act_simple
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps sch_act_simple_def)
+
+lemma tcbInReleaseQueue_update_st_tcb_at'[wp]:
+  "threadSet (tcbInReleaseQueue_update b) t \<lbrace>\<lambda>s. Q (st_tcb_at' P t' s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  apply (cases "t=t'")
+   apply (fastforce simp: obj_at_simps st_tcb_at'_def ps_clear_def)
+  apply (erule back_subst[where P=Q])
+  apply (fastforce simp: obj_at_simps st_tcb_at'_def ps_clear_def)
+  done
+
+crunches tcbReleaseEnqueue
+  for st_tcb_at'[wp]: "\<lambda>s. Q (st_tcb_at' P tptr s)"
+  (wp: mapM_wp_inv ignore: threadSet)
 
 end
