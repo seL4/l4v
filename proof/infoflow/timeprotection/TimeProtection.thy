@@ -54,8 +54,10 @@ type_synonym time = nat
 
 typedecl regs
 typedecl other_state
-typedecl domain
 typedecl colour
+
+typedecl userdomain
+datatype domain = Sched | User userdomain
 
 record ('fch_cachedness,'pch_cachedness) state =
   fch :: "'fch_cachedness fch" \<comment> \<open> flushable cache\<close>
@@ -68,6 +70,7 @@ record ('fch_cachedness,'pch_cachedness) state =
 
 locale time_protection =
   fixes collision_set :: "address \<Rightarrow> address set"
+  assumes collision_set_contains_itself: "a \<in> collision_set a"
 
   fixes read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) cache_impact"
   assumes pch_partitioned_read: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (read_impact a1 f p) a2"
@@ -93,19 +96,31 @@ locale time_protection =
 
   fixes addr_domain :: "address \<Rightarrow> domain" \<comment> \<open>for each address, this is the security domain\<close>
   fixes addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
-  fixes colour_domain :: "colour \<Rightarrow> domain"
-  assumes colours_not_shared: "colour_domain c1 \<noteq> colour_domain c2 \<Longrightarrow> c1 \<noteq> c2"
-  assumes addr_domain_valid: "addr_domain a = colour_domain (addr_colour a)" \<comment> \<open>do we assert this here
+  fixes colour_userdomain :: "colour \<Rightarrow> userdomain"
+  assumes colours_not_shared: "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
+  assumes addr_domain_valid: "addr_domain a = Sched
+                            \<or> addr_domain a = User (colour_userdomain (addr_colour a))"
+\<comment> \<open>do we assert this here
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
   fixes current_domain :: "other_state \<Rightarrow> domain"
 
   fixes external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
   assumes external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
-\<comment> \<open>we will probably needs lots more info about this external uwr later on\<close>
+\<comment> \<open>we will probably needs lots more info about this external uwr\<close>
 
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 begin
+
+\<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
+definition kernel_shared_specific :: "address set" where
+  "kernel_shared_specific \<equiv> {a. addr_domain a = Sched}"
+
+\<comment> \<open> the kernel shared memory, including cache colliding addresses \<close>
+definition kernel_shared_expanded :: "address set" where
+  "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_specific. a \<in> collision_set z}"
+
+
 
 definition current_domain' where "current_domain' s = current_domain (other_state s)"
 
@@ -147,11 +162,15 @@ definition pch_same_for_domain :: "domain \<Rightarrow> 'pch_cachedness pch \<Ri
   where
  "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> p1 a = p2 a"
 
+definition pch_same_for_domain_and_shared :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+  where
+ "pch_same_for_domain_and_shared d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<or> a \<in> kernel_shared_expanded \<longrightarrow> p1 a = p2 a"
+
 definition uwr_running :: "domain \<Rightarrow>
   (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
   where
   "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
-                            \<and> pch_same_for_domain d (pch s1) (pch s2)
+                            \<and> pch_same_for_domain_and_shared d (pch s1) (pch s2)
                             \<and> tm s1 = tm s2
                             \<and> regs s1 = regs s2
                             \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
