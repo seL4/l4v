@@ -48,7 +48,8 @@ outputs:
 \<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
 type_synonym 'fch_cachedness fch = "address \<Rightarrow> 'fch_cachedness"
 type_synonym 'pch_cachedness pch = "address \<Rightarrow> 'pch_cachedness"
-type_synonym ('fch,'pch) cache_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'pch \<Rightarrow> 'fch \<times> 'pch"
+type_synonym 'fch fch_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'fch"
+type_synonym ('fch,'pch) pch_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'pch \<Rightarrow> 'pch"
 
 type_synonym time = nat
 
@@ -69,14 +70,32 @@ record ('fch_cachedness,'pch_cachedness) state =
 
 
 locale time_protection =
-  fixes collision_set :: "address \<Rightarrow> address set"
-  assumes collision_set_contains_itself: "a \<in> collision_set a"
+  (* "(a, b) \<in> collides_in_pch" = "a may cause b to be evicted from or loaded to the pch" *)
+  fixes collides_in_pch :: "address rel"
+  assumes collides_with_equiv: "equiv UNIV collides_in_pch"
 
-  fixes read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) cache_impact"
-  assumes pch_partitioned_read: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (read_impact a1 f p) a2"
+  fixes fch_read_impact :: "'fch_cachedness fch fch_impact"
+  fixes pch_read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  assumes pch_partitioned_read: "(a1, a2) \<notin> collides_in_pch \<Longrightarrow> p a2 = (pch_read_impact a1 f p) a2"
+  (* if a2 can be impacted by a read from a1,
+     we require that this impact depends only on the prior state of the fch
+     and the prior cachedness of the rest of their collision set in the pch *)
+  assumes pch_collision_read: "(a1, a2) \<in> collides_in_pch \<Longrightarrow>
+    \<forall>a3. (a2, a3) \<in> collides_in_pch \<longrightarrow> pchs a3 = pcht a3 \<Longrightarrow>
+    \<comment> \<open>This might be stronger than is met by hardware that just promises
+        a 'random' replacement algorithm. Essentially we are requiring that
+        any such 'randomness' cannot be influenced by the prior cachedness of
+        addresses outside the collision set in question. \<close>
+    (pch_read_impact a1 f pchs) a2 = (pch_read_impact a1 f pcht) a2"
 
-  fixes write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) cache_impact"
-  assumes pch_partitioned_write: "a2 \<notin> collision_set a1 \<Longrightarrow> p a2 = snd (write_impact a1 f p) a2"
+  fixes fch_write_impact :: "'fch_cachedness fch fch_impact"
+  fixes pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  assumes pch_partitioned_write: "(a1, a2) \<notin> collides_in_pch \<Longrightarrow> p a2 = (pch_write_impact a1 f p) a2"
+  assumes pch_collision_write: "(a1, a2) \<in> collides_in_pch \<Longrightarrow>
+    \<forall>a3. (a2, a3) \<in> collides_in_pch \<longrightarrow> pchs a3 = pcht a3 \<Longrightarrow>
+    \<comment> \<open>The same strong requirement placing limits on the 'randomness'
+        of the cache replacement algorithm as for @{term pch_collision_read}\<close>
+    (pch_write_impact a1 f pchs) a2 = (pch_write_impact a1 f pcht) a2"
 
   fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
@@ -98,6 +117,8 @@ locale time_protection =
   fixes addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
   fixes colour_userdomain :: "colour \<Rightarrow> userdomain"
   assumes colours_not_shared: "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
+  assumes no_cross_colour_collisions:
+    "(a1, a2) \<in> collides_in_pch \<Longrightarrow> addr_colour a1 = addr_colour a2"
   assumes addr_domain_valid: "addr_domain a = Sched
                             \<or> addr_domain a = User (colour_userdomain (addr_colour a))"
 \<comment> \<open>do we assert this here
@@ -124,6 +145,13 @@ locale time_protection =
 
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 begin
+
+abbreviation collision_set :: "address \<Rightarrow> address set" where
+  "collision_set a \<equiv> {b. (a, b) \<in> collides_in_pch}"
+
+lemma collision_set_contains_itself: "a \<in> collision_set a"
+  using collides_with_equiv
+  by (clarsimp simp:equiv_def refl_on_def)
 
 \<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
 definition kernel_shared_precise :: "address set" where
@@ -272,16 +300,16 @@ primrec
   instr_step :: "instr \<Rightarrow>
     ('fch_cachedness, 'pch_cachedness) state \<Rightarrow>
     ('fch_cachedness, 'pch_cachedness) state" where
- "instr_step (IRead a) s = (let (f2, p2) = read_impact a (fch s) (pch s) in
-      s\<lparr>fch := f2,
-        pch := p2,
+ "instr_step (IRead a) s =
+      s\<lparr>fch := fch_read_impact a (fch s),
+        pch := pch_read_impact a (fch s) (pch s),
         tm  := tm s + read_cycles (fch s a) (pch s a),
-        regs := do_read a (other_state s) (regs s)\<rparr>)"
-  | "instr_step (IWrite a) s = (let (f2, p2) = write_impact a (fch s) (pch s) in
-      s\<lparr>fch := f2,
-        pch := p2,
+        regs := do_read a (other_state s) (regs s)\<rparr>"
+  | "instr_step (IWrite a) s =
+      s\<lparr>fch := fch_write_impact a (fch s),
+        pch := pch_write_impact a (fch s) (pch s),
         tm  := tm s + write_cycles (fch s a) (pch s a),
-        other_state := do_write a (other_state s) (regs s)\<rparr>)"
+        other_state := do_write a (other_state s) (regs s)\<rparr>"
   | "instr_step (IRegs m) s =
       s\<lparr>regs := m (regs s),
         tm := tm s + 1 \<rparr>" \<comment> \<open>we increment by the smallest possible amount - different instruction
@@ -374,6 +402,132 @@ definition
 definition all_addrs_of :: "domain \<Rightarrow> address set" where
   "all_addrs_of d = {a. addr_domain a = d}"
 
+lemma d_running_step:
+  assumes
+    "i \<in> instrs_obeying_ta ta"
+    "ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise"
+    "(s, t) \<in> uwr d"
+    "current_domain' s = d"
+    "s' = instr_step i s"
+    "t' = instr_step i t"
+    "current_domain' s' = d"
+  shows
+    "(s', t') \<in> uwr d"
+  proof (cases i)
+    case (IRead a)
+    thus ?thesis using assms
+      apply(clarsimp simp:uwr_def uwr_running_def)
+      apply(clarsimp simp:instrs_obeying_ta_def)
+      (* First obtain that `a` belongs to the current domain or shared memory (i.e. Sched) *)
+      apply(clarsimp simp:all_addrs_of_def)
+      apply(erule_tac c=a in subsetCE)
+       apply force
+      apply clarsimp
+      apply(rule conjI)
+       (* equivalence on part of pch *)
+       apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
+       apply(rename_tac a')
+       apply(case_tac "a' \<in> collision_set a")
+        (* for colliding addresses *)
+        apply clarsimp
+        apply(rule conjI)
+         apply clarsimp
+         apply(rule pch_collision_read)
+          apply force
+         using no_cross_colour_collisions
+         apply(metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself kernel_shared_precise_def mem_Collect_eq)
+        apply clarsimp
+        apply(rule pch_collision_read)
+         apply force
+        apply clarsimp
+        apply(erule_tac x=a3 in allE)
+        apply clarsimp
+        apply(erule_tac x=z in ballE)
+         using collides_with_equiv
+         apply(clarsimp simp:equiv_def)
+         apply(solves\<open>meson trans_def\<close>)
+        apply force
+       apply clarsimp
+       (* for non-colliding addresses *)
+       using pch_partitioned_read
+       apply force
+      apply(rule conjI)
+       (* equivalence of read cycles *)
+       apply(erule disjE)
+        apply(force simp:pch_same_for_domain_and_shared_def)
+       apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
+       using collision_set_contains_itself
+       apply fastforce
+      (* equivalence of what ends up in the registers from other_state *)
+      (* TODO: we need a property that says the external_uwr will give us
+         equivalence of what's read from addresses belonging to that domain. *)
+      sorry
+  next
+    case (IWrite a)
+    (* NB: Reasoning is mostly identical to that for IRead -robs. *)
+    thus ?thesis using assms
+      apply(clarsimp simp:uwr_def uwr_running_def)
+      apply(clarsimp simp:instrs_obeying_ta_def)
+      (* First obtain that `a` belongs to the current domain or shared memory (i.e. Sched) *)
+      apply(clarsimp simp:all_addrs_of_def)
+      apply(erule_tac c=a in subsetCE)
+       apply force
+      apply clarsimp
+      apply(rule conjI)
+       (* equivalence on part of pch *)
+       apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
+       apply(rename_tac a')
+       apply(case_tac "a' \<in> collision_set a")
+        (* for colliding addresses *)
+        apply clarsimp
+        apply(rule conjI)
+         apply clarsimp
+         apply(rule pch_collision_write)
+          apply force
+         using no_cross_colour_collisions
+         apply(metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself kernel_shared_precise_def mem_Collect_eq)
+        apply clarsimp
+        apply(rule pch_collision_write)
+         apply force
+        apply clarsimp
+        apply(erule_tac x=a3 in allE)
+        apply clarsimp
+        apply(erule_tac x=z in ballE)
+         using collides_with_equiv
+         apply(clarsimp simp:equiv_def)
+         apply(solves\<open>meson trans_def\<close>)
+        apply force
+       apply clarsimp
+       (* for non-colliding addresses *)
+       using pch_partitioned_write
+       apply force
+      apply(rule conjI)
+       (* equivalence of write cycles *)
+       apply(erule disjE)
+        apply(force simp:pch_same_for_domain_and_shared_def)
+       apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
+       using collision_set_contains_itself
+       apply fastforce
+      (* equivalence of the written impact on other_state *)
+      using do_write_maintains_external_uwr_in kernel_shared_precise_def
+      by blast
+  next
+    case (IRegs x3)
+    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+  next
+    case IFlushL1
+    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+  next
+    case (IFlushL2 x5)
+    then show ?thesis sorry (* TODO *)
+  next
+    case IReadTime
+    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+  next
+    case (IPadToTime x7)
+    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+  qed
+
 (* d running \<rightarrow> d running *)
 lemma d_running: "\<lbrakk>
    \<comment> \<open>we have two programs derived from the same touched_addresses -
@@ -394,6 +548,10 @@ lemma d_running: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr_running\<close>
    (s', t') \<in> uwr d"
+  apply(induct p)
+   apply force
+  using d_running_step
+  (* TODO *)
   oops
 
 (*FIXME: This is a draft *)
