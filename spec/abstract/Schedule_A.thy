@@ -212,8 +212,8 @@ where
 abbreviation (input)
   schedule_switch_thread_branch :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "schedule_switch_thread_branch candidate ct ct_schedulable \<equiv> do
-     when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
+  "schedule_switch_thread_branch candidate ct ct_schdble \<equiv> do
+     when ct_schdble (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
 
      it \<leftarrow> gets idle_thread;
      target_prio \<leftarrow> thread_get tcb_priority candidate;
@@ -232,7 +232,7 @@ where
                 set_scheduler_action choose_new_thread;
                 schedule_choose_new_thread
              od
-        else if ct_schedulable \<and> ct_prio = target_prio
+        else if ct_schdble \<and> ct_prio = target_prio
                 then do \<comment> \<open>Current thread was runnable and candidate is not strictly better
                             want current thread to run next, so append the candidate to end of queue
                             and choose again\<close>
@@ -251,15 +251,15 @@ definition
      awaken;
      check_domain_time;
      ct \<leftarrow> gets cur_thread;
-     ct_schedulable \<leftarrow> is_schedulable ct;
+     ct_schdble \<leftarrow> is_schedulable ct;
      action \<leftarrow> gets scheduler_action;
      (case action
        of resume_cur_thread \<Rightarrow> return ()
         | choose_new_thread \<Rightarrow> do
-            when ct_schedulable (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
+            when ct_schdble (tcb_sched_action tcb_sched_enqueue ct); \<comment> \<open>schedulable\<close>
             schedule_choose_new_thread
           od
-        | switch_thread candidate \<Rightarrow> schedule_switch_thread_branch candidate ct ct_schedulable);
+        | switch_thread candidate \<Rightarrow> schedule_switch_thread_branch candidate ct ct_schdble);
      sc_and_timer
    od"
 

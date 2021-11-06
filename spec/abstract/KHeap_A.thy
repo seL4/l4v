@@ -338,15 +338,18 @@ where
             \<and> \<not>(in_release_queue tcb_ptr s)))"
 
 definition
-  is_schedulable_bool :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  schedulable :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "is_schedulable_bool tcb_ptr \<equiv> \<lambda>s.
+  "schedulable tcb_ptr \<equiv> \<lambda>s.
      case get_tcb tcb_ptr s of None \<Rightarrow> False
      | Some tcb \<Rightarrow>
        (case tcb_sched_context tcb of None => False
         | Some sc_ptr =>
             (runnable (tcb_state tcb) \<and> (is_sc_active sc_ptr s)
               \<and> \<not>(in_release_queue tcb_ptr s)))"
+
+abbreviation ct_schedulable where
+  "ct_schedulable s \<equiv> schedulable (cur_thread s) s"
 
 (* refill checks *)
 
