@@ -542,7 +542,7 @@ lemma schedContextYieldTo_corres:
                    apply (rule corres_when, simp)
                    apply (rule setConsumed_corres)
                   apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?ct and ?scp
-                                     and (\<lambda>s. sched = is_schedulable_bool tp s) and tcb_at tp
+                                     and (\<lambda>s. sched = schedulable tp s) and tcb_at tp
                                      and sc_tcb_sc_at ((=) (Some tp)) scp"
                              and P'="?con_buf and cur_tcb' and tcb_at' tp and ko_at' sc0' scp
                                      and (\<lambda>s. scTCBs_of s scp = Some tp)"
@@ -630,7 +630,7 @@ lemma schedContextYieldTo_corres:
                       apply wpsimp
                      apply wpsimp
                     apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?scp
-                                       and (\<lambda>s. sched = is_schedulable_bool tp s)"
+                                       and (\<lambda>s. sched = schedulable tp s)"
                                 and P'="?con_buf and cur_tcb' and ko_at' sc0' scp"
                            in corres_inst)
                     apply simp

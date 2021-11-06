@@ -1178,7 +1178,7 @@ lemma handleInvocation_corres:
    apply (erule st_tcb_ex_cap, clarsimp+)
    apply fastforce
   apply (clarsimp cong: conj_cong)
-  apply (subgoal_tac "is_schedulable_bool (cur_thread s) s")
+  apply (subgoal_tac "ct_schedulable s")
    apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def)
    apply (frule valid_objs'_valid_tcbs')
    apply (frule ct_active_cross, fastforce, fastforce, simp)
@@ -1192,7 +1192,7 @@ lemma handleInvocation_corres:
    apply (frule curthread_relation, simp)
    apply (frule_tac t1="cur_thread s" in cross_relF[OF _ isSchedulable_bool_cross_rel];
           simp add: invs_def valid_state_def valid_pspace_def)
-  apply (clarsimp simp: is_schedulable_bool_def2 ct_in_state_def runnable_eq_active)
+  apply (clarsimp simp: schedulable_def2 ct_in_state_def runnable_eq_active)
   done
 
 lemma ts_Restart_case_helper':

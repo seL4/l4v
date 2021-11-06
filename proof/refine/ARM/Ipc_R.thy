@@ -2998,7 +2998,7 @@ lemma schedContextResume_corres:
 
     apply (intro conjI; (clarsimp simp: invs_def valid_state_def; fail)?)
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_obj_def)
-    apply (clarsimp simp: is_schedulable_bool_def get_tcb_def obj_at_kh_kheap_simps)
+    apply (clarsimp simp: schedulable_def get_tcb_def obj_at_kh_kheap_simps)
     apply (rename_tac t; prop_tac "budget_sufficient t s")
      apply (erule active_valid_budget_sufficient)
      apply (clarsimp simp: vs_all_heap_simps)
