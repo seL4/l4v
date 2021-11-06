@@ -317,7 +317,7 @@ crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_obj
 
 lemma handle_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>\<lambda>s. valid_vspace_objs' s \<and> invs s \<and> ct_active s \<and>
-        scheduler_action s = resume_cur_thread \<and> is_schedulable_bool (cur_thread s) s\<rbrace>
+        scheduler_action s = resume_cur_thread \<and> ct_schedulable s\<rbrace>
    handle_invocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: handle_invocation_def)
@@ -346,7 +346,7 @@ lemma schedule_valid_vspace_objs'[wp]:
 (* FIXME RT: clean up the duplication here (also in ARM); factor out handle_event? *)
 lemma call_kernel_valid_vspace_objs'[wp]:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s) and valid_vspace_objs' and
-    (\<lambda>s. scheduler_action s = resume_cur_thread) and (\<lambda>s. is_schedulable_bool (cur_thread s) s)\<rbrace>
+    (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
       (call_kernel e) :: (unit,unit) s_monad
    \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (cases e, simp_all add: call_kernel_def preemption_path_def)
@@ -355,13 +355,13 @@ lemma call_kernel_valid_vspace_objs'[wp]:
         apply (rule_tac Q="\<lambda>_. valid_vspace_objs'" in handleE_wp[rotated])
          apply (rule_tac B="\<lambda>_. invs and ct_running and valid_vspace_objs' and
            (\<lambda>s. scheduler_action s = resume_cur_thread) and
-           (\<lambda>s. is_schedulable_bool (cur_thread s) s)" in seqE)
+           ct_schedulable" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: hoare_vcg_ex_lift)
          apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            valid_vspace_objs' and
            (\<lambda>s. rv \<longrightarrow> scheduler_action s = resume_cur_thread) and
-           (\<lambda>s. rv \<longrightarrow> (is_schedulable_bool (cur_thread s) s))" in seqE)
+           (\<lambda>s. rv \<longrightarrow> ct_schedulable s)" in seqE)
           apply (rule liftE_wp)
           apply (wpsimp wp: check_budget_restart_true)
          apply (rule valid_validE)
@@ -377,7 +377,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
         apply wpsimp
-        apply (clarsimp simp: pred_tcb_at_def obj_at_def is_schedulable_bool_def')
+        apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
        apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and valid_vspace_objs'"
                        in hoare_seq_ext[rotated])
         apply (wpsimp wp: check_budget_restart_true)
@@ -390,7 +390,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
        apply wpsimp
-       apply (clarsimp simp: pred_tcb_at_def obj_at_def is_schedulable_bool_def')
+       apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
       apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and valid_vspace_objs'"
                       in hoare_seq_ext[rotated])
        apply (wpsimp wp: check_budget_restart_true)
@@ -405,7 +405,7 @@ lemma call_kernel_valid_vspace_objs'[wp]:
            valid_vspace_objs' and
            (\<lambda>s. bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) (cur_thread s) s)" in hoare_seq_ext[rotated])
      apply wpsimp
-     apply (clarsimp simp: pred_tcb_at_def obj_at_def is_schedulable_bool_def')
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def schedulable_def')
     apply (rule_tac B="\<lambda>rv. invs and (\<lambda>s. rv \<longrightarrow> ct_running s) and
            valid_vspace_objs'" in hoare_seq_ext[rotated])
      apply (wpsimp wp: check_budget_restart_true)
