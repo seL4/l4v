@@ -22,16 +22,22 @@ lemma pred_tcb_at_upd_apply:
   pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(t := p' t)\<rparr>)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
-lemma thread_set_tcb_arch_is_schedulable_bool[wp]:
-  "\<lbrace>\<lambda>s. is_schedulable_bool (cur_thread s) s\<rbrace>
-     thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t
-   \<lbrace>\<lambda>rv s. is_schedulable_bool (cur_thread s) s\<rbrace>"
+lemma thread_set_tcb_arch_ct_schedulable[wp]:
+  "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t \<lbrace>ct_schedulable\<rbrace>"
   apply (simp add: thread_set_def)
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
   apply (wpsimp wp: set_object_wp)
-  apply (fastforce simp: is_schedulable_bool_def is_sc_active_def get_tcb_def ko_atD
+  apply (fastforce simp: schedulable_def is_sc_active_def get_tcb_def ko_atD
                          in_release_queue_def
                   split: option.splits )
+  done
+
+lemma thread_set_tcb_arch_ct_not_running[wp]:
+  "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set us (tcb_arch tcb)\<rparr>) t \<lbrace>\<lambda>s. \<not> ct_running s\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (rule hoare_seq_ext[OF _ assert_get_tcb_ko'])
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def split: if_splits)
   done
 
 text \<open>The top-level invariance\<close>
@@ -39,9 +45,9 @@ text \<open>The top-level invariance\<close>
 lemma akernel_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
         scheduler_action s = resume_cur_thread \<and>
-        is_schedulable_bool (cur_thread s) s\<rbrace>
-     (call_kernel e)
-   \<lbrace>\<lambda>rv s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
+        (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
+   call_kernel e
+   \<lbrace>\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))\<rbrace>"
   unfolding call_kernel_def preemption_path_def
   apply (wpsimp wp: activate_invs check_budget_invs charge_budget_invs is_schedulable_wp
                     update_time_stamp_invs hoare_drop_imps hoare_vcg_all_lift hoare_vcg_if_lift2)
@@ -51,12 +57,12 @@ lemma akernel_invs:
 lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
         scheduler_action s = resume_cur_thread \<and>
-        is_schedulable_bool (cur_thread s) s\<rbrace>
+        (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
   (kernel_entry e us) :: (user_context,unit) s_monad
   \<lbrace>\<lambda>rv s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
-            static_imp_wp hoare_vcg_disj_lift
+            static_imp_wp hoare_vcg_disj_lift hoare_vcg_imp_lift'
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 
