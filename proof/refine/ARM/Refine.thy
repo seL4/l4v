@@ -631,7 +631,7 @@ lemma entry_corres:
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (clarsimp simp: invs_def cur_tcb_def)
-  sorry (* FIXME: akernel_invs wants is_schedulable_bool, which is too strong for kernel entry
+  sorry (*
   apply (clarsimp simp: ct_in_state'_def)
   done *)
 
