@@ -1609,10 +1609,9 @@ lemma is_schedulable_opt_Some:
   by (clarsimp simp: is_schedulable_opt_def vs_all_heap_simps obj_at_kh_kheap_simps
               split: option.splits)
 
-lemma is_schedulable_bool_def2:
-  "is_schedulable_bool t s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s
-                               \<and> \<not> (in_release_queue t s))"
-  by (clarsimp simp: is_schedulable_bool_def vs_all_heap_simps obj_at_kh_kheap_simps
+lemma schedulable_def2:
+  "schedulable t s = (st_tcb_at runnable t s \<and> active_sc_tcb_at t s \<and> \<not> (in_release_queue t s))"
+  by (clarsimp simp: schedulable_def vs_all_heap_simps obj_at_kh_kheap_simps
               split: option.splits)
 
 \<comment> \<open>Like refill_ready', but using unat addition to avoid the need to reason about overflow.\<close>

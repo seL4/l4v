@@ -1438,20 +1438,20 @@ lemma valid_blocked_except_cur_thread[simp]:
   using valid_blocked_defs by simp
 
 lemma valid_blocked_except_set_not_schedulable:
-  "\<lbrakk>valid_blocked_except tcbptr s; \<not> is_schedulable_bool tcbptr s\<rbrakk> \<Longrightarrow> valid_blocked s"
-  apply (clarsimp simp: valid_blocked_defs is_schedulable_bool_def2)
+  "\<lbrakk>valid_blocked_except tcbptr s; \<not> schedulable tcbptr s\<rbrakk> \<Longrightarrow> valid_blocked s"
+  apply (clarsimp simp: valid_blocked_defs schedulable_def2)
   apply (case_tac "t = tcbptr"; drule_tac x=t in spec; simp add: tcb_at_kh_simps runnable_eq_active)
   done
 
 lemma shows
-  not_runnable_not_schedulable: "\<not> st_tcb_at runnable t s \<Longrightarrow> \<not> is_schedulable_bool t s" and
-  not_active_sc_not_schedulable: "\<not> active_sc_tcb_at t s \<Longrightarrow> \<not> is_schedulable_bool t s" and
-  in_release_q_not_schedulable: "in_release_q t s \<Longrightarrow> \<not> is_schedulable_bool t s"
-  by (clarsimp simp: is_schedulable_bool_def2)+
+  not_runnable_not_schedulable: "\<not> st_tcb_at runnable t s \<Longrightarrow> \<not> schedulable t s" and
+  not_active_sc_not_schedulable: "\<not> active_sc_tcb_at t s \<Longrightarrow> \<not> schedulable t s" and
+  in_release_q_not_schedulable: "in_release_q t s \<Longrightarrow> \<not> schedulable t s"
+  by (clarsimp simp: schedulable_def2)+
 
 lemma no_bound_sc_not_schedulable:
-  "bound_sc_tcb_at ((=) None) t s \<Longrightarrow> \<not> is_schedulable_bool t s"
-  by (clarsimp simp: is_schedulable_bool_def2 active_sc_tcb_at_def2 pred_tcb_at_def obj_at_def)
+  "bound_sc_tcb_at ((=) None) t s \<Longrightarrow> \<not> schedulable t s"
+  by (clarsimp simp: schedulable_def2 active_sc_tcb_at_def2 pred_tcb_at_def obj_at_def)
 
 lemmas valid_blocked_except_set_in_release_q =
          valid_blocked_except_set_not_schedulable[OF _ in_release_q_not_schedulable]
