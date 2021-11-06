@@ -1566,8 +1566,8 @@ lemma he_invs[wp]:
   "\<And>e.
     \<lbrace>\<lambda>s. invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and>
          scheduler_action s = resume_cur_thread \<and>
-         is_schedulable_bool (cur_thread s) s\<rbrace>
-      handle_event e
+         (ct_running s \<longrightarrow> ct_schedulable s)\<rbrace>
+    handle_event e
     \<lbrace>\<lambda>_. invs :: 'state_ext state \<Rightarrow> bool\<rbrace>"
   apply (case_tac e, simp_all)
        apply (rename_tac syscall)
