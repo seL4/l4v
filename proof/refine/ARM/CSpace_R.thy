@@ -2492,6 +2492,7 @@ crunches cteInsert
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
+  and bounded'[wp]: pspace_bounded'
   and no_0_obj'[wp]: no_0_obj'
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
@@ -5786,6 +5787,7 @@ lemma updateFreeIndex_forward_valid_objs':
 crunches updateFreeIndex
   for pspace_aligned'[wp]: "pspace_aligned'"
   and pspace_distinct'[wp]: "pspace_distinct'"
+  and pspace_bounded'[wp]: "pspace_bounded'"
   and no_0_obj[wp]: "no_0_obj'"
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"

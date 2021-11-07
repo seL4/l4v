@@ -79,7 +79,7 @@ lemma pspace_relation_pd:
   apply (drule_tac x="ucast y" in spec, clarsimp)
   apply (simp add: ucast_ucast_mask iffD2 [OF mask_eq_iff_w2p] word_size)
   apply (clarsimp simp add: pde_relation_def)
-  apply (drule(2) aligned_distinct_pde_atI')
+  apply (drule(2) aligned_distinct_pde_atI', simp)
   apply (erule obj_at'_weakenE)
   apply simp
   done
@@ -2703,7 +2703,6 @@ lemma storePDE_pde_mappings'[wp]:
    apply (wp setObject_ko_wp_at)
       apply simp
      apply (simp add: objBits_simps archObjSize_def)
-    apply (simp add: pdeBits_def)
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   apply assumption
   done
