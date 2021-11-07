@@ -37,6 +37,7 @@ crunches refillUnblockCheck, refillBudgetCheck, refillBudgetCheckRoundRobin
   and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   and pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
   and no_0_obj'[wp]: no_0_obj'
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
@@ -5374,6 +5375,7 @@ crunches schedContextDonate
   and valid_dom_schedule'[wp]: valid_dom_schedule'
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and valid_replies' [wp]: valid_replies'
+  and pspace_bounded'[wp]: "pspace_bounded'"
   (simp: comp_def tcb_cte_cases_def crunch_simps
      wp: threadSet_not_inQ hoare_vcg_imp_lift' valid_irq_node_lift
          setQueue_cur threadSet_ifunsafe'T threadSet_cur crunch_wps

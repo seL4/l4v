@@ -829,7 +829,7 @@ lemma cte_wp_at_obj_cases':
   apply (simp add: cte_wp_at_cases' obj_at'_def)
   apply (rule iffI)
    apply (erule disjEI
-           | clarsimp simp: objBits_simps' cte_level_bits_def projectKOs
+           | clarsimp simp: objBits_simps' cte_level_bits_def projectKOs word_bits_def
            | rule rev_bexI, erule domI)+
   apply fastforce
   done

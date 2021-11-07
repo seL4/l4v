@@ -618,6 +618,7 @@ lemma untypedCap_descendants_range':
   apply (clarsimp simp: ko_wp_at'_def simp del: usableUntypedRange.simps untypedRange.simps)
   apply (frule(1) pspace_alignedD')
   apply (frule(1) pspace_distinctD')
+  apply (frule(1) pspace_boundedD')
   apply (erule(1) impE)
   apply (clarsimp simp del: usableUntypedRange.simps untypedRange.simps)
   apply blast
@@ -3074,7 +3075,7 @@ lemma createNewCaps_descendants_range':
         range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0 \<and>
         (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                \<longrightarrow> sc_size_bounds us) \<and>
-        pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
+        pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
    createNewCaps ty ptr n us d
    \<lbrace> \<lambda>rv s. descendants_range' p q (ctes_of s)\<rbrace>"
   apply (clarsimp simp:descendants_range'_def2 descendants_range_in'_def2)
@@ -3104,7 +3105,7 @@ lemma caps_overlap_reserved'_def2:
   done
 
 lemma createNewCaps_caps_overlap_reserved':
-  "\<lbrace>\<lambda>s. caps_overlap_reserved' S s \<and> pspace_aligned' s \<and> pspace_distinct' s \<and>
+  "\<lbrace>\<lambda>s. caps_overlap_reserved' S s \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and>
         pspace_no_overlap' ptr sz s \<and> 0 < n \<and>
         (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                  \<longrightarrow> sc_size_bounds us) \<and>
@@ -3119,7 +3120,7 @@ lemma createNewCaps_caps_overlap_reserved':
 lemma createNewCaps_caps_overlap_reserved_ret':
   "\<lbrace>\<lambda>s. caps_overlap_reserved'
           {ptr..ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s \<and>
-        pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_no_overlap' ptr sz s \<and>
+        pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and> pspace_no_overlap' ptr sz s \<and>
         (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                \<longrightarrow> sc_size_bounds us) \<and>
         0 < n \<and> range_cover ptr sz (APIType_capBits ty us) n\<rbrace>
@@ -3142,7 +3143,7 @@ lemma createNewCaps_caps_overlap_reserved_ret':
 
 lemma createNewCaps_descendants_range_ret':
  "\<lbrace>\<lambda>s.  (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n)
-        \<and> pspace_aligned' s \<and> pspace_distinct' s
+        \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
         \<and> pspace_no_overlap' ptr sz s
         \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                \<longrightarrow> sc_size_bounds us)
@@ -3166,7 +3167,7 @@ lemma createNewCaps_descendants_range_ret':
 
 lemma createNewCaps_parent_helper:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap d (ptr && ~~ mask sz) sz idx) p s
-      \<and> pspace_aligned' s \<and> pspace_distinct' s
+      \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
       \<and> pspace_no_overlap' ptr sz s
       \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us)
       \<and> (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
@@ -3683,6 +3684,7 @@ lemma cte_wp_at_pspace_no_overlapI':
   apply (drule spec)+
   apply (frule(1) pspace_distinctD')
   apply (frule(1) pspace_alignedD')
+  apply (frule(1) pspace_boundedD')
   apply (erule(1) impE)+
   apply (clarsimp simp: obj_range'_def simp del: atLeastAtMost_iff
           atLeastatMost_subset_iff atLeastLessThan_iff
@@ -4948,7 +4950,7 @@ lemma inv_untyped_corres':
                      set_cap_cte_wp_at
                      | strengthen exI[where x=cref])+
           apply (clarsimp simp:conj_comms ball_conj_distrib simp del:capFreeIndex_update.simps)
-          apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
+          apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_pspace_bounded'
                invs_valid_pspace' invs_arch_state'
                imp_consequent[where Q = "(\<exists>x. x \<in> cte_map ` set slots)"]
              | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+
@@ -5024,7 +5026,7 @@ lemma inv_untyped_corres':
                               invokeUntyped_proofs.ps_no_overlap'
                               invokeUntyped_proofs.descendants_range
                               if_split[where P="\<lambda>v. v \<le> getFreeIndex x y" for x y]
-                              empty_descendants_range_in'
+                              empty_descendants_range_in' invs_pspace_bounded'
                               invs_pspace_aligned' invs_pspace_distinct'
                               invs_ksCurDomain_maxDomain'
                         cong: if_cong)
@@ -5375,7 +5377,7 @@ lemma createNewCaps_not_isZombie[wp]:
 lemma createNewCaps_cap_to':
   "\<lbrace>\<lambda>s. ex_cte_cap_to' p s \<and> 0 < n
       \<and> range_cover ptr sz (APIType_capBits ty us) n
-      \<and> pspace_aligned' s \<and> pspace_distinct' s
+      \<and> pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s
       \<and>  (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                \<longrightarrow> sc_size_bounds us)
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
@@ -5411,7 +5413,7 @@ lemma createNewCaps_IRQHandler[wp]:
   done
 
 lemma createNewCaps_ct_active':
-  "\<lbrace>ct_active' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz and
+  "\<lbrace>ct_active' and pspace_aligned' and pspace_distinct' and pspace_bounded' and pspace_no_overlap' ptr sz and
     K (range_cover ptr sz (APIType_capBits ty us) n \<and> 0 < n \<and>
        (ty = APIObjectType ArchTypes_H.apiobject_type.SchedContextObject
                \<longrightarrow> sc_size_bounds us))\<rbrace>
@@ -5575,7 +5577,7 @@ lemma invokeUntyped_invs'':
         apply (clarsimp simp: slots)
        apply (clarsimp simp:conj_comms ball_conj_distrib pred_conj_def
                    simp del:capFreeIndex_update.simps)
-       apply (strengthen invs_pspace_aligned' invs_pspace_distinct'
+       apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_pspace_bounded'
                 invs_valid_pspace' invs_arch_state'
                 imp_consequent[where Q = "(\<exists>x. x \<in> set slots)"]
               | clarsimp simp: conj_comms simp del: capFreeIndex_update.simps)+

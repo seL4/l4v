@@ -1068,7 +1068,7 @@ lemma valid_duplicates'_update:
 
 lemma createObject_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_aligned' and pspace_distinct'
-   and pspace_no_overlap' ptr (getObjectSize ty us)
+   and pspace_no_overlap' ptr (getObjectSize ty us) and pspace_bounded'
    and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
    and K (is_aligned ptr (getObjectSize ty us))
    and K (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> us < 28)\<rbrace>
@@ -1146,12 +1146,17 @@ lemma createObject_valid_duplicates'[wp]:
      ,simplified objBits_simps])
     apply simp
    apply (clarsimp simp: objBits_simps archObjSize_def pdBits_def pageBits_def)
-   apply (frule(2) retype_aligned_distinct'[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
+   apply (frule(3) retype_aligned_distinct'[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
        apply simp
       apply (simp add:APIType_capBits_def word_bits_def pdeBits_def)+
-   apply (frule(2) retype_aligned_distinct'(2)[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
+   apply (frule(3) retype_aligned_distinct'(2)[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
+    apply (simp add:objBits_simps archObjSize_def)
+    apply (rule range_cover_rel[OF range_cover_full])
+       apply simp
+      apply (simp add:APIType_capBits_def word_bits_def pdeBits_def)+
+   apply (frule(3) retype_aligned_distinct'(3)[where n = 4096 and ko = "KOArch (KOPDE makeObject)"])
     apply (simp add:objBits_simps archObjSize_def)
     apply (rule range_cover_rel[OF range_cover_full])
        apply simp
@@ -1199,7 +1204,7 @@ crunch arch_inv[wp]: createNewObjects "\<lambda>s. P (armKSGlobalPD (ksArchState
 
 lemma createNewObjects_valid_duplicates'[wp]:
  "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_no_overlap' ptr sz and pspace_aligned'
-    and pspace_distinct' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
+    and pspace_distinct' and pspace_bounded' and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
     and K (range_cover ptr sz (Types_H.getObjectSize ty us) (length dest))
     and K (ptr \<noteq> 0)
     and K (ty = APIObjectType ArchTypes_H.apiobject_type.CapTableObject \<longrightarrow> us < 28)
@@ -1220,17 +1225,17 @@ lemma createNewObjects_valid_duplicates'[wp]:
       apply (simp add: word_bits_def)
      apply wp
       apply (wp snoc.hyps)
+       (* first bundling up "pspace_xxx" conjuncts together to apply
+          createNewObjects_pspace_no_overlap' in an appropriate way *)
+      apply (subst conj_assoc[symmetric])
+      apply (subst conj_assoc[symmetric])
+      apply (subst conj_assoc[symmetric])
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_post_imp[OF _ createNewObjects_pspace_no_overlap'[where sz = sz]])
        apply clarsimp
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule hoare_post_imp[OF _ createNewObjects_pspace_no_overlap'[where sz = sz]])
-       apply clarsimp
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule hoare_post_imp[OF _ createNewObjects_pspace_no_overlap'[where sz = sz]])
        apply (rule pspace_no_overlap'_le)
-        apply fastforce
-       apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def])+
+         apply fastforce
+        apply (simp add: range_cover.sz[where 'a=32, folded word_bits_def])+
       apply wp
      apply clarsimp
      apply (frule range_cover.aligned)

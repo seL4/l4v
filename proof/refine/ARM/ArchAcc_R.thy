@@ -180,7 +180,7 @@ lemma pte_at_cross:
   apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
   apply (clarsimp simp: pte_relation_aligned_def)
   apply (frule (1) pspace_distinctD')
-  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pteBits_def word_bits_def)
   done
 
 lemma pde_at_cross:
@@ -206,7 +206,7 @@ lemma pde_at_cross:
   apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
   apply (clarsimp simp: pde_relation_aligned_def)
   apply (frule (1) pspace_distinctD')
-  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def)
+  apply (clarsimp simp: objBitsKO_def archObjSize_def pdeBits_def word_bits_def)
   done
 
 lemma asid_pool_at_cross:
@@ -229,7 +229,7 @@ lemma asid_pool_at_cross:
   apply (rule conjI, simp add: bit_simps archObjSize_def)
   apply (clarsimp simp: pspace_distinct'_def)
   apply (drule bspec, fastforce)
-  apply (simp add: objBits_simps)
+  apply (simp add: objBits_simps archObjSize_def pageBits_def word_bits_def)
   done
 
 lemma pte_relation_must_pte:
@@ -348,7 +348,7 @@ lemma getObject_ASIDPool_corres [corres]:
 
 lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   "\<lbrakk> asid_pool_at p s; pspace_relation (kheap s) (ksPSpace s');
-     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
+     pspace_aligned' s'; pspace_distinct' s'\<rbrakk>
         \<Longrightarrow> asid_pool_at' p s'"
   apply (drule asid_pool_at_ko)
   apply (clarsimp simp add: obj_at_def)
@@ -356,7 +356,7 @@ lemma aligned_distinct_relation_asid_pool_atI'[elim]:
   apply (clarsimp simp: other_obj_relation_def)
   apply (simp split: Structures_H.kernel_object.split_asm
                      arch_kernel_object.split_asm)
-  apply (drule(2) aligned'_distinct'_ko_at'I[where 'a=asidpool], simp)
+  apply (drule (2) aligned'_distinct'_ko_at'I[where 'a=asidpool]; fastforce?)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   done
@@ -437,7 +437,7 @@ lemma getObject_PDE_corres [corres]:
 
 lemmas aligned_distinct_pde_atI'
     = aligned'_distinct'_ko_at'I[where 'a=pde,
-                                simplified, OF _ _ _ refl]
+                                simplified, OF _ _ _ _ refl]
 
 lemma aligned_distinct_relation_pde_atI'[elim]:
   "\<lbrakk> pde_at p s; pspace_relation (kheap s) (ksPSpace s');
@@ -461,7 +461,7 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
   apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pde_relation_def)
-  apply (drule(2) aligned_distinct_pde_atI')
+  apply (drule(2) aligned_distinct_pde_atI', simp)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   done
@@ -683,7 +683,7 @@ lemma pte_relation_alignedD:
 
 lemmas aligned_distinct_pte_atI'
     = aligned'_distinct'_ko_at'I[where 'a=pte,
-                                simplified, OF _ _ _ refl]
+                                simplified, OF _ _ _ _ refl]
 
 lemma aligned_distinct_relation_pte_atI'[elim]:
   "\<lbrakk> pte_at p s; pspace_relation (kheap s) (ksPSpace s');
@@ -707,7 +707,7 @@ lemma aligned_distinct_relation_pte_atI'[elim]:
   apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pte_relation_def)
-  apply (drule(2) aligned_distinct_pte_atI')
+  apply (drule(2) aligned_distinct_pte_atI', simp)
   apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def
                         projectKOs)
   done
@@ -1099,12 +1099,11 @@ lemma page_table_at_state_relation:
     split:if_splits)
   apply (drule pte_relation_must_pte)
   apply (drule(1) pspace_distinctD')
-  apply (clarsimp simp:objBits_simps archObjSize_def)
+  apply (clarsimp simp:objBits_simps archObjSize_def word_bits_def pteBits_def)
   apply (rule is_aligned_weaken)
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_shiftl_self)
-   apply simp
-  apply (simp add: pteBits_def)
+   apply simp+
   done
 
 lemma page_directory_at_state_relation:
@@ -1135,12 +1134,11 @@ lemma page_directory_at_state_relation:
   apply (clarsimp simp:ucast_ucast_len split:if_splits)
   apply (drule pde_relation_must_pde)
   apply (drule(1) pspace_distinctD')
-  apply (clarsimp simp:objBits_simps archObjSize_def)
+  apply (clarsimp simp:objBits_simps archObjSize_def word_bits_def pdeBits_def)
   apply (rule is_aligned_weaken)
    apply (erule aligned_add_aligned)
     apply (rule is_aligned_shiftl_self)
-   apply simp
-  apply (simp add: pdeBits_def)
+   apply simp+
   done
 
 lemmas get_pde_wp_valid = hoare_add_post'[OF get_pde_valid get_pde_wp]

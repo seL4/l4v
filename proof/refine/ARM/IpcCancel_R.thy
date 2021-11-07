@@ -297,7 +297,8 @@ lemma blocked_cancelIPC_corres:
        apply (case_tac ko; simp)
        apply (rename_tac reply')
        apply (frule_tac x=rp in pspace_alignedD', simp)
-       apply (drule_tac x=rp in pspace_distinctD', simp)
+       apply (frule_tac x=rp in pspace_distinctD', simp)
+       apply (drule_tac x=rp in pspace_boundedD'[OF _ pspace_relation_pspace_bounded'], simp)
        apply (clarsimp simp: reply_relation_def)
        \<comment>\<open>main corres proof\<close>
       apply (rule corres_gen_asm)
@@ -527,7 +528,7 @@ lemma sr_inv_sc_with_reply_None_helper:
      (valid_objs' and valid_release_queue_iff and
       (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and
       (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp and
-      ((\<lambda>s'. sc_with_reply' rp s' = None) and pspace_aligned' and pspace_distinct'))
+      ((\<lambda>s'. sc_with_reply' rp s' = None) and pspace_aligned' and pspace_distinct' and pspace_bounded'))
      (do y <-
          do y <-
             when (\<exists>y. replyNext reply' = Some y)
@@ -656,8 +657,7 @@ lemma no_fail_sc_wtih_reply_None_helper:
             (\<lambda>s. sym_refs (state_refs_of' s)) and
             ko_at' reply' rp and
             ((\<lambda>s'. sc_with_reply' rp s' = None) and
-             pspace_aligned' and
-             pspace_distinct'))
+             pspace_aligned' and pspace_distinct' and pspace_bounded'))
             s')
      (do y <-
          do y <-
@@ -706,8 +706,10 @@ lemma replyRemoveTCB_corres:
              apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = sc_opt) and reply_at rp"
                          and P'="?conc_guard and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp"
                     in corres_inst)
-             apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned' and pspace_distinct'"
+             apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
+                                      and pspace_distinct' and pspace_bounded'"
                     in corres_cross_add_guard)
+              apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
               apply (fastforce simp: sc_replies_relation_sc_with_reply_cross_eq
                               dest!: state_relationD pspace_distinct_cross dest: pspace_aligned_cross)
              apply (case_tac sc_opt; simp split del: if_split add: bind_assoc)
@@ -745,7 +747,7 @@ lemma replyRemoveTCB_corres:
               apply (drule sc_with_reply'_SomeD, clarsimp)
               apply (case_tac "hd xs = rp")
                apply (drule heap_path_head, clarsimp)
-               apply (drule (2) sym_refs_scReplies)
+               apply (drule (3) sym_refs_scReplies)
                apply (clarsimp simp: obj_at'_def projectKOs sym_heap_def)
 
               apply (frule (1) heap_path_takeWhile_lookup_next)
@@ -854,7 +856,7 @@ lemma replyRemoveTCB_corres:
                                             objBits_simps)
                      apply (erule sym_refs_replyNext_replyPrev_sym[THEN iffD2])
                      apply (clarsimp simp: opt_map_red obj_at'_def projectKOs)
-                    apply (frule (2) sym_refs_scReplies)
+                    apply (frule (3) sym_refs_scReplies)
                     apply (clarsimp simp: hd_opt_def projectKOs opt_map_red sym_heap_def
                                    split: list.split_asm)
                     apply (clarsimp simp: opt_map_red obj_at'_def projectKOs split: reply_next.splits)
@@ -927,8 +929,9 @@ lemma replyRemoveTCB_corres:
                      apply (frule (1) valid_sched_context_objsI)
                      apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
                      apply (frule (4) next_reply_in_sc_replies[OF state_relation_sc_replies_relation])
-                       apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
-                      apply (fastforce dest!: state_relationD pspace_distinct_cross)
+                        apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
+                       apply (fastforce dest!: state_relationD pspace_distinct_cross)
+                      apply (fastforce dest!: state_relationD pspace_relation_pspace_bounded')
                      apply (clarsimp simp: obj_at'_def)
                      apply (clarsimp simp: vs_heap_simps)
                     apply clarsimp
@@ -1139,6 +1142,8 @@ lemma replyPop_corres:
    apply (fastforce dest!: pspace_distinct_cross)
   apply (rule_tac Q="pspace_aligned'" in corres_cross_add_guard)
    apply (fastforce dest!: pspace_aligned_cross)
+  apply (rule_tac Q="pspace_bounded'" in corres_cross_add_guard)
+   apply (fastforce dest!: pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
   apply (rule_tac Q="\<lambda>s. scReplies_of s scp = Some rp" in corres_cross_add_guard)
    apply (fastforce simp: opt_map_red obj_at'_def projectKOs
                    dest!: sc_replies_relation_scReplies_of state_relation_sc_replies_relation)
@@ -1159,7 +1164,7 @@ lemma replyPop_corres:
                             and ko_at (Structures_A.Reply r) rp and bound_sc_tcb_at ((=) tcbsc) t
                             and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) scp s)"
                      and P'="?conc_guard and (\<lambda>s'. sym_refs (list_refs_of_replies' s'))
-                            and pspace_aligned' and pspace_distinct' and (\<lambda>s. sym_refs (state_refs_of' s))
+                            and pspace_aligned' and pspace_distinct' and pspace_bounded' and (\<lambda>s. sym_refs (state_refs_of' s))
                             and st_tcb_at' ((=) st') t and (\<lambda>s. tcbSCs_of s t = tcbsc) and ko_at' r' rp
                             and (\<lambda>s. scReplies_of s scp = Some rp)
                             and K (replyTCB r' = Some t) and K (replyNext r' = Some (Head scp))"
@@ -1182,7 +1187,7 @@ lemma replyPop_corres:
                                   and bound_sc_tcb_at ((=) tcbsc) t
                                   and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) scp s)"
                            and P'="?conc_guard and (\<lambda>s'. sym_refs (list_refs_of_replies' s'))
-                                  and pspace_aligned' and pspace_distinct'
+                                  and pspace_aligned' and pspace_distinct' and pspace_bounded'
                                   and (\<lambda>s. sym_refs (state_refs_of' s)) and st_tcb_at' ((=) st') t
                                   and (\<lambda>s. tcbSCs_of s t = tcbsc)
                                   and (\<lambda>s. scReplies_of s scp = Some rp)
@@ -1354,7 +1359,7 @@ lemma replyPop_corres:
                  apply (fastforce dest!: sym_refs_replyNext_replyPrev_sym[where rp'=rp and rp=rp, THEN iffD2]
                                    simp: obj_at_simps opt_map_red)
                 apply (clarsimp del: opt_mapE)
-                apply (drule (3) sym_refs_scReplies[simplified sym_heap_def, rule_format, THEN iffD1])
+                apply (drule (4) sym_refs_scReplies[simplified sym_heap_def, rule_format, THEN iffD1])
                 apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
                apply (clarsimp del: opt_mapE)
                apply (drule (1) reply_sym_heap_Prev_Next[simplified sym_heap_def, rule_format, THEN iffD1])
@@ -1377,7 +1382,7 @@ lemma replyPop_corres:
         apply (fastforce simp: obj_at'_def projectKOs)
        apply (rule disjI2, rule sym, simp)
       apply clarsimp
-     apply (drule (3) sym_refs_scReplies[simplified sym_heap_def, rule_format, THEN iffD1])
+     apply (drule (4) sym_refs_scReplies[simplified sym_heap_def, rule_format, THEN iffD1])
      apply (clarsimp simp: obj_at'_def projectKOs opt_map_red)
     apply (wpsimp wp: get_sched_context_exs_valid)
      apply (clarsimp simp: obj_at_def is_sc_obj)
@@ -1443,8 +1448,10 @@ lemma replyRemove_corres:
                 apply (rule_tac P="?abs_guard and (\<lambda>s. sc_with_reply rp s = sc_opt) and  ko_at (Structures_A.Reply reply) rp"
                            and P'="?conc_guard and (\<lambda>s. sym_refs (state_refs_of' s)) and ko_at' reply' rp"
                        in corres_inst)
-                apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned' and pspace_distinct'"
+                apply (rule_tac Q="(\<lambda>s'. sc_with_reply' rp s' = sc_opt) and pspace_aligned'
+                                         and pspace_distinct' and pspace_bounded'"
                        in corres_cross_add_guard)
+                 apply (frule pspace_relation_pspace_bounded'[OF state_relation_pspace_relation])
                  apply (fastforce simp: sc_replies_relation_sc_with_reply_cross_eq
                                  dest!: state_relationD pspace_distinct_cross dest: pspace_aligned_cross)
                 apply (case_tac sc_opt; simp split del: if_split add: bind_assoc)
@@ -1481,7 +1488,7 @@ lemma replyRemove_corres:
                  apply (drule sc_with_reply'_SomeD, clarsimp)
                  apply (case_tac "hd xs = rp")
                   apply (drule heap_path_head, clarsimp)
-                  apply (drule (2) sym_refs_scReplies)
+                  apply (drule (3) sym_refs_scReplies)
                   apply (clarsimp simp: obj_at'_def projectKOs sym_heap_def)
                  apply (frule (1) heap_path_takeWhile_lookup_next)
                  apply (frule heap_path_head, clarsimp)
@@ -1636,8 +1643,9 @@ lemma replyRemove_corres:
                               apply (frule (1) valid_sched_context_objsI)
                               apply (clarsimp simp: valid_sched_context_def del: opt_mapE)
                               apply (frule (4) next_reply_in_sc_replies[OF state_relation_sc_replies_relation])
-                                apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
-                               apply (fastforce dest!: state_relationD pspace_distinct_cross)
+                                 apply (fastforce dest!: state_relationD pspace_aligned_cross pspace_distinct_cross)
+                                apply (fastforce dest!: state_relationD pspace_distinct_cross)
+                               apply (fastforce dest!: state_relationD pspace_relation_pspace_bounded')
                               apply (clarsimp simp: obj_at'_def)
                               apply (clarsimp simp: vs_heap_simps)
                              apply clarsimp

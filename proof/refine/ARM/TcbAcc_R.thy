@@ -1241,7 +1241,6 @@ lemma threadSet_obj_at'_really_strongest:
     apply (rule getObject_tcb_inv)
    apply (rule hoare_strengthen_post [OF getObject_ko_at])
      apply simp
-    apply (simp add: objBits_simps')
    apply (erule obj_at'_weakenE)
    apply simp
   apply (cases "t = t'", simp_all)
@@ -2807,6 +2806,7 @@ crunches rescheduleRequired, tcbSchedDequeue, scheduleTCB
 crunches rescheduleRequired, tcbSchedDequeue, setThreadState
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]: "pspace_distinct'"
+  and bounded'[wp]: "pspace_bounded'"
   and no_0_obj'[wp]: "no_0_obj'"
   (wp: crunch_wps)
 
@@ -5747,6 +5747,7 @@ crunches tcbReleaseDequeue
 crunches tcbReleaseRemove
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
   and no_0_obj'[wp]: no_0_obj'
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
