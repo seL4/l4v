@@ -800,6 +800,16 @@ definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_
   "A_extended_state s =
      \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
 
+(* XXX: Annoying, surely some helpers for this already exist; come back to this later -robs. *)
+lemma bad_lemma:
+  "\<lbrakk>\<comment> \<open>system.reachable A_extended (A_extended_state s0) s;\<close>
+   x \<in> execution A_extended s as\<rbrakk>
+   \<Longrightarrow> (s, x) \<in> Run (system.Step A_extended) as"
+  apply(induct as arbitrary:s)
+   apply(force simp:execution_def steps_def A_extended_def)
+  apply(clarsimp simp:execution_def A_extended_def)
+  sorry
+
 interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
   policy "\<lambda>d s. out d (other_state s)" Sched
   (* Note: The 3 enabledness/reachability requirements are probably broken. -robs. *)
@@ -810,13 +820,16 @@ interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda
         (* FIXME *)
         defer
        (* Step_system.reachable_s0 *)
-       using reachable_s0
-       apply(clarsimp simp:A_extended_def)
-       (* FIXME *)
-       defer
+       apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
+       apply(clarsimp simp:system.reachable_def execution_def)
+       apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
       (* Step_system.execution_Run *)
-      using execution_Run
-      apply(clarsimp simp:A_extended_def)
+      (* using execution_Run *)
+      apply(rule set_eqI)
+      apply clarsimp
+      apply(rule iffI)
+       (* XXX: Not sure the best way to do these proofs -robs. *)
+       apply(force simp:bad_lemma)
       (* FIXME *)
       defer
      (* noninterference_policy.uwr_equiv_rel *)
