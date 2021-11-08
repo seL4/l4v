@@ -164,7 +164,8 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
 
   fixes touched_addrs :: "other_state \<Rightarrow> address set"
   assumes touched_addrs_inv:
-    "touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> kernel_shared_precise"
+    "reachable s \<Longrightarrow>
+     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> kernel_shared_precise"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 begin
@@ -179,7 +180,8 @@ abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Righta
   "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
 lemma touched_addrs_inv':
-  "touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
+  "reachable (other_state s) \<Longrightarrow>
+   touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
   using touched_addrs_inv unfolding all_addrs_of_def
   by simp
 
@@ -465,6 +467,10 @@ definition
  "programs_obeying_ta ta \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta ta) p}"
 
 
+lemma hd_instr_obeying_ta [dest]:
+  "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
+  by (force simp:programs_obeying_ta_def)
+
 (*
 
   s  -->  t
@@ -605,6 +611,9 @@ lemma d_running_step:
 
 (* d running \<rightarrow> d running *)
 lemma d_running: "\<lbrakk>
+   \<comment> \<open>Note: The \<open>programs_obeying_ta_preserve_uwr\<close> lemma that uses this should extract whatever
+     we'll need here from its guards that s and t are reachable. We can't have these reachability
+     guards here because it will mess up the induction proof (won't hold for intermediate states).\<close>
    \<comment> \<open>we have two programs derived from the same touched_addresses -
      these have to be the same program (so we need to know that the choice depends on stuff in
      other_state in the external uwr)\<close>
@@ -623,16 +632,27 @@ lemma d_running: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr_running\<close>
    (s', t') \<in> uwr d"
-  apply(induct p)
+  apply(induct p arbitrary:s t)
    apply force
-  using d_running_step
-  (* TODO *)
+  apply clarsimp
+  apply(erule_tac x="instr_step a s" in meta_allE)
+  apply(erule_tac x="instr_step a t" in meta_allE)
+  apply clarsimp
+  apply(erule meta_impE)
+   apply(force simp:programs_obeying_ta_def)
+  apply(prop_tac "current_domain' (instr_step a s) = current_domain' s")
+   (* FIXME: We need a guard strong enough to say "there's no change to dom by any instr
+      of this program" enforced depending on which step of the automaton we're in. *)
+   defer
+  apply(erule meta_impE)
+   apply(force dest:d_running_step)
+  apply force
   sorry
 
 (*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
-lemma context_switch_from_d:
-  "\<lbrakk>p \<in> programs_obeying_ta ta;
+lemma context_switch_from_d: "\<lbrakk>
+   p \<in> programs_obeying_ta ta;
    ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise;
    (s, t) \<in> uwr d;
    current_domain' s = d;
@@ -672,8 +692,8 @@ lemma d_not_running: "\<lbrakk>
   sorry
 
 (* d not running \<rightarrow> d running *)
-lemma context_switch_to_d:
-  "\<lbrakk>p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
+lemma context_switch_to_d: "\<lbrakk>
+   p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
    p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;
    ta\<^sub>s \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
    ta\<^sub>t \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
@@ -689,6 +709,8 @@ lemma context_switch_to_d:
   sorry
 
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
+   reachable (other_state s);
+   reachable (other_state t);
    p\<^sub>s \<in> programs_obeying_ta (touched_addrs' s);
    p\<^sub>t \<in> programs_obeying_ta (touched_addrs' t);
    (s, t) \<in> uwr d;
@@ -867,12 +889,7 @@ theorem extended_confidentiality_u:
      These case split on whether `u` is the currently running domain, but maybe we'll
      need to adjust their guards to adapt them further to the automata... -robs. *)
   apply(rename_tac u s t x xa p\<^sub>s xb xc p\<^sub>t)
-  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr)
-      apply force
-     apply force
-    apply force
-   apply force
-  apply force
+  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr, force+)
   done
 
 end
