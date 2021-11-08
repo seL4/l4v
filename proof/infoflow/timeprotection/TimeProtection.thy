@@ -7,6 +7,8 @@
 
 theory TimeProtection
 imports "Word_Lib.WordSetup"
+  InfoFlow.Noninterference_Base
+  Lib.Eisbach_Methods
 begin
 
 (* or something *)
@@ -69,7 +71,14 @@ record ('fch_cachedness,'pch_cachedness) state =
 
 
 
-locale time_protection =
+locale time_protection_system = unwinding_system A s0 current_domain external_uwr policy out Sched
+  for A :: "('a,other_state,unit) data_type"
+  and s0 :: "other_state"
+  and current_domain :: "unit \<Rightarrow> other_state \<Rightarrow> domain"
+  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  and policy :: "(domain \<times> domain) set"
+  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p" +
+
   (* "(a, b) \<in> collides_in_pch" = "a may cause b to be evicted from or loaded to the pch" *)
   fixes collides_in_pch :: "address rel"
   assumes collides_with_equiv: "equiv UNIV collides_in_pch"
@@ -105,11 +114,13 @@ locale time_protection =
 
   fixes store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
+  fixes initial_regs :: "regs"
   fixes padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
   fixes empty_fch :: "'fch_cachedness fch"
   fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+  fixes initial_pch :: "'pch_cachedness pch"
   fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
   \<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
 
@@ -124,10 +135,16 @@ locale time_protection =
 \<comment> \<open>do we assert this here
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
-  fixes current_domain :: "other_state \<Rightarrow> domain"
 
-  fixes external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
-  assumes external_uwr_same_domain: "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
+  (* The parent locale requires current_domain to be equated by Sched uwr, which confidentiality_u
+     then treats as specifying public information; assuming that it is instead equated by every
+     domain's uwr arguably simplifies things without changing the strength of the property.
+       Without this assumption, I expect we'll need to add the Sched uwr explicitly to the
+     pre-equivalence of many lemmas; it may also be a bit harder to prove that our uwr is an
+     equivalence relation without it. It may be reasonable to keep this if it holds (or can
+     reasonably be made to hold) for the seL4 infoflow theory's unwinding relation. -robs. *)
+  assumes external_uwr_same_domain:
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = current_domain () s2"
 \<comment> \<open>we will probably needs lots more info about this external uwr\<close>
 
   
@@ -144,7 +161,27 @@ locale time_protection =
 
 
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
+
+  fixes touched_addrs :: "other_state \<Rightarrow> address set"
+  assumes touched_addrs_inv:
+    "touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> kernel_shared_precise"
+  assumes external_uwr_same_touched_addrs:
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 begin
+
+definition all_addrs_of :: "domain \<Rightarrow> address set" where
+  "all_addrs_of d = {a. addr_domain a = d}"
+
+abbreviation current_domain' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> domain" where
+  "current_domain' s \<equiv> current_domain () (other_state s)"
+
+abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> address set" where
+  "touched_addrs' s \<equiv> touched_addrs (other_state s)"
+
+lemma touched_addrs_inv':
+  "touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
+  using touched_addrs_inv unfolding all_addrs_of_def
+  by simp
 
 abbreviation collision_set :: "address \<Rightarrow> address set" where
   "collision_set a \<equiv> {b. (a, b) \<in> collides_in_pch}"
@@ -162,8 +199,6 @@ definition kernel_shared_expanded :: "address set" where
   "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
 
 
-
-definition current_domain' where "current_domain' s = current_domain (other_state s)"
 
 (*
 
@@ -235,6 +270,49 @@ definition uwr :: "domain \<Rightarrow>
   "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
                       then (s1, s2) \<in> uwr_running d
                       else (s1, s2) \<in> uwr_notrunning d }"
+
+lemma uwr_to_external:
+  "(s, t) \<in> uwr d \<Longrightarrow> (other_state s, other_state t) \<in> external_uwr d"
+  by (clarsimp simp:uwr_def uwr_running_def uwr_notrunning_def split:if_splits)
+
+lemma uwr_same_domain:
+  "(s, t) \<in> uwr d \<Longrightarrow> current_domain' s = current_domain' t"
+  by (force dest:uwr_to_external external_uwr_same_domain)
+
+lemma uwr_same_touched_addrs:
+  "(s, t) \<in> uwr d \<Longrightarrow> current_domain' s = d \<Longrightarrow> touched_addrs' s = touched_addrs' t"
+  by (force dest:uwr_to_external external_uwr_same_touched_addrs)
+
+lemma extended_uwr_equiv_rel:
+  "equiv UNIV (uwr u)"
+  using uwr_equiv_rel
+  apply(erule_tac x=u in meta_allE)
+  apply(clarsimp simp:equiv_def)
+  apply(rule conjI)
+   apply(clarsimp simp:uwr_def refl_on_def uwr_running_def uwr_notrunning_def)
+   apply(force simp:pch_same_for_domain_and_shared_def pch_same_for_domain_except_shared_def)
+  apply(rule conjI)
+   apply(clarsimp simp:sym_def)
+   apply(frule uwr_same_domain)
+   apply(erule_tac x="other_state x" in allE)
+   apply(erule_tac x="other_state y" in allE)
+   apply(clarsimp simp:uwr_def split:if_splits)
+    apply(force simp:uwr_running_def pch_same_for_domain_and_shared_def)
+   apply(force simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  apply(clarsimp simp:trans_def)
+  apply(frule_tac s=x in uwr_same_domain)
+  apply(frule_tac s=y in uwr_same_domain)
+  apply(erule_tac x="other_state x" in allE)
+  apply(erule_tac x="other_state y" in allE)
+  apply(erule impE)
+   apply(force simp:uwr_to_external)
+  apply(erule_tac x="other_state z" in allE)
+  apply(erule impE)
+   apply(force simp:uwr_to_external)
+  apply(clarsimp simp:uwr_def split:if_splits)
+   apply(force simp:uwr_running_def pch_same_for_domain_and_shared_def)
+  apply(force simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  done
 
 (* notes about confidentiality properties with this model:
    
@@ -399,9 +477,6 @@ definition
 
 *)
 
-definition all_addrs_of :: "domain \<Rightarrow> address set" where
-  "all_addrs_of d = {a. addr_domain a = d}"
-
 lemma d_running_step:
   assumes
     "i \<in> instrs_obeying_ta ta"
@@ -552,7 +627,7 @@ lemma d_running: "\<lbrakk>
    apply force
   using d_running_step
   (* TODO *)
-  oops
+  sorry
 
 (*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
@@ -568,7 +643,7 @@ lemma context_switch_from_d:
    \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  oops
+  sorry
 
 (* d not running \<rightarrow> d not running *)
 lemma d_not_running: "\<lbrakk>
@@ -594,7 +669,7 @@ lemma d_not_running: "\<lbrakk>
    \<comment> \<open>new state s' and t' hold uwr_notrunning\<close>
    (s', t') \<in> uwr d"
   apply(clarsimp simp:uwr_def)
-  oops
+  sorry
 
 (* d not running \<rightarrow> d running *)
 lemma context_switch_to_d:
@@ -611,7 +686,194 @@ lemma context_switch_to_d:
    \<comment> \<open>external_uwr should oblige us to prove current_domain' t' = d\<close>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  oops
+  sorry
+
+lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
+   p\<^sub>s \<in> programs_obeying_ta (touched_addrs' s);
+   p\<^sub>t \<in> programs_obeying_ta (touched_addrs' t);
+   (s, t) \<in> uwr d;
+   s' = instr_multistep p\<^sub>s s;
+   t' = instr_multistep p\<^sub>t t
+   \<rbrakk> \<Longrightarrow>
+   (s', t') \<in> uwr d"
+  apply(frule uwr_same_domain)
+  apply(case_tac "current_domain' s = d")
+   apply clarsimp
+   apply(case_tac "current_domain' s' = d")
+    apply(rule d_running)
+          apply force
+         using touched_addrs_inv'
+         apply force
+        apply force
+       apply force
+      apply force
+     apply(frule uwr_same_touched_addrs)
+      apply force
+     apply(prop_tac "p\<^sub>s = p\<^sub>t")
+      (* FIXME: Here's something we need - essentially, that we *can* expect the program
+         (that is, the "multistep" implementation) to be known to the currently running domain.
+         How best to require/obtain this? -robs. *)
+      defer
+     apply force
+    apply force
+   (* FIXME: The lemma is too broad. We should make it about the context switch and assert
+      there is (1) a designated step in the automaton that does it, and (2) a much more
+      constrained set of instr_multistep programs that implement it. -robs.
+   apply(rule context_switch_from_d)
+         apply force
+        using touched_addrs_inv' apply force
+       apply force
+      apply force
+     apply force
+    defer
+   apply force
+   *)
+   defer
+  apply(case_tac "current_domain' s' = d")
+   (* FIXME: Broken for similar reasons as context_switch_from_d
+   apply(rule context_switch_to_d)
+           apply force
+          using touched_addrs_inv' apply force
+         defer
+        defer
+       apply force
+      apply force
+     defer
+    defer
+   apply force
+   *)
+  apply clarsimp
+  apply(rule d_not_running[where s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t and
+        ta\<^sub>s="touched_addrs' s" and ta\<^sub>t="touched_addrs' t"])
+          apply force
+         apply force
+        (* using touched_addrs_inv' *)
+        defer (* FIXME: Think more about these two. -robs. *)
+       defer
+      apply force
+     apply force
+    apply force
+   apply force
+  (* FIXME: We need a fact from the automaton - for example, that we're definitely
+     not on a context switch step. (But is that enough? Can't this case also be
+     covering a context switch step between two other domains?) -robs. *)
+  defer
+  sorry
+
+definition A_extended_Step :: "unit \<Rightarrow>
+  (('fch_cachedness,'pch_cachedness)state \<times> ('fch_cachedness,'pch_cachedness)state) set"
+  where
+  "A_extended_Step \<equiv> \<lambda>_. {(s, s').
+     \<comment> \<open>Initial attempt. FIXME: The fact the 2nd conjunct might reject executions that were fine
+        in the original automaton is what might be making enabledness tricky. -robs.\<close>
+     (other_state s') \<in> execution A (other_state s) [()] \<and>
+     (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s)}"
+
+definition A_extended ::
+  "(('fch_cachedness,'pch_cachedness)state,('fch_cachedness,'pch_cachedness)state,unit) data_type"
+  where
+  "A_extended = \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = A_extended_Step \<rparr>"
+
+definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_cachedness)state" where
+  "A_extended_state s =
+     \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
+
+interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
+  policy "\<lambda>d s. out d (other_state s)" Sched
+  (* Note: The 3 enabledness/reachability requirements are probably broken. -robs. *)
+  apply unfold_locales
+        (* enabled_system.enabled *)
+        using enabled
+        apply(clarsimp simp:A_extended_def)
+        (* FIXME *)
+        defer
+       (* Step_system.reachable_s0 *)
+       using reachable_s0
+       apply(clarsimp simp:A_extended_def)
+       (* FIXME *)
+       defer
+      (* Step_system.execution_Run *)
+      using execution_Run
+      apply(clarsimp simp:A_extended_def)
+      (* FIXME *)
+      defer
+     (* noninterference_policy.uwr_equiv_rel *)
+     using extended_uwr_equiv_rel apply blast
+    (* noninterference_policy.schedIncludesCurrentDom *)
+    using uwr_same_domain apply blast
+   (* noninterference_policy.schedFlowsToAll *)
+   using schedFlowsToAll apply blast
+  (* noninterference_policy.schedNotGlobalChannel *)
+  using schedNotGlobalChannel apply blast
+  sorry
+
+lemma to_original_step:
+  "(x, y) \<in> tpni.Step () \<Longrightarrow>
+   (other_state x, other_state y) \<in> Step ()"
+  by (clarsimp simp:tpni.Step_def system.Step_def execution_def
+      A_extended_def A_extended_Step_def steps_def)
+
+lemma to_original_run:
+  "(s, s') \<in> Run tpni.Step as \<Longrightarrow>
+   (other_state s, other_state s') \<in> Run local.Step as"
+  apply(induct as arbitrary:s)
+   apply(force simp:A_extended_state_def)
+  apply clarsimp
+  apply(erule_tac x=y in meta_allE)
+  apply clarsimp
+  apply(subgoal_tac "(other_state x, other_state y) \<in> Step ()")
+   apply blast
+  using to_original_step by blast
+
+lemma to_original_run':
+  "(A_extended_state s, s') \<in> Run tpni.Step as \<Longrightarrow>
+   (s, other_state s') \<in> Run local.Step as"
+  apply(clarsimp simp:A_extended_state_def)
+  using to_original_run by force
+
+lemma to_original_reachability:
+  "tpni.reachable s \<Longrightarrow> reachable (other_state s)"
+  apply(rule Run_reachable)
+  apply(drule tpni.reachable_Run)
+  apply clarsimp
+  apply(rule_tac x=as in exI)
+  using to_original_run' by blast
+
+theorem extended_confidentiality_u:
+  "confidentiality_u \<Longrightarrow> tpni.confidentiality_u"
+  apply(clarsimp simp:confidentiality_u_def tpni.confidentiality_u_def)
+  apply(erule_tac x=u in allE)
+  apply(erule_tac x="other_state s" in allE)
+  apply(erule_tac x="other_state t" in allE)
+  apply(prop_tac "reachable (other_state s) \<and> reachable (other_state t)")
+   using to_original_reachability apply force
+  apply(prop_tac "uwr2 (other_state s) Sched (other_state t)")
+   using uwr_to_external apply blast
+  apply(prop_tac "((current_domain () (other_state s), u) \<in> policy) \<longrightarrow>
+        uwr2 (other_state s) (current_domain () (other_state s)) (other_state t)")
+   using uwr_to_external apply blast
+  apply(prop_tac "uwr2 (other_state s) u (other_state t)")
+   using uwr_to_external apply blast
+  apply clarsimp
+  apply(erule_tac x="other_state s'" in allE)
+  apply(erule_tac x="other_state t'" in allE)
+  apply(frule_tac x=s in to_original_step)
+  apply(frule_tac x=t in to_original_step)
+  apply clarsimp
+  (* The reachability assumptions just unfold into something messy - get rid of them. -robs. *)
+  apply(thin_tac "tpni.reachable x" for x)+
+  apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
+  (* What we now expect is to invoke some versions of d_running, d_notrunning etc.
+     These case split on whether `u` is the currently running domain, but maybe we'll
+     need to adjust their guards to adapt them further to the automata... -robs. *)
+  apply(rename_tac u s t x xa p\<^sub>s xb xc p\<^sub>t)
+  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr)
+      apply force
+     apply force
+    apply force
+   apply force
+  apply force
+  done
 
 end
 end
