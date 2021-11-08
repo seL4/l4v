@@ -1402,41 +1402,31 @@ lemma lookupCap_refs[wp]:
   by (simp add: lookupCap_def split_def | wp | simp add: o_def)+
 
 lemma hw_invs'[wp]:
-  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
-          and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
-          and (\<lambda>s. ksCurThread s \<noteq> ksIdleThread s)
-          and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   handleRecv isBlocking canReply \<lbrace>\<lambda>r. invs'\<rbrace>"
+  "\<lbrace>invs' and ct_in_state' active'\<rbrace>
+   handleRecv isBlocking canReply
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: handleRecv_def cong: if_cong split del: if_split)
-  sorry (*
-  apply (rule hoare_pre)
-   apply ((wp getNotification_wp | wpc | simp)+)[1]
-                apply (clarsimp simp: ct_in_state'_def)
-                apply ((wp hoare_vcg_all_lift
-                      | wpc | simp)+)[1]
-               apply simp
-               apply (wp hoare_vcg_all_lift
-                    | wpc | simp add: ct_in_state'_def whenE_def split del: if_split)+
-     apply (rule validE_validE_R)
-     apply (rule_tac Q="\<lambda>rv s. invs' s
-                             \<and> sch_act_sane s
-                             \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
-                             \<and> thread = ksCurThread s
-                             \<and> ct_in_state' simple' s
-                             \<and> ex_nonz_cap_to' thread s
-                             \<and> thread \<noteq> ksIdleThread s
-                            \<and> (\<forall>x \<in> zobj_refs' rv. ex_nonz_cap_to' x s)"
-              and E="\<lambda>_ _. True"
-           in hoare_post_impErr[rotated])
-        apply (clarsimp simp: isCap_simps ct_in_state'_def pred_tcb_at' invs_valid_objs'
-                              sch_act_sane_not obj_at'_def projectKOs pred_tcb_at'_def)
-      apply (assumption)
-     apply (wp)+
-  apply (clarsimp)
-  apply (auto elim: st_tcb_ex_cap'' pred_tcb'_weakenE
-             dest!: st_tcb_at_idle_thread'
-              simp: ct_in_state'_def sch_act_sane_def)
-  done *)
+  apply (rule hoare_seq_ext[OF _ getCurThread_sp])
+  apply (rule hoare_seq_ext_skip)
+   apply (wpsimp simp: getCapReg_def)
+   apply (fastforce simp: ct_in_state'_def)
+  apply (rule catch_wp; (solves wpsimp)?)
+  apply (rule_tac A=A and
+                  B="\<lambda>rv. A and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
+                          and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
+                          and (\<lambda>s. st_tcb_at' active' (ksCurThread s) s)"
+         for A in hoare_vcg_seqE[rotated])
+   apply wpsimp
+   apply (fastforce simp: ct_in_state'_def)
+  apply (rename_tac epCap)
+  apply (case_tac epCap; clarsimp?, (solves wpsimp)?)
+   apply (wpsimp wp: getNotification_wp)
+   apply (clarsimp simp: obj_at_simps isNotificationCap_def)
+  apply (intro conjI impI; (solves wpsimp)?)
+  by (wpsimp simp: lookupReply_def getCapReg_def
+               wp: hoare_vcg_conj_liftE
+      | wp (once) hoare_drop_imps)+
+     (clarsimp simp: obj_at_simps ct_in_state'_def pred_tcb_at'_def) \<comment> \<open>takes 30 seconds\<close>
 
 lemma setSchedulerAction_obj_at'[wp]:
   "\<lbrace>obj_at' P p\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
