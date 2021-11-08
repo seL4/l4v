@@ -112,6 +112,8 @@ Fetch the notification object, and select the operation based on its state.
 >         let ntfnPtr = capNtfnPtr cap
 >         stateAssert sym_refs_asrt
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
+>         stateAssert valid_idle'_asrt
+>             "Assert that `valid_idle' s` holds"
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 
