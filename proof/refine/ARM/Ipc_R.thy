@@ -5305,7 +5305,7 @@ lemma replyPush_sch_act_wf:
 lemma replyPush_invs':
   "\<lbrace>invs' and valid_idle' and sym_heap_tcbSCs and sym_heap_scReplies and
     st_tcb_at' (Not \<circ> is_replyState) callerPtr and
-    sch_act_not callerPtr and ex_nonz_cap_to' callerPtr and ex_nonz_cap_to' calleePtr and
+    ex_nonz_cap_to' callerPtr and ex_nonz_cap_to' calleePtr and
     ex_nonz_cap_to' replyPtr and (\<lambda>s. replyTCBs_of s replyPtr = None)\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -5569,8 +5569,7 @@ lemma replyTCB_is_not_ksIdleThread:
 
 (* t = ksCurThread s *)
 lemma ri_invs' [wp]:
-  "\<lbrace>invs' and sch_act_not t
-          and st_tcb_at' active' t
+  "\<lbrace>invs' and st_tcb_at' active' t
           and ex_nonz_cap_to' t
           and (\<lambda>s. \<forall>r \<in> zobj_refs' replyCap. ex_nonz_cap_to' r s)
           and (\<lambda>s. \<forall>r \<in> zobj_refs' cap. ex_nonz_cap_to' r s)
@@ -5587,7 +5586,7 @@ lemma ri_invs' [wp]:
     apply (rule_tac B="\<lambda>ep s. invs' s \<and> valid_idle' s \<and> sch_act_wf (ksSchedulerAction s) s
                               \<and> ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' (capEPPtr cap) s \<and>
                               sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
-                              st_tcb_at' simple' t s \<and> sch_act_not t s \<and> t \<noteq> ksIdleThread s \<and>
+                              st_tcb_at' simple' t s \<and> t \<noteq> ksIdleThread s \<and>
                               (\<forall>x. replyOpt = Some x \<longrightarrow> ex_nonz_cap_to' x s \<and>
                                                          reply_at' x s \<and> replyTCBs_of s x = None) \<and>
                               ko_at' ep (capEPPtr cap) s \<and>
@@ -5623,7 +5622,6 @@ lemma ri_invs' [wp]:
                apply (rename_tac sender queue senderState badge canGrant canGrantReply)
                apply (rule_tac Q="\<lambda>_. invs' and valid_idle'
                                       and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and tcb_at' t
-                                      and sch_act_not sender
                                       and st_tcb_at' (Not \<circ> is_replyState) sender
                                       and (\<lambda>s. sender \<noteq> ksIdleThread s)
                                       and sym_heap_tcbSCs and sym_heap_scReplies
@@ -5645,12 +5643,11 @@ lemma ri_invs' [wp]:
       apply (frule_tac t=sender in pred_tcb_at', clarsimp)
       apply (subgoal_tac "st_tcb_at' (Not \<circ> is_replyState) sender s")
        apply (clarsimp simp: o_def)
-       apply (subgoal_tac "sch_act_not sender s \<and> sender \<noteq> ksIdleThread s
+       apply (subgoal_tac "sender \<noteq> ksIdleThread s
                            \<and> ex_nonz_cap_to' sender s \<and>
                            valid_ep' (case queue of [] \<Rightarrow> Structures_H.endpoint.IdleEP
                                       | a # list \<Rightarrow> Structures_H.endpoint.SendEP queue) s", clarsimp)
        apply (intro conjI)
-          apply (erule sch_act_wf_not_runnable_sch_act_not, fastforce, clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
          apply (frule (1) st_tcb_idle', clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
         apply (erule st_tcb_ex_cap''; clarsimp simp: isBlockedOnSend_equiv is_BlockedOnSend_def)
        apply (clarsimp simp: valid_ep'_def pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def
@@ -5737,7 +5734,7 @@ crunches doIPCTransfer
   (wp: setCTE_pred_tcb_at' getCTE_wp mapM_wp' simp: cte_wp_at'_def zipWithM_x_mapM)
 
 lemma si_invs'_helper2:
-  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> sch_act_not t s \<and> st_tcb_at' active' t s \<and>
+  "\<lbrace>\<lambda>s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and>
         st_tcb_at' (Not \<circ> is_BlockedOnReply) d s \<and>
         ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' d s \<and>
         sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
@@ -5766,9 +5763,6 @@ lemma si_invs'_helper2:
   apply (frule_tac P'="Not \<circ> is_replyState" in pred_tcb'_weakenE)
    apply (fastforce simp: is_BlockedOnReply_def is_BlockedOnReceive_def)
   apply (frule invs_valid_objs')
-  apply (prop_tac "t \<noteq> ksIdleThread s")
-   apply (clarsimp simp: valid_idle'_def idle_tcb'_def pred_tcb_at'_def obj_at'_real_def
-                         ko_wp_at'_def)
   apply (clarsimp simp: tcb_at'_ex_eq_all o_def)
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
   done
@@ -5784,7 +5778,6 @@ lemma replyUnlink_obj_at_tcb_none:
 (* FIXME RT: si_invs' already exists, and should perhaps be renamed *)
 lemma si_invs'2[wp]:
   "\<lbrace>invs' and st_tcb_at' active' t
-          and sch_act_not t
           and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
           and ex_nonz_cap_to' ep and ex_nonz_cap_to' t\<rbrace>
    sendIPC bl call ba cg cgr cd t ep
@@ -5803,7 +5796,7 @@ lemma si_invs'2[wp]:
             apply (wpsimp wp: si_invs'_helper2)
            apply wpsimp
           apply (wpsimp wp: threadGet_wp)
-         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
+         apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and>
                                   st_tcb_at' (Not \<circ> is_BlockedOnReply) a s \<and>
                                   ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and>
                                   (\<forall>x. replyObject recvState = Some x \<longrightarrow>
@@ -5819,7 +5812,7 @@ lemma si_invs'2[wp]:
                           dest!: global'_no_ex_cap)
          apply (wpsimp wp: replyUnlink_invs' replyUnlink_st_tcb_at' replyUnlink_obj_at_tcb_none
                            hoare_vcg_ex_lift hoare_vcg_imp_lift')
-        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and> sch_act_not t s \<and>
+        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> valid_idle' s \<and> st_tcb_at' active' t s \<and>
                                  st_tcb_at' is_BlockedOnReceive a s \<and>
                                  ex_nonz_cap_to' t s \<and> ex_nonz_cap_to' a s \<and> a \<noteq> t \<and>
                                  sym_heap_tcbSCs s \<and> sym_heap_scReplies s \<and>
@@ -6012,7 +6005,7 @@ lemma handleTimeout_corres:
   done
 
 lemma hf_invs' [wp]:
-  "\<lbrace>invs' and sch_act_not t
+  "\<lbrace>invs'
           and st_tcb_at' active' t
           and ex_nonz_cap_to' t\<rbrace>
    handleFault t f
@@ -6023,7 +6016,7 @@ lemma hf_invs' [wp]:
                     threadGet_wp threadSet_cap_to' hoare_vcg_all_lift hoare_vcg_imp_lift' threadSet_idle'
         | fastforce simp: tcb_cte_cases_def)+
   apply (clarsimp simp: invs'_def inQ_def)
-  apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s \<and> t \<noteq> ksIdleThread s")
+  apply (subgoal_tac "st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = {}) t s")
    apply (rule_tac x=ko in exI)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
    apply (intro conjI impI allI; clarsimp?)
