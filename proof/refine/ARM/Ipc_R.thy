@@ -4793,7 +4793,10 @@ lemma receiveSignal_corres:
   (is "\<lbrakk>_;_\<rbrakk> \<Longrightarrow> corres _ (?pred and _) _ _ _")
   apply (simp add: receive_signal_def receiveSignal_def)
   apply add_sym_refs
+  apply add_valid_idle'
   apply (rule corres_stateAssert_assume)
+   apply (rule corres_stateAssert_add_assertion[rotated])
+    apply (clarsimp simp: valid_idle'_asrt_def)
    apply (case_tac cap, simp_all add: isEndpointCap_def)
    apply (rename_tac cap_ntfn_ptr badge rights)
    apply (rule_tac Q="\<lambda>rv. ?pred and tcb_at thread and ntfn_at cap_ntfn_ptr
@@ -5063,17 +5066,16 @@ crunches doNBRecvFailedTransfer
 
 (* t = ksCurThread s *)
 lemma rai_invs'[wp]:
-  "\<lbrace>invs' and valid_idle' and st_tcb_at' active' t
+  "\<lbrace>invs' and st_tcb_at' active' t
           and ex_nonz_cap_to' t
-          and valid_cap' cap
           and (\<lambda>s. \<forall>r \<in> zobj_refs' cap. ex_nonz_cap_to' r s)
           and (\<lambda>s. \<exists>ntfnptr. isNotificationCap cap
                  \<and> capNtfnPtr cap = ntfnptr
                  \<and> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None \<or> ntfnBoundTCB ko = Some t) ntfnptr s)\<rbrace>
    receiveSignal t cap isBlocking
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: receiveSignal_def doNBRecvFailedTransfer_def)
-  apply (rule hoare_seq_ext [OF _ stateAssert_sp])
+  apply (simp add: receiveSignal_def doNBRecvFailedTransfer_def valid_idle'_asrt_def)
+  apply (intro hoare_seq_ext [OF _ stateAssert_sp])
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
   apply (rename_tac ep)
   apply (case_tac "ntfnObj ep"; clarsimp)
