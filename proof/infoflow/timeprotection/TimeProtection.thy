@@ -168,6 +168,11 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
      touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> kernel_shared_precise"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
+
+  (* We expect this to be true for, say, seL4's KSched \<rightarrow> KExit step. -robs. *)
+  fixes can_domain_switch :: "other_state \<Rightarrow> bool"
+  assumes can_domain_switch_public:
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> can_domain_switch s1 = can_domain_switch s2"
 begin
 
 definition all_addrs_of :: "domain \<Rightarrow> address set" where
@@ -789,7 +794,11 @@ definition A_extended_Step :: "unit \<Rightarrow>
      \<comment> \<open>Initial attempt. FIXME: The fact the 2nd conjunct might reject executions that were fine
         in the original automaton is what might be making enabledness tricky. -robs.\<close>
      (other_state s') \<in> execution A (other_state s) [()] \<and>
-     (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s)}"
+     (if can_domain_switch (other_state s) then
+        \<comment> \<open>FIXME: Need to think of appropriate guards for the domain-switch case\<close>
+        (\<exists>p. s' = instr_multistep p s)
+      else
+        (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s))}"
 
 definition A_extended ::
   "(('fch_cachedness,'pch_cachedness)state,('fch_cachedness,'pch_cachedness)state,unit) data_type"
@@ -812,7 +821,6 @@ lemma bad_lemma:
 
 interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
   policy "\<lambda>d s. out d (other_state s)" Sched
-  (* Note: The 3 enabledness/reachability requirements are probably broken. -robs. *)
   apply unfold_locales
         (* enabled_system.enabled *)
         using enabled
@@ -828,7 +836,7 @@ interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda
       apply(rule set_eqI)
       apply clarsimp
       apply(rule iffI)
-       (* XXX: Not sure the best way to do these proofs -robs. *)
+       (* XXX: Not sure the best way to do these execution-Run conversion proofs -robs. *)
        apply(force simp:bad_lemma)
       (* FIXME *)
       defer
@@ -898,12 +906,18 @@ theorem extended_confidentiality_u:
   (* The reachability assumptions just unfold into something messy - get rid of them. -robs. *)
   apply(thin_tac "tpni.reachable x" for x)+
   apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
-  (* What we now expect is to invoke some versions of d_running, d_notrunning etc.
-     These case split on whether `u` is the currently running domain, but maybe we'll
-     need to adjust their guards to adapt them further to the automata... -robs. *)
-  apply(rename_tac u s t x xa p\<^sub>s xb xc p\<^sub>t)
-  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr, force+)
-  done
+  apply(frule can_domain_switch_public)
+  apply(clarsimp split:if_splits)
+   apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
+   (* FIXME: Maybe what we need here is a "domain_switch_preserves_uwr" lemma enforcing
+      the special conditions we expect the domain-switch-time mitigations to fulfil. -robs. *)
+   defer
+  apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
+  (* FIXME: As "obeying ta" is something that follows from being a non-domain-switch step,
+     we can probably push the `\<not> can_domain_switch (other_state s)` guard into the lemma and
+     use it to enforce there aren't any instructions that modify the dom either... -robs. *)
+  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr, simp+)
+  oops
 
 end
 end
