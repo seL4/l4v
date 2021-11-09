@@ -395,7 +395,10 @@ lemma performInvocation_corres:
             and ct_active
             and ct_released
             and ct_not_in_release_q
-            and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
+            and (\<lambda>s. (\<exists>w w2 b c. i = Invocations_A.InvokeEndpoint w w2 b c) \<longrightarrow> st_tcb_at simple (cur_thread s) s)
+            and cur_sc_active and current_time_bounded 5 and consumed_time_bounded
+            and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+            and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
      (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call can_donate i) (performInvocation block call can_donate i')"
   supply current_time_bounded_strengthen[of 2 _ 0, elim!]
@@ -1088,7 +1091,9 @@ lemma handleInvocation_corres:
    corres (dc \<oplus> dc)
           (einvs and valid_machine_time and schact_is_rct and ct_active and ct_released
            and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and ct_not_in_release_q
-           and current_time_bounded 2)
+           and cur_sc_active and current_time_bounded 5 and consumed_time_bounded
+           and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+           and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (handle_invocation call blocking can_donate first_phase cptr)
           (handleInvocation call blocking can_donate first_phase cptr')"
@@ -1143,9 +1148,13 @@ lemma handleInvocation_corres:
                                  and (\<lambda>s. thread = cur_thread s)
                                  and st_tcb_at active thread
                                  and ct_not_in_release_q and ct_released
-                                 and current_time_bounded 2"
+                                 and cur_sc_active and current_time_bounded 5
+                                 and consumed_time_bounded
+                                 and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+                                 and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)"
                         in hoare_post_imp)
               apply (clarsimp simp: simple_from_active ct_in_state_def schact_is_rct_def
+                                    current_time_bounded_def
                              elim!: st_tcb_weakenE)
              apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action
                        set_thread_state_active_valid_sched set_thread_state_schact_is_rct_strong)
@@ -1173,7 +1182,7 @@ lemma handleInvocation_corres:
    apply (frule schact_is_rct_sane)
    apply (frule invs_valid_objs)
    apply (frule valid_objs_valid_tcbs)
-   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def current_time_bounded_def
                          valid_sched_def valid_pspace_def ct_in_state_def simple_from_active)
    apply (erule st_tcb_ex_cap, clarsimp+)
    apply fastforce
@@ -1271,9 +1280,11 @@ lemma getCapReg_corres:
 
 lemma handleSend_corres:
   "corres (dc \<oplus> dc)
-          (einvs and valid_machine_time and schact_is_rct and ct_active and
-           ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-           ct_not_in_release_q and current_time_bounded 2)
+          (einvs and valid_machine_time and schact_is_rct and ct_active
+           and ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
+           and ct_not_in_release_q and cur_sc_active and current_time_bounded 5
+           and  consumed_time_bounded and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+           and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
           (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_active')
           (handle_send blocking) (handleSend blocking)"
@@ -1518,9 +1529,12 @@ lemmas cteDeleteOne_st_tcb_at_simple'[wp] =
     cteDeleteOne_st_tcb_at[where P=simple', simplified]
 
 lemma handleCall_corres:
-  "corres (dc \<oplus> dc) (einvs and valid_machine_time and schact_is_rct and ct_active and
-                      ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s) and
-                      ct_not_in_release_q and current_time_bounded 2)
+  "corres (dc \<oplus> dc) (einvs and valid_machine_time and schact_is_rct and ct_active
+                     and ct_released and (\<lambda>s. active_sc_tcb_at (cur_thread s) s)
+                     and ct_not_in_release_q and cur_sc_active and current_time_bounded 5
+                     and consumed_time_bounded
+                     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
+                     and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
                 (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
                 ct_active')
