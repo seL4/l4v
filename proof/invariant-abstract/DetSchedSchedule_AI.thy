@@ -269,10 +269,29 @@ lemma tcb_sched_append_ct_not_in_q[wp]:
      \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
 
-lemma tcb_sched_dequeue_ct_not_in_q[wp]:
-  "\<lbrace>ct_not_in_q\<rbrace> tcb_sched_action tcb_sched_dequeue thread
-   \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
+lemma tcb_sched_dequeue_ct_not_in_q:
+  "tcb_sched_action tcb_sched_dequeue thread \<lbrace>ct_not_in_q\<rbrace>"
   by (wpsimp wp: valid_sched_wp simp: valid_sched_wpsimps)
+
+lemma tcb_sched_dequeue_sc_not_in_ready_q:
+  "\<lbrace>\<lambda>s. heap_ref_eq sc_ptr tptr (tcb_scps_of s) \<and> heap_refs_inj (tcb_scps_of s) \<and> valid_ready_qs s
+        \<and> tcb_at tptr s\<rbrace>
+   tcb_sched_action tcb_sched_dequeue tptr
+   \<lbrace>\<lambda>rv. sc_not_in_ready_q sc_ptr\<rbrace>"
+  apply (clarsimp simp: tcb_sched_action_def set_tcb_queue_def)
+  apply (wpsimp wp: thread_get_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_sched_dequeue_def heap_refs_inj_eq
+                        in_queues_2_def  valid_ready_qs_def is_tcb_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; clarsimp)
+  apply (drule_tac x=d in spec)
+  apply (drule_tac x=p in spec)
+  apply clarsimp
+  apply (drule_tac x=t in bspec, blast)
+  apply (prop_tac "t=tptr")
+   apply (clarsimp simp:heap_refs_inj_eq)
+  apply (clarsimp simp: vs_all_heap_simps)
+  done
 
 lemma valid_blocked_discharge_except:
   assumes "valid_blocked_thread id id S queues rlq sa ct tcb_sts tcb_scps sc_refill_cfgs t"
@@ -2758,7 +2777,7 @@ crunch ct_not_in_q[wp]: test_reschedule ct_not_in_q
 
 lemma sched_context_donate_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q\<rbrace> sched_context_donate scp tp \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
-  by (wpsimp simp: sched_context_donate_def wp: get_sc_obj_ref_wp)
+  by (wpsimp simp: sched_context_donate_def wp: get_sc_obj_ref_wp tcb_sched_dequeue_ct_not_in_q)
 
 lemma sched_context_unbind_tcb_ct_not_in_q[wp]:
   "\<lbrace>ct_not_in_q\<rbrace> sched_context_unbind_tcb scp \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -3250,7 +3269,7 @@ lemma set_next_interrupt_valid_sched[wp]:
 context DetSchedSchedule_AI begin
 
 crunch ct_not_in_q[wp]: finalise_cap "ct_not_in_q :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps maybeM_inv ignore: tcb_sched_action)
+  (wp: crunch_wps maybeM_inv tcb_sched_dequeue_ct_not_in_q ignore: tcb_sched_action)
 
 end
 
@@ -6487,7 +6506,7 @@ lemma sched_context_unbind_tcb_valid_sched:
   apply (wpsimp wp: tcb_sched_context_update_None_valid_sched tcb_release_remove_valid_blocked_except
                     tcb_sched_dequeue_valid_ready_qs tcb_sched_dequeue_valid_blocked_except_set tcb_dequeue_not_queued
                     reschedule_required_valid_blocked hoare_vcg_disj_lift
-                    reschedule_required_not_queued
+                    reschedule_required_not_queued tcb_sched_dequeue_ct_not_in_q
               simp: valid_sched_def | strengthen valid_ready_qs_etcb_eq)+
   by (clarsimp simp: sc_at_pred_n_def obj_at_def)
 
@@ -12755,11 +12774,9 @@ crunch (in DetSchedSchedule_AI) not_cur_thread[wp] : do_ipc_transfer "not_cur_th
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure)
 
 lemma postpone_ct_not_in_q[wp]:
-  "\<lbrace> ct_not_in_q \<rbrace>
-     postpone sc_ptr
-   \<lbrace> \<lambda>_. ct_not_in_q\<rbrace>"
+  "postpone sc_ptr \<lbrace>ct_not_in_q\<rbrace>"
   unfolding postpone_def
-  by (wpsimp wp:get_sc_obj_ref_wp)
+  by (wpsimp wp: get_sc_obj_ref_wp tcb_sched_dequeue_ct_not_in_q)
 
 lemma sched_context_resume_ct_not_in_q[wp]:
   "\<lbrace> ct_not_in_q \<rbrace>
@@ -15969,7 +15986,7 @@ lemma invoke_domain_valid_sched:
   apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs tcb_dequeue_not_queued
                     tcb_sched_action_valid_sched_misc
                     tcb_sched_dequeue_valid_blocked_except_set_const
-                    hoare_vcg_conj_lift hoare_vcg_imp_lift')
+                    hoare_vcg_conj_lift hoare_vcg_imp_lift' tcb_sched_dequeue_ct_not_in_q)
   apply (clarsimp simp: valid_blocked_thread_def)
   apply (intro conjI)
    using valid_blocked_valid_ready_qs_ready_and_sufficient apply blast
