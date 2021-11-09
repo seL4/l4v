@@ -201,6 +201,14 @@ where
   \<and> tcb_priority tcb = tcbPriority tcb'
   \<and> tcb_domain tcb = tcbDomain tcb'"
 
+lemma sc_sporadic_flag_eq_schedContextSporadicFlag[simp]:
+  "sc_sporadic_flag = schedContextSporadicFlag"
+  by (simp add: sc_sporadic_flag_def schedContextSporadicFlag_def)
+
+lemma minRefills_eq_MIN_REFILLS[simp]:
+  "minRefills = MIN_REFILLS"
+  by (clarsimp simp: minRefills_def MIN_REFILLS_def)
+
 definition refill_map :: "Structures_H.refill \<Rightarrow> Structures_A.refill" where
   "refill_map refill \<equiv> \<lparr> r_time = rTime refill, r_amount = rAmount refill\<rparr>"
 
