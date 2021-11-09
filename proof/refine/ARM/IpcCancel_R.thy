@@ -1339,8 +1339,6 @@ lemma replyPop_corres:
                  apply (rule hoare_vcg_conj_lift)
                   apply (wpsimp wp: updateSchedContext_wp)
                  apply wpsimp
-                  apply (clarsimp simp: objBits_simps)
-                 apply wpsimp
                  apply (rule hoare_vcg_conj_lift)
                   apply (wpsimp wp: setSchedContext_local_sym_refs simp: updateSchedContext_def)
                  apply wpsimp
@@ -1757,7 +1755,7 @@ lemma cancel_ipc_corres:
                   apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
                  apply simp+
        apply (wpsimp wp: thread_set_invs_fault_None thread_set_valid_ready_qs thread_set_no_change_tcb_state)
-      apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_invs_trivial)
+      apply (wpsimp wp: threadSet_pred_tcb_no_state threadSet_invs_trivial)+
      apply (wp gts_sp[where P="\<top>", simplified])+
     apply (rule hoare_strengthen_post)
      apply (rule gts_sp'[where P="\<top>"])
@@ -2457,41 +2455,40 @@ lemma (in delete_one) suspend_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF _ cancel_ipc_corres])
       apply (rule corres_split_deprecated[OF _ getThreadState_corres], rename_tac state state')
-        apply (simp only: when_def)
-        apply (rule corres_split_deprecated[OF _ corres_if])
-             apply (rule corres_split_deprecated[OF _ setThreadState_corres])
-                apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres'])
-                  apply (rule corres_split_deprecated[OF _ tcb_release_remove_corres])
-                    apply (rule schedContextCancelYieldTo_corres)
-                   apply wpsimp+
-            apply (case_tac state; clarsimp?)
-           apply (clarsimp simp: update_restart_pc_def updateRestartPC_def)
-           apply (rule asUser_corres')
-           apply (simp add: ARM.nextInstructionRegister_def ARM.faultRegister_def
-                            ARM_H.nextInstructionRegister_def ARM_H.faultRegister_def
-                            ARM_H.Register_def)
-           apply (rule corres_underlying_trivial)
-           apply (wpsimp simp: ARM.setRegister_def ARM.getRegister_def)
-          apply (rule corres_rel_imp)
-           apply (rule corres_return_trivial)
-          apply simp
-         apply (wpsimp simp: update_restart_pc_def updateRestartPC_def)
-          apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs s \<and> tcb_at t s"], fastforce)
-          apply wp
+         apply (simp only: when_def)
+         apply (rule corres_split_deprecated[OF _ corres_if])
+              apply (rule corres_split_deprecated[OF _ setThreadState_corres])
+                 apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres'])
+                   apply (rule corres_split_deprecated[OF _ tcbReleaseRemove_corres])
+                      apply (rule schedContextCancelYieldTo_corres)
+                     apply wpsimp+
+             apply (case_tac state; clarsimp?)
+            apply (clarsimp simp: update_restart_pc_def updateRestartPC_def)
+            apply (rule asUser_corres')
+            apply (simp add: ARM.nextInstructionRegister_def ARM.faultRegister_def
+                             ARM_H.nextInstructionRegister_def ARM_H.faultRegister_def
+                             ARM_H.Register_def)
+            apply (rule corres_underlying_trivial)
+            apply (wpsimp simp: ARM.setRegister_def ARM.getRegister_def)
+           apply (rule corres_rel_imp)
+            apply (rule corres_return_trivial)
+           apply simp
+          apply (wpsimp simp: update_restart_pc_def updateRestartPC_def)
+           apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs s \<and> tcb_at t s"], fastforce)
+           apply wp
+          apply wpsimp
+         apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs' s \<and> tcb_at' t s"])
+          apply (fastforce simp: invs'_def dest!: valid_queues_inQ_queues)
+         apply wp
+          apply (clarsimp simp: updateRestartPC_def)
+          apply wpsimp
          apply wpsimp
-        apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs' s \<and> tcb_at' t s"])
-         apply (fastforce simp: invs'_def dest!: valid_queues_inQ_queues)
-        apply wp
-         apply (clarsimp simp: updateRestartPC_def)
-         apply wpsimp
-        apply wpsimp
-       apply (wpsimp wp: gts_wp)
-      apply (wpsimp wp: gts_wp')
-     apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs s \<and> tcb_at t s"], fastforce)
-     apply wpsimp
-    apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs' s \<and> tcb_at' t s"], fastforce)
-    apply wpsimp
-   apply clarsimp+
+        apply (wpsimp wp: gts_wp)
+       apply (wpsimp wp: gts_wp')
+       apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs s \<and> tcb_at t s"], fastforce)
+       apply wpsimp
+      apply (rule hoare_post_imp[where Q = "\<lambda>rv s. invs' s \<and> tcb_at' t s"], fastforce)
+      apply (wpsimp wp: hoare_drop_imps)+
   done
 
 lemma (in delete_one) prepareThreadDelete_corres:
@@ -2773,7 +2770,7 @@ lemma restart_thread_if_no_fault_corres:
          apply clarsimp
          apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
             apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
-              apply (rule possibleSwitchTo_corres)
+              apply (rule possibleSwitchTo_corres, simp)
              apply (wpsimp simp: if_cond_refill_unblock_check_def
                              wp: refill_unblock_check_active_sc_valid_refills)
             apply wpsimp
@@ -3166,7 +3163,7 @@ lemma ntfn_cancel_corres_helper:
                apply clarsimp
               apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
                  apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
-                   apply (rule possibleSwitchTo_corres)
+                   apply (rule possibleSwitchTo_corres, simp)
                   apply (wpsimp simp: if_cond_refill_unblock_check_def
                                   wp: refill_unblock_check_active_sc_valid_refills)
                  apply wpsimp

@@ -2532,7 +2532,7 @@ lemma sendIPC_corres:
                              apply simp
                             apply (rule corres_split_eqr [OF _ threadGet_corres])
                                apply (rule corres_split [OF ifCondRefillUnblockCheck_corres])
-                                 apply (rule possibleSwitchTo_corres)
+                                 apply (rule possibleSwitchTo_corres, simp)
                             \<comment> \<open>starting Hoare triples\<close>
                                 apply wpsimp
                                apply wpsimp
@@ -3461,7 +3461,7 @@ lemma sendSignal_corres:
                 apply (rule corres_split_deprecated[OF _ maybeDonateSc_corres])
                   apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
                     apply (rule corres_when, simp)
-                    apply (rule possibleSwitchTo_corres)
+                    apply (rule possibleSwitchTo_corres; (solves simp)?)
                    apply ((wpsimp wp: hoare_drop_imp)+)[2]
                  apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
                  apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
@@ -3531,7 +3531,7 @@ lemma sendSignal_corres:
              apply (rule corres_split_deprecated[OF _ maybeDonateSc_corres])
                apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
                  apply (rule corres_when, simp)
-                 apply (rule possibleSwitchTo_corres)
+                 apply (rule possibleSwitchTo_corres; (solves simp)?)
                 apply ((wpsimp wp: hoare_drop_imp)+)[2]
               apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
               apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
@@ -4749,7 +4749,7 @@ lemma receiveIPC_corres:
                                     apply (rule setThreadState_corres, simp)
                                    prefer 3 \<comment> \<open> defer wp until corres complete \<close>
                                    apply (rule corres_split[OF setThreadState_corres], simp)
-                                     apply (rule possibleSwitchTo_corres)
+                                     apply (rule possibleSwitchTo_corres, simp)
                                     apply (wpsimp wp: set_thread_state_valid_sched_action)
                                    apply wpsimp
                                   apply wpsimp
@@ -6332,7 +6332,7 @@ lemma doReplyTransfer_corres:
                              reply_tcb_reply_at (\<lambda>xa. xa = Some recvr) reply s" and
                       Q'="invs' and cur_tcb'"
              in corres_split [OF _ _ gts_sp gts_sp' ])
-       apply (rule getThreadState_corres, rename_tac ts ts')
+       apply (rule getThreadState_corres, simp, rename_tac ts ts')
       apply (case_tac ts; simp add: isReply_def)
       apply (rule stronger_corres_guard_imp)
         apply (rule corres_assert_assume_l)
@@ -6416,7 +6416,7 @@ lemma doReplyTransfer_corres:
                              apply (rule_tac corres_gen_asm2)
                              apply (rule stronger_corres_guard_imp)
                                apply (rule corres_if, simp)
-                                apply (rule possibleSwitchTo_corres)
+                                apply (rule possibleSwitchTo_corres; (solves simp)?)
                                apply (rule corres_symb_exec_r[OF _ get_sc_sp'], rename_tac sc')
                                  apply (rule_tac Q="\<lambda>_. sc_badge sc = scBadge sc'" in corres_cross_add_guard[rotated])
                                   apply (rule_tac corres_gen_asm2)
