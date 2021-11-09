@@ -60,6 +60,11 @@ crunches refillUnblockCheck, refillBudgetCheck, ifCondRefillUnblockCheck, refill
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   (wp: crunch_wps valid_dom_schedule'_lift simp: crunch_simps refillSingle_def)
 
+crunches commitTime, refillNew, refillUpdate
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 end
 
 global_interpretation tcbReleaseDequeue: typ_at_all_props' tcbReleaseDequeue
@@ -96,6 +101,18 @@ global_interpretation refillBudgetCheck: typ_at_all_props' "refillBudgetCheck us
   by typ_at_props'
 
 global_interpretation refillBudgetCheckRoundRobin: typ_at_all_props' "refillBudgetCheckRoundRobin usage"
+  by typ_at_props'
+
+global_interpretation commitTime: typ_at_all_props' "commitTime"
+   by typ_at_props'
+
+global_interpretation refillNew: typ_at_all_props' "refillNew scPtr maxRefills budget period"
+  by typ_at_props'
+
+global_interpretation refillUpdate: typ_at_all_props' "refillUpdate  scPtr newPeriod newBudget newMaxRefills"
+  by typ_at_props'
+
+global_interpretation updateSchedContext: typ_at_all_props' "updateSchedContext scPtr f"
   by typ_at_props'
 
 context begin interpretation Arch . (*FIXME: arch_split*)
