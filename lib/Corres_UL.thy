@@ -542,6 +542,11 @@ lemma corres_if_split:
    \<Longrightarrow> corres_underlying sr nf nf' r P P' (if G then a else b) (if G' then c else d)"
   by (clarsimp simp: corres_underlying_def)
 
+lemma abs_ex_lift_corres:
+  "(\<And>n. corres_underlying srel nf nf' rrel (\<lambda>s. P n s \<and> Q s) P' G G' )
+   \<Longrightarrow> corres_underlying srel nf nf' rrel (\<lambda>s. (\<exists>n. P n s) \<and> Q s) P' G G'"
+  by (fastforce simp: corres_underlying_def)
+
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
 lemma snd_liftM [simp]:
