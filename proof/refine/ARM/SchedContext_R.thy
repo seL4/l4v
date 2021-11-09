@@ -165,42 +165,47 @@ lemma updateSchedContext_invs'_indep:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma scConsumed_update_corres:
-  "\<lbrakk>\<forall>x y. x = y \<longrightarrow> f x = f' y\<rbrakk> \<Longrightarrow>
-    corres dc (sc_at scPtr) (ko_at' sc' scPtr)
-          (update_sched_context scPtr (sc_consumed_update f))
-          (setSchedContext scPtr (scConsumed_update f' sc'))"
-  apply (clarsimp simp: update_sched_context_def)
-  apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
-    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
-    apply (fastforce intro: get_object_exs_valid
-                      simp: obj_at_def)
-   apply wpsimp
-   apply (clarsimp simp: obj_at_def)
-  apply (rename_tac obj)
-  apply (case_tac obj; clarsimp;
-         (solves \<open>fastforce simp: obj_at_simps is_sc_obj_def corres_underlying_def\<close>)?)
-  apply (corressimp corres: setSchedContext_no_stack_update_corres
-                              [where f="sc_consumed_update f" and f'="scConsumed_update f'" ])
-  apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def obj_at_def)
-  done
-
 lemma schedContextUpdateConsumed_corres:
  "corres (=) (sc_at scp) (sc_at' scp)
             (sched_context_update_consumed scp)
             (schedContextUpdateConsumed scp)"
-  using if_cong[cong]
-  unfolding sched_context_update_consumed_def schedContextUpdateConsumed_def
+  apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def)
   apply (simp add: maxTicksToUs_def ticksToUs_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_sc_corres])
-      apply (rule corres_if2, clarsimp simp: sc_relation_def)
-       apply (rule corres_split_deprecated[OF corres_return_eq_same[OF refl]])
-         apply (rule scConsumed_update_corres, clarsimp simp: sc_relation_def)
-        apply wpsimp+
-      apply (rule corres_split_deprecated[OF corres_return_eq_same scConsumed_update_corres],
-             clarsimp simp: sc_relation_def)
-        apply wpsimp+
+  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+   apply (corressimp corres: get_sc_corres)
+  apply (rename_tac abs_sc conc_sc)
+  apply (rule corres_if_split)
+    apply (clarsimp simp: sc_relation_def)
+   apply (rule corres_split')
+      apply (rule corres_guard_imp)
+        apply clarsimp
+        apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed abs_sc - max_ticks_to_us\<rparr>"
+                    and f'="\<lambda>sc'. scConsumed_update (\<lambda>_. scConsumed conc_sc - maxTicksToUs) sc'"
+                     in setSchedContext_update_sched_context_no_stack_update_corres)
+           apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
+          apply (clarsimp simp: sc_relation_def)
+         apply (clarsimp simp: sc_relation_def objBits_simps)
+        apply (clarsimp simp: sc_relation_def)
+       apply (clarsimp simp: obj_at_def)
+      apply (clarsimp simp: obj_at_simps)
+     apply (clarsimp simp: maxTicksToUs_def ticksToUs_def)
+    apply wpsimp
+   apply wpsimp
+  apply (rule corres_split')
+     apply (rule corres_guard_imp)
+       apply clarsimp
+       apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := 0\<rparr>"
+                   and f'="\<lambda>sc'. scConsumed_update (\<lambda>_. 0) sc'"
+                    in setSchedContext_update_sched_context_no_stack_update_corres)
+          apply (clarsimp simp: sc_relation_def maxTicksToUs_def)
+         apply (clarsimp simp: sc_relation_def)
+        apply (clarsimp simp: sc_relation_def objBits_simps)
+       apply (clarsimp simp: sc_relation_def)
+      apply (clarsimp simp: obj_at_def)
+     apply (clarsimp simp: obj_at_simps)
+    apply (clarsimp simp: maxTicksToUs_def ticksToUs_def sc_relation_def)
+   apply wpsimp
+  apply wpsimp
   done
 
 end

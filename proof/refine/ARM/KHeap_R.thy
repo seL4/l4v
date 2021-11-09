@@ -1664,6 +1664,32 @@ lemma setSchedContext_no_stack_update_corres:
   apply (drule (2) sc_replies_relation_prevs_list)
   by fastforce
 
+lemma setSchedContext_update_sched_context_no_stack_update_corres:
+  "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
+    \<forall>sc. sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
+    scReply sc' = scReply (f' sc')\<rbrakk>
+    \<Longrightarrow> corres dc
+         (\<lambda>s. sc_at ptr s)
+         (ko_at' sc' ptr)
+         (update_sched_context ptr f)
+         (setSchedContext ptr (f' sc'))"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
+    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
+    apply (fastforce intro: get_object_exs_valid
+                      simp: obj_at_def)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def)
+  apply (rename_tac obj)
+  apply (case_tac obj;
+         clarsimp, (solves \<open>clarsimp simp: obj_at_def is_sc_obj_def corres_underlying_def\<close>)?)
+  apply (rule corres_guard_imp)
+    apply (rule_tac f=f and f'="f'" in setSchedContext_no_stack_update_corres)
+       apply simp+
+   apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_simps)
+  done
+
 lemma getNotification_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
      (get_notification ptr) (getNotification ptr)"

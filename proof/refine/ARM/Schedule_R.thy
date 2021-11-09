@@ -4947,10 +4947,12 @@ lemma commitTime_corres:
      apply (rule_tac P="\<lambda>t. corres dc _ _ _ (setSchedContext csc t)" in subst[OF sym])
       apply assumption
      apply (rule corres_guard_imp)
-       apply (rule_tac f="\<lambda>c. c + consumed" and f'="\<lambda>c. c + consumed" in scConsumed_update_corres)
-       apply (clarsimp simp: sc_relation_def opt_map_red opt_map_def active_sc_def)
-      apply fastforce
-     apply (wpsimp simp: isRoundRobin_def | wps)+
+       apply (rule_tac f'="\<lambda>sched_context'. (scConsumed_update (\<lambda>c. c + consumed)) sched_context'"
+                    in setSchedContext_update_sched_context_no_stack_update_corres)
+          apply (clarsimp simp: sc_relation_def opt_map_red opt_map_def active_sc_def)
+         apply fastforce
+        apply (fastforce simp: obj_at_simps)
+       apply (wpsimp simp: isRoundRobin_def | wps)+
   apply (clarsimp simp: ifM_def split: if_split)
   apply (rule corres_split'[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
    apply (corressimp corres: isRoundRobin_corres)
