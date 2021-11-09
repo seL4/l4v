@@ -18092,10 +18092,17 @@ lemma consumed_time_bounded_trivial[simp]:
 crunches commit_time
   for consumed_time_bounded[wp]: consumed_time_bounded
 
-lemma tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed[wp_unsafe]:
-  "tcb_release_remove tcb_ptr \<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
+lemma tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed'[wp_unsafe]:
+  "tcb_release_remove tcb_ptr
+   \<lbrace>\<lambda>s. cur_sc_in_release_q_imp_zero_consumed_2 sc_ptr (release_queue s) (consumed_time s) (tcb_scps_of s)\<rbrace>"
   apply (wpsimp wp: tcb_release_remove_wp simp: cur_sc_in_release_q_imp_zero_consumed_def)
   apply (case_tac "t = tcb_ptr"; clarsimp simp: in_queue_2_def tcb_sched_dequeue_def)
+  done
+
+lemma tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed[wp_unsafe]:
+  "tcb_release_remove tcb_ptr \<lbrace>cur_sc_in_release_q_imp_zero_consumed\<rbrace>"
+  apply (rule_tac f=cur_sc in hoare_lift_Pf2)
+   apply (wpsimp wp: tcb_release_remove_cur_sc_in_release_q_imp_zero_consumed')+
   done
 
 lemma ct_not_in_release_q_cur_sc_in_release_q_imp_zero_consumed:
