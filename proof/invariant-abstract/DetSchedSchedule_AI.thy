@@ -11883,7 +11883,6 @@ lemma refill_budget_check_active_sc_valid_refills:
    the cur_sc is ready at this point *)
 lemma commit_time_active_sc_valid_refills:
   "\<lbrace>active_sc_valid_refills
-    and cur_sc_in_release_q_imp_zero_consumed
     and cur_sc_more_than_ready
     and current_time_bounded 5
     and consumed_time_bounded\<rbrace>
