@@ -787,18 +787,64 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
   defer
   sorry
 
+definition has_implementation where
+  "has_implementation s s' \<equiv> \<exists>p. s' = instr_multistep p s"
+
+definition has_secure_implementation where
+  "has_secure_implementation s s' \<equiv>
+   (if can_domain_switch (other_state s) then
+        \<comment> \<open>FIXME: Need to think of appropriate guards for the domain-switch case\<close>
+        (\<exists>p. s' = instr_multistep p s)
+      else
+        (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s))"
+end
+
+locale securely_implementable = time_protection_system A s0 current_domain external_uwr policy out
+  collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
+  read_cycles write_cycles do_read do_write store_time initial_regs padding_regs_impact
+  empty_fch fch_flush_cycles initial_pch do_pch_flush addr_domain addr_colour colour_userdomain
+  pch_flush_cycles touched_addrs can_domain_switch
+  for A :: "('a,other_state,unit) data_type"
+  and s0 :: "other_state"
+  and current_domain :: "unit \<Rightarrow> other_state \<Rightarrow> domain"
+  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  and policy :: "(domain \<times> domain) set"
+  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p"
+  and collides_in_pch :: "address rel"
+  and fch_read_impact :: "'fch_cachedness fch fch_impact"
+  and pch_read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  and fch_write_impact :: "'fch_cachedness fch fch_impact"
+  and pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
+  and do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
+  and store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and initial_regs :: "regs"
+  and padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and empty_fch :: "'fch_cachedness fch"
+  and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
+  and initial_pch :: "'pch_cachedness pch"
+  and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
+  and addr_domain :: "address \<Rightarrow> domain"
+  and addr_colour :: "address \<Rightarrow> colour"
+  and colour_userdomain :: "colour \<Rightarrow> userdomain"
+  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
+  and touched_addrs :: "other_state \<Rightarrow> address set"
+  and can_domain_switch :: "other_state \<Rightarrow> bool" +
+  assumes reachable_steps_have_secure_implementation:
+    "(\<And> s s'.
+       reachable (other_state s) \<Longrightarrow>
+       (other_state s, other_state s') \<in> Step () \<Longrightarrow>
+       has_secure_implementation s s')"
+begin
+
 definition A_extended_Step :: "unit \<Rightarrow>
   (('fch_cachedness,'pch_cachedness)state \<times> ('fch_cachedness,'pch_cachedness)state) set"
   where
   "A_extended_Step \<equiv> \<lambda>_. {(s, s').
-     \<comment> \<open>Initial attempt. FIXME: The fact the 2nd conjunct might reject executions that were fine
-        in the original automaton is what might be making enabledness tricky. -robs.\<close>
-     (other_state s') \<in> execution A (other_state s) [()] \<and>
-     (if can_domain_switch (other_state s) then
-        \<comment> \<open>FIXME: Need to think of appropriate guards for the domain-switch case\<close>
-        (\<exists>p. s' = instr_multistep p s)
-      else
-        (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s))}"
+     (other_state s, other_state s') \<in> Step () \<and>
+     has_secure_implementation s s'}"
 
 definition A_extended ::
   "(('fch_cachedness,'pch_cachedness)state,('fch_cachedness,'pch_cachedness)state,unit) data_type"
@@ -808,6 +854,45 @@ definition A_extended ::
 definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_cachedness)state" where
   "A_extended_state s =
      \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
+
+lemma to_extended_step:
+ "\<lbrakk>reachable (other_state s);
+   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> system.Step A ()
+  \<rbrakk> \<Longrightarrow> \<exists>s'. (s, s') \<in> system.Step A_extended ()"
+  apply clarsimp
+  apply(frule_tac s'=s' in reachable_steps_have_secure_implementation)
+   apply force
+  apply(rule_tac x=s' in exI)
+  by (clarsimp simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
+
+lemma to_extended_execution:
+ "\<lbrakk>reachable (other_state s); s' \<in> execution A (other_state s) js\<rbrakk>
+  \<Longrightarrow> \<exists>s'. s' \<in> execution A_extended s js"
+  apply(induct js arbitrary:s)
+   apply(force simp:execution_def steps_def A_extended_def)
+  apply(frule to_extended_step)
+   apply(metis enabled_Step state.select_convs(5))
+  apply clarsimp
+  apply(rename_tac js s s'')
+  apply(erule_tac x=s'' in meta_allE)
+  apply(erule meta_impE)
+   apply(prop_tac "(other_state s, other_state s'') \<in> Step ()")
+    apply(force simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
+   using reachable_Step apply blast
+  apply(erule meta_impE)
+   defer (* FIXME *)
+  apply clarsimp
+  apply(rename_tac js s s'' s''')
+  apply(rule_tac x=s''' in exI)
+  apply(clarsimp simp:system.Step_def)
+  (* FIXME: How is this possibly not true - don't we have a Cons lemma for executing event lists? *)
+  sorry
+
+lemma to_extended_reachability:
+  "system.reachable A_extended (A_extended_state s0) s \<Longrightarrow>
+   reachable (other_state s)"
+  (* FIXME *)
+  sorry
 
 (* XXX: Annoying, surely some helpers for this already exist; come back to this later -robs. *)
 lemma bad_lemma:
@@ -823,10 +908,15 @@ interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda
   policy "\<lambda>d s. out d (other_state s)" Sched
   apply unfold_locales
         (* enabled_system.enabled *)
-        using enabled
-        apply(clarsimp simp:A_extended_def)
-        (* FIXME *)
-        defer
+        apply(prop_tac "reachable (other_state s)")
+         (* FIXME: I think this is provable, because surely the extended execution to s
+            wouldn't be possible if there wasn't an original one. -robs. *)
+         apply(simp only:system.reachable_def[symmetric])
+         apply(force dest:to_extended_reachability)
+        apply clarsimp
+        apply(rename_tac s js js0)
+        apply(frule_tac js=js in enabled[simplified reachable_def[symmetric]])
+        using to_extended_execution apply blast
        (* Step_system.reachable_s0 *)
        apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
        apply(clarsimp simp:system.reachable_def execution_def)
@@ -907,6 +997,7 @@ theorem extended_confidentiality_u:
   apply(thin_tac "tpni.reachable x" for x)+
   apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
   apply(frule can_domain_switch_public)
+  apply(clarsimp simp:has_secure_implementation_def)
   apply(clarsimp split:if_splits)
    apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
    (* FIXME: Maybe what we need here is a "domain_switch_preserves_uwr" lemma enforcing
