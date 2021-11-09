@@ -1035,9 +1035,40 @@ lemma sc_and_timer_activatable:
                   wp: hoare_drop_imp modify_wp hoare_vcg_if_lift2 set_next_interrupt_activatable)
   done
 
-crunches refill_new, refill_update
+crunches refill_new, refill_update, commit_time
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemmas refill_new_typ_ats [wp] =
+  abs_typ_at_lifts [OF refill_new_typ_at]
+
+lemmas refill_update_typ_ats [wp] =
+  abs_typ_at_lifts [OF refill_update_typ_at]
+
+lemmas commit_time_typ_ats [wp] =
+  abs_typ_at_lifts [OF commit_time_typ_at]
+
+lemma update_sched_context_sc_obj_at_n[wp]:
+  "update_sched_context sc_ptr' f \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: obj_at_def is_sc_obj_def)
+  done
+
+lemma refill_budget_check_round_robin_sc_obj_at_n[wp]:
+  "refill_budget_check_round_robin usage \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
+  by (wpsimp simp: refill_budget_check_round_robin_def update_refill_hd_def update_refill_tl_def)
+
+crunches handle_overrun_loop, head_insufficient_loop
+  for sc_obj_at[wp]: "\<lambda>s. Q (sc_obj_at n sc_ptr s)"
   (wp: crunch_wps)
+
+lemma refill_budget_check_sc_obj_at_n[wp]:
+  "refill_budget_check usage \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
+  by (wpsimp simp: refill_budget_check_def is_round_robin_def)
+
+lemma commit_time_sc_obj_at[wp]:
+  "commit_time \<lbrace>\<lambda>s. Q (sc_obj_at n sc_ptr s)\<rbrace>"
+  by (wpsimp simp: commit_time_def)
 
 lemma sched_context_resume_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> sched_context_resume sc_ptr
