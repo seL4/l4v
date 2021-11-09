@@ -482,6 +482,22 @@ lemma valid_sched_context_size'_scReply_update[simp]:
   "valid_sched_context_size' (scReply_update f sc) = valid_sched_context_size' sc"
   by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
 
+lemma valid_sched_context'_scBadge_update[simp]:
+  "valid_sched_context' (scBadge_update f ko) s = valid_sched_context' ko s"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma valid_sched_context_size'_scBadge_update[simp]:
+  "valid_sched_context_size' (scBadge_update f sc) = valid_sched_context_size' sc"
+  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+
+lemma valid_sched_context'_scSporadic_update[simp]:
+  "valid_sched_context' (scSporadic_update f ko) s = valid_sched_context' ko s"
+  by (clarsimp simp: valid_sched_context'_def)
+
+lemma valid_sched_context_size'_scSporadic_update[simp]:
+  "valid_sched_context_size' (scSporadic_update f sc) = valid_sched_context_size' sc"
+  by (clarsimp simp: valid_sched_context_size'_def objBits_simps)
+
 lemma valid_tcb_yield_to_update[elim!]:
   "valid_tcb tp tcb s \<Longrightarrow> sc_at scp s \<Longrightarrow> valid_tcb tp (tcb_yield_to_update (\<lambda>_. Some scp) tcb) s"
   by (auto simp: valid_tcb_def tcb_cap_cases_def)
