@@ -16256,23 +16256,18 @@ lemma sc_ready_times_cong:
   by (clarsimp simp: sc_ready_times_2_def tcb_sc_refill_cfgs_2_def map_project_opt_map
                      assms[unfolded sc_ready_times_2_def])
 
-lemma maybe_add_empty_tail_sc_tcb_sc_at[wp]:
-  "maybe_add_empty_tail sc_ptr \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
-  unfolding maybe_add_empty_tail_def refill_add_tail_def update_sched_context_set_refills_rewrite
-  apply (wpsimp wp: update_sched_context_wp hoare_drop_imp hoare_vcg_if_lift2)
-  done
+crunches maybe_add_empty_tail
+  for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)"
 
 lemma refill_update_sc_tcb_sc_at[wp]:
-  "refill_update sc_ptr mrefills budget period \<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>"
-  unfolding refill_update_def refill_add_tail_def update_refill_tl_def update_refill_hd_def
-             bind_assoc update_sched_context_set_refills_rewrite
-  apply (wpsimp wp: update_sched_context_wp set_refills_wp get_refills_wp)
-  by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
+  "refill_update sc_ptr mrefills budget period \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
+   unfolding refill_update_def refill_add_tail_def update_refill_tl_def update_refill_hd_def
+              bind_assoc update_sched_context_set_refills_rewrite
+   apply (wpsimp wp: update_sched_context_wp set_refills_wp get_refills_wp)
+   by (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
 
 lemma refill_new_sc_tcb_sc_at[wp]:
-  "\<lbrace>sc_tcb_sc_at P sc_ptr\<rbrace>
-   refill_new sc_ptr mrefills budget period
-   \<lbrace>\<lambda>rv. sc_tcb_sc_at P sc_ptr\<rbrace>"
+  "refill_new sc_ptr mrefills budget period \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
   unfolding refill_new_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
