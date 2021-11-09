@@ -189,7 +189,7 @@ lemma restart_corres:
                 apply (simp add: maybeM_when, fold dc_def)
                 apply (rule corres_split_deprecated [OF _ corres_when2])
                     apply (rule corres_split_deprecated [OF _ isSchedulable_corres])
-                      apply (rule corres_when2 [OF _ possibleSwitchTo_corres])
+                      apply (rule corres_when2 [OF _ possibleSwitchTo_corres]; (solves simp)?)
                       apply simp
                      prefer 4
                      apply (rule schedContextResume_corres)
@@ -578,13 +578,17 @@ lemma copyreg_invs':
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   by (rule hoare_strengthen_post, rule copyreg_invs'', simp)
 
-lemma isRunnable_corres:
-  "corres (\<lambda>ts runn. runnable ts = runn) (tcb_at t) (tcb_at' t)
-     (get_thread_state t) (isRunnable t)"
+lemma isRunnable_corres':
+  "t = t' \<Longrightarrow>
+   corres (\<lambda>ts runn. runnable ts = runn)
+     (tcb_at t and pspace_aligned and pspace_distinct) \<top>
+     (get_thread_state t) (isRunnable t')"
+  apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
+   apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (simp add: isRunnable_def)
   apply (subst bind_return[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getThreadState_corres])
+    apply (rule corres_split_deprecated[OF _ getThreadState_corres'])
       apply (case_tac rv, clarsimp+)
      apply (wp hoare_TrueI)+
    apply auto

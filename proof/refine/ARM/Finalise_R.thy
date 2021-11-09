@@ -4716,7 +4716,8 @@ lemma schedContextUnbindTCB_corres:
          apply (rule corres_split[OF corres_when], clarsimp simp: sc_relation_def)
             apply (rule rescheduleRequired_corres)
            apply (rule corres_split[OF tcbSchedDequeue_corres])
-             apply (rule corres_split[OF tcb_release_remove_corres])
+             apply (rule corres_split[OF tcbReleaseRemove_corres])
+             apply (clarsimp simp: sc_relation_def)
                apply (rule corres_split[OF set_tcb_obj_ref_corres];
                       clarsimp simp: tcb_relation_def)
                  apply (rule_tac sc'=sc' in update_sc_no_reply_stack_update_ko_at'_corres)

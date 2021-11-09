@@ -3043,12 +3043,13 @@ lemma weak_sch_act_wf_at_cross:
   done
 
 lemma possibleSwitchTo_corres:
-  "corres dc
+  "t = t' \<Longrightarrow>
+   corres dc
     (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
      and valid_tcbs and active_sc_valid_refills)
     (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')
       (possible_switch_to t)
-      (possibleSwitchTo t)"
+      (possibleSwitchTo t')"
   supply dc_simp [simp del]
   apply (rule corres_cross_add_guard[where Q="tcb_at' t"])
    apply (fastforce intro: tcb_at_cross)
@@ -5450,9 +5451,10 @@ lemma release_queue_corres:
   "corres (=) \<top> \<top> (gets release_queue) getReleaseQueue"
   by (simp add: getReleaseQueue_def state_relation_def release_queue_relation_def)
 
-lemma tcb_release_remove_corres:
-  "corres dc (pspace_aligned and pspace_distinct and tcb_at t) \<top>
-             (tcb_release_remove t) (tcbReleaseRemove t)"
+lemma tcbReleaseRemove_corres:
+  "t = t' \<Longrightarrow>
+   corres dc (pspace_aligned and pspace_distinct and tcb_at t) \<top>
+             (tcb_release_remove t) (tcbReleaseRemove t')"
   unfolding tcb_release_remove_def tcbReleaseRemove_def tcb_sched_dequeue_def setReleaseQueue_def
   apply clarsimp
   apply (rule stronger_corres_guard_imp)
@@ -5584,8 +5586,7 @@ lemma schedContextDonate_corres:
                apply (wpsimp wp: hoare_drop_imps
                                  threadSet_valid_release_queue threadSet_valid_release_queue'
                                  threadSet_valid_queues_no_state threadSet_valid_queues'_no_state)
-              apply (rule_tac x="the (sc_tcb sc)" and x'="the (scTCB sca)" in lift_args_corres)
-               apply (rule tcb_release_remove_corres)
+              apply (rule tcbReleaseRemove_corres)
               apply (clarsimp simp: sc_relation_def)
              apply (wpsimp | strengthen weak_valid_sched_action_strg)+
             apply (rule_tac Q="\<lambda>_. tcb_at' (the (scTCB sca)) and valid_tcbs' and
