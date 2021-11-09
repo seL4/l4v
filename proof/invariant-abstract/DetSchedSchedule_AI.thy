@@ -12835,19 +12835,27 @@ lemma sched_context_donate_wp:
   unfolding sched_context_donate_def
   by (wpsimp wp: ssc_bound_tcb_at' sc_tcb_update_sc_tcb_sc_at)
 
-lemma tcb_release_remove_sc_not_in_release_q[wp]:
-  "\<lbrace>sc_not_in_release_q sc_ptr\<rbrace>
-    tcb_release_remove tptr
-   \<lbrace>\<lambda>rv. sc_not_in_release_q sc_ptr\<rbrace>"
+lemma tcb_release_remove_sc_not_in_release_q_inv:
+  "tcb_release_remove tptr \<lbrace>sc_not_in_release_q sc_ptr\<rbrace>"
   apply (wpsimp simp: tcb_release_remove_def)
-  by (clarsimp simp: pred_tcb_at_def obj_at_def tcb_sched_dequeue_def not_in_release_q_def in_queue_2_def)
+  by (clarsimp simp: pred_tcb_at_def obj_at_def tcb_sched_dequeue_def not_in_release_q_def
+                     in_queue_2_def)
+
+lemma tcb_release_remove_sc_not_in_release_q:
+  "\<lbrace>\<lambda>s. heap_ref_eq sc_ptr tptr (tcb_scps_of s) \<and> heap_refs_inj (tcb_scps_of s)\<rbrace>
+   tcb_release_remove tptr
+   \<lbrace>\<lambda>_. sc_not_in_release_q sc_ptr\<rbrace>"
+  apply (clarsimp simp: tcb_release_remove_def)
+  apply wpsimp
+  apply (clarsimp simp: tcb_sched_dequeue_def in_queue_2_def heap_refs_inj_eq)
+  done
 
 lemma sched_context_donate_sc_not_in_release_q:
   "\<lbrace>sc_not_in_release_q sc_ptr and not_in_release_q tptr\<rbrace>
-    sched_context_donate scp tptr
-   \<lbrace>\<lambda>rv. sc_not_in_release_q sc_ptr\<rbrace>"
+   sched_context_donate scp tptr
+   \<lbrace>\<lambda>_. sc_not_in_release_q sc_ptr\<rbrace>"
   apply (clarsimp simp: sched_context_donate_def)
-  by (wpsimp wp: get_sc_obj_ref_wp hoare_vcg_imp_lift' tcb_release_remove_not_in_release_q)
+  by (wpsimp wp: get_sc_obj_ref_wp hoare_vcg_imp_lift' tcb_release_remove_sc_not_in_release_q_inv)
 
 lemma maybe_donate_sc_valid_release_q:
   "\<lbrace> valid_release_q and not_in_release_q tcb_ptr\<rbrace>
