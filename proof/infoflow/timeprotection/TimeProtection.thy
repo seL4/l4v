@@ -165,7 +165,7 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
   fixes touched_addrs :: "other_state \<Rightarrow> address set"
   assumes touched_addrs_inv:
     "reachable s \<Longrightarrow>
-     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> kernel_shared_precise"
+     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> {a. addr_domain a = Sched}"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
@@ -180,15 +180,6 @@ definition all_addrs_of :: "domain \<Rightarrow> address set" where
 
 abbreviation current_domain' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> domain" where
   "current_domain' s \<equiv> current_domain () (other_state s)"
-
-abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> address set" where
-  "touched_addrs' s \<equiv> touched_addrs (other_state s)"
-
-lemma touched_addrs_inv':
-  "reachable (other_state s) \<Longrightarrow>
-   touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
-  using touched_addrs_inv unfolding all_addrs_of_def
-  by simp
 
 abbreviation collision_set :: "address \<Rightarrow> address set" where
   "collision_set a \<equiv> {b. (a, b) \<in> collides_in_pch}"
@@ -205,7 +196,14 @@ definition kernel_shared_precise :: "address set" where
 definition kernel_shared_expanded :: "address set" where
   "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
 
+abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> address set" where
+  "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
+lemma touched_addrs_inv':
+  "reachable (other_state s) \<Longrightarrow>
+   touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
+  using touched_addrs_inv unfolding all_addrs_of_def kernel_shared_precise_def
+  by simp
 
 (*
 
