@@ -752,6 +752,10 @@ fun crunch cfg pre extra stack const' thms =
                                           (ms ~~ goals);
             in fold (fn pre' => fn goal => collect_preconds pre' goal pre extra ctxt'') preconds goal end;
           val goal' = if Instance.has_preconds then collect_preconds' pre else goal;
+          val _ =
+            if Instance.has_preconds andalso not (Term.aconv_untyped (get_precond goal, get_precond goal'))
+            then Output.information ("Lemma generated for " ^ Proof_Context.markup_const ctxt const ^ " has side-conditions.")
+            else ();
           val goal_prop = HOLogic.mk_Trueprop goal';
 
           val ctxt''' = ctxt'' |> Proof_Context.augment goal_prop
