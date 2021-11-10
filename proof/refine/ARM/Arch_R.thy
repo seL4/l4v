@@ -66,12 +66,12 @@ lemma descendants_of'_helper:
   done
 
 lemma createObject_typ_at':
-  "\<lbrace>\<lambda>s.  koTypeOf ty = otype \<and> is_aligned ptr (objBitsKO ty) \<and>
-         pspace_aligned' s \<and> pspace_no_overlap' ptr (objBitsKO ty) s\<rbrace>
+  "\<lbrace>\<lambda>s.  koTypeOf ty = otype \<and> is_aligned ptr (objBitsKO ty) \<and> objBitsKO ty < word_bits \<and>
+         pspace_aligned' s \<and> pspace_bounded' s \<and> pspace_no_overlap' ptr (objBitsKO ty) s\<rbrace>
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
   apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
-  apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
+  apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
   apply (simp add:ps_clear_def)+
@@ -84,7 +84,8 @@ lemma createObject_typ_at':
   apply (subgoal_tac "x \<in> {x..x + 2 ^ objBitsKO y - 1}")
    apply (fastforce simp: p_assoc_help)
   apply (rule first_in_uptoD)
-  apply (drule(1) pspace_alignedD')
+  apply (frule(1) pspace_alignedD')
+  apply (drule(1) pspace_boundedD')
   apply (clarsimp simp: is_aligned_no_wrap' p_assoc_help)
   done
 
@@ -213,7 +214,7 @@ lemma performASIDControlInvocation_corres:
                                makeObjectKO_def range_cover_full
                          simp del: capFreeIndex_update.simps
                 | strengthen invs_valid_pspace' invs_pspace_aligned'
-                             invs_pspace_distinct'
+                             invs_pspace_distinct' invs_pspace_bounded'
                              exI[where x="makeObject :: asidpool"])+
          apply (wp updateFreeIndex_forward_invs'
            updateFreeIndex_pspace_no_overlap'
@@ -230,7 +231,7 @@ lemma performASIDControlInvocation_corres:
      apply wp+
     apply (clarsimp simp: conj_comms)
     apply (clarsimp simp: conj_comms ex_disj_distrib
-           | strengthen invs_valid_pspace' invs_pspace_aligned'
+           | strengthen invs_valid_pspace' invs_pspace_aligned' invs_pspace_bounded'
                         invs_pspace_distinct')+
     apply (wp deleteObjects_invs'[where p="makePoolParent i'"]
               deleteObjects_cte_wp_at'
@@ -806,7 +807,7 @@ shows
             apply (simp add: lookup_failure_map_def)
            apply simp
           apply (rule_tac P="\<lambda>s. asid_table (asid_high_bits_of word2) = Some word1 \<longrightarrow> asid_pool_at word1 s" and
-                          P'="pspace_aligned' and pspace_distinct'" in corres_inst)
+                          P'="pspace_aligned' and pspace_distinct' and pspace_bounded'" in corres_inst)
           apply (simp add: liftME_return)
           apply (rule whenE_throwError_corres_initial, simp)
            apply auto[1]
@@ -1923,7 +1924,7 @@ lemma performASIDControlInvocation_invs' [wp]:
          cong: rev_conj_cong)
     apply (clarsimp simp:conj_comms
                          descendants_of_null_filter'
-      | strengthen invs_pspace_aligned' invs_pspace_distinct'
+      | strengthen invs_pspace_aligned' invs_pspace_distinct' invs_pspace_bounded'
           invs_pspace_aligned' invs_valid_pspace')+
     apply (wp updateFreeIndex_forward_invs'
            updateFreeIndex_cte_wp_at
@@ -1934,7 +1935,7 @@ lemma performASIDControlInvocation_invs' [wp]:
            updateCap_cte_wp_at_cases static_imp_wp
            getSlotCap_wp)+
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
-           | strengthen invs_valid_pspace' invs_pspace_aligned'
+           | strengthen invs_valid_pspace' invs_pspace_aligned' invs_pspace_bounded'
                         invs_pspace_distinct' empty_descendants_range_in')+
   apply (wp deleteObjects_invs'[where p="makePoolParent aci"]
             hoare_vcg_ex_lift

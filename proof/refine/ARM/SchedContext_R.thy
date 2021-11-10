@@ -60,7 +60,7 @@ lemma setSchedContext_valid_idle'[wp]:
   apply (wpsimp simp: setSchedContext_def wp: setObject_ko_wp_at)
   apply (rule hoare_lift_Pf3[where f=ksIdleThread])
   apply (wpsimp wp: hoare_vcg_conj_lift)
-   apply (wpsimp simp: obj_at'_real_def sc_objBits_pos_power2 wp: setObject_ko_wp_at)
+   apply (wpsimp simp: obj_at'_real_def wp: setObject_ko_wp_at)
   apply wpsimp
   apply (wpsimp wp: updateObject_default_inv)
   by (auto simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def)[1]
@@ -81,7 +81,7 @@ lemma setSchedContext_active_sc_at':
    setSchedContext scPtr sc
    \<lbrace>\<lambda>rv s. active_sc_at' scPtr' s\<rbrace>"
   apply (simp add: active_sc_at'_def obj_at'_real_def setSchedContext_def)
-  apply (wpsimp wp: setObject_ko_wp_at simp: sc_objBits_pos_power2)
+  apply (wpsimp wp: setObject_ko_wp_at)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_real_def)
   done
 
@@ -251,6 +251,7 @@ lemma schedContextUpdateConsumed_sym_refs_lis_refs_of_replies'[wp]:
 crunches schedContextUpdateConsumed
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]:"pspace_distinct'"
+  and bounded'[wp]: "pspace_bounded'"
   and typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
@@ -404,6 +405,7 @@ lemma schedContextCancelYeldTo_valid_release_queue'[wp]:
 crunches schedContextCancelYieldTo
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
   and no_0_obj'[wp]: no_0_obj'
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"

@@ -50,9 +50,18 @@ definition
 definition
   "ko_wp_at' P p s \<equiv>
    \<exists>ko. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko) \<and> P ko \<and>
-        ps_clear p (objBitsKO ko) s"
+        ps_clear p (objBitsKO ko) s \<and> objBitsKO ko < word_bits"
 
-
+lemma valid_sz_simps:
+  "objBitsKO ko < word_bits =
+    (case ko of
+      (KOSchedContext sc) \<Rightarrow> scBitsFromRefillLength sc < word_bits
+      | _ \<Rightarrow>    True)"
+  by (cases ko;
+      clarsimp simp: objBits_def objBitsKO_def word_size_def archObjSize_def pageBits_def word_bits_def
+                     tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def word_size
+                     pdeBits_def pteBits_def wordSizeCase_def wordBits_def replySizeBits_def
+              split: arch_kernel_object.splits)
 
 definition
   obj_at' :: "('a::pspace_storable \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -369,6 +378,7 @@ definition state_refs_of' :: "kernel_state \<Rightarrow> word32 \<Rightarrow> re
                             None \<Rightarrow> {}
                           | Some ko \<Rightarrow>
                               if is_aligned x (objBitsKO ko) \<and> ps_clear x (objBitsKO ko) s
+                                 \<and> objBitsKO ko < word_bits
                               then refs_of' ko
                               else {}"
 
@@ -748,6 +758,10 @@ where
   "pspace_distinct' s \<equiv>
    \<forall>x \<in> dom (ksPSpace s). ps_clear x (objBitsKO (the (ksPSpace s x))) s"
 
+definition pspace_bounded' :: "kernel_state \<Rightarrow> bool" where
+ "pspace_bounded' s \<equiv>
+  \<forall>x \<in> dom (ksPSpace s). objBitsKO (the (ksPSpace s x)) < word_bits"
+
 definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
 where
@@ -1050,6 +1064,7 @@ where
                    valid_replies' and
                    pspace_aligned' and
                    pspace_distinct' and
+                   pspace_bounded' and
                    no_0_obj' and
                    valid_mdb'"
 
@@ -1599,7 +1614,7 @@ lemmas projectKO_eq = projectKO_eq2
 lemma obj_at'_def':
   "obj_at' P p s = (\<exists>ko obj. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko)
                    \<and> projectKO ko s = Some obj \<and> P obj
-                   \<and> ps_clear p (objBitsKO ko) s)"
+                   \<and> ps_clear p (objBitsKO ko) s \<and> objBitsKO ko < word_bits)"
   apply (simp add: obj_at'_real_def ko_wp_at'_def projectKO_eq
                    True_notin_set_replicate_conv objBits_def)
   apply fastforce
@@ -1608,21 +1623,21 @@ lemma obj_at'_def':
 lemma obj_at'_def:
   "obj_at' P p s \<equiv> \<exists>ko obj. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko)
                    \<and> projectKO ko s = Some obj \<and> P obj
-                   \<and> ps_clear p (objBitsKO ko) s"
+                   \<and> ps_clear p (objBitsKO ko) s \<and> objBitsKO ko < word_bits"
   by (simp add: obj_at'_def')
 
 lemma obj_atE' [elim?]:
   assumes objat: "obj_at' P ptr s"
   and        rl: "\<And>ko obj.
   \<lbrakk> ksPSpace s ptr = Some ko; is_aligned ptr (objBitsKO ko);
-     projectKO ko s = Some obj; P obj;
+     projectKO ko s = Some obj; P obj; objBitsKO ko < word_bits;
      ps_clear ptr (objBitsKO ko) s \<rbrakk> \<Longrightarrow> R"
   shows "R"
   using objat unfolding obj_at'_def by (auto intro!: rl)
 
 lemma obj_atI' [intro?]:
   "\<lbrakk> ksPSpace s ptr = Some ko; is_aligned ptr (objBitsKO ko);
-       projectKO ko s = Some obj; P obj;
+       projectKO ko s = Some obj; P obj; objBitsKO ko < word_bits;
        ps_clear ptr (objBitsKO ko) s \<rbrakk>
   \<Longrightarrow> obj_at' P ptr s"
   unfolding obj_at'_def by (auto)
@@ -1917,6 +1932,13 @@ lemma pspace_alignedD':
   apply simp
   done
 
+lemma pspace_boundedD':
+  "\<lbrakk> ksPSpace s x = Some v; pspace_bounded' s \<rbrakk> \<Longrightarrow> objBitsKO v < word_bits"
+  apply (simp add: pspace_bounded'_def)
+  apply (drule bspec, erule domI)
+  apply simp
+  done
+
 lemma next_unfold:
   "mdb_next s c =
    (case s c of Some cte \<Rightarrow> Some (mdbNext (cteMDBNode cte)) | None \<Rightarrow> None)"
@@ -1943,13 +1965,13 @@ lemma valid_pde_mapping'_simps[simp]:
 lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceI' [intro]:
-  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; valid_mdb' s; no_0_obj' s;
+  "\<lbrakk>valid_objs' s; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s; valid_mdb' s; no_0_obj' s;
     valid_replies' s\<rbrakk>
   \<Longrightarrow> valid_pspace' s"  unfolding valid_pspace'_def by simp
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; valid_replies' s; pspace_aligned' s; pspace_distinct' s;
+    \<lbrakk> valid_objs' s; valid_replies' s; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s;
       no_0_obj' s; valid_mdb' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
@@ -2094,10 +2116,10 @@ lemma state_refs_of'_pspaceI:
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
-  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
+  by (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
-                     typ_at'_def
-           intro: valid_obj'_pspaceI valid_mdb'_pspaceI valid_replies'_pspaceI)
+                     typ_at'_def pspace_bounded'_def
+              intro: valid_obj'_pspaceI valid_mdb'_pspaceI valid_replies'_pspaceI)
 
 lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
@@ -2638,7 +2660,7 @@ proof -
   have Q: "\<And>P f. (\<exists>x. (\<exists>y. x = f y) \<and> P x) = (\<exists>y. P (f y))"
     by fastforce
   show ?thesis
-    by (fastforce simp: cte_wp_at_cases' obj_at'_real_def typ_at'_def
+    by (fastforce simp: cte_wp_at_cases' obj_at'_real_def typ_at'_def word_bits_def
                         ko_wp_at'_def objBits_simps' P Q conj_comms cte_level_bits_def)
 qed
 
@@ -3189,6 +3211,10 @@ lemma pspace_aligned_update [iff]:
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
+
+lemma pspace_bounded_update [iff]:
+  "pspace_bounded' (f s) = pspace_bounded' s"
+  by (simp add: pspace pspace_bounded'_def)
 
 lemma pspace_no_overlap'_update [iff]:
   "pspace_no_overlap' p sz (f s) = pspace_no_overlap' p sz s"
@@ -3764,6 +3790,10 @@ lemma invs_pspace_distinct' [elim!]:
   "invs' s \<Longrightarrow> pspace_distinct' s"
   by (simp add: invs'_def valid_pspace'_def)
 
+lemma invs_pspace_bounded' [elim!]:
+  "invs' s \<Longrightarrow> pspace_bounded' s"
+  by (simp add: invs'_def valid_pspace'_def)
+
 lemma invs_valid_pspace' [elim!]:
   "invs' s \<Longrightarrow> valid_pspace' s"
   by (simp add: invs'_def)
@@ -3884,6 +3914,7 @@ lemmas invs'_implies =
   invs_no_0_obj'
   invs_pspace_aligned'
   invs_pspace_distinct'
+  invs_pspace_bounded'
   invs_arch_state'
   invs_valid_global'
   invs_mdb'

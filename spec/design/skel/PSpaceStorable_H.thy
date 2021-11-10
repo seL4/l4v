@@ -113,6 +113,7 @@ definition loadObject_default ::
      oassert (ptr = ptr');
      val \<leftarrow> projectKO obj;
      oassert (is_aligned ptr (objBits val));
+     oassert (objBits val < word_bits);
      read_magnitudeCheck ptr next (objBits val);
      oreturn val
   }"
@@ -125,6 +126,7 @@ definition updateObject_default ::
      (_ :: 'a) \<leftarrow> gets_the $ projectKO oldObj;
      assert (objBitsKO (injectKO val) = objBitsKO oldObj);
      alignCheck ptr (objBits val);
+     assert (objBits val < word_bits);
      magnitudeCheck ptr next (objBits val);
      return (injectKO val)
   od"

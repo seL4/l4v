@@ -740,6 +740,7 @@ crunches transferCapsToSlots
   for reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and valid_replies' [wp]: valid_replies'
+  and pspace_bounded'[wp]: pspace_bounded'
 
 lemma transferCapsToSlots_vp[wp]:
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> distinct slots
@@ -1029,7 +1030,7 @@ lemma transferCaps_corres:
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and valid_replies' and
-    pspace_aligned' and pspace_distinct' and no_0_obj' and valid_mdb'
+    pspace_aligned' and pspace_distinct' and pspace_bounded' and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
     and case_option \<top> valid_ipc_buffer_ptr' recv_buf
     and transferCaps_srcs caps'
@@ -1366,6 +1367,7 @@ crunches copyMRs
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and valid_replies' [wp]: valid_replies'
+  and pspace_bounded'[wp]: pspace_bounded'
   (wp: threadSet_ctes_of crunch_wps)
 
 lemma copyMRs_valid_mdb[wp]:
@@ -1380,7 +1382,7 @@ lemma doNormalTransfer_corres:
    and case_option \<top> in_user_frame send_buf
    and case_option \<top> in_user_frame recv_buf)
   (tcb_at' sender and tcb_at' receiver and valid_objs' and valid_replies'
-   and pspace_aligned' and pspace_distinct' and cur_tcb'
+   and pspace_aligned' and pspace_distinct' and pspace_bounded' and cur_tcb'
    and valid_mdb' and no_0_obj'
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
    and case_option \<top> valid_ipc_buffer_ptr' send_buf
@@ -2351,6 +2353,7 @@ crunches bindScReply
 crunches replyPush
   for pspace_aligned'[wp]: pspace_aligned'
   and pspace_distinct'[wp]: pspace_distinct'
+  and pspace_bounded'[wp]: pspace_bounded'
   and if_unsafe_then_cap'[wp]: "if_unsafe_then_cap'"
   and valid_global_refs'[wp]: "valid_global_refs'"
   and valid_arch_state'[wp]: "valid_arch_state'"
@@ -2394,7 +2397,7 @@ lemma replyPush_valid_objs'[wp]:
       fastforce simp: valid_reply'_def obj_at'_def projectKOs valid_bound_obj'_def)+
 
 lemma replyPush_valid_replies'[wp]:
-  "\<lbrace>valid_replies' and pspace_distinct' and pspace_aligned'
+  "\<lbrace>valid_replies' and pspace_distinct' and pspace_aligned' and pspace_bounded'
     and st_tcb_at' (Not \<circ> is_replyState) callerPtr\<rbrace>
    replyPush callerPtr calleePtr replyPtr canDonate
    \<lbrace>\<lambda>_. valid_replies'\<rbrace>"
@@ -5663,8 +5666,8 @@ lemma ri_invs' [wp]:
   apply (rename_tac s)
   apply (clarsimp simp: comp_def invs'_def valid_pspace'_def if_distribR
                   cong: conj_cong imp_cong)
-  apply (frule (2) sym_refs_tcbSCs)
-  apply (frule (2) sym_refs_scReplies)
+  apply (frule (3) sym_refs_tcbSCs)
+  apply (frule (3) sym_refs_scReplies)
   apply (prop_tac "\<forall>ep. ko_at' ep (capEPPtr cap) s \<longrightarrow> ep \<noteq> IdleEP \<longrightarrow> t \<notin> set (epQueue ep)")
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
    apply (drule_tac ko="ko :: endpoint" for ko in sym_refs_ko_atD'[rotated])
@@ -5843,8 +5846,8 @@ lemma si_invs'2[wp]:
         apply (fastforce simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def
                                projectKO_eq projectKO_tcb isReceive_def
                         split: thread_state.splits)
-       apply (erule (2) sym_refs_tcbSCs)
-      apply (erule (2) sym_refs_scReplies)
+       apply (erule (3) sym_refs_tcbSCs)
+      apply (erule (3) sym_refs_scReplies)
      apply (simp flip: conj_assoc, rule conjI)
       apply (subgoal_tac "ko_wp_at' live' xb s \<and> reply_at' xb s", clarsimp)
        apply (erule (1) if_live_then_nonz_capE')

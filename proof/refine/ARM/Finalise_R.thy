@@ -1419,6 +1419,7 @@ lemma emptySlot_untyped_ranges[wp]:
 
 crunches emptySlot
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
+  and pspace_bounded'[wp]: pspace_bounded'
 
 lemma emptySlot_invs'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' (\<lambda>cte. removeable' sl s (cteCap cte)) sl s
@@ -2335,6 +2336,7 @@ crunches replyRemove
   and cur_tcb'[wp]: cur_tcb'
   and no_0_obj'[wp]: no_0_obj'
   and valid_dom_schedule'[wp]: valid_dom_schedule'
+  and pspace_bounded'[wp]: pspace_bounded'
   (simp: crunch_simps)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -4222,7 +4224,7 @@ lemma schedContextUnbindReply_invs'[wp]:
                     hoare_vcg_imp_lift typ_at_lifts)
   apply (clarsimp simp: invs'_def valid_pspace'_def sym_refs_asrt_def)
   apply (frule (1) ko_at_valid_objs', clarsimp simp: projectKOs)
-  apply (frule (2) sym_refs_scReplies)
+  apply (frule (3) sym_refs_scReplies)
   apply (intro conjI)
      apply (fastforce simp: obj_at'_def opt_map_def projectKOs sym_heap_def split: option.splits)
     apply (fastforce elim: if_live_then_nonz_capE'

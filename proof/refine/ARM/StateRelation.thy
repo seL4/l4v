@@ -1237,14 +1237,6 @@ lemma MIN_REFILLS_le_minRefillLength:
 
 lemmas scBits_simps = scBits_inverse_us refillAbsoluteMax_def sc_size_bounds_def sc_const_conc
 
-(* leaving this sorried for now, still tweaking what to assume and how *)
-lemma scBits_max:
-(*  assumes "valid_sched_context_size' sc'"*)
-  shows "scBitsFromRefillLength' us < LENGTH(machine_word_len)"
-  unfolding scBitsFromRefillLength'_def
-(*  using assms
-  by (clarsimp simp: valid_sched_context_size'_def maxUntypedSizeBits_def)*) sorry
-
 lemma scBits_at_least_6:
   "6 \<le> scBitsFromRefillLength' us"
 proof -
@@ -1260,30 +1252,33 @@ proof -
     by (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
 qed
 
-lemma scBits_pos':
+lemma scBits_pos'[simp]:
   "0 < scBitsFromRefillLength' us"
   using scBits_at_least_6
   by (metis gr0I not_numeral_le_zero)
 
-lemma scBits_pos:
-(*  assumes "valid_sched_context_size' sc'"*)
-  shows "(0::machine_word) < of_nat (scBitsFromRefillLength' us)"
-  using scBits_pos' scBits_max unat_ucast_less_no_overflow_simp
-  by (metis less_or_eq_imp_le pow_mono_leq_imp_lt unat_0)
-
 lemma scBits_pos_power2:
-(*  assumes "valid_sched_context_size' sc'"*)
+  assumes "scBitsFromRefillLength' us < word_bits"
   shows "(1::machine_word) < (2::machine_word) ^ scBitsFromRefillLength' us"
-  using one_less_power rel_simps(49) semiring_norm(76) scBits_pos' scBits_max
-  by (metis Num.of_nat_simps(2) unat_2tp_if word_of_nat_less)
+  using semiring_norm(76) word_bits_def
+  by (metis assms const_less p2_eq_1 p2_gt_0 scBits_pos' verit_comp_simplify1(1) verit_minus_simplify(1))
 
-lemma sc_objBits_pos_power2:
-(*  assumes "valid_sched_context_size' sc'"*)
+lemma objBits_pos_power2[simp]:
+  assumes "objBits v < word_bits"
   shows "(1::machine_word) < (2::machine_word) ^ objBits v"
   unfolding objBits_simps'
+  apply (insert assms)
   apply (case_tac "injectKO v"; simp)
-  by (simp add: pageBits_def archObjSize_def pteBits_def pdeBits_def scBits_pos_power2
+  by (simp add: pageBits_def archObjSize_def pteBits_def pdeBits_def objBits_simps scBits_pos_power2
          split: arch_kernel_object.split)+
+
+lemma objBitsKO_no_overflow[simp, intro!]:
+  "objBitsKO ko < word_bits
+    \<Longrightarrow> (1::machine_word) < (2::machine_word)^(objBitsKO ko)"
+  apply (cases ko; simp add: objBits_simps' pageBits_def archObjSize_def pteBits_def pdeBits_def
+                   split: arch_kernel_object.splits)
+  using one_less_power[OF _ scBits_pos']
+  by (simp add: scBits_pos_power2 word_bits_conv)
 
 lemma valid_sc_size_sc_relation:
   "\<lbrakk>valid_sched_context_size n; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> n = objBits sc' - minSchedContextBits"
