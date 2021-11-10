@@ -855,45 +855,6 @@ definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_
   "A_extended_state s =
      \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
 
-lemma to_extended_step:
- "\<lbrakk>reachable (other_state s);
-   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> system.Step A ()
-  \<rbrakk> \<Longrightarrow> \<exists>s'. (s, s') \<in> system.Step A_extended ()"
-  apply clarsimp
-  apply(frule_tac s'=s' in reachable_steps_have_secure_implementation)
-   apply force
-  apply(rule_tac x=s' in exI)
-  by (clarsimp simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
-
-lemma to_extended_execution:
- "\<lbrakk>reachable (other_state s); s' \<in> execution A (other_state s) js\<rbrakk>
-  \<Longrightarrow> \<exists>s'. s' \<in> execution A_extended s js"
-  apply(induct js arbitrary:s)
-   apply(force simp:execution_def steps_def A_extended_def)
-  apply(frule to_extended_step)
-   apply(metis enabled_Step state.select_convs(5))
-  apply clarsimp
-  apply(rename_tac js s s'')
-  apply(erule_tac x=s'' in meta_allE)
-  apply(erule meta_impE)
-   apply(prop_tac "(other_state s, other_state s'') \<in> Step ()")
-    apply(force simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
-   using reachable_Step apply blast
-  apply(erule meta_impE)
-   defer (* FIXME *)
-  apply clarsimp
-  apply(rename_tac js s s'' s''')
-  apply(rule_tac x=s''' in exI)
-  apply(clarsimp simp:system.Step_def)
-  (* FIXME: How is this possibly not true - don't we have a Cons lemma for executing event lists? *)
-  sorry
-
-lemma to_extended_reachability:
-  "system.reachable A_extended (A_extended_state s0) s \<Longrightarrow>
-   reachable (other_state s)"
-  (* FIXME *)
-  sorry
-
 (* XXX: Annoying, surely some helpers for this already exist; come back to this later -robs. *)
 lemma bad_lemma:
   "\<lbrakk>\<comment> \<open>system.reachable A_extended (A_extended_state s0) s;\<close>
@@ -904,40 +865,20 @@ lemma bad_lemma:
   apply(clarsimp simp:execution_def A_extended_def)
   sorry
 
-interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
-  policy "\<lambda>d s. out d (other_state s)" Sched
+interpretation tpni: Step_system A_extended "A_extended_state s0"
   apply unfold_locales
-        (* enabled_system.enabled *)
-        apply(prop_tac "reachable (other_state s)")
-         (* FIXME: I think this is provable, because surely the extended execution to s
-            wouldn't be possible if there wasn't an original one. -robs. *)
-         apply(simp only:system.reachable_def[symmetric])
-         apply(force dest:to_extended_reachability)
-        apply clarsimp
-        apply(rename_tac s js js0)
-        apply(frule_tac js=js in enabled[simplified reachable_def[symmetric]])
-        using to_extended_execution apply blast
-       (* Step_system.reachable_s0 *)
-       apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
-       apply(clarsimp simp:system.reachable_def execution_def)
-       apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
-      (* Step_system.execution_Run *)
-      (* using execution_Run *)
-      apply(rule set_eqI)
-      apply clarsimp
-      apply(rule iffI)
-       (* XXX: Not sure the best way to do these execution-Run conversion proofs -robs. *)
-       apply(force simp:bad_lemma)
-      (* FIXME *)
-      defer
-     (* noninterference_policy.uwr_equiv_rel *)
-     using extended_uwr_equiv_rel apply blast
-    (* noninterference_policy.schedIncludesCurrentDom *)
-    using uwr_same_domain apply blast
-   (* noninterference_policy.schedFlowsToAll *)
-   using schedFlowsToAll apply blast
-  (* noninterference_policy.schedNotGlobalChannel *)
-  using schedNotGlobalChannel apply blast
+   (* Step_system.reachable_s0 *)
+   apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
+   apply(clarsimp simp:system.reachable_def execution_def)
+   apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
+  (* Step_system.execution_Run *)
+  (* using execution_Run *)
+  apply(rule set_eqI)
+  apply clarsimp
+  apply(rule iffI)
+   (* XXX: Not sure the best way to do these execution-Run conversion proofs -robs. *)
+   apply(force simp:bad_lemma)
+  (* FIXME *)
   sorry
 
 lemma to_original_step:
@@ -971,6 +912,74 @@ lemma to_original_reachability:
   apply clarsimp
   apply(rule_tac x=as in exI)
   using to_original_run' by blast
+
+lemma to_extended_step:
+ "\<lbrakk>reachable (other_state s);
+   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> system.Step A ()
+  \<rbrakk> \<Longrightarrow> \<exists>s'. (s, s') \<in> system.Step A_extended ()"
+  apply clarsimp
+  apply(frule_tac s'=s' in reachable_steps_have_secure_implementation)
+   apply force
+  apply(rule_tac x=s' in exI)
+  by (clarsimp simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
+
+lemma to_extended_execution:
+ "\<lbrakk>tpni.reachable s;
+   reachable (other_state s);
+   s' \<in> execution A (other_state s) js\<rbrakk>
+  \<Longrightarrow> \<exists>s'. s' \<in> execution A_extended s js"
+  apply(induct js arbitrary:s)
+   apply(force simp:execution_def steps_def A_extended_def)
+  apply clarsimp
+  apply(frule to_extended_step)
+   apply(metis enabled_Step state.select_convs(5))
+  apply clarsimp
+  apply(rename_tac js s s'')
+  apply(prop_tac "(other_state s, other_state s'') \<in> Step ()")
+   apply(force simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
+  apply(frule_tac as="() # js" in execution_Run)
+  apply clarsimp
+  apply(rename_tac js s s'' so'')
+  (* FIXME: The problem here is we don't know that so'' is the other_state of s'' specifically.
+     That would only be true if the original Step function was deterministic. -robs. *)
+  apply(prop_tac "so'' = other_state s''")
+   defer
+  apply clarsimp
+  apply(frule_tac s'=s'' in reachable_steps_have_secure_implementation)
+   apply force
+  apply(erule_tac x=s'' in meta_allE)
+  apply(erule meta_impE)
+   using tpni.reachable_Step apply blast
+  apply(erule meta_impE)
+   using reachable_Step apply blast
+  apply(erule meta_impE)
+   defer (* FIXME *)
+  apply clarsimp
+  apply(rename_tac js s s'' s''')
+  apply(rule_tac x=s''' in exI)
+  apply(clarsimp simp:system.Step_def)
+  (* FIXME: How is this possibly not true - don't we have a Cons lemma for executing event lists? *)
+  sorry
+
+interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
+  policy "\<lambda>d s. out d (other_state s)" Sched
+  apply unfold_locales
+      (* enabled_system.enabled *)
+      apply(prop_tac "reachable (other_state s)")
+       apply(simp only:system.reachable_def[symmetric])
+       apply(force dest:to_original_reachability)
+      apply(simp only:tpni.reachable_def[symmetric])
+      apply(frule_tac js=js in enabled[simplified reachable_def[symmetric]])
+      using to_extended_execution apply blast
+     (* noninterference_policy.uwr_equiv_rel *)
+     using extended_uwr_equiv_rel apply blast
+    (* noninterference_policy.schedIncludesCurrentDom *)
+    using uwr_same_domain apply blast
+   (* noninterference_policy.schedFlowsToAll *)
+   using schedFlowsToAll apply blast
+  (* noninterference_policy.schedNotGlobalChannel *)
+  using schedNotGlobalChannel apply blast
+  done
 
 theorem extended_confidentiality_u:
   "confidentiality_u \<Longrightarrow> tpni.confidentiality_u"
