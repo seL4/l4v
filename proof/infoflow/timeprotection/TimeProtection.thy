@@ -799,7 +799,8 @@ definition has_secure_implementation where
         (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s))"
 end
 
-locale securely_implementable = time_protection_system A s0 current_domain external_uwr policy out
+locale securely_implementable =
+  time_protection_system A s0 current_domain external_uwr policy out
   collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
   read_cycles write_cycles do_read do_write store_time initial_regs padding_regs_impact
   empty_fch fch_flush_cycles initial_pch do_pch_flush addr_domain addr_colour colour_userdomain
@@ -832,12 +833,20 @@ locale securely_implementable = time_protection_system A s0 current_domain exter
   and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
   and touched_addrs :: "other_state \<Rightarrow> address set"
   and can_domain_switch :: "other_state \<Rightarrow> bool" +
-  assumes reachable_steps_have_secure_implementation:
+  assumes reachable_steps_have_secure_implementation_specific:
     "(\<And> s s'.
        reachable (other_state s) \<Longrightarrow>
        (other_state s, other_state s') \<in> Step () \<Longrightarrow>
        has_secure_implementation s s')"
 begin
+
+lemma reachable_steps_have_secure_implementation_nonspecific:
+  "(\<And> s os'.
+     reachable (other_state s) \<Longrightarrow>
+     (other_state s, os') \<in> Step () \<Longrightarrow>
+     \<exists>s'. os' = other_state s' \<and> has_secure_implementation s s')"
+  using reachable_steps_have_secure_implementation_specific
+  by (metis state.select_convs(5))
 
 definition A_extended_Step :: "unit \<Rightarrow>
   (('fch_cachedness,'pch_cachedness)state \<times> ('fch_cachedness,'pch_cachedness)state) set"
@@ -855,31 +864,32 @@ definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_
   "A_extended_state s =
      \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
 
-(* XXX: Annoying, surely some helpers for this already exist; come back to this later -robs. *)
-lemma bad_lemma:
-  "\<lbrakk>\<comment> \<open>system.reachable A_extended (A_extended_state s0) s;\<close>
-   x \<in> execution A_extended s as\<rbrakk>
-   \<Longrightarrow> (s, x) \<in> Run (system.Step A_extended) as"
-  apply(induct as arbitrary:s)
-   apply(force simp:execution_def steps_def A_extended_def)
-  apply(clarsimp simp:execution_def A_extended_def)
-  sorry
-
-interpretation tpni: Step_system A_extended "A_extended_state s0"
+(* This is now redundant with the Init_inv_Fin_system interpretation below, but I'll commit this
+   at least once in case we change something and are left only with Init_Fin_system. -robs. *)
+interpretation tpni: Init_Fin_system A_extended "A_extended_state s0"
   apply unfold_locales
-   (* Step_system.reachable_s0 *)
-   apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
-   apply(clarsimp simp:system.reachable_def execution_def)
-   apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
-  (* Step_system.execution_Run *)
-  (* using execution_Run *)
-  apply(rule set_eqI)
-  apply clarsimp
-  apply(rule iffI)
-   (* XXX: Not sure the best way to do these execution-Run conversion proofs -robs. *)
-   apply(force simp:bad_lemma)
-  (* FIXME *)
-  sorry
+     (* Init_Fin_system.reachable_s0 *)
+     apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
+     apply(clarsimp simp:system.reachable_def execution_def)
+     apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
+    (* Init_Fin_system.Fin_Init *)
+    apply(force simp:A_extended_def)
+   (* Init_Fin_system.Init_Fin *)
+   apply(force simp:A_extended_def)
+  (* Init_Fin_system.obs_det_or_no_abs *)
+  apply(rule disjI2)
+  apply(force simp:system.no_abs_def A_extended_def)
+  done
+
+interpretation tpni: Init_inv_Fin_system A_extended "A_extended_state s0"
+  apply unfold_locales
+    (* Init_Fin_system.Fin_Init_s0 *)
+    apply(force simp:A_extended_state_def A_extended_def)
+   (* Init_Fin_system.Init_inv_Fin *)
+   apply(force simp:A_extended_def)
+  (* Init_Fin_system.Fin_inj *)
+  apply(force simp:A_extended_def)
+  done
 
 lemma to_original_step:
   "(x, y) \<in> tpni.Step () \<Longrightarrow>
@@ -913,53 +923,82 @@ lemma to_original_reachability:
   apply(rule_tac x=as in exI)
   using to_original_run' by blast
 
-lemma to_extended_step:
+lemma to_extended_step_enabledness:
  "\<lbrakk>reachable (other_state s);
-   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> system.Step A ()
+   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> Step ()
   \<rbrakk> \<Longrightarrow> \<exists>s'. (s, s') \<in> system.Step A_extended ()"
   apply clarsimp
-  apply(frule_tac s'=s' in reachable_steps_have_secure_implementation)
+  apply(frule_tac os'="other_state s'" in reachable_steps_have_secure_implementation_nonspecific)
    apply force
-  apply(rule_tac x=s' in exI)
+  apply clarsimp
+  apply(rename_tac s' s'')
+  apply(rule_tac x=s'' in exI)
   by (clarsimp simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
 
-lemma to_extended_execution:
+lemma to_some_extended_step:
+ "\<lbrakk>reachable (other_state s);
+   (other_state s, os') \<in> Step ()
+  \<rbrakk> \<Longrightarrow> \<exists>s'. os' = other_state s' \<and> (s, s') \<in> system.Step A_extended ()"
+  apply(frule_tac os'="os'" in reachable_steps_have_secure_implementation_nonspecific)
+   apply force
+  apply clarsimp
+  apply(rule_tac x=s' in exI)
+  apply(rule conjI)
+   apply force
+  unfolding tpni.Step_def (* Warning: This unfold has to happen first for some reason -robs. *)
+  apply(force simp:execution_def A_extended_def A_extended_Step_def steps_def)
+  done
+
+lemma to_specific_extended_step:
+ "\<lbrakk>reachable (other_state s);
+   (other_state s, other_state s') \<in> Step ()
+  \<rbrakk> \<Longrightarrow> (s, s') \<in> system.Step A_extended ()"
+  apply(frule_tac s'=s' in reachable_steps_have_secure_implementation_specific)
+   apply force
+  unfolding tpni.Step_def (* Warning: This unfold has to happen first for some reason -robs. *)
+  apply(force simp:execution_def A_extended_def A_extended_Step_def steps_def)
+  done
+
+lemma to_extended_execution_enabledness:
  "\<lbrakk>tpni.reachable s;
    reachable (other_state s);
-   s' \<in> execution A (other_state s) js\<rbrakk>
-  \<Longrightarrow> \<exists>s'. s' \<in> execution A_extended s js"
+   \<exists>os'. os' \<in> execution A (other_state s) js \<comment> \<open>enabledness of original system at (other_state s)\<close>\<rbrakk>
+  \<Longrightarrow> \<exists>s'. s' \<in> execution A_extended s js" \<comment> \<open>enabledness of extended system at s\<close>
   apply(induct js arbitrary:s)
    apply(force simp:execution_def steps_def A_extended_def)
   apply clarsimp
-  apply(frule to_extended_step)
-   apply(metis enabled_Step state.select_convs(5))
-  apply clarsimp
-  apply(rename_tac js s s'')
-  apply(prop_tac "(other_state s, other_state s'') \<in> Step ()")
-   apply(force simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
+  apply(rename_tac js s os')
+  (* We need s' to be an extension of os'. But we also need it to be
+     a state we arrive at after one tpni.Step from s. *)
   apply(frule_tac as="() # js" in execution_Run)
   apply clarsimp
-  apply(rename_tac js s s'' so'')
-  (* FIXME: The problem here is we don't know that so'' is the other_state of s'' specifically.
-     That would only be true if the original Step function was deterministic. -robs. *)
-  apply(prop_tac "so'' = other_state s''")
-   defer
-  apply clarsimp
-  apply(frule_tac s'=s'' in reachable_steps_have_secure_implementation)
+  apply(rename_tac js s os'' os')
+  apply(frule_tac os'="os''" in reachable_steps_have_secure_implementation_nonspecific)
    apply force
+  apply clarsimp
+  apply(rename_tac js s os' s'')
   apply(erule_tac x=s'' in meta_allE)
   apply(erule meta_impE)
-   using tpni.reachable_Step apply blast
+   apply(rule_tac a="()" in tpni.reachable_Step)
+    apply force
+   unfolding tpni.Step_def (* For some reason this can't just be in the simps on the next line. *)
+   apply(force simp:execution_def A_extended_def A_extended_Step_def steps_def)
   apply(erule meta_impE)
-   using reachable_Step apply blast
+   using reachable_Step apply force
   apply(erule meta_impE)
-   defer (* FIXME *)
+   using reachable_Step reachable_enabled apply force
   apply clarsimp
-  apply(rename_tac js s s'' s''')
-  apply(rule_tac x=s''' in exI)
-  apply(clarsimp simp:system.Step_def)
-  (* FIXME: How is this possibly not true - don't we have a Cons lemma for executing event lists? *)
-  sorry
+  apply(rename_tac js s os' s'' s')
+  apply(frule_tac s'=s'' in to_specific_extended_step)
+   apply force
+  apply(prop_tac "tpni.reachable s''")
+   using tpni.reachable_Step apply blast
+  apply(prop_tac "tpni.reachable s'")
+   using tpni.reachable_execution apply blast
+  apply(rule_tac x=s' in exI)
+  apply(drule_tac as="() # js" in tpni.execution_Run)
+  apply clarsimp
+  using tpni.execution_Run by auto
 
 interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
   policy "\<lambda>d s. out d (other_state s)" Sched
@@ -970,7 +1009,7 @@ interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda
        apply(force dest:to_original_reachability)
       apply(simp only:tpni.reachable_def[symmetric])
       apply(frule_tac js=js in enabled[simplified reachable_def[symmetric]])
-      using to_extended_execution apply blast
+      using to_extended_execution_enabledness apply blast
      (* noninterference_policy.uwr_equiv_rel *)
      using extended_uwr_equiv_rel apply blast
     (* noninterference_policy.schedIncludesCurrentDom *)
