@@ -26193,7 +26193,7 @@ method he_ctris_two_phase_wp
 
 method he_ctris_two_phase_ff
  = (frule invs_strengthen_cur_sc_tcb_are_bound; fastforce?),
-   fastforce dest: cur_sc_not_idle_sc_ptr'
+   fastforce dest: cur_sc_not_idle_sc_ptr' valid_sched_ct_not_queued
            intro!: schact_is_rct_ct_released invs_strengthen_cur_sc_tcb_are_bound
                    schact_is_rct_ct_active_sc invs_cur_sc_chargeableE
              simp: runnable_eq_active ct_in_state_def in_release_queue_def not_in_release_q_def
@@ -26207,9 +26207,8 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
     and cur_sc_active
     and (\<lambda>s. ct_running s \<or> ct_idle s) and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)
     and ct_not_in_release_q
-    and ct_not_queued
     and consumed_time_bounded
-    and ct_released
+    and (\<lambda>s. ct_running s \<longrightarrow> ct_released s)
     and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s) \<rbrace>
    handle_event e
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
@@ -26242,11 +26241,13 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
     apply wpsimp
        apply (wp hoare_drop_imp)
       apply (wpsimp_str wp: update_time_stamp_current_time_bounded_5)
-     apply (wpsimp)
-    apply (clarsimp simp: ct_in_state_def)
+     apply wpsimp
+     apply (clarsimp simp: ct_in_state_def)
     apply (fastforce intro!: schact_is_rct_ct_released
-                       elim: invs_cur_sc_chargeableE ct_in_state_weaken)
-  done
+                       elim: invs_cur_sc_chargeableE
+                       simp: ct_ready_if_schedulable_def vs_all_heap_simps ct_in_state_def
+                             pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
+    done
   apply he_ctris_handle_fault
   apply (wpsimp wp: handle_fault_ct_ready_if_schedulable_not_blocked_on_receive)
   done
