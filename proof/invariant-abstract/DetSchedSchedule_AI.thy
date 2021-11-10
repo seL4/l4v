@@ -26441,10 +26441,12 @@ lemma handle_event_preemption_path_valid_sched:
   done
 
 lemma call_kernel_valid_sched:
-  "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> valid_machine_time s \<and> schact_is_rct s \<and> ct_not_in_release_q s
-        \<and> ct_released s \<and> (ct_running s \<or> ct_idle s) \<and> consumed_time_bounded s
-        \<and> cur_sc_active s \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
-        \<and> cur_sc_offset_sufficient (consumed_time s) s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+  "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> schact_is_rct s
+        \<and> cur_sc_active s \<and> ct_not_in_release_q s
+        \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+        \<and> valid_machine_time s \<and> current_time_bounded 5 s \<and> consumed_time_bounded s
+        \<and> cur_sc_offset_ready (consumed_time s) s
+        \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: call_kernel_def)
@@ -26474,7 +26476,11 @@ lemma call_kernel_valid_sched:
   apply (frule schact_is_rct_ct_active_sc; simp add: schact_is_rct_def)
   apply (prop_tac "ct_not_queued s")
    apply (fastforce simp: valid_sched_def ct_not_in_q_def)
-  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (intro conjI impI; (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)?)
+  apply (rule schact_is_rct_ct_released; (fastforce simp: schact_is_rct_def)?)
+  apply (rule cur_sc_not_idle_sc_ptr;
+         (fastforce simp: runnable_eq_active ct_in_state_def pred_tcb_at_def obj_at_def)?)
+  apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound simp: schact_is_rct_def)
   done
 
 end
