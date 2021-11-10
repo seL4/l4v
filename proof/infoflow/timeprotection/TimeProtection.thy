@@ -476,6 +476,35 @@ lemma hd_instr_obeying_ta [dest]:
   "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
   by (force simp:programs_obeying_ta_def)
 
+
+primrec program_no_domainswitch :: "program \<Rightarrow> bool" where
+  "program_no_domainswitch [] = True" |
+  "program_no_domainswitch (i#is) =
+     ((\<forall> s. current_domain' s = current_domain' (instr_step i s)) \<and> program_no_domainswitch is)"
+
+definition
+  programs_no_domainswitch :: "program set" where
+  "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
+
+lemma no_domainswitch_inv:
+  "program_no_domainswitch p \<Longrightarrow> current_domain' s = current_domain' (instr_multistep p s)"
+  apply(induct p arbitrary:s)
+   apply force
+  by force
+
+definition is_secure_implementation where
+  "is_secure_implementation p s \<equiv>
+   (if can_domain_switch (other_state s) then
+        \<comment> \<open>FIXME: Need to design appropriate requirements for the time protection mitigations
+           we expect to carry out at domain-switch time.\<close>
+        True
+      else
+        p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_no_domainswitch)"
+
+definition has_secure_implementation where
+  "has_secure_implementation s s' \<equiv>
+     \<exists>p. s' = instr_multistep p s \<and> is_secure_implementation p s"
+
 (*
 
   s  -->  t
@@ -716,59 +745,38 @@ lemma context_switch_to_d: "\<lbrakk>
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    reachable (other_state s);
    reachable (other_state t);
-   p\<^sub>s \<in> programs_obeying_ta (touched_addrs' s);
-   p\<^sub>t \<in> programs_obeying_ta (touched_addrs' t);
+   \<not> can_domain_switch (other_state s);
+   \<not> can_domain_switch (other_state t);
+   is_secure_implementation p\<^sub>s s;
+   is_secure_implementation p\<^sub>t t;
    (s, t) \<in> uwr d;
    s' = instr_multistep p\<^sub>s s;
    t' = instr_multistep p\<^sub>t t
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
+  apply(clarsimp simp:is_secure_implementation_def programs_no_domainswitch_def)
   apply(frule uwr_same_domain)
   apply(case_tac "current_domain' s = d")
-   apply clarsimp
-   apply(case_tac "current_domain' s' = d")
-    apply(rule d_running)
-          apply force
-         using touched_addrs_inv'
+   apply(prop_tac "current_domain' s' = d")
+    apply(metis no_domainswitch_inv)
+   apply(rule d_running)
          apply force
+        using touched_addrs_inv'
         apply force
        apply force
       apply force
-     apply(frule uwr_same_touched_addrs)
-      apply force
-     apply(prop_tac "p\<^sub>s = p\<^sub>t")
+     apply force
+    apply(frule uwr_same_touched_addrs)
+     apply force
+    apply(prop_tac "p\<^sub>s = p\<^sub>t")
       (* FIXME: Here's something we need - essentially, that we *can* expect the program
          (that is, the "multistep" implementation) to be known to the currently running domain.
          How best to require/obtain this? -robs. *)
-      defer
-     apply force
-    apply force
-   (* FIXME: The lemma is too broad. We should make it about the context switch and assert
-      there is (1) a designated step in the automaton that does it, and (2) a much more
-      constrained set of instr_multistep programs that implement it. -robs.
-   apply(rule context_switch_from_d)
-         apply force
-        using touched_addrs_inv' apply force
-       apply force
-      apply force
-     apply force
-    defer
-   apply force
-   *)
-   defer
-  apply(case_tac "current_domain' s' = d")
-   (* FIXME: Broken for similar reasons as context_switch_from_d
-   apply(rule context_switch_to_d)
-           apply force
-          using touched_addrs_inv' apply force
-         defer
-        defer
-       apply force
-      apply force
      defer
-    defer
+    apply force
    apply force
-   *)
+  apply(prop_tac "current_domain' s' \<noteq> d")
+   apply(metis no_domainswitch_inv)
   apply clarsimp
   apply(rule d_not_running[where s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t and
         ta\<^sub>s="touched_addrs' s" and ta\<^sub>t="touched_addrs' t"])
@@ -781,22 +789,29 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
      apply force
     apply force
    apply force
-  (* FIXME: We need a fact from the automaton - for example, that we're definitely
-     not on a context switch step. (But is that enough? Can't this case also be
-     covering a context switch step between two other domains?) -robs. *)
-  defer
+  apply force
   sorry
 
-definition has_implementation where
-  "has_implementation s s' \<equiv> \<exists>p. s' = instr_multistep p s"
+lemma domainswitch_programs_preserve_uwr: "\<lbrakk>
+   reachable (other_state s);
+   reachable (other_state t);
+   can_domain_switch (other_state s);
+   can_domain_switch (other_state t);
+   is_secure_implementation p\<^sub>s s;
+   is_secure_implementation p\<^sub>t t;
+   (s, t) \<in> uwr d;
+   s' = instr_multistep p\<^sub>s s;
+   t' = instr_multistep p\<^sub>t t
+   \<rbrakk> \<Longrightarrow>
+   (s', t') \<in> uwr d"
+  apply(clarsimp simp:is_secure_implementation_def)
+  apply(frule uwr_same_domain)
+  apply(case_tac "current_domain' s = d")
+   (* FIXME: `can_domain_switch` now designates we're at an automaton step responsible for it.
+      But we still need new constraints on the instr_multistep programs that implement it,
+      which should then reshape the context_switch_from_d and context_switch_to_d lemmas. -robs. *)
+  sorry
 
-definition has_secure_implementation where
-  "has_secure_implementation s s' \<equiv>
-   (if can_domain_switch (other_state s) then
-        \<comment> \<open>FIXME: Need to think of appropriate guards for the domain-switch case\<close>
-        (\<exists>p. s' = instr_multistep p s)
-      else
-        (\<exists>p \<in> programs_obeying_ta (touched_addrs (other_state s)). s' = instr_multistep p s))"
 end
 
 locale securely_implementable =
@@ -1046,17 +1061,12 @@ theorem extended_confidentiality_u:
   apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
   apply(frule can_domain_switch_public)
   apply(clarsimp simp:has_secure_implementation_def)
-  apply(clarsimp split:if_splits)
-   apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
-   (* FIXME: Maybe what we need here is a "domain_switch_preserves_uwr" lemma enforcing
-      the special conditions we expect the domain-switch-time mitigations to fulfil. -robs. *)
-   defer
-  apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
-  (* FIXME: As "obeying ta" is something that follows from being a non-domain-switch step,
-     we can probably push the `\<not> can_domain_switch (other_state s)` guard into the lemma and
-     use it to enforce there aren't any instructions that modify the dom either... -robs. *)
-  apply(rule_tac s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t in programs_obeying_ta_preserve_uwr, simp+)
-  oops
+  apply(case_tac "can_domain_switch (other_state s)")
+   apply(rename_tac u s t x xa xb xc p\<^sub>s p\<^sub>t)
+   apply(force intro:domainswitch_programs_preserve_uwr)
+  apply(rename_tac u s t x xa xb xc p\<^sub>s p\<^sub>t)
+  apply(force intro:programs_obeying_ta_preserve_uwr)
+  done
 
 end
 end
