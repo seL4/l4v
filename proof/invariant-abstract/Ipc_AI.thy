@@ -2565,18 +2565,12 @@ crunch cap_to[wp]: do_ipc_transfer "ex_nonz_cap_to p :: 'state_ext state \<Right
   (wp: crunch_wps simp: zipWithM_x_mapM ignore: transfer_caps_loop)
 
 crunch it[wp]: receive_ipc "\<lambda>s::'state_ext state. P (idle_thread s)"
-  (wp: hoare_drop_imps crunch_wps simp: crunch_simps zipWithM_x_mapM)
+  (wp: hoare_vcg_all_lift crunch_wps simp: crunch_simps)
 
 end
 
 lemma schedule_tcb_Pmdb[wp]: "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> schedule_tcb param_a \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
   by (wpsimp simp: schedule_tcb_def)
-
-crunch Pmdb[wp]: set_thread_state "\<lambda>s. P (cdt s)"
-
-crunch irq_handlers[wp]: set_simple_ko "valid_irq_handlers"
-  (wp: crunch_wps)
-
 
 lemma same_caps_tcb_upd_state[simp]:
  "same_caps (TCB (tcb \<lparr>tcb_state := BlockedOnReply r\<rparr>)) = same_caps (TCB tcb)"
@@ -2623,13 +2617,6 @@ crunch cap_refs_respects_device_region[wp]: copy_mrs "cap_refs_respects_device_r
     VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
     const_on_failure_wp simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
 
-crunch cap_refs_respects_device_region[wp]: get_receive_slots "cap_refs_respects_device_region"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift
-    VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
-    const_on_failure_wp simp: crunch_simps zipWithM_x_mapM )
-
-
-
 lemma invs_respects_device_region:
   "invs s \<Longrightarrow> cap_refs_respects_device_region s \<and> pspace_respects_device_region s"
   by (clarsimp simp: invs_def valid_state_def)
@@ -2655,21 +2642,27 @@ locale Ipc_AI_cont = Ipc_AI state_ext_t
 
 
 lemma complete_signal_invs:
-  "\<lbrace>invs and tcb_at tcb\<rbrace> complete_signal ntfnptr tcb \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs and ex_nonz_cap_to tcb\<rbrace> complete_signal ntfnptr tcb \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: complete_signal_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfn"; simp)
-  apply (wpsimp simp: as_user_def set_object_def get_object_def wp: set_ntfn_minor_invs)
+  apply (wpsimp simp: get_tcb_obj_ref_def wp: thread_get_wp)
+     apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at tcb"])
+      apply (wpsimp wp: abs_typ_at_lifts)
+     apply (clarsimp simp: obj_at_def)
+    apply (wpsimp wp: set_ntfn_minor_invs simp: as_user_def set_object_def get_object_def)+
   apply safe
-    apply (clarsimp simp: obj_at_def is_tcb)
-   apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_bound_obj_def
-                          valid_obj_def valid_ntfn_def is_tcb obj_at_def is_sc_obj_def
-                   elim!: valid_objsE
-                   split: option.splits)
-  apply (fastforce simp: invs_def valid_state_def valid_pspace_def live_def live_ntfn_def
-                         tcb_cap_cases_def is_tcb obj_at_def
-                 intro!: ex_cap_to_after_update
-                  elim!: if_live_then_nonz_capD)
+      apply (clarsimp simp: obj_at_def is_tcb)
+     apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_bound_obj_def
+                            valid_obj_def valid_ntfn_def is_tcb obj_at_def is_sc_obj_def
+                     elim!: valid_objsE
+                     split: option.splits)
+    apply (fastforce simp: invs_def valid_state_def valid_pspace_def live_def live_ntfn_def
+                           tcb_cap_cases_def is_tcb obj_at_def
+                   intro!: ex_cap_to_after_update
+                    elim!: if_live_then_nonz_capD)
+   apply (fastforce intro!: ex_cap_to_after_update dest!: get_tcb_SomeD
+                      simp: obj_at_def tcb_cap_cases_def is_tcb)+
   done
 
 crunch ntfn_at[wp]: set_message_info "ntfn_at ntfn"
@@ -2822,12 +2815,9 @@ lemma maybe_return_sc_pred_tcb_at:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
-crunch pred_tcb_at[wp]: sched_context_resume, refill_unblock_check "pred_tcb_at proj P tcb_ptr"
-  (wp: crunch_wps simp: crunch_simps is_round_robin_def)
-
 lemma maybe_donate_sc_pred_tcb_at:
-  "\<lbrace>pred_tcb_at proj P tcb_ptr' and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
-   \<lbrace>\<lambda>rv. pred_tcb_at proj P tcb_ptr'\<rbrace>"
+  "\<lbrace>(\<lambda>s. P' (pred_tcb_at proj P tcb_ptr' s)) and K (tcb_ptr \<noteq> tcb_ptr')\<rbrace> maybe_donate_sc tcb_ptr ntfn_ptr
+   \<lbrace>\<lambda>rv s. P' (pred_tcb_at proj P tcb_ptr' s)\<rbrace>"
   apply (simp add: maybe_donate_sc_def)
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (case_tac sc_opt; simp)
@@ -2912,6 +2902,7 @@ lemma ep_ntfn_cap_case_helper:
 
 crunches complete_signal, update_sk_obj_ref, do_nbrecv_failed_transfer
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
+  (wp: crunch_wps hoare_vcg_all_lift)
 
 lemmas thread_set_Pmdb = thread_set_no_cdt
 

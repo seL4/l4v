@@ -1585,11 +1585,11 @@ end
    these are presently unused, but have proven useful in the past *)
 context notes if_cong[cong] begin
 
-lemma complete_signal_state_refs_of:
-  "\<lbrace>\<lambda>s. P (state_refs_of s) \<rbrace> complete_signal ntfnc t \<lbrace>\<lambda>rv s. P (state_refs_of s) \<rbrace>"
+lemma complete_signal_sym_refsf:
+  "complete_signal ntfnc t \<lbrace>\<lambda>s. sym_refs (state_refs_of s) \<rbrace>"
   unfolding complete_signal_def
   apply (rule hoare_pre)
-   apply (wp get_simple_ko_wp | wpc | simp)+
+   apply (wpsimp wp: get_simple_ko_wp maybe_donate_sc_sym_refs hoare_vcg_all_lift hoare_drop_imps)
   apply clarsimp
   apply (rename_tac ntfn badge)
   apply (subgoal_tac " get_refs NTFNBound (ntfn_bound_tcb ntfn) \<union>
