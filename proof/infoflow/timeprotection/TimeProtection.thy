@@ -682,6 +682,7 @@ lemma d_running: "\<lbrakk>
    \<comment> \<open>we execute the program on both states\<close>
    s' = instr_multistep p s;
    t' = instr_multistep p t;
+   program_no_domainswitch p;
    current_domain' s' = d
    \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' = d\<close>
    \<rbrakk> \<Longrightarrow>
@@ -695,14 +696,10 @@ lemma d_running: "\<lbrakk>
   apply clarsimp
   apply(erule meta_impE)
    apply(force simp:programs_obeying_ta_def)
-  apply(prop_tac "current_domain' (instr_step a s) = current_domain' s")
-   (* FIXME: We need a guard strong enough to say "there's no change to dom by any instr
-      of this program" enforced depending on which step of the automaton we're in. *)
-   defer
   apply(erule meta_impE)
-   apply(force dest:d_running_step)
+   apply(fastforce dest:d_running_step)
   apply force
-  sorry
+  done
 
 (*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
@@ -781,19 +778,20 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    apply(prop_tac "current_domain' s' = d")
     apply(metis no_domainswitch_inv)
    apply(rule d_running)
+          apply force
+         using touched_addrs_inv'
          apply force
-        using touched_addrs_inv'
         apply force
        apply force
       apply force
-     apply force
-    apply(frule uwr_same_touched_addrs)
-     apply force
-    apply(prop_tac "p\<^sub>s = p\<^sub>t")
+     apply(frule uwr_same_touched_addrs)
+      apply force
+     apply(prop_tac "p\<^sub>s = p\<^sub>t")
       (* FIXME: Here's something we need - essentially, that we *can* expect the program
          (that is, the "multistep" implementation) to be known to the currently running domain.
          How best to require/obtain this? -robs. *)
-     defer
+      defer
+     apply force
     apply force
    apply force
   apply(prop_tac "current_domain' s' \<noteq> d")
@@ -1062,13 +1060,12 @@ theorem extended_confidentiality_u:
   apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
   apply(frule can_domain_switch_public)
   apply(clarsimp simp:has_secure_implementation_def split:if_splits)
-   apply(rename_tac u s t s' t' x xa xb xc)
    apply(clarsimp simp:has_secure_domainswitch_def)
    apply(metis enabled_Step to_some_extended_step tpni.uwr_sym tpni.uwr_trans)
    (* Note: Another proof. Are the use of these lemmas by these metis proofs suspicious? -robs.
    apply(metis enabled_Step reachable_steps_have_secure_implementation_nonspecific tpni.uwr_sym tpni.uwr_trans) *)
-  apply(rename_tac u s t s' t' x xa xb xc)
   apply(clarsimp simp:has_secure_nondomainswitch_def)
+  apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
   apply(force intro:programs_obeying_ta_preserve_uwr)
   done
 
