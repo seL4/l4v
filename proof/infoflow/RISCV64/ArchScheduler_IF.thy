@@ -207,12 +207,6 @@ lemma set_vm_root_reads_respects_scheduler[wp]:
   apply (wp silc_dom_equiv_states_equiv_lift set_vm_root_states_equiv_for | simp)+
   done
 
-(* FIXME IF: move *)
-lemma equiv_valid_weaken_pre:
-  "\<lbrakk> equiv_valid I A' B P f; \<forall>st t. I st t \<and> A st t \<longrightarrow> A' st t \<rbrakk>
-     \<Longrightarrow> equiv_valid I A B P f"
-  by (fastforce simp: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
-
 lemma store_cur_thread_fragment_midstrength_reads_respects:
   "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
                (scheduler_affects_equiv aag l) invs

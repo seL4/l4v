@@ -23,7 +23,7 @@ fun pasGenAbs :: "'a PAS \<Rightarrow> gen_obj_ref \<Rightarrow> 'a" where
 (*FIXME REPLACE by alternative definition *)
 definition cap_points_to_label where
   "cap_points_to_label aag cap l \<equiv>
-     (\<forall>x \<in> Structures_A.obj_refs cap. (pasObjectAbs aag x = l)) \<and>
+     (\<forall>x \<in> obj_refs cap. (pasObjectAbs aag x = l)) \<and>
      (\<forall>x \<in> cap_irqs cap. (pasIRQAbs aag x = l))"
 
 (* WARNING: Reply cap will be considered as intra_label even if they are between labels *)
@@ -36,7 +36,7 @@ definition intra_label_cap where
 definition slots_holding_overlapping_caps :: "cap \<Rightarrow> ('z::state_ext) state \<Rightarrow> cslot_ptr set" where
   "slots_holding_overlapping_caps cap s \<equiv>
      {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)} \<and>
-                   (Structures_A.obj_refs cap \<inter> Structures_A.obj_refs cap' \<noteq> {} \<or>
+                   (obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
                     cap_irqs cap \<inter> cap_irqs cap' \<noteq> {} \<or>
                     arch_gen_refs cap \<inter> arch_gen_refs cap' \<noteq> {})}"
 
@@ -255,7 +255,7 @@ lemma is_final_then_nonempty_refs:
   by (auto simp add: is_final_cap'_def)
 
 lemma caps_ref_single_objects:
-  "\<lbrakk> x \<in> Structures_A.obj_refs cap; y \<in> Structures_A.obj_refs cap \<rbrakk> \<Longrightarrow> x = y"
+  "\<lbrakk> x \<in> obj_refs cap; y \<in> obj_refs cap \<rbrakk> \<Longrightarrow> x = y"
   by (cases cap; simp)
 
 lemma caps_ref_single_irqs:
@@ -310,7 +310,7 @@ lemma aag_can_read_kheap_eq:
 
 lemma caps_ref_either_an_object_or_irq':
    "ref \<in> cap_irqs cap' \<Longrightarrow>
-    (Structures_A.obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
+    (obj_refs cap' = {} \<and> arch_gen_refs cap' = {})"
   apply (case_tac cap', simp_all)
   done
 
@@ -350,11 +350,10 @@ locale FinalCaps_1 =
     "init_arch_objects typ ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
   and init_arch_objects_cte_wp_at[wp]:
     "\<And>P. init_arch_objects typ ptr num sz refs \<lbrace>\<lambda>s :: det_state. P (cte_wp_at P' slot s)\<rbrace>"
-  (* FIXME IF: having to qualify obj_refs is very annoying *)
   and finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
      finalise_cap cap ex
-     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> Structures_A.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   and arch_post_modify_registers_silc_inv[wp]:
     "arch_post_modify_registers cur t \<lbrace>silc_inv aag st\<rbrace>"
   and arch_derive_cap_silc:
@@ -370,7 +369,7 @@ lemma cap_points_to_label_def':
   by (simp add: gen_obj_refs_def ball_Un FIXME_arch_gen_refs)
 
 lemma caps_ref_either_an_object_or_irq:
-   "ref \<in> Structures_A.obj_refs cap'
+   "ref \<in> obj_refs cap'
     \<Longrightarrow> cap_irqs cap' = {} \<and> arch_gen_refs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   apply (case_tac cap'; clarsimp)
@@ -378,7 +377,7 @@ lemma caps_ref_either_an_object_or_irq:
 
 lemma caps_ref_either_an_object_or_irq'':
    "ref \<in> arch_gen_refs cap'
-    \<Longrightarrow> Structures_A.obj_refs cap' = {} \<and> cap_irqs cap' = {}"
+    \<Longrightarrow> obj_refs cap' = {} \<and> cap_irqs cap' = {}"
   apply (clarsimp simp: FIXME_arch_gen_refs)
   done
 
@@ -480,7 +479,7 @@ where
 
 lemma slots_holding_overlapping_caps_def2:
   "slots_holding_overlapping_caps cap s =
-     ctes_wp_at (\<lambda>c. (Structures_A.obj_refs cap \<inter> Structures_A.obj_refs c \<noteq> {}) \<or>
+     ctes_wp_at (\<lambda>c. (obj_refs cap \<inter> obj_refs c \<noteq> {}) \<or>
                      (cap_irqs cap \<inter> cap_irqs c \<noteq> {}) \<or>
                      (arch_gen_refs cap \<inter> arch_gen_refs c \<noteq> {})) s"
   by (simp add: slots_holding_overlapping_caps_def ctes_wp_at_def cte_wp_at_def)
@@ -645,7 +644,7 @@ lemma set_cap_well_formed_cnode_helper:
 
 lemma set_cap_slots_holding_overlapping_caps_helper:
   "\<lbrakk> x \<in> slots_holding_overlapping_caps cap s; fst x \<noteq> fst slot;
-     Structures_A.obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
+     obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
      ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, blah) \<rbrakk>
      \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
                (s\<lparr>kheap := kheap s(fst slot \<mapsto>
@@ -663,7 +662,7 @@ lemma set_cap_slots_holding_overlapping_caps_other:
    \<lbrace>\<lambda>rv s. x \<in> slots_holding_overlapping_caps capa s\<rbrace>"
   unfolding set_cap_def
   apply (wpsimp wp: set_object_wp get_object_wp)+
-  apply (case_tac "Structures_A.obj_refs capa = {} \<and> cap_irqs capa = {}")
+  apply (case_tac "obj_refs capa = {} \<and> cap_irqs capa = {}")
    apply (clarsimp simp: slots_holding_overlapping_caps_def)
    apply (fastforce simp: get_cap_def get_object_def bind_def split_def gets_def get_def
                           return_def assert_def assert_opt_def fail_def
@@ -757,7 +756,7 @@ crunch silc_inv[wp]: set_original "silc_inv aag st"
   (wp: silc_inv_triv wp_del:set_original_wp)
 
 lemma nonempty_refs:
-  "\<not> cap_points_to_label aag cap l \<Longrightarrow> Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}"
+  "\<not> cap_points_to_label aag cap l \<Longrightarrow> obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}"
   by (auto simp: cap_points_to_label_def)
 
 lemma set_cdt_silc_inv:
@@ -810,9 +809,9 @@ lemma set_untyped_cap_as_full_slots_holding_overlapping_caps_other:
 
 lemma is_derived_overlaps':
   "\<lbrakk> is_derived (cdt s) slot cap cap';
-     (Structures_A.obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {}) \<or>
-     (Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}) \<rbrakk>
-     \<Longrightarrow> Structures_A.obj_refs cap \<inter> Structures_A.obj_refs cap' \<noteq> {} \<or>
+     (obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {}) \<or>
+     (obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {}) \<rbrakk>
+     \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
          cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
   apply (simp add: is_derived_def)
   apply (case_tac cap', simp_all add: cap_master_cap_def split: cap.splits)
@@ -821,7 +820,7 @@ lemma is_derived_overlaps':
 
 lemma is_derived_overlaps:
   "\<lbrakk> cte_wp_at (is_derived (cdt s) slot cap) slot s;
-     Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
+     obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
      \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (drule cte_wp_at_norm)
@@ -833,7 +832,7 @@ lemma is_derived_overlaps:
 lemma is_derived_overlaps2:
   "\<lbrakk> cte_wp_at ((=) cap') slot s;
      is_derived (cdt s) slot cap cap';
-     Structures_A.obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {} \<rbrakk>
+     obj_refs cap' \<noteq> {} \<or> cap_irqs cap' \<noteq> {} \<rbrakk>
      \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap' s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (blast dest: cte_wp_at_norm is_derived_overlaps')
@@ -846,8 +845,8 @@ lemma disj_dup: "A \<and> B \<and> C \<and> C'\<Longrightarrow> A \<and> B \<and
 context FinalCaps_1 begin
 
 lemma weak_derived_overlaps':
-  "\<lbrakk> weak_derived cap cap'; Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
-     \<Longrightarrow> Structures_A.obj_refs cap \<inter> Structures_A.obj_refs cap' \<noteq> {} \<or>
+  "\<lbrakk> weak_derived cap cap'; obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
+     \<Longrightarrow> obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<or>
          cap_irqs cap \<inter> cap_irqs cap' \<noteq> {}"
   apply (simp add: weak_derived_def)
   apply (erule disjE)
@@ -860,7 +859,7 @@ lemma weak_derived_overlaps':
 
 lemma weak_derived_overlaps:
   "\<lbrakk> cte_wp_at (weak_derived cap) slot s;
-     Structures_A.obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
+     obj_refs cap \<noteq> {} \<or> cap_irqs cap \<noteq> {} \<rbrakk>
      \<Longrightarrow> slot \<in> slots_holding_overlapping_caps cap s"
   apply (simp add: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
   apply (drule cte_wp_at_norm)
@@ -1307,9 +1306,9 @@ lemma finalise_cap_ret_subset_cap_irqs:
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
 lemma finalise_cap_ret_subset_obj_refs:
-  "\<lbrace>\<lambda>s. Structures_A.obj_refs cap = X\<rbrace>
+  "\<lbrace>\<lambda>s. obj_refs cap = X\<rbrace>
    finalise_cap cap blah
-   \<lbrace>\<lambda>rv s :: det_state. (Structures_A.obj_refs (fst rv)) \<subseteq> X\<rbrace>"
+   \<lbrace>\<lambda>rv s :: det_state. (obj_refs (fst rv)) \<subseteq> X\<rbrace>"
   apply (cases cap)
   by (wp arch_finalise_cap_rv | simp add: o_def split del: if_split | simp split: if_split)+
 
@@ -1385,24 +1384,24 @@ lemma finalise_cap_ret_is_silc:
   apply (rule_tac x=lb in exI)
   apply (drule_tac lslot="(la,lb)" in silc_inv_preserves_silc_dom_caps, simp+)
   apply (drule nonempty_refs)+
-  apply (erule disjE[where P="Structures_A.obj_refs cap \<noteq> {}"])
+  apply (erule disjE[where P="obj_refs cap \<noteq> {}"])
    apply (subgoal_tac "cap_irqs cap = {} \<and> cap_irqs a = {}")
     apply (clarsimp simp: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
     apply (rename_tac cap'a)
     apply (rule_tac x=cap'a in exI)
     apply simp
-    apply (subgoal_tac "\<exists>x. Structures_A.obj_refs cap = {x} \<and> Structures_A.obj_refs a = {x}")
+    apply (subgoal_tac "\<exists>x. obj_refs cap = {x} \<and> obj_refs a = {x}")
      apply blast
     apply (erule nonemptyE)
     apply (rename_tac x)
     apply (rule_tac x=x in exI)
-    apply (subgoal_tac "Structures_A.obj_refs a \<subseteq> Structures_A.obj_refs cap")
+    apply (subgoal_tac "obj_refs a \<subseteq> obj_refs cap")
      apply (drule (1) subsetD)
      apply (blast dest: caps_ref_single_objects)
     apply (fastforce dest: use_valid[OF _ finalise_cap_ret_subset_obj_refs])
    apply (fastforce dest: caps_ref_either_an_object_or_irq
                           use_valid[OF _ finalise_cap_ret_subset_cap_irqs])
-  apply (subgoal_tac "Structures_A.obj_refs cap = {} \<and> Structures_A.obj_refs a = {}")
+  apply (subgoal_tac "obj_refs cap = {} \<and> obj_refs a = {}")
    apply (clarsimp simp: slots_holding_overlapping_caps_def get_cap_cte_wp_at')
    apply (rename_tac cap'a)
    apply (rule_tac x=cap'a in exI)
@@ -1579,7 +1578,7 @@ lemma rec_del_silc_inv':
                                     replaceable s slot (fst fin) rv \<and>
                                     cte_wp_at ((=) rv) slot s \<and>
                                     ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s \<and>
-                                    (\<forall>t\<in>Structures_A.obj_refs (fst fin). halted_if_tcb t s) \<and>
+                                    (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s) \<and>
                                     einvs s \<and>
                                     silc_inv aag st s \<and>
                                     pasSubject aag \<noteq> SilcLabel \<and>
@@ -2062,14 +2061,14 @@ lemma send_signal_silc_inv[wp]:
 context FinalCaps_1 begin
 
 lemma slots_holding_overlapping_caps_eq:
-  assumes "Structures_A.obj_refs cap = Structures_A.obj_refs cap'"
+  assumes "obj_refs cap = obj_refs cap'"
   assumes "cap_irqs cap = cap_irqs cap'"
   shows "slots_holding_overlapping_caps cap s = slots_holding_overlapping_caps cap' s"
   using assms by (fastforce simp: slots_holding_overlapping_caps_def)
 
 lemma set_cap_silc_inv_simple:
   "\<lbrace>silc_inv aag st and cte_wp_at (\<lambda>cp. cap_irqs cp = cap_irqs cap \<and>
-                                        Structures_A.obj_refs cp = Structures_A.obj_refs cap) slot
+                                        obj_refs cp = obj_refs cap) slot
                     and K (is_subject aag (fst slot))\<rbrace>
    set_cap cap slot
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
@@ -2256,7 +2255,7 @@ lemma untyped_caps_are_intra_label:
 
 lemma interrupt_derived_ntfn_cap_identical_refs:
   "\<lbrakk>interrupt_derived cap cap'; is_ntfn_cap cap\<rbrakk> \<Longrightarrow>
-   Structures_A.obj_refs cap = Structures_A.obj_refs cap' \<and>
+   obj_refs cap = obj_refs cap' \<and>
    cap_irqs cap = cap_irqs cap'"
   apply (case_tac cap)
   apply (simp_all add: interrupt_derived_def cap_master_cap_def split: cap.splits)

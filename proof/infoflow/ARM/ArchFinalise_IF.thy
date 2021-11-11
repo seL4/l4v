@@ -45,7 +45,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
         and (\<lambda>s. ex = is_final_cap' (ArchObjectCap arch_cap) s)
         and cte_wp_at ((=) (ArchObjectCap arch_cap)) slot\<rbrace>
    arch_finalise_cap arch_cap ex
-   \<lbrace>\<lambda>rv s. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
 (* FIXME: move *)

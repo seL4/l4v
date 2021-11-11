@@ -1031,6 +1031,11 @@ lemma ptrFromPAddr_addr_from_ppn:
   apply (simp add: aligned_shiftr_mask_shiftl mask_len_id[where 'a=machine_word_len, simplified])
   done
 
+lemma ptrFromPAddr_addr_from_ppn':
+  "is_aligned pt_ptr pt_bits \<Longrightarrow>
+   ptrFromPAddr (addr_from_ppn (ucast (addrFromPPtr pt_ptr >> pt_bits))) = pt_ptr"
+  using ptrFromPAddr_addr_from_ppn by (simp add: bit_simps)
+
 lemma is_aligned_pageBitsForSize_table_size:
   "is_aligned p (pageBitsForSize vmpage_size) \<Longrightarrow> is_aligned p table_size"
   apply (erule is_aligned_weaken)

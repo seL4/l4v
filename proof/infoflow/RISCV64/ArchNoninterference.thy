@@ -375,6 +375,10 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
   apply (simp add: scheduler_equiv_def)
   done
 
+lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:
+  "getActiveIRQ True = getActiveIRQ False"
+  by (clarsimp simp: getActiveIRQ_def non_kernel_IRQs_def)
+
 end
 
 

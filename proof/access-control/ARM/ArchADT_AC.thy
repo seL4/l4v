@@ -17,14 +17,6 @@ lemma invs_valid_global_pd_mappings:
   apply (simp add: invs_def valid_state_def)
   done
 
-lemma objs_valid_tcb_vtable:
-  "\<lbrakk> valid_objs s; get_tcb t s = Some tcb \<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
-  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
-  apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
-    apply fastforce+
-  done
-
 lemma pd_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
      get_pd_of_thread (kheap s) (arch_state s) tcb_ptr = pd; pd \<noteq> arm_global_pd (arch_state s) \<rbrakk>

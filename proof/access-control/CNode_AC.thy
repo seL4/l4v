@@ -175,7 +175,7 @@ definition authorised_cnode_inv ::
 
 lemma resolve_address_bits_authorised_aux:
   "s \<turnstile> \<lbrace>pas_refined aag and K (is_cnode_cap (fst (cap, cref))
-                               \<longrightarrow> (\<forall>x \<in> obj_refs (fst (cap, cref)). is_subject aag x))\<rbrace>
+                               \<longrightarrow> (\<forall>x \<in> obj_refs_ac (fst (cap, cref)). is_subject aag x))\<rbrace>
        resolve_address_bits (cap, cref)
        \<lbrace>\<lambda>rv s. is_subject aag (fst (fst rv))\<rbrace>, \<lbrace>\<lambda>rv. \<top>\<rbrace>"
 unfolding resolve_address_bits_def
@@ -195,7 +195,7 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
 qed
 
 lemma resolve_address_bits_authorised[wp]:
-  "\<lbrace>pas_refined aag and K (is_cnode_cap cap \<longrightarrow> (\<forall>x \<in> obj_refs cap. is_subject aag x))\<rbrace>
+  "\<lbrace>pas_refined aag and K (is_cnode_cap cap \<longrightarrow> (\<forall>x \<in> obj_refs_ac cap. is_subject aag x))\<rbrace>
    resolve_address_bits (cap, cref)
    \<lbrace>\<lambda>rv s. is_subject aag (fst (fst rv))\<rbrace>, -"
   apply (unfold validE_R_def)
@@ -205,7 +205,7 @@ lemma resolve_address_bits_authorised[wp]:
   done
 
 lemma lookup_slot_for_cnode_op_authorised[wp]:
-  "\<lbrace>pas_refined aag and K (is_cnode_cap croot \<longrightarrow> (\<forall>x \<in> obj_refs croot. is_subject aag x))\<rbrace>
+  "\<lbrace>pas_refined aag and K (is_cnode_cap croot \<longrightarrow> (\<forall>x \<in> obj_refs_ac croot. is_subject aag x))\<rbrace>
    lookup_slot_for_cnode_op is_source croot ptr depth
    \<lbrace>\<lambda>rv s. is_subject aag (fst rv)\<rbrace>, -"
   apply (simp add: lookup_slot_for_cnode_op_def split del: if_split)
@@ -218,7 +218,7 @@ lemma lookup_slot_for_cnode_op_authorised[wp]:
 (* FIXME MOVE *)
 lemma is_cnode_into_is_subject:
   "\<lbrakk> pas_cap_cur_auth aag cap; pas_refined aag s; is_cnode_cap cap \<rbrakk>
-     \<Longrightarrow> \<forall>x\<in>obj_refs cap. is_subject aag x"
+     \<Longrightarrow> \<forall>x\<in>obj_refs_ac cap. is_subject aag x"
   by (clarsimp simp: is_cap_simps cap_auth_conferred_def
                      pas_refined_all_auth_is_owns aag_cap_auth_def)
 
@@ -251,7 +251,7 @@ lemma decode_cnode_inv_authorised:
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
-                               \<longrightarrow> (\<forall>x\<in>obj_refs (excaps ! n). is_subject aag x))")
+                               \<longrightarrow> (\<forall>x\<in>obj_refs_ac (excaps ! n). is_subject aag x))")
    apply (fastforce simp: invs_valid_objs is_cnode_into_is_subject)
   apply (intro allI impI is_cnode_into_is_subject; fastforce)
   done
@@ -1123,7 +1123,7 @@ lemma empty_slot_pas_refined_transferable[wp_transferable]:
                       pas_refined_mem[OF sta_cdt] pas_refined_mem[OF sta_cdt_transferable])
 
 lemma obj_ref_weak_derived:
-  "weak_derived cap cap' \<Longrightarrow> obj_refs cap = obj_refs cap'"
+  "weak_derived cap cap' \<Longrightarrow> obj_refs_ac cap = obj_refs_ac cap'"
   unfolding obj_refs_def weak_derived_def copy_of_def same_object_as_def
   by (cases cap; fastforce simp: is_cap_simps aobj_ref'_same_aobject split: cap.splits)
 
@@ -1440,7 +1440,7 @@ lemma get_cap_auth_wp:
 lemma get_cap_auth_conferred:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst slot))\<rbrace>
    get_cap slot
-   \<lbrace>\<lambda>rv s. \<forall>x\<in>obj_refs rv. \<forall>a \<in> cap_auth_conferred rv. aag_has_auth_to aag a x\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>x\<in>obj_refs_ac rv. \<forall>a \<in> cap_auth_conferred rv. aag_has_auth_to aag a x\<rbrace>"
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule sta_caps, simp+)
@@ -1473,7 +1473,7 @@ definition auth_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
  "auth_derived cap cap' \<equiv>
     (cap_asid' cap \<subseteq> cap_asid' cap')
   \<and> (untyped_range cap = untyped_range cap')
-  \<and> (obj_refs cap = obj_refs cap')
+  \<and> (obj_refs_ac cap = obj_refs_ac cap')
   \<and> (cap_auth_conferred cap \<subseteq> cap_auth_conferred cap')
   \<and> (cap_irqs_controlled cap = cap_irqs_controlled cap')"
 
@@ -1565,15 +1565,15 @@ locale CNode_AC_4 = CNode_AC_3 +
      arch_derive_cap acap
      \<lbrace>\<lambda>rv s. cap_links_asid_slot aag p rv\<rbrace>, -"
   and arch_derive_cap_obj_refs_auth:
-    "\<lbrace>K (\<forall>r\<in>obj_refs (ArchObjectCap cap).
+    "\<lbrace>K (\<forall>r\<in>obj_refs_ac (ArchObjectCap cap).
          \<forall>auth\<in>cap_auth_conferred (ArchObjectCap cap). aag_has_auth_to aag auth r)\<rbrace>
      arch_derive_cap cap
-     \<lbrace>\<lambda>x s :: det_ext state. \<forall>r\<in>obj_refs x.
+     \<lbrace>\<lambda>x s :: det_ext state. \<forall>r\<in>obj_refs_ac x.
                              \<forall>auth \<in> cap_auth_conferred x. aag_has_auth_to aag auth r\<rbrace>, -"
   and arch_derive_cap_obj_refs_subset:
     "\<lbrace>\<lambda>s :: det_ext state. (\<forall>x \<in> aobj_ref' acap. P x s)\<rbrace>
      arch_derive_cap acap
-     \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs rv. P x s\<rbrace>, -"
+     \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac rv. P x s\<rbrace>, -"
   and arch_derive_cap_cli:
     "\<lbrace>K (cap_links_irq aag l (ArchObjectCap ac))\<rbrace>
      arch_derive_cap ac
@@ -1583,7 +1583,7 @@ locale CNode_AC_4 = CNode_AC_3 +
      arch_derive_cap acap
      \<lbrace>\<lambda>rv s. \<forall>x \<in> untyped_range rv. P x s\<rbrace>, -"
   and arch_update_cap_obj_refs_subset:
-    "\<lbrakk> x \<in> obj_refs (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
+    "\<lbrakk> x \<in> obj_refs_ac (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
   and arch_update_cap_untyped_range_empty[simp]:
     "untyped_range (arch_update_cap_data pres data cap) = {}"
   and arch_update_cap_irqs_controlled_empty[simp]:
@@ -1664,9 +1664,9 @@ lemma derive_cap_clas:
   done
 
 lemma derive_cap_obj_refs_auth:
-  "\<lbrace>\<lambda>s :: det_ext state. (\<forall>r\<in>obj_refs cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth r)\<rbrace>
+  "\<lbrace>\<lambda>s :: det_ext state. (\<forall>r\<in>obj_refs_ac cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth r)\<rbrace>
    derive_cap slot cap
-   \<lbrace>\<lambda>x s. (\<forall>r\<in>obj_refs x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r) \<rbrace>, -"
+   \<lbrace>\<lambda>x s. (\<forall>r\<in>obj_refs_ac x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r) \<rbrace>, -"
   by (wpsimp wp: arch_derive_cap_obj_refs_auth simp: derive_cap_def)
 
 lemma derive_cap_cli:
@@ -1681,9 +1681,9 @@ lemma derive_cap_cli:
 
 (* FIXME: move *)
 lemma derive_cap_obj_refs_subset:
-  "\<lbrace>\<lambda>s :: det_ext state. \<forall>x \<in> obj_refs cap. P x s\<rbrace>
+  "\<lbrace>\<lambda>s :: det_ext state. \<forall>x \<in> obj_refs_ac cap. P x s\<rbrace>
    derive_cap slot cap
-   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs rv. P x s\<rbrace>, -"
+   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac rv. P x s\<rbrace>, -"
   unfolding derive_cap_def
   apply (rule hoare_pre)
   apply (simp cong: cap.case_cong)
@@ -1721,7 +1721,7 @@ lemma derive_cap_cap_cur_auth [wp]:
 
 (* FIXME: move *)
 lemma update_cap_obj_refs_subset:
-  "x \<in> obj_refs (update_cap_data P dt cap) \<Longrightarrow> x \<in> obj_refs cap"
+  "x \<in> obj_refs_ac (update_cap_data P dt cap) \<Longrightarrow> x \<in> obj_refs_ac cap"
   by (cases cap; simp add: update_cap_data_closedform arch_update_cap_obj_refs_subset split: if_splits)
 
 (* FIXME: move *)

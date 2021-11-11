@@ -158,15 +158,6 @@ lemma requiv_get_page_info_eq:
   apply (rule requiv_get_pt_entry_eq; fastforce simp: canonical_not_kernel_is_user)
   done
 
-(* FIXME IF: make generic, used in ARM too *)
-lemma objs_valid_tcb_vtable:
-  "\<lbrakk> valid_objs s; get_tcb t s = Some tcb \<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
-  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
-  apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
-    apply fastforce+
-  done
-
 lemma requiv_vspace_of_thread_global_pt:
   "\<lbrakk> reads_equiv aag s s'; is_subject aag (cur_thread s); invs s; pas_refined aag s;
      get_vspace_of_thread (kheap s) (arch_state s) (cur_thread s) = global_pt s \<rbrakk>
@@ -211,17 +202,6 @@ lemma vspace_for_asid_get_vspace_of_thread:
    \<Longrightarrow> \<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) ct)"
   by (fastforce simp: get_vspace_of_thread_def
                split: option.splits kernel_object.splits cap.splits arch_cap.splits)
-
-(* FIXME IF: replace get_page_info_gpd_kmaps (canonical address unnecessary) *)
-lemma get_page_info_gpd_kmaps:
-  "\<lbrakk> valid_global_vspace_mappings s; valid_arch_state s;
-     get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r) \<rbrakk>
-     \<Longrightarrow> p \<in> kernel_mappings"
-  apply (clarsimp simp: get_page_info_def in_omonad pt_lookup_slot_def pt_lookup_slot_from_level_def)
-  apply (subst (asm) pt_walk.simps)
-  apply (fastforce dest: pte_info_not_InvalidPTE global_pt_not_invalid_kernel
-                   simp: valid_arch_state_def in_omonad)
-  done
 
 lemma pt_of_thread_same_agent:
   "\<lbrakk> pas_refined aag s; is_subject aag tcb_ptr;
@@ -484,11 +464,23 @@ proof -
     done
 qed
 
-(* FIXME IF: move *)
-lemma vm_level_exhaust:
-  fixes n :: vm_level
-  shows "\<lbrakk> n = 0 \<Longrightarrow> Q; n = 1 \<Longrightarrow> Q; n = 2 \<Longrightarrow> Q; n = 3 \<Longrightarrow> Q \<rbrakk> \<Longrightarrow> Q"
-  by (induct n; clarsimp)
+lemma level_le_2_cases:
+  "(level :: vm_level) \<le> 2 \<Longrightarrow> level = 0 \<or> level = 1 \<or> level = 2"
+  apply clarsimp
+  apply (erule_tac P="level=2" in swap)
+  apply (subst (asm) order.order_iff_strict)
+  apply (erule disjE_R)
+   apply (clarsimp simp: order.strict_implies_not_eq)
+   apply (induct level; clarsimp)
+   apply (drule meta_mp)
+    apply (erule order.strict_implies_not_eq)
+   apply (drule meta_mp)
+    apply (rule bit0.minus_one_leq_less)
+     apply (erule order.strict_implies_order)
+    apply (erule bit0.zero_least)
+   apply clarsimp
+  apply clarsimp
+  done
 
 lemma ptable_lift_data_consistant:
   assumes vs: "valid_state s"
@@ -540,7 +532,7 @@ proof -
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
      apply (rule exI)
      apply (subst pt_walk_vref_for_level_eq[where vref'=x])
-       apply (rule_tac n=level in vm_level_exhaust; clarsimp simp: max_def max_pt_level_def2)
+       apply (fastforce dest: level_le_2_cases le_neq_trans simp: max_pt_level_def2 max_def)
       apply clarsimp
      apply fastforce
     apply (fastforce simp: vref_for_level_def is_aligned_mask_out_add_eq mask_AND_NOT_mask
@@ -599,7 +591,7 @@ proof -
      apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def in_omonad)
      apply (rule exI)
      apply (subst pt_walk_vref_for_level_eq[where vref'=x])
-       apply (rule_tac n=level in vm_level_exhaust; clarsimp simp: max_def max_pt_level_def2)
+       apply (fastforce dest: level_le_2_cases le_neq_trans simp: max_pt_level_def2 max_def)
       apply clarsimp
      apply fastforce
     apply (clarsimp simp: vref_for_level_def)

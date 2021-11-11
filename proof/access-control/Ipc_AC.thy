@@ -95,7 +95,7 @@ lemma send_signal_pas_refined:
 
 lemma receive_signal_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and K (\<forall>ntfnptr \<in> obj_refs cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
+                    and K (\<forall>ntfnptr \<in> obj_refs_ac cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: receive_signal_def)
@@ -140,7 +140,7 @@ lemma set_notification_respects:
 
 lemma receive_signal_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs and
-    K ((\<forall>ntfnptr \<in> obj_refs cap. aag_has_auth_to aag Receive ntfnptr) \<and> is_subject aag thread)\<rbrace>
+    K ((\<forall>ntfnptr \<in> obj_refs_ac cap. aag_has_auth_to aag Receive ntfnptr) \<and> is_subject aag thread)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: receive_signal_def)
@@ -608,8 +608,8 @@ lemma lookup_slot_for_thread_authorised:
 
 lemma cnode_cap_all_auth_owns:
   "(\<exists>s. is_cnode_cap cap \<and> pas_refined aag s \<and>
-        (\<forall>x\<in>obj_refs cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth x))
-   \<longrightarrow> (\<forall>x\<in>obj_refs cap. is_subject aag x)"
+        (\<forall>x\<in>obj_refs_ac cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth x))
+   \<longrightarrow> (\<forall>x\<in>obj_refs_ac cap. is_subject aag x)"
   apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: cap_auth_conferred_def pas_refined_all_auth_is_owns)
   done
@@ -661,7 +661,7 @@ lemma remove_rights_untyped_range[simp]:
   by (clarsimp split: cap.splits simp: cap_links_irq_def)
 
 lemma obj_refs_remove_rights[simp]:
-  "obj_refs (remove_rights rs cap) = obj_refs cap"
+  "obj_refs_ac (remove_rights rs cap) = obj_refs_ac cap"
   unfolding remove_rights_def
   by (cases cap, simp_all add: cap_rights_update_def)
 

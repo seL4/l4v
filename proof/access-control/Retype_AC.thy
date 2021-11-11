@@ -369,7 +369,7 @@ lemma invoke_untyped_integrity:
 
 lemma obj_refs_default':
   "is_aligned oref (obj_bits_api tp sz)
-   \<Longrightarrow> obj_refs (default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api tp sz)"
+   \<Longrightarrow> obj_refs_ac (default_cap tp oref sz dev) \<subseteq> ptr_range oref (obj_bits_api tp sz)"
   by (cases tp; auto simp: ptr_range_memI obj_bits_api_def dest: rev_subsetD[OF _ aobj_refs'_default'])
 
 lemma create_cap_pas_refined:
@@ -1191,7 +1191,7 @@ lemma decode_untyped_invocation_authorised:
                               \<longrightarrow> (\<forall>ref \<in> ptr_range base (bits_of cap). is_subject aag ref)) \<and>
                        is_subject aag (fst slot) \<and> pas_refined aag s \<and> word_size_bits \<le> sz \<and>
                        sz < word_bits \<and> is_aligned base sz \<and>
-                       (is_cnode_cap (excaps ! 0) \<longrightarrow> (\<forall>x\<in>obj_refs (excaps ! 0). is_subject aag x))"
+                       (is_cnode_cap (excaps ! 0) \<longrightarrow> (\<forall>x\<in>obj_refs_ac (excaps ! 0). is_subject aag x))"
                    in hoare_post_imp_R)
        apply (wp data_to_obj_type_ret_not_asid_pool data_to_obj_type_inv2)
       apply (case_tac "excaps ! 0", simp_all, fastforce simp: nonzero_data_to_nat_simp)[1]

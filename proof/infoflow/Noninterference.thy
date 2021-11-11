@@ -679,6 +679,9 @@ locale Noninterference_1 =
   and dmo_getActive_IRQ_reads_respect_scheduler:
     "reads_respects_scheduler aag l (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s)
                              (do_machine_op (getActiveIRQ in_kernel))"
+  (* FIXME IF: precludes ARM_HYP *)
+  and getActiveIRQ_no_non_kernel_IRQs:
+    "getActiveIRQ True = getActiveIRQ False"
 begin
 
 lemma integrity_update_reference_state:
@@ -3454,7 +3457,7 @@ lemma preemption_interrupt_scheduler_invisible:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s))
                        (handle_preemption_if uc) (kernel_entry_if Interrupt uc')"
-  apply (simp add: kernel_entry_if_def handle_preemption_if_def)
+  apply (simp add: kernel_entry_if_def handle_preemption_if_def getActiveIRQ_no_non_kernel_IRQs)
   apply (rule equiv_valid_2_bind_right)
        apply (rule equiv_valid_2_bind_right)
             apply (simp add: liftE_def bind_assoc)

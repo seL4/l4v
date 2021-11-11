@@ -245,7 +245,7 @@ lemmas pas_refined_Control
 
 lemma caps_of_state_pasObjectAbs_eq:
   "\<lbrakk> caps_of_state s p = Some cap; Control \<in> cap_auth_conferred cap;
-     is_subject aag (fst p); pas_refined aag s; x \<in> obj_refs cap \<rbrakk>
+     is_subject aag (fst p); pas_refined aag s; x \<in> obj_refs_ac cap \<rbrakk>
      \<Longrightarrow> is_subject aag x"
   apply (frule sta_caps, simp+)
   apply (drule pas_refined_mem, simp+)
@@ -1219,7 +1219,7 @@ end
 
 lemma owns_thread_owns_cspace:
   "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb thread s = Some tcb;
-     is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs (tcb_ctable tcb) \<rbrakk>
+     is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs_ac (tcb_ctable tcb) \<rbrakk>
      \<Longrightarrow> is_subject aag x"
   apply (drule get_tcb_SomeD)
   apply (drule cte_wp_at_tcbI[where t="(thread, tcb_cnode_index 0)"

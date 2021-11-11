@@ -45,7 +45,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
         and (\<lambda>s. ex = is_final_cap' (ArchObjectCap arch_cap) s)
         and cte_wp_at ((=) (ArchObjectCap arch_cap)) slot\<rbrace>
    arch_finalise_cap arch_cap ex
-   \<lbrace>\<lambda>rv s. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
 (* FIXME: move *)
@@ -246,28 +246,11 @@ lemma prepare_thread_delete_reads_respects_f[Finalise_IF_assms]:
   "reads_respects_f aag l \<top> (prepare_thread_delete thread)"
   unfolding prepare_thread_delete_def by wp
 
-(* FIXME IF: catch_ev is too strong *)
-lemma catch_ev':
-  assumes ok:
-    "equiv_valid I A A P f"
-  assumes err:
-    "\<And> e. equiv_valid I A A (E e) (handler e)"
-  assumes hoare:
-    "\<lbrace> Q \<rbrace> f -, \<lbrace> E \<rbrace>"
-  shows
-    "equiv_valid I A A (P and Q) (f <catch> handler)"
-  apply(simp add: catch_def)
-  apply (wp err ok | wpc | simp)+
-   apply(insert hoare[simplified validE_E_def validE_def])[1]
-   apply(simp split: sum.splits)
-  by simp
-
 lemma arch_finalise_cap_reads_respects[Finalise_IF_assms]:
   "reads_respects aag l (pas_refined aag and invs and cte_wp_at ((=) (ArchObjectCap cap)) slot
                                          and K (pas_cap_cur_auth aag (ArchObjectCap cap)))
                         (arch_finalise_cap cap final)"
   unfolding arch_finalise_cap_def
-  supply catch_ev[wp del] catch_ev'[wp]
   apply (rule gen_asm_ev)
   apply (case_tac cap)
      apply simp

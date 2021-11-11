@@ -39,11 +39,10 @@ proof -
      apply (clarsimp simp: return_def)
     apply wp
    apply (rule_tac Q="\<lambda>rv s. invs' s \<and> (\<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ)" in hoare_post_imp)
-      apply (clarsimp simp: non_kernel_IRQs_empty)
-   apply (wp getActiveIRQ_le_maxIRQ  | simp)+
+    apply (clarsimp simp: non_kernel_IRQs_def)
+   apply (wp getActiveIRQ_le_maxIRQ | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
-
 qed
 
 lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:

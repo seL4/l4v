@@ -1071,12 +1071,6 @@ lemma shared_page_ptr_is_aligned[simp]:
   "is_aligned shared_page_ptr pt_bits"
   by (clarsimp simp: s0_ptr_defs pt_bits_def table_size_def ptTranslationBits_def pte_bits_def word_size_bits_def is_aligned_def)
 
-(* FIXME IF: replace ptrFromPAddr_addr_from_ppn *)
-lemma ptrFromPAddr_addr_from_ppn':
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   ptrFromPAddr (addr_from_ppn (ucast (addrFromPPtr pt_ptr >> pt_bits))) = pt_ptr"
-  using ptrFromPAddr_addr_from_ppn by (simp add: bit_simps)
-
 lemma vs_lookup_s0_SomeD:
   "vs_lookup_table lvl asid vref s0_internal = Some (lvl', p)
    \<Longrightarrow> (asid_high_bits_of asid = asid_high_bits_of High_asid \<and> lvl' = asid_pool_level \<and> p = High_pool_ptr
@@ -1962,7 +1956,7 @@ lemma cap_refs_in_kernel_window_s0[simp]:
   "cap_refs_in_kernel_window s0_internal"
   apply (clarsimp simp: cap_refs_in_kernel_window_def valid_refs_def not_kernel_window_def
                         cap_range_def Invariants_AI.cte_wp_at_caps_of_state)
-  apply (subgoal_tac "- kernel_window s0_internal \<inter> Structures_A.obj_refs cap = {}")
+  apply (subgoal_tac "- kernel_window s0_internal \<inter> obj_refs cap = {}")
    apply (fastforce dest: s0_caps_of_state)
   apply (rule Int_emptyI, clarsimp)
   apply (erule swap, clarsimp)

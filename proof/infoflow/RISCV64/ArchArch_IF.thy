@@ -324,15 +324,15 @@ lemma unmap_page_table_reads_respects:
                       and K (asid \<noteq> 0 \<and> is_subject_asid aag asid \<and> vaddr \<in> user_region))
      (unmap_page_table asid vaddr pt)"
   unfolding unmap_page_table_def fun_app_def
-  apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
-            pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
-            find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_lift_R
-         | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
-    apply clarsimp
-    apply (frule (3) vspace_for_asid_is_subject)
-    apply (fastforce dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)
-   apply wpsimp
-  apply wpsimp
+  apply (rule gen_asm_ev)
+  apply (rule equiv_valid_guard_imp)
+   apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
+             pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
+             find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_lift_R
+          | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
+  apply clarsimp
+  apply (frule vspace_for_asid_is_subject)
+     apply (fastforce dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)+
   done
 
 lemma perform_page_table_invocation_reads_respects:

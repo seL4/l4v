@@ -14,7 +14,7 @@ lemma ensure_empty_rev:
   by (wp get_cap_rev | simp)+
 
 lemma prop_of_obj_ref_of_cnode_cap:
-  "\<lbrakk> is_cnode_cap cap; \<forall>r\<in>obj_refs cap. P r \<rbrakk>
+  "\<lbrakk> is_cnode_cap cap; \<forall>r\<in>obj_refs_ac cap. P r \<rbrakk>
      \<Longrightarrow> P (obj_ref_of cap)"
   by (case_tac cap, simp_all)
 
@@ -87,7 +87,7 @@ lemma range_check_ev:
 (* FIXME: move *)
 lemma aag_has_auth_to_obj_refs_of_owned_cap:
   "\<lbrakk> pas_refined aag s; is_subject aag (fst slot); cte_wp_at ((=) cap) slot s;
-     a \<in> cap_auth_conferred cap; x \<in> Access.obj_refs cap \<rbrakk>
+     a \<in> cap_auth_conferred cap; x \<in> obj_refs_ac cap \<rbrakk>
      \<Longrightarrow> aag_has_auth_to aag a x"
   apply (drule sym, erule ssubst)
   apply (rule_tac s=s in pas_refined_mem)

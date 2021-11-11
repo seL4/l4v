@@ -207,7 +207,7 @@ lemma not_in_global_not_arm:
 lemma cte_wp_at_page_cap_bits :
   "\<lbrakk> cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s; valid_objs s \<rbrakk>
      \<Longrightarrow> cte_wp_at (\<lambda>c. (\<lambda>x. x && ~~ mask pt_bits) ` set [word, word + 4 .e. word + 2 ^ pt_bits - 1]
-                        \<subseteq> Structures_A.obj_refs c \<and> is_pt_cap c) slot s"
+                        \<subseteq> obj_refs c \<and> is_pt_cap c) slot s"
   apply (frule (1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (erule cte_wp_at_weakenE)
@@ -1652,7 +1652,7 @@ lemma cte_wp_at_pt_exists_cap:
   "\<lbrakk> valid_objs s; cte_wp_at ((=) (ArchObjectCap (PageTableCap word option))) slot s;
      x \<in> set [word , word + 4 .e. word + 2 ^ pt_bits - 1] \<rbrakk>
      \<Longrightarrow> \<exists>a b cap. caps_of_state s (a, b) = Some cap \<and>
-                   x && ~~ mask pt_bits \<in> Structures_A.obj_refs cap \<and> is_pt_cap cap"
+                   x && ~~ mask pt_bits \<in> obj_refs cap \<and> is_pt_cap cap"
   apply (case_tac slot)
   apply (rule_tac x=a in exI)
   apply (rule_tac x=b in exI)

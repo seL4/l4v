@@ -176,15 +176,6 @@ lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
    apply (fastforce intro!: invs_pt_not_idle_thread)+
   done
 
-(* FIXME IF: malformed *)
-lemma handle_preemption_if_valid_sched[ADT_IF_assms, wp]:
-  "\<lbrace>valid_sched and invs and (\<lambda>s. blah \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
-   handle_preemption_if irq
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def non_kernel_IRQs_def cong: if_cong)
-   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)+
-  done
-
 lemmas handle_preemption_idle_equiv[ADT_IF_assms, wp] =
   idle_globals_lift[OF handle_preemption_globals_equiv invs_pt_not_idle_thread, simplified]
 
@@ -219,10 +210,6 @@ lemma do_user_op_if_valid_pdpt_objs[ADT_IF_assms, wp]:
 lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
   "valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
   by simp
-
-lemma non_kernel_IRQs_empty[ADT_IF_assms]:
-  "non_kernel_IRQs = {}"
-  by (simp add: non_kernel_IRQs_def)
 
 lemma do_user_op_if_irq_state_of_state[ADT_IF_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
