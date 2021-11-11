@@ -3466,7 +3466,7 @@ lemma sendSignal_corres:
                     apply (rule possibleSwitchTo_corres)
                    apply ((wpsimp wp: hoare_drop_imp)+)[2]
                  apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
-                 apply (wpsimp wp: maybe_donate_sc_valid_sched_action)
+                 apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
                 apply (clarsimp simp: pred_conj_def, strengthen valid_objs'_valid_tcbs')
                 apply (wpsimp+)[3]
              apply (clarsimp simp: thread_state_relation_def)
@@ -3536,7 +3536,7 @@ lemma sendSignal_corres:
                  apply (rule possibleSwitchTo_corres)
                 apply ((wpsimp wp: hoare_drop_imp)+)[2]
               apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
-              apply (wpsimp wp: maybe_donate_sc_valid_sched_action)
+              apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
              apply (clarsimp simp: pred_conj_def, strengthen valid_objs'_valid_tcbs')
              apply (wpsimp+)[3]
           apply (clarsimp simp: thread_state_relation_def)
