@@ -490,18 +490,41 @@ lemma no_domainswitch_inv:
    apply force
   by force
 
-definition is_secure_implementation where
-  "is_secure_implementation p s \<equiv>
-   (if can_domain_switch (other_state s) then
-        \<comment> \<open>FIXME: Need to design appropriate requirements for the time protection mitigations
-           we expect to carry out at domain-switch time.\<close>
-        True
-      else
-        p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_no_domainswitch)"
+definition is_secure_nondomainswitch :: "program \<Rightarrow> ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
+  "is_secure_nondomainswitch p s \<equiv>
+      \<comment> \<open>Oblige the original system not to reach any system-step that would require either
+          (1) straying out of touched_addresses or (2) switching domains to implement.\<close>
+      p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_no_domainswitch"
 
-definition has_secure_implementation where
+definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
+  "has_secure_nondomainswitch s s' \<equiv>
+     \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s"
+
+definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
+  "has_secure_domainswitch s s' \<equiv>
+     \<comment> \<open>Oblige the instantiator to ensure that in all possible reachable situations where the
+         uwr holds there exists a domain-switch implementation pair that would preserve it.\<close>
+     \<forall>d t t'. reachable (other_state t) \<and>
+       (s, t) \<in> uwr d \<and> \<comment> \<open>The \<open>uwr\<close> should give us \<open>can_domain_switch (other_state t)\<close>.\<close>
+       (other_state t, other_state t') \<in> Step () \<longrightarrow>
+        (\<exists> p q.
+           s' = instr_multistep p s \<and>
+           t' = instr_multistep q t \<and>
+           (s', t') \<in> uwr d)"
+
+definition has_secure_implementation :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
   "has_secure_implementation s s' \<equiv>
-     \<exists>p. s' = instr_multistep p s \<and> is_secure_implementation p s"
+     if can_domain_switch (other_state s)
+       then has_secure_domainswitch s s'
+       else has_secure_nondomainswitch s s'"
+
 
 (*
 
@@ -695,7 +718,7 @@ lemma context_switch_from_d: "\<lbrakk>
    \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  sorry
+  oops
 
 (* d not running \<rightarrow> d not running *)
 lemma d_not_running: "\<lbrakk>
@@ -738,21 +761,21 @@ lemma context_switch_to_d: "\<lbrakk>
    \<comment> \<open>external_uwr should oblige us to prove current_domain' t' = d\<close>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  sorry
+  oops
 
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    reachable (other_state s);
    reachable (other_state t);
    \<not> can_domain_switch (other_state s);
    \<not> can_domain_switch (other_state t);
-   is_secure_implementation p\<^sub>s s;
-   is_secure_implementation p\<^sub>t t;
+   is_secure_nondomainswitch p\<^sub>s s;
+   is_secure_nondomainswitch p\<^sub>t t;
    (s, t) \<in> uwr d;
    s' = instr_multistep p\<^sub>s s;
    t' = instr_multistep p\<^sub>t t
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  apply(clarsimp simp:is_secure_implementation_def programs_no_domainswitch_def)
+  apply(clarsimp simp:is_secure_nondomainswitch_def programs_no_domainswitch_def)
   apply(frule uwr_same_domain)
   apply(case_tac "current_domain' s = d")
    apply(prop_tac "current_domain' s' = d")
@@ -788,26 +811,6 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
     apply force
    apply force
   apply force
-  sorry
-
-lemma domainswitch_programs_preserve_uwr: "\<lbrakk>
-   reachable (other_state s);
-   reachable (other_state t);
-   can_domain_switch (other_state s);
-   can_domain_switch (other_state t);
-   is_secure_implementation p\<^sub>s s;
-   is_secure_implementation p\<^sub>t t;
-   (s, t) \<in> uwr d;
-   s' = instr_multistep p\<^sub>s s;
-   t' = instr_multistep p\<^sub>t t
-   \<rbrakk> \<Longrightarrow>
-   (s', t') \<in> uwr d"
-  apply(clarsimp simp:is_secure_implementation_def)
-  apply(frule uwr_same_domain)
-  apply(case_tac "current_domain' s = d")
-   (* FIXME: `can_domain_switch` now designates we're at an automaton step responsible for it.
-      But we still need new constraints on the instr_multistep programs that implement it,
-      which should then reshape the context_switch_from_d and context_switch_to_d lemmas. -robs. *)
   sorry
 
 end
@@ -1058,11 +1061,14 @@ theorem extended_confidentiality_u:
   apply(thin_tac "tpni.reachable x" for x)+
   apply(clarsimp simp:tpni.Step_def system.Step_def A_extended_def execution_def A_extended_Step_def steps_def)
   apply(frule can_domain_switch_public)
-  apply(clarsimp simp:has_secure_implementation_def)
-  apply(case_tac "can_domain_switch (other_state s)")
-   apply(rename_tac u s t x xa xb xc p\<^sub>s p\<^sub>t)
-   apply(force intro:domainswitch_programs_preserve_uwr)
-  apply(rename_tac u s t x xa xb xc p\<^sub>s p\<^sub>t)
+  apply(clarsimp simp:has_secure_implementation_def split:if_splits)
+   apply(rename_tac u s t s' t' x xa xb xc)
+   apply(clarsimp simp:has_secure_domainswitch_def)
+   apply(metis enabled_Step to_some_extended_step tpni.uwr_sym tpni.uwr_trans)
+   (* Note: Another proof. Are the use of these lemmas by these metis proofs suspicious? -robs.
+   apply(metis enabled_Step reachable_steps_have_secure_implementation_nonspecific tpni.uwr_sym tpni.uwr_trans) *)
+  apply(rename_tac u s t s' t' x xa xb xc)
+  apply(clarsimp simp:has_secure_nondomainswitch_def)
   apply(force intro:programs_obeying_ta_preserve_uwr)
   done
 
