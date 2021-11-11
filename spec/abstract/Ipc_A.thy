@@ -330,12 +330,22 @@ endpoint\<close>
 definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "complete_signal ntfnptr tcb \<equiv> do
+  "complete_signal ntfnptr tptr \<equiv> do
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
-           as_user tcb $ setRegister badge_register badge;
-           set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn
+           as_user tptr $ setRegister badge_register badge;
+           set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
+           maybe_donate_sc tptr ntfnptr;
+           sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tptr;
+           maybeM (\<lambda>scp. do
+             sc \<leftarrow> get_sched_context scp;
+             when (sc_sporadic sc \<and> sc_active sc) $ do
+               ntfn_scp \<leftarrow> get_ntfn_obj_ref ntfn_sc ntfnptr;
+               cur_sc_ptr <- gets cur_sc;
+               when (sc_opt = ntfn_scp \<and> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp
+            od
+          od) sc_opt
          od
      | _ \<Rightarrow> fail
    od"
