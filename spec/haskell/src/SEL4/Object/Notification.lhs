@@ -188,12 +188,22 @@ The following function will remove the given thread from the queue of the notifi
 >                       _ -> False
 
 > completeSignal :: PPtr Notification -> PPtr TCB -> Kernel ()
-> completeSignal ntfnPtr tcb = do
+> completeSignal ntfnPtr tcbPtr = do
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             ActiveNtfn badge -> do
->                 asUser tcb $ setRegister badgeRegister badge
+>                 asUser tcbPtr $ setRegister badgeRegister badge
 >                 setNotification ntfnPtr $ ntfn {ntfnObj = IdleNtfn}
+>                 maybeDonateSc tcbPtr ntfnPtr
+>                 scOpt <- threadGet tcbSchedContext tcbPtr
+>                 case scOpt of
+>                     Just scp -> do
+>                         sc <- getSchedContext scp
+>                         when (scSporadic sc && 0 < scRefillMax sc) $ do
+>                             ntfnScPtr <- liftM ntfnSc $ getNotification ntfnPtr
+>                             curScPtr <- getCurSc
+>                             when (scOpt == ntfnScPtr && scp /= curScPtr) $ refillUnblockCheck scp
+>                     Nothing -> return ()
 >             _ -> fail "tried to complete signal with inactive notification object"
 
 
