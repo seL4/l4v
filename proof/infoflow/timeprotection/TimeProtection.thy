@@ -70,15 +70,7 @@ record ('fch_cachedness,'pch_cachedness) state =
   other_state :: other_state
 
 
-
-locale time_protection_system = unwinding_system A s0 current_domain external_uwr policy out Sched
-  for A :: "('a,other_state,unit) data_type"
-  and s0 :: "other_state"
-  and current_domain :: "unit \<Rightarrow> other_state \<Rightarrow> domain"
-  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
-  and policy :: "(domain \<times> domain) set"
-  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p" +
-
+locale time_protection =
   (* "(a, b) \<in> collides_in_pch" = "a may cause b to be evicted from or loaded to the pch" *)
   fixes collides_in_pch :: "address rel"
   assumes collides_with_equiv: "equiv UNIV collides_in_pch"
@@ -114,13 +106,11 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
 
   fixes store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
-  fixes initial_regs :: "regs"
   fixes padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
 
   fixes empty_fch :: "'fch_cachedness fch"
   fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
-  fixes initial_pch :: "'pch_cachedness pch"
   fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
   \<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
 
@@ -136,6 +126,10 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
 
+  fixes current_domain :: "other_state \<Rightarrow> domain"
+  fixes external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  assumes external_uwr_equiv_rel:
+    "equiv UNIV (external_uwr d)"
   (* The parent locale requires current_domain to be equated by Sched uwr, which confidentiality_u
      then treats as specifying public information; assuming that it is instead equated by every
      domain's uwr arguably simplifies things without changing the strength of the property.
@@ -144,7 +138,7 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
      equivalence relation without it. It may be reasonable to keep this if it holds (or can
      reasonably be made to hold) for the seL4 infoflow theory's unwinding relation. -robs. *)
   assumes external_uwr_same_domain:
-    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = current_domain () s2"
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = current_domain s2"
 \<comment> \<open>we will probably needs lots more info about this external uwr\<close>
 
   
@@ -165,9 +159,9 @@ locale time_protection_system = unwinding_system A s0 current_domain external_uw
   fixes touched_addrs :: "other_state \<Rightarrow> address set"
   assumes touched_addrs_inv:
     "reachable s \<Longrightarrow>
-     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain () s)} \<union> {a. addr_domain a = Sched}"
+     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain s)} \<union> {a. addr_domain a = Sched}"
   assumes external_uwr_same_touched_addrs:
-    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain () s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
   (* We expect this to be true for, say, seL4's KSched \<rightarrow> KExit step. -robs. *)
   fixes can_domain_switch :: "other_state \<Rightarrow> bool"
@@ -179,7 +173,7 @@ definition all_addrs_of :: "domain \<Rightarrow> address set" where
   "all_addrs_of d = {a. addr_domain a = d}"
 
 abbreviation current_domain' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> domain" where
-  "current_domain' s \<equiv> current_domain () (other_state s)"
+  "current_domain' s \<equiv> current_domain (other_state s)"
 
 abbreviation collision_set :: "address \<Rightarrow> address set" where
   "collision_set a \<equiv> {b. (a, b) \<in> collides_in_pch}"
@@ -290,7 +284,7 @@ lemma uwr_same_touched_addrs:
 
 lemma extended_uwr_equiv_rel:
   "equiv UNIV (uwr u)"
-  using uwr_equiv_rel
+  using external_uwr_equiv_rel
   apply(erule_tac x=u in meta_allE)
   apply(clarsimp simp:equiv_def)
   apply(rule conjI)
@@ -502,28 +496,6 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness)state
   where
   "has_secure_nondomainswitch s s' \<equiv>
      \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s"
-
-definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
-  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
-  where
-  "has_secure_domainswitch s s' \<equiv>
-     \<comment> \<open>Oblige the instantiator to ensure that in all possible reachable situations where the
-         uwr holds there exists a domain-switch implementation pair that would preserve it.\<close>
-     \<forall>d t t'. reachable (other_state t) \<and>
-       (s, t) \<in> uwr d \<and> \<comment> \<open>The \<open>uwr\<close> should give us \<open>can_domain_switch (other_state t)\<close>.\<close>
-       (other_state t, other_state t') \<in> Step () \<longrightarrow>
-        (\<exists> p q.
-           s' = instr_multistep p s \<and>
-           t' = instr_multistep q t \<and>
-           (s', t') \<in> uwr d)"
-
-definition has_secure_implementation :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
-  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
-  where
-  "has_secure_implementation s s' \<equiv>
-     if can_domain_switch (other_state s)
-       then has_secure_domainswitch s s'
-       else has_secure_nondomainswitch s s'"
 
 
 (*
@@ -761,8 +733,6 @@ lemma context_switch_to_d: "\<lbrakk>
   oops
 
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
-   reachable (other_state s);
-   reachable (other_state t);
    \<not> can_domain_switch (other_state s);
    \<not> can_domain_switch (other_state t);
    is_secure_nondomainswitch p\<^sub>s s;
@@ -779,8 +749,7 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
     apply(metis no_domainswitch_inv)
    apply(rule d_running)
           apply force
-         using touched_addrs_inv'
-         apply force
+         apply(solves\<open>meson touched_addrs_inv'\<close>)
         apply force
        apply force
       apply force
@@ -813,15 +782,75 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
 
 end
 
+locale time_protection_system =
+  unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
+  time_protection collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
+    read_cycles write_cycles do_read do_write store_time padding_regs_impact
+    empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
+    current_domain external_uwr pch_flush_cycles touched_addrs can_domain_switch
+  for A :: "('a,other_state,unit) data_type"
+  and s0 :: "other_state"
+  and current_domain :: "other_state \<Rightarrow> domain"
+  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  and policy :: "(domain \<times> domain) set"
+  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p"
+  and collides_in_pch :: "address rel"
+  and fch_read_impact :: "'fch_cachedness fch fch_impact"
+  and pch_read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  and fch_write_impact :: "'fch_cachedness fch fch_impact"
+  and pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
+  and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
+  and do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
+  and store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and empty_fch :: "'fch_cachedness fch"
+  and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
+  and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
+  and addr_domain :: "address \<Rightarrow> domain"
+  and addr_colour :: "address \<Rightarrow> colour"
+  and colour_userdomain :: "colour \<Rightarrow> userdomain"
+  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
+  and touched_addrs :: "other_state \<Rightarrow> address set"
+  and can_domain_switch :: "other_state \<Rightarrow> bool" +
+  fixes initial_regs :: "regs"
+  fixes initial_pch :: "'pch_cachedness pch"
+begin
+
+definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
+  "has_secure_domainswitch s s' \<equiv>
+     \<comment> \<open>Oblige the instantiator to ensure that in all possible reachable situations where the
+         uwr holds there exists a domain-switch implementation pair that would preserve it.\<close>
+     \<forall>d t t'. reachable (other_state t) \<and>
+       (s, t) \<in> uwr d \<and> \<comment> \<open>The \<open>uwr\<close> should give us \<open>can_domain_switch (other_state t)\<close>.\<close>
+       (other_state t, other_state t') \<in> Step () \<longrightarrow>
+        (\<exists> p q.
+           s' = instr_multistep p s \<and>
+           t' = instr_multistep q t \<and>
+           (s', t') \<in> uwr d)"
+
+definition has_secure_implementation :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+  where
+  "has_secure_implementation s s' \<equiv>
+     if can_domain_switch (other_state s)
+       then has_secure_domainswitch s s'
+       else has_secure_nondomainswitch s s'"
+
+end
+
 locale securely_implementable =
   time_protection_system A s0 current_domain external_uwr policy out
   collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
-  read_cycles write_cycles do_read do_write store_time initial_regs padding_regs_impact
-  empty_fch fch_flush_cycles initial_pch do_pch_flush addr_domain addr_colour colour_userdomain
-  pch_flush_cycles touched_addrs can_domain_switch
+  read_cycles write_cycles do_read do_write store_time padding_regs_impact
+  empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
+  pch_flush_cycles touched_addrs can_domain_switch initial_regs initial_pch
   for A :: "('a,other_state,unit) data_type"
   and s0 :: "other_state"
-  and current_domain :: "unit \<Rightarrow> other_state \<Rightarrow> domain"
+  and current_domain :: "other_state \<Rightarrow> domain"
   and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
   and policy :: "(domain \<times> domain) set"
   and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p"
@@ -1044,8 +1073,8 @@ theorem extended_confidentiality_u:
    using to_original_reachability apply force
   apply(prop_tac "uwr2 (other_state s) Sched (other_state t)")
    using uwr_to_external apply blast
-  apply(prop_tac "((current_domain () (other_state s), u) \<in> policy) \<longrightarrow>
-        uwr2 (other_state s) (current_domain () (other_state s)) (other_state t)")
+  apply(prop_tac "((current_domain (other_state s), u) \<in> policy) \<longrightarrow>
+        uwr2 (other_state s) (current_domain (other_state s)) (other_state t)")
    using uwr_to_external apply blast
   apply(prop_tac "uwr2 (other_state s) u (other_state t)")
    using uwr_to_external apply blast
