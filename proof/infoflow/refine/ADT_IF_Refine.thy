@@ -411,7 +411,7 @@ lemma handlePreemption_ex_abs[wp]:
   apply (rule hoare_pre)
    apply (rule corres_ex_abs_lift[OF handle_preemption_if_corres])
    apply (wp handle_preemption_if_invs)
-  apply (auto simp: ex_abs_def non_kernel_IRQs_empty domain_list_rel_eq domain_time_rel_eq)
+  apply (auto simp: ex_abs_def domain_list_rel_eq domain_time_rel_eq)
   done
 
 end
@@ -800,7 +800,7 @@ lemma abstract_invs:
         apply (rule hoare_pre)
          apply (wp handle_preemption_if_invs)
          apply (wp handle_preemption_if_valid_domain_time)
-        apply (clarsimp simp: non_kernel_IRQs_empty)
+        apply clarsimp
         done
      (* KernelSchedule \<rightarrow> KernelExit *)
      apply (rule preserves_lifts, simp add: full_invs_if_def)

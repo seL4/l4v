@@ -48,7 +48,7 @@ locale Finalise_IF_1 =
            and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
-     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   and set_notification_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      set_notification ntfnptr ntfn
@@ -1222,7 +1222,7 @@ next
                          \<and> einvs s \<and> replaceable s slot (fst fin) rv
                          \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                          \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
-                         \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
+                         \<and> (\<forall>t\<in>obj_refs_ac (fst fin). halted_if_tcb t s)
                          \<and> pas_refined aag s
                          \<and> emptyable slot s
                          \<and> simple_sched_action s

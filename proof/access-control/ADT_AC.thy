@@ -111,4 +111,13 @@ lemma do_user_op_respects:
 
 end
 
+
+lemma objs_valid_tcb_vtable:
+  "\<lbrakk> valid_objs s; get_tcb t s = Some tcb \<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
+  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (erule cte_wp_valid_cap[rotated])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
+    apply fastforce+
+  done
+
 end

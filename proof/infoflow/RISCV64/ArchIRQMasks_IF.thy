@@ -29,16 +29,6 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_mask
        wp: mapME_x_inv_wp preemption_point_inv
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
-(* FIXME IF: clagged from CNodeInv_R *)
-lemma no_irq_setVSpaceRoot:
-  "no_irq (setVSpaceRoot r a)"
-  unfolding setVSpaceRoot_def by wpsimp
-
-(* FIXME IF: clagged from CNodeInv_R *)
-lemma no_irq_hwASIDFlush:
-  "no_irq (hwASIDFlush r)"
-  unfolding hwASIDFlush_def by wpsimp
-
 crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: select_wp crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)

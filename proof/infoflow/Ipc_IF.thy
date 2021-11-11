@@ -709,7 +709,7 @@ lemma receive_signal_reads_respects:
   shows
   "reads_respects aag (l :: 'a subject_label)
      (valid_objs and pas_refined aag and (\<lambda>s. is_subject aag (cur_thread s))
-                 and K ((\<forall>ntfnptr \<in> Access.obj_refs cap.
+                 and K ((\<forall>ntfnptr \<in> obj_refs_ac cap.
                            (pasSubject aag, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag \<and>
                            is_subject aag thread)))
      (receive_signal thread cap is_blocking)"
@@ -1140,7 +1140,7 @@ lemma cancel_badged_sends_reads_respects:
 lemma get_cap_ret_is_subject':
   "\<lbrace>pas_refined aag and K (is_subject aag (fst ptr))\<rbrace>
    get_cap ptr
-   \<lbrace>\<lambda>rv s. is_cnode_cap rv \<longrightarrow> (\<forall>x\<in>Access.obj_refs rv. is_subject aag x)\<rbrace>"
+   \<lbrace>\<lambda>rv s. is_cnode_cap rv \<longrightarrow> (\<forall>x\<in>obj_refs_ac rv. is_subject aag x)\<rbrace>"
   apply (rule hoare_strengthen_post[OF get_cap_ret_is_subject])
   apply (clarsimp simp: is_cap_simps)
   done
@@ -2131,7 +2131,7 @@ lemma receive_signal_reads_respects_g:
        (valid_global_objs and valid_objs and valid_arch_state and valid_global_refs
                           and pspace_distinct and pas_refined aag and (\<lambda>s. thread \<noteq> idle_thread s)
                           and is_subject aag \<circ> cur_thread
-                          and K (\<forall>nptr\<in>Access.obj_refs cap.
+                          and K (\<forall>nptr\<in>obj_refs_ac cap.
                                    (pasSubject aag, Receive, pasObjectAbs aag nptr) \<in> pasPolicy aag
                                  \<and> is_subject aag thread))
        (receive_signal thread cap is_blocking)"

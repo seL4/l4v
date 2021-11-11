@@ -3751,7 +3751,9 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
             apply (word_bitwise, fastforce)
            apply (rule ext)
            apply (clarsimp split: if_splits)
-           apply (rule_tac n=level in vm_level_exhaust; clarsimp)
+           subgoal for level
+           by (induct level; simp only: size_maxPTLevel[simplified maxPTLevel_def, symmetric]
+                                        bit0.size_inj max_pt_level_def2)
           apply (clarsimp simp: s0_internal_def s0H_internal_def exst0_def cte_level_bits_def
                                 interrupt_state_relation_def irq_state_relation_def)
          apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)+

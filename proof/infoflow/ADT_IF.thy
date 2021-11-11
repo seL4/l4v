@@ -844,7 +844,7 @@ text \<open>
 \<close>
 definition handle_preemption_if :: "user_context \<Rightarrow> (user_context,det_ext) s_monad" where
   "handle_preemption_if tc \<equiv>
-   do irq \<leftarrow> do_machine_op (getActiveIRQ False);
+   do irq \<leftarrow> do_machine_op (getActiveIRQ True);
       when (irq \<noteq> None) $ handle_interrupt (the irq);
       return tc
    od"
@@ -964,12 +964,6 @@ locale ADT_IF_1 =
            and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  (* FIXME IF: malformed lemma *)
-  and handle_preemption_if_valid_sched[wp]:
-    "\<lbrace>valid_sched and invs and
-      (\<lambda>s. blah \<in> (non_kernel_IRQs :: irq set) \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
-     handle_preemption_if tc
-     \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   and handle_preemption_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   and schedule_if_idle_equiv[wp]:
@@ -988,9 +982,6 @@ locale ADT_IF_1 =
     "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs_if s\<rbrace>"
   and valid_vspace_objs_if_ms_update[simp]:
     "\<And>f. valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
-  (* FIXME IF: precludes ARM_HYP *)
-  and non_kernel_IRQs_empty:
-    "(non_kernel_IRQs :: irq set) = {}"
   and do_user_op_if_irq_state_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and do_user_op_if_irq_masks_of_state:
@@ -1931,6 +1922,17 @@ lemma Init_ADT_if:
   "Init (ADT_A_if utf) = (\<lambda>s. {s} \<inter> full_invs_if \<inter> {s. step_restrict s})"
   by (simp add: ADT_A_if_def)
 
+lemma handle_preemption_if_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs\<rbrace>
+   handle_preemption_if irq
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (wpsimp simp: handle_preemption_if_def cong: if_cong)
+   apply (rule_tac Q="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
+                in hoare_strengthen_post[rotated])
+    apply clarsimp
+   apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
+  done
+
 
 locale ADT_valid_initial_state =
   ADT_IF_1 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
@@ -2006,7 +2008,7 @@ lemma invs_if_Step_ADT_A_if:
           apply (wp handle_preemption_if_invs handle_preemption_if_domain_sep_inv
                     handle_preemption_if_domain_time_sched_action[OF num_domains_sanity]
                     handle_preemption_if_det_inv ct_idle_lift)
-         apply (fastforce simp: non_kernel_IRQs_empty)
+         apply fastforce
         apply (simp add: kernel_schedule_if_def | elim exE conjE)+
         apply (erule use_valid)
          apply ((wp schedule_if_ct_running_or_ct_idle schedule_if_domain_time_nonzero'

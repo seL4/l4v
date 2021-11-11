@@ -378,6 +378,10 @@ lemma integrity_asids_update_reference_state[Noninterference_assms]:
    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
   by clarsimp
 
+lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:
+  "getActiveIRQ True = getActiveIRQ False"
+  by (clarsimp simp: getActiveIRQ_def non_kernel_IRQs_def)
+
 end
 
 context begin interpretation Arch .

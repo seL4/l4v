@@ -98,7 +98,7 @@ next
                                           \<and> P s
                                           \<and> replaceable s slot (fst fin) rv
                                           \<and> emptyable slot s
-                                          \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
+                                          \<and> (\<forall>t\<in>obj_refs_ac (fst fin). halted_if_tcb t s)
                                           \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s"
                      in hoare_vcg_conj_lift)
          apply (wp finalise_cap_invs[where slot=slot]

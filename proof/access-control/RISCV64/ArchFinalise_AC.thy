@@ -126,11 +126,11 @@ lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
 lemma arch_finalise_cap_obj_refs[Finalise_AC_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
    arch_finalise_cap acap slot
-   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs (fst rv). P x\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
 lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
-  "\<lbrace>\<top>\<rbrace> arch_finalise_cap arch_cap ex \<lbrace>\<lambda>rv s. \<forall>t\<in>Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> arch_finalise_cap arch_cap ex \<lbrace>\<lambda>rv s. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
   by (wpsimp simp: valid_cap_def split: option.split bool.split)+
 
