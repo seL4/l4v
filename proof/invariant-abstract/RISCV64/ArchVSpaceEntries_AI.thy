@@ -332,7 +332,7 @@ crunches activate_thread,switch_to_thread, handle_hypervisor_fault,
          handle_send, handle_yield, handle_interrupt, check_budget_restart, update_time_stamp,
          schedule_choose_new_thread, activate_thread, switch_to_thread, check_domain_time
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
-  (simp: crunch_simps wp: crunch_wps
+  (simp: crunch_simps wp: crunch_wps hoare_vcg_all_lift
    ignore: without_preemption getActiveIRQ resetTimer ackInterrupt update_sk_obj_ref)
 
 crunches awaken, sc_and_timer
