@@ -55,19 +55,14 @@ type_synonym ('fch,'pch) pch_impact = "address \<Rightarrow> 'fch \<Rightarrow> 
 
 type_synonym time = nat
 
-typedecl regs
-typedecl other_state
-typedecl colour
+datatype 'userdomain domain = Sched | User 'userdomain
 
-typedecl userdomain
-datatype domain = Sched | User userdomain
-
-record ('fch_cachedness,'pch_cachedness) state =
+record ('fch_cachedness,'pch_cachedness,'regs,'other_state) state =
   fch :: "'fch_cachedness fch" \<comment> \<open> flushable cache\<close>
   pch :: "'pch_cachedness pch" \<comment> \<open> partitionable cache \<close>
   tm :: time
-  regs :: regs
-  other_state :: other_state
+  regs :: 'regs
+  other_state :: 'other_state
 
 
 locale time_protection =
@@ -101,12 +96,12 @@ locale time_protection =
   fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
 
-  fixes do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
-  fixes do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
+  fixes do_read :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  fixes do_write :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'other_state"
 
-  fixes store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  fixes store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
 
-  fixes padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  fixes padding_regs_impact :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
 
   fixes empty_fch :: "'fch_cachedness fch"
   fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
@@ -114,9 +109,9 @@ locale time_protection =
   fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
   \<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
 
-  fixes addr_domain :: "address \<Rightarrow> domain" \<comment> \<open>for each address, this is the security domain\<close>
-  fixes addr_colour :: "address \<Rightarrow> colour" \<comment> \<open>for each address, this is the cache colour\<close>
-  fixes colour_userdomain :: "colour \<Rightarrow> userdomain"
+  fixes addr_domain :: "address \<Rightarrow> 'userdomain domain" \<comment> \<open>for each address, this is the security domain\<close>
+  fixes addr_colour :: "address \<Rightarrow> 'colour" \<comment> \<open>for each address, this is the cache colour\<close>
+  fixes colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   assumes colours_not_shared: "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
   assumes no_cross_colour_collisions:
     "(a1, a2) \<in> collides_in_pch \<Longrightarrow> addr_colour a1 = addr_colour a2"
@@ -126,8 +121,8 @@ locale time_protection =
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
 
-  fixes current_domain :: "other_state \<Rightarrow> domain"
-  fixes external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
+  fixes current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
+  fixes external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
   assumes external_uwr_equiv_rel:
     "equiv UNIV (external_uwr d)"
   (* The parent locale requires current_domain to be equated by Sched uwr, which confidentiality_u
@@ -156,20 +151,21 @@ locale time_protection =
 
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
-  fixes touched_addrs :: "other_state \<Rightarrow> address set"
+  fixes touched_addrs :: "'other_state \<Rightarrow> address set"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
   (* We expect this to be true for, say, seL4's KSched \<rightarrow> KExit step. -robs. *)
-  fixes can_domain_switch :: "other_state \<Rightarrow> bool"
+  fixes can_domain_switch :: "'other_state \<Rightarrow> bool"
   assumes can_domain_switch_public:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> can_domain_switch s1 = can_domain_switch s2"
 begin
 
-definition all_addrs_of :: "domain \<Rightarrow> address set" where
+definition all_addrs_of :: "'userdomain domain \<Rightarrow> address set" where
   "all_addrs_of d = {a. addr_domain a = d}"
 
-abbreviation current_domain' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> domain" where
+abbreviation current_domain' :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> 'userdomain domain"
+  where
   "current_domain' s \<equiv> current_domain (other_state s)"
 
 abbreviation collision_set :: "address \<Rightarrow> address set" where
@@ -187,14 +183,16 @@ definition kernel_shared_precise :: "address set" where
 definition kernel_shared_expanded :: "address set" where
   "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
 
-abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> address set" where
+abbreviation touched_addrs' ::
+  "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> address set"
+  where
   "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
-definition touched_addrs_inv :: "other_state \<Rightarrow> bool" where
+definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
      touched_addrs s \<subseteq> all_addrs_of (current_domain s) \<union> kernel_shared_precise"
 
-abbreviation touched_addrs_inv' :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool" where
+abbreviation touched_addrs_inv' :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool" where
   "touched_addrs_inv' s \<equiv> touched_addrs_inv (other_state s)"
 
 
@@ -232,20 +230,23 @@ abbreviation touched_addrs_inv' :: "('fch_cachedness,'pch_cachedness)state \<Rig
 
 *)
 
-definition pch_same_for_domain :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+definition pch_same_for_domain ::
+  "'userdomain domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
   where
  "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> p1 a = p2 a"
 
-definition pch_same_for_domain_and_shared :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+definition pch_same_for_domain_and_shared ::
+  "'userdomain domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
   where
  "pch_same_for_domain_and_shared d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<or> a \<in> kernel_shared_expanded \<longrightarrow> p1 a = p2 a"
 
-definition pch_same_for_domain_except_shared :: "domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
+definition pch_same_for_domain_except_shared ::
+  "'userdomain domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
   where
  "pch_same_for_domain_except_shared d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<and> a \<notin> kernel_shared_expanded \<longrightarrow> p1 a = p2 a"
 
-definition uwr_running :: "domain \<Rightarrow>
-  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
+definition uwr_running ::
+  "'userdomain domain \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state rel"
   where
   "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
                             \<and> pch_same_for_domain_and_shared d (pch s1) (pch s2)
@@ -255,15 +256,15 @@ definition uwr_running :: "domain \<Rightarrow>
 \<comment> \<open>how do we know we have the same program?\<close>
 
 
-definition uwr_notrunning :: "domain \<Rightarrow>
-  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
+definition uwr_notrunning ::
+  "'userdomain domain \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state rel"
   where
   "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain_except_shared d (pch s1) (pch s2)
                                \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
 \<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
 
-definition uwr :: "domain \<Rightarrow>
-  (('fch_cachedness,'pch_cachedness) state \<times> ('fch_cachedness,'pch_cachedness) state) set"
+definition uwr ::
+  "'userdomain domain \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state rel"
   where
   "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
                       then (s1, s2) \<in> uwr_running d
@@ -363,9 +364,9 @@ lemma extended_uwr_equiv_rel:
 *)
 
 (* now we make some basic isntructions, which contain addresses etc *)
-datatype instr = IRead address
+datatype 'r instr = IRead address
                | IWrite address
-               | IRegs "regs \<Rightarrow> regs"
+               | IRegs "'r \<Rightarrow> 'r"
                | IFlushL1
                | IFlushL2 "address set"
                | IReadTime
@@ -373,9 +374,9 @@ datatype instr = IRead address
 
 
 primrec
-  instr_step :: "instr \<Rightarrow>
-    ('fch_cachedness, 'pch_cachedness) state \<Rightarrow>
-    ('fch_cachedness, 'pch_cachedness) state" where
+  instr_step :: "'regs instr \<Rightarrow>
+    ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
+    ('fch_cachedness,'pch_cachedness,'regs,'other_state)state" where
  "instr_step (IRead a) s =
       s\<lparr>fch := fch_read_impact a (fch s),
         pch := pch_read_impact a (fch s) (pch s),
@@ -436,11 +437,11 @@ definition
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 *)
 
-type_synonym program = "instr list"
+type_synonym 'r program = "'r instr list"
 
-primrec instr_multistep :: "program \<Rightarrow>
-  ('fch_cachedness, 'pch_cachedness) state \<Rightarrow>
-  ('fch_cachedness, 'pch_cachedness) state" where
+primrec instr_multistep :: "'regs program \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state" where
   "instr_multistep [] s = s"
 | "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
 
@@ -449,7 +450,7 @@ primrec instr_multistep :: "program \<Rightarrow>
 
 
 definition
-  instrs_obeying_ta :: "address set \<Rightarrow> instr set" where
+  instrs_obeying_ta :: "address set \<Rightarrow> 'regs instr set" where
  "instrs_obeying_ta ta \<equiv> {i. case i of
                             IRead a  \<Rightarrow> a \<in> ta
                           | IWrite a \<Rightarrow> a \<in> ta
@@ -459,7 +460,7 @@ definition
 
 (* these are the programs that could have created this ta *)
 definition
-  programs_obeying_ta :: "address set \<Rightarrow> program set" where
+  programs_obeying_ta :: "address set \<Rightarrow> 'regs program set" where
  "programs_obeying_ta ta \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta ta) p}"
 
 
@@ -468,13 +469,13 @@ lemma hd_instr_obeying_ta [dest]:
   by (force simp:programs_obeying_ta_def)
 
 
-primrec program_no_domainswitch :: "program \<Rightarrow> bool" where
+primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
   "program_no_domainswitch [] = True" |
   "program_no_domainswitch (i#is) =
      ((\<forall> s. current_domain' s = current_domain' (instr_step i s)) \<and> program_no_domainswitch is)"
 
 definition
-  programs_no_domainswitch :: "program set" where
+  programs_no_domainswitch :: "'regs program set" where
   "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
 
 lemma no_domainswitch_inv:
@@ -483,15 +484,16 @@ lemma no_domainswitch_inv:
    apply force
   by force
 
-definition is_secure_nondomainswitch :: "program \<Rightarrow> ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+definition is_secure_nondomainswitch ::
+  "'regs program \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
   where
   "is_secure_nondomainswitch p s \<equiv>
       \<comment> \<open>Oblige the original system not to reach any system-step that would require either
           (1) straying out of touched_addresses or (2) switching domains to implement.\<close>
       p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_no_domainswitch"
 
-definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
-  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
   where
   "has_secure_nondomainswitch s s' \<equiv>
      \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s"
@@ -789,12 +791,12 @@ locale time_protection_system =
     read_cycles write_cycles do_read do_write store_time padding_regs_impact
     empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
     current_domain external_uwr pch_flush_cycles touched_addrs can_domain_switch
-  for A :: "('a,other_state,unit) data_type"
-  and s0 :: "other_state"
-  and current_domain :: "other_state \<Rightarrow> domain"
-  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
-  and policy :: "(domain \<times> domain) set"
-  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p"
+  for A :: "('a,'other_state,unit) data_type"
+  and s0 :: "'other_state"
+  and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
+  and external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
+  and policy :: "('userdomain domain \<times> 'userdomain domain) set"
+  and out :: "'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
   and collides_in_pch :: "address rel"
   and fch_read_impact :: "'fch_cachedness fch fch_impact"
   and pch_read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
@@ -802,28 +804,28 @@ locale time_protection_system =
   and pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
   and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-  and do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
-  and do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
-  and store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
-  and padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and do_read :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  and do_write :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'other_state"
+  and store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  and padding_regs_impact :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
   and empty_fch :: "'fch_cachedness fch"
   and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
   and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
-  and addr_domain :: "address \<Rightarrow> domain"
-  and addr_colour :: "address \<Rightarrow> colour"
-  and colour_userdomain :: "colour \<Rightarrow> userdomain"
+  and addr_domain :: "address \<Rightarrow> 'userdomain domain"
+  and addr_colour :: "address \<Rightarrow> 'colour"
+  and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
-  and touched_addrs :: "other_state \<Rightarrow> address set"
-  and can_domain_switch :: "other_state \<Rightarrow> bool" +
-  fixes initial_regs :: "regs"
+  and touched_addrs :: "'other_state \<Rightarrow> address set"
+  and can_domain_switch :: "'other_state \<Rightarrow> bool" +
+  fixes initial_regs :: "'regs"
   fixes initial_pch :: "'pch_cachedness pch"
   assumes touched_addrs_inv:
     "reachable s \<Longrightarrow> touched_addrs_inv s"
 
 begin
 
-definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
-  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
   where
   "has_secure_domainswitch s s' \<equiv>
      \<comment> \<open>Oblige the instantiator to ensure that in all possible reachable situations where the
@@ -836,8 +838,8 @@ definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<
            t' = instr_multistep q t \<and>
            (s', t') \<in> uwr d)"
 
-definition has_secure_implementation :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
-  ('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool"
+definition has_secure_implementation :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
   where
   "has_secure_implementation s s' \<equiv>
      if can_domain_switch (other_state s)
@@ -852,12 +854,13 @@ locale securely_implementable =
   read_cycles write_cycles do_read do_write store_time padding_regs_impact
   empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
   pch_flush_cycles touched_addrs can_domain_switch initial_regs initial_pch
-  for A :: "('a,other_state,unit) data_type"
-  and s0 :: "other_state"
-  and current_domain :: "other_state \<Rightarrow> domain"
-  and external_uwr :: "domain \<Rightarrow> (other_state \<times> other_state) set"
-  and policy :: "(domain \<times> domain) set"
-  and out :: "domain \<Rightarrow> other_state \<Rightarrow> 'p"
+
+  for A :: "('a,'other_state,unit) data_type"
+  and s0 :: "'other_state"
+  and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
+  and external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
+  and policy :: "('userdomain domain \<times> 'userdomain domain) set"
+  and out :: "'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
   and collides_in_pch :: "address rel"
   and fch_read_impact :: "'fch_cachedness fch fch_impact"
   and pch_read_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
@@ -865,21 +868,21 @@ locale securely_implementable =
   and pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
   and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-  and do_read :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> regs"
-  and do_write :: "address \<Rightarrow> other_state \<Rightarrow> regs \<Rightarrow> other_state"
-  and store_time :: "time \<Rightarrow> regs \<Rightarrow> regs"
-  and initial_regs :: "regs"
-  and padding_regs_impact :: "time \<Rightarrow> regs \<Rightarrow> regs"
+  and do_read :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  and do_write :: "address \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'other_state"
+  and store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  and padding_regs_impact :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
   and empty_fch :: "'fch_cachedness fch"
   and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
-  and initial_pch :: "'pch_cachedness pch"
   and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
-  and addr_domain :: "address \<Rightarrow> domain"
-  and addr_colour :: "address \<Rightarrow> colour"
-  and colour_userdomain :: "colour \<Rightarrow> userdomain"
+  and addr_domain :: "address \<Rightarrow> 'userdomain domain"
+  and addr_colour :: "address \<Rightarrow> 'colour"
+  and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
-  and touched_addrs :: "other_state \<Rightarrow> address set"
-  and can_domain_switch :: "other_state \<Rightarrow> bool" +
+  and touched_addrs :: "'other_state \<Rightarrow> address set"
+  and can_domain_switch :: "'other_state \<Rightarrow> bool"
+  and initial_regs :: "'regs"
+  and initial_pch :: "'pch_cachedness pch" +
   assumes reachable_steps_have_secure_implementation_specific:
     "(\<And> s s'.
        reachable (other_state s) \<Longrightarrow>
@@ -896,18 +899,21 @@ lemma reachable_steps_have_secure_implementation_nonspecific:
   by (metis state.select_convs(5))
 
 definition A_extended_Step :: "unit \<Rightarrow>
-  (('fch_cachedness,'pch_cachedness)state \<times> ('fch_cachedness,'pch_cachedness)state) set"
+  ('fch_cachedness,'pch_cachedness,'regs,'other_state)state rel"
   where
   "A_extended_Step \<equiv> \<lambda>_. {(s, s').
      (other_state s, other_state s') \<in> Step () \<and>
      has_secure_implementation s s'}"
 
 definition A_extended ::
-  "(('fch_cachedness,'pch_cachedness)state,('fch_cachedness,'pch_cachedness)state,unit) data_type"
+  "(('fch_cachedness,'pch_cachedness,'regs,'other_state)state,
+    ('fch_cachedness,'pch_cachedness,'regs,'other_state)state,unit) data_type"
   where
   "A_extended = \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = A_extended_Step \<rparr>"
 
-definition A_extended_state :: "other_state \<Rightarrow> ('fch_cachedness,'pch_cachedness)state" where
+definition A_extended_state ::
+  "'other_state \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state"
+  where
   "A_extended_state s =
      \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
 
@@ -972,7 +978,7 @@ lemma to_original_reachability:
 
 lemma to_extended_step_enabledness:
  "\<lbrakk>reachable (other_state s);
-   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness)state)) \<in> Step ()
+   \<exists>s'. (other_state s, other_state (s'::('fch_cachedness,'pch_cachedness,'regs,'other_state)state)) \<in> Step ()
   \<rbrakk> \<Longrightarrow> \<exists>s'. (s, s') \<in> system.Step A_extended ()"
   apply clarsimp
   apply(frule_tac os'="other_state s'" in reachable_steps_have_secure_implementation_nonspecific)
