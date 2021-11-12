@@ -1108,5 +1108,10 @@ theorem extended_confidentiality_u:
   apply(force simp:touched_addrs_inv intro:programs_obeying_ta_preserve_uwr)
   done
 
+theorem extended_Nonleakage:
+  "Nonleakage_gen \<Longrightarrow> tpni.Nonleakage_gen"
+  using Nonleakage_gen_confidentiality_u extended_confidentiality_u tpni.Nonleakage_gen
+  by blast
+
 end
 end
