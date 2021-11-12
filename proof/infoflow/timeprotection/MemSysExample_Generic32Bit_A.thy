@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory MemSysExample_RISCV64_A
+theory MemSysExample_Generic32Bit_A
 imports TimeProtection
 begin
 
-(* RISCV64 example memory system A:
-  - 8-way 32KiB L1-D (write-through)
-  - 4-way 16KiB L1-I
-  - ?-way 512KiB L2 (write-back) *)
+(* Generic 32-bit example memory system A:
+  - L1-D (write-through)
+  - L2 (write-back) *)
 
 (* Recall this is just for the L2 cache. *)
 definition collision_set_A :: "address \<Rightarrow> address set" where
