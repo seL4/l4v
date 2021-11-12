@@ -157,9 +157,6 @@ locale time_protection =
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
   fixes touched_addrs :: "other_state \<Rightarrow> address set"
-  assumes touched_addrs_inv:
-    "reachable s \<Longrightarrow>
-     touched_addrs s \<subseteq> {a. addr_domain a = (current_domain s)} \<union> {a. addr_domain a = Sched}"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
@@ -193,11 +190,13 @@ definition kernel_shared_expanded :: "address set" where
 abbreviation touched_addrs' :: "('fch_cachedness,'pch_cachedness) state \<Rightarrow> address set" where
   "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
-lemma touched_addrs_inv':
-  "reachable (other_state s) \<Longrightarrow>
-   touched_addrs' s \<subseteq> all_addrs_of (current_domain' s) \<union> kernel_shared_precise"
-  using touched_addrs_inv unfolding all_addrs_of_def kernel_shared_precise_def
-  by simp
+definition touched_addrs_inv :: "other_state \<Rightarrow> bool" where
+  "touched_addrs_inv s \<equiv>
+     touched_addrs s \<subseteq> all_addrs_of (current_domain s) \<union> kernel_shared_precise"
+
+abbreviation touched_addrs_inv' :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow> bool" where
+  "touched_addrs_inv' s \<equiv> touched_addrs_inv (other_state s)"
+
 
 (*
 
@@ -735,6 +734,8 @@ lemma context_switch_to_d: "\<lbrakk>
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    \<not> can_domain_switch (other_state s);
    \<not> can_domain_switch (other_state t);
+   touched_addrs_inv' s;
+   touched_addrs_inv' t;
    is_secure_nondomainswitch p\<^sub>s s;
    is_secure_nondomainswitch p\<^sub>t t;
    (s, t) \<in> uwr d;
@@ -749,7 +750,7 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
     apply(metis no_domainswitch_inv)
    apply(rule d_running)
           apply force
-         apply(solves\<open>meson touched_addrs_inv'\<close>)
+         apply(force simp:touched_addrs_inv_def)
         apply force
        apply force
       apply force
@@ -816,6 +817,9 @@ locale time_protection_system =
   and can_domain_switch :: "other_state \<Rightarrow> bool" +
   fixes initial_regs :: "regs"
   fixes initial_pch :: "'pch_cachedness pch"
+  assumes touched_addrs_inv:
+    "reachable s \<Longrightarrow> touched_addrs_inv s"
+
 begin
 
 definition has_secure_domainswitch :: "('fch_cachedness,'pch_cachedness)state \<Rightarrow>
@@ -1095,7 +1099,7 @@ theorem extended_confidentiality_u:
    apply(metis enabled_Step reachable_steps_have_secure_implementation_nonspecific tpni.uwr_sym tpni.uwr_trans) *)
   apply(clarsimp simp:has_secure_nondomainswitch_def)
   apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
-  apply(force intro:programs_obeying_ta_preserve_uwr)
+  apply(force simp:touched_addrs_inv intro:programs_obeying_ta_preserve_uwr)
   done
 
 end
