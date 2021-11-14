@@ -9,7 +9,7 @@ section "Solving Word Equalities"
 theory Word_EqI
   imports
     More_Word
-    Traditional_Infix_Syntax
+    Aligned
     "HOL-Eisbach.Eisbach_Tools"
 begin
 
@@ -23,23 +23,27 @@ named_theorems word_eqI_simps
 
 lemmas [word_eqI_simps] =
   word_ops_nth_size
+  word_ao_nth
+  bit_mask_iff
   word_size
   word_or_zero
   neg_mask_test_bit
   nth_ucast
-  nth_w2p nth_shiftl
-  nth_shiftr
+  nth_w2p bit_push_bit_iff
+  bit_drop_bit_eq
   less_2p_is_upper_bits_unset
   le_mask_high_bits
   bang_eq
   neg_test_bit
   is_up
   is_down
+  is_aligned_nth
+  neg_mask_le_high_bits
 
 lemmas word_eqI_rule = word_eqI [rule_format]
 
 lemma test_bit_lenD:
-  "x !! n \<Longrightarrow> n < LENGTH('a) \<and> x !! n" for x :: "'a :: len word"
+  "bit x n \<Longrightarrow> n < LENGTH('a) \<and> bit x n" for x :: "'a :: len word"
   by (fastforce dest: test_bit_size simp: word_size)
 
 method word_eqI uses simp simp_del split split_del cong flip =

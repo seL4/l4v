@@ -7,7 +7,8 @@
 section \<open>Comprehension syntax for bit expressions\<close>
 
 theory Bit_Comprehension
-  imports "HOL-Library.Word"
+  imports
+    "HOL-Library.Word"
 begin
 
 class bit_comprehension = ring_bit_operations +
@@ -72,7 +73,7 @@ instance by standard
 
 end
 
-lemma bit_set_bits_word_iff:
+lemma bit_set_bits_word_iff [bit_simps]:
   \<open>bit (set_bits P :: 'a::len word) n \<longleftrightarrow> n < LENGTH('a) \<and> P n\<close>
   by (auto simp add: word_set_bits_def bit_horner_sum_bit_word_iff)
 
@@ -100,7 +101,7 @@ proof (cases \<open>\<exists>n. \<forall>m\<ge>n. f m \<longleftrightarrow> f n\
   then have n: \<open>\<And>m. n \<le> m \<Longrightarrow> f m \<longleftrightarrow> f n\<close>
     by blast
   from n_def have n_eq: \<open>(LEAST q. \<forall>m\<ge>q. f m \<longleftrightarrow> f n) = n\<close>
-    by (smt Least_equality Least_le \<open>\<forall>m\<ge>n. f m = f n\<close> dual_order.refl le_refl n order_refl)
+    by (smt (verit, best) Least_le \<open>\<forall>m\<ge>n. f m = f n\<close> dual_order.antisym wellorder_Least_lemma(1))
   show ?thesis
   proof (cases \<open>f n\<close>)
     case False

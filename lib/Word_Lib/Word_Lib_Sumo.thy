@@ -10,8 +10,8 @@ theory Word_Lib_Sumo
 imports
   "HOL-Library.Word"
   Aligned
-  Ancient_Numeral
   Bit_Comprehension
+  Bit_Shifts_Infix_Syntax
   Bits_Int
   Bitwise_Signed
   Bitwise
@@ -32,7 +32,7 @@ imports
   Reversed_Bit_Lists
   Rsplit
   Signed_Words
-  Traditional_Infix_Syntax
+  Syntax_Bundles
   Typedef_Morphisms
   Type_Syntax
   Word_EqI
@@ -42,13 +42,15 @@ imports
   Word_32
   Word_Syntax
   Signed_Division_Word
+  Singleton_Bit_Shifts
   More_Word_Operations
   Many_More
-  Word_Lemmas_Internal
-  Word_Lemmas_Prefix
 begin
 
-declare word_induct2[case_names zero suc, induct type]
+unbundle bit_operations_syntax
+unbundle bit_projection_infix_syntax
+
+declare word_induct2[induct type]
 declare word_nat_cases[cases type]
 
 declare signed_take_bit_Suc [simp]
@@ -58,13 +60,7 @@ lemmas of_int_and_nat = unsigned_of_nat unsigned_of_int signed_of_int signed_of_
 
 bundle no_take_bit
 begin
-  declare of_int_and_nat[simp del]
-end
-
-bundle no_0_dvd
-begin
-  declare word_of_int_eq_0_iff[simp del]
-  declare word_of_nat_eq_0_iff[simp del]
+declare of_int_and_nat[simp del]
 end
 
 lemmas bshiftr1_def = bshiftr1_eq
@@ -103,11 +99,6 @@ lemmas word_prev_def = word_prev_unfold
 
 lemmas is_aligned_def = is_aligned_iff_dvd_nat
 
-lemma shiftl_transfer [transfer_rule]:
-  includes lifting_syntax
-  shows "(pcr_word ===> (=) ===> pcr_word) (<<) (<<)"
-  by (unfold shiftl_eq_push_bit) transfer_prover
-
 lemmas word_and_max_simps =
   word8_and_max_simp
   word16_and_max_simp
@@ -132,7 +123,7 @@ declare of_nat_diff [simp]
 
 (* Haskellish names/syntax *)
 notation (input)
-  test_bit ("testBit")
+  bit ("testBit")
 
 lemmas cast_simps = cast_simps ucast_down_bl
 
@@ -140,6 +131,6 @@ lemmas cast_simps = cast_simps ucast_down_bl
 lemma nth_ucast:
   "(ucast (w::'a::len word)::'b::len word) !! n =
    (w !! n \<and> n < min LENGTH('a) LENGTH('b))"
-  by transfer (simp add: bit_take_bit_iff ac_simps)
+  by (auto simp add: bit_simps not_le dest: bit_imp_le_length)
 
 end
