@@ -11,7 +11,7 @@ section \<open>Operation variant for the least significant bit\<close>
 theory Least_significant_bit
   imports
     "HOL-Library.Word"
-    Bits_Int
+    More_Word
 begin
 
 class lsb = semiring_bits +
@@ -22,14 +22,14 @@ instantiation int :: lsb
 begin
 
 definition lsb_int :: \<open>int \<Rightarrow> bool\<close>
-  where \<open>lsb i = i !! 0\<close> for i :: int
+  where \<open>lsb i = bit i 0\<close> for i :: int
 
 instance
   by standard (simp add: fun_eq_iff lsb_int_def)
 
 end
 
-lemma bin_last_conv_lsb: "bin_last = lsb"
+lemma bin_last_conv_lsb: "odd = (lsb :: int \<Rightarrow> bool)"
   by (simp add: lsb_odd)
 
 lemma int_lsb_numeral [simp]:
@@ -62,9 +62,9 @@ lemma lsb_word_eq:
   \<open>lsb = (odd :: 'a word \<Rightarrow> bool)\<close> for w :: \<open>'a::len word\<close>
   by (fact lsb_odd)
 
-lemma word_lsb_alt: "lsb w = test_bit w 0"
+lemma word_lsb_alt: "lsb w = bit w 0"
   for w :: "'a::len word"
-  by (auto simp: word_test_bit_def word_lsb_def)
+  by (simp add: lsb_word_eq)
 
 lemma word_lsb_1_0 [simp]: "lsb (1::'a::len word) \<and> \<not> lsb (0::'b::len word)"
   unfolding word_lsb_def by simp
@@ -78,12 +78,12 @@ lemma word_lsb_int: "lsb w \<longleftrightarrow> uint w mod 2 = 1"
 lemmas word_ops_lsb = lsb0 [unfolded word_lsb_alt]
 
 lemma word_lsb_numeral [simp]:
-  "lsb (numeral bin :: 'a::len word) \<longleftrightarrow> bin_last (numeral bin)"
-  unfolding word_lsb_alt test_bit_numeral by simp
+  "lsb (numeral bin :: 'a::len word) \<longleftrightarrow> odd (numeral bin :: int)"
+  by (simp only: lsb_odd, transfer) rule
 
 lemma word_lsb_neg_numeral [simp]:
-  "lsb (- numeral bin :: 'a::len word) \<longleftrightarrow> bin_last (- numeral bin)"
-  by (simp add: word_lsb_alt)
+  "lsb (- numeral bin :: 'a::len word) \<longleftrightarrow> odd (- numeral bin :: int)"
+  by (simp only: lsb_odd, transfer) rule
 
 lemma word_lsb_nat:"lsb w = (unat w mod 2 = 1)"
   apply (simp add: word_lsb_def Groebner_Basis.algebra(31))

@@ -28,7 +28,7 @@ lemma strict_part_mono_singleton[simp]:
 
 lemma strict_part_mono_lt:
   "\<lbrakk> x < f 0; strict_part_mono {.. n :: nat} f \<rbrakk> \<Longrightarrow> \<forall>m \<le> n. x < f m"
-  by (metis atMost_iff le_0_eq le_cases neq0_conv order.strict_trans strict_part_mono_def)
+  by (auto simp add: strict_part_mono_def Ball_def intro: order.strict_trans)
 
 lemma strict_part_mono_reverseE:
   "\<lbrakk> f n \<le> f m; strict_part_mono {.. N :: nat} f; n \<le> N \<rbrakk> \<Longrightarrow> n \<le> m"

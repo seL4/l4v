@@ -22,7 +22,7 @@ lift_definition word_prev :: \<open>'a::len word \<Rightarrow> 'a word\<close>
 
 lemma word_next_unfold:
   \<open>word_next w = (if w = - 1 then - 1 else w + 1)\<close>
-  by transfer (simp add: take_bit_minus_one_eq_mask flip: take_bit_eq_mask_iff_exp_dvd)
+  by transfer (simp flip: take_bit_eq_mask_iff_exp_dvd)
 
 lemma word_prev_unfold:
   \<open>word_prev w = (if w = 0 then 0 else w - 1)\<close>
@@ -32,7 +32,7 @@ lemma [code]:
   \<open>Word.the_int (word_next w :: 'a::len word) =
     (if w = - 1 then Word.the_int w else Word.the_int w + 1)\<close>
   by transfer
-    (simp add: take_bit_minus_one_eq_mask mask_eq_exp_minus_1 take_bit_incr_eq flip: take_bit_eq_mask_iff_exp_dvd)
+    (simp add: mask_eq_exp_minus_1 take_bit_incr_eq flip: take_bit_eq_mask_iff_exp_dvd)
 
 lemma [code]:
   \<open>Word.the_int (word_prev w :: 'a::len word) =

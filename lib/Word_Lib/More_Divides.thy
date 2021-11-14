@@ -403,13 +403,11 @@ lemma two_pow_div_gt_le:
 lemma td_gal_lt:
   \<open>0 < c \<Longrightarrow> a < b * c \<longleftrightarrow> a div c < b\<close>
   for a b c :: nat
-  apply (auto dest: less_mult_imp_div_less)
-  apply (metis div_le_mono div_mult_self_is_m leD leI)
-  done
+  by (simp add: div_less_iff_less_mult)
 
 lemma td_gal:
   \<open>0 < c \<Longrightarrow> b * c \<le> a  \<longleftrightarrow> b \<le> a div c\<close>
   for a b c :: nat
-  by (meson not_le td_gal_lt)
+  by (simp add: less_eq_div_iff_mult_less_eq)
 
 end

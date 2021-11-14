@@ -18,7 +18,7 @@ struct
 
   fun tr' cnst ctxt typ ts = if Config.get ctxt show_word_types then
       case (Term.binder_types typ, Term.body_type typ) of
-        ([Type (@{type_name "word"}, [S])], Type (@{type_name "word"}, [T])) =>
+        ([\<^Type>\<open>word S\<close>], \<^Type>\<open>word T\<close>) =>
           list_comb
             (Syntax.const cnst $ Syntax_Phases.term_of_typ ctxt S $ Syntax_Phases.term_of_typ ctxt T
             , ts)

@@ -63,7 +63,7 @@ lemma minBound_word:
   by (simp add: minBound_def enum_word_def upt_conv_Cons)
 
 lemma maxBound_max_word:
-  "(maxBound::'a::len word) = max_word"
+  "(maxBound::'a::len word) = - 1"
   by (fact maxBound_word)
 
 lemma leq_maxBound [simp]:
@@ -294,5 +294,36 @@ lemma enum_word_div:
    apply simp
   apply simp
   done
+
+lemma remdups_enum_upto:
+  fixes s::"'a::len word"
+  shows "remdups [s .e. e] = [s .e. e]"
+  by simp
+
+lemma card_enum_upto:
+  fixes s::"'a::len word"
+  shows "card (set [s .e. e]) = Suc (unat e) - unat s"
+  by (subst List.card_set) (simp add: remdups_enum_upto)
+
+lemma length_upto_enum_one:
+  fixes x :: "'a :: len word"
+  assumes lt1: "x < y" and lt2: "z < y" and lt3: "x \<le> z"
+  shows "[x , y .e. z] = [x]"
+  unfolding upto_enum_step_def
+proof (subst upto_enum_red, subst if_not_P [OF leD [OF lt3]], clarsimp, rule conjI)
+  show "unat ((z - x) div (y - x)) = 0"
+  proof (subst unat_div, rule div_less)
+    have syx: "unat (y - x) = unat y - unat x"
+      by (rule unat_sub [OF order_less_imp_le]) fact
+    moreover have "unat (z - x) = unat z - unat x"
+      by (rule unat_sub) fact
+
+    ultimately show "unat (z - x) < unat (y - x)"
+      using lt2 lt3 unat_mono word_less_minus_mono_left by blast
+  qed
+
+  then show "(z - x) div (y - x) * (y - x) = 0"
+    by (simp add: unat_div) (simp add: word_arith_nat_defs(6))
+qed
 
 end
