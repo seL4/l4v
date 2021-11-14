@@ -45,6 +45,8 @@ imports
   Singleton_Bit_Shifts
   More_Word_Operations
   Many_More
+  Word_Lemmas_Internal
+  Word_Lemmas_Prefix
 begin
 
 unbundle bit_operations_syntax

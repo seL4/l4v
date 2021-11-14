@@ -14,8 +14,11 @@ text \<open>
 \<close>
 
 theory Word_Lemmas_Internal
-imports Word_Lemmas More_Word_Operations Many_More Word_Syntax
+imports Word_Lemmas More_Word_Operations Many_More Word_Syntax Syntax_Bundles
 begin
+
+unbundle bit_operations_syntax
+unbundle bit_projection_infix_syntax
 
 lemma signed_ge_zero_scast_eq_ucast:
  "0 <=s x \<Longrightarrow> scast x = ucast x"
@@ -496,10 +499,7 @@ lemma mask_to_bl_exists_True:
   apply (clarsimp simp: eq_zero_set_bl in_set_conv_nth)
   apply (subst (asm) to_bl_nth, clarsimp simp: word_size)
   apply (clarsimp simp: word_size)
-  apply (drule_tac x="LENGTH('a) - Suc i" in spec, simp)
-  apply (subst (asm) rev_nth, simp)
-  apply (subst (asm) to_bl_nth; clarsimp simp: word_size)
-  done
+  by (meson nth_mask test_bit_bl word_and_nth)
 
 lemma word_ctz_shiftr_1:
   fixes z::"'a::len word"
@@ -647,7 +647,7 @@ lemma ucast_down_0:
 
 lemma uint_minus_1_eq:
   \<open>uint (- 1 :: 'a word) = 2 ^ LENGTH('a::len) - 1\<close>
-  by transfer (simp add: take_bit_minus_one_eq_mask mask_eq_exp_minus_1)
+  by transfer (simp add: mask_eq_exp_minus_1)
 
 lemma FF_eq_minus_1:
   \<open>0xFF = (- 1 :: 8 word)\<close>
