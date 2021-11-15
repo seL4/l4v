@@ -1468,7 +1468,7 @@ lemma vref_for_level_eq_mono:
   "\<lbrakk> vref_for_level vref level = vref_for_level vref' level; level \<le> level' \<rbrakk> \<Longrightarrow>
   vref_for_level vref level' = vref_for_level vref' level'"
   unfolding vref_for_level_def
-  by (metis (no_types, hide_lams) pt_bits_left_mono mask_lower_twice)
+  by (metis (no_types, opaque_lifting) pt_bits_left_mono mask_lower_twice)
 
 lemma vref_for_level_eq_max_mono:
   "\<lbrakk> vref_for_level vref level = vref_for_level vref' level' \<rbrakk> \<Longrightarrow>
