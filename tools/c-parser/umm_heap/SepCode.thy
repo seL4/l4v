@@ -93,7 +93,7 @@ lemma singleton_t_dom [simp]:
     apply(simp add: ptr_retyp_None)
    apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
     apply(simp add: ptr_retyp_footprint list_map_eq split: if_split_asm)
-    apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+    apply(drule intvlD, clarsimp)
     apply(rule s_footprintI)
      apply(subst (asm) word_unat.eq_norm)
      apply(subst (asm) mod_less)
@@ -170,7 +170,7 @@ lemma ptr_retyp_tagd_exc:
    apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
     apply(subst (asm) ptr_retyp_footprint)
      apply simp
-    apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+    apply(drule intvlD, clarsimp)
     apply(subst (asm )word_unat.eq_norm)
     apply(subst (asm) mod_less)
      apply(subst len_of_addr_card)
@@ -188,7 +188,7 @@ lemma ptr_retyp_tagd_exc:
   apply(case_tac "a \<in> {ptr_val p..+size_of TYPE('a)}")
    apply(subst (asm) ptr_retyp_footprint)
     apply simp
-   apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+   apply(drule intvlD, clarsimp)
    apply(subst (asm )word_unat.eq_norm)
    apply(subst (asm) mod_less)
     apply(subst len_of_addr_card)
@@ -197,7 +197,7 @@ lemma ptr_retyp_tagd_exc:
    apply(subst (asm) list_map_eq)
    apply(clarsimp split: if_split_asm)
    apply(drule s_footprintD2)
-   apply(simp del: unsigned_of_nat)
+   apply simp
    apply(subst (asm) unat_of_nat)
    apply(subst (asm) mod_less)
     apply(subst len_of_addr_card)
@@ -315,7 +315,7 @@ lemma heap_update_list_value':
   apply (simp only: heap_update_list_value addr_card_def card_word)
   apply (rule if_cong; simp)
   apply (rule iffI)
-   apply (drule intvlD, clarsimp simp: unat_of_nat simp del: unsigned_of_nat)
+   apply (drule intvlD, clarsimp simp: unat_of_nat)
   apply (simp add: intvl_def unat_arith_simps(4) unat_of_nat split: if_split_asm)
    apply (rule_tac x="unat x - unat ptr" in exI, simp)
   apply (rule_tac x="unat x + 2^addr_bitsize - unat ptr" in exI)
@@ -772,7 +772,6 @@ lemma sep_map_field_unfold:
       export_uinfo t = typ_uinfo_t TYPE('b) \<rbrakk> \<Longrightarrow>
       (p \<mapsto>\<^sub>g\<^sup>F v) = (p \<mapsto>\<^sub>g\<^sup>({f}\<union>F) (v::'a::mem_type) \<and>\<^sup>*
           Ptr (&(p\<rightarrow>f)) \<mapsto>\<^sub>g' ((from_bytes (access_ti\<^sub>0 t v))::'b::mem_type))"
-  supply unsigned_of_nat[simp del]
   apply(rule ext)
   apply(rule iffI)
    apply(rule_tac s\<^sub>0="x |` (dom x - fs_footprint p {f})" and
@@ -1103,7 +1102,7 @@ lemma field_access_update_nth_disjD:
 lemma intvl_cut:
   "\<lbrakk> (x::addr) \<in> {p..+m}; x \<notin> {p+of_nat k..+n}; m < addr_card \<rbrakk> \<Longrightarrow>
       unat (x - p) < k \<or> k + n \<le> unat (x - p)"
-  apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+  apply(drule intvlD, clarsimp)
   apply(subst unat_of_nat, subst mod_less, subst len_of_addr_card)
    apply(erule (1) less_trans)
   apply(subst (asm) unat_of_nat, subst (asm) mod_less, subst len_of_addr_card)
@@ -1135,7 +1134,7 @@ lemma singleton_t_mask_out:
   apply(rule field_access_update_nth_disjD; simp?)
     apply(subst (asm) ptr_retyp_d_eq_fst)
     apply(clarsimp simp: empty_htd_def split: if_split_asm)
-    apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+    apply(drule intvlD, clarsimp)
     apply(subst unat_of_nat)
     apply(subst mod_less)
      apply(subst len_of_addr_card)

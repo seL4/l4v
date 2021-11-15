@@ -319,9 +319,9 @@ lemma intvl_plus_sub_Suc:
 
 lemma intvl_neq_start:
   "\<lbrakk> (q::'a::len word) \<in> {p..+n}; p \<noteq> q \<rbrakk> \<Longrightarrow> q \<in> {p + 1..+n - Suc 0}"
-  by (clarsimp simp: intvl_def)
-     (metis One_nat_def diff_Suc_1 less_Suc_eq_0_disj less_imp_Suc_add of_nat_Suc take_bit_eq_0_iff
-            take_bit_of_0)
+  apply (clarsimp simp: intvl_def)
+  by (metis One_nat_def Suc_eq_plus1 gr0_conv_Suc less_diff_conv not_gr_zero of_nat_Suc
+            semiring_1_class.of_nat_0)
 
 lemmas unat_simps' =
   word_arith_nat_defs unat_of_nat len_of_addr_card mod_less

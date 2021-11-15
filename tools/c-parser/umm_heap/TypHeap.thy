@@ -286,9 +286,7 @@ lemma typ_slice_t_not_empty [simp]:
 
 lemma list_map_typ_slice_t_not_empty [simp]:
   "list_map (typ_slice_t t n) \<noteq> Map.empty"
-  apply(simp add: list_map_def)
-  apply(cases "typ_slice_t t n", fastforce)
-  by (simp add: upt_rec)
+  by (simp add: list_map_def)
 
 lemma s_footprint:
   "s_footprint (p::'a::c_type ptr) =
@@ -299,7 +297,7 @@ lemma s_footprint:
 
 lemma ptr_val_SIndexVal_in_s_footprint [simp]:
   "(ptr_val p, SIndexVal) \<in> s_footprint (p::'a::mem_type ptr)"
-  by (force simp: s_footprint)
+  by (clarsimp simp: s_footprint) (metis Abs_fnat_hom_0 sz_nzero)
 
 lemma s_footprintI:
   "\<lbrakk> n < length (typ_slice_t (typ_uinfo_t TYPE('a)) x); x < size_of TYPE('a) \<rbrakk> \<Longrightarrow>
@@ -318,7 +316,7 @@ lemma s_footprintD2:
   "(x,SIndexTyp n) \<in> s_footprint (p::'a::mem_type ptr) \<Longrightarrow>
       n < length (typ_slice_t (typ_uinfo_t TYPE('a)) (unat (x - ptr_val p)))"
   by (clarsimp simp: s_footprint)
-     (metis addr_bitsize_def addr_card less_trans max_size take_bit_nat_eq_self)
+     (metis len_of_addr_card max_size nat_less_le of_nat_inverse order_less_le_trans)
 
 lemma s_footprint_restrict:
   "x \<in> s_footprint p \<Longrightarrow> (s |` s_footprint p) x = s x"
@@ -503,7 +501,7 @@ lemma h_t_valid_ptr_safe:
   "d,g \<Turnstile>\<^sub>t (p::'a::c_type ptr) \<Longrightarrow> ptr_safe p d"
   apply(clarsimp simp: ptr_safe_def h_t_valid_def valid_footprint_def s_footprint_def
                        s_footprint_untyped_def dom_s_def size_of_def Let_def)
-  by (metis (mono_tags, hide_lams) domIff list_map map_le_def option.simps(3) surj_pair)
+  by (metis (mono_tags) domIff list_map map_le_def option.simps(3) surj_pair)
 
 lemma lift_t_ptr_safe:
   "lift_t g (h,d) (p::'a::c_type ptr) = Some x \<Longrightarrow> ptr_safe p d"
@@ -803,7 +801,7 @@ lemma valid_footprint_neq_nmem:
   "\<lbrakk> valid_footprint d p f; valid_footprint d q g; p \<noteq> q; f \<bottom>\<^sub>t g \<or> f=g \<rbrakk> \<Longrightarrow> p \<notin> {q..+size_td g}"
   unfolding valid_footprint_def intvl_def Let_def
   by clarsimp
-     (metis add.right_neutral dvd_0_right map_prefix_same_cases semiring_1_class.of_nat_0
+     (metis add.right_neutral map_prefix_same_cases semiring_1_class.of_nat_0
             tag_disj_def tag_disj_prefix typ_slice_0_prefix zero_less_iff_neq_zero)
 
 lemma valid_footprint_sub:
@@ -1520,13 +1518,13 @@ lemma lift_t_field_ind:
    apply(simp add: size_of_def)
    apply(drule td_set_field_lookupD[where k="(c,da)"])
    apply(drule td_set_offset_size)
-   apply (metis (full_types) add.commute add_le_cancel_right le_trans take_bit_nat_less_eq_self)
+   apply(smt (verit) add.commute add_le_imp_le_right le_trans le_unat_uoi nat_le_linear)
   apply(rule intvl_sub_offset)
   apply(simp add: size_of_def)
   apply(drule td_set_field_lookupD)
   apply(drule td_set_offset_size)
-  by (metis (full_types) add.commute add_le_cancel_right le_trans take_bit_nat_less_eq_self)
-
+  apply(smt (verit) add.commute add_le_imp_le_right le_trans le_unat_uoi nat_le_linear)
+  done
 
 (* case where 'b contains a field of type of 'a *)
 
@@ -1559,8 +1557,9 @@ lemma field_of_t_nmem:
   apply(clarsimp simp: field_of_t_def field_of_def intvl_def)
   apply(drule td_set_offset_size)
   apply(simp add: addr_card_unat_minus size_of_def)
-  by (metis (no_types) addr_bitsize_def addr_card diff_diff_cancel le_diff_conv le_less_trans
-                       max_size nat_less_le size_of_def take_bit_nat_eq_self_iff)
+  apply(thin_tac "ptr_val q = x" for x)
+  by (metis (no_types, opaque_lifting) Nat.add_diff_assoc add.commute le_unat_uoi less_irrefl_nat
+            linorder_not_le max_size order_less_trans size_of_def trans_less_add1)
 
 lemma field_of_t_init_neq_disjoint:
   "field_of_t p (x::'b::mem_type ptr) \<Longrightarrow>
@@ -1572,13 +1571,12 @@ lemma field_of_t_init_neq_disjoint:
   apply(clarsimp simp: field_of_t_nmem)
   apply(drule intvlD)
   apply clarsimp
-  by (meson linorder_not_less take_bit_nat_less_eq_self)
+  by (metis le_unat_uoi nat_less_le)
 
 lemma field_of_t_final_neq_disjoint:
   "field_of_t (p::'a ptr) (x::'b ptr) \<Longrightarrow> {ptr_val p..+size_of TYPE('a::mem_type)} \<inter>
       {ptr_val p + of_nat (size_of TYPE('a))..+size_of TYPE('b::mem_type) -
           (unat (ptr_val p - ptr_val x) + size_of TYPE('a))} = {}"
-  supply unsigned_of_nat[simp del]
   apply(rule ccontr)
   apply(drule intvl_inter)
   apply(erule disjE)
@@ -2012,7 +2010,7 @@ lemma ptr_retyp_footprint:
   apply(subst htd_update_list_index; simp)
   apply(subst typ_slices_index; simp?)
   apply(drule intvlD, clarsimp)
-  by (meson le_less_trans take_bit_nat_less_eq_self)
+  by (metis le_def le_unat_uoi order_less_trans)
 
 lemma ptr_retyp_Some:
   "ptr_retyp (p::'a::mem_type ptr) d (ptr_val p) =
@@ -2140,7 +2138,7 @@ lemma ptr_retyp_valid_footprint:
   apply(subst ptr_retyp_footprint)
    apply(rule intvlI)
    apply(simp add: size_of_def)
-  apply(clarsimp simp del: unsigned_of_nat)
+  apply clarsimp
   by (metis (no_types) len_of_addr_card less_trans map_le_map_add max_size of_nat_inverse size_of_def)
 
 lemma ptr_retyp_h_t_valid:
@@ -2167,7 +2165,7 @@ lemma ptr_retyp_h_t_valid_same:
   apply(erule impE)
    apply(simp only: size_of_def [symmetric, where t="TYPE('a)"])
    apply(drule intvlD, clarsimp)
-   apply (meson le_less_trans take_bit_nat_less_eq_self)
+   apply (simp add: lt_size_of_unat_simps)
   apply(fastforce intro: map_add_le_mapI)
   done
 
@@ -2238,7 +2236,6 @@ proof -
     apply simp
     done
   from assms show ?thesis
-    supply unsigned_of_nat[simp del]
     apply(clarsimp simp: super_field_update_t_def)
     apply(rule ext)
     apply(clarsimp simp: field_lvalue_def split: option.splits)
