@@ -100,7 +100,6 @@ structure WPData = Generic_Data
     type T = wp_rules;
     val empty = {trips = ([], K I), rules = no_rules,
       splits = [], combs = [], unsafe_rules = []};
-    val extend = I;
 
     val merge = rules_merge;
 end);
