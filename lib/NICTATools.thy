@@ -13,14 +13,12 @@ imports
   (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
-  TSubst
   Time_Methods_Cmd
   Try_Attribute
   Repeat_Attribute
   Trace_Schematic_Insts
   Insulin
   ShowTypes
-  AutoLevity_Hooks
   Locale_Abbrev
   Value_Type
 begin

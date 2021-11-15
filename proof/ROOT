@@ -219,16 +219,3 @@ session SimplExport in "asmrefine/export" = CSpec +
     "$L4V_ARCH"
   theories
     "SEL4SimplExport"
-
-(*
- * Libraries
- *)
-(* unused:
-session AutoLevity = AutoLevity_Base +
-  theories
-   "../lib/autolevity_buckets/AutoLevity_Top"
-
-session AutoLevity_Base = Word_Lib +
-  theories
-    "../lib/autolevity_buckets/AutoLevity_Base"
-*)
