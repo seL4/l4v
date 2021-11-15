@@ -21,7 +21,7 @@ lemma [word_abs]:
 lemma [word_abs]:
   "\<lbrakk> abstract_val P x unat x'; abstract_val Q y unat y' \<rbrakk> \<Longrightarrow>
          abstract_val (P \<and> Q \<and> y < 32) (x mod (2 ^ y)) unat (x' && 2 ^ unat y' - (1 :: word32))"
-  apply (clarsimp simp del: shiftl_1 simp: shiftl_1 [symmetric])
+  apply (clarsimp simp flip: shiftl_1 simp del: shiftl_Suc_0)
   apply (fold mask_def)
   apply (subst word_mod_2p_is_mask [symmetric])
   apply (subst p2_gt_0)
