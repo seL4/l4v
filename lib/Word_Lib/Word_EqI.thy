@@ -22,23 +22,18 @@ text \<open>
 named_theorems word_eqI_simps
 
 lemmas [word_eqI_simps] =
-  word_ops_nth_size
-  word_ao_nth
-  bit_mask_iff
-  word_size
+  bit_simps
   word_or_zero
   neg_mask_test_bit
   nth_ucast
-  nth_w2p bit_push_bit_iff
-  bit_drop_bit_eq
   less_2p_is_upper_bits_unset
   le_mask_high_bits
   bang_eq
-  neg_test_bit
   is_up
   is_down
   is_aligned_nth
   neg_mask_le_high_bits
+  word_size
 
 lemmas word_eqI_rule = word_eqI [rule_format]
 
