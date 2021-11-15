@@ -124,6 +124,14 @@ lemma shiftr_numeral_numeral [simp]:
   \<open>numeral m >> numeral n = drop_bit (numeral n) (numeral m)\<close>
   by (fact shiftr_def)
 
+lemma shiftl_eq_mult:
+  \<open>x << n = x * 2 ^ n\<close>
+  unfolding shiftl_def by (fact push_bit_eq_mult)
+
+lemma shiftr_eq_div:
+  \<open>x >> n = x div 2 ^ n\<close>
+  unfolding shiftr_def by (fact drop_bit_eq_div)
+
 end
 
 context ring_bit_operations
