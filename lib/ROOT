@@ -97,7 +97,6 @@ session Lib (lib) = Word_Lib +
     "Monad_WP/wp/Eisbach_WP"
     "Monad_WP/wp/WPI"
     "Monad_WP/wp/WPC"
-    "Monad_WP/wp/WPEx"
     "Monad_WP/wp/WP_Pre"
     "Monad_WP/wp/WP"
     "Monad_WP/Datatype_Schematic"

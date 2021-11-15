@@ -124,8 +124,6 @@ end
 
 setup \<open>Add_Locale_Code_Defs.setup "eval_bool_test_locale"\<close>
 
-setup \<open>Add_Locale_Code_Defs.setup "eval_bool_test_locale"\<close>
-
 lemma "eval_bool_test_locale.z > 150"
   by eval_bool
 

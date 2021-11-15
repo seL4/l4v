@@ -171,7 +171,7 @@ local
 in
   val _ = Context.>> (Context.map_theory (
     ML_Antiquotation.inline @{binding "mk_term"}
-      ((Args.context -- Scan.lift Args.embedded_inner_syntax -- (Scan.optional (Scan.lift ((comma_list Args.name))) []))
+      ((Args.context -- Scan.lift Parse.embedded_inner_syntax -- (Scan.optional (Scan.lift ((comma_list Args.name))) []))
          >>  gen_constructor)))
 end
 

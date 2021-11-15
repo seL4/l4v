@@ -2413,9 +2413,7 @@ lemma insert_subtract_new:
   "x \<notin> S \<Longrightarrow> (insert x S - S) = {x}"
   by auto
 
-lemma zip_is_empty:
-  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
-  by (cases xs; simp) (cases ys; simp)
+lemmas zip_is_empty = zip_eq_Nil_iff
 
 lemma minus_Suc_0_lt:
   "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
@@ -2426,14 +2424,9 @@ lemma fst_last_zip_upt:
    fst (last (zip [0 ..< m] xs)) = (if length xs < m then length xs - 1 else m - 1)"
   apply (subst last_conv_nth, assumption)
   apply (simp only: One_nat_def)
-  apply (subst nth_zip)
-    apply (rule order_less_le_trans[OF minus_Suc_0_lt])
-     apply (simp add: zip_is_empty)
-    apply simp
-   apply (rule order_less_le_trans[OF minus_Suc_0_lt])
-    apply (simp add: zip_is_empty)
-   apply simp
-  apply (simp add: min_def zip_is_empty)
+  apply (subst nth_zip; simp)
+   apply (rule order_less_le_trans[OF minus_Suc_0_lt]; simp)
+  apply (rule order_less_le_trans[OF minus_Suc_0_lt]; simp)
   done
 
 lemma neq_into_nprefix:
@@ -2582,7 +2575,7 @@ lemma nat_int_mul:
 lemma int_shiftl_less_cancel:
   "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
   apply (drule le_Suc_ex)
-  apply (clarsimp simp: shiftl_int_def power_add)
+  apply (clarsimp simp: shiftl_def shiftl_int_def power_add)
   done
 
 lemma int_shiftl_lt_2p_bits:
@@ -2591,11 +2584,7 @@ lemma int_shiftl_lt_2p_bits:
   by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
 \<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
 
-lemma int_eq_test_bit:
-  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
-  apply simp
-  apply (metis bin_eqI)
-  done
+lemmas int_eq_test_bit = bin_eq_iff
 lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
 
 lemma le_nat_shrink_left:
