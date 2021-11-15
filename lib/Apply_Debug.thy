@@ -455,7 +455,6 @@ structure Data = Generic_Data
 (
   type T = (morphism * Proof.context * static_info) option;
   val empty: T = NONE;
-  val extend = K NONE;
   fun merge _ : T = NONE;
 );
 

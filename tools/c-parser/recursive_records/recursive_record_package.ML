@@ -26,7 +26,6 @@ structure RecursiveRecordData = Theory_Data
 (
   type T = simpset;
   val empty = HOL_basic_ss;
-  val extend = I;
   val merge = merge_ss;
 );
 

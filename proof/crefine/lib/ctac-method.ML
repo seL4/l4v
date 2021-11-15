@@ -71,7 +71,6 @@ structure ctac_rules = Generic_Data
 (struct
     type T = thm list
     val empty = []
-    val extend = I
     val merge = Thm.merge_thms;
 end);
 
@@ -79,7 +78,6 @@ structure ctac_pre = Generic_Data
 (struct
     type T = thm list
     val empty = []
-    val extend = I
     val merge = Thm.merge_thms;
 end);
 
@@ -87,7 +85,6 @@ structure ctac_post = Generic_Data
 (struct
     type T = thm list
     val empty = []
-    val extend = I
     val merge = Thm.merge_thms;
 end);
 
