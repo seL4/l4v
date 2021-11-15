@@ -183,9 +183,9 @@ fun attach_proof_annotations ctxt terms st =
     (* FIXME: this might affect st's maxidx *)
     val add_eqn =
           Thm.instantiate
-            ([],
-             [((("P", 0), @{typ prop}), cconcl_of st),
-              ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
+            (TVars.empty,
+             Vars.make [((("P", 0), @{typ prop}), cconcl_of st),
+                        ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
             @{thm proof_state_add}
   in
     rewrite_state_concl add_eqn st
@@ -208,9 +208,9 @@ fun detach_proof_annotations st =
           |> dest_term_container
     val remove_eqn =
           Thm.instantiate
-            ([],
-             [((("P", 0), @{typ prop}), real_concl),
-              ((("xs", 0), @{typ bool}), ccontainer)])
+            (TVars.empty,
+             Vars.make [((("P", 0), @{typ prop}), real_concl),
+                        ((("xs", 0), @{typ bool}), ccontainer)])
             @{thm proof_state_remove}
   in
     (terms, rewrite_state_concl remove_eqn st)
@@ -227,9 +227,9 @@ fun attach_rule_annotations ctxt terms thm =
     (* FIXME: this might affect thm's maxidx *)
     val add_eqn =
           Thm.instantiate
-            ([],
-             [((("P", 0), @{typ prop}), Thm.cconcl_of thm),
-              ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
+            (TVars.empty,
+             Vars.make [((("P", 0), @{typ prop}), Thm.cconcl_of thm),
+                        ((("xs", 0), @{typ bool}), Thm.cterm_of ctxt container)])
             @{thm rule_add}
   in
     rewrite_state_concl add_eqn thm
@@ -349,7 +349,7 @@ fun instantiate_types ctxt _ tvar_insts term =
         val tyenv = Sign.typ_match (Proof_Context.theory_of ctxt) tvar_inst Vartab.empty
         val S = Vartab.dest tyenv
         val S' = map (fn (s,(t,u)) => ((s,t),u)) S
-      in Term_Subst.instantiateT S' typ
+      in Term_Subst.instantiateT (TVars.make S') typ
       end
   in fold (fn typs => Term.map_types (instantiateT typs)) tvar_insts term
   end

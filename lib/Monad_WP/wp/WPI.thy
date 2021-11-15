@@ -254,7 +254,7 @@ ML \<open>
     val frees = Term.add_frees t [];
     val frees' = Term.add_frees t' [];
   in
-   exists (member (=) frees') frees
+   exists (member (op =) frees') frees
   end
 \<close>
 
@@ -511,7 +511,7 @@ end
 
 
 notepad begin
-  fix f and Q P P' :: "int \<Rightarrow> 'a \<Rightarrow> bool" and Q' :: "'a \<Rightarrow> bool" and a
+  fix f :: "'a \<Rightarrow> ('a,'b) nondet_monad" and Q P P' :: "int \<Rightarrow> 'a \<Rightarrow> bool" and Q' :: "'a \<Rightarrow> bool" and a :: 'a
 
   {
   assume P[wp]: "\<And>PP x. \<lbrace>\<lambda>s. PP (P x s)\<rbrace> f a \<lbrace>\<lambda>r s. PP (P x s)\<rbrace>"

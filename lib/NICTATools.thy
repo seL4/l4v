@@ -76,8 +76,10 @@ in
 end
 
 (* Setup the tool, stealing the "auto_solve_direct" option. *)
-val _ = Try.tool_setup ("unused_meta_forall",
-    (1, @{system_option auto_solve_direct}, detect_unused_meta_forall))
+val _ = Try.tool_setup { name = "unused_meta_forall",
+                         weight = 1,
+                         auto_option = \<^system_option>\<open>auto_solve_direct\<close>,
+                         body = detect_unused_meta_forall }
 \<close>
 
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"

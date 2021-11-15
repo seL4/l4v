@@ -55,7 +55,7 @@ lemma Eq_TrueI_ByAssum:
 simproc_setup simp_strategy_ByAssum ("simp_strategy ByAssum b") =
   \<open>K (fn ss => fn ct => let
       val b = Thm.dest_arg ct
-      val t = Thm.instantiate ([],[((("P",0),@{typ bool}), b)])
+      val t = Thm.instantiate (TVars.empty, Vars.make [((("P",0),@{typ bool}), b)])
         @{thm Eq_TrueI_ByAssum}
       val prems = Raw_Simplifier.prems_of ss
     in get_first (try (fn p => p RS t)) prems end)\<close>
@@ -83,7 +83,7 @@ lemma simp_strategy_Eq_True:
 ML \<open>
 fun simp_strategy_True_conv ct = case Thm.term_of ct of
     (Const (@{const_name simp_strategy}, _) $ _ $ @{term True})
-      => Thm.instantiate ([], [((("name",0), @{typ nat}), Thm.dest_arg1 ct)])
+      => Thm.instantiate (TVars.empty, Vars.make [((("name",0), @{typ nat}), Thm.dest_arg1 ct)])
           @{thm simp_strategy_Eq_True}
   | _ => Conv.all_conv ct
 

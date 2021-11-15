@@ -1003,13 +1003,13 @@ lemma zipWithM_If_cut:
   apply (cases "n < m")
    apply (cut_tac i=0 and j=n and k="m - n" in upt_add_eq_append)
     apply simp
-   apply (simp add: min.absorb1 zipWithM_mapM)
+   apply (simp add: zipWithM_mapM)
    apply (simp add: zip_append1 mapM_append zip_take_triv2 split_def)
    apply (intro bind_cong bind_apply_cong refl mapM_length_cong
                 fun_cong[OF mapM_length_cong])
     apply (clarsimp simp: set_zip)
    apply (clarsimp simp: set_zip)
-  apply (simp add: min.absorb2 zipWithM_mapM mapM_Nil)
+  apply (simp add: zipWithM_mapM mapM_Nil)
   apply (intro mapM_length_cong refl)
   apply (clarsimp simp: set_zip)
   done
@@ -3028,12 +3028,12 @@ proof -
   apply (intro conjI)
    apply (rule set_eqI)
     apply (rule iffI)
-    apply (clarsimp simp:Union_eq dest!: singletonD)
+    apply (clarsimp simp:Union_eq)
     apply (frule fsame)
     apply clarsimp
     apply (frule gsame)
     apply (metis fst_conv snd_conv)
-   apply (clarsimp simp:Union_eq dest!: singletonD)
+   apply (clarsimp simp:Union_eq)
    apply (frule gsame)
    apply clarsimp
    apply (frule fsame)

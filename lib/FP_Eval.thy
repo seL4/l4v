@@ -66,14 +66,14 @@ fun then_eq_reflection thm = let
   in Thm.implies_elim rule thm end;
 
 fun bool_conv_True thm =
-      Thm.instantiate ([], [((("P", 0), @{typ bool}),
-                             Thm.dest_arg (Thm.cprop_of thm))])
+      Thm.instantiate (TVars.empty, Vars.make [((("P", 0), @{typ bool}),
+                                               Thm.dest_arg (Thm.cprop_of thm))])
                       @{thm FP_Eval.bool_prop_eq_True}
       |> (fn conv => Thm.equal_elim conv thm);
 
 fun bool_conv_False thm =
-      Thm.instantiate ([], [((("P", 0), @{typ bool}),
-                             Thm.dest_arg (Thm.dest_arg (Thm.cprop_of thm)))])
+      Thm.instantiate (TVars.empty, Vars.make [((("P", 0), @{typ bool}),
+                                               Thm.dest_arg (Thm.dest_arg (Thm.cprop_of thm)))])
                       @{thm FP_Eval.bool_prop_eq_False}
       |> (fn conv => Thm.equal_elim conv thm);
 
