@@ -20,6 +20,9 @@ begin
 unbundle bit_operations_syntax
 unbundle bit_projection_infix_syntax
 
+lemmas shiftl_nat_def = push_bit_eq_mult[of _ a for a::nat, folded shiftl_def]
+lemmas shiftr_nat_def = drop_bit_eq_div[of _ a for a::nat, folded shiftr_def]
+
 lemma signed_ge_zero_scast_eq_ucast:
  "0 <=s x \<Longrightarrow> scast x = ucast x"
   by (simp add: scast_eq_ucast word_sle_msb_le)
@@ -365,28 +368,12 @@ lemmas distinct_aligned_addresses_accumulate = aligned_mask_ranges_disjoint2[fol
 lemmas bang_big = test_bit_over
 
 lemma unat_and_mask_le:
-  fixes x::"'a::len word"
-  assumes "n < LENGTH('a)"
-  shows "unat (x && mask n) \<le> 2^n"
-proof -
-  from assms
-  have "2^n-1 \<le> (2^n :: 'a word)"
-    using word_1_le_power word_le_imp_diff_le by blast
-  then
-  have "unat (x && mask n) \<le> unat (2^n::'a word)"
-    apply (fold word_le_nat_alt)
-    apply (rule order_trans, rule word_and_le1)
-    apply (simp add: mask_eq)
-    done
-  with assms
-  show ?thesis by (simp add: unat_2tp_if)
-qed
+  "n < LENGTH('a) \<Longrightarrow> unat (x && mask n) \<le> 2^n" for x::"'a::len word"
+  by (simp add: and_mask_less' order_less_imp_le unat_less_power)
 
 lemma sign_extend_less_mask_idem:
   "\<lbrakk> w \<le> mask n; n < size w \<rbrakk> \<Longrightarrow> sign_extend n w = w"
-  apply (simp add: sign_extend_def le_mask_imp_and_mask)
-  apply (simp add: le_mask_high_bits)
-  done
+  by (simp add: sign_extend_def le_mask_imp_and_mask le_mask_high_bits)
 
 lemma word_and_le:
   "a \<le> c \<Longrightarrow> (a :: 'a :: len word) && b \<le> c"
