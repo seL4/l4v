@@ -994,7 +994,7 @@ lemma retype_untyped_loop_inv_fail:
         apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
        apply clarsimp
        apply (drule list_all_nth [where xs=free_slots], simp)
-       apply (metis (hide_lams, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)
+       apply (metis (opaque_lifting, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)
       apply simp
     apply wp
    apply (clarsimp)

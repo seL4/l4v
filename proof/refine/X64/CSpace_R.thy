@@ -3073,7 +3073,7 @@ lemma setCTE_ioports':
    apply (erule disjE)
     apply (force simp: ran_def split: if_splits)
    apply (metis Diff_disjoint Diff_triv o_apply option.simps(9) ranI)
-  by (metis (mono_tags, hide_lams) o_apply option.simps(9) ranI)
+  by (metis (mono_tags, opaque_lifting) o_apply option.simps(9) ranI)
 
 lemma updateCap_ioports':
   "\<lbrace>valid_ioports' and (\<lambda>s. cte_wp_at' (\<lambda>c. safe_ioport_insert' v (cteCap c) s) dest s)\<rbrace>
