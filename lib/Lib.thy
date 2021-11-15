@@ -2575,7 +2575,7 @@ lemma nat_int_mul:
 lemma int_shiftl_less_cancel:
   "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
   apply (drule le_Suc_ex)
-  apply (clarsimp simp: shiftl_def shiftl_int_def power_add)
+  apply (clarsimp simp: shiftl_int_def power_add)
   done
 
 lemma int_shiftl_lt_2p_bits:

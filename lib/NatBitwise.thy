@@ -48,9 +48,7 @@ lemma nat_2p_eq_shiftl:
   "(2::nat)^x = 1 << x"
   by simp
 
-lemma shiftl_nat_alt_def:
-  "(x::nat) << n = x * 2^n"
-  by (simp add: push_bit_nat_def shiftl_def)
+lemmas shiftl_nat_alt_def = shiftl_nat_def
 
 lemma shiftl_nat_def:
   "(x::nat) << y = nat (int x << y)"
