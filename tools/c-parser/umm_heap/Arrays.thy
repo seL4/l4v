@@ -77,7 +77,7 @@ lemma finite_index_inj:
 
 lemma forall_finite_index:
   "(\<forall>k::'a::finite. P k) = (\<forall>i. i < CARD('a) \<longrightarrow> P (finite_index i))"
-  by (metis (mono_tags, hide_lams) finite_index_works)
+  by (metis (mono_tags) finite_index_works)
 
 
 section \<open>Finite Cartesian Products\<close>

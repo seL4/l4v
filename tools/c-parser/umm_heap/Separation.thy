@@ -117,7 +117,7 @@ lemma lift_state_dom:
    apply(fastforce dest: s_footprintD intvlD simp: size_of_def)
   apply(frule s_footprintD2)
   apply(drule s_footprintD)
-  apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+  apply(drule intvlD, clarsimp)
   apply(rename_tac k)
   apply(drule_tac x=k in spec)
   apply(erule impE)

@@ -596,7 +596,7 @@ lemma point_eq_mod_safe_ptr_safe_tag:
      k = (\<lambda>s. lift_state (h s,d s));
      htd_ind p \<rbrakk> \<Longrightarrow>
    point_eq_mod_safe {s. ptr_safe ((p s)::'b::mem_type ptr) (d s)} m k"
-  supply if_split_asm[split] unsigned_of_nat[simp del]
+  supply if_split_asm[split]
   apply(clarsimp simp: point_eq_mod_safe_def point_eq_mod_def ptr_safe_def)
   apply(subgoal_tac "(a,b) \<notin> s_footprint (p (restrict_htd s X))")
    prefer 2
@@ -644,7 +644,7 @@ proof (simp only: comm_restrict_safe_def comm_restrict_def, auto)
     apply(clarsimp simp: map_add_def list_map_eq)
     apply(subgoal_tac "(x,SIndexTyp y) \<in> s_footprint (p s)")
      apply(fastforce simp: dom_s_def split: if_split_asm)
-    apply(drule intvlD, clarsimp simp del: unsigned_of_nat)
+    apply(drule intvlD, clarsimp)
     apply(rule s_footprintI; assumption?)
     apply(metis len_of_addr_card less_trans max_size mod_less word_unat.eq_norm)
     done
