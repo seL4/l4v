@@ -944,13 +944,8 @@ lemma word_set_bit_0 [simp]: "set_bit 0 n b = word_of_int (bin_sc n b 0)"
 lemma word_set_bit_1 [simp]: "set_bit 1 n b = word_of_int (bin_sc n b 1)"
   unfolding word_1_wi by (rule set_bit_word_of_int)
 
-lemma shiftl_int_def:
-  "push_bit n x = x * 2 ^ n" for x :: int
-  by (fact push_bit_eq_mult)
-
-lemma shiftr_int_def:
-  "drop_bit n x = x div 2 ^ n" for x :: int
-  by (fact drop_bit_eq_div)
+lemmas shiftl_int_def = shiftl_eq_mult[of x for x::int]
+lemmas shiftr_int_def = shiftr_eq_div[of x for x::int]
 
 
 subsubsection \<open>Basic simplification rules\<close>
@@ -1262,8 +1257,8 @@ by(simp add: int_not_def)
 subsection \<open>Setting and clearing bits\<close>
 
 lemma int_shiftl_BIT: fixes x :: int
-  shows int_shiftl0: "push_bit 0 x = x"
-  and int_shiftl_Suc: "push_bit (Suc n) x = 2 * push_bit n x"
+  shows int_shiftl0: "x << 0 = x"
+  and int_shiftl_Suc: "x << Suc n = 2 * x << n"
   by (auto simp add: shiftl_int_def)
 
 lemma int_0_shiftl: "push_bit n 0 = (0 :: int)"
