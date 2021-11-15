@@ -67,7 +67,6 @@ session Lib (lib) = Word_Lib +
     LexordList
     Rule_By_Method
     Defs
-    AutoLevity_Hooks
     Distinct_Cmd
     Match_Abbreviation
     ShowTypes
@@ -152,7 +151,6 @@ session LibTest (lib) in test = Refine +
     WPTutorial
     Match_Abbreviation_Test
     Apply_Debug_Test
-    AutoLevity_Test
     Insulin_Test
     ShowTypes_Test
     Time_Methods_Cmd_Test
@@ -171,14 +169,6 @@ session LibTest (lib) in test = Refine +
 session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
   theories
     Hoare_Sep_Tactics
-
-(* bitrotted
-session AutoLevity (lib) = HOL +
-  theories
-    AutoLevity
-    AutoLevity_Run
-    AutoLevity_Theory_Report
-*)
 
 session Concurrency (lib) in concurrency = HOL +
   sessions
