@@ -33,7 +33,7 @@ fun get_record_info thy T =
  *)
 fun get_record_constructor thy T =
   get_record_info thy T |> #ext_def |> Thm.prop_of |> Utils.lhs_of |> head_of
-  |> Term_Subst.instantiate ([((("'z", 0), @{sort "type"}), @{typ unit})], [])
+  |> Term_Subst.instantiate (TVars.make [((("'z", 0), @{sort "type"}), @{typ unit})], Vars.empty)
 
 (*
  * Given a record "bar" (assumed to have fields "a", "b", "c" and a

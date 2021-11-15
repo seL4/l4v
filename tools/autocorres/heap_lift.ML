@@ -248,7 +248,7 @@ let
     val getter_mixfix = mixfix ("_[_]\<rightarrow>" ^ (Syntax_Ext.escape field_pname), [1000], 1000)
     val setter_mixfix = mixfix ("_[_\<rightarrow>" ^ (Syntax_Ext.escape field_pname) ^ " := _]", [1000], 1000)
 
-    val lthy = Specification.notation true Syntax.mode_default [
+    val lthy = Local_Theory.notation true Syntax.mode_default [
                  (new_heap_get, getter_mixfix),
                  (new_heap_update, setter_mixfix)] lthy
 
@@ -295,7 +295,7 @@ let
     val getter_mixfix = mixfix ("_[_]", [1000], 1000)
     val setter_mixfix = mixfix ("_[_ := _]", [1000], 1000)
 
-    val lthy = Specification.notation true Syntax.mode_default
+    val lthy = Local_Theory.notation true Syntax.mode_default
                [(Const getter, getter_mixfix), (new_heap_update, setter_mixfix)] lthy
 
     val new_getters = Symtab.update_new (Long_Name.base_name (fst getter), (type_pname, "", Const getter, NONE)) new_getters
