@@ -278,7 +278,7 @@ lemma range_cover_le_n_less:
 
 lemma unat_of_nat_n :"unat ((of_nat n):: 'a :: len word) = n"
   using range_cover_n_less
-  by (simp add:unat_of_nat del: unsigned_of_nat)
+  by (simp add:unat_of_nat)
 
 
 lemma unat_of_nat_n_shift:

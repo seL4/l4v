@@ -1410,6 +1410,7 @@ lemmas abs_atyp_at_lifts =
 lemma page_directory_pde_atI:
   "\<lbrakk> page_directory_at p s; x < 2 ^ pageBits;
          pspace_aligned s \<rbrakk> \<Longrightarrow> pde_at (p + (x << 2)) s"
+  supply bit_simps[simp del]
   apply (clarsimp simp: obj_at_def pde_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
@@ -1429,6 +1430,7 @@ lemma page_directory_pde_atI:
 
 lemma page_table_pte_atI:
   "\<lbrakk> page_table_at p s; x < 2^(pt_bits - 2); pspace_aligned s \<rbrakk> \<Longrightarrow> pte_at (p + (x << 2)) s"
+  supply bit_simps[simp del]
   apply (clarsimp simp: obj_at_def pte_at_def)
   apply (drule (1) pspace_alignedD[rotated])
   apply (clarsimp simp: a_type_def
@@ -1889,7 +1891,7 @@ proof -
      apply (erule (6) 2)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pde_ref_pages_def data_at_def
-                   dest!: vs_lookup_pages1D elim!: disjE
+                   dest!: vs_lookup_pages1D
                    split: if_split_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
@@ -2431,7 +2433,7 @@ lemma valid_arch_mdb_eqI:
   assumes "caps_of_state s = caps_of_state s'"
   assumes "is_original_cap s = is_original_cap s'"
   shows "valid_arch_mdb (is original_cap s') (caps_of_state s')"
-  by (clarsimp simp: valid_arch_mdb_def)
+  by clarsimp
 
 lemma arch_tcb_context_absorbs[simp]:
   "arch_tcb_context_set uc2 (arch_tcb_context_set uc1 a_tcb) \<equiv> arch_tcb_context_set uc2 a_tcb"

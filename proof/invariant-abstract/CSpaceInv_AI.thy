@@ -496,7 +496,7 @@ lemma set_cap_cte_wp_at:
   set_cap cap ptr
   \<lbrace>\<lambda>uu s. cte_wp_at P p s\<rbrace>"
   apply (simp add: cte_wp_at_caps_of_state)
-  apply (wpx set_cap_caps_of_state)
+  apply (wp set_cap_caps_of_state)
   apply clarsimp
   done
 
@@ -506,7 +506,7 @@ lemma set_cap_cte_wp_at':
   set_cap cap ptr
   \<lbrace>\<lambda>uu s. cte_wp_at P p s\<rbrace>"
   apply (simp add: cte_wp_at_caps_of_state)
-  apply (wpx set_cap_caps_of_state)
+  apply (wp set_cap_caps_of_state)
   apply clarsimp
   done
 
@@ -536,7 +536,7 @@ lemma set_cap_tcb:
 lemma set_cap_sets:
   "\<lbrace>\<top>\<rbrace> set_cap cap p \<lbrace>\<lambda>rv s. cte_wp_at (\<lambda>c. c = cap) p s\<rbrace>"
   apply (simp add: cte_wp_at_caps_of_state)
-  apply (wpx set_cap_caps_of_state)
+  apply (wp set_cap_caps_of_state)
   apply clarsimp
   done
 
@@ -655,13 +655,10 @@ lemma set_cap_cte_cap_wp_to:
         \<and> ex_cte_cap_wp_to P p' s\<rbrace>
      set_cap cap p
    \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p'\<rbrace>"
-  apply (simp add: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
-  apply wpx
-  apply (intro impI, elim conjE exE)
-  apply (case_tac "(a, b) = p")
-   apply fastforce
-  apply fastforce
-  done
+  apply (simp add: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state del: split_paired_Ex)
+  apply (wp hoare_vcg_ex_lift)
+  apply clarify
+  by (metis fun_upd_other fun_upd_same option.sel)
 
 
 lemma set_cap_iflive:
@@ -684,7 +681,7 @@ lemma update_cap_iflive:
   "\<lbrace>cte_wp_at (\<lambda>cap'. zobj_refs cap' = zobj_refs cap) p
       and if_live_then_nonz_cap\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. if_live_then_nonz_cap s\<rbrace>"
-  apply (wpx set_cap_iflive)
+  apply (wp set_cap_iflive)
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
@@ -701,7 +698,7 @@ lemma set_cap_ifunsafe:
         \<and> (cap \<noteq> cap.NullCap \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) p s)\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. if_unsafe_then_cap s\<rbrace>"
   apply (simp add: if_unsafe_then_cap_def)
-  apply (wpx set_cap_cte_cap_wp_to)
+  apply (wp set_cap_cte_cap_wp_to hoare_vcg_all_lift hoare_vcg_imp_lift)
   apply clarsimp
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -720,7 +717,7 @@ lemma update_cap_ifunsafe:
       and if_unsafe_then_cap
       and (\<lambda>s. cap \<noteq> cap.NullCap \<longrightarrow> ex_cte_cap_wp_to (appropriate_cte_cap cap) p s)\<rbrace>
      set_cap cap p \<lbrace>\<lambda>rv s. if_unsafe_then_cap s\<rbrace>"
-  apply (wpx set_cap_ifunsafe)
+  apply (wp set_cap_ifunsafe)
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
@@ -737,8 +734,8 @@ lemma set_cap_globals [wp]:
   "\<lbrace>valid_global_refs and (\<lambda>s. global_refs s \<inter> cap_range cap = {})\<rbrace>
   set_cap cap p
   \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  apply (simp add: valid_global_refs_def valid_refs_def2)
-  apply (wpx set_cap_caps_of_state)
+  apply (simp add: valid_global_refs_def valid_refs_def2 Ball_def)
+  apply (wp set_cap_caps_of_state hoare_vcg_all_lift hoare_vcg_imp_lift)
   apply (clarsimp simp: ran_def)
   apply blast
   done
@@ -1009,7 +1006,7 @@ lemma new_cap_valid_pspace:
      set_cap cap p
    \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (simp add: valid_pspace_def)
-  apply (wpx set_cap_valid_objs new_cap_iflive new_cap_ifunsafe new_cap_zombies)
+  apply (wp set_cap_valid_objs new_cap_iflive new_cap_ifunsafe new_cap_zombies)
   apply (auto simp: cte_wp_at_caps_of_state)
   done
 
@@ -1244,7 +1241,7 @@ lemma delete_duplicate_valid_pspace:
   set_cap cap.NullCap p
   \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (simp add: valid_pspace_def)
-  apply (wpx set_cap_valid_objs delete_duplicate_iflive delete_duplicate_ifunsafe
+  apply (wp set_cap_valid_objs delete_duplicate_iflive delete_duplicate_ifunsafe
             set_cap_zombies, auto elim!: cte_wp_at_weakenE)
   done
 
@@ -1258,7 +1255,7 @@ lemma set_cap_valid_pspace:
      set_cap cap p
    \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
   apply (simp add: valid_pspace_def)
-  apply (wpx set_cap_valid_objs set_cap_iflive set_cap_zombies)
+  apply (wp set_cap_valid_objs set_cap_iflive set_cap_zombies)
   apply (clarsimp elim!: cte_wp_at_weakenE | rule conjI)+
   done
 
@@ -1289,7 +1286,7 @@ lemma set_cap_idle[wp]:
 lemma set_cap_cte_at_neg[wp]:
   "\<lbrace>\<lambda>s. \<not> cte_at sl s\<rbrace> set_cap cap sl' \<lbrace>\<lambda>rv s. \<not> cte_at sl s\<rbrace>"
   apply (simp add: cte_at_typ)
-  apply (wpx set_cap_typ_at)
+  apply (wp set_cap_typ_at)
   done
 
 lemma set_cap_cte_wp_at_neg:
@@ -1338,10 +1335,10 @@ lemma set_cap_irq_handlers:
       \<and> cte_wp_at (\<lambda>cap'. \<forall>irq \<in> cap_irqs cap - cap_irqs cap'. irq_issued irq s) ptr s\<rbrace>
     set_cap cap ptr
   \<lbrace>\<lambda>rv. valid_irq_handlers\<rbrace>"
-  apply (simp add: valid_irq_handlers_def irq_issued_def)
-  apply wpx
+  apply (simp add: valid_irq_handlers_def irq_issued_def Ball_def)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
   apply (clarsimp simp: cte_wp_at_caps_of_state elim!: ranE split: if_split_asm)
-   apply (auto intro: ranI)
+   apply auto
   done
 
 lemma arch_obj_caps_of:
@@ -1819,7 +1816,7 @@ lemma cap_insert_ex_cap:
   apply (simp add: cap_insert_def)
   apply (wp|simp split del: if_split)+
         apply (wp set_cap_cap_to get_cap_wp set_cap_cte_wp_at set_untyped_cap_as_full_cte_wp_at)+
-     apply (clarsimp simp: set_untyped_cap_as_full_def split del: if_splits)
+     apply (clarsimp simp: set_untyped_cap_as_full_def split del: if_split)
      apply (wp set_cap_cap_to get_cap_wp)+
   apply (clarsimp elim!: cte_wp_at_weakenE simp: is_cap_simps cte_wp_at_caps_of_state)
   apply (simp add: masked_as_full_def)
@@ -1865,7 +1862,7 @@ lemma cap_insert_ifunsafe:
   apply (simp add: cap_insert_def)
   apply (wp get_cap_wp | simp split del: if_split)+
       apply (rule new_cap_ifunsafe)
-     apply (simp add: set_untyped_cap_as_full_def split del: if_splits)
+     apply (simp add: set_untyped_cap_as_full_def split del: if_split)
      apply (wp set_cap_cte_wp_at set_cap_ifunsafe set_cap_cte_cap_wp_to get_cap_wp)+
   apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
   apply (rule untyped_cap_update_ex_cte_cap_wp_to)
@@ -1907,7 +1904,7 @@ lemma cap_insert_cap_wp_to[wp]:
                    cte_wp_at_caps_of_state update_cdt_def)
   apply (wp get_cap_wp | simp split del: if_split)+
   apply (rule allI)
-  apply (clarsimp simp del: split_def,rule conjI)
+  apply (clarsimp, rule conjI)
     apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
     apply (rule_tac x = a in exI)
     apply (rule_tac x = b in exI)
@@ -2002,8 +1999,7 @@ lemma set_untyped_cap_full_valid_objs:
    \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_untyped_cap_as_full_def split del: if_split)
   apply (wp set_cap_valid_objs)
-  apply (clarsimp simp: valid_cap_free_index_update tcb_cap_valid_caps_of_stateD
-                        cte_wp_at_caps_of_state caps_of_state_valid_cap)
+  apply (clarsimp simp: tcb_cap_valid_caps_of_stateD cte_wp_at_caps_of_state caps_of_state_valid_cap)
   done
 
 

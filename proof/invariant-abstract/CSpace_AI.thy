@@ -388,9 +388,7 @@ lemma of_bl_take:
   "length xs < len_of TYPE('a) \<Longrightarrow> of_bl (take n xs) = ((of_bl xs) >> (length xs - n) :: ('a :: len) word)"
   apply (clarsimp simp: bang_eq and_bang test_bit_of_bl
                         rev_take conj_comms nth_shiftr)
-  apply safe
-        apply simp_all
-   apply (clarsimp elim!: rsubst[where P="\<lambda>x. rev xs ! x"])+
+  apply auto
   done
 
 
