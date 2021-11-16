@@ -144,6 +144,8 @@ If the notification object is active, the badge of the invoked notification obje
 >                 asUser thread $ setRegister badgeRegister badge
 >                 setNotification ntfnPtr $ ntfn {ntfnObj = IdleNtfn }
 >                 maybeDonateSc thread ntfnPtr
+>                 scOpt <- threadGet tcbSchedContext thread
+>                 ifCondRefillUnblockCheck scOpt (Just False) (Just False)
 
 \subsection{Delete Operation}
 
