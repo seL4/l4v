@@ -528,8 +528,9 @@ where
        | ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ setRegister badge_register badge;
                      set_notification ntfnptr $ ntfn_obj_update (K IdleNtfn) ntfn;
-                     maybe_donate_sc thread ntfnptr
-                   od
+                     maybe_donate_sc thread ntfnptr;
+                     sc_ptr \<leftarrow> get_tcb_obj_ref tcb_sched_context thread;
+                     if_sporadic_cur_sc_test_refill_unblock_check sc_ptr                   od
     od"
 
 section \<open>Sending Fault Messages\<close>
