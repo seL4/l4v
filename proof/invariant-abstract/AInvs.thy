@@ -979,17 +979,6 @@ crunches receive_ipc, handle_fault
   for ct_not_in_release_q[wp]: ct_not_in_release_q
   (wp: crunch_wps simp: crunch_simps)
 
-lemma maybe_donate_sc_ct_not_in_release_q_thread_bound:
-  "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> thread = cur_thread s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>
-   maybe_donate_sc thread sc_ptr
-   \<lbrace>\<lambda>_. ct_not_in_release_q\<rbrace>"
-  apply (clarsimp simp: maybe_donate_sc_def)
-  apply (rule hoare_seq_ext[OF _ gsc_sp])
-  apply (rule hoare_when_cases, simp)
-  apply (wpsimp wp: hoare_pre_cont)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  done
-
 lemma receive_signal_schact_is_rct_imp_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> thread = cur_thread s\<rbrace>
    receive_signal thread cap is_blocking
@@ -999,7 +988,7 @@ lemma receive_signal_schact_is_rct_imp_ct_not_in_release_q:
   apply (case_tac "ntfn_obj ntfn"; clarsimp?, (solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
   apply (rule hoare_vcg_imp_lift_pre_add; (solves wpsimp)?)
   apply (rule hoare_seq_ext_skip, solves wpsimp)
-  apply (wpsimp wp: maybe_donate_sc_ct_not_in_release_q_thread_bound set_simple_ko_wp)
+  apply (wpsimp wp: set_simple_ko_wp)
   apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
                    simp: obj_at_def pred_tcb_at_def vs_all_heap_simps sk_obj_at_pred_def)
   done
