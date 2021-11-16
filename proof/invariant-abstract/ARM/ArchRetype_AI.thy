@@ -1264,7 +1264,7 @@ lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  by (simp add: storeWord_def word_rsplit_0 | wp)+
+  by (simp add: storeWord_def word_rsplit_0 word_bits_conv | wp)+
 
 lemma clearMemory_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>

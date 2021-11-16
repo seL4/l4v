@@ -83,15 +83,7 @@ lemma asid_low_high_bits':
     asid_high_bits_of x = asid_high_bits_of y;
     x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
   \<Longrightarrow> x = y"
-  apply (rule asid_low_high_bits)
-     apply (rule word_eqI)
-     apply (subst (asm) bang_eq)
-     apply (simp add: nth_ucast asid_low_bits_def word_size)
-    apply (rule word_eqI)
-    apply (subst (asm) bang_eq)+
-    apply (simp add: nth_ucast asid_low_bits_def)
-   apply assumption+
-  done
+  by (rule asid_low_high_bits; (assumption|word_eqI_solve simp: asid_low_bits_def)?)
 
 lemma table_cap_ref_at_eq:
   "table_cap_ref c = Some [x] \<longleftrightarrow> vs_cap_ref c = Some [x]"
@@ -680,34 +672,29 @@ lemma ex_asid_high_bits_plus:
    apply (rule word_and_le1)
   apply (subst (asm) mask_def)
   apply (simp add: upper_bits_unset_is_l2p_32 [symmetric])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_ucast nth_shiftl)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr asid_high_bits_of_def
-                        asid_low_bits_def word_bits_def asid_bits_def)
+  apply (subst word_plus_and_or_coroll; word_eqI)
+  apply (clarsimp simp: asid_high_bits_of_def asid_low_bits_def word_bits_def asid_bits_def)
   apply (rule iffI)
    prefer 2
    apply fastforce
   apply (clarsimp simp: linorder_not_less)
-  apply (subgoal_tac "n < 17", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
+  by (metis add_One_commute add_diff_inverse_nat le_add1 less_diff_conv2 less_imp_diff_less
+            numeral_plus_numeral semiring_norm(10) semiring_norm(2) semiring_norm(3)
+            semiring_norm(4) semiring_norm(9))
 
 
 lemma asid_high_bits_shl:
   "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
   apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
-  apply (rule word_eqI[rule_format])
-  apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def
-                   asid_high_bits_of_def word_size asid_bits_def word_bits_def)
+  apply word_eqI
+  apply (simp add: asid_low_bits_def asid_high_bits_of_def word_bits_conv asid_bits_def)
   apply (rule iffI, clarsimp)
   apply (rule context_conjI)
    apply (clarsimp simp add: linorder_not_less [symmetric])
   apply simp
-  apply (subgoal_tac "n < 17", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
+  by (metis less_imp_le_nat linorder_neqE_nat nat_diff_less numeral_plus_numeral pl_pl_rels
+            semiring_norm(10) semiring_norm(2) semiring_norm(3) semiring_norm(8) semiring_norm(9)
+            trans_less_add1)
 
 
 lemma valid_asid_map_unmap:

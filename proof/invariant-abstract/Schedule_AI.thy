@@ -54,10 +54,10 @@ lemma findM_inv'':
   apply simp
   done
 
-lemmas findM_inv' = findM_inv''[OF suffix_order.order.refl]
+lemmas findM_inv' = findM_inv''[OF suffix_order.refl]
 
 lemma findM_inv:
-  assumes x: "\<And>x xs. \<lbrace>P\<rbrace> m x \<lbrace>\<lambda>rv. P\<rbrace>"
+  assumes x: "\<And>x. \<lbrace>P\<rbrace> m x \<lbrace>\<lambda>rv. P\<rbrace>"
   shows      "\<lbrace>P\<rbrace> findM m xs \<lbrace>\<lambda>rv. P\<rbrace>"
   by (rule findM_inv', simp_all add: x)
 
@@ -78,7 +78,7 @@ lemma postfix_tails:
    apply clarsimp
   apply clarsimp
   apply (erule meta_allE, erule meta_allE, drule meta_mp,
-         rule suffix_appendI[OF suffix_order.order.refl])
+         rule suffix_appendI[OF suffix_order.refl])
   apply clarsimp
   apply (erule suffix_ConsI)
   done

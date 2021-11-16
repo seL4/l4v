@@ -115,8 +115,6 @@ lemma shift_0x3C_set:
                     nth_shiftl neg_mask_test_bit
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
-   apply (drule_tac x="Suc (Suc n)" in spec)
-   apply simp
   apply (rule_tac x="ucast x && mask 4" in image_eqI)
    apply (rule word_eqI[rule_format])
    apply (drule_tac x=n in word_eqD)
@@ -1089,7 +1087,7 @@ lemma neg_mask_pt_6_4:
    (ptr::word32) && ~~ mask 6 && mask pt_bits >> 2"
   apply (simp add:pt_bits_def pageBits_def)
   apply word_bitwise
-  apply (simp add:word_size)
+  apply (simp add:word_size mask_def)
   done
 
 lemma neg_mask_pd_6_4:
@@ -1097,7 +1095,7 @@ lemma neg_mask_pd_6_4:
    (ptr::word32) && ~~ mask 6 && mask pd_bits >> 2"
   apply (simp add:pd_bits_def pageBits_def)
   apply word_bitwise
-  apply (simp add:word_size)
+  apply (simp add:word_size mask_def)
   done
 
 lemma mask_out_same_pt:
@@ -1192,7 +1190,7 @@ lemma ensure_safe_mapping_ensures[wp]:
      apply (clarsimp simp :upto_enum_def upto_enum_step_def
          Fun.comp_def upto_0_to_n2)
      apply (cut_tac x = "of_nat x" and n = 2 in word_power_nonzero_32)
-        apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0 del: word_of_nat_eq_0_iff)+
+        apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0)+
      done
     have neq_pt_offset: "\<And>z zs xa (p::word32). \<lbrakk>[0 , 4 .e. 0x3C] = z # zs;
         xa \<in> set zs;is_aligned p 6 \<rbrakk> \<Longrightarrow>

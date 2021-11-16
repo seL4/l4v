@@ -105,18 +105,15 @@ lemma mask_split_aligned_neg:
   shows "(p && ~~ mask m) + (ucast x << a) = p \<Longrightarrow> False"
   apply (subst (asm) word_plus_and_or_coroll)
    apply (clarsimp simp: word_simps bang_eq)
-  subgoal for n
-    apply (drule test_bit_size)
-    apply (clarsimp simp: word_simps)
-    using len by arith
+   apply (metis bit_imp_le_length diff_add_inverse le_add1 len(2) less_diff_iff)
   apply (insert x)
   apply (erule notE)
-  apply (rule word_eqI)
+  apply word_eqI
   subgoal for n
     using len
-    apply (clarsimp simp: word_simps bang_eq)
+    apply (clarsimp)
     apply (spec "n + a")
-    by (clarsimp simp: word_ops_nth_size word_size)
+    by (clarsimp simp: add.commute)
   done
 
 lemma mask_alignment_ugliness:
@@ -126,14 +123,8 @@ lemma mask_alignment_ugliness:
      \<forall>n \<ge> m. \<not>z !! n\<rbrakk>
   \<Longrightarrow> False"
   apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: is_aligned_nth word_ops_nth_size word_size)
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size)
-   subgoal for \<dots> na
-    apply (spec na)+
-    by simp
-  by auto
+  apply (subst word_plus_and_or_coroll; word_eqI)
+   apply (meson linorder_not_le)
+  by (auto simp: le_def)
 
 end

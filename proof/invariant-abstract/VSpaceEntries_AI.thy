@@ -87,16 +87,6 @@ lemma ucast_neg_mask:
   apply (auto simp:nth_ucast neg_mask_test_bit word_size)
   done
 
-lemma shiftr_eq_neg_mask_eq:
-  "a >> b = c >> b \<Longrightarrow> a && ~~ mask b = c && ~~ mask b"
-  apply (rule word_eqI[rule_format])
-   apply (simp add:neg_mask_test_bit)
-  apply (drule_tac f = "\<lambda>x. x !! (n - b)" in arg_cong)
-  apply (simp add:nth_shiftr)
-  apply (rule iffI)
-   apply simp+
-  done
-
 lemma delete_objects_reduct:
   "valid (\<lambda>s. P (kheap (s :: ('z::state_ext) state))) (modify (detype {ptr..ptr + 2 ^ bits - 1}))
          (\<lambda>_ s. P(kheap (s :: ('z::state_ext) state))) \<Longrightarrow>

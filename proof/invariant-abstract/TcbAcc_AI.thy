@@ -892,10 +892,9 @@ lemma get_cap_aligned:
 lemma shiftr_eq_mask_eq:
   "a && ~~ mask b = c && ~~ mask b \<Longrightarrow> a >> b = c >> b"
   apply (rule word_eqI)
-  apply (drule_tac x="n + b" in word_eqD)
-  apply (case_tac "n + b < size a")
+  apply (drule_tac x="b + n" in word_eqD)
+  apply (case_tac "b + n < size a")
    apply (simp add: nth_shiftr word_size word_ops_nth_size)
-  apply (simp add: nth_shiftr)
   apply (auto dest!: test_bit_size simp: word_size)
   done
 
