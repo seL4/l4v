@@ -18611,10 +18611,15 @@ lemma sched_context_donate_bound_not_cur_thread:
   by wpsimp
 
 lemma maybe_donate_sc_ct_not_in_release_q[wp]:
-  "\<lbrace>ct_not_in_release_q and (\<lambda>s. thread \<noteq> cur_thread s):: 'state_ext state \<Rightarrow> _\<rbrace>
+  "\<lbrace>ct_not_in_release_q and (\<lambda>s. thread = cur_thread s \<longrightarrow> bound_sc_tcb_at bound (cur_thread s) s):: 'state_ext state \<Rightarrow> _\<rbrace>
    maybe_donate_sc thread scp
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding maybe_donate_sc_def
+  apply (clarsimp simp: maybe_donate_sc_def)
+  apply (rule hoare_pre_tautI[where P="\<lambda>s. thread = cur_thread s"])
+  apply (rule hoare_seq_ext[OF _ gsc_sp])
+  apply (rule hoare_when_cases, simp)
+  apply (wpsimp wp: hoare_pre_cont)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   apply wpsimp
          apply (wpsimp wp: sched_context_resume_ct_not_in_release_q hoare_vcg_all_lift hoare_vcg_imp_lift')
         apply simp
@@ -18627,14 +18632,17 @@ lemma update_waiting_ntfn_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and (\<lambda>s. queue \<noteq> [] \<longrightarrow> hd queue \<noteq> cur_thread s)\<rbrace>
    update_waiting_ntfn ntfnptr queue bound_tcb sc_ptr badge
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding update_waiting_ntfn_def by (wpsimp wp: maybeM_inv)
+  unfolding update_waiting_ntfn_def
+  by (wps | wpsimp wp: maybeM_inv hoare_vcg_imp_lift' set_thread_state_bound_sc_tcb_at)+
 
 lemma send_signal_ct_not_in_release_q[wp]:
   "\<lbrace>ct_not_in_release_q and ct_not_blocked_on_ntfn and ct_not_blocked_on_receive and invs\<rbrace>
    send_signal ntfnptr badge
    \<lbrace>\<lambda>_. ct_not_in_release_q :: 'state_ext state \<Rightarrow> _\<rbrace>"
   unfolding send_signal_def
-  apply (wpsimp wp: gts_wp ct_in_state_set hoare_drop_impE get_simple_ko_wp)
+  apply (wpsimp wp: gts_wp ct_in_state_set hoare_drop_impE get_simple_ko_wp
+                    hoare_vcg_imp_lift' set_thread_state_bound_sc_tcb_at
+       | wps)+
   apply (intro conjI allI impI; clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
    apply (case_tac "tcb_state tcb"; simp add: receive_blocked_def)
   apply (subgoal_tac "(hd x, NTFNSignal) \<in> state_refs_of s ntfnptr")
