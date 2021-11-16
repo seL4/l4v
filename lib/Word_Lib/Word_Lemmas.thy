@@ -1020,11 +1020,11 @@ lemma word_and_less':
 
 lemma shiftr_w2p:
   "x < LENGTH('a) \<Longrightarrow> 2 ^ x = (2 ^ (LENGTH('a) - 1) >> (LENGTH('a) - 1 - x) :: 'a :: len word)"
-  by (rule bit_word_eqI) (auto simp add: bit_simps)
+  by word_eqI_solve
 
 lemma t2p_shiftr:
   "\<lbrakk> b \<le> a; a < LENGTH('a) \<rbrakk> \<Longrightarrow> (2 :: 'a :: len word) ^ a >> b = 2 ^ (a - b)"
-  by (rule bit_word_eqI) (auto simp add: bit_simps)
+  by word_eqI_solve
 
 lemma scast_1[simp]:
   "scast (1 :: 'a :: len signed word) = (1 :: 'a word)"
@@ -1360,7 +1360,7 @@ lemma unat_2tp_if:
 
 lemma mask_of_mask:
   "mask (n::nat) AND mask (m::nat) = (mask (min m n) :: 'a::len word)"
-  by (rule bit_word_eqI) (auto simp add: bit_simps)
+  by word_eqI_solve
 
 lemma unat_signed_ucast_less_ucast:
   "LENGTH('a) \<le> LENGTH('b) \<Longrightarrow> unat (ucast (x :: 'a :: len word) :: 'b :: len signed word) = unat x"

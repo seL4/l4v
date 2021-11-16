@@ -59,12 +59,15 @@ method word_eqI uses simp simp_del split split_del cong flip =
    (* turn x < 2^n assumptions into mask equations: *)
    ((drule less_mask_eq)+)?,
    (* expand and distribute test_bit everywhere: *)
-   (clarsimp simp: bit_simps word_eqI_simps simp not_less not_le simp del: simp_del simp flip: flip
+   (simp only: bit_simps word_eqI_simps)?,
+   (* clarsimp normal form again, also resolve negated < and \<le> *)
+   (clarsimp simp: simp not_less not_le simp del: simp_del simp flip: flip
              split: split split del: split_del cong: cong)?,
    (* add any additional word size constraints to new indices: *)
    ((drule test_bit_lenD)+)?,
    (* try to make progress (can't use +, would loop): *)
-   (clarsimp simp: bit_simps word_eqI_simps simp simp del: simp_del simp flip: flip
+   (simp only: bit_simps word_eqI_simps)?,
+   (clarsimp simp: simp simp del: simp_del simp flip: flip
              split: split split del: split_del cong: cong)?,
    (* helps sometimes, rarely: *)
    (simp add: simp test_bit_conj_lt del: simp_del flip: flip split: split split del: split_del cong: cong)?)
@@ -72,7 +75,7 @@ method word_eqI uses simp simp_del split split_del cong flip =
 method word_eqI_solve uses simp simp_del split split_del cong flip dest =
   solves \<open>word_eqI simp: simp simp_del: simp_del split: split split_del: split_del
                    cong: cong simp flip: flip;
-          (fastforce dest: dest simp: bit_simps word_eqI_simps simp flip: flip
+          (fastforce dest: dest simp: simp flip: flip
                      simp: simp simp del: simp_del split: split split del: split_del cong: cong)?\<close>
 
 end
