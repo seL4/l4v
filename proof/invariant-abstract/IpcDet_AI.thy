@@ -2522,6 +2522,7 @@ lemma rai_invs':
   assumes schedule_tcb_Q[wp]: "\<And>t. \<lbrace>Q\<rbrace> schedule_tcb t \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes maybe_return_sc[wp]: "\<And>ntfn t. \<lbrace>Q\<rbrace> maybe_return_sc ntfn t \<lbrace>\<lambda>_. Q\<rbrace>"
   assumes maybe_donate_sc[wp]: "\<And>t ntfn. \<lbrace>Q\<rbrace> maybe_donate_sc t ntfn \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes refill_unblock_check[wp]: "\<And>scp. \<lbrace>Q\<rbrace> refill_unblock_check scp \<lbrace>\<lambda>_. Q\<rbrace>"
   shows
   "\<lbrace>invs and Q and st_tcb_at active t and ex_nonz_cap_to t
          and (\<lambda>s. \<forall>r\<in>zobj_refs cap. ex_nonz_cap_to r s)
@@ -2584,7 +2585,7 @@ lemma rai_invs':
     apply (fastforce simp: idle_no_ex_cap obj_at_def st_tcb_at_def get_refs_def2
                     dest!: sym_refs_ko_atD bspec)
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
-  apply wpsimp
+  apply (wpsimp simp: if_cond_refill_unblock_check_def wp: hoare_vcg_all_lift hoare_drop_imp)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
    apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)
   apply (fastforce simp: invs_def valid_state_def valid_pspace_def state_refs_of_def valid_obj_def

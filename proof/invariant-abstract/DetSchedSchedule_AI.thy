@@ -12031,6 +12031,16 @@ lemma refill_unblock_check_cur_sc_more_than_ready[wp]:
   apply clarsimp
   done
 
+lemma if_cond_refill_unblock_check_cur_sc_more_than_ready[wp]:
+  "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. \<forall>scp. scopt = Some scp \<longrightarrow> scp \<noteq> cur_sc s)\<rbrace>
+   if_cond_refill_unblock_check scopt act ast
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready\<rbrace>"
+  apply (wpsimp wp: hoare_vcg_imp_lift' simp: cur_sc_more_than_ready_def)
+   apply (wps, wpsimp wp: refill_unblock_check_refill_ready_no_overflow_sc ruc_is_refill_sufficient_indep
+                    simp: if_cond_refill_unblock_check_def)+
+  apply clarsimp
+  done
+
 lemma cur_tcb_sc_at:
   "\<lbrakk>valid_objs s; cur_tcb s; bound_sc_tcb_at ((=) (Some sc_ptr)) (cur_thread s) s\<rbrakk>
    \<Longrightarrow> sc_at sc_ptr s"
@@ -15598,12 +15608,28 @@ lemma receive_signal_valid_sched:
   apply (cases cap; clarsimp)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rename_tac ntfn)
-  apply (case_tac "ntfn_obj ntfn"; clarsimp)
+  apply (case_tac "ntfn_obj ntfn"; clarsimp simp: if_cond_refill_unblock_check_def)
     apply (wpsimp wp: set_thread_state_valid_sched)
     apply (clarsimp simp: valid_sched_def)
    apply (wpsimp wp: set_thread_state_valid_sched)
    apply (clarsimp simp: valid_sched_def)
-  apply (wpsimp wp: maybe_donate_sc_valid_sched simp: valid_ntfn_def)
+  apply (wpsimp wp: maybe_donate_sc_valid_sched hoare_vcg_if_lift2
+                    refill_unblock_check_valid_sched get_tcb_obj_ref_wp
+              simp: valid_ntfn_def)
+     apply (rule_tac Q="\<lambda>_ s. valid_sched s \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
+                              \<and> current_time_bounded 2 s
+                              \<and> (in_release_q thread s
+                                  \<longrightarrow> active_sc_tcb_at thread s \<longrightarrow> (\<not> budget_ready thread s))"
+            in hoare_strengthen_post[rotated])
+      apply (clarsimp simp: pred_neg_def obj_at_def tcb_at_kh_simps)
+      apply (rename_tac tcb scp sc n t)
+      apply (prop_tac "heap_ref_eq scp thread (tcb_scps_of s)")
+       apply (clarsimp simp: obj_at_def vs_all_heap_simps)
+      apply (clarsimp simp: heap_refs_inv_def2 pred_map_eq)
+      apply (prop_tac "pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) thread")
+       apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
+      apply (fastforce simp: budget_ready_def2 tcb_at_kh_simps vs_all_heap_simps)
+     apply (wpsimp wp: maybe_donate_sc_valid_sched maybe_donate_sc_in_release_q_imp_not_ready)+
   done
 
 crunches restart_thread_if_no_fault
@@ -22178,9 +22204,13 @@ lemma receive_ipc_cur_sc_more_than_ready[wp]:
   apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)+
   done
 
+lemma receive_signal_cur_sc_more_than_ready[wp]:
+  "receive_signal thread cap is_blocking \<lbrace>cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
+  unfolding receive_signal_def by (wpsimp wp: hoare_drop_imp)
+
 crunches handle_recv
   for cur_sc_more_than_ready[wp]: "cur_sc_more_than_ready :: det_state \<Rightarrow> _"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object update_sched_context)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps ignore: set_object)
 
 lemma charge_budget_cur_sc_more_than_ready[wp]:
   "\<lbrace>\<top>\<rbrace> charge_budget consumed canTimeout \<lbrace>\<lambda>_. cur_sc_more_than_ready :: det_state \<Rightarrow> _\<rbrace>"
@@ -25611,10 +25641,10 @@ lemma receive_signal_ct_ready_if_schedulable:
         \<and> heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
-  unfolding receive_signal_def
+  unfolding receive_signal_def if_cond_refill_unblock_check_def
   apply (wpsimp wp: set_thread_state_ct_ready_if_schedulable_strong get_simple_ko_wp
-                    maybe_donate_sc_ct_ready_if_schedulable_two
-                    thread_get_wp')
+                    maybe_donate_sc_ct_ready_if_schedulable_two hoare_drop_imp
+                    thread_get_wp' get_tcb_obj_ref_wp hoare_vcg_all_lift)
   done
 
 lemma handle_recv_ct_ready_if_schedulable[wp]:
