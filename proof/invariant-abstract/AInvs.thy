@@ -195,9 +195,9 @@ lemma handle_yield_sc_is_active_sc[wp]:
   apply (wpsimp wp: get_tcb_obj_ref_wp get_sk_obj_ref_wp)
   done
 
-crunches handle_fault, check_budget_restart, handle_recv
+crunches handle_recv
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
-  (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 crunches sched_context_yield_to, sched_context_bind_tcb, cancel_all_ipc, cancel_all_signals,
          cancel_badged_sends, restart, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb,
@@ -209,7 +209,7 @@ crunches install_tcb_frame_cap, install_tcb_cap, do_reply_transfer, invoke_irq_h
          check_domain_time, if_cond_refill_unblock_check, activate_thread, handle_fault, handle_recv,
          handle_yield, handle_interrupt, preemption_path
   for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
-  (wp: crunch_wps check_cap_inv filterM_preserved preemption_point_inv simp: crunch_simps)
+  (wp: crunch_wps check_cap_inv  preemption_point_inv hoare_vcg_all_lift simp: crunch_simps)
 
 crunches perform_invocation
   for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
@@ -253,9 +253,10 @@ crunches restart_thread_if_no_fault, cancel_all_signals, cancel_ipc,
   (wp: crunch_wps hoare_vcg_all_lift)
 
 crunches perform_invocation, handle_fault, handle_recv, preemption_path, activate_thread, awaken,
-         check_domain_time, if_cond_refill_unblock_check, handle_yield
+         check_domain_time, if_cond_refill_unblock_check, handle_yield, receive_ipc_preamble
   for schact_is_not_rct[wp]: "\<lambda>s. \<not> schact_is_rct s"
   (wp: crunch_wps preemption_point_inv check_cap_inv filterM_preserved cap_revoke_preservation
+       hoare_vcg_all_lift
    simp: crunch_simps)
 
 lemma sched_context_unbind_tcb_schact_is_rct_imp_cur_sc_active:
@@ -975,9 +976,9 @@ lemma check_budget_restart_schact_is_rct_imp_ct_not_in_release_q[wp]:
   apply (wpsimp wp: hoare_vcg_imp_lift')
   done
 
-crunches receive_ipc, handle_fault
+crunches handle_fault, receive_ipc_preamble, possible_switch_to, do_nbrecv_failed_transfer
   for ct_not_in_release_q[wp]: ct_not_in_release_q
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma receive_signal_schact_is_rct_imp_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> thread = cur_thread s\<rbrace>
@@ -993,6 +994,92 @@ lemma receive_signal_schact_is_rct_imp_ct_not_in_release_q:
                    simp: obj_at_def pred_tcb_at_def vs_all_heap_simps sk_obj_at_pred_def)
   done
 
+lemma complete_signal_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> tptr = cur_thread s\<rbrace>
+   complete_signal ntfnptr tptr
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (clarsimp simp: complete_signal_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (case_tac "ntfn_obj ntfn"; clarsimp?, (solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
+  apply (rule hoare_vcg_imp_lift_pre_add; (solves wpsimp)?)
+   apply (rule hoare_seq_ext_skip, solves wpsimp)
+   apply (wpsimp wp: set_simple_ko_wp get_tcb_obj_ref_wp
+                     hoare_vcg_all_lift hoare_drop_imp)
+   apply (fastforce dest: invs_strengthen_cur_sc_tcb_are_bound
+                    simp: obj_at_def pred_tcb_at_def vs_all_heap_simps sk_obj_at_pred_def)
+  apply (wpsimp wp: set_simple_ko_wp get_tcb_obj_ref_wp
+                    hoare_vcg_all_lift hoare_drop_imp)
+  done
+
+declare set_thread_state_bound_tcb_at[wp del]
+
+lemma set_thread_state_bound_tcb_at[wp]:
+  "set_thread_state p ts \<lbrace>\<lambda>s. Q (bound_tcb_at P t s)\<rbrace>"
+  unfolding set_thread_state_def set_object_def get_object_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+
+lemma thread_set_tcb_fault_bound_tcb_at[wp]:
+  "thread_set (tcb_fault_update f) ts \<lbrace>\<lambda>s. Q (bound_tcb_at P t s)\<rbrace>"
+  unfolding thread_set_def set_object_def get_object_def
+  by (wpsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
+
+crunches receive_ipc_preamble
+  for bound_tcb_at'[wp]: "\<lambda>s. P (bound_tcb_at P' tp s)"
+  (wp: assert_inv ignore: thread_set)
+
+lemma receive_ipc_schact_is_rct_imp_ct_not_in_release_q:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s \<and> thread = cur_thread s\<rbrace>
+   receive_ipc thread cap is_blocking reply_cap
+   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s\<rbrace>"
+  apply (cases cap;
+         simp add: receive_ipc_def split_def receive_ipc_preamble_def[symmetric]
+                   if_cond_refill_unblock_check_def
+             cong: endpoint.case_cong bool.case_cong)
+  apply (rename_tac ep_ptr ep_badge ep_rights)
+  apply (wpsimp wp: complete_signal_schact_is_rct_imp_ct_not_in_release_q)
+           apply ((wpsimp wp: hoare_vcg_imp_lift' thread_get_wp')+)[2]
+         apply (wpsimp wp: thread_get_wp')
+                    apply (wpsimp wp: hoare_vcg_imp_lift')
+                   apply wpsimp
+                  apply (wpsimp wp: hoare_vcg_imp_lift')
+                 apply (wpsimp wp: hoare_vcg_imp_lift')
+                apply (rule_tac Q="\<lambda>rv s. fault_tcb_at ((=) rv) (hd x2) s
+                                          \<and> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+                       in hoare_strengthen_post[rotated])
+                 apply clarsimp
+                apply (wpsimp wp: thread_get_wp')
+               apply wpsimp
+                 apply (rule_tac Q="\<lambda>_. tcb_at (hd x2)
+                                        and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+                        in hoare_strengthen_post[rotated])
+                  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+                 apply wpsimp
+                apply wpsimp
+               apply wpsimp
+              apply (rule_tac Q="\<lambda>_. tcb_at (hd x2)
+                                     and (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+                     in hoare_strengthen_post[rotated])
+               apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+              apply wpsimp
+             apply wpsimp
+            apply wpsimp
+           apply (wpsimp wp: gts_wp)
+          apply (wpsimp wp: set_simple_ko_wp)
+         apply wpsimp
+        apply (wpsimp wp: hoare_vcg_imp_lift')
+       apply (rule_tac Q="\<lambda>_. (\<lambda>s. schact_is_rct s \<longrightarrow> ct_not_in_release_q s)"
+              in hoare_strengthen_post[rotated])
+        apply clarsimp
+       apply (wpsimp wp: hoare_vcg_imp_lift')
+      apply (wpsimp wp: get_simple_ko_wp get_tcb_obj_ref_wp)+
+   apply (rule_tac Q="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)
+                            \<and> (bound_tcb_at bound thread s \<longrightarrow> invs s \<and> thread = cur_thread s)"
+          in hoare_strengthen_post[rotated])
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply (wpsimp wp: receive_ipc_preamble_invs hoare_vcg_imp_lift')
+  apply clarsimp
+  done
+
 lemma handle_recv_schact_is_rct_imp_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_not_in_release_q s) \<and> invs s\<rbrace>
    handle_recv is_blocking can_reply
@@ -1006,8 +1093,7 @@ lemma handle_recv_schact_is_rct_imp_ct_not_in_release_q:
   apply clarsimp
   apply (rule hoare_seq_ext_skipE, wpsimp)
   apply (case_tac ep_cap; clarsimp; (solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
-   apply (wpsimp wp: hoare_vcg_imp_lift')
-   apply fastforce
+   apply (wpsimp wp: receive_ipc_schact_is_rct_imp_ct_not_in_release_q)
   apply (wpsimp wp: receive_signal_schact_is_rct_imp_ct_not_in_release_q get_sk_obj_ref_wp)
   done
 
