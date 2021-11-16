@@ -23,6 +23,8 @@ unbundle bit_projection_infix_syntax
 lemmas shiftl_nat_def = push_bit_eq_mult[of _ a for a::nat, folded shiftl_def]
 lemmas shiftr_nat_def = drop_bit_eq_div[of _ a for a::nat, folded shiftr_def]
 
+declare bit_simps[simp]
+
 lemma signed_ge_zero_scast_eq_ucast:
  "0 <=s x \<Longrightarrow> scast x = ucast x"
   by (simp add: scast_eq_ucast word_sle_msb_le)
