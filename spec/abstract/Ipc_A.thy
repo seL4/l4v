@@ -454,7 +454,9 @@ where
      as_user dest $ setRegister badge_register badge;
      maybe_donate_sc dest ntfnptr;
      schedulable <- is_schedulable dest;
-     when (schedulable) $ possible_switch_to dest
+     when schedulable $ possible_switch_to dest;
+     scopt \<leftarrow> get_tcb_obj_ref tcb_sched_context dest;
+     if_sporadic_active_cur_sc_assert_refill_unblock_check scopt
    od"
 
 text \<open>Handle a message send operation performed on a notification object.
@@ -484,7 +486,9 @@ where
                       as_user tcb $ setRegister badge_register badge;
                       maybe_donate_sc tcb ntfnptr;
                       schedulable <- is_schedulable tcb;
-                      when (schedulable) $ possible_switch_to tcb
+                      when schedulable $ possible_switch_to tcb;
+                      scopt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb;
+                      if_sporadic_active_cur_sc_assert_refill_unblock_check scopt
                     od
                   else set_notification ntfnptr $ ntfn_obj_update (K (ActiveNtfn badge)) ntfn
             od
