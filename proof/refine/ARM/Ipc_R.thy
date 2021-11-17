@@ -3460,15 +3460,28 @@ lemma sendSignal_corres:
               apply (rule corres_split_deprecated[OF _ asUser_setRegister_corres])
                 apply (rule corres_split_deprecated[OF _ maybeDonateSc_corres])
                   apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
-                    apply (rule corres_when, simp)
-                    apply (rule possibleSwitchTo_corres; (solves simp)?)
-                   apply ((wpsimp wp: hoare_drop_imp)+)[2]
-                 apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
-                 apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
-                apply (clarsimp simp: pred_conj_def, strengthen valid_objs'_valid_tcbs')
-                apply (wpsimp+)[3]
-             apply (clarsimp simp: thread_state_relation_def)
-            apply (simp add: pred_conj_def)
+                    apply (rule corres_split[OF corres_when], simp)
+                       apply (rule possibleSwitchTo_corres; (solves simp)?)
+                      apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
+                         apply (rule ifCondRefillUnblockCheck_corres)
+                        apply (clarsimp simp: tcb_relation_def)
+                       apply (wpsimp wp: get_tcb_obj_ref_wp)
+                      apply (wpsimp wp: threadGet_wp)
+                     apply (rule_tac Q="\<lambda>_. tcb_at a and active_sc_valid_refills and pspace_aligned
+                                            and pspace_distinct and valid_objs"
+                            in hoare_strengthen_post[rotated])
+                      apply (clarsimp, drule (1) valid_objs_ko_at)
+                      apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def valid_obj_def
+                                      split: option.split)
+                     apply wpsimp
+                    apply (rule_tac Q="\<lambda>_. tcb_at' a and valid_objs'" in hoare_strengthen_post[rotated])
+                     apply (clarsimp simp: obj_at'_def split: option.split)
+                    apply wpsimp
+                   apply (wpsimp wp: is_schedulable_wp)
+                  apply (wpsimp wp: isSchedulable_wp)
+                 apply (wpsimp wp: hoare_drop_imp maybe_donate_sc_valid_sched_action abs_typ_at_lifts
+                      | strengthen valid_objs_valid_tcbs)+
+                apply(wpsimp wp: hoare_drop_imp | strengthen valid_objs'_valid_tcbs')+
             apply (strengthen valid_sched_action_weak_valid_sched_action)
             apply (wpsimp wp: sts_cancel_ipc_Running_invs set_thread_state_valid_sched_action
                               set_thread_state_valid_ready_qs
@@ -3530,15 +3543,28 @@ lemma sendSignal_corres:
            apply (rule corres_split_deprecated [OF _ asUser_setRegister_corres])
              apply (rule corres_split_deprecated[OF _ maybeDonateSc_corres])
                apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
-                 apply (rule corres_when, simp)
-                 apply (rule possibleSwitchTo_corres; (solves simp)?)
-                apply ((wpsimp wp: hoare_drop_imp)+)[2]
-              apply (clarsimp simp: pred_conj_def, strengthen valid_objs_valid_tcbs)
-              apply (wpsimp wp: maybe_donate_sc_valid_sched_action abs_typ_at_lifts)
-             apply (clarsimp simp: pred_conj_def, strengthen valid_objs'_valid_tcbs')
-             apply (wpsimp+)[3]
-          apply (clarsimp simp: thread_state_relation_def)
-         apply (simp add: pred_conj_def)
+                 apply (rule corres_split[OF corres_when], simp)
+                    apply (rule possibleSwitchTo_corres; (solves simp)?)
+                   apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
+                      apply (rule ifCondRefillUnblockCheck_corres)
+                     apply (clarsimp simp: tcb_relation_def)
+                    apply (wpsimp wp: get_tcb_obj_ref_wp)
+                   apply (wpsimp wp: threadGet_wp)
+                  apply (rule_tac Q="\<lambda>_. tcb_at (hd list) and active_sc_valid_refills and pspace_aligned
+                                         and pspace_distinct and valid_objs"
+                         in hoare_strengthen_post[rotated])
+                   apply (clarsimp, drule (1) valid_objs_ko_at)
+                   apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def valid_obj_def
+                                   split: option.split)
+                  apply wpsimp
+                 apply (rule_tac Q="\<lambda>_. tcb_at' (hd list) and valid_objs'" in hoare_strengthen_post[rotated])
+                  apply (clarsimp simp: obj_at'_def split: option.split)
+                 apply wpsimp
+                apply (wpsimp wp: is_schedulable_wp)
+               apply (wpsimp wp: isSchedulable_wp)
+              apply (wpsimp wp: hoare_drop_imp maybe_donate_sc_valid_sched_action abs_typ_at_lifts
+                   | strengthen valid_objs_valid_tcbs)+
+             apply(wpsimp wp: hoare_drop_imp | strengthen valid_objs'_valid_tcbs')+
          apply (strengthen valid_sched_action_weak_valid_sched_action)
          apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
                          wp: sts_valid_replies sts_only_idle sts_fault_tcbs_valid_states
