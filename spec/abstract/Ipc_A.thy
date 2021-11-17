@@ -599,6 +599,8 @@ where
         BlockedOnReply r \<Rightarrow> do
           assert (r = reply);
           reply_remove receiver reply;
+          sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context receiver;
+          if_sporadic_active_cur_sc_test_refill_unblock_check sc_opt;
           fault \<leftarrow> thread_get tcb_fault receiver;
           case fault of
             None \<Rightarrow> do
