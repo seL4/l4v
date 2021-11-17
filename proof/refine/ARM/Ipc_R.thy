@@ -5067,12 +5067,27 @@ lemma receiveSignal_corres:
     apply (clarsimp simp: badge_register_def badgeRegister_def)
     apply (rule corres_split_deprecated[OF _ asUser_setRegister_corres])
       apply (rule corres_split_deprecated[OF _ setNotification_corres])
-         apply (rule maybeDonateSc_corres)
+         apply (rule corres_split[OF maybeDonateSc_corres])
+              apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
+                 apply (rule ifCondRefillUnblockCheck_corres)
+             apply (clarsimp simp: tcb_relation_def)
+            apply (wpsimp wp: get_tcb_obj_ref_wp)
+           apply (wpsimp wp: threadGet_wp)
+          apply (rule_tac Q="\<lambda>_. tcb_at thread and active_sc_valid_refills and pspace_distinct
+                                 and pspace_aligned and valid_objs"
+                 in hoare_strengthen_post[rotated])
+           apply (clarsimp simp: obj_at_def is_tcb)
+           apply (erule (1) valid_objsE)
+           apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def opt_map_def is_sc_obj
+                           split: option.splits)
+          apply wpsimp
+         apply (rule_tac Q="\<lambda>_. tcb_at' thread and valid_objs'" in hoare_strengthen_post[rotated])
+          apply (clarsimp simp: obj_at'_def projectKOs split: option.split)
+         apply wpsimp
         apply (clarsimp simp: ntfn_relation_def)
        apply (wpsimp wp: set_ntfn_minor_invs)
       apply (wpsimp wp: set_ntfn_minor_invs')
-     apply (wpsimp wp: hoare_vcg_imp_lift'
-                 simp: valid_ntfn_def)
+     apply (wpsimp wp: hoare_vcg_imp_lift' simp: valid_ntfn_def)
     apply (wpsimp wp: hoare_vcg_imp_lift')
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (clarsimp simp: obj_at_def live_def live_ntfn_def valid_ntfn_def)
