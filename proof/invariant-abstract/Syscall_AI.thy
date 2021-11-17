@@ -469,7 +469,9 @@ lemma do_reply_invs[wp]:
                                  get_simple_ko_wp thread_get_fault_wp
                                  hoare_vcg_all_lift
                            simp: ran_tcb_cap_cases)+
-        apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
+          apply (simp flip: cases_imp_eq imp_conjL not_None_eq)
+          apply (wpsimp wp: hoare_drop_imps)
+         apply wpsimp
         apply (wpsimp wp: hoare_drop_imps reply_remove_invs)
        apply (clarsimp cong: conj_cong)
        apply (wpsimp wp: gts_wp get_simple_ko_wp)+
