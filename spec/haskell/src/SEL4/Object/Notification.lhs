@@ -70,6 +70,8 @@ mark the notification object as active.
 >                         maybeDonateSc tcb ntfnPtr
 >                         schedulable <- isSchedulable tcb
 >                         when schedulable $ possibleSwitchTo tcb
+>                         scOpt <- threadGet tcbSchedContext tcb
+>                         ifCondRefillUnblockCheck scOpt (Just True) (Just True)
 >                       else
 >                         setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
 >             (IdleNtfn, Nothing) -> setNotification ntfnPtr $ nTFN { ntfnObj = ActiveNtfn badge }
@@ -87,6 +89,8 @@ If the notification object is waiting, a thread is removed from its queue and th
 >                 maybeDonateSc dest ntfnPtr
 >                 schedulable <- isSchedulable dest
 >                 when schedulable $ possibleSwitchTo dest
+>                 scOpt <- threadGet tcbSchedContext dest
+>                 ifCondRefillUnblockCheck scOpt (Just True) (Just True)
 >             (WaitingNtfn [], _) -> fail "WaitingNtfn Notification must have non-empty queue"
 
 If the notification object is active, new values are calculated and stored in the notification object. The calculation is done by a bitwise OR operation of the currently stored, and the newly sent values.
