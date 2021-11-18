@@ -768,6 +768,10 @@ lemma handleTimeout_invs':
 crunches isValidTimeoutHandler
   for inv[wp]: P
 
+crunches ifCondRefillUnblockCheck
+  for sch_act_simple[wp]: sch_act_simple
+  (simp: crunch_simps sch_act_simple_def)
+
 lemma doReplyTransfer_invs'[wp]:
   "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr and sch_act_simple\<rbrace>
    doReplyTransfer sender replyPtr grant
@@ -788,6 +792,9 @@ lemma doReplyTransfer_invs'[wp]:
    apply (fastforce intro: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def projectKOs isReply_def)
   apply simp
+  apply (rule hoare_seq_ext[OF _ threadGet_sp])
+  apply (rule_tac B="\<lambda>_. ?pre and st_tcb_at' ((=) Inactive) receiver and tcb_at' receiver and ex_nonz_cap_to' receiver"
+         in hoare_seq_ext[rotated], wpsimp)
   apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
   apply (rule_tac B="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver"
          in hoare_seq_ext)

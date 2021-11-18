@@ -6378,75 +6378,77 @@ lemma doReplyTransfer_corres:
       apply (rule stronger_corres_guard_imp)
         apply (rule corres_assert_assume_l)
         apply (rule corres_split [OF replyRemove_corres], (rule refl)+)
-          apply (rule corres_split [OF threadget_fault_corres])
-            apply (rule corres_split)
-               apply (rule_tac P="tcb_at sender and tcb_at recvr and valid_objs and pspace_aligned and
-                                  valid_list and pspace_distinct and valid_mdb and cur_tcb
-                                  and current_time_bounded 2" and
-                               P'="tcb_at' sender and tcb_at' recvr and valid_pspace' and cur_tcb' and
-                                   valid_release_queue and valid_release_queue'"
-                      in corres_guard_imp)
-                 apply (simp add: fault_rel_optionation_def)
-                 apply (rule corres_option_split; simp)
-                  apply (rule corres_split [OF doIPCTransfer_corres setThreadState_corres])
-                    apply (clarsimp simp: thread_state_relation_def)
-                   prefer 3
-                   apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
-                     apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
-                       apply (rule corres_split_eqr [OF _ getMRs_corres])
-                          apply (simp (no_asm) del: dc_simp)
-                          apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
-                             apply (rule corres_split [OF threadset_corresT setThreadState_corres])
-                                  apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
-                                 apply (clarsimp simp: tcb_cap_cases_def)
-                                apply (clarsimp simp: tcb_cte_cases_def)
-                               apply (clarsimp simp: thread_state_relation_def split: if_split)
-                              (* solving hoare_triples *)
-                              apply (clarsimp simp: valid_tcb_state_def)
-                              apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and
-                                                     pspace_distinct and tcb_at recvr
-                                                     and current_time_bounded 2" in
-                                      hoare_strengthen_post[rotated])
-                               apply (clarsimp simp: valid_objs_valid_tcbs)
-                              apply (wpsimp wp: thread_set_fault_valid_objs)
-                             apply (wpsimp wp: threadSet_valid_tcbs' threadSet_valid_release_queue_inv
-                                               threadSet_valid_release_queue'_inv)
-                            apply simp
-                           apply (clarsimp simp: pred_conj_def cong: conj_cong)
-                           apply wpsimp+
-                          apply (strengthen valid_objs'_valid_tcbs')
-                          apply wpsimp+
-                  apply (strengthen valid_objs_valid_tcbs)
-                  apply wpsimp+
-                 apply (strengthen valid_objs'_valid_tcbs')
-                 apply wpsimp
-                apply (clarsimp split: option.splits)
-               apply (clarsimp split: option.splits simp: valid_pspace'_def)
-              apply (clarsimp simp: isRunnable_def get_tcb_obj_ref_def)
-              (* solve remaining corres goals *)
-              apply (rule corres_split [OF getThreadState_corres])
-                apply (rule corres_split [OF threadGet_corres[where r="(=)"]])
-                   apply (simp add: tcb_relation_def)
-                  apply (rename_tac scopt scopt')
-                  apply (rule corres_when)
-                   apply (case_tac state; simp add: thread_state_relation_def)
-                  apply (rule corres_assert_opt_assume_l)
-                  apply (rule_tac Q="valid_sched_action and tcb_at recvr
-                                     and sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
-                                     active_sc_at (the scopt) and valid_refills (the scopt) and
-                                     valid_release_q and active_sc_valid_refills and
-                                     (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
-                                     invs and valid_list and scheduler_act_not recvr
-                                     and current_time_bounded 2 and st_tcb_at active recvr"
-                              and Q'="invs' and tcb_at' recvr and sc_at' (the scopt) and cur_tcb'"
-                              and P'="invs' and sc_at' (the scopt') and tcb_at' recvr and cur_tcb'"
-                              and P="valid_sched_action and tcb_at recvr and current_time_bounded 2 and
-                                     sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
-                                     active_sc_at (the scopt) and valid_refills (the scopt) and
-                                     valid_release_q and active_sc_valid_refills and
-                                     (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
-                                     invs and valid_list and scheduler_act_not recvr and st_tcb_at active recvr"
-                         in stronger_corres_guard_imp)
+          apply (rule corres_split_eqr [OF _ get_tcb_obj_ref_corres])
+             apply (rule corres_split [OF ifCondRefillUnblockCheck_corres])
+               apply (rule corres_split [OF threadget_fault_corres])
+                 apply (rule corres_split)
+                    apply (rule_tac P="tcb_at sender and tcb_at recvr and valid_objs and pspace_aligned and
+                                       valid_list and pspace_distinct and valid_mdb and cur_tcb
+                                       and current_time_bounded 2" and
+                                    P'="tcb_at' sender and tcb_at' recvr and valid_pspace' and cur_tcb' and
+                                        valid_release_queue and valid_release_queue'"
+                           in corres_guard_imp)
+                      apply (simp add: fault_rel_optionation_def)
+                      apply (rule corres_option_split; simp)
+                       apply (rule corres_split [OF doIPCTransfer_corres setThreadState_corres])
+                         apply (clarsimp simp: thread_state_relation_def)
+                        prefer 3
+                        apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
+                          apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
+                            apply (rule corres_split_eqr [OF _ getMRs_corres])
+                               apply (simp (no_asm) del: dc_simp)
+                               apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
+                                  apply (rule corres_split [OF threadset_corresT setThreadState_corres])
+                                       apply (clarsimp simp: tcb_relation_def fault_rel_optionation_def)
+                                      apply (clarsimp simp: tcb_cap_cases_def)
+                                     apply (clarsimp simp: tcb_cte_cases_def)
+                                    apply (clarsimp simp: thread_state_relation_def split: if_split)
+                                   (* solving hoare_triples *)
+                                   apply (clarsimp simp: valid_tcb_state_def)
+                                   apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and
+                                                          pspace_distinct and tcb_at recvr
+                                                          and current_time_bounded 2" in
+                                           hoare_strengthen_post[rotated])
+                                    apply (clarsimp simp: valid_objs_valid_tcbs)
+                                   apply (wpsimp wp: thread_set_fault_valid_objs)
+                                  apply (wpsimp wp: threadSet_valid_tcbs' threadSet_valid_release_queue_inv
+                                                    threadSet_valid_release_queue'_inv)
+                                 apply simp
+                                apply (clarsimp simp: pred_conj_def cong: conj_cong)
+                                apply wpsimp+
+                               apply (strengthen valid_objs'_valid_tcbs')
+                               apply wpsimp+
+                       apply (strengthen valid_objs_valid_tcbs)
+                       apply wpsimp+
+                      apply (strengthen valid_objs'_valid_tcbs')
+                      apply wpsimp
+                     apply (clarsimp split: option.splits)
+                    apply (clarsimp split: option.splits simp: valid_pspace'_def)
+                   apply (clarsimp simp: isRunnable_def get_tcb_obj_ref_def)
+                   (* solve remaining corres goals *)
+                   apply (rule corres_split [OF getThreadState_corres])
+                     apply (rule corres_split [OF threadGet_corres[where r="(=)"]])
+                        apply (simp add: tcb_relation_def)
+                       apply (rename_tac scopt scopt')
+                       apply (rule corres_when)
+                        apply (case_tac state; simp add: thread_state_relation_def)
+                       apply (rule corres_assert_opt_assume_l)
+                       apply (rule_tac Q="valid_sched_action and tcb_at recvr
+                                          and sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
+                                          active_sc_at (the scopt) and valid_refills (the scopt) and
+                                          valid_release_q and active_sc_valid_refills and
+                                          (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
+                                          invs and valid_list and scheduler_act_not recvr
+                                          and current_time_bounded 2 and st_tcb_at active recvr"
+                                   and Q'="invs' and tcb_at' recvr and sc_at' (the scopt) and cur_tcb'"
+                                   and P'="invs' and sc_at' (the scopt') and tcb_at' recvr and cur_tcb'"
+                                   and P="valid_sched_action and tcb_at recvr and current_time_bounded 2 and
+                                          sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
+                                          active_sc_at (the scopt) and valid_refills (the scopt) and
+                                          valid_release_q and active_sc_valid_refills and
+                                          (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
+                                          invs and valid_list and scheduler_act_not recvr and st_tcb_at active recvr"
+                              in stronger_corres_guard_imp)
 
                     (* this next section by somewhat complicated symbolic executions *)
                     apply (rule corres_symb_exec_l [OF _ _ get_sched_context_sp], rename_tac sc)
@@ -6488,133 +6490,151 @@ lemma doReplyTransfer_corres:
                                             apply (clarsimp simp: invs'_def valid_pspace'_def)
                                             apply (auto simp: is_timeout_fault_def fault_map_def split: ExceptionTypes_A.fault.splits)[1]
 
-                                           (* solve final hoare triple goals *)
-                                           apply wpsimp
-                                          apply wpsimp
-                                         apply (wpsimp wp: hoare_drop_imp simp: isValidTimeoutHandler_def)
-                                        apply (wpsimp simp: isValidTimeoutHandler_def)
-                                       apply (clarsimp split: if_split simp: valid_fault_def invs_def valid_state_def valid_pspace_def)
-                                       apply (clarsimp simp: tcb_cnode_map_def obj_at_def TCB_cte_wp_at_obj_at)
-                                      apply (clarsimp simp: obj_at_def)
-                                      apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-                                      apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs tcb_relation_def)
-                                      apply (case_tac "cteCap (tcbTimeoutHandler ko)";
-                                             case_tac "tcb_timeout_handler tcb"; simp)
-                                     apply (wpsimp simp: tcb_at_def)
-                                    apply (wpsimp simp: tcb_at_def)
-                                   apply (assumption)
-                                  apply clarsimp
-                                  apply (subgoal_tac "invs' s \<and> tcb_at' recvr s \<and> cur_tcb' s
-                                                      \<and> obj_at' (\<lambda>sc'. sc_badge sc = scBadge sc') (the scopt') s")
-                                   apply (clarsimp simp: obj_at'_def)
-                                  apply (assumption)
-                                 apply (clarsimp simp: obj_at'_def)
-                                apply wpsimp
-                               apply wpsimp
+                                                (* solve final hoare triple goals *)
+                                                apply wpsimp
+                                               apply wpsimp
+                                              apply (wpsimp wp: hoare_drop_imp simp: isValidTimeoutHandler_def)
+                                             apply (wpsimp simp: isValidTimeoutHandler_def)
+                                            apply (clarsimp split: if_split simp: valid_fault_def invs_def valid_state_def valid_pspace_def)
+                                            apply (clarsimp simp: tcb_cnode_map_def obj_at_def TCB_cte_wp_at_obj_at)
+                                           apply (clarsimp simp: obj_at_def)
+                                           apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+                                           apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs tcb_relation_def)
+                                           apply (case_tac "cteCap (tcbTimeoutHandler ko)";
+                                                  case_tac "tcb_timeout_handler tcb"; simp)
+                                          apply (wpsimp simp: tcb_at_def)
+                                         apply (wpsimp simp: tcb_at_def)
+                                        apply (assumption)
+                                       apply clarsimp
+                                       apply (subgoal_tac "invs' s \<and> tcb_at' recvr s \<and> cur_tcb' s
+                                                           \<and> obj_at' (\<lambda>sc'. sc_badge sc = scBadge sc') (the scopt') s")
+                                        apply (clarsimp simp: obj_at'_def)
+                                       apply (assumption)
+                                      apply (clarsimp simp: obj_at'_def)
+                                     apply wpsimp
+                                    apply wpsimp
 
-                              apply (clarsimp simp: invs_def valid_state_def valid_pspace_def active_sc_at_equiv
-                                             split: if_split)
-                             apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def
-                                                   valid_pspace'_def
-                                            split: if_split)
-                             apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
-                             apply (clarsimp simp: obj_at_def)
-                             apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-                             apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs sc_relation_def)
-                            apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def valid_pspace'_def)
-                            apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
-                            apply (prop_tac "sc_relation sc n ko")
-                             apply (clarsimp simp: obj_at_def)
-                             apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-                             apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs )
-                            apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
-                            apply (subgoal_tac "0 < scRefillMax ko")
-                             apply (subgoal_tac "sc_valid_refills sc")
-                              apply (prop_tac "koa=ko", erule (1) ko_at'_inj, simp only:)
-                              apply (subgoal_tac "sc_valid_refills' ko")
-                               apply (simp add: sc_refill_ready_relation sc_refill_sufficient_relation state_relation_def active_sc_at_equiv)
-                              apply (metis valid_sched_context'_def sc_valid_refills_scRefillCount)
-                             apply (subst (asm) active_sc_at_equiv)
-                             apply (frule (1) active_sc_valid_refillsE)
-                             apply (clarsimp simp: valid_refills_def2 obj_at_def)
-                            apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def
-                                                  sc_relation_def)
-                           apply wpsimp
-                          apply (wpsimp simp: refillSufficient_def getRefills_def obj_at'_def)
-                         apply (wpsimp simp: refillReady_wp)
-                        apply (simp add: refillReady_def, rule no_ofail_gets_the)
-                        apply wpsimp
-                       apply wpsimp
-                      apply (clarsimp simp: obj_at_def sc_at_pred_n_def get_sched_context_exs_valid)
-                     apply (rule get_sched_context_exs_valid)
-                     apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-                    apply ((wpsimp simp: obj_at_def is_sc_obj_def
-                           | clarsimp split: Structures_A.kernel_object.splits)+)[1]
-                   apply simp
-                  apply clarsimp
-                 apply (wpsimp wp: thread_get_wp')
-                apply (wpsimp wp: threadGet_wp)
-               apply (wpsimp wp: gts_wp)
-              apply (wpsimp wp: gts_wp')
-             apply (rule_tac Q="\<lambda>_. tcb_at recvr and valid_sched_action and invs and valid_list
-                                    and valid_release_q and scheduler_act_not recvr
-                                    and active_sc_valid_refills and current_time_bounded 2
-                                    and active_if_bound_sc_tcb_at recvr
-                                    and not_queued recvr"
-                    in hoare_strengthen_post[rotated])
-              apply (clarsimp simp: obj_at_def is_tcb)
-              apply (subgoal_tac "pred_map (\<lambda>a. a = Some y) (tcb_scps_of s) recvr")
-               apply (subgoal_tac "pred_map (\<lambda>a. a = Some recvr) (sc_tcbs_of s) y")
-                apply (intro conjI)
-                    apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
+                                   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def active_sc_at_equiv
+                                                  split: if_split)
+                                  apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def
+                                                        valid_pspace'_def
+                                                 split: if_split)
+                                  apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
+                                  apply (clarsimp simp: obj_at_def)
+                                  apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+                                  apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs sc_relation_def)
+                                 apply (clarsimp simp: invs_def valid_state_def valid_pspace_def invs'_def valid_pspace'_def)
+                                 apply (frule (1) valid_objs_ko_at, clarsimp simp: valid_obj_def)
+                                 apply (prop_tac "sc_relation sc n ko")
+                                  apply (clarsimp simp: obj_at_def)
+                                  apply (frule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+                                  apply (clarsimp simp: other_obj_relation_def obj_at'_def projectKOs )
+                                 apply (frule (1) sc_ko_at_valid_objs_valid_sc', clarsimp)
+                                 apply (subgoal_tac "0 < scRefillMax ko")
+                                  apply (subgoal_tac "sc_valid_refills sc")
+                                   apply (prop_tac "koa=ko", erule (1) ko_at'_inj, simp only:)
+                                   apply (subgoal_tac "sc_valid_refills' ko")
+                                    apply (simp add: sc_refill_ready_relation sc_refill_sufficient_relation state_relation_def active_sc_at_equiv)
+                                   apply (metis valid_sched_context'_def sc_valid_refills_scRefillCount)
+                                  apply (subst (asm) active_sc_at_equiv)
+                                  apply (frule (1) active_sc_valid_refillsE)
+                                  apply (clarsimp simp: valid_refills_def2 obj_at_def)
+                                 apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def
+                                                       sc_relation_def)
+                                apply wpsimp
+                               apply (wpsimp simp: refillSufficient_def getRefills_def obj_at'_def)
+                              apply (wpsimp simp: refillReady_wp)
+                             apply (simp add: refillReady_def, rule no_ofail_gets_the)
+                             apply wpsimp
+                            apply wpsimp
+                           apply (clarsimp simp: obj_at_def sc_at_pred_n_def get_sched_context_exs_valid)
+                          apply (rule get_sched_context_exs_valid)
+                          apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+                         apply ((wpsimp simp: obj_at_def is_sc_obj_def
+                                | clarsimp split: Structures_A.kernel_object.splits)+)[1]
+                        apply simp
+                       apply clarsimp
+                      apply (wpsimp wp: thread_get_wp')
+                     apply (wpsimp wp: threadGet_wp)
+                    apply (wpsimp wp: gts_wp)
+                   apply (wpsimp wp: gts_wp')
+                  apply (rule_tac Q="\<lambda>_. tcb_at recvr and valid_sched_action and invs and valid_list
+                                         and valid_release_q and scheduler_act_not recvr
+                                         and active_sc_valid_refills and current_time_bounded 2
+                                         and active_if_bound_sc_tcb_at recvr
+                                         and not_queued recvr"
+                         in hoare_strengthen_post[rotated])
+                   apply (clarsimp simp: obj_at_def is_tcb)
+                   apply (subgoal_tac "pred_map (\<lambda>a. a = Some y) (tcb_scps_of s) recvr")
+                    apply (subgoal_tac "pred_map (\<lambda>a. a = Some recvr) (sc_tcbs_of s) y")
+                     apply (intro conjI)
+                         apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
+                        apply (clarsimp simp: vs_all_heap_simps)
+                       apply (erule active_sc_valid_refillsE[rotated], clarsimp simp: vs_all_heap_simps)
+                      apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
+                     apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def runnable_eq)
+                    apply (simp add: sc_at_kh_simps pred_map_eq_normalise heap_refs_inv_def2)
+                    apply (erule heap_refs_retractD[rotated], clarsimp)
                    apply (clarsimp simp: vs_all_heap_simps)
-                  apply (erule active_sc_valid_refillsE[rotated], clarsimp simp: vs_all_heap_simps)
-                 apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
-                apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def runnable_eq)
-               apply (simp add: sc_at_kh_simps pred_map_eq_normalise heap_refs_inv_def2)
-               apply (erule heap_refs_retractD[rotated], clarsimp)
-              apply (clarsimp simp: vs_all_heap_simps)
-             apply (wpsimp wp: set_thread_state_valid_sched_action set_thread_state_valid_release_q
-                               sts_invs_minor2)
-                 apply (rule_tac Q="\<lambda>_ s.
-                           st_tcb_at inactive recvr s \<and>
-                           invs s \<and> valid_list s \<and> scheduler_act_not recvr s \<and>
-                           ex_nonz_cap_to recvr s \<and> current_time_bounded 2 s \<and>
-                           recvr \<noteq> idle_thread s \<and>
-                           fault_tcb_at ((=) None) recvr s \<and>
-                           valid_release_q s \<and>
-                           active_sc_valid_refills s \<and>
-                           heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s) \<and>
-                           (pred_map_eq None (tcb_scps_of s) recvr \<or> active_sc_tcb_at recvr s) \<and>
-                           not_queued recvr s \<and> not_in_release_q recvr s"
-                        in hoare_strengthen_post[rotated])
-                  apply (clarsimp split: if_split simp: pred_tcb_at_def obj_at_def)
-                 apply (wpsimp wp: thread_set_no_change_tcb_state thread_set_cap_to
-                                   thread_set_no_change_tcb_state
-                                   thread_set_pred_tcb_at_sets_true simp: ran_tcb_cap_cases)
-                apply simp
-                apply (wpsimp wp: hoare_drop_imp)
-               apply wpsimp
-              apply wpsimp
-             apply wpsimp
-            apply (rule_tac Q="\<lambda>_. tcb_at' recvr and invs' and cur_tcb'" in hoare_strengthen_post[rotated])
-             apply (clarsimp simp: tcb_at'_ex_eq_all invs'_def valid_pspace'_def)
-             apply (frule (1) tcb_ko_at_valid_objs_valid_tcb', clarsimp simp: valid_tcb'_def)
-            apply (wpsimp wp: sts_invs')
-             apply (rule_tac Q="\<lambda>_. invs' and ex_nonz_cap_to' recvr and tcb_at' recvr
-                                    and (st_tcb_at' (\<lambda>st. st = Inactive) recvr) and cur_tcb'"
+                  apply (wpsimp wp: set_thread_state_valid_sched_action set_thread_state_valid_release_q
+                                    sts_invs_minor2)
+                      apply (rule_tac Q="\<lambda>_ s.
+                                st_tcb_at inactive recvr s \<and>
+                                invs s \<and> valid_list s \<and> scheduler_act_not recvr s \<and>
+                                ex_nonz_cap_to recvr s \<and> current_time_bounded 2 s \<and>
+                                recvr \<noteq> idle_thread s \<and>
+                                fault_tcb_at ((=) None) recvr s \<and>
+                                valid_release_q s \<and>
+                                active_sc_valid_refills s \<and>
+                                heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s) \<and>
+                                (pred_map_eq None (tcb_scps_of s) recvr \<or> active_sc_tcb_at recvr s) \<and>
+                                not_queued recvr s \<and> not_in_release_q recvr s"
+                             in hoare_strengthen_post[rotated])
+                       apply (clarsimp split: if_split simp: pred_tcb_at_def obj_at_def)
+                      apply (wpsimp wp: thread_set_no_change_tcb_state thread_set_cap_to
+                                        thread_set_no_change_tcb_state
+                                        thread_set_pred_tcb_at_sets_true simp: ran_tcb_cap_cases)
+                     apply simp
+                     apply (wpsimp wp: hoare_drop_imp)
+                    apply wpsimp
+                   apply wpsimp
+                  apply wpsimp
+                 apply (rule_tac Q="\<lambda>_. tcb_at' recvr and invs' and cur_tcb'" in hoare_strengthen_post[rotated])
+                  apply (clarsimp simp: tcb_at'_ex_eq_all invs'_def valid_pspace'_def)
+                  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb', clarsimp simp: valid_tcb'_def)
+                 apply (wpsimp wp: sts_invs')
+                  apply (rule_tac Q="\<lambda>_. invs' and ex_nonz_cap_to' recvr and tcb_at' recvr
+                                         and (st_tcb_at' (\<lambda>st. st = Inactive) recvr) and cur_tcb'"
+                         in hoare_strengthen_post[rotated])
+                   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+                  apply wpsimp
+                 apply (wpsimp wp: sts_invs')
+                     apply (rule_tac Q="\<lambda>_. invs' and sch_act_not recvr and ex_nonz_cap_to' recvr and tcb_at' recvr
+                                            and (st_tcb_at' (\<lambda>st. st = Inactive) recvr) and cur_tcb'"
+                            in hoare_strengthen_post[rotated])
+                      apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+                      apply (fastforce dest: global'_no_ex_cap simp: invs'_def split: if_split)
+                     apply (wpsimp wp: threadSet_fault_invs' threadSet_pred_tcb_no_state threadSet_cur)
+                    apply wpsimp+
+                apply (wpsimp wp: thread_get_wp')
+               apply (wpsimp wp: threadGet_wp)
+              apply (rule_tac Q="\<lambda>_. tcb_at sender and tcb_at recvr and invs and valid_list and
+                        valid_sched and scheduler_act_not recvr and not_in_release_q recvr and
+                        active_if_bound_sc_tcb_at recvr and st_tcb_at inactive recvr and
+                        ex_nonz_cap_to recvr and not_queued recvr and current_time_bounded 2"
+                     in hoare_strengthen_post[rotated])
+               apply (clarsimp simp: valid_sched_def invs_def valid_state_def valid_pspace_def
+                                     pred_tcb_at_def obj_at_def
+                              dest!: idle_no_ex_cap)
+              apply (wpsimp wp: refill_unblock_check_valid_sched
+                          simp: if_cond_refill_unblock_check_def)
+             apply (rule_tac Q="\<lambda>_. tcb_at' recvr and invs' and cur_tcb' and tcb_at' sender
+             and ex_nonz_cap_to' recvr and sch_act_not recvr and st_tcb_at' ((=) Inactive) recvr"
                     in hoare_strengthen_post[rotated])
-              apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+              apply (clarsimp simp: op_equal invs'_def obj_at'_def)
              apply wpsimp
-            apply (wpsimp wp: sts_invs')
-                apply (rule_tac Q="\<lambda>_. invs' and sch_act_not recvr and ex_nonz_cap_to' recvr and tcb_at' recvr
-                                       and (st_tcb_at' (\<lambda>st. st = Inactive) recvr) and cur_tcb'"
-                       in hoare_strengthen_post[rotated])
-                 apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
-                 apply (fastforce dest: global'_no_ex_cap simp: invs'_def split: if_split)
-                apply (wpsimp wp: threadSet_fault_invs' threadSet_pred_tcb_no_state threadSet_cur)
-               apply wpsimp+
-           apply (wpsimp wp: thread_get_wp')
+            apply (clarsimp simp: tcb_relation_def)
+           apply (wpsimp wp: get_tcb_obj_ref_wp)
           apply (wpsimp wp: threadGet_wp)
          apply (rule_tac Q="\<lambda>_. tcb_at sender and tcb_at recvr and invs and valid_list and
                    valid_sched and scheduler_act_not recvr and not_in_release_q recvr and
@@ -6622,13 +6642,21 @@ lemma doReplyTransfer_corres:
                    ex_nonz_cap_to recvr and not_queued recvr and current_time_bounded 2"
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: valid_sched_def invs_def valid_state_def valid_pspace_def
-                                pred_tcb_at_def obj_at_def
                          dest!: idle_no_ex_cap)
+          apply (erule disjE; clarsimp simp: vs_all_heap_simps obj_at_def is_sc_obj opt_map_red)
+          apply (rule conjI)
+           apply (erule (1) valid_sched_context_size_objsI)
+          apply (clarsimp split: if_split)
+          apply (drule sym_refs_inv_tcb_scps, rename_tac scp sc n t tcb')
+          apply (prop_tac "heap_ref_eq scp t (tcb_scps_of s) \<and> heap_ref_eq scp recvr (tcb_scps_of s)")
+           apply (clarsimp simp: vs_all_heap_simps)
+          apply (clarsimp simp: heap_refs_inv_def2 vs_all_heap_simps)
+
          apply (wpsimp wp: reply_remove_valid_sched reply_remove_active_if_bound_sc_tcb_at reply_remove_invs)
         apply (rule_tac Q="\<lambda>_. tcb_at' sender and invs' and sch_act_not recvr and ex_nonz_cap_to' recvr and tcb_at' recvr
                                and st_tcb_at' (\<lambda>a. a = Structures_H.thread_state.Inactive) recvr and cur_tcb'"
                in hoare_strengthen_post[rotated])
-         apply (clarsimp simp: obj_at'_def invs'_def valid_pspace'_def)
+         apply (clarsimp simp: obj_at'_def invs'_def valid_pspace'_def op_equal split: option.split)
         apply (wpsimp simp: valid_pspace'_def wp: replyRemove_invs')
        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
                              valid_sched_action_weak_valid_sched_action
