@@ -200,6 +200,8 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                 then return ()
 >                 else do
 >                     replyRemove reply receiver
+>                     scOpt <- threadGet tcbSchedContext receiver
+>                     ifCondRefillUnblockCheck scOpt (Just True) (Just False)
 >                     faultOpt <- threadGet tcbFault receiver
 >                     case faultOpt of
 >                         Nothing -> do
