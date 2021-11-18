@@ -107,7 +107,9 @@ locale time_protection =
   fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
   fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
-  \<comment> \<open> this will probably need some restriction about its relationship with collision_set\<close>
+  assumes do_pch_flush_affects_only_collisions:
+   "(\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch) \<Longrightarrow> p a = (do_pch_flush p as) a"
+
 
   fixes addr_domain :: "address \<Rightarrow> 'userdomain domain" \<comment> \<open>for each address, this is the security domain\<close>
   fixes addr_colour :: "address \<Rightarrow> 'colour" \<comment> \<open>for each address, this is the cache colour\<close>
@@ -120,6 +122,7 @@ locale time_protection =
 \<comment> \<open>do we assert this here
   or just put it in the type so it has to be asserted before instantiation? or assert it differently
   later?\<close>
+
 
   fixes current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
   fixes external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
@@ -186,6 +189,13 @@ lemma collision_set_contains_itself: "a \<in> collision_set a"
   using collides_with_equiv
   by (clarsimp simp:equiv_def refl_on_def)
 
+
+lemma external_uwr_refl [simp]:
+  "(s, s) \<in> external_uwr d"
+  using external_uwr_equiv_rel
+  by (clarsimp simp: equiv_def refl_on_def)
+
+
 \<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
 definition kernel_shared_precise :: "address set" where
   "kernel_shared_precise \<equiv> {a. addr_domain a = Sched}"
@@ -193,6 +203,32 @@ definition kernel_shared_precise :: "address set" where
 \<comment> \<open> the kernel shared memory, including cache colliding addresses \<close>
 definition kernel_shared_expanded :: "address set" where
   "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
+
+definition full_collision_set :: "address set \<Rightarrow> bool" where
+  "full_collision_set S \<equiv> \<forall>a1\<in>S. \<forall>a2. (a1, a2) \<in> collides_in_pch \<longrightarrow> a2 \<in> S"
+
+lemma collision_set_full_collision_set:
+  "full_collision_set (collision_set a)"
+  apply (clarsimp simp: full_collision_set_def)
+  apply (meson collides_with_equiv equiv_def trans_def)
+  done
+
+lemma kernel_shared_expanded_full_collision_set:
+  "full_collision_set kernel_shared_expanded"
+  apply (clarsimp simp: kernel_shared_expanded_def full_collision_set_def)
+  apply (meson collides_with_equiv equiv_def trans_def)
+  done
+
+lemma collision_in_full_collision_set:
+  "full_collision_set S \<Longrightarrow>
+  (a1, a2) \<in> collides_in_pch \<Longrightarrow>
+  a1 \<notin> S \<Longrightarrow>
+  a2 \<notin> S"
+  apply (clarsimp simp: full_collision_set_def)
+  apply (drule_tac x=a2 in bspec, assumption)
+  apply (drule_tac x=a1 in spec)
+  apply (meson collides_with_equiv equiv_def sym_def)
+  done
 
 abbreviation touched_addrs' ::
   "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> address set"
@@ -456,18 +492,13 @@ primrec instr_multistep :: "'regs program \<Rightarrow>
   "instr_multistep [] s = s"
 | "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
 
-
-
-
-
 definition
   instrs_obeying_ta :: "address set \<Rightarrow> 'regs instr set" where
  "instrs_obeying_ta ta \<equiv> {i. case i of
                             IRead a  \<Rightarrow> a \<in> ta
                           | IWrite a \<Rightarrow> a \<in> ta
+                          | IFlushL2 as \<Rightarrow> as \<subseteq> ta
                           | _        \<Rightarrow> True }"
-
-
 
 (* these are the programs that could have created this ta *)
 definition
@@ -521,12 +552,6 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs
 
 
 *)
-
-lemma do_read_from_external_uwr:
-  "\<lbrakk>(s, t) \<in> external_uwr (current_domain s);
-     addr_domain a = current_domain s\<rbrakk>
-    \<Longrightarrow> do_read a s r = do_read a t r"
-  
 
 lemma d_running_step:
   assumes
@@ -694,11 +719,12 @@ lemma d_running: "\<lbrakk>
   apply force
   done
 
+
 (*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
 lemma context_switch_from_d: "\<lbrakk>
    p \<in> programs_obeying_ta ta;
-   ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise;
+   ta \<inter> all_addrs_of d = {};
    (s, t) \<in> uwr d;
    current_domain' s = d;
    \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
@@ -709,6 +735,64 @@ lemma context_switch_from_d: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
   oops
+
+lemma in_sub_inter_empty:
+  "\<lbrakk>x \<in> S1;
+  S1 \<subseteq> S2;
+  S2 \<inter> S3 = {} \<rbrakk> \<Longrightarrow>
+  x \<notin> S3"
+  by blast
+
+lemma d_not_running_step:
+  assumes
+  "i \<in> instrs_obeying_ta ta"
+  "ta \<inter> all_addrs_of d = {}"
+  "current_domain' s \<noteq> d"
+  "s' = instr_step i s"
+  shows
+  "(s, s') \<in> uwr d"
+  proof (cases i)
+  case (IRead x1)
+  then show ?thesis sorry
+  next
+    case (IWrite x2)
+    then show ?thesis sorry
+  next
+    case (IRegs x3)
+    then show ?thesis using assms
+    by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  next
+    case IFlushL1
+    then show ?thesis using assms
+    by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  next
+    case (IFlushL2 x5)
+    then show ?thesis using assms
+      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
+                            instrs_obeying_ta_def)
+      apply (rule do_pch_flush_affects_only_collisions, clarsimp)
+      (* a' also can't be in kernel_shared_expanded, as this would mean they wouldn't collide *)
+      apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
+      apply (drule(2) in_sub_inter_empty)
+      apply (metis (mono_tags, lifting) addr_domain_valid all_addrs_of_def
+                   collision_set_contains_itself kernel_shared_expanded_def
+                   kernel_shared_precise_def mem_Collect_eq
+                   time_protection.no_cross_colour_collisions time_protection_axioms)
+      done
+  next
+    case IReadTime
+    then show ?thesis sorry
+  next
+    case (IPadToTime x7)
+    then show ?thesis sorry
+qed
+
+
+
+
+
+
+
 
 (* d not running \<rightarrow> d not running *)
 lemma d_not_running: "\<lbrakk>
