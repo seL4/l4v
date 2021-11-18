@@ -148,6 +148,17 @@ locale time_protection =
      (s, t) \<in> external_uwr d \<Longrightarrow>
      (do_write a s r, do_write a t r) \<in> external_uwr d"
 
+  (* do_read depends only on things bound in its external uwr *)
+  assumes do_read_from_external_uwr_domain:
+    "\<lbrakk>(s, t) \<in> external_uwr d;
+     addr_domain a = d \<rbrakk> \<Longrightarrow>
+     do_read a s r = do_read a t r"
+
+  (* do_read of kernel_shared depends only on things bound in any external uwr *)
+  assumes do_read_from_external_uwr_sched:
+    "\<lbrakk>(s, t) \<in> external_uwr d;
+     addr_domain a = Sched \<rbrakk> \<Longrightarrow>
+     do_read a s r = do_read a t r"
 
   fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
@@ -468,7 +479,7 @@ lemma hd_instr_obeying_ta [dest]:
   "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
   by (force simp:programs_obeying_ta_def)
 
-
+(* this program never changes the current domain *)
 primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
   "program_no_domainswitch [] = True" |
   "program_no_domainswitch (i#is) =
@@ -510,6 +521,12 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs
 
 
 *)
+
+lemma do_read_from_external_uwr:
+  "\<lbrakk>(s, t) \<in> external_uwr (current_domain s);
+     addr_domain a = current_domain s\<rbrakk>
+    \<Longrightarrow> do_read a s r = do_read a t r"
+  
 
 lemma d_running_step:
   assumes
@@ -567,10 +584,13 @@ lemma d_running_step:
        apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
        using collision_set_contains_itself
        apply fastforce
-      (* equivalence of what ends up in the registers from other_state *)
-      (* TODO: we need a property that says the external_uwr will give us
-         equivalence of what's read from addresses belonging to that domain. *)
-      sorry
+      apply (erule disjE)
+       (* equivalence of what is read from external state, from external uwr *)
+       apply (erule(1) do_read_from_external_uwr_domain)
+      (* equivalence of what is read from kernel shared memory *)
+      apply (erule do_read_from_external_uwr_sched)
+      apply (clarsimp simp: kernel_shared_precise_def)
+      done
   next
     case (IWrite a)
     (* NB: Reasoning is mostly identical to that for IRead -robs. *)
