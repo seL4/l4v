@@ -3087,11 +3087,6 @@ lemma getScTime_wp:
   apply (wpsimp simp: getScTime_def getTCBSc_def wp: threadGet_wp)
   by (clarsimp simp: tcb_at'_ex_eq_all)
 
-lemma refillUnblockCheck_corres:
- "corres dc \<top> \<top> (refill_unblock_check a) (refillUnblockCheck b)"
-  unfolding refillUnblockCheck_def refill_unblock_check_def
-  sorry (* refillUnblockCheck_corres *)
-
 lemma updateRefillHd_valid_objs':
   "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
@@ -4140,7 +4135,9 @@ lemma completeSignal_corres:
             apply (rule corres_guard_imp)
               apply (rule corres_split_deprecated[OF _ maybeDonateSc_corres])
                 apply (rule corres_split_eqr[OF _ get_tcb_obj_ref_corres])
-                   apply (rule_tac P="bound_sc_tcb_at ((=) sc_opt) tcb and ntfn_at ntfnptr and valid_objs"
+                   apply (rule_tac P="bound_sc_tcb_at ((=) sc_opt) tcb and ntfn_at ntfnptr and valid_objs
+                                      and pspace_aligned and pspace_distinct
+                                      and active_sc_valid_refills"
                               and P'="bound_sc_tcb_at' ((=) sc_opt) tcb and ntfn_at' ntfnptr and valid_objs'"
                           in corres_inst)
                    apply (rename_tac sc_opt; case_tac sc_opt;
@@ -4148,8 +4145,9 @@ lemma completeSignal_corres:
                    apply (rule corres_guard_imp)
                      apply (rule corres_split[OF get_sc_corres])
                        apply (rename_tac scp sc sc')
-                       apply (rule_tac P="sc_at scp  and ntfn_at ntfnptr"
-                                  and P'="sc_at' scp and ntfn_at' ntfnptr"
+                       apply (rule_tac P="sc_at scp and (\<lambda>s. scs_of2 s scp = Some sc) and ntfn_at ntfnptr and active_sc_valid_refills
+                                          and pspace_aligned and pspace_distinct"
+                                  and P'="ko_at' sc' scp and ntfn_at' ntfnptr and valid_objs'"
                               in corres_inst)
                        apply (rule corres_guard_imp)
                          apply (rule corres_when2)
@@ -4161,16 +4159,22 @@ lemma completeSignal_corres:
                              apply (rule refillUnblockCheck_corres)
                             apply wpsimp
                            apply wpsimp
-                          apply wpsimp
-                         apply wpsimp
+                          apply (wpsimp wp: get_simple_ko_wp)
+                         apply (wpsimp wp: getNotification_wp)
                         apply (clarsimp simp: obj_at_def is_ntfn)
-                       apply simp
+                        apply (drule active_sc_valid_refillsE[rotated])
+                         apply (fastforce simp: vs_all_heap_simps is_sc_obj)
+                        apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def)
+                       apply clarsimp
+                       apply (erule valid_objs'_valid_refills', clarsimp simp: obj_at'_def)
+                       apply (clarsimp dest!: valid_objs'_valid_refills'
+                                        simp: opt_map_red is_active_sc'_def obj_at'_def projectKOs)
                       apply wpsimp
                      apply wpsimp
                     apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_obj_def valid_tcb_def
                                    dest!: sym[of "Some _"])
                     apply (erule (1) valid_objsE[where x=tcb])
-                    apply (clarsimp simp: obj_at_def valid_obj_def valid_tcb_def)
+                    apply (clarsimp simp: obj_at_def valid_obj_def valid_tcb_def is_sc_obj opt_map_red)
                    apply clarsimp
                    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def dest!: sym[of "Some _"])
                    apply (erule (1) valid_objsE'[where x=tcb])
@@ -4178,7 +4182,8 @@ lemma completeSignal_corres:
                   apply (clarsimp simp: tcb_relation_def)
                  apply (wpsimp wp: get_tcb_obj_ref_wp threadGet_wp)
                 apply (wpsimp wp: get_tcb_obj_ref_wp threadGet_wp)
-               apply (rule_tac Q="\<lambda>_. tcb_at tcb  and ntfn_at ntfnptr and valid_objs"
+               apply (rule_tac Q="\<lambda>_. tcb_at tcb  and ntfn_at ntfnptr and valid_objs
+                                      and pspace_distinct and pspace_aligned and active_sc_valid_refills"
                       in hoare_strengthen_post[rotated])
                 apply (clarsimp simp: pred_tcb_at_def obj_at_def opt_map_red)
                apply (wpsimp wp: abs_typ_at_lifts)

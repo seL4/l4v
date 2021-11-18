@@ -3916,7 +3916,7 @@ lemma refillHeadOverlappingLoop_corres:
   apply (fastforce intro!: mergeRefills_terminates)
   done
 
-lemma refillUnblockCheck_corres':
+lemma refillUnblockCheck_corres:
   "corres dc
      (sc_at scp and pspace_aligned and pspace_distinct
       and (\<lambda>s. ((\<lambda>sc. 0 < length (sc_refills sc)) |< scs_of2 s) scp))
@@ -3962,7 +3962,7 @@ lemma ifCondRefillUnblockCheck_corres:
        apply (clarsimp simp: active_sc_def sc_relation_def case_bool_if option.case_eq_if)
       apply (rule corres_when)
        apply fastforce
-      apply (rule refillUnblockCheck_corres')
+      apply (rule refillUnblockCheck_corres)
      apply wpsimp+
    apply (drule_tac scp=scp in active_sc_valid_refillsE[rotated, simplified is_active_sc_rewrite];
           clarsimp simp: case_bool_if option.case_eq_if opt_map_red obj_at_def is_active_sc2_def
