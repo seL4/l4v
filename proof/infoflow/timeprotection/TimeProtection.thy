@@ -151,6 +151,10 @@ locale time_protection =
      (s, t) \<in> external_uwr d \<Longrightarrow>
      (do_write a s r, do_write a t r) \<in> external_uwr d"
 
+  assumes do_write_outside_kernelshared_same_domain:
+    "addr_domain a \<noteq> Sched \<Longrightarrow>
+     current_domain (do_write a s r) = current_domain s"
+
   (* do_read depends only on things bound in its external uwr *)
   assumes do_read_from_external_uwr_domain:
     "\<lbrakk>(s, t) \<in> external_uwr d;
