@@ -193,7 +193,6 @@ lemma collision_set_contains_itself: "a \<in> collision_set a"
   using collides_with_equiv
   by (clarsimp simp:equiv_def refl_on_def)
 
-
 lemma external_uwr_refl [simp]:
   "(s, s) \<in> external_uwr d"
   using external_uwr_equiv_rel
@@ -212,6 +211,7 @@ definition kernel_shared_precise :: "address set" where
 definition kernel_shared_expanded :: "address set" where
   "kernel_shared_expanded \<equiv> {a. \<exists> z \<in> kernel_shared_precise. a \<in> collision_set z}"
 
+\<comment> \<open> a full collision set contains all of its own collisions \<close>
 definition full_collision_set :: "address set \<Rightarrow> bool" where
   "full_collision_set S \<equiv> \<forall>a1\<in>S. \<forall>a2. (a1, a2) \<in> collides_in_pch \<longrightarrow> a2 \<in> S"
 
@@ -240,47 +240,14 @@ abbreviation touched_addrs' ::
   where
   "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
+(*FIXME: Move these? These seem more of an IF framework thing. -Scott B *)
+\<comment> \<open> the invariant that touched_addresses is always sensible for its current domain \<close>
 definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
      touched_addrs s \<subseteq> all_addrs_of (current_domain s) \<union> kernel_shared_precise"
 
 abbreviation touched_addrs_inv' :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool" where
   "touched_addrs_inv' s \<equiv> touched_addrs_inv (other_state s)"
-
-
-(*
-
-  KSHARED
-  - some concrete set of addresses that spans various colours
-  - kernel steps may access these addresses - therefore there are time flows through pch
-  - we make the pch of all these addresses deterministic at domain-switch
-  - we may say that kshared includes all of the collision sets within itself
-
-
-
-
-  UWR u (CURRENTLY RUNNNING)
-  - all of fch
-  - pch (for addresses in colour(u))
-    - user transitions: only above
-    - kernel transitions: also addresses in kshared
-  - tm 
-  - all of regs
-  - other_state (according to external UWR u)
-
-  UWR u (NOT RUNNNING)
-  - none of fch
-  - pch (for addresses in colour(u))
-    - user transitions: only above
-    - kernel transitions: also addresses in kshared
-  - none of tm
-  - none of regs
-  - other_state (according to external UWR u)
-
-
-  every step maintains external UWR u
-
-*)
 
 definition pch_same_for_domain ::
   "'userdomain domain \<Rightarrow> 'pch_cachedness pch \<Rightarrow> 'pch_cachedness pch \<Rightarrow> bool"
@@ -395,35 +362,15 @@ lemma extended_uwr_equiv_rel:
 
 
 
-(*
- - if we have some types of step:
-   - kentry
-   - kexit 
-   - etc
-
- - 
-
- - for any step, touched_addresses is only in the current domain
-
-*)
-
-
-
-(*
-  read process:
-  - time step from read_time
-  - impact using read_impact
-*)
 
 (* now we make some basic isntructions, which contain addresses etc *)
-datatype 'r instr = IRead address
-               | IWrite address
-               | IRegs "'r \<Rightarrow> 'r"
-               | IFlushL1
-               | IFlushL2 "address set"
-               | IReadTime
-               | IPadToTime time
-
+datatype 'r instr = IRead address          \<comment> \<open>read from some address into regs\<close>
+                  | IWrite address         \<comment> \<open>write to some address from regs\<close>
+                  | IRegs "'r \<Rightarrow> 'r"       \<comment> \<open>modify the regs somehow\<close>
+                  | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
+                  | IFlushL2 "address set" \<comment> \<open>flush some part L2 cache(s)\<close>
+                  | IReadTime              \<comment> \<open>read the time into some regs\<close>
+                  | IPadToTime time        \<comment> \<open>pad the time up to some point\<close>
 
 primrec
   instr_step :: "'regs instr \<Rightarrow>
@@ -457,38 +404,6 @@ primrec
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 
 
-(*
-definition
-  instr_step :: "instr \<Rightarrow> state \<Rightarrow> state" where
- "instr_step i s \<equiv> case i of
-    IRead a \<Rightarrow> let (f2, p2) = read_impact a (fch s) (pch s) in
-      s\<lparr>fch := f2,
-        pch := p2,
-        tm  := tm s + read_cycles (fch s a) (pch s a),
-        regs := do_read a (other_state s) (regs s)\<rparr>
-  | IWrite a \<Rightarrow> let (f2, p2) = write_impact a (fch s) (pch s) in
-      s\<lparr>fch := f2,
-        pch := p2,
-        tm  := tm s + write_cycles (fch s a) (pch s a),
-        other_state := do_write a (other_state s) (regs s)\<rparr>
-  | IRegs m \<Rightarrow>
-      s\<lparr>regs := m (regs s),
-        tm := tm s + 1 \<rparr> \<comment> \<open>we increment by the smallest possible amount - different instruction
-                            lengths can be encoded with strings of consecutive IRegs intructions.\<close>
-  | IReadTime \<Rightarrow>
-      s\<lparr>regs := store_time (tm s) (regs s),
-        tm := tm s + 1\<rparr>
-  | IPadToTime t \<Rightarrow>     \<comment> \<open>TODO: is it possible that this changes anything other than regs? what about going backwards?\<close>
-      s\<lparr>regs := padding_regs_impact t (regs s),
-        tm := t\<rparr>
-  | IFlushL1 \<Rightarrow>
-      s\<lparr>fch := empty_fch,
-        tm := tm s + fch_flush_cycles (fch s)\<rparr>
-  | IFlushL2 as \<Rightarrow>
-      s\<lparr>pch := do_pch_flush (pch s) as,
-        tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
-*)
-
 type_synonym 'r program = "'r instr list"
 
 primrec instr_multistep :: "'regs program \<Rightarrow>
@@ -521,6 +436,9 @@ definition
 lemma hd_instr_obeying_ta [dest]:
   "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
   by (force simp:programs_obeying_ta_def)
+
+
+
 
 (* this program never changes the current domain *)
 primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
