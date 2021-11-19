@@ -195,6 +195,10 @@ lemma external_uwr_refl [simp]:
   using external_uwr_equiv_rel
   by (clarsimp simp: equiv_def refl_on_def)
 
+lemma collision_sym [simp]:
+  "(a, b) \<in> collides_in_pch \<Longrightarrow>
+  (b, a) \<in> collides_in_pch"
+  by (meson collides_with_equiv equiv_def symE)
 
 \<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
 definition kernel_shared_precise :: "address set" where
@@ -225,9 +229,6 @@ lemma collision_in_full_collision_set:
   a1 \<notin> S \<Longrightarrow>
   a2 \<notin> S"
   apply (clarsimp simp: full_collision_set_def)
-  apply (drule_tac x=a2 in bspec, assumption)
-  apply (drule_tac x=a1 in spec)
-  apply (meson collides_with_equiv equiv_def sym_def)
   done
 
 abbreviation touched_addrs' ::
@@ -744,12 +745,30 @@ lemma context_switch_from_d: "\<lbrakk>
    (s', t') \<in> uwr d"
   oops
 
+lemma in_inter_empty:
+  "\<lbrakk>x \<in> S1;
+  S1 \<inter> S2 = {} \<rbrakk> \<Longrightarrow>
+  x \<notin> S2"
+  by blast
+
 lemma in_sub_inter_empty:
   "\<lbrakk>x \<in> S1;
   S1 \<subseteq> S2;
   S2 \<inter> S3 = {} \<rbrakk> \<Longrightarrow>
   x \<notin> S3"
   by blast
+
+lemma diff_domain_no_collision:
+  "\<lbrakk>a \<notin> kernel_shared_expanded;
+  addr_domain a' \<noteq> addr_domain a;
+  (a, a') \<in> collides_in_pch\<rbrakk> \<Longrightarrow>
+  False"
+  apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
+  apply (metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself
+               kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
+               no_cross_colour_collisions)
+  done
+
 
 lemma d_not_running_step:
   assumes
@@ -762,16 +781,29 @@ lemma d_not_running_step:
   proof (cases i)
     case (IRead x1)
     then show ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
-      
+      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
+                            instrs_obeying_ta_def)
       (* show that the instruction hasn't affected our visible part of pch *)
-      sorry
+      apply (drule(1) in_inter_empty)
+      apply (clarsimp simp: all_addrs_of_def)
+      apply (rule pch_partitioned_read, clarsimp)
+      apply (erule(1) diff_domain_no_collision, simp)
+      done
   next
     case (IWrite x2)
     then show ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
+                            instrs_obeying_ta_def)
+      apply (thin_tac "s' = _")
+      apply (drule(1) in_inter_empty)
       apply (intro conjI)
-       apply clarsimp
+       apply (clarsimp simp: all_addrs_of_def)
+       apply (rule pch_partitioned_write, clarsimp)
+       apply (erule(1) diff_domain_no_collision, simp)
+      apply (rule do_write_maintains_external_uwr_out)
+      apply (clarsimp simp: all_addrs_of_def)
+       
+       
        (* pch is ok after write *)
        defer
       (* need (or already have?) something abotu write and external_uwr *)
@@ -790,13 +822,10 @@ lemma d_not_running_step:
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
                             instrs_obeying_ta_def)
       apply (rule do_pch_flush_affects_only_collisions, clarsimp)
-      (* a' also can't be in kernel_shared_expanded, as this would mean they wouldn't collide *)
-      apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
       apply (drule(2) in_sub_inter_empty)
-      apply (metis (mono_tags, lifting) addr_domain_valid all_addrs_of_def
-                   collision_set_contains_itself kernel_shared_expanded_def
-                   kernel_shared_precise_def mem_Collect_eq
-                   time_protection.no_cross_colour_collisions time_protection_axioms)
+      apply (thin_tac "s' = _") (* just clearing junk *)
+      apply (clarsimp simp: all_addrs_of_def)
+      apply (erule(2) diff_domain_no_collision)
       done
   next
     case IReadTime
