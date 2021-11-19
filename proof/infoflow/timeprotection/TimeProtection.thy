@@ -433,12 +433,18 @@ definition
  "programs_obeying_ta ta \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta ta) p}"
 
 
+definition
+  programs_safe :: "'regs program set" where
+ "programs_safe \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_safe) p}"
+
+
 lemma hd_instr_obeying_ta [dest]:
   "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
   by (force simp:programs_obeying_ta_def)
 
 
 
+(* trying to replace this with instrs_safe
 
 (* this program never changes the current domain *)
 primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
@@ -446,15 +452,27 @@ primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
   "program_no_domainswitch (i#is) =
      ((\<forall> s. current_domain' s = current_domain' (instr_step i s)) \<and> program_no_domainswitch is)"
 
+
+
 definition
   programs_no_domainswitch :: "'regs program set" where
   "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
 
+*)
+
+lemma safe_no_domainswitch:
+  "i \<in> instrs_safe \<Longrightarrow>
+  current_domain' s = current_domain' (instr_step i s)"
+  apply (cases i; clarsimp simp: instrs_safe_def)
+  apply (clarsimp simp: kernel_shared_precise_def do_write_outside_kernelshared_same_domain)
+  done
+
 lemma no_domainswitch_inv:
-  "program_no_domainswitch p \<Longrightarrow> current_domain' s = current_domain' (instr_multistep p s)"
+  "p \<in> programs_safe \<Longrightarrow> current_domain' s = current_domain' (instr_multistep p s)"
   apply(induct p arbitrary:s)
    apply force
-  by force
+  using safe_no_domainswitch
+  by (metis (full_types) instr_multistep.simps(2) list_all_simps(1) mem_Collect_eq programs_safe_def)
 
 definition is_secure_nondomainswitch ::
   "'regs program \<Rightarrow> ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
@@ -462,7 +480,7 @@ definition is_secure_nondomainswitch ::
   "is_secure_nondomainswitch p s \<equiv>
       \<comment> \<open>Oblige the original system not to reach any system-step that would require either
           (1) straying out of touched_addresses or (2) switching domains to implement.\<close>
-      p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_no_domainswitch"
+      p \<in> (programs_obeying_ta (touched_addrs (other_state s))) \<inter> programs_safe"
 
 definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow>
   ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
@@ -479,17 +497,6 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs
        (\<forall>t q. (s, t) \<in> uwr (current_domain' s) \<and> is_secure_nondomainswitch q t \<longrightarrow> p = q)"
 
 
-(*
-
-  s  -->  t
-          
-  |       ||||
-  v       vvvv
-          
-  s'      t'
-
-
-*)
 
 lemma d_running_step:
   assumes
@@ -629,6 +636,7 @@ lemma d_running: "\<lbrakk>
      these have to be the same program (so we need to know that the choice depends on stuff in
      other_state in the external uwr)\<close>
    p \<in> programs_obeying_ta ta;
+   p \<in> programs_safe;
    \<comment> \<open>that touched_addresses ONLY contains addresses in d\<close>
    ta \<subseteq> all_addrs_of d \<union> kernel_shared_precise;
    \<comment> \<open>initial states s and t hold uwr_running\<close>
@@ -637,10 +645,7 @@ lemma d_running: "\<lbrakk>
    \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
    \<comment> \<open>we execute the program on both states\<close>
    s' = instr_multistep p s;
-   t' = instr_multistep p t;
-   program_no_domainswitch p;
-   current_domain' s' = d
-   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' = d\<close>
+   t' = instr_multistep p t
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr_running\<close>
    (s', t') \<in> uwr d"
@@ -653,10 +658,14 @@ lemma d_running: "\<lbrakk>
   apply(erule meta_impE)
    apply(force simp:programs_obeying_ta_def)
   apply(erule meta_impE)
-   apply(fastforce dest:d_running_step)
-  apply force
+   apply (clarsimp simp: programs_safe_def)
+  apply (subgoal_tac "current_domain' (instr_step a s) = d")
+   apply (erule meta_impE)
+    apply(fastforce dest:d_running_step) 
+   apply force
+  using safe_no_domainswitch
+  apply (metis list_all_simps(1) mem_Collect_eq programs_safe_def)
   done
-
 
 (*FIXME: This is a draft *)
 (* d running \<rightarrow> d not running *)
