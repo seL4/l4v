@@ -538,7 +538,15 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs
   ('fch_cachedness,'pch_cachedness,'regs,'other_state)state \<Rightarrow> bool"
   where
   "has_secure_nondomainswitch s s' \<equiv>
-     \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s"
+     \<comment> \<open>The original definition.\<close>
+     \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s \<and>
+       \<comment> \<open>Assume the currently running domain's uwr ensures the program stays deterministic.
+             Actually, as discussed with Toby, we should add machinery to capture that the program
+           might become nondeterministic after the current domain reads from outside
+           `touched_addresses + kernel_shared_memory`, assuming pessimistically it might branch
+           on some secret data it read -- thus, forcing ourselves to prove that won't happen before
+           or during a non-domainswitch step. We should then remove the lines below.\<close>
+       (\<forall>t q. (s, t) \<in> uwr (current_domain' s) \<and> is_secure_nondomainswitch q t \<longrightarrow> p = q)"
 
 
 (*
@@ -845,6 +853,7 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    is_secure_nondomainswitch p\<^sub>s s;
    is_secure_nondomainswitch p\<^sub>t t;
    (s, t) \<in> uwr d;
+   current_domain' s = d \<longrightarrow> p\<^sub>s = p\<^sub>t;
    s' = instr_multistep p\<^sub>s s;
    t' = instr_multistep p\<^sub>t t
    \<rbrakk> \<Longrightarrow>
@@ -852,6 +861,7 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
   apply(clarsimp simp:is_secure_nondomainswitch_def programs_no_domainswitch_def)
   apply(frule uwr_same_domain)
   apply(case_tac "current_domain' s = d")
+   apply clarsimp
    apply(prop_tac "current_domain' s' = d")
     apply(metis no_domainswitch_inv)
    apply(rule d_running)
@@ -862,11 +872,6 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
       apply force
      apply(frule uwr_same_touched_addrs)
       apply force
-     apply(prop_tac "p\<^sub>s = p\<^sub>t")
-      (* FIXME: Here's something we need - essentially, that we *can* expect the program
-         (that is, the "multistep" implementation) to be known to the currently running domain.
-         How best to require/obtain this? -robs. *)
-      defer
      apply force
     apply force
    apply force
@@ -1208,8 +1213,13 @@ theorem extended_confidentiality_u:
    (* Note: Another proof. Are the use of these lemmas by these metis proofs suspicious? -robs.
    apply(metis enabled_Step reachable_steps_have_secure_implementation_nonspecific tpni.uwr_sym tpni.uwr_trans) *)
   apply(clarsimp simp:has_secure_nondomainswitch_def)
-  apply(rename_tac u s t x xa xb xc p\<^sub>t p\<^sub>s)
-  apply(force simp:touched_addrs_inv intro:programs_obeying_ta_preserve_uwr)
+  apply(rename_tac u s t s_priv' s_priv t_priv' t_priv p\<^sub>t p\<^sub>s)
+  apply(erule_tac x=t in allE)
+  apply(erule_tac x=p\<^sub>t in allE)
+  apply clarsimp
+  apply(rule programs_obeying_ta_preserve_uwr, simp_all)
+   apply(force simp:touched_addrs_inv)
+  apply(force simp:touched_addrs_inv)
   done
 
 theorem extended_Nonleakage:
