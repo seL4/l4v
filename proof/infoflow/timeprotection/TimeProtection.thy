@@ -501,6 +501,13 @@ definition
                           | IFlushL2 as \<Rightarrow> as \<subseteq> ta
                           | _        \<Rightarrow> True }"
 
+(* "safe" instructions. for now this just means they don't write to kernel shared memory *)
+definition
+  instrs_safe :: "'regs instr set" where
+ "instrs_safe \<equiv> {i. case i of
+                    IWrite a \<Rightarrow> a \<notin> kernel_shared_precise
+                  | _ \<Rightarrow> True}"
+
 (* these are the programs that could have created this ta *)
 definition
   programs_obeying_ta :: "address set \<Rightarrow> 'regs program set" where
@@ -773,6 +780,7 @@ lemma diff_domain_no_collision:
 lemma d_not_running_step:
   assumes
   "i \<in> instrs_obeying_ta ta"
+  "i \<in> instrs_safe"
   "ta \<inter> all_addrs_of d = {}"
   "current_domain' s \<noteq> d"
   "s' = instr_step i s"
@@ -802,12 +810,8 @@ lemma d_not_running_step:
        apply (erule(1) diff_domain_no_collision, simp)
       apply (rule do_write_maintains_external_uwr_out)
       apply (clarsimp simp: all_addrs_of_def)
-       
-       
-       (* pch is ok after write *)
-       defer
-      (* need (or already have?) something abotu write and external_uwr *)
-      sorry
+      apply (clarsimp simp: instrs_safe_def kernel_shared_precise_def)
+      done
   next
     case (IRegs x3)
     then show ?thesis using assms
