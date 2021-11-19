@@ -752,19 +752,30 @@ lemma d_not_running_step:
   shows
   "(s, s') \<in> uwr d"
   proof (cases i)
-  case (IRead x1)
-  then show ?thesis sorry
+    case (IRead x1)
+    then show ?thesis using assms
+      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+      
+      (* show that the instruction hasn't affected our visible part of pch *)
+      sorry
   next
     case (IWrite x2)
-    then show ?thesis sorry
+    then show ?thesis using assms
+      apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+      apply (intro conjI)
+       apply clarsimp
+       (* pch is ok after write *)
+       defer
+      (* need (or already have?) something abotu write and external_uwr *)
+      sorry
   next
     case (IRegs x3)
     then show ?thesis using assms
-    by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+      by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
   next
     case IFlushL1
     then show ?thesis using assms
-    by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
+      by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
   next
     case (IFlushL2 x5)
     then show ?thesis using assms
@@ -781,10 +792,12 @@ lemma d_not_running_step:
       done
   next
     case IReadTime
-    then show ?thesis sorry
+    then show ?thesis using assms
+      by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
   next
     case (IPadToTime x7)
-    then show ?thesis sorry
+    then show ?thesis using assms
+      by (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def)
 qed
 
 
