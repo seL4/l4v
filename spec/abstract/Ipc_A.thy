@@ -660,19 +660,15 @@ where
      ct \<leftarrow> gets cur_thread;
      sc_ptr \<leftarrow> gets cur_sc;
      csc \<leftarrow> get_sched_context sc_ptr;
-     curtime \<leftarrow> gets cur_time;
+
+     ready \<leftarrow> get_sc_refill_ready sc_ptr;
+     sufficient \<leftarrow> get_sc_refill_sufficient sc_ptr 0;
      tcb \<leftarrow> gets_the $ get_tcb ct;
 
      if canTimeout \<and> (is_ep_cap (tcb_timeout_handler tcb)) then
        handle_timeout ct (Timeout (sc_badge csc))
-     else if sc_refill_ready curtime csc \<and> sc_refill_sufficient 0 csc then do
-     \<comment> \<open>C code assets @{text cur_thread} not to be in ready q at this point\<close>
-       d \<leftarrow> thread_get tcb_domain ct;
-       prio \<leftarrow> thread_get tcb_priority ct;
-       queue \<leftarrow> get_tcb_queue d prio;
-       assert (\<not>(ct \<in> set queue));
+     else if ready \<and> sufficient then
        tcb_sched_action tcb_sched_append ct \<comment> \<open>@{text \<open>not_queued & ready & sufficient & runnable\<close>}\<close>
-     od
      else
        postpone sc_ptr
   od"
