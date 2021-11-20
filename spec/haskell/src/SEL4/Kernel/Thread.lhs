@@ -715,21 +715,18 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 > endTimeslice :: Bool -> Kernel ()
 > endTimeslice canTimeoutFault = do
 >     ct <- getCurThread
->     it <- getIdleThread
->     when (ct /= it) $ do
->         scPtr <- getCurSc
->         sc <- getSchedContext scPtr
->         ready <- refillReady scPtr
->         sufficient <- refillSufficient scPtr 0
->         valid <- isValidTimeoutHandler ct
->         if canTimeoutFault && valid
->             then handleTimeout ct $ Timeout $ scBadge sc
->             else
->                 if ready && sufficient
->                     then do
->                         cur <- getCurThread
->                         tcbSchedAppend cur
->                     else postpone scPtr
+>     scPtr <- getCurSc
+>     sc <- getSchedContext scPtr
+>     ready <- refillReady scPtr
+>     sufficient <- refillSufficient scPtr 0
+>     valid <- isValidTimeoutHandler ct
+>     if canTimeoutFault && valid
+>         then handleTimeout ct $ Timeout $ scBadge sc
+>         else
+>             if ready && sufficient
+>                 then do
+>                     tcbSchedAppend ct
+>                 else postpone scPtr
 
 > inReleaseQueue :: PPtr TCB -> Kernel Bool
 > inReleaseQueue tcbPtr = do
