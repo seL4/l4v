@@ -52,7 +52,7 @@ type_synonym 'fch_cachedness fch = "address \<Rightarrow> 'fch_cachedness"
 type_synonym 'pch_cachedness pch = "address \<Rightarrow> 'pch_cachedness"
 type_synonym 'fch fch_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'fch"
 type_synonym ('fch,'pch) pch_impact = "address \<Rightarrow> 'fch \<Rightarrow> 'pch \<Rightarrow> 'pch"
-
+                                                 
 type_synonym time = nat
 
 datatype 'userdomain domain = Sched | User 'userdomain
@@ -87,6 +87,7 @@ locale time_protection =
   fixes fch_write_impact :: "'fch_cachedness fch fch_impact"
   fixes pch_write_impact :: "('fch_cachedness fch, 'pch_cachedness pch) pch_impact"
   assumes pch_partitioned_write: "(a1, a2) \<notin> collides_in_pch \<Longrightarrow> p a2 = (pch_write_impact a1 f p) a2"
+
   assumes pch_collision_write: "(a1, a2) \<in> collides_in_pch \<Longrightarrow>
     \<forall>a3. (a2, a3) \<in> collides_in_pch \<longrightarrow> pchs a3 = pcht a3 \<Longrightarrow>
     \<comment> \<open>The same strong requirement placing limits on the 'randomness'
@@ -107,9 +108,17 @@ locale time_protection =
   fixes fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
   fixes do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
-  assumes do_pch_flush_affects_only_collisions:
-   "(\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch) \<Longrightarrow> p a = (do_pch_flush p as) a"
+  fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+  assumes pch_partitioned_flush:
+   "(\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch) \<Longrightarrow> (do_pch_flush p as) a = p a"
+  assumes pch_collision_flush:
+    "\<exists>a1\<in>as. (a, a1) \<in> collides_in_pch \<Longrightarrow>
+    \<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pchs a1 = pcht a1 \<Longrightarrow>
+    (do_pch_flush pchs as) a = (do_pch_flush pcht as) a"
+  assumes pch_flush_cycles_localised:
+    "\<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pchs a1 = pcht a1 \<Longrightarrow>
+    pch_flush_cycles pchs as = pch_flush_cycles pcht as"
 
   fixes addr_domain :: "address \<Rightarrow> 'userdomain domain" \<comment> \<open>for each address, this is the security domain\<close>
   fixes addr_colour :: "address \<Rightarrow> 'colour" \<comment> \<open>for each address, this is the cache colour\<close>
@@ -166,8 +175,6 @@ locale time_protection =
     "\<lbrakk>(s, t) \<in> external_uwr d;
      addr_domain a = Sched \<rbrakk> \<Longrightarrow>
      do_read a s r = do_read a t r"
-
-  fixes pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
   fixes touched_addrs :: "'other_state \<Rightarrow> address set"
   assumes external_uwr_same_touched_addrs:
@@ -497,6 +504,52 @@ definition has_secure_nondomainswitch :: "('fch_cachedness,'pch_cachedness,'regs
        (\<forall>t q. (s, t) \<in> uwr (current_domain' s) \<and> is_secure_nondomainswitch q t \<longrightarrow> p = q)"
 
 
+lemma collides_with_set_or_doesnt:
+  "\<lbrakk>\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch \<Longrightarrow> P;
+    \<exists>a'\<in>as. (a, a') \<in> collides_in_pch \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
+  P"
+  by blast
+
+
+lemma diff_domain_no_collision:
+  "\<lbrakk>a \<notin> kernel_shared_expanded;
+  addr_domain a' \<noteq> addr_domain a;
+  (a, a') \<in> collides_in_pch\<rbrakk> \<Longrightarrow>
+  False"
+  apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
+  apply (metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself
+               kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
+               no_cross_colour_collisions)
+  done
+
+
+
+lemma in_inter_empty:
+  "\<lbrakk>x \<in> S1;              
+  S1 \<inter> S2 = {} \<rbrakk> \<Longrightarrow>
+  x \<notin> S2"
+  by blast
+
+lemma in_sub_inter_empty:
+  "\<lbrakk>x \<in> S1;
+  S1 \<subseteq> S2;
+  S2 \<inter> S3 = {} \<rbrakk> \<Longrightarrow>
+  x \<notin> S3"
+  by blast
+
+lemma in_sub_union:
+  "\<lbrakk>x \<in> S1;
+  S1 \<subseteq> S2;
+  S2 \<subseteq> S3 \<union> S4\<rbrakk> \<Longrightarrow>
+  x \<in> S3 \<or> x \<in> S4"
+  by blast
+
+(* this helps avoid/reverse some unhelpful clarsimp behaviour *)
+lemma and_or_specific:
+  "(\<And>x. (P x \<or> Q x \<Longrightarrow> R x)) \<Longrightarrow>
+   \<forall>a. (P a \<longrightarrow> R a) \<and> (Q a \<longrightarrow> R a)"
+  apply blast
+  done
 
 lemma d_running_step:
   assumes
@@ -617,8 +670,35 @@ lemma d_running_step:
     case IFlushL1
     thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
   next
-    case (IFlushL2 x5)
-    then show ?thesis sorry (* TODO *)
+    case (IFlushL2 fa)
+    then show ?thesis using assms
+      apply (clarsimp simp: uwr_def uwr_running_def pch_same_for_domain_and_shared_def
+                            instrs_obeying_ta_def)
+      apply (thin_tac "s' = _", thin_tac "t' = _") (* messy and not needed *)
+      apply (subgoal_tac "\<forall>a1. (\<exists>a2\<in>fa. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pch s a1 = pch t a1")
+       defer
+        apply clarsimp
+        apply (drule_tac x=a1 in spec)
+        apply clarsimp
+        apply (drule(2) in_sub_union)
+        apply (metis (mono_tags, lifting) all_addrs_of_def collision_in_full_collision_set
+                     diff_domain_no_collision kernel_shared_expanded_def
+                     kernel_shared_expanded_full_collision_set kernel_shared_precise_def
+                     mem_Collect_eq)
+      apply (intro conjI)
+       (* pch flush affects are partitioned or deterministic on collision *)
+       apply (rule and_or_specific)
+       apply (rename_tac a)
+       apply (rule_tac a=a and as=fa in collides_with_set_or_doesnt)
+        (* a has no collision with fa *)
+        apply (frule pch_partitioned_flush [where p = "pch s"])
+        apply (frule pch_partitioned_flush [where p = "pch t"])
+        apply (clarsimp, blast)
+       (* a collides with fa *)
+       apply (erule(1) pch_collision_flush)
+      (* pch flush cycles depend only on equiv state *)
+      apply (erule pch_flush_cycles_localised)
+      done
   next
     case IReadTime
     thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
@@ -683,29 +763,7 @@ lemma context_switch_from_d: "\<lbrakk>
    (s', t') \<in> uwr d"
   oops
 
-lemma in_inter_empty:
-  "\<lbrakk>x \<in> S1;
-  S1 \<inter> S2 = {} \<rbrakk> \<Longrightarrow>
-  x \<notin> S2"
-  by blast
 
-lemma in_sub_inter_empty:
-  "\<lbrakk>x \<in> S1;
-  S1 \<subseteq> S2;
-  S2 \<inter> S3 = {} \<rbrakk> \<Longrightarrow>
-  x \<notin> S3"
-  by blast
-
-lemma diff_domain_no_collision:
-  "\<lbrakk>a \<notin> kernel_shared_expanded;
-  addr_domain a' \<noteq> addr_domain a;
-  (a, a') \<in> collides_in_pch\<rbrakk> \<Longrightarrow>
-  False"
-  apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
-  apply (metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself
-               kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
-               no_cross_colour_collisions)
-  done
 
 
 lemma d_not_running_step:
@@ -756,7 +814,7 @@ lemma d_not_running_step:
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
                             instrs_obeying_ta_def)
-      apply (rule do_pch_flush_affects_only_collisions, clarsimp)
+      apply (rule pch_partitioned_flush, clarsimp)
       apply (drule(2) in_sub_inter_empty)
       apply (thin_tac "s' = _") (* just clearing junk *)
       apply (clarsimp simp: all_addrs_of_def)
