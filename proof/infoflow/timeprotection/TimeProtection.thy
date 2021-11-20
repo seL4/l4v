@@ -339,6 +339,26 @@ lemma extended_uwr_equiv_rel:
   apply(force simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
   done
 
+lemma uwr_refl [simp]:
+  "(s, s) \<in> uwr d"
+  using extended_uwr_equiv_rel
+  by (clarsimp simp: equiv_def refl_on_def)
+
+lemma uwr_trans:
+  "(a, b) \<in> uwr d \<Longrightarrow>
+  (b, c) \<in> uwr d \<Longrightarrow>
+  (a, c) \<in> uwr d"
+  using extended_uwr_equiv_rel
+  apply (clarsimp simp: equiv_def)
+  by (meson trans_def)
+
+lemma uwr_sym:
+  "((a, b) \<in> uwr d) = ((b, a) \<in> uwr d)"
+  using extended_uwr_equiv_rel
+  apply (clarsimp simp: equiv_def sym_def)
+  apply blast
+  done
+
 (* notes about confidentiality properties with this model:
    
   for some step (let's say the user step for example), for a step of the NOT CURRENTLY RUNNING
@@ -365,6 +385,7 @@ lemma extended_uwr_equiv_rel:
 
 
 *)
+
 
 
 
@@ -465,7 +486,7 @@ definition
   programs_no_domainswitch :: "'regs program set" where
   "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
 
-*)
+*)safe_no_domainswitch
 
 lemma safe_no_domainswitch:
   "i \<in> instrs_safe \<Longrightarrow>
@@ -814,7 +835,7 @@ lemma d_not_running_step:
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
                             instrs_obeying_ta_def)
-      apply (rule pch_partitioned_flush, clarsimp)
+      apply (rule sym, rule pch_partitioned_flush, clarsimp)
       apply (drule(2) in_sub_inter_empty)
       apply (thin_tac "s' = _") (* just clearing junk *)
       apply (clarsimp simp: all_addrs_of_def)
@@ -832,22 +853,52 @@ qed
 
 
 
+lemma programs_obeying_ta_head_and_rest:
+  "h # r \<in> programs_obeying_ta ta \<Longrightarrow>
+   h \<in> instrs_obeying_ta ta \<and> r \<in> programs_obeying_ta ta"
+  apply (clarsimp simp: programs_obeying_ta_def)
+  done
 
+lemma programs_safe_head_and_rest:
+  "h # r \<in> programs_safe \<Longrightarrow>
+   h \<in> instrs_safe \<and> r \<in> programs_safe"
+  apply (clarsimp simp: programs_safe_def)
+  done                          
 
-
-
+lemma d_not_running_integrity_uwr:
+  "\<lbrakk>p \<in> programs_obeying_ta ta;
+  p \<in> programs_safe; 
+  current_domain' s \<noteq> d;
+  ta \<inter> all_addrs_of d = {} \<rbrakk> \<Longrightarrow>
+  (s, instr_multistep p s) \<in> uwr d"
+  apply (induct p arbitrary: s; clarsimp)
+  apply (drule programs_obeying_ta_head_and_rest, clarsimp)
+  apply (drule programs_safe_head_and_rest, clarsimp)
+  apply (subgoal_tac "current_domain' (instr_step a s) \<noteq> d")
+   defer
+   using safe_no_domainswitch
+   apply blast
+  apply (drule_tac x="instr_step a s" in meta_spec)
+  apply (rule_tac b="instr_step a s" in uwr_trans)
+   defer
+   apply assumption 
+  (* now we are down to the single step *)
+  apply (erule_tac i=a and ta=ta in d_not_running_step; simp)
+  done
 
 (* d not running \<rightarrow> d not running *)
 lemma d_not_running: "\<lbrakk>
    \<comment> \<open>we have two programs derived from touched_addresses - may not be the same touched_addresses\<close>
    p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
-   p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;
+   p\<^sub>t \<in> programs_obeying_ta ta\<^sub>t;   
+   p\<^sub>s \<in> programs_safe;
+   p\<^sub>t \<in> programs_safe;
    \<comment> \<open>we may not have concrete touched_addresses -
      we may overapprox this to the whole currently running domain.
      NB: I think it's enough just to require it not contain any of d's addresses. -robs.\<close>
    \<comment> \<open>these touched_addresses does NOT contain any addresses from d\<close>
-   ta\<^sub>s \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
-   ta\<^sub>t \<inter> all_addrs_of d \<subseteq> kernel_shared_precise;
+   ta\<^sub>s \<inter> all_addrs_of d = {};
+   ta\<^sub>t \<inter> all_addrs_of d = {};
    \<comment> \<open>initial states s and t hold uwr_notrunning\<close>
    (s, t) \<in> uwr d;
    current_domain' s \<noteq> d;
@@ -860,8 +911,16 @@ lemma d_not_running: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new state s' and t' hold uwr_notrunning\<close>
    (s', t') \<in> uwr d"
-  apply(clarsimp simp:uwr_def)
-  sorry
+  apply clarsimp
+  apply (subgoal_tac "current_domain' t \<noteq> d")
+   apply (drule(3) d_not_running_integrity_uwr [where s=s])
+   apply (drule(3) d_not_running_integrity_uwr [where s=t])
+  apply (rule uwr_trans, subst uwr_sym, assumption)
+   apply (rule uwr_trans, assumption, assumption)
+  using uwr_same_domain apply blast
+  done
+  
+  
 
 (* d not running \<rightarrow> d running *)
 lemma context_switch_to_d: "\<lbrakk>
