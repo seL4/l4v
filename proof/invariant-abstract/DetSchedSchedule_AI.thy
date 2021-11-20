@@ -16825,9 +16825,6 @@ lemma end_timeslice_ready_or_release[wp]:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>)+
   apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_if; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp\<close>)+
-  apply (wpsimp wp: thread_get_wp hoare_drop_imps)
   done
 
 lemma end_timeslice_valid_blocked[wp]:
@@ -21420,8 +21417,6 @@ lemma end_timeslice_ct_ready_if_schedulable[wp]:
    \<lbrace>\<lambda>_. ct_ready_if_schedulable :: det_state \<Rightarrow> _\<rbrace>"
   unfolding end_timeslice_def
   apply wpsimp
-          apply (wpsimp wp: hoare_drop_imp)
-         apply wpsimp
         apply (wpsimp wp: postpone_ct_ready_if_schedulable)
        apply wpsimp+
   apply (intro conjI; intro allI impI)
