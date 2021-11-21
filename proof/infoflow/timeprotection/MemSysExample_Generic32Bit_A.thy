@@ -162,9 +162,9 @@ interpretation time_protection_A: time_protection collides_in_pch_A
   read_cycles_A write_cycles_A
   do_read_A do_write_A
   store_time_A padding_regs_impact_A
-  empty_fch_A fch_flush_cycles_A do_pch_flush_A
+  empty_fch_A fch_flush_cycles_A do_pch_flush_A pch_flush_cycles_A
   addr_domain_A addr_colour_A colour_userdomain_A
-  current_domain_A external_uwr_A pch_flush_cycles_A touched_addrs_A can_domain_switch_A
+  current_domain_A external_uwr_A touched_addrs_A can_domain_switch_A
   apply unfold_locales
   oops
 (* Gerwin's feedback: at least get to the end of this once

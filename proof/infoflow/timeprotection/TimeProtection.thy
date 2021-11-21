@@ -486,7 +486,7 @@ definition
   programs_no_domainswitch :: "'regs program set" where
   "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
 
-*)safe_no_domainswitch
+*)
 
 lemma safe_no_domainswitch:
   "i \<in> instrs_safe \<Longrightarrow>
@@ -952,21 +952,20 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    t' = instr_multistep p\<^sub>t t
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
-  apply(clarsimp simp:is_secure_nondomainswitch_def programs_no_domainswitch_def)
+  apply(clarsimp simp:is_secure_nondomainswitch_def)
   apply(frule uwr_same_domain)
   apply(case_tac "current_domain' s = d")
    apply clarsimp
    apply(prop_tac "current_domain' s' = d")
     apply(metis no_domainswitch_inv)
    apply(rule d_running)
-          apply force
-         apply(force simp:touched_addrs_inv_def)
         apply force
        apply force
-      apply force
-     apply(frule uwr_same_touched_addrs)
-      apply force
+      apply(force simp:touched_addrs_inv_def)
      apply force
+    apply force
+   apply force
+  apply(frule uwr_same_touched_addrs)
     apply force
    apply force
   apply(prop_tac "current_domain' s' \<noteq> d")
@@ -974,6 +973,8 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
   apply clarsimp
   apply(rule d_not_running[where s=s and t=t and p\<^sub>s=p\<^sub>s and p\<^sub>t=p\<^sub>t and
         ta\<^sub>s="touched_addrs' s" and ta\<^sub>t="touched_addrs' t"])
+            apply force
+           apply force
           apply force
          apply force
         (* using touched_addrs_inv' *)
@@ -992,8 +993,8 @@ locale time_protection_system =
   unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
   time_protection collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
     read_cycles write_cycles do_read do_write store_time padding_regs_impact
-    empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
-    current_domain external_uwr pch_flush_cycles touched_addrs can_domain_switch
+    empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles addr_domain addr_colour colour_userdomain
+    current_domain external_uwr  touched_addrs can_domain_switch
   for A :: "('a,'other_state,unit) data_type"
   and s0 :: "'other_state"
   and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
@@ -1014,10 +1015,10 @@ locale time_protection_system =
   and empty_fch :: "'fch_cachedness fch"
   and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
   and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
+  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
   and addr_domain :: "address \<Rightarrow> 'userdomain domain"
   and addr_colour :: "address \<Rightarrow> 'colour"
   and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
-  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
   and touched_addrs :: "'other_state \<Rightarrow> address set"
   and can_domain_switch :: "'other_state \<Rightarrow> bool" +
   fixes initial_regs :: "'regs"
@@ -1055,8 +1056,8 @@ locale securely_implementable =
   time_protection_system A s0 current_domain external_uwr policy out
   collides_in_pch fch_read_impact pch_read_impact fch_write_impact pch_write_impact
   read_cycles write_cycles do_read do_write store_time padding_regs_impact
-  empty_fch fch_flush_cycles do_pch_flush addr_domain addr_colour colour_userdomain
-  pch_flush_cycles touched_addrs can_domain_switch initial_regs initial_pch
+  empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles addr_domain addr_colour colour_userdomain
+  touched_addrs can_domain_switch initial_regs initial_pch
 
   for A :: "('a,'other_state,unit) data_type"
   and s0 :: "'other_state"
@@ -1078,10 +1079,10 @@ locale securely_implementable =
   and empty_fch :: "'fch_cachedness fch"
   and fch_flush_cycles :: "'fch_cachedness fch \<Rightarrow> time"
   and do_pch_flush :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> 'pch_cachedness pch"
+  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
   and addr_domain :: "address \<Rightarrow> 'userdomain domain"
   and addr_colour :: "address \<Rightarrow> 'colour"
   and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
-  and pch_flush_cycles :: "'pch_cachedness pch \<Rightarrow> address set \<Rightarrow> time"
   and touched_addrs :: "'other_state \<Rightarrow> address set"
   and can_domain_switch :: "'other_state \<Rightarrow> bool"
   and initial_regs :: "'regs"
