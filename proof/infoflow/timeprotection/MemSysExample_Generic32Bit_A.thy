@@ -94,19 +94,20 @@ datatype writeback_cachedness = WB_Absent | WB_Valid | WB_DirtyValid
 
 type_synonym fch_cachedness_A = writethru_cachedness
 type_synonym pch_cachedness_A = writeback_cachedness
-type_synonym fch_A = "fch_cachedness_A fch"
-type_synonym pch_A = "pch_cachedness_A pch"
 
 (* Let's keep things simple and go with direct mapped for both caches to begin with.
   Later we should convince ourselves we can model n-way set associative caches; this should amount
   to keeping for each index a set/queue (depending on replacement algorithm) of max size n tags. *)
-type_synonym fch_underlying = "L1_index_A \<Rightarrow> L1_tag_A option"
+type_synonym fch_A = "L1_index_A \<Rightarrow> L1_tag_A option"
 (* As the L2 for this example is writeback, we need a bool here to serve as a dirty bit. *)
-type_synonym pch_underlying = "L2_index_A \<Rightarrow> (L2_tag_A \<times> bool) option"
+type_synonym pch_A = "L2_index_A \<Rightarrow> (L2_tag_A \<times> bool) option"
 
-(* FIXME: If the `fch` type is any function on addrs to cachedness, but `fch_underlying`
-  representation will only ever bring in the addresses in block-sized chunks, then it is
-  possible here we'll be given `fch` that cannot be represented by an `fch_underlying`. *)
+definition fch_lookup_A :: "fch_A \<Rightarrow> fch_cachedness_A fch" where
+  "fch_lookup_A f a = WT_Absent" (* TODO *)
+
+definition pch_lookup_A :: "pch_A \<Rightarrow> pch_cachedness_A pch" where
+  "pch_lookup_A p a = WB_Absent" (* TODO *)
+
 definition fch_read_impact_A :: "fch_A fch_impact" where
   "fch_read_impact_A a f = f" (* TODO *)
 
@@ -138,7 +139,7 @@ definition padding_regs_impact_A :: "time \<Rightarrow> regs_A \<Rightarrow> reg
   "padding_regs_impact_A t r = r"  (* TODO *)
 
 definition empty_fch_A :: fch_A where
-  "empty_fch_A a = WT_Absent"
+  "empty_fch_A idx = None"
 
 definition fch_flush_cycles_A:: "fch_A \<Rightarrow> time" where
   "fch_flush_cycles_A f = 0" (* TODO *)
@@ -212,6 +213,7 @@ lemma can_domain_switch_public_A:
   oops
 
 interpretation time_protection_A: time_protection collides_in_pch_A
+  fch_lookup_A pch_lookup_A
   fch_read_impact_A pch_read_impact_A
   fch_write_impact_A pch_write_impact_A
   read_cycles_A write_cycles_A
