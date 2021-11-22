@@ -18,31 +18,61 @@ record other_state_A =
 record regs_A =
   r0 :: "machine_word"
 
-(* This part is all just for the L2 cache.
-   As for now we just need something generic to test-instantiate our locale to completion,
-   these numbers are plucked from thin air for a hypothetical cache that supports 4 colours.
-   31               ...          8                             0
-   | page (24 bits) ...          |        page offset          |
+(* As for now we just need something generic to test-instantiate our locale to completion,
+   these numbers are plucked from thin air for a hypothetical memory system whose L2 cache
+   supports 4 colours given a page size of 4KiB.
+
+   L1:
+   4 index bits \<Rightarrow> 2^4 = 16 cache sets.
+   6 block offset bits \<Rightarrow> 2^6 bytes = 64 bytes per cache block.
+   - If it was 4-way set associative, it would have 16 * 4 = 64 cache blocks,
+     making a total cache size of 64 * 64 = 4096 bytes (i.e. 4 KiB).
+   - If direct mapped, it would have 16 cache blocks and thus be 16 * 64 bytes = 1 KiB large.
+   (NOT TO SCALE)
+   | tag (22 bits)  ...                  |index(4bit)|    block offset    |
+   |31                                 10|9         6|5                  0|
+
+   L2:
+   4KiB page size = 4096 bytes = 2^12 bytes per page \<Rightarrow> 12 page offset bits.
+   6 index bits \<Rightarrow> 2^6 = 64 cache sets.
+   8 block offset bits \<Rightarrow> 2^8 bytes = 256 bytes per cache block.
+   - If it was 8-way set associative, it would have 64 * 8 = 512 cache blocks,
+     making a total cache size of 512 * 256 = 131072 bytes (i.e. 128 KiB).
+   - If direct mapped, it would have 64 cache blocks and thus be 64 * 256 bytes = 16 KiB large.
+   (NOT TO SCALE)
+   |31              ...        12|11                                     0|
+   | page (20 bits) ...          |              page offset               |
                         | colour |
                         | (2bit) |
-   | tag (22 bits)  ... |     index (6bit)      | block offset |
-   31                  10                       4              0 *)
+   | tag (18 bits)  ... |     index (6bit)    |       block offset        |
+   |31                14|13                  8|7                         0|
+*)
 (* Note: There should be "x" mask bits for an "x word" type, and the offset
    should match the number of zeroes to the right of the mask. *)
-type_synonym tag_A = "22 word"
-definition tag_mask :: address where "tag_mask = 0b11111111111111111111110000000000"
-definition tag_offset :: nat where "tag_offset = 10"
-type_synonym index_A = "6 word"
-definition index_mask :: address where "index_mask = 0b1111110000"
-definition index_offset :: nat where "index_offset = 4"
+type_synonym L1_tag_A = "22 word"
+definition L1_tag_mask :: address where "L1_tag_mask = 0b11111111111111111111110000000000"
+definition L1_tag_offset :: nat where "L1_tag_offset = 10"
+type_synonym L1_index_A = "4 word"
+definition L1_index_mask :: address where "L1_index_mask = 0b1111000000"
+definition L1_index_offset :: nat where "L1_index_offset = 6"
+type_synonym L2_tag_A = "18 word"
+definition L2_tag_mask :: address where "L2_tag_mask = 0b11111111111111111100000000000000"
+definition L2_tag_offset :: nat where "L2_tag_offset = 14"
+type_synonym L2_index_A = "6 word"
+definition L2_index_mask :: address where "L2_index_mask = 0b11111100000000"
+definition L2_index_offset :: nat where "L2_index_offset = 8"
 type_synonym colour_A = "2 word"
-definition colour_mask :: address where "colour_mask = 0b1100000000"
-definition colour_offset :: nat where "colour_offset = 8"
+definition colour_mask :: address where "colour_mask = 0b11000000000000"
+definition colour_offset :: nat where "colour_offset = 12"
 
-definition tag_of :: "address \<Rightarrow> tag_A" where
-  "tag_of a = ucast ((a AND tag_mask) >> tag_offset)"
-definition index_of :: "address \<Rightarrow> index_A" where
-  "index_of a = ucast ((a AND index_mask) >> index_offset)"
+definition L1_tag_of :: "address \<Rightarrow> L1_tag_A" where
+  "L1_tag_of a = ucast ((a AND L1_tag_mask) >> L1_tag_offset)"
+definition L1_index_of :: "address \<Rightarrow> L1_index_A" where
+  "L1_index_of a = ucast ((a AND L1_index_mask) >> L1_index_offset)"
+definition L2_tag_of :: "address \<Rightarrow> L2_tag_A" where
+  "L2_tag_of a = ucast ((a AND L2_tag_mask) >> L2_tag_offset)"
+definition L2_index_of :: "address \<Rightarrow> L2_index_A" where
+  "L2_index_of a = ucast ((a AND L2_index_mask) >> L2_index_offset)"
 definition colour_of :: "address \<Rightarrow> colour_A" where
   "colour_of a = ucast ((a AND colour_mask) >> colour_offset)"
 
@@ -53,7 +83,7 @@ abbreviation addr_colour_A :: "address \<Rightarrow> colour_A" where "addr_colou
 abbreviation colour_userdomain_A :: "colour_A \<Rightarrow> userdomain_A" where "colour_userdomain_A \<equiv> id"
 
 definition collides_in_pch_A :: "address rel" where
-  "collides_in_pch_A = {(a, a'). index_of a = index_of a'}"
+  "collides_in_pch_A = {(a, a'). L2_index_of a = L2_index_of a'}"
 
 (* As our cache impact model is not distinguishing yet between I-cache and D-cache nor counting
    timing impacts of instruction fetching itself, let's say fch is just the L1-D.
@@ -67,6 +97,16 @@ type_synonym pch_cachedness_A = writeback_cachedness
 type_synonym fch_A = "fch_cachedness_A fch"
 type_synonym pch_A = "pch_cachedness_A pch"
 
+(* Let's keep things simple and go with direct mapped for both caches to begin with.
+  Later we should convince ourselves we can model n-way set associative caches; this should amount
+  to keeping for each index a set/queue (depending on replacement algorithm) of max size n tags. *)
+type_synonym fch_underlying = "L1_index_A \<Rightarrow> L1_tag_A option"
+(* As the L2 for this example is writeback, we need a bool here to serve as a dirty bit. *)
+type_synonym pch_underlying = "L2_index_A \<Rightarrow> (L2_tag_A \<times> bool) option"
+
+(* FIXME: If the `fch` type is any function on addrs to cachedness, but `fch_underlying`
+  representation will only ever bring in the addresses in block-sized chunks, then it is
+  possible here we'll be given `fch` that cannot be represented by an `fch_underlying`. *)
 definition fch_read_impact_A :: "fch_A fch_impact" where
   "fch_read_impact_A a f = f" (* TODO *)
 
@@ -114,9 +154,9 @@ lemma colours_not_shared_A:
   using distinct_lemma by blast
 
 lemma same_index_same_colour:
-  "index_of a = index_of b \<Longrightarrow> colour_of a = colour_of b"
-  unfolding index_of_def colour_of_def
-    index_mask_def index_offset_def colour_mask_def colour_offset_def
+  "L2_index_of a = L2_index_of b \<Longrightarrow> colour_of a = colour_of b"
+  unfolding L2_index_of_def colour_of_def
+    L2_index_mask_def L2_index_offset_def colour_mask_def colour_offset_def
   by (word_bitwise, simp)
 
 lemma no_cross_colour_collisions_A:
