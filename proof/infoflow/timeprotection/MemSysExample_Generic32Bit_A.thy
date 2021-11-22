@@ -18,7 +18,15 @@ record other_state_A =
 record regs_A =
   r0 :: "machine_word"
 
-(* This part is all just for the L2 cache. *)
+(* This part is all just for the L2 cache.
+   As for now we just need something generic to test-instantiate our locale to completion,
+   these numbers are plucked from thin air for a hypothetical cache that supports 4 colours.
+   31               ...          8                             0
+   | page (24 bits) ...          |        page offset          |
+                        | colour |
+                        | (2bit) |
+   | tag (22 bits)  ... |     index (6bit)      | block offset |
+   31                  10                       4              0 *)
 (* Note: There should be "x" mask bits for an "x word" type, and the offset
    should match the number of zeroes to the right of the mask. *)
 type_synonym tag_A = "22 word"
@@ -45,7 +53,7 @@ abbreviation addr_colour_A :: "address \<Rightarrow> colour_A" where "addr_colou
 abbreviation colour_userdomain_A :: "colour_A \<Rightarrow> userdomain_A" where "colour_userdomain_A \<equiv> id"
 
 definition collides_in_pch_A :: "address rel" where
-  "collides_in_pch_A = {(a, a'). colour_of a = colour_of a' \<and> tag_of a = tag_of a'}"
+  "collides_in_pch_A = {(a, a'). index_of a = index_of a'}"
 
 (* As our cache impact model is not distinguishing yet between I-cache and D-cache nor counting
    timing impacts of instruction fetching itself, let's say fch is just the L1-D.
@@ -105,9 +113,16 @@ lemma colours_not_shared_A:
   "colour_userdomain_A c1 \<noteq> colour_userdomain_A c2 \<Longrightarrow> c1 \<noteq> c2"
   using distinct_lemma by blast
 
+lemma same_index_same_colour:
+  "index_of a = index_of b \<Longrightarrow> colour_of a = colour_of b"
+  unfolding index_of_def colour_of_def
+    index_mask_def index_offset_def colour_mask_def colour_offset_def
+  by (word_bitwise, simp)
+
 lemma no_cross_colour_collisions_A:
   "(a1, a2) \<in> collides_in_pch_A \<Longrightarrow> addr_colour_A a1 = addr_colour_A a2"
-  using collides_in_pch_A_def by blast
+  unfolding collides_in_pch_A_def
+  using same_index_same_colour by blast
 
 lemma addr_domain_valid_A:
   "addr_domain_A a = Sched \<or> addr_domain_A a = User (colour_userdomain_A (addr_colour_A a))"
