@@ -697,8 +697,6 @@ where
     ct \<leftarrow> gets cur_thread;
     sched \<leftarrow> is_schedulable ct;
     when (sched) $ do
-      sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context ct;
-      assert (sc_opt = (Some csc_ptr));
       end_timeslice canTimeout;
       reschedule_required;
       modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>)
