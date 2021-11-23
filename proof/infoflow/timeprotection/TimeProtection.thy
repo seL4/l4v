@@ -776,21 +776,7 @@ lemma d_running: "\<lbrakk>
   apply (metis list_all_simps(1) mem_Collect_eq programs_safe_def)
   done
 
-(*FIXME: This is a draft *)
-(* d running \<rightarrow> d not running *)
-lemma context_switch_from_d: "\<lbrakk>
-   p \<in> programs_obeying_ta ta;
-   ta \<inter> all_addrs_of d = {};
-   (s, t) \<in> uwr d;
-   current_domain' s = d;
-   \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
-   s' = instr_multistep p s;
-   t' = instr_multistep p t;
-   current_domain' s' \<noteq> d
-   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
-   \<rbrakk> \<Longrightarrow>
-   (s', t') \<in> uwr d"
-  oops
+
 
 
 
@@ -930,6 +916,96 @@ lemma d_not_running: "\<lbrakk>
   
   
 
+(* --- notes for domainswitch step stuff ---- *)
+
+
+(*
+
+  
+  - firstly, a ta-based step
+  - then, SPECIFIC OPERATIONS
+
+
+
+  A domainswitch step from u1 to u2 will look like:
+  - some operations that obey TA as with other steps (and therefore
+    also preserve the appropriate UWR.
+  - now a very speifically defined set of operations, at the instruction level:
+    - change the domain (this changes other_state memory)
+    - flush pch for kernel shared precise
+    - flush fch
+    - pad to time
+    - load registers
+      - this is a series of reads from u2's memory, and it results in a total "regs" state
+        that is dependent only upon u2's memory.
+
+  We conceptualise a domainswitch in those two stages. first, something underdefined
+  that follows normal TA rules, so the existing proofs will work happily with those.
+  Then, we have a strictly defined program that is 
+
+
+  Why this works:
+  For the to-running case:
+  - start with u2 running. uwr u1 gives:
+    - same pch for that domain except kernel_shared_extended
+    - same external uwr (means external memory for u1)
+  - we end with u1 running. uwr u1 now requires:
+    - same pch for that domain PLUS kernel_shared_expanded
+      - we can get this from the pch flush, and the exit-path only reading from u1 AND
+        being a totally defined set of instructions will create a uniform impact on all
+        of the pch that we care about.
+    - same fch totally
+      - this becomes the same on fch flush, then padding and exitpath/regload must
+        have a uniform impact on it.
+    - same time
+      - at the start we have no idea about time, so we need some way of knowing that
+        pad-to-time will both pad to exactly the same time. after that, the exit path is
+        deterministic isntructions that depend only on state on u1, so will be consistent.
+    - same regs
+      - we need to konw that the exit path overrides all regs, from u1's memory,
+        so they will be the same at the end.
+    - same other_state
+      - this will be given by an external property.
+
+  For the from-running case:
+  - start with u1 running. uwr u1 gives:
+    - same pch for that domain PLUS kernel shared
+    - same fch
+    - same time
+    - same regs
+    - other_state from external_uwr
+  - we end with u2 running. uwr u1 requires:
+    - same pch for that domain EXCEPT kernel shared
+      - none of the operations will affect u1's part of pch
+    - same other_state
+      - this will be given by an external property
+
+
+*)
+
+
+
+
+
+
+
+
+(*FIXME: This is a draft *)
+(* d running \<rightarrow> d not running *)
+lemma context_switch_from_d: "\<lbrakk>
+   p \<in> programs_obeying_ta ta;
+   ta \<inter> all_addrs_of d = {};
+   (s, t) \<in> uwr d;
+   current_domain' s = d;
+   \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
+   s' = instr_multistep p s;
+   t' = instr_multistep p t;
+   current_domain' s' \<noteq> d
+   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
+   \<rbrakk> \<Longrightarrow>
+   (s', t') \<in> uwr d"
+  oops
+
 (* d not running \<rightarrow> d running *)
 lemma context_switch_to_d: "\<lbrakk>
    p\<^sub>s \<in> programs_obeying_ta ta\<^sub>s;
@@ -946,6 +1022,50 @@ lemma context_switch_to_d: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    (s', t') \<in> uwr d"
   oops
+
+
+
+(* ------------------------- end ----------------- *)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
    \<not> can_domain_switch (other_state s);
