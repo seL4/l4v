@@ -12,12 +12,6 @@ begin
   - L1-D (write-through)
   - L2 (write-back) *)
 
-record other_state_A =
-  mem :: "address \<Rightarrow> machine_word"
-
-record regs_A =
-  r0 :: "machine_word"
-
 (* As for now we just need something generic to test-instantiate our locale to completion,
    these numbers are plucked from thin air for a hypothetical memory system whose L2 cache
    supports 4 colours given a page size of 4KiB.
@@ -76,14 +70,36 @@ definition L2_index_of :: "address \<Rightarrow> L2_index_A" where
 definition colour_of :: "address \<Rightarrow> colour_A" where
   "colour_of a = ucast ((a AND colour_mask) >> colour_offset)"
 
+(* Some more made-up numbers. *)
+definition L1_fetch_cycles :: nat where "L1_fetch_cycles = 2"
+definition L2_fetch_cycles :: nat where "L2_fetch_cycles = 8"
+definition Mem_fetch_cycles :: nat where "Mem_fetch_cycles = 200"
+definition Default_cycle :: nat where "Default_cycle = 1"
+
 (* In this system let's choose to have the max number of user domains possible on the hardware
    - that is, as many as there are colours. -robs. *)
 type_synonym userdomain_A = colour_A
 abbreviation addr_colour_A :: "address \<Rightarrow> colour_A" where "addr_colour_A \<equiv> colour_of"
 abbreviation colour_userdomain_A :: "colour_A \<Rightarrow> userdomain_A" where "colour_userdomain_A \<equiv> id"
 
+record other_state_A =
+  mem :: "address \<Rightarrow> machine_word"
+  curdom :: "userdomain_A domain"
+  taddrs :: "address set"
+
+record regs_A =
+  r0 :: "machine_word"
+
 definition collides_in_pch_A :: "address rel" where
   "collides_in_pch_A = {(a, a'). L2_index_of a = L2_index_of a'}"
+
+lemma collides_with_equiv_A: "equiv UNIV collides_in_pch_A"
+  unfolding collides_in_pch_A_def equiv_def
+  apply(rule conjI)
+   unfolding refl_on_def apply blast
+  apply(rule conjI)
+   unfolding sym_def apply force
+  unfolding trans_def by force
 
 (* As our cache impact model is not distinguishing yet between I-cache and D-cache nor counting
    timing impacts of instruction fetching itself, let's say fch is just the L1-D.
@@ -103,52 +119,75 @@ type_synonym fch_A = "L1_index_A \<Rightarrow> L1_tag_A option"
 type_synonym pch_A = "L2_index_A \<Rightarrow> (L2_tag_A \<times> bool) option"
 
 definition fch_lookup_A :: "fch_A \<Rightarrow> fch_cachedness_A fch" where
-  "fch_lookup_A f a = WT_Absent" (* TODO *)
+  "fch_lookup_A f a \<equiv> if f (L1_index_of a) = Some (L1_tag_of a) then WT_Valid else WT_Absent"
 
 definition pch_lookup_A :: "pch_A \<Rightarrow> pch_cachedness_A pch" where
-  "pch_lookup_A p a = WB_Absent" (* TODO *)
+  "pch_lookup_A p a \<equiv> case p (L2_index_of a) of
+     Some (tag, dirty) \<Rightarrow>
+       if tag = L2_tag_of a then (if dirty then WB_DirtyValid else WB_Valid) else WB_Absent |
+     None \<Rightarrow> WB_Absent"
 
-definition fch_read_impact_A :: "fch_A fch_impact" where
-  "fch_read_impact_A a f = f" (* TODO *)
+(* Read and write have the same impact on the fch. *)
+definition fch_access_impact_A :: "fch_A fch_impact" where
+  "fch_access_impact_A a f = f(L1_index_of a := Some (L1_tag_of a))"
 
+(* In this case the L1 is writethrough, so we don't need to consult it.
+  If it were writeback, we would have to check the dirty bit of any block evicted from it
+  to propagate it to the L2 if it is set. *)
 definition pch_read_impact_A :: "(fch_A, pch_A) pch_impact" where
-  "pch_read_impact_A a f p = p" (* TODO *)
+  "pch_read_impact_A a _ p \<equiv>
+     if \<exists> dirty. p (L2_index_of a) = Some (L2_tag_of a, dirty)
+       then p
+       else p(L2_index_of a := Some (L2_tag_of a, False))"
 
-definition fch_write_impact_A :: "fch_A fch_impact" where
-  "fch_write_impact_A a f = f" (* TODO *)
-
+(* As the L1 is writethrough, we always set the block's dirty bit in the L2 immediately. *)
 definition pch_write_impact_A :: "(fch_A, pch_A) pch_impact" where
-  "pch_write_impact_A a f p = p" (* TODO *)
+  "pch_write_impact_A a f p \<equiv> p(L2_index_of a := Some (L2_tag_of a, True))"
 
 definition read_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<Rightarrow> time" where
-  "read_cycles_A a p = 0" (* TODO *)
+  "read_cycles_A in_f in_p \<equiv> case in_f of
+     WT_Valid \<Rightarrow> L1_fetch_cycles |
+     WT_Absent \<Rightarrow> (case in_p of WB_Absent \<Rightarrow> Mem_fetch_cycles | _ \<Rightarrow> L2_fetch_cycles)"
 
 definition write_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<Rightarrow> time" where
-  "write_cycles_A a p = 0" (* TODO *)
+  "write_cycles_A _ _ = Default_cycle"
 
 definition do_read_A :: "address \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "do_read_A a s r = r" (* TODO *)
+  "do_read_A a s _ = \<lparr> r0 = (mem s) a \<rparr>"
 
 definition do_write_A :: "address \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> other_state_A" where
-  "do_write_A a s r = s" (* TODO *)
+  "do_write_A a s rs = s\<lparr> mem := (mem s)(a := r0 rs) \<rparr>"
 
 definition store_time_A :: "time \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "store_time_A t r = r" (* TODO *)
+  "store_time_A t r = \<lparr> r0 = of_nat t \<rparr>"
 
+(* The IPadToTime is a bit of an abstraction... Presumably in reality we would do this by invoking
+  IReadTime/IRegs repeatedly (busy wait until the time equals a value IRead earlier from memory)
+  for a sufficient number of steps. Just say there's a primitive that's no-op on regs for now. *)
 definition padding_regs_impact_A :: "time \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "padding_regs_impact_A t r = r"  (* TODO *)
+  "padding_regs_impact_A t r = r"
 
 definition empty_fch_A :: fch_A where
   "empty_fch_A idx = None"
 
+(* Let's just say there's a primitive for it that will do it in 1 cycle. *)
 definition fch_flush_cycles_A:: "fch_A \<Rightarrow> time" where
-  "fch_flush_cycles_A f = 0" (* TODO *)
+  "fch_flush_cycles_A _ = Default_cycle"
+
+definition L2_indices_of :: "address set \<Rightarrow> L2_index_A set" where
+  "L2_indices_of as \<equiv> {idx. \<exists> a. L2_index_of a = idx \<and> a \<in> as}"
 
 definition do_pch_flush_A :: "pch_A \<Rightarrow> address set \<Rightarrow> pch_A" where
-  "do_pch_flush_A p as = p" (* TODO *)
+  "do_pch_flush_A p as \<equiv> \<lambda> idx. if idx \<in> L2_indices_of as then None else p idx"
+
+(* Let's say the flush time is proportional to the number of sets needing to be flushed.
+  Not sure how realistic this is.*)
+definition pch_flush_cycles_A :: "pch_A \<Rightarrow> address set \<Rightarrow> time" where
+  "pch_flush_cycles_A p as = Default_cycle + length (sorted_list_of_set
+     {idx. \<exists> a entry. p idx = Some entry \<and> L2_index_of a = idx \<and> a \<in> as})"
 
 definition addr_domain_A :: "address \<Rightarrow> userdomain_A domain" where
-  "addr_domain_A a = Sched" (* TODO *)
+  "addr_domain_A a = User (colour_userdomain_A (addr_colour_A a))"
 
 lemma colours_not_shared_A:
   "colour_userdomain_A c1 \<noteq> colour_userdomain_A c2 \<Longrightarrow> c1 \<noteq> c2"
@@ -167,43 +206,51 @@ lemma no_cross_colour_collisions_A:
 
 lemma addr_domain_valid_A:
   "addr_domain_A a = Sched \<or> addr_domain_A a = User (colour_userdomain_A (addr_colour_A a))"
-  oops (* TODO: Define addr_domain_A first. *)
+  unfolding addr_domain_A_def
+  by force
 
 definition current_domain_A :: "other_state_A \<Rightarrow> userdomain_A domain" where
-  "current_domain_A s = Sched" (* TODO *)
+  "current_domain_A s = curdom s"
 
 definition external_uwr_A :: "userdomain_A domain \<Rightarrow> (other_state_A \<times> other_state_A) set" where
-  "external_uwr_A d = UNIV" (* TODO *)
+  "external_uwr_A d \<equiv> {(s, t). curdom s = curdom t \<and>
+     (\<forall> a. addr_domain_A a = d \<longrightarrow> mem s a = mem t a) \<and>
+     (curdom s = d \<longrightarrow> taddrs s = taddrs t)}"
 
 lemma external_uwr_equiv_rel_A:
   "equiv UNIV (external_uwr_A d)"
-  oops
+  unfolding external_uwr_A_def equiv_def
+  apply(rule conjI)
+   unfolding refl_on_def apply blast
+  apply(rule conjI)
+   unfolding sym_def apply force
+  unfolding trans_def by force
 
 lemma external_uwr_same_domain_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> current_domain_A s1 = current_domain_A s2"
-  oops
+  unfolding external_uwr_A_def current_domain_A_def by blast
 
 lemma do_write_maintains_external_uwr_out_A:
   "addr_domain_A a \<noteq> d \<and> addr_domain_A a \<noteq> Sched \<Longrightarrow>
    (s, do_write_A a s r) \<in> external_uwr_A d"
-  oops
+  unfolding do_write_A_def external_uwr_A_def
+  by force
 
-lemma do_write_maintains_external_uwr_in:
+lemma do_write_maintains_external_uwr_in_A:
   "addr_domain_A a = d \<or> addr_domain_A a = Sched \<Longrightarrow>
    (s, t) \<in> external_uwr_A d \<Longrightarrow>
    (do_write_A a s r, do_write_A a t r) \<in> external_uwr_A d"
-  oops
-
-definition pch_flush_cycles_A :: "pch_A \<Rightarrow> address set \<Rightarrow> time" where
-  "pch_flush_cycles_A p as = 0" (* TODO *)
+  unfolding do_write_A_def external_uwr_A_def
+  by force
 
 definition touched_addrs_A :: "other_state_A \<Rightarrow> address set" where
-  "touched_addrs_A s = {}" (* TODO *)
+  "touched_addrs_A s = taddrs s"
 
 lemma external_uwr_same_touched_addrs_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> current_domain_A s1 = d \<Longrightarrow>
    touched_addrs_A s1 = touched_addrs_A s2"
-  oops
+  unfolding external_uwr_A_def current_domain_A_def touched_addrs_A_def
+  by blast
 
 definition can_domain_switch_A :: "other_state_A \<Rightarrow> bool" where
   "can_domain_switch_A s = False" (* TODO *)
@@ -214,8 +261,8 @@ lemma can_domain_switch_public_A:
 
 interpretation time_protection_A: time_protection collides_in_pch_A
   fch_lookup_A pch_lookup_A
-  fch_read_impact_A pch_read_impact_A
-  fch_write_impact_A pch_write_impact_A
+  fch_access_impact_A pch_read_impact_A
+  fch_access_impact_A pch_write_impact_A
   read_cycles_A write_cycles_A
   do_read_A do_write_A
   store_time_A padding_regs_impact_A
@@ -223,6 +270,36 @@ interpretation time_protection_A: time_protection collides_in_pch_A
   addr_domain_A addr_colour_A colour_userdomain_A
   current_domain_A external_uwr_A touched_addrs_A can_domain_switch_A
   apply unfold_locales
+                     using collides_with_equiv_A apply blast
+                    (* pch_partitioned_read *)
+                    defer
+                   (* pch_collision_read *)
+                   defer
+                  (* pch_partitioned_write *)
+                  defer
+                 (* pch_collision_write *)
+                 defer
+                (* pch_partitioned_flush *)
+                defer
+               (* pch_collision_flush *)
+               defer
+              (* pch_flush_cycles_localised *)
+              defer
+             using colours_not_shared_A apply blast
+            using no_cross_colour_collisions_A apply blast
+           using addr_domain_valid_A apply blast
+          using external_uwr_equiv_rel_A apply blast
+         using external_uwr_same_domain_A apply blast
+        using do_write_maintains_external_uwr_out_A apply blast
+       using do_write_maintains_external_uwr_in_A apply blast
+      (* using do_write_outside_kernelshared_same_domain_A *)
+      defer
+     (* using do_read_from_external_uwr_domain_A *)
+     defer
+    (* using do_read_from_external_uwr_sched_A *)
+    defer
+   using external_uwr_same_touched_addrs_A apply blast
+  (* using can_domain_switch_public_A *)
   oops
 (* Gerwin's feedback: at least get to the end of this once
    so we know it's satisfiable even if not flexible *)
