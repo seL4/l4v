@@ -82,10 +82,13 @@ type_synonym userdomain_A = colour_A
 abbreviation addr_colour_A :: "address \<Rightarrow> colour_A" where "addr_colour_A \<equiv> colour_of"
 abbreviation colour_userdomain_A :: "colour_A \<Rightarrow> userdomain_A" where "colour_userdomain_A \<equiv> id"
 
+datatype sys_mode = KEntry | KSchedule | KExit
+
 record other_state_A =
   mem :: "address \<Rightarrow> machine_word"
   curdom :: "userdomain_A domain"
   taddrs :: "address set"
+  smode :: sys_mode
 
 record regs_A =
   r0 :: "machine_word"
@@ -140,9 +143,51 @@ definition pch_read_impact_A :: "(fch_A, pch_A) pch_impact" where
        then p
        else p(L2_index_of a := Some (L2_tag_of a, False))"
 
+lemma pch_partitioned_read_A:
+  "(a1, a2) \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_read_impact_A a1 f p) a2"
+  unfolding collides_in_pch_A_def pch_lookup_A_def pch_read_impact_A_def
+  by auto
+
+lemma pch_collision_read_A:
+  assumes
+    a2_evicts_a1: "(a1, a2) \<in> collides_in_pch_A" and
+    set_lookup_eq:
+      "\<forall>a3. (a2, a3) \<in> collides_in_pch_A \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
+  shows
+    "pch_lookup_A (pch_read_impact_A a1 f pchs) a2 = pch_lookup_A (pch_read_impact_A a1 f pcht) a2"
+  proof -
+    have "pch_lookup_A pchs a1 = pch_lookup_A pcht a1 \<and>
+          pch_lookup_A pchs a2 = pch_lookup_A pcht a2"
+      using a2_evicts_a1 set_lookup_eq unfolding collides_in_pch_A_def
+      by force
+    thus ?thesis unfolding pch_read_impact_A_def pch_lookup_A_def
+      by (force split:option.splits if_splits)
+qed
+
 (* As the L1 is writethrough, we always set the block's dirty bit in the L2 immediately. *)
 definition pch_write_impact_A :: "(fch_A, pch_A) pch_impact" where
   "pch_write_impact_A a f p \<equiv> p(L2_index_of a := Some (L2_tag_of a, True))"
+
+lemma pch_partitioned_write_A:
+  "(a1, a2) \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_write_impact_A a1 f p) a2"
+  unfolding collides_in_pch_A_def pch_lookup_A_def pch_write_impact_A_def
+  by auto
+
+lemma pch_collision_write_A:
+  assumes
+    a2_evicts_a1: "(a1, a2) \<in> collides_in_pch_A" and
+    set_lookup_eq:
+      "\<forall>a3. (a2, a3) \<in> collides_in_pch_A \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
+  shows
+    "pch_lookup_A (pch_write_impact_A a1 f pchs) a2 = pch_lookup_A (pch_write_impact_A a1 f pcht) a2"
+  proof -
+    have "pch_lookup_A pchs a1 = pch_lookup_A pcht a1 \<and>
+          pch_lookup_A pchs a2 = pch_lookup_A pcht a2"
+      using a2_evicts_a1 set_lookup_eq unfolding collides_in_pch_A_def
+      by force
+    thus ?thesis unfolding pch_write_impact_A_def pch_lookup_A_def
+      by (force split:option.splits if_splits)
+qed
 
 definition read_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<Rightarrow> time" where
   "read_cycles_A in_f in_p \<equiv> case in_f of
@@ -180,11 +225,35 @@ definition L2_indices_of :: "address set \<Rightarrow> L2_index_A set" where
 definition do_pch_flush_A :: "pch_A \<Rightarrow> address set \<Rightarrow> pch_A" where
   "do_pch_flush_A p as \<equiv> \<lambda> idx. if idx \<in> L2_indices_of as then None else p idx"
 
-(* Let's say the flush time is proportional to the number of sets needing to be flushed.
-  Not sure how realistic this is.*)
+(* Let's say the flush time is proportional to the number of sets we're asking to be flushed
+   -- to begin with, *not* sensitive to the current cachedness status of those sets.
+   We may later want to try this for manual flushing schemes whose timing might depend on
+   whether each index has an entry loaded in the cache or not, whether it is dirty, etc. *)
 definition pch_flush_cycles_A :: "pch_A \<Rightarrow> address set \<Rightarrow> time" where
-  "pch_flush_cycles_A p as = Default_cycle + length (sorted_list_of_set
-     {idx. \<exists> a entry. p idx = Some entry \<and> L2_index_of a = idx \<and> a \<in> as})"
+  "pch_flush_cycles_A p as = Default_cycle + length (sorted_list_of_set (L2_indices_of as))"
+
+lemma pch_partitioned_flush_A:
+  "\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A (do_pch_flush_A p as) a = pch_lookup_A p a"
+  unfolding collides_in_pch_A_def pch_lookup_A_def do_pch_flush_A_def L2_indices_of_def
+  by (auto split:option.splits if_splits)
+
+lemma pch_collision_flush_A:
+  "\<exists>a1\<in>as. (a, a1) \<in> collides_in_pch_A \<Longrightarrow>
+   \<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch_A) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1 \<Longrightarrow>
+   pch_lookup_A (do_pch_flush_A pchs as) a = pch_lookup_A (do_pch_flush_A pcht as) a"
+  unfolding pch_lookup_A_def do_pch_flush_A_def
+  by simp
+
+lemma pch_flush_cycles_localised_A:
+  assumes
+    (* For all addresses a1 that collide with some address a2 in as,
+       the lookup status of a1 is the same in s and t. *)
+    "\<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch_A) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1"
+  shows
+    (* A flush of the `as` set will take equal time in s and t *)
+    "pch_flush_cycles_A pchs as = pch_flush_cycles_A pcht as"
+  (* By this flush_cycles definition, we don't need the assumption after all. *)
+  by (clarsimp simp:pch_flush_cycles_A_def)
 
 definition addr_domain_A :: "address \<Rightarrow> userdomain_A domain" where
   "addr_domain_A a = User (colour_userdomain_A (addr_colour_A a))"
@@ -214,7 +283,10 @@ definition current_domain_A :: "other_state_A \<Rightarrow> userdomain_A domain"
 
 definition external_uwr_A :: "userdomain_A domain \<Rightarrow> (other_state_A \<times> other_state_A) set" where
   "external_uwr_A d \<equiv> {(s, t). curdom s = curdom t \<and>
+     smode s = smode t \<and>
      (\<forall> a. addr_domain_A a = d \<longrightarrow> mem s a = mem t a) \<and>
+     \<comment> \<open>Simplifying assumption: everybody's uwr includes the Scheduler uwr \<close>
+     (\<forall> a. addr_domain_A a = Sched \<longrightarrow> mem s a = mem t a) \<and>
      (curdom s = d \<longrightarrow> taddrs s = taddrs t)}"
 
 lemma external_uwr_equiv_rel_A:
@@ -243,6 +315,27 @@ lemma do_write_maintains_external_uwr_in_A:
   unfolding do_write_A_def external_uwr_A_def
   by force
 
+lemma do_write_outside_kernelshared_same_domain_A:
+  assumes "addr_domain_A a \<noteq> Sched"
+  shows "current_domain_A (do_write_A a s r) = current_domain_A s"
+  (* Note: We didn't need the assumption *)
+  unfolding current_domain_A_def do_write_A_def
+  by force
+
+lemma do_read_from_external_uwr_domain_A:
+  "\<lbrakk>(s, t) \<in> external_uwr_A d;
+   addr_domain_A a = d \<rbrakk> \<Longrightarrow>
+   do_read_A a s r = do_read_A a t r"
+  unfolding external_uwr_A_def do_read_A_def
+  by force
+
+lemma do_read_from_external_uwr_sched_A:
+  "\<lbrakk>(s, t) \<in> external_uwr_A d;
+   addr_domain_A a = Sched \<rbrakk> \<Longrightarrow>
+   do_read_A a s r = do_read_A a t r"
+  unfolding external_uwr_A_def do_read_A_def
+  by force
+
 definition touched_addrs_A :: "other_state_A \<Rightarrow> address set" where
   "touched_addrs_A s = taddrs s"
 
@@ -253,11 +346,12 @@ lemma external_uwr_same_touched_addrs_A:
   by blast
 
 definition can_domain_switch_A :: "other_state_A \<Rightarrow> bool" where
-  "can_domain_switch_A s = False" (* TODO *)
+  "can_domain_switch_A s \<equiv> smode s = KSchedule"
 
 lemma can_domain_switch_public_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> can_domain_switch_A s1 = can_domain_switch_A s2"
-  oops
+  unfolding external_uwr_A_def can_domain_switch_A_def
+  by force
 
 interpretation time_protection_A: time_protection collides_in_pch_A
   fch_lookup_A pch_lookup_A
@@ -271,20 +365,13 @@ interpretation time_protection_A: time_protection collides_in_pch_A
   current_domain_A external_uwr_A touched_addrs_A can_domain_switch_A
   apply unfold_locales
                      using collides_with_equiv_A apply blast
-                    (* pch_partitioned_read *)
-                    defer
-                   (* pch_collision_read *)
-                   defer
-                  (* pch_partitioned_write *)
-                  defer
-                 (* pch_collision_write *)
-                 defer
-                (* pch_partitioned_flush *)
-                defer
-               (* pch_collision_flush *)
-               defer
-              (* pch_flush_cycles_localised *)
-              defer
+                    using pch_partitioned_read_A apply blast
+                   using pch_collision_read_A apply blast
+                  using pch_partitioned_write_A apply blast
+                 using pch_collision_write_A apply blast
+                using pch_partitioned_flush_A apply blast
+               using pch_collision_flush_A apply blast
+              using pch_flush_cycles_localised_A apply blast
              using colours_not_shared_A apply blast
             using no_cross_colour_collisions_A apply blast
            using addr_domain_valid_A apply blast
@@ -292,15 +379,12 @@ interpretation time_protection_A: time_protection collides_in_pch_A
          using external_uwr_same_domain_A apply blast
         using do_write_maintains_external_uwr_out_A apply blast
        using do_write_maintains_external_uwr_in_A apply blast
-      (* using do_write_outside_kernelshared_same_domain_A *)
-      defer
-     (* using do_read_from_external_uwr_domain_A *)
-     defer
-    (* using do_read_from_external_uwr_sched_A *)
-    defer
+      using do_write_outside_kernelshared_same_domain_A apply blast
+     using do_read_from_external_uwr_domain_A apply blast
+    using do_read_from_external_uwr_sched_A apply blast
    using external_uwr_same_touched_addrs_A apply blast
-  (* using can_domain_switch_public_A *)
-  oops
+  using can_domain_switch_public_A apply blast
+  done
 (* Gerwin's feedback: at least get to the end of this once
    so we know it's satisfiable even if not flexible *)
 

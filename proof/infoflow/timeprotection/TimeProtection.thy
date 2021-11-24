@@ -177,6 +177,10 @@ locale time_protection =
      do_read a s r = do_read a t r"
 
   (* do_read of kernel_shared depends only on things bound in any external uwr *)
+  (* Note: This is a simplifying assumption that might need to be temporary,
+     in effect, pulling the Sched uwr into everybody else's uwr.
+     Compare to external_uwr_same_domain, and note for the seL4 instantiation we'll expect
+     current_domain just to be some designated part of kernel shared memory too. -robs. *)
   assumes do_read_from_external_uwr_sched:
     "\<lbrakk>(s, t) \<in> external_uwr d;
      addr_domain a = Sched \<rbrakk> \<Longrightarrow>
