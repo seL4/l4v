@@ -447,8 +447,10 @@ definition initial_regs_A :: regs_A where
 definition initial_pch_A :: pch_A where
   "initial_pch_A = (\<lambda> idx. None)"
 
-interpretation securely_implementable_A: securely_implementable
-  original_system_A s0_A
+interpretation time_protection_refinement_A: time_protection_refinement
+  original_system_A
+  refined_system (* TODO *)
+  s0_A
   current_domain_A external_uwr_A
   policy_A out_A
   collides_in_pch_A
@@ -462,6 +464,7 @@ interpretation securely_implementable_A: securely_implementable
   addr_domain_A addr_colour_A colour_userdomain_A
   touched_addrs_A can_domain_switch_A
   initial_regs_A initial_pch_A
+  refined_step_to_program (* TODO *)
   apply unfold_locales
   sorry
 
