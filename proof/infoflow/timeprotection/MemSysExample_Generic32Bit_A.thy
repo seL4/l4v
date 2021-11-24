@@ -84,11 +84,12 @@ abbreviation colour_userdomain_A :: "colour_A \<Rightarrow> userdomain_A" where 
 
 datatype sys_mode = KEntry | KSchedule | KExit
 
-record other_state_A =
+record orig_state_A =
   mem :: "address \<Rightarrow> machine_word"
   curdom :: "userdomain_A domain"
   taddrs :: "address set"
-  smode :: sys_mode
+
+type_synonym other_state_A = "orig_state_A \<times> sys_mode"
 
 record regs_A =
   r0 :: "machine_word"
@@ -198,10 +199,10 @@ definition write_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<
   "write_cycles_A _ _ = Default_cycle"
 
 definition do_read_A :: "address \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "do_read_A a s _ = \<lparr> r0 = (mem s) a \<rparr>"
+  "do_read_A a s _ = \<lparr> r0 = mem (fst s) a \<rparr>"
 
 definition do_write_A :: "address \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> other_state_A" where
-  "do_write_A a s rs = s\<lparr> mem := (mem s)(a := r0 rs) \<rparr>"
+  "do_write_A a s rs = ((fst s)\<lparr> mem := (mem (fst s))(a := r0 rs) \<rparr>, snd s)"
 
 definition store_time_A :: "time \<Rightarrow> regs_A \<Rightarrow> regs_A" where
   "store_time_A t r = \<lparr> r0 = of_nat t \<rparr>"
@@ -279,15 +280,17 @@ lemma addr_domain_valid_A:
   by force
 
 definition current_domain_A :: "other_state_A \<Rightarrow> userdomain_A domain" where
-  "current_domain_A s = curdom s"
+  "current_domain_A s = curdom (fst s)"
 
-definition external_uwr_A :: "userdomain_A domain \<Rightarrow> (other_state_A \<times> other_state_A) set" where
-  "external_uwr_A d \<equiv> {(s, t). curdom s = curdom t \<and>
-     smode s = smode t \<and>
+abbreviation orig_uwr_A :: "userdomain_A domain \<Rightarrow> (orig_state_A \<times> orig_state_A) set" where
+  "orig_uwr_A d \<equiv> {(s, t). curdom s = curdom t \<and>
      (\<forall> a. addr_domain_A a = d \<longrightarrow> mem s a = mem t a) \<and>
      \<comment> \<open>Simplifying assumption: everybody's uwr includes the Scheduler uwr \<close>
      (\<forall> a. addr_domain_A a = Sched \<longrightarrow> mem s a = mem t a) \<and>
      (curdom s = d \<longrightarrow> taddrs s = taddrs t)}"
+
+definition external_uwr_A :: "userdomain_A domain \<Rightarrow> (other_state_A \<times> other_state_A) set" where
+  "external_uwr_A d \<equiv> {(s, t). snd s = snd t \<and> (fst s, fst t) \<in> orig_uwr_A d}"
 
 lemma external_uwr_equiv_rel_A:
   "equiv UNIV (external_uwr_A d)"
@@ -337,7 +340,7 @@ lemma do_read_from_external_uwr_sched_A:
   by force
 
 definition touched_addrs_A :: "other_state_A \<Rightarrow> address set" where
-  "touched_addrs_A s = taddrs s"
+  "touched_addrs_A s = taddrs (fst s)"
 
 lemma external_uwr_same_touched_addrs_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> current_domain_A s1 = d \<Longrightarrow>
@@ -346,7 +349,7 @@ lemma external_uwr_same_touched_addrs_A:
   by blast
 
 definition can_domain_switch_A :: "other_state_A \<Rightarrow> bool" where
-  "can_domain_switch_A s \<equiv> smode s = KSchedule"
+  "can_domain_switch_A s \<equiv> snd s = KSchedule"
 
 lemma can_domain_switch_public_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> can_domain_switch_A s1 = can_domain_switch_A s2"
@@ -387,5 +390,79 @@ interpretation time_protection_A: time_protection collides_in_pch_A
   done
 (* Gerwin's feedback: at least get to the end of this once
    so we know it's satisfiable even if not flexible *)
+
+definition s0_A :: other_state_A where
+  "s0_A = (\<lparr> mem = (\<lambda>a. 0), curdom = Sched, taddrs = {}\<rparr>, KExit)"
+
+definition system_step_A :: "other_state_A rel" where
+  "system_step_A =
+    {((s, KExit), (s', KEntry)) | s s'. s = s'} \<union>
+    {((s, KEntry), (s', KExit)) | s s'. s = s'} \<union>
+    {((s, KEntry), (s', KSchedule)) | s s'. s = s'} \<union>
+    {((s, KSchedule), (s', KExit)) | s s'. s = s'}"
+
+definition original_system_A ::
+  "(orig_state_A \<times> sys_mode, orig_state_A \<times> sys_mode, 'a) data_type"
+  where
+  "original_system_A = \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = \<lambda>_. system_step_A \<rparr>"
+
+definition policy_A :: "userdomain_A domain rel" where
+  "policy_A = {(d, d'). d = Sched}"
+
+definition out_A where
+  "out_A = (\<lambda>_. id)"
+
+interpretation time_protection_system_A: Init_inv_Fin_system original_system_A s0_A
+  apply unfold_locales
+    (* Init_Fin_system.Fin_Init_s0 *)
+    apply(force simp:original_system_A_def)
+   (* Init_Fin_system.Init_inv_Fin *)
+   apply(force simp:original_system_A_def)
+  (* Init_Fin_system.Fin_inj *)
+  apply(force simp:original_system_A_def)
+  (* FIXME: Don't know what the issue here is. *)
+  done
+  oops
+
+interpretation time_protection_system_A: time_protection_system
+  original_system_A s0_A
+  current_domain_A external_uwr_A
+  policy_A out_A
+  collides_in_pch_A
+  fch_lookup_A pch_lookup_A
+  fch_access_impact_A pch_read_impact_A
+  fch_access_impact_A pch_write_impact_A
+  read_cycles_A write_cycles_A
+  do_read_A do_write_A
+  store_time_A padding_regs_impact_A
+  empty_fch_A fch_flush_cycles_A do_pch_flush_A pch_flush_cycles_A
+  addr_domain_A addr_colour_A colour_userdomain_A
+  touched_addrs_A can_domain_switch_A
+  apply unfold_locales
+  sorry
+
+definition initial_regs_A :: regs_A where
+  "initial_regs_A = \<lparr> r0 = 0 \<rparr>"
+
+definition initial_pch_A :: pch_A where
+  "initial_pch_A = (\<lambda> idx. None)"
+
+interpretation securely_implementable_A: securely_implementable
+  original_system_A s0_A
+  current_domain_A external_uwr_A
+  policy_A out_A
+  collides_in_pch_A
+  fch_lookup_A pch_lookup_A
+  fch_access_impact_A pch_read_impact_A
+  fch_access_impact_A pch_write_impact_A
+  read_cycles_A write_cycles_A
+  do_read_A do_write_A
+  store_time_A padding_regs_impact_A
+  empty_fch_A fch_flush_cycles_A do_pch_flush_A pch_flush_cycles_A
+  addr_domain_A addr_colour_A colour_userdomain_A
+  touched_addrs_A can_domain_switch_A
+  initial_regs_A initial_pch_A
+  apply unfold_locales
+  sorry
 
 end
