@@ -424,6 +424,7 @@ interpretation time_protection_system_A: Init_inv_Fin_system original_system_A s
   done
   oops
 
+(* XXX: defunct -robs.
 interpretation time_protection_system_A: time_protection_system
   original_system_A s0_A
   current_domain_A external_uwr_A
@@ -440,6 +441,7 @@ interpretation time_protection_system_A: time_protection_system
   touched_addrs_A can_domain_switch_A
   apply unfold_locales
   sorry
+*)
 
 definition initial_regs_A :: regs_A where
   "initial_regs_A = \<lparr> r0 = 0 \<rparr>"
