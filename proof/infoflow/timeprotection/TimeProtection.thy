@@ -1128,6 +1128,7 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
 
 end
 
+(* XXX: defunct -robs.
 locale time_protection_system =
   us?: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
   tp?: time_protection collides_in_pch fch_lookup pch_lookup
@@ -1195,18 +1196,18 @@ definition has_secure_implementation :: "('fch,'pch,'regs,'other_state)state \<R
 *)
 
 end
+*)
 
 locale time_protection_refinement =
   (* Can we expect C to be a Step_system?
     Locale `complete_noninterference_refinement` enforces this.
     But it doesn't look like we use this for seL4 infoflow refinement... -robs. *)
   nir?: complete_noninterference_refinement A s0 "\<lambda>_. current_domain" external_uwr policy out Sched C +
-  tps?: time_protection_system A s0 current_domain external_uwr policy out
-    collides_in_pch fch_lookup pch_lookup
+  tp?: time_protection collides_in_pch fch_lookup pch_lookup
     fch_read_impact pch_read_impact fch_write_impact pch_write_impact
     read_cycles write_cycles do_read do_write store_time padding_regs_impact
     empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles addr_domain addr_colour colour_userdomain
-    touched_addrs can_domain_switch initial_regs initial_pch
+    current_domain external_uwr touched_addrs can_domain_switch
   for A :: "('a,'other_state,unit) data_type"
   and C :: "('c,'other_state,unit) data_type"
   and s0 :: "'other_state"
@@ -1235,9 +1236,11 @@ locale time_protection_refinement =
   and addr_colour :: "address \<Rightarrow> 'colour"
   and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   and touched_addrs :: "'other_state \<Rightarrow> address set"
-  and can_domain_switch :: "'other_state \<Rightarrow> bool"
-  and initial_regs :: "'regs"
-  and initial_pch :: "'pch" +
+  and can_domain_switch :: "'other_state \<Rightarrow> bool" +
+  fixes initial_regs :: "'regs"
+  fixes initial_pch :: "'pch"
+  assumes A_touched_addrs_inv:
+    "abs.reachable s \<Longrightarrow> touched_addrs_inv s"
   fixes C_step_program :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> 'regs program"
   assumes reachable_C_nondomainswitch_reqs:
     "(\<And> s s' p.
@@ -1577,8 +1580,8 @@ theorem extended_confidentiality_u:
   apply(clarsimp simp:Let_def)
   apply(rename_tac u s t s_priv' s_priv t_priv' t_priv)
   apply(rule programs_obeying_ta_preserve_uwr, simp_all)
-    apply(force simp:touched_addrs_inv reachable)
-   apply(force simp:touched_addrs_inv reachable)
+    apply(force simp:A_touched_addrs_inv reachable)
+   apply(force simp:A_touched_addrs_inv reachable)
   apply(force simp:kludge_uwr_same_programs_def)
   done
 
