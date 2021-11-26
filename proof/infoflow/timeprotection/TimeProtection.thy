@@ -130,7 +130,6 @@ locale time_protection =
   fixes addr_domain :: "address \<Rightarrow> 'userdomain domain" \<comment> \<open>for each address, this is the security domain\<close>
   fixes addr_colour :: "address \<Rightarrow> 'colour" \<comment> \<open>for each address, this is the cache colour\<close>
   fixes colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
-  assumes colours_not_shared: "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
   assumes no_cross_colour_collisions:
     "(a1, a2) \<in> collides_in_pch \<Longrightarrow> addr_colour a1 = addr_colour a2"
   assumes addr_domain_valid: "addr_domain a = Sched
@@ -196,6 +195,10 @@ locale time_protection =
   assumes can_domain_switch_public:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> can_domain_switch s1 = can_domain_switch s2"
 begin
+
+corollary colours_not_shared:
+  "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
+  by blast
 
 definition all_addrs_of :: "'userdomain domain \<Rightarrow> address set" where
   "all_addrs_of d = {a. addr_domain a = d}"
@@ -1538,7 +1541,7 @@ interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda
   done
 
 theorem extended_confidentiality_u:
-  "confidentiality_u \<Longrightarrow> tpni.confidentiality_u"
+  "conc.confidentiality_u \<Longrightarrow> tpni.confidentiality_u"
   apply(clarsimp simp:confidentiality_u_def tpni.confidentiality_u_def)
   apply(erule_tac x=u in allE)
   apply(erule_tac x="other_state s" in allE)
@@ -1586,7 +1589,9 @@ theorem extended_confidentiality_u:
   done
 
 theorem extended_Nonleakage:
-  "conc.Nonleakage_gen \<Longrightarrow> tpni.Nonleakage_gen"
+  "abs.Nonleakage_gen \<Longrightarrow> tpni.Nonleakage_gen"
+  apply(prop_tac "conc.Nonleakage_gen")
+   apply(force intro:Nonleakage_gen_refinement_closed)
   using conc.Nonleakage_gen_confidentiality_u extended_confidentiality_u tpni.Nonleakage_gen
   by blast
 

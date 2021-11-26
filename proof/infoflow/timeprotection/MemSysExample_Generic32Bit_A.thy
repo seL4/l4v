@@ -259,10 +259,6 @@ lemma pch_flush_cycles_localised_A:
 definition addr_domain_A :: "address \<Rightarrow> userdomain_A domain" where
   "addr_domain_A a = User (colour_userdomain_A (addr_colour_A a))"
 
-lemma colours_not_shared_A:
-  "colour_userdomain_A c1 \<noteq> colour_userdomain_A c2 \<Longrightarrow> c1 \<noteq> c2"
-  using distinct_lemma by blast
-
 lemma same_index_same_colour:
   "L2_index_of a = L2_index_of b \<Longrightarrow> colour_of a = colour_of b"
   unfolding L2_index_of_def colour_of_def
@@ -367,15 +363,14 @@ interpretation time_protection_A: time_protection collides_in_pch_A
   addr_domain_A addr_colour_A colour_userdomain_A
   current_domain_A external_uwr_A touched_addrs_A can_domain_switch_A
   apply unfold_locales
-                     using collides_with_equiv_A apply blast
-                    using pch_partitioned_read_A apply blast
-                   using pch_collision_read_A apply blast
-                  using pch_partitioned_write_A apply blast
-                 using pch_collision_write_A apply blast
-                using pch_partitioned_flush_A apply blast
-               using pch_collision_flush_A apply blast
-              using pch_flush_cycles_localised_A apply blast
-             using colours_not_shared_A apply blast
+                    using collides_with_equiv_A apply blast
+                   using pch_partitioned_read_A apply blast
+                  using pch_collision_read_A apply blast
+                 using pch_partitioned_write_A apply blast
+                using pch_collision_write_A apply blast
+               using pch_partitioned_flush_A apply blast
+              using pch_collision_flush_A apply blast
+             using pch_flush_cycles_localised_A apply blast
             using no_cross_colour_collisions_A apply blast
            using addr_domain_valid_A apply blast
           using external_uwr_equiv_rel_A apply blast
