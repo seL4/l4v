@@ -825,8 +825,50 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         Symtab.fold inner_fold local_vars_collected lthy
       end
 
-    fun mk_frame_lemmas local_vars_collected lthy =
+
+      fun construct_lflds lthy =
+        let
+          (* the state information accumulated so far allows for local
+             variables of the same name and type to be declared in different
+             functions.  When we come to make an Isabelle record definition
+             we want to have just one field of the given name *)
+          fun map_elim_name_inner ({isa_name,...}, ty, _, _) (seen,out) =
+            let
+              val nm' = HoarePackage.varname (MString.dest isa_name)
+            in
+              if member (op =) seen nm'
+              then
+                (seen,out)
+              else
+                (nm' :: seen, (Binding.make (nm',@{here}),ty,NoSyn) :: out)
+            end
+
+          fun map_elim_name (_,vs) (seen,out) =
+            fold map_elim_name_inner vs (seen,out)
+
+          val stackT = Proof_Context.read_typ lthy "frame stack"
+
+          val additional_flds =
+            [ (simple global_exn_var_name, c_exntype_ty, NONE, Local "cparser'internal"),
+            (simple "stack", stackT, NONE, Local "cparser'internal") ]
+
+          val lflds =
+            snd (Symtab.fold map_elim_name lvars ([],[])) @
+            snd (fold map_elim_name_inner additional_flds ([],[]))
+
+          (* trace the fields for reference *)
+          val _ =
+            lflds
+            |> map (fn (a,b,_) => (Binding.name_of a,b))
+            |> pretty_recdef (thy2ctxt thy) NameGeneration.local_rcd_name
+        in
+          lflds
+        end
+
+    fun mk_frame_lemmas lflds local_vars_collected lthy =
       let
+        val locals_names = map (fn (a,_,_) => Binding.name_of a) lflds
+
         fun inner_fold (nm, _) lthy =
           let
             val upd =
@@ -847,9 +889,10 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
             val vx = Term.Var (("x",0), state_T)
             val vf = Term.Var (("f",0), nth (fst stripped_state_typ) 0)
             val globals_t = Const ("StateSpace.state.globals", state_T --> globals_T)
+
+            (* globals (vv_update f x) = globals x *)
             val lemma_t =
               HOLogic.mk_eq (globals_t $ (upd_t $ vf $ vx), globals_t $ vx)
-
             val lemma_ct =
               lemma_t
               |> HOLogic.mk_Trueprop
@@ -866,8 +909,183 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
                 {pervasive=false, syntax=false}
                 (K (Simplifier.map_ss (fn ss => ss addsimps [lemma_th])))
           end
+
+        val frameT = Proof_Context.read_typ lthy "frame"
+        val stackT = Proof_Context.read_typ lthy "frame stack"
+        val frame_subst = Term.subst_TVars [(("f",0),frameT)]
+
+        val top_frame_get_t =
+          Const (@{const_name get_top_frame_stack}, stackT --> frameT)
+        val top_frame_upd_t =
+          Const (@{const_name top_frame_update_stack}, [frameT --> frameT, stackT] ---> stackT)
+
+        val stack_global_get_t =
+          "stack_'"
+          |> Proof_Context.read_const
+              {proper = false, strict = false}
+              lthy
+          |> frame_subst
+        val stack_global_upd_t =
+          "stack_'"
+          |> suffix Record.updateN
+          |> Proof_Context.read_const
+              {proper = false, strict = false}
+              lthy
+          |> frame_subst
+
+        fun lookup_term lthy =
+          Proof_Context.read_const {proper = false, strict = false} lthy #> frame_subst
+        fun lookup_defn lthy =
+          suffix "_def" #> Proof_Context.get_thm lthy
+
+        fun make_reduce_lemmas var_name field_name lthy =
+          let
+            val state_frame_var_get_nm =
+              var_name
+              |> prefix "state_"
+              |> Long_Name.qualify "frame"
+            val state_frame_var_upd_nm =
+              state_frame_var_get_nm
+              |> suffix Record.updateN
+
+            val frame_var_get_nm =
+              var_name
+              |> Long_Name.qualify "frame"
+            val frame_var_upd_nm =
+              frame_var_get_nm
+              |> suffix Record.updateN
+
+            (* frame state functions; take a state, manipulate frame vars *)
+            val state_frame_var_get_t = lookup_term lthy state_frame_var_get_nm
+            val state_frame_var_upd_t = lookup_term lthy state_frame_var_upd_nm
+            (* frame variable functions; take a frame, manipulate frame vars *)
+            val frame_var_get_t = lookup_term lthy frame_var_get_nm
+            val frame_var_upd_t = lookup_term lthy frame_var_upd_nm
+
+            fun get_field_term name =
+              case name of
+                "globals" =>
+                  (* the globals field is a bit tricky in this setup. It is provided by the
+                   * superclass \<open>StateSpace.state\<close>, which means its type is not the same as the
+                   * others. As raw terms require matching types, we must create the correct type.
+                   *)
+                  let
+                    val gvarT = TVar (("'g",0), @{sort type})
+                    val zvarT = TVar (("'z",0), @{sort type})
+                    val myvars_schemeT =
+                      "myvars_scheme"
+                      |> Proof_Context.read_type_name {proper=false,strict=false} lthy
+                      |> dest_Type
+                      ||> K [gvarT,zvarT] (* replace dummyT with the actual type vars *)
+                      |> Type
+                    val globalsT = myvars_schemeT --> gvarT
+                  in
+                    Const (@{const_name globals}, globalsT)
+                  end
+              | "globals_update" =>
+                let
+                    val gvarT = TVar (("'g",0), @{sort type})
+                    val zvarT = TVar (("'z",0), @{sort type})
+                    val myvars_schemeT =
+                      "myvars_scheme"
+                      |> Proof_Context.read_type_name {proper=false,strict=false} lthy
+                      |> dest_Type
+                      ||> K [gvarT,zvarT] (* replace dummyT with the actual type vars *)
+                      |> Type
+                    val globals_updT = (gvarT --> gvarT) --> myvars_schemeT --> myvars_schemeT
+                  in
+                    Const (@{const_name globals_update}, globals_updT)
+                  end
+              | _ =>
+                name
+                |> Proof_Context.read_const {proper = false, strict = false} lthy
+                |> frame_subst
+
+            val field_get_t =
+              field_name
+              |> get_field_term
+            val field_upd_t =
+              field_name
+              |> suffix Record.updateN
+              |> get_field_term
+
+            val state_frame_var_get_def = lookup_defn lthy state_frame_var_get_nm
+            val state_frame_var_upd_def = lookup_defn lthy state_frame_var_upd_nm
+
+            val local_state_T =
+              Term.domain_type (Term.type_of field_get_t)
+            val local_state_updfn_T =
+              Term.domain_type (Term.type_of field_upd_t)
+            val frame_var_upd_T =
+              Term.domain_type (Term.type_of state_frame_var_upd_t)
+
+            val vs = Term.Var (("s",0), local_state_T)
+            val vf = Term.Var (("f",0), frame_var_upd_T)
+            val vg = Term.Var (("g",0), local_state_updfn_T)
+
+            val t0 = (
+              if match_string "*stack_'" field_name
+              then
+                HOLogic.mk_eq
+                  (field_get_t $ (state_frame_var_upd_t $ vf $ vs),
+                    field_get_t $
+                      (stack_global_upd_t $ (top_frame_upd_t $ (frame_var_upd_t $ vf)) $ vs))
+              else
+                HOLogic.mk_eq (field_get_t $ (state_frame_var_upd_t $ vf $ vs), field_get_t $ vs)
+            )
+            val lemma0 =
+              t0
+              |> HOLogic.mk_Trueprop
+              |> Thm.cterm_of lthy
+              |> Goal.init
+              |> TRY(simp_tac (lthy addsimps [state_frame_var_upd_def,@{thm comp_def}]) 1)
+                |> Seq.pull |> the |> fst
+              |> Goal.finish lthy
+
+            val t1 = (
+              if match_string "*stack_'" field_name
+              then
+                HOLogic.mk_eq
+                  (state_frame_var_get_t $ (field_upd_t $ vg $ vs),
+                    frame_var_get_t $ (top_frame_get_t $ (vg $ (stack_global_get_t $ vs))))
+              else
+                HOLogic.mk_eq
+                  (state_frame_var_get_t $ (field_upd_t $ vg $ vs), state_frame_var_get_t $ vs)
+            )
+            val lemma1 =
+              t1
+              |> HOLogic.mk_Trueprop
+              |> Thm.cterm_of lthy
+              |> Goal.init
+              |> TRY(simp_tac (lthy addsimps [state_frame_var_get_def,@{thm comp_def}]) 1)
+                |> Seq.pull |> the |> fst
+              |> Goal.finish lthy
+          in
+            (lemma0, lemma1)
+          end
+
+        val lems =
+          Symtab.fold
+            (fn (vname,_) => fn lemss =>
+              List.foldl
+                (fn (nm, (lems0, lems1)) =>
+                  let
+                    val (th0, th1) = make_reduce_lemmas vname nm lthy
+                  in
+                    (th0 :: lems0, th1 :: lems1)
+                  end)
+                lemss
+                ("globals" :: (map (Long_Name.qualify NameGeneration.local_rcd_name) locals_names)))
+            local_vars_collected
+            ([],[])
+          |> List.@
       in
-        Symtab.fold inner_fold local_vars_collected lthy
+        lthy
+        |> Symtab.fold inner_fold local_vars_collected
+        |> Local_Theory.note ((Binding.make ("frame_helper_lemmas", @{here}),[]), lems) |> snd
+        |> Local_Theory.declaration
+             {pervasive=false, syntax=false}
+             (K (Simplifier.map_ss (fn ss => ss addsimps lems)))
       end
 
     (* create update aliases *)
@@ -968,62 +1186,26 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         thy |> define_aliases (Symtab.dest_list lvars |> map snd)
       end
 
-      fun mk_locals_rcd thy =
-        let
-          (* the state information accumulated so far allows for local
-             variables of the same name and type to be declared in different
-             functions.  When we come to make an Isabelle record definition
-             we want to have just one field of the given name *)
-          fun map_elim_name_inner ({isa_name,...}, ty, _, _) (seen,out) =
-            let
-              val nm' = HoarePackage.varname (MString.dest isa_name)
-            in
-              if member (op =) seen nm'
-              then
-                (seen,out)
-              else
-                (nm' :: seen, (Binding.make (nm',@{here}),ty,NoSyn) :: out)
-            end
-
-        fun map_elim_name (_,vs) (seen,out) =
-          fold map_elim_name_inner vs (seen,out)
-
-        val stackT = Syntax.parse_typ (thy2ctxt thy) "frame stack"
-
-        val additional_flds =
-          [ (simple global_exn_var_name, c_exntype_ty, NONE, Local "cparser'internal"),
-          (simple "stack", stackT, NONE, Local "cparser'internal") ]
-
-        val lflds =
-          snd (Symtab.fold map_elim_name lvars ([],[])) @
-          snd (fold map_elim_name_inner additional_flds ([],[]))
-
-        (* trace the fields for reference *)
-        val _ =
-          lflds
-          |> map (fn (a,b,_) => (Binding.name_of a,b))
-          |> pretty_recdef (thy2ctxt thy) NameGeneration.local_rcd_name
-
+      fun mk_locals_rcd lflds thy =
         (* define the record as an extension of state *)
-        val thy =
           Record.add_record
             {overloaded=false}
             ([("'g",["HOL.type"])], Binding.make (NameGeneration.local_rcd_name,@{here}))
             (SOME([TFree("'g", ["HOL.type"])], "StateSpace.state"))
             lflds
             thy
-      in
-        thy
-      end
 
-    val (thy, globs) =
+    val thy =
       thy
       |> Named_Target.theory_map
         (mk_frame_dattyp
           #> Symtab.fold mk_frame_updator local_vars_collected)
-      |> mk_locals_rcd
+    val lflds = construct_lflds (Proof_Context.init_global thy)
+    val (thy, globs) =
+      thy
+      |> mk_locals_rcd lflds
       |> Named_Target.theory_map (mk_frame_state_fns local_vars_collected)
-      |> Named_Target.theory_map (mk_frame_lemmas local_vars_collected)
+      |> Named_Target.theory_map (mk_frame_lemmas lflds local_vars_collected)
       |> mk_locals_aliases
       |> mk_globals_rcd
     val flat_lvars = lvars |> Symtab.dest_list |> map snd

@@ -947,8 +947,7 @@ in
             | SOME (_, FunctionName) => p (false, true, MString.mk s)
       fun mk_ec s = let
         val constname =
-         s
-         |> Long_Name.qualify "state"
+         prefix "state_" s
          |> Long_Name.qualify "frame"
          |> Sign.intern_const thy
         fun rval _ = Const(constname, IntInfo.int)

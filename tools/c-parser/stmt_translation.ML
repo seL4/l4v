@@ -91,8 +91,8 @@ in
     Local _ =>
       let
         val vname =
-          name
-          |> Long_Name.qualify local_rcd_name
+          prefix "state_" name
+          |> Long_Name.qualify "frame" (* local_rcd_name *)
       in
         Const (Sign.intern_const sg vname, type_of state --> ty) $ state
       end

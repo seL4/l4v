@@ -46,14 +46,14 @@ fun deref_stack_ptr :: "'f stack \<Rightarrow> ('f,'a) stack_ptr \<Rightarrow> '
 (* The top of the stack is, alas, at the end of the list structure *)
 
 fun get_top_frame_stack :: "'f stack \<Rightarrow> 'f" where
-  "get_top_frame_stack ((_,frm) \<triangleright> Top _) = frm"
-| "get_top_frame_stack ((_,frm) \<triangleright> s) = get_top_frame_stack s"
+  "get_top_frame_stack (fm \<triangleright> Top _) = snd fm"
+| "get_top_frame_stack (_ \<triangleright> s) = get_top_frame_stack s"
 | "get_top_frame_stack (Top _) = undefined"
 
 fun top_frame_update_stack :: "('f \<Rightarrow> 'f) \<Rightarrow> 'f stack \<Rightarrow> 'f stack" where
-  "top_frame_update_stack f ((m,frm) \<triangleright> Top n) = (m,f frm) \<triangleright> Top n"
+  "top_frame_update_stack f (a \<triangleright> Top n) = (fst a, f (snd a)) \<triangleright> Top n"
 | "top_frame_update_stack f (a \<triangleright> s) = a \<triangleright> top_frame_update_stack f s"
-| "top_frame_update_stack _ (Top _) = undefined"
+| "top_frame_update_stack _ (Top n) = Top n"
 
 fun pop_stack :: "'f stack \<Rightarrow> 'f stack" where
   "pop_stack ((g,_) \<triangleright> Top _) = Top (Suc g)"
@@ -69,6 +69,10 @@ fun next_gen_update_stack :: "(nat \<Rightarrow> nat) \<Rightarrow> 'f stack \<R
 | "next_gen_update_stack f (a \<triangleright> s) = a \<triangleright> next_gen_update_stack f s"
 
 
+definition stack_empty :: "'f stack \<Rightarrow> bool" where
+  "stack_empty s \<equiv> \<exists>k. s = Top k"
+
+
 lemma stack_pop_push[simp]:
   "pop_stack (push_stack fm s) = next_gen_update_stack Suc s"
   by (induct s rule: pop_stack.induct) clarsimp+
@@ -81,5 +85,55 @@ lemma top_frame_same_under_next_gen_update[simp]:
   "get_top_frame_stack (next_gen_update_stack f s) =
     get_top_frame_stack s"
   by (induct s rule: get_top_frame_stack.induct) simp+
+
+lemma top_frame_update_stack_on_push[simp]:
+  "top_frame_update_stack f (push_stack fm s) = push_stack (f fm) s"
+  by (induct s rule: get_top_frame_stack.induct) simp+
+
+lemma get_top_frame_of_update[simp]:
+  "get_top_frame_stack (top_frame_update_stack f s) = f (get_top_frame_stack s)"
+  apply (induct s rule: get_top_frame_stack.induct)
+    apply clarsimp
+  oops
+
+
+
+lemma top_frame_update_stack_preserves_structure:
+  "top_frame_update_stack f (a \<triangleright> s) =
+    (case s of
+      Top n \<Rightarrow> (fst a, f (snd a))
+    | _ \<Rightarrow> a)
+    \<triangleright>
+    (case s of
+      Top n \<Rightarrow> Top n
+    | _ \<Rightarrow> top_frame_update_stack f s)"
+  "top_frame_update_stack f (Top n) = Top n"
+  by (cases s; simp) simp
+
+lemma top_frame_update_merge[simp]:
+  "top_frame_update_stack f (top_frame_update_stack g s) = top_frame_update_stack (f \<circ> g) s"
+  apply (induct s)
+   apply simp
+  apply (simp add: top_frame_update_stack_preserves_structure)
+   apply (simp split: stack.splits)
+   apply (metis stack.distinct(1) top_frame_update_stack_preserves_structure(1))
+  apply clarsimp
+  done
+
+lemma next_gen_update_top_frame_update_norm[simp]:
+  "next_gen_update_stack f (top_frame_update_stack g s)
+  = top_frame_update_stack g (next_gen_update_stack f s)"
+  apply (induct s)
+   apply (case_tac s; simp)
+  apply simp
+  done
+
+lemma next_gen_update_empty[simp]:
+  "stack_empty (next_gen_update_stack f s) \<longleftrightarrow> stack_empty s"
+  by (induct s) (simp add: stack_empty_def)+
+
+lemma next_gen_update_nonempty[simp]:
+  "\<not> stack_empty (next_gen_update_stack f s) \<longleftrightarrow> \<not> stack_empty s"
+  by (induct s) (simp add: stack_empty_def)+
 
 end
