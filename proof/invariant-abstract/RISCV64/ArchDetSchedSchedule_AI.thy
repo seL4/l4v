@@ -290,7 +290,7 @@ lemma arch_perform_invocation_cur_sc_in_release_q_imp_zero_consumed [wp, DetSche
   by (cases iv; wpsimp wp: hoare_drop_imps)
 
 crunches arch_invoke_irq_handler, arch_mask_irq_signal, handle_reserved_irq
-  for ct_active[wp]: ct_active
+  for ct_in_state[wp]: "ct_in_state P"
 
 lemma arch_invoke_irq_handler_valid_sched_pred_strong[wp]:
   "arch_invoke_irq_handler i \<lbrace> valid_sched_pred_strong P \<rbrace>"
@@ -305,6 +305,10 @@ for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))
 
 crunches make_arch_fault_msg
   for valid_sched_pred_strong[wp,DetSchedSchedule_AI_assms]: "valid_sched_pred_strong P"
+
+lemma handle_hyp_fault_trivial[wp]:
+  "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
+  by (cases fault; wpsimp)
 
 end
 
@@ -321,10 +325,6 @@ proof goal_cases
 qed
 
 context Arch begin global_naming RISCV64
-
-lemma handle_hyp_fault_trivial[wp]:
-  "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"
-  by (cases fault; wpsimp)
 
 lemma handle_reserved_irq_trivial[wp]:
   "handle_reserved_irq irq \<lbrace>Q\<rbrace>"
