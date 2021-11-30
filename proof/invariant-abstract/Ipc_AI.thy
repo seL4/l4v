@@ -2900,9 +2900,18 @@ lemma ep_ntfn_cap_case_helper:
       R)"
   by (cases x, simp_all)
 
-crunches complete_signal, update_sk_obj_ref, do_nbrecv_failed_transfer
+crunches complete_signal, do_nbrecv_failed_transfer
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P' t s)"
   (wp: crunch_wps hoare_vcg_all_lift)
+
+lemma complete_signal_st_tcb_at[wp]:
+  "complete_signal ntfnptr tptr \<lbrace>\<lambda>s. Q (st_tcb_at P t s)\<rbrace>"
+  apply (clarsimp simp: complete_signal_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (case_tac "ntfn_obj ntfn"; clarsimp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply wpsimp
+  done
 
 lemmas thread_set_Pmdb = thread_set_no_cdt
 

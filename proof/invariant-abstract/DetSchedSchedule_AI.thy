@@ -2327,9 +2327,9 @@ locale DetSchedSchedule_AI =
   assumes arch_invoke_irq_handler_ct_active[wp]:
     "\<And>i. arch_invoke_irq_handler i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
   assumes handle_reserved_irq_ct_active[wp]:
-    "\<And>i. handle_reserved_irq i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
-  assumes arch_mask_irq_signal_ct_active[wp]:
-    "\<And>i. arch_mask_irq_signal i \<lbrace>ct_active::'state_ext state \<Rightarrow> _\<rbrace>"
+    "\<And>i P. handle_reserved_irq i \<lbrace>ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+  assumes arch_mask_irq_signal_ct_in_state[wp]:
+    "\<And>i P. arch_mask_irq_signal i \<lbrace>ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes prepare_thread_delete_current_time_bounded[wp]: (* need to give a concrete n? *)
     "\<And>t n. prepare_thread_delete t \<lbrace>current_time_bounded n :: 'state_ext state \<Rightarrow> _\<rbrace>"
   assumes arch_post_cap_deletion_current_time_bounded[wp] :
@@ -2342,6 +2342,10 @@ locale DetSchedSchedule_AI =
     "\<And>c P. arch_post_cap_deletion c \<lbrace>\<lambda>s :: 'state_ext state. P (tcb_scps_of s)\<rbrace>"
   assumes arch_finalise_cap_tcb_scps_of[wp]:
     "\<And>cap final P. arch_finalise_cap cap final \<lbrace>\<lambda>s :: 'state_ext state. P (tcb_scps_of s)\<rbrace>"
+  assumes handle_hypervisor_fault_ct_in_state[wp]:
+     "\<And>t fault P. handle_hypervisor_fault t fault \<lbrace>ct_in_state P :: 'state_ext state \<Rightarrow> _\<rbrace>"
+   assumes handle_hypervisor_fault_scheduler_action[wp]:
+     "\<And>t fault P. handle_hypervisor_fault t fault \<lbrace>\<lambda>s :: 'state_ext state. P (scheduler_action s)\<rbrace>"
 
 locale DetSchedSchedule_AI_det_ext = DetSchedSchedule_AI "TYPE(det_ext)" +
   assumes arch_activate_idle_thread_valid_list'[wp]:

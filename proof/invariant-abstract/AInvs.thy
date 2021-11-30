@@ -1373,4 +1373,708 @@ lemma call_kernel_consumed_time_bounded:
   apply (wpsimp wp: preemption_path_consumed_time_bounded)
   done
 
+lemma set_thread_state_schact_is_rct_imp_ct_activatable[wp]:
+  "set_thread_state ref ts \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (wpsimp simp: set_scheduler_action_def
+                  wp: is_schedulable_wp set_object_wp)
+  apply (clarsimp simp: schact_is_rct_def ct_in_state_def pred_tcb_at_def obj_at_def
+                        schedulable_def2 get_tcb_def)
+  done
+
+lemma reply_unlink_tcb_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_unlink_tcb t r \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_unlink_tcb_def)
+  apply (wpsimp wp: update_sk_obj_ref_wp gts_inv get_simple_ko_inv
+         | wp (once) hoare_drop_imps)+
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma reschedule_required_schact_is_rct_imp_ct_activatable[wp]:
+  "\<lbrace>\<top>\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (rule_tac Q="\<lambda>_ s. scheduler_action s = choose_new_thread" in hoare_post_imp)
+   apply (clarsimp simp: schact_is_rct_def)
+  apply wpsimp
+  done
+
+lemma sched_context_donate_schact_is_rct_imp_ct_activatable[wp]:
+  "sched_context_donate sc_ptr tcb_ptr
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "_ \<lbrace>?P\<rbrace>")
+  apply (clarsimp simp: sched_context_donate_def test_reschedule_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_. ?P" in hoare_seq_ext)
+   apply (wpsimp wp: hoare_vcg_imp_lift' set_tcb_obj_ref_wp update_sched_context_wp)
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
+                   split: if_splits kernel_object.splits)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+  apply (rule hoare_seq_ext_skip)
+  apply (wpsimp wp: hoare_vcg_imp_lift' set_tcb_obj_ref_wp)
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply wpsimp
+  done
+
+crunches bind_sc_reply
+  for ct_in_state[wp]: "ct_in_state P"
+
+lemma reply_push_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_push caller callee reply_ptr can_donate
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_push_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+  done
+
+lemma send_ipc_schact_is_rct_imp_ct_activatable[wp]:
+  "send_ipc block call badge can_grant can_grant_reply can_donate thread epptr
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: send_ipc_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (case_tac ep; clarsimp)
+    apply (cases block; clarsimp)
+    apply (rule hoare_seq_ext_skip, wpsimp)
+    apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+    apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+   apply (cases block; clarsimp)
+   apply (rule hoare_seq_ext_skip, solves wpsimp)+
+   apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+  apply (case_tac x3; clarsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma blocked_cancel_ipc_schact_is_rct_imp_ct_activatable[wp]:
+  "blocked_cancel_ipc state tptr reply_opt
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: blocked_cancel_ipc_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply wpsimp
+  done
+
+lemma reply_unlink_sc_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_unlink_sc sc_ptr reply_ptr
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_unlink_sc_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (rule hoare_if)
+   apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+   apply (wpsimp wp: update_sk_obj_ref_wp)
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: update_sched_context_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma reply_remove_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_remove caller r \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_remove_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply wpsimp
+  done
+
+lemma reply_remove_tcb_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_remove_tcb tptr rptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_remove_tcb_def)
+  apply (simp flip: bind_assoc)
+  apply (rule hoare_seq_ext)
+   apply wpsimp
+  apply (simp add: bind_assoc)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (rename_tac sc_opt)
+  apply (case_tac sc_opt; clarsimp)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma cancel_signal_schact_is_rct_imp_ct_activatable[wp]:
+  "cancel_signal threadptr ntfnptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cancel_signal_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (wpsimp simp: update_sk_obj_ref_def
+                  wp: set_simple_ko_wp get_simple_ko_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+  done
+
+lemma cancel_ipc_schact_is_rct_imp_ct_activatable[wp]:
+  "cancel_ipc tptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cancel_ipc_def)
+  apply (wpsimp wp: thread_set_wp gts_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
+  done
+
+lemma restart_schact_is_rct_imp_ct_activatable[wp]:
+  "restart tptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: restart_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma suspend_schact_is_rct_imp_ct_activatable[wp]:
+  "suspend thread \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: suspend_def update_restart_pc_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma restart_thread_if_no_fault_schact_is_rct_imp_ct_activatable[wp]:
+  "restart_thread_if_no_fault ep_ptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: restart_thread_if_no_fault_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_if; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma cancel_all_ipc_schact_is_rct_imp_ct_activatable[wp]:
+  "cancel_all_ipc ep_ptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cancel_all_ipc_def)
+  apply (wpsimp wp: update_sk_obj_ref_wp get_simple_ko_wp)
+  done
+
+lemma cancel_all_signals_schact_is_rct_imp_ct_activatable[wp]:
+  "cancel_all_signals ntfnptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cancel_all_signals_def)
+  apply (wpsimp wp: get_simple_ko_wp)
+  done
+
+lemma set_ntfn_obj_ref_schact_is_rct_imp_ct_activatable[wp]:
+  "set_ntfn_obj_ref update ref new \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (wpsimp wp: update_sk_obj_ref_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+  done
+
+lemma unbind_maybe_notification_schact_is_rct_imp_ct_activatable[wp]:
+  "unbind_maybe_notification ntfnptr \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: unbind_maybe_notification_def)
+  apply (wpsimp wp: update_sk_obj_ref_wp set_tcb_obj_ref_wp get_sk_obj_ref_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma sched_context_maybe_unbind_ntfn_schact_is_rct_imp_ct_activatable[wp]:
+  "sched_context_maybe_unbind_ntfn ntfn_ptr
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: sched_context_maybe_unbind_ntfn_def)
+  apply (wpsimp wp: update_sk_obj_ref_wp get_sk_obj_ref_wp update_sched_context_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+crunches fast_finalise
+  for schact_is_rct_imp_ct_activatable[wp]:  "\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
+
+lemma cap_delete_one_schact_is_rct_imp_ct_activatable[wp]:
+  "cap_delete_one slot \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cap_delete_one_def unless_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+crunches deleting_irq_handler
+  for schact_is_rct_imp_ct_activatable[wp]: "\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
+
+lemma finalise_cap_schact_is_rct_imp_ct_activatable:
+  "finalise_cap cap final \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (rule_tac Q="\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s"
+               in hoare_weaken_pre[rotated])
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (cases cap; clarsimp; (intro conjI impI)?;
+         (solves \<open>wpsimp | wpsimp wp: hoare_vcg_imp_lift'\<close>)?)
+    apply (clarsimp simp: liftM_def)
+    apply (wpsimp wp: gts_wp get_simple_ko_wp)
+   apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+   apply wpsimp
+  apply (clarsimp simp: sched_context_zero_refill_max_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply wpsimp
+  done
+
+crunches cap_swap_for_delete, empty_slot
+  for ct_in_state[wp]: "ct_in_state P :: det_state \<Rightarrow> _"
+  (simp: cap_swap_ext_def wp: dxo_wp_weak)
+
+lemma rec_del_schact_is_rct_imp_ct_activatable:
+ "\<lbrace>(\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s) and invs and valid_rec_del_call args
+        and (\<lambda>s. \<not> exposed_rdcall args
+               \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
+        and (\<lambda>s. case args of ReduceZombieCall cap sl ex \<Rightarrow>
+                       \<not> cap_removeable cap sl
+                       \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
+                  | _ \<Rightarrow> True)\<rbrace>
+  rec_del args
+  \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (rule validE_valid)
+  apply (rule hoare_post_impErr)
+  apply (rule hoare_pre)
+     apply (rule use_spec)
+     apply (rule rec_del_invs''[where Q="?Q"])
+         apply ((wpsimp | wpsimp wp: hoare_vcg_imp_lift' simp: ct_in_state_def)+)[1]
+        apply ((wpsimp | wpsimp wp: hoare_vcg_imp_lift' simp: ct_in_state_def)+)[1]
+       apply (rule_tac Q="\<lambda>_ s. ?Q s \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s"
+                    in hoare_strengthen_post)
+        apply (wpsimp wp: finalise_cap_schact_is_rct_imp_ct_activatable)
+         apply (rule hoare_vcg_conj_lift)
+          apply (rule hoare_vcg_ex_lift)+
+          apply wpsimp
+         apply (rule hoare_ex_pre)
+         apply (wpsimp wp: finalise_cap_invs)
+        apply fastforce
+       apply blast
+      apply (wpsimp wp: hoare_vcg_imp_lift')
+     apply (wpsimp wp: preemption_point_inv simp: ct_in_state_def)
+    apply blast+
+  done
+
+lemma cap_revoke_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s :: det_state. (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and> invs s\<rbrace>
+   cap_revoke cap
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (rule_tac Q="\<lambda>_. ?P" in hoare_post_imp, simp)
+  apply (rule validE_valid)
+  apply (rule cap_revoke_preservation)
+   apply (clarsimp simp: cap_delete_def)
+   apply (rule hoare_vcg_conj_lift_pre_fix)
+    apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable[THEN valid_validE])
+   apply (wpsimp wp: rec_del_invs)
+  apply (wpsimp wp: preemption_point_inv simp: ct_in_state_def pred_tcb_at_def)
+  done
+
+lemma install_tcb_cap_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and> invs s\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (clarsimp simp: install_tcb_cap_def)
+  apply (cases slot_opt; clarsimp; (solves wpsimp)?)
+  apply (rule validE_valid)
+  apply (rule hoare_seq_ext_skipE)
+   apply (rule_tac E="\<lambda>_. ?P" in hoare_post_impErr)
+     apply (clarsimp simp: cap_delete_def)
+     apply (rule valid_validE)
+     apply (intro hoare_vcg_conj_lift_pre_fix)
+      apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable)
+     apply (wpsimp wp: rec_del_invs)
+    apply blast
+   apply blast
+  apply (wpsimp wp: hoare_vcg_imp_lift' check_cap_inv)
+  done
+
+lemma install_tcb_frame_cap_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and> invs s\<rbrace>
+   install_tcb_frame_cap target slot buffer
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>_\<rbrace>")
+  apply (clarsimp simp: install_tcb_frame_cap_def)
+  apply (cases buffer; clarsimp; (solves wpsimp)?)
+  apply (rule validE_valid)
+  apply (rule hoare_seq_ext_skipE)
+   apply (rule_tac E="\<lambda>_ . ?P" in hoare_post_impErr)
+     apply (clarsimp simp: cap_delete_def)
+     apply (rule valid_validE)
+     apply (intro hoare_vcg_conj_lift_pre_fix)
+      apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable)
+     apply (wpsimp wp: rec_del_invs)
+    apply blast
+   apply blast
+  apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable check_cap_inv hoare_vcg_imp_lift'
+                    thread_set_wp)
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
+  done
+
+crunches set_priority, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: crunch_wps)
+
+lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. invs s \<and> ct_in_state active s \<and> tcb_inv_wf iv s\<rbrace>
+   invoke_tcb iv
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (cases iv; clarsimp)
+          apply (clarsimp simp: liftE_def bind_assoc)
+          apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+           apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+           apply wpsimp
+         apply (clarsimp simp: liftE_def bind_assoc)
+         apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+          apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+         apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+         apply wpsimp
+        apply (clarsimp simp: liftE_def bind_assoc)
+        apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+         apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+        apply (rule hoare_seq_ext_skip,
+               solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift' crunch_wps mapM_x_wp')+\<close>)+
+        apply wpsimp
+       subgoal for target cnode_index cslot_ptr fault_handler timeout_handler croot vroot buffer
+         apply wp
+              apply (wpsimp wp: install_tcb_frame_cap_schact_is_rct_imp_ct_activatable)
+             apply (invoke_tcb_install_tcb_cap_helper wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)+
+         apply simp
+         apply (strengthen tcb_cap_valid_ep_strgs)
+         apply (clarsimp cong: conj_cong)
+         apply (intro conjI impI;
+                clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
+                               ct_in_state_def pred_tcb_at_def obj_at_def
+                        split: thread_state.splits)
+             apply (case_tac "tcb_state tcb"; clarsimp)
+            apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+           apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+           apply (metis (no_types, lifting) cap.simps(38) fst_conv is_obj_defs(3) o_apply obj_atI
+                                            option.simps(5) real_cte_at_not_tcb_at snd_conv)
+          apply auto
+         done
+      apply (rule validE_valid)
+      apply (rule_tac B="\<lambda>_ . ?Q" in hoare_vcg_seqE[rotated])
+       apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (rule hoare_seq_ext_skipE, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+      apply (wpsimp wp: hoare_vcg_imp_lift')
+     apply wpsimp
+     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+    apply wpsimp
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (rename_tac ntfnptr_opt)
+   apply (case_tac ntfnptr_opt; clarsimp)
+    apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma complete_signal_cur_thread[wp]:
+  "complete_signal ntfnptr tptr \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
+  apply (clarsimp simp: complete_signal_def)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)
+  apply (case_tac "ntfn_obj ntfn"; clarsimp)
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply wpsimp
+  done
+
+crunches cap_move, refill_new, refill_update, set_message_info, complete_signal,
+         do_nbrecv_failed_transfer
+  for ct_in_state[wp]: "ct_in_state P"
+  (wp: ct_in_state_thread_state_lift)
+
+lemma cancel_badged_sends_schact_is_rct_imp_ct_activatable[wp]:
+  "cancel_badged_sends epptr badge \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: cancel_badged_sends_def)
+  apply (wpsimp wp: get_simple_ko_wp)
+  done
+
+lemma invoke_cnode_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. ct_active s \<and> invs s\<rbrace>
+   invoke_cnode iv
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (clarsimp simp: invoke_cnode_def)
+  apply (cases iv; clarsimp; (intro conjI impI)?)
+        apply (wpsimp wp: hoare_vcg_imp_lift')
+        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+       apply (wpsimp wp: hoare_vcg_imp_lift')
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (rule_tac Q="\<lambda>s . ?Q s \<and> invs s" in hoare_weaken_pre[rotated])
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (rule_tac Q="\<lambda>_ s. ?Q s \<and> invs s" in hoare_post_imp)
+       apply fastforce
+      apply (rule validE_valid)
+      apply (rule cap_revoke_preservation)
+       apply (clarsimp simp: cap_delete_def)
+       apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable rec_del_invs)
+      apply (wpsimp wp: preemption_point_inv)
+             apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)+
+     apply (clarsimp simp: cap_delete_def)
+     apply (wpsimp wp: rec_del_schact_is_rct_imp_ct_activatable)
+     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+    apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply wpsimp
+  apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma invoke_sched_control_configure_flags_schact_is_rct_imp_ct_activatable:
+  "invoke_sched_control_configure_flags iv \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (simp add: invoke_sched_control_configure_flags_def)
+  apply (cases iv; simp)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma perform_invocation_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. ct_active s \<and> invs s \<and> schact_is_rct s \<and> valid_invocation iv s\<rbrace>
+   perform_invocation block call can_donate iv
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (cases iv; simp)
+             apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+              apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+             apply (wpsimp wp: invoke_untyped_ct_active)
+            apply (wpsimp wp: send_ipc_schact_is_rct_imp_ct_activatable)
+            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+           apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+            apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+           apply wpsimp
+          apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+           apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+          apply wpsimp
+         apply (wpsimp wp: invoke_tcb_schact_is_rct_imp_ct_activatable)
+        apply (wpsimp wp: hoare_drop_imps)
+        apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+       apply (wpsimp wp: hoare_drop_imps)
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (wpsimp wp: invoke_sched_control_configure_flags_schact_is_rct_imp_ct_activatable)
+      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+     apply (wpsimp wp: invoke_cnode_schact_is_rct_imp_ct_activatable)
+    apply (wpsimp wp: hoare_drop_imps)
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply wpsimp
+  apply (rule_tac Q="\<lambda>_. ct_active" in hoare_post_imp)
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply wpsimp
+  done
+
+lemma handle_fault_schact_is_rct_imp_ct_activatable[wp]:
+  "handle_fault thread ft \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: handle_fault_def handle_no_fault_def send_fault_ipc_def)
+  apply (wpsimp wp: thread_set_wp)
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
+  done
+
+lemma reply_from_kernel_schact_is_rct_imp_ct_activatable[wp]:
+  "reply_from_kernel thread x \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: reply_from_kernel_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma handle_invocation_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. ct_active s \<and> cur_sc_active s \<and> ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s\<rbrace>
+   handle_invocation calling blocking can_donate first_phase cptr
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>?P\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (clarsimp simp: handle_invocation_def)
+  apply (subst liftE_bindE)
+  apply (rule hoare_seq_ext[OF _  gets_sp])
+  apply (subst liftE_bindE)
+  apply (rule_tac B="\<lambda>rv. ?P and (\<lambda>s. cur_thread s = thread) and K (valid_message_info rv)"
+               in hoare_seq_ext[rotated])
+   apply wpsimp
+  apply (rule validE_valid)
+  apply (rule_tac P_flt="\<lambda>_. ?Q" and P_err="\<lambda>_. ?Q"
+              and P_no_err="\<lambda>rv. ?P and (\<lambda>s. cur_thread s = thread) and valid_invocation rv"
+               in syscall_valid)
+      apply wpsimp
+     apply wpsimp
+    apply (rule valid_validE)
+    apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_activatable)
+       apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
+         apply (wpsimp wp: gts_wp')+
+      apply (rule_tac Q="\<lambda>_. ?Q" and E="\<lambda>_. ?Q" in hoare_post_impErr[rotated]; fastforce?)
+      apply (rule valid_validE)
+      apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_activatable)
+     apply (wpsimp wp: perform_invocation_schact_is_rct_imp_ct_not_in_release_q
+                       ct_in_state_set set_thread_state_schact_is_rct_strong)
+    apply (fastforce intro: cur_sc_active_active_sc_tcb_at_cur_thread
+                      simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (wp hoare_vcg_E_conj | simp add: split_def)+
+   apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma charge_budget_restart_schact_is_rct_imp_ct_activatable[wp]:
+  "charge_budget consumed canTimeout \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: charge_budget_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply wpsimp
+  done
+
+lemma check_budget_schact_is_rct_imp_ct_activatable[wp]:
+  "check_budget \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  by (wpsimp simp: check_budget_def)
+
+lemma check_budget_restart_schact_is_rct_imp_ct_activatable[wp]:
+  "check_budget_restart \<lbrace>\<lambda>s. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  by (wpsimp simp: check_budget_restart_def)
+
+lemma receive_ipc_schact_is_rct_imp_ct_activatable[wp]:
+  "receive_ipc thread cap is_blocking reply_cap
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: receive_ipc_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (case_tac x; clarsimp)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (rule hoare_if)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (case_tac ep; clarsimp)
+    apply (cases is_blocking; clarsimp)
+     apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+     apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+     apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+    apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+   apply (intro hoare_if)
+     apply (rule hoare_seq_ext_skip, wpsimp)
+     apply wpsimp
+    apply wpsimp
+   apply (rule hoare_seq_ext_skip, wpsimp)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (cases is_blocking; clarsimp)
+   apply (rule hoare_seq_ext_skip,
+          solves \<open>(wpsimp | wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')+\<close>)+
+   apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def simple_obj_at_def)
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma receive_signal_schact_is_rct_imp_ct_activatable[wp]:
+  "receive_signal thread cap is_blocking
+   \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: receive_signal_def)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (case_tac "ntfn_obj ntfn"; clarsimp)
+    apply (cases is_blocking; clarsimp)
+     apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+     apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+    apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (cases is_blocking; clarsimp)
+    apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+    apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+   apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')
+  done
+
+lemma handle_recv_schact_is_rct_imp_ct_activatable[wp]:
+  "handle_recv is_blocking can_reply \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: handle_recv_def Let_def split del: if_split)
+  apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+  apply (rule catch_wp; (solves wpsimp)?)
+  apply (rule hoare_seq_ext_skipE, wpsimp)
+  apply (case_tac ep_cap; clarsimp, (intro conjI impI)?, (solves wpsimp)?)
+     apply (rule hoare_seq_ext_skipE, wpsimp wp: set_simple_ko_wp hoare_vcg_imp_lift')+
+     apply (wpsimp wp: get_simple_ko_wp | wp (once) hoare_drop_imps)+
+  done
+
+lemma handle_yield_schact_is_rct_imp_ct_activatable[wp]:
+  "handle_yield \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: handle_yield_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  done
+
+lemma send_signal_ct_active[wp]:
+  "send_signal ntfnptr badge \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (simp add: send_signal_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (case_tac "ntfn_obj ntfn"; clarsimp)
+    apply (case_tac "ntfn_bound_tcb ntfn"; clarsimp)
+     apply (wpsimp wp: hoare_vcg_imp_lift')
+    apply (rule hoare_seq_ext_skip, wpsimp)
+    apply (rule hoare_if)
+     apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+     apply (wpsimp wp: hoare_vcg_imp_lift')+
+  done
+
+lemma handle_interrupt_schact_is_rct_imp_ct_activatable[wp]:
+  "handle_interrupt irq \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  supply if_split[split del]
+  apply (clarsimp simp: handle_interrupt_def)
+  apply (rule hoare_if)
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (case_tac st; clarsimp simp: bind_assoc)
+    apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+    apply (wpsimp wp: hoare_vcg_imp_lift')+
+  done
+
+method handle_event_schact_is_rct_imp_ct_activatable for e
+  = rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift',
+    rule_tac B="\<lambda>rv s. (rv \<longrightarrow> (cur_sc_active s \<and> invs s \<and> (ct_running s \<or> ct_idle s)
+                                \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> ct_not_in_release_q s
+                                \<and> schact_is_rct s))
+                       \<and> (\<not>rv \<longrightarrow> (schact_is_rct s \<longrightarrow> ct_in_state activatable s))"
+          in hoare_seq_ext[rotated],
+    wpsimp wp: check_budget_restart_true,
+    rule check_budget_restart_false,
+    wpsimp,
+    fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def,
+    wpsimp wp: handle_invocation_schact_is_rct_imp_ct_activatable,
+    fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def
+
+lemma handle_event_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+        \<and> ct_not_in_release_q s \<and> schact_is_rct s\<rbrace>
+   handle_event e
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
+  apply (cases e; (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
+  apply (rename_tac syscall)
+
+       subgoal for syscall
+         by (case_tac syscall; clarsimp simp: handle_send_def handle_call_def liftE_bindE;
+             handle_event_schact_is_rct_imp_ct_activatable e)
+
+      apply (clarsimp simp: liftE_def bind_assoc)
+      apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+       apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+      apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+      apply wpsimp
+     apply (clarsimp simp: liftE_def bind_assoc)
+     apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+     apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+     apply wpsimp
+    apply (clarsimp simp: liftE_def bind_assoc)
+    apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+     apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+    apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+    apply (rule hoare_seq_ext_skip, wpsimp)
+    apply wpsimp
+   apply (clarsimp simp: liftE_def bind_assoc)
+   apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+   apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
+   apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (wpsimp wp: hoare_vcg_imp_lift')
+  apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
+  done
+
+lemma preemption_path_schact_is_rct_imp_ct_activatable[wp]:
+  "preemption_path \<lbrace>\<lambda>s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (clarsimp simp: preemption_path_def)
+  apply (rule hoare_seq_ext_skip)
+   apply wpsimp
+    apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)+
+  apply (rule hoare_seq_ext_skip, solves wpsimp)+
+  apply wpsimp
+  done
+
+lemma handle_event_preemption_path_schact_is_rct_imp_ct_activatable:
+  "\<lbrace>\<lambda>s. (ct_running s \<or> ct_idle s) \<and> ct_not_in_release_q s \<and> invs s \<and> schact_is_rct s
+         \<and> cur_sc_active s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+   handle_event e <handle> (\<lambda>_. liftE preemption_path)
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> ct_in_state activatable s\<rbrace>"
+  apply (rule validE_valid)
+  apply (rule_tac F="\<lambda>_ s. (schact_is_rct s \<longrightarrow> ct_in_state activatable s) \<and> invs s"
+               in handleE_wp)
+   apply wpsimp
+  apply (wpsimp wp: handle_event_schact_is_rct_imp_ct_activatable)
+  apply (fastforce dest!: cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable
+                    simp: schact_is_rct_def)
+  done
+
 end
