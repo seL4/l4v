@@ -17,7 +17,7 @@ begin
 context Arch begin global_naming RISCV64
 
 type_synonym irq = "6 word" (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
-type_synonym paddr = word64
+type_synonym paddr = machine_word
 
 abbreviation (input) "toPAddr \<equiv> id"
 abbreviation (input) "fromPAddr \<equiv> id"
@@ -97,36 +97,36 @@ definition canonical_bit :: nat
   where
   "canonical_bit = 38"
 
-definition kdevBase :: word64
+definition kdevBase :: machine_word
   where
   "kdevBase = - (1 << 30)" (* 2^64 - 1 GiB *)
 
 lemma "kdevBase = 0xFFFFFFFFC0000000" (* Sanity check with C *)
   by (simp add: kdevBase_def)
 
-definition kernelELFBase :: word64
+definition kernelELFBase :: machine_word
   where
   "kernelELFBase = - (1 << 31) + 0x4000000" (* 2^64 - 2 GiB + 2^26 *)
 
 lemma "kernelELFBase = 0xFFFFFFFF84000000" (* Sanity check with C *)
   by (simp add: kernelELFBase_def)
 
-definition kernelELFPAddrBase :: word64
+definition kernelELFPAddrBase :: machine_word
   where
   "kernelELFPAddrBase = 0x84000000"
 
-definition kernelELFBaseOffset :: word64
+definition kernelELFBaseOffset :: machine_word
   where
   "kernelELFBaseOffset = kernelELFBase - kernelELFPAddrBase"
 
-definition pptrBase :: word64
+definition pptrBase :: machine_word
   where
   "pptrBase = - (1 << canonical_bit)"
 
 lemma "pptrBase = 0xFFFFFFC000000000" (* Sanity check with C *)
   by (simp add: pptrBase_def canonical_bit_def)
 
-definition pptrUserTop :: word64
+definition pptrUserTop :: machine_word
   where
   "pptrUserTop \<equiv> mask canonical_bit && ~~mask 12" (* for page boundary alignment *)
 
@@ -137,23 +137,23 @@ schematic_goal pptrUserTop_def': (* direct constant definition *)
   "RISCV64.pptrUserTop = numeral ?x"
   by (simp add: RISCV64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
 
-definition paddrBase :: word64
+definition paddrBase :: machine_word
   where
   "paddrBase \<equiv> 0"
 
-definition pptrBaseOffset :: word64
+definition pptrBaseOffset :: machine_word
   where
   "pptrBaseOffset = pptrBase - paddrBase"
 
-definition ptrFromPAddr :: "paddr \<Rightarrow> word64"
+definition ptrFromPAddr :: "paddr \<Rightarrow> machine_word"
   where
   "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
 
-definition addrFromPPtr :: "word64 \<Rightarrow> paddr"
+definition addrFromPPtr :: "machine_word \<Rightarrow> paddr"
   where
   "addrFromPPtr pptr \<equiv> pptr - pptrBaseOffset"
 
-definition addrFromKPPtr :: "word64 \<Rightarrow> paddr"
+definition addrFromKPPtr :: "machine_word \<Rightarrow> paddr"
   where
   "addrFromKPPtr pptr \<equiv> pptr - kernelELFBaseOffset"
 
