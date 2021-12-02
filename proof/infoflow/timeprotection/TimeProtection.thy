@@ -997,9 +997,74 @@ lemma d_not_running: "\<lbrakk>
 
 *)
 
+(* this will mostly mimic the requirements for non-domainswitch step requirements *)
+(*FIXME: define this *)
+definition
+  is_simple_program_d :: "'userdomain domain \<Rightarrow> 'regs program \<Rightarrow> bool" where
+  "is_simple_program_d d p \<equiv> True"
 
+(* this is an instruction that sets the domain to d. *)
+(*FIXME: perhaps "\<forall>s" is too strong? Perhaps not.*)
+definition
+  is_domainswitch_instr :: "'userdomain domain \<Rightarrow> 'regs instr \<Rightarrow> bool" where
+  "is_domainswitch_instr d i \<equiv> \<forall> s. current_domain' (instr_step i s) = d"
 
+(* this is the time that will end current domain slice *)
+(*FIXME: implement properly
+  notes: schedule_oracle might be the way to implement this. however,
+    there needs to be some point at which the concept of time in this model
+    is connected to the looser concepts of time in seL4 spec. Not sure if this
+    is one of the places for that connection to occur though.
 
+ *)
+definition
+  fully_padded_time :: "time \<Rightarrow> time" where
+  "fully_padded_time t \<equiv> 12345"
+
+(* this is a (very specific) program that reads registers from memory.
+   requirements:
+   - leaves regs in a state that is dependent ONLY on domain `d` (ie removes all previous regs state)
+   - needs to have an impact on fch and pch that is dependent only on stuff visible to d2
+   - needs to take a bounded amount of time
+
+   implementation ideas:
+   - i think this is only a series of reads.
+   - probably a set number of reads.
+   - the list of addresses is probably set too - determined by the domain.
+   - the read addresses are domain-confined.
+   - how do we bound the time? a set number of reads, and a read has a max time?
+   - regs impact of read isn't strongly defined in this model. we just assert here that
+     regs will be overwritten completely. knowing that regs state might require a state input.
+*)
+definition
+  is_loadregs_program :: "'userdomain domain \<Rightarrow> 'regs program \<Rightarrow> bool" where
+  "is_loadregs_program d p \<equiv> True"
+
+(* the given program is a domainswitch program. This means a program that starts in domain d1,
+  at time t, switches to domain d2, and performs all the appropriate steps along the way. *)
+definition
+  is_domainswitch_program :: "'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> time \<Rightarrow> 'regs program \<Rightarrow> bool" where
+  "is_domainswitch_program d1 d2 t p \<equiv> \<exists> p1 iswitch pregs.
+                                       p = p1
+                                         @ [iswitch,
+                                            IFlushL2 kernel_shared_precise,
+                                            IFlushL1,
+                                            IPadToTime (fully_padded_time t)]
+                                         @ pregs
+                                     \<and> is_simple_program_d d1 p1
+                                     \<and> is_domainswitch_instr d2 iswitch
+                                     \<and> is_loadregs_program d2 pregs"
+
+(* major questions:
+
+  - is there anything else in the exit path apart from loadregs?
+  - exit path doesn't need to take constant time - it only needs to take time dependent on the new
+    domain. obviously it needs to take a bounded amount of time though.
+  - time in this model and in seL4. does there need to be some relationship between time in this
+    model and time in the seL4 model? at what point is this link made? This probably needs to be
+    part of the integration, but then our use of a scheduler oracle needs to line up with that
+    somehow.
+*)
 
 
 
