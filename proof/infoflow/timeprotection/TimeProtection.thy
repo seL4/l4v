@@ -1117,7 +1117,74 @@ lemma context_switch_to_d: "\<lbrakk>
 
 
 
+(*
 
+  existing infoflow structure:
+
+  we have lots of transitions
+
+  S1  ---------> S2
+
+  these preserve UWRs
+
+  
+
+
+  if we have, for every possible step in the above transition system:
+  - that step was some monad m, which executes from state s to state s'.
+  - we know from infoflow that uwr is maintained
+  - we say there is some program p, representing m in the timeprot model.
+  - we then show that uwr (incl caches and time) is also held.
+
+
+
+  things we need:
+  - given some monad m, give some program(s) that are equivalent.
+  - OR given some final touched_addresses ta, give some programs(s) that represent the monads.
+
+
+
+
+
+
+  we have some program derived from:
+  - the other_state at the start
+  - the touched_addresses at the end
+
+  given that it's derived from touched_addresses, we know it does not stray from touched_addresses
+
+  
+  - there exists some function from other_state to a program that will execute next
+  - that function generates the same program on two states if uwr holds (uwr including fch etc) 
+  - 
+
+
+  get_program :: other_state \<Rightarrow> program
+
+  is_running d \<Longrightarrow>
+  (s, t) \<in> uwr d \<Longrightarrow>
+  get_program s = get_program t
+
+  
+
+
+
+  do we need to prove that our programs derived from touched_addresses are "equivalent" to monads
+  that generated those touched_addresses?
+
+
+
+
+
+
+
+
+
+
+
+
+
+*)
 
 
 
