@@ -56,8 +56,8 @@ record
   machine_state =
   irq_masks :: "RISCV64.irq \<Rightarrow> bool"
   irq_state :: nat
-  underlying_memory :: "word64 \<Rightarrow> word8"
-  device_state :: "word64 \<Rightarrow> word8 option"
+  underlying_memory :: "machine_word \<Rightarrow> word8"
+  device_state :: "machine_word \<Rightarrow> word8 option"
   machine_state_rest :: RISCV64.machine_state_rest
 
 axiomatization
@@ -91,7 +91,7 @@ text \<open>
   The initial contents of the user-visible memory is 0.
 \<close>
 definition
-  init_underlying_memory :: "word64 \<Rightarrow> word8"
+  init_underlying_memory :: "machine_word \<Rightarrow> word8"
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
