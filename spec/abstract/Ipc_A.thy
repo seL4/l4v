@@ -688,11 +688,13 @@ definition
 where
   "charge_budget consumed canTimeout = do
     csc_ptr \<leftarrow> gets cur_sc;
-    robin \<leftarrow> is_round_robin csc_ptr;
-    if robin
-    then refill_reset_rr csc_ptr
-    else refill_budget_check consumed;
-    update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>);
+    when (csc_ptr \<noteq> idle_sc_ptr)
+       $ do robin \<leftarrow> is_round_robin csc_ptr;
+            if robin
+               then refill_reset_rr csc_ptr
+               else refill_budget_check consumed;
+            update_sched_context csc_ptr (\<lambda>sc. sc\<lparr>sc_consumed := (sc_consumed sc) + consumed \<rparr>)
+         od;
     modify $ consumed_time_update (K 0);
     ct \<leftarrow> gets cur_thread;
     sched \<leftarrow> is_schedulable ct;
