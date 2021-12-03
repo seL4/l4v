@@ -43,7 +43,7 @@ fun deref_stack_ptr :: "'f stack \<Rightarrow> ('f,'a) stack_ptr \<Rightarrow> '
     (if g = g' then Some (prj f) else None)"
 | "deref_stack_ptr _ _ = None"
 
-(* The top of the stack is, alas, at the end of the list structure *)
+(* The top of the stack, alas, needs to be at the end of the list structure *)
 
 fun get_top_frame_stack :: "'f stack \<Rightarrow> 'f" where
   "get_top_frame_stack (fm \<triangleright> Top _) = snd fm"
@@ -72,6 +72,10 @@ fun next_gen_update_stack :: "(nat \<Rightarrow> nat) \<Rightarrow> 'f stack \<R
 definition stack_empty :: "'f stack \<Rightarrow> bool" where
   "stack_empty s \<equiv> \<exists>k. s = Top k"
 
+lemma stack_empty_simps[simp]:
+  \<open>stack_empty (Top g) = True\<close>
+  \<open>stack_empty (a \<triangleright> s) = False\<close>
+  by (simp add: stack_empty_def)+
 
 lemma stack_pop_push[simp]:
   "pop_stack (push_stack fm s) = next_gen_update_stack Suc s"
@@ -82,20 +86,34 @@ lemma next_gen_update_next_gen_update[simp]:
   by (induct s) clarsimp+
 
 lemma top_frame_same_under_next_gen_update[simp]:
-  "get_top_frame_stack (next_gen_update_stack f s) =
-    get_top_frame_stack s"
+  "get_top_frame_stack (next_gen_update_stack f s) = get_top_frame_stack s"
   by (induct s rule: get_top_frame_stack.induct) simp+
+
+
+lemma top_frame_update_stack_on_push':
+  "fm' = f fm \<Longrightarrow> top_frame_update_stack f (push_stack fm s) = push_stack fm' s"
+  apply (induct s rule: push_stack.induct)
+   apply (case_tac s; force)
+  apply force
+  done
 
 lemma top_frame_update_stack_on_push[simp]:
   "top_frame_update_stack f (push_stack fm s) = push_stack (f fm) s"
-  by (induct s rule: get_top_frame_stack.induct) simp+
+  by (simp add: top_frame_update_stack_on_push')
 
-lemma get_top_frame_of_update[simp]:
-  "get_top_frame_stack (top_frame_update_stack f s) = f (get_top_frame_stack s)"
+lemma get_top_frame_of_update:
+  assumes \<open>\<not> stack_empty s\<close>
+  shows \<open>get_top_frame_stack (top_frame_update_stack f s) = f (get_top_frame_stack s)\<close>
+  using assms
   apply (induct s rule: get_top_frame_stack.induct)
     apply clarsimp
-  oops
-
+   apply clarsimp
+  apply (rename_tac a n s)
+   apply (case_tac s)
+    apply clarsimp
+   apply clarsimp
+  apply clarsimp
+  done
 
 
 lemma top_frame_update_stack_preserves_structure:
@@ -111,13 +129,10 @@ lemma top_frame_update_stack_preserves_structure:
   by (cases s; simp) simp
 
 lemma top_frame_update_merge[simp]:
-  "top_frame_update_stack f (top_frame_update_stack g s) = top_frame_update_stack (f \<circ> g) s"
+  "top_frame_update_stack f (top_frame_update_stack g s) = top_frame_update_stack (\<lambda>x. f (g x)) s"
   apply (induct s)
-   apply simp
-  apply (simp add: top_frame_update_stack_preserves_structure)
-   apply (simp split: stack.splits)
-   apply (metis stack.distinct(1) top_frame_update_stack_preserves_structure(1))
-  apply clarsimp
+   apply (case_tac s)
+    apply (force simp add: top_frame_update_stack_preserves_structure)+
   done
 
 lemma next_gen_update_top_frame_update_norm[simp]:

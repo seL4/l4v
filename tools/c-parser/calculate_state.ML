@@ -937,9 +937,18 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           Proof_Context.read_const {proper = false, strict = false} lthy #> frame_subst
         fun lookup_defn lthy =
           suffix "_def" #> Proof_Context.get_thm lthy
+            val get_top_frame_stack =
+              Const (
+                Long_Name.qualify "Stack" "get_top_frame_stack",
+                stackT --> frameT)
+            val top_frame_update_stack =
+              Const (
+                Long_Name.qualify "Stack" "top_frame_update_stack",
+                (frameT --> frameT) --> stackT --> stackT)
+            val stack_empty =
+              Const (Long_Name.qualify "Stack" "stack_empty", stackT --> HOLogic.boolT)
 
-
-        fun make_collapse_lemmas var_name lthy =
+        fun make_frame_reduce_lemmas var_name lthy =
           let
             val state_frame_var_get_nm =
               var_name
@@ -957,61 +966,136 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
               |> suffix Record.updateN
 
             (* frame state functions; take a state, manipulate frame vars *)
+            val state_frame_var_get_t = lookup_term lthy state_frame_var_get_nm
             val state_frame_var_upd_t = lookup_term lthy state_frame_var_upd_nm
             (* frame variable functions; take a frame, manipulate frame vars *)
+            val frame_var_get_t = lookup_term lthy frame_var_get_nm
             val frame_var_upd_t = lookup_term lthy frame_var_upd_nm
 
-            val frame_var_upd_T = Term.domain_type (Term.type_of state_frame_var_upd_t)
-            val rvar_T = Term.domain_type frame_var_upd_T
-            val frame_T = Term.range_type (Term.range_type (Term.type_of frame_var_upd_t))
-            val state_T = Term.range_type (Term.range_type (Term.type_of state_frame_var_upd_t))
+            val state_frame_var_get_def = lookup_defn lthy state_frame_var_get_nm
+            val state_frame_var_upd_def = lookup_defn lthy state_frame_var_upd_nm
 
-            val fvfm = Term.Free ("fm", frame_T)
-            val vs = Term.Var (("s",0), state_T)
-            val vf = Term.Var (("f",0), rvar_T --> rvar_T)
-            val vg = Term.Var (("g",0), rvar_T --> rvar_T)
+            val frame_var_updT = Term.domain_type (Term.type_of state_frame_var_upd_t)
+            val rvarT = Term.domain_type frame_var_updT
+            val stateT = Term.range_type (Term.range_type (Term.type_of state_frame_var_upd_t))
+
+            val vfm = Term.Free ("fm", frameT)
+            val vs = Term.Free ("s", stateT)
+            val vstk = Term.Free ("stk", stackT)
+            val vf = Term.Free ("f", rvarT --> rvarT)
+            val vg = Term.Free ("g", rvarT --> rvarT)
 
             (* If field is the stack:
              * frame_x_update f (frame_x_update g fm) = frame_x_update (\<lambda>x. f (g x)) fm
              *)
             val t0 =
               HOLogic.mk_eq
-                (frame_var_upd_t $ vf $ (frame_var_upd_t $ vg $ fvfm),
-                  frame_var_upd_t $ (Abs ("x", rvar_T, vf $ (vg $ Bound 0))) $ fvfm)
+                (frame_var_upd_t $ vf $ (frame_var_upd_t $ vg $ vfm),
+                  frame_var_upd_t $ (Abs ("x", rvarT, vf $ (vg $ Bound 0))) $ vfm)
             val lemma0 =
               t0
               |> HOLogic.mk_Trueprop
               |> Thm.cterm_of lthy
               |> Goal.init
               |> ((
-                (Induct.cases_tac lthy false [[SOME fvfm]] NONE [])
+                (Induct.cases_tac lthy false [[SOME vfm]] NONE [])
                 THEN_ALL_NEW
                 (force_tac lthy)
               ) 1)
                 |> Seq.pull |> the |> fst
-              |> (fn s => Thm.generalize ([], ["fm"]) (Thm.maxidx_of s + 1) s)
+              |> (fn s => Thm.generalize ([], ["fm","f","g"]) (Thm.maxidx_of s + 1) s)
               |> Goal.finish lthy
 
             (* If field is the stack:
              *  state_frame_x_update f (state_frame_x_update g s)
              *    = state_frame_x_update (\<lambda>x. f (g x)) s
              *)
-            val state_frame_var_upd_def = lookup_defn lthy state_frame_var_upd_nm
             val t1 =
               HOLogic.mk_eq
                 (state_frame_var_upd_t $ vf $ (state_frame_var_upd_t $ vg $ vs),
-                  state_frame_var_upd_t $ (Abs ("x", rvar_T, vf $ (vg $ Bound 0))) $ vs)
+                  state_frame_var_upd_t $ (Abs ("x", rvarT, vf $ (vg $ Bound 0))) $ vs)
             val lemma1 =
               t1
               |> HOLogic.mk_Trueprop
               |> Thm.cterm_of lthy
               |> Goal.init
-              |> simp_tac (lthy addsimps [state_frame_var_upd_def,@{thm comp_def},lemma0]) 1
+              |> simp_tac (lthy addsimps [state_frame_var_upd_def,lemma0]) 1
                 |> Seq.pull |> the |> fst
-              |> (fn s => Thm.generalize ([], ["x"]) (Thm.maxidx_of s + 1) s)
+              |> (fn s => Thm.generalize ([], ["s","f","g"]) (Thm.maxidx_of s + 1) s)
+              |> Goal.finish lthy
+
+            (* If field is the stack:
+             * frame_x (frame_x_update g fm) = f (frame_x fm)
+             *)
+            val t2 =
+              HOLogic.mk_eq
+                (frame_var_get_t $ (frame_var_upd_t $ vf $ vfm),
+                  vf $ (frame_var_get_t $ vfm))
+            val lemma2 =
+              t2
+              |> HOLogic.mk_Trueprop
+              |> Thm.cterm_of lthy
+              |> Goal.init
+              |> ((
+                (Induct.cases_tac lthy false [[SOME vfm]] NONE [])
+                THEN_ALL_NEW
+                (force_tac lthy)
+              ) 1)
+                |> Seq.pull |> the |> fst
+              |> (fn s => Thm.generalize ([], ["fm","f"]) (Thm.maxidx_of s + 1) s)
+              |> Goal.finish lthy
+
+            (* 
+             * \<not> stack_empty stk \<Longrightarrow>
+             * frame.x (get_top_frame_stack (top_frame_update_stack (frame.x_update f)) stk)
+             *  = f (frame.x (get_top_frame_stack stk))
+             *)
+            val t3 =
+              Logic.mk_implies
+                (HOLogic.mk_Trueprop ((@{term HOL.Not} $ (stack_empty  $ vstk))),
+                  HOLogic.mk_Trueprop (HOLogic.mk_eq
+                    (frame_var_get_t $ (get_top_frame_stack $
+                        (top_frame_update_stack $ (frame_var_upd_t $ vf) $ vstk)),
+                      vf $ (frame_var_get_t $ (get_top_frame_stack $ vstk)))))
+            val lemma3 =
+              t3
+              |> Thm.cterm_of lthy
+              |> Goal.init
+              |> (SOLVED' (asm_full_simp_tac
+                (lthy addsimps [lemma2,@{thm get_top_frame_of_update}]))
+                1)
+              |> Seq.pull |> the |> fst
+              |> (fn s => Thm.generalize ([], ["stk","f"]) (Thm.maxidx_of s + 1) s)
+              |> Goal.finish lthy
+
+            (* 
+             * \<not> stack_empty stk \<Longrightarrow>
+             * state_frame_x (state_frame_x_update g s) = f (state_frame_x s)
+             *)
+            val t4 =
+              Logic.mk_implies
+              (HOLogic.mk_Trueprop ((@{term HOL.Not} $ (stack_empty $ (stack_global_get_t $ vs)))),
+                HOLogic.mk_Trueprop (
+                  HOLogic.mk_eq
+                    (state_frame_var_get_t $ (state_frame_var_upd_t $ vf $ vs),
+                      vf $ (state_frame_var_get_t $ vs))))
+            val lemma4 =
+              t4
+              |> Thm.cterm_of lthy
+              |> Goal.init
+              |> (
+                ((asm_full_simp_tac
+                  (lthy addsimps [state_frame_var_get_def,state_frame_var_upd_def])))
+                THEN'
+                (resolve_tac lthy [lemma3])
+                THEN'
+                Thm.assumption NONE
+              ) 1
+              |> Seq.pull |> the |> fst
+              |> (fn s => Thm.generalize ([], ["s","f"]) (Thm.maxidx_of s + 1) s)
               |> Goal.finish lthy
           in
-            (lemma0, lemma1)
+            (lemma0, lemma1, lemma2, lemma3, lemma4)
           end
 
         fun make_reduce_lemmas var_name field_name lthy =
@@ -1154,14 +1238,18 @@ fun mk_thy_decls all_vars {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
         val lems0 =
           Symtab.fold
             (fn (vname,_) =>
-              (fn (lems0, lems1) =>
-                make_collapse_lemmas vname lthy
-                |-> (fn th0 => fn th1 => (th0 :: lems0, th1 :: lems1))
+              (fn (lems0, lems1, lems2, lems3, lems4) =>
+                let
+                  val (th0,th1,th2,th3,th4) = make_frame_reduce_lemmas vname lthy
+                in
+                  (th0 :: lems0, th1 :: lems1, th2 :: lems2, th3 :: lems3, th4 :: lems4)
+                end
               )
             )
             local_vars_collected
-            ([],[])
-          |> List.@ (* we could just make the list all at once, but this keeps them in order *)
+            ([],[],[],[],[])
+          |> (fn (a,b,c,d,e) => a @ b @ c @ d @ e)
+            (* we could just make the list all at once, but this keeps them in order *)
         val lems1 =
           Symtab.fold
             (fn (vname,_) => fn lemss =>
