@@ -4655,11 +4655,10 @@ lemma receiveIPC_corres:
               and st_tcb_at active thread
               and not_queued thread and not_in_release_q thread and scheduler_act_not thread
               and tcb_at thread and ex_nonz_cap_to thread
-              and cte_wp_at (\<lambda>c. c = cap.NullCap) (thread, tcb_cnode_index 3)
               and (\<lambda>s. \<forall>r\<in>zobj_refs reply_cap. ex_nonz_cap_to r s))
              (invs' and tcb_at' thread and valid_cap' cap' and valid_cap' replyCap)
              (receive_ipc thread cap isBlocking reply_cap) (receiveIPC thread cap' isBlocking replyCap)"
-    (is "corres _ (_ and ?tat and ?tex and ?slot3 and ?rrefs) _ _ _")
+    (is "corres _ (_ and ?tat and ?tex and ?rrefs) _ _ _")
   apply add_sch_act_wf
   apply add_valid_idle'
   apply add_cur_tcb'
@@ -4696,7 +4695,7 @@ lemma receiveIPC_corres:
              apply (rule corres_split[where r'=dc])
                 apply (rule corres_when; simp)
                 apply (rule maybeReturnSc_corres)
-               apply (rule_tac P="einvs and ?tat and ?slot3 and ?tex and ep_at epptr
+               apply (rule_tac P="einvs and ?tat and ?tex and ep_at epptr
                         and valid_ep ep and ko_at (Endpoint ep) epptr
                         and current_time_bounded 2
                         and receive_ipc_preamble_rv reply_cap replyOpt and ?rrefs" and
@@ -4759,7 +4758,7 @@ lemma receiveIPC_corres:
                                                   and (\<lambda>s. sym_refs (\<lambda>p. if p = sender
                                                                          then tcb_non_st_state_refs_of s sender
                                                                          else state_refs_of s p))
-                                                  and ?rrefs and ?slot3"
+                                                  and ?rrefs"
                                            and P'="tcb_at' sender and tcb_at' thread and cur_tcb'
                                                    and valid_queues
                                                    and valid_queues'
@@ -4821,7 +4820,6 @@ lemma receiveIPC_corres:
                                                                then tcb_non_st_state_refs_of s sender
                                                                else state_refs_of s p))
                                                  and valid_bound_obj (\<lambda>r s. r \<notin> fst ` replies_with_sc s) replyOpt
-                                                 and cte_wp_at (\<lambda>c. c = cap.NullCap) (thread, tcb_cnode_index 3)
                                                  and receive_ipc_preamble_rv reply_cap replyOpt"
                                 in hoare_strengthen_post[rotated])
                           apply (clarsimp simp: valid_sched_active_sc_valid_refills)
@@ -4856,7 +4854,6 @@ lemma receiveIPC_corres:
                                                              then tcb_non_st_state_refs_of s sender
                                                              else state_refs_of s p))
                                                and valid_bound_obj (\<lambda>r s. r \<notin> fst ` replies_with_sc s) replyOpt
-                                               and cte_wp_at (\<lambda>c. c = cap.NullCap) (thread, tcb_cnode_index 3)
                                                and receive_ipc_preamble_rv reply_cap replyOpt"
                               in hoare_strengthen_post[rotated])
                         apply (clarsimp simp: valid_sched_active_sc_valid_refills)
@@ -4921,7 +4918,7 @@ lemma receiveIPC_corres:
                apply (clarsimp simp: invs'_def valid_pspace'_def valid_ep'_def)
                apply fastforce
               \<comment> \<open> end of ep cases \<close>
-              apply (rule_tac Q="\<lambda>_. einvs and ?tat and ?slot3 and ?tex and
+              apply (rule_tac Q="\<lambda>_. einvs and ?tat and ?tex and
                                ko_at (Endpoint ep) epptr and current_time_bounded 2 and
                                receive_ipc_preamble_rv reply_cap replyOpt and ?rrefs"
                      in hoare_strengthen_post[rotated])
@@ -4943,7 +4940,7 @@ lemma receiveIPC_corres:
       apply simp
       apply (rule_tac Q="\<lambda>r. invs and ep_at epptr and valid_list and current_time_bounded 2
                              and scheduler_act_not thread and (\<lambda>s. thread \<noteq> idle_thread s)
-                             and valid_sched and ?tat and ?tex and ?slot3
+                             and valid_sched and ?tat and ?tex
                              and receive_ipc_preamble_rv reply_cap r
                              and not_queued thread and not_in_release_q thread and ?rrefs"
              in hoare_strengthen_post[rotated])
