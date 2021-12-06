@@ -324,8 +324,8 @@ next
       unat guardBits = capCNodeGuardSize cap;
       \<not> guard < capCNodeBits cap + capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
-                (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb \<le> radixBits + guardBits\<rbrace>)"
-      by (simp add: Collect_const_mem word_le_nat_alt unat_word_ariths)
+                (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb = radixBits + guardBits\<rbrace>)"
+      by clarsimp unat_arith
 
     have cond4:
       "\<And>rva nodeCapb ret__unsigned_long.
