@@ -34,7 +34,7 @@ endif
 ifndef TOOLPREFIX
   ifndef TRY_TOOLPREFIX
     ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
-      TRY_TOOLPREFIX := arm-none-eabi-
+      TRY_TOOLPREFIX := arm-none-eabi- arm-linux-gnueabi-
     else ifeq (${L4V_ARCH},RISCV64)
       TRY_TOOLPREFIX := riscv64-unknown-linux-gnu- riscv64-linux-gnu- riscv64-unknown-elf-
     endif
