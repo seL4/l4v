@@ -25,11 +25,11 @@ defs arch_irq_control_inv_valid_def:
 
 named_theorems Interrupt_AI_asms
 
-lemma (* decode_irq_control_invocation_inv *)[Interrupt_AI_asms]:
-  "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma (* decode_irq_control_invocation_tainv *)[Interrupt_AI_asms]:
+  "\<lbrace>ignore_ta P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def whenE_def, safe)
-  apply (wp | simp)+
+  apply wpsimp+
   done
 
 lemma decode_irq_control_valid [Interrupt_AI_asms]:

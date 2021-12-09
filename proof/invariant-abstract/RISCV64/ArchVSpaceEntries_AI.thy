@@ -32,6 +32,13 @@ abbreviation
 where
  "valid_vspace_objs' s \<equiv> \<forall>x \<in> ran (kheap s). obj_valid_vspace x"
 
+end
+
+sublocale touched_addresses_inv \<subseteq> valid_vspace_objs': touched_addresses_P_inv _ RISCV64.valid_vspace_objs'
+  by unfold_locales (clarsimp simp:ta_agnostic_def)
+
+context Arch begin global_naming RISCV64
+
 lemma set_object_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and K (obj_valid_vspace obj)\<rbrace>
       set_object ptr obj
@@ -149,6 +156,8 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   apply (rule hoare_pre)
    apply (wp get_cap_wp | wpc | simp split del: if_split)+
   done
+
+
 
 crunch valid_vspace_objs'[wp]: invoke_tcb "valid_vspace_objs'"
   (wp: check_cap_inv crunch_wps simp: crunch_simps
@@ -294,18 +303,25 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
   done
 
-crunch valid_vspace_objs'[wp]: handle_fault, reply_from_kernel "valid_vspace_objs'"
+(* this was previously crunched as part of the following crunches. can hopefully crunch this again *)
+lemma send_fault_ipc_valid_vspace_objs' [wp]:
+  "send_fault_ipc a b \<lbrace>valid_vspace_objs'\<rbrace>"
+  sorry
+
+crunches reply_from_kernel, handle_fault
+  for valid_vspace_objs [wp]: valid_vspace_objs'
   (simp: crunch_simps wp: crunch_wps)
 
 lemma handle_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace>
         handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
+  sorry (*
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
                | wp (once) hoare_drop_imps)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
-  done
+  done *)
 
 
 crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,

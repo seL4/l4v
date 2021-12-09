@@ -26,6 +26,11 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
+
+sublocale touched_addresses_inv \<subseteq> valid_list: touched_addresses_P_inv _ "\<lambda>s::det_ext state. valid_list s"
+  (* by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+ *)
+
+
 context Arch begin global_naming RISCV64
 
 crunch valid_list[wp,Deterministic_AI_assms]: arch_invoke_irq_handler valid_list
@@ -49,6 +54,7 @@ lemma perform_page_invocation_valid_list[wp]:
     apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc
            | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits)+
   done
+
 
 crunch valid_list[wp]: perform_invocation valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
