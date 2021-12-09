@@ -1522,7 +1522,6 @@ lemma charge_budget_invs[wp]:
   unfolding charge_budget_def is_round_robin_def
   apply clarsimp
   apply (rule hoare_seq_ext[OF _ gets_sp])
-  apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp is_schedulable_wp)
      apply (rule_tac Q="\<lambda>_. invs" in hoare_strengthen_post[rotated])
       apply (clarsimp simp: ct_in_state_def runnable_eq pred_tcb_at_def obj_at_def schedulable_def
@@ -1532,7 +1531,11 @@ lemma charge_budget_invs[wp]:
       apply (wpsimp wp: end_timeslice_invs assert_inv hoare_vcg_if_lift2 gts_wp
                         hoare_vcg_all_lift  sc_consumed_add_invs refill_budget_check_invs
                   simp: Let_def)+
-  done
+  apply (frule invs_cur)
+  apply (clarsimp simp: ct_in_state_def schedulable_def pred_tcb_at_def obj_at_def get_tcb_def
+                        cur_tcb_def
+                 split: kernel_object.splits if_splits)
+  by (metis (no_types, lifting) option.case_eq_if runnable_eq)
 
 lemma check_budget_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> check_budget \<lbrace>\<lambda>rv. invs \<rbrace>"

@@ -818,7 +818,7 @@ lemma commit_time_invs:
   apply (clarsimp simp: commit_time_def num_domains_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
-  apply (case_tac "sc_active sc"; clarsimp split del: if_split simp: bind_assoc)
+  apply (case_tac "sc_active sc \<and> csc \<noteq> idle_sc_ptr"; clarsimp split del: if_split simp: bind_assoc)
    apply (rule hoare_seq_ext[OF _ gets_sp])
    apply (rename_tac csc sc consumed)
    apply (case_tac "0 < consumed"; simp split del: if_split add: bind_assoc)

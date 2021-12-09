@@ -1622,7 +1622,9 @@ abbreviation refill_ready_no_overflow_sc :: "time \<Rightarrow> time \<Rightarro
   "refill_ready_no_overflow_sc usage curtime cfg \<equiv> refill_ready_no_overflow usage curtime (scrc_refill_hd cfg)"
 
 abbreviation cur_sc_offset_ready :: "time \<Rightarrow> 'z state \<Rightarrow> bool" where
-  "cur_sc_offset_ready usage s \<equiv> pred_map (refill_ready_no_overflow_sc usage (cur_time s)) (sc_refill_cfgs_of s) (cur_sc s)"
+  "cur_sc_offset_ready usage s
+     \<equiv> cur_sc s \<noteq> idle_sc_ptr
+       \<longrightarrow> pred_map (refill_ready_no_overflow_sc usage (cur_time s)) (sc_refill_cfgs_of s) (cur_sc s)"
 
 lemmas cur_sc_offset_ready_def = refill_ready_no_overflow_def
 
