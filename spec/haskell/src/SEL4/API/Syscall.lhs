@@ -91,10 +91,10 @@ System call events are dispatched here to the appropriate system call handlers, 
 >         SysCall -> handleCall
 >         SysRecv -> withoutPreemption $ handleRecv True True
 >         SysYield -> withoutPreemption handleYield
->         SysReplyRecv -> withoutPreemption $ do
->             replyCptr <- getCapReg replyRegister
->             return $ handleInvocation False False True True replyCptr
->             handleRecv True True
+>         SysReplyRecv -> do
+>             replyCptr <- withoutPreemption $ getCapReg replyRegister
+>             handleInvocation False False True True replyCptr
+>             withoutPreemption $ handleRecv True True
 >         SysNBSendRecv -> do
 >             dest <- withoutPreemption $ getCapReg nbsendRecvDest
 >             handleInvocation False False True True dest
