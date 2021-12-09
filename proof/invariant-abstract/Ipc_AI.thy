@@ -2298,6 +2298,44 @@ lemma set_thread_state_not_BOReply_valid_replies:
   apply fastforce
   done
 
+lemma update_waiting_notification_sym_refs_helper:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s;  kheap s ntfnptr = Some (Notification ntfn);
+    ntfn_obj ntfn = WaitingNtfn (a # list); tcb_at a s; \<forall>t\<in>set list. tcb_at t s; a \<notin> set list;
+    case ntfn_bound_tcb ntfn of None \<Rightarrow> True | Some tcb \<Rightarrow> a # list = [tcb]\<rbrakk>
+   \<Longrightarrow> sym_refs
+         (\<lambda>b. if b = a
+              then {r \<in> if a = ntfnptr
+                         then ntfn_q_refs_of
+                               (case list of [] \<Rightarrow> IdleNtfn | aa # lista \<Rightarrow> WaitingNtfn (tl (a # list))) \<union>
+                              get_refs NTFNBound (ntfn_bound_tcb ntfn) \<union>
+                              get_refs NTFNSchedContext (ntfn_sc ntfn)
+                         else state_refs_of s a.
+                    snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo}
+              else if b = ntfnptr
+                   then ntfn_q_refs_of (case list of [] \<Rightarrow> IdleNtfn | aa # lista \<Rightarrow> WaitingNtfn (tl (a # list))) \<union>
+                        get_refs NTFNBound (ntfn_bound_tcb ntfn) \<union>
+                        get_refs NTFNSchedContext (ntfn_sc ntfn)
+                   else state_refs_of s b)"
+  apply (rule delta_sym_refs, assumption)
+   apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
+                   split: if_splits list.splits)
+  apply (frule_tac x=a in bspec[OF st_in_waitingntfn], assumption+, simp)
+  apply (clarsimp simp: get_refs_def2 state_refs_of_def
+                  split: if_splits list.splits option.splits)
+         apply ((clarsimp simp: is_tcb obj_at_def)+)[3]
+      apply (clarsimp simp: is_tcb obj_at_def)
+      apply (subgoal_tac "tp = TCBSignal \<and> y = ntfnptr", clarsimp)
+      apply (elim disjE;
+             clarsimp simp: tcb_st_refs_of_def st_tcb_at_def obj_at_def
+                     dest!: refs_in_get_refs)
+     apply (clarsimp simp: is_tcb obj_at_def)
+     apply (subgoal_tac "tp = TCBSignal \<and> y = ntfnptr", clarsimp)
+     apply (elim disjE;
+            clarsimp simp: tcb_st_refs_of_def st_tcb_at_def obj_at_def
+                    dest!: refs_in_get_refs)
+    apply (elim disjE; clarsimp simp: is_tcb obj_at_def)+
+  done
+
 lemma update_waiting_invs:
   "\<lbrace>\<lambda>s. invs s \<and> (\<exists>ntfn. ko_at (Notification ntfn) ntfnptr s
         \<and> ntfn_obj ntfn = WaitingNtfn q \<and> ntfn_bound_tcb ntfn = bound_tcb \<and> ntfn_sc ntfn = sc)
@@ -2327,24 +2365,7 @@ lemma update_waiting_invs:
    apply (clarsimp elim!: fault_tcbs_valid_states_not_fault_tcb_states
                           pred_tcb_weakenE
                     simp: pred_neg_def)
-  apply (rule delta_sym_refs, assumption)
-   apply (fastforce simp: state_refs_of_def get_refs_def2 st_tcb_at_def obj_at_def
-                   split: if_splits list.splits)
-  apply (frule_tac x=a in bspec[OF st_in_waitingntfn], assumption+, simp)
-  apply (clarsimp simp: get_refs_def2 state_refs_of_def
-                  split: if_splits list.splits option.splits)
-         apply ((clarsimp simp: is_tcb obj_at_def)+)[3]
-      apply (clarsimp simp: is_tcb obj_at_def)
-      apply (subgoal_tac "tp = TCBSignal \<and> y = ntfnptr", clarsimp)
-      apply (elim disjE;
-             clarsimp simp: tcb_st_refs_of_def st_tcb_at_def obj_at_def
-                     dest!: refs_in_get_refs)
-     apply (clarsimp simp: is_tcb obj_at_def)
-     apply (subgoal_tac "tp = TCBSignal \<and> y = ntfnptr", clarsimp)
-     apply (elim disjE;
-            clarsimp simp: tcb_st_refs_of_def st_tcb_at_def obj_at_def
-                    dest!: refs_in_get_refs)
-    apply (elim disjE; clarsimp simp: is_tcb obj_at_def)+
+  apply (rule update_waiting_notification_sym_refs_helper; fastforce)
   done
 
 lemma not_idle_tcb_in_SendEp:

@@ -199,23 +199,6 @@ crunches handle_recv
   for is_active_sc[wp]: "\<lambda>s. P (is_active_sc sc_ptr s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
-crunches sched_context_yield_to, sched_context_bind_tcb, cancel_all_ipc, cancel_all_signals,
-         cancel_badged_sends, restart, maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb,
-         sched_context_bind_tcb, bind_notification, send_signal
-  for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
-  (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
-
-crunches install_tcb_frame_cap, install_tcb_cap, do_reply_transfer, invoke_irq_handler, awaken,
-         check_domain_time, if_cond_refill_unblock_check, activate_thread, handle_fault, handle_recv,
-         handle_yield, handle_interrupt, preemption_path
-  for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
-  (wp: crunch_wps check_cap_inv  preemption_point_inv hoare_vcg_all_lift simp: crunch_simps)
-
-crunches perform_invocation
-  for cur_sc[wp]: "\<lambda>s. P (cur_sc s)"
-  (wp: crunch_wps preemption_point_inv check_cap_inv filterM_preserved cap_revoke_preservation
-   simp: crunch_simps)
-
 lemma invoke_sched_context_cur_sc_active[wp]:
   "invoke_sched_context i \<lbrace>\<lambda>s. cur_sc_active s\<rbrace>"
   apply (simp add: invoke_sched_context_def)
@@ -282,8 +265,8 @@ lemma sched_context_unbind_tcb_schact_is_rct_imp_cur_sc_active_inv[wp]:
 
 lemma finalise_cap_sc_tcb_are_bound_imp_is_active_sc:
   "finalise_cap cap final
-   \<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> cur_sc_active s)
-                            \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s\<rbrace>"
+   \<lbrace>\<lambda>s :: det_state. (schact_is_rct s \<longrightarrow> cur_sc_active s)
+                     \<and> (\<exists>slot. cte_wp_at ((=) cap) slot s) \<and> invs s\<rbrace>"
   apply (intro hoare_vcg_conj_lift_pre_fix)
     subgoal
       apply (cases cap; clarsimp; (solves wpsimp)?)
@@ -330,7 +313,7 @@ lemma rec_del_schact_is_rct_imp_cur_sc_active:
                        \<and> (\<forall>t\<in>obj_refs cap. halted_if_tcb t s)
                   | _ \<Rightarrow> True)\<rbrace>
   rec_del args
-  \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+  \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (rule validE_valid)
   apply (rule hoare_post_impErr)
   apply (rule hoare_pre)
@@ -348,7 +331,7 @@ lemma rec_del_schact_is_rct_imp_cur_sc_active:
   done
 
 lemma cap_revoke_schact_is_rct_imp_cur_sc_active:
-  "cap_revoke cap \<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s\<rbrace>"
+  "cap_revoke cap \<lbrace>\<lambda>s :: det_state. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s\<rbrace>"
   apply (rule validE_valid)
   apply (rule cap_revoke_preservation)
    apply (clarsimp simp: cap_delete_def)
@@ -361,7 +344,7 @@ lemma cap_revoke_schact_is_rct_imp_cur_sc_active:
 lemma invoke_cnode_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s\<rbrace>
    invoke_cnode iv
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (clarsimp simp: invoke_cnode_def)
   apply (cases iv; clarsimp; (intro conjI impI)?;
          (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
@@ -377,7 +360,7 @@ lemma invoke_cnode_schact_is_rct_imp_cur_sc_active:
 lemma install_tcb_cap_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s\<rbrace>
    install_tcb_cap target slot n slot_opt
-   \<lbrace>\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s)\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. (schact_is_rct s \<longrightarrow> cur_sc_active s)\<rbrace>"
   apply (clarsimp simp: install_tcb_cap_def)
   apply (cases slot_opt; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
@@ -396,7 +379,7 @@ lemma install_tcb_cap_schact_is_rct_imp_cur_sc_active:
 lemma install_tcb_frame_cap_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> invs s\<rbrace>
    install_tcb_frame_cap target slot buffer
-   \<lbrace>\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s)\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. (schact_is_rct s \<longrightarrow> cur_sc_active s)\<rbrace>"
   apply (clarsimp simp: install_tcb_frame_cap_def)
   apply (cases buffer; clarsimp; (solves wpsimp)?)
   apply (rule validE_valid)
@@ -415,7 +398,7 @@ lemma install_tcb_frame_cap_schact_is_rct_imp_cur_sc_active:
 lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> tcb_inv_wf iv s\<rbrace>
    invoke_tcb iv
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (cases iv; clarsimp;
          (solves \<open>wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift mapM_x_inv_wp\<close>)?)
     subgoal for target cnode_index cslot_ptr fault_handler timeout_handler croot vroot buffer
@@ -455,7 +438,7 @@ lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
 lemma perform_invocation_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> ct_active s \<and> schact_is_rct s \<and> valid_invocation iv s\<rbrace>
    perform_invocation block call can_donate iv
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state . schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (cases iv; simp, (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
        apply (wpsimp wp: invoke_untyped_cur_sc_active hoare_drop_imps)
       apply (wpsimp wp: invoke_tcb_schact_is_rct_imp_cur_sc_active)
@@ -468,7 +451,7 @@ lemma perform_invocation_schact_is_rct_imp_cur_sc_active:
 lemma handle_invocation_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> ct_active s \<and> ct_not_in_release_q s \<and> schact_is_rct s\<rbrace>
    handle_invocation calling blocking can_donate first_phase cptr
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   (is "\<lbrace>?P\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
   apply (clarsimp simp: handle_invocation_def)
   apply (subst liftE_bindE)
@@ -542,7 +525,7 @@ lemma handle_event_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
         \<and> ct_not_in_release_q s \<and> schact_is_rct s\<rbrace>
    handle_event e
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (cases e; (solves \<open>wpsimp wp: hoare_drop_imps cur_sc_active_lift\<close>)?)
   apply (rename_tac syscall)
   by (case_tac syscall; clarsimp simp: handle_send_def handle_call_def liftE_bindE;
@@ -554,7 +537,7 @@ lemma handle_event_preemption_path_schact_is_rct_imp_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
         \<and> ct_not_in_release_q s \<and> schact_is_rct s\<rbrace>
    handle_event e <handle> (\<lambda>_. liftE preemption_path)
-   \<lbrace>\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s \<longrightarrow> cur_sc_active s\<rbrace>"
   apply (rule validE_valid)
   apply (rule_tac F="\<lambda>_ s. schact_is_rct s \<longrightarrow> cur_sc_active s" in handleE_wp)
    apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
@@ -628,7 +611,7 @@ lemma schedule_switch_thread_branch_active_sc_tcb_at_cur_thread:
 lemma schedule_cur_sc_active:
   "\<lbrace>\<lambda>s. valid_sched s \<and> invs s \<and> (schact_is_rct s \<longrightarrow> cur_sc_active s)\<rbrace>
    schedule
-   \<lbrace>\<lambda>_ s. cur_sc_active s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. cur_sc_active s\<rbrace>"
   apply (clarsimp simp: schedule_def)
   apply (rule hoare_seq_ext_skip, wpsimp wp: awaken_valid_sched hoare_vcg_imp_lift')
   apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)

@@ -250,7 +250,7 @@ lemma invoke_untyped_sc_at_pred_n:
 lemma retype_region_active_sc_props[wp]:
   "retype_region ptr numObjects o_bits type dev
    \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
-        \<longrightarrow> pred_map (P (cur_time s) (consumed_time s)) (sc_refill_cfgs_of s) p\<rbrace>"
+        \<longrightarrow> pred_map (P (cur_time s) (consumed_time s) (cur_sc s)) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding retype_region_def
   apply wp
   apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
@@ -264,7 +264,7 @@ crunches retype_region
 lemma retype_region_active_sc_props''[wp]:
   "retype_region ptr numObjects o_bits type dev
    \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) (cur_sc s)
-        \<longrightarrow> pred_map (P (cur_time s) (consumed_time s)) (sc_refill_cfgs_of s) (cur_sc s)\<rbrace>"
+        \<longrightarrow> pred_map (P (cur_time s) (consumed_time s) (cur_sc s)) (sc_refill_cfgs_of s) (cur_sc s)\<rbrace>"
   apply (rule_tac f=cur_sc in hoare_lift_Pf3)
    apply wpsimp+
   done
@@ -272,7 +272,7 @@ lemma retype_region_active_sc_props''[wp]:
 lemma delete_objects_pred_map_sc_refill_cfgs_of[wp]:
   "delete_objects base sz
    \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
-        \<longrightarrow> pred_map (P (consumed_time s) (cur_time s)) (sc_refill_cfgs_of s) p\<rbrace>"
+        \<longrightarrow> pred_map (P (consumed_time s) (cur_time s) (cur_sc s)) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding delete_objects_def2
   apply wpsimp
   by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
