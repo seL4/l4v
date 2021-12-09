@@ -4203,6 +4203,18 @@ lemma sym_ref_sc_tcb:
   apply (case_tac koa; clarsimp simp: get_refs_def2)
   done
 
+lemma sym_ref_tcb_sc: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
+   tcb_sched_context tcb = Some scp \<rbrakk> \<Longrightarrow>
+  \<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_tcb sc = Some tp"
+  apply (drule sym_refs_obj_atD[rotated, where p=tp])
+   apply (clarsimp simp: obj_at_def, simp)
+  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
+  apply (drule_tac x="(scp, TCBSchedContext)" in bspec)
+   apply fastforce
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac koa; clarsimp simp: get_refs_def2)
+  done
+
 lemma max_ipc_length_unfold:
   "max_ipc_length = 128"
   by (simp add: max_ipc_length_def cap_transfer_data_size_def msg_max_length_def msg_max_extra_caps_def)

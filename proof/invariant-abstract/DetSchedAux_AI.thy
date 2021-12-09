@@ -340,19 +340,6 @@ lemmas reset_untyped_cap_sched_context_at =
   reset_untyped_cap_obj_at[where P'="\<lambda>obj. \<exists>sc n. obj = SchedContext sc n \<and> P' sc" for P'
                            , simplified cnode_agnostic_pred_def tcb_cnode_agnostic_pred_def, simplified]
 
-(* FIXME: Move to Invariants_AI *)
-lemma sym_ref_tcb_sc: "\<lbrakk> sym_refs (state_refs_of s); kheap s tp = Some (TCB tcb);
-   tcb_sched_context tcb = Some scp \<rbrakk> \<Longrightarrow>
-  \<exists>sc n. kheap s scp = Some (SchedContext sc n) \<and> sc_tcb sc = Some tp"
-  apply (drule sym_refs_obj_atD[rotated, where p=tp])
-   apply (clarsimp simp: obj_at_def, simp)
-  apply (clarsimp simp: state_refs_of_def get_refs_def2 elim!: sym_refsE)
-  apply (drule_tac x="(scp, TCBSchedContext)" in bspec)
-   apply fastforce
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac koa; clarsimp simp: get_refs_def2)
-  done
-
 (* FIXME: move? *)
 lemma idle_thread_idle_thread_ptr:
   "valid_idle s \<Longrightarrow> idle_thread s = idle_thread_ptr"
