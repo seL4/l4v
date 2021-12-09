@@ -305,9 +305,8 @@ crunch domain_list_inv[wp]: handle_invocation,receive_ipc,receive_signal "\<lamb
 lemma handle_recv_domain_list_inv[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>
   handle_recv is_blocking can_reply \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
-  apply (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
+  by (wpsimp simp: handle_recv_def Let_def whenE_def get_sk_obj_ref_def
                 split_del: if_split wp: hoare_drop_imps)
-  by (rule_tac Q'="\<lambda>_ s. P (domain_list s)" in hoare_post_imps(1))  wpsimp+
 
 crunches
   handle_yield, handle_call, handle_vm_fault, handle_hypervisor_fault, check_domain_time
