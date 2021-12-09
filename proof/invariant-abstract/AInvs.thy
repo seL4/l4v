@@ -2553,4 +2553,21 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
   apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound simp: schact_is_rct_def)
   done
 
+crunches call_kernel
+  for current_time_bounded_5: "\<lambda>s :: det_state. current_time_bounded 5 s"
+  (wp: crunch_wps)
+
+crunches schedule, activate_thread
+  for valid_machine_time[wp]: "\<lambda>s :: det_state. valid_machine_time s"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma preemption_path_valid_machine_time[wp]:
+  "preemption_path \<lbrace>\<lambda>s :: det_state. valid_machine_time s\<rbrace>"
+  apply (clarsimp simp: preemption_path_def)
+  apply (wpsimp wp: getActiveIRQ_wp is_schedulable_inv hoare_drop_imps)
+  done
+
+crunches call_kernel
+  for valid_machine_time[wp]: "\<lambda>s :: det_state. valid_machine_time s"
+
 end
