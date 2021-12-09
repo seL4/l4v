@@ -3901,6 +3901,32 @@ lemma cur_sc_active_ct_not_in_release_q_imp_ct_running_imp_ct_schedulable:
   apply (fastforce dest!: sym_ref_sc_tcb)
   done
 
+lemma cur_sc_is_idle_sc_ptr_imp_cur_thread_is_idle_thread:
+  "\<lbrakk>cur_sc_tcb s; sym_refs (state_refs_of s); schact_is_rct s; valid_idle s; cur_sc s = idle_sc_ptr\<rbrakk>
+   \<Longrightarrow> cur_thread s = idle_thread s"
+  apply (clarsimp simp: cur_sc_tcb_def sc_at_pred_n_def obj_at_def ct_in_state_def vs_all_heap_simps
+                        pred_tcb_at_def schact_is_rct_def)
+  apply (frule sym_ref_sc_tcb)
+    apply fastforce+
+  apply (simp add: obj_at_def valid_idle_def)
+  done
+
+lemma cur_sc_not_idle_sc_ptr:
+  "\<lbrakk>valid_idle s; sym_refs (state_refs_of s); ct_active s; cur_sc_tcb_are_bound s\<rbrakk>
+   \<Longrightarrow> cur_sc s \<noteq> idle_sc_ptr"
+  apply (clarsimp simp: valid_idle_def vs_all_heap_simps ct_in_state_def pred_tcb_at_def obj_at_def)
+  apply (frule_tac tp="cur_thread s" in sym_ref_tcb_sc; fastforce?)
+  apply fastforce
+  done
+
+lemma cur_sc_not_idle_sc_ptr':
+  "\<lbrakk>invs s; ct_running s; cur_sc_tcb_are_bound s\<rbrakk>
+   \<Longrightarrow> cur_sc s \<noteq> idle_sc_ptr"
+  apply (rule cur_sc_not_idle_sc_ptr;
+         fastforce simp: valid_idle_def vs_all_heap_simps ct_in_state_def pred_tcb_at_def
+                         obj_at_def)
+  done
+
 abbreviation sc_bounded_release_time :: "sched_context \<Rightarrow> bool" where
   "sc_bounded_release_time sc \<equiv> cfg_bounded_release_time (sc_refill_cfg_of sc)"
 
