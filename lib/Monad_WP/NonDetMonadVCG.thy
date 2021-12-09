@@ -1305,6 +1305,13 @@ lemma hoare_vcg_imp_lift':
   apply (erule (1) hoare_vcg_imp_lift)
   done
 
+lemma hoare_vcg_imp_liftE:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>A\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>A\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. \<not> P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>A\<rbrace>"
+  apply (simp only: imp_conv_disj)
+  apply (clarsimp simp: validE_def valid_def split_def sum.case_eq_if)
+  done
+
 lemma hoare_vcg_imp_conj_lift[wp_comb]:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace> \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace>
    \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>"
