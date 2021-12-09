@@ -18,7 +18,7 @@ begin
 defs handleRecv_def:
 "handleRecv isBlocking canReply\<equiv> (do
     thread \<leftarrow> getCurThread;
-    epCptr \<leftarrow> getCapReg capRegister;
+    epCptr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     ((doE
         epCap \<leftarrow> capFaultOnFailure epCptr True (lookupCap thread epCptr);
         exc \<leftarrow> returnOk ( CapFault epCptr True (MissingCapability 0));
@@ -28,8 +28,7 @@ defs handleRecv_def:
                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
               odE)
             | NotificationCap ntfnPtr _ _ True \<Rightarrow>   (doE
-                ntfn \<leftarrow> withoutFailure $ getNotification ntfnPtr;
-                boundTCB \<leftarrow> returnOk $ ntfnBoundTCB ntfn;
+                boundTCB \<leftarrow> withoutFailure $ liftM ntfnBoundTCB $ getNotification ntfnPtr;
                 if boundTCB = Just thread \<or> boundTCB = Nothing
                     then withoutFailure $ receiveSignal thread epCap isBlocking
                     else throw exc
