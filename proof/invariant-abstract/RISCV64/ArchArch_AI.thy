@@ -997,11 +997,8 @@ crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool
   for inv[wp]: "P"
   (wp: crunch_wps simp: crunch_simps)
 
-(*
-crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
-
-*)
+crunches arch_decode_invocation
+  for tainv [wp]: "ignore_ta P"
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
 

@@ -1525,6 +1525,10 @@ interpretation lookup_extra_caps_tainv:
   touched_addresses_invE "lookup_extra_caps x y z"
   by unfold_locales wp
 
+interpretation lookup_cap_and_slot_tainv:
+  touched_addresses_invE "lookup_cap_and_slot x y"
+  by unfold_locales wp
+
 lemma lookup_extra_caps_srcs[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps thread buf info \<lbrace>transfer_caps_srcs\<rbrace>,-"
   apply (simp add: lookup_extra_caps_def lookup_cap_and_slot_def

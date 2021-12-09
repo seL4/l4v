@@ -54,9 +54,9 @@ where
 
 locale Interrupt_AI =
   fixes state_ext_type1 :: "('a :: state_ext) itself"
-  assumes decode_irq_control_invocation_inv[wp]:
+  assumes decode_irq_control_invocation_tainv[wp]:
     "\<And>(P  :: 'a state \<Rightarrow> bool) args slot label caps.
-      \<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
+      \<lbrace>ignore_ta P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   assumes decode_irq_control_valid[wp]:
     "\<And>slot caps label args.
     \<lbrace>\<lambda>s :: 'a state. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)

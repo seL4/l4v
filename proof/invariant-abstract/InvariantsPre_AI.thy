@@ -65,6 +65,10 @@ lemma validE_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
   by (simp add: hoare_valid_validE tainv)
 
+lemma validE_R_tainv[wp]:
+  "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, -"
+  by (clarsimp simp: agnostic_preserved ta_agnostic_def valid_validE_R)
+
 lemma agnostic_preservedE_R:
   "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -"
   unfolding ta_agnostic_def
