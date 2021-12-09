@@ -196,7 +196,7 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 > handleRecv :: Bool -> Bool -> Kernel ()
 > handleRecv isBlocking canReply = do
 >     thread <- getCurThread
->     epCptr <- getCapReg capRegister
+>     epCPtr <- asUser thread $ liftM CPtr $ getRegister capRegister
 >     (do
 >         epCap <- capFaultOnFailure epCptr True (lookupCap thread epCptr)
 >         let exc = CapFault epCptr True (MissingCapability 0)
@@ -205,8 +205,7 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >                 replyCap <- if canReply then lookupReply else return NullCap
 >                 withoutFailure $ receiveIPC thread epCap isBlocking replyCap
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do
->                 ntfn <- withoutFailure $ getNotification ntfnPtr
->                 boundTCB <- return $ ntfnBoundTCB ntfn
+>                 boundTCB <- withoutFailure $ liftM ntfbBoundTCB $ getNotification ntfnPtr
 >                 if boundTCB == Just thread || boundTCB == Nothing
 >                     then withoutFailure $ receiveSignal thread epCap isBlocking
 >                     else throw exc
