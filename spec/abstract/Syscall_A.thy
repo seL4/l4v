@@ -316,11 +316,13 @@ definition
         let flt = throwError $ CapFault (of_bl ep_cptr) True (MissingCapability 0)
         in
         case ep_cap
-          of EndpointCap ref badge rights \<Rightarrow> doE
-               whenE (AllowRecv \<notin> rights) flt;
-               reply_cap \<leftarrow> if can_reply then lookup_reply else returnOk NullCap;
-               liftE $ receive_ipc thread ep_cap is_blocking reply_cap
-             odE
+          of EndpointCap ref badge rights \<Rightarrow>
+               if AllowRecv \<in> rights
+               then doE
+                 reply_cap \<leftarrow> if can_reply then lookup_reply else returnOk NullCap;
+                 liftE $ receive_ipc thread ep_cap is_blocking reply_cap
+               odE
+               else flt
            | NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
