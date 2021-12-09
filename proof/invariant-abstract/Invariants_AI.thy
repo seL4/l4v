@@ -2374,6 +2374,13 @@ lemma valid_cs_sizeE [elim]:
   using assms
   by (auto simp: valid_cs_size_def well_formed_cnode_n_def)
 
+lemma valid_objs_valid_ntfn [dest?]:
+  assumes vp: "valid_objs s"
+  and    ran: "Notification ntfn \<in> ran (kheap s)"
+  shows  "valid_ntfn ntfn s"
+  using vp ran unfolding valid_objs_def
+  by (auto simp: valid_obj_def ran_def dom_def)
+
 lemma valid_objs_valid_sched_context [dest?]:
   assumes vp: "valid_objs s"
   and    ran: "SchedContext sc n \<in> ran (kheap s)"
