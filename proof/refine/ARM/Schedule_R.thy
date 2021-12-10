@@ -5010,7 +5010,7 @@ crunches ifCondRefillUnblockCheck
 
 lemma switchSchedContext_corres:
   "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s  \<and> active_sc_valid_refills s
-                  \<and> current_time_bounded 1 s \<and> active_sc_tcb_at (cur_thread s) s)
+                  \<and> current_time_bounded s \<and> active_sc_tcb_at (cur_thread s) s)
              valid_objs'
              switch_sched_context
              switchSchedContext"
@@ -5087,7 +5087,7 @@ crunches schedule_choose_new_thread
 lemma scAndTimer_corres:
   "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s
                   \<and> active_sc_valid_refills s \<and> valid_release_q s
-                  \<and> current_time_bounded 1 s \<and> active_sc_tcb_at (cur_thread s) s)
+                  \<and> current_time_bounded s \<and> active_sc_tcb_at (cur_thread s) s)
              invs'
              sc_and_timer
              scAndTimer"
@@ -5147,7 +5147,7 @@ lemma schedule_switch_thread_branch_valid_state_and_cur_tcb:
   done
 
 lemma schedule_corres:
-  "corres dc (invs and valid_sched and current_time_bounded 1 and ct_ready_if_schedulable
+  "corres dc (invs and valid_sched and current_time_bounded and ct_ready_if_schedulable
               and (\<lambda>s. schact_is_rct s \<longrightarrow> cur_sc_active s))
              invs'
              (Schedule_A.schedule)

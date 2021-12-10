@@ -702,7 +702,7 @@ lemma invokeSchedContext_corres:
   "sc_inv_rel sc_inv sc_inv' \<Longrightarrow>
    corres (=)
           (einvs and valid_sched_context_inv sc_inv and simple_sched_action
-           and current_time_bounded 2)
+           and current_time_bounded)
           (invs' and sch_act_simple and valid_sc_inv' sc_inv')
           (invoke_sched_context sc_inv)
           (invokeSchedContext sc_inv')"
@@ -1255,7 +1255,7 @@ lemma invokeSchedControlConfigureFlags_corres:
    corres dc
           (einvs and valid_sched_control_inv sc_inv and cur_sc_active and schact_is_rct
            and ct_not_in_release_q and ct_active
-           and current_time_bounded 5 and consumed_time_bounded
+           and current_time_bounded and consumed_time_bounded
            and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
            and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s))
           (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
@@ -1363,7 +1363,7 @@ lemma invokeSchedControlConfigureFlags_corres:
                      simp: sc_const_eq)
 
   apply (rename_tac sc')
-  apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded 5 s
+  apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded s
                            \<and> valid_sched_action s \<and> active_sc_valid_refills s
                            \<and> valid_ready_qs s \<and> valid_release_q s
                            \<and> sc_at (cur_sc s) s
@@ -1473,7 +1473,7 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply (wps_conj_solves wp: commitTime_invs' tcbReleaseRemove_invs'
                         simp: active_sc_at'_rewrite)
 
-  apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded 5 s
+  apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded s
                            \<and> valid_sched_action s \<and> active_sc_valid_refills s
                            \<and> valid_ready_qs s \<and> valid_release_q s
                            \<and> sc_at (cur_sc s) s
