@@ -67,6 +67,7 @@ requalify_consts
   timerPrecision
   max_time
   getCurrentTime_buffer
+  time_buffer_const
   \<mu>s_in_ms
 
 requalify_facts
