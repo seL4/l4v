@@ -257,8 +257,19 @@ context Arch begin global_naming ARM
 definition
   "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
 
+text \<open>
+  It is crucial that time does not overflow, and that overflow does not occur when performing any
+  operation which modifies the refill lists. We therefore impose a cap on the time that can be
+  returned by getCurrentTime, namely getCurrentTime_buffer. This is chosen to be the greatest word
+  t such that if a refill list has its head r_time at t, and satisfies valid_refills, then
+  when performing any function which does modify the refill list, overflow does not occur. The
+  choice depends heavily on the implementation of refill_budget_check.
+ \<close>
+
+abbreviation time_buffer_const where "time_buffer_const \<equiv> 5"
+
 abbreviation (input) getCurrentTime_buffer where
-  "getCurrentTime_buffer \<equiv> kernelWCET_ticks + 5 * MAX_PERIOD"
+  "getCurrentTime_buffer \<equiv> kernelWCET_ticks + time_buffer_const * MAX_PERIOD"
 
 lemma replicate_no_overflow:
   "n * unat (a :: ticks) \<le> unat (upper_bound :: ticks)
