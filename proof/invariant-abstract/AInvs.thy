@@ -635,7 +635,7 @@ lemma schedule_cur_sc_active:
 lemma call_kernel_cur_sc_active:
   "\<lbrace>\<lambda>s. cur_sc_active s \<and> invs s \<and> schact_is_rct s \<and> valid_sched s \<and> ct_not_in_release_q s
         \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
-        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
+        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded s
         \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_active s\<rbrace>"
@@ -1263,7 +1263,7 @@ lemma schedule_ct_not_in_release_q:
 lemma call_kernel_ct_not_in_release_q:
   "\<lbrace>\<lambda>s. ct_not_in_release_q s \<and> cur_sc_active s \<and> invs s \<and> schact_is_rct s \<and> valid_sched s
         \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
-        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
+        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded s
         \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_ s :: det_state. ct_not_in_release_q s\<rbrace>"
@@ -1328,7 +1328,7 @@ lemma schedule_schact_is_rct[wp]:
 lemma call_kernel_schact_is_rct:
   "\<lbrace>\<lambda>s. schact_is_rct s \<and> invs s \<and> valid_sched s \<and> cur_sc_active s \<and> ct_not_in_release_q s
         \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
-        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded 5 s
+        \<and> cur_sc_offset_ready (consumed_time s) s \<and> current_time_bounded s
         \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_ s :: det_state. schact_is_rct s\<rbrace>"
@@ -2074,7 +2074,7 @@ lemma is_refill_ready_imp_cur_sc_offset_ready_zero:
 
 lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
   "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s
-        \<and> current_time_bounded 5 s \<and> active_sc_valid_refills s\<rbrace>
+        \<and> current_time_bounded s \<and> active_sc_valid_refills s\<rbrace>
    commit_time
    \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: commit_time_def)
@@ -2153,7 +2153,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
          \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s)
         \<and> (cur_thread s \<noteq> idle_thread s \<longrightarrow> ct_released s)
         \<and> valid_idle s
-        \<and> current_time_bounded 5 s
+        \<and> current_time_bounded s
         \<and> active_sc_valid_refills s\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2224,7 +2224,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
          \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s)
         \<and> (cur_thread s \<noteq> idle_thread s \<longrightarrow> ct_released s)
         \<and> valid_idle s
-        \<and> current_time_bounded 5 s
+        \<and> current_time_bounded s
         \<and> active_sc_valid_refills s\<rbrace>
    sc_and_timer
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2261,7 +2261,7 @@ lemma switch_to_thread_cur_sc_offset_ready_and_sufficient:
 
 lemma choose_thread_cur_sc_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> invs s
-        \<and> current_time_bounded 5 s\<rbrace>
+        \<and> current_time_bounded s\<rbrace>
    choose_thread
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
           \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2281,7 +2281,7 @@ lemma choose_thread_cur_sc_offset_ready_and_sufficient:
 
 lemma schedule_choose_new_thread_cur_sc_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s
-        \<and> invs s \<and> current_time_bounded 5 s \<rbrace>
+        \<and> invs s \<and> current_time_bounded s \<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
           \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2296,14 +2296,14 @@ lemma schedule_choose_new_thread_cur_sc_offset_ready_and_sufficient:
 lemma schedule_switch_thread_branch_cur_sc_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> ct_ready_if_schedulable s
         \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> valid_sched_action s
-        \<and> invs s \<and> current_time_bounded 5 s
+        \<and> invs s \<and> current_time_bounded s
         \<and> cur_thread s = ct \<and> ct_schdble = ct_schedulable s
         \<and> scheduler_action s = switch_thread candidate\<rbrace>
    schedule_switch_thread_branch candidate ct ct_schdble
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
           \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (rule_tac B="\<lambda>_ s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s
-                           \<and> valid_sched_action s \<and> invs s \<and> current_time_bounded 5 s
+                           \<and> valid_sched_action s \<and> invs s \<and> current_time_bounded s
                            \<and> scheduler_action s = switch_thread candidate"
                in hoare_seq_ext[rotated])
    apply wpsimp
@@ -2371,8 +2371,7 @@ lemma schedule_choose_new_thread_ct_not_idle_imp_ct_released:
 lemma schedule_switch_thread_branch_ct_not_idle_imp_ct_released:
   "\<lbrace>\<lambda>s. ct_ready_if_schedulable s \<and> ct_schdble = schedulable ct s
         \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> valid_sched_action s
-        \<and> (schact_is_rct s \<longrightarrow> cur_sc_active s)
-        \<and> current_time_bounded 5 s
+        \<and> current_time_bounded s
         \<and> cur_thread s = ct \<and> scheduler_action s = switch_thread candidate\<rbrace>
    schedule_switch_thread_branch candidate ct ct_schdble
    \<lbrace>\<lambda>_ s. cur_thread s \<noteq> idle_thread s \<longrightarrow> ct_released s\<rbrace>"
@@ -2408,7 +2407,7 @@ lemma schedule_cur_sc_offset_ready_and_sufficient:
         \<and> (schact_is_rct s \<longrightarrow> cur_sc_active s)
         \<and> (schact_is_rct s \<longrightarrow> ct_not_in_release_q s)
         \<and> (schact_is_rct s \<longrightarrow> ct_in_state activatable s)
-        \<and> invs s \<and> valid_sched s \<and> current_time_bounded 5 s\<rbrace>
+        \<and> invs s \<and> valid_sched s \<and> current_time_bounded s\<rbrace>
    schedule
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s
                        \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2511,7 +2510,7 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
         \<and> cur_sc_active s \<and> ct_not_in_release_q s
         \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
         \<and> invs s \<and> schact_is_rct s \<and> valid_sched s
-        \<and> current_time_bounded 5 s \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
+        \<and> current_time_bounded s \<and> valid_machine_time s \<and> consumed_time_bounded s\<rbrace>
    call_kernel e
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s
                        \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2554,7 +2553,7 @@ lemma call_kernel_cur_sc_offset_ready_and_sufficient:
   done
 
 crunches call_kernel
-  for current_time_bounded_5: "\<lambda>s :: det_state. current_time_bounded 5 s"
+  for current_time_bounded: "\<lambda>s :: det_state. current_time_bounded s"
   (wp: crunch_wps)
 
 crunches schedule, activate_thread

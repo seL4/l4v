@@ -1637,24 +1637,22 @@ abbreviation consumed_time_bounded :: "'z::state_ext state \<Rightarrow> bool" w
 lemmas consumed_time_bounded_def = consumed_time_bounded_2_def
 
 definition current_time_bounded_2 where
-  "current_time_bounded_2 k curtime \<equiv>
-   unat curtime + unat kernelWCET_ticks + k * unat MAX_PERIOD \<le> unat max_time"
+  "current_time_bounded_2 curtime \<equiv>
+   unat curtime + unat kernelWCET_ticks + time_buffer_const * unat MAX_PERIOD \<le> unat max_time"
 
-abbreviation current_time_bounded :: "nat \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "current_time_bounded k s \<equiv> current_time_bounded_2 k (cur_time s)"
+abbreviation current_time_bounded :: "'z::state_ext state \<Rightarrow> bool" where
+  "current_time_bounded s \<equiv> current_time_bounded_2 (cur_time s)"
 
 lemmas current_time_bounded_def = current_time_bounded_2_def
-
-(* unat (cur_time s) + unat kernelWCET_ticks + 2 * unat MAX_SC_PERIOD \<le> unat max_time) *)
-
-\<comment> \<open>A predicate over all the components of state that determine scheduler validity.
-    Many operations will preserve all of these.\<close>
 
 abbreviation last_machine_time_of :: "'z state \<Rightarrow> time" where
   "last_machine_time_of s \<equiv> last_machine_time (machine_state s)"
 
 abbreviation time_state_of :: "'z state \<Rightarrow> nat" where
   "time_state_of s \<equiv> time_state (machine_state s)"
+
+\<comment> \<open>A predicate over all the components of state that determine scheduler validity.
+    Many operations will preserve all of these.\<close>
 
 type_synonym valid_sched_t
   = "time
