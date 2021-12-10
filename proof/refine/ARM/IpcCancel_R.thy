@@ -508,7 +508,7 @@ locale delete_one = delete_one_conc + delete_one_abs +
   assumes delete_one_corres:
     "corres dc
           (einvs and simple_sched_action and cte_wp_at can_fast_finalise ptr
-           and current_time_bounded 2)
+           and current_time_bounded)
           (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 
@@ -2753,7 +2753,7 @@ crunches ifCondRefillUnblockCheck
 
 lemma restart_thread_if_no_fault_corres:
   "corres dc (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
-              and valid_tcbs and active_sc_valid_refills and current_time_bounded 2)
+              and valid_tcbs and active_sc_valid_refills and current_time_bounded)
              (valid_queues and valid_queues' and valid_release_queue_iff and valid_objs')
              (restart_thread_if_no_fault t)
              (restartThreadIfNoFault t)"
@@ -2778,7 +2778,7 @@ lemma restart_thread_if_no_fault_corres:
           apply (rule_tac Q="\<lambda>scopt s. case_option True (\<lambda>p. sc_at p s) scopt \<and>
                                        tcb_at t s \<and> valid_sched_action s \<and>
                                        pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
-                                       active_sc_valid_refills s \<and> current_time_bounded 2 s"
+                                       active_sc_valid_refills s \<and> current_time_bounded s"
                  in hoare_strengthen_post[rotated])
            apply (fastforce split: option.splits simp: obj_at_def is_sc_obj opt_map_red)
           apply (wpsimp wp: thread_get_wp' simp: get_tcb_obj_ref_def)
@@ -2787,7 +2787,7 @@ lemma restart_thread_if_no_fault_corres:
         apply (clarsimp simp: fault_rel_optionation_def)
        apply (rule_tac Q="\<lambda>scopt s. tcb_at t s \<and> valid_sched_action s \<and>
                                     pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
-                                    active_sc_valid_refills s \<and> current_time_bounded 2 s"
+                                    active_sc_valid_refills s \<and> current_time_bounded s"
               in hoare_strengthen_post[rotated])
         apply (fastforce split: option.split simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def)
        apply (wpsimp wp: sts_typ_ats set_thread_state_valid_sched_action)
@@ -2948,7 +2948,7 @@ lemma cancelAllIPC_corres_helper:
           ((\<lambda>s. \<forall>t \<in> set list. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
                                \<and> reply_unlink_ts_pred t s)
             and (valid_sched and valid_tcbs and pspace_aligned and pspace_distinct
-                 and current_time_bounded 2 and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
+                 and current_time_bounded and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
           ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
             and (valid_queues and valid_queues' and valid_objs' and valid_release_queue_iff))
      (mapM_x cancel_all_ipc_loop_body list)
@@ -2962,7 +2962,7 @@ lemma cancelAllIPC_corres_helper:
               apply (rule_tac P="\<lambda>s. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
                                      \<and> reply_unlink_ts_pred t s \<and> valid_sched s \<and> valid_tcbs s
                                      \<and> pspace_aligned s \<and> pspace_distinct s
-                                     \<and> st_tcb_at ((=) st) t s \<and> current_time_bounded 2 s"
+                                     \<and> st_tcb_at ((=) st) t s \<and> current_time_bounded s"
                           and P'="\<lambda>s. valid_queues s \<and> valid_queues' s \<and> valid_objs' s
                                       \<and> valid_release_queue_iff s"
                            in corres_inst)
@@ -3023,7 +3023,7 @@ lemma in_send_ep_queue_TCBBlockedSend:
   done
 
 lemma cancelAllIPC_corres:
-  "corres dc (invs and valid_sched and ep_at ep_ptr and current_time_bounded 2)
+  "corres dc (invs and valid_sched and ep_at ep_ptr and current_time_bounded)
              (invs' and ep_at' ep_ptr)
              (cancel_all_ipc ep_ptr) (cancelAllIPC ep_ptr)"
 proof -
@@ -3033,7 +3033,7 @@ proof -
           ((\<lambda>s. \<forall>t \<in> set list. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
                                \<and> reply_unlink_ts_pred t s)
             and (valid_sched and valid_tcbs and pspace_aligned and pspace_distinct and ep_at ep_ptr
-                 and current_time_bounded 2 and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
+                 and current_time_bounded and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
           ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
             and (valid_queues and valid_queues' and valid_objs' and valid_release_queue_iff
                  and ep_at' ep_ptr))
@@ -3131,7 +3131,7 @@ lemma ntfn_cancel_corres_helper:
            and valid_objs
            and pspace_aligned
            and pspace_distinct and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))
-           and cur_tcb and current_time_bounded 2
+           and cur_tcb and current_time_bounded
            and K (distinct list))
           ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
            and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)
@@ -3171,7 +3171,7 @@ lemma ntfn_cancel_corres_helper:
                apply (wpsimp wp: get_tcb_obj_ref_wp)
               apply (wpsimp wp: threadGet_wp)
              apply (clarsimp cong: conj_cong imp_cong all_cong)
-             apply (rule_tac Q="\<lambda>_. pspace_aligned and pspace_distinct and current_time_bounded 2
+             apply (rule_tac Q="\<lambda>_. pspace_aligned and pspace_distinct and current_time_bounded
                                     and active_sc_valid_refills and valid_tcbs
                                     and valid_sched_action and tcb_at tp"
                     in hoare_strengthen_post[rotated])
@@ -3194,7 +3194,7 @@ lemma ntfn_cancel_corres_helper:
        apply (wpsimp wp: get_tcb_obj_ref_wp possible_switch_to_valid_sched_weak hoare_vcg_imp_lift')
         apply (rule_tac Q="\<lambda>_ s. tcb_at tp s \<longrightarrow>
                                    (bound (tcb_scps_of s tp) \<longrightarrow>  not_in_release_q tp s)
-                                   \<and> current_time_bounded 2 s
+                                   \<and> current_time_bounded s
                                    \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
                                    \<and> (pred_map (\<lambda>a. \<exists>y. a = Some y) (tcb_scps_of s) tp
                                        \<and> not_in_release_q tp s
@@ -3245,7 +3245,7 @@ crunches if_cond_refill_unblock_check
   (simp: crunch_simps)
 
 lemma cancelAllSignals_corres:
-  "corres dc (invs and valid_sched and ntfn_at ntfn and current_time_bounded 2)
+  "corres dc (invs and valid_sched and ntfn_at ntfn and current_time_bounded)
              (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply add_sch_act_wf
@@ -3263,7 +3263,7 @@ lemma cancelAllSignals_corres:
           apply (simp add: dc_def)
           apply (rename_tac list)
           apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. released_if_bound_sc_tcb_at x s)
-                                   \<and> current_time_bounded 2 s"
+                                   \<and> current_time_bounded s"
                  in hoare_post_add)
           apply (rule mapM_x_wp')
           apply wpsimp
@@ -4086,7 +4086,7 @@ lemma cancelBadgedSends_invs'[wp]:
 
 lemma restart_thread_if_no_fault_valid_sched_blocked_on_send:
   "\<lbrace>\<lambda>s. valid_sched s \<and> tcb_at t s \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
-        \<and> current_time_bounded 2 s
+        \<and> current_time_bounded s
         \<and> (epptr, TCBBlockedSend) \<in> state_refs_of s t \<and> t \<noteq> idle_thread s\<rbrace>
    restart_thread_if_no_fault t
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -4117,7 +4117,7 @@ lemma in_send_ep_queue_TCBBlockedSend':
   done
 
 lemma cancelBadgedSends_corres:
-  "corres dc (invs and valid_sched and ep_at epptr and current_time_bounded 2)
+  "corres dc (invs and valid_sched and ep_at epptr and current_time_bounded)
              (invs' and ep_at' epptr)
          (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
   apply add_sym_refs
@@ -4129,7 +4129,7 @@ lemma cancelBadgedSends_corres:
    apply (clarsimp simp: sch_act_wf_asrt_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[OF _ getEndpoint_corres get_simple_ko_sp get_ep_sp'
-                             , where Q="invs and valid_sched and current_time_bounded 2"
+                             , where Q="invs and valid_sched and current_time_bounded"
                                  and Q'="invs' and (\<lambda>s. sym_refs (state_refs_of' s))
                                          and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"])
     apply simp_all
@@ -4145,7 +4145,7 @@ lemma cancelBadgedSends_corres:
             apply (simp split: list.split add: ep_relation_def)
            apply (wp weak_sch_act_wf_lift_linear)+
          apply (rule_tac P="\<lambda>s. valid_sched s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s
-                                \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s) \<and> current_time_bounded 2 s"
+                                \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s) \<and> current_time_bounded s"
                      and Q="\<lambda>t s. tcb_at t s \<and> (epptr, TCBBlockedSend) \<in> state_refs_of s t
                                   \<and> t \<noteq> idle_thread s"
                      and P'="\<lambda>s. valid_objs' s \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> valid_queues s
@@ -4193,7 +4193,7 @@ lemma cancelBadgedSends_corres:
         apply (rule_tac Q="\<lambda>_ s. valid_tcbs s \<and> pspace_aligned s \<and> pspace_distinct s
                                  \<and> ep_at epptr s \<and> valid_sched s
                                  \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
-                                 \<and> current_time_bounded 2 s"
+                                 \<and> current_time_bounded s"
                      in hoare_strengthen_post)
          apply (rule_tac Q="\<lambda>t s. tcb_at t s \<and> (epptr, TCBBlockedSend) \<in> state_refs_of s t
                                   \<and> t \<noteq> idle_thread s"

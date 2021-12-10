@@ -170,7 +170,7 @@ crunches cancel_ipc
 
 lemma restart_corres:
   "corres dc
-          (einvs and tcb_at t and ex_nonz_cap_to t and current_time_bounded 2)
+          (einvs and tcb_at t and ex_nonz_cap_to t and current_time_bounded)
           (invs' and tcb_at' t and ex_nonz_cap_to' t)
           (Tcb_A.restart t) (ThreadDecls_H.restart t)"
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def test_possible_switch_to_def
@@ -202,7 +202,7 @@ lemma restart_corres:
                  apply wpsimp
                 apply (fastforce simp: invs'_def sch_act_wf_weak valid_pspace'_def)
                apply (rule_tac Q="\<lambda>rv. invs and valid_ready_qs and valid_release_q
-                                            and current_time_bounded 2
+                                            and current_time_bounded
                                             and (\<lambda>s. \<exists>scp. scOpt = Some scp \<longrightarrow> sc_not_in_release_q scp s)
                                             and active_sc_valid_refills and valid_sched_action
                                             and scheduler_act_not t and bound_sc_tcb_at ((=) scOpt) t"
@@ -222,7 +222,7 @@ lemma restart_corres:
                               wp: refillUnblockCheck_invs')
              apply (clarsimp simp: thread_state_relation_def)
             apply (rule_tac Q="\<lambda>rv. invs and valid_ready_qs and valid_release_q
-                                         and current_time_bounded 2
+                                         and current_time_bounded
                                          and (\<lambda>s. \<forall>scp. scOpt = Some scp \<longrightarrow> sc_not_in_release_q scp s)
                                          and active_sc_valid_refills and valid_sched_action
                                          and scheduler_act_not t and bound_sc_tcb_at ((=) scOpt) t"
@@ -241,7 +241,7 @@ lemma restart_corres:
             apply (clarsimp simp: invs'_def valid_pspace'_def o_def)
            apply (wpsimp wp: setThreadState_Restart_invs' hoare_drop_imps)
           apply (rule_tac Q="\<lambda>rv. invs and valid_sched and valid_sched_action and tcb_at t
-                                       and current_time_bounded 2
+                                       and current_time_bounded
                                        and (\<lambda>s. \<forall>scp. scOpt = Some scp \<longrightarrow> sc_not_in_release_q scp s)
                                        and fault_tcb_at ((=) None) t and bound_sc_tcb_at ((=) scOpt) t
                                        and st_tcb_at (\<lambda>st'. tcb_st_refs_of st' = {}) t
@@ -381,7 +381,7 @@ crunches restart
 lemma invokeTCB_WriteRegisters_corres:
   "corres (dc \<oplus> (=))
           (einvs and simple_sched_action and tcb_at dest and ex_nonz_cap_to dest
-           and current_time_bounded 2)
+           and current_time_bounded)
           (invs' and tcb_at' dest and ex_nonz_cap_to' dest)
           (invoke_tcb (tcb_invocation.WriteRegisters dest resume values arch))
           (invokeTCB (tcbinvocation.WriteRegisters dest resume values arch'))"
@@ -449,7 +449,7 @@ lemma asUser_valid_tcbs' [wp]:
 lemma invokeTCB_CopyRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
-          ex_nonz_cap_to dest and current_time_bounded 2)
+          ex_nonz_cap_to dest and current_time_bounded)
         (invs' and sch_act_simple and tcb_at' dest and tcb_at' src
           and ex_nonz_cap_to' src and ex_nonz_cap_to' dest)
         (invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch))
@@ -531,7 +531,7 @@ proof -
             apply (wp mapM_x_wp' static_imp_wp restart_valid_sched | simp)+
          apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp add: if_apply_def2)+)[2]
        apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
-                              and simple_sched_action and current_time_bounded 2"
+                              and simple_sched_action and current_time_bounded"
               in hoare_strengthen_post[rotated])
         apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                               valid_pspace_def valid_idle_def
@@ -1665,7 +1665,7 @@ lemma installTCBCap_corres:
   "\<lbrakk> newroot_rel slot_opt slot_opt'; slot_opt \<noteq> None \<longrightarrow> slot' = cte_map slot; n \<in> {0,1,3,4} \<rbrakk> \<Longrightarrow>
      corres (dc \<oplus> dc)
             (\<lambda>s. einvs s \<and> valid_machine_time s \<and> simple_sched_action s
-                 \<and> cte_at (target, tcb_cnode_index n) s \<and> current_time_bounded 2 s \<and>
+                 \<and> cte_at (target, tcb_cnode_index n) s \<and> current_time_bounded s \<and>
                  (\<forall>new_cap src_slot.
                    slot_opt = Some (new_cap, src_slot) \<longrightarrow>
                    (is_cnode_or_valid_arch new_cap \<or> valid_fault_handler new_cap) \<and>
@@ -1794,7 +1794,7 @@ lemma installThreadBuffer_corres:
   and     "g \<noteq> None \<longrightarrow> sl' = cte_map slot"
   shows "corres (dc \<oplus> dc)
          (einvs and valid_machine_time and simple_sched_action and tcb_at a
-                and (case_option \<top> (\<lambda>(_,sl). cte_at slot and current_time_bounded 2 and
+                and (case_option \<top> (\<lambda>(_,sl). cte_at slot and current_time_bounded and
                         (case_option \<top> (\<lambda>(newCap,srcSlot). cte_at srcSlot and valid_cap newCap and
                                                             no_cap_to_obj_dr_emp newCap) sl)) g)
                 and K (case_option True (\<lambda>(x,v).
@@ -1915,7 +1915,7 @@ lemma tc_corres_caps:
   shows
     "corres (dc \<oplus> (=))
     (einvs and valid_machine_time and simple_sched_action and active_sc_valid_refills
-     and tcb_at t and tcb_inv_wf tc_caps_inv and current_time_bounded 2)
+     and tcb_at t and tcb_inv_wf tc_caps_inv and current_time_bounded)
     (invs' and sch_act_simple and tcb_inv_wf' tc_caps_inv')
     (invoke_tcb tc_caps_inv)
     (invokeTCB tc_caps_inv')"
@@ -1991,7 +1991,7 @@ lemma setSchedContext_scTCB_update_valid_refills[wp]:
 lemma schedContextBindTCB_corres:
   "corres dc (valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s))
               and valid_sched and simple_sched_action and bound_sc_tcb_at ((=) None) t
-              and current_time_bounded 2
+              and current_time_bounded
               and active_sc_valid_refills and sc_tcb_sc_at ((=) None) ptr and ex_nonz_cap_to t and ex_nonz_cap_to ptr)
              (invs' and ex_nonz_cap_to' t and ex_nonz_cap_to' ptr)
              (sched_context_bind_tcb ptr t) (schedContextBindTCB ptr t)"
@@ -2016,14 +2016,14 @@ lemma schedContextBindTCB_corres:
                  apply (rule schedContextResume_corres)
                 apply (rule_tac Q="\<lambda>rv. valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)) and
                                         weak_valid_sched_action and active_sc_valid_refills and
-                                        sc_tcb_sc_at ((=) (Some t)) ptr and current_time_bounded 2 and
+                                        sc_tcb_sc_at ((=) (Some t)) ptr and current_time_bounded and
                                         bound_sc_tcb_at (\<lambda>sc. sc = Some ptr) t"
                              in hoare_strengthen_post[rotated], fastforce)
                 apply (wp sched_context_resume_weak_valid_sched_action sched_context_resume_pred_tcb_at)
                apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated], fastforce)
                apply wp
               apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
-                                     (\<lambda>s. sym_refs (state_refs_of s)) and current_time_bounded 2 and
+                                     (\<lambda>s. sym_refs (state_refs_of s)) and current_time_bounded and
                                      valid_ready_qs and valid_release_q and weak_valid_sched_action and
                                      active_sc_valid_refills and scheduler_act_not t and
                                      sc_tcb_sc_at ((=) (Some t)) ptr and
@@ -2044,7 +2044,7 @@ lemma schedContextBindTCB_corres:
                                   (\<lambda>s. sym_refs (state_refs_of s)) and
                                   valid_ready_qs and valid_release_q and active_sc_valid_refills and
                                   sc_tcb_sc_at (\<lambda>sc. sc \<noteq> None) ptr and
-                                  (\<lambda>s. (weak_valid_sched_action s \<and> current_time_bounded 2 s \<and>
+                                  (\<lambda>s. (weak_valid_sched_action s \<and> current_time_bounded s \<and>
                                         (\<forall>ya. sc_tcb_sc_at ((=) (Some ya)) ptr s \<longrightarrow>
                                               not_in_release_q ya s \<and> scheduler_act_not ya s)) \<and>
                                        active_sc_valid_refills s \<and>
@@ -2279,7 +2279,7 @@ lemma tc_corres_sched:
   shows
     "corres (dc \<oplus> (=))
     (einvs and valid_machine_time and simple_sched_action and tcb_inv_wf tc_inv_sched
-           and ct_released and ct_active and ct_not_in_release_q and current_time_bounded 2)
+           and ct_released and ct_active and ct_not_in_release_q and current_time_bounded)
     (invs' and sch_act_simple and tcb_inv_wf' tc_inv_sched')
     (invoke_tcb tc_inv_sched)
     (invokeTCB tc_inv_sched')"
@@ -2318,7 +2318,7 @@ lemma tc_corres_sched:
                 apply wpfix
                 apply (rule setPriority)
                apply (rule_tac Q="\<lambda>_ s. invs s \<and> valid_machine_time s \<and> valid_sched s
-                                        \<and> simple_sched_action s \<and> current_time_bounded 2 s \<and>
+                                        \<and> simple_sched_action s \<and> current_time_bounded s \<and>
                                         tcb_at t s \<and> ex_nonz_cap_to t s \<and>
                                         (\<forall>scPtr. sc_opt = Some (Some scPtr) \<longrightarrow>
                                                    ex_nonz_cap_to scPtr s \<and>
@@ -2375,7 +2375,7 @@ lemma tc_corres_sched:
        apply (rule installTCBCap_corres; clarsimp)
       apply (rule_tac Q="\<lambda>_ s. einvs s \<and> valid_machine_time s \<and> simple_sched_action s \<and> tcb_at t s
                                \<and> ex_nonz_cap_to t s \<and> ct_active s \<and> ct_released s
-                               \<and> ct_not_in_release_q s \<and> current_time_bounded 2 s \<and>
+                               \<and> ct_not_in_release_q s \<and> current_time_bounded s \<and>
                                (\<forall>scp. sc_opt = Some (Some scp) \<longrightarrow> ex_nonz_cap_to scp s \<and>
                                                                    sc_tcb_sc_at ((=) None) scp s \<and>
                                                                    bound_sc_tcb_at ((=) None) t s)"
@@ -2604,10 +2604,9 @@ lemma invokeTCB_corres:
  "tcbinv_relation ti ti' \<Longrightarrow>
   corres (dc \<oplus> (=))
          (einvs and valid_machine_time and simple_sched_action and Tcb_AI.tcb_inv_wf ti
-                and current_time_bounded 2 and ct_released and ct_active and ct_not_in_release_q)
+                and current_time_bounded and ct_released and ct_active and ct_not_in_release_q)
          (invs' and sch_act_simple and tcb_inv_wf' ti')
          (invoke_tcb ti) (invokeTCB ti')"
-  using current_time_bounded_strengthen[of 2 _ 1, elim!]
   apply (case_tac ti, simp_all only: tcbinv_relation.simps valid_tcb_invocation_def)
           apply (rule corres_guard_imp[OF invokeTCB_WriteRegisters_corres], fastforce+)[1]
          apply (rule corres_guard_imp[OF invokeTCB_ReadRegisters_corres], simp+)[1]

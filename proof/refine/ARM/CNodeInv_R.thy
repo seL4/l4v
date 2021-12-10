@@ -6968,7 +6968,7 @@ lemma rec_del_corres:
                                                            \<and> cap_relation (snd r) (snd r') )
                           | _ \<Rightarrow> dc))
       (einvs and valid_machine_time and simple_sched_action
-            and valid_rec_del_call args and current_time_bounded 2
+            and valid_rec_del_call args and current_time_bounded
             and cte_at (slot_rdcall args)
             and (\<lambda>s. \<not> exposed_rdcall args \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall args) s)
             and (\<lambda>s. case args of ReduceZombieCall cap sl ex \<Rightarrow>
@@ -7105,7 +7105,7 @@ next
            apply (wp | simp)+
            apply (rule hoare_strengthen_post)
             apply (rule_tac Q="\<lambda>fin s. einvs s \<and> valid_machine_time s  \<and> simple_sched_action s
-                                      \<and> replaceable s slot (fst fin) rv \<and> current_time_bounded 2 s
+                                      \<and> replaceable s slot (fst fin) rv \<and> current_time_bounded s
                                       \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> fst fin
                                       \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)"
                        in hoare_vcg_conj_lift)
@@ -7382,7 +7382,7 @@ qed
 lemma cteDelete_corres:
   "corres (dc \<oplus> dc)
       (einvs and valid_machine_time and simple_sched_action
-       and current_time_bounded 2 and cte_at ptr)
+       and current_time_bounded and cte_at ptr)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_delete ptr) (cteDelete (cte_map ptr) True)"
   unfolding cap_delete_def
@@ -7628,7 +7628,7 @@ lemma cap_revoke_mdb_stuff4:
 
 lemma cteRevoke_corres':
   "spec_corres s (dc \<oplus> dc)
-      (einvs and valid_machine_time and simple_sched_action and cte_at ptr and current_time_bounded 2)
+      (einvs and valid_machine_time and simple_sched_action and cte_at ptr and current_time_bounded)
       (invs' and sch_act_simple and cte_at' (cte_map ptr))
       (cap_revoke ptr) (\<lambda>s. cteRevoke (cte_map ptr) s)"
 proof (induct rule: cap_revoke.induct)
@@ -8652,7 +8652,7 @@ lemma invokeCNode_corres:
   "cnodeinv_relation ci ci' \<Longrightarrow>
    corres (dc \<oplus> dc)
      (einvs and valid_machine_time and simple_sched_action and valid_cnode_inv ci
-      and current_time_bounded 2)
+      and current_time_bounded)
      (invs' and sch_act_simple and valid_cnode_inv' ci')
      (invoke_cnode ci) (invokeCNode ci')"
   apply (simp add: invoke_cnode_def invokeCNode_def)
