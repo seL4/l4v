@@ -1889,12 +1889,47 @@ lemma end_timeslice_valid_sched_action:
   apply (clarsimp simp: active_sc_tcb_at_def2)
   done
 
+lemma sendFaultIPC_invs':
+  "\<lbrace>invs' and valid_idle' and st_tcb_at' active' t
+          and (\<lambda>s. canDonate \<longrightarrow> bound_sc_tcb_at' bound t s)
+          and ex_nonz_cap_to' t
+          and (\<lambda>s. \<exists>n\<in>dom tcb_cte_cases. \<exists>cte. cte_wp_at' (\<lambda>cte. cteCap cte = cap) (t + n) s)\<rbrace>
+   sendFaultIPC t cap f canDonate
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (simp add: sendFaultIPC_def)
+  apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
+            threadSet_cap_to' threadSet_idle'
+           | wpc | simp)+
+  apply (intro conjI impI allI; (fastforce simp: inQ_def)?)
+   apply (clarsimp simp: invs'_def valid_release_queue'_def obj_at'_def)
+  apply (fastforce simp: ex_nonz_cap_to'_def cte_wp_at'_def)
+  done
+
+lemma handleTimeout_Timeout_invs':
+  "\<lbrace>invs' and st_tcb_at' active' tptr\<rbrace>
+   handleTimeout tptr (Timeout badge)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (clarsimp simp: handleTimeout_def)
+  apply (wpsimp wp: sendFaultIPC_invs' set_tcb'.getObject_wp' simp: isValidTimeoutHandler_def)
+  apply (clarsimp simp: valid_idle'_asrt_def)
+  apply (rule conjI; clarsimp simp: obj_at'_real_def projectKOs pred_tcb_at'_def)
+   apply (drule invs_iflive')
+   apply (erule (1) if_live_then_nonz_capD')
+   apply (fastforce simp: live_def)
+  apply (clarsimp simp: ko_wp_at'_def projectKOs opt_map_red)
+  apply (rule_tac x="0x40" in bexI)
+   apply (clarsimp simp: cte_wp_at_cases')
+   apply (drule_tac x="0x40" in spec)
+   apply (clarsimp simp: objBits_simps)
+   apply fastforce+
+  done
+
 lemma endTimeslice_invs'[wp]:
-  "\<lbrace>invs' and ct_active' and sch_act_sane\<rbrace>
+  "\<lbrace>invs' and ct_active'\<rbrace>
    endTimeslice timeout
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding endTimeslice_def
-  apply (wpsimp wp: handleTimeout_invs' isValidTimeoutHandler_inv hoare_drop_imp)
+  apply (wpsimp wp: handleTimeout_Timeout_invs' isValidTimeoutHandler_inv hoare_drop_imp)
   apply (clarsimp simp: runnable_eq_active')
   apply (frule (1) active_ex_cap'[OF _ invs_iflive'])
   apply (clarsimp simp: ct_in_state'_def sch_act_sane_def)
@@ -1917,9 +1952,7 @@ crunches chargeBudget
   (wp: crunch_wps)
 
 lemma refillResetRR_invs'[wp]:
-  "\<lbrace>invs' and ct_active' and sch_act_sane\<rbrace>
-   refillResetRR scp
-   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  "refillResetRR scp \<lbrace>invs'\<rbrace>"
   unfolding refillResetRR_def
   apply (wpsimp wp: updateSchedContext_invs')
   apply (intro conjI; clarsimp elim!: live_sc'_ex_cap[OF invs_iflive'])
@@ -2145,17 +2178,24 @@ lemma handleYield_corres:
   apply clarsimp
   done
 
+lemma chargeBudget_invs'[wp]:
+  "chargeBudget consumed canTimeout Flag \<lbrace>invs'\<rbrace>"
+  unfolding chargeBudget_def ifM_def bind_assoc
+  apply (rule hoare_seq_ext[OF _ getCurSc_sp])
+  apply (rule hoare_seq_ext[OF _ isRoundRobin_sp])
+  apply (wpsimp wp: isSchedulable_wp)
+     apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs'"])
+      apply wpsimp
+     apply (clarsimp simp: isSchedulable_bool_def obj_at'_def projectKOs
+                           pred_map_def ct_in_state'_def pred_tcb_at'_def runnable_eq_active')
+  by (wpsimp wp: hoare_drop_imp updateSchedContext_invs'
+    | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
+
 lemma hy_invs':
-  "\<lbrace>invs' and ct_active'\<rbrace> handleYield \<lbrace>\<lambda>r. invs' and ct_active'\<rbrace>"
+  "handleYield \<lbrace>invs'\<rbrace>"
   apply (simp add: handleYield_def)
-  apply (wp ct_in_state_thread_state_lift'
-            rescheduleRequired_invs'
-            tcbSchedAppend_invs' | simp)+
-  apply (clarsimp simp add: invs'_def ct_in_state'_def sch_act_wf_weak cur_tcb'_def
-                   valid_pspace_valid_objs' valid_objs'_maxDomain tcb_in_cur_domain'_def)
-  sorry (*
-  apply (simp add:ct_active_runnable'[unfolded ct_in_state'_def])
-  done *)
+  by (wpsimp wp: updateSchedContext_invs' ct_in_state_thread_state_lift'
+    | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
 
 lemma getDFSR_invs'[wp]:
   "valid invs' (doMachineOp getDFSR) (\<lambda>_. invs')"
