@@ -1522,72 +1522,181 @@ crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
    simp: crunch_simps unless_def
    rule: sch_act_sane_lift)
 
+lemma getCapReg_corres_gen:
+  "corres (\<lambda>x y. x = to_bl y) cur_tcb cur_tcb'
+          (get_cap_reg rg) (getCapReg rg)"
+  apply (simp add: get_cap_reg_def getCapReg_def cap_register_def capRegister_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF getCurThread_corres], simp)
+      apply (rule corres_rel_imp)
+       apply (rule asUser_getRegister_corres)
+      apply (wpsimp simp: cur_tcb_def cur_tcb'_def)+
+  done
+
+lemma lookupReply_corres:
+  "corres (fr \<oplus> cap_relation)
+     (cur_tcb and valid_objs and pspace_aligned)
+     (cur_tcb' and valid_objs' and pspace_aligned' and pspace_distinct')
+     lookup_reply lookupReply"
+  unfolding lookup_reply_def lookupReply_def withoutFailure_def
+  apply simp
+  apply (rule corres_rel_imp)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_liftEE[OF getCapReg_corres_gen])
+       apply (rule corres_split_liftEE[OF getCurThread_corres])
+         apply simp
+         apply (rule corres_splitEE[OF _ corres_cap_fault[OF lookupCap_corres]])
+           apply (rename_tac cref cref' ct ct' cap cap')
+           apply (rule corres_if2)
+             apply (case_tac cap; case_tac cap'; clarsimp simp: is_reply_cap_def isReplyCap_def)
+            apply (rule corres_returnOk[where r=cap_relation])
+            apply simp
+           apply (simp add: lookup_failure_map_def)
+          apply wpsimp+
+     apply (wpsimp simp: getCapReg_def)
+    apply (clarsimp simp: cur_tcb_def, simp)
+   apply (clarsimp simp: cur_tcb'_def)
+  apply assumption
+  done
+
+lemma lookup_reply_valid [wp]:
+  "\<lbrace> valid_objs \<rbrace> lookup_reply \<lbrace> valid_cap \<rbrace>, -"
+  unfolding lookup_reply_def get_cap_reg_def
+  apply (wpsimp wp: get_cap_wp hoare_vcg_imp_lift_R)
+       apply (rule hoare_FalseE_R)
+      apply wpsimp+
+  done
+
+lemma lookup_reply_is_reply_cap [wp]:
+  "\<lbrace> valid_objs \<rbrace> lookup_reply \<lbrace>\<lambda>rv s. is_reply_cap rv \<rbrace>, -"
+  unfolding lookup_reply_def lookup_cap_def
+  by (wpsimp wp: get_cap_wp)
+
+crunches lookupReply
+  for inv[wp]: "P"
+  (simp: crunch_simps wp: crunch_wps)
+
+crunches lookup_reply
+  for valid_cap[wp]: "valid_cap c"
+  and cte_wp_at[wp]: "\<lambda>s. Q (cte_wp_at P p s)"
+
+lemma lookupReply_valid [wp]:
+  "\<lbrace> valid_objs' \<rbrace> lookupReply \<lbrace> valid_cap' \<rbrace>, -"
+  unfolding lookupReply_def getCapReg_def
+  apply (wpsimp wp: get_cap_wp hoare_vcg_imp_lift_R)
+       apply (rule hoare_FalseE_R)
+      apply wpsimp+
+  done
+
+lemma getBoundBNotification_corres: (* generalise *)
+  "corres (=) (ntfn_at nptr) (ntfn_at' nptr)
+          (get_ntfn_obj_ref ntfn_bound_tcb nptr) (liftM ntfnBoundTCB (getNotification nptr))"
+  apply (simp add: get_sk_obj_ref_def)
+  apply (rule corres_bind_return2)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF getNotification_corres])
+      apply (simp add: ntfn_relation_def)
+     apply wpsimp+
+  done
+
 lemma handleRecv_isBlocking_corres':
-   "corres dc (einvs and ct_in_state active
-                    and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
+   "corres dc (einvs and ct_in_state active and current_time_bounded 2
+               and scheduler_act_sane and ct_not_queued and ct_not_in_release_q
+               and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
               (invs' and ct_in_state' simple'
                      and sch_act_sane
                      and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
                      and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s))
                     (handle_recv isBlocking canReply) (handleRecv isBlocking canReply)"
   (is "corres dc (?pre1) (?pre2) (handle_recv _ _) (handleRecv _ _)")
-  apply (simp add: handle_recv_def handleRecv_def liftM_bind Let_def
-                   cap_register_def capRegister_def
-             cong: if_cong cap.case_cong capability.case_cong bool.case_cong split del: if_split)
-  sorry (*
+  unfolding handle_recv_def handleRecv_def Let_def
+  apply add_cur_tcb'
+  apply (rule_tac Q="ct_active'" in corres_cross_add_guard)
+   apply (fastforce elim!: ct_active_cross dest: invs_psp_aligned invs_distinct)
+  apply (simp add: cap_register_def capRegister_def liftM_bind
+            cong: if_cong cap.case_cong capability.case_cong split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
       apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
-          apply (rule corres_cap_fault)
-          apply (rule corres_splitEE [OF _ lookupCap_corres])
+          apply (rule corres_splitEE [OF _ corres_cap_fault[OF lookupCap_corres]])
             apply (rule_tac P="?pre1 and tcb_at thread
                                and (\<lambda>s. (cur_thread s) = thread  )
                                and valid_cap rv"
-                       and P'="?pre2 and tcb_at' thread and valid_cap' rv'" in corres_inst)
+                       and P'="?pre2 and cur_tcb' and tcb_at' thread and valid_cap' epCap" in corres_inst)
             apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm split del: if_split
                              simp: lookup_failure_map_def whenE_def)
+             apply (rename_tac rights)
+             apply (case_tac "AllowRead \<in> rights \<and> canReply")
+              apply clarsimp
+              apply (rule corres_guard_imp)
+                apply (rule corres_splitEE[OF _ lookupReply_corres])
+                  apply (rule_tac Q="\<lambda>_. is_reply_cap reply_cap" in corres_inst_add)
+                  apply (rule corres_gen_asm)
+                  apply simp
+                  apply (rule corres_guard_imp)
+                    apply (rule receiveIPC_corres)
+                       apply simp
+                      apply (clarsimp simp: cap_relation_def)
+                     apply simp+
+                 apply (wpsimp wp: typ_at_lifts)+
+               apply (clarsimp simp: ct_in_state_def invs_def valid_state_def valid_pspace_def)
+              apply (simp add: invs'_def valid_pspace'_def)
+             apply (clarsimp simp: lookup_failure_map_def)
              apply (rule corres_guard_imp)
-               apply (rename_tac rights)
-                apply (case_tac "AllowRead \<in> rights"; simp)
-                 apply (rule corres_split_nor[OF _ deleteCallerCap_corres])
-                   apply (rule receiveIPC_corres)
-                    apply (clarsimp)+
-                  apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)+
-                apply (clarsimp)+
-                apply (clarsimp simp: lookup_failure_map_def)+
-             apply (clarsimp simp: valid_cap'_def capAligned_def)
-            apply (rule corres_guard_imp)
-              apply (rename_tac rights)
-              apply (case_tac "AllowRead \<in> rights"; simp)
-               apply (rule_tac r'=ntfn_relation in corres_splitEE)
-                  apply (rule corres_if)
-                    apply (clarsimp simp: ntfn_relation_def)
-                   apply (clarsimp, rule receiveSignal_corres)
-                    prefer 3
-                    apply (rule corres_trivial)
-                    apply (clarsimp simp: lookup_failure_map_def)+
-                 apply (rule getNotification_corres)
-                apply (wp get_simple_ko_wp getNotification_wp | wpcw | simp)+
-              apply (clarsimp simp: lookup_failure_map_def)
-             apply (clarsimp simp: valid_cap_def ct_in_state_def)
-            apply (clarsimp simp: valid_cap'_def capAligned_def)
-           apply (wp get_simple_ko_wp | wpcw | simp)+
-         apply (rule hoare_vcg_E_elim)
-          apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
-          apply wp
-           apply (simp add: split_def)
-           apply (wp resolve_address_bits_valid_fault2)+
-         apply (wp getNotification_wp | wpcw | simp add: valid_fault_def whenE_def split del: if_split)+
-  apply (clarsimp simp add: ct_in_state_def  ct_in_state'_def conj_comms invs_valid_tcb_ctable
-                            invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
-                        ct_in_state'_def sch_act_sane_not)
-  done *)
+               apply (rule receiveIPC_corres)
+                  apply ((clarsimp simp: cap_relation_def ct_in_state_def)+)[6]
+            apply (rename_tac rights)
+            apply (simp add: bool.case_eq_if if_swap[where P="AllowRead \<in> x" for x, symmetric] split del: if_split)
+            apply (case_tac "AllowRead \<in> rights")
+             apply clarsimp
+             apply (rule stronger_corres_guard_imp)
+               apply (rule corres_split_liftEE[OF getBoundBNotification_corres])
+                 apply (case_tac "rv = Some thread \<or> rv = None")
+                  apply simp
+                  apply (rule receiveSignal_corres)
+                   apply simp
+                  apply (clarsimp simp: cap_relation_def)
+                 apply (clarsimp simp: lookup_failure_map_def)
+                apply (wpsimp wp: get_sk_obj_ref_wp getNotification_wp)+
+              apply (clarsimp simp: valid_cap_def valid_sched_def valid_sched_action_def
+                                    current_time_bounded_def ct_in_state_def)
+             apply (clarsimp simp: valid_cap_def valid_cap'_def dest!: state_relationD)
+            apply (clarsimp simp: lookup_failure_map_def)
+           apply (wpsimp wp: get_sk_obj_ref_wp)+
+         apply (rule_tac Q="\<lambda>_. ?pre1 and (\<lambda>s. cur_thread s = thread)
+                                 and K (valid_fault (ExceptionTypes_A.fault.CapFault x True
+                                        (ExceptionTypes_A.lookup_failure.MissingCapability 0)))"
+                     and E=E and F=E for E
+                in hoare_post_impErr[rotated])
+           apply (fastforce simp: valid_sched_valid_sched_action valid_sched_active_sc_valid_refills ct_in_state_def)
+          apply simp
+         apply (wpsimp wp: resolve_address_bits_valid_fault2 simp: lookup_cap_def lookup_cap_and_slot_def lookup_slot_for_thread_def)
+        apply wp
+         apply (case_tac epCap; simp split del: if_split)
+                      apply wpsimp
+                     apply wpsimp
+                    apply (rename_tac readright; case_tac readright; simp)
+                     apply wp
+                       apply simp
+                       apply wp
+                      apply (wp getNotification_wp)
+                     apply clarsimp
+                    apply (wpsimp+)[13]
+       apply (wpsimp wp: hoare_vcg_imp_lift' simp: valid_fault_def)
+      apply (wpsimp+)[3]
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_pspace_def ct_in_state_def
+                         valid_sched_valid_sched_action valid_sched_active_sc_valid_refills
+                  dest!: get_tcb_SomeD)
+   apply (erule (1) valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def tcb_cap_cases_def)
+  apply (clarsimp simp: invs'_def cur_tcb'_def valid_pspace'_def sch_act_sane_def ct_in_state'_def)
+  done
 
 lemma handleRecv_isBlocking_corres:
-  "corres dc (einvs and ct_active)
+  "corres dc (einvs and ct_active and scheduler_act_sane and current_time_bounded 2
+              and ct_not_queued and ct_not_in_release_q)
              (invs' and ct_active' and sch_act_sane and
                     (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
             (handle_recv isBlocking canReply) (handleRecv isBlocking canReply)"
@@ -1610,8 +1719,7 @@ lemma hw_invs'[wp]:
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: handleRecv_def cong: if_cong split del: if_split)
   apply (rule hoare_seq_ext[OF _ getCurThread_sp])
-  apply (rule hoare_seq_ext_skip)
-   apply (wpsimp simp: getCapReg_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule catch_wp; (solves wpsimp)?)
   apply (rule_tac A=A and
                   B="\<lambda>rv. A and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
@@ -2118,8 +2226,7 @@ lemma handleCall_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getCapReg_corres])
       apply (simp, rule handleInvocation_corres; simp)
-     apply (wpsimp simp: getCapReg_def)+
-  apply (clarsimp simp: cur_tcb'_def)
+     apply wpsimp+
   done
 
 lemma hc_invs'[wp]:
@@ -2131,8 +2238,7 @@ lemma hc_invs'[wp]:
   apply (clarsimp simp: handleCall_def)
   apply (rule validE_valid)
   apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
-  apply (wpsimp simp: getCapReg_def)
-  apply (clarsimp simp: cur_tcb'_def cur_tcb'_asrt_def)
+  apply wpsimp
   done
 
 lemma cteInsert_sane[wp]:
@@ -2172,7 +2278,9 @@ lemma handleEvent_corres:
 proof -
   have hw:
     "\<And>isBlocking canGrant.
-     corres dc (einvs and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
+     corres dc (einvs and ct_running and valid_machine_time and current_time_bounded 2
+                and ct_released and (\<lambda>s. scheduler_action s = resume_cur_thread)
+                and ct_not_in_release_q and ct_not_queued)
                (invs' and ct_running'
                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
                (handle_recv isBlocking canGrant) (handleRecv isBlocking canGrant)"
@@ -2186,7 +2294,6 @@ proof -
     show ?thesis
       apply (case_tac event)
           apply (simp_all add: handleEvent_def)
-
           apply (rename_tac syscall)
           apply (case_tac syscall)
           apply (auto intro: corres_guard_imp[OF handleSend_corres]
