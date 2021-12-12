@@ -1612,7 +1612,6 @@ lemma hw_invs'[wp]:
   apply (rule hoare_seq_ext[OF _ getCurThread_sp])
   apply (rule hoare_seq_ext_skip)
    apply (wpsimp simp: getCapReg_def)
-   apply (fastforce simp: ct_in_state'_def)
   apply (rule catch_wp; (solves wpsimp)?)
   apply (rule_tac A=A and
                   B="\<lambda>rv. A and (\<lambda>s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s)
@@ -1622,14 +1621,13 @@ lemma hw_invs'[wp]:
    apply wpsimp
    apply (fastforce simp: ct_in_state'_def)
   apply (rename_tac epCap)
-  apply (case_tac epCap; clarsimp?, (solves wpsimp)?)
-   apply (wpsimp wp: getNotification_wp)
+  apply (case_tac epCap; clarsimp split del: if_split; (wpsimp; fail)?)
+   apply (rename_tac readright; case_tac readright; (wp getNotification_wp |simp)+)
    apply (clarsimp simp: obj_at_simps isNotificationCap_def)
-  apply (intro conjI impI; (solves wpsimp)?)
   by (wpsimp simp: lookupReply_def getCapReg_def
                wp: hoare_vcg_conj_liftE
       | wp (once) hoare_drop_imps)+
-     (clarsimp simp: obj_at_simps ct_in_state'_def pred_tcb_at'_def) \<comment> \<open>takes 30 seconds\<close>
+     (clarsimp simp: obj_at_simps ct_in_state'_def pred_tcb_at'_def)
 
 lemma setSchedulerAction_obj_at'[wp]:
   "\<lbrace>obj_at' P p\<rbrace> setSchedulerAction sa \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
