@@ -3684,6 +3684,22 @@ method add_cur_tcb' =
   rule_tac Q="\<lambda>s'. cur_tcb' s'" in corres_cross_add_guard,
   fastforce intro!: cur_tcb_cross
 
+lemma cur_sc_tcb_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; valid_objs s; pspace_aligned s; pspace_distinct s;
+    cur_sc_tcb s; schact_is_rct s\<rbrakk>
+  \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s')) (ksCurSc s') s'"
+  apply (clarsimp simp: obj_at_def sc_tcb_sc_at_def cur_sc_tcb_def
+                 dest!: schact_is_rct state_relationD)
+  apply (frule (1) pspace_relation_absD)
+  apply clarsimp
+  apply (prop_tac "valid_sched_context_size n")
+   apply (erule (1) valid_sched_context_size_objsI)
+  apply (clarsimp simp: if_split_asm)
+  apply (rename_tac z; case_tac z; simp)
+  apply (drule (3) aligned_distinct_ko_at'I[where 'a=sched_context], simp)
+  apply (clarsimp simp: obj_at'_def sc_relation_def projectKOs)
+  done
+
 lemma reply_at_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ps: "pspace_aligned s" "pspace_distinct s"
