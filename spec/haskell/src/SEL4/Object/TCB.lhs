@@ -1037,10 +1037,9 @@ On some architectures, the thread context may include registers that may be modi
 
 > checkBudgetRestart :: Kernel Bool
 > checkBudgetRestart = do
+>     result <- checkBudget
 >     ct <- getCurThread
 >     runnable <- isRunnable ct
->     assert runnable "current thread should be runnbale"
->     result <- checkBudget
 >     when (not result && runnable) $ do
 >         setThreadState Restart ct
 >     return result
