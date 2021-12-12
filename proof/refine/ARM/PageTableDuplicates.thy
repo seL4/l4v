@@ -2202,7 +2202,7 @@ lemma hs_valid_duplicates'[wp]:
   "\<lbrace>invs' and ct_active' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
   handleSend blocking \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule validE_valid)
-  apply (simp add: handleSend_def getCapReg_def)
+  apply (simp add: handleSend_def)
   apply (wp | simp)+
   done
 
@@ -2213,8 +2213,7 @@ lemma hc_valid_duplicates'[wp]:
   apply (clarsimp simp: handleCall_def)
   apply (rule validE_valid)
   apply (rule hoare_vcg_seqE[OF _ stateAssertE_sp])
-  apply (wpsimp simp: getCapReg_def)
-  apply (clarsimp simp: cur_tcb'_def cur_tcb'_asrt_def)
+  apply wpsimp
   done
 
 lemma handleRecv_valid_duplicates'[wp]:
