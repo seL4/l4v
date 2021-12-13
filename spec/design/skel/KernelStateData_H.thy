@@ -58,6 +58,7 @@ record kernel_state =
   ksReadyQueuesL2Bitmap :: "domain \<times> nat \<Rightarrow> machine_word"
   ksCurThread          :: machine_word
   ksIdleThread         :: machine_word
+  ksIdleSC             :: machine_word
   ksConsumedTime       :: time
   ksCurTime            :: time
   ksCurSc              :: machine_word
