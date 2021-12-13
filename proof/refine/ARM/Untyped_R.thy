@@ -1351,6 +1351,7 @@ lemma do_ext_op_update_cdt_list_symb_exec_l':
 
 crunches updateMDB, updateNewFreeIndex
   for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   and ups'[wp]: "\<lambda>s. P (gsUserPages s)"
   and cns'[wp]: "\<lambda>s. P (gsCNodes s)"
   and ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
@@ -1362,12 +1363,14 @@ crunches updateMDB, updateNewFreeIndex
   and ksCurrentTime[wp]: "\<lambda>s. P (ksCurTime s)"
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   and ksReprogramTimer[wp]: "\<lambda>s. P (ksReprogramTimer s)"
+
 crunches insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
   and norlq[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"

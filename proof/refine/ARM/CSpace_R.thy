@@ -709,6 +709,7 @@ lemma set_cap_not_quite_corres':
   "pspace_relation (kheap s) (ksPSpace s')"
   "cur_thread s    = ksCurThread s'"
   "idle_thread s   = ksIdleThread s'"
+  "idle_sc_ptr     = ksIdleSC s'"
   "machine_state s = ksMachineState s'"
   "work_units_completed s = ksWorkUnitsCompleted s'"
   "domain_index s  = ksDomScheduleIdx s'"
@@ -739,6 +740,7 @@ lemma set_cap_not_quite_corres':
              (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
              cur_thread t    = ksCurThread t' \<and>
              idle_thread t   = ksIdleThread t' \<and>
+             idle_sc_ptr     = ksIdleSC t' \<and>
              machine_state t = ksMachineState t' \<and>
              work_units_completed t = ksWorkUnitsCompleted t' \<and>
              domain_index t  = ksDomScheduleIdx t' \<and>
@@ -2795,6 +2797,12 @@ lemma setCTE_it'[wp]:
   apply (wp|wpc|simp del: hoare_fail_any)+
   done
 
+lemma setCTE_idldSC[wp]:
+  "setCTE c p \<lbrace>\<lambda>s. P (ksIdleSC s)\<rbrace>"
+  apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
+  apply (wp|wpc|simp del: hoare_fail_any)+
+  done
+
 crunches setCTE
   for idle_sc_at'[wp]: "\<lambda>s. idle_sc_at' p s"
 
@@ -3080,7 +3088,9 @@ lemma setCTE_ksDomSchedule[wp]:
 crunch ksCurDomain[wp]: cteInsert "\<lambda>s. P (ksCurDomain s)"
   (wp:  crunch_wps )
 
-crunch ksIdleThread[wp]: cteInsert "\<lambda>s. P (ksIdleThread s)"
+crunches cteInsert
+  for ksIdleThread[wp]:  "\<lambda>s. P (ksIdleThread s)"
+  and ksIdlSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   (wp: crunch_wps)
 
 crunch ksDomSchedule[wp]: cteInsert "\<lambda>s. P (ksDomSchedule s)"
@@ -3576,6 +3586,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_as' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksArchState s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_id s)\<rbrace> f \<lbrace>\<lambda>rv s. P (idle_thread s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_id' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksIdleThread s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_idsc' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksIdleSC s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_irqn s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_irq_node s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_irqs s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_states s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_irqs' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
@@ -3622,6 +3633,7 @@ lemma corres_caps_decomposition:
                   \<and> (new_as s, new_as' s') \<in> arch_state_relation
                   \<and> new_ct s = new_ct' s'
                   \<and> new_id s = new_id' s'
+                  \<and> idle_sc_ptr = new_idsc' s'
                   \<and> new_ms s = new_ms' s'
                   \<and> new_di s = new_dsi' s'
                   \<and> new_dl s = new_ds' s'
@@ -4373,6 +4385,7 @@ lemma cteInsert_simple_corres:
              apply (clarsimp simp: corres_underlying_def state_relation_def
                                    in_monad valid_mdb'_def valid_mdb_ctes_def)
              apply (drule (22) set_cap_not_quite_corres)
+               apply fastforce
               apply (rule refl)
              apply (elim conjE exE)
              apply (rule bind_execI, assumption)

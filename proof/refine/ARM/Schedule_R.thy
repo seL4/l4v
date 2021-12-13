@@ -2661,7 +2661,7 @@ lemma commitTime_invs':
       apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_def sc_size_bounds_def objBitsKO_def live_sc'_def)
       apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post)
        apply (wpsimp wp: isRoundRobin_wp)
-      apply (wpsimp wp: getConsumedTime_wp  getCurSc_wp)+
+      apply (wpsimp wp: getConsumedTime_wp getCurSc_wp)+
   by (clarsimp simp: active_sc_at'_def obj_at'_real_def ko_wp_at'_def)
 
 lemma switchSchedContext_invs':
@@ -3248,11 +3248,10 @@ lemma releaseQNonEmptyAndReady_eq:
      valid_objs s; valid_release_q s;
      active_sc_valid_refills s; valid_objs' s'\<rbrakk>
    \<Longrightarrow> read_release_q_non_empty_and_ready s = releaseQNonEmptyAndReady s'"
-  apply (clarsimp simp: read_release_q_non_empty_and_ready_simp releaseQNonEmptyAndReady_simp
-                        readTCBRefillReady_simp release_queue_relation_def
-                 dest!: state_relationD)
-  by (fastforce simp: state_relation_def release_queue_relation_def
-              intro!: readTCBRefillReady_simp valid_release_q_active_sc)
+  apply (clarsimp simp: read_release_q_non_empty_and_ready_simp releaseQNonEmptyAndReady_simp)
+  apply (fastforce simp: state_relation_def release_queue_relation_def
+                 intro!: readTCBRefillReady_simp valid_release_q_active_sc)
+  done
 
 lemma ksReleaseQueue_length_well_founded:
   "wf {((r :: unit, s :: kernel_state), (r', s')). length (ksReleaseQueue s)
