@@ -4931,14 +4931,20 @@ lemma commitTime_corres:
   apply clarsimp
   apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corressimp corres: get_sc_corres)
+  apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp])
+    apply wpsimp
+   apply (wpsimp simp: getIdleSC_def)
+  apply (rename_tac idleSCPtr)
   apply (rule corres_split'[rotated, where r'=dc])
      apply (rule setConsumedTime_corres)
      apply simp
     apply wpsimp
    apply wpsimp
   apply (clarsimp simp: when_def)
+  apply (rule_tac F="idleSCPtr = idle_sc_ptr" in corres_req)
+   apply (clarsimp simp: state_relation_def)
   apply (rule corres_if_split; fastforce?)
-   apply (clarsimp simp: sc_relation_def active_sc_def)
+   apply (fastforce simp: sc_relation_def active_sc_def)
   apply (rule corres_split'[rotated 2, OF gets_sp getConsumedTime_sp])
    apply corressimp
   apply clarsimp

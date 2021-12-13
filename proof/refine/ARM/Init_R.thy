@@ -105,6 +105,7 @@ definition zeroed_intermediate_state ::
     ksReadyQueuesL2Bitmap = K 0,
     ksCurThread = 0,
     ksIdleThread = 0,
+    ksIdleSC = idle_sc_ptr,
     ksConsumedTime = 0,
     ksCurTime = 0,
     ksCurSc = 0,

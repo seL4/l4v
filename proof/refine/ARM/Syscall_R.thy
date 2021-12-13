@@ -1804,11 +1804,19 @@ crunches refillResetRR, refillBudgetCheck
   and sch_act_sane[wp]: sch_act_sane
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' p"
   and typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
+  and sc_at'_n[wp]: "\<lambda>s. Q (sc_at'_n n p s)"
   (wp: crunch_wps)
 
 crunches chargeBudget
   for typ_at'[wp]: "\<lambda>s. Q (typ_at' P p s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
+
+end
+
+global_interpretation refillResetRR: typ_at_all_props' "refillResetRR scPtr"
+  by typ_at_props'
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma refillResetRR_invs'[wp]:
   "\<lbrace>invs' and ct_active' and sch_act_sane\<rbrace>
@@ -1820,119 +1828,141 @@ lemma refillResetRR_invs'[wp]:
   by (fastforce dest!: valid_sc_strengthen[OF invs_valid_objs']
                  simp: valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps')
 
+lemmas refill_reset_rr_typ_ats [wp] =
+  abs_typ_at_lifts [OF refill_reset_rr_typ_at]
+
+crunches refillResetRR
+  for ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
+
+crunches setConsumedTime, refillResetRR
+  for cur_tcb'[wp]: cur_tcb'
+  (simp: cur_tcb'_def)
+
 lemma chargeBudget_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
-      and valid_ready_qs and scheduler_act_sane and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
+      and valid_ready_qs and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
       and released_ipc_queues and cur_sc_active and ct_active and schact_is_rct
-      and current_time_bounded 5 and cur_sc_offset_ready 0
-      and ct_not_queued and ct_not_in_release_q and current_time_bounded 2)
+      and current_time_bounded 5
+      and ct_not_queued and ct_not_in_release_q
+      and cur_sc_offset_ready 0)
      invs'
      (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout True)"
+  (is "corres _ (?pred and cur_sc_offset_ready 0) _ _ _")
   unfolding chargeBudget_def charge_budget_def ifM_def bind_assoc
   apply (rule_tac Q=sch_act_sane in corres_cross_add_guard)
    apply (clarsimp simp: sch_act_sane_def scheduler_act_sane_def sched_act_relation_def
                   dest!: state_relationD)
-   apply (case_tac "scheduler_action s"; simp)
+   apply (case_tac "scheduler_action s"; simp add: schact_is_rct_def)
   apply (rule_tac Q=ct_active' in corres_cross_add_guard)
-   apply (fastforce elim!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
+   apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
   apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
-   apply (fastforce simp: invs_def valid_state_def valid_pspace_def elim!: cur_sc_tcb_cross)
+   apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
   apply (rule_tac Q="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
-   apply (prop_tac "cur_sc s = ksCurSc s'", clarsimp dest!: state_relationD)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-   apply (fastforce dest: valid_sched_context_size_objsI elim!: is_active_sc'2_cross
-                    simp: invs_def valid_state_def valid_pspace_def cur_sc_tcb_def sc_tcb_sc_at_def
-                          obj_at_def is_sc_obj)
+  apply (fastforce intro: valid_objs_valid_sched_context_size
+                    simp: sc_at_pred_n_def obj_at_def is_sc_obj_def state_relation_def vs_all_heap_simps
+                   intro: is_active_sc'2_cross)
+  apply (rule_tac Q="\<lambda>s. sc_at (cur_sc s) s" in corres_cross_add_abs_guard)
+   apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
   apply add_cur_tcb'
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ getCurSc_corres])
-      apply (rule corres_split_eqr[OF _ isRoundRobin_corres])
-        apply (rule corres_split[OF corres_if2], simp)
-            apply (rule refillResetRR_corres)
-           apply (rule refillBudgetCheck_corres, simp)
-          apply simp
-          apply (rule corres_split[OF updateSchedContext_corres])
-               apply (fastforce simp: sc_relation_def obj_at'_def projectKOs obj_at_def is_sc_obj opt_map_red
-                               dest!: state_relation_sc_relation)
-              apply (fastforce simp: sc_relation_def obj_at'_def projectKOs obj_at_def is_sc_obj opt_map_red
-                              dest!: state_relation_sc_replies_relation elim: sc_replies_relation_prevs_list)
-             apply (clarsimp simp: objBits_simps)
-            apply (rule corres_split[OF setConsumedTime_corres], simp)
-              apply (simp add: andM_def whenM_def ifM_def when_def[symmetric] bind_assoc)
-              apply (rule corres_split_eqr[OF _ getCurThread_corres])
-                apply (rule corres_split_eqr[OF _ isSchedulable_corres])
-                  apply (fold dc_def)
-                  apply (rule corres_when2, simp)
-                  apply (rule corres_split[OF endTimeslice_corres])
-                    apply (rule corres_split[OF rescheduleRequired_corres])
-                      apply (rule setReprogramTimer_corres)
-                     apply wpsimp
-                    apply wpsimp
-                   apply (rule hoare_strengthen_post
-                                   [where Q="\<lambda>_. invs and active_sc_valid_refills
-                                                 and valid_sched_action", rotated])
-                    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
-                                          valid_sched_action_def)
-                   apply (wpsimp wp: end_timeslice_invs end_timeslice_valid_sched_action)
-                  apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs'", rotated])
-                   apply (clarsimp simp: invs'_def valid_pspace'_def)
-                  apply wpsimp
-                 apply (wpsimp wp: hoare_drop_imp)
-                apply (wpsimp wp: hoare_drop_imp)
-               apply wpsimp+
-            apply (rule hoare_strengthen_post
-                           [where Q="\<lambda>_. invs' and ct_active' and sch_act_sane", rotated])
-             apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs')
-            apply wpsimp
-           apply (clarsimp simp: consumed_time_update_arch.state_refs_update sc_consumed_update_eq[symmetric])
-           apply (wpsimp wp: hoare_vcg_conj_lift; (solves wpsimp)?
-                | strengthen valid_objs_valid_tcbs | wps)+
-          apply (wpsimp wp: updateSchedContext_invs')
-         apply (wpsimp wp: sc_at_typ_at)
-          apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and valid_list and valid_sched_action
-                             and active_sc_valid_refills and valid_release_q and ct_active
-                             and valid_ready_qs and released_ipc_queues and cur_sc_active
-                             and scheduler_act_sane and schact_is_rct and current_time_bounded 2
-                             and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)", rotated])
-           apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cur_tcb_def)
-          apply ((wpsimp wp: refill_reset_rr_valid_sched_action | wps)+)[1]
-         apply (wpsimp simp: cur_tcb_def[symmetric]
-                         wp: refill_budget_check_valid_sched_action_act_not
-                             refill_budget_check_active_sc_valid_refills
-                             refill_budget_check_valid_release_q
-                             refill_budget_check_valid_ready_qs_not_queued
-                       cong: conj_cong)
-         apply (rule hoare_vcg_conj_lift)
-          apply wps
-          apply (wpsimp wp: refill_budget_check_released_ipc_queues
-               | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
-         apply (wpsimp wp: typ_at_lifts
-               | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
-       apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp)+
+  apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
+   apply (corressimp corres: getCurSc_corres)
+  apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp]; wpsimp simp: getIdleSC_def)
+  apply (rule_tac F="idle_sc_ptr = idleSCPtr" in corres_req)
+   apply (clarsimp simp: state_relation_def)
+  apply (rule_tac Q="\<lambda>_. ?pred"
+              and Q'="\<lambda>_. invs' and sch_act_sane and cur_tcb'"
+               in corres_split')
+     apply (clarsimp simp: when_def split del: if_split)
+     apply (rule corres_if_split; (solves corressimp)?)
+     apply (rule corres_split'[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
+      apply (corressimp corres: isRoundRobin_corres)
+     apply (rule_tac Q="\<lambda>_ s. sc_at (cur_sc s) s \<and> cur_sc s = scPtr"
+                 and Q'="\<lambda>_ s'. sc_at' (ksCurSc s') s' \<and> ksCurSc s' = scPtr"
+                 and r'=dc
+                  in corres_split')
+        apply (rule corres_if_split; (solves simp)?)
+         apply (corressimp corres: refillResetRR_corres)
+         apply (fastforce intro!: active_sc_valid_refillsE)
+        apply (corressimp corres: refillBudgetCheck_corres)
+        apply (fastforce intro!: active_sc_valid_refillsE valid_objs'_valid_refills')
+       apply (rule corres_guard_imp)
+         apply (rule updateSchedContext_corres)
+           apply (fastforce simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red
+                           dest!: state_relation_sc_relation)
+          apply (fastforce simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red
+                          dest!: state_relation_sc_replies_relation
+                           elim: sc_replies_relation_prevs_list)
+         apply (clarsimp simp: objBits_simps)
+        apply simp
+       apply simp
+      apply ((wpsimp | wps)+)[1]
+     apply ((wpsimp | wps)+)[1]
+    apply (rule corres_split_skip)
+       apply wpsimp
+      apply wpsimp
+     apply (corressimp corres: setConsumedTime_corres)
+    apply (clarsimp simp: andM_def ifM_def whenM_def when_def bind_assoc)
+    apply (rule corres_split'[rotated 2, OF gets_sp getCurThread_sp])
+     apply corressimp
+    apply (rule corres_split'[rotated 2, OF is_schedulable_sp' isSchedulable_sp])
+     apply (corressimp corres: isSchedulable_corres)
+     apply (fastforce dest: invs_cur simp: cur_tcb_def)
+    apply (rule corres_if_split; (solves simp)?)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF endTimeslice_corres])
+        apply (rule corres_split[OF rescheduleRequired_corres])
+          apply (rule setReprogramTimer_corres)
+         apply wpsimp+
+       apply (rule hoare_strengthen_post [where Q="\<lambda>_. invs and active_sc_valid_refills
+                                                       and valid_sched_action", rotated])
+        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
+                              valid_sched_action_def)
+       apply (wpsimp wp: end_timeslice_invs end_timeslice_valid_sched_action)
+      apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs'", rotated])
+       apply (clarsimp simp: invs'_def valid_pspace'_def)
+      apply wpsimp
+     apply (fastforce simp: current_time_bounded_def)
+    apply (fastforce dest: isSchedulable_bool_runnableE
+                     simp: cur_tcb'_def ct_in_state'_def runnable_eq_active')
+   apply wps_conj_solves
+        apply (wpsimp wp: sc_consumed_add_invs refill_budget_check_invs)
+       apply (wpsimp wp: refill_reset_rr_valid_sched_action
+                         refill_budget_check_valid_sched_action_act_not is_round_robin_wp)
+       apply (fastforce dest: schact_is_rct)
+      apply (wpsimp wp: refill_budget_check_active_sc_valid_refills is_round_robin_wp)
+      apply (clarsimp simp: obj_at_def vs_all_heap_simps)
+     apply (wpsimp wp: refill_budget_check_valid_release_q is_round_robin_wp)
+     apply (fastforce dest!: cur_sc_chargeable_sc_not_in_release_q invs_cur_sc_chargeableE
+                             active_sc_valid_refillsE
+                       simp: vs_all_heap_simps sc_at_pred_n_def obj_at_def valid_refills_def
+                             rr_valid_refills_def)
+    apply (wpsimp wp: refill_budget_check_valid_ready_qs_not_queued is_round_robin_wp)
+    apply (fastforce simp: sc_tcb_sc_at_def invs_def valid_state_def valid_pspace_def
+                           vs_all_heap_simps obj_at_def cur_sc_tcb_def
+                    dest!: sym_ref_tcb_sc schact_is_rct active_sc_valid_refillsE)
+   apply (wpsimp wp: refill_budget_check_released_ipc_queues is_round_robin_wp)
    apply (frule invs_cur_sc_tcb)
    apply (frule invs_valid_objs)
    apply (rule context_conjI)
-    apply (fastforce dest!: schact_is_rct dest: valid_sched_context_size_objsI
-                     simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj)
-   apply (drule (1) active_sc_valid_refillsE, clarsimp)
-   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def round_robin_def obj_at_def
-                         vs_all_heap_simps current_time_bounded_strengthen tcb_at_kh_simps
-                  dest!: sym[of "Some _"])
-   apply (intro conjI; clarsimp)
-    apply (clarsimp simp: sc_refills_sc_at_def obj_at_def cur_sc_tcb_def
-                          sc_valid_refills_def rr_valid_refills_def
-                   dest!: schact_is_rct)
-   apply (intro conjI; clarsimp simp: cur_sc_tcb_def dest!: schact_is_rct)
-     apply ((fastforce simp: sc_tcb_sc_at_def obj_at_def dest!: sym_ref_tcb_sc)+)[2]
-   apply (drule ct_runnable_ct_not_blocked)
+    apply (fastforce simp: obj_at_def vs_all_heap_simps
+                    dest!: active_sc_valid_refillsE)
+   apply (clarsimp simp: cur_sc_tcb_def schact_is_rct_def)
+   apply (frule ct_runnable_ct_not_blocked)
    apply (clarsimp simp: cur_sc_not_blocked_def)
-   apply (prop_tac "heap_ref_eq (cur_sc s) (cur_thread s) (tcb_scps_of s)")
-    apply (frule (1) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[symmetric, OF refl refl, THEN iffD1])
-    apply (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
-   apply (drule sym_refs_inv_tcb_scps)
-   apply (clarsimp simp: heap_refs_inv_def2 vs_all_heap_simps ct_in_state_def pred_tcb_at_def obj_at_def)
-  apply (fastforce simp: invs'_def valid_pspace'_def elim!: valid_objs'_valid_refills')
+   apply (prop_tac "cur_sc_tcb_are_bound s")
+    apply (fastforce intro: invs_strengthen_cur_sc_tcb_are_bound)
+   apply (clarsimp simp: vs_all_heap_simps ct_in_state_def pred_tcb_at_def obj_at_def sc_at_pred_n_def)
+   apply (frule sym_ref_tcb_sc[rotated], fastforce+)
+  apply wps_conj_solves
+  apply (rule hoare_when_cases, simp)
+  apply (rule hoare_seq_ext[OF _ isRoundRobin_sp])
+  apply (rule_tac B="\<lambda>_. invs'" in hoare_seq_ext[rotated])
+   apply wpsimp
+  apply (wpsimp wp: updateSchedContext_invs')
+  apply (fastforce dest: invs'_ko_at_valid_sched_context'
+                  intro: if_live_then_nonz_capE'
+                   simp: ko_wp_at'_def obj_at_simps)
   done
 
 lemma checkBudget_corres:
@@ -1975,7 +2005,7 @@ lemma handleYield_corres:
      handle_yield handleYield"
   (is "corres _ ?pre ?pre' _ _")
   apply (rule_tac Q=ct_active' in corres_cross_add_guard)
-   apply (fastforce elim!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
+   apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
   apply (rule_tac Q="\<lambda>s. sc_at' (ksCurSc s) s" in corres_cross_add_guard)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                   dest!: state_relationD schact_is_rct)
@@ -2021,13 +2051,10 @@ lemma handleYield_corres:
                apply (clarsimp simp: objBits_simps)
               apply (rule sc_at_typ_at, wp)
              apply (wpsimp wp: typ_at_lifts)
-            apply (clarsimp simp: valid_sched_def, frule invs_valid_objs)
-            apply (fastforce simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj
-                            dest!: invs_cur_sc_tcb schact_is_rct elim: valid_sched_context_size_objsI)
-           apply clarsimp
+            apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
+           apply fastforce
           apply wpsimp
-           apply (fastforce simp: obj_at_def is_sc_obj opt_map_def split: Structures_A.kernel_object.splits
-                            elim: valid_sched_context_size_objsI[OF invs_valid_objs])
+           apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
           apply simp
          apply (wpsimp wp: get_refills_wp)
          apply (clarsimp simp: obj_at_def is_sc_obj)
