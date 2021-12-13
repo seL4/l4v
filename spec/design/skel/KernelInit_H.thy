@@ -71,6 +71,7 @@ newKernelState_def:
         ksReadyQueuesL2Bitmap = const 0,
         ksCurThread = error [],
         ksIdleThread = error [],
+        ksIdleSC = error [],
         ksConsumedTime = 0,
         ksCurTime = 0,
         ksCurSc = error [],
