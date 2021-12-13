@@ -1011,10 +1011,12 @@ On some architectures, the thread context may include registers that may be modi
 > chargeBudget :: Ticks -> Bool -> Bool -> Kernel ()
 > chargeBudget consumed canTimeoutFault isCurCPU = do
 >     scPtr <- getCurSc
->     ifM (isRoundRobin scPtr)
->       (refillResetRR scPtr)
->       (refillBudgetCheck consumed)
->     updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
+>     idleSCPtr <- getIdleSC
+>     when (scPtr /= idleSCPtr) $ do
+>       ifM (isRoundRobin scPtr)
+>           (refillResetRR scPtr)
+>           (refillBudgetCheck consumed)
+>       updateSchedContext scPtr $ \sc -> sc { scConsumed = scConsumed sc + consumed }
 >     setConsumedTime 0
 >     whenM ((return isCurCPU) `andM` (getCurThread >>= isSchedulable)) $ do
 >       endTimeslice canTimeoutFault
