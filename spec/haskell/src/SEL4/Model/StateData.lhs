@@ -94,6 +94,10 @@ The top-level kernel state structure is called "KernelState". It contains:
 
 >         ksIdleThread :: PPtr TCB,
 
+\item a pointer to the idle thread's scheduling context;
+
+>         ksIdleSC :: PPtr SchedContext,
+
 >         ksConsumedTime :: Time,
 
 >         ksCurTime :: Time,
@@ -188,10 +192,13 @@ ready queues have runnable' thread state. We add an assertion that it does hold.
 > ready_qs_runnable :: KernelState -> Bool
 > ready_qs_runnable _ = True
 
-Similarly, these functions access the idle thread pointer, the ready queue for a given priority level (adjusted to account for the active security domain), the requested action of the scheduler, and the interrupt handler state.
+Similarly, these functions access the idle thread pointer, the idle sc pointer, the ready queue for a given priority level (adjusted to account for the active security domain), the requested action of the scheduler, and the interrupt handler state.
 
 > getIdleThread :: Kernel (PPtr TCB)
 > getIdleThread = gets ksIdleThread
+
+> getIdleSC :: Kernel (PPtr SchedContext)
+> getIdleSC = gets ksIdleSC
 
 > setIdleThread :: PPtr TCB -> Kernel ()
 > setIdleThread tptr = modify (\ks -> ks { ksIdleThread = tptr })
@@ -320,6 +327,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReleaseQueue = [],
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
+>         ksIdleSC = error "Idle scheduling context has not been created",
 >         ksReprogramTimer = False,
 >         ksConsumedTime = 0,
 >         ksCurTime = 0,
