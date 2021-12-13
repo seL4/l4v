@@ -1724,6 +1724,7 @@ lemma set_cap_not_quite_corres:
   "pspace_relation (kheap s) (ksPSpace s')"
   "cur_thread s = ksCurThread s'"
   "idle_thread s = ksIdleThread s'"
+  "idle_sc_ptr = ksIdleSC s'"
   "machine_state s = ksMachineState s'"
   "work_units_completed s = ksWorkUnitsCompleted s'"
   "domain_index s = ksDomScheduleIdx s'"
@@ -1754,6 +1755,7 @@ lemma set_cap_not_quite_corres:
              (arch_state t, ksArchState t') \<in> arch_state_relation \<and>
              cur_thread t = ksCurThread t' \<and>
              idle_thread t = ksIdleThread t' \<and>
+             idle_sc_ptr = ksIdleSC t' \<and>
              machine_state t = ksMachineState t' \<and>
              work_units_completed t = ksWorkUnitsCompleted t' \<and>
              domain_index t = ksDomScheduleIdx t' \<and>
@@ -1840,6 +1842,7 @@ lemma updateCap_stuff:
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
+         ksIdleSC s'' = ksIdleSC s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
          ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
@@ -2368,6 +2371,7 @@ lemma updateMDB_eqs:
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
+         ksIdleSC s'' = ksIdleSC s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
          ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksInterruptState s'' = ksInterruptState s' \<and>
@@ -2467,6 +2471,7 @@ lemma updateMDB_the_lot:
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
+         ksIdleSC s'' = ksIdleSC s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
          ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
@@ -4912,6 +4917,7 @@ lemma updateMDB_the_lot':
          ksWorkUnitsCompleted s'' = ksWorkUnitsCompleted s' \<and>
          ksCurThread s'' = ksCurThread s' \<and>
          ksIdleThread s'' = ksIdleThread s' \<and>
+         ksIdleSC s'' = ksIdleSC s' \<and>
          ksReadyQueues s'' = ksReadyQueues s' \<and>
          ksReleaseQueue s'' = ksReleaseQueue s' \<and>
          ksSchedulerAction s'' = ksSchedulerAction s' \<and>
@@ -4994,6 +5000,7 @@ lemma cteInsert_corres:
              apply (clarsimp simp: corres_underlying_def state_relation_def
                                    in_monad valid_mdb'_def valid_mdb_ctes_def)
              apply (drule (22) set_cap_not_quite_corres)
+               apply fastforce
               apply (rule refl)
              apply (elim conjE exE)
              apply (rule bind_execI, assumption)
@@ -6464,8 +6471,9 @@ lemma cteSwap_corres:
                         state_relation_def)
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule (16) set_cap_not_quite_corres)
-      apply (erule cte_wp_at_weakenE, rule TrueI)
-     apply assumption+
+          apply fastforce
+         apply (erule cte_wp_at_weakenE, rule TrueI)
+        apply assumption+
    apply (rule refl)
   apply (elim exE conjE)
   apply (rule bind_execI, assumption)
@@ -6484,7 +6492,8 @@ lemma cteSwap_corres:
                          cte_wp_at_weakenE)
   apply (elim conjE)
   apply (drule (18) set_cap_not_quite_corres)
-       apply simp
+        apply simp
+       apply fastforce
       apply assumption+
    apply (rule refl)
   apply (elim exE conjE)

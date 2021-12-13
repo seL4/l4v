@@ -4918,6 +4918,7 @@ crunches cteSwap
   and ksCurDomain [wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksDomSchedule [wp]:  "\<lambda>s. P (ksDomSchedule s)"
   and it  [wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
   and tcbDomain_obj_at'[wp]: "obj_at' (\<lambda>tcb. x = tcbDomain tcb) t"
 
 lemma cteSwap_idle'[wp]:
@@ -5820,6 +5821,7 @@ lemmas finaliseSlot_abort_cases
 
 crunches capSwapForDelete
   for it[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksIdleSC[wp]: "\<lambda>s. P (ksIdleSC s)"
 
 lemma cteDelete_delete_cases:
   "\<lbrace>\<top>\<rbrace>

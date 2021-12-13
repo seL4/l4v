@@ -744,6 +744,7 @@ where
        \<and> interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')
        \<and> (cur_thread s = ksCurThread s')
        \<and> (idle_thread s = ksIdleThread s')
+       \<and> (idle_sc_ptr = ksIdleSC s')
        \<and> (machine_state s = ksMachineState s')
        \<and> (work_units_completed s = ksWorkUnitsCompleted s')
        \<and> (domain_index s = ksDomScheduleIdx s')
@@ -801,6 +802,7 @@ lemma state_relationD:
   interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<and>
   cur_thread s = ksCurThread s' \<and>
   idle_thread s = ksIdleThread s' \<and>
+  idle_sc_ptr = ksIdleSC s' \<and>
   machine_state s = ksMachineState s' \<and>
   work_units_completed s = ksWorkUnitsCompleted s' \<and>
   domain_index s = ksDomScheduleIdx s' \<and>

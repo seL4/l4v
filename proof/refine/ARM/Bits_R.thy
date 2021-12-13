@@ -266,6 +266,9 @@ lemma getIdleThread_corres [corres]:
 lemma git_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleThread s) s\<rbrace> getIdleThread \<lbrace>P\<rbrace>"
   by (unfold getIdleThread_def, wp)
 
+lemma getIdleSc_wp [wp]: "\<lbrace>\<lambda>s. P (ksIdleSC s) s\<rbrace> getIdleSC \<lbrace>P\<rbrace>"
+  by (unfold getIdleSC_def, wp)
+
 lemma gsa_wp [wp]: "\<lbrace>\<lambda>s. P (ksSchedulerAction s) s\<rbrace> getSchedulerAction \<lbrace>P\<rbrace>"
   by (unfold getSchedulerAction_def, wp)
 

@@ -4030,6 +4030,10 @@ lemma getIdleThread_sp:
   "\<lbrace>P\<rbrace> getIdleThread \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksIdleThread s)\<rbrace>"
   by wpsimp
 
+lemma getIdleSC_sp:
+  "\<lbrace>P\<rbrace> getIdleSC \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksIdleSC s)\<rbrace>"
+  by wpsimp
+
 lemma getReprogramTimer_wp[wp]:
   "\<lbrace>\<lambda>s. P (ksReprogramTimer s) s\<rbrace> getReprogramTimer \<lbrace>P\<rbrace>"
   by (wpsimp simp: getReprogramTimer_def)
@@ -4884,6 +4888,8 @@ lemma is_active_sc'2_cross:
 
 method add_sym_refs =
   rule_tac Q="\<lambda>s'. sym_refs (state_refs_of' s')" in corres_cross_add_guard,
+  (clarsimp simp: pred_conj_def)?,
+  (elim conjE)?,
   (frule invs_sym_refs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
   fastforce dest: state_refs_of_cross_eq
 
