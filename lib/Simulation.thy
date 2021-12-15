@@ -51,7 +51,7 @@ definition
 
 text \<open>
   The sequence of operations in the data type is then executed
-  in an initial state by initialising the private state, executing
+  in an initial state by initialising the observable state, executing
   the transition relation over this private state, and finally
   projecting back out the set of final, observable states.
 \<close>
@@ -96,7 +96,7 @@ where
 
 text \<open>
   Refinement is a global property over all executions and/or all
-  hoare triples. As this is hard to show, we define the weaker concept
+  hoare triples. As this is hard to show, we define the stronger concept
   of forward simulation.
 \<close>
 definition
