@@ -2184,6 +2184,17 @@ lemma rf_sr_sched_action_relation:
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
+lemma numDomains_sge_1_simp:
+  "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
+  apply (simp add: word_sless_alt sint_numDomains_to_H)
+  apply (subst nat_less_as_int, simp)
+  done
+
+lemma unat_scast_numDomains:
+  "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
+  including no_take_bit
+  by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
+
 end
 end
 

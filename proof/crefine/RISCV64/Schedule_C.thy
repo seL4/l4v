@@ -184,16 +184,6 @@ lemma ceqv_remove_tail_Guard_Skip:
 lemmas ccorres_remove_tail_Guard_Skip
     = ccorres_abstract[where xf'="\<lambda>_. ()", OF ceqv_remove_tail_Guard_Skip]
 
-(* FIXME x64: does this need machine_word? *)
-lemma queue_in_range_pre:
-  "\<lbrakk> (qdom :: word32) \<le> ucast maxDom; prio \<le> ucast maxPrio \<rbrakk>
-    \<Longrightarrow> qdom * of_nat numPriorities + prio < of_nat (numDomains * numPriorities)"
-  by (clarsimp simp: cready_queues_index_to_C_def word_less_nat_alt
-                     word_le_nat_alt unat_ucast maxDom_def seL4_MaxPrio_def
-                     numPriorities_def unat_word_ariths numDomains_def)
-
-lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
-
 lemma switchToThread_ccorres':
   "ccorres (\<lambda>_ _. True) xfdc
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
@@ -215,73 +205,98 @@ proof -
   note prio_and_dom_limit_helpers [simp]
   note ksReadyQueuesL2Bitmap_nonzeroI [simp]
   note Collect_const_mem [simp]
+  (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
+     shape of the proof compared to when numDomains > 1 *)
+  include no_less_1_simps
 
   have invs_no_cicd'_max_CurDomain[intro]:
     "\<And>s. invs_no_cicd' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
     by (simp add: invs_no_cicd'_def)
 
   show ?thesis
-  apply (cinit)
-   apply (simp add: numDomains_def word_sless_alt word_sle_def)
-   apply (ctac (no_vcg) add: getCurDomain_ccorres_dom_')
-     apply clarsimp
-     apply (rename_tac curdom)
-     apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
-     apply (rule ccorres_Guard)
-     apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
-     apply (rename_tac l1)
-     apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
-              in ccorres_cond)
-       subgoal by (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
-      prefer 2 \<comment> \<open>switchToIdleThread\<close>
-      apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
-     apply clarsimp
-     apply (rule ccorres_rhs_assoc)+
-
-     apply (rule ccorres_split_nothrow_novcg)
-         apply (rule_tac xf'=prio_' in ccorres_call)
-            apply (rule getHighestPrio_ccorres[simplified getHighestPrio_def'])
-           apply simp+
+    supply if_split[split del]
+    apply (cinit)
+     apply (simp add: numDomains_sge_1_simp)
+     apply (rule_tac xf'=dom_' and r'="\<lambda>rv rv'. rv' = ucast rv" in ccorres_split_nothrow_novcg)
+         apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+         apply clarsimp
+         apply (rule conseqPre, vcg)
+         apply (rule Collect_mono)
+         apply (clarsimp split: prod.split)
+         apply (clarsimp simp: curDomain_def simpler_gets_def return_def rf_sr_ksCurDomain)
         apply ceqv
        apply clarsimp
-       apply (rename_tac prio)
+       apply (rename_tac curdom)
        apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
-       apply (rule_tac P="prio \<le> maxPriority" in ccorres_cross_over_guard_no_st)
-       apply (rule ccorres_pre_getQueue)
-       apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
-       apply (rule ccorres_symb_exec_l)
-          apply (rule ccorres_assert)
-          apply csymbr
-          apply (rule ccorres_Guard_Seq)+
-          apply (rule ccorres_symb_exec_r)
-            apply (simp only: ccorres_seq_skip)
-            apply (rule ccorres_call[OF switchToThread_ccorres']; simp)
-           apply vcg
-          apply (rule conseqPre, vcg)
-          apply clarsimp
-         apply (wp isRunnable_wp)+
-       apply (simp add: isRunnable_def)
-      apply wp
-     apply (clarsimp simp: Let_def guard_is_UNIV_def)
-     apply (drule invs_no_cicd'_queues)
-     apply (case_tac queue, simp)
-     apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def
-                            numPriorities_def )
-     apply (simp add: word_less_nat_alt word_le_nat_alt)
-     apply (rule_tac x="unat curdom * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
-      subgoal by (simp add: word_le_nat_alt[symmetric])
-     subgoal by (simp add: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
-    apply wp
-   apply clarsimp
-  apply (frule invs_no_cicd'_queues)
-  apply (frule invs_no_cicd'_max_CurDomain)
-  apply (frule invs_no_cicd'_queues)
-  apply (clarsimp simp: valid_queues_def lookupBitmapPriority_le_maxPriority)
-  apply (intro conjI impI)
-      apply (fastforce dest: bitmapQ_from_bitmap_lookup simp: valid_bitmapQ_bitmapQ_simp)
-     apply (fastforce dest: lookupBitmapPriority_obj_at'
-                      simp: pred_conj_def comp_def obj_at'_def st_tcb_at'_def)
-  done
+       apply (rule ccorres_Guard)
+       apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+       apply (rename_tac l1)
+       apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
+                in ccorres_cond)
+         subgoal by (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
+        prefer 2 \<comment> \<open>switchToIdleThread\<close>
+        apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
+       apply clarsimp
+       apply (rule ccorres_rhs_assoc)+
+       apply (rule ccorres_split_nothrow_novcg)
+           apply (rule_tac xf'=prio_' in ccorres_call)
+              apply (rule getHighestPrio_ccorres[simplified getHighestPrio_def'])
+             apply simp+
+          apply ceqv
+         apply clarsimp
+         apply (rename_tac prio)
+         apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
+         apply (rule_tac P="prio \<le> maxPriority" in ccorres_cross_over_guard_no_st)
+         apply (rule ccorres_pre_getQueue)
+         apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
+         apply (rule ccorres_symb_exec_l)
+            apply (rule ccorres_assert)
+            apply (rule ccorres_symb_exec_r)
+              apply (rule ccorres_Guard_Seq)+
+              apply (rule ccorres_symb_exec_r)
+                apply (simp only: ccorres_seq_skip)
+                apply (rule ccorres_call[OF switchToThread_ccorres']; simp)
+               apply vcg
+              apply (rule conseqPre, vcg)
+              apply clarsimp
+             apply clarsimp
+             apply (rule conseqPre, vcg)
+             apply (rule Collect_mono)
+             apply clarsimp
+             apply (strengthen queue_in_range)
+             apply assumption
+            apply clarsimp
+            apply (rule conseqPre, vcg)
+            apply clarsimp
+           apply (wp isRunnable_wp)+
+         apply (simp add: isRunnable_def)
+        apply wp
+       apply (clarsimp simp: Let_def guard_is_UNIV_def)
+       apply (drule invs_no_cicd'_queues)
+       apply (case_tac queue, simp)
+       apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def numPriorities_def)
+       apply (clarsimp simp add: maxDom_to_H maxPrio_to_H
+                                 queue_in_range[where qdom=0, simplified, simplified maxPrio_to_H])
+       apply (clarsimp simp: le_maxDomain_eq_less_numDomains unat_trans_ucast_helper )
+      apply wpsimp
+     apply (clarsimp simp: guard_is_UNIV_def le_maxDomain_eq_less_numDomains word_less_nat_alt
+                           numDomains_less_numeric_explicit)
+    apply (frule invs_no_cicd'_queues)
+    apply (frule invs_no_cicd'_max_CurDomain)
+    apply (frule invs_no_cicd'_queues)
+    apply (clarsimp simp: valid_queues_def lookupBitmapPriority_le_maxPriority)
+    apply (intro conjI impI)
+       apply (fastforce dest: bitmapQ_from_bitmap_lookup simp: valid_bitmapQ_bitmapQ_simp)
+      apply (fastforce dest: lookupBitmapPriority_obj_at'
+                       simp: pred_conj_def comp_def obj_at'_def st_tcb_at'_def)
+     apply (fastforce dest: bitmapQ_from_bitmap_lookup simp: valid_bitmapQ_bitmapQ_simp)
+    apply (clarsimp simp: pred_conj_def comp_def obj_at'_def st_tcb_at'_def)
+    apply (clarsimp simp: not_less le_maxDomain_eq_less_numDomains)
+    apply (prop_tac "ksCurDomain s = 0")
+     using unsigned_eq_0_iff apply force
+    apply (cut_tac s=s in lookupBitmapPriority_obj_at'; simp?)
+    apply (clarsimp simp: pred_conj_def comp_def obj_at'_def st_tcb_at'_def)
+    done
 qed
 
 lemma ksDomSched_length_relation[simp]:
@@ -367,6 +382,9 @@ lemma isHighestPrio_ccorres:
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
           ccorres_IF_True[simp] if_cong[cong]
+  (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
+     shape of the proof compared to when numDomains > 1 *)
+  including no_less_1_simps
   apply (cinit lift: dom_' prio_')
    apply clarsimp
    apply (rule ccorres_move_const_guard)
@@ -392,7 +410,8 @@ lemma isHighestPrio_ccorres:
       apply (rule ccorres_return_C, simp, simp, simp)
      apply (rule wp_post_taut)
     apply (vcg exspec=getHighestPrio_modifies)+
-  apply (clarsimp simp: word_le_nat_alt true_def to_bool_def split: if_splits)
+  apply (clarsimp simp: word_le_nat_alt true_def to_bool_def maxDomain_le_unat_ucast_explicit
+                  split: if_splits)
   done
 
 lemma schedule_ccorres:
@@ -584,7 +603,7 @@ lemma schedule_ccorres:
                      apply (wpsimp simp: cscheduler_action_relation_def)+
                    apply (vcg exspec=scheduleChooseNewThread_modifies)
                   apply (wp add: setSchedulerAction_invs' setSchedulerAction_direct del: ssa_wp)
-                 apply (clarsimp | vcg exspec=tcbSchedEnqueue_modifies | wp wp_post_taut)+
+                 apply (clarsimp | vcg exspec=tcbSchedAppend_modifies | wp wp_post_taut)+
               (* candidate is best, switch to it *)
               apply (ctac add: switchToThread_ccorres)
                 apply clarsimp
@@ -731,7 +750,9 @@ lemma timerTick_ccorres:
              apply (vcg exspec=tcbSchedDequeue_modifies)
         apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip[unfolded dc_def])+
         apply ceqv
-       apply (simp add: when_def numDomains_def decDomainTime_def)
+       apply (clarsimp simp: decDomainTime_def numDomains_sge_1_simp)
+       apply (rule ccorres_when[where R=\<top>])
+        apply (solves \<open>clarsimp split: if_split\<close>)
        apply (rule ccorres_split_nothrow_novcg)
            apply (rule_tac rrel=dc and xf=xfdc and P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
@@ -739,6 +760,7 @@ lemma timerTick_ccorres:
            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                  carch_state_relation_def cmachine_state_relation_def)
           apply ceqv
+         apply (fold dc_def)
          apply (rule ccorres_pre_getDomainTime)
          apply (rename_tac rva rv'a rvb)
          apply (rule_tac P'="{s. ksDomainTime_' (globals s) = rvb}" in ccorres_inst, simp)

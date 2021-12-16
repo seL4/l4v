@@ -457,13 +457,113 @@ lemma ptr_val_tcb_ptr_mask2:
   apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
+section \<open>Domains\<close>
+
+text \<open>
+  seL4's build system allows configuration of the number of domains. This means the proofs have to
+  work for any number of domains provided it fits into the hard limit of a 8-bit word.
+
+  In the C code, we have the enumerated constant numDomains, one greater than maxDom. In the
+  abstract specs, we have the corresponding Platform_Config.numDomains and maxDomain.
+
+  To keep the proofs as general as possible, we avoid unfolding definitions of:
+  maxDom, maxDomain, numDomains except in this theory where we need to establish basic properties.
+
+  Unfortunately, array bounds checks coming from the C code use numerical values, meaning we might
+  get 0x10 instead of the number of domains, or 0x1000 for numDomains * numPriorities. To solve
+  these, the "explicit" lemmas expose direct numbers. They are more risky to deploy, as one could
+  prove that 0x5 is less than the number of domains when that's the case, and then the proof will
+  break upon reconfiguration.
+\<close>
+
+text \<open>The @{text num_domains} enumerated type and constant represent the number of domains.\<close>
+
+value_type num_domains = "numDomains"
+
+context includes no_less_1_simps begin
+
+(* The proofs expect the minimum priority and minimum domain to be zero.
+   Note that minDom is unused in the C code. *)
+lemma min_prio_dom_sanity:
+  "seL4_MinPrio = 0"
+  "Kernel_C.minDom = 0"
+  by (auto simp: seL4_MinPrio_def minDom_def)
+
+lemma less_numDomains_is_domain[simplified word_size, simplified]:
+  "x < numDomains \<Longrightarrow> x < 2 ^ size (y::domain)"
+  unfolding Kernel_Config.numDomains_def
+  by (simp add: word_size)
+
+lemma sint_numDomains_to_H:
+  "sint Kernel_C.numDomains = int Kernel_Config.numDomains"
+  by (clarsimp simp: Kernel_C.numDomains_def Kernel_Config.numDomains_def)
+
+lemma unat_numDomains_to_H:
+  "unat Kernel_C.numDomains = Kernel_Config.numDomains"
+  by (clarsimp simp: Kernel_C.numDomains_def Kernel_Config.numDomains_def)
+
 lemma maxDom_to_H:
   "ucast maxDom = maxDomain"
-  by (simp add: maxDomain_def maxDom_def numDomains_def)
+  by (simp add: maxDomain_def Kernel_C.maxDom_def Kernel_Config.numDomains_def)
+
+lemma maxDom_sgt_0_maxDomain:
+  "0 <s maxDom \<longleftrightarrow> 0 < maxDomain"
+  unfolding Kernel_C.maxDom_def maxDomain_def Kernel_Config.numDomains_def
+  by clarsimp
+
+lemma num_domains_calculation:
+  "num_domains = numDomains"
+  unfolding num_domains_def by eval
+
+private lemma num_domains_card_explicit:
+  "num_domains = CARD(num_domains)"
+  by (simp add: num_domains_def)
+
+lemmas num_domains_index_updates =
+  index_update[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+               simplified num_domains_calculation]
+  index_update2[where 'b=num_domains, folded num_domains_card_explicit num_domains_def,
+                simplified num_domains_calculation]
+
+(* C ArrayGuards will throw these at us and there is no way to avoid a proof of being less than a
+   specific number expressed as a word, so we must introduce these. However, being explicit means
+   lack of discipline can lead to a violation. *)
+lemma numDomains_less_numeric_explicit[simplified num_domains_def One_nat_def]:
+  "x < Kernel_Config.numDomains \<Longrightarrow> x < num_domains"
+  by (simp add: num_domains_calculation)
+
+lemma numDomains_less_unat_ucast_explicit[simplified num_domains_def]:
+  "unat x < Kernel_Config.numDomains \<Longrightarrow> (ucast (x::domain) :: machine_word) < of_nat num_domains"
+  apply (rule word_less_nat_alt[THEN iffD2])
+  apply transfer
+  apply simp
+  apply (drule numDomains_less_numeric_explicit, simp add: num_domains_def)
+  done
+
+lemmas maxDomain_le_unat_ucast_explicit =
+  numDomains_less_unat_ucast_explicit[simplified le_maxDomain_eq_less_numDomains(2)[symmetric],
+                                      simplified]
+
+end (* numDomain abstraction definitions and lemmas *)
+
+
+text \<open>Priorities - not expected to be configurable\<close>
 
 lemma maxPrio_to_H:
   "ucast seL4_MaxPrio = maxPriority"
   by (simp add: maxPriority_def seL4_MaxPrio_def numPriorities_def)
+
+
+text \<open>TCB scheduling queues\<close>
+
+(* establish and sanity-check relationship between the calculation of the number of TCB queues and
+   the size of the array in C *)
+value_type num_tcb_queues = "numDomains * numPriorities"
+
+lemma num_tcb_queues_calculation:
+  "num_tcb_queues = numDomains * numPriorities"
+  unfolding num_tcb_queues_def by eval
+
 
 (* Input abbreviations for API object types *)
 (* disambiguates names *)
