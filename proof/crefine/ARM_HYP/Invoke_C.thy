@@ -133,14 +133,15 @@ lemma decodeDomainInvocation_ccorres:
    apply (rule ccorres_add_return)
    apply (rule ccorres_rhs_assoc)+
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-     apply (simp add: numDomains_def hd_conv_nth word_le_nat_alt)
+     apply (simp add: hd_conv_nth word_le_nat_alt)
+     apply (simp add: unat_scast_numDomains)
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (simp add: throwError_bind invocationCatch_def numDomains_def
-                       hd_conv_nth word_le_nat_alt
+      apply (simp add: throwError_bind invocationCatch_def
+                       hd_conv_nth word_le_nat_alt unat_numDomains_to_H
                  cong: StateSpace.state.fold_congs globals.fold_congs)
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
-     apply (simp add: null_def excaps_map_def)
+     apply (simp add: null_def excaps_map_def unat_numDomains_to_H)
      apply (rule ccorres_Cond_rhs_Seq)
       apply (simp add: throwError_bind invocationCatch_def
                        interpret_excaps_test_null
@@ -190,11 +191,11 @@ lemma decodeDomainInvocation_ccorres:
    apply clarsimp
    apply (vcg exspec=getSyscallArg_modifies)
 
+  including no_take_bit
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
                         invs_queues invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
-                        mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs"
-                        maxDomain_def numDomains_def)
+                        mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs")
   apply (rule conjI)
    apply (clarsimp simp: linorder_not_le isCap_simps)
    apply (rule conjI, clarsimp simp: unat32_eq_of_nat)
@@ -204,9 +205,11 @@ lemma decodeDomainInvocation_ccorres:
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
    apply (rule conjI)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
-   apply (simp add: word_le_nat_alt unat_ucast)
-  apply (clarsimp simp: ucast_ucast_len word_less_nat_alt
-                        ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
+   apply (simp add: word_le_nat_alt unat_ucast unat_numDomains_to_H le_maxDomain_eq_less_numDomains)
+  apply (clarsimp simp: ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
+  subgoal (* args ! 0 can be contained in a domain-sized word *)
+    by (clarsimp simp: not_le unat_numDomains_to_H ucast_ucast_len[simplified word_less_nat_alt]
+                 dest!: less_numDomains_is_domain)
   done
 
 (************************************************************************)
