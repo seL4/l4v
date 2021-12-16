@@ -249,8 +249,8 @@ lemma kernel_entry_valid_sched:
    kernel_entry e us
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: kernel_entry_def)
-  apply (wp call_kernel_valid_sched  thread_set_invs_trivial thread_set_ct_in_state
-            static_imp_wp hoare_vcg_disj_lift  thread_set_not_state_valid_sched
+  apply (wp call_kernel_valid_sched thread_set_invs_trivial thread_set_ct_in_state
+            static_imp_wp hoare_vcg_disj_lift thread_set_not_state_valid_sched
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 
@@ -339,7 +339,7 @@ crunches do_user_op, check_active_irq
   for valid_list[wp]: valid_list
   and valid_sched[wp]: valid_sched
   and sched_act[wp]: "\<lambda>s. P (scheduler_action s)"
-  and domain_time[wp]: "\<lambda>s. 0 < domain_time s"
+  and domain_time[wp]: "\<lambda>s. P (domain_time s)"
   and cur_sc_active[wp]: cur_sc_active
   and ct_not_in_release_q[wp]: ct_not_in_release_q
   and current_time_bounded[wp]: "current_time_bounded 5"
@@ -954,9 +954,9 @@ lemma ckernel_invariant:
     apply (clarsimp simp: ex_abs_def lift_state_relation_def)
     apply (frule akernel_init_invs[THEN bspec])
     apply (rule_tac x = s in exI)
-    apply (clarsimp simp: Init_A_def )
+    apply (clarsimp simp: Init_A_def)
 
-    apply (clarsimp simp: Init_A_def init_A_st_def )
+    apply (clarsimp simp: Init_A_def init_A_st_def)
 
    apply (insert ckernel_init_invs)[1]
    apply clarsimp
