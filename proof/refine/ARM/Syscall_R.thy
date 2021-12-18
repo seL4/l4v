@@ -1755,7 +1755,7 @@ lemma valid_sc_strengthen:
 lemma endTimeslice_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
-      and valid_ready_qs and scheduler_act_sane and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
+      and valid_ready_qs and scheduler_act_sane
       and cur_sc_active and ct_active and schact_is_rct and current_time_bounded 2)
      invs'
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
@@ -1808,7 +1808,7 @@ lemma endTimeslice_corres:
                                clarsimp simp: cap_relation_def isEndpointCap_def)
                        apply (rule corres_symb_exec_r)
                           apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sc_ptr = cur_sc s)
-                                             and (\<lambda>s. ready = is_refill_ready sc_ptr s)
+                                             and (\<lambda>s. ready = is_refill_ready sc_ptr s) and ko_at (TCB tcb) ct
                                              and (\<lambda>s. sufficient = is_refill_sufficient 0 sc_ptr s)"
                                      and P'="?pre' and cur_tcb' and (\<lambda>s. ct = ksCurThread s)
                                              and (\<lambda>s. sc_at' (ksCurSc s) s) and (\<lambda>s. is_active_sc' (ksCurSc s) s) and (\<lambda>s. sc_ptr = ksCurSc s) and
@@ -1825,10 +1825,16 @@ lemma endTimeslice_corres:
                             apply (rule corres_if2, simp)
                              apply (rule tcbSchedAppend_corres)
                             apply (rule postpone_corres)
+                           apply (clarsimp cong: conj_cong imp_cong)
                            apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
                                                  valid_fault_def valid_fault_handler_def)
-                           apply (clarsimp simp: ct_in_state_def)
-                           apply (clarsimp simp: cur_sc_tcb_def
+                           apply (rule conjI impI; clarsimp)
+                            apply (clarsimp simp: ct_in_state_def cte_wp_at_def cur_tcb_def)
+                            apply (rule_tac x="tcb_timeout_handler tcb" in exI)
+                            apply (clarsimp simp: get_cap_caps_of_state obj_at_def is_tcb
+                                                  caps_of_state_tcb_index_trans[OF get_tcb_rev]
+                                                  tcb_cnode_map_def)
+                           apply (clarsimp simp: cur_sc_tcb_def invs_def valid_pspace_def
                                           dest!: active_sc_valid_refillsE valid_refills_refill_sufficient)
                            apply (drule schact_is_rct, simp)
                            apply (drule (1) sym_refs_bound_sc_tcb_iff_sc_tcb_sc_at[OF refl refl, THEN iffD2])
@@ -1838,6 +1844,7 @@ lemma endTimeslice_corres:
                            apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def)
                           apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def)
                          apply (wpsimp wp: getTCB_wp)+
+                    apply (clarsimp dest!: invs_cur simp: cur_tcb_def)
                    apply (clarsimp simp: cur_tcb'_def isEndpointCap_def)
                   apply simp
                  apply (wpsimp wp: get_sc_refill_sufficient_wp)+
@@ -1978,7 +1985,7 @@ crunches setConsumedTime, refillResetRR
 lemma chargeBudget_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
-      and valid_ready_qs and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
+      and valid_ready_qs and scheduler_act_sane
       and released_ipc_queues and cur_sc_active and ct_active and schact_is_rct
       and current_time_bounded 5
       and ct_not_queued and ct_not_in_release_q
@@ -2103,9 +2110,8 @@ lemma chargeBudget_corres:
   done
 
 lemma checkBudget_corres:
-  "corres dc
-     (einvs and scheduler_act_sane and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
-      and current_time_bounded 5 and cur_sc_offset_ready 0
+  "corres (=)
+     (einvs and current_time_bounded 5 and cur_sc_offset_ready 0
       and cur_sc_active and ct_active and schact_is_rct and current_time_bounded 2
       and ct_not_queued and ct_not_in_release_q)
      invs'
@@ -2135,7 +2141,6 @@ lemma checkBudget_corres:
 lemma handleYield_corres:
   "corres dc
      (einvs and ct_active and cur_sc_active and scheduler_act_sane and schact_is_rct
-      and (\<lambda>s. cte_wp_at is_ep_cap (cur_thread s, tcb_cnode_index 4) s)
       and current_time_bounded 5 and cur_sc_offset_ready 0
       and ct_not_queued and ct_not_in_release_q and current_time_bounded 2)
      invs'
