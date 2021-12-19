@@ -2907,7 +2907,7 @@ lemma placeNewObject_asid_pool_obj_at'_tcb:
   by (clarsimp simp: objBits_simps archObjSize_def new_cap_addrs_def obj_at'_real_def
                      ko_wp_at'_def projectKOs
               split: kernel_object.split_asm)
-  
+ 
 lemma placeNewObject_asid_pool_ct_in_state':
   "\<lbrace>invs' and K (is_aligned ptr pageBits)
     and pspace_no_overlap' ptr pageBits and ct_in_state' P and (\<lambda>s. ptr \<noteq> ksCurThread s)\<rbrace>
