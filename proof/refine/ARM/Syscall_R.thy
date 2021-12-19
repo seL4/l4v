@@ -2694,7 +2694,6 @@ lemma sendSignal_ct_active'[wp]:
 crunches resetUntypedCap
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps wp: mapME_x_inv_wp preemptionPoint_inv crunch_wps)
-thm cte_wp_at_def cte_wp_at'_def
 
 lemma
   ct_in_state'_ksArchState_update[simp]:
