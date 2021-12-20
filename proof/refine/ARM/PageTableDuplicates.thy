@@ -2277,9 +2277,7 @@ lemma updateTimeStamp_sch_act_simple[wp]:
   by (wpsimp wp: dmo_invs'_simple simp: setCurTime_def)
 
 crunches updateTimeStamp
-  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  and pred_tcb_at'[wp]: "pred_tcb_at' p P t"
-  and ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
+  for ksPSpace[wp]: "\<lambda>s. P (ksPSpace s)"
   and tcb_at'[wp]: "tcb_at' t"
 
 crunches getCapReg, refillCapacity
@@ -2292,9 +2290,8 @@ lemma handleEvent_valid_duplicates':
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   supply if_cong[cong]
   apply (case_tac e; simp add: handleEvent_def)
-       apply (rename_tac syscall, case_tac syscall)
-  by (wpsimp wp: checkBudgetRestart_gen ct_in_state_thread_state_lift' |
-      erule active_from_running')+
+       apply (rename_tac syscall, case_tac syscall; simp)
+  by (wpsimp wp: checkBudgetRestart_gen stateAssertE_inv active_from_running')+
 
 lemma callKernel_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and

@@ -2495,9 +2495,155 @@ crunches handleFault, receiveSignal, receiveIPC, asUser
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
+lemma checkBudget_true:
+  "\<lbrace>P\<rbrace> checkBudget \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding checkBudget_def
+  by (wpsimp | rule hoare_drop_imp)+
+
+lemma checkBudgetRestart_true:
+  "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. rv \<longrightarrow> P s\<rbrace>"
+  unfolding checkBudgetRestart_def
+  apply (wpsimp wp: checkBudget_true)
+   apply (rule hoare_drop_imp)
+   apply (wpsimp wp: checkBudget_true)
+  by clarsimp
+
+lemma checkBudgetRestart_false:
+  "\<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. Q s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> checkBudgetRestart \<lbrace>\<lambda>rv s. \<not> rv \<longrightarrow> Q s\<rbrace>"
+  by (wpsimp wp: hoare_drop_imp)
+
+crunches checkBudget
+  for invs'[wp]: invs'
+
+lemma checkBudgetRestart_invs'[wp]:
+  "checkBudgetRestart \<lbrace>invs'\<rbrace>"
+  unfolding checkBudgetRestart_def
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (wpsimp wp: setThreadState_Restart_invs')
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def)
+  apply (intro conjI)
+    apply (erule ko_wp_at'_weakenE, clarsimp)
+   apply (drule invs_iflive')
+   apply (erule (1) if_live_then_nonz_capD')
+  by (fastforce simp: live_def ko_wp_at'_def projectKOs opt_map_red is_BlockedOnReply_def)+
+
+lemma setEndpoint_valid_duplicates'[wp]:
+  "setObject a (ep::endpoint) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_aligned'_def ps_clear_upd
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: if_split_asm)
+  apply (frule pspace_storable_class.updateObject_type[where v = ep,simplified])
+  apply (clarsimp simp: updateObject_default_def assert_def bind_def
+                        alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
+                        assert_opt_def return_def fail_def typeError_def
+                 split: if_splits option.splits Structures_H.kernel_object.splits)
+     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
+  done
+
+lemma setSchedContext_valid_duplicates'[wp]:
+  "setObject a (sc::sched_context) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_aligned'_def ps_clear_upd
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: if_split_asm)
+  apply (frule pspace_storable_class.updateObject_type[where v = sc,simplified])
+  apply (clarsimp simp: updateObject_default_def assert_def bind_def
+                        alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
+                        assert_opt_def return_def fail_def typeError_def
+                 split: if_splits option.splits Structures_H.kernel_object.splits)
+     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
+  done
+
+lemma setReply_valid_duplicates'[wp]:
+  "setObject a (r::reply) \<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_aligned'_def ps_clear_upd
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: if_split_asm)
+  apply (frule pspace_storable_class.updateObject_type[where v = r,simplified])
+  apply (clarsimp simp: updateObject_default_def assert_def bind_def
+                        alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
+                        assert_opt_def return_def fail_def typeError_def
+                 split: if_splits option.splits Structures_H.kernel_object.splits)
+     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
+  done
+
+crunches check_budget
+  for cur_tcb[wp]: cur_tcb
+  and pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  (wp: crunch_wps)
+
+crunches checkBudgetRestart
+  for valid_duplicates''[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma getCurrentTime_invs'[wp]:
+  "doMachineOp getCurrentTime \<lbrace>invs'\<rbrace>"
+  apply (simp add: getCurrentTime_def modify_def)
+  apply (wpsimp wp: dmo_invs' simp: modify_def)
+  by (simp add: in_get put_def gets_def in_bind in_return)
+
+lemma invs'_ksCurTime_update[iff]:
+  "invs' (ksCurTime_update f s) = invs' s"
+  by (clarsimp simp: invs'_def valid_pspace'_def valid_mdb'_def
+                     valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
+                     bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def valid_irq_node'_def
+                     valid_machine_state'_def valid_queues'_def valid_release_queue_def
+                     valid_release_queue'_def valid_dom_schedule'_def)
+
+crunches setDomainTime, setCurTime, setConsumedTime, setExtraBadge, setReleaseQueue, setQueue,
+  modifyReadyQueuesL1Bitmap, modifyReadyQueuesL2Bitmap, setReprogramTimer
+  for ct_in_state'[wp]: "ct_in_state' P"
+  and isSchedulable[wp]: "isSchedulable_bool p"
+  and scs_of'_ct[wp]: "\<lambda>s. P (scs_of' s) (ksCurThread s)"
+  and isScActive_ct[wp]: "\<lambda>s. P (isScActive p s) (tcbSCs_of s) (ksCurThread s)"
+  and pred_map_sc_active_ct[wp]: "\<lambda>s. pred_map (\<lambda>p. isScActive p s) (tcbSCs_of s) (ksCurThread s)"
+  (simp: ct_in_state'_def isScActive_def isSchedulable_bool_def)
+
+crunches updateTimeStamp, tcbSchedAppend, postpone
+  for invs'[wp]: invs'
+  and ct_in_state'[wp]: "ct_in_state' P"
+  and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and valid_duplicates''[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  (ignore: doMachineOp wp: crunch_wps)
+
+crunches updateTimeStamp
+  for tcbSCs_of_scTCBs_of[wp]: "\<lambda>s. P (tcbSCs_of s) (scTCBs_of s)"
+  and tcbs_of'_ct[wp]: "\<lambda>s. P (tcbs_of' s) (ksCurThread s)"
+  and tcbSCs_of_ct[wp]: "\<lambda>s. P (tcbSCs_of s) (ksCurThread s)"
+  and isScActive_ct[wp]: "\<lambda>s. P (isScActive p s) (tcbSCs_of s) (ksCurThread s)"
+  and pred_map_sc_active_ct[wp]: "\<lambda>s. pred_map (\<lambda>p. isScActive p s) (tcbSCs_of s) (ksCurThread s)"
+  and typ_at[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and pred_tcb_at'[wp]: "\<lambda>s. P (pred_tcb_at' proj Q p s)"
+
+lemma installThreadBuffer_ksCurThread[wp]:
+  "installThreadBuffer target slot buffer \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> "
+  unfolding installThreadBuffer_def
+  by (wpsimp wp: checkCap_inv hoare_drop_imp cteDelete_preservation)
+
+crunches ARM_H.performInvocation
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
+
+crunches resetUntypedCap
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (simp: crunch_simps wp: mapME_x_inv_wp preemptionPoint_inv crunch_wps)
+
+crunches performInvocation
+  for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (wp: crunch_wps cteRevoke_preservation filterM_preserved cteDelete_preservation
+       hoare_drop_imps hoare_vcg_all_lift
+   simp: crunch_simps)
+
 lemma he_invs'[wp]:
   "\<lbrace>invs' and
       (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
+      (\<lambda>s. ct_running' s \<longrightarrow> ct_isSchedulable s) and
       (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleEvent event
@@ -2507,27 +2653,28 @@ proof -
     by (clarsimp)
   show ?thesis
     apply (case_tac event, simp_all add: handleEvent_def)
-        apply (rename_tac syscall)
-  sorry (* checkBudgetRestart
-        apply (case_tac syscall,
-               (wp
-                | clarsimp simp: active_from_running' simple_from_running' simple_sane_strg simp del: split_paired_All
-                | rule conjI active_ex_cap'
-                | drule ct_not_ksQ[rotated]
-                | strengthen nidle)+)
-        apply (rule hoare_strengthen_post,
-               rule hoare_weaken_pre,
-               rule hy_invs')
-         apply (simp add: active_from_running')
-        apply simp
-       apply (wp hv_inv' hh_inv'
-                 | rule conjI
-                 | erule pred_tcb'_weakenE st_tcb_ex_cap''
-                 | clarsimp simp: tcb_at_invs ct_in_state'_def simple_sane_strg sch_act_simple_def
-                 | drule st_tcb_at_idle_thread'
+         apply (rename_tac syscall)
+         apply (case_tac syscall,
+                (wpsimp wp: checkBudgetRestart_true checkBudgetRestart_false
+                 | clarsimp simp: active_from_running' simple_from_running' simple_sane_strg
+                                  stateAssertE_def stateAssert_def
+                        simp del: split_paired_All
+                 | rule hoare_post_imp_R[where Q'="\<lambda>_. invs'", rotated],
+                   clarsimp simp: ct_active'_asrt_def
+                 | rule conjI active_ex_cap'
                  | drule ct_not_ksQ[rotated]
-                 | wpc | wp (once) hoare_drop_imps)+
-  done *)
+                 | strengthen nidle)+)
+                  apply (rule hoare_strengthen_post,
+                         rule hoare_weaken_pre,
+                         rule hy_invs')
+                   apply (simp add: active_from_running')
+                  apply simp
+                 apply (wp hv_inv' hh_inv' hoare_vcg_if_lift2 checkBudgetRestart_true checkBudgetRestart_false
+                           updateTimeStamp_ct_in_state'[simplified ct_in_state'_def]
+                        | strengthen active_ex_cap'[OF _ invs_iflive']
+                        | clarsimp simp: ct_in_state'_def
+                        | wpc)+
+    done
 qed
 
 
