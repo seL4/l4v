@@ -1535,7 +1535,7 @@ lemma clearMemory_untyped_ccorres:
                   \<and> {ptr ..+ 2 ^ sz} \<subseteq> untypedRange cap
                   \<and> pspace_no_overlap' (capPtr cap) (capBlockSize cap) s)
               \<and> 2 ^ sz \<le> gsMaxObjectSize s)
-          and (\<lambda>_. is_aligned ptr sz \<and> sz \<ge> 2 \<and> sz \<le> reset_chunk_bits))
+          and (\<lambda>_. is_aligned ptr sz \<and> sz \<ge> 2 \<and> sz \<le> resetChunkBits))
       ({s. region_actually_is_bytes ptr (2 ^ sz) s}
             \<inter> {s. bits_' s = of_nat sz}
             \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr})
@@ -1582,7 +1582,7 @@ lemma clearMemory_untyped_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid', clarify+)
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
-                        word_of_nat_less reset_chunk_bits_def
+                        word_of_nat_less Kernel_Config.resetChunkBits_def
                         word_bits_def unat_2p_sub_1)
   apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
   apply (simp add: addrFromPPtr_mask)
@@ -1788,7 +1788,7 @@ lemma resetUntypedCap_ccorres:
        apply clarsimp
        apply (simp only: ccorres_seq_cond_raise)
        apply (rule ccorres_cond[where R="\<top>"])
-         apply (clarsimp simp: reset_chunk_bits_def)
+         apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
          apply (simp add: word_less_nat_alt unat_of_nat32 from_bool_0)
          apply blast
         apply (simp add: liftE_def bind_assoc shiftL_nat unless_def
@@ -1817,7 +1817,7 @@ lemma resetUntypedCap_ccorres:
          apply wp
         apply simp
         apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
-       apply (rule_tac P="reset_chunk_bits \<le> capBlockSize (cteCap cte)
+       apply (rule_tac P="resetChunkBits \<le> capBlockSize (cteCap cte)
              \<and> of_nat (capFreeIndex (cteCap cte)) - 1
                  < (2 ^ capBlockSize (cteCap cte) :: addr)"
            in ccorres_gen_asm)
@@ -1838,11 +1838,11 @@ lemma resetUntypedCap_ccorres:
            apply (rule_tac P="(\<exists>s. valid_cap' (cteCap cte) s)
                 \<and> \<not> capIsDevice (cteCap cte)" in ccorres_gen_asm)
            apply (rule_tac yf="\<lambda>ptr. ptr - (capPtr (cteCap cte))"
-                      and P="\<lambda>s. 2 ^ reset_chunk_bits \<le> gsMaxObjectSize s"
+                      and P="\<lambda>s. 2 ^ resetChunkBits \<le> gsMaxObjectSize s"
                       and F="\<lambda>n b idx. cte_wp_at' (\<lambda>cte'. \<exists>idx'. cteCap cte'
                                   = (cteCap cte)\<lparr> capFreeIndex := idx' \<rparr>
                               \<and> idx = (getFreeRef (capPtr (cteCap cte)) idx') - 1
-                                  && ~~ mask reset_chunk_bits) slot
+                                  && ~~ mask resetChunkBits) slot
                           and invs'
                           and (\<lambda>s. descendants_of' slot (ctes_of s) = {})
                           and pspace_no_overlap' (capPtr (cteCap cte)) (capBlockSize (cteCap cte))"
@@ -1852,16 +1852,16 @@ lemma resetUntypedCap_ccorres:
                  in mapME_x_simpl_sequence_fun_related)
               apply (rule nth_equalityI)
                apply (simp add: length_upto_enum_step)
-               apply (simp add: getFreeRef_def shiftr_div_2n_w reset_chunk_bits_def
+               apply (simp add: getFreeRef_def shiftr_div_2n_w Kernel_Config.resetChunkBits_def
                                 word_size)
               apply (simp add: length_upto_enum_step upto_enum_step_nth
                                less_Suc_eq_le nth_rev getFreeRef_def
-                               reset_chunk_bits_def shiftr_div_2n_w word_size
+                               Kernel_Config.resetChunkBits_def shiftr_div_2n_w word_size
                                and_not_mask shiftl_t2n)
              apply clarify
              apply (rule_tac Q="\<lambda>v. cte_wp_at' (\<lambda>cte. capFreeIndex (cteCap cte) = v) slot"
                    and Q'="\<top>\<top>" and V="\<lambda>v. x = (getFreeRef (capPtr (cteCap cte)) v) - 1
-                           && ~~ mask reset_chunk_bits"
+                           && ~~ mask resetChunkBits"
                    in ccorres_req_Ex)
               apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
              apply (clarsimp simp add: shiftL_nat)
@@ -1931,7 +1931,7 @@ lemma resetUntypedCap_ccorres:
                   aligned_sub_aligned
                   aligned_intvl_offset_subset_ran
                   unat_le_helper Aligned.is_aligned_neg_mask)
-              apply (simp add: order_less_imp_le reset_chunk_bits_def untypedBits_defs)
+              apply (simp add: order_less_imp_le Kernel_Config.resetChunkBits_def untypedBits_defs)
 
              apply (clarsimp simp: in_set_conv_nth isCap_simps
                                    length_upto_enum_step upto_enum_step_nth
@@ -1943,8 +1943,8 @@ lemma resetUntypedCap_ccorres:
              apply (frule ctes_of_valid', clarify+)
              apply (clarsimp simp: valid_cap_simps')
              apply (strengthen ghost_assertion_size_logic[unfolded o_def, rotated, mk_strg I E]
-                               is_aligned_weaken[where y=2 and x=reset_chunk_bits]
-                               is_aligned_weaken[where y=8 and x=reset_chunk_bits]
+                               is_aligned_weaken[where y=2 and x=resetChunkBits]
+                               is_aligned_weaken[where y=8 and x=resetChunkBits]
                                is_aligned_no_overflow'[where n=8, simplified]
                                power_increasing[where a=2 and n=8, simplified]
                                region_actually_is_bytes_dom_s[mk_strg I E]
@@ -1959,7 +1959,7 @@ lemma resetUntypedCap_ccorres:
              apply (strengthen region_actually_is_bytes_subset[mk_strg I E]
                     heap_list_is_zero_mono[OF heap_list_update_eq]
                     order_trans [OF intvl_start_le
-                          aligned_intvl_offset_subset[where sz'=reset_chunk_bits]]
+                          aligned_intvl_offset_subset[where sz'=resetChunkBits]]
                     byte_regions_unmodified_actually_heap_list[mk_strg I E E]
                 | simp add: is_aligned_mult_triv2 hrs_mem_update)+
              apply (simp add: unat_sub word_le_nat_alt unat_sub[OF word_and_le2]
@@ -1970,13 +1970,13 @@ lemma resetUntypedCap_ccorres:
               (* must be contradictory *)
               apply clarsimp
               apply (simp add: is_aligned_def addr_card_def card_word
-                               reset_chunk_bits_def)
+                               Kernel_Config.resetChunkBits_def)
               apply clarsimp
               apply (simp add: is_aligned_def addr_card_def card_word
-                               reset_chunk_bits_def)
+                               Kernel_Config.resetChunkBits_def)
              apply (simp add: unat_of_nat32[OF order_le_less_trans, rotated,
                                 OF power_strict_increasing])
-             apply (simp add: word_mod_2p_is_mask[symmetric] reset_chunk_bits_def
+             apply (simp add: word_mod_2p_is_mask[symmetric] Kernel_Config.resetChunkBits_def
                               unat_mod unat_of_nat mod_mod_cancel)
              apply (strengthen nat_le_Suc_less_imp[OF mod_less_divisor, THEN order_trans])
              apply (simp add: is_aligned_def addr_card_def card_word)
@@ -1991,9 +1991,9 @@ lemma resetUntypedCap_ccorres:
                                   hrs_mem_update)
             apply (frule(2) reset_untyped_inner_offs_helper, simp+)
             apply (clarsimp simp: valid_cap_simps')
-            apply (strengthen is_aligned_weaken[where y=2 and x=reset_chunk_bits]
+            apply (strengthen is_aligned_weaken[where y=2 and x=resetChunkBits]
                               ghost_assertion_size_logic[unfolded o_def, rotated, mk_strg I E]
-                              is_aligned_weaken[where y=8 and x=reset_chunk_bits]
+                              is_aligned_weaken[where y=8 and x=resetChunkBits]
                               is_aligned_no_overflow'[where n=8, simplified]
                               power_increasing[where a=2 and n=8, simplified]
                               region_actually_is_bytes_dom_s[mk_strg I E]
@@ -2004,7 +2004,7 @@ lemma resetUntypedCap_ccorres:
                                   aligned_offset_non_zero
                                   is_aligned_add_multI conj_comms
                                   region_actually_is_bytes_def)
-            apply (simp add: reset_chunk_bits_def is_aligned_def)
+            apply (simp add: Kernel_Config.resetChunkBits_def is_aligned_def)
 
            apply (rule hoare_pre)
             apply (wp updateFreeIndex_cte_wp_at updateFreeIndex_clear_invs'
@@ -2028,17 +2028,17 @@ lemma resetUntypedCap_ccorres:
                                  is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
            apply (simp add: field_simps)
            apply (strengthen Aligned.is_aligned_neg_mask unat_le_helper)
-           apply (simp add: reset_chunk_bits_def[THEN arg_cong[where f="\<lambda>x. n \<le> x" for n]])
+           apply (simp add: Kernel_Config.resetChunkBits_def[unfolded atomize_eq, THEN arg_cong[where f="\<lambda>x. n \<le> x" for n]])
            apply (rule order_less_imp_le, erule order_le_less_trans[rotated],
              rule olen_add_eqv[THEN iffD2])
            apply (rule order_trans, rule word_mult_le_mono1, rule word_of_nat_le,
-             erule order_trans[rotated], simp, simp add: reset_chunk_bits_def)
+             erule order_trans[rotated], simp, simp add: Kernel_Config.resetChunkBits_def)
             apply (simp only: unat_power_lower32 shiftr_div_2n_w[symmetric]
                               word_size word_bits_def[symmetric])
             apply (rule nat_less_power_trans2)
              apply (rule order_less_le_trans[OF word_shiftr_lt])
              apply (simp add: word_bits_def)
-            apply (simp add: word_bits_def reset_chunk_bits_def)
+            apply (simp add: word_bits_def Kernel_Config.resetChunkBits_def)
            apply (simp add: field_simps)
           apply ceqv
          apply (rule ccorres_return_CE, simp+)[1]
@@ -2089,7 +2089,7 @@ lemma resetUntypedCap_ccorres:
     apply (simp add: getFreeRef_def nth_rev length_upto_enum_step
                      upto_enum_step_nth word_of_nat_le
                      is_aligned_mask_out_add_eq_sub[OF is_aligned_weaken])
-    apply (simp add: neg_mask_is_div' reset_chunk_bits_def word_size)
+    apply (simp add: neg_mask_is_div' Kernel_Config.resetChunkBits_def word_size)
     apply (safe, simp_all)[1]
 
    apply (simp add: getFreeRef_def)
@@ -2907,13 +2907,13 @@ lemma decodeUntypedInvocation_ccorres_helper:
                  apply (rule ccorres_split_when_throwError_cond[where Q=\<top> and Q'=\<top>, rotated -1])
                     apply vcg
                    apply (clarsimp simp:)
-                   apply (simp add: retypeFanOutLimit_def word_le_nat_alt linorder_not_le)
+                   apply (simp add: Kernel_Config.retypeFanOutLimit_def word_le_nat_alt linorder_not_le)
                    apply (auto simp: linorder_not_le unat_eq_0)[1]
                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                         exception_defs syscall_error_to_H_cases)
-                  apply (simp add: retypeFanOutLimit_def)
+                  apply (simp add: Kernel_Config.retypeFanOutLimit_def)
                  apply (rule ccorres_split_when_throwError_cond[where Q=\<top> and Q'=\<top>, rotated -1])
                     apply vcg
                    apply (clarsimp simp: numeral_eqs[symmetric]

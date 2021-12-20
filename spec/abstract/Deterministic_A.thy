@@ -117,9 +117,6 @@ record etcb =
  tcb_time_slice :: "nat"
  tcb_domain :: "domain"
 
-definition time_slice :: "nat" where
-  "time_slice \<equiv> 5"
-
 definition default_priority :: "priority" where
   "default_priority \<equiv> minBound"
 
@@ -127,7 +124,7 @@ definition default_domain :: "domain" where
   "default_domain \<equiv> minBound"
 
 definition default_etcb :: "etcb" where
-  "default_etcb \<equiv> \<lparr>tcb_priority = default_priority, tcb_time_slice = time_slice, tcb_domain = default_domain\<rparr>"
+  "default_etcb \<equiv> \<lparr>tcb_priority = default_priority, tcb_time_slice = timeSlice, tcb_domain = default_domain\<rparr>"
 
 type_synonym ready_queue = "obj_ref list"
 

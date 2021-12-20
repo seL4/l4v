@@ -33,6 +33,7 @@
 /spec/design/X64/*.thy
 
 /spec/machine/*/MachineTypes.thy
+/spec/machine/*/Kernel_Config.thy
 
 CFunDump.txt
 umm_types.txt

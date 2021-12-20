@@ -4011,7 +4011,7 @@ proof -
                                     initContext_def selCS3_eq selDS3_eq)
        apply (clarsimp simp: fpu_relation_def)
       apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)
-     apply (simp add: timeSlice_def)
+     apply (simp add: Kernel_Config.timeSlice_def)
     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
                      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
                      index_foldr_update seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def

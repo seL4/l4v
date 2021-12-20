@@ -68,7 +68,7 @@ definition timer_tick :: "unit det_ext_monad" where
        ts \<leftarrow> ethread_get tcb_time_slice cur;
        let ts' = ts - 1 in
        if (ts' > 0) then thread_set_time_slice cur ts' else do
-         thread_set_time_slice cur time_slice;
+         thread_set_time_slice cur timeSlice;
          tcb_sched_action tcb_sched_append cur;
          reschedule_required
        od

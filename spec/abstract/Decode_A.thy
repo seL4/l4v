@@ -540,7 +540,7 @@ where
   whenE (node_offset < 0 \<or> node_offset > node_size - 1) $
     throwError $ RangeError 0 (of_nat (node_size - 1));
 
-  whenE (node_window < 1 \<or> node_window > 256) $ throwError $ RangeError 1 256;
+  whenE (node_window < 1 \<or> node_window > unat retypeFanOutLimit) $ throwError $ RangeError 1 retypeFanOutLimit;
 
   whenE (node_window < 1 \<or> node_window > node_size - node_offset) $
     throwError $ RangeError 1 (of_nat (node_size - node_offset));

@@ -5,9 +5,9 @@
  *)
 
 theory Config_H
-imports Types_H Kernel_Config
+imports Types_H Kernel_Config_Lemmas
 begin
 
-#INCLUDE_HASKELL SEL4/Config.lhs NOT numDomains
+#INCLUDE_HASKELL SEL4/Config.lhs NOT numDomains timeSlice resetChunkBits retypeFanOutLimit
 
 end

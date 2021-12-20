@@ -70,7 +70,7 @@ c-config: .FORCE
 .PHONY: c-config
 
 # Run the haskell translator
-design-spec: .FORCE
+design-spec: c-config .FORCE
 	cd design/ && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) design
 .PHONY: design-spec
 
