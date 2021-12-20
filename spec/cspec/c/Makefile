@@ -23,8 +23,15 @@ include kernel.mk
 cspec: ${UMM_TYPES} ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_theories
 
+
+CONFIG_THY := ../../machine/${L4V_ARCH}/Kernel_Config.thy
+
 # called by ../../Makefile
-config: ${KERNEL_CONFIG_ROOT}/.cmake_done
+config: ${CONFIG_THY}
+
+${CONFIG_THY}: ${KERNEL_CONFIG_ROOT}/.cmake_done
+	./gen-config-thy.py
+
 
 clean:
 	rm -rf ${KERNEL_BUILD_ROOT}
