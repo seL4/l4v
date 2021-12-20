@@ -94,14 +94,23 @@ System call events are dispatched here to the appropriate system call handlers, 
 >         SysReplyRecv -> do
 >             replyCptr <- withoutPreemption $ getCapReg replyRegister
 >             handleInvocation False False True True replyCptr
+>             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
+>             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
+>             stateAssert ct_active'_asrt "Assert ct_active'"
 >             withoutPreemption $ handleRecv True True
 >         SysNBSendRecv -> do
 >             dest <- withoutPreemption $ getCapReg nbsendRecvDest
 >             handleInvocation False False True True dest
+>             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
+>             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
+>             stateAssert ct_active'_asrt "Assert ct_active'"
 >             withoutPreemption $ handleRecv True True
 >         SysNBSendWait -> do
 >             replyCptr <- withoutPreemption $ getCapReg replyRegister
 >             handleInvocation False False True True replyCptr
+>             stateAssert sch_act_sane_asrt "Assert sch_act_sane"
+>             stateAssert ct_not_ksQ_asrt "Assert ksCurThread notin ksReadyQueues"
+>             stateAssert ct_active'_asrt "Assert ct_active'"
 >             withoutPreemption $ handleRecv True False
 >         SysWait -> withoutPreemption $ handleRecv True False
 >         SysNBWait -> withoutPreemption $ handleRecv False False
