@@ -2168,18 +2168,22 @@ lemma valid_caps_s0H[simp]:
           rule pspace_distinctD'[OF _ s0H_pspace_distinct', simplified s0H_internal_def],
           simp)+
 
+text \<open>We can only instantiate our example state (featuring high and low domains) if the number
+  of configured domains is > 1, i.e. that maxDomain is 1 or greater. When seL4 is configured for a
+  single domain only, none of the state instantiation proofs below are relevant.\<close>
+
 lemma s0H_valid_objs':
-  "valid_objs' s0H_internal"
+  "1 \<le> maxDomain \<Longrightarrow> valid_objs' s0H_internal"
   supply objBits_defs[simp]
   apply (clarsimp simp: valid_objs'_def ran_def)
   apply (drule kh0H_SomeD)
   apply (elim disjE)
                 apply clarsimp
                apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                     default_domain_def maxDomain_def numDomains_def minBound_word
+                                     default_domain_def minBound_word
                                      default_priority_def tcb_cte_cases_def)
               apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                    High_domain_def maxDomain_def numDomains_def minBound_word
+                                    High_domain_def minBound_word
                                     High_mcp_def High_prio_def maxPriority_def numPriorities_def
                                     tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq
                                     project_inject)
@@ -2188,7 +2192,7 @@ lemma s0H_valid_objs':
               apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
               apply (simp add: ntfnH_def)
              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def
-                                   Low_domain_def maxDomain_def numDomains_def minBound_word
+                                   Low_domain_def minBound_word
                                    Low_mcp_def Low_prio_def maxPriority_def numPriorities_def
                                    tcb_cte_cases_def Low_capsH_def)
             apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq
@@ -2645,7 +2649,9 @@ lemma mdb_nextI:
 
 lemma s0H_valid_pspace':
   notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
+  assumes "1 \<le> maxDomain"
   shows "valid_pspace' s0H_internal"
+  using assms
   supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: valid_pspace'_def s0H_pspace_distinct' s0H_valid_objs')
   apply (intro conjI)
@@ -2819,9 +2825,10 @@ axiomatization  where
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma s0H_invs:
+  assumes "1 \<le> maxDomain"
   notes pdeBits_def[simp] pteBits_def[simp] objBits_defs[simp]
-  shows
-  "invs' s0H_internal"
+  shows "invs' s0H_internal"
+  using assms
   supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
   apply (rule conjI)
@@ -3055,7 +3062,7 @@ lemma s0H_invs:
   (* unfold s0H_internal for remaining goals *)
   apply (clarsimp simp: s0H_internal_def cteCaps_of_def
                         untyped_ranges_zero_inv_def
-                        maxDomain_def numDomains_def dschDomain_def dschLength_def)
+                        dschDomain_def dschLength_def)
   apply (clarsimp simp: newKernelState_def newKSDomSched)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
@@ -3259,7 +3266,8 @@ lemma subtree_node_Some:
   "m \<turnstile> a \<rightarrow> b \<Longrightarrow> m a \<noteq> None"
   by (erule subtree.cases) (auto simp: parentOf_def)
 
-lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
+lemma s0_srel:
+  "1 \<le> maxDomain \<Longrightarrow> (s0_internal, s0H_internal) \<in> state_relation"
   apply (simp add: state_relation_def)
   apply (intro conjI)
                    apply (simp add: s0_pspace_rel)
@@ -3337,7 +3345,8 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
               apply (drule subtree_mdb_next)
               apply (case_tac "x = 0")
                apply (cut_tac s0H_valid_pspace')
-               apply (simp add: valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def parentOf_def isMDBParentOf_def kh0H_all_obj_def')
+                apply (simp add: valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def parentOf_def isMDBParentOf_def kh0H_all_obj_def')
+               apply simp
               apply (clarsimp simp: mdb_next_trancl_s0H)
               apply (elim disjE, (clarsimp simp: parentOf_def isMDBParentOf_def kh0H_all_obj_def')+)[1]
              apply (clarsimp simp: cdt_list_relation_def s0_internal_def exst0_def split: option.splits)
@@ -3353,9 +3362,9 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
             apply clarsimp
             apply (elim disjE)
                            apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def kh0H_all_obj_def' cte_level_bits_def split: if_split_asm)+
-                apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
-               apply ((clarsimp simp: cte_map_def' s0H_internal_def s0_internal_def,
-                      clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
+                 apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
+                apply ((clarsimp simp: cte_map_def' s0H_internal_def s0_internal_def,
+                       clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
            apply (clarsimp simp: s0_internal_def s0H_internal_def arch_state_relation_def arch_state0_def arch_state0H_def)
           apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def interrupt_state_relation_def irq_state_relation_def)
          apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)+
@@ -3365,7 +3374,7 @@ definition
   "s0H \<equiv> ((if ct_idle' s0H_internal then idle_context s0_internal else s0_context,s0H_internal),KernelExit)"
 
 lemma step_restrict_s0:
-  "step_restrict s0"
+  "1 \<le> maxDomain \<Longrightarrow> step_restrict s0"
   supply option.case_cong[cong] if_cong[cong]
   apply (clarsimp simp: step_restrict_def has_srel_state_def)
   apply (rule_tac x="fst (fst s0H)" in exI)
@@ -3376,11 +3385,9 @@ lemma step_restrict_s0:
    apply (clarsimp split: if_split_asm)
    apply (rule conjI)
     apply clarsimp
-    apply (drule ct_idle'_related[OF s0_srel s0H_invs])
-    apply simp
+    apply (frule ct_idle'_related[OF s0_srel s0H_invs]; solves simp)
    apply clarsimp
-   apply (drule ct_idle_related[OF s0_srel])
-   apply simp
+   apply (drule ct_idle_related[OF s0_srel]; simp)
   apply (clarsimp simp: full_invs_if'_def s0H_invs)
   apply (rule conjI)
    apply (simp only: ex_abs_def)
@@ -3406,6 +3413,7 @@ lemma step_restrict_s0:
   done
 
 lemma Sys1_valid_initial_state_noenabled:
+  assumes domains: "1 \<le> maxDomain"
   assumes utf_det: "\<forall>pl pr pxn tc um ds es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um ds es s \<and> ct_running s
                    \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, ds, es) = {x})"
   assumes utf_non_empty: "\<forall>t pl pr pxn tc um ds es. utf t pl pr pxn (tc, um, ds, es) \<noteq> {}"
@@ -3413,7 +3421,11 @@ lemma Sys1_valid_initial_state_noenabled:
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"
-  by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty utf_non_interrupt det_inv_invariant det_inv_s0])
+  by (rule Sys1_valid_initial_state_noenabled[OF step_restrict_s0 utf_det utf_non_empty
+                                                 utf_non_interrupt det_inv_invariant det_inv_s0
+                                                 ],
+      rule domains)
+
 end
 
 end
