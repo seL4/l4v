@@ -456,3 +456,14 @@ is true using the rule cur_tcb'_cross.
 
 > cur_tcb'_asrt :: KernelState -> Bool
 > cur_tcb'_asrt _ = True
+
+Asserts for first phase, non-blocking, non-calling handle_invocation.
+
+> sch_act_sane_asrt :: KernelState -> Bool
+> sch_act_sane_asrt _ = True
+
+> ct_not_ksQ_asrt :: KernelState -> Bool
+> ct_not_ksQ_asrt _ = True
+
+> ct_active'_asrt :: KernelState -> Bool
+> ct_active'_asrt _ = True
