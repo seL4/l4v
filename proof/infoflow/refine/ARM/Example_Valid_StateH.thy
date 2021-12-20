@@ -274,7 +274,7 @@ where
      \<comment> \<open>tcbPriority        =\<close> default_priority
      \<comment> \<open>tcbQueued          =\<close> False
      \<comment> \<open>tcbFault           =\<close> None
-     \<comment> \<open>tcbTimeSlice       =\<close> time_slice
+     \<comment> \<open>tcbTimeSlice       =\<close> timeSlice
      \<comment> \<open>tcbFaultHandler    =\<close> 0
      \<comment> \<open>tcbIPCBuffer       =\<close> 0
      \<comment> \<open>tcbBoundNotification        =\<close> None

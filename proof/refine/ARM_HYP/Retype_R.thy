@@ -951,8 +951,7 @@ lemma foldr_upd_app_if': "foldr (\<lambda>p ps. ps(p := f p)) as g = (\<lambda>x
 
 lemma etcb_rel_makeObject: "etcb_relation default_etcb makeObject"
   apply (simp add: etcb_relation_def default_etcb_def)
-  apply (simp add: makeObject_tcb default_priority_def default_domain_def
-                   time_slice_def timeSlice_def)
+  apply (simp add: makeObject_tcb default_priority_def default_domain_def)
   done
 
 

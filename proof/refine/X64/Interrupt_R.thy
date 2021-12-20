@@ -729,8 +729,7 @@ lemma timerTick_corres:
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
                        apply (rule tcbSchedAppend_invs_but_ct_not_inQ', clarsimp simp: sch_act_wf_weak)
-                     apply (simp add: sch_act_wf_weak etcb_relation_def
-                       time_slice_def timeSlice_def pred_conj_def)+
+                     apply (simp add: sch_act_wf_weak etcb_relation_def pred_conj_def)+
                  apply (wp threadSet_timeslice_invs threadSet_valid_queues
                            threadSet_valid_queues' threadSet_pred_tcb_at_state)+
                apply (simp add:etcb_relation_def)

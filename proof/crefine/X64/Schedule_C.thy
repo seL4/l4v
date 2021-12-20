@@ -797,7 +797,7 @@ lemma timerTick_ccorres:
   apply (frule invs_cur')
   apply (clarsimp simp: cur_tcb'_def)
   apply (drule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps' timeSlice_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps' Kernel_Config.timeSlice_def)
   apply (subst unat_sub)
    apply simp
   apply (clarsimp simp: ctcb_relation_def)
