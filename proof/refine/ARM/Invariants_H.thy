@@ -1452,6 +1452,12 @@ definition
 defs cur_tcb'_asrt_def:
   "cur_tcb'_asrt \<equiv> \<lambda>s. cur_tcb' s"
 
+defs sch_act_sane_asrt_def:
+  "sch_act_sane_asrt \<equiv> \<lambda>s. sch_act_sane s"
+
+defs ct_not_ksQ_asrt_def:
+  "ct_not_ksQ_asrt \<equiv> \<lambda>s. \<forall>pd. ksCurThread s \<notin> set (ksReadyQueues s pd)"
+
 subsection "Derived concepts"
 
 abbreviation
@@ -1506,6 +1512,9 @@ abbreviation
 
 abbreviation
   "ct_running' \<equiv> ct_in_state' (\<lambda>st. st = Structures_H.Running)"
+
+defs ct_active'_asrt_def:
+  "ct_active'_asrt \<equiv> ct_active'"
 
 end
 
