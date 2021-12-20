@@ -1755,8 +1755,7 @@ lemma valid_sc_strengthen:
 lemma endTimeslice_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
-      and valid_ready_qs and scheduler_act_sane
-      and cur_sc_active and ct_active and schact_is_rct and current_time_bounded 2)
+      and valid_ready_qs and cur_sc_active and ct_active and schact_is_rct and current_time_bounded 2)
      invs'
      (end_timeslice canTimeout) (endTimeslice canTimeout)"
   (is "corres _ ?pre ?pre' _ _")
@@ -1830,7 +1829,6 @@ lemma endTimeslice_corres:
                                                  valid_fault_def valid_fault_handler_def)
                            apply (rule conjI impI; clarsimp)
                             apply (clarsimp simp: ct_in_state_def cte_wp_at_def cur_tcb_def)
-                            apply (rule_tac x="tcb_timeout_handler tcb" in exI)
                             apply (clarsimp simp: get_cap_caps_of_state obj_at_def is_tcb
                                                   caps_of_state_tcb_index_trans[OF get_tcb_rev]
                                                   tcb_cnode_map_def)
@@ -1985,8 +1983,7 @@ crunches setConsumedTime, refillResetRR
 lemma chargeBudget_corres:
   "corres dc
      (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
-      and valid_ready_qs and scheduler_act_sane
-      and released_ipc_queues and cur_sc_active and ct_active and schact_is_rct
+      and valid_ready_qs and released_ipc_queues and cur_sc_active and ct_active and schact_is_rct
       and current_time_bounded 5
       and ct_not_queued and ct_not_in_release_q
       and cur_sc_offset_ready 0)
@@ -1994,10 +1991,6 @@ lemma chargeBudget_corres:
      (charge_budget consumed canTimeout) (chargeBudget consumed canTimeout True)"
   (is "corres _ (?pred and cur_sc_offset_ready 0) _ _ _")
   unfolding chargeBudget_def charge_budget_def ifM_def bind_assoc
-  apply (rule_tac Q=sch_act_sane in corres_cross_add_guard)
-   apply (clarsimp simp: sch_act_sane_def scheduler_act_sane_def sched_act_relation_def
-                  dest!: state_relationD)
-   apply (case_tac "scheduler_action s"; simp add: schact_is_rct_def)
   apply (rule_tac Q=ct_active' in corres_cross_add_guard)
    apply (fastforce intro!: ct_active_cross simp: invs_def valid_state_def valid_pspace_def)
   apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
@@ -2015,7 +2008,7 @@ lemma chargeBudget_corres:
   apply (rule_tac F="idle_sc_ptr = idleSCPtr" in corres_req)
    apply (clarsimp simp: state_relation_def)
   apply (rule_tac Q="\<lambda>_. ?pred"
-              and Q'="\<lambda>_. invs' and sch_act_sane and cur_tcb'"
+              and Q'="\<lambda>_. invs' and cur_tcb'"
                in corres_split')
      apply (clarsimp simp: when_def split del: if_split)
      apply (rule corres_if_split; (solves corressimp)?)
@@ -2140,7 +2133,7 @@ lemma checkBudget_corres:
 
 lemma handleYield_corres:
   "corres dc
-     (einvs and ct_active and cur_sc_active and scheduler_act_sane and schact_is_rct
+     (einvs and ct_active and cur_sc_active and schact_is_rct
       and current_time_bounded 5 and cur_sc_offset_ready 0
       and ct_not_queued and ct_not_in_release_q and current_time_bounded 2)
      invs'
