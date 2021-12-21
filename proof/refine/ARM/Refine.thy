@@ -254,19 +254,19 @@ lemma kernel_entry_valid_sched:
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 
-abbreviation (input) abstract_bundle where
-  "abstract_bundle s \<equiv> einvs s
-                       \<and> scheduler_action s = resume_cur_thread
-                       \<and> cur_sc_active s \<and> ct_not_in_release_q s
-                       \<and> valid_machine_time s \<and> current_time_bounded 5 s \<and> consumed_time_bounded s
-                       \<and> (cur_sc_offset_ready (consumed_time s) s
-                          \<and> cur_sc_offset_sufficient (consumed_time s) s)
-                       \<and> (0 < domain_time s) \<and> valid_domain_list s "
+abbreviation (input) mcs_invs where
+  "mcs_invs s \<equiv> einvs s
+                 \<and> scheduler_action s = resume_cur_thread
+                 \<and> cur_sc_active s \<and> ct_not_in_release_q s
+                 \<and> valid_machine_time s \<and> current_time_bounded 5 s \<and> consumed_time_bounded s
+                 \<and> (cur_sc_offset_ready (consumed_time s) s
+                    \<and> cur_sc_offset_sufficient (consumed_time s) s)
+                 \<and> (0 < domain_time s) \<and> valid_domain_list s "
 
 lemma kernel_entry_invs:
-  "\<lbrace>\<lambda>s. abstract_bundle s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+  "\<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    kernel_entry e us
-   \<lbrace>\<lambda>_ s. abstract_bundle s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. mcs_invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (rule_tac Q="\<lambda>_ s. (invs s \<and> (ct_running s \<or> ct_idle s))
                            \<and> (cur_sc_offset_ready (consumed_time s) s
                               \<and> cur_sc_offset_sufficient (consumed_time s) s)
@@ -328,7 +328,7 @@ lemma kernel_entry_invs:
 
 definition
   "full_invs
-     \<equiv> {((tc, s :: det_ext state), m, e). abstract_bundle s
+     \<equiv> {((tc, s :: det_ext state), m, e). mcs_invs s
                                           \<and> (ct_running s \<or> ct_idle s)
                                           \<and> (m = KernelMode \<longrightarrow> e \<noteq> None)
                                           \<and> (m = UserMode \<longrightarrow> ct_running s)
@@ -374,7 +374,7 @@ lemma check_active_irq_valid_machine_time[wp]:
 
 lemma do_user_op_invs2:
   "do_user_op f tc
-   \<lbrace>\<lambda>s. abstract_bundle s \<and> ct_running s\<rbrace>"
+   \<lbrace>\<lambda>s. mcs_invs s \<and> ct_running s\<rbrace>"
   apply (rule_tac Q="\<lambda>_ s. (invs s \<and> ct_running s) \<and> valid_list s \<and> valid_sched s
                            \<and> scheduler_action s = resume_cur_thread
                            \<and> (0 < domain_time s)  \<and> valid_domain_list s
@@ -453,15 +453,15 @@ lemma cur_sc_offset_ready_and_sufficient[simp]:
   done
 
 lemma check_active_irq_invs:
-  "check_active_irq \<lbrace>\<lambda>s. abstract_bundle s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
+  "check_active_irq \<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
 lemma check_active_irq_invs_just_running:
-  "check_active_irq \<lbrace>\<lambda>s. abstract_bundle s \<and> ct_running s\<rbrace>"
+  "check_active_irq \<lbrace>\<lambda>s. mcs_invs s \<and> ct_running s\<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
 lemma check_active_irq_invs_just_idle:
-  "check_active_irq \<lbrace>\<lambda>s. abstract_bundle s \<and> ct_idle s\<rbrace>"
+  "check_active_irq \<lbrace>\<lambda>s. mcs_invs s \<and> ct_idle s\<rbrace>"
   by (wpsimp simp: check_active_irq_def ct_in_state_def)
 
 lemma akernel_invariant:
@@ -718,7 +718,7 @@ lemma device_mem_corres:
                          corres_underlying_def device_mem_relation)
 
 lemma entry_corres:
-  "corres (=) (\<lambda>s. abstract_bundle s \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
+  "corres (=) (\<lambda>s. mcs_invs s \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
               (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
           (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
@@ -817,7 +817,7 @@ lemma ct_idle_related:
 definition
   "full_invs'
      \<equiv> {((tc,s),m,e). invs' s \<and> vs_valid_duplicates' (ksPSpace s)
-                      \<and> ex_abs (\<lambda>s :: det_state. abstract_bundle s
+                      \<and> ex_abs (\<lambda>s :: det_state. mcs_invs s
                                                   \<and> (ct_running s \<or> ct_idle s)
                                                   \<and> (e \<noteq> None \<and> e \<noteq> Some Interrupt \<longrightarrow> ct_running s)) s
                       \<and> (m = KernelMode \<longrightarrow> e \<noteq> None)
