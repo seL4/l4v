@@ -76,8 +76,7 @@ end
 All architecture-specific definitions should be placed in the Arch locale, with
 an appropriate global_naming scheme (see below).
 
-If you're not familiar with locales, you should read the [locale
-tutorial](http://isabelle.in.tum.de/dist/Isabelle2021/doc/locales.pdf). The
+If you're not familiar with locales, you should read the [locale tutorial]. The
 `Arch` locale has no parameters and no assumptions, since we are merely using it
 as a namespace, but it still important to understand the various ways of
 interpreting this locale, how it interacts with various other locales in the
@@ -87,6 +86,8 @@ The locale is named "Arch" on every architectures, rather than "ARM" or "X64",
 because the generic theories need to be able to selectively refer to types,
 constants and facts from architecture-specific theories, without naming a
 particular architecture. The mechanisms for doing this are described below.
+
+[locale tutorial]: https://isabelle.in.tum.de/website-Isabelle2021/dist/Isabelle2021/doc/locales.pdf
 
 ## Current status
 
