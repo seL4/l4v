@@ -2573,7 +2573,7 @@ crunches check_budget
   for cur_tcb[wp]: cur_tcb
   and pspace_aligned[wp]: pspace_aligned
   and pspace_distinct[wp]: pspace_distinct
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunches checkBudgetRestart
   for valid_duplicates''[wp]: "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
