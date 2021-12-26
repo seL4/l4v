@@ -457,7 +457,9 @@ is true using the rule cur_tcb'_cross.
 > cur_tcb'_asrt :: KernelState -> Bool
 > cur_tcb'_asrt _ = True
 
-Asserts for first phase, non-blocking, non-calling handle_invocation.
+Asserts used for first phase, non-blocking, non-calling handle_invocation.
+Each stating that `sch_act_sane`, `!pd. ksCurThread s notin set (ksReadyQueues s pd)`,
+and `ct_active' s` holds.
 
 > sch_act_sane_asrt :: KernelState -> Bool
 > sch_act_sane_asrt _ = True
@@ -467,3 +469,9 @@ Asserts for first phase, non-blocking, non-calling handle_invocation.
 
 > ct_active'_asrt :: KernelState -> Bool
 > ct_active'_asrt _ = True
+
+Assert stating that, when scheduler action is resume, the current thread is activatable.
+Used in callKernel.
+
+> rct_imp_activatable'_asrt :: KernelState -> Bool
+> rct_imp_activatable'_asrt _ = True
