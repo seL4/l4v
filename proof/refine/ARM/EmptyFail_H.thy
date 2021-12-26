@@ -313,8 +313,15 @@ crunch (empty_fail) empty_fail: callKernel
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-              (\<lambda>s. scheduler_action s = resume_cur_thread) and
-              (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
+                (\<lambda>s. scheduler_action s = resume_cur_thread) and
+                current_time_bounded 5 and
+                consumed_time_bounded and
+                valid_machine_time and
+                ct_not_in_release_q and
+                cur_sc_active and
+                (\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and
+                (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s) and
+                (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
