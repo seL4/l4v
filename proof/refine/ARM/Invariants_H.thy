@@ -1206,6 +1206,10 @@ abbreviation
 abbreviation
   "activatable' st \<equiv> runnable' st \<or> idle' st"
 
+defs rct_imp_activatable'_asrt_def:
+  "rct_imp_activatable'_asrt \<equiv> \<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow>
+                                         ct_in_state' activatable' s"
+
 primrec
   sch_act_wf :: "scheduler_action \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
