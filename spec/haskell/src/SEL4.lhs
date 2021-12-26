@@ -22,7 +22,7 @@ This is the top-level module; it defines the interface between the kernel and th
 > import SEL4.API.Types
 > import SEL4.Kernel.CSpace(lookupCap)
 > import SEL4.Kernel.Thread(schedule, activateThread)
-> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert)
+> import SEL4.Model.StateData(KernelState, Kernel, getCurThread, doMachineOp, stateAssert, rct_imp_activatable'_asrt)
 > import SEL4.Model.Preemption(withoutPreemption)
 > import SEL4.Object.Structures
 > import SEL4.Object.TCB(asUser, mcsPreemptionPoint)
@@ -44,7 +44,9 @@ faults, and system calls; the set of possible events is defined in
 >                       irq_opt <- doMachineOp (getActiveIRQ True)
 >                       mcsPreemptionPoint irq_opt
 >                       when (isJust irq_opt) $ handleInterrupt (fromJust irq_opt))
+>     stateAssert rct_imp_activatable'_asrt "Assert that RCT sched action implies ct activatable'"
 >     schedule
+>     stateAssert rct_imp_activatable'_asrt "Assert that RCT sched action implies ct activatable'"
 >     activateThread
 >     stateAssert kernelExitAssertions "Kernel exit conditions must hold"
 
