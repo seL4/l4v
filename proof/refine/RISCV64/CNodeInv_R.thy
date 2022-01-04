@@ -8876,14 +8876,6 @@ declare withoutPreemption_lift [wp]
 
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
-lemma no_irq_setVSpaceRoot:
-  "no_irq (setVSpaceRoot r a)"
-  unfolding setVSpaceRoot_def by wpsimp
-
-lemma no_irq_hwASIDFlush:
-  "no_irq (hwASIDFlush r)"
-  unfolding hwASIDFlush_def by wpsimp
-
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps hoare_unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
    simp: crunch_simps o_def pteAtIndex_def)

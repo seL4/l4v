@@ -795,7 +795,8 @@ lemma chooseThread_no_orphans [wp]:
    chooseThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  unfolding chooseThread_def Let_def numDomains_def curDomain_def
+  unfolding chooseThread_def Let_def
+  supply if_split[split del]
   apply (simp only: return_bind, simp)
   apply (rule hoare_seq_ext[where B="\<lambda>rv s. ?PRE s \<and> rv = ksCurDomain s"])
    apply (rule_tac B="\<lambda>rv s. ?PRE s \<and> curdom = ksCurDomain s \<and>
@@ -811,7 +812,9 @@ lemma chooseThread_no_orphans [wp]:
                           valid_queues_def st_tcb_at'_def)
     apply (fastforce dest!: lookupBitmapPriority_obj_at' elim: obj_at'_weaken
                      simp: all_active_tcb_ptrs_def)
-   apply (simp add: bitmap_fun_defs | wp)+
+   apply (wpsimp simp: bitmap_fun_defs)
+  apply (wp curDomain_or_return_0[simplified])
+    apply (wpsimp simp: curDomain_def simp: invs_no_cicd_ksCurDomain_maxDomain')+
   done
 
 lemma tcbSchedAppend_in_ksQ:
@@ -1215,18 +1218,20 @@ lemma timerTick_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
    timerTick
    \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
-  unfolding timerTick_def getDomainTime_def numDomains_def
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps | clarsimp)+
-   apply (wp threadSet_valid_queues' tcbSchedAppend_almost_no_orphans
-             threadSet_almost_no_orphans threadSet_no_orphans tcbSchedAppend_sch_act_wf
-             | wpc | clarsimp
-             | strengthen sch_act_wf_weak)+
-         apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> valid_queues' s \<and> tcb_at' thread s
-                                 \<and> sch_act_wf  (ksSchedulerAction s) s" in hoare_post_imp)
-          apply (clarsimp simp: inQ_def)
-         apply (wp hoare_drop_imps | clarsimp)+
-  apply auto
+  unfolding timerTick_def getDomainTime_def
+  supply if_split[split del]
+  apply (subst threadState_case_if)
+  apply (wpsimp wp: threadSet_no_orphans threadSet_valid_queues'
+                    threadSet_valid_queues' tcbSchedAppend_almost_no_orphans
+                    threadSet_almost_no_orphans threadSet_no_orphans tcbSchedAppend_sch_act_wf
+                    hoare_drop_imp
+                simp: if_apply_def2
+         | strengthen sch_act_wf_weak)+
+      apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> valid_queues' s \<and> tcb_at' thread s
+                                \<and> sch_act_wf  (ksSchedulerAction s) s" in hoare_post_imp)
+       apply (clarsimp simp: inQ_def)
+      apply (wp hoare_drop_imps | clarsimp)+
+  apply (auto split: if_split)
   done
 
 

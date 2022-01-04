@@ -927,10 +927,10 @@ lemma getExMonitor_wp[wp]:
   by (simp add: getExMonitor_def | wp)+
 
 
-definition valid_vspace_objs' where
-  "valid_vspace_objs' \<equiv> valid_pdpt_objs"
+definition valid_vspace_objs_if where
+  "valid_vspace_objs_if \<equiv> valid_pdpt_objs"
 
-declare valid_vspace_objs'_def[simp]
+declare valid_vspace_objs_if_def[simp]
 
 
 lemma do_user_op_reads_respects_g:
@@ -938,7 +938,7 @@ lemma do_user_op_reads_respects_g:
   shows
     "(\<forall>pl pr pxn tc ms s. P tc s \<and> context_matches_state pl pr pxn ms s
                                 \<longrightarrow> (\<exists>x. uop (cur_thread s) pl pr pxn (tc, ms) = {x}))
-     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs'
+     \<Longrightarrow> reads_respects_g aag l (pas_refined aag and invs and valid_vspace_objs_if
                                                  and is_subject aag \<circ> cur_thread
                                                  and (\<lambda>s. cur_thread s \<noteq> idle_thread s) and P tc)
                           (do_user_op_if uop tc)"
@@ -1000,7 +1000,7 @@ context begin interpretation Arch .
 
 requalify_consts
   do_user_op_if
-  valid_vspace_objs'
+  valid_vspace_objs_if
   context_matches_state
 
 requalify_facts

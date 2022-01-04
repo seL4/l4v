@@ -84,6 +84,7 @@ session Lib (lib) = Word_Lib +
     Guess_ExI
     GenericTag
     ML_Goal_Test
+    Value_Type
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
@@ -163,6 +164,7 @@ session LibTest (lib) in test = Refine +
     Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
+    Value_Type_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test

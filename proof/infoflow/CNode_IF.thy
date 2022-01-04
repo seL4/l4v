@@ -326,7 +326,9 @@ locale CNode_IF_1 =
   fixes state_ext_t :: "'s :: state_ext itself"
   and irq_at :: "nat \<Rightarrow> (irq \<Rightarrow> bool) \<Rightarrow> irq option"
   assumes set_cap_globals_equiv:
-    "\<lbrace>globals_equiv s and valid_global_objs\<rbrace> set_cap cap p \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+    "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+     set_cap cap p
+     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and dmo_getActiveIRQ_wp:
     "\<lbrace>\<lambda>s. P (irq_at (irq_state (machine_state s) + 1) (irq_masks (machine_state s)))
             (s\<lparr>machine_state := machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>\<rparr>)\<rbrace>
@@ -342,7 +344,7 @@ begin
 crunch globals_equiv[wp]: set_untyped_cap_as_full "globals_equiv st"
 
 lemma cap_insert_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_insert_def fun_app_def
@@ -350,14 +352,14 @@ lemma cap_insert_globals_equiv:
                  set_cap_globals_equiv hoare_drop_imps dxo_wp_weak)
 
 lemma cap_move_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
-    cap_move new_cap src_slot dest_slot
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
+   cap_move new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_move_def fun_app_def
   by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
 
 lemma cap_swap_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_swap cap1 slot1 cap2 slot2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_swap_def

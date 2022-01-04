@@ -113,8 +113,7 @@ lemma valid_obj_makeObject_cte [simp]:
 lemma valid_obj_makeObject_tcb [simp]:
   "valid_obj' (KOTCB makeObject) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def valid_arch_tcb'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte newArchTCB_def
-                     tcb_cte_cases_def maxDomain_def numDomains_def maxPriority_def numPriorities_def minBound_word)
+  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word newArchTCB_def)
 
 lemma valid_obj_makeObject_endpoint [simp]:
   "valid_obj' (KOEndpoint makeObject) s"
@@ -952,8 +951,7 @@ lemma foldr_upd_app_if': "foldr (\<lambda>p ps. ps(p := f p)) as g = (\<lambda>x
 
 lemma etcb_rel_makeObject: "etcb_relation default_etcb makeObject"
   apply (simp add: etcb_relation_def default_etcb_def)
-  apply (simp add: makeObject_tcb default_priority_def default_domain_def
-                   time_slice_def timeSlice_def)
+  apply (simp add: makeObject_tcb default_priority_def default_domain_def)
   done
 
 

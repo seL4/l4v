@@ -961,11 +961,6 @@ lemma threadGet_wp'':
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma dom_less_0x10_helper:
-  "d \<le> maxDomain \<Longrightarrow> (ucast d :: machine_word) < 0x10"
-  unfolding maxDomain_def numDomains_def
-  by (clarsimp simp add: word_less_nat_alt unat_ucast_upcast is_up word_le_nat_alt)
-
 lemma filter_empty_unfiltered_contr:
   "\<lbrakk> [x\<leftarrow>xs . x \<noteq> y] = [] ; x' \<in> set xs ; x' \<noteq> y \<rbrakk> \<Longrightarrow> False"
   by (induct xs, auto split: if_split_asm)
@@ -1357,5 +1352,27 @@ lemma word_ctz_0[simp]:
   "word_ctz (0::32 word) = 32"
   "word_ctz (0::64 word) = 64"
   by (clarsimp simp: word_ctz_def to_bl_def)+
+
+(* FIXME move to Word_Lib *)
+lemma unat_trans_ucast_helper:
+  "\<lbrakk> unat x < n ; n \<le> Suc 0 \<rbrakk> \<Longrightarrow> ucast x = 0"
+  by (simp add: le_Suc_eq unsigned_eq_0_iff)
+
+lemma numPriorities_machine_word_safe:
+  "unat (of_nat numPriorities :: machine_word) = numPriorities"
+  by (simp add: numPriorities_def)
+
+(* needed consequence of word_less_1 when word_less_1 isn't safe, e.g. when
+   using no_less_1_simps; otherwise you'll be able to prove that 0 < 300, but
+   not that 0 < 1 *)
+lemma word_zero_less_one[simp]:
+  "0 < (1::'a::len word)"
+  by (simp add: word_less_1)
+
+bundle no_less_1_simps
+begin
+  declare word_less_1[simp del]
+  declare less_Suc0[iff del]
+end
 
 end

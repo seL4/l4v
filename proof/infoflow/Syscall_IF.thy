@@ -44,12 +44,6 @@ locale Syscall_IF_1 =
           \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   and sts_authorised_for_globals_inv:
     "\<And>f. set_thread_state d f \<lbrace>\<lambda>s :: det_state. authorised_for_globals_inv oper s\<rbrace>"
-  and arch_perform_invocation_reads_respects_g:
-    "pas_domains_distinct aag
-     \<Longrightarrow> reads_respects_g aag l (ct_active and authorised_arch_inv aag ai and valid_arch_inv ai
-                                           and authorised_for_globals_arch_inv ai and invs
-                                           and pas_refined aag and is_subject aag \<circ> cur_thread)
-                          (arch_perform_invocation ai)"
   and dmo_maskInterrupt_globals_equiv[wp]:
     "do_machine_op (maskInterrupt b irq) \<lbrace>globals_equiv s\<rbrace>"
   and dmo_ackInterrupt_globals_equiv[wp]:
@@ -258,24 +252,27 @@ lemma invoke_cnode_reads_respects_f:
 
 lemma cap_swap_reads_respects_g:
   "reads_respects_g aag l
-     (\<lambda>s. is_subject aag (fst slot1) \<and> is_subject aag (fst slot2) \<and> valid_global_objs s)
+     (\<lambda>s. is_subject aag (fst slot1) \<and> is_subject aag (fst slot2) \<and>
+          valid_global_objs s \<and> valid_arch_state s)
      (cap_swap cap1 slot1 cap2 slot2)"
-  by (fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] cap_swap_reads_respects
-                       doesnt_touch_globalsI cap_swap_globals_equiv)
+  by (wp equiv_valid_guard_imp[OF reads_respects_g] cap_swap_reads_respects
+         doesnt_touch_globalsI cap_swap_globals_equiv | simp)+
 
 lemma cap_insert_reads_respects_g:
   "reads_respects_g aag l
-     (\<lambda>s. is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot) \<and> valid_global_objs s)
+     (\<lambda>s. is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot) \<and>
+          valid_global_objs s \<and> valid_arch_state s)
      (cap_insert new_cap src_slot dest_slot)"
-  by (fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] cap_insert_reads_respects
-                       doesnt_touch_globalsI cap_insert_globals_equiv)
+  by (wp equiv_valid_guard_imp[OF reads_respects_g] cap_insert_reads_respects
+         doesnt_touch_globalsI cap_insert_globals_equiv | simp)+
 
 lemma cap_move_reads_respects_g:
   "reads_respects_g aag l
-     (\<lambda>s. is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot) \<and> valid_global_objs s)
+     (\<lambda>s. is_subject aag (fst src_slot) \<and> is_subject aag (fst dest_slot) \<and>
+ valid_global_objs s \<and> valid_arch_state s)
      (cap_move new_cap src_slot dest_slot)"
-  by (fastforce intro: equiv_valid_guard_imp[OF reads_respects_g] cap_move_reads_respects
-                       doesnt_touch_globalsI cap_move_globals_equiv)
+  by (wp equiv_valid_guard_imp[OF reads_respects_g] cap_move_reads_respects
+         doesnt_touch_globalsI cap_move_globals_equiv | simp)+
 
 (* FIXME: MOVE *)
 lemma reads_respects_f_g':

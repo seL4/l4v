@@ -224,15 +224,6 @@ lemma kernel_entry_if_idle_equiv[ADT_IF_assms]:
    apply (fastforce intro!: invs_pd_not_idle_thread)+
   done
 
-(* FIXME IF: malformed *)
-lemma handle_preemption_if_valid_sched[ADT_IF_assms, wp]:
-  "\<lbrace>valid_sched and invs and (\<lambda>s. blah \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
-   handle_preemption_if irq
-   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def non_kernel_IRQs_def cong: if_cong)
-   apply (wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)+
-  done
-
 lemmas handle_preemption_idle_equiv[ADT_IF_assms, wp] =
   idle_globals_lift[OF handle_preemption_globals_equiv invs_pd_not_idle_thread, simplified]
 
@@ -266,31 +257,27 @@ lemma kernel_entry_if_valid_pdpt_objs[wp]:
                     wp: static_imp_wp thread_set_invs_trivial)+
   done
 
-lemma kernel_entry_if_valid_vspace_objs'[ADT_IF_assms, wp]:
-  "\<lbrace>valid_vspace_objs' and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+lemma kernel_entry_if_valid_vspace_objs_if[ADT_IF_assms, wp]:
+  "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
    kernel_entry_if e tc
-   \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+   \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
   by wpsimp
 
 lemma handle_preemption_if_valid_pdpt_objs[ADT_IF_assms, wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_vspace_objs' s\<rbrace>"
+  "\<lbrace>valid_vspace_objs_if\<rbrace> handle_preemption_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by (simp add: handle_preemption_if_def | wp)+
 
 lemma schedule_if_valid_pdpt_objs[ADT_IF_assms, wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_vspace_objs' s\<rbrace>"
+  "\<lbrace>valid_vspace_objs_if\<rbrace> schedule_if a \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by (simp add: schedule_if_def | wp)+
 
 lemma do_user_op_if_valid_pdpt_objs[ADT_IF_assms, wp]:
-  "\<lbrace>valid_vspace_objs'\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_vspace_objs' s\<rbrace>"
+  "\<lbrace>valid_vspace_objs_if\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
   by (simp add: do_user_op_if_def | wp select_wp | wpc)+
 
-lemma valid_vspace_objs'_ms_update[ADT_IF_assms, simp]:
-  "valid_vspace_objs' (machine_state_update f s) = valid_vspace_objs' s"
+lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
+  "valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
   by auto
-
-lemma non_kernel_IRQs_empty[ADT_IF_assms]:
-  "non_kernel_IRQs = {}"
-  by (simp add: non_kernel_IRQs_def)
 
 lemma do_user_op_if_irq_state_of_state[ADT_IF_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"

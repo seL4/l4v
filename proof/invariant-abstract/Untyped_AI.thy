@@ -2768,7 +2768,7 @@ lemma reset_untyped_cap_invs_etc:
      (simp add: cte_wp_at_caps_of_state descendants_range_def)+)
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
-  apply (cases "dev \<or> sz < reset_chunk_bits")
+  apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: bits_of_def)
    apply (simp add: unless_def)
    apply (rule hoare_pre)
@@ -2781,7 +2781,7 @@ lemma reset_untyped_cap_invs_etc:
                hoare_vcg_ex_lift ct_in_state_thread_state_lift)+
    apply (clarsimp simp add: bits_of_def field_simps cte_wp_at_caps_of_state
                              empty_descendants_range_in)
-  apply (cut_tac a=sz and b=reset_chunk_bits and n=idx in upt_mult_lt_prop)
+  apply (cut_tac a=sz and b=resetChunkBits and n=idx in upt_mult_lt_prop)
     apply (frule caps_of_state_valid_cap, clarsimp+)
     apply (simp add: valid_cap_def)
    apply simp
@@ -2789,7 +2789,7 @@ lemma reset_untyped_cap_invs_etc:
   apply (rule hoare_pre, rule hoare_post_impErr,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and (\<lambda>s. scheduler_action s = resume_cur_thread)
                     and valid_untyped_inv_wcap ?ui
-                          (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ reset_chunk_bits)))"
+                          (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ resetChunkBits)))"
       and E="\<lambda>_. invs"
       in mapME_x_validE_nth)
      apply (rule hoare_pre)

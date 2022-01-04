@@ -208,7 +208,7 @@ lemma globals_equiv_is_original_cap_update[simp]:
   by (fastforce simp: globals_equiv_def idle_equiv_def)
 
 lemma create_cap_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_global_objs\<rbrace>
+  "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    create_cap type bits untyped dev slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   apply (simp only: create_cap_def split_def)
@@ -298,12 +298,13 @@ lemma do_machine_op_mapM_x:
   done
 
 lemma create_cap_reads_respects_g:
-  "reads_respects_g aag l (K (is_subject aag (fst (fst slot))) and valid_global_objs)
-                    (create_cap type bits untyped dev slot)"
+  "reads_respects_g aag l
+     (K (is_subject aag (fst (fst slot))) and valid_global_objs and valid_arch_state)
+     (create_cap type bits untyped dev slot)"
   apply (rule equiv_valid_guard_imp[OF reads_respects_g])
     apply (rule create_cap_reads_respects)
-   apply (rule doesnt_touch_globalsI[OF create_cap_globals_equiv])
-  by simp
+   apply (wp doesnt_touch_globalsI create_cap_globals_equiv | simp)+
+  done
 
 lemma retype_region_ext_def2:
   "retype_region_ext a b =
@@ -433,11 +434,12 @@ lemma cap_range_of_valid_capD:
       | intro exI | rule singleton_set_size[symmetric] | fastforce)+
 
 lemma set_cap_reads_respects_g:
-  "reads_respects_g aag l (valid_global_objs and K (is_subject aag (fst slot))) (set_cap cap slot)"
+  "reads_respects_g aag l (valid_global_objs and valid_arch_state
+                                             and K (is_subject aag (fst slot))) (set_cap cap slot)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g[OF set_cap_reads_respects])
-   apply (rule doesnt_touch_globalsI[OF set_cap_globals_equiv])
-  by simp
+   apply (wp doesnt_touch_globalsI set_cap_globals_equiv | simp)+
+  done
 
 (*FIXME move*)
 lemma when_ev:

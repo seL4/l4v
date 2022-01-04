@@ -45,7 +45,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
         and (\<lambda>s. ex = is_final_cap' (ArchObjectCap arch_cap) s)
         and cte_wp_at ((=) (ArchObjectCap arch_cap)) slot\<rbrace>
    arch_finalise_cap arch_cap ex
-   \<lbrace>\<lambda>rv s. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
 (* FIXME: move *)
@@ -334,8 +334,7 @@ lemma pagebitsforsize_ge_2[simp]:
   by (induct vmpage_size; simp)
 
 lemma arch_finalise_cap_globals_equiv[Finalise_IF_assms]:
-  "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned
-                     and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and invs and valid_arch_cap cap\<rbrace>
    arch_finalise_cap cap b
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap; simp add: arch_finalise_cap_def)

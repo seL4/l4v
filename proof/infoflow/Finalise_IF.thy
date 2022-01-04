@@ -48,7 +48,7 @@ locale Finalise_IF_1 =
            and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
-     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+     \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   and set_notification_globals_equiv:
     "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
      set_notification ntfnptr ntfn
@@ -58,8 +58,7 @@ locale Finalise_IF_1 =
   and set_irq_state_globals_equiv:
     "set_irq_state state irq \<lbrace>globals_equiv st\<rbrace>"
   and arch_finalise_cap_globals_equiv:
-    "\<lbrace>globals_equiv st and valid_global_objs and valid_arch_state and pspace_aligned
-                       and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+    "\<lbrace>globals_equiv st and invs and valid_arch_cap acap\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   and prepare_thread_delete_globals_equiv[wp]:
@@ -1223,7 +1222,7 @@ next
                          \<and> einvs s \<and> replaceable s slot (fst fin) rv
                          \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                          \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
-                         \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
+                         \<and> (\<forall>t\<in>obj_refs_ac (fst fin). halted_if_tcb t s)
                          \<and> pas_refined aag s
                          \<and> emptyable slot s
                          \<and> simple_sched_action s
@@ -1508,9 +1507,8 @@ crunches unbind_notification
   for valid_arch_state[wp]: valid_arch_state
 
 lemma finalise_cap_globals_equiv:
-  "\<lbrace>globals_equiv st and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)
-                     and valid_global_objs and valid_arch_state and pspace_aligned
-                     and valid_vspace_objs and valid_global_refs and valid_vs_lookup\<rbrace>
+  "\<lbrace>globals_equiv st and invs and valid_cap cap
+                     and (\<lambda>s. \<forall>p. cap = ThreadCap p \<longrightarrow> p \<noteq> idle_thread s)\<rbrace>
    finalise_cap cap b
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap; simp)
@@ -1518,7 +1516,7 @@ lemma finalise_cap_globals_equiv:
          cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs
          arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
          unbind_notification_globals_equiv liftM_wp when_def
-      | clarsimp | intro impI conjI)+
+      | clarsimp simp: valid_cap_def | intro impI conjI)+
 
 end
 

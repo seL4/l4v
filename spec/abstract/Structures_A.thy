@@ -491,10 +491,6 @@ primrec ipc_queued_thread_state :: "thread_state \<Rightarrow> bool" where
 | "ipc_queued_thread_state (IdleThreadState)         = False"
 | "ipc_queued_thread_state (BlockedOnReply _)        = True"
 
-definition num_domains :: nat
-where
-  "num_domains \<equiv> 16" (* FIXME: import from config *)
-
 definition default_domain :: domain
 where
   "default_domain \<equiv> minBound"

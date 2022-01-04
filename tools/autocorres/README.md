@@ -35,7 +35,7 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2020:
+AutoCorres is packaged as a theory for Isabelle2021:
 
     https://isabelle.in.tum.de
 
@@ -89,14 +89,15 @@ the tutorial.
 Development and reporting bugs
 ------------------------------
 
-AutoCorres is currently maintained by
-Matthew Brecknell <Matthew.Brecknell@data61.csiro.au>.
+AutoCorres is currently maintained by the seL4 Foundation.
 
 Additionally, the latest development version is available on GitHub
 as part of the L4.verified project:
 
-    https://github.com/seL4/l4v (in tools/autocorres)
+  <https://github.com/seL4/l4v> (in tools/autocorres)
 
+Please use the tracker on the GitHub address above for reporting issues
+with the tool.
 
 
 Options

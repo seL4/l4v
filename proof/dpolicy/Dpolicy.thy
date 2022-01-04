@@ -421,7 +421,7 @@ lemma opt_cap_Some_rev:
   done
 
 lemma obj_refs_transform:
-  "\<not> (\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> obj_refs cap = cdl_obj_refs (transform_cap cap)"
+  "\<not> (\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> obj_refs_ac cap = cdl_obj_refs (transform_cap cap)"
   apply (case_tac cap; clarsimp)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap; clarsimp)

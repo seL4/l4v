@@ -33,7 +33,7 @@ The size of the root node of the initial capability space determines the area of
 The default number of security domains.
 
 > numDomains :: Int
-> numDomains = 16
+> numDomains = error "see Kernel_Config.thy for definition"
 
 The number of priority levels per domain. There is one ready queue per domain and per priority.
 
@@ -43,12 +43,12 @@ The number of priority levels per domain. There is one ready queue per domain an
 To limit the impact of "Retype" calls on interrupt latency, there is a fixed maximum number of capabilities that may be created by a single "Retype" operation. This limit may be changed at kernel configuration time.
 
 > retypeFanOutLimit :: Word
-> retypeFanOutLimit = 256
+> retypeFanOutLimit = error "see Kernel_Config.thy"
 
 Also related to interrupt latency, clearing of memory before "Retype" is done one chunk at a time, with a configurable chunk size. The chunk size must be a power of two, and is represented by a number of bits.
 
 > resetChunkBits :: Int
-> resetChunkBits = 8
+> resetChunkBits = error "see Kernel_Config.thy"
 
 > timeArgSize :: Int
 > timeArgSize = 2

@@ -1600,8 +1600,7 @@ lemma reads_respects_scheduler_invisible_domain_switch:
     apply (rule equiv_valid_2_bind_pre[where R'=dc])
          apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
               apply simp
-              apply (rename_tac rv'b)
-              apply (rule_tac P="rv'b = choose_new_thread" in  EquivValid.gen_asm_ev2_l)
+              apply (rule_tac P="rvb = choose_new_thread" in  EquivValid.gen_asm_ev2_l)
               apply simp
               apply (rule equiv_valid_2_bind_pre)
                    apply (rule equiv_valid_2)
@@ -1940,7 +1939,7 @@ lemma timer_tick_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (pas_refined aag and valid_queues and valid_etcbs
                                                          and valid_sched_action)
-                                 (when (Suc 0 < num_domains)
+                                 (when (Suc 0 < numDomains)
                                     (do x \<leftarrow> dec_domain_time;
                                         dom_time \<leftarrow> gets domain_time;
                                         when (dom_time = 0) reschedule_required

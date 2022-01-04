@@ -119,8 +119,8 @@ lemma sata_detype[Retype_AC_assms]:
 lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
-lemma word_size_bits_reset_chunk_bits[Retype_AC_assms]: "word_size_bits \<le> reset_chunk_bits"
-  by (simp add: word_size_bits_def reset_chunk_bits_def)
+lemma word_size_bits_resetChunkBits[Retype_AC_assms]: "word_size_bits \<le> resetChunkBits"
+  by (simp add: word_size_bits_def Kernel_Config.resetChunkBits_def)
 
 lemma clas_default_cap[Retype_AC_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
@@ -411,6 +411,24 @@ lemma init_arch_objects_integrity[Retype_AC_assms]:
                     dmo_mapM_x_cleanCacheRange_PoU_integrity
               simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
+
+lemma integrity_asids_detype[Retype_AC_assms]:
+  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  shows
+    "integrity_asids aag subjects x a (detype refs s) s' =
+     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag subjects x a s (detype refs s') =
+     integrity_asids aag subjects x a s s'"
+  by auto
+
+lemma retype_region_integrity_asids[Retype_AC_assms]:
+  "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
+     \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits)
+                            else kheap s a\<rparr>)"
+  by clarsimp
 
 end
 

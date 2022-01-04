@@ -95,7 +95,7 @@ lemma send_signal_pas_refined:
 
 lemma receive_signal_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
-                    and K (\<forall>ntfnptr \<in> obj_refs cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
+                    and K (\<forall>ntfnptr \<in> obj_refs_ac cap. abs_has_auth_to aag Receive thread ntfnptr)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: receive_signal_def)
@@ -135,12 +135,12 @@ lemma set_notification_respects:
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def partial_inv_def a_type_def)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def tro_ntfn)
+  apply (clarsimp simp: integrity_def tro_ntfn integrity_asids_kh_upds)
   done
 
 lemma receive_signal_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs and
-    K ((\<forall>ntfnptr \<in> obj_refs cap. aag_has_auth_to aag Receive ntfnptr) \<and> is_subject aag thread)\<rbrace>
+    K ((\<forall>ntfnptr \<in> obj_refs_ac cap. aag_has_auth_to aag Receive ntfnptr) \<and> is_subject aag thread)\<rbrace>
    receive_signal thread cap is_blocking
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: receive_signal_def)
@@ -165,7 +165,7 @@ locale Ipc_AC_1 =
      lookup_ipc_buffer True receiver
      \<lbrace>\<lambda>rv _. ipc_buffer_has_auth aag receiver rv\<rbrace>"
   and cap_insert_ext_integrity_asids[wp]:
-    "cap_insert_ext a b c d e \<lbrace>integrity_asids aag subjects x (st :: det_ext state)\<rbrace>"
+    "cap_insert_ext a b c d e \<lbrace>integrity_asids aag subjects x asid (st :: det_ext state)\<rbrace>"
   and make_fault_message_inv[wp]:
     "\<And>P. make_fault_msg ft t \<lbrace>\<lambda>s :: det_ext state. P s\<rbrace>"
   and tcb_context_no_change:
@@ -181,6 +181,9 @@ lemma send_upd_ctxintegrity:
                    (s\<lparr>kheap := kheap s(thread \<mapsto>
                                        TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
+  apply (rule conjI)
+   prefer 2
+   apply (fastforce dest: get_tcb_ko_atI simp: integrity_asids_kh_upds obj_at_def)
   apply (drule get_tcb_SomeD)+
   apply (drule spec[where x=thread], simp)
   apply (cases "is_subject aag thread")
@@ -232,7 +235,7 @@ lemma set_thread_state_respects_in_signalling:
    apply (erule(1) integrity_update_autarch [unfolded fun_upd_def])
   apply (erule integrity_trans)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: integrity_def st_tcb_def2)
+  apply (clarsimp simp: integrity_def st_tcb_def2 integrity_asids_kh_upds)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule tro_tcb_send [OF refl refl])
    apply (rule tcb.equality; simp; rule arch_tcb_context_set_eq[symmetric])
@@ -337,6 +340,7 @@ lemma cancel_ipc_receive_blocked_respects:
     apply (rule_tac ep=ep in tro_tcb_send[OF refl refl];
            fastforce intro!: tcb.equality arch_tcb_context_set_eq[symmetric]
                        simp: indirect_send_def pred_tcb_at_def obj_at_def)
+    apply (fastforce simp: integrity_asids_kh_upds)
    apply (fastforce simp: indirect_send_def pred_tcb_at_def obj_at_def)
   apply (fastforce simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
@@ -604,8 +608,8 @@ lemma lookup_slot_for_thread_authorised:
 
 lemma cnode_cap_all_auth_owns:
   "(\<exists>s. is_cnode_cap cap \<and> pas_refined aag s \<and>
-        (\<forall>x\<in>obj_refs cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth x))
-   \<longrightarrow> (\<forall>x\<in>obj_refs cap. is_subject aag x)"
+        (\<forall>x\<in>obj_refs_ac cap. \<forall>auth\<in>cap_auth_conferred cap. aag_has_auth_to aag auth x))
+   \<longrightarrow> (\<forall>x\<in>obj_refs_ac cap. is_subject aag x)"
   apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: cap_auth_conferred_def pas_refined_all_auth_is_owns)
   done
@@ -657,7 +661,7 @@ lemma remove_rights_untyped_range[simp]:
   by (clarsimp split: cap.splits simp: cap_links_irq_def)
 
 lemma obj_refs_remove_rights[simp]:
-  "obj_refs (remove_rights rs cap) = obj_refs cap"
+  "obj_refs_ac (remove_rights rs cap) = obj_refs_ac cap"
   unfolding remove_rights_def
   by (cases cap, simp_all add: cap_rights_update_def)
 
@@ -1397,7 +1401,7 @@ lemma set_thread_state_running_respects:
   apply (simp add: set_thread_state_def)
   apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
+  apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def integrity_asids_kh_upds)
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (rule_tac new_st=Running in tro_tcb_receive)
   by (auto simp: tcb_bound_notification_reset_integrity_def)
@@ -1423,7 +1427,7 @@ lemma sts_receive_Inactive_respects:
   apply wp
   apply clarsimp
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
+  apply (clarsimp simp: integrity_def integrity_asids_kh_upds)
   apply (drule get_tcb_SomeD)
   apply (rule_tac new_st=Inactive in tro_tcb_receive, simp_all)
   apply (fastforce simp: st_tcb_at_def obj_at_def)
@@ -1469,7 +1473,8 @@ lemma set_thread_state_blocked_on_reply_respects:
    apply wp
   apply clarsimp
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def dest!:get_tcb_SomeD elim!: pred_tcb_atE)
+  apply (clarsimp simp: integrity_def integrity_asids_kh_upds
+                 dest!: get_tcb_SomeD elim!: pred_tcb_atE)
   apply (rule tro_tcb_receive[where new_st=BlockedOnReply])
   by fastforce+
 
@@ -1757,6 +1762,10 @@ locale Ipc_AC_2 = Ipc_AC_1 +
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_ext state. valid_vspace_objs s\<rbrace>"
   and handle_arch_fault_reply_valid_arch_state[wp]:
     "handle_arch_fault_reply vmf thread x y \<lbrace>\<lambda>s :: det_ext state. valid_arch_state s\<rbrace>"
+  and cap_insert_ext_integrity_asids_in_ipc[wp]:
+    "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+     \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
+            (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
 begin
 
 lemma cap_insert_ext_integrity_in_ipc_autarch:
@@ -1777,7 +1786,7 @@ lemma cap_insert_ext_integrity_in_ipc_autarch:
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: list_integ_def del: split_paired_All)
     apply (fold list_integ_def)
-    apply (wp cap_insert_list_integrity hoare_vcg_all_lift | simp | force)+
+    apply (wpsimp wp: cap_insert_list_integrity hoare_vcg_all_lift hoare_vcg_imp_lift | fastforce)+
   done
 
 lemma cap_insert_ext_integrity_in_ipc_reply:
@@ -1787,7 +1796,7 @@ lemma cap_insert_ext_integrity_in_ipc_reply:
    cap_insert_ext src_parent src_slot (receiver, tcb_cnode_index 3) src_p dest_p
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   apply (rule hoare_gen_asm)+
-  apply (simp add: integrity_tcb_in_ipc_def split del: if_split)
+  apply (simp add: integrity_tcb_in_ipc_def fun_upd_def split del: if_split)
   apply (unfold integrity_def)
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def
@@ -1797,9 +1806,8 @@ lemma cap_insert_ext_integrity_in_ipc_reply:
    apply (simp add: list_integ_def del: split_paired_All)
    apply (fold list_integ_def get_tcb_def tcb_states_of_state_def)
    apply (wp cap_insert_list_integrity hoare_vcg_all_lift)
-   apply simp
-   apply (simp add: list_integ_def del: split_paired_All)
-   apply (fold list_integ_def get_tcb_def tcb_states_of_state_def)
+  apply (simp add: list_integ_def del: split_paired_All)
+  apply (fold list_integ_def get_tcb_def tcb_states_of_state_def)
   apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
   apply (rule conjI)
    apply (rule cca_reply; force)
@@ -1828,12 +1836,16 @@ lemma integrity_tcb_in_ipc_final:
     apply (fastforce intro!: tro_tcb_call simp: direct_call_def)
    apply clarsimp
    apply (fastforce intro!: tro_tcb_reply tcb.equality simp: direct_reply_def)
-    \<comment> \<open>rm\<close>
+  apply (rule conjI)
+   prefer 2
+   apply (clarsimp)
+   apply (erule tcb_in_ipc.cases; clarsimp simp: integrity_asids_kh_upds' split: if_splits)
+  \<comment> \<open>rm\<close>
   apply clarsimp
   apply (cases "is_subject aag thread")
    apply (rule trm_write)
    apply (solves\<open>simp\<close>)
-    \<comment> \<open>doesn't own\<close>
+  \<comment> \<open>doesn't own\<close>
   apply (erule tcb_in_ipc.cases, simp_all)[1]
     apply clarsimp
     apply (rule trm_ipc [where p' = thread])
@@ -1914,6 +1926,10 @@ lemma set_object_respects_in_ipc_autarch:
   apply (intro conjI ; (solves \<open>simp\<close>)?)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
+  apply (clarsimp simp: fun_upd_def)
+  apply (rule integrity_asids_kh_update[simplified fun_upd_def])
+  apply (cut_tac integrity_asids_update_autarch)
+    apply (auto simp: fun_upd_def)
   done
 
 lemma set_cap_respects_in_ipc_autarch:
@@ -1930,10 +1946,15 @@ lemma set_original_respects_in_ipc_autarch:
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   apply (wp set_original_wp)
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
-  apply (simp add: integrity_def
-                   tcb_states_of_state_def get_tcb_def map_option_def
+  apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def map_option_def
               split del: if_split cong: if_cong)
-  by (fastforce intro: integrity_cdt_direct)
+  apply (rule conjI)
+   apply (fastforce intro: integrity_cdt_direct)
+  apply (subst (asm) integrity_asids_updates(6)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
+  done
 
 lemma update_cdt_fun_upd_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and K (is_subject aag (fst slot))\<rbrace>
@@ -1943,7 +1964,13 @@ lemma update_cdt_fun_upd_respects_in_ipc_autarch:
   apply wp
   apply (simp add: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def
              cong: if_cong split del: if_split)
-  by (fastforce intro: integrity_cdt_direct)
+  apply (rule conjI)
+   apply (fastforce intro: integrity_cdt_direct)
+  apply (subst (asm) integrity_asids_updates(2)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
+  done
 
 lemma set_untyped_cap_as_full_integrity_tcb_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -2099,7 +2126,6 @@ lemma set_thread_state_running_respects_in_ipc:
               cong: if_cong elim: update_tcb_state_in_ipc[unfolded fun_upd_def])
   done
 
-
 context Ipc_AC_2 begin
 
 lemma set_endpoint_integrity_in_ipc:
@@ -2113,12 +2139,13 @@ lemma set_endpoint_integrity_in_ipc:
                         partial_inv_def a_type_def)
   apply (intro impI conjI)
     apply (erule integrity_trans)
-    apply (clarsimp simp: integrity_def)
-   apply clarsimp
+    apply (clarsimp simp: integrity_def fun_upd_def)
    apply (erule tcb_in_ipc.cases, simp_all)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
-  apply (fastforce intro: tro_ep)
+  apply (rule conjI)
+   apply (fastforce intro: tro_ep)
+  apply (clarsimp simp: integrity_asids_kh_update integrity_asids_kh_upds)
   done
 
 lemma integrity_tcb_in_ipc_refl:
@@ -2154,8 +2181,13 @@ lemma set_original_respects_in_ipc_reply:
   apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def)
   apply (fold get_tcb_def tcb_states_of_state_def)
   apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
-  apply (rule integrity_cdt_change_allowed)
-  apply (rule cca_reply; force)
+  apply (rule conjI)
+   apply (rule integrity_cdt_change_allowed)
+   apply (rule cca_reply; force)
+  apply (subst (asm) integrity_asids_updates(6)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
   done
 
 end
@@ -2178,13 +2210,17 @@ lemma update_cdt_reply_in_ipc:
   apply (simp add: integrity_def tcb_states_of_state_def get_tcb_def
               split del: if_split cong: if_cong)
   apply (fold get_tcb_def tcb_states_of_state_def)
-  apply (clarsimp simp:st_tcb_at_tcb_states_of_state)
-  apply (rule integrity_cdt_change_allowed)
-  apply (rule cca_reply; force)
+  apply (clarsimp simp: st_tcb_at_tcb_states_of_state)
+  apply (rule conjI)
+   apply (rule integrity_cdt_change_allowed)
+   apply (rule cca_reply; force)
+  apply (subst (asm) integrity_asids_updates(2)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
   done
 
 end
-
 
 (* FIXME: move to NondetMonad *)
 lemma spec_valid_direct:
@@ -2224,20 +2260,24 @@ lemma cap_insert_reply_cap_respects_in_ipc:
                  update_cdt_reply_in_ipc set_cap_respects_in_ipc_reply
                  set_untyped_cap_as_full_not_untyped get_cap_wp)
 
+
 lemma set_scheduler_action_respects_in_ipc_autarch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>
    set_scheduler_action action
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-   unfolding set_scheduler_action_def
-   by (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def)
+  unfolding set_scheduler_action_def
+  apply (wpsimp simp: integrity_tcb_in_ipc_def integrity_def tcb_states_of_state_def get_tcb_def)
+  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
+  done
 
 end
-
 
 lemma exists_cons_append:
   "\<exists>xs. xs @ ys = zs \<Longrightarrow> \<exists>xs. xs @ ys = z # zs"
   by auto
-
 
 context Ipc_AC_2 begin
 
@@ -2251,7 +2291,17 @@ lemma tcb_sched_action_respects_in_ipc_autarch:
                         integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def
                         tcb_at_def get_etcb_def tcb_sched_enqueue_def etcb_at_def
                  split: option.splits)
-  apply (fastforce intro: exists_cons_append)
+  apply (intro conjI impI)
+     apply (fastforce intro: exists_cons_append)
+    apply (subst (asm) integrity_asids_updates(4)[symmetric])
+    apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+    apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+    apply (fastforce simp: trans_state_def)
+   apply (fastforce intro: exists_cons_append)
+  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
   done
 
 crunches possible_switch_to, set_thread_state
@@ -2570,7 +2620,12 @@ lemma set_cdt_empty_slot_respects_in_ipc_autarch:
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st \<rbrace>"
   unfolding set_cdt_def
   apply wp
-  apply (force simp: integrity_tcb_in_ipc_def integrity_def no_children_empty_desc[symmetric])
+  apply (clarsimp simp: integrity_tcb_in_ipc_def integrity_def no_children_empty_desc[symmetric])
+  apply (rule conjI, force)
+  apply (subst (asm) integrity_asids_updates(2)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
   done
 
 end
@@ -2634,7 +2689,9 @@ lemma integrity_tcb_in_fault_reply_final:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
   apply (erule tcb_in_fault_reply.cases; clarsimp)
-  apply (fastforce intro!: tcb.equality tro_tcb_reply)
+  apply (rule conjI)
+   apply (fastforce intro!: tcb.equality tro_tcb_reply)
+  apply (clarsimp simp: integrity_asids_kh_upds')
   done
 
 end
@@ -2655,7 +2712,12 @@ context Ipc_AC_2 begin
 lemma set_scheduler_action_respects_in_fault_reply:
   "set_scheduler_action action \<lbrace>integrity_tcb_in_fault_reply aag X receiver ctxt st\<rbrace>"
   unfolding set_scheduler_action_def
-  by (wpsimp simp: integrity_tcb_in_fault_reply_def integrity_def tcb_states_of_state_def get_tcb_def)
+  apply (wpsimp simp: integrity_tcb_in_fault_reply_def integrity_def tcb_states_of_state_def get_tcb_def)
+  apply (subst (asm) integrity_asids_updates(4)[symmetric])
+  apply (subst integrity_asids_updates(4)[where f=id, symmetric])
+  apply (subst (asm) integrity_asids_updates(4)[where f=id, symmetric])
+  apply (fastforce simp: trans_state_def)
+  done
 
 lemma handle_fault_reply_respects_in_fault_reply:
   "handle_fault_reply f thread label mrs \<lbrace>integrity_tcb_in_fault_reply aag X thread TRFContext st\<rbrace>"
@@ -2772,7 +2834,7 @@ lemma do_reply_transfer_respects:
           apply (wp set_thread_state_respects_in_fault_reply
                     thread_set_no_fault_respects_in_fault_reply
                     handle_fault_reply_respects_in_fault_reply
-                | simp)+
+                 | simp)+
    apply (strengthen integrity_tcb_in_fault_reply_refl)+
    apply (wp cap_delete_one_reply_st_tcb_at)
   \<comment> \<open>the end\<close>

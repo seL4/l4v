@@ -81,7 +81,12 @@ lemma pas_refined:
 
 end
 
-context Arch begin
+
+context Arch begin global_naming RISCV64
+
+named_theorems Retype_AC_assms
+
+declare retype_region_proofs'.pas_refined[Retype_AC_assms]
 
 lemma aobjs_of_detype[simp]:
   "(aobjs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> aobjs_of s p = Some aobj)"
@@ -144,14 +149,6 @@ lemma vs_lookup_table:
   apply simp
   done
 
-end
-
-context Arch begin global_naming RISCV64
-
-named_theorems Retype_AC_assms
-
-declare retype_region_proofs'.pas_refined[Retype_AC_assms]
-
 lemma state_vrefs_detype[Retype_AC_assms, dest]:
   "x \<in> state_vrefs (detype R s) p \<Longrightarrow> x \<in> state_vrefs s p"
   apply (clarsimp simp: state_vrefs_def)
@@ -170,8 +167,8 @@ lemma sata_detype[Retype_AC_assms]:
 lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
-lemma word_size_bits_reset_chunk_bits[Retype_AC_assms]: "word_size_bits \<le> reset_chunk_bits"
-  by (simp add: word_size_bits_def reset_chunk_bits_def)
+lemma word_size_bits_resetChunkBits[Retype_AC_assms]: "word_size_bits \<le> resetChunkBits"
+  by (simp add: word_size_bits_def Kernel_Config.resetChunkBits_def)
 
 lemma clas_default_cap[Retype_AC_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
@@ -349,6 +346,29 @@ lemma dmo_clearMemory_respects'[Retype_AC_assms]:
   apply simp
   done
 
+lemma integrity_asids_detype[Retype_AC_assms]:
+  assumes refs: "\<forall>r\<in>refs. pasObjectAbs aag r \<in> subjects"
+  shows
+    "integrity_asids aag subjects x a (detype refs s) s' =
+     integrity_asids aag subjects x a s s'"
+    "integrity_asids aag subjects x a s (detype refs s') =
+     integrity_asids aag subjects x a s s'"
+  by (auto simp: detype_def refs opt_map_def)
+
+lemma retype_region_integrity_asids[Retype_AC_assms]:
+  "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
+     \<forall>x\<in>up_aligned_area ptr sz. is_subject aag x; integrity_asids aag {pasSubject aag} x a s st \<rbrakk>
+     \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s
+           (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
+                            then Some (default_object typ dev o_bits)
+                            else kheap s a\<rparr>)"
+  apply (clarsimp simp: opt_map_def)
+  apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
+  apply (fastforce intro: tro_lrefl tre_lrefl
+                    dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+                    simp: image_def p_assoc_help power_sub )
+  done
+
 end
 
 
@@ -359,11 +379,6 @@ proof goal_cases
     by (unfold_locales; (fact Retype_AC_assms | wpsimp wp: init_arch_objects_inv)?)
 qed
 
-
-context begin interpretation Arch .
-
-requalify_facts storeWord_respects
-
-end
+requalify_facts RISCV64.storeWord_respects
 
 end

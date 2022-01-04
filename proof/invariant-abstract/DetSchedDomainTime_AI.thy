@@ -408,6 +408,11 @@ lemma schedule_domain_time_left:
 
 end
 
+lemma reschedule_required_valid_domain_time:
+  "\<lbrace> \<top> \<rbrace> reschedule_required
+   \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+  by (wpsimp wp: hoare_drop_imp reschedule_required_choose_new_thread)
+
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
 lemma hoare_false_imp:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. \<not> R r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. R r s \<longrightarrow> Q r s\<rbrace>"

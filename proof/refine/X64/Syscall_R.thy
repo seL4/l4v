@@ -616,7 +616,7 @@ lemma dec_dom_inv_wf[wp]:
   apply (simp add:not_le)
   apply (simp del: Word.of_nat_unat flip: ucast_nat_def)
   apply (rule word_of_nat_le)
-  apply (simp add:numDomains_def maxDomain_def)
+  apply (simp add: le_maxDomain_eq_less_numDomains)
   done
 
 lemma decode_inv_wf'[wp]:

@@ -600,11 +600,6 @@ lemma getIRQState_prop:
   apply simp
   done
 
-lemma num_domains[simp]:
-  "num_domains = numDomains"
-  apply(simp add: num_domains_def numDomains_def)
-  done
-
 lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
   apply (simp add:dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)

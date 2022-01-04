@@ -844,7 +844,7 @@ text \<open>
 \<close>
 definition handle_preemption_if :: "user_context \<Rightarrow> (user_context,det_ext) s_monad" where
   "handle_preemption_if tc \<equiv>
-   do irq \<leftarrow> do_machine_op (getActiveIRQ False);
+   do irq \<leftarrow> do_machine_op (getActiveIRQ True);
       when (irq \<noteq> None) $ handle_interrupt (the irq);
       return tc
    od"
@@ -964,33 +964,24 @@ locale ADT_IF_1 =
            and (\<lambda>s. ct_idle s \<longrightarrow> tc = idle_context s)\<rbrace>
      kernel_entry_if e tc
      \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  (* FIXME IF: malformed lemma *)
-  and handle_preemption_if_valid_sched[wp]:
-    "\<lbrace>valid_sched and invs and
-      (\<lambda>s. blah \<in> (non_kernel_IRQs :: irq set) \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
-     handle_preemption_if tc
-     \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   and handle_preemption_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> handle_preemption_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   and schedule_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   and do_user_op_if_idle_equiv[wp]:
     "\<lbrace>idle_equiv st and invs\<rbrace> do_user_op_if uop tc \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
-  and kernel_entry_if_valid_vspace_objs'[wp]:
-    "\<lbrace>valid_vspace_objs' and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
+  and kernel_entry_if_valid_vspace_objs_if[wp]:
+    "\<lbrace>valid_vspace_objs_if and invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
      kernel_entry_if e tc
-     \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
+     \<lbrace>\<lambda>_. valid_vspace_objs_if\<rbrace>"
   and handle_preemption_if_valid_pdpt_objs[wp]:
-    "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs' s\<rbrace>"
+    "handle_preemption_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
   and schedule_if_valid_pdpt_objs[wp]:
-    "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs' s\<rbrace>"
+    "schedule_if tc \<lbrace>\<lambda>s. valid_vspace_objs_if s\<rbrace>"
   and do_user_op_if_valid_pdpt_objs[wp]:
-    "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs' s\<rbrace>"
-  and valid_vspace_objs'_ms_update[simp]:
-    "\<And>f. valid_vspace_objs' (machine_state_update f s) = valid_vspace_objs' s"
-  (* FIXME IF: precludes ARM_HYP *)
-  and non_kernel_IRQs_empty:
-    "(non_kernel_IRQs :: irq set) = {}"
+    "do_user_op_if uop tc \<lbrace>\<lambda>s :: det_state. valid_vspace_objs_if s\<rbrace>"
+  and valid_vspace_objs_if_ms_update[simp]:
+    "\<And>f. valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
   and do_user_op_if_irq_state_of_state:
     "\<And>P. do_user_op_if uop tc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and do_user_op_if_irq_masks_of_state:
@@ -1505,13 +1496,12 @@ locale valid_initial_state_noenabled = invariant_over_ADT_if + (* FIXME: arch_sp
                                pas_refined (current_aag s) s \<and>
                                guarded_pas_domain (current_aag s) s \<and>
                                idle_equiv s0_internal s \<and>
-                               valid_domain_list s \<and> valid_vspace_objs' s"
+                               valid_domain_list s \<and> valid_vspace_objs_if s"
   assumes Invs_s0_internal: "Invs s0_internal"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   assumes scheduler_action_s0_internal: "scheduler_action s0_internal = resume_cur_thread"
   assumes ct_running_or_ct_idle_s0_internal: "ct_running s0_internal \<or> ct_idle s0_internal"
   assumes domain_time_s0_internal: "domain_time s0_internal > 0"
-  assumes num_domains_sanity: "num_domains > 1"
   assumes utf_det:
     "\<forall>pl pr pxn tc ms s. det_inv InUserMode tc s \<and> einvs s \<and>
                                context_matches_state pl pr pxn ms s \<and> ct_running s
@@ -1590,8 +1580,7 @@ lemma kernel_entry_if_domain_fields:
   done
 
 lemma kernel_entry_if_domain_time_sched_action:
-  "num_domains > 1
-   \<Longrightarrow> \<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
+  "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   apply (case_tac "e = Interrupt")
@@ -1608,14 +1597,13 @@ end
 subsection \<open>to split generic preservation lemma\<close>
 
 lemma handle_preemption_if_domain_time_sched_action:
-  "num_domains > 1
-   \<Longrightarrow> \<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
+  "\<lbrace>\<lambda>s. domain_time s > 0\<rbrace>
    handle_preemption_if tc
    \<lbrace>\<lambda>_ s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-   apply (simp add: handle_preemption_if_def)
+  apply (simp add: handle_preemption_if_def)
   apply (wp handle_interrupt_valid_domain_time| wpc | simp)+
    apply (rule_tac Q="\<lambda>r s. domain_time s > 0" in hoare_strengthen_post)
-    apply (wp | fastforce)+
+    apply wpsimp+
   done
 
 definition user_context_of :: "'k global_sys_state \<Rightarrow> user_context" where
@@ -1931,6 +1919,17 @@ lemma Init_ADT_if:
   "Init (ADT_A_if utf) = (\<lambda>s. {s} \<inter> full_invs_if \<inter> {s. step_restrict s})"
   by (simp add: ADT_A_if_def)
 
+lemma handle_preemption_if_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs\<rbrace>
+   handle_preemption_if irq
+   \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  apply (wpsimp simp: handle_preemption_if_def cong: if_cong)
+   apply (rule_tac Q="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
+                in hoare_strengthen_post[rotated])
+    apply clarsimp
+   apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
+  done
+
 
 locale ADT_valid_initial_state =
   ADT_IF_1 initial_aag + valid_initial_state _ _ _ initial_aag for initial_aag
@@ -1955,7 +1954,7 @@ lemma invs_if_Step_ADT_A_if:
                       kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
                       kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
                        kernel_entry_if_domain_fields kernel_entry_if_idle_equiv
-                      kernel_entry_if_domain_time_sched_action[OF num_domains_sanity]
+                       kernel_entry_if_domain_time_sched_action
                        hoare_false_imp ct_idle_lift
                   | clarsimp intro!: guarded_pas_is_subject_current_aag[rule_format]
                   | intro conjI)+
@@ -1980,14 +1979,14 @@ lemma invs_if_Step_ADT_A_if:
           apply (erule use_valid)
            apply (rule current_aag_lift)
             apply (wp hoare_vcg_const_imp_lift kernel_entry_if_invs
-                     kernel_entry_silc_inv[where st'=s0_internal]
-                     kernel_entry_pas_refined[where st=s0_internal]
-                     kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
-                     kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
-                     kernel_entry_if_domain_time_sched_action[OF num_domains_sanity]
-                     ct_idle_lift
-                 | clarsimp intro: guarded_pas_is_subject_current_aag
-                 | wp kernel_entry_if_domain_fields)+
+                      kernel_entry_silc_inv[where st'=s0_internal]
+                      kernel_entry_pas_refined[where st=s0_internal]
+                      kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
+                      kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
+                      kernel_entry_if_domain_time_sched_action
+                      ct_idle_lift
+                   | clarsimp intro: guarded_pas_is_subject_current_aag
+                   | wp kernel_entry_if_domain_fields)+
           apply (rule conjI, fastforce intro!: active_from_running)
           apply (simp add: schact_is_rct_def)
           apply (rule guarded_pas_is_subject_current_aag,assumption+)
@@ -2004,9 +2003,9 @@ lemma invs_if_Step_ADT_A_if:
           apply (rule hoare_add_post[OF handle_preemption_context, OF TrueI], simp,
                 rule hoare_drop_imps)
           apply (wp handle_preemption_if_invs handle_preemption_if_domain_sep_inv
-                     handle_preemption_if_domain_time_sched_action[OF num_domains_sanity]
+                    handle_preemption_if_domain_time_sched_action
                     handle_preemption_if_det_inv ct_idle_lift)
-         apply (fastforce simp: non_kernel_IRQs_empty)
+         apply fastforce
         apply (simp add: kernel_schedule_if_def | elim exE conjE)+
         apply (erule use_valid)
          apply ((wp schedule_if_ct_running_or_ct_idle schedule_if_domain_time_nonzero'
@@ -2030,15 +2029,15 @@ lemma invs_if_Step_ADT_A_if:
       apply simp
       apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
        apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
-                              (\<lambda>b. valid_vspace_objs' b \<and> valid_list b \<and> valid_sched b \<and>
-                 only_timer_irq_inv timer_irq s0_internal b \<and>
-                 silc_inv initial_aag s0_internal b \<and>
-                 pas_refined initial_aag b \<and>
-                 guarded_pas_domain initial_aag b \<and>
-                 idle_equiv s0_internal b \<and>
-                 domain_sep_inv False s0_internal b \<and>
-                 valid_domain_list b \<and> 0 < domain_time b \<and>
-                 scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
+                              (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
+                                   only_timer_irq_inv timer_irq s0_internal b \<and>
+                                   silc_inv initial_aag s0_internal b \<and>
+                                   pas_refined initial_aag b \<and>
+                                   guarded_pas_domain initial_aag b \<and>
+                                   idle_equiv s0_internal b \<and>
+                                   domain_sep_inv False s0_internal b \<and>
+                                   valid_domain_list b \<and> 0 < domain_time b \<and>
+                                   scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
         apply ((wp do_user_op_if_invs ct_idle_lift | simp add: ct_active_not_idle' | clarsimp)+)[2]
       apply (erule use_valid[OF _ check_active_irq_if_wp])
       apply (simp add: ct_in_state_def)
@@ -2052,15 +2051,15 @@ lemma invs_if_Step_ADT_A_if:
      apply simp
      apply (erule use_valid, erule use_valid[OF _ check_active_irq_if_wp])
       apply (rule_tac Q="\<lambda>a. (invs and ct_running) and
-                             (\<lambda>b. valid_vspace_objs' b \<and> valid_list b \<and> valid_sched b \<and>
-                 only_timer_irq_inv timer_irq s0_internal b \<and>
-                 silc_inv initial_aag s0_internal b \<and>
-                 pas_refined initial_aag b \<and>
-                 guarded_pas_domain initial_aag b \<and>
-                 idle_equiv s0_internal b \<and>
-                 domain_sep_inv False s0_internal b \<and>
-                 valid_domain_list b \<and> 0 < domain_time b \<and>
-                 scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
+                             (\<lambda>b. valid_vspace_objs_if b \<and> valid_list b \<and> valid_sched b \<and>
+                                  only_timer_irq_inv timer_irq s0_internal b \<and>
+                                  silc_inv initial_aag s0_internal b \<and>
+                                  pas_refined initial_aag b \<and>
+                                  guarded_pas_domain initial_aag b \<and>
+                                  idle_equiv s0_internal b \<and>
+                                  domain_sep_inv False s0_internal b \<and>
+                                  valid_domain_list b \<and> 0 < domain_time b \<and>
+                                  scheduler_action b = resume_cur_thread)" in hoare_strengthen_post)
        apply ((wp do_user_op_if_invs | simp | clarsimp simp: ct_active_not_idle')+)[2]
      apply (erule use_valid[OF _ check_active_irq_if_wp])
      apply (simp add: ct_in_state_def)

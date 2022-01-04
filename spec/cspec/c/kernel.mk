@@ -34,7 +34,7 @@ endif
 ifndef TOOLPREFIX
   ifndef TRY_TOOLPREFIX
     ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
-      TRY_TOOLPREFIX := arm-none-eabi-
+      TRY_TOOLPREFIX := arm-none-eabi- arm-linux-gnueabi-
     else ifeq (${L4V_ARCH},RISCV64)
       TRY_TOOLPREFIX := riscv64-unknown-linux-gnu- riscv64-linux-gnu- riscv64-unknown-elf-
     endif
@@ -115,3 +115,16 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 
 ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	${CSPEC_DIR}/mk_umm_types.py --root $(L4V_REPO_PATH) ${KERNEL_BUILD_ROOT}/kernel_all.c_pp $@
+
+# This target generates config files and headers only. It does not invoke
+# the C tool chain or preprocessor. We force CMake to skip tests for these,
+# so that ASpec and ExecSpec can be built with fewer dependencies.
+${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS}
+	rm -rf ${KERNEL_CONFIG_ROOT}
+	mkdir -p ${KERNEL_CONFIG_ROOT}
+	cd ${KERNEL_CONFIG_ROOT} && \
+	cmake -C ${CONFIG} \
+		-DCMAKE_TOOLCHAIN_FILE=${CSPEC_DIR}/c/no-compiler.cmake \
+		${KERNEL_CMAKE_EXTRA_OPTIONS} \
+		-G Ninja ${SOURCE_ROOT}
+	touch ${KERNEL_CONFIG_ROOT}/.cmake_done

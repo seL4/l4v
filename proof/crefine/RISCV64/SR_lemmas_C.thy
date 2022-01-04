@@ -2163,5 +2163,16 @@ lemmas h_t_valid_fields_clift =
   h_t_valid_nested_fields[OF h_t_valid_clift]
   h_t_valid_clift
 
+lemma numDomains_sge_1_simp:
+  "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
+  apply (simp add: word_sless_alt sint_numDomains_to_H)
+  apply (subst nat_less_as_int, simp)
+  done
+
+lemma unat_scast_numDomains:
+  "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
+  including no_take_bit
+  by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
+
 end
 end

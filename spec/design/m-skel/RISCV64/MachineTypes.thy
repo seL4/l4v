@@ -58,11 +58,14 @@ record
   irq_state :: nat
   time_state :: nat \<comment> \<open>position in the time oracle\<close>
   last_machine_time :: "64 word" \<comment> \<open>value we read from timer device\<close>
-  underlying_memory :: "word64 \<Rightarrow> word8"
-  device_state :: "word64 \<Rightarrow> word8 option"
+  underlying_memory :: "machine_word \<Rightarrow> word8"
+  device_state :: "machine_word \<Rightarrow> word8 option"
   machine_state_rest :: RISCV64.machine_state_rest
 
-consts irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+axiomatization
+  irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+where
+  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= RISCV64.maxIRQ"
 
 text {* The values the timer device will return (how much time passed since last query) *}
 axiomatization
@@ -94,7 +97,7 @@ text \<open>
   The initial contents of the user-visible memory is 0.
 \<close>
 definition
-  init_underlying_memory :: "word64 \<Rightarrow> word8"
+  init_underlying_memory :: "machine_word \<Rightarrow> word8"
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 
