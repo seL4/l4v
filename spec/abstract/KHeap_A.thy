@@ -641,7 +641,7 @@ text \<open>Allow preemption at this point.\<close>
 definition
   is_cur_domain_expired :: "'z::state_ext state \<Rightarrow> bool"
 where
-  "is_cur_domain_expired = (\<lambda>s. num_domains > 1 \<and> domain_time s = 0)"
+  "is_cur_domain_expired = (\<lambda>s. numDomains > 1 \<and> domain_time s = 0)"
 
 text \<open>Update current and consumed time.\<close>
 definition
@@ -654,9 +654,9 @@ where
      modify (\<lambda>s. s\<lparr> cur_time := current_time \<rparr>);
      modify (\<lambda>s. s\<lparr> consumed_time := consumed_time s + consumed \<rparr>);
      domain_time \<leftarrow> gets domain_time;
-     when (num_domains > 1) $ if consumed + MIN_BUDGET \<ge> domain_time
-                                 then modify (\<lambda>s. s\<lparr> domain_time := 0 \<rparr>)
-                                 else modify (\<lambda>s. s\<lparr> domain_time := domain_time - consumed \<rparr>)
+     when (numDomains > 1) $ if consumed + MIN_BUDGET \<ge> domain_time
+                             then modify (\<lambda>s. s\<lparr> domain_time := 0 \<rparr>)
+                             else modify (\<lambda>s. s\<lparr> domain_time := domain_time - consumed \<rparr>)
   od"
 
 definition

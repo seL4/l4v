@@ -79,7 +79,7 @@ where
      sc \<leftarrow> get_sched_context sc_ptr;
      next_interrupt \<leftarrow> return $ cur_tm + r_amount (refill_hd sc);
      next_interrupt \<leftarrow>
-     if num_domains > 1 then do
+     if numDomains > 1 then do
        domain_tm \<leftarrow> gets domain_time;
        return $ min next_interrupt (cur_tm + domain_tm) od
      else
