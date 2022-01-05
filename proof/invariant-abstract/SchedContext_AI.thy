@@ -815,7 +815,7 @@ lemma commit_times_invs_helper:
 lemma commit_time_invs:
   "commit_time \<lbrace>invs\<rbrace>"
   supply fun_upd_apply[simp del]
-  apply (clarsimp simp: commit_time_def num_domains_def)
+  apply (clarsimp simp: commit_time_def)
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (case_tac "sc_active sc \<and> csc \<noteq> idle_sc_ptr"; clarsimp split del: if_split simp: bind_assoc)

@@ -350,10 +350,10 @@ section \<open>Preservation of domain time remaining\<close>
 lemma check_domain_time_domain_time_zero_imp_sched_act_choose_new_thread[wp]:
   "\<lbrace>\<top>\<rbrace>
    check_domain_time
-   \<lbrace>\<lambda>_ s :: det_state. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. domain_time s = 0 \<and> 1 < numDomains \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
   apply (clarsimp simp: check_domain_time_def reschedule_required_def set_scheduler_action_def)
   apply wpsimp
-  apply (clarsimp simp: is_cur_domain_expired_def num_domains_def)
+  apply (clarsimp simp: is_cur_domain_expired_def)
   done
 
 crunches set_next_interrupt
@@ -391,11 +391,11 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
 lemma schedule_domain_time_left:
   "\<lbrace>valid_domain_list\<rbrace>
    schedule
-   \<lbrace>\<lambda>_ s :: det_state. 0 < domain_time s \<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s \<rbrace>"
   supply word_neq_0_conv[simp]
   apply (simp add: schedule_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule_tac B="\<lambda>_ s. (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)
+  apply (rule_tac B="\<lambda>_ s. (domain_time s = 0 \<and> 1 < numDomains \<longrightarrow> scheduler_action s = choose_new_thread)
                            \<and> valid_domain_list s"
                 in hoare_seq_ext[rotated])
    apply wpsimp
@@ -403,15 +403,10 @@ lemma schedule_domain_time_left:
   apply (rule hoare_seq_ext[OF _ gets_sp])
   apply (rule hoare_seq_ext[OF _ is_schedulable_sp])
   apply (rule hoare_seq_ext[OF _  gets_sp], rename_tac action)
-  apply (case_tac action; wpsimp wp: hoare_drop_imps is_schedulable_wp)
+  apply (case_tac action; wpsimp wp: is_schedulable_wp hoare_vcg_const_imp_lift hoare_drop_imps)
   done
 
 end
-
-lemma reschedule_required_valid_domain_time:
-  "\<lbrace> \<top> \<rbrace> reschedule_required
-   \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  by (wpsimp wp: hoare_drop_imp reschedule_required_choose_new_thread)
 
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
 lemma hoare_false_imp:
@@ -425,12 +420,12 @@ crunches activate_thread
   (wp: crunch_wps simp: crunch_simps)
 
 lemma call_kernel_domain_time_inv_det_ext:
-  "\<lbrace>(\<lambda>s. 0 < domain_time s) and valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
+  "\<lbrace>valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    call_kernel e
-   \<lbrace>\<lambda>_ s :: det_state. 0 < domain_time s \<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s \<rbrace>"
   unfolding call_kernel_def
   apply (case_tac "e = Interrupt"; clarsimp)
-   subgoal by (wpsimp wp: schedule_domain_time_left | wp (once) hoare_drop_imp)+
+   apply (wpsimp wp: schedule_domain_time_left)
   apply (rule_tac B="\<lambda>_. valid_domain_list" in hoare_seq_ext[rotated])
    apply wpsimp
   apply (wp schedule_domain_time_left without_preemption_wp)

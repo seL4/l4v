@@ -1642,7 +1642,6 @@ lemmas unat_plus_gt_trans = order_trans[OF unat_plus_gt]
 
 (* FIXME RT: move to WordLib *)
 lemmas unat_split_plus = iffD1[OF unat_plus_simple]
-crunch scheduler_action [wp]: thread_set_time_slice, dec_domain_time "\<lambda>s. P (scheduler_action s)"
 
 lemma pred_map_imp:
   "pred_map P s d \<Longrightarrow> (\<And>x. P x \<Longrightarrow> Q x) \<Longrightarrow> pred_map Q s d"
