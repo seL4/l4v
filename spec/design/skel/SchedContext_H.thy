@@ -28,6 +28,6 @@ requalify_consts
   maxPeriodUs
 end
 
-#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/SchedContext.lhs bodies_only NOT workUnitsLimit
 
 end

@@ -768,7 +768,7 @@ This module uses the C preprocessor to select a target architecture.
 
 In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.
 
-> workUnitsLimit = 0x64
+> workUnitsLimit = error "see Kernel_Config"
 
 > preemptionPoint :: KernelP ()
 > preemptionPoint = do

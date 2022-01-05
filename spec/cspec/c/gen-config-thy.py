@@ -133,7 +133,7 @@ known_config_keys = {
     'CONFIG_TIMER_TICK_MS': (word, None),
     'CONFIG_TIME_SLICE': (nat, 'timeSlice'),
     'CONFIG_RETYPE_FAN_OUT_LIMIT': (word, 'retypeFanOutLimit'),
-    'CONFIG_MAX_NUM_WORK_UNITS_PER_PREEMPTION': (nat, 'workUnitsLimit'),
+    'CONFIG_MAX_NUM_WORK_UNITS_PER_PREEMPTION': (word, 'workUnitsLimit'),
     'CONFIG_RESET_CHUNK_BITS': (nat, 'resetChunkBits'),
     'CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS': (nat, None),
     'CONFIG_FASTPATH': (bool, None),
