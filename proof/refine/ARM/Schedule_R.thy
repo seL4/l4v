@@ -1694,10 +1694,6 @@ lemma curDomain_or_return_0:
   apply (simp add: valid_def curDomain_def simpler_gets_def return_def maxDomain_def)
   done
 
-lemma invs_no_cicd_ksCurDomain_maxDomain':
-  "invs_no_cicd' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
-  unfolding invs_no_cicd'_def by simp
-
 lemma chooseThread_corres:
   "corres dc (invs and valid_ready_qs and ready_or_release) invs'
      choose_thread chooseThread" (is "corres _ ?PREI ?PREH _ _")
@@ -1705,7 +1701,7 @@ lemma chooseThread_corres:
   unfolding choose_thread_def chooseThread_def
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: ready_qs_runnable_def)
-  apply (simp only: return_bind Let_def)
+  apply (simp only: return_bind Let_def K_bind_def)
   apply (subst if_swap[where P="_ \<noteq> 0"]) (* put switchToIdleThread on first branch*)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF curDomain_corres'])
@@ -1730,24 +1726,24 @@ lemma chooseThread_corres:
                 apply (rule_tac P=\<top> and P'=\<top> in guarded_switch_to_chooseThread_fragment_corres)
                apply (wp | clarsimp simp: getQueue_def getReadyQueuesL2Bitmap_def)+
       apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift ksReadyQueuesL1Bitmap_return_wp)
-     apply (wpsimp wp: curDomain_or_return_0 simp: curDomain_def)+
-    apply (fastforce simp: invs_no_cicd'_def)
+     apply (wpsimp wp: curDomain_or_return_0)+
+    apply (fastforce simp: invs_ksCurDomain_maxDomain')
    apply (clarsimp simp: valid_sched_def DetSchedInvs_AI.valid_ready_qs_def max_non_empty_queue_def)
    apply (erule_tac x="cur_domain s" in allE)
    apply (erule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in allE)
    apply (case_tac "ready_queues s (cur_domain s) (Max {prio. ready_queues s (cur_domain s) prio \<noteq> []})")
     apply (clarsimp)
     apply (subgoal_tac
-             "ready_queues sa (cur_domain sa) (Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}) \<noteq> []")
+             "ready_queues s (cur_domain s) (Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}) \<noteq> []")
      apply (fastforce elim!: setcomp_Max_has_prop)
     apply (fastforce elim!: setcomp_Max_has_prop)
    apply (clarsimp simp: tcb_at_kh_simps schedulable_def2 released_sc_tcb_at_def)
-   apply (subgoal_tac "in_ready_q a sa", fastforce simp: ready_or_release_def)
+   apply (subgoal_tac "in_ready_q a s", fastforce simp: ready_or_release_def)
    apply (clarsimp simp: in_ready_q_def)
-    apply (rule_tac x="cur_domain sa" in exI)
-    apply (rule_tac x="Max {prio. ready_queues sa (cur_domain sa) prio \<noteq> []}" in exI)
+    apply (rule_tac x="cur_domain s" in exI)
+    apply (rule_tac x="Max {prio. ready_queues s (cur_domain s) prio \<noteq> []}" in exI)
     apply clarsimp
-  apply (simp add: invs_no_cicd_ksCurDomain_maxDomain')
+  apply (simp add: invs_ksCurDomain_maxDomain')
   apply (clarsimp simp: ready_qs_runnable_def)
   apply (fastforce intro: ksReadyQueuesL1Bitmap_st_tcb_at')
   done
@@ -1965,8 +1961,8 @@ lemma chooseThread_invs'_posts: (* generic version *)
    \<lbrace>\<lambda>rv s. obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s \<and>
            ct_in_state' activatable' s \<and>
            (ksCurThread s = ksIdleThread s \<or> tcb_in_cur_domain' (ksCurThread s) s) \<rbrace>"
-  unfolding chooseThread_def Let_def curDomain_def
-  apply (simp only: return_bind, simp)
+  unfolding chooseThread_def Let_def
+  apply (simp only: return_bind, simp split del: if_split)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[where B="\<lambda>rv s. invs' s \<and> rv = ksCurDomain s \<and> ready_qs_runnable s"])
    apply (rule_tac B="\<lambda>rv s. invs' s \<and> curdom = ksCurDomain s \<and>
@@ -1991,7 +1987,8 @@ lemma chooseThread_invs'_posts: (* generic version *)
     apply (drule (3) lookupBitmapPriority_obj_at')
     apply normalise_obj_at'
     apply (fastforce simp: tcb_in_cur_domain'_def inQ_def elim: obj_at'_weaken)
-   apply (wpsimp simp: bitmap_fun_defs curDomain_def)+
+   apply (wpsimp simp: bitmap_fun_defs)
+  apply (wpsimp wp: curDomain_or_return_0[simplified] simp: invs_ksCurDomain_maxDomain')
   done
 
 lemma chooseThread_activatable_2:
@@ -2010,16 +2007,10 @@ lemma chooseThread_ct_not_queued_2:
   done
 
 
-(* FIXME merge
-  (* if we only have one domain, we are in it *)
-  have one_domain_case:
-    "\<And>s. \<lbrakk> invs_no_cicd' s; numDomains \<le> 1 \<rbrakk> \<Longrightarrow> ksCurDomain s = 0"
-    by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def maxDomain_def)
-*)
 lemma chooseThread_invs'':
   "chooseThread \<lbrace>invs'\<rbrace>"
-  unfolding chooseThread_def Let_def curDomain_def
-  apply (simp only: return_bind, simp)
+  unfolding chooseThread_def Let_def
+  apply (simp only: return_bind, simp split del: if_split)
   apply (rule hoare_seq_ext[OF _ stateAssert_sp])
   apply (rule hoare_seq_ext[where B="\<lambda>rv s. invs' s \<and> rv = ksCurDomain s \<and> ready_qs_runnable s"])
    apply (rule_tac B="\<lambda>rv s. invs' s \<and> curdom = ksCurDomain s \<and>
@@ -2033,7 +2024,8 @@ lemma chooseThread_invs'':
     apply (clarsimp simp: bitmap_fun_defs)
     apply (wp assert_inv isSchedulable_wp)
     apply (clarsimp simp: valid_queues_def invs'_def)
-   apply (wpsimp simp: bitmap_fun_defs curDomain_def)+
+   apply (wpsimp simp: bitmap_fun_defs)
+  apply (wpsimp wp: curDomain_or_return_0[simplified] simp: invs_ksCurDomain_maxDomain')
   done
 
 lemma chooseThread_in_cur_domain':

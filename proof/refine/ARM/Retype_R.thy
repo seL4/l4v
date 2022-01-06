@@ -117,7 +117,7 @@ lemma valid_obj_makeObject_tcb_tcbDomain_update [simp]:
   "d \<le> maxDomain \<Longrightarrow> valid_obj' (KOTCB (tcbDomain_update (\<lambda>_. d) makeObject)) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
   by (clarsimp simp: makeObject_tcb makeObject_cte
-                     tcb_cte_cases_def maxDomain_def numDomains_def maxPriority_def numPriorities_def minBound_word)
+                     tcb_cte_cases_def maxDomain_def maxPriority_def numPriorities_def minBound_word)
 
 lemma valid_obj_makeObject_endpoint [simp]:
   "valid_obj' (KOEndpoint makeObject) s"

@@ -139,8 +139,8 @@ lemma updateTimeStamp_corres[corres]:
                apply (rule corres_guard_imp)
                  apply (rule corres_rel_imp)
                   apply (rule corres_split[OF getDomainTime_corres])
-                    apply (fastforce intro: setDomainTime_corres
-                                      simp: num_domains_def)
+                    apply (rule corres_when, rule refl)
+                    apply (fastforce intro: setDomainTime_corres)
                    apply (wpsimp simp: getConsumedTime_def)+
   done
 
@@ -220,7 +220,7 @@ lemma isCurDomainExpired_corres[corres]:
   "corres (=) \<top> \<top> (gets is_cur_domain_expired) isCurDomainExpired"
   apply (simp add: is_cur_domain_expired_def isCurDomainExpired_def getDomainTime_def
                    getConsumedTime_def)
-  apply (clarsimp simp: corres_underlying_def gets_def bind_def get_def return_def num_domains_def
+  apply (clarsimp simp: corres_underlying_def gets_def bind_def get_def return_def
                         state_relation_def)
   done
 
@@ -277,10 +277,10 @@ lemma preemptionPoint_corres:
                            wrap_ext_bool_det_ext_ext_def)
     apply wpsimp
     apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def get_def return_def
-                          work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
+                          work_units_limit_def wrap_ext_bool_det_ext_ext_def Kernel_Config.workUnitsLimit_def)
    apply wpsimp
   apply (clarsimp simp: select_f_def mk_ef_def bind_def gets_def exs_valid_def get_def return_def
-                        work_units_limit_def wrap_ext_bool_det_ext_ext_def workUnitsLimit_def)
+                        work_units_limit_def wrap_ext_bool_det_ext_ext_def Kernel_Config.workUnitsLimit_def)
   apply (case_tac rv; clarsimp)
   apply (rename_tac bool state)
   apply (rule_tac F="bool = (workUnitsLimit \<le> work_units) \<and> ?abs state" in corres_req)

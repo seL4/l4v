@@ -261,7 +261,7 @@ abbreviation (input) mcs_invs where
                  \<and> valid_machine_time s \<and> current_time_bounded 5 s \<and> consumed_time_bounded s
                  \<and> (cur_sc_offset_ready (consumed_time s) s
                     \<and> cur_sc_offset_sufficient (consumed_time s) s)
-                 \<and> (0 < domain_time s) \<and> valid_domain_list s "
+                 \<and> valid_domain_list s "
 
 lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
@@ -271,7 +271,7 @@ lemma kernel_entry_invs:
                            \<and> (cur_sc_offset_ready (consumed_time s) s
                               \<and> cur_sc_offset_sufficient (consumed_time s) s)
                            \<and> valid_sched s
-                           \<and> (0 < domain_time s) \<and> valid_domain_list s
+                           \<and> valid_domain_list s
                            \<and> valid_list s \<and> scheduler_action s = resume_cur_thread
                            \<and> cur_sc_active s \<and> ct_not_in_release_q s
                            \<and> valid_machine_time s \<and> current_time_bounded 5 s
@@ -288,10 +288,6 @@ lemma kernel_entry_invs:
           | clarsimp simp: tcb_cap_cases_def)+
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (wpsimp wp: kernel_entry_valid_sched)
-  apply (rule hoare_vcg_conj_lift_pre_fix)
-   apply (clarsimp simp: kernel_entry_def)
-   apply (wpsimp wp: call_kernel_domain_time_inv_det_ext thread_set_wp)
-   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def get_tcb_def)
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply (wpsimp wp: call_kernel_domain_list_inv_det_ext | clarsimp simp: active_from_running)+
@@ -377,7 +373,7 @@ lemma do_user_op_invs2:
    \<lbrace>\<lambda>s. mcs_invs s \<and> ct_running s\<rbrace>"
   apply (rule_tac Q="\<lambda>_ s. (invs s \<and> ct_running s) \<and> valid_list s \<and> valid_sched s
                            \<and> scheduler_action s = resume_cur_thread
-                           \<and> (0 < domain_time s)  \<and> valid_domain_list s
+                           \<and> valid_domain_list s
                            \<and> cur_sc_active s \<and> ct_not_in_release_q s
                            \<and> valid_machine_time s \<and> current_time_bounded 5 s
                            \<and> consumed_time_bounded s
@@ -530,10 +526,10 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
 defs kernelExitAssertions_def:
-  "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
+  "kernelExitAssertions s \<equiv> valid_domain_list' s"
 
 lemma callKernel_domain_time_left:
-  "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<and> valid_domain_list' s \<rbrace>"
+  "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. valid_domain_list' s \<rbrace>"
   unfolding callKernel_def kernelExitAssertions_def by wpsimp
 
 lemma threadSet_is_active_sc'[wp]:
@@ -561,7 +557,7 @@ lemma kernelEntry_invs':
     and (\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s)
     and (\<lambda>s. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s))
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
-    and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>
+    and valid_domain_list' \<rbrace>
   kernelEntry e tc
   \<lbrace>\<lambda>_. invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>"
   apply (rule_tac R1="\<lambda>s. obj_at' (\<lambda>tcb. tcbSchedContext tcb = Some (ksCurSc s)) (ksCurThread s) s"
@@ -628,11 +624,11 @@ crunches doMachineOp
 lemma doUserOp_invs':
   "\<lbrace>invs' and ex_abs einvs and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-    (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>
+    valid_domain_list'\<rbrace>
    doUserOp f tc
    \<lbrace>\<lambda>_. invs' and
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
-        (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
+        valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
   apply (wp device_update_invs' select_wp
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
@@ -981,7 +977,7 @@ lemma kernel_corres:
               and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
               and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
               and (\<lambda>s. scheduler_action s = resume_cur_thread)
-              and (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s))
+              and valid_domain_list)
              (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
               (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
@@ -991,7 +987,7 @@ lemma kernel_corres:
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
     apply (rule corres_split_deprecated[where r'=dc and
-                                   R="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" and
+                                   R="\<lambda>_ s. valid_domain_list s" and
                                    R'="\<lambda>_. \<top>"])
        apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
         apply simp
@@ -1022,7 +1018,7 @@ lemma entry_corres:
   "corres (=)
       (\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
       (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
-       and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
+       and valid_domain_list'
        and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
        and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
       (kernel_entry event tc) (kernelEntry event tc)"
@@ -1153,7 +1149,7 @@ lemma checkActiveIRQ_corres':
 lemma checkActiveIRQ_corres:
   "corres (=)
     (invs and (ct_running or ct_idle) and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-     and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
+     and valid_domain_list)
     (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -1163,7 +1159,7 @@ lemma checkActiveIRQ_corres:
 lemma checkActiveIRQ_just_running_corres:
   "corres (=)
     (invs and ct_running and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and (\<lambda>s. 0 < domain_time s) and valid_domain_list)
+      and valid_domain_list)
     (invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -1173,9 +1169,9 @@ lemma checkActiveIRQ_just_running_corres:
 lemma checkActiveIRQ_just_idle_corres:
   "corres (=)
     (invs and ct_idle and einvs and (\<lambda>s. scheduler_action s = resume_cur_thread)
-      and (\<lambda>s. 0 < domain_time s)  and valid_domain_list)
+      and valid_domain_list)
     (invs' and ct_idle' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))
-      and (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'
+      and valid_domain_list'
       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
     (check_active_irq) (checkActiveIRQ)"
   apply (rule corres_guard_imp)
@@ -1429,8 +1425,7 @@ lemma fw_sim_A_H:
     apply clarsimp
     apply (frule (1) ct_running_or_idle_cross; clarsimp)
     apply (prop_tac "event \<noteq> Interrupt \<longrightarrow> ct_running' conc_state", fastforce dest!: ct_running_cross)
-    apply (prop_tac "0 < ksDomainTime conc_state \<and>
-            valid_domain_list' conc_state \<and> ksSchedulerAction conc_state = ResumeCurrentThread")
+    apply (prop_tac "valid_domain_list' conc_state \<and> ksSchedulerAction conc_state = ResumeCurrentThread")
      apply (clarsimp simp: state_relation_def)
     apply clarsimp
     apply (drule_tac x="(uc', conc_state')" in bspec, blast)
