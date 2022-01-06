@@ -679,7 +679,7 @@ This module uses the C preprocessor to select a target architecture.
 > isCurDomainExpired :: Kernel Bool
 > isCurDomainExpired = do
 >     domainTime <- getDomainTime
->     return $! domainTime == 0
+>     return $ 1 < numDomains && domainTime == 0
 
 > commitTime :: Kernel ()
 > commitTime = do
@@ -712,9 +712,9 @@ This module uses the C preprocessor to select a target architecture.
 >     consumed <- getConsumedTime
 >     setConsumedTime (consumed + curTime' - prevTime)
 >     domainTime <- getDomainTime
->     if (curTime' - prevTime + minBudget >= domainTime)
->         then setDomainTime 0
->         else setDomainTime (domainTime - (curTime' - prevTime))
+>     when (numDomains > 1) $ if (curTime' - prevTime + minBudget >= domainTime)
+>                             then setDomainTime 0
+>                             else setDomainTime (domainTime - (curTime' - prevTime))
 
 > maybeDonateSc :: PPtr TCB -> PPtr Notification -> Kernel ()
 > maybeDonateSc tcbPtr ntfnPtr = do
