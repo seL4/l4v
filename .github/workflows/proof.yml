@@ -26,6 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, RISCV64, X64]
+    # test only most recent push to PR:
+    concurrency: l4v-pr-${{ github.ref }}-${{ strategy.job-index }}
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
