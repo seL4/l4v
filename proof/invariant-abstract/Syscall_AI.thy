@@ -722,8 +722,6 @@ lemma lec_ex_nonz_cap_to [wp]:
 (*  unfolding lookup_extra_caps_def
   by (wp mapME_set | simp)+ *)
 
-find_theorems name:lookup_cap_and_slot
-
 lemma lookup_extras_real_ctes[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps t xs info \<lbrace>\<lambda>rv s. \<forall>x \<in> set rv. real_cte_at (snd x) s\<rbrace>,-"
   apply (simp add: lookup_extra_caps_def
@@ -873,7 +871,7 @@ lemma lec_valid_fault2[wp]:
   apply fastforce
   done
 
-sublocale touched_addresses_inv \<subseteq> ex_cte_cap_wp_to:touched_addresses_P_inv _ "ex_cte_cap_wp_to a b"
+sublocale touched_addresses_inv \<subseteq> ex_cte_cap_wp_to:touched_addresses_P_inv _ _ "ex_cte_cap_wp_to a b"
   by unfold_locales (simp add:ta_agnostic_def)
 
 lemma lec_caps_to[wp]:
@@ -1204,7 +1202,7 @@ lemma (in Syscall_AI) hr_invs[wp]:
                   elim: cte_wp_at_weakenE)
   done
 
-sublocale touched_addresses_inv \<subseteq> cur_thread:touched_addresses_P_inv _ "\<lambda>s. P (cur_thread s)"
+sublocale touched_addresses_inv \<subseteq> cur_thread:touched_addresses_P_inv _ _ "\<lambda>s. P (cur_thread s)"
   by unfold_locales (simp add:ta_agnostic_def)
 
 crunch cur_thread[wp]: set_extra_badge "\<lambda>s. P (cur_thread s)"

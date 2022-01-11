@@ -126,7 +126,7 @@ crunches touch_object
   (ignore: do_machine_op)
 
 interpretation touch_object_tainv:
-  touched_addresses_inv "touch_object obj"
+  touched_addresses_inv _ "touch_object obj"
   by unfold_locales wp
 
 lemma rab_tainv[wp]:
@@ -158,6 +158,7 @@ proof (induct slot rule: resolve_address_bits'.induct)
          apply (drule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
          apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+         thm touch_object_tainv.in_inv_by_hoare
          apply (drule(1) touch_object_tainv.in_inv_by_hoare)
          apply simp
          apply (drule(2) use_valid, simp)
@@ -191,18 +192,18 @@ proof (induct slot rule: resolve_address_bits'.induct)
 qed
 
 interpretation resolve_address_bits_tainv:
-  touched_addresses_invE "resolve_address_bits slot"
+  touched_addresses_invE _ "resolve_address_bits slot"
   by (unfold_locales, rule rab_tainv)
 
 crunches lookup_cap
   for tainv [wp]: "ignore_ta P"
 
 interpretation lookup_cap_tainv:
-  touched_addresses_invE "lookup_cap obj cap"
+  touched_addresses_invE _ "lookup_cap obj cap"
   by (unfold_locales, rule lookup_cap_tainv)
 
 interpretation lookup_slot_for_thread_tainv:
-  touched_addresses_invE "lookup_slot_for_thread obj cap"
+  touched_addresses_invE _ "lookup_slot_for_thread obj cap"
   by (unfold_locales, rule lookup_slot_for_thread_tainv)
 
 lemma cte_at_tcb_update:
@@ -222,8 +223,8 @@ lemma valid_cap_tcb_update [simp]:
   apply (simp add: a_type_def)
   done
 
-sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ valid_objs
-                                + valid_cap:touched_addresses_P_inv _ "valid_cap c"
+sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ _ valid_objs
+                                + valid_cap:touched_addresses_P_inv _ _ "valid_cap c"
   by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+
 
 lemma obj_at_tcb_update:

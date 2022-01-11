@@ -34,7 +34,7 @@ where
 
 end
 
-sublocale touched_addresses_inv \<subseteq> valid_vspace_objs': touched_addresses_P_inv _ RISCV64.valid_vspace_objs'
+sublocale touched_addresses_inv \<subseteq> valid_vspace_objs': touched_addresses_P_inv _ _ RISCV64.valid_vspace_objs'
   by unfold_locales (clarsimp simp:ta_agnostic_def)
 
 context Arch begin global_naming RISCV64

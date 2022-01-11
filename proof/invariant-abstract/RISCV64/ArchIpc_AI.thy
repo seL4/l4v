@@ -447,7 +447,7 @@ interpretation Ipc_AI?: Ipc_AI
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
   qed
 
-sublocale touched_addresses_inv \<subseteq> state_hyp_refs_of:touched_addresses_P_inv _ "\<lambda>s. P (state_hyp_refs_of s)"
+sublocale touched_addresses_inv \<subseteq> state_hyp_refs_of:touched_addresses_P_inv _ _ "\<lambda>s. P (state_hyp_refs_of s)"
   by unfold_locales (simp add:ta_agnostic_def)
 
 context Arch begin global_naming RISCV64
