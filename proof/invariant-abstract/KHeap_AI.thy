@@ -1627,20 +1627,20 @@ lemma ta_agnostic_null[simp]:
   "ta_agnostic (\<lambda>s. P)"
   by (clarsimp simp:ta_agnostic_def)
 
-sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ valid_pspace
-                                + valid_irq_states: touched_addresses_P_inv _ valid_irq_states
-                                + valid_machine_state: touched_addresses_P_inv _ valid_machine_state
-                                + cte_wp_at: touched_addresses_P_inv _ "cte_wp_at P p"
+sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ _ valid_pspace
+                                + valid_irq_states: touched_addresses_P_inv _ _ valid_irq_states
+                                + valid_machine_state: touched_addresses_P_inv _ _ valid_machine_state
+                                + cte_wp_at: touched_addresses_P_inv _ _ "cte_wp_at P p"
   by unfold_locales (simp add:ta_agnostic_def valid_irq_states_def valid_machine_state_def)+
 
-sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ valid_state
+sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ _ valid_state
   apply unfold_locales
   apply (clarsimp simp: valid_state_def)
   apply (intro ta_agnostic_predconj)
   apply (solves \<open>clarsimp | clarsimp simp: ta_agnostic_def\<close>)+
   done
 
-sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ invs
+sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ _ invs
   apply unfold_locales
   apply (simp only:invs_def)
   apply (intro ta_agnostic_predconj)
@@ -1652,7 +1652,7 @@ sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ invs
    without specifying a (meaningful) monad. so now we can use base.invs.ta_agnostic for
    example. *)
 interpretation base:
-  touched_addresses_inv "return ()"
+  touched_addresses_inv _ "return ()"
   by unfold_locales wp
 
 end

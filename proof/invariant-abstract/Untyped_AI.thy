@@ -169,7 +169,7 @@ crunches lookup_target_slot
   (simp:crunch_simps)
 
 interpretation lookup_target_slot_tainv:
-  touched_addresses_inv "lookup_target_slot cap capref x"
+  touched_addresses_inv _ "lookup_target_slot cap capref x"
   by unfold_locales wp
 
 lemma dui_tainv[wp]:

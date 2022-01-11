@@ -65,7 +65,7 @@ crunches get_receive_slots
   for tainv[wp]: "ignore_ta P"
 
 interpretation get_receive_slots_tainv:
-  touched_addresses_inv "get_receive_slots oref orefo"
+  touched_addresses_inv _ "get_receive_slots oref orefo"
   by unfold_locales wp
 
 lemma cte_wp_at_eq_simp:
@@ -362,7 +362,7 @@ lemma get_mi_valid[wp]:
 end
 
 
-sublocale touched_addresses_inv \<subseteq> pspace_respects_device_region:touched_addresses_P_inv _ pspace_respects_device_region
+sublocale touched_addresses_inv \<subseteq> pspace_respects_device_region:touched_addresses_P_inv _ _ pspace_respects_device_region
   by unfold_locales (simp add:ta_agnostic_def)
 
 crunches get_extra_cptr
@@ -1522,11 +1522,11 @@ crunches lookup_extra_caps
   (wp: crunch_wps mapME_wp' simp: crunch_simps)
 
 interpretation lookup_extra_caps_tainv:
-  touched_addresses_invE "lookup_extra_caps x y z"
+  touched_addresses_invE _ "lookup_extra_caps x y z"
   by unfold_locales wp
 
 interpretation lookup_cap_and_slot_tainv:
-  touched_addresses_invE "lookup_cap_and_slot x y"
+  touched_addresses_invE _ "lookup_cap_and_slot x y"
   by unfold_locales wp
 
 lemma lookup_extra_caps_srcs[wp]:
@@ -1552,7 +1552,7 @@ lemma mapME_length:
    apply (wp | simp | assumption)+
   done
 
-sublocale touched_addresses_inv \<subseteq> typ_at:touched_addresses_P_inv _ "\<lambda>s. P (typ_at T p s)"
+sublocale touched_addresses_inv \<subseteq> typ_at:touched_addresses_P_inv _ _ "\<lambda>s. P (typ_at T p s)"
   by unfold_locales (simp add:ta_agnostic_def)
 
 context Ipc_AI begin
@@ -1634,17 +1634,17 @@ lemma set_mrs_valid_globals[wp]:
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
 
 
-sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ pspace_aligned
-                                + distinct:touched_addresses_P_inv _ pspace_distinct
-                                + vmdb:touched_addresses_P_inv _ valid_mdb
-                                + cap_table_at:touched_addresses_P_inv _ "cap_table_at a b"
-                                + ifunsafe:touched_addresses_P_inv _ if_unsafe_then_cap
-                                + iflive:touched_addresses_P_inv _ if_live_then_nonz_cap
-                                + state_refs_of:touched_addresses_P_inv _ "\<lambda>s. P1 (state_refs_of s)"
-                                + ct:touched_addresses_P_inv _ cur_tcb
-                                + zombies:touched_addresses_P_inv _ zombies_final
-                                + it:touched_addresses_P_inv _ "\<lambda>s. P2 (idle_thread s)"
-                                + valid_globals:touched_addresses_P_inv _ valid_global_refs
+sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ _ pspace_aligned
+                                + distinct:touched_addresses_P_inv _ _ pspace_distinct
+                                + vmdb:touched_addresses_P_inv _ _ valid_mdb
+                                + cap_table_at:touched_addresses_P_inv _ _ "cap_table_at a b"
+                                + ifunsafe:touched_addresses_P_inv _ _ if_unsafe_then_cap
+                                + iflive:touched_addresses_P_inv _ _ if_live_then_nonz_cap
+                                + state_refs_of:touched_addresses_P_inv _ _ "\<lambda>s. P1 (state_refs_of s)"
+                                + ct:touched_addresses_P_inv _ _ cur_tcb
+                                + zombies:touched_addresses_P_inv _ _ zombies_final
+                                + it:touched_addresses_P_inv _ _ "\<lambda>s. P2 (idle_thread s)"
+                                + valid_globals:touched_addresses_P_inv _ _ valid_global_refs
   apply unfold_locales
   apply (simp add: ta_agnostic_def state_refs_of_def cur_tcb_def zombies_final_def
                    is_final_cap'_def2)+
@@ -1704,11 +1704,11 @@ lemma set_mrs_reply_masters[wp]:
 crunch reply_masters[wp]: copy_mrs valid_reply_masters
   (wp: crunch_wps)
 
-sublocale touched_addresses_inv \<subseteq> reply:touched_addresses_P_inv _ valid_reply_caps
-                                + reply_masters:touched_addresses_P_inv _ valid_reply_masters
-                                + valid_idle:touched_addresses_P_inv _ valid_idle
-                                + arch:touched_addresses_P_inv _ "\<lambda>s. P1 (arch_state s)"
-                                + irq_node:touched_addresses_P_inv _ "\<lambda>s. P2 (interrupt_irq_node s)"
+sublocale touched_addresses_inv \<subseteq> reply:touched_addresses_P_inv _ _ valid_reply_caps
+                                + reply_masters:touched_addresses_P_inv _ _ valid_reply_masters
+                                + valid_idle:touched_addresses_P_inv _ _ valid_idle
+                                + arch:touched_addresses_P_inv _ _ "\<lambda>s. P1 (arch_state s)"
+                                + irq_node:touched_addresses_P_inv _ _ "\<lambda>s. P2 (interrupt_irq_node s)"
   by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
@@ -1769,10 +1769,10 @@ lemma copy_mrs_irq_handlers[wp]:
   apply wp+
   done
 
-sublocale touched_addresses_inv \<subseteq> irq_handlers:touched_addresses_P_inv _ valid_irq_handlers
+sublocale touched_addresses_inv \<subseteq> irq_handlers:touched_addresses_P_inv _ _ valid_irq_handlers
   by unfold_locales (clarsimp simp: ta_agnostic_def)
 
-sublocale touched_addresses_inv \<subseteq> ioports:touched_addresses_P_inv _ valid_ioports
+sublocale touched_addresses_inv \<subseteq> ioports:touched_addresses_P_inv _ _ valid_ioports
   by unfold_locales (clarsimp simp: ta_agnostic_def)
 
 context Ipc_AI begin
@@ -1825,8 +1825,8 @@ lemma set_mrs_only_idle [wp]:
    apply (fastforce simp: obj_at_def)
   by (simp add: get_tcb_rev)
 
-sublocale touched_addresses_inv \<subseteq> only_idle:touched_addresses_P_inv _ only_idle
-                                + pspace_in_kernel_window:touched_addresses_P_inv _ pspace_in_kernel_window
+sublocale touched_addresses_inv \<subseteq> only_idle:touched_addresses_P_inv _ _ only_idle
+                                + pspace_in_kernel_window:touched_addresses_P_inv _ _ pspace_in_kernel_window
   by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
@@ -1863,9 +1863,9 @@ lemmas set_mrs_cap_refs_respects_device_region[wp]
                                 VSpace_AI.cap_refs_respects_device_region_dmo[OF storeWord_device_state_inv],
                                 simplified tcb_cap_cases_def, simplified]
 
-sublocale touched_addresses_inv \<subseteq> cap_refs_in_kernel_window:touched_addresses_P_inv _ cap_refs_in_kernel_window
-                                + valid_ioc:touched_addresses_P_inv _ valid_ioc
-                                + tcb_at:touched_addresses_P_inv _ "tcb_at r"
+sublocale touched_addresses_inv \<subseteq> cap_refs_in_kernel_window:touched_addresses_P_inv _ _ cap_refs_in_kernel_window
+                                + valid_ioc:touched_addresses_P_inv _ _ valid_ioc
+                                + tcb_at:touched_addresses_P_inv _ _ "tcb_at r"
   by unfold_locales (clarsimp simp: ta_agnostic_def)+
 
 context Ipc_AI begin
@@ -2050,7 +2050,7 @@ lemma cte_wp_at_reply_cap_can_fast_finalise:
   "cte_wp_at ((=) (cap.ReplyCap tcb v R)) slot s \<longrightarrow> cte_wp_at can_fast_finalise slot s"
   by (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_def)
 
-sublocale touched_addresses_inv \<subseteq> st_tcb_at:touched_addresses_P_inv _ "st_tcb_at P t"
+sublocale touched_addresses_inv \<subseteq> st_tcb_at:touched_addresses_P_inv _ _ "st_tcb_at P t"
   by unfold_locales (simp add:ta_agnostic_def)
 
 context Ipc_AI begin
@@ -2475,7 +2475,7 @@ lemmas (in Ipc_AI) transfer_caps_loop_cap_to[wp]
 
 crunch cap_to[wp]: set_extra_badge "ex_nonz_cap_to p"
 
-sublocale touched_addresses_inv \<subseteq> ex_nonz_cap_to:touched_addresses_P_inv _ "ex_nonz_cap_to p"
+sublocale touched_addresses_inv \<subseteq> ex_nonz_cap_to:touched_addresses_P_inv _ _ "ex_nonz_cap_to p"
   by unfold_locales (clarsimp simp:ta_agnostic_def ex_nonz_cap_to_def)
 
 context Ipc_AI begin
@@ -2656,7 +2656,7 @@ lemma setup_caller_cap_refs_respects_device_region[wp]:
   apply (simp add: tcb_at_def get_tcb_def)
   done
 
-sublocale touched_addresses_inv \<subseteq> cap_refs_respects_device_region:touched_addresses_P_inv _ cap_refs_respects_device_region
+sublocale touched_addresses_inv \<subseteq> cap_refs_respects_device_region:touched_addresses_P_inv _ _ cap_refs_respects_device_region
   by unfold_locales (simp add:ta_agnostic_def)
 
 
@@ -3071,7 +3071,7 @@ lemma ep_queue_cap_to:
   apply (erule st_tcb_ex_cap, clarsimp+)
   done
 
-sublocale touched_addresses_inv \<subseteq> has_reply_cap:touched_addresses_P_inv _ "has_reply_cap t"
+sublocale touched_addresses_inv \<subseteq> has_reply_cap:touched_addresses_P_inv _ _ "has_reply_cap t"
   by unfold_locales (simp add:ta_agnostic_def has_reply_cap_def)
 
 context Ipc_AI_cont begin

@@ -29,8 +29,10 @@ definition ta_agnostic :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" whe
 abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state \<Rightarrow> bool)" where
   "ignore_ta P \<equiv> \<lambda>s. \<forall>ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>)"
 
+
 locale touched_addresses_inv =
-  fixes m :: "('z::state_ext state, 'r) nondet_monad"
+  fixes state_ext_t :: "'state_ext::state_ext itself"
+  fixes m :: "('state_ext::state_ext state, 'r) nondet_monad"
   assumes tainv: "\<And>P. m \<lbrace>ignore_ta P\<rbrace>"
 begin
 
@@ -58,8 +60,9 @@ lemma in_inv_by_agnostic:
   done
 end
 
-locale touched_addresses_invE = touched_addresses_inv m for
-                                m::"('z::state_ext state, 'ra + 'rb) nondet_monad"
+locale touched_addresses_invE = touched_addresses_inv state_ext_t m
+  for state_ext_t :: "'state_ext::state_ext itself"
+  and m::"('state_ext::state_ext state, 'ra + 'rb) nondet_monad"
 begin
 lemma validE_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
@@ -88,8 +91,13 @@ sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
 (*TODO: how do we get the sublocale-interpretations of touched_addresses_P_inv to map into things
   like agnostic_preservedE_R above?  *)
 
-locale touched_addresses_P_inv = touched_addresses_inv m for m::"('z::state_ext state, 'r) nondet_monad" +
-  fixes P :: "'z state \<Rightarrow> bool"
+term "state_ext"
+term "state_ext state"
+
+locale touched_addresses_P_inv = touched_addresses_inv state_ext_t m
+  for state_ext_t :: "'state_ext::state_ext itself"
+  and m::"('state_ext::state_ext state, 'r) nondet_monad" +
+  fixes P :: "'state_ext::state_ext state \<Rightarrow> bool"
   assumes ta_agnostic [simp]: "ta_agnostic P"
 begin
 lemma m_inv [wp]:

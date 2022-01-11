@@ -26,10 +26,97 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
+locale touched_addresses_det_inv = touched_addresses_inv "TYPE(det_ext)"
+begin
+(*
+lemma valid_list_inv [wp]:
+  "m \<lbrace>valid_list\<rbrace>"
+  apply (simp add: agnostic_preserved ta_agnostic_def)
+  done
 
-sublocale touched_addresses_inv \<subseteq> valid_list: touched_addresses_P_inv _ "\<lambda>s::det_ext state. valid_list s"
-  (* by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+ *)
+lemma domain_list_inv [wp]:
+  "m \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  apply (rule agnostic_preserved)
+  apply (simp add:ta_agnostic_def)
+  done
 
+lemma domain_time_inv [wp]:
+  "m \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  apply (rule agnostic_preserved)
+  apply (simp add:ta_agnostic_def)
+  done *)
+end
+
+locale touched_addresses_P_det_inv = touched_addresses_det_inv m
+  for m::"(det_ext state, 'r) nondet_monad" +
+  fixes P :: "det_ext state \<Rightarrow> bool"
+  assumes ta_agnostic [simp]: "ta_agnostic P"
+begin
+lemma m_inv [wp]:
+  "m \<lbrace>P\<rbrace>"
+  by (rule agnostic_preserved [OF ta_agnostic])
+end
+
+sublocale touched_addresses_det_inv \<subseteq> valid_list: touched_addresses_P_det_inv _ valid_list
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)
+
+(* locale touched_addresses_invE = touched_addresses_inv state_ext_t m *)
+  (* for state_ext_t :: "'state_ext::state_ext itself" *)
+  (* and m::"('state_ext::state_ext state, 'ra + 'rb) nondet_monad" *)
+(* begin *)
+
+locale touched_addresses_det_invE = touched_addresses_invE "TYPE(det_ext)" m
+  + touched_addresses_det_inv m
+  for m::"(det_ext state, 'ra + 'rb) nondet_monad"
+begin
+(*lemma valid_list_inv [wp]:
+  "m \<lbrace>valid_list\<rbrace>"
+  apply (simp add: agnostic_preserved ta_agnostic_def)
+  done *)
+
+(*FIXME: can these be generated with some interesting locale trickery? *)
+lemma valid_list_invER[wp]:
+  "\<lbrace>valid_list\<rbrace> m \<lbrace>\<lambda>_. valid_list\<rbrace>, -"
+  by (clarsimp simp: agnostic_preserved ta_agnostic_def valid_validE_R)
+
+lemma domain_list_invE[wp]:
+  "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> m \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>, \<lbrace>\<lambda>_ s. P (domain_list s)\<rbrace>"
+  by (clarsimp simp: agnostic_preserved ta_agnostic_def valid_validE)
+
+end
+
+interpretation resolve_address_bits_tainv_det:
+  touched_addresses_det_inv "resolve_address_bits objref"
+  apply unfold_locales
+  (* note that here we get this for free. i dont know how to generate this for free though *)
+  done
+
+interpretation lookup_extra_caps_tainv_det:
+  touched_addresses_det_inv "lookup_extra_caps x y z"
+  by unfold_locales
+
+interpretation get_receive_slots_tainv_det:
+  touched_addresses_det_inv "get_receive_slots x y"
+  by unfold_locales
+
+interpretation decode_invocation_tainv_det:
+  touched_addresses_det_inv "decode_invocation x y z xx yy zz"
+  apply unfold_locales
+  apply (rule decode_inv_tainv)
+  done
+
+interpretation lookup_cap_tainv_det:
+  touched_addresses_det_invE "lookup_cap x y"
+  by unfold_locales
+
+(* does something like this already exist? *)
+lemma hoare_post_conj_imp:
+  "(\<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -) \<Longrightarrow>
+    \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv s.
+           (\<forall>x. (ZZ1 x \<longrightarrow> P s) \<and>
+                (ZZ3 x \<longrightarrow> P s)) \<and>
+           P s\<rbrace>, -"
+  by (simp add: hoare_post_imp_R)
 
 context Arch begin global_naming RISCV64
 
@@ -55,12 +142,17 @@ lemma perform_page_invocation_valid_list[wp]:
            | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits)+
   done
 
-
-crunch valid_list[wp]: perform_invocation valid_list
+crunches perform_invocation
+  for valid_list [wp]: valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 
-crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
-  (wp: crunch_wps syscall_valid simp: crunch_simps
+crunches decode_invocation
+  for valid_list [wp]: valid_list
+  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption syscall)
+
+crunches handle_invocation
+  for valid_list[wp, Deterministic_AI_assms]: valid_list
+  (wp: crunch_wps syscall_valid hoare_post_conj_imp simp: crunch_simps
    ignore: without_preemption syscall)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_recv, handle_yield, handle_call valid_list
