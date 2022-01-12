@@ -68,7 +68,7 @@ where
      put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
    od"
 
-text \<open>versions of get_object and set_object that obey the touched_addresses
+text \<open>versions of @{term get_object} and @{term set_object} that obey the @{term touched_addresses}
       pattern (for tracking cache stuff). This is temporary, for testing out
       the effects of the new feature on a smaller scale.\<close>
 
