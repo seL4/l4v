@@ -30,7 +30,7 @@ The following is the definition of the seven object types that are always availa
 > epSizeBits = 4
 
 > ntfnSizeBits :: Int
-> ntfnSizeBits = wordSizeCase 5 5
+> ntfnSizeBits = wordSizeCase 5 6
 
 > cteSizeBits :: Int
 > cteSizeBits = wordSizeCase 4 5
