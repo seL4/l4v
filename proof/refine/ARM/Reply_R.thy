@@ -733,7 +733,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
   apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD sc_at_cross simp: obj_at'_def)
   apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
-   apply (fastforce dest!: state_relationD ko_at'_cross)
+   apply (fastforce dest!: state_relationD ko_at_sc_cross)
   apply (rule corres_guard_imp)
     apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
                and n1="objBits sc' - minSchedContextBits"
@@ -1616,7 +1616,7 @@ lemma setSchedContext_scReply_update_None_corres:
   apply (rule corres_symb_exec_r)
      apply (rule_tac P'="ko_at' sc' ptr" in corres_inst)
      apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
-      apply (fastforce dest!: state_relationD ko_at'_cross)
+      apply (fastforce dest!: state_relationD ko_at_sc_cross)
      apply (rule corres_guard_imp)
        apply (rule_tac P="(\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp)
                           and sc_obj_at (objBits sc' - minSchedContextBits) ptr"

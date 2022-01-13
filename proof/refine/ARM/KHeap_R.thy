@@ -4452,7 +4452,7 @@ end
 
 (* FIXME RT: rename *)
 (* this let us cross the sc size information from concrete to abstract *)
-lemma ko_at'_cross:
+lemma ko_at_sc_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "ko_at' (sc'::sched_context) ptr s'"
   shows "sc_obj_at (objBits sc' - minSchedContextBits) ptr s" using assms
