@@ -4562,11 +4562,6 @@ lemma sch_act_simple_cross_rel:
                 dest: state_relation_sched_act_relation
                split: Structures_A.scheduler_action.splits)
 
-(* FIXME RT: move to Corres_UL.thy *)
-lemma cross_relF:
-  "(s, s') \<in> state_relation \<Longrightarrow> cross_rel A B \<Longrightarrow> A s \<Longrightarrow> B s'"
-  by (clarsimp simp: cross_rel_def)
-
 lemma valid_tcb_state'_simps[simp]:
   "valid_tcb_state' Running = \<top>"
   "valid_tcb_state' Inactive = \<top>"
