@@ -1014,7 +1014,7 @@ lemma setSchedContext_pop_head_corres:
                          and pspace_aligned' and pspace_distinct' and  K (scReply sc' = Some rp)" in corres_inst)
      apply (rule corres_gen_asm2')
      apply (rule_tac Q="sc_obj_at (objBits sc' - minSchedContextBits) ptr" in corres_cross_add_abs_guard)
-      apply (fastforce dest!: state_relationD ko_at'_cross)
+      apply (fastforce dest!: state_relationD ko_at_sc_cross)
      apply (rule corres_guard_imp)
        apply (rule_tac P="(\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp)
                           and sc_obj_at (objBits sc' - minSchedContextBits) ptr"
