@@ -110,6 +110,7 @@ session DSpec in capDL = Word_Lib +
   sessions
     ExecSpec
     ASpec
+    "HOL-Combinatorics" (* for Fun.swap *)
   theories
     Syscall_D
 
