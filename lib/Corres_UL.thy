@@ -119,6 +119,10 @@ lemma cross_relI:
   "(\<And>s s'. \<lbrakk> P s; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s') \<Longrightarrow> cross_rel_ul sr P Q"
   by (simp add: cross_rel_ul_def)
 
+lemma cross_relF:
+  "\<lbrakk> (s, s') \<in> sr; cross_rel_ul sr P Q; P s \<rbrakk> \<Longrightarrow> Q s'"
+  by (clarsimp simp: cross_rel_ul_def)
+
 lemma cross_relE:
   "\<lbrakk> cross_rel_ul sr P Q; \<forall>s s'. P s \<longrightarrow> (s, s') \<in> sr \<longrightarrow> Q s' \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (simp add: cross_rel_ul_def)
