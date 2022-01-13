@@ -142,6 +142,9 @@ declare None_upd_eq[simp]
 lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \<mapsto> v) |> g = f |> g"
   by simp
 
+definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Rightarrow> 'b set" where
+  "map_set f \<equiv> case_option {} id \<circ> f"
+
 (* opt_pred *)
 
 abbreviation
