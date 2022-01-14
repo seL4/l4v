@@ -1822,14 +1822,19 @@ lemma schedule_reads_respects_scheduler_cur_domain:
       We are switching to a new thread but still in the current domain.
       By the domains_distinct condition, we must remain in the current label as well
     *)
-   (* slow 5s *)
-   by (fastforce simp: guarded_pas_domain_def pas_refined_def reads_scheduler_def
-                       tcb_domain_map_wellformed_aux_def
-                       valid_sched_def valid_sched_action_def weak_valid_sched_action_def
-                       switch_in_cur_domain_def in_cur_domain_def
-                intro: etcb_in_domains_of_state tcb_at_is_etcb_at st_tcb_at_tcb_at
-                 dest: domains_distinct[THEN pas_domains_distinct_inj]
-                split: if_splits prod.splits)+
+   apply (thin_tac "runnable st" for st)
+   prefer 2
+   apply (thin_tac "\<not>runnable st" for st)
+   apply distinct_subgoals
+  apply (clarsimp simp: guarded_pas_domain_def pas_refined_def reads_scheduler_def
+                      tcb_domain_map_wellformed_aux_def
+                      valid_sched_def valid_sched_action_def weak_valid_sched_action_def
+                      switch_in_cur_domain_def in_cur_domain_def
+               split: if_splits)
+  apply (frule st_tcb_at_tcb_at, drule (1) tcb_at_is_etcb_at, drule (1) etcb_in_domains_of_state)
+  apply (drule (1) bspec)
+  apply simp
+  by (metis Int_emptyI assms pas_domains_distinct_inj)
 
 end
 
