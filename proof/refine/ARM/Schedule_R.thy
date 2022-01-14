@@ -61,7 +61,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
@@ -144,23 +144,17 @@ crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
-crunches setQueue
-  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
      removeFromBitmap d p
   \<lbrace>\<lambda>_. valid_queues_no_bitmap_except t \<rbrace>"
   unfolding bitmapQ_defs valid_queues_no_bitmap_except_def
-  by (wp| clarsimp simp: bitmap_fun_defs)+
+  by (wp | clarsimp simp: bitmap_fun_defs)+
 
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply (wp | clarsimp simp: bitmap_fun_defs wordRadix_def)+
-  apply (subst (asm) complement_nth_w2p, simp_all)
-  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size)
-  done
+  by (wpsimp simp: bitmap_fun_defs wordRadix_def)
 
 lemma removeFromBitmap_valid_bitmapQ[wp]:
 " \<lbrace> valid_bitmapQ_except d p and bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
