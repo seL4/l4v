@@ -1011,8 +1011,10 @@ lemma dcorres_ep_cancel_badge_sends:
               apply clarsimp+
               apply (frule pending_thread_in_send_not_idle)
                  apply (simp add:valid_state_def)+
-              apply (clarsimp simp:not_idle_thread_def)+
-           apply (frule_tac epptr = epptr in get_endpoint_pick ,simp add:obj_at_def)
+              apply (clarsimp simp:not_idle_thread_def)
+             apply fastforce
+            apply fastforce
+           apply (frule_tac epptr = epptr in get_endpoint_pick, simp add:obj_at_def)
            apply (clarsimp simp:valid_ep_abstract_def ep_waiting_set_send_def)
            apply (clarsimp simp:valid_idle_def pred_tcb_at_def obj_at_def valid_ep_abstract_def)
            apply (rule conjI,clarsimp)
@@ -1113,7 +1115,7 @@ lemma dcorres_list_all2_mapM_':
   done
 
 lemmas dcorres_list_all2_mapM_
-     = dcorres_list_all2_mapM_' [OF suffix_order.order.refl suffix_order.order.refl]
+     = dcorres_list_all2_mapM_' [OF suffix_order.refl suffix_order.refl]
 
 lemma set_get_set_asid_pool:
   "do _ \<leftarrow> set_asid_pool a x; ap \<leftarrow> get_asid_pool a; set_asid_pool a (y ap) od = set_asid_pool a (y x)"
@@ -1275,7 +1277,7 @@ lemma dcorres_set_asid_pool_empty:
      apply (clarsimp simp del:set_map simp: suffix_def)
     apply (wp | clarsimp simp:swp_def)+
   apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
-  apply (clarsimp simp: upto_enum_def take_bit_nat_eq_self)
+  apply (clarsimp simp: upto_enum_def ucast_of_nat_small unat_of_nat)
   done
 
 declare fun_upd_apply[simp]
