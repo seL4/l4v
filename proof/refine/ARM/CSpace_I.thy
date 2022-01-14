@@ -666,6 +666,7 @@ lemma capUntypedSize_capBits:
                    ARM_H.capUntypedSize_def
                    pteBits_def pdeBits_def
                    ptBits_def pdBits_def
+                   shiftl_eq_mult
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce

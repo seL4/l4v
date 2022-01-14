@@ -82,7 +82,7 @@ lemma createObject_typ_at':
   apply (erule allE)+
   apply (erule(1) impE)
   apply (subgoal_tac "x \<in> {x..x + 2 ^ objBitsKO y - 1}")
-   apply (fastforce simp:is_aligned_neg_mask_eq p_assoc_help)
+   apply (fastforce simp: p_assoc_help)
   apply (rule first_in_uptoD)
   apply (drule(1) pspace_alignedD')
   apply (clarsimp simp: is_aligned_no_wrap' p_assoc_help)
@@ -386,7 +386,8 @@ lemma mask_vmrights_corres:
                      mask_vm_rights_def nth_ucast
                      validate_vm_rights_def vm_read_write_def
                      vm_kernel_only_def vm_read_only_def
-               split: bool.splits)
+               split: bool.splits
+               simp del: bit_0)
 
 lemma vm_attributes_corres:
   "vmattributes_map (attribs_from_word w) = attribsFromWord w"
@@ -435,8 +436,7 @@ lemma ARMMMU_improve_cases:
 
 crunch inv [wp]: "ARM_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
-   simp: forME_x_def crunch_simps
-         ARMMMU_improve_cases)
+   simp: crunch_simps ARMMMU_improve_cases)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -969,12 +969,12 @@ shows
          apply (rule_tac P="map_data = None \<and> kernel_base \<le> vaddr + 2 ^ pageBitsForSize vmpage_size - 1
                             \<or> (\<exists>asid' vaddr'. map_data = Some (asid', vaddr') \<and> (asid',vaddr') \<noteq> (asid,vaddr))"
                   in corres_symmetric_bool_cases[where Q=\<top> and Q'=\<top>, OF refl])
-          apply (erule disjE; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM.pptrBase_def
+          apply (erule disjE; clarsimp simp: whenE_def kernel_base_def pptrBase_def
                                       split: option.splits)
          apply clarsimp
          apply (rule corres_splitEE'[where r'=dc and P=\<top> and P'=\<top>])
             apply (case_tac map_data
-                   ; clarsimp simp: whenE_def kernel_base_def pptrBase_def ARM.pptrBase_def
+                   ; clarsimp simp: whenE_def kernel_base_def pptrBase_def
                                     corres_returnOkTT)
            \<comment> \<open>pd=undefined as vspace_at_asid not used in find_pd_for_asid_corres and avoid unresolved schematics\<close>
            apply (rule corres_splitEE'[
@@ -1030,7 +1030,7 @@ shows
     apply (simp split: cap.split arch_cap.split option.split,
            intro conjI allI impI, simp_all)[1]
     apply (rule whenE_throwError_corres_initial, simp)
-     apply (simp add: kernel_base_def ARM.pptrBase_def pptrBase_def)
+     apply (simp add: kernel_base_def pptrBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
          prefer 2
@@ -1099,7 +1099,7 @@ shows
      apply (rule whenE_throwError_corres, simp)
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
-      apply (clarsimp simp: kernel_base_def ARM.pptrBase_def pptrBase_def)
+      apply (clarsimp simp: kernel_base_def pptrBase_def)
      apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
@@ -1334,7 +1334,7 @@ lemma sts_valid_arch_inv':
 lemma less_pptrBase_valid_pde_offset':
   "\<lbrakk> vptr < pptrBase; x = 0 \<or> is_aligned vptr 24; x \<le> 0xF \<rbrakk>
      \<Longrightarrow> valid_pde_mapping_offset' (((x * 4) + (vptr >> 20 << 2)) && mask pdBits)"
-  apply (clarsimp simp: ARM.pptrBase_def pptrBase_def pdBits_def pageBits_def
+  apply (clarsimp simp: pptrBase_def pdBits_def pageBits_def
                         valid_pde_mapping_offset'_def pd_asid_slot_def)
   apply (drule word_le_minus_one_leq, simp add: pdeBits_def)
   apply (drule le_shiftr[where u=vptr and n=20])
@@ -1376,7 +1376,7 @@ lemma createMappingEntries_valid_pde_slots':
    apply (simp add: pdBits_def pageBits_def)
   apply (clarsimp simp: upto_enum_step_def linorder_not_less pd_bits_def
                         lookup_pd_slot_def Let_def field_simps
-                        mask_add_aligned pdeBits_def)
+                        mask_add_aligned pdeBits_def take_bit_Suc)
   apply (erule less_pptrBase_valid_pde_offset'
     [unfolded pdBits_def pageBits_def pdeBits_def, simplified], simp+)
   done
@@ -1512,8 +1512,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:ptrFromPAddr_def is_aligned_mask
-    pptrBaseOffset_def pptrBase_def ARM.physBase_def physBase_def)
+  apply (simp add:ptrFromPAddr_def is_aligned_mask pptrBaseOffset_def pptrBase_def physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])
@@ -1560,7 +1559,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
      apply (frule is_aligned_no_wrap'[where off = "0x3c"])
       apply simp
      apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-     apply (clarsimp simp: mask_def add.commute upto_enum_step_def)
+     apply (clarsimp simp: mask_def add.commute upto_enum_step_def take_bit_Suc)
      apply simp
     apply wp+
    apply (intro conjI impI)
@@ -1576,7 +1575,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    apply (frule is_aligned_no_wrap'[where off = "0x3c" and sz = 6])
     apply simp
    apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-   apply (clarsimp simp: mask_def add.commute upto_enum_step_def
+   apply (clarsimp simp: mask_def add.commute upto_enum_step_def take_bit_Suc
                          superSectionPDEOffsets_def pdeBits_def)
    done
 
@@ -1797,27 +1796,11 @@ crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation, p
             performASIDPoolInvocation "st_tcb_at' P t"
   (wp: crunch_wps getASID_wp getObject_cte_inv simp: crunch_simps)
 
-crunch aligned': "Arch.finaliseCap" pspace_aligned'
-  (wp: crunch_wps getASID_wp simp: crunch_simps)
-
 lemmas arch_finalise_cap_aligned' = finaliseCap_aligned'
-
-crunch distinct': "Arch.finaliseCap" pspace_distinct'
-  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemmas arch_finalise_cap_distinct' = finaliseCap_distinct'
 
-crunch nosch [wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
-  (wp: crunch_wps getASID_wp simp: crunch_simps updateObject_default_def)
-
-
 crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
-  (wp: crunch_wps getASID_wp simp: crunch_simps)
-
-crunch typ_at' [wp]: "Arch.finaliseCap" "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps getASID_wp simp: crunch_simps)
-
-crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
   (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma invs_asid_table_strengthen':
@@ -1918,7 +1901,7 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
   apply (clarsimp simp: conj_comms invs_valid_objs')
   apply (frule_tac ptr="w1" in descendants_range_caps_no_overlapI'[where sz = pageBits])
-    apply (fastforce simp:is_aligned_neg_mask_eq cte_wp_at_ctes_of)
+    apply (fastforce simp: cte_wp_at_ctes_of)
    apply (simp add:empty_descendants_range_in')
   apply (frule(1) if_unsafe_then_capD'[OF _ invs_unsafe_then_cap',rotated])
    apply (fastforce simp:cte_wp_at_ctes_of)
@@ -1932,7 +1915,7 @@ lemma performASIDControlInvocation_invs' [wp]:
     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
    apply (simp add: pageBits_def minUntypedSizeBits_def)
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
-  apply (simp add: is_aligned_neg_mask_eq Int_commute)
+  apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
                     archObjSize_def asid_low_bits_def word_bits_def pageBits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
