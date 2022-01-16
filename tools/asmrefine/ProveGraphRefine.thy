@@ -134,12 +134,7 @@ lemma drop_sign_isomorphism_bitwise:
   "drop_sign (scast z) = scast z"
   "ucast x = ucast (drop_sign x)"
   "scast x = scast (drop_sign x)"
-  by (rule word_eqI
-          | simp add: word_size drop_sign_def nth_ucast nth_shiftl
-                      nth_shiftr nth_sshiftr word_ops_nth_size
-                      nth_scast
-          | safe
-          | simp add: test_bit_bin)+
+  by (all \<open>(word_eqI_solve simp: drop_sign_def test_bit_bin)\<close>)
 
 lemma drop_sign_of_nat:
   "drop_sign (of_nat n) = of_nat n"
@@ -272,7 +267,7 @@ lemma fold_of_nat_eq_Ifs[simplified word_bits_conv]:
     \<Longrightarrow> foldr (\<lambda>n v. if x = of_nat n then f n else v) [0 ..< m] (f m)
         = f (unat (machine_word_truncate_nat m x))"
   apply (rule fold_of_nat_eq_Ifs_proof)
-   apply (simp_all add: machine_word_truncate_nat_def word_bits_def take_bit_nat_eq_self)
+   apply (simp_all add: machine_word_truncate_nat_def word_bits_def take_bit_nat_eq_self unat_of_nat)
   done
 
 lemma less_is_non_zero_p1':
@@ -761,7 +756,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 
 fun graph_refine_proof_tacs csenv ctxt = let
-    val ctxt = ctxt delsimps @{thms shiftl_numeral}
+    val ctxt = ctxt delsimps @{thms shiftl_numeral_numeral shiftl1_is_mult}
         |> Splitter.del_split @{thm if_split}
         |> Simplifier.del_cong @{thm if_weak_cong}
 
