@@ -2615,6 +2615,10 @@ where
 lemma proj_inj: "inj f \<Longrightarrow> (partial_inv f ko = Some v) = (f v = ko)"
   by (auto simp: partial_inv_def the_equality injD)
 
+lemma partial_inv_inj_Some:
+  "inj f \<Longrightarrow> partial_inv f (f r) = Some r"
+  by (fastforce simp: proj_inj)
+
 text \<open>Obtain the unique thing satisfying a predicate, otherwise @{term None}\<close>
 abbreviation the_pred_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a option"
   where
