@@ -561,4 +561,25 @@ lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> 
 
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
+lemma last_take:
+  "\<lbrakk>ls \<noteq> []; 0 < n; n \<le>  length ls\<rbrakk> \<Longrightarrow>last (take n ls) = ls ! (n - 1)"
+  by (induct ls arbitrary: n; fastforce simp: take_Cons nth_Cons split: nat.splits)
+
+lemma take_drop_nth:
+  "\<lbrakk> 0 < n; n < length ls\<rbrakk> \<Longrightarrow> take 1 (drop n ls) = [ls ! n]"
+  apply (induct ls arbitrary: n; clarsimp simp: drop_Cons nth_Cons)
+  by (case_tac n; simp add: drop_Suc_nth)
+
+lemma filter_hd_equals_tl:
+  "\<lbrakk>distinct q; q \<noteq> []\<rbrakk> \<Longrightarrow> filter ((\<noteq>) (hd q)) q = tl q"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (fastforce simp: filter_id_conv)
+  done
+
+lemma case_list_when:
+  "(case l of [] \<Rightarrow> return () | r # xs \<Rightarrow> f r xs) = (when (l \<noteq> []) $ f (hd l) (tl l))"
+  by (clarsimp simp: list_case_If2)
+
 end
