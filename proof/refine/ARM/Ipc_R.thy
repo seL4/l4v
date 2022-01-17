@@ -1921,16 +1921,6 @@ crunches finaliseCapTrue_standin
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (simp: crunch_simps wp: crunch_wps)
 
-(* This is currently unused. It should be provable if we add `sch_act_simple` to the preconditions *)
-lemma cteDeleteOne_weak_sch_act[wp]:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-   cteDeleteOne sl
-   \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: cteDeleteOne_def unless_def)
-  apply (wp hoare_drop_imps finaliseCapTrue_standin_cur' isFinalCapability_cur'
-         | simp add: split_def)+
-  oops
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches handleFaultReply
@@ -3677,23 +3667,6 @@ lemma setThreadState_nonqueued_state_update:
   apply (clarsimp simp: list_refs_of_replies'_def o_def pred_tcb_at'_def obj_at'_def)
   done
 
-lemma cteDeleteOne_reply_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p and
-    cte_wp_at' (\<lambda>c. isReplyCap (cteCap c)) slot\<rbrace>
-   cteDeleteOne slot
-   \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: cteDeleteOne_def ex_nonz_cap_to'_def unless_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
-  apply (rule hoare_assume_pre)
-  apply (subgoal_tac "isReplyCap (cteCap cte)")
-   apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
-        | clarsimp simp: finaliseCap_def isCap_simps | simp
-        | wp (once) hoare_drop_imps)+
-(*   apply (fastforce simp: cte_wp_at_ctes_of)
-  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
-  done*)
-oops (* RT fixme: I think this is no longer true, and it currently isn't used anywhere*)
-
 crunches possibleSwitchTo, asUser, doIPCTransfer
   for vms'[wp]: "valid_machine_state'"
   (wp: crunch_wps simp: zipWithM_x_mapM_x)
@@ -3757,18 +3730,6 @@ lemma replyRemoveTCB_ResumeCurrentThread_imp_notct[wp]:
    apply (clarsimp simp: when_def)
    apply (intro conjI impI)
     apply (wpsimp wp: set_sc'.set_wp set_reply'.set_wp hoare_vcg_imp_lift')+
-  done
-
-(* FIXME RT: This is not actually being used currently. I'll keep it here just in case *)
-lemma cteDeleteOne_ResumeCurrentThread_imp_notct:
-  "cteDeleteOne slot \<lbrace>\<lambda>s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
-  (is "valid ?pre _ _")
-  apply (simp add: cteDeleteOne_def unless_def split_def)
-  apply wp
-       apply (wp hoare_convert_imp)[1]
-      apply wp
-     apply (rule_tac Q="\<lambda>_. ?pre" in hoare_post_imp, clarsimp)
-     apply (wpsimp wp: hoare_convert_imp isFinalCapability_inv)+
   done
 
 lemma cancelSignal_ResumeCurrentThread_imp_notct[wp]:

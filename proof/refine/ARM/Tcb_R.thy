@@ -113,38 +113,6 @@ lemma activate_invs':
 
 declare not_psubset_eq[dest!] (* FIXME: remove, not a good dest rule *)
 
-lemma setThreadState_runnable_simp: (* FIXME RT: not true any more, and probably not feasible to update *)
-  "runnable' ts \<Longrightarrow> setThreadState ts t =
-   threadSet (tcbState_update (\<lambda>x. ts)) t"
-  apply (simp add: setThreadState_def isRunnable_def isStopped_def liftM_def)
-  oops (*
-  apply (subst bind_return[symmetric], rule bind_cong[OF refl])
-  apply (drule use_valid[OF _ threadSet_pred_tcb_at_state[where proj="itcbState" and p=t and P="(=) ts"]])
-   apply simp
-  apply (subst bind_known_operation_eq)
-       apply wp+
-     apply clarsimp
-    apply (subst eq_commute, erule conjI[OF _ refl])
-   apply (rule empty_fail_getThreadState)
-  apply (simp add: getCurThread_def getSchedulerAction_def exec_gets)
-  apply (auto simp: when_def split: Structures_H.thread_state.split)
-  done *)
-
-lemma activate_sch_act: (* FIXME RT: not true any more, ksSchedulerAction updates more often *)
-  "\<lbrace>ct_in_state' activatable' and (\<lambda>s. P (ksSchedulerAction s))\<rbrace>
-     activateThread \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  oops (*
-  apply (simp add: activateThread_def getCurThread_def
-             cong: if_cong Structures_H.thread_state.case_cong)
-  apply (rule hoare_seq_ext [OF _ gets_sp])
-  apply (rule hoare_seq_ext[where B="\<lambda>st s. (runnable' or idle') st
-                                          \<and> P (ksSchedulerAction s)"])
-   apply (rule hoare_pre)
-    apply (wp | wpc | simp add: )+
-  apply (clarsimp simp: ct_in_state'_def cur_tcb'_def pred_tcb_at'
-                 elim!: pred_tcb'_weakenE)
-  done *)
-
 crunches schedContextResume
   for tcb_at'[wp]: "\<lambda>s. P (tcb_at' t s)"
   (wp: crunch_wps)

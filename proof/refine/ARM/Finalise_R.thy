@@ -2301,19 +2301,6 @@ lemma replyUnlink_invs'[wp]:
   unfolding invs'_def valid_dom_schedule'_def
   by wpsimp
 
-(* FIXME RT: unused? *)
-lemma in_list_refs_of_replies'_E:
-  assumes in_list: "(p, tp) \<in> list_refs_of_replies' s replyPtr"
-  assumes nextR: "\<And>reply. tp = ReplyNext \<Longrightarrow> replyNext reply = Some (Next p)
-                            \<Longrightarrow> replies_of' s replyPtr = Some reply \<Longrightarrow> R"
-  assumes prevR: "\<And>reply. tp = ReplyPrev \<Longrightarrow> replyPrev reply = Some p
-                            \<Longrightarrow> replies_of' s replyPtr = Some reply \<Longrightarrow> R"
-  shows "R"
-  using in_list
-  apply (clarsimp simp: list_refs_of_replies'_def list_refs_of_reply'_def in_get_refs
-                 split: option.splits)
-  by (auto elim: nextR prevR simp: opt_map_def)
-
 crunches replyRemove
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   and if_unsafe_then_cap'[wp]: if_unsafe_then_cap'
@@ -3165,16 +3152,18 @@ lemma finaliseCapTrue_standin_bound_tcb_at':
 
 lemma capDeleteOne_bound_tcb_at':
   "\<lbrace>bound_tcb_at' P tptr and cte_wp_at' (isReplyCap \<circ> cteCap) callerCap\<rbrace>
-      cteDeleteOne callerCap \<lbrace>\<lambda>rv. bound_tcb_at' P tptr\<rbrace>"
+   cteDeleteOne callerCap
+   \<lbrace>\<lambda>_. bound_tcb_at' P tptr\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def)
   apply (rule hoare_pre)
-   apply (wp finaliseCapTrue_standin_bound_tcb_at' hoare_vcg_all_lift
-            hoare_vcg_if_lift2 getCTE_cteCap_wp
-        | wpc | simp | wp (once) hoare_drop_imp)+
-  apply (clarsimp simp:  cteCaps_of_def projectKOs isReplyCap_def cte_wp_at_ctes_of
-                 split: option.splits)
-  apply (case_tac "cteCap cte", simp_all)
-  done
+    apply (wp finaliseCapTrue_standin_bound_tcb_at' hoare_vcg_all_lift
+              hoare_vcg_if_lift2 getCTE_cteCap_wp
+           | clarsimp simp: isFinalCapability_def Let_def cteCaps_of_def isReplyCap_def
+                            cte_wp_at_ctes_of
+                     split: option.splits
+           | intro conjI impI | wp (once) hoare_drop_imp)+
+   apply (case_tac "cteCap cte", simp_all)
+   done
 
 crunches cleanReply
   for bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
@@ -3803,12 +3792,6 @@ lemma rescheduleRequired_sch_act_not[wp]:
   apply (wp hoare_post_taut | simp)+
   done
 
-(* FIXME RT: cancelAllIPC calls possibleSwitchTo
-crunch sch_act_not[wp]: cteDeleteOne "sch_act_not t"
-  (simp: crunch_simps case_Null_If unless_def
-   wp: crunch_wps getObject_inv loadObject_default_inv)
-*)
-
 lemma rescheduleRequired_oa_queued':
   "\<lbrace>obj_at' (\<lambda>tcb. Q (tcbDomain tcb) (tcbPriority tcb)) t'\<rbrace>
     rescheduleRequired
@@ -4308,12 +4291,6 @@ lemma finaliseCap_valid_cap[wp]:
 
 crunch nosch[wp]: "Arch.finaliseCap" "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: loadObject_default_def updateObject_default_def)
-
-(* FIXME RT: not true any more, calls possibleSwitchTo
-crunch sch_act_simple[wp]: finaliseCap sch_act_simple
-  (simp: crunch_simps
-   rule: sch_act_simple_lift
-   wp: getObject_inv loadObject_default_inv crunch_wps) *)
 
 end
 
@@ -5084,59 +5061,6 @@ lemma cancelAll_ct_not_ksQ_helper:
   apply (clarsimp)
   done
 
-lemma cancelAllIPC_ct_not_ksQ:
-  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
-          and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   cancelAllIPC epptr
-   \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>\<lambda>_. ?POST\<rbrace>")
-  apply (simp add: cancelAllIPC_def)
-  apply (wp, wpc, wp)
-        apply (wps rescheduleRequired_ct')
-        apply (wp rescheduleRequired_ksQ')
-       apply clarsimp
-       apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
-  oops (* FIXME RT: this lemma is probably not needed since we have ct_queues_cross *) (*
-      apply (wp hoare_lift_Pf2 [OF set_ep'.ksReadyQueues set_ep'.ct])+
-      apply (wps rescheduleRequired_ct')
-      apply (wp rescheduleRequired_ksQ')
-     apply clarsimp
-     apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
-    apply (wp hoare_lift_Pf2 [OF setEndpoint_ksQ setEndpoint_ct'])+
-   prefer 2
-   apply assumption
-  apply (rule_tac Q="\<lambda>ep. ?PRE and ko_at' ep epptr" in hoare_post_imp)
-   apply (clarsimp)
-   apply (rule conjI)
-    apply ((clarsimp simp: invs'_def valid_state'_def
-                           sch_act_sane_def
-            | drule(1) ct_not_in_epQueue)+)[2]
-  apply (wp get_ep_sp')
-  done *)
-
-lemma cancelAllSignals_ct_not_ksQ:
-  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
-          and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   cancelAllSignals ntfnptr
-   \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>\<lambda>_. ?POST\<rbrace>")
-  apply (simp add: cancelAllSignals_def)
-  apply (wp, wpc, wp+)
-      apply (wps rescheduleRequired_ct')
-      apply (wp rescheduleRequired_ksQ')
-     apply clarsimp
-     apply (wp cancelAll_ct_not_ksQ_helper mapM_x_wp_inv)
-  oops (* FIXME RT: this lemma is probably not needed since we have ct_queues_cross *) (*
-    apply (wp hoare_lift_Pf2 [OF set_ntfn'.ksReadyQueues set_ntfn'.ct])
-    apply (wps set_ntfn'.ct, wp)
-   prefer 2
-   apply assumption
-  apply (rule_tac Q="\<lambda>ep. ?PRE and ko_at' ep ntfnptr" in hoare_post_imp)
-   apply ((clarsimp simp: invs'_def valid_state'_def sch_act_sane_def
-          | drule(1) ct_not_in_ntfnQueue)+)[1]
-  apply (wp get_ntfn_sp')
-  done *)
-
 lemma unbindMaybeNotification_ct_not_ksQ:
  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
           and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
@@ -5183,44 +5107,6 @@ begin
 crunches unbindNotification, unbindMaybeNotification
   for sch_act_sane[wp]: "sch_act_sane"
 end
-
-lemma ct_queues_cross:
-  "cross_rel (\<lambda>s. P (cur_thread s) (ready_queues s d p)) (\<lambda>s. P (ksCurThread s) (ksReadyQueues s (d,p)))"
-  by (clarsimp simp: state_relation_def ready_queues_relation_def cross_rel_def)
-
-lemma finaliseCapTrue_standin_ct_not_ksQ:
-  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
-          and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   finaliseCapTrue_standin cap final
-   \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-(*   apply (simp add: finaliseCapTrue_standin_def Let_def)
-  apply (safe)
-      apply (wp cancelAllIPC_ct_not_ksQ cancelAllSignals_ct_not_ksQ
-                hoare_drop_imps unbindMaybeNotification_ct_not_ksQ
-             | wpc
-             | clarsimp simp: isNotificationCap_def isReplyCap_def split:capability.splits)+ *)
-  oops (* FIXME RT: this lemma is probably not needed since we have ct_queues_cross *)
-
-lemma cteDeleteOne_ct_not_ksQ:
-  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
-          and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   cteDeleteOne slot
-   \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-(*   apply (simp add: cteDeleteOne_def unless_def split_def)
-  apply (rule hoare_seq_ext [OF _ getCTE_sp])
-  apply (case_tac "\<forall>final. finaliseCap (cteCap cte) final True = fail")
-   apply (simp add: finaliseCapTrue_standin_simple_def)
-   apply wp
-   apply (clarsimp)
-  apply (wp emptySlot_cteCaps_of hoare_lift_Pf2 [OF emptySlot_ksRQ emptySlot_ct])
-    apply (simp add: cteCaps_of_def)
-    apply (wp (once) hoare_drop_imps)
-    apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)+
-  apply (clarsimp)
-  done *)
-  oops (* FIXME RT: this lemma is probably not needed since we have ct_queues_cross
-                    in fact this is not used at all in Refine (perhaps it is needed in
-                    CRefine?) GK: not needed in CRefine, can be deleted if we don't need it here *)
 
 end
 

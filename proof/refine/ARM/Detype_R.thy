@@ -4715,35 +4715,6 @@ lemma createObjects_setDomain_commute:
   apply (clarsimp split:Structures_H.kernel_object.splits)
   done
 
-(* FIXME RT: unused? *)
-lemma createObjects_setDomains_commute:
-  "monad_commute
-      (\<lambda>s. \<forall>x\<in> set xs. tcb_at' (f x) s \<and>
-      range_cover ptr (objBitsKO (KOTCB makeObject)) (objBitsKO (KOTCB makeObject)) (Suc 0) \<and>
-      pspace_aligned' s \<and>
-      pspace_distinct' s \<and> pspace_bounded' s \<and>
-      pspace_no_overlap' ptr (objBitsKO (KOTCB makeObject)) s \<and>
-      is_aligned ptr (objBitsKO (KOTCB makeObject)))
-  (mapM_x (threadSet (tcbDomain_update (\<lambda>_. r))) (map f xs))
-  (createObjects' ptr (Suc 0) (KOTCB makeObject) 0)"
-  proof (induct xs)
-    case Nil
-    show ?case
-      apply (simp add:monad_commute_def mapM_x_Nil)
-    done
-    next
-    case (Cons x xs)
-    show ?case
-    apply (simp add:mapM_x_Cons)
-    apply (rule monad_commute_guard_imp)
-    apply (rule commute_commute[OF monad_commute_split])
-     apply (rule commute_commute[OF Cons.hyps])
-     apply (rule createObjects_setDomain_commute)
-     apply (wp hoare_vcg_ball_lift)
-    apply clarsimp
-   done
-  qed
-
 lemma createObjects'_pspace_no_overlap2:
   "\<lbrace>pspace_no_overlap' (ptr + (1 + of_nat n << gz)) sz
        and K (gz = (objBitsKO val) + us)

@@ -125,10 +125,6 @@ locale delete_one_conc_pre =
      cteDeleteOne sl \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   assumes delete_one_inQ_queues:
     "\<lbrace>valid_inQ_queues and valid_objs'\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
-  (* FIXME RT: not true any more: assumes delete_one_sch_act_simple:
-    "\<lbrace>sch_act_simple\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"  *)
-  (* FIXME RT: not true any more: assumes delete_one_sch_act_not:
-    "\<And>t. \<lbrace>sch_act_not t\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>" *)
   assumes delete_one_ksCurDomain:
     "\<And>P. \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> cteDeleteOne sl \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
   assumes delete_one_tcbDomain_obj_at':
@@ -2062,63 +2058,9 @@ lemma setThreadState_st_tcb_at'_test_unaffected:
   apply (wpsimp wp: sts_st_tcb')
   done
 
-lemma cancelAllIPC_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  unfolding cancelAllIPC_def
-  apply (wpsimp wp: mapM_x_wp' hoare_vcg_if_lift setThreadState_st_tcb_at'_test_unaffected
-                    threadGet_wp
-              simp: o_def
-         split_del: if_split)
-  oops (*
-  by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp) *)
-
-lemma cancelAllSignals_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllSignals ntfnptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  unfolding cancelAllSignals_def
-  oops
-(*by (wpsimp wp: mapM_x_wp' sts_st_tcb' hoare_drop_imp) *)
-
 crunches unbindNotification, bindNotification, unbindMaybeNotification
   for st_tcb_at'[wp]: "st_tcb_at' P p"
   (wp: threadSet_pred_tcb_no_state ignore: threadSet)
-
-lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  apply (clarsimp simp add: finaliseCap_def Let_def)
-  oops (*
-  apply (rule conjI | clarsimp | wp cancelAllIPC_tcb_at_runnable' getObject_ntfn_inv
-                                    cancelAllSignals_tcb_at_runnable'
-       | wpc)+
-  done *)
-
-crunch pred_tcb_at'[wp]: isFinalCapability "pred_tcb_at' proj st t"
-  (simp: crunch_simps)
-
-lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> cteDeleteOne callerCap \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  apply (simp add: cteDeleteOne_def unless_def)
-  oops (*
-  apply (wp finaliseCap_tcb_at_runnable' | clarsimp | wp (once) hoare_drop_imps)+
-  done
-*)
-
-lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
-  (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (clarsimp simp: cancelIPC_def Let_def)
-  oops (*
-  apply (case_tac "t'=t")
-   apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
-            in hoare_seq_ext)
-    apply(case_tac x; simp)
-   apply (wpsimp wp: sts_pred_tcb_neq')+
-           apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
-           apply (wp cteDeleteOne_tcb_at_runnable'
-                    threadSet_pred_tcb_no_state
-                    cancelSignal_tcb_at_runnable'
-                    sts_pred_tcb_neq' hoare_drop_imps
-                  | wpc | simp add: o_def if_fun_split)+
-  done *)
 
 (* FIXME move *)
 lemma setBoundNotification_not_ntfn:
@@ -2184,27 +2126,6 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
    apply wps
    apply (wp cancelIPC_tcbDomain_obj_at' | simp)+
   done
-
-(* FIXME RT: not true any more
-lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
-  "\<lbrace>sch_act_not t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. sch_act_not t'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def)
-  apply (wp hoare_vcg_conj_lift
-            delete_one_sch_act_not
-       | wpc
-       | simp add: o_def if_apply_def2
-              split del: if_split
-       | rule hoare_drop_imps)+
-  oops *)
-
-lemma (in delete_one_conc_pre) cancelIPC_weak_sch_act_wf:
-  "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-      cancelIPC t
-   \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  oops (*
-  apply (rule weak_sch_act_wf_lift_linear)
-  apply (wp cancelIPC_sch_act_not cancelIPC_tcb_in_cur_domain' cancelIPC_tcb_at_runnable')+
-  done *)
 
 text \<open>The suspend operation, significant as called from delete\<close>
 
@@ -2495,11 +2416,6 @@ lemma (in delete_one) prepareThreadDelete_corres:
   "corres dc (tcb_at t) (tcb_at' t)
         (prepare_thread_delete t) (ArchRetypeDecls_H.ARM_H.prepareThreadDelete t)"
   by (simp add: ArchVSpace_A.ARM_A.prepare_thread_delete_def ArchRetype_H.ARM_H.prepareThreadDelete_def)
-
-lemma no_refs_simple_strg':
-  "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
-  oops (* FIXME RT: not true any more; adjust simple'?
-  by (fastforce elim!: pred_tcb'_weakenE)+ *)
 
 lemma rescheduleRequired_oa_queued:
   "\<lbrace> (\<lambda>s. P (obj_at' (\<lambda>tcb. Q (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s)) and sch_act_simple\<rbrace>
