@@ -78,15 +78,13 @@ lemma more_pageBits_inner_beauty:
   apply clarsimp
   apply (simp add: word_shift_by_2)
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
+   apply word_eqI
    apply (drule test_bit_size)
    apply (clarsimp simp: word_size pageBits_def)
    apply arith
   apply (insert x)
   apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bang_eq)
+  apply word_eqI
   apply (erule_tac x="n+2" in allE)
   apply (clarsimp simp: word_ops_nth_size word_size)
   apply (clarsimp simp: pageBits_def)
@@ -502,7 +500,7 @@ proof (intro allI impI)
      apply (insert ptr_mask_less)[1]
      apply (simp add: word_less_nat_alt)
     apply (simp add: ptr_add_def word_shift_by_2 shiftr_shiftl1)
-    apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
+    apply (simp add: al is_aligned_andI1)
     apply (simp add: word_plus_and_or_coroll2 add.commute)
     done
 
@@ -810,7 +808,7 @@ proof (intro allI impI)
      apply (insert ptr_mask_less)[1]
      apply (simp add: word_less_nat_alt)
     apply (simp add: ptr_add_def word_shift_by_2 shiftr_shiftl1)
-    apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
+    apply (simp add: al is_aligned_andI1)
     apply (simp add: word_plus_and_or_coroll2 add.commute)
     done
 
@@ -1042,9 +1040,8 @@ proof -
      apply (rule kernel_state.fold_congs[OF refl refl], simp only:)
      apply (rule machine_state.fold_congs[OF refl refl], simp only:)
      apply (cut_tac p=ptr in unat_mask_2_less_4)
-     apply (simp del: list_update.simps split del: if_split
-                 add: word_rsplit_rcat_size word_size nth_list_update
-                      horrible_helper)
+     apply (simp del: list_update.simps
+                 add: word_rsplit_rcat_size word_size nth_list_update horrible_helper)
      apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
       apply (subgoal_tac "(ptr && mask 2) \<in> {0, 1, 2, 3}")
        apply (auto split: if_split simp: fun_upd_idem)[1]
@@ -1094,7 +1091,7 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=2 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2 simp del: unsigned_numeral
+     apply (auto simp add: eval_nat_numeral horrible_helper2 take_bit_Suc simp del: unsigned_numeral
                  elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp
@@ -1115,8 +1112,7 @@ lemma storeWord_ccorres':
      (doMachineOp $ storeWord ptr val)
      (Basic (\<lambda>s. globals_update (t_hrs_'_update
            (hrs_mem_update (heap_update (ptr' s) (val' s)))) s))"
-  apply (clarsimp simp: storeWordUser_def simp del: Collect_const
-             split del: if_split)
+  apply (clarsimp simp: storeWordUser_def)
   apply (rule ccorres_from_vcg_nofail)
   apply (rule allI)
   apply (rule conseqPre, vcg)

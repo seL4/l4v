@@ -184,9 +184,8 @@ lemma word_upcast_shiftr:
 
 lemma word_upcast_neg_msb:
   "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  apply (simp only: ucast_def msb_word_of_int, clarsimp)
-  apply (drule bin_nth_uint_imp)
-  by simp
+  unfolding ucast_def msb_word_of_int
+  by clarsimp (metis Suc_pred bit_imp_le_length lens_gt_0(2) not_less_eq)
 
 (* FIXME: move to Word_Lib *)
 lemma word_upcast_0_sle:
@@ -199,10 +198,9 @@ lemma scast_ucast_up_eq_ucast:
   shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
   using assms
   apply (subst scast_eq_ucast; simp)
-  apply (simp only: ucast_def msb_word_of_int, clarsimp)
-  apply (drule bin_nth_uint_imp)
-  apply simp
-  by (metis Word.of_nat_unat nat_less_le unat_ucast_up_simp)
+  apply (simp only: ucast_def msb_word_of_int)
+   apply (metis bin_nth_uint_imp decr_length_less_iff numeral_nat(7) verit_comp_simplify1(3))
+  by (metis less_or_eq_imp_le ucast_nat_def unat_ucast_up_simp)
 
 lemma not_max_word_iff_less:
   "w \<noteq> max_word \<longleftrightarrow> w < max_word"
@@ -227,7 +225,7 @@ lemma ucast_increment:
 
 lemma max_word_gt_0:
   "0 < max_word"
-  by (simp add: le_neq_trans[OF max_word_max] max_word_not_0)
+  by (simp add: le_neq_trans[OF max_word_max])
 
 lemma and_not_max_word:
   "m \<noteq> max_word \<Longrightarrow> w && m \<noteq> max_word"
@@ -242,17 +240,7 @@ lemmas and_mask_not_max_word =
 
 lemma shiftr_not_max_word:
   "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
-  apply (simp add: not_max_word_iff_less)
-  apply (cases "n < size w")
-   apply (cases "w = 0")
-    apply (simp add: max_word_gt_0)
-   apply (subst shiftr_div_2n_w, assumption)
-   apply (rule less_le_trans[OF div_less_dividend_word max_word_max])
-    apply simp
-   apply (metis word_size_gt_0 less_numeral_extra(3) mask_def nth_mask power_0 shiftl_t2n)
-  apply (simp add: not_less word_size)
-  apply (subgoal_tac "w >> n = 0"; simp add: max_word_gt_0 shiftr_eq_0)
-  done
+  by (metis and_mask_eq_iff_shiftr_0 and_mask_not_max_word diff_less len_gt_0 shiftr_le_0 word_shiftr_lt)
 
 lemma word_sandwich1:
   fixes a b c :: "'a::len word"
@@ -477,7 +465,7 @@ lemma word_minus_1_shiftr:
   apply (rule_tac t="w - 1" and s="(w && ~~ mask n) - 1" in subst,
          fastforce simp: low_bits_zero mask_eq_x_eq_0)
   apply (clarsimp simp: mask_eq_0_eq_x neg_mask_is_div lt1_neq0[symmetric])
-  apply (subst shiftr_div_2n_w, fastforce simp: word_size)+
+  apply (subst shiftr_div_2n_w)+
   apply (rule word_uint.Rep_eqD)
   apply (simp only: uint_word_ariths uint_div uint_power_lower)
   apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
@@ -489,7 +477,7 @@ lemma word_minus_1_shiftr:
   apply (clarsimp simp: and_mask_dvd low_bits_zero)
   apply (subst mod_pos_pos_trivial)
     apply (metis le_step_down_int mult_zero_left shiftr_div_2n shiftr_div_2n_w uint_0_iff
-                 uint_nonnegative word_not_simps(1) wsst_TYs(3))
+                 uint_nonnegative word_not_simps(1))
    apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
   apply fastforce
   done
@@ -497,8 +485,7 @@ lemma word_minus_1_shiftr:
 (* FIXME: move to Word *)
 lemma ucast_shiftr:
   "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) ((w && mask LENGTH('b)) >> n)"
-  apply (rule word_eqI[rule_format]; rule iffI; clarsimp simp: nth_ucast nth_shiftr word_size)
-  done
+  by (word_eqI_solve dest: bit_imp_le_length)
 
 (* FIXME: move to Word *)
 lemma mask_eq_ucast_shiftr:
@@ -511,10 +498,7 @@ lemma mask_eq_ucast_shiftl:
   assumes "w && mask (LENGTH('a) - n) = w"
   shows "UCAST('a::len \<rightarrow> 'b::len) w << n = UCAST('a \<rightarrow> 'b) (w << n)"
   apply (rule subst[where P="\<lambda>c. ucast c << n = ucast (c << n)", OF assms])
-  apply (rule word_eqI[rule_format]; rule iffI;
-         clarsimp simp: nth_ucast nth_shiftl word_size;
-         drule test_bit_size; simp add: word_size)
-  done
+  by word_eqI_solve
 
 (* FIXME: replace by mask_mono *)
 lemma mask_le_mono:
@@ -1367,7 +1351,7 @@ lemma numPriorities_machine_word_safe:
    not that 0 < 1 *)
 lemma word_zero_less_one[simp]:
   "0 < (1::'a::len word)"
-  by (simp add: word_less_1)
+  by simp
 
 bundle no_less_1_simps
 begin
