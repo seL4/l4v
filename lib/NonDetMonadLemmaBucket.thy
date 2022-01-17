@@ -3269,4 +3269,8 @@ lemma hoare_name_pre_state2:
   "(\<And>s. \<lbrace>P and ((=) s)\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (auto simp: valid_def intro: hoare_name_pre_state)
 
+lemma put_id_return:
+  "put s s = return () s"
+  by (clarsimp simp: put_def return_def)
+
 end
