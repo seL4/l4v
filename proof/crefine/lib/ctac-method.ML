@@ -439,7 +439,7 @@ fun ceqv_restore_args_tac ctxt = SUBGOAL (fn (t, n) => case
       val thm = infer_instantiate ctxt [(("f",0), Thm.cterm_of ctxt f),
               (("g",0), g)]
           @{thm ceqv_xpres_call_restore_argsI}
-          |> Drule.generalize ([], map (dest_Free #> fst) xs)
+          |> Drule.generalize (Names.empty, Names.make_set (map (dest_Free #> fst) xs))
     in resolve_tac ctxt [thm] n THEN simp_tac ctxt n end
   | _ => raise TERM("ceqv_restore_args_tac", [t]))
 
@@ -788,7 +788,7 @@ fun instantiate_xf_type ctxt tp which thms = let
     fun inst_type_vars thm = let
         val (Const ("Pure.all", _) $ Abs (_, tpv, _)) = nth (Thm.prems_of thm) which
     in
-        Thm.instantiate ([(dest_TVar tpv, ctp)], []) thm
+        Thm.instantiate (TVars.make [(dest_TVar tpv, ctp)], Vars.empty) thm
     end;
 in
     map inst_type_vars thms

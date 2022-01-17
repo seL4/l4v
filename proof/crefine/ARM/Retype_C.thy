@@ -124,8 +124,7 @@ lemma heap_update_word32_is_heap_update_list:
 
 lemma to_bytes_word32_0:
   "to_bytes (0 :: word32) xs = [0, 0, 0, 0 :: word8]"
-  apply (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0)
-  done
+  by (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0 word_bits_def)
 
 lemma globals_list_distinct_subset:
   "\<lbrakk> globals_list_distinct D symtab xs; D' \<subseteq> D \<rbrakk>
@@ -2999,7 +2998,7 @@ proof -
     subgoal for r
       by (case_tac r;
           simp add: "StrictC'_register_defs" eval_nat_numeral atcbContext_def atcbContextGet_def
-                    newArchTCB_def newContext_def initContext_def
+                    newArchTCB_def newContext_def initContext_def take_bit_Suc
                del: unsigned_numeral)
     apply (simp add: thread_state_lift_def eval_nat_numeral atcbContextGet_def)+
     apply (simp add: Kernel_Config.timeSlice_def)
@@ -3283,7 +3282,7 @@ next
                     ex_disj_distrib field_simps)
 
     show "?thesis m x"
-      apply (simp add: xin word_rsplit_0 cong: if_cong)
+      apply (simp add: xin word_rsplit_0 word_bits_def cong: if_cong)
       apply (simp split: if_split)
       done
   qed
@@ -3324,7 +3323,6 @@ lemma mapM_x_storeWord_step:
 lemma range_cover_bound_weak:
   "\<lbrakk> n \<noteq> 0; range_cover ptr sz us n \<rbrakk> \<Longrightarrow>
     ptr + (of_nat n * 2 ^ us - 1) \<le> (ptr && ~~ mask sz) + 2 ^ sz - 1"
-  including no_0_dvd
   apply (frule range_cover_cell_subset[where x = "of_nat (n - 1)"])
    apply (simp add:range_cover_not_zero)
   apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat (n - 1)"])
@@ -3713,7 +3711,6 @@ lemma copyGlobalMappings_ccorres:
         and page_directory_at' pd and (\<lambda>_. is_aligned pd pdBits))
      (UNIV \<inter> {s. newPD_' s = Ptr pd}) []
     (copyGlobalMappings pd) (Call copyGlobalMappings_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: newPD_' simp: ARMSectionBits_def pdeBits_def)
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
@@ -6179,21 +6176,16 @@ lemma createObject_child:
   apply (rule hoare_assume_pre)
   apply (simp add:createObject_def3)
   apply wp
-  apply (rule hoare_chain [OF createNewCaps_range_helper[where sz = "APIType_capBits ty us"]])
-   apply (fastforce simp:range_cover_full)
+   apply (rule hoare_strengthen_post[OF createNewCaps_range_helper[where sz = "APIType_capBits ty us"]])
+    prefer 2
+    apply (fastforce simp:range_cover_full)
   apply clarsimp
   apply (drule_tac x = ptr in spec)
-   apply (case_tac "(capfn ptr)")
-   apply (simp_all add:capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)+
-    apply clarsimp+
-    apply (rename_tac arch_capability d v0 v1 f)
-    apply (case_tac arch_capability)
-     apply (simp add:ARM_H.capUntypedSize_def)+
-     apply (simp add: is_aligned_no_wrap' field_simps ptBits_def pteBits_def)
-    apply (simp add:ARM_H.capUntypedSize_def)+
-    apply (simp add: pdBits_def pdeBits_def field_simps)
-    apply (simp add: is_aligned_no_wrap')
-  apply clarsimp+
+  apply (case_tac "capfn ptr"; clarsimp simp: capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)
+  apply (rename_tac arch_capability d v0 v1 f)
+  apply (case_tac arch_capability;
+         simp add: ARM_H.capUntypedSize_def ptBits_def pteBits_def pdBits_def pdeBits_def add.commute;
+         (simp add: is_aligned_no_wrap')?)
   done
 
 lemma createObject_parent_helper:
@@ -6830,7 +6822,6 @@ shows  "ccorres dc xfdc
      ) []
      (createNewObjects newType srcSlot destSlots ptr userSize isdev)
      (Call createNewObjects_'proc)"
-  including no_take_bit no_0_dvd
   supply if_cong[cong]
   apply (rule ccorres_gen_asm_state)
   apply clarsimp

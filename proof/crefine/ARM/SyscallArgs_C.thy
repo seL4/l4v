@@ -741,7 +741,6 @@ lemma lookupIPCBuffer_ccorres[corres]:
            (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}
                   \<inter> {s. isReceiver_' s = from_bool isReceiver}) []
       (lookupIPCBuffer isReceiver t) (Call lookupIPCBuffer_'proc)"
-  including no_take_bit
   apply (cinit lift: thread_' isReceiver_')
    apply (rule ccorres_split_nothrow)
        apply simp
@@ -772,20 +771,19 @@ lemma lookupIPCBuffer_ccorres[corres]:
             apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
              apply vcg
             apply (rule conseqPre, vcg,
-                clarsimp simp: isCap_simps return_def
-                option_to_ptr_def option_to_0_def)
+                   clarsimp simp: isCap_simps return_def option_to_ptr_def option_to_0_def)
            apply (rule ccorres_cond_false_seq)
            apply simp
            apply csymbr
            apply (clarsimp simp: isCap_simps)
            apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-               rule ccorres_cond [where R=\<top>])
+                  rule ccorres_cond [where R=\<top>])
                apply (clarsimp simp: from_bool_0 isCap_simps)
                apply (frule ccap_relation_PageCap_generics)
                apply clarsimp
                apply (clarsimp simp: vmrights_to_H_def)
                apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
-                           Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
+                                Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
                          split: if_split)
                apply clarsimp
                apply (drule less_4_cases)
@@ -1021,7 +1019,7 @@ lemma getMRs_user_word:
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
   apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute
-                   wordSize_def')
+                   wordSize_def' take_bit_Suc)
   done
 
 declare if_split [split]

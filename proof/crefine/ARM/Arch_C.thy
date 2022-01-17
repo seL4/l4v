@@ -999,7 +999,6 @@ lemma createSafeMappingEntries_PDE_ccorres:
            \<inter> {s. pd_' s = pde_Ptr pd}) []
      (createSafeMappingEntries base vaddr vsz vrights attr pd)
      (Call createSafeMappingEntries_PDE_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (subgoal_tac "vsz = ARMSuperSection
                        \<longrightarrow> lookup_pd_slot pd vaddr \<le> lookup_pd_slot pd vaddr + 0x3C")
@@ -1219,7 +1218,6 @@ lemma createSafeMappingEntries_PTE_ccorres:
            \<inter> {s. pd_' s = pde_Ptr pd}) []
      (createSafeMappingEntries base vaddr vsz vrights attr pd)
      (Call createSafeMappingEntries_PTE_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: base_' vaddr_' frameSize_' vmRights_' attr_' pd_')
    apply (simp add: createSafeMappingEntries_def createMappingEntries_def
@@ -1512,7 +1510,6 @@ lemma performPageInvocationMapPTE_ccorres:
              \<inter> {s. isLeft mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPTE_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm2)
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
@@ -1606,20 +1603,20 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz + 2" in  power_not_zero[where 'a="32"])
          apply simp
-        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
-        apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst is_aligned_no_wrap', assumption, fastforce)
+        apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def
                             addrFromPPtr_mask_5)
        apply (auto simp: valid_pte_slots'2_def upt_conv_Cons[where i=0])[1]
-      apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
+      apply (clarsimp simp: guard_is_UNIV_def hd_conv_nth last_conv_nth ucast_minus)
       apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps archObjSize_def)
       apply (simp add: CTypesDefs.ptr_add_def ucast_nat_def word_0_sle_from_less)
       apply (clarsimp simp: valid_pte_slots'2_def del: disjCI)
       apply (erule disjE, simp_all add: unat_arith_simps pteBits_def)[1]
       apply (clarsimp simp: upt_conv_Cons[where i=0])
      apply (wp valid_pte_slots_lift2)+
-   apply (clarsimp simp: pte_range_relation_def map_is_Nil_conv hd_map_simp
+   apply (clarsimp simp: pte_range_relation_def hd_map_simp
                          ptr_range_to_list_def valid_pte_slots'2_def
                          word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
   apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def unat_1_0
@@ -1774,7 +1771,6 @@ lemma performPageInvocationMapPDE_ccorres:
              \<inter> {s. isRight mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPDE_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_gen_asm2)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
@@ -1867,9 +1863,9 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
          apply simp
-        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst is_aligned_no_wrap', assumption, fastforce)
         apply (subst add_diff_eq [symmetric])
-        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst is_aligned_no_wrap', assumption, fastforce)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def
                              valid_pde_slots'2_def addrFromPPtr_mask_5)
@@ -2121,12 +2117,13 @@ lemma resolveVAddr_ccorres:
      apply (rule allI, rule conseqPre, vcg)
      using pte_get_tag_exhaust
      apply clarsimp
-     apply (fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
-                            fst_return typ_heap_simps framesize_from_H_simps
-                            pte_pte_large_lift_def pte_pte_small_lift_def
-                            pte_pte_invalid_def
-                     intro: resolve_ret_rel_Some
-                     split: pte.splits)
+     subgoal
+       by (fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
+                           fst_return typ_heap_simps framesize_from_H_simps
+                           pte_pte_large_lift_def pte_pte_small_lift_def
+                           pte_pte_invalid_def Let_def
+                    intro: resolve_ret_rel_Some
+                    split: pte.splits)
     apply (rule guard_is_UNIVI)
     apply (clarsimp simp: typ_heap_simps)
     apply (auto simp: ptBits_def pageBits_def pteBits_def
@@ -2138,11 +2135,12 @@ lemma resolveVAddr_ccorres:
               in ccorres_from_vcg_might_throw[where P=\<top>])
    apply (rule allI, rule conseqPre, vcg)
    apply clarsimp
-   apply (fastforce simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
-                          fst_return typ_heap_simps framesize_from_H_simps
-                          pde_pde_section_lift_def
-                   intro: resolve_ret_rel_Some
-                   split: pde.splits)
+   subgoal
+     by (fastforce simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
+                         fst_return typ_heap_simps framesize_from_H_simps
+                         pde_pde_section_lift_def
+                  intro: resolve_ret_rel_Some
+                  split: pde.splits)
   apply clarsimp
   apply (frule(1) page_directory_at_rf_sr)
   apply (clarsimp simp: isPageTablePDE_def pde_get_tag_alt pde_tag_defs cpde_relation_def
@@ -2216,7 +2214,6 @@ lemma decodeARMFrameInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMFrameInvocation_'proc)"
-  including no_take_bit no_0_dvd
   supply if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
@@ -2252,7 +2249,7 @@ lemma decodeARMFrameInvocation_ccorres:
                  del: Collect_const
                 cong: StateSpace.state.fold_congs globals.fold_congs if_cong
                       invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
-     apply (simp add: if_1_0_0 split_def case_option_If2 if_to_top_of_bind del: Collect_const
+     apply (simp add: split_def case_option_If2 if_to_top_of_bind del: Collect_const
                 cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
         apply vcg
@@ -2488,7 +2485,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply clarsimp
             apply ccorres_rewrite
             apply csymbr
-            apply (simp add: ARM.pptrBase_def ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
+            apply (simp add: ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
             apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
             apply (simp add: syscall_error_to_H_cases)
@@ -2689,6 +2686,7 @@ lemma decodeARMFrameInvocation_ccorres:
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps' isCap_simps)
    apply (frule slotcap_in_mem_valid, clarsimp+)
    apply (erule_tac c="ArchObjectCap (PageDirectoryCap a b)" for a b in ccap_relationE)
+   supply from_bool_odd_eq_and[simp]
    apply (case_tac mapdata
           ; (clarsimp simp: cap_lift_page_directory_cap to_bool_def cap_page_directory_cap_lift_def
                             cap_to_H_def[split_simps cap_CL.split] valid_cap'_def,

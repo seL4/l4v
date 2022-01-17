@@ -36,7 +36,7 @@ lemma threadSet_obj_at'_nontcb:
    \<lbrace>obj_at' (P :: 'a \<Rightarrow> bool) t'\<rbrace> threadSet f t \<lbrace>\<lambda>rv. obj_at' P t'\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wp obj_at_setObject2 hoare_drop_imps
-       | clarsimp simp: updateObject_tcb updateObject_default_def in_monad)+
+       | clarsimp simp: updateObject_default_def in_monad)+
   done
 
 lemma asUser_ntfn_at[wp]:
@@ -92,7 +92,7 @@ shows
   apply (simp add: zipWithM_mapM)
   apply (simp add: split_def mapM_liftM_const[unfolded liftM_def]
                    mapM_return mapM_Nil mapM_x_Nil asUser_mapM_x
-                   zip_is_empty last_append map_replicate_const
+                   last_append map_replicate_const
             split: option.split split del: if_split)
   apply (simp add: mapM_discarded mapM_x_def split del: if_split)
   apply (intro allI conjI impI bind_cong bind_apply_cong refl
@@ -124,7 +124,7 @@ lemma setMRs_to_setMR:
   apply (subst mapM_last_Cons)
     prefer 3
     apply simp
-   apply (simp add: zip_is_empty msgMaxLength_unfold)
+   apply (simp add: msgMaxLength_unfold)
   apply (simp add: fst_last_zip_upt)
   apply (subgoal_tac "msgMaxLength - Suc 0 \<ge> length msgRegisters
                            \<and> of_nat (length xs - Suc 0) = of_nat (length xs) - (1 :: word32)
@@ -258,7 +258,6 @@ lemma ccap_relation_ep_helpers:
           \<and> capCanGrantReply_CL (cap_endpoint_cap_lift cap') = from_bool (capEPCanGrantReply cap)"
   by (clarsimp simp: cap_lift_endpoint_cap cap_to_H_simps
                      cap_endpoint_cap_lift_def word_size
-                     from_bool_to_bool_and_1
               elim!: ccap_relationE)
 
 (* FIXME move *)
@@ -270,7 +269,6 @@ lemma ccap_relation_reply_helpers:
               = ptr_val (tcb_ptr_to_ctcb_ptr (capTCBPtr cap))"
   by (clarsimp simp: cap_lift_reply_cap cap_to_H_simps
                      cap_reply_cap_lift_def word_size
-                     from_bool_to_bool_and_1
               elim!: ccap_relationE)
 
 (*FIXME: arch_split: C kernel names hidden by Haskell names *)
@@ -1069,7 +1067,7 @@ lemma setMRs_syscall_error_ccorres:
                  | wp hoare_case_option_wp
                  | (simp del: Collect_const, vcg exspec=setMR_modifies)
                )+
-   apply (simp add: msgMaxLength_unfold if_1_0_0 true_def false_def)
+   apply (simp add: msgMaxLength_unfold true_def false_def)
    apply (clarsimp split:if_split_asm simp:syscall_error_to_H_def map_option_Some_eq2)
    apply (simp add: msgFromLookupFailure_def
                  split: lookup_failure.split
@@ -1244,7 +1242,7 @@ lemma setMR_atcbContext_obj_at:
     \<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
       setMR t' b r v
     \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
-  apply (simp add: setMR_def split del: if_split)
+  apply (simp add: setMR_def)
   apply (rule hoare_pre)
    apply (wp asUser_atcbContext_obj_at[simplified] | simp | wpc)+
   done
@@ -1252,13 +1250,11 @@ lemma setMR_atcbContext_obj_at:
 lemma setMR_tcbFault_obj_at:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace> setMR t' b r v
    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
-  apply (simp add: setMR_def split del: if_split)
+  apply (simp add: setMR_def)
   apply (rule hoare_pre)
    apply (wp asUser_tcbFault_obj_at | wpc)+
   apply simp
   done
-
-declare from_bool_to_bool_and_1[simp]
 
 (* FIXME move to Corres_C and remove from Tcb_C *)
 lemma ccorres_abstract_known:
@@ -1298,7 +1294,7 @@ lemma exceptionMessage_ccorres:
              = index exceptionMessageC n"
   apply (simp add: exceptionMessageC_def ARM_H.exceptionMessage_def
                    ARM.exceptionMessage_def MessageID_Exception_def)
-  by (simp add: Arrays.update_def n_exceptionMessage_def fcp_beta nth_Cons'
+  by (simp add: Arrays.update_def n_exceptionMessage_def nth_Cons'
                 fupdate_def
          split: if_split)
 
@@ -1361,7 +1357,7 @@ lemma copyMRsFault_ccorres_exception:
           apply (clarsimp simp: n_msgRegisters_def foo)
          apply (rule allI, rule conseqPre, vcg exspec=setRegister_modifies exspec=getRegister_modifies)
          apply simp
-        apply (simp add: setMR_def split del: if_split)
+        apply (simp add: setMR_def)
         apply (rule hoare_pre)
          apply (wp asUser_obj_at_elsewhere | wpc)+
         apply simp
@@ -1410,11 +1406,12 @@ proof -
   have msg_aux: "\<forall>p. elem p (zip [4..<120] (drop 4 msg))
                     \<longrightarrow> (\<lambda>(x1,y1). setMR receiver None x1 y1) p = (\<lambda>_ . return (length msgRegisters)) p"
     by (fastforce simp add: numeral_eqs setMR_def less_than_4 n_msgRegisters_def length_msgRegisters
+                            take_bit_Suc
                   simp del: unsigned_numeral)
   have mapM_x_return_gen: "\<And>v w xs. mapM_x (\<lambda>_. return v) xs = return w" (* FIXME mapM_x_return *)
     by (induct_tac xs; simp add: mapM_x_Nil mapM_x_Cons)
   show ?thesis
-  including no_pre no_take_bit
+  including no_pre
   apply (unfold K_def)
   apply (intro ccorres_gen_asm)
   apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
@@ -1504,8 +1501,7 @@ proof -
      apply (subst drop_zip)
      apply (subst drop_n)
      apply (clarsimp simp:  n_msgRegisters_def numeral_eqs
-                            mapM_cong[OF msg_aux, simplified numeral_eqs]
-                            mapM_x_return_gen)
+                            mapM_cong[OF msg_aux, simplified numeral_eqs])
      apply (subst mapM_x_return_gen[where w2="()"])
      apply (rule ccorres_return_Skip[simplified dc_def])
     apply (clarsimp)
@@ -2951,7 +2947,6 @@ proof -
   let ?EXCNONE = "{s. ret__unsigned_long_' s = scast EXCEPTION_NONE}"
   let ?interpret = "\<lambda>v n. take n (array_to_list (excaprefs_C v))"
   show ?thesis
-    including no_take_bit no_0_dvd
     apply (rule ccorres_gen_asm)+
     apply (cinit(no_subst_asm) lift: thread_' bufferPtr_' info_' simp: whileAnno_def)
      apply (clarsimp simp add: getExtraCPtrs_def lookupCapAndSlot_def
