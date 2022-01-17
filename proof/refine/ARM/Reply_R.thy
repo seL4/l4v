@@ -651,16 +651,6 @@ lemma replyRemoveTCB_invs':
               simp: cteCaps_of_def)
   done
 
-(* FIXME RT: move this to lib *)
-lemma partial_inv_inj_Some:
-  "inj f \<Longrightarrow> partial_inv f (f r) = Some r"
-  by (fastforce simp: proj_inj)
-
-(* FIXME RT: move to non det lemma bucket *)
-lemma put_id_return:
-  "put s s = return () s"
-  by (clarsimp simp: put_def return_def)
-
 lemma set_reply_obj_ref_noop:
   "monadic_rewrite False True (reply_at rptr)
    (return ())
@@ -715,14 +705,6 @@ lemma updateReply_replyNext_not_head_corres:
   apply wpsimp+
   apply (clarsimp simp: obj_at'_def replyPrev_same_def)
   done
-
-(* FIXME RT: move to Lemma bucket *)
-lemma case_list_when:
-  "(case l of
-      [] \<Rightarrow> return ()
-      | r # x \<Rightarrow> f r x)
-   = (when (l \<noteq> []) $ f (hd l) (tl l))"
-  by (clarsimp simp: list_case_If2)
 
 lemma update_sc_reply_stack_update_ko_at'_corres:
   "corres dc

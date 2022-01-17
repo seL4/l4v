@@ -367,10 +367,6 @@ definition list_refs_of_reply' :: "reply \<Rightarrow> ref_set" where
 abbreviation list_refs_of_replies_opt' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set option" where
   "list_refs_of_replies_opt' s \<equiv> replies_of' s ||> list_refs_of_reply'"
 
-(* FIXME RT: move to Option_Monad? *)
-definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Rightarrow> 'b set" where
-  "map_set f \<equiv> case_option {} id \<circ> f"
-
 abbreviation list_refs_of_replies' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> ref_set" where
   "list_refs_of_replies' s \<equiv> map_set (list_refs_of_replies_opt' s)"
 
