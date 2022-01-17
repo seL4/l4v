@@ -173,7 +173,7 @@ lemma drop_sign_projections:
 lemmas drop_sign_isomorphism
     = drop_sign_isomorphism_ariths drop_sign_projections
         drop_sign_isomorphism_bitwise drop_sign_of_nat
-        drop_sign_extra_bl_ops ucast_id
+        drop_sign_extra_bl_ops
 
 lemma drop_sign_h_val[simp]:
   "drop_sign (h_val hp p :: ('a :: len8) signed word) = h_val hp (ptr_coerce p)"
@@ -627,7 +627,7 @@ fun prove_mem_equality_unchecked ctxt = let
        and won't function after we unpack them *)
     THEN_ALL_NEW normalise_mem_accs "prove_mem_equality" ctxt
     THEN_ALL_NEW asm_lr_simp_tac (prove_mem_equality_unpack_simpset ctxt)
-    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms ucast_id})
+    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms})
   end
 
 fun prove_mem_equality ctxt = DETERM o
@@ -787,9 +787,6 @@ fun graph_refine_proof_tacs csenv ctxt = let
                     (* this includes wrappers for word arithmetic
                        and other simpl actions*)
                     bvlshr_def bvashr_def bvshl_def bv_clz_def
-
-                    (* and some stupidity *)
-                    Collect_const_mem
                     }
                 (* we should also unfold enumerations, since the graph
                    representation does this, and we need to normalise
