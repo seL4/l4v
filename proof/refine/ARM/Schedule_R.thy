@@ -3031,14 +3031,6 @@ lemma ct_in_state'_activatable_coerce_concrete:
    apply (frule curthread_relation, simp)
    done
 
-lemma schedule_ct_activatable':
-  "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
-  supply ssa_wp[wp del]
-  apply (simp add: schedule_def)
-     apply wpsimp
-  oops (* I believe that the coerce lemma above (ct_in_state'_activatable_coerce_concrete) can
-           be used to avoid the need for this lemma. This should be confirmed at some point. *)
-
 lemma threadSet_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)

@@ -3888,12 +3888,6 @@ lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def)
 
-(* FIXME RT: not going to work any more like this:
-lemma simple_st_tcb_at_state_refs_ofD':
-  "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
-  by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
-                      projectKO_eq project_inject) *)
-
 lemma cur_tcb_arch' [iff]:
   "cur_tcb' (ksArchState_update f s) = cur_tcb' s"
   by (simp add: cur_tcb'_def)
