@@ -2303,19 +2303,6 @@ lemma setReprogramTimer_active_sc_at'[wp]:
   unfolding active_sc_at'_def
   by wpsimp
 
-(* FIXME RT: move these whileM lemmas, prove `whileM_*_inv` using `whileM_wp_gen`. *)
-lemmas whileM_post_inv
-  = hoare_strengthen_post[where R="\<lambda>_. Q" for Q, OF whileM_inv[where P=C for C], rotated -1]
-
-lemma whileM_wp_gen:
-  assumes termin:"\<And>s. I False s \<Longrightarrow> Q s"
-  assumes [wp]: "\<lbrace>I'\<rbrace> C \<lbrace>I\<rbrace>"
-  assumes [wp]: "\<lbrace>I True\<rbrace> f \<lbrace>\<lambda>_. I'\<rbrace>"
-  shows "\<lbrace>I'\<rbrace> whileM C f \<lbrace>\<lambda>_. Q\<rbrace>"
-  unfolding whileM_def
-  using termin
-  by (wpsimp wp: whileLoop_wp[where I=I])
-
 crunches refillBudgetCheck, refillUnblockCheck
   for valid_queues[wp]: valid_queues
   and valid_queues'[wp]: valid_queues'
@@ -3320,15 +3307,6 @@ lemma awaken_terminates:
 lemma reprogram_timer_update_release_queue_update_monad_commute:
   "monad_commute \<top> (modify (reprogram_timer_update (\<lambda>_. b))) (modify (release_queue_update q))"
   apply (clarsimp simp: monad_commute_def modify_def get_def put_def bind_def return_def)
-  done
-
-(* FIXME RT: move? *)
-lemma filter_hd_equals_tl:
-  "\<lbrakk>distinct q; q \<noteq> []\<rbrakk> \<Longrightarrow> filter ((\<noteq>) (hd q)) q = tl q"
-  apply (induct q rule: length_induct)
-  apply (rename_tac list)
-  apply (case_tac list; simp)
-  apply (fastforce simp: filter_id_conv)
   done
 
 lemma release_queue_modify_tl:
