@@ -1250,16 +1250,6 @@ lemma refills_tl_equal:
   apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
   done
 
-(* FIXME RT: Move to Lib *)
-lemma last_take:
-  "\<lbrakk>ls \<noteq> []; 0 < n; n \<le>  length ls\<rbrakk> \<Longrightarrow>last (take n ls) = ls ! (n - 1)"
-  by (induct ls arbitrary: n; fastforce simp: take_Cons nth_Cons split: nat.splits)
-
-lemma take_drop_nth:
-  "\<lbrakk> 0 < n; n < length ls\<rbrakk> \<Longrightarrow> take 1 (drop n ls) = [ls ! n]"
-  apply (induct ls arbitrary: n; clarsimp simp: drop_Cons nth_Cons)
-  by (case_tac n; simp add: drop_Suc_nth)
-
 (* wrap_slice *)
 lemma wrap_slice_start_0:
   "\<lbrakk>0 < count; mx \<le> length ls; count \<le> mx\<rbrakk> \<Longrightarrow> wrap_slice 0 count mx ls = take count ls"
