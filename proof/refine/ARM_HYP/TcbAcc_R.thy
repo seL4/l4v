@@ -16,7 +16,6 @@ declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare empty_fail_sequence_x[simp]
 declare storeWordUser_typ_at' [wp]
-declare complement_def[simp]
 
 (* Auxiliaries and basic properties of priority bitmap functions *)
 
@@ -1437,9 +1436,6 @@ lemma asUser_getRegister_corres:
   apply (clarsimp simp: getRegister_def)
   done
 
-crunch inv[wp]: getRegister "P"
-  (ignore_del: getRegister)
-
 lemma user_getreg_inv'[wp]:
   "\<lbrace>P\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
   by (wp asUser_inv)
@@ -1559,9 +1555,6 @@ lemma asUser_tcb_in_cur_domain'[wp]:
       apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | simp)+
   apply (clarsimp simp: obj_at'_def)
   done
-
-crunch tcb_in_cur_domain'[wp]: asUser "\<lambda>s. P (tcb_in_cur_domain' t)"
-  (simp: crunch_simps wp: hoare_drop_imps getObject_inv_tcb setObject_ct_inv)
 
 lemma asUser_tcbDomain_inv[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> asUser t m \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
@@ -2565,12 +2558,14 @@ lemma prioL2Index_bit_set:
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)
   done
 
+
 lemma addToBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> addToBitmap d p \<lbrace>\<lambda>_. bitmapQ d p \<rbrace>"
   unfolding addToBitmap_def
              modifyReadyQueuesL1Bitmap_def modifyReadyQueuesL2Bitmap_def
              getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
-  by (wp, clarsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set)
+  by (wpsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set
+             simp_del: bit_exp_iff)
 
 lemma addToBitmap_valid_queues_no_bitmap_except:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
@@ -2598,7 +2593,7 @@ lemma prioToL1Index_bits_low_high_eq:
 
 lemma prioToL1Index_bit_not_set:
   "\<not> (~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p"
-  apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set)
+  apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set del: bit_exp_iff)
   apply (fastforce simp: prioToL1Index_def wordRadix_def word_size
                   intro: order_less_le_trans[OF word_shiftr_lt])
   done
@@ -2657,6 +2652,7 @@ proof -
 
   show ?thesis
   unfolding removeFromBitmap_def
+  supply bit_not_iff[simp del] bit_not_exp_iff[simp del]
   apply (simp add: let_into_return[symmetric])
   unfolding bitmap_fun_defs when_def
   apply wp
@@ -2709,8 +2705,8 @@ lemma addToBitmap_bitmapQ_no_L1_orphans[wp]:
 lemma addToBitmap_bitmapQ_no_L2_orphans[wp]:
   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> addToBitmap d p \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   unfolding bitmap_fun_defs bitmapQ_defs
-  apply wp
-  apply clarsimp
+  supply bit_exp_iff[simp del]
+  apply wpsimp
   apply (fastforce simp: invertL1Index_eq_cancel prioToL1Index_bit_set)
   done
 
@@ -2743,8 +2739,6 @@ proof -
   thus ?thesis
     by - (erule hoare_strengthen_post; fastforce elim: valid_bitmap_valid_bitmapQ_exceptE)
 qed
-
-crunch valid_queues[wp]: threadGet "Invariants_H.valid_queues"
 
 lemma threadGet_const_tcb_at:
   "\<lbrace>\<lambda>s. tcb_at' t s \<and> obj_at' (P s \<circ> f) t s\<rbrace> threadGet f t \<lbrace>\<lambda>rv s. P s rv \<rbrace>"
@@ -3140,8 +3134,6 @@ lemma rescheduleRequired_ksQ':
   apply (simp add: rescheduleRequired_def)
   apply (wpsimp wp: tcbSchedEnqueue_ksQ)
   done
-
-crunch ksQ[wp]: getCurThread "\<lambda>s. P (ksReadyQueues s p)"
 
 lemma threadSet_tcbState_st_tcb_at':
   "\<lbrace>\<lambda>s. P st \<rbrace> threadSet (tcbState_update (\<lambda>_. st)) t \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
@@ -3582,7 +3574,7 @@ lemma pspace_dom_dom:
      apply (drule wf_cs_0)
      apply clarsimp
      apply (rule_tac x = n in exI)
-     apply (clarsimp simp: of_bl_def word_of_int_hom_syms)
+     apply (clarsimp simp: of_bl_def)
     apply (rule range_eqI [where x = 0], simp)+
   apply (rename_tac vmpage_size)
   apply (rule exI [where x = 0])
@@ -3969,8 +3961,6 @@ crunches setThreadState, setBoundNotification
 
 crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"
 
-crunch ctes_of [wp]: setQueue "\<lambda>s. P (ctes_of s)"
-
 lemma sts_ctes_of [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setThreadState st t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: setThreadState_def)
@@ -4128,7 +4118,6 @@ crunch nosch[wp]: tcbSchedEnqueue "\<lambda>s. P (ksSchedulerAction s)"
   (simp: unless_def)
 crunch nosch[wp]: tcbSchedAppend "\<lambda>s. P (ksSchedulerAction s)"
   (simp: unless_def)
-crunch nosch[wp]: tcbSchedDequeue "\<lambda>s. P (ksSchedulerAction s)"
 
 lemma rescheduleRequired_sa_cnt[wp]:
   "\<lbrace>\<lambda>s. True \<rbrace> rescheduleRequired \<lbrace>\<lambda>_ s. ksSchedulerAction s = ChooseNewThread \<rbrace>"

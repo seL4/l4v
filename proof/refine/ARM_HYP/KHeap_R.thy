@@ -227,16 +227,16 @@ lemma updateObject_cte_is_tcb_or_cte:
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
-               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
+               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                lookupAround2_char1
          split: kernel_object.splits)
-  apply (subst(asm) in_magnitude_check3, simp+)
+   apply (subst(asm) in_magnitude_check3; simp?)
+    apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
+                     tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
+              split: if_split_asm)
    apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
                     tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
              split: if_split_asm)
-  apply (simp add: in_monad tcbCTableSlot_def tcbVTableSlot_def
-                   tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-            split: if_split_asm)
   done
 
 declare plus_1_less[simp]

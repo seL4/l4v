@@ -61,7 +61,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
@@ -69,8 +69,6 @@ declare objBitsT_koTypeOf [simp]
 crunches vcpu_switch
   for valid_asid_map[wp]: valid_asid_map
   and pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  and valid_vspace_objs[wp]: valid_vspace_objs
   (wp: crunch_wps simp: crunch_simps)
 
 lemma vs_refs_pages_vcpu:
@@ -227,10 +225,6 @@ crunches tcbSchedEnqueue, tcbSchedAppend, tcbSchedDequeue
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P t"
   (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def)
 
-crunches setQueue
-  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  and state_hyp_refs_of'[wp]: "\<lambda>s. P (state_hyp_refs_of' s)"
-
 lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
      removeFromBitmap d p
@@ -241,10 +235,7 @@ lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply (wp| clarsimp simp: bitmap_fun_defs)+
-  apply (subst (asm) complement_nth_w2p, simp_all)
-  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
-  done
+  by (wp| clarsimp simp: bitmap_fun_defs)+
 
 lemma removeFromBitmap_valid_bitmapQ[wp]:
 " \<lbrace> valid_bitmapQ_except d p and bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
@@ -371,9 +362,6 @@ lemma tcbSchedAppend_valid_queues'[wp]:
   apply (clarsimp simp: obj_at'_def)
   done
 
-crunch norq[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (simp: updateObject_default_def)
-
 lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak for dequeue *)
   "\<lbrace>\<lambda>s. (\<forall>d p t'. obj_at' (inQ d p) t' s \<and> t' \<noteq> t \<longrightarrow> t' \<in> set (ksReadyQueues s (d, p))) \<and>
         obj_at' (inQ d p) t s \<rbrace>
@@ -421,21 +409,14 @@ lemma tcbSchedDequeue_valid_queues'[wp]:
    apply (clarsimp simp: valid_queues'_def obj_at'_def projectKOs inQ_def|wp)+
   done
 
-crunch tcb_at'[wp]: tcbSchedEnqueue "tcb_at' t"
-  (simp: unless_def)
 crunch tcb_at'[wp]: tcbSchedAppend "tcb_at' t"
   (simp: unless_def)
-crunch tcb_at'[wp]: tcbSchedDequeue "tcb_at' t"
 
-crunch state_refs_of'[wp]: tcbSchedEnqueue "\<lambda>s. P (state_refs_of' s)"
-  (wp: refl simp: crunch_simps unless_def)
 crunch state_refs_of'[wp]: tcbSchedAppend "\<lambda>s. P (state_refs_of' s)"
   (wp: refl simp: crunch_simps unless_def)
 crunch state_refs_of'[wp]: tcbSchedDequeue "\<lambda>s. P (state_refs_of' s)"
   (wp: refl simp: crunch_simps)
 
-crunch state_hyp_refs_of'[wp]: tcbSchedEnqueue "\<lambda>s. P (state_hyp_refs_of' s)"
-  (wp: refl simp: crunch_simps unless_def)
 crunch state_hyp_refs_of'[wp]: tcbSchedAppend "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: refl simp: crunch_simps unless_def)
 crunch state_hyp_refs_of'[wp]: tcbSchedDequeue "\<lambda>s. P (state_hyp_refs_of' s)"
@@ -446,8 +427,6 @@ crunch cap_to'[wp]: tcbSchedEnqueue "ex_nonz_cap_to' p"
 crunch cap_to'[wp]: tcbSchedAppend "ex_nonz_cap_to' p"
   (simp: unless_def)
 crunch cap_to'[wp]: tcbSchedDequeue "ex_nonz_cap_to' p"
-
-crunch iflive'[wp]: setQueue if_live_then_nonz_cap'
 
 lemma tcbSchedAppend_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' tcb\<rbrace>
@@ -466,18 +445,12 @@ lemma tcbSchedDequeue_iflive'[wp]:
       apply (wp | simp add: crunch_simps)+
   done
 
-crunch ifunsafe'[wp]: tcbSchedEnqueue if_unsafe_then_cap'
-  (simp: unless_def)
 crunch ifunsafe'[wp]: tcbSchedAppend if_unsafe_then_cap'
   (simp: unless_def)
 crunch ifunsafe'[wp]: tcbSchedDequeue if_unsafe_then_cap'
 
-crunch idle'[wp]: tcbSchedEnqueue valid_idle'
-  (simp: crunch_simps unless_def)
 crunch idle'[wp]: tcbSchedAppend valid_idle'
   (simp: crunch_simps unless_def)
-crunch idle'[wp]: tcbSchedDequeue valid_idle'
-  (simp: crunch_simps)
 
 crunch global_refs'[wp]: tcbSchedEnqueue valid_global_refs'
   (wp: threadSet_global_refs simp: unless_def)
@@ -486,44 +459,27 @@ crunch global_refs'[wp]: tcbSchedAppend valid_global_refs'
 crunch global_refs'[wp]: tcbSchedDequeue valid_global_refs'
   (wp: threadSet_global_refs)
 
-crunch irq_node'[wp]: tcbSchedEnqueue "\<lambda>s. P (irq_node' s)"
-  (simp: unless_def)
 crunch irq_node'[wp]: tcbSchedAppend "\<lambda>s. P (irq_node' s)"
   (simp: unless_def)
 crunch irq_node'[wp]: tcbSchedDequeue "\<lambda>s. P (irq_node' s)"
 
-crunch typ_at'[wp]: tcbSchedEnqueue "\<lambda>s. P (typ_at' T p s)"
-  (simp: unless_def)
 crunch typ_at'[wp]: tcbSchedAppend "\<lambda>s. P (typ_at' T p s)"
   (simp: unless_def)
-crunch typ_at'[wp]: tcbSchedDequeue "\<lambda>s. P (typ_at' T p s)"
 
-crunch ctes_of[wp]: tcbSchedEnqueue "\<lambda>s. P (ctes_of s)"
-  (simp: unless_def)
 crunch ctes_of[wp]: tcbSchedAppend "\<lambda>s. P (ctes_of s)"
   (simp: unless_def)
-crunch ctes_of[wp]: tcbSchedDequeue "\<lambda>s. P (ctes_of s)"
 
-crunch ksInterrupt[wp]: tcbSchedEnqueue "\<lambda>s. P (ksInterruptState s)"
-  (simp: unless_def)
 crunch ksInterrupt[wp]: tcbSchedAppend "\<lambda>s. P (ksInterruptState s)"
   (simp: unless_def)
 crunch ksInterrupt[wp]: tcbSchedDequeue "\<lambda>s. P (ksInterruptState s)"
 
-crunch irq_states[wp]: tcbSchedEnqueue valid_irq_states'
-  (simp: unless_def)
 crunch irq_states[wp]: tcbSchedAppend valid_irq_states'
   (simp: unless_def)
 crunch irq_states[wp]: tcbSchedDequeue valid_irq_states'
 
-crunch ct'[wp]: tcbSchedEnqueue "\<lambda>s. P (ksCurThread s)"
-  (simp: unless_def)
 crunch ct'[wp]: tcbSchedAppend "\<lambda>s. P (ksCurThread s)"
   (simp: unless_def)
-crunch ct'[wp]: tcbSchedDequeue "\<lambda>s. P (ksCurThread s)"
 
-crunch pde_mappings'[wp]: tcbSchedEnqueue "valid_pde_mappings'"
-  (simp: unless_def)
 crunch pde_mappings'[wp]: tcbSchedAppend "valid_pde_mappings'"
   (simp: unless_def)
 crunch pde_mappings'[wp]: tcbSchedDequeue "valid_pde_mappings'"
@@ -533,9 +489,6 @@ lemma tcbSchedEnqueue_vms'[wp]:
   apply (simp add: valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift tcbSchedEnqueue_ksMachine)
   done
-
-crunch ksCurDomain[wp]: tcbSchedEnqueue "\<lambda>s. P (ksCurDomain s)"
-(simp: unless_def)
 
 lemma tcbSchedEnqueue_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
@@ -683,9 +636,6 @@ crunch ksIdleThread[wp]: tcbSchedDequeue "\<lambda>s. P (ksIdleThread s)"
 (simp: unless_def)
 
 crunch ksDomSchedule[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomSchedule s)"
-(simp: unless_def)
-
-crunch ksDomScheduleIdx[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomScheduleIdx s)"
 (simp: unless_def)
 
 lemma tcbSchedDequeue_tcb_in_cur_domain'[wp]:
@@ -1222,8 +1172,6 @@ lemma setCurThread_obj_at[wp]:
   apply (fastforce intro: obj_at'_pspaceI)
   done
 
-crunch cap_to'[wp]: setQueue "ex_nonz_cap_to' p"
-
 lemma dmo_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace>
      doMachineOp m
@@ -1264,9 +1212,6 @@ lemma iflive_inQ_nonz_cap_strg:
 
 lemmas iflive_inQ_nonz_cap[elim]
     = mp [OF iflive_inQ_nonz_cap_strg, OF conjI[rotated]]
-
-crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
-  (wp: updateObject_default_inv)
 
 declare Cons_eq_tails[simp]
 
@@ -1342,8 +1287,6 @@ lemma ct_not_ksQ:
   apply (fastforce)
   done
 
-crunch nosch[wp]: getCurThread "\<lambda>s. P (ksSchedulerAction s)"
-
 lemma setThreadState_rct:
   "\<lbrace>\<lambda>s. (runnable' st \<or> ksCurThread s \<noteq> t)
         \<and> ksSchedulerAction s = ResumeCurrentThread\<rbrace>
@@ -1400,8 +1343,6 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
   apply (subst less_mask_eq)
    apply (rule word_of_nat_less)
     apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
-  apply (subst unat_of_nat_eq)
-   apply (fastforce intro: word_log2_max[THEN order_less_le_trans] simp: word_size)+
   done
 
 lemma bitmapQ_from_bitmap_lookup:
