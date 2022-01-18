@@ -327,10 +327,7 @@ lemma ucast_ucast_asid_high_bits [simp]:
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
-  done
-
+  by (word_eqI simp: asid_low_bits_def conj.commute)
 
 
 lemma set_asid_pool_cur [wp]:
@@ -426,17 +423,16 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
   from prems show ?thesis
     apply (subst (asm) word_plus_and_or_coroll)
      apply (rule word_eqI)
-     subgoal for n
-       apply (clarsimp simp: word_size nth_shiftr is_aligned_nth vspace_bits_defs)
-       apply (spec "n + 21")
-       apply (frule test_bit_size[where n="n + 21"])
-       apply (simp add: word_size)
-       apply (insert H)
-       apply (drule (1) order_le_less_trans)
-       apply (drule bang_is_le)
-       apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-       apply (drule word_power_increasing)
-       by simp+
+    subgoal for n
+      apply (clarsimp simp: word_size nth_shiftr is_aligned_nth vspace_bits_defs)
+      apply (spec "21 + n")
+      apply (frule test_bit_size[where n="21 + n"])
+      apply (simp add: word_size)
+      apply (insert H)
+      apply (drule (1) order_le_less_trans)
+      apply (drule bang_is_le)
+      apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
+      by (drule word_power_increasing; simp)
     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth vspace_bits_defs)
     apply (erule disjE)
      apply (insert H)[1]
@@ -444,8 +440,8 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
      apply (drule bang_is_le)
      apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
      apply (drule word_power_increasing; simp)
-    apply (spec "n' + 21")
-    apply (frule test_bit_size[where n = "n' + 21"])
+    apply (spec "21 + n'")
+    apply (frule test_bit_size[where n = "21 + n'"])
     by (simp add: word_size)
   qed
 done
@@ -538,8 +534,7 @@ lemma pte_at_aligned_vptr:
   \<Longrightarrow> pte_at (x + (pt + (((vptr >> pageBits) &&  mask (pt_bits - pte_bits)) << pte_bits))) s"
   apply (erule page_table_pte_at_diffE[where x="(x >> pte_bits) + ((vptr >> 12) &&  mask (pt_bits - pte_bits))"];simp?)
    apply (simp add: word_shiftl_add_distrib upto_enum_step_def)
-   apply (clarsimp simp: word_shift_by_n[of _ 3, simplified] shiftr_shiftl1 vspace_bits_defs
-                         is_aligned_neg_mask_eq is_aligned_shift)
+   apply (clarsimp simp: word_shift_by_n[of _ 3, simplified] shiftr_shiftl1 vspace_bits_defs is_aligned_shift)
   apply (simp only: vspace_bits_defs)
   apply (subst add.commute, rule is_aligned_add_less_t2n)
      apply (rule is_aligned_andI1[where n=4], rule is_aligned_shiftr, simp add: pt_bits_def pte_bits_def)
@@ -2240,7 +2235,7 @@ lemma lookup_pt_slot_looks_up [wp]: (* ARMHYP *)
   apply (simp add: word_bits_def)+
    apply word_bitwise
   apply (clarsimp simp: nth_shiftr)
-  apply (frule_tac n="n + 21" in test_bit_size)
+  apply (frule_tac n="21 + n" in test_bit_size)
   by (simp add: word_size)
 done
 
