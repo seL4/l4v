@@ -407,7 +407,8 @@ lemma valid_etcbs_tcb_etcb:
 
 lemma valid_etcbs_get_tcb_get_etcb:
   "\<lbrakk> valid_etcbs s; get_tcb ptr s = Some tcb \<rbrakk> \<Longrightarrow> \<exists>etcb. get_etcb ptr s = Some etcb"
-  apply (clarsimp simp:  valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def get_etcb_def get_tcb_def split: option.splits if_split)
+  apply (clarsimp simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def get_etcb_def get_tcb_def
+                  split: option.splits if_split)
   apply (erule_tac x=ptr in allE)
   apply (clarsimp simp: get_etcb_def split: option.splits kernel_object.splits)+
   done

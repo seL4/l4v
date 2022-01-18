@@ -197,7 +197,7 @@ lemma update_restart_pc_has_reply_cap[wp]:
 
 crunch st_tcb_at_simple[wp]: reply_cancel_ipc "st_tcb_at simple t"
   (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
-   simp: crunch_simps unless_def fast_finalise.simps)
+   simp: crunch_simps unless_def)
 
 lemma cancel_ipc_simple [wp]:
   "\<lbrace>\<top>\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
@@ -772,7 +772,7 @@ lemma suspend_unlive:
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live0) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
     (* avoid creating two copies of obj_at *)
-  supply hoare_vcg_if_split[wp_split del] if_splits[split del]
+  supply hoare_vcg_if_split[wp_split del] if_split[split del]
   apply (wp | simp only: obj_at_exst_update)+
      apply (simp add: obj_at_def)
      apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
@@ -816,8 +816,7 @@ lemma cancel_all_invs_helper:
            apply (rule sts_st_tcb_at_cases, simp)
           apply (strengthen reply_cap_doesnt_exist_strg)
           apply (auto simp: valid_tcb_state_def idle_no_ex_cap o_def if_split_asm
-                     elim!: rsubst[where P=sym_refs] st_tcb_weakenE
-                    intro!: ext)
+                     elim!: rsubst[where P=sym_refs] st_tcb_weakenE)
   done
 
 
@@ -950,10 +949,9 @@ lemma ntfn_bound_tcb_at:
   \<Longrightarrow> bound_tcb_at P tcbptr s"
   apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (fastforce simp: state_refs_of_def)
-  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
-                    state_refs_of_def refs_of_rev
-          simp del: refs_of_simps
-             elim!: valid_objsE)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
+                         state_refs_of_def refs_of_rev
+                   simp del: refs_of_simps)
   done
 
 lemma bound_tcb_bound_notification_at:
@@ -964,8 +962,7 @@ lemma bound_tcb_bound_notification_at:
    apply (fastforce simp: state_refs_of_def pred_tcb_at_def obj_at_def)
   apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
                     state_refs_of_def refs_of_rev
-          simp del: refs_of_simps
-             elim!: valid_objsE)
+          simp del: refs_of_simps)
   done
 
 lemma unbind_notification_invs:

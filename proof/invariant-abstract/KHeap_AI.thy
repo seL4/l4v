@@ -669,9 +669,6 @@ lemma set_object_cap_refs_respects_device_region:
   done
 
 
-crunch no_revokable[wp]: set_simple_ko "\<lambda>s. P (is_original_cap s)"
-  (wp: crunch_wps)
-
 lemma get_object_ret:
   "\<lbrace>obj_at P addr\<rbrace> get_object addr \<lbrace>\<lambda>r s. P r\<rbrace>"
   unfolding get_object_def
@@ -1162,8 +1159,6 @@ lemmas set_simple_ko_valid_irq_handlers[wp]
     = valid_irq_handlers_lift [OF set_simple_ko_caps_of_state set_simple_ko_interrupt_states]
 
 
-crunch irq_node[wp]: set_simple_ko "\<lambda>s. P (interrupt_irq_node s)"
-
 lemmas hoare_use_eq_irq_node = hoare_use_eq[where f=interrupt_irq_node]
 
 
@@ -1176,9 +1171,6 @@ lemma cap_table_at_lift_valid:
 lemmas cap_table_at_lift_irq =
   hoare_use_eq_irq_node [OF _ cap_table_at_lift_valid]
 
-
-crunch interrupt_states[wp]: set_notification "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps)
 
 lemma set_simple_ko_only_idle [wp]:
   "set_simple_ko f p ntfn \<lbrace>only_idle\<rbrace>"
@@ -1197,10 +1189,6 @@ lemma set_simple_ko_cap_refs_respects_device_region[wp]:
         wp_thm: set_object_cap_refs_respects_device_region[THEN hoare_set_object_weaken_pre]
                 get_object_wp
       simp_thm: is_ep_def is_ntfn_def)
-
-
-crunch v_ker_map[wp]: set_simple_ko "valid_kernel_mappings"
-  (ignore: set_object wp: set_object_v_ker_map crunch_wps simp: set_simple_ko_def)
 
 
 (* There are two wp rules for preserving valid_ioc over set_object.
@@ -1297,8 +1285,6 @@ lemma set_ntfn_minor_invs:
                  intro!: ext
                   dest!: obj_at_state_refs_ofD)
   done
-
-crunch asid_map[wp]: set_bound_notification "valid_asid_map"
 
 lemma do_machine_op_result[wp]:
   "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow>

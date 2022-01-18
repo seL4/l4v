@@ -576,7 +576,7 @@ lemma cte_wp_at_caps_descendants_range_inI:
   apply (drule untyped_cap_descendants_range[rotated])
     apply simp+
    apply (simp add: invs_valid_pspace)
-  apply (clarsimp simp: cte_wp_at_caps_of_state usable_untyped_range.simps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (erule disjoint_subset2[rotated])
   apply clarsimp
   apply (rule le_plus'[OF word_and_le2])
@@ -744,7 +744,7 @@ lemma pspace_no_overlap_detype:
      \<Longrightarrow> pspace_no_overlap_range_cover ptr bits (detype {ptr .. ptr + 2 ^ bits - 1} s)"
   apply (drule(2) pspace_no_overlap_detype'[rotated])
   apply (drule valid_cap_aligned)
-  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq field_simps)
+  apply (clarsimp simp: cap_aligned_def field_simps)
   done
 
 lemma zip_take_length[simp]:
@@ -810,8 +810,6 @@ lemma not_waiting_reply_slot_no_descendants:
   done
 
 
-crunch irq_node[wp]: set_thread_state "\<lambda>s. P (interrupt_irq_node s)"
-crunch irq_states[wp]: update_cdt "\<lambda>s. P (interrupt_states s)"
 crunch ups[wp]: set_cdt "\<lambda>s. P (ups_of_heap (kheap s))"
 crunch cns[wp]: set_cdt "\<lambda>s. P (cns_of_heap (kheap s))"
 
@@ -827,14 +825,6 @@ lemma list_all2_zip_split:
   apply (case_tac bs; simp)
   apply (case_tac ds; simp)
   done
-
-
-crunch irq_states[wp]: update_cdt "\<lambda>s. P (interrupt_states s)"
-
-crunch ups[wp]: set_cdt "\<lambda>s. P (ups_of_heap (kheap s))"
-
-crunch cns[wp]: set_cdt "\<lambda>s. P (cns_of_heap (kheap s))"
-
 
 lemma set_cdt_tcb_valid[wp]:
   "\<lbrace>tcb_cap_valid cap ptr\<rbrace> set_cdt m \<lbrace>\<lambda>rv. tcb_cap_valid cap ptr\<rbrace>"
@@ -1588,7 +1578,6 @@ crunch pdistinct[wp]: do_machine_op "pspace_distinct"
 crunch vmdb[wp]: do_machine_op "valid_mdb"
 
 crunch mdb[wp]: do_machine_op "\<lambda>s. P (cdt s)"
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_obj_at]
 
@@ -1784,7 +1773,7 @@ lemma set_cap_valid_mdb_simple:
   assume "reply_caps_mdb (cdt s) (caps_of_state s)"
   thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
-  apply (simp add: reply_caps_mdb_def del: split_paired_All split_paired_Ex)
+  apply (simp add: reply_caps_mdb_def del: split_paired_All)
   apply (intro allI impI conjI)
    apply (drule spec)+
    apply (erule(1) impE)
@@ -1794,7 +1783,7 @@ lemma set_cap_valid_mdb_simple:
   done
   assume "reply_masters_mdb (cdt s) (caps_of_state s)"
   thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
-   apply (simp add: reply_masters_mdb_def del: split_paired_All split_paired_Ex)
+   apply (simp add: reply_masters_mdb_def del: split_paired_All)
    apply (intro allI impI ballI)
    apply (erule exE)
    apply (elim allE impE)
@@ -1834,7 +1823,7 @@ lemma set_free_index_valid_pspace_simple:
    apply (elim allE allE impE)
      apply simp+
   apply (drule(1) pspace_no_overlap_obj_range)
-  apply (simp add: is_aligned_neg_mask_eq field_simps)
+  apply (simp add: field_simps)
   apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
           valid_ipc_buffer_cap_def split: option.split)
   apply (drule(2) tcb_cap_slot_regular)
@@ -1929,7 +1918,7 @@ lemma set_cap_caps_no_overlap:
 
 lemma caps_overlap_reserved_detype:
   "caps_overlap_reserved S s \<Longrightarrow> caps_overlap_reserved S (detype H s)"
-  apply (clarsimp simp: caps_of_state_detype caps_overlap_reserved_def )
+  apply (clarsimp simp: caps_overlap_reserved_def )
   apply (erule ranE)
   apply (clarsimp split: if_splits)
   apply (drule bspec)
@@ -1940,7 +1929,7 @@ lemma caps_overlap_reserved_detype:
 
 lemma caps_no_overlap_detype:
   "caps_no_overlap ptr sz s \<Longrightarrow> caps_no_overlap ptr sz (detype H s)"
-   apply (clarsimp simp: caps_of_state_detype caps_no_overlap_def)
+   apply (clarsimp simp: caps_no_overlap_def)
    apply (erule ranE)
    apply (clarsimp split: if_splits)
    apply (drule bspec,fastforce)
@@ -2420,8 +2409,7 @@ lemma valid_untyped_cap_inc:
    apply (rule word_of_nat_le)
    apply (simp add: unat_of_nat_eq[where 'a=machine_word_len] range_cover_unat field_simps)
    apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
-   apply (simp add: word_less_nat_alt
-                    unat_power_lower[where 'a=machine_word_len, folded word_bits_def])
+   apply (simp add: word_less_nat_alt)
   apply (simp add: range_cover_unat range_cover.unat_of_nat_shift shiftl_t2n field_simps)
   apply (subst add.commute)
   apply (simp add: range_cover.range_cover_compare_bound)
@@ -2611,7 +2599,7 @@ proof -
      apply (simp add: exI[where x=0])
     apply (rule exI[where x="?al"])
     apply (strengthen filter_upt_eq)
-    apply (simp add: linorder_not_less conj_ac)
+    apply (simp add: linorder_not_less conj.commute)
     apply (simp add: alignUp_ge_nat[simplified] sub1[simplified]
                      sub1[THEN order_less_imp_le, simplified]
                      power_minus_is_div[OF b] le1 le2)
@@ -2820,8 +2808,7 @@ lemma reset_untyped_cap_invs_etc:
                 | wp (once) ct_in_state_thread_state_lift
                 | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
                   simp add: ex_cte_cap_wp_to_def ct_in_state_def))+
-     apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
-                           cte_wp_at_caps_of_state nth_rev)
+     apply (clarsimp simp: bits_of_def field_simps cte_wp_at_caps_of_state nth_rev)
      apply (strengthen order_trans[where z="2 ^ sz", rotated, mk_strg I E])
      apply (clarsimp split: if_split_asm)
       apply auto[1]
@@ -3411,12 +3398,6 @@ lemma cap_to_protected:
     apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply auto
   done
-
-lemma valid_cap_aligned:
-  "valid_cap cap s \<Longrightarrow> cap_aligned cap"
-  by (simp add: valid_cap_def)
-
-crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
 
 (* FIXME: move *)
 lemma ge_mask_eq: "len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) && mask n = x"

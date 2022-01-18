@@ -76,8 +76,7 @@ lemma cdt_detype[simp]:
 lemma caps_of_state_detype[simp]:
   "caps_of_state (detype S s) =
    (\<lambda>p. if fst p \<in> S then None else caps_of_state s p)"
-  by (clarsimp simp add: caps_of_state_cte_wp_at
-                 intro!: ext)
+  by (fastforce simp add: caps_of_state_cte_wp_at)
 
 
 lemma state_refs_of_detype:
@@ -829,7 +828,7 @@ lemma invariants:
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
   using detype_invs_lemmas detype_invs_assms ct_act
   by (simp add: invs_def valid_state_def valid_pspace_def
-                detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
+                detype_clear_um_independent clear_um.state_refs_update)
 
 end
 
@@ -1065,7 +1064,7 @@ lemma corres_submonad2:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer
@@ -1093,7 +1092,7 @@ lemma corres_submonad3:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer

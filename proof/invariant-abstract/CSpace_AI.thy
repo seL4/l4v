@@ -57,7 +57,7 @@ lemma capBadge_ordefield_simps[simp]:
   "((y, y) \<in> capBadge_ordering fb) = (fb \<longrightarrow> (y = None \<or> y = Some 0))"
   "((Some x, Some z) \<in> capBadge_ordering fb) = (x = 0 \<or> (\<not> fb \<and> x = z))"
   "(y, Some 0) \<in> capBadge_ordering fb = (y = None \<or> y = Some 0)"
-  by (simp add: capBadge_ordering_def disj_ac
+  by (simp add: capBadge_ordering_def disj.commute
            | simp add: eq_commute image_def
            | fastforce)+
 
@@ -120,9 +120,6 @@ lemma preemption_point_inv:
   done
 
 end
-
-lemmas valid_cap_machine_state [iff]
-  = machine_state_update.valid_cap_update
 
 lemma get_cap_valid [wp]:
   "\<lbrace> valid_objs \<rbrace> get_cap addr \<lbrace> valid_cap \<rbrace>"
@@ -1405,22 +1402,22 @@ proof -
        apply (erule_tac x=src in allE)
        apply (erule_tac x=p' in allE)
        apply (cut_tac p = src and c' = c in no_usage)
-       apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+       apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
      apply (erule_tac x=src in allE)
      apply (erule_tac x=p' in allE)
-       apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+       apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
    apply (erule_tac x=p in allE)
      apply (case_tac "p'=dest")
        apply (case_tac "p'=src")
          apply (erule_tac x=src in allE)
-         apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+         apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
      apply (erule_tac x=src in allE)
-       apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+       apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
      apply (cut_tac p = "(a,b)" and c' = ca in no_usage)
-       apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+       apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
    apply (case_tac "p' = src")
      apply (erule_tac x = src in allE)
-       apply (clarsimp simp del:split_paired_All split del:if_splits simp: descendants_child)
+       apply (clarsimp simp del:split_paired_All split del:if_split simp: descendants_child)
    apply (erule_tac x = p' in allE)
      apply (clarsimp simp del:split_paired_All simp: descendants_child)
    done
@@ -1725,7 +1722,7 @@ lemma mdb_cte_at_set_untyped_cap_as_full:
   \<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at P) s) (cdt s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
   set_untyped_cap_as_full src_cap cap src
   \<lbrace>\<lambda>rv s'. mdb_cte_at (swp (cte_wp_at P) s') (cdt s') \<rbrace>"
-  apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
+  apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
   apply (rule hoare_pre)
   apply (wp set_cap_mdb_cte_at)
   apply clarsimp
@@ -1741,7 +1738,7 @@ lemma set_untyped_cap_as_full_is_original[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s'. P (is_original_cap s') \<rbrace>"
-  apply (simp add:set_untyped_cap_as_full_def split del:if_splits)
+  apply (simp add:set_untyped_cap_as_full_def split del:if_split)
   apply (rule hoare_pre)
   apply wp
   apply auto
@@ -1827,7 +1824,7 @@ lemma cap_insert_mdb_cte_at:
     set_cap_cte_wp_at get_cap_wp)+
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)+
-  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:prod.case_cong_weak)
+  apply (clarsimp simp:conj_comms split del:if_split cong:prod.case_cong_weak)
   apply (wps)
   apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )+
@@ -2997,7 +2994,7 @@ lemma descendants_inc:
   assumes c: "weak_derived cap src_cap"
   shows "descendants_inc m' (cs (dest \<mapsto> cap, src \<mapsto> cap.NullCap))"
   using dc s d c
-  apply (simp add: descendants_inc_def descendants split)
+  apply (simp add: descendants_inc_def descendants)
   apply (intro allI conjI)
    apply (intro impI allI)
    apply (drule spec)+
@@ -3026,33 +3023,33 @@ proof -
              split: if_split_asm cap.splits)
   with ut s d
   show ?thesis
-    apply (simp add: untyped_inc_def descendants del: split_paired_All split del: if_splits)
+    apply (simp add: untyped_inc_def descendants del: split_paired_All split del: if_split)
     apply (intro allI)
     apply (case_tac "p = src")
-     apply (simp  del: split_paired_All split del: if_splits)
-    apply (simp  del: split_paired_All split del: if_splits)
+     apply (simp  del: split_paired_All split del: if_split)
+    apply (simp  del: split_paired_All split del: if_split)
     apply (case_tac "p = dest")
-     apply (simp del: split_paired_All split del: if_splits)
+     apply (simp del: split_paired_All split del: if_split)
     apply (case_tac "p' = src")
-     apply (simp del: split_paired_All split del: if_splits)+
+     apply (simp del: split_paired_All split del: if_split)+
     apply (case_tac "p' = dest")
-     apply (simp del:split_paired_All split del:if_splits)+
+     apply (simp del:split_paired_All split del:if_split)+
     apply (intro impI allI conjI)
          apply ((erule_tac x=src in allE,erule_tac x=p' in allE,simp)+)[5]
       apply (erule_tac x=src in allE)
       apply (erule_tac x=p' in allE)
       apply simp
       apply (intro conjI impI)
-     apply (simp del:split_paired_All split del:if_splits)+
+     apply (simp del:split_paired_All split del:if_split)+
     apply (case_tac "p' = src")
-     apply (simp del: split_paired_All split del: if_splits)+
+     apply (simp del: split_paired_All split del: if_split)+
     apply (case_tac "p' = dest")
-     apply (simp del:split_paired_All split del:if_splits)+
+     apply (simp del:split_paired_All split del:if_split)+
     apply (intro impI allI conjI)
      apply (erule_tac x=p in allE,erule_tac x=src in allE)
      apply simp
      apply (intro conjI impI)
-     apply (simp del:split_paired_All split del:if_splits)+
+     apply (simp del:split_paired_All split del:if_split)+
   apply (intro conjI impI allI)
   apply (erule_tac x=p in allE,erule_tac x=p' in allE)
   apply simp
@@ -3574,9 +3571,6 @@ lemma set_untyped_cap_as_full_valid_reply_masters:
   done
 
 
-crunch global_refs[wp]: set_untyped_cap_as_full "\<lambda>s. P (global_refs s)"
-
-
 lemma set_untyped_cap_as_full_valid_global_refs[wp]:
   "\<lbrace>valid_global_refs and cte_wp_at ((=) src_cap) src\<rbrace>
    set_untyped_cap_as_full src_cap cap src
@@ -3821,8 +3815,6 @@ lemma set_cdt_valid_ioc[wp]:
   by (simp add: set_cdt_def, wp) (simp add: valid_ioc_def)
 
 crunch valid_ioc[wp]: update_cdt valid_ioc
-
-crunch cte_wp_at[wp]: update_cdt "cte_wp_at P slot"
 
 
 (* FIXME: we could weaken this. *)

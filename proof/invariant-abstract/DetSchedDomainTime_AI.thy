@@ -151,8 +151,6 @@ context DetSchedDomainTime_AI begin
 crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
-crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
-
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
@@ -188,11 +186,6 @@ crunch domain_list_inv[wp]:
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 end
-
-crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: cap_move "\<lambda>s. P (domain_list s)"
 
@@ -299,8 +292,6 @@ context DetSchedDomainTime_AI begin
 crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
-crunch domain_time_inv[wp]: copy_mrs "\<lambda>s. P (domain_time s)"
-
 crunch domain_time_inv[wp]: handle_fault "\<lambda>s. P (domain_time s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
@@ -383,9 +374,6 @@ lemma handle_event_domain_time_inv:
              apply (wp|simp|wpc)+
   done
 
-crunch domain_time_inv[wp]: send_fault_ipc, handle_call "\<lambda>s. P (domain_time s)"
-  (wp: hoare_drop_imps mapM_x_wp_inv select_wp without_preemption_wp simp: crunch_simps unless_def)
-
 end
 
 lemma next_domain_domain_time_left[wp]:
@@ -407,8 +395,6 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
    \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   unfolding schedule_choose_new_thread_def
   by (wpsimp simp: word_gt_0)
-
-crunch valid_domain_list: schedule_choose_new_thread valid_domain_list
 
 crunch etcb_at[wp]: tcb_sched_action "etcb_at P t"
 
