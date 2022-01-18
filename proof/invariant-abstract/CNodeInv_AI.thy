@@ -735,10 +735,6 @@ lemma cte_wp_and:
   by (auto simp: cte_wp_at_def)
 
 
-crunch cte_wp_at[wp]: get_mrs "cte_wp_at P c"
-  (wp: crunch_wps simp: crunch_simps)
-
-
 lemmas cte_wp_and' = cte_wp_and [unfolded pred_conj_def]
 
 
@@ -1513,7 +1509,7 @@ lemma cap_swap_fd_caps_of_state[wp]:
    apply (simp add: fun_upd_def id_def[symmetric] cong: if_cong)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (erule rsubst[where P=P])
-  apply (clarsimp intro!: ext)
+  apply fastforce
   done
 
 
@@ -2717,14 +2713,6 @@ crunch rvk_prog: cancel_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. opti
   (simp: crunch_simps o_def unless_def is_final_cap_def tcb_cap_cases_def
      wp: hoare_drop_imps empty_slot_rvk_prog' select_wp
          thread_set_caps_of_state_trivial)
-
-crunch rvk_prog: cancel_all_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
-  (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
-
-crunch rvk_prog: cancel_all_signals "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
-  (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
 crunch rvk_prog: suspend "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def

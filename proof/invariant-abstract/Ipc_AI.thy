@@ -72,7 +72,7 @@ lemma get_recv_slot_inv[wp]:
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
-  apply (safe intro!: ext)
+  apply fastforce
   done
 
 lemma get_rs_cte_at[wp]:
@@ -478,12 +478,12 @@ lemma cap_insert_cte_wp_at:
   apply (clarsimp split:if_split_asm)
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
-     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
+     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
     apply (wp get_cap_wp)+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
-    apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
+    apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
    apply (wp set_cap_cte_wp_at get_cap_wp)+
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid)
@@ -783,9 +783,6 @@ lemma (in Ipc_AI) tcl_ct[wp]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
   by (wp transfer_caps_loop_pres)
-
-crunch it[wp]: cap_insert "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma (in Ipc_AI) tcl_it[wp]:
   "\<And>P ep buffer n caps slots mi.
@@ -1192,12 +1189,6 @@ end
 (* FIXME: move *)
 crunch valid_vspace_objs [wp]: set_extra_badge valid_vspace_objs
 
-crunch vspace_objs [wp]: set_untyped_cap_as_full "valid_vspace_objs"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
-
-crunch vspace_objs [wp]: cap_insert "valid_vspace_objs"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
-
 lemma zipWith_append2:
   "length ys + 1 < n \<Longrightarrow>
    zipWith f [0 ..< n] (ys @ [y]) = zipWith f [0 ..< n] ys @ [f (length ys) y]"
@@ -1455,13 +1446,6 @@ crunch "distinct" [wp]: set_mrs pspace_distinct
 
 crunch "distinct" [wp]: copy_mrs pspace_distinct
   (wp: mapM_wp' simp: copy_mrs_redux)
-
-
-crunch mdb [wp]: store_word_offs valid_mdb (wp: crunch_wps simp: crunch_simps)
-
-
-crunch caps_of_state [wp]: store_word_offs "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 
 crunch mdb_P [wp]: set_mrs "\<lambda>s. P (cdt s)"
@@ -1788,8 +1772,6 @@ context Ipc_AI begin
 crunch only_idle [wp]: do_ipc_transfer "only_idle :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_global_vspace_mappings [wp]: set_extra_badge valid_global_vspace_mappings
-
 crunch pspace_in_kernel_window[wp]: do_ipc_transfer "pspace_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -2070,8 +2052,7 @@ lemma update_waiting_invs:
   apply (frule ko_at_state_refs_ofD)
   apply (frule st_tcb_at_state_refs_ofD)
   apply (erule(1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def
-             split del: if_split)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def)
   apply (rule conjI, clarsimp simp: obj_at_def split: option.splits list.splits)
   apply (rule conjI, clarsimp elim!: pred_tcb_weakenE)
   apply (rule conjI, clarsimp dest!: idle_no_ex_cap)
@@ -2080,8 +2061,8 @@ lemma update_waiting_invs:
                     split: if_split_asm if_split)
    apply (simp only: tcb_bound_refs_eq_restr, simp)
    apply (fastforce dest!: refs_in_ntfn_bound_refs symreftype_inverse'
-                  elim!: valid_objsE simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb
-                 split: if_split_asm if_split)
+                    simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb
+                   split: if_split_asm)
   apply (clarsimp elim!: pred_tcb_weakenE)
   done
 
@@ -2142,10 +2123,6 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
    apply (wp hoare_pre_cont[where a="reply_cancel_ipc t"] gts_wp | wpc)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
-
-
-crunch idle[wp]: cancel_ipc "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps select_wp simp: crunch_simps unless_def)
 
 
 lemma sai_invs[wp]:
@@ -2615,12 +2592,6 @@ crunch cap_refs_respects_device_region[wp]: copy_mrs "cap_refs_respects_device_r
     VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
     const_on_failure_wp simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
 
-crunch cap_refs_respects_device_region[wp]: get_receive_slots "cap_refs_respects_device_region"
-  (wp: crunch_wps hoare_vcg_const_Ball_lift
-    VSpace_AI.cap_refs_respects_device_region_dmo ball_tcb_cap_casesI
-    const_on_failure_wp simp: crunch_simps zipWithM_x_mapM )
-
-
 
 lemma invs_respects_device_region:
   "invs s \<Longrightarrow> cap_refs_respects_device_region s \<and> pspace_respects_device_region s"
@@ -2984,14 +2955,6 @@ end
 
 crunch cap_to[wp]: receive_signal "ex_nonz_cap_to p"
   (wp: crunch_wps)
-
-
-crunch ex_nonz_cap_to[wp]: set_message_info "ex_nonz_cap_to p"
-
-
-lemma is_derived_not_Null [simp]:
-  "\<not>is_derived m p c NullCap"
-  by (auto simp add: is_derived_def cap_master_cap_simps dest: cap_master_cap_eqDs)
 
 crunch mdb[wp]: set_message_info valid_mdb
   (wp: select_wp crunch_wps mapM_wp')

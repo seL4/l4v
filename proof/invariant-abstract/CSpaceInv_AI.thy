@@ -102,9 +102,6 @@ crunch inv[wp]: get_cap "P"
   (simp: crunch_simps)
 
 
-declare resolve_address_bits'.simps [simp del]
-
-
 lemma rab_inv[wp]:
   "\<lbrace>P\<rbrace> resolve_address_bits slot \<lbrace>\<lambda>rv. P\<rbrace>"
 unfolding resolve_address_bits_def

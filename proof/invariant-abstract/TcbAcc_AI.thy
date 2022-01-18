@@ -307,8 +307,6 @@ lemma thread_set_valid_idle_trivial:
 
 crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
 
-crunch arch [wp]: thread_set "\<lambda>s. P (arch_state s)"
-
 
 lemma thread_set_caps_of_state_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -852,8 +850,6 @@ lemma fold_fun_upd:
   apply clarsimp
   done
 
-crunch obj_at[wp]: store_word_offs "\<lambda>s. P (obj_at Q p s)"
-
 lemma load_word_offs_P[wp]:
   "\<lbrace>P\<rbrace> load_word_offs a x \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding load_word_offs_def
@@ -1313,8 +1309,6 @@ lemma set_bound_notification_global_refs [wp]:
   apply (wp thread_set_global_refs_triv|clarsimp simp: tcb_cap_cases_def)+
   done
 
-crunch arch [wp]: set_thread_state, set_bound_notification "\<lambda>s. P (arch_state s)"
-
 
 lemma st_tcb_ex_cap:
   "\<lbrakk> st_tcb_at P t s; if_live_then_nonz_cap s;
@@ -1623,8 +1617,6 @@ crunch valid_cap: set_bound_notification "valid_cap c"
 lemma set_thread_state_cte_at:
   "\<lbrace>cte_at p\<rbrace> set_thread_state x st \<lbrace>\<lambda>rv. cte_at p\<rbrace>"
   by (rule set_thread_state_cte_wp_at)
-
-crunch cte_at: set_bound_notification "cte_at p"
 
 
 lemma as_user_mdb [wp]:
