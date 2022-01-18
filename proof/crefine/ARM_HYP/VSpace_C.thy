@@ -548,7 +548,7 @@ lemma rf_sr_asidTable_None:
    apply (case_tac "n < 7", simp) (*asid_low_bits*)
    apply (clarsimp simp: linorder_not_less)
    apply (erule_tac x="n+10" in allE)
-   apply simp
+   apply (simp add: add.commute)
   apply simp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
   apply (simp add: array_relation_def option_to_0_def)
@@ -853,7 +853,7 @@ lemma lookupPTSlot_ccorres:
    apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
                          pde_pde_coarse_lift_def pde_pde_coarse_lift
                   split: pde.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
    apply (simp add: table_bits_defs mask_def shiftl_t2n)
@@ -1283,7 +1283,7 @@ lemma findFreeHWASID_ccorres:
               apply (simp add: rf_sr_armKSASIDTable_rel'
                                throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-              apply (uint_arith, simp add: take_bit_nat_def)
+              apply (uint_arith, simp add: take_bit_nat_def unsigned_of_nat)
              apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
@@ -1299,10 +1299,8 @@ lemma findFreeHWASID_ccorres:
        apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
        apply (simp add: upto_enum_word)
        apply (rule nth_equalityI)
-        apply (simp add: min.absorb2
-                    del: upt.simps)
-       apply (simp add: min.absorb2
-                   del: upt.simps)
+        apply (simp del: upt.simps)
+       apply (simp del: upt.simps)
        apply (simp add: nth_append
                  split: if_split)
 
@@ -3338,7 +3336,6 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive
@@ -3471,7 +3468,7 @@ lemma unmapPage_ccorres:
                  apply (subgoal_tac "P" for P)
                   apply (frule bspec, erule hd_in_set)
                   apply (frule bspec, erule last_in_set)
-                  subgoal by (simp add: upto_enum_step_def upto_enum_word
+                  subgoal by (simp add: upto_enum_step_def upto_enum_word take_bit_Suc
                                    hd_map last_map typ_at_to_obj_at_arches field_simps
                                    objBits_simps archObjSize_def largePagePTEOffsets_def
                                    Let_def table_bits_defs,

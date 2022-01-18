@@ -50,9 +50,9 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 lemma clift_foldl_hrs_mem_update:
@@ -329,9 +329,8 @@ lemma clearMemory_PageCap_ccorres:
        apply (rule aligned_range_offset_mem[where m=pageBits], simp_all)[1]
        apply (rule pbfs_atleast_pageBits)
       apply (erule cmap_relation_If_upd)
-        apply (clarsimp simp: cuser_user_data_relation_def fcp_beta
-                              order_less_le_trans[OF unat_lt2p])
-        apply (fold word_rsplit_0, simp add: word_rcat_rsplit)[1]
+        apply (clarsimp simp: cuser_user_data_relation_def order_less_le_trans[OF unat_lt2p])
+        apply (simp add: update_ti_t_word32_0s)
        apply (rule image_cong[OF _ refl])
        apply (rule set_eqI, rule iffI)
         apply (clarsimp simp del: atLeastAtMost_iff)
@@ -403,9 +402,9 @@ lemma coerce_memset_to_heap_update_asidpool:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 declare replicate_numeral [simp]
@@ -421,8 +420,8 @@ lemma coerce_memset_to_heap_update_pte:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma coerce_memset_to_heap_update_pde:
@@ -436,8 +435,8 @@ lemma coerce_memset_to_heap_update_pde:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma objBits_eq_by_type:
@@ -1236,7 +1235,7 @@ lemma coerce_memset_to_heap_update:
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
   apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
-  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
+  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0 word_bits_def
                    replicateHider_def)
   done
 

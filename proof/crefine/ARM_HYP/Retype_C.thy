@@ -142,8 +142,7 @@ lemma heap_update_word32_is_heap_update_list:
 
 lemma to_bytes_word32_0:
   "to_bytes (0 :: word32) xs = [0, 0, 0, 0 :: word8]"
-  apply (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0)
-  done
+  by (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0 word_bits_def)
 
 
 lemma globals_list_distinct_subset:
@@ -3913,7 +3912,7 @@ next
                     ex_disj_distrib field_simps)
 
     show "?thesis m x"
-      apply (simp add: xin word_rsplit_0 cong: if_cong)
+      apply (simp add: xin word_rsplit_0 word_bits_def cong: if_cong)
       apply (simp split: if_split)
       done
   qed
@@ -3983,7 +3982,6 @@ qed
 lemma range_cover_bound_weak:
   "\<lbrakk> n \<noteq> 0; range_cover ptr sz us n \<rbrakk> \<Longrightarrow>
     ptr + (of_nat n * 2 ^ us - 1) \<le> (ptr && ~~ mask sz) + 2 ^ sz - 1"
-  including no_0_dvd
   apply (frule range_cover_cell_subset[where x = "of_nat (n - 1)"])
    apply (simp add:range_cover_not_zero)
   apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat (n - 1)"])
@@ -8221,7 +8219,6 @@ shows  "ccorres dc xfdc
      ) []
      (createNewObjects newType srcSlot destSlots ptr userSize isdev)
      (Call createNewObjects_'proc)"
-  including no_take_bit no_0_dvd
   supply if_cong[cong]
   apply (rule ccorres_gen_asm_state)
   apply clarsimp

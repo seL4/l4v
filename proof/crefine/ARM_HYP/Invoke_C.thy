@@ -713,7 +713,7 @@ lemma decodeCNodeInvocation_ccorres:
                                                syscall_error_to_H_cases numeral_eqs)
                          apply (clarsimp simp: lookup_fault_missing_capability_lift
                                                mask_eq_iff_w2p word_size word_less_nat_alt
-                                               word_bits_def hd_conv_nth)
+                                               word_bits_def hd_conv_nth take_bit_Suc)
                         apply (simp add: whenE_def[where P=False]
                                          injection_handler_returnOk Collect_const[symmetric]
                                    cong: call_ignore_cong del: Collect_const)
@@ -1228,10 +1228,9 @@ lemma decodeCNodeInvocation_ccorres:
                                      apply (simp add: syscall_error_to_H_cases
                                                       lookup_fault_missing_capability_lift)
                                      apply (simp add: mask_eq_iff_w2p word_less_nat_alt
-                                                      word_size word_bits_def)
+                                                      word_size word_bits_def take_bit_Suc)
                                     apply (simp add: whenE_def[where P=False] injection_handler_returnOk
-                                                     hd_conv_nth numeral_eqs[symmetric]
-                                                del: Collect_const)
+                                                     hd_conv_nth numeral_eqs[symmetric])
                                     apply (rule ccorres_move_c_guard_cte)
                                     apply (rule ccorres_symb_exec_r)
                                       apply (rule_tac xf'="newSrcCap_'" in ccorres_abstract, ceqv)
@@ -1758,7 +1757,6 @@ lemma reset_untyped_inner_offs_helper:
       valid_cap' (cteCap cte) s
     \<rbrakk>
     \<Longrightarrow> of_nat i * 2 ^ sz2 < (2 ^ sz :: addr)"
-  including no_0_dvd
   apply (clarsimp simp: valid_cap_simps' untypedBits_defs)
   apply (rule word_less_power_trans2, simp_all)
   apply (rule word_of_nat_less)
@@ -1900,7 +1898,6 @@ lemma resetUntypedCap_ccorres:
      []
      (resetUntypedCap slot)
      (Call resetUntypedCap_'proc)"
-  including no_take_bit no_0_dvd
   using [[ceqv_simpl_sequence = true]]
   apply (cinit lift: srcSlot_')
    apply (simp add: liftE_bindE getSlotCap_def
