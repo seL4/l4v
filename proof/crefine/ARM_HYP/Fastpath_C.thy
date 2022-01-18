@@ -1209,6 +1209,7 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
                           (the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
                   (t_hrs_' (globals s))
            )}"
+  supply shiftl_of_Suc[simp del]
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -1219,9 +1220,9 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   apply (subst parent_update_child, erule typ_heap_simps', simp+)
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ refl])
-  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist ucast_id)
+  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist)
   apply (fold limited_and_def)
-  apply (simp add: limited_and_simps mask_def)
+  apply (simp add: limited_and_simps mask_def and_mask2 word_size)
   done
 
 
@@ -1967,7 +1968,7 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
   apply (simp add: cap_to_H_simps word_ao_dist cl_valid_cap_def ctcb_size_bits_def
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
-                   shiftr_over_or_dist word_bw_assocs mask_def)
+                   shiftr_over_or_dist word_bw_assocs mask_def shiftl_shiftr3 word_size)
   apply (cases m ; clarsimp)
   apply (cases canGrant ; clarsimp)
   done
