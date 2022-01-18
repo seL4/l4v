@@ -393,7 +393,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
                       | intro impI TrueI ext conjI)+)[11]
   apply (simp add: arch_finalise_cap_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def simp_thms)+
+   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
 crunch typ_at_arch [wp]: arch_thread_set "\<lambda>s. P (typ_at T p s)"
@@ -1054,8 +1054,6 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def)
   done
-
-crunch unlive[wp]: do_machine_op "obj_at (Not \<circ> live) r"
 
 lemma arch_thread_set_unlive_other:
   "\<lbrace>\<lambda>s. vr \<noteq> t \<and> obj_at (Not \<circ> live) vr s\<rbrace> arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>\<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"

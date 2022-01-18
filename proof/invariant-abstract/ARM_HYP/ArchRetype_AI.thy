@@ -70,8 +70,6 @@ crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps)
 
-crunch mdb_inv[wp]: get_pd "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps)
 crunch mdb_inv[wp]: store_pde "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps)
 
@@ -657,7 +655,7 @@ lemma hyp_refs_eq:
                              default_arch_tcb_def)
   apply (rename_tac ao)
   apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
-                        arch_kernel_obj.case ARM_A.default_vcpu_def
+                        ARM_A.default_vcpu_def
                   split: aobject_type.splits)
   done
 
@@ -1112,7 +1110,7 @@ lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  by (simp add: storeWord_def word_rsplit_0 | wp)+
+  by (simp add: storeWord_def word_rsplit_0 word_bits_conv | wp)+
 
 
 lemma clearMemory_um_eq_0:

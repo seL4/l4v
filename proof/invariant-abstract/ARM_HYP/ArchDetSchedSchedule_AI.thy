@@ -85,16 +85,6 @@ crunch weak_valid_sched_action[wp, DetSchedSchedule_AI_assms]:
   weak_valid_sched_action
   (simp: crunch_simps wp: crunch_wps)
 
-crunch cur_thread[wp]: set_vcpu, vcpu_disable, vcpu_restore, vcpu_save "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps)
-
-lemma vcpu_switch_cur_thread [wp]:
-  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
-  unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
-
-crunch cur_thread[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 lemma switch_to_idle_thread_ct_not_in_q[wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
   apply (simp add: switch_to_idle_thread_def)

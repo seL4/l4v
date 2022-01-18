@@ -1421,7 +1421,8 @@ lemma page_directory_pde_atI:  (* ARMHYP: x < 2 ^ pageBits? *)
   apply (subgoal_tac "p = (p + (x << pde_bits) && ~~ mask pd_bits)")
    subgoal by (auto simp add: pd_bits_def)
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pd_bits_def pageBits_def pde_bits_def)+
+   apply (simp add: pd_bits_def pageBits_def pde_bits_def)
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
    apply (simp add: pd_bits_def pde_bits_def pageBits_def)
   apply (rule shiftl_less_t2n)
@@ -1439,7 +1440,8 @@ lemma page_table_pte_atI:  (* ARMHYP: x < 2 ^ (pt_bits - 2) *)
   apply (subgoal_tac "p = (p + (x << pte_bits) && ~~ mask pt_bits)")
    subgoal by (auto simp add: pt_bits_def)
   apply (rule sym, rule add_mask_lower_bits)
-   apply (simp add: pt_bits_def pageBits_def pte_bits_def)+
+   apply (simp add: pt_bits_def pageBits_def pte_bits_def)
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_32[unfolded word_bits_conv])
    apply (simp add: pt_bits_def pageBits_def pte_bits_def)
   apply (rule shiftl_less_t2n)
@@ -1884,7 +1886,7 @@ proof -
      apply (erule (5) 2)
     apply (clarsimp simp: vs_refs_pages_def graph_of_def obj_at_def
                           pde_ref_pages_def data_at_def
-                   dest!: vs_lookup_pages1D elim!: disjE
+                   dest!: vs_lookup_pages1D
                    split: if_split_asm pde.splits)
     apply (frule_tac d=ac in vpt, assumption+)
     apply (erule converse_rtranclE)
