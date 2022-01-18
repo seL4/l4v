@@ -1491,7 +1491,7 @@ lemma mapM_x_zip_the_i:
 lemma upto_enum_word_of_nat:
   "\<lbrakk> a < 2^LENGTH('a); b < 2^LENGTH('a) \<rbrakk> \<Longrightarrow>
   [of_nat a::'a::len word .e. of_nat b] = map of_nat [a .e. b]"
-  by (simp add: upto_enum_word take_bit_nat_eq_self)
+  by (simp add: upto_enum_word take_bit_nat_eq_self unat_of_nat)
 
 lemma map_shift_of_nat:
   "\<lbrakk> a < 2^LENGTH('a); b < 2^LENGTH('a) \<rbrakk> \<Longrightarrow>
