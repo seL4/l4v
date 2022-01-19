@@ -128,7 +128,7 @@ lemma valid_vs_lookup_unmap_strg:
 lemma asid_high_bits_shl:
   "is_aligned base asid_low_bits \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
   unfolding asid_high_bits_of_def asid_low_bits_def is_aligned_mask
-  by word_bitwise (simp add: word_size)
+  by word_eqI_solve
 
 lemma valid_asid_map_unmap:
   "valid_asid_map s \<and> is_aligned base asid_low_bits \<longrightarrow>

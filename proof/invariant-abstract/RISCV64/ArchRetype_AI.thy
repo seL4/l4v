@@ -965,7 +965,7 @@ lemma retype_region_plain_invs:
 
 lemma storeWord_um_eq_0:
   "storeWord x 0 \<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>"
-  by (wpsimp simp: storeWord_def word_rsplit_0 upto_rec1)
+  by (wpsimp simp: storeWord_def word_rsplit_0 upto_rec1 word_bits_def)
 
 lemma clearMemory_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
