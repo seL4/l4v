@@ -91,8 +91,8 @@ lemma dom_ucast_eq:
    apply (simp add: asid_low_bits_def)
    apply (erule notE)
    apply (subst word_plus_and_or_coroll)
-    apply (word_bitwise, clarsimp simp: word_size)
-   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
+    apply word_eqI_solve
+   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size simp del: bit_0)
   apply (clarsimp simp: p2_low_bits_max)
   apply (rule ccontr)
   apply simp
@@ -108,9 +108,9 @@ lemma dom_ucast_eq:
   apply (erule notE)
   apply (simp add: is_aligned_mask asid_low_bits_def)
   apply (subst word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
+   apply word_eqI_solve
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
+   apply (word_bitwise, clarsimp simp: word_size simp del: bit_0)
   apply (word_bitwise)
   done
 
@@ -1228,7 +1228,7 @@ lemma asid_low_hi_cast:
   "is_aligned asid_hi asid_low_bits \<Longrightarrow>
    ucast (ucast asid_low + (asid_hi::asid)) = (asid_low :: asid_low_index)"
   apply (simp add: is_aligned_nth asid_low_bits_def)
-  apply (subst word_plus_and_or_coroll; (word_bitwise, simp))
+  apply (subst word_plus_and_or_coroll; word_eqI_solve)
   done
 
 lemma decode_asid_pool_invocation_wf[wp]:

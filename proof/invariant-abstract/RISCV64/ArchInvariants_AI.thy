@@ -1775,7 +1775,7 @@ lemma pt_slot_offset_vref:
    pt_slot_offset level pt_ptr vref = pt_ptr"
   apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def)
   apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps)
-  apply (erule_tac x="(9 + (n + 9 * size level))" in allE)
+  apply (erule_tac x="(9 + (9 * size level + n))" in allE)
   apply (erule impE; clarsimp)
   apply (simp flip: bit0.size_less)
   done
@@ -1844,7 +1844,7 @@ lemma table_base_plus:
   "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
    table_base (pt_ptr + (i << pte_bits)) = pt_ptr"
   unfolding is_aligned_mask bit_simps
-  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+  by (subst word_plus_and_or_coroll; word_eqI_solve)
 
 lemma table_base_plus_ucast:
   "is_aligned pt_ptr pt_bits \<Longrightarrow>
@@ -2070,7 +2070,7 @@ lemma pptr_base_mask:
 
 lemma pptr_base_nth[simp]:
   "pptr_base !! n = (canonical_bit \<le> n \<and> n < word_bits)"
-  by (simp add: pptr_base_mask neg_mask_test_bit word_bits_def)
+  by (auto simp: pptr_base_mask neg_mask_test_bit word_bits_def)
 
 lemma pt_bits_left_bound:
   "pt_bits_left level \<le> canonical_bit + 1"
@@ -2084,7 +2084,7 @@ lemma pt_bits_left_bound:
 lemma vref_for_level_pptr_baseI:
   "p < pptr_base \<Longrightarrow> vref_for_level p level < pptr_base"
   using pt_bits_left_bound[of level] unfolding vref_for_level_def
-  by word_bitwise (clarsimp simp: word_size word_bits_def canonical_bit_def)
+  by word_bitwise (clarsimp simp: word_size word_bits_def canonical_bit_def pptr_base_def pptrBase_def)
 
 lemma pt_bits_left_le_max_pt_level:
   "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit + 1 - ptTranslationBits"
@@ -2112,7 +2112,7 @@ lemma canonical_vref_for_levelI:
   apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
                    bit_simps)
   apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less)
+  by (clarsimp simp: canonical_bit_def word_size not_less simp del: bit_0)
 
 lemma vref_for_level_le:
   "vref_for_level vref level \<le> vref"
@@ -2137,7 +2137,7 @@ lemma aligned_canonical_max_is_0:
   "\<lbrakk> canonical_address p; is_aligned p (pt_bits_left (max_pt_level + 1)) \<rbrakk> \<Longrightarrow> p = 0"
   apply (simp add: canonical_address_def canonical_address_of_def level_defs pt_bits_left_def
                    bit_simps is_aligned_nth)
-  by word_bitwise clarsimp
+  by word_bitwise (clarsimp simp del: bit_0)
 
 lemma aligned_vref_for_level[simp]:
   "is_aligned (vref_for_level vref level) (pt_bits_left level)"
@@ -2387,8 +2387,7 @@ lemma asid_high_bits_of_and_mask[simp]:
 lemma asid_low_bits_of_and_mask[simp]:
   "asid_low_bits_of (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) = asid_low"
   apply (simp add: asid_low_bits_of_def asid_low_bits_def)
-  apply word_bitwise
-  apply (simp add: word_size)
+  apply word_eqI
   done
 
 lemma pool_for_asid_and_mask[simp]:
@@ -2442,7 +2441,7 @@ lemma vref_for_level_idx[simp]:
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
-  apply (word_eqI_solve simp: bit_simps flip: bit0.size_less_eq)
+  apply (word_eqI_solve simp: bit_simps flip: bit0.size_less_eq dest: bit_imp_possible_bit)
   done
 
 lemma vref_for_level_nth[simp]:
@@ -2467,7 +2466,7 @@ lemma vref_for_level_user_regionD:
   apply (clarsimp simp: user_region_def)
   apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
+  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def simp del: bit_0)
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;
