@@ -161,7 +161,7 @@ lemma updateObject_cte_is_tcb_or_cte:
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                         tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
-                        in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
+                        in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                         lookupAround2_char1
          split: kernel_object.splits)
   apply (subst(asm) in_magnitude_check3, simp+)
@@ -663,7 +663,7 @@ proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
                  split: if_splits
                   elim: cte_wp_atE' canonical_address_add)
 qed
