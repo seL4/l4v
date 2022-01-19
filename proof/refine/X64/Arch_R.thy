@@ -434,7 +434,8 @@ lemma mask_vmrights_corres:
                      mask_vm_rights_def nth_ucast
                      validate_vm_rights_def vm_read_write_def
                      vm_kernel_only_def vm_read_only_def
-               split: bool.splits)
+               split: bool.splits
+               simp del: bit_0)
 
 lemma vm_attributes_corres:
   "vmattributes_map (attribs_from_word w) = attribsFromWord w"
@@ -2079,7 +2080,7 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
   apply (clarsimp simp: conj_comms invs_valid_objs')
   apply (frule_tac ptr="w1" in descendants_range_caps_no_overlapI'[where sz = pageBits])
-    apply (fastforce simp:is_aligned_neg_mask_eq cte_wp_at_ctes_of)
+    apply (fastforce simp: cte_wp_at_ctes_of)
    apply (simp add:empty_descendants_range_in')
   apply (frule(1) if_unsafe_then_capD'[OF _ invs_unsafe_then_cap',rotated])
    apply (fastforce simp:cte_wp_at_ctes_of)
@@ -2093,7 +2094,7 @@ lemma performASIDControlInvocation_invs' [wp]:
     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1, simplified])
    apply (simp add: pageBits_def untypedBits_defs)
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
-  apply (simp add: is_aligned_neg_mask_eq Int_commute)
+  apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
                     archObjSize_def asid_low_bits_def word_bits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask

@@ -510,7 +510,7 @@ lemma flushTable_corres:
       apply (rule subst[of "0x1FF" "-1::9 word"], simp)
       apply (rule corres_mapM_x[OF _ _ _ _ subset_refl])
          apply (frule zip_map_rel[where f=ucast and g=id, simplified])
-          apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self)
+          apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self unsigned_of_nat)
          apply (rule corres_guard_imp)
            apply (rule corres_split_deprecated[OF _ getObject_PTE_corres''])
               apply (case_tac rv; case_tac rv'; simp)

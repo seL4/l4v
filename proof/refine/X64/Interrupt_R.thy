@@ -161,7 +161,7 @@ lemma whenE_rangeCheck_eq:
   "(rangeCheck (x :: 'a :: {linorder, integral}) y z) =
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
-  by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
+  by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
 (* 125 = maxIRQ *)
 lemma unat_ucast_ucast_shenanigans[simp]:
@@ -458,7 +458,6 @@ lemma IRQHandler_valid':
   by (simp add: valid_cap'_def capAligned_def word_bits_conv)
 
 crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
-crunch cte_wp_at[wp]: setIRQState "cte_wp_at' P p"
 
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp)
