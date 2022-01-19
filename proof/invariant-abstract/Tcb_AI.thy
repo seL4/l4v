@@ -12,6 +12,7 @@ context begin interpretation Arch .
 
 requalify_facts
   arch_derive_is_arch rec_del_invs''
+  as_user_valid_tcbs
 
 end
 
@@ -149,6 +150,10 @@ lemma suspend_nonz_cap_to_tcb[wp]:
   unfolding suspend_def sched_context_cancel_yield_to_def
   by (wpsimp wp: cancel_ipc_ex_nonz_cap_to_tcb hoare_drop_imps)
 
+crunches restart
+  for ex_nonz_cap_to[wp]: "ex_nonz_cap_to tcb_ptr"
+  (wp: crunch_wps cancel_ipc_cap_to simp: crunch_simps)
+
 lemmas suspend_tcb_at[wp] = tcb_at_typ_at [OF suspend_typ_at]
 
 lemma readreg_invs:
@@ -269,6 +274,24 @@ lemma thread_set_valid_objs':
   apply (simp add: valid_obj_def)
   done
 
+lemma thread_set_valid_tcbs:
+  "\<lbrace>valid_tcbs and (\<lambda>s. \<forall>p tcb. valid_tcb p tcb s \<longrightarrow> valid_tcb p (f tcb) s)\<rbrace>
+   thread_set f t
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (simp add: thread_set_def)
+  apply (wp set_object_valid_tcbs)
+  apply (fastforce simp: obj_at_def valid_tcbs_def dest: get_tcb_SomeD)
+  done
+
+lemma thread_set_empty_tcb_sched_context_valid_tcbs[wp]:
+  "thread_set (tcb_sched_context_update Map.empty) t \<lbrace>valid_tcbs\<rbrace>"
+  by (wp thread_set_valid_tcbs) (simp add: valid_tcbs_def valid_tcb_def tcb_cap_cases_def)
+
+lemma thread_set_priority_valid_tcbs[wp]:
+  "thread_set (tcb_priority_update f) t \<lbrace>valid_tcbs\<rbrace>"
+  apply (wp thread_set_valid_tcbs)
+  apply (clarsimp simp: valid_tcbs_def valid_tcb_def tcb_cap_cases_def)
+  done
 
 lemma thread_set_valid_objs:
   "\<lbrace>valid_objs and K (\<forall>p (s::'z::state_ext state) t. valid_tcb p t s \<longrightarrow> valid_tcb p (f t) s)\<rbrace>
@@ -279,6 +302,65 @@ lemma thread_set_valid_objs:
   apply simp
   done
 
+crunches tcb_release_remove
+  for valid_tcbs[wp]: valid_tcbs
+  (simp: crunch_simps)
+
+lemma tcb_sched_action_valid_tcb[wp]:
+  "tcb_sched_action action thread \<lbrace>\<lambda>s. valid_tcb ptr tcb s\<rbrace>"
+  apply (clarsimp simp: tcb_sched_action_def set_tcb_queue_def get_tcb_queue_def)
+  apply (intro hoare_seq_ext[OF _ thread_get_sp])
+  apply (wpsimp wp: thread_get_wp)
+  apply (clarsimp simp: obj_at_def update_valid_tcb is_tcb_def)
+  done
+
+lemma set_thread_state_valid_tcb[wp]:
+  "\<lbrace>valid_tcb ptr tcb and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule_tac B="\<lambda>_. valid_tcb ptr tcb" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_object_valid_tcbs)
+  apply (wpsimp wp: set_object_valid_tcbs update_valid_tcb is_schedulable_inv hoare_vcg_if_lift2
+                    hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def update_valid_tcb)
+  done
+
+lemma set_thread_state_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and valid_tcb_state st\<rbrace> set_thread_state thread st \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (clarsimp simp: set_thread_state_def set_thread_state_act_def)
+  apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
+  apply (rule_tac B="\<lambda>_. valid_tcbs" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: set_object_valid_tcbs)
+   apply (fastforce simp: valid_tcbs_def obj_at_def
+                   intro: valid_tcb_state_update)
+  apply (clarsimp simp: valid_tcbs_def)
+  apply (wpsimp wp: is_schedulable_inv hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def)
+  done
+
+lemma reply_unlink_tcb_valid_tcbs[wp]:
+  "reply_unlink_tcb tptr reply_ptr \<lbrace>valid_tcbs\<rbrace>"
+  apply (clarsimp simp: reply_unlink_tcb_def get_simple_ko_def)
+  apply (wpsimp wp: gts_wp get_object_wp)
+  done
+
+lemma possible_switch_to_valid_tcbs[wp]:
+  "possible_switch_to thread \<lbrace>valid_tcbs\<rbrace>"
+  apply (clarsimp simp: possible_switch_to_def)
+  apply (wpsimp wp: update_valid_tcbs thread_get_inv hoare_vcg_conj_lift hoare_drop_imps
+              simp: set_scheduler_action_def get_tcb_obj_ref_def)+
+  done
+
+lemma update_sched_context_ko_at_TCB[wp]:
+  "update_sched_context ref f \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (wpsimp wp: set_object_wp get_object_wp)
+  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
+  done
+
+crunches restart_thread_if_no_fault
+  for valid_tcbs[wp]: valid_tcbs
+  (simp: is_round_robin_def crunch_simps wp: crunch_wps)
 
 lemma out_valid_objs:
   "\<lbrace>valid_objs and K (\<forall>p (s::'z::state_ext state) t x. valid_tcb p t s \<longrightarrow> valid_tcb p (f x t) s)\<rbrace>
@@ -809,6 +891,24 @@ lemma cap_delete_ep:
      apply (rule hoare_strengthen_post, rule finalise_cap_ep[where P=P and p=p and slot=slot], clarsimp)
     apply (wpsimp wp: get_cap_wp)+
   apply (simp add: cte_wp_at_caps_of_state valid_fault_handler_def)
+  done
+
+lemma cap_delete_deletes_fh:
+  "\<lbrace>\<lambda>s. p \<noteq> ptr \<longrightarrow> cte_wp_at valid_fault_handler ptr s \<and>
+                     cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s\<rbrace>
+   cap_delete ptr
+   \<lbrace>\<lambda>_. cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p\<rbrace>, -"
+  apply (rule_tac Q'="\<lambda>rv s. ((p = ptr) \<longrightarrow> cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s) \<and>
+                             ((p \<noteq> ptr) \<longrightarrow> cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s)"
+               in hoare_post_imp_R)
+   apply (rule hoare_vcg_precond_impE_R)
+    apply (rule hoare_vcg_conj_lift_R)
+     apply (rule hoare_post_imp_R[OF cap_delete_deletes])
+     apply (clarsimp simp: cte_wp_at_def)
+    apply (rule hoare_vcg_const_imp_lift_R)
+    apply (rule cap_delete_ep)
+   apply simp
+  apply clarsimp
   done
 
 lemma checked_insert_cte_wp_at_weak:

@@ -1125,6 +1125,40 @@ crunches maybe_return_sc
   and state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
   (simp: crunch_simps wp: crunch_wps ignore: set_tcb_obj_ref)
 
+lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def pred_neg_def
+               wp: get_object_wp)
+
+lemma set_sc_obj_ref_valid_tcb[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  by (wpsimp wp: get_object_wp simp: update_sched_context_def)
+
+lemma set_sc_obj_ref_valid_tcbs[wp]:
+  "set_sc_obj_ref f scp v \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
+
+crunches reschedule_required
+  for valid_tcbs[wp]: valid_tcbs
+  (wp: crunch_wps)
+
+lemma valid_tcb_sched_context_update_empty[elim!]:
+  "valid_tcb tp tcb s \<Longrightarrow> valid_tcb tp (tcb_sched_context_update Map.empty tcb) s"
+  by (auto simp: valid_tcb_def tcb_cap_cases_def)
+
+lemma maybe_return_sc_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and tcb_at tcb_ptr\<rbrace>
+   maybe_return_sc ntfn_ptr tcb_ptr
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (clarsimp simp: maybe_return_sc_def)
+  apply (wpsimp wp: set_object_valid_tcbs thread_get_wp get_simple_ko_wp
+              simp: set_tcb_obj_ref_def get_tcb_obj_ref_def get_sk_obj_ref_def)
+  apply (clarsimp simp: obj_at_def is_tcb_def valid_tcbs_def)
+  apply (fastforce simp: get_tcb_def
+                  split: Structures_A.kernel_object.splits)
+  done
+
 lemma maybe_return_sc_valid_objs[wp]:
   "\<lbrace>valid_objs\<rbrace> maybe_return_sc ntfn_ptr tcb_ptr \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
   by (wpsimp simp: maybe_return_sc_def get_sk_obj_ref_def wp: weak_if_wp hoare_drop_imp)

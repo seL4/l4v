@@ -275,6 +275,26 @@ Finally, replace the IPC block with a fault block (which will retry the operatio
 >             IdleEP -> True
 >             _      -> False
 
+> restartThreadIfNoFault :: PPtr TCB -> Kernel ()
+> restartThreadIfNoFault t = do
+>         fault <- threadGet tcbFault t
+>         if isNothing fault
+>             then do
+>                 setThreadState Restart t
+>                 scOpt <- threadGet tcbSchedContext t
+>                 ifCondRefillUnblockCheck scOpt (Just False) (Just True)
+>                 possibleSwitchTo t
+>             else setThreadState Inactive t
+
+> cancelAllIPC_loop_body :: PPtr TCB -> Kernel ()
+> cancelAllIPC_loop_body t = do
+>         st <- getThreadState t
+>         let replyOpt = if isReceive st then replyObject st else Nothing
+>         case replyOpt of
+>             Nothing -> return ()
+>             Just reply -> replyUnlink reply t
+>         restartThreadIfNoFault t
+
 If an endpoint is deleted, then every pending IPC operation using it must be cancelled.
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
@@ -289,20 +309,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 >                 return ()
 >             _ -> do
 >                 setEndpoint epptr IdleEP
->                 forM_ (epQueue ep) (\t -> do
->                     st <- getThreadState t
->                     let replyOpt = if isReceive st then replyObject st else Nothing
->                     case replyOpt of
->                         Nothing -> return ()
->                         Just reply -> replyUnlink reply t
->                     fault <- threadGet tcbFault t
->                     if isNothing fault
->                         then do
->                             setThreadState Restart t
->                             scOpt <- threadGet tcbSchedContext t
->                             ifCondRefillUnblockCheck scOpt (Just False) (Just True)
->                             possibleSwitchTo t
->                         else setThreadState Inactive t)
+>                 forM_ (epQueue ep) (\t -> cancelAllIPC_loop_body t)
 >                 rescheduleRequired
 
 If a badged endpoint is recycled, then cancel every pending send operation using a badge equal to the recycled capability's badge. Receive operations are not affected.
@@ -323,14 +330,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >                 st <- getThreadState t
 >                 if blockingIPCBadge st == badge
 >                     then do
->                         fault <- threadGet tcbFault t
->                         if isNothing fault
->                             then do
->                                 setThreadState Restart t
->                                 scOpt <- threadGet tcbSchedContext t
->                                 ifCondRefillUnblockCheck scOpt (Just False) (Just True)
->                                 possibleSwitchTo t
->                             else setThreadState Inactive t
+>                         restartThreadIfNoFault t
 >                         return False
 >                     else return True
 >             ep' <- case queue' of

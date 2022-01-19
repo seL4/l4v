@@ -654,21 +654,7 @@ lemma ct_in_state_irq_state_independent[intro!, simp]:
    = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
-(* FIXME RT: move *)
-lemma valid_tcbs_machine_state_update[iff]:
-  "valid_tcbs (machine_state_update f s) = valid_tcbs s"
-  by (rule iffI;
-      clarsimp simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def valid_tcb_state_def
-                     valid_arch_tcb_def obj_at_def;
-      rename_tac ptr tcb; drule_tac x=ptr and y=tcb in spec2; clarsimp;
-      case_tac "tcb_state tcb"; clarsimp split: option.splits)
-
 text \<open>The top-level correspondence\<close>
-
-(* FIXME RT: move to DetSchedInvs *)
-lemma active_sc_tcb_at_ct_cur_sc_active:
-  "cur_sc_tcb_are_bound s \<Longrightarrow> cur_sc_active s \<longleftrightarrow> active_sc_tcb_at (cur_thread s) s"
-   by (clarsimp simp: vs_all_heap_simps)
 
 lemma kernel_preemption_corres:
   "corres (dc \<oplus> dc)

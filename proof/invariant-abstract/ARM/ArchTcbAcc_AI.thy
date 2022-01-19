@@ -10,6 +10,18 @@ begin
 
 context Arch begin global_naming ARM
 
+lemma as_user_valid_tcbs[wp]:
+  "as_user ptr f \<lbrace>valid_tcbs\<rbrace>"
+  unfolding as_user_def
+  apply wpsimp
+  apply (clarsimp simp: valid_tcbs_def get_tcb_ko_at)
+  apply (rename_tac s tcb a b)
+  apply (prop_tac "valid_tcb ptr tcb s")
+   apply blast
+  apply (clarsimp simp: valid_tcb_def valid_tcb_state_def obj_at_def is_reply_def
+                        valid_arch_tcb_def tcb_cap_cases_def)
+  done
+
 named_theorems TcbAcc_AI_assms
 
 lemmas cap_master_cap_simps =

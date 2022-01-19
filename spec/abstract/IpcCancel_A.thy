@@ -426,6 +426,16 @@ where
      else set_thread_state t Inactive
    od"
 
+definition
+  "cancel_all_ipc_loop_body t \<equiv> do
+     st \<leftarrow> get_thread_state t;
+     reply_opt \<leftarrow> case st of
+                    Structures_A.thread_state.BlockedOnReceive x r_opt xa \<Rightarrow> return r_opt
+                  | _ \<Rightarrow> return None;
+     when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
+     restart_thread_if_no_fault t
+   od"
+
 text \<open>Cancel all message operations on threads currently queued within this
 synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
@@ -439,13 +449,7 @@ where
        | _ \<Rightarrow> do
          queue \<leftarrow> get_ep_queue ep;
          set_endpoint epptr IdleEP;
-         mapM_x (\<lambda>t.
-           do st \<leftarrow> get_thread_state t;
-              reply_opt \<leftarrow> case st of BlockedOnReceive _ r_opt _ \<Rightarrow> return r_opt
-                                    | _ \<Rightarrow> return None;
-              when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
-              restart_thread_if_no_fault t
-            od) $ queue;
+         mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) $ queue;
          reschedule_required
       od
    od"

@@ -724,6 +724,11 @@ where
   | Reply reply \<Rightarrow> valid_reply reply s
   | ArchObj ao \<Rightarrow> arch_valid_obj ao s"
 
+(* Consider further unbundling of valid_objs and valid_objs'; see JIRA issue VER-1343 *)
+
+definition valid_tcbs :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_tcbs s \<equiv> \<forall>ptr tcb. ko_at (TCB tcb) ptr s \<longrightarrow> valid_tcb ptr tcb s"
+
 definition
   valid_objs :: "'z::state_ext state \<Rightarrow> bool"
 where
@@ -2296,6 +2301,37 @@ lemma valid_pspaceE [elim?]:
   shows    R
   using vp
   unfolding valid_pspace_def by (auto intro: rl)
+
+lemma valid_tcbs_valid_tcbE:
+  assumes "tcb_at t s"
+          "valid_tcbs s"
+          "\<And>tcb. ko_at (TCB tcb) t s \<Longrightarrow> valid_tcb t tcb s \<Longrightarrow> R s (TCB tcb)"
+  shows "obj_at (R s) t s"
+  using assms
+  apply (clarsimp simp: obj_at_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; clarsimp simp: is_tcb_def)
+  apply (rename_tac tcb)
+  apply (prop_tac "valid_tcb t tcb s")
+   apply (clarsimp simp: valid_tcbs_def)
+   apply (drule_tac x=t in spec)
+   apply (drule_tac x=tcb in spec)
+   apply (clarsimp simp: obj_at_def)
+  apply clarsimp
+  done
+
+lemma valid_objs_valid_tcbs[elim!]:
+  "valid_objs s \<Longrightarrow> valid_tcbs s"
+  by (force simp: valid_objs_def valid_tcbs_def obj_at_def valid_obj_def)
+
+lemma valid_tcbs_valid_tcb:
+  "\<lbrakk>valid_tcbs s; get_tcb thread s = Some tcb\<rbrakk> \<Longrightarrow> valid_tcb thread tcb s"
+  by (fastforce simp: valid_tcbs_def get_tcb_def obj_at_def
+               split: Structures_A.kernel_object.splits option.splits)
+
+lemma valid_tcb_valid_obj:
+  "valid_tcb ptr tcb s = valid_obj ptr (TCB tcb) s"
+  by (clarsimp simp: valid_obj_def)
 
 lemma valid_objs_valid_cs [dest?]:
   assumes vp: "valid_objs s"
@@ -3943,10 +3979,14 @@ lemma valid_irq_states_more_update[iff]:
   "valid_irq_states (trans_state f s) = valid_irq_states s"
   by (simp add: valid_irq_states_def)
 
-
 lemma invs_valid_objs [elim!]:
   "invs s \<Longrightarrow> valid_objs s"
   by (simp add: invs_def valid_state_def valid_pspace_def)
+
+lemma invs_valid_tcbs[elim!]:
+  "invs s \<Longrightarrow> valid_tcbs s"
+  apply (fastforce intro:  valid_objs_valid_tcbs)
+  done
 
 lemma invs_psp_aligned [elim!]:
   "invs s \<Longrightarrow> pspace_aligned s"

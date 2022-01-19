@@ -69,6 +69,8 @@ requalify_facts
   valid_arch_tcb_same_type
   valid_arch_tcb_typ_at
   valid_tcb_arch_ref_lift
+  update_valid_tcb
+  valid_tcbs_machine_state_update
 
 end
 
@@ -187,6 +189,25 @@ lemma valid_objs_same_type:
   apply (clarsimp simp add: a_type_def is_tcb)
   done
 
+lemma set_object_valid_tcbs[wp]:
+  "\<lbrace>valid_tcbs and valid_tcb ptr tcb\<rbrace>
+   set_object ptr (TCB tcb)
+   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong)
+  apply (fastforce intro: valid_obj_same_type
+                    simp: obj_at_def valid_tcb_valid_obj valid_tcbs_def dom_def)
+  done
+
+lemma set_simple_ko_not_tcb_at[wp]:
+  "set_reply ptr new \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  "set_endpoint ptr new' \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  "set_notification ptr new'' \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
+  apply (wpsimp simp: set_simple_ko_def set_object_def obj_at_def pred_neg_def
+                  wp: get_object_wp)+
+  done
+
+lemmas set_object_typ_ats [wp] = abs_typ_at_lifts [OF set_object_typ_at]
+
 lemma set_object_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_obj p k\<rbrace>
   set_object p k
@@ -236,28 +257,24 @@ lemma set_tcb_obj_ref_ep_at_inv[wp]:
   "\<lbrace> ep_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
   done
 
 lemma set_tcb_obj_ref_ntfn_at_inv[wp]:
   "\<lbrace> ntfn_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
 
 lemma set_tcb_obj_ref_sc_at_inv[wp]:
   "\<lbrace> sc_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. sc_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_sc_obj_def is_tcb get_tcb_def split: kernel_object.splits)
   done
 
 lemma set_tcb_obj_ref_reply_at_inv[wp]:
   "\<lbrace> reply_at ep \<rbrace> set_tcb_obj_ref f t ntfn \<lbrace> \<lambda>rv. reply_at ep \<rbrace>"
   apply (simp add: set_tcb_obj_ref_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_reply is_tcb get_tcb_def)
   done
 
 lemma update_sched_context_typ_at_inv[wp]:
@@ -515,6 +532,51 @@ lemma get_simple_ko_valid_simple_obj[wp]:
   apply (wpsimp simp: partial_inv_def the_equality valid_obj_imp_valid_simple
               split: option.splits)
   done
+
+lemma set_reply_obj_ref_valid_tcb[wp]:
+  "set_reply_obj_ref f rp opt \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: update_sk_obj_ref_def set_simple_ko_def)
+  apply (wpsimp wp: set_object_typ_ats get_object_wp get_simple_ko_wp)
+  done
+
+lemma set_reply_obj_ref_not_tcb_at[wp]:
+  "set_reply_obj_ref f rp opt \<lbrace>\<lambda>s. P (ko_at (TCB tcb) t s)\<rbrace>"
+  apply (clarsimp simp: update_sk_obj_ref_def)
+  apply (wpsimp wp: set_simple_ko_wp get_simple_ko_wp)
+  apply (clarsimp simp: obj_at_def sk_obj_at_pred_def pred_neg_def split: if_splits)
+  done
+
+lemma set_reply_obj_ref_valid_tcbs[wp]:
+  "set_reply_obj_ref f rp opt \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' simp: pred_neg_def)
+  done
+
+lemma set_simple_ko_valid_tcb[wp]:
+  "set_simple_ko C p obj \<lbrace>valid_tcb ptr tcb\<rbrace>"
+  apply (clarsimp simp: set_simple_ko_def)
+  apply (wpsimp wp: set_object_typ_ats get_object_wp)+
+  done
+
+lemma set_simple_ko_valid_tcbs[wp]:
+  "set_endpoint ep eval \<lbrace>valid_tcbs\<rbrace>"
+  "set_notification ntfnptr nval \<lbrace>valid_tcbs\<rbrace>"
+  "set_reply rptr rval \<lbrace>valid_tcbs\<rbrace>"
+  unfolding valid_tcbs_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
+  done
+
+lemma update_valid_tcbs[simp]:
+  "\<And>f. valid_tcbs (release_queue_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (reprogram_timer_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (ready_queues_update f s) = valid_tcbs s"
+  "\<And>f. valid_tcbs (scheduler_action_update f s) = valid_tcbs s"
+  by (simp_all add: valid_tcbs_def update_valid_tcb)
+
+lemma valid_tcb_domain_update[simp]:
+  "valid_tcb tptr (tcb_domain_update f tcb) s = valid_tcb tptr tcb s"
+  unfolding valid_tcb_def
+  by (clarsimp simp: tcb_cap_cases_def)
 
 lemma get_ntfn_valid_ntfn[wp]:
   "\<lbrace> valid_objs \<rbrace>
@@ -2452,8 +2514,6 @@ global_interpretation set_reply_obj_ref: non_sc_op "set_reply_obj_ref f r v"
   apply (erule_tac P=P in rsubst)
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
-
-lemmas set_object_typ_ats [wp] = abs_typ_at_lifts [OF set_object_typ_at]
 
 lemma typ_at_pspace_aligned:
   assumes type_invs: "\<And>T p. f \<lbrace>typ_at T p\<rbrace>"

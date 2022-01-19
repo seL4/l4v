@@ -41,7 +41,7 @@ crunches restart_thread_if_no_fault
 lemma cancel_all_ipc_valid_objs:
   "\<lbrace>valid_objs and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    cancel_all_ipc ptr \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  by (wpsimp simp: cancel_all_ipc_def get_thread_state_def thread_get_def
+  by (wpsimp simp: cancel_all_ipc_def cancel_all_ipc_loop_body_def get_thread_state_def thread_get_def
                    get_ep_queue_def get_simple_ko_def get_object_def valid_ep_def
                wp: mapM_x_wp_inv hoare_drop_imp)
 
@@ -1454,7 +1454,7 @@ lemma cancel_all_ipc_it[wp]:
   "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>
    cancel_all_ipc tcb_ptr
    \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
-  by (wpsimp simp: cancel_all_ipc_def set_thread_state_def reply_unlink_tcb_def
+  by (wpsimp simp: cancel_all_ipc_def cancel_all_ipc_loop_body_def set_thread_state_def reply_unlink_tcb_def
                wp: mapM_x_wp' hoare_drop_imp)
 
 lemma cancel_signal_it[wp]:
@@ -1918,6 +1918,15 @@ lemma reply_unlink_tcb_st_tcb_at':
                   wp: sts_st_tcb_at_cases get_object_wp get_simple_ko_wp)
   done
 
+lemma reply_unlink_tcb_reply_tcb_reply_at_other:
+  "\<lbrace>\<lambda>s. reply_tcb_reply_at ((=) (Some t')) r' s \<and> t' \<noteq> t\<rbrace>
+   reply_unlink_tcb t r
+   \<lbrace>\<lambda>_ s. reply_tcb_reply_at ((=) (Some t')) r' s\<rbrace>"
+  apply (wpsimp wp: update_sk_obj_ref_wps get_simple_ko_wp gts_wp
+              simp: reply_unlink_tcb_def)
+  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def)
+  done
+
 lemma valid_objs_reply_not_tcbD:
   "valid_objs s \<Longrightarrow> kheap s tptr = Some (TCB tcb) \<Longrightarrow>
    tcb_state tcb = BlockedOnReceive epptr (Some rptr) d \<Longrightarrow> \<not> tcb_at rptr s"
@@ -2085,15 +2094,11 @@ lemma cancel_all_ipc_invs_helper:
   "ep = SendEP q \<or> ep = RecvEP q \<Longrightarrow>
    \<lbrace>ko_at (Endpoint ep) epptr and invs\<rbrace>
    do _ <- set_endpoint epptr IdleEP;
-      _ <- mapM_x (\<lambda>t. do st <- get_thread_state t;
-                          reply_opt <- case st of BlockedOnReceive _ ro _ \<Rightarrow> return ro
-                                                                      | _ \<Rightarrow> return None;
-                          _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                          restart_thread_if_no_fault t
-                       od) q;
+      _ <- mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) q;
       reschedule_required
    od
    \<lbrace>\<lambda>rv. invs\<rbrace>"
+  unfolding cancel_all_ipc_loop_body_def
   apply (subst bind_assoc[symmetric])
   apply (rule hoare_seq_ext)
    apply wpsimp
@@ -2128,7 +2133,7 @@ lemma cancel_all_ipc_invs_helper:
 
 lemma cancel_all_ipc_invs:
   "\<lbrace>invs\<rbrace> cancel_all_ipc epptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: cancel_all_ipc_def)
+  apply (simp add: cancel_all_ipc_def cancel_all_ipc_loop_body_def)
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all add: get_ep_queue_def)
     apply (wp, fastforce)
@@ -2158,12 +2163,9 @@ lemma cancel_all_ipc_st_tcb_at_helper:
                           else P (P' Inactive)
                      else P (st_tcb_at P' t s)"
   shows "\<lbrace>V q\<rbrace>
-          mapM_x (\<lambda>t. do st <- get_thread_state t;
-                         reply_opt <- case st of BlockedOnReceive _ ro _ \<Rightarrow> return ro | _ \<Rightarrow> return None;
-                         _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                         restart_thread_if_no_fault t
-                      od) q
+          mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) q
          \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
+  unfolding cancel_all_ipc_loop_body_def
   apply (rule mapM_x_inv_wp2[of \<top> V, simplified]; simp add: V_def split del: if_split)
   by (wpsimp wp: restart_thread_if_no_fault_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at
                  restart_thread_if_no_fault_pred_tcb_at' gts_wp hoare_vcg_imp_lift')
@@ -2176,7 +2178,7 @@ lemma cancel_all_ipc_st_tcb_at':
         else P (st_tcb_at P' t s)\<rbrace>
     cancel_all_ipc epptr
    \<lbrace>\<lambda>rv s. P (st_tcb_at P' t s)\<rbrace>"
-  apply (simp add: cancel_all_ipc_def)
+  apply (simp add: cancel_all_ipc_def cancel_all_ipc_loop_body_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wpsimp wp: cancel_all_ipc_st_tcb_at_helper get_ep_queue_wp hoare_vcg_imp_lift)
   apply (auto simp: ep_at_pred_def obj_at_def)
@@ -2438,14 +2440,17 @@ lemmas
   restart_thread_if_no_fault_obj_at_impossible =
     restart_thread_if_no_fault_obj_at_impossible'[where P= id, simplified]
 
+lemma restart_thread_if_no_fault_reply_tcb_reply_at[wp]:
+  "restart_thread_if_no_fault t \<lbrace>reply_tcb_reply_at ((=) (Some t')) r_opt\<rbrace>"
+  apply (clarsimp simp: sk_obj_at_pred_def)
+  apply (wpsimp wp: restart_thread_if_no_fault_obj_at_impossible')
+  done
+
 lemma cancel_all_unlive_helper:
   "\<lbrace>obj_at (\<lambda>obj. \<not> live obj \<and> is_ep obj) ptr\<rbrace>
-     mapM_x (\<lambda>t. do st <- get_thread_state t;
-                    reply_opt <- case st of BlockedOnReceive _ ro _ \<Rightarrow> return ro | _ \<Rightarrow> return None;
-                    _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                    restart_thread_if_no_fault t
-                 od) q
+     mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) q
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) ptr\<rbrace>"
+  unfolding cancel_all_ipc_loop_body_def
   apply (rule hoare_strengthen_post [OF mapM_x_wp'])
    apply (rule hoare_seq_ext[OF _ gts_sp])
    apply (wpsimp wp: hoare_drop_imp restart_thread_if_no_fault_obj_at_impossible
@@ -2718,5 +2723,20 @@ lemma cancel_ipc_ct_active[wp]:
   apply (wpsimp wp: gts_wp thread_set_ct_in_state hoare_vcg_imp_lift)
   apply (auto simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   done
+
+lemma bind_sc_reply_valid_objs[wp]:
+  "\<lbrace>valid_objs and reply_at reply_ptr and sc_at sc_ptr and
+    sc_replies_sc_at (\<lambda>a. reply_ptr \<notin> set a) sc_ptr\<rbrace>
+   bind_sc_reply sc_ptr reply_ptr
+   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
+  unfolding bind_sc_reply_def
+  apply (wpsimp wp: hoare_list_all_lift)
+  apply (drule (1) valid_objs_ko_at)
+  by (clarsimp simp: valid_obj_def valid_sched_context_def sc_at_pred_n_def obj_at_def)
+
+crunches reply_push
+  for pspace_aligned[wp]: pspace_aligned
+  and pspace_distinct[wp]: pspace_distinct
+  (wp: crunch_wps simp: crunch_simps)
 
 end

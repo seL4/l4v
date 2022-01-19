@@ -921,5 +921,21 @@ lemma update_sched_context_hyp_refs_of[wp]:
                  split: kernel_object.splits)
   done
 
+lemma update_valid_tcb[simp]:
+  "\<And>f. valid_tcb ptr tcb (release_queue_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (reprogram_timer_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (ready_queues_update f s) = valid_tcb ptr tcb s"
+  "\<And>f. valid_tcb ptr tcb (scheduler_action_update f s) = valid_tcb ptr tcb s"
+  by (auto simp: valid_tcb_def valid_tcb_state_def valid_bound_obj_def valid_arch_tcb_def
+          split: thread_state.splits option.splits)
+
+lemma valid_tcbs_machine_state_update[iff]:
+  "valid_tcbs (machine_state_update f s) = valid_tcbs s"
+  by (rule iffI;
+      clarsimp simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def valid_tcb_state_def
+                     valid_arch_tcb_def obj_at_def;
+      rename_tac ptr tcb; drule_tac x=ptr and y=tcb in spec2; clarsimp;
+      case_tac "tcb_state tcb"; clarsimp split: option.splits)
+
 end
 end
