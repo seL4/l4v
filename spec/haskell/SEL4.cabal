@@ -33,6 +33,10 @@ Flag ArchRiscV
     description:        Include RISC-V 64-bit modules and platforms
     default:            False
 
+Flag ArchAArch64
+    description:        Include AArch 64-bit modules and platforms
+    default:            False
+
 Library
     exposed-modules:        SEL4
                             SEL4.Machine.Target
@@ -183,6 +187,28 @@ Library
                             SEL4.Machine.Hardware.RISCV64
 
                             SEL4.Machine.Hardware.RISCV64.HiFive
+
+    if flag(ArchAArch64)
+        other-modules:
+                            SEL4.API.Types.AARCH64
+                            SEL4.API.InvocationLabels.AARCH64
+                            SEL4.API.Invocation.AARCH64
+                            SEL4.API.Failures.AARCH64
+                            SEL4.API.Faults.AARCH64
+                            SEL4.Kernel.VSpace.AARCH64
+                            SEL4.Kernel.Thread.AARCH64
+                            SEL4.Kernel.Hypervisor.AARCH64
+                            SEL4.Object.ObjectType.AARCH64
+                            SEL4.Object.Structures.AARCH64
+                            SEL4.Object.Interrupt.AARCH64
+                            SEL4.Object.Instances.AARCH64
+                            -- FIXME AARCH64 SEL4.Object.VCPU.AARCH64
+                            SEL4.Object.TCB.AARCH64
+                            SEL4.Model.StateData.AARCH64
+                            SEL4.Machine.RegisterSet.AARCH64
+                            SEL4.Machine.Hardware.AARCH64
+
+                            SEL4.Machine.Hardware.AARCH64.TX2
 
     hs-source-dirs:         src
     ghc-prof-options:       -auto-all -fprof-auto
