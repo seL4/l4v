@@ -3808,6 +3808,7 @@ lemma cancelAllIPC_valid_queues[wp]:
    cancelAllIPC ep_ptr
    \<lbrace>\<lambda>_. valid_queues\<rbrace>"
   apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
+  unfolding cancelAllIPC_loop_body_def restartThreadIfNoFault_def
   apply (wpsimp wp: mapM_x_wp' getEndpoint_wp
               simp: valid_tcb_state'_def)
   done

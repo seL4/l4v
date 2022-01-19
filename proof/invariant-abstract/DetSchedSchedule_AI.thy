@@ -3269,7 +3269,7 @@ lemma set_next_interrupt_valid_sched[wp]:
 context DetSchedSchedule_AI begin
 
 crunch ct_not_in_q[wp]: finalise_cap "ct_not_in_q :: 'state_ext state \<Rightarrow> _"
-  (wp: crunch_wps maybeM_inv tcb_sched_dequeue_ct_not_in_q ignore: tcb_sched_action)
+  (wp: crunch_wps maybeM_inv tcb_sched_dequeue_ct_not_in_q ignore: tcb_sched_action simp: crunch_simps)
 
 end
 
@@ -4712,6 +4712,12 @@ lemma reply_push_valid_sched_misc[wp]:
   by (wpsimp wp: get_simple_ko_wp hoare_vcg_if_lift2 hoare_drop_imps hoare_vcg_all_lift
            simp: reply_push_def bind_sc_reply_def)
 
+crunches bind_sc_reply
+  for pspace_distinct[wp]: pspace_distinct
+  and pspace_aligned[wp]: pspace_aligned
+  and active_sc_valid_refills[wp]: active_sc_valid_refills
+  (ignore: update_sched_context)
+
 crunch valid_refills[wp]: set_cdt,set_original,set_extra_badge "valid_refills scp"
   (wp_del: set_original_wp)
 
@@ -4816,12 +4822,9 @@ lemma pred_map_weakenE:
 lemma cancel_all_ipc_loop_body_valid_sched:
   "\<lbrace>(\<lambda>s. blocked_on_send_recv_tcb_at t s \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
         \<and> current_time_bounded s \<and> t \<noteq> idle_thread s) and valid_sched\<rbrace>
-     do st <- get_thread_state t;
-        reply_opt <- case st of BlockedOnReceive x r_opt _ \<Rightarrow> return r_opt | _ \<Rightarrow> return None;
-        y <- when (\<exists>y. reply_opt = Some y) (reply_unlink_tcb t (the reply_opt));
-        restart_thread_if_no_fault t
-     od
+   cancel_all_ipc_loop_body t
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  unfolding cancel_all_ipc_loop_body_def
   apply (wpsimp wp: restart_thread_if_no_fault_valid_sched reply_unlink_tcb_valid_sched
                     reply_unlink_tcb_valid_sched_pred_lift[OF set_thread_state_pred_map_tcb_sts_of]
                     gts_wp')
@@ -4851,12 +4854,9 @@ crunches restart_thread_if_no_fault
 
 lemma cancel_all_ipc_loop_body_blocked_on_send_recv:
   "\<lbrace>\<lambda>s. blocked_on_send_recv_tcb_at t' s \<and> t' \<noteq> t\<rbrace>
-     do st <- get_thread_state t;
-        reply_opt <- case st of BlockedOnReceive x r_opt _ \<Rightarrow> return r_opt | _ \<Rightarrow> return None;
-        _ <- when (\<exists>y. reply_opt = Some y) (reply_unlink_tcb t (the reply_opt));
-        restart_thread_if_no_fault t
-     od
-  \<lbrace>\<lambda>_. blocked_on_send_recv_tcb_at t'\<rbrace>"
+   cancel_all_ipc_loop_body t
+   \<lbrace>\<lambda>_. blocked_on_send_recv_tcb_at t'\<rbrace>"
+  unfolding cancel_all_ipc_loop_body_def
   by (wpsimp wp: restart_thread_if_no_fault_other[unfolded obj_at_kh_kheap_simps]
                  reply_unlink_tcb_st_tcb_at[unfolded obj_at_kh_kheap_simps]
                  gts_wp')
@@ -4905,15 +4905,13 @@ lemma cancel_all_ipc_loop_valid_sched:
   "\<lbrace>(\<lambda>s. \<forall>t\<in>set queue. blocked_on_send_recv_tcb_at t s \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
                        \<and> current_time_bounded s \<and> t \<noteq> idle_thread s)
         and valid_sched and K (distinct queue)\<rbrace>
-   mapM_x (\<lambda>t. do st <- get_thread_state t;
-                  reply_opt <- case st of BlockedOnReceive _ ro _ \<Rightarrow> return ro | _ \<Rightarrow> return None;
-                  _ <- when (\<exists>r. reply_opt = Some r) (reply_unlink_tcb t (the reply_opt));
-                  restart_thread_if_no_fault t
-               od) queue
+   mapM_x (\<lambda>t. cancel_all_ipc_loop_body t) queue
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule ball_mapM_x_scheme[OF _ cancel_all_ipc_loop_body_valid_sched])
-  by (wpsimp wp: cancel_all_ipc_loop_body_blocked_on_send_recv gts_wp')
+  apply (wpsimp wp: cancel_all_ipc_loop_body_blocked_on_send_recv gts_wp'
+              simp: cancel_all_ipc_loop_body_def)+
+  done
 
 lemma cancel_all_ipc_valid_sched:
   "\<lbrace>\<lambda>s. valid_sched s \<and> valid_objs s \<and> valid_idle s \<and> sym_refs (state_refs_of s)
@@ -5869,6 +5867,43 @@ crunch st_tcb_at_not_runnable[wp]: reply_remove_tcb "st_tcb_at (\<lambda>st. \<n
 lemma reply_remove_tcb_not_runnable[wp]:
   "reply_unlink_tcb t r \<lbrace>\<lambda>s. \<not> pred_map runnable (tcb_sts_of s) t\<rbrace>"
   by (wpsimp wp: reply_unlink_tcb_valid_sched_pred simp: vs_all_heap_simps)
+
+definition
+  "reply_unlink_ts_pred t s
+    \<equiv> \<forall>ep r_opt pl.
+       pred_map ((=) (Structures_A.thread_state.BlockedOnReceive ep (Some r_opt) pl)) (tcb_sts_of s) t
+       \<longrightarrow> reply_tcb_reply_at ((=) (Some t)) r_opt s"
+
+lemma restart_thread_if_no_fault_tcb_sts_of_other:
+  "\<lbrace>\<lambda>s. Q (pred_map P (tcb_sts_of s) t') \<and> t \<noteq> t'\<rbrace>
+   restart_thread_if_no_fault t
+   \<lbrace>\<lambda>_ s. Q (pred_map P (tcb_sts_of s) t')\<rbrace>"
+  apply (clarsimp simp: restart_thread_if_no_fault_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (wpsimp wp: possible_switch_to_pred_tcb_at[unfolded obj_at_kh_kheap_simps]
+                    set_thread_state_pred_map_tcb_sts_of thread_get_inv)
+  done
+
+lemma reply_unlink_tcb_tcb_sts_of_other:
+  "\<lbrace>\<lambda>s. Q (pred_map P (tcb_sts_of s) t') \<and> t \<noteq> t'\<rbrace>
+   reply_unlink_tcb t r
+   \<lbrace>\<lambda>_ s. Q (pred_map P (tcb_sts_of s) t')\<rbrace>"
+  apply (clarsimp simp: reply_unlink_tcb_def)
+  apply (rule hoare_seq_ext_skip, wpsimp)+
+  apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
+  done
+
+lemma cancel_all_ipc_loop_body_reply_unlink_ts_pred_other:
+  "\<lbrace>\<lambda>s. reply_unlink_ts_pred t s \<and> t' \<noteq> t\<rbrace>
+   cancel_all_ipc_loop_body t'
+   \<lbrace>\<lambda>_. reply_unlink_ts_pred t\<rbrace>"
+  unfolding reply_unlink_ts_pred_def cancel_all_ipc_loop_body_def
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (rule hoare_seq_ext_skip, wpsimp)
+  apply (wpsimp wp: restart_thread_if_no_fault_tcb_sts_of_other reply_unlink_tcb_tcb_sts_of_other
+                    reply_unlink_tcb_reply_tcb_reply_at_other hoare_vcg_all_lift
+                    hoare_vcg_imp_lift')
+  done
 
 global_interpretation blocked_cancel_ipc:
   set_thread_state_Inactive_valid_sched_pred_equiv "\<lambda>t. blocked_cancel_ipc st t r"
@@ -6881,7 +6916,7 @@ lemma cancel_all_ipc_ct_not_queued:
   "\<lbrace>ct_not_queued and scheduler_act_sane and invs and ct_not_blocked\<rbrace>
    cancel_all_ipc epptr
    \<lbrace>\<lambda>_. ct_not_queued:: 'state_ext state \<Rightarrow> _\<rbrace>"
-  unfolding cancel_all_ipc_def
+  unfolding cancel_all_ipc_def cancel_all_ipc_loop_body_def
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (case_tac "ep=IdleEP"; simp?)
    apply wpsimp
@@ -7070,7 +7105,7 @@ lemma cancel_all_ipc_cur_sc_chargeable:
   "\<lbrace>cur_sc_chargeable and ct_not_blocked and invs\<rbrace>
    cancel_all_ipc x
    \<lbrace>\<lambda>_. cur_sc_chargeable\<rbrace>"
-  unfolding cancel_all_ipc_def
+  unfolding cancel_all_ipc_def cancel_all_ipc_loop_body_def
   apply wpsimp
        apply (rule_tac R="\<lambda>_ s. \<forall>x \<in> set queue. \<not> bound_sc_tcb_at (\<lambda>x. x = Some (cur_sc s)) x s \<and> x \<noteq> cur_thread s" in hoare_post_add)
        apply (rule mapM_x_wp[where S="set xs" and xs=xs for xs])
@@ -7176,7 +7211,7 @@ lemma cancel_ipc_cur_sc_chargeable2:
   "\<lbrace>cur_sc_chargeable and ct_not_blocked\<rbrace>
    cancel_ipc x
    \<lbrace>\<lambda>_. cur_sc_chargeable\<rbrace>"
-  unfolding cancel_ipc_def
+  unfolding cancel_ipc_def cancel_all_ipc_loop_body_def
   apply (wpsimp wp: blocked_cancel_ipc_cur_sc_chargeable reply_remove_tcb_cur_sc_chargeable
                     cancel_signal_cur_sc_chargeable)
     apply (wpsimp wp: thread_set_cur_sc_chargeable_indep hoare_vcg_imp_lift' gts_wp thread_set_no_change_tcb_state)+
@@ -7700,7 +7735,7 @@ lemma cancel_all_ipc_budget_sufficient[wp]:
     and active_sc_tcb_at t and released_ipc_queues and active_sc_valid_refills\<rbrace>
    cancel_all_ipc epptr
    \<lbrace>\<lambda>_. budget_sufficient t\<rbrace>"
-  unfolding cancel_all_ipc_def
+  unfolding cancel_all_ipc_def cancel_all_ipc_loop_body_def
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rename_tac ep; case_tac "ep = IdleEP"; (solves wpsimp)?)
   apply (clarsimp simp: endpoint.case_eq_if)
@@ -7751,6 +7786,7 @@ lemma cancel_all_ipc_released_sc_at[wp]:
   apply (rule hoare_seq_ext, wpsimp)
    apply (rule hoare_strengthen_post[where Q="\<lambda>_. released_sc_at scp and current_time_bounded
                                                   and valid_refills scp"])
+    unfolding cancel_all_ipc_loop_body_def
     apply (wpsimp wp: mapM_x_wp' gts_wp)
    apply wpsimp+
   done
@@ -7774,6 +7810,7 @@ lemma cancel_all_ipc_released_sc_tcb_at[wp]:
   apply (rule hoare_seq_ext, wpsimp)
    apply (rule hoare_strengthen_post[where Q="\<lambda>_. released_sc_tcb_at tp and current_time_bounded
                         and active_sc_valid_refills"])
+    unfolding cancel_all_ipc_loop_body_def
     apply (wpsimp wp: mapM_x_wp' gts_wp)
    apply wpsimp+
   done
@@ -15720,6 +15757,7 @@ lemma cancel_all_ipc_not_queued:
    cancel_all_ipc epptr
    \<lbrace>\<lambda>rv. not_queued t\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
+  unfolding cancel_all_ipc_loop_body_def
   apply (wp reschedule_required_not_queued  | wpc | simp)+
       apply (rule hoare_gen_asm)
       apply (rule_tac S="set queue - {t}" in mapM_x_wp)
@@ -21975,7 +22013,8 @@ lemma
   "cancel_all_ipc ep \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
   and cancel_all_ipc_offset_sufficient[wp]:
   "cancel_all_ipc ep \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
-  unfolding cancel_all_ipc_def by (wpsimp wp: mapM_x_wp' gts_wp get_simple_ko_wp)+
+  unfolding cancel_all_ipc_def cancel_all_ipc_loop_body_def
+  by (wpsimp wp: mapM_x_wp' gts_wp get_simple_ko_wp)+
 
 lemma
   cancel_all_signals_cur_sc_offset_ready[wp]:
@@ -23307,6 +23346,7 @@ lemma cancel_all_ipc_active_sc_valid_refills[wp]:
   apply (rule hoare_seq_ext[OF _ get_epq_sp])
   apply (rule hoare_seq_ext, wpsimp)
    apply (rule hoare_strengthen_post[where Q="\<lambda>_. current_time_bounded and active_sc_valid_refills"])
+    unfolding cancel_all_ipc_loop_body_def
     apply (wpsimp wp: mapM_x_wp' gts_wp)
    apply wpsimp+
   done

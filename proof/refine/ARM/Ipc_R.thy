@@ -1944,8 +1944,6 @@ lemma possibleSwitchTo_valid_queues[wp]:
 lemma cancelAllIPC_valid_queues':
   "cancelAllIPC t \<lbrace> valid_queues' \<rbrace>"
   apply (clarsimp simp: cancelAllIPC_def)
-  apply (fold restartThreadIfNoFault_def)
-  apply (fold cancelAllIPC_loop_body_def)
   apply (wpsimp wp: mapM_x_wp' get_ep_inv' getEndpoint_wp)
   done
 
@@ -2057,23 +2055,6 @@ lemma bind_sc_reply_invs[wp]:
    apply fastforce
   apply (erule (1) valid_objs_sc_replies_distinct)
   done
-
-(* FIXME RT: move to AInvs *)
-crunches bind_sc_reply
-  for pspace_distinct[wp]: pspace_distinct
-  and pspace_aligned[wp]: pspace_aligned
-  and active_sc_valid_refills[wp]: active_sc_valid_refills
-  (ignore: update_sched_context)
-
-lemma bind_sc_reply_valid_objs[wp]:
-  "\<lbrace>valid_objs and reply_at reply_ptr and sc_at sc_ptr and
-    sc_replies_sc_at (\<lambda>a. reply_ptr \<notin> set a) sc_ptr\<rbrace>
-   bind_sc_reply sc_ptr reply_ptr
-   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  unfolding bind_sc_reply_def
-  apply (wpsimp wp: hoare_list_all_lift)
-  apply (drule (1) valid_objs_ko_at)
-  by (clarsimp simp: valid_obj_def valid_sched_context_def sc_at_pred_n_def obj_at_def)
 
 lemma replyPush_corres:
   "can_donate = can_donate' \<Longrightarrow>
@@ -2329,12 +2310,6 @@ lemma tcbEPFindIndex_inv[wp]:
 
 crunches tcbEPAppend
   for ep_at'[wp]: "ep_at' epptr"
-
-(* FIXME RT: move to AInvs *)
-crunches reply_push
-  for pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
-  (wp: crunch_wps simp: crunch_simps)
 
 crunches bindScReply
   for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
@@ -4180,38 +4155,6 @@ lemma ntfn_relation_par_inj:
   "ntfn_relation ntfn ntfn' \<Longrightarrow> ntfn_sc ntfn = ntfnSc ntfn'"
   by (simp add: ntfn_relation_def)
 
-lemma set_sc_obj_ref_ko_not_tcb_at[wp]:
-  "set_sc_obj_ref f scp v \<lbrace>\<lambda>s. \<not> ko_at (TCB tcb) t s\<rbrace>"
-  by (wpsimp simp: update_sched_context_def set_object_def obj_at_def pred_neg_def
-               wp: get_object_wp)
-
-lemma set_sc_obj_ref_valid_tcb[wp]:
-  "set_sc_obj_ref f scp v \<lbrace>valid_tcb ptr tcb\<rbrace>"
-  by (wpsimp wp: get_object_wp simp: update_sched_context_def)
-
-lemma set_sc_obj_ref_valid_tcbs[wp]:
-  "set_sc_obj_ref f scp v \<lbrace>valid_tcbs\<rbrace>"
-  unfolding valid_tcbs_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
-
-lemma valid_tcbs_valid_tcbE:
-  assumes "tcb_at t s"
-          "valid_tcbs s"
-          "\<And>tcb. ko_at (TCB tcb) t s \<Longrightarrow> valid_tcb t tcb s \<Longrightarrow> R s (TCB tcb)"
-  shows "obj_at (R s) t s"
-  using assms
-  apply (clarsimp simp: obj_at_def)
-  apply (rename_tac ko)
-  apply (case_tac ko; clarsimp simp: is_tcb_def)
-  apply (rename_tac tcb)
-  apply (prop_tac "valid_tcb t tcb s")
-   apply (clarsimp simp: valid_tcbs_def)
-   apply (drule_tac x=t in spec)
-   apply (drule_tac x=tcb in spec)
-   apply (clarsimp simp: obj_at_def)
-  apply clarsimp
-  done
-
 lemma thread_set_weak_valid_sched_action2:
   "\<lbrace>weak_valid_sched_action and scheduler_act_not tptr\<rbrace> thread_set f tptr \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
   apply (wpsimp wp: thread_set_wp simp: obj_at_kh_kheap_simps vs_all_heap_simps fun_upd_def
@@ -4338,18 +4281,6 @@ lemma maybeReturnSc_valid_tcbs'[wp]:
   apply (wpsimp wp: threadSet_valid_tcbs' threadGet_wp getNotification_wp
                     hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply (fastforce simp: obj_at'_def projectKOs)
-  done
-
-lemma maybe_return_sc_valid_tcbs[wp]:
-  "\<lbrace>valid_tcbs and tcb_at tcb_ptr\<rbrace>
-   maybe_return_sc ntfn_ptr tcb_ptr
-   \<lbrace>\<lambda>_. valid_tcbs\<rbrace>"
-  apply (clarsimp simp: maybe_return_sc_def)
-  apply (wpsimp wp: set_object_valid_tcbs thread_get_wp get_simple_ko_wp
-              simp: set_tcb_obj_ref_def get_tcb_obj_ref_def get_sk_obj_ref_def)
-  apply (clarsimp simp: obj_at_def is_tcb_def valid_tcbs_def)
-  apply (fastforce simp: get_tcb_def
-                  split: Structures_A.kernel_object.splits)
   done
 
 lemma maybeReturnSc_valid_queues:

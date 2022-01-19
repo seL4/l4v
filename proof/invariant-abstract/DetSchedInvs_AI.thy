@@ -3670,6 +3670,11 @@ lemma invs_strengthen_cur_sc_tcb_are_bound:
   "\<lbrakk>schact_is_rct s; cur_sc_tcb s; sym_refs (state_refs_of s)\<rbrakk> \<Longrightarrow> cur_sc_tcb_are_bound s"
   by (fastforce intro: cur_sc_tcb_rev simp: schact_is_rct_def tcb_at_kh_simps[symmetric])
 
+lemma cur_sc_tcb_are_bound_sym:
+  "\<lbrakk>cur_sc_tcb_are_bound s; sym_refs (state_refs_of s)\<rbrakk>
+   \<Longrightarrow> heap_ref_eq (cur_thread s) (cur_sc s) (sc_tcbs_of s) "
+  by (drule sym_refs_inv_tcb_scps, clarsimp simp: heap_refs_inv_def2)
+
 abbreviation ct_not_blocked where
   "ct_not_blocked s \<equiv> ct_in_state (\<lambda>x. \<not>ipc_queued_thread_state x) s"
 
@@ -3880,6 +3885,10 @@ lemma cur_sc_active_active_sc_tcb_at_cur_thread:
                         obj_at_def active_sc_def)
   apply (fastforce dest: sym_ref_sc_tcb)
   done
+
+lemma active_sc_tcb_at_ct_cur_sc_active:
+  "cur_sc_tcb_are_bound s \<Longrightarrow> cur_sc_active s \<longleftrightarrow> active_sc_tcb_at (cur_thread s) s"
+   by (clarsimp simp: vs_all_heap_simps)
 
 lemma it_not_in_release_qI:
   "\<lbrakk>valid_release_q s; valid_idle s\<rbrakk> \<Longrightarrow> not_in_release_q (idle_thread s) s"

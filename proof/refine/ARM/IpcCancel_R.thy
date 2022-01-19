@@ -2619,19 +2619,6 @@ lemma sts_sch_act_not_ct[wp]:
 
 text \<open>Cancelling all IPC in an endpoint or notification object\<close>
 
-(* FIXME RT: use in Haskell in cancelAllIPC and cancelBadgedSends? *)
-definition
-  "restartThreadIfNoFault t
-    \<equiv> do fault \<leftarrow> threadGet tcbFault t;
-          if isNothing fault
-          then do setThreadState Restart t;
-                  scOpt \<leftarrow> threadGet tcbSchedContext t;
-                  ifCondRefillUnblockCheck scOpt (Just False) (Just True);
-                  possibleSwitchTo t
-               od
-          else setThreadState Inactive t
-       od"
-
 global_interpretation refillUnblockCheck: typ_at_all_props' "refillUnblockCheck scp"
   by typ_at_props'
 
@@ -2720,88 +2707,11 @@ lemma restart_thread_if_no_fault_corres:
   apply (clarsimp simp: obj_at'_def projectKOs valid_tcb_state'_def)
   done
 
-(* FIXME RT: move to AInvs *)
-lemma restart_thread_if_no_fault_tcb_sts_of_other:
-  "\<lbrace>\<lambda>s. Q (pred_map P (tcb_sts_of s) t') \<and> t \<noteq> t'\<rbrace>
-   restart_thread_if_no_fault t
-   \<lbrace>\<lambda>_ s. Q (pred_map P (tcb_sts_of s) t')\<rbrace>"
-  apply (clarsimp simp: restart_thread_if_no_fault_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (wpsimp wp: possible_switch_to_pred_tcb_at[unfolded obj_at_kh_kheap_simps]
-                    set_thread_state_pred_map_tcb_sts_of thread_get_inv)
-  done
-
-(* FIXME RT: move to AInvs *)
-lemma reply_unlink_tcb_tcb_sts_of_other:
-  "\<lbrace>\<lambda>s. Q (pred_map P (tcb_sts_of s) t') \<and> t \<noteq> t'\<rbrace>
-   reply_unlink_tcb t r
-   \<lbrace>\<lambda>_ s. Q (pred_map P (tcb_sts_of s) t')\<rbrace>"
-  apply (clarsimp simp: reply_unlink_tcb_def)
-  apply (rule hoare_seq_ext_skip, wpsimp)+
-  apply (wpsimp wp: set_thread_state_pred_map_tcb_sts_of)
-  done
-
 crunches possibleSwitchTo
   for sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
 
 global_interpretation possibleSwitchTo: typ_at_all_props' "possibleSwitchTo target"
   by typ_at_props'
-
-(* FIXME RT: move to AInvs *)
-lemma restart_thread_if_no_fault_reply_tcb_reply_at[wp]:
-  "restart_thread_if_no_fault t \<lbrace>reply_tcb_reply_at ((=) (Some t')) r_opt\<rbrace>"
-  apply (clarsimp simp: sk_obj_at_pred_def)
-  apply (wpsimp wp: restart_thread_if_no_fault_obj_at_impossible')
-  done
-
-(* FIXME RT: move to AInvs *)
-lemma reply_unlink_tcb_reply_tcb_reply_at_other:
-  "\<lbrace>\<lambda>s. reply_tcb_reply_at ((=) (Some t')) r' s \<and> t' \<noteq> t\<rbrace>
-   reply_unlink_tcb t r
-   \<lbrace>\<lambda>_ s. reply_tcb_reply_at ((=) (Some t')) r' s\<rbrace>"
-  apply (wpsimp wp: update_sk_obj_ref_wps get_simple_ko_wp gts_wp
-              simp: reply_unlink_tcb_def)
-  apply (clarsimp simp: reply_tcb_reply_at_def obj_at_def pred_tcb_at_def)
-  done
-
-definition
-  "reply_unlink_ts_pred t s
-    \<equiv> \<forall>ep r_opt pl.
-       pred_map ((=) (Structures_A.thread_state.BlockedOnReceive ep (Some r_opt) pl)) (tcb_sts_of s) t
-       \<longrightarrow> reply_tcb_reply_at ((=) (Some t)) r_opt s"
-
-(* FIXME RT: move to AInvs or even use in abstract spec? *)
-definition
-  "cancel_all_ipc_loop_body t
-    \<equiv> do st \<leftarrow> get_thread_state t;
-          reply_opt \<leftarrow> case st of Structures_A.thread_state.BlockedOnReceive x r_opt xa
-                                   \<Rightarrow> return r_opt
-                               | _ \<Rightarrow> return None;
-          when (reply_opt \<noteq> None) $ reply_unlink_tcb t (the reply_opt);
-          restart_thread_if_no_fault t
-       od"
-
-(* FIXME RT: move to AInvs *)
-lemma cancel_all_ipc_loop_body_reply_unlink_ts_pred_other:
-  "\<lbrace>\<lambda>s. reply_unlink_ts_pred t s \<and> t' \<noteq> t\<rbrace>
-   cancel_all_ipc_loop_body t'
-   \<lbrace>\<lambda>_. reply_unlink_ts_pred t\<rbrace>"
-  unfolding reply_unlink_ts_pred_def cancel_all_ipc_loop_body_def
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (wpsimp wp: restart_thread_if_no_fault_tcb_sts_of_other reply_unlink_tcb_tcb_sts_of_other
-                    reply_unlink_tcb_reply_tcb_reply_at_other hoare_vcg_all_lift
-                    hoare_vcg_imp_lift')
-  done
-
-(* FIXME RT: use in Haskell? *)
-definition
-  "cancelAllIPC_loop_body t
-    \<equiv> do st \<leftarrow> getThreadState t;
-          replyOpt \<leftarrow> return (if isReceive st then replyObject st else Nothing);
-          case replyOpt of None \<Rightarrow> return () | Some reply \<Rightarrow> replyUnlink reply t;
-          restartThreadIfNoFault t
-       od"
 
 crunches ifCondRefillUnblockCheck
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
@@ -3498,7 +3408,8 @@ lemma sch_act_wf_weak[elim!]:
 lemma cancelAllIPC_invs'[wp]:
   "cancelAllIPC ep_ptr \<lbrace>invs'\<rbrace>"
   supply valid_dom_schedule'_def[simp]
-  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
+  unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
+  apply (simp add: ep'_Idle_case_helper cong del: if_cong)
   apply (intro hoare_seq_ext[OF _ stateAssert_sp])
   apply (wpsimp wp: rescheduleRequired_invs' cancel_all_invs'_helper
                     hoare_vcg_const_Ball_lift
@@ -3609,14 +3520,6 @@ lemma setQueue_valid_ep'[wp]:
   apply (clarsimp simp: valid_ep'_def split: endpoint.splits)
   done
 
-lemma addToBitmap_valid_ep'[wp]:
-  "addToBitmap tdom prio \<lbrace>valid_ep' ep\<rbrace>"
-  apply (clarsimp simp: addToBitmap_def modifyReadyQueuesL2Bitmap_def getReadyQueuesL2Bitmap_def
-                        modifyReadyQueuesL1Bitmap_def getReadyQueuesL1Bitmap_def)
-  apply wpsimp
-  apply (clarsimp simp: valid_ep'_def split: endpoint.splits)
-  done
-
 lemma tcbSchedEnqueue_valid_ep'[wp]:
   "tcbSchedEnqueue thread \<lbrace>valid_ep' ep\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def unless_def when_def)
@@ -3625,20 +3528,6 @@ lemma tcbSchedEnqueue_valid_ep'[wp]:
   apply (rule hoare_seq_ext_skip, wpsimp wp: hoare_if)+
   apply (wpsimp wp: threadSet_wp)
   apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs objBitsKO_def split: endpoint.splits)
-  done
-
-lemma rescheduleRequired_valid_ep'[wp]:
-  "rescheduleRequired \<lbrace>valid_ep' ep\<rbrace>"
-  apply (clarsimp simp: rescheduleRequired_def)
-  apply (rule hoare_seq_ext_skip, (solves \<open>wpsimp wp: isSchedulable_inv\<close>))+
-  apply (wpsimp simp: valid_ep'_def split: endpoint.splits)
-  done
-
-lemma possibleSwitchTo_valid_ep'[wp]:
-  "possibleSwitchTo target \<lbrace>valid_ep' ep\<rbrace>"
-  apply (clarsimp simp: possibleSwitchTo_def)
-  apply (wpsimp wp: threadGet_inv hoare_drop_imps hoare_vcg_if_lift2 inReleaseQueue_inv)
-  apply (clarsimp simp: valid_ep'_def split: endpoint.splits)
   done
 
 lemma cancelAllIPC_valid_objs'[wp]:
@@ -3655,8 +3544,6 @@ lemma cancelAllIPC_valid_objs'[wp]:
    apply wpsimp
   apply (rule_tac Q="\<lambda>_ s. valid_objs' s \<and> valid_ep' ep s" in hoare_strengthen_post; clarsimp)
   apply (rule mapM_x_wp')
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp wp: replyUnlink_valid_objs')
   by wpsimp
 
 lemma cancelAllSignals_valid_objs'[wp]:
@@ -3681,7 +3568,7 @@ lemma cancelAllIPC_st_tcb_at:
   "\<lbrace>st_tcb_at' P t and K (P Inactive \<and> P Restart)\<rbrace>
    cancelAllIPC epptr
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  unfolding cancelAllIPC_def
+  unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
   apply (rule hoare_gen_asm)
   apply simp
   apply (intro hoare_seq_ext[OF _ stateAssert_sp])
@@ -3790,7 +3677,8 @@ lemma cancelAllIPC_unlive:
   "\<lbrace>valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
    cancelAllIPC ep
    \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
-  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
+  unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
+  apply (simp add: ep'_Idle_case_helper)
   apply (repeat_unless \<open>rule hoare_seq_ext[OF _ get_ep_sp']\<close>
                        \<open>rule hoare_seq_ext_skip, wpsimp\<close>)
   apply (rename_tac endpoint)
@@ -3907,15 +3795,7 @@ lemma cancelBadgedSends_filterM_helper':
       filterM (\<lambda>t. do st \<leftarrow> getThreadState t;
                       if blockingIPCBadge st = badge
                       then
-                        do fault \<leftarrow> threadGet tcbFault t;
-                           y \<leftarrow> if fault = None
-                                then
-                                  do y \<leftarrow> setThreadState Structures_H.thread_state.Restart t;
-                                     scOpt <- threadGet tcbSchedContext t;
-                                     y <- ifCondRefillUnblockCheck scOpt (Some False) (Some True);
-                                     possibleSwitchTo t
-                                  od
-                                else setThreadState Structures_H.thread_state.Inactive t;
+                        do restartThreadIfNoFault t;
                            return False
                         od
                       else return True
@@ -3927,6 +3807,7 @@ lemma cancelBadgedSends_filterM_helper':
                                                  \<union> tcb_non_st_state_refs_of' s y)
            \<and> distinct rv \<and> distinct (xs @ ys) \<and> set rv \<subseteq> set xs \<and> (\<forall>x \<in> set xs. tcb_at' x s)\<rbrace>"
   supply valid_dom_schedule'_def[simp]
+  unfolding restartThreadIfNoFault_def
   apply (simp only: invs'_def)
   apply (rule_tac xs=xs in rev_induct)
    apply clarsimp
@@ -4082,14 +3963,12 @@ lemma cancelBadgedSends_corres:
                                   split: thread_state.splits)
                   apply (clarsimp simp: o_def dc_def[symmetric] liftM_def)
                   apply (rule corres_guard_imp)
-                    apply (subst bind_assoc[symmetric])
-                    apply (rule corres_guard_imp)
-                      apply (fold restartThreadIfNoFault_def[simplified])
-                      apply (rule corres_split_deprecated[OF _ restart_thread_if_no_fault_corres])
-                        apply (rule corres_return_eq_same, simp)
-                       apply (rule hoare_TrueI[where P=\<top>])
-                      apply (rule hoare_TrueI[where P=\<top>])
-                     apply simp+
+                    apply (rule corres_split_deprecated[OF _ restart_thread_if_no_fault_corres])
+                      unfolding restartThreadIfNoFault_def
+                      apply (rule corres_return_eq_same, simp)
+                     apply (rule hoare_TrueI[where P=\<top>])
+                    apply (rule hoare_TrueI[where P=\<top>])
+                   apply simp+
                 apply (wpsimp wp: gts_wp)
                apply (wpsimp wp: gts_wp')
               apply (clarsimp simp: st_tcb_def2 st_tcb_at_refs_of_rev valid_sched_def
