@@ -39,16 +39,15 @@ lemma set_cap_ioports':
   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: valid_ioports_def)
   apply (rule hoare_conjI)
-   apply (simp add: all_ioports_issued_def)
-   apply wpx
+   apply (simp add: all_ioports_issued_def Ball_def)
+   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
    apply (clarsimp simp: cte_wp_at_caps_of_state safe_ioport_insert_def elim!: ranE split: if_split_asm)
-    apply (auto intro: ranI simp: all_ioports_issued_def)[2]
-  apply wpx
+    apply (auto)[2]
+  apply (unfold ioports_no_overlap_def Ball_def)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
   apply (clarsimp simp: cte_wp_at_caps_of_state safe_ioport_insert_def elim!: ranE split: if_split_asm)
-  apply (clarsimp simp: ioports_no_overlap_def ran_def)
-  apply (erule disjE)
-   apply (auto simp: ioports_no_overlap_def ran_def)[1]
-  by (force simp: ioports_no_overlap_def ran_def) (* long *)
+    apply blast+
+  done
 
 lemma set_cap_ioports_no_new_ioports:
  "\<lbrace>\<lambda>s. valid_ioports s
@@ -57,13 +56,18 @@ lemma set_cap_ioports_no_new_ioports:
   \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"
   apply (simp add: valid_ioports_def)
   apply (rule hoare_conjI)
-   apply (simp add: all_ioports_issued_def)
-   apply wpx
-   apply (clarsimp simp: cte_wp_at_caps_of_state elim!: ranE split: if_split_asm)
-    apply (auto intro: ranI simp: all_ioports_issued_def)[2]
-  apply wpx
-  apply (clarsimp simp: cte_wp_at_caps_of_state elim!: ranE split: if_split_asm)
-  by (auto intro: ranI simp: ioports_no_overlap_def ran_def)
+   apply (simp add: all_ioports_issued_def Ball_def)
+   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
+   apply (clarsimp simp: cte_wp_at_caps_of_state safe_ioport_insert_def elim!: ranE split: if_split_asm)
+    apply (auto)[2]
+  apply (unfold ioports_no_overlap_def Ball_def)
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (clarsimp simp: cte_wp_at_caps_of_state all_ioports_issued_def ioports_no_overlap_def
+                  elim!: ranE
+                  split: if_split_asm)
+    apply (metis Int_empty_left ranI)
+   apply (metis Int_empty_right ranI)
+  by (meson ranI)
 
 lemma valid_ioportsD:
   "\<lbrakk>valid_ioports s; caps_of_state s p = Some cap; cap' \<in> ran (caps_of_state s);
@@ -120,7 +124,7 @@ lemma replace_cap_invs:
    apply (erule allEI, erule allEI)
    apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
    apply (clarsimp simp: gen_obj_refs_subset)
-   apply (drule(1) disjoint_subset, simp)
+   apply (drule(1) disjoint_subset, erule (1) notE)
   apply (rule conjI)
    apply (erule descendants_inc_minor)
     apply simp

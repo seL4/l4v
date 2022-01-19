@@ -50,7 +50,7 @@ next
   case (Suc n')
 
   have b: "\<And>i. word_rsplit (0 :: machine_word) ! (7 - i) = (0 :: 8 word)"
-    apply (simp add: word_rsplit_0)
+    apply (simp add: word_rsplit_0 word_bits_def)
     apply (case_tac i; simp; rename_tac i)+
     done
 
@@ -566,8 +566,7 @@ lemma delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc
-                   empty_fail_mapM_x ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)

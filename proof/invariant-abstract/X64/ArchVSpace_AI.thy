@@ -95,15 +95,7 @@ lemma asid_low_high_bits':
      asid_high_bits_of x = asid_high_bits_of y;
      asid_wf x; asid_wf y \<rbrakk>
   \<Longrightarrow> x = y"
-  apply (rule asid_low_high_bits)
-     apply (rule word_eqI)
-     apply (subst (asm) bang_eq)
-     apply (simp add: nth_ucast asid_low_bits_def word_size)
-    apply (rule word_eqI)
-    apply (subst (asm) bang_eq)+
-    apply (simp add: nth_ucast asid_low_bits_def)
-   apply assumption+
-  done
+  by (rule asid_low_high_bits; (assumption|word_eqI_solve simp: asid_low_bits_def)?)
 
 lemma is_aligned_asid_low_bits_of_zero:
   "is_aligned asid asid_low_bits \<longleftrightarrow> asid_low_bits_of asid = 0"
@@ -296,7 +288,7 @@ lemma ex_asid_high_bits_plus:
    prefer 2
    apply fastforce
   apply (clarsimp simp: linorder_not_less)
-  apply (subgoal_tac "n < 12", simp)
+  apply (subgoal_tac "n < 12", fastforce)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -311,7 +303,7 @@ lemma asid_high_bits_shl:
   apply (rule context_conjI)
    apply (clarsimp simp add: linorder_not_less [symmetric])
   apply simp
-  apply (subgoal_tac "n < 12", simp)
+  apply (subgoal_tac "n < 12", fastforce)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
