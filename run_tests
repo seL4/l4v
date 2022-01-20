@@ -12,7 +12,7 @@ import subprocess
 
 # Settings
 L4V_ARCH_DEFAULT="ARM"
-L4V_ARCH_LIST=["ARM","ARM_HYP","X64","RISCV64"]
+L4V_ARCH_LIST=["ARM","ARM_HYP","X64","RISCV64", "AARCH64"]
 
 # Fetch directory this script is stored in.
 DIR=os.path.dirname(os.path.realpath(__file__))
@@ -54,6 +54,29 @@ EXCLUDE["X64"]=[
 ]
 
 EXCLUDE["RISCV64"]=[
+    "AutoCorresSEL4",
+    "DSpec",
+    "DBaseRefine",
+    "CamkesGlueProofs",
+    "AsmRefine"
+]
+
+EXCLUDE["AARCH64"]=[
+    # To be eliminated/refined as development progresses
+    "ASpec",
+    "ExecSpec",
+    "CKernel",
+
+    # Tools and unrelated content, removed for development
+    "CParser",
+    "AutoCorres",
+    "CamkesGlueSpec",
+    "Sep_Algebra",
+    "Concurrency",
+    "EVTutorial",
+    "TakeGrant",
+
+    # Longer-term exclusions
     "AutoCorresSEL4",
     "DSpec",
     "DBaseRefine",
