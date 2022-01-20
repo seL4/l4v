@@ -100,7 +100,6 @@ crunches set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
   (wp: store_word_offs_respects_in_ipc)
 
-crunch inv[Ipc_AC_assms, wp]: arch_get_sanitise_register_info P
 crunch pas_refined[Ipc_AC_assms, wp]: handle_arch_fault_reply "pas_refined aag"
 
 lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
