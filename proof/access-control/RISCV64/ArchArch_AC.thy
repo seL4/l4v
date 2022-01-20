@@ -41,7 +41,6 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
   apply (rule is_aligned_add_less_t2n[where n=word_size_bits])
      apply (simp_all add: msg_align_bits' word_size_word_size_bits is_aligned_mult_triv2)
    apply (simp_all add: word_size_word_size_bits word_size_bits_def)
-   apply (simp add: word_size_def)
   apply (erule word_less_power_trans_ofnat[where k=3 and m=10, simplified], simp)
   done
 

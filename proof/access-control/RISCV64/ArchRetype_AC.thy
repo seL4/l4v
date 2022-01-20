@@ -212,7 +212,7 @@ lemma freeMemory_vms:
   apply (simp add: freeMemory_def machine_op_lift_def machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
    apply (simp add: storeWord_def | wp)+
-   apply (simp add: word_rsplit_0 upto.simps)
+   apply (simp add: word_rsplit_0 upto.simps word_bits_def)
   apply simp
   done
 
@@ -278,9 +278,8 @@ lemma storeWord_integrity_autarch:
    \<lbrace>\<lambda>_ ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
   unfolding storeWord_def
   apply wp
-  apply (auto simp: upto.simps integrity_def is_aligned_mask [symmetric] word_size_bits_def
+  by (auto simp: upto.simps integrity_def is_aligned_mask [symmetric] word_size_bits_def word_bits_def
             intro!: trm_lrefl ptr_range_memI ptr_range_add_memI)
-  done
 
 (* TODO: proof has mainly been copied from dmo_clearMemory_respects *)
 lemma dmo_freeMemory_respects[Retype_AC_assms]:
@@ -316,9 +315,8 @@ lemma storeWord_respects:
    \<lbrace>\<lambda>_ ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
   unfolding storeWord_def word_size_bits_def
   apply wp
-  apply (auto simp: upto.simps integrity_def is_aligned_mask [symmetric]
+  by (auto simp: upto.simps integrity_def is_aligned_mask [symmetric] word_bits_def
             intro!: trm_write ptr_range_memI ptr_range_add_memI)
-  done
 
 lemma dmo_clearMemory_respects'[Retype_AC_assms]:
   "\<lbrace>integrity aag X st and
@@ -366,7 +364,7 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
   apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
   apply (fastforce intro: tro_lrefl tre_lrefl
                     dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
-                    simp: image_def p_assoc_help power_sub )
+                    simp: image_def p_assoc_help power_sub)
   done
 
 end
