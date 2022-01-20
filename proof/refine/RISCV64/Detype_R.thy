@@ -3568,7 +3568,6 @@ lemma no_overlap_check:
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"
-  including no_0_dvd
   apply (clarsimp split:option.splits simp:assert_def lookupAround2_char1 not_less)
   apply (rule ccontr)
   apply (frule(1) pspace_no_overlapD')
