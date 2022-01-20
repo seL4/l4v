@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, ARM_HYP, RISCV64, X64]
+        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
     # test only most recent push:
     concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
     steps:
