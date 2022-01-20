@@ -95,7 +95,7 @@ proof -
              od)" for P Q
     apply (corressimp corres: corres_gets_global_pt corres_machine_op)
      apply fastforce
-    apply (simp add: RISCV64.addrFromKPPtr_def addrFromKPPtr_def)
+    apply (simp add: addrFromKPPtr_def)
     done
 
   show ?thesis
@@ -277,9 +277,7 @@ lemma is_aligned_asid_low_bits_of_zero:
 
 lemma mask_is_asid_low_bits_of[simp]:
   "(ucast asid :: machine_word) && mask asid_low_bits = ucast (asid_low_bits_of asid)"
-  apply (simp add: asid_low_bits_of_def asid_low_bits_def)
-  apply (word_bitwise, simp add: word_size)
-  done
+  by (word_eqI_solve simp: asid_low_bits_of_def asid_low_bits_def)
 
 lemma deleteASIDPool_corres:
   assumes "base' = ucast base" "ptr' = ptr"

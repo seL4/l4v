@@ -61,7 +61,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
@@ -160,10 +160,7 @@ lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply (wp| clarsimp simp: bitmap_fun_defs)+
-  apply (subst (asm) complement_nth_w2p, simp_all)
-  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size wordRadix_def')
-  done
+  by (wp| clarsimp simp: bitmap_fun_defs)+
 
 lemma removeFromBitmap_valid_bitmapQ[wp]:
 " \<lbrace> valid_bitmapQ_except d p and bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
@@ -530,9 +527,6 @@ crunch ksIdleThread[wp]: tcbSchedDequeue "\<lambda>s. P (ksIdleThread s)"
 crunch ksDomSchedule[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomSchedule s)"
 (simp: unless_def)
 
-crunch ksDomScheduleIdx[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomScheduleIdx s)"
-(simp: unless_def)
-
 lemma tcbSchedDequeue_tcb_in_cur_domain'[wp]:
   "\<lbrace>tcb_in_cur_domain' t'\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
   apply (rule tcb_in_cur_domain'_lift)
@@ -556,6 +550,9 @@ lemma tcbSchedDequeue_tcbPriority[wp]:
   apply (clarsimp simp: tcbSchedDequeue_def)
   apply (wp hoare_when_weak_wp | simp)+
   done
+
+crunch ksDomScheduleIdx[wp]: tcbSchedDequeue "\<lambda>s. P (ksDomScheduleIdx s)"
+  (simp: unless_def)
 
 lemma tcbSchedDequeue_invs'[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace>
@@ -1216,8 +1213,6 @@ lemma bitmapQ_lookupBitmapPriority_simp: (* neater unfold, actual unfold is real
   apply (subst less_mask_eq)
    apply (rule word_of_nat_less)
     apply (fastforce intro: word_of_nat_less simp: wordRadix_def' unat_of_nat word_size)+
-  apply (subst unat_of_nat_eq)
-   apply (fastforce intro: word_log2_max[THEN order_less_le_trans] simp: word_size)+
   done
 
 lemma bitmapQ_from_bitmap_lookup:
