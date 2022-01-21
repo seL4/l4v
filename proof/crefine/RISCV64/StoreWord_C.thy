@@ -51,16 +51,15 @@ lemma byte_to_word_heap_upd_outside_range:
    byte_to_word_heap (m (p := v')) base off = byte_to_word_heap m base off"
   apply (simp add: byte_to_word_heap_def Let_def)
   apply (erule contrapos_np)
-  apply (clarsimp intro!: intvl_inter_le [where k=0 and ka=7, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=6, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=5, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=4, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=3, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=2, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=1, simplified, OF refl]
-                          intvl_inter_le [where k=0 and ka=0, simplified, OF refl]
-                   split: if_split_asm)
-  done
+  by (clarsimp intro!: intvl_inter_le [where k=0 and ka=7, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=6, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=5, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=4, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=3, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=2, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=1, simplified, OF refl]
+                       intvl_inter_le [where k=0 and ka=0, simplified, OF refl]
+                split: if_split_asm) (* long, many if_asm splits *)
 
 lemma intvl_range_conv:
   "\<lbrakk> is_aligned (ptr :: 'a :: len word) bits; bits < len_of TYPE('a) \<rbrakk> \<Longrightarrow>
@@ -97,7 +96,9 @@ proof -
     done
 
   thus ?thesis
-    by (rule byte_to_word_heap_upd_outside_range)
+    (* when this is "by ..", it waits for byte_to_word_heap_upd_outside_range to complete *)
+    apply (rule byte_to_word_heap_upd_outside_range)
+    done
 qed
 
 lemma update_ti_t_acc_foo:
@@ -181,36 +182,6 @@ lemma user_data_device_relation_upd:
               (\<lambda>ws. Arrays.update ws (unat (ucast ((ptr && mask pageBits) >> 3):: 9 word)) w)
               (the (cslift s (Ptr (ptr && ~~ mask pageBits)))))"
   by (simp add:cuser_user_data_device_relation_def )
-  (* If we use identity map, the following proof might be useful
-  unfolding cuser_user_data_device_relation_def
-  apply -
-  apply (erule allEI)
-  apply (case_tac "off = ucast ((ptr && mask pageBits) >> 2)")
-   apply (clarsimp simp: mask_pageBits_inner_beauty [OF al] byte_to_word_heap_def)
-   apply (subst index_update)
-    apply (simp, unat_arith, simp)
-   apply (subgoal_tac "map ((!) (word_rsplit w)) [0,1,2,3]
-                      = (word_rsplit w :: word8 list)")
-    apply (clarsimp simp: word_rcat_rsplit)
-   apply (cut_tac w=w and m=4 and 'a=8
-               in length_word_rsplit_even_size [OF refl])
-    apply (simp add: word_size)
-   apply (rule nth_equalityI[symmetric])
-    apply simp
-   apply (subgoal_tac "[0,1,2,3] = [0..<4]")
-    apply clarsimp
-   apply (rule nth_equalityI[symmetric])
-    apply simp
-   apply (auto dest: nat_less_4_cases)[1]
-  apply (frule more_pageBits_inner_beauty)
-  apply (simp add: byte_to_word_heap_upd_neq aligned_already_mask al
-                   byte_to_word_heap_upd_neq [where n=0, simplified])
-  apply (subst index_update2)
-   apply (cut_tac x=off in unat_lt2p, simp)
-   apply simp
-  apply simp
-  done
-  *)
 
 lemma deviceDataSeperate:
   "\<lbrakk>\<not> pointerInDeviceData ptr \<sigma>; pspace_distinct' \<sigma>; pspace_aligned' \<sigma>; ksPSpace \<sigma> x = Some KOUserDataDevice\<rbrakk>
@@ -1038,7 +1009,7 @@ proof -
                       horrible_helper)
      apply (subgoal_tac "(ptr && ~~ mask 3) + (ptr && mask 3) = ptr")
       apply (subgoal_tac "(ptr && mask 3) \<in> {0, 1, 2, 3,4,5,6,7}")
-       apply (auto split: if_split simp: fun_upd_idem)[1] (* long *)
+       subgoal by (auto split: if_split simp: fun_upd_idem) (* long *)
       apply (simp add: word_unat.Rep_inject[symmetric]
                   del: word_unat.Rep_inject)
       apply arith
@@ -1093,7 +1064,7 @@ proof -
       apply (cut_tac x=ptr in mask_lower_twice[where n=3 and m=pageBits])
        apply (simp add: pageBits_def)
       apply simp
-     apply (auto simp add: eval_nat_numeral horrible_helper2 simp del: unsigned_numeral
+     apply (auto simp add: eval_nat_numeral horrible_helper2 take_bit_Suc simp del: unsigned_numeral
                  elim!: less_SucE)[1]
     apply (rule iffI)
      apply clarsimp

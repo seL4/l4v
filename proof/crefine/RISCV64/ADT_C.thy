@@ -871,7 +871,7 @@ lemma cpspace_pte_relation_unique:
   apply (rule cmap_relation_unique'[OF inj_Ptr _ assms, where P=\<top> and P'=\<top>]; simp)
   apply (simp add: cpte_relation_def Let_def ucast_id
                    writable_from_vm_rights_def readable_from_vm_rights_def
-              split: pte.splits vmrights.splits)
+              split: pte.splits vmrights.splits split del: split_of_bool_asm)
   done
 
 lemma is_aligned_no_overflow_0:

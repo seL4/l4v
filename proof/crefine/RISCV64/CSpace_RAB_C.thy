@@ -114,7 +114,7 @@ lemmas wordFromRights_eq = inj_eq [OF wordFromRights_inj]
 
 lemma rightsFromWord_and:
   "rightsFromWord (a && b) = andCapRights (rightsFromWord a) (rightsFromWord b)"
-  by (simp add: rightsFromWord_def andCapRights_def)
+  by (simp add: rightsFromWord_def andCapRights_def del: bit_0)
 
 lemma andCapRights_ac:
   "andCapRights (andCapRights a b) c = andCapRights a (andCapRights b c)"

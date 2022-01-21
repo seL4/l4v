@@ -144,7 +144,6 @@ lemma capRemovable_spec:
   "\<forall>cap s.  \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> (isZombie cap \<or> cap = NullCap) \<and> capAligned cap\<rbrace>
      Call capRemovable_'proc
       {s'. ret__unsigned_long_' s' = from_bool (capRemovable cap (ptr_val (slot_' s)))}"
-  including no_0_dvd
   supply if_cong[cong]
   apply vcg
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
