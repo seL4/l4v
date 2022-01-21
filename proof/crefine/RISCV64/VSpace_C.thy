@@ -48,9 +48,6 @@ end
 
 context kernel_m begin
 
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
-
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
   by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
@@ -70,7 +67,6 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
-  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -278,7 +274,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -359,6 +355,8 @@ lemma getPPtrFromHWPTE_spec':
                pte_Ptr (ptrFromPAddr (pte_CL.ppn_CL (pte_lift
                             (the (clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C))) << pageBits)) \<rbrace>"
   by vcg (simp add: bit_simps)
+
+declare split_of_bool_asm[split del]
 
 lemma getPPtrFromHWPTE_corres:
   "ccorres (\<lambda>_ ptr. ptr = pte_Ptr (getPPtrFromHWPTE pte))
@@ -1301,7 +1299,6 @@ lemma unmapPage_ccorres:
        \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace> \<inter> \<lbrace> \<acute>pptr___unsigned_long = pptr \<rbrace>)
       hs
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid___unsigned_long_' vptr_' pptr___unsigned_long_')
    apply (simp add: ignoreFailure_liftM)

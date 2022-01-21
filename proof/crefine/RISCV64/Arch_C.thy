@@ -1451,7 +1451,7 @@ lemma framesize_to_from_H:
   "sz < 3 \<Longrightarrow> framesize_from_H (framesize_to_H sz) = sz"
    apply (clarsimp simp: framesize_to_H_def framesize_from_H_def framesize_defs
            split: if_split vmpage_size.splits)
-  by (word_bitwise, auto)
+  by (word_bitwise, auto simp del: bit_0)
 
 lemma ccap_relation_FrameCap_generics:
   "ccap_relation (ArchObjectCap (FrameCap word vmrights vmpage_size d map_data)) cap'

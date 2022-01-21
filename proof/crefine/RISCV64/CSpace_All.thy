@@ -151,7 +151,6 @@ lemma lookupSlotForCNodeOp_ccorres':
             {s. depth_' s = of_nat depth} ) []
   (lookupSlotForCNodeOp isSource croot capptr depth)
   (Call lookupSlotForCNodeOp_'proc)"
-  including no_take_bit no_0_dvd
   apply (cinit lift: capptr_' isSource_' root___struct_cap_C_' depth_')
    apply csymbr \<comment> \<open>slot_C_update\<close>
    apply csymbr \<comment> \<open>cap_get_capType\<close>
