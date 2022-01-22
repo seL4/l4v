@@ -542,7 +542,7 @@ lemma bl_to_bin_le2p_aux:
   apply (induct bs arbitrary: w)
    apply clarsimp
   apply (clarsimp split del: split_of_bool)
-  apply (drule meta_spec, erule xtr8 [rotated], simp add: Bit_def)+
+  apply (drule meta_spec, erule xtr8 [rotated], simp)+
   done
 
 lemma bl_to_bin_le2p:
@@ -560,15 +560,13 @@ lemma of_bl_length_le:
   apply safe
   apply (simp add: word_le_def take_bit_int_def uint_2p_alt uint_word_arith_bintrs(2))
   apply (subst mod_pos_pos_trivial)
+    apply simp
+   using not_le apply fastforce
+  apply (subst uint_word_of_int)
+  apply (subst mod_pos_pos_trivial)
     apply (rule bl_to_bin_ge0)
    apply (rule order_less_trans)
     apply (rule bl_to_bin_lt2p)
-   apply simp
-  apply (subst mod_pos_pos_trivial)
-    apply fastforce
-   apply (rule order_less_trans)
-    apply (rule less_1_helper)
-    apply (rule order_refl)
    apply simp
   apply (rule bl_to_bin_le2p)
   done
