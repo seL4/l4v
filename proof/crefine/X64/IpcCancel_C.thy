@@ -1382,7 +1382,6 @@ proof -
     by simp
 
   show ?thesis
-  including no_take_bit no_0_dvd
   apply (cinit lift: tcb_')
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'" and xf'="ret__unsigned_longlong_'"
             in ccorres_split_nothrow)

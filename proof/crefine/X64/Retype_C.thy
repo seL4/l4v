@@ -162,7 +162,7 @@ lemma heap_update_machine_word_is_heap_update_list:
 
 lemma to_bytes_machine_word_0:
   "to_bytes (0 :: machine_word) xs = [0, 0, 0, 0,0,0,0,0 :: word8]"
-  apply (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0)
+  apply (simp add: to_bytes_def typ_info_word word_rsplit_same word_rsplit_0 word_bits_def)
   done
 
 lemma globals_list_distinct_subset:
@@ -4421,7 +4421,7 @@ next
                     ex_disj_distrib field_simps)
 
     show "?thesis m x"
-      apply (simp add: xin word_rsplit_0 cong: if_cong)
+      apply (simp add: xin word_rsplit_0 word_bits_def cong: if_cong)
       apply (simp split: if_split)
       done
   qed
@@ -4494,7 +4494,6 @@ qed
 lemma range_cover_bound_weak:
   "\<lbrakk> n \<noteq> 0; range_cover ptr sz us n \<rbrakk> \<Longrightarrow>
     ptr + (of_nat n * 2 ^ us - 1) \<le> (ptr && ~~ mask sz) + 2 ^ sz - 1"
-  including no_0_dvd
   apply (frule range_cover_cell_subset[where x = "of_nat (n - 1)"])
    apply (simp add:range_cover_not_zero)
   apply (frule range_cover_subset_not_empty[rotated,where x = "of_nat (n - 1)"])
@@ -8676,7 +8675,7 @@ shows  "ccorres dc xfdc
        apply (subst upt_enum_offset_trivial)
          apply (rule word_leq_le_minus_one[OF word_of_nat_le])
           apply (fold_subgoals (prefix))[3]
-          subgoal premises prems using prems including no_0_dvd
+          subgoal premises prems using prems
              by (simp add:word_bits_conv minus_one_norm range_cover_not_zero[rotated])+
        apply (simp add: intvl_range_conv aligned_add_aligned[OF range_cover.aligned]
               is_aligned_shiftl_self range_cover_sz')
@@ -8845,7 +8844,7 @@ shows  "ccorres dc xfdc
       apply (erule cte_wp_at_weakenE')
       apply (clarsimp simp:blah word_and_le2 shiftl_t2n field_simps)
       apply (frule range_cover_bound''[where x = "of_nat (length destSlots) - 1"])
-       subgoal including no_0_dvd by (simp add: range_cover_not_zero[rotated])
+       subgoal by (simp add: range_cover_not_zero[rotated])
       subgoal by (simp add:field_simps)
      subgoal by (erule range_cover_subset[where p=0, simplified]; simp)
     apply clarsimp
