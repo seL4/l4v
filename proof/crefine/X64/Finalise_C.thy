@@ -2478,8 +2478,8 @@ lemma finaliseCap_ccorres:
    apply csymbr
    apply (simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: cap_get_tag_isCap isCap_simps from_bool_neq_0
-                    cong: if_cong simp del: Collect_const)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps
+                    cong: if_cong)
     apply (clarsimp simp: word_sle_def)
     apply (rule ccorres_if_lhs)
      apply (rule ccorres_fail)

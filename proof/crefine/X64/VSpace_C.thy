@@ -47,9 +47,6 @@ end
 
 context kernel_m begin
 
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
-
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
   by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
@@ -69,7 +66,6 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
-  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -306,7 +302,7 @@ lemma rf_sr_asidTable_None:
    apply (simp add: word_size nth_shiftr asid_bits_def asid_low_bits_def)
    apply (case_tac "n < 3", simp) (*asid_high_bits*)
    apply (clarsimp simp: linorder_not_less)
-   apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+   apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
    apply simp
   apply simp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
@@ -330,7 +326,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -342,7 +338,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI[rule_format])
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE)(*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE)(*asid_low_bits*)
   apply simp
   apply (case_tac "n < 3", simp) (*asid_high_bits*)
   apply (simp add: linorder_not_less)
@@ -628,10 +624,10 @@ lemma lookupPDPTSlot_ccorres:
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
   apply (frule page_map_l4_at_rf_sr, simp add: rf_sr_def, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-  apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def)
-  apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp)
-  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp+)
+  apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def split del: split_of_bool_asm)
+  apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp split del: split_of_bool_asm)
+  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp split del: split_of_bool_asm)
+  apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
   done
 
 (* For comparison, here is the ccorres proof. *)
@@ -671,8 +667,8 @@ lemma lookupPDPTSlot_ccorres':
    apply (frule (1) pd_pointer_table_at_rf_sr, clarsimp)
    apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps cpml4e_relation_def Let_def isPDPointerTablePML4E_def
-                  split: pml4e.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+                  split: pml4e.split_asm split del: split_of_bool_asm)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp split del: split_of_bool_asm)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps shiftl_t2n mask_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
@@ -720,6 +716,7 @@ lemma lookupPDSlot_ccorres:
        []
        (lookupPDSlot pm vptr)
        (Call lookupPDSlot_'proc)"
+  supply split_of_bool_asm[split del]
   apply (cinit lift: pml4_' vptr_')
    apply (rename_tac vptr' pml4)
    apply (simp add: liftE_bindE pdpte_case_isPageDirectoryPDPTE)
@@ -789,6 +786,7 @@ lemma lookupPTSlot_ccorres:
        []
        (lookupPTSlot pm vptr)
        (Call lookupPTSlot_'proc)"
+  supply split_of_bool_asm[split del]
   apply (cinit lift: vspace_' vptr_')
    apply (rename_tac vptr' pml4)
    apply (simp add: liftE_bindE pde_case_isPageTablePDE)
@@ -1748,6 +1746,7 @@ lemma modeUnmapPage_ccorres:
             liftE (storePDPTE p X64_H.InvalidPDPTE)
         odE)
        (Call modeUnmapPage_'proc)"
+  supply split_of_bool_asm[split del]
   apply (cinit' lift: page_size_' vroot_' vaddr___unsigned_long_' pptr_')
    apply ccorres_rewrite
    apply (rule ccorres_rhs_assoc)+
@@ -1801,7 +1800,6 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM Collect_True

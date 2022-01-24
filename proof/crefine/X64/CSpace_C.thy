@@ -524,7 +524,7 @@ lemma revokable_ccorres:
   apply (cinit' lift: derivedCap_' srcCap_')
    \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
-   apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
+   apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_rhs_assoc)
     apply (clarsimp simp: isCap_simps)
@@ -805,7 +805,7 @@ lemma update_freeIndex':
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
           apply word_bitwise
-          subgoal by (simp add: word_size untypedBits_defs)
+          subgoal by (simp add: word_size untypedBits_defs mask_def)
          apply (cut_tac i'_bound_concrete)
          subgoal by (simp add: unats_def)
         subgoal by (simp add: word_unat.Rep[where 'a=machine_word_len, simplified])
@@ -1490,7 +1490,7 @@ lemma emptySlot_helper:
    apply clarsimp
 
    apply (frule(1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
+   apply (clarsimp simp: typ_heap_simps' nextmdb_def nextcte_def)
    apply (intro conjI impI allI)
      \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
      apply clarsimp
@@ -2411,7 +2411,7 @@ lemma setIOPortMask_ccorres:
                    if_distrib[where f="\<lambda>c. test_bit c i" for i] word_ops_nth_size word_size
                    unat_shiftr_less_2p[of 6 10, simplified] unat_and_mask_less_2p[of 6, simplified]
                    less_Suc_eq_le Suc_le_eq not_less unat_arith_simps(1,2)[symmetric]
-                   if_if_same_output if_if_if_same_output)
+                   if_if_same_output if_if_if_same_output less_Suc_eq_le[where n=63, symmetric])
   apply (thin_tac "_ = _")
   apply (rule if_weak_cong)
   apply (rule ssubst[OF word_le_split_mask[where n=6], where P="\<lambda>f. e \<longleftrightarrow> f \<and> c" for e c])
@@ -2916,7 +2916,7 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
                  split: if_split if_split_asm)
   apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 6)
                       < unat ((2::machine_word) ^ 6)")
-   apply clarsimp
+   apply (clarsimp simp: shiftl_eq_mult)
   apply (rule unat_mono)
   apply (rule and_mask_less_size)
   apply (clarsimp simp: word_size)
@@ -3241,7 +3241,7 @@ lemma ccap_relation_PageCap_Size:
   apply (cases s; clarsimp simp: framesize_to_H_def framesize_from_H_def
                                  X86_SmallPage_def X86_LargePage_def X64_HugePage_def
                           split: if_splits cong: conj_cong)
-  apply (word_bitwise, simp)
+  apply (word_bitwise, simp del: bit_0)
   done
 
 lemma ccap_relation_PageCap_MappedASID:
