@@ -73,21 +73,34 @@ nextInstructionRegister = NextIP
 
 {- User-level Context -}
 
--- On RISC-V the representation of the user-level context of a thread is an array
--- of machine words, indexed by register name for the user registers.
+-- The FPU state consists of an array of 64 general registers, as well as special
+-- registers. We use an array for the general registers, with the convention that
+-- all unused entries map to 0.
+data FPUState = FPUState { fpuRegs :: Array Int Data.Word.Word64
+                         , fpuSr :: Data.Word.Word32
+                         , fpuCr :: Data.Word.Word32 }
+  deriving Show
 
-data UserContext = UC { fromUC :: Array Register Word }
+-- The representation of the user-level context of a thread is an array of
+-- machine words, indexed by register name for the user registers, plus the
+-- state of the FPU. There are no operations on the FPU state apart from save
+-- and restore at kernel entry and exit.
+data UserContext = UC { fromUC :: Array Register Word,
+                        fpuState :: FPUState }
   deriving Show
 
 -- A new user-level context is a list of values for the machine's registers.
 -- Registers are generally initialised to 0, but there may be machine-specific
--- initial values for certain registers.
+-- initial values for certain registers. The FPU state is zeroed.
+
+newFPUState :: FPUState
+newFPUState = FPUState (funPartialArray (const 0) (0,63)) 0 0
 
 newContext :: UserContext
-newContext = UC $ (funArray $ const 0)//initContext
+newContext = UC ((funArray $ const 0)//initContext) newFPUState
 
 -- Functions are provided to get and set a single register.
 
 getRegister r = gets $ (!r) . fromUC
 
-setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
+setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
