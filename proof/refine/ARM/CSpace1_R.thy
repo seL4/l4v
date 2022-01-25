@@ -144,9 +144,6 @@ lemma obj_size_relation:
                   pageBits_def ptBits_def pteBits_def pdBits_def pdeBits_def)
   done
 
-(* FIXME RT: move up *)
-lemmas bits_of_simps[simp] = bits_of_def[split_simps cap.split]
-
 lemma same_region_as_relation:
   "\<lbrakk> cap_relation c d; cap_relation c' d' \<rbrakk> \<Longrightarrow> same_region_as c c' = sameRegionAs d d'"
   apply (cases c)

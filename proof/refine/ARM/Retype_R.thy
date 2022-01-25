@@ -2174,9 +2174,7 @@ lemma createNewCaps_valid_cap:
            createNewCaps ty ptr n us dev
          \<lbrace>\<lambda>r s. (\<forall>cap \<in> set r. s \<turnstile>' cap)\<rbrace>"
 proof -
-  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                    atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost
-                    atLeastatMost_empty_iff split_paired_Ex
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   note [split del] = if_split
 
   show ?thesis
@@ -2997,8 +2995,7 @@ lemma caps_no_overlapD'':
    \<Longrightarrow> untypedRange c \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<noteq> {} \<longrightarrow>
        {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<subseteq> untypedRange c"
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps caps_no_overlap''_def
-        simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
+              simp del: atLeastAtMost_simps)
   apply (drule_tac x = cte in bspec)
     apply fastforce
   apply (erule(1) impE)
@@ -3016,8 +3013,7 @@ lemma valid_untyped'_helper:
           \<Longrightarrow> valid_cap' c (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr val)
                                                       (new_cap_addrs n ptr val) (ksPSpace s)\<rparr>)"
 proof -
-  note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-    Int_atLeastAtMost atLeastatMost_empty_iff
+  note blah[simp del] = atLeastAtMost_simps
   note cover' = range_cover_rel[where sbit' = "objBitsKO val",OF cover _ refl,simplified]
   assume pn : "pspace_aligned' s" "pspace_distinct' s" "pspace_bounded' s"
   and no_overlap: "pspace_no_overlap' ptr sz s"
@@ -3660,23 +3656,20 @@ lemma valid_cap'_range_no_overlap:
                     page_table_at'_def page_directory_at'_def)
    apply (fastforce simp: typ_at_to_obj_at_arches retype_obj_at_disj')
   apply (rename_tac word nat1 nat2)
-  apply (clarsimp simp:valid_untyped'_def retype_ko_wp_at'
-        simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp: valid_untyped'_def retype_ko_wp_at'
+              simp del: atLeastAtMost_simps)
   apply (frule aligned_untypedRange_non_empty)
    apply (simp add:isCap_simps)
   apply (intro conjI impI)
    apply (intro allI)
    apply (drule_tac x = ptr' in spec)
    apply (rule ccontr)
-   apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                             Int_atLeastAtMost atLeastatMost_empty_iff)
+   apply (clarsimp simp del: atLeastAtMost_simps)
    apply (erule disjE)
     apply (drule(2) disjoint_subset2 [OF obj_range'_subset])
     apply (drule(1) disjoint_subset2[OF psubset_imp_subset])
     apply (simp add: Int_absorb ptr_add_def p_assoc_help
-                del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                     Int_atLeastAtMost atLeastatMost_empty_iff)
+                del: atLeastAtMost_simps)
    apply (drule(1) obj_range'_subset)
    apply (drule_tac A'=" {word + of_nat nat2..word + 2 ^ nat1 - 1}" in disjoint_subset[rotated])
     apply clarsimp
@@ -3689,13 +3682,11 @@ lemma valid_cap'_range_no_overlap:
   apply (intro allI)
   apply (drule_tac x = ptr' in spec)
   apply (rule ccontr)
-  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                            Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp del: atLeastAtMost_simps)
   apply (drule(2) disjoint_subset2 [OF obj_range'_subset])
   apply (drule(1) disjoint_subset2)
   apply (simp add: Int_absorb ptr_add_def p_assoc_help
-              del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                   Int_atLeastAtMost atLeastatMost_empty_iff)
+              del: atLeastAtMost_simps)
   apply (clarsimp simp: retype_ko_wp_at')
     apply (drule (4) retype_ko_wp_at'_not[where gbits=0, simplified])
   apply (erule notE, simp)
@@ -4914,8 +4905,8 @@ lemma createObjects_null_filter':
     apply (drule(1) pspace_alignedD')
     apply (clarsimp)
     apply (erule is_aligned_no_overflow)
-   apply (simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                   Int_atLeastAtMost atLeastatMost_empty_iff add:Int_ac ptr_add_def p_assoc_help)
+   apply (simp del: atLeastAtMost_simps
+               add: Int_ac ptr_add_def p_assoc_help)
   apply (simp add:field_simps foldr_upd_app_if[folded data_map_insert_def] shiftl_t2n)
   apply auto
   done

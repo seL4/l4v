@@ -5761,17 +5761,6 @@ lemma updateCap_cap_to':
   apply (clarsimp simp: modify_map_def cte_wp_at_ctes_of cteCaps_of_def)
   done
 
-(* FIXME RT: do this in simple_ko *)
-lemmas setNotification_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF set_ntfn'.cte_wp_at' set_ntfn'.ksInterruptState]
-
-lemmas setEndpoint_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF set_ep'.cte_wp_at' set_ep'.ksInterruptState]
-
-(* FIXME RT: do this in simple_ko *)
-lemmas setThreadState_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF sts_ctes_wp_at setThreadState_ksInterruptState]
-
 crunches cancelSignal
   for cap_to'[wp]: "ex_cte_cap_wp_to' P p"
   (simp: crunch_simps wp: crunch_wps)
@@ -6632,13 +6621,6 @@ lemma capSwap_rvk_prog:
   apply simp
   apply arith
   done
-
-(* FIXME RT: do this in simple_ko *)
-lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_asidpool.ctes_of]
-lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ep'.ctes_of]
-lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF set_ntfn'.ctes_of]
-lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE.ctes_of]
-lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE.ctes_of]
 
 lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
 lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]

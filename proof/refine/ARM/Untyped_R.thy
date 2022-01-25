@@ -3140,8 +3140,7 @@ lemma createNewCaps_caps_overlap_reserved_ret':
   apply (drule(1) range_cover_subset)
    apply simp
   apply (clarsimp simp: ptr_add_def capRange_def
-                  simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                            Int_atLeastAtMost atLeastatMost_empty_iff)
+                  simp del: atLeastAtMost_simps)
   done
 
 lemma createNewCaps_descendants_range_ret':
@@ -3397,24 +3396,20 @@ lemma updateFreeIndex_updateCap_caps_no_overlap'':
   apply (clarsimp simp:caps_no_overlap''_def)
   apply (wp updateCap_ctes_of_wp)
   apply (clarsimp simp: modify_map_def ran_def cte_wp_at_ctes_of
-              simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                        Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex)
+              simp del: atLeastAtMost_simps)
   apply (case_tac "a = src")
-   apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex)
+   apply (clarsimp simp del: atLeastAtMost_simps)
    apply (erule subsetD[rotated])
    apply (elim allE impE)
      apply fastforce
     apply (clarsimp simp:isCap_simps)
    apply (erule subset_trans)
    apply (clarsimp simp:isCap_simps)
-  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex)
-   apply (erule subsetD[rotated])
+  apply clarsimp
   apply (elim allE impE)
-   prefer 2
+    prefer 2
     apply assumption
-  apply fastforce+
+   apply fastforce+
   done
 
 lemma updateFreeIndex_caps_no_overlap'':
@@ -3681,17 +3676,13 @@ lemma cte_wp_at_pspace_no_overlapI':
   apply (unfold pspace_no_overlap'_def)
   apply (intro allI impI)
   apply (unfold ko_wp_at'_def)
-  apply (clarsimp simp del: atLeastAtMost_iff
-          atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff  usableUntypedRange.simps)
+  apply (clarsimp simp del: atLeastAtMost_simps usableUntypedRange.simps)
   apply (drule spec)+
   apply (frule(1) pspace_distinctD')
   apply (frule(1) pspace_alignedD')
   apply (frule(1) pspace_boundedD')
   apply (erule(1) impE)+
-  apply (clarsimp simp: obj_range'_def simp del: atLeastAtMost_iff
-          atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff  usableUntypedRange.simps)
+  apply (clarsimp simp: obj_range'_def simp del: atLeastAtMost_simps usableUntypedRange.simps)
   apply (erule disjoint_subset2[rotated])
   apply (frule(1) le_mask_le_2p)
   apply (clarsimp simp:p_assoc_help)
@@ -4774,8 +4765,8 @@ lemma inv_untyped_corres':
        apply (clarsimp simp:range_cover_def)
        done
 
-    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex usableUntypedRange.simps
+    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
+                          usableUntypedRange.simps
 
     have vc'[simp] : "s' \<turnstile>' capability.UntypedCap dev (ptr && ~~ mask sz) sz idx"
       using vui' invs'
@@ -5499,8 +5490,8 @@ lemma invokeUntyped_invs'':
        apply (clarsimp simp:range_cover_def)
        done
 
-    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex usableUntypedRange.simps
+    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
+                          usableUntypedRange.simps
     note descendants_range[simp] = invokeUntyped_proofs.descendants_range[OF pf]
     note ps_no_overlap'[simp] = invokeUntyped_proofs.ps_no_overlap'[OF pf]
     note caps_no_overlap'[simp] = invokeUntyped_proofs.caps_no_overlap'[OF pf]

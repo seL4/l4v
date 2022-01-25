@@ -1961,8 +1961,7 @@ lemma pspace_no_overlap'_lift:
   shows "\<lbrace>Q and pspace_aligned' and pspace_distinct' and pspace_bounded' and pspace_no_overlap' ptr sz\<rbrace>
                 f \<lbrace>\<lambda>r. pspace_no_overlap' ptr sz\<rbrace>"
 proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
     apply (clarsimp simp:valid_def pspace_no_overlap'_def)
     apply (drule_tac x = x in spec)
@@ -2196,9 +2195,7 @@ proof -
                          word_plus_mono_right is_aligned_no_wrap' tcbSlot_defs)
   qed
 
-  note blah[simp del] = usableUntypedRange.simps atLeastAtMost_iff
-          atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = usableUntypedRange.simps atLeastAtMost_simps
 
   have step1:
     "\<lbrakk>(ptr, s) \<in> fst (locateCTE src s);
@@ -2974,8 +2971,7 @@ lemma modify_pde_psp_no_overlap':
    modify (ksPSpace_update (\<lambda>ps. ps(ptr \<mapsto> KOArch (KOPDE new_pde))))
    \<lbrace>\<lambda>a. pspace_no_overlap' ptr' sz\<rbrace>"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
   apply (clarsimp simp:simpler_modify_def ko_wp_at'_def
     valid_def typ_at'_def)
@@ -3120,9 +3116,7 @@ lemma modify_obj_commute':
   done
 
 lemma cte_wp_at_modify_pde:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
        \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := ksPSpace s(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
@@ -3152,9 +3146,7 @@ lemma cte_wp_at_modify_pde:
   done
 
 lemma storePDE_setCTE_commute:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   shows "monad_commute
      (pde_at' ptr and pspace_distinct' and pspace_aligned' and pspace_bounded' and
       cte_wp_at' (\<lambda>_. True) src)
@@ -3373,9 +3365,7 @@ lemma setCTE_modify_tcbDomain_commute:
     (setCTE src cte)
     (threadSet (tcbDomain_update (\<lambda>_. ra)) ptr)"
   proof -
-    note blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+    note blah[simp del] =  atLeastAtMost_simps
 
     have hint:
       "\<And>P ptr a cte b src ra. monad_commute (tcb_at' ptr and ko_wp_at' P a )
@@ -3459,11 +3449,6 @@ lemma curDomain_commute:
   done
 
 crunch inv[wp]: curDomain P
-
-(* FIXME RT: move to first occurence of atLeastatMost_subset_iff; usually the "notes" can just be removed *)
-lemmas atLeastAtMost_simps =
-  atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost atLeastatMost_empty_iff
-  atLeastAtMost_iff split_paired_Ex
 
 lemma placeNewObject_tcb_at':
   "\<lbrace>pspace_aligned' and pspace_distinct'
@@ -3928,9 +3913,7 @@ lemma createObjects'_pspace_no_overlap:
    createObjects' ptr (Suc n) val us
    \<lbrace>\<lambda>addrs s. pspace_no_overlap' (ptr + (1 + of_nat n << gz)) gz s\<rbrace>"
 proof -
-  note simps [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-                          atLeastatMost_subset_iff atLeastLessThan_iff
-                          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note simps [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   assume "gz = (objBitsKO val) + us"
   thus ?thesis
     apply -
@@ -4095,8 +4078,7 @@ lemma pspace_no_overlap'_le:
   assumes b: "sz < word_bits"
   shows "pspace_no_overlap' ptr sz' s"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   have diff_cancel: "\<And>a b c. (a::word32) + b - c = b + (a - c)"
    by simp
   have bound :"(ptr && ~~ mask sz') - (ptr && ~~ mask sz) \<le> 2 ^ sz - 2 ^ sz'"
@@ -4125,8 +4107,7 @@ lemma pspace_no_overlap'_le2:
   assumes "pspace_no_overlap' ptr sz s" "ptr \<le> ptr'"  "ptr' &&~~ mask sz = ptr && ~~ mask sz"
   shows "pspace_no_overlap' ptr' sz s"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
     using assms
     apply (clarsimp simp:pspace_no_overlap'_def)
@@ -4373,8 +4354,7 @@ lemma pspace_no_overlap'_modify:
           (((1::word32) + of_nat n << objBitsKO val + us) + ptr)
           (objBitsKO val + us)\<rbrace>"
   proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
   apply (clarsimp simp:simpler_modify_def valid_def pspace_no_overlap'_def)
   apply (frule(1) range_cover_tail_mask)
@@ -4722,8 +4702,7 @@ lemma createObjects'_pspace_no_overlap2:
     createObjects' ptr (Suc n) val us
   \<lbrace>\<lambda>addrs s. pspace_no_overlap' (ptr + (1 + of_nat n << gz)) sz s\<rbrace>"
 proof -
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
   apply (rule hoare_gen_asm)+
   apply (clarsimp simp:createObjects'_def split_def new_cap_addrs_fold')

@@ -141,6 +141,10 @@ lemmas get_pte_sp' = setObject_pte.getObject_sp'
 lemmas get_pde_sp' = setObject_pde.getObject_sp'
 lemmas get_asidpool_sp' = setObject_asidpool.getObject_sp'
 
+lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_asidpool.ctes_of]
+lemmas storePTE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePTE.ctes_of]
+lemmas storePDE_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF storePDE.ctes_of]
+
 lemma no_0_obj'_abstract:
   "(s, s') \<in> state_relation \<Longrightarrow> no_0_obj' s' \<Longrightarrow> kheap s 0 = None"
   by (auto intro: pspace_relation_None simp add: no_0_obj'_def)

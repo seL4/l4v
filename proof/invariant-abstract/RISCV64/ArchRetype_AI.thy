@@ -229,8 +229,7 @@ proof -
   have obj_at_pres: "\<And>P x. obj_at P x s \<Longrightarrow> obj_at P x ?ns"
   by (clarsimp simp: obj_at_def dest: domI)
    (erule pspace_no_overlapC [OF pn _ _ cover vp])
-  note blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff
+  note blah[simp del] = atLeastAtMost_simps
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt tysc
     by (clarsimp simp: obj_bits_dev_irr)
@@ -313,8 +312,7 @@ lemma valid_cap:
     "(s::'state_ext state) \<turnstile> cap \<and> untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}"
   shows "s' \<turnstile> cap"
 proof -
-  note [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                    Int_atLeastAtMost atLeastatMost_empty_iff
+  note [simp del] = atLeastAtMost_simps
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt tysc
     by (clarsimp simp: obj_bits_dev_irr)
@@ -799,9 +797,7 @@ lemma pspace_respects_device_region:
       and cap_refs_resp_dev: "cap_refs_respects_device_region s"
   shows "pspace_respects_device_region s'"
   proof -
-    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff
-          atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
   show ?thesis
   apply (cut_tac vp)
   apply (rule pspace_respects_device_regionI)

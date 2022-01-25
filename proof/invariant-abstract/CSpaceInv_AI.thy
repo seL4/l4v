@@ -38,6 +38,8 @@ requalify_facts
   is_valid_vtable_root_is_arch_cap
 end
 
+lemmas bits_of_simps[simp] = bits_of_def[split_simps cap.split]
+
 lemma is_valid_vtable_root_simps[simp]:
   "\<not> is_valid_vtable_root (UntypedCap a b c d)"
   "\<not> is_valid_vtable_root (ThreadCap tcb_ref)"

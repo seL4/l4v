@@ -592,9 +592,7 @@ lemma globalPDEWindow_neg_mask:
   done
 
 lemma copyGlobalMappings_ksPSpace_stable:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   assumes ptr_al: "is_aligned ptr pdBits"
   shows
    "\<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
@@ -774,10 +772,6 @@ lemma copyGlobalMappings_ksPSpace_stable:
 qed
 
 lemma copyGlobalMappings_ksPSpace_same:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
-  shows
   "\<lbrakk>is_aligned ptr pdBits\<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. ksPSpace s x = ko \<and> pspace_distinct' s \<and> pspace_aligned' s \<and>
     is_aligned (armKSGlobalPD (ksArchState s)) pdBits \<and> ptr = armKSGlobalPD (ksArchState s)\<rbrace>
@@ -808,9 +802,7 @@ lemmas copyGlobalMappings_ksPSpaceD = use_valid[OF _ copyGlobalMappings_ksPSpace
 lemmas copyGlobalMappings_ksPSpace_sameD = use_valid[OF _ copyGlobalMappings_ksPSpace_same]
 
 lemma copyGlobalMappings_ksPSpace_concrete:
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   assumes monad: "(r, s') \<in> fst (copyGlobalMappings ptr s)"
   and ps: "pspace_distinct' s" "pspace_aligned' s"
   and al: "is_aligned (armKSGlobalPD (ksArchState s)) pdBits"
@@ -883,9 +875,7 @@ qed
 
 
 lemma copyGlobalMappings_valid_duplicates':
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   shows "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and pspace_distinct'
     and pspace_aligned'
     and (\<lambda>s. is_aligned (armKSGlobalPD (ksArchState s)) pdBits)
@@ -1285,9 +1275,7 @@ lemma valid_duplicates_deleteObjects_helper:
   assumes inc: "\<And>p ko. \<lbrakk>m p = Some (KOArch ko);p \<in> {ptr .. ptr + 2 ^ sz - 1}\<rbrakk>
   \<Longrightarrow> 6 \<le> sz"
   assumes aligned:"is_aligned ptr sz"
-  notes blah[simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes blah[simp del] =  atLeastAtMost_simps
   shows "vs_valid_duplicates'  (\<lambda>x. if x \<in> {ptr .. ptr + 2 ^ sz - 1} then None else m x)"
   apply (rule valid_duplicates'_diffI,rule vd)
    apply (clarsimp simp: vs_valid_duplicates'_def split:option.splits)
@@ -1335,9 +1323,7 @@ lemma valid_duplicates_deleteObjects_helper:
   done
 
 lemma deleteObjects_valid_duplicates'[wp]:
-  notes [simp del] =  atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
-          atLeastAtMost_iff
+  notes [simp del] =  atLeastAtMost_simps
   shows
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       K (is_aligned ptr sz)
@@ -1936,8 +1922,7 @@ lemma performPageInvocation_valid_duplicates'[wp]:
   done
 
 lemma placeASIDPool_valid_duplicates'[wp]:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  notes blah[simp del] = atLeastAtMost_simps
   shows "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<and> pspace_no_overlap' ptr pageBits s
    \<and> is_aligned ptr pageBits \<and> pspace_aligned' s\<rbrace>
   placeNewObject' ptr (KOArch (KOASIDPool makeObject)) 0

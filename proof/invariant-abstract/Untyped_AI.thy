@@ -735,16 +735,10 @@ lemma valid_untypedD:
 lemma pspace_no_overlap_detype':
   "\<lbrakk> s \<turnstile> cap.UntypedCap dev ptr bits idx; pspace_aligned s; valid_objs s \<rbrakk>
      \<Longrightarrow> pspace_no_overlap {ptr .. ptr + 2 ^ bits - 1} (detype {ptr .. ptr + 2 ^ bits - 1} s)"
-  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff
-        simp: obj_range_def add_diff_eq[symmetric] pspace_no_overlap_def)
+  apply (clarsimp simp: obj_range_def add_diff_eq[symmetric] pspace_no_overlap_def)
   apply (frule(2) valid_untypedD)
   apply (rule ccontr)
-  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                            Int_atLeastAtMost atLeastatMost_empty_iff is_aligned_neg_mask_eq
-                      simp: valid_cap_def cap_aligned_def obj_range_def cap_range_def is_aligned_neg_mask_eq p_assoc_help)
-  apply (drule_tac c= x in set_mp)
-   apply simp+
+  apply (clarsimp simp: valid_cap_def cap_aligned_def obj_range_def cap_range_def p_assoc_help)
   done
 
 lemma pspace_no_overlap_detype:
@@ -1386,9 +1380,8 @@ lemma retype_ret_valid_caps:
     apply (erule of_nat_mono_maybe[rotated])
     apply (drule range_cover.range_cover_n_less)
     apply (simp add:word_bits_def)
-   apply (simp add:obj_bits_api_def field_simps
-               del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-           Int_atLeastAtMost atLeastatMost_empty_iff)
+   apply (simp add: obj_bits_api_def field_simps
+               del: atLeastAtMost_simps)
    apply blast
   apply (erule(2) range_cover_no_0)
   done
@@ -1411,8 +1404,7 @@ lemma ex_cte_cap_protects:
       apply simp
      apply assumption
     apply (rule notemptyI[where x="fst p"])
-    apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                              Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex)
+    apply (clarsimp simp del: atLeastAtMost_simps)
     apply blast
     apply (clarsimp simp:cte_wp_at_caps_of_state)
     apply (drule(2) descendants_range_inD)
@@ -1420,8 +1412,7 @@ lemma ex_cte_cap_protects:
     apply blast
   apply clarsimp
   apply (drule_tac irq=irq in valid_globals_irq_node, assumption)
-  apply (clarsimp simp del:atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-        Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex)
+  apply (clarsimp simp del: atLeastAtMost_simps)
   apply blast
   done
 
@@ -1471,8 +1462,7 @@ lemma retype_region_ranges':
   apply clarify
   apply (drule use_valid[OF _ retype_region_ret])
    apply simp
-  apply (clarsimp simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                            Int_atLeastAtMost atLeastatMost_empty_iff)
+  apply (clarsimp simp del: atLeastAtMost_simps)
   apply (rule subsetD[OF subset_trans])
     apply (rule range_cover_subset,assumption)
      apply clarsimp
@@ -1572,7 +1562,8 @@ lemma retype_region_distinct_sets:
   apply (clarsimp simp: add_diff_eq[symmetric]
                   simp del: Int_atLeastAtMost
                   dest!: less_two_pow_divD)
-  apply (simp add: obj_bits_api_def ptr_add_def shiftl_t2n[simplified mult.commute, symmetric] del: Int_atLeastAtMost)
+  apply (simp add: obj_bits_api_def ptr_add_def shiftl_t2n[simplified mult.commute, symmetric]
+              del: atLeastAtMost_simps)
   apply (rule aligned_neq_into_no_overlap)
     apply simp
    apply (simp_all add:range_cover_def shiftl_t2n mult.commute)
@@ -1707,8 +1698,7 @@ lemma set_cap_valid_mdb_simple:
   assume drange: "descendants_range_in {r..r + 2 ^ bits - 1} cref s"
   have untyped_range_simp: "untyped_range (cap.UntypedCap dev r bits f) = untyped_range (cap.UntypedCap dev r bits idx)"
     by simp
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  note blah[simp del] = untyped_range.simps usable_untyped_range.simps
 
   show "untyped_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using inc cstate drange
@@ -1887,23 +1877,17 @@ lemma set_cap_caps_no_overlap:
   apply (simp add: caps_no_overlap_def)
   apply wp
   apply (clarsimp simp: cte_wp_at_caps_of_state caps_no_overlap_def
-              simp del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-                        Int_atLeastAtMost atLeastatMost_empty_iff )
+              simp del: atLeastAtMost_simps)
   apply (erule ranE)
   apply (simp split: if_splits
-    del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff )
+                del: atLeastAtMost_simps)
    apply (drule bspec)
     apply fastforce
-   apply (clarsimp simp
-      del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff )
+   apply (clarsimp simp del:atLeastAtMost_simps)
    apply (erule(1) set_mp)
   apply (drule_tac x = capa in bspec)
    apply fastforce
-  apply (clarsimp simp
-      del: atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff )
+  apply (clarsimp simp del: atLeastAtMost_simps)
   apply (erule(1) set_mp)
   done
 
@@ -1940,9 +1924,7 @@ lemma caps_of_state_no_overlapD:
     pspace_no_overlap S s\<rbrakk>
    \<Longrightarrow> (fst slot) \<notin> S"
   apply (drule caps_of_state_cteD)
-  apply (clarsimp simp: cte_wp_at_cases obj_at_def
-              simp del: atLeastAtMost_iff atLeastatMost_subset_iff
-                        atLeastLessThan_iff Int_atLeastAtMost)
+  apply (clarsimp simp: cte_wp_at_cases obj_at_def)
   apply (elim disjE)
    apply clarify
    apply (frule(2) p_in_obj_range)
@@ -1950,9 +1932,7 @@ lemma caps_of_state_no_overlapD:
    apply (drule(1) IntI)
    unfolding obj_range_def
    apply (drule notemptyI)+
-   apply (simp add: Int_ac p_assoc_help
-               del: atLeastAtMost_iff atLeastatMost_subset_iff
-                    atLeastLessThan_iff Int_atLeastAtMost)
+   apply (simp add: Int_ac p_assoc_help)
   apply clarify
   apply (frule(2) p_in_obj_range)
   apply (erule(1) pspace_no_overlapE)
@@ -1960,8 +1940,7 @@ lemma caps_of_state_no_overlapD:
   unfolding obj_range_def
   apply (drule notemptyI)+
   apply (simp add: Int_ac p_assoc_help add.commute
-              del: atLeastAtMost_iff atLeastatMost_subset_iff
-         atLeastLessThan_iff Int_atLeastAtMost)
+              del: atLeastAtMost_simps)
   done
 
 
@@ -2135,8 +2114,7 @@ locale invoke_untyped_proofs =
   assumes vui: "valid_untyped_inv_wcap (Retype cref reset ptr_base ptr tp us slots dev)
       (Some (UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
   and misc: "ct_active s" "invs s" "scheduler_action s = resume_cur_thread"
-  notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
 begin
 
 abbreviation(input)
@@ -2473,7 +2451,7 @@ lemma mapME_append:
     ys_r \<leftarrow> mapME f ys;
     returnOk (xs_r @ ys_r)
   odE"
-  by (induct xs, simp_all add: mapME_Nil mapME_Cons bindE_assoc)
+  by (induct xs, simp_all add: mapME_Cons bindE_assoc)
 lemma mapME_validE_nth_induct:
   "\<lbrakk> \<And>i ys. i < length xs \<Longrightarrow> \<lbrace>P i ys\<rbrace> f (zs ! i) \<lbrace>\<lambda>y. P (Suc i) (y # ys)\<rbrace>, \<lbrace>E\<rbrace>;
         \<And>i. i < length xs \<Longrightarrow> zs ! i = xs ! i \<rbrakk>
@@ -2481,7 +2459,7 @@ lemma mapME_validE_nth_induct:
 proof (induct xs rule: rev_induct)
   case Nil
   show ?case
-    by (wp | simp add: mapME_Nil)+
+    by wpsimp+
 next
   case (snoc x xs)
   from snoc.prems have x: "x = zs ! length xs"
@@ -2489,7 +2467,7 @@ next
   from snoc.prems have zs: "\<And>i. i < length xs \<Longrightarrow> xs ! i = zs ! i"
     by (metis length_append_singleton less_SucI nth_append)
   show ?case
-    apply (simp add: mapME_append mapME_Cons mapME_Nil bindE_assoc x)
+    apply (simp add: mapME_append mapME_Cons bindE_assoc x)
     apply (wp snoc.hyps snoc.prems | simp add: zs)+
     done
 qed
@@ -3652,9 +3630,7 @@ lemma invoke_untyp_invs':
        (is "?cte_cond s")
        using vui by (clarsimp simp add:cte_wp_at_caps_of_state)
 
-    note blah[simp del] = untyped_range.simps usable_untyped_range.simps
-          atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+    note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_simps
 
     note neg_mask_add_mask = word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr,symmetric]
 

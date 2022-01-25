@@ -1436,9 +1436,6 @@ lemma singleton_in_magnitude_check:
 lemma wordSizeCase_simp [simp]: "wordSizeCase a b = b"
   by (simp add: wordSizeCase_def wordBits_def word_size)
 
-(* FIXME RT: cleanup: with the reader monad, projectKO_eq is identical to projectKO_eq2. *)
-lemmas projectKO_eq = projectKO_eq2
-
 lemma obj_at'_def':
   "obj_at' P p s = (\<exists>ko obj. ksPSpace s p = Some ko \<and> is_aligned p (objBitsKO ko)
                    \<and> projectKO ko s = Some obj \<and> P obj
@@ -1499,6 +1496,17 @@ lemma tcb_bound_refs'_simps[simp]:
   "tcb_bound_refs' b c (Some a) = {(a, TCBYieldTo)} \<union> tcb_bound_refs' b c None"
   "tcb_bound_refs' None None None = {}"
   by (auto simp: tcb_bound_refs'_def)
+
+lemma prod_in_refsD:
+  "\<And>ref x y. (x, ref) \<in> ep_q_refs_of' y \<Longrightarrow> ref \<in> {EPRecv, EPSend}"
+  "\<And>ref x y. (x, ref) \<in> ntfn_q_refs_of' y \<Longrightarrow> ref \<in> {NTFNSignal}"
+  "\<And>ref x y. (x, ref) \<in> tcb_st_refs_of' y \<Longrightarrow> ref \<in> {TCBBlockedRecv, TCBReply, TCBSignal, TCBBlockedSend}"
+  "\<And>ref x a b c. (x, ref) \<in> tcb_bound_refs' a b c \<Longrightarrow> ref \<in> {TCBBound, TCBSchedContext, TCBYieldTo}"
+  apply (rename_tac ep; case_tac ep; simp)
+  apply (rename_tac ep; case_tac ep; simp)
+  apply (rename_tac ep; case_tac ep; clarsimp split: if_splits)
+  apply (clarsimp simp: tcb_bound_refs'_def get_refs_def2)
+  done
 
 \<comment>\<open> Useful rewrite rules for extracting the existence of objects on the other side of symmetric refs.
    There should be a rewrite corresponding to each entry of @{term symreftype}.\<close>
@@ -3465,6 +3473,14 @@ lemma objBitsT_simps:
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
   by (simp add: makeObject_simps objBits_simps bit_simps')+
+
+lemma objBits_sc_only_depends_on_scRefills:
+  fixes sc :: sched_context
+    and upd :: "sched_context \<Rightarrow> sched_context"
+  assumes [simp]: "scRefills (upd sc) = scRefills sc"
+  shows "objBits (upd sc) = objBits sc"
+  apply (clarsimp simp: objBits_def objBitsKO_def)
+  done
 
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>

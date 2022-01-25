@@ -601,15 +601,6 @@ lemma replyRemoveTCB_sym_refs_list_refs_of_replies':
                       option.inject)+
   done
 
-(* FIXME RT: move to...? *)
-lemma objBits_sc_only_depends_on_scRefills:
-  fixes sc :: sched_context
-    and upd :: "sched_context \<Rightarrow> sched_context"
-  assumes [simp]: "scRefills (upd sc) = scRefills sc"
-  shows "objBits (upd sc) = objBits sc"
-  apply (clarsimp simp: objBits_def objBitsKO_def)
-  done
-
 lemma replyRemoveTCB_valid_idle':
   "replyRemoveTCB tptr \<lbrace>valid_idle'\<rbrace>"
   unfolding replyRemoveTCB_def
