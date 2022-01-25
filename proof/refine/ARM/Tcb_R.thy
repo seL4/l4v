@@ -401,14 +401,6 @@ lemma suspend_ResumeCurrentThread_imp_notct[wp]:
    \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> ksCurThread s \<noteq> t'\<rbrace>"
   by (wpsimp simp: suspend_def wp_del: getThreadState_only_state_wp)
 
-(* FIXME RT: move *)
-lemma asUser_valid_tcbs' [wp]:
-  "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wp threadSet_valid_tcbs' hoare_drop_imps
-             | simp add: valid_tcb'_def tcb_cte_cases_def)+
-  done
-
 lemma invokeTCB_CopyRegisters_corres:
   "corres (dc \<oplus> (=))
         (einvs and simple_sched_action and tcb_at dest and tcb_at src and ex_nonz_cap_to src and
@@ -2892,50 +2884,6 @@ lemma decodeSetSchedParams_wf:
   apply (auto simp: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
-(* FIXME RT: move to...? *)
-lemma is_blocked_corres:
-  "corres (=) (tcb_at tcb_ptr) (tcb_at' tcb_ptr) (is_blocked tcb_ptr) (isBlocked tcb_ptr)"
-  unfolding is_blocked_def isBlocked_def
-  apply clarsimp
-  apply (rule corres_underlying_split[where b=return and P="\<top>\<top>" and P'="\<top>\<top>", simplified,
-                                      OF getThreadState_corres ])
-    apply wpsimp+
-  apply (rename_tac st st' s s')
-  apply (case_tac st; clarsimp)
-  done
-
-(* FIXME RT: move to...? *)
-lemma get_sc_released_corres:
-  "corres (=) (active_sc_valid_refills and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
-          (get_sc_released sc_ptr) (scReleased sc_ptr)"
-  apply (simp add: get_sc_released_def scReleased_def scActive_def refillReady_def)
-  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
-  apply (rename_tac sc')
-  apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)
-  apply (rule corres_symb_exec_r[rotated, OF gets_the_sp]; (solves wpsimp)?)
-   apply (wpsimp wp: no_ofail_gets_the readRefillReady_no_ofail)
-  apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def
-                 dest!: readObject_misc_ko_at')
-  apply (subgoal_tac "sc_active sc = (0 < scRefillMax sc')")
-   apply (case_tac "sc_active sc"; clarsimp)
-   apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
-    apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
-   apply (drule_tac s'=s' in refill_hd_relation2)
-      apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def
-                             kernelWCETTicks_def vs_all_heap_simps cfg_valid_refills_def
-                             rr_valid_refills_def sp_valid_refills_def obj_at_def
-                             valid_obj'_def obj_at'_def projectKOs readCurTime_def ogets_def
-                             state_relation_def
-                      dest!: readObject_ko_at'_sc
-                      split: if_splits)+
-  apply (clarsimp simp: refill_ready_def readCurTime_def ogets_def sc_relation_def active_sc_def)
-  done
-
-(* FIXME RT: move to...? *)
-crunches scReleased
-  for inv: P
-
 (* FIXME RT: There's probably a way to avoid this using cap.case_eq_if and corres_if, but it
              doesn't seem easy to do in a nice way. This lemma is used to "keep" the cap type
              information all the way through to the final WP proofs. *)
@@ -3016,7 +2964,7 @@ lemma decodeSetSchedParams_corres:
              ; intro conjI impI allI
              ; fastforce intro: corres_returnOkTT)
      apply wpsimp+
-   apply (clarsimp simp: valid_cap_def)
+   apply (fastforce simp: valid_cap_def)
   apply (clarsimp simp: valid_cap_simps')
   apply normalise_obj_at'
   apply (intro exI impI conjI allI)

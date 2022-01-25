@@ -1226,72 +1226,12 @@ lemma invokeArch_tcb_at':
   apply (wp, clarsimp simp: pred_tcb_at')
   done
 
-lemma setObject_tcb_pre:
-  assumes "\<lbrace>P and tcb_at' p\<rbrace> setObject p (t::tcb) \<lbrace>Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> setObject p (t::tcb) \<lbrace>Q\<rbrace>" using assms
-  apply (clarsimp simp: valid_def setObject_def in_monad
-                        split_def updateObject_default_def
-                        projectKOs in_magnitude_check objBits_simps')
-  apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_simps')
-  apply (simp add: split_paired_Ball)
-  apply (drule spec, erule mp)
-  apply (clarsimp simp: in_monad projectKOs in_magnitude_check objBits_simps')
-  done
-
-(* FIXME RT: move to KHeap, including instances below, replace single setObject lemmas *)
-lemma setObject_at_pre:
-  assumes pre: "\<lbrace>P and obj_at' (\<lambda>_::'a. True) p\<rbrace> setObject p (v::'a::pspace_storable) \<lbrace>Q\<rbrace>"
-  assumes R: "\<And>ko s y n. updateObject v ko p y n s = updateObject_default v ko p y n s"
-  assumes objBits: "\<exists>n. \<forall>v. objBits (v::'a) = n \<and> (1::machine_word) < 2^n"
-  shows "\<lbrace>P\<rbrace> setObject p v \<lbrace>Q\<rbrace>"
-  using pre objBits
-  apply (clarsimp simp: valid_def setObject_def in_monad R
-                        split_def updateObject_default_def
-                        projectKOs in_magnitude_check split_paired_Ball)
-  apply (drule spec, drule mp, erule conjI)
-   apply (simp add: obj_at'_def projectKOs objBits_def project_inject)
-   apply metis
-  apply (simp add: split_paired_Ball)
-  apply (drule spec, erule mp)
-  apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
-  done
-
-lemma setObject_pspace_no_overlap':
-  assumes R: "\<And>ko s y n. updateObject v ko p y n s = updateObject_default v ko p y n s"
-  assumes objBits: "\<exists>n. \<forall>v. objBits (v::'a) = n \<and> (1::machine_word) < 2^n"
-  shows "setObject p (v::'a::pspace_storable) \<lbrace>pspace_no_overlap' w s\<rbrace>"
-  apply (rule setObject_at_pre[OF _ R objBits])
-  using objBits
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad R)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (erule (1) ps_clear_lookupAround2)
-    apply (rule order_refl)
-   apply (erule is_aligned_no_overflow)
-   apply simp
-  apply (clarsimp simp: objBits_def updateObject_default_def in_monad projectKOs in_magnitude_check)
-  apply (fastforce simp: pspace_no_overlap'_def project_inject)
-  done
-
 end
 
 context begin interpretation Arch .
 
-(* FIXME RT: replace the one in KHeap *)
-lemma setObject_tcb_pspace_no_overlap2:
-  "\<lbrace>pspace_no_overlap' w s\<rbrace>
-  setObject t (tcb::tcb)
-  \<lbrace>\<lambda>rv. pspace_no_overlap' w s\<rbrace>"
-  apply (rule setObject_tcb_pre)
-  apply (rule setObject_tcb_pspace_no_overlap')
-  done
-
 crunch pspace_no_overlap'[wp]: setThreadState "pspace_no_overlap' w s"
-  (simp: unless_def wp: crunch_wps setObject_tcb_pspace_no_overlap2)
-
-lemma sts_cte_cap_to'[wp]:
-  "\<lbrace>ex_cte_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_cte_cap_to' p\<rbrace>"
-  by (wp ex_cte_cap_to'_pres)
+  (simp: unless_def wp: crunch_wps)
 
 lemma valid_slots_duplicated_lift':
   assumes ko_wp_at':

@@ -12,6 +12,10 @@ theory Retype_AI
 imports VSpace_AI
 begin
 
+lemmas atLeastAtMost_simps =
+  atLeastatMost_subset_iff atLeastLessThan_iff Int_atLeastAtMost atLeastatMost_empty_iff
+  atLeastAtMost_iff split_paired_Ex
+
 abbreviation "up_aligned_area ptr sz \<equiv> {ptr..(ptr && ~~ mask sz) + (2 ^ sz - 1)}"
 abbreviation "down_aligned_area ptr sz \<equiv> {(ptr && ~~ mask sz) + (2 ^ sz - 1) .. ptr}"
 

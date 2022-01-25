@@ -243,8 +243,6 @@ lemma decodeInvocation_corres:
       apply (simp_all add: list_all2_map2 list_all2_map1)+
   done
 
-declare mapME_Nil [simp] (* FIXME RT: make global *)
-
 lemma hinv_corres_assist:
   "\<lbrakk> info' = message_info_map info \<rbrakk>
        \<Longrightarrow> corres (fr \<oplus> (\<lambda>(p, cap, extracaps, buffer) (p', capa, extracapsa, buffera).
@@ -797,7 +795,7 @@ lemma doReplyTransfer_invs'[wp]:
   apply (rule hoare_seq_ext[OF _ threadGet_sp], rename_tac fault)
   apply (rule_tac B="\<lambda>_. ?pre and tcb_at' receiver and ex_nonz_cap_to' receiver"
          in hoare_seq_ext)
-   apply (wpsimp wp: possibleSwitchTo_invs' handleTimeout_invs' threadGet_wp hoare_drop_imps)
+   apply (wpsimp wp: possibleSwitchTo_invs' handleTimeout_invs' threadGet_wp hoare_drop_imps refillReady_wp)
    apply (fastforce simp: runnable_eq_active' obj_at'_def)
   apply (case_tac fault; clarsimp)
    apply (wpsimp wp: doIPCTransfer_invs setThreadState_Running_invs')
@@ -1834,13 +1832,13 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
                                                   caps_of_state_tcb_index_trans[OF get_tcb_rev]
                                                   tcb_cnode_map_def)
                            apply (frule (1) cur_sc_tcb_are_bound_sym)
-                           apply (clarsimp simp: vs_all_heap_simps sc_tcb_sc_at_def obj_at_def)
+                           apply (clarsimp simp: vs_all_heap_simps sc_tcb_sc_at_def obj_at_def is_tcb_def)
                           apply (clarsimp simp: invs'_def valid_pspace'_def cur_tcb'_def)
                          apply (wpsimp wp: getTCB_wp)+
                     apply (clarsimp dest!: invs_cur simp: cur_tcb_def)
                    apply (clarsimp simp: cur_tcb'_def isEndpointCap_def)
                   apply simp
-                 apply (wpsimp wp: get_sc_refill_sufficient_wp)+
+                 apply (wpsimp wp: get_sc_refill_sufficient_wp refillReady_wp)+
            apply (clarsimp dest!: valid_sched_active_sc_valid_refills
                             simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
                                   sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps

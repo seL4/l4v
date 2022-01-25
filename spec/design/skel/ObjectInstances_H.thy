@@ -24,7 +24,7 @@ requalify_consts
   newContext
 end
 
-lemma projectKO_eq2:
+lemma projectKO_eq:
   "(projectKO ko s = Some obj) = (projectKO_opt ko = Some obj)"
   by (auto simp: projectKO_def ofail_def oreturn_def oassert_opt_def split: option.splits)
 
@@ -223,7 +223,7 @@ instance
   apply (intro_classes)
   apply simp
   apply (case_tac ko, auto simp: projectKO_opt_ep updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -238,7 +238,7 @@ instance
   apply (intro_classes)
   apply simp
   apply (case_tac ko, auto simp: projectKO_opt_reply updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -272,7 +272,7 @@ instance
   apply (intro_classes)
   apply simp
   apply (case_tac ko, auto simp: projectKO_opt_sc updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -286,7 +286,7 @@ begin
 instance
   apply (intro_classes)
   apply (case_tac ko, auto simp: projectKO_opt_ntfn updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -301,7 +301,7 @@ begin
 instance
   apply (intro_classes)
   apply (case_tac ko, auto simp: projectKO_opt_cte updateObject_cte objBitsKO_def
-                                 in_monad projectKO_eq2 typeError_def alignError_def
+                                 in_monad projectKO_eq typeError_def alignError_def
                            split: kernel_object.splits if_split_asm)
   done
 
@@ -316,7 +316,7 @@ begin
 instance
   apply (intro_classes)
   apply (case_tac ko, auto simp: projectKO_opt_user_data updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -331,7 +331,7 @@ begin
 instance
   apply (intro_classes)
   apply (case_tac ko, auto simp: projectKO_opt_user_data_device updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 
@@ -346,7 +346,7 @@ begin
 instance
   apply (intro_classes)
   apply (case_tac ko, auto simp: projectKO_opt_tcb updateObject_default_def
-                                 in_monad projectKO_eq2
+                                 in_monad projectKO_eq
                            split: kernel_object.splits)
   done
 

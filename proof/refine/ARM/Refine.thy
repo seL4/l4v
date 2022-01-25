@@ -648,12 +648,6 @@ lemma doUserOp_valid_duplicates':
   apply clarsimp
   done
 
-(* FIXME RT: generalise similar lemmas in InterruptAcc_R with this one *)
-lemma ct_in_state_irq_state_independent[intro!, simp]:
-  "ct_in_state P (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
-   = ct_in_state P s"
-  by (simp add: ct_in_state_def)
-
 text \<open>The top-level correspondence\<close>
 
 lemma kernel_preemption_corres:

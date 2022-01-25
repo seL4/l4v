@@ -90,7 +90,7 @@ interpretation Arch .
 instance
   apply (intro_classes)
   apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2 objBitsKO_def
+                            projectKO_eq objBitsKO_def
                      split: kernel_object.splits arch_kernel_object.splits)+
   done
 
@@ -121,7 +121,7 @@ definition
 instance
   apply (intro_classes)
   apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
-                            projectKO_eq2 objBitsKO_def
+                            projectKO_eq objBitsKO_def
                      split: kernel_object.splits arch_kernel_object.splits)+
   done
 

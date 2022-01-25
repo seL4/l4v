@@ -2692,8 +2692,6 @@ lemma sendIPC_corres:
             apply (subst identity_eq, assumption)
            apply (clarsimp simp: obj_at_def pred_tcb_at_def)
           subgoal for t' _ s
-            (*RT FIXME: The proof of this subgoal is copied completely from si_invs'.
-                                 It would be nice to turn this into a separate lemma. *)
             apply (rule delta_sym_refs, assumption)
              apply (fastforce simp: obj_at_def state_refs_of_def split: list.splits if_splits)
             apply clarsimp
@@ -3245,12 +3243,12 @@ lemma schedContextResume_vrq[wp]:
    schedContextResume scPtr
    \<lbrace>\<lambda>_. valid_release_queue\<rbrace>"
   unfolding schedContextResume_def
-  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
+  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp refillReady_wp)
 
 lemma schedContextResume_vrq'[wp]:
   "\<lbrace>valid_release_queue' and valid_objs'\<rbrace> schedContextResume scPtr \<lbrace>\<lambda>_. valid_release_queue'\<rbrace>"
   unfolding schedContextResume_def
-  apply (wpsimp | wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)+
+  apply (wpsimp | wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp refillReady_wp)+
   by (clarsimp simp: obj_at'_def)
 
 lemma schedContextResume_vq[wp]:
@@ -5977,8 +5975,7 @@ lemma replyUnlink_obj_at_tcb_none:
   apply (wpsimp wp: updateReply_wp_all gts_wp')
   by (auto simp: obj_at'_def projectKOs objBitsKO_def)
 
-(* FIXME RT: si_invs' already exists, and should perhaps be renamed *)
-lemma si_invs'2[wp]:
+lemma si_invs'[wp]:
   "\<lbrace>invs' and st_tcb_at' active' t
           and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at' (\<lambda>a. a \<noteq> None) t s)
           and ex_nonz_cap_to' ep and ex_nonz_cap_to' t\<rbrace>
@@ -6437,7 +6434,7 @@ lemma doReplyTransfer_corres:
                                                        sc_relation_def)
                                 apply wpsimp
                                apply (wpsimp simp: refillSufficient_def getRefills_def obj_at'_def)
-                              apply (wpsimp simp: refillReady_wp)
+                              apply (wpsimp wp: refillReady_wp)
                              apply (simp add: refillReady_def, rule no_ofail_gets_the)
                              apply wpsimp
                             apply wpsimp

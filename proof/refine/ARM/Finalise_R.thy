@@ -3774,7 +3774,6 @@ lemma cteDeleteOne_st_tcb_at[wp]:
   done
 
 
-(* FIXME RT: this had cteDeleteOne_sch_act_simple, but does not hold any more *)
 context
 notes option.case_cong_weak[cong]
 begin
@@ -5072,7 +5071,7 @@ lemma unbindMaybeNotification_ct_not_ksQ:
   apply (case_tac "ntfnBoundTCB ntfn", simp, wp, simp+)
   apply (rule hoare_pre)
     apply wp
-    apply (wps setBoundNotification_ct')
+    apply (wps setBoundNotification.ct)
     apply (wp sbn_ksQ)
    apply (wps set_ntfn'.ct, wp)
   apply clarsimp
@@ -5082,7 +5081,7 @@ lemma sbn_ct_in_state'[wp]:
   "\<lbrace>ct_in_state' P\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. ct_in_state' P\<rbrace>"
   apply (simp add: ct_in_state'_def)
   apply (rule hoare_pre)
-   apply (wps setBoundNotification_ct')
+   apply (wps setBoundNotification.ct)
   apply wpsimp+
   done
 

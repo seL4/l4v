@@ -157,17 +157,6 @@ lemma sch_act_wf_weak_sch_act_wf[elim!]:
   "sch_act_wf (ksSchedulerAction s) s \<Longrightarrow> weak_sch_act_wf (ksSchedulerAction s) s"
   by (clarsimp simp: weak_sch_act_wf_def)
 
-(* FIXME RT: move to TcbAcc_R and replace gts_wf' with this *)
-lemma gts_wf''[wp]:
-  "\<lbrace>valid_objs'\<rbrace> getThreadState t \<lbrace>valid_tcb_state'\<rbrace>"
-  apply (simp add: getThreadState_def threadGet_getObject liftM_def)
-  apply (wp getObject_tcb_wp)
-  apply clarsimp
-  apply (drule obj_at_ko_at', clarsimp)
-  apply (frule ko_at_valid_objs', fastforce, simp add: projectKOs)
-  apply (fastforce simp: valid_obj'_def valid_tcb'_def)
-  done
-
 lemma replyTCB_update_corres:
   "corres dc (reply_at rp) (reply_at' rp)
             (set_reply_obj_ref reply_tcb_update rp new)
@@ -1940,21 +1929,14 @@ lemma cancelIPC_sch_act_wf[wp]:
                     replyRemoveTCB_sch_act_wf)
   done
 
-(* FIXME RT: move to ...? *)
 crunches getBlockingObject
   for inv: P
-
-(* FIXME RT: move to...? *)
-lemma endpoint_live:
-  "\<lbrakk>ko_at' ep ptr s; ep \<noteq> IdleEP\<rbrakk> \<Longrightarrow> ko_wp_at' live' ptr s"
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs)
-  done
 
 lemma blockedCancelIPC_if_live'[wp]:
   "blockedCancelIPC st tptr epptr \<lbrace>if_live_then_nonz_cap'\<rbrace>"
   unfolding blockedCancelIPC_def getBlockingObject_def
   apply (wpsimp wp: getEndpoint_wp haskell_assert_wp)
-  apply (clarsimp simp: if_live_then_nonz_cap'_def endpoint.disc_eq_case endpoint_live)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def endpoint.disc_eq_case endpoint_live')
   done
 
 lemma blockedCancelIPC_valid_idle':
@@ -2073,15 +2055,6 @@ lemma setBoundNotification_not_ntfn:
      | simp)+
   done
 
-(* FIXME RT: setBoundNotification should be simple_ko' *)
-lemma setBoundNotification_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> setBoundNotification st t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
-  apply (simp add: tcb_in_cur_domain'_def)
-  apply (rule hoare_pre)
-  apply wps
-  apply (wp setBoundNotification_not_ntfn | simp)+
-  done
-
 lemma cancelSignal_tcb_obj_at':
   "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
      \<Longrightarrow> cancelSignal t word \<lbrace>obj_at' P t'\<rbrace>"
@@ -2129,17 +2102,19 @@ lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
 
 text \<open>The suspend operation, significant as called from delete\<close>
 
-lemma sbn_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: setBoundNotification_def, wp threadSet.ksSchedulerAction)
-
+lemma setBoundNotification_tcb_in_cur_domain'[wp]:
+  "setBoundNotification st t \<lbrace>tcb_in_cur_domain' t'\<rbrace>"
+  apply (simp add: tcb_in_cur_domain'_def)
+  apply (rule hoare_pre)
+   apply wps
+  apply (wp setBoundNotification_not_ntfn | simp)+
+  done
 
 lemma sbn_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
    setBoundNotification ntfn t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   by (wp weak_sch_act_wf_lift)
-
 
 lemma set_ep_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>

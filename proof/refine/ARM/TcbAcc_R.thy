@@ -570,20 +570,6 @@ lemma setObject_tcb_valid_globals' [wp]:
    apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
   done
 
-lemma setObject_tcb_pspace_no_overlap':
-  "\<lbrace>pspace_no_overlap' w s and tcb_at' t\<rbrace>
-  setObject t (tcb::tcb)
-  \<lbrace>\<lambda>rv. pspace_no_overlap' w s\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (erule (1) ps_clear_lookupAround2)
-    apply (rule order_refl)
-   apply (erule is_aligned_no_overflow)
-   apply simp
-  apply (clarsimp simp: updateObject_default_def in_monad projectKOs objBits_simps in_magnitude_check)
-  apply (fastforce simp: pspace_no_overlap'_def objBits_simps)
-  done
-
 lemma threadSet_pspace_no_overlap' [wp]:
   "\<lbrace>pspace_no_overlap' w s\<rbrace> threadSet f t \<lbrace>\<lambda>rv. pspace_no_overlap' w s\<rbrace>"
   apply (simp add: threadSet_def)
@@ -842,9 +828,6 @@ lemmas threadSet_cteCaps_of = ctes_of_cteCaps_of_lift [OF threadSet_ctes_of]
 lemmas threadSet_urz = untyped_ranges_zero_lift[where f="cteCaps_of", OF _ threadSet_cteCaps_of]
 
 lemma threadSet_idle'T:
-  (* RT FIXME: why was this assumption here? It's not necessary for the lemma,
-     and doesn't introduce any unification. *)
-  (* assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb" *)
   shows
   "\<lbrace>\<lambda>s. valid_idle' s
         \<and> (t = ksIdleThread s \<longrightarrow> (\<forall>tcb. ko_at' tcb t s \<and> idle_tcb' tcb \<longrightarrow> idle_tcb' (F tcb)))\<rbrace>
@@ -1442,6 +1425,13 @@ lemma threadSet_valid_tcbs':
   apply (clarsimp simp: obj_at'_def projectKOs valid_tcbs'_def)
   done
 
+lemma asUser_valid_tcbs'[wp]:
+  "asUser t f \<lbrace>valid_tcbs'\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wpsimp wp: threadSet_valid_tcbs' hoare_drop_imps
+              simp: valid_tcb'_def tcb_cte_cases_def)
+  done
+
 lemma asUser_corres':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t)
@@ -1730,8 +1720,25 @@ lemma getThreadState_corres':
 
 lemmas getThreadState_corres = getThreadState_corres'[OF refl]
 
-lemma gts_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getThreadState t \<lbrace>valid_tcb_state'\<rbrace>"
-  apply (simp add: getThreadState_def threadGet_getObject)
+lemma is_blocked_corres:
+  "corres (=) (pspace_aligned and pspace_distinct and tcb_at tcb_ptr)  \<top>
+              (is_blocked tcb_ptr) (isBlocked tcb_ptr)"
+  apply (rule_tac Q="tcb_at' tcb_ptr" in corres_cross_add_guard)
+   apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
+  unfolding is_blocked_def isBlocked_def
+  apply clarsimp
+  apply (rule corres_guard_imp)
+    apply (rule corres_underlying_split[where b=return and P="\<top>\<top>" and P'="\<top>\<top>", simplified,
+                                        OF getThreadState_corres ])
+    apply wpsimp+
+    apply (rename_tac st st' s s')
+    apply (case_tac st; clarsimp)
+   apply simp+
+  done
+
+lemma gts_wf'[wp]:
+  "\<lbrace>valid_objs'\<rbrace> getThreadState t \<lbrace>valid_tcb_state'\<rbrace>"
+  apply (simp add: getThreadState_def threadGet_getObject liftM_def)
   apply (wp getObject_tcb_wp)
   apply clarsimp
   apply (drule obj_at_ko_at', clarsimp)
@@ -1752,7 +1759,6 @@ lemma gts_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> getThreadState t \<l
 
 lemma gts_inv'[wp]: "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getThreadState_def) wp
-
 
 lemma getBoundNotification_corres:
   "corres (=) (tcb_at t) (tcb_at' t)
@@ -4604,14 +4610,18 @@ lemma sbn_st_tcb'[wp]:
 
 context begin interpretation Arch .
 
-crunches scheduleTCB
+crunches scheduleTCB, setThreadState
   for cte_wp_at'[wp]: "\<lambda>s. Q (cte_wp_at' P p s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
   (wp: hoare_when_weak_wp crunch_wps)
 
 lemma sts_ctes_wp_at[wp]:
   "setThreadState st p \<lbrace>\<lambda>s. P (cte_wp_at' Q p' s)\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   by (wpsimp wp: threadSet_cte_wp_at')
+
+lemmas setThreadState_cap_to'[wp]
+    = ex_cte_cap_to'_pres [OF sts_ctes_wp_at setThreadState_ksInterruptState]
 
 crunches setThreadState, setBoundNotification
   for aligned'[wp]: pspace_aligned'
@@ -4773,7 +4783,7 @@ lemma bound_tcb_ex_cap'':
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
-crunches setThreadState, setBoundNotification (* FIXME RT: instantiate pspace_only' instead *)
+crunches setThreadState
   for arch'[wp]:  "\<lambda>s. P (ksArchState s)"
   and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: getObject_tcb_inv crunch_wps
@@ -4801,7 +4811,7 @@ lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
 
 lemmas setBoundNotification_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF sbn_ctes_of setBoundNotification_ksInterruptState]
+    = valid_irq_handlers_lift'' [OF sbn_ctes_of setBoundNotification.ksInterruptState]
 
 lemma sts_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
@@ -5405,7 +5415,6 @@ lemma setThreadState_obj_at'_only_st_qd_ft:
   apply (wpsimp wp: scheduleTCB_obj_at'_only_st_qd_ft threadSet_obj_at'_only_st_qd_ft[where P=P])
   done
 
-(* FIXME RT: move to ...? *)
 crunches addToBitmap, setQueue
   for ko_wp_at'[wp]: "\<lambda>s. P (ko_wp_at' Q p s)"
 

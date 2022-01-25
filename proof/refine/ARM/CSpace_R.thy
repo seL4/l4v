@@ -3692,11 +3692,9 @@ proof -
      apply (simp add: ghost_relation_of_heap)
      apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp updates abs_irq_together)
     apply (wpsimp wp: hoare_vcg_conj_lift updates simp: swp_cte_at)
-    (* FIXME RT: kind of dumb to reconstruct this. What's better? *)
-    apply (rename_tac s s')
-    apply (prop_tac "(s, s') \<in> state_relation")
-     apply (clarsimp simp: state_relation_def swp_cte_at)
-    apply (frule updated_relations, assumption, assumption)
+    apply (frule updated_relations)
+      apply fastforce
+     apply (fastforce simp: state_relation_def swp_cte_at)
     apply (clarsimp simp: o_def)
     done
 qed

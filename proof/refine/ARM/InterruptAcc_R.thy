@@ -376,14 +376,8 @@ lemma preemptionPoint_inv:
               simp: isCurDomainExpired_def getDomainTime_def refillSufficient_def)
   done
 
-lemma ct_running_irq_state_independent[intro!, simp]:
-  "ct_running (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
-   = ct_running s"
-  by (simp add: ct_in_state_def)
-
-lemma ct_idle_irq_state_independent[intro!, simp]:
-  "ct_idle (s \<lparr>machine_state := machine_state s \<lparr>irq_state := f (irq_state (machine_state s)) \<rparr> \<rparr>)
-   = ct_idle s"
+lemma ct_in_state_machine_state_independent[intro!, simp]:
+  "ct_in_state P (machine_state_update f s) = ct_in_state P s"
   by (simp add: ct_in_state_def)
 
 lemma typ_at'_irq_state_independent[simp, intro!]:

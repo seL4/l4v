@@ -26,7 +26,7 @@ lemma mapME_Cons:
   by (simp add: mapME_def sequenceE_def Let_def)
 
 
-lemma mapME_Nil : "mapME f [] = returnOk []"
+lemma mapME_Nil[simp]: "mapME f [] = returnOk []"
   unfolding mapME_def by (simp add: sequenceE_def)
 
 lemma hoare_take_disjunct:
