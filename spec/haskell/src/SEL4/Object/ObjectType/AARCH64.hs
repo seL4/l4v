@@ -207,7 +207,11 @@ capUntypedSize (PageTableCap {}) = bit ptBits
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 
--- No arch-specific thread deletion operations needed on RISC-V platform.
+-- Thread deletion requires associated FPU cleanup
+
+fpuThreadDelete :: PPtr TCB -> Kernel ()
+fpuThreadDelete threadPtr =
+    doMachineOp $ fpuThreadDeleteOp (fromPPtr threadPtr)
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
-prepareThreadDelete _ = return ()
+prepareThreadDelete thread = fpuThreadDelete thread

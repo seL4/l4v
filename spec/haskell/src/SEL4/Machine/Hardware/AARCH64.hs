@@ -327,3 +327,8 @@ read_stval = error "Unimplemented - machine op"
 
 plic_complete_claim :: IRQ -> MachineMonad ()
 plic_complete_claim = error "Unimplemented - machine op"
+
+{- FPU Operations -}
+
+fpuThreadDeleteOp :: Word -> MachineMonad ()
+fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
