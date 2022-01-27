@@ -10,6 +10,8 @@
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
 
+-- FIXME AARCH64: added HW ASID helpers and adjusted findVSpaceForASID
+
 module SEL4.Kernel.VSpace.AARCH64 where
 
 import Prelude hiding (Word)
@@ -32,6 +34,7 @@ import {-# SOURCE #-} SEL4.Kernel.CSpace
 import Data.Bits
 import Data.Maybe
 import Data.Array
+import Data.List
 import Data.Word (Word32)
 
 -- The RISC-V-specific invocations are imported with the "ArchInv" prefix. This
@@ -80,22 +83,34 @@ lookupIPCBuffer isReceiver thread = do
 
 {- ASID Lookups -}
 
-findVSpaceForASID :: ASID -> KernelF LookupFailure (PPtr PTE)
-findVSpaceForASID asid = do
+-- FIXME AARCH64: make this a Reader Monad
+getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
+getASIDPoolEntry asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
     assert (asid <= snd asidRange) "ASID out of range"
-    asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+    asidTable <- gets (riscvKSASIDTable . ksArchState)
     let poolPtr = asidTable!(asidHighBitsOf asid)
-    ASIDPool pool <- case poolPtr of
-        Just ptr -> withoutFailure $ getObject ptr
-        Nothing -> throw InvalidRoot
-    let pm = pool!(asid .&. mask asidLowBits)
-    case pm of
-        Just ptr -> do
+    maybePool <- case poolPtr of
+        Just ptr -> liftM Just $ getObject ptr
+        Nothing -> return Nothing
+    case maybePool of
+        Just (ASIDPool pool) -> return $ pool!(asid .&. mask asidLowBits)
+        Nothing -> return Nothing
+
+updateASIDPoolEntry :: ASID -> (ASIDPoolEntry -> Maybe ASIDPoolEntry) -> Kernel ()
+updateASIDPoolEntry asid f = error "FIXME AARCH64: TODO"
+-- TODO: should assert that ASID exists (resolve to not-Nothing)
+-- TODO: swap parameter order?
+
+findVSpaceForASID :: ASID -> KernelF LookupFailure (PPtr PTE)
+findVSpaceForASID asid = do
+    maybeEntry <- withoutFailure $ getASIDPoolEntry asid
+    case maybeEntry of
+        Just (ASIDPoolVSpace vmID ptr) -> do
             assert (ptr /= 0) "findVSpaceForASID: found null PD"
             withoutFailure $ checkPTAt ptr
             return ptr
-        Nothing -> throw InvalidRoot
+        _ -> throw $ InvalidRoot
 
 maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
 maybeVSpaceForASID asid =
@@ -197,6 +212,8 @@ deleteASIDPool base ptr = do
 
 {- Deleting an Address Space -}
 
+-- FIXME AARCH64: might be better to use updateASIDPoolEntry here, depending on
+-- match with C (the flush might get in the way)
 deleteASID :: ASID -> PPtr PTE -> Kernel ()
 deleteASID asid pt = do
     asidTable <- gets (riscvKSASIDTable . ksArchState)
@@ -204,7 +221,11 @@ deleteASID asid pt = do
         Nothing -> return ()
         Just poolPtr -> do
             ASIDPool pool <- getObject poolPtr
-            when (pool!(asid .&. mask asidLowBits) == Just pt) $ do
+            let maybeEntry = pool!(asid .&. mask asidLowBits)
+            let maybeRoot = case maybeEntry of -- FIXME AARCH64: surely there is option.map
+                 Just (ASIDPoolVSpace vmID p) -> Just p
+                 Nothing -> Nothing
+            when (maybeRoot == Just pt) $ do
                 doMachineOp $ hwASIDFlush (fromASID asid)
                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
                 setObject poolPtr $ ASIDPool pool'
@@ -283,6 +304,91 @@ setVMRoot tcb = do
             globalPT <- gets (riscvKSGlobalPT . ksArchState)
             doMachineOp $ setVSpaceRoot (addrFromKPPtr globalPT) 0)
 
+-- FIXME AARCH64: based on ARM_HYP
+
+{- Hardware ASID allocation -}
+
+-- FIXME AARCH64: the naming here needs cleanup (in the C code as well) -- there
+-- are no actual hardware ASIDs in EL-2, but VM IDs instead. Currently keeping
+-- this so we can figure out what corresponds in C.
+
+-- FIXME AARCH64: naming
+storeHWASID :: ASID -> VMID -> Kernel ()
+storeHWASID asid hw_asid = do
+    updateASIDPoolEntry asid (\entry -> Just $ entry { apVMID = Just hw_asid })
+    hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
+    let hwASIDTable' = hwASIDTable//[(hw_asid, Just asid)]
+    modify (\s -> s {
+        ksArchState = (ksArchState s)
+        { armKSHWASIDTable = hwASIDTable' }})
+
+-- FIXME AARCH64: naming
+-- FIXME AARCH64: the C PR removes this function, but it is still useful in
+-- Haskell; it's mostly type wrangling and assertion so maybe not necessary for C
+loadHWASID :: ASID -> Kernel (Maybe VMID)
+loadHWASID asid = do
+    maybeEntry <- getASIDPoolEntry asid
+    case maybeEntry of
+        Just (ASIDPoolVSpace vmID ptr) -> return vmID
+        _ -> error ("loadHWASID: no entry for asid")
+
+-- FIXME AARCH64: naming
+invalidateASID :: ASID -> Kernel ()
+invalidateASID asid = do
+    updateASIDPoolEntry asid (\entry -> Just $ entry { apVMID = Nothing })
+
+-- FIXME AARCH64: naming
+invalidateHWASIDEntry :: VMID -> Kernel ()
+invalidateHWASIDEntry hwASID = do
+    asidTable <- gets (armKSHWASIDTable . ksArchState)
+    let asidTable' = asidTable//[(hwASID, Nothing)]
+    modify (\s -> s {
+        ksArchState = (ksArchState s)
+        { armKSHWASIDTable = asidTable' }})
+
+-- FIXME AARCH64: naming
+invalidateASIDEntry :: ASID -> Kernel ()
+invalidateASIDEntry asid = do
+    maybeHWASID <- loadHWASID asid
+    when (isJust maybeHWASID) $ invalidateHWASIDEntry (fromJust maybeHWASID)
+    invalidateASID asid
+
+-- FIXME AARCH64: update; currently verbatim from ARM
+findFreeHWASID :: Kernel VMID
+findFreeHWASID = do
+    -- Look for a free Hardware ASID.
+    hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
+    nextASID <- gets (armKSNextASID . ksArchState)
+    let maybe_asid = find (\a -> isNothing (hwASIDTable ! a))
+                    ([nextASID .. maxBound] ++ init [minBound .. nextASID])
+
+    -- If there is one, return it, otherwise revoke the next one in a strict round-robin.
+    case maybe_asid of
+        Just hw_asid -> return hw_asid
+        Nothing -> do
+            invalidateASID $ fromJust $ hwASIDTable ! nextASID
+            -- FIXME AARCH64: ARM had "doMachineOp $ invalidateLocalTLB_ASID nextASID"
+            invalidateHWASIDEntry nextASID
+            let new_nextASID =
+                    if nextASID == maxBound
+                    then minBound
+                    else nextASID + 1
+            modify (\s -> s {
+                ksArchState = (ksArchState s)
+                { armKSNextASID = new_nextASID }})
+            return nextASID
+
+-- FIXME AARCH64: naming
+getHWASID :: ASID -> Kernel VMID
+getHWASID asid = do
+    maybe_hw_asid <- loadHWASID asid
+    case maybe_hw_asid of
+        Just hw_asid ->
+            return hw_asid
+        Nothing -> do
+            new_hw_asid <- findFreeHWASID
+            storeHWASID asid new_hw_asid
+            return new_hw_asid
 
 {- Helper Functions -}
 
@@ -577,7 +683,8 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
     updateCap ctSlot (ArchObjectCap $ cap { capPTMappedAddress = Just (asid,0) })
     copyGlobalMappings (capPTBasePtr cap)
     ASIDPool pool <- getObject poolPtr
-    let pool' = pool//[(asid .&. mask asidLowBits, Just $ capPTBasePtr cap)]
+    let pool' = pool//[(asid .&. mask asidLowBits,
+                        Just $ ASIDPoolVSpace Nothing $ capPTBasePtr cap)]
     setObject poolPtr $ ASIDPool pool'
 
 performRISCVMMUInvocation :: ArchInv.Invocation -> KernelP [Word]

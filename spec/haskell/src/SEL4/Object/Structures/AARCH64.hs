@@ -14,6 +14,9 @@
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
 
+-- FIXME AARCH64: added ASID pool entry type and validated ASID high/low bits,
+-- but no other checking yet.
+
 module SEL4.Object.Structures.AARCH64 where
 
 import Prelude hiding (Word)
@@ -21,7 +24,7 @@ import SEL4.Machine.RegisterSet
 import SEL4.Machine.Hardware.AARCH64
 import Data.Array
 import Data.Bits
-import Data.Word(Word64)
+import Data.Word(Word64, Word8)
 
 
 {- Capabilities -}
@@ -80,7 +83,17 @@ atcbContextGet = atcbContext
 
 {- ASID Pools -}
 
-newtype ASIDPool = ASIDPool (Array ASID (Maybe (PPtr PTE)))
+{- Aarch64 HYP (EL-2) has 8-bit VM IDs, which are similar to hardware ASIDs. -}
+newtype VMID = VMID Word8
+    deriving (Eq, Ord, Show, Real, Integral, Enum, Num, Ix, Bounded)
+
+{- For SMMU table roots there will be another constructor in this data type. -}
+data ASIDPoolEntry = ASIDPoolVSpace {
+        apVMID :: Maybe VMID,
+        apVSpace :: PPtr PTE }
+    deriving Show
+
+newtype ASIDPool = ASIDPool (Array ASID (Maybe ASIDPoolEntry))
     deriving Show
 
 newtype ASID = ASID { fromASID :: Word64 }

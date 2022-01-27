@@ -11,6 +11,8 @@
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
 
+-- FIXME AARCH64: added armKSHWASIDTable, leaving rest untouched
+
 module SEL4.Model.StateData.AARCH64 where
 
 import Prelude hiding (Word)
@@ -31,8 +33,10 @@ data RISCVVSpaceRegionUse
 data KernelState = RISCVKernelState {
     riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
     riscvKSGlobalPTs :: Int -> [PPtr PTE],
-    riscvKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse
-  }
+    riscvKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse,
+    armKSHWASIDTable :: Array VMID (Maybe ASID), -- FIXME AARCH64: should be armKSVMIDTable
+    armKSNextASID :: VMID -- FIXME AARCH64: naming
+}
 
 -- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;
 -- maxPTLevel = level of top-level root table
