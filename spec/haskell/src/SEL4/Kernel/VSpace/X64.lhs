@@ -180,15 +180,6 @@ Locating the page directory for a given ASID is necessary when updating or delet
 >             return ptr
 >         Nothing -> throw InvalidRoot
 
-> findVSpaceForASIDAssert :: ASID -> Kernel (PPtr PML4E)
-> findVSpaceForASIDAssert asid = do
->     pm <- findVSpaceForASID asid `catchFailure`
->         const (fail "findVSpaceForASIDAssert: pm not found")
->     assert (pm .&. mask pml4Bits == 0)
->         "findVSpaceForASIDAssert: pml4 pointer alignment check"
->     checkPML4At pm
->     return pm
-
 > -- FIXME x64: these are all now unused.
 
 > checkPML4At :: PPtr PML4E -> Kernel ()

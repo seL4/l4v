@@ -36,16 +36,8 @@ lemma findVSpaceForASID_vs_at_wp:
   apply (simp add: asid_low_bits_of_def ucast_ucast_a is_down ucast_ucast_mask asid_low_bits_def)
   by fastforce
 
-lemma findVSpaceForASIDAssert_vs_at_wp:
-  "\<lbrace>(\<lambda>s. \<forall>pd. vspace_at_asid' pd asid  s \<longrightarrow> P pd s)\<rbrace>
-       findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (simp add: findVSpaceForASIDAssert_def const_def
-                   checkPTAt_def)
-  apply (rule hoare_pre, wp findVSpaceForASID_vs_at_wp)
-  apply simp
-  done
-
-crunch inv[wp]: findVSpaceForASIDAssert "P"
+crunches findVSpaceForASID, haskell_fail
+  for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma asidBits_asid_bits[simp]:
