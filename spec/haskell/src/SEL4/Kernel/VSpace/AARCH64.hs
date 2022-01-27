@@ -97,15 +97,6 @@ findVSpaceForASID asid = do
             return ptr
         Nothing -> throw InvalidRoot
 
-findVSpaceForASIDAssert :: ASID -> Kernel (PPtr PTE)
-findVSpaceForASIDAssert asid = do
-    pm <- findVSpaceForASID asid `catchFailure`
-        const (fail "findVSpaceForASIDAssert: pt not found")
-    assert (pm .&. mask ptBits == 0)
-        "findVSpaceForASIDAssert: pt pointer alignment check"
-    checkPTAt pm
-    return pm
-
 maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
 maybeVSpaceForASID asid =
     liftM Just (findVSpaceForASID asid) `catchFailure` const (return Nothing)
