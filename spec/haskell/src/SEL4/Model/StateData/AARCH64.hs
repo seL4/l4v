@@ -31,9 +31,9 @@ data RISCVVSpaceRegionUse
     | RISCVVSpaceDeviceWindow
 
 data KernelState = RISCVKernelState {
-    riscvKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
-    riscvKSGlobalPTs :: Int -> [PPtr PTE],
-    riscvKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse,
+    armKSASIDTable :: Array ASID (Maybe (PPtr ASIDPool)),
+    armKSGlobalPTs :: Int -> [PPtr PTE],
+    armKSKernelVSpace :: PPtr Word -> RISCVVSpaceRegionUse,
     armKSHWASIDTable :: Array VMID (Maybe ASID), -- FIXME AARCH64: should be armKSVMIDTable
     armKSNextASID :: VMID -- FIXME AARCH64: naming
 }
@@ -43,8 +43,8 @@ data KernelState = RISCVKernelState {
 maxPTLevel :: Int
 maxPTLevel = 2
 
-riscvKSGlobalPT :: KernelState -> PPtr PTE
-riscvKSGlobalPT s = head (riscvKSGlobalPTs s maxPTLevel)
+armKSGlobalPT :: KernelState -> PPtr PTE
+armKSGlobalPT s = head (armKSGlobalPTs s maxPTLevel)
 
 newKernelState :: PAddr -> (KernelState, [PAddr])
 newKernelState _ = error "No initial state defined for RISC-V"

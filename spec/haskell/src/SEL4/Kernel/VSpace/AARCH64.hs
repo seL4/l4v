@@ -51,7 +51,7 @@ ipcBufferSizeBits = 10
 
 copyGlobalMappings :: PPtr PTE -> Kernel ()
 copyGlobalMappings newPT = do
-    globalPT <- gets (riscvKSGlobalPT . ksArchState)
+    globalPT <- gets (armKSGlobalPT . ksArchState)
     let base = ptIndex maxPTLevel pptrBase
     let ptSize = 1 `shiftL` ptTranslationBits -- number of entries in table
     forM_ [base .. ptSize - 1] $ \index -> do
@@ -88,7 +88,7 @@ getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
 getASIDPoolEntry asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
     assert (asid <= snd asidRange) "ASID out of range"
-    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    asidTable <- gets (armKSASIDTable . ksArchState)
     let poolPtr = asidTable!(asidHighBitsOf asid)
     maybePool <- case poolPtr of
         Just ptr -> liftM Just $ getObject ptr
@@ -201,12 +201,12 @@ deleteASIDPool :: ASID -> PPtr ASIDPool -> Kernel ()
 deleteASIDPool base ptr = do
     assert (base .&. mask asidLowBits == 0)
         "ASID pool's base must be aligned"
-    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    asidTable <- gets (armKSASIDTable . ksArchState)
     when (asidTable ! (asidHighBitsOf base) == Just ptr) $ do
         ASIDPool pool <- getObject ptr
         let asidTable' = asidTable//[(asidHighBitsOf base, Nothing)]
         modify (\s -> s {
-            ksArchState = (ksArchState s) { riscvKSASIDTable = asidTable' }})
+            ksArchState = (ksArchState s) { armKSASIDTable = asidTable' }})
         tcb <- getCurThread
         setVMRoot tcb
 
@@ -216,7 +216,7 @@ deleteASIDPool base ptr = do
 -- match with C (the flush might get in the way)
 deleteASID :: ASID -> PPtr PTE -> Kernel ()
 deleteASID asid pt = do
-    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    asidTable <- gets (armKSASIDTable . ksArchState)
     case asidTable!(asidHighBitsOf asid) of
         Nothing -> return ()
         Just poolPtr -> do
@@ -301,7 +301,7 @@ setVMRoot tcb = do
                     setVSpaceRoot (addrFromPPtr pt) (fromASID asid)
             _ -> throw InvalidRoot)
         (\_ -> do
-            globalPT <- gets (riscvKSGlobalPT . ksArchState)
+            globalPT <- gets (armKSGlobalPT . ksArchState)
             doMachineOp $ setVSpaceRoot (addrFromKPPtr globalPT) 0)
 
 -- FIXME AARCH64: based on ARM_HYP
@@ -549,7 +549,7 @@ decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel RISCVASIDControlMakePool, index:depth:_,
                         (untyped,parentSlot):(croot,_):_) -> do
-            asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+            asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
             let free = filter (\(x,y) -> x <= (1 `shiftL` asidHighBits) - 1 && isNothing y) $ assocs asidTable
             when (null free) $ throw DeleteFirst
             let base = (fst $ head free) `shiftL` asidLowBits
@@ -581,7 +581,7 @@ decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
             case vspaceCap of
                 ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
                   -> do
-                    asidTable <- withoutFailure $ gets (riscvKSASIDTable . ksArchState)
+                    asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
                     let base = capASIDBase cap
                     let poolPtr = asidTable!(asidHighBitsOf base)
                     when (isNothing poolPtr) $ throw $ FailedLookup False InvalidRoot
@@ -670,10 +670,10 @@ performASIDControlInvocation (MakePool frame slot parent base) = do
     cteInsert (ArchObjectCap $ ASIDPoolCap poolPtr base) parent slot
     assert (base .&. mask asidLowBits == 0)
         "ASID pool's base must be aligned"
-    asidTable <- gets (riscvKSASIDTable . ksArchState)
+    asidTable <- gets (armKSASIDTable . ksArchState)
     let asidTable' = asidTable//[(asidHighBitsOf base, Just poolPtr)]
     modify (\s -> s {
-        ksArchState = (ksArchState s) { riscvKSASIDTable = asidTable' }})
+        ksArchState = (ksArchState s) { armKSASIDTable = asidTable' }})
 
 
 performASIDPoolInvocation :: ASIDPoolInvocation -> Kernel ()
