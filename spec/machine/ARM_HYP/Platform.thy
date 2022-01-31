@@ -76,7 +76,7 @@ definition minIRQ :: "irq" where
   "minIRQ \<equiv> 0"
 
 definition maxIRQ :: "irq" where
-  "maxIRQ \<equiv> 191"
+  "maxIRQ \<equiv> 254"
 
 definition irqVGICMaintenance :: "irq" where
   "irqVGICMaintenance \<equiv> 25"
