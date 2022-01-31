@@ -47,18 +47,6 @@ import SEL4.API.Invocation.AARCH64 as ArchInv
 ipcBufferSizeBits :: Int
 ipcBufferSizeBits = 10
 
-{- Creating a New Address Space -}
-
-copyGlobalMappings :: PPtr PTE -> Kernel ()
-copyGlobalMappings newPT = do
-    globalPT <- gets (armKSGlobalPT . ksArchState)
-    let base = ptIndex maxPTLevel pptrBase
-    let ptSize = 1 `shiftL` ptTranslationBits -- number of entries in table
-    forM_ [base .. ptSize - 1] $ \index -> do
-        let offset = PPtr index `shiftL` pteBits
-        pte <- getObject $ globalPT + offset
-        storePTE (newPT + offset) pte
-
 {- Lookups and Faults -}
 
 {- IPC Buffer Accesses -}
@@ -301,8 +289,8 @@ setVMRoot tcb = do
                     setVSpaceRoot (addrFromPPtr pt) (fromASID asid)
             _ -> throw InvalidRoot)
         (\_ -> do
-            globalPT <- gets (armKSGlobalPT . ksArchState)
-            doMachineOp $ setVSpaceRoot (addrFromKPPtr globalPT) 0)
+            globalUserVSpace <- gets (armKSGlobalUserVSpace . ksArchState)
+            doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) 0)
 
 -- FIXME AARCH64: based on ARM_HYP
 
@@ -681,7 +669,6 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
     oldcap <- getSlotCap ctSlot
     let ArchObjectCap cap = oldcap
     updateCap ctSlot (ArchObjectCap $ cap { capPTMappedAddress = Just (asid,0) })
-    copyGlobalMappings (capPTBasePtr cap)
     ASIDPool pool <- getObject poolPtr
     let pool' = pool//[(asid .&. mask asidLowBits,
                         Just $ ASIDPoolVSpace Nothing $ capPTBasePtr cap)]
