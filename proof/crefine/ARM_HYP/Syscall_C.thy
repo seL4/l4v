@@ -1612,7 +1612,7 @@ lemma ucast_maxIRQ_is_less:
   "SCAST(32 signed \<rightarrow> 32) Kernel_C.maxIRQ < UCAST(10 \<rightarrow> 32) irq \<Longrightarrow> scast Kernel_C.maxIRQ < irq"
   apply (clarsimp simp: scast_def Kernel_C.maxIRQ_def)
   apply (subgoal_tac "LENGTH(10) \<le> LENGTH(32)")
-  apply (drule less_ucast_ucast_less[where x= "0xBF" and y="irq"])
+  apply (drule less_ucast_ucast_less[where x= "0xFE" and y="irq"])
     by (simp)+
 
 lemma validIRQcastingLess:
