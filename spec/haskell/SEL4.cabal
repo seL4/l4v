@@ -131,6 +131,7 @@ Library
     if flag(ArchArmHyp)
         other-modules:
                             SEL4.Machine.Hardware.ARM.TK1
+                            SEL4.Machine.Hardware.ARM.Exynos5422
                             SEL4.Machine.Hardware.ARM.Callbacks
 
                             SEL4.API.Types.ARM
