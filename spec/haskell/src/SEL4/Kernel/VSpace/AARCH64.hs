@@ -465,14 +465,14 @@ decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
 
 decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
     case (invocationType label, args, extraCaps) of
-        (ArchInvocationLabel RISCVPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
+        (ArchInvocationLabel ARMPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
             decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
-        (ArchInvocationLabel RISCVPageMap, _, _) -> throw TruncatedMessage
-        (ArchInvocationLabel RISCVPageUnmap, _, _) ->
+        (ArchInvocationLabel ARMPageMap, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel ARMPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
                 pageUnmapCap = cap,
                 pageUnmapCapSlot = cte }
-        (ArchInvocationLabel RISCVPageGetAddress, _, _) ->
+        (ArchInvocationLabel ARMPageGetAddress, _, _) ->
             return $ InvokePage $ PageGetAddr (capFBasePtr cap)
         _ -> throw IllegalOperation
 decodeRISCVFrameInvocation _ _ _ _ _ = fail "Unreachable"
@@ -510,10 +510,10 @@ decodeRISCVPageTableInvocation :: Word -> [Word] -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
    case (invocationType label, args, extraCaps) of
-        (ArchInvocationLabel RISCVPageTableMap, vaddr:attr:_, (vspaceCap,_):_) -> do
+        (ArchInvocationLabel ARMPageTableMap, vaddr:attr:_, (vspaceCap,_):_) -> do
             decodeRISCVPageTableInvocationMap cte cap (VPtr vaddr) attr vspaceCap
-        (ArchInvocationLabel RISCVPageTableMap, _, _) -> throw TruncatedMessage
-        (ArchInvocationLabel RISCVPageTableUnmap, _, _) -> do
+        (ArchInvocationLabel ARMPageTableMap, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel ARMPageTableUnmap, _, _) -> do
             cteVal <- withoutFailure $ getCTE cte
             final <- withoutFailure $ isFinalCapability cteVal
             unless final $ throw RevokeFirst
@@ -538,7 +538,7 @@ decodeRISCVASIDControlInvocation :: Word -> [Word] ->
 
 decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
     case (invocationType label, args, extraCaps) of
-        (ArchInvocationLabel RISCVASIDControlMakePool, index:depth:_,
+        (ArchInvocationLabel ARMASIDControlMakePool, index:depth:_,
                         (untyped,parentSlot):(croot,_):_) -> do
             asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
             let free = filter (\(x,y) -> x <= (1 `shiftL` asidHighBits) - 1 && isNothing y) $ assocs asidTable
@@ -557,7 +557,7 @@ decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
                 makePoolSlot = destSlot,
                 makePoolParent = parentSlot,
                 makePoolBase = base }
-        (ArchInvocationLabel RISCVASIDControlMakePool, _, _) -> throw TruncatedMessage
+        (ArchInvocationLabel ARMASIDControlMakePool, _, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
 decodeRISCVASIDControlInvocation _ _ _ _ = fail "Unreachable"
 
@@ -568,7 +568,7 @@ decodeRISCVASIDPoolInvocation :: Word ->
 
 decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
     case (invocationType label, extraCaps) of
-        (ArchInvocationLabel RISCVASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) ->
+        (ArchInvocationLabel ARMASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) ->
             case vspaceCap of
                 ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
                   -> do
@@ -588,23 +588,23 @@ decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
                         assignASIDPool = capASIDPool cap,
                         assignASIDCTSlot = vspaceCapSlot }
                 _ -> throw $ InvalidCapability 1
-        (ArchInvocationLabel RISCVASIDPoolAssign, _) -> throw TruncatedMessage
+        (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
 decodeRISCVASIDPoolInvocation _ _ _ = fail "Unreachable"
 
 
-decodeRISCVMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
+decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-decodeRISCVMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeRISCVFrameInvocation label args cte cap extraCaps
-decodeRISCVMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
-decodeRISCVMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
+decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
-decodeRISCVMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
+decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
     decodeRISCVASIDPoolInvocation label cap extraCaps
-decodeRISCVMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 
 
 {- Invocation Implementations -}
@@ -678,8 +678,8 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
                         Just $ ASIDPoolVSpace Nothing $ capPTBasePtr cap)]
     setObject poolPtr $ ASIDPool pool'
 
-performRISCVMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
-performRISCVMMUInvocation i = withoutPreemption $ do
+performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
+performARMMMUInvocation i = withoutPreemption $ do
     case i of
         InvokePageTable oper -> performPageTableInvocation oper
         InvokePage oper -> performPageInvocation oper
