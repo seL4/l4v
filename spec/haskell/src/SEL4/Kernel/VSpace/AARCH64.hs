@@ -1,4 +1,5 @@
 --
+-- Copyright 2022, Proofcraft Pty Ltd
 -- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 --
 -- SPDX-License-Identifier: GPL-2.0-only
@@ -9,6 +10,7 @@
 -- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
+-- Progress: added VCPU cases (uninteresting)
 
 -- FIXME AARCH64: added HW ASID helpers and adjusted findVSpaceForASID
 
@@ -30,6 +32,7 @@ import {-# SOURCE #-} SEL4.Object.CNode
 import {-# SOURCE #-} SEL4.Object.TCB
 import {-# SOURCE #-} SEL4.Kernel.Init
 import {-# SOURCE #-} SEL4.Kernel.CSpace
+import SEL4.Object.VCPU.AARCH64
 
 import Data.Bits
 import Data.Maybe
@@ -601,6 +604,7 @@ decodeRISCVMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
 decodeRISCVMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
     decodeRISCVASIDPoolInvocation label cap extraCaps
+decodeRISCVMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 
 
 {- Invocation Implementations -}
@@ -681,6 +685,7 @@ performRISCVMMUInvocation i = withoutPreemption $ do
         InvokePage oper -> performPageInvocation oper
         InvokeASIDControl oper -> performASIDControlInvocation oper
         InvokeASIDPool oper -> performASIDPoolInvocation oper
+        InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
     return $ []
 
 {- Simulator Support -}

@@ -1,4 +1,5 @@
 --
+-- Copyright 2022, Proofcraft Pty Ltd
 -- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 --
 -- SPDX-License-Identifier: GPL-2.0-only
@@ -11,6 +12,7 @@
 -- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
+-- Progress: add hypervisor features to handleReservedIRQ
 
 module SEL4.Object.Interrupt.AARCH64 where
 
@@ -29,6 +31,8 @@ import {-# SOURCE #-} SEL4.Kernel.CSpace
 import {-# SOURCE #-} SEL4.Object.Interrupt
 import qualified SEL4.Machine.Hardware.AARCH64 as Arch
 import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqInvalid)
+import SEL4.Object.VCPU.TARGET (vgicMaintenance, vppiEvent, irqVPPIEventIndex)
+import SEL4.Machine.Hardware.AARCH64.PLATFORM (irqVGICMaintenance, irqVTimerEvent, irqSMMU)
 
 decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
@@ -66,7 +70,10 @@ invokeIRQHandler (AckIRQ irq) = doMachineOp $ plic_complete_claim irq
 invokeIRQHandler _ = return ()
 
 handleReservedIRQ :: IRQ -> Kernel ()
-handleReservedIRQ _ = return ()
+handleReservedIRQ irq = do
+    when (fromEnum irq == fromEnum irqVGICMaintenance) vgicMaintenance
+    when (irqVPPIEventIndex irq /= Nothing) $ vppiEvent irq
+    return ()
 
 maskIrqSignal :: IRQ -> Kernel ()
 maskIrqSignal _ = return ()

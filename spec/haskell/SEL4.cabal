@@ -202,7 +202,7 @@ Library
                             SEL4.Object.Structures.AARCH64
                             SEL4.Object.Interrupt.AARCH64
                             SEL4.Object.Instances.AARCH64
-                            -- FIXME AARCH64 SEL4.Object.VCPU.AARCH64
+                            SEL4.Object.VCPU.AARCH64
                             SEL4.Object.TCB.AARCH64
                             SEL4.Model.StateData.AARCH64
                             SEL4.Machine.RegisterSet.AARCH64

@@ -77,7 +77,7 @@ vmFaultTypeFSR f =
         RISCVStorePageFault -> 15
 
 data HypFaultType
-    = RISCVNoHypFaults
+    = ARMVCPUFault Word32 -- HSR
     deriving Show
 
 {- Physical Memory -}
@@ -139,6 +139,9 @@ pageBitsForSize :: VMPageSize -> Int
 pageBitsForSize RISCVSmallPage = pageBits
 pageBitsForSize RISCVLargePage = pageBits + ptTranslationBits
 pageBitsForSize RISCVHugePage = pageBits + ptTranslationBits + ptTranslationBits
+
+vcpuBits :: Int
+vcpuBits = 12
 
 configureTimer :: MachineMonad IRQ
 configureTimer = do
@@ -211,6 +214,49 @@ sfence = error "Unimplemented - machine op"
 
 hwASIDFlush :: Word64 -> MachineMonad ()
 hwASIDFlush asid = error "unimplemented - machine op"
+
+{- FPU status/control registers -}
+
+enableFpuEL01 :: MachineMonad ()
+enableFpuEL01 = error "Unimplemented - machine op"
+
+{- Hypervisor-specific status/control registers -}
+
+-- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
+getHSR :: MachineMonad Word
+getHSR = error "Unimplemented - machine op"
+
+-- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
+setHCR :: Word -> MachineMonad ()
+setHCR _hcr = error "Unimplemented - machine op"
+
+getFAR :: MachineMonad VPtr
+getFAR = error "Unimplemented - machine op"
+
+getESR :: MachineMonad Word
+getESR = error "Unimplemented - machine op"
+
+addressTranslateS1 :: VPtr -> MachineMonad VPtr
+addressTranslateS1 = error "Unimplemented - machine op"
+
+getSCTLR :: MachineMonad Word
+getSCTLR = error "Unimplemented - machine op"
+
+setSCTLR :: Word -> MachineMonad ()
+setSCTLR _sctlr = error "Unimplemented - machine op"
+
+{- Hypervisor banked registers -}
+
+-- Rather than a line-for-line copy of every hypervisor register storage and
+-- retrieval function from the C code, we abstract the concept into one function
+-- each. Some special registers, like SCTLR, still get their own load/store
+-- functions due to being operated on separately.
+
+readVCPUHardwareReg :: AARCH64.VCPUReg -> MachineMonad Word
+readVCPUHardwareReg reg = error "Unimplemented - machine op"
+
+writeVCPUHardwareReg :: AARCH64.VCPUReg -> Word -> MachineMonad ()
+writeVCPUHardwareReg reg val = error "Unimplemented - machine op"
 
 {- Page Table Structure -}
 
@@ -332,3 +378,60 @@ plic_complete_claim = error "Unimplemented - machine op"
 
 fpuThreadDeleteOp :: Word -> MachineMonad ()
 fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
+
+{- GIC VCPU interface -}
+
+get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
+get_gic_vcpu_ctrl_hcr = error "Unimplemented - machine op"
+
+set_gic_vcpu_ctrl_hcr :: Word32 -> MachineMonad ()
+set_gic_vcpu_ctrl_hcr = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_vmcr :: MachineMonad Word32
+get_gic_vcpu_ctrl_vmcr = error "Unimplemented - machine op"
+
+set_gic_vcpu_ctrl_vmcr :: Word32 -> MachineMonad ()
+set_gic_vcpu_ctrl_vmcr = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_apr :: MachineMonad Word32
+get_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
+
+set_gic_vcpu_ctrl_apr :: Word32 -> MachineMonad ()
+set_gic_vcpu_ctrl_apr = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_vtr :: MachineMonad Word32
+get_gic_vcpu_ctrl_vtr = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_eisr0 :: MachineMonad Word32
+get_gic_vcpu_ctrl_eisr0 = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_eisr1 :: MachineMonad Word32
+get_gic_vcpu_ctrl_eisr1 = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_misr :: MachineMonad Word32
+get_gic_vcpu_ctrl_misr = error "Unimplemented - machine op"
+
+get_gic_vcpu_ctrl_lr :: Word -> MachineMonad Word
+get_gic_vcpu_ctrl_lr = error "Unimplemented - machine op"
+
+set_gic_vcpu_ctrl_lr :: Word -> Word -> MachineMonad ()
+set_gic_vcpu_ctrl_lr = error "Unimplemented - machine op"
+
+{- Virtual timer interface -}
+
+read_cntpct :: MachineMonad Word64
+read_cntpct = error "Unimplemented - machine op"
+
+check_export_arch_timer :: MachineMonad ()
+check_export_arch_timer = error "Unimplemented - machine op"
+
+
+{- Constants -}
+
+hcrVCPU =  (0x80086039 :: Word) -- HCR_VCPU
+hcrNative = (0x8e28703b :: Word) -- HCR_NATIVE
+sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
+sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
+vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
+gicVCPUMaxNumLR = (64 :: Int)
+
