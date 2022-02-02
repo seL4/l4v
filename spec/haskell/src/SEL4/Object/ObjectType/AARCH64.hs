@@ -1,4 +1,5 @@
 --
+-- Copyright 2022, Proofcraft Pty Ltd
 -- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 --
 -- SPDX-License-Identifier: GPL-2.0-only
@@ -9,6 +10,7 @@
 -- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
+-- Progress: add VCPU
 
 module SEL4.Object.ObjectType.AARCH64 where
 
@@ -22,6 +24,8 @@ import SEL4.API.Failures
 import SEL4.API.Invocation.AARCH64 as ArchInv
 import SEL4.Object.Structures
 import SEL4.Kernel.VSpace.AARCH64
+import SEL4.Object.VCPU.AARCH64
+import {-# SOURCE #-} SEL4.Object.TCB
 
 import Data.Bits
 import Data.Word(Word16)
@@ -48,6 +52,7 @@ deriveCap _ (c@FrameCap {})
 -- ASID capabilities can be copied without modification
 deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
 deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
+deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
 
 isCapRevocable :: Capability -> Capability -> Bool
 isCapRevocable newCap srcCap = False
@@ -106,6 +111,10 @@ finaliseCap (FrameCap {
     unmapPage s asid v ptr
     return (NullCap, NullCap)
 
+finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
+    vcpuFinalise vcpu
+    return (NullCap, NullCap)
+
 finaliseCap _ _ = return (NullCap, NullCap)
 
 {- Identifying Capabilities -}
@@ -123,6 +132,7 @@ sameRegionAs (a@PageTableCap {}) (b@PageTableCap {}) =
 sameRegionAs ASIDControlCap ASIDControlCap = True
 sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
     capASIDPool a == capASIDPool b
+sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
 sameRegionAs _ _ = False
 
 isPhysicalCap :: ArchCapability -> Bool
@@ -173,10 +183,14 @@ createObject t regionBase _ isDevice =
                      (fromPPtr regionBase) (Just RISCVHugePage)})
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVHugePage isDevice Nothing
+        -- FIXME AARCH64: sizes may differ by level when hypervisor enabled
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
             return $! PageTableCap (pointerCast regionBase) Nothing
+        Arch.Types.VCPUObject -> do
+            placeNewObject regionBase (makeObject :: VCPU) 0
+            return $! VCPUCap (PPtr $ fromPPtr regionBase)
 
 {- Capability Invocation -}
 
@@ -185,10 +199,16 @@ createObject t regionBase _ isDevice =
 decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-decodeInvocation = decodeRISCVMMUInvocation
+decodeInvocation label args capIndex slot cap extraCaps =
+    case cap of
+       VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
+       _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
 performInvocation :: ArchInv.Invocation -> KernelP [Word]
-performInvocation = performRISCVMMUInvocation
+performInvocation i =
+    case i of ArchInv.InvokeVCPU iv -> do
+                withoutPreemption $ performARMVCPUInvocation iv
+              _ -> performARMMMUInvocation i
 
 {- Helper Functions -}
 
@@ -197,6 +217,7 @@ capUntypedPtr (FrameCap { capFBasePtr = PPtr p }) = PPtr p
 capUntypedPtr (PageTableCap { capPTBasePtr = PPtr p }) = PPtr p
 capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
+capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
 
 asidPoolBits :: Int
 asidPoolBits = 12
@@ -206,6 +227,7 @@ capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
 capUntypedSize (PageTableCap {}) = bit ptBits
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
+capUntypedSize (VCPUCap {}) = bit vcpuBits
 
 -- Thread deletion requires associated FPU cleanup
 
@@ -214,4 +236,9 @@ fpuThreadDelete threadPtr =
     doMachineOp $ fpuThreadDeleteOp (fromPPtr threadPtr)
 
 prepareThreadDelete :: PPtr TCB -> Kernel ()
-prepareThreadDelete thread = fpuThreadDelete thread
+prepareThreadDelete thread = do
+    fpuThreadDelete thread
+    tcbVCPU <- archThreadGet atcbVCPUPtr thread
+    case tcbVCPU of
+      Just ptr -> dissociateVCPUTCB ptr thread
+      _ -> return ()

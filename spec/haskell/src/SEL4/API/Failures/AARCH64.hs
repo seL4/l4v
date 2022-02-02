@@ -23,4 +23,9 @@ data ArchFault
     = VMFault {
             vmFaultAddress :: VPtr,
             vmFaultArchData :: [Word] }
+    | VCPUFault {
+            vcpuHSR :: Word }
+    | VPPIEvent {
+            vppiIRQ :: IRQ }
+    | VGICMaintenance { vgicMaintenanceData :: Maybe Word }
     deriving Show

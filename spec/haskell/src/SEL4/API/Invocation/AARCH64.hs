@@ -1,4 +1,5 @@
 --
+-- Copyright 2022, Proofcraft Pty Ltd
 -- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 --
 -- SPDX-License-Identifier: GPL-2.0-only
@@ -11,6 +12,7 @@
 -- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
+-- Progress: add VCPU invocations
 
 module SEL4.API.Invocation.AARCH64 where
 
@@ -19,6 +21,7 @@ import SEL4.Machine
 import SEL4.Machine.Hardware.AARCH64 as Arch hiding (PAddr, IRQ)
 import SEL4.Object.Structures
 import Data.Word (Word8, Word16, Word32)
+import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..))
 
 {- RISC-V-Specific Objects -}
 
@@ -31,6 +34,7 @@ data Invocation
     | InvokePage PageInvocation
     | InvokeASIDControl ASIDControlInvocation
     | InvokeASIDPool ASIDPoolInvocation
+    | InvokeVCPU VCPUInvocation
     deriving Show
 
 data PageTableInvocation
@@ -70,6 +74,19 @@ data ASIDPoolInvocation
         assignASIDPool :: PPtr ASIDPool,
         assignASIDCTSlot :: PPtr CTE }
     deriving Show
+
+{- VCPUs -}
+
+type HyperReg = VCPUReg
+type HyperRegVal = Word
+
+data VCPUInvocation
+    = VCPUSetTCB (PPtr VCPU) (PPtr TCB)
+    | VCPUInjectIRQ (PPtr VCPU) Int VIRQ
+    | VCPUReadRegister (PPtr VCPU) HyperReg
+    | VCPUWriteRegister (PPtr VCPU) HyperReg HyperRegVal
+    | VCPUAckVPPI (PPtr VCPU) VPPIEventIRQ
+    deriving (Show, Eq)
 
 {- Interrupt Control -}
 

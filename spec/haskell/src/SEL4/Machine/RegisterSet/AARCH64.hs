@@ -27,6 +27,7 @@ data Register
     | S0 | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11
     | A0 | A1 | A2 | A3 | A4 | A5 | A6 | A7
     | T0 | T1 | T2 | T3 | T4 | T5 | T6 | TP
+    | SPSR_EL1 -- FIXME AARCH64: this is only so haskell compiles
     | SCAUSE | SSTATUS | FaultIP | NextIP
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
@@ -70,6 +71,43 @@ faultRegister = FaultIP
 
 nextInstructionRegister :: Register
 nextInstructionRegister = NextIP
+
+{- VCPU-saved Registers -}
+
+data VCPUReg =
+      VCPURegSCTLR
+    | VCPURegTTBR0
+    | VCPURegTTBR1
+    | VCPURegTCR
+    | VCPURegMAIR
+    | VCPURegAMAIR
+    | VCPURegCIDR
+    | VCPURegACTLR
+    | VCPURegCPACR
+    | VCPURegAFSR0
+    | VCPURegAFSR1
+    | VCPURegESR
+    | VCPURegFAR
+    | VCPURegISR
+    | VCPURegVBAR
+    | VCPURegTPIDR_EL1
+    | VCPURegSP_EL1
+    | VCPURegELR_EL1
+    | VCPURegSPSR_EL1
+    | VCPURegCNTV_CTL
+    | VCPURegCNTV_CVAL
+    | VCPURegCNTVOFF
+    | VCPURegCNTKCTL_EL1
+    deriving (Eq, Enum, Bounded, Ord, Ix, Show)
+
+vcpuRegNum :: Int
+vcpuRegNum = fromEnum (maxBound :: VCPUReg)
+
+vcpuRegSavedWhenDisabled :: VCPUReg -> Bool
+vcpuRegSavedWhenDisabled VCPURegSCTLR = True
+vcpuRegSavedWhenDisabled VCPURegCNTV_CTL = True
+vcpuRegSavedWhenDisabled VCPURegCPACR = True
+vcpuRegSavedWhenDisabled _ = False
 
 {- User-level Context -}
 

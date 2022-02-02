@@ -36,6 +36,10 @@ pageColourBits = error "unused on this architecture"
 irqInvalid :: IRQ
 irqInvalid = IRQ 0xFFFF -- -1 in 16 bits
 
+irqVGICMaintenance = IRQ 25
+irqVTimerEvent = IRQ 27
+irqSMMU = IRQ 202
+
 {- simulator callback stubs - we do not plan to support the simulator on this
    platform -}
 

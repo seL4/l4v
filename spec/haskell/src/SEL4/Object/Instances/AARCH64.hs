@@ -1,16 +1,17 @@
 --
+-- Copyright 2022, Proofcraft Pty Ltd
 -- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 --
 -- SPDX-License-Identifier: GPL-2.0-only
 --
 
 -- This module defines instances of "PSpaceStorable" for architecture-specific
--- kernel objects. This includes page table and page directory entries, and
--- ASID pools.
+-- kernel objects. This includes page table entries, VCPUs and ASID pools.
 
 -- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
 -- with minimal text substitution! Remove this comment after updating and
 -- checking against C; update copyright as necessary.
+-- Progress: added VCPU
 
 module SEL4.Object.Instances.AARCH64 where
 
@@ -26,6 +27,13 @@ instance PSpaceStorable PTE where
     projectKO o = case o of
                 KOArch (KOPTE p) -> return p
                 _ -> typeError "PTE" o
+
+instance PSpaceStorable VCPU where
+    makeObject = makeVCPUObject
+    injectKO = KOArch . KOVCPU
+    projectKO o = case o of
+                KOArch (KOVCPU p) -> return p
+                _ -> typeError "VCPU" o
 
 instance PSpaceStorable ASIDPool where
     makeObject = ASIDPool $

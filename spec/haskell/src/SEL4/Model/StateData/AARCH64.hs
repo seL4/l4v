@@ -39,7 +39,9 @@ data KernelState = ARMKernelState {
     armKSNextASID :: VMID, -- FIXME AARCH64: naming (nextVMID)
     -- pointer to a global top-level VSpace table with only invalid entries;
     -- used e.g. for user threads with missing or invalid VSpace root
-    armKSGlobalUserVSpace :: PPtr PTE
+    armKSGlobalUserVSpace :: PPtr PTE,
+    armHSCurVCPU :: Maybe (PPtr VCPU, Bool),
+    armKSGICVCPUNumListRegs :: Int
 }
 
 -- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;
