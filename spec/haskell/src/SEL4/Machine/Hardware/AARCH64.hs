@@ -207,6 +207,16 @@ setVSpaceRoot addr asid = error "Unimplemented - machine op"
 
 {- Memory Barriers -}
 
+isb :: MachineMonad ()
+isb = error "Unimplemented - machine op"
+
+dsb :: MachineMonad ()
+dsb = error "Unimplemented - machine op"
+
+dmb :: MachineMonad ()
+dmb = error "Unimplemented - machine op"
+
+-- FIXME AARCH64: no sfence on Arm
 sfence :: MachineMonad ()
 sfence = error "Unimplemented - machine op"
 
