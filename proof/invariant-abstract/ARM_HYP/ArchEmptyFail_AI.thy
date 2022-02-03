@@ -37,7 +37,7 @@ context Arch begin global_naming ARM_HYP
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail empty_fail_addressTranslateS1CPR)
+         Let_def wp: zipWithM_x_empty_fail empty_fail_addressTranslateS1)
 
 crunch (empty_fail) empty_fail[wp]:
   decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
@@ -189,7 +189,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_event, activate_t
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits
          flush_type.splits page_directory_invocation.splits
-   ignore: resetTimer_impl ackInterrupt_impl addressTranslateS1CPR_impl)
+   ignore: resetTimer_impl ackInterrupt_impl addressTranslateS1_impl)
 end
 
 global_interpretation EmptyFail_AI_call_kernel_unit?: EmptyFail_AI_call_kernel_unit

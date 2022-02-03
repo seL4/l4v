@@ -500,7 +500,7 @@ lemma handleVMFault_ccorres:
     apply csymbr
     apply csymbr
     apply (ctac (no_vcg) add: getHDFAR_ccorres pre: ccorres_liftE_Seq)
-     apply (ctac (no_vcg) add: addressTranslateS1CPR_ccorres pre: ccorres_liftE_Seq)
+     apply (ctac (no_vcg) add: addressTranslateS1_ccorres pre: ccorres_liftE_Seq)
       apply csymbr
       apply (ctac (no_vcg) add: getHSR_ccorres pre: ccorres_liftE_Seq)
        apply csymbr
@@ -517,7 +517,7 @@ lemma handleVMFault_ccorres:
    apply csymbr
    apply csymbr
    apply (ctac (no_vcg) pre: ccorres_liftE_Seq)
-    apply (ctac (no_vcg) add: addressTranslateS1CPR_ccorres pre: ccorres_liftE_Seq)
+    apply (ctac (no_vcg) add: addressTranslateS1_ccorres pre: ccorres_liftE_Seq)
      apply csymbr
      apply (ctac (no_vcg) add: getHSR_ccorres pre: ccorres_liftE_Seq)
       apply csymbr

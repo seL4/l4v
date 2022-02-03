@@ -1589,18 +1589,18 @@ lemma makeFaultMessage_corres:
   apply (rule makeArchFaultMessage_corres)
   done
 
-lemma dmo_addressTranslateS1CPR_invs'[wp]:
-  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>invs'\<rbrace>"
-  apply (wp dmo_invs' no_irq_addressTranslateS1CPR no_irq)
+lemma dmo_addressTranslateS1_invs'[wp]:
+  "doMachineOp (addressTranslateS1 pc) \<lbrace>invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_addressTranslateS1 no_irq)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-    apply (clarsimp simp: addressTranslateS1CPR_def machine_op_lift_def
+    apply (clarsimp simp: addressTranslateS1_def machine_op_lift_def
                           machine_rest_lift_def split_def | wp)+
   done
 
-lemma dmo_addressTranslateS1CPR_valid_ipc_buffer_ptr'[wp]:
-  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
+lemma dmo_addressTranslateS1_valid_ipc_buffer_ptr'[wp]:
+  "doMachineOp (addressTranslateS1 pc) \<lbrace>valid_ipc_buffer_ptr' p\<rbrace>"
   by (wpsimp wp: hoare_valid_ipc_buffer_ptr_typ_at')
 
 crunch inv[wp]: makeArchFaultMessage invs'
@@ -1846,7 +1846,7 @@ crunch irq_handlers'[wp]: doIPCTransfer "valid_irq_handlers'"
 
 crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
   (wp: crunch_wps no_irq no_irq_mapM no_irq_storeWord no_irq_loadWord
-       no_irq_case_option no_irq_addressTranslateS1CPR
+       no_irq_case_option no_irq_addressTranslateS1
        simp: crunch_simps zipWithM_x_mapM)
 
 crunch pde_mappings'[wp]: doIPCTransfer "valid_pde_mappings'"
@@ -2934,13 +2934,13 @@ lemma cteDeleteOne_reply_cap_to'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   done
 
-lemma dmo_addressTranslateS1CPR_valid_machine_state'[wp]:
-  "doMachineOp (addressTranslateS1CPR pc) \<lbrace>valid_machine_state'\<rbrace>"
+lemma dmo_addressTranslateS1_valid_machine_state'[wp]:
+  "doMachineOp (addressTranslateS1 pc) \<lbrace>valid_machine_state'\<rbrace>"
   by (wpsimp simp: valid_machine_state'_def
                       pointerInUserData_def
                       pointerInDeviceData_def
                 wp: dmo_lift' hoare_vcg_all_lift
-                    addressTranslateS1CPR_underlying_memory
+                    addressTranslateS1_underlying_memory
                     hoare_vcg_disj_lift)
 
 crunches setupCallerCap, possibleSwitchTo, asUser, doIPCTransfer
