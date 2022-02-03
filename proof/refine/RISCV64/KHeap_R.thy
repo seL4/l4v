@@ -3087,10 +3087,6 @@ crunches doMachineOp
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemmas bit_simps' = pteBits_def asidHighBits_def asid_low_bits_def
-                    asid_high_bits_def minSchedContextBits_def
-                    replySizeBits_def pageBits_def ptBits_def
-
 lemmas is_aligned_add_step_le' = is_aligned_add_step_le[simplified mask_2pm1 add_diff_eq]
 
 lemma objBitsKO_Data:
