@@ -38,7 +38,7 @@ fi
 # Get the directory that this script is running in.
 CPARSER_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 TOPLEVEL_DIR=$( git -C ${CPARSER_DIR} rev-parse --show-toplevel)
-RELEASE_ARCHS='ARM ARM_HYP X64 RISCV64'
+RELEASE_ARCHS='ARM ARM_HYP AARCH64 X64 RISCV64'
 pushd "${TOPLEVEL_DIR}"
 
 # Ensure that our working directory is clean.
