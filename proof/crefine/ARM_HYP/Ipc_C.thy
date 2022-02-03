@@ -1800,7 +1800,7 @@ proof -
        apply (csymbr)
        apply csymbr
        apply (ctac(no_vcg) add: getRestartPC_ccorres)
-        apply (ctac(no_vcg) add: addressTranslateS1CPR_ccorres)
+        apply (ctac(no_vcg) add: addressTranslateS1_ccorres)
          apply (rule ccorres_stateAssert)
          apply csymbr
          apply (ctac(no_vcg) add: setMR_ccorres_dc)

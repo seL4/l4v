@@ -466,8 +466,8 @@ lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
 lemma no_irq_writeContextIDAndPD: "no_irq (writeContextIDAndPD asid w)"
   by (simp add: writeContextIDAndPD_def)
 
-lemma no_irq_addressTranslateS1CPR: "no_irq (addressTranslateS1CPR w)"
-  apply (clarsimp simp add: addressTranslateS1CPR_def no_irq_def, wp)
+lemma no_irq_addressTranslateS1: "no_irq (addressTranslateS1 w)"
+  apply (clarsimp simp add: addressTranslateS1_def no_irq_def, wp)
   apply (simp only: atomize_all)
   apply (wp no_irq_machine_op_lift[simplified no_irq_def], simp)
   done
@@ -770,9 +770,9 @@ lemma empty_fail_setHCR[simp, intro!]:
   "empty_fail (setHCR w)"
   by (simp add: setHCR_def)
 
-lemma empty_fail_addressTranslateS1CPR[simp, intro!]:
-  "empty_fail (addressTranslateS1CPR w)"
-  by (simp add: addressTranslateS1CPR_def)
+lemma empty_fail_addressTranslateS1[simp, intro!]:
+  "empty_fail (addressTranslateS1 w)"
+  by (simp add: addressTranslateS1_def)
 
 lemma empty_fail_writeContextIDAndPD[simp, intro!]:
   "empty_fail (writeContextIDAndPD asid w)"

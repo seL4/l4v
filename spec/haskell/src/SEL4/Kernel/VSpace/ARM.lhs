@@ -738,7 +738,7 @@ Hypervisor mode requires extra translation here.
 > handleVMFault _ ARMDataAbort = do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     addr <- withoutFailure $ doMachineOp getHDFAR
->     uaddr <- withoutFailure $ doMachineOp (addressTranslateS1CPR addr)
+>     uaddr <- withoutFailure $ doMachineOp (addressTranslateS1 addr)
 >     let faddr = (uaddr .&. complement (mask pageBits)) .|.
 >                 (addr .&. mask pageBits)
 >     fault <- withoutFailure $ doMachineOp getHSR
@@ -752,7 +752,7 @@ Hypervisor mode requires extra translation here.
 > handleVMFault thread ARMPrefetchAbort = do
 >     pc <- withoutFailure $ asUser thread $ getRestartPC
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->     upc <- withoutFailure $ doMachineOp (addressTranslateS1CPR $ VPtr pc)
+>     upc <- withoutFailure $ doMachineOp (addressTranslateS1 $ VPtr pc)
 >     let faddr = (upc .&. complement (mask pageBits)) .|.
 >                 (VPtr pc .&. mask pageBits)
 >     fault <- withoutFailure $ doMachineOp getHSR

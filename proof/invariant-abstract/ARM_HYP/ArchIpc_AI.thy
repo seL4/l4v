@@ -218,7 +218,7 @@ lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \
 lemma make_arch_fault_msg_invs[wp, Ipc_AI_assms]: "make_arch_fault_msg f t \<lbrace>invs\<rbrace>"
   apply (cases f)
   apply simp_all
-  apply (wpsimp simp: do_machine_op_bind addressTranslateS1CPR_def)
+  apply (wpsimp simp: do_machine_op_bind addressTranslateS1_def)
   done
 
 lemma make_fault_message_inv[wp, Ipc_AI_assms]:
@@ -409,17 +409,17 @@ lemma transfer_caps_loop_valid_vspace_objs[wp, Ipc_AI_assms]:
         | assumption | simp split del: if_split)+
   done
 
-lemma addressTranslateS1CPR_vms[wp]: "do_machine_op (addressTranslateS1CPR pc) \<lbrace> valid_machine_state \<rbrace>"
+lemma addressTranslateS1_vms[wp]: "do_machine_op (addressTranslateS1 pc) \<lbrace> valid_machine_state \<rbrace>"
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift
-                    addressTranslateS1CPR_underlying_memory
+                    addressTranslateS1_underlying_memory
              simp: valid_machine_state_def)
 
-lemma dmo_addressTranslateS1CPR_valid_irq_state[wp]:
-  "do_machine_op (addressTranslateS1CPR pc) \<lbrace>valid_irq_states\<rbrace>"
-  by (wpsimp simp: addressTranslateS1CPR_def do_machine_op_bind wp: dmo_valid_irq_states)
+lemma dmo_addressTranslateS1_valid_irq_state[wp]:
+  "do_machine_op (addressTranslateS1 pc) \<lbrace>valid_irq_states\<rbrace>"
+  by (wpsimp simp: addressTranslateS1_def do_machine_op_bind wp: dmo_valid_irq_states)
 
-lemma dmo_addressTranslateS1CPR_cap_refs_respects_device_region[wp]:
-  "do_machine_op (addressTranslateS1CPR pc) \<lbrace>cap_refs_respects_device_region\<rbrace>"
+lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
+  "do_machine_op (addressTranslateS1 pc) \<lbrace>cap_refs_respects_device_region\<rbrace>"
   by (wpsimp  wp: cap_refs_respects_device_region_dmo)
 
 crunch aligned                   [wp, Ipc_AI_assms]:  make_arch_fault_msg "pspace_aligned"
@@ -478,9 +478,9 @@ context Arch begin global_naming ARM_HYP
 
 named_theorems Ipc_AI_cont_assms
 
-lemma dmo_addressTranslateS1CPR_pspace_respects_device_region[wp]:
-  "do_machine_op (addressTranslateS1CPR pc) \<lbrace>pspace_respects_device_region\<rbrace>"
-  by (wpsimp simp: addressTranslateS1CPR_def do_machine_op_bind wp: device_region_dmos)
+lemma dmo_addressTranslateS1_pspace_respects_device_region[wp]:
+  "do_machine_op (addressTranslateS1 pc) \<lbrace>pspace_respects_device_region\<rbrace>"
+  by (wpsimp simp: addressTranslateS1_def do_machine_op_bind wp: device_region_dmos)
 
 crunch pspace_respects_device_region[wp]: make_fault_msg "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)

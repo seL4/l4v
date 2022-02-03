@@ -539,14 +539,14 @@ where
   "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
 
 consts'
-  addressTranslateS1CPR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  addressTranslateS1CPR_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
+  addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+  addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition
-  addressTranslateS1CPR :: "machine_word \<Rightarrow> machine_word machine_monad"
+  addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machine_monad"
 where
-  "addressTranslateS1CPR w \<equiv> do
-    machine_op_lift (addressTranslateS1CPR_impl w);
-    gets (addressTranslateS1CPR_val w)
+  "addressTranslateS1 w \<equiv> do
+    machine_op_lift (addressTranslateS1_impl w);
+    gets (addressTranslateS1_val w)
   od"
 
 definition
