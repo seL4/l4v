@@ -156,6 +156,12 @@ abbreviation st_tcb_at' :: "(thread_state \<Rightarrow> bool) \<Rightarrow> obj_
 abbreviation bound_tcb_at' :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "bound_tcb_at' \<equiv> pred_tcb_at' itcbBoundNotification"
 
+abbreviation bound_sc_tcb_at' :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "bound_sc_tcb_at' \<equiv> pred_tcb_at' itcbSchedContext"
+
+abbreviation bound_yt_tcb_at' :: "(obj_ref option \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "bound_yt_tcb_at' \<equiv> pred_tcb_at' itcbYieldTo"
+
 abbreviation mcpriority_tcb_at' :: "(priority \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "mcpriority_tcb_at' \<equiv> pred_tcb_at' itcbMCP"
 
@@ -601,6 +607,8 @@ definition valid_tcb' :: "tcb \<Rightarrow> kernel_state \<Rightarrow> bool" whe
                   \<and> valid_tcb_state' (tcbState t) s
                   \<and> is_aligned (tcbIPCBuffer t) msg_align_bits
                   \<and> valid_bound_ntfn' (tcbBoundNotification t) s
+                  \<and> valid_bound_sc' (tcbSchedContext t) s
+                  \<and> valid_bound_sc' (tcbYieldTo t) s
                   \<and> tcbDomain t \<le> maxDomain
                   \<and> tcbPriority t \<le> maxPriority
                   \<and> tcbMCP t \<le> maxPriority"
@@ -1593,6 +1601,9 @@ lemma obj_at_state_refs_ofD':
 lemma ko_at_state_refs_ofD':
   "ko_at' ko p s \<Longrightarrow> state_refs_of' s p = refs_of' (injectKO ko)"
   by (clarsimp dest!: obj_at_state_refs_ofD')
+
+abbreviation distinct_release_queue :: "kernel_state \<Rightarrow> bool" where
+  "distinct_release_queue \<equiv> \<lambda>s. distinct (ksReleaseQueue s)"
 
 definition
   tcb_ntfn_is_bound' :: "machine_word option \<Rightarrow> tcb \<Rightarrow> bool"
@@ -3458,7 +3469,8 @@ lemma vms_sch_act_update'[iff]:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas bit_simps' = pteBits_def asidHighBits_def asidPoolBits_def asid_low_bits_def
-                    asid_high_bits_def bit_simps
+                    asid_high_bits_def minSchedContextBits_def
+                    replySizeBits_def ptBits_def bit_simps
 
 lemma objBitsT_simps:
   "objBitsT EndpointT = epSizeBits"
