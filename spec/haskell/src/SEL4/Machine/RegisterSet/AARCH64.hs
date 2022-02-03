@@ -1,15 +1,12 @@
 --
--- Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+-- Copyright 2022, Proofcraft Pty Ltd
 --
 -- SPDX-License-Identifier: GPL-2.0-only
 --
 
--- This module defines the RISCV 64-bit register set.
+-- This module defines the AArch 64-bit register set.
 
 {-# LANGUAGE FlexibleContexts #-}
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
 
 module SEL4.Machine.RegisterSet.AARCH64 where
 
@@ -22,49 +19,47 @@ import Data.Helpers
 import Control.Monad.State(State, gets, modify)
 
 data Register
-    = LR -- "RA"
-    | SP | GP
-    | S0 | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11
-    | A0 | A1 | A2 | A3 | A4 | A5 | A6 | A7
-    | T0 | T1 | T2 | T3 | T4 | T5 | T6 | TP
-    | SPSR_EL1 -- FIXME AARCH64: this is only so haskell compiles
-    | SCAUSE | SSTATUS | FaultIP | NextIP
+    = X0 | X1 | X2 | X3 | X4 | X5 | X6 | X7 | X8 | X9
+    | X10 | X11 | X12 | X13 | X14 | X15 | X16 | X17 | X18 | X19
+    | X20 | X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 {-LR-}
+    | SP_EL0 | NextIP {-ELR_EL1-} | SPSR_EL1 | FaultIP | TPIDR_EL0 {-TLS_BASE-}
+    | TPIDRRO_EL0
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 type Word = Data.Word.Word64
 
 capRegister :: Register
-capRegister = A0
+capRegister = X0
 
 msgInfoRegister :: Register
-msgInfoRegister = A1
+msgInfoRegister = X1
 
 msgRegisters :: [Register]
-msgRegisters = [A2 .. A5]
+msgRegisters = [X2 .. X5]
 
 badgeRegister :: Register
-badgeRegister = A0
+badgeRegister = X0
 
 frameRegisters :: [Register]
-frameRegisters = FaultIP : LR : SP : GP : [S0 .. S11]
+frameRegisters = FaultIP : SP_EL0 : SPSR_EL1 : [X0 .. X8] ++ [X16, X17, X18, X29, X30]
 
 gpRegisters :: [Register]
-gpRegisters = [A0 .. A7] ++ [T0 .. T6] ++ [TP]
+gpRegisters = [X9 .. X15] ++ [X19 .. X28] ++ [TPIDR_EL0, TPIDRRO_EL0]
 
-exceptionMessage :: [Register]
-exceptionMessage = [FaultIP, SP]
+exceptionMessage :: [Register] -- see fault_messages[] in C
+exceptionMessage = [FaultIP, SP_EL0, SPSR_EL1]
 
-syscallMessage :: [Register]
-syscallMessage = FaultIP : SP : LR : [A0 .. A6]
+syscallMessage :: [Register] -- see fault_messages[] in C
+syscallMessage = [X0 .. X7] ++ [FaultIP, SP_EL0, NextIP {-ELR_EL1-}, SPSR_EL1]
 
 tlsBaseRegister :: Register
-tlsBaseRegister = TP
+tlsBaseRegister = TPIDR_EL0
 
-sstatusSPIE :: Word
-sstatusSPIE = 0x20
+pstateUser :: Word
+pstateUser =  0x140 -- PSTATE_USER
 
 initContext :: [(Register, Word)]
-initContext = [ (SSTATUS , sstatusSPIE) ]
+initContext = [ (SPSR_EL1 , pstateUser) ]
 
 faultRegister :: Register
 faultRegister = FaultIP
@@ -115,6 +110,7 @@ vcpuRegSavedWhenDisabled _ = False
 -- registers. We use an array for the general registers, with the convention that
 -- all unused entries map to 0.
 data FPUState = FPUState { fpuRegs :: Array Int Data.Word.Word64
+                           -- fpsr and fpcr in C
                          , fpuSr :: Data.Word.Word32
                          , fpuCr :: Data.Word.Word32 }
   deriving Show
