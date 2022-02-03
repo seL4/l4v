@@ -37,6 +37,8 @@ ifndef TOOLPREFIX
       TRY_TOOLPREFIX := arm-none-eabi- arm-linux-gnueabi-
     else ifeq (${L4V_ARCH},RISCV64)
       TRY_TOOLPREFIX := riscv64-unknown-linux-gnu- riscv64-linux-gnu- riscv64-unknown-elf-
+    else ifeq (${L4V_ARCH},AARCH64)
+      TRY_TOOLPREFIX := aarch64-unknown-linux-gnu- aarch64-linux-gnu-
     endif
   endif
   ifdef TRY_TOOLPREFIX
