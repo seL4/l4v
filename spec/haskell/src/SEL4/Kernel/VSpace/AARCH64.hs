@@ -122,17 +122,20 @@ isPageTablePTE _ = False
 getPPtrFromHWPTE :: PTE -> PPtr PTE
 getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits False)
 
--- how many bits there are left to be translated at a given level
--- (0 = bottom level)
+-- how many bits there are left to be translated at a given level (0 = bottom
+-- level). This counts the bits the levels below the current one translate, so
+-- no case distinction needed for the top level -- it never participates.
+-- Example: if maxPTLevel = 2, and we are on level 2, that means level 0 and 1
+-- are below us and we still need translate the bits for level 0 and 1 after
+-- this lookup, but not the ones from level 2, so only level 0 and 1 need to be
+-- counted in ptBitsLeft.
 ptBitsLeft :: Int -> Int
--- FIXME AARCH64: check if this needs conditional on top-level
 ptBitsLeft level = ptTranslationBits False * level + pageBits
 
 -- compute index into a page table from vPtr at given level
 ptIndex :: Int -> VPtr -> Word
 ptIndex level vPtr =
-    -- FIXME AARCH64: check if this needs a conditional on top-level
-    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits False)
+    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits (level == maxPTLevel))
 
 -- compute slot ptr inside the table ptPtr at given level for a vPtr
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
