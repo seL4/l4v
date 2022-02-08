@@ -6,18 +6,10 @@
 --
 
 -- This module contains the physical memory model's representations of the
--- RISC-V 64bit-specific data structures, as well as a type representing
--- capabilities to RISC-V-specific objects.
+-- AArch64-specific data structures, as well as a type representing capabilities
+-- to AArch64-specific objects.
 
 {-# LANGUAGE EmptyDataDecls, GeneralizedNewtypeDeriving #-}
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: added VCPU
-
--- FIXME AARCH64: added ASID pool entry type and validated ASID high/low bits,
--- but no other checking yet.
 
 module SEL4.Object.Structures.AARCH64 where
 
@@ -46,6 +38,7 @@ data ArchCapability
         capFMappedAddress :: Maybe (ASID, VPtr) }
     | PageTableCap {
         capPTBasePtr :: PPtr PTE,
+        capPTTopLevel :: Bool,
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     | VCPUCap {
         capVCPUPtr :: PPtr VCPU }
@@ -57,7 +50,7 @@ minUntypedSizeBits :: Int
 minUntypedSizeBits = 4
 
 maxUntypedSizeBits :: Int
-maxUntypedSizeBits = 38
+maxUntypedSizeBits = 47
 
 {- Kernel Objects -}
 

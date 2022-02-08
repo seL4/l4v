@@ -184,10 +184,13 @@ createObject t regionBase _ isDevice =
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVHugePage isDevice Nothing
         -- FIXME AARCH64: sizes may differ by level when hypervisor enabled
+        -- GK: should this be determined by a separate API object type or a
+        -- user-size parameter? Probably API object type.
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) Nothing
+            -- FIXME AARCH64: for now picked non-toplevel PT default
+            return $! PageTableCap (pointerCast regionBase) False Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0
             return $! VCPUCap (PPtr $ fromPPtr regionBase)
