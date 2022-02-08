@@ -1,0 +1,1 @@
+regen /home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM/kernel.dtb /home/sbuckley/repos/verification_timeprot/seL4/tools/dts/sabre.dts;/home/sbuckley/repos/verification_timeprot/seL4/src/plat/imx6/overlay-sabre.dts

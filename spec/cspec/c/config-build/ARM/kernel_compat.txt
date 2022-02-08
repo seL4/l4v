@@ -1,0 +1,1 @@
+arm,cortex-a9-gic;arm,cortex-a9-twd-timer;arm,pl310-cache;fsl,imx6q-uart;

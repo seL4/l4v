@@ -11,7 +11,7 @@ import argparse
 import subprocess
 
 # Settings
-L4V_ARCH_DEFAULT="ARM"
+L4V_ARCH_DEFAULT="RISCV64"
 L4V_ARCH_LIST=["ARM","ARM_HYP","X64","RISCV64"]
 
 # Fetch directory this script is stored in.

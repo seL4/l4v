@@ -1,0 +1,135 @@
+
+#pragma once
+
+#define CONFIG_ARM_HIKEY_OUTSTANDING_PREFETCHERS  0
+#define CONFIG_ARM_HIKEY_PREFETCHER_STRIDE  0
+#define CONFIG_ARM_HIKEY_PREFETCHER_NPFSTRM  0
+/* disabled: CONFIG_ARM_HIKEY_PREFETCHER_STBPFDIS */
+/* disabled: CONFIG_ARM_HIKEY_PREFETCHER_STBPFRS */
+#define CONFIG_PLAT_SABRE  1  /* KernelPlatformSabre=ON */
+#define CONFIG_PLAT_IMX6DQ  1  /* KernelPlatImx6dq=ON */
+#define CONFIG_ARM_PLAT  sabre
+#define CONFIG_ARCH_AARCH32  1  /* KernelSel4ArchAarch32=ON */
+/* disabled: CONFIG_ARCH_AARCH64 */
+/* disabled: CONFIG_ARCH_ARM_HYP */
+/* disabled: CONFIG_ARCH_RISCV32 */
+/* disabled: CONFIG_ARCH_RISCV64 */
+/* disabled: CONFIG_ARCH_X86_64 */
+/* disabled: CONFIG_ARCH_IA32 */
+#define CONFIG_SEL4_ARCH  aarch32
+/* disabled: CONFIG_ARCH_ARM */
+#define CONFIG_ARCH  arm
+#define CONFIG_ARCH_ARM  1  /* KernelArchARM=ON */
+#define CONFIG_WORD_SIZE  32
+/* disabled: CONFIG_PLAT_IMX7 */
+/* disabled: CONFIG_PLAT_ALLWINNERA20 */
+/* disabled: CONFIG_PLAT_AM335X */
+/* disabled: CONFIG_PLAT_APQ8064 */
+/* disabled: CONFIG_PLAT_BCM2711 */
+/* disabled: CONFIG_PLAT_BCM2837 */
+/* disabled: CONFIG_PLAT_EXYNOS4 */
+/* disabled: CONFIG_PLAT_EXYNOS5 */
+/* disabled: CONFIG_PLAT_HIKEY */
+/* disabled: CONFIG_PLAT_KZM */
+#define CONFIG_PLAT_IMX6  1  /* KernelPlatImx6=ON */
+/* disabled: CONFIG_PLAT_IMX7_SABRE */
+/* disabled: CONFIG_PLAT_IMX8MQ_EVK */
+/* disabled: CONFIG_PLAT_IMX8MM_EVK */
+/* disabled: CONFIG_PLAT_OMAP3 */
+/* disabled: CONFIG_PLAT_QEMU_ARM_VIRT */
+/* disabled: CONFIG_PLAT_TK1 */
+/* disabled: CONFIG_PLAT_TQMA8XQP1GB */
+/* disabled: CONFIG_PLAT_ZYNQ7000 */
+/* disabled: CONFIG_PLAT_ZYNQMP */
+#define CONFIG_PLAT  imx6
+/* disabled: CONFIG_ARM_CORTEX_A7 */
+/* disabled: CONFIG_ARM_CORTEX_A8 */
+#define CONFIG_ARM_CORTEX_A9  1  /* KernelArmCortexA9=ON */
+/* disabled: CONFIG_ARM_CORTEX_A15 */
+/* disabled: CONFIG_ARM_CORTEX_A35 */
+/* disabled: CONFIG_ARM_CORTEX_A53 */
+/* disabled: CONFIG_ARM_CORTEX_A55 */
+/* disabled: CONFIG_ARM_CORTEX_A57 */
+/* disabled: CONFIG_ARM_CORTEX_A72 */
+/* disabled: CONFIG_ARM1136JF_S */
+/* disabled: CONFIG_ARCH_ARM_V6 */
+#define CONFIG_ARCH_ARM_V7A  1  /* KernelArchArmV7a=ON */
+/* disabled: CONFIG_ARCH_ARM_V7VE */
+/* disabled: CONFIG_ARCH_ARM_V8A */
+/* disabled: CONFIG_ARM_SMMU */
+/* disabled: CONFIG_AARCH64_SERROR_IGNORE */
+#define CONFIG_ARM_MACH  imx
+/* disabled: CONFIG_KERNEL_MCS */
+/* disabled: CONFIG_ARM_PA_SIZE_BITS_40 */
+/* disabled: CONFIG_ARM_PA_SIZE_BITS_44 */
+#define CONFIG_ARM_ICACHE_VIPT    /* empty */
+/* disabled: CONFIG_DANGEROUS_CODE_INJECTION_ON_UNDEF_INSTR */
+/* disabled: CONFIG_DEBUG_DISABLE_L2_CACHE */
+/* disabled: CONFIG_DEBUG_DISABLE_L1_ICACHE */
+/* disabled: CONFIG_DEBUG_DISABLE_L1_DCACHE */
+/* disabled: CONFIG_DEBUG_DISABLE_BRANCH_PREDICTION */
+/* disabled: CONFIG_ARM_HYPERVISOR_SUPPORT */
+/* disabled: CONFIG_ARM_GIC_V3_SUPPORT */
+/* disabled: CONFIG_AARCH64_VSPACE_S2_START_L1 */
+/* disabled: CONFIG_ARM_HYP_ENABLE_VCPU_CP14_SAVE_AND_RESTORE */
+/* disabled: CONFIG_ARM_ERRATA_430973 */
+/* disabled: CONFIG_ARM_ERRATA_773022 */
+/* disabled: CONFIG_ARM_SMMU */
+/* disabled: CONFIG_TK1_SMMU */
+/* disabled: CONFIG_ENABLE_A9_PREFETCHER */
+/* disabled: CONFIG_EXPORT_PMU_USER */
+/* disabled: CONFIG_DISABLE_WFI_WFE_TRAPS */
+/* disabled: CONFIG_SMMU_INTERRUPT_ENABLE */
+/* disabled: CONFIG_AARCH32_FPU_ENABLE_CONTEXT_SWITCH */
+/* disabled: CONFIG_AARCH64_SERROR_IGNORE */
+#define CONFIG_L1_CACHE_LINE_SIZE_BITS  5
+/* disabled: CONFIG_KERNEL_GLOBALS_FRAME */
+/* disabled: CONFIG_EXPORT_PCNT_USER */
+/* disabled: CONFIG_EXPORT_VCNT_USER */
+/* disabled: CONFIG_EXPORT_PTMR_USER */
+/* disabled: CONFIG_EXPORT_VTMR_USER */
+#define CONFIG_VTIMER_UPDATE_VOFFSET  1  /* KernelArmVtimerUpdateVOffset=ON */
+/* disabled: CONFIG_HAVE_FPU */
+#define CONFIG_PADDR_USER_DEVICE_TOP  4294967295
+#define CONFIG_ROOT_CNODE_SIZE_BITS  12
+#define CONFIG_TIMER_TICK_MS  2
+#define CONFIG_TIME_SLICE  5
+#define CONFIG_RETYPE_FAN_OUT_LIMIT  256
+#define CONFIG_MAX_NUM_WORK_UNITS_PER_PREEMPTION  100
+#define CONFIG_RESET_CHUNK_BITS  8
+#define CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS  230
+#define CONFIG_FASTPATH  1  /* KernelFastpath=ON */
+#define CONFIG_NUM_DOMAINS  16
+#define CONFIG_NUM_PRIORITIES  256
+#define CONFIG_MAX_NUM_NODES  1
+/* disabled: CONFIG_ENABLE_SMP_SUPPORT */
+#define CONFIG_KERNEL_STACK_BITS  12
+#define CONFIG_VERIFICATION_BUILD  1  /* KernelVerificationBuild=ON */
+/* disabled: CONFIG_DEBUG_BUILD */
+/* disabled: CONFIG_HARDWARE_DEBUG_API */
+/* disabled: CONFIG_PRINTING */
+/* disabled: CONFIG_KERNEL_INVOCATION_REPORT_ERROR_IPC */
+#define CONFIG_NO_BENCHMARKS  1  /* KernelBenchmarksNone=ON */
+#define CONFIG_KERNEL_BENCHMARK  none
+/* disabled: CONFIG_ENABLE_BENCHMARKS */
+/* disabled: CONFIG_KERNEL_LOG_BUFFER */
+#define CONFIG_MAX_NUM_TRACE_POINTS  0
+/* disabled: CONFIG_IRQ_REPORTING */
+/* disabled: CONFIG_COLOUR_PRINTING */
+#define CONFIG_USER_STACK_TRACE_LENGTH  0
+#define CONFIG_KERNEL_OPT_LEVEL_O2  1  /* KernelOptimisationO2=ON */
+/* disabled: CONFIG_KERNEL_OPT_LEVEL_OS */
+/* disabled: CONFIG_KERNEL_OPT_LEVEL_O0 */
+/* disabled: CONFIG_KERNEL_OPT_LEVEL_O1 */
+/* disabled: CONFIG_KERNEL_OPT_LEVEL_O3 */
+#define CONFIG_KERNEL_OPT_LEVEL  -O2
+/* disabled: CONFIG_KERNEL_FWHOLE_PROGRAM */
+/* disabled: CONFIG_DANGEROUS_CODE_INJECTION */
+/* disabled: CONFIG_DEBUG_DISABLE_PREFETCHERS */
+/* disabled: CONFIG_SET_TLS_BASE_SELF */
+/* disabled: CONFIG_CLZ_32 */
+/* disabled: CONFIG_CLZ_64 */
+/* disabled: CONFIG_CTZ_32 */
+/* disabled: CONFIG_CTZ_64 */
+/* disabled: CONFIG_CLZ_NO_BUILTIN */
+/* disabled: CONFIG_CTZ_NO_BUILTIN */
