@@ -548,6 +548,8 @@ performPageInvocation (PageUnmap cap ctSlot) = do
     updateCap ctSlot (ArchObjectCap $ cap { capFMappedAddress = Nothing })
 
 performPageInvocation (PageGetAddr ptr) = do
+    stateAssert cur_tcb'_asrt
+        "Assert that `cur_tcb' s` holds"
     let paddr = fromPAddr $ addrFromPPtr ptr
     ct <- getCurThread
     msgTransferred <- setMRs ct Nothing [paddr]
