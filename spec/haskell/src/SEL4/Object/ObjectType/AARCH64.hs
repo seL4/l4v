@@ -155,6 +155,8 @@ placeNewDataObject regionBase sz isDevice = if isDevice
     then placeNewObject regionBase UserDataDevice sz
     else placeNewObject regionBase UserData sz
 
+-- FIXME AARCH64: this should use getObjectSize instead of ptBits/ptTranslationBits calculations
+-- (also not entirely satisfying, because it's getObjectSize - size of base object)
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 createObject t regionBase _ isDevice =
     let funupd = (\f x v y -> if y == x then v else f y) in
@@ -166,31 +168,31 @@ createObject t regionBase _ isDevice =
             placeNewDataObject regionBase 0 isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
-                     (fromPPtr regionBase) (Just RISCVSmallPage)})
+                     (fromPPtr regionBase) (Just ARMSmallPage)})
             return $! FrameCap (pointerCast regionBase)
-                  VMReadWrite RISCVSmallPage isDevice Nothing
+                  VMReadWrite ARMSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
-            placeNewDataObject regionBase ptTranslationBits isDevice
+            placeNewDataObject regionBase (ptTranslationBits False) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
-                     (fromPPtr regionBase) (Just RISCVLargePage)})
+                     (fromPPtr regionBase) (Just ARMLargePage)})
             return $! FrameCap (pointerCast regionBase)
-                  VMReadWrite RISCVLargePage isDevice Nothing
+                  VMReadWrite ARMLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
-            placeNewDataObject regionBase (ptTranslationBits+ptTranslationBits) isDevice
+            placeNewDataObject regionBase (ptTranslationBits False+ptTranslationBits False) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
-                     (fromPPtr regionBase) (Just RISCVHugePage)})
+                     (fromPPtr regionBase) (Just ARMHugePage)})
             return $! FrameCap (pointerCast regionBase)
-                  VMReadWrite RISCVHugePage isDevice Nothing
-        -- FIXME AARCH64: sizes may differ by level when hypervisor enabled
-        -- GK: should this be determined by a separate API object type or a
-        -- user-size parameter? Probably API object type.
+                  VMReadWrite ARMHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do
-            let ptSize = ptBits - objBits (makeObject :: PTE)
+            let ptSize = ptBits False - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            -- FIXME AARCH64: for now picked non-toplevel PT default
             return $! PageTableCap (pointerCast regionBase) False Nothing
+        Arch.Types.VSpaceRootObject -> do
+            let ptSize = ptBits True - objBits (makeObject :: PTE)
+            placeNewObject regionBase (makeObject :: PTE) ptSize
+            return $! PageTableCap (pointerCast regionBase) True Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0
             return $! VCPUCap (PPtr $ fromPPtr regionBase)
@@ -227,7 +229,7 @@ asidPoolBits = 12
 
 capUntypedSize :: ArchCapability -> Word
 capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
-capUntypedSize (PageTableCap {}) = bit ptBits
+capUntypedSize (PageTableCap {capPTTopLevel = isTopLevel}) = bit (ptBits isTopLevel)
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits

@@ -6,13 +6,7 @@
 --
 
 -- This module contains an instance of the machine-specific kernel API for the
--- RISC-V architecture.
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: VCPU added
--- Progress: adjusted tcbBlockSizeBits
+-- AArch64 architecture.
 
 module SEL4.API.Types.AARCH64 where
 
@@ -21,14 +15,13 @@ import SEL4.API.Types.Universal(APIObjectType(..),
 import SEL4.Machine.Hardware.AARCH64
 import Data.WordLib(wordSizeCase)
 
--- There are two page sizes on RISCV, and one extra size specific to 64-bit.
--- We are keeping with the design spec naming convention here; in C they are
--- referred to as 4K, Mega and Giga Pages respectively.
--- Hypervisor additions add VCPUs.
+-- There are three page sizes on AArch64 plus two page table sizes in hyp mode
+-- (top-level and non-top-level). Hypervisor additions add VCPUs.
 
 data ObjectType
     = APIObjectType APIObjectType
     | HugePageObject
+    | VSpaceRootObject
     | SmallPageObject
     | LargePageObject
     | PageTableObject
@@ -49,7 +42,8 @@ instance Enum ObjectType where
         LargePageObject -> apiMax + 2
         HugePageObject -> apiMax + 3
         PageTableObject -> apiMax + 4
-        VCPUObject -> apiMax + 5
+        VSpaceRootObject -> apiMax + 5
+        VCPUObject -> apiMax + 6
         where apiMax = fromEnum (maxBound :: APIObjectType)
     toEnum n
         | n <= apiMax = APIObjectType $ toEnum n
@@ -57,8 +51,9 @@ instance Enum ObjectType where
         | n == apiMax + 2 = LargePageObject
         | n == apiMax + 3 = HugePageObject
         | n == apiMax + 4 = PageTableObject
-        | n == apiMax + 5 = VCPUObject
-        | otherwise = error "toEnum out of range for RISCV.ObjectType"
+        | n == apiMax + 5 = VSpaceRootObject
+        | n == apiMax + 6 = VCPUObject
+        | otherwise = error "toEnum out of range for AArch64.ObjectType"
         where apiMax = fromEnum (maxBound :: APIObjectType)
 
 fromAPIType = APIObjectType
@@ -79,10 +74,11 @@ apiGetObjectSize NotificationObject _ = ntfnSizeBits
 apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 getObjectSize :: ObjectType -> Int -> Int
-getObjectSize PageTableObject _ = ptBits
-getObjectSize SmallPageObject _ = pageBitsForSize RISCVSmallPage
-getObjectSize LargePageObject _ = pageBitsForSize RISCVLargePage
-getObjectSize HugePageObject _ = pageBitsForSize RISCVHugePage
+getObjectSize PageTableObject _ = ptBits False
+getObjectSize VSpaceRootObject _ = ptBits True
+getObjectSize SmallPageObject _ = pageBitsForSize ARMSmallPage
+getObjectSize LargePageObject _ = pageBitsForSize ARMLargePage
+getObjectSize HugePageObject _ = pageBitsForSize ARMHugePage
 getObjectSize VCPUObject _ = vcpuBits
 getObjectSize (APIObjectType apiObjectType) size = apiGetObjectSize apiObjectType size
 

@@ -118,18 +118,21 @@ isPageTablePTE :: PTE -> Bool
 isPageTablePTE (PageTablePTE {}) = True
 isPageTablePTE _ = False
 
+-- only used on non-toplevel tables
 getPPtrFromHWPTE :: PTE -> PPtr PTE
-getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits)
+getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits False)
 
 -- how many bits there are left to be translated at a given level
 -- (0 = bottom level)
 ptBitsLeft :: Int -> Int
-ptBitsLeft level = ptTranslationBits * level + pageBits
+-- FIXME AARCH64: check if this needs conditional on top-level
+ptBitsLeft level = ptTranslationBits False * level + pageBits
 
 -- compute index into a page table from vPtr at given level
 ptIndex :: Int -> VPtr -> Word
 ptIndex level vPtr =
-    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask ptTranslationBits
+    -- FIXME AARCH64: check if this needs a conditional on top-level
+    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits False)
 
 -- compute slot ptr inside the table ptPtr at given level for a vPtr
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
@@ -259,7 +262,8 @@ checkMappingPPtr :: PPtr Word -> PTE -> KernelF LookupFailure ()
 checkMappingPPtr pptr pte =
     case pte of
         PagePTE { ptePPN = ppn } ->
-            unless (ptrFromPAddr (ppn `shiftL` ptBits) == pptr) $ throw InvalidRoot
+            -- PagePTEs can only occur on non-toplevel tables
+            unless (ptrFromPAddr (ppn `shiftL` ptBits False) == pptr) $ throw InvalidRoot
         _ -> throw InvalidRoot
 
 unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
@@ -620,7 +624,7 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit ptBits - 1]
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTTopLevel cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
