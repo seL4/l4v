@@ -47,9 +47,9 @@ toPAddr = Platform.PAddr
 -- these correspond to 4K, Mega and Giga pages in C
 
 data VMPageSize
-    = RISCVSmallPage
-    | RISCVLargePage
-    | RISCVHugePage
+    = ARMSmallPage
+    | ARMLargePage
+    | ARMHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
 -- C defines further fault types, but the trap handler only forwards these
@@ -124,21 +124,24 @@ pageBits :: Int
 pageBits = 12
 
 -- Each page table performs 9 bits of translation, with each entry occupying
--- 2^3 bytes, thus occupying one small page.
+-- 2^3 bytes, thus occupying one small page, apart from top-level tables which
+-- contain twice as many entries if config_ARM_PA_SIZE_BITS_40 is set.
 
-ptTranslationBits :: Int
-ptTranslationBits = 9
+ptTranslationBits :: Bool -> Int
+ptTranslationBits isToplevel =
+    if isToplevel && config_ARM_PA_SIZE_BITS_40 then 10 else 9
 
 pteBits :: Int
 pteBits = 3
 
-ptBits :: Int
-ptBits = ptTranslationBits + pteBits
+ptBits :: Bool -> Int
+ptBits isTopLevel = ptTranslationBits isTopLevel + pteBits
 
+-- The top-level table cannot contain frame PTEs, so isToplevel is False
 pageBitsForSize :: VMPageSize -> Int
-pageBitsForSize RISCVSmallPage = pageBits
-pageBitsForSize RISCVLargePage = pageBits + ptTranslationBits
-pageBitsForSize RISCVHugePage = pageBits + ptTranslationBits + ptTranslationBits
+pageBitsForSize ARMSmallPage = pageBits
+pageBitsForSize ARMLargePage = pageBits + ptTranslationBits False
+pageBitsForSize ARMHugePage = pageBits + ptTranslationBits False + ptTranslationBits False
 
 vcpuBits :: Int
 vcpuBits = 12
@@ -445,3 +448,9 @@ sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 gicVCPUMaxNumLR = (64 :: Int)
 
+
+{- Config parameter -}
+
+-- The size of the physical address space in hyp mode can be configured on some platforms.
+config_ARM_PA_SIZE_BITS_40 :: Bool
+config_ARM_PA_SIZE_BITS_40 = error "generated from CMake config"
