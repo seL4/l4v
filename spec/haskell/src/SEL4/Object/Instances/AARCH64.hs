@@ -8,11 +8,6 @@
 -- This module defines instances of "PSpaceStorable" for architecture-specific
 -- kernel objects. This includes page table entries, VCPUs and ASID pools.
 
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: added VCPU
-
 module SEL4.Object.Instances.AARCH64 where
 
 import SEL4.Machine.Hardware.AARCH64(PTE(..))
