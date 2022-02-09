@@ -81,7 +81,8 @@ maskIrqSignal _ = return ()
 initInterruptController :: Kernel ()
 initInterruptController = error "Unimplemented. Init code."
 
+-- This check takes a different form on architectures where the invalid IRQ is
+-- in the [minIRQ,maxIRQ] range. On Arm platforms, irqInvalid is outside
+-- that range, hence the rangeCheck implicitly checks for irqInvalid
 checkIRQ :: Word -> KernelF SyscallError ()
-checkIRQ irqW = when (irqW > fromIntegral (fromEnum maxIRQ) ||
-                      irqW == fromIntegral (fromEnum irqInvalid)) $
-    throw $ RangeError 1 (fromIntegral (fromEnum maxIRQ))
+checkIRQ irq = rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)
