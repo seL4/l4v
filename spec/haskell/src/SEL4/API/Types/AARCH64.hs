@@ -37,7 +37,7 @@ data ObjectType
 
 instance Bounded ObjectType where
     minBound = APIObjectType minBound
-    maxBound = PageTableObject
+    maxBound = VCPUObject
 
 -- the order of these does not matter, any order that creates an enumeration
 -- will suffice to derive Enum
