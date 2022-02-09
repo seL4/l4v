@@ -40,7 +40,7 @@ import Data.Array
 import Data.List
 import Data.Word (Word32)
 
--- The RISC-V-specific invocations are imported with the "ArchInv" prefix. This
+-- The AArch64-specific invocations are imported with the "ArchInv" prefix. This
 -- is necessary to avoid namespace conflicts with the generic invocations.
 
 import SEL4.API.Invocation.AARCH64 as ArchInv
@@ -75,12 +75,17 @@ lookupIPCBuffer isReceiver thread = do
 {- ASID Lookups -}
 
 -- FIXME AARCH64: make this a Reader Monad
-getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
-getASIDPoolEntry asid = do
+getPoolPtr :: ASID -> Kernel (Maybe (PPtr ASIDPool))
+getPoolPtr asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
     assert (asid <= snd asidRange) "ASID out of range"
     asidTable <- gets (armKSASIDTable . ksArchState)
-    let poolPtr = asidTable!(asidHighBitsOf asid)
+    return $ asidTable!(asidHighBitsOf asid)
+
+-- FIXME AARCH64: make this a Reader Monad
+getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
+getASIDPoolEntry asid = do
+    poolPtr <- getPoolPtr asid
     maybePool <- case poolPtr of
         Just ptr -> liftM Just $ getObject ptr
         Nothing -> return Nothing
@@ -88,10 +93,16 @@ getASIDPoolEntry asid = do
         Just (ASIDPool pool) -> return $ pool!(asid .&. mask asidLowBits)
         Nothing -> return Nothing
 
-updateASIDPoolEntry :: ASID -> (ASIDPoolEntry -> Maybe ASIDPoolEntry) -> Kernel ()
-updateASIDPoolEntry asid f = error "FIXME AARCH64: TODO"
--- TODO: should assert that ASID exists (resolve to not-Nothing)
--- TODO: swap parameter order?
+updateASIDPoolEntry :: (ASIDPoolEntry -> Maybe ASIDPoolEntry) -> ASID -> Kernel ()
+updateASIDPoolEntry f asid = do
+    maybePoolPtr <- getPoolPtr asid
+    assert (isJust maybePoolPtr) "ASID pool pointer must exist"
+    let poolPtr = fromJust maybePoolPtr
+    ASIDPool pool <- getObject poolPtr
+    let maybeEntry = pool!(asid .&. mask asidLowBits)
+    assert (isJust maybeEntry) "ASID pool entry must exist"
+    let pool' = pool//[(asid .&. mask asidLowBits, f $ fromJust maybeEntry)]
+    setObject poolPtr $ ASIDPool pool'
 
 findVSpaceForASID :: ASID -> KernelF LookupFailure (PPtr PTE)
 findVSpaceForASID asid = do
@@ -313,7 +324,7 @@ setVMRoot tcb = do
 -- FIXME AARCH64: naming
 storeHWASID :: ASID -> VMID -> Kernel ()
 storeHWASID asid hw_asid = do
-    updateASIDPoolEntry asid (\entry -> Just $ entry { apVMID = Just hw_asid })
+    updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Just hw_asid }) asid
     hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
     let hwASIDTable' = hwASIDTable//[(hw_asid, Just asid)]
     modify (\s -> s {
@@ -332,8 +343,7 @@ loadHWASID asid = do
 
 -- FIXME AARCH64: naming
 invalidateASID :: ASID -> Kernel ()
-invalidateASID asid = do
-    updateASIDPoolEntry asid (\entry -> Just $ entry { apVMID = Nothing })
+invalidateASID = updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Nothing })
 
 -- FIXME AARCH64: naming
 invalidateHWASIDEntry :: VMID -> Kernel ()
