@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/gitlint@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   whitespace:
     name: 'Trailing Whitespace'
