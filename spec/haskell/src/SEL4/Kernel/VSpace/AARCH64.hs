@@ -178,6 +178,8 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
+lookupFrame :: PPtr PTE -> VPtr -> Kernel (Maybe (VMPageSize, PAddr))
+lookupFrame _ _ = error "FIXME AARCH64: TODO"
 
 {- Handling Faults -}
 
@@ -485,6 +487,25 @@ checkSlot slot test = do
     pte <- withoutFailure $ getObject slot
     unless (test pte) $ throw DeleteFirst
 
+labelToFlushType :: Word -> FlushType
+labelToFlushType label = case invocationType label of
+      ArchInvocationLabel ARMVSpaceClean_Data -> Clean
+      ArchInvocationLabel ARMPageClean_Data -> Clean
+      ArchInvocationLabel ARMVSpaceInvalidate_Data -> Invalidate
+      ArchInvocationLabel ARMPageInvalidate_Data -> Invalidate
+      ArchInvocationLabel ARMVSpaceCleanInvalidate_Data -> CleanInvalidate
+      ArchInvocationLabel ARMPageCleanInvalidate_Data -> CleanInvalidate
+      ArchInvocationLabel ARMVSpaceUnify_Instruction -> Unify
+      ArchInvocationLabel ARMPageUnify_Instruction -> Unify
+      _ -> error "Should never be called without a flush invocation"
+
+pageBase :: (Num a, Bits a) => a -> VMPageSize -> a
+pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+
+-- proof assertion only
+checkValidMappingSize :: VMPageSize -> Kernel ()
+checkValidMappingSize _ = return ()
+
 decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
 decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
@@ -590,6 +611,49 @@ decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
 decodeRISCVPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 
+decodeVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
+        KernelF SyscallError ArchInv.Invocation
+decodeVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }) =
+    case (isVSpaceFlushLabel (invocationType label), args) of
+        (True, start:end:_) -> do
+            when (end <= start) $
+                throw $ InvalidArgument 1
+            when (VPtr start >= pptrBase || VPtr end > pptrBase) $
+                throw IllegalOperation
+            -- FIXME AARCH64: add isValidNativeRoot instead? (same semantics)
+            (vspaceRoot, asid) <- case cap of
+                PageTableCap {
+                         capPTMappedAddress = Just (asid, _),
+                         capPTBasePtr = pt}
+                    -> return (pt, asid)
+                _ -> throw $ InvalidCapability 0
+            ptCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
+            when (ptCheck /= vspaceRoot) $ throw $ InvalidCapability 0
+            frameInfo <- withoutFailure $ lookupFrame (capPTBasePtr cap) (VPtr start)
+            case frameInfo of
+                -- Ignore call if there is nothing mapped here
+                Nothing -> return $ InvokeVSpaceRoot VSpaceRootNothing
+                Just frameInfo -> do
+                    withoutFailure $ checkValidMappingSize (fst frameInfo)
+                    let baseStart = pageBase (VPtr start) (fst frameInfo)
+                    let baseEnd = pageBase (VPtr end - 1) (fst frameInfo)
+                    when (baseStart /= baseEnd) $
+                        throw $ RangeError start $ fromVPtr $ baseStart +
+                                  mask (pageBitsForSize (fst frameInfo))
+                    let offset = start .&. mask (pageBitsForSize (fst frameInfo))
+                    let pStart = snd frameInfo + toPAddr offset
+                    return $ InvokeVSpaceRoot $ VSpaceRootFlush {
+                         vsFlushType = labelToFlushType label,
+                         vsFlushStart = VPtr start,
+                         vsFlushEnd = VPtr end - 1,
+                         vsFlushPStart = pStart,
+                         vsFlushSpace = vspaceRoot,
+                         vsFlushASID = asid }
+        (True, _) -> throw TruncatedMessage
+        _ -> throw IllegalOperation
+decodeVSpaceRootInvocation _ _ _ = fail "Unreachable"
+
+
 decodeRISCVASIDControlInvocation :: Word -> [Word] ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
@@ -656,8 +720,10 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeRISCVFrameInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap {}) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = False }) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = True }) extraCaps =
+    decodeVSpaceRootInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
@@ -668,6 +734,7 @@ decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: no
 {- Invocation Implementations -}
 
 performVSpaceRootInvocation :: VSpaceRootInvocation -> Kernel ()
+performVSpaceRootInvocation VSpaceRootNothing = return ()
 performVSpaceRootInvocation (VSpaceRootFlush flushType vstart vend pstart space asid) = do
     let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
     let end = start + (vend - vstart)

@@ -19,6 +19,8 @@ module SEL4.API.Invocation.AARCH64 where
 import Prelude hiding (Word)
 import SEL4.Machine
 import SEL4.Machine.Hardware.AARCH64 as Arch hiding (PAddr, IRQ)
+import SEL4.API.InvocationLabels
+import SEL4.API.InvocationLabels.AARCH64
 import SEL4.Object.Structures
 import Data.Word (Word8, Word16, Word32)
 import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..))
@@ -39,7 +41,8 @@ data Invocation
     deriving Show
 
 data VSpaceRootInvocation
-    = VSpaceRootFlush {
+    = VSpaceRootNothing
+    | VSpaceRootFlush {
         vsFlushType :: FlushType,
         vsFlushStart :: VPtr,
         vsFlushEnd :: VPtr,
@@ -131,3 +134,19 @@ data IRQControlInvocation
 
 data CopyRegisterSets = RISCVNoExtraRegisters
     deriving Show
+
+isVSpaceFlushLabel :: InvocationLabel -> Bool
+isVSpaceFlushLabel x = case x of
+      ArchInvocationLabel ARMVSpaceClean_Data -> True
+      ArchInvocationLabel ARMVSpaceInvalidate_Data -> True
+      ArchInvocationLabel ARMVSpaceCleanInvalidate_Data -> True
+      ArchInvocationLabel ARMVSpaceUnify_Instruction -> True
+      _ -> False
+
+isPageFlushLabel :: InvocationLabel -> Bool
+isPageFlushLabel x = case x of
+      ArchInvocationLabel ARMPageClean_Data -> True
+      ArchInvocationLabel ARMPageInvalidate_Data -> True
+      ArchInvocationLabel ARMPageCleanInvalidate_Data -> True
+      ArchInvocationLabel ARMPageUnify_Instruction -> True
+      _ -> False
