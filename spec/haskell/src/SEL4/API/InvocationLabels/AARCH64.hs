@@ -19,11 +19,19 @@ module SEL4.API.InvocationLabels.AARCH64 where
 -- FIXME AARCH64: review enum arch_invocation_label in C, the list is quite
 -- different between ARM and RISCV64
 data ArchInvocationLabel
-        = ARMPageTableMap
+        = ARMVSpaceClean_Data
+        | ARMVSpaceInvalidate_Data
+        | ARMVSpaceCleanInvalidate_Data
+        | ARMVSpaceUnify_Instruction
+        | ARMPageTableMap
         | ARMPageTableUnmap
         | ARMPageMap
         | ARMPageUnmap
         | ARMPageGetAddress
+        | ARMPageClean_Data
+        | ARMPageInvalidate_Data
+        | ARMPageCleanInvalidate_Data
+        | ARMPageUnify_Instruction
         | ARMASIDControlMakePool
         | ARMASIDPoolAssign
         | ARMVCPUSetTCB

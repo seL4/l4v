@@ -220,6 +220,19 @@ invalidateTLBByASID asid = do
     when (isJust maybeVMID) $
         doMachineOp $ invalidateTranslationASID $ fromIntegral $ fromJust maybeVMID
 
+doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
+doFlush flushType vstart vend pstart =
+    -- the address calculations that happen here on ARM_HYP are at the caller side in AARCH64
+    case flushType of
+        Clean           -> cleanCacheRange_RAM vstart vend pstart
+        Invalidate      -> invalidateCacheRange_RAM vstart vend pstart
+        CleanInvalidate -> cleanInvalidateCacheRange_RAM vstart vend pstart
+        Unify           -> do
+                               cleanCacheRange_PoU vstart vend pstart
+                               dsb
+                               invalidateCacheRange_I vstart vend pstart
+                               branchFlushRange vstart vend pstart
+                               isb
 
 {- Unmapping and Deletion -}
 
@@ -654,6 +667,14 @@ decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: no
 
 {- Invocation Implementations -}
 
+performVSpaceRootInvocation :: VSpaceRootInvocation -> Kernel ()
+performVSpaceRootInvocation (VSpaceRootFlush flushType vstart vend pstart space asid) = do
+    let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
+    let end = start + (vend - vstart)
+    when (start < end) $ do
+        doMachineOp $ doFlush flushType start end pstart
+
+
 performPageTableInvocation :: PageTableInvocation -> Kernel ()
 performPageTableInvocation (PageTableMap cap ctSlot pte ptSlot) = do
     updateCap ctSlot cap
@@ -696,6 +717,12 @@ performPageInvocation (PageGetAddr ptr) = do
             msgLabel = 0 }
     setMessageInfo ct msgInfo
 
+performPageInvocation (PageFlush flushType vstart vend pstart space asid) = do
+    let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
+    let end = start + (vend - vstart)
+    when (start < end) $ do
+        doMachineOp $ doFlush flushType start end pstart
+
 
 performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
 performASIDControlInvocation (MakePool frame slot parent base) = do
@@ -726,6 +753,7 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
 performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 performARMMMUInvocation i = withoutPreemption $ do
     case i of
+        InvokeVSpaceRoot oper -> performVSpaceRootInvocation oper
         InvokePageTable oper -> performPageTableInvocation oper
         InvokePage oper -> performPageInvocation oper
         InvokeASIDControl oper -> performASIDControlInvocation oper
