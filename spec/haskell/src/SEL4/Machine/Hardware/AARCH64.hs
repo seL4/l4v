@@ -209,6 +209,25 @@ sfence = error "Unimplemented - machine op"
 invalidateTranslationASID :: Word -> MachineMonad ()
 invalidateTranslationASID vmID = error "unimplemented - machine op"
 
+cleanInvalidateCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+cleanInvalidateCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+
+cleanCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+cleanCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+
+cleanCacheRange_PoU :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+cleanCacheRange_PoU vstart vend pstart = error "Unimplemented - machine op"
+
+invalidateCacheRange_RAM :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+invalidateCacheRange_RAM vstart vend pstart = error "Unimplemented - machine op"
+
+invalidateCacheRange_I :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+invalidateCacheRange_I vstart vend pstart = error "Unimplemented - machine op"
+
+branchFlushRange :: VPtr -> VPtr -> PAddr -> MachineMonad ()
+branchFlushRange vstart vend pstart = error "Unimplemented - machine op"
+
+
 {- FPU status/control registers -}
 
 enableFpuEL01 :: MachineMonad ()

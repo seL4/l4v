@@ -30,11 +30,22 @@ import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..))
 -- ASID pool structures.
 
 data Invocation
-    = InvokePageTable PageTableInvocation
+    = InvokeVSpaceRoot VSpaceRootInvocation
+    | InvokePageTable PageTableInvocation
     | InvokePage PageInvocation
     | InvokeASIDControl ASIDControlInvocation
     | InvokeASIDPool ASIDPoolInvocation
     | InvokeVCPU VCPUInvocation
+    deriving Show
+
+data VSpaceRootInvocation
+    = VSpaceRootFlush {
+        vsFlushType :: FlushType,
+        vsFlushStart :: VPtr,
+        vsFlushEnd :: VPtr,
+        vsFlushPStart :: PAddr,
+        vsFlushSpace :: PPtr PTE,
+        vsFlushASID :: ASID }
     deriving Show
 
 data PageTableInvocation
@@ -58,6 +69,13 @@ data PageInvocation
     | PageUnmap {
         pageUnmapCap :: ArchCapability,
         pageUnmapCapSlot :: PPtr CTE }
+    | PageFlush {
+        pageFlushType :: FlushType,
+        pageFlushStart :: VPtr,
+        pageFlushEnd :: VPtr,
+        pageFlushPStart :: PAddr,
+        pageFlushSpace :: PPtr PTE,
+        pageFlushASID :: ASID }
     deriving Show
 
 data ASIDControlInvocation
@@ -73,6 +91,10 @@ data ASIDPoolInvocation
         assignASID :: ASID,
         assignASIDPool :: PPtr ASIDPool,
         assignASIDCTSlot :: PPtr CTE }
+    deriving Show
+
+data FlushType
+    = Clean | Invalidate | CleanInvalidate | Unify
     deriving Show
 
 {- VCPUs -}
