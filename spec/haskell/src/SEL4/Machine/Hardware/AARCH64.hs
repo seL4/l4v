@@ -206,8 +206,8 @@ sfence = error "Unimplemented - machine op"
 
 {- Cache Cleaning and TLB Flushes -}
 
-hwASIDFlush :: Word64 -> MachineMonad ()
-hwASIDFlush asid = error "unimplemented - machine op"
+invalidateTranslationASID :: Word -> MachineMonad ()
+invalidateTranslationASID vmID = error "unimplemented - machine op"
 
 {- FPU status/control registers -}
 
