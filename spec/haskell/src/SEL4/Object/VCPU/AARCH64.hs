@@ -13,7 +13,7 @@
 
 {-# LANGUAGE CPP #-}
 
-module SEL4.Object.VCPU.AARCH64(vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
+module SEL4.Object.VCPU.AARCH64(curVCPUActive, vcpuBits, decodeARMVCPUInvocation, performARMVCPUInvocation, vcpuFinalise, vcpuSwitch, dissociateVCPUTCB, vgicMaintenance, vppiEvent, irqVPPIEventIndex) where
 
 import Prelude hiding (Word)
 import SEL4.Machine
@@ -41,6 +41,14 @@ import Data.Bits hiding (countTrailingZeros)
 import Data.Word(Word8, Word16, Word32, Word64)
 import Data.Array
 import Data.Maybe
+
+{- VCPU: Helper functions -}
+
+-- FIXME AARCH64: can be Reader Monad
+curVCPUActive :: Kernel Bool
+curVCPUActive = do
+    vcpu <- gets (armHSCurVCPU . ksArchState)
+    return $ isJust vcpu && snd (fromJust vcpu)
 
 {- VCPU: Set TCB -}
 

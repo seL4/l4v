@@ -182,19 +182,34 @@ lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 {- Handling Faults -}
 
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
-handleVMFault thread f = do
-    w <- withoutFailure $ doMachineOp read_stval
-    let addr = VPtr w
-    case f of
-        RISCVLoadPageFault -> throw $ loadf addr
-        RISCVLoadAccessFault -> throw $ loadf addr
-        RISCVStorePageFault -> throw $ storef addr
-        RISCVStoreAccessFault -> throw $ storef addr
-        RISCVInstructionPageFault -> throw $ instrf addr
-        RISCVInstructionAccessFault -> throw $ instrf addr
-    where loadf a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVLoadAccessFault]
-          storef a = ArchFault $ VMFault a [0, vmFaultTypeFSR RISCVStoreAccessFault]
-          instrf a = ArchFault $ VMFault a [1, vmFaultTypeFSR RISCVInstructionAccessFault]
+handleVMFault _ ARMDataAbort = do
+    addr <- withoutFailure $ doMachineOp getFAR
+    fault <- withoutFailure $ doMachineOp getDFSR
+    active <- withoutFailure $ curVCPUActive
+    addr <- if active
+            then do
+                -- FIXME AARCH64: assumes GET_PAR_ADDR is inside addressTranslateS1
+                addr' <- withoutFailure $ doMachineOp $ addressTranslateS1 addr
+                return $ addr' .|. (addr .&. mask pageBits)
+            else
+                return addr
+    -- 32 is the width of the FSR field in the C VMFault structure:
+    throw $ ArchFault $ VMFault addr [0, fault .&. mask 32]
+
+handleVMFault thread ARMPrefetchAbort = do
+    pc <- withoutFailure $ asUser thread $ getRestartPC
+    fault <- withoutFailure $ doMachineOp getIFSR
+    active <- withoutFailure $ curVCPUActive
+    pc <- if active
+          then do
+              -- FIXME AARCH64: assumes GET_PAR_ADDR is inside addressTranslateS1
+              pc' <- withoutFailure $ doMachineOp $ addressTranslateS1 (VPtr pc)
+              return $ pc' .|. (VPtr pc .&. mask pageBits)
+          else
+              return $ VPtr pc
+    -- 32 is the width of the FSR field in the C VMFault structure:
+    throw $ ArchFault $ VMFault pc [1, fault .&. mask 32]
+
 
 {- Unmapping and Deletion -}
 

@@ -52,29 +52,10 @@ data VMPageSize
     | ARMHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
--- C defines further fault types, but the trap handler only forwards these
--- below as VMFaults. The rest, including any unknown faults, become user level
--- faults with the fault scause number passed on verbatim.
-
 data VMFaultType
-    = RISCVInstructionAccessFault
-    | RISCVLoadAccessFault
-    | RISCVStoreAccessFault
-    | RISCVInstructionPageFault
-    | RISCVLoadPageFault
-    | RISCVStorePageFault
+    = ARMDataAbort
+    | ARMPrefetchAbort
     deriving Show
-
--- incomplete enumeration of VMFaultType, used only in handleVMFault, hence Word
-vmFaultTypeFSR :: VMFaultType -> Word
-vmFaultTypeFSR f =
-    case f of
-        RISCVInstructionAccessFault -> 1
-        RISCVLoadAccessFault -> 5
-        RISCVStoreAccessFault -> 7
-        RISCVInstructionPageFault -> 12
-        RISCVLoadPageFault -> 13
-        RISCVStorePageFault -> 15
 
 data HypFaultType
     = ARMVCPUFault Word32 -- HSR
@@ -233,6 +214,18 @@ hwASIDFlush asid = error "unimplemented - machine op"
 enableFpuEL01 :: MachineMonad ()
 enableFpuEL01 = error "Unimplemented - machine op"
 
+{- Fault registers -}
+
+getFAR :: MachineMonad VPtr
+getFAR = error "Unimplemented - machine op"
+
+getDFSR :: MachineMonad Word
+getDFSR =  error "Unimplemented - machine op"
+
+getIFSR :: MachineMonad Word
+getIFSR =  error "Unimplemented - machine op"
+
+
 {- Hypervisor-specific status/control registers -}
 
 -- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
@@ -242,9 +235,6 @@ getHSR = error "Unimplemented - machine op"
 -- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
 setHCR :: Word -> MachineMonad ()
 setHCR _hcr = error "Unimplemented - machine op"
-
-getFAR :: MachineMonad VPtr
-getFAR = error "Unimplemented - machine op"
 
 getESR :: MachineMonad Word
 getESR = error "Unimplemented - machine op"
