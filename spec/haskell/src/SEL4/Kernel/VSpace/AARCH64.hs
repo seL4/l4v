@@ -211,6 +211,16 @@ handleVMFault thread ARMPrefetchAbort = do
     throw $ ArchFault $ VMFault pc [1, fault .&. mask 32]
 
 
+{- Cache and TLB consistency -}
+
+invalidateTLBByASID :: ASID -> Kernel ()
+invalidateTLBByASID asid = do
+    -- FIXME AARCH64: add SMMU
+    maybeVMID <- loadHWASID asid
+    when (isJust maybeVMID) $
+        doMachineOp $ invalidateTranslationASID $ fromIntegral $ fromJust maybeVMID
+
+
 {- Unmapping and Deletion -}
 
 -- When a capability backing a virtual memory mapping is deleted, or when an
@@ -227,6 +237,10 @@ deleteASIDPool base ptr = do
     asidTable <- gets (armKSASIDTable . ksArchState)
     when (asidTable ! (asidHighBitsOf base) == Just ptr) $ do
         ASIDPool pool <- getObject ptr
+        forM [0 .. bit asidLowBits - 1] $ \offset -> do
+            when (isJust $ pool ! offset) $ do
+                invalidateTLBByASID $ base + offset
+                invalidateASIDEntry $ base + offset
         let asidTable' = asidTable//[(asidHighBitsOf base, Nothing)]
         modify (\s -> s {
             ksArchState = (ksArchState s) { armKSASIDTable = asidTable' }})
@@ -235,12 +249,10 @@ deleteASIDPool base ptr = do
 
 {- Deleting an Address Space -}
 
--- FIXME AARCH64: might be better to use updateASIDPoolEntry here, depending on
--- match with C (the flush might get in the way)
 deleteASID :: ASID -> PPtr PTE -> Kernel ()
 deleteASID asid pt = do
-    asidTable <- gets (armKSASIDTable . ksArchState)
-    case asidTable!(asidHighBitsOf asid) of
+    maybePoolPtr <- getPoolPtr asid
+    case maybePoolPtr of
         Nothing -> return ()
         Just poolPtr -> do
             ASIDPool pool <- getObject poolPtr
@@ -249,7 +261,8 @@ deleteASID asid pt = do
                  Just (ASIDPoolVSpace vmID p) -> Just p
                  Nothing -> Nothing
             when (maybeRoot == Just pt) $ do
-                doMachineOp $ hwASIDFlush (fromASID asid)
+                invalidateTLBByASID asid
+                invalidateASIDEntry asid
                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
                 setObject poolPtr $ ASIDPool pool'
                 tcb <- getCurThread
