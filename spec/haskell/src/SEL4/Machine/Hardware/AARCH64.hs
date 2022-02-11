@@ -213,6 +213,9 @@ sfence = error "Unimplemented - machine op"
 invalidateTranslationASID :: Word -> MachineMonad ()
 invalidateTranslationASID vmID = error "unimplemented - machine op"
 
+invalidateTranslationSingle :: Word -> MachineMonad ()
+invalidateTranslationSingle vpn = error "unimplemented - machine op"
+
 cleanByVA_PoU :: VPtr -> PAddr -> MachineMonad ()
 cleanByVA_PoU vaddr paddr = error "Unimplemented - machine op"
 

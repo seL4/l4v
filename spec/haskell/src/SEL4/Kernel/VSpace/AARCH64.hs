@@ -237,6 +237,16 @@ invalidateTLBByASID asid = do
     when (isJust maybeVMID) $
         doMachineOp $ invalidateTranslationASID $ fromIntegral $ fromJust maybeVMID
 
+invalidateTLBByASIDVA :: ASID -> VPtr -> Kernel ()
+invalidateTLBByASIDVA asid vaddr = do
+    -- FIXME AARCH64: add SMMU
+    maybeVMID <- loadHWASID asid
+    when (isJust maybeVMID) $ do
+        let vmID = fromJust maybeVMID
+        -- FIXME AARCH64: de-magic 48 (from C)
+        let vpn = fromIntegral vmID `shiftL` 48 .|. fromVPtr vaddr `shiftR` pageBits
+        doMachineOp $ invalidateTranslationSingle vpn
+
 doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
 doFlush flushType vstart vend pstart =
     -- the address calculations that happen here on ARM_HYP are at the caller side in AARCH64
@@ -347,7 +357,8 @@ unmapPage size asid vptr pptr = ignoreFailure $ do
     pte <- withoutFailure $ getObject slot
     checkMappingPPtr pptr pte
     withoutFailure $ storePTE slot InvalidPTE
-    withoutFailure $ doMachineOp sfence
+    withoutFailure $ doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr slot) (addrFromPPtr slot)
+    withoutFailure $ invalidateTLBByASIDVA asid vptr
 
 {- Address Space Switching -}
 
