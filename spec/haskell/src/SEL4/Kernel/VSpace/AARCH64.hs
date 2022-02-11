@@ -324,7 +324,8 @@ unmapPageTable asid vaddr pt = ignoreFailure $ do
     topLevelPT <- findVSpaceForASID asid
     ptSlot <- lookupPTFromLevel maxPTLevel topLevelPT vaddr pt
     withoutFailure $ storePTE ptSlot InvalidPTE
-    withoutFailure $ doMachineOp sfence
+    withoutFailure $ doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr ptSlot) (addrFromPPtr ptSlot)
+    withoutFailure $ invalidateTLBByASID asid
 
 {- Unmapping a Frame -}
 
