@@ -732,16 +732,17 @@ decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
 decodeRISCVASIDControlInvocation _ _ _ _ = fail "Unreachable"
 
 
-decodeRISCVASIDPoolInvocation :: Word ->
+decodeARMASIDPoolInvocation :: Word ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-
-decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
+decodeARMASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
     case (invocationType label, extraCaps) of
         (ArchInvocationLabel ARMASIDPoolAssign, (vspaceCap,vspaceCapSlot):_) ->
             case vspaceCap of
                 ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
                   -> do
+                    when (not (isVTableRoot vspaceCap) || isJust (capPTMappedAddress cap)) $
+                        throw $ InvalidCapability 1
                     asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
                     let base = capASIDBase cap
                     let poolPtr = asidTable!(asidHighBitsOf base)
@@ -760,7 +761,7 @@ decodeRISCVASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
                 _ -> throw $ InvalidCapability 1
         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
-decodeRISCVASIDPoolInvocation _ _ _ = fail "Unreachable"
+decodeARMASIDPoolInvocation _ _ _ = fail "Unreachable"
 
 
 decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
@@ -775,7 +776,7 @@ decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = True
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
-    decodeRISCVASIDPoolInvocation label cap extraCaps
+    decodeARMASIDPoolInvocation label cap extraCaps
 decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
 
 
