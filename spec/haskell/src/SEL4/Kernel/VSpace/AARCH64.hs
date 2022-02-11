@@ -362,26 +362,34 @@ unmapPage size asid vptr pptr = ignoreFailure $ do
 
 {- Address Space Switching -}
 
+armContextSwitch :: PPtr PTE -> ASID -> Kernel ()
+armContextSwitch vspace asid = do
+    vmID <- getHWASID asid
+    doMachineOp $ setVSpaceRoot (addrFromPPtr vspace) (fromIntegral vmID)
+
+setGlobalUserVSpace :: Kernel ()
+setGlobalUserVSpace = do
+    globalUserVSpace <- gets (armKSGlobalUserVSpace . ksArchState)
+    doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) 0
+
 setVMRoot :: PPtr TCB -> Kernel ()
 setVMRoot tcb = do
     threadRootSlot <- getThreadVSpaceRoot tcb
     threadRoot <- getSlotCap threadRootSlot
-    {- We use this in C to remove the check for isMapped: -}
+    {- This means C does not need to check for isMapped: -}
     assert (isValidVTableRoot threadRoot || threadRoot == NullCap)
            "threadRoot must be valid or Null"
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {
+                    capPTTopLevel = True,
                     capPTMappedAddress = Just (asid, _),
-                    capPTBasePtr = pt }) -> do
-                pt' <- findVSpaceForASID asid
-                when (pt /= pt') $ throw InvalidRoot
-                withoutFailure $ doMachineOp $
-                    setVSpaceRoot (addrFromPPtr pt) (fromASID asid)
+                    capPTBasePtr = vspaceRoot }) -> do
+                vspaceRoot' <- findVSpaceForASID asid
+                when (vspaceRoot /= vspaceRoot') $ throw InvalidRoot
+                withoutFailure $ armContextSwitch vspaceRoot asid
             _ -> throw InvalidRoot)
-        (\_ -> do
-            globalUserVSpace <- gets (armKSGlobalUserVSpace . ksArchState)
-            doMachineOp $ setVSpaceRoot (addrFromKPPtr globalUserVSpace) 0)
+        (\_ -> setGlobalUserVSpace)
 
 -- FIXME AARCH64: based on ARM_HYP
 
