@@ -86,7 +86,11 @@ kernelELFBase = VPtr $ fromVPtr pptrTop + (fromPAddr kernelELFPAddrBase .&. (mas
 pptrUserTop :: VPtr
 pptrUserTop = pptrBase
 
+pptrBaseOffset :: Word
 pptrBaseOffset = (fromVPtr pptrBase) - (fromPAddr paddrBase)
+
+paddrTop :: PAddr
+paddrTop = toPAddr $ (fromVPtr pptrTop - pptrBaseOffset)
 
 ptrFromPAddr :: PAddr -> PPtr a
 ptrFromPAddr addr = PPtr $ fromPAddr addr + pptrBaseOffset
