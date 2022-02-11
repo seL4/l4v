@@ -458,16 +458,23 @@ getHWASID asid = do
 
 {- Helper Functions -}
 
+isVTableRoot :: Capability -> Bool
+isVTableRoot (ArchObjectCap (PageTableCap { capPTTopLevel = True })) = True
+isVTableRoot _ = False
+
+-- FIXME AARCH64: name indirection kept here for sync with C; both (C and
+-- Haskell) should define isValidVTableRoot directly
+isValidNativeRoot :: Capability -> Bool
+isValidNativeRoot cap = isValidVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
+
+isValidVTableRoot :: Capability -> Bool
+isValidVTableRoot = isValidNativeRoot
+
 checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
 checkValidIPCBuffer vptr (ArchObjectCap (FrameCap {capFIsDevice = False})) = do
     when (vptr .&. mask ipcBufferSizeBits /= 0) $ throw AlignmentError
     return ()
 checkValidIPCBuffer _ _ = throw IllegalOperation
-
-isValidVTableRoot :: Capability -> Bool
-isValidVTableRoot
-    (ArchObjectCap (PageTableCap { capPTMappedAddress = Just _ })) = True
-isValidVTableRoot _ = False
 
 maskVMRights :: VMRights -> CapRights -> VMRights
 maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
