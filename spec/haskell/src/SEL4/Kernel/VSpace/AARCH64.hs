@@ -560,11 +560,32 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
 
-decodeRISCVFrameInvocation :: Word -> [Word] -> PPtr CTE ->
-                   ArchCapability -> [(Capability, PPtr CTE)] ->
-                   KernelF SyscallError ArchInv.Invocation
+decodeARMFrameInvocationFlush :: Word -> [Word] -> ArchCapability ->
+                                 KernelF SyscallError ArchInv.Invocation
+decodeARMFrameInvocationFlush label args cap = case (args, capFMappedAddress cap) of
+    (start:end:_, Just (asid, vaddr)) -> do
+        vspaceRoot <- lookupErrorOnFailure False $ findVSpaceForASID asid
+        when (end <= start) $ throw $ InvalidArgument 1
+        let pageSize = bit (pageBitsForSize (capFSize cap))
+        let pageBase = addrFromPPtr $ capFBasePtr cap
+        when (start >= pageSize || end > pageSize) $ throw $ InvalidArgument 0
+        let pstart = pageBase + toPAddr start
+        when (pstart < paddrBase || ((end - start) + fromPAddr pstart > fromPAddr paddrTop)) $
+            throw IllegalOperation
+        return $ InvokePage $ PageFlush {
+              pageFlushType = labelToFlushType label,
+              pageFlushStart = VPtr $ fromVPtr vaddr + start,
+              pageFlushEnd = VPtr $ fromVPtr vaddr + end - 1,
+              pageFlushPStart = pstart,
+              pageFlushSpace = vspaceRoot,
+              pageFlushASID = asid }
+    (_:_:_, Nothing) -> throw IllegalOperation
+    _ -> throw TruncatedMessage
 
-decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
+decodeARMFrameInvocation :: Word -> [Word] -> PPtr CTE ->
+                            ArchCapability -> [(Capability, PPtr CTE)] ->
+                            KernelF SyscallError ArchInv.Invocation
+decodeARMFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel ARMPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
             decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
@@ -575,8 +596,16 @@ decodeRISCVFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
                 pageUnmapCapSlot = cte }
         (ArchInvocationLabel ARMPageGetAddress, _, _) ->
             return $ InvokePage $ PageGetAddr (capFBasePtr cap)
+        (ArchInvocationLabel ARMPageClean_Data, _, _) ->
+            decodeARMFrameInvocationFlush label args cap
+        (ArchInvocationLabel ARMPageInvalidate_Data, _, _) ->
+            decodeARMFrameInvocationFlush label args cap
+        (ArchInvocationLabel ARMPageCleanInvalidate_Data, _, _) ->
+            decodeARMFrameInvocationFlush label args cap
+        (ArchInvocationLabel ARMPageUnify_Instruction, _, _) ->
+            decodeARMFrameInvocationFlush label args cap
         _ -> throw IllegalOperation
-decodeRISCVFrameInvocation _ _ _ _ _ = fail "Unreachable"
+decodeARMFrameInvocation _ _ _ _ _ = fail "Unreachable"
 
 
 decodeRISCVPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
@@ -633,16 +662,14 @@ decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
 decodeRISCVPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 
-decodeVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
+decodeARMVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation
-decodeVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }) =
+decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }) =
     case (isVSpaceFlushLabel (invocationType label), args) of
         (True, start:end:_) -> do
-            when (end <= start) $
-                throw $ InvalidArgument 1
-            when (VPtr start >= pptrBase || VPtr end > pptrBase) $
-                throw IllegalOperation
-            -- FIXME AARCH64: add isValidNativeRoot instead? (same semantics)
+            when (end <= start) $ throw $ InvalidArgument 1
+            when (VPtr end > pptrUserTop) $ throw IllegalOperation
+            -- equivalent to isValidNativeRoot:
             (vspaceRoot, asid) <- case cap of
                 PageTableCap {
                          capPTMappedAddress = Just (asid, _),
@@ -660,8 +687,7 @@ decodeVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }
                     let baseStart = pageBase (VPtr start) (fst frameInfo)
                     let baseEnd = pageBase (VPtr end - 1) (fst frameInfo)
                     when (baseStart /= baseEnd) $
-                        throw $ RangeError start $ fromVPtr $ baseStart +
-                                  mask (fst frameInfo)
+                        throw $ RangeError start $ fromVPtr $ baseStart + mask (fst frameInfo)
                     let offset = start .&. mask (fst frameInfo)
                     let pStart = snd frameInfo + toPAddr offset
                     return $ InvokeVSpaceRoot $ VSpaceRootFlush {
@@ -673,7 +699,7 @@ decodeVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }
                          vsFlushASID = asid }
         (True, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
-decodeVSpaceRootInvocation _ _ _ = fail "Unreachable"
+decodeARMVSpaceRootInvocation _ _ _ = fail "Unreachable"
 
 
 decodeRISCVASIDControlInvocation :: Word -> [Word] ->
@@ -741,11 +767,11 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
-    decodeRISCVFrameInvocation label args cte cap extraCaps
+    decodeARMFrameInvocation label args cte cap extraCaps
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = False }) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = True }) extraCaps =
-    decodeVSpaceRootInvocation label args cap
+    decodeARMVSpaceRootInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeRISCVASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
