@@ -199,8 +199,6 @@ createObject t regionBase _ isDevice =
 
 {- Capability Invocation -}
 
--- The only Arch invocations on RISCV are MMU invocations
-
 decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
