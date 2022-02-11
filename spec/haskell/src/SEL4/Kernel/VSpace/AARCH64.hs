@@ -850,15 +850,9 @@ performARMMMUInvocation i = withoutPreemption $ do
         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
     return $ []
 
-{- Simulator Support -}
-
 storePTE :: PPtr PTE -> PTE -> Kernel ()
 storePTE slot pte = do
     setObject slot pte
--- No simulator support currently available for RISCV, but this would be the
--- hook for PTEs:
--- doMachineOp $ storeWordVM (PPtr $ fromPPtr slot) $ wordFromPTE pte
-
 
 {- Unimplemented Boot Code Stubs -}
 
