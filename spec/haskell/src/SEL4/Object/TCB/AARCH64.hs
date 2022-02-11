@@ -9,14 +9,9 @@
 -- Specifically, these functions are used by the "CopyRegisters" operation to
 -- transfer architecture-specific subsets of the register set.
 
--- There are presently no RISC-V-specific register subsets defined, but in
+-- There are presently no AArch64-specific register subsets defined, but in
 -- future this may be extended to transfer floating point registers and other
 -- coprocessor state.
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: added VCPU/HYP to sanitising registers
 
 module SEL4.Object.TCB.AARCH64 where
 
@@ -35,7 +30,7 @@ import Data.Maybe
 import Data.Word(Word8)
 
 decodeTransfer :: Word8 -> KernelF SyscallError CopyRegisterSets
-decodeTransfer _ = return RISCVNoExtraRegisters
+decodeTransfer _ = return ARMNoExtraRegisters
 
 performTransfer :: CopyRegisterSets -> PPtr TCB -> PPtr TCB -> Kernel ()
 performTransfer _ _ _ = return ()

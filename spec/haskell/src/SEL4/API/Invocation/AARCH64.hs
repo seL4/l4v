@@ -128,11 +128,11 @@ data IRQControlInvocation
 
 {- Additional Register Subsets -}
 
--- The RISCV platform currently does not define any additional register sets
+-- The AArch64 platform currently does not define any additional register sets
 -- for the "CopyRegisters" operation. This may be changed in future to support
 -- a floating point unit.
 
-data CopyRegisterSets = RISCVNoExtraRegisters
+data CopyRegisterSets = ARMNoExtraRegisters
     deriving Show
 
 isVSpaceFlushLabel :: InvocationLabel -> Bool

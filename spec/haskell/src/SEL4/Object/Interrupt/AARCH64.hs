@@ -9,11 +9,6 @@
 
 {-# LANGUAGE CPP #-}
 
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: add hypervisor features to handleReservedIRQ
-
 module SEL4.Object.Interrupt.AARCH64 where
 
 import Prelude hiding (Word)
@@ -62,11 +57,8 @@ performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger)
     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
     return ()
 
-plic_complete_claim :: IRQ -> MachineMonad ()
-plic_complete_claim (IRQ irq) = Arch.plic_complete_claim irq
-
 invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
-invokeIRQHandler (AckIRQ irq) = doMachineOp $ plic_complete_claim irq
+invokeIRQHandler (AckIRQ irq) = doMachineOp $ maskInterrupt False irq
 invokeIRQHandler _ = return ()
 
 handleReservedIRQ :: IRQ -> Kernel ()
@@ -76,7 +68,7 @@ handleReservedIRQ irq = do
     return ()
 
 maskIrqSignal :: IRQ -> Kernel ()
-maskIrqSignal _ = return ()
+maskIrqSignal irq = doMachineOp $ maskInterrupt True irq
 
 initInterruptController :: Kernel ()
 initInterruptController = error "Unimplemented. Init code."
