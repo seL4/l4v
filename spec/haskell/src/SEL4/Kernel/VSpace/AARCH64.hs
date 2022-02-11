@@ -129,9 +129,17 @@ isPageTablePTE :: PTE -> Bool
 isPageTablePTE (PageTablePTE {}) = True
 isPageTablePTE _ = False
 
+isPagePTE :: PTE -> Bool
+isPagePTE (PagePTE {}) = True
+isPagePTE _ = False
+
+-- FIXME AARCH64: replace name with whatever ppns will be called
 -- only used on non-toplevel tables
+pteAddr :: PTE -> PAddr
+pteAddr pte = ptePPN pte `shiftL` ptBits False
+
 getPPtrFromHWPTE :: PTE -> PPtr PTE
-getPPtrFromHWPTE pte = ptrFromPAddr (ptePPN pte `shiftL` ptBits False)
+getPPtrFromHWPTE pte = ptrFromPAddr $ pteAddr pte
 
 -- how many bits there are left to be translated at a given level (0 = bottom
 -- level). This counts the bits the levels below the current one translate, so
@@ -178,8 +186,15 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
 lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
 
-lookupFrame :: PPtr PTE -> VPtr -> Kernel (Maybe (VMPageSize, PAddr))
-lookupFrame _ _ = error "FIXME AARCH64: TODO"
+lookupFrame :: PPtr PTE -> VPtr -> Kernel (Maybe (Int, PAddr))
+lookupFrame vspaceRoot vPtr = do
+    (bitsLeft, ptePtr) <- lookupPTSlot vspaceRoot vPtr
+    pte <- getObject ptePtr
+    if isPagePTE pte
+        then return $ Just (bitsLeft, pteAddr pte)
+        else return Nothing
+
+{- Page Table Modification -}
 
 {- Handling Faults -}
 
@@ -499,11 +514,11 @@ labelToFlushType label = case invocationType label of
       ArchInvocationLabel ARMPageUnify_Instruction -> Unify
       _ -> error "Should never be called without a flush invocation"
 
-pageBase :: (Num a, Bits a) => a -> VMPageSize -> a
-pageBase vaddr size = vaddr .&. (complement $ mask (pageBitsForSize size))
+pageBase :: (Num a, Bits a) => a -> Int -> a
+pageBase vaddr size = vaddr .&. (complement $ mask size)
 
 -- proof assertion only
-checkValidMappingSize :: VMPageSize -> Kernel ()
+checkValidMappingSize :: Int -> Kernel ()
 checkValidMappingSize _ = return ()
 
 decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
@@ -639,8 +654,8 @@ decodeVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }
                     let baseEnd = pageBase (VPtr end - 1) (fst frameInfo)
                     when (baseStart /= baseEnd) $
                         throw $ RangeError start $ fromVPtr $ baseStart +
-                                  mask (pageBitsForSize (fst frameInfo))
-                    let offset = start .&. mask (pageBitsForSize (fst frameInfo))
+                                  mask (fst frameInfo)
+                    let offset = start .&. mask (fst frameInfo)
                     let pStart = snd frameInfo + toPAddr offset
                     return $ InvokeVSpaceRoot $ VSpaceRootFlush {
                          vsFlushType = labelToFlushType label,
