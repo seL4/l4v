@@ -419,7 +419,7 @@ invalidateASIDEntry asid = do
     when (isJust maybeHWASID) $ invalidateHWASIDEntry (fromJust maybeHWASID)
     invalidateASID asid
 
--- FIXME AARCH64: update; currently verbatim from ARM
+-- FIXME AARCH64: naming (VMID)
 findFreeHWASID :: Kernel VMID
 findFreeHWASID = do
     -- Look for a free Hardware ASID.
@@ -433,15 +433,10 @@ findFreeHWASID = do
         Just hw_asid -> return hw_asid
         Nothing -> do
             invalidateASID $ fromJust $ hwASIDTable ! nextASID
-            -- FIXME AARCH64: ARM had "doMachineOp $ invalidateLocalTLB_ASID nextASID"
+            doMachineOp $ invalidateTranslationASID $ fromIntegral nextASID
             invalidateHWASIDEntry nextASID
-            let new_nextASID =
-                    if nextASID == maxBound
-                    then minBound
-                    else nextASID + 1
-            modify (\s -> s {
-                ksArchState = (ksArchState s)
-                { armKSNextASID = new_nextASID }})
+            let new_nextASID = if nextASID == maxBound then minBound else nextASID + 1
+            modify (\s -> s { ksArchState = (ksArchState s) { armKSNextASID = new_nextASID }})
             return nextASID
 
 -- FIXME AARCH64: naming
