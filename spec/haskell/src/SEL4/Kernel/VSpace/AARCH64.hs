@@ -702,11 +702,10 @@ decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = Tru
 decodeARMVSpaceRootInvocation _ _ _ = fail "Unreachable"
 
 
-decodeRISCVASIDControlInvocation :: Word -> [Word] ->
+decodeARMASIDControlInvocation :: Word -> [Word] ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-
-decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
+decodeARMASIDControlInvocation label args ASIDControlCap extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel ARMASIDControlMakePool, index:depth:_,
                         (untyped,parentSlot):(croot,_):_) -> do
@@ -729,7 +728,7 @@ decodeRISCVASIDControlInvocation label args ASIDControlCap extraCaps =
                 makePoolBase = base }
         (ArchInvocationLabel ARMASIDControlMakePool, _, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
-decodeRISCVASIDControlInvocation _ _ _ _ = fail "Unreachable"
+decodeARMASIDControlInvocation _ _ _ _ = fail "Unreachable"
 
 
 decodeARMASIDPoolInvocation :: Word ->
@@ -774,7 +773,7 @@ decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = Fals
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = True }) extraCaps =
     decodeARMVSpaceRootInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
-    decodeRISCVASIDControlInvocation label args cap extraCaps
+    decodeARMASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
     decodeARMASIDPoolInvocation label cap extraCaps
 decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
