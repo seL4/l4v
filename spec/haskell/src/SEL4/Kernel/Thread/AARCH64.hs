@@ -37,8 +37,7 @@ configureIdleThread _ = error "Unimplemented init code"
 switchToIdleThread :: Kernel ()
 switchToIdleThread = do
     vcpuSwitch Nothing
-    t <- getIdleThread
-    setVMRoot t
+    setGlobalUserVSpace
 
 activateIdleThread :: PPtr TCB -> Kernel ()
 activateIdleThread _ = return ()
