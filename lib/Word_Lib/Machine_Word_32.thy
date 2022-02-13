@@ -122,8 +122,9 @@ lemma word_ge_min:
   \<open>- (2 ^ (word_bits - 1)) \<le> sint x\<close> for x :: machine_word
   using sint_ge [of x] by (simp add: word_bits_def)
 
+(* We want the rhs unfolded here for later matching *)
 lemma word_rsplit_0:
-  "word_rsplit (0 :: machine_word) = replicate (word_bits div 8) (0 :: 8 word)"
+  "word_rsplit (0::machine_word) = [0, 0, 0, (0::8 word)]"
   by (simp add: word_rsplit_def bin_rsplit_def word_bits_def word_size_def Cons_replicate_eq)
 
 lemma x_less_2_0_1:

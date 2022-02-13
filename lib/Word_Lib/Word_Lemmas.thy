@@ -19,6 +19,8 @@ theory Word_Lemmas
     Word_EqI
 begin
 
+lemmas take_bit_Suc_numeral[simp] = take_bit_Suc[where a="numeral w" for w]
+
 context
   includes bit_operations_syntax
 begin
@@ -1885,6 +1887,28 @@ lemma nasty_split_less:
     apply (erule order_le_less_trans, simp)
    apply simp+
   done
+
+lemma is_aligned_shiftr_add:
+ "\<lbrakk>is_aligned a n; is_aligned b m; b < 2^n; m \<le> n; n < LENGTH('a)\<rbrakk>
+  \<Longrightarrow> a + b >> m = (a >> m) + (b >> m)" for a :: "'a::len word"
+  apply(simp add: shiftr_div_2n_w word_size)
+  apply (rule word_unat_eq_iff[THEN iffD2])
+  apply (subst unat_plus_simple[THEN iffD1])
+   apply (subst shiftr_div_2n_w[symmetric])+
+   apply (rule is_aligned_no_wrap')
+    apply (rule is_aligned_shiftr[where n = "n - m"])
+    apply simp
+   apply (rule shiftr_less_t2n)
+   apply simp
+  apply (simp add:unat_div)
+  apply (subst unat_plus_simple[THEN iffD1])
+   apply (erule is_aligned_no_wrap')
+   apply simp
+  by (meson div_plus_div_distrib_dvd_left is_aligned_iff_dvd_nat is_aligned_weaken)
+
+lemma shiftr_eq_neg_mask_eq:
+  "a >> b = c >> b \<Longrightarrow> a AND NOT (mask b) = c AND NOT (mask b)" for a :: "'a::len word"
+  by word_eqI (metis less_eqE)
 
 end
 
