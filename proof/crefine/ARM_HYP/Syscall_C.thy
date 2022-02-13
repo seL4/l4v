@@ -1729,7 +1729,6 @@ lemma gic_vcpu_num_list_regs_cross_over:
   "\<lbrakk> of_nat (armKSGICVCPUNumListRegs (ksArchState s)) = gic_vcpu_num_list_regs_' t;
      valid_arch_state' s \<rbrakk>
    \<Longrightarrow> gic_vcpu_num_list_regs_' t \<le> 0x3F"
-  including no_take_bit
   apply (drule sym, simp)
   apply (clarsimp simp: valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   apply (clarsimp simp: word_le_nat_alt unat_of_nat)
@@ -1814,13 +1813,11 @@ proof -
 
   have unat_of_nat_ctz_plus_32s:
     "unat (of_nat (word_ctz w) + (0x20 :: int_sword)) = word_ctz w + 32" for w :: machine_word
-    including no_take_bit
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
   have unat_of_nat_ctz_plus_32:
     "unat (of_nat (word_ctz w) + (0x20 :: machine_word)) = word_ctz w + 32" for w :: machine_word
-    including no_take_bit
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_mw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
@@ -1829,7 +1826,6 @@ proof -
      \<Longrightarrow> (0 :: int_sword) <=s of_nat (eisr_calc eisr0 eisr1)
         \<and> of_nat (eisr_calc eisr0 eisr1) <s (0x40 :: int_sword)"
     for eisr0 :: machine_word and eisr1
-    including no_take_bit
     using word_ctz_le[where w=eisr0] word_ctz_less[where w=eisr1]
     apply (clarsimp simp: word_sless_alt word_sle_def)
     apply (rule conjI) (* 0 \<le> *)
@@ -1849,14 +1845,12 @@ proof -
 
   have of_nat_word_ctz_0x21helper:
     "0x21 + word_of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
-    including no_take_bit
     apply (subst unat_arith_simps, simp)
     apply (subst unat_add_lem'; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified]
     by simp
 
   show ?thesis
-    including no_take_bit
     supply if_cong[cong]
     apply (cinit)
      apply (rule ccorres_pre_getCurVCPU, rename_tac vcpuPtr_opt)
@@ -2153,7 +2147,6 @@ lemma  ccorres_VPPIEvent:
   (is "ccorres _ _ ?PRE _ _ _ _")
 proof -
   show ?thesis
-    including no_take_bit
     apply (cinit lift: irq_')
      apply (rule_tac P="irqVPPIEventIndex irq \<noteq> None" in ccorres_gen_asm)
      apply (rule ccorres_pre_getCurVCPU, rename_tac vcpuPtr_opt)

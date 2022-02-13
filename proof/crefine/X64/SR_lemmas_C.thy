@@ -2570,7 +2570,6 @@ lemma numDomains_sge_1_simp:
 
 lemma unat_scast_numDomains:
   "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
-  including no_take_bit
   by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
 
 end

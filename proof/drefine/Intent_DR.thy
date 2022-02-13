@@ -59,13 +59,11 @@ lemma tcb_cap_casesE:
 lemma tcb_cnode_index_def2:
   "n < 8 \<Longrightarrow> tcb_cnode_index n = bin_to_bl 3 (int n)"
   unfolding tcb_cnode_index_def to_bl_def
-  including no_take_bit
   by (simp add: uint_nat unat_of_nat)
 
 lemma bl_to_bin_tcb_cnode_index:
   "n < 8 \<Longrightarrow> nat (bl_to_bin (tcb_cnode_index n)) = n"
   unfolding tcb_cnode_index_def
-  including no_take_bit
   by (simp add: unat_of_nat)
 
 (* LIFT LEMMAS:

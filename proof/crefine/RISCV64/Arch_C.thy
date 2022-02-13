@@ -430,7 +430,6 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -1175,7 +1174,6 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1230,7 +1228,7 @@ lemma ccorres_pre_getObject_pte:
 
 lemma ptr_add_uint_of_nat [simp]:
   "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
-  including no_take_bit by (clarsimp simp: CTypesDefs.ptr_add_def)
+  by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
 
@@ -1492,7 +1490,6 @@ lemma canonical_address_cap_frame_cap:
 
 lemma of_nat_pageBitsForSize_eq:
   "(x = of_nat (pageBitsForSize sz)) = (unat x = pageBitsForSize sz)" for x::machine_word
-  including no_take_bit
   by (auto simp: of_nat_pageBitsForSize)
 
 lemma ccap_relation_FrameCap_IsMapped:
@@ -1575,7 +1572,6 @@ lemma decodeRISCVFrameInvocation_ccorres:
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVFrameInvocation_'proc)"
-  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_'

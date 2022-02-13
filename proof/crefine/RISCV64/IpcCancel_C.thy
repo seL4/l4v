@@ -821,7 +821,6 @@ lemma cready_queues_index_to_C_def2:
   "\<lbrakk> qdom \<le> maxDomain; prio \<le> maxPriority \<rbrakk>
    \<Longrightarrow> cready_queues_index_to_C qdom prio
              = unat (ucast qdom * of_nat numPriorities + ucast prio :: machine_word)"
-  including no_take_bit
   using numPriorities_machine_word_safe
   apply -
   apply (frule (1) cready_queues_index_to_C_in_range[simplified maxDom_to_H maxPrio_to_H])
@@ -900,7 +899,6 @@ lemma cbitmap_L1_relation_bit_set:
            (Arrays.update (ksReadyQueuesL1Bitmap_' (globals x)) (unat d)
              (ksReadyQueuesL1Bitmap_' (globals x).[unat d] || 2 ^ unat (p >> wordRadix)))
            ((ksReadyQueuesL1Bitmap \<sigma>)(d := ksReadyQueuesL1Bitmap \<sigma> d || 2 ^ prioToL1Index p))"
-  including no_take_bit
   apply (unfold cbitmap_L1_relation_def)
   apply (clarsimp simp: le_maxDomain_eq_less_numDomains word_le_nat_alt prioToL1Index_def
                         num_domains_index_updates)
@@ -2155,7 +2153,6 @@ proof -
     "\<And>(w::machine_word). \<lbrakk> w \<noteq> 0 ; word_log2 w < l2BitmapSize \<rbrakk> \<Longrightarrow>
        unat (of_nat l2BitmapSize - (1::machine_word) - of_nat (word_log2 w))
      = invertL1Index (word_log2 w)"
-    including no_take_bit
     apply (subst unat_sub)
      apply (clarsimp simp: l2BitmapSize_def')
      apply (rule word_of_nat_le)
@@ -2178,7 +2175,6 @@ proof -
   include no_less_1_simps
 
   show ?thesis
-    including no_take_bit
     apply (rule ccorres_grab_asm)
     apply (cinit lift: dom_')
      apply (clarsimp split del: if_split)
@@ -2299,7 +2295,6 @@ lemma possibleSwitchTo_ccorres:
           \<inter> UNIV) []
      (possibleSwitchTo t )
      (Call possibleSwitchTo_'proc)"
-  including no_take_bit
   supply if_split [split del]
   supply Collect_const [simp del]
   supply dc_simp [simp del]

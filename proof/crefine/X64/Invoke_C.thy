@@ -191,7 +191,6 @@ lemma decodeDomainInvocation_ccorres:
    apply clarsimp
    apply (vcg exspec=getSyscallArg_modifies)
 
-  including no_take_bit
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
                         invs_queues invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
@@ -1676,7 +1675,6 @@ lemma clearMemory_untyped_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits" in ccorres_gen_asm)
@@ -1806,7 +1804,6 @@ lemma byte_regions_unmodified_actually_heap_list:
 
 lemma ucast_64_32[simp]:
   "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
-  including no_take_bit
   by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
 
 lemma resetUntypedCap_ccorres:
@@ -2359,7 +2356,6 @@ lemma invokeUntyped_Retype_ccorres:
           (ptr + of_nat (shiftL (length destSlots)
               (APIType_capBits newType us)))) >> 4"
       using cover range_cover_sz'[OF cover]
-      including no_take_bit
       apply (simp add: getFreeIndex_def shiftl_t2n
                        unat_of_nat_eq shiftL_nat)
       apply (rule less_mask_eq)
@@ -2377,7 +2373,6 @@ lemma invokeUntyped_Retype_ccorres:
          (liftxf errstate id (K ()) ret__unsigned_long_') (\<lambda>s'. s' = s) ?P'
          [] (invokeUntyped (Retype cref reset ptr_base ptr newType us destSlots isdev))
             (Call invokeUntyped_Retype_'proc)"
-      including no_take_bit
       apply (cinit lift: retypeBase_' srcSlot_' reset_' newType_'
                           userSize_' deviceMemory_' destCNode_' destOffset_' destLength_'
                     simp: when_def)
@@ -2863,7 +2858,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
            liftE (stateAssert (valid_untyped_inv' uinv) []); returnOk uinv odE)
            >>= invocationCatch thread isBlocking isCall InvokeUntyped)
   (Call decodeUntypedInvocation_'proc)"
-  including no_take_bit
   supply if_cong[cong] option.case_cong[cong]
   apply (rule ccorres_name_pre)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' current_extra_caps_' call_' buffer_'

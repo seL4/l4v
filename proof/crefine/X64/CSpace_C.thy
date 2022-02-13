@@ -1768,7 +1768,6 @@ lemma untypedZeroRange_idx_forward_helper:
     \<Longrightarrow> (case (untypedZeroRange cap, untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap))
        of (Some (a, b), Some (a', b')) \<Rightarrow> {a' ..+ unat (b' + 1 - a')} \<subseteq> {a ..+ unat (b + 1 - a)}
         | _ \<Rightarrow> True)"
-  including no_take_bit
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
                         isCap_simps valid_cap_simps' capAligned_def untypedBits_defs
@@ -1811,7 +1810,6 @@ lemma untypedZeroRange_idx_backward_helper:
                of Some (a, b) \<Rightarrow> {a ..+ unat (b + 1 - a)}
                 | None \<Rightarrow> {})
   )"
-  including no_take_bit
   apply (clarsimp split: option.split, intro impI conjI allI)
    apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
@@ -3067,7 +3065,6 @@ lemma sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and> ccap_relation capb \<acute>cap_b \<and> capAligned capb\<rbrace>
   Call sameRegionAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (sameRegionAs capa capb) \<rbrace>"
-  including no_take_bit
   apply vcg
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2 ccap_relation_c_valid_cap)

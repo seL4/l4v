@@ -1659,7 +1659,6 @@ lemma update_cap_rights_and_data:
   apply simp
   apply (subst less_mask_eq)
    apply (clarsimp simp: guard_bits_def word_of_nat_less)
-  including no_take_bit
   apply (clarsimp simp: guard_bits_def word_of_nat_less word_bits_def unat_of_nat32)
   done
 

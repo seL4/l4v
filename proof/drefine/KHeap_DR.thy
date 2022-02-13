@@ -270,7 +270,6 @@ lemma nat_to_bl_dest:
 
 lemma bl_to_bin_tcb_cnode_index_le0:
   "n < 8 \<Longrightarrow> (bl_to_bin (tcb_cnode_index n) \<le> 0) = (n = 0)"
-  including no_take_bit
   by (simp add: tcb_cnode_index_def uint_nat unat_of_nat)
 
 lemma nat_bl_to_bin_lt2p: "nat(bl_to_bin b) < 2 ^ length b"

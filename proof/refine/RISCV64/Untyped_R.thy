@@ -259,7 +259,6 @@ next
 
   note word_unat_power [symmetric, simp del]
   show ?thesis
-    including no_take_bit
     apply (rule corres_name_pre)
     apply clarsimp
     apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap d w n idx)) (cte_map slot) s'")
@@ -732,7 +731,6 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
-  including no_take_bit
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
               split del: if_split cong: if_cong list.case_cong)

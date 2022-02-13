@@ -1007,7 +1007,6 @@ proof -
   have horrible_helper:
     "\<And>v p. v \<le> 3 \<Longrightarrow> (3 - unat (p && mask 2 :: word32) = v) =
                      (p && mask 2 = 3 - of_nat v)"
-    including no_take_bit
     apply (simp add: unat_arith_simps unat_of_nat)
     apply (cut_tac p=p in unat_mask_2_less_4)
     apply arith

@@ -260,7 +260,6 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
-  including no_take_bit
   supply image_cong_simp [cong del]
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="capAligned (ArchObjectCap (PageCap False ptr undefined sz None))"
@@ -638,7 +637,6 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_PT_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
@@ -1273,7 +1271,6 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

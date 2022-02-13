@@ -1128,7 +1128,6 @@ qed
 
 lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-  including no_take_bit
   apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
                     simp: capAligned_def objBits_simps field_simps)

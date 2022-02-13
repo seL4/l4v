@@ -1210,7 +1210,6 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-  including no_take_bit
   using assms
   by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
                      newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)

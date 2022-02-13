@@ -4628,7 +4628,6 @@ lemma new_cap_addrs_def2:
   "n < 2 ^ 32
    \<Longrightarrow> new_cap_addrs (Suc n) ptr obj
    = map (\<lambda>n. ptr + (n << objBitsKO obj)) [0.e.of_nat n]"
-  including no_take_bit
   by (simp add:new_cap_addrs_def upto_enum_word unat_of_nat Fun.comp_def)
 
 lemma createTCBs_tcb_at':
@@ -4734,7 +4733,7 @@ proof -
         done
 
   show ?thesis
-  including no_take_bit using assms
+  using assms
   apply (clarsimp simp:valid_pspace'_def)
   apply (frule range_cover.aligned)
   apply (frule(3) pspace_no_overlap'_tail)
@@ -5201,7 +5200,6 @@ lemma createNewObjects_def2:
           apply (simp add:range_cover_def objSize_eq_capBits)+
          done
       show ?case
-      including no_take_bit
       apply simp
       using snoc.prems
       apply (subst upto_enum_inc_1)
@@ -5487,7 +5485,7 @@ lemma createNewObjects_Cons:
       case Nil thus ?case by simp
     next
       case (Cons x xs)
-      thus ?case including no_take_bit by (simp add:unat_of_nat32)
+      thus ?case by (simp add:unat_of_nat32)
     qed
 
     show ?thesis

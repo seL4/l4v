@@ -1030,7 +1030,6 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 12 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1358,7 +1357,6 @@ lemma flushTable_ccorres:
       (UNIV \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr}
             \<inter> {s. pt_' s = pte_Ptr ptPtr} \<inter> {s. vspace_' s = pml4e_Ptr vspace})
       [] (flushTable vspace vptr ptPtr asid) (Call flushTable_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_' vptr_' pt_' vspace_')
    apply (rule ccorres_assert)

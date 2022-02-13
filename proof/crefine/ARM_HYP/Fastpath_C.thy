@@ -419,7 +419,6 @@ lemma lookup_fp_ccorres':
       by (simp add: cap_get_tag_def cong: if_cong)
 
     show ?case
-    including no_take_bit
     supply if_cong[cong]
     apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)

@@ -204,7 +204,6 @@ lemma retype_untyped_wp:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
    (\<not>has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> cover_ids = available_ids) \<and>
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices)\<rbrace>"
-  including no_take_bit
   (* I would like to remove this later by rewriting seL4_Untyped_Retype_sep *)
   apply (subgoal_tac "si_cspace_cap=si_cnode_cap", simp)
    apply (unfold retype_untyped_def)
@@ -705,7 +704,6 @@ lemma retype_untyped_loop_inv_success:
     list_all (\<lambda>index. \<not>has_children (si_cnode_id,untyped_slots!index) (kernel_state s) \<longrightarrow>
               is_full_untyped_cap (untyped_caps!index)) [0 ..< length untyped_slots] \<and>
     si_caps = map_of (zip (take obj_id_index obj_ids) free_cptrs))\<rbrace>"
-  including no_take_bit
   apply (subst list_all_imp_filter2)+
   apply (rule hoare_ex_pre hoare_ex_pre_conj)+
   apply (rule hoare_grab_asm2)+
@@ -956,7 +954,6 @@ lemma retype_untyped_loop_inv_fail:
     list_all (\<lambda>index. \<not>has_children (si_cnode_id,untyped_slots!index) (kernel_state s) \<longrightarrow>
              is_full_untyped_cap (untyped_caps!index)) [0 ..< length untyped_slots] \<and>
     si_caps = map_of (zip (take obj_id_index obj_ids) free_cptrs))\<rbrace>"
-  including no_take_bit
   apply (subst list_all_imp_filter2)+
   apply (rule valid_imp_ex)+
   apply (rule hoare_ex_pre hoare_ex_pre_conj)+

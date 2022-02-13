@@ -1033,7 +1033,6 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. asid_wf base \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1289,17 +1288,14 @@ next
   have level: "level < maxPTLevel" by simp
   then
   have [simp]: "maxPT - (1 + of_nat level) < maxPT" (is "?i < maxPT")
-    including no_take_bit
     by (simp add: maxPTLevel_def maxPT_def unat_arith_simps  unat_of_nat)
 
   from level
   have [simp]: "idx ?i < 0x40"
-    including no_take_bit
     by (simp add: idx_def maxPT_def maxPTLevel_def unat_word_ariths unat_arith_simps unat_of_nat)
 
   from level
   have [simp]: "pt + vshift vaddr ?i * 8 = ptSlotIndex (Suc level) pt vaddr"
-    including no_take_bit
     by (simp add: ptSlotIndex_def vshift_def maxPT_def ptIndex_def idx_def ptBitsLeft_def
                   bit_simps mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n)
 
