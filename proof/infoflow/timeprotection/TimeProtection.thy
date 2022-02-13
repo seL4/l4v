@@ -15,38 +15,6 @@ begin
 datatype vaddr = VAddr machine_word
 datatype paddr = PAddr machine_word
 
-
-(*
-     cache(s)
-     time
-     other_state
-     regs
-*)
-
-(*
-  FLUSHABLE
-  everything changes it somehow
-  it affects everything
-
-  PARTITIONABLE
-  address \<Rightarrow> time
-
-  the cache touch fn, given some 'a'
-
-
-cache impact fn
-inputs:
-  - address
-  - fch
-  - pch
-outputs:
-  - new fch
-  - new pch
-  - time taken
-*)
-
-
-
 \<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
 type_synonym 'fch_cachedness fch = "vaddr \<Rightarrow> 'fch_cachedness"
 type_synonym 'pch_cachedness pch = "paddr \<Rightarrow> 'pch_cachedness"
@@ -113,8 +81,8 @@ locale time_protection =
   fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
 
-  fixes do_read :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
-  fixes do_write :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'other_state"
+  fixes do_read  :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
+  fixes do_write :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
 
   fixes store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
 
@@ -165,24 +133,8 @@ locale time_protection =
 
   (* This is an abstraction for the page table. -robs *)
   fixes v_to_p :: "'other_state \<Rightarrow> vaddr \<Rightarrow> paddr"
-  assumes page_table_not_in_mem:
-    "\<And>a s r. v_to_p (do_write a s r) = v_to_p s"
   assumes external_uwr_current_page_table:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d \<Longrightarrow> v_to_p s1 = v_to_p s2"
-
-  assumes do_write_maintains_external_uwr_out:
-    "\<And>s a r. addr_domain (v_to_p s a) \<noteq> d \<and> addr_domain (v_to_p s a) \<noteq> Sched \<Longrightarrow>
-     (s, do_write a s r) \<in> external_uwr d"
-
-  (*NOTE: we can only invoke this if we have already equalised the "regs" fields *)
-  assumes do_write_maintains_external_uwr_in:
-    "\<And>s t a r. addr_domain (v_to_p s a) = d \<or> addr_domain (v_to_p s a) = Sched \<Longrightarrow>
-     (s, t) \<in> external_uwr d \<Longrightarrow>
-     (do_write a s r, do_write a t r) \<in> external_uwr d"
-
-  assumes do_write_outside_kernelshared_same_domain:
-    "\<And>s a r. addr_domain (v_to_p s a) \<noteq> Sched \<Longrightarrow>
-     current_domain (do_write a s r) = current_domain s"
 
   (* do_read depends only on things bound in its external uwr *)
   assumes do_read_from_external_uwr_domain:
@@ -204,9 +156,7 @@ locale time_protection =
 
   fixes touched_addrs :: "'other_state \<Rightarrow> vaddr set"
   assumes external_uwr_same_touched_addrs:
-    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d\<Longrightarrow> touched_addrs s1 = touched_addrs s2"
-  assumes touched_addrs_not_in_mem:
-    "\<And>a s r. touched_addrs (do_write a s r) = touched_addrs s"
+    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d \<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
   (* We expect this to be true for, say, seL4's KSched \<rightarrow> KExit step. -robs. *)
   fixes can_domain_switch :: "'other_state \<Rightarrow> bool"
@@ -270,6 +220,8 @@ lemma kernel_shared_expanded_full_collision_set:
   apply (meson collides_with_equiv equiv_def trans_def)
   done
 
+\<comment> \<open> in a full collision set S, if two addresses collide and one is not in the set, the other
+     is also not in the set. \<close>
 lemma collision_in_full_collision_set:
   "full_collision_set S \<Longrightarrow>
   (a1, a2) \<in> collides_in_pch \<Longrightarrow>
