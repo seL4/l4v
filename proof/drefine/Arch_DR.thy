@@ -1248,7 +1248,6 @@ lemma store_pte_page_inv_entries_safe:
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (hd bb && ~~ mask pt_bits)  s
     \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pt_bits >> 2)) = ARM_A.pte.InvalidPTE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pt_bits = hd bb && ~~ mask pt_bits)\<rbrace>"
-  including no_take_bit
   apply (simp add:store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)
@@ -1291,7 +1290,6 @@ lemma store_pde_page_inv_entries_safe:
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (hd bb && ~~ mask pd_bits)  s
     \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pd_bits >> 2)) = ARM_A.pde.InvalidPDE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pd_bits = hd bb && ~~ mask pd_bits)\<rbrace>"
-  including no_take_bit
   apply (simp add:store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)

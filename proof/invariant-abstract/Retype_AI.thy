@@ -223,7 +223,6 @@ proof -
   apply (case_tac "p = 0")
    apply (insert pointer)
    apply (clarsimp simp: range_cover_def pointer)
-   including no_take_bit
    apply (simp add:unat_word_ariths)
    apply (rule le_less_trans[OF mod_less_eq_dividend])
    apply (rule less_le_trans[OF mult_less_mono1[where j = n]])
@@ -674,7 +673,6 @@ lemma range_cover_not_zero:
 lemma range_cover_not_zero_shift:
   "\<lbrakk>n \<noteq> 0; range_cover (ptr :: 'a :: len word) sz bits n; gbits \<le> bits\<rbrakk>
    \<Longrightarrow> ((of_nat n) :: 'a :: len word) << gbits \<noteq> 0"
-  including no_take_bit
   apply (rule word_shift_nonzero[where m = "sz-gbits"])
      prefer 2
       apply (clarsimp simp:range_cover_def)
@@ -708,7 +706,6 @@ lemma range_cover_cell_subset:
      apply (simp add:is_aligned_mask mask_twice range_cover_def min_def)
      done
   show ?thesis
-  including no_take_bit
   using cover cmp
   apply clarsimp
   apply (intro conjI)

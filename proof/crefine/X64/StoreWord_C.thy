@@ -966,7 +966,6 @@ proof -
   have horrible_helper:
     "\<And>v p. v \<le> 7 \<Longrightarrow> (7 - unat (p && mask 3 :: machine_word) = v) =
                      (p && mask 3 = 7 - of_nat v)"
-    including no_take_bit
     apply (simp add: unat_arith_simps unat_of_nat)
     apply (cut_tac p=p in unat_mask_3_less_8)
     apply arith

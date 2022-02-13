@@ -909,7 +909,6 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 4\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned' (w_' s) (gen_framesize_to_H (sz_' s)))}"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1417,7 +1416,6 @@ lemma createSafeMappingEntries_PTE_ccorres:
 
 lemma ptr_add_uint_of_nat [simp]:
   "a  +\<^sub>p uint (of_nat b :: word32) = a  +\<^sub>p (int b)"
-  including no_take_bit
   by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 
@@ -1586,7 +1584,6 @@ lemma performPageInvocationMapPTE_ccorres:
              \<inter> {s. isLeft mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPTE_'proc)"
-  including no_take_bit
   supply pageBitsForSize_le_32 [simp]
   apply (rule ccorres_gen_asm2)
   apply (rule ccorres_gen_asm)
@@ -1971,7 +1968,6 @@ lemma performPageInvocationMapPDE_ccorres:
              \<inter> {s. isRight mapping}) []
        (liftE (performPageInvocation (PageMap asid cap slot mapping)))
        (Call performPageInvocationMapPDE_'proc)"
-  including no_take_bit
   supply pageBitsForSize_le_32 [simp]
   apply (rule ccorres_gen_asm2)
   apply (rule ccorres_gen_asm)
@@ -3266,7 +3262,6 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageDirectoryInvocation_'proc)"
-  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeARMMMUInvocation_def invocation_eq_use_types)
@@ -4268,7 +4263,6 @@ lemma writeVCPUReg_ccorres:
             \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>
             \<inter> \<lbrace>\<acute>value = val\<rbrace>) hs
     (writeVCPUReg vcpuptr reg val) (Call writeVCPUReg_'proc)"
-  including no_take_bit
   apply (cinit lift: vcpu_' field_' value_')
    apply clarsimp
    apply (rule ccorres_pre_getCurVCPU, rename_tac cvcpuopt)
@@ -4313,7 +4307,6 @@ lemma readVCPUReg_ccorres:
       (vcpu_at' vcpuptr and no_0_obj')
       (UNIV \<inter> \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace>\<acute>field = of_nat (fromEnum reg) \<rbrace>) hs
     (readVCPUReg vcpuptr reg) (Call readVCPUReg_'proc)"
-  including no_take_bit
   apply (cinit lift: vcpu_' field_')
    apply clarsimp
    apply (rule ccorres_pre_getCurVCPU, rename_tac cvcpuopt)
@@ -4573,7 +4566,6 @@ lemma invokeVCPUInjectIRQ_ccorres:
        hs
        (liftE (invokeVCPUInjectIRQ vcpuptr idx virq))
        (Call invokeVCPUInjectIRQ_'proc)"
-  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: vcpu_' index_' virq_')
    supply not_None_eq[simp del]
@@ -4633,7 +4625,6 @@ lemma decodeVCPUInjectIRQ_ccorres:
        (decodeVCPUInjectIRQ args cp
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeVCPUInjectIRQ_'proc)"
-  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift: length_' cap_' buffer_'
                 simp: decodeVCPUInjectIRQ_def Let_def shiftL_nat )
@@ -5082,7 +5073,6 @@ proof -
                  split: if_splits)
 
   show ?thesis
-    including no_take_bit
     apply (rule ccorres_grab_asm)
     apply (cinit' lift: length_' cap_' buffer_')
      apply (clarsimp simp: decodeVCPUAckVPPI_def)

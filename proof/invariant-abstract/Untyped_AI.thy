@@ -384,8 +384,6 @@ lemma range_cover_stuff:
    range_cover (alignUp (w + ((of_nat rv)::machine_word)) bits) sz bits n"
   apply (clarsimp simp: range_cover_def)
   proof (intro conjI)
-    include no_take_bit
-
     assume not_0 : "0<n"
     assume bound : "n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits)" "rv\<le> 2^sz"
       "sz < word_bits"
@@ -704,7 +702,6 @@ lemma inj_bits:
 lemma of_nat_shiftR:
   "a < 2 ^ word_bits \<Longrightarrow>
    unat (of_nat (shiftR a b)::machine_word) = unat ((of_nat a :: machine_word) >> b)"
-  including no_take_bit
   apply (subst shiftr_div_2n')
   apply (clarsimp simp: shiftR_nat)
   apply (subst unat_of_nat_eq[where 'a=machine_word_len])

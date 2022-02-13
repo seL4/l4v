@@ -1047,7 +1047,6 @@ lemma setMR_ccorres:
              \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
              \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []
      (setMR thread buf offset v) (Call setMR_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: offset_' reg_' receiver_' receiveIPCBuffer_')
    apply (rule ccorres_cond2'[where R=\<top>])
@@ -1328,7 +1327,6 @@ lemma copyMRs_register_loop_helper:
       (CALL setRegister(tcb_ptr_to_ctcb_ptr receiver,
                ucast (index msgRegistersC (unat \<acute>i)),
                \<acute>ret__unsigned_long)))"
-  including no_take_bit
   apply clarsimp
   apply (rule ccorres_guard_imp)
     apply ctac
@@ -1581,7 +1579,6 @@ lemma copyMRsFault_ccorres_exception:
            hs
            (mapM_x (\<lambda>(x, y). setMR receiver recvBuffer x y) (zip [0..<120] msg))
            (Call copyMRsFault_'proc)"
-  including no_take_bit
   apply (unfold K_def)
   apply (intro ccorres_gen_asm)
   apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_'
@@ -2571,7 +2568,6 @@ lemma setExtraBadge_ccorres:
            hs
            (setExtraBadge buffer badge n)
            (Call setExtraBadge_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: bufferPtr_' badge_' i_')
    apply (unfold storeWordUser_def)
@@ -2862,7 +2858,6 @@ proof (rule ccorres_gen_asm, induct caps arbitrary: n slots mi)
   note if_split[split]
   case Nil
   thus ?case
-    including no_take_bit
     apply (simp only: transferCapsToSlots.simps)
     apply (rule ccorres_guard_imp2)
      apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
@@ -2885,7 +2880,6 @@ next
   let ?S="\<lbrace>\<acute>i=of_nat n \<and> mi=message_info_to_H \<acute>info\<rbrace>"
   have n3: "n \<le> 3" using Cons.prems by simp
   hence of_nat_n3[intro!]: "of_nat n \<le> (3 :: word32)"
-    including no_take_bit
     by (simp add: word_le_nat_alt unat_of_nat)
   have drop_n_foo: "\<And>xs n y ys. drop n xs = y # ys
      \<Longrightarrow> \<exists>xs'. length xs' = n \<and> xs = xs' @ (y # ys)"
@@ -2975,7 +2969,6 @@ next
   note sle_positive[simp del]
   from Cons.prems
   show ?case
-    including no_take_bit
     apply (clarsimp simp: Let_def word_sle_def[where b=5] split_def
                     cong: call_ignore_cong
                 simp del: Collect_const)
@@ -3437,7 +3430,6 @@ proof -
   let ?interpret = "\<lambda>v n. take n (array_to_list (excaprefs_C v))"
   note if_split[split del]
   show ?thesis
-    including no_take_bit
     apply (rule ccorres_gen_asm)+
     apply (cinit(no_subst_asm) lift: thread_' bufferPtr_' info_' simp: whileAnno_def)
      apply (clarsimp simp add: getExtraCPtrs_def lookupCapAndSlot_def
@@ -3889,7 +3881,6 @@ lemma copyMRsFaultReply_ccorres_exception:
            (Call copyMRsFaultReply_'proc)"
 proof -
   show ?thesis
-    including no_take_bit
     apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'
                         id___anonymous_enum_'
@@ -4004,7 +3995,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
   show ?thesis
-    including no_take_bit
     apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'
                         id___anonymous_enum_'

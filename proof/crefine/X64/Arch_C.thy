@@ -732,7 +732,6 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -1366,7 +1365,6 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1456,7 +1454,7 @@ lemma ccorres_pre_getObject_pte:
 
 lemma ptr_add_uint_of_nat [simp]:
   "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
-  including no_take_bit by (clarsimp simp: CTypesDefs.ptr_add_def)
+  by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
 
@@ -4792,7 +4790,6 @@ lemma first_last_highbits_eq_port_set:
          \<Longrightarrow> \<exists>port::16 word.
                 unat f \<le> unat port \<and> unat port \<le> unat l
               \<and> arr.[unat (port >> 6)] !! unat (port && 0x3F)"
-  including no_take_bit
   apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(l && ~~ mask 6) + of_nat i" in exI)
@@ -4937,7 +4934,6 @@ lemma isIOPortRangeFree_spec:
         ret__unsigned_long_' t = from_bool
           (\<forall>port. first_port_' \<sigma> \<le> port \<and> port \<le> last_port_' \<sigma>
                    \<longrightarrow> \<not> port_array \<sigma>.[unat (port >> wordRadix)] !! unat (port && mask wordRadix))}"
-  including no_take_bit
   apply (rule allI)
   subgoal for \<sigma>
   apply (hoare_rule HoarePartial.ProcNoRec1)

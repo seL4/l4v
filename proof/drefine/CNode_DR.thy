@@ -1134,7 +1134,6 @@ lemma set_asid_pool_empty'_helper:
   "n < 1023 \<Longrightarrow>
    (if x = ucast ((1 :: word32) + of_nat n) then None else if x \<le> of_nat n then None else ap x) =
    (if (x :: 10 word) \<le> 1 + of_nat n then None else ap x)"
-  including no_take_bit
   apply (frule of_nat_mono_maybe[where x="2^10 - 1" and 'a=10, simplified])
   apply (subgoal_tac "ucast (1 + of_nat n :: word32) = (1 + of_nat n :: 10 word)")
    prefer 2
@@ -1684,7 +1683,6 @@ lemma dcorres_clear_object_caps_pt:
   "dcorres dc \<top> (invs and  cte_wp_at ((=) (cap.ArchObjectCap (arch_cap.PageTableCap w option))) (a, b))
     (clear_object_caps w)
     (mapM_x (swp store_pte ARM_A.pte.InvalidPTE) [w , w + 4 .e. w + 2 ^ pt_bits - 1])"
-  including no_take_bit
   apply (clarsimp simp: clear_object_caps_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (subgoal_tac "\<exists>ptx. (ko_at (ArchObj (arch_kernel_obj.PageTable ptx)) w) s'")

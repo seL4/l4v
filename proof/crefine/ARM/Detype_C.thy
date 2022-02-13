@@ -371,7 +371,6 @@ proof -
 
   ultimately show ?thesis
     unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
-    including no_take_bit
     apply -
     apply (clarsimp simp: field_simps objBits_simps' size_of_def)
     apply (drule intvlD)

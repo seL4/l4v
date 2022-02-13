@@ -372,7 +372,6 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
       {s. array_assertion (cte_Ptr (capZombiePtr cap)) (capZombieNumber cap - 1)
            (hrs_htd (t_hrs_' (globals s))) \<longrightarrow> s \<in> Q'} hs
       (cutMon ((=) s) (locateSlotCap cap n >>= a)) c"
-  including no_take_bit
   apply (simp add: locateSlot_conv in_monad cutMon_walk_bind)
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_guard_imp2)
@@ -421,7 +420,6 @@ lemma reduceZombie_ccorres1:
      (invs' and sch_act_simple and cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot)
      (UNIV \<inter> {s. slot_' s = Ptr slot} \<inter> {s. immediate_' s = from_bool expo}) []
      (cutMon ((=) s) (reduceZombie cap slot expo)) (Call reduceZombie_'proc)"
-  including no_take_bit
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0 del: Collect_const)
    apply (rule_tac P="capZombieNumber cap < 2 ^ word_bits" in ccorres_gen_asm)

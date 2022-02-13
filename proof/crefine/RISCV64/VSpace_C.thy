@@ -489,7 +489,6 @@ proof (induct level arbitrary: pt)
 
   case 0
   show ?case
-    including no_take_bit
     apply (simp only: ptSlot_upd_def lookupPTSlotFromLevel.simps(1))
     apply (cinitlift pt_' vptr_', simp only:)
     apply (rule ccorres_rhs_assoc)+
@@ -531,11 +530,9 @@ proof (induct level arbitrary: pt)
            of_nat ptTranslationBits * of_nat level +
            of_nat pt_bits :: machine_word) =
      ptTranslationBits + ptTranslationBits * level + pt_bits"
-    including no_take_bit
     by (simp add: bit_simps word_less_nat_alt maxPTLevel_def unat_word_ariths unat_of_nat_eq)
 
   show ?case
-    including no_take_bit
     apply (simp only: lookupPTSlotFromLevel.simps)
     apply (subst ptSlot_upd_def)
     \<comment> \<open>cinitlift will not fully eliminate pt and vptr,
@@ -1067,7 +1064,6 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
-  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -1692,7 +1688,7 @@ lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simpli
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) ((unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms including no_take_bit
+  using assms
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1702,7 +1698,7 @@ lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simp
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms including no_take_bit
+  using assms
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1721,7 +1717,6 @@ proof -
     "\<And>n. n < 256 \<Longrightarrow> ?enum n = 0x800 + of_nat n * 8"
     by (auto simp: upto_enum_word_nth word_shiftl_add_distrib shiftl_t2n)
   show ?thesis
-    including no_take_bit
     apply (cinit lift: newLvl1pt_' simp: ptIndex_maxPTLevel_pptrBase ptTranslationBits_def)
      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState, rename_tac globalPT)
      apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])

@@ -65,7 +65,6 @@ lemma ucast_assocs:
   "LENGTH('a) < LENGTH('b) \<Longrightarrow>
    assocs (fn o (ucast :: 'a :: len word \<Rightarrow> 'b :: len word))
      = map (\<lambda>(x, y). (ucast x, y)) (filter (\<lambda>(x, y). x < 2 ^ LENGTH('a)) (assocs fn))"
-  including no_take_bit
   apply (simp add: assocs_def enum_word_def split_def filter_map)
   apply (rule map_cong)
    apply (simp add: o_def)
@@ -86,7 +85,6 @@ lemma ucast_assocs:
 lemma ucast_le_migrate:
   "\<lbrakk> y < 2 ^ size x; size x < size y \<rbrakk> \<Longrightarrow> (ucast x \<le> y) = (x \<le> ucast y)"
   for x :: "'a :: len word" and y :: "'b :: len word"
-  including no_take_bit
   apply (simp add: word_le_def ucast_def del: Word.of_int_uint)
   apply (subst word_uint.Abs_inverse)
    apply (simp add: uints_num word_size)
