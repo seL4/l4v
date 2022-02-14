@@ -6,12 +6,7 @@
 --
 
 -- This module contains the architecture-specific thread switch code for
--- RISCV 64bit.
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: add VCPU switching
+-- AArch64.
 
 module SEL4.Kernel.Thread.AARCH64 where
 
