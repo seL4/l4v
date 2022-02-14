@@ -9,29 +9,25 @@
 
 {-# LANGUAGE EmptyDataDecls #-}
 
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: renamed RISCV->ARM in labels, added VCPU invocations
-
 module SEL4.API.InvocationLabels.AARCH64 where
 
--- FIXME AARCH64: review enum arch_invocation_label in C, the list is quite
--- different between ARM and RISCV64
 data ArchInvocationLabel
         = ARMVSpaceClean_Data
         | ARMVSpaceInvalidate_Data
         | ARMVSpaceCleanInvalidate_Data
         | ARMVSpaceUnify_Instruction
+        -- FIXME AARCH64 C is undergoing review, currently having (for tables):
+        -- ARMPageUpperDirectoryMap, ...Unmap
+        -- ARMPageDirectoryMap, ...Unmap
         | ARMPageTableMap
         | ARMPageTableUnmap
         | ARMPageMap
         | ARMPageUnmap
-        | ARMPageGetAddress
         | ARMPageClean_Data
         | ARMPageInvalidate_Data
         | ARMPageCleanInvalidate_Data
         | ARMPageUnify_Instruction
+        | ARMPageGetAddress
         | ARMASIDControlMakePool
         | ARMASIDPoolAssign
         | ARMVCPUSetTCB
@@ -39,5 +35,19 @@ data ArchInvocationLabel
         | ARMVCPUReadReg
         | ARMVCPUWriteReg
         | ARMVCPUAckVPPI
+        -- FIXME AARCH64: C has ARMIRQIssueIRQHandlerTrigger
         | ARMIRQIssueIRQHandler
+        -- FIXME AARCH64: SMMU invocation labels in C
+        -- ARMSIDIssueSIDManager,
+        -- | ARMSIDGetFault
+        -- | ARMSIDClearFault
+        -- | ARMSIDBindCB
+        -- | ARMSIDUnbindCB
+        -- | ARMCBIssueCBManager
+        -- | ARMCBTLBInvalidateAll
+        -- | ARMCBAssignVspace
+        -- | ARMCBUnassignVspace
+        -- | ARMCBTLBInvalidate
+        -- | ARMCBGetFault
+        -- | ARMCBClearFault
         deriving (Show, Eq, Enum, Bounded)
