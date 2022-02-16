@@ -143,6 +143,13 @@ locale time_protection =
      v_to_p s a = v_to_p t a \<Longrightarrow>
      do_read a s r = do_read a t r"
 
+  (* do_write depends only on things bound in its external uwr *)
+  assumes do_write_from_external_uwr_domain:
+    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
+     addr_domain (v_to_p s a) = d \<Longrightarrow>
+     v_to_p s a = v_to_p t a \<Longrightarrow>
+     do_write a s r = do_write a t r"
+
   (* do_read of kernel_shared depends only on things bound in any external uwr *)
   (* Note: This is a simplifying assumption that might need to be temporary,
      in effect, pulling the Sched uwr into everybody else's uwr.
@@ -153,6 +160,12 @@ locale time_protection =
      addr_domain (v_to_p s a) = Sched \<Longrightarrow>
      v_to_p s a = v_to_p t a \<Longrightarrow>
      do_read a s r = do_read a t r"
+
+  assumes do_write_from_external_uwr_sched:
+    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
+     addr_domain (v_to_p s a) = Sched \<Longrightarrow>
+     v_to_p s a = v_to_p t a \<Longrightarrow>
+     do_write a s r = do_write a t r"
 
   fixes touched_addrs :: "'other_state \<Rightarrow> vaddr set"
   assumes external_uwr_same_touched_addrs:
@@ -426,7 +439,7 @@ primrec
       s\<lparr>fch := fch_write_impact a (fch s),
         pch := pch_write_impact (v_to_p' s a) (pch s),
         tm  := tm s + write_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p' s a)),
-        other_state := do_write a (other_state s) (regs s)\<rparr>"
+        regs := do_write a (other_state s) (regs s)\<rparr>"
   | "instr_step (IRegs m) s =
       s\<lparr>regs := m (regs s),
         tm := tm s + 1 \<rparr>" \<comment> \<open>we increment by the smallest possible amount - different instruction
@@ -460,107 +473,24 @@ definition
                           | IFlushL2 as \<Rightarrow> as \<subseteq> touched_paddrs s
                           | _        \<Rightarrow> True }"
 
-(* "safe" instructions. for now this just means they don't write to kernel shared memory *)
-definition
-  instrs_safe :: "'other_state \<Rightarrow> 'regs instr set" where
- "instrs_safe s \<equiv> {i. case i of
-                    IWrite a \<Rightarrow> v_to_p s a \<notin> kernel_shared_precise
-                  | _ \<Rightarrow> True}"
-
 (* these are the programs that could have created this ta *)
 definition
   programs_obeying_ta :: "'other_state \<Rightarrow> 'regs program set" where
  "programs_obeying_ta s \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta s) p}"
 
-
-definition
-  programs_safe :: "'other_state \<Rightarrow> 'regs program set" where
- "programs_safe s \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_safe s) p}"
-
-
 lemma hd_instr_obeying_ta [dest]:
   "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
   by (force simp:programs_obeying_ta_def)
 
-
-
-(* trying to replace this with instrs_safe
-
-(* this program never changes the current domain *)
-primrec program_no_domainswitch :: "'regs program \<Rightarrow> bool" where
-  "program_no_domainswitch [] = True" |
-  "program_no_domainswitch (i#is) =
-     ((\<forall> s. current_domain' s = current_domain' (instr_step i s)) \<and> program_no_domainswitch is)"
-
-
-
-definition
-  programs_no_domainswitch :: "'regs program set" where
-  "programs_no_domainswitch \<equiv> {p. program_no_domainswitch p}"
-
-*)
-
-lemma safe_no_domainswitch:
-  "i \<in> instrs_safe (other_state s) \<Longrightarrow>
-  current_domain' s = current_domain' (instr_step i s)"
-  apply (cases i; clarsimp simp: instrs_safe_def)
-   apply (force simp: kernel_shared_precise_def do_write_outside_kernelshared_same_domain)
-  done
-
-lemma safe_no_TA_removals:
-  "i \<in> instrs_safe (other_state s) \<Longrightarrow>
-  touched_addrs' s \<subseteq> touched_addrs' (instr_step i s)"
-  apply (cases i; clarsimp simp: instrs_safe_def)
-   using touched_addrs_not_in_mem apply force
-  done
-
-lemma safe_remains_safe:
-  "i \<in> instrs_safe (other_state s) \<Longrightarrow>
-   a \<in> instrs_safe (other_state s) \<Longrightarrow>
-   i \<in> instrs_safe (other_state (instr_step a s))"
-  apply (cases i; cases a; clarsimp simp: instrs_safe_def all_addrs_of_def paddrs_of_def)
-    using page_table_not_in_mem apply force
-  done
-
-lemma no_domainswitch_inv:
-  "p \<in> programs_safe (other_state s) \<Longrightarrow>
-     current_domain' s = current_domain' (instr_multistep p s)
-   \<and> touched_addrs' s \<subseteq> touched_addrs' (instr_multistep p s)"
-  apply(induct p arbitrary:s)
-   apply force
-  unfolding programs_safe_def list_all_def
-  apply clarsimp
-  apply(frule safe_no_domainswitch)
-  apply(frule safe_no_TA_removals)
-  by (simp add:safe_remains_safe subset_trans)
-
+(*
 definition is_secure_nondomainswitch ::
   "'regs program \<Rightarrow> ('fch,'pch,'regs,'other_state)state \<Rightarrow> bool"
   where
   "is_secure_nondomainswitch p s \<equiv>
       \<comment> \<open>Oblige the original system not to reach any system-step that would require either
           (1) straying out of touched_addresses or (2) switching domains to implement.\<close>
-      p \<in> programs_obeying_ta (other_state s) \<inter> programs_safe (other_state s)"
-
-definition kludge_uwr_same_programs ::
-  "'regs program \<Rightarrow> ('fch,'pch,'regs,'other_state)state \<Rightarrow> bool"
-  where
-  "kludge_uwr_same_programs p s =
-     (\<forall>t q. (s, t) \<in> uwr (current_domain' s) \<and> is_secure_nondomainswitch q t \<longrightarrow> p = q)"
-
-definition has_secure_nondomainswitch :: "('fch,'pch,'regs,'other_state)state \<Rightarrow>
-  ('fch,'pch,'regs,'other_state)state \<Rightarrow> bool"
-  where
-  "has_secure_nondomainswitch s s' \<equiv>
-     \<comment> \<open>The original definition.\<close>
-     \<exists>p. s' = instr_multistep p s \<and> is_secure_nondomainswitch p s \<and>
-       \<comment> \<open>Assume the currently running domain's uwr ensures the program stays deterministic.
-             Actually, as discussed with Toby, we should add machinery to capture that the program
-           might become nondeterministic after the current domain reads from outside
-           `touched_addresses + kernel_shared_memory`, assuming pessimistically it might branch
-           on some secret data it read -- thus, forcing ourselves to prove that won't happen before
-           or during a non-domainswitch step. We should then remove the line below.\<close>
-       kludge_uwr_same_programs p s"
+      p \<in> programs_obeying_ta (other_state s)"
+*)
 
 
 lemma collides_with_set_or_doesnt:
@@ -568,7 +498,6 @@ lemma collides_with_set_or_doesnt:
     \<exists>a'\<in>as. (a, a') \<in> collides_in_pch \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
   P"
   by blast
-
 
 lemma diff_domain_no_collision:
   "\<lbrakk>a \<notin> kernel_shared_expanded;
@@ -580,7 +509,6 @@ lemma diff_domain_no_collision:
                kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
                no_cross_colour_collisions)
   done
-
 
 
 lemma in_inter_empty:
@@ -613,14 +541,12 @@ lemma and_or_specific:
 lemma d_running_step:
   assumes
     "i \<in> instrs_obeying_ta (other_state s)"
-    "i \<in> instrs_safe (other_state s)"
     "touched_addrs_inv (other_state s)"
     "page_table_inv (other_state s)"
     "(s, t) \<in> uwr d"
     "current_domain' s = d"
     "s' = instr_step i s"
     "t' = instr_step i t"
-    "current_domain' s' = d"
   shows
     "(s', t') \<in> uwr d"
   proof (cases i)
@@ -723,9 +649,16 @@ lemma d_running_step:
        apply(clarsimp simp:pch_same_for_domain_and_shared_def kernel_shared_expanded_def)
        using collision_set_contains_itself
        apply fastforce
-      (* equivalence of the written impact on other_state *)
-      using do_write_maintains_external_uwr_in kernel_shared_precise_def
-      by blast
+      (* equivalence of the written impact on regs *)
+      apply (erule disjE)
+       (* equivalence of what is read from external state, from external uwr *)
+       apply (erule(1) do_write_from_external_uwr_domain)
+       apply force
+      (* equivalence of what is read from kernel shared memory *)
+      apply (erule do_write_from_external_uwr_sched)
+       apply (clarsimp simp: kernel_shared_precise_def)
+      apply force
+      done
   next
     case (IRegs x3)
     thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
