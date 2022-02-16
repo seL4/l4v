@@ -742,7 +742,7 @@ let
     (* Apply a conversion to the concrete side of the given L2T term.
      * By convention, the concrete side is the last argument (index ~1). *)
     fun l2t_conc_body_conv conv =
-      Conv.params_conv (~1) (K (Conv.arg_conv (Utils.nth_arg_conv (~1) conv)))
+      Conv.params_conv (~1) (fn ctxt => (Conv.arg_conv (Utils.nth_arg_conv (~1) (conv ctxt))))
 
     (* Standard tactics. *)
     val print_debug = f = ""
@@ -752,8 +752,8 @@ let
                             Seq.succeed x))) r))
 
     (* Convert the concrete side of the given L2T term to/from first-order form. *)
-    val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv (mk_first_order lthy) lthy)
-    val l2t_from_fo_tac = CONVERSION (l2t_conc_body_conv (dest_first_order lthy then_conv Drule.beta_eta_conversion) lthy)
+    val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv mk_first_order lthy)
+    val l2t_from_fo_tac = CONVERSION (l2t_conc_body_conv (fn ctxt => dest_first_order ctxt then_conv Drule.beta_eta_conversion) lthy)
     val fo_tac = ((l2t_to_fo_tac THEN' rtac_all fo_rules) THEN_ALL_NEW l2t_from_fo_tac) 1
 
     (*
