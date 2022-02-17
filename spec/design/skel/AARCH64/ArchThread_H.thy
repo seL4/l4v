@@ -14,6 +14,7 @@ imports
   ArchThreadDecls_H
   TCBDecls_H
   ArchVSpaceDecls_H
+  ArchHypervisor_H
 begin
 
 context Arch begin global_naming AARCH64_H

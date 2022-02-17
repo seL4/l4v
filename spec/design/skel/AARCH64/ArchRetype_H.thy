@@ -15,12 +15,14 @@ imports
   ArchVSpaceDecls_H
   Hardware_H
   KI_Decls_H
+  VCPU_H
 begin
 
 context Arch begin global_naming AARCH64_H
 
 #INCLUDE_HASKELL SEL4/Object/ObjectType/AARCH64.hs CONTEXT AARCH64_H Arch.Types=ArchTypes_H ArchInv=ArchRetypeDecls_H NOT bodies_only
-#INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H bodies_only
+#INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H bodies_only \
+  NOT isVSpaceFlushLabel isPageFlushLabel
 
 end (* context AARCH64 *)
 end

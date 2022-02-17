@@ -1,14 +1,10 @@
 (*
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
- *
+ * Copyright 2022, Proofcraft Pty Ltd
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "RISCV 64bit Machine Types"
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the AARCH64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
 theory MachineTypes
 imports
   "Word_Lib.WordSetup"
@@ -19,6 +15,9 @@ begin
 
 context Arch begin global_naming AARCH64
 
+#INCLUDE_SETTINGS keep_constructor=hyp_fault_type
+#INCLUDE_SETTINGS keep_constructor=virt_timer
+
 text \<open>
   An implementation of the machine's types, defining register set
   and some observable machine state.
@@ -27,17 +26,20 @@ text \<open>
 section "Types"
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 decls_only NOT UserContext UserMonad Word getRegister setRegister newContext FPUState newFPUState
+
+#INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 ONLY VPPIEventIRQ VirtTimer
 (*<*)
 
 end
 
 context begin interpretation Arch .
-requalify_types register
+requalify_types register vcpureg vppievent_irq virt_timer
 end
 
 context Arch begin global_naming AARCH64
 
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 instanceproofs
+#INCLUDE_HASKELL SEL4/Object/Structures/AARCH64.hs CONTEXT AARCH64 instanceproofs ONLY VPPIEventIRQ VirtTimer
 (*>*)
 #INCLUDE_HASKELL SEL4/Machine/RegisterSet/AARCH64.hs CONTEXT AARCH64 bodies_only NOT getRegister setRegister newContext newFPUState
 
@@ -110,7 +112,10 @@ definition
                          device_state = Map.empty,
                          machine_state_rest = undefined \<rparr>"
 
-#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits pageBitsForSize
+#INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
+  VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
+  pageBitsForSize \
+  hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR
 
 end
 

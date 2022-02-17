@@ -1,5 +1,6 @@
 (*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -10,9 +11,6 @@
 
 chapter "Storable Arch Object Instances"
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
 theory ArchObjInsts_H
 imports
   ArchTypes_H
@@ -44,6 +42,29 @@ instance
 
 end
 
+instantiation AARCH64_H.vcpu :: pre_storable
+begin
+interpretation Arch .
+
+definition
+  projectKO_opt_vcpu:
+  "projectKO_opt e \<equiv> case e of KOArch (KOVCPU e) \<Rightarrow> Some e | _ \<Rightarrow> None"
+
+definition
+  injectKO_vcpu [simp]:
+  "injectKO e \<equiv> KOArch (KOVCPU e)"
+
+definition
+  koType_vcpu [simp]:
+  "koType (t::vcpu itself) \<equiv> ArchT VCPUT"
+
+instance
+  by (intro_classes,
+      auto simp: projectKO_opt_vcpu injectKO_vcpu koType_vcpu
+          split: kernel_object.splits arch_kernel_object.splits)
+
+end
+
 instantiation AARCH64_H.asidpool :: pre_storable
 begin
 interpretation Arch .
@@ -68,6 +89,7 @@ end
 
 lemmas (in Arch) projectKO_opts_defs =
   projectKO_opt_pte
+  projectKO_opt_vcpu
   projectKO_opt_asidpool
   ObjectInstances_H.projectKO_opts_defs
 
@@ -82,7 +104,7 @@ lemmas (in Arch) [simp] =
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/AARCH64.hs
 #INCLUDE_HASKELL_PREPARSE SEL4/Machine/Hardware/AARCH64.hs
-
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/AARCH64.hs
 
 instantiation AARCH64_H.pte :: pspace_storable
 begin
@@ -99,7 +121,22 @@ instance
 
 end
 
+instantiation AARCH64_H.vcpu :: pspace_storable
+begin
+interpretation Arch .
 
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/AARCH64.hs
+#INCLUDE_HASKELL_PREPARSE SEL4/Object/VCPU/AARCH64.hs
+#INCLUDE_HASKELL SEL4/Object/Instances/AARCH64.hs instanceproofs bodies_only ONLY VCPU
+
+instance
+  apply (intro_classes)
+  apply (clarsimp simp add: updateObject_default_def in_monad projectKO_opts_defs
+                            projectKO_eq2
+                     split: kernel_object.splits arch_kernel_object.splits)
+  done
+
+end
 
 (* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
 
