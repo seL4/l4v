@@ -60,7 +60,7 @@ then
 fi
 
 # which architectures to process
-ARCHES=("ARM" "RISCV64" "X64" "ARM_HYP")
+ARCHES=("AARCH64" "ARM" "RISCV64" "X64" "ARM_HYP")
 
 # Match the CPP configuration used by SEL4.cabal and Setup.hs for Haskell build
 # Note: these should be in sync with both the Haskell .cabal and Setup.hs,
@@ -77,6 +77,9 @@ function cpp_opts () {
             ;;
         RISCV64)
             L4CPP="-DPLATFORM=HiFive -DPLATFORM_HiFive -DTARGET=RISCV64 -DTARGET_RISCV64"
+            ;;
+        AARCH64)
+            L4CPP="-DPLATFORM=TX2 -DPLATFORM_TX2 -DTARGET=AARCH64 -DTARGET_AARCH64"
             ;;
         *)
             echo "Warning: No CPP configuration for achitecture ${1}"
