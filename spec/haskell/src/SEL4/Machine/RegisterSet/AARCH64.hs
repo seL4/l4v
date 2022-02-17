@@ -18,12 +18,12 @@ import Data.Helpers
 
 import Control.Monad.State(State, gets, modify)
 
+-- note on aliases: NextIP = ELR_EL1, X30 = LR, TPIDR_EL0 = TLS_BASE
 data Register
     = X0 | X1 | X2 | X3 | X4 | X5 | X6 | X7 | X8 | X9
     | X10 | X11 | X12 | X13 | X14 | X15 | X16 | X17 | X18 | X19
-    | X20 | X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30 {-LR-}
-    | SP_EL0 | NextIP {-ELR_EL1-} | SPSR_EL1 | FaultIP | TPIDR_EL0 {-TLS_BASE-}
-    | TPIDRRO_EL0
+    | X20 | X21 | X22 | X23 | X24 | X25 | X26 | X27 | X28 | X29 | X30
+    | SP_EL0 | NextIP | SPSR_EL1 | FaultIP | TPIDR_EL0 | TPIDRRO_EL0
     deriving (Eq, Enum, Bounded, Ord, Ix, Show)
 
 type Word = Data.Word.Word64
@@ -49,8 +49,8 @@ gpRegisters = [X9 .. X15] ++ [X19 .. X28] ++ [TPIDR_EL0, TPIDRRO_EL0]
 exceptionMessage :: [Register] -- see fault_messages[] in C
 exceptionMessage = [FaultIP, SP_EL0, SPSR_EL1]
 
-syscallMessage :: [Register] -- see fault_messages[] in C
-syscallMessage = [X0 .. X7] ++ [FaultIP, SP_EL0, NextIP {-ELR_EL1-}, SPSR_EL1]
+syscallMessage :: [Register] -- see fault_messages[] in C; note NextIP = ELR_EL1
+syscallMessage = [X0 .. X7] ++ [FaultIP, SP_EL0, NextIP, SPSR_EL1]
 
 tlsBaseRegister :: Register
 tlsBaseRegister = TPIDR_EL0

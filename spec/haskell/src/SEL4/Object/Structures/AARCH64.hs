@@ -52,19 +52,6 @@ minUntypedSizeBits = 4
 maxUntypedSizeBits :: Int
 maxUntypedSizeBits = 47
 
-{- Kernel Objects -}
-
-data ArchKernelObject
-    = KOASIDPool ASIDPool
-    | KOPTE PTE
-    | KOVCPU VCPU
-    deriving Show
-
-archObjSize :: ArchKernelObject -> Int
-archObjSize (KOASIDPool _) = pageBits
-archObjSize (KOPTE _) = pteBits
-archObjSize (KOVCPU _) = vcpuBits
-
 
 {- Threads -}
 
@@ -163,3 +150,16 @@ makeVCPUObject =
         , vcpuVTimer = VirtTimer 0
         }
 
+
+{- Kernel Objects -}
+
+data ArchKernelObject
+    = KOASIDPool ASIDPool
+    | KOPTE PTE
+    | KOVCPU VCPU
+    deriving Show
+
+archObjSize :: ArchKernelObject -> Int
+archObjSize (KOASIDPool _) = pageBits
+archObjSize (KOPTE _) = pteBits
+archObjSize (KOVCPU _) = vcpuBits
