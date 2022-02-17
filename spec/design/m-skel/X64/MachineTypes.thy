@@ -11,7 +11,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.OptionMonadND"
   "Lib.HaskellLib_H"
-  Platform
+  Kernel_Config_Lemmas
 begin
 
 context Arch begin global_naming X64
