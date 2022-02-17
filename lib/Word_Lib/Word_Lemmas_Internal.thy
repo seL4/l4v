@@ -17,13 +17,24 @@ theory Word_Lemmas_Internal
 imports Word_Lemmas More_Word_Operations Many_More Word_Syntax Syntax_Bundles
 begin
 
+(* this bundle doesn't survive theory merges from HOL.Main, because these simp/split rules
+   are added there, so it may need to be unbundled or included locally more than once
+*)
+bundle l4v_word_context
+begin
+  declare bit_0 [simp del]
+  declare split_of_bool_asm [split del]
+end
+
 unbundle bit_operations_syntax
 unbundle bit_projection_infix_syntax
+unbundle l4v_word_context
 
 lemmas shiftl_nat_def = push_bit_eq_mult[of _ a for a::nat, folded shiftl_def]
 lemmas shiftr_nat_def = drop_bit_eq_div[of _ a for a::nat, folded shiftr_def]
 
 declare bit_simps[simp]
+lemmas bit_0_numeral[simp] = bit_0[of "numeral w" for w]
 
 lemma signed_ge_zero_scast_eq_ucast:
  "0 <=s x \<Longrightarrow> scast x = ucast x"
@@ -642,8 +653,6 @@ lemma FF_eq_minus_1:
   \<open>0xFF = (- 1 :: 8 word)\<close>
   by simp
 
-lemma shiftl_t2n':
-  "w << n = w * (2 ^ n)" for w :: "'a::len word"
-  by (simp add: shiftl_t2n)
+lemmas shiftl_t2n' = shiftl_eq_mult[where x="w::'a::len word" for w]
 
 end

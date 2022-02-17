@@ -2457,7 +2457,7 @@ lemma table_index_slot_offset_inj:
   apply (simp add: word_plus_and_or_coroll)
   apply word_bitwise
   apply (drule max_pt_level_enum)
-  by (auto simp: pt_bits_left_def pt_index_def word_size bit_simps simp del: bit_0)
+  by (auto simp: pt_bits_left_def pt_index_def word_size bit_simps)
 
 lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   "\<lbrace> valid_vs_lookup

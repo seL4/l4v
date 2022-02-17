@@ -8,6 +8,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault lookupPDPTSlot,
@@ -624,9 +626,9 @@ lemma lookupPDPTSlot_ccorres:
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
   apply (frule page_map_l4_at_rf_sr, simp add: rf_sr_def, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-  apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def split del: split_of_bool_asm)
-  apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp split del: split_of_bool_asm)
-  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp split del: split_of_bool_asm)
+  apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def)
+  apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp)
+  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
   apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
   done
 
@@ -667,8 +669,8 @@ lemma lookupPDPTSlot_ccorres':
    apply (frule (1) pd_pointer_table_at_rf_sr, clarsimp)
    apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps cpml4e_relation_def Let_def isPDPointerTablePML4E_def
-                  split: pml4e.split_asm split del: split_of_bool_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp split del: split_of_bool_asm)
+                  split: pml4e.split_asm)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps shiftl_t2n mask_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
@@ -716,7 +718,6 @@ lemma lookupPDSlot_ccorres:
        []
        (lookupPDSlot pm vptr)
        (Call lookupPDSlot_'proc)"
-  supply split_of_bool_asm[split del]
   apply (cinit lift: pml4_' vptr_')
    apply (rename_tac vptr' pml4)
    apply (simp add: liftE_bindE pdpte_case_isPageDirectoryPDPTE)
@@ -786,7 +787,6 @@ lemma lookupPTSlot_ccorres:
        []
        (lookupPTSlot pm vptr)
        (Call lookupPTSlot_'proc)"
-  supply split_of_bool_asm[split del]
   apply (cinit lift: vspace_' vptr_')
    apply (rename_tac vptr' pml4)
    apply (simp add: liftE_bindE pde_case_isPageTablePDE)
@@ -1745,7 +1745,6 @@ lemma modeUnmapPage_ccorres:
             liftE (storePDPTE p X64_H.InvalidPDPTE)
         odE)
        (Call modeUnmapPage_'proc)"
-  supply split_of_bool_asm[split del]
   apply (cinit' lift: page_size_' vroot_' vaddr___unsigned_long_' pptr_')
    apply ccorres_rewrite
    apply (rule ccorres_rhs_assoc)+

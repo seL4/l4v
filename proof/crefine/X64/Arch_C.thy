@@ -8,6 +8,8 @@ theory Arch_C
 imports Recycle_C
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches unmapPageTable, unmapPageDirectory, unmapPDPT
@@ -1483,7 +1485,6 @@ lemma addrFromPPtr_mask_6:
 
 lemma cpde_relation_invalid:
  "cpde_relation pdea pde \<Longrightarrow> (pde_get_tag pde = scast pde_pde_pt \<and> pde_pde_pt_CL.present_CL (pde_pde_pt_lift pde) = 0) = isInvalidPDE pdea"
-  supply split_of_bool_asm[split del]
   apply (simp add: cpde_relation_def Let_def)
   apply (simp add: pde_pde_pt_lift_def)
   apply (case_tac pdea, simp_all add: isInvalidPDE_def) [1]
@@ -2214,7 +2215,7 @@ lemma framesize_to_from_H:
                 Kernel_C.X86_SmallPage_def Kernel_C.X86_LargePage_def
                 Kernel_C.X64_HugePage_def
            split: if_split vmpage_size.splits)
-  by (word_bitwise, auto simp del: bit_0)
+  by (word_bitwise, auto)
 
 lemma cap_get_tag_PDPTCap:
   "ccap_relation cap cap' \<Longrightarrow>
@@ -2290,7 +2291,7 @@ lemma canonical_address_cap_frame_cap:
   done
 
 lemma decodeX64FrameInvocation_ccorres:
-  notes if_cong[cong] option.case_cong[cong] Collect_const[simp del] split_of_bool_asm[split del]
+  notes if_cong[cong] option.case_cong[cong] Collect_const[simp del]
   defines "does_not_throw args extraCaps maptype pg_sz mapdata \<equiv>
            (mapdata = None \<longrightarrow> \<not> (unat user_vtop < unat (hd args)
                                   \<or> unat user_vtop < unat (hd args + 2 ^ pageBitsForSize pg_sz)))
@@ -2746,7 +2747,6 @@ lemma decodeX64FrameInvocation_ccorres:
 
 
   (* C side *)
-  supply bit_0[simp del]
   apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs" mask_eq_iff_w2p
                         word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of
                         n_msgRegisters_def)

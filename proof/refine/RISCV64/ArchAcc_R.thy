@@ -12,6 +12,7 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
+unbundle l4v_word_context
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -293,7 +294,7 @@ lemma p_le_table_base:
   "is_aligned p pte_bits \<Longrightarrow> p + mask pte_bits \<le> table_base p + mask table_size"
   apply (simp add: is_aligned_mask bit_simps word_plus_and_or_coroll)
   apply word_bitwise
-  apply (simp add: word_size del: bit_0)
+  apply (simp add: word_size)
   done
 
 lemma pte_at_cross:

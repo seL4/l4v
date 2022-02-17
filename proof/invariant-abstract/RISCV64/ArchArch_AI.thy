@@ -8,6 +8,8 @@ theory ArchArch_AI
 imports Arch_AI
 begin
 
+unbundle l4v_word_context
+
 context Arch begin global_naming RISCV64
 
 definition
@@ -92,7 +94,7 @@ lemma dom_ucast_eq:
    apply (erule notE)
    apply (subst word_plus_and_or_coroll)
     apply word_eqI_solve
-   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size simp del: bit_0)
+   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
   apply (clarsimp simp: p2_low_bits_max)
   apply (rule ccontr)
   apply simp
@@ -110,7 +112,7 @@ lemma dom_ucast_eq:
   apply (subst word_plus_and_or_coroll)
    apply word_eqI_solve
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size simp del: bit_0)
+   apply (word_bitwise, clarsimp simp: word_size)
   apply (word_bitwise)
   done
 

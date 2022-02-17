@@ -8,6 +8,8 @@ theory CSpace_RAB_C
 imports CSpaceAcc_C "CLib.MonadicRewrite_C"
 begin
 
+unbundle l4v_word_context
+
 context kernel
 begin
 
@@ -114,7 +116,7 @@ lemmas wordFromRights_eq = inj_eq [OF wordFromRights_inj]
 
 lemma rightsFromWord_and:
   "rightsFromWord (a && b) = andCapRights (rightsFromWord a) (rightsFromWord b)"
-  by (simp add: rightsFromWord_def andCapRights_def del: bit_0)
+  by (simp add: rightsFromWord_def andCapRights_def)
 
 lemma andCapRights_ac:
   "andCapRights (andCapRights a b) c = andCapRights a (andCapRights b c)"

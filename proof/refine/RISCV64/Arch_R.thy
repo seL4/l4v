@@ -12,6 +12,8 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
+unbundle l4v_word_context
+
 lemmas [datatype_schematic] = cap.sel list.sel(1) list.sel(3)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -384,8 +386,7 @@ lemma mask_vmrights_corres:
                      mask_vm_rights_def nth_ucast
                      validate_vm_rights_def vm_read_write_def
                      vm_kernel_only_def vm_read_only_def
-               split: bool.splits
-               simp del: bit_0)
+               split: bool.splits)
 
 lemma vm_attributes_corres:
   "vmattributes_map (attribs_from_word w) = attribsFromWord w"
@@ -498,7 +499,7 @@ lemma below_user_vtop_in_user_region:
   "p < user_vtop \<Longrightarrow> p \<in> user_region"
   apply (simp add: user_region_def canonical_user_def user_vtop_def pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def)
-  by (word_bitwise, clarsimp simp: word_size simp del: bit_0)
+  by (word_bitwise, clarsimp simp: word_size)
 
 lemma vmsz_aligned_user_region:
   "\<lbrakk> vmsz_aligned p sz;  p + (2 ^ pageBitsForSize sz - 1) < pptrUserTop \<rbrakk>
@@ -507,7 +508,7 @@ lemma vmsz_aligned_user_region:
   apply (simp flip: mask_2pm1 add: vmsz_aligned_def)
   apply (simp add: user_region_def canonical_user_def pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
-  by (word_bitwise, clarsimp simp: word_size simp del: bit_0)
+  by (word_bitwise, clarsimp simp: word_size)
 
 lemma decodeX64FrameInvocation_corres:
   "\<lbrakk>cap = arch_cap.FrameCap p R sz d opt; acap_relation cap cap';
@@ -1308,7 +1309,7 @@ lemma kernel_mappings_canonical_pt_base:
   "x \<in> kernel_mappings \<Longrightarrow> canonical_address (table_base x)"
   apply (simp add: kernel_mappings_def pptr_base_def RISCV64.pptrBase_def canonical_address_range
                    canonical_bit_def bit_simps)
-  by (word_bitwise, clarsimp simp: word_size simp del: bit_0)
+  by (word_bitwise, clarsimp simp: word_size)
 
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>

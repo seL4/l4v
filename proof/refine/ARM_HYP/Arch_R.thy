@@ -12,6 +12,8 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare is_aligned_shiftl [intro!]
@@ -400,8 +402,7 @@ lemma mask_vmrights_corres:
                      mask_vm_rights_def nth_ucast
                      validate_vm_rights_def vm_read_write_def
                      vm_kernel_only_def vm_read_only_def
-               split: bool.splits
-               simp del: bit_0)
+               split: bool.splits)
 
 definition
   "parity_mask attrs \<equiv> case attrs of VMAttributes c p xn \<Rightarrow> VMAttributes c False xn"

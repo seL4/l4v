@@ -12,6 +12,8 @@ imports
   "Lib.MonadicRewrite"
 begin
 
+unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
+
 context begin interpretation Arch .
 
 requalify_consts
