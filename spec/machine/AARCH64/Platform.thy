@@ -89,6 +89,12 @@ definition minIRQ :: "irq" where
 definition maxIRQ :: "irq" where
   "maxIRQ \<equiv> 383"
 
+definition irqVGICMaintenance :: irq where
+  "irqVGICMaintenance \<equiv> 25"
+
+definition irqVTimerEvent :: irq where
+  "irqVTimerEvent \<equiv> 27"
+
 definition pageColourBits :: nat where
   "pageColourBits \<equiv> undefined" \<comment> \<open>not implemented on this platform\<close>
 
