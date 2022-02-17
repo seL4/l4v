@@ -1,11 +1,7 @@
 (*
  * Copyright 2014, NICTA
  *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
+ * SPDX-License-Identifier: BSD-2-Clause
  *)
 
 section \<open>32 bit standard platform-specific word size and alignment.\<close>
