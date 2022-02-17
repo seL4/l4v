@@ -42,7 +42,7 @@ data KernelState = ARMKernelState {
     armKSGlobalUserVSpace :: PPtr PTE,
     armHSCurVCPU :: Maybe (PPtr VCPU, Bool),
     armKSGICVCPUNumListRegs :: Int
-}
+    }
 
 -- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;
 -- maxPTLevel = level of top-level root table

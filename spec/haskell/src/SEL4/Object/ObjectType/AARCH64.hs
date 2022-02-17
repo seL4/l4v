@@ -215,10 +215,10 @@ decodeInvocation label args capIndex slot cap extraCaps =
 
 performInvocation :: ArchInv.Invocation -> KernelP [Word]
 performInvocation i =
-    case i of ArchInv.InvokeVCPU iv -> do
-                withoutPreemption $ performARMVCPUInvocation iv
-              -- FIXME AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
-              _ -> performARMMMUInvocation i
+    case i of
+        ArchInv.InvokeVCPU iv -> withoutPreemption $ performARMVCPUInvocation iv
+        -- FIXME AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
+        _ -> performARMMMUInvocation i
 
 {- Helper Functions -}
 
