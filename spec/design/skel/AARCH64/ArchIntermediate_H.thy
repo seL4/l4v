@@ -1,14 +1,13 @@
 (*
  * Copyright 2014, General Dynamics C4 Systems
+ * Copyright 2022, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 chapter "Intermediate"
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
+(* FIXME AARCH64: This file needs some thinking regarding handling of top-level tables. *)
 theory ArchIntermediate_H
 imports Intermediate_H
 begin
@@ -40,15 +39,23 @@ defs Arch_createNewCaps_def:
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of
           APIObjectType apiObject \<Rightarrow> haskell_fail []
+        \<comment> \<open>FIXME AARCH64 TODO\<close>
+        | VSpaceRootObject \<Rightarrow> undefined
         | SmallPageObject \<Rightarrow>
-            createNewFrameCaps regionBase numObjects dev 0 RISCVSmallPage
+            createNewFrameCaps regionBase numObjects dev 0 ARMSmallPage
         | LargePageObject \<Rightarrow>
-            createNewFrameCaps regionBase numObjects dev ptTranslationBits RISCVLargePage
+            createNewFrameCaps regionBase numObjects dev (ptTranslationBits False) ARMLargePage
         | HugePageObject \<Rightarrow>
-            createNewFrameCaps regionBase numObjects dev (ptTranslationBits + ptTranslationBits) RISCVHugePage
+            createNewFrameCaps regionBase numObjects dev (ptTranslationBits False + ptTranslationBits False) ARMHugePage
+        \<comment> \<open>FIXME AARCH64: does not take into account top-level pages and is almost certainly wrong\<close>
         | PageTableObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects ptBits (makeObject::pte) PageTableCap
+            createNewTableCaps regionBase numObjects (ptBits False) (makeObject::pte)
+              (\<lambda>base addr. PageTableCap base False addr)
               (\<lambda>pts. return ())
+        | VCPUObject \<Rightarrow> (do
+            addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject :: vcpu)) 0;
+            return $ map (\<lambda> addr. VCPUCap addr) addrs
+            od)
         )"
 
 end
