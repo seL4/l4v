@@ -8,6 +8,8 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
+unbundle l4v_word_context
+
 context Arch begin
 
 global_naming RISCV64
@@ -26,8 +28,7 @@ lemma kernel_mappings_slots_eq:
   apply (simp add: kernel_mappings_def kernel_mapping_slots_def ucast_mask_drop canonical_address_range)
   apply word_bitwise
   by (auto simp: canonical_bit_def word_bits_def pt_bits_left_def bit_simps level_defs word_size
-                 rev_bl_order_simps
-           simp del: bit_0)
+                 rev_bl_order_simps)
 
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)

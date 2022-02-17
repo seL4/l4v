@@ -13,6 +13,8 @@ theory CNodeInv_R
 imports Ipc_R Invocations_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
@@ -48,7 +50,7 @@ where
 
 lemma rightsFromWord_correspondence:
   "rightsFromWord w = rights_mask_map (data_to_rights w)"
-  by (simp add: rightsFromWord_def rights_mask_map_def data_to_rights_def Let_def del: bit_0)
+  by (simp add: rightsFromWord_def rights_mask_map_def data_to_rights_def Let_def)
 
 primrec
   cnodeinv_relation :: "Invocations_A.cnode_invocation \<Rightarrow> Invocations_H.cnode_invocation \<Rightarrow> bool"

@@ -5,7 +5,7 @@
  *)
 
 theory ArchInvariants_AI
-imports InvariantsPre_AI "Lib.Apply_Trace_Cmd"
+imports InvariantsPre_AI
 begin
 
 (* setup *)
@@ -2112,7 +2112,7 @@ lemma canonical_vref_for_levelI:
   apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
                    bit_simps)
   apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less simp del: bit_0)
+  by (clarsimp simp: canonical_bit_def word_size not_less)
 
 lemma vref_for_level_le:
   "vref_for_level vref level \<le> vref"
@@ -2137,7 +2137,7 @@ lemma aligned_canonical_max_is_0:
   "\<lbrakk> canonical_address p; is_aligned p (pt_bits_left (max_pt_level + 1)) \<rbrakk> \<Longrightarrow> p = 0"
   apply (simp add: canonical_address_def canonical_address_of_def level_defs pt_bits_left_def
                    bit_simps is_aligned_nth)
-  by word_bitwise (clarsimp simp del: bit_0)
+  by word_bitwise clarsimp
 
 lemma aligned_vref_for_level[simp]:
   "is_aligned (vref_for_level vref level) (pt_bits_left level)"
@@ -2466,7 +2466,7 @@ lemma vref_for_level_user_regionD:
   apply (clarsimp simp: user_region_def)
   apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def simp del: bit_0)
+  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;

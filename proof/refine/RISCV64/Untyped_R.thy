@@ -10,6 +10,8 @@ theory Untyped_R
 imports Detype_R Invocations_R InterruptAcc_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
@@ -4864,7 +4866,7 @@ lemma inv_untyped_corres':
     have canonical_ptr[simp]: "canonical_address ptr"
       using ptr_cn sz_limit
       unfolding canonical_address_range maxUntypedSizeBits_def canonical_bit_def
-      by word_bitwise (simp add: word_size del: bit_0)
+      by word_bitwise (simp add: word_size)
 
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"

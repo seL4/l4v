@@ -9,6 +9,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault,
@@ -355,8 +357,6 @@ lemma getPPtrFromHWPTE_spec':
                pte_Ptr (ptrFromPAddr (pte_CL.ppn_CL (pte_lift
                             (the (clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C))) << pageBits)) \<rbrace>"
   by vcg (simp add: bit_simps)
-
-declare split_of_bool_asm[split del]
 
 lemma getPPtrFromHWPTE_corres:
   "ccorres (\<lambda>_ ptr. ptr = pte_Ptr (getPPtrFromHWPTE pte))

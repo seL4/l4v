@@ -10,6 +10,8 @@ theory CSpace_C
 imports CSpaceAcc_C Machine_C
 begin
 
+unbundle l4v_word_context
+
 context kernel_m
 begin
 
@@ -2964,7 +2966,7 @@ lemma ccap_relation_FrameCap_Size:
   apply (cases s; clarsimp simp: framesize_to_H_def framesize_from_H_def
                                  RISCV_4K_Page_def RISCV_Mega_Page_def RISCV_Giga_Page_def
                           split: if_splits cong: conj_cong)
-  apply (word_bitwise, simp del: bit_0)
+  apply (word_bitwise, simp)
   done
 
 lemma ccap_relation_FrameCap_MappedASID:

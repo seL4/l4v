@@ -8,6 +8,8 @@ theory Arch_C
 imports Recycle_C
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -1629,7 +1631,7 @@ lemma performPageInvocationMapPTE_ccorres:
                 apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def
                                       unat_of_nat upto_enum_word ARMSmallPage_def)
                 apply (case_tac h_pte; clarsimp simp: isLargePagePTE_def)
-                apply (clarsimp simp: cpte_relation_def pte_lift_small split del: split_of_bool_asm)
+                apply (clarsimp simp: cpte_relation_def pte_lift_small)
                 apply (clarsimp simp: pte_lifts split del: split_of_bool)
                apply (clarsimp simp: Kernel_C.ARMSmallPage_def)
                apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def
@@ -1640,12 +1642,12 @@ lemma performPageInvocationMapPTE_ccorres:
                apply (clarsimp simp: pte_lifts split: if_split)
                apply (rule conjI)
                 apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def
-                                split del: split_of_bool_asm split_of_bool)
+                                split del: split_of_bool)
                apply (clarsimp simp: addPTEOffset_def)
                apply (clarsimp simp: cpte_relation_def pte_pte_small_lift_def
-                               split del: split_of_bool_asm split_of_bool)
+                               split del: split_of_bool)
                apply (clarsimp simp: gen_framesize_to_H_def ARMSmallPage_def addPAddr_def fromPAddr_def
-                               split del: split_of_bool_asm split_of_bool)
+                               split del: split_of_bool)
                apply (rule is_aligned_neg_mask_eq)
                apply (erule is_aligned_add_multI[where n=12, simplified]; simp)
               apply simp
@@ -1663,23 +1665,23 @@ lemma performPageInvocationMapPTE_ccorres:
               apply (clarsimp split: if_split_asm)
                apply (case_tac a; clarsimp simp: isLargePagePTE_def)
                apply (clarsimp simp: cpte_relation_def pte_lift_small
-                               split del: split_of_bool split_of_bool_asm)
+                               split del: split_of_bool)
                apply (clarsimp simp: pte_lifts split del: split_of_bool)
               apply (case_tac a; clarsimp simp: isLargePagePTE_def)
               apply (clarsimp simp: cpte_relation_def pte_lift_small
-                              split del: split_of_bool split_of_bool_asm)
+                              split del: split_of_bool)
               apply (clarsimp simp: pte_lifts split del: split_of_bool)
              apply clarsimp
              apply (rule conjI, clarsimp)
               apply (clarsimp split: if_split_asm)
                apply (case_tac a; clarsimp simp: isLargePagePTE_def)
                apply (clarsimp simp: cpte_relation_def pte_lift_small
-                               split del: split_of_bool split_of_bool_asm)
+                               split del: split_of_bool)
                apply (clarsimp simp: pte_lifts split del: split_of_bool)
               apply (case_tac a; clarsimp simp: isLargePagePTE_def)
               apply (clarsimp simp: cpte_relation_def pte_lift_small
-                              split del: split_of_bool split_of_bool_asm)
-              apply (clarsimp simp: pte_lifts split del: split_of_bool split_of_bool_asm)
+                              split del: split_of_bool)
+              apply (clarsimp simp: pte_lifts split del: split_of_bool)
              apply (clarsimp split: if_split)
              apply (rule conjI, clarsimp)
               apply unat_arith
@@ -1687,14 +1689,13 @@ lemma performPageInvocationMapPTE_ccorres:
              apply (erule disjE)
               apply (case_tac a; clarsimp simp: isLargePagePTE_def)
               apply (clarsimp simp: cpte_relation_def pte_lift_small
-                              split del: split_of_bool split_of_bool_asm)
-              apply (clarsimp simp: pte_lifts split del: split_of_bool split_of_bool_asm)
+                              split del: split_of_bool)
+              apply (clarsimp simp: pte_lifts split del: split_of_bool)
              apply (case_tac a; clarsimp simp: isLargePagePTE_def)
              apply (clarsimp simp: cpte_relation_def addPTEOffset_def pte_lift_small
-                             split del: split_of_bool split_of_bool_asm)
-             apply (clarsimp simp: pte_lifts split del: split_of_bool split_of_bool_asm)
-             apply (clarsimp simp: ARMSmallPage_def gen_framesize_to_H_def addPAddr_def fromPAddr_def
-                             split del: split_of_bool_asm)
+                             split del: split_of_bool)
+             apply (clarsimp simp: pte_lifts split del: split_of_bool)
+             apply (clarsimp simp: ARMSmallPage_def gen_framesize_to_H_def addPAddr_def fromPAddr_def)
              apply (rule is_aligned_neg_mask_eq)
              apply (rule is_aligned_add_multI[where n=12, simplified], simp, simp, simp)
             apply (simp add: valid_pte_slots'2_def split_def)
@@ -2012,8 +2013,8 @@ lemma performPageInvocationMapPDE_ccorres:
                 apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def
                                       unat_of_nat upto_enum_word ARMSection_def mask_def[of 2])
                 apply (case_tac h_pde; clarsimp simp: isSuperSectionPDE_def)
-                apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool_asm)
-                apply (clarsimp simp: pde_lifts split del: split_of_bool_asm)
+                apply (clarsimp simp: cpde_relation_def pde_lift_section)
+                apply (clarsimp simp: pde_lifts)
                apply (clarsimp simp: Kernel_C.ARMSection_def mask_def[of 2])
                apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def
                                      upt_conv_Cons[where i=0] of_nat_gt_0
@@ -2026,10 +2027,9 @@ lemma performPageInvocationMapPDE_ccorres:
                                 split del: split_of_bool)
                apply (clarsimp simp: addPDEOffset_def)
                apply (clarsimp simp: cpde_relation_def pde_pde_section_lift_def
-                               split del: split_of_bool split_of_bool_asm)
+                               split del: split_of_bool)
                apply (clarsimp simp: gen_framesize_to_H_def ARMLargePage_def ARMSection_def
-                                     ARMSmallPage_def addPAddr_def fromPAddr_def
-                               split del:  split_of_bool_asm)
+                                     ARMSmallPage_def addPAddr_def fromPAddr_def)
                apply (rule is_aligned_neg_mask_eq)
                apply (drule is_aligned_add_multI[where n=21 and m=25, simplified], simp)
                apply (erule is_aligned_weaken, simp)
@@ -2047,19 +2047,19 @@ lemma performPageInvocationMapPDE_ccorres:
              apply (rule conjI, clarsimp)
               apply (clarsimp split: if_split_asm)
                apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool split_of_bool_asm)
+               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
                apply (clarsimp simp: pde_lifts split del: split_of_bool cong: conj_cong)
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool split_of_bool_asm)
+              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
              apply clarsimp
              apply (rule conjI, clarsimp)
               apply (clarsimp split: if_split_asm)
                apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool split_of_bool_asm)
+               apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
                apply (clarsimp simp: pde_lifts split del: split_of_bool)
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool split_of_bool_asm)
+              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
              apply (clarsimp split: if_split)
              apply (rule conjI, clarsimp)
@@ -2067,14 +2067,13 @@ lemma performPageInvocationMapPDE_ccorres:
              apply clarsimp
              apply (erule disjE)
               apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool split_of_bool_asm)
+              apply (clarsimp simp: cpde_relation_def pde_lift_section split del: split_of_bool)
               apply (clarsimp simp: pde_lifts split del: split_of_bool)
              apply (case_tac a; clarsimp simp: isSuperSectionPDE_def)
-             apply (clarsimp simp: cpde_relation_def addPDEOffset_def pde_lift_section split del: split_of_bool split_of_bool_asm)
-             apply (clarsimp simp: pde_lifts split del: split_of_bool split_of_bool_asm)
+             apply (clarsimp simp: cpde_relation_def addPDEOffset_def pde_lift_section split del: split_of_bool)
+             apply (clarsimp simp: pde_lifts split del: split_of_bool)
              apply (clarsimp simp: ARMSection_def ARMLargePage_def ARMSmallPage_def
-                                   gen_framesize_to_H_def addPAddr_def fromPAddr_def
-                             split del: split_of_bool_asm)
+                                   gen_framesize_to_H_def addPAddr_def fromPAddr_def)
              apply (rule is_aligned_neg_mask_eq)
              apply (drule is_aligned_add_multI[where n=21 and m=25, simplified], simp)
              apply (erule is_aligned_weaken, simp)
@@ -2508,8 +2507,7 @@ lemma resolveVAddr_ccorres:
                           fst_return typ_heap_simps framesize_from_H_simps
                           pde_pde_section_lift_def true_def
                    intro: resolve_ret_rel_Some
-                   split: pde.splits
-                   split del: split_of_bool_asm)
+                   split: pde.splits)
      subgoal
        apply (fastforce simp: cpte_relation_def pte_pte_small_lift_def pte_lift_def Let_def mask_def
                               valid_mapping'_def  true_def framesize_from_H_simps
@@ -2517,7 +2515,6 @@ lemma resolveVAddr_ccorres:
                         dest!: is_aligned_neg_mask_eq)+
        done
      subgoal
-       supply split_of_bool_asm[split del]
        apply (rule conjI; clarsimp simp: ARMSuperSection_def mask_def)
        apply (rule conjI)
         apply (clarsimp simp: gen_framesize_to_H_def split: if_splits)

@@ -1302,8 +1302,8 @@ next
   have [simp]: "\<And>pte pte'. \<lbrakk> cpte_relation pte pte'; isPageTablePTE pte \<rbrakk> \<Longrightarrow>
                             ptrFromPAddr (pte_CL.ppn_CL (pte_lift pte') << pageBits) =
                             getPPtrFromHWPTE pte"
-    by (clarsimp simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
-                 split: pte.splits)
+    by (auto simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
+             split: pte.splits)
 
   have mask_simp[simp]: "(0x1FF::machine_word) = mask ptTranslationBits"
     by (simp add: bit_simps mask_def)
