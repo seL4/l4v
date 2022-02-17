@@ -100,8 +100,8 @@ known_config_keys = {
     'CONFIG_AARCH64_SERROR_IGNORE': (bool, None),
     'CONFIG_ARM_MACH': (string, None),
     'CONFIG_KERNEL_MCS': (bool, None),
-    'CONFIG_ARM_PA_SIZE_BITS_40': (bool, None),
-    'CONFIG_ARM_PA_SIZE_BITS_44': (bool, None),
+    'CONFIG_ARM_PA_SIZE_BITS_40': (bool, 'config_ARM_PA_SIZE_BITS_40'),
+    'CONFIG_ARM_PA_SIZE_BITS_44': (bool, 'config_ARM_PA_SIZE_BITS_44'),
     'CONFIG_ARM_ICACHE_VIPT': (bool, None),
     'CONFIG_DEBUG_DISABLE_L2_CACHE': (bool, None),
     'CONFIG_DEBUG_DISABLE_L1_ICACHE': (bool, None),
@@ -208,6 +208,17 @@ def parse_gen_config(gen_config_file: str) -> Dict[str, str]:
     return config
 
 
+def add_defaults(config: Dict[str, str]):
+    """
+    Defaults are boolean config keys that are mentioned in known_config_keys
+    with a custom name. These are set to `false` if not present in the input
+    config file.
+    """
+    for key, (_, name) in known_config_keys.items():
+        if key not in config and not name is None:
+            config[key] = 0
+
+
 theory_header = """(*
  * Copyright {}, Proofcraft Pty Ltd
  *
@@ -253,8 +264,17 @@ def write_config_thy(config_thy_path, config: Dict[str, str]):
                 if name != key:
                     f.write(f'  (* {key} *)')
                 f.write('\n\n')
+            if type is bool:
+                name = name_of(key)
+                names.append(name)
+                f.write(f'definition {name} :: bool where\n')
+                val = 'True' if value == '1' else 'False'
+                f.write(f'  "{name} \\<equiv> {val}"')
+                if name != key:
+                    f.write(f'  (* {key} *)')
+                f.write('\n\n')
             else:
-                # currently ignoring bool and string configs
+                # currently ignoring string configs
                 pass
 
         f.write('\n(* These definitions should only be unfolded consciously and carefully: *)\n')
@@ -279,4 +299,5 @@ if __name__ == '__main__':
     thy_path = path.join(this_dir, f'../../machine/{L4V_ARCH}')
 
     config = parse_gen_config(config_path)
+    add_defaults(config)
     write_config_thy(thy_path, config)
