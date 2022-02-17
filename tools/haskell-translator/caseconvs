@@ -1819,7 +1819,7 @@ case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Type
  Arch.Types.APIObjectType \v0\ \<Rightarrow> ->1 | Arch.Types.SmallPageObject \<Rightarrow> ->2 | Arch.Types.LargePageObject \<Rightarrow> ->3 | Arch.Types.SectionObject \<Rightarrow> ->4 | Arch.Types.SuperSectionObject \<Rightarrow> ->5 | Arch.Types.PageTableObject \<Rightarrow> ->6 | Arch.Types.PageDirectoryObject \<Rightarrow> ->7 | Arch.Type.VCPUObject \<Rightarrow> -> 8
 
 case \x of ArchInv.InvokeVCPU iv -> _ ->  ---> let inv = \x
-     in case inv of ArchInv.InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
+     in case inv of InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
 
 case \x of ((mr0:mr1:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
    if isVCPUCap cap \<and> length ls > 1
@@ -2028,3 +2028,60 @@ case \x of (ArchInvocationLabel ArchLabels.RISCVIRQIssueIRQHandler, irqW:trigger
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel RISCVIRQIssueIRQHandler, _, _) => ->2
     | _ => ->3
+
+case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> ((a@VCPUCap {}), (b@VCPUCap {})) -> (_, _) ->  ---> let (a,b) = \x in
+  if isFrameCap a \<and> isFrameCap b
+  then ->1
+  else if isPageTableCap a \<and> isPageTableCap b
+  then ->2
+  else if a = ASIDControlCap \<and> b = ASIDControlCap
+  then ->3
+  else if isASIDPoolCap a \<and> isASIDPoolCap b
+  then ->4
+  else if isVCPUCap a \<and> isVCPUCap b
+  then ->5
+  else ->6
+
+case \x of cap@(PageTableCap { capPTTopLevel = True }) -> _ ->  ---> let cap = \x in
+  if isPageTableCap cap \<and> capPTTopLevel cap
+  then ->1
+  else ->2
+
+case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTTopLevel = False }) -> cap@(PageTableCap { capPTTopLevel = True }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
+  if isFrameCap cap
+  then ->1
+  else if isPageTableCap cap \<and> \<not> capPTTopLevel cap
+  then ->2
+  else if isPageTableCap cap \<and> capPTTopLevel cap
+  then ->3
+  else if isASIDControlCap cap
+  then ->4
+  else if isASIDPoolCap cap
+  then ->5
+  else if isVCPUCap cap
+  then ->6
+  else undefined
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@FrameCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) ->  ---> let c = \x in
+  if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+  then ->1
+  else if isPageTableCap c \<and> capPTMappedAddress c = None
+  then ->2
+  else if isFrameCap c
+  then ->3
+  else if c = ASIDControlCap
+  then ->4
+  else if isASIDPoolCap c
+  then ->5
+  else if isVCPUCap c
+  then ->6
+  else undefined
+
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject -> Arch.Types.VSpaceRootObject -> Arch.Types.VCPUObject ->  ---> case \x of
+    APIObjectType \v0\ \<Rightarrow> ->1
+  | SmallPageObject \<Rightarrow> ->2
+  | LargePageObject \<Rightarrow> ->3
+  | HugePageObject \<Rightarrow> ->4
+  | PageTableObject \<Rightarrow> ->5
+  | VSpaceRootObject \<Rightarrow> ->6
+  | VCPUObject \<Rightarrow> ->7
