@@ -1,3 +1,9 @@
+(*
+ * Copyright 2021, Florian Haftmann
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
 theory Singleton_Bit_Shifts
   imports
     "HOL-Library.Word"
