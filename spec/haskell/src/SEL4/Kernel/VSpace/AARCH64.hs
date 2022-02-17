@@ -480,7 +480,7 @@ isVTableRoot _ = False
 -- FIXME AARCH64: name indirection kept here for sync with C; both (C and
 -- Haskell) should define isValidVTableRoot directly
 isValidNativeRoot :: Capability -> Bool
-isValidNativeRoot cap = isValidVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
+isValidNativeRoot cap = isVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
 
 isValidVTableRoot :: Capability -> Bool
 isValidVTableRoot = isValidNativeRoot
