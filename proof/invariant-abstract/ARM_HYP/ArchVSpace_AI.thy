@@ -2656,6 +2656,37 @@ lemma invs_current_vcpu_update': "\<lbrakk> cur_vcpu_at v s \<and> invs s \<rbra
             valid_global_objs_def valid_global_vspace_mappings_def
            split: option.split)
 
+lemma vgic_update_sym_refs_hyp[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vgic_update_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
+
+lemma vcpu_save_reg_sym_refs_hyp[wp]:
+  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_save_reg vcpuptr r \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_save_reg_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+     (simp add: obj_at_def)
+
+lemma vcpu_update_regs_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+lemma vcpu_write_reg_sym_refs_hyp[wp]:
+  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+
+lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
+  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  (ignore: vcpu_update wp: crunch_wps)
+
 lemma vcpu_switch_invs[wp]:
 "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> obj_at hyp_live (the v) s)\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
   unfolding vcpu_switch_def
