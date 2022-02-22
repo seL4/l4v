@@ -67,6 +67,8 @@ declare [[allow_underscore_idents = true]]
 
 end
 
+(* workaround for the fact that the C parser wants to know the vmpage sizes*)
+(* create appropriately qualified aliases *)
 context begin interpretation Arch . global_naming vmpage_size
 requalify_consts RISCVSmallPage RISCVLargePage RISCVHugePage
 end
@@ -88,11 +90,18 @@ cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
 install_C_file "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 
+text \<open>Hide unqualified names conflicting with Kernel_Config names. Force use of Kernel_C prefix
+  for these:\<close>
+hide_const (open)
+  numDomains
+
+(* hide vmpage sizes again *)
 hide_const
   vmpage_size.RISCVSmallPage
   vmpage_size.RISCVLargePage
   vmpage_size.RISCVHugePage
 
+(* re-allow fully qualified accesses (for consistency). Slightly clunky *)
 context Arch begin
 global_naming "RISCV.vmpage_size" requalify_consts RISCVSmallPage RISCVLargePage RISCVHugePage
 global_naming "RISCV" requalify_consts RISCVSmallPage RISCVLargePage RISCVHugePage
