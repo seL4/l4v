@@ -22,7 +22,7 @@ ML \<open>
   ParseGraph.mkdir_relative @{theory} (getenv "L4V_ARCH");
   val CFunDump_filename_export = getenv "L4V_ARCH" ^ "/" ^ "CFunDump.txt";
   val CFunDump_filename = "export/" ^ CFunDump_filename_export;
-  emit_C_everything_relative @{context} (csenv ()) CFunDump_filename_export;
+  emit_C_everything_relative @{context} (csenv ()) CFunDump_filename_export "Kernel_C";
 \<close>
 
 end
