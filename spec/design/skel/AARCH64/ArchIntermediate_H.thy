@@ -7,7 +7,6 @@
 
 chapter "Intermediate"
 
-(* FIXME AARCH64: This file needs some thinking regarding handling of top-level tables. *)
 theory ArchIntermediate_H
 imports Intermediate_H
 begin
@@ -39,15 +38,16 @@ defs Arch_createNewCaps_def:
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of
           APIObjectType apiObject \<Rightarrow> haskell_fail []
-        \<comment> \<open>FIXME AARCH64 TODO\<close>
-        | VSpaceRootObject \<Rightarrow> undefined
         | SmallPageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev 0 ARMSmallPage
         | LargePageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev (ptTranslationBits False) ARMLargePage
         | HugePageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev (ptTranslationBits False + ptTranslationBits False) ARMHugePage
-        \<comment> \<open>FIXME AARCH64: does not take into account top-level pages and is almost certainly wrong\<close>
+        | VSpaceRootObject \<Rightarrow>
+            createNewTableCaps regionBase numObjects (ptBits True) (makeObject::pte)
+              (\<lambda>base addr. PageTableCap base True addr)
+              (\<lambda>pts. return ())
         | PageTableObject \<Rightarrow>
             createNewTableCaps regionBase numObjects (ptBits False) (makeObject::pte)
               (\<lambda>base addr. PageTableCap base False addr)
