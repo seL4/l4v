@@ -34,11 +34,11 @@ definition init_arch_objects ::
 
 definition empty_context :: user_context
   where
-  "empty_context \<equiv> UserContext (FPUState (\<lambda>_. 0) 0 0) (\<lambda>_. 0)" (* FIXME AARCH64: new_context? *)
+  "empty_context \<equiv> UserContext (FPUState (\<lambda>_. 0) 0 0) (\<lambda>_. 0)"
 
 definition init_arch_tcb :: arch_tcb
   where
-  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context \<rparr>"
+  "init_arch_tcb \<equiv> \<lparr> tcb_context = empty_context, tcb_vcpu = None \<rparr>"
 
 end
 end

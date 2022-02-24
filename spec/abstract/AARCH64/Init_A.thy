@@ -55,8 +55,11 @@ definition init_vspace_uses :: "vspace_ref \<Rightarrow> riscvvspace_region_use"
 definition init_arch_state :: arch_state
   where
   "init_arch_state \<equiv> \<lparr>
-     riscv_asid_table = Map.empty,
-     riscv_global_pts = (\<lambda>level. if level = max_pt_level then {riscv_global_pt_ptr} else {})
+     arm_asid_table = Map.empty,
+     arm_us_global_vspace = undefined,
+     arm_kernel_vspace = undefined,
+     arm_current_vcpu = None,
+     arm_gicvcpu_numlistregs = undefined
    \<rparr>"
 
 
@@ -72,12 +75,6 @@ definition global_pte :: "pt_index \<Rightarrow> pte"
      else if idx = 0x1FE
      then PagePTE (2 << ptTranslationBits False * 2) {} vm_kernel_only
      else InvalidPTE"
-
-definition init_global_pt :: kernel_object
-  where
-  "init_global_pt \<equiv> ArchObj $ PageTable (\<lambda>idx. if idx \<in> kernel_mapping_slots
-                                                then global_pte idx
-                                                else InvalidPTE)"
 
 definition init_kheap :: kheap
   where
@@ -99,8 +96,7 @@ definition init_kheap :: kheap
          tcb_bound_notification = None,
          tcb_mcpriority = minBound,
          tcb_arch = init_arch_tcb
-         \<rparr>,
-      riscv_global_pt_ptr \<mapsto> init_global_pt
+         \<rparr>
     )"
 
 definition init_cdt :: cdt
