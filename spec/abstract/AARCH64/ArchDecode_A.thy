@@ -95,7 +95,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vspace_cap = fst (extra_caps ! 0)
          in doE
            (pt, asid) \<leftarrow> case vspace_cap of
-                           ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
+                           ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
@@ -135,7 +135,7 @@ definition decode_frame_invocation :: "'z::state_ext arch_decoder"
 definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
   where
   "decode_pt_inv_map label args cte cap extra_caps \<equiv> case cap of
-     PageTableCap p mapped_address \<Rightarrow>
+     PageTableCap p t mapped_address \<Rightarrow>
        if length args > 1 \<and> length extra_caps > 0
        then let
            vaddr = args ! 0;
@@ -144,7 +144,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
          in doE
            whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
            (pt, asid) \<leftarrow> case vspace_cap of
-                           ArchObjectCap (PageTableCap pt (Some (asid,_))) \<Rightarrow> returnOk (pt, asid)
+                           ArchObjectCap (PageTableCap pt True (Some (asid,_))) \<Rightarrow> returnOk (pt, asid)
                          | _ \<Rightarrow> throwError $ InvalidCapability 1;
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
@@ -153,7 +153,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
-           cap' <- returnOk $ PageTableCap p $ Some (asid, vaddr && ~~mask (pt_bits_left level));
+           cap' <- returnOk $ PageTableCap p t $ Some (asid, vaddr && ~~mask (pt_bits_left level));
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
          odE
        else throwError TruncatedMessage
@@ -169,11 +169,9 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
        final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
        unlessE final $ throwError RevokeFirst;
        case cap of
-         PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
+         PageTableCap pt True (Some (asid, _)) \<Rightarrow>
              \<comment> \<open>cannot invoke unmap on top level page table\<close>
-             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
-             whenE (pt_opt = Some pt) $ throwError RevokeFirst
-           odE
+             throwError RevokeFirst
        | _ \<Rightarrow> returnOk ();
        returnOk $ InvokePageTable $ PageTableUnmap cap cte
      odE
@@ -190,7 +188,7 @@ definition decode_asid_control_invocation :: "'z::state_ext arch_decoder"
          (untyped, parent_slot) = extra_caps ! 0;
          root = fst (extra_caps ! 1)
        in doE
-         asid_table \<leftarrow> liftE $ gets (riscv_asid_table \<circ> arch_state);
+         asid_table \<leftarrow> liftE $ gets asid_table;
          free_set \<leftarrow> returnOk (- dom asid_table);
          whenE (free_set = {}) $ throwError DeleteFirst;
          free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
@@ -220,8 +218,8 @@ definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder"
          p = acap_obj cap;
          base = acap_asid_base cap
        in case pt_cap of
-         ArchObjectCap (PageTableCap _ None) \<Rightarrow> doE
-           asid_table \<leftarrow> liftE $ gets (riscv_asid_table \<circ> arch_state);
+         ArchObjectCap (PageTableCap _ _ None) \<Rightarrow> doE
+           asid_table \<leftarrow> liftE $ gets asid_table;
            pool_ptr \<leftarrow> returnOk (asid_table (asid_high_bits_of base));
            whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
            whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
@@ -240,7 +238,7 @@ definition arch_decode_invocation ::
     (arch_invocation,'z::state_ext) se_monad"
   where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
-     PageTableCap _ _   \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
+     PageTableCap _ _ _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
    | FrameCap _ _ _ _ _ \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
    | ASIDControlCap     \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
    | ASIDPoolCap _ _    \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps"

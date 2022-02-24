@@ -66,9 +66,9 @@ definition perform_asid_control_invocation :: "asid_control_invocation \<Rightar
        retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
        cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
        assert (asid_low_bits_of base = 0);
-       asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
+       asid_table \<leftarrow> gets asid_table;
        asid_table' \<leftarrow> return (asid_table (asid_high_bits_of base \<mapsto> frame));
-       modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>riscv_asid_table := asid_table'\<rparr>\<rparr>)
+       modify (\<lambda>s. s \<lparr>arch_state := (arch_state s) \<lparr>arm_asid_table := asid_table'\<rparr>\<rparr>)
      od"
 
 text \<open>The ASIDPool capability confers the authority to assign an ASID to a top-level page table.\<close>
@@ -131,6 +131,7 @@ definition perform_pt_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow>
      do_machine_op sfence
    od"
 
+(* FIXME AARCH64: check pt_bits False *)
 definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_pt_inv_unmap cap ct_slot = do
@@ -139,7 +140,7 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
        Some (asid, vaddr) \<Rightarrow> do
          p \<leftarrow> return $ acap_obj cap;
          unmap_page_table asid vaddr p;
-         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + (1 << pt_bits) - 1];
+         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + (1 << pt_bits False) - 1];
          mapM_x (swp store_pte InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();

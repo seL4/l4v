@@ -33,9 +33,8 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
      | _ \<Rightarrow> return None
    od"
 
-definition pool_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
-  where
-  "pool_for_asid asid \<equiv> \<lambda>s. riscv_asid_table (arch_state s) (asid_high_bits_of asid)"
+definition pool_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
+  "pool_for_asid asid \<equiv> \<lambda>s. asid_table s (asid_high_bits_of asid)"
 
 definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> obj_ref option"
   where
@@ -71,13 +70,12 @@ text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
   configured.
 \<close>
-definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_vm_root tcb \<equiv> do
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
     thread_root \<leftarrow> get_cap thread_root_slot;
     (case thread_root of
-       ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
+       ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;
            whenE (pt \<noteq> pt') $ throwError InvalidRoot;
            liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
@@ -90,25 +88,23 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   od"
 
 
-definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "delete_asid_pool base ptr \<equiv> do
      assert (asid_low_bits_of base = 0);
-     asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
+     asid_table \<leftarrow> gets asid_table;
      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
        pool \<leftarrow> get_asid_pool ptr;
        asid_table' \<leftarrow> return $ asid_table (asid_high_bits_of base:= None);
-       modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> riscv_asid_table := asid_table' \<rparr>\<rparr>);
+       modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_asid_table := asid_table' \<rparr>\<rparr>);
        tcb \<leftarrow> gets cur_thread;
        set_vm_root tcb
      od
    od"
 
 
-definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "delete_asid asid pt \<equiv> do
-     asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
+     asid_table \<leftarrow> gets asid_table;
      case asid_table (asid_high_bits_of asid) of
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
@@ -187,8 +183,8 @@ definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_mon
   where
   "arch_derive_cap c \<equiv>
      case c of
-       PageTableCap _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
-     | PageTableCap _ None \<Rightarrow> throwError IllegalOperation
+       PageTableCap _ _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
+     | PageTableCap _ _ None \<Rightarrow> throwError IllegalOperation
      | FrameCap r R sz dev mp \<Rightarrow> returnOk $ ArchObjectCap (FrameCap r R sz dev None)
      | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
      | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
@@ -207,7 +203,7 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
        delete_asid_pool b ptr;
        return (NullCap, NullCap)
      od
-   | (PageTableCap ptr (Some (a, v)), True) \<Rightarrow> do
+   | (PageTableCap ptr is_top (Some (a, v)), True) \<Rightarrow> do
        doE
          vroot \<leftarrow> find_vspace_for_asid a;
          if vroot = ptr then liftE $ delete_asid a ptr else throwError InvalidRoot
@@ -229,7 +225,7 @@ text \<open>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool"
   where
   "is_valid_vtable_root c \<equiv>
-     case c of ArchObjectCap (PageTableCap _ (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
+     case c of ArchObjectCap (PageTableCap _ True (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
 
 text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]

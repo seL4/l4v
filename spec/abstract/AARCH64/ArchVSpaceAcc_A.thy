@@ -37,7 +37,7 @@ definition asid_low_bits_of :: "asid \<Rightarrow> asid_low_index"
 lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 
 locale_abbrev
-  "asid_table \<equiv> \<lambda>s. riscv_asid_table (arch_state s)"
+  "asid_table \<equiv> \<lambda>s. arm_asid_table (arch_state s)"
 
 section "Kernel Heap Accessors"
 
@@ -67,11 +67,11 @@ locale_abbrev pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoo
   where
   "pts_of \<equiv> \<lambda>s. aobjs_of s |> pt_of"
 
-locale_abbrev get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
+locale_abbrev get_pt :: "obj_ref \<Rightarrow> (pt,'z::state_ext) s_monad"
   where
   "get_pt \<equiv> gets_map pts_of"
 
-definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad"
+definition set_pt :: "obj_ref \<Rightarrow> pt \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_pt ptr pt \<equiv> do
      get_pt ptr;
@@ -79,63 +79,74 @@ definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Right
    od"
 
 (* The base address of the table a page table entry at p is in (assuming alignment) *)
-locale_abbrev table_base :: "obj_ref \<Rightarrow> obj_ref" where
-  "table_base p \<equiv> p && ~~mask pt_bits"
+locale_abbrev table_base :: "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
+  "table_base is_top p \<equiv> p && ~~mask (pt_bits is_top)"
 
 (* The index within the page table that a page table entry at p addresses *)
-locale_abbrev table_index :: "obj_ref \<Rightarrow> pt_index" where
-  "table_index p \<equiv> ucast (p && mask pt_bits >> pte_bits)"
+locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> 'a::len word" where
+  "table_index is_top p \<equiv> ucast (p && mask (pt_bits is_top) >> pte_bits)"
+
+locale_abbrev vsroot_index :: "obj_ref \<Rightarrow> vs_index" where
+  "vsroot_index \<equiv> table_index True"
+
+locale_abbrev ptable_index :: "obj_ref \<Rightarrow> pt_index" where
+  "ptable_index \<equiv> table_index False"
+
+definition pt_pte :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte" where
+  "pt_pte pt p \<equiv> case pt of
+                   VSRootPT vs \<Rightarrow> vs (vsroot_index p)
+                 | NormalPT pt \<Rightarrow> pt (ptable_index p)"
+
+definition normal_pt_at :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
+  "normal_pt_at p pts \<equiv> pts (table_base False p) \<noteq> None"
 
 (* p is the address of the pte,
    which consists of base (for the pt) and offset (for the index inside the pt).
    We assert that we avoid addresses between ptes. *)
-definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte"
-  where
+definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
   "pte_of p \<equiv> do {
      oassert (is_aligned p pte_bits);
-     pt \<leftarrow> oapply (table_base p);
-     oreturn $ pt (table_index p)
+     normal_pt \<leftarrow> ogets (normal_pt_at p);
+     pt \<leftarrow> oapply (table_base (\<not>normal_pt) p);
+     oreturn $ pt_pte pt p
    }"
 
-locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
-  where
+locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte" where
   "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
-locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
-  where
+locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte \<equiv> gets_map ptes_of"
 
-definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition pt_upd :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> pt" where
+  "pt_upd pt p pte \<equiv> case pt of
+                       VSRootPT vs \<Rightarrow> VSRootPT (vs(ptable_index p := pte))
+                     | NormalPT pt \<Rightarrow> NormalPT (pt(ptable_index p := pte))"
+
+definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte p pte \<equiv> do
      assert (is_aligned p pte_bits);
-     base \<leftarrow> return $ table_base p;
-     index \<leftarrow> return $ table_index p;
-     pt \<leftarrow> get_pt (table_base p);
-     pt' \<leftarrow> return $ pt (index := pte);
+     normal_pt \<leftarrow> gets (normal_pt_at p \<circ> pts_of);
+     base \<leftarrow> return $ table_base (\<not>normal_pt) p;
+     pt \<leftarrow> get_pt base;
+     pt' \<leftarrow> return $ pt_upd pt p pte;
      set_pt base pt'
    od"
 
 
 section "Basic Operations"
 
-definition pt_bits_left :: "vm_level \<Rightarrow> nat"
-  where
+(* See comment in Haskell why toplevel=False here is what we want *)
+definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
   "pt_bits_left level = ptTranslationBits False * size level + pageBits"
 
-definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word"
-  where
-  "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask (ptTranslationBits False)"
+definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word" where
+  "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask (ptTranslationBits (level = max_pt_level))"
 
-text \<open>Interface function to extract the single top-level global page table:\<close>
-definition riscv_global_pt :: "arch_state \<Rightarrow> obj_ref"
-  where
-  "riscv_global_pt s = the_elem (riscv_global_pts s max_pt_level)"
 
 locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref"
   where
-  "global_pt s \<equiv> riscv_global_pt (arch_state s)"
+  "global_pt s \<equiv> arm_us_global_vspace (arch_state s)"
 
 
 text \<open>Walk page tables in software.\<close>
