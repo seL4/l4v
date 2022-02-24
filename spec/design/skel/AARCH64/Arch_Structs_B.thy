@@ -17,7 +17,7 @@ begin
 
 context Arch begin global_naming AARCH64_H
 
-#INCLUDE_HASKELL SEL4/Model/StateData/AARCH64.hs CONTEXT AARCH64_H ONLY RISCVVSpaceRegionUse
+#INCLUDE_HASKELL SEL4/Model/StateData/AARCH64.hs CONTEXT AARCH64_H ONLY ArmVSpaceRegionUse
 
 end
 
