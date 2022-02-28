@@ -549,6 +549,7 @@ method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_pro
 
 end
 
+(* FIXME: swap the arguments, or rename the method to repeat_until *)
 method repeat_unless methods stop cont
   = (stop | (cont, repeat_unless stop cont))
 
