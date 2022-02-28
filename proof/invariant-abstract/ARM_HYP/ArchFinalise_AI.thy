@@ -697,37 +697,6 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
    apply (wp get_object_sp[simplified pred_conj_def], simp)
   done
 
-lemma vgic_update_sym_refs_hyp[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vgic_update_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
-
-lemma vcpu_save_reg_sym_refs_hyp[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_save_reg vcpuptr r \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_save_reg_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-     (simp add: obj_at_def)
-
-lemma vcpu_update_regs_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
-
-lemma vcpu_write_reg_sym_refs_hyp[wp]:
-  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
-
-lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
-
-crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active
-  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
-  (ignore: vcpu_update)
-
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
     vcpu_invalidate_active \<lbrace>\<lambda>rv. obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>"
@@ -916,6 +885,10 @@ lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_ac
   by (wpsimp simp: cur_vcpu_at_def | strengthen invs_current_vcpu_update')+
 
 crunch cur_tcb[wp]: dissociate_vcpu_tcb "cur_tcb"
+  (wp: crunch_wps)
+
+crunches dissociate_vcpu_tcb
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps)
 
 lemma same_caps_tcb_arch_update[simp]:
