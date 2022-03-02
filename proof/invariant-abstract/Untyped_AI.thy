@@ -2839,10 +2839,10 @@ lemma get_cap_prop_known:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-lemma reset_untyped_cap_st_tcb_at:
-  "\<lbrace>invs and st_tcb_at P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
-    reset_untyped_cap slot
-  \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma reset_untyped_cap_pred_tcb_at:
+  "\<lbrace>invs and pred_tcb_at proj P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
+   reset_untyped_cap slot
+   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>, \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
@@ -3868,25 +3868,32 @@ lemmas invoke_untyp_invs[wp] =
 lemmas invoke_untyped_Q
     = invoke_untyp_invs'[THEN validE_valid, THEN hoare_conjD2[unfolded pred_conj_def]]
 
-lemma invoke_untyped_st_tcb_at[wp]:
-  "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-         and ct_active and valid_untyped_inv ui\<rbrace>
-     invoke_untyped ui
-   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
+lemma invoke_untyped_pred_tcb_at:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> invs s \<and> st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t s
+        \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_ s :: 'state_ext state. pred_tcb_at proj Q t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
-    (wp init_arch_objects_wps | simp)+)
+         (wp init_arch_objects_wps | simp)+)
      apply (rule hoare_name_pre_state, clarsimp)
-     apply (wp retype_region_st_tcb_at, auto)[1]
-    apply (wp reset_untyped_cap_st_tcb_at | simp)+
+     apply (wp retype_region_st_tcb_at)
+     apply fastforce
+    apply (wp reset_untyped_cap_pred_tcb_at | simp)+
   apply (cases ui, clarsimp)
-  apply (strengthen st_tcb_weakenE[mk_strg I E], clarsimp)
   apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
    apply (clarsimp split: Structures_A.thread_state.splits)
   apply (drule ex_nonz_cap_to_overlap,
-    ((simp add:cte_wp_at_caps_of_state
-            is_cap_simps descendants_range_def2
-            empty_descendants_range_in)+))
+         ((simp add: cte_wp_at_caps_of_state is_cap_simps descendants_range_def2
+                     empty_descendants_range_in)+))
   done
+
+lemma invoke_untyped_st_tcb_at[wp]:
+  "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
+         and ct_active and valid_untyped_inv ui\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_pred_tcb_at)
+  by (fastforce simp: pred_tcb_at_def  obj_at_def)
 
 lemma invoked_untyp_tcb[wp]:
   "\<lbrace>invs and st_tcb_at active tptr

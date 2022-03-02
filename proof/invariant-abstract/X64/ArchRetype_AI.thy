@@ -1264,7 +1264,7 @@ lemma init_arch_objects_excap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> init_arch_objects tp ptr bits us refs \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   by (wp ex_cte_cap_to_pres )
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+crunch pred_tcb_at[wp]: init_arch_objects "pred_tcb_at proj P t"
   (wp: crunch_wps ignore: set_object set_pml4 simp: set_arch_obj_simps)
 
 lemma valid_arch_mdb_detype:
@@ -1278,7 +1278,7 @@ lemmas init_arch_objects_wps
       init_arch_objects_valid_cap
       init_arch_objects_cap_table
       init_arch_objects_excap
-      init_arch_objects_st_tcb_at
+      init_arch_objects_pred_tcb_at
 
 end
 
