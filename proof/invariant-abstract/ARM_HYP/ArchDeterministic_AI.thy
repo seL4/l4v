@@ -5,8 +5,10 @@
  *)
 
 theory ArchDeterministic_AI
-imports Deterministic_AI
+imports Deterministic_AI ArchVCPU_AI
 begin
+
+declare dxo_wp_weak[wp del]
 
 context Arch begin global_naming ARM_HYP
 
