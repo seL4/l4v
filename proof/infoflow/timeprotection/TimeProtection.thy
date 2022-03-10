@@ -31,18 +31,17 @@ type_synonym time = nat
 
 datatype 'userdomain domain = Sched | User 'userdomain
 
-record ('fch,'pch,'regs,'other_state) state =
+record ('fch,'pch) state =
   fch :: "'fch" \<comment> \<open> flushable cache\<close>
   pch :: "'pch" \<comment> \<open> partitionable cache \<close>
   tm :: time
-  regs :: 'regs
-  other_state :: 'other_state
-
 
 locale time_protection =
-  (* "(a, b) \<in> collides_in_pch" = "a may cause b to be evicted from or loaded to the pch" *)
-  fixes collides_in_pch :: "paddr rel"
-  assumes collides_with_equiv: "equiv UNIV collides_in_pch"
+  (* "a coll b" = "a may cause b to be evicted from or loaded to the pch" *)
+  fixes collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" (infix "coll" 50)
+
+  (* collides_in_pch isn't a relation, but it is kind of an equivalence *)
+  assumes collides_with_equiv: "equiv UNIV ({(x, y). x coll y})"
 
   fixes fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
   fixes pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
@@ -50,13 +49,18 @@ locale time_protection =
   fixes fch_read_impact :: "'fch fch_impact"
   fixes pch_read_impact :: "'pch pch_impact"
 
+  \<comment> \<open>pch_read_impact only impacts colliding addresses\<close>
   assumes pch_partitioned_read:
-    "(a1, a2) \<notin> collides_in_pch \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_read_impact a1 p) a2"
+    "\<not>a1 coll a2 \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_read_impact a1 p) a2"
+
+
+  (* hiding this temporarily to see if we can get away without it - Scott B
   (* if a2 can be impacted by a read from a1,
      we require that this impact depends only on the prior state of the fch
      and the prior cachedness of the rest of their collision set in the pch *)
-  assumes pch_collision_read: "\<And>a1 a2 pchs pcht. (a1, a2) \<in> collides_in_pch \<Longrightarrow>
-    \<forall>a3. (a2, a3) \<in> collides_in_pch \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
+  assumes pch_collision_read: "\<And>a1 a2 pchs pcht.
+    a1 coll a2 \<Longrightarrow>
+    \<forall>a3. a2 coll a3 \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
     \<comment> \<open>This might be stronger than is met by hardware that just promises
         a 'random' replacement algorithm. Essentially we are requiring that
         any such 'randomness' cannot be influenced by the prior cachedness of
@@ -64,29 +68,27 @@ locale time_protection =
     pchs' = pch_read_impact a1 pchs \<Longrightarrow>
     pcht' = pch_read_impact a1 pcht \<Longrightarrow>
     pch_lookup pchs' a2 = pch_lookup pcht' a2"
+  *)
 
   fixes fch_write_impact :: "'fch fch_impact"
   fixes pch_write_impact :: "'pch pch_impact"
-  assumes pch_partitioned_write:
-    "(a1, a2) \<notin> collides_in_pch \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_write_impact a1 p) a2"
 
-  assumes pch_collision_write: "\<And>a1 a2 pchs pcht. (a1, a2) \<in> collides_in_pch \<Longrightarrow>
-    \<forall>a3. (a2, a3) \<in> collides_in_pch \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
+  \<comment> \<open>pch_write_impact only impacts colliding addresses\<close>
+  assumes pch_partitioned_write:
+    "not (a1 coll a2) \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_write_impact a1 p) a2"
+
+  (* again, just trying to see if we can get away without this - Scott B
+  assumes pch_collision_write: "\<And>a1 a2 pchs pcht. a1 coll a2 \<Longrightarrow>
+    \<forall>a3. a2 coll a3 \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
     \<comment> \<open>The same strong requirement placing limits on the 'randomness'
         of the cache replacement algorithm as for @{term pch_collision_read}\<close>
     pchs' = pch_write_impact a1 pchs \<Longrightarrow>
     pcht' = pch_write_impact a1 pcht \<Longrightarrow>
     pch_lookup pchs' a2 = pch_lookup pcht' a2"
+  *)
 
   fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-
-  fixes do_read  :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
-  fixes do_write :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
-
-  fixes store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
-
-  fixes padding_regs_impact :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
 
   fixes empty_fch :: "'fch"
   fixes fch_flush_cycles :: "'fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
@@ -94,21 +96,33 @@ locale time_protection =
   fixes do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
   fixes pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+
+  \<comment> \<open>pch flush only affects addresses that collide with the set\<close>
   assumes pch_partitioned_flush:
-   "(\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch) \<Longrightarrow> pch_lookup (do_pch_flush p as) a = pch_lookup p a"
+   "(\<forall>a'\<in>as. \<not> a coll a') \<Longrightarrow> pch_lookup (do_pch_flush p as) a = pch_lookup p a"
+
+  (* again, just trying to see if we can get away without this - Scott B
   assumes pch_collision_flush:
-    "\<exists>a1\<in>as. (a, a1) \<in> collides_in_pch \<Longrightarrow>
-    \<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pch_lookup pchs a1 = pch_lookup pcht a1 \<Longrightarrow>
+    "\<exists>a1\<in>as. a coll a1 \<Longrightarrow>
+    \<forall>a1. (\<exists>a2\<in>as. a1 coll a2) \<longrightarrow> pch_lookup pchs a1 = pch_lookup pcht a1 \<Longrightarrow>
     pch_lookup (do_pch_flush pchs as) a = pch_lookup (do_pch_flush pcht as) a"
+  *)
+
+  \<comment> \<open> if all colliding addresses to @{term as} are the same, then the flush will take the same amount of time \<close>
   assumes pch_flush_cycles_localised:
-    "\<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pch_lookup pchs a1 = pch_lookup pcht a1 \<Longrightarrow>
+    "\<forall>a1. (\<exists>a2\<in>as. a1 coll a2) \<longrightarrow> pch_lookup pchs a1 = pch_lookup pcht a1 \<Longrightarrow>
     pch_flush_cycles pchs as = pch_flush_cycles pcht as"
 
-  fixes addr_domain :: "paddr \<Rightarrow> 'userdomain domain" \<comment> \<open>for each address, this is the security domain\<close>
-  fixes addr_colour :: "paddr \<Rightarrow> 'colour" \<comment> \<open>for each address, this is the cache colour\<close>
+  \<comment> \<open>for each address, this is the security domain\<close>
+  fixes addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
+
+  \<comment> \<open>for each address, this is the cache colour\<close>
+  fixes addr_colour :: "paddr \<Rightarrow> 'colour"
+
   fixes colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
+
   assumes no_cross_colour_collisions:
-    "(a1, a2) \<in> collides_in_pch \<Longrightarrow> addr_colour a1 = addr_colour a2"
+    "a1 coll a2 \<Longrightarrow> addr_colour a1 = addr_colour a2"
   assumes addr_domain_valid: "addr_domain a = Sched
                             \<or> addr_domain a = User (colour_userdomain (addr_colour a))"
 \<comment> \<open>do we assert this here
@@ -136,37 +150,6 @@ locale time_protection =
   assumes external_uwr_current_page_table:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d \<Longrightarrow> v_to_p s1 = v_to_p s2"
 
-  (* do_read depends only on things bound in its external uwr *)
-  assumes do_read_from_external_uwr_domain:
-    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
-     addr_domain (v_to_p s a) = d \<Longrightarrow>
-     v_to_p s a = v_to_p t a \<Longrightarrow>
-     do_read a s r = do_read a t r"
-
-  (* do_write depends only on things bound in its external uwr *)
-  assumes do_write_from_external_uwr_domain:
-    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
-     addr_domain (v_to_p s a) = d \<Longrightarrow>
-     v_to_p s a = v_to_p t a \<Longrightarrow>
-     do_write a s r = do_write a t r"
-
-  (* do_read of kernel_shared depends only on things bound in any external uwr *)
-  (* Note: This is a simplifying assumption that might need to be temporary,
-     in effect, pulling the Sched uwr into everybody else's uwr.
-     Compare to external_uwr_same_domain, and note for the seL4 instantiation we'll expect
-     current_domain just to be some designated part of kernel shared memory too. -robs. *)
-  assumes do_read_from_external_uwr_sched:
-    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
-     addr_domain (v_to_p s a) = Sched \<Longrightarrow>
-     v_to_p s a = v_to_p t a \<Longrightarrow>
-     do_read a s r = do_read a t r"
-
-  assumes do_write_from_external_uwr_sched:
-    "\<And>s t a r. (s, t) \<in> external_uwr d \<Longrightarrow>
-     addr_domain (v_to_p s a) = Sched \<Longrightarrow>
-     v_to_p s a = v_to_p t a \<Longrightarrow>
-     do_write a s r = do_write a t r"
-
   fixes touched_addrs :: "'other_state \<Rightarrow> vaddr set"
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d \<Longrightarrow> touched_addrs s1 = touched_addrs s2"
@@ -184,16 +167,8 @@ corollary colours_not_shared:
 definition all_addrs_of :: "'userdomain domain \<Rightarrow> paddr set" where
   "all_addrs_of d = {a. addr_domain a = d}"
 
-abbreviation current_domain' :: "('fch,'pch,'regs,'other_state)state \<Rightarrow> 'userdomain domain"
-  where
-  "current_domain' s \<equiv> current_domain (other_state s)"
-
-abbreviation v_to_p' :: "('fch,'pch,'regs,'other_state)state \<Rightarrow> vaddr \<Rightarrow> paddr"
-  where
-  "v_to_p' s \<equiv> v_to_p (other_state s)"
-
 abbreviation collision_set :: "paddr \<Rightarrow> paddr set" where
-  "collision_set a \<equiv> {b. (a, b) \<in> collides_in_pch}"
+  "collision_set a \<equiv> {b. a coll b}"
 
 lemma collision_set_contains_itself: "a \<in> collision_set a"
   using collides_with_equiv
@@ -204,9 +179,13 @@ lemma external_uwr_refl [simp]:
   using external_uwr_equiv_rel
   by (clarsimp simp: equiv_def refl_on_def)
 
+lemma collision_collect:
+  "a coll b = ((a, b) \<in> (Collect (case_prod collides_in_pch)))"
+  by simp
+
 lemma collision_sym [simp]:
-  "(a, b) \<in> collides_in_pch \<Longrightarrow>
-  (b, a) \<in> collides_in_pch"
+  "a coll b \<Longrightarrow> b coll a"
+  using collision_collect
   by (meson collides_with_equiv equiv_def symE)
 
 \<comment> \<open> the addresses in kernel shared memory (which for now is everything in the sched domain)\<close>
@@ -219,17 +198,19 @@ definition kernel_shared_expanded :: "paddr set" where
 
 \<comment> \<open> a full collision set contains all of its own collisions \<close>
 definition full_collision_set :: "paddr set \<Rightarrow> bool" where
-  "full_collision_set S \<equiv> \<forall>a1\<in>S. \<forall>a2. (a1, a2) \<in> collides_in_pch \<longrightarrow> a2 \<in> S"
+  "full_collision_set S \<equiv> \<forall>a1\<in>S. \<forall>a2. a1 coll a2 \<longrightarrow> a2 \<in> S"
 
 lemma collision_set_full_collision_set:
   "full_collision_set (collision_set a)"
   apply (clarsimp simp: full_collision_set_def)
+  using collision_collect
   apply (meson collides_with_equiv equiv_def trans_def)
   done
 
 lemma kernel_shared_expanded_full_collision_set:
   "full_collision_set kernel_shared_expanded"
   apply (clarsimp simp: kernel_shared_expanded_def full_collision_set_def)
+  using collision_collect
   apply (meson collides_with_equiv equiv_def trans_def)
   done
 
@@ -237,16 +218,11 @@ lemma kernel_shared_expanded_full_collision_set:
      is also not in the set. \<close>
 lemma collision_in_full_collision_set:
   "full_collision_set S \<Longrightarrow>
-  (a1, a2) \<in> collides_in_pch \<Longrightarrow>
+  a1 coll a2 \<Longrightarrow>
   a1 \<notin> S \<Longrightarrow>
   a2 \<notin> S"
   apply (clarsimp simp: full_collision_set_def)
   done
-
-abbreviation touched_addrs' ::
-  "('fch,'pch,'regs,'other_state)state \<Rightarrow> vaddr set"
-  where
-  "touched_addrs' s \<equiv> touched_addrs (other_state s)"
 
 definition paddrs_of ::
   "'other_state \<Rightarrow> vaddr set \<Rightarrow> paddr set"
@@ -258,26 +234,17 @@ definition touched_paddrs ::
   where
   "touched_paddrs s \<equiv> paddrs_of s (touched_addrs s)"
 
-abbreviation touched_paddrs' ::
-  "('fch,'pch,'regs,'other_state)state \<Rightarrow> paddr set"
-  where
-  "touched_paddrs' s \<equiv> touched_paddrs (other_state s)"
-
 (*FIXME: Move these? These seem more of an IF framework thing. -Scott B *)
 \<comment> \<open> the invariant that touched_addresses is always sensible for its current domain \<close>
 definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
      touched_paddrs s \<subseteq> all_addrs_of (current_domain s) \<union> kernel_shared_precise"
 
-abbreviation touched_addrs_inv' :: "('fch,'pch,'regs,'other_state)state \<Rightarrow> bool" where
-  "touched_addrs_inv' s \<equiv> touched_addrs_inv (other_state s)"
-
+(* this isn't true apparently?
 definition page_table_inv :: "'other_state \<Rightarrow> bool" where
   "page_table_inv s \<equiv>
      \<forall> a. v_to_p s a \<in> all_addrs_of (current_domain s) \<union> kernel_shared_precise"
-
-abbreviation page_table_inv' :: "('fch,'pch,'regs,'other_state)state \<Rightarrow> bool" where
-  "page_table_inv' s \<equiv> page_table_inv (other_state s)"
+*)
 
 definition pch_same_for_domain ::
   "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
@@ -297,30 +264,29 @@ definition pch_same_for_domain_except_shared ::
     \<forall> a. addr_domain a = d \<and> a \<notin> kernel_shared_expanded \<longrightarrow> pch_lookup p1 a = pch_lookup p2 a"
 
 definition uwr_running ::
-  "'userdomain domain \<Rightarrow> ('fch,'pch,'regs,'other_state)state rel"
+  "'userdomain domain \<Rightarrow> ('fch,'pch)state rel"
   where
   "uwr_running d \<equiv> {(s1, s2). fch s1 = fch s2
                             \<and> pch_same_for_domain_and_shared d (pch s1) (pch s2)
-                            \<and> tm s1 = tm s2
-                            \<and> regs s1 = regs s2
-                            \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
+                            \<and> tm s1 = tm s2 }"
+
 \<comment> \<open>how do we know we have the same program?\<close>
 
 
 definition uwr_notrunning ::
-  "'userdomain domain \<Rightarrow> ('fch,'pch,'regs,'other_state)state rel"
+  "'userdomain domain \<Rightarrow> ('fch,'pch)state rel"
   where
-  "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain_except_shared d (pch s1) (pch s2)
-                               \<and> (other_state s1, other_state s2) \<in> external_uwr d }"
-\<comment> \<open>external uwr needs to be held in the right conditions as an axiom\<close>
+  "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain_except_shared d (pch s1) (pch s2) }"
 
 definition uwr ::
-  "'userdomain domain \<Rightarrow> ('fch,'pch,'regs,'other_state)state rel"
+  "'userdomain domain \<Rightarrow> ('other_state \<times> ('fch,'pch)state) rel"
   where
-  "uwr d \<equiv> {(s1, s2). if (current_domain' s1 = d)
+  "uwr d \<equiv> {((os1, s1), (os2, s2)). current_domain os1 = current_domain os2 \<and>
+                      (if (current_domain os1 = d)
                       then (s1, s2) \<in> uwr_running d
-                      else (s1, s2) \<in> uwr_notrunning d }"
+                      else (s1, s2) \<in> uwr_notrunning d ) }"
 
+(*
 lemma uwr_to_external:
   "(s, t) \<in> uwr d \<Longrightarrow> (other_state s, other_state t) \<in> external_uwr d"
   by (clarsimp simp:uwr_def uwr_running_def uwr_notrunning_def split:if_splits)
@@ -332,57 +298,45 @@ lemma uwr_same_domain:
 lemma uwr_same_touched_addrs:
   "(s, t) \<in> uwr d \<Longrightarrow> current_domain' s = d \<Longrightarrow> touched_addrs' s = touched_addrs' t"
   by (force dest:uwr_to_external external_uwr_same_touched_addrs)
+*)
 
-lemma extended_uwr_equiv_rel:
+lemma uwr_equiv_rel:
   "equiv UNIV (uwr u)"
-  using external_uwr_equiv_rel
-  apply(erule_tac x=u in meta_allE)
   apply(clarsimp simp:equiv_def)
-  apply(rule conjI)
-   apply(clarsimp simp:uwr_def refl_on_def uwr_running_def uwr_notrunning_def)
-   apply(force simp:pch_same_for_domain_and_shared_def pch_same_for_domain_except_shared_def)
-  apply(rule conjI)
-   apply(clarsimp simp:sym_def)
-   apply(frule uwr_same_domain)
-   apply(erule_tac x="other_state x" in allE)
-   apply(erule_tac x="other_state y" in allE)
-   apply(clarsimp simp:uwr_def split:if_splits)
-    apply(force simp:uwr_running_def pch_same_for_domain_and_shared_def)
-   apply(force simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
-  apply(clarsimp simp:trans_def)
-  apply(frule_tac s=x in uwr_same_domain)
-  apply(frule_tac s=y in uwr_same_domain)
-  apply(erule_tac x="other_state x" in allE)
-  apply(erule_tac x="other_state y" in allE)
-  apply(erule impE)
-   apply(force simp:uwr_to_external)
-  apply(erule_tac x="other_state z" in allE)
-  apply(erule impE)
-   apply(force simp:uwr_to_external)
-  apply(clarsimp simp:uwr_def split:if_splits)
-   apply(force simp:uwr_running_def pch_same_for_domain_and_shared_def)
-  apply(force simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  apply(intro conjI)
+    apply (clarsimp simp:uwr_def refl_on_def)
+    apply (intro conjI)
+     apply (clarsimp simp:uwr_running_def pch_same_for_domain_and_shared_def)
+    apply (clarsimp simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
+   apply (clarsimp simp:sym_def uwr_def)
+   apply (intro conjI)
+    apply (clarsimp simp:uwr_running_def pch_same_for_domain_and_shared_def)
+   apply (clarsimp simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
+  apply (clarsimp simp:trans_def uwr_def)
+  apply (intro conjI)
+   apply (clarsimp simp:uwr_running_def pch_same_for_domain_and_shared_def)
+  apply (clarsimp simp:uwr_notrunning_def pch_same_for_domain_except_shared_def)
   done
 
 lemma uwr_refl [simp]:
   "(s, s) \<in> uwr d"
-  using extended_uwr_equiv_rel
-  by (clarsimp simp: equiv_def refl_on_def)
+  using uwr_equiv_rel
+  by (clarsimp simp: equiv_def refl_on_def uwr_def)
 
 lemma uwr_trans:
   "(a, b) \<in> uwr d \<Longrightarrow>
   (b, c) \<in> uwr d \<Longrightarrow>
   (a, c) \<in> uwr d"
-  using extended_uwr_equiv_rel
+  using uwr_equiv_rel
   apply (clarsimp simp: equiv_def)
   by (meson trans_def)
 
 lemma uwr_sym:
   "((a, b) \<in> uwr d) = ((b, a) \<in> uwr d)"
-  using extended_uwr_equiv_rel
+  using uwr_equiv_rel
   apply (clarsimp simp: equiv_def sym_def)
-  apply blast
-  done
+  by (metis surj_pair)
+  
 
 (* notes about confidentiality properties with this model:
    
@@ -416,54 +370,43 @@ lemma uwr_sym:
 
 
 
-(* now we make some basic isntructions, which contain addresses etc *)
+(* now we make some basic instructions, which contain addresses etc *)
 datatype 'r instr = IRead vaddr            \<comment> \<open>read from some address into regs\<close>
                   | IWrite vaddr           \<comment> \<open>write to some address from regs\<close>
-                  | IRegs "'r \<Rightarrow> 'r"       \<comment> \<open>modify the regs somehow\<close>
                   | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
                   | IFlushL2 "paddr set"   \<comment> \<open>flush some part L2 cache(s)\<close>
-                  | IReadTime              \<comment> \<open>read the time into some regs\<close>
                   | IPadToTime time        \<comment> \<open>pad the time up to some point\<close>
-(* FIXME: I expect we'll want page table manipulation primitives eventually. -robs. *)
 
 primrec
   instr_step :: "'regs instr \<Rightarrow>
-    ('fch,'pch,'regs,'other_state)state \<Rightarrow>
-    ('fch,'pch,'regs,'other_state)state" where
- "instr_step (IRead a) s =
+    'other_state \<Rightarrow>
+    ('fch,'pch)state \<Rightarrow>
+    ('fch,'pch)state" where
+ "instr_step (IRead a) os s =
       s\<lparr>fch := fch_read_impact a (fch s),
-        pch := pch_read_impact (v_to_p' s a) (pch s),
-        tm  := tm s + read_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p' s a)),
-        regs := do_read a (other_state s) (regs s)\<rparr>"
-  | "instr_step (IWrite a) s =
+        pch := pch_read_impact (v_to_p os a) (pch s),
+        tm  := tm s + read_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p os a))\<rparr>"
+  | "instr_step (IWrite a) os s =
       s\<lparr>fch := fch_write_impact a (fch s),
-        pch := pch_write_impact (v_to_p' s a) (pch s),
-        tm  := tm s + write_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p' s a)),
-        regs := do_write a (other_state s) (regs s)\<rparr>"
-  | "instr_step (IRegs m) s =
-      s\<lparr>regs := m (regs s),
-        tm := tm s + 1 \<rparr>" \<comment> \<open>we increment by the smallest possible amount - different instruction
-                            lengths can be encoded with strings of consecutive IRegs intructions.\<close>
-  | "instr_step IReadTime s =
-      s\<lparr>regs := store_time (tm s) (regs s),
-        tm := tm s + 1\<rparr>"
-  | "instr_step (IPadToTime t) s =     \<comment> \<open>TODO: is it possible that this changes anything other than regs? what about going backwards?\<close>
-      s\<lparr>regs := padding_regs_impact t (regs s),
-        tm := t\<rparr>"
-  | "instr_step IFlushL1 s =
+        pch := pch_write_impact (v_to_p os a) (pch s),
+        tm  := tm s + write_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p os a))\<rparr>"
+  | "instr_step (IPadToTime t) _ s =
+      s\<lparr>tm := t\<rparr>"
+  | "instr_step IFlushL1 _ s =
       s\<lparr>fch := empty_fch,
         tm := tm s + fch_flush_cycles (fch s)\<rparr>"
-  | "instr_step (IFlushL2 as) s =
+  | "instr_step (IFlushL2 as) _ s =
       s\<lparr>pch := do_pch_flush (pch s) as,
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 
 type_synonym 'r program = "'r instr list"
 
 primrec instr_multistep :: "'regs program \<Rightarrow>
-  ('fch,'pch,'regs,'other_state)state \<Rightarrow>
-  ('fch,'pch,'regs,'other_state)state" where
-  "instr_multistep [] s = s"
-| "instr_multistep (i#is) s = instr_multistep is (instr_step i s)"
+  'other_state \<Rightarrow>
+  ('fch,'pch)state \<Rightarrow>
+  ('fch,'pch)state" where
+  "instr_multistep [] os s = s"
+| "instr_multistep (i#is) os s = instr_multistep is os (instr_step i os s)"
 
 definition
   instrs_obeying_ta :: "'other_state \<Rightarrow> 'regs instr set" where
@@ -494,22 +437,21 @@ definition is_secure_nondomainswitch ::
 
 
 lemma collides_with_set_or_doesnt:
-  "\<lbrakk>\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch \<Longrightarrow> P;
-    \<exists>a'\<in>as. (a, a') \<in> collides_in_pch \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
-  P"
+  "\<lbrakk>\<forall>a'\<in>as. \<not> a coll a' \<Longrightarrow> P;
+    \<exists>a'\<in>as. a coll a' \<Longrightarrow> P \<rbrakk> \<Longrightarrow>
+    P"
   by blast
 
 lemma diff_domain_no_collision:
   "\<lbrakk>a \<notin> kernel_shared_expanded;
   addr_domain a' \<noteq> addr_domain a;
-  (a, a') \<in> collides_in_pch\<rbrakk> \<Longrightarrow>
+  a coll a'\<rbrakk> \<Longrightarrow>
   False"
   apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
   apply (metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself
                kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
                no_cross_colour_collisions)
   done
-
 
 lemma in_inter_empty:
   "\<lbrakk>x \<in> S1;              
@@ -540,15 +482,14 @@ lemma and_or_specific:
 
 lemma d_running_step:
   assumes
-    "i \<in> instrs_obeying_ta (other_state s)"
-    "touched_addrs_inv (other_state s)"
-    "page_table_inv (other_state s)"
-    "(s, t) \<in> uwr d"
-    "current_domain' s = d"
-    "s' = instr_step i s"
-    "t' = instr_step i t"
+    "i \<in> instrs_obeying_ta (os)"
+    "touched_addrs_inv (os)"
+    "((os, s), (ot, t)) \<in> uwr d"
+    "current_domain os = d"
+    "s' = instr_step i os s"
+    "t' = instr_step i ot t"
   shows
-    "(s', t') \<in> uwr d"
+    "((os, s'), (ot, t')) \<in> uwr d"
   proof (cases i)
     case (IRead a)
     thus ?thesis using assms
