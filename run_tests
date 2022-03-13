@@ -14,6 +14,10 @@ import subprocess
 L4V_ARCH_DEFAULT="ARM"
 L4V_ARCH_LIST=["ARM","ARM_HYP","X64","RISCV64"]
 
+# Set MCS for this branch by default
+L4V_FEATURES=os.environ.get("L4V_FEATURES", "MCS")
+os.environ["L4V_FEATURES"]=L4V_FEATURES
+
 # Fetch directory this script is stored in.
 DIR=os.path.dirname(os.path.realpath(__file__))
 
