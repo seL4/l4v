@@ -4,6 +4,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+# default to MCS on this branch if L4V_FEATURES is unset
+export L4V_FEATURES ?= MCS
+
 # For kernel builds (CSpec and binary verificaiton):
 KERNEL_BUILD_ROOT := build/${L4V_ARCH}
 
