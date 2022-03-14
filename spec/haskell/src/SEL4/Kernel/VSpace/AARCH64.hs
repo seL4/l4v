@@ -525,11 +525,6 @@ checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
 checkVPAlignment sz w =
     unless (w .&. mask (pageBitsForSize sz) == 0) $ throw AlignmentError
 
-checkSlot :: PPtr PTE -> (PTE -> Bool) -> KernelF SyscallError ()
-checkSlot slot test = do
-    pte <- withoutFailure $ getObject slot
-    unless (test pte) $ throw DeleteFirst
-
 labelToFlushType :: Word -> FlushType
 labelToFlushType label = case invocationType label of
       ArchInvocationLabel ARMVSpaceClean_Data -> Clean
@@ -812,9 +807,14 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
 
 performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
+    pte <- getObject slot
+    let tlbFlushRequired = pte /= InvalidPTE
     updateCap ctSlot cap
     storePTE slot pte
-    doMachineOp sfence
+    doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr slot) (addrFromPPtr slot)
+    when tlbFlushRequired $ do
+        (asid, vaddr) <- return $ fromJust $ capFMappedAddress $ capCap cap
+        invalidateTLBByASIDVA asid vaddr
 
 performPageInvocation (PageUnmap cap ctSlot) = do
     case capFMappedAddress cap of
