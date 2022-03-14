@@ -293,7 +293,10 @@ writeVCPUHardwareReg reg val = error "Unimplemented - machine op"
 {- Page Table Structure -}
 
 data VMAttributes
-    = VMAttributes { riscvExecuteNever :: Bool }
+    = VMAttributes {
+        armExecuteNever :: Bool,
+        armParityEnabled :: Bool,
+        armPageCacheable :: Bool }
 
 -- The C code also defines VMWriteOnly.
 -- Leaving it out here will show that it is unused.
@@ -329,24 +332,21 @@ vmRightsFromBits rw = getVMRights (testBit rw 1) (testBit rw 0)
 -- Page Table entries
 
 --  Encoding notes:
---  - dirty and accessed bits are always 1 for valid PTEs
---   - SW bits always 0
---   - valid = 1 and read/write/execute = 0 => table PTE
---   - valid = 0 => invalid PTE
---   - otherwise => page PTE
+--  - pteSmallPage distinguishes pte_4k_page from pte_page
+--  - AF is always 1
+--  - mair/mair_s2 (Memory Attribute Indirection Register) encoded as pteDevice
 
 data PTE
     = InvalidPTE
     | PagePTE {
-        ptePPN :: PAddr,
+        pteBaseAddress :: PAddr,
+        pteSmallPage :: Bool,
         pteGlobal :: Bool,
-        pteUser :: Bool,
-        pteExecute :: Bool,
+        pteExecuteNever :: Bool,
+        pteDevice :: Bool,
         pteRights :: VMRights }
     | PageTablePTE {
-        ptePPN :: PAddr,
-        pteGlobal :: Bool,
-        pteUser :: Bool }
+        pteBaseAddress :: PAddr }
     deriving (Show, Eq)
 
 {- Simulator callbacks -}
