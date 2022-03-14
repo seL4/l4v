@@ -5,14 +5,7 @@
 -- SPDX-License-Identifier: GPL-2.0-only
 --
 
--- This module defines the handling of the RISC-V hardware-defined page tables.
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: added VCPU cases (uninteresting)
-
--- FIXME AARCH64: added HW ASID helpers and adjusted findVSpaceForASID
+-- This module defines the handling of the AARCH64 hardware-defined page tables.
 
 module SEL4.Kernel.VSpace.AARCH64 where
 
@@ -39,6 +32,7 @@ import Data.Maybe
 import Data.Array
 import Data.List
 import Data.Word (Word32)
+import Data.WordLib
 
 -- The AArch64-specific invocations are imported with the "ArchInv" prefix. This
 -- is necessary to avoid namespace conflicts with the generic invocations.
@@ -238,8 +232,8 @@ invalidateTLBByASIDVA asid vaddr = do
     maybeVMID <- loadHWASID asid
     when (isJust maybeVMID) $ do
         let vmID = fromJust maybeVMID
-        -- FIXME AARCH64: de-magic 48 (from C)
-        let vpn = fromIntegral vmID `shiftL` 48 .|. fromVPtr vaddr `shiftR` pageBits
+        let shift = wordBits - asidBits
+        let vpn = fromIntegral vmID `shiftL` shift .|. fromVPtr vaddr `shiftR` pageBits
         doMachineOp $ invalidateTranslationSingle vpn
 
 doFlush :: FlushType -> VPtr -> VPtr -> PAddr -> MachineMonad ()
@@ -618,9 +612,9 @@ decodeARMFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
 decodeARMFrameInvocation _ _ _ _ _ = fail "Unreachable"
 
 
-decodeRISCVPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
+decodeARMPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
+decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     when (isJust $ capPTMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- checkVSpaceRoot vspaceCap 1
     when (vptr >= pptrUserTop) $ throw $ InvalidArgument 0
@@ -638,31 +632,23 @@ decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
         ptMapPTE = pte,
         ptMapPTSlot = slot }
 
-decodeRISCVPageTableInvocation :: Word -> [Word] -> PPtr CTE ->
+decodeARMPageTableInvocation :: Word -> [Word] -> PPtr CTE ->
         ArchCapability -> [(Capability, PPtr CTE)] ->
         KernelF SyscallError ArchInv.Invocation
-decodeRISCVPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
+decodeARMPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
    case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel ARMPageTableMap, vaddr:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVPageTableInvocationMap cte cap (VPtr vaddr) attr vspaceCap
+            decodeARMPageTableInvocationMap cte cap (VPtr vaddr) attr vspaceCap
         (ArchInvocationLabel ARMPageTableMap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel ARMPageTableUnmap, _, _) -> do
             cteVal <- withoutFailure $ getCTE cte
             final <- withoutFailure $ isFinalCapability cteVal
             unless final $ throw RevokeFirst
-            case cap of
-                PageTableCap { capPTMappedAddress = Just (asid,_),
-                               capPTBasePtr = pt }
-                    -> do
-                        -- top-level PTs must be unmapped via Revoke
-                        maybeVSpace <- withoutFailure $ maybeVSpaceForASID asid
-                        when (maybeVSpace == Just pt) $ throw RevokeFirst
-                _ -> return ()
             return $ InvokePageTable $ PageTableUnmap {
                 ptUnmapCap = cap,
                 ptUnmapCapSlot = cte }
         _ -> throw IllegalOperation
-decodeRISCVPageTableInvocation _ _ _ _ _ = fail "Unreachable"
+decodeARMPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 
 decodeARMVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
@@ -766,7 +752,7 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeARMFrameInvocation label args cte cap extraCaps
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = False }) extraCaps =
-    decodeRISCVPageTableInvocation label args cte cap extraCaps
+    decodeARMPageTableInvocation label args cte cap extraCaps
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = True }) extraCaps =
     decodeARMVSpaceRootInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
@@ -791,7 +777,7 @@ performPageTableInvocation :: PageTableInvocation -> Kernel ()
 performPageTableInvocation (PageTableMap cap ctSlot pte ptSlot) = do
     updateCap ctSlot cap
     storePTE ptSlot pte
-    doMachineOp sfence
+    doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr ptSlot) (addrFromPPtr ptSlot)
 
 performPageTableInvocation (PageTableUnmap cap slot) = do
     case capPTMappedAddress cap of
