@@ -42,7 +42,7 @@ datatype arch_cap =
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | PageTableCap
       (acap_obj : obj_ref)
-      (acap_toplevel : bool)
+      (acap_is_vspace : bool)
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | VCPUCap
       (acap_obj : obj_ref)
@@ -234,7 +234,7 @@ datatype aobject_type =
   | LargePageObj
   | HugePageObj
   | PageTableObj
-  | VSpaceRootObj
+  | VSpaceObj
   | ASIDPoolObj (* used internally, not on API level *)
   | VCPUObj
 
@@ -243,22 +243,22 @@ definition arch_is_frame_type :: "aobject_type \<Rightarrow> bool" where
 
 definition arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap" where
   "arch_default_cap tp r n dev \<equiv> case tp of
-     SmallPageObj  \<Rightarrow> FrameCap r vm_read_write ARMSmallPage dev None
-   | LargePageObj  \<Rightarrow> FrameCap r vm_read_write ARMLargePage dev None
-   | HugePageObj   \<Rightarrow> FrameCap r vm_read_write ARMHugePage dev None
-   | PageTableObj  \<Rightarrow> PageTableCap r False None
-   | VSpaceRootObj \<Rightarrow> PageTableCap r True None
-   | VCPUObj       \<Rightarrow> VCPUCap r
-   | ASIDPoolObj   \<Rightarrow> ASIDPoolCap r 0" (* unused, but nicer properties when defined *)
+     SmallPageObj \<Rightarrow> FrameCap r vm_read_write ARMSmallPage dev None
+   | LargePageObj \<Rightarrow> FrameCap r vm_read_write ARMLargePage dev None
+   | HugePageObj  \<Rightarrow> FrameCap r vm_read_write ARMHugePage dev None
+   | PageTableObj \<Rightarrow> PageTableCap r False None
+   | VSpaceObj    \<Rightarrow> PageTableCap r True None
+   | VCPUObj      \<Rightarrow> VCPUCap r
+   | ASIDPoolObj  \<Rightarrow> ASIDPoolCap r 0" (* unused, but nicer properties when defined *)
 
 definition default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> arch_kernel_obj" where
   "default_arch_object tp dev n \<equiv> case tp of
-     SmallPageObj  \<Rightarrow> DataPage dev ARMSmallPage
-   | LargePageObj  \<Rightarrow> DataPage dev ARMLargePage
-   | HugePageObj   \<Rightarrow> DataPage dev ARMHugePage
-   | PageTableObj  \<Rightarrow> PageTable (NormalPT (\<lambda>_. InvalidPTE))
-   | VSpaceRootObj \<Rightarrow> PageTable (VSRootPT (\<lambda>_. InvalidPTE))
-   | ASIDPoolObj   \<Rightarrow> ASIDPool Map.empty"
+     SmallPageObj \<Rightarrow> DataPage dev ARMSmallPage
+   | LargePageObj \<Rightarrow> DataPage dev ARMLargePage
+   | HugePageObj  \<Rightarrow> DataPage dev ARMHugePage
+   | PageTableObj \<Rightarrow> PageTable (NormalPT (\<lambda>_. InvalidPTE))
+   | VSpaceObj    \<Rightarrow> PageTable (VSRootPT (\<lambda>_. InvalidPTE))
+   | ASIDPoolObj  \<Rightarrow> ASIDPool Map.empty"
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"
 
