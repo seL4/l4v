@@ -44,7 +44,7 @@ defs Arch_createNewCaps_def:
             createNewFrameCaps regionBase numObjects dev (ptTranslationBits False) ARMLargePage
         | HugePageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev (ptTranslationBits False + ptTranslationBits False) ARMHugePage
-        | VSpaceRootObject \<Rightarrow>
+        | VSpaceObject \<Rightarrow>
             createNewTableCaps regionBase numObjects (ptBits True) (makeObject::pte)
               (\<lambda>base addr. PageTableCap base True addr)
               (\<lambda>pts. return ())

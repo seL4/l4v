@@ -39,7 +39,7 @@ definition
       LargePageObject,
       HugePageObject,
       PageTableObject,
-      VSpaceRootObject,
+      VSpaceObject,
       VCPUObject
     ]"
 

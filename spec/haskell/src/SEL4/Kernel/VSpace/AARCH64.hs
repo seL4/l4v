@@ -382,7 +382,7 @@ setVMRoot tcb = do
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {
-                    capPTTopLevel = True,
+                    capPTisVSpace = True,
                     capPTMappedAddress = Just (asid, _),
                     capPTBasePtr = vspaceRoot }) -> do
                 vspaceRoot' <- findVSpaceForASID asid
@@ -474,7 +474,7 @@ getHWASID asid = do
 {- Helper Functions -}
 
 isVTableRoot :: Capability -> Bool
-isVTableRoot (ArchObjectCap (PageTableCap { capPTTopLevel = True })) = True
+isVTableRoot (ArchObjectCap (PageTableCap { capPTisVSpace = True })) = True
 isVTableRoot _ = False
 
 -- FIXME AARCH64: name indirection kept here for sync with C; both (C and
@@ -679,7 +679,7 @@ decodeRISCVPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 decodeARMVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation
-decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTTopLevel = True }) =
+decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = True }) =
     case (isVSpaceFlushLabel (invocationType label), args) of
         (True, start:end:_) -> do
             when (end <= start) $ throw $ InvalidArgument 1
@@ -783,9 +783,9 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeARMFrameInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = False }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = False }) extraCaps =
     decodeRISCVPageTableInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTTopLevel = True }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = True }) extraCaps =
     decodeARMVSpaceRootInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeARMASIDControlInvocation label args cap extraCaps
@@ -816,7 +816,7 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTTopLevel cap)) - 1]
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTisVSpace cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
