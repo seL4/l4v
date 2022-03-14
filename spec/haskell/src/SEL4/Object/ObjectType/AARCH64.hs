@@ -194,7 +194,7 @@ createObject t regionBase _ isDevice =
             let ptSize = ptBits False - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
             return $! PageTableCap (pointerCast regionBase) False Nothing
-        Arch.Types.VSpaceRootObject -> do
+        Arch.Types.VSpaceObject -> do
             let ptSize = ptBits True - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
             return $! PageTableCap (pointerCast regionBase) True Nothing
@@ -234,7 +234,7 @@ asidPoolBits = 12
 
 capUntypedSize :: ArchCapability -> Word
 capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
-capUntypedSize (PageTableCap {capPTTopLevel = isTopLevel}) = bit (ptBits isTopLevel)
+capUntypedSize (PageTableCap {capPTisVSpace = isTopLevel}) = bit (ptBits isTopLevel)
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits

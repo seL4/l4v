@@ -2042,17 +2042,17 @@ case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTa
   then ->5
   else ->6
 
-case \x of cap@(PageTableCap { capPTTopLevel = True }) -> _ ->  ---> let cap = \x in
-  if isPageTableCap cap \<and> capPTTopLevel cap
+case \x of cap@(PageTableCap { capPTisVSpace = True }) -> _ ->  ---> let cap = \x in
+  if isPageTableCap cap \<and> capPTisVSpace cap
   then ->1
   else ->2
 
-case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTTopLevel = False }) -> cap@(PageTableCap { capPTTopLevel = True }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
+case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTisVSpace = False }) -> cap@(PageTableCap { capPTisVSpace = True }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
   if isFrameCap cap
   then ->1
-  else if isPageTableCap cap \<and> \<not> capPTTopLevel cap
+  else if isPageTableCap cap \<and> \<not> capPTisVSpace cap
   then ->2
-  else if isPageTableCap cap \<and> capPTTopLevel cap
+  else if isPageTableCap cap \<and> capPTisVSpace cap
   then ->3
   else if isASIDControlCap cap
   then ->4
@@ -2077,11 +2077,11 @@ case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { c
   then ->6
   else undefined
 
-case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject -> Arch.Types.VSpaceRootObject -> Arch.Types.VCPUObject ->  ---> case \x of
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.HugePageObject -> Arch.Types.PageTableObject -> Arch.Types.VSpaceObject -> Arch.Types.VCPUObject ->  ---> case \x of
     APIObjectType \v0\ \<Rightarrow> ->1
   | SmallPageObject \<Rightarrow> ->2
   | LargePageObject \<Rightarrow> ->3
   | HugePageObject \<Rightarrow> ->4
   | PageTableObject \<Rightarrow> ->5
-  | VSpaceRootObject \<Rightarrow> ->6
+  | VSpaceObject \<Rightarrow> ->6
   | VCPUObject \<Rightarrow> ->7

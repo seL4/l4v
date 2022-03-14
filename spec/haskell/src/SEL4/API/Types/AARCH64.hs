@@ -21,7 +21,7 @@ import Data.WordLib(wordSizeCase)
 data ObjectType
     = APIObjectType APIObjectType
     | HugePageObject
-    | VSpaceRootObject
+    | VSpaceObject
     | SmallPageObject
     | LargePageObject
     | PageTableObject
@@ -42,7 +42,7 @@ instance Enum ObjectType where
         LargePageObject -> apiMax + 2
         HugePageObject -> apiMax + 3
         PageTableObject -> apiMax + 4
-        VSpaceRootObject -> apiMax + 5
+        VSpaceObject -> apiMax + 5
         VCPUObject -> apiMax + 6
         where apiMax = fromEnum (maxBound :: APIObjectType)
     toEnum n
@@ -51,7 +51,7 @@ instance Enum ObjectType where
         | n == apiMax + 2 = LargePageObject
         | n == apiMax + 3 = HugePageObject
         | n == apiMax + 4 = PageTableObject
-        | n == apiMax + 5 = VSpaceRootObject
+        | n == apiMax + 5 = VSpaceObject
         | n == apiMax + 6 = VCPUObject
         | otherwise = error "toEnum out of range for AArch64.ObjectType"
         where apiMax = fromEnum (maxBound :: APIObjectType)
@@ -75,7 +75,7 @@ apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 getObjectSize :: ObjectType -> Int -> Int
 getObjectSize PageTableObject _ = ptBits False
-getObjectSize VSpaceRootObject _ = ptBits True
+getObjectSize VSpaceObject _ = ptBits True
 getObjectSize SmallPageObject _ = pageBitsForSize ARMSmallPage
 getObjectSize LargePageObject _ = pageBitsForSize ARMLargePage
 getObjectSize HugePageObject _ = pageBitsForSize ARMHugePage
