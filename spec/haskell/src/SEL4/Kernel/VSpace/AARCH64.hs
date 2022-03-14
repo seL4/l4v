@@ -476,6 +476,16 @@ isVTableRoot _ = False
 isValidNativeRoot :: Capability -> Bool
 isValidNativeRoot cap = isVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
 
+-- if isValidNativeRoot holds, return VSpace and ASID, otherwise throw error
+checkVSpaceRoot :: Capability  -> Int -> KernelF SyscallError (PPtr PTE, ASID)
+checkVSpaceRoot vspaceCap argNo =
+    case vspaceCap of
+        ArchObjectCap (PageTableCap {
+                capPTMappedAddress = Just (asid, _),
+                capPTBasePtr = vspace })
+            -> return (vspace, asid)
+        _ -> throw $ InvalidCapability argNo
+
 isValidVTableRoot :: Capability -> Bool
 isValidVTableRoot = isValidNativeRoot
 
@@ -539,37 +549,31 @@ pageBase vaddr size = vaddr .&. (complement $ mask size)
 checkValidMappingSize :: Int -> Kernel ()
 checkValidMappingSize _ = return ()
 
-decodeRISCVFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
+decodeARMFrameInvocationMap :: PPtr CTE -> ArchCapability -> VPtr -> Word ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
-decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
-    (vspace,asid) <- case vspaceCap of
-        ArchObjectCap (PageTableCap {
-                capPTMappedAddress = Just (asid, _),
-                capPTBasePtr = vspace })
-            -> return (vspace, asid)
-        _ -> throw $ InvalidCapability 1
+decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
+    let attributes = attribsFromWord attr
+    let frameSize = capFSize cap
+    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    (vspace,asid) <- checkVSpaceRoot vspaceCap 1
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
-    let frameSize = capFSize cap
-    let pgBits = pageBitsForSize frameSize
-    let vtop = vptr + (bit pgBits - 1)
-    when (vtop >= pptrUserTop) $ throw $ InvalidArgument 0
     checkVPAlignment frameSize vptr
-    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
-    unless (bitsLeft == pgBits) $ throw $
-        FailedLookup False $ MissingCapability bitsLeft
+    let pgBits = pageBitsForSize frameSize
     case capFMappedAddress cap of
         Just (asid', vaddr') -> do
-            when (asid' /= asid) $ throw $ InvalidCapability 1
-            when (vaddr' /= vptr) $ throw $ InvalidArgument 0
-            checkSlot slot (not . isPageTablePTE)
-        Nothing -> checkSlot slot (\pte ->  pte == InvalidPTE)
-    let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
-    let framePAddr = addrFromPPtr (capFBasePtr cap)
+            when (asid' /= asid) $ throw $ InvalidCapability 0
+            when (vaddr' /= vptr) $ throw $ InvalidArgument 2
+        Nothing -> do
+            let vtop = vptr + (bit pgBits - 1)
+            when (vtop > pptrUserTop) $ throw $ InvalidArgument 0
+    (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
+    unless (bitsLeft == pgBits) $ throw $ FailedLookup False $ MissingCapability bitsLeft
+    let base = addrFromPPtr (capFBasePtr cap)
     return $ InvokePage $ PageMap {
         pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
-        pageMapEntries = (makeUserPTE framePAddr vmRights (attribsFromWord attr) frameSize, slot) }
+        pageMapEntries = (makeUserPTE base vmRights attributes frameSize, slot) }
 
 decodeARMFrameInvocationFlush :: Word -> [Word] -> ArchCapability ->
                                  KernelF SyscallError ArchInv.Invocation
@@ -599,7 +603,7 @@ decodeARMFrameInvocation :: Word -> [Word] -> PPtr CTE ->
 decodeARMFrameInvocation label args cte (cap@FrameCap {}) extraCaps =
     case (invocationType label, args, extraCaps) of
         (ArchInvocationLabel ARMPageMap, vaddr:rightsMask:attr:_, (vspaceCap,_):_) -> do
-            decodeRISCVFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
+            decodeARMFrameInvocationMap cte cap (VPtr vaddr) rightsMask attr vspaceCap
         (ArchInvocationLabel ARMPageMap, _, _) -> throw TruncatedMessage
         (ArchInvocationLabel ARMPageUnmap, _, _) ->
             return $ InvokePage $ PageUnmap {
@@ -623,12 +627,7 @@ decodeRISCVPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
     Word -> Capability -> KernelF SyscallError ArchInv.Invocation
 decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
     when (isJust $ capPTMappedAddress cap) $ throw $ InvalidCapability 0
-    (vspace,asid) <- case vspaceCap of
-        ArchObjectCap (PageTableCap {
-                 capPTMappedAddress = Just (asid,_),
-                 capPTBasePtr = vspace })
-            -> return (vspace,asid)
-        _ -> throw $ InvalidCapability 1
+    (vspace,asid) <- checkVSpaceRoot vspaceCap 1
     when (vptr >= pptrUserTop) $ throw $ InvalidArgument 0
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
@@ -678,13 +677,7 @@ decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = Tru
         (True, start:end:_) -> do
             when (end <= start) $ throw $ InvalidArgument 1
             when (VPtr end > pptrUserTop) $ throw IllegalOperation
-            -- equivalent to isValidNativeRoot:
-            (vspaceRoot, asid) <- case cap of
-                PageTableCap {
-                         capPTMappedAddress = Just (asid, _),
-                         capPTBasePtr = pt}
-                    -> return (pt, asid)
-                _ -> throw $ InvalidCapability 0
+            (vspaceRoot, asid) <- checkVSpaceRoot (ArchObjectCap cap) 0
             ptCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
             when (ptCheck /= vspaceRoot) $ throw $ InvalidCapability 0
             frameInfo <- withoutFailure $ lookupFrame (capPTBasePtr cap) (VPtr start)
