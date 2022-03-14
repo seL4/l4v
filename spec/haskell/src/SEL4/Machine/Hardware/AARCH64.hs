@@ -204,10 +204,6 @@ dsb = error "Unimplemented - machine op"
 dmb :: MachineMonad ()
 dmb = error "Unimplemented - machine op"
 
--- FIXME AARCH64: no sfence on Arm
-sfence :: MachineMonad ()
-sfence = error "Unimplemented - machine op"
-
 {- Cache Cleaning and TLB Flushes -}
 
 invalidateTranslationASID :: Word -> MachineMonad ()
