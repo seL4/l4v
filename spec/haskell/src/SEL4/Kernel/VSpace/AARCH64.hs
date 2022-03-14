@@ -133,13 +133,8 @@ isPagePTE :: PTE -> Bool
 isPagePTE (PagePTE {}) = True
 isPagePTE _ = False
 
--- FIXME AARCH64: replace name with whatever ppns will be called
--- only used on non-toplevel tables
-pteAddr :: PTE -> PAddr
-pteAddr pte = ptePPN pte `shiftL` ptBits False
-
-getPPtrFromHWPTE :: PTE -> PPtr PTE
-getPPtrFromHWPTE pte = ptrFromPAddr $ pteAddr pte
+getPPtrFromPTE :: PTE -> PPtr PTE
+getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
 
 -- how many bits there are left to be translated at a given level (0 = bottom
 -- level). This counts the bits the levels below the current one translate, so
@@ -176,8 +171,8 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
         then do
-            checkPTAt (getPPtrFromHWPTE pte)
-            lookupPTSlotFromLevel (level-1) (getPPtrFromHWPTE pte) vPtr
+            checkPTAt (getPPtrFromPTE pte)
+            lookupPTSlotFromLevel (level-1) (getPPtrFromPTE pte) vPtr
         else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
 -- lookupPTSlot walks the page table and returns a pointer to the slot that maps
@@ -191,7 +186,7 @@ lookupFrame vspaceRoot vPtr = do
     (bitsLeft, ptePtr) <- lookupPTSlot vspaceRoot vPtr
     pte <- getObject ptePtr
     if isPagePTE pte
-        then return $ Just (bitsLeft, pteAddr pte)
+        then return $ Just (bitsLeft, pteBaseAddress pte)
         else return Nothing
 
 {- Page Table Modification -}
@@ -322,7 +317,7 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     let slot = ptSlotIndex level ptPtr vPtr
     pte <- withoutFailure $ getObject slot
     unless (isPageTablePTE pte) $ throw InvalidRoot
-    let ptr = getPPtrFromHWPTE pte
+    let ptr = getPPtrFromPTE pte
     if ptr == targetPtPtr
         then return slot
         else do
@@ -344,9 +339,8 @@ unmapPageTable asid vaddr pt = ignoreFailure $ do
 checkMappingPPtr :: PPtr Word -> PTE -> KernelF LookupFailure ()
 checkMappingPPtr pptr pte =
     case pte of
-        PagePTE { ptePPN = ppn } ->
-            -- PagePTEs can only occur on non-toplevel tables
-            unless (ptrFromPAddr (ppn `shiftL` ptBits False) == pptr) $ throw InvalidRoot
+        PagePTE { pteBaseAddress = addr } ->
+            unless (addr == addrFromPPtr pptr) $ throw InvalidRoot
         _ -> throw InvalidRoot
 
 unmapPage :: VMPageSize -> ASID -> VPtr -> PPtr Word -> Kernel ()
@@ -499,21 +493,23 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
     _ -> VMKernelOnly
 
 
-{- Decoding RISC-V Invocations -}
+{- Decoding AARCH64 Invocations -}
 
 attribsFromWord :: Word -> VMAttributes
-attribsFromWord w = VMAttributes { riscvExecuteNever = w `testBit` 0 }
+attribsFromWord w = VMAttributes {
+    armExecuteNever = w `testBit` 2,
+    armParityEnabled = w `testBit` 1, -- FIXME AARCH64: this seems to be ignored, but is present in the API
+    armPageCacheable = w `testBit` 0 }
 
-makeUserPTE :: PAddr -> Bool -> VMRights -> PTE
-makeUserPTE baseAddr executable rights =
-    if rights == VMKernelOnly && not executable
-    then InvalidPTE
-    else PagePTE {
-             ptePPN = baseAddr `shiftR` pageBits,
-             pteGlobal = False,
-             pteUser = True,
-             pteExecute = executable,
-             pteRights = rights }
+makeUserPTE :: PAddr -> VMRights -> VMAttributes -> VMPageSize -> PTE
+makeUserPTE baseAddr rights attrs vmSize =
+    PagePTE {
+        pteBaseAddress = baseAddr,
+        pteSmallPage = vmSize == ARMSmallPage,
+        pteGlobal = False,
+        pteExecuteNever = armExecuteNever attrs,
+        pteDevice = armPageCacheable attrs,
+        pteRights = rights }
 
 checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
 checkVPAlignment sz w =
@@ -554,10 +550,11 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         _ -> throw $ InvalidCapability 1
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
-    let pgBits = pageBitsForSize $ capFSize cap
+    let frameSize = capFSize cap
+    let pgBits = pageBitsForSize frameSize
     let vtop = vptr + (bit pgBits - 1)
     when (vtop >= pptrUserTop) $ throw $ InvalidArgument 0
-    checkVPAlignment (capFSize cap) vptr
+    checkVPAlignment frameSize vptr
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $
         FailedLookup False $ MissingCapability bitsLeft
@@ -569,11 +566,10 @@ decodeRISCVFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
         Nothing -> checkSlot slot (\pte ->  pte == InvalidPTE)
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
     let framePAddr = addrFromPPtr (capFBasePtr cap)
-    let exec = not $ riscvExecuteNever (attribsFromWord attr)
     return $ InvokePage $ PageMap {
         pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
-        pageMapEntries = (makeUserPTE framePAddr exec vmRights, slot) }
+        pageMapEntries = (makeUserPTE framePAddr vmRights (attribsFromWord attr) frameSize, slot) }
 
 decodeARMFrameInvocationFlush :: Word -> [Word] -> ArchCapability ->
                                  KernelF SyscallError ArchInv.Invocation
@@ -640,9 +636,7 @@ decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
     let pte = PageTablePTE {
-            ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits,
-            pteGlobal = False,
-            pteUser = False }
+            pteBaseAddress = addrFromPPtr (capPTBasePtr cap) }
     let vptr = vptr .&. complement (mask bitsLeft)
     return $ InvokePageTable $ PageTableMap {
         ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },

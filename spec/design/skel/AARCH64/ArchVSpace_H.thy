@@ -32,8 +32,8 @@ where
      pte <- pteAtIndex level ptPtr vPtr;
      if isPageTablePTE pte
      then do
-       checkPTAt (getPPtrFromHWPTE pte);
-       lookupPTSlotFromLevel (level - 1) (getPPtrFromHWPTE pte) vPtr
+       checkPTAt (getPPtrFromPTE pte);
+       lookupPTSlotFromLevel (level - 1) (getPPtrFromPTE pte) vPtr
      od
      else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
    od"
@@ -48,7 +48,7 @@ where
     slot <- returnOk $ ptSlotIndex level ptPtr vPtr;
     pte <- withoutFailure $ getObject slot;
     unlessE (isPageTablePTE pte) $ throw InvalidRoot;
-    ptr <- returnOk (getPPtrFromHWPTE pte);
+    ptr <- returnOk (getPPtrFromPTE pte);
     if ptr = targetPtPtr
         then returnOk slot
         else doE
