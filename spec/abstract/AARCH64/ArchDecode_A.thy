@@ -42,7 +42,7 @@ definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
   where
   "arch_decode_irq_control_invocation label args src_slot cps \<equiv>
-     (if invocation_type label = ArchInvocationLabel ARMIRQIssueIRQHandler
+     (if invocation_type label = ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger
       then if length args \<ge> 4 \<and> length cps \<ge> 1
         then let irq_word = args ! 0;
                  trigger = args ! 1;
