@@ -65,12 +65,12 @@ definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
   where
   "attribs_from_word w \<equiv> if \<not> w!!0 then {Execute} else {}"
 
-definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte"
-  where
+(* FIXME AARCH64: only half updated *)
+definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte" where
   "make_user_pte addr attr rights \<equiv>
     if rights = {} \<and> attr = {}
     then InvalidPTE
-    else PagePTE (ucast (addr >> pageBits)) (attr \<union> {User}) rights"
+    else PagePTE addr False attr rights"
 
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
@@ -152,7 +152,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
-           pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
+           pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p);
            cap' <- returnOk $ PageTableCap p t $ Some (asid, vaddr && ~~mask (pt_bits_left level));
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
          odE

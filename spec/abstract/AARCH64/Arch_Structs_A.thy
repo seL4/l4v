@@ -60,24 +60,20 @@ section \<open>Architecture-specific objects\<close>
 subsection \<open>Page tables\<close>
 
 (* This datatype does not match up with the executable spec directly:
-   This one here models all "things" one can set on a page or page table entry.
+   This one here models all "things" one can set on a page entry.
    The attributes accessible to users are the ones returned by attribs_from_word. *)
-datatype vm_attribute = Global | Execute | User
+datatype vm_attribute = Global | Execute | Device
 type_synonym vm_attributes = "vm_attribute set"
-
-(* FIXME AARCH64: update once C code is there *)
-(* The address of the target object is stored shifted right by pt_bits and stored as a ppn (page
-   number). To get the address, use addr_from_pte *)
-type_synonym pte_ppn_len = 52 (* machine_word_len - pt_bits *)
-type_synonym pte_ppn = "pte_ppn_len word"
-
-definition ppn_len :: nat where
-  "ppn_len \<equiv> LENGTH(pte_ppn_len)"
 
 datatype pte =
     InvalidPTE
-  | PagePTE (pte_ppn : pte_ppn) (pte_attr : vm_attributes) (pte_rights : vm_rights)
-  | PageTablePTE (pte_ppn : pte_ppn) (pte_attr : vm_attributes)
+  | PagePTE
+      (pte_base_addr : paddr)
+      (pte_is_small_page : bool)
+      (pte_attr : vm_attributes)
+      (pte_rights : vm_rights)
+  | PageTablePTE
+      (pte_base_addr : paddr)
 
 
 (* who needs dependent types.. *)
@@ -171,12 +167,6 @@ definition table_size :: "bool \<Rightarrow> nat" where
 definition pt_bits :: "bool \<Rightarrow> nat" where
   "pt_bits is_vspace \<equiv> table_size is_vspace"
 
-definition addr_from_ppn :: "pte_ppn \<Rightarrow> paddr" where
-  "addr_from_ppn ppn = ucast ppn << pt_bits False" (* FIXME AARCH64: ppn still unclear *)
-
-abbreviation addr_from_pte :: "pte \<Rightarrow> paddr" where
-  "addr_from_pte pte \<equiv> addr_from_ppn (pte_ppn pte)"
-
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
@@ -222,10 +212,6 @@ definition acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow
       FrameCap ref cR sz dev as \<Rightarrow> FrameCap ref (validate_vm_rights R) sz dev as
     | _ \<Rightarrow> acap"
 
-text \<open>Sanity check:\<close>
-lemma "LENGTH(pte_ppn_len) = word_bits - pt_bits False"
-  by (simp add: pte_bits_def ptTranslationBits_def word_size_bits_def word_bits_def
-                pt_bits_def table_size_def)
 
 section \<open>Architecture-specific object types and default objects\<close>
 
