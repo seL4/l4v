@@ -231,7 +231,7 @@ asidPoolBits = 12
 
 capUntypedSize :: ArchCapability -> Word
 capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
-capUntypedSize (PageTableCap {capPTisVSpace = isTopLevel}) = bit (ptBits isTopLevel)
+capUntypedSize (PageTableCap {capPTisVSpace = isVSpace}) = bit (ptBits isVSpace)
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits
