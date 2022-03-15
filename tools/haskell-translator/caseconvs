@@ -2009,6 +2009,13 @@ case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:
     | (ArchInvocationLabel ARMIRQIssueIRQHandler, _, _) => ->2
     | _ => ->3
 
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger, _, _) => ->2
+    | _ => ->3
+
 case \x of (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) ->  ---> case \x of
   IssueIRQHandler irq destSlot srcSlot trigger => ->1
 

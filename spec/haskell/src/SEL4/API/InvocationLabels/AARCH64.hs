@@ -16,9 +16,6 @@ data ArchInvocationLabel
         | ARMVSpaceInvalidate_Data
         | ARMVSpaceCleanInvalidate_Data
         | ARMVSpaceUnify_Instruction
-        -- FIXME AARCH64 C is undergoing review, currently having (for tables):
-        -- ARMPageUpperDirectoryMap, ...Unmap
-        -- ARMPageDirectoryMap, ...Unmap
         | ARMPageTableMap
         | ARMPageTableUnmap
         | ARMPageMap
@@ -35,8 +32,7 @@ data ArchInvocationLabel
         | ARMVCPUReadReg
         | ARMVCPUWriteReg
         | ARMVCPUAckVPPI
-        -- FIXME AARCH64: C has ARMIRQIssueIRQHandlerTrigger
-        | ARMIRQIssueIRQHandler
+        | ARMIRQIssueIRQHandlerTrigger
         -- FIXME AARCH64: SMMU invocation labels in C
         -- ARMSIDIssueSIDManager,
         -- | ARMSIDGetFault

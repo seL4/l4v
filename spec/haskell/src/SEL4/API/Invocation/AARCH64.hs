@@ -5,14 +5,9 @@
 -- SPDX-License-Identifier: GPL-2.0-only
 --
 
--- This module defines the machine-specific invocations for RISC-V.
+-- This module defines the machine-specific invocations for AARCH64.
 
 {-# LANGUAGE EmptyDataDecls #-}
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
--- Progress: add VCPU invocations
 
 module SEL4.API.Invocation.AARCH64 where
 
@@ -25,11 +20,9 @@ import SEL4.Object.Structures
 import Data.Word (Word8, Word16, Word32)
 import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..))
 
-{- RISC-V-Specific Objects -}
+{- AARCH64-Specific Objects -}
 
 -- This data type enumerates the object invocations that are possible.
--- These are invocations on the page table structures, on pages, and on
--- ASID pool structures.
 
 data Invocation
     = InvokeVSpaceRoot VSpaceRootInvocation
@@ -114,9 +107,6 @@ data VCPUInvocation
     deriving (Show, Eq)
 
 {- Interrupt Control -}
-
--- The RISCV platform requires an interrupt control call to record whether
--- the interrupt was edge or level-triggered.
 
 data IRQControlInvocation
     = IssueIRQHandler {
