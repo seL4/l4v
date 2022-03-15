@@ -7,6 +7,8 @@
 (* FIXME AARCH64: verbatim setup copy of RISCV64; needs adjustment and validation;
                   only minimal type-check changes performed so far if any *)
 
+(* FIXME AARCH64: style update *)
+
 chapter "Accessing the RISCV64 VSpace"
 
 theory ArchVSpaceAcc_A
@@ -80,11 +82,11 @@ definition set_pt :: "obj_ref \<Rightarrow> pt \<Rightarrow> (unit,'z::state_ext
 
 (* The base address of the table a page table entry at p is in (assuming alignment) *)
 locale_abbrev table_base :: "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
-  "table_base is_top p \<equiv> p && ~~mask (pt_bits is_top)"
+  "table_base is_vspace p \<equiv> p && ~~mask (pt_bits is_vspace)"
 
 (* The index within the page table that a page table entry at p addresses *)
 locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> 'a::len word" where
-  "table_index is_top p \<equiv> ucast (p && mask (pt_bits is_top) >> pte_bits)"
+  "table_index is_vspace p \<equiv> ucast (p && mask (pt_bits is_vspace) >> pte_bits)"
 
 locale_abbrev vsroot_index :: "obj_ref \<Rightarrow> vs_index" where
   "vsroot_index \<equiv> table_index True"
@@ -97,22 +99,21 @@ definition pt_pte :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte" where
                    VSRootPT vs \<Rightarrow> vs (vsroot_index p)
                  | NormalPT pt \<Rightarrow> pt (ptable_index p)"
 
-definition normal_pt_at :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
-  "normal_pt_at p pts \<equiv> pts (table_base False p) \<noteq> None"
-
-(* p is the address of the pte,
-   which consists of base (for the pt) and offset (for the index inside the pt).
-   We assert that we avoid addresses between ptes. *)
-definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
-  "pte_of p \<equiv> do {
-     oassert (is_aligned p pte_bits);
-     normal_pt \<leftarrow> ogets (normal_pt_at p);
-     pt \<leftarrow> oapply (table_base (\<not>normal_pt) p);
-     oreturn $ pt_pte pt p
+(* extract pte from page table of a specific level *)
+definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
+  "level_pte_of is_vspace p \<equiv> do {
+      oassert (is_aligned p pte_bits);
+      pt \<leftarrow> oapply (table_base is_vspace p);
+      oreturn $ pt_pte pt p
    }"
 
+(* pte from page tables of any level = map-union of all levels, since we can assume distinctness *)
+definition pte_of :: "(obj_ref \<rightharpoonup> pt) \<Rightarrow> obj_ref \<rightharpoonup> pte" where
+  "pte_of s \<equiv> swp (level_pte_of True) s ++ swp (level_pte_of False) s"
+
 locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte" where
-  "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
+  "ptes_of s \<equiv> pte_of (pts_of s)"
+
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
@@ -120,23 +121,27 @@ locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" whe
 
 definition pt_upd :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> pt" where
   "pt_upd pt p pte \<equiv> case pt of
-                       VSRootPT vs \<Rightarrow> VSRootPT (vs(ptable_index p := pte))
+                       VSRootPT vs \<Rightarrow> VSRootPT (vs(vsroot_index p := pte))
                      | NormalPT pt \<Rightarrow> NormalPT (pt(ptable_index p := pte))"
 
+(* Checks object content so that this also works when object sizes are equal between levels. *)
+definition pt_level_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
+  "pt_level_of p pts \<equiv> \<exists>pt. pts (table_base True p) = Some (VSRootPT pt)"
+
+(* Determine which level the pt object is, then update. *)
 definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte p pte \<equiv> do
      assert (is_aligned p pte_bits);
-     normal_pt \<leftarrow> gets (normal_pt_at p \<circ> pts_of);
-     base \<leftarrow> return $ table_base (\<not>normal_pt) p;
+     is_vspace \<leftarrow> gets (pt_level_of p \<circ> pts_of);
+     base \<leftarrow> return $ table_base is_vspace p;
      pt \<leftarrow> get_pt base;
-     pt' \<leftarrow> return $ pt_upd pt p pte;
-     set_pt base pt'
+     set_pt base (pt_upd pt p pte)
    od"
 
 
 section "Basic Operations"
 
-(* See comment in Haskell why toplevel=False here is what we want *)
+(* See comment in Haskell why is_vspace=False here is what we want *)
 definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
   "pt_bits_left level = ptTranslationBits False * size level + pageBits"
 
