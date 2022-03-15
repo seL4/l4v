@@ -33,7 +33,7 @@ decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
         KernelF SyscallError ArchInv.IRQControlInvocation
 decodeIRQControlInvocation label args srcSlot extraCaps =
     case (invocationType label, args, extraCaps) of
-        (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,
+        (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,
             irqW:triggerW:index:depth:_, cnode:_) -> do
             checkIRQ irqW
             let irq = toEnum (fromIntegral irqW) :: IRQ
@@ -44,7 +44,7 @@ decodeIRQControlInvocation label args srcSlot extraCaps =
             ensureEmptySlot destSlot
             return $
                 ArchInv.IssueIRQHandler irq destSlot srcSlot (triggerW /= 0)
-        (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) ->
+        (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) ->
             throw TruncatedMessage
         _ -> throw IllegalOperation
 
