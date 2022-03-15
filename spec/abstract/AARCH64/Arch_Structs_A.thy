@@ -169,7 +169,7 @@ definition table_size :: "bool \<Rightarrow> nat" where
   "table_size is_toplevel = ptTranslationBits is_toplevel + pte_bits"
 
 definition pt_bits :: "bool \<Rightarrow> nat" where
-  "pt_bits is_toplevel \<equiv> table_size is_toplevel"
+  "pt_bits is_vspace \<equiv> table_size is_vspace"
 
 definition addr_from_ppn :: "pte_ppn \<Rightarrow> paddr" where
   "addr_from_ppn ppn = ucast ppn << pt_bits False" (* FIXME AARCH64: ppn still unclear *)
@@ -181,7 +181,7 @@ primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
-| "arch_obj_size (PageTableCap _ is_toplevel _ ) = table_size is_toplevel"
+| "arch_obj_size (PageTableCap _ is_vspace _ ) = table_size is_vspace"
 | "arch_obj_size (VCPUCap _) = pageBits" (* FIXME AARCH64: vcpuBits not in scope *)
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
@@ -304,7 +304,7 @@ section "Type declarations for invariant definitions"
 
 datatype aa_type =
     AASIDPool
-  | APageTable bool (* is_toplevel *)
+  | APageTable (pt_is_vspace : bool)
   | AVCPU
   | AUserData vmpage_size
   | ADeviceData vmpage_size
