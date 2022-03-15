@@ -71,9 +71,9 @@ definition global_pte :: "pt_index \<Rightarrow> pte"
   "global_pte idx \<equiv>
      if idx = 0x100
      then PagePTE ((ucast (idx && mask (ptTranslationBits False - 1)) << ptTranslationBits False * 2))
-                  {} vm_kernel_only
+                  True {} vm_kernel_only
      else if idx = 0x1FE
-     then PagePTE (2 << ptTranslationBits False * 2) {} vm_kernel_only
+     then PagePTE (2 << ptTranslationBits False * 2) True {} vm_kernel_only
      else InvalidPTE"
 
 definition init_kheap :: kheap

@@ -157,9 +157,8 @@ locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref"
 text \<open>Walk page tables in software.\<close>
 
 (* pte addresses will always be at least page aligned *)
-definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref"
-  where
-  "pptr_from_pte pte \<equiv> ptrFromPAddr (addr_from_pte pte)"
+definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref" where
+  "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_base_addr pte)"
 
 definition pt_slot_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
   where
