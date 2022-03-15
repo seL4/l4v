@@ -398,8 +398,8 @@ storeHWASID asid hw_asid = do
         { armKSHWASIDTable = hwASIDTable' }})
 
 -- FIXME AARCH64: naming
--- FIXME AARCH64: the C PR removes this function, but it is still useful in
--- Haskell; it's mostly type wrangling and assertion so maybe not necessary for C
+-- This function is removed in C, but it is still useful in Haskell; it's
+-- mostly type wrangling and assertion so maybe not necessary for C
 loadHWASID :: ASID -> Kernel (Maybe VMID)
 loadHWASID asid = do
     maybeEntry <- getASIDPoolEntry asid
