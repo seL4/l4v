@@ -502,7 +502,6 @@ maskVMRights r m = case (r, capAllowRead m, capAllowWrite m) of
 attribsFromWord :: Word -> VMAttributes
 attribsFromWord w = VMAttributes {
     armExecuteNever = w `testBit` 2,
-    armParityEnabled = w `testBit` 1, -- FIXME AARCH64: this seems to be ignored, but is present in the API
     armPageCacheable = w `testBit` 0 }
 
 makeUserPTE :: PAddr -> VMRights -> VMAttributes -> VMPageSize -> PTE

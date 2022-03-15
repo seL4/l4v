@@ -6,11 +6,7 @@
 
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving, EmptyDataDecls #-}
 
--- This module defines the low-level RISC-V hardware interface.
-
--- FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
--- with minimal text substitution! Remove this comment after updating and
--- checking against C; update copyright as necessary.
+-- This module defines the low-level AARCH64 hardware interface.
 
 module SEL4.Machine.Hardware.AARCH64 where
 
@@ -22,8 +18,8 @@ import Control.Monad.Reader
 import Data.Bits
 import Data.Word(Word8, Word16, Word32, Word64)
 
--- The RISC-V 64bit-specific register set definitions are qualified with the
--- "RISCV" prefix, and the platform-specific hardware access functions are
+-- The AARCH64-specific register set definitions are qualified with the
+-- "AARCH64" prefix, and the platform-specific hardware access functions are
 -- qualified with the "Platform" prefix.
 
 import qualified SEL4.Machine.RegisterSet.AARCH64 as AARCH64
@@ -113,16 +109,16 @@ pageBits = 12
 -- contain twice as many entries if config_ARM_PA_SIZE_BITS_40 is set.
 
 ptTranslationBits :: Bool -> Int
-ptTranslationBits isToplevel =
-    if isToplevel && config_ARM_PA_SIZE_BITS_40 then 10 else 9
+ptTranslationBits isVSpace =
+    if isVSpace && config_ARM_PA_SIZE_BITS_40 then 10 else 9
 
 pteBits :: Int
 pteBits = 3
 
 ptBits :: Bool -> Int
-ptBits isTopLevel = ptTranslationBits isTopLevel + pteBits
+ptBits isVSpace = ptTranslationBits isVSpace + pteBits
 
--- The top-level table cannot contain frame PTEs, so isToplevel is False
+-- The top-level table cannot contain frame PTEs, so isVSpace is False
 pageBitsForSize :: VMPageSize -> Int
 pageBitsForSize ARMSmallPage = pageBits
 pageBitsForSize ARMLargePage = pageBits + ptTranslationBits False
@@ -168,21 +164,21 @@ clearMemory ptr byteLength = error "Unimplemented -- machine op"
 -- This function is called before a region of memory is made user-accessible.
 -- Though in Haskell, it is implemented as "clearMemory",
 -- we draw the logical distinction to gain more freedom for its interpretation
--- in the Isabelle formalization.
+-- in the Isabelle formalisation.
 
 initMemory :: PPtr Word -> Int -> MachineMonad ()
 initMemory = clearMemory
 
 -- This function is called to free a region of user-memory after use.
 -- In Haskell, this operation does not do anything.
--- We just use it as a stub for the Isabelle formalization.
+-- We just use it as a stub for the Isabelle formalisation.
 
 freeMemory :: PPtr Word -> Int -> MachineMonad ()
 freeMemory _ _ = return ()
 
 -- Same as "clearMemory", but uses storeWordVM to write to memory.
--- To be used when creating mapping objects (page tables and -dirs)
--- Flushing the kernel's mapping from TLBindexed
+-- To be used when creating mapping objects (page tables)
+-- Flushing the kernel's mapping from TLB-indexed
 -- caches must be done separately.
 
 clearMemoryVM :: PPtr Word -> Int -> MachineMonad ()
@@ -264,7 +260,7 @@ setHCR _hcr = error "Unimplemented - machine op"
 getESR :: MachineMonad Word
 getESR = error "Unimplemented - machine op"
 
-addressTranslateS1 :: VPtr -> MachineMonad VPtr
+addressTranslateS1 :: VPtr -> MachineMonad VPtr -- FIXME AARCH64: pending C PR
 addressTranslateS1 = error "Unimplemented - machine op"
 
 getSCTLR :: MachineMonad Word
@@ -291,7 +287,7 @@ writeVCPUHardwareReg reg val = error "Unimplemented - machine op"
 data VMAttributes
     = VMAttributes {
         armExecuteNever :: Bool,
-        armParityEnabled :: Bool,
+        -- armParityEnabled not used in AARCH64
         armPageCacheable :: Bool }
 
 -- The C code also defines VMWriteOnly.
@@ -395,9 +391,6 @@ maskInterrupt maskI irq = do
 
 debugPrint :: String -> MachineMonad ()
 debugPrint str = liftIO $ putStrLn str
-
-read_stval :: MachineMonad Word
-read_stval = error "Unimplemented - machine op"
 
 {- FPU Operations -}
 
