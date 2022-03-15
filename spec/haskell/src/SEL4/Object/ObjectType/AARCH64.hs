@@ -7,8 +7,7 @@
 
 -- This module contains operations on machine-specific object types.
 
--- FIXME AARCH64: this file is waiting on C updates to page table caps and
--- objects. SMMU issues are pointed out in cases where a default match exists.
+-- FIXME AARCH64: SMMU issues are pointed out in cases where a default match exists.
 
 module SEL4.Object.ObjectType.AARCH64 where
 
@@ -160,8 +159,6 @@ placeNewDataObject regionBase sz isDevice = if isDevice
     then placeNewObject regionBase UserDataDevice sz
     else placeNewObject regionBase UserData sz
 
--- FIXME AARCH64: this should use getObjectSize instead of ptBits/ptTranslationBits calculations
--- (also not entirely satisfying, because it's getObjectSize - size of base object)
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 createObject t regionBase _ isDevice =
     let funupd = (\f x v y -> if y == x then v else f y) in
