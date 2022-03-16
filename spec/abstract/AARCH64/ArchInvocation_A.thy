@@ -44,11 +44,31 @@ datatype page_invocation =
   | PageGetAddr
       (pg_get_paddr : obj_ref)
 
+datatype vcpu_invocation =
+    VCPUSetTCB
+      (vcpu_inv_vcpu : obj_ref)
+      (vcpu_inv_tcb : obj_ref)
+  | VCPUInjectIRQ
+      (vcpu_inv_vcpu : obj_ref)
+      (vcpu_inv_idx : nat)
+      (vcpu_inv_irq : virq)
+  | VCPUReadRegister
+      (vcpu_inv_vcpu : obj_ref)
+      (vcpu_inv_reg : vcpureg)
+  | VCPUWriteRegister
+      (vcpu_inv_vcpu : obj_ref)
+      (vcpu_inv_reg : vcpureg)
+      (vcpu_inv_val : machine_word)
+  | VCPUAckVPPI
+      (vcpu_inv_vcpu : obj_ref)
+      (vcpu_inv_eirq : vppievent_irq)
+
 datatype arch_invocation =
     InvokePageTable page_table_invocation
   | InvokePage page_invocation
   | InvokeASIDControl asid_control_invocation
   | InvokeASIDPool asid_pool_invocation
+  | InvokeVCPU vcpu_invocation
 
 datatype arch_copy_register_sets =
     RISCVNoExtraRegisters

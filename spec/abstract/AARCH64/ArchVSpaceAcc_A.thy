@@ -1,5 +1,6 @@
 (*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -212,6 +213,21 @@ declare pt_lookup_from_level.simps[simp del]
 schematic_goal pt_lookup_from_level_simps:
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = ?rhs"
   by (rule ext, rule pt_lookup_from_level.simps)
+
+
+section \<open>VCPU\<close>
+
+locale_abbrev vcpus_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> vcpu" where
+  "vcpus_of \<equiv> \<lambda>s. aobjs_of s |> vcpu_of"
+
+definition
+  get_vcpu :: "obj_ref \<Rightarrow> (vcpu,'z::state_ext) s_monad" where
+  "get_vcpu \<equiv> gets_map vcpus_of"
+
+definition
+  set_vcpu :: "obj_ref \<Rightarrow> vcpu \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_vcpu ptr vcpu \<equiv> set_object ptr (ArchObj (VCPU vcpu))"
 
 end
 end

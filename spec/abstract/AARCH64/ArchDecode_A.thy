@@ -32,12 +32,6 @@ definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspa
 
 section "Architecture-specific Decode Functions"
 
-definition
-  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
-where
-  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ \<or> irq = ucast (undefined::data)) $
-                          throwError (RangeError 1 (ucast maxIRQ))" (* FIXME AARCH64: TODO *)
-
 definition arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad"
   where
@@ -240,7 +234,8 @@ definition arch_decode_invocation ::
      PageTableCap _ _ _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
    | FrameCap _ _ _ _ _ \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
    | ASIDControlCap     \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
-   | ASIDPoolCap _ _    \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps"
+   | ASIDPoolCap _ _    \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
+   | VCPUCap _          \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
 
 
 section "Interface Functions used in Decode"
@@ -252,6 +247,7 @@ definition arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option"
      else if n = 1 then Some SmallPageObj
      else if n = 2 then Some LargePageObj
      else if n = 3 then Some PageTableObj
+     else if n = 4 then Some VCPUObj \<comment> \<open>FIXME AARCH64: check number when other objects arrive\<close>
      else None"
 
 end

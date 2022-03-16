@@ -99,6 +99,7 @@ datatype pt =
     VSRootPT (the_vs : "vs_index \<Rightarrow> pte")
   | NormalPT (the_pt : "pt_index \<Rightarrow> pte")
 
+
 subsection \<open>VCPU\<close>
 
 type_synonym virq = machine_word
@@ -174,7 +175,7 @@ primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
 | "arch_obj_size (PageTableCap _ is_vspace _ ) = table_size is_vspace"
-| "arch_obj_size (VCPUCap _) = pageBits" (* FIXME AARCH64: vcpuBits not in scope *)
+| "arch_obj_size (VCPUCap _) = vcpuBits"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
   "arch_cap_is_device (FrameCap _ _ _ is_dev _) = is_dev"
@@ -184,7 +185,7 @@ definition cte_level_bits :: nat where
   "cte_level_bits \<equiv> 5"
 
 definition tcb_bits :: nat where
-  "tcb_bits \<equiv> 10"
+  "tcb_bits \<equiv> 11"
 
 definition endpoint_bits :: nat where
   "endpoint_bits \<equiv> 4"
@@ -202,7 +203,7 @@ primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat" where
   "arch_kobj_size (ASIDPool _) = pageBits"
 | "arch_kobj_size (PageTable pt) = table_size (is_VSRootPT pt)"
 | "arch_kobj_size (DataPage _ sz) = pageBitsForSize sz"
-| "arch_kobj_size (VCPU _) = pageBits" (* FIXME AARCH64: vcpuBits not in scope *)
+| "arch_kobj_size (VCPU _) = vcpuBits"
 
 fun aobj_ref :: "arch_cap \<rightharpoonup> obj_ref" where
   "aobj_ref ASIDControlCap = None"
@@ -246,6 +247,7 @@ definition default_arch_object :: "aobject_type \<Rightarrow> bool \<Rightarrow>
    | HugePageObj  \<Rightarrow> DataPage dev ARMHugePage
    | PageTableObj \<Rightarrow> PageTable (NormalPT (\<lambda>_. InvalidPTE))
    | VSpaceObj    \<Rightarrow> PageTable (VSRootPT (\<lambda>_. InvalidPTE))
+   | VCPUObj \<Rightarrow> VCPU default_vcpu
    | ASIDPoolObj  \<Rightarrow> ASIDPool Map.empty"
 
 type_synonym arm_vspace_region_uses = "vspace_ref \<Rightarrow> arm_vspace_region_use"

@@ -10,7 +10,7 @@
 chapter "Toplevel RISCV64 Definitions"
 
 theory Arch_A
-imports TcbAcc_A
+imports TcbAcc_A VCPU_A
 begin
 
 context Arch begin global_naming RISCV64_A
@@ -30,11 +30,16 @@ fun arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,
 
 definition arch_switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
-  "arch_switch_to_thread t \<equiv> set_vm_root t"
+  "arch_switch_to_thread t \<equiv> do
+     tcb \<leftarrow> gets_the $ get_tcb t;
+     vcpu_switch $ tcb_vcpu $ tcb_arch tcb;
+     set_vm_root t
+   od"
 
 definition arch_switch_to_idle_thread :: "(unit,'z::state_ext) s_monad"
   where
   "arch_switch_to_idle_thread \<equiv> do
+    vcpu_switch None;
     thread \<leftarrow> gets idle_thread;
     set_vm_root thread
   od"
@@ -166,7 +171,8 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
      InvokePageTable oper \<Rightarrow> arch_no_return $ perform_page_table_invocation oper
    | InvokePage oper \<Rightarrow> arch_no_return $ perform_page_invocation oper
    | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
-   | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper"
+   | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper
+   | InvokeVCPU oper \<Rightarrow> perform_vcpu_invocation oper"
 
 end
 end
