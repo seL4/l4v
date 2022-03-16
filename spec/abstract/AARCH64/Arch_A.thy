@@ -43,11 +43,11 @@ definition arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_e
   where
   "arch_activate_idle_thread t \<equiv> return ()"
 
-definition store_asid_pool_entry :: "obj_ref \<Rightarrow> asid \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
+definition store_asid_pool_entry :: "obj_ref \<Rightarrow> asid \<Rightarrow> asid_pool_entry option \<Rightarrow> (unit, 'z::state_ext) s_monad"
   where
-  "store_asid_pool_entry pool_ptr asid ptr \<equiv> do
+  "store_asid_pool_entry pool_ptr asid entry \<equiv> do
     pool \<leftarrow> get_asid_pool pool_ptr;
-    pool' \<leftarrow> return $ pool(asid_low_bits_of asid := ptr);
+    pool' \<leftarrow> return $ pool(asid_low_bits_of asid := entry);
     set_asid_pool pool_ptr pool'
   od"
 
@@ -82,7 +82,7 @@ definition perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (
        assert $ is_PageTableCap acap;
        set_cap (ArchObjectCap $ update_map_data acap $ Some (asid,0)) ct_slot;
        pt_base \<leftarrow> return $ acap_obj acap;
-       store_asid_pool_entry pool_ptr asid (Some pt_base)
+       store_asid_pool_entry pool_ptr asid (Some (ASIDPoolVSpace None pt_base))
      od"
 
 definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"

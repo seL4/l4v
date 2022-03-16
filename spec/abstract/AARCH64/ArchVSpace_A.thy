@@ -40,7 +40,8 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
   where
   "vspace_for_pool pool_ptr asid \<equiv> do {
      pool \<leftarrow> oapply pool_ptr;
-     K $ pool (asid_low_bits_of asid)
+     entry \<leftarrow> K $ pool (asid_low_bits_of asid);
+     oreturn $ ap_vspace entry
    }"
 
 definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
@@ -109,7 +110,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
          pool \<leftarrow> get_asid_pool pool_ptr;
-         when (pool (asid_low_bits_of asid) = Some pt) $ do
+         when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
            do_machine_op $ hwASIDFlush (ucast asid);
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';

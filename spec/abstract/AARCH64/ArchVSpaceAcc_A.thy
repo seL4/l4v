@@ -54,11 +54,11 @@ locale_abbrev asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<righ
   where
   "asid_pools_of \<equiv> \<lambda>s. aobjs_of s |> asid_pool_of"
 
-locale_abbrev get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
+locale_abbrev get_asid_pool :: "obj_ref \<Rightarrow> (asid_pool, 'z::state_ext) s_monad"
   where
   "get_asid_pool \<equiv> gets_map asid_pools_of"
 
-definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit,'z::state_ext) s_monad"
+definition set_asid_pool :: "obj_ref \<Rightarrow> asid_pool \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_asid_pool ptr pool \<equiv> do
      get_asid_pool ptr;
