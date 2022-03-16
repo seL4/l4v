@@ -172,9 +172,20 @@ definition get_vmid :: "asid \<Rightarrow> (vmid, 'z::state_ext) s_monad" where
 text \<open>
   Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
 \<close>
-definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::state_ext) f_monad"
-  where
-  "handle_vm_fault thread fault_type = undefined" (* FIXME AARCH64: TODO *)
+definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit, 'z::state_ext) f_monad" where
+  "handle_vm_fault thread fault \<equiv> case fault of
+     ARMDataAbort \<Rightarrow> doE
+       \<comment> \<open>FIXME AARCH64: needs VCPU adjustment (currently copy/paste from ARM)\<close>
+       addr \<leftarrow> liftE $ do_machine_op getFAR;
+       fault \<leftarrow> liftE $ do_machine_op getDFSR;
+       throwError $ ArchFault $ VMFault addr [0, fault && mask 14]
+     odE
+   | ARMPrefetchAbort \<Rightarrow> doE
+       \<comment> \<open>FIXME AARCH64: needs VCPU adjustment (currently copy/paste from ARM)\<close>
+       pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
+       fault \<leftarrow> liftE $ do_machine_op getIFSR;
+       throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
+     odE"
 
 text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
