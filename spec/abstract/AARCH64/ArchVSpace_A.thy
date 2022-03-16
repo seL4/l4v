@@ -36,29 +36,138 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
 definition pool_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
   "pool_for_asid asid \<equiv> \<lambda>s. asid_table s (asid_high_bits_of asid)"
 
-definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> obj_ref option"
+definition entry_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> asid_pool_entry option"
   where
-  "vspace_for_pool pool_ptr asid \<equiv> do {
+  "entry_for_pool pool_ptr asid \<equiv> do {
      pool \<leftarrow> oapply pool_ptr;
-     entry \<leftarrow> K $ pool (asid_low_bits_of asid);
+     K $ pool (asid_low_bits_of asid)
+   }"
+
+definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> obj_ref option" where
+  "vspace_for_pool pool_ptr asid \<equiv> do {
+     entry \<leftarrow> entry_for_pool pool_ptr asid;
      oreturn $ ap_vspace entry
    }"
 
-definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
-  where
-  "vspace_for_asid asid = do {
+(* this is what asid_map encodes in ARM/ARM_HYP; getASIDPoolEntry in Haskell *)
+definition entry_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> asid_pool_entry option" where
+  "entry_for_asid asid = do {
      oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
-     vspace_for_pool pool_ptr asid \<circ> asid_pools_of
+     entry_for_pool pool_ptr asid \<circ> asid_pools_of
+   }"
+
+(* update an entry in the asid map *)
+definition update_asid_pool_entry ::
+  "(asid_pool_entry \<rightharpoonup> asid_pool_entry) \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "update_asid_pool_entry f asid \<equiv> do
+     pool_ptr \<leftarrow> gets_the $ pool_for_asid asid;
+     pool \<leftarrow> get_asid_pool pool_ptr;
+     idx \<leftarrow> return $ asid_low_bits_of asid;
+     entry \<leftarrow> assert_opt $ pool idx;
+     set_asid_pool pool_ptr (pool (idx := f entry))
+   od"
+
+definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
+  "vspace_for_asid asid = do {
+     entry \<leftarrow> entry_for_asid asid;
+     oreturn $ ap_vspace entry
    }"
 
 text \<open>Locate the top-level page table associated with a given virtual ASID.\<close>
-definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
-  where
+definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad" where
   "find_vspace_for_asid asid \<equiv> doE
-    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
-    throw_opt InvalidRoot vspace_opt
-  odE"
+     vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+     throw_opt InvalidRoot vspace_opt
+   odE"
+
+definition load_vmid :: "asid \<Rightarrow> (vmid option, 'z::state_ext) s_monad" where
+  "load_vmid asid \<equiv> do
+     entry \<leftarrow> gets_the $ entry_for_asid asid;
+     return $ ap_vmid entry
+   od"
+
+text \<open>Associate a VMID with an ASID.\<close>
+definition store_vmid :: "asid \<Rightarrow> vmid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "store_vmid asid hw_asid \<equiv> do
+     update_asid_pool_entry (\<lambda>entry. Some $ ASIDPoolVSpace (Some hw_asid) (ap_vspace entry)) asid;
+     vmid_table \<leftarrow> gets (arm_vmid_table \<circ> arch_state);
+     vmid_table' \<leftarrow> return $ vmid_table (hw_asid \<mapsto> asid);
+     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_vmid_table := vmid_table' \<rparr>\<rparr>)
+   od"
+
+text \<open>Clear all TLB mappings associated with this ASID.\<close>
+definition invalidate_tlb_by_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "invalidate_tlb_by_asid asid \<equiv> do
+     maybe_vmid \<leftarrow> load_vmid asid;
+     case maybe_vmid of
+       None \<Rightarrow> return ()
+     | Some vmid \<Rightarrow> do_machine_op $ invalidateTranslationASID (ucast vmid)
+   od"
+
+text \<open>Clear all TLB mappings associated with this ASID and virtual address.\<close>
+definition invalidate_tlb_by_asid_va :: "asid \<Rightarrow> vspace_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "invalidate_tlb_by_asid_va asid vaddr \<equiv> do
+     maybe_vmid \<leftarrow> load_vmid asid;
+     case maybe_vmid of
+       None \<Rightarrow> return ()
+     | Some vmid \<Rightarrow>
+         do_machine_op $
+           invalidateTranslationSingle $ (ucast vmid << word_bits-asid_bits) || (vaddr >> pageBits)
+   od"
+
+text \<open>Remove any mapping from this virtual ASID to a VMID.\<close>
+definition invalidate_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "invalidate_asid asid \<equiv>
+     update_asid_pool_entry (\<lambda>entry. Some $ ASIDPoolVSpace None (ap_vspace entry)) asid"
+
+text \<open>Remove any mapping from this VMID to an ASID.\<close>
+definition invalidate_vmid_entry :: "vmid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "invalidate_vmid_entry vmid \<equiv> do
+     vmid_table \<leftarrow> gets (arm_vmid_table \<circ> arch_state);
+     vmid_table' \<leftarrow> return (vmid_table (vmid := None));
+     modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_vmid_table := vmid_table' \<rparr>\<rparr>)
+  od"
+
+text \<open>Remove mappings in either direction involving this ASID.\<close>
+definition invalidate_asid_entry :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "invalidate_asid_entry asid \<equiv> do
+     maybe_hw_asid \<leftarrow> load_vmid asid;
+     when (maybe_hw_asid \<noteq> None) $ invalidate_vmid_entry (the maybe_hw_asid);
+     invalidate_asid asid
+  od"
+
+text \<open>Locate a VMID that is not in use, if necessary by reclaiming one already assigned to an ASID.\<close>
+definition find_free_vmid :: "(vmid,'z::state_ext) s_monad" where
+  "find_free_vmid \<equiv> do
+     vmid_table \<leftarrow> gets (arm_vmid_table \<circ> arch_state);
+     next_vmid \<leftarrow> gets (arm_next_vmid \<circ> arch_state);
+     maybe_vmid \<leftarrow> return $ find (\<lambda>a. vmid_table a = None)
+                                 (take (length [minBound :: vmid .e. maxBound])
+                                       ([next_vmid .e. maxBound] @ [minBound .e. next_vmid]));
+     case maybe_vmid of
+       Some vmid \<Rightarrow> return vmid
+     | None \<Rightarrow> do
+         invalidate_asid $ the $ vmid_table next_vmid;
+         do_machine_op $ invalidateTranslationASID (ucast next_vmid);
+         invalidate_vmid_entry next_vmid;
+         modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_next_vmid := next_vmid + 1 \<rparr>\<rparr>);
+         return next_vmid
+       od
+   od"
+
+text \<open>Get the VMID associated with an ASID, assigning one if none is already assigned.\<close>
+definition get_vmid :: "asid \<Rightarrow> (vmid, 'z::state_ext) s_monad" where
+  "get_vmid asid \<equiv> do
+     maybe_vmid \<leftarrow> load_vmid asid;
+     case maybe_vmid of
+       Some vmid \<Rightarrow> return vmid
+     | None \<Rightarrow>  do
+         new_hw_asid \<leftarrow> find_free_vmid;
+         store_vmid asid new_hw_asid;
+         return new_hw_asid
+       od
+   od"
 
 text \<open>
   Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
@@ -126,7 +235,7 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
      liftE $ store_pte pt_slot InvalidPTE;
-     liftE $ do_machine_op sfence
+     liftE $ invalidate_tlb_by_asid asid
    odE <catch> (K $ return ())"
 
 text \<open>
@@ -172,7 +281,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
      liftE $ store_pte slot InvalidPTE;
-     liftE $ do_machine_op sfence
+     liftE $ invalidate_tlb_by_asid_va asid vptr
    odE <catch> (K $ return ())"
 
 text \<open>
