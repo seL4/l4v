@@ -21,15 +21,23 @@ context Arch begin global_naming AARCH64_H
   VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize toPAddr \
   addrFromPPtr ptrFromPAddr sfence physBase paddrBase pptrBase pptrBaseOffset \
   pptrUserTop kernelELFBase kernelELFBaseOffset kernelELFPAddrBase \
-  addrFromKPPtr ptTranslationBits vmFaultTypeFSR read_stval setVSpaceRoot \
-  hwASIDFlush setIRQTrigger \
+  addrFromKPPtr ptTranslationBits vmFaultTypeFSR setVSpaceRoot \
+  setIRQTrigger \
   config_ARM_PA_SIZE_BITS_40 fpuThreadDeleteOp \
   hcrVCPU hcrNative sctlrDefault vgicHCREN gicVCPUMaxNumLR sctlrEL1VM \
   get_gic_vcpu_ctrl_hcr set_gic_vcpu_ctrl_hcr get_gic_vcpu_ctrl_vmcr \
   set_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr set_gic_vcpu_ctrl_apr \
   get_gic_vcpu_ctrl_vtr get_gic_vcpu_ctrl_eisr0 get_gic_vcpu_ctrl_eisr1 \
   get_gic_vcpu_ctrl_misr get_gic_vcpu_ctrl_lr set_gic_vcpu_ctrl_lr read_cntpct \
-  check_export_arch_timer
+  check_export_arch_timer \
+  isb dsb dmb \
+  invalidateTranslationASID invalidateTranslationSingle \
+  cleanByVA_PoU cleanInvalidateCacheRange_RAM cleanCacheRange_RAM cleanCacheRange_PoU \
+  invalidateCacheRange_RAM invalidateCacheRange_I branchFlushRange \
+  enableFpuEL01 \
+  getFAR getDFSR getIFSR getHSR setHCR getESR  getSCTLR setSCTLR \
+  addressTranslateS1 \
+  readVCPUHardwareReg writeVCPUHardwareReg
 
 end
 
