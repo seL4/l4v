@@ -650,9 +650,9 @@ decodeARMPageTableInvocation label args cte cap@(PageTableCap {}) extraCaps =
 decodeARMPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 
-decodeARMVSpaceRootInvocation :: Word -> [Word] -> ArchCapability ->
+decodeARMVSpaceInvocation :: Word -> [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation
-decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = True }) =
+decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTisVSpace = True }) =
     case (isVSpaceFlushLabel (invocationType label), args) of
         (True, start:end:_) -> do
             when (end <= start) $ throw $ InvalidArgument 1
@@ -663,7 +663,7 @@ decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = Tru
             frameInfo <- withoutFailure $ lookupFrame (capPTBasePtr cap) (VPtr start)
             case frameInfo of
                 -- Ignore call if there is nothing mapped here
-                Nothing -> return $ InvokeVSpaceRoot VSpaceRootNothing
+                Nothing -> return $ InvokeVSpace VSpaceNothing
                 Just frameInfo -> do
                     withoutFailure $ checkValidMappingSize (fst frameInfo)
                     let baseStart = pageBase (VPtr start) (fst frameInfo)
@@ -672,7 +672,7 @@ decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = Tru
                         throw $ RangeError start $ fromVPtr $ baseStart + mask (fst frameInfo)
                     let offset = start .&. mask (fst frameInfo)
                     let pStart = snd frameInfo + toPAddr offset
-                    return $ InvokeVSpaceRoot $ VSpaceRootFlush {
+                    return $ InvokeVSpace $ VSpaceFlush {
                          vsFlushType = labelToFlushType label,
                          vsFlushStart = VPtr start,
                          vsFlushEnd = VPtr end - 1,
@@ -681,7 +681,7 @@ decodeARMVSpaceRootInvocation label args cap@(PageTableCap { capPTisVSpace = Tru
                          vsFlushASID = asid }
         (True, _) -> throw TruncatedMessage
         _ -> throw IllegalOperation
-decodeARMVSpaceRootInvocation _ _ _ = fail "Unreachable"
+decodeARMVSpaceInvocation _ _ _ = fail "Unreachable"
 
 
 decodeARMASIDControlInvocation :: Word -> [Word] ->
@@ -753,7 +753,7 @@ decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = False }) extraCaps =
     decodeARMPageTableInvocation label args cte cap extraCaps
 decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = True }) extraCaps =
-    decodeARMVSpaceRootInvocation label args cap
+    decodeARMVSpaceInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeARMASIDControlInvocation label args cap extraCaps
 decodeARMMMUInvocation label _ _ _ cap@(ASIDPoolCap {}) extraCaps =
@@ -763,9 +763,9 @@ decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: no
 
 {- Invocation Implementations -}
 
-performVSpaceRootInvocation :: VSpaceRootInvocation -> Kernel ()
-performVSpaceRootInvocation VSpaceRootNothing = return ()
-performVSpaceRootInvocation (VSpaceRootFlush flushType vstart vend pstart space asid) = do
+performVSpaceInvocation :: VSpaceInvocation -> Kernel ()
+performVSpaceInvocation VSpaceNothing = return ()
+performVSpaceInvocation (VSpaceFlush flushType vstart vend pstart space asid) = do
     let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
     let end = start + (vend - vstart)
     when (start < end) $ do
@@ -855,7 +855,7 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
 performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 performARMMMUInvocation i = withoutPreemption $ do
     case i of
-        InvokeVSpaceRoot oper -> performVSpaceRootInvocation oper
+        InvokeVSpace oper -> performVSpaceInvocation oper
         InvokePageTable oper -> performPageTableInvocation oper
         InvokePage oper -> performPageInvocation oper
         InvokeASIDControl oper -> performASIDControlInvocation oper
