@@ -4,16 +4,15 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: verbatim setup copy of RISCV64; needs adjustment and validation;
-                  only minimal type-check changes performed so far if any *)
+(* FIXME AARCH64: validated modulo VCPU operations and style update *)
 
-chapter "RISCV64 VSpace Functions"
+chapter "AARCH64 VSpace Functions"
 
 theory ArchVSpace_A
 imports Retype_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin global_naming AARCH64_A
 
 text \<open>
   Look up a thread's IPC buffer and check that the thread has the authority to read or (in the
@@ -187,25 +186,36 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
        throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
      odE"
 
+
+text \<open>Switch to given address space, using VMID associated with provided ASID.\<close>
+definition arm_context_switch :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "arm_context_switch vspace asid = do
+     vmid <- get_vmid asid;
+     do_machine_op $ setVSpaceRoot (addrFromPPtr vspace) (ucast vmid)
+   od"
+
+text \<open>Switch to global user address space, using VMID 0.\<close>
+definition set_global_user_vspace :: "(unit,'z::state_ext) s_monad" where
+  "set_global_user_vspace = do
+     global <- gets (arm_us_global_vspace \<circ> arch_state);
+     do_machine_op $ setVSpaceRoot (addrFromKPPtr global) 0
+   od"
+
 text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
   configured.
 \<close>
 definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_vm_root tcb \<equiv> do
-    thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
-    thread_root \<leftarrow> get_cap thread_root_slot;
-    (case thread_root of
-       ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> doE
-           pt' \<leftarrow> find_vspace_for_asid asid;
-           whenE (pt \<noteq> pt') $ throwError InvalidRoot;
-           liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
-       odE
-     | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    (\<lambda>_. do
-       global_pt \<leftarrow> gets global_pt;
-       do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
-    od)
+     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
+     thread_root \<leftarrow> get_cap thread_root_slot;
+     (case thread_root of
+        ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> doE
+          pt' \<leftarrow> find_vspace_for_asid asid;
+          whenE (pt \<noteq> pt') $ throwError InvalidRoot;
+          liftE $ arm_context_switch pt asid
+        odE
+      | _ \<Rightarrow> throwError InvalidRoot) <catch> (\<lambda>_. set_global_user_vspace)
   od"
 
 
@@ -215,6 +225,10 @@ definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'
      asid_table \<leftarrow> gets asid_table;
      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
        pool \<leftarrow> get_asid_pool ptr;
+       mapM (\<lambda>offset. when (pool (ucast offset) \<noteq> None) $ do
+                            invalidate_tlb_by_asid $ base + offset;
+                            invalidate_asid_entry $ base + offset
+                      od) [0  .e.  mask asid_low_bits];
        asid_table' \<leftarrow> return $ asid_table (asid_high_bits_of base:= None);
        modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> arm_asid_table := asid_table' \<rparr>\<rparr>);
        tcb \<leftarrow> gets cur_thread;
@@ -225,13 +239,14 @@ definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'
 
 definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "delete_asid asid pt \<equiv> do
-     asid_table \<leftarrow> gets asid_table;
-     case asid_table (asid_high_bits_of asid) of
+     pool_ptr_op \<leftarrow> gets (pool_for_asid asid);
+     case pool_ptr_op of
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
          pool \<leftarrow> get_asid_pool pool_ptr;
          when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
-           \<^cancel>\<open>do_machine_op $ hwASIDFlush (ucast asid); FIXME AARCH64\<close>
+           invalidate_tlb_by_asid asid;
+           invalidate_asid_entry asid;
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;
@@ -240,12 +255,14 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
        od
    od"
 
+
 definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
      liftE $ store_pte pt_slot InvalidPTE;
+     liftE $ do_machine_op $ cleanByVA_PoU pt_slot (addrFromPPtr pt_slot);
      liftE $ invalidate_tlb_by_asid asid
    odE <catch> (K $ return ())"
 
@@ -292,6 +309,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
      liftE $ store_pte slot InvalidPTE;
+     liftE $ do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      liftE $ invalidate_tlb_by_asid_va asid vptr
    odE <catch> (K $ return ())"
 
@@ -309,14 +327,15 @@ definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_mon
      | FrameCap r R sz dev mp \<Rightarrow> returnOk $ ArchObjectCap (FrameCap r R sz dev None)
      | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
      | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
+(* FIXME AARCH64: VCPUCap *)
 
-text \<open>No user-modifiable data is stored in RISCV64-specific capabilities.\<close>
+text \<open>No user-modifiable data is stored in AARCH64-specific capabilities.\<close>
 definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
   where
   "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
-text \<open>Actions that must be taken on finalisation of RISCV64-specific capabilities.\<close>
+text \<open>Actions that must be taken on finalisation of AARCH64-specific capabilities.\<close>
 definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
   where
   "arch_finalise_cap c x \<equiv> case (c, x) of
@@ -337,11 +356,12 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
        return (NullCap, NullCap)
      od
    | _ \<Rightarrow> return (NullCap, NullCap)"
+(* FIXME AARCH64: VCPUCap *)
 
 
 text \<open>
   A thread's virtual address space capability must be to a mapped page table to be valid on
-  the RISCV64 architecture.
+  the AARCH64 architecture.
 \<close>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool"
   where
