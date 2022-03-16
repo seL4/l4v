@@ -90,8 +90,10 @@ lemma "LENGTH(vs_index_len) = ptTranslationBits True"
 lemma "LENGTH(pt_index_len) = ptTranslationBits False"
   by (simp add: ptTranslationBits_def)
 
-(* FIXME AARCH64: needs updating for asid map entries and VM ids *)
-type_synonym asid_pool = "asid_low_index \<rightharpoonup> obj_ref"
+(* This could also be a record, but we expect further alternatives to be added for SMMU *)
+datatype asid_pool_entry = ASIDPoolVSpace (ap_vm_id : "vmid option") (ap_vspace : obj_ref)
+
+type_synonym asid_pool = "asid_low_index \<rightharpoonup> asid_pool_entry"
 
 datatype pt =
     VSRootPT (the_vs : "vs_index \<Rightarrow> pte")

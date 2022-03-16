@@ -38,6 +38,9 @@ type_synonym asid_len        = 16
 type_synonym asid_rep_len    = asid_len
 type_synonym asid            = "asid_rep_len word"
 
+type_synonym vmid            = "16 word"
+
+
 text \<open>
   With the definitions above, most conversions between abstract type names boil down to just
   the identity function, some convert from @{text word} to @{typ nat} and others between different
