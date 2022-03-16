@@ -783,7 +783,8 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTisVSpace cap)) - 1]
+            -- ptBits False, because it can't be a VSpace table
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits False) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
