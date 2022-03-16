@@ -50,7 +50,7 @@ definition arch_decode_irq_control_invocation ::
           whenE irq_active $ throwError RevokeFirst;
           dest_slot \<leftarrow> lookup_target_slot cnode (data_to_cptr index) (unat depth);
           ensure_empty dest_slot;
-          returnOk $ RISCVIRQControlInvocation irq dest_slot src_slot (trigger \<noteq> 0)
+          returnOk $ ARMIRQControlInvocation irq dest_slot src_slot (trigger \<noteq> 0)
         odE
       else throwError TruncatedMessage
     else throwError IllegalOperation)"
