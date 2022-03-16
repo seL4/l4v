@@ -115,7 +115,8 @@ definition
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
   VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
   pageBitsForSize \
-  hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR
+  hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
+  vcpuBits
 
 end
 

@@ -37,7 +37,7 @@ context Arch begin global_naming AARCH64_H
   enableFpuEL01 \
   getFAR getDFSR getIFSR getHSR setHCR getESR  getSCTLR setSCTLR \
   addressTranslateS1 \
-  readVCPUHardwareReg writeVCPUHardwareReg
+  readVCPUHardwareReg writeVCPUHardwareReg vcpuBits
 
 end
 
