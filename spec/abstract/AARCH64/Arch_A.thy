@@ -100,8 +100,8 @@ definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow>
   where
   "perform_pg_inv_map cap ct_slot pte slot \<equiv> do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte slot pte;
-     do_machine_op sfence
+     store_pte slot pte\<^cancel>\<open>;
+     do_machine_op sfence FIXME AARCH64\<close>
    od"
 
 definition perform_pg_inv_get_addr :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -127,8 +127,8 @@ definition perform_pt_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow>
   where
   "perform_pt_inv_map cap ct_slot pte slot = do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte slot pte;
-     do_machine_op sfence
+     store_pte slot pte \<^cancel>\<open>;
+     do_machine_op sfence FIXME AARCH64\<close>
    od"
 
 (* FIXME AARCH64: check pt_bits False *)

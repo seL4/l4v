@@ -111,7 +111,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
      | Some pool_ptr \<Rightarrow> do
          pool \<leftarrow> get_asid_pool pool_ptr;
          when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
-           do_machine_op $ hwASIDFlush (ucast asid);
+           \<^cancel>\<open>do_machine_op $ hwASIDFlush (ucast asid); FIXME AARCH64\<close>
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;

@@ -7,6 +7,8 @@
 
 chapter "Machine Operations"
 
+(* FIXME AARCH64: review and style *)
+
 theory MachineOps
 imports
   "Word_Lib.WordSetup"
@@ -456,29 +458,80 @@ where
 subsection "Caches, Barriers, and Flushing"
 
 consts' initL2Cache_impl :: "unit machine_rest_monad"
-definition initL2Cache :: "unit machine_monad"
-  where
+definition initL2Cache :: "unit machine_monad" where
   "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
 
-consts' hwASIDFlush_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition hwASIDFlush :: "machine_word \<Rightarrow> unit machine_monad"
-  where
-  "hwASIDFlush asid \<equiv> machine_op_lift (hwASIDFlush_impl asid)"
+consts' isb_impl :: "unit machine_rest_monad"
+definition isb :: "unit machine_monad" where
+  "isb \<equiv> machine_op_lift isb_impl"
 
-consts' sfence_impl :: "unit machine_rest_monad"
-definition sfence :: "unit machine_monad"
-  where
-  "sfence \<equiv> machine_op_lift sfence_impl"
+consts' dsb_impl :: "unit machine_rest_monad"
+definition dsb :: "unit machine_monad" where
+  "dsb \<equiv> machine_op_lift dsb_impl"
 
-lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
+consts' invalidateTranslationASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition invalidateTranslationASID :: "machine_word \<Rightarrow> unit machine_monad" where
+  "invalidateTranslationASID asid \<equiv> machine_op_lift (invalidateTranslationASID_impl asid)"
 
+consts' invalidateTranslationSingle_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition invalidateTranslationSingle :: "machine_word \<Rightarrow> unit machine_monad" where
+  "invalidateTranslationSingle r \<equiv> machine_op_lift (invalidateTranslationSingle_impl r)"
 
-subsection "Faults"
+consts' cleanByVA_PoU_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition cleanByVA_PoU :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "cleanByVA_PoU vaddr paddr = machine_op_lift (cleanByVA_PoU_impl vaddr paddr)"
 
-consts' stval_val :: "machine_state \<Rightarrow> machine_word"
-definition read_stval :: "machine_word machine_monad"
-  where
-  "read_stval = gets stval_val"
+consts' cleanInvalidateCacheRange_RAM_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition cleanInvalidateCacheRange_RAM ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "cleanInvalidateCacheRange_RAM vstart vend pstart =
+     machine_op_lift (cleanInvalidateCacheRange_RAM_impl vstart vend pstart)"
+
+consts' cleanCacheRange_RAM_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition cleanCacheRange_RAM ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "cleanCacheRange_RAM vstart vend pstart =
+     machine_op_lift (cleanCacheRange_RAM_impl vstart vend pstart)"
+
+consts' cleanCacheRange_PoU_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition cleanCacheRange_PoU ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "cleanCacheRange_PoU vstart vend pstart =
+     machine_op_lift (cleanCacheRange_PoU_impl vstart vend pstart)"
+
+consts' invalidateCacheRange_RAM_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition invalidateCacheRange_RAM ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "invalidateCacheRange_RAM vstart vend pstart =
+     machine_op_lift (invalidateCacheRange_RAM_impl vstart vend pstart)"
+
+consts' invalidateCacheRange_I_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition invalidateCacheRange_I ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "invalidateCacheRange_I vstart vend pstart =
+     machine_op_lift (invalidateCacheRange_I_impl vstart vend pstart)"
+
+consts' branchFlushRange_impl ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition branchFlushRange ::
+  "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "branchFlushRange vstart vend pstart = machine_op_lift (branchFlushRange_impl vstart vend pstart)"
+
+lemmas cache_machine_op_defs =
+  invalidateTranslationASID_def
+  invalidateTranslationSingle_def
+  cleanByVA_PoU_def
+  cleanInvalidateCacheRange_RAM_def
+  cleanCacheRange_RAM_def
+  cleanCacheRange_PoU_def
+  invalidateCacheRange_RAM_def
+  invalidateCacheRange_I_def
+  branchFlushRange_def
 
 
 subsection "Virtual Memory"
