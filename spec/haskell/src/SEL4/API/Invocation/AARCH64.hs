@@ -25,7 +25,7 @@ import SEL4.Machine.RegisterSet.AARCH64 (Register(..), VCPUReg(..))
 -- This data type enumerates the object invocations that are possible.
 
 data Invocation
-    = InvokeVSpaceRoot VSpaceRootInvocation
+    = InvokeVSpace VSpaceInvocation
     | InvokePageTable PageTableInvocation
     | InvokePage PageInvocation
     | InvokeASIDControl ASIDControlInvocation
@@ -33,9 +33,9 @@ data Invocation
     | InvokeVCPU VCPUInvocation
     deriving Show
 
-data VSpaceRootInvocation
-    = VSpaceRootNothing
-    | VSpaceRootFlush {
+data VSpaceInvocation
+    = VSpaceNothing
+    | VSpaceFlush {
         vsFlushType :: FlushType,
         vsFlushStart :: VPtr,
         vsFlushEnd :: VPtr,
