@@ -56,6 +56,7 @@ fun arch_same_region_as :: "arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
 | "arch_same_region_as (PageTableCap r _ _) c' = (\<exists>r' t' d'. c' = PageTableCap r' t' d' \<and> r = r')"
 | "arch_same_region_as ASIDControlCap c' = (c' = ASIDControlCap)"
 | "arch_same_region_as (ASIDPoolCap r _) c' = (\<exists>r' d'. c' = ASIDPoolCap r' d' \<and> r = r')"
+| "arch_same_region_as (VCPUCap r) c' = (\<exists>r'. c' = VCPUCap r' \<and> r = r')"
 
 
 text \<open>Check whether two arch capabilities are to the same object.\<close>
