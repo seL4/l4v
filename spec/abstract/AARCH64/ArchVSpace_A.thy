@@ -385,9 +385,11 @@ definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
   "in_user_frame p s \<equiv>
      \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
 
-definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
-  "prepare_thread_delete thread_ptr \<equiv> return ()"
+definition fpu_thread_delete :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "fpu_thread_delete thread_ptr \<equiv> do_machine_op (fpuThreadDeleteOp thread_ptr)"
+
+definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "prepare_thread_delete thread_ptr \<equiv> fpu_thread_delete thread_ptr"
 
 end
 end
