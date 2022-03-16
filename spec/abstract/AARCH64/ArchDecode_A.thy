@@ -61,9 +61,8 @@ definition arch_decode_irq_control_invocation ::
       else throwError TruncatedMessage
     else throwError IllegalOperation)"
 
-definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes"
-  where
-  "attribs_from_word w \<equiv> if \<not> w!!0 then {Execute} else {}"
+definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
+  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Execute \<or> \<not>w !! 2 \<and> attr = Device}"
 
 (* FIXME AARCH64: only half updated *)
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte" where
