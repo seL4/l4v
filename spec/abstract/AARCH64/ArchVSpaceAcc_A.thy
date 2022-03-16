@@ -4,18 +4,13 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: verbatim setup copy of RISCV64; needs adjustment and validation;
-                  only minimal type-check changes performed so far if any *)
-
-(* FIXME AARCH64: style update *)
-
-chapter "Accessing the RISCV64 VSpace"
+chapter "Accessing the AARCH64 VSpace"
 
 theory ArchVSpaceAcc_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin global_naming AARCH64_A
 
 text \<open>
   This part of the specification is fairly concrete as the machine architecture is visible to
@@ -27,64 +22,55 @@ text \<open>
 section "Encodings"
 
 text \<open>The high bits of a virtual ASID.\<close>
-definition asid_high_bits_of :: "asid \<Rightarrow> asid_high_index"
-  where
+definition asid_high_bits_of :: "asid \<Rightarrow> asid_high_index" where
   "asid_high_bits_of asid \<equiv> ucast (asid >> asid_low_bits)"
 
 text \<open>The low bits of a virtual ASID.\<close>
-definition asid_low_bits_of :: "asid \<Rightarrow> asid_low_index"
-  where
+definition asid_low_bits_of :: "asid \<Rightarrow> asid_low_index" where
   "asid_low_bits_of asid \<equiv> ucast asid"
 
 lemmas asid_bits_of_defs = asid_high_bits_of_def asid_low_bits_of_def
 
-locale_abbrev
+locale_abbrev asid_table :: "'z::state_ext state \<Rightarrow> asid_high_index \<rightharpoonup> obj_ref" where
   "asid_table \<equiv> \<lambda>s. arm_asid_table (arch_state s)"
 
 section "Kernel Heap Accessors"
 
 (* declared in Arch as workaround for VER-1099 *)
-locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
-  where
+locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj" where
   "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 
-locale_abbrev asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
-  where
+locale_abbrev asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool" where
   "asid_pools_of \<equiv> \<lambda>s. aobjs_of s |> asid_pool_of"
 
-locale_abbrev get_asid_pool :: "obj_ref \<Rightarrow> (asid_pool, 'z::state_ext) s_monad"
-  where
+locale_abbrev get_asid_pool :: "obj_ref \<Rightarrow> (asid_pool, 'z::state_ext) s_monad" where
   "get_asid_pool \<equiv> gets_map asid_pools_of"
 
-definition set_asid_pool :: "obj_ref \<Rightarrow> asid_pool \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition set_asid_pool :: "obj_ref \<Rightarrow> asid_pool \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_asid_pool ptr pool \<equiv> do
      get_asid_pool ptr;
      set_object ptr (ArchObj (ASIDPool pool))
    od"
 
-locale_abbrev pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
-  where
+locale_abbrev pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt" where
   "pts_of \<equiv> \<lambda>s. aobjs_of s |> pt_of"
 
-locale_abbrev get_pt :: "obj_ref \<Rightarrow> (pt,'z::state_ext) s_monad"
-  where
+locale_abbrev get_pt :: "obj_ref \<Rightarrow> (pt,'z::state_ext) s_monad" where
   "get_pt \<equiv> gets_map pts_of"
 
-definition set_pt :: "obj_ref \<Rightarrow> pt \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition set_pt :: "obj_ref \<Rightarrow> pt \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_pt ptr pt \<equiv> do
      get_pt ptr;
      set_object ptr (ArchObj (PageTable pt))
    od"
 
-(* The base address of the table a page table entry at p is in (assuming alignment) *)
+text \<open>The base address of the table a page table entry at p is in (assuming alignment)\<close>
 locale_abbrev table_base :: "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
   "table_base is_vspace p \<equiv> p && ~~mask (pt_bits is_vspace)"
 
-(* The index within the page table that a page table entry at p addresses *)
+text \<open>The index within the page table that a page table entry at p addresses\<close>
 locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> 'a::len word" where
   "table_index is_vspace p \<equiv> ucast (p && mask (pt_bits is_vspace) >> pte_bits)"
 
@@ -99,7 +85,7 @@ definition pt_pte :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte" where
                    VSRootPT vs \<Rightarrow> vs (vsroot_index p)
                  | NormalPT pt \<Rightarrow> pt (ptable_index p)"
 
-(* extract pte from page table of a specific level *)
+text \<open>Extract a PTE from the page table of a specific level\<close>
 definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
   "level_pte_of is_vspace p \<equiv> do {
       oassert (is_aligned p pte_bits);
@@ -146,22 +132,20 @@ definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
   "pt_bits_left level = ptTranslationBits False * size level + pageBits"
 
 definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word" where
-  "pt_index level vptr \<equiv> (vptr >> pt_bits_left level) && mask (ptTranslationBits (level = max_pt_level))"
+  "pt_index level vptr \<equiv>
+     (vptr >> pt_bits_left level) && mask (ptTranslationBits (level = max_pt_level))"
 
 
-locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref"
-  where
+locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
   "global_pt s \<equiv> arm_us_global_vspace (arch_state s)"
 
 
-text \<open>Walk page tables in software.\<close>
+subsection \<open>Walk page tables in software.\<close>
 
-(* pte addresses will always be at least page aligned *)
 definition pptr_from_pte :: "pte \<Rightarrow> vspace_ref" where
   "pptr_from_pte pte \<equiv> ptrFromPAddr (pte_base_addr pte)"
 
-definition pt_slot_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref"
-  where
+definition pt_slot_offset :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref" where
   "pt_slot_offset level pt_ptr vptr = pt_ptr + (pt_index level vptr << pte_bits)"
 
 text \<open>
@@ -205,7 +189,7 @@ definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (ob
   where
   "pt_lookup_slot = pt_lookup_slot_from_level max_pt_level 0"
 
-(* Returns the slot that points to target_pt_ptr *)
+text \<open>Returns the slot that points to @{text target_pt_ptr}\<close>
 fun pt_lookup_from_level ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
   where
@@ -228,12 +212,6 @@ declare pt_lookup_from_level.simps[simp del]
 schematic_goal pt_lookup_from_level_simps:
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr = ?rhs"
   by (rule ext, rule pt_lookup_from_level.simps)
-
-(* Kernel mappings go from pptr base to top of virtual memory. This definition encompasses
-   the kernel window, kernel ELF window, and kernel device window.
-   These indices identify the relevant top level table slots. *)
-definition kernel_mapping_slots :: "pt_index set" where
-  "kernel_mapping_slots \<equiv> {i. i \<ge> ucast (pptr_base >> pt_bits_left max_pt_level)}"
 
 end
 end
