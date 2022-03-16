@@ -49,9 +49,7 @@ ifndef TOOLPREFIX
   endif
 endif
 
-ifndef OBJDUMP
-  OBJDUMP := ${TOOLPREFIX}objdump
-endif
+OBJDUMP := ${TOOLPREFIX}objdump
 
 ifndef UMM_TYPES
   UMM_TYPES := ${KERNEL_BUILD_ROOT}/umm_types.txt
