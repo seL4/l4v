@@ -793,8 +793,8 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
 
 performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
-    pte <- getObject slot
-    let tlbFlushRequired = pte /= InvalidPTE
+    oldPte <- getObject slot
+    let tlbFlushRequired = oldPte /= InvalidPTE
     updateCap ctSlot cap
     storePTE slot pte
     doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr slot) (addrFromPPtr slot)
