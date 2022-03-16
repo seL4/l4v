@@ -21,8 +21,7 @@ text \<open>
   Look up a thread's IPC buffer and check that the thread has the authority to read or (in the
   receiver case) write to it.
 \<close>
-definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
-  where
+definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
@@ -200,62 +199,47 @@ definition arm_context_switch :: "obj_ref \<Rightarrow> asid \<Rightarrow> (unit
 
 section \<open>Manipulation of VCPU-related state and registers\<close>
 
-definition
-  vcpu_update :: "obj_ref \<Rightarrow> (vcpu \<Rightarrow> vcpu) \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_update :: "obj_ref \<Rightarrow> (vcpu \<Rightarrow> vcpu) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_update vr f \<equiv> do
     vcpu \<leftarrow> get_vcpu vr;
     set_vcpu vr (f vcpu)
   od"
 
-definition
-  vgic_update :: "obj_ref \<Rightarrow> (gic_vcpu_interface \<Rightarrow> gic_vcpu_interface) \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vgic_update ::
+  "obj_ref \<Rightarrow> (gic_vcpu_interface \<Rightarrow> gic_vcpu_interface) \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vgic_update vr f \<equiv> vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_vgic := f (vcpu_vgic vcpu) \<rparr> )"
 
-definition
-  vgic_update_lr :: "obj_ref \<Rightarrow> nat \<Rightarrow> AARCH64_A.virq \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vgic_update_lr :: "obj_ref \<Rightarrow> nat \<Rightarrow> AARCH64_A.virq \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vgic_update_lr vr irq_idx virq \<equiv>
     vgic_update vr (\<lambda>vgic. vgic \<lparr> vgic_lr := (vgic_lr vgic)(irq_idx := virq) \<rparr>)"
 
-definition
-  vcpu_save_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_save_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save_reg vr reg \<equiv> do
     rval \<leftarrow> do_machine_op (readVCPUHardwareReg reg);
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := rval) \<rparr> )
   od"
 
-definition
-  vcpu_save_reg_range :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_save_reg_range :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save_reg_range vr from to \<equiv> mapM_x (\<lambda>reg. vcpu_save_reg vr reg) [from .e. to]"
 
-definition
-  vcpu_restore_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_restore_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_restore_reg vr reg \<equiv> do
     vcpu \<leftarrow> get_vcpu vr;
     do_machine_op (writeVCPUHardwareReg reg (vcpu_regs vcpu reg))
   od"
 
-definition
-  vcpu_restore_reg_range :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_restore_reg_range :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> vcpureg \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "vcpu_restore_reg_range vr from to \<equiv> mapM_x (\<lambda>reg. vcpu_restore_reg vr reg) [from .e. to]"
 
-definition
-  vcpu_read_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (machine_word, 'z::state_ext) s_monad"
-where
+definition vcpu_read_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> (machine_word, 'z::state_ext) s_monad" where
   "vcpu_read_reg vr reg \<equiv> do
     vcpu \<leftarrow> get_vcpu vr;
     return (vcpu_regs vcpu reg)
   od"
 
-definition
-  vcpu_write_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
+definition vcpu_write_reg :: "obj_ref \<Rightarrow> vcpureg \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad"
+  where
   "vcpu_write_reg vr reg val \<equiv>
     vcpu_update vr (\<lambda>vcpu. vcpu \<lparr> vcpu_regs := (vcpu_regs vcpu)(reg := val) \<rparr> )"
 
@@ -353,7 +337,6 @@ definition vcpu_invalidate_active :: "(unit,'z::state_ext) s_monad" where
   od"
 
 text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
-(* ARMHYP: maybe these vcpu related definitions can go into a separate file? *)
 
 text \<open>Removing the connection between a TCB and VCPU:\<close>
 definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
@@ -388,8 +371,7 @@ definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (u
 
 text \<open>Register + context save for VCPUs\<close>
 
-definition
-  vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad" where
+definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save vb \<equiv>
      case vb
      of Some (vr, active) \<Rightarrow> do
@@ -555,8 +537,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
    od"
 
 
-definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
@@ -571,8 +552,8 @@ text \<open>
   The level can be higher than @{term bot_level} if the lookup terminates early because
   it hit a page or an invalid entry.
 \<close>
-definition vs_lookup_table :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
-  where
+definition vs_lookup_table ::
+  "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "vs_lookup_table bot_level asid vptr \<equiv> do {
      pool_ptr \<leftarrow> pool_for_asid asid;
      if bot_level = asid_pool_level
@@ -588,8 +569,8 @@ text \<open>
   For @{prop "bot_level = asid_pool_level"}, still return the pointer to the ASID pool (not a slot
   inside it, since there are no slot functions for ASID pools).
 \<close>
-definition vs_lookup_slot :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
-  where
+definition vs_lookup_slot ::
+  "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "vs_lookup_slot bot_level asid vref \<equiv> do {
      (level', table) \<leftarrow> vs_lookup_table bot_level asid vref;
      if level' = asid_pool_level then
@@ -617,8 +598,7 @@ text \<open>
   assigned. This is because they cannot have multiple current ASIDs and cannot be shared between
   address spaces or virtual locations.
 \<close>
-definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad"
-  where
+definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad" where
   "arch_derive_cap c \<equiv>
      case c of
        PageTableCap _ _ (Some x) \<Rightarrow> returnOk (ArchObjectCap c)
@@ -629,14 +609,12 @@ definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_mon
      | VCPUCap _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
 text \<open>No user-modifiable data is stored in AARCH64-specific capabilities.\<close>
-definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap"
-  where
+definition arch_update_cap_data :: "bool \<Rightarrow> data \<Rightarrow> arch_cap \<Rightarrow> cap" where
   "arch_update_cap_data preserve data c \<equiv> ArchObjectCap c"
 
 
 text \<open>Actions that must be taken on finalisation of AARCH64-specific capabilities.\<close>
-definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad"
-  where
+definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap \<times> cap,'z::state_ext) s_monad" where
   "arch_finalise_cap c x \<equiv> case (c, x) of
      (ASIDPoolCap ptr b, True) \<Rightarrow>  do
        delete_asid_pool b ptr;
@@ -657,7 +635,7 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
    | (VCPUCap vcpu_ref, True) \<Rightarrow> do
       vcpu_finalise vcpu_ref;
       return (NullCap, NullCap)
-   od
+     od
    | _ \<Rightarrow> return (NullCap, NullCap)"
 
 
@@ -665,16 +643,14 @@ text \<open>
   A thread's virtual address space capability must be to a mapped page table to be valid on
   the AARCH64 architecture.
 \<close>
-definition is_valid_vtable_root :: "cap \<Rightarrow> bool"
-  where
+definition is_valid_vtable_root :: "cap \<Rightarrow> bool" where
   "is_valid_vtable_root c \<equiv>
      case c of ArchObjectCap (PageTableCap _ True (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
 
 text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]
 
-definition check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad"
-  where
+definition check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) se_monad" where
   "check_valid_ipc_buffer vptr c \<equiv>
      case c of
        ArchObjectCap (FrameCap _ _ _ False _) \<Rightarrow>
@@ -682,8 +658,7 @@ definition check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow>
      | _ \<Rightarrow> throwError IllegalOperation"
 
 text \<open>A pointer is inside a user frame if its top bits point to a @{const DataPage}.\<close>
-definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-  where
+definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "in_user_frame p s \<equiv>
      \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
 
