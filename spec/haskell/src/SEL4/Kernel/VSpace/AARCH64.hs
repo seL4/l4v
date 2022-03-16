@@ -511,7 +511,7 @@ makeUserPTE baseAddr rights attrs vmSize =
         pteSmallPage = vmSize == ARMSmallPage,
         pteGlobal = False,
         pteExecuteNever = armExecuteNever attrs,
-        pteDevice = armPageCacheable attrs,
+        pteDevice = not (armPageCacheable attrs),
         pteRights = rights }
 
 checkVPAlignment :: VMPageSize -> VPtr -> KernelF SyscallError ()
