@@ -1,11 +1,9 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
-
-(* FIXME AARCH64: verbatim setup copy of RISCV64; needs adjustment and validation;
-                  only minimal type-check changes performed so far if any *)
 
 chapter "Decoding Architecture-specific System Calls"
 
@@ -16,7 +14,7 @@ imports
   "ExecSpec.InvocationLabels_H"
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin global_naming AARCH64_A
 
 section "Helper definitions"
 
@@ -25,8 +23,7 @@ definition check_vp_alignment :: "vmpage_size \<Rightarrow> machine_word \<Right
   "check_vp_alignment sz vptr \<equiv>
      unlessE (is_aligned vptr (pageBitsForSize sz)) $ throwError AlignmentError"
 
-definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspace_ref"
-  where
+definition page_base :: "vspace_ref \<Rightarrow> vmpage_size \<Rightarrow> vspace_ref" where
   "page_base vaddr vmsize \<equiv> vaddr && ~~ mask (pageBitsForSize vmsize)"
 
 
@@ -58,26 +55,21 @@ definition arch_decode_irq_control_invocation ::
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
   "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Execute \<or> \<not>w !! 2 \<and> attr = Device}"
 
-(* FIXME AARCH64: only half updated *)
-definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> pte" where
-  "make_user_pte addr attr rights \<equiv>
-    if rights = {} \<and> attr = {}
-    then InvalidPTE
-    else PagePTE addr False attr rights"
+definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
+  "make_user_pte addr attr rights vm_size \<equiv>
+     PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
 
-definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
-  where
-  "check_slot slot test = doE
-     pte \<leftarrow> liftE $ get_pte slot;
-     unlessE (test pte) $ throwError DeleteFirst
-   odE"
+definition check_vspace_root :: "arch_cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
+  "check_vspace_root cap arg_no \<equiv>
+     case cap of
+       PageTableCap pt True (Some (asid, _)) \<Rightarrow> returnOk (pt, asid)
+     | _ \<Rightarrow> throwError $ InvalidCapability arg_no"
 
 type_synonym 'z arch_decoder =
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> arch_cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
     (arch_invocation,'z) se_monad"
 
-definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
-  where
+definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
   "decode_fr_inv_map label args cte cap extra_caps \<equiv> case cap of
      FrameCap p R pgsz dev mapped_address \<Rightarrow>
        if length args > 2 \<and> length extra_caps > 0
@@ -87,35 +79,72 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            attr = args ! 2;
            vspace_cap = fst (extra_caps ! 0)
          in doE
-           (pt, asid) \<leftarrow> case vspace_cap of
-                           ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
-                         | _ \<Rightarrow> throwError $ InvalidCapability 1;
+           (pt, asid) \<leftarrow> check_vspace_root cap 1;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           pg_bits \<leftarrow> returnOk $ pageBitsForSize pgsz;
-           vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
-           whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
+           pg_bits \<leftarrow> returnOk $ pageBitsForSize pgsz;
+           case mapped_address of
+             Some (asid', vaddr') \<Rightarrow> doE
+               whenE (asid' \<noteq> asid) $ throwError $ InvalidCapability 1;
+               whenE (vaddr' \<noteq> vaddr) $ throwError $ InvalidArgument 0
+             odE
+           | None \<Rightarrow> doE
+               vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
+               whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0
+             odE;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
-           case mapped_address of
-             Some (asid', vaddr') \<Rightarrow> doE
-               whenE (asid' \<noteq> asid) (throwError $ InvalidCapability 1);
-               whenE (vaddr' \<noteq> vaddr) (throwError $ InvalidArgument 0);
-               check_slot slot (Not \<circ> is_PageTablePTE)
-             odE
-           | None \<Rightarrow> check_slot slot ((=) InvalidPTE);
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
-           pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights;
+           pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights pgsz;
            returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte (pte,slot)
          odE
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
 
-definition decode_frame_invocation :: "'z::state_ext arch_decoder"
-  where
+definition label_to_flush_type :: "data \<Rightarrow> flush_type" where
+  "label_to_flush_type label \<equiv>
+     case invocation_type label of
+       ArchInvocationLabel ARMVSpaceClean_Data \<Rightarrow> Clean
+     | ArchInvocationLabel ARMPageClean_Data \<Rightarrow> Clean
+     | ArchInvocationLabel ARMVSpaceInvalidate_Data \<Rightarrow> Invalidate
+     | ArchInvocationLabel ARMPageInvalidate_Data \<Rightarrow> Invalidate
+     | ArchInvocationLabel ARMVSpaceCleanInvalidate_Data \<Rightarrow> CleanInvalidate
+     | ArchInvocationLabel ARMPageCleanInvalidate_Data \<Rightarrow> CleanInvalidate
+     | ArchInvocationLabel ARMVSpaceUnify_Instruction \<Rightarrow> Unify
+     | ArchInvocationLabel ARMPageUnify_Instruction \<Rightarrow> Unify"
+
+definition decode_fr_inv_flush :: "'z::state_ext arch_decoder" where
+  "decode_fr_inv_flush label args cte cap extra_caps \<equiv> case cap of
+     FrameCap p R pgsz dev mapped_address \<Rightarrow>
+        if length args > 1
+        then let
+          start = args ! 0;
+          end = args ! 1
+        in doE
+          (asid, vaddr) \<leftarrow> case mapped_address of
+                             Some a \<Rightarrow> returnOk a
+                           | _ \<Rightarrow> throwError IllegalOperation;
+          vspace \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
+          whenE (end \<le> start) $ throwError $ InvalidArgument 1;
+          page_size \<leftarrow> returnOk $ 1 << pageBitsForSize pgsz;
+          whenE (start \<ge> page_size \<or> end > page_size) $ throwError $ InvalidArgument 0;
+          pstart \<leftarrow> returnOk $ addrFromPPtr p + start;
+          \<comment> \<open>flush only inside the kernel window:\<close>
+          whenE (pstart < paddrBase \<or> ((end - start) + pstart > paddrTop)) $
+            throwError IllegalOperation;
+          returnOk $ InvokePage $
+            PageFlush (label_to_flush_type label)
+                      (vaddr + start) (vaddr + end - 1)
+                      pstart vspace asid
+        odE
+        else throwError TruncatedMessage
+   | _ \<Rightarrow> fail"
+
+
+definition decode_frame_invocation :: "'z::state_ext arch_decoder" where
   "decode_frame_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel ARMPageMap
      then decode_fr_inv_map label args cte cap extra_caps
@@ -123,10 +152,11 @@ definition decode_frame_invocation :: "'z::state_ext arch_decoder"
      then returnOk $ InvokePage $ PageUnmap cap cte
      else if invocation_type label = ArchInvocationLabel ARMPageGetAddress
      then returnOk $ InvokePage $ PageGetAddr (acap_obj cap)
+     else if isPageFlushLabel (invocation_type label)
+     then decode_fr_inv_flush label args cte cap extra_caps
      else throwError IllegalOperation"
 
-definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
-  where
+definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
   "decode_pt_inv_map label args cte cap extra_caps \<equiv> case cap of
      PageTableCap p t mapped_address \<Rightarrow>
        if length args > 1 \<and> length extra_caps > 0
@@ -136,10 +166,8 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            vspace_cap = fst (extra_caps ! 0)
          in doE
            whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-           (pt, asid) \<leftarrow> case vspace_cap of
-                           ArchObjectCap (PageTableCap pt True (Some (asid,_))) \<Rightarrow> returnOk (pt, asid)
-                         | _ \<Rightarrow> throwError $ InvalidCapability 1;
-           whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
+           (pt, asid) \<leftarrow> check_vspace_root cap 1;
+           whenE (user_vtop < vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
@@ -152,8 +180,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
 
-definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
-  where
+definition decode_page_table_invocation :: "'z::state_ext arch_decoder" where
   "decode_page_table_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel ARMPageTableMap
      then decode_pt_inv_map label args cte cap extra_caps
@@ -161,17 +188,70 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
      then doE
        final \<leftarrow> liftE $ is_final_cap (ArchObjectCap cap);
        unlessE final $ throwError RevokeFirst;
-       case cap of
-         PageTableCap pt True (Some (asid, _)) \<Rightarrow>
-             \<comment> \<open>cannot invoke unmap on top level page table\<close>
-             throwError RevokeFirst
-       | _ \<Rightarrow> returnOk ();
        returnOk $ InvokePageTable $ PageTableUnmap cap cte
      odE
      else throwError IllegalOperation"
 
-definition decode_asid_control_invocation :: "'z::state_ext arch_decoder"
+definition level_of_vmsize :: "vmpage_size \<Rightarrow> vm_level" where
+  "level_of_vmsize vmsz \<equiv>
+     case vmsz of
+       ARMSmallPage \<Rightarrow> 0
+     | ARMLargePage \<Rightarrow> 1
+     | ARMHugePage \<Rightarrow> 2"
+
+definition vmsize_of_level :: "vm_level \<Rightarrow> vmpage_size" where
+  "vmsize_of_level level \<equiv>
+     if level = 0 then ARMSmallPage
+     else if level = 1 then ARMLargePage
+     else ARMHugePage"
+
+definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vmpage_size \<times> paddr) option"
   where
+  "lookup_frame vspace vaddr = do {
+     (level, slot) \<leftarrow> pt_lookup_slot vspace vaddr;
+     pte \<leftarrow> oapply slot;
+     oassert (is_PagePTE pte);
+     oassert (level \<le> 2);
+     oreturn (vmsize_of_level level, pte_base_addr pte)
+   }"
+
+definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
+  "decode_vs_inv_flush label args cte cap extra_caps \<equiv> case cap of
+     PageTableCap p True mapped_address \<Rightarrow>
+        if length args > 1
+        then let
+          start = args ! 0;
+          end = args ! 1
+        in doE
+          whenE (end \<le> start) $ throwError $ InvalidArgument 1;
+          whenE (end > pptrUserTop) $ throwError $ IllegalOperation;
+          (vspace, asid) \<leftarrow> check_vspace_root cap 0;
+          vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
+          whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 0;
+          frame_info \<leftarrow> liftE $ gets $ lookup_frame p start \<circ> ptes_of;
+          case frame_info of
+            None \<Rightarrow> returnOk $ InvokeVSpace VSpaceNothing
+          | Some (pgsz, paddr) \<Rightarrow> doE
+              bits_left  \<leftarrow> returnOk $ pt_bits_left (level_of_vmsize pgsz);
+              base_start \<leftarrow> returnOk $ page_base start pgsz;
+              base_end \<leftarrow> returnOk $ page_base (end - 1) pgsz;
+              whenE (base_start \<noteq> base_end) $
+                throwError $ RangeError start (base_start + mask bits_left);
+              pstart \<leftarrow> returnOk $ paddr + (start && mask bits_left);
+              returnOk $ InvokeVSpace $
+                VSpaceFlush (label_to_flush_type label) start (end - 1) pstart vspace asid
+            odE
+        odE
+        else throwError TruncatedMessage
+   | _ \<Rightarrow> fail"
+
+definition decode_vspace_invocation :: "'z::state_ext arch_decoder" where
+  "decode_vspace_invocation label args cte cap extra_caps \<equiv>
+     if isPageFlushLabel (invocation_type label)
+     then decode_vs_inv_flush label args cte cap extra_caps
+     else throwError IllegalOperation"
+
+definition decode_asid_control_invocation :: "'z::state_ext arch_decoder" where
   "decode_asid_control_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
      then if length args > 1 \<and> length extra_caps > 1
@@ -201,8 +281,7 @@ definition decode_asid_control_invocation :: "'z::state_ext arch_decoder"
      else throwError TruncatedMessage
      else throwError IllegalOperation"
 
-definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder"
-  where
+definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder" where
   "decode_asid_pool_invocation label args cte cap extra_caps \<equiv>
      if invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
      then if length extra_caps > 0
@@ -231,23 +310,24 @@ definition arch_decode_invocation ::
     (arch_invocation,'z::state_ext) se_monad"
   where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
-     PageTableCap _ _ _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
-   | FrameCap _ _ _ _ _ \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
-   | ASIDControlCap     \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
-   | ASIDPoolCap _ _    \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
-   | VCPUCap _          \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
+     PageTableCap _ True _  \<Rightarrow> decode_vspace_invocation label args cte cap extra_caps
+   | PageTableCap _ False _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
+   | FrameCap _ _ _ _ _     \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
+   | ASIDControlCap         \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
+   | ASIDPoolCap _ _        \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
+   | VCPUCap _              \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
 
 
 section "Interface Functions used in Decode"
 
-definition arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option"
-  where
+definition arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option" where
   "arch_data_to_obj_type n \<equiv>
      if      n = 0 then Some HugePageObj
-     else if n = 1 then Some SmallPageObj
-     else if n = 2 then Some LargePageObj
-     else if n = 3 then Some PageTableObj
-     else if n = 4 then Some VCPUObj \<comment> \<open>FIXME AARCH64: check number when other objects arrive\<close>
+     else if n = 1 then Some VSpaceObj
+     else if n = 2 then Some SmallPageObj
+     else if n = 3 then Some LargePageObj
+     else if n = 4 then Some PageTableObj
+     else if n = 5 then Some VCPUObj
      else None"
 
 end
