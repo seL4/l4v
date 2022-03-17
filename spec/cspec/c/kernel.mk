@@ -50,6 +50,7 @@ ifndef TOOLPREFIX
 endif
 
 OBJDUMP := ${TOOLPREFIX}objdump
+CPP := ${TOOLPREFIX}cpp
 
 ifndef UMM_TYPES
   UMM_TYPES := ${KERNEL_BUILD_ROOT}/umm_types.txt
@@ -91,8 +92,8 @@ ${KERNEL_BUILD_ROOT}/kernel.elf.symtab: ${KERNEL_BUILD_ROOT}/kernel.elf
 	${OBJDUMP} -t $^ > $@
 
 ${KERNEL_BUILD_ROOT}/kernel.sigs: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
-	MAKEFILES= make -C ${PARSERPATH} standalone-cparser
-	${PARSERPATH}/c-parser ${L4V_ARCH} --underscore_idents --mmbytes $^ > $@.tmp
+	MAKEFILES= make -C ${PARSERPATH} ${PARSERPATH}/${L4V_ARCH}/c-parser
+	${PARSERPATH}/${L4V_ARCH}/c-parser --cpp=${CPP} --underscore_idents --mmbytes $^ > $@.tmp
 	mv $@.tmp $@
 
 # Initialize the CMake build. We purge the build directory and start again
