@@ -11,19 +11,15 @@ theory ArchInterrupt_A
 imports Ipc_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin global_naming AARCH64_A
 
-definition
-  virqSetEOIIRQEN :: "virq \<Rightarrow> machine_word \<Rightarrow> virq"
-where
-  "virqSetEOIIRQEN virq v =
-    (if virq_type virq = 3
-    then virq
-    else (virq && ~~0x80000) || ((v << 19) && 0x80000))"
+definition virqSetEOIIRQEN :: "virq \<Rightarrow> machine_word \<Rightarrow> virq" where
+  "virqSetEOIIRQEN virq v \<equiv>
+     if virq_type virq = 3
+     then virq
+     else (virq && ~~0x80000) || ((v << 19) && 0x80000)"
 
-definition
-  vgic_maintenance :: "(unit,'z::state_ext) s_monad"
-where
+definition vgic_maintenance :: "(unit,'z::state_ext) s_monad" where
   "vgic_maintenance = do
      cur_vcpu \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
      case cur_vcpu
@@ -74,20 +70,17 @@ definition vppi_event :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
         | _ \<Rightarrow> return ()
    od"
 
-definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
-  "handle_reserved_irq irq \<equiv>
-     if irq = irqVGICMaintenance then vgic_maintenance
-     else if irq_vppi_event_index irq \<noteq> None then vppi_event irq
-     else return ()"
+definition handle_reserved_irq :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "handle_reserved_irq irq \<equiv> do
+     when (irq = irqVGICMaintenance) vgic_maintenance;
+     when (irq_vppi_event_index irq \<noteq> None) $ vppi_event irq
+   od"
 
-fun arch_invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+fun arch_invoke_irq_handler :: "irq_handler_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
 | "arch_invoke_irq_handler _ = return ()"
 
-definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad"
-  where
+definition arch_mask_irq_signal :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "arch_mask_irq_signal irq \<equiv> do_machine_op $ maskInterrupt True irq"
 
 end
