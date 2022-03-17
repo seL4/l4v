@@ -570,8 +570,8 @@ decodeARMFrameInvocationFlush label args cap = case (args, capFMappedAddress cap
         vspaceRoot <- lookupErrorOnFailure False $ findVSpaceForASID asid
         when (end <= start) $ throw $ InvalidArgument 1
         let pageSize = bit (pageBitsForSize (capFSize cap))
-        let pageBase = addrFromPPtr $ capFBasePtr cap
         when (start >= pageSize || end > pageSize) $ throw $ InvalidArgument 0
+        let pageBase = addrFromPPtr $ capFBasePtr cap
         let pstart = pageBase + toPAddr start
         when (pstart < paddrBase || ((end - start) + fromPAddr pstart > fromPAddr paddrTop)) $
             throw IllegalOperation
@@ -616,7 +616,7 @@ decodeARMPageTableInvocationMap :: PPtr CTE -> ArchCapability -> VPtr ->
 decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     when (isJust $ capPTMappedAddress cap) $ throw $ InvalidCapability 0
     (vspace,asid) <- checkVSpaceRoot vspaceCap 1
-    when (vptr >= pptrUserTop) $ throw $ InvalidArgument 0
+    when (vptr > pptrUserTop) $ throw $ InvalidArgument 0
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
@@ -664,14 +664,14 @@ decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTisVSpace = True })
             case frameInfo of
                 -- Ignore call if there is nothing mapped here
                 Nothing -> return $ InvokeVSpace VSpaceNothing
-                Just frameInfo -> do
-                    withoutFailure $ checkValidMappingSize (fst frameInfo)
-                    let baseStart = pageBase (VPtr start) (fst frameInfo)
-                    let baseEnd = pageBase (VPtr end - 1) (fst frameInfo)
+                Just (bitsLeft, pAddr) -> do
+                    withoutFailure $ checkValidMappingSize bitsLeft
+                    let baseStart = pageBase (VPtr start) bitsLeft
+                    let baseEnd = pageBase (VPtr end - 1) bitsLeft
                     when (baseStart /= baseEnd) $
-                        throw $ RangeError start $ fromVPtr $ baseStart + mask (fst frameInfo)
-                    let offset = start .&. mask (fst frameInfo)
-                    let pStart = snd frameInfo + toPAddr offset
+                        throw $ RangeError start $ fromVPtr $ baseStart + mask bitsLeft
+                    let offset = start .&. mask bitsLeft
+                    let pStart = pAddr + toPAddr offset
                     return $ InvokeVSpace $ VSpaceFlush {
                          vsFlushType = labelToFlushType label,
                          vsFlushStart = VPtr start,
