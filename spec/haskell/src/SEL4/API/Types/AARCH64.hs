@@ -33,25 +33,26 @@ instance Bounded ObjectType where
     maxBound = VCPUObject
 
 -- the order of these does not matter, any order that creates an enumeration
--- will suffice to derive Enum
+-- will suffice to derive Enum. The actual order is defined in the corresponding
+-- design/skel file. We mirror this order here purely for consistency.
 
 instance Enum ObjectType where
     fromEnum e = case e of
         APIObjectType a -> fromEnum a
-        SmallPageObject -> apiMax + 1
-        LargePageObject -> apiMax + 2
-        HugePageObject -> apiMax + 3
-        PageTableObject -> apiMax + 4
-        VSpaceObject -> apiMax + 5
+        HugePageObject -> apiMax + 1
+        VSpaceObject -> apiMax + 2
+        SmallPageObject -> apiMax + 3
+        LargePageObject -> apiMax + 4
+        PageTableObject -> apiMax + 5
         VCPUObject -> apiMax + 6
         where apiMax = fromEnum (maxBound :: APIObjectType)
     toEnum n
         | n <= apiMax = APIObjectType $ toEnum n
-        | n == apiMax + 1 = SmallPageObject
-        | n == apiMax + 2 = LargePageObject
-        | n == apiMax + 3 = HugePageObject
-        | n == apiMax + 4 = PageTableObject
-        | n == apiMax + 5 = VSpaceObject
+        | n == apiMax + 1 = HugePageObject
+        | n == apiMax + 2 = VSpaceObject
+        | n == apiMax + 3 = SmallPageObject
+        | n == apiMax + 4 = LargePageObject
+        | n == apiMax + 5 = PageTableObject
         | n == apiMax + 6 = VCPUObject
         | otherwise = error "toEnum out of range for AArch64.ObjectType"
         where apiMax = fromEnum (maxBound :: APIObjectType)
