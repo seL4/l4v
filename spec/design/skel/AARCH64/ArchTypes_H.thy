@@ -35,11 +35,11 @@ interpretation Arch .
 definition
   enum_object_type: "enum_class.enum \<equiv>
     map APIObjectType (enum_class.enum :: apiobject_type list) @
-     [SmallPageObject,
-      LargePageObject,
-      HugePageObject,
-      PageTableObject,
+     [HugePageObject,
       VSpaceObject,
+      SmallPageObject,
+      LargePageObject,
+      PageTableObject,
       VCPUObject
     ]"
 
