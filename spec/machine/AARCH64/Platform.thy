@@ -68,11 +68,17 @@ schematic_goal pptrUserTop_def': (* direct constant definition *)
   "AARCH64.pptrUserTop = numeral ?x"
   by (simp add: AARCH64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
 
+definition pptrTop :: machine_word where
+  "pptrTop = 0xFFFFFFFF80000000" (* FIXME AARCH64: review; copy/paste from Haskell *)
+
 definition paddrBase :: machine_word where
   "paddrBase \<equiv> 0"
 
 definition pptrBaseOffset :: machine_word where
   "pptrBaseOffset = pptrBase - paddrBase"
+
+definition paddrTop :: machine_word where
+  "paddrTop = pptrTop - pptrBaseOffset"
 
 definition ptrFromPAddr :: "paddr \<Rightarrow> machine_word" where
   "ptrFromPAddr paddr \<equiv> paddr + pptrBaseOffset"
