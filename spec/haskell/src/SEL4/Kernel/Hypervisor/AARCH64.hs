@@ -5,8 +5,6 @@
 -- SPDX-License-Identifier: GPL-2.0-only
 --
 
--- The RISCV target does not have any hypervisor support.
-
 module SEL4.Kernel.Hypervisor.AARCH64 where
 
 import SEL4.Machine (PPtr(..))
