@@ -33,7 +33,7 @@ data ArchInvocationLabel
         | ARMVCPUWriteReg
         | ARMVCPUAckVPPI
         | ARMIRQIssueIRQHandlerTrigger
-        -- FIXME AARCH64: SMMU invocation labels in C
+        -- TODO AARCH64: SMMU invocation labels in C
         -- ARMSIDIssueSIDManager,
         -- | ARMSIDGetFault
         -- | ARMSIDClearFault
