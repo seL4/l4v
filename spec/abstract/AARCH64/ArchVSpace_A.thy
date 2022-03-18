@@ -620,12 +620,12 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
        delete_asid_pool b ptr;
        return (NullCap, NullCap)
      od
-   | (PageTableCap ptr is_top (Some (a, v)), True) \<Rightarrow> do
-       doE
-         vroot \<leftarrow> find_vspace_for_asid a;
-         if vroot = ptr then liftE $ delete_asid a ptr else throwError InvalidRoot
-       odE <catch>
-       (\<lambda>_. unmap_page_table a v ptr);
+   | (PageTableCap ptr True (Some (a, v)), True) \<Rightarrow> do
+       delete_asid a ptr;
+       return (NullCap, NullCap)
+     od
+   | (PageTableCap ptr False (Some (a, v)), True) \<Rightarrow> do
+       unmap_page_table a v ptr;
        return (NullCap, NullCap)
      od
    | (FrameCap ptr _ sz _ (Some (a, v)), _) \<Rightarrow> do
