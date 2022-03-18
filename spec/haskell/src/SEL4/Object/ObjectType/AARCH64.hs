@@ -89,17 +89,17 @@ finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do
     return (NullCap, NullCap)
 
 finaliseCap (PageTableCap {
+        capPTisVSpace = True,
         capPTMappedAddress = Just (asid, vptr),
         capPTBasePtr = pte }) True = do
+    deleteASID asid pte
+    return (NullCap, NullCap)
 
-    catchFailure
-        (do
-            vroot <- findVSpaceForASID asid
-            if vroot == pte
-                then withoutFailure $ deleteASID asid pte
-                else throw InvalidRoot)
-        (\_ -> unmapPageTable asid vptr pte)
-
+finaliseCap (PageTableCap {
+        capPTisVSpace = False,
+        capPTMappedAddress = Just (asid, vptr),
+        capPTBasePtr = pte }) True = do
+    unmapPageTable asid vptr pte
     return (NullCap, NullCap)
 
 finaliseCap (FrameCap {
