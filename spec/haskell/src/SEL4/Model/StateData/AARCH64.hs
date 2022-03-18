@@ -35,8 +35,8 @@ data KernelState = ARMKernelState {
     armKSKernelVSpace :: PPtr Word -> ArmVSpaceRegionUse,
     -- map VM IDs to seL4 ASIDs; the space of VM IDs is smaller than the ASID
     -- space, so the kernel allocates and displaces on demand.
-    armKSHWASIDTable :: Array VMID (Maybe ASID), -- FIXME AARCH64: should be armKSVMIDTable
-    armKSNextASID :: VMID, -- FIXME AARCH64: naming (nextVMID)
+    armKSVMIDTable :: Array VMID (Maybe ASID),
+    armKSNextVMID :: VMID,
     -- pointer to a global top-level VSpace table with only invalid entries;
     -- used e.g. for user threads with missing or invalid VSpace root
     armKSGlobalUserVSpace :: PPtr PTE,
