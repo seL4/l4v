@@ -10,7 +10,7 @@ theory ArchTcb_A
 imports KHeap_A
 begin
 
-context Arch begin global_naming RISCV64_A
+context Arch begin global_naming AARCH64_A
 
 definition sanitise_register :: "bool \<Rightarrow> register \<Rightarrow> machine_word \<Rightarrow> machine_word" where
   "sanitise_register b r v \<equiv> case r of
@@ -23,8 +23,7 @@ definition arch_get_sanitise_register_info :: "obj_ref \<Rightarrow> (bool, 'a::
      return (vcpu \<noteq> None)
    od"
 
-definition arch_post_modify_registers :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'a::state_ext) s_monad"
-  where
+definition arch_post_modify_registers :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit, 'a::state_ext) s_monad" where
   "arch_post_modify_registers cur t \<equiv> return ()"
 
 end
