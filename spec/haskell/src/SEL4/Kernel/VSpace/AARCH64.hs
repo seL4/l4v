@@ -222,14 +222,14 @@ handleVMFault thread ARMPrefetchAbort = do
 invalidateTLBByASID :: ASID -> Kernel ()
 invalidateTLBByASID asid = do
     -- TODO AARCH64: add SMMU
-    maybeVMID <- loadHWASID asid
+    maybeVMID <- loadVMID asid
     when (isJust maybeVMID) $
         doMachineOp $ invalidateTranslationASID $ fromIntegral $ fromJust maybeVMID
 
 invalidateTLBByASIDVA :: ASID -> VPtr -> Kernel ()
 invalidateTLBByASIDVA asid vaddr = do
     -- TODO AARCH64: add SMMU
-    maybeVMID <- loadHWASID asid
+    maybeVMID <- loadVMID asid
     when (isJust maybeVMID) $ do
         let vmID = fromJust maybeVMID
         let shift = wordBits - asidBits
@@ -352,7 +352,7 @@ unmapPage size asid vptr pptr = ignoreFailure $ do
 
 armContextSwitch :: PPtr PTE -> ASID -> Kernel ()
 armContextSwitch vspace asid = do
-    vmID <- getHWASID asid
+    vmID <- getVMID asid
     doMachineOp $ setVSpaceRoot (addrFromPPtr vspace) (fromIntegral vmID)
 
 setGlobalUserVSpace :: Kernel ()
@@ -379,85 +379,72 @@ setVMRoot tcb = do
             _ -> throw InvalidRoot)
         (\_ -> setGlobalUserVSpace)
 
--- FIXME AARCH64: based on ARM_HYP
-
 {- Hardware ASID allocation -}
 
--- FIXME AARCH64: the naming here needs cleanup (in the C code as well) -- there
--- are no actual hardware ASIDs in EL-2, but VM IDs instead. Currently keeping
--- this so we can figure out what corresponds in C.
-
--- FIXME AARCH64: naming
-storeHWASID :: ASID -> VMID -> Kernel ()
-storeHWASID asid hw_asid = do
-    updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Just hw_asid }) asid
-    hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
-    let hwASIDTable' = hwASIDTable//[(hw_asid, Just asid)]
+storeVMID :: ASID -> VMID -> Kernel ()
+storeVMID asid vmid = do
+    updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Just vmid }) asid
+    vmidTable <- gets (armKSVMIDTable . ksArchState)
+    let vmidTable' = vmidTable//[(vmid, Just asid)]
     modify (\s -> s {
         ksArchState = (ksArchState s)
-        { armKSHWASIDTable = hwASIDTable' }})
+        { armKSVMIDTable = vmidTable' }})
 
--- FIXME AARCH64: naming
 -- This function is removed in C, but it is still useful in Haskell; it's
 -- mostly type wrangling and assertion so maybe not necessary for C
-loadHWASID :: ASID -> Kernel (Maybe VMID)
-loadHWASID asid = do
+loadVMID :: ASID -> Kernel (Maybe VMID)
+loadVMID asid = do
     maybeEntry <- getASIDPoolEntry asid
     case maybeEntry of
         Just (ASIDPoolVSpace vmID ptr) -> return vmID
-        _ -> error ("loadHWASID: no entry for asid")
+        _ -> error ("loadVMID: no entry for asid")
 
--- FIXME AARCH64: naming
 invalidateASID :: ASID -> Kernel ()
 invalidateASID = updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Nothing })
 
--- FIXME AARCH64: naming
-invalidateHWASIDEntry :: VMID -> Kernel ()
-invalidateHWASIDEntry hwASID = do
-    asidTable <- gets (armKSHWASIDTable . ksArchState)
-    let asidTable' = asidTable//[(hwASID, Nothing)]
+invalidateVMIDEntry :: VMID -> Kernel ()
+invalidateVMIDEntry vmid = do
+    vmidTable <- gets (armKSVMIDTable . ksArchState)
+    let vmidTable' = vmidTable//[(vmid, Nothing)]
     modify (\s -> s {
         ksArchState = (ksArchState s)
-        { armKSHWASIDTable = asidTable' }})
+        { armKSVMIDTable = vmidTable' }})
 
--- FIXME AARCH64: naming
 invalidateASIDEntry :: ASID -> Kernel ()
 invalidateASIDEntry asid = do
-    maybeHWASID <- loadHWASID asid
-    when (isJust maybeHWASID) $ invalidateHWASIDEntry (fromJust maybeHWASID)
+    maybeVMID <- loadVMID asid
+    when (isJust maybeVMID) $ invalidateVMIDEntry (fromJust maybeVMID)
     invalidateASID asid
 
--- FIXME AARCH64: naming (VMID)
-findFreeHWASID :: Kernel VMID
-findFreeHWASID = do
-    -- Look for a free Hardware ASID.
-    hwASIDTable <- gets (armKSHWASIDTable . ksArchState)
-    nextASID <- gets (armKSNextASID . ksArchState)
-    let maybe_asid = find (\a -> isNothing (hwASIDTable ! a))
-                    ([nextASID .. maxBound] ++ init [minBound .. nextASID])
+findFreeVMID :: Kernel VMID
+findFreeVMID = do
+    -- Look for a free VM ID.
+    vmidTable <- gets (armKSVMIDTable . ksArchState)
+    nextVMID <- gets (armKSNextVMID . ksArchState)
+    let maybeVMID = find (\a -> isNothing (vmidTable ! a))
+                    ([nextVMID .. maxBound] ++ init [minBound .. nextVMID])
 
     -- If there is one, return it, otherwise revoke the next one in a strict round-robin.
-    case maybe_asid of
-        Just hw_asid -> return hw_asid
+    case maybeVMID of
+        Just vmid -> return vmid
         Nothing -> do
-            invalidateASID $ fromJust $ hwASIDTable ! nextASID
-            doMachineOp $ invalidateTranslationASID $ fromIntegral nextASID
-            invalidateHWASIDEntry nextASID
-            let new_nextASID = if nextASID == maxBound then minBound else nextASID + 1
-            modify (\s -> s { ksArchState = (ksArchState s) { armKSNextASID = new_nextASID }})
-            return nextASID
+            invalidateASID $ fromJust $ vmidTable ! nextVMID
+            doMachineOp $ invalidateTranslationASID $ fromIntegral nextVMID
+            invalidateVMIDEntry nextVMID
+            let new_nextVMID = if nextVMID == maxBound then minBound else nextVMID + 1
+            modify (\s -> s { ksArchState = (ksArchState s) { armKSNextVMID = new_nextVMID }})
+            return nextVMID
 
--- FIXME AARCH64: naming
-getHWASID :: ASID -> Kernel VMID
-getHWASID asid = do
-    maybe_hw_asid <- loadHWASID asid
-    case maybe_hw_asid of
-        Just hw_asid ->
-            return hw_asid
+getVMID :: ASID -> Kernel VMID
+getVMID asid = do
+    maybeVMID <- loadVMID asid
+    case maybeVMID of
+        Just vmid ->
+            return vmid
         Nothing -> do
-            new_hw_asid <- findFreeHWASID
-            storeHWASID asid new_hw_asid
-            return new_hw_asid
+            newVMID <- findFreeVMID
+            storeVMID asid newVMID
+            return newVMID
 
 {- Helper Functions -}
 
