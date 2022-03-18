@@ -7,7 +7,7 @@
 
 -- This module contains operations on machine-specific object types.
 
--- FIXME AARCH64: SMMU issues are pointed out in cases where a default match exists.
+-- TODO AARCH64: SMMU issues are pointed out in cases where a default match exists.
 
 module SEL4.Object.ObjectType.AARCH64 where
 
@@ -50,7 +50,7 @@ deriveCap _ (c@FrameCap {})
 deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
 deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
 deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
--- FIXME AARCH64 SMMU: SID/CB control caps, SID/CB caps
+-- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
 
 isCapRevocable :: Capability -> Capability -> Bool
 isCapRevocable newCap srcCap = False
@@ -113,8 +113,7 @@ finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
     vcpuFinalise vcpu
     return (NullCap, NullCap)
 
--- FIXME AARCH64 SMMU: C also has cap_page_global_directory_cap, cap_cb_cap,
--- cap_sid_cap (but not SID/CB control caps)
+-- TODO AARCH64 SMMU: C also has cap_cb_cap, cap_sid_cap (but not SID/CB control caps)
 
 finaliseCap _ _ = return (NullCap, NullCap)
 
@@ -134,12 +133,12 @@ sameRegionAs ASIDControlCap ASIDControlCap = True
 sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
     capASIDPool a == capASIDPool b
 sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
--- FIXME AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
+-- TODO AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
 sameRegionAs _ _ = False
 
 isPhysicalCap :: ArchCapability -> Bool
 isPhysicalCap ASIDControlCap = False
--- FIXME AARCH64 SMMU: in C, SMMU caps default to False but this needs review
+-- TODO AARCH64 SMMU: in C, SMMU caps default to False but this needs review
 isPhysicalCap _ = True
 
 sameObjectAs :: ArchCapability -> ArchCapability -> Bool
@@ -147,7 +146,7 @@ sameObjectAs (a@FrameCap { capFBasePtr = ptrA }) (b@FrameCap {}) =
     (ptrA == capFBasePtr b) && (capFSize a == capFSize b)
         && (ptrA <= ptrA + mask (pageBitsForSize $ capFSize a))
         && (capFIsDevice a == capFIsDevice b)
--- FIXME AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
+-- TODO AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
 sameObjectAs a b = sameRegionAs a b
 
 {- Creating New Capabilities -}
@@ -207,14 +206,14 @@ decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 decodeInvocation label args capIndex slot cap extraCaps =
     case cap of
        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
-       -- FIXME AARCH64 SMMU: SID/CB control caps, SID/CB caps
+       -- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
 performInvocation :: ArchInv.Invocation -> KernelP [Word]
 performInvocation i =
     case i of
         ArchInv.InvokeVCPU iv -> withoutPreemption $ performARMVCPUInvocation iv
-        -- FIXME AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
+        -- TODO AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
         _ -> performARMMMUInvocation i
 
 {- Helper Functions -}

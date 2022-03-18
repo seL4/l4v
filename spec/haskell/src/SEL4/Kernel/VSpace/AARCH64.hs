@@ -221,14 +221,14 @@ handleVMFault thread ARMPrefetchAbort = do
 
 invalidateTLBByASID :: ASID -> Kernel ()
 invalidateTLBByASID asid = do
-    -- FIXME AARCH64: add SMMU
+    -- TODO AARCH64: add SMMU
     maybeVMID <- loadHWASID asid
     when (isJust maybeVMID) $
         doMachineOp $ invalidateTranslationASID $ fromIntegral $ fromJust maybeVMID
 
 invalidateTLBByASIDVA :: ASID -> VPtr -> Kernel ()
 invalidateTLBByASIDVA asid vaddr = do
-    -- FIXME AARCH64: add SMMU
+    -- TODO AARCH64: add SMMU
     maybeVMID <- loadHWASID asid
     when (isJust maybeVMID) $ do
         let vmID = fromJust maybeVMID
