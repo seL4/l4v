@@ -261,8 +261,7 @@ text \<open>
   top-level page tables, and level 1 page tables. The bottom-level page tables (level 0)
   contains only InvalidPTEs or PagePTEs.
 \<close>
-(* FIXME AARCH64: this depends on config_ARM_PA_SIZE_BITS_40 *)
-type_synonym vm_level = 5
+value_type vm_level = "if config_ARM_PA_SIZE_BITS_40 then 4 else (5::int)"
 
 definition asid_pool_level :: vm_level where
   "asid_pool_level = maxBound"

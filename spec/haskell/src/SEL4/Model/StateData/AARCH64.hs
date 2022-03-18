@@ -12,7 +12,7 @@ module SEL4.Model.StateData.AARCH64 where
 
 import Prelude hiding (Word)
 import SEL4.Machine
-import SEL4.Machine.Hardware.AARCH64 (PTE(..))
+import SEL4.Machine.Hardware.AARCH64 (PTE(..), config_ARM_PA_SIZE_BITS_40)
 import SEL4.Object.Structures.AARCH64
 
 import Data.Array
@@ -47,7 +47,7 @@ data KernelState = ARMKernelState {
 -- counting from 0 at bottom, i.e. number of levels = maxPTLevel + 1;
 -- maxPTLevel = level of top-level root table
 maxPTLevel :: Int
-maxPTLevel = 3
+maxPTLevel = if config_ARM_PA_SIZE_BITS_40 then 2 else 3
 
 newKernelState :: PAddr -> (KernelState, [PAddr])
 newKernelState _ = error "No initial state defined for AARCH64"
