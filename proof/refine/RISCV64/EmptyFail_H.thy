@@ -9,7 +9,7 @@ imports Refine
 begin
 
 crunch_ignore (empty_fail)
-  (add: handleE' getCTE getObject updateObject
+  (add: handleE' getCTE getObject updateObject ifM andM orM whileM ifM
         CSpaceDecls_H.resolveAddressBits
         doMachineOp suspend restart schedule)
 
@@ -80,13 +80,14 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
 lemmas resolveAddressBits_empty_fail[intro!, wp, simp] =
        resolveAddressBits_spec_empty_fail[THEN use_spec_empty_fail]
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupIPCBuffer
-(simp:Let_def)
-
 declare ef_dmo'[intro!, wp, simp]
 
 lemma empty_fail_getObject_ep [intro!, wp, simp]:
   "empty_fail (getObject p :: endpoint kernel)"
+  by (simp add: empty_fail_getObject)
+
+lemma empty_fail_getObject_reply [intro!, wp, simp]:
+  "empty_fail (getObject p :: reply kernel)"
   by (simp add: empty_fail_getObject)
 
 lemma getEndpoint_empty_fail [intro!, wp, simp]:
@@ -165,15 +166,28 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
   "empty_fail x \<Longrightarrow> empty_fail (ignoreFailure x)"
   by (simp add: ignoreFailure_def empty_fail_catch)
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: cancelIPC, setThreadState, tcbSchedDequeue, setupReplyMaster, isStopped, possibleSwitchTo, tcbSchedAppend
-(simp: Let_def setNotification_def setBoundNotification_def)
+lemma empty_fail_getObject_sc [intro!, wp, simp]:
+   "empty_fail (getObject p :: sched_context kernel)"
+   by (simp add: empty_fail_getObject)
+
+crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "SchedContextDecls_H.postpone"
+  (simp: getSchedContext_def)
+
+context
+notes option.case_cong_weak[cong]
+begin
+crunch (empty_fail) empty_fail[intro!, wp, simp]:
+  cancelIPC, setThreadState, tcbSchedDequeue, isStopped, possibleSwitchTo, tcbSchedAppend,
+  refillUnblockCheck, schedContextResume, ifCondRefillUnblockCheck
+  (simp: Let_def wp: empty_fail_whileLoop)
+end
 
 crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
   (ignore_del: ThreadDecls_H.suspend)
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
-  by (simp add:restart_def)
+  unfolding restart_def getCurSc_def by wpsimp
 
 lemma empty_fail_lookupPTFromLevel[intro!, wp, simp]:
   "empty_fail (lookupPTFromLevel level ptPtr vPtr target)"
@@ -261,28 +275,48 @@ lemma catchError_empty_fail[intro!, wp, simp]:
   by (simp add: catchError_def handle_empty_fail)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
-  chooseThread, getDomainTime, nextDomain, isHighestPrio
-  (wp: empty_fail_catch)
+  chooseThread, getDomainTime, nextDomain, isHighestPrio, switchSchedContext, setNextInterrupt
+  (wp: empty_fail_catch empty_fail_setDeadline empty_fail_whileLoop)
+
+crunch (empty_fail) empty_fail[intro!, wp, simp]: tcbReleaseDequeue
+
+lemma awaken_empty_fail[intro!, wp, simp]:
+  "empty_fail awaken"
+  apply (clarsimp simp: awaken_def awakenBody_def)
+  apply (wpsimp wp: empty_fail_whileLoop)
+  done
 
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
-  apply (simp add: schedule_def)
+  apply (simp add: schedule_def scAndTimer_def checkDomainTime_def)
   apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
   done
 
 crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo
 (wp: empty_fail_catch simp: const_def Let_def)
 
+lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
+  "empty_fail (tcbEPFindIndex t qs ci)"
+  by (induct ci; subst tcbEPFindIndex.simps; simp)
+
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and
-              (\<lambda>s. scheduler_action s = resume_cur_thread) and
-              (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
+                (\<lambda>s. scheduler_action s = resume_cur_thread) and
+                current_time_bounded and
+                consumed_time_bounded and
+                valid_machine_time and
+                ct_not_in_release_q and
+                cur_sc_active and
+                (\<lambda>s. cur_sc_offset_ready (consumed_time s) s) and
+                (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s) and
+                (\<lambda>s. 0 < domain_time s \<and> valid_domain_list s)) s;
        \<exists>s'. (s, s') \<in> state_relation \<and>
             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) s' \<rbrakk>
+              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and
+              (\<lambda>s. vs_valid_duplicates' (ksPSpace s))) s' \<rbrakk>
     \<Longrightarrow> fst (call_kernel event s) \<noteq> {}"
   apply (cut_tac m = "call_kernel event" in corres_underlying_serial)
     apply (rule kernel_corres)
