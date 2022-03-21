@@ -191,6 +191,12 @@ lemmas getReplyNextPr_simps[simp] = getReplyNextPtr_def[split_simps option.split
 
 lemmas getHeadScPtr_simps[simp] = getHeadScPtr_def[split_simps option.split reply_next.split]
 
+lemma theReplyNextPtr_Some_Next[simp]:
+  "theReplyNextPtr (Some (Next rn)) = rn" by (simp add: theReplyNextPtr_def)
+
+lemma theHeadScPtr_Some_Head[simp]:
+  "theHeadScPtr (Some (Head sc)) = sc" by (simp add: theHeadScPtr_def)
+
 lemma getReplyNextPtr_Some_iff[iff]:
   "(getReplyNextPtr x) = (Some rn) \<longleftrightarrow> x = Some (Next rn)"
   by (cases x; clarsimp simp: getReplyNextPtr_def split: reply_next.split)

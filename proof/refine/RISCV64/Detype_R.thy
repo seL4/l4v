@@ -1857,6 +1857,12 @@ lemma deleteObjects_invs_derivatives:
      and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
      deleteObjects ptr bits
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
+  "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
+     and invs' and ct_active' and sch_act_simple
+     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))
+     and K (bits < word_bits \<and> is_aligned ptr bits)\<rbrace>
+     deleteObjects ptr bits
+   \<lbrace>\<lambda>rv. pspace_bounded'\<rbrace>"
   by (safe intro!: hoare_strengthen_post [OF deleteObjects_invs'])
 
 lemma deleteObjects_nosch:

@@ -1339,7 +1339,6 @@ lemma setObject_other_corres:
 lemmas obj_at_simps = obj_at_def obj_at'_def map_to_ctes_upd_other
                       is_other_obj_relation_type_def
                       a_type_def objBits_simps other_obj_relation_def pageBits_def
-                      archObjSize_def
 
 lemma setEndpoint_corres:
   "ep_relation e e' \<Longrightarrow>
@@ -4575,9 +4574,8 @@ lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> 
 
 end
 
-(* FIXME RT: rename *)
 (* this lets cross the sc size information from concrete to abstract *)
-lemma ko_at_sc__cross:
+lemma ko_at_sc_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "ko_at' (sc'::sched_context) ptr s'"
   shows "sc_obj_at (objBits sc' - minSchedContextBits) ptr s" using assms

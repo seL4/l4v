@@ -7,8 +7,14 @@
 chapter \<open>Abstract datatype for the executable specification\<close>
 
 theory ADT_H
-  imports Syscall_R
+imports
+  Syscall_R
 begin
+
+(* FIXME: many of the naming conventions in this file are wrong. Definitions should start with
+          lower case letters, and should be under_score, not camelCase. Some, possibly many of
+          the functions here can benefit from projections that have been developed since this
+          was originally written *)
 
 text \<open>
   The general refinement calculus (see theory Simulation) requires
@@ -98,12 +104,13 @@ definition
                    | Structures_H.RecvEP q \<Rightarrow> Structures_A.RecvEP q"
 
 definition
-  "AEndpointMap ntfn \<equiv>
+  "NtfnMap ntfn \<equiv>
       \<lparr> ntfn_obj = case ntfnObj ntfn of
                        Structures_H.IdleNtfn \<Rightarrow> Structures_A.IdleNtfn
                      | Structures_H.WaitingNtfn q \<Rightarrow> Structures_A.WaitingNtfn q
                      | Structures_H.ActiveNtfn b \<Rightarrow> Structures_A.ActiveNtfn b
-      , ntfn_bound_tcb = ntfnBoundTCB ntfn \<rparr>"
+      , ntfn_bound_tcb = ntfnBoundTCB ntfn
+      , ntfn_sc = ntfnSc ntfn \<rparr>"
 
 definition mdata_map' ::
   "(asid \<times> vspace_ref) option \<Rightarrow> (Machine_A.RISCV64_A.asid \<times> vspace_ref) option" where
@@ -125,8 +132,10 @@ fun CapabilityMap :: "capability \<Rightarrow> cap" where
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
 | "CapabilityMap capability.DomainCap = cap.DomainCap"
-| "CapabilityMap (capability.ReplyCap ref master gr) =
-   cap.ReplyCap ref master {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
+| "CapabilityMap (capability.ReplyCap ref gr) =
+   cap.ReplyCap ref {x. gr \<and> x = AllowGrant \<or> x = AllowWrite}"
+| "CapabilityMap (SchedContextCap sc n) = cap.SchedContextCap sc (n - min_sched_context_bits)"
+| "CapabilityMap SchedControlCap = cap.SchedControlCap"
 | "CapabilityMap capability.IRQControlCap = cap.IRQControlCap"
 | "CapabilityMap (capability.IRQHandlerCap irq) = cap.IRQHandlerCap irq"
 | "CapabilityMap (capability.Zombie p b n) =
@@ -170,10 +179,10 @@ primrec ThStateMap :: "Structures_H.thread_state \<Rightarrow> Structures_A.thre
               Structures_A.thread_state.Inactive"
 | "ThStateMap Structures_H.thread_state.IdleThreadState =
               Structures_A.thread_state.IdleThreadState"
-| "ThStateMap Structures_H.thread_state.BlockedOnReply =
-              Structures_A.thread_state.BlockedOnReply"
-| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant) =
-              Structures_A.thread_state.BlockedOnReceive oref \<lparr> receiver_can_grant = grant \<rparr>"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReply r) =
+              Structures_A.thread_state.BlockedOnReply (the r)"
+| "ThStateMap (Structures_H.thread_state.BlockedOnReceive oref grant r) =
+              Structures_A.thread_state.BlockedOnReceive oref r \<lparr> receiver_can_grant = grant \<rparr>"
 | "ThStateMap (Structures_H.thread_state.BlockedOnSend oref badge grant grant_reply call) =
               Structures_A.thread_state.BlockedOnSend oref
                 \<lparr> sender_badge = badge,
@@ -213,6 +222,8 @@ primrec ArchFaultMap :: "Fault_H.arch_fault \<Rightarrow> ExceptionTypes_A.arch_
 primrec FaultMap :: "Fault_H.fault \<Rightarrow> ExceptionTypes_A.fault" where
   "FaultMap (Fault_H.fault.CapFault ref b failure) =
      ExceptionTypes_A.fault.CapFault ref b (LookupFailureMap failure)"
+| "FaultMap (Fault_H.fault.Timeout b) =
+     ExceptionTypes_A.fault.Timeout b"
 | "FaultMap (Fault_H.fault.ArchFault fault) =
      ExceptionTypes_A.fault.ArchFault (ArchFaultMap fault)"
 | "FaultMap (Fault_H.fault.UnknownSyscallException n) =
@@ -241,15 +252,18 @@ definition
   "TcbMap tcb \<equiv>
      \<lparr>tcb_ctable = CapabilityMap (cteCap (tcbCTable tcb)),
       tcb_vtable = CapabilityMap (cteCap (tcbVTable tcb)),
-      tcb_reply = CapabilityMap (cteCap (tcbReply tcb)),
-      tcb_caller = CapabilityMap (cteCap (tcbCaller tcb)),
       tcb_ipcframe = CapabilityMap (cteCap (tcbIPCBufferFrame tcb)),
+      tcb_fault_handler = CapabilityMap (cteCap (tcbFaultHandler tcb)),
+      tcb_timeout_handler = CapabilityMap (cteCap (tcbTimeoutHandler tcb)),
       tcb_state = ThStateMap (tcbState tcb),
-      tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
       tcb_bound_notification = tcbBoundNotification tcb,
       tcb_mcpriority = tcbMCP tcb,
+      tcb_sched_context = tcbSchedContext tcb,
+      tcb_yield_to = tcbYieldTo tcb,
+      tcb_priority = tcbPriority tcb,
+      tcb_domain = tcbDomain tcb,
       tcb_arch = ArchTcbMap (tcbArch tcb)\<rparr>"
 
 definition
@@ -259,18 +273,42 @@ definition
                                 Some (KOCTE cte) \<Rightarrow> cteCap cte))
     else None)"
 
+definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_context \<Rightarrow> Structures_A.sched_context" where
+  "scMap replyPrevs sc = \<lparr>
+     sc_period     = scPeriod sc,
+     sc_budget     = scBudget sc,
+     sc_consumed   = scConsumed sc,
+     sc_tcb        = scTCB sc,
+     sc_ntfn       = scNtfn sc,
+     sc_refills    = refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc),
+     sc_refill_max = scRefillMax sc,
+     sc_badge      = scBadge sc,
+     sc_yield_from = scYieldFrom sc,
+     sc_replies    = heap_walk replyPrevs (scReply sc) [],
+     sc_sporadic   = scSporadic sc
+   \<rparr>"
+
+definition
+  "mapScSize sc \<equiv> scBitsFromRefillLength' (length (scRefills sc)) - minSchedContextBits"
+
+definition replyMap :: "reply \<Rightarrow>  Structures_A.reply" where
+  "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySC r \<rparr>"
+
 definition absHeap ::
   "(machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow>
      (machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> Structures_A.kheap" where
   "absHeap ups cns h \<equiv> \<lambda>x.
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
-     | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
+     | Some (KONotification ntfn) \<Rightarrow> Some (Notification (NtfnMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined \<comment> \<open>forbidden by pspace_relation\<close>
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage False) (ups x)
      | Some KOUserDataDevice \<Rightarrow> map_option (ArchObj \<circ> DataPage True) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
      | Some (KOCTE cte) \<Rightarrow> map_option (\<lambda>sz. absCNode sz h x) (cns x)
+     | Some (KOReply reply) \<Rightarrow> Some (Structures_A.Reply (replyMap reply))
+     | Some (KOSchedContext sc) \<Rightarrow> Some (Structures_A.SchedContext
+                                           (scMap (h |> reply_of' |> replyPrev) sc) (mapScSize sc))
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
@@ -405,6 +443,17 @@ lemma distinct_word_add_inj_ptes:
    \<Longrightarrow> p' = p \<and> off' = off" for off :: pt_index and p :: machine_word
   by (erule (2) distinct_word_add_ucast_shift_inj; simp add: bit_simps)
 
+context
+begin
+
+private method ako =
+  find_goal \<open>match premises in "kheap s p = Some (ArchObj ako)" for s p ako \<Rightarrow> succeed\<close>,
+  (rename_tac ako, case_tac ako;
+   clarsimp simp: other_obj_relation_def pte_relation_def split: if_split_asm)
+
+private method ko =
+  case_tac ko; clarsimp simp: other_obj_relation_def cte_relation_def split: if_split_asm
+
 lemma absHeap_correct:
   fixes s' :: kernel_state
   assumes pspace_aligned:  "pspace_aligned s"
@@ -412,8 +461,10 @@ lemma absHeap_correct:
   assumes valid_objs:      "valid_objs s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
+  assumes replies:         "sc_replies_relation s s'"
   shows "absHeap (gsUserPages s') (gsCNodes s') (ksPSpace s') = kheap s"
 proof -
+  note relatedE = pspace_dom_relatedE[OF _ pspace_relation]
   from ghost_relation
   have gsUserPages:
     "\<And>a sz. (\<exists>dev. kheap s a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow>
@@ -433,12 +484,12 @@ proof -
      apply (erule_tac x=x in allE)
      apply clarsimp
      apply (case_tac "kheap s x", simp)
+     apply (rename_tac ko)
      apply (erule_tac x=x in allE, clarsimp)
      apply (erule_tac x=x in allE, simp add: Ball_def)
      apply (erule_tac x=x in allE, clarsimp)
-     apply (rename_tac a)
-     apply (case_tac a; simp add: other_obj_relation_def
-                             split: if_split_asm Structures_H.kernel_object.splits)
+
+     apply (case_tac ko; simp add: other_obj_relation_def split: if_split_asm kernel_object.splits)
       apply (rename_tac sz cs)
       apply (clarsimp simp: image_def cte_map_def well_formed_cnode_n_def Collect_eq dom_def)
       apply (erule_tac x="replicate sz False" in allE)+
@@ -452,120 +503,77 @@ proof -
 
     apply (clarsimp split: kernel_object.splits)
     apply (intro conjI impI allI)
-           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-           apply clarsimp
-           apply (case_tac ko; simp add: other_obj_relation_def)
-             apply (clarsimp simp: cte_relation_def split: if_split_asm)
-            apply (clarsimp simp: ep_relation_def EndpointMap_def
-                            split: Structures_A.endpoint.splits)
-           apply (clarsimp simp: EndpointMap_def split: Structures_A.endpoint.splits)
-           apply (rename_tac arch_kernel_obj)
-           apply (case_tac arch_kernel_obj; simp add: other_obj_relation_def)
-            apply (clarsimp simp add: pte_relation_def)
-           apply (clarsimp split: if_split_asm)+
+             apply (erule relatedE, ko, ako)
+             apply (clarsimp simp: ep_relation_def EndpointMap_def
+                             split: Structures_A.endpoint.splits)
+            apply (erule relatedE, ko, ako)
+            apply (clarsimp simp: ntfn_relation_def NtfnMap_def
+                            split: Structures_A.ntfn.splits)
+           apply (erule relatedE, ko, ako)
+          apply (erule relatedE, ko, ako)
 
-          apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-          apply (case_tac ko; simp add: other_obj_relation_def)
-            apply (clarsimp simp: cte_relation_def split: if_split_asm)
-           apply (clarsimp simp: ntfn_relation_def AEndpointMap_def
-                           split: Structures_A.ntfn.splits)
-          apply (clarsimp simp: AEndpointMap_def split: Structures_A.ntfn.splits)
-          apply (rename_tac arch_kernel_obj)
-          apply (case_tac arch_kernel_obj; simp add: other_obj_relation_def)
-           apply (clarsimp simp add: pte_relation_def)
-          apply (clarsimp split: if_split_asm)+
+          apply (rename_tac vmpage_size n)
 
-         apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-         apply (case_tac ko; simp add: other_obj_relation_def)
-          apply (clarsimp simp: cte_relation_def split: if_split_asm)
-         apply (rename_tac arch_kernel_obj)
-         apply (case_tac arch_kernel_obj; simp add: other_obj_relation_def)
-          apply (clarsimp simp add: pte_relation_def)
-         apply (clarsimp split: if_split_asm)+
+          apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+          apply (case_tac "n=0", simp)
+          apply (case_tac "kheap s (y + (n << pageBits))")
+           apply (rule ccontr)
+           apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1] )
+          using pspace_aligned
+          apply (simp add: pspace_aligned_def dom_def)
+          apply (erule_tac x=y in allE)
+          apply (case_tac "n=0",(simp split: if_split_asm)+)
+          apply (frule (2) unaligned_page_offsets_helper)
+          apply (frule_tac y="(n << pageBits)" in pspace_aligned_distinct_None'
+                                            [OF pspace_aligned pspace_distinct])
+           apply simp
+           apply (rule conjI, clarsimp simp add: word_gt_0  shiftl_t2n')
+           apply (fastforce simp: Arch_objBits_simps' shiftl_t2n' dest!: n_less_2p_pageBitsForSize )
 
-        apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-        apply (case_tac ko, simp_all add: other_obj_relation_def)
-         apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-        apply (rename_tac arch_kernel_obj)
-        apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-         apply (clarsimp simp add: pte_relation_def)
-        apply (rename_tac vmpage_size)
-        apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
-        apply (case_tac "n=0", simp)
-        apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
-         apply (rule ccontr)
-         apply (clarsimp simp: shiftl_t2n mult_ac dest!: gsUserPages[symmetric, THEN iffD1] )
-    using pspace_aligned
-        apply (simp add: pspace_aligned_def dom_def)
+          apply simp
+
+          apply (erule relatedE, ko, ako)
+          apply (rename_tac vmpage_size n)
+
+          apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
+          apply (case_tac "n=0", simp)
+          apply (case_tac "kheap s (y + (n << pageBits))")
+           apply (rule ccontr)
+           apply (clarsimp dest!: gsUserPages[symmetric, THEN iffD1] )
+          using pspace_aligned
+          apply (simp add: pspace_aligned_def dom_def)
+          apply (erule_tac x=y in allE)
+          apply (case_tac "n=0",(simp split: if_split_asm)+)
+          apply (frule (2) unaligned_page_offsets_helper)
+          apply (frule_tac y="(n << pageBits)" in pspace_aligned_distinct_None'
+                                            [OF pspace_aligned pspace_distinct])
+           apply simp
+           apply (rule conjI, clarsimp simp add: word_gt_0)
+            apply (fastforce simp: shiftl_t2n')
+           apply (clarsimp simp add: pageBits_def mask_def)
+           apply (simp only: shiftl_t2n')
+           apply (fastforce intro: n_less_2p_pageBitsForSize[simplified Arch_objBits_simps'])
+          apply simp
+
+        apply (erule relatedE, ko, ako)
+        apply (clarsimp simp: TcbMap_def tcb_relation_def valid_obj_def)
+        apply (rename_tac tcb y tcb')
+        apply (case_tac tcb, case_tac tcb')
+        apply (simp add: thread_state_relation_imp_ThStateMap)
+        apply (subgoal_tac "map_option FaultMap (tcbFault tcb) = tcb_fault")
+         prefer 2
+         apply (simp add: fault_rel_optionation_def)
+         using valid_objs[simplified valid_objs_def dom_def fun_app_def, simplified]
+         apply (erule_tac x=y in allE)
+         apply (clarsimp simp: valid_obj_def valid_tcb_def split: option.splits)
+        using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
         apply (erule_tac x=y in allE)
-        apply (case_tac "n=0",(simp split: if_split_asm)+)
-        apply (frule (2) unaligned_page_offsets_helper)
-        apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
-                                             [OF pspace_aligned pspace_distinct])
-         apply simp
-         apply (rule conjI, clarsimp simp add: word_gt_0)
-         apply (erule n_less_2p_pageBitsForSize)
-        apply (clarsimp simp: shiftl_t2n mult_ac)
-       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-       apply (case_tac ko, simp_all add: other_obj_relation_def)
-        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-       apply (rename_tac arch_kernel_obj)
-       apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-        apply (clarsimp simp add: pte_relation_def)
-       apply (rename_tac vmpage_size)
-       apply (cut_tac a=y and sz=vmpage_size in gsUserPages, clarsimp split: if_split_asm)
-       apply (case_tac "n=0", simp)
-       apply (case_tac "kheap s (y + n * 2 ^ pageBits)")
-        apply (rule ccontr)
-        apply (clarsimp simp: shiftl_t2n mult_ac dest!: gsUserPages[symmetric, THEN iffD1])
-       using pspace_aligned
-       apply (simp add: pspace_aligned_def dom_def)
-       apply (erule_tac x=y in allE)
-       apply (case_tac "n=0",simp+)
-       apply (frule (2) unaligned_page_offsets_helper)
-       apply (frule_tac y="n*2^pageBits" in pspace_aligned_distinct_None'
-                                         [OF pspace_aligned pspace_distinct])
-        apply simp
-        apply (rule conjI, clarsimp simp add: word_gt_0)
-        apply (erule n_less_2p_pageBitsForSize)
-       apply (clarsimp simp: shiftl_t2n mult_ac)
-      apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-      apply (case_tac ko, simp_all add: other_obj_relation_def)
-        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-       prefer 2
-       apply (rename_tac arch_kernel_obj)
-       apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-        apply (clarsimp simp add: pte_relation_def)
-       apply (clarsimp split: if_split_asm)
-      apply (clarsimp simp add: TcbMap_def tcb_relation_def valid_obj_def)
-      apply (rename_tac tcb y tcb')
-      apply (case_tac tcb)
-      apply (case_tac tcb')
-      apply (simp add: thread_state_relation_imp_ThStateMap)
-      apply (subgoal_tac "map_option FaultMap (tcbFault tcb) = tcb_fault")
-       prefer 2
-       apply (simp add: fault_rel_optionation_def)
-       using valid_objs[simplified valid_objs_def dom_def fun_app_def, simplified]
-       apply (erule_tac x=y in allE)
-       apply (clarsimp simp: valid_obj_def valid_tcb_def
-                       split: option.splits)
-      using valid_objs[simplified valid_objs_def Ball_def dom_def fun_app_def]
-      apply (erule_tac x=y in allE)
-      apply (clarsimp simp add: cap_relation_imp_CapabilityMap valid_obj_def
-                                valid_tcb_def ran_tcb_cap_cases valid_cap_def2
-                                arch_tcb_relation_imp_ArchTcnMap)
-     apply (simp add: absCNode_def cte_map_def)
-     apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-     apply (case_tac ko, simp_all add: other_obj_relation_def
-                                split: if_split_asm)
-      prefer 2
-      apply (rename_tac arch_kernel_obj)
-      apply (case_tac arch_kernel_obj, simp_all add: other_obj_relation_def)
-       apply (clarsimp simp add: pte_relation_def)
-      apply (clarsimp split: if_split_asm)
-     apply (simp add: cte_map_def)
-     apply (clarsimp simp add: cte_relation_def)
-     apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
+        apply (clarsimp simp: cap_relation_imp_CapabilityMap valid_obj_def valid_tcb_def
+                              ran_tcb_cap_cases valid_cap_def2 arch_tcb_relation_imp_ArchTcnMap)
+
+       apply (erule relatedE, ko, ako)
+       apply (simp add: absCNode_def cte_map_def)
+       apply (cut_tac a=y and n=sz in gsCNodes, clarsimp)
     using pspace_aligned[simplified pspace_aligned_def]
      apply (drule_tac x=y in bspec, clarsimp)
      apply clarsimp
@@ -621,32 +629,32 @@ proof -
      apply clarsimp
 
     (* mapping architecture-specific objects *)
-    apply clarsimp
-    apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-    apply (case_tac ko, simp_all add: other_obj_relation_def)
-     apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-    apply (rename_tac arch_kernel_object y ko P arch_kernel_obj)
-    apply (case_tac arch_kernel_object, simp_all add: absHeapArch_def
-                                            split: asidpool.splits)
+      apply clarsimp
+      apply (rename_tac x arch_kernel_object)
+      apply (erule relatedE, ko)
+      apply (rename_tac y P arch_kernel_obj)
+      apply (case_tac arch_kernel_object; simp add: absHeapArch_def split: asidpool.splits)
 
-     apply clarsimp
-     apply (case_tac arch_kernel_obj)
-       apply (simp add: other_obj_relation_def asid_pool_relation_def
-                        inv_def o_def)
-      apply (clarsimp simp add:  pte_relation_def)
-     apply (clarsimp split: if_split_asm)+
+        apply clarsimp
+        apply (case_tac arch_kernel_obj)
+           apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+          apply (clarsimp simp add:  pte_relation_def)
+         apply (clarsimp simp add:  )
+        apply (clarsimp split: if_split_asm)
 
-    apply (case_tac arch_kernel_obj)
-      apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
-                       o_def)
-    using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
-     apply (erule_tac x=y in allE)
+       apply (case_tac arch_kernel_obj)
+          apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
+         using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
+         apply (erule_tac x=y in allE)
      apply (clarsimp simp add: pte_relation_def absPageTable_def absPageTable0_def
                                bit_simps)
-     apply (rule conjI)
-      prefer 2
-      apply clarsimp
-      apply (rule sym)
+
+         apply (rule conjI)
+          prefer 2
+          apply clarsimp
+          apply (rule sym)
+
+          \<comment> \<open>apply (rule pspace_aligned_distinct_None'[OF pspace_aligned pspace_distinct]; simp)\<close>
       apply (rule pspace_aligned_distinct_None'
                   [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
       apply (cut_tac x=ya and n="2^12" in
@@ -661,6 +669,7 @@ proof -
       apply (rename_tac pte')
       apply (erule pspace_dom_relatedE[OF _ pspace_relation])
       apply (case_tac ko; simp add: other_obj_relation_def)
+       apply (clarsimp simp add: cte_relation_def split: if_split_asm)
        apply (clarsimp simp add: cte_relation_def split: if_split_asm)
       apply (rename_tac ako' y ko P ako)
       apply (case_tac ako; clarsimp simp: other_obj_relation_def bit_simps)
@@ -709,55 +718,17 @@ proof -
      apply (rule set_eqI, clarsimp)
      apply (case_tac x; simp)
     apply (clarsimp split: if_splits)
+
+     apply (rule relatedE, assumption, ko, ako)
+     apply (frule scBits_inverse_sc_relation)
+     apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_prevs_walk[OF replies])
+
+    apply (erule relatedE, ko, ako)
+    apply (clarsimp simp: reply_relation_def replyMap_def)
     done
 qed
 
-definition
-  "EtcbMap tcb \<equiv>
-     \<lparr>tcb_priority = tcbPriority tcb,
-      time_slice = tcbTimeSlice tcb,
-      tcb_domain = tcbDomain tcb\<rparr>"
-
-definition absEkheap ::
-  "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> etcb option" where
-  "absEkheap h \<equiv> \<lambda>x.
-     case h x of
-       Some (KOTCB tcb) \<Rightarrow> Some (EtcbMap tcb)
-     | _ \<Rightarrow> None"
-
-lemma absEkheap_correct:
-  assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
-  assumes ekheap_relation: "ekheap_relation (ekheap s) (ksPSpace s')"
-  assumes vetcbs: "valid_etcbs s"
-  shows "absEkheap (ksPSpace s') = ekheap s"
-  apply (rule ext)
-  apply (clarsimp simp: absEkheap_def split: option.splits Structures_H.kernel_object.splits)
-  apply (subgoal_tac "\<forall>x. (\<exists>tcb. kheap s x = Some (TCB tcb)) =
-                          (\<exists>tcb'. ksPSpace s' x = Some (KOTCB tcb'))")
-   using vetcbs ekheap_relation
-   apply (clarsimp simp: valid_etcbs_def is_etcb_at_def dom_def ekheap_relation_def st_tcb_at_def obj_at_def)
-   apply (erule_tac x=x in allE)+
-   apply (rule conjI, force)
-   apply clarsimp
-   apply (rule conjI, clarsimp simp: EtcbMap_def etcb_relation_def)+
-   apply clarsimp
-  using pspace_relation
-  apply (clarsimp simp add: pspace_relation_def pspace_dom_def UNION_eq
-                              dom_def Collect_eq)
-  apply (rule iffI)
-   apply (erule_tac x=x in allE)+
-   apply (case_tac "ksPSpace s' x", clarsimp)
-    apply (erule_tac x=x in allE, clarsimp)
-   apply clarsimp
-   apply (case_tac a, simp_all add: other_obj_relation_def)
-  apply (insert pspace_relation)
-  apply (clarsimp simp: obj_at'_def)
-  apply (erule(1) pspace_dom_relatedE)
-  apply (erule(1) obj_relation_cutsE)
-     apply (clarsimp simp: other_obj_relation_def
-                    split: Structures_A.kernel_object.split_asm  if_split_asm
-                           RISCV64_A.arch_kernel_obj.split_asm)+
-  done
+end
 
 text \<open>The following function can be used to reverse cte_map.\<close>
 definition
@@ -1518,13 +1489,6 @@ lemma absSchedulerAction_correct:
 definition
   "absExst s \<equiv>
      \<lparr>work_units_completed_internal = ksWorkUnitsCompleted s,
-      scheduler_action_internal = absSchedulerAction (ksSchedulerAction s),
-      ekheap_internal = absEkheap (ksPSpace s),
-      domain_list_internal = ksDomSchedule s,
-      domain_index_internal = ksDomScheduleIdx s,
-      cur_domain_internal = ksCurDomain s,
-      domain_time_internal = ksDomainTime s,
-      ready_queues_internal = curry (ksReadyQueues s),
       cdt_list_internal = absCDTList (cteMap (gsCNodes s)) (ctes_of s)\<rparr>"
 
 lemma absExst_correct:
@@ -1533,11 +1497,10 @@ lemma absExst_correct:
   shows "absExst s' = exst s"
   apply (rule det_ext.equality)
       using rel invs invs'
-      apply (simp_all add: absExst_def absSchedulerAction_correct absEkheap_correct
+      apply (simp_all add: absExst_def absSchedulerAction_correct
                            absCDTList_correct[THEN fun_cong] state_relation_def invs_def valid_state_def
-                           ready_queues_relation_def invs'_def valid_state'_def
+                           ready_queues_relation_def invs'_def
                            valid_pspace_def valid_sched_def valid_pspace'_def curry_def fun_eq_iff)
-      apply (fastforce simp: absEkheap_correct)
   done
 
 
@@ -1547,6 +1510,17 @@ definition
     cdt = absCDT (cteMap (gsCNodes s)) (ctes_of s),
     is_original_cap = absIsOriginalCap (cteMap (gsCNodes s)) (ksPSpace s),
     cur_thread = ksCurThread s, idle_thread = ksIdleThread s,
+    consumed_time = ksConsumedTime s,
+    cur_time = ksCurTime s,
+    cur_sc = ksCurSc s,
+    reprogram_timer = ksReprogramTimer s,
+    scheduler_action = absSchedulerAction (ksSchedulerAction s),
+    domain_list = ksDomSchedule s,
+    domain_index = ksDomScheduleIdx s,
+    cur_domain = ksCurDomain s,
+    domain_time = ksDomainTime s,
+    ready_queues = curry (ksReadyQueues s),
+    release_queue = ksReleaseQueue s,
     machine_state = observable_memory (ksMachineState s) (user_mem' s),
     interrupt_irq_node = absInterruptIRQNode (ksInterruptState s),
     interrupt_states = absInterruptStates (ksInterruptState s),

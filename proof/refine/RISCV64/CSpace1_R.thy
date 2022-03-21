@@ -6639,18 +6639,17 @@ lemma cteSwap_corres:
   apply (drule (2) updateMDB_the_lot')
      apply (erule (1) impE, assumption)
     apply (fastforce simp only: no_0_modify_map)
-   apply assumption
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', assumption, fastforce simp only: no_0_modify_map)
   apply (drule in_getCTE, elim conjE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', assumption, fastforce simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', assumption, fastforce simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule (2) updateMDB_the_lot', assumption, fastforce simp only: no_0_modify_map)
   apply (elim conjE TrueE, simp only:)
-  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
-  apply (simp only: pspace_relations_def refl)
+  apply (drule (2) updateMDB_the_lot', assumption, fastforce simp only: no_0_modify_map)
+  apply (simp only: refl)
   apply (rule conjI, rule TrueI)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
@@ -6699,7 +6698,6 @@ lemma cteSwap_corres:
   apply (thin_tac "domain_index t = p" for t p)+
   apply (thin_tac "domain_list t = p" for t p)+
   apply (thin_tac "domain_time t = p" for t p)+
-  apply (thin_tac "ekheap t = p" for t p)+
   apply (thin_tac "scheduler_action t = p" for t p)+
   apply (thin_tac "ksArchState t = p" for t p)+
   apply (thin_tac "gsCNodes t = p" for t p)+
@@ -6708,7 +6706,6 @@ lemma cteSwap_corres:
   apply (thin_tac "ksIdleThread t = p" for t p)+
   apply (thin_tac "gsUserPages t = p" for t p)+
   apply (thin_tac "pspace_relation s s'" for s s')+
-  apply (thin_tac "ekheap_relation e p" for e p)+
   apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
   apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply (rule conjI)

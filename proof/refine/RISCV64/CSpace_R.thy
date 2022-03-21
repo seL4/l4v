@@ -875,7 +875,7 @@ lemma cteMove_corres:
   apply (drule updateCap_stuff, clarsimp)
   apply (subgoal_tac "pspace_distinct' b \<and> pspace_aligned' b")
    prefer 2
-   subgoal by fastforce
+   subgoal by fast
   apply (thin_tac "ctes_of t = s" for t s)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
@@ -915,7 +915,6 @@ lemma cteMove_corres:
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
-  apply (thin_tac "ekheap_relation t p" for t p)+
   apply (thin_tac "pspace_relation t p" for t p)+
   apply (thin_tac "interrupt_state_relation s t p" for s t p)+
   apply (thin_tac "ghost_relation s t p" for s t p)+
@@ -4450,7 +4449,7 @@ lemma cteInsert_simple_corres:
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
-        apply (clarsimp simp: pspace_relations_def)
+        apply clarsimp
         apply (rule conjI)
          subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (thin_tac "gsCNodes t = p" for t p)+
@@ -4477,7 +4476,6 @@ lemma cteInsert_simple_corres:
         apply (thin_tac "ksDomainTime t = p" for t p)+
         apply (thin_tac "ksDomSchedule t = p" for t p)+
         apply (thin_tac "ctes_of t = p" for t p)+
-        apply (thin_tac "ekheap_relation t p" for t p)+
         apply (thin_tac "pspace_relation t p" for t p)+
         apply (thin_tac "interrupt_state_relation s t p" for s t p)+
         apply (thin_tac "sched_act_relation t p" for t p)+
