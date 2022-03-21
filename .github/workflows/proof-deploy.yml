@@ -49,13 +49,13 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
     - name: Upload C graph-lang
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: c-graph-lang-${{ matrix.arch }}
-        path: artifacts/CFunctions.txt.xz
+        name: c-graph-lang
+        path: artifacts/simpl-export
         if-no-files-found: ignore
     - name: Upload logs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: logs-${{ matrix.arch }}
         path: logs.tar.xz
@@ -83,13 +83,13 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
     - name: Upload C graph-lang
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: c-graph-lang-${{ matrix.arch }}-MCS
-        path: artifacts/CFunctions.txt.xz
+        name: c-graph-lang
+        path: artifacts/simpl-export
         if-no-files-found: ignore
     - name: Upload logs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: logs-${{ matrix.arch }}-MCS
         path: logs.tar.xz
