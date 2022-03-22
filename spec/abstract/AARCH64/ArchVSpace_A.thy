@@ -171,21 +171,38 @@ definition get_vmid :: "asid \<Rightarrow> (vmid, 'z::state_ext) s_monad" where
    od"
 
 text \<open>
-  Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.
-\<close>
+  Format a VM fault message to be passed to a thread's supervisor after it encounters a page fault.\<close>
 definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> (unit, 'z::state_ext) f_monad" where
   "handle_vm_fault thread fault \<equiv> case fault of
      ARMDataAbort \<Rightarrow> doE
-       \<comment> \<open>FIXME AARCH64: needs VCPU adjustment (currently copy/paste from ARM)\<close>
        addr \<leftarrow> liftE $ do_machine_op getFAR;
        fault \<leftarrow> liftE $ do_machine_op getDFSR;
-       throwError $ ArchFault $ VMFault addr [0, fault && mask 14]
+       cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
+       addr \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
+              then doE
+                  \<comment> \<open>address bits of PAR register after S1 translation\<close>
+                  par_el1_mask \<leftarrow> returnOk $ 0xfffffffff000;
+                  addr' \<leftarrow> liftE $ do_machine_op $ addressTranslateS1 addr;
+                  returnOk $ (addr' && par_el1_mask) || (addr && mask pageBits)
+                odE
+              else returnOk addr;
+       \<comment> \<open>32 is the width of the FSR field in the C VMFault structure\<close>
+       throwError $ ArchFault $ VMFault addr [0, fault && mask 32]
      odE
    | ARMPrefetchAbort \<Rightarrow> doE
-       \<comment> \<open>FIXME AARCH64: needs VCPU adjustment (currently copy/paste from ARM)\<close>
        pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
        fault \<leftarrow> liftE $ do_machine_op getIFSR;
-       throwError $ ArchFault $ VMFault pc [1, fault && mask 14]
+       cur_v \<leftarrow> liftE $ gets (arm_current_vcpu \<circ> arch_state);
+       pc \<leftarrow> if (\<exists>v. cur_v = Some (v, True)) \<comment> \<open>VCPU active\<close>
+            then doE
+                \<comment> \<open>address bits of PAR register after S1 translation\<close>
+                par_el1_mask \<leftarrow> returnOk $ 0xfffffffff000;
+                pc' \<leftarrow> liftE $ do_machine_op $ addressTranslateS1 pc;
+                returnOk $ (pc' && par_el1_mask) || (pc && mask pageBits)
+              odE
+            else returnOk pc;
+       \<comment> \<open>32 is the width of the FSR field in the C VMFault structure\<close>
+       throwError $ ArchFault $ VMFault pc [1, fault && mask 32]
      odE"
 
 
