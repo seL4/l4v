@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: validated modulo VCPU operations and style update *)
-
 chapter "AARCH64 VSpace Functions"
 
 theory ArchVSpace_A
@@ -19,8 +17,7 @@ context Arch begin global_naming AARCH64_A
 
 text \<open>
   Look up a thread's IPC buffer and check that the thread has the authority to read or (in the
-  receiver case) write to it.
-\<close>
+  receiver case) write to it.\<close>
 definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
@@ -302,7 +299,7 @@ text \<open>Turn VPCU mode off on the hardware level.\<close>
 definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_disable vo \<equiv> do
     do_machine_op dsb;
-    (case vo of
+    case vo of
       Some vr \<Rightarrow> do
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
@@ -310,7 +307,7 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
         vcpu_save_reg vr VCPURegACTLR; \<comment> \<open>since FPU enabled\<close>
         do_machine_op isb
       od
-    | _ \<Rightarrow> return ());
+    | _ \<Rightarrow> return ();
     do_machine_op $ do
         set_gic_vcpu_ctrl_hcr 0; \<comment> \<open>turn VGIC off\<close>
         isb;
@@ -326,7 +323,7 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
           save_virt_timer vr;
           do_machine_op $ maskInterrupt True irqVTimerEvent
         od
-      | _ \<Rightarrow> return ()
+    | _ \<Rightarrow> return ()
     od"
 
 text \<open>Turn VCPU mode on, on the hardware level.\<close>
@@ -387,7 +384,6 @@ definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (u
   od"
 
 text \<open>Register + context save for VCPUs\<close>
-
 definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save vb \<equiv>
      case vb
@@ -501,8 +497,7 @@ definition set_global_user_vspace :: "(unit,'z::state_ext) s_monad" where
 
 text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
-  configured.
-\<close>
+  configured.\<close>
 definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "set_vm_root tcb \<equiv> do
      thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
@@ -567,8 +562,7 @@ text \<open>
   Look up an @{text "asid+vspace_ref"} down to the provided level in the page table.
   For level @{term bot_level}, return a pointer to a table at the returned level.
   The level can be higher than @{term bot_level} if the lookup terminates early because
-  it hit a page or an invalid entry.
-\<close>
+  it hit a page or an invalid entry.\<close>
 definition vs_lookup_table ::
   "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "vs_lookup_table bot_level asid vptr \<equiv> do {
@@ -584,8 +578,7 @@ definition vs_lookup_table ::
 text \<open>
   Same as @{const vs_lookup_table}, but return a pointer to a slot in a table at the returned level.
   For @{prop "bot_level = asid_pool_level"}, still return the pointer to the ASID pool (not a slot
-  inside it, since there are no slot functions for ASID pools).
-\<close>
+  inside it, since there are no slot functions for ASID pools).\<close>
 definition vs_lookup_slot ::
   "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "vs_lookup_slot bot_level asid vref \<equiv> do {
@@ -613,8 +606,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
 text \<open>
   Page table structure capabilities cannot be copied until they have an ASID and location
   assigned. This is because they cannot have multiple current ASIDs and cannot be shared between
-  address spaces or virtual locations.
-\<close>
+  address spaces or virtual locations.\<close>
 definition arch_derive_cap :: "arch_cap \<Rightarrow> (cap,'z::state_ext) se_monad" where
   "arch_derive_cap c \<equiv>
      case c of
@@ -658,8 +650,7 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
 
 text \<open>
   A thread's virtual address space capability must be to a mapped page table to be valid on
-  the AARCH64 architecture.
-\<close>
+  the AARCH64 architecture.\<close>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool" where
   "is_valid_vtable_root c \<equiv>
      case c of ArchObjectCap (PageTableCap _ True (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
