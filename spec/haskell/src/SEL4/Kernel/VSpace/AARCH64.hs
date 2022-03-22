@@ -194,9 +194,10 @@ handleVMFault _ ARMDataAbort = do
     active <- withoutFailure $ curVCPUActive
     addr <- if active
             then do
-                -- FIXME AARCH64: assumes GET_PAR_ADDR is inside addressTranslateS1
+                -- address bits of PAR register after S1 translation
+                let parEL1Mask = 0xfffffffff000
                 addr' <- withoutFailure $ doMachineOp $ addressTranslateS1 addr
-                return $ addr' .|. (addr .&. mask pageBits)
+                return $ (addr' .&. parEL1Mask) .|. (addr .&. mask pageBits)
             else
                 return addr
     -- 32 is the width of the FSR field in the C VMFault structure:
@@ -208,9 +209,10 @@ handleVMFault thread ARMPrefetchAbort = do
     active <- withoutFailure $ curVCPUActive
     pc <- if active
           then do
-              -- FIXME AARCH64: assumes GET_PAR_ADDR is inside addressTranslateS1
+              -- address bits of PAR register after S1 translation
+              let parEL1Mask = 0xfffffffff000
               pc' <- withoutFailure $ doMachineOp $ addressTranslateS1 (VPtr pc)
-              return $ pc' .|. (VPtr pc .&. mask pageBits)
+              return $ (pc' .&. parEL1Mask) .|. (VPtr pc .&. mask pageBits)
           else
               return $ VPtr pc
     -- 32 is the width of the FSR field in the C VMFault structure:
