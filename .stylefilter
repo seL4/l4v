@@ -16,3 +16,6 @@
 # separate repositories
 *isabelle/*
 *internal/*
+
+# this is firmly a bash script, no point checking bashisms
+*tools/haskell-translator/make_spec.sh
