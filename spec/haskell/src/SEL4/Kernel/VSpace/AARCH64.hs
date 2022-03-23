@@ -288,9 +288,7 @@ deleteASID asid pt = do
         Just poolPtr -> do
             ASIDPool pool <- getObject poolPtr
             let maybeEntry = pool!(asid .&. mask asidLowBits)
-            let maybeRoot = case maybeEntry of -- FIXME AARCH64: surely there is option.map
-                 Just (ASIDPoolVSpace vmID p) -> Just p
-                 Nothing -> Nothing
+            let maybeRoot = maybe Nothing (Just . apVSpace) maybeEntry
             when (maybeRoot == Just pt) $ do
                 invalidateTLBByASID asid
                 invalidateASIDEntry asid
