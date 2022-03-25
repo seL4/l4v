@@ -166,6 +166,10 @@ definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Righ
   where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
+definition setInterruptMask :: "irq set \<Rightarrow> unit machine_monad"
+  where
+  "setInterruptMask irqs \<equiv> modify (\<lambda>s. s \<lparr> irq_masks := \<lambda>irq. irq \<in> irqs \<rparr>)"
+
 
 subsection "Clearing Memory"
 
@@ -246,7 +250,12 @@ definition sfence :: "unit machine_monad"
   where
   "sfence \<equiv> machine_op_lift sfence_impl"
 
-lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
+consts' tfence_impl :: "unit machine_rest_monad"
+definition tfence :: "unit machine_monad"
+  where
+  "tfence \<equiv> machine_op_lift tfence_impl"
+
+lemmas cache_machine_op_defs = tfence_def sfence_def hwASIDFlush_def
 
 
 subsection "Faults"
