@@ -165,5 +165,22 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
    | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
    | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper"
 
+text \<open>
+  Interrupt mask switching, microarchitectural state flushing and time padding necessary for
+  time protection whenever there is a domain switch, but deferred until restore_user_context.
+\<close>
+\<comment> \<open>TODO: Once this is figured out for RISCV64, arch-split all this. -robs\<close>
+definition kimage_flush :: "unit det_ext_monad"
+where
+  "kimage_flush \<equiv>
+     do
+       \<comment> \<open>TODO: Early exit if KSCurrentKISwitch flag is not set. -robs\<close>
+       curdom \<leftarrow> gets cur_domain;
+       mask \<leftarrow> gets domain_irqmask;
+       do_machine_op $ setInterruptMask (mask curdom);
+       \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
+       do_machine_op $ tfence
+     od"
+
 end
 end

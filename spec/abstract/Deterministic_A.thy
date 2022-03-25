@@ -149,6 +149,8 @@ record det_ext =
    domain_time_internal :: "machine_word"
    ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
+   domain_kimage_internal :: "domain \<Rightarrow> obj_ref"
+   domain_irqmask_internal :: "domain \<Rightarrow> irq set"
 
 text \<open>
   The state of the deterministic abstract specification extends the
@@ -212,6 +214,18 @@ abbreviation
 
 abbreviation
   "cdt_list_update f (s::det_state) \<equiv> trans_state (cdt_list_internal_update f) s"
+
+abbreviation
+  "domain_kimage (s::det_state) \<equiv> domain_kimage_internal (exst s)"
+
+abbreviation
+  "domain_kimage_update f (s::det_state) \<equiv> trans_state (domain_kimage_internal_update f) s"
+
+abbreviation
+  "domain_irqmask (s::det_state) \<equiv> domain_irqmask_internal (exst s)"
+
+abbreviation
+  "domain_irqmask_update f (s::det_state) \<equiv> trans_state (domain_irqmask_internal_update f) s"
 
 type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
 
@@ -564,7 +578,10 @@ definition "ext_init_det_ext_ext \<equiv>
       cur_domain_internal = 0,
       domain_time_internal = 15,
       ready_queues_internal = const (const []),
-      cdt_list_internal = const []\<rparr> :: det_ext"
+      cdt_list_internal = const [],
+      \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
+      domain_kimage_internal = \<lambda>_. 0,
+      domain_irqmask_internal = \<lambda>_. {}\<rparr> :: det_ext"
 
 instance ..
 

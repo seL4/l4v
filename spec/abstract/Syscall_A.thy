@@ -385,7 +385,8 @@ definition
                   when (irq \<noteq> None) $ handle_interrupt (the irq)
                 od);
        schedule;
-       activate_thread
+       activate_thread;
+       do_extended_op RISCV64_A.kimage_flush
    od"
 
 end
