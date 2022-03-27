@@ -128,6 +128,12 @@ lemma x_less_2_0_1:
   shows "x < 2 \<Longrightarrow> x = 0 \<or> x = 1"
   by (rule x_less_2_0_1') auto
 
+lemma less_4_cases:
+  "(x::machine_word) < 4 \<Longrightarrow> x=0 \<or> x=1 \<or> x=2 \<or> x=3"
+  apply clarsimp
+  apply (drule word_less_cases, erule disjE, simp, simp)+
+  done
+
 end
 
 end
