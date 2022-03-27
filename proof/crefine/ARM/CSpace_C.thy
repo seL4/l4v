@@ -1484,7 +1484,7 @@ lemma cteSwap_ccorres:
              apply simp
              apply (cases "(slot'=slot)", simp+)
     \<comment> \<open>no_0 (ctes_of s)\<close>
-       apply (simp add: valid_mdb'_def) \<comment> \<open>yuck\<close>
+       apply (simp add: valid_mdb'_def)
       apply (erule valid_mdb_ctesE)
       apply assumption
 

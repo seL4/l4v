@@ -499,7 +499,7 @@ declare pspace_distinctD' [intro?]
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
   assumes ks: "ksPSpace s x = Some (KOCTE cte)"
-  and     pa: "pspace_aligned' s"  (* yuck *)
+  and     pa: "pspace_aligned' s"
   and     pd: "pspace_distinct' s"
   shows   "ctes_of s x = Some cte"
 proof (rule ctes_of_eq_cte_wp_at')
