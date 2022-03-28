@@ -371,14 +371,14 @@ lemma uwr_sym:
 
 
 (* now we make some basic instructions, which contain addresses etc *)
-datatype 'r instr = IRead vaddr            \<comment> \<open>read from some address into regs\<close>
-                  | IWrite vaddr           \<comment> \<open>write to some address from regs\<close>
-                  | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
-                  | IFlushL2 "paddr set"   \<comment> \<open>flush some part L2 cache(s)\<close>
-                  | IPadToTime time        \<comment> \<open>pad the time up to some point\<close>
+datatype instr = IRead vaddr            \<comment> \<open>read from some address\<close>
+               | IWrite vaddr           \<comment> \<open>write to some address\<close>
+               | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
+               | IFlushL2 "paddr set"   \<comment> \<open>flush some part L2 cache(s)\<close>
+               | IPadToTime time        \<comment> \<open>pad the time up to some point\<close>
 
 primrec
-  instr_step :: "'regs instr \<Rightarrow>
+  instr_step :: "instr \<Rightarrow>
     'other_state \<Rightarrow>
     ('fch,'pch)state \<Rightarrow>
     ('fch,'pch)state" where
@@ -399,9 +399,9 @@ primrec
       s\<lparr>pch := do_pch_flush (pch s) as,
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 
-type_synonym 'r program = "'r instr list"
+type_synonym program = "instr list"
 
-primrec instr_multistep :: "'regs program \<Rightarrow>
+primrec instr_multistep :: "program \<Rightarrow>
   'other_state \<Rightarrow>
   ('fch,'pch)state \<Rightarrow>
   ('fch,'pch)state" where
@@ -409,7 +409,7 @@ primrec instr_multistep :: "'regs program \<Rightarrow>
 | "instr_multistep (i#is) os s = instr_multistep is os (instr_step i os s)"
 
 definition
-  instrs_obeying_ta :: "'other_state \<Rightarrow> 'regs instr set" where
+  instrs_obeying_ta :: "'other_state \<Rightarrow> instr set" where
  "instrs_obeying_ta s \<equiv> {i. case i of
                             IRead a  \<Rightarrow> a \<in> touched_addrs s
                           | IWrite a \<Rightarrow> a \<in> touched_addrs s
@@ -418,7 +418,7 @@ definition
 
 (* these are the programs that could have created this ta *)
 definition
-  programs_obeying_ta :: "'other_state \<Rightarrow> 'regs program set" where
+  programs_obeying_ta :: "'other_state \<Rightarrow> program set" where
  "programs_obeying_ta s \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta s) p}"
 
 lemma hd_instr_obeying_ta [dest]:
@@ -480,16 +480,43 @@ lemma and_or_specific:
   apply blast
   done
 
+(*
+
+  my biggest question right now:
+  with steps like this, do we use external uwr stuff?
+  we seem to be using the original other_states for the output unwinding
+  relations. this doesn't seem right. if we have some "after" other_state,
+  how do we reason about it? we don't want a bunch of complexity here, so
+  we need to kinda distill what we need to know into the simplest possible
+  thing. maybe just stuff about external_uwr?
+
+
+lemma d_not_running_step:
+  assumes
+  "i \<in> instrs_obeying_ta os"
+  "touched_addrs_inv os"
+  "current_domain os \<noteq> d"
+  "s' = instr_step i s"
+  shows
+  "((os, s), (os, s')) \<in> uwr d"
+*)
+
 lemma d_running_step:
   assumes
-    "i \<in> instrs_obeying_ta (os)"
-    "touched_addrs_inv (os)"
+    "i \<in> instrs_obeying_ta os"
+    "touched_addrs_inv os"
     "((os, s), (ot, t)) \<in> uwr d"
     "current_domain os = d"
     "s' = instr_step i os s"
     "t' = instr_step i ot t"
+    (* the only thing we care about output other_state is that the domain hasn't changed *)
+    "current_domain os' = current_domain os"
+    "current_domain ot' = current_domain ot"
   shows
-    "((os, s'), (ot, t')) \<in> uwr d"
+    "((os', s'), (ot', t')) \<in> uwr d"
+  sorry
+
+(*
   proof (cases i)
     case (IRead a)
     thus ?thesis using assms
@@ -651,8 +678,9 @@ lemma d_running_step:
   next
     case (IPadToTime x7)
     thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
-  qed
+  qed *)
 
+(*
 lemma touched_addrs_inv_preserved:
   "\<lbrakk>touched_addrs_inv' s; page_table_inv' s;
     s' = instr_multistep p (instr_step a s);
@@ -694,6 +722,8 @@ lemma page_table_inv_preserved':
    \<Longrightarrow> page_table_inv' (instr_step a s)"
   apply(clarsimp simp:programs_obeying_ta_def programs_safe_def)
   using page_table_inv_preserved by blast
+*)
+
 
 (* d running \<rightarrow> d running *)
 lemma d_running: "\<lbrakk>
@@ -703,23 +733,23 @@ lemma d_running: "\<lbrakk>
    \<comment> \<open>we have two programs derived from the same touched_addresses -
      these have to be the same program (so we need to know that the choice depends on stuff in
      other_state in the external uwr)\<close>
-   p \<in> programs_obeying_ta (other_state s);
-   p \<in> programs_safe (other_state s);
+   p \<in> programs_obeying_ta os;
    \<comment> \<open>that touched_addresses ONLY contains addresses in d\<close>
-   touched_addrs_inv (other_state s);
-   page_table_inv (other_state s);
+   touched_addrs_inv os;
    \<comment> \<open>initial states s and t hold uwr_running\<close>
-   (s, t) \<in> uwr d;
-   current_domain' s = d;
+   ((os, s), (ot, t)) \<in> uwr d;
+   current_domain os = d;
    \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
    \<comment> \<open>we execute the program on both states\<close>
-   s' = instr_multistep p s;
-   t' = instr_multistep p t
+   s' = instr_multistep p os s;
+   t' = instr_multistep p ot t;
+   current_domain os' = current_domain os;
+   current_domain ot' = current_domain ot
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr_running\<close>
-   (s', t') \<in> uwr d"
-  apply(induct p arbitrary:s t)
-   apply force
+   ((os', s'), (ot', t')) \<in> uwr d"
+  apply(induct p arbitrary:s t os ot)
+   apply (solves \<open>clarsimp simp:uwr_def\<close>)
   apply clarsimp
   apply(erule_tac x="instr_step a s" in meta_allE)
   apply(erule_tac x="instr_step a t" in meta_allE)
