@@ -99,15 +99,20 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
        do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
     od);
     do_extended_op $ do
-      switched \<leftarrow> gets domain_switched;
-      if \<not> switched then return ()
-      else do
-        curdom \<leftarrow> gets cur_domain;
+      curdom \<leftarrow> gets cur_domain;
+      olddom \<leftarrow> gets old_domain;
+      when (curdom \<noteq> olddom) (do
+        irqs_of \<leftarrow> gets domain_irqs;
+        \<comment> \<open>FIXME: Placeholder only! Instead of invoking maskInterrupt once
+          for a random member of the old domain's irq set, we need to invoke it
+          repeatedly with True to mask every member of that set. -robs.\<close>
+        irq_to_disable \<leftarrow> select (irqs_of olddom);
+        do_machine_op $ maskInterrupt True irq_to_disable;
         kimage \<leftarrow> gets domain_kimage;
         \<comment> \<open>FIXME: Placeholder only! Retrieve correct references and invoke
           correct machine interface to switch kernel images on RISCV64. -robs\<close>
         do_machine_op $ setVSpaceRoot (kimage curdom) 0
-      od
+      od)
     od
   od"
 
