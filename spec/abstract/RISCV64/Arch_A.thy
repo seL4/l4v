@@ -174,12 +174,16 @@ definition kimage_flush :: "unit det_ext_monad"
 where
   "kimage_flush \<equiv>
      do
-       \<comment> \<open>TODO: Early exit if KSCurrentKISwitch flag is not set. -robs\<close>
-       curdom \<leftarrow> gets cur_domain;
-       mask \<leftarrow> gets domain_irqmask;
-       do_machine_op $ setInterruptMask (mask curdom);
-       \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
-       do_machine_op $ tfence
+       switched \<leftarrow> gets domain_switched;
+       if \<not> switched then return ()
+       else do
+         modify (\<lambda>s. s\<lparr> domain_switched := False \<rparr>);
+         curdom \<leftarrow> gets cur_domain;
+         mask \<leftarrow> gets domain_irqmask;
+         do_machine_op $ setInterruptMask (mask curdom);
+         \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
+         do_machine_op $ tfence
+       od
      od"
 
 end

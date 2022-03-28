@@ -151,6 +151,7 @@ record det_ext =
    cdt_list_internal :: cdt_list
    domain_kimage_internal :: "domain \<Rightarrow> obj_ref"
    domain_irqmask_internal :: "domain \<Rightarrow> irq set"
+   domain_switched_internal :: bool
 
 text \<open>
   The state of the deterministic abstract specification extends the
@@ -226,6 +227,12 @@ abbreviation
 
 abbreviation
   "domain_irqmask_update f (s::det_state) \<equiv> trans_state (domain_irqmask_internal_update f) s"
+
+abbreviation
+  "domain_switched (s::det_state) \<equiv> domain_switched_internal (exst s)"
+
+abbreviation
+  "domain_switched_update f (s::det_state) \<equiv> trans_state (domain_switched_internal_update f) s"
 
 type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
 
@@ -358,7 +365,8 @@ definition
       in s\<lparr> domain_index := domain_index',
             cur_domain := fst next_dom,
             domain_time := snd next_dom,
-            work_units_completed := 0\<rparr>)"
+            work_units_completed := 0,
+            domain_switched := True\<rparr>)"
 
 definition
   dec_domain_time :: "unit det_ext_monad" where
@@ -581,7 +589,8 @@ definition "ext_init_det_ext_ext \<equiv>
       cdt_list_internal = const [],
       \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
       domain_kimage_internal = \<lambda>_. 0,
-      domain_irqmask_internal = \<lambda>_. {}\<rparr> :: det_ext"
+      domain_irqmask_internal = \<lambda>_. {},
+      domain_switched_internal = False\<rparr> :: det_ext"
 
 instance ..
 
