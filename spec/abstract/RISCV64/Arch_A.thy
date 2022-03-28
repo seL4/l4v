@@ -174,16 +174,19 @@ definition kimage_flush :: "unit det_ext_monad"
 where
   "kimage_flush \<equiv>
      do
-       switched \<leftarrow> gets domain_switched;
-       if \<not> switched then return ()
-       else do
-         modify (\<lambda>s. s\<lparr> domain_switched := False \<rparr>);
-         curdom \<leftarrow> gets cur_domain;
-         mask \<leftarrow> gets domain_irqmask;
-         do_machine_op $ setInterruptMask (mask curdom);
+       curdom \<leftarrow> gets cur_domain;
+       olddom \<leftarrow> gets old_domain;
+       when (curdom \<noteq> olddom) (do
+         modify (\<lambda>s. s\<lparr> old_domain := cur_domain s \<rparr>);
+         irqs_of \<leftarrow> gets domain_irqs;
+         \<comment> \<open>FIXME: Placeholder only! Instead of invoking maskInterrupt once
+           for a random member of the new domain's irq set, we need to invoke it
+           repeatedly with False to unmask every member of that set. -robs.\<close>
+         irq_to_enable \<leftarrow> select (irqs_of curdom);
+         do_machine_op $ maskInterrupt False irq_to_enable;
          \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
          do_machine_op $ tfence
-       od
+       od)
      od"
 
 end

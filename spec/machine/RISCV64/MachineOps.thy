@@ -166,10 +166,6 @@ definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Righ
   where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
-definition setInterruptMask :: "irq set \<Rightarrow> unit machine_monad"
-  where
-  "setInterruptMask irqs \<equiv> modify (\<lambda>s. s \<lparr> irq_masks := \<lambda>irq. irq \<in> irqs \<rparr>)"
-
 
 subsection "Clearing Memory"
 
