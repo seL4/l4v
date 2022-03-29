@@ -43,7 +43,6 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         xml: ${{ needs.code.outputs.xml }}
-        session: '-v'  # non-empty argument to `./run-tests` to not exclude AutoCorresSEL4
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
