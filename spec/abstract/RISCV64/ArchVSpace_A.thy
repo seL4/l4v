@@ -103,11 +103,9 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
       olddom \<leftarrow> gets old_domain;
       when (curdom \<noteq> olddom) (do
         irqs_of \<leftarrow> gets domain_irqs;
-        \<comment> \<open>FIXME: Placeholder only! Instead of invoking maskInterrupt once
-          for a random member of the old domain's irq set, we need to invoke it
-          repeatedly with True to mask every member of that set. -robs.\<close>
-        irq_to_disable \<leftarrow> select (irqs_of olddom);
-        do_machine_op $ maskInterrupt True irq_to_disable;
+        \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
+          with one invocation of a new HW interface that masks them all at once. -robs\<close>
+        do_machine_op $ forM_x (irqs_of olddom) (maskInterrupt True);
         kimage \<leftarrow> gets domain_kimage;
         \<comment> \<open>FIXME: Placeholder only! Retrieve correct references and invoke
           correct machine interface to switch kernel images on RISCV64. -robs\<close>
