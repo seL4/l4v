@@ -179,11 +179,9 @@ where
        when (curdom \<noteq> olddom) (do
          modify (\<lambda>s. s\<lparr> old_domain := cur_domain s \<rparr>);
          irqs_of \<leftarrow> gets domain_irqs;
-         \<comment> \<open>FIXME: Placeholder only! Instead of invoking maskInterrupt once
-           for a random member of the new domain's irq set, we need to invoke it
-           repeatedly with False to unmask every member of that set. -robs.\<close>
-         irq_to_enable \<leftarrow> select (irqs_of curdom);
-         do_machine_op $ maskInterrupt False irq_to_enable;
+         \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
+           with one invocation of a new HW interface that unmasks them all at once. -robs\<close>
+         do_machine_op $ forM_x (irqs_of curdom) (maskInterrupt False);
          \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
          do_machine_op $ tfence
        od)

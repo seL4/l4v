@@ -150,7 +150,7 @@ record det_ext =
    ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
    domain_kimage_internal :: "domain \<Rightarrow> obj_ref"
-   domain_irqs_internal :: "domain \<Rightarrow> irq set"
+   domain_irqs_internal :: "domain \<Rightarrow> irq list"
    old_domain_internal :: domain
 
 text \<open>
@@ -589,7 +589,7 @@ definition "ext_init_det_ext_ext \<equiv>
       cdt_list_internal = const [],
       \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
       domain_kimage_internal = \<lambda>_. 0,
-      domain_irqs_internal = \<lambda>_. {},
+      domain_irqs_internal = \<lambda>_. [],
       old_domain_internal = 0\<rparr>"
 
 instance ..
