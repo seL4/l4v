@@ -5,7 +5,7 @@
  *)
 
 theory Word_Lemmas_64_Internal
-imports Word_Lib_Sumo Word_64
+imports Word_Lib_Sumo Word_64 Machine_Word_64
 begin
 
 (* This is why Word_Lib_Sumo doesn't really work: *)

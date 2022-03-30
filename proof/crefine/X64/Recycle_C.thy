@@ -50,9 +50,9 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 lemma clift_foldl_hrs_mem_update:
@@ -268,7 +268,6 @@ lemma clearMemory_PageCap_ccorres:
       []
      (doMachineOp (clearMemory ptr (2 ^ pageBitsForSize sz))) (Call clearMemory_'proc)"
   (is "ccorres dc xfdc ?P ?P' [] ?m ?c")
-  including no_take_bit
   apply (cinit' lift: bits_' ptr___ptr_to_void_')
    apply (rule_tac P="capAligned (ArchObjectCap (PageCap ptr undefined mt sz False None))"
                 in ccorres_gen_asm)
@@ -375,34 +374,6 @@ lemma clearMemory_PageCap_ccorres:
   by (simp add:  word_bits_def capAligned_def word_of_nat_less valid_cap'_def)
 
 
-(* FIXME x64: asid_map
-lemma coerce_memset_to_heap_update_asidpool:
-  "heap_update_list x (replicateHider 4096 0)
-      = heap_update (Ptr x :: asid_pool_C ptr)
-             (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
-  apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
-  apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
-  apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps
-                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
-                   lookup_fault_C_tag_def update_ti_t_ptr_0s
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-                   ti_typ_combine_empty_ti ti_typ_combine_td
-                   align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                   align_td_array' size_td_array)
-  apply (simp add: typ_info_array')
-  apply (subst access_ti_list_array)
-     apply simp
-    apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
-   apply fastforce
-  apply (simp add: collapse_foldl_replicate)
-  done
-*)
-
 declare replicate_numeral [simp]
 
 lemma coerce_memset_to_heap_update_pte:
@@ -416,8 +387,8 @@ lemma coerce_memset_to_heap_update_pte:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma coerce_memset_to_heap_update_pde:
@@ -461,8 +432,8 @@ lemma coerce_memset_to_heap_update_pml4e:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma objBits_eq_by_type:
@@ -1258,7 +1229,7 @@ lemma coerce_memset_to_heap_update:
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array' access_ti_list_word8_array)
   apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
-  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
+  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0 word_bits_def
                    replicateHider_def)
   done
 
@@ -1296,7 +1267,6 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

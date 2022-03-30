@@ -71,7 +71,7 @@ next
                 x = ptr + of_nat n' * 4 + 2 \<or> x = ptr + of_nat n' * 4 + 3)"
       by (simp add: xin' conj_disj_distribL ex_disj_distrib field_simps)
 
-    show "?thesis m x" by (simp add: xin word_rsplit_0 cong: if_cong)
+    show "?thesis m x" by (simp add: xin word_rsplit_0 word_bits_conv cong: if_cong)
   qed
 
   from al have "is_aligned (ptr + of_nat n' * 4) 2"

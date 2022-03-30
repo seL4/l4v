@@ -8,6 +8,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault lookupPDPTSlot,
@@ -47,9 +49,6 @@ end
 
 context kernel_m begin
 
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
-
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
   by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
@@ -69,7 +68,6 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
-  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -306,7 +304,7 @@ lemma rf_sr_asidTable_None:
    apply (simp add: word_size nth_shiftr asid_bits_def asid_low_bits_def)
    apply (case_tac "n < 3", simp) (*asid_high_bits*)
    apply (clarsimp simp: linorder_not_less)
-   apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+   apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
    apply simp
   apply simp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
@@ -330,7 +328,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -342,7 +340,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI[rule_format])
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE)(*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE)(*asid_low_bits*)
   apply simp
   apply (case_tac "n < 3", simp) (*asid_high_bits*)
   apply (simp add: linorder_not_less)
@@ -630,8 +628,8 @@ lemma lookupPDPTSlot_ccorres:
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
   apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def)
   apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp)
-  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp+)
+  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
+  apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
   done
 
 (* For comparison, here is the ccorres proof. *)
@@ -672,7 +670,7 @@ lemma lookupPDPTSlot_ccorres':
    apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps cpml4e_relation_def Let_def isPDPointerTablePML4E_def
                   split: pml4e.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps shiftl_t2n mask_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
@@ -1399,7 +1397,6 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
-  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -1801,7 +1798,6 @@ lemma unmapPage_ccorres:
       (UNIV \<inter> {s. framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 3}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
    apply (simp add: ignoreFailure_liftM Collect_True

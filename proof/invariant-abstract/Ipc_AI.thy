@@ -63,7 +63,7 @@ lemma get_recv_slot_inv[wp]:
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
   apply (rule arg_cong [where f=cte_wp_at])
-  apply (safe intro!: ext)
+  apply fastforce
   done
 
 lemma get_rs_cte_at[wp]:
@@ -436,12 +436,12 @@ lemma cap_insert_cte_wp_at:
   apply (clarsimp split:if_split_asm)
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
-     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
+     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
     apply (wp get_cap_wp)+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
-    apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_splits)
+    apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
    apply (wp set_cap_cte_wp_at get_cap_wp)+
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid)
@@ -757,9 +757,6 @@ lemma (in Ipc_AI) tcl_cst[wp]:
       transfer_caps_loop ep buffer n caps slots mi
     \<lbrace>\<lambda>rv. cur_sc_tcb\<rbrace>"
   by (wp transfer_caps_loop_pres)
-
-crunch it[wp]: cap_insert "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma (in Ipc_AI) tcl_it[wp]:
   "\<And>P ep buffer n caps slots mi.
@@ -1183,12 +1180,6 @@ end
 (* FIXME: move *)
 crunch valid_vspace_objs [wp]: set_extra_badge valid_vspace_objs
 
-crunch vspace_objs [wp]: set_untyped_cap_as_full "valid_vspace_objs"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
-
-crunch vspace_objs [wp]: cap_insert "valid_vspace_objs"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_cap)
-
 lemma zipWith_append2:
   "length ys + 1 < n \<Longrightarrow>
    zipWith f [0 ..< n] (ys @ [y]) = zipWith f [0 ..< n] ys @ [f (length ys) y]"
@@ -1426,13 +1417,6 @@ crunch "distinct" [wp]: set_mrs pspace_distinct
 
 crunch "distinct" [wp]: copy_mrs pspace_distinct
   (wp: mapM_wp' simp: copy_mrs_redux)
-
-
-crunch mdb [wp]: store_word_offs valid_mdb (wp: crunch_wps simp: crunch_simps)
-
-
-crunch caps_of_state [wp]: store_word_offs "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps simp: crunch_simps)
 
 
 crunch mdb_P [wp]: set_mrs "\<lambda>s. P (cdt s)"
@@ -1728,8 +1712,6 @@ context Ipc_AI begin
 
 crunch only_idle [wp]: do_ipc_transfer "only_idle :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch valid_global_vspace_mappings [wp]: set_extra_badge valid_global_vspace_mappings
 
 crunch pspace_in_kernel_window[wp]: do_ipc_transfer "pspace_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)

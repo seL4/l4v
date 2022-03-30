@@ -60,7 +60,7 @@ fun term_pattern_antiquote ctxt s =
 end;
 val _ = Context.>> (Context.map_theory (
     ML_Antiquotation.inline @{binding "term_pat"}
-      ((Args.context -- Scan.lift Args.embedded_inner_syntax)
+      ((Args.context -- Scan.lift Parse.embedded_inner_syntax)
          >> uncurry Term_Pattern_Antiquote.term_pattern_antiquote)))
 \<close>
 

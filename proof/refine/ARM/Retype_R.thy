@@ -1691,7 +1691,6 @@ proof -
   have set_retype_addrs_fold:
     "image (\<lambda>n. ptr + 2 ^ obj_bits_api (APIType_map2 ty) us * n) {x. x \<le> of_nat n - 1} =
      set (retype_addrs ptr (APIType_map2 ty) n us)"
-    including no_take_bit
     apply (clarsimp simp: retype_addrs_def image_def Bex_def ptr_add_def Collect_eq)
     apply (rule iffI)
      apply (clarsimp simp: field_simps word_le_nat_alt)
@@ -1723,7 +1722,6 @@ proof -
   have al': "is_aligned ptr (obj_bits_api (APIType_map2 ty) us)"
      by (simp add: obj_bits_api ko)
   show ?thesis
-  including no_take_bit
   apply (simp add: when_def retype_region_def createObjects'_def
                    createObjects_def aligned obj_bits_api[symmetric]
                    ko[symmetric] al' shiftl_t2n data_map_insert_def[symmetric]
@@ -1910,7 +1908,6 @@ proof -
   have in_new:"\<And>idx offs. \<lbrakk>idx \<le> of_nat n - 1;offs<2 ^ gbits\<rbrakk>
     \<Longrightarrow> ptr + (idx << objBitsKO ko + gbits) + (offs << objBitsKO ko)
         \<in> set (new_cap_addrs (n * 2 ^ gbits) ptr ko)"
-       including no_take_bit
     apply (insert range_cover_not_zero[OF not_0 cover] not_0)
     apply (clarsimp simp:new_cap_addrs_def image_def)
     apply (rule_tac x ="unat (2 ^ gbits * idx + offs)" in bexI)
@@ -2948,7 +2945,7 @@ proof -
     have bd[simp]: "objBitsKO val < word_bits"
       using assms by (clarsimp simp: range_cover_def word_bits_def)
     have "ptr' + 2 ^ objBitsKO val - 1 \<le> ptr + of_nat n * 2 ^ objBitsKO val - 1"
-      using cover including no_take_bit
+      using cover
       apply (subst decomp)
       apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
@@ -3393,7 +3390,6 @@ proof -
     using cover
     by (simp add:range_cover_def word_bits_def)
   thus ?thesis
-    including no_take_bit
   apply -
   apply (insert not_0 cover ptr_in bd)
   apply (frule range_cover.range_cover_le_n_less[OF _ le_refl])
@@ -5462,7 +5458,6 @@ lemma corres_retype_region_createNewCaps:
                 init_arch_objects (APIType_map2 (Inr ty)) y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
-  including no_take_bit
   apply (rule_tac F="range_cover y sz
                        (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and>
                      n \<noteq> 0 \<and>

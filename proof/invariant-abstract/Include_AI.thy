@@ -11,10 +11,14 @@ imports
   "ASpec.Syscall_A"
   "Lib.LemmaBucket"
   "Lib.ListLibLemmas"
+  "Lib.LemmaBucket"
+  "Lib.SplitRule"
   "Rights_AI"
 begin
 
 no_notation bind_drop (infixl ">>" 60)
+
+unbundle l4v_word_context
 
 (* Clagged from Bits_R *)
 

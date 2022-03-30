@@ -70,6 +70,8 @@ end
 (* x86-64 asm statements are not yet supported by the c-parser *)
 setup \<open>Context.theory_map (ASM_Ignore_Hooks.add_hook (fn _ => true))\<close>
 
+(* workaround for the fact that the C parser wants to know the vmpage sizes*)
+(* create appropriately qualified aliases *)
 context begin interpretation Arch . global_naming vmpage_size
 requalify_consts X64SmallPage X64LargePage X64HugePage
 end
@@ -91,11 +93,18 @@ cond_sorry_modifies_proofs SORRY_MODIFIES_PROOFS
 install_C_file "../c/build/$L4V_ARCH/kernel_all.c_pp"
   [machinety=machine_state, ghostty=cghost_state]
 
+text \<open>Hide unqualified names conflicting with Kernel_Config names. Force use of Kernel_C prefix
+  for these:\<close>
+hide_const (open)
+  numDomains
+
+(* hide vmpage sizes again *)
 hide_const
   vmpage_size.X64SmallPage
   vmpage_size.X64LargePage
   vmpage_size.X64HugePage
 
+(* re-allow fully qualified accesses (for consistency). Slightly clunky *)
 context Arch begin
 global_naming "X64.vmpage_size" requalify_consts X64SmallPage X64LargePage X64HugePage
 global_naming "X64" requalify_consts X64SmallPage X64LargePage X64HugePage

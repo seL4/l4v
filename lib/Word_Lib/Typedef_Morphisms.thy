@@ -292,7 +292,7 @@ lemma unat_le: "y \<le> unat z \<Longrightarrow> y \<in> unats (LENGTH('a))"
   for z :: "'a::len word"
   apply (unfold unats_def)
   apply clarsimp
-  apply (rule xtrans, rule unat_lt2p, assumption)
+  apply (metis le_unat_uoi unsigned_less)
   done
 
 lemma td_ext_sbin:
@@ -346,11 +346,11 @@ lemmas uint_mod_alt = word_mod_def [THEN trans [OF uint_cong int_word_uint]]
 
 interpretation test_bit:
   td_ext
-    "(!!) :: 'a::len word \<Rightarrow> nat \<Rightarrow> bool"
+    "bit :: 'a::len word \<Rightarrow> nat \<Rightarrow> bool"
     set_bits
     "{f. \<forall>i. f i \<longrightarrow> i < LENGTH('a::len)}"
     "(\<lambda>h i. h i \<and> i < LENGTH('a::len))"
-  by standard (auto simp add: test_bit_word_eq bit_imp_le_length bit_set_bits_word_iff set_bits_bit_eq)
+  by standard (auto simp add: bit_imp_le_length bit_set_bits_word_iff set_bits_bit_eq)
 
 lemmas td_nth = test_bit.td_thm
 
@@ -364,5 +364,37 @@ lemma sints_subset:
   apply (erule order_less_le_trans)
   apply simp
   done
+
+lemma uints_mono_iff: "uints l \<subseteq> uints m \<longleftrightarrow> l \<le> m"
+  using power_increasing_iff[of "2::int" l m]
+  apply (auto simp: uints_num subset_iff simp del: power_increasing_iff)
+  apply (meson less_irrefl not_le zero_le_numeral zero_le_power)
+  done
+
+lemmas uints_monoI = uints_mono_iff[THEN iffD2]
+
+lemma Bit_in_uints_Suc: "of_bool c + 2 * w \<in> uints (Suc m)" if "w \<in> uints m"
+  using that
+  by (auto simp: uints_num)
+
+lemma Bit_in_uintsI: "of_bool c + 2 * w \<in> uints m" if "w \<in> uints (m - 1)" "m > 0"
+  using Bit_in_uints_Suc[OF that(1)] that(2)
+  by auto
+
+lemma bin_cat_in_uintsI:
+  \<open>concat_bit n b a \<in> uints m\<close> if \<open>a \<in> uints l\<close> \<open>m \<ge> l + n\<close>
+proof -
+  from \<open>m \<ge> l + n\<close> obtain q where \<open>m = l + n + q\<close>
+    using le_Suc_ex by blast
+  then have \<open>(2::int) ^ m = 2 ^ n * 2 ^ (l + q)\<close>
+    by (simp add: ac_simps power_add)
+  moreover have \<open>a mod 2 ^ (l + q) = a\<close>
+    using \<open>a \<in> uints l\<close>
+    by (auto simp add: uints_def take_bit_eq_mod power_add Divides.mod_mult2_eq)
+  ultimately have \<open>concat_bit n b a = take_bit m (concat_bit n b a)\<close>
+    by (simp add: concat_bit_eq take_bit_eq_mod push_bit_eq_mult Divides.mod_mult2_eq)
+  then show ?thesis
+    by (simp add: uints_def)
+qed
 
 end

@@ -1543,7 +1543,7 @@ lemma heap_update_list_If1:
    apply (clarsimp simp: nth_append)
    apply (rule refl)
   apply (simp add: nth_append split del: if_split cong: if_cong)
-  apply (auto simp: addr_card linorder_not_less less_Suc_eq take_bit_nat_eq_self
+  apply (auto simp: addr_card linorder_not_less less_Suc_eq take_bit_nat_eq_self unat_of_nat
               dest: word_unat.Rep_inverse')
   done
 
@@ -1932,7 +1932,7 @@ and mk_simpl_to_graph_thm funs hints cache nm ctxt tm = let
         THEN_ALL_NEW (TRY o simpl_to_graph_cache_tac funs hints cache nm ctxt)
         THEN_ALL_NEW (TRY o eq_impl_assume_tac ctxt)) 1
     |> Seq.hd
-    |> Drule.generalize ([], ["n", "trS"])
+    |> Drule.generalize (Names.empty, Names.make_set ["n", "trS"])
     |> SOME
   end handle TERM (s, _) => (tracing ("mk_simpl_to_graph_thm: " ^ s); NONE)
     | Empty => (tracing "mk_simpl_to_graph_thm: raised Empty on:";
@@ -1988,7 +1988,7 @@ fun simpl_to_graph_While_tac hints nm ctxt =
     val rl_inst = infer_instantiate ctxt [(("G",0), Thm.cterm_of ctxt gd)]
         @{thm simpl_to_graph_While_inst}
   in
-    resolve_tac ctxt [Thm.trivial ct |> Drule.generalize ([], ["n", "trS"])] i
+    resolve_tac ctxt [Thm.trivial ct |> Drule.generalize (Names.empty, Names.make_set ["n", "trS"])] i
         THEN resolve_tac ctxt [rl_inst] i
         THEN resolve_tac ctxt @{thms refl} i
         THEN inst_graph_tac ctxt i
@@ -2131,7 +2131,7 @@ fun init_graph_refines_proof funs nm ctxt = let
 
 val thin_While_assums_rule =
     @{thm thin_rl[where V="simpl_to_graph SG GG f nn (add_cont (com.While C c) con) n tS P I e e2"]}
-        |> Drule.generalize ([], ["SG", "GG", "f", "nn", "C", "c", "con", "n", "tS", "P", "I", "e", "e2"])
+        |> Drule.generalize (Names.empty, Names.make_set ["SG", "GG", "f", "nn", "C", "c", "con", "n", "tS", "P", "I", "e", "e2"])
 
 fun eq_impl_unassume_tac t = let
     val hyps = t |> Thm.chyps_of

@@ -653,7 +653,7 @@ lemma sum_list_bounded_eq:
   "sum_list (map unat (ls :: time list)) = unat (budget :: time) \<Longrightarrow> sum_list (map unat ls) = unat (sum_list ls)"
   apply (induct ls arbitrary: budget, simp)
   apply clarsimp
-  by (metis (no_types, hide_lams) le_add2 le_unat_uoi of_nat_add word_unat.Rep_inverse)
+  by (metis (no_types, opaque_lifting) le_add2 le_unat_uoi of_nat_add word_unat.Rep_inverse)
 
 lemma sum_list_bounded_lt:
   "sum_list (map unat (ls :: time list)) < unat (budget :: time) \<Longrightarrow>sum_list (map unat ls) = unat (sum_list ls)"
@@ -917,7 +917,7 @@ lemma min_refill_list_to_subset:
   apply (elim impE; fastforce?)
   apply (clarsimp simp: ordered_disjoint_def)
   apply (rule_tac j="unat (r_time (hd list))" in le_trans; fastforce?)
-  apply (metis (no_types, hide_lams) add.commute hd_conv_nth le_trans
+  apply (metis (no_types, opaque_lifting) add.commute hd_conv_nth le_trans
                length_greater_0_conv nat_iffs(2) nth_Cons_0 refill_list_to_subset.simps(1))
   done
 
@@ -1042,8 +1042,8 @@ lemma sum_exact_overflow:
   apply (drule_tac x=list in spec)
   apply simp
   using unat_sum_list_of_words
-  by (metis (mono_tags, hide_lams) arith_special(10) list.map(2) plus_1_eq_Suc sum_list_simps(2)
-                                   unat_word_ariths(1) unsigned_1 unsigned_eq_0_iff)
+  by (metis (mono_tags, opaque_lifting) arith_special(10) list.map(2) plus_1_eq_Suc sum_list_simps(2)
+                                        unat_word_ariths(1) unsigned_1 unsigned_eq_0_iff)
 
 lemma exactly_max_word_plus_one_implies_unat_refills_sum_is_zero:
   "\<lbrakk>no_overflow refills;
@@ -1122,12 +1122,11 @@ lemma unat_sum_list_equals_budget:
 
 (* FIXME move *)
 lemma sorted_wrt_last_append:
-  "\<lbrakk>\<And>x y z. P x y \<Longrightarrow> P y z \<Longrightarrow> P x z; sorted_wrt P (ls::'a list);
-         P (last ls) new; ls \<noteq> []\<rbrakk>
-      \<Longrightarrow> sorted_wrt P (ls @ [new])"
-  apply (induction ls, simp)
+  assumes trans: "\<And>x y z. P x y \<Longrightarrow> P y z \<Longrightarrow> P x z"
+  shows "\<lbrakk>sorted_wrt P (ls::'a list); P (last ls) new; ls \<noteq> []\<rbrakk> \<Longrightarrow> sorted_wrt P (ls @ [new])"
+  apply (induct ls, simp)
   apply (clarsimp split: if_split_asm)
-  by (drule_tac x="last ls" in bspec, simp) fastforce
+  by (drule_tac x="last ls" in bspec, simp) (fastforce intro: trans)
 
 lemma refill_word_proof_helper:
   "\<lbrakk>unat (head_time :: time) + unat period \<le> unat (max_word :: time);
@@ -1199,12 +1198,6 @@ lemma non_empty_tail_length:
   "tl list \<noteq> [] \<Longrightarrow> Suc 0 \<le> length list"
   using le0 list.sel(2) not_less_eq_eq by blast
 
-crunches get_sched_context
-  for sc_at[wp]: "sc_at p"
-  and ko_sc_at[wp]: "\<lambda>s. \<exists>sc n. ko_at (SchedContext sc n) p s"
-  and ko_sc_at'[wp]: "\<lambda>s. ko_at (SchedContext sc n) p s"
-  (wp: crunch_wps simp: crunch_simps)
-
 text \<open>invocation related lemmas\<close>
 
 lemma sched_context_bind_tcb_typ_at[wp]:
@@ -1236,8 +1229,7 @@ lemma check_budget_typ_at[wp]:
             wp: hoare_vcg_if_lift2 hoare_drop_imp)
 
 context notes if_weak_cong[cong del] begin
-crunch typ_at[wp]: commit_time "\<lambda>s. P (typ_at T p s)"
-  (wp: hoare_drop_imp simp: Let_def)
+
 end
 
 lemma invoke_sched_control_typ_at[wp]:

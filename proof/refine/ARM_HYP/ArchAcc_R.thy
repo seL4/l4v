@@ -918,7 +918,6 @@ lemma setObject_PD_corres [corres]:
         apply (simp add: pd_bits_def pageBits_def)
        apply (simp add: pd_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
@@ -994,7 +993,6 @@ lemma setObject_PT_corres [corres]:
          apply (simp add: pt_bits_def pageBits_def)
         apply (simp add: pt_bits_def pageBits_def)
        apply clarsimp
-       apply (clarsimp simp: nth_ucast nth_shiftl)
        apply (drule test_bit_size)
        apply (clarsimp simp: word_size vspace_bits_defs)
        apply arith
@@ -1370,8 +1368,7 @@ lemma ensureSafeMapping_corres [corres]:
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of asid)"
   apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
+  apply word_eqI_solve
   done
 
 lemma page_directory_at_lift:
@@ -1576,8 +1573,8 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
      apply (rule word_eqI)
      subgoal for n
        apply (clarsimp simp: word_size nth_shiftr is_aligned_nth vspace_bits_defs)
-       apply (spec "n + 21")
-       apply (frule test_bit_size[where n="n + 21"])
+       apply (spec "21 + n")
+       apply (frule test_bit_size[where n="21 + n"])
        apply (simp add: word_size)
        apply (insert H)
        apply (drule (1) order_le_less_trans)
@@ -1592,8 +1589,8 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
      apply (drule bang_is_le)
      apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
      apply (drule word_power_increasing; simp)
-    apply (spec "n' + 21")
-    apply (frule test_bit_size[where n = "n' + 21"])
+    apply (spec "21 + n'")
+    apply (frule test_bit_size[where n = "21 + n'"])
     by (simp add: word_size)
   qed
 done

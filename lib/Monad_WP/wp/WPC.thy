@@ -86,7 +86,6 @@ structure WPCPredicateAndFinals = Theory_Data
 (struct
     type T = (cterm * thm) list
     val empty = []
-    val extend = I
     fun merge (xs, ys) =
         (* Order of predicates is important, so we can't reorder *)
         let val tms = map (Thm.term_of o fst) xs
@@ -119,11 +118,11 @@ let
   val thm_pred_tvar   = Term.dest_TVar (get_pred_tvar thm_pred);
   val pred_tvar       = Thm.ctyp_of ctxt (get_pred_tvar pred);
 
-  val thm2            = Thm.instantiate ([(thm_pred_tvar, pred_tvar)], []) thm;
+  val thm2            = Thm.instantiate (TVars.make [(thm_pred_tvar, pred_tvar)], Vars.empty) thm;
 
   val thm2_pred       = Term.dest_Var (get_concl_pred thm2);
 in
-  Thm.instantiate ([], [(thm2_pred, pred)]) thm2
+  Thm.instantiate (TVars.empty, Vars.make [(thm2_pred, pred)]) thm2
 end;
 
 fun detect_term ctxt n thm tm =

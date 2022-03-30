@@ -26,12 +26,14 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, RISCV64]
+    # test only most recent push to PR:
+    concurrency: l4v-pr-${{ github.event.number }}-idx-${{ strategy.job-index }}
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2021
+        isa_branch: ts-2021-1
         manifest: mcs.xml
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}

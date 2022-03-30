@@ -532,7 +532,7 @@ lemma bl_to_bin_le2p_aux:
    apply clarsimp
   apply clarsimp
   apply (rule conjI; clarsimp)
-  apply (drule meta_spec, erule xtr8 [rotated], simp add: Bit_def)+
+  apply (drule meta_spec, erule xtr8 [rotated], simp)+
   done
 
 (* FIXME: move to Word_Lib *)

@@ -162,7 +162,7 @@ lemma c_guard_mono:
   apply clarsimp
   apply(drule_tac p=p in field_tag_sub)
   apply(clarsimp simp: field_lvalue_def field_offset_def field_offset_untyped_def typ_uinfo_t_def)
-  apply(metis (mono_tags, hide_lams) export_size_of subsetD typ_uinfo_t_def)
+  apply(metis (mono_tags) export_size_of subsetD typ_uinfo_t_def)
   done
 
 lemma c_guard_NULL_fl:

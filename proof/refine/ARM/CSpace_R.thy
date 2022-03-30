@@ -1015,7 +1015,9 @@ lemma cteMove_corres:
     apply(intro allI impI)
     apply(rule mdb_move_abs'.next_slot)
       apply(simp, fastforce, simp)
-   apply(fastforce split: option.splits)
+   apply(clarsimp split: option.splits)
+   apply(rule ext)
+   apply(clarsimp split: option.splits if_split)
   apply(case_tac "ctes_of b (cte_map (aa, bb))")
    subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
   apply(case_tac ab)
@@ -3777,7 +3779,6 @@ lemma setCTE_work_units_completed[wp]:
 lemma cte_map_nat_to_cref:
   "\<lbrakk> n < 2 ^ b; b < word_bits \<rbrakk> \<Longrightarrow>
    cte_map (p, nat_to_cref b n) = p + (of_nat n * 2^cte_level_bits)"
-  including no_take_bit
   apply (clarsimp simp: cte_map_def nat_to_cref_def
                  dest!: less_is_drop_replicate)
   apply (rule arg_cong [where f="\<lambda>x. x * 2^cte_level_bits"])

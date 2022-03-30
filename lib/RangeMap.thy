@@ -442,7 +442,7 @@ proof (induct tree)
                          ([((start, end), v)]
                            @ lookup_range_tree_to_list treeL
                            @ lookup_range_tree_to_list treeR) x"
-        using lookup_range_tree_to_list.simps append_assoc
+        using lookup_range_tree_to_list.simps(2) append_assoc
               lookup_map_of_append_commute[OF treeL1_disjoint]
               lookup_map_of_append_cong[OF _ refl]
         by metis

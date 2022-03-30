@@ -134,12 +134,7 @@ lemma drop_sign_isomorphism_bitwise:
   "drop_sign (scast z) = scast z"
   "ucast x = ucast (drop_sign x)"
   "scast x = scast (drop_sign x)"
-  by (rule word_eqI
-          | simp add: word_size drop_sign_def nth_ucast nth_shiftl
-                      nth_shiftr nth_sshiftr word_ops_nth_size
-                      nth_scast
-          | safe
-          | simp add: test_bit_bin)+
+  by (all \<open>(word_eqI_solve simp: drop_sign_def test_bit_bin)\<close>)
 
 lemma drop_sign_of_nat:
   "drop_sign (of_nat n) = of_nat n"
@@ -178,7 +173,7 @@ lemma drop_sign_projections:
 lemmas drop_sign_isomorphism
     = drop_sign_isomorphism_ariths drop_sign_projections
         drop_sign_isomorphism_bitwise drop_sign_of_nat
-        drop_sign_extra_bl_ops ucast_id
+        drop_sign_extra_bl_ops
 
 lemma drop_sign_h_val[simp]:
   "drop_sign (h_val hp p :: ('a :: len8) signed word) = h_val hp (ptr_coerce p)"
@@ -272,7 +267,7 @@ lemma fold_of_nat_eq_Ifs[simplified word_bits_conv]:
     \<Longrightarrow> foldr (\<lambda>n v. if x = of_nat n then f n else v) [0 ..< m] (f m)
         = f (unat (machine_word_truncate_nat m x))"
   apply (rule fold_of_nat_eq_Ifs_proof)
-   apply (simp_all add: machine_word_truncate_nat_def word_bits_def take_bit_nat_eq_self)
+   apply (simp_all add: machine_word_truncate_nat_def word_bits_def take_bit_nat_eq_self unat_of_nat)
   done
 
 lemma less_is_non_zero_p1':
@@ -632,7 +627,7 @@ fun prove_mem_equality_unchecked ctxt = let
        and won't function after we unpack them *)
     THEN_ALL_NEW normalise_mem_accs "prove_mem_equality" ctxt
     THEN_ALL_NEW asm_lr_simp_tac (prove_mem_equality_unpack_simpset ctxt)
-    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms ucast_id})
+    THEN_ALL_NEW simp_tac (ctxt addsimps @{thms add_ac mult_ac add_mult_comms})
   end
 
 fun prove_mem_equality ctxt = DETERM o
@@ -761,7 +756,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 
 fun graph_refine_proof_tacs csenv ctxt = let
-    val ctxt = ctxt delsimps @{thms shiftl_numeral}
+    val ctxt = ctxt delsimps @{thms shiftl_numeral_numeral shiftl1_is_mult}
         |> Splitter.del_split @{thm if_split}
         |> Simplifier.del_cong @{thm if_weak_cong}
 
@@ -792,9 +787,6 @@ fun graph_refine_proof_tacs csenv ctxt = let
                     (* this includes wrappers for word arithmetic
                        and other simpl actions*)
                     bvlshr_def bvashr_def bvshl_def bv_clz_def
-
-                    (* and some stupidity *)
-                    Collect_const_mem
                     }
                 (* we should also unfold enumerations, since the graph
                    representation does this, and we need to normalise

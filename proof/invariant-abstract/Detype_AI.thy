@@ -84,8 +84,7 @@ lemma cdt_detype[simp]:
 lemma caps_of_state_detype[simp]:
   "caps_of_state (detype S s) =
    (\<lambda>p. if fst p \<in> S then None else caps_of_state s p)"
-  by (clarsimp simp add: caps_of_state_cte_wp_at
-                 intro!: ext)
+  by (fastforce simp add: caps_of_state_cte_wp_at)
 
 
 lemma state_refs_of_detype:
@@ -1053,7 +1052,6 @@ lemma (in Detype_AI) mapM_storeWord_clear_um:
 lemma intvl_range_conv':
   "\<lbrakk>is_aligned (ptr::'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>
    (\<exists>k. x = ptr + of_nat k \<and> k < 2 ^ bits) \<longleftrightarrow> (ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
-  including no_take_bit
   apply (rule iffI)
    apply (clarsimp simp: x_power_minus_1 mask_2pm1[symmetric])
    apply (frule is_aligned_no_overflow'[simplified mask_2pm1[symmetric]])
@@ -1153,7 +1151,7 @@ lemma corres_submonad2:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer
@@ -1181,7 +1179,7 @@ lemma corres_submonad3:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer

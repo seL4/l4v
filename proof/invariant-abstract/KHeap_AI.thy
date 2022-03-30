@@ -1920,24 +1920,6 @@ lemma set_ntfn_minor_invs:
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
 
-(*
-lemma set_ntfn_minor_invs:
-  "\<lbrace>invs and ntfn_at ptr
-         and obj_at (\<lambda>ko. refs_of ko = refs_of_ntfn val) ptr
-         and valid_ntfn val
-         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> ntfn_q_refs_of (ntfn_obj val))
-         and (\<lambda>s. live (Notification val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_notification ptr val
-   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def)
-  apply (wp set_simple_ko_valid_objs valid_irq_node_typ
-                    valid_irq_handlers_lift valid_ioports_lift)
-  apply (clarsimp simp: ntfn_at_def2
-                  elim!: rsubst[where P=sym_refs]
-                 intro!: ext
-                  dest!: obj_at_state_refs_ofD)
-  done
-*)
 
 lemma do_machine_op_result[wp]:
   "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow>

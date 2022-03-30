@@ -1271,7 +1271,6 @@ lemma reset_untyped_cap_corres:
           and (\<lambda>s. descendants_of cref (cdt s) = {}))
      (Untyped_D.reset_untyped_cap (transform_cslot_ptr cref))
      (Retype_A.reset_untyped_cap cref)"
-  including no_take_bit
   supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)

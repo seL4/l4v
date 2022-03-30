@@ -356,7 +356,8 @@ lemma pde_at_aligned_vptr:
   apply (simp add: aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
   apply (prove "pd = (x + (pd + (vptr >> 20 << 2)) && ~~ mask pd_bits)")
-   subgoal
+  subgoal
+    supply bit_simps[simp del]
     apply (subst mask_lower_twice[symmetric, where n=6])
      apply (simp add: pd_bits_def pageBits_def)
     apply (subst add.commute, subst add_mask_lower_bits)
@@ -397,11 +398,9 @@ lemma pde_shifting:
   have H: "(0xF::word32) < 2 ^ 4" by simp
   from prems show ?thesis
     apply (subst (asm) word_plus_and_or_coroll)
-     apply (rule word_eqI)
+     apply word_eqI
      subgoal for n
-       apply (clarsimp simp: word_size nth_shiftr is_aligned_nth)
-       apply (spec "n + 20")
-       apply (frule test_bit_size[where n="n + 20"])
+       apply (spec "20 + n")
        apply (simp add: word_size)
        apply (insert H)
         apply (drule (1) order_le_less_trans)
@@ -409,7 +408,6 @@ lemma pde_shifting:
         apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
         apply (drule word_power_increasing)
         by simp+
-
     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
     apply (erule disjE)
      apply (insert H)[1]
@@ -417,8 +415,8 @@ lemma pde_shifting:
       apply (drule bang_is_le)
       apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
       apply (drule word_power_increasing; simp)
-    apply (spec "n' + 20")
-    apply (frule test_bit_size[where n = "n' + 20"])
+    apply (spec "20 + n'")
+    apply (frule test_bit_size)
     by (simp add: word_size)
   qed
   done

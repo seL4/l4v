@@ -99,8 +99,8 @@ fun spec' cv thm =
              val cvT = Thm.ctyp_of_cterm cv;
              val vT = Thm.typ_of cvT;
            in Thm.instantiate
-                ([(dest_TVar sVT, cvT)],
-                 [((sP, vT --> HOLogic.boolT), #2 (Thm.dest_comb ct2)),
+                (TVars.make [(dest_TVar sVT, cvT)],
+                 Vars.make [((sP, vT --> HOLogic.boolT), #2 (Thm.dest_comb ct2)),
                  ((sV, vT), cv)])
                 spec
            end
@@ -110,8 +110,8 @@ fun spec' cv thm =
              val cvT = Thm.ctyp_of_cterm cv;
              val vT = Thm.typ_of cvT;
            in Thm.instantiate
-                ([(dest_TVar sVT, cvT)],
-                 [((sP, vT --> propT), ct2),
+                (TVars.make [(dest_TVar sVT, cvT)],
+                 Vars.make [((sP, vT --> propT), ct2),
                  ((sV, vT),cv)])
                 meta_spec
            end
@@ -134,7 +134,7 @@ fun split_thm qnt ctxt s T t =
         Hol_ex => Goal.prove ctxt [] [] prop (fn _ => SplitState.ex_tac ctxt vars)
       | _ => let
                val rP = conc_of genRefl';
-               val thm0 = Thm.instantiate ([], [(dest_Var rP, Thm.cterm_of ctxt prop)]) genRefl';
+               val thm0 = Thm.instantiate (TVars.empty, Vars.make [(dest_Var rP, Thm.cterm_of ctxt prop)]) genRefl';
                fun elim_all v thm =
                  let
                    val cv = Thm.cterm_of ctxt v;
@@ -156,7 +156,7 @@ fun eta_expand ctxt ct =
 
 fun split_abs ctxt ct =
   (case Thm.term_of ct of
-     Abs x => (x, Thm.dest_abs NONE ct)
+     Abs x => (x, Thm.dest_abs_global ct)
    | _ => split_abs ctxt (eta_expand ctxt ct))
 
 fun decomp ctxt (Const (@{const_name HOL.conj}, _) $ t $ t', ct) =
@@ -206,7 +206,7 @@ fun decomp ctxt (Const (@{const_name HOL.conj}, _) $ t $ t', ct) =
                val X = genImp |> Thm.concl_of |> dest_prop |> Logic.dest_implies |> #1
                        |> dest_prop |> HOLogic.dest_Trueprop |> HOLogic.dest_imp |> #1
                        |> dest_Var;
-               val genImp' = Thm.instantiate ([],[(X,cP)]) genImp;
+               val genImp' = Thm.instantiate (TVars.empty, Vars.make [(X,cP)]) genImp;
              in SIMPLE_OF ctxt genImp' [thm] end)
        end
   | decomp ctxt (Const (@{const_name Pure.imp},_)$P$Q, ct) =
@@ -217,7 +217,7 @@ fun decomp ctxt (Const (@{const_name HOL.conj}, _) $ t $ t', ct) =
                val X = genImpl |> Thm.concl_of |> dest_prop |> Logic.dest_implies |> #1
                        |> dest_prop  |> Logic.dest_implies |> #1
                        |> dest_Var;
-               val genImpl' = Thm.instantiate ([],[(X,cP)]) genImpl;
+               val genImpl' = Thm.instantiate (TVars.empty, Vars.make [(X,cP)]) genImpl;
              in SIMPLE_OF ctxt genImpl' [thm] end)
        end
   | decomp ctxt ((allc as Const (@{const_name Pure.all},_)) $ f, ct) =
@@ -245,7 +245,7 @@ fun decomp ctxt (Const (@{const_name HOL.conj}, _) $ t $ t', ct) =
   | decomp ctxt (Const (@{const_name "Trueprop"},_)$P, ct) = ([P],snd (Drule.strip_comb ct),fn [thm] => thm)
   | decomp ctxt (t, ct) = ([],[], fn [] =>
                          let val rP = HOLogic.dest_Trueprop (dest_prop (conc_of genRefl));
-                         in  Thm.instantiate ([],[(dest_Var rP, ct)]) genRefl end)
+                         in  Thm.instantiate (TVars.empty, Vars.make [(dest_Var rP, ct)]) genRefl end)
 
 fun generalise ctxt ct = gen_thm (decomp ctxt) (Thm.term_of ct,ct);
 

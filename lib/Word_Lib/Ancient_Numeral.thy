@@ -5,7 +5,7 @@
  *)
 
 theory Ancient_Numeral
-  imports Main Reversed_Bit_Lists
+  imports Main Reversed_Bit_Lists Legacy_Aliases
 begin
 
 definition Bit :: "int \<Rightarrow> bool \<Rightarrow> int"  (infixl "BIT" 90)
@@ -188,6 +188,10 @@ lemma sbintrunc_Suc_minus_Is:
 lemma bin_cat_Suc_Bit: "bin_cat w (Suc n) (v BIT b) = bin_cat w n v BIT b"
   by (auto simp add: Bit_def concat_bit_Suc)
 
+context
+  includes bit_operations_syntax
+begin
+
 lemma int_not_BIT [simp]: "NOT (w BIT b) = (NOT w) BIT (\<not> b)"
   by (simp add: not_int_def Bit_def)
 
@@ -199,6 +203,8 @@ lemma int_or_Bits [simp]: "(x BIT b) OR (y BIT c) = (x OR y) BIT (b \<or> c)"
 
 lemma int_xor_Bits [simp]: "(x BIT b) XOR (y BIT c) = (x XOR y) BIT ((b \<or> c) \<and> \<not> (b \<and> c))"
   using xor_int_rec [of \<open>x BIT b\<close> \<open>y BIT c\<close>] by (auto simp add: Bit_B0_2t Bit_B1_2t)
+
+end
 
 lemma mod_BIT:
   "bin BIT bit mod 2 ^ Suc n = (bin mod 2 ^ n) BIT bit" for bit
@@ -221,13 +227,9 @@ lemma int_lsb_BIT [simp]: fixes x :: int shows
 by(simp add: lsb_int_def)
 
 lemma int_shiftr_BIT [simp]: fixes x :: int
-  shows int_shiftr0: "x >> 0 = x"
-  and int_shiftr_Suc: "x BIT b >> Suc n = x >> n"
-proof -
-  show "x >> 0 = x" by (simp add: shiftr_int_def)
-  show "x BIT b >> Suc n = x >> n" by (cases b)
-   (simp_all add: shiftr_int_def Bit_def add.commute pos_zdiv_mult_2)
-qed
+  shows int_shiftr0: "drop_bit 0 x = x"
+  and int_shiftr_Suc: "drop_bit (Suc n) (x BIT b) = drop_bit n x"
+  by (simp_all add: drop_bit_Suc)
 
 lemma msb_BIT [simp]: "msb (x BIT b) = msb x"
 by(simp add: msb_int_def)

@@ -8,6 +8,8 @@ theory ArchArch_AI
 imports Arch_AI
 begin
 
+unbundle l4v_word_context
+
 context Arch begin global_naming RISCV64
 
 definition
@@ -91,7 +93,7 @@ lemma dom_ucast_eq:
    apply (simp add: asid_low_bits_def)
    apply (erule notE)
    apply (subst word_plus_and_or_coroll)
-    apply (word_bitwise, clarsimp simp: word_size)
+    apply word_eqI_solve
    apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
   apply (clarsimp simp: p2_low_bits_max)
   apply (rule ccontr)
@@ -108,7 +110,7 @@ lemma dom_ucast_eq:
   apply (erule notE)
   apply (simp add: is_aligned_mask asid_low_bits_def)
   apply (subst word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
+   apply word_eqI_solve
   apply (subst (asm) word_plus_and_or_coroll)
    apply (word_bitwise, clarsimp simp: word_size)
   apply (word_bitwise)
@@ -1243,7 +1245,7 @@ lemma asid_low_hi_cast:
   "is_aligned asid_hi asid_low_bits \<Longrightarrow>
    ucast (ucast asid_low + (asid_hi::asid)) = (asid_low :: asid_low_index)"
   apply (simp add: is_aligned_nth asid_low_bits_def)
-  apply (subst word_plus_and_or_coroll; (word_bitwise, simp))
+  apply (subst word_plus_and_or_coroll; word_eqI_solve)
   done
 
 lemma decode_asid_pool_invocation_wf[wp]:

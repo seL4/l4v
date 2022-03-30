@@ -427,7 +427,6 @@ proof -
      apply simp
      done
   from assms show ?thesis
-    supply unsigned_of_nat[simp del]
     apply (clarsimp simp: super_field_update_t_def)
     apply (rule ext)
     apply (clarsimp simp: field_lvalue_def split: option.splits)
@@ -493,7 +492,6 @@ lemma field_of_t_field_lookup:
   assumes b: "export_uinfo s = typ_uinfo_t TYPE('b::mem_type)"
   assumes n: "n = field_offset TYPE('a) f"
   shows "field_of_t (Ptr &(ptr\<rightarrow>f) :: ('b ptr)) (ptr :: 'a ptr)"
-  supply unsigned_of_nat[simp del]
   apply (clarsimp simp del: field_lookup_offset_eq
                  simp: field_of_t_def field_of_def)
   apply (subst td_set_field_lookup)
@@ -533,7 +531,6 @@ proof (rule ext)
     done
 
   have equal_case: "?LHS ptr = ?RHS ptr"
-    supply unsigned_of_nat[simp del]
     apply (insert cl)
     apply (clarsimp simp: simple_lift_def split: if_split_asm)
     apply (clarsimp simp: hrs_mem_update)
@@ -727,15 +724,14 @@ lemma zero_not_in_intvl_no_overflow:
   apply (drule_tac x="2 ^ len_of TYPE('a) - unat a" in spec)
   apply (clarsimp simp: not_less)
   apply (erule disjE)
-  apply (metis (erased, hide_lams) diff_add_inverse less_imp_add_positive of_nat_2p of_nat_add
-           unat_lt2p word_neq_0_conv word_unat.Rep_inverse)
+   apply (metis (erased) diff_add_inverse less_imp_add_positive of_nat_2p of_nat_add
+                unat_lt2p word_neq_0_conv word_unat.Rep_inverse)
   apply (metis le_add_diff_inverse le_antisym le_diff_conv le_refl
-           less_imp_le_nat add.commute not_add_less1 unat_lt2p)
+               less_imp_le_nat add.commute not_add_less1 unat_lt2p)
   done
 
 lemma intvl_split:
   "\<lbrakk> n \<ge> a \<rbrakk> \<Longrightarrow> { p :: ('a :: len) word ..+ n } = { p ..+ a } \<union> { p + of_nat a ..+ (n - a)}"
-  supply unsigned_of_nat[simp del]
   apply (rule set_eqI, rule iffI)
    apply (clarsimp simp: intvl_def not_less)
    apply (rule_tac x=k in exI)

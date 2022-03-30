@@ -808,7 +808,7 @@ let
   val typ_vals = Vartab.dest (Envir.type_env env)
 in
   (Drule.instantiate_normalize
-      (map prep_type typ_vals, map prep_term term_vals))
+      (TVars.make (map prep_type typ_vals), Vars.make (map prep_term term_vals)))
 end
 
 (*

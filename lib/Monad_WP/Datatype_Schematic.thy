@@ -84,7 +84,6 @@ structure Datatype_Schematic_Data = Generic_Data
   \<close>
   type T = ((int * string * thm) list) Symtab.table;
   val empty = Symtab.empty;
-  val extend = I;
   val merge = Symtab.merge_list eq;
 );
 

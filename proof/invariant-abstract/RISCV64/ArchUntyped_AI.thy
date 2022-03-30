@@ -18,7 +18,7 @@ lemma of_bl_nat_to_cref[Untyped_AI_assms]:
   apply (clarsimp intro!: less_mask_eq
                   simp: nat_to_cref_def of_drop_to_bl
                         word_size word_less_nat_alt word_bits_def)
-  by (simp add: take_bit_nat_def)
+  by (metis add_lessD1 le_unat_uoi nat_le_iff_add nat_le_linear)
 
 
 lemma cnode_cap_ex_cte[Untyped_AI_assms]:

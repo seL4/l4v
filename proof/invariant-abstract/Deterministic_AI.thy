@@ -4384,6 +4384,7 @@ lemma next_slot_setD:
   apply(subst(asm) next_slot_set_def)
   apply(simp)
   apply(induct "next" slot rule: trancl.induct)
+    apply simp
    apply(simp add: next_slot_def split: if_split_asm)
     apply(simp add: next_child_def valid_list_2_def descendants_of_def cdt_parent_defs)
     apply(case_tac "t b", simp, fastforce)

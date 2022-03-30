@@ -41,8 +41,8 @@ lemma same_object_obj_refs[Tcb_AI_asms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
   apply (cases cap, simp_all add: same_object_as_def)
-       apply ((clarsimp simp: is_cap_simps bits_of_def same_aobject_as_def
-                      split: cap.split_asm )+)
+       apply (clarsimp simp: is_cap_simps bits_of_def
+                      split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
 

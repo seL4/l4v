@@ -463,10 +463,10 @@ lemma invoke_untyped_one_has_children:
         apply wp
        apply simp
       apply (clarsimp simp:neq_Nil_conv)
-        apply auto[1]
+        apply (cases slot, fastforce)
        apply wp+
      apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
-     apply (clarsimp simp:zip_is_empty)
+     apply clarsimp
     apply (wp unlessE_wp hoare_drop_imps | simp)+
   done
 

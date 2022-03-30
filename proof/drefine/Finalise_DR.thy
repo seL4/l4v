@@ -1374,16 +1374,13 @@ lemma mask_compare_imply:
    apply (drule_tac na = na in test_bits_mask[where l = l and y = y])
      apply clarsimp+
   apply (case_tac "l+n\<le> na")
-   apply (drule_tac na = na in test_bits_neg_mask)
-     apply clarsimp+
+   apply (drule_tac na = na in test_bits_neg_mask; clarsimp)
   apply (drule_tac na = "na-l" in test_bits_mask)
     apply (clarsimp simp: linorder_not_le)
     apply (subst (asm) add.commute[where a = l])+
     apply (drule nat_diff_less)
      apply (clarsimp simp:word_size)+
-  apply (clarsimp simp:nth_shiftr)
-  apply (auto simp:word_size)
-done
+  done
 
 lemma aligned_in_step_up_to:
   "\<lbrakk>x\<in> set (map (\<lambda>x. x + ptr) [0 , (2^t) .e. up]); t < word_bits; is_aligned ptr t\<rbrakk>
@@ -2950,60 +2947,60 @@ lemma swap_cap_corres:
 proof -
   note inj_on_insert[iff del]
   show ?thesis
-  supply if_cong[cong]
-  apply (simp add: swap_cap_def cap_swap_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ set_cap_corres[OF refl refl]])
+    supply if_cong[cong]
+    apply (simp add: swap_cap_def cap_swap_def)
+    apply (rule corres_guard_imp)
       apply (rule corres_split_nor [OF _ set_cap_corres[OF refl refl]])
-        apply (simp add: swap_parents_def set_original_def
-                         set_cdt_modify gets_fold_into_modify bind_assoc
-                         cap_swap_ext_def update_cdt_list_def set_cdt_list_modify)
-        apply (simp add: gets_fold_into_modify modify_modify Fun.swap_def o_def)
-        apply (rule_tac P'="K (slot_a \<noteq> slot_b) and cte_at slot_a and cte_at slot_b
-                              and (\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s))
-                              and no_mloop o cdt"
-                   and P=\<top> in corres_modify)
+        apply (rule corres_split_nor [OF _ set_cap_corres[OF refl refl]])
+          apply (simp add: swap_parents_def[unfolded Fun.swap_def] set_original_def
+                           set_cdt_modify gets_fold_into_modify bind_assoc
+                           cap_swap_ext_def update_cdt_list_def set_cdt_list_modify)
+          apply (simp add: gets_fold_into_modify modify_modify o_def)
+          apply (rule_tac P'="K (slot_a \<noteq> slot_b) and cte_at slot_a and cte_at slot_b
+                                and (\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s))
+                                and no_mloop o cdt"
+                     and P=\<top> in corres_modify)
 
-        apply (clarsimp simp:transform_def transform_current_thread_def
-                             transform_asid_table_def transform_objects_def
-                             transform_cdt_def split del: if_split)
-        apply (rule sym)
-        apply (subgoal_tac "inj_on transform_cslot_ptr
-                   ({slot_a, slot_b} \<union> dom (cdt s') \<union> ran (cdt s'))
-                     \<and> cdt s' slot_a \<noteq> Some slot_a \<and> cdt s' slot_b \<noteq> Some slot_b")
-         apply (elim conjE)
-         apply (subst map_lift_over_upd, erule subset_inj_on)
-          apply (safe elim!: ranE, simp_all split: if_split_asm,
-                 simp_all add: ranI)[1]
-         apply (subst map_lift_over_upd, erule subset_inj_on)
-          apply (safe elim!: ranE, simp_all split: if_split_asm,
-                 simp_all add: ranI)[1]
-         apply (subst map_lift_over_if_eq_twice)
-          apply (erule subset_inj_on, fastforce)
-         apply (rule ext)
-         apply (cases slot_a, cases slot_b)
-         apply (simp split del: if_split)
-         apply (intro if_cong[OF refl],
-                simp_all add: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
-                              ranI domI)[1]
-          apply (subst subset_inj_on, assumption, fastforce)+
-          prefer 2
-          apply (subst subset_inj_on, assumption, fastforce)+
-          apply (auto simp: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
-                            ranI domI
-                     intro: map_lift_over_f_eq[THEN iffD2, OF _ refl]
-                      elim: subset_inj_on)[2]
-        apply (clarsimp simp: no_cdt_loop_mloop)
-        apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
-        apply (auto simp: swp_def dest: mdb_cte_atD
-                    elim!: ranE)[1]
-       apply (wp set_cap_caps_of_state2 set_cap_idle
-                  | simp add: swp_def cte_wp_at_caps_of_state)+
-  apply clarsimp
-  apply (clarsimp simp: cte_wp_at_caps_of_state valid_mdb_def)
-  apply (safe intro!: mdb_cte_atI)
-     apply (auto simp: swp_def cte_wp_at_caps_of_state not_idle_thread_def
-                 dest: mdb_cte_atD elim!: ranE)
+          apply (clarsimp simp:transform_def transform_current_thread_def
+                               transform_asid_table_def transform_objects_def
+                               transform_cdt_def split del: if_split)
+          apply (rule sym)
+          apply (subgoal_tac "inj_on transform_cslot_ptr
+                     ({slot_a, slot_b} \<union> dom (cdt s') \<union> ran (cdt s'))
+                       \<and> cdt s' slot_a \<noteq> Some slot_a \<and> cdt s' slot_b \<noteq> Some slot_b")
+           apply (elim conjE)
+           apply (subst map_lift_over_upd, erule subset_inj_on)
+            apply (safe elim!: ranE, simp_all split: if_split_asm,
+                   simp_all add: ranI)[1]
+           apply (subst map_lift_over_upd, erule subset_inj_on)
+            apply (safe elim!: ranE, simp_all split: if_split_asm,
+                   simp_all add: ranI)[1]
+           apply (subst map_lift_over_if_eq_twice)
+            apply (erule subset_inj_on, fastforce)
+           apply (rule ext)
+           apply (cases slot_a, cases slot_b)
+           apply (simp split del: if_split)
+           apply (intro if_cong[OF refl],
+                  simp_all add: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
+                                ranI domI)[1]
+            apply (subst subset_inj_on, assumption, fastforce)+
+            prefer 2
+            apply (subst subset_inj_on, assumption, fastforce)+
+            apply (auto simp: map_lift_over_eq_Some inj_on_eq_iff[where f=transform_cslot_ptr]
+                              ranI domI
+                       intro: map_lift_over_f_eq[THEN iffD2, OF _ refl]
+                        elim: subset_inj_on)[2]
+          apply (clarsimp simp: no_cdt_loop_mloop)
+          apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
+          apply (auto simp: swp_def dest: mdb_cte_atD
+                      elim!: ranE)[1]
+         apply (wp set_cap_caps_of_state2 set_cap_idle
+                    | simp add: swp_def cte_wp_at_caps_of_state)+
+    apply clarsimp
+    apply (clarsimp simp: cte_wp_at_caps_of_state valid_mdb_def)
+    apply (safe intro!: mdb_cte_atI)
+       apply (auto simp: swp_def cte_wp_at_caps_of_state not_idle_thread_def
+                   dest: mdb_cte_atD elim!: ranE)
     done
 qed
 

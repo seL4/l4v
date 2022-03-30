@@ -15,6 +15,7 @@ The C parser supports multiple target architectures:
 
     - ARM
     - ARM_HYP
+    - AARCH64
     - X64
     - RISCV64
 

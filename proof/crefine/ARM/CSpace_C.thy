@@ -536,7 +536,7 @@ lemma revokable_ccorres:
   apply (cinit' lift: derivedCap_' srcCap_' simp: revokable'_def)
    \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
-   apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
+   apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_rhs_assoc)
     apply (clarsimp simp: isCap_simps)
@@ -850,7 +850,7 @@ lemma update_freeIndex':
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
           apply word_bitwise
-          subgoal by (simp add: word_size untypedBits_defs)
+          subgoal by (simp add: word_size untypedBits_defs mask_def)
          apply (cut_tac i'_bound_concrete)
          subgoal by (simp add: unats_def)
         subgoal by (simp add: word_unat.Rep[where 'a=machine_word_len, simplified])
@@ -985,7 +985,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
        apply assumption
       apply (clarsimp simp: max_free_index_def shiftL_nat valid_cap'_def capAligned_def)
-     apply (simp add:power_minus_is_div unat_power_lower unat_sub word_le_nat_alt t2p_shiftr_32)
+     apply (simp add:power_minus_is_div unat_sub word_le_nat_alt t2p_shiftr_32)
      apply clarsimp
      apply (erule cte_wp_at_weakenE', simp)
     apply clarsimp
@@ -1484,7 +1484,7 @@ lemma cteSwap_ccorres:
              apply simp
              apply (cases "(slot'=slot)", simp+)
     \<comment> \<open>no_0 (ctes_of s)\<close>
-       apply (simp add: valid_mdb'_def) \<comment> \<open>yuck\<close>
+       apply (simp add: valid_mdb'_def)
       apply (erule valid_mdb_ctesE)
       apply assumption
 
@@ -1583,7 +1583,7 @@ lemma emptySlot_helper:
    apply clarsimp
 
    apply (frule(1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
+   apply (clarsimp simp: typ_heap_simps' nextmdb_def nextcte_def)
    apply (intro conjI impI allI)
 
      \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
@@ -1668,24 +1668,24 @@ done
 
 lemma mdbNext_CL_mdb_node_lift_eq_mdbNext:
   "cmdbnode_relation n n' \<Longrightarrow>  (mdbNext_CL (mdb_node_lift n')) =(mdbNext n)"
-  by (erule cmdbnode_relationE, fastforce simp: mdbNext_to_H)
+  by (erule cmdbnode_relationE, fastforce)
 
 lemma mdbPrev_CL_mdb_node_lift_eq_mdbPrev:
   "cmdbnode_relation n n' \<Longrightarrow>  (mdbPrev_CL (mdb_node_lift n')) =(mdbPrev n)"
-  by (erule cmdbnode_relationE, fastforce simp: mdbNext_to_H)
+  by (erule cmdbnode_relationE, fastforce)
 
 lemma mdbNext_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbNext n \<noteq> 0) = (mdbNext_CL (mdb_node_lift n') \<noteq> 0)"
   apply clarsimp
   apply (erule cmdbnode_relationE)
-  apply (fastforce simp: mdbNext_to_H)
+  apply fastforce
   done
 
 lemma mdbPrev_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbPrev n \<noteq> 0) = (mdbPrev_CL (mdb_node_lift n') \<noteq> 0)"
   apply clarsimp
   apply (erule cmdbnode_relationE)
-  apply (fastforce simp: mdbPrev_to_H)
+  apply fastforce
   done
 
 (* TODO: move *)
@@ -1788,7 +1788,6 @@ lemma untypedZeroRange_idx_forward_helper:
     \<Longrightarrow> (case (untypedZeroRange cap, untypedZeroRange (capFreeIndex_update (\<lambda>_. idx) cap))
        of (Some (a, b), Some (a', b')) \<Rightarrow> {a' ..+ unat (b' + 1 - a')} \<subseteq> {a ..+ unat (b + 1 - a)}
         | _ \<Rightarrow> True)"
-  including no_take_bit
   apply (clarsimp split: option.split)
   apply (clarsimp simp: untypedZeroRange_def max_free_index_def Let_def
                         isCap_simps valid_cap_simps' capAligned_def untypedBits_defs
@@ -1831,7 +1830,6 @@ lemma untypedZeroRange_idx_backward_helper:
                of Some (a, b) \<Rightarrow> {a ..+ unat (b + 1 - a)}
                 | None \<Rightarrow> {})
   )"
-  including no_take_bit
   apply (clarsimp split: option.split, intro impI conjI allI)
    apply (rule intvl_both_le; clarsimp simp: untypedZeroRange_def
                          max_free_index_def Let_def
@@ -2142,8 +2140,7 @@ lemma emptySlot_ccorres:
 
   \<comment> \<open>final precondition proof\<close>
   apply (clarsimp simp: typ_heap_simps Collect_const_mem
-                        cte_wp_at_ctes_of
-             split del: if_split)
+                        cte_wp_at_ctes_of)
 
   apply (rule conjI)
    \<comment> \<open>Haskell side\<close>
@@ -2777,7 +2774,7 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
                  split: if_split if_split_asm)
   apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 5)
                       < unat ((2::word32) ^ 5)")
-   apply clarsimp
+   apply (clarsimp simp: shiftl_eq_mult)
   apply (rule unat_mono)
   apply (rule and_mask_less_size)
   apply (clarsimp simp: word_size)
@@ -2941,7 +2938,6 @@ lemma sameRegionAs_spec:
                      capAligned capb \<and> (\<exists>s. s \<turnstile>' capa)\<rbrace>
   Call sameRegionAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (sameRegionAs capa capb) \<rbrace>"
-  including no_take_bit
   apply vcg
   apply clarsimp
   apply (simp add: sameRegionAs_def isArchCap_tag_def2)

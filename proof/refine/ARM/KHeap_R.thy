@@ -1074,7 +1074,7 @@ lemma map_to_ctes_upd_tcb:
      apply (simp only: field_simps)
      apply (erule is_aligned_no_overflow)
     apply (simp add: objBits_simps field_simps)
-   apply (clarsimp simp: tcb_cte_cases_def objBits_simps' field_simps
+   apply (clarsimp simp: tcb_cte_cases_def objBits_simps'
                   split: if_split_asm)
   apply (subst mask_in_range, assumption)
   apply (simp only: atLeastAtMost_iff order_refl simp_thms)
@@ -5060,7 +5060,7 @@ lemma refillSingle_corres:
     apply (rule_tac R'="\<lambda>sc s. sc_valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
        apply (rule get_sc_corres)
       apply simp
-      apply (metis (mono_tags, hide_lams) refillSingle_equiv sc_relation_def)
+      apply (metis (mono_tags, opaque_lifting) refillSingle_equiv sc_relation_def)
      apply wpsimp+
   apply (clarsimp simp: obj_at'_def)
   done

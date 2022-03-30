@@ -1744,7 +1744,7 @@ lemma handleInterrupt_ccorres:
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
       apply (frule cap_get_tag_to_H, assumption)
       apply (clarsimp simp: to_bool_def)
-     apply (cut_tac un_ui_le[where b = 191 and a = irq,
+     apply (cut_tac un_ui_le[where b = "256::machine_word" and a = irq,
             simplified word_size])
      apply (simp add: ucast_eq_0 is_up_def source_size_def
                       target_size_def word_size unat_gt_0

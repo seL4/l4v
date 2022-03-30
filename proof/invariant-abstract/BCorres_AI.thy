@@ -10,6 +10,8 @@ imports
   "Lib.BCorres_UL"
 begin
 
+unbundle l4v_word_context (* because of Lib.BCorres_UL *)
+
 abbreviation "bcorres \<equiv> bcorres_underlying truncate_state"
 
 abbreviation "s_bcorres \<equiv> s_bcorres_underlying truncate_state"

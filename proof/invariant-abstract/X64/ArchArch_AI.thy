@@ -641,11 +641,11 @@ lemma max_index_upd_no_cap_to:
   apply (clarsimp simp:table_cap_ref_def)
   done
 
-lemma perform_asid_control_invocation_st_tcb_at:
-  "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-    and ct_active and invs and valid_aci aci\<rbrace>
-    perform_asid_control_invocation aci
-  \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+lemma perform_asid_control_invocation_pred_tcb_at:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t s
+        \<and> ct_active s \<and> invs s \<and> valid_aci aci s\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. pred_tcb_at proj Q t\<rbrace>"
   supply
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
@@ -676,8 +676,6 @@ lemma perform_asid_control_invocation_st_tcb_at:
       apply (simp add:page_bits_def)+
     apply (simp add:invs_valid_objs invs_psp_aligned)+
   apply (rule conjI)
-   apply (erule pred_tcb_weakenE, simp)
-  apply (rule conjI)
    apply (frule st_tcb_ex_cap)
      apply clarsimp
     apply (clarsimp split: Structures_A.thread_state.splits)
@@ -703,6 +701,15 @@ lemma perform_asid_control_invocation_st_tcb_at:
      invs_psp_aligned invs_valid_objs page_bits_def)
    apply (erule pspace_no_overlap_detype)
   apply (auto simp:page_bits_def detype_clear_um_independent)
+  done
+
+lemma perform_asid_control_invocation_st_tcb_at:
+  "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
+    and ct_active and invs and valid_aci aci\<rbrace>
+   perform_asid_control_invocation aci
+   \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  apply (wpsimp wp: perform_asid_control_invocation_pred_tcb_at)
+  apply (fastforce simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma set_cap_idx_up_aligned_area:

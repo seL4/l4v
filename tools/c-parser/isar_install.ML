@@ -66,7 +66,6 @@ structure C_Includes = Theory_Data
 (struct
    type T = string list
    val empty = []
-   val extend = I
    val merge = Library.merge (op =)
 end);
 
@@ -79,7 +78,6 @@ structure C_Installs = Theory_Data
 (struct
    type T = install_data list
    val empty = []
-   val extend = I
    val merge = Library.merge (op =)
 end);
 val installed_C_files = C_Installs.get

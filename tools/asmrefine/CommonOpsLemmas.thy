@@ -25,7 +25,7 @@ lemma fold_all_htd_updates':
     ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)"
   "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_arr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 5 (ptr_val p) (of_nat n)"
-  by (simp_all add: all_htd_updates_def fun_eq_iff word_bits_conv take_bit_nat_eq_self)
+  by (simp_all add: all_htd_updates_def fun_eq_iff word_bits_conv take_bit_nat_eq_self unat_of_nat)
 
 lemma upcast_unat_less_2p_length:
     "is_up UCAST('a :: len \<rightarrow> 'b :: len) \<Longrightarrow> unat (x :: 'a word) < 2 ^ LENGTH('b)"
@@ -89,13 +89,15 @@ proof -
     apply (cut_tac x=a in sint_range')
     apply (clarsimp simp add: abs_if word_size)
     done
+  note sint_of_int_eq[simp] signed_take_bit_int_eq_self[simp]
   show ?thesis using mag len
     apply (cases "b = 1")
      apply (case_tac "size a", simp_all)[1]
      apply (case_tac nat, simp_all add: sint_word_ariths word_size)[1]
     apply (simp add: sdiv_int_def sdiv_word_def del: of_int_mult)
     apply (simp add: sbintrunc_eq_in_range range_sbintrunc sgn_if)
-    apply (safe, simp_all add: word_size sint_int_min)
+    apply (safe, simp_all add: word_size sint_int_min sint_int_max_plus_1;
+           simp add: sint_word_ariths)
     done
 qed
 

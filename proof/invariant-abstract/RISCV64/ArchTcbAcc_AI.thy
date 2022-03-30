@@ -59,7 +59,6 @@ lemma cap_master_cap_tcb_cap_valid_arch:
   (* slow: 5 to 10s *)
   by (auto simp: cap_master_cap_def tcb_cap_valid_def tcb_cap_cases_def
                  valid_ipc_buffer_cap_def  is_cap_simps valid_fault_handler_def
-                 is_nondevice_page_cap_simps
            elim: pred_tcb_weakenE
           split: option.splits cap.splits arch_cap.splits
                  Structures_A.thread_state.splits)

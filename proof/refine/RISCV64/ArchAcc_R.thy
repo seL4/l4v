@@ -12,6 +12,8 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
+unbundle l4v_word_context
+
 context begin
 
 lemma fun_all: "f = f' \<Longrightarrow> (\<forall>s. f s \<longrightarrow> f' s)"
@@ -392,7 +394,6 @@ lemma setObject_PT_corres:
         apply (simp add: pt_bits_def pageBits_def)
        apply (simp add: pt_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size bit_simps)
       apply arith
@@ -853,7 +854,7 @@ lemma pte_relation'_Invalid_inv [simp]:
 
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of (ucast asid))"
-  by (word_eqI simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
+  by (word_eqI_solve simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"

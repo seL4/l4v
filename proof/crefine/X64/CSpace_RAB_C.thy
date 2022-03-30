@@ -8,6 +8,8 @@ theory CSpace_RAB_C
 imports CSpaceAcc_C "CLib.MonadicRewrite_C"
 begin
 
+unbundle l4v_word_context
+
 context kernel
 begin
 

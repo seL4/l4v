@@ -6,12 +6,14 @@
 
 (* Author: Jeremy Dawson and Gerwin Klein, NICTA *)
 
+section \<open>Splitting words into lists\<close>
+
 theory Rsplit
-  imports "HOL-Library.Word" Bits_Int
+  imports "HOL-Library.Word" More_Word Bits_Int
 begin
 
 definition word_rsplit :: "'a::len word \<Rightarrow> 'b::len word list"
-  where "word_rsplit w = map word_of_int (bin_rsplit (LENGTH('b)) (LENGTH('a), uint w))"
+  where "word_rsplit w = map word_of_int (bin_rsplit LENGTH('b) (LENGTH('a), uint w))"
 
 lemma word_rsplit_no:
   "(word_rsplit (numeral bin :: 'b::len word) :: 'a word list) =
@@ -39,11 +41,11 @@ lemma word_rsplit_empty_iff_size: "word_rsplit w = [] \<longleftrightarrow> size
 
 lemma test_bit_rsplit:
   "sw = word_rsplit w \<Longrightarrow> m < size (hd sw) \<Longrightarrow>
-    k < length sw \<Longrightarrow> (rev sw ! k) !! m = w !! (k * size (hd sw) + m)"
+    k < length sw \<Longrightarrow> bit (rev sw ! k) m = bit w (k * size (hd sw) + m)"
   for sw :: "'a::len word list"
   apply (unfold word_rsplit_def word_test_bit_def)
   apply (rule trans)
-   apply (rule_tac f = "\<lambda>x. bin_nth x m" in arg_cong)
+   apply (rule_tac f = "\<lambda>x. bit x m" in arg_cong)
    apply (rule nth_map [symmetric])
    apply simp
   apply (rule bin_nth_rsplit)
@@ -53,12 +55,12 @@ lemma test_bit_rsplit:
    defer
    apply (rule map_ident [THEN fun_cong])
   apply (rule refl [THEN map_cong])
-  apply simp
+  apply (simp add: unsigned_of_int take_bit_int_eq_self_iff)
   using bin_rsplit_size_sign take_bit_int_eq_self_iff by blast
 
 lemma test_bit_rsplit_alt:
-  \<open>(word_rsplit w  :: 'b::len word list) ! i !! m \<longleftrightarrow>
-    w !! ((length (word_rsplit w :: 'b::len word list) - Suc i) * size (hd (word_rsplit w :: 'b::len word list)) + m)\<close>
+  \<open>bit ((word_rsplit w  :: 'b::len word list) ! i) m \<longleftrightarrow>
+    bit w ((length (word_rsplit w :: 'b::len word list) - Suc i) * size (hd (word_rsplit w :: 'b::len word list)) + m)\<close>
   if \<open>i < length (word_rsplit w :: 'b::len word list)\<close> \<open>m < size (hd (word_rsplit w :: 'b::len word list))\<close> \<open>0 < length (word_rsplit w :: 'b::len word list)\<close>
   for w :: \<open>'a::len word\<close>
   apply (rule trans)
@@ -120,12 +122,6 @@ lemma size_word_rsplit_rcat_size:
   for ws :: "'a::len word list" and frcw :: "'b::len word"
   by (cases \<open>LENGTH('a)\<close>) (simp_all add: word_size length_word_rsplit_exp_size' div_nat_eqI)
 
-lemma msrevs:
-  "0 < n \<Longrightarrow> (k * n + m) div n = m div n + k"
-  "(k * n + m) mod n = m mod n"
-  for n :: nat
-  by (auto simp: add.commute)
-
 lemma word_rsplit_rcat_size [OF refl]:
   "word_rcat ws = frcw \<Longrightarrow>
     size frcw = length ws * LENGTH('a) \<Longrightarrow> word_rsplit frcw = ws"
@@ -152,15 +148,16 @@ lemma word_rsplit_rcat_size [OF refl]:
 
 lemma word_rsplit_upt:
   "\<lbrakk> size x = LENGTH('a :: len) * n; n \<noteq> 0 \<rbrakk>
-    \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> i * len_of TYPE ('a)) :: 'a word) (rev [0 ..< n])"
+    \<Longrightarrow> word_rsplit x = map (\<lambda>i. ucast (x >> (i * LENGTH('a))) :: 'a word) (rev [0 ..< n])"
   apply (subgoal_tac "length (word_rsplit x :: 'a word list) = n")
    apply (rule nth_equalityI, simp)
    apply (intro allI word_eqI impI)
    apply (simp add: test_bit_rsplit_alt word_size)
-   apply (simp add: nth_ucast nth_shiftr rev_nth field_simps)
-  apply (simp add: length_word_rsplit_exp_size)
-  apply transfer
-  apply (metis (no_types, lifting) Nat.add_diff_assoc Suc_leI add_0_left diff_Suc_less div_less len_gt_0 msrevs(1) mult.commute)
+   apply (simp add: nth_ucast bit_simps rev_nth field_simps)
+  apply (simp add: length_word_rsplit_exp_size word_size)
+  apply (subst diff_add_assoc)
+   apply (simp flip: less_eq_Suc_le)
+  apply simp
   done
 
 end

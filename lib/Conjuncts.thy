@@ -23,7 +23,6 @@ local
   (
     type T = thm;
     val empty: T = Drule.dummy_thm;
-    val extend = I;
     val merge : T * T -> T = (K Drule.dummy_thm);
   );
 

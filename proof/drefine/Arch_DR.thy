@@ -1067,28 +1067,6 @@ lemma store_pde_set_cap_corres:
       apply (simp add: obj_at_def)+
   done
 
-lemma is_aligned_shiftr_add:
- "\<lbrakk>is_aligned (a::word32) n; is_aligned b m; b < 2 ^n; m \<le> n; n < 32\<rbrakk>
-  \<Longrightarrow> a + b >> m = (a >> m) + (b >> m)"
-  apply(simp add:shiftr_div_2n_w word_size)
-  apply (rule word_unat.Rep_eqD)
-  apply (subst unat_plus_simple[THEN iffD1])
-   apply (subst shiftr_div_2n_w[symmetric],simp add:word_size)+
-   apply (rule is_aligned_no_wrap')
-    apply (rule is_aligned_shiftr[where n = "n - m"])
-    apply simp
-   apply (rule shiftr_less_t2n)
-   apply simp
-  apply (simp add:unat_div)
-  apply (subst unat_plus_simple[THEN iffD1])
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (rule div_add)
-   apply (simp add:is_aligned_def[symmetric])
-   apply (erule(1) is_aligned_weaken[rotated])
-  apply (simp add:is_aligned_def)
-  done
-
 lemma pde_opt_cap_eq:
   "\<lbrakk> ko_at (ArchObj (arch_kernel_obj.PageDirectory pd)) (x && ~~ mask pd_bits) s;
          valid_idle s \<rbrakk>
@@ -1270,7 +1248,6 @@ lemma store_pte_page_inv_entries_safe:
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (hd bb && ~~ mask pt_bits)  s
     \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pt_bits >> 2)) = ARM_A.pte.InvalidPTE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pt_bits = hd bb && ~~ mask pt_bits)\<rbrace>"
-  including no_take_bit
   apply (simp add:store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)
@@ -1313,7 +1290,6 @@ lemma store_pde_page_inv_entries_safe:
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (hd bb && ~~ mask pd_bits)  s
     \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pd_bits >> 2)) = ARM_A.pde.InvalidPDE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pd_bits = hd bb && ~~ mask pd_bits)\<rbrace>"
-  including no_take_bit
   apply (simp add:store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)

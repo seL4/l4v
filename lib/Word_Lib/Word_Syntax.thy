@@ -13,6 +13,10 @@ begin
 
 text \<open>Additional bit and type syntax that forces word types.\<close>
 
+context
+  includes bit_operations_syntax
+begin
+
 abbreviation
   wordNOT  :: "'a::len word \<Rightarrow> 'a word"      ("~~ _" [70] 71)
 where
@@ -32,5 +36,7 @@ abbreviation
   wordXOR  :: "'a::len word \<Rightarrow> 'a word \<Rightarrow> 'a word" (infixr "xor" 59)
 where
   "a xor b == a XOR b"
+
+end
 
 end

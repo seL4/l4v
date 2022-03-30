@@ -29,7 +29,7 @@ USA
 section "Example: Quicksort on Heap Lists"
 
 theory Quicksort
-imports "../Vcg" "../HeapList" "HOL-Library.Permutation"
+imports "../Vcg" "../HeapList" "HOL-Library.Multiset"
 begin
 
 record globals_heap =
@@ -81,60 +81,10 @@ where
 "sorted le [] = True" |
 "sorted le (x#xs) = ((\<forall>y\<in>set xs. le x y) \<and> sorted le xs)"
 
-lemma perm_set_eq:
-  assumes perm: "xs <~~> ys"
-  shows "set xs = set ys"
-  using perm
-  by induct auto
-
-lemma perm_Cons_eq [iff]: "x#xs <~~> x#ys = (xs <~~> ys)"
-  by auto
-
-lemma perm_app_Cons_eq1 : "xs@y#ys <~~> zs = (y#xs@ys <~~> zs)"
-proof -
-  have app_Cons: "xs@y#ys <~~> y#xs@ys"
-    by (rule perm_sym, rule perm_append_Cons)
-  show ?thesis
-  proof
-    assume "xs@y#ys <~~> zs"
-    with app_Cons [THEN perm_sym]
-    show "y#xs@ys <~~> zs"
-      by (rule perm.trans)
-  next
-    assume " y#xs@ys <~~> zs"
-    with app_Cons
-    show "xs@y#ys <~~> zs"
-      by (rule perm.trans)
-  qed
-qed
-
-lemma perm_app_Cons_eq2 : "zs <~~> xs@y#ys = (zs <~~> y#xs@ys)"
-proof -
-  have "xs@y#ys <~~> zs = (y#xs@ys <~~> zs)"
-    by (rule perm_app_Cons_eq1)
-  thus ?thesis
-    by (iprover intro: perm_sym)
-qed
-
-lemmas perm_app_Cons_simps = perm_app_Cons_eq1 [THEN sym]
-                             perm_app_Cons_eq2 [THEN sym]
-
 lemma sorted_append[simp]:
  "sorted le (xs@ys) = (sorted le xs \<and> sorted le ys \<and>
                        (\<forall>x \<in> set xs. \<forall>y \<in> set ys. le x y))"
 by (induct xs, auto)
-
-lemma perm_append_blocks:
-  assumes ws_ys: "ws <~~> ys"
-  assumes xs_zs: "xs <~~> zs"
-  shows "ws@xs <~~> ys@zs"
-using ws_ys
-proof (induct)
-  case (swap l x y)
-  from xs_zs
-  show "(l # x # y) @ xs <~~> (x # l # y) @ zs"
-  by (induct) auto
-qed (insert xs_zs , auto)
 
 procedures quickSort(p|p) =
  "IF \<acute>p=Null THEN SKIP
@@ -162,7 +112,7 @@ procedures quickSort(p|p) =
   "\<forall>\<sigma> Ps. \<Gamma>\<turnstile> \<lbrace>\<sigma>. List \<acute>p \<acute>next Ps\<rbrace> \<acute>p :== PROC quickSort(\<acute>p)
        \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
         sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
-        Ps <~~> sortedPs) \<and>
+        mset Ps = mset sortedPs) \<and>
         (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 
   quickSort_modifies:
@@ -182,7 +132,7 @@ shows
                   \<acute>p :== PROC quickSort(\<acute>p)
                 \<lbrace>(\<exists>sortedPs. List \<acute>p \<acute>next sortedPs \<and>
                  sorted (\<le>) (map \<^bsup>\<sigma>\<^esup>cont sortedPs) \<and>
-                 Ps <~~> sortedPs) \<and>
+                 mset Ps = mset sortedPs) \<and>
                  (\<forall>x. x\<notin>set Ps \<longrightarrow> \<acute>next x = \<^bsup>\<sigma>\<^esup>next x)\<rbrace>"
 apply (hoare_rule HoarePartial.ProcRec1)
 apply (hoare_rule anno =
@@ -193,7 +143,7 @@ apply (hoare_rule anno =
        WHILE \<acute>tl\<noteq>Null
        INV \<lbrace> (\<exists>les grs tls. List \<acute>le \<acute>next les \<and> List \<acute>gt \<acute>next grs \<and>
                List \<acute>tl \<acute>next tls \<and>
-               Ps <~~> \<acute>p#tls@les@grs \<and>
+               mset Ps = mset (\<acute>p#tls@les@grs) \<and>
                distinct(\<acute>p#tls@les@grs) \<and>
                (\<forall>x\<in>set les. x\<rightarrow>\<acute>cont \<le> \<acute>p\<rightarrow>\<acute>cont) \<and>
                (\<forall>x\<in>set grs. \<acute>p\<rightarrow>\<acute>cont < x\<rightarrow>\<acute>cont)) \<and>
@@ -217,65 +167,55 @@ apply (hoare_rule anno =
        \<acute>le :== CALL append(\<acute>le,\<acute>p);;
        \<acute>p :== \<acute>le
   FI" in HoarePartial.annotateI)
-apply vcg
-apply   fastforce
-apply  clarsimp
-apply  (rule conjI)
-apply   clarify
-apply   (rule conjI)
-apply    (rule_tac x="tl#les" in exI)
-apply    simp
-apply    (rule_tac x="grs" in exI)
-apply    simp
-apply    (rule_tac x="ps" in exI)
-apply    simp
-apply    (erule perm.trans)
-apply    simp
-apply    (simp add: perm_app_Cons_simps)
-apply   (simp add: perm_set_eq)
-apply  clarify
-apply  (rule conjI)
-apply   (rule_tac x="les" in exI)
-apply   simp
-apply   (rule_tac x="tl#grs" in exI)
-apply   simp
-apply   (rule_tac x="ps" in exI)
-apply   simp
-apply   (erule perm.trans)
-apply   simp
-apply   (simp add: perm_app_Cons_simps)
-apply  (simp add: perm_set_eq)
-apply clarsimp
-apply (rule_tac ?x=grs in exI)
-apply (rule conjI)
-apply  (erule heap_eq_ListI1)
-apply  clarify
-apply  (erule_tac x=x in allE)back
-apply  blast
-apply clarsimp
-apply (rule_tac x="sortedPs" in exI)
-apply (rule conjI)
-apply  (erule heap_eq_ListI1)
-apply  (clarsimp)
-apply  (erule_tac x=x in allE) back back
-apply  (fast dest!: perm_set_eq)
-apply (rule_tac x="p#sortedPsa" in exI)
-apply (rule conjI)
-apply  (fastforce dest!: perm_set_eq)
-apply (rule conjI)
-apply  (force dest!: perm_set_eq)
-apply clarsimp
-apply (rule conjI)
-apply  (fastforce dest!: perm_set_eq)
-apply (rule conjI)
-apply  (fastforce dest!: perm_set_eq)
-apply (rule conjI)
-apply  (erule perm.trans)
-apply  (simp add:  perm_app_Cons_simps list_all_iff)
-apply  (fastforce intro!: perm_append_blocks)
-apply clarsimp
-apply (erule_tac x=x in allE)+
-apply (force dest!: perm_set_eq)
-done
+  apply vcg
+    apply fastforce
+   apply clarsimp
+   apply (rule conjI)
+    apply clarify
+    apply (rule conjI)
+     apply (rule_tac x="tl#les" in exI)
+     apply simp
+     apply (rule_tac x="grs" in exI)
+     apply simp
+     apply (rule_tac x="ps" in exI)
+     apply simp
+    apply (metis insertCI set_mset_add_mset_insert set_mset_mset)
+   apply clarify
+   apply (rule conjI)
+    apply (rule_tac x="les" in exI)
+    apply simp
+    apply (rule_tac x="tl#grs" in exI)
+    apply simp
+    apply (rule_tac x="ps" in exI)
+    apply simp
+   apply (metis insertCI set_mset_add_mset_insert set_mset_mset)
+  apply clarsimp
+  apply (rule_tac ?x=grs in exI)
+  apply (rule conjI)
+  apply (erule heap_eq_ListI1)
+   apply clarify
+   apply (erule_tac x=x in allE) back
+   apply blast
+  apply clarsimp
+  apply (rule_tac x="sortedPs" in exI)
+  apply (rule conjI)
+   apply (erule heap_eq_ListI1)
+   apply (clarsimp)
+   apply (erule_tac x=x in allE) back back
+   apply (metis IntI empty_iff set_mset_mset)
+  apply (rule_tac x="p#sortedPsa" in exI)
+  apply (rule conjI)
+   apply (metis List_cons List_updateI Null_notin_List fun_upd_same insert_iff set_mset_add_mset_insert set_mset_mset)
+  apply (rule conjI)
+   apply (metis disjoint_iff mset_eq_setD set_ConsD)
+  apply clarsimp
+  apply (rule conjI)
+   apply (metis less_or_eq_imp_le mset_eq_setD)
+  apply (rule conjI)
+   apply (metis leD less_le_trans mset_eq_setD nat_le_linear)
+  apply clarsimp
+  apply (erule_tac x=x in allE)+
+  apply (metis Un_iff insert_iff list.set(2) mset.simps(2) mset_append set_append set_mset_mset)
+  done
 
 end

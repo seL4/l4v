@@ -179,7 +179,6 @@ structure CrunchIgnore = Theory_Data
 (struct
     type T = string list
     val empty = []
-    val extend = I
     val merge = Library.merge (op =);
 end);
 

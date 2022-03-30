@@ -205,7 +205,6 @@ lemma valid_msg_length_strengthen [Ipc_AI_assms]:
   apply (clarsimp simp: valid_message_info_def)
   apply (subgoal_tac "unat (mi_length mi) \<le> unat (of_nat msg_max_length :: machine_word)")
    apply (clarsimp simp: unat_of_nat msg_max_length_def)
-  including no_take_bit
   apply (clarsimp simp: un_ui_le word_le_def)
   done
 

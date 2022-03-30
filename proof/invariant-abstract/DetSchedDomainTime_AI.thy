@@ -29,9 +29,6 @@ lemmas valid_domain_list_def = valid_domain_list_2_def
 section \<open>Preservation of domain list validity\<close>
 
 crunch domain_list_inv[wp]:
-  empty_slot_ext, cap_swap_ext "\<lambda>s. P (domain_list s)"
-
-crunch domain_list_inv[wp]:
   schedule_tcb, set_thread_state "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps)
 
@@ -100,9 +97,6 @@ crunch domain_list_inv[wp]:
   "\<lambda>s::det_state. P (domain_list s)"
   (wp: dxo_wp_weak)
 
-crunch domain_list_inv[wp]: reschedule_required,schedule_tcb "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 crunch domain_list_inv[wp]: reply_unlink_tcb, reply_unlink_sc, tcb_sched_action "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps hoare_unless_wp maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
@@ -144,9 +138,6 @@ crunch domain_list_inv[wp]: set_next_interrupt, switch_sched_context
 lemma sc_and_timer_domain_list[wp]:
   "sc_and_timer \<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace>"
   by (wpsimp simp: sc_and_timer_def Let_def wp: get_sched_context_wp)
-
-crunch domain_list_inv[wp]: sc_and_timer "\<lambda>s::det_state. P (domain_list s)"
-    (simp: Let_def wp: get_sched_context_wp ignore: do_machine_op set_next_interrupt)
 
 crunch domain_list_inv[wp]: schedule "\<lambda>s::det_state. P (domain_list s)"
   (wp: hoare_drop_imp dxo_wp_weak simp: Let_def)
@@ -191,9 +182,6 @@ lemma send_fault_ipc_domain_list_inv[wp]:
 
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s::det_state. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps hoare_unless_wp maybeM_inv dxo_wp_weak simp: crunch_simps ignore:copy_mrs)
-
-crunch domain_list_inv[wp]: create_cap_ext "\<lambda>s. P (domain_list s)"
-  (wp: maybeM_inv mapM_wp dxo_wp_weak)
 
 crunch domain_list_inv[wp]:
   reply_from_kernel, create_cap
@@ -244,18 +232,6 @@ crunch domain_list_inv[wp]:
   (wp: crunch_wps check_cap_inv maybeM_inv)
 
 end
-
-context DetSchedDomainTime_AI_2
-begin
-
-crunch domain_list_inv[wp]: arch_perform_invocation "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch domain_list_inv[wp]: handle_interrupt "\<lambda>s::det_state. P (domain_list s)"
-
-end
-
-crunch domain_list_inv[wp]: cap_move_ext "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: cap_move "\<lambda>s::det_state. P (domain_list s)"
 

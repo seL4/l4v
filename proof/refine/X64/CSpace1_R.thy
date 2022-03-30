@@ -1496,7 +1496,7 @@ lemma ps_clear_32:
     \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   apply (simp add: ps_clear_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
-  apply (simp add: dom_def field_simps objBits_defs)
+  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp

@@ -1115,36 +1115,8 @@ lemma hinv_invs':
 lemmas hinv_invs[wp] = hinv_invs'
   [where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
 
-(* FIXME: move *)
-lemma hinv_tcb[wp]:
-  "\<And>t calling blocking can_donate first_phase cptr.
-    \<lbrace>\<lambda>s. st_tcb_at active t s \<and> invs s \<and> ct_active s \<and>
-         scheduler_action s = resume_cur_thread \<and>
-         ct_schedulable s\<rbrace>
-      handle_invocation calling blocking can_donate first_phase cptr
-    \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (simp add: handle_invocation_def split_def
-                   ts_Restart_case_helper
-                   liftE_liftM_liftME liftME_def bindE_assoc)
-  apply (wp syscall_valid sts_st_tcb_at_cases ct_in_state_set lec_caps_to
-            sts_schedulable_scheduler_action
-         | simp cong: conj_cong)+
-  apply (auto simp: ct_in_state_def fault_tcbs_valid_states_active
-              dest: invs_fault_tcbs_valid_states
-              elim: st_tcb_ex_cap st_tcb_at_tcb_at)
-  done
-
 lemma get_cap_reg_inv[wp]: "\<lbrace>P\<rbrace> get_cap_reg r \<lbrace>\<lambda>_. P\<rbrace>"
   by (wpsimp simp: get_cap_reg_def)
-
-lemma hs_tcb_on_err:
-  "\<lbrace>st_tcb_at active t and invs and ct_active and
-    (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>
-   handle_send blocking
-   -,\<lbrace>\<lambda>_. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  apply (unfold handle_send_def whenE_def fun_app_def)
-  apply (wpsimp | rule hoare_strengthen_post [OF hinv_tcb])+
-  done
 
 lemma hs_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. scheduler_action s = resume_cur_thread) and ct_schedulable\<rbrace>

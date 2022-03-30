@@ -16,7 +16,6 @@ declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare empty_fail_sequence_x[simp]
 declare storeWordUser_typ_at' [wp]
-declare complement_def[simp]
 
 lemma threadRead_SomeD:
   "threadRead f t s = Some y \<Longrightarrow> \<exists>tcb. ko_at' tcb t s \<and> y = f tcb"
@@ -3164,12 +3163,14 @@ lemma prioL2Index_bit_set:
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)
   done
 
+
 lemma addToBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> addToBitmap d p \<lbrace>\<lambda>_. bitmapQ d p \<rbrace>"
   unfolding addToBitmap_def
              modifyReadyQueuesL1Bitmap_def modifyReadyQueuesL2Bitmap_def
              getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
-  by (wp, clarsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set)
+  by (wpsimp simp: bitmap_fun_defs bitmapQ_def prioToL1Index_bit_set prioL2Index_bit_set
+             simp_del: bit_exp_iff)
 
 lemma addToBitmap_valid_queues_no_bitmap_except:
 " \<lbrace> valid_queues_no_bitmap_except t \<rbrace>
@@ -3197,7 +3198,7 @@ lemma prioToL1Index_bits_low_high_eq:
 
 lemma prioToL1Index_bit_not_set:
   "\<not> (~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p"
-  apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set)
+  apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set del: bit_exp_iff)
   apply (fastforce simp: prioToL1Index_def wordRadix_def word_size
                   intro: order_less_le_trans[OF word_shiftr_lt])
   done
@@ -3256,6 +3257,7 @@ proof -
 
   show ?thesis
   unfolding removeFromBitmap_def
+  supply bit_not_iff[simp del] bit_not_exp_iff[simp del]
   apply (simp add: let_into_return[symmetric])
   unfolding bitmap_fun_defs when_def
   apply wp
@@ -3308,8 +3310,8 @@ lemma addToBitmap_bitmapQ_no_L1_orphans[wp]:
 lemma addToBitmap_bitmapQ_no_L2_orphans[wp]:
   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> addToBitmap d p \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
   unfolding bitmap_fun_defs bitmapQ_defs
-  apply wp
-  apply clarsimp
+  supply bit_exp_iff[simp del]
+  apply wpsimp
   apply (fastforce simp: invertL1Index_eq_cancel prioToL1Index_bit_set)
   done
 
@@ -4343,7 +4345,7 @@ lemma pspace_dom_dom:
      apply (drule wf_cs_0)
      apply clarsimp
      apply (rule_tac x = n in exI)
-     apply (clarsimp simp: of_bl_def word_of_int_hom_syms)
+     apply (clarsimp simp: of_bl_def)
     apply (rule range_eqI [where x = 0], simp)+
   apply (rename_tac vmpage_size)
   apply (rule exI [where x = 0])
@@ -4790,7 +4792,6 @@ crunches setThreadState
    simp: updateObject_default_def unless_def crunch_simps)
 
 crunch it' [wp]: removeFromBitmap "\<lambda>s. P (ksIdleThread s)"
-
 
 lemma sts_ctes_of [wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setThreadState st t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"

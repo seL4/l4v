@@ -10,7 +10,6 @@ structure Data = Generic_Data
 (
   type T = (int * (ProgramAnalysis.asm_stmt_elements -> bool)) list
   val empty = []
-  val extend = I
   fun merge data = Ord_List.merge (int_ord o apply2 fst) data
 )
 

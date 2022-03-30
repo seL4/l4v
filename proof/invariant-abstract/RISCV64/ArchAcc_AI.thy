@@ -112,8 +112,7 @@ lemma vs_lookup_table_valid_cap:
   apply (rule conjI, assumption)
   apply (simp add: asid_for_level_def vref_for_level_asid_pool user_region_def)
   apply (simp add: asid_high_bits_of_def)
-  apply word_bitwise
-  apply (simp add: asid_low_bits_def word_size)
+  apply (word_eqI_solve simp: asid_low_bits_def)
   done
 
 lemma invs_valid_asid_pool_caps[elim!]:
@@ -664,7 +663,7 @@ lemma ucast_ucast_asid_high_bits [simp]:
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::machine_word) && mask asid_low_bits) = ucast (ucast asid :: asid_low_index)"
-  by (word_eqI simp: asid_low_bits_def)
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma set_asid_pool_cur [wp]:
   "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
@@ -730,7 +729,7 @@ lemma page_table_pte_atI:
    subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: bit_simps)
-  apply simp
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)

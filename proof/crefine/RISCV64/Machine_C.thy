@@ -211,7 +211,6 @@ lemma clz64_step:
 
 lemma clz64_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call clz64_'proc \<lbrace>\<acute>ret__unsigned = of_nat (word_clz (x___unsigned_longlong_' s))\<rbrace>"
-  including no_take_bit
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply (hoarep_rewrite, fold clz64_step_def)
   apply (intro allI hoarep.Catch[OF _ hoarep.Skip])
@@ -376,7 +375,6 @@ lemma clzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0}
    Call clzl_'proc
    \<lbrace>\<acute>ret__long = of_nat (word_clz (x___unsigned_long_' s))\<rbrace>"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   by (clarsimp simp: casts_of_nat_small[OF word_clz_max[THEN le_less_trans]] word_size)
 
@@ -384,7 +382,6 @@ lemma ctzl_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x___unsigned_long_' s \<noteq> 0}
    Call ctzl_'proc
    \<lbrace>\<acute>ret__long = of_nat (word_ctz (x___unsigned_long_' s))\<rbrace>"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   by (clarsimp simp: casts_of_nat_small[OF word_ctz_max[THEN le_less_trans]] word_size)
 

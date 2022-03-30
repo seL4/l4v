@@ -478,7 +478,7 @@ declare pspace_distinctD' [intro?]
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
   assumes ks: "ksPSpace s x = Some (KOCTE cte)"
-  and     pa: "pspace_aligned' s"  (* yuck *)
+  and     pa: "pspace_aligned' s"
   and     pd: "pspace_distinct' s"
   shows   "ctes_of s x = Some cte"
 proof (rule ctes_of_eq_cte_wp_at')
@@ -511,15 +511,21 @@ lemma fst_setCTE:
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
-  (* Unpack the existential and bind x, theorems in this.  Yuck *)
-  from fst_setCTE0 [where cte = cte, OF ct] guess s' by clarsimp
+  from fst_setCTE0 [where cte = cte, OF ct]
+  obtain s' where
+    "((), s')\<in>fst (setCTE dest cte s)"
+    "s' = s\<lparr>ksPSpace := ksPSpace s'\<rparr>"
+    "dom (ksPSpace s) = dom (ksPSpace s')"
+    "(\<forall>p \<in> dom (ksPSpace s').
+       case the (ksPSpace s p) of
+         KOTCB t \<Rightarrow> \<exists>t'. ksPSpace s' p = Some (KOTCB t') \<and> tcb_no_ctes_proj t = tcb_no_ctes_proj t'
+       | KOCTE _ \<Rightarrow> \<exists>cte. ksPSpace s' p = Some (KOCTE cte)
+       | _ \<Rightarrow> ksPSpace s' p = ksPSpace s p)"
+    by clarsimp
   note thms = this
 
-  from thms have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
-    apply -
-    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
-    apply simp
-    done
+  have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
+    by (rule use_valid [OF thms(1) setCTE_ctes_of_wp]) simp
 
   show ?thesis
   proof (rule rl)
@@ -2171,7 +2177,6 @@ lemma numDomains_sge_1_simp:
 
 lemma unat_scast_numDomains:
   "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
-  including no_take_bit
   by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
 
 end

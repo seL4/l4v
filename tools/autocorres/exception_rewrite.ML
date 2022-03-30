@@ -84,7 +84,7 @@ fun empty_fail term =
     | (Const (@{const_name "L1_while"}, _) $ _ $ body) =>
         @{thm L1_while_empty_fail} OF [empty_fail body]
     | x => Utils.invalid_term "L1_term" x
-val empty_fail = Term_Ord.term_cache (fn x => empty_fail (anon x))
+val empty_fail = Termtab.term_cache (fn x => empty_fail (anon x))
 
 (*
  * Determine what control flow the given block of code exhibits.
@@ -170,7 +170,7 @@ fun throws_exception' term =
               UnknownExc)
 
     | x => (warning ("throws_exception: Unknown term: " ^ (@{make_string} x)); UnknownExc)
-val throws_exception = Term_Ord.term_cache (fn x => throws_exception' (anon x))
+val throws_exception = Termtab.term_cache (fn x => throws_exception' (anon x))
 
 
 (*

@@ -76,7 +76,7 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
        apply (rule preorder_class.eq_refl, simp)
       apply (rule unat_of_nat_closure)
      apply (rule_tac order.trans)
-     apply (rule order_class.order.strict_implies_order, assumption)
+     apply (rule order.strict_implies_order, assumption)
      by (metis unat_minus_one_word word_le_nat_alt word_n1_ge)
   apply (clarsimp simp: min_def, intro conjI impI)
    subgoal

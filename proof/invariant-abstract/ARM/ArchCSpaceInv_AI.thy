@@ -79,7 +79,7 @@ lemma replace_cap_invs:
    apply (erule allEI, erule allEI)
    apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
    apply (clarsimp simp: gen_obj_refs_subset)
-   apply (drule(1) disjoint_subset, simp)
+   apply (drule(1) disjoint_subset, erule (1) notE)
   apply (rule conjI)
    apply (erule descendants_inc_minor)
     apply simp

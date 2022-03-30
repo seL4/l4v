@@ -174,15 +174,7 @@ lemma asid_low_high_bits':
     asid_high_bits_of x = asid_high_bits_of y;
     x \<le> 2 ^ asid_bits - 1; y \<le> 2 ^ asid_bits - 1 \<rbrakk>
   \<Longrightarrow> x = y"
-  apply (rule asid_low_high_bits)
-     apply (rule word_eqI)
-     apply (subst (asm) bang_eq)
-     apply (simp add: nth_ucast asid_low_bits_def word_size)
-    apply (rule word_eqI)
-    apply (subst (asm) bang_eq)+
-    apply (simp add: nth_ucast asid_low_bits_def)
-   apply assumption+
-  done
+  by (rule asid_low_high_bits; (assumption|word_eqI_solve simp: asid_low_bits_def)?)
 
 lemma table_cap_ref_at_eq:
   "table_cap_ref c = Some [x] \<longleftrightarrow> vs_cap_ref c = Some [x]"
@@ -643,7 +635,7 @@ lemma invalidate_asid_entry_invs [wp]:
    apply (rule conjI)
     apply (erule order_trans[rotated], clarsimp)
    apply (simp add: pd_at_asid_arch_up')
-  apply (clarsimp simp: comp_upd_simp None_upd_eq)
+  apply (clarsimp simp: comp_upd_simp)
    apply (clarsimp simp: comp_upd_simp is_inv_None_upd)
   apply (clarsimp simp: valid_asid_map_def valid_machine_state_def)
   apply (rule conjI)
@@ -783,34 +775,29 @@ lemma ex_asid_high_bits_plus:
    apply (rule word_and_le1)
   apply (subst (asm) mask_def)
   apply (simp add: upper_bits_unset_is_l2p_32 [symmetric])
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: word_size nth_ucast nth_shiftl)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr asid_high_bits_of_def
-                        asid_low_bits_def word_bits_def asid_bits_def)
+  apply (subst word_plus_and_or_coroll; word_eqI)
+  apply (clarsimp simp: asid_high_bits_of_def asid_low_bits_def word_bits_def asid_bits_def)
   apply (rule iffI)
    prefer 2
    apply fastforce
   apply (clarsimp simp: linorder_not_less)
-  apply (subgoal_tac "n < 17", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
+  by (metis add_One_commute add_diff_inverse_nat le_add1 less_diff_conv2 less_imp_diff_less
+            numeral_plus_numeral semiring_norm(10) semiring_norm(2) semiring_norm(3)
+            semiring_norm(4) semiring_norm(9))
 
 
 lemma asid_high_bits_shl:
   "\<lbrakk> is_aligned base asid_low_bits; base \<le> mask asid_bits \<rbrakk> \<Longrightarrow> ucast (asid_high_bits_of base) << asid_low_bits = base"
   apply (simp add: mask_def upper_bits_unset_is_l2p_32 [symmetric])
-  apply (rule word_eqI[rule_format])
-  apply (simp add: is_aligned_nth nth_ucast nth_shiftl nth_shiftr asid_low_bits_def
-                   asid_high_bits_of_def word_size asid_bits_def word_bits_def)
+  apply word_eqI
+  apply (simp add: asid_low_bits_def asid_high_bits_of_def word_bits_conv asid_bits_def)
   apply (rule iffI, clarsimp)
   apply (rule context_conjI)
    apply (clarsimp simp add: linorder_not_less [symmetric])
   apply simp
-  apply (subgoal_tac "n < 17", simp)
-  apply (clarsimp simp add: linorder_not_le [symmetric])
-  done
+  by (metis less_imp_le_nat linorder_neqE_nat nat_diff_less numeral_plus_numeral pl_pl_rels
+            semiring_norm(10) semiring_norm(2) semiring_norm(3) semiring_norm(8) semiring_norm(9)
+            trans_less_add1)
 
 
 lemma valid_asid_map_unmap:
@@ -1177,8 +1164,6 @@ lemma set_vcpu_valid_objs[wp]:
 lemma do_machine_op_valid_obj[wp]: "\<lbrace>valid_obj t obj\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_obj t obj\<rbrace>"
   by (rule valid_obj_typ) wp
 
-crunch valid_objs [wp]: do_machine_op "valid_objs"
-
 lemma get_vcpu_valid[wp]: "\<lbrace>valid_objs\<rbrace> get_vcpu t \<lbrace>\<lambda>r. valid_obj t (ArchObj (VCPU r))\<rbrace>"
   apply (wpsimp simp: get_vcpu_def)
   apply (rule hoare_allI)
@@ -1364,9 +1349,6 @@ lemma vcpu_switch_valid_arch[wp]:
   done
 
 crunch valid_arch [wp]: store_pde "valid_arch_state"
-
-crunch valid_arch [wp]: vcpu_disable "valid_arch_state"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma gets_the_get_tcb_wp:
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s \<longrightarrow> Q tcb s\<rbrace> gets_the $ get_tcb t \<lbrace>Q\<rbrace>"
@@ -1678,8 +1660,6 @@ definition "pg_entry_align pgsz \<equiv> case pgsz of
   | ARMLargePage \<Rightarrow> 7
   | ARMSection \<Rightarrow> 3
   | ARMSuperSection \<Rightarrow> 7"  (* ARMHYP  change 6 to 7? *)
-
-crunch "distinct" [wp]: flush_page pspace_distinct (simp: crunch_simps)
 
 
 crunch inv[wp]: check_mapping_pptr "P"
@@ -2045,8 +2025,6 @@ crunch device_state_inv[wp]: addressTranslateS1CPR "\<lambda>ms. P (device_state
 crunch device_state_inv[wp]: getSCTLR,get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: writeVCPUHardwareReg, readVCPUHardwareReg "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]:
-  get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr,dsb,isb "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]:
   get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
    "\<lambda>ms. P (device_state ms)"
@@ -2656,6 +2634,37 @@ lemma invs_current_vcpu_update': "\<lbrakk> cur_vcpu_at v s \<and> invs s \<rbra
             valid_global_objs_def valid_global_vspace_mappings_def
            split: option.split)
 
+lemma vgic_update_sym_refs_hyp[wp]:
+  "vgic_update vcpuptr f \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vgic_update_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
+
+lemma vcpu_save_reg_sym_refs_hyp[wp]:
+  "vcpu_save_reg vcpuptr r \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_save_reg_def vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+     (simp add: obj_at_def)
+
+lemma vcpu_update_regs_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+lemma vcpu_write_reg_sym_refs_hyp[wp]:
+  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
+
+lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
+  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
+  unfolding vcpu_update_def
+  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
+     (simp add: obj_at_def)
+
+crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vcpu_save, vcpu_switch
+  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  (ignore: vcpu_update wp: crunch_wps)
+
 lemma vcpu_switch_invs[wp]:
 "\<lbrace>invs and (\<lambda>s. v \<noteq> None \<longrightarrow> obj_at hyp_live (the v) s)\<rbrace> vcpu_switch v \<lbrace> \<lambda>_ . invs \<rbrace>"
   unfolding vcpu_switch_def
@@ -3248,7 +3257,7 @@ lemma ref_is_unique: (* ARMHYP *)
 lemma mask_shift_mask_helper:
   "(p && mask pd_bits >> pde_bits) && mask 11 = (p && mask pd_bits >> pde_bits)"
   apply (rule word_eqI)
-  apply (simp add: word_size pd_bits_def vspace_bits_defs nth_shiftr conj_comms)
+  apply (simp add: word_size vspace_bits_defs nth_shiftr conj_comms)
   done
 
 lemma ucast_ucast_mask_shift_helper:
@@ -4041,9 +4050,6 @@ lemma vcpu_switch_cte_wp_at[wp]:
   apply (wp | wpc | clarsimp)+
   done
 
-crunch cte_wp_at[wp]: vcpu_switch "\<lambda>s. P (cte_wp_at P' p s)"
-  (wp: crunch_wps simp: crunch_simps)
-
 crunch cte_wp_at[wp]: flush_table "\<lambda>s. P (cte_wp_at P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -4058,17 +4064,8 @@ lemma vcpu_switch_global_refs_inv[wp]:
   apply (wp | wpc | rule modify_valid_lift | clarsimp simp: global_refs_def)+
   done
 
-crunch global_refs_inv[wp]: vcpu_switch "\<lambda>s. P (global_refs s)"
-  (wp: crunch_wps simp: crunch_simps global_refs_arch_update_eq)
-
 crunch global_refs_inv[wp]: flush_table "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps simp: crunch_simps global_refs_arch_update_eq)
-(*
-lemma lookup_pd_slot_kernel_mappings_strg:
-  "is_aligned pd pd_bits \<and> vptr < kernel_base
-     \<and> vmsz_aligned vptr ARMSection
-     \<longrightarrow> ucast (lookup_pd_slot pd vptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots"
-  by (simp add: less_kernel_base_mapping_slots) *)
 
 lemma not_in_global_refs_vs_lookup:
   "(\<exists>\<rhd> p) s \<and> valid_vs_lookup s \<and> valid_global_refs s
@@ -5190,7 +5187,7 @@ lemma vaddr_segment_nonsense2:
    p + (vaddr >> 21 << 3) && mask pd_bits >> 3 = vaddr >> 21"
   by (simp add: shiftl_less_t2n'[where m=11 and n=3, simplified]
                 shiftr_less_t2n'[where m=11 and n=21, simplified] vspace_bits_defs
-                pd_bits_def pageBits_def is_aligned_add_helper[THEN conjunct1] triple_shift_fun)
+                is_aligned_add_helper[THEN conjunct1] triple_shift_fun)
 
 lemma vaddr_segment_nonsense3:
   "is_aligned (p :: word32) 12 \<Longrightarrow>
@@ -5484,8 +5481,7 @@ lemma data_at_orth_vcpu:
 lemma data_at_pg_cap:
   "\<lbrakk>data_at sz p s;valid_cap cap s; p \<in> obj_refs cap\<rbrakk> \<Longrightarrow> is_pg_cap cap"
   apply (case_tac cap)
-   apply (clarsimp simp: is_pg_cap_def obj_refs.simps valid_cap_def
-                         data_at_orth_vcpu split option.split)+
+   apply (clarsimp simp: is_pg_cap_def valid_cap_def data_at_orth_vcpu option.split)+
   apply (clarsimp split: arch_cap.split_asm simp: data_at_orth_vcpu)
 done
 

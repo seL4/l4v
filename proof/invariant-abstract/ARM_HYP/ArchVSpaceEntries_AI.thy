@@ -124,8 +124,6 @@ lemma shift_0x3C_set:
                     nth_shiftl neg_mask_test_bit
                     word_bits_conv)
    apply (safe, simp_all add: is_aligned_nth)[1]
-   apply (drule_tac x="Suc (Suc (Suc n))" in spec)
-   apply simp
   apply (rule_tac x="ucast x && mask 4" in image_eqI)
    apply (rule word_eqI[rule_format])
    apply (drule_tac x=n in word_eqD)
@@ -385,24 +383,6 @@ lemma unmap_page_valid_pdpt[wp]:
   done
 
 crunch valid_pdpt_objs[wp]: flush_table "valid_pdpt_objs"
-  (wp: crunch_wps simp: crunch_simps)
-
-(*
-
-NOTE: This isn't true, but is the main reason flush_table_kheap does not work now,
-      I guess it is possible to prove this for a P that does not care about VCPU
-      but let's wait and see where and how this lemma is used.
-
-lemma vcpu_switch_kheap[wp]:"\<lbrace>\<lambda>s. P (kheap s)\<rbrace> vcpu_switch v \<lbrace>\<lambda>_ s. P (kheap s)\<rbrace>"
-
-
-crunch kheap[wp]: flush_table "\<lambda>s. P (kheap s)"
-  (wp: crunch_wps simp: crunch_simps)
-
-FIXME: Delete
-*)
-
-crunch kheap[wp]: get_cap "\<lambda>s. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma unmap_page_table_valid_pdpt_objs[wp]:
@@ -1064,18 +1044,12 @@ lemma perform_invocation_valid_pdpt[wp]:
 lemma neg_mask_pt_7_4:
   "(ptr && mask pt_bits >> 3) && ~~ mask 4 =
    (ptr::word32) && ~~ mask 7 && mask pt_bits >> 3"
-  apply (simp add:vspace_bits_defs)
-  apply word_bitwise
-  apply (simp add:word_size)
-  done
+  by (word_eqI_solve simp: vspace_bits_defs)
 
 lemma neg_mask_pd_7_4:
   "(ptr && mask pd_bits >> 3) && ~~ mask 4 =
    (ptr::word32) && ~~ mask 7 && mask pd_bits >> 3"
-  apply (simp add:pd_bits_def pageBits_def)
-  apply word_bitwise
-  apply (simp add:word_size)
-  done
+  by (word_eqI_solve simp: vspace_bits_defs)
 
 lemma mask_out_same_pt:
   "\<lbrakk>is_aligned p 7; x < 2 ^ 7 \<rbrakk> \<Longrightarrow> p + x && ~~ mask pt_bits = p && ~~ mask pt_bits"
@@ -1175,7 +1149,7 @@ lemma ensure_safe_mapping_ensures[wp]:
      apply (clarsimp simp :upto_enum_def upto_enum_step_def
          Fun.comp_def upto_0_to_n2)
      apply (cut_tac x = "of_nat x" and n = 3 in word_power_nonzero_32)
-         apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0 del: word_of_nat_eq_0_iff)+
+         apply (simp add:word_of_nat_less word_bits_def of_nat_neq_0)+
      done
     have neq_pt_offset: "\<And>z zs xa (p::word32). \<lbrakk>[0 , 8 .e. 0x78] = z # zs;
         xa \<in> set zs;is_aligned p 7 \<rbrakk> \<Longrightarrow>
@@ -1275,7 +1249,7 @@ lemma ensure_safe_mapping_ensures[wp]:
          apply (clarsimp simp:  pte_bits_def)
          apply (drule(1) valid_pdpt_objs_ptD)
          apply (frule align_entry_ptD,simp)
-         apply (simp add: is_aligned_neg_mask_eq)
+         apply simp
         apply (wp hoare_drop_imps |wpc|simp)+
       apply (clarsimp simp:upto_enum_def upto_enum_step_def
         upto_0_to_n2 Fun.comp_def distinct_map)

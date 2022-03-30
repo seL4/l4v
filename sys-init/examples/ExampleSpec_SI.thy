@@ -87,7 +87,7 @@ where
 lemma example_irq_node_def2:
   "example_irq_node2 = (\<lambda>irq. word_of_int (uint irq + 100))"
   unfolding example_irq_node2_def
-  by (metis (hide_lams) ucast_def wi_hom_add word_of_int_numeral)
+  by (metis (opaque_lifting) ucast_def wi_hom_add word_of_int_numeral)
 
 definition
   "example_spec =

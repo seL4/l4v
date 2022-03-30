@@ -27,7 +27,7 @@ declare asm_semantics_respects[unfolded Let_def, simp]
 ML \<open>
 emit_C_everything_relative @{context}
   (CalculateState.get_csenv @{theory} "global_asm_stmt.c" |> the)
-  "global_asm_stmt_Cfuns.txt"
+  "global_asm_stmt_Cfuns.txt" "global_asm_stmt"
 \<close>
 
 lemma globals_list_valid:

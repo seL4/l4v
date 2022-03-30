@@ -3352,7 +3352,7 @@ lemma not_in_ntfnQueue:
         apply (drule_tac x="(t, NTFNSignal)" in bspec, clarsimp)
         apply (clarsimp simp: st_tcb_at_refs_of_rev' sym_refs_def dest!: st_tcb_at_state_refs_ofD')
        apply (fastforce simp: st_tcb_at_refs_of_rev' sym_refs_def dest!: st_tcb_at_state_refs_ofD')
-      apply (metis (full_types, hide_lams) sym_refs_simp symreftype.simps(3))
+      apply (metis (full_types, opaque_lifting) sym_refs_simp symreftype.simps(3))
       done
 
     with ko_at have "st_tcb_at' (Not \<circ> simple') t s"

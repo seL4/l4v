@@ -75,7 +75,7 @@ next
                 x = ptr + of_nat n' * 4 + 2 \<or> x = ptr + of_nat n' * 4 + 3)"
       by (simp add: xin' conj_disj_distribL ex_disj_distrib field_simps)
 
-    show "?thesis m x" by (simp add: xin word_rsplit_0 cong: if_cong)
+    show "?thesis m x" by (simp add: xin word_rsplit_0 word_bits_conv cong: if_cong)
   qed
 
   from al have "is_aligned (ptr + of_nat n' * 4) 2"
@@ -643,8 +643,7 @@ lemma delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc
-                   empty_fail_mapM_x ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)

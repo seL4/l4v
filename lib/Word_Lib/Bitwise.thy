@@ -9,6 +9,7 @@ theory Bitwise
     "HOL-Library.Word"
     More_Arithmetic
     Reversed_Bit_Lists
+    Bit_Shifts_Infix_Syntax
 begin
 
 text \<open>Helper constants used in defining addition\<close>
@@ -101,7 +102,7 @@ lemma rbl_succ2_simps:
   "rbl_succ2 b (x # xs) = (b \<noteq> x) # rbl_succ2 (x \<and> b) xs"
   by (simp_all add: rbl_succ2_def)
 
-lemma twos_complement: "- x = word_succ (NOT x)"
+lemma twos_complement: "- x = word_succ (not x)"
   using arg_cong[OF word_add_not[where x=x], where f="\<lambda>a. a - x + 1"]
   by (simp add: word_succ_p1 word_sp_01[unfolded word_succ_p1] del: word_add_not)
 
@@ -165,22 +166,22 @@ lemma rbl_sshiftr:
       drop_nonempty_def take_Cons')
    apply (case_tac "LENGTH('a)", simp_all)
   apply (rule word_eqI)
-  apply (simp add: nth_sshiftr word_size test_bit_of_bl
+  apply (simp add: bit_simps word_size test_bit_of_bl
       msb_nth)
   done
 
 lemma nth_word_of_int:
-  "(word_of_int x :: 'a::len word) !! n = (n < LENGTH('a) \<and> bin_nth x n)"
+  "bit (word_of_int x :: 'a::len word) n = (n < LENGTH('a) \<and> bit x n)"
   apply (simp add: test_bit_bl word_size to_bl_of_bin)
   apply (subst conj_cong[OF refl], erule bin_nth_bl)
   apply auto
   done
 
 lemma nth_scast:
-  "(scast (x :: 'a::len word) :: 'b::len word) !! n =
+  "bit (scast (x :: 'a::len word) :: 'b::len word) n =
     (n < LENGTH('b) \<and>
-    (if n < LENGTH('a) - 1 then x !! n
-     else x !! (LENGTH('a) - 1)))"
+    (if n < LENGTH('a) - 1 then bit x n
+     else bit x (LENGTH('a) - 1)))"
   apply transfer
   apply (auto simp add: bit_signed_take_bit_iff min_def)
   done
@@ -235,7 +236,7 @@ next
     by (cases z) (simp cong: map_cong, simp add: map_replicate_const cong: map_cong)
 
   have shiftl: "of_bl xs * 2 * y = (of_bl xs * y) << 1" for xs
-    by (simp add: shiftl_t2n)
+    by (simp add: push_bit_eq_mult shiftl_def)
 
   have zip_take_triv: "\<And>xs ys n. n = length ys \<Longrightarrow> zip (take n xs) ys = zip xs ys"
     by (rule nth_equalityI) simp_all
@@ -244,7 +245,10 @@ next
     apply (simp add: trans [OF of_bl_append add.commute]
         rbl_mul_simps rbl_word_plus' distrib_right mult_bit shiftl rbl_shiftl)
     apply (simp add: takefill_alt word_size rev_map take_rbl_plus min_def)
-    apply (simp add: rbl_plus_def zip_take_triv)
+    apply (simp add: rbl_plus_def)
+    apply (simp add: zip_take_triv)
+    apply (simp only: mult.commute [of _ 2] to_bl_double_eq)
+    apply (simp flip: butlast_rev add: take_butlast)
     done
 qed
 
@@ -349,13 +353,10 @@ lemma rev_bin_to_bl_simps:
     False # rev (bin_to_bl n (- numeral num.One))"
   by (simp_all add: bin_to_bl_aux_append bin_to_bl_zero_aux bin_to_bl_minus1_aux replicate_append_same)
 
-lemma to_bl_upt: "to_bl x = rev (map ((!!) x) [0 ..< size x])"
-  apply (rule nth_equalityI)
-   apply (simp add: word_size)
-  apply (auto simp: to_bl_nth word_size rev_nth)
-  done
+lemma to_bl_upt: "to_bl x = rev (map (bit x) [0 ..< size x])"
+  by (simp add: to_bl_eq_rev word_size rev_map)
 
-lemma rev_to_bl_upt: "rev (to_bl x) = map ((!!) x) [0 ..< size x]"
+lemma rev_to_bl_upt: "rev (to_bl x) = map (bit x) [0 ..< size x]"
   by (simp add: to_bl_upt)
 
 lemma upt_eq_list_intros:
@@ -383,7 +384,7 @@ fun mk_nat_clist ns =
 
 fun upt_conv ctxt ct =
   case Thm.term_of ct of
-    (\<^const>\<open>upt\<close> $ n $ m) =>
+    \<^Const_>\<open>upt for n m\<close> =>
       let
         val (i, j) = apply2 (snd o HOLogic.dest_number) (n, m);
         val ns = map (Numeral.mk_cnumber \<^ctyp>\<open>nat\<close>) (i upto (j - 1))
@@ -405,7 +406,7 @@ val expand_upt_simproc =
 
 fun word_len_simproc_fn ctxt ct =
   (case Thm.term_of ct of
-    Const (\<^const_name>\<open>len_of\<close>, _) $ t =>
+    \<^Const_>\<open>len_of _ for t\<close> =>
      (let
         val T = fastype_of t |> dest_Type |> snd |> the_single
         val n = Numeral.mk_cnumber \<^ctyp>\<open>nat\<close> (Word_Lib.dest_binT T);

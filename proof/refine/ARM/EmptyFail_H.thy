@@ -143,7 +143,6 @@ lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
                    cong: if_cong bool.case_cong list.case_cong)
          by (simp | wp | wpc | safe)+
 
-
 lemma empty_fail_getObject_ap [intro!, wp, simp]:
   "empty_fail (getObject p :: asidpool kernel)"
   by (simp add: empty_fail_getObject)

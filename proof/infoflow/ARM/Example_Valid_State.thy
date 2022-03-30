@@ -1317,8 +1317,8 @@ lemma pspace_distinct_s0:
       apply (simp add: shiftl_t2n uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
       apply simp
-     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
-     apply (simp add: shiftl_int_def take_bit_eq_mod)
+     apply (simp add: shiftl_def uint_shiftl word_size bintrunc_shiftl)
+     apply (simp add: shiftl_int_def take_bit_eq_mod push_bit_eq_mult)
     apply (frule_tac y="ucast irq << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irqa")
@@ -1365,8 +1365,8 @@ lemma pspace_distinct_s0:
       apply (simp add: shiftl_t2n uint_word_ariths)
       apply (subst mod_mult_mult1[where c="2^4" and b="2^28", simplified])
       apply simp
-     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
-     apply (simp add: shiftl_int_def take_bit_eq_mod)
+     apply (simp add: shiftl_def uint_shiftl word_size bintrunc_shiftl)
+     apply (simp add: shiftl_int_def take_bit_eq_mod push_bit_eq_mult)
     apply (frule_tac y="ucast irqa << 4" in word_plus_mono_right[where x="0xE000800F"])
      apply (simp add: shiftl_t2n)
      apply (case_tac "(1::32 word) \<le> ucast irq")

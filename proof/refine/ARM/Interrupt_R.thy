@@ -167,7 +167,7 @@ lemma whenE_rangeCheck_eq:
   "(rangeCheck (x :: 'a :: {linorder, integral}) y z) =
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
-  by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
+  by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
 (* 125 = maxIRQ *)
 lemma unat_ucast_ucast_shenanigans[simp]:

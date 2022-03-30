@@ -313,7 +313,7 @@ lemma MAX_PERIOD_mult:
   apply (simp add: us_to_ticks_helper)
    apply (prop_tac "5 * (unat MAX_PERIOD_US * unat ticks_per_timer_unit) \<le> unat max_time")
     apply linarith
-   apply (metis (no_types, hide_lams) le_trans mult.commute mult_le_mono1)
+   apply (metis (no_types, opaque_lifting) le_trans mult.commute mult_le_mono1)
   by simp
 
 lemma getCurrentTime_buffer_no_overflow':
@@ -357,7 +357,7 @@ lemma getCurrentTime_buffer_minus:
    using getCurrentTime_buffer_no_overflow' apply force
   apply (prop_tac "MAX_PERIOD * 5 \<le> - 1 - kernelWCET_ticks")
    apply (metis le_minus mult.commute word_n1_ge)
-  apply (metis (no_types, hide_lams) ab_group_add_class.ab_diff_conv_add_uminus add.assoc
+  apply (metis (no_types, opaque_lifting) ab_group_add_class.ab_diff_conv_add_uminus add.assoc
                add.commute mult.commute word_sub_le)
   done
 
@@ -386,7 +386,7 @@ lemma us_to_ticks_mono:
   apply (clarsimp simp: word_le_nat_alt)
   apply (rule unat_div_helper)
   apply (clarsimp simp: word_le_nat_alt)
-  by (metis (no_types, hide_lams) le_unat_uoi mult_le_mono1 word_arith_nat_defs(2))
+  by (metis (no_types, opaque_lifting) le_unat_uoi mult_le_mono1 word_arith_nat_defs(2))
 
 lemma divide_le_helper:
   "\<lbrakk>unat a * unat b  \<le> unat (max_word :: 'a :: len word)\<rbrakk>
@@ -395,8 +395,8 @@ lemma divide_le_helper:
   apply (subst unat_div | subst unat_mult_lem')+
   apply (blast intro: div_le_dividend le_trans mult_le_mono2)
   apply (subst unat_div | subst unat_mult_lem' | simp)+
-  by (metis (no_types, hide_lams) Groups.mult_ac(3) arith_extra_simps(19) div_by_0 div_le_mono
-                                  mult_le_mono2 nonzero_mult_div_cancel_left thd)
+  by (metis (no_types, opaque_lifting) Groups.mult_ac(3) arith_extra_simps(19) div_by_0 div_le_mono
+                                       mult_le_mono2 nonzero_mult_div_cancel_left thd)
 
 lemma MIN_BUDGET_helper:
   "2 * us_to_ticks kernelWCET_us \<le> us_to_ticks (2 * kernelWCET_us)"

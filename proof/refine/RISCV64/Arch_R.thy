@@ -12,6 +12,8 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
+unbundle l4v_word_context
+
 lemmas [datatype_schematic] = cap.sel list.sel(1) list.sel(3)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -480,10 +482,7 @@ lemma vmrights_map_VMKernelOnly:
 lemma machine_word_len_pageBits_shift[simp]:
   "UCAST(pte_ppn_len \<rightarrow> machine_word_len) (UCAST(machine_word_len \<rightarrow> pte_ppn_len) (p >> pageBits))
    = p >> pageBits"
-  apply (simp add: ucast_ucast_mask pageBits_def)
-  apply word_bitwise
-  apply (simp add: word_size)
-  done
+  by (word_eqI_solve simp: ucast_ucast_mask pageBits_def dest: bit_imp_possible_bit)
 
 lemma vmrights_map_empty[simp]:
   "vmrights_map {} = VMKernelOnly"
@@ -498,7 +497,7 @@ lemma pte_relation_make_user[simp]:
 
 lemma below_user_vtop_in_user_region:
   "p < user_vtop \<Longrightarrow> p \<in> user_region"
-  apply (simp add: user_region_def canonical_user_def user_vtop_def pptrUserTop_def RISCV64.pptrUserTop_def)
+  apply (simp add: user_region_def canonical_user_def user_vtop_def pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def)
   by (word_bitwise, clarsimp simp: word_size)
 
@@ -507,7 +506,7 @@ lemma vmsz_aligned_user_region:
    \<Longrightarrow> p \<in> user_region"
   using pbfs_atleast_pageBits[of sz]
   apply (simp flip: mask_2pm1 add: vmsz_aligned_def)
-  apply (simp add: user_region_def canonical_user_def pptrUserTop_def RISCV64.pptrUserTop_def)
+  apply (simp add: user_region_def canonical_user_def pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
   by (word_bitwise, clarsimp simp: word_size)
 
@@ -1098,7 +1097,7 @@ lemma decode_page_inv_wf[wp]:
 
 lemma below_pptrUserTop_in_user_region:
   "p < pptrUserTop \<Longrightarrow> p \<in> user_region"
-  apply (simp add: user_region_def canonical_user_def pptrUserTop_def RISCV64.pptrUserTop_def)
+  apply (simp add: user_region_def canonical_user_def pptrUserTop_def)
   apply (simp add: bit_simps is_aligned_mask canonical_bit_def)
   by (word_bitwise, clarsimp simp: word_size)
 
@@ -1310,8 +1309,7 @@ lemma kernel_mappings_canonical_pt_base:
   "x \<in> kernel_mappings \<Longrightarrow> canonical_address (table_base x)"
   apply (simp add: kernel_mappings_def pptr_base_def RISCV64.pptrBase_def canonical_address_range
                    canonical_bit_def bit_simps)
-  apply (word_bitwise, clarsimp simp: word_size)
-  done
+  by (word_bitwise, clarsimp simp: word_size)
 
 lemma performASIDControlInvocation_invs' [wp]:
   "\<lbrace>invs' and ct_active' and valid_aci' aci\<rbrace>

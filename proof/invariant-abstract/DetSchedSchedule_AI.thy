@@ -19960,7 +19960,7 @@ lemma invoke_untyped_released_if_bound_sc_tcb_at[wp]:
   apply (rule validI)
   apply (clarsimp simp: pred_map2'_pred_maps obj_at_kh_kheap_simps[symmetric] pred_tcb_at_eq_commute)
   apply (rename_tac sc_ptr)
-  apply (frule use_valid[OF _ invoke_untyped_st_tcb_at], simp)
+  apply (frule use_valid[OF _ invoke_untyped_pred_tcb_at], simp)
   apply (frule use_valid)
     apply (rule_tac scp=sc_ptr and P="released_sc (cur_time s)" and N=\<top>
                  in invoke_untyped_sc_at_pred_n[where proj=sc_refill_cfg_of, simplified])
@@ -20139,8 +20139,8 @@ lemma update_time_stamp_consumed_time_bounded[wp]:
     apply (clarsimp simp: valid_def consumed_time_bounded_def)
     apply (subst unat_add_lem', overflow_hammer)
      apply (subst unat_sub, simp)
-     apply (metis (no_types, hide_lams) add_mono_thms_linordered_semiring(3)
-            le_add_diff_inverse le_trans max_word_max unat_arith_simps(1) )
+     apply (metis (no_types, opaque_lifting) add_mono_thms_linordered_semiring(3)
+                  le_add_diff_inverse le_trans max_word_max unat_arith_simps(1) )
     apply (subst unat_sub, simp)
     apply (subst add_diff_assoc, overflow_hammer)
     apply linarith
@@ -22529,8 +22529,8 @@ lemma sched_context_resume_cur_sc_not_in_release_q:
   apply (intro conjI impI allI; fastforce?)
   apply (case_tac "sc_ptr = cur_sc s"; (solves \<open>simp\<close>)?)
   apply (prop_tac "y \<noteq> t")
-   apply (metis (no_types, hide_lams) kernel_object.simps(2) option.simps(1)
-                                      heap_refs_inv_sc_tcb)
+   apply (metis (no_types, opaque_lifting) kernel_object.simps(2) option.simps(1)
+                                           heap_refs_inv_sc_tcb)
   apply (prop_tac "t \<notin> set (release_queue s)", blast)
   apply (simp add: set_tcb_release_enqueue_upd_insert)
   done

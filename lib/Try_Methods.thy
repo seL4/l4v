@@ -30,7 +30,6 @@ structure Methods = Theory_Data
 (
   type T = Symtab.set;
   val empty = Symtab.empty;
-  val extend = I;
   val merge = Symtab.merge (K true);
 );
 

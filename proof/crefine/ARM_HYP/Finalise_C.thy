@@ -90,8 +90,7 @@ lemma setThreadState_cslift_spec:
        apply (vcg_step+)[1]
       apply vcg
      apply vcg_step+
-  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                        fun_eq_iff option_map2_def if_1_0_0)
+  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff fun_eq_iff option_map2_def)
   by (simp split: if_split)
 
 lemma ep_queue_relation_shift:
@@ -1061,7 +1060,6 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. base < 2 ^ 17 \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1296,8 +1294,7 @@ lemma deleteASID_ccorres:
                            asid_low_bits_def order_le_less_trans [OF word_and_le1])
     apply wp
    apply vcg
-  apply (clarsimp simp: Collect_const_mem if_1_0_0
-                        word_sless_def word_sle_def
+  apply (clarsimp simp: word_sless_def word_sle_def
                         Kernel_C.asidLowBits_def
                         typ_at_to_obj_at_arches)
   apply (rule conjI)
@@ -1708,24 +1705,17 @@ lemma irq_opt_relation_Some_ucast':
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
   apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply simp+
-  apply (rule word_eqI[rule_format])
-  apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (clarsimp simp add:nth_ucast word_size)
-done
+  apply (rule irq_opt_relation_Some_ucast[rotated]; simp)
+  apply word_eqI_solve
+  done
 
 lemma irq_opt_relation_Some_ucast_left:
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) x"
   apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
-  apply (rule irq_opt_relation_Some_ucast[rotated])
-    apply simp+
-  apply (rule word_eqI)
-  apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (clarsimp simp add:nth_ucast word_size)
- done
-
+  apply (rule irq_opt_relation_Some_ucast[rotated]; simp)
+  apply word_eqI_solve
+  done
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
@@ -2121,8 +2111,8 @@ lemma associateVCPUTCB_ccorres:
   apply (cinit lift: tcb_' vcpu_')
   apply (rule ccorres_move_c_guard_tcb)
    apply (rule ccorres_pre_archThreadGet, rename_tac tcbVCPU)
-    apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-   apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' tcb tptr s \<and> (atcbVCPUPtr o tcbArch)  tcb = tcbVCPU) and
+   apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+       apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' tcb tptr s \<and> (atcbVCPUPtr o tcbArch) tcb = tcbVCPU) and
                           no_0_obj' and
                           valid_objs'"
                    and Q'=UNIV
@@ -2145,12 +2135,12 @@ lemma associateVCPUTCB_ccorres:
      apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
      apply (rule ccorres_move_c_guard_vcpu)
      apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-    apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' vcpu vcpuptr s) and
-                          no_0_obj' and
-                          valid_objs'"
-                   and Q'=UNIV
-                   and C'="{s. (vcpuTCBPtr vcpu \<noteq> None)}"
-                   in ccorres_rewrite_cond_sr)
+         apply (rule_tac Q="(\<lambda>s. \<exists>tcb. ko_at' vcpu vcpuptr s) and
+                            no_0_obj' and
+                            valid_objs'"
+                     and Q'=UNIV
+                     and C'="{s. (vcpuTCBPtr vcpu \<noteq> None)}"
+                     in ccorres_rewrite_cond_sr)
           apply clarsimp
           apply (frule cmap_relation_vcpu)
           apply (erule cmap_relationE1)
@@ -2179,29 +2169,31 @@ lemma associateVCPUTCB_ccorres:
           apply ceqv
          apply (rule ccorres_move_c_guard_vcpu)
          apply clarsimp
-         apply (subst ccorres_seq_skip'[symmetric])
          apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
-             apply (rule  setObject_vcpuTCB_updated_Basic_ccorres[where tptr="Some tptr" and t="Map.empty"
-                                                                 , simplified option_to_ctcb_ptr_def, simplified])
+             apply (rule setObject_vcpuTCB_updated_Basic_ccorres[where tptr="Some tptr" and t="Map.empty",
+                                                                 simplified option_to_ctcb_ptr_def, simplified])
             apply ceqv
-           apply (rule ccorres_return_Skip)
-          apply (rule wp_post_taut)
+           apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+           apply (subst ccorres_seq_skip'[symmetric])
+           apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc])
+               apply (rule_tac R="\<lambda>s. curThread = ksCurThread s" in ccorres_when)
+                apply (clarsimp simp: rf_sr_ksCurThread)
+               apply (ctac add: vcpu_switch_ccorres_Some)
+              apply ceqv
+             apply (rule ccorres_return_Skip)
+            apply (rule wp_post_taut)
+           apply (vcg exspec=vcpu_switch_modifies)
+          apply (wpsimp wp: setObject_vcpu_valid_objs' hoare_drop_imps)
          apply vcg
         apply wpsimp
-       apply vcg
-      apply wpc
-       apply (subgoal_tac "vcpuTCBPtr_update Map.empty vcpu = vcpu", simp, wp)
-       apply (case_tac vcpu; clarsimp)
-      apply wpsimp
+       apply (vcg exspec=dissociateVCPUTCB_modifies)
+      apply ((wpsimp wp: hoare_vcg_all_lift hoare_drop_imps
+              | strengthen invs_valid_objs' invs_arch_state')+)[1]
      apply (vcg exspec=dissociateVCPUTCB_modifies)
-    apply wpc
-     apply clarsimp
-     apply wp
-    apply clarsimp
-    apply (wpsimp wp: hoare_vcg_all_lift)
     apply (rule_tac Q="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
-     apply (clarsimp simp: invs_no_0_obj' valid_vcpu'_def typ_at_tcb'
-                     split: option.splits)
+     apply (clarsimp simp: valid_vcpu'_def typ_at_tcb' obj_at'_def projectKOs)
+     apply (rename_tac vcpu obj, case_tac vcpu)
+     apply (fastforce simp: valid_arch_tcb'_def)
     apply wpsimp
    apply (vcg exspec=dissociateVCPUTCB_modifies)
   apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps
@@ -2434,7 +2426,6 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
      apply csymbr
-     apply (simp add: if_1_0_0)
      apply clarsimp
      apply (rule ccorres_Cond_rhs_Seq)
       apply (subgoal_tac "capPTMappedAddress cp \<noteq> None")
@@ -2482,7 +2473,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (frule small_frame_cap_is_mapped_alt)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
       apply (simp add: split_def)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -2498,7 +2489,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule small_frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                             case_option_over_if
-                     elim!: ccap_relationE simp del: Collect_const)
+                     elim!: ccap_relationE)
      apply (simp add: split_def)
      apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
@@ -2516,7 +2507,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (frule frame_cap_is_mapped_alt)
        apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
       apply simp
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -2533,7 +2524,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                             case_option_over_if
-                      elim!: ccap_relationE simp del: Collect_const)
+                      elim!: ccap_relationE)
      apply clarsimp
      apply (return_NullCap_pair_ccorres)
     apply (clarsimp simp: isCap_simps)
@@ -2579,10 +2570,10 @@ lemma Arch_finaliseCap_ccorres:
                               case_option_over_if gen_framesize_to_H_def
                               Kernel_C.ARMSmallPage_def ARM_HYP.pptrBase_def
                               if_split
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                        elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
       apply (frule cap_get_tag_isCap_unfolded_H_cap, simp, simp)
      apply (rule conjI, clarsimp)
       apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
@@ -2603,8 +2594,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
       apply (frule frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                            case_option_over_if
-                     elim!: ccap_relationE simp del: Collect_const)
+                     elim!: ccap_relationE)
      apply (frule (1) cap_get_tag_isCap_unfolded_H_cap, simp)
     apply (cases is_final; clarsimp)
     apply (intro conjI; clarsimp?)
@@ -2712,8 +2702,8 @@ lemma finaliseCap_ccorres:
    apply csymbr
    apply (simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: cap_get_tag_isCap isCap_simps from_bool_neq_0
-                    cong: if_cong simp del: Collect_const)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps
+                    cong: if_cong)
     apply (clarsimp simp: word_sle_def)
     apply (rule ccorres_if_lhs)
      apply (rule ccorres_fail)

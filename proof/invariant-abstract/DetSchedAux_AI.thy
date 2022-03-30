@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch .
 requalify_facts
-  invoke_untyped_st_tcb_at
+  invoke_untyped_pred_tcb_at
   init_arch_objects_typ_at
   init_arch_objects_pred_tcb_at
   init_arch_objects_cur_thread
@@ -587,8 +587,8 @@ lemma valid_machine_time_refill_ready_buffer:
   "valid_machine_time s \<Longrightarrow> cur_time s \<le> cur_time s + kernelWCET_ticks"
   apply (clarsimp simp: valid_machine_time_def)
   apply (insert getCurrentTime_buffer_minus)
-  by (metis (no_types, hide_lams) Groups.add_ac(2) olen_add_eqv plus_minus_no_overflow_ab
-                                  uminus_add_conv_diff word_n1_ge word_plus_mono_right2)
+  by (metis (no_types, opaque_lifting) Groups.add_ac(2) olen_add_eqv plus_minus_no_overflow_ab
+                                       uminus_add_conv_diff word_n1_ge word_plus_mono_right2)
 
 lemma released_sc_cur_time_increasing:
   "\<lbrakk>sc_refill_cfg_sc_at (released_sc (cur_time s)) scp s'; cur_time s \<le> cur_time s';
@@ -1106,7 +1106,7 @@ lemma invoke_untyped_valid_sched:
                       (\<lambda>s. scheduler_action s = resume_cur_thread)"
             in valid_sched_tcb_state_preservation_gen)
                   apply simp
-                 apply (wpsimp wp: invoke_untyped_st_tcb_at invoke_untyped_pred_tcb_at_live
+                 apply (wpsimp wp: invoke_untyped_pred_tcb_at invoke_untyped_pred_tcb_at_live
                                    invoke_untyped_sc_at_pred_n_live[where Q="Not"]
                                    invoke_untyped_etcb_at invoke_untyped_sc_at_pred_n
                                    invoke_untyped_pred_map_sc_refill_cfgs_of

@@ -702,7 +702,7 @@ lemma isCap_Master:
 
 lemma capUntypedSize_capBits:
   "capClass cap = PhysicalClass \<Longrightarrow> capUntypedSize cap = 2 ^ (capBits cap)"
-  apply (simp add: capUntypedSize_def objBits_simps
+  apply (simp add: capUntypedSize_def objBits_simps shiftl_eq_mult
                    ARM_HYP_H.capUntypedSize_def vspace_bits_defs vcpu_bits_def
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
@@ -1171,7 +1171,6 @@ qed
 
 lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-  including no_take_bit
   apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
                     simp: capAligned_def objBits_simps field_simps)

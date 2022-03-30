@@ -25,7 +25,7 @@ lemma ptr_add_uint_of_nat [simp]:
     "p +\<^sub>p uint (of_nat x :: addr) = p +\<^sub>p int x"
   apply (subst uint_of_nat)
   apply (unfold CTypesDefs.ptr_add_def)
-  apply (metis (hide_lams, no_types) uint_of_nat of_int_of_nat_eq of_int_uint)
+  apply (metis (opaque_lifting, no_types) uint_of_nat of_int_of_nat_eq of_int_uint)
   done
 
 lemmas [simp] = sint_ucast_eq_uint is_up is_down

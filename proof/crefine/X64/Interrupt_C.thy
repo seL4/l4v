@@ -664,7 +664,6 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
   have irq64_helper_three:
     "\<And>irq. \<not> 107 < unat irq \<Longrightarrow>
         toEnum (16 + unat (UCAST(64 \<rightarrow> 8) irq)) \<le> SCAST(32 signed \<rightarrow> 8) Kernel_C.maxIRQ"
-    including no_take_bit
     supply Word.of_nat_unat[simp del]
     apply (subst toEnum_of_nat)
      apply (simp add: unat_ucast)

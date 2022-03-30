@@ -1148,7 +1148,6 @@ lemma from_bytes_signed_word:
   "length p = len_of TYPE('a) div 8 \<Longrightarrow>
            (from_bytes p :: 'a::len8 signed word) = ucast (from_bytes p :: 'a word)"
   by (clarsimp simp: from_bytes_def word_rcat_def typ_info_word)
-     (metis len_signed word_ubin.Abs_norm)
 
 lemma hrs_mem_update_signed_word:
     "hrs_mem_update (heap_update (ptr_coerce p :: 'a::len8 word ptr) (scast val :: 'a::len8 word))
@@ -1251,7 +1250,7 @@ lemma valid_typ_heap_signed_word:
    apply clarsimp
    apply (drule spec, drule spec, erule (1) impE)+
    apply (subst (asm) c_guard_ptr_coerce, simp, simp)
-   apply (metis (hide_lams, mono_tags) h_val_signed_word scast_ucast_norm(2))
+   apply (metis (opaque_lifting, mono_tags) h_val_signed_word scast_ucast_norm(2))
   apply clarsimp
   apply (drule_tac x=s in spec)+
   apply (drule_tac x="ptr_coerce p" in spec)+
@@ -1306,7 +1305,7 @@ lemma valid_typ_heap_ptr_coerce:
   apply (erule_tac x="ptr_coerce x" in allE)
   apply (clarsimp simp: heap_update_def [abs_def] to_bytes_def typ_info_ptr)
   apply (clarsimp simp: if_distrib [where f=ptr_coerce])
-  apply (metis (hide_lams) ptr_coerce_idem ptr_coerce_id)
+  apply (metis (opaque_lifting) ptr_coerce_idem ptr_coerce_id)
   done
 
 (*

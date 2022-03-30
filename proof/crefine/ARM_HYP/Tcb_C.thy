@@ -1166,7 +1166,6 @@ lemma invokeTCB_CopyRegisters_ccorres:
          \<inter> {s. to_bool (transferInteger_' s) = ints}) []
    (invokeTCB (CopyRegisters destn source susp resume frames ints arch))
    (Call invokeTCB_CopyRegisters_'proc)"
-  including no_take_bit
   apply (cinit lift: dest_' tcb_src_' resumeTarget_'
                      suspendSource_' transferFrame_' transferInteger_'
                simp: whileAnno_def)
@@ -1552,7 +1551,6 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
          \<inter> {s. buffer_' s = option_to_ptr buffer}) []
    (invokeTCB (WriteRegisters dst resume values arch))
    (Call invokeTCB_WriteRegisters_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (erule conjE)
   apply (cinit lift: n_' dest_' resumeTarget_' buffer_'
@@ -1801,7 +1799,6 @@ shows
        (doE reply \<leftarrow> invokeTCB (ReadRegisters target susp n archCp);
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeTCB_ReadRegisters_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm) using [[goals_limit=1]]
   apply (cinit' lift: tcb_src_' suspendSource_' n_' call_'
                 simp: invokeTCB_def liftE_bindE bind_assoc)

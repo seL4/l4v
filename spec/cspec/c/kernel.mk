@@ -37,6 +37,8 @@ ifndef TOOLPREFIX
       TRY_TOOLPREFIX := arm-none-eabi- arm-linux-gnueabi-
     else ifeq (${L4V_ARCH},RISCV64)
       TRY_TOOLPREFIX := riscv64-unknown-linux-gnu- riscv64-linux-gnu- riscv64-unknown-elf-
+    else ifeq (${L4V_ARCH},AARCH64)
+      TRY_TOOLPREFIX := aarch64-unknown-linux-gnu- aarch64-linux-gnu-
     endif
   endif
   ifdef TRY_TOOLPREFIX
@@ -47,9 +49,8 @@ ifndef TOOLPREFIX
   endif
 endif
 
-ifndef OBJDUMP
-  OBJDUMP := ${TOOLPREFIX}objdump
-endif
+OBJDUMP := ${TOOLPREFIX}objdump
+CPP := ${TOOLPREFIX}cpp
 
 ifndef UMM_TYPES
   UMM_TYPES := ${KERNEL_BUILD_ROOT}/umm_types.txt
@@ -91,8 +92,8 @@ ${KERNEL_BUILD_ROOT}/kernel.elf.symtab: ${KERNEL_BUILD_ROOT}/kernel.elf
 	${OBJDUMP} -t $^ > $@
 
 ${KERNEL_BUILD_ROOT}/kernel.sigs: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
-	MAKEFILES= make -C ${PARSERPATH} standalone-cparser
-	${PARSERPATH}/c-parser ${L4V_ARCH} --underscore_idents --mmbytes $^ > $@.tmp
+	MAKEFILES= make -C ${PARSERPATH} ${PARSERPATH}/${L4V_ARCH}/c-parser
+	${PARSERPATH}/${L4V_ARCH}/c-parser --cpp=${CPP} --underscore_idents --mmbytes $^ > $@.tmp
 	mv $@.tmp $@
 
 # Initialize the CMake build. We purge the build directory and start again

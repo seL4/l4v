@@ -944,7 +944,7 @@ proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical canonical_bit_def
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
                  split: if_splits
                   elim: cte_wp_atE' canonical_address_add)
 qed
@@ -4973,7 +4973,7 @@ lemma refillSingle_corres:
     apply (rule_tac R'="\<lambda>sc s. sc_valid_refills' sc" and R="\<lambda>_ _ . True" in corres_split)
        apply (rule get_sc_corres)
       apply simp
-      apply (metis (mono_tags, hide_lams) refillSingle_equiv sc_relation_def)
+      apply (metis (mono_tags, opaque_lifting) refillSingle_equiv sc_relation_def)
      apply wpsimp+
   apply (clarsimp simp: obj_at'_def)
   done

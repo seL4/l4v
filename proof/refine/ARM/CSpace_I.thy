@@ -638,6 +638,7 @@ lemma capUntypedSize_capBits:
                    ARM_H.capUntypedSize_def
                    pteBits_def pdeBits_def
                    ptBits_def pdBits_def
+                   shiftl_eq_mult
             split: capability.splits arch_capability.splits
                    zombie_type.splits)
   apply fastforce
@@ -1104,7 +1105,6 @@ qed
 
 lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-  including no_take_bit
   apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
                     simp: capAligned_def objBits_simps field_simps)

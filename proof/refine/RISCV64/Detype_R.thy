@@ -3753,7 +3753,6 @@ lemma no_overlap_check:
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"
-  including no_0_dvd
   apply (clarsimp split:option.splits simp:assert_def lookupAround2_char1 not_less)
   apply (rule ccontr)
   apply (frule(1) pspace_no_overlapD')
@@ -4298,7 +4297,6 @@ qed
 
 lemma new_cap_addrs_def2:
   "n < 2^64 \<Longrightarrow> new_cap_addrs (Suc n) ptr obj = map (\<lambda>n. ptr + (n << objBitsKO obj)) [0.e.of_nat n]"
-  including no_take_bit
   by (simp add:new_cap_addrs_def upto_enum_word unat_of_nat Fun.comp_def)
 
 lemma createTCBs_tcb_at':
@@ -4713,7 +4711,6 @@ lemma createNewObjects_def2:
       apply (simp add:range_cover_def objSize_eq_capBits)+
       done
     show ?case
-      including no_take_bit
       apply simp
       using snoc.prems
       apply (subst upto_enum_inc_1_len)
@@ -4996,7 +4993,7 @@ lemma createNewObjects_Cons:
       case Nil thus ?case by simp
     next
       case (Cons x xs)
-      thus ?case including no_take_bit by (simp add:unat_of_nat64)
+      thus ?case by (simp add:unat_of_nat64)
     qed
 
     show ?thesis

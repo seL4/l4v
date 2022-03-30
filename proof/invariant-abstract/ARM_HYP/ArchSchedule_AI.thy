@@ -25,7 +25,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp
-  apply simp
+  apply (clarsimp simp: word_bits_conv)
   done
 (*
 global_naming ARM_HYP (*FIXME: arch_split*)

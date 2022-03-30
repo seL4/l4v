@@ -1732,10 +1732,10 @@ lemma handleInterrupt_ccorres:
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
       apply (frule cap_get_tag_to_H, assumption)
       apply (clarsimp simp: to_bool_def)
-     apply (cut_tac un_ui_le[where b = 191 and a = irq,
+     apply (cut_tac un_ui_le[where b = "54::machine_word" and a = irq,
             simplified word_size])
      apply (simp add: ucast_eq_0 is_up_def source_size_def
-                      target_size_def word_size unat_gt_0
+                      target_size_def word_size unat_gt_0 not_less
            | subst array_assertion_abs_irq[rule_format, OF conjI])+
     apply (clarsimp simp:nat_le_iff)
     apply (clarsimp simp: IRQReserved_def)+

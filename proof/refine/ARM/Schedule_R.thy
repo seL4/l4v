@@ -157,7 +157,7 @@ proof -
     done
 qed
 
-lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.order.refl]
+lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map
@@ -254,15 +254,12 @@ lemma removeFromBitmap_valid_queues_no_bitmap_except[wp]:
      removeFromBitmap d p
   \<lbrace>\<lambda>_. valid_queues_no_bitmap_except t \<rbrace>"
   unfolding bitmapQ_defs valid_queues_no_bitmap_except_def
-  by (wp| clarsimp simp: bitmap_fun_defs)+
+  by (wp | clarsimp simp: bitmap_fun_defs)+
 
 lemma removeFromBitmap_bitmapQ:
   "\<lbrace> \<lambda>s. True \<rbrace> removeFromBitmap d p \<lbrace>\<lambda>_ s. \<not> bitmapQ d p s \<rbrace>"
   unfolding bitmapQ_defs bitmap_fun_defs
-  apply (wp | clarsimp simp: bitmap_fun_defs wordRadix_def)+
-  apply (subst (asm) complement_nth_w2p, simp_all)
-  apply (fastforce intro!: order_less_le_trans[OF word_unat_mask_lt] simp: word_size)
-  done
+  by (wpsimp simp: bitmap_fun_defs wordRadix_def)
 
 lemma removeFromBitmap_valid_bitmapQ[wp]:
 " \<lbrace> valid_bitmapQ_except d p and bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
