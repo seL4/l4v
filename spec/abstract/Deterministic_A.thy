@@ -152,6 +152,7 @@ record det_ext =
    domain_kimage_internal :: "domain \<Rightarrow> obj_ref"
    domain_irqs_internal :: "domain \<Rightarrow> irq list"
    old_domain_internal :: domain
+   shared_data_flush_paddrs_internal :: "machine_word list"
 
 text \<open>
   The state of the deterministic abstract specification extends the
@@ -233,6 +234,12 @@ abbreviation
 
 abbreviation
   "old_domain_update f (s::det_state) \<equiv> trans_state (old_domain_internal_update f) s"
+
+abbreviation
+  "shared_data_flush_paddrs (s::det_state) \<equiv> shared_data_flush_paddrs_internal (exst s)"
+
+abbreviation
+  "shared_data_flush_paddrs_update f (s::det_state) \<equiv> trans_state (shared_data_flush_paddrs_internal_update f) s"
 
 type_synonym 'a det_ext_monad = "(det_state,'a) nondet_monad"
 
@@ -590,7 +597,8 @@ definition "ext_init_det_ext_ext \<equiv>
       \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
       domain_kimage_internal = \<lambda>_. 0,
       domain_irqs_internal = \<lambda>_. [],
-      old_domain_internal = 0\<rparr>"
+      old_domain_internal = 0,
+      shared_data_flush_paddrs_internal = []\<rparr>"
 
 instance ..
 

@@ -182,7 +182,9 @@ where
          \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
            with one invocation of a new HW interface that unmasks them all at once. -robs\<close>
          do_machine_op $ forM_x (irqs_of curdom) (maskInterrupt False);
-         \<comment> \<open>TODO: Add any other needed flush primitives for RISCV64. -robs\<close>
+         paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
+         do_machine_op $ forM_x paddrs_to_flush L2FlushAddr;
+         \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
          do_machine_op $ tfence
        od)
      od"
