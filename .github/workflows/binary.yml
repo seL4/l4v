@@ -59,8 +59,8 @@ jobs:
             const fs = require('fs/promises');
             const files = bv_artifacts.map(async function(artifact) {
               let download = await github.rest.actions.downloadArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner: repo_parts[0],
+                repo: repo_parts[1],
                 artifact_id: artifact.id,
                 archive_format: 'zip',
               });
