@@ -47,16 +47,36 @@ jobs:
             console.log(`::set-output name=trigger_repo::${inputs.repo}`)
             console.log(`::set-output name=trigger_run_id::${inputs.run_id}`)
             const repo_parts = inputs.repo.split("/");
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: repo_parts[0],
-               repo: repo_parts[1],
-               run_id: inputs.run_id,
-            });
-            const bv_artifacts = artifacts.data.artifacts.filter((artifact) => {
-              const name = artifact.name;
-              return name == "manifest" || name == "c-graph-lang";
-            });
+            const bv_artifacts = await (async function() {
+              console.log("::group::Waiting for artifacts");
+              try {
+                // Wait up to 10 minutes for artifacts to appear, in case the
+                // triggering workflow isn't finished yet.
+                for (let attempt = 0; attempt < 60; attempt++) {
+                  const all_artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                    owner: repo_parts[0],
+                    repo: repo_parts[1],
+                    run_id: inputs.run_id,
+                  });
+                  const bv_artifacts = all_artifacts.data.artifacts.filter((artifact) => {
+                    const name = artifact.name;
+                    return name === "manifest" || name === "c-graph-lang";
+                  });
+                  if (bv_artifacts.length === 2) {
+                    console.log("Artifacts found");
+                    return bv_artifacts;
+                  }
+                  console.log("Waiting...");
+                  await new Promise(resolve => setTimeout(resolve, 10000));
+                }
+                throw "Expected artifacts not found";
+              }
+              finally {
+                console.log("::endgroup::");
+              }
+            })();
             const fs = require('fs/promises');
+            console.log("::group::Downloading artifacts");
             const files = bv_artifacts.map(async function(artifact) {
               let download = await github.rest.actions.downloadArtifact({
                 owner: repo_parts[0],
@@ -70,6 +90,8 @@ jobs:
               );
             });
             await Promise.all(files);
+            console.log("Artifacts downloaded");
+            console.log("::endgroup::");
       - name: Checkout graph-refine
         uses: actions/checkout@v3
         with:
