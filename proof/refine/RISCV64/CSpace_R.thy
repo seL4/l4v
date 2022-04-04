@@ -893,7 +893,31 @@ lemma cteMove_corres:
    apply fastforce
   apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+   subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+  apply (thin_tac "gsCNodes t = p" for t p)+
+  apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+  apply (thin_tac "cur_thread t = p" for t p)+
+  apply (thin_tac "domain_index t = p" for t p)+
+  apply (thin_tac "domain_time t = p" for t p)+
+  apply (thin_tac "cur_domain t = p" for t p)+
+  apply (thin_tac "scheduler_action t = p" for t p)+
+  apply (thin_tac "ready_queues t = p" for t p)+
+  apply (thin_tac "idle_thread t = p" for t p)+
+  apply (thin_tac "machine_state t = p" for t p)+
+  apply (thin_tac "work_units_completed t = p" for t p)+
+  apply (thin_tac "ksArchState t = p" for t p)+
+  apply (thin_tac "gsUserPages t = p" for t p)+
+  apply (thin_tac "ksCurDomain t = p" for t p)+
+  apply (thin_tac "ksInterruptState t = p" for t p)+
+  apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomainTime t = p" for t p)+
+  apply (thin_tac "ksDomSchedule t = p" for t p)+
+  apply (thin_tac "ekheap_relation t p" for t p)+
+  apply (thin_tac "pspace_relation t p" for t p)+
+  apply (thin_tac "interrupt_state_relation s t p" for s t p)+
+  apply (thin_tac "ghost_relation s t p" for s t p)+
+  apply (thin_tac "sched_act_relation t p" for t p)+
+  apply (thin_tac "ready_queues_relation t p" for t p)+
   apply (subst conj_assoc[symmetric])
   apply (rule conjI)
    defer
@@ -945,7 +969,7 @@ lemma cteMove_corres:
        apply (simp add: nullPointer_def)
       apply (simp add: nullPointer_def)
      apply (erule weak_derived_sym')
-    apply clarsimp
+    subgoal by clarsimp
    apply assumption
   apply (rule conjI)
    apply (simp (no_asm) add: cdt_relation_def)
@@ -955,14 +979,14 @@ lemma cteMove_corres:
     apply (rule mdb_move_abs.intro)
        apply fastforce
       apply (fastforce elim!: cte_wp_at_weakenE)
-     apply simp
-    apply simp
+     subgoal by simp
+    subgoal by simp
    apply (case_tac "(aa,bb) = ptr", simp)
    apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map ptr")
     prefer 2
     apply (erule (2) cte_map_inj, fastforce, fastforce, fastforce)
    apply (case_tac "(aa,bb) = ptr'")
-    apply (simp add: cdt_relation_def del: split_paired_All)
+    subgoal by (simp add: cdt_relation_def del: split_paired_All)
    apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map ptr'")
     prefer 2
     apply (erule (2) cte_map_inj, fastforce, fastforce, fastforce)
@@ -982,7 +1006,7 @@ lemma cteMove_corres:
         apply fastforce
        apply fastforce
       apply (rule subset_refl)
-     apply simp
+     subgoal by simp
     apply simp
    apply clarsimp
    apply (drule (1) cte_map_inj_eq)
@@ -991,9 +1015,8 @@ lemma cteMove_corres:
       apply fastforce
      apply fastforce
     apply fastforce
-   subgoal by clarsimp
+   subgoal by simp
   apply(clarsimp simp: cdt_list_relation_def)
-
   apply(subst next_slot_eq2)
     apply(simp split: option.splits)
     apply(intro conjI impI)
@@ -1002,7 +1025,7 @@ lemma cteMove_corres:
     apply(intro allI impI)
     apply(rule mdb_move_abs'.next_slot)
       apply(simp, fastforce, simp)
-   apply(fastforce split: option.splits)
+   subgoal by (fastforce split: option.splits)
   apply(case_tac "ctes_of b (cte_map (aa, bb))")
    subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
   apply(case_tac ab)
@@ -4764,12 +4787,41 @@ lemma cteInsert_simple_corres:
         apply (clarsimp simp: put_def state_relation_def simp del: fun_upd_apply)
         apply (drule updateCap_stuff)
         apply clarsimp
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-        apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
+        apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
         apply (clarsimp simp: pspace_relations_def)
         apply (rule conjI)
-         apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+         subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+        apply (thin_tac "gsCNodes t = p" for t p)+
+        apply (thin_tac "ksMachineState t = p" for t p)+
+        apply (thin_tac "ksCurThread t = p" for t p)+
+        apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+        apply (thin_tac "ksIdleThread t = p" for t p)+
+        apply (thin_tac "ksReadyQueues t = p" for t p)+
+        apply (thin_tac "ksSchedulerAction t = p" for t p)+
+        apply (thin_tac "cur_thread t = p" for t p)+
+        apply (thin_tac "domain_index t = p" for t p)+
+        apply (thin_tac "domain_time t = p" for t p)+
+        apply (thin_tac "cur_domain t = p" for t p)+
+        apply (thin_tac "scheduler_action t = p" for t p)+
+        apply (thin_tac "ready_queues t = p" for t p)+
+        apply (thin_tac "idle_thread t = p" for t p)+
+        apply (thin_tac "machine_state t = p" for t p)+
+        apply (thin_tac "work_units_completed t = p" for t p)+
+        apply (thin_tac "ksArchState t = p" for t p)+
+        apply (thin_tac "gsUserPages t = p" for t p)+
+        apply (thin_tac "ksCurDomain t = p" for t p)+
+        apply (thin_tac "ksInterruptState t = p" for t p)+
+        apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+        apply (thin_tac "ksDomainTime t = p" for t p)+
+        apply (thin_tac "ksDomSchedule t = p" for t p)+
+        apply (thin_tac "ctes_of t = p" for t p)+
+        apply (thin_tac "ekheap_relation t p" for t p)+
+        apply (thin_tac "pspace_relation t p" for t p)+
+        apply (thin_tac "interrupt_state_relation s t p" for s t p)+
+        apply (thin_tac "sched_act_relation t p" for t p)+
+        apply (thin_tac "ready_queues_relation t p" for t p)+
         apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def prev_update_modify_mdb_relation)
         apply (subgoal_tac "cte_map dest \<noteq> 0")
          prefer 2
@@ -4779,11 +4831,6 @@ lemma cteInsert_simple_corres:
          prefer 2
          apply (clarsimp simp: valid_mdb'_def
                                valid_mdb_ctes_def no_0_def)
-        apply (thin_tac "ksMachineState t = p" for t p)+
-        apply (thin_tac "ksCurThread t = p" for t p)+
-        apply (thin_tac "ksIdleThread t = p" for t p)+
-        apply (thin_tac "ksReadyQueues t = p" for t p)+
-        apply (thin_tac "ksSchedulerAction t = p" for t p)+
         apply (subgoal_tac "should_be_parent_of src_cap (is_original_cap a src) c (is_cap_revocable c src_cap) = True")
          prefer 2
          apply (subst should_be_parent_of_masked_as_full[symmetric])
@@ -4792,7 +4839,6 @@ lemma cteInsert_simple_corres:
         apply (subst conj_assoc[symmetric])
         apply (rule conjI)
          defer
-         apply (thin_tac "ctes_of t = t'" for t t')+
          apply (clarsimp simp: modify_map_apply)
          apply (clarsimp simp: revokable_relation_def simp del: fun_upd_apply)
          apply (simp split: if_split)
@@ -4844,9 +4890,6 @@ lemma cteInsert_simple_corres:
     apply clarsimp
     subgoal by (fastforce elim: cte_wp_at_weakenE)
    subgoal by (clarsimp simp: cte_wp_at'_def)
-  apply (thin_tac "ctes_of s = t" for s t)+
-  apply (thin_tac "pspace_relation s t" for s t)+
-  apply (thin_tac "machine_state t = s" for t s)+
   apply (case_tac "srcCTE")
   apply (rename_tac src_cap' src_node)
   apply (case_tac "rv'")
@@ -4884,7 +4927,7 @@ lemma cteInsert_simple_corres:
    apply (frule set_cap_caps_of_state_monad)
    apply (subgoal_tac "cte_at (aa,bb) a")
     prefer 2
-    apply (clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
+    subgoal by (clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
    apply (simp add: descendants_of_eq' cdt_relation_def split: if_split del: split_paired_All)
    apply clarsimp
    apply (drule (5) cte_map_inj)+
@@ -4934,12 +4977,10 @@ lemma cteInsert_simple_corres:
   apply(simp)
   apply(subgoal_tac "cte_at ca a")
    prefer 2
-   apply(rule cte_at_next_slot)
-      apply(simp_all)[5]
+   subgoal by (rule cte_at_next_slot; simp)
   apply(clarsimp simp: modify_map_def const_def)
   apply(simp split: if_split_asm)
-        apply(drule cte_map_inj_eq)
-             apply(simp_all)[6]
+        subgoal by (drule cte_map_inj_eq; simp)
        apply(drule_tac p="cte_map src" in valid_mdbD1')
          apply(simp)
         apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -4949,12 +4990,9 @@ lemma cteInsert_simple_corres:
       apply(erule_tac x=aa in allE)
       apply(erule_tac x=bb in allE)
       apply(fastforce)
-     apply(drule cte_map_inj_eq)
-          apply(simp_all)[6]
-    apply(drule cte_map_inj_eq)
-        apply(simp_all)[6]
-   apply(drule cte_map_inj_eq)
-       apply(simp_all)[6]
+     subgoal by (drule cte_map_inj_eq; simp)
+    subgoal by (drule cte_map_inj_eq; simp)
+   subgoal by (drule cte_map_inj_eq; simp)
   by(fastforce)
 
 declare if_split [split]
