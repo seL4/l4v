@@ -41,7 +41,9 @@ HEAPS += SepTactics
 
 # Additional dependencies
 
-BaseRefine Refine DBaseRefine DRefine: design-spec
+AInvs: design-spec ASpec-files
+
+BaseRefine Refine DBaseRefine DRefine: design-spec ASpec-files
 
 # CKernel uses the `machinety=machine_state` option for `install_C_file`,
 # and therefore depends on `design-spec`.
