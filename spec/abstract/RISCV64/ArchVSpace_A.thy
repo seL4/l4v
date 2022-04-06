@@ -92,11 +92,13 @@ definition check_kernel_image :: "unit det_ext_monad"
       \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
         with one invocation of a new HW interface that masks them all at once. -robs\<close>
       do_machine_op $ forM_x (irqs_of olddom) (maskInterrupt True);
-      kimage \<leftarrow> gets domain_kimage;
-      \<comment> \<open>TODO: Specify stack copy here. -robs\<close>
-      \<comment> \<open>TODO: Ensure the ASID and kernel image reference used here make sense
-          and are of the correct type. -robs.\<close>
-      do_machine_op $ setVSpaceRoot (kimage curdom) 0
+      ki_vspace \<leftarrow> gets domain_kimage_vspace;
+      ki_asid \<leftarrow> gets domain_kimage_asid;
+      \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel
+        image to the one we are about to switch to (described Sec. 6.4.6.1 of Qian's PhD thesis).
+        TODO: Determine if we expect that to be visible to the abstract specification. -robs\<close>
+      \<comment> \<open>Switch to the current domain's default kernel-image page table.\<close>
+      do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace curdom) (ucast $ ki_asid curdom)
     od)
   od"
 
@@ -119,17 +121,16 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
            od
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
-    \<comment> \<open>Instead of switching to the global address space, the multi-kernel-image prototype
-        here switches to the current domain's kernel-image page table. -robs\<close>
+    \<comment> \<open>Instead of switching to the global page table, the multi-kernel-image prototype
+        here switches to the current domain's default kernel-image page table. -robs\<close>
     (\<lambda>_. do_extended_op $ do
        check_kernel_image;
        curdom \<leftarrow> gets cur_domain;
-       kimage \<leftarrow> gets domain_kimage;
-       \<comment> \<open>TODO: Ensure the ASID and kernel image reference used here make sense
-           and are of the correct type. -robs.\<close>
-       do_machine_op $ setVSpaceRoot (kimage curdom) 0
+       ki_vspace \<leftarrow> gets domain_kimage_vspace;
+       ki_asid \<leftarrow> gets domain_kimage_asid;
+       do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace curdom) (ucast $ ki_asid curdom)
     od)
-    \<comment> \<open>The error case on non-multi-kernel-image mainline:
+    \<comment> \<open>The error case on non-multi-kernel-image mainline switches to the global page table:
     (\<lambda>_. do
        global_pt \<leftarrow> gets global_pt;
        do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
