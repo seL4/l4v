@@ -149,7 +149,8 @@ record det_ext =
    domain_time_internal :: "machine_word"
    ready_queues_internal :: "domain \<Rightarrow> priority \<Rightarrow> ready_queue"
    cdt_list_internal :: cdt_list
-   domain_kimage_internal :: "domain \<Rightarrow> obj_ref"
+   domain_kimage_vspace_internal :: "domain \<Rightarrow> obj_ref"
+   domain_kimage_asid_internal :: "domain \<Rightarrow> asid"
    domain_irqs_internal :: "domain \<Rightarrow> irq list"
    old_domain_internal :: domain
    shared_data_flush_paddrs_internal :: "machine_word list"
@@ -218,10 +219,16 @@ abbreviation
   "cdt_list_update f (s::det_state) \<equiv> trans_state (cdt_list_internal_update f) s"
 
 abbreviation
-  "domain_kimage (s::det_state) \<equiv> domain_kimage_internal (exst s)"
+  "domain_kimage_vspace (s::det_state) \<equiv> domain_kimage_vspace_internal (exst s)"
 
 abbreviation
-  "domain_kimage_update f (s::det_state) \<equiv> trans_state (domain_kimage_internal_update f) s"
+  "domain_kimage_vspace_update f (s::det_state) \<equiv> trans_state (domain_kimage_vspace_internal_update f) s"
+
+abbreviation
+  "domain_kimage_asid (s::det_state) \<equiv> domain_kimage_asid_internal (exst s)"
+
+abbreviation
+  "domain_kimage_asid_update f (s::det_state) \<equiv> trans_state (domain_kimage_asid_internal_update f) s"
 
 abbreviation
   "domain_irqs (s::det_state) \<equiv> domain_irqs_internal (exst s)"
@@ -595,7 +602,8 @@ definition "ext_init_det_ext_ext \<equiv>
       ready_queues_internal = const (const []),
       cdt_list_internal = const [],
       \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
-      domain_kimage_internal = \<lambda>_. 0,
+      domain_kimage_vspace_internal = \<lambda>_. 0,
+      domain_kimage_asid_internal = \<lambda>_. 0,
       domain_irqs_internal = \<lambda>_. [],
       old_domain_internal = 0,
       shared_data_flush_paddrs_internal = []\<rparr>"
