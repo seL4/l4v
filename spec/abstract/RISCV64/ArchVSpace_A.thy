@@ -79,27 +79,18 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
   odE"
 
 text \<open>
-  Check if switching of kernel interrupt mask and kernel-image page table are needed;
-  if so, do so.
+  Prepare the new domain's kernel image and switch to using it.
 \<close>
-definition check_kernel_image :: "unit det_ext_monad"
+definition switch_kernel_image :: "domain \<Rightarrow> unit det_ext_monad"
   where
-  "check_kernel_image \<equiv> do
-    curdom \<leftarrow> gets cur_domain;
-    olddom \<leftarrow> gets old_domain;
-    when (curdom \<noteq> olddom) (do
-      irqs_of \<leftarrow> gets domain_irqs;
-      \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
-        with one invocation of a new HW interface that masks them all at once. -robs\<close>
-      do_machine_op $ forM_x (irqs_of olddom) (maskInterrupt True);
-      ki_vspace \<leftarrow> gets domain_kimage_vspace;
-      ki_asid \<leftarrow> gets domain_kimage_asid;
-      \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel
-        image to the one we are about to switch to (described Sec. 6.4.6.1 of Qian's PhD thesis).
-        TODO: Determine if we expect that to be visible to the abstract specification. -robs\<close>
-      \<comment> \<open>Switch to the current domain's default kernel-image page table.\<close>
-      do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace curdom) (ucast $ ki_asid curdom)
-    od)
+  "switch_kernel_image newdom \<equiv> do
+    ki_vspace \<leftarrow> gets domain_kimage_vspace;
+    ki_asid \<leftarrow> gets domain_kimage_asid;
+    \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel
+      image to the one we are about to switch to (described Sec. 6.4.6.1 of Qian's PhD thesis).
+      TODO: Determine if we expect that to be visible to the abstract specification. -robs\<close>
+    \<comment> \<open>Switch to the new domain's default kernel-image page table.\<close>
+    do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace newdom) (ucast $ ki_asid newdom)
   od"
 
 text \<open>
@@ -115,16 +106,12 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;
            whenE (pt \<noteq> pt') $ throwError InvalidRoot;
-           liftE $ do
-             do_extended_op $ check_kernel_image;
-             do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
-           od
+           liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     \<comment> \<open>Instead of switching to the global page table, the multi-kernel-image prototype
         here switches to the current domain's default kernel-image page table. -robs\<close>
     (\<lambda>_. do_extended_op $ do
-       check_kernel_image;
        curdom \<leftarrow> gets cur_domain;
        ki_vspace \<leftarrow> gets domain_kimage_vspace;
        ki_asid \<leftarrow> gets domain_kimage_asid;

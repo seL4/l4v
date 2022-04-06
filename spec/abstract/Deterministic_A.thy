@@ -152,7 +152,6 @@ record det_ext =
    domain_kimage_vspace_internal :: "domain \<Rightarrow> obj_ref"
    domain_kimage_asid_internal :: "domain \<Rightarrow> asid"
    domain_irqs_internal :: "domain \<Rightarrow> irq list"
-   old_domain_internal :: domain
    shared_data_flush_paddrs_internal :: "machine_word list"
 
 text \<open>
@@ -235,12 +234,6 @@ abbreviation
 
 abbreviation
   "domain_irqs_update f (s::det_state) \<equiv> trans_state (domain_irqs_internal_update f) s"
-
-abbreviation
-  "old_domain (s::det_state) \<equiv> old_domain_internal (exst s)"
-
-abbreviation
-  "old_domain_update f (s::det_state) \<equiv> trans_state (old_domain_internal_update f) s"
 
 abbreviation
   "shared_data_flush_paddrs (s::det_state) \<equiv> shared_data_flush_paddrs_internal (exst s)"
@@ -370,17 +363,20 @@ definition
        set_scheduler_action $ switch_thread target
    od"
 
+\<comment> \<open>Returns the domain we just switched away from.\<close>
 definition
-  next_domain :: "unit det_ext_monad" where
-  "next_domain \<equiv>
+  next_domain :: "domain det_ext_monad" where
+  "next_domain \<equiv> do
+    olddom \<leftarrow> gets cur_domain;
     modify (\<lambda>s.
       let domain_index' = (domain_index s + 1) mod length (domain_list s) in
       let next_dom = (domain_list s)!domain_index'
       in s\<lparr> domain_index := domain_index',
-            old_domain := cur_domain s,
             cur_domain := fst next_dom,
             domain_time := snd next_dom,
-            work_units_completed := 0\<rparr>)"
+            work_units_completed := 0\<rparr>);
+    return olddom
+  od"
 
 definition
   dec_domain_time :: "unit det_ext_monad" where
@@ -601,11 +597,10 @@ definition "ext_init_det_ext_ext \<equiv>
       domain_time_internal = 15,
       ready_queues_internal = const (const []),
       cdt_list_internal = const [],
-      \<comment> \<open>Figure out how these are to be initialised. -robs\<close>
+      \<comment> \<open>TODO: Figure out how these are to be initialised. -robs\<close>
       domain_kimage_vspace_internal = \<lambda>_. 0,
       domain_kimage_asid_internal = \<lambda>_. 0,
       domain_irqs_internal = \<lambda>_. [],
-      old_domain_internal = 0,
       shared_data_flush_paddrs_internal = []\<rparr>"
 
 instance ..
