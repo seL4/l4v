@@ -167,26 +167,23 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
 
 text \<open>
   Interrupt mask switching, microarchitectural state flushing and time padding necessary for
-  time protection whenever there is a domain switch, but deferred until restore_user_context.
+  time protection whenever there is a domain switch.
 \<close>
-\<comment> \<open>TODO: Once this is figured out for RISCV64, arch-split all this. -robs\<close>
-definition kimage_flush :: "unit det_ext_monad"
+
+definition mask_interrupts :: "bool \<Rightarrow> irq list \<Rightarrow> unit det_ext_monad"
 where
-  "kimage_flush \<equiv>
+  \<comment> \<open>Gerwin advised we'll want to replace these repeated \<open>maskInterrupt\<close> invocations with one
+    invocation of a new HW interface that masks/unmasks them all at once, if possible. -robs\<close>
+  "mask_interrupts m irqs \<equiv> do_machine_op $ forM_x irqs (maskInterrupt m)"
+
+definition domain_switch_flush :: "unit det_ext_monad"
+where
+  "domain_switch_flush \<equiv>
      do
-       curdom \<leftarrow> gets cur_domain;
-       olddom \<leftarrow> gets old_domain;
-       when (curdom \<noteq> olddom) (do
-         modify (\<lambda>s. s\<lparr> old_domain := cur_domain s \<rparr>);
-         irqs_of \<leftarrow> gets domain_irqs;
-         \<comment> \<open>We will probably want to replace this repeated invocation of maskInterrupt
-           with one invocation of a new HW interface that unmasks them all at once. -robs\<close>
-         do_machine_op $ forM_x (irqs_of curdom) (maskInterrupt False);
-         paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
-         do_machine_op $ forM_x paddrs_to_flush L2FlushAddr;
-         \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
-         do_machine_op $ tfence
-       od)
+       paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
+       do_machine_op $ forM_x paddrs_to_flush L2FlushAddr;
+       \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
+       do_machine_op $ tfence
      od"
 
 end
