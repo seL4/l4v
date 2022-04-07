@@ -1228,9 +1228,10 @@ lemma programs_obeying_ta_preserve_uwr: "\<lbrakk>
  *)
 end
 
+(*
 
 locale time_protection_system =
-  us?: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
+  ab?: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
   tp?: time_protection collides_in_pch fch_lookup pch_lookup
     fch_read_impact pch_read_impact fch_write_impact pch_write_impact
     read_cycles write_cycles empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles
@@ -1301,7 +1302,6 @@ lemma consdf:
 end
 
 sublocale time_protection_system \<subseteq> dd?:unwinding_system maA mas0 maDom uwr policy maOut Sched
-  apply unfold_locales
   sorry
 
 context time_protection_system begin
@@ -1318,7 +1318,7 @@ lemma conu_ta:
   apply (clarsimp simp:uwr_def)
   apply (frule will_domain_switch_public; clarsimp)
   apply (frule external_uwr_same_domain)
-  apply (prop_tac "us.uwr2 so' u to'")
+  apply (prop_tac "ab.uwr2 so' u to'")
    (* this should be covered by external conf_u *)
    subgoal sorry
   apply clarsimp
@@ -1336,31 +1336,6 @@ lemma conu_ta:
 
   oops
 
-lemma dd_step_us_step:
-  "((os, s), (os', s')) \<in> dd.Step () \<Longrightarrow>
-   (os, os') \<in> us.Step ()"
-  apply (clarsimp simp: dd.Step_def execution_def maA_def system.Step_def steps_def maStep_def)
-  done
-
-lemma dd_run_us_run:
-  "((os, s), (os', s')) \<in> Run dd.Step as \<Longrightarrow>
-   (os, os') \<in> Run us.Step as"
-  apply(induct as arbitrary:s os, solves \<open>simp\<close>)
-  apply clarsimp
-  apply(erule_tac x=ba in meta_allE)
-  apply(erule_tac x=aa in meta_allE)
-  apply (drule dd_step_us_step)
-  apply clarsimp
-  by blast
-
-lemma reachable_reachable:
-  "dd.reachable (so, s) \<Longrightarrow> us.reachable so"
-  apply(rule us.Run_reachable)
-  apply(drule dd.reachable_Run, clarsimp)
-  apply(rule_tac x=as in exI)
-  apply (clarsimp simp:mas0_def)
-  using dd_run_us_run apply blast
-  done
 
 lemma sdf:
   "dd.confidentiality_u"
@@ -1373,31 +1348,39 @@ lemma sdf:
   apply (case_tac "will_domain_switch so")
   
 end
-  
 
-locale time_protection_system' =
-  tps:time_protection_system
+*)
+
+(* give me:
+   - a domain extractor
+   - an unwinding relation
+   - a state
+   - a set of programs
+   and i'll give you a program. i only use information inside the uwr to decide which program
+   to choose, and i will always choose from the given set of programs. *)
+axiomatization
+  SelectProgram :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> ('s \<Rightarrow> 'p set) \<Rightarrow> 's \<Rightarrow> 'p"
+where
+  program_uwr_determined : "(s, t) \<in> uwr (cdom s) \<Longrightarrow>
+                            SelectProgram cdom uwr get_ps s = SelectProgram cdom uwr get_ps t"
+and
+  program_from_set : "get_ps s \<noteq> {} \<Longrightarrow> SelectProgram cdom uwr get_ps s \<in> get_ps s"
 
 
-(*robs: rename thi extension and don't talk about refinement *)
-locale time_protection_refinement =
-  (* Can we expect C to be a Step_system?
-    Locale `complete_noninterference_refinement` enforces this.
-    But it doesn't look like we use this for seL4 infoflow refinement... -robs. *)
-  nir?: complete_noninterference_refinement A s0 "\<lambda>_. current_domain" external_uwr policy out Sched C +
+locale time_protection_system =
+  ab?: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
   tp?: time_protection collides_in_pch fch_lookup pch_lookup
     fch_read_impact pch_read_impact fch_write_impact pch_write_impact
-    read_cycles write_cycles do_read do_write store_time padding_regs_impact
-    empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles addr_domain addr_colour colour_userdomain
-    current_domain external_uwr v_to_p touched_addrs will_domain_switchves us that refinem
+    read_cycles write_cycles empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles
+    addr_domain addr_colour colour_userdomain current_domain external_uwr v_to_p
+    touched_addrs will_domain_switch
   for A :: "('a,'other_state,unit) data_type"
-  and C :: "('c,'other_state,unit) data_type"
   and s0 :: "'other_state"
   and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
   and external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
   and policy :: "('userdomain domain \<times> 'userdomain domain) set"
   and out :: "'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
-  and collides_in_pch :: "paddr rel"
+  and collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool"
   and fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
   and pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
   and fch_read_impact :: "'fch fch_impact"
@@ -1406,10 +1389,6 @@ locale time_protection_refinement =
   and pch_write_impact :: "'pch pch_impact"
   and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-  and do_read :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'regs"
-  and do_write :: "vaddr \<Rightarrow> 'other_state \<Rightarrow> 'regs \<Rightarrow> 'other_state"
-  and store_time :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
-  and padding_regs_impact :: "time \<Rightarrow> 'regs \<Rightarrow> 'regs"
   and empty_fch :: "'fch"
   and fch_flush_cycles :: "'fch \<Rightarrow> time"
   and do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
@@ -1419,42 +1398,25 @@ locale time_protection_refinement =
   and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   and v_to_p :: "'other_state \<Rightarrow> vaddr \<Rightarrow> paddr"
   and touched_addrs :: "'other_state \<Rightarrow> vaddr set"
-  and do_add_to_TA :: "'other_state \<Rightarrow> vaddr set \<Rightarrow> 'other_state"
-  and do_empty_TA :: "'other_state \<Rightarrow> 'other_state"
   and will_domain_switch :: "'other_state \<Rightarrow> bool" +
-  fixes initial_regs :: "'regs"
   fixes initial_pch :: "'pch"
-  assumes A_touched_addrs_inv:
-    "abs.reachable s \<Longrightarrow> touched_addrs_inv s"
-  assumes A_page_table_inv:
-    "abs.reachable s \<Longrightarrow> page_table_inv s"
-  fixes C_step_program :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> 'regs program"
-  assumes reachable_C_nondomainswitch_reqs:
-    "(\<And> s s' p.
-       (other_state s, other_state s') \<in> conc.Step () \<Longrightarrow>
-       p = C_step_program (other_state s) (other_state s') \<Longrightarrow>
-       conc.reachable (other_state s) \<Longrightarrow>
-       \<not> will_domain_switch (other_state s) \<Longrightarrow>
-       s' = instr_multistep p s \<and> is_secure_nondomainswitch p s \<and> kludge_uwr_same_programs p s)"
-  assumes reachable_C_domainswitch_reqs:
-    "(\<And> d s s' t t' p q.
-       (other_state s, other_state s') \<in> conc.Step () \<Longrightarrow>
-       p = C_step_program (other_state s) (other_state s') \<Longrightarrow>
-       q = C_step_program (other_state t) (other_state t') \<Longrightarrow>
-       conc.reachable (other_state s) \<Longrightarrow>
-       conc.reachable (other_state t) \<Longrightarrow>
-       (other_state t, other_state t') \<in> conc.Step () \<Longrightarrow>
-       will_domain_switch (other_state s) \<Longrightarrow>
-       (s, t) \<in> uwr d \<Longrightarrow> \<comment> \<open>The \<open>uwr\<close> should give us \<open>will_domain_switch (other_state t)\<close>.\<close>
-       s' = instr_multistep p s \<and> t' = instr_multistep q t \<and> (s', t') \<in> uwr d)"
+  fixes is_domainswitch_gadget_step :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> bool"
+  assumes reachable_touched_addrs_inv:
+    "reachable s \<Longrightarrow> touched_addrs_inv s"
+  assumes simple_steps:
+    "(s, s') \<in> Step () \<Longrightarrow>
+    (\<not>will_domain_switch s \<and> current_domain s' = current_domain s)
+    \<or> (will_domain_switch s \<and> is_domainswitch_gadget_step s s')"
 begin
 
-(* What I would have wanted is something like this. But the `data_type`'s Step field
-   doesn't keep the monads, only the state pairs it derived from them. -robs.
-definition retrieve_C_monad :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> monad"
-definition C_monad_program :: "monad \<Rightarrow> 'regs program"
-*)
+(* this is an axiomatised selector that gets one program from a set.
+  it is not defined which program will be selected. *)
+definition selectProgram :: "'other_state \<Rightarrow> program"
+  where
+  "selectProgram \<equiv> SelectProgram current_domain external_uwr programs_obeying_ta"
 
+(* scott: i think this states that a program is a domainswitch from s to s' - this will be replaced,
+   i think, with enforcing a specific gadget
 definition is_secure_domainswitch :: "'regs program \<Rightarrow>
   ('fch,'pch,'regs,'other_state)state \<Rightarrow> ('fch,'pch,'regs,'other_state)state \<Rightarrow> bool"
   where
@@ -1465,7 +1427,11 @@ definition is_secure_domainswitch :: "'regs program \<Rightarrow>
        s' = instr_multistep (C_step_program (other_state s) (other_state s')) s \<and>
        t' = instr_multistep (C_step_program (other_state t) (other_state t')) t \<longrightarrow>
        (s', t') \<in> uwr d"
+*)
 
+
+(* scott: this seems to say that if a state is about to domainswitch, the step taken (and
+   given by C_step_program) is a domainswitch step 
 lemma reachable_C_domainswitch_secure:
   "conc.reachable (other_state s) \<Longrightarrow>
    (other_state s, other_state (s'::('fch,'pch,'regs,'other_state)state)) \<in> conc.Step () \<Longrightarrow>
@@ -1475,7 +1441,9 @@ lemma reachable_C_domainswitch_secure:
   apply clarsimp
   apply(frule reachable_C_domainswitch_reqs, simp_all)
   by force
+*)
 
+(* scott: this defined stuff about the program that does a non-domainswitch step
 lemma reachable_C_nondomainswitch_reqs_nonspecific:
   "(\<And> s so' p.
      (other_state s, so') \<in> conc.Step () \<Longrightarrow>
@@ -1486,7 +1454,10 @@ lemma reachable_C_nondomainswitch_reqs_nonspecific:
        s' = instr_multistep p s \<and> is_secure_nondomainswitch p s \<and> kludge_uwr_same_programs p s)"
   using reachable_C_nondomainswitch_reqs
   by (metis state.select_convs(5))
+*)
 
+(*scott: this seems to enforce stuff about the behaviour of a domainswitch,
+  including that the uwr will hold on the way out
 lemma reachable_C_domainswitch_reqs_nonspecific:
   "(\<And> d s t so' to' p q.
      (other_state s, so') \<in> conc.Step () \<Longrightarrow>
@@ -1501,89 +1472,72 @@ lemma reachable_C_domainswitch_reqs_nonspecific:
        s' = instr_multistep p s \<and> t' = instr_multistep q t \<and> (s', t') \<in> uwr d)"
   using reachable_C_domainswitch_reqs
   by (metis state.select_convs(5))
+*)
 
-definition A_extended_Step :: "unit \<Rightarrow>
-  ('fch,'pch,'regs,'other_state)state rel"
+(* this used to be called A_extened_Step *)
+definition maStep :: "unit \<Rightarrow>
+  (('other_state\<times>('fch, 'pch)state) \<times> ('other_state\<times>('fch, 'pch)state)) set"
   where
-  "A_extended_Step \<equiv> \<lambda>_. {(s, s').
-     (other_state s, other_state s') \<in> Step () \<and>
-     (let p = C_step_program (other_state s) (other_state s') in
-       s' = instr_multistep p s \<and>
-       (\<not> will_domain_switch (other_state s) \<longrightarrow>
-         is_secure_nondomainswitch p s \<and> kludge_uwr_same_programs p s))}"
+  "maStep _ \<equiv> {((os, s), (os', s')) | os os' s s' p.
+              (os, os') \<in> Step () \<and>
+               ((\<not>will_domain_switch os
+                 \<and> p = selectProgram os
+                 \<and> s' = instr_multistep p os s ) \<comment> \<open>TA step\<close>
+               \<or> (will_domain_switch os
+                 \<and> is_domainswitch_gadget p
+                 \<and> s' = instr_multistep p os s ) \<comment> \<open>gadget step\<close>
+              )}"
 
-definition A_extended ::
-  "(('fch,'pch,'regs,'other_state)state,
-    ('fch,'pch,'regs,'other_state)state,unit) data_type"
-  where
-  "A_extended = \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = A_extended_Step \<rparr>"
+definition maA :: "(('other_state\<times>('fch, 'pch)state), ('other_state\<times>('fch, 'pch)state), unit) data_type" where
+  "maA \<equiv> \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = maStep\<rparr>"
 
-(* this looks like s0 to me - Scott *)
-definition A_extended_state ::
-  "'other_state \<Rightarrow> ('fch,'pch,'regs,'other_state)state"
-  where
-  "A_extended_state s =
-     \<lparr> fch = empty_fch, pch = initial_pch, tm = 0, regs = initial_regs, other_state = s \<rparr>"
+(* instead of A_extended_state *)
+definition mas0 :: "'other_state\<times>('fch, 'pch)state" where
+  "mas0 \<equiv> (s0, \<lparr>fch=empty_fch, pch=initial_pch, tm=0\<rparr>)"
 
-(* This is now redundant with the Init_inv_Fin_system interpretation below, but I'll commit this
-   at least once in case we change something and are left only with Init_Fin_system. -robs. *)
-interpretation tpni: Init_Fin_system A_extended "A_extended_state s0"
-  apply unfold_locales
-     (* Init_Fin_system.reachable_s0 *)
-     apply(clarsimp simp:A_extended_state_def A_extended_def A_extended_Step_def)
-     apply(clarsimp simp:system.reachable_def execution_def)
-     apply(metis (no_types, lifting) foldl_Nil singletonI steps_def)
-    (* Init_Fin_system.Fin_Init *)
-    apply(force simp:A_extended_def)
-   (* Init_Fin_system.Init_Fin *)
-   apply(force simp:A_extended_def)
-  (* Init_Fin_system.obs_det_or_no_abs *)
-  apply(rule disjI2)
-  apply(force simp:system.no_abs_def A_extended_def)
-  done
-
-interpretation tpni: Init_inv_Fin_system A_extended "A_extended_state s0"
+interpretation ma:Init_inv_Fin_system maA mas0
   apply unfold_locales
     (* Init_Fin_system.Fin_Init_s0 *)
-    apply(force simp:A_extended_state_def A_extended_def)
+    apply(force simp:maA_def mas0_def)
    (* Init_Fin_system.Init_inv_Fin *)
-   apply(force simp:A_extended_def)
+   apply(force simp:maA_def)
   (* Init_Fin_system.Fin_inj *)
-  apply(force simp:A_extended_def)
+  apply(force simp:maA_def)
   done
 
-lemma to_C_step:
-  "(x, y) \<in> tpni.Step () \<Longrightarrow>
-   (other_state x, other_state y) \<in> Step ()"
-  by (clarsimp simp:tpni.Step_def system.Step_def execution_def
-      A_extended_def A_extended_Step_def steps_def)
 
-lemma to_C_run:
-  "(s, s') \<in> Run tpni.Step as \<Longrightarrow>
-   (other_state s, other_state s') \<in> Run local.Step as"
-  apply(induct as arbitrary:s)
-   apply(force simp:A_extended_state_def)
-  apply clarsimp
-  apply(erule_tac x=y in meta_allE)
-  apply clarsimp
-  apply(subgoal_tac "(other_state x, other_state y) \<in> Step ()")
-   apply blast
-  using to_C_step by blast
+lemma ma_to_ab_step:
+  "((os, s), (os', s')) \<in> ma.Step () \<Longrightarrow>
+   (os, os') \<in> ab.Step ()"
+  apply (clarsimp simp: ma.Step_def execution_def maA_def system.Step_def steps_def maStep_def)
+  done
 
-lemma to_C_run':
-  "(A_extended_state s, s') \<in> Run tpni.Step as \<Longrightarrow>
-   (s, other_state s') \<in> Run local.Step as"
-  apply(clarsimp simp:A_extended_state_def)
-  using to_C_run by force
-
-lemma to_C_reachability:
-  "tpni.reachable s \<Longrightarrow> conc.reachable (other_state s)"
-  (* Note: We're relying on C to be a Step_system here. Is this reasonable? -robs. *)
-  apply(rule conc.Run_reachable)
-  apply(drule tpni.reachable_Run)
+lemma ma_to_ab_run:
+  "((os, s), (os', s')) \<in> Run ma.Step as \<Longrightarrow>
+   (os, os') \<in> Run ab.Step as"
+  apply(induct as arbitrary:s os, solves \<open>simp\<close>)
   apply clarsimp
+  apply(erule_tac x=ba in meta_allE)
+  apply(erule_tac x=aa in meta_allE)
+  apply (drule ma_to_ab_step)
+  apply clarsimp
+  by blast
+
+lemma ma_to_ab_reachable:
+  "ma.reachable (so, s) \<Longrightarrow> ab.reachable so"
+  apply(rule ab.Run_reachable)
+  apply(drule ma.reachable_Run, clarsimp)
   apply(rule_tac x=as in exI)
-  using to_C_run' by blast
+  apply (clarsimp simp:mas0_def)
+  using ma_to_ab_run apply blast
+  done
+
+lemma ma_to_ab_reachable':
+  "ma.reachable s \<Longrightarrow> ab.reachable (fst s)"
+  apply (cases s, clarsimp simp:ma_to_ab_reachable)
+  done
+
+(*
 
 lemma to_original_step:
   "(x, y) \<in> tpni.Step () \<Longrightarrow>
@@ -1661,6 +1615,80 @@ lemma to_specific_extended_step:
   apply(force simp:system.Step_def execution_def A_extended_def A_extended_Step_def steps_def)
   done
 
+*)
+
+lemma ma_single_step_enabled:
+  "ab.reachable os \<Longrightarrow>
+   \<exists>s' os'. ((os, s), os', s') \<in> {(s, s'). s' \<in> steps maStep {s} [()]} \<and> ab.reachable os'"
+  apply (clarsimp simp: steps_def maStep_def)
+  apply (cases "will_domain_switch os"; clarsimp)
+  using enabled_Step is_domainswitch_gadget_def reachable_Step apply fastforce
+  using enabled_Step reachable_Step apply blast
+done
+
+lemma ma_execution_enabledness:
+  "ab.reachable os \<Longrightarrow>
+   ma.reachable (os, s) \<Longrightarrow>
+   \<exists>s' os'. (os', s') \<in> execution maA (os, s) js"
+  apply (subst ma.execution_Run [OF _], simp)
+  apply (thin_tac "ma.reachable _")
+  apply (induct js arbitrary:os s)
+   apply (clarsimp simp: execution_def steps_def maA_def)
+  apply clarsimp
+  apply (clarsimp simp:ma.Step_def execution_def maA_def maStep_def system.Step_def)
+  apply (simp only:maA_def [symmetric])
+  using ma_single_step_enabled apply (meson relcomp.relcompI)
+  done
+(*
+lemma ab_to_ma_execution_enabledness:
+  "\<lbrakk>ma.reachable (os, s);
+    ab.reachable os;
+    \<exists>os'. os' \<in> execution A os js \<comment> \<open>enabledness of original system at os\<close>\<rbrakk>
+   \<Longrightarrow> \<exists>s' os'. (os', s') \<in> execution maA (os, s) js" \<comment> \<open>enabledness of microarch system at s\<close>
+  apply(induct js arbitrary:os s)
+   apply(force simp:execution_def steps_def maA_def)
+  apply clarsimp
+  (* We need (os', s') to be an extension of os'. But we also need it to be
+     a state we arrive at after one tpni.Step from s. *)
+  apply(frule_tac as="() # js" in execution_Run)
+  apply clarsimp
+  apply(rename_tac js s os'' os' s')
+  apply(prop_tac "os'' = other_state (instr_multistep (C_step_program (other_state s) os'') s)")
+   apply(case_tac "will_domain_switch (other_state s)")
+    apply(frule_tac so'=os'' in reachable_C_domainswitch_reqs_nonspecific, simp_all)
+     apply(force simp:uwr_equiv)
+    apply(force simp:uwr_equiv)
+   apply(frule_tac so'=os'' in reachable_C_nondomainswitch_reqs_nonspecific, simp_all)
+   apply force
+  apply(erule_tac x="instr_multistep (C_step_program (other_state s) os'') s" in meta_allE)
+  apply(erule meta_impE)
+   apply(rule_tac a="()" in tpni.reachable_Step)
+    apply force
+   unfolding tpni.Step_def (* For some reason this can't just be in the simps on the next line. *)
+   apply(clarsimp simp:execution_def A_extended_def A_extended_Step_def steps_def Let_def)
+   using reachable_C_nondomainswitch_reqs_nonspecific apply blast
+  apply(erule meta_impE)
+   using conc.reachable_Step apply force
+  apply(erule meta_impE)
+   using conc.reachable_Step reachable_enabled apply force
+  apply clarsimp
+  apply(frule_tac s'="instr_multistep (C_step_program (other_state s) os'') s" in to_specific_extended_step)
+   apply force
+  apply(prop_tac "tpni.reachable (instr_multistep (C_step_program (other_state s) os'') s)")
+   using tpni.reachable_Step apply blast
+  apply(prop_tac "tpni.reachable s'")
+   using tpni.reachable_execution apply blast
+  apply(rule_tac x=s' in exI)
+  apply(drule_tac as="() # js" in
+lemma dd_step_us_step:
+  "((os, s), (os', s')) \<in> dd.Step () \<Longrightarrow>
+   (os, os') \<in> ab.Step ()"
+  apply (clarsimp simp: dd.Step_def execution_def maA_def system.Step_def steps_def maStep_def)
+  done
+*)
+
+(*
+
 lemma to_extended_execution_enabledness:
  "\<lbrakk>tpni.reachable s;
    reachable (other_state s);
@@ -1701,33 +1729,42 @@ lemma to_extended_execution_enabledness:
   apply(prop_tac "tpni.reachable s'")
    using tpni.reachable_execution apply blast
   apply(rule_tac x=s' in exI)
-  apply(drule_tac as="() # js" in tpni.execution_Run)
-  apply clarsimp
-  using tpni.execution_Run by auto
+  apply(drule_tac as="() # js" in
+lemma dd_step_us_step:
+  "((os, s), (os', s')) \<in> dd.Step () \<Longrightarrow>
+   (os, os') \<in> ab.Step ()"
+  apply (clarsimp simp: dd.Step_def execution_def maA_def system.Step_def steps_def maStep_def)
+  done
 
-interpretation tpni: unwinding_system A_extended "A_extended_state s0" "\<lambda>_. current_domain'" uwr
-  policy "\<lambda>d s. out d (other_state s)" Sched
+*)
+
+
+(* note: we're given an 'out' in time_protection_system, and here we just adjust it to look at
+   the other_state part of the new ma state *)
+interpretation ma: unwinding_system maA mas0 "\<lambda>_ s. current_domain (fst s)" uwr policy "\<lambda>d s. out d (fst s)" Sched
   apply unfold_locales
       (* enabled_system.enabled *)
-      apply(prop_tac "reachable (other_state s)")
-       apply(simp only:system.reachable_def[symmetric])
-       apply(force dest:to_C_reachability)
-      apply(simp only:tpni.reachable_def[symmetric])
-      apply(frule_tac js=js in enabled[simplified reachable_def[symmetric]])
-      using to_extended_execution_enabledness apply blast
+      apply(simp only:system.reachable_def[symmetric])
+      apply (frule ma_to_ab_reachable')
+      apply (simp only:ab.reachable_def)
+      apply (frule_tac js=js in enabled)
+      apply (frule ma_to_ab_reachable')
+      using ma_execution_enabledness apply fastforce 
      (* noninterference_policy.uwr_equiv_rel *)
-     using extended_uwr_equiv_rel apply blast
+     using uwr_equiv_rel apply blast
     (* noninterference_policy.schedIncludesCurrentDom *)
-    using uwr_same_domain apply blast
+    using external_uwr_same_domain uwr_external_uwr apply fastforce
    (* noninterference_policy.schedFlowsToAll *)
    using schedFlowsToAll apply blast
   (* noninterference_policy.schedNotGlobalChannel *)
   using schedNotGlobalChannel apply blast
   done
 
-theorem extended_confidentiality_u:
-  "conc.confidentiality_u \<Longrightarrow> tpni.confidentiality_u"
-  apply(clarsimp simp:confidentiality_u_def tpni.confidentiality_u_def)
+
+theorem ma_confidentiality_u:
+  "ab.confidentiality_u \<Longrightarrow> ma.confidentiality_u"
+  apply(clarsimp simp:confidentiality_u_def ma.confidentiality_u_def)
+  apply (rename_tac u a b aa ba ab bb ac bc)
   apply(erule_tac x=u in allE)
   apply(erule_tac x="other_state s" in allE)
   apply(erule_tac x="other_state t" in allE)
