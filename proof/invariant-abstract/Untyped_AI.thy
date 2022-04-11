@@ -3847,7 +3847,7 @@ lemmas invoke_untyped_Q
     = invoke_untyp_invs'[THEN validE_valid, THEN hoare_conjD2[unfolded pred_conj_def]]
 
 lemma invoke_untyped_pred_tcb_at:
-  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> invs s \<and> st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t s
+  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> invs s \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s
         \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_ s :: 'state_ext state. pred_tcb_at proj Q t s\<rbrace>"
