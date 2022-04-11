@@ -253,13 +253,13 @@ section \<open>More on proofs\<close>
 subsection \<open>prefer and defer\<close>
 
 text \<open>
-   There are currently no hard rules on the use of `prefer` and `defer n`. Two general principles
-   apply:
+  There are currently no hard rules on the use of `prefer` and `defer n`. Two general principles
+  apply:
 
-   1. If they are used too frequently then a proof may become unreadable. Do not use them
-      unnecessarily and consider including comments to indicate their purpose.
-   2. If they are used too "specifically" then a proof may break very frequently for not-
-      interesting reasons. This makes a proof less maintainable and so this should be avoided.
+  1. If they are used too frequently then a proof may become unreadable. Do not use them
+     unnecessarily and consider including comments to indicate their purpose.
+  2. If they are used too "specifically" then a proof may break very frequently for not-
+     interesting reasons. This makes a proof less maintainable and so this should be avoided.
 
   A known use case for `prefer` is where a proof has a tree-like structure, and the prover wants to
   approach it with a breadth-first approach. Since the default isabelle strategy is depth-first,
