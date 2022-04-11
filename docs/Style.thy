@@ -265,6 +265,31 @@ text \<open>
   approach it with a breadth-first approach. Since the default isabelle strategy is depth-first,
   prefers (or defers) will be needed, e.g. corres proofs.\<close>
 
+subsection \<open>Unfolding definitions\<close>
+
+text \<open>
+  When unfolding definitions at the start of a proof, use `unfolding` instead of the simplifier.
+  This is not a hard rule but is strongly preferred, since the unfolding step is then stable and it
+  makes it obvious that nothing interesting is supposed to be happening. For example, use\<close>
+
+lemma my_hoare_triple_lemma:
+  "\<lbrace>precondition_one and precondition_two and
+    precondition three\<rbrace>
+   my_function param_a param_b
+   \<lbrace>post_condition\<rbrace>"
+  unfolding my_function_def
+  oops
+
+text \<open>instead of\<close>
+
+lemma my_hoare_triple_lemma:
+  "\<lbrace>precondition_one and precondition_two and
+    precondition three\<rbrace>
+   my_function param_a param_b
+   \<lbrace>post_condition\<rbrace>"
+  apply (clarsimp simp: my_function_def)
+  oops
+
 section \<open>Referenecs\<close>
 
 text \<open>
