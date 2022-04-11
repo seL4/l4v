@@ -25,4 +25,7 @@ definition
   where
   "pred_conj P Q \<equiv> \<lambda>x. P x \<and> Q x"
 
+consts my_function :: 'a
+axiomatization where my_function_def: "my_function \<equiv> undefined"
+
 end
