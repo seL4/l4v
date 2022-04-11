@@ -53,13 +53,15 @@ lemma arch_cap_fun_lift_expand[simp]:
                                 ASIDPoolCap obj_ref asid \<Rightarrow> P_ASIDPoolCap obj_ref asid
                               | ASIDControlCap \<Rightarrow> P_ASIDControlCap
                               | FrameCap obj_ref rights sz dev vr \<Rightarrow> P_FrameCap obj_ref rights sz dev vr
-                              | PageTableCap obj_ref vr \<Rightarrow> P_PageTableCap obj_ref vr)
+                              | PageTableCap obj_ref is_vspace vr \<Rightarrow> P_PageTableCap obj_ref is_vspace vr
+                              | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref)
                       F = (\<lambda>c.
    case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
     | ArchObjectCap (ASIDControlCap) \<Rightarrow> P_ASIDControlCap
     | ArchObjectCap (FrameCap obj_ref rights sz dev vr) \<Rightarrow> P_FrameCap obj_ref rights sz dev vr
-    | ArchObjectCap (PageTableCap obj_ref vr) \<Rightarrow> P_PageTableCap obj_ref vr
+    | ArchObjectCap (PageTableCap obj_ref is_vspace vr) \<Rightarrow> P_PageTableCap obj_ref is_vspace vr
+    | ArchObjectCap (VCPUCap obj_ref) \<Rightarrow> P_VCPUCap obj_ref
     | _ \<Rightarrow> F)"
   unfolding arch_cap_fun_lift_def by fastforce
 
@@ -71,12 +73,14 @@ lemma arch_obj_fun_lift_expand[simp]:
   "arch_obj_fun_lift (\<lambda>ako. case ako of
                                 ASIDPool pool \<Rightarrow> P_ASIDPool pool
                               | PageTable pt \<Rightarrow> P_PageTable pt
-                              | DataPage dev s \<Rightarrow> P_DataPage dev s)
+                              | DataPage dev s \<Rightarrow> P_DataPage dev s
+                              | VCPU v \<Rightarrow> P_VCPU v)
                       F = (\<lambda>ko.
    case ko of
       ArchObj (ASIDPool pool) \<Rightarrow> P_ASIDPool pool
     | ArchObj (PageTable pt) \<Rightarrow> P_PageTable pt
     | ArchObj (DataPage dev s) \<Rightarrow> P_DataPage dev s
+    | ArchObj (VCPU v) \<Rightarrow> P_VCPU v
     | _ \<Rightarrow> F)"
   unfolding arch_obj_fun_lift_def by fastforce
 
@@ -87,25 +91,24 @@ lemmas a_type_simps[simp] = a_type_def[split_simps kernel_object.split arch_kern
 section "Virtual Memory Regions"
 
 (* Number of significant bits for canonical addresses *)
-type_synonym canonical_len = 39
+type_synonym canonical_len = 48
 
 (* Consistency check *)
 lemma "CARD(canonical_len) = canonical_bit + 1"
   by (simp add: canonical_bit_def)
 
+(* Because hyp does not use sign-extension, we don't use canonical addresses with sign extension
+   here, but we still need the concept of valid kernel-virtual addresses (pptr). Note that these
+   are different to user-virtual addresses (IPAs for hyp). *)
 definition canonical_address_of :: "canonical_len word \<Rightarrow> obj_ref" where
-  "canonical_address_of x \<equiv> scast x"
+  "canonical_address_of x \<equiv> ucast x"
 
 definition canonical_address :: "obj_ref \<Rightarrow> bool" where
   "canonical_address x \<equiv> canonical_address_of (ucast x) = x"
 
-(* All virtual kernel addresses, including those potentially not mapped. *)
-definition kernel_mappings :: "vspace_ref set" where
-  "kernel_mappings \<equiv> {vref. pptr_base \<le> vref}"
-
-(* All virtual user addresses *)
+(* All mappable user addresses (for hyp these are IPA, not actual virtual addresses) *)
 definition user_region :: "vspace_ref set" where
-  "user_region = {vref. vref \<le> canonical_user}"
+  "user_region = {vref. vref \<le> pptrUserTop}"
 
 definition
   "in_device_frame p \<equiv> \<lambda>s.
@@ -123,54 +126,46 @@ locale_abbrev
   "device_region s \<equiv> dom (device_state (machine_state s))"
 
 
-definition kernel_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
-  "kernel_window_2 uses \<equiv> {x. uses x = RISCVVSpaceKernelWindow}"
+definition kernel_window_2 :: "arm_vspace_region_uses \<Rightarrow> obj_ref set" where
+  "kernel_window_2 uses \<equiv> {x. uses x = ArmVSpaceKernelWindow}"
 
 locale_abbrev kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "kernel_window s \<equiv> kernel_window_2 (riscv_kernel_vspace (arch_state s))"
+  "kernel_window s \<equiv> kernel_window_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas kernel_window_def = kernel_window_2_def
 
-definition not_kernel_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
+definition not_kernel_window_2 :: "arm_vspace_region_uses \<Rightarrow> obj_ref set" where
   "not_kernel_window_2 uses \<equiv> - kernel_window_2 uses"
 
 locale_abbrev not_kernel_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "not_kernel_window s \<equiv> not_kernel_window_2 (riscv_kernel_vspace (arch_state s))"
+  "not_kernel_window s \<equiv> not_kernel_window_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas not_kernel_window_def = not_kernel_window_2_def
 
-(* Virtual memory window containing kernel code and other ELF artifacts. *)
-definition kernel_elf_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
-  "kernel_elf_window_2 uses \<equiv> {x. uses x = RISCVVSpaceKernelELFWindow}"
-
-locale_abbrev kernel_elf_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "kernel_elf_window s \<equiv> kernel_elf_window_2 (riscv_kernel_vspace (arch_state s))"
-
-lemmas kernel_elf_window_def = kernel_elf_window_2_def
-
 (* Virtual memory window containing kernel device mappings. *)
-definition kernel_device_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
-  "kernel_device_window_2 uses \<equiv> {x. uses x = RISCVVSpaceDeviceWindow}"
+definition kernel_device_window_2 :: "arm_vspace_region_uses \<Rightarrow> obj_ref set" where
+  "kernel_device_window_2 uses \<equiv> {x. uses x = ArmVSpaceDeviceWindow}"
 
 locale_abbrev kernel_device_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "kernel_device_window s \<equiv> kernel_device_window_2 (riscv_kernel_vspace (arch_state s))"
+  "kernel_device_window s \<equiv> kernel_device_window_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas kernel_device_window_def = kernel_device_window_2_def
 
-definition kernel_regions_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
+definition kernel_regions_2 :: "arm_vspace_region_uses \<Rightarrow> obj_ref set" where
   "kernel_regions_2 uses \<equiv>
-     kernel_window_2 uses \<union> kernel_elf_window_2 uses \<union> kernel_device_window_2 uses"
+     kernel_window_2 uses \<union> kernel_device_window_2 uses"
 
 locale_abbrev kernel_regions :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "kernel_regions s \<equiv> kernel_regions_2 (riscv_kernel_vspace (arch_state s))"
+  "kernel_regions s \<equiv> kernel_regions_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas kernel_regions_def = kernel_regions_2_def
 
-definition user_window_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> obj_ref set" where
-  "user_window_2 uses \<equiv> {x. uses x = RISCVVSpaceUserRegion}"
+(* There is no user window on hyp, so we later demand that this set is empty *)
+definition user_window_2 :: "arm_vspace_region_uses \<Rightarrow> obj_ref set" where
+  "user_window_2 uses \<equiv> {x. uses x = ArmVSpaceUserRegion}"
 
 locale_abbrev user_window :: "'z::state_ext state \<Rightarrow> obj_ref set" where
-  "user_window s \<equiv> user_window_2 (riscv_kernel_vspace (arch_state s))"
+  "user_window s \<equiv> user_window_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas user_window_def = user_window_2_def
 
@@ -181,8 +176,9 @@ section "Wellformed Addresses and ASIDs"
 definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
   "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> vref \<in> user_region"
 
-definition level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
-  "level_of_sz sz \<equiv> case sz of RISCVSmallPage \<Rightarrow> 0 | RISCVLargePage \<Rightarrow> 1 | RISCVHugePage \<Rightarrow> 2"
+(* FIXME AARCH64: elimate one of the two *)
+locale_abbrev level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
+  "level_of_sz \<equiv> level_of_vmsize"
 
 definition vm_level_aligned :: "obj_ref \<Rightarrow> vm_level \<Rightarrow> bool" where
   "vm_level_aligned ref level \<equiv> is_aligned ref (pt_bits_left level)"
@@ -198,7 +194,7 @@ definition wellformed_acap :: "arch_cap \<Rightarrow> bool" where
        rghts \<in> valid_vm_rights \<and>
        case_option True wellformed_mapdata mapdata \<and>
        case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
-   | PageTableCap r (Some mapdata) \<Rightarrow> wellformed_mapdata mapdata
+   | PageTableCap r is_vspace (Some mapdata) \<Rightarrow> wellformed_mapdata mapdata
    | _ \<Rightarrow> True"
 
 lemmas wellformed_acap_simps[simp] = wellformed_acap_def[split_simps arch_cap.split]
@@ -210,19 +206,37 @@ locale_abbrev
   "asid_pool_at \<equiv> typ_at (AArch AASIDPool)"
 
 locale_abbrev
-  "pt_at \<equiv> typ_at (AArch APageTable)"
+  "level_pt_at is_vspace \<equiv> typ_at (AArch (APageTable is_vspace))"
+
+locale_abbrev
+  "normal_pt_at \<equiv> level_pt_at False"
+
+locale_abbrev
+  "vspace_pt_at \<equiv> level_pt_at True"
+
+locale_abbrev
+  "pt_at p s \<equiv> vspace_pt_at p s \<or> normal_pt_at p s"
 
 definition
-  "pte_at p \<equiv> pt_at (p && ~~ mask pt_bits) and K (is_aligned p pte_bits)"
+  "pte_at p \<equiv> \<lambda>s. ptes_of s p \<noteq> None"
+
+(* FIXME AARCH64: prove this as lemma:
+  "pte_at p \<equiv> (normal_pt_at (table_base False) p or vspace_pt_at (table_base True) p) and
+              K (is_aligned p pte_bits)"
+*)
+
+locale_abbrev
+  "vcpu_at \<equiv> typ_at (AArch AVCPU)"
 
 definition valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_cap_ref ac s \<equiv> case ac of
-    ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
+    ASIDPoolCap r as \<Rightarrow> asid_pool_at r s
   | ASIDControlCap \<Rightarrow> True
   | FrameCap r rghts sz dev mapdata \<Rightarrow>
       if dev then typ_at (AArch (ADeviceData sz)) r s
              else typ_at (AArch (AUserData sz)) r s
-  | PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s"
+  | PageTableCap r is_vspace mapdata \<Rightarrow> level_pt_at is_vspace r s
+  | VCPUCap r \<Rightarrow> vcpu_at r s"
 
 lemmas valid_arch_cap_ref_simps[simp] =
   valid_arch_cap_ref_def[split_simps arch_cap.split]
@@ -251,7 +265,8 @@ primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
 | "acap_class (ASIDControlCap)      = ASIDMasterClass"
 | "acap_class (FrameCap _ _ _ _ _)  = PhysicalClass"
-| "acap_class (PageTableCap _ _)    = PhysicalClass"
+| "acap_class (PageTableCap _ _ _)  = PhysicalClass"
+| "acap_class (VCPUCap _)           = PhysicalClass"
 
 definition valid_ipc_buffer_cap_arch :: "arch_cap \<Rightarrow> machine_word \<Rightarrow> bool" where
   [simp]: "valid_ipc_buffer_cap_arch ac bufptr \<equiv>
@@ -270,27 +285,34 @@ definition
   "data_at \<equiv> \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
                        \<or> typ_at (AArch (ADeviceData sz)) p s"
 
-definition vmpage_size_of_level :: "vm_level \<Rightarrow> vmpage_size" where
-  "vmpage_size_of_level level \<equiv>
-     if level = 0 then RISCVSmallPage
-     else if level = 1 then RISCVLargePage
-     else RISCVHugePage"
-
 (* Validity of vspace table entries, defined shallowly. *)
 primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_pte _ (InvalidPTE) = \<top>"
-| "valid_pte level (PagePTE ppn _ _) =
-     (\<lambda>s. data_at (vmpage_size_of_level level) (ptrFromPAddr (addr_from_ppn ppn)) s
-          \<and> level \<le> max_pt_level)"
-| "valid_pte level (PageTablePTE ppn _) =
-     (\<lambda>s. typ_at (AArch APageTable) (ptrFromPAddr (addr_from_ppn ppn)) s \<and> 0 < level)"
+| "valid_pte level (PagePTE base is_small _ _) =
+     (\<lambda>s. data_at (vmsize_of_level level) (ptrFromPAddr base) s
+          \<and> level \<le> max_pt_level
+          \<and> (is_small \<longleftrightarrow> level = 0))"
+| "valid_pte level (PageTablePTE base) =
+     (\<lambda>s. level_pt_at (level = max_pt_level) (ptrFromPAddr base) s \<and> 0 < level)"
 
-primrec valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+definition pt_range :: "pt \<Rightarrow> pte set" where
+  "pt_range pt \<equiv> case pt of VSRootPT vs \<Rightarrow> range vs | NormalPT pt \<Rightarrow> range pt"
+
+(* FIXME AARCH64: we could try to unify VSRoot and NormalPT cases, but does it help? *)
+fun valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  (* FIXME AARCH64: do we need vm_id/hw_asid properties here? *)
   "valid_vspace_obj _ (ASIDPool pool) =
-   (\<lambda>s. \<forall>x \<in> ran pool. typ_at (AArch APageTable) x s)"
+   (\<lambda>s. \<forall>x \<in> ran pool. vspace_pt_at (ap_vspace x) s)"
 | "valid_vspace_obj level (PageTable pt) =
-   (\<lambda>s. \<forall>x \<in> (if level = max_pt_level then -kernel_mapping_slots else UNIV). valid_pte level (pt x) s)"
+   (\<lambda>s. \<forall>pte \<in> pt_range pt. valid_pte level pte s)"
+(* FIXME AARCH64: might be nicer to write these out:
+| "valid_vspace_obj level (PageTable (VSRootPT pt)) =
+   (\<lambda>s. \<forall>x. valid_pte level (pt x) s)"
+| "valid_vspace_obj level (PageTable (NormalPT pt)) =
+   (\<lambda>s. \<forall>x. valid_pte level (pt x) s)"
+*)
 | "valid_vspace_obj _ (DataPage _ _) = \<top>" (* already covered by valid_pte *)
+| "valid_vspace_obj _ (VCPU _ ) = \<top>" (* not a vspace obj *)
 
 definition valid_vso_at :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vso_at level p \<equiv> \<lambda>s. \<exists>ao. aobjs_of s p = Some ao \<and> valid_vspace_obj level ao s"
@@ -298,35 +320,38 @@ definition valid_vso_at :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::sta
 definition wellformed_pte :: "pte \<Rightarrow> bool" where
   "wellformed_pte pte \<equiv> is_PagePTE pte \<longrightarrow> pte_rights pte \<in> valid_vm_rights"
 
-definition wellformed_aobj :: "arch_kernel_obj \<Rightarrow> bool" where
-  "wellformed_aobj ao \<equiv> case_option True (\<lambda>pt. \<forall>pte\<in>range pt. wellformed_pte pte) (pt_of ao)"
+definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "valid_vcpu vcpu s \<equiv> True" (* FIXME AARCH64 *)
+
+(* FIXME AARCH64: alternative definition for arch_valid_obj
+definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
+  "wellformed_vspace_obj ao \<equiv> case_option True (\<lambda>pt. \<forall>pte\<in>UNIV. wellformed_pte pte) (pt_of ao)"
+
+definition valid_vcpu_ao :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "valid_vcpu_ao ao \<equiv> case_option (K True) valid_vcpu (vcpu_of ao)" (* FIXME AARCH64 *)
 
 definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  [simp]: "arch_valid_obj ao \<equiv> \<lambda>_. wellformed_aobj ao"
+  "arch_valid_obj ao \<equiv> (\<lambda>_. wellformed_vspace_obj ao) and valid_vcpu_ao ao"
+*)
 
-(* The only arch objects on RISCV are vspace objects *)
-definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
-  [simp]: "wellformed_vspace_obj \<equiv> wellformed_aobj"
+definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "arch_valid_obj ao s \<equiv> case ao of
+     VCPU v \<Rightarrow> valid_vcpu v s
+   | PageTable pt \<Rightarrow> \<forall>pte\<in>pt_range pt. wellformed_pte pte
+   | _ \<Rightarrow> True"
 
+(* FIXME AARCH64: change to arch_valid_obj
 lemmas wellformed_aobj_simps[simp] = wellformed_aobj_def[split_simps arch_kernel_obj.split]
+*)
 
-definition has_kernel_mappings :: "pt \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "has_kernel_mappings pt \<equiv> \<lambda>s.
-     \<forall>pt'. pts_of s (global_pt s) = Some pt' \<longrightarrow>
-           (\<forall>i \<in> kernel_mapping_slots. pt i = pt' i)"
-
-(* To find the top-level page tables, we need to start with ASIDs *)
+(* There are no kernel mappings in user tables in hyp *)
 definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" where
-  "equal_kernel_mappings \<equiv> \<lambda>s.
-     \<forall>asid pt_ptr pt.
-       vspace_for_asid asid s = Some pt_ptr
-      \<longrightarrow> pts_of s pt_ptr = Some pt
-      \<longrightarrow> has_kernel_mappings pt s"
+  "equal_kernel_mappings \<equiv> \<top>"
 
 definition pte_ref :: "pte \<Rightarrow> obj_ref option" where
   "pte_ref pte \<equiv> case pte of
-                   PageTablePTE ppn _  \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn))
-                 | PagePTE ppn _ _ \<Rightarrow> Some (ptrFromPAddr (addr_from_ppn ppn))
+                   PageTablePTE base \<Rightarrow> Some (ptrFromPAddr base)
+                 | PagePTE base _ _ _ \<Rightarrow> Some (ptrFromPAddr base)
                  | _ \<Rightarrow> None"
 
 lemmas pte_ref_simps[simp] = pte_ref_def[split_simps pte.split]
@@ -395,6 +420,8 @@ definition vs_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
   "vs_cap_ref_arch acap \<equiv> case acap of
                             ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
                           | ASIDControlCap \<Rightarrow> None
+                          | VCPUCap _ \<Rightarrow> None
+                          \<comment> \<open>Cover all PageTableCaps/FrameCaps\<close>
                           | _ \<Rightarrow> acap_map_data acap"
 
 lemmas vs_cap_ref_arch_simps[simp] = vs_cap_ref_arch_def [split_simps arch_cap.split]
@@ -423,17 +450,17 @@ definition valid_asid_pool_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Righta
 
 locale_abbrev valid_asid_pool_caps :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_pool_caps \<equiv> \<lambda>s.
-     valid_asid_pool_caps_2 (caps_of_state s) (riscv_asid_table (arch_state s))"
+     valid_asid_pool_caps_2 (caps_of_state s) (asid_table s)"
 
 lemmas valid_asid_pool_caps_def = valid_asid_pool_caps_2_def
 
-locale_abbrev empty_pt :: pt where
-  "empty_pt \<equiv> \<lambda>_. InvalidPTE"
+definition empty_pt :: "bool \<Rightarrow> pt" where
+  "empty_pt vsp \<equiv> if vsp then VSRootPT (\<lambda>_. InvalidPTE) else NormalPT (\<lambda>_. InvalidPTE)"
 
 definition valid_table_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
   "valid_table_caps_2 caps pts \<equiv>
-   \<forall>r p. caps p = Some (ArchObjectCap (PageTableCap r None)) \<longrightarrow>
-         pts r = Some empty_pt"
+   \<forall>r vsp p. caps p = Some (ArchObjectCap (PageTableCap r vsp None)) \<longrightarrow>
+             pts r = Some (empty_pt vsp)"
 
 locale_abbrev valid_table_caps :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_table_caps \<equiv> \<lambda>s. valid_table_caps_2 (caps_of_state s) (pts_of s)"
@@ -443,7 +470,8 @@ lemmas valid_table_caps_def = valid_table_caps_2_def
 definition is_pt_cap :: "cap \<Rightarrow> bool" where
   "is_pt_cap cap \<equiv> arch_cap_fun_lift is_PageTableCap False cap"
 
-(* No two PT caps with vs_cap_ref = None may point to the same object. *)
+(* No two PT caps with vs_cap_ref = None may point to the same object, i.e.
+   copies of unmapped caps cannot exist. *)
 definition unique_table_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool" where
   "unique_table_caps_2 \<equiv> \<lambda>cs. \<forall>p p' cap cap'.
      cs p = Some cap \<longrightarrow> cs p' = Some cap' \<longrightarrow>
@@ -461,7 +489,7 @@ definition table_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_r
   "table_cap_ref_arch acap \<equiv>
      case acap of
        ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
-     | PageTableCap _ mapdata \<Rightarrow> mapdata
+     | PageTableCap _ _ mapdata \<Rightarrow> mapdata
      | _ \<Rightarrow> None"
 
 lemmas table_cap_ref_arch_simps[simp] = table_cap_ref_arch_def[split_simps arch_cap.split]
@@ -488,45 +516,21 @@ definition valid_arch_caps :: "'z::state_ext state \<Rightarrow> bool" where
      and unique_table_caps and unique_table_refs"
 
 definition arch_live :: "arch_kernel_obj \<Rightarrow> bool" where
-  "arch_live ao \<equiv> False"
+  "arch_live ao \<equiv> case ao of VCPU v \<Rightarrow> bound (vcpu_tcb v) | _ \<Rightarrow>  False"
 
 definition hyp_live :: "kernel_object \<Rightarrow> bool" where
-  "hyp_live ko \<equiv> False"
+  "hyp_live ko \<equiv> case ko of
+     TCB tcb \<Rightarrow> bound (tcb_vcpu (tcb_arch tcb))
+   | ArchObj ao \<Rightarrow> arch_live ao
+   |  _ \<Rightarrow> False"
 
 definition pte_rights_of :: "pte \<Rightarrow> rights set" where
   "pte_rights_of pte \<equiv> if is_PagePTE pte then pte_rights pte else {}"
 
-(* All page table walks starting from the global page table may only end up at global
-   tables for the right level. The final level must not contain further page table references.
-   We do not consider frame mappings here.
-   See valid_global_vspace_mappings for the restrictions on frame mappings. *)
-definition valid_global_tables_2 :: "(AARCH64_A.vm_level \<Rightarrow> obj_ref set) \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool"
-  where
-  "valid_global_tables_2 global_pts pts \<equiv>
-    let ptes = (\<lambda>p. pte_of p pts);
-        global_pt = the_elem (global_pts max_pt_level)
-    in
-      (\<forall>bot_level vref level pt_ptr.
-         vref \<in> kernel_mappings \<longrightarrow>
-         pt_walk max_pt_level bot_level global_pt vref ptes = Some (level, pt_ptr) \<longrightarrow>
-           pt_ptr \<in> global_pts level) \<and>
-       (\<forall>pt_ptr \<in> global_pts 0.
-          \<forall>pt. pts pt_ptr = Some pt \<longrightarrow> (\<forall>i. \<not> is_PageTablePTE (pt i))) \<and>
-       (\<forall>pt. pts global_pt = Some pt \<longrightarrow> (\<forall>idx \<in> -kernel_mapping_slots. pt idx = InvalidPTE)) \<and>
-       (\<forall>level. \<forall>pt_ptr \<in> global_pts level. \<forall>pt idx. pts pt_ptr = Some pt \<longrightarrow>
-                                                       pte_rights_of (pt idx) = vm_kernel_only)"
-
-locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_global_tables \<equiv>
-    \<lambda>s. valid_global_tables_2 (riscv_global_pts (arch_state s)) (pts_of s)"
-
-lemmas valid_global_tables_def = valid_global_tables_2_def
-
 definition global_refs :: "'z::state_ext state \<Rightarrow> obj_ref set" where
   "global_refs \<equiv> \<lambda>s.
-     {idle_thread s} \<union>
-     range (interrupt_irq_node s) \<union>
-     (\<Union>level. riscv_global_pts (arch_state s) level)"
+     {idle_thread s, arm_us_global_vspace (arch_state s)} \<union>
+     range (interrupt_irq_node s)"
 
 definition valid_asid_table_2 :: "(asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool) \<Rightarrow> bool"
   where
@@ -538,24 +542,19 @@ locale_abbrev valid_asid_table :: "'z::state_ext state \<Rightarrow> bool" where
 lemmas valid_asid_table_def = valid_asid_table_2_def
 
 definition arch_obj_bits_type :: "aa_type \<Rightarrow> nat" where
- "arch_obj_bits_type T \<equiv> case T of
-                           AASIDPool      \<Rightarrow> arch_kobj_size (ASIDPool undefined)
-                         | APageTable     \<Rightarrow> arch_kobj_size (PageTable undefined)
-                         | AUserData sz   \<Rightarrow> arch_kobj_size (DataPage False sz)
-                         | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)"
+  "arch_obj_bits_type T \<equiv> case T of
+     AASIDPool      \<Rightarrow> arch_kobj_size (ASIDPool undefined)
+   | APageTable vsp \<Rightarrow> arch_kobj_size (PageTable ((if vsp then VSRootPT else NormalPT) undefined))
+   | AUserData sz   \<Rightarrow> arch_kobj_size (DataPage False sz)
+   | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)"
 
-definition valid_global_arch_objs :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_global_arch_objs \<equiv> \<lambda>s.
-     riscv_global_pts (arch_state s) asid_pool_level = {} \<and>
-     (\<exists>pt_ptr. riscv_global_pts (arch_state s) max_pt_level = {pt_ptr}) \<and>
-     (\<forall>level. \<forall>pt_ptr \<in> riscv_global_pts (arch_state s) level. pt_at pt_ptr s)"
-
+(* AArch64+hyp has a separate static kernel page table tree that is not modelled here and never
+   accessed after init. On hyp the kernel lives in a separate address space that uses a separate MMU.
+   For non-hyp, seL4 currently shares the address space with the user, but there exists an option
+   to use a separate MMU to obtain the same model as on hyp. If we wanted to model non-hyp seL4 in
+   the future, we would likely use that option. *)
 definition valid_global_vspace_mappings :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_global_vspace_mappings \<equiv> \<lambda>s.
-     let root = global_pt s in
-       is_aligned root pt_bits \<and>
-       (\<forall>vref \<in> kernel_window s. translate_address root vref (ptes_of s) = Some (addrFromPPtr vref)) \<and>
-       (\<forall>vref \<in> kernel_elf_window s. translate_address root vref (ptes_of s) = Some (addrFromKPPtr vref))"
+  "valid_global_vspace_mappings \<equiv> \<top>"
 
 locale_abbrev obj_addrs :: "kernel_object \<Rightarrow> obj_ref \<Rightarrow> obj_ref set" where
   "obj_addrs ko p \<equiv> {p .. p + 2 ^ obj_bits ko - 1}"
@@ -567,27 +566,36 @@ definition pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool" w
 definition vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "vspace_at_asid asid pt \<equiv> \<lambda>s. vspace_for_asid asid s = Some pt"
 
-definition valid_uses_2 :: "(obj_ref \<Rightarrow> riscvvspace_region_use) \<Rightarrow> bool" where
+definition valid_uses_2 :: "arm_vspace_region_uses \<Rightarrow> bool" where
   "valid_uses_2 uses \<equiv>
-     \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = RISCVVSpaceInvalidRegion)
-          \<and> (p \<in> {pptr_base ..< kernel_elf_base}
-             \<longrightarrow> uses p \<in> {RISCVVSpaceKernelWindow, RISCVVSpaceInvalidRegion})
-          \<and> (uses p = RISCVVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< kernel_elf_base})
-          \<and> (p \<in> {kernel_elf_base ..< kdev_base} \<longrightarrow> uses p \<in> {RISCVVSpaceKernelELFWindow, RISCVVSpaceInvalidRegion})
-          \<and> (kdev_base \<le> p \<longrightarrow> uses p \<in> {RISCVVSpaceDeviceWindow, RISCVVSpaceInvalidRegion})
-          \<comment> \<open>We allow precisely all virtual addresses up to canonical_user as the user window:\<close>
-          \<and> (user_region = user_window_2 uses)
+     \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = ArmVSpaceInvalidRegion)
+          \<and> (p \<in> {pptr_base ..< pptrTop}
+             \<longrightarrow> uses p \<in> {ArmVSpaceKernelWindow, ArmVSpaceInvalidRegion})
+          \<and> (uses p = ArmVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< pptrTop})
+          \<comment> \<open>The kernel device window doesn't occupy the entire region above kdev_base\<close>
+          \<and> (kdev_base \<le> p \<longrightarrow> uses p \<in> {ArmVSpaceDeviceWindow, ArmVSpaceInvalidRegion})
+          \<comment> \<open>No user window in hyp kernel address space\<close>
+          \<and> (user_window_2 uses = {})
       \<comment> \<open>We want the kernel window to be non-empty, and to contain at least @{const pptr_base}\<close>
-      \<and> uses pptr_base = RISCVVSpaceKernelWindow"
+      \<and> uses pptr_base = ArmVSpaceKernelWindow"
 
 locale_abbrev valid_uses :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_uses \<equiv> \<lambda>s. valid_uses_2 (riscv_kernel_vspace (arch_state s))"
+  "valid_uses \<equiv> \<lambda>s. valid_uses_2 (arm_kernel_vspace (arch_state s))"
 
 lemmas valid_uses_def = valid_uses_2_def
 
+definition vmid_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> vmid option" where
+  "vmid_for_asid asid = do {
+     entry \<leftarrow> entry_for_asid asid;
+     K $ ap_vmid entry
+   }"
+
+(* vmIDs stored in ASID pools form the inverse of the vmid_table *)
+definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
+  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (swp vmid_for_asid s)"
+
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and valid_global_arch_objs
-                      and valid_global_tables"
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv" (* FIXME AARCH64: add cur_vcpu *)
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -595,27 +603,27 @@ definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
    necessarily in RISC-V *)
 
 definition valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_tcb \<equiv> \<lambda>_. \<top>"
+  "valid_arch_tcb \<equiv> \<lambda>_. \<top>" (* FIXME AARCH64: vcpu *)
 
 definition valid_arch_idle :: "iarch_tcb \<Rightarrow> bool" where
-  "valid_arch_idle \<equiv> \<top>"
+  "valid_arch_idle \<equiv> \<top>" (* FIXME AARCH64: vcpu *)
 
 definition
   "valid_arch_mdb r cs \<equiv> True"
 
-(* covered by existing invariants in RISCV *)
+(* not needed for hyp mode *)
 definition
   "valid_kernel_mappings \<equiv> \<top>"
 
 (* tcb_arch_ref extracts the obj_refs in tcb_arch: currently there is no vcpu ref in RISCV *)
 definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option" where
-  "tcb_arch_ref t \<equiv> None"
+  "tcb_arch_ref t \<equiv> None" (* FIXME AARCH64: vcpu *)
 
 definition tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_hyp_refs atcb \<equiv> {}"
+  "tcb_hyp_refs atcb \<equiv> {}" (* FIXME AARCH64: vcpu *)
 
 definition refs_of_ao :: "arch_kernel_obj \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "refs_of_ao x \<equiv> {}"
+  "refs_of_ao x \<equiv> {}" (* FIXME AARCH64: vcpu *)
 
 (* FIXME: move to generic *)
 definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
@@ -629,8 +637,11 @@ definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype
 definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
+
+(* covered by ASIDPool case of valid_vspace_obj, inv_vmid, and definition of
+   vspace_for_asid (asid 0 never mapped) *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_map \<equiv> \<lambda>s. True"
+  "valid_asid_map \<equiv> \<top>"
 
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
@@ -643,7 +654,8 @@ definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
    In other architectures, S is a set of object references (to global tables) that
    top-level tables may contain. In RISC-V, these table are fully empty *)
 definition empty_table_arch :: "obj_ref set \<Rightarrow> arch_kernel_obj \<Rightarrow> bool" where
-  "empty_table_arch S \<equiv> \<lambda>ko. case ko of PageTable pt \<Rightarrow> pt = empty_pt | _ \<Rightarrow> False"
+  "empty_table_arch S \<equiv>
+     \<lambda>ko. case ko of PageTable (VSRootPT pt) \<Rightarrow> pt = (\<lambda>_. InvalidPTE) | _ \<Rightarrow> False"
 
 declare empty_table_arch_def[simp]
 
@@ -662,7 +674,7 @@ definition second_level_tables :: "arch_state \<Rightarrow> obj_ref list" where
 definition
   "cap_asid_arch cap \<equiv> case cap of
     FrameCap _ _ _ _ (Some (asid, _)) \<Rightarrow> Some asid
-  | PageTableCap _ (Some (asid, _)) \<Rightarrow> Some asid
+  | PageTableCap _ _ (Some (asid, _)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 declare cap_asid_arch_def[abs_def, simp]
