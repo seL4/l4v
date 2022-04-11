@@ -1,12 +1,10 @@
 (*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating;
-   update copyright as necessary. *)
 theory ArchBCorres_AI
 imports
   BCorres_AI
@@ -14,10 +12,17 @@ begin
 
 context Arch begin global_naming AARCH64
 
+(* FIXME AARCH64: move/generalise; port back to RISC-V before we seed AInvs from there *)
+lemmas vm_level_minus_induct = bit1.minus_induct
+
+lemma entry_for_asid_truncate[simp]:
+  "entry_for_asid asid (truncate_state s) = entry_for_asid asid s"
+  by (simp add: entry_for_asid_def pool_for_asid_def obind_def
+         split: option.splits)
+
 lemma vspace_for_asid_truncate[simp]:
   "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"
-  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
-         split: option.splits)
+  by (simp add: vspace_for_asid_def obind_def oreturn_def)
 
 lemma pool_for_asid_truncate[simp]:
   "pool_for_asid asid (truncate_state s) = pool_for_asid asid s"
@@ -33,7 +38,7 @@ lemma vs_lookup_slot_truncate[simp]:
 
 lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
-  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
+  by (induct l arbitrary: r b c rule: vm_level_minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
 crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
