@@ -10,9 +10,6 @@
 
 chapter "Function Declarations for Threads"
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
 theory ArchThreadDecls_H
 imports
   Structures_H

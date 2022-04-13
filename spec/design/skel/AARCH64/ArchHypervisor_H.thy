@@ -9,8 +9,6 @@
   Hypervisor function definitions for AARCH64
 *)
 
-(* FIXME AARCH64: This file is a combination of RISCV64 and ARM_HYP versions,
-   with minimal text substitution! Remove this comment after updating. *)
 theory ArchHypervisor_H
 imports
   CNode_H
