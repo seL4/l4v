@@ -120,7 +120,7 @@ ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 # This target generates config files and headers only. It does not invoke
 # the C tool chain or preprocessor. We force CMake to skip tests for these,
 # so that ASpec and ExecSpec can be built with fewer dependencies.
-${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS}
+${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py
 	rm -rf ${KERNEL_CONFIG_ROOT}
 	mkdir -p ${KERNEL_CONFIG_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && \
