@@ -11,7 +11,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.OptionMonadND"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Platform
 begin
 
 context Arch begin global_naming ARM
