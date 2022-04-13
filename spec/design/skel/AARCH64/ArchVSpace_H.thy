@@ -1,5 +1,6 @@
 (*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, Proofcraft Pty Ltd
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -8,9 +9,6 @@
   VSpace lookup code.
 *)
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
 theory ArchVSpace_H
 imports
   CNode_H

@@ -8,9 +8,6 @@
   VSpace lookup code.
 *)
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating,
-   check copyright. *)
 theory ArchFault_H
 imports Types_H
 begin
