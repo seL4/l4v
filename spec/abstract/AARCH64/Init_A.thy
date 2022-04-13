@@ -40,7 +40,6 @@ definition canonical_user :: "vspace_ref" where
 definition init_vspace_uses :: "vspace_ref \<Rightarrow> arm_vspace_region_use" where
   "init_vspace_uses p \<equiv>
      if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then ArmVSpaceKernelWindow
-     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << 20)} then ArmVSpaceKernelELFWindow
      else if p \<le> canonical_user then ArmVSpaceUserRegion
      else ArmVSpaceInvalidRegion"
 

@@ -24,7 +24,6 @@ data ArmVSpaceRegionUse
     = ArmVSpaceUserRegion
     | ArmVSpaceInvalidRegion
     | ArmVSpaceKernelWindow
-    | ArmVSpaceKernelELFWindow
     | ArmVSpaceDeviceWindow
 
 
