@@ -58,16 +58,17 @@ definition kernelELFBaseOffset :: machine_word where
 definition pptrBase :: machine_word where
   "pptrBase = 0x8000000000" (* 2^39 | FIXME AARCH64: likely to be moved to 0x0 *)
 
-(* FIXME AARCH64: under review in C *)
 definition pptrUserTop :: machine_word where
-  "pptrUserTop \<equiv> mask 44 && ~~mask 12" (* for page boundary alignment *)
+  "pptrUserTop \<equiv> mask (if config_ARM_PA_SIZE_BITS_44 then 44 else 40)"
 
-lemma "pptrUserTop = 0xffffffff000" (* Sanity check with C *)
-  by (simp add: pptrUserTop_def canonical_bit_def mask_def)
+lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_44 then 0xFFFFFFFFFFF else 0xFFFFFFFFFF)" (* Sanity check with C *)
+  by (simp add: pptrUserTop_def mask_def)
 
+(* FIXME AARCH64: we might want to remove this for improved genericity *)
 schematic_goal pptrUserTop_def': (* direct constant definition *)
   "AARCH64.pptrUserTop = numeral ?x"
-  by (simp add: AARCH64.pptrUserTop_def canonical_bit_def mask_def del: word_eq_numeral_iff_iszero)
+  by (simp add: AARCH64.pptrUserTop_def Kernel_Config.config_ARM_PA_SIZE_BITS_44_def mask_def
+           del: word_eq_numeral_iff_iszero)
 
 definition pptrTop :: machine_word where
   "pptrTop = 0xFFFFFFFF80000000" (* FIXME AARCH64: review; copy/paste from Haskell *)
