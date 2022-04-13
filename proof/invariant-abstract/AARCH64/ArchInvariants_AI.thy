@@ -562,7 +562,8 @@ definition arch_obj_bits_type :: "aa_type \<Rightarrow> nat" where
      AASIDPool      \<Rightarrow> arch_kobj_size (ASIDPool undefined)
    | APageTable vsp \<Rightarrow> arch_kobj_size (PageTable ((if vsp then VSRootPT else NormalPT) undefined))
    | AUserData sz   \<Rightarrow> arch_kobj_size (DataPage False sz)
-   | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)"
+   | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)
+   | AVCPU          \<Rightarrow> arch_kobj_size (VCPU undefined)"
 
 (* AArch64+hyp has a separate static kernel page table tree that is not modelled here and never
    accessed after init. On hyp the kernel lives in a separate address space that uses a separate MMU.
@@ -616,7 +617,7 @@ definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
 (* ---------------------------------------------------------------------------------------------- *)
 
 (* Interface definitions, needed to define concepts needed in generic theories, but not
-   necessarily in RISC-V *)
+   necessarily in AARCH64 *)
 
 definition valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_tcb \<equiv> \<lambda>t s. \<forall>v. tcb_vcpu t = Some v \<longrightarrow> vcpu_at v s"
@@ -681,7 +682,7 @@ definition valid_ioports :: "'z::state_ext state \<Rightarrow> bool" where
 
 (* This definition is needed as interface for other architectures only.
    In other architectures, S is a set of object references (to global tables) that
-   top-level tables may contain. In RISC-V, these table are fully empty *)
+   top-level tables may contain. In AARCH64, these table are completely empty *)
 definition empty_table_arch :: "obj_ref set \<Rightarrow> arch_kernel_obj \<Rightarrow> bool" where
   "empty_table_arch S \<equiv>
      \<lambda>ko. case ko of PageTable (VSRootPT pt) \<Rightarrow> pt = (\<lambda>_. InvalidPTE) | _ \<Rightarrow> False"
@@ -694,9 +695,7 @@ definition empty_table :: "obj_ref set \<Rightarrow> kernel_object \<Rightarrow>
 
 
 (* Interface definition, it provides the set (in form of a list) that is
-   plugged into empty_table for other architectures, but is unused in RISC-V.
-   We could make this equal to riscv_global_tables (max_pt_level - 1), but
-   since it is unused in empty_table anyway, we leave it empty. *)
+   plugged into empty_table for other architectures, but is unused in AARCH64. *)
 definition second_level_tables :: "arch_state \<Rightarrow> obj_ref list" where
   "second_level_tables s = []"
 
@@ -716,56 +715,32 @@ definition
 section "Canonical Addresses"
 
 lemma canonical_address_range:
-  "canonical_address x = (x \<le> mask canonical_bit \<or> ~~ mask canonical_bit \<le> x)"
-  by (simp add: canonical_address_def canonical_address_of_def scast_ucast_mask_compare
-                canonical_bit_def)
-
-lemma canonical_address_of_mask:
-  "canonical_address_of x =
-   (if x \<le> mask canonical_bit then ucast x else ucast x || ~~ mask canonical_bit)"
-  apply (simp add: canonical_address_of_def mask_def canonical_bit_def)
-  by word_bitwise
-
-lemma canonical_address_sign_extended: "canonical_address p = sign_extended canonical_bit p"
-  apply (intro iffI;
-         simp add: canonical_address_range sign_extended_def
-                   le_mask_high_bits neg_mask_le_high_bits word_size)
-  apply fastforce
-  apply (case_tac "test_bit p canonical_bit"; intro disjI1 disjI2 ballI;
-           case_tac "i = canonical_bit"; fastforce)
-  done
-
-lemmas canonical_address_high_bits
-  = canonical_address_sign_extended[THEN iffD1, THEN sign_extended_high_bits]
-
-lemma canonical_address_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "n \<le> canonical_bit"
-  assumes "canonical_address p"
-  shows "canonical_address (p + f)"
-  using assms sign_extended_add
-  unfolding canonical_address_sign_extended
-  by auto
-
+  "canonical_address x = (x \<le> mask (canonical_bit + 1))"
+  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask
+                and_mask_eq_iff_le_mask canonical_bit_def)
 
 (* ---------------------------------------------------------------------------------------------- *)
 
 section "Machine Bits and VM Levels"
 
+(* FIXME AARCH64: might not be a good simp rule, but let's try *)
 lemma table_size:
-  "table_size = 12"
+  "table_size vsp = (if vsp \<and> config_ARM_PA_SIZE_BITS_40 then 13 else 12)"
   by (simp add: table_size_def ptTranslationBits_def word_size_bits_def pte_bits_def)
 
 bundle machine_bit_simps =
   table_size_def[simp] word_size_bits_def[simp]
   ptTranslationBits_def[simp] pageBits_def[simp]
-  pte_bits_def[simp]
+  pte_bits_def[simp] vcpuBits_def[simp]
 
-context includes machine_bit_simps begin
-  lemmas simple_bit_simps       = table_size word_size_bits_def ptTranslationBits_def pageBits_def
-  lemmas table_bits_simps       = pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def]
-  lemmas bit_simps              = table_bits_simps simple_bit_simps
+context
+  includes machine_bit_simps
+begin
+
+lemmas simple_bit_simps = table_size word_size_bits_def ptTranslationBits_def pageBits_def vcpuBits_def
+lemmas table_bits_simps = pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def]
+lemmas bit_simps        = table_bits_simps simple_bit_simps
+
 end
 
 lemmas pageBitsForSize_simps[simp] = pageBitsForSize_def[split_simps vmpage_size.split]
@@ -775,12 +750,16 @@ lemma pageBitsForSize_bounded[simp,intro!]:
   including machine_bit_simps by (cases sz; simp add: word_bits_def)
 
 lemma table_size_bounded[simp,intro!]:
-  "table_size < word_bits"
+  "table_size vs < word_bits"
+  including machine_bit_simps by (simp add: word_bits_def)
+
+lemma vcpuBits_bounded[simp,intro!]:
+  "vcpuBits < word_bits"
   including machine_bit_simps by (simp add: word_bits_def)
 
 (* with asid_pool_level normalised to -1, max_pt_level otherwise becomes -2 *)
-lemma max_pt_level_def2: "max_pt_level = 2"
-  by (simp add: max_pt_level_def asid_pool_level_def)
+lemma max_pt_level_def2: "max_pt_level = (if config_ARM_PA_SIZE_BITS_40 then 2 else 3)"
+  by (simp add: max_pt_level_def asid_pool_level_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 lemmas level_defs = asid_pool_level_def max_pt_level_def2
 
@@ -788,15 +767,19 @@ lemma max_pt_level_gt0[simp]:
   "0 < max_pt_level"
   by (simp add: level_defs)
 
+(* FIXME AARCH64: move *)
+lemmas bit_of_nat_cases = bit1.of_nat_cases
+
 lemma max_pt_level_enum:
-  "level \<le> max_pt_level \<Longrightarrow> level \<in> {0,1,2}"
-  unfolding level_defs
-  by (cases level rule: bit0.of_nat_cases) (case_tac m; simp; rename_tac m)+
+  "level \<le> max_pt_level \<Longrightarrow> if config_ARM_PA_SIZE_BITS_40 then level \<in> {0,1,2} else level \<in> {0,1,2,3}"
+  unfolding level_defs Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+  by (cases level rule: bit_of_nat_cases) (case_tac m; simp; rename_tac m)+
 
 lemma asid_pool_level_size:
-  "size asid_pool_level = 3"
+  "size asid_pool_level = (if config_ARM_PA_SIZE_BITS_40 then 3 else 4)"
 proof -
-  have m1: "-1 = (3::vm_level)" by simp
+  have m1: "(-1::vm_level) = (if config_ARM_PA_SIZE_BITS_40 then 3 else 4)"
+    by (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
   show ?thesis unfolding asid_pool_level_def
    by (simp add: m1)
 qed
@@ -805,10 +788,14 @@ lemma asid_pool_level_not_0[simp]:
   "asid_pool_level \<noteq> 0"
   by (simp add: asid_pool_level_def)
 
+(* FIXME AARCH64: move *)
+lemmas bit_not_less_zero_bit0 = bit1.not_less_zero_bit0
+lemmas bit_leq_minus1_less = bit1.leq_minus1_less
+
 lemma vm_level_not_less_zero:
   fixes level :: vm_level
   shows "level \<noteq> 0 \<Longrightarrow> level > 0"
-  using bit0.not_less_zero_bit0 neqE by blast
+  using bit_not_less_zero_bit0 neqE by blast
 
 lemma asid_pool_level_neq[simp]:
   "(x \<noteq> asid_pool_level) = (x \<le> max_pt_level)"
@@ -817,12 +804,12 @@ proof
   hence "x < asid_pool_level"
     unfolding asid_pool_level_def by simp
   thus "x \<le> max_pt_level"
-    by (simp add: max_pt_level_def bit0.leq_minus1_less)
+    by (simp add: max_pt_level_def bit_leq_minus1_less)
 next
   note maxBound_minus_one_bit[simp del]
   assume "x \<le> max_pt_level"
   thus "x \<noteq> asid_pool_level"
-    unfolding level_defs by (auto simp: maxBound_size_bit)
+    unfolding level_defs by (auto simp: maxBound_size_bit split: if_splits)
 qed
 
 lemma asid_pool_level_eq:
@@ -847,7 +834,7 @@ lemma vm_level_less_max_pt_level:
 
 lemma vm_level_less_le_1:
   "\<lbrakk> (level' :: vm_level) < level \<rbrakk> \<Longrightarrow> level' \<le> level' + 1"
-  by (fastforce dest: max_pt_level_enum vm_level_less_max_pt_level)
+  by (fastforce dest: max_pt_level_enum vm_level_less_max_pt_level split: if_split_asm)
 
 lemma asid_pool_level_leq_conv[iff]:
   "(asid_pool_level \<le> level) = (level = asid_pool_level)"
@@ -859,7 +846,7 @@ lemma max_pt_level_less_conv[iff]:
 
 lemma max_pt_level_not_asid_pool_level[simp]:
   "max_pt_level \<noteq> asid_pool_level"
-  by (simp add: level_defs)
+  by (simp add: asid_pool_level_def)
 
 lemma asid_pool_level_minus:
   "asid_pool_level = -1"
@@ -869,9 +856,15 @@ lemma max_pt_level_plus_one:
   "max_pt_level + 1 = asid_pool_level"
   by (simp add: max_pt_level_def)
 
+(* FIXME AARCH64: move *)
+lemmas bit_no_overflow_eq_max_bound = bit1.no_overflow_eq_max_bound
+lemmas bit_size_inj = bit1.size_inj
+lemmas bit_plus_one_leq = bit1.plus_one_leq
+lemmas bit_pred = bit1.pred
+
 lemma max_pt_level_less_Suc[iff]:
   "(level < level + 1) = (level \<le> max_pt_level)"
-  apply (simp add: bit0.no_overflow_eq_max_bound max_pt_level_def flip: asid_pool_level_minus)
+  apply (simp add: bit_no_overflow_eq_max_bound max_pt_level_def flip: asid_pool_level_minus)
   by (metis asid_pool_level_max asid_pool_level_neq max_pt_level_def antisym_conv2)
 
 lemma size_level1[simp]:
@@ -879,12 +872,12 @@ lemma size_level1[simp]:
 proof
   assume "size level = Suc 0"
   hence "size level = size (1::vm_level)" by simp
-  thus "level = 1" by (subst (asm) bit0.size_inj)
+  thus "level = 1" by (subst (asm) bit_size_inj)
 qed auto
 
 lemma minus_one_max_pt_level[simp]:
   "(level - 1 = max_pt_level) = (level = asid_pool_level)"
-  by (simp add: level_defs bit0.minus_1_eq)
+  by (simp add: max_pt_level_def)
 
 lemma max_inc_pt_level[simp]:
   "level \<le> max_pt_level \<Longrightarrow> max (level + 1) level = level + 1"
@@ -892,7 +885,7 @@ lemma max_inc_pt_level[simp]:
 
 lemma vm_level_le_plus_1_mono:
   "\<lbrakk>level' \<le> level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 \<le> level + 1"
-  by (simp add: bit0.plus_one_leq le_less_trans)
+  by (simp add: bit_plus_one_leq le_less_trans)
 
 lemma vm_level_less_plus_1_mono:
   "\<lbrakk> level' < level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 < level + 1"
@@ -900,20 +893,21 @@ lemma vm_level_less_plus_1_mono:
 
 lemma level_minus_one_max_pt_level[iff]:
   "(level - 1 \<le> max_pt_level) = (0 < level)"
-  by (metis max_pt_level_less_Suc bit0.not_less_zero_bit0 bit0.pred diff_add_cancel
+  by (metis max_pt_level_less_Suc bit_not_less_zero_bit0 bit_pred diff_add_cancel
            not_less_iff_gr_or_eq)
 
 lemma canonical_bit:
-  "canonical_bit = ptTranslationBits * Suc (size max_pt_level) + pageBits - 1"
-  by (simp add: bit_simps level_defs canonical_bit_def)
+  "canonical_bit =
+     ptTranslationBits True + ptTranslationBits False * size max_pt_level + pageBits - 1"
+  by (simp add: bit_simps level_defs canonical_bit_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 (* ---------------------------------------------------------------------------------------------- *)
 
 section \<open>Basic Properties\<close>
 
 lemma valid_table_caps_pdD:
-  "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap pt None)); valid_table_caps s \<rbrakk>
-  \<Longrightarrow> pts_of s pt = Some empty_pt"
+  "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap pt vsp None)); valid_table_caps s \<rbrakk>
+  \<Longrightarrow> pts_of s pt = Some (empty_pt vsp)"
   by (auto simp add: valid_table_caps_def simp del: split_paired_Ex)
 
 lemma addrFromPPtr_ptrFromPAddr_id[simp]:
@@ -921,11 +915,11 @@ lemma addrFromPPtr_ptrFromPAddr_id[simp]:
   by (simp add: addrFromPPtr_def ptrFromPAddr_def)
 
 lemma global_refs_asid_table_update [iff]:
-  "global_refs (s\<lparr>arch_state := riscv_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
+  "global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) = global_refs s"
   by (simp add: global_refs_def)
 
 lemma pspace_in_kernel_window_arch_update[simp]:
-  "riscv_kernel_vspace (f (arch_state s)) = riscv_kernel_vspace (arch_state s)
+  "arm_kernel_vspace (f (arch_state s)) = arm_kernel_vspace (arch_state s)
      \<Longrightarrow> pspace_in_kernel_window (arch_state_update f s) = pspace_in_kernel_window s"
   by (simp add: pspace_in_kernel_window_def)
 
@@ -942,7 +936,7 @@ lemmas is_pt_cap_simps [simp] =
                         split_simps cap.split arch_cap.split]
 
 lemma is_pt_cap_eq:
-  "is_pt_cap cap = (\<exists>p m. cap = ArchObjectCap (PageTableCap p m))"
+  "is_pt_cap cap = (\<exists>p vsp m. cap = ArchObjectCap (PageTableCap p vsp m))"
   by (auto simp: is_pt_cap_def is_PageTableCap_def)
 
 lemma vs_cap_ref_table_cap_ref_eq:
@@ -955,7 +949,7 @@ lemma wellformed_arch_pspace:
 
 lemma pageBitsForSize_pt_bits_left:
   "pageBitsForSize sz = pt_bits_left (level_of_sz sz)"
-  by (cases sz; simp add: level_of_sz_def pt_bits_left_def pageBitsForSize_def)
+  by (cases sz; simp add: level_of_vmsize_def pt_bits_left_def pageBitsForSize_def)
 
 lemma asid_low_bits_of_mask_eq:
   "ucast (asid_low_bits_of asid) = asid && mask asid_low_bits"
@@ -1022,7 +1016,7 @@ lemmas valid_vspace_obj_typ = valid_vspace_obj_typ2[where Q=\<top>, simplified]
 lemma global_refs_equiv:
   assumes "idle_thread s = idle_thread s'"
   assumes "interrupt_irq_node s = interrupt_irq_node s'"
-  assumes "riscv_global_pts (arch_state s) = riscv_global_pts (arch_state s')"
+  assumes "arm_us_global_vspace (arch_state s) = arm_us_global_vspace (arch_state s')"
   shows "global_refs s = global_refs s'"
   by (simp add: assms global_refs_def)
 
@@ -1066,25 +1060,30 @@ lemma pts_of_Some:
 
 lemma ptes_of_Some:
   "(ptes_of s p = Some pte) =
-   ((\<exists>pt. is_aligned p pte_bits \<and>
-          pts_of s (p && ~~ mask pt_bits) = Some pt \<and>
-          pt (ucast (p && mask pt_bits >> pte_bits)) = pte))"
-  by (auto simp: pte_of_def in_omonad)
+   (is_aligned p pte_bits \<and>
+     (\<exists>pt. pts_of s (table_base True p) = Some (VSRootPT pt) \<and>
+           pt (table_index True p) = pte) \<or>
+     (\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
+           pt (table_index False p) = pte))"
+  apply (auto simp: pte_of_def in_omonad level_pte_of_def swp_def split: if_split_asm)
+  sorry (* FIXME AARCH64: ptes_of_Some -- do we want something more generic? *)
 
 declare a_typeE[elim!]
 
 lemma aa_typeE[elim!]:
   "\<lbrakk>aa_type ao = AASIDPool; (\<And>ap. ao = ASIDPool ap \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
-  "\<lbrakk>aa_type ao = APageTable; (\<And>pt. ao = PageTable pt \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>aa_type ao = APageTable vsp; (\<And>pt. \<lbrakk> ao = PageTable pt; vsp = is_VSRootPT pt \<rbrakk> \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>aa_type ao = AUserData sz; ao = DataPage False sz \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   "\<lbrakk>aa_type ao = ADeviceData sz; ao = DataPage True sz \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk>aa_type ao = AVCPU; (\<And>vcpu. ao = VCPU vcpu \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (cases ao; clarsimp split: if_split_asm)+
 
 lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. kheap s p = Some (ArchObj (ASIDPool f)))"
-  "typ_at (AArch APageTable) p s \<longleftrightarrow> (\<exists>pt. kheap s p = Some (ArchObj (PageTable pt)))"
+  "typ_at (AArch (APageTable vsp)) p s \<longleftrightarrow> (\<exists>pt. kheap s p = Some (ArchObj (PageTable pt)) \<and> vsp = is_VSRootPT pt)"
   "typ_at (AArch (AUserData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage False sz)))"
   "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
+  "typ_at (AArch AVCPU) p s \<longleftrightarrow> (\<exists>vcpu. kheap s p = Some (ArchObj (VCPU vcpu)))"
   by (auto simp: obj_at_def)
 
 lemma asid_pools_at_eq:
@@ -1095,8 +1094,12 @@ lemma pt_at_eq:
   "pt_at p s \<longleftrightarrow> pts_of s p \<noteq> None"
   by (auto simp: obj_at_def in_opt_map_eq)
 
+lemma vspace_pt_at_eq:
+  "vspace_pt_at p s \<longleftrightarrow> (\<exists>pt. pts_of s p = Some (VSRootPT pt))"
+  by (auto simp: obj_at_def in_opt_map_eq is_VSRootPT_def)
+
 lemma valid_asid_tableD:
-  "\<lbrakk> riscv_asid_table (arch_state s) x = Some p; valid_asid_table s \<rbrakk> \<Longrightarrow> asid_pool_at p s"
+  "\<lbrakk> asid_table s x = Some p; valid_asid_table s \<rbrakk> \<Longrightarrow> asid_pool_at p s"
   by (auto simp: valid_asid_table_def asid_pools_at_eq)
 
 lemma dom_asid_pools_of_typ:
@@ -1144,12 +1147,12 @@ lemma valid_vcpu_default[simp]:
 lemma wellformed_arch_default[simp]:
   "arch_valid_obj (default_arch_object ao_type dev us) s"
   unfolding arch_valid_obj_def default_arch_object_def
-  by (cases ao_type; simp add: wellformed_pte_def)
+  by (cases ao_type; simp add: wellformed_pte_def pt_range_def)
 
 lemma valid_vspace_obj_default'[simp]:
   "valid_vspace_obj level (default_arch_object ao_type dev us) s"
   unfolding default_arch_object_def
-  by (cases ao_type; simp)
+  by (cases ao_type; simp add: pt_range_def)
 
 lemma physical_arch_cap_has_ref:
   "(acap_class arch_cap = PhysicalClass) = (\<exists>y. aobj_ref arch_cap = Some y)"
@@ -1326,77 +1329,22 @@ lemma canonical_user_ge0[intro!,simp]:
   "0 < canonical_user"
   by (simp add: canonical_user_def mask_def canonical_bit_def)
 
-lemma user_vtop_pptr_base[intro!,simp]:
-  "user_vtop < pptr_base"
-  by (simp add: user_vtop_def pptrUserTop_def pptr_base_def pptrBase_def canonical_bit_def mask_def)
-
-lemma user_vtop_leq_canonical_user:
-  "user_vtop \<le> canonical_user"
-  by (simp add: user_vtop_def pptrUserTop_def canonical_user_def canonical_bit_def mask_def)
-
-lemma canonical_user_pptr_base:
-  "canonical_user < pptr_base"
-  by (simp add: canonical_user_def pptr_base_def pptrBase_def canonical_bit_def mask_def)
-
 lemma pptr_base_kernel_elf_base:
   "pptr_base < kernel_elf_base"
   by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def)
 
-lemma above_pptr_base_canonical:
-  "pptr_base \<le> p \<Longrightarrow> canonical_address p"
-  by (simp add: canonical_address_range pptr_base_def pptrBase_def NOT_mask)
-
-lemma canonical_user_canonical:
-  "p \<le> canonical_user \<Longrightarrow> canonical_address p"
-  by (simp add: canonical_user_def canonical_address_range)
-
-lemma below_user_vtop_canonical:
-  "p \<le> user_vtop \<Longrightarrow> canonical_address p"
-  by (drule order_trans, rule user_vtop_leq_canonical_user) (erule canonical_user_canonical)
-
-lemma user_vtop_canonical_user:
-  "vref < user_vtop \<Longrightarrow> vref \<le> canonical_user"
-  using user_vtop_leq_canonical_user by simp
-
 lemmas window_defs =
-  kernel_window_def not_kernel_window_def kernel_elf_window_def kernel_regions_def
+  kernel_window_def not_kernel_window_def kernel_regions_def
   kernel_device_window_def user_region_def user_window_def
 
 lemma valid_uses_kernel_window:
-  "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< kernel_elf_base} \<and> canonical_address p"
+  "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< pptrTop} \<and> canonical_address p"
   unfolding valid_uses_def window_defs
   by (erule_tac x=p in allE) auto
 
-(* This says that pptr_base is the lowest canonical address in the high range, and
-   canonical_user is the highest canonical address in the low range.
-   There is nothing canonical in between. *)
-lemma canonical_below_pptr_base_canonical_user:
-  "\<lbrakk> p < pptr_base; canonical_address p \<rbrakk> \<Longrightarrow> p \<le> canonical_user"
-  by (auto simp: canonical_address_range canonical_user_def pptr_base_def pptrBase_def NOT_mask)
-
-lemma canonical_user_below_pptr_base:
-  "p \<le> canonical_user \<Longrightarrow> p < pptr_base"
-  apply (simp add: canonical_user_def pptr_base_def pptrBase_def flip: NOT_mask)
-  apply word_bitwise
-  apply (simp add: word_size canonical_bit_def)
-  done
-
-lemma canonical_below_pptr_base_user:
-  "\<lbrakk> v < pptr_base; canonical_address v \<rbrakk> \<Longrightarrow> v \<in> user_region"
-  by (simp add: user_region_def canonical_below_pptr_base_canonical_user)
-
-lemma valid_uses_user_region_eq:
-  "valid_uses s \<Longrightarrow> (v \<in> user_window s) = (v \<in> user_region)"
-  unfolding valid_uses_def window_defs
-  by (erule_tac x=v in allE) (auto simp: canonical_user_canonical)
-
-lemma user_region_canonical[elim!]:
-  "p \<in> user_region \<Longrightarrow> canonical_address p"
-  unfolding user_region_def by (simp add: canonical_user_canonical)
-
-lemma user_region_pptr_base[elim!]:
-  "p \<in> user_region \<Longrightarrow> p < pptr_base"
-  unfolding user_region_def by (simp add: canonical_user_below_pptr_base)
+(* FIXME AARCH64: move *)
+lemmas bit_zero_least = bit1.zero_least
+lemmas bit_minus1_leq = bit1.minus1_leq
 
 lemma pt_walk_max_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -1408,8 +1356,8 @@ lemma pt_walk_max_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  apply (drule bit0.zero_least)
-  using bit0.pred less_trans not_less by blast
+  apply (drule bit_zero_least)
+  using bit_pred less_trans not_less by blast
 
 lemma pt_walk_min_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -1421,7 +1369,7 @@ lemma pt_walk_min_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  apply (auto simp: min_def split: if_split_asm dest: bit0.minus1_leq)
+  apply (auto simp: min_def split: if_split_asm dest: bit_minus1_leq)
   done
 
 lemma pt_walk_top:
@@ -1496,7 +1444,7 @@ lemma max_pt_bits_left[simp]:
 
 lemma pt_bits_left_plus1:
   "level \<le> max_pt_level \<Longrightarrow>
-   pt_bits_left (level + 1) = ptTranslationBits + pt_bits_left level"
+   pt_bits_left (level + 1) = ptTranslationBits False + pt_bits_left level"
   by (clarsimp simp: pt_bits_left_def)
 
 lemma vref_for_level_idem:
@@ -1543,9 +1491,9 @@ lemma pt_walk_vref_for_level_eq:
    apply (simp add: pt_walk.simps)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
-  apply (simp add: Let_def bit0.leq_minus1_less)
+  apply (simp add: Let_def bit_leq_minus1_less)
   apply (drule_tac level'=top_level in vref_for_level_eq_mono)
-   apply (simp add: bit0.plus_one_leq)
+   apply (simp add: bit_plus_one_leq)
   apply (drule_tac pt=pt in vref_for_level_pt_slot_offset)
   apply (clarsimp simp: obind_def oapply_def split: option.splits)
   done
@@ -1560,7 +1508,7 @@ lemma pt_walk_vref_for_level1:
   "\<lbrakk> level \<le> bot_level; bot_level \<le> top_level; top_level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level bot_level pt (vref_for_level vref (level+1)) =
    pt_walk top_level bot_level pt vref"
-  by (meson max_pt_level_less_Suc bit0.plus_one_leq leD leI order.trans vref_for_level_idem
+  by (meson max_pt_level_less_Suc bit_plus_one_leq leD leI order.trans vref_for_level_idem
             pt_walk_vref_for_level_eq)
 
 lemma vs_lookup_vref_for_level1:
@@ -1573,63 +1521,55 @@ lemma vs_lookup_vref_for_level:
    vs_lookup_table bot_level asid (vref_for_level vref level) = vs_lookup_table bot_level asid vref"
   by (force simp: vs_lookup_table_def pt_walk_vref_for_level obind_def split: option.splits)
 
-lemma riscv_global_pts_global_ref:
-  "pt \<in> riscv_global_pts (arch_state s) level \<Longrightarrow> pt \<in> global_refs s"
-  by (auto simp: global_refs_def)
-
-lemma valid_global_vspace_mappings_kwD:
-  "\<lbrakk> valid_global_vspace_mappings s; vref \<in> kernel_window s \<rbrakk>
-   \<Longrightarrow> translate_address (global_pt s) vref (ptes_of s) = Some (addrFromPPtr vref)"
-  by (simp add: valid_global_vspace_mappings_def Let_def)
-
-lemma valid_global_vspace_mappings_aligned[simp]:
-  "valid_global_vspace_mappings s \<Longrightarrow> is_aligned (global_pt s) pt_bits"
-  by (simp add: valid_global_vspace_mappings_def Let_def)
-
-
 lemma vspace_for_asid_SomeD:
   "vspace_for_asid asid s = Some pt_ptr
-   \<Longrightarrow> \<exists>pool_ptr pool. asid_table s (asid_high_bits_of asid) = Some pool_ptr
-                      \<and> asid_pools_of s pool_ptr = Some pool
-                      \<and> pool (asid_low_bits_of asid) = Some pt_ptr
-                      \<and> asid > 0"
+   \<Longrightarrow> \<exists>pool_ptr pool entry. asid_table s (asid_high_bits_of asid) = Some pool_ptr
+                            \<and> asid_pools_of s pool_ptr = Some pool
+                            \<and> pool (asid_low_bits_of asid) = Some entry
+                            \<and> ap_vspace entry = pt_ptr
+                            \<and> asid > 0"
   unfolding vspace_for_asid_def
-  by (clarsimp simp: pool_for_asid_def vspace_for_pool_def)
+  by (clarsimp simp: entry_for_asid_def pool_for_asid_def entry_for_pool_def vspace_for_pool_def)
 
 lemma vspace_for_asid_SomeI:
   "\<lbrakk> asid_table s (asid_high_bits_of asid) = Some pool_ptr;
      asid_pools_of s pool_ptr = Some pool;
-     pool (asid_low_bits_of asid) = Some pt_ptr;
+     pool (asid_low_bits_of asid) = Some entry;
+     ap_vspace entry = pt_ptr;
      asid > 0 \<rbrakk>
    \<Longrightarrow> vspace_for_asid asid s = Some pt_ptr"
-  by (clarsimp simp: vspace_for_asid_def vspace_for_pool_def pool_for_asid_def obind_def)
+  by (clarsimp simp: entry_for_asid_def pool_for_asid_def entry_for_pool_def vspace_for_pool_def
+                     vspace_for_asid_def obind_def)
 
 lemmas ptes_of_def = pte_of_def
 
 lemma ptes_of_pts_of:
-  "ptes_of s pte_ptr = Some pte \<Longrightarrow> pts_of s (pte_ptr && ~~mask pt_bits) \<noteq> None"
-  by (auto simp: ptes_of_def in_omonad)
+  "ptes_of s pte_ptr = Some pte \<Longrightarrow> \<exists>vsp. pts_of s (pte_ptr && ~~mask (pt_bits vsp)) \<noteq> None"
+  by (fastforce simp: ptes_of_def in_omonad level_pte_of_def split: if_split_asm)
 
 lemma ptes_of_eqI:
-  "pts (table_base p) = pts' (table_base p) \<Longrightarrow> pte_of p pts = pte_of p pts'"
-  by (rule obind_eqI | clarsimp simp: pte_of_def)+
+  "pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow> pte_of pts p = pte_of pts' p"
+  apply (rule obind_eqI | clarsimp simp: pte_of_def swp_def level_pte_of_def)+
+  sorry (* FIXME AARCH64 *)
 
 lemma pte_refs_of_eqI:
   "ptes p = ptes' p \<Longrightarrow> (ptes |> pte_ref) p =  (ptes' |> pte_ref) p"
   by (clarsimp simp: opt_map_def)
 
 lemma pt_index_mask_pt_bits[simp]:
-  "(pt_index level vref << pte_bits) && mask pt_bits = pt_index level vref << pte_bits"
+  "(pt_index level vref << pte_bits) && mask (pt_bits (level = max_pt_level)) =
+   pt_index level vref << pte_bits"
   by (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist mask_shiftl_decompose
                 bit.conj_ac)
 
 lemma table_base_offset_id:
-  "\<lbrakk> is_aligned pt_ptr pt_bits; (idx << pte_bits) && mask pt_bits = idx << pte_bits \<rbrakk>
-     \<Longrightarrow> table_base (pt_ptr + (idx << pte_bits)) = pt_ptr"
+  "\<lbrakk> is_aligned pt_ptr (pt_bits vsp); (idx << pte_bits) && mask (pt_bits vsp) = idx << pte_bits \<rbrakk>
+     \<Longrightarrow> table_base vsp (pt_ptr + (idx << pte_bits)) = pt_ptr"
   by (simp add: is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
 
 lemma table_base_pt_slot_offset[simp]:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow> table_base (pt_slot_offset level pt_ptr vref) = pt_ptr"
+  "is_aligned pt_ptr (pt_bits (level = max_pt_level)) \<Longrightarrow>
+   table_base (level = max_pt_level) (pt_slot_offset level pt_ptr vref) = pt_ptr"
   by (simp add: pt_slot_offset_def table_base_offset_id)
 
 lemma pt_slot_offset_0[simp]:
@@ -1637,37 +1577,16 @@ lemma pt_slot_offset_0[simp]:
   by (clarsimp simp: pt_slot_offset_def pt_index_def)
 
 lemma pt_slot_offset_or_def:
-  "is_aligned pt_ptr pt_bits
+  "is_aligned pt_ptr (pt_bits (level = max_pt_level))
    \<Longrightarrow> pt_slot_offset level pt_ptr vptr = pt_ptr || (pt_index level vptr << pte_bits)"
   unfolding pt_slot_offset_def
   apply (rule is_aligned_add_or, assumption)
-  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits")
+  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits (level = max_pt_level)")
    prefer 2
    apply (simp add: pt_index_def)
    apply (rule and_mask_less', simp add: bit_simps and_mask_less')
   apply (drule shiftl_less_t2n'[where n=pte_bits], auto simp: bit_simps)
   done
-
-lemma ptes_of_pt_slot_offset:
-  "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr vref) = Some pte; is_aligned pt_ptr pt_bits \<rbrakk>
-   \<Longrightarrow> pts_of s pt_ptr \<noteq> None"
-  by (auto dest!: ptes_of_pts_of simp: in_opt_map_eq)
-
-lemma valid_global_vspace_mappings_pt_at:
-  "\<lbrakk> valid_global_vspace_mappings s; valid_uses s \<rbrakk>
-  \<Longrightarrow> pt_at (global_pt s) s"
-  apply (clarsimp simp: pt_at_eq Let_def)
-  apply (frule valid_global_vspace_mappings_kwD)
-   apply (fastforce simp: valid_uses_def window_defs)
-  apply (clarsimp simp: translate_address_def pt_lookup_slot_from_level_def pt_lookup_target_def
-                        in_omonad)
-  apply (subst (asm) pt_walk.simps)
-  by (auto simp: in_omonad dest!: ptes_of_pt_slot_offset split: if_split_asm)
-
-lemma valid_global_arch_objs_pt_at:
-  "valid_global_arch_objs s \<Longrightarrow> pt_at (global_pt s) s"
-  unfolding valid_global_arch_objs_def riscv_global_pt_def
-  by fastforce
 
 lemma pool_for_asid_vs_lookup:
   "(vs_lookup_table asid_pool_level asid vref s = Some (level, p)) =
@@ -1706,7 +1625,7 @@ lemma pt_walk_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  by (fastforce simp: bit0.leq_minus1_less dest: pt_walk_max_level)
+  by (fastforce simp: bit_leq_minus1_less dest: pt_walk_max_level)
 
 lemma vs_lookup_level:
   "vs_lookup_table bot_level asid vref s = Some (level, p) \<Longrightarrow>
@@ -1743,11 +1662,13 @@ lemma pt_lookup_vs_lookup_eq:
       pt \<leftarrow> vspace_for_asid asid;
       pt_walk max_pt_level bot_level pt vref \<circ> ptes_of
   }"
-  by (auto simp: vs_lookup_table_def vspace_for_asid_def obind_assoc intro!: opt_bind_cong)
+  by (auto simp: vs_lookup_table_def vspace_for_asid_def obind_assoc entry_for_asid_def
+                 vspace_for_pool_def obind_comp_dist
+           intro!: opt_bind_cong)
 
 lemma vspace_for_asid_0:
   "vspace_for_asid asid s = Some pt \<Longrightarrow> 0 < asid"
-  by (simp add: vspace_for_asid_def in_omonad split: if_split_asm)
+  by (simp add: vspace_for_asid_def in_omonad entry_for_asid_def split: if_split_asm)
 
 lemma pt_lookup_vs_lookupI:
   "\<lbrakk> vspace_for_asid asid s = Some pt;
@@ -1770,16 +1691,8 @@ lemma pt_lookup_slot_vs_lookup_slotI:
 lemma vspace_for_asid_vs_lookup:
   "vspace_for_asid asid s = Some pt \<Longrightarrow>
    vs_lookup_table max_pt_level asid 0 s = Some (max_pt_level, pt)"
-  by (clarsimp simp: vspace_for_asid_def vs_lookup_table_def in_omonad pt_walk.simps)
-
-lemma ptes_of_ptsD:
-  assumes p: "ptes_of s pte_ptr = Some pte"
-  assumes a: "is_aligned pte_ptr table_size"
-  shows "pts_of s pte_ptr \<noteq> None"
-proof -
-  from a have "pte_ptr && ~~mask pt_bits = pte_ptr" by (simp add: pt_bits_def)
-  with p show ?thesis by (auto dest!: ptes_of_pts_of)
-qed
+  by (clarsimp simp: vspace_for_asid_def vs_lookup_table_def entry_for_asid_def vspace_for_pool_def
+                     in_omonad pt_walk.simps)
 
 lemma pte_at_eq:
   "pte_at p s = (ptes_of s p \<noteq> None)"
@@ -1820,18 +1733,21 @@ lemma vspace_for_asid_valid_pt:
      valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> \<exists>pt. pts_of s root_pt = Some pt \<and> valid_vspace_obj max_pt_level (PageTable pt) s"
   apply (frule vspace_for_asid_vs_lookup)
-  apply (clarsimp simp: vspace_for_asid_def)
+  apply (clarsimp simp: vspace_for_asid_def entry_for_asid_def)
   apply (frule (2) pool_for_asid_valid_vspace_objs)
-  by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
+  by (fastforce simp: in_opt_map_eq valid_vspace_objs_def vspace_pt_at_eq entry_for_pool_def)
+
+(* FIXME AARCH64: move *)
+lemmas bit_size_less = bit1.size_less
 
 lemma pt_slot_offset_vref:
   "\<lbrakk> level < level'; is_aligned vref (pt_bits_left level') \<rbrakk> \<Longrightarrow>
    pt_slot_offset level pt_ptr vref = pt_ptr"
   apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def)
-  apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps)
+  apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def) (* FIXME AARCH64: generalise *)
   apply (erule_tac x="(9 + (n + 9 * size level))" in allE)
   apply (erule impE; clarsimp)
-  apply (simp flip: bit0.size_less)
+  apply (simp flip: bit_size_less)
   done
 
 lemma pt_slot_offset_vref_for_level_eq:
@@ -1841,7 +1757,7 @@ lemma pt_slot_offset_vref_for_level_eq:
 lemma vspace_for_pool_None_upd_idem:
   "vspace_for_pool pool_ptr asid ((asid_pools_of s)(p := None)) = Some table_ptr
    \<Longrightarrow> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some table_ptr"
-  by (clarsimp simp: vspace_for_pool_def obind_def split: option.splits if_splits)
+  by (clarsimp simp: vspace_for_pool_def entry_for_pool_def obind_def split: option.splits if_splits)
 
 lemma vs_lookup_max_pt_levelD:
   "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)
@@ -1864,24 +1780,27 @@ lemma vs_lookup_max_pt_valid:
   "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt);
      vref \<in> user_region;
      valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> \<exists>pt. pts_of s root_pt = Some pt \<and> valid_vspace_obj max_pt_level (PageTable pt) s"
+   \<Longrightarrow> \<exists>pt. pts_of s root_pt = Some pt \<and>
+            valid_vspace_obj max_pt_level (PageTable pt) s \<and>
+            is_VSRootPT pt"
   apply (frule vs_lookup_max_pt_levelD)
   apply clarsimp
   apply (frule (2) pool_for_asid_valid_vspace_objs)
-  by (fastforce simp: in_opt_map_eq valid_vspace_objs_def pt_at_eq vspace_for_pool_def)
+  by (fastforce simp: in_opt_map_eq valid_vspace_objs_def vspace_pt_at_eq vspace_for_pool_def
+                      entry_for_pool_def)
 
 lemma aligned_vref_for_level_eq:
   "is_aligned vref (pt_bits_left level) = (vref_for_level vref level = vref)"
   unfolding vref_for_level_def using is_aligned_neg_mask_eq' by blast
 
 lemma is_aligned_table_base_pte_bits[simp]:
-  "is_aligned (table_base p) pte_bits"
+  "is_aligned (table_base vs p) pte_bits"
   unfolding pte_bits_def
   by (simp add: bit_simps is_aligned_neg_mask)
 
 lemma pt_slot_offset_offset:
-  "is_aligned pt pt_bits \<Longrightarrow>
-   pt_slot_offset level pt vref && mask pt_bits >> pte_bits = pt_index level vref"
+  "is_aligned pt (pt_bits (level = max_pt_level)) \<Longrightarrow>
+   pt_slot_offset level pt vref && mask (pt_bits (level = max_pt_level)) >> pte_bits = pt_index level vref"
   by (simp add: pt_slot_offset_def pt_index_def bit_simps mask_add_aligned and_mask_shiftr_comm
                 word_size and_mask2 mask_twice)
 
@@ -1895,35 +1814,41 @@ lemma pt_slot_offset_vref_id[simp]:
   by (rule vref_for_level_pt_slot_offset) (simp add: max_def)
 
 lemma table_base_plus:
-  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
-   table_base (pt_ptr + (i << pte_bits)) = pt_ptr"
+  "\<lbrakk> is_aligned pt_ptr (pt_bits vsp); i \<le> mask (ptTranslationBits vsp) \<rbrakk> \<Longrightarrow>
+   table_base vsp (pt_ptr + (i << pte_bits)) = pt_ptr"
   unfolding is_aligned_mask bit_simps
-  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+  apply (cases "vsp \<and> config_ARM_PA_SIZE_BITS_40"; simp only:)
+   by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)+
+
 
 lemma table_base_plus_ucast:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   table_base (pt_ptr + (ucast (i::pt_index) << pte_bits)) = pt_ptr"
+  "is_aligned pt_ptr (pt_bits vsp) \<Longrightarrow>
+   table_base vsp (pt_ptr + (ucast (i::pt_index) << pte_bits)) = pt_ptr"
   by (fastforce intro!: table_base_plus ucast_leq_mask simp: bit_simps)
 
 lemma table_index_plus:
-  "\<lbrakk> is_aligned pt_ptr pt_bits; i \<le> mask ptTranslationBits \<rbrakk> \<Longrightarrow>
-   table_index (pt_ptr + (i << pte_bits)) = ucast i"
+  "\<lbrakk> is_aligned pt_ptr (pt_bits vsp); i \<le> mask (ptTranslationBits vsp) \<rbrakk> \<Longrightarrow>
+   table_index vsp (pt_ptr + (i << pte_bits)) = ucast i"
   unfolding is_aligned_mask bit_simps
-  by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)
+  apply (cases "vsp \<and> config_ARM_PA_SIZE_BITS_40"; simp only:)
+   by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)+
 
 lemma table_index_plus_ucast:
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   table_index (pt_ptr + (ucast (i::pt_index) << pte_bits)) = i"
+  "is_aligned pt_ptr (pt_bits False) \<Longrightarrow>
+   table_index False (pt_ptr + (ucast (i::pt_index) << pte_bits)) = i"
+  (* FIXME AARCH64: type is interfering; either generalise or need two versions *)
   apply (drule table_index_plus[where i="ucast i"])
    apply (rule ucast_leq_mask, simp add: bit_simps)
+  sorry (*
   apply (simp add: is_down_def target_size_def source_size_def word_size ucast_down_ucast_id)
-  done
+  done *)
 
 lemma table_index_offset_pt_bits_left:
-  "is_aligned pt_ref pt_bits \<Longrightarrow>
-   table_index (pt_slot_offset lvl pt_ref vref) = ucast (vref >> pt_bits_left lvl)"
+  "is_aligned pt_ref (pt_bits (lvl = max_pt_level)) \<Longrightarrow>
+   table_index (lvl = max_pt_level) (pt_slot_offset lvl pt_ref vref) = ucast (vref >> pt_bits_left lvl)"
+  sorry (* FIXME AARCH64: needs general table_index_plus_ucast, see type instance below
   by (simp add: table_index_plus_ucast pt_slot_offset_def pt_index_def
-                ptTranslationBits_def ucast_ucast_mask[where 'a=9, simplified, symmetric])
+                ptTranslationBits_def ucast_ucast_mask[where 'a=9, simplified, symmetric]) *)
 
 lemma vs_lookup_slot_level:
   "vs_lookup_slot bot_level asid vref s = Some (level, p) \<Longrightarrow>
@@ -2007,7 +1932,7 @@ lemma pt_walk_split:
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
   apply (subgoal_tac "level' < top_level -1")
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
-  apply (meson bit0.minus1_leq not_le less_le)
+  apply (meson bit_minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_short:
@@ -2027,7 +1952,7 @@ lemma pt_walk_split_short:
   apply (subgoal_tac "level' < top_level -1")
    apply (clarsimp simp: obind_assoc)
    apply (fastforce simp: obind_def pt_walk.simps intro!: opt_bind_cong)
-  apply (meson bit0.minus1_leq not_le less_le)
+  apply (meson bit_minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_Some:
@@ -2083,7 +2008,7 @@ lemma vs_lookup_table_split_last_Some:
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
                          vm_level_less_max_pt_level)
   apply (subst (asm) pt_walk_split_Some[where level'="level+1"])
-    apply (clarsimp simp add: less_imp_le bit0.plus_one_leq)+
+    apply (clarsimp simp add: less_imp_le bit_plus_one_leq)+
   apply (subst (asm) (2) pt_walk.simps)
   apply (clarsimp simp: in_omonad split: if_splits)
   done
@@ -2118,14 +2043,6 @@ lemma valid_vspace_objsD:
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
-lemma pptr_base_mask:
-  "pptr_base = ~~mask canonical_bit"
-  by (simp add: pptr_base_def pptrBase_def mul_not_mask_eq_neg_shiftl flip: minus_one_shift)
-
-lemma pptr_base_nth[simp]:
-  "pptr_base !! n = (canonical_bit \<le> n \<and> n < word_bits)"
-  by (simp add: pptr_base_mask neg_mask_test_bit word_bits_def)
-
 lemma pt_bits_left_bound:
   "pt_bits_left level \<le> canonical_bit + 1"
   apply (simp add: pt_bits_left_def bit_simps canonical_bit_def)
@@ -2138,10 +2055,10 @@ lemma pt_bits_left_bound:
 lemma vref_for_level_pptr_baseI:
   "p < pptr_base \<Longrightarrow> vref_for_level p level < pptr_base"
   using pt_bits_left_bound[of level] unfolding vref_for_level_def
-  by word_bitwise (clarsimp simp: word_size word_bits_def canonical_bit_def)
+  by word_bitwise (clarsimp simp: word_size word_bits_def pptr_base_def pptrBase_def)
 
 lemma pt_bits_left_le_max_pt_level:
-  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit + 1 - ptTranslationBits"
+  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit + 1 - ptTranslationBits False"
   apply (simp add: pt_bits_left_def bit_simps canonical_bit_def)
   apply (subgoal_tac "size level \<le> size max_pt_level")
    apply (erule order_trans)
@@ -2151,22 +2068,15 @@ lemma pt_bits_left_le_max_pt_level:
 
 lemma vref_for_level_asid_pool:
   "vref \<le> canonical_user \<Longrightarrow> vref_for_level vref asid_pool_level = 0"
+  oops (* FIXME AARCH64: does not make sense any more, but is used in ArchAcc_AI
   apply (clarsimp simp: vref_for_level_def pt_bits_left_def asid_pool_level_size bit_simps
                         canonical_user_def canonical_bit_def and_mask_0_iff_le_mask)
   apply (fastforce simp add: mask_def elim: order.trans)
-  done
+  done *)
 
 lemma pt_bits_left_le_canonical:
-  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit"
+  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> canonical_bit" (* FIXME AARCH64: probably needs something about IPA bits *)
   by (drule pt_bits_left_le_max_pt_level) (simp add: canonical_bit_def bit_simps)
-
-lemma canonical_vref_for_levelI:
-  "\<lbrakk> canonical_address vref; vref < pptr_base \<rbrakk> \<Longrightarrow> canonical_address (vref_for_level vref level)"
-  using pt_bits_left_bound[of level]
-  apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
-                   bit_simps)
-  apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less)
 
 lemma vref_for_level_le:
   "vref_for_level vref level \<le> vref"
@@ -2175,23 +2085,8 @@ lemma vref_for_level_le:
 lemma vref_for_level_user_region:
   "vref \<in> user_region \<Longrightarrow> vref_for_level vref level \<in> user_region"
   using vref_for_level_le[of vref level]
-  by (force simp: user_region_def vref_for_level_pptr_baseI canonical_vref_for_levelI)
-
-lemma canonical_vref_for_levelD:
-  "\<lbrakk> canonical_address (vref_for_level vref level); vref < pptr_base; level \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> canonical_address vref"
-  using pt_bits_left_bound[of level]
-  apply (simp add: canonical_address_def canonical_address_of_def vref_for_level_def pptr_base_mask
-                    bit_simps)
-  apply (drule pt_bits_left_le_canonical)
-  apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less)
-
-lemma aligned_canonical_max_is_0:
-  "\<lbrakk> canonical_address p; is_aligned p (pt_bits_left (max_pt_level + 1)) \<rbrakk> \<Longrightarrow> p = 0"
-  apply (simp add: canonical_address_def canonical_address_of_def level_defs pt_bits_left_def
-                   bit_simps is_aligned_nth)
-  by word_bitwise clarsimp
+  sorry (* FIXME AARCH64
+  by (force simp: user_region_def vref_for_level_pptr_baseI canonical_vref_for_levelI) *)
 
 lemma aligned_vref_for_level[simp]:
   "is_aligned (vref_for_level vref level) (pt_bits_left level)"
@@ -2199,21 +2094,24 @@ lemma aligned_vref_for_level[simp]:
 
 lemmas pt_walk_0[simp] = pt_walk.simps[where level=0, simplified]
 
+(* FIXME AARCH64: the 39 is from the construction of pptrBaseOffset, not sure if we can de-magic that number *)
 lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> canonical_bit \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
+  "\<lbrakk> is_aligned p n; n \<le> 39 \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
   apply (simp add: addrFromPPtr_def)
-  apply (erule aligned_sub_aligned; simp add: canonical_bit_def)
-  apply (simp add: pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
+  apply (erule aligned_sub_aligned)
+   apply (simp add: pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
+   apply (erule is_aligned_weaken[rotated])
+   apply (simp add: is_aligned_def)
+  apply simp
   done
 
 lemma is_aligned_addrFromPPtr[intro!]:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
   by (simp add: is_aligned_addrFromPPtr_n pageBits_def canonical_bit_def)
 
+(* FIXME AARCH64: the 39 is from the construction of pptrBaseOffset, via is_aligned_addrFromPPtr_n *)
 lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz \<le> canonical_bit\<rbrakk>
+  "\<lbrakk>is_aligned x sz; sz \<le> 39\<rbrakk>
    \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
   apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def paddrBase_def canonical_bit_def)
   apply (erule aligned_add_aligned)
@@ -2227,24 +2125,25 @@ lemma is_aligned_ptrFromPAddr:
   by (simp add: is_aligned_ptrFromPAddr_n pageBits_def canonical_bit_def)
 
 lemma is_aligned_ptrFromPAddr_pt_bits[intro!]:
-  "is_aligned p pt_bits \<Longrightarrow> is_aligned (ptrFromPAddr p) pt_bits"
+  "is_aligned p (pt_bits vsp) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pt_bits vsp)"
   by (simp add: is_aligned_ptrFromPAddr_n canonical_bit_def bit_simps)
 
 lemma ptr_from_pte_aligned[simp,intro!]:
-  "is_aligned (pptr_from_pte pte) pt_bits"
+  "is_aligned (pptr_from_pte pte) (pt_bits False)"
   unfolding pptr_from_pte_def
-  by (auto simp: addr_from_ppn_def is_aligned_shift)
+  oops (* FIXME AARCH64: this needs to become an invariant, which is unexpectedly annoying for pt_walk
+  by (auto simp: is_aligned_shift) *)
 
 lemma pspace_aligned_pts_ofD:
-  "\<lbrakk> pspace_aligned s; pts_of s pt_ptr \<noteq> None \<rbrakk> \<Longrightarrow> is_aligned pt_ptr pt_bits"
+  "\<lbrakk> pspace_aligned s; pts_of s pt_ptr = Some pt \<rbrakk> \<Longrightarrow> is_aligned pt_ptr (pt_bits (is_VSRootPT pt))"
   by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps)
 
-lemma user_region_slots:
-  "vref \<in> user_region \<Longrightarrow> ucast (pt_index max_pt_level vref) \<notin> kernel_mapping_slots"
-  apply (clarsimp simp: user_region_def kernel_mapping_slots_def pt_index_def level_defs)
-  apply (simp add: pt_bits_left_def bit_simps canonical_address_def canonical_address_of_def)
-  apply word_bitwise
-  by (clarsimp simp: word_bits_def canonical_bit_def word_size canonical_user_def)
+lemma is_aligned_pt_slot_offset_pte:
+  "is_aligned pt (pt_bits vsp) \<Longrightarrow> is_aligned (pt_slot_offset level pt vref) pte_bits"
+  unfolding pt_slot_offset_def
+  by (simp add: is_aligned_add bit_simps is_aligned_weaken is_aligned_shift)
+
+lemmas bit_from_top_induct = bit1.from_top_induct
 
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
@@ -2252,10 +2151,11 @@ lemma valid_vspace_objs_strongD:
      vref \<in> user_region;
      level \<le> max_pt_level;
      valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
-   \<exists>pt. pts_of s pt_ptr = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
+   \<exists>pt. pts_of s pt_ptr = Some pt \<and> valid_vspace_obj level (PageTable pt) s \<and>
+        is_VSRootPT pt = (level= max_pt_level)"
   supply valid_vspace_obj.simps[simp del]
   apply (drule vs_lookup_level)
-  apply (induct level arbitrary: pt_ptr rule: bit0.from_top_induct[where y="max_pt_level"])
+  apply (induct level arbitrary: pt_ptr rule: bit_from_top_induct[where y="max_pt_level"])
    apply simp
    apply (erule (3) vs_lookup_max_pt_valid)
   apply (rename_tac level pt_ptr)
@@ -2268,6 +2168,8 @@ lemma valid_vspace_objs_strongD:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (subst (asm) valid_vspace_obj.simps)
   apply (frule (1) pspace_alignedD)
+  apply clarsimp
+  sorry (* FIXME AARCH64: make a lemma about pt_range and ptes_of s (pt_slot_offset level pt vref)
   apply (clarsimp simp: ptes_of_def in_omonad pt_slot_offset_offset
                   simp flip: pt_bits_def)
   apply (drule_tac x="ucast (pt_index level vref)" in bspec)
@@ -2276,87 +2178,42 @@ lemma valid_vspace_objs_strongD:
   apply (drule (2) valid_vspace_objsD)
    apply (simp add: in_omonad)
   apply assumption
-  done
+  done *)
 
 lemma pt_walk_is_aligned:
   "\<lbrakk> pt_walk level bot_level p vref' ptes = Some (level', p');
-     is_aligned p pt_bits \<rbrakk>
-   \<Longrightarrow> is_aligned p' pt_bits"
+     is_aligned p (pt_bits (level = max_pt_level)) \<rbrakk>
+   \<Longrightarrow> is_aligned p' (pt_bits (level' = max_pt_level))"
   apply (induct level arbitrary: p, simp)
   apply (subst (asm) (2) pt_walk.simps)
+  oops (* FIXME AARCH64: pt_walk_is_aligned no longer true without base_addr invariant; should still
+                         be true with pspace_aligned and valid_vspace_obj, though
   apply (fastforce simp: in_omonad split: if_splits)
-  done
+  done *)
 
 lemma vspace_for_pool_is_aligned:
   "\<lbrakk> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some pt_ptr;
      pool_for_asid asid s = Some pool_ptr;
      vref \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
-   \<Longrightarrow> is_aligned pt_ptr pt_bits"
+   \<Longrightarrow> is_aligned pt_ptr (pt_bits True)"
   by (drule valid_vspace_objs_strongD[where bot_level=max_pt_level and asid=asid]
-      ; fastforce simp: vs_lookup_table_def in_omonad elim: pspace_aligned_pts_ofD)
+      ; fastforce simp: vs_lookup_table_def in_omonad dest: pspace_aligned_pts_ofD)
 
 lemma vs_lookup_table_is_aligned:
   "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
     level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s; valid_asid_table s;
     valid_vspace_objs s \<rbrakk>
-   \<Longrightarrow> is_aligned pt_ptr pt_bits"
+   \<Longrightarrow> is_aligned pt_ptr (pt_bits (level' = max_pt_level))"
   apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_splits)
   apply (erule disjE; clarsimp?)
+  sorry (* FIXME AARCH64: should still be true, since we have valid_vspace_obj and pspace_aligned
   apply (erule pt_walk_is_aligned)
   apply (erule vspace_for_pool_is_aligned; simp)
-  done
-
-lemma kernel_mapping_slots:
-  "vref \<in> kernel_mappings \<Longrightarrow> ucast (pt_index max_pt_level vref) \<in> kernel_mapping_slots"
-  apply (clarsimp simp: kernel_mapping_slots_def pt_index_def kernel_mappings_def)
-  apply (simp add: bit_simps pptr_base_def pptrBase_def canonical_bit level_defs pt_bits_left_def)
-  by word_bitwise (clarsimp simp: word_size)
+  done *)
 
 lemma kernel_window_user_region_sane:
   "valid_uses s \<Longrightarrow> kernel_window s \<inter> user_window s = {}"
   unfolding window_defs by auto
-
-lemma kernel_mappings_user_region:
-  "kernel_mappings \<inter> user_region = {}"
-  unfolding kernel_mappings_def user_region_def
-  by (auto dest!: canonical_user_below_pptr_base)
-
-lemma is_aligned_pt_slot_offset_pte:
-  "is_aligned pt pt_bits \<Longrightarrow> is_aligned (pt_slot_offset level pt vref) pte_bits"
-  unfolding pt_slot_offset_def
-  by (simp add: is_aligned_add bit_simps is_aligned_weaken is_aligned_shift)
-
-(* valid_uses is in here, because we need to know that the asid pools are valid objects,
-   which means that the top-level root_pt actually exists *)
-lemma equal_mappings_pt_slot_offset:
-  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_mappings;
-     equal_kernel_mappings s; valid_global_vspace_mappings s;
-     valid_vspace_objs s; valid_asid_table s; valid_uses s;
-     pspace_aligned s \<rbrakk>
-   \<Longrightarrow> ptes_of s (pt_slot_offset max_pt_level root_pt vref) =
-       ptes_of s (pt_slot_offset max_pt_level (global_pt s) vref)"
-  apply (simp add: equal_kernel_mappings_def has_kernel_mappings_def)
-  apply ((erule allE)+, erule (1) impE)
-  apply (drule (2) vspace_for_asid_valid_pt)
-  apply (drule (1) valid_global_vspace_mappings_pt_at)
-  apply (clarsimp simp: in_omonad pt_at_eq)
-  apply (frule_tac p="(global_pt s)" in pspace_alignedD, assumption)
-  apply (frule_tac p=root_pt in pspace_alignedD, assumption)
-  apply (drule kernel_mapping_slots[where vref=vref])
-  apply (simp add: pt_bits_def[symmetric])
-  apply (simp add: ptes_of_def pt_slot_offset_offset obind_def in_opt_map_eq
-                   is_aligned_pt_slot_offset_pte
-            split: option.splits)
-  done
-
-lemma equal_mappings_translate_address:
-  "\<lbrakk> vspace_for_asid asid s = Some root_pt; vref \<in> kernel_mappings;
-     equal_kernel_mappings s; valid_global_vspace_mappings s;
-     valid_vspace_objs s; valid_asid_table s; valid_uses s;
-     pspace_aligned s \<rbrakk>
-  \<Longrightarrow> translate_address root_pt vref (ptes_of s)
-     = translate_address (global_pt s) vref (ptes_of s)"
-  by (fastforce dest: equal_mappings_pt_slot_offset translate_address_equal_top_slot)
 
 lemma pte_ref_def2:
   "pte_ref pte = (if pte = InvalidPTE then None else Some (pptr_from_pte pte))"
@@ -2393,18 +2250,48 @@ lemma arch_tcb_context_get_set[simp]:
 lemma pte_at_typ_lift:
   assumes "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
   shows "f \<lbrace>pte_at t\<rbrace>"
-  unfolding pte_at_def by (wpsimp wp: assms)
+  unfolding pte_at_def sorry (* FIXME AARCH64 by (wpsimp wp: assms) *)
 
-lemma vmid_inv_typ_lift:
-  assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
+lemma entry_for_asid_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (entry_for_asid asid s)\<rbrace>"
+  unfolding entry_for_asid_def
+  apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
+  apply (rule hoare_lift_Pf[where f=asid_table])
+   apply (rule hoare_lift_Pf[where f=asid_pools_of])
+    apply (wpsimp wp: assms)+
+  done
+
+(* P has a different type here compared to the lemma above *)
+lemma swp_entry_for_asid_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (\<lambda>asid. entry_for_asid asid s)\<rbrace>"
+  unfolding entry_for_asid_def
+  apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
+  apply (rule hoare_lift_Pf[where f=asid_table])
+   apply (rule hoare_lift_Pf[where f=asid_pools_of])
+    apply (wpsimp wp: assms)+
+  done
+
+lemma vmid_for_asid_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (swp vmid_for_asid s)\<rbrace>"
+  unfolding vmid_for_asid_def
+  by (wpsimp wp: assms swp_entry_for_asid_lift simp: swp_def obind_def)
+
+lemma vmid_inv_ap_lift:
+  assumes ap[wp]: "(\<And>P. f \<lbrace> \<lambda>s. P (asid_pools_of s) \<rbrace>)"
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>vmid_inv\<rbrace>"
   unfolding vmid_inv_def
   apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
   apply (rule hoare_lift_Pf[where f="swp vmid_for_asid"])
    apply wpsimp
-  apply clarsimp
-  sorry (* FIXME AARCH64: this needs something related to vmid_for_asid etc *)
+  apply (wpsimp wp: vmid_for_asid_lift)
+  done
 
 lemma cur_vcpu_typ_lift:
   assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
@@ -2429,28 +2316,29 @@ lemma vspace_for_asid_lift:
   apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
   apply (rule hoare_lift_Pf[where f=asid_table])
    apply (rule hoare_lift_Pf[where f=asid_pools_of])
-    apply (wpsimp wp: assms)+
-  done
+    apply (wpsimp wp: assms entry_for_asid_lift)+
+  sorry (* FIXME AARCH64 *)
 
 lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
-  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
-  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
+  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s) \<rbrace>"
+  assumes aps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
+  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> " (* FIXME AARCH64: phrase this as projection *)
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", rotated], rule arch)
   apply (wpsimp wp: dom_asid_pools_of_lift)
     apply blast
-   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_typ_lift)+
+   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift)+
   done
 
 (* the pt_of projection is not available in generic spec, so we limit what we export
    to a dependency on arch objects *)
 lemma valid_arch_state_lift:
-  assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
+  assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>" (* FIXME AARCH64: should be implied by aobjs *)
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s) \<rbrace>"
-  assumes vcpus[wp]: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
+  assumes vcpus[wp]: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>" (* FIXME AARCH64: phrase this as projection? Already implied by aobjs? *)
   assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_arch; wp)
@@ -2477,13 +2365,14 @@ lemma pool_for_asid_and_mask[simp]:
 
 lemma vs_lookup_table_ap_step:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     asid_pools_of s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
-   \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, pt)"
+     asid_pools_of s p = Some ap; ap ap_idx = Some entry \<rbrakk> \<Longrightarrow>
+   \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, ap_vspace entry)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
+  sorry (* FIXME AARCH64
   apply (rename_tac asid_low)
   apply (rule_tac x="asid && ~~mask asid_low_bits || ucast asid_low" in exI)
   apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def in_omonad)
-  done
+  done *)
 
 locale_abbrev vref_for_index :: "pt_index \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
   "vref_for_index idx level \<equiv> ucast (idx::pt_index) << pt_bits_left level"
@@ -2492,15 +2381,15 @@ locale_abbrev vref_for_level_idx :: "vspace_ref \<Rightarrow> pt_index \<Rightar
   "vref_for_level_idx vref idx level \<equiv> vref_for_level vref (level+1) || vref_for_index idx level"
 
 lemma table_index_pt_slot_offset:
-  "\<lbrakk> is_aligned p pt_bits; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   table_index (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
+  "\<lbrakk> is_aligned p (pt_bits (level = max_pt_level)); level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
+   table_index (level = max_pt_level) (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
   using pt_bits_left_bound[of "level"]
   using pt_bits_left_bound[of "level+1"]
   apply (simp add: pt_slot_offset_def pt_index_def vref_for_level_def)
   apply (subst word_plus_and_or_coroll)
    apply (rule word_eqI)
    apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
-   apply (clarsimp simp: pt_bits_left_def bit_simps is_aligned_nth)
+   apply (clarsimp simp: pt_bits_left_def bit_simps is_aligned_nth split: if_split_asm)
   apply (rule word_eqI)
   apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
   apply (clarsimp simp: bit_simps is_aligned_nth canonical_bit_def pt_bits_left_def)
@@ -2516,28 +2405,20 @@ lemma vs_lookup_vref_for_level_eq1:
   apply simp
   done
 
+(* FIXME AARCH64: move *)
+lemmas bit_size_less_eq = bit1.size_less_eq
+
 lemma vref_for_level_idx[simp]:
   "level \<le> max_pt_level \<Longrightarrow>
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
-  apply (word_eqI_solve simp: bit_simps flip: bit0.size_less_eq)
+  apply (word_eqI_solve simp: bit_simps flip: bit_size_less_eq)
   done
 
 lemma vref_for_level_nth[simp]:
   "vref_for_level vref level !! n = (vref !! n \<and> pt_bits_left level \<le> n \<and> n < size vref)"
   by (auto simp: vref_for_level_def word_eqI_simps)
-
-lemma pt_bits_left_max:
-  "pt_bits_left max_pt_level = canonical_bit - (LENGTH(pt_index_len)-1)"
-  by (simp add: pt_bits_left_def level_defs bit_simps canonical_bit_def)
-
-lemma kernel_mapping_slots_top_bit:
-  "(idx \<in> kernel_mapping_slots) = (idx !! (LENGTH(pt_index_len)-1))"
-  apply (simp add: kernel_mapping_slots_def pptr_base_mask pt_bits_left_max)
-  apply word_bitwise
-  apply (simp add: canonical_bit_def word_size rev_bl_order_simps)
-  done
 
 lemma vref_for_level_user_regionD:
   "\<lbrakk> vref_for_level vref level \<in> user_region; level \<le> max_pt_level \<rbrakk>
@@ -2546,11 +2427,11 @@ lemma vref_for_level_user_regionD:
   apply (clarsimp simp: user_region_def)
   apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
-  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def)
+  sorry (* FIXME AARCH 64
+  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def) *)
 
 lemma vref_for_level_idx_canonical_user:
-  "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;
-     level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    vref_for_level_idx vref idx level \<le> canonical_user"
   apply (simp add: canonical_user_def le_mask_high_bits)
   apply (clarsimp simp: word_size)
@@ -2558,21 +2439,23 @@ lemma vref_for_level_idx_canonical_user:
    apply (clarsimp simp: word_eqI_simps canonical_bit_def)
    apply (simp add: pt_bits_left_def bit_simps)
    apply (frule test_bit_size)
-   apply (simp add: word_size level_defs flip: bit0.size_less)
+   apply (simp add: word_size level_defs flip: bit_size_less split: if_split_asm)
   apply (simp add: not_less)
-  apply (clarsimp simp: word_eqI_simps canonical_bit_def kernel_mapping_slots_top_bit)
+  apply (clarsimp simp: word_eqI_simps canonical_bit_def)
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (frule test_bit_size)
-  apply (simp add: word_size)
+  apply (simp add: word_size split: if_split_asm)
+  sorry (* FIXME: AARCH64
   apply (subgoal_tac "i \<noteq> canonical_bit"; fastforce simp: canonical_bit_def)
-  done
+  done *)
 
 lemma vs_lookup_table_pt_step:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
-     pts_of s p = Some pt; is_aligned p pt_bits; level \<le> max_pt_level; pte_ref (pt idx) = Some p';
-     level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
+     pts_of s p = Some pt; is_aligned p (pt_bits (level = max_pt_level)); level \<le> max_pt_level;
+     pte \<in> pt_range pt; pte_ref pte = Some p' \<rbrakk> \<Longrightarrow>
    \<exists>vref'. vs_lookup_target level asid vref' s = Some (level, p') \<and>
            vref' \<in> user_region"
+  sorry (* FIXME AARCH64 (no more idx, because of pt_range)
   apply (rule_tac x="vref_for_level vref (level+1) ||
                      (ucast (idx::pt_index) << pt_bits_left level)" in exI)
   apply (simp add: vs_lookup_target_def vs_lookup_slot_def in_omonad)
@@ -2590,7 +2473,7 @@ lemma vs_lookup_table_pt_step:
     apply simp
    apply (simp add: pte_of_def in_omonad is_aligned_pt_slot_offset_pte table_index_pt_slot_offset)
   apply (simp add: user_region_def vref_for_level_idx_canonical_user)
-  done
+  done *)
 
 lemma pte_rights_PagePTE[simp]:
   "pte_rights_of (PagePTE b sm attr r) = r"
@@ -2601,13 +2484,9 @@ lemma pt_lookup_slot_max_pt_level:
   by (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def dest!: pt_walk_max_level)
 
 lemma pageBitsForSize_vmpage_size_of_level[simp]:
-  "level \<le> max_pt_level \<Longrightarrow> pageBitsForSize (vmpage_size_of_level level) = pt_bits_left level"
-  by (auto dest!: max_pt_level_enum simp add: vmpage_size_of_level_def pt_bits_left_def)
-
-lemma global_pts_ofD:
-  "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
-   pts_of s pt_ptr \<noteq> None"
-  by (simp add: valid_global_arch_objs_def pt_at_eq)
+  "level \<le> max_pt_level \<Longrightarrow> pageBitsForSize (vmsize_of_level level) = pt_bits_left level"
+  sorry (* FIXME AARCH64: a config_ARM_PA_SIZE_BITS_40 dependency seems to be missing somewhere
+  by (auto dest!: max_pt_level_enum simp add: vmsize_of_level_def pt_bits_left_def split: if_split_asm) *)
 
 lemma vs_lookup_slot_table:
   "level \<le> max_pt_level \<Longrightarrow>
@@ -2652,15 +2531,6 @@ lemma pool_for_asid_kheap_upd[simp]:
   "pool_for_asid asid (s\<lparr>kheap := kheap'\<rparr>) = pool_for_asid asid s"
   by (simp add: pool_for_asid_def)
 
-lemma table_index_max_level_slots:
-  "\<lbrakk> vref \<in> user_region; is_aligned pt pt_bits \<rbrakk>
-   \<Longrightarrow> table_index (pt_slot_offset max_pt_level pt vref) \<notin> kernel_mapping_slots"
-  apply (simp add: kernel_mapping_slots_def table_index_offset_pt_bits_left not_le user_region_def)
-  apply (simp add: pt_bits_left_def level_defs bit_simps canonical_user_def)
-  apply word_bitwise
-  apply (simp add: word_size canonical_bit_def word_bits_def)
-  done
-
 lemma valid_vspace_objs_strong_slotD:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); vref \<in> user_region;
      level \<le> max_pt_level; valid_vspace_objs s; valid_asid_table s; pspace_aligned s\<rbrakk>
@@ -2670,12 +2540,13 @@ lemma valid_vspace_objs_strong_slotD:
   apply (drule (5) valid_vspace_objs_strongD)
   apply (clarsimp simp: in_omonad ptes_of_def)
   apply (frule (1) pspace_alignedD, clarsimp)
+  sorry (* FIXME AARCH64: config_ARM_PA_SIZE_BITS_40 dependency
   apply (prop_tac "table_size = pt_bits", simp add: bit_simps)
   apply (clarsimp simp: is_aligned_pt_slot_offset_pte)
   apply (drule_tac x="table_index (pt_slot_offset level pt_ptr vref)" in bspec; clarsimp)
   apply (drule (1) table_index_max_level_slots)
   apply simp
-  done
+  done *)
 
 lemma pt_bits_left_inj[simp]:
   "(pt_bits_left level' = pt_bits_left level) = (level' = level)"
@@ -2704,17 +2575,6 @@ lemma valid_arch_state_asid_table:
   "valid_arch_state s \<Longrightarrow> valid_asid_table s"
   by (simp add: valid_arch_state_def)
 
-lemma valid_arch_state_global_arch_objs:
-  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
-  by (simp add: valid_arch_state_def)
-
-lemma kernel_mappings_canonical:
-  "p \<in> kernel_mappings \<Longrightarrow> canonical_address p"
-  apply (simp add: kernel_mappings_def pptr_base_def AARCH64.pptrBase_def canonical_bit_def
-                   canonical_address_def canonical_address_of_def)
-  apply word_bitwise
-  apply simp
-  done
 
 (* VCPU and related symrefs *)
 
@@ -2762,11 +2622,6 @@ lemma in_user_frame_update[iff]:
 lemma in_device_frame_update[iff]:
   "in_device_frame p (f s) = in_device_frame p s"
   by (simp add: in_device_frame_def obj_at_def pspace)
-
-lemma valid_global_arch_objs_update [iff]:
-  "riscv_global_pts (arch_state (f s)) = riscv_global_pts (arch_state s) \<Longrightarrow>
-   valid_global_arch_objs (f s) = valid_global_arch_objs s"
-  by (simp add: valid_global_arch_objs_def)
 
 lemma valid_pte_update [iff]:
   "valid_pte level pte (f s) = valid_pte level pte s"
@@ -2823,10 +2678,14 @@ lemma pool_for_asid_update[iff]:
   "pool_for_asid asid (f s) = pool_for_asid asid s"
   by (simp add: pool_for_asid_def arch)
 
+lemma entry_for_asid_update[iff]:
+  "entry_for_asid asid (f s) =  entry_for_asid asid s"
+  by (simp add: entry_for_asid_def obind_def oassert_def oreturn_def pspace
+           split: option.splits)
+
 lemma vspace_for_asid_update[iff]:
   "vspace_for_asid asid (f s) =  vspace_for_asid asid s"
-  by (simp add: vspace_for_asid_def entry_for_asid_def obind_def oassert_def oreturn_def pspace
-           split: option.splits)
+  by (simp add: vspace_for_asid_def obind_def split: option.splits)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
@@ -2855,10 +2714,6 @@ lemma valid_ioports_update[iff]:
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
   by (simp add: valid_asid_table_def arch pspace)
-
-lemma has_kernel_mappings_update [iff]:
-  "has_kernel_mappings pt (f s) = has_kernel_mappings pt s"
-  by (simp add: has_kernel_mappings_def arch pspace)
 
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
