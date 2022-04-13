@@ -15,18 +15,6 @@ begin
 
 declare opt_mapE[rule del]
 
-\<comment> \<open>---------------------------------------------------------------------------\<close>
-
-section "AARCH64-specific invariant definitions"
-
-(* the unit type gets simplified too eagerly by simpprocs *)
-(* FIXME RISCV: put this or something like this into Lib, eliminate competitors *)
-datatype void = Void unit
-
-qualify AARCH64 (in Arch)
-type_synonym iarch_tcb = void
-end_qualify
-
 context Arch begin global_naming AARCH64
 
 (* compatibility with other architectures, input only *)
@@ -36,16 +24,38 @@ abbreviation
 locale_abbrev
   "atyps_of \<equiv> \<lambda>s. aobjs_of s ||> aa_type"
 
+end
+
+\<comment> \<open>---------------------------------------------------------------------------\<close>
+
+section "AARCH64-specific invariant definitions"
+
+(* the unit type gets simplified too eagerly by simpprocs *)
+(* FIXME RISCV: put this or something like this into Lib, eliminate competitors *)
+datatype void = Void unit
+
+qualify AARCH64 (in Arch)
+record iarch_tcb =
+  itcb_vcpu :: "obj_ref option"
+end_qualify
+
+context Arch begin global_naming AARCH64
+
 definition arch_tcb_to_iarch_tcb :: "arch_tcb \<Rightarrow> iarch_tcb" where
-  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> Void ()"
+  "arch_tcb_to_iarch_tcb arch_tcb \<equiv> \<lparr> itcb_vcpu = tcb_vcpu arch_tcb \<rparr>"
 
-lemma iarch_tcb_context_set:
+(* Need one of these simp rules for each field in 'iarch_tcb' *)
+lemma arch_tcb_to_iarch_tcb_simps[simp]:
+  "itcb_vcpu (arch_tcb_to_iarch_tcb arch_tcb) = tcb_vcpu arch_tcb"
+  by (auto simp: arch_tcb_to_iarch_tcb_def)
+
+lemma iarch_tcb_context_set[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_context_set p tcb) = arch_tcb_to_iarch_tcb tcb"
-  by (simp add: arch_tcb_to_iarch_tcb_def)
+  by (auto simp: arch_tcb_context_set_def)
 
-lemma iarch_tcb_set_registers:
+lemma iarch_tcb_set_registers[simp]:
   "arch_tcb_to_iarch_tcb (arch_tcb_set_registers regs arch_tcb) = arch_tcb_to_iarch_tcb arch_tcb"
-  by (simp add: arch_tcb_to_iarch_tcb_def)
+  by (auto simp: arch_tcb_set_registers_def)
 
 (* These simplifications allows us to keep many arch-specific proofs unchanged. *)
 lemma arch_cap_fun_lift_expand[simp]:
@@ -321,7 +331,7 @@ definition wellformed_pte :: "pte \<Rightarrow> bool" where
   "wellformed_pte pte \<equiv> is_PagePTE pte \<longrightarrow> pte_rights pte \<in> valid_vm_rights"
 
 definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_vcpu vcpu s \<equiv> True" (* FIXME AARCH64 *)
+  "valid_vcpu vcpu \<equiv> case_option \<top> (typ_at ATCB) (vcpu_tcb vcpu) "
 
 (* FIXME AARCH64: alternative definition for arch_valid_obj
 definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
@@ -340,9 +350,7 @@ definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state 
    | PageTable pt \<Rightarrow> \<forall>pte\<in>pt_range pt. wellformed_pte pte
    | _ \<Rightarrow> True"
 
-(* FIXME AARCH64: change to arch_valid_obj
-lemmas wellformed_aobj_simps[simp] = wellformed_aobj_def[split_simps arch_kernel_obj.split]
-*)
+lemmas arch_valid_obj_simps[simp] = arch_valid_obj_def[split_simps arch_kernel_obj.split]
 
 (* There are no kernel mappings in user tables in hyp *)
 definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" where
@@ -524,6 +532,14 @@ definition hyp_live :: "kernel_object \<Rightarrow> bool" where
    | ArchObj ao \<Rightarrow> arch_live ao
    |  _ \<Rightarrow> False"
 
+definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
+  "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
+
+definition cur_vcpu :: "'z::state_ext state \<Rightarrow> bool" where
+  "cur_vcpu \<equiv> \<lambda>s. case arm_current_vcpu (arch_state s) of
+     Some (v, _) \<Rightarrow> obj_at (is_vcpu and hyp_live) v s
+   | _ \<Rightarrow> True"
+
 definition pte_rights_of :: "pte \<Rightarrow> rights set" where
   "pte_rights_of pte \<equiv> if is_PagePTE pte then pte_rights pte else {}"
 
@@ -595,7 +611,7 @@ definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
   "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (swp vmid_for_asid s)"
 
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv" (* FIXME AARCH64: add cur_vcpu *)
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -603,10 +619,10 @@ definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
    necessarily in RISC-V *)
 
 definition valid_arch_tcb :: "arch_tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_tcb \<equiv> \<lambda>_. \<top>" (* FIXME AARCH64: vcpu *)
+  "valid_arch_tcb \<equiv> \<lambda>t s. \<forall>v. tcb_vcpu t = Some v \<longrightarrow> vcpu_at v s"
 
 definition valid_arch_idle :: "iarch_tcb \<Rightarrow> bool" where
-  "valid_arch_idle \<equiv> \<top>" (* FIXME AARCH64: vcpu *)
+  "valid_arch_idle t \<equiv> itcb_vcpu t = None"
 
 definition
   "valid_arch_mdb r cs \<equiv> True"
@@ -615,15 +631,26 @@ definition
 definition
   "valid_kernel_mappings \<equiv> \<top>"
 
-(* tcb_arch_ref extracts the obj_refs in tcb_arch: currently there is no vcpu ref in RISCV *)
+(* tcb_arch_ref extracts the obj_refs in tcb_arch; currently only vcpu *)
 definition tcb_arch_ref :: "tcb \<Rightarrow> obj_ref option" where
-  "tcb_arch_ref t \<equiv> None" (* FIXME AARCH64: vcpu *)
+  "tcb_arch_ref t \<equiv> tcb_vcpu (tcb_arch t)"
+
+definition
+  tcb_vcpu_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "tcb_vcpu_refs atcb \<equiv> case atcb of Some vc \<Rightarrow> {(vc, TCBHypRef)} | None \<Rightarrow> {}"
+
+definition vcpu_tcb_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set" where
+  "vcpu_tcb_refs t \<equiv> case t of Some tcb \<Rightarrow> {(tcb, HypTCBRef)} | None \<Rightarrow> {}"
 
 definition tcb_hyp_refs :: "arch_tcb \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "tcb_hyp_refs atcb \<equiv> {}" (* FIXME AARCH64: vcpu *)
+  "tcb_hyp_refs atcb \<equiv> tcb_vcpu_refs (tcb_vcpu atcb)"
 
 definition refs_of_ao :: "arch_kernel_obj \<Rightarrow> (obj_ref \<times> reftype) set" where
-  "refs_of_ao x \<equiv> {}" (* FIXME AARCH64: vcpu *)
+  "refs_of_ao ako \<equiv> case ako of
+     VCPU v \<Rightarrow> vcpu_tcb_refs (vcpu_tcb v)
+   | _ \<Rightarrow> {}"
+
+lemmas refs_of_ao_simps[simp] = refs_of_ao_def[split_simps arch_kernel_obj.split]
 
 (* FIXME: move to generic *)
 definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set" where
@@ -633,6 +660,8 @@ definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype
                    | Endpoint ep       \<Rightarrow> {}
                    | Notification ntfn \<Rightarrow> {}
                    | ArchObj ao        \<Rightarrow> refs_of_ao ao"
+
+lemmas hyp_refs_of_simps[simp] = hyp_refs_of_def[split_simps arch_kernel_obj.split]
 
 definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
@@ -921,7 +950,8 @@ lemma vs_cap_ref_table_cap_ref_eq:
   by (cases cap; simp) (rename_tac acap, case_tac acap; simp)
 
 lemma wellformed_arch_pspace:
-  "\<And>ao. \<lbrakk>arch_valid_obj ao s; kheap s = kheap s'\<rbrakk> \<Longrightarrow> arch_valid_obj ao s'" by simp
+  "\<lbrakk>arch_valid_obj ao s; kheap s = kheap s'\<rbrakk> \<Longrightarrow> arch_valid_obj ao s'"
+  by (cases ao; simp add: arch_valid_obj_def valid_vcpu_def obj_at_def split: option.splits)
 
 lemma pageBitsForSize_pt_bits_left:
   "pageBitsForSize sz = pt_bits_left (level_of_sz sz)"
@@ -933,15 +963,6 @@ lemma asid_low_bits_of_mask_eq:
 
 lemmas asid_low_bits_of_p2m1_eq =
   asid_low_bits_of_mask_eq[simplified mask_2pm1]
-
-lemma tcb_hyp_refs_of_simps[simp]: "tcb_hyp_refs atcb = {}"
-  by (auto simp: tcb_hyp_refs_def)
-
-lemma refs_of_a_simps[simp]: "refs_of_ao ao = {}"
-  by (auto simp: refs_of_ao_def)
-
-lemma hyp_refs_of_simps[simp]: "hyp_refs_of obj = {}"
-  by (auto simp: hyp_refs_of_def split: kernel_object.splits)
 
 lemma arch_kobj_size_bounded[simp, intro!]:
   "arch_kobj_size obj < word_bits"
@@ -1116,6 +1137,10 @@ lemma in_user_frame_lift:
   unfolding in_user_frame_def
   by (wp hoare_vcg_ex_lift assms)
 
+lemma valid_vcpu_default[simp]:
+  "valid_vcpu default_vcpu s"
+  by (simp add: valid_vcpu_def default_vcpu_def)
+
 lemma wellformed_arch_default[simp]:
   "arch_valid_obj (default_arch_object ao_type dev us) s"
   unfolding arch_valid_obj_def default_arch_object_def
@@ -1157,10 +1182,16 @@ lemma ko_at_state_hyp_refs_ofD:
   by (clarsimp dest!: obj_at_state_hyp_refs_ofD)
 
 lemma hyp_sym_refs_obj_atD:
-  "\<lbrakk> obj_at P p s; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
-     \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko \<and>
-        (\<forall>(x, tp)\<in>hyp_refs_of ko. obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
-  by (drule obj_at_state_hyp_refs_ofD) fastforce
+  "\<lbrakk> obj_at P p s; sym_refs (state_hyp_refs_of s) \<rbrakk>
+   \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko \<and>
+           (\<forall>(x, tp)\<in>hyp_refs_of ko. obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
+  supply hyp_refs_of_simps[simp del]
+  apply (drule obj_at_state_hyp_refs_ofD)
+  apply (erule exEI, clarsimp)
+  apply (drule sym, simp)
+  apply (drule (1) sym_refsD)
+  apply (erule state_hyp_refs_of_elemD)
+  done
 
 lemma hyp_sym_refs_ko_atD:
   "\<lbrakk> ko_at ko p s; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
@@ -1178,7 +1209,10 @@ lemma state_hyp_refs_update[iff]:
 
 lemma hyp_refs_of_hyp_live:
   "hyp_refs_of ko \<noteq> {} \<Longrightarrow> hyp_live ko"
-  by simp
+  by (cases ko)
+     (auto simp: hyp_live_def arch_live_def refs_of_ao_def vcpu_tcb_refs_def tcb_hyp_refs_def
+                     tcb_vcpu_refs_def hyp_refs_of_def
+           split: arch_kernel_obj.splits option.splits)
 
 lemma hyp_refs_of_hyp_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; hyp_refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at hyp_live p s"
@@ -1202,7 +1236,7 @@ lemma tcb_arch_ref_simps[simp]:
   "\<And>f. tcb_arch_ref (tcb_bound_notification_update f tcb) = tcb_arch_ref tcb"
   "tcb_arch_ref (t\<lparr>tcb_arch := (arch_tcb_context_set a (tcb_arch t))\<rparr>) = tcb_arch_ref t"
   "tcb_arch_ref (tcb\<lparr>tcb_arch := arch_tcb_set_registers regs (tcb_arch tcb)\<rparr>) = tcb_arch_ref tcb"
-  by (auto simp: tcb_arch_ref_def)
+  by (auto simp: tcb_arch_ref_def arch_tcb_set_registers_def arch_tcb_context_set_def)
 
 lemma hyp_live_tcb_def: "hyp_live (TCB tcb) = bound (tcb_arch_ref tcb)"
   by (clarsimp simp: hyp_live_def tcb_arch_ref_def)
@@ -1222,16 +1256,21 @@ lemma hyp_live_tcb_simps[simp]:
   by (simp_all add: hyp_live_tcb_def)
 
 lemma wellformed_arch_typ:
-  "(\<And>T p. f \<lbrace>typ_at T p\<rbrace>) \<Longrightarrow> f \<lbrace>arch_valid_obj ao\<rbrace>"
-  by (cases ao; wpsimp)
+  assumes [wp]: "\<And>T p. f \<lbrace>typ_at T p\<rbrace>"
+  shows "f \<lbrace>arch_valid_obj ao\<rbrace>"
+  unfolding arch_valid_obj_def valid_vcpu_def
+  by (simp split: option.split)
+     (cases ao; wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemma valid_arch_tcb_pspaceI:
   "\<lbrakk> valid_arch_tcb t s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_tcb t s'"
   unfolding valid_arch_tcb_def obj_at_def by simp
 
 lemma valid_arch_tcb_lift:
-  "(\<And>T p. f \<lbrace>typ_at T p\<rbrace>) \<Longrightarrow> f \<lbrace>valid_arch_tcb t\<rbrace>"
-  unfolding valid_arch_tcb_def by wpsimp
+  assumes [wp]: "\<And>T p. f \<lbrace>typ_at T p\<rbrace>"
+  shows "f \<lbrace>valid_arch_tcb t\<rbrace>"
+  unfolding valid_arch_tcb_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemma obj_ref_not_arch_gen_ref:
   "x \<in> obj_refs cap \<Longrightarrow> arch_gen_refs cap = {}"
@@ -2356,6 +2395,28 @@ lemma pte_at_typ_lift:
   shows "f \<lbrace>pte_at t\<rbrace>"
   unfolding pte_at_def by (wpsimp wp: assms)
 
+lemma vmid_inv_typ_lift:
+  assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
+  assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>vmid_inv\<rbrace>"
+  unfolding vmid_inv_def
+  apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
+  apply (rule hoare_lift_Pf[where f="swp vmid_for_asid"])
+   apply wpsimp
+  apply clarsimp
+  sorry (* FIXME AARCH64: this needs something related to vmid_for_asid etc *)
+
+lemma cur_vcpu_typ_lift:
+  assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
+  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
+  assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>cur_vcpu\<rbrace>"
+  unfolding cur_vcpu_def
+  apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
+  apply (clarsimp split: option.split)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift vcpus[simplified pred_conj_def])
+  done
+
 lemmas abs_atyp_at_lifts =
   valid_pte_lift valid_vspace_obj_typ valid_arch_cap_ref_lift in_user_frame_lift
   valid_arch_cap_typ pte_at_typ_lift
@@ -2374,12 +2435,14 @@ lemma vspace_for_asid_lift:
 lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
-  assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
+  assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
-  apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def)
-  apply (rule hoare_lift_Pf[where f="arch_state"]; wp dom_asid_pools_of_lift)
-    apply fastforce
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)+
+  apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def)
+  apply (rule hoare_lift_Pf[where f="arch_state", rotated], rule arch)
+  apply (wpsimp wp: dom_asid_pools_of_lift)
+    apply blast
+   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_typ_lift)+
   done
 
 (* the pt_of projection is not available in generic spec, so we limit what we export
@@ -2387,6 +2450,7 @@ lemma valid_arch_state_lift_arch:
 lemma valid_arch_state_lift:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s) \<rbrace>"
+  assumes vcpus[wp]: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
   assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_arch; wp)
@@ -2529,7 +2593,7 @@ lemma vs_lookup_table_pt_step:
   done
 
 lemma pte_rights_PagePTE[simp]:
-  "pte_rights_of (PagePTE b attr r) = r"
+  "pte_rights_of (PagePTE b sm attr r) = r"
   by (simp add: pte_rights_of_def)
 
 lemma pt_lookup_slot_max_pt_level:
@@ -2652,6 +2716,33 @@ lemma kernel_mappings_canonical:
   apply simp
   done
 
+(* VCPU and related symrefs *)
+
+lemma aa_type_vcpuD:
+  "aa_type ko = AVCPU \<Longrightarrow> \<exists>v. ko = VCPU v"
+  by (clarsimp simp: aa_type_def
+               split: arch_kernel_obj.splits if_split_asm)
+
+lemma tcb_hyp_refs_of_simps[simp]:
+  "tcb_hyp_refs atcb = tcb_vcpu_refs (tcb_vcpu atcb)"
+  by (auto simp: tcb_hyp_refs_def)
+
+lemma tcb_vcpu_refs_of_simps[simp]:
+  "tcb_vcpu_refs (Some vc) = {(vc, TCBHypRef)}"
+  "tcb_vcpu_refs None = {}"
+  by (auto simp: tcb_vcpu_refs_def)
+
+lemma vcpu_tcb_refs_of_simps[simp]:
+  "vcpu_tcb_refs (Some tcb) = {(tcb, HypTCBRef)}"
+  by (auto simp: vcpu_tcb_refs_def)
+
+lemma hyp_refs_of_rev:
+ "(x, TCBHypRef) \<in> hyp_refs_of ko = (\<exists>tcb. ko = TCB tcb \<and> (tcb_vcpu (tcb_arch tcb) = Some x))"
+ "(x, HypTCBRef) \<in> hyp_refs_of ko = (\<exists>v. ko = ArchObj (VCPU v) \<and> (vcpu_tcb v = Some x))"
+  by (auto simp: hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
+                 vcpu_tcb_refs_def refs_of_ao_def
+           split: kernel_object.splits arch_kernel_obj.splits option.split)
+
 end
 
 context Arch_pspace_update_eq begin
@@ -2685,6 +2776,10 @@ lemma valid_vspace_obj_update [iff]:
   "valid_vspace_obj level ao (f s) = valid_vspace_obj level ao s"
   by (cases ao) auto
 
+lemma valid_vcpu_update [iff]:
+  "valid_vcpu v (f s) = valid_vcpu v s"
+  by (case_tac "vcpu_tcb v") (auto simp: valid_vcpu_def)
+
 lemma valid_vso_at_update [iff]:
   "valid_vso_at level p (f s) = valid_vso_at level p s"
   by (simp add: valid_vso_at_def pspace)
@@ -2706,7 +2801,7 @@ lemma caps_of_state_update [iff]:
 
 lemma arch_valid_obj_update:
   "\<And>ao. b = ArchObj ao \<Longrightarrow> arch_valid_obj ao (f s) = arch_valid_obj ao s"
-  by clarsimp
+  by (clarsimp simp: arch_valid_obj_def split: arch_kernel_obj.splits)
 
 lemma ptes_of_update[iff]:
   "ptes_of (f s) = ptes_of s"
@@ -2730,7 +2825,8 @@ lemma pool_for_asid_update[iff]:
 
 lemma vspace_for_asid_update[iff]:
   "vspace_for_asid asid (f s) =  vspace_for_asid asid s"
-  by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace split: option.splits)
+  by (simp add: vspace_for_asid_def entry_for_asid_def obind_def oassert_def oreturn_def pspace
+           split: option.splits)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
