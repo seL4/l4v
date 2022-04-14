@@ -116,9 +116,10 @@ definition canonical_address_of :: "canonical_len word \<Rightarrow> obj_ref" wh
 definition canonical_address :: "obj_ref \<Rightarrow> bool" where
   "canonical_address x \<equiv> canonical_address_of (ucast x) = x"
 
-(* All mappable user addresses (for hyp these are IPA, not actual virtual addresses) *)
+(* All mappable user addresses (for hyp these are IPA, not actual virtual addresses) -- see
+   comment at definition of canonical_user *)
 definition user_region :: "vspace_ref set" where
-  "user_region = {vref. vref \<le> pptrUserTop}"
+  "user_region = {vref. vref \<le> canonical_user}"
 
 definition
   "in_device_frame p \<equiv> \<lambda>s.
@@ -2068,9 +2069,9 @@ lemma pt_bits_left_le_max_pt_level:
 
 lemma vref_for_level_asid_pool:
   "vref \<le> canonical_user \<Longrightarrow> vref_for_level vref asid_pool_level = 0"
-  oops (* FIXME AARCH64: does not make sense any more, but is used in ArchAcc_AI
   apply (clarsimp simp: vref_for_level_def pt_bits_left_def asid_pool_level_size bit_simps
-                        canonical_user_def canonical_bit_def and_mask_0_iff_le_mask)
+                        canonical_user_def canonical_bit_def and_mask_0_iff_le_mask split: if_split_asm)
+  sorry (* FIXME AARCH64: something is not quite in sync here yet
   apply (fastforce simp add: mask_def elim: order.trans)
   done *)
 
@@ -2433,7 +2434,7 @@ lemma vref_for_level_user_regionD:
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    vref_for_level_idx vref idx level \<le> canonical_user"
-  apply (simp add: canonical_user_def le_mask_high_bits)
+  apply (simp add: canonical_user_def le_mask_high_bits split: if_split_asm)
   apply (clarsimp simp: word_size)
   apply (cases "level < max_pt_level")
    apply (clarsimp simp: word_eqI_simps canonical_bit_def)
