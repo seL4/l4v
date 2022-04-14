@@ -914,11 +914,6 @@ lemma wellformed_arch_pspace:
   "\<lbrakk>arch_valid_obj ao s; kheap s = kheap s'\<rbrakk> \<Longrightarrow> arch_valid_obj ao s'"
   by (cases ao; simp add: arch_valid_obj_def valid_vcpu_def obj_at_def split: option.splits)
 
-lemma pte_at_def2:
-  "pte_at p \<equiv> (normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
-               K (is_aligned p pte_bits)"
-  sorry (* FIXME AARCH64 *)
-
 lemma pageBitsForSize_pt_bits_left:
   "pageBitsForSize sz = pt_bits_left (level_of_vmsize sz)"
   by (cases sz; simp add: level_of_vmsize_def pt_bits_left_def pageBitsForSize_def)
@@ -1029,6 +1024,21 @@ lemma aobjs_of_Some:
 lemma pts_of_Some:
   "(pts_of s p = Some pt) = (aobjs_of s p = Some (PageTable pt))"
   by (simp add: in_omonad)
+
+lemma level_pte_of_pt:
+  "(\<exists>pte. level_pte_of vsp p (pts_of s) = Some pte) =
+   (level_pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits)) s"
+  apply (clarsimp simp: level_pte_of_def obj_at_def obind_def in_omonad
+                  elim!: a_typeE
+                  split: option.splits)
+  apply (case_tac ao; simp add: split: if_split_asm)
+  apply (simp add: opt_map_def)
+  done
+
+lemma pte_at_def2:
+  "pte_at p = ((normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
+               K (is_aligned p pte_bits))"
+  by (auto simp: pte_at_def pte_of_def level_pte_of_pt)
 
 lemma ptes_of_Some:
   "(ptes_of s p = Some pte) =
