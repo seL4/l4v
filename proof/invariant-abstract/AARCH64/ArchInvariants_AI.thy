@@ -1025,31 +1025,6 @@ lemma pts_of_Some:
   "(pts_of s p = Some pt) = (aobjs_of s p = Some (PageTable pt))"
   by (simp add: in_omonad)
 
-lemma level_pte_of_pt:
-  "(\<exists>pte. level_pte_of vsp p (pts_of s) = Some pte) =
-   (level_pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits)) s"
-  apply (clarsimp simp: level_pte_of_def obj_at_def obind_def in_omonad
-                  elim!: a_typeE
-                  split: option.splits)
-  apply (case_tac ao; simp add: split: if_split_asm)
-  apply (simp add: opt_map_def)
-  done
-
-lemma pte_at_def2:
-  "pte_at p = ((normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
-               K (is_aligned p pte_bits))"
-  by (auto simp: pte_at_def pte_of_def level_pte_of_pt)
-
-lemma ptes_of_Some:
-  "(ptes_of s p = Some pte) =
-   (is_aligned p pte_bits \<and>
-     (\<exists>pt. pts_of s (table_base True p) = Some (VSRootPT pt) \<and>
-           pt (table_index True p) = pte) \<or>
-     (\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
-           pt (table_index False p) = pte))"
-  apply (auto simp: pte_of_def in_omonad level_pte_of_def swp_def split: if_split_asm)
-  sorry (* FIXME AARCH64: ptes_of_Some -- do we want something more generic? *)
-
 declare a_typeE[elim!]
 
 lemma aa_typeE[elim!]:
@@ -1067,6 +1042,70 @@ lemma atyp_at_eq_kheap_obj:
   "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
   "typ_at (AArch AVCPU) p s \<longleftrightarrow> (\<exists>vcpu. kheap s p = Some (ArchObj (VCPU vcpu)))"
   by (auto simp: obj_at_def)
+
+
+lemma level_pte_of_pt:
+  "(\<exists>pte. level_pte_of vsp p (pts_of s) = Some pte) =
+   (level_pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits)) s"
+  apply (clarsimp simp: level_pte_of_def obj_at_def obind_def in_omonad
+                  split: option.splits)
+  apply (simp add: opt_map_def)
+  done
+
+lemma pte_at_def2:
+  "pte_at p = ((normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
+               K (is_aligned p pte_bits))"
+  by (auto simp: pte_at_def pte_of_def level_pte_of_pt)
+
+lemma level_ptes_of_pts:
+  "(level_pte_of vsp p (pts_of s) = Some pte) =
+   (\<exists>pt. pts_of s (table_base vsp p) = Some pt \<and> pt_pte pt p = pte \<and>
+         is_aligned p pte_bits \<and> vsp = is_VSRootPT pt)"
+  by (clarsimp simp: level_pte_of_def obj_at_def obind_def in_omonad opt_map_def
+               split: option.splits)
+
+lemmas pt_pte_simps [simp] = pt_pte_def[split_simps pt.split]
+
+lemma ptes_of_Some:
+  "(ptes_of s p = Some pte) =
+   (is_aligned p pte_bits \<and>
+     ((\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
+            pt (table_index False p) = pte) \<or>
+      (\<exists>vs. (\<forall>pt. pts_of s (table_base False p) \<noteq> Some (NormalPT pt)) \<and>
+            pts_of s (table_base True p) = Some (VSRootPT vs) \<and>
+            vs (table_index True p) = pte)))"
+  unfolding pte_of_def
+  apply (simp add: map_add_Some_iff level_ptes_of_pts)
+  apply (rule iffI)
+   apply (erule disjE; clarsimp; case_tac pt; clarsimp)
+   apply (clarsimp simp: level_pte_of_def obind_def split: option.splits if_split_asm)
+  apply (erule conjE, erule disjE)
+   apply clarsimp
+  apply (clarsimp simp: level_pte_of_def)
+  apply (rename_tac pt)
+  apply (case_tac pt; simp)
+  done
+
+lemma pts_of_table_base_distinct:
+  "\<lbrakk> pts_of s (table_base True p) = Some (VSRootPT vs);
+     pts_of s (table_base False p) = Some (NormalPT pt);
+     pspace_distinct s \<rbrakk>
+   \<Longrightarrow> False"
+  apply (clarsimp elim!: opt_mapE)
+  apply (cases "table_base True p = table_base False p", simp)
+  apply (drule (3) pspace_distinctD)
+  apply (clarsimp simp: pt_bits_def table_size split: if_split_asm)
+  by (metis and_neg_mask_plus_mask_mono word_and_le' word_bw_comms(1))
+
+lemma ptes_of_Some_distinct:
+  "pspace_distinct s \<Longrightarrow>
+   (ptes_of s p = Some pte) =
+   (is_aligned p pte_bits \<and>
+     ((\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
+            pt (table_index False p) = pte) \<or>
+      (\<exists>vs. pts_of s (table_base True p) = Some (VSRootPT vs) \<and>
+            vs (table_index True p) = pte)))"
+  by (auto simp: ptes_of_Some dest: pts_of_table_base_distinct)
 
 lemma asid_pools_at_eq:
   "asid_pool_at p s \<longleftrightarrow> asid_pools_of s p \<noteq> None"
@@ -1529,10 +1568,18 @@ lemma ptes_of_pts_of:
   "ptes_of s pte_ptr = Some pte \<Longrightarrow> \<exists>vsp. pts_of s (pte_ptr && ~~mask (pt_bits vsp)) \<noteq> None"
   by (fastforce simp: ptes_of_def in_omonad level_pte_of_def split: if_split_asm)
 
+lemma level_ptes_of_eqI:
+  "pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow>
+   level_pte_of vsp p pts = level_pte_of vsp p pts'"
+  by (rule obind_eqI | simp add: level_pte_of_def)+
+
 lemma ptes_of_eqI:
-  "pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow> pte_of pts p = pte_of pts' p"
-  apply (rule obind_eqI | clarsimp simp: pte_of_def swp_def level_pte_of_def)+
-  sorry (* FIXME AARCH64 *)
+  "\<forall>vsp. pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow> pte_of pts p = pte_of pts' p"
+  unfolding pte_of_def
+  apply (frule_tac x=True in spec)
+  apply (drule_tac x=False in spec)
+  apply (auto dest!: level_ptes_of_eqI simp: map_add_def split: option.splits)
+  done
 
 lemma pte_refs_of_eqI:
   "ptes p = ptes' p \<Longrightarrow> (ptes |> pte_ref) p =  (ptes' |> pte_ref) p"
