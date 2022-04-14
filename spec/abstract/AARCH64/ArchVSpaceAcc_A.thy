@@ -91,6 +91,7 @@ definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<
   "level_pte_of is_vspace p \<equiv> do {
       oassert (is_aligned p pte_bits);
       pt \<leftarrow> oapply (table_base is_vspace p);
+      oassert (is_vspace = is_VSRootPT pt);
       oreturn $ pt_pte pt p
    }"
 
