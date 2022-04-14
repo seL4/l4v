@@ -1,12 +1,10 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating;
-   update copyright as necessary. *)
 theory ArchInvariants_AI
 imports InvariantsPre_AI "Lib.Apply_Trace_Cmd"
 begin
@@ -29,10 +27,6 @@ end
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "AARCH64-specific invariant definitions"
-
-(* the unit type gets simplified too eagerly by simpprocs *)
-(* FIXME RISCV: put this or something like this into Lib, eliminate competitors *)
-datatype void = Void unit
 
 qualify AARCH64 (in Arch)
 record iarch_tcb =
@@ -187,10 +181,6 @@ section "Wellformed Addresses and ASIDs"
 definition wellformed_mapdata :: "asid \<times> vspace_ref \<Rightarrow> bool" where
   "wellformed_mapdata \<equiv> \<lambda>(asid, vref). 0 < asid \<and> vref \<in> user_region"
 
-(* FIXME AARCH64: elimate one of the two *)
-locale_abbrev level_of_sz :: "vmpage_size \<Rightarrow> vm_level" where
-  "level_of_sz \<equiv> level_of_vmsize"
-
 definition vm_level_aligned :: "obj_ref \<Rightarrow> vm_level \<Rightarrow> bool" where
   "vm_level_aligned ref level \<equiv> is_aligned ref (pt_bits_left level)"
 
@@ -230,11 +220,6 @@ locale_abbrev
 
 definition
   "pte_at p \<equiv> \<lambda>s. ptes_of s p \<noteq> None"
-
-(* FIXME AARCH64: prove this as lemma:
-  "pte_at p \<equiv> (normal_pt_at (table_base False) p or vspace_pt_at (table_base True) p) and
-              K (is_aligned p pte_bits)"
-*)
 
 locale_abbrev
   "vcpu_at \<equiv> typ_at (AArch AVCPU)"
@@ -309,19 +294,11 @@ primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext sta
 definition pt_range :: "pt \<Rightarrow> pte set" where
   "pt_range pt \<equiv> case pt of VSRootPT vs \<Rightarrow> range vs | NormalPT pt \<Rightarrow> range pt"
 
-(* FIXME AARCH64: we could try to unify VSRoot and NormalPT cases, but does it help? *)
 fun valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  (* FIXME AARCH64: do we need vm_id/hw_asid properties here? *)
   "valid_vspace_obj _ (ASIDPool pool) =
    (\<lambda>s. \<forall>x \<in> ran pool. vspace_pt_at (ap_vspace x) s)"
 | "valid_vspace_obj level (PageTable pt) =
    (\<lambda>s. \<forall>pte \<in> pt_range pt. valid_pte level pte s)"
-(* FIXME AARCH64: might be nicer to write these out:
-| "valid_vspace_obj level (PageTable (VSRootPT pt)) =
-   (\<lambda>s. \<forall>x. valid_pte level (pt x) s)"
-| "valid_vspace_obj level (PageTable (NormalPT pt)) =
-   (\<lambda>s. \<forall>x. valid_pte level (pt x) s)"
-*)
 | "valid_vspace_obj _ (DataPage _ _) = \<top>" (* already covered by valid_pte *)
 | "valid_vspace_obj _ (VCPU _ ) = \<top>" (* not a vspace obj *)
 
@@ -333,17 +310,6 @@ definition wellformed_pte :: "pte \<Rightarrow> bool" where
 
 definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vcpu vcpu \<equiv> case_option \<top> (typ_at ATCB) (vcpu_tcb vcpu) "
-
-(* FIXME AARCH64: alternative definition for arch_valid_obj
-definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
-  "wellformed_vspace_obj ao \<equiv> case_option True (\<lambda>pt. \<forall>pte\<in>UNIV. wellformed_pte pte) (pt_of ao)"
-
-definition valid_vcpu_ao :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_vcpu_ao ao \<equiv> case_option (K True) valid_vcpu (vcpu_of ao)" (* FIXME AARCH64 *)
-
-definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "arch_valid_obj ao \<equiv> (\<lambda>_. wellformed_vspace_obj ao) and valid_vcpu_ao ao"
-*)
 
 definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "arch_valid_obj ao s \<equiv> case ao of
@@ -948,8 +914,13 @@ lemma wellformed_arch_pspace:
   "\<lbrakk>arch_valid_obj ao s; kheap s = kheap s'\<rbrakk> \<Longrightarrow> arch_valid_obj ao s'"
   by (cases ao; simp add: arch_valid_obj_def valid_vcpu_def obj_at_def split: option.splits)
 
+lemma pte_at_def2:
+  "pte_at p \<equiv> (normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
+               K (is_aligned p pte_bits)"
+  sorry (* FIXME AARCH64 *)
+
 lemma pageBitsForSize_pt_bits_left:
-  "pageBitsForSize sz = pt_bits_left (level_of_sz sz)"
+  "pageBitsForSize sz = pt_bits_left (level_of_vmsize sz)"
   by (cases sz; simp add: level_of_vmsize_def pt_bits_left_def pageBitsForSize_def)
 
 lemma asid_low_bits_of_mask_eq:
