@@ -2687,6 +2687,10 @@ lemma vspace_for_asid_update[iff]:
   "vspace_for_asid asid (f s) =  vspace_for_asid asid s"
   by (simp add: vspace_for_asid_def obind_def split: option.splits)
 
+lemma vmid_for_asid_update[iff]:
+  "vmid_for_asid asid (f s) =  vmid_for_asid asid s"
+  by (simp add: vmid_for_asid_def obind_def)
+
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
   by (auto simp: vs_lookup_table_def pspace arch obind_def split: option.splits)
@@ -2718,6 +2722,14 @@ lemma valid_asid_table_update [iff]:
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
   by (simp add: equal_kernel_mappings_def pspace)
+
+lemma cur_vcpu_update [iff]:
+  "cur_vcpu (f s) = cur_vcpu s"
+  by (simp add: cur_vcpu_def arch split: option.splits)
+
+lemma vmid_inv_update [iff]:
+  "vmid_inv (f s) = vmid_inv s"
+  by (simp add: vmid_inv_def arch is_inv_def swp_def)
 
 end
 
