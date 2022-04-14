@@ -1471,7 +1471,7 @@ lemma vref_for_level_eq_mono:
   "\<lbrakk> vref_for_level vref level = vref_for_level vref' level; level \<le> level' \<rbrakk> \<Longrightarrow>
   vref_for_level vref level' = vref_for_level vref' level'"
   unfolding vref_for_level_def
-  by (metis (no_types, hide_lams) pt_bits_left_mono mask_lower_twice)
+  by (metis (no_types, opaque_lifting) pt_bits_left_mono mask_lower_twice)
 
 lemma vref_for_level_eq_max_mono:
   "\<lbrakk> vref_for_level vref level = vref_for_level vref' level' \<rbrakk> \<Longrightarrow>
@@ -1745,8 +1745,9 @@ lemma pt_slot_offset_vref:
   "\<lbrakk> level < level'; is_aligned vref (pt_bits_left level') \<rbrakk> \<Longrightarrow>
    pt_slot_offset level pt_ptr vref = pt_ptr"
   apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def)
-  apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def) (* FIXME AARCH64: generalise *)
-  apply (erule_tac x="(9 + (n + 9 * size level))" in allE)
+  apply (rule word_eqI, clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth bit_simps
+                                       Kernel_Config.config_ARM_PA_SIZE_BITS_40_def) (* FIXME AARCH64: generalise *)
+  apply (erule_tac x="(9 + (9 * size level + n))" in allE)
   apply (erule impE; clarsimp)
   apply (simp flip: bit_size_less)
   done
@@ -2391,6 +2392,7 @@ lemma table_index_pt_slot_offset:
    apply (rule word_eqI)
    apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
    apply (clarsimp simp: pt_bits_left_def bit_simps is_aligned_nth split: if_split_asm)
+   subgoal using  less_diff_conv2 by auto[1]
   apply (rule word_eqI)
   apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bit_simps neg_mask_test_bit)
   apply (clarsimp simp: bit_simps is_aligned_nth canonical_bit_def pt_bits_left_def)
@@ -2414,7 +2416,7 @@ lemma vref_for_level_idx[simp]:
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
-  apply (word_eqI_solve simp: bit_simps flip: bit_size_less_eq)
+  apply (word_eqI_solve simp: bit_simps dest: bit_imp_possible_bit)
   done
 
 lemma vref_for_level_nth[simp]:
@@ -2428,12 +2430,14 @@ lemma vref_for_level_user_regionD:
   apply (clarsimp simp: user_region_def)
   apply (drule pt_bits_left_le_canonical)
   apply word_bitwise
-  sorry (* FIXME AARCH 64
-  by (clarsimp simp: canonical_bit_def word_size not_less bit_simps canonical_user_def) *)
+  sorry (* FIXME AARCH64
+  by (clarsimp simp: word_size not_less bit_simps canonical_user_def
+               split: if_split_asm) *)
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    vref_for_level_idx vref idx level \<le> canonical_user"
+  sorry (* FIXME: AARCH64
   apply (simp add: canonical_user_def le_mask_high_bits split: if_split_asm)
   apply (clarsimp simp: word_size)
   apply (cases "level < max_pt_level")
@@ -2446,7 +2450,6 @@ lemma vref_for_level_idx_canonical_user:
   apply (simp add: pt_bits_left_def bit_simps level_defs)
   apply (frule test_bit_size)
   apply (simp add: word_size split: if_split_asm)
-  sorry (* FIXME: AARCH64
   apply (subgoal_tac "i \<noteq> canonical_bit"; fastforce simp: canonical_bit_def)
   done *)
 
