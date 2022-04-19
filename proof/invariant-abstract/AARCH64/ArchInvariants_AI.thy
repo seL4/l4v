@@ -94,7 +94,7 @@ lemmas a_type_simps[simp] = a_type_def[split_simps kernel_object.split arch_kern
 
 section "Virtual Memory Regions"
 
-(* Number of significant bits for canonical addresses *)
+(* Number of significant bits for canonical addresses in kernel-virtual space *)
 type_synonym canonical_len = 48
 
 (* Consistency check *)
@@ -281,24 +281,31 @@ definition
   "data_at \<equiv> \<lambda>sz p s. typ_at (AArch (AUserData sz)) p s
                        \<or> typ_at (AArch (ADeviceData sz)) p s"
 
+(* Regardless of PA/IPA space size or max_pt_level, the maximum level at which pages can be
+   mapped is 2 on AArch64 *)
+definition max_page_level :: vm_level where
+   "max_page_level = 2"
+
 (* Validity of vspace table entries, defined shallowly. *)
 primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_pte _ (InvalidPTE) = \<top>"
 | "valid_pte level (PagePTE base is_small _ _) =
      (\<lambda>s. data_at (vmsize_of_level level) (ptrFromPAddr base) s
-          \<and> level \<le> max_pt_level
+          \<and> level \<le> max_page_level
           \<and> (is_small \<longleftrightarrow> level = 0))"
 | "valid_pte level (PageTablePTE base) =
-     (\<lambda>s. level_pt_at (level = max_pt_level) (ptrFromPAddr base) s \<and> 0 < level)"
+     (\<lambda>s. normal_pt_at (ptrFromPAddr base) s \<and> 0 < level)"
 
 definition pt_range :: "pt \<Rightarrow> pte set" where
   "pt_range pt \<equiv> case pt of VSRootPT vs \<Rightarrow> range vs | NormalPT pt \<Rightarrow> range pt"
+
+lemmas pt_range_simps[simp] = pt_range_def[split_simps pt.split]
 
 fun valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vspace_obj _ (ASIDPool pool) =
    (\<lambda>s. \<forall>x \<in> ran pool. vspace_pt_at (ap_vspace x) s)"
 | "valid_vspace_obj level (PageTable pt) =
-   (\<lambda>s. \<forall>pte \<in> pt_range pt. valid_pte level pte s)"
+   (\<lambda>s. (\<forall>pte \<in> pt_range pt. valid_pte level pte s) \<and> is_VSRootPT pt = (level = max_pt_level))"
 | "valid_vspace_obj _ (DataPage _ _) = \<top>" (* already covered by valid_pte *)
 | "valid_vspace_obj _ (VCPU _ ) = \<top>" (* not a vspace obj *)
 
@@ -728,7 +735,7 @@ lemma vcpuBits_bounded[simp,intro!]:
 lemma max_pt_level_def2: "max_pt_level = (if config_ARM_PA_SIZE_BITS_40 then 2 else 3)"
   by (simp add: max_pt_level_def asid_pool_level_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
-lemmas level_defs = asid_pool_level_def max_pt_level_def2
+lemmas level_defs = asid_pool_level_def max_pt_level_def2 max_page_level_def
 
 lemma max_pt_level_gt0[simp]:
   "0 < max_pt_level"
