@@ -7,12 +7,10 @@
 
 chapter "Machine Operations"
 
-(* FIXME AARCH64: review and style *)
-
 theory MachineOps
 imports
-  "Word_Lib.WordSetup"
-  "Lib.NonDetMonad"
+  Word_Lib.WordSetup
+  Lib.NonDetMonad
   MachineMonad
 begin
 
@@ -27,8 +25,7 @@ text \<open>
   states, which would require the operation to fail. So we explicitly make this (non-existing) case
   a null operation.
 
-  All this is done only to avoid a large number of axioms (2 for each operation).
-\<close>
+  All this is done only to avoid a large number of axioms (2 for each operation).\<close>
 
 context Arch begin global_naming AARCH64
 
@@ -36,16 +33,14 @@ section "The Operations"
 
 subsection "Memory"
 
-definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
-  where
+definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "loadWord p \<equiv> do
      m \<leftarrow> gets underlying_memory;
      assert (p && mask 3 = 0);
      return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
    od"
 
-definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where
+definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "storeWord p w \<equiv> do
      assert (p && mask 3 = 0);
      modify (underlying_memory_update
@@ -61,13 +56,11 @@ lemma loadWord_storeWord_is_return:
                  modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def word_size)
 
 consts' memory_regions :: "(paddr \<times> paddr) list"
-definition getMemoryRegions :: "(paddr * paddr) list machine_monad"
-  where
+definition getMemoryRegions :: "(paddr * paddr) list machine_monad" where
   "getMemoryRegions \<equiv> return memory_regions"
 
 text \<open>This instruction is required in the simulator, only.\<close>
-definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where
+definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "storeWordVM w p \<equiv> return ()"
 
 
@@ -75,65 +68,51 @@ subsection "Timer"
 
 consts' configureTimer_impl :: "unit machine_rest_monad"
 consts' configureTimer_val :: "machine_state \<Rightarrow> irq"
-definition configureTimer :: "irq machine_monad"
-  where
+definition configureTimer :: "irq machine_monad" where
   "configureTimer \<equiv> do
      machine_op_lift configureTimer_impl;
      gets configureTimer_val
    od"
 
 consts' initTimer_impl :: "unit machine_rest_monad"
-definition initTimer :: "unit machine_monad"
-  where
+definition initTimer :: "unit machine_monad" where
   "initTimer \<equiv> machine_op_lift initTimer_impl"
 
 consts' resetTimer_impl :: "unit machine_rest_monad"
-definition resetTimer :: "unit machine_monad"
-  where
+definition resetTimer :: "unit machine_monad" where
   "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
 
 subsection "Debug"
 
-definition debugPrint :: "unit list \<Rightarrow> unit machine_monad"
-  where
+definition debugPrint :: "unit list \<Rightarrow> unit machine_monad" where
   debugPrint_def[simp]:
   "debugPrint \<equiv> \<lambda>message. return ()"
 
 
 subsection \<open>Interrupt Controller\<close>
 
-definition
-  IRQ :: "irq \<Rightarrow> irq"
-where "IRQ \<equiv> id"
+definition IRQ :: "irq \<Rightarrow> irq" where
+  "IRQ \<equiv> id"
 
-consts'
-  setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
-
-definition
-  setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-where
+consts' setIRQTrigger_impl :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_rest_monad"
+definition setIRQTrigger :: "irq \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setIRQTrigger irq trigger \<equiv> machine_op_lift (setIRQTrigger_impl irq trigger)"
 
-consts'
-  plic_complete_claim_impl :: "irq \<Rightarrow> unit machine_rest_monad"
-
-definition
-  plic_complete_claim :: "irq \<Rightarrow> unit machine_monad"
-where
+consts' plic_complete_claim_impl :: "irq \<Rightarrow> unit machine_rest_monad"
+definition plic_complete_claim :: "irq \<Rightarrow> unit machine_monad" where
   "plic_complete_claim irq \<equiv> machine_op_lift (plic_complete_claim_impl irq)"
 
-text \<open>Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
-that can occur from user mode. Empty on AARCH64.\<close>
-definition non_kernel_IRQs :: "irq set"
-  where
+text \<open>
+  Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
+  that can occur from user mode. Empty on AARCH64.\<close>
+definition non_kernel_IRQs :: "irq set" where
   "non_kernel_IRQs = {}"
 
 text \<open>@{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
 updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
 IRQ (if there is one).\<close>
-definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
-  where
+definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad" where
   "getActiveIRQ in_kernel \<equiv> do
      is_masked \<leftarrow> gets $ irq_masks;
      modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
@@ -143,49 +122,41 @@ definition getActiveIRQ :: "bool \<Rightarrow> (irq option) machine_monad"
      else return ((Some active_irq) :: irq option)
    od"
 
-definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
-  where
+definition maskInterrupt :: "bool \<Rightarrow> irq \<Rightarrow> unit machine_monad" where
   "maskInterrupt m irq \<equiv> modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
-definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
-  where
+definition ackInterrupt :: "irq \<Rightarrow> unit machine_monad" where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
 
-definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-  where
+definition setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad" where
   "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
 
 subsection "Clearing Memory"
 
 text \<open>Clear memory contents to recycle it as user memory\<close>
-definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
+definition clearMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
   "clearMemory ptr bytelength \<equiv>
      mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1]"
 
 text \<open>Haskell simulator interface stub.\<close>
-definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
+definition clearMemoryVM :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
   "clearMemoryVM ptr bits \<equiv> return ()"
 
 text \<open>
   Initialize memory to be used as user memory. Note that zeroing out the memory is redundant
   in the specifications. In any case, we cannot abstract from the call to cleanCacheRange, which
-  appears in the implementation.
-\<close>
+  appears in the implementation.\<close>
 abbreviation (input) "initMemory == clearMemory"
 
 text \<open>
   Free memory that had been initialized as user memory. While freeing memory is a no-op in the
   implementation, we zero out the underlying memory in the specifications to avoid garbage. If we
   know that there is no garbage, we can compute from the implementation state what the exact memory
-  content in the specifications is.
-\<close>
-definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
-  where
+  content in the specifications is.\<close>
+definition freeMemory :: "machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad" where
   "freeMemory ptr bits \<equiv>
-   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
+     mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
 
 subsection "User Monad and Registers"
@@ -195,7 +166,8 @@ type_synonym user_regs = "register \<Rightarrow> machine_word"
 text \<open> There are 64 general FPU registers saved. \<close>
 type_synonym fpu_regs = 64
 
-text \<open> We use Haskell naming convention here, as we translate the Haskell FPUState directly
+text \<open>
+  We use Haskell naming convention here, as we translate the Haskell FPUState directly
   to this one for use in the abstract and executable specs.\<close>
 datatype fpu_state = FPUState (fpuRegs : "fpu_regs \<Rightarrow> 64 word")
                               (fpuSr : "32 word")
@@ -233,92 +205,65 @@ definition getFPUState :: "fpu_state user_monad" where
 definition setFPUState :: "fpu_state \<Rightarrow> unit user_monad" where
   "setFPUState fc \<equiv> modify (\<lambda>s. UserContext fc (user_regs s))"
 
-consts'
-  nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
-definition
-  nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad"
-where
+consts' nativeThreadUsingFPU_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+consts' nativeThreadUsingFPU_val :: "machine_state \<Rightarrow> bool"
+definition nativeThreadUsingFPU :: "machine_word \<Rightarrow> bool machine_monad" where
   "nativeThreadUsingFPU thread_ptr \<equiv> do
        machine_op_lift (nativeThreadUsingFPU_impl thread_ptr);
        gets nativeThreadUsingFPU_val
   od"
 
-consts'
-  switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
+consts' switchFpuOwner_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition switchFpuOwner :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "switchFpuOwner new_owner cpu \<equiv> machine_op_lift (switchFpuOwner_impl new_owner cpu)"
 
 (* FIXME this is a very high-level FPU abstraction *)
-consts'
-  fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad"
-where
+consts' fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad" where
   "fpuThreadDeleteOp thread_ptr \<equiv> machine_op_lift (fpuThreadDeleteOp_impl thread_ptr)"
 
 
 subsection "Fault Registers"
 
-consts'
-  FAR_val :: "machine_state \<Rightarrow> machine_word"
-  DFSR_val :: "machine_state \<Rightarrow> machine_word"
-  IFSR_val :: "machine_state \<Rightarrow> machine_word"
 
-definition
-  getFAR :: "machine_word machine_monad" where
+consts' FAR_val :: "machine_state \<Rightarrow> machine_word"
+definition getFAR :: "machine_word machine_monad" where
   "getFAR \<equiv> gets FAR_val"
 
-definition
-  getDFSR :: "machine_word machine_monad" where
+consts' DFSR_val :: "machine_state \<Rightarrow> machine_word"
+definition getDFSR :: "machine_word machine_monad" where
   "getDFSR \<equiv> gets DFSR_val"
 
-definition
-  getIFSR :: "machine_word machine_monad" where
+consts' IFSR_val :: "machine_state \<Rightarrow> machine_word"
+definition getIFSR :: "machine_word machine_monad" where
   "getIFSR \<equiv> gets IFSR_val"
 
 
 subsection "Control Registers"
 
-consts'
-  HSR_val :: "machine_state \<Rightarrow> machine_word"
-  ESR_val :: "machine_state \<Rightarrow> machine_word"
-  SCTLR_val :: "machine_state \<Rightarrow> machine_word"
-
-definition
-  getHSR :: "machine_word machine_monad" where
+consts' HSR_val :: "machine_state \<Rightarrow> machine_word"
+definition getHSR :: "machine_word machine_monad" where
   "getHSR \<equiv> gets HSR_val"
 
-definition
-  getESR :: "machine_word machine_monad" where
+consts' ESR_val :: "machine_state \<Rightarrow> machine_word"
+definition getESR :: "machine_word machine_monad" where
   "getESR \<equiv> gets ESR_val"
 
-definition
-  getSCTLR :: "machine_word machine_monad" where
+consts' SCTLR_val :: "machine_state \<Rightarrow> machine_word"
+definition getSCTLR :: "machine_word machine_monad" where
   "getSCTLR \<equiv> gets SCTLR_val"
 
-consts'
-  setHCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  setHCR :: "machine_word \<Rightarrow> unit machine_monad"
-where
+consts' setHCR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition setHCR :: "machine_word \<Rightarrow> unit machine_monad" where
   "setHCR w \<equiv> machine_op_lift (setHCR_impl w)"
 
-consts'
-  setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  setSCTLR :: "machine_word \<Rightarrow> unit machine_monad"
-where
+consts' setSCTLR_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition setSCTLR :: "machine_word \<Rightarrow> unit machine_monad" where
   "setSCTLR w \<equiv> machine_op_lift (setSCTLR_impl w)"
 
-consts'
-  addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
-definition
-  addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machine_monad"
-where
+consts' addressTranslateS1_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+consts' addressTranslateS1_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
+definition addressTranslateS1 :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "addressTranslateS1 w \<equiv> do
     machine_op_lift (addressTranslateS1_impl w);
     gets (addressTranslateS1_val w)
@@ -327,131 +272,82 @@ where
 
 subsection "GIC VCPU Interface"
 
-consts'
-  gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_hcr :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_hcr_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_hcr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_hcr \<equiv> gets gic_vcpu_ctrl_hcr_val"
 
-consts'
-  set_gic_vcpu_ctrl_hcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
-definition
-  set_gic_vcpu_ctrl_hcr :: "32 word \<Rightarrow> unit machine_monad"
-where
+consts' set_gic_vcpu_ctrl_hcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_hcr :: "32 word \<Rightarrow> unit machine_monad" where
   "set_gic_vcpu_ctrl_hcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_hcr_impl w)"
 
-consts'
-  gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_vmcr :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_vmcr_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_vmcr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_vmcr \<equiv> gets gic_vcpu_ctrl_vmcr_val"
 
-consts'
-  set_gic_vcpu_ctrl_vmcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
-definition
-  set_gic_vcpu_ctrl_vmcr :: "32 word \<Rightarrow> unit machine_monad"
-where
+consts' set_gic_vcpu_ctrl_vmcr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_vmcr :: "32 word \<Rightarrow> unit machine_monad" where
   "set_gic_vcpu_ctrl_vmcr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vmcr_impl w)"
 
-consts'
-  gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_apr :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_apr_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_apr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_apr \<equiv> gets gic_vcpu_ctrl_apr_val"
 
-consts'
-  set_gic_vcpu_ctrl_apr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
-definition
-  set_gic_vcpu_ctrl_apr :: "32 word \<Rightarrow> unit machine_monad"
-where
+consts' set_gic_vcpu_ctrl_apr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_apr :: "32 word \<Rightarrow> unit machine_monad" where
   "set_gic_vcpu_ctrl_apr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_apr_impl w)"
 
-consts'
-  gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_vtr :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_vtr_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_vtr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_vtr \<equiv> gets gic_vcpu_ctrl_vtr_val"
 
-consts'
-  set_gic_vcpu_ctrl_vtr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
-definition
-  set_gic_vcpu_ctrl_vtr :: "32 word \<Rightarrow> unit machine_monad"
-where
+consts' set_gic_vcpu_ctrl_vtr_impl :: "32 word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_vtr :: "32 word \<Rightarrow> unit machine_monad" where
   "set_gic_vcpu_ctrl_vtr w \<equiv> machine_op_lift (set_gic_vcpu_ctrl_vtr_impl w)"
 
-consts'
-  gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_misr :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_misr_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_misr :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_misr \<equiv> gets gic_vcpu_ctrl_misr_val"
 
-consts'
-  gic_vcpu_ctrl_eisr0_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_eisr0 :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_eisr0_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_eisr0 :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_eisr0 \<equiv> gets gic_vcpu_ctrl_eisr0_val"
 
-consts'
-  gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> 32 word"
-definition
-  get_gic_vcpu_ctrl_eisr1 :: "32 word machine_monad"
-where
+consts' gic_vcpu_ctrl_eisr1_val :: "machine_state \<Rightarrow> 32 word"
+definition get_gic_vcpu_ctrl_eisr1 :: "32 word machine_monad" where
   "get_gic_vcpu_ctrl_eisr1 \<equiv> gets gic_vcpu_ctrl_eisr1_val"
 
-consts'
-  get_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
-  gic_vcpu_ctrl_lr_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
-definition
-  get_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word machine_monad"
-where
+consts' get_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+consts' gic_vcpu_ctrl_lr_val :: "machine_word \<Rightarrow> machine_state \<Rightarrow> machine_word"
+definition get_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word machine_monad" where
   "get_gic_vcpu_ctrl_lr n \<equiv> do
-      machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
-      gets (gic_vcpu_ctrl_lr_val n)
-    od"
+     machine_op_lift (get_gic_vcpu_ctrl_lr_impl n);
+     gets (gic_vcpu_ctrl_lr_val n)
+   od"
 
-consts'
-  set_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
+consts' set_gic_vcpu_ctrl_lr_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition set_gic_vcpu_ctrl_lr :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "set_gic_vcpu_ctrl_lr n w  \<equiv> machine_op_lift (set_gic_vcpu_ctrl_lr_impl n w)"
 
 
 subsection "Virtual Timer Interface"
 
 consts' check_export_arch_timer_impl :: "unit machine_rest_monad"
-definition check_export_arch_timer :: "unit machine_monad"
-  where
+definition check_export_arch_timer :: "unit machine_monad" where
   "check_export_arch_timer \<equiv> machine_op_lift check_export_arch_timer_impl"
 
-consts'
-  read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
-definition
-  read_cntpct :: "64 word machine_monad"
-where
+consts' read_cntpct_val :: "machine_state \<Rightarrow> 64 word"
+definition read_cntpct :: "64 word machine_monad" where
   "read_cntpct \<equiv> gets read_cntpct_val"
 
 
 subsection "Hypervisor Banked Registers"
 
-consts'
-  vcpuHardwareRegVal :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
-definition
-  readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad"
-where
+consts' vcpuHardwareRegVal :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
+definition readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad" where
   "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareRegVal reg)"
 
-consts'
-  writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition
-  writeVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-where
+consts' writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition writeVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "writeVCPUHardwareReg reg val \<equiv> machine_op_lift (writeVCPUHardwareReg_impl reg val)"
 
 
@@ -537,8 +433,7 @@ lemmas cache_machine_op_defs =
 subsection "Virtual Memory"
 
 consts' setVSpaceRoot_impl :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
-definition setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
-  where
+definition setVSpaceRoot :: "paddr \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
   "setVSpaceRoot pt asid \<equiv> machine_op_lift $ setVSpaceRoot_impl pt asid"
 
 end
