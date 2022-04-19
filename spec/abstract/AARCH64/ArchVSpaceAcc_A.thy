@@ -129,9 +129,14 @@ definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state
 
 section "Basic Operations"
 
-(* See comment in Haskell why is_vspace=False here is what we want *)
+(* During pt_walk, we will only call this with level \<le> max_pt_level, but in the invariants we
+   also make use of this function for level = asid_pool_level. *)
 definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
-  "pt_bits_left level = ptTranslationBits False * size level + pageBits"
+  "pt_bits_left level =
+    (if level = asid_pool_level
+     then ptTranslationBits True + ptTranslationBits False * size max_pt_level
+     else ptTranslationBits False * size level)
+    + pageBits"
 
 definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word" where
   "pt_index level vptr \<equiv>

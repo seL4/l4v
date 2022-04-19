@@ -131,14 +131,18 @@ getPPtrFromPTE :: PTE -> PPtr PTE
 getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
 
 -- how many bits there are left to be translated at a given level (0 = bottom
--- level). This counts the bits the levels below the current one translate, so
--- no case distinction needed for the top level -- it never participates.
--- Example: if maxPTLevel = 2, and we are on level 2, that means level 0 and 1
+-- level). This counts the bits being translated by the levels below the current one, so
+-- no case distinction needed for maxPTLevel and below. We include the separate case for the
+-- ASID pool level, because this function is also used in invariants.
+-- Example for maxPTLevel: if maxPTLevel = 2, and we are on level 2, that means level 0 and 1
 -- are below us and we still need translate the bits for level 0 and 1 after
--- this lookup, but not the ones from level 2, so only level 0 and 1 need to be
+-- this lookup, but not the ones from level 2, so only level 0 and 1 (= 2 levels) need to be
 -- counted in ptBitsLeft.
 ptBitsLeft :: Int -> Int
-ptBitsLeft level = ptTranslationBits False * level + pageBits
+ptBitsLeft level =
+  (if level <= maxPTLevel
+   then ptTranslationBits False * level
+   else ptTranslationBits True + ptTranslationBits False * maxPTLevel) + pageBits
 
 -- compute index into a page table from vPtr at given level
 ptIndex :: Int -> VPtr -> Word
