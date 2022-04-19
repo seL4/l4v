@@ -9,7 +9,6 @@ chapter \<open>VCPU\<close>
 
 theory VCPU_A
 imports
-  Structures_A
   TcbAcc_A
   InvocationLabels_A
 begin
