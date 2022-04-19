@@ -76,18 +76,25 @@ datatype pte =
       (pte_base_addr : paddr)
 
 
-(* who needs dependent types.. *)
-value_type vs_index_len = "if config_ARM_PA_SIZE_BITS_40 then 10 else (9::int)"
+(* A dependent-ish type in Isabelle: *)
+value_type vs_index_len = "if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
 type_synonym vs_index = "vs_index_len word"
+
+(* Use vs_index_len instead of vs_index_len_def in generic proofs *)
+lemma vs_index_len:
+  "vs_index_len = (if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat))"
+  by (simp add: vs_index_len_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 type_synonym pt_index_len = 9
 type_synonym pt_index = "pt_index_len word"
 
 text \<open>Sanity check:\<close>
-lemma "LENGTH(vs_index_len) = ptTranslationBits True"
+lemma vs_index_ptTranslationBits:
+  "ptTranslationBits True = LENGTH(vs_index_len)"
   by (simp add: ptTranslationBits_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
-lemma "LENGTH(pt_index_len) = ptTranslationBits False"
+lemma pt_index_ptTranslationBits:
+  "ptTranslationBits False = LENGTH(pt_index_len)"
   by (simp add: ptTranslationBits_def)
 
 (* This could also be a record, but we expect further alternatives to be added for SMMU *)
