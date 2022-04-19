@@ -284,10 +284,10 @@ section \<open>Architecture-specific state\<close>
 
 record arch_state =
   arm_asid_table :: "asid_high_index \<rightharpoonup> obj_ref"
+  arm_kernel_vspace :: "AARCH64_A.arm_vspace_region_uses"
   arm_vmid_table :: "AARCH64_A.vmid \<rightharpoonup> asid"
   arm_next_vmid :: AARCH64_A.vmid
   arm_us_global_vspace :: "obj_ref"
-  arm_kernel_vspace :: "AARCH64_A.arm_vspace_region_uses"
   arm_current_vcpu    :: "(obj_ref \<times> bool) option"
   arm_gicvcpu_numlistregs :: nat
 
