@@ -59,7 +59,7 @@ data PageInvocation
     = PageGetAddr {
         pageGetBasePtr :: PPtr Word }
     | PageMap {
-        pageMapCap :: Capability,
+        pageMapCap :: ArchCapability,
         pageMapCTSlot :: PPtr CTE,
         pageMapEntries :: (PTE, PPtr PTE) }
     | PageUnmap {

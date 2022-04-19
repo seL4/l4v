@@ -546,7 +546,7 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     unless (bitsLeft == pgBits) $ throw $ FailedLookup False $ MissingCapability bitsLeft
     let base = addrFromPPtr (capFBasePtr cap)
     return $ InvokePage $ PageMap {
-        pageMapCap = ArchObjectCap $ cap { capFMappedAddress = Just (asid,vptr) },
+        pageMapCap = cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
         pageMapEntries = (makeUserPTE base vmRights attributes frameSize, slot) }
 
@@ -782,11 +782,11 @@ performPageInvocation :: PageInvocation -> Kernel ()
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     oldPte <- getObject slot
     let tlbFlushRequired = oldPte /= InvalidPTE
-    updateCap ctSlot cap
+    updateCap ctSlot (ArchObjectCap cap)
     storePTE slot pte
     doMachineOp $ cleanByVA_PoU (VPtr $ fromPPtr slot) (addrFromPPtr slot)
     when tlbFlushRequired $ do
-        (asid, vaddr) <- return $ fromJust $ capFMappedAddress $ capCap cap
+        (asid, vaddr) <- return $ fromJust $ capFMappedAddress cap
         invalidateTLBByASIDVA asid vaddr
 
 performPageInvocation (PageUnmap cap ctSlot) = do
