@@ -122,11 +122,6 @@ lemma (in Schedule_AI) stt_tcb [wp]:
   apply (wp | simp)+
    done
 
-(* FIXME - Move Invariants_AI *)
-lemma invs_exst [iff]:
-  "invs (trans_state f s) = invs s"
-  by (simp add: invs_def valid_state_def)
-
 lemma (in Schedule_AI) stt_invs [wp]:
   "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: switch_to_thread_def)

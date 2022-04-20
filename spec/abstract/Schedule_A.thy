@@ -19,6 +19,9 @@ context begin interpretation Arch .
 requalify_consts
   arch_switch_to_thread
   arch_switch_to_idle_thread
+  arch_mask_interrupts
+  arch_switch_domain_kernel
+  arch_domainswitch_flush
 
 end
 
@@ -105,15 +108,15 @@ definition
   "schedule_choose_new_thread \<equiv> do
      dom_time \<leftarrow> gets domain_time;
      when (dom_time = 0) (do
-       olddom \<leftarrow> next_domain;
+       olddom \<leftarrow> gets cur_domain;
+       next_domain;
        newdom \<leftarrow> gets cur_domain;
        assert (newdom \<noteq> olddom);
        irqs_of \<leftarrow> gets domain_irqs;
-       \<comment> \<open>TODO: Arch-split all this. -robs\<close>
-       RISCV64_A.mask_interrupts True (irqs_of olddom);
-       RISCV64_A.switch_kernel_image newdom;
-       RISCV64_A.mask_interrupts False (irqs_of newdom);
-       RISCV64_A.domain_switch_flush
+       arch_mask_interrupts True (irqs_of olddom);
+       arch_switch_domain_kernel newdom;
+       arch_mask_interrupts False (irqs_of newdom);
+       arch_domainswitch_flush
      od);
      choose_thread;
      set_scheduler_action resume_cur_thread

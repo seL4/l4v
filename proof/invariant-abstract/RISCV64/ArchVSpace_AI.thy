@@ -294,7 +294,7 @@ lemma set_vm_root_invs[wp]:
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
 crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
-  (simp: crunch_simps)
+  (simp: crunch_simps ignore:do_machine_op)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
 

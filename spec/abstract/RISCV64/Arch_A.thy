@@ -169,22 +169,20 @@ text \<open>
   Interrupt mask switching, microarchitectural state flushing and time padding necessary for
   time protection whenever there is a domain switch.
 \<close>
-
-definition mask_interrupts :: "bool \<Rightarrow> irq list \<Rightarrow> unit det_ext_monad"
+definition arch_mask_interrupts :: "bool \<Rightarrow> irq list \<Rightarrow> unit det_ext_monad"
 where
   \<comment> \<open>Gerwin advised we'll want to replace these repeated \<open>maskInterrupt\<close> invocations with one
     invocation of a new HW interface that masks/unmasks them all at once, if possible. -robs\<close>
-  "mask_interrupts m irqs \<equiv> do_machine_op $ forM_x irqs (maskInterrupt m)"
+  "arch_mask_interrupts m irqs \<equiv> forM_x irqs (\<lambda>irq. do_machine_op $ maskInterrupt m irq)"
 
-definition domain_switch_flush :: "unit det_ext_monad"
+definition arch_domainswitch_flush :: "unit det_ext_monad"
 where
-  "domain_switch_flush \<equiv>
-     do
-       paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
-       do_machine_op $ forM_x paddrs_to_flush L2FlushAddr;
-       \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
-       do_machine_op $ tfence
-     od"
+  "arch_domainswitch_flush \<equiv> do
+     paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
+     forM_x paddrs_to_flush (\<lambda>x. do_machine_op (RISCV64.L2FlushAddr x));
+     \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
+     do_machine_op $ tfence
+   od"
 
 end
 end
