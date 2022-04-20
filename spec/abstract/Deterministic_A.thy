@@ -363,20 +363,16 @@ definition
        set_scheduler_action $ switch_thread target
    od"
 
-\<comment> \<open>Returns the domain we just switched away from.\<close>
 definition
-  next_domain :: "domain det_ext_monad" where
-  "next_domain \<equiv> do
-    olddom \<leftarrow> gets cur_domain;
+  next_domain :: "unit det_ext_monad" where
+  "next_domain \<equiv>
     modify (\<lambda>s.
       let domain_index' = (domain_index s + 1) mod length (domain_list s) in
       let next_dom = (domain_list s)!domain_index'
       in s\<lparr> domain_index := domain_index',
             cur_domain := fst next_dom,
             domain_time := snd next_dom,
-            work_units_completed := 0\<rparr>);
-    return olddom
-  od"
+            work_units_completed := 0\<rparr>)"
 
 definition
   dec_domain_time :: "unit det_ext_monad" where

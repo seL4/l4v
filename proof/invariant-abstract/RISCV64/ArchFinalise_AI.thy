@@ -654,7 +654,7 @@ crunches set_vm_root
   for ptes_of[wp]: "\<lambda>s. P (ptes_of s)"
   and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps ignore:do_machine_op)
 
 lemma set_vm_root_vs_lookup_target[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
@@ -963,7 +963,7 @@ crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
-   ignore: arch_thread_set)
+   ignore: arch_thread_set do_machine_op)
 end
 
 interpretation Finalise_AI_1?: Finalise_AI_1
@@ -1016,7 +1016,7 @@ context Arch begin global_naming RISCV64
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps ignore:do_machine_op)
 
 crunch pred_tcb_at[wp]:
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page
@@ -1082,7 +1082,7 @@ lemma is_arch_update_reset_page:
   done
 
 crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps simp: crunch_simps)
+   (wp: crunch_wps simp: crunch_simps ignore:do_machine_op)
 
 lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table S) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table S) p s) \<rbrace>"
@@ -1370,7 +1370,7 @@ crunches resolve_address_bits
 
 crunches empty_slot, finalise_cap, send_ipc, receive_ipc
   for ioports[wp]: valid_ioports
-  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object)
+  (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object do_machine_op)
 
 lemma arch_derive_cap_notzombie[wp]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<not> is_zombie rv\<rbrace>, -"

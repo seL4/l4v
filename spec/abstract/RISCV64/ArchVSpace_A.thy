@@ -81,9 +81,9 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
 text \<open>
   Prepare the new domain's kernel image and switch to using it.
 \<close>
-definition switch_kernel_image :: "domain \<Rightarrow> unit det_ext_monad"
+definition arch_switch_domain_kernel :: "domain \<Rightarrow> unit det_ext_monad"
   where
-  "switch_kernel_image newdom \<equiv> do
+  "arch_switch_domain_kernel newdom \<equiv> do
     ki_vspace \<leftarrow> gets domain_kimage_vspace;
     ki_asid \<leftarrow> gets domain_kimage_asid;
     \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel

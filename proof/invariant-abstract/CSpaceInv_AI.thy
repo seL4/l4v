@@ -1807,6 +1807,14 @@ lemma cur_tcb_more_update[iff]:
   "cur_tcb (trans_state f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
 
+(* Pulled this back from Schedule_AI, where it had the comment "FIXME - Move Invariants_AI".
+   This appears to be the earliest point it can be moved.
+   TODO: Before merge, try moving it back to Invariants_AI or justify leaving it here;
+         remove also its duplicate "lemma invs_trans_state[simp]" in Retype_AI. -robs *)
+lemma invs_exst [iff]:
+  "invs (trans_state f s) = invs s"
+  by (simp add: invs_def valid_state_def)
+
 crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
 
 
