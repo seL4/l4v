@@ -2349,7 +2349,8 @@ lemma arch_tcb_context_get_set[simp]:
 lemma pte_at_typ_lift:
   assumes "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
   shows "f \<lbrace>pte_at t\<rbrace>"
-  unfolding pte_at_def sorry (* FIXME AARCH64 *)
+  unfolding pte_at_def2
+  by (wpsimp wp: assms hoare_vcg_conj_lift hoare_vcg_disj_lift)
 
 lemma entry_for_asid_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
@@ -2432,15 +2433,19 @@ lemma valid_arch_state_lift_arch:
    apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift)+
   done
 
+lemma aobjs_of_atyp_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
+  by (wpsimp simp: typ_at_aobjs wp: assms)
+
 (* the pt_of projection is not available in generic spec, so we limit what we export
    to a dependency on arch objects *)
 lemma valid_arch_state_lift:
-  assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>" (* FIXME AARCH64: should be implied by aobjs *)
-  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s) \<rbrace>"
+  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   assumes vcpus[wp]: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>" (* FIXME AARCH64: phrase this as projection? Already implied by aobjs? *)
   assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift_arch; wp)
+  by (rule valid_arch_state_lift_arch; fastforce intro: aobjs_of_atyp_lift assms)
 
 lemma asid_high_bits_of_and_mask[simp]:
   "asid_high_bits_of (asid && ~~ mask asid_low_bits || ucast (asid_low::asid_low_index)) =
@@ -2645,8 +2650,11 @@ lemma valid_vspace_objs_strong_slotD:
 
 lemma pt_bits_left_inj[simp]:
   "(pt_bits_left level' = pt_bits_left level) = (level' = level)"
-  sorry (* FIXME AARCH64
-  by (auto simp add: pt_bits_left_def bit_simps) *)
+  apply (intro iffI; clarsimp?)
+  apply (clarsimp simp: pt_bits_left_def bit_simps
+                 split: if_splits)
+     by (metis bit_size_less_eq diff_is_0_eq' mult_zero_right right_diff_distrib' sum_imp_diff
+               zero_neq_numeral)+
 
 lemma pt_walk_stopped:
   "\<lbrakk> pt_walk top_level level top_ptr vref (ptes_of s) = Some (level', pt_ptr);
