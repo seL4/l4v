@@ -12,6 +12,34 @@ context Arch begin global_naming RISCV64
 
 named_theorems DetSchedDomainTime_AI_assms
 
+lemma set_per_domain_default_vm_root_domain_list:
+  "\<And>P. do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
+lemma set_per_domain_default_vm_root_domain_time:
+  "\<And>P. do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
+crunch domain_list_inv[wp]: set_vm_root "\<lambda>s. P (domain_list s)"
+  (wp: set_per_domain_default_vm_root_domain_list)
+
+crunch domain_time_inv[wp]: set_vm_root "\<lambda>s. P (domain_time s)"
+  (wp: set_per_domain_default_vm_root_domain_time)
+
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
 
@@ -21,9 +49,10 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, make_arch_fault_msg,
   arch_post_modify_registers, arch_post_cap_deletion, handle_vm_fault,
-  arch_invoke_irq_handler
+  arch_invoke_irq_handler,
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
   "\<lambda>s. P (domain_list s)"
-  (simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
@@ -34,9 +63,10 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_invoke_irq_control, arch_get_sanitise_register_info,
   prepare_thread_delete, handle_hypervisor_fault, handle_vm_fault,
   arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
-  arch_invoke_irq_handler
+  arch_invoke_irq_handler,
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
   "\<lambda>s. P (domain_time s)"
-  (simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunches do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"

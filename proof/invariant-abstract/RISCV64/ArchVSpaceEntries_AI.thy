@@ -113,7 +113,8 @@ crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
   (wp: crunch_wps)
 
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def
+   ignore:set_object do_machine_op)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
