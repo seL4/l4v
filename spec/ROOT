@@ -28,7 +28,8 @@ chapter "Specifications"
 
 (* Session on which most other sessions build. *)
 session ASpec in "abstract" = Word_Lib +
-  options [document=pdf]
+  (* Was 'pdf'. Temporarily disabled for experimental-tpspec. -robs *)
+  options [document=false]
   sessions
     "HOL-Library"
     Lib

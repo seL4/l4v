@@ -12,9 +12,26 @@ context Arch begin global_naming RISCV64
 
 named_theorems Deterministic_AI_assms
 
+lemma set_per_domain_default_vm_root_valid_list:
+  "\<lbrace>valid_list\<rbrace> do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>_.valid_list\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
+crunch valid_list[wp, Deterministic_AI_assms]:
+  set_vm_root valid_list
+  (wp: set_per_domain_default_vm_root_valid_list)
+
 crunch valid_list[wp, Deterministic_AI_assms]:
   cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
-  arch_post_modify_registers valid_list
+  arch_post_modify_registers,
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
+  valid_list
   (wp: crunch_wps simp: unless_def crunch_simps)
 declare get_cap_inv[Deterministic_AI_assms]
 

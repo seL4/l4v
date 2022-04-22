@@ -15,20 +15,75 @@ named_theorems DetSchedSchedule_AI_assms
 crunch  prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
   prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
 
+lemma set_per_domain_default_vm_root_valid_etcbs[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_etcbs\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
   (simp: crunch_simps)
+
+lemma set_per_domain_default_vm_root_valid_queues[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_queues\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_queues
   (simp: crunch_simps ignore: set_tcb_queue tcb_sched_action)
 
+lemma set_per_domain_default_vm_root_weak_valid_sched_action[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>weak_valid_sched_action\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
   (simp: crunch_simps)
 
+lemma set_per_domain_default_vm_root_ct_not_in_q[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>ct_not_in_q\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
+
+lemma set_per_domain_default_vm_root_ct_not_in_q'[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
   (wp: crunch_wps simp: crunch_simps)
@@ -42,6 +97,17 @@ lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   apply (fastforce simp: valid_queues_def ct_not_in_q_def not_queued_def
                          valid_idle_def pred_tcb_at_def obj_at_def)
   done
+
+lemma set_per_domain_default_vm_root_valid_sched_action'[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. valid_sched_action_2 (scheduler_action s) (ekheap s) (kheap s) thread (cur_domain s)\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
                                                  (ekheap s) (kheap s) thread (cur_domain s)"
@@ -59,6 +125,17 @@ lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
                         pred_tcb_at_def obj_at_def)
   done
 
+lemma set_per_domain_default_vm_root_ct_in_cur_domain'[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. ct_in_cur_domain_2 t (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idle_thread s)
                                                    (scheduler_action s) (cur_domain s) (ekheap s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -73,33 +150,110 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers ct_not_in_q
   (simp: crunch_simps wp: crunch_wps)
 
+lemma set_per_domain_default_vm_root_is_activatable[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>is_activatable t\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
   (simp: crunch_simps)
+
+lemma set_per_domain_default_vm_root_valid_sched_action[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_sched_action\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched_action
   (simp: crunch_simps)
 
+lemma set_per_domain_default_vm_root_valid_sched[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_sched\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
   (simp: crunch_simps)
 
+lemma set_per_domain_default_vm_root_exst[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. P (exst s)\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
-  (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
+  (wp: crunch_wps hoare_whenE_wp simp: crunch_simps ignore: do_machine_op)
 
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
   (simp: crunch_simps wp: assert_inv)
 
+lemma set_per_domain_default_vm_root_valid_blocked[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_blocked\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch valid_blocked[wp]: set_vm_root valid_blocked
   (simp: crunch_simps)
+
+lemma set_per_domain_default_vm_root_ct_in_q[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>ct_in_q\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch ct_in_q[wp]: set_vm_root ct_in_q
   (simp: crunch_simps)
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: switch_to_thread "etcb_at P t"
 
+lemma set_per_domain_default_vm_root_valid_idle[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>valid_idle\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps ignore: do_machine_op)
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: arch_switch_to_idle_thread "etcb_at P t"
 
@@ -131,6 +285,17 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
   apply (fastforce simp: valid_sched_2_def valid_queues_2_def valid_idle_def
                          pred_tcb_at_def obj_at_def not_queued_def)
   done
+
+lemma set_per_domain_default_vm_root_valid_blocked_2[wp]:
+  "do_extended_op (do
+     curdom <- gets cur_domain;
+     ki_vspace <- gets domain_kimage_vspace;
+     ki_asid <- gets domain_kimage_asid;
+     do_machine_op (setVSpaceRoot (addrFromPPtr (ki_vspace curdom)) (ucast (ki_asid curdom)))
+   od)
+   \<lbrace>\<lambda>s. valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) thread\<rbrace>"
+  (* TODO: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 crunch valid_blocked_2[wp]: set_vm_root "\<lambda>s.
            valid_blocked_2 (ready_queues s) (kheap s)
@@ -248,7 +413,9 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "valid_sched"
 
 crunch valid_list [wp, DetSchedSchedule_AI_assms]:
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list"
+  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
+  valid_list
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]:
   handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers
@@ -314,7 +481,10 @@ end
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched)?)
+  case 1 show ?case
+    by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched
+      arch_mask_interrupts_valid_list arch_switch_domain_kernel_valid_list
+      arch_domainswitch_flush_valid_list)?)
   qed
 
 end

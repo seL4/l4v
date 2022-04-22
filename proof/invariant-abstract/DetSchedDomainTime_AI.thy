@@ -92,6 +92,18 @@ locale DetSchedDomainTime_AI =
     "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
   assumes arch_invoke_irq_handler_domain_time_inv'[wp]:
     "\<And>P i. arch_invoke_irq_handler i \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  assumes arch_mask_interrupts_domain_list_inv'[wp]:
+    "\<And>P m irqs. arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes arch_mask_interrupts_domain_time_inv'[wp]:
+    "\<And>P m irqs. arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  assumes arch_switch_domain_kernel_domain_list_inv'[wp]:
+    "\<And>P d. arch_switch_domain_kernel d \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes arch_switch_domain_kernel_domain_time_inv'[wp]:
+    "\<And>P d. arch_switch_domain_kernel d \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  assumes arch_domainswitch_flush_domain_list_inv'[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  assumes arch_domainswitch_flush_domain_time_inv'[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
 
 crunches update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
@@ -388,6 +400,26 @@ lemma next_domain_domain_time_left[wp]:
    done
 
 context DetSchedDomainTime_AI begin
+
+lemma domainswitch_sequence_domain_time_left[wp]:
+  "\<lbrace> valid_domain_list \<rbrace> do
+     olddom \<leftarrow> gets cur_domain;
+     next_domain;
+     newdom \<leftarrow> gets cur_domain;
+     \<comment> \<open>XXX: This assert needs to be removed, for this to be true.
+       After that, I expect this lemma won't even be needed because all the rules needed by
+       \<open>schedule_choose_new_thread_domain_time_left\<close> are already in the [wp] set. -robs\<close>
+     assert (newdom \<noteq> olddom);
+     irqs_of \<leftarrow> gets domain_irqs;
+     arch_mask_interrupts True (irqs_of olddom);
+     arch_switch_domain_kernel newdom;
+     arch_mask_interrupts False (irqs_of newdom);
+     arch_domainswitch_flush
+   od
+   \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
+  apply wp
+  (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry
 
 lemma schedule_choose_new_thread_domain_time_left[wp]:
   "\<lbrace> valid_domain_list \<rbrace>

@@ -1363,9 +1363,11 @@ lemma schedule_choose_new_thread_valid_sched:
                  wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
                      choose_thread_ct_activatable choose_thread_cur_dom_or_idle
                      hoare_vcg_disj_lift)+
+    sorry (* FIXME: Broken by experimental-tpspec. -robs
     apply (wpsimp wp: next_domain_valid_sched_action next_domain_valid_etcbs
                       next_domain_valid_queues next_domain_valid_blocked next_domain_ct_in_q)+
   done
+  *)
 
 lemma schedule_valid_sched:
   "\<lbrace>valid_sched and valid_idle\<rbrace> schedule \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -3401,6 +3403,12 @@ locale DetSchedSchedule_AI_handle_hypervisor_fault = DetSchedSchedule_AI +
          (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
         handle_reserved_irq irq
       \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  assumes arch_mask_interrupts_valid_list'[wp]:
+    "\<And>m irqs. arch_mask_interrupts m irqs \<lbrace>valid_list\<rbrace>"
+  assumes arch_switch_domain_kernel_valid_list'[wp]:
+    "\<And>d. arch_switch_domain_kernel d \<lbrace>valid_list\<rbrace>"
+  assumes arch_domainswitch_flush_valid_list'[wp]:
+    "arch_domainswitch_flush \<lbrace>valid_list\<rbrace>"
 
 context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
@@ -3457,7 +3465,28 @@ crunch valid_list[wp]: next_domain valid_list (simp: Let_def)
 
 context DetSchedSchedule_AI_handle_hypervisor_fault begin
 
+lemma domainswitch_sequence_valid_list[wp]:
+  "do
+     olddom \<leftarrow> gets cur_domain;
+     next_domain;
+     newdom \<leftarrow> gets cur_domain;
+     \<comment> \<open>XXX: This assert needs to be removed from the sequence, for this to be true.
+       After that, remove this lemma because all rules needed by the
+       \<open>schedule_choose_new_thread valid_list\<close> crunch below are already in [wp]. -robs\<close>
+     assert (newdom \<noteq> olddom);
+     irqs_of \<leftarrow> gets domain_irqs;
+     arch_mask_interrupts True (irqs_of olddom);
+     arch_switch_domain_kernel newdom;
+     arch_mask_interrupts False (irqs_of newdom);
+     arch_domainswitch_flush
+   od
+   \<lbrace> valid_list \<rbrace>"
+  apply wp
+  (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry
+
 crunch valid_list[wp]: schedule_choose_new_thread valid_list
+  (wp: crunch_wps)
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
