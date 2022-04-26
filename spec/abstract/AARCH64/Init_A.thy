@@ -28,12 +28,15 @@ definition arm_global_pt_ptr :: obj_ref where
 definition init_irq_node_ptr :: obj_ref where
   "init_irq_node_ptr = pptr_base + 0x3000"
 
+definition ipa_size :: nat where
+  "ipa_size \<equiv> if config_ARM_PA_SIZE_BITS_40 then 40 else 44"
+
 (* The highest user-virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.
    For AArch64-hyp, user-virtual addresses are IPAs and since there is no sign extension,
    the value is the top of the entire IPA address space. *)
 definition canonical_user :: "vspace_ref" where
-  "canonical_user \<equiv> mask (if config_ARM_PA_SIZE_BITS_40 then 40 else 44)"
+  "canonical_user \<equiv> mask ipa_size"
 
 (* This is not the layout the real kernel uses, but we are only trying to show that
    the invariants are consistent. These apply to the mappings of the (separate) kernel-level
