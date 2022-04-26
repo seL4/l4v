@@ -318,10 +318,25 @@ definition wellformed_pte :: "pte \<Rightarrow> bool" where
 definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vcpu vcpu \<equiv> case_option \<top> (typ_at ATCB) (vcpu_tcb vcpu) "
 
+definition valid_vs_slot_bits :: nat where
+  "valid_vs_slot_bits = pt_bits_left asid_pool_level - ipa_size"
+
+definition invalid_mapping_slots :: "vs_index set" where
+  "invalid_mapping_slots \<equiv>
+     if valid_vs_slot_bits = 0 then {} else -{idx. idx \<le> mask valid_vs_slot_bits}"
+
+(* In some AArch64 configurations the page tables can theoretically translate more bits than
+   are available in the input address space (e.g. 44-bit IPA width, 48 ptbit_bits_left for toplevel.
+   We want those inaccessible pte slots in the pt_range to be set to Invalid so that we know there
+   can be no junk translations in the table that are impossible on hardware. *)
+definition valid_pt_range :: "pt \<Rightarrow> bool" where
+  "valid_pt_range pt \<equiv>
+    \<forall>vs. pt = VSRootPT vs \<longrightarrow> (\<forall>idx \<in> invalid_mapping_slots. vs idx = InvalidPTE)"
+
 definition arch_valid_obj :: "arch_kernel_obj \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "arch_valid_obj ao s \<equiv> case ao of
      VCPU v \<Rightarrow> valid_vcpu v s
-   | PageTable pt \<Rightarrow> \<forall>pte\<in>pt_range pt. wellformed_pte pte
+   | PageTable pt \<Rightarrow> valid_pt_range pt \<and> (\<forall>pte\<in>pt_range pt. wellformed_pte pte)
    | _ \<Rightarrow> True"
 
 lemmas arch_valid_obj_simps[simp] = arch_valid_obj_def[split_simps arch_kernel_obj.split]
@@ -713,7 +728,10 @@ begin
 
 lemmas simple_bit_simps = table_size word_size_bits_def ptTranslationBits_def pageBits_def vcpuBits_def
 lemmas table_bits_simps = pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def]
-lemmas bit_simps        = table_bits_simps simple_bit_simps
+
+named_theorems bit_simps
+
+lemmas [bit_simps] = table_bits_simps simple_bit_simps ipa_size_def valid_vs_slot_bits_def
 
 end
 
@@ -878,6 +896,15 @@ lemma level_minus_one_max_pt_level[iff]:
   "(level - 1 \<le> max_pt_level) = (0 < level)"
   by (metis max_pt_level_less_Suc bit_not_less_zero_bit0 bit_pred diff_add_cancel
            not_less_iff_gr_or_eq)
+
+(* Sometimes you need type nat directly in the goal, not vm_level *)
+lemma size_max_pt_level:
+  "size max_pt_level = (if config_ARM_PA_SIZE_BITS_40 then 2 else 3)"
+  by (simp add: level_defs)
+
+lemma pt_bits_left_asid_pool[bit_simps]:
+  "pt_bits_left asid_pool_level = (if config_ARM_PA_SIZE_BITS_40 then 40 else 48)"
+  by (simp add: pt_bits_left_def bit_simps size_max_pt_level)
 
 (* ---------------------------------------------------------------------------------------------- *)
 
