@@ -549,7 +549,9 @@ lemmas valid_asid_table_def = valid_asid_table_2_def
 definition arch_obj_bits_type :: "aa_type \<Rightarrow> nat" where
   "arch_obj_bits_type T \<equiv> case T of
      AASIDPool      \<Rightarrow> arch_kobj_size (ASIDPool undefined)
-   | APageTable vsp \<Rightarrow> arch_kobj_size (PageTable ((if vsp then VSRootPT else NormalPT) undefined))
+   | APageTable vsp \<Rightarrow> arch_kobj_size (PageTable (if vsp
+                                                  then VSRootPT undefined
+                                                  else NormalPT undefined))
    | AUserData sz   \<Rightarrow> arch_kobj_size (DataPage False sz)
    | ADeviceData sz \<Rightarrow> arch_kobj_size (DataPage True sz)
    | AVCPU          \<Rightarrow> arch_kobj_size (VCPU undefined)"
@@ -726,10 +728,12 @@ context
   includes machine_bit_simps
 begin
 
-lemmas simple_bit_simps = table_size word_size_bits_def ptTranslationBits_def pageBits_def vcpuBits_def
-lemmas table_bits_simps = pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def]
+lemmas simple_bit_simps =
+  table_size word_size_bits_def ptTranslationBits_def pageBits_def vcpuBits_def
+lemmas table_bits_simps =
+  pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def] vs_index_bits_def
 
-named_theorems bit_simps
+named_theorems bit_simps (* FIXME AARCH64: shadows Word_Lib bit_simps *)
 
 lemmas [bit_simps] = table_bits_simps simple_bit_simps ipa_size_def valid_vs_slot_bits_def
 
@@ -1931,18 +1935,14 @@ lemma table_index_plus_ucast_pt[simp]:
 lemma table_index_plus_ucast_vs[simp]:
   "is_aligned pt_ptr (pt_bits True) \<Longrightarrow>
    table_index True (pt_ptr + (ucast (i::vs_index) << pte_bits)) = i"
-  by (rule table_index_plus_ucast;
-      simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-  (* FIXME AARCH64: occasionally we need the config value to relate the (fixed per config) type to
-                    the (conditional) constant. *)
+  by (rule table_index_plus_ucast; simp add: bit_simps)
 
 lemma table_index_offset_pt_bits_left_vs:
   "\<lbrakk> is_aligned pt_ref (pt_bits True); lvl = max_pt_level \<rbrakk> \<Longrightarrow>
    (table_index True (pt_slot_offset lvl pt_ref vref)::vs_index) =
    ucast (vref >> pt_bits_left lvl)"
-  by (simp add: table_index_plus_ucast pt_slot_offset_def pt_index_def
-                Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
-                ptTranslationBits_def ucast_ucast_mask[where 'a=vs_index_len, simplified, symmetric])
+  by (auto simp: table_index_plus_ucast pt_slot_offset_def pt_index_def vs_index_ptTranslationBits
+                 ucast_ucast_mask[where 'a=vs_index_len, simplified, symmetric])
 
 lemma table_index_offset_pt_bits_left_pt:
   "\<lbrakk> is_aligned pt_ref (pt_bits False); lvl \<noteq> max_pt_level \<rbrakk> \<Longrightarrow>
@@ -2537,7 +2537,7 @@ lemma table_index_pt_slot_offset_vs:
    vsroot_index (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
   for idx :: vs_index
   using table_index_pt_slot_offset[where level=max_pt_level and 'a=vs_index_len]
-  by (simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  by (simp add: bit_simps)
 
 lemma vs_lookup_vref_for_level_eq1:
   "vref_for_level vref' (bot_level+1) = vref_for_level vref (bot_level+1) \<Longrightarrow>
@@ -2629,12 +2629,11 @@ lemma vs_lookup_table_pt_step:
      apply (subst vs_lookup_vref_for_level_eq1)
       prefer 2
       apply assumption
-     apply (simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+     apply (simp add: bit_simps)
     apply (fastforce simp: ptes_of_Some_distinct in_omonad is_aligned_pt_slot_offset_pte
                            table_index_pt_slot_offset_vs)
    apply (prop_tac "idx \<notin> invalid_mapping_slots", clarsimp simp: valid_pt_range_def)
-   apply (simp add: user_region_def vref_for_level_idx_canonical_user bit_simps
-                    Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+   apply (simp add: user_region_def vref_for_level_idx_canonical_user bit_simps)
   apply (rename_tac ptn idx)
   apply (rule_tac x="vref_for_level vref (level+1) ||
                      (ucast (idx::pt_index) << pt_bits_left level)" in exI)
