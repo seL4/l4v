@@ -23,11 +23,6 @@ os.environ["PATH"] += os.pathsep + DIR
 # Enable tracking stuck tasks, and set report interval to 3 seconds
 os.environ["ISABELLE_TIMING_LOG"]="3.0s"
 
-# For the time being, we allow sorries in invariant proofs:
-os.environ["AINVS_QUICK_AND_DIRTY"]="1"
-os.environ["REFINE_QUICK_AND_DIRTY"]="1"
-print("Testing with QUICK_AND_DIRTY for AInvs and Refine")
-
 
 # Enable quick_and_dirty mode for various images
 if "QUICK_AND_DIRTY" in os.environ:
