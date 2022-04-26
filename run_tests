@@ -93,8 +93,8 @@ EXCLUDE["RISCV64"]=[
     "SepTactics",
     "TakeGrant",
     "Sep_Algebra",
-    "Refine",
-    "CBaseRefine"
+    "CBaseRefine",
+    "LibTest"
 ]
 
 EXCLUDE["AARCH64"]=[
