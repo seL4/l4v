@@ -2248,7 +2248,10 @@ lemma vs_root_pt_idx_distinct:
   apply (cases "config_ARM_PA_SIZE_BITS_40")
    apply (clarsimp simp: pt_slot_offset_def bit_simps pt_index_def pt_bits_left_def size_max_pt_level
                    split: if_split_asm)
-   using vs_index_len vs_index_len_def apply presburger
+   apply (simp add: is_aligned_no_overflow_mask)
+   apply (subst (asm) word_plus_and_or_coroll, word_eqI)+
+   apply word_bitwise
+   apply simp
   (* This is the case where all tables are equal size, which should be the easier one, but the
      carefully crafted simp rules don't apply at this level, so first establish the right context *)
   apply (prop_tac "table_base False (pt_slot_offset max_pt_level pt vref) =
