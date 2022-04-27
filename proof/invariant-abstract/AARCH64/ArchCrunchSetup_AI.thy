@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-(* FIXME AARCH64: This file was copied *VERBATIM* from the RISCV64 version,
-   with minimal text substitution! Remove this comment after updating;
-   update copyright as necessary. *)
 theory ArchCrunchSetup_AI
 imports
   "ASpec.Syscall_A"
