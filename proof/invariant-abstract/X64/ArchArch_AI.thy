@@ -642,7 +642,7 @@ lemma max_index_upd_no_cap_to:
   done
 
 lemma perform_asid_control_invocation_pred_tcb_at:
-  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t s
+  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s
         \<and> ct_active s \<and> invs s \<and> valid_aci aci s\<rbrace>
    perform_asid_control_invocation aci
    \<lbrace>\<lambda>_. pred_tcb_at proj Q t\<rbrace>"

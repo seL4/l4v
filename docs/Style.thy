@@ -253,17 +253,42 @@ section \<open>More on proofs\<close>
 subsection \<open>prefer and defer\<close>
 
 text \<open>
-   There are currently no hard rules on the use of `prefer` and `defer n`. Two general principles
-   apply:
+  There are currently no hard rules on the use of `prefer` and `defer n`. Two general principles
+  apply:
 
-   1. If they are used too frequently then a proof may become unreadable. Do not use them
-      unnecessarily and consider including comments to indicate their purpose.
-   2. If they are used too "specifically" then a proof may break very frequently for not-
-      interesting reasons. This makes a proof less maintainable and so this should be avoided.
+  1. If they are used too frequently then a proof may become unreadable. Do not use them
+     unnecessarily and consider including comments to indicate their purpose.
+  2. If they are used too "specifically" then a proof may break very frequently for not-
+     interesting reasons. This makes a proof less maintainable and so this should be avoided.
 
   A known use case for `prefer` is where a proof has a tree-like structure, and the prover wants to
   approach it with a breadth-first approach. Since the default isabelle strategy is depth-first,
   prefers (or defers) will be needed, e.g. corres proofs.\<close>
+
+subsection \<open>Unfolding definitions\<close>
+
+text \<open>
+  When unfolding definitions at the start of a proof, use `unfolding` instead of the simplifier.
+  This is not a hard rule but is strongly preferred, since the unfolding step is then stable and it
+  makes it obvious that nothing interesting is supposed to be happening. For example, use\<close>
+
+lemma my_hoare_triple_lemma:
+  "\<lbrace>precondition_one and precondition_two and
+    precondition three\<rbrace>
+   my_function param_a param_b
+   \<lbrace>post_condition\<rbrace>"
+  unfolding my_function_def
+  oops
+
+text \<open>instead of\<close>
+
+lemma my_hoare_triple_lemma:
+  "\<lbrace>precondition_one and precondition_two and
+    precondition three\<rbrace>
+   my_function param_a param_b
+   \<lbrace>post_condition\<rbrace>"
+  apply (clarsimp simp: my_function_def)
+  oops
 
 section \<open>Referenecs\<close>
 

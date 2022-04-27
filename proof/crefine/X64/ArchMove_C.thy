@@ -154,8 +154,6 @@ lemma ucast_le_ucast_8_32:
   "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
   by (simp add: word_le_nat_alt is_up_8_32 unat_ucast_upcast)
 
-lemmas findVSpaceForASIDAssert_pd_at_wp2 = findVSpaceForASIDAssert_vs_at_wp
-
 lemma asid_shiftr_low_bits_less:
   "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x8"
   apply (rule_tac y="2 ^ 3" in order_less_le_trans)
@@ -191,13 +189,6 @@ lemma empty_fail_findVSpaceForASID[iff]:
     apply (simp add: assertE_def split: if_split)
    apply (simp add: empty_fail_getObject)
   apply (simp add: assertE_def liftE_bindE checkPML4At_def split: if_split)
-  done
-
-lemma empty_fail_findVSpaceForASIDAssert[iff]:
-  "empty_fail (findVSpaceForASIDAssert asid)"
-  apply (simp add: findVSpaceForASIDAssert_def catch_def
-                   checkPML4At_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
 crunch inv'[wp]: archThreadGet P

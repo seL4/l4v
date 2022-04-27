@@ -65,6 +65,12 @@ build-riscv: sandbox $(BOOT_FILES)
 	    --builddir="dist/riscv"
 	$(CABAL_BUILD) --builddir="dist/riscv"
 
+build-aarch64: sandbox $(BOOT_FILES)
+	$(CABAL_CONFIGURE) --configure-option="aarch64-tx2" \
+	    --flags="ArchAArch64 -FFI" \
+	    --builddir="dist/aarch64"
+	$(CABAL_BUILD) --builddir="dist/aarch64"
+
 # We assume that if the .stack-work directory exists,
 # we don't need to install ghc, cabal, nor fetch the cabal
 # package database.

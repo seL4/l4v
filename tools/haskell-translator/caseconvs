@@ -1819,7 +1819,7 @@ case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Type
  Arch.Types.APIObjectType \v0\ \<Rightarrow> ->1 | Arch.Types.SmallPageObject \<Rightarrow> ->2 | Arch.Types.LargePageObject \<Rightarrow> ->3 | Arch.Types.SectionObject \<Rightarrow> ->4 | Arch.Types.SuperSectionObject \<Rightarrow> ->5 | Arch.Types.PageTableObject \<Rightarrow> ->6 | Arch.Types.PageDirectoryObject \<Rightarrow> ->7 | Arch.Type.VCPUObject \<Rightarrow> -> 8
 
 case \x of ArchInv.InvokeVCPU iv -> _ ->  ---> let inv = \x
-     in case inv of ArchInv.InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
+     in case inv of InvokeVCPU iv \<Rightarrow> ->1 | _ \<Rightarrow> ->2
 
 case \x of ((mr0:mr1:_), cap@(VCPUCap {})) -> (_, _) ->  ---> let (ls, cap) = \x in
    if isVCPUCap cap \<and> length ls > 1
@@ -2007,6 +2007,13 @@ case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:
       (ArchInvocationLabel ARMIRQIssueIRQHandler,
         irqW#triggerW#index#depth#_, cnode#_) => ->1
     | (ArchInvocationLabel ARMIRQIssueIRQHandler, _, _) => ->2
+    | _ => ->3
+
+case \x of (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger, irqW:triggerW:index:depth:_, cnode:_) -> (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandlerTrigger,_,_) -> _ ->  ---> let (label, args, extraCaps) = \x in
+    case (label, args, extraCaps) of
+      (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger,
+        irqW#triggerW#index#depth#_, cnode#_) => ->1
+    | (ArchInvocationLabel ARMIRQIssueIRQHandlerTrigger, _, _) => ->2
     | _ => ->3
 
 case \x of (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) ->  ---> case \x of
