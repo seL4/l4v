@@ -2393,9 +2393,29 @@ lemma vmid_inv_ap_lift:
   apply (wpsimp wp: vmid_for_asid_lift)
   done
 
+lemmas vcpu_of_simps[simp] = vcpu_of_def[split_simps arch_kernel_obj.split]
+
+lemma vcpu_of_Some[simp]:
+  "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
+  by (cases ako; simp)
+
+definition hyp_live_of :: "vcpu \<Rightarrow> bool option" where (* FIXME AARCH64: used pred_map from MCS? *)
+  "hyp_live_of vcpu \<equiv> if hyp_live (ArchObj (VCPU vcpu)) then Some True else Some False"
+
+lemma hyp_live_of_Some[simp]:
+  "(hyp_live_of vcpu = Some True) = hyp_live (ArchObj (VCPU vcpu))"
+  by (simp add: hyp_live_of_def)
+
+locale_abbrev
+  "vcpu_hyp_live_of s \<equiv> vcpus_of s |> hyp_live_of"
+
+lemma obj_at_vcpu_hyp_live_of:
+  "obj_at (is_vcpu and hyp_live) p = (\<lambda>s. vcpu_hyp_live_of s p = Some True)"
+  by (rule ext) (auto simp: obj_at_def in_omonad is_vcpu_def hyp_live_def arch_live_def)
+
 lemma cur_vcpu_typ_lift:
   assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
-  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> "
+  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>"
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>cur_vcpu\<rbrace>"
   unfolding cur_vcpu_def
@@ -2423,14 +2443,14 @@ lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s) \<rbrace>"
   assumes aps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
-  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace> " (* FIXME AARCH64: phrase this as projection *)
+  assumes vcpus: "\<And>p. f \<lbrace>\<lambda>s. vcpu_hyp_live_of s p = Some True\<rbrace>"
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", rotated], rule arch)
   apply (wpsimp wp: dom_asid_pools_of_lift)
     apply blast
-   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift)+
+   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift simp: obj_at_vcpu_hyp_live_of)+
   done
 
 lemma aobjs_of_atyp_lift:
@@ -2438,11 +2458,15 @@ lemma aobjs_of_atyp_lift:
   shows "f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
   by (wpsimp simp: typ_at_aobjs wp: assms)
 
+lemma aobjs_of_vcpu_lift:
+  assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  shows "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>"
+  by (wpsimp simp: obj_at_vcpu_hyp_live_of)
+
 (* the pt_of projection is not available in generic spec, so we limit what we export
    to a dependency on arch objects *)
 lemma valid_arch_state_lift:
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  assumes vcpus[wp]: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>" (* FIXME AARCH64: phrase this as projection? Already implied by aobjs? *)
   assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_arch; fastforce intro: aobjs_of_atyp_lift assms)
