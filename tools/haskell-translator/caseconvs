@@ -2289,4 +2289,3 @@ case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { c
     else if isZombie cap \<and> \<not> final
     then ->13
     else ->14
-
