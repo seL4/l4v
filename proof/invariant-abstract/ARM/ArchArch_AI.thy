@@ -633,9 +633,30 @@ lemma max_index_upd_no_cap_to:
   apply (clarsimp simp:table_cap_ref_def)
   done
 
-lemma perform_asid_control_invocation_pred_tcb_at:
-  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s
-        \<and> ct_active s \<and> invs s \<and> valid_aci aci s\<rbrace>
+
+lemma get_cap_valid_max_free_index_update:
+  "\<lbrace>valid_objs\<rbrace> get_cap p \<lbrace>\<lambda>rv s. s \<turnstile> max_free_index_update rv\<rbrace>"
+  by (strengthen valid_cap_free_index_update) (rule get_cap_valid)
+
+lemma get_cap_tcb_cap_valid:
+  "\<lbrace>valid_objs\<rbrace> get_cap p \<lbrace>\<lambda>rv. tcb_cap_valid rv p\<rbrace>"
+  by (wpsimp wp: get_cap_wp simp: cte_wp_tcb_cap_valid)
+
+lemma valid_aci_frame_aligned:
+  "\<lbrakk>valid_aci (MakePool frame slot parent base) s; valid_objs s\<rbrakk> \<Longrightarrow> is_aligned frame page_bits"
+  apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+  apply (frule (1) caps_of_state_valid_cap[where p=parent])
+  by (simp add: valid_cap_simps cap_aligned_def page_bits_def)
+
+lemma perform_asid_control_invocation_non_cspace_obj_at:
+  assumes non_cspace: "cspace_agnostic_pred P"
+  shows
+  "\<lbrace>obj_at P t
+      and ex_nonz_cap_to t
+      and ct_active
+      and (\<lambda>s. scheduler_action s = resume_cur_thread)
+      and invs
+      and valid_aci aci\<rbrace>
    perform_asid_control_invocation aci
    \<lbrace>\<lambda>y. obj_at P t\<rbrace>"
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)

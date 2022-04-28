@@ -923,7 +923,6 @@ lemma cteMove_corres:
   apply (thin_tac "ksDomainTime t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "ctes_of t = p" for t p)+
-  apply (thin_tac "ekheap_relation t p" for t p)+
   apply (thin_tac "pspace_relation t p" for t p)+
   apply (thin_tac "interrupt_state_relation s t p" for s t p)+
   apply (thin_tac "ghost_relation s t p" for s t p)+
@@ -1000,7 +999,6 @@ lemma cteMove_corres:
    apply simp
    apply (prop_tac "descendants_of' (cte_map (aa, bb)) (ctes_of b) =
                        cte_map ` descendants_of (aa, bb) (cdt a)")
-    prefer 2
     subgoal by (simp add: cdt_relation_def del: split_paired_All)
    apply simp
    apply (rule conjI)
@@ -4425,7 +4423,6 @@ lemma cteInsert_simple_corres:
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
         apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
-        apply (clarsimp simp: pspace_relations_def)
         apply (thin_tac "gsCNodes t = p" for t p)+
         apply (thin_tac "ksMachineState t = p" for t p)+
         apply (thin_tac "ksCurThread t = p" for t p)+
@@ -4450,11 +4447,11 @@ lemma cteInsert_simple_corres:
         apply (thin_tac "ksDomainTime t = p" for t p)+
         apply (thin_tac "ksDomSchedule t = p" for t p)+
         apply (thin_tac "ctes_of t = p" for t p)+
-        apply (thin_tac "ekheap_relation t p" for t p)+
         apply (thin_tac "pspace_relation t p" for t p)+
         apply (thin_tac "interrupt_state_relation s t p" for s t p)+
         apply (thin_tac "sched_act_relation t p" for t p)+
         apply (thin_tac "ready_queues_relation t p" for t p)+
+        apply clarsimp
         apply (rule conjI)
          subgoal by (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
         apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def prev_update_modify_mdb_relation)
