@@ -9,7 +9,10 @@
  *)
 
 theory PageTable_D
-imports Invocations_D CSpace_D
+imports
+  "ASpec.VMAttributes_A"
+  Invocations_D
+  CSpace_D
 begin
 
 (* Return the set of free PD slots in the given PD. *)
@@ -56,8 +59,10 @@ where
 
         target_slot \<leftarrow> returnOk $ cdl_lookup_pd_slot pd_object_id vaddr;
 
-        returnOk $ PageTableMap (PageTableCap (cap_object target) Real (Some (asid,vaddr && ~~ mask 20)))
-          (PageTableCap (cap_object target) Fake None) target_ref target_slot
+        new_attribs \<leftarrow> returnOk $ validate_pt_vm_attributes attr;
+
+        returnOk $ PageTableMap (PageTableCap (cap_object target) Real (Some (asid,vaddr && ~~ mask sectionBits)))
+          (PageTableCap (cap_object target) (Fake new_attribs) None) target_ref target_slot
       odE \<sqinter> throw
     \<comment> \<open>Unmap this PageTable.\<close>
     | PageTableUnmapIntent \<Rightarrow> (
@@ -78,11 +83,7 @@ where
       (returnOk $ PageDirectoryFlush CleanInvalidate )  \<sqinter> (returnOk $ PageDirectoryFlush Invalidate)
       \<sqinter> throw "
 
-
-
-
 (* Decode a page intent into an invocation. *)
-
 definition
   decode_page_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_page_intent \<Rightarrow> cdl_page_invocation except_monad"
@@ -112,9 +113,12 @@ where
           \<comment> \<open>Calculate rights.\<close>
           new_rights \<leftarrow> returnOk $ validate_vm_rights $ cap_rights target \<inter> rights;
 
+          \<comment> \<open>Calculate attribs.\<close>
+          new_attribs \<leftarrow> returnOk $ validate_vm_attributes attr (pageForPageBits sz);
+
           \<comment> \<open>Return the map intent.\<close>
           returnOk $ PageMap (FrameCap dev frame (cap_rights target) sz Real (Some (asid,vaddr)))
-            (FrameCap False frame new_rights sz Fake None) target_ref target_slots
+            (FrameCap False frame new_rights sz (Fake new_attribs) None) target_ref target_slots
         odE \<sqinter> throw
 
     \<comment> \<open>Unmap this PageTable.\<close>

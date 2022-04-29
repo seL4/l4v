@@ -4827,10 +4827,21 @@ lemma inv_untyped_corres':
       apply (simp add: add.commute word_plus_and_or_coroll2)
       done
 
+   from vc' have sz_le_word_bits[simp]: (* FIXME: arch-split *)
+     "sz \<le> word_bits"
+     by (clarsimp simp: valid_cap'_def maxUntypedSizeBits_def word_bits_def)
+
+   (* avoid LENGTH('a) in of_nat_le_pow to maintain arch-generic proof *)
+   have no_overflow:
+     "\<not> reset \<Longrightarrow> ptr && ~~ mask sz \<le> (ptr && ~~ mask sz) + word_of_nat idx"
+     by (rule and_neg_mask_plus_le, rule of_nat_le_pow[where 'a=machine_word_len, folded word_bits_def],
+         erule non_reset_idx_le)
+        clarsimp
+
    have overlap_ranges:
      "{x. ptr \<le> x \<and> x \<le> ptr + 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us * of_nat (length slots) - 1}
          \<subseteq> usable_untyped_range (cap.UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))"
-     apply (cases reset, simp_all add: usable_untyped_range.simps)
+     apply (cases reset, simp_all add: usable_untyped_range.simps no_overflow)
       apply (rule order_trans, rule overlap_ranges1)
       apply (simp add: blah word_and_le2)
      apply (rule overlap_ranges2)
@@ -4964,7 +4975,7 @@ lemma inv_untyped_corres':
                           if_split[where P="\<lambda>v. v \<le> unat x" for x])
          apply (frule range_cover.sz(1), fold word_bits_def)
          apply (frule cte_wp_at_pspace_no_overlapI,
-           simp add: cte_wp_at_caps_of_state, simp split: if_split,
+           simp add: cte_wp_at_caps_of_state, simp split: if_splits,
            simp add: invoke_untyped_proofs.szw)
          apply (simp add: field_simps conj_comms ex_in_conv
                           cte_wp_at_caps_of_state

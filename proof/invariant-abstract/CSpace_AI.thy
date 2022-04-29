@@ -1922,6 +1922,27 @@ lemma set_untyped_cap_as_full_valid_mdb:
   apply (clarsimp simp: free_index_update_def cap_range_def split:cap.splits)
   done
 
+lemma usable_untyped_range_shrink:
+  assumes valid: "bits < word_bits" "is_aligned r bits"
+  assumes cmp: "f \<le> idx" "idx \<le> 2 ^ bits"
+  shows "usable_untyped_range (cap.UntypedCap dev r bits idx)
+         \<subseteq> usable_untyped_range (cap.UntypedCap dev r bits f)"
+  using valid cmp
+  apply (cases "r \<le> r + of_nat f")
+   (* no overflow *)
+   apply (clarsimp simp: valid_cap_def cap_aligned_def)
+   apply (rule word_plus_mono_right)
+    apply (rule of_nat_mono_maybe_le[THEN iffD1])
+      apply (subst word_bits_def[symmetric])
+      apply (erule less_le_trans[OF _  power_increasing]; simp)
+     apply (subst word_bits_def[symmetric])
+     apply (erule le_less_trans)
+     apply (erule less_le_trans[OF _ power_increasing]; simp)
+    apply simp
+   apply simp
+  (* overflow *)
+  apply (clarsimp simp add: is_aligned_no_wrap' word_of_nat_less)
+  done
 
 lemma set_free_index_valid_mdb:
   "\<lbrace>\<lambda>s. valid_objs s \<and> valid_mdb s \<and> cte_wp_at ((=) cap ) cref s \<and>
@@ -1962,22 +1983,10 @@ lemma set_free_index_valid_mdb:
   assume valid: "s \<turnstile> cap.UntypedCap dev r bits f"
   assume cmp: "f \<le> idx" "idx \<le> 2 ^ bits"
   have subset_range: "usable_untyped_range (cap.UntypedCap dev r bits idx) \<subseteq> usable_untyped_range (cap.UntypedCap dev r bits f)"
+    apply (rule usable_untyped_range_shrink)
     using cmp valid
-  apply (clarsimp simp:valid_cap_def cap_aligned_def)
-  apply (rule word_plus_mono_right)
-   apply (rule of_nat_mono_maybe_le[THEN iffD1])
-     apply (subst word_bits_def[symmetric])
-     apply (erule less_le_trans[OF _  power_increasing])
-      apply simp
-     apply simp
-    apply (subst word_bits_def[symmetric])
-    apply (erule le_less_trans)
-    apply (erule less_le_trans[OF _ power_increasing])
-     apply simp+
-  apply (erule is_aligned_no_wrap')
-  apply (rule word_of_nat_less)
-  apply (simp add: word_bits_def)
-  done
+       apply (fastforce simp: valid_cap_def valid_untyped_def cap_aligned_def)+
+    done
 
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps
   show "untyped_inc (cdt s) ((caps_of_state s)(cref \<mapsto> UntypedCap dev r bits idx))"
@@ -3364,41 +3373,28 @@ lemma tcb_cap_slot_regular:
   apply clarsimp
   done
 
-
 lemma set_free_index_valid_pspace:
   "\<lbrace>\<lambda>s. valid_pspace s \<and> cte_wp_at ((=) cap) cref s \<and>
         (free_index_of cap \<le> idx \<and> is_untyped_cap cap \<and>idx \<le> 2^ cap_bits cap)\<rbrace>
    set_cap (free_index_update (\<lambda>_. idx) cap) cref
    \<lbrace>\<lambda>rv s'. valid_pspace s'\<rbrace>"
+  supply usable_untyped_range.simps[simp del]
   apply (clarsimp simp: valid_pspace_def)
   apply (wp set_cap_valid_objs update_cap_iflive set_cap_zombies')
   apply (clarsimp simp:cte_wp_at_caps_of_state is_cap_simps)+
   apply (frule(1) caps_of_state_valid)
   apply (clarsimp simp:valid_cap_def cap_aligned_def free_index_update_def)
   apply (intro conjI)
-   apply (clarsimp simp: valid_untyped_def)
+   apply (clarsimp simp: valid_untyped_def free_index_of_def)
    apply (elim impE allE)
      apply assumption+
-   apply (clarsimp simp: free_index_of_def)
-   apply (erule disjoint_subset[rotated])
    apply clarsimp
-   apply (rule word_plus_mono_right)
-    apply (rule of_nat_mono_maybe_le[THEN iffD1])
-      apply (subst word_bits_def[symmetric])
-      apply (erule less_le_trans[OF _  power_increasing])
-       apply simp
-      apply simp
-     apply (subst word_bits_def[symmetric])
-     apply (erule le_less_trans)
-     apply (erule less_le_trans[OF _ power_increasing])
-      apply simp+
-   apply (erule is_aligned_no_wrap')
-   apply (rule word_of_nat_less)
-   apply (simp add: word_bits_def)
+   apply (erule disjoint_subset[rotated])
+   apply (simp add: usable_untyped_range_shrink)
   apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb valid_ipc_buffer_cap_def
                      split: option.split)
   apply (frule tcb_cap_slot_regular)
-   apply simp+
+    apply simp+
   apply (clarsimp simp: is_nondevice_page_cap_simps)
   done
 

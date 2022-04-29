@@ -272,15 +272,15 @@ where "cdl_get_pde ptr \<equiv>
   KHeap_D.get_cap ptr"
 
 definition cdl_lookup_pd_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> word32 \<times> nat "
-  where "cdl_lookup_pd_slot pd vptr \<equiv> (pd, unat (vptr >> 20))"
+  where "cdl_lookup_pd_slot pd vptr \<equiv> (pd, unat (vptr >> sectionBits))"
 
 definition cdl_lookup_pt_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> (word32 \<times> nat) except_monad"
   where "cdl_lookup_pt_slot pd vptr \<equiv>
     doE pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd vptr);
         pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
-        (case pdcap of cdl_cap.PageTableCap ref Fake None
+        (case pdcap of cdl_cap.PageTableCap ref (Fake _) None
          \<Rightarrow> ( doE pt \<leftarrow> returnOk ref;
-              pt_index \<leftarrow> returnOk ((vptr >> 12) && 0xFF);
+              pt_index \<leftarrow> returnOk ((vptr >> 12) && pt_slot_vaddr_mask);
               returnOk (pt,unat pt_index)
          odE)
         | _ \<Rightarrow> Monads_D.throw)
@@ -311,11 +311,11 @@ definition cdl_page_mapping_entries :: "32 word \<Rightarrow> nat \<Rightarrow> 
     p \<leftarrow> cdl_lookup_pt_slot pd vptr;
          returnOk [p]
     odE
-  else if pgsz = 20 then doE
+  else if pgsz = sectionBits then doE
     p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
          returnOk [p]
     odE
-  else if pgsz = 24 then doE
+  else if pgsz = superSectionBits then doE
     p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
          returnOk [p]
     odE
@@ -329,7 +329,7 @@ where
      pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd (snd maddr));
      pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
      (case pdcap of
-       cdl_cap.PageTableCap ref Fake None \<Rightarrow>
+       cdl_cap.PageTableCap ref (Fake _) None \<Rightarrow>
          (returnOk $ if ref = pt_id then Some pd_slot else None)
      | _ \<Rightarrow> returnOk None )
    odE <catch> (K (return None))"

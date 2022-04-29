@@ -70,7 +70,8 @@ where
                objects with Untyped addresses.\<close>
             modify (detype untyped_covers);
             set_cap untyped_cap_ref untyped_cap;
-            targets \<leftarrow> generate_object_ids 1 AsidPoolType untyped_covers;
+            targets \<leftarrow> return $ generate_range (Min (untyped_cap_range untyped_cap))
+                                    AsidPoolType (obj_bits_cdl AsidPoolType undefined) 1;
 
             \<comment> \<open>Retype the region.\<close>
             retype_region 0 AsidPoolType targets;
@@ -97,7 +98,7 @@ where
          case pd_cap of
            PageDirectoryCap pd_id _ _ \<Rightarrow> do
              set_cap pd_cap_ref (PageDirectoryCap pd_id Real (Some asid));
-             set_cap ap_target_slot (PageDirectoryCap pd_id Fake None)
+             set_cap ap_target_slot (PageDirectoryCap pd_id (Fake undefined) None)
            od
          | _ \<Rightarrow> fail
        od"

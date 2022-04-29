@@ -1387,22 +1387,21 @@ lemma valid_obj_default_object:
 
 lemma usable_range_subseteq:
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap\<rbrakk> \<Longrightarrow> usable_untyped_range cap \<subseteq> untyped_range cap"
-  apply (clarsimp simp:is_cap_simps cap_aligned_def split:if_splits)
+  apply (clarsimp simp: is_cap_simps cap_aligned_def split: if_splits)
   apply (erule order_trans[OF is_aligned_no_wrap'])
    apply (erule of_nat_power)
-   apply (simp add:word_bits_def)+
- done
-
+   apply (simp add: word_bits_def)+
+  done
 
 lemma usable_range_emptyD:
   "\<lbrakk>cap_aligned cap;is_untyped_cap cap ;usable_untyped_range cap = {}\<rbrakk> \<Longrightarrow> 2 ^ cap_bits cap \<le> free_index_of cap"
   apply (clarsimp simp:is_cap_simps not_le free_index_of_def cap_aligned_def split:if_splits)
-  apply (drule(1) of_nat_power [where 'a=machine_word_len, folded word_bits_def])
-  apply (drule word_plus_mono_right[OF _ is_aligned_no_overflow[unfolded p_assoc_help],rotated])
-   apply simp
-  apply (simp add:p_assoc_help)
+   apply (drule(1) of_nat_power [where 'a=machine_word_len, folded word_bits_def])
+   apply (drule word_plus_mono_right[OF _ is_aligned_no_overflow[unfolded p_assoc_help],rotated])
+    apply simp
+   apply (simp add: p_assoc_help)
+  apply (metis More_Word.of_nat_power is_aligned_no_wrap' not_le word_bits_def)
   done
-
 
 locale Retype_AI_valid_untyped_helper =
   fixes state_ext_t :: "'state_ext::state_ext itself"

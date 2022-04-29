@@ -11,9 +11,9 @@ begin
 context begin interpretation Arch . (*FIXME: arch-split*)
 
 definition
- "make_arch_duplicate cap \<equiv> case cap of
-    cdl_cap.PageTableCap oid _ mp \<Rightarrow> cdl_cap.PageTableCap oid Fake None
-  | cdl_cap.FrameCap dev oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap dev oid rghts sz Fake None"
+ "make_arch_duplicate cap attr \<equiv> case cap of
+    cdl_cap.PageTableCap oid _ mp \<Rightarrow> cdl_cap.PageTableCap oid (Fake attr) None
+  | cdl_cap.FrameCap dev oid rghts sz _ mp \<Rightarrow> cdl_cap.FrameCap dev oid rghts sz (Fake attr) None"
 
 definition
   "get_pt_mapped_addr cap \<equiv>
@@ -21,12 +21,18 @@ definition
     | _ \<Rightarrow> None"
 
 definition
+  "get_pt_vm_attributes pde \<equiv> case pde of
+      PageTablePDE _ vm_attributes _ \<Rightarrow> attribs_to_word vm_attributes
+    | SectionPDE _ vm_attributes _ _ \<Rightarrow> attribs_to_word vm_attributes
+    | SuperSectionPDE _ vm_attributes _ \<Rightarrow> attribs_to_word vm_attributes"
+
+definition
  "transform_page_table_inv invok \<equiv> case invok of
     ARM_A.PageTableMap cap slot pde slot' \<Rightarrow>
       if (\<exists>oref attribs. pde = ARM_A.PageTablePDE (addrFromPPtr oref) attribs 0
                 \<and> is_pt_cap cap \<and> oref \<in> obj_refs cap)
       then Some (cdl_page_table_invocation.PageTableMap (transform_cap cap)
-                      (make_arch_duplicate (transform_cap cap))
+                      (make_arch_duplicate (transform_cap cap) (get_pt_vm_attributes pde))
                       (transform_cslot_ptr slot) (transform_pd_slot_ref slot'))
       else None
   | ARM_A.PageTableUnmap cap slot \<Rightarrow>
@@ -209,7 +215,7 @@ lemma create_mapping_entries_dcorres:
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
                      \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap False (ptrFromPAddr base)
-                               vm_rights (pageBitsForSize pgsz) Fake None))
+                               vm_rights (pageBitsForSize pgsz) (Fake (transform_vm_attributes attrib pgsz)) None))
      \<top>
      (page_directory_at pd_ptr and valid_idle and valid_vspace_objs and pspace_aligned
              and (\<exists>\<rhd> (lookup_pd_slot pd_ptr vptr && ~~ mask pd_bits)))
@@ -242,9 +248,9 @@ proof -
         apply (rule corres_dummy_returnOk_r)
         apply (rule corres_guard_imp)
           apply (rule corres_splitEE)
-             apply (rule dcorres_lookup_pt_slot)
-            apply (rule dcorres_returnOk; simp)
-           apply wp+
+            apply (rule dcorres_lookup_pt_slot)
+           apply (rule dcorres_returnOk; clarsimp simp: transform_vm_attributes_def)
+          apply wp+
          apply simp
         apply (clarsimp simp:
           dest!:page_directory_at_aligned_pd_bits )
@@ -267,7 +273,7 @@ proof -
             apply (rule dcorres_returnOk)
             apply (subst aligned_4_hd)
              apply clarsimp
-            apply (clarsimp)
+            apply (clarsimp simp: transform_vm_attributes_def)
            apply (wpsimp wp: lookup_pt_slot_aligned_6')+
         apply (clarsimp dest!:page_directory_at_aligned_pd_bits)
         apply (frule less_kernel_base_mapping_slots_both[OF kb,where x = 0])
@@ -285,7 +291,7 @@ proof -
           apply (rule_tac F = "is_aligned pd_ptr 14" in corres_gen_asm2)
           apply (rule dcorres_returnOk)
           apply (clarsimp simp:transform_pde_def vmsz_aligned_def)
-          apply (simp add: dcorres_lookup_pd_slot)
+          apply (simp add: dcorres_lookup_pd_slot transform_vm_attributes_def)
          apply simp
         apply (clarsimp simp: pd_bits_def pageBits_def
           dest!:page_directory_at_aligned_pd_bits )
@@ -304,7 +310,7 @@ proof -
           apply (subst aligned_4_hd)
            apply (rule lookup_pd_slot_aligned_6)
             apply (simp add:vmsz_aligned_def)+
-          apply (simp add: dcorres_lookup_pd_slot)
+          apply (simp add: dcorres_lookup_pd_slot transform_vm_attributes_def)
          apply simp
         apply (clarsimp simp: pd_bits_def pageBits_def
           dest!:page_directory_at_aligned_pd_bits )
@@ -322,7 +328,7 @@ lemma create_mapping_entries_dcorres_select:
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
                      \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap False (ptrFromPAddr base)
-                               vm_rights (pageBitsForSize pgsz) Fake None))
+                               vm_rights (pageBitsForSize pgsz) (Fake (transform_vm_attributes attrib pgsz)) None))
      (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
               \<and> cdl_objects s pdid = Some pd)
      (page_directory_at pd_ptr and valid_idle and valid_vspace_objs and pspace_aligned
@@ -381,7 +387,7 @@ proof -
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def del: disjCI)
+        apply (clarsimp simp: obj_at_def transform_vm_attributes_def del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule disjI2, rule conjI)
          apply (rule_tac x="unat (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)"
@@ -422,7 +428,7 @@ proof -
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
         apply (drule_tac t="pda v" for v in sym, simp)
-        apply (clarsimp simp: obj_at_def del: disjCI)
+        apply (clarsimp simp: obj_at_def transform_vm_attributes_def del: disjCI)
         apply (frule_tac p="ptrFromPAddr v" for v in pspace_alignedD, simp+)
         apply (rule map_includedI)
          apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
@@ -465,7 +471,7 @@ proof -
           apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory
+                              opt_object_page_directory transform_vm_attributes_def
                        dest!: a_type_pdD)
         apply (simp add: transform_pd_slot_ref_def lookup_pd_slot_def
                          all_pd_pt_slots_def object_slots_def
@@ -484,7 +490,7 @@ proof -
           apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
-                              opt_object_page_directory
+                              opt_object_page_directory transform_vm_attributes_def
                        dest!: a_type_pdD)
         apply (rule map_includedI)
          apply clarsimp
@@ -794,11 +800,9 @@ next
                  apply (clarsimp simp add: liftE_bindE[symmetric])
                  apply (rule corres_alternative_throw_splitE)
                       apply (rule corres_alternate1)
-                      apply (rule corres_guard_imp,
-                             rule create_mapping_entries_dcorres[OF refl])
-                          apply (clarsimp simp: neq_Nil_conv cap_aligned_def
-                                                pd_bits_def pageBits_def)
-                         apply (simp add: vmsz_aligned_def)
+                      apply (rule corres_guard_imp, rule create_mapping_entries_dcorres[OF refl])
+                        apply (clarsimp simp: neq_Nil_conv cap_aligned_def pd_bits_def pageBits_def)
+                        apply (simp add: vmsz_aligned_def)
                         apply (simp only: linorder_not_le, erule order_le_less_trans[rotated])
                         apply simp
                        apply simp
@@ -812,7 +816,11 @@ next
                      apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
                                       transform_page_inv_def update_cap_rights_def
                                       update_mapping_cap_status_def Types_D.cap_rights_def
-                                      mask_vm_rights_def transform_mapping_def)
+                                      mask_vm_rights_def transform_mapping_def
+                                      transform_vm_attributes_def)
+                     apply (case_tac pgsz)
+                        apply (simp add: pageForPageBits_def validate_vm_attributes_def
+                                         attribs_to_word_def attribs_from_word_def)+
                     apply wp+
                  apply simp
                 apply (rule hoare_pre, wp, auto)[1]
@@ -856,7 +864,10 @@ next
                     apply (simp add: arch_invocation_relation_def translate_arch_invocation_def
                                      transform_page_inv_def update_cap_rights_def
                                      update_mapping_cap_status_def Types_D.cap_rights_def
-                                     mask_vm_rights_def transform_mapping_def)
+                                     mask_vm_rights_def transform_mapping_def transform_vm_attributes_def)
+                     apply (case_tac pgsz)
+                        apply (simp add: pageForPageBits_def validate_vm_attributes_def
+                                         attribs_to_word_def attribs_from_word_def)+
                    apply wp+
                 apply (simp)
                apply (rule hoare_pre, wp, auto)[1]
@@ -964,19 +975,20 @@ next
                                   obj_at_def invs_valid_idle pd_shifting
                                   object_slots_def transform_page_directory_contents_def
                                   unat_map_def kernel_pde_mask_def
-                                  transform_pde_def transform_mapping_def)
+                                  transform_pde_def transform_mapping_def
+                                  get_pt_vm_attributes_def transform_vm_attributes_def)
         apply (simp add: pd_shifting_dual ucast_nat_def shiftr_20_less triple_shift_fun
-                         le_shiftr linorder_not_le)
+                         le_shiftr linorder_not_le attribs_to_word_def
+                         attribs_from_word_def validate_pt_vm_attributes_def)
        apply (rule hoare_pre, wp, auto)[1]
       apply (wp weak_if_wp | simp)+
-    apply (clarsimp simp: is_final_cap'_def
-      is_final_cap_def split:list.splits)
+    apply (clarsimp simp: is_final_cap'_def is_final_cap_def split:list.splits)
     apply (simp add: liftE_bindE is_final_cap_def corres_symb_exec_in_gets
                      unlessE_whenE corres_whenE_throwError_split_rhs
                      corres_alternate2)
     apply (rule corres_alternate1, simp add: returnOk_def)
-    apply (clarsimp simp: arch_invocation_relation_def translate_arch_invocation_def get_pt_mapped_addr_def
-                          transform_page_table_inv_def is_cap_simps)
+    apply (clarsimp simp: arch_invocation_relation_def translate_arch_invocation_def
+                          get_pt_mapped_addr_def transform_page_table_inv_def is_cap_simps)
     done
 next
   case (PageDirectoryCap pd_ptr asid)
@@ -1159,7 +1171,7 @@ lemma invoke_page_table_corres:
             apply (rule_tac F ="ucast (word && mask pd_bits >> 2) \<notin> kernel_mapping_slots" in corres_gen_asm2)
             apply (rule store_pde_set_cap_corres)
               apply (simp add:transform_pde_def addrFromPPtr_def)+
-             apply (wp | clarsimp simp: ptrFromPAddr_def)+
+             apply (wp | clarsimp simp: ptrFromPAddr_def get_pt_vm_attributes_def)+
          apply (rule dcorres_machine_op_noop)
          apply (wp set_cap_opt_cap)+
     apply (clarsimp simp: empty_pde_at_def)
@@ -1608,6 +1620,28 @@ lemma unat_map_upd:
 
 declare descendants_of_empty[simp]
 
+lemma word_upto_Cons_eq':
+  "\<lbrakk>x = z; x \<le> y; Suc (unat x) < 2 ^ LENGTH('a)\<rbrakk> \<Longrightarrow>
+   [x::'a::len word .e. y] = z # [x + 1 .e. y]"
+  apply (subst upto_enum_red)
+  apply (subst upt_conv_Cons)
+   apply simp
+   apply unat_arith
+  apply (simp only: list.map)
+  apply (subst list.inject)
+  apply rule
+   apply (rule to_from_enum)
+  apply (subst upto_enum_red)
+  apply (rule map_cong [OF _ refl])
+  apply (rule arg_cong2 [where f = "\<lambda>x y. [x ..< y]"])
+   apply (simp add: unat_add_lem')
+  apply simp
+  done
+
+lemma Min_atLeastAtMost:
+  "(a :: _ :: finite) \<le> b \<Longrightarrow> Min {a .. b} = a"
+  by (fastforce intro: MinI)
+
 lemma invoke_asid_control_corres:
   assumes "arch_invocation_relation (cdl_invocation.InvokeAsidControl asid_inv)
       (arch_invocation.InvokeASIDControl asid_inv')"
@@ -1639,6 +1673,9 @@ proof -
   have p2bits: "2 ^ pageBits \<le> 2 ^ pageBits - Suc 0 \<Longrightarrow> False"
     by (simp add:pageBits_def)
 
+  have asid_pool_size: "\<And>sz. obj_bits_cdl AsidPoolType sz = pageBits"
+    by (simp add: pageBits_cdl_def pageBits_def obj_bits_cdl_def)
+
   assume misc: "invs (s' :: det_ext state)" "ct_active s'"
         "caps_of_state s' cnode_ref = Some cap.NullCap"
         "ex_cte_cap_wp_to Structures_A.is_cnode_cap cnode_ref s'"
@@ -1657,6 +1694,7 @@ proof -
     supply if_cong[cong]
     apply (clarsimp simp:invoke_asid_control_def)
     apply (clarsimp simp:perform_asid_control_invocation_def)
+    apply (simp only:asid_pool_size) \<comment> \<open>prevent unfolding value of pageBits\<close>
     apply (simp add:arch_invocation_relation_def translate_arch_invocation_def)
     apply (cases asid_inv, clarsimp)
     apply (rule corres_guard_imp)
@@ -1671,9 +1709,12 @@ proof -
                                 transform_cap (max_free_index_update pcap)" in corres_gen_asm2)
            apply (rule corres_split)
               apply (rule set_cap_corres; simp)
-             apply (rule generate_object_ids_exec[where ty = "ArchObject ASIDPoolObj" and
-                                                        ptr = frame and us = 0 and sz = pageBits,
-                                                  unfolded translate_object_type_def ,simplified])
+             apply (rule generate_range_corres_subst[
+                                      where ty="ArchObject ASIDPoolObj" and ptr=frame and us=0,
+                                   simplified return_bind translate_object_type_def
+                                              obj_bits_api_def arch_kobj_size_def
+                                                 default_arch_object_def,
+                                      simplified])
              apply (rule corres_split[OF retype_dc[where ptr = frame and sz = pageBits]])
                apply (simp add: retype_addrs_def obj_bits_api_def default_arch_object_def
                                 retype_transform_obj_ref_def)
@@ -1738,11 +1779,13 @@ proof -
        apply (intro conjI)
           apply (case_tac cref,clarsimp)
           apply (drule valid_idle_has_null_cap[rotated -1]; clarsimp)
-         apply (erule descendants_range_caps_no_overlapI)
-          apply (fastforce simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)+
-        apply (erule range_cover_full)
-        apply (simp add:pageBits_def word_bits_conv)
-       apply (clarsimp dest!:p2bits simp:free_range_of_untyped_def)
+        apply (erule descendants_range_caps_no_overlapI)
+           apply (fastforce simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)+
+         apply (erule range_cover_full)
+         apply (simp add:pageBits_def word_bits_conv)
+        apply (rule Min_atLeastAtMost)
+        apply (erule is_aligned_no_overflow)
+       apply (simp add: free_range_of_untyped_def pageBits_def)
       apply wp
      apply fastforce
     using misc

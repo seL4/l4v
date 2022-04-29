@@ -75,7 +75,7 @@ where
  * "real" cap or "fake" cap. Real caps are installed in CNodes,
  * and fake caps represent a page table mapping.
  *)
-datatype cdl_frame_cap_type = Real | Fake
+datatype cdl_frame_cap_type = Real | Fake cdl_raw_vmattrs
 
 (*
  * Kernel capabilities.
@@ -166,12 +166,25 @@ translations
 
 
 (* Kernel objects *)
+
+(* Extra data carried in the capDL state that holds no meaning in the proofs,
+   but is required for generating an executable system initialiser
+*)
+record cdl_tcb_extra =
+  cdl_tcb_prio    :: word8
+  cdl_tcb_mcp     :: word8
+  cdl_tcb_ip      :: machine_word
+  cdl_tcb_sp      :: machine_word
+  cdl_tcb_ipc_buf :: machine_word
+  cdl_tcb_init    :: "machine_word list"
+
 record cdl_tcb =
   cdl_tcb_caps           :: cdl_cap_map
   cdl_tcb_fault_endpoint :: cdl_cptr
   cdl_tcb_intent         :: cdl_full_intent
   cdl_tcb_has_fault      :: bool
   cdl_tcb_domain         :: word8
+  cdl_tcb_extra          :: cdl_tcb_extra
 
 record cdl_cnode =
   cdl_cnode_caps :: cdl_cap_map
@@ -186,8 +199,18 @@ record cdl_page_table =
 record cdl_page_directory =
   cdl_page_directory_caps :: cdl_cap_map
 
+(* Extra "frame fill" data. The executable initialiser requires this
+ * so that it can load pages for components. For now, we only support
+ * FileData, which is copied from a linked cpio archive. *)
+record cdl_frame_fill =
+  cdl_frame_fill_filename :: string
+  cdl_frame_fill_file_offset :: machine_word
+  cdl_frame_fill_dest_offset :: machine_word
+  cdl_frame_fill_dest_len :: machine_word
+
 record cdl_frame =
   cdl_frame_size_bits :: cdl_size_bits
+  cdl_frame_fills :: "cdl_frame_fill list"
 
 record cdl_irq_node =
   cdl_irq_node_caps :: cdl_cap_map
@@ -366,7 +389,7 @@ definition
 where
   "cap_object cap \<equiv>
      if cap_has_object cap
-     then (THE c. c \<in> cap_objects cap)
+     then (LEAST c. c \<in> cap_objects cap)
      else undefined"
 
 lemma cap_object_simps[simp]:
@@ -389,6 +412,7 @@ lemma cap_object_simps[simp]:
   "cap_object (PendingNtfnRecvCap x) = x"
   "cap_object (BoundNotificationCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
+      (metis (full_types) LeastI)+
 
 primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
 where
@@ -462,6 +486,20 @@ where
   "update_cap_guard_size x c \<equiv> case c of
       CNodeCap f1 f2 _ f3 \<Rightarrow> CNodeCap f1 f2 x f3
     | _ \<Rightarrow> c"
+
+definition
+  cap_vmattrs :: "cdl_cap \<Rightarrow> cdl_raw_vmattrs"
+where
+  "cap_vmattrs cap \<equiv> case cap of 
+      FrameCap _ _ _ _ (Fake attr) _ \<Rightarrow> attr
+    | PageTableCap _ (Fake attr) _ \<Rightarrow> attr"
+
+definition
+  frame_cap_size :: "cdl_cap \<Rightarrow> cdl_size_bits"
+where
+  "frame_cap_size cap \<equiv> case cap of
+      FrameCap _ _ _ x _ _ \<Rightarrow> x
+    | _ \<Rightarrow> 0"
 
 (* Kernel object getters / setters *)
 definition
@@ -622,6 +660,16 @@ definition
 where
   "empty_irq_node \<equiv> \<lparr> cdl_irq_node_caps = empty_cap_map 0 \<rparr>"
 
+definition default_tcb_extra_data :: "cdl_tcb_extra" where
+  "default_tcb_extra_data \<equiv> \<lparr>
+     cdl_tcb_prio = 0,
+     cdl_tcb_mcp = 0,
+     cdl_tcb_ip = 0,
+     cdl_tcb_sp = 0,
+     cdl_tcb_ipc_buf = 1,
+     cdl_tcb_init = []
+  \<rparr>"
+
 (* Standard empty TCB object. *)
 definition
   default_tcb :: "word8 \<Rightarrow> cdl_tcb"
@@ -637,8 +685,12 @@ where
       cdl_intent_recv_slot = None
       \<rparr>,
     cdl_tcb_has_fault = False,
-    cdl_tcb_domain = current_domain
+    cdl_tcb_domain = current_domain,
+    cdl_tcb_extra = default_tcb_extra_data
     \<rparr>"
+
+definition default_frame_fill_data :: "cdl_frame_fill list" where
+  "default_frame_fill_data \<equiv> []"
 
 (* Return a newly constructed object of the given type. *)
 definition
@@ -652,9 +704,10 @@ where
       | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
       | CNodeType \<Rightarrow> Some (CNode (empty_cnode y))
       | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
-      | PageTableType \<Rightarrow> Some (PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>)
-      | PageDirectoryType \<Rightarrow> Some (PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>)
-      | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz \<rparr>)
+      | PageTableType \<Rightarrow> Some (PageTable \<lparr> cdl_page_table_caps = empty_cap_map pt_size_index \<rparr>)
+      | PageDirectoryType \<Rightarrow> Some (PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map pd_size_index \<rparr>)
+      | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz,
+                                      cdl_frame_fills = default_frame_fill_data \<rparr>)
       | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)"
 
 abbreviation "pick a \<equiv> SOME x. x\<in> a"

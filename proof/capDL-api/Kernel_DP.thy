@@ -12,12 +12,17 @@ begin
 
 (* Bootinfo contructs *)
 
-(* BootInfo record. Modelled on the C implementation, though only contains information needed for the booter. *)
+(* BootInfo record. Modelled on the C implementation, though only contains
+   information needed for the booter. *)
 type_synonym bi_slot_region = "cdl_cptr \<times> cdl_cptr"
+record bi_untyped_desc =
+  bi_ut_paddr :: cdl_object_id
+  bi_ut_is_device :: bool
 
 record cdl_bootinfo =
-  bi_untypes    :: bi_slot_region
-  bi_free_slots :: bi_slot_region
+  bi_free_slots  :: bi_slot_region
+  bi_untypeds    :: bi_slot_region
+  bi_untyped_information :: "bi_untyped_desc list"
 
 (* Bootinfo constants *)
 definition "seL4_CapNull                = (0 :: cdl_cptr)"
@@ -97,6 +102,14 @@ where
       return has_error
     od"
 
+(* A dummy system call to be used for system calls that we do not model the semantics of.
+ *
+ * Such system calls are useful because they allow us to generate executable code from the system
+ * initialiser model without reasoning about details that are irrelevant to DSpec
+ *)
+definition dummy_syscall :: "bool u_monad" where
+  "dummy_syscall \<equiv> return True"
+
 definition seL4_TCB_Configure :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> bool u_monad"
 where
   "seL4_TCB_Configure tcb_cap fault_ep cspace_root cspace_root_data vspace_root vspace_root_data buffer_addr buffer_frame \<equiv>
@@ -128,6 +141,14 @@ where
        cdl_intent_extras = [],
        cdl_intent_recv_slot = None\<rparr> False"
 
+definition seL4_TCB_SetSchedParams :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word64 \<Rightarrow> word64 \<Rightarrow> bool u_monad" where
+  "seL4_TCB_SetSchedParams tcb_cap auth_tcb_cap mcp priority \<equiv> dummy_syscall"
+
+(* Upcast for libsel4 compat *)
+definition seL4_TCB_SetSchedParams' :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> word8 \<Rightarrow> word8 \<Rightarrow> bool u_monad" where
+  "seL4_TCB_SetSchedParams' tcb_cap auth_tcb_cap mcp priority \<equiv>
+     seL4_TCB_SetSchedParams tcb_cap auth_tcb_cap (UCAST(8\<rightarrow>64) mcp) (UCAST(8\<rightarrow>64) priority)"
+
 definition seL4_TCB_SetSpace :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_capdata \<Rightarrow>  bool u_monad"
 where
   "seL4_TCB_SetSpace tcb_cap fault_ep cspace_root cspace_root_data vspace_root vspace_root_data \<equiv>
@@ -143,6 +164,16 @@ where
   "seL4_TCB_Resume tcb_cap \<equiv>
     do_kernel_op $ call_kernel_with_intent
       \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbResumeIntent,
+       cdl_intent_error = False,
+       cdl_intent_cap = tcb_cap,
+       cdl_intent_extras = [],
+       cdl_intent_recv_slot = None\<rparr> True"
+
+definition seL4_TCB_Suspend :: "cdl_cptr \<Rightarrow> bool u_monad"
+where
+  "seL4_TCB_Suspend tcb_cap \<equiv>
+    do_kernel_op $ call_kernel_with_intent
+      \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbSuspendIntent,
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
        cdl_intent_extras = [],

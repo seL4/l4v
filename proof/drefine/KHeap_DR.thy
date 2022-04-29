@@ -643,7 +643,8 @@ lemma cdl_objects_tcb:
               cdl_tcb_fault_endpoint = of_bl (tcb_fault_handler tcb),
               cdl_tcb_intent = transform_full_intent (machine_state s') p tcb,
               cdl_tcb_has_fault = (tcb_has_fault tcb),
-              cdl_tcb_domain = tcb_domain tcb
+              cdl_tcb_domain = tcb_domain tcb,
+              cdl_tcb_extra = default_tcb_extra_data
             \<rparr>)"
   apply (simp add: transform_def transform_objects_def)
   apply (clarsimp simp: transform_tcb_def)

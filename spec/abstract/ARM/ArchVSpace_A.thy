@@ -613,15 +613,6 @@ check_valid_ipc_buffer :: "vspace_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::
   odE
 | _ \<Rightarrow> throwError IllegalOperation"
 
-text \<open>Decode a user argument word describing the kind of VM attributes a
-mapping is to have.\<close>
-definition
-attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
-"attribs_from_word w \<equiv>
-  let V = (if w !!0 then {PageCacheable} else {});
-      V' = (if w!!1 then insert ParityEnabled V else V)
-  in if w!!2 then insert XNever V' else V'"
-
 text \<open>Update the mapping data saved in a page or page table capability.\<close>
 definition
   update_map_data :: "arch_cap \<Rightarrow> (word32 \<times> word32) option \<Rightarrow> arch_cap" where
