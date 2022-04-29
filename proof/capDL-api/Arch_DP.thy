@@ -5,12 +5,14 @@
  *)
 
 theory Arch_DP
-imports Retype_DP
+imports
+  Retype_DP
+  ExecSpec.MachineTypes
 begin
 
 
 lemma cdl_get_pde_result_pt:
-  "\<lbrace> < (pd, unat (ptr >> 20)) \<mapsto>c PageTableCap p b None \<and>* sep_true> \<rbrace>
+  "\<lbrace> < (pd, unat (ptr >> sectionBits)) \<mapsto>c PageTableCap p b None \<and>* sep_true> \<rbrace>
     cdl_get_pde (cdl_lookup_pd_slot pd ptr)
   \<lbrace>\<lambda>r s. \<exists>asid. r = PageTableCap p b asid\<rbrace>"
   apply (clarsimp simp:cdl_get_pde_def cdl_lookup_pd_slot_def)
@@ -20,7 +22,8 @@ lemma cdl_get_pde_result_pt:
   done
 
 lemma cdl_lookup_pt_slot_rv:
-  "\<lbrace> K (R (p, unat ((ptr >> 12) && 0xFF))) and <(pd, unat (ptr >> 20)) \<mapsto>c PageTableCap p Fake None \<and>* (\<lambda>s. True)>\<rbrace>
+  "\<lbrace> K (R (p, unat ((ptr >> 12) && pt_slot_vaddr_mask))) and
+     <(pd, unat (ptr >> sectionBits)) \<mapsto>c PageTableCap p (Fake attr) None \<and>* (\<lambda>s. True)>\<rbrace>
   cdl_lookup_pt_slot pd ptr \<lbrace>\<lambda>r s. R r\<rbrace>,-"
   apply (rule validE_validE_R)
   apply (clarsimp simp : cdl_lookup_pt_slot_def)
@@ -53,15 +56,13 @@ definition
 definition
   "get_mapped_asid \<equiv> \<lambda>asid vaddr. option_map (\<lambda>x. (x,vaddr)) asid"
 
-
-
-lemma decode_page_map_intent_rv_20_24:
-  "\<lbrakk>n = 20 \<or> n = 24 \<rbrakk>
+lemma decode_page_map_intent_rv_sec_ssecc:
+  "\<lbrakk>n = sectionBits \<or> n = superSectionBits; attr' =  validate_vm_attributes attr (pageForPageBits n)\<rbrakk>
   \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
   decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
   [(PageDirectoryCap ptr real' asid',pdref)]
-  (PageIntent (PageMapIntent vaddr perms vmattr))
+  (PageIntent (PageMapIntent vaddr perms attr))
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add: decode_invocation_def get_index_def get_page_intent_def throw_opt_def
                    cap_rights_def decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
@@ -69,18 +70,19 @@ lemma decode_page_map_intent_rv_20_24:
      apply (rule validE_validE_R)
      apply wp
      apply (simp add:cdl_page_mapping_entries_def split del:if_split | wp | wpc)+
-  apply auto
+  apply (auto simp: pageForPageBits_def
+                    validate_vm_attributes_def vmpage_size_simps)
   done
 
 lemma decode_page_map_intent_rv_16_12:
-  "\<lbrakk>n = 12 \<or> n = 16 \<rbrakk>
+  "\<lbrakk>n = 12 \<or> n = 16; attr' =  validate_vm_attributes attr (pageForPageBits n)\<rbrakk>
   \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref
-         [(p, unat ((vaddr >> 12) && 0xFF))]))
-  \<and> <(ptr, unat (vaddr >> 20)) \<mapsto>c PageTableCap p Fake None \<and>* (\<lambda>s. True)> s\<rbrace>
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr') None) ref
+         [(p, unat ((vaddr >> 12) && pt_slot_vaddr_mask))]))
+  \<and> <(ptr, unat (vaddr >> sectionBits)) \<mapsto>c PageTableCap p (Fake a) None \<and>* (\<lambda>s. True)> s\<rbrace>
   decode_invocation (FrameCap dev frame_ptr rights n real_type asid) ref
   [(PageDirectoryCap ptr real' asid',pdref)]
-  (PageIntent (PageMapIntent vaddr perms vmattr))
+  (PageIntent (PageMapIntent vaddr perms attr))
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add:decode_invocation_def get_index_def
     get_page_intent_def throw_opt_def cap_rights_def
@@ -90,8 +92,9 @@ lemma decode_page_map_intent_rv_16_12:
   apply (rule validE_validE_R)
    apply wp
     apply (simp add:cdl_page_mapping_entries_def)
-    apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
-   apply auto
+     apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
+    apply (auto simp: pageForPageBits_def
+                      validate_vm_attributes_def vmpage_size_simps)
   done
 
 abbreviation(input)
@@ -119,7 +122,6 @@ lemma invoke_page_wp:
   apply (wp sep_wp: set_cap_wp, sep_solve)
 done
 
-
 lemma invoke_page_table_wp:
   "pinv = PageTableMap real_pt_cap pt_cap pt_cap_ref pt_target_slot \<Longrightarrow>
   \<lbrace> < pt_cap_ref \<mapsto>c - \<and>* pt_target_slot \<mapsto>c - \<and>* P> \<rbrace>
@@ -145,21 +147,22 @@ lemmas cap_asid_simps[simp] = cap_asid_def[split_simps cdl_cap.split]
 lemmas cap_mapped_simps[simp] = cap_mapped_def[split_simps cdl_cap.split]
 
 lemma decode_page_table_rv:
-  "\<lbrace>Q (InvokePageTable
-               (PageTableMap (PageTableCap ptr Real (get_mapped_asid (cap_asid (fst pd_cap_slot)) (vaddr && ~~ mask 20)))
-                 (PageTableCap ptr Fake None) ref
+  "attr' = validate_pt_vm_attributes attr \<Longrightarrow>
+  \<lbrace>Q (InvokePageTable
+               (PageTableMap (PageTableCap ptr Real (get_mapped_asid (cap_asid (fst pd_cap_slot)) (vaddr && ~~ mask sectionBits)))
+                 (PageTableCap ptr (Fake attr') None) ref
                  (cdl_lookup_pd_slot (cap_object (fst pd_cap_slot)) vaddr))) \<rbrace>
   decode_invocation (PageTableCap ptr b asid) ref  [pd_cap_slot]
-  (PageTableIntent (PageTableMapIntent vaddr vmattribs))
+  (PageTableIntent (PageTableMapIntent vaddr attr))
   \<lbrace>Q\<rbrace>, -"
   apply (case_tac pd_cap_slot)
-  apply (simp add:decode_invocation_def get_page_table_intent_def
-    throw_opt_def decode_page_table_invocation_def)
+  apply (simp add: decode_invocation_def get_page_table_intent_def
+                   throw_opt_def decode_page_table_invocation_def)
   apply (rule hoare_pre)
    apply (wp throw_on_none_wp | wpc | simp)+
-  apply (clarsimp split:option.splits simp:get_index_def cap_object_def
-    cap_has_object_def get_mapped_asid_def)
-  done
+  apply (clarsimp split: option.splits
+                  simp: get_index_def cap_object_def get_mapped_asid_def Least_def)
+  by (metis (mono_tags, lifting) order_refl the_equality)
 
 lemma seL4_Page_Table_Map:
   notes split_paired_Ex[simp del]
@@ -168,6 +171,7 @@ lemma seL4_Page_Table_Map:
   "is_cnode_cap cnode_cap"
   "offset page_table root_size = pt_offset"
   "offset page_directory root_size = pd_offset"
+  "validate_pt_vm_attributes vmattribs = attr"
   and sz: "one_lvl_lookup cnode_cap word_bits root_size"
           "guard_equal cnode_cap page_directory word_bits"
           "guard_equal cnode_cap page_table word_bits"
@@ -183,7 +187,7 @@ lemma seL4_Page_Table_Map:
   seL4_PageTable_Map page_table page_directory vaddr vmattribs
   \<lbrace>\<lambda>r s.
   \<guillemotleft> (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
-  \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c (PageTableCap ptr Fake None)
+  \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c (PageTableCap ptr (Fake attr) None)
   \<and>* (cnode_id, pt_offset) \<mapsto>c (PageTableCap ptr Real None)
   \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real_type None)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
@@ -200,7 +204,7 @@ lemma seL4_Page_Table_Map:
                apply (rule set_cap_wp)
               apply (wp+)[4]
           apply (rule_tac P = "\<exists>asid'. iv = InvokePageTable (PageTableMap
-            (PageTableCap ptr Real asid') (PageTableCap ptr Fake None)
+            (PageTableCap ptr Real asid') (PageTableCap ptr (Fake attr) None)
             (cnode_id,pt_offset) (cdl_lookup_pd_slot pd_ptr vaddr))"
             in hoare_gen_asmEx)
          apply clarsimp
@@ -233,7 +237,7 @@ lemma seL4_Page_Table_Map:
           \<and>* (cnode_id, pd_offset) \<mapsto>c PageDirectoryCap pd_ptr real_type None
           \<and>* root_tcb_id \<mapsto>f Tcb tcb
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
-         iv = InvokePageTable (PageTableMap (PageTableCap ptr Real (get_mapped_asid asid' (vaddr && ~~ mask 20))) (PageTableCap ptr Fake None)
+         iv = InvokePageTable (PageTableMap (PageTableCap ptr Real (get_mapped_asid asid' (vaddr && ~~ mask sectionBits))) (PageTableCap ptr (Fake attr) None)
           (cnode_id,pt_offset) (cdl_lookup_pd_slot pd_ptr vaddr))"
          in hoare_strengthen_postE[rotated -1])
            apply assumption
@@ -245,7 +249,7 @@ lemma seL4_Page_Table_Map:
          apply (rule hoare_weaken_preE[where P = \<top>])
          apply (wp decode_page_table_rv)[1]
           apply (simp add:cap_object_def)
-         apply (simp add:cap_has_object_def)
+         using misc apply (simp add:cap_has_object_def)
         apply clarsimp
         apply (sep_solve)
        apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
@@ -293,10 +297,11 @@ lemma seL4_Section_Map_wp:
   "cap_object cnode_cap = cnode_id" "is_cnode_cap cnode_cap"
   "offset sel_page root_size = frame_offset"
   "offset sel4_page_directory root_size = pd_offset"
+  "validate_vm_attributes vmattr (pageForPageBits n) = attr"
   and sz: "one_lvl_lookup cnode_cap word_bits root_size"
           "guard_equal cnode_cap sel4_page_directory word_bits"
           "guard_equal cnode_cap sel_page word_bits"
-  shows "\<lbrakk>n = 20 \<or> n = 24
+  shows "\<lbrakk>n = sectionBits \<or> n = superSectionBits
   \<rbrakk> \<Longrightarrow> \<lbrace>
   \<guillemotleft> (root_tcb_id,tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* root_tcb_id \<mapsto>f Tcb tcb
@@ -309,7 +314,7 @@ lemma seL4_Section_Map_wp:
   \<lbrace>\<lambda>r s. \<guillemotleft> (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c
-       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
+       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None
     \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
     \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real_type None)
@@ -326,14 +331,14 @@ lemma seL4_Section_Map_wp:
                apply (wp+)[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
              (PageMap (FrameCap dev frame_ptr rights n Real asid')
-             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
+             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None) (cnode_id,frame_offset)
              [cdl_lookup_pd_slot pd_ptr vaddr])"
              in hoare_gen_asmEx)
            apply clarsimp
            apply wp
            apply (rule_tac P1 = "\<lambda>iv. P1 \<and>* P2" for P1 P2 in hoare_strengthen_post
             [OF invoke_page_wp[where fake = Real
-              and fake' = Fake and x = "[cdl_lookup_pd_slot pd_ptr vaddr]" ]])
+              and fake' = "Fake attr" and x = "[cdl_lookup_pd_slot pd_ptr vaddr]" ]])
             apply (rule refl)
            apply simp
            apply (rule conjI)
@@ -363,7 +368,7 @@ lemma seL4_Section_Map_wp:
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
          (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None) (cnode_id,frame_offset)
           [cdl_lookup_pd_slot pd_ptr vaddr])"
          in hoare_strengthen_postE[rotated -1])
           apply assumption
@@ -372,8 +377,8 @@ lemma seL4_Section_Map_wp:
          apply wp
          apply (rule validE_validE_R)
          apply (rule hoare_weaken_preE[where P = \<top>])
-         apply (wp decode_page_map_intent_rv_20_24)[1]
-          apply simp
+         apply (wp decode_page_map_intent_rv_sec_ssecc)[1]
+          using misc apply simp
          apply simp
         apply clarsimp
         apply sep_solve
@@ -429,6 +434,7 @@ lemma seL4_Page_Map_wp:
   "cap_object cnode_cap = cnode_id" "is_cnode_cap cnode_cap"
   "offset sel_page root_size = frame_offset"
   "offset sel4_page_directory root_size = pd_offset"
+  "validate_vm_attributes vmattr (pageForPageBits n) = attr"
   and sz: "one_lvl_lookup cnode_cap word_bits root_size"
           "guard_equal cnode_cap sel4_page_directory word_bits"
           "guard_equal cnode_cap sel_page word_bits"
@@ -438,21 +444,21 @@ lemma seL4_Page_Map_wp:
   \<and>* root_tcb_id \<mapsto>f Tcb tcb
   \<and>* (root_tcb_id,tcb_cspace_slot) \<mapsto>c cnode_cap
   \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
-  \<and>* (cdl_lookup_pd_slot pd_ptr vaddr) \<mapsto>c PageTableCap pt_ptr Fake None
+  \<and>* (cdl_lookup_pd_slot pd_ptr vaddr) \<mapsto>c PageTableCap pt_ptr (Fake a) None
   \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real_type None)
   \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
-  \<and>* (pt_ptr, unat ((vaddr >> 12) && 0xFF)) \<mapsto>c -
+  \<and>* (pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask)) \<mapsto>c -
   \<and>* R \<guillemotright> \<rbrace>
   seL4_Page_Map sel_page sel4_page_directory vaddr perms vmattr
   \<lbrace>\<lambda>r s. \<guillemotleft> (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
-    \<and>* (pt_ptr, unat ((vaddr >> 12) && 0xFF)) \<mapsto>c
-       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None
+    \<and>* (pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask)) \<mapsto>c
+       FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None
     \<and>* (cnode_id, frame_offset) \<mapsto>c FrameCap dev frame_ptr rights n Real None
     \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real_type None)
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
-    \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr Fake None
+    \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr (Fake a) None
     \<and>* R \<guillemotright> s \<rbrace>"
   apply (simp add:seL4_Page_Map_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
@@ -465,15 +471,15 @@ lemma seL4_Page_Map_wp:
                apply (wp+)[4]
            apply (rule_tac P = "\<exists>asid'. iv = InvokePage
              (PageMap (FrameCap dev frame_ptr rights n Real asid')
-             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
-             [(pt_ptr, unat ((vaddr >> 12) && 0xFF))])"
+             (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None) (cnode_id,frame_offset)
+             [(pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask))])"
              in hoare_gen_asmEx)
            apply clarsimp
            apply wp
            apply (rule_tac P1 = "\<lambda>iv. P1 \<and>* P2" for P1 P2 in hoare_strengthen_post
             [OF invoke_page_wp[where fake = Real
-              and fake' = Fake
-              and x = "[(pt_ptr, unat ((vaddr >> 12) && 0xFF))]" ]])
+              and fake' = "Fake attr"
+              and x = "[(pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask))]" ]])
             apply (rule refl)
            apply simp
            apply (rule conjI)
@@ -496,16 +502,16 @@ lemma seL4_Page_Map_wp:
                                     cdl_current_domain s = minBound \<and>
           <(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
           \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
-          \<and>* (pt_ptr, unat ((vaddr >> 12) && 0xFF)) \<mapsto>c -
+          \<and>* (pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask)) \<mapsto>c -
           \<and>* (cnode_id, frame_offset) \<mapsto>c -
           \<and>* root_tcb_id \<mapsto>f Tcb tcb
           \<and>* (cnode_id, pd_offset) \<mapsto>c PageDirectoryCap pd_ptr real_type None
-          \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr Fake None
+          \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr (Fake a) None
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
          (PageMap (FrameCap dev frame_ptr rights n Real (get_mapped_asid asid' vaddr))
-         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None)
-             (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && 0xFF))] )"
+         (FrameCap False frame_ptr (validate_vm_rights (rights \<inter> perms)) n (Fake attr) None)
+             (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && pt_slot_vaddr_mask))] )"
          in hoare_strengthen_postE[rotated -1])
           apply assumption
          apply (rule hoare_vcg_conj_elimE)

@@ -50,7 +50,10 @@ where
      set_cap dest_slot new_cap
    od"
 
-
+primrec (nonexhaustive)
+  untyped_cap_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
+where
+  "untyped_cap_range (UntypedCap _ r available) = r"
 
 primrec (nonexhaustive)
   available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
@@ -474,15 +477,27 @@ where
     mapM_x empty_slot ptrlist
   od"
 
-definition cdl_default_tcb :: "cdl_object"
-where "cdl_default_tcb \<equiv>  Tcb \<lparr>cdl_tcb_caps =
-           [tcb_cspace_slot \<mapsto> cdl_cap.NullCap, tcb_vspace_slot \<mapsto> cdl_cap.NullCap, tcb_replycap_slot \<mapsto>
-            cdl_cap.NullCap, tcb_caller_slot \<mapsto> cdl_cap.NullCap, tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
-            tcb_pending_op_slot \<mapsto> cdl_cap.NullCap, tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap],
-           cdl_tcb_fault_endpoint = 0,
-           cdl_tcb_intent =
-             \<lparr>cdl_intent_op = None, cdl_intent_error = False,cdl_intent_cap = 0, cdl_intent_extras = [],
-                cdl_intent_recv_slot = None\<rparr>, cdl_tcb_has_fault = False, cdl_tcb_domain = minBound\<rparr>"
+definition cdl_default_tcb :: "cdl_object" where
+  "cdl_default_tcb \<equiv> Tcb \<lparr>
+    cdl_tcb_caps =
+      [tcb_cspace_slot \<mapsto> cdl_cap.NullCap,
+       tcb_vspace_slot \<mapsto> cdl_cap.NullCap,
+       tcb_replycap_slot \<mapsto> cdl_cap.NullCap,
+       tcb_caller_slot \<mapsto> cdl_cap.NullCap,
+       tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
+       tcb_pending_op_slot \<mapsto> cdl_cap.NullCap,
+       tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap],
+    cdl_tcb_fault_endpoint = 0,
+    cdl_tcb_intent = \<lparr>
+      cdl_intent_op = None,
+      cdl_intent_error = False,
+      cdl_intent_cap = 0,
+      cdl_intent_extras = [],
+      cdl_intent_recv_slot = None
+    \<rparr>,
+    cdl_tcb_has_fault = False,
+    cdl_tcb_domain = minBound,
+    cdl_tcb_extra = default_tcb_extra_data\<rparr>"
 
 definition obj_tcb :: "cdl_object \<Rightarrow> cdl_tcb"
 where "obj_tcb obj \<equiv> case obj of Tcb tcb \<Rightarrow> tcb"

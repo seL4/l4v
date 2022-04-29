@@ -12,27 +12,6 @@ imports
   "Sep_Algebra.Map_Extra"
 begin
 
-(* Functions we need from capDL, but can't have yet (until we change capDL).
- * Maybe they aren't actually needed for the proof.
- * (If capDL doesn't have them, then we might not need them to prove conformance.)
- *)
-
-consts tcb_priority :: "cdl_tcb \<Rightarrow> word8 \<times> word8"
-consts tcb_ip :: "cdl_tcb \<Rightarrow> word32"
-consts tcb_sp :: "cdl_tcb \<Rightarrow> word32"
-consts opt_vmattribs :: "cdl_object \<Rightarrow> cdl_raw_vmattrs option"
-
-(* We don't need to know anything about this except that it isn't 0. *)
-definition tcb_ipc_buffer_address :: "cdl_tcb \<Rightarrow> word32"
-where "tcb_ipc_buffer_address tcb = 1"
-
-lemma tcb_ipc_buffer_address_non_zero:
-  "tcb_ipc_buffer_address tcb \<noteq> 0"
-  by (clarsimp simp: tcb_ipc_buffer_address_def)
-
-(* Helper funtions. These possibly should be moved somewhere else. *)
-
-
 (***************************************************
  * Generic Isabelle lemmas. Could be moved to lib. *
  ***************************************************)
@@ -414,11 +393,11 @@ lemma is_object_simps [simp]:
 (* These sizes are needed for ARM *)
 definition pt_size :: nat
 where
-  "pt_size = 8"
+  "pt_size = pt_size_index"
 
 definition pd_size :: nat
 where
-  "pd_size = 12"
+  "pd_size = pd_size_index"
 
 definition small_frame_size :: nat
 where
@@ -657,6 +636,19 @@ lemma cnode_or_tcb_at_simps:
   "(cnode_or_tcb_at obj_id spec \<and> \<not> cnode_at obj_id spec) = tcb_at obj_id spec"
   by (auto simp: object_at_def object_type_is_object)
 
+lemma real_object_at_other_object[simp]:
+  "(real_object_at obj_id spec \<and> untyped_at obj_id spec)      = untyped_at obj_id spec"
+  "(real_object_at obj_id spec \<and> ep_at obj_id spec)           = ep_at obj_id spec"
+  "(real_object_at obj_id spec \<and> ntfn_at obj_id spec)         = ntfn_at obj_id spec"
+  "(real_object_at obj_id spec \<and> tcb_at obj_id spec)          = tcb_at obj_id spec"
+  "(real_object_at obj_id spec \<and> cnode_at obj_id spec)        = cnode_at obj_id spec"
+  "(real_object_at obj_id spec \<and> asidpool_at obj_id spec)     = asidpool_at obj_id spec"
+  "(real_object_at obj_id spec \<and> pt_at obj_id spec)           = pt_at obj_id spec"
+  "(real_object_at obj_id spec \<and> pd_at obj_id spec)           = pd_at obj_id spec"
+  "(real_object_at obj_id spec \<and> frame_at obj_id spec)        = frame_at obj_id spec"
+  "(real_object_at obj_id spec \<and> cnode_or_tcb_at obj_id spec) = cnode_or_tcb_at obj_id spec"
+  by (auto simp: real_object_at_def irq_nodes_def object_type_is_object object_at_def)
+
 (******************************
  * Cap types and default caps *
  ******************************)
@@ -666,7 +658,7 @@ where
 
 definition is_fake_pt_cap :: "cdl_cap \<Rightarrow> bool"
 where "is_fake_pt_cap cap \<equiv> case cap of
-    PageTableCap _ Fake _ \<Rightarrow> True
+    PageTableCap _ (Fake _) _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition is_real_vm_cap :: "cdl_cap \<Rightarrow> bool"
@@ -682,15 +674,15 @@ definition is_fake_vm_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_fake_vm_cap cap \<equiv>
        (case cap of
-           FrameCap _ _ _ _ Fake _     \<Rightarrow> True
-         | PageTableCap _ Fake _     \<Rightarrow> True
-         | PageDirectoryCap _ Fake _ \<Rightarrow> True
+           FrameCap _ _ _ _ (Fake _) _     \<Rightarrow> True
+         | PageTableCap _ (Fake _) _     \<Rightarrow> True
+         | PageDirectoryCap _ (Fake _) _ \<Rightarrow> True
          | _                         \<Rightarrow> False)"
 
 abbreviation
-  "fake_frame_cap dev ptr rights n \<equiv> FrameCap dev ptr rights n Fake None"
+  "fake_frame_cap dev ptr rights n attr \<equiv> FrameCap dev ptr rights n (Fake attr) None"
 abbreviation
-  "is_fake_frame_cap cap \<equiv> (case cap of FrameCap _ _ _ _ Fake None \<Rightarrow> True | _ \<Rightarrow> False)"
+  "is_fake_frame_cap cap \<equiv> (case cap of FrameCap _ _ _ _ (Fake _) None \<Rightarrow> True | _ \<Rightarrow> False)"
 
 definition dev_of :: "cdl_cap \<Rightarrow> bool option" where
   "dev_of cap = (case cap of FrameCap dev ptr _ n _ _ \<Rightarrow> Some dev | _ \<Rightarrow> None)"
@@ -976,8 +968,9 @@ where
     cap_badge cap
   else if (is_ntfn_cap cap) then
     cap_badge cap
-  else
-    guard_as_rawdata cap"
+  else if is_cnode_cap cap then
+    guard_as_rawdata cap
+  else 0"
 
 (*
  * Deterministic version of update_cap_data used by the capDL kernel.
@@ -1095,9 +1088,10 @@ lemma object_default_state_def2:
       | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
       | IRQNode cnode \<Rightarrow> IRQNode empty_irq_node
       | AsidPool ap \<Rightarrow> AsidPool \<lparr>cdl_asid_pool_caps = empty_cap_map asid_low_bits\<rparr>
-      | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>
-      | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>
-      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = (cdl_frame_size_bits frame) \<rparr>)"
+      | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map pt_size_index \<rparr>
+      | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map pd_size_index \<rparr>
+      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = cdl_frame_size_bits frame,
+                               cdl_frame_fills = default_frame_fill_data \<rparr>)"
   by (clarsimp simp: object_default_state_def object_type_def default_object_def
                      object_size_bits_def object_domain_def
               split: cdl_object.splits)
@@ -1226,11 +1220,11 @@ lemma is_fake_pt_cap_cap_has_object:
   by (clarsimp simp: cap_has_object_def is_fake_pt_cap_def split: cdl_cap.splits)
 
 lemma is_fake_pt_cap_pt_cap:
-  "is_fake_pt_cap (PageTableCap x R z) \<longleftrightarrow> R = Fake"
+  "is_fake_pt_cap (PageTableCap x R z) \<longleftrightarrow> (\<exists>attr. R = Fake attr)"
   by (clarsimp simp: is_fake_pt_cap_def split: cdl_frame_cap_type.splits)
 
 lemma fake_vm_cap_simp:
-  "is_fake_vm_cap (FrameCap x y z a R b) \<longleftrightarrow> R = Fake"
+  "is_fake_vm_cap (FrameCap x y z a R b) \<longleftrightarrow> (\<exists>attr. R = Fake attr)"
   by (clarsimp simp: is_fake_vm_cap_def split: cdl_frame_cap_type.splits)
 
 lemma frame_not_pt[intro!]: "\<not> (is_frame x \<and> is_pt x)"

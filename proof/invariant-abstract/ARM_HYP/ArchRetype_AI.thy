@@ -490,7 +490,7 @@ context Arch begin arch_global_naming
 lemma valid_untyped_helper [Retype_AI_assms]:
   assumes valid_c : "s  \<turnstile> c"
   and   cte_at  : "cte_wp_at ((=) c) q s"
-  and     tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
+  and     tyunt: "ty \<noteq> Untyped"
   and   cover  : "range_cover ptr sz (obj_bits_api ty us) n"
   and   range  : "is_untyped_cap c \<Longrightarrow> usable_untyped_range c \<inter> {ptr..ptr + of_nat (n * 2 ^ (obj_bits_api ty us)) - 1} = {}"
   and     pn   : "pspace_no_overlap_range_cover ptr sz s"
@@ -507,58 +507,78 @@ lemma valid_untyped_helper [Retype_AI_assms]:
         Int_atLeastAtMost atLeastatMost_empty_iff
   have cover':"range_cover ptr sz (obj_bits (default_object ty dev us (cur_domain s))) n"
     using cover tyunt
-    by (clarsimp simp:obj_bits_dev_irr)
+    by (clarsimp simp: obj_bits_dev_irr)
 
   show ?thesis
-  using cover valid_c range usable_range_emptyD[where cap = c] cte_at
-  apply (clarsimp simp: valid_cap_def elim!: obj_at_pres
-                 split: cap.splits option.splits arch_cap.splits)
-      defer
+    using cover valid_c range usable_range_emptyD[where cap = c] cte_at
+    apply (clarsimp simp: valid_cap_def elim!: obj_at_pres
+                   split: cap.splits option.splits arch_cap.splits)
+       defer
+       apply (fastforce elim!: obj_at_pres)
+      apply (fastforce elim!: obj_at_pres)
      apply (fastforce elim!: obj_at_pres)
-    apply (fastforce elim!: obj_at_pres)
-   apply (fastforce elim!: obj_at_pres)
-  apply (rename_tac word nat1 nat2)
-  apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:if_split_asm)
-    apply (thin_tac "\<forall>x. Q x" for Q)
-     apply (frule retype_addrs_obj_range_subset_strong[where dev=dev, OF _ _ tyunt])
+    apply (rename_tac word nat1 nat2)
+    apply (clarsimp simp: valid_untyped_def is_cap_simps obj_at_def split: if_split_asm)
+     apply (thin_tac "\<forall>x. Q x" for Q)
+     apply (frule retype_addrs_obj_range_subset_strong[where dev = dev, OF _ _ tyunt])
       apply (simp add: obj_bits_dev_irr tyunt)
      apply (frule usable_range_subseteq)
-       apply (simp add:is_cap_simps)
-     apply (clarsimp simp:cap_aligned_def split:if_split_asm)
-      apply (frule aligned_ranges_subset_or_disjoint)
+      apply (simp add: is_cap_simps)
+     apply (clarsimp simp: cap_aligned_def split: if_split_asm)
+     apply (frule aligned_ranges_subset_or_disjoint)
       apply (erule retype_addrs_aligned[where sz = sz])
-         apply (simp add: range_cover_def)
-        apply (simp add: range_cover_def word_bits_def)
-       apply (simp add: range_cover_def)
-      apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: if_split_asm)
+        apply (simp add: range_cover_def word_bits_def)+
+     apply (clarsimp simp: default_obj_range Int_ac tyunt
+                    split: if_split_asm)
      apply (elim disjE)
       apply (drule(2) subset_trans[THEN disjoint_subset2])
       apply (drule Int_absorb2)+
-       apply (simp add:is_cap_simps free_index_of_def)
-    apply simp
-    apply (drule(1) disjoint_subset2[rotated])
-    apply (simp add:Int_ac)
-   apply (thin_tac "\<forall>x. Q x" for Q)
-   apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
-   apply (clarsimp simp:cap_aligned_def)
+      apply (simp add: is_cap_simps free_index_of_def)
+     apply simp
+     apply (drule(1) disjoint_subset2[rotated])
+     apply (simp add: Int_ac)
+    apply (intro impI conjI)
+      apply (thin_tac "\<forall>x. Q x" for Q)
+      apply (simp add: cte_wp_at_caps_of_state)
+     apply (clarsimp simp: default_obj_range Int_ac tyunt
+                    split: if_split_asm)
+     apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
+     apply (clarsimp simp: cap_aligned_def)
+     apply (frule aligned_ranges_subset_or_disjoint)
+      apply (erule retype_addrs_aligned[where sz = sz])
+        apply (simp add: range_cover_def word_bits_def)+
+     apply (clarsimp simp: default_obj_range Int_ac tyunt
+                    split: if_split_asm)
+     apply (erule disjE)
+      apply (simp add: cte_wp_at_caps_of_state)
+      apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
+      apply (simp add: p_assoc_help[symmetric])
+      apply (erule impE)
+       apply blast (* set arith *)
+      apply blast (* set arith *)
+     apply blast (* set arith  *)
+    apply (thin_tac "\<forall>x. Q x" for Q)
+    apply (simp add: cte_wp_at_caps_of_state)
+    apply (clarsimp simp: default_obj_range Int_ac tyunt
+                   split: if_split_asm)
+    apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
+    apply (clarsimp simp: cap_aligned_def)
     apply (frule aligned_ranges_subset_or_disjoint)
      apply (erule retype_addrs_aligned[where sz = sz])
-          apply (simp add: range_cover_def)
-        apply (simp add: range_cover_def word_bits_def)
        apply (simp add: range_cover_def)
-      apply (clarsimp simp: default_obj_range Int_ac tyunt
-                     split: if_split_asm)
-   apply (erule disjE)
-    apply (simp add: cte_wp_at_caps_of_state)
-    apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
-   apply (simp add: p_assoc_help[symmetric])
-    apply (erule impE)
+      apply (simp add: range_cover_def word_bits_def)
+     apply (simp add: range_cover_def)
+    apply (clarsimp simp: default_obj_range Int_ac tyunt
+                   split: if_split_asm)
+    apply (erule disjE)
+     apply (drule cn[unfolded caps_no_overlap_def,THEN bspec,OF ranI])
+     apply (simp add: p_assoc_help[symmetric])
+     apply (erule impE)
+      apply blast (* set arith *)
      apply blast (* set arith *)
-    apply blast (* set arith *)
-  apply blast (* set arith  *)
-  done
-  qed
+    apply blast (* set arith  *)
+    done
+qed
 
 lemma valid_default_arch_tcb:
   "\<And>s. valid_arch_tcb default_arch_tcb s"

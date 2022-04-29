@@ -9,7 +9,7 @@
  *)
 
 theory Untyped_D
-imports Invocations_D CSpace_D
+imports Invocations_D CSpace_D Structures_D
 begin
 
 definition
@@ -55,23 +55,16 @@ where
            Some Untyped
          else cdl_objects s x)\<rparr>)"
 
-(*
- * Retype the given untyped object into a new object type,
- * and return a list of pointers to the newly constructed items.
- *)
+(* Return a list of n set for requested n objects;
+ * if the object type is not UntypedType, sets contain the ptr for
+ * new objects, otherwise, sets represent valid ptrs in each untypes. *)
 
-definition
-  generate_object_ids :: "nat \<Rightarrow> cdl_object_type \<Rightarrow> cdl_object_id set \<Rightarrow>  ((cdl_object_id set) list) k_monad"
-  where "generate_object_ids num_objects type object_range
-  \<equiv> do
-    s \<leftarrow> get;
-    available_names \<leftarrow> return $ (cdl_objects s) -` {Some Untyped};
-    setlist \<leftarrow> select {x. distinct  x \<and> (\<forall>a\<in> set x. \<forall>b \<in> set x. a \<noteq> b \<longrightarrow> a \<inter> b = {})
-           \<and> (\<forall>y \<in> set x. y \<noteq> {} \<and> y \<subseteq> object_range \<inter> available_names)
-           \<and> (num_objects = (size x)) };
-    if (type \<noteq> UntypedType) then (return $ map (\<lambda>x. {pick x}) setlist)
-    else return setlist
-    od"
+definition generate_range :: "cdl_object_id \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> cdl_object_id set list"
+  where
+  "generate_range start type sz num_objects \<equiv>
+     map (\<lambda>ptr. if type = UntypedType then {ptr .. ptr + 2 ^ sz - 1} else {ptr}) $
+         map (\<lambda>x. ptr_add start (x * 2 ^ sz))
+             [0 ..< num_objects]"
 
 definition create_objects :: "(cdl_object_id set) list \<Rightarrow> cdl_object option \<Rightarrow> unit k_monad"
 where
@@ -95,15 +88,23 @@ where
     set_parent dest_slot parent_slot
   od"
 
+(* This returns the set of unused ptr while explicitly check for overflow *)
+definition
+  update_range :: "cdl_object_id set \<Rightarrow> cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_object_id set"
+where
+  "update_range old_range ptr idx \<equiv>
+   if idx = 0 then old_range
+   else if (ptr \<le> ptr + of_nat idx) then
+     old_range - {..<ptr + of_nat idx}
+   else {}"
 
 definition
-  update_available_range :: "(cdl_object_id set) => (cdl_object_id list) \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
-where "update_available_range orange newids cap_ref cap \<equiv>
-  do
-     new_range  \<leftarrow> select {x. x \<subseteq> orange - set newids};
-     set_cap cap_ref $ set_available_range cap new_range
-  od"
-
+  update_available_range :: "cdl_object_id \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
+where "update_available_range ptr idx cap_ref cap \<equiv>
+     let cap_range = untyped_cap_range cap;
+         new_range = update_range cap_range ptr idx
+     in
+     set_cap cap_ref $ set_available_range cap new_range"
 
 definition
   retype_region :: "nat \<Rightarrow> cdl_object_type \<Rightarrow> (cdl_object_id set list)
@@ -148,6 +149,31 @@ where
     odE
   odE"
 
+definition pte_bits :: nat where
+  "pte_bits \<equiv> if word_bits = 32 then 2 else 3"
+
+definition obj_bits_cdl :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> nat" where
+  "obj_bits_cdl type obj_size_bits \<equiv>
+     case type of
+       UntypedType \<Rightarrow> obj_size_bits
+     | TcbType \<Rightarrow> tcb_bits_cdl
+     | EndpointType \<Rightarrow> endpoint_bits_cdl
+     | NotificationType \<Rightarrow> ntfn_bits_cdl
+     | CNodeType \<Rightarrow> obj_size_bits + slot_bits_cdl
+     | FrameType sz \<Rightarrow> sz
+     | PageTableType \<Rightarrow> pt_size_index + pte_bits
+     | PageDirectoryType \<Rightarrow> pd_size_index + pte_bits
+     | AsidPoolType \<Rightarrow> pageBits_cdl"
+
+(* This definition mostly just wraps "If" so that if-splitting can be controlled separately. *)
+definition keep_if :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "keep_if P a b \<equiv> if P a then a else b"
+
+(* Pick the minimum/smallest element of the first set if that set is not empty, otherwise of the
+   second set *)
+abbreviation min_of_range :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a::linorder" where
+  "min_of_range r1 r2 \<equiv> Min (keep_if ((\<noteq>) {}) r1 r2)"
+
 definition
   invoke_untyped :: "cdl_untyped_invocation \<Rightarrow> unit preempt_monad"
 where
@@ -156,12 +182,22 @@ where
    doE
      unlessE has_kids $ reset_untyped_cap untyped_ref;
        liftE $ do
-         untyped_cap \<leftarrow> get_cap untyped_ref;
+         untyped_cap  \<leftarrow> get_cap untyped_ref;
 
-         new_range \<leftarrow> return $ available_range untyped_cap;
-         new_obj_refs \<leftarrow> generate_object_ids num_objects new_type new_range;
+         base_ptr     \<leftarrow> return $ Min (untyped_cap_range untyped_cap);
 
-         update_available_range new_range (map (\<lambda>s. pick s) new_obj_refs) untyped_ref untyped_cap;
+         \<comment> \<open>If we have overflow, then the available range will be empty,
+            but the index is considered to have wrapped back around to zero.\<close>
+         next_ptr     \<leftarrow> return $ min_of_range (available_range untyped_cap)
+                                               (untyped_cap_range untyped_cap);
+
+         \<comment> \<open> Check if the ptr needs aligning \<close>
+         aligned_ptr  \<leftarrow> return $ if has_kids then alignUp next_ptr (obj_bits_cdl new_type type_size) else next_ptr;
+
+         new_obj_refs \<leftarrow> return $ generate_range (aligned_ptr) new_type (obj_bits_cdl new_type type_size) num_objects;
+         new_idx      \<leftarrow> return $ aligned_ptr + (of_nat num_objects << (obj_bits_cdl new_type type_size)) - base_ptr;
+
+         update_available_range base_ptr (unat (new_idx)) untyped_ref untyped_cap;
 
          \<comment> \<open>Construct new objects within the covered range.\<close>
          retype_region type_size new_type new_obj_refs;

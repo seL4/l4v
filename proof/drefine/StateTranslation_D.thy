@@ -31,6 +31,14 @@ definition
   transform_cptr :: "word32 \<Rightarrow> cdl_cptr" where
   "transform_cptr w \<equiv> w"
 
+definition
+  transform_vm_attributes :: "vm_attributes \<Rightarrow> vmpage_size \<Rightarrow> word32" where
+  "transform_vm_attributes attr sz \<equiv> case sz of
+    ARMSmallPage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
+  | ARMLargePage \<Rightarrow> attribs_to_word (attr - {Global, ParityEnabled})
+  | ARMSection \<Rightarrow>attribs_to_word (attr - {Global})
+  | ARMSuperSection \<Rightarrow> attribs_to_word (attr - {Global})"
+
 (* transform an abstract-spec recv_slot description to a capDL one *)
 definition
   transform_recv_slot :: "(word32 \<times> word32 \<times> word8) \<Rightarrow>
@@ -617,8 +625,13 @@ where
  * CapDL cap.
  *)
 
-definition "free_range_of_untyped \<equiv> (\<lambda>idx size_bits ptr.
-  (if (idx \<le> 2^size_bits - 1) then {ptr + of_nat idx .. ptr + 2^size_bits - 1} else {}))"
+definition free_range_of_untyped :: "nat \<Rightarrow> nat \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object_id set"
+  where
+  "free_range_of_untyped \<equiv> (\<lambda>idx size_bits ptr.
+      if idx \<le> 2 ^ size_bits - 1 \<and> ptr \<le> ptr + of_nat idx
+      then {ptr + of_nat idx .. ptr + 2 ^ size_bits - 1} else {})"
+
+
 definition
   transform_cap :: "cap \<Rightarrow> cdl_cap"
 where
@@ -835,7 +848,11 @@ where
                  \<comment> \<open>Decode the thread's intent.\<close>
                  cdl_tcb_intent = transform_full_intent ms ptr tcb,
                  cdl_tcb_has_fault = (tcb_has_fault tcb),
-                 cdl_tcb_domain = tcb_domain tcb
+                 cdl_tcb_domain = tcb_domain tcb,
+
+                 \<comment> \<open>FIXME: we're ignoring ASpec data here. We ought to carry over the data and
+                            update DRefine proofs\<close>
+                 cdl_tcb_extra = default_tcb_extra_data
                 \<rparr>"
 
 definition
@@ -843,7 +860,7 @@ definition
 where
   "transform_asid_pool_entry p \<equiv> case p of
        None \<Rightarrow> Types_D.NullCap
-     | Some p \<Rightarrow> Types_D.PageDirectoryCap p Fake None"
+     | Some p \<Rightarrow> Types_D.PageDirectoryCap p (Fake undefined) None"
 
 (*
  * Transform an AsidPool.
@@ -872,12 +889,12 @@ definition
 where
   "transform_pte pte \<equiv> case pte of
            ARM_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
-         | ARM_A.LargePagePTE ref _ rights_ \<Rightarrow>
+         | ARM_A.LargePagePTE ref attr rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
-                              (pageBitsForSize ARMLargePage) Fake None
-         | ARM_A.SmallPagePTE ref _ rights_ \<Rightarrow>
+                              (pageBitsForSize ARMLargePage) (Fake (attribs_to_word attr))  None
+         | ARM_A.SmallPagePTE ref attr rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
-                              (pageBitsForSize ARMSmallPage) Fake None"
+                              (pageBitsForSize ARMSmallPage) (Fake (attribs_to_word attr)) None"
 
 definition
   transform_page_table_contents :: "(word8 \<Rightarrow> ARM_A.pte) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
@@ -894,14 +911,14 @@ definition
 where
   "transform_pde pde \<equiv> case pde of
            ARM_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
-         | ARM_A.PageTablePDE ref _ _ \<Rightarrow>
-             Types_D.PageTableCap (transform_paddr ref) Fake None
-         | ARM_A.SectionPDE ref _ _ rights_ \<Rightarrow>
+         | ARM_A.PageTablePDE ref attr _ \<Rightarrow>
+             Types_D.PageTableCap (transform_paddr ref) (Fake (attribs_to_word attr)) None
+         | ARM_A.SectionPDE ref attr _ rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
-                              (pageBitsForSize ARMSection) Fake None
-         | ARM_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
+                              (pageBitsForSize ARMSection) (Fake (attribs_to_word attr)) None
+         | ARM_A.SuperSectionPDE ref attr rights_ \<Rightarrow>
              Types_D.FrameCap False (transform_paddr ref) rights_
-                              (pageBitsForSize ARMSuperSection) Fake None"
+                              (pageBitsForSize ARMSuperSection) (Fake (attribs_to_word attr)) None"
 
 definition
   kernel_pde_mask ::  "(12 word \<Rightarrow> ARM_A.pde) \<Rightarrow> (12 word \<Rightarrow> ARM_A.pde)"
@@ -936,7 +953,8 @@ definition
          | Structures_A.ArchObj (ARM_A.PageDirectory pd) \<Rightarrow>
                 Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
          | Structures_A.ArchObj (ARM_A.DataPage dev sz) \<Rightarrow>
-                Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz\<rparr>"
+                Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz,
+                               cdl_frame_fills = default_frame_fill_data\<rparr>"
 
 lemmas transform_object_simps [simp] =
   transform_object_def [split_simps Structures_A.kernel_object.split ARM_A.arch_kernel_obj.split]

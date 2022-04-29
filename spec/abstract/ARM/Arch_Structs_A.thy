@@ -15,6 +15,7 @@ imports
   ExecSpec.Arch_Structs_B
   ExceptionTypes_A
   VMRights_A
+  VMAttributes_A
   ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
@@ -29,9 +30,6 @@ section \<open>Architecture-specific virtual memory\<close>
 
 text \<open>An ASID is simply a word.\<close>
 type_synonym asid = "word32"
-
-datatype vm_attribute = ParityEnabled | PageCacheable | Global | XNever
-type_synonym vm_attributes = "vm_attribute set"
 
 section \<open>Architecture-specific capabilities\<close>
 

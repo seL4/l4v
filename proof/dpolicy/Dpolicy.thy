@@ -288,9 +288,9 @@ definition
   is_real_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_real_cap cap \<equiv> case cap of
-    cdl_cap.FrameCap _ _ _ _ Fake _ \<Rightarrow> False
-  | cdl_cap.PageTableCap _ Fake _ \<Rightarrow> False
-  | cdl_cap.PageDirectoryCap _ Fake _ \<Rightarrow> False
+    cdl_cap.FrameCap _ _ _ _ (Fake _) _ \<Rightarrow> False
+  | cdl_cap.PageTableCap _ (Fake _) _ \<Rightarrow> False
+  | cdl_cap.PageDirectoryCap _ (Fake _) _ \<Rightarrow> False
   | _ \<Rightarrow> True"
 
 lemma is_real_cap_transform:
@@ -1002,7 +1002,7 @@ lemma state_asids_transform:
    apply (case_tac aa, simp_all add:vs_refs_no_global_pts_def)
    apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add:graph_of_def, safe)
-   apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b Fake None" in csata_asid_lookup)
+   apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b (Fake undefined) None" in csata_asid_lookup)
        apply (simp add: asid_table_entry_transform)
       apply (simp add: is_null_cap_def transform_asid_table_entry_def)
      apply (simp add: is_null_cap_def transform_asid_table_entry_def)

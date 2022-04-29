@@ -273,7 +273,7 @@ primrec (nonexhaustive)
   usable_untyped_range :: "cap \<Rightarrow> machine_word set"
 where
  "usable_untyped_range (UntypedCap _ p n f) =
-  (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
+  (if f < 2 ^ n \<and> p \<le> p + of_nat f then {p + of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
   "obj_range p obj \<equiv> {p .. p + 2^obj_bits obj - 1}" (* FIXME mask_range *)

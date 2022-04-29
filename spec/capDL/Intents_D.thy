@@ -25,12 +25,10 @@
 theory Intents_D
 imports
   "ASpec.CapRights_A"
-  ExecSpec.Platform
+  "ASpec.VMAttributes_A"
 begin
 
-context begin interpretation Arch .
-requalify_types irq
-end
+arch_requalify_types irq
 
 (*
  * Entities in seL4 have particular rights to kernel objects, which
@@ -57,7 +55,7 @@ abbreviation (input) GrantReply::rights
 type_synonym cdl_raw_capdata = word32
 
 (* VM Attributes, such as page cache attributes. *)
-type_synonym cdl_raw_vmattrs = word32
+type_synonym cdl_raw_vmattrs = arch_raw_vmattrs
 
 (* TCB context, for operations such as write to a thread's registers. *)
 type_synonym cdl_raw_usercontext = "word32 list"

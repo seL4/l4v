@@ -111,6 +111,8 @@ session DSpec in capDL = Word_Lib +
     ExecSpec
     ASpec
     "HOL-Combinatorics" (* for Fun.swap *)
+  directories
+    "$L4V_ARCH"
   theories
     Syscall_D
 

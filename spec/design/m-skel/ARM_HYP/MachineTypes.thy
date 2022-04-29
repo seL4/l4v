@@ -134,13 +134,40 @@ definition
                          exclusive_state = default_exclusive_state,
                          machine_state_rest = undefined \<rparr>"
 
+(* Probably better to transfer from Haskell *)
+abbreviation (input) "smallPageBits \<equiv> 12"
+abbreviation (input) "largePageBits \<equiv> 16"
+abbreviation (input) "sectionBits \<equiv> 21"
+abbreviation (input) "superSectionBits \<equiv> 25"
+
+abbreviation (input) "pt_size_index \<equiv> 9"
+abbreviation (input) "pd_size_index \<equiv> 11"
+abbreviation (input) "pt_slot_vaddr_mask \<equiv> 0x1FF"
 
 (* Machine/Hardware/ARM.lhs - hardware_asid, vmfault_type and vmpage_size *)
-#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
+#INCLUDE_HASKELL SEL4/Machine/Hardware/ARM.lhs CONTEXT ARM_HYP ONLY HardwareASID VMFaultType HypFaultType VMPageSize pageBits pageBitsForSize pageForPageBits hcrCommon hcrTWE hcrTWI hcrVCPU hcrNative vgicHCREN sctlrDefault actlrDefault gicVCPUMaxNumLR
 
+lemmas vmpage_size_simps = vmpage_size.simps
 end
 
 arch_requalify_types vmpage_size
+
+arch_requalify_consts
+  pageBitsForSize
+  pageForPageBits
+  smallPageBits
+  largePageBits
+  sectionBits
+  superSectionBits
+  pt_size_index
+  pd_size_index
+  pt_slot_vaddr_mask
+
+arch_requalify_facts
+  pageForPageBits_def
+  pageBitsForSize_def
+  vmpage_size_simps
+
 
 context Arch begin arch_global_naming
 

@@ -319,12 +319,12 @@ lemma seL4_CNode_Mutate_sep:
        (dest_id, dest_slot) \<mapsto>c cap' \<and>* R\<guillemotright>\<rbrace>"
   apply (simp add:seL4_CNode_Mutate_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back)
-   apply (rule hoare_pre)
+  apply (rule hoare_pre)
    apply (rule_tac
                intent_op = "CNodeIntent (CNodeMutateIntent dest_index dest_depth src_index src_depth data)"
            and intent_cptr = dest_root
            and intent_extra = "[src_root]" in call_kernel_with_intent_no_fault_helper)
-            apply (clarsimp simp:sep_conj_assoc)
+             apply (clarsimp simp:sep_conj_assoc)
             apply (rule hoare_post_imp[OF _
               set_cap_wp])
             apply (sep_select 5,assumption)
@@ -350,8 +350,8 @@ lemma seL4_CNode_Mutate_sep:
           apply (rule conjI[rotated])
            apply (rule sep_any_imp_c'_conj[where cap = RestartCap])
            apply (subst(asm) sep_map_c_asid_reset[where cap' = " (update_cap_data_det data src_cap)"])
-           apply (simp add:reset_cap_asid_update_cap_data)
-            apply (sep_solve)
+            apply (simp add:reset_cap_asid_update_cap_data)
+           apply (sep_solve)
           apply sep_solve
          apply (assumption)
         apply (rule_tac Q'="\<lambda>r. < (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q >
@@ -381,26 +381,26 @@ lemma seL4_CNode_Mutate_sep:
     apply (rule hoare_pre)
      apply (rule lookup_cap_and_slot_rvu[where r = root_size])
     apply (clarsimp simp:get_index_def)
-   defer
-   apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
-     hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-     update_thread_intent_update update_thread_cnode_at | clarsimp simp:Let_def)+
-  apply (clarsimp simp:conj_comms)
-  apply (intro conjI impI ballI)[1]
-        apply (clarsimp dest!:sep_map_f_tcb_at simp:object_at_def)
-       apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
-       apply (intro conjI,simp+)
-       apply (clarsimp simp:sep_conj_assoc)
-       apply sep_solve
-      apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
-      apply (intro conjI allI)
-       apply (simp add:cnode_non_ep cong: cap_type_bad_cong)+
-      apply (clarsimp simp:sep_conj_assoc)
-      apply sep_solve
+    defer
+    apply (wp hoare_vcg_ball_lift sep_inv_to_all_scheduable_tcbs[OF update_thread_intent_update]
+      hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
+      update_thread_intent_update update_thread_cnode_at | clarsimp simp:Let_def)+
+   apply (clarsimp simp:conj_comms)
+   apply (intro conjI impI ballI)[1]
+     apply (clarsimp dest!:sep_map_f_tcb_at simp:object_at_def)
+    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
+    apply (intro conjI,simp+)
+    apply (clarsimp simp:sep_conj_assoc)
+    apply sep_solve
    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
    apply (intro conjI allI)
-             apply (fastforce cong: cap_type_bad_cong)+
-        apply (drule(1) reset_cap_asid_cnode_cap | simp)+
+        apply (simp add:cnode_non_ep cong: cap_type_bad_cong)+
+    apply (clarsimp simp:sep_conj_assoc)
+    apply sep_solve
+   apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
+   apply (intro conjI allI)
+              apply (fastforce cong: cap_type_bad_cong)+
+          apply (drule(1) reset_cap_asid_cnode_cap | simp)+
     apply (clarsimp simp:sep_conj_assoc)
     apply sep_solve
    apply clarsimp

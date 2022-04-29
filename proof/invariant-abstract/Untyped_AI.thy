@@ -26,7 +26,9 @@ where
    = (\<lambda>co s. \<exists>sz idx. (cte_wp_at (\<lambda>c. c = (UntypedCap dev ptr_base sz idx)
                \<and> (co = None \<or> co = Some c)) slot s
           \<and> range_cover ptr sz (obj_bits_api ty us) (length slots)
-          \<and> (idx \<le> unat (ptr - ptr_base) \<or> (reset \<and> ptr = ptr_base))
+          \<and> (if reset then ptr = ptr_base else
+               (alignUp (ptr_base + of_nat idx) (obj_bits_api ty us) = ptr
+                \<and> idx \<le> unat (ptr - ptr_base)))
           \<and> (ptr && ~~ mask sz) = ptr_base)
           \<and> (reset \<longrightarrow> descendants_of slot (cdt s) = {})
           \<and> (ty = CapTableObject \<longrightarrow> us > 0)
@@ -555,6 +557,9 @@ lemma diff_neg_mask[simp]:
   apply simp
   done
 
+lemma idx_no_overflow:
+  "idx \<le> unat (ptr && mask sz) \<Longrightarrow> ptr && ~~ mask sz \<le> (ptr && ~~ mask sz) + of_nat idx"
+  by (metis AND_NOT_mask_plus_AND_mask_eq word_and_le2 word_of_nat_le word_random)
 
 lemma cte_wp_at_caps_descendants_range_inI:
   "\<lbrakk> invs s;cte_wp_at (\<lambda>c. c = UntypedCap dev (ptr && ~~ mask sz) sz idx) cref s;
@@ -565,11 +570,12 @@ lemma cte_wp_at_caps_descendants_range_inI:
   apply (frule(1) descendants_of_cte_at)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule untyped_cap_descendants_range[rotated])
-    apply simp+
+      apply simp+
    apply (simp add: invs_valid_pspace)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (erule disjoint_subset2[rotated])
   apply clarsimp
+  apply (frule idx_no_overflow, clarsimp)
   apply (rule le_plus'[OF word_and_le2])
   apply simp
   apply (erule word_of_nat_le)
@@ -1975,7 +1981,7 @@ lemma cte_wp_at_pspace_no_overlapI:
    \<Longrightarrow> pspace_no_overlap_range_cover ptr sz s"
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap)
-    apply (simp add: invs_valid_objs)
+   apply (simp add: invs_valid_objs)
   apply (clarsimp simp: valid_cap_def valid_untyped_def)
   apply (unfold pspace_no_overlap_def)
   apply (intro allI impI)
@@ -1983,23 +1989,24 @@ lemma cte_wp_at_pspace_no_overlapI:
   apply (erule(1) impE)
   apply (simp only: obj_range_def[symmetric] p_assoc_help[symmetric])
   apply (frule(1) le_mask_le_2p)
+  apply (rule ccontr)
+  apply (erule impE)
    apply (rule ccontr)
-   apply (erule impE)
-    apply (rule ccontr)
-    apply simp
-    apply (drule disjoint_subset2[rotated,
-      where B'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
-     apply clarsimp
-     apply (rule word_and_le2)
-    apply simp
-   apply clarsimp
-   apply (drule_tac A'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"
-        in disjoint_subset[rotated])
+   apply simp
+   apply (drule disjoint_subset2[rotated,
+     where B'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
     apply clarsimp
-    apply (rule le_plus'[OF word_and_le2])
-    apply simp
-    apply (erule word_of_nat_le)
-   apply blast
+    apply (rule word_and_le2)
+   apply simp
+  apply clarsimp
+  apply (drule_tac A'="{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"
+       in disjoint_subset[rotated])
+   apply clarsimp
+   apply (frule idx_no_overflow, clarsimp)
+   apply (rule le_plus'[OF word_and_le2])
+   apply simp
+   apply (erule word_of_nat_le)
+  apply blast
   done
 
 
@@ -2049,37 +2056,35 @@ lemma cte_wp_at_caps_no_overlapI:
   apply (frule(1) le_mask_le_2p)
   apply (clarsimp simp: valid_mdb_def cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap)
-    apply (simp add: invs_valid_objs)
+   apply (simp add: invs_valid_objs)
   apply (unfold caps_no_overlap_def)
   apply (intro ballI impI)
   apply (erule ranE)
   apply (subgoal_tac "is_untyped_cap cap")
-  prefer 2
+   prefer 2
    apply (rule untyped_range_is_untyped_cap)
    apply blast
   apply (drule untyped_incD)
-     apply simp+
+      apply (simp+)[4]
   apply (elim conjE)
   apply (erule subset_splitE)
-      apply (erule subset_trans[OF _ psubset_imp_subset,rotated])
-       apply (clarsimp simp: word_and_le2)
-     apply simp
-     apply (thin_tac "P\<longrightarrow>Q" for P Q)+
-     apply (elim conjE)
-     apply (drule disjoint_subset2[rotated,
-       where B' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
-      apply clarsimp
-      apply (rule le_plus'[OF word_and_le2])
-      apply simp
-      apply (erule word_of_nat_le)
-     apply simp
+     apply (erule subset_trans[OF _ psubset_imp_subset,rotated])
+     apply (clarsimp simp: word_and_le2)
+    apply simp
+    apply (thin_tac "P\<longrightarrow>Q" for P Q)+
+    apply (elim conjE)
+    apply (drule disjoint_subset2[rotated,
+      where B' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
+     apply clarsimp
+     apply (frule idx_no_overflow,clarsimp)
+     apply (metis add.commute word_and_le2 word_of_nat_le word_plus_and_or_coroll2 word_plus_mcs_3)
     apply simp
    apply (erule subset_trans[OF _  equalityD1,rotated])
    apply (clarsimp simp: word_and_le2)
   apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (drule disjoint_subset[rotated,
        where A' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
-  apply (clarsimp simp: word_and_le2 Int_ac)+
+   apply (clarsimp simp: word_and_le2 Int_ac)+
   done
 
 
@@ -2386,18 +2391,19 @@ lemma valid_untyped_cap_inc:
     idx \<le> unat (ptr && mask sz); range_cover ptr sz sb n\<rbrakk>
    \<Longrightarrow> s \<turnstile> UntypedCap dev (ptr && ~~ mask sz) sz
                           (unat ((ptr && mask sz) + of_nat n * 2 ^ sb))"
- apply (clarsimp simp: valid_cap_def cap_aligned_def valid_untyped_def simp del: usable_untyped_range.simps)
- apply (intro conjI allI impI)
-  apply (elim allE conjE impE)
+  apply (clarsimp simp: valid_cap_def cap_aligned_def valid_untyped_def simp del: usable_untyped_range.simps)
+  apply (intro conjI allI impI)
+   apply (elim allE conjE impE)
+     apply simp
     apply simp
-   apply simp
    apply (erule disjoint_subset[rotated])
    apply (frule(1) le_mask_le_2p[OF _
                      range_cover.sz(1)[where 'a=machine_word_len, folded word_bits_def]])
    apply clarsimp
+   apply (frule idx_no_overflow, clarsimp)
    apply (rule word_plus_mono_right)
-   apply (rule word_of_nat_le)
-   apply (simp add: unat_of_nat_eq[where 'a=machine_word_len] range_cover_unat field_simps)
+    apply (rule word_of_nat_le)
+    apply (simp add: unat_of_nat_eq[where 'a=machine_word_len] range_cover_unat field_simps)
    apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
    apply (simp add: word_less_nat_alt)
   apply (simp add: range_cover_unat range_cover.unat_of_nat_shift shiftl_t2n field_simps)
@@ -2732,7 +2738,7 @@ lemma reset_untyped_cap_invs_etc:
   apply (subgoal_tac "is_aligned ptr sz")
    prefer 2
    apply (frule caps_of_state_valid_cap, clarsimp)
-   apply auto[1]
+   apply (metis is_aligned_neg_mask2)
   apply (cases "idx = 0")
    apply (clarsimp simp: free_index_of_def)
    apply wp
@@ -2802,8 +2808,6 @@ lemma reset_untyped_cap_invs_etc:
      apply (clarsimp simp: bits_of_def field_simps cte_wp_at_caps_of_state nth_rev)
      apply (strengthen order_trans[where z="2 ^ sz", rotated, mk_strg I E])
      apply (clarsimp split: if_split_asm)
-      apply auto[1]
-     apply (auto elim: order_trans[rotated])[1]
     apply (clarsimp simp: cte_wp_at_caps_of_state split: if_split_asm)
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -3789,27 +3793,32 @@ lemma invoke_untyp_invs':
                        invoke_untyped_proofs.idx_compare'
                        exI invoke_untyped_proofs.simps
                        word_bw_assocs)
-      apply (frule cte_wp_at_pspace_no_overlapI,
-        simp add: cte_wp_at_caps_of_state, simp+,
-        simp add: invoke_untyped_proofs.szw)
+      apply (frule cte_wp_at_pspace_no_overlapI)
+         apply (simp add: cte_wp_at_caps_of_state)
+        apply clarsimp
+       apply (simp add: invoke_untyped_proofs.szw)
       apply (cut_tac s=s in obj_is_device_vui_eq[where ui=ui])
        apply (clarsimp simp: ui cte_wp_at_caps_of_state)
-      apply (simp_all add: field_simps ui)
+       apply (simp_all add: field_simps ui)
+       apply (intro conjI; clarsimp)
 
+       apply (intro conjI)
+        apply (clarsimp simp: add.commute)
+       apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
       apply (intro conjI)
 
-            (* slots not in retype_addrs *)
-            apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
-            apply (drule(1) invoke_untyped_proofs.slots_invD)
-            apply (drule(1) subsetD)
-            apply (simp add:p_assoc_help)
+             (* slots not in retype_addrs *)
+             apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
+             apply (drule(1) invoke_untyped_proofs.slots_invD)
+             apply (drule(1) subsetD)
+             apply (simp add:p_assoc_help)
 
-           (* not global refs*)
-           apply (simp add: Int_commute, erule disjoint_subset2[rotated])
-           apply (simp add: atLeastatMost_subset_iff word_and_le2)
+            (* not global refs*)
+            apply (simp add: Int_commute, erule disjoint_subset2[rotated])
+            apply (simp add: atLeastatMost_subset_iff word_and_le2)
 
-          (* idx less_eq new offs *)
-          apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
+           (* idx less_eq new offs *)
+           apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
 
           (* not empty tables *)
           apply clarsimp
@@ -3831,7 +3840,7 @@ lemma invoke_untyp_invs':
         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
       done
-qed
+  qed
 
 lemmas invoke_untyp_invs[wp] =
   invoke_untyp_invs'[where Q=\<top> and Q'=\<top>, simplified,
@@ -3892,6 +3901,7 @@ lemmas sts_real_cte_at[wp] =
 
 lemma sts_valid_untyped_inv:
   "\<lbrace>valid_untyped_inv ui\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_untyped_inv ui\<rbrace>"
+  supply if_split[split del]
   apply (cases ui, simp add: descendants_range_in_def)
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_ex_lift hoare_vcg_imp_lift | wps)+
   apply clarsimp

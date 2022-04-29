@@ -49,10 +49,6 @@ lemma create_objects_mapM_x':
     done
 qed
 
-crunch generate_object_ids
-  for inv[wp]: P
-  (wp: crunch_wps)
-
 lemma pick_rev:
   assumes "target_object_ids = map (\<lambda>x. {x}) ids"
   shows "ids = map (\<lambda>x. pick x) target_object_ids"
@@ -105,53 +101,22 @@ lemma nonempty_pick_in:
   "a\<noteq>{} \<Longrightarrow> pick a \<in> a"
   by (metis all_not_in_conv someI_ex)
 
-(* This is not true, need to change the capdl_spec to make the selected list distinct *)
-lemma generate_object_ids_rv:
-  "\<lbrace>K (target_type \<noteq> UntypedType) \<rbrace>
-  generate_object_ids n target_type obj_range
-  \<lbrace>\<lambda>r s.  r = map (\<lambda>x. {x}) (map pick r) \<and> length r = n \<and> set (map pick r) \<subseteq> obj_range
-  \<and> distinct (map pick r) \<rbrace>"
-  apply (clarsimp simp:generate_object_ids_def)
-  apply wp
-  apply clarsimp
-  apply (simp add: distinct_map)
-  apply (intro conjI)
-   apply (clarsimp simp:Fun.comp_def)
-   apply (rule subsetD[rotated,OF nonempty_pick_in])
-    apply fastforce
-   apply fastforce
-  apply (clarsimp simp:Fun.comp_def inj_on_def)
-  apply (drule_tac x = xa in bspec)
-   apply simp
-  apply (frule_tac x = xa in bspec,simp)
-  apply (drule_tac x = y in bspec,simp)+
-  apply (rule ccontr)
-  apply clarsimp
-  apply (drule nonempty_pick_in)+
-  apply clarsimp
-  apply blast
-  done
-
 lemma retype_region_wp:
   "\<lbrace> K (default_object target_type target_bits minBound = Some obj
      \<and> target_type \<noteq> UntypedType \<and> distinct (map pick obj_refs)
      \<and> obj_refs = map (\<lambda>x. {x}) (map pick obj_refs)
      \<and> set (map pick obj_refs) \<subseteq> obj_range )
      and (\<lambda>s. cdl_current_domain s = minBound)
-     and <(\<And>* ptr\<in>obj_range. ptr \<mapsto>o Untyped) \<and>* P > \<rbrace>
+     and <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o Untyped) \<and>* P > \<rbrace>
   retype_region target_bits target_type obj_refs
   \<lbrace>\<lambda>r s. <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o obj)
-  \<and>* (\<And>* ptr\<in>obj_range - set (map pick obj_refs). ptr \<mapsto>o Untyped) \<and>* P > s\<rbrace>"
+   \<and>* P > s\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
-  apply (clarsimp simp:retype_region_def)
+   apply (clarsimp simp:retype_region_def)
    apply wp
     apply (rule_tac P="current_domain = minBound" in hoare_gen_asm)
     apply (wp create_objects_wp | simp)+
-  apply (subst sep_conj_assoc[symmetric])
-  apply (subst sep.prod.union_disjoint [symmetric])
-   apply simp+
-  apply (simp add:Un_absorb1)
   done
 
 lemma map_zip_first_simp:
@@ -170,25 +135,23 @@ lemma map_zip_first_simp:
     done
 qed
 
+lemma update_range_simple:
+  "idx \<noteq> 0 \<Longrightarrow> ptr \<le> ptr + of_nat idx \<Longrightarrow>
+      update_range old_range ptr idx = old_range - {..<ptr + of_nat idx}"
+  by (clarsimp simp: update_range_def)
+
 lemma update_available_range_wp:
-  "\<lbrace> (\<lambda>s. cdl_current_domain s = minBound)
-     and <uref \<mapsto>c - \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* P> \<rbrace>
-  update_available_range pick_range (map pick new_obj_refs) uref (UntypedCap dev obj_range free_range)
-  \<lbrace>\<lambda>r s. cdl_current_domain s = minBound \<and>
-  (\<exists>nfr\<subseteq>pick_range - set (map pick new_obj_refs).
-  <(\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* uref \<mapsto>c UntypedCap dev obj_range nfr \<and>* P>
-  s)\<rbrace>"
-  apply wp
-   apply (simp add:update_available_range_def)
-   apply (wp)
-    apply (rule hoare_gen_asm)
-    apply (rule hoare_strengthen_post[OF set_cap_wp])
-    apply (rule_tac x = new_range in exI)
-    apply (intro conjI,assumption+)
-    apply (sep_select 2,assumption)
-   apply wp
-   apply clarsimp+
+  "\<lbrace> <cap_ref \<mapsto>c - \<and>* P> \<rbrace>
+  update_available_range ptr idx cap_ref cap
+  \<lbrace>\<lambda>_ . <cap_ref \<mapsto>c set_available_range cap (update_range (untyped_cap_range cap) ptr idx) \<and>* P> \<rbrace>"
+  apply (unfold update_available_range_def, simp only: Let_unfold fun_app_def)
+  apply (wp sep_wp: set_cap_wp)
+  apply (clarsimp simp: pred_conj_def update_range_def)
+  apply (intro conjI impI; sep_solve)
   done
+
+lemmas update_available_range_wp' = update_available_range_wp
+  [where cap="UntypedCap dev b c" for dev b c, simplified]
 
 lemma reset_cap_asid_untyped_cap_eqD:
   "reset_cap_asid c = UntypedCap dev a b
@@ -242,54 +205,36 @@ lemma mapME_x_wp:
    done
   qed
 
-lemma reset_untyped_cap_wp:
-  "obj_range \<subseteq> tot_free_range
-  \<Longrightarrow> \<lbrace>< (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
-    \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
-    \<and>* P >\<rbrace> reset_untyped_cap uref
-  \<lbrace>\<lambda>y s. \<exists>fr. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range \<and>
-    cdl.lift (uref \<mapsto>c UntypedCap dev obj_range fr \<and>* (\<And>*ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* P) s\<rbrace>,-"
-  apply (simp add:reset_untyped_cap_def bind_assoc bindE_assoc)
-  apply (rule hoare_pre)
-   apply (wp whenE_wp)
-      apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr
-          \<and> (\<forall>fr\<in> set rv. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
-      apply clarsimp
-      apply (wp whenE_wp mapME_x_wp)
-      apply (rule ballI)
-       apply (rule hoare_pre)
-       apply wp
-       apply simp
-       apply (rule hoare_post_imp[OF _ set_cap_wp])
-       apply clarsimp
-       apply (rule_tac x = x in exI)
-        apply ((rule conjI, fastforce)+, sep_solve)
-      apply clarsimp
-      apply sep_solve
-     apply (wp | clarsimp)+
-  apply (subst dummy_detype_if_untyped)
-    apply simp
-   apply (sep_select_asm 2)
-   apply (frule opt_cap_sep_imp)
-   apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
-   apply (subgoal_tac "tot_free_range = obj_range \<union> (tot_free_range - obj_range)")
-    apply simp
-    apply (subst (asm) sep.prod.subset_diff)
-      apply simp+
-    apply (sep_select_asm 2)
-    apply (simp add:sep_conj_assoc)
-    apply sep_solve
-   apply blast
-  apply (sep_select_asm 2, frule opt_cap_sep_imp)
-  apply (clarsimp dest!: reset_cap_asid_simps2)
-  apply (intro conjI impI exI allI)
-      apply fastforce
-     apply (elim conjE)
-     apply (drule hd_in_set)
-     apply (drule(1) bspec)
-     apply force
-    apply sep_solve
-   apply fastforce+
+lemma hoare_whenE_not:
+  "\<lbrace>\<lambda>s. R () s \<and> \<not>P\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
+  unfolding whenE_def by clarsimp wp
+
+lemma reset_untyped_cap_wp_trivial:
+  "\<lbrace><uref \<mapsto>c UntypedCap dev obj_range free_range \<and>* P>
+     and (\<lambda>_. obj_range = free_range)\<rbrace>
+   reset_untyped_cap uref
+   \<lbrace>\<lambda>_. <uref \<mapsto>c UntypedCap dev obj_range free_range \<and>* P>\<rbrace>"
+  apply (rule hoare_name_pre_state, clarsimp simp: reset_untyped_cap_def)
+  apply (sep_frule (direct) opt_cap_sep_imp, clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
+  apply (wp hoare_whenE_not mapME_x_wp)
+  apply (clarsimp)
+  done
+
+lemma reset_untyped_cap_wp_trivial':
+  "\<lbrace><uref \<mapsto>c UntypedCap dev obj_range free_range \<and>* P>
+     and (\<lambda>_. obj_range = free_range)\<rbrace> reset_untyped_cap uref
+    \<lbrace>\<lambda>_. <uref \<mapsto>c UntypedCap dev obj_range free_range \<and>* P>\<rbrace>, -"
+  by (wp reset_untyped_cap_wp_trivial)
+
+lemma reset_untyped_cap_wp_trivial'':
+  "\<lbrace><uref \<mapsto>c UntypedCap dev obj_range free_range \<and>* P>
+     and (\<lambda>_. obj_range = free_range) and R ()\<rbrace> reset_untyped_cap uref \<lbrace>\<lambda>y. R y\<rbrace>, -"
+  unfolding validE_R_def
+  apply (rule hoare_name_pre_stateE)
+  apply (clarsimp simp: reset_untyped_cap_def)
+  apply (sep_frule (direct) opt_cap_sep_imp, clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
+  apply (wp hoare_whenE_not mapME_x_wp)
+  apply (clarsimp)
   done
 
 crunch reset_untyped_cap
@@ -302,99 +247,145 @@ crunch invoke_untyped
   (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
    simp: detype_def crunch_simps validE_E_def)
 
+lemma create_cap_wp:
+  "\<lbrace> < ((fst xs) \<mapsto>c cap \<and>* R) >\<rbrace>
+   create_cap new_type sz parent_slot dev xs
+   \<lbrace>\<lambda>_. < ((fst xs) \<mapsto>c (default_cap new_type (snd xs) sz dev) \<and>* R) > \<rbrace>"
+  apply (clarsimp simp: create_cap_def split: prod.split, wp add: set_parent_wp sep_wp: set_cap_wp)
+  apply clarsimp
+  apply sep_solve
+  done
+
+(* FIXME: move to sep-CapDL  *)
+lemma sep_lift_generic:
+  "\<And>sep_lift.
+   (\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>) \<Longrightarrow>
+     \<lbrace>g (ALLS x. P x \<longrightarrow>* R x)\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>"
+  apply (rule hoare_chain, assumption)+
+   apply (fastforce)
+  apply (clarsimp simp: sep_conj_def)
+  using sep_add_commute sep_disj_commuteI sep_implD by fastforce
+
+(* FIXME: move to sep-CapDL  *)
+lemma sep_lift_generic_E:
+  "\<And>sep_lift.
+   (\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow>
+     \<lbrace>g (ALLS x. P x \<longrightarrow>* R x)\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>, \<lbrace>E\<rbrace>"
+  unfolding validE_R_def
+  apply (rule hoare_chainE, assumption)+
+    apply (fastforce)
+   apply (clarsimp simp: sep_conj_def)
+  using sep_add_commute sep_disj_commuteI sep_implD apply fastforce
+  by (simp)
+
+lemma sep_lift_generic_R:
+  "\<And>sep_lift.
+   (\<And>R. \<lbrace>g (R)\<rbrace> f \<lbrace>\<lambda>x s. (P x \<and>* R) (sep_lift s)\<rbrace>, -) \<Longrightarrow>
+     \<lbrace>g (ALLS x. P x \<longrightarrow>* R x) \<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s) \<rbrace>, -"
+  unfolding validE_R_def
+  by (rule sep_lift_generic_E, simp)
+
+lemma distinct_pick: "\<lbrakk>distinct xs;  \<forall>s\<in>set xs. \<exists>v. {v} = s\<rbrakk> \<Longrightarrow> distinct (map pick xs)"
+  apply (induct xs; clarsimp?)
+  apply (clarsimp simp: Ball_def)
+  apply (erule_tac x=aa in allE)
+  apply (clarsimp simp: pick_def)
+  done
+
+lemma distinct_singleton_union_eq: "\<lbrakk>distinct xs; \<forall>s\<in>set xs. \<exists>v. {v} = s\<rbrakk>
+     \<Longrightarrow>  \<Union> (set xs) = pick ` (set xs)"
+  by (induct xs; clarsimp)
+
+lemma map_zip_helper: "map (\<lambda>x. f (fst x)) (zip xs ys) = map f (take (length ys) xs)"
+  apply (induct xs arbitrary: ys ; clarsimp?)
+  apply (case_tac ys; clarsimp)
+done
+
+lemma map_zip_helper': "map (\<lambda>x. f (fst x)) (zip xs (map g [0..<length xs])) = map f xs"
+  apply (induct xs; clarsimp)
+  apply (subst map_zip_helper, clarsimp)
+done
+
+lemma [simp]: "fst (case v of (x, y) \<Rightarrow> (f x, g y)) = ((f (fst v))) "
+ by (cases v, simp)
+
+lemma [simp]: "snd (case v of (x, y) \<Rightarrow> (f x, g y)) = ((g (snd v))) "
+ by (cases v, simp)
+
+lemma [simp]: "(case case v of (x, y) \<Rightarrow> (f x, g y) of (x', y') \<Rightarrow> f' x' y') = ( f' (f (fst v)) (g (snd v)))"
+ by (cases v, clarsimp)
+
 lemma invoke_untyped_wp:
   "\<lbrace> K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
-     \<and> length slots = n \<and> free_range \<subseteq> tot_free_range
-     \<and> (\<not> has_kids \<longrightarrow> free_range = obj_range) \<and> finite tot_free_range)
+     \<and> length slots = n  \<and> (generate_range (aligned_ptr) nt sz n) = created_range
+     \<and> distinct created_range \<and> base_ptr = Min obj_range \<and> sz = (obj_bits_cdl nt ts) \<and>
+     new_idx = unat (aligned_ptr + (of_nat n << sz) - base_ptr)  \<and>
+     (\<not> has_kids \<longrightarrow> aligned_ptr = Min (get_range ((\<noteq>) {}) free_range obj_range))
+     \<and> (has_kids \<longrightarrow> aligned_ptr = alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) sz)
+     \<and> (\<not> has_kids \<longrightarrow> free_range = obj_range))
      and (\<lambda>s. cdl_current_domain s = minBound)
      and < \<And>* map (\<lambda>dest_slot. dest_slot \<mapsto>c NullCap) slots
-    \<and>*(\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+    \<and>*(\<And>* ptr\<in>\<Union> (set created_range). ptr \<mapsto>o Untyped)
     \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
     \<and>* P > \<rbrace>
   invoke_untyped (Retype uref nt ts slots has_kids n)
-  \<lbrace>\<lambda>_ s. (\<exists>nlist free_range'.
-  length nlist = n \<and> distinct nlist \<and> set nlist \<subseteq> free_range
-  \<and> free_range' \<subseteq> free_range - (set nlist) \<and>
-  < \<And>* map (\<lambda>(dest_slot, obj_refs). dest_slot \<mapsto>c (default_cap nt obj_refs ts dev)) (zip slots (map (\<lambda>x. {x}) nlist))
-  \<and>* (\<And>* ptr\<in>set nlist. ptr \<mapsto>o obj)
-  \<and>* (\<And>* ptr\<in>tot_free_range - set nlist. ptr \<mapsto>o Untyped)
-  \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range'
-  \<and>* P > s) \<rbrace>, -"
+  \<lbrace>\<lambda>_ s.
+  < \<And>* map (\<lambda>(dest_slot, obj_refs). dest_slot \<mapsto>c (default_cap nt obj_refs ts dev)) (zip slots created_range)
+  \<and>* (\<And>* ptr\<in>\<Union> (set created_range). ptr \<mapsto>o obj)
+  \<and>* uref \<mapsto>c UntypedCap dev obj_range (update_range obj_range base_ptr new_idx)
+  \<and>* P > s \<rbrace>, -"
   apply (simp add: validE_R_def)
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp:invoke_untyped_def unless_def)
   apply (rule hoare_pre)
    apply wp
-        apply (rule hoare_vcg_ex_lift)
-        apply (rule_tac P = "new_obj_refs = map (\<lambda>x. {x}) nlist \<and> untyped_is_device untyped_cap = dev" in hoare_gen_asm)
-        apply (simp add:create_cap_def split_def)
-        apply (wp hoare_vcg_ex_lift)
-        apply (rule cdl.mapM_x_sep')
-        apply (rule hoare_pre, wp set_parent_wp set_cap_wp)
-        apply fastforce
-       apply (rule_tac P = "untyped_cap = UntypedCap dev obj_range free_range
-         \<and> length new_obj_refs = length slots
-         \<and> distinct (map pick new_obj_refs)
-         \<and> pick ` set new_obj_refs \<subseteq> free_range
-         \<and> new_obj_refs = map ((\<lambda>x. {x}) \<circ> pick) new_obj_refs" in hoare_gen_asm)
-       apply (wp hoare_vcg_ex_lift)
-        apply (rule_tac P = "x = map pick new_obj_refs" in hoare_gen_asm)
-        apply simp
-        apply (rule_tac
-          hoare_strengthen_post[OF retype_region_wp[where obj_range = tot_free_range]])
-        apply (simp add:map_zip_first_simp)
-        apply (elim conjE)
-        apply (sep_select 3,sep_select 3)
-        apply assumption
-       apply wp+
-      apply (rule hoare_vcg_conj_lift)
-       apply (rule hoare_vcg_ex_lift)
-       apply (wp hoare_vcg_conj_lift)
-        apply (rule_tac P = "x = map pick new_obj_refs
-          \<and> (untyped_cap = UntypedCap dev obj_range free_range)
-          \<and>  distinct (map pick new_obj_refs) \<and>
-           new_obj_refs = map ((\<lambda>x. {x}) \<circ> pick) new_obj_refs \<and>
-           pick ` set new_obj_refs \<subseteq> tot_free_range" in hoare_gen_asm)
-        apply (simp del:set_map split del:if_split)
-        apply (rule hoare_strengthen_post[OF update_available_range_wp])
-        apply clarsimp
-        apply (rule_tac x = nfr in exI)
-        apply (rule conjI)
-         apply (clarsimp split:if_splits)
-        apply (sep_select 3,sep_select 2,simp)
-       apply (wp|simp split del:if_split)+
-     apply (rule_tac P = "untyped_cap = UntypedCap dev obj_range free_range"
-       in hoare_gen_asm)
-     apply (clarsimp simp:conj_comms split del: if_split)
-     apply (simp add: conj_assoc[symmetric] del:conj_assoc split del: if_split)+
-     apply (rule hoare_vcg_conj_lift)
-      apply wp
-      apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
-      apply (clarsimp simp:Fun.comp_def split:if_splits)
-       apply (drule(1) subset_trans[rotated],fastforce)+
-     apply (wp reset_untyped_cap_wp unlessE_wp| simp)+
-   apply (wp hoare_drop_impE_R)
-   apply (erule hoare_strengthen_postE_R[OF reset_untyped_cap_wp
-            [where free_range = free_range and obj_range = obj_range]])
-   apply clarsimp
-   apply (rule conjI)
-    apply sep_solve
-   apply (drule opt_cap_sep_imp)
-   apply (fastforce dest!: reset_cap_asid_simps2)
-  apply (clarsimp split: if_splits)
-  apply (sep_select_asm 3)
-  apply (frule opt_cap_sep_imp, clarsimp dest!: reset_cap_asid_simps2)
-  apply (intro conjI impI)
-   apply sep_cancel+
-   apply (erule sep_list_conj_impl[rotated])
-   apply (rule list_all2I)
-    apply (clarsimp simp add: zip_map1 zip_map2 set_zip_same sep_any_map_c_imp)+
-  apply sep_cancel+
-  apply (erule sep_list_conj_impl[rotated])
-  apply (rule list_all2I)
-   apply (clarsimp simp add: zip_map1 zip_map2 set_zip_same sep_any_map_c_imp)+
+       apply (wp sep_hoare_fold_mapM_x[OF create_cap_wp[where cap=NullCap], simplified])
+      apply (wp retype_region_wp[simplified sep_wp_simp, THEN sep_lift_generic])
+     apply (wp update_available_range_wp[simplified sep_wp_simp, THEN sep_lift_generic])
+    apply wp
+   apply wp
+   apply (rule reset_untyped_cap_wp_trivial'')
+  apply (clarsimp)
+  apply (rule conjI, intro impI, clarsimp)
+   apply (sep_frule (direct) opt_cap_sep_imp[where p=uref], clarsimp)
+   apply (drule reset_cap_asid_untyped_cap_eqD, simp)
+   apply (intro conjI)
+       apply (fastforce)
+      apply (erule distinct_pick)
+      apply (clarsimp simp: comp_def generate_range_def)
+     apply (clarsimp simp: comp_def generate_range_def)
+    apply (fastforce)
+   apply (frule distinct_singleton_union_eq)
+    apply (clarsimp simp: generate_range_def, clarsimp)
+   apply (sep_cancel)+
+   apply (rule sep_map_sep_foldI)
+   apply (subgoal_tac "(\<And>* map (\<lambda>x. fst x \<mapsto>c NullCap)
+            (zip slots (generate_range (alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt ts)) nt (obj_bits_cdl nt ts) (length slots))))
+             = (\<And>* map (\<lambda>x. x \<mapsto>c NullCap) slots)")
+    prefer 2
+    apply (rule arg_cong)
+    apply (clarsimp simp: generate_range_def)
+    apply (subst map_zip_helper', simp)
+   apply (clarsimp)
+   apply (sep_cancel)+
+   apply (clarsimp simp: generate_range_def zip_map2 map_zip_helper comp_def)
+  apply (intro impI, clarsimp)
+  apply (sep_frule (direct) opt_cap_sep_imp[where p=uref], clarsimp)
+  apply (drule reset_cap_asid_untyped_cap_eqD; clarsimp)
+  apply (intro conjI)
+      apply (sep_solve)
+     apply (clarsimp)
+    apply (erule distinct_pick)
+    apply (clarsimp simp: comp_def generate_range_def)
+   apply (clarsimp simp: comp_def pick_def generate_range_def)
+  apply (frule  distinct_singleton_union_eq )
+   apply (clarsimp simp: generate_range_def, clarsimp)
+  apply (sep_cancel)+
+  apply (rule sep_map_sep_foldI)+
+  apply (clarsimp simp: generate_range_def)
+  apply (subst map_zip_helper', sep_cancel+)
+  apply (clarsimp simp: generate_range_def zip_map2 map_zip_helper comp_def)
   done
-
 
 lemma mapME_x_singleton:
   "mapME_x f [a] = (f a >>= return)"
@@ -438,10 +429,6 @@ lemma create_cap_has_children[wp]:
   apply wpsimp
   done
 
-abbreviation (input) "retype_with_kids uinv
-  \<equiv> (case uinv of (InvokeUntyped (Retype uref nt ts dest has_kids n)) \<Rightarrow> has_kids)"
-
-
 crunch retype_region, update_available_range
   for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
   (simp: crunch_simps corrupt_intents_def)
@@ -453,41 +440,36 @@ crunch retype_region, update_available_range
 lemma invoke_untyped_one_has_children:
   "uinv = (Retype uref nt ts [slot] has_kids (Suc 0))
   \<Longrightarrow> \<lbrace>K(nt \<noteq> UntypedType)\<rbrace> invoke_untyped uinv \<lbrace>\<lambda>r. has_children uref\<rbrace>,-"
-  apply (simp add:invoke_untyped_def)
-  apply (wp)
-       apply (rule_tac P = "zip [slot] new_obj_refs \<noteq> []" in hoare_gen_asm)
+  apply (simp add: invoke_untyped_def)
+  apply wp
+       apply (rule_tac P = "zip [slot] (generate_range
+                (if has_kids then alignUp (Min (get_range ((\<noteq>) {}) (available_range untyped_cap) (untyped_cap_range untyped_cap))) (obj_bits_cdl nt ts)
+                 else Min (get_range ((\<noteq>) {}) (available_range untyped_cap) (untyped_cap_range untyped_cap)))
+                    nt (obj_bits_cdl nt ts) (Suc 0)) \<noteq> []" in hoare_gen_asm)
        apply (rule hoare_strengthen_post[OF mapM_x_accumulate_checks])
          apply (rule create_cap_has_children)
         apply wp
-       apply simp
-      apply (clarsimp simp:neq_Nil_conv)
-        apply (cases slot, fastforce)
-       apply wp+
-     apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
-     apply clarsimp
-    apply (wp unlessE_wp hoare_drop_imps | simp)+
+       apply (clarsimp simp: neq_Nil_conv)
+       apply (cases slot, fastforce)
+      apply (wpsimp wp: unlessE_wp hoare_drop_imps simp: generate_range_def)+
   done
 
 lemma invoke_untyped_exception:
   "uinv = (Retype uref nt ts [dest_slot] has_kids (Suc 0))
-  \<Longrightarrow> \<lbrace>K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
-     \<and> free_range \<subseteq> tot_free_range
-     \<and> (\<not> retype_with_kids (InvokeUntyped uinv) \<longrightarrow> free_range = obj_range) \<and> finite tot_free_range)
-     and (\<lambda>s. cdl_current_domain s = minBound)
-     and < dest_slot \<mapsto>c NullCap
-    \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
-    \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
-    \<and>* P > \<rbrace>
-   invoke_untyped uinv -,\<lbrace>\<lambda>r. Q\<rbrace>"
-  apply (simp add: invoke_untyped_def validE_E_def)
+  \<Longrightarrow> \<lbrace>K (\<not> has_kids \<longrightarrow> (obj_range = free_range))
+     and < dest_slot \<mapsto>c NullCap \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
+    \<and>* sep_true > \<rbrace>
+   invoke_untyped uinv
+  -,\<lbrace>\<lambda>r. Q\<rbrace>"
+  apply (simp only: invoke_untyped_def validE_E_def)
   apply (rule hoare_name_pre_stateE)
   apply (cases uinv)
   apply clarsimp
   apply (wp unlessE_wp
           | wpc | simp add: reset_untyped_cap_def)+
-    apply (rule_tac P = "available_range cap = cap_objects cap" in hoare_gen_asmEx)
-    apply (simp add: whenE_def)
-   apply wp+
+      apply (rule_tac P = "available_range cap = cap_objects cap" in hoare_gen_asmEx)
+      apply (simp add: whenE_def)
+     apply wp+
   apply clarsimp
   apply (cut_tac p = "uref" in opt_cap_sep_imp)
    apply sep_solve
@@ -495,38 +477,39 @@ lemma invoke_untyped_exception:
   done
 
 lemma invoke_untyped_one_wp:
-  "uinv = (Retype uref nt ts [dest_slot] has_kids (Suc 0))
+  fixes "free_range" "obj_range" "nt" "ts"
+  defines "aligned_ptr b \<equiv> (if b then alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt ts)
+                            else Min (get_range ((\<noteq>) {}) free_range obj_range))"
+  defines "base_ptr \<equiv> Min obj_range"
+  shows
+    "uinv = (Retype uref nt ts [dest_slot] has_kids (Suc 0))
   \<Longrightarrow> \<lbrace>K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
-     \<and> free_range \<subseteq> tot_free_range
-     \<and> (\<not> retype_with_kids (InvokeUntyped uinv) \<longrightarrow> free_range = obj_range) \<and> finite tot_free_range)
+     \<and> aligned_ptr has_kids \<in> tot_free_range \<and> finite tot_free_range
+     \<and> (\<not> has_kids \<longrightarrow> (obj_range = free_range)))
      and (\<lambda>s. cdl_current_domain s = minBound)
      and < dest_slot \<mapsto>c NullCap
     \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
     \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range
     \<and>* P > \<rbrace>
   invoke_untyped uinv
-  \<lbrace>\<lambda>_ s. (\<exists>oid free_range'.
-  oid \<in> free_range
-  \<and> free_range' \<subseteq> free_range - {oid} \<and>
-  < dest_slot \<mapsto>c (default_cap nt {oid} ts dev)
-  \<and>* oid \<mapsto>o obj
-  \<and>* (\<And>* ptr\<in>tot_free_range - {oid}. ptr \<mapsto>o Untyped)
-  \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range'
-  \<and>* P > s) \<rbrace>, -"
+  \<lbrace>\<lambda>_ s.
+  < dest_slot \<mapsto>c (default_cap nt {aligned_ptr has_kids} ts dev)
+  \<and>* aligned_ptr has_kids \<mapsto>o obj
+  \<and>* (\<And>* ptr\<in>tot_free_range - {aligned_ptr has_kids}. ptr \<mapsto>o Untyped)
+  \<and>* uref \<mapsto>c UntypedCap dev obj_range (update_range obj_range base_ptr (unat (aligned_ptr has_kids + (1 << obj_bits_cdl nt ts) - base_ptr)))
+  \<and>* P > s \<rbrace>, -"
   apply simp
-  apply (rule hoare_pre)
-   apply (rule hoare_strengthen_postE_R)
-    apply (rule invoke_untyped_wp
-      [where free_range = free_range and obj_range = obj_range
-      and tot_free_range = tot_free_range and obj = obj and P = P])
-   apply clarsimp
-   apply (case_tac nlist)
-    apply simp+
-   apply (rule_tac x = "a" in exI)
-   apply simp
-   apply (rule_tac x = free_range' in exI)
-   apply simp
-  apply clarsimp
+  apply (wp invoke_untyped_wp [where free_range = free_range and obj_range = obj_range and
+                                     aligned_ptr="aligned_ptr has_kids" and sz = "obj_bits_cdl nt ts" and
+                                     obj = obj and base_ptr = base_ptr,
+                                     simplified sep_wp_simp, THEN sep_lift_generic_R])
+  apply (clarsimp simp: base_ptr_def)
+  apply (rule conjI, simp)
+  apply (clarsimp simp: generate_range_def)
+  apply (rule conjI, simp)
+  apply (rule conjI, clarsimp simp: aligned_ptr_def)+
+  apply sep_cancel+
+  apply (clarsimp simp: sep.prod.remove aligned_ptr_def base_ptr_def split: if_splits; sep_solve)
   done
 
 lemma mark_tcb_intent_error_has_children[wp]:
@@ -552,6 +535,18 @@ lemma update_thread_intent_has_children[wp]:
   \<lbrace>\<lambda>rv s. P (has_children ptr s)\<rbrace>"
   by (simp add:has_children_def is_cdt_parent_def | wp )+
 
+lemma do_kernel_op_pull_back':
+  "\<lbrace>\<lambda>s. P \<lparr>kernel_state = s\<rparr> \<rbrace> oper \<lbrace>\<lambda>r s. Q r \<lparr>kernel_state = s\<rparr>\<rbrace> \<Longrightarrow>
+   \<lbrace> P \<rbrace> do_kernel_op oper \<lbrace> Q \<rbrace>"
+  apply (simp add:do_kernel_op_def)
+    apply (wp|wpc)+
+  by (metis (mono_tags, lifting) old.unit.exhaust use_valid user_state.surjective user_state.update_convs(1))
+
+lemma reset_cap_asid_Untyped[simp]: "(reset_cap_asid c = UntypedCap dev obj_range free_range) \<longleftrightarrow> (c = UntypedCap dev obj_range free_range)"
+ by (cases c; clarsimp simp: reset_cap_asid_def )
+
+lemma reset_cap_asid_CNode[simp]: "is_cnode_cap cnode_cap \<Longrightarrow> (reset_cap_asid c = cnode_cap) \<longleftrightarrow> (c = cnode_cap)"
+ by (cases cnode_cap; cases c; clarsimp simp: cap_type_def reset_cap_asid_def )
 
 lemma seL4_Untyped_Retype_sep:
   "\<lbrakk>cap_object root_cnode_cap = root_cnode;
@@ -562,8 +557,8 @@ lemma seL4_Untyped_Retype_sep:
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
    guard_equal root_cnode_cap croot 32\<rbrakk>
-  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
-    \<and> free_range\<subseteq> tot_free_range) and
+   \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object nt (unat ts) minBound = Some obj \<and>
+            aligned_ptr \<in> tot_free_range) and
     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
@@ -576,18 +571,17 @@ lemma seL4_Untyped_Retype_sep:
     and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
   \<rbrace>
   seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
-  \<lbrace>\<lambda>r s. (\<not> r \<longrightarrow> (\<exists>oid free_range'. (\<guillemotleft>
+  \<lbrace>\<lambda>r s. (\<not> r \<longrightarrow>(\<guillemotleft>
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
-  \<and>* (root_cnode, ncptr_slot) \<mapsto>c (default_cap nt {oid} (unat ts) dev)
-  \<and>* oid \<mapsto>o obj
+  \<and>* (root_cnode, ncptr_slot) \<mapsto>c (default_cap nt {aligned_ptr} (unat ts) dev)
+  \<and>* aligned_ptr \<mapsto>o obj
   \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
-  \<and>* (\<And>* ptr\<in>tot_free_range - {oid}. ptr \<mapsto>o Untyped)
-  \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range'
+  \<and>* (\<And>* ptr\<in>tot_free_range - {aligned_ptr}. ptr \<mapsto>o Untyped)
+  \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range (update_range obj_range (Min obj_range) (unat (aligned_ptr + (of_nat 1 << obj_bits_cdl nt (unat ts)) - Min obj_range)) )
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
   \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
-  \<and>* P \<guillemotright> s ) \<and> free_range' \<subseteq> free_range - {oid} \<and> oid \<in> free_range)
-  \<and> has_children (root_cnode,ucptr_slot) (kernel_state s))
+  \<and>* P \<guillemotright> s \<and> has_children (root_cnode,ucptr_slot) (kernel_state s)))
   \<and> (r \<longrightarrow> (\<guillemotleft>
      (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
@@ -597,97 +591,86 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
   \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
-  \<and>* P \<guillemotright> s )
-  \<and> (\<not>has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range))  \<rbrace>"
+  \<and>* P \<guillemotright> s )) \<rbrace>"
   apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
+  apply (rule do_kernel_op_pull_back')
+  apply (clarsimp)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
-   apply (rule do_kernel_op_pull_back)
-   apply (rule call_kernel_with_intent_allow_error_helper
-               [where check= False and tcb = tcb,simplified,rotated -1])
-                apply assumption
-               apply fastforce
-              apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
-         apply (rule_tac P = "\<exists>has_kids. iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts)
-               [(root_cnode, ncptr_slot)]
-               has_kids 1)"
-           in hoare_gen_asmEx)
-         apply clarsimp
-         apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
-          apply wp
-          apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_liftE_R])
-           apply (rule invoke_untyped_one_has_children)
-           apply fastforce
-          apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
+   apply (rule_tac ?Pd2.0 ="\<lambda>s'. has_children (root_cnode,ucptr_slot) s' = has_children (root_cnode,ucptr_slot) s \<and> Q s'" for Q
+      in call_kernel_with_intent_allow_error_helper[where check= False and tcb = tcb,simplified,rotated -1])
+               apply (elim conjE, assumption)
+              apply fastforce[1]
+             apply (wp set_cap_wp)
+            apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
+        apply (rule_tac P = "iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts) [(root_cnode, ncptr_slot)]
+                            (has_children (cap_object root_cnode_cap, offset ucptr root_size) s)  1)" in hoare_gen_asmEx)
+        apply (simp only: perform_invocation.simps)
+        apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
+         apply (wp)
+         apply (subst conj_assoc[symmetric])
+         apply (rule hoare_vcg_conj_liftE_R)
+          apply (rule_tac
             invoke_untyped_one_wp
               [where free_range = free_range
                 and obj_range = obj_range
-                and obj = obj
-                and tot_free_range = tot_free_range])
-           apply fastforce
-          apply clarsimp
-          apply (rule conjI)
-          apply (sep_erule refl_imp, simp)
-          apply (rule_tac x = oid in exI)
-          apply (rule_tac x = free_range' in exI)
-          apply clarsimp
-          apply (sep_schem)
-         apply (rule hoare_pre)
-          apply (rule invoke_untyped_exception
-              [where tot_free_range = tot_free_range and free_range = free_range and obj_range = obj_range], simp)
-         apply force
-        apply (wp hoare_vcg_conj_lift)
-         apply (wp hoare_strengthen_post[OF set_cap_wp])
-         apply (sep_select 4,assumption)
-        apply wp[1]
-       apply (rule_tac P =" nt \<noteq> UntypedType
-        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]"
-        in hoare_gen_asmEx)
-      apply simp
-       apply (rule decode_untyped_invocation_rvu)
-       apply simp
-      apply (simp add:lookup_extra_caps_def mapME_singleton)
-      apply (rule wp_no_exception_seq)
-       apply wp[1]
-      apply (rule lookup_cap_and_slot_rvu[where r = root_size
-       and  cap' = "root_cnode_cap"])
-     apply (rule hoare_pre, wp lookup_cap_and_slot_rvu[where r = root_size
-       and cap' = "UntypedCap dev obj_range free_range"])[1]
-     apply clarsimp
+                and obj = obj  and dev=dev
+                and tot_free_range = tot_free_range and nt=nt and ts="unat ts"
+                and uref = "(cap_object root_cnode_cap, offset ucptr root_size)"
+                and dest_slot = "(cap_object root_cnode_cap, offset ncptr root_size)", simplified sep_wp_simp, THEN sep_lift_generic_R, simplified])
+          apply clarsimp+
+          apply (rule_tac s="has_children (cap_object root_cnode_cap, offset ucptr root_size) s" in trans,
+                  solves simp, rule refl)
+         apply (wp invoke_untyped_one_has_children[where nt=nt and ts="unat ts" and slot="(cap_object root_cnode_cap, offset ncptr root_size)"])
+         apply clarsimp+
+         apply (rule_tac s="has_children (cap_object root_cnode_cap, offset ucptr root_size) s" in trans,
+                 solves simp, rule refl)
+        apply (rule hoare_pre)
+         apply (rule_tac has_kids = "(has_children (cap_object root_cnode_cap, offset ucptr root_size) s)" in
+              invoke_untyped_exception[where dest_slot="(cap_object root_cnode_cap, offset ncptr root_size)" and uref="(cap_object root_cnode_cap, offset ucptr root_size)" and nt=nt and ts="unat ts" and free_range = free_range and obj_range = obj_range])[1]
+         apply (clarsimp)
+        apply (clarsimp)
+        apply (sep_solve)
+       apply (wp)
+       apply (wp set_cap_wp[simplified sep_wp_simp, THEN sep_lift_generic, simplified])
+      apply (rule_tac P =" nt \<noteq> UntypedType
+       \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]" in hoare_gen_asmEx)
+      apply (simp only:)
+      apply (wp decode_untyped_invocation_rvu)
+      apply (clarsimp)
+     apply (simp only:lookup_extra_caps_def mapME_singleton)
+     apply (rule wp_no_exception_seq)
+      apply wp
+     apply (wp lookup_cap_and_slot_rvu[where r = root_size and  cap' = "root_cnode_cap"])[1]
+    apply (wp lookup_cap_and_slot_rvu[where r = root_size and cap=root_cnode_cap and cap' = "UntypedCap dev obj_range free_range"])[1]
+    apply (case_tac "(has_children (cap_object root_cnode_cap, offset ucptr root_size)) s")
+     apply (clarsimp)
      apply (intro conjI allI)
-      apply (intro impI allI)
-      apply (rule conjI)
-       apply (intro impI allI)
-        apply (clarsimp dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)
-        apply (intro conjI,simp_all)[1]
-          apply sep_solve
-         apply sep_cancel+
-      apply (clarsimp simp: user_pointer_at_def Let_def word_bits_def)
-      apply (rule conjI)
-       apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
+  sorry (* FIXME merge
+          apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
+          apply (sep_cancel)+
+          apply (intro conjI; sep_solve)
+         apply (sep_solve)
+        apply (fastforce)
        apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
        apply (sep_solve)
       apply (clarsimp simp: ep_related_cap_def
                      dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)+
-          apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
-      apply (sep_cancel)
-    apply (clarsimp simp: user_pointer_at_def Let_def
-                          word_bits_def sep_conj_assoc)
-    apply (sep_solve)
-   apply (clarsimp simp: user_pointer_at_def Let_def
-                         word_bits_def sep_conj_assoc)
+     apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
+     apply (sep_solve)
+    apply (clarsimp simp: ep_related_cap_def user_pointer_at_def Let_def word_bits_def)
+    apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
+    apply (intro conjI)
+       apply (sep_cancel)+
+       apply (rule conjI)
+        apply (sep_solve)+
+   apply (clarsimp simp:ep_related_cap_def)+
    apply (wp update_thread_intent_update)
   apply (intro conjI allI impI,simp_all)
-     apply (clarsimp simp:ep_related_cap_def)+
+    apply (clarsimp simp:ep_related_cap_def)+
     apply sep_solve
-   apply clarsimp+
-   apply (sep_solve)
-  apply clarsimp
-  apply (sep_solve)
-  done
-
-
-
+   apply (clarsimp, sep_solve)+
+  done *)
 
 (**********************************************************************
  * We need to know the cdt only ever increases when creating objects. *
@@ -784,7 +767,6 @@ lemma invoke_untyped_cdt_inc[wp]:
   apply simp
   apply (rule hoare_pre)
   apply (wp unlessE_wp)
-      apply clarsimp
       apply (wp mapM_x_wp[OF _ subset_refl])
        apply (simp add:create_cap_def)
         apply (rule hoare_pre)
@@ -796,6 +778,12 @@ lemma invoke_untyped_cdt_inc[wp]:
    apply (wp whenE_wp mapME_x_inv_wp | simp)+
   apply (clarsimp simp:detype_def)
   done
+
+lemma invoke_untyped_cdt_inc_R[wp]:
+  "\<lbrace>\<lambda>s. cdl_cdt s child = Some parent \<rbrace>
+  invoke_untyped uinv
+  \<lbrace>\<lambda>_ s. cdl_cdt s child = Some parent \<rbrace>, -"
+  by wp
 
 lemma object_at_cdl_cdt[simp]:
   "object_at P ptr (s\<lparr>cdl_cdt := a\<rparr>)
@@ -1175,16 +1163,13 @@ lemma invoke_untyped_no_pending[wp]:
   "\<lbrace>no_pending and (\<lambda>s. \<not> is_pending_cap (the (opt_cap ref s)))\<rbrace>
   invoke_untyped (Retype ref a b c d e)
   \<lbrace>\<lambda>rv. no_pending\<rbrace>"
-  apply (simp add: invoke_untyped_def create_cap_def)
+  apply (simp add: invoke_untyped_def create_cap_def update_available_range_def)
   apply (wpsimp wp: mapM_x_wp' set_cap_no_pending_asm_in_pre get_cap_wp
-              simp: update_available_range_def)
-     apply (wp (once) hoare_drop_imps)
-     apply (wpsimp split_del: if_split)+
+                simp: update_available_range_def update_range_def)
    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_strengthen_postE_R)
     apply (wp reset_untyped_cap_no_pending)
-   apply simp
-  apply auto
+   apply auto
   done
 
 lemma is_pending_cap_reset_cap_asid:
@@ -1197,6 +1182,149 @@ lemma is_pending_cap_reset_cap_asid:
 lemmas
   is_pending_cap_simps[simp] = is_pending_cap_def[split_simps cdl_cap.split]
 
+lemma map_nonempty_split: "xs \<noteq> [] \<Longrightarrow> map f xs = f (hd xs)# map f (tl xs)"
+  by (induct xs; clarsimp)
+
+lemma zip_generate_range_single: "\<lbrakk>type \<noteq> UntypedType; n \<noteq> 0\<rbrakk>
+   \<Longrightarrow> zip [x] (generate_range start type sz n) = [(x, {start})]"
+  apply (simp add: generate_range_def comp_def)
+  apply (case_tac " [0..<n] = []")
+   apply (simp add: map_nonempty_split)+
+  done
+
+lemma create_cap_touch_wp:
+  "\<lbrace>< (fst xs) \<mapsto>c - \<and>* R >\<rbrace>
+  create_cap new_type sz parent_slot dev xs
+  \<lbrace>\<lambda>_. < (fst xs) \<mapsto>c - \<and>* R >\<rbrace>"
+  apply (simp add: create_cap_def)
+  apply wpc
+   apply (wp set_parent_wp)
+     apply (wp sep_wp: set_cap_wp)+
+  apply clarsimp
+  apply sep_solve
+  done
+
+lemma sep_map_list_conjD: "\<lbrakk>(\<And>* map P xs) s; \<And>v s. \<lbrakk>v \<in> set xs; P v s\<rbrakk> \<Longrightarrow> P' v s\<rbrakk>
+   \<Longrightarrow> (\<And>* map P' xs) s"
+  apply (induction xs arbitrary: s; simp)
+  apply (erule sep_conj_impl; simp)
+  done
+
+lemma create_objects_touch_wp:
+  notes set_map[simp del]
+  shows
+  "\<lbrace> K (obj_refs = map (\<lambda>x. {x}) (map pick obj_refs) \<and> distinct (map pick obj_refs) \<and> obj \<noteq> None)
+     and <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o -) \<and>* P > \<rbrace>
+   create_objects obj_refs (obj)
+   \<lbrace>\<lambda>r s. <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o -) \<and>* P > s \<rbrace>"
+  apply (rule hoare_name_pre_state, clarsimp)
+  apply (subst create_objects_mapM_x'[where ids' = "map pick obj_refs"])
+   apply simp
+  apply (rule hoare_pre)
+   apply (rule hoare_strengthen_post)
+    apply (rule cdl.mapM_x_sep')
+    apply (rule create_one_wp)
+   apply (subst sep_list_conj_sep_map_set_conj[symmetric])
+    apply (simp add:distinct_map)
+   apply simp
+   apply (clarsimp simp: set_map[symmetric])
+   apply (subst(asm) sep_list_conj_sep_map_set_conj[symmetric])
+    apply (simp add:distinct_map)
+   apply (simp add:set_map)
+   apply sep_cancel
+  apply (clarsimp simp: comp_def)
+  apply (subst (asm) sep_list_conj_sep_map_set_conj[symmetric])
+   apply (clarsimp)
+  apply (subst (asm) map_map)
+  apply (clarsimp simp: comp_def)
+  apply (sep_cancel)+
+  apply (erule sep_map_list_conjD)
+  apply (sep_solve)
+  done
+
+lemma retype_region_touch_wp: "\<lbrace>\<lambda>s. obj_refs = map ((\<lambda>x. {x}) \<circ> pick) obj_refs \<and>
+  distinct (map pick obj_refs) \<and> target_type \<noteq> UntypedType \<and> <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o -) \<and>* P> s\<rbrace>
+   retype_region target_bits target_type obj_refs
+  \<lbrace>\<lambda>r. <(\<And>* ptr\<in>set (map pick obj_refs). ptr \<mapsto>o -) \<and>* P>\<rbrace>"
+  apply (clarsimp simp: retype_region_def, wp)
+    apply(rule create_objects_touch_wp[simplified, THEN sep_lift_generic, simplified])
+   apply (wp)
+  apply (clarsimp)
+  apply (intro conjI)
+   apply (cases target_type; clarsimp simp: default_object_def)
+  apply (sep_solve)
+  done
+
+lemma update_available_range_touch_wp: "\<lbrace>\<lambda>s. <cap_ref \<mapsto>c - \<and>* P> s\<rbrace>
+  update_available_range ptr idx cap_ref cap
+  \<lbrace>\<lambda>r s. <cap_ref \<mapsto>c - \<and>* P> s\<rbrace>"
+  apply (clarsimp simp: update_available_range_def Let_unfold update_range_def)
+  apply (intro conjI impI; wp sep_wp: set_cap_wp, sep_solve)
+  done
+
+lemma invoke_untyped_touch_wp:
+  "invocation = (Retype uref nt (unat ts) [dest_slot] has_kids (Suc 0)) \<Longrightarrow>
+   \<lbrace>\<lambda>s. (\<not> has_kids \<longrightarrow> obj_range = free_range) \<and> nt \<noteq> UntypedType \<and>
+    < dest_slot \<mapsto>c NullCap \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range \<and>*
+    (if has_kids then (alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt (unat ts))) else  (Min (get_range ((\<noteq>) {}) free_range obj_range))) \<mapsto>o - \<and>*  R> s \<rbrace>
+    invoke_untyped invocation
+   \<lbrace>\<lambda>rv s. <uref \<mapsto>c - \<and>* dest_slot \<mapsto>c - \<and>*
+    (if has_kids then (alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt (unat ts))) else  (Min (get_range ((\<noteq>) {}) free_range obj_range))) \<mapsto>o - \<and>* R> s\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (clarsimp simp:  invoke_untyped_def)
+  apply (intro conjI impI; clarsimp)
+   apply wp
+       apply (subst zip_generate_range_single, clarsimp, clarsimp)
+       apply (subst mapM_x_singleton)
+       apply (wp sep_wp: create_cap_touch_wp)
+      apply (wp retype_region_touch_wp[simplified, THEN sep_lift_generic, simplified])
+     apply (wp sep_wp: update_available_range_touch_wp)
+    apply (clarsimp)
+    apply (rule get_cap_rv[where cap="UntypedCap dev obj_range free_range" and R=sep_true])
+   apply (clarsimp)
+   apply (intro conjI)
+    apply (sep_solve)
+   apply (sep_cancel)+
+   apply (clarsimp simp: generate_range_def)
+   apply (sep_solve)
+  apply wp
+       apply (subst zip_generate_range_single, clarsimp, clarsimp)
+       apply (subst mapM_x_singleton)
+       apply (wp sep_wp: create_cap_touch_wp)
+      apply (wp retype_region_touch_wp[simplified, THEN sep_lift_generic, simplified])
+     apply (wp sep_wp: update_available_range_touch_wp)
+    apply (clarsimp)
+    apply (rule get_cap_rv[where cap="UntypedCap dev obj_range free_range" and R=sep_true])
+   apply (wp reset_untyped_cap_wp_trivial[THEN sep_lift_generic])
+  apply (clarsimp, intro conjI impI)
+       apply (sep_solve)
+      apply (clarsimp)
+     apply (sep_solve)
+    apply (clarsimp)
+   apply (sep_cancel)+
+   apply (intro conjI; clarsimp simp: generate_range_def)
+   apply (sep_solve)
+  apply (clarsimp)
+  done
+
+lemma invoke_untyped_touch_wp_R:
+  "invocation = (Retype uref nt (unat ts) [dest_slot] has_kids (Suc 0)) \<Longrightarrow>
+   \<lbrace>\<lambda>s. (\<not> has_kids \<longrightarrow> obj_range = free_range) \<and> nt \<noteq> UntypedType \<and>
+    < dest_slot \<mapsto>c NullCap \<and>* uref \<mapsto>c UntypedCap dev obj_range free_range \<and>*
+    (if has_kids then (alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt (unat ts))) else  (Min (get_range ((\<noteq>) {}) free_range obj_range))) \<mapsto>o - \<and>*  R> s \<rbrace>
+    invoke_untyped invocation
+   \<lbrace>\<lambda>rv s. <uref \<mapsto>c - \<and>* dest_slot \<mapsto>c - \<and>*
+    (if has_kids then (alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt (unat ts))) else  (Min (get_range ((\<noteq>) {}) free_range obj_range))) \<mapsto>o - \<and>* R> s\<rbrace>, -"
+  apply (simp only:)
+  apply (rule valid_validE_R)
+  apply (rule hoare_chain[OF invoke_untyped_touch_wp])
+    apply simp
+   apply assumption+
+  done
+
+abbreviation (input) "retype_with_kids uinv
+  \<equiv> (case uinv of (InvokeUntyped (Retype uref nt ts dest has_kids n)) \<Rightarrow> has_kids)"
+
 lemma seL4_Untyped_Retype_inc_no_preempt:
   "\<lbrakk>cap_object root_cnode_cap = root_cnode;
    ucptr_slot = offset ucptr root_size;
@@ -1206,8 +1334,7 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
    one_lvl_lookup root_cnode_cap 32 root_size;
    guard_equal root_cnode_cap ucptr 32;
    guard_equal root_cnode_cap croot 32\<rbrakk>
-  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj
-    \<and> free_range\<subseteq> tot_free_range) and
+  \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object  nt (unat ts) minBound = Some obj) and
     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
   \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
@@ -1216,8 +1343,11 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
   \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
   \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
+  \<and>* aligned_ptr \<mapsto>o -
   \<and>* P\<guillemotright>
-    and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
+    and (\<lambda>s. if has_children (root_cnode,ucptr_slot) (kernel_state s)
+       then  aligned_ptr = alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range)) (obj_bits_cdl nt (unat ts))
+       else obj_range = free_range \<and>  aligned_ptr = Min (get_range ((\<noteq>) {}) free_range obj_range ))
     and (\<lambda>s. cdl_cdt (kernel_state s) child = Some parent)
   \<rbrace>
   seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
@@ -1226,11 +1356,10 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
-   apply (rule call_kernel_with_intent_allow_error_helper
-     [where check= False and tcb = tcb and Q = Q  and Perror = Q
-        for Q , simplified])
+   apply (rule_tac ?Pd2.0="\<lambda>s'. has_children (root_cnode,ucptr_slot) ( s') = has_children (root_cnode,ucptr_slot) (kernel_state s) \<and> Q s'" for Q
+          in call_kernel_with_intent_allow_error_helper[where check= False and tcb = tcb and Q = Q and Perror = Q for Q,simplified])
                apply fastforce
-              apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
+              apply (wp)+
          apply (rule_tac P = "\<exists>has_kids. iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts)
                [(root_cnode, ncptr_slot)]
                has_kids 1)"
@@ -1239,62 +1368,73 @@ lemma seL4_Untyped_Retype_inc_no_preempt:
          apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
           apply wp
           apply (rule hoare_strengthen_postE_R[OF hoare_vcg_conj_liftE_R])
-           apply (rule valid_validE_R)
-           apply (rule invoke_untyped_cdt_inc)
-          apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
-            invoke_untyped_one_wp
-              [where free_range = free_range
-                and obj_range = obj_range
-                and obj = obj
-                and tot_free_range = tot_free_range])
-           apply fastforce
+            apply (rule valid_validE_R)
+            apply (rule invoke_untyped_cdt_inc)
+           apply (rule invoke_untyped_touch_wp_R [where
+                        uref = "(cap_object root_cnode_cap, offset ucptr root_size)"
+                    and dest_slot = "(cap_object root_cnode_cap, offset ncptr root_size)"
+                    and free_range = free_range and nt=nt and ts="ts"
+                    and obj_range = obj_range, simplified sep_wp_simp, THEN sep_lift_generic_R])
+           apply clarsimp
+           apply (rule_tac s="retype_with_kids (InvokeUntyped (Retype _ _ _ _ has_kids _))" in trans, simp, rule refl)
           apply clarsimp
           apply (rule conjI)
            apply (sep_erule refl_imp, simp)
           apply fastforce
          apply (rule hoare_pre)
-          apply (rule invoke_untyped_exception
-              [where tot_free_range = tot_free_range and free_range = free_range and obj_range = obj_range], simp)
-         apply force
+          apply (rule invoke_untyped_exception[where  free_range = free_range and obj_range = obj_range], simp)
+         apply (clarsimp)
+         apply (sep_solve)
         apply (wp hoare_vcg_conj_lift)
          apply (wp hoare_strengthen_post[OF set_cap_wp])
-         apply (sep_select 4,assumption)
+         apply (sep_schem)
         apply wp[1]
-       apply (rule_tac P =" nt \<noteq> UntypedType
-        \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]"
+       apply (rule_tac P ="nt \<noteq> UntypedType \<and> c = UntypedCap dev obj_range free_range \<and> cs = [(root_cnode_cap,(root_cnode,offset croot root_size))]"
         in hoare_gen_asmEx)
-      apply simp
+       apply simp
        apply (rule decode_untyped_invocation_rvu)
        apply simp
       apply (simp add:lookup_extra_caps_def mapME_singleton)
       apply (rule wp_no_exception_seq)
        apply wp[1]
-      apply (rule lookup_cap_and_slot_rvu[where r = root_size
-       and  cap' = "root_cnode_cap"])
-      apply clarsimp
-     apply (wp lookup_cap_and_slot_rvu[where r = root_size
-       and cap' = "UntypedCap dev obj_range free_range"])[1]
-    apply clarsimp
+      apply (rule lookup_cap_and_slot_rvu[where r = root_size and  cap' = "root_cnode_cap"])
+     apply clarsimp
+     apply (rule hoare_weaken_preE)
+      apply (rule lookup_cap_and_slot_rvu[where r = root_size and cap' = "UntypedCap dev obj_range free_range"])[1]
+     apply (force)
     apply (wp hoare_vcg_ball_lift
               update_thread_intent_update
               hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
-              is_cnode_cap_guard_equal update_thread_intent_update )
-   apply clarsimp
-   apply (erule conjE)+
-   apply (drule_tac x = "UntypedCap dev obj_range free_range" in spec)
-   apply clarsimp
-   apply (erule conjE)+
-   apply (drule_tac x = root_cnode_cap in spec)
-   apply clarsimp
-   apply (erule conjE)+
-   apply clarsimp
-   apply (erule use_sep_true_for_sep_map_c)
-   apply (thin_tac "<P \<and>* Q \<and>* sep_true> sa" for P Q)
-   apply sep_solve
-  apply clarsimp
-  apply (intro conjI impI allI, simp_all)
-          apply (clarsimp simp: user_pointer_at_def Let_def ep_related_cap_def
-                                word_bits_def sep_conj_assoc
-                         dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap | sep_solve)+
+              is_cnode_cap_guard_equal update_thread_intent_update)
+   apply clarsimp+
+   apply (case_tac "has_children (cap_object root_cnode_cap, offset ucptr root_size) sa", clarsimp)
+    apply (drule mp, force)
+    apply (clarsimp)
+    apply (sep_schem)
+   apply (drule mp, force)
+   apply (clarsimp)
+   apply (sep_schem)
+  apply (clarsimp)
+  apply (intro conjI impI)
+         apply (erule conjE)+
+         apply clarsimp
+         apply (sep_cancel)
+         apply (sep_cancel)
+         apply (sep_cancel)
+         apply (sep_cancel)
+         apply (sep_cancel)
+         apply (sep_cancel)
+         apply (sep_erule refl_imp)
+         apply (rule TrueI)
+        apply (sep_solve)+
+       apply (erule conjE)+
+       apply (fastforce)
+      apply (subst disj_imp, intro impI conjI)
+         apply (clarsimp)
+        apply (clarsimp, sep_solve)
+       apply (clarsimp)
+       apply (clarsimp simp: user_pointer_at_def Let_def ep_related_cap_def
+                                       word_bits_def sep_conj_assoc
+                                dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap | sep_solve)+
   done
 end
