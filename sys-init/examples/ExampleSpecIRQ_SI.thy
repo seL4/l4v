@@ -612,6 +612,9 @@ lemma well_formed_caps_example:
    well_formed_caps example_spec obj_id obj"
    apply (clarsimp simp: well_formed_caps_def, rule conjI)
    apply (clarsimp simp: is_orig_cap_example_spec)
+subgoal sorry
+apply (rule conjI)
+   apply (clarsimp simp: is_orig_cap_example_spec)
    apply (clarsimp simp: example_spec_def obj_defs object_type_def cap_type_def object_slots_def
                          is_copyable_cap_def
                   dest!: cdl_cnode_caps_new_cnode_D new_cap_map_caps_D

@@ -538,76 +538,96 @@ lemma update_thread_intent_has_children[wp]:
 lemma do_kernel_op_pull_back':
   "\<lbrace>\<lambda>s. P \<lparr>kernel_state = s\<rparr> \<rbrace> oper \<lbrace>\<lambda>r s. Q r \<lparr>kernel_state = s\<rparr>\<rbrace> \<Longrightarrow>
    \<lbrace> P \<rbrace> do_kernel_op oper \<lbrace> Q \<rbrace>"
-  apply (simp add:do_kernel_op_def)
-    apply (wp|wpc)+
-  by (metis (mono_tags, lifting) old.unit.exhaust use_valid user_state.surjective user_state.update_convs(1))
+  apply (wpsimp simp: do_kernel_op_def)
+  apply (metis (mono_tags, lifting) unit.exhaust use_valid user_state.surjective
+                                    user_state.update_convs(1))
+  done
 
-lemma reset_cap_asid_Untyped[simp]: "(reset_cap_asid c = UntypedCap dev obj_range free_range) \<longleftrightarrow> (c = UntypedCap dev obj_range free_range)"
- by (cases c; clarsimp simp: reset_cap_asid_def )
+lemma reset_cap_asid_Untyped[simp]:
+  "reset_cap_asid c = UntypedCap dev obj_range free_range \<longleftrightarrow>
+   c = UntypedCap dev obj_range free_range"
+  by (cases c; clarsimp simp: reset_cap_asid_def )
 
-lemma reset_cap_asid_CNode[simp]: "is_cnode_cap cnode_cap \<Longrightarrow> (reset_cap_asid c = cnode_cap) \<longleftrightarrow> (c = cnode_cap)"
- by (cases cnode_cap; cases c; clarsimp simp: cap_type_def reset_cap_asid_def )
+lemma reset_cap_asid_CNode[simp]:
+  "is_cnode_cap cnode_cap \<Longrightarrow> reset_cap_asid c = cnode_cap \<longleftrightarrow> c = cnode_cap"
+  by (cases cnode_cap; cases c; clarsimp simp: cap_type_def reset_cap_asid_def )
 
 lemma seL4_Untyped_Retype_sep:
-  "\<lbrakk>cap_object root_cnode_cap = root_cnode;
-   ucptr_slot = offset ucptr root_size;
-   is_cnode_cap root_cnode_cap;
-   ncptr_slot = offset ncptr root_size;
-   unat ncptr_slot_nat = ncptr_slot;
-   one_lvl_lookup root_cnode_cap 32 root_size;
-   guard_equal root_cnode_cap ucptr 32;
-   guard_equal root_cnode_cap croot 32\<rbrakk>
-   \<Longrightarrow> \<lbrace> K (nt\<noteq> UntypedType \<and> default_object nt (unat ts) minBound = Some obj \<and>
-            aligned_ptr \<in> tot_free_range) and
-    \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
-  \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
-  \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
-  \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range
-  \<and>* (root_cnode, ncptr_slot ) \<mapsto>c NullCap
-  \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
-  \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
-  \<and>* P\<guillemotright>
-    and (\<lambda>s. \<not> has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range)
-  \<rbrace>
-  seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
-  \<lbrace>\<lambda>r s. (\<not> r \<longrightarrow>(\<guillemotleft>
-     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
-  \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
-  \<and>* (root_cnode, ncptr_slot) \<mapsto>c (default_cap nt {aligned_ptr} (unat ts) dev)
-  \<and>* aligned_ptr \<mapsto>o obj
-  \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
-  \<and>* (\<And>* ptr\<in>tot_free_range - {aligned_ptr}. ptr \<mapsto>o Untyped)
-  \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range (update_range obj_range (Min obj_range) (unat (aligned_ptr + (of_nat 1 << obj_bits_cdl nt (unat ts)) - Min obj_range)) )
-  \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
-  \<and>* P \<guillemotright> s \<and> has_children (root_cnode,ucptr_slot) (kernel_state s)))
-  \<and> (r \<longrightarrow> (\<guillemotleft>
-     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
-  \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
-  \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
-  \<and>* (root_cnode,ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range
-  \<and>* (root_cnode, ncptr_slot) \<mapsto>c NullCap
-  \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
-  \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
-  \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
-  \<and>* P \<guillemotright> s )) \<rbrace>"
-  apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
+  "\<lbrakk> cap_object root_cnode_cap = root_cnode;
+     ucptr_slot = offset ucptr root_size;
+     is_cnode_cap root_cnode_cap;
+     ncptr_slot = offset ncptr root_size;
+     unat ncptr_slot_nat = ncptr_slot;
+     one_lvl_lookup root_cnode_cap 32 root_size;
+     guard_equal root_cnode_cap ucptr 32;
+     guard_equal root_cnode_cap croot 32;
+     default_object  nt (unat ts) minBound = Some obj;
+     aligned_ptr \<in> tot_free_range \<rbrakk> \<Longrightarrow>
+   \<lbrace> K (nt \<noteq> UntypedType) and
+     \<guillemotleft>root_tcb_id \<mapsto>f (Tcb tcb)
+      \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+      \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
+      \<and>* (root_cnode, ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range
+      \<and>* (root_cnode, ncptr_slot ) \<mapsto>c NullCap
+      \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
+      \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
+      \<and>* P\<guillemotright>
+     and (\<lambda>s. if has_children (root_cnode,ucptr_slot) (kernel_state s)
+              then aligned_ptr = alignUp (Min (get_range ((\<noteq>) {}) free_range obj_range))
+                                         (obj_bits_cdl nt (unat ts))
+              else obj_range = free_range \<and>
+                   aligned_ptr = Min (get_range ((\<noteq>) {}) free_range obj_range))\<rbrace>
+   seL4_Untyped_Retype ucptr nt ts croot node_index 0 ncptr_slot_nat 1
+   \<lbrace>\<lambda>err s.
+      (\<not>err \<longrightarrow>
+        \<guillemotleft>(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+         \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
+         \<and>* (root_cnode, ncptr_slot) \<mapsto>c (default_cap nt {aligned_ptr} (unat ts) dev)
+         \<and>* aligned_ptr \<mapsto>o obj
+         \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
+         \<and>* (\<And>* ptr\<in>tot_free_range - {aligned_ptr}. ptr \<mapsto>o Untyped)
+         \<and>* (root_cnode, ucptr_slot) \<mapsto>c
+              UntypedCap dev obj_range
+                         (update_range obj_range (Min obj_range)
+                                       (unat (aligned_ptr + (of_nat 1 << obj_bits_cdl nt (unat ts))
+                                              - Min obj_range)))
+         \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
+         \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
+         \<and>* P\<guillemotright> s \<and>
+        has_children (root_cnode,ucptr_slot) (kernel_state s))
+      \<and>
+      (err \<longrightarrow>
+        \<guillemotleft>(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+         \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
+         \<and>* (cap_object root_cnode_cap \<mapsto>f CNode (empty_cnode root_size))
+         \<and>* (root_cnode,ucptr_slot) \<mapsto>c UntypedCap dev obj_range free_range
+         \<and>* (root_cnode, ncptr_slot) \<mapsto>c NullCap
+         \<and>* (\<And>* ptr\<in>tot_free_range. ptr \<mapsto>o Untyped)
+         \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cnode_cap
+         \<and>* (cap_object root_cnode_cap, offset croot root_size) \<mapsto>c root_cnode_cap
+         \<and>* P\<guillemotright> s) \<rbrace>"
+  apply (simp add: seL4_Untyped_Retype_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back')
-  apply (clarsimp)
+  apply clarsimp
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
-   apply (rule_tac ?Pd2.0 ="\<lambda>s'. has_children (root_cnode,ucptr_slot) s' = has_children (root_cnode,ucptr_slot) s \<and> Q s'" for Q
-      in call_kernel_with_intent_allow_error_helper[where check= False and tcb = tcb,simplified,rotated -1])
+   apply (rule_tac ?Pd2.0 = "\<lambda>s'. has_children (root_cnode, ucptr_slot) s' =
+                                  has_children (root_cnode, ucptr_slot) s \<and> Q s'" for Q
+                   in call_kernel_with_intent_allow_error_helper[where check= False and tcb = tcb,
+                                                                 simplified, rotated -1])
                apply (elim conjE, assumption)
-              apply fastforce[1]
+              apply fastforce
              apply (wp set_cap_wp)
             apply ((wp hoare_vcg_ex_lift set_cap_wp)+)[5]
-        apply (rule_tac P = "iv = InvokeUntyped (Retype (root_cnode,ucptr_slot) nt (unat ts) [(root_cnode, ncptr_slot)]
-                            (has_children (cap_object root_cnode_cap, offset ucptr root_size) s)  1)" in hoare_gen_asmEx)
+        apply (rule_tac P = "iv = InvokeUntyped (Retype (root_cnode, ucptr_slot) nt (unat ts)
+                                                        [(root_cnode, ncptr_slot)]
+                                                        (has_children (cap_object root_cnode_cap,
+                                                                       offset ucptr root_size) s)
+                                                        1)" in hoare_gen_asmEx)
         apply (simp only: perform_invocation.simps)
-        apply (rule hoare_vcg_conj_elimE[where P = P and P' = P for P,simplified,rotated])
-         apply (wp)
+        apply (rule hoare_vcg_conj_elimE[where P=P and P'=P for P, simplified, rotated])
+         apply wp
          apply (subst conj_assoc[symmetric])
          apply (rule hoare_vcg_conj_liftE_R)
           apply (rule_tac
@@ -646,7 +666,6 @@ lemma seL4_Untyped_Retype_sep:
     apply (case_tac "(has_children (cap_object root_cnode_cap, offset ucptr root_size)) s")
      apply (clarsimp)
      apply (intro conjI allI)
-  sorry (* FIXME merge
           apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
           apply (sep_cancel)+
           apply (intro conjI; sep_solve)
@@ -670,7 +689,7 @@ lemma seL4_Untyped_Retype_sep:
     apply (clarsimp simp:ep_related_cap_def)+
     apply sep_solve
    apply (clarsimp, sep_solve)+
-  done *)
+  done
 
 (**********************************************************************
  * We need to know the cdt only ever increases when creating objects. *

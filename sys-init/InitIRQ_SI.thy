@@ -82,10 +82,10 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (simp add: object_fields_initialised_def object_initialised_general_def)
   apply (sep_drule sep_map_s_sep_map_c [where obj_id = kernel_irq_id
          and cap = "NotificationCap kernel_ntfn_id 0 {AllowRead, AllowWrite}"
-         and obj = "spec2s t spec_irq"])
+         and obj = "object_initialised_state t spec_irq"])
    apply simp
    apply (frule (1) object_slots_opt_capI)
-   apply (subst object_slots_spec2s,
+   apply (subst object_slots_object_initialised_state,
          (fastforce simp: object_type_has_slots cap_has_object_def
                           update_cap_object_def cap_type_def
                    split: cdl_cap.splits)+)
@@ -207,7 +207,7 @@ lemma irq_slot_empty_initialised_NullCap:
   apply (rule ext)
   apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def
                  split: option.splits)
-  apply (subgoal_tac "object_slots (object_default_state obj) slot = object_slots (spec2s t obj) slot")
+  apply (subgoal_tac "object_slots (object_default_state obj) slot = object_slots (object_initialised_state t obj) slot")
    apply (subst sep_map_s_object_slots_equal, assumption, simp)
    apply clarsimp
   apply (frule object_slots_spec2s_NullCap [where t=t], simp)

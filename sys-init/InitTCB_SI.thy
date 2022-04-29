@@ -53,7 +53,7 @@ lemma tcb_decomp':
     opt_cap (obj_id, tcb_replycap_slot) spec = Some reply_cap;
     opt_cap (obj_id, tcb_pending_op_slot) spec = Some pending_cap;
     opt_cap (obj_id, tcb_boundntfn_slot) spec = Some bound_cap\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t obj) =
      (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
@@ -76,7 +76,7 @@ lemma tcb_decomp':
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
-         rule object_slots_spec2s',
+         rule object_slots_object_initialised_state',
          fastforce simp: opt_cap_def slots_of_def object_slots_def)+
   apply (clarsimp simp: sep_conj_ac)
   done
@@ -86,7 +86,7 @@ lemma tcb_half_decomp':
     opt_cap (obj_id, tcb_cspace_slot) spec = Some cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t (tcb_half spec obj)) =
      (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
@@ -112,15 +112,17 @@ lemma tcb_half_decomp':
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
-         rule object_slots_spec2s',
+         rule object_slots_object_initialised_state',
          simp add: object_slots_tcb_half tcb_slot_defs,
          fastforce simp: opt_cap_def slots_of_def object_slots_def)+
+  apply(subst sep_map_f_object_initialised_state_alt)
+   apply(simp add: tcb_half_def update_slots_def is_frame_def)
   apply (clarsimp simp: sep_conj_ac)
   done
 
 lemma tcb_decomp [simplified]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t obj) =
     (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
@@ -152,7 +154,7 @@ lemma tcb_decomp [simplified]:
 
 lemma tcb_half_decomp [simplified]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
-  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+  \<Longrightarrow> (k_obj_id \<mapsto>o object_initialised_state t (tcb_half spec obj)) =
     (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
@@ -311,14 +313,11 @@ lemma default_cap_update_cap_object_non_cnode:
   done
 
 lemma sep_map_f_eq_tcb_fault_endpoint:
-  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>\<not> cdl_tcb_has_fault tcb; cdl_tcb_domain tcb = minBound; cdl_tcb_extra tcb = default_tcb_extra_data\<rbrakk> \<Longrightarrow>
    obj_id \<mapsto>f Tcb (update_tcb_fault_endpoint (cdl_tcb_fault_endpoint tcb) (default_tcb minBound)) =
    obj_id \<mapsto>f Tcb tcb"
-   apply (rule sep_map_f_eq_tcb)
-     apply (clarsimp simp: update_tcb_fault_endpoint_def)
-    apply (clarsimp simp: update_tcb_fault_endpoint_def default_tcb_def)
-   apply (clarsimp simp: update_tcb_fault_endpoint_def default_tcb_def)
-  done
+  apply (rule sep_map_f_eq_tcb)
+  by (auto simp: update_tcb_fault_endpoint_def default_tcb_def)
 
 lemma cnode_not_device[simp]:
   "is_cnode_cap spec_cspace_cap \<Longrightarrow> \<not> is_device_cap spec_cspace_cap"
@@ -424,9 +423,13 @@ lemma tcb_configure_post:
   apply (clarsimp simp: si_objects_def)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
+
+thm tcb_half_decomp'
+
   apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
-  apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+)
+  apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+,
+         fastforce intro: well_formed_tcb_extra_data)
   apply (clarsimp simp: opt_cap_def slots_of_def)
   apply (frule (2) well_formed_well_formed_cap [where cap=spec_cspace_cap],
          simp add: cap_type_null)
@@ -436,7 +439,6 @@ lemma tcb_configure_post:
   apply (frule (2) well_formed_vm_cap_has_asid [where cap=spec_vspace_cap])
   apply (frule (1) well_formed_is_fake_vm_cap
          [where cap=spec_vspace_cap], simp+)
-
   apply (frule (4) well_formed_cnode_object_size_bits_eq2, simp)
   apply (subst (asm) update_cap_data [where spec_cap = spec_cspace_cap],
          (assumption|simp|fastforce dest: is_fake_vm_cap_cap_type)+)
@@ -790,10 +792,11 @@ lemma init_tcb_sep':
    apply (frule well_formed_tcb_vspace_cap, fastforce)
    apply (frule well_formed_tcb_ipcbuffer_cap, fastforce)
    apply (clarsimp simp: init_tcb_def)
-   apply (wp hoare_drop_imps seL4_TCB_Configure_object_initialised_sep
+   apply (wpsimp wp: hoare_drop_imps seL4_TCB_Configure_object_initialised_sep
                              [where spec_cspace_cap=cspace_cap and
                                     spec_vspace_cap=vspace_cap and
-                                    spec_buffer_frame_cap=tcb_ipcbuffer_cap])
+                                    spec_buffer_frame_cap=tcb_ipcbuffer_cap]
+                 simp: seL4_TCB_SetSchedParams'_def seL4_TCB_SetSchedParams_def dummy_syscall_def)
    apply (fastforce simp: opt_thread_def cap_data_def
                           tcb_ipc_buffer_address_non_zero
                           si_cap_at_def sep_conj_exists)
@@ -947,8 +950,9 @@ lemma init_tcbs_sep:
   "\<lbrace>\<guillemotleft>objects_empty spec t {obj_id. tcb_at obj_id spec} \<and>*
      si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
-     K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
-   init_tcbs spec orig_caps obj_ids
+     K (well_formed spec \<and> distinct real_obj_ids \<and>
+        set real_obj_ids = {obj_id. real_object_at obj_id spec})\<rbrace>
+   init_tcbs spec orig_caps real_obj_ids
    \<lbrace>\<lambda>_.\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
         si_caps_at t orig_caps spec False {obj_id. real_object_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"

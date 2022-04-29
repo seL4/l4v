@@ -47,6 +47,14 @@ definition
 where
   "spec2s t object \<equiv> update_slots (cap_transform t \<circ>\<^sub>M object_slots object) object"
 
+definition
+  object_initialised_state :: "(cdl_object_id \<rightharpoonup> cdl_object_id) \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
+where
+ "object_initialised_state t object \<equiv> case object of
+    Frame frame \<Rightarrow> Frame \<lparr>cdl_frame_size_bits = cdl_frame_size_bits frame,
+        cdl_frame_fills = default_frame_fill_data\<rparr>
+    | _ \<Rightarrow> spec2s t object"
+
 (* This is used to define object_empty, object_initialised (and others).
  * Since we pass in the spec object cap transformation, we can specify
  * objects with no caps, all their caps (or anything else).
@@ -69,7 +77,7 @@ definition
   object_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "object_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t) sep_map_o spec_object_id"
+  object_initialised_general spec t (object_initialised_state t) sep_map_o spec_object_id"
 
 (* The object is created and in it's default state. *)
 definition
@@ -93,27 +101,27 @@ definition
   object_fields_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "object_fields_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t) sep_map_f spec_object_id"
+  object_initialised_general spec t (object_initialised_state t) sep_map_f spec_object_id"
 
 (* The object's slots are set up (as per the spec). *)
 definition
   object_slots_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "object_slots_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t) sep_map_S spec_object_id"
+  object_initialised_general spec t (object_initialised_state t) sep_map_S spec_object_id"
 
 definition
   object_empty_slots_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "object_empty_slots_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t) sep_map_E spec_object_id"
+  object_initialised_general spec t (object_initialised_state t) sep_map_E spec_object_id"
 
 (* A particular slot of an object is set up (as per the spec). *)
 definition
   object_slot_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
 where
   "object_slot_initialised spec t spec_object_id slot \<equiv>
-  object_initialised_general spec t (spec2s t) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
+  object_initialised_general spec t (object_initialised_state t) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
 
 (* The object's fields are in their default state. *)
 definition
@@ -176,7 +184,7 @@ definition
   cnode_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "cnode_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) sep_map_o spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec spec_object_id) sep_map_o spec_object_id"
 
 definition
   cnodes_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id set \<Rightarrow> sep_pred"
@@ -188,27 +196,27 @@ definition
   cnode_fields_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "cnode_fields_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) sep_map_f spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec spec_object_id) sep_map_f spec_object_id"
 
 (* The cnode's slots are half done (as per the spec). *)
 definition
   cnode_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "cnode_slots_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) sep_map_S spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec spec_object_id) sep_map_S spec_object_id"
 
 (* A particular slot of an object is set up (as per the spec). *)
 definition
   cnode_slot_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
 where
   "cnode_slot_half_initialised spec t spec_object_id slot \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec spec_object_id) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
 
 definition
   cnode_empty_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "cnode_empty_slots_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) sep_map_E spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec spec_object_id) sep_map_E spec_object_id"
 
 
 (**********************************************
@@ -228,7 +236,7 @@ definition
   tcb_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "tcb_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_o spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> tcb_half spec) sep_map_o spec_object_id"
 
 definition
   tcbs_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id set \<Rightarrow> sep_pred"
@@ -240,27 +248,27 @@ definition
   tcb_fields_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "tcb_fields_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_f spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> tcb_half spec) sep_map_f spec_object_id"
 
 (* The cnode's slots are half done (as per the spec). *)
 definition
   tcb_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "tcb_slots_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_S spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> tcb_half spec) sep_map_S spec_object_id"
 
 (* A particular slot of an object is set up (as per the spec). *)
 definition
   tcb_slot_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
 where
   "tcb_slot_half_initialised spec t spec_object_id slot \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> tcb_half spec) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
 
 definition
   tcb_empty_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
 where
   "tcb_empty_slots_half_initialised spec t spec_object_id \<equiv>
-  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_E spec_object_id"
+  object_initialised_general spec t (object_initialised_state t \<circ> tcb_half spec) sep_map_E spec_object_id"
 
 (********************************************
  * Predicates about IRQs being initialised. *
@@ -294,7 +302,7 @@ definition
   irq_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_irq \<Rightarrow> sep_pred"
 where
   "irq_initialised spec t irq \<equiv>
-  irq_initialised_general spec t (spec2s t) sep_map_o irq"
+  irq_initialised_general spec t (object_initialised_state t) sep_map_o irq"
 
 (* The irq is created and in it's default state. *)
 definition
@@ -318,26 +326,26 @@ definition
   irq_fields_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_irq \<Rightarrow> sep_pred"
 where
   "irq_fields_initialised spec t irq \<equiv>
-  irq_initialised_general spec t (spec2s t) sep_map_f irq"
+  irq_initialised_general spec t (object_initialised_state t) sep_map_f irq"
 
 (* The object's slots are set up (as per the spec). *)
 definition
   irq_slots_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_irq \<Rightarrow> sep_pred"
 where
   "irq_slots_initialised spec t irq \<equiv>
-  irq_initialised_general spec t (spec2s t) sep_map_S irq"
+  irq_initialised_general spec t (object_initialised_state t) sep_map_S irq"
 
 definition
   irq_slot_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_irq \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
 where
   "irq_slot_initialised spec t irq slot \<equiv>
-  irq_initialised_general spec t (spec2s t) (\<lambda>p. sep_map_s (p, slot)) irq"
+  irq_initialised_general spec t (object_initialised_state t) (\<lambda>p. sep_map_s (p, slot)) irq"
 
 definition
   irq_empty_slots_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_irq \<Rightarrow> sep_pred"
 where
   "irq_empty_slots_initialised spec t irq \<equiv>
-  irq_initialised_general spec t (spec2s t) sep_map_E irq"
+  irq_initialised_general spec t (object_initialised_state t) sep_map_E irq"
 
 (* The object's fields are set up (as per the spec). *)
 definition
@@ -372,9 +380,9 @@ where
 
 lemma object_slot_initialisedI:
   "\<lbrakk>t obj_id = Some kernel_object_id; cdl_objects spec obj_id = Some spec_object;
-   ((kernel_object_id, slot) \<mapsto>s (spec2s t spec_object)) s\<rbrakk>
+   ((kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)) s\<rbrakk>
   \<Longrightarrow> object_slot_initialised spec t obj_id slot s"
-  by (fastforce simp: object_slot_initialised_def object_initialised_general_def)
+  by (fastforce simp: object_slot_initialised_def object_initialised_general_def )
 
 lemma object_slot_emptyI:
   "\<lbrakk>well_formed spec; t obj_id = Some kernel_object_id;
@@ -389,7 +397,7 @@ lemma object_slot_initialisedD:
   "object_slot_initialised spec t obj_id slot s \<Longrightarrow>
    \<exists>kernel_object_id spec_object.
        t obj_id = Some kernel_object_id \<and>
-       ((kernel_object_id, slot) \<mapsto>s (spec2s t spec_object)) s \<and>
+       ((kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)) s \<and>
        cdl_objects spec obj_id = Some spec_object"
   by (clarsimp simp: object_slot_initialised_def object_initialised_general_def)
 
@@ -405,7 +413,7 @@ lemma object_slot_initialisedE:
   "\<lbrakk>object_slot_initialised spec t obj_id slot s;
    \<And>kernel_object_id spec_object.
       \<lbrakk>t obj_id = Some kernel_object_id \<and>
-       ((kernel_object_id, slot) \<mapsto>s (spec2s t spec_object)) s \<and>
+       ((kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)) s \<and>
        cdl_objects spec obj_id = Some spec_object\<rbrakk> \<Longrightarrow> X\<rbrakk> \<Longrightarrow> X"
   by (fastforce simp: object_slot_initialised_def object_initialised_general_def)
 
@@ -451,13 +459,11 @@ lemma cap_transform_nullcap [simp]:
 
 lemma cap_transform_pt_simp [simp]:
   "cap_transform t (PageTableCap x y z) = PageTableCap (the (t x)) y z"
-  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def cap_object_def
-               split: option.splits)
+  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def)
 
 lemma cap_transform_frame [simp]:
   "cap_transform t (FrameCap x ptr rights n y z) = FrameCap x (the (t ptr)) rights n y z"
-  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def cap_object_def
-               split: option.splits)
+  by (clarsimp simp: option.the_def cap_transform_def update_cap_object_def)
 
 lemma cap_type_cap_transform [simp]:
   "cap_type (cap_transform t cap) = cap_type cap"
@@ -524,9 +530,20 @@ lemma object_type_spec2s [simp]:
   "object_type (spec2s t obj) = object_type obj"
   by (clarsimp simp: spec2s_def)
 
+lemma object_type_object_initialised_state [simp]:
+  "object_type (object_initialised_state t obj) = object_type obj"
+  by (case_tac obj; clarsimp simp: object_type_def
+        object_initialised_state_def
+        spec2s_def update_slots_def)+
+
 lemma dom_object_slots_spec2s [simp]:
   "dom (object_slots (spec2s t spec_object)) = dom (object_slots spec_object)"
   by (fastforce simp: spec2s_def update_slots_def object_slots_def
+               split: cdl_object.splits option.splits)
+
+lemma dom_object_slots_object_initialised_state [simp]:
+  "dom (object_slots (object_initialised_state t spec_object)) = dom (object_slots spec_object)"
+  by (fastforce simp: spec2s_def update_slots_def object_slots_def object_initialised_state_def
                split: cdl_object.splits option.splits)
 
 lemma object_slots_spec2s:
@@ -538,10 +555,27 @@ lemma object_slots_spec2s:
   apply (clarsimp simp: cap_transform_def)
   done
 
+lemma object_slots_object_initialised_state:
+  "\<lbrakk>has_slots obj; object_slots obj slot = Some cap;
+    t (cap_object cap) = Some cap_object_id;
+    cap_has_object cap; \<not>is_untyped_cap cap\<rbrakk>
+  \<Longrightarrow> object_slots (object_initialised_state t obj) slot = Some (update_cap_object cap_object_id cap)"
+  apply (clarsimp simp: object_initialised_state_def)
+  apply (case_tac obj)
+           apply (clarsimp simp: spec2s_def cap_transform_def has_slots_def)+
+  done
+
 lemma object_slots_spec2s':
   "object_slots obj slot = Some spec_cap
   \<Longrightarrow> object_slots (spec2s t obj) slot = Some (cap_transform t spec_cap)"
   by (auto simp: spec2s_def object_slots_def update_slots_def
+          split: cdl_object.splits)
+
+lemma object_slots_object_initialised_state':
+  "object_slots obj slot = Some spec_cap
+  \<Longrightarrow> object_slots (object_initialised_state t obj) slot = Some (cap_transform t spec_cap)"
+  by (auto simp: object_initialised_state_def
+                 spec2s_def object_slots_def update_slots_def
           split: cdl_object.splits)
 
 lemma object_slots_spec2s_NullCap [simp]:
@@ -549,6 +583,13 @@ lemma object_slots_spec2s_NullCap [simp]:
   \<Longrightarrow> object_slots (spec2s t obj) slot = Some NullCap"
   apply (case_tac "has_slots obj")
    apply (clarsimp simp: spec2s_def)+
+  done
+
+lemma object_slots_object_initialised_state_NullCap [simp]:
+  "object_slots obj slot = Some NullCap
+  \<Longrightarrow> object_slots (object_initialised_state t obj) slot = Some NullCap"
+  apply (clarsimp simp: object_initialised_state_def)
+  apply (case_tac obj; clarsimp simp:has_slots_def)
   done
 
 lemma update_cap_object_irqhandler_cap [simp]:
@@ -566,6 +607,13 @@ lemma object_slots_spec2s_irqhandler_cap [simp]:
    apply (clarsimp simp: spec2s_def)+
   done
 
+lemma object_slots_object_initialised_state_irqhandler_cap [simp]:
+  "\<lbrakk>object_slots obj slot = Some cap; is_irqhandler_cap cap\<rbrakk>
+  \<Longrightarrow> object_slots (object_initialised_state t obj) slot = Some cap"
+  apply (clarsimp simp: object_initialised_state_def)
+  apply (case_tac obj; clarsimp simp:has_slots_def)
+  done
+
 lemma update_slots_empty_spec2s [simp]:
   "update_slots Map.empty (spec2s t obj)
    = update_slots Map.empty obj"
@@ -579,9 +627,38 @@ lemma object_to_sep_state_fields_spec2s [simp]:
                         asid_reset_def spec2s_def object_wipe_slots_def)
   done
 
+lemma object_to_sep_state_fields_object_initialised_state [simp]:
+  "(\<And> f. obj \<noteq> Frame f) \<Longrightarrow>
+  object_to_sep_state obj_id (object_initialised_state t obj) {Fields}
+  = object_to_sep_state obj_id obj {Fields}"
+  apply (rule ext)
+  apply (case_tac obj)
+           apply (clarsimp simp: object_to_sep_state_def object_project_def
+                                 object_clean_def asid_reset_def spec2s_def
+                                 object_initialised_state_def object_wipe_slots_def)+
+    apply force
+   apply (clarsimp simp: object_to_sep_state_def object_project_def
+                         object_clean_def asid_reset_def spec2s_def
+                         object_initialised_state_def object_wipe_slots_def)+
+  done
+
+lemma object_to_sep_state_fields_object_initialised_state_alt [simp]:
+  "\<not>is_frame obj \<Longrightarrow>
+  object_to_sep_state obj_id (object_initialised_state t obj) {Fields}
+  = object_to_sep_state obj_id obj {Fields}"
+  by(cases obj) auto
+
 lemma sep_map_f_spec2s [simp]:
   "obj_id \<mapsto>f spec2s t obj = obj_id \<mapsto>f obj"
   by (auto simp: sep_map_f_def sep_map_general_def)
+
+lemma sep_map_f_object_initialised_state [simp]:
+  "(\<And> f. obj \<noteq> Frame f) \<Longrightarrow> obj_id \<mapsto>f object_initialised_state t obj = obj_id \<mapsto>f obj"
+ by (auto simp: sep_map_f_def sep_map_general_def)
+
+lemma sep_map_f_object_initialised_state_alt [simp]:
+  "\<not>is_frame obj \<Longrightarrow> obj_id \<mapsto>f object_initialised_state t obj = obj_id \<mapsto>f obj"
+ by (auto simp: sep_map_f_def sep_map_general_def)
 
 lemma object_type_cnode_half [simp]:
   "object_type (cnode_half spec obj_id obj) = object_type obj"
@@ -709,6 +786,14 @@ lemma sep_map_E_spec2s [simp]:
     apply simp+
   done
 
+lemma sep_map_E_object_initialised_state [simp]:
+  "(p \<mapsto>E object_initialised_state t obj) = (p \<mapsto>E obj)"
+  apply (cut_tac obj="object_initialised_state t obj" and obj'=obj in sep_map_E_eq, simp)
+   apply (clarsimp simp: spec2s_def)
+  apply (case_tac "has_slots obj")
+   apply simp+
+  done
+
 lemma sep_map_E_tcb_half [simp]:
   "obj_id \<mapsto>E tcb_half spec tcb = obj_id \<mapsto>E tcb"
   by (rule sep_map_E_eq, simp+)
@@ -716,7 +801,8 @@ lemma sep_map_E_tcb_half [simp]:
 lemma object_to_sep_state_fields_tcb_eq:
   "\<lbrakk>cdl_tcb_fault_endpoint tcb = cdl_tcb_fault_endpoint tcb';
     cdl_tcb_has_fault tcb = cdl_tcb_has_fault tcb';
-    cdl_tcb_domain tcb = cdl_tcb_domain tcb'\<rbrakk>
+    cdl_tcb_domain tcb = cdl_tcb_domain tcb';
+    cdl_tcb_extra tcb = cdl_tcb_extra tcb'\<rbrakk>
   \<Longrightarrow> object_to_sep_state obj_id (Tcb tcb) {Fields}
   = object_to_sep_state obj_id (Tcb tcb') {Fields}"
   apply (rule ext)
@@ -728,7 +814,8 @@ lemma object_to_sep_state_fields_tcb_eq:
 lemma sep_map_f_eq_tcb:
   "\<lbrakk>cdl_tcb_fault_endpoint tcb = cdl_tcb_fault_endpoint tcb';
     cdl_tcb_has_fault tcb = cdl_tcb_has_fault tcb';
-    cdl_tcb_domain tcb = cdl_tcb_domain tcb'\<rbrakk>
+    cdl_tcb_domain tcb = cdl_tcb_domain tcb';
+    cdl_tcb_extra tcb = cdl_tcb_extra tcb'\<rbrakk>
   \<Longrightarrow> obj_id \<mapsto>f Tcb tcb = obj_id \<mapsto>f Tcb tcb'"
   apply (clarsimp simp: sep_map_f_def sep_map_general_def object_slots_def
                       object_clean_def intent_reset_def asid_reset_def update_slots_def)
@@ -863,7 +950,7 @@ lemma irq_empty_decomp:
 lemma object_slot_initialised_eq:
   "\<lbrakk>t obj_id = Some kernel_object_id; cdl_objects spec obj_id = Some spec_object\<rbrakk>
   \<Longrightarrow> object_slot_initialised spec t obj_id slot
-      = (kernel_object_id, slot) \<mapsto>s (spec2s t spec_object)"
+      = (kernel_object_id, slot) \<mapsto>s (object_initialised_state t spec_object)"
   apply (rule ext, rename_tac s)
   apply (fastforce simp: object_slot_initialised_def object_initialised_general_def)
   done
@@ -886,8 +973,8 @@ lemma object_slot_empty_eq:
 lemma object_slots_initialised_decomp_helper:
   "\<lbrakk>slots \<noteq> {}; slots \<noteq> UNIV\<rbrakk>
   \<Longrightarrow> object_slots_initialised spec t obj_id =
-  (object_initialised_general spec t (spec2s t) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id \<and>*
-   object_initialised_general spec t (spec2s t) (\<lambda>obj_id. sep_map_S' (obj_id, UNIV-slots)) obj_id)"
+  (object_initialised_general spec t (object_initialised_state t) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id \<and>*
+   object_initialised_general spec t (object_initialised_state t) (\<lambda>obj_id. sep_map_S' (obj_id, UNIV-slots)) obj_id)"
   apply (clarsimp simp: object_slots_initialised_def)
   apply (rule object_initialised_general_decomp)
   apply (clarsimp simp: sep_map_S_decomp')
@@ -906,10 +993,10 @@ lemma object_slots_empty_decomp_helper:
 lemma cnode_slots_half_initialised_decomp_helper:
   "\<lbrakk>slots \<noteq> {}; slots \<noteq> UNIV\<rbrakk>
   \<Longrightarrow> cnode_slots_half_initialised spec t obj_id =
-  (object_initialised_general spec t (spec2s t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id \<and>*
-   object_initialised_general spec t (spec2s t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, UNIV-slots)) obj_id)"
+  (object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id \<and>*
+   object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, UNIV-slots)) obj_id)"
   apply (clarsimp simp: cnode_slots_half_initialised_def)
-  apply (rule object_initialised_general_decomp)
+  apply (rule object_initialised_general_decomp )
   apply (clarsimp simp: sep_map_S_decomp')
   done
 
@@ -973,7 +1060,7 @@ lemma object_slots_general_decomp_set:
 
 lemma object_slots_initialised_decomp':
   "\<lbrakk>finite slots; slots \<noteq> {}\<rbrakk>
-  \<Longrightarrow> (object_initialised_general spec t (spec2s t) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id) =
+  \<Longrightarrow> (object_initialised_general spec t (object_initialised_state t) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id) =
   (\<And>* slot \<in> slots. object_slot_initialised spec t obj_id slot)"
   apply (clarsimp simp: object_slot_initialised_def [abs_def])
   apply (erule (1) object_slots_general_decomp_set)
@@ -989,7 +1076,7 @@ lemma object_slots_empty_decomp':
 
 lemma cnode_slots_half_initialised_decomp':
   "\<lbrakk>finite slots; slots \<noteq> {}\<rbrakk>
-  \<Longrightarrow> (object_initialised_general spec t (spec2s t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id) =
+  \<Longrightarrow> (object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec obj_id) (\<lambda>obj_id. sep_map_S' (obj_id, slots)) obj_id) =
   (\<And>* slot \<in> slots. cnode_slot_half_initialised spec t obj_id slot)"
   apply (clarsimp simp: cnode_slot_half_initialised_def [abs_def])
   apply (erule (1) object_slots_general_decomp_set)
@@ -998,23 +1085,25 @@ lemma cnode_slots_half_initialised_decomp':
 lemma empty_slots_object_slots_initialised_object_empty_slots_initialised:
   "dom (slots_of obj_id spec) = {} \<Longrightarrow> object_empty_slots_initialised spec t obj_id = object_slots_initialised spec t obj_id"
   apply (rule ext, rename_tac s)
-  apply (clarsimp simp: object_slots_initialised_def object_empty_slots_initialised_def object_initialised_general_def)
+  apply (clarsimp simp: object_slots_initialised_def
+            object_empty_slots_initialised_def object_initialised_general_def
+            object_initialised_state_def)
   apply (rule iffI)
    apply clarsimp
    apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def
                   split: option.splits)
-   apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits
+   apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits object_initialised_state_def
                    split: cdl_object.splits)
   apply clarsimp
   apply (clarsimp simp: sep_map_S_def sep_map_S'_def sep_map_E_def slots_of_def
                  split: option.splits)
-  apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits
+  apply (fastforce simp: intent_reset_def spec2s_def object_slots_def cdl_tcb.splits object_initialised_state_def
                   split: cdl_object.splits)
   done
 
 lemma object_empty_slots_initialised_def2:
   "object_empty_slots_initialised spec t obj_id =
-   object_initialised_general spec t (spec2s t) (\<lambda>obj_id'. sep_map_S' (obj_id', UNIV - dom (slots_of obj_id spec))) obj_id"
+   object_initialised_general spec t (object_initialised_state t) (\<lambda>obj_id'. sep_map_S' (obj_id', UNIV - dom (slots_of obj_id spec))) obj_id"
   apply (clarsimp simp: object_empty_slots_initialised_def object_initialised_general_def sep_map_E_def)
   apply (fastforce simp: slots_of_def
                   split: option.splits)
@@ -1052,14 +1141,14 @@ lemma object_slot_empty_initialised_NullCap:
   apply (rule iffI)
    apply (clarsimp simp: sep_conj_exists)
    apply (cut_tac obj="object_default_state spec_object" and obj_id=kernel_object_id and
-                  obj'="spec2s t spec_object" and slot=slot
+                  obj'="object_initialised_state t spec_object" and slot=slot
                in sep_map_s_object_slots_equal)
      apply (clarsimp simp: object_slots_opt_cap)
      apply (drule (3) object_slots_object_default_state_NullCap, simp)
     apply clarsimp
    apply clarsimp
   apply (clarsimp simp: sep_conj_exists)
-  apply (cut_tac obj="spec2s t spec_object" and obj_id=kernel_object_id and
+  apply (cut_tac obj="object_initialised_state t spec_object" and obj_id=kernel_object_id and
                  obj'="object_default_state spec_object" and slot=slot
               in sep_map_s_object_slots_equal)
     apply (drule (3) object_slots_object_default_state_NullCap)
@@ -1123,27 +1212,10 @@ lemma well_formed_has_slots:
   done
 
 lemma sep_map_S_object_default_state_no_slots:
-  "\<not> has_slots obj \<Longrightarrow> (obj_id \<mapsto>S object_default_state obj) = (obj_id \<mapsto>S obj)"
-  apply (clarsimp simp: sep_map_S_def sep_map_general_def)
-  apply (intro ext conjI iffI |
-         clarsimp simp: object_to_sep_state_def object_project_def
-                        update_slots_def empty_cnode_def
-                        object_slots_object_clean
-                        object_default_state_def default_object_def
-                        object_type_def has_slots_def
-                 split: cdl_component_id.splits option.splits cdl_object.splits)+
-  done
-
-lemma sep_map_s_object_default_state_no_slots:
-  "\<not> has_slots obj \<Longrightarrow> (obj_id, slot) \<mapsto>s object_default_state obj = (obj_id, slot) \<mapsto>s obj"
-  apply (clarsimp simp: sep_map_s_def sep_map_general_def)
-  apply (intro ext conjI iffI |
-         clarsimp simp: object_to_sep_state_def object_project_def
-                        update_slots_def empty_cnode_def
-                        object_slots_object_clean
-                        object_default_state_def default_object_def
-                        object_type_def has_slots_def
-                 split: cdl_component_id.splits option.splits cdl_object.splits)+
+  "\<not> has_slots obj \<Longrightarrow> (obj_id \<mapsto>S object_default_state obj) = (obj_id \<mapsto>S object_initialised_state t obj)"
+  apply (case_tac obj; clarsimp simp: has_slots_def)
+     apply (clarsimp simp: object_default_state_def default_object_def
+                           object_type_def object_initialised_state_def)+
   done
 
 lemma object_slots_empty_initialised_no_slots:
@@ -1157,11 +1229,12 @@ lemma object_slots_empty_initialised_no_slots:
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: object_slots_empty_def object_slots_initialised_def object_initialised_general_def)
   apply (rule ext, rule iffI)
-   apply (clarsimp simp: spec2s_def)
-   apply (drule_tac obj_id=kernel_object_id in sep_map_S_object_default_state_no_slots, simp)
+   apply clarsimp
+   apply (drule_tac obj_id=kernel_object_id and t=t in sep_map_S_object_default_state_no_slots)
+   apply clarsimp
   apply clarsimp
-  apply (clarsimp simp: spec2s_def)
-  apply (drule_tac obj_id=kernel_object_id in sep_map_S_object_default_state_no_slots, simp)
+  apply (drule_tac obj_id=kernel_object_id and t=t in sep_map_S_object_default_state_no_slots)
+  apply clarsimp
   done
 
 lemma object_empty_slots_empty_def2:
@@ -1181,9 +1254,9 @@ lemma object_empty_slots_empty_def2:
   apply (fastforce simp: slots_of_def split: option.splits)
   done
 
-lemma cnode_empty_slots_half_initialised_def2:
+lemma cnode_empty_slots_half_initialised_def3:
   "cnode_empty_slots_half_initialised spec t obj_id =
-      object_initialised_general spec t (spec2s t \<circ> cnode_half spec obj_id)
+      object_initialised_general spec t (object_initialised_state t \<circ> cnode_half spec obj_id)
       (\<lambda>obj_id'. sep_map_S' (obj_id', UNIV - dom (slots_of obj_id spec))) obj_id"
   apply (clarsimp simp: object_empty_slots_initialised_def cnode_empty_slots_half_initialised_def
                         object_initialised_general_def)
@@ -1192,12 +1265,12 @@ lemma cnode_empty_slots_half_initialised_def2:
    apply (clarsimp split: option.splits)
    apply (cut_tac p=kernel_object_id and
                   obj="cnode_half spec obj_id spec_object" and
-                  obj'="spec2s t (cnode_half spec obj_id spec_object)" in
+                  obj'="object_initialised_state t (cnode_half spec obj_id spec_object)" in
           sep_map_E_eq, simp, simp)
    apply (clarsimp simp: sep_map_E_def slots_of_def split: option.splits)
   apply clarsimp
   apply (cut_tac p=kernel_object_id and
-                 obj="spec2s t (cnode_half spec obj_id spec_object)" and
+                 obj="object_initialised_state t (cnode_half spec obj_id spec_object)" and
                  obj'="cnode_half spec obj_id spec_object" in
          sep_map_E_eq, simp, simp)
   apply (clarsimp simp: sep_map_E_def slots_of_def)
@@ -1244,17 +1317,13 @@ lemma cnode_slots_half_initialised_decomp:
    apply clarsimp
    apply (drule_tac obj_id=obj_id in well_formed_finite, clarsimp)
   apply (subst cnode_slots_half_initialised_decomp', simp+)
-  apply (clarsimp simp: cnode_empty_slots_half_initialised_def2)
+  apply (clarsimp simp: cnode_empty_slots_half_initialised_def3)
   done
-
-
 
 lemma distinct_singleton_set:
   "\<lbrakk>distinct xs; set xs = {x}\<rbrakk> \<Longrightarrow> xs = [x]"
   by (metis set_simps(2) distinct.simps(2) distinct_singleton
             insert_iff insert_not_empty list.exhaust set_empty2)
-
-
 
 lemma irq_slots_initialised_decomp_helper:
   "well_formed spec
@@ -1390,12 +1459,19 @@ lemma cnode_fields_empty_initialised:
   by (clarsimp simp: object_fields_empty_def object_fields_initialised_def
                      object_initialised_general_def object_at_def object_type_is_object)
 
-
 lemma cnode_fields_half_initialised_object_fields_initialised:
-  "cnode_at obj_id spec
+  "\<lbrakk>cnode_at obj_id spec\<rbrakk>
   \<Longrightarrow> cnode_fields_half_initialised spec t obj_id = object_fields_initialised spec t obj_id"
-  by (clarsimp simp: cnode_fields_half_initialised_def object_fields_initialised_def object_initialised_general_def)
-
+  apply (clarsimp simp: cnode_fields_half_initialised_def
+                        object_fields_initialised_def object_initialised_general_def object_at_def)
+  apply(subst sep_map_f_object_initialised_state_alt)
+   apply(clarsimp simp add: cnode_half_def object_at_def is_cnode_def update_slots_def is_frame_def
+                  split: cdl_object.split_asm)
+  apply(subst sep_map_f_object_initialised_state_alt)
+   apply(clarsimp simp add: object_at_def is_cnode_def update_slots_def is_frame_def
+                  split: cdl_object.split_asm)
+  apply clarsimp
+  done
 
 lemma object_fields_empty_half_initialised:
   "cnode_at obj_id spec
@@ -1403,9 +1479,11 @@ lemma object_fields_empty_half_initialised:
   by (clarsimp simp: cnode_fields_half_initialised_object_fields_initialised cnode_fields_empty_initialised)
 
 lemma object_default_state_frame [simp]:
-  "is_frame object \<Longrightarrow> object_default_state object = object"
-  by (clarsimp simp: object_default_state_def default_object_def
-                     object_type_is_object object_type_def
-              split: cdl_object.splits)
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some object; is_frame object\<rbrakk>
+  \<Longrightarrow> object_default_state object = object"
+  by (fastforce simp: object_default_state_def default_object_def
+                     object_type_is_object object_type_def well_formed_frame_extra_def
+                split: cdl_object.splits
+                dest: well_formed_frame_extra_data)
 
 end
