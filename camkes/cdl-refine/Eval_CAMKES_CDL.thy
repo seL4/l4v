@@ -615,7 +615,7 @@ lemmas obj_policy_eval_simps =
 
         (* evaluating asid integrity *)
         cdl_cap_asid'.simps
-        is_null_cap_def cap_object_simps
+        is_null_cap_def cap_object_simps tcb_slot_defs
         image_empty
         semiring_1_class.of_nat_0 semiring_1_class.of_nat_1 semiring_1_class.of_nat_numeral
 
