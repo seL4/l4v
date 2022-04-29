@@ -10,6 +10,8 @@ imports
   ObjectInitialised_SI
   RootTask_SI
   SysInit_SI
+  Sep_Algebra.Sep_Fold_Cancel
+  Mapped_Separating_Conjunction
 begin
 
 (*****************
@@ -117,6 +119,7 @@ lemma si_irq_nodes_def2:
    apply (rule_tac x=k_irq_table in exI, simp)
    apply (subst (asm) sep.prod.distrib)
    apply (drule sep_conj_existR, clarsimp)
+thm sep_map_o_inj_on_set
     apply (erule sep_map_o_inj_on_set) (* Why doesn't sep_rule work? *)
    apply simp
   apply blast
@@ -167,7 +170,7 @@ lemma create_irq_cap_sep:
   apply (simp add: offset_slot_si_cnode_size' guard_equal_si_cspace_cap word_bits_def)
   done
 
-lemma word_upto_enum_sorted:
+lemma word_upto_enum_sorted: (* FIXME: move to Word_Lib *)
   "sorted [(x::('a::len) word) .e. y]"
 proof (induct "fromEnumAlt y" arbitrary: x y)
   case 0
@@ -186,7 +189,7 @@ proof (induct "fromEnumAlt y" arbitrary: x y)
                 word_not_le word_unat_less_le)
 qed
 
-lemma sorted_list_of_set_eq_filter:
+lemma sorted_list_of_set_eq_filter: (* FIXME: move to Word_Lib *)
   fixes P::"('a::len) word \<Rightarrow> bool"
   shows "sorted_list_of_set {x. P x} = filter P [minBound .e. maxBound]"
         (is "_ = ?rhs")
@@ -221,87 +224,271 @@ lemma well_formed_spec_used_irqs_compute:
   apply (clarsimp simp add: Option.is_none_def well_formed_all_caps_cap_irq)
   done
 
-lemma create_irq_caps_sep_helper:
-  "\<lbrace>\<guillemotleft>((\<And>* cptr \<in> set (take (card (used_irqs spec)) free_cptrs).
-           ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
-      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_objects \<and>* si_irq_nodes spec \<and>* R)  and
-   K (well_formed spec \<and>
-      list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_cptrs \<and>
-      distinct free_cptrs \<and>
-      card (used_irqs spec) \<le> length free_cptrs)\<guillemotright> \<rbrace>
-  create_irq_caps spec free_cptrs
-   \<lbrace>\<lambda>rv s. \<exists>(t'::32 word \<Rightarrow> 32 word option).
-    \<guillemotleft>(irqs_empty spec t' (used_irqs spec) \<and>*
-      si_irq_caps_at (fst rv) spec (used_irqs spec) \<and>*
-      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_objects \<and>* R)
-    and K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
-    inj_on t' (used_irq_nodes spec) \<and>
-    dom t' = used_irq_nodes spec)\<guillemotright> s\<rbrace>"
+
+lemma fun_on_prod: "f = (\<lambda>a. f (fst a, snd a))"
+ by (clarsimp)
+
+lemma map_snd_zip_take[simp]:
+  "map (\<lambda>x. f (snd x)) (zip xs ys) = map f (take (length xs) ys) "
+  apply (induct ys arbitrary: xs; clarsimp?)
+  apply (case_tac xs; clarsimp)
+done
+
+lemma map_fst_zip_take[simp]:
+  "map (\<lambda>x. f (fst x)) (zip xs ys) = map f (take (length ys) xs) "
+  apply (induct ys arbitrary: xs; clarsimp?)
+  apply (case_tac xs; clarsimp)
+done
+
+
+lemma irq_initialised_general_def3:
+  "\<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq) \<Longrightarrow> irq \<in> used_irqs spec \<Longrightarrow>
+    irq_initialised_general spec t obj_trans arrow irq  =
+     (object_initialised_general spec t obj_trans arrow (cdl_irq_node spec irq) \<and>*
+      irq \<mapsto>irq  (cdl_irq_node spec irq)) "
+  apply (rule ext, clarsimp simp: irq_initialised_general_def object_initialised_general_def
+                      sep_conj_exists sep_conj_ac)
+  apply (drule (1) bspec)
+ apply (rule iffI; clarsimp)
+done
+
+definition
+  si_irq_nodes :: "cdl_state \<Rightarrow> sep_state \<Rightarrow> bool"
+where
+  "si_irq_nodes spec \<equiv>
+     (\<lambda>s.  (\<And>* irq\<in>used_irqs spec. irq \<mapsto>irq (cdl_irq_node spec irq) \<and>*
+             (cdl_irq_node spec irq) \<mapsto>o IRQNode empty_irq_node) s)"
+
+
+lemma sep_fold_cong1:  "(\<forall>x\<in>(set xs). P x = P' x) \<Longrightarrow>  sep_fold P Q R xs = sep_fold P' Q R xs"
+ apply (clarsimp simp: sep_fold_def)
+  by (smt foldr_cong)
+
+lemma sep_fold_cong2:  "(\<forall>x\<in>(set xs). Q x = Q' x) \<Longrightarrow>  sep_fold P Q R xs = sep_fold P Q' R xs"
+ apply (clarsimp simp: sep_fold_def)
+  by (smt foldr_cong)
+
+lemma create_irq_caps_sep:
+  "\<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq) \<Longrightarrow>
+    \<lbrace>\<guillemotleft>((\<And>* cptr \<in> set (list_take_region (card (used_irqs spec)) free_cptrs).
+             ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
+        si_objects \<and>* si_irq_nodes spec \<and>* R)  and
+     K (well_formed spec \<and> valid_slot_region free_cptrs \<and>
+        card (used_irqs spec) \<le> length_region free_cptrs)\<guillemotright> \<rbrace>
+    create_irq_caps spec free_cptrs
+     \<lbrace>\<lambda>rv.
+      \<guillemotleft>((irqs_empty spec t (used_irqs spec) and
+         K ((map_of (zip_region (used_irq_list spec) free_cptrs),
+             drop_region (card (used_irqs spec)) free_cptrs) = rv)) \<and>*
+        si_irq_caps_at (fst rv) spec (used_irqs spec) \<and>*
+        si_objects \<and>* R)
+      \<guillemotright> \<rbrace>"
   apply clarsimp
   apply (rule hoare_gen_asm_conj)
-  apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists
-                        well_formed_spec_used_irqs_compute)
-  apply (rule hoare_grab_exs2)
-  apply wp
-   apply simp
-   apply (rule_tac x="(\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
-                      |` used_irq_nodes spec" in hoare_exI)
+  apply (rule hoare_name_pre_state)
+  apply (clarsimp simp: create_irq_caps_def well_formed_spec_used_irqs_compute)
 
-   apply (rule_tac P1 = "\<lambda>(irq,free_cptr). (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
-                                           irq \<mapsto>irq k_irq_table irq \<and>*
-                                           k_irq_table irq \<mapsto>o IRQNode empty_irq_node" and
-                  Q1 = "\<lambda>(irq,free_cptr). irq_empty spec ((\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
-                                                           |` used_irq_nodes spec) irq \<and>*
-                                          si_irq_cap_at (map_of (zip (used_irq_list spec) free_cptrs)) spec irq" and
-                  I1 = "si_objects" and
-                  R1 = "si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-                        R" in hoare_chain [OF mapM_x_set_sep])
-      apply (metis distinct_zipI2)
-     apply (clarsimp split:prod.splits)
-     apply (clarsimp simp: sep_conj_assoc)
-     apply (wp sep_wp: create_irq_cap_sep, simp+)
-     apply (rule conjI)
-      apply (clarsimp simp: sep_conj_assoc sep_conj_exists)
-      apply sep_solve
-     apply (frule well_formed_inj_cdl_irq_node)
-     apply (frule set_zip_leftD)
-     apply (frule in_set_zip2)
-     apply (simp add: map_of_zip_tuple_in list_all_iff unat_less_2_si_cnode_size
-                      restrict_map_def used_irq_nodes_def)
-    apply assumption
-   defer
-   apply (subst sep_list_conj_sep_map_set_conj [symmetric], erule distinct_zipI2)
-   apply (subst (asm) sep_list_conj_sep_map_set_conj [symmetric, where xs = "used_irq_list spec", simplified])
-   apply (subst split_beta')
-   apply (subst sep_list_conj_map_add)
-   apply (subst zip_take_length [symmetric])
-   apply (subst split_beta' [symmetric])+
-   apply (subst map_zip_snd', simp)
+  apply wpsimp
 
-   apply (subst (asm) (3) append_take_drop_id [where n="card (used_irqs spec)" and xs=free_cptrs, symmetric])
-   apply (subst map_zip_fst', simp)
-   apply (subst sep_list_conj_sep_map_set_conj, fastforce simp: used_irq_list_def)
-   apply (simp add: comp_def)
-   apply sep_solve
+   apply (subst fun_on_prod)
+   apply (rule sep_hoare_fold_mapM_x[OF create_irq_cap_sep[where irq_caps="map_of (zip_region (used_irq_list spec) free_cptrs)" and kernel_irq_id="cdl_irq_node spec (fst irq)" and t'=t for irq , simplified sep_wp_simp]])
+  apply clarsimp
+  apply (sep_flatten)
+  apply (sep_fold_cancel)+
 
-  apply simp
-  apply (subst (asm) sep_list_conj_sep_map_set_conj [symmetric], erule distinct_zipI2)
-  apply (subst (asm) map_zip_fst', simp)
-  apply (subst (asm) sep_list_conj_map_add)
-  apply (subst (asm) sep_list_conj_sep_map_set_conj,
-         metis used_irq_list_def distinct_sorted_list_of_set)
-  apply (subst (asm) sep_list_conj_sep_map_set_conj,
-         metis used_irq_list_def distinct_sorted_list_of_set)
-  apply (clarsimp simp: irqs_empty_def si_irq_caps_at_def)
-  apply (rule conjI)
-   apply sep_solve
-  apply (frule well_formed_inj_cdl_irq_node)
-  apply (fastforce simp: inj_on_def used_irq_nodes_def)
+   apply (clarsimp simp: irq_empty_def)
+   apply (subst sep_fold_cong2)
+    apply (intro ballI)
+
+
+    apply ( subst irq_initialised_general_def3)
+      apply (assumption)
+  using in_set_zipE apply fastforce
+    apply (rule refl)
+   apply (sep_flatten)
+   apply (rule sep_map_sep_foldI)
+   apply (clarsimp simp: sep_list_conj_sep_map_set_conj sep.prod.distrib)
+   apply (sep_flatten)
+
+   apply (clarsimp)
+   apply (subst map_snd_zip_take)
+   apply (clarsimp)
+   apply (clarsimp simp: sep_list_conj_sep_map_set_conj, sep_cancel)
+   apply (clarsimp simp: si_irq_nodes_def sep_conj_exists)
+   apply (subst map_fst_zip_take, clarsimp simp: sep_list_conj_sep_map_set_conj sep.prod.distrib)
+   apply (sep_cancel)+
+   apply (subst map_fst_zip_take, clarsimp simp: sep_list_conj_sep_map_set_conj sep.prod.distrib)
+   apply (sep_cancel)+
+   apply (subst (asm) map_fst_zip_take, clarsimp simp: sep_list_conj_sep_map_set_conj sep.prod.distrib)
+   apply (subst (asm) map_fst_zip_take, clarsimp simp: sep_list_conj_sep_map_set_conj sep.prod.distrib)
+   apply (clarsimp simp: irqs_empty_def si_irq_caps_at_def irq_empty_def irq_initialised_general_def3 sep.prod.distrib)
+   apply (sep_cancel)+
+   apply (clarsimp simp: sep_conj_sep_true')
+  apply (intro conjI; fastforce?)
+
+  using in_set_zipE apply fastforce
+  using in_set_zipE apply fastforce
+
+  apply (frule valid_slot_region_leI, drule valid_slot_region_less_all)
+  apply (clarsimp simp: list_all_def)
+  apply (erule bspec)
+  apply (metis in_set_zipE length_used_irq_list zip_take_length)
   done
 
+(* FIXME merge: most of this can be deleted, monster_mash needs to be renamed or removed;
+                used once in Proof_SI.thy *)
+(* TODO: All of this needs to be moved to new files *)
 
+datatype Command = Times | Minus | Plus | Divide
+
+definition "decode (c :: nat) = do modify (\<lambda>x. x - 1);
+                                   return $ (if c = 0  then Times else if c = 1 then Minus else if c = 2 then Plus else Divide) od"
+
+definition "decode' (c :: nat) = do modify (\<lambda>x. x - 1);
+                                   return $ (if c = 0  then Times else if c = 1 then Minus else if c = 2 then Plus else Divide) od"
+
+term "(/)"
+
+definition "execute c' = (case c' of Times \<Rightarrow> modify  (\<lambda>x. x * 2) |
+                                   Minus \<Rightarrow> modify  (\<lambda>x. x - 2) |
+                                   Plus  \<Rightarrow> modify   (\<lambda>x. x + 2) |
+                                    _ \<Rightarrow> modify (\<lambda>x. x + 5))"
+
+definition "foo  c = do c' <- decode c;
+                        execute c';
+                        c'' <- decode' c;
+                        execute c'';
+                        return () od
+                                      "
+
+
+lemma prop_forward: "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. rv = x\<rbrace> \<Longrightarrow> (do x <- f; g x od) = ( do  f; g x od) "
+  apply (clarsimp)
+  apply (monad_eq)
+  apply (intro conjI; clarsimp)
+
+  using post_by_hoare apply fastforce
+  using post_by_hoare apply fastforce
+  using post_by_hoare by fastforce
+
+lemma prop_forward': " g = g \<Longrightarrow> \<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. rv = x\<rbrace> \<Longrightarrow> (do x <- f; g x od) = ( do  f; g x od) "
+  apply (clarsimp)
+  apply (monad_eq)
+  apply (intro conjI; clarsimp)
+
+  using post_by_hoare apply fastforce
+  using post_by_hoare apply fastforce
+  using post_by_hoare by fastforce
+
+
+lemma prop_forward_middle: "(\<And>r. \<lbrace>\<top>\<rbrace> f r  \<lbrace>\<lambda>rv s. rv = x\<rbrace>) \<Longrightarrow> (do y <- h; x <- f y; g x od) = (do y <- h; f y; g x od) "
+  apply (clarsimp)
+  apply (monad_eq)
+  apply (intro conjI; clarsimp)
+  using post_by_hoare apply fastforce
+  using post_by_hoare apply fastforce
+  using post_by_hoare by fastforce
+
+
+ML \<open>
+
+val _ = Parse.term
+
+fun lookup_term t ctxt  =
+  let fun append s s' = s' ^ s;
+      fun box x = [x];
+      val fun_term = t |> Term.head_of;
+  in
+        if is_Const fun_term then (fun_term |> dest_Const |> fst |> append "_def" |> Proof_Context.get_thm ctxt |> box |> Method.unfold) ctxt
+                             else Method.fail
+
+     end;
+
+fun append s s' = s' ^ s;
+
+val x = lookup_term @{term "foo x"} @{context}
+
+
+val _ = Parse.for_fixes
+
+\<close>
+
+method_setup unfold_term =
+\<open> Args.term >> lookup_term \<close>
+
+
+lemma [wp]:"\<lbrace>P\<rbrace> (f :: ('a, unit) nondet_monad) \<lbrace>\<lambda>rv _. rv = ()\<rbrace>"
+  by (clarsimp simp: valid_def)
+
+method monster_mash_inner for f :: "('a, 'b) nondet_monad"  =
+   ( (unfold_term f, wp, rule refl)[1])
+
+
+
+method nokbind for P = (match (P) in "K_bind _" \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow> \<open>-\<close>)
+method no_k_bind = (match conclusion in "g = g" for g \<Rightarrow> \<open>nokbind g, rule refl\<close>)
+
+
+method monster_mash =
+  (changed \<open>(subst prop_forward', no_k_bind, (match conclusion in " valid _ f _" for f \<Rightarrow>
+    \<open> ( (wp | (unfold_term f, (wp | (monster_mash, wp)) )))[1] \<close>)), (intro impI)?, rule refl\<close>)+
+
+definition "bar x y = (do foo x; foo y od)"
+
+
+lemma test: "\<lbrace>\<lambda>x. x =  2 \<and> c = 0 \<and> c' = 3\<rbrace> bar c c' \<lbrace>\<lambda>rv x. x = (2 :: nat)\<rbrace>"
+
+   apply (unfold_term bar)
+   apply (clarsimp)
+    apply (monster_mash)
+   apply (rule hoare_name_pre_state)
+   apply (clarsimp)
+   apply (unfold foo_def)
+    apply (monster_mash)
+
+oops
+
+(* FIXME merge end *)
+
+
+lemma sep_map_set_conj_set_append: (* FIXME merge: triplicate *)
+  "distinct (xs@ys) \<Longrightarrow> sep_map_set_conj P (set (xs @ ys)) = (sep_map_set_conj P (set xs) \<and>* sep_map_set_conj P (set ys))"
+  apply (induct xs; clarsimp)
+  apply (case_tac ys; clarsimp)
+  apply (rule ext; rule iffI; sep_solve)
+  done
+
+lemma sep_map_set_conj_set_take_drop: (* FIXME merge: triplicate *)
+  "sep_map_set_conj P (set xs) s \<Longrightarrow> distinct xs \<Longrightarrow> (sep_map_set_conj P (set (take n xs)) \<and>*  sep_map_set_conj P (set (drop n xs))) s"
+ apply (clarsimp)
+ by (subst (asm) append_take_drop_id[where n=n, symmetric],
+    (subst  sep_map_set_conj_set_append[symmetric]), clarsimp+)
+
+lemma create_irq_caps_sep':
+  "\<forall>irq\<in>used_irqs spec. t (cdl_irq_node spec irq) = Some (cdl_irq_node spec irq) \<Longrightarrow>
+  \<lbrace>\<guillemotleft>((\<And>* cptr \<in> set_region (free_cptrs).
+           ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
+      si_objects \<and>* si_irq_nodes spec \<and>* R)  and
+   K (well_formed spec \<and> valid_slot_region free_cptrs \<and>
+      card (used_irqs spec) \<le> length_region free_cptrs)\<guillemotright> \<rbrace>
+  create_irq_caps spec free_cptrs
+   \<lbrace>\<lambda>_.
+    \<guillemotleft>(irqs_empty spec t (used_irqs spec) \<and>*
+      si_irq_caps_at (map_of (zip_region (used_irq_list spec) free_cptrs)) spec (used_irqs spec) \<and>*
+     (\<And>* cptr \<in> set_region (drop_region (card (used_irqs spec)) free_cptrs).
+           ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) \<and>*
+      si_objects \<and>* R)
+    \<guillemotright> \<rbrace>"
+  apply (erule hoare_chain[OF create_irq_caps_sep])
+   apply (clarsimp simp: pred_conj_def)
+   defer
+   apply (clarsimp simp: pred_conj_def cong del: prod.cong_simp )
+   apply (sep_solve)
+  apply (sep_cancel)+
+  apply (sep_drule sep_map_set_conj_set_take_drop[where n="card (used_irqs spec)"])
+   apply (clarsimp)
+  apply sep_cancel+
+  done
 
 
 
@@ -423,61 +610,5 @@ lemma si_objects_extra_caps'_split:
   apply (clarsimp simp: sep_conj_ac)
   done
 
-
-lemma create_irq_caps_sep:
-  "\<lbrace>\<lambda>s. \<exists>t_real.
-    \<guillemotleft>(objects_empty spec t_real {obj_id. real_object_at obj_id spec} \<and>*
-      si_caps_at t_real orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_objects \<and>*
-      si_objects_extra_caps' {obj_id. real_object_at obj_id spec} free_cptrs_orig untyped_cptrs \<and>*
-      si_irq_nodes spec \<and>* R)  and
-   K (well_formed spec \<and>
-      distinct free_cptrs_orig \<and>
-      list_all (\<lambda>n. n < 2 ^ si_cnode_size) free_cptrs \<and>
-      card (used_irqs spec) \<le> length free_cptrs \<and>
-      inj_on t_real {obj_id. real_object_at obj_id spec} \<and>
-      dom t_real = {obj_id. real_object_at obj_id spec} \<and>
-      dom orig_caps = {obj_id. real_object_at obj_id spec} \<and>
-      free_cptrs = drop (card {obj_id. real_object_at obj_id spec}) free_cptrs_orig)\<guillemotright> s\<rbrace>
-  create_irq_caps spec free_cptrs
-   \<lbrace>\<lambda>rv s. \<exists>(t::32 word \<Rightarrow> 32 word option).
-    \<guillemotleft>(objects_empty spec t {obj_id. real_object_at obj_id spec} \<and>*
-      irqs_empty spec t (used_irqs spec) \<and>*
-      si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*
-      si_irq_caps_at (fst rv) spec (used_irqs spec) \<and>*
-      si_objects \<and>*
-      si_objects_extra_caps' (dom (cdl_objects spec)) free_cptrs_orig untyped_cptrs \<and>*
-      R) and
-    K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
-       inj_on t (dom (cdl_objects spec)) \<and> dom t = dom (cdl_objects spec))\<guillemotright> s\<rbrace>"
-  apply (rule hoare_ex_pre)
-  apply (rule hoare_gen_lifted_asm)
-  apply (elim conjE)
-  apply (subst si_objects_extra_caps'_split, assumption+)
-  apply (rule hoare_chain [OF create_irq_caps_sep_helper, where orig_caps1=orig_caps])
-   apply (rule pred_conjI)
-    apply sep_solve
-   apply clarsimp
-  apply clarsimp
-  apply (rule_tac x="t_real ++ t'" in exI)
-  apply clarsimp
-  apply (frule well_formed_objects_real_or_irq)
-  apply (frule well_formed_objects_only_real_or_irq)
-  apply (clarsimp simp: used_irq_nodes_def)
-  apply (subgoal_tac "map_disj t_real t'")
-   apply (rule conjI)
-    apply (subst object_empty_map_add [symmetric], assumption+)
-    apply (subst irq_empty_map_add [symmetric],simp add: used_irq_nodes_def)
-    apply (subst si_caps_at_map_add [symmetric], assumption+)
-    apply (clarsimp simp: si_objects_extra_caps'_def sep_conj_exists sep_conj_assoc)
-    apply (rule_tac x=untyped_caps in exI)
-    apply (rule_tac x=all_available_ids in exI)
-    apply sep_solve
-   apply (rule conjI)
-    apply (rule inj_on_map_add, simp+)
-     apply (rule irq_empty_objects_empty_ran_distinct, sep_solve, simp+)
-   apply (metis sup_commute)
-  apply (clarsimp simp: map_disjI)
-  done
 
 end

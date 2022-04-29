@@ -8,29 +8,28 @@ theory SysInit_SI
 imports
   "DSpecProofs.Kernel_DP"
   "Lib.NonDetMonadLemmaBucket"
+  Region
 begin
 
-definition
-  parse_bootinfo :: "cdl_bootinfo \<Rightarrow> (cdl_cptr list \<times> cdl_cptr list) u_monad"
-where
+definition parse_bootinfo ::
+  "cdl_bootinfo \<Rightarrow> (bi_slot_region \<times> (cdl_cptr \<times> bi_untyped_desc) list) u_monad"
+  where
   "parse_bootinfo bootinfo \<equiv> do
-    (untyped_start, untyped_end) \<leftarrow> return $ bi_untypes bootinfo;
-    untyped_list \<leftarrow> return [untyped_start .e. (untyped_end - 1)];
+    (untyped_start, untyped_end) \<leftarrow> return $ bi_untypeds bootinfo;
+    untyped_list \<leftarrow> return $ zip [untyped_start .e. (untyped_end - 1)]
+                                 (bi_untyped_information bootinfo);
 
-    (free_slot_start, free_slot_end) \<leftarrow> return $ bi_free_slots bootinfo;
-    free_slots \<leftarrow> return [free_slot_start .e. (free_slot_end - 1)];
-
-    return (untyped_list, free_slots)
+    return (bi_free_slots bootinfo, untyped_list)
   od"
 
 (* Create a new object in the next free cnode slot using a given untyped.
-   Return whether or not the operation fails. *)
+   Assuming an static allocation, we are sure it always returns success. *)
 definition
-  retype_untyped :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> bool u_monad"
+  retype_untyped :: "cdl_cptr \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_type \<Rightarrow> nat \<Rightarrow> unit u_monad"
 where
   "retype_untyped free_slot free_untyped type size_bits \<equiv>
     seL4_Untyped_Retype free_untyped type (of_nat size_bits)
-                        seL4_CapInitThreadCNode 0 0 free_slot 1"
+                        seL4_CapInitThreadCNode 0 0 free_slot 1 >>= (assert o Not) "
 
 definition
   inc_when :: "bool \<Rightarrow> nat \<Rightarrow> ('s,nat) nondet_monad"
@@ -51,39 +50,47 @@ lemma update_when_wp [wp]:
   "\<lbrace>Q (if B then t(a \<mapsto> b) else t)\<rbrace> update_when B t a b \<lbrace>Q\<rbrace>"
   by (unfold update_when_def, wp)
 
-(* Create the objects in the capDL spec.
-   Caps to new objects are stored in the free slots. *)
-
-definition create_objects :: "cdl_state \<Rightarrow> cdl_object_id list
-                           \<Rightarrow> cdl_cptr list \<Rightarrow> cdl_cptr list
-                           \<Rightarrow> ((cdl_object_id \<Rightarrow> cdl_cptr option) \<times> cdl_cptr list) u_monad"
-where
-  "create_objects spec obj_ids untyped_cptrs free_cptrs \<equiv> do
-    (obj_id_index, untyped_index, si_caps) \<leftarrow> whileLoop (\<lambda>(obj_id_index, untyped_index, si_caps) _.
-                     obj_id_index  < length [obj\<leftarrow>obj_ids. real_object_at obj spec] \<and>
-                     obj_id_index  < length free_cptrs \<and>
-                     untyped_index < length untyped_cptrs)
-    (\<lambda>(obj_id_index, untyped_index, si_caps).
-     do
-        obj_id       \<leftarrow> return $ [obj\<leftarrow>obj_ids. real_object_at obj spec] ! obj_id_index;
-        free_cptr    \<leftarrow> return $ free_cptrs ! obj_id_index;
-        untyped_cptr \<leftarrow> return $ untyped_cptrs ! untyped_index;
-
-        object      \<leftarrow> get_spec_object spec obj_id;
-        object_type \<leftarrow> return $ object_type object;
-        object_size \<leftarrow> return $ object_size_bits object;
-
-        fail \<leftarrow> retype_untyped free_cptr untyped_cptr object_type object_size;
-
-        obj_id_index  \<leftarrow> inc_when (\<not> fail) obj_id_index;
-        untyped_index \<leftarrow> inc_when    fail  untyped_index;
-        si_caps   \<leftarrow> update_when (\<not> fail) si_caps obj_id free_cptr;
-        return (obj_id_index, untyped_index, si_caps)
-     od) (0, 0, Map.empty);
-     assert (untyped_index \<noteq> length untyped_cptrs);
-     return (si_caps, drop (length [obj\<leftarrow>obj_ids. real_object_at obj spec]) free_cptrs)
+definition lookup_cptr ::
+  "(cdl_cptr \<times> bi_untyped_desc) list \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cptr u_monad"
+  where
+  "lookup_cptr untyped_list untyped_id \<equiv> do
+    untyped_cptr_opt \<leftarrow>
+      return $ (find (\<lambda>(_, ut_desc). bi_ut_paddr ut_desc = untyped_id)
+                ||> fst) untyped_list;
+    assert $ isJust untyped_cptr_opt;
+    return $ the untyped_cptr_opt
   od"
 
+definition create_object :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
+                           \<Rightarrow> cdl_cptr \<Rightarrow> cdl_object_id
+                           \<Rightarrow> (cdl_object_id \<times> cdl_cptr) u_monad"
+where
+  "create_object spec free_cptr_map untyped_cptr child \<equiv> do
+    object      \<leftarrow> get_spec_object spec child;
+    object_type \<leftarrow> return $ object_type object;
+    object_size \<leftarrow> return $ object_size_bits object;
+    free_cptr   \<leftarrow> return $ the (free_cptr_map child);
+
+    retype_untyped free_cptr untyped_cptr object_type object_size;
+    return (child, free_cptr)
+  od"
+
+definition collect_children :: "('a \<times> ('b list)) list \<Rightarrow> 'b list"
+   where "collect_children xs = xs \<bind> snd"
+
+definition create_objects :: "cdl_state \<Rightarrow> (cdl_cptr \<times> bi_untyped_desc) list
+                           \<Rightarrow> bi_slot_region \<Rightarrow> (cdl_object_id \<times> (cdl_object_id list)) list
+                           \<Rightarrow> ((cdl_object_id \<Rightarrow> cdl_cptr option) \<times> bi_slot_region) u_monad"
+where
+  "create_objects spec untyped_list free_cptrs untyped_derivations \<equiv> do
+     si_caps <- return $ map_of $ zip_region (collect_children untyped_derivations)
+                                                  free_cptrs;
+     mapM_x (\<lambda>(parent, children).
+              do parent_cptr <- lookup_cptr untyped_list parent;
+                 mapM_x (create_object spec si_caps parent_cptr) children od)
+            untyped_derivations;
+     return (si_caps, drop_region' (collect_children untyped_derivations) free_cptrs)
+  od"
 
 (* This makes the IRQ handler caps.
  * These caps are then used to set up the IRQs.
@@ -110,14 +117,15 @@ where
          (HOL.Not o Option.is_none o cdl_objects s o cdl_irq_node s)
          [0 .e. maxBound]"
 
-definition create_irq_caps :: "cdl_state \<Rightarrow> cdl_cptr list \<Rightarrow>
-                              ((cdl_irq \<Rightarrow> cdl_cptr option) \<times> cdl_cptr list) u_monad"
+definition create_irq_caps :: "cdl_state \<Rightarrow> bi_slot_region \<Rightarrow>
+                              ((cdl_irq \<Rightarrow> cdl_cptr option) \<times> bi_slot_region) u_monad"
 where
   "create_irq_caps spec free_cptrs \<equiv> do
     irqs \<leftarrow> return $ used_irq_list_compute spec;
-    mapM_x (create_irq_cap spec) (zip irqs free_cptrs);
-    si_irq_caps \<leftarrow> return $ map_of (zip irqs free_cptrs);
-    return (si_irq_caps, drop (length irqs) free_cptrs)
+    irq_caps_list <- return $ zip_region irqs free_cptrs;
+    mapM_x (create_irq_cap spec) irq_caps_list;
+    si_irq_caps \<leftarrow> return $ map_of irq_caps_list;
+    return (si_irq_caps, drop_region' irqs free_cptrs)
   od"
 
 (* This one installs the caps in the CNodes.
@@ -133,7 +141,6 @@ where
     irq_slot        \<leftarrow> return $ get_irq_slot irq spec;
     endpoint_cap    \<leftarrow> assert_opt $ opt_cap irq_slot spec;
     endpoint_cptr   \<leftarrow> assert_opt $ orig_caps (cap_object endpoint_cap);
-
     fail \<leftarrow> seL4_IRQHandler_SetEndpoint irq_handler_cap endpoint_cptr;
     assert (\<not>fail)
   od"
@@ -175,15 +182,16 @@ where
  * Thread caps are duplicated as the system initialiser needs to have them to start the threads
  * at the end of initialisation.
  *)
-definition duplicate_caps :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
-                                        \<Rightarrow> cdl_object_id list \<Rightarrow> cdl_cptr list
-                                        \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) u_monad"
+definition duplicate_caps ::
+  "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
+   \<Rightarrow> cdl_object_id list \<Rightarrow> bi_slot_region
+   \<Rightarrow> ((cdl_object_id \<Rightarrow> cdl_cptr option) \<times> bi_slot_region) u_monad"
 where
   "duplicate_caps spec orig_caps obj_ids free_slots \<equiv> do
     obj_ids' \<leftarrow> return [obj_id \<leftarrow> obj_ids. cnode_or_tcb_at obj_id spec];
-    assert (length obj_ids' \<le> length free_slots);
-    mapM_x (duplicate_cap spec orig_caps) (zip obj_ids' free_slots);
-    return $ map_of $ zip obj_ids' free_slots
+    assert (length obj_ids' \<le> length_region free_slots);
+    mapM_x (duplicate_cap spec orig_caps) (zip_region obj_ids' free_slots);
+    return (map_of $ zip_region obj_ids' free_slots, drop_region' obj_ids' free_slots)
   od"
 
 (* Initialise a single tcb (cspace, vspace and fault_ep). *)
@@ -194,8 +202,9 @@ where
     cdl_cspace_root \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_cspace_slot) spec;
     cdl_vspace_root \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_vspace_slot) spec;
     cdl_ipcbuffer   \<leftarrow> assert_opt $ opt_cap (tcb_id, tcb_ipcbuffer_slot) spec;
-    ipcbuf_addr     \<leftarrow> return $ tcb_ipc_buffer_address cdl_tcb;
-    priority        \<leftarrow> return $ tcb_priority cdl_tcb;
+    ipcbuf_addr     \<leftarrow> return $ cdl_tcb_ipc_buf (cdl_tcb_extra cdl_tcb);
+    priority        \<leftarrow> return $ cdl_tcb_prio (cdl_tcb_extra cdl_tcb);
+    mcp             \<leftarrow> return $ cdl_tcb_mcp (cdl_tcb_extra cdl_tcb);
 
     sel4_tcb         \<leftarrow> assert_opt $ orig_caps tcb_id;
     sel4_cspace_root \<leftarrow> assert_opt $ orig_caps (cap_object cdl_cspace_root);
@@ -210,7 +219,9 @@ where
                                   sel4_cspace_root sel4_cspace_root_data
                                   sel4_vspace_root sel4_vspace_root_data
                                   ipcbuf_addr sel4_ipcbuffer;
-    assert (\<not>fail)
+    assert (\<not>K fail ''init_tcb configure'');
+    fail \<leftarrow> seL4_TCB_SetSchedParams' sel4_tcb seL4_CapInitThreadTCB mcp priority;
+    assert (\<not>K fail ''init_tcb set sched params'')
   od"
 
 (* Set the registers of a single tcb (cspace, vspace and fault_ep). *)
@@ -219,11 +230,16 @@ where
   "configure_tcb spec orig_caps tcb_id \<equiv> do
     cdl_tcb  \<leftarrow> assert_opt $ opt_thread tcb_id spec;
     sel4_tcb \<leftarrow> assert_opt $ orig_caps tcb_id;
-    ip \<leftarrow> return $ tcb_ip cdl_tcb;
-    sp \<leftarrow> return $ tcb_sp cdl_tcb;
-    regs \<leftarrow> return [ip, sp];
-    fail \<leftarrow> seL4_TCB_WriteRegisters sel4_tcb False 0 2 regs;
-    assert fail
+    ip \<leftarrow> return $ cdl_tcb_ip (cdl_tcb_extra cdl_tcb);
+    sp \<leftarrow> return $ cdl_tcb_sp (cdl_tcb_extra cdl_tcb);
+    init \<leftarrow> return $ cdl_tcb_init (cdl_tcb_extra cdl_tcb);
+    get_arg \<leftarrow> return (\<lambda>i. if i < length init then init ! i else 0);
+    \<comment> \<open>Set r0..r3 to get_arg(0..3), but seL4 ARM register order is convoluted.
+       See seL4_UserContext in seL4/libsel4/sel4_arch_include/aarch32/sel4/sel4_arch/types.h
+       for the register layout (on aarch32 platforms).\<close>
+    regs \<leftarrow> return ([ip, sp, 0, get_arg 0, get_arg 1, 0, 0, 0, 0, 0, get_arg 2, get_arg 3] @ replicate 7 0);
+    fail \<leftarrow> seL4_TCB_WriteRegisters sel4_tcb False 0 18 regs;
+    assert (\<not>K fail ''configure_tcb'')
   od"
 
 (* Initialise all the tcbs (cspace, vspace and fault_ep). *)
@@ -264,13 +280,12 @@ where
 (* Map a page into a page table or page directory *)
 definition map_page ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> unit u_monad"
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_cptr \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
-  "map_page spec orig_caps page_id pd_id rights vaddr free_cptr \<equiv> do
+  "map_page spec orig_caps page_id pd_id rights vaddr free_cptr vmattribs \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
-    vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;
     assert (frame_at page_id spec);
     \<comment> \<open>Copy the frame cap into a new slot for mapping, this enables shared frames\<close>
     duplicate_cap spec orig_caps (page_id, free_cptr);
@@ -281,13 +296,12 @@ definition map_page ::
 (* Map a page table into a page directory *)
 definition map_page_table ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
-   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> unit u_monad"
+   \<Rightarrow> cdl_object_id \<Rightarrow> cdl_right set \<Rightarrow> word32 \<Rightarrow> cdl_raw_vmattrs \<Rightarrow> unit u_monad"
   where
-  "map_page_table spec orig_caps page_id pd_id rights vaddr \<equiv> do
+  "map_page_table spec orig_caps page_id pd_id rights vaddr vmattribs \<equiv> do
     cdl_page  \<leftarrow> assert_opt $ cdl_objects spec page_id;
     sel4_page \<leftarrow> assert_opt $ orig_caps page_id;
     sel4_pd   \<leftarrow> assert_opt $ orig_caps pd_id;
-    vmattribs \<leftarrow> assert_opt $ opt_vmattribs cdl_page;
     assert (pt_at page_id spec);
     seL4_PageTable_Map sel4_page sel4_pd vaddr vmattribs;
     return ()
@@ -298,7 +312,7 @@ definition map_page_table_slot ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id
    \<Rightarrow> cdl_object_id \<Rightarrow> word32 \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
   where
-  "map_page_table_slot spec orig_caps pd_id pt_id pt_vaddr free_cptr pt_slot  \<equiv> do
+  "map_page_table_slot spec orig_caps pd_id pt_id pt_vaddr free_cptrs_map pt_slot  \<equiv> do
     frame_cap  \<leftarrow> assert_opt $ opt_cap (pt_id, pt_slot) spec;
     page       \<leftarrow> return $ cap_object frame_cap;
 
@@ -307,9 +321,10 @@ definition map_page_table_slot ::
        Each page stores 12 bits of memory.\<close>
     page_vaddr   \<leftarrow> return $ pt_vaddr + (of_nat pt_slot << small_frame_size);
     page_rights  \<leftarrow> return (cap_rights frame_cap);
+    page_attr \<leftarrow> return (cap_vmattrs frame_cap);
     if frame_cap \<noteq> NullCap then
-      do cptr  \<leftarrow> return $ free_cptr (pt_id, pt_slot);
-         map_page spec orig_caps page pd_id page_rights page_vaddr cptr
+      do cptr  \<leftarrow> return $ free_cptrs_map (pt_id, pt_slot);
+         map_page spec orig_caps page pd_id page_rights page_vaddr cptr page_attr
       od
     else
       return ()
@@ -320,7 +335,7 @@ definition map_page_directory_slot ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
    \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_cnode_index \<Rightarrow> unit u_monad"
   where
-  "map_page_directory_slot spec orig_caps pd_id free_cptrs pd_slot \<equiv> do
+  "map_page_directory_slot spec orig_caps pd_id free_cptrs_map pd_slot \<equiv> do
     page_cap    \<leftarrow> assert_opt $ opt_cap (pd_id, pd_slot) spec;
     page_id     \<leftarrow> return $ cap_object page_cap;
 
@@ -328,18 +343,19 @@ definition map_page_directory_slot ::
        Each page directory slot maps 10+12 bits of memory (by the page table and page respectively).\<close>
     page_vaddr  \<leftarrow> return $ of_nat pd_slot << (pt_size + small_frame_size);
     page_rights \<leftarrow> return (cap_rights page_cap);
+    page_attr \<leftarrow> return (cap_vmattrs page_cap);
 
     if pt_at page_id spec then
       do
-        map_page_table spec orig_caps page_id pd_id page_rights page_vaddr;
+        map_page_table spec orig_caps page_id pd_id page_rights page_vaddr page_attr;
         page_slots \<leftarrow> return $ slots_of_list spec page_id;
-        mapM_x (map_page_table_slot spec orig_caps pd_id page_id page_vaddr free_cptrs)
+        mapM_x (map_page_table_slot spec orig_caps pd_id page_id page_vaddr free_cptrs_map)
                [slot <- page_slots. cap_at ((\<noteq>) NullCap) (page_id, slot) spec]
       od
     else if frame_at page_id spec then
       do
-        cptr \<leftarrow> return $ free_cptrs (pd_id, pd_slot);
-        map_page spec orig_caps page_id pd_id page_rights page_vaddr cptr
+        cptr \<leftarrow> return $ free_cptrs_map (pd_id, pd_slot);
+        map_page spec orig_caps page_id pd_id page_rights page_vaddr cptr page_attr
       od
     else
       return ()
@@ -350,12 +366,12 @@ definition map_page_directory ::
   "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option)
    \<Rightarrow> (cdl_cap_ref \<Rightarrow> cdl_cptr) \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
   where
-  "map_page_directory spec orig_caps free_cptrs pd_id \<equiv> do
+  "map_page_directory spec orig_caps free_cptrs_map pd_id \<equiv> do
     pd_slots \<leftarrow> return $ slots_of_list spec pd_id;
-    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs)
+    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs_map)
            [pd_slot <- pd_slots. cap_at (\<lambda>cap. cap \<noteq> NullCap
                                  \<and> frame_at (cap_object cap) spec) (pd_id, pd_slot) spec];
-    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs)
+    mapM_x (map_page_directory_slot spec orig_caps pd_id free_cptrs_map)
            [pd_slot <- pd_slots. cap_at (\<lambda>cap. cap \<noteq> NullCap
                                  \<and> pt_at (cap_object cap) spec) (pd_id, pd_slot) spec]
   od"
@@ -366,29 +382,33 @@ definition get_frame_caps :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow
  "get_frame_caps spec pd_id \<equiv> do {
     pd_slot <- slots_of_list spec pd_id;
     obj_cap <- case_option [] (\<lambda>x. [x]) $ opt_cap (pd_id, pd_slot) spec;
-    let obj_id = cap_object obj_cap;
-    if frame_at obj_id spec then
-      [(pd_id, pd_slot)]
-    else
-      \<comment> \<open>If the slot contains a page table cap, collect all its slots that contain frames\<close>
-      map (Pair obj_id) o filter (\<lambda>slot. cap_at ((\<noteq>) NullCap) (obj_id, slot) spec) $
-        slots_of_list spec obj_id
+    if cap_has_object obj_cap then
+      let obj_id = cap_object obj_cap in
+      if frame_at obj_id spec then
+        [(pd_id, pd_slot)]
+      else
+        \<comment> \<open>If the slot contains a page table cap, collect all its slots that contain frames\<close>
+        map (Pair obj_id) o filter (\<lambda>slot. cap_at ((\<noteq>) NullCap) (obj_id, slot) spec) $
+          slots_of_list spec obj_id
+   else []
   }"
 
 (* Construct a function to assign each frame cap a free cptr, mapping all other slots to 0 *)
 definition make_frame_cap_map ::
-  "cdl_object_id list \<Rightarrow> word32 list \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id \<times> nat \<Rightarrow> word32"
+  "cdl_object_id list \<Rightarrow> bi_slot_region \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id \<times> nat \<Rightarrow> word32"
   where
   "make_frame_cap_map obj_ids free_cptrs spec ref \<equiv>
      case_option 0 id
-       (map_of (zip ([obj_id \<leftarrow> obj_ids. pd_at obj_id spec] \<bind> get_frame_caps spec) free_cptrs) ref)"
+       (map_of (zip_region ([obj_id \<leftarrow> obj_ids. pd_at obj_id spec] \<bind> get_frame_caps spec)
+                                free_cptrs)
+               ref)"
 
 (* Maps page directories and all their contents. *)
 definition init_vspace ::
   "cdl_state \<Rightarrow>
   (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow>
   cdl_object_id list \<Rightarrow>
-  cdl_cptr list \<Rightarrow>
+  bi_slot_region \<Rightarrow>
   unit u_monad"
 where
   "init_vspace spec orig_caps obj_ids free_cptrs \<equiv> do
@@ -410,10 +430,11 @@ definition init_cnode_slot :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarr
                                          \<Rightarrow> init_cnode_mode \<Rightarrow> cdl_object_id
                                          \<Rightarrow> cdl_cnode_index \<Rightarrow> bool u_monad"
 where
-  "init_cnode_slot spec orig_caps dup_caps irq_caps mode cnode_id cnode_slot \<equiv> do
-    target_cap     \<leftarrow> assert_opt (opt_cap (cnode_id, cnode_slot) spec);
+  "init_cnode_slot spec orig_caps dup_caps irq_caps mode cnode_id cnode_slot \<equiv>
+    case opt_cap (cnode_id, cnode_slot) spec of
+        None \<Rightarrow> return True
+      | Some target_cap \<Rightarrow> do
     target_cap_obj \<leftarrow> return (cap_object target_cap);
-    target_cap_irq \<leftarrow> return (cap_irq target_cap);
 
     target_cap_rights     \<leftarrow> return (cap_rights target_cap);
 
@@ -422,9 +443,13 @@ where
 
     is_ep_cap   \<leftarrow> return (ep_related_cap target_cap);
     is_irqhandler_cap \<leftarrow> return (is_irqhandler_cap target_cap);
+    target_cap_irq \<leftarrow> return (if is_irqhandler_cap then cap_irq target_cap else 0);
 
-    \<comment> \<open>ny original caps (which includes IRQ Hander caps) are moved, not copied.\<close>
-    move_cap \<leftarrow> return (original_cap_at (cnode_id, cnode_slot) spec);
+    \<comment> \<open>IRQ Handler caps are moved, not copied.\<close>
+    \<comment> \<open>LIMITATION: This only moves irqhandler caps so that the generated
+            initialiser can work with the wider CAmkES framework. The proof would
+            still hold with original_cap_at.\<close>
+    move_cap \<leftarrow> return (irqhandler_cap_at (cnode_id, cnode_slot) spec);
 
     dest_obj   \<leftarrow> get_spec_object spec cnode_id;
     dest_size  \<leftarrow> return (object_size_bits dest_obj);
@@ -490,7 +515,7 @@ where
   "start_thread spec dup_caps tcb_id \<equiv> do
     sel4_tcb \<leftarrow> assert_opt $ dup_caps tcb_id;
     fail \<leftarrow> seL4_TCB_Resume sel4_tcb;
-    assert fail
+    assert (\<not>fail)
   od"
 
 definition start_threads :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list
@@ -501,21 +526,23 @@ where
     mapM_x (start_thread spec orig_caps) tcbs
   od"
 
-definition init_system :: "cdl_state \<Rightarrow> cdl_bootinfo \<Rightarrow> cdl_object_id list \<Rightarrow> unit u_monad"
+definition init_system :: "cdl_state \<Rightarrow> cdl_bootinfo
+                          \<Rightarrow> (cdl_object_id \<times> cdl_object_id list) list \<Rightarrow> unit u_monad"
 where
-  "init_system spec bootinfo obj_ids \<equiv> do
-    (untyped_cptrs, free_cptrs) \<leftarrow> parse_bootinfo bootinfo;
+  "init_system spec bootinfo untyped_derivations \<equiv> do
+    real_obj_ids \<leftarrow> return $ List.concat (map snd untyped_derivations);
+    (free_cptrs, untyped_list) \<leftarrow> parse_bootinfo bootinfo;
 
-    (orig_caps, free_cptrs) \<leftarrow> create_objects spec obj_ids untyped_cptrs free_cptrs;
+    (orig_caps, free_cptrs) \<leftarrow> create_objects spec untyped_list free_cptrs untyped_derivations;
     (irq_caps, free_cptrs) \<leftarrow> create_irq_caps spec free_cptrs;
-    dup_caps \<leftarrow> duplicate_caps spec orig_caps obj_ids free_cptrs;
+    (dup_caps, free_cptrs) \<leftarrow> duplicate_caps spec orig_caps real_obj_ids free_cptrs;
 
     init_irqs     spec orig_caps irq_caps;
-    init_pd_asids spec orig_caps obj_ids;
-    init_vspace   spec orig_caps obj_ids free_cptrs;
-    init_tcbs     spec orig_caps obj_ids;
-    init_cspace   spec orig_caps dup_caps irq_caps obj_ids;
-    start_threads spec dup_caps obj_ids
+    init_pd_asids spec orig_caps real_obj_ids;
+    init_vspace   spec orig_caps real_obj_ids free_cptrs;
+    init_tcbs     spec orig_caps real_obj_ids;
+    init_cspace   spec orig_caps dup_caps irq_caps real_obj_ids;
+    start_threads spec dup_caps real_obj_ids
   od"
 
 end

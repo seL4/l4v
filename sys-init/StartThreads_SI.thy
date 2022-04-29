@@ -120,12 +120,20 @@ lemma tcb_half_initialised_object_initialised':
   apply (rule tcb_half_initialised_object_initialised, simp+)
   done
 
+lemma real_object_at_is_waiting_thread_at[simp]:
+  "(real_object_at obj_id spec \<and> is_waiting_thread_at obj_id spec) = is_waiting_thread_at obj_id spec"
+  unfolding real_object_at_def irq_nodes_def is_irq_node_def object_at_def
+            is_waiting_thread_def is_tcb_def
+  apply safe
+  by (auto split: cdl_object.splits)
+
 lemma start_threads_sep:
   "\<lbrace>\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
      si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright> and
-     K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
-   start_threads spec dup_caps obj_ids
+    K (well_formed spec \<and> distinct real_obj_ids
+       \<and> set real_obj_ids = {obj_id. real_object_at obj_id spec})\<rbrace>
+   start_threads spec dup_caps real_obj_ids
    \<lbrace>\<lambda>_.\<guillemotleft>objects_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
         si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
@@ -148,7 +156,7 @@ lemma start_threads_sep:
                Q="\<lambda>obj_id. object_initialised spec t obj_id" and
                I="si_caps_at t dup_caps spec False {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
                   si_objects" and
-               xs="[obj_id \<leftarrow> obj_ids. is_waiting_thread_at obj_id spec]" and
+               xs="[obj_id \<leftarrow> real_obj_ids. is_waiting_thread_at obj_id spec]" and
                X="{obj_id. object_at is_waiting_thread obj_id spec}" and
               R="R \<and>* (\<And>*obj_id | tcb_at obj_id spec \<and> \<not> object_at is_waiting_thread obj_id spec.
                                    object_initialised spec t obj_id)"

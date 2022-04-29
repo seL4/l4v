@@ -180,11 +180,12 @@ lemma cap_guard_size_si_cnode_cap_plus_si_cnode_size [simp]:
 lemma cap_object_si_cspace_cap [simp]:
   "cap_object si_cspace_cap = si_cnode_id"
   by (clarsimp simp: cap_object_def cap_has_object_def si_cspace_cap_def)
+     (metis (full_types) LeastI)
 
 lemma cap_object_si_cnode_cap [simp]:
   "cap_object si_cnode_cap = si_cnode_id"
   by (clarsimp simp: cap_object_def cap_has_object_def si_cnode_cap_def)
-
+     (metis (full_types) LeastI)
 
 lemma offset_slot_si_cnode_size:
   "slot < 2^si_cnode_size \<Longrightarrow> offset (of_nat slot) si_cnode_size = slot"
@@ -560,53 +561,11 @@ definition frame_duplicates_copied ::
  * The pre and post conditions of the system initialiser. *
  **********************************************************)
 
-(* That the boot info is valid, and that there are enough free slots to initialise a system. *)
-definition
-  valid_boot_info
-where
-  "valid_boot_info bootinfo spec \<equiv> \<lambda>s.
-  \<exists>untyped_caps fstart fend ustart uend obj_ids.
-  ((\<And>*(cptr, cap) \<in> set (zip [ustart .e. uend - 1] untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap)  \<and>*
-   (\<And>* cptr \<in> set [fstart .e. fend - 1]. (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-   (\<And>* obj_id\<in>(\<Union>cap\<in>set untyped_caps. cap_free_ids cap). obj_id \<mapsto>o Untyped) \<and>*
-   (SETSEPCONJ pd_id | pd_at pd_id spec.
-     frame_duplicates_empty (make_frame_cap_map obj_ids
-                              (drop (card (dom (cdl_objects spec))) [fstart .e. fend - 1]) spec)
-                            pd_id spec) \<and>*
-   si_objects \<and>*
-   si_irq_nodes spec) s \<and>
-   obj_ids = sorted_list_of_set (dom (cdl_objects spec)) \<and>
-   card (dom (cdl_objects spec)) +
-   card {obj_id. cnode_or_tcb_at obj_id spec} +
-   card (\<Union>(set ` get_frame_caps spec ` {obj. pd_at obj spec})) \<le> unat fend - unat fstart \<and>
-   length untyped_caps = unat uend - unat ustart \<and>
-   distinct_sets (map cap_free_ids untyped_caps) \<and>
-   list_all is_full_untyped_cap untyped_caps \<and>
-   list_all well_formed_untyped_cap untyped_caps \<and>
-   list_all (\<lambda>c. \<not> is_device_cap c) untyped_caps \<and>
-   bi_untypes bootinfo = (ustart, uend) \<and>
-   bi_free_slots bootinfo = (fstart, fend) \<and>
-   ustart < 2 ^ si_cnode_size \<and>
-  (uend - 1) < 2 ^ si_cnode_size \<and>
-   fstart < 2 ^ si_cnode_size \<and>
-  (fend - 1) < 2 ^ si_cnode_size \<and>
-   uend \<noteq> 0 \<and> fend \<noteq> 0"
 
-definition
-  si_final_objects :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> sep_pred"
-where
-  "si_final_objects spec t \<equiv> \<lambda>s.
-   \<exists>dup_caps (untyped_cptrs::32 word list) (free_cptrs::32 word list) untyped_caps all_available_ids.
-    ((\<And>*  cptr \<in> set (take (card (dom (cdl_objects spec))) free_cptrs).
-          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     (\<And>*  cptr \<in> set (drop (card (dom (cdl_objects spec)) +
-                             card ({obj_id. cnode_or_tcb_at obj_id spec})) free_cptrs).
-          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     (\<And>* (cptr, untyped_cap) \<in> set (zip untyped_cptrs untyped_caps).
-          (si_cnode_id, unat cptr) \<mapsto>c untyped_cap) \<and>*
-     (\<And>*  obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-     (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec False obj_id)) \<and>*
-      si_objects) s"
+(* That the boot info is valid, and that there are enough free slots to initialise a system. *)
+
+
+
 
 (********************************************************
  * Conversion of si_objs_caps_at to si_caps_at *
@@ -808,20 +767,34 @@ lemma si_null_caps_at_simplified_helper:
   apply clarsimp
   done
 
+thm dom_def
+
+lemma the_dom_inj_on: "inj_on f S \<Longrightarrow> dom f = S \<Longrightarrow> inj_on (\<lambda>x. the (f x)) S"
+  by (metis (mono_tags, lifting) Some_the inj_on_def)
+
 lemma si_null_caps_at_simplified:
   "\<lbrakk>(si_spec_objs_null_caps_at t si_caps spec cnode_ids) s;
     well_formed spec;
     cnode_ids = {obj_id. cnode_at obj_id spec};
     real_ids = {obj_id. real_object_at obj_id spec};
     real_ids = set obj_ids;
-    distinct obj_ids; distinct free_cptrs;
-    si_caps = map_of (zip obj_ids free_cptrs);
-    length obj_ids \<le> length free_cptrs\<rbrakk> \<Longrightarrow>
-   (\<And>* cptr \<in> set (take (length obj_ids) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
+    distinct obj_ids;
+    bij_betw (the o si_caps) real_ids (set (list_take_region (length obj_ids) free_cptrs));
+    dom si_caps = real_ids;
+    length obj_ids \<le> length_region free_cptrs\<rbrakk> \<Longrightarrow>
+   (\<And>* cptr \<in> set (list_take_region (length obj_ids) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
   apply (subst (asm) si_null_caps_at_conversion, assumption+)
   apply (drule si_null_caps_at_simplified_helper)
-  apply (subst si_null_caps_at_reindex [symmetric], simp+)
-  done
+  apply (subst (asm) sep.prod.cong[OF refl, where h= "\<lambda>id. ((si_cnode_id, unat (the (si_caps id))) \<mapsto>c NullCap)"])
+  apply (rule ext, clarsimp, rule iffI; clarsimp?)
+  apply (clarsimp simp: bij_betw_def)
+  apply (metis (full_types) domIff mem_Collect_eq option.collapse)
+  apply (erule sep.prod.reindex_cong[THEN fun_cong,  THEN iffD2, rotated -1])
+prefer 3
+  apply (fastforce)
+  apply (metis bij_betw_imp_inj_on inj_on_imageI2 the_dom_inj_on)
+ by (clarsimp simp: bij_betw_def)
+
 
 lemma map_of_zip_range':
   "\<lbrakk>length xs = length ys; distinct xs; set xs = X\<rbrakk>
@@ -923,11 +896,11 @@ lemma well_formed_used_irqs_rewrite:
 lemma si_irq_null_caps_at_simplified:
   "\<lbrakk>(si_spec_irqs_null_caps_at irq_caps spec {obj_id. cnode_at obj_id spec}) s;
     well_formed spec;
-    distinct irqs; distinct free_cptrs;
+    distinct irqs;
     set irqs = used_irqs spec;
-    irq_caps = map_of (zip irqs free_cptrs);
-    length irqs \<le> length free_cptrs\<rbrakk> \<Longrightarrow>
-   (\<And>* cptr \<in> set (take (length irqs) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
+    irq_caps = map_of (zip_region irqs free_cptrs);
+    length irqs \<le> length_region free_cptrs\<rbrakk> \<Longrightarrow>
+   (\<And>* cptr \<in> set (list_take_region (length irqs) free_cptrs). ((si_cnode_id, unat cptr) \<mapsto>c NullCap)) s"
   apply (clarsimp simp: si_spec_irqs_null_caps_at_def si_spec_irq_null_caps_at_def
                         si_spec_irq_null_cap_at_def si_spec_irqs_caps_at_def)
   apply (subst (asm) sep.prod.Sigma, clarsimp+)
@@ -936,7 +909,7 @@ lemma si_irq_null_caps_at_simplified:
   apply (subst (asm) rewrite_irqhandler_cap_at, simp)
   apply (subst (asm) sep_map_set_conj_reindex_cong [where
                     f = "\<lambda>cap_ref. cap_ref_irq cap_ref spec"
-                and h = "si_null_irq_cap_at (map_of (zip irqs free_cptrs)) spec", symmetric])
+                and h = "si_null_irq_cap_at (map_of (zip_region irqs free_cptrs)) spec", symmetric])
      apply (drule well_formed_irqhandler_bij)
      apply (clarsimp simp: bij_betw_def cond_case_prod_eta)
     apply simp
@@ -944,22 +917,59 @@ lemma si_irq_null_caps_at_simplified:
   apply clarsimp
   apply (drule si_null_irq_caps_at_simplified_helper [simplified si_null_irq_caps_at_def])
   apply (subst (asm) sep_map_set_conj_reindex_cong [symmetric, where
-                    f = "\<lambda>irq. the ( map_of (zip irqs free_cptrs) irq)"
+                    f = "\<lambda>irq. the ( map_of (zip_region irqs free_cptrs) irq)"
                 and h = "\<lambda>cptr. (si_cnode_id, unat cptr) \<mapsto>c NullCap"
-                and B = "set (take (length irqs) free_cptrs)"])
+                and B = "set (list_take_region (length irqs) free_cptrs)"])
      apply (subst well_formed_used_irqs_rewrite, assumption)
-     apply (metis map_of_zip_inj')
+     apply (rule_tac t="used_irqs spec" in subst[rotated],
+            rule map_of_zip_inj; clarsimp)
     apply (subst well_formed_used_irqs_rewrite, assumption)
-    apply (subst zip_take_length[symmetric], subst map_of_zip_range', simp+)
+    apply clarsimp
+    apply (subst zip_take_length[symmetric], subst map_of_zip_range'; simp)
    apply (rule ext)
    apply rule
     apply clarsimp
-   apply (rule_tac x="the (map_of (zip irqs free_cptrs) a)" in exI)
-   apply clarsimp
-   apply (frule_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1], clarsimp)
+   apply (rule_tac x="the (map_of (zip_region irqs free_cptrs) a)" in exI)
+   apply (clarsimp simp del: map_of_eq_Some_iff)
+   apply (cut_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" and
+                  xs1=irqs and
+                  ys1="(list_take_region (length irqs) free_cptrs)"
+            in map_of_zip_is_Some'[THEN iffD1])
+     apply clarsimp
     apply (fastforce simp: cap_at_def used_irqs_def all_caps_def)
    apply (clarsimp simp: cap_ref_irq_def)
   apply simp
   done
+
+(******************************
+ * Validity of a slot region. *
+ ******************************)
+
+definition valid_slot_region where
+  "valid_slot_region region \<equiv>
+     valid_region region \<and> snd region \<le> 2 ^ si_cnode_size"
+
+lemma valid_slot_region_leI[simp, elim!]:
+  "valid_slot_region region \<Longrightarrow> fst region \<le> snd region"
+  by (simp add: valid_slot_region_def valid_region_def)
+
+lemma valid_slot_region_less_all[simp, elim!]:
+  "valid_slot_region region \<Longrightarrow> list_all (\<lambda>n. n < 2 ^ si_cnode_size) (list_region region)"
+  by (simp add: valid_slot_region_def list_region_less_all)
+
+lemma valid_slot_region_less[]:
+  "\<lbrakk>valid_slot_region region; n \<in> set_region region \<rbrakk> \<Longrightarrow>
+   n < 2 ^ si_cnode_size"
+  apply (drule valid_slot_region_less_all)
+  by (clarsimp simp: Ball_set_list_all[symmetric])
+
+lemma valid_slot_region_append[intro!]:
+  "\<lbrakk>valid_slot_region rg1; valid_slot_region rg2; valid_concat_regions rg1 rg2\<rbrakk> \<Longrightarrow>
+   valid_slot_region (rg1 @2 rg2)"
+  apply (clarsimp simp: valid_slot_region_def valid_concat_regions_defs append_region_def)
+  by auto
+
+\<comment> \<open>FIXME: move\<close>
+method try_solves methods m = (solves m)?
 
 end
