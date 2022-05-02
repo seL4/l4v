@@ -207,19 +207,16 @@ locale_abbrev
   "asid_pool_at \<equiv> typ_at (AArch AASIDPool)"
 
 locale_abbrev
-  "level_pt_at is_vspace \<equiv> typ_at (AArch (APageTable is_vspace))"
+  "pt_at is_vspace \<equiv> typ_at (AArch (APageTable is_vspace))"
 
 locale_abbrev
-  "normal_pt_at \<equiv> level_pt_at False"
+  "normal_pt_at \<equiv> pt_at False"
 
 locale_abbrev
-  "vspace_pt_at \<equiv> level_pt_at True"
-
-locale_abbrev
-  "pt_at p s \<equiv> vspace_pt_at p s \<or> normal_pt_at p s"
+  "vspace_pt_at \<equiv> pt_at True"
 
 definition
-  "pte_at p \<equiv> \<lambda>s. ptes_of s p \<noteq> None"
+  "pte_at vsp p \<equiv> \<lambda>s. ptes_of s vsp p \<noteq> None"
 
 locale_abbrev
   "vcpu_at \<equiv> typ_at (AArch AVCPU)"
@@ -231,7 +228,7 @@ definition valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<R
   | FrameCap r rghts sz dev mapdata \<Rightarrow>
       if dev then typ_at (AArch (ADeviceData sz)) r s
              else typ_at (AArch (AUserData sz)) r s
-  | PageTableCap r is_vspace mapdata \<Rightarrow> level_pt_at is_vspace r s
+  | PageTableCap r is_vspace mapdata \<Rightarrow> pt_at is_vspace r s
   | VCPUCap r \<Rightarrow> vcpu_at r s"
 
 lemmas valid_arch_cap_ref_simps[simp] =
@@ -370,8 +367,8 @@ definition asid_for_level :: "asid \<Rightarrow> vm_level \<Rightarrow> asid" wh
   "asid_for_level asid level \<equiv>
      if level = asid_pool_level then asid && ~~mask asid_low_bits else asid"
 
-locale_abbrev pte_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
-  "pte_refs_of \<equiv> \<lambda>s. ptes_of s |> pte_ref"
+locale_abbrev pte_refs_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
+  "pte_refs_of \<equiv> \<lambda>vsp p s. (ptes_of s vsp |> pte_ref) p"
 
 (* vs_lookup_slot locates a slot at a given level,
    vs_lookup_target returns the object reference in that slot. *)
@@ -382,7 +379,7 @@ definition vs_lookup_target ::
      (level, slot) \<leftarrow> vs_lookup_slot bot_level asid vref;
      ptr \<leftarrow> if level = asid_pool_level
             then vspace_for_pool slot asid \<circ> asid_pools_of
-            else swp pte_refs_of slot;
+            else pte_refs_of (level = max_pt_level) slot;
      oreturn (level, ptr)
   }"
 
@@ -392,18 +389,18 @@ abbreviation
 
 (* Walk page table until we get to a slot or run out of levels; return obj_ref in slot. *)
 definition pt_lookup_target ::
-  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<Rightarrow> pte option) \<Rightarrow> (vm_level \<times> obj_ref) option"
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<Rightarrow> pte option) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "pt_lookup_target bot_level pt_root vref \<equiv> do {
      (level, slot) \<leftarrow> pt_lookup_slot_from_level max_pt_level bot_level pt_root vref;
-     pte \<leftarrow> oapply slot;
+     pte \<leftarrow> oapply2 (level = max_pt_level) slot;
      p \<leftarrow> K $ pte_ref pte;
      oreturn (level, p)
    }"
 
 (* Translate virtual into physical address by walking page tables.
    Relies on last level being a PagePTE, otherwise returns garbage. *)
-definition translate_address :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<Rightarrow> pte option) \<Rightarrow> paddr option"
+definition translate_address :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<Rightarrow> pte option) \<Rightarrow> paddr option"
   where
   "translate_address pt_root vref = do {
      (level, p) \<leftarrow> pt_lookup_target 0 pt_root vref;
@@ -1080,16 +1077,15 @@ lemma atyp_at_eq_kheap_obj:
 
 lemma level_pte_of_pt:
   "(\<exists>pte. level_pte_of vsp p (pts_of s) = Some pte) =
-   (level_pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits)) s"
+   (pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits)) s"
   apply (clarsimp simp: level_pte_of_def obj_at_def obind_def in_omonad
                   split: option.splits)
   apply (simp add: opt_map_def)
   done
 
 lemma pte_at_def2:
-  "pte_at p = ((normal_pt_at (table_base False p) or vspace_pt_at (table_base True p)) and
-               K (is_aligned p pte_bits))"
-  by (auto simp: pte_at_def pte_of_def level_pte_of_pt)
+  "pte_at vsp p = (pt_at vsp (table_base vsp p) and K (is_aligned p pte_bits))"
+  by (auto simp: pte_at_def level_pte_of_pt)
 
 lemma level_ptes_of_pts:
   "(level_pte_of vsp p (pts_of s) = Some pte) =
@@ -1100,54 +1096,27 @@ lemma level_ptes_of_pts:
 
 lemmas pt_pte_simps [simp] = pt_pte_def[split_simps pt.split]
 
+definition pt_apply :: "pt \<Rightarrow> machine_word \<Rightarrow> pte" where
+  "pt_apply pt idx \<equiv> case pt of NormalPT npt \<Rightarrow> npt (ucast idx) | VSRootPT vs \<Rightarrow> vs (ucast idx)"
+
+lemmas pt_apply_def_simps[simp] = pt_apply_def[split_simps pt.split]
+
 lemma ptes_of_Some:
-  "(ptes_of s p = Some pte) =
+  "(ptes_of s vsp p = Some pte) =
    (is_aligned p pte_bits \<and>
-     ((\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
-            pt (table_index False p) = pte) \<or>
-      (\<exists>vs. (\<forall>pt. pts_of s (table_base False p) \<noteq> Some (NormalPT pt)) \<and>
-            pts_of s (table_base True p) = Some (VSRootPT vs) \<and>
-            vs (table_index True p) = pte)))"
-  unfolding pte_of_def
+     (\<exists>pt. pts_of s (table_base vsp p) = Some pt \<and> (is_VSRootPT pt = vsp) \<and>
+           pt_apply pt (table_index vsp p) = pte))"
   apply (simp add: map_add_Some_iff level_ptes_of_pts)
-  apply (rule iffI)
-   apply (erule disjE; clarsimp; case_tac pt; clarsimp)
-   apply (clarsimp simp: level_pte_of_def obind_def split: option.splits if_split_asm)
-  apply (erule conjE, erule disjE)
-   apply clarsimp
-  apply (clarsimp simp: level_pte_of_def)
-  apply (rename_tac pt)
-  apply (case_tac pt; simp)
+  apply (rule iffI; clarsimp simp: level_pte_of_def; rename_tac pt, case_tac pt; clarsimp)
   done
-
-lemma pts_of_table_base_distinct:
-  "\<lbrakk> pts_of s (table_base True p) = Some (VSRootPT vs);
-     pts_of s (table_base False p) = Some (NormalPT pt);
-     pspace_distinct s \<rbrakk>
-   \<Longrightarrow> False"
-  apply (clarsimp elim!: opt_mapE)
-  apply (cases "table_base True p = table_base False p", simp)
-  apply (drule (3) pspace_distinctD)
-  apply (clarsimp simp: pt_bits_def table_size split: if_split_asm)
-  by (metis and_neg_mask_plus_mask_mono word_and_le' word_bw_comms(1))
-
-lemma ptes_of_Some_distinct:
-  "pspace_distinct s \<Longrightarrow>
-   (ptes_of s p = Some pte) =
-   (is_aligned p pte_bits \<and>
-     ((\<exists>pt. pts_of s (table_base False p) = Some (NormalPT pt) \<and>
-            pt (table_index False p) = pte) \<or>
-      (\<exists>vs. pts_of s (table_base True p) = Some (VSRootPT vs) \<and>
-            vs (table_index True p) = pte)))"
-  by (auto simp: ptes_of_Some dest: pts_of_table_base_distinct)
 
 lemma asid_pools_at_eq:
   "asid_pool_at p s \<longleftrightarrow> asid_pools_of s p \<noteq> None"
   by (auto simp: obj_at_def in_opt_map_eq)
 
 lemma pt_at_eq:
-  "pt_at p s \<longleftrightarrow> pts_of s p \<noteq> None"
-  by (auto simp: obj_at_def in_opt_map_eq)
+  "pt_at vsp p s \<longleftrightarrow> pts_of s p \<noteq> None \<and> (vsp = is_VSRootPT (the (pts_of s p)))"
+  by (auto simp: obj_at_def opt_map_def split: option.splits)
 
 lemma vspace_pt_at_eq:
   "vspace_pt_at p s \<longleftrightarrow> (\<exists>pt. pts_of s p = Some (VSRootPT pt))"
@@ -1429,8 +1398,13 @@ lemma pt_walk_top:
   "top_level \<le> bot_level \<Longrightarrow> pt_walk top_level bot_level pt vptr ptes = Some (top_level, pt)"
   by (auto simp: pt_walk.simps Let_def)
 
+(* FIXME AARCH64: move *)
+lemma oapply2_apply[simp]:
+  "oapply2 x y s = s x y"
+  by (simp add: oapply2_def)
+
 lemma pt_walk_equal_top_slot_Some:
-  "\<lbrakk> ptes (pt_slot_offset top_level pt_ptr vptr) = ptes (pt_slot_offset top_level pt_ptr' vptr);
+  "\<lbrakk> ptes (top_level = max_pt_level) (pt_slot_offset top_level pt_ptr vptr) = ptes (top_level = max_pt_level) (pt_slot_offset top_level pt_ptr' vptr);
      pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p) \<rbrakk> \<Longrightarrow>
    if level = top_level then
      pt_walk top_level bot_level pt_ptr' vptr ptes = Some (level, pt_ptr') \<and> p = pt_ptr
@@ -1451,25 +1425,24 @@ lemma pt_walk_equal_top_slot_Some:
   done
 
 lemma pt_walk_equal_top_slot_None:
-  "\<lbrakk> ptes (pt_slot_offset top_level pt_ptr vptr) = ptes (pt_slot_offset top_level pt_ptr' vptr);
+  "\<lbrakk> ptes (top_level = max_pt_level) (pt_slot_offset top_level pt_ptr vptr) = ptes (top_level = max_pt_level) (pt_slot_offset top_level pt_ptr' vptr);
      pt_walk top_level bot_level pt_ptr' vptr ptes = None \<rbrakk> \<Longrightarrow>
   pt_walk top_level bot_level pt_ptr vptr ptes = None"
   apply (subst (asm) pt_walk.simps)
   apply (subst pt_walk.simps)
-  by (auto simp: Let_def obind_def oapply_def oreturn_def split: if_split_asm option.splits)
+  by (auto simp: Let_def obind_def oapply_def oreturn_def oapply2_def split: if_split_asm option.splits)
 
 lemma translate_address_equal_top_slot:
-  "ptes (pt_slot_offset max_pt_level pt_ptr vptr) =
-     ptes (pt_slot_offset max_pt_level pt_ptr' vptr)
-   \<Longrightarrow> translate_address pt_ptr vptr ptes = translate_address pt_ptr' vptr ptes"
+  notes pt_top = pt_walk_equal_top_slot_Some[OF sym, where top_level=max_pt_level, simplified]
+  shows "ptes True (pt_slot_offset max_pt_level pt_ptr vptr) =
+           ptes True (pt_slot_offset max_pt_level pt_ptr' vptr)
+         \<Longrightarrow> translate_address pt_ptr vptr ptes = translate_address pt_ptr' vptr ptes"
   supply if_split_asm[split] opt_map_def[simp]
+  supply pt_walk_equal_top_slot_None[where top_level=max_pt_level, simplified, dest]
   apply (simp add: translate_address_def obind_def pt_lookup_slot_from_level_def pt_lookup_target_def
             split: option.splits)
-  apply (rule conjI; clarsimp)
-   apply (fastforce dest: pt_walk_equal_top_slot_None)
-  apply (rule conjI; clarsimp)
-   apply (frule (1) pt_walk_equal_top_slot_Some, fastforce)
-  apply (rule conjI; clarsimp; frule (1) pt_walk_equal_top_slot_Some[OF sym]; fastforce)
+  apply ((rule conjI; clarsimp), (frule (1) pt_top)?, fastforce)+
+  apply (frule (1) pt_top, fastforce)
   done
 
 lemmas min_max_pt_level[simp] = min_absorb2[where x=max_pt_level]
@@ -1548,7 +1521,7 @@ lemma pt_walk_vref_for_level_eq:
   apply (drule_tac level'=top_level in vref_for_level_eq_mono)
    apply (simp add: vm_level_plus_one_leq)
   apply (drule_tac pt=pt in vref_for_level_pt_slot_offset)
-  apply (clarsimp simp: obind_def oapply_def split: option.splits)
+  apply (clarsimp simp: obind_def split: option.splits)
   done
 
 lemma pt_walk_vref_for_level:
@@ -1594,24 +1567,18 @@ lemma vspace_for_asid_SomeI:
   by (clarsimp simp: entry_for_asid_def pool_for_asid_def entry_for_pool_def vspace_for_pool_def
                      vspace_for_asid_def obind_def)
 
-lemmas ptes_of_def = pte_of_def
+(* FIXME AARCH64: move up *)
+lemmas ptes_of_def = level_pte_of_def
 
 lemma ptes_of_pts_of:
-  "ptes_of s pte_ptr = Some pte \<Longrightarrow> \<exists>vsp. pts_of s (pte_ptr && ~~mask (pt_bits vsp)) \<noteq> None"
-  by (fastforce simp: ptes_of_def in_omonad level_pte_of_def split: if_split_asm)
+  "ptes_of s vsp pte_ptr = Some pte \<Longrightarrow>
+    \<exists>pt. pts_of s (pte_ptr && ~~mask (pt_bits vsp)) = Some pt \<and> is_VSRootPT pt = vsp"
+  by (fastforce simp: ptes_of_def in_omonad split: if_split_asm)
 
 lemma level_ptes_of_eqI:
   "pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow>
    level_pte_of vsp p pts = level_pte_of vsp p pts'"
   by (rule obind_eqI | simp add: level_pte_of_def)+
-
-lemma ptes_of_eqI:
-  "\<forall>vsp. pts (table_base vsp p) = pts' (table_base vsp p) \<Longrightarrow> pte_of pts p = pte_of pts' p"
-  unfolding pte_of_def
-  apply (frule_tac x=True in spec)
-  apply (drule_tac x=False in spec)
-  apply (auto dest!: level_ptes_of_eqI simp: map_add_def split: option.splits)
-  done
 
 lemma pte_refs_of_eqI:
   "ptes p = ptes' p \<Longrightarrow> (ptes |> pte_ref) p =  (ptes' |> pte_ref) p"
@@ -1756,8 +1723,8 @@ lemma vspace_for_asid_vs_lookup:
                      in_omonad pt_walk.simps)
 
 lemma pte_at_eq:
-  "pte_at p s = (ptes_of s p \<noteq> None)"
-  by (auto simp: obj_at_def pte_at_def in_omonad pte_of_def)
+  "pte_at vsp p s = (ptes_of s vsp p \<noteq> None)"
+  by (auto simp: obj_at_def pte_at_def in_omonad)
 
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
@@ -2080,7 +2047,8 @@ lemma vs_lookup_split:
 lemma vs_lookup_table_split_last_Some:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level < max_pt_level \<rbrakk>
    \<Longrightarrow> \<exists>p' pte. vs_lookup_table (level+1) asid vref s = Some (level+1, p')
-            \<and> ptes_of s (pt_slot_offset (level + 1) p' vref) = Some pte \<and> p = pptr_from_pte pte
+            \<and> ptes_of s (level+1 = max_pt_level) (pt_slot_offset (level + 1) p' vref) = Some pte
+            \<and> p = pptr_from_pte pte
             \<and> is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
                          vm_level_less_max_pt_level)
@@ -2210,54 +2178,19 @@ lemma is_aligned_pt_slot_offset_pte:
   unfolding pt_slot_offset_def
   by (simp add: is_aligned_add bit_simps is_aligned_weaken is_aligned_shift)
 
-(* Show that VSRootPTs are distinct from any index ptes_of might compute for a NormalPT *)
-lemma vs_root_pt_idx_distinct:
-  "\<lbrakk> pts_of s pt = Some (VSRootPT vs);
-     pts_of s (table_base False (pt_slot_offset max_pt_level pt vref)) = Some (NormalPT npt);
-     pspace_aligned s; pspace_distinct s \<rbrakk>
-   \<Longrightarrow> False"
-  apply (clarsimp simp: in_omonad)
-  apply (prop_tac "pt \<noteq> table_base False (pt_slot_offset max_pt_level pt vref)", clarsimp)
-  apply (frule_tac y="table_base False (pt_slot_offset max_pt_level pt vref)" in pspace_distinctD;
-         assumption?)
-  apply (drule (1) pspace_alignedD)+
-  apply (cases "config_ARM_PA_SIZE_BITS_40")
-   apply (clarsimp simp: pt_slot_offset_def bit_simps pt_index_def pt_bits_left_def size_max_pt_level
-                   split: if_split_asm)
-   apply (simp add: is_aligned_no_overflow_mask)
-   apply (subst (asm) word_plus_and_or_coroll, word_eqI)+
-   apply word_bitwise
-   apply simp
-  (* This is the case where all tables are equal size, which should be the easier one, but the
-     carefully crafted simp rules don't apply at this level, so first establish the right context *)
-  apply (prop_tac "table_base False (pt_slot_offset max_pt_level pt vref) =
-                   table_base True (pt_slot_offset max_pt_level pt vref)", simp add: bit_simps)
-  apply (prop_tac "table_size False = table_size True", simp add: bit_simps)
-  apply clarsimp
-  apply (subst (asm) table_base_pt_slot_offset; simp?)
-  apply (simp add: pt_bits_def)
-  done
 
 lemma pt_slot_offset_pt_range:
-  "\<lbrakk> ptes_of s (pt_slot_offset level pt vref) = Some pte; level \<le> max_pt_level;
-     is_VSRootPT ptable = (level = max_pt_level);
-     pts_of s pt = Some ptable; pspace_aligned s; pspace_distinct s \<rbrakk>
+  "\<lbrakk> ptes_of s (level = max_pt_level) (pt_slot_offset level pt vref) = Some pte;
+     pts_of s pt = Some ptable; is_aligned pt (pt_bits (level = max_pt_level)) \<rbrakk>
    \<Longrightarrow> pte \<in> pt_range ptable"
-  apply (clarsimp simp: ptes_of_Some)
-  apply (frule (1) pspace_aligned_pts_ofD)
-  apply (cases "level = max_pt_level"; clarsimp simp: is_VSRootPT_def)
-  apply (cases "\<exists>npt. pts_of s (table_base False (pt_slot_offset max_pt_level pt vref)) =
-                      Some (NormalPT npt)"; clarsimp)
-  apply (drule (3) vs_root_pt_idx_distinct)
-  apply simp
-  done
+  by (clarsimp simp: ptes_of_Some pt_apply_def split: pt.split)
 
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, pt_ptr);
      vref \<in> user_region;
      level \<le> max_pt_level;
-     valid_asid_table s; pspace_aligned s; pspace_distinct s \<rbrakk> \<Longrightarrow>
+     valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
    \<exists>pt. pts_of s pt_ptr = Some pt \<and> valid_vspace_obj level (PageTable pt) s \<and>
         is_VSRootPT pt = (level= max_pt_level)"
   supply valid_vspace_obj.simps[simp del]
@@ -2276,8 +2209,7 @@ lemma valid_vspace_objs_strongD:
   apply (subst (asm) valid_vspace_obj.simps)
   apply (frule (1) pspace_alignedD)
   apply clarsimp
-  apply (drule (1) pt_slot_offset_pt_range,
-         simp add: pt_bits_def, simp add: in_omonad, assumption, assumption)
+  apply (drule pt_slot_offset_pt_range, fastforce simp: in_omonad, simp add: pt_bits_def)
   apply (drule (1) bspec)
   apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def atyp_at_eq_kheap_obj)
   apply (drule (2) valid_vspace_objsD)
@@ -2302,10 +2234,10 @@ lemma vspace_for_pool_is_aligned:
 
 lemma vs_lookup_table_is_aligned:
   "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
-    level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s; pspace_distinct s;
+    level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s;
     valid_asid_table s; valid_vspace_objs s \<rbrakk>
    \<Longrightarrow> is_aligned pt_ptr (pt_bits (level' = max_pt_level))"
-  apply (drule (6) valid_vspace_objs_strongD)
+  apply (drule (5) valid_vspace_objs_strongD)
   apply (cases "level' = max_pt_level";
          fastforce dest: pspace_alignedD simp: pt_bits_def is_VSRootPT_def in_omonad)
   done
@@ -2323,7 +2255,7 @@ lemma pt_lookup_slot_from_level_rec:
      let slot = pt_slot_offset level pt vptr;
      if bot_level < level
      then do {
-       pte \<leftarrow> oapply slot;
+       pte \<leftarrow> oapply2 (level = max_pt_level) slot;
        if is_PageTablePTE pte
          then pt_lookup_slot_from_level (level - 1) bot_level (pptr_from_pte pte) vptr
          else oreturn (level, slot)
@@ -2348,7 +2280,7 @@ lemma arch_tcb_context_get_set[simp]:
 
 lemma pte_at_typ_lift:
   assumes "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
-  shows "f \<lbrace>pte_at t\<rbrace>"
+  shows "f \<lbrace>pte_at vsp t\<rbrace>"
   unfolding pte_at_def2
   by (wpsimp wp: assms hoare_vcg_conj_lift hoare_vcg_disj_lift)
 
@@ -2624,7 +2556,7 @@ lemma vs_lookup_table_pt_step:
       prefer 2
       apply assumption
      apply (simp add: bit_simps)
-    apply (fastforce simp: ptes_of_Some_distinct in_omonad is_aligned_pt_slot_offset_pte
+    apply (fastforce simp: ptes_of_Some in_omonad is_aligned_pt_slot_offset_pte
                            table_index_pt_slot_offset_vs)
    apply (prop_tac "idx \<notin> invalid_mapping_slots", clarsimp simp: valid_pt_range_def)
    apply (simp add: user_region_def vref_for_level_idx_canonical_user bit_simps)
@@ -2644,7 +2576,7 @@ lemma vs_lookup_table_pt_step:
      prefer 2
      apply assumption
     apply (simp add: bit_simps)
-   apply (fastforce simp: ptes_of_Some_distinct in_omonad is_aligned_pt_slot_offset_pte
+   apply (fastforce simp: ptes_of_Some in_omonad is_aligned_pt_slot_offset_pte
                           table_index_pt_slot_offset_pt)
   apply (simp add: user_region_def vref_for_level_idx_canonical_user bit_simps)
   done
@@ -2707,12 +2639,12 @@ lemma pool_for_asid_kheap_upd[simp]:
 lemma valid_vspace_objs_strong_slotD:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); vref \<in> user_region;
      level \<le> max_pt_level;
-     valid_vspace_objs s; valid_asid_table s; pspace_aligned s; pspace_distinct s\<rbrakk>
-   \<Longrightarrow> \<exists>pte. ptes_of s slot = Some pte \<and> valid_pte level pte s"
+     valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> \<exists>pte. ptes_of s (level = max_pt_level) slot = Some pte \<and> valid_pte level pte s"
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac pt_ptr)
-  apply (drule (6) valid_vspace_objs_strongD)
-  apply (clarsimp simp: in_omonad ptes_of_Some_distinct)
+  apply (drule (5) valid_vspace_objs_strongD)
+  apply (clarsimp simp: in_omonad ptes_of_Some)
   apply (frule (1) pspace_alignedD, clarsimp)
   apply (cases "level = max_pt_level";
          fastforce simp: is_aligned_pt_slot_offset_pte is_VSRootPT_def simp flip: pt_bits_def)
@@ -2729,7 +2661,7 @@ lemma pt_bits_left_inj[simp]:
 lemma pt_walk_stopped:
   "\<lbrakk> pt_walk top_level level top_ptr vref (ptes_of s) = Some (level', pt_ptr);
      level < level'; level \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> \<exists>pte. ptes_of s (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not> is_PageTablePTE pte"
+   \<Longrightarrow> \<exists>pte. ptes_of s (level' = max_pt_level) (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not> is_PageTablePTE pte"
   apply (induct top_level arbitrary: top_ptr; clarsimp)
   apply (subst (asm) (2) pt_walk.simps)
   apply (clarsimp split: if_split_asm)
@@ -2738,7 +2670,7 @@ lemma pt_walk_stopped:
 lemma vs_lookup_table_stopped:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level', pt_ptr); level' \<noteq> level;
     level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-  \<exists>pte. ptes_of s (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
+  \<exists>pte. ptes_of s (level' = max_pt_level) (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
   apply (frule pt_walk_min_level)
   apply (clarsimp simp: min_def split: if_split_asm)
