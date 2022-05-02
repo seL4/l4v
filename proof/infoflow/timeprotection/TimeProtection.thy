@@ -13,8 +13,18 @@ imports "Word_Lib.WordSetup"
   "Lib.Apply_Trace_Cmd"
 begin
 
+(* questions:
+  - do we want to support a writeback `fch`?
+    - We know how we'd implement it, we dont think it would be heaps more work. we just need
+      to know if it's needed.
+
+
+*)
+
 datatype vaddr = VAddr machine_word
 datatype paddr = PAddr machine_word
+
+type_synonym vpaddr = "vaddr \<times> paddr"
 
 \<comment> \<open> flushable (fch) and partitionable (pch) caches\<close>
 type_synonym 'fch_cachedness fch = "vaddr \<Rightarrow> 'fch_cachedness"
@@ -23,8 +33,7 @@ type_synonym 'fch fch_impact = "vaddr \<Rightarrow> 'fch \<Rightarrow> 'fch"
 (* Note: This `pch_impact` version only supports a writethrough `fch`. *)
 type_synonym 'pch pch_impact = "paddr \<Rightarrow> 'pch \<Rightarrow> 'pch"
 (* FIXME: If we want to support a writeback `fch`, we'll need to use a type signature like this
-  instead (note we'll also need to add the page table state as an argument, to get the paddr).
-  This is because when a read or write evicts a dirty `fch` entry, that dirty bit (and value)
+  instead. This is because when a read or write evicts a dirty `fch` entry, that dirty bit (and value)
   will need to be propagated to the corresponding `pch` entry. -robs.
 type_synonym ('fch,'pch) pch_impact = "vaddr \<Rightarrow> 'fch \<Rightarrow> 'pch \<Rightarrow> 'pch" *)
 
@@ -44,52 +53,57 @@ locale time_protection =
   (* collides_in_pch isn't a relation, but it is kind of an equivalence *)
   assumes collides_with_equiv: "equiv UNIV ({(x, y). x coll y})"
 
+  (* instead of making fch and pch functions, we leave them unspecified but
+     require lookup functions for them *)
   fixes fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
   fixes pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
 
+  (* we require read_impact functions for both pch and fch *)
   fixes fch_read_impact :: "'fch fch_impact"
   fixes pch_read_impact :: "'pch pch_impact"
 
-  \<comment> \<open>pch_read_impact only impacts colliding addresses\<close>
+  \<comment> \<open> pch_read_impact only impacts colliding addresses \<close>
   assumes pch_partitioned_read:
-    "\<not>a1 coll a2 \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_read_impact a1 p) a2"
+    "\<not>a coll b \<Longrightarrow> pch_lookup p b = pch_lookup (pch_read_impact a p) b"
 
 
-  (* if a2 can be impacted by a read from a1,
+  \<comment> \<open> if `b` can be impacted by a read from `a`,
      we require that this impact depends only on the prior state of the fch
-     and the prior cachedness of the rest of their collision set in the pch *)
-  assumes pch_collision_read: "\<And>a1 a2 pchs pcht.
-    a1 coll a2 \<Longrightarrow>
-    \<forall>a3. a2 coll a3 \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
+     and the prior cachedness of the rest of their collision set in the pch \<close>
+  assumes pch_collision_read: "\<And>a b pchs pcht.
+    a coll b \<Longrightarrow>
+    \<forall>c. a coll c \<longrightarrow> pch_lookup pchs c = pch_lookup pcht c \<Longrightarrow>
     \<comment> \<open>This might be stronger than is met by hardware that just promises
         a 'random' replacement algorithm. Essentially we are requiring that
         any such 'randomness' cannot be influenced by the prior cachedness of
         addresses outside the collision set in question. \<close>
-    pchs' = pch_read_impact a1 pchs \<Longrightarrow>
-    pcht' = pch_read_impact a1 pcht \<Longrightarrow>
-    pch_lookup pchs' a2 = pch_lookup pcht' a2"
+    pchs' = pch_read_impact a pchs \<Longrightarrow>
+    pcht' = pch_read_impact a pcht \<Longrightarrow>
+    pch_lookup pchs' b = pch_lookup pcht' b"
   
-
+  (* we require write_impact functions for both pch and fch *)
   fixes fch_write_impact :: "'fch fch_impact"
   fixes pch_write_impact :: "'pch pch_impact"
 
   \<comment> \<open>pch_write_impact only impacts colliding addresses\<close>
   assumes pch_partitioned_write:
-    "not (a1 coll a2) \<Longrightarrow> pch_lookup p a2 = pch_lookup (pch_write_impact a1 p) a2"
+    "\<not>a coll b \<Longrightarrow> pch_lookup p b = pch_lookup (pch_write_impact a p) b"
 
-  
-  assumes pch_collision_write: "\<And>a1 a2 pchs pcht. a1 coll a2 \<Longrightarrow>
-    \<forall>a3. a2 coll a3 \<longrightarrow> pch_lookup pchs a3 = pch_lookup pcht a3 \<Longrightarrow>
+  \<comment> \<open> similar to pch_collision_read \<close>
+  assumes pch_collision_write: "\<And>a b pchs pcht. a coll b \<Longrightarrow>
+    \<forall>c. a coll b \<longrightarrow> pch_lookup pchs c = pch_lookup pcht c \<Longrightarrow>
     \<comment> \<open>The same strong requirement placing limits on the 'randomness'
         of the cache replacement algorithm as for @{term pch_collision_read}\<close>
-    pchs' = pch_write_impact a1 pchs \<Longrightarrow>
-    pcht' = pch_write_impact a1 pcht \<Longrightarrow>
-    pch_lookup pchs' a2 = pch_lookup pcht' a2"
+    pchs' = pch_write_impact a pchs \<Longrightarrow>
+    pcht' = pch_write_impact a pcht \<Longrightarrow>
+    pch_lookup pchs' b = pch_lookup pcht' b"
 
+  (* given the fch_cachedness and the pch_cachedness of some access, tell me how long it took *)
   fixes read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   fixes write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
 
   fixes empty_fch :: "'fch"
+  (* how long it takes to flush a particular fch *)
   fixes fch_flush_cycles :: "'fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
   fixes do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
@@ -148,12 +162,8 @@ locale time_protection =
   assumes external_uwr_Sched:
     "(s, t) \<in> external_uwr d \<Longrightarrow> (s, t) \<in> external_uwr Sched"
 
-  (* This is an abstraction for the page table. -robs *)
-  fixes v_to_p :: "'other_state \<Rightarrow> vaddr \<Rightarrow> paddr"
-  assumes external_uwr_current_page_table:
-    "(s, t) \<in> external_uwr d \<Longrightarrow> current_domain s = d \<Longrightarrow> v_to_p t = v_to_p s"
-
-  fixes touched_addrs :: "'other_state \<Rightarrow> vaddr set"
+  fixes touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
+  (* the external uwr maintains that touched_addrs is the same for the currently running user *)
   assumes external_uwr_same_touched_addrs:
     "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s1 = d \<Longrightarrow> touched_addrs s1 = touched_addrs s2"
 
@@ -227,29 +237,10 @@ lemma collision_in_full_collision_set:
   apply (clarsimp simp: full_collision_set_def)
   done
 
-definition paddrs_of ::
-  "'other_state \<Rightarrow> vaddr set \<Rightarrow> paddr set"
-  where
-  "paddrs_of s vas \<equiv> {a. \<exists>v. a = v_to_p s v \<and> v \<in> vas}"
-
-definition touched_paddrs ::
-  "'other_state \<Rightarrow> paddr set"
-  where
-  "touched_paddrs s \<equiv> paddrs_of s (touched_addrs s)"
-
-(*FIXME: Move these? These seem more of an IF framework thing. -Scott B *)
 \<comment> \<open> the invariant that touched_addresses is always sensible for its current domain \<close>
 definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
-     touched_paddrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
-
-(* this isn't true apparently?
-definition page_table_inv :: "'other_state \<Rightarrow> bool" where
-  "page_table_inv s \<equiv>
-     \<forall> a. v_to_p s a \<in> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
-*)
-
-
+     snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
 
 definition pch_same_for_domain ::
   "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
@@ -384,117 +375,93 @@ lemma uwr_equiv_rel:
 
 
 
-(* now we make some basic instructions, which contain addresses etc *)
-datatype instr = IRead vaddr            \<comment> \<open>read from some address\<close>
-               | IWrite vaddr           \<comment> \<open>write to some address\<close>
-               | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
-               | IFlushL2 "paddr set"   \<comment> \<open>flush some part L2 cache(s)\<close>
-               | IPadToTime time        \<comment> \<open>pad the time up to some point\<close>
+(* the different ways our trace can interact with microarch state *)
+datatype trace_unit = IRead vpaddr           \<comment> \<open>read from some address\<close>
+                    | IWrite vpaddr          \<comment> \<open>write to some address\<close>
+                    | IFlushL1               \<comment> \<open>flush the entire L1 cache(s)\<close>
+                    | IFlushL2 "paddr set"   \<comment> \<open>flush some part L2 cache(s)\<close>
+                    | IPadToTime time        \<comment> \<open>pad the time up to some point, if that time is in the future\<close>
 
 primrec
-  instr_step :: "instr \<Rightarrow>
-    'other_state \<Rightarrow>
+  trace_step :: "trace_unit \<Rightarrow>
     ('fch,'pch)state \<Rightarrow>
     ('fch,'pch)state" where
- "instr_step (IRead a) os s =
-      s\<lparr>fch := fch_read_impact a (fch s),
-        pch := pch_read_impact (v_to_p os a) (pch s),
-        tm  := tm s + read_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p os a))\<rparr>"
-  | "instr_step (IWrite a) os s =
-      s\<lparr>fch := fch_write_impact a (fch s),
-        pch := pch_write_impact (v_to_p os a) (pch s),
-        tm  := tm s + write_cycles (fch_lookup (fch s) a) (pch_lookup (pch s) (v_to_p os a))\<rparr>"
-  | "instr_step (IPadToTime t) _ s =
-      s\<lparr>tm := t\<rparr>"
-  | "instr_step IFlushL1 _ s =
+ "trace_step (IRead a) s =
+      s\<lparr>fch := fch_read_impact (fst a) (fch s),
+        pch := pch_read_impact (snd a) (pch s),
+        tm  := tm s + read_cycles (fch_lookup (fch s) (fst a)) (pch_lookup (pch s) (snd a))\<rparr>"
+  | "trace_step (IWrite a) s =
+      s\<lparr>fch := fch_write_impact (fst a) (fch s),
+        pch := pch_write_impact (snd a) (pch s),
+        tm  := tm s + write_cycles (fch_lookup (fch s) (fst a)) (pch_lookup (pch s) (snd a))\<rparr>"
+  | "trace_step (IPadToTime t) s =
+      s\<lparr>tm := max (tm s) t\<rparr>" \<comment> \<open>will not step backwards\<close>
+  | "trace_step IFlushL1 s =
       s\<lparr>fch := empty_fch,
         tm := tm s + fch_flush_cycles (fch s)\<rparr>"
-  | "instr_step (IFlushL2 as) _ s =
+  | "trace_step (IFlushL2 as) s =
       s\<lparr>pch := do_pch_flush (pch s) as,
         tm := tm s + pch_flush_cycles (pch s) as\<rparr>"
 
-type_synonym program = "instr list"
+type_synonym trace = "trace_unit list"
 
-primrec instr_multistep :: "program \<Rightarrow>
-  'other_state \<Rightarrow>
+primrec trace_multistep :: "trace \<Rightarrow>
   ('fch,'pch)state \<Rightarrow>
   ('fch,'pch)state" where
-  "instr_multistep [] os s = s"
-| "instr_multistep (i#is) os s = instr_multistep is os (instr_step i os s)"
+  "trace_multistep [] s = s"
+| "trace_multistep (i#is) s = trace_multistep is (trace_step i s)"
 
 definition
-  instrs_obeying_ta :: "'other_state \<Rightarrow> instr set" where
- "instrs_obeying_ta s \<equiv> {i. case i of
-                            IRead a  \<Rightarrow> a \<in> touched_addrs s
-                          | IWrite a \<Rightarrow> a \<in> touched_addrs s
-                          | IFlushL2 as \<Rightarrow> as \<subseteq> touched_paddrs s
-                          | _        \<Rightarrow> True }"
+  trace_units_obeying_set :: "vpaddr set \<Rightarrow> trace_unit set" where
+ "trace_units_obeying_set vps \<equiv> {i. case i of
+                                 IRead a  \<Rightarrow> a \<in> vps
+                               | IWrite a \<Rightarrow> a \<in> vps
+                               | IFlushL2 as \<Rightarrow> as \<subseteq> snd ` vps
+                               | _        \<Rightarrow> True }"
 
-definition
-  instrs_obeying_set :: "'other_state \<Rightarrow> paddr set \<Rightarrow> instr set" where
- "instrs_obeying_set s pas \<equiv> {i. case i of
-                            IRead a  \<Rightarrow> v_to_p s a \<in> pas
-                          | IWrite a \<Rightarrow> v_to_p s a \<in> pas
-                          | IFlushL2 as \<Rightarrow> as \<subseteq> pas
-                          | _        \<Rightarrow> True }"
+abbreviation
+  trace_units_obeying_ta :: "'other_state \<Rightarrow> trace_unit set" where
+ "trace_units_obeying_ta os \<equiv> trace_units_obeying_set (touched_addrs os)"
 
 (* these are the programs that could have created this ta *)
 definition
-  programs_obeying_ta :: "'other_state \<Rightarrow> program set" where
- "programs_obeying_ta s \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_ta s) p}"
+  traces_obeying_set :: "vpaddr set \<Rightarrow> trace set" where
+ "traces_obeying_set vps \<equiv> {p. list_all (\<lambda>i. i \<in> trace_units_obeying_set vps) p}"
 
-(* these are the programs that could have created this ta *)
-definition
-  programs_obeying_set :: "'other_state \<Rightarrow> paddr set \<Rightarrow> program set" where
- "programs_obeying_set s pas \<equiv> {p. list_all (\<lambda>i. i \<in> instrs_obeying_set s pas) p}"
+abbreviation
+  traces_obeying_ta :: "'other_state \<Rightarrow> trace set" where
+ "traces_obeying_ta os \<equiv> traces_obeying_set (touched_addrs os)"
 
-lemma hd_instr_obeying_ta [dest]:
-  "a # p \<in> programs_obeying_ta ta \<Longrightarrow> a \<in> instrs_obeying_ta ta"
-  by (force simp:programs_obeying_ta_def)
-
-(*
-definition is_secure_nondomainswitch ::
-  "'regs program \<Rightarrow> ('fch,'pch,'regs,'other_state)state \<Rightarrow> bool"
-  where
-  "is_secure_nondomainswitch p s \<equiv>
-      \<comment> \<open>Oblige the original system not to reach any system-step that would require either
-          (1) straying out of touched_addresses or (2) switching domains to implement.\<close>
-      p \<in> programs_obeying_ta (other_state s)"
-*)
+lemma hd_trace_obeying_set [dest]:
+  "a # p \<in> traces_obeying_ta ta \<Longrightarrow> a \<in> trace_units_obeying_ta ta \<and> p \<in> traces_obeying_ta ta"
+  by (force simp:traces_obeying_set_def)
 
 
 
-
-
-
-
-
-(* question: for the dirty program in domainswitch, how does the kernel address stuff in 
-   the other domain? does v_to_p capture that? does the kernel have its own v_to_p? *)
-
-type_synonym ('os, 'ud) dirty_program_getter = "'ud domain \<Rightarrow> 'ud domain \<Rightarrow> 'os \<Rightarrow> program"
+\<comment> \<open>this is (current a draft of) the mechanisms that will allow us to define a 'dirty' trace
+    that accesses memory belonging to two different domains. however, we enforce that the EXACT
+    trace is dependent only upon the to- and from-domain, as well as things visible to the Sched
+    uwr\<close>
+type_synonym ('os, 'ud) dirty_trace_getter = "'ud domain \<Rightarrow> 'ud domain \<Rightarrow> 'os \<Rightarrow> trace"
 
 type_synonym 'os next_time_getter = "'os \<Rightarrow> time"
 
 definition same_next_time :: "'other_state next_time_getter \<Rightarrow> bool" where
   "same_next_time ntg \<equiv> \<forall> os os'. ((os, os') \<in> external_uwr Sched \<longrightarrow> ntg os' = ntg os)"
 
-definition same_dirty_programs :: " ('other_state, 'userdomain) dirty_program_getter \<Rightarrow> bool" where
-  "same_dirty_programs dpg \<equiv> \<forall> u v os os'. ((os, os') \<in> external_uwr Sched \<longrightarrow> dpg u v os' = dpg u v os)"
+definition same_dirty_traces :: " ('other_state, 'userdomain) dirty_trace_getter \<Rightarrow> bool" where
+  "same_dirty_traces dpg \<equiv> \<forall> u v os os'. ((os, os') \<in> external_uwr Sched \<longrightarrow> dpg u v os' = dpg u v os)"
 
-(*TODO: currently we have an issue of potentially disagreeing page tables here *)
-(* this assumes that `os`'s v_to_p maps to physical addresses belonging to BOTH users *)
-definition correct_dirty_programs :: " ('other_state, 'userdomain) dirty_program_getter \<Rightarrow> bool" where
-  "correct_dirty_programs dpg \<equiv> \<forall> u v os. dpg u v os \<in> programs_obeying_set os (all_paddrs_of u \<union> all_paddrs_of v \<union> kernel_shared_precise)"
+definition correct_dirty_traces :: " ('other_state, 'userdomain) dirty_trace_getter \<Rightarrow> bool" where
+  "correct_dirty_traces dpg \<equiv> \<forall> u v os. dpg u v os \<in> traces_obeying_set {(va, pa) | va pa. pa \<in> (all_paddrs_of u \<union> all_paddrs_of v \<union> kernel_shared_precise)}"
 
 (* sketching out some definitions for domain-switch programs -scott *)
-(* TODO: we need to deal with WCETs, and/or make it so that IPadToTime can't go backwards, which will force
-   the proofs to deal with WCETs *)
-definition get_domain_switch_program ::
-  "('other_state, 'userdomain) dirty_program_getter \<Rightarrow> 'other_state next_time_getter \<Rightarrow> 'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> program"
+(*TODO: right now we only flush kernel_shared_precise. i hope that the proofs fail here, as we really
+  need to be flushing kernel_shared_extended *)
+definition get_domain_switch_trace ::
+  "('other_state, 'userdomain) dirty_trace_getter \<Rightarrow> 'other_state next_time_getter \<Rightarrow> 'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> trace"
   where
-  "get_domain_switch_program dpg ntg u v os \<equiv> dpg u v os @ [IFlushL1, IFlushL2 kernel_shared_precise, IPadToTime (ntg os)]"
-
+  "get_domain_switch_trace dpg ntg u v os \<equiv> dpg u v os @ [IFlushL1, IFlushL2 kernel_shared_precise, IPadToTime (ntg os)]"
 
 lemma collides_with_set_or_doesnt:
   "\<lbrakk>\<forall>a'\<in>as. \<not> a coll a' \<Longrightarrow> P;
@@ -540,10 +507,17 @@ lemma and_or_specific:
   apply blast
   done
 
+lemma and_or_specific':
+  "((P \<or> Q \<Longrightarrow> R)) \<Longrightarrow>
+   (P \<longrightarrow> R) \<and> (Q \<longrightarrow> R)"
+  apply simp
+  done
+
+
 (*
 lemma d_not_running_step:
   assumes
-  "i \<in> instrs_obeying_ta os"
+  "i \<in> trace_units_obeying_ta os"
   "touched_addrs_inv os"
   "current_domain os \<noteq> d"
   "s' = instr_step i s"
@@ -551,33 +525,24 @@ lemma d_not_running_step:
   "((os, s), (os, s')) \<in> uwr d"
 *)
 
-lemma in_touched_addrs_in_touched_paddrs:
-  "a \<in> touched_addrs os \<Longrightarrow>
-   v_to_p os a \<in> touched_paddrs os"
-  using paddrs_of_def touched_paddrs_def apply auto
-  done
-
 lemma in_touched_addrs_expand:
   "a \<in> touched_addrs os \<Longrightarrow>
   touched_addrs_inv os \<Longrightarrow>
-  v_to_p os a \<in> all_paddrs_of (current_domain os) \<or> v_to_p os a \<in> kernel_shared_precise"
-  apply (drule in_touched_addrs_in_touched_paddrs)
+  snd a \<in> all_paddrs_of (current_domain os) \<or> snd a \<in> kernel_shared_precise"
   apply (clarsimp simp:touched_addrs_inv_def)
-  apply (drule(1) subsetD, subst (asm) Un_iff)
-  apply clarsimp
+  apply blast
   done
 
 
 lemma d_running_step:
   assumes
-    "i \<in> instrs_obeying_ta os'"
+    "i \<in> trace_units_obeying_ta os'"
     "touched_addrs_inv os'"
     "((os, s), (ot, t)) \<in> uwr d"
-    "(os, ot) \<in> external_uwr d"
     "(os', ot') \<in> external_uwr d"
     "current_domain os = d"
-    "s' = instr_step i os s"
-    "t' = instr_step i ot t"
+    "s' = trace_step i s"
+    "t' = trace_step i t"
     (* the only thing we care about output other_state is that the domain hasn't changed *)
     "current_domain os' = current_domain os"
     "current_domain ot' = current_domain ot"
@@ -586,22 +551,26 @@ lemma d_running_step:
   proof (cases i)
     case (IRead a)
     thus ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_running_def instrs_obeying_ta_def)
+      apply (clarsimp simp: uwr_def uwr_running_def trace_units_obeying_set_def)
       apply (thin_tac "s' = _", thin_tac "t' = _")
-      apply (frule external_uwr_current_page_table, simp)
-      apply clarsimp
       apply (intro conjI)
        (* pch *)
-       apply (drule(1) in_touched_addrs_expand)
-       apply (clarsimp simp: touched_addrs_inv_def)
        apply (clarsimp simp: pch_same_for_domain_and_shared_def)
+       apply (rule and_or_specific')
+       apply (case_tac "snd a coll aa")
+        (* colliding addresses *)
+        apply (rule pch_collision_read [where pchs="pch s" and pcht="pch t" and a="snd a"]; clarsimp)
+        apply (metis collision_in_full_collision_set collision_sym diff_domain_no_collision kernel_shared_expanded_full_collision_set)
+       (* non-colliding addresses *)
+       apply (metis pch_partitioned_read)
+      (* time *)
+      
 
 
-       apply (clarsimp simp: touched_addrs_inv_def all_paddrs_of_def)
-       apply(frule external_uwr_current_page_table[symmetric])
-        apply force
-       
-       apply (clarsimp simp: touched_paddrs_def paddrs_of_def)
+
+
+
+
       (*
       (* apply(clarsimp simp:page_table_inv_def) *)
       (* First obtain that `a` belongs to the current domain or shared memory (i.e. Sched) *)
@@ -619,7 +588,7 @@ lemma d_running_step:
     case (IRead a)
     thus ?thesis using assms
       apply(clarsimp simp:uwr_def uwr_running_def)
-      apply(clarsimp simp:instrs_obeying_ta_def touched_addrs_inv_def)
+      apply(clarsimp simp:trace_units_obeying_set_def touched_addrs_inv_def)
       apply(frule external_uwr_current_page_table[symmetric])
        apply force
       apply(clarsimp simp:page_table_inv_def)
@@ -674,7 +643,7 @@ lemma d_running_step:
     (* NB: Reasoning is mostly identical to that for IRead -robs. *)
     thus ?thesis using assms
       apply(clarsimp simp:uwr_def uwr_running_def)
-      apply(clarsimp simp:instrs_obeying_ta_def touched_addrs_inv_def)
+      apply(clarsimp simp:trace_units_obeying_set_def touched_addrs_inv_def)
       apply(frule external_uwr_current_page_table[symmetric])
        apply force
       apply(clarsimp simp:page_table_inv_def)
@@ -735,7 +704,7 @@ lemma d_running_step:
     case (IFlushL2 fa)
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_running_def pch_same_for_domain_and_shared_def
-                            instrs_obeying_ta_def)
+                            trace_units_obeying_set_def)
       apply (thin_tac "s' = _", thin_tac "t' = _") (* messy and not needed *)
       apply (subgoal_tac "\<forall>a1. (\<exists>a2\<in>fa. (a1, a2) \<in> collides_in_pch) \<longrightarrow> pch_lookup (pch s) a1 = pch_lookup (pch t) a1")
        defer
@@ -785,7 +754,7 @@ lemma touched_addrs_inv_preserved:
     current_domain' (instr_step a s) = current_domain' s;
     a \<in> instrs_safe (other_state s)\<rbrakk>
    \<Longrightarrow> touched_addrs_inv' (instr_step a s)"
-  apply(clarsimp simp:instrs_obeying_ta_def
+  apply(clarsimp simp:trace_units_obeying_set_def
     programs_safe_def instrs_safe_def list_all_def split:instr.splits)
    using page_table_inv_def page_table_not_in_mem touched_addrs_inv_def touched_paddrs_def paddrs_of_def
    apply(force simp add: touched_addrs_not_in_mem)
@@ -806,7 +775,7 @@ lemma page_table_inv_preserved:
     current_domain' (instr_step a s) = current_domain' s;
     a \<in> instrs_safe (other_state s)\<rbrakk>
    \<Longrightarrow> page_table_inv' (instr_step a s)"
-  apply(clarsimp simp:programs_obeying_ta_def instrs_obeying_ta_def
+  apply(clarsimp simp:programs_obeying_ta_def trace_units_obeying_set_def
     programs_safe_def instrs_safe_def list_all_def split:instr.splits)
    using page_table_inv_def page_table_not_in_mem touched_addrs_inv_def touched_paddrs_def
    apply force
@@ -856,7 +825,7 @@ lemma d_running: "\<lbrakk>
   apply(erule_tac x="instr_step a t" in meta_allE)
   apply clarsimp
   apply(erule meta_impE)
-   apply(clarsimp simp:programs_obeying_ta_def instrs_obeying_ta_def list_all_def split:instr.splits)
+   apply(clarsimp simp:programs_obeying_ta_def trace_units_obeying_set_def list_all_def split:instr.splits)
      apply(force simp add:touched_paddrs_def paddrs_of_def page_table_not_in_mem touched_addrs_not_in_mem)
     unfolding touched_paddrs_def paddrs_of_def
   apply(erule meta_impE)
@@ -882,7 +851,7 @@ definition is_domainswitch_gadget where
 
 lemma d_not_running_step:
   assumes
-  "i \<in> instrs_obeying_ta os"
+  "i \<in> trace_units_obeying_ta os"
   "touched_addrs_inv os"
   "current_domain os \<noteq> d"
   "s' = instr_step i os s"
@@ -894,7 +863,7 @@ lemma d_not_running_step:
     case (IRead x1)
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
-                            instrs_obeying_ta_def)
+                            trace_units_obeying_set_def)
       (* show that the instruction hasn't affected our visible part of pch *)
       apply (drule in_inter_empty)
        apply force
@@ -907,7 +876,7 @@ lemma d_not_running_step:
     case (IWrite x2)
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
-                            instrs_obeying_ta_def)
+                            trace_units_obeying_set_def)
       apply (thin_tac "s' = _")
       apply (drule in_inter_empty)
        apply force
@@ -934,7 +903,7 @@ lemma d_not_running_step:
     case (IFlushL2 x5)
     then show ?thesis using assms
       apply (clarsimp simp: uwr_def uwr_notrunning_def pch_same_for_domain_except_shared_def
-                            instrs_obeying_ta_def)
+                            trace_units_obeying_set_def)
       apply (rule sym, rule pch_partitioned_flush, clarsimp)
       apply(clarsimp simp:touched_addrs_inv_def all_paddrs_of_def)
       (* Adapted from Isar proof found by Sledgehammer -robs. *)
@@ -959,7 +928,7 @@ qed *)
 
 lemma programs_obeying_ta_head_and_rest:
   "h # r \<in> programs_obeying_ta ta \<Longrightarrow>
-   h \<in> instrs_obeying_ta ta \<and> r \<in> programs_obeying_ta ta"
+   h \<in> trace_units_obeying_ta ta \<and> r \<in> programs_obeying_ta ta"
   apply (clarsimp simp: programs_obeying_ta_def)
   done
 
@@ -980,11 +949,11 @@ lemma d_not_running_integrity_uwr:
   unfolding programs_obeying_ta_def programs_safe_def
   apply (drule_tac x="instr_step a s" in meta_spec)
   apply(erule meta_impE)
-   apply(clarsimp simp:instrs_obeying_ta_def instrs_safe_def list_all_def split:instr.splits)
+   apply(clarsimp simp:trace_units_obeying_set_def instrs_safe_def list_all_def split:instr.splits)
     using page_table_not_in_mem touched_paddrs_def
     apply(force simp add: touched_addrs_not_in_mem paddrs_of_def)
   apply(erule meta_impE)
-   apply(clarsimp simp:instrs_obeying_ta_def instrs_safe_def list_all_def split:instr.splits)
+   apply(clarsimp simp:trace_units_obeying_set_def instrs_safe_def list_all_def split:instr.splits)
     using page_table_not_in_mem touched_paddrs_def paddrs_of_def touched_addrs_not_in_mem
     apply (force simp add: do_write_outside_kernelshared_same_domain kernel_shared_precise_def)
   apply(erule meta_impE)
