@@ -12,6 +12,7 @@ imports
   "Lib.Lib"
   "Word_Lib.WordSetup"
   Setup_Locale
+  Kernel_Config_Lemmas
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -56,11 +57,11 @@ definition paddrTop :: "32 word" where
 definition pptrBaseOffset :: word32 where
   "pptrBaseOffset \<equiv> pptrBase - physBase"
 
-definition kernelELFBase :: word32 where
-  "kernelELFBase \<equiv> pptrBase + (physBase && mask 22)"
-
 definition kernelELFPAddrBase :: word32 where
-  "kernelELFPAddrBase \<equiv> 0x80000000"
+  "kernelELFPAddrBase \<equiv> physBase"
+
+definition kernelELFBase :: word32 where
+  "kernelELFBase \<equiv> pptrBase + (kernelELFPAddrBase && mask 22)"
 
 definition kernelELFBaseOffset :: word32 where
   "kernelELFBaseOffset \<equiv> kernelELFBase - kernelELFPAddrBase"

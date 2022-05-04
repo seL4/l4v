@@ -45,7 +45,8 @@ targets =
     , ("arm-tk1-nosmmu",("ARM", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT"]))
     , ("arm-tk1",       ("ARM", "TK1",          ["CONFIG_ARM_HYPERVISOR_SUPPORT",
                                                      "CONFIG_ARM_SMMU"]))
-    , ("riscv-hifive",   ("RISCV64", "HiFive",        []))
+    , ("riscv-hifive",  ("RISCV64", "HiFive",       []))
+    , ("aarch64-tx2",   ("AARCH64", "TX2",          []))
     ]
 
 getPlatform :: Maybe String -> IO (Maybe (String, String, [String]))

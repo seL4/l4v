@@ -223,7 +223,6 @@ proof -
   apply (case_tac "p = 0")
    apply (insert pointer)
    apply (clarsimp simp: range_cover_def pointer)
-   including no_take_bit
    apply (simp add:unat_word_ariths)
    apply (rule le_less_trans[OF mod_less_eq_dividend])
    apply (rule less_le_trans[OF mult_less_mono1[where j = n]])
@@ -278,7 +277,7 @@ lemma range_cover_le_n_less:
 
 lemma unat_of_nat_n :"unat ((of_nat n):: 'a :: len word) = n"
   using range_cover_n_less
-  by (simp add:unat_of_nat del: unsigned_of_nat)
+  by (simp add:unat_of_nat)
 
 
 lemma unat_of_nat_n_shift:
@@ -478,7 +477,7 @@ proof -
       show "x \<in> {x .. x + (2 ^ obj_bits ko - 1)}"
       proof (rule base_member_set)
         from vp show "is_aligned x (obj_bits ko)" using ps'
-          by (auto elim!: valid_pspaceE pspace_alignedE)
+          by (auto elim!: valid_pspaceE)
         show "obj_bits ko < len_of TYPE(machine_word_len)"
           by (rule valid_pspace_obj_sizes [OF _ ranI, unfolded word_bits_def]) fact+
       qed
@@ -674,7 +673,6 @@ lemma range_cover_not_zero:
 lemma range_cover_not_zero_shift:
   "\<lbrakk>n \<noteq> 0; range_cover (ptr :: 'a :: len word) sz bits n; gbits \<le> bits\<rbrakk>
    \<Longrightarrow> ((of_nat n) :: 'a :: len word) << gbits \<noteq> 0"
-  including no_take_bit
   apply (rule word_shift_nonzero[where m = "sz-gbits"])
      prefer 2
       apply (clarsimp simp:range_cover_def)
@@ -708,7 +706,6 @@ lemma range_cover_cell_subset:
      apply (simp add:is_aligned_mask mask_twice range_cover_def min_def)
      done
   show ?thesis
-  including no_take_bit
   using cover cmp
   apply clarsimp
   apply (intro conjI)
@@ -918,8 +915,6 @@ locale Retype_AI_dmo_eq_kernel_restricted =
 
 crunch only_idle[wp]: do_machine_op "only_idle"
 crunch valid_global_refs[wp]: do_machine_op "valid_global_refs"
-crunch global_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
-crunch valid_kernel_mappings[wp]: do_machine_op "valid_kernel_mappings"
 crunch cap_refs_in_kernel_window[wp]: do_machine_op "cap_refs_in_kernel_window"
 
 
@@ -1032,8 +1027,7 @@ lemma unsafe_rep2:
   apply (subst P_null_filter_caps_of_cte_wp_at, simp)+
   apply (simp add: null_filter_same [where cps="caps_of_state s" for s, OF cte_wp_at_not_Null])
   apply (fastforce simp: if_unsafe_then_cap2_def cte_wp_at_caps_of_state
-                        if_unsafe_then_cap_def ex_cte_cap_wp_to_def
-                intro!: ext)
+                        if_unsafe_then_cap_def ex_cte_cap_wp_to_def)
   done
 
 
@@ -1114,10 +1108,10 @@ lemma valid_mdb_rep2:
    apply (rule arg_cong2 [where f="(\<and>)"])
     apply (simp add: reply_caps_mdb_def
                 del: split_paired_Ex split_paired_All)
-    apply (fastforce intro!: iffI elim!: allEI exEI
+    apply (fastforce elim!: allEI exEI
                   simp del: split_paired_Ex split_paired_All)
    apply (rule arg_cong2 [where f="(\<and>)"])
-    apply (fastforce simp: reply_masters_mdb_def intro!: iffI elim!: allEI
+    apply (fastforce simp: reply_masters_mdb_def elim!: allEI
                  simp del: split_paired_All split: if_split_asm)
    apply (fastforce simp: valid_arch_mdb_null_filter[simplified null_filter_def])
   apply (rule arg_cong[where f=All, OF ext])+

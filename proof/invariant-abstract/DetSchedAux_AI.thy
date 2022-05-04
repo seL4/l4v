@@ -341,6 +341,8 @@ crunch valid_sched_action[wp]: create_cap,cap_insert valid_sched_action
 crunch valid_sched[wp]: create_cap,cap_insert valid_sched
   (wp: valid_sched_lift)
 
+crunch scheduler_action [wp]: thread_set_time_slice, dec_domain_time "\<lambda>s. P (scheduler_action s)"
+
 crunch inv[wp]: get_tcb_queue "\<lambda>s. P s"
 
 lemma ethread_get_when_wp:

@@ -41,9 +41,9 @@ definition
 
 lemma tcbSchedEnqueue_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. \<exists>d v. option_map2 tcbPriority_C (cslift s) \<acute>tcb = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) \<acute>tcb = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -61,6 +61,10 @@ lemma tcbSchedEnqueue_cslift_spec:
   apply (clarsimp simp: option_map2_def fun_eq_iff h_t_valid_clift
                         h_t_valid_field[OF h_t_valid_clift])
   apply (rule conjI)
+   apply (clarsimp simp: typ_heap_simps le_maxDomain_eq_less_numDomains)
+   apply unat_arith
+  apply clarsimp
+  apply (rule conjI)
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
    apply (simp split: if_split)
   apply (clarsimp simp: typ_heap_simps if_Some_helper cong: if_cong)
@@ -70,9 +74,9 @@ lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
                  \<and> x \<noteq> 0 \<and> x \<noteq> 1
               \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -145,32 +149,27 @@ lemma ctcb_relation_tcbPriority:
   "ctcb_relation tcb tcb' \<Longrightarrow> ucast (tcbPriority tcb) = tcbPriority_C tcb'"
   by (simp add: ctcb_relation_def)
 
-lemma ctcb_relation_tcbDomain_maxDom:
-  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk> \<Longrightarrow> tcbDomain_C tcb' \<le> ucast maxDom"
+lemma ctcb_relation_tcbDomain_maxDomain_numDomains:
+  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk>
+   \<Longrightarrow> unat (tcbDomain_C tcb') < Kernel_Config.numDomains"
   apply (subst ctcb_relation_tcbDomain[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add:maxDom_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxDom_to_H)
+  apply (simp add: le_maxDomain_eq_less_numDomains)
   done
 
-lemma ctcb_relation_tcbPriority_maxPrio:
+lemma ctcb_relation_tcbPriority_maxPriority_numPriorities:
   "\<lbrakk> ctcb_relation tcb tcb'; tcbPriority tcb \<le> maxPriority \<rbrakk>
-    \<Longrightarrow> tcbPriority_C tcb' \<le> ucast maxPrio"
+    \<Longrightarrow> unat (tcbPriority_C tcb') < numPriorities"
   apply (subst ctcb_relation_tcbPriority[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add: seL4_MaxPrio_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxPrio_to_H)
+  apply (simp add: maxPriority_def numPriorities_def word_le_nat_alt)
   done
 
 lemma tcbSchedEnqueue_cslift_precond_discharge:
   "\<lbrakk> (s, s') \<in> rf_sr; obj_at' (P :: tcb \<Rightarrow> bool) x s;
         valid_queues s; valid_objs' s \<rbrakk> \<Longrightarrow>
    (\<exists>d v. option_map2 tcbPriority_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some v
-        \<and> v \<le> ucast maxPrio
+        \<and> unat v < numPriorities
         \<and> option_map2 tcbDomain_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some d
-        \<and> d \<le> ucast maxDom
+        \<and> unat d < Kernel_Config.numDomains
         \<and> (end_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))) \<noteq> NULL
                 \<longrightarrow> option_map2 tcbPriority_C (cslift s')
                      (head_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))))
@@ -184,12 +183,12 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
   apply (frule_tac t=x in valid_objs'_maxDomain, fastforce simp: obj_at'_def)
   apply (drule_tac P="\<lambda>tcb. tcbPriority tcb \<le> maxPriority" in obj_at_ko_at2', simp)
   apply (drule_tac P="\<lambda>tcb. tcbDomain tcb \<le> maxDomain" in obj_at_ko_at2', simp)
-
-  apply (simp add: ctcb_relation_tcbDomain_maxDom ctcb_relation_tcbPriority_maxPrio)
+  apply (simp add: ctcb_relation_tcbDomain_maxDomain_numDomains
+                   ctcb_relation_tcbPriority_maxPriority_numPriorities)
   apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
               in rf_sr_sched_queue_relation)
     apply (simp add: maxDom_to_H maxPrio_to_H)+
-  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def)
+  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ctcb_relation_def)
   apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_up_simp, simp)
   apply (frule tcb_queue'_head_end_NULL)
@@ -1034,7 +1033,6 @@ lemma deleteASIDPool_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. asid_wf base \<and> pool \<noteq> 0))
       (UNIV \<inter> {s. asid_base_' s = base} \<inter> {s. pool_' s = Ptr pool}) []
       (deleteASIDPool base pool) (Call deleteASIDPool_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
@@ -1290,25 +1288,22 @@ next
   have level: "level < maxPTLevel" by simp
   then
   have [simp]: "maxPT - (1 + of_nat level) < maxPT" (is "?i < maxPT")
-    including no_take_bit
     by (simp add: maxPTLevel_def maxPT_def unat_arith_simps  unat_of_nat)
 
   from level
   have [simp]: "idx ?i < 0x40"
-    including no_take_bit
     by (simp add: idx_def maxPT_def maxPTLevel_def unat_word_ariths unat_arith_simps unat_of_nat)
 
   from level
   have [simp]: "pt + vshift vaddr ?i * 8 = ptSlotIndex (Suc level) pt vaddr"
-    including no_take_bit
     by (simp add: ptSlotIndex_def vshift_def maxPT_def ptIndex_def idx_def ptBitsLeft_def
                   bit_simps mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n)
 
   have [simp]: "\<And>pte pte'. \<lbrakk> cpte_relation pte pte'; isPageTablePTE pte \<rbrakk> \<Longrightarrow>
                             ptrFromPAddr (pte_CL.ppn_CL (pte_lift pte') << pageBits) =
                             getPPtrFromHWPTE pte"
-    by (clarsimp simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
-                 split: pte.splits)
+    by (auto simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
+             split: pte.splits)
 
   have mask_simp[simp]: "(0x1FF::machine_word) = mask ptTranslationBits"
     by (simp add: bit_simps mask_def)

@@ -546,27 +546,19 @@ definition
 
 lemma ucast_ucast_asid_high_bits [simp]:
   "ucast (ucast (asid_high_bits_of asid)::word64) = asid_high_bits_of asid"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma ucast_ucast_asid_low_bits [simp]:
   "ucast (ucast (asid_low_bits_of asid)::word64) = asid_low_bits_of asid"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word64) && mask asid_low_bits) = (ucast asid :: 9 word)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word64) && mask asid_low_bits) = ucast (ucast asid :: 9 word)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 
 context

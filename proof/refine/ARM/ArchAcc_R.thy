@@ -746,7 +746,6 @@ lemma setObject_PD_corres [@lift_corres_args, corres]:
         apply (simp add: pd_bits_def pageBits_def)
        apply (simp add: pd_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
@@ -823,7 +822,6 @@ lemma setObject_PT_corres [@lift_corres_args, corres]:
          apply (simp add: pt_bits_def pageBits_def)
         apply (simp add: pt_bits_def pageBits_def)
        apply clarsimp
-       apply (clarsimp simp: nth_ucast nth_shiftl)
        apply (drule test_bit_size)
        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
        apply arith
@@ -1177,8 +1175,7 @@ lemma ensureSafeMapping_corres [corres]:
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of asid)"
   apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
+  apply word_eqI_solve
   done
 
 

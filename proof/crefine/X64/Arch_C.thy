@@ -8,6 +8,8 @@ theory Arch_C
 imports Recycle_C
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches unmapPageTable, unmapPageDirectory, unmapPDPT
@@ -732,7 +734,6 @@ shows
                    \<inter> {s. asid_base_' s = base}) []
        (liftE (performASIDControlInvocation (MakePool frame slot parent base)))
        (Call performASIDControlInvocation_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
@@ -1366,7 +1367,6 @@ lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
           {t. ret__unsigned_long_' t = from_bool
                (vmsz_aligned (w_' s) (framesize_to_H (sz_' s)))}"
-  including no_take_bit
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
@@ -1456,7 +1456,7 @@ lemma ccorres_pre_getObject_pte:
 
 lemma ptr_add_uint_of_nat [simp]:
   "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
-  including no_take_bit by (clarsimp simp: CTypesDefs.ptr_add_def)
+  by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
 
@@ -2318,12 +2318,10 @@ lemma decodeX64FrameInvocation_ccorres:
        (decodeX64MMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX86FrameInvocation_'proc)"
-  including no_take_bit
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
                 simp: decodeX64MMUInvocation_def )
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeX64FrameInvocation_def
-               del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs
                     if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
    apply (rule ccorres_Cond_rhs[rotated])+
@@ -2361,7 +2359,6 @@ lemma decodeX64FrameInvocation_ccorres:
     apply (vcg exspec=setThreadState_modifies)
 
    \<comment> \<open>PageMap\<close>
-   supply Collect_const[simp del]
    apply (rename_tac word rghts maptype pg_sz mapdata buffera cap excaps cte length___unsigned_long
                      invLabel)
    apply simp
@@ -2748,6 +2745,7 @@ lemma decodeX64FrameInvocation_ccorres:
                          linorder_not_le)
    apply (erule ctes_of_valid', clarsimp)
 
+
   (* C side *)
   apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs" mask_eq_iff_w2p
                         word_size word_less_nat_alt from_bool_0 excaps_map_def cte_wp_at_ctes_of
@@ -2790,7 +2788,7 @@ lemma decodeX64FrameInvocation_ccorres:
     apply (frule(1) cap_to_H_PageCap_tag)
     apply (frule canonical_address_cap_frame_cap)
     apply metis
-   apply ((intro conjI impI,
+   by ((intro conjI impI,
           (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
            ; force simp: vm_page_map_type_defs mask_def),
           (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
@@ -2799,9 +2797,8 @@ lemma decodeX64FrameInvocation_ccorres:
           (rule framesize_to_from_H[symmetric], fastforce simp: c_valid_cap_def cl_valid_cap_def),
           (rule_tac cp=cp in ccap_relation_PageCap_MappedAddress_update
            ; force simp: vm_page_map_type_defs mask_def))+)[2] (* 70s *)
-  done
 
-(* FIXME x64: find out some handy ones for X64 *)
+
 lemma asidHighBits_handy_convs:
   "sint Kernel_C.asidHighBits = 3"
   "Kernel_C.asidHighBits \<noteq> 0x20"
@@ -4793,7 +4790,6 @@ lemma first_last_highbits_eq_port_set:
          \<Longrightarrow> \<exists>port::16 word.
                 unat f \<le> unat port \<and> unat port \<le> unat l
               \<and> arr.[unat (port >> 6)] !! unat (port && 0x3F)"
-  including no_take_bit
   apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(l && ~~ mask 6) + of_nat i" in exI)
@@ -4844,11 +4840,9 @@ lemma port_set_in_first_word:
            0 < unat (arr.[unat (f >> 6)] && ~~ mask (unat (f && mask 6)))\<rbrakk>
        \<Longrightarrow> \<exists>port::16 word. unat f \<le> unat port \<and> unat port \<le> unat l \<and>
               arr.[unat (port >> 6)] !! unat (port && mask 6)"
-  including no_take_bit
   apply (frule word_exists_nth[OF word_neq_0_conv[THEN iffD2], OF unat_less_impl_less, simplified],
                 clarsimp simp: word_size)
   apply (rule_tac x="(f && ~~ mask 6) + of_nat i" in exI)
-  apply (clarsimp simp: neg_mask_test_bit mask_def[where n=6, simplified, symmetric])
   apply (frule test_bit_size, clarsimp simp: word_size)
   apply (frule_tac n=i in word_of_nat_less[where x=64 and 'a=16, simplified])
   apply (rule conjI)
@@ -4859,8 +4853,7 @@ lemma port_set_in_first_word:
      apply (subst unat_plus_simple[THEN iffD1])
       apply (clarsimp simp: AND_NOT_mask_plus_AND_mask_eq word_and_le2)
      apply (subst unat_plus_simple[THEN iffD1])
-      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow',
-                     simp add: is_aligned_neg_mask2)
+      apply (rule word_random[where x'="2^6 - 1"], rule is_aligned_no_overflow', simp)
       apply (rule word_less_sub_1, simp)
      by (simp add: unat_of_nat)
   apply (rule conjI)
@@ -4903,7 +4896,7 @@ lemma bitmap_word_zero_no_bits_set1:
   apply (frule_tac w1=port in word_le_split_mask[where n=6, THEN iffD1, OF word_le_nat_alt[THEN iffD2]])
   apply (subgoal_tac "port >> 6 = l >> 6")
    apply (clarsimp simp: word_size neg_mask_test_bit not_less not_le)
-   apply (clarsimp simp: word_unat.Rep_inject word_le_nat_alt mask_def)
+   apply (clarsimp simp: word_le_nat_alt mask_def min_def split: if_split_asm)
   apply (erule disjE; clarsimp simp:word_less_nat_alt)
   done
 
@@ -4941,7 +4934,6 @@ lemma isIOPortRangeFree_spec:
         ret__unsigned_long_' t = from_bool
           (\<forall>port. first_port_' \<sigma> \<le> port \<and> port \<le> last_port_' \<sigma>
                    \<longrightarrow> \<not> port_array \<sigma>.[unat (port >> wordRadix)] !! unat (port && mask wordRadix))}"
-  including no_take_bit
   apply (rule allI)
   subgoal for \<sigma>
   apply (hoare_rule HoarePartial.ProcNoRec1)
@@ -5045,7 +5037,6 @@ lemma isIOPortRangeFree_spec:
                simp add: ucast_less_ucast_weak shiftr_over_or_dist
                          word_ao_dist mask_AND_NOT_mask)
         apply (rule word_of_nat_le, rule nat_Suc_less_le_imp)
-        apply (erule rsubst[where P="\<lambda>c. i < c"])
         apply (simp add: unat_arith_simps)
         done
      subgoal for port

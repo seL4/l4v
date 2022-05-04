@@ -314,7 +314,7 @@ lemma card_of_dom_bounded:
   by (simp add: assms card_mono)
 
 lemma third_in: "(a, b, c) \<in> S \<Longrightarrow> c \<in> (snd \<circ> snd) ` S"
-  by (metis (erased, hide_lams) map_set_in image_comp snd_conv)
+  by (metis (erased, opaque_lifting) map_set_in image_comp snd_conv)
 
 lemma third_in2: "(a \<in> (snd \<circ> snd) ` (set (enumerate i xs))) = (a \<in> snd ` (set xs))"
   by (metis map_map map_snd_enumerate set_map)
@@ -357,7 +357,7 @@ lemma distinct_map_via_ran: "distinct (map fst xs) \<Longrightarrow> ran (map_of
   by (simp add: ran_distinct)
 
 lemma in_ran_in_set: "x \<in> ran (map_of xs) \<Longrightarrow> x \<in> set (map snd xs)"
-  by (metis (mono_tags, hide_lams) map_set_in map_of_SomeD ranE set_map snd_conv)
+  by (metis (mono_tags) map_set_in map_of_SomeD ranE set_map snd_conv)
 
 lemma in_ran_map_app: "x \<in> ran (xs ++ ys ++ zs) \<Longrightarrow> x \<in> ran xs \<or> x \<in> ran ys \<or> x \<in> ran zs"
   proof -

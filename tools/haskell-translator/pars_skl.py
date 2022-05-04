@@ -20,6 +20,21 @@ def create_find_source():
     return lambda x: os.path.join(dir, x)
 
 
+def continued_lines(file):
+    '''Iterate over lines in file, using backslash at EOL as line continuation
+    character.'''
+    out = []
+    for line in file:
+        if line.endswith('\\\n'):
+            out.append(line[:-2])
+        else:
+            out.append(line)
+            yield ''.join(out)
+            out = []
+    if out:
+        raise IOError('No line after line continuation character')
+
+
 find_source = create_find_source()
 bad_type_assignment = False
 
@@ -45,7 +60,7 @@ for line in instructions:
                    os.path.basename(input))
 
     input_f = open(input)
-    for line in input_f:
+    for line in continued_lines(input_f):
         if line.startswith('#INCLUDE_HASKELL'):
             call = lhs_pars.Call()
 

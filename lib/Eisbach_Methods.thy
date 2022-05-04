@@ -214,7 +214,7 @@ text \<open>
 \<close>
 setup \<open>
   Method.setup \<^binding>\<open>prop_tac\<close>
-    (Args.goal_spec -- Scan.lift (Scan.repeat1 Args.embedded_inner_syntax -- Parse.for_fixes) >>
+    (Args.goal_spec -- Scan.lift (Scan.repeat1 Parse.embedded_inner_syntax -- Parse.for_fixes) >>
       (fn (quant, (props, fixes)) => fn ctxt =>
         (SIMPLE_METHOD'' quant
           (EVERY' (map (fn prop => Rule_Insts.subgoal_tac ctxt prop fixes) props)
@@ -548,5 +548,9 @@ text \<open>
 method solves_emerging methods m1 m2 = (rule bool_protectD, (m1 ; (rule bool_protectI | (m2; fail))))
 
 end
+
+(* FIXME: swap the arguments, or rename the method to repeat_until *)
+method repeat_unless methods stop cont
+  = (stop | (cont, repeat_unless stop cont))
 
 end

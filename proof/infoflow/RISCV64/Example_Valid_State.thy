@@ -1345,103 +1345,8 @@ lemma pspace_distinct_s0:
    apply (drule irq_node_offs_range_correct)+
    apply clarsimp
    apply (clarsimp simp: s0_ptr_defs cte_level_bits_def)
-   apply (case_tac "(ucast irq << 5) < (ucast irqa << 5)")
-    apply (frule udvd_decr'[where K="0x20::obj_ref" and ua=0, simplified])
-       apply (simp add: shiftl_t2n uint_word_ariths)
-       apply (subst mod_mult_mult1[where c="2^5" and b="2^59", simplified])
-       apply simp
-      apply (simp add: shiftl_t2n uint_word_ariths)
-      apply (subst mod_mult_mult1[where c="2^5" and b="2^59", simplified])
-      apply simp
-     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
-     apply (simp add: shiftl_int_def take_bit_eq_mod)
-    apply (frule_tac y="ucast irq << 5" in word_plus_mono_right[where x="0xFFFFFFC00000301F"])
-     apply (simp add: shiftl_t2n)
-     apply (case_tac "(1::obj_ref) \<le> ucast irqa")
-      apply (drule_tac i=1 and k="0x20" in word_mult_le_mono1)
-        apply simp
-       apply (cut_tac x=irqa and 'a=64 in ucast_less)
-        apply simp
-       apply (simp add: word_less_nat_alt)
-      apply (simp add: mult.commute)
-      apply (drule_tac y="0x20" and x="0xFFFFFFC000002FFF" in word_plus_mono_right)
-       apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-        apply (simp add: unat_word_ariths mask_def)
-        apply (cut_tac x=irqa and 'a=64 in ucast_less)
-         apply simp
-        apply (simp add: word_less_nat_alt)
-       apply (simp add: word_bits_def)
-      apply simp
-     apply (simp add: lt1_neq0)
-    apply (drule(1) order_trans_rules(23))
-    apply clarsimp
-    apply (drule_tac a="0xFFFFFFC000003000 + (ucast irqa << 5)" and b="ucast irqa << 5"
-                 and c="0xFFFFFFC000002FFF + (ucast irqa << 5)" and d="ucast irqa << 5" in word_sub_mono)
-       apply simp
-      apply simp
-      apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-       apply (simp add: unat_word_ariths mask_def shiftl_t2n)
-       apply (cut_tac x=irqa and 'a=64 in ucast_less)
-        apply simp
-       apply (simp add: word_less_nat_alt)
-      apply (simp add: word_bits_def)
-     apply simp
-     apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-      apply (simp add: unat_word_ariths mask_def shiftl_t2n)
-      apply (cut_tac x=irqa and 'a=64 in ucast_less)
-       apply simp
-      apply (simp add: word_less_nat_alt)
-     apply (simp add: word_bits_def)
-    apply simp
-   apply (case_tac "(ucast irq << 5) > (ucast irqa << 5)")
-    apply (frule udvd_decr'[where K="0x20 :: obj_ref" and ua=0, simplified])
-       apply (simp add: shiftl_t2n uint_word_ariths)
-       apply (subst mod_mult_mult1[where c="2^5" and b="2^59", simplified])
-       apply simp
-      apply (simp add: shiftl_t2n uint_word_ariths)
-      apply (subst mod_mult_mult1[where c="2^5" and b="2^59", simplified])
-      apply simp
-     apply (simp add: uint_shiftl word_size bintrunc_shiftl)
-     apply (simp add: shiftl_int_def take_bit_eq_mod)
-    apply (frule_tac y="ucast irqa << 5" in word_plus_mono_right[where x="0xFFFFFFC00000301F"])
-     apply (simp add: shiftl_t2n)
-     apply (case_tac "(1::obj_ref) \<le> ucast irq")
-      apply (drule_tac i=1 and k="0x20" in word_mult_le_mono1)
-        apply simp
-       apply (cut_tac x=irq and 'a=64 in ucast_less)
-        apply simp
-       apply (simp add: word_less_nat_alt)
-      apply (simp add: mult.commute)
-      apply (drule_tac y="0x20" and x="0xFFFFFFC000002FFF" in word_plus_mono_right)
-       apply (rule_tac sz=28 in machine_word_plus_mono_right_split)
-        apply (simp add: unat_word_ariths mask_def)
-        apply (cut_tac x=irq and 'a=64 in ucast_less)
-         apply simp
-        apply (simp add: word_less_nat_alt)
-       apply (simp add: word_bits_def)
-      apply simp
-     apply (simp add: lt1_neq0)
-    apply (drule(1) order_trans_rules(23))
-    apply clarsimp
-    apply (drule_tac a="0xFFFFFFC000003000 + (ucast irq << 5)" and b="ucast irq << 5"
-                 and c="0xFFFFFFC000002FFF + (ucast irq << 5)" and d="ucast irq << 5" in word_sub_mono)
-       apply simp
-      apply simp
-      apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-       apply (simp add: unat_word_ariths mask_def shiftl_t2n)
-       apply (cut_tac x=irq and 'a=64 in ucast_less)
-        apply simp
-       apply (simp add: word_less_nat_alt)
-      apply (simp add: word_bits_def)
-     apply simp
-     apply (rule_tac sz=59 in machine_word_plus_mono_right_split)
-      apply (simp add: unat_word_ariths mask_def shiftl_t2n)
-      apply (cut_tac x=irq and 'a=64 in ucast_less)
-       apply simp
-      apply (simp add: word_less_nat_alt)
-     apply (simp add: word_bits_def)
-    apply simp
-   apply simp
+   apply word_bitwise
+   apply auto[1]
   apply (elim disjE)
   (* slow *)
   by (simp | clarsimp simp: kh0_obj_def cte_level_bits_def s0_ptr_defs pte_bits_def bit_simps
@@ -2042,21 +1947,20 @@ lemma Sys1_valid_initial_state_noenabled:
                                    invariant_over_ADT_if.kernel_entry_if_det_inv
                                    invariant_over_ADT_if.kernel_exit_if_det_inv
                                    invariant_over_ADT_if.schedule_if_det_inv)+)[8]
-             apply (rule Sys1_pas_cur_domain)
-            apply (rule Sys1_pas_wellformed_noninterference)
-           apply (simp only: einvs_s0)
-           apply (simp add: Sys1_current_subject_idemp)
-           apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
-                            domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
-                            idle_equiv_refl)
-           apply (clarsimp simp:  valid_domain_list_2_def s0_internal_def exst0_def)
-          apply (simp add: det_inv_s0)
-         apply (simp add: s0_internal_def exst0_def)
-        apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq
-                         identity_eq[symmetric] tcb_states_of_state_s0)
-        apply (simp add: s0_ptr_defs s0_internal_def)
-       apply (simp add: s0_internal_def exst0_def)
-      apply (simp add: num_domains_def)
+            apply (rule Sys1_pas_cur_domain)
+           apply (rule Sys1_pas_wellformed_noninterference)
+          apply (simp only: einvs_s0)
+          apply (simp add: Sys1_current_subject_idemp)
+          apply (simp add: only_timer_irq_inv_s0 silc_inv_s0 Sys1_pas_cur_domain
+                           domain_sep_inv_s0 Sys1_pas_refined Sys1_guarded_pas_domain
+                           idle_equiv_refl)
+          apply (clarsimp simp: valid_domain_list_2_def s0_internal_def exst0_def)
+         apply (simp add: det_inv_s0)
+        apply (simp add: s0_internal_def exst0_def)
+       apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq
+                        identity_eq[symmetric] tcb_states_of_state_s0)
+       apply (simp add: s0_ptr_defs s0_internal_def)
+      apply (simp add: s0_internal_def exst0_def)
      apply (rule utf_det)
     apply (rule utf_non_empty)
    apply (rule utf_non_interrupt)

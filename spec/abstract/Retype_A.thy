@@ -128,11 +128,6 @@ definition
      modify (detype {ptr..ptr + 2 ^ bits - 1})
   od"
 
-(* FIXME: we need a sensible place for these configurable constants. *)
-definition
-  reset_chunk_bits :: nat where
-  "reset_chunk_bits = 8"
-
 definition
   get_free_ref :: "obj_ref \<Rightarrow> nat \<Rightarrow> obj_ref" where
   "get_free_ref base free_index \<equiv> base +  (of_nat free_index)"
@@ -162,19 +157,19 @@ where
     liftE $ delete_objects base sz;
   dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 
-  if dev \<or> sz < reset_chunk_bits
+  if dev \<or> sz < resetChunkBits
       then liftE $ do
         unless dev $ do_machine_op $ clearMemory base (2 ^ sz);
         set_cap (UntypedCap dev base sz 0) src_slot
       od
     else mapME_x (\<lambda>i. doE
-          liftE $ do_machine_op $ clearMemory (base + (of_nat i << reset_chunk_bits))
-              (2 ^ reset_chunk_bits);
+          liftE $ do_machine_op $ clearMemory (base + (of_nat i << resetChunkBits))
+              (2 ^ resetChunkBits);
           liftE $ set_cap (UntypedCap dev base sz
-              (i * 2 ^ reset_chunk_bits)) src_slot;
+              (i * 2 ^ resetChunkBits)) src_slot;
           preemption_point
-        odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - reset_chunk_bits)].
-            i * 2 ^ reset_chunk_bits < free_index_of cap])
+        odE) (rev [i \<leftarrow> [0 ..< 2 ^ (sz - resetChunkBits)].
+            i * 2 ^ resetChunkBits < free_index_of cap])
     odE
   odE"
 

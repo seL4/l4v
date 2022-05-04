@@ -50,7 +50,7 @@ next
   case (Suc n')
 
   have b: "\<And>i. word_rsplit (0 :: machine_word) ! (7 - i) = (0 :: 8 word)"
-    apply (simp add: word_rsplit_0)
+    apply (simp add: word_rsplit_0 word_bits_def)
     apply (case_tac i; simp; rename_tac i)+
     done
 

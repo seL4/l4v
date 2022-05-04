@@ -73,10 +73,6 @@ val dbg = ProveSimplToGraphGoals.new_debug
   };
 \<close>
 
-context
-includes no_take_bit
-begin
-
 (* If this fails, it can be debugged with the assistance of the
    script in TestGraphRefine.thy *)
 ML \<open>
@@ -95,8 +91,6 @@ val _ = ProveSimplToGraphGoals.print dbg "timeouts:" #timeouts;
 ML \<open>
 val _ = ProveSimplToGraphGoals.print dbg "successes:" #successes;
 \<close>
-
-end
 
 end
 

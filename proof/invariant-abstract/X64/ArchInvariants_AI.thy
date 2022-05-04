@@ -1866,7 +1866,7 @@ lemma page_directory_pde_atI:
    subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: pd_bits_def pageBits_def table_size)
-  apply (simp)
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: pd_bits_def pageBits_def table_size)
   apply (rule shiftl_less_t2n)
@@ -1884,7 +1884,7 @@ lemma page_table_pte_atI:
    subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: bit_simps)
-  apply simp
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)
@@ -1902,7 +1902,7 @@ lemma pd_pointer_table_pdpte_atI:
    subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: bit_simps)
-  apply simp
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)
@@ -1920,7 +1920,7 @@ lemma page_map_l4_pml4e_atI:
    subgoal by (auto simp: bit_simps)
   apply (rule sym, rule add_mask_lower_bits)
    apply (simp add: bit_simps)
-  apply simp
+  apply (simp del: bit_shiftl_iff bit_shiftl_word_iff)
   apply (subst upper_bits_unset_is_l2p_64[unfolded word_bits_conv])
    apply (simp add: bit_simps)
   apply (rule shiftl_less_t2n)

@@ -14,30 +14,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/gitlint@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   whitespace:
     name: 'Trailing Whitespace'
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/git-diff-check@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   shell:
     name: 'Portable Shell'
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/bashisms@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   style:
     name: Style
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/style@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   thylint:
     name: 'Theory Linter'
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/thylint@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
     - uses: yuzutech/annotations-action@v0.2.1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

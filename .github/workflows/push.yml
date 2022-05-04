@@ -10,6 +10,7 @@ on:
     branches:
       - master
       - rt
+      - aarch64
   pull_request:
 
 jobs:
@@ -18,9 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: seL4/ci-actions/license-check@master
+      with:
+        token: ${{ secrets.READ_TOKEN }}
 
   links:
     name: Links
     runs-on: ubuntu-latest
     steps:
       - uses: seL4/ci-actions/link-check@master
+        with:
+          token: ${{ secrets.READ_TOKEN }}

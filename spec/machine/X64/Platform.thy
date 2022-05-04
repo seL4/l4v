@@ -12,6 +12,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
+  Kernel_Config_Lemmas
 begin
 
 context Arch begin global_naming X64

@@ -48,7 +48,7 @@ lemma exec_Guard:
   "(G \<turnstile> \<langle>Guard Err S c, Normal s\<rangle> \<Rightarrow> s')
        = (if s \<in> S then G \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'
                 else s' = Fault Err)"
-  by (auto split: if_split elim!: exec_elim_cases intro: exec.intros)
+  using exec.intros by (auto split: if_split elim!: exec_elim_cases)
 
 lemma to_bytes_word8:
   "to_bytes (v :: word8) xs = [v]"
@@ -267,7 +267,6 @@ qed
 
 lemma intvl_nowrap:
   "\<lbrakk>y \<noteq> 0; unat y + z \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> x \<notin> {x + y ..+ z}" for x :: "'a::len word"
-  supply unsigned_of_nat[simp del]
   apply clarsimp
   apply (drule intvlD)
   apply clarsimp
@@ -404,7 +403,6 @@ lemma intvl_off_disj:
   and    zoff: "z + off < 2 ^ word_bits"
   shows   "{x ..+ y} \<inter> {x + of_nat off ..+ z} = {}"
   using ylt zoff
-  supply unsigned_of_nat[simp del]
   apply (cases "off = 0")
    apply simp
   apply (rule contrapos_pp [OF TrueI])
@@ -434,6 +432,7 @@ proof (induct m arbitrary: n rule: rev_induct)
 next
   case (snoc x xs)
 
+  note [[syntax_ambiguity_warning=false]]
   from snoc.prems have
     sm: "[length xs \<mapsto> x] ++ list_map xs \<subseteq>\<^sub>m list_map n"
     unfolding list_map_def by simp
@@ -767,7 +766,6 @@ proof -
          \<Longrightarrow> unat (of_nat x * of_nat (size_of TYPE('a)) + (of_nat k :: addr))
                  = x * size_of TYPE('a) + k"
     using size
-    supply unsigned_of_nat[simp del]
     apply (case_tac "size_of TYPE('a)", simp_all)
     apply (case_tac "CARD('b)", simp_all)
     apply (subst unat_add_lem[THEN iffD1])
@@ -872,7 +870,6 @@ lemma typ_slice_t_array:
 lemma h_t_valid_Array_element':
   "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); coerce \<or> n < CARD('b) \<rbrakk>
     \<Longrightarrow> htd \<Turnstile>\<^sub>t array_ptr_index p coerce n"
-  supply unsigned_of_nat[simp del]
   apply (clarsimp simp only: h_t_valid_def valid_footprint_def Let_def
                              c_guard_def c_null_guard_def)
   apply (subgoal_tac "\<exists>offs. array_ptr_index p coerce n = ptr_add (ptr_coerce p) (of_nat offs)
@@ -969,7 +966,7 @@ lemma ptr_add_disjoint:
   apply (erule swap)
   apply (rule intvl_inter_le [where k=0 and ka="unat (ptr_val y - ptr_val x)"])
     apply clarsimp
-   apply (metis (hide_lams, mono_tags) add_diff_cancel2 add_diff_inverse diff_add_cancel
+   apply (metis (mono_tags) add_diff_cancel2 add_diff_inverse diff_add_cancel
               trans_less_add1 unat_less_helper word_le_less_eq word_less_add_right
               word_of_nat_less word_unat.Rep_inverse)
   apply simp
@@ -983,7 +980,7 @@ lemma ptr_add_disjoint2:
   apply (erule swap)
   apply (rule intvl_inter_le[where k=0 and ka="unat (ptr_val x - ptr_val y)"])
     apply clarsimp
-   apply (metis (no_types, hide_lams) add.commute less_imp_le less_le_trans not_le unat_less_helper
+   apply (metis (no_types) add.commute less_imp_le less_le_trans not_le unat_less_helper
                 word_diff_ls'(4))
   apply simp
   done

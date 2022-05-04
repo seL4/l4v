@@ -2622,9 +2622,9 @@ lemma getPDE_det:
    apply (rule conjI)
     apply (subst add.commute)
     apply (rule word_diff_ls')
-     apply (clarsimp simp:field_simps not_le plus_one_helper)
-    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
-   apply simp
+     apply (clarsimp simp: not_le plus_one_helper)
+    apply (subst add.commute)
+    apply (simp add: is_aligned_no_wrap' is_aligned_mask)
   apply auto
   done
 
@@ -2908,7 +2908,8 @@ lemma getPML4E_det:
     apply (subst add.commute)
     apply (rule word_diff_ls')
      apply (clarsimp simp:field_simps not_le plus_one_helper)
-    apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
+    apply (subst add.commute)
+    apply (simp add: is_aligned_no_wrap' is_aligned_mask)
    apply simp
   apply auto
   done
@@ -3679,7 +3680,8 @@ lemma ctes_of_ko_at:
   (\<exists>ptr ko. (ksPSpace s ptr = Some ko \<and> p \<in> obj_range' ptr ko))"
   apply (clarsimp simp: map_to_ctes_def Let_def split: if_split_asm)
    apply (intro exI conjI, assumption)
-   apply (simp add: obj_range'_def objBits_simps' is_aligned_no_wrap' field_simps)
+   apply (simp add: obj_range'_def objBits_simps' add.commute)
+   apply (simp add: is_aligned_no_wrap')
   apply (intro exI conjI, assumption)
   apply (clarsimp simp: objBits_simps' obj_range'_def word_and_le2)
   apply (thin_tac "P" for P)+
@@ -4274,7 +4276,6 @@ lemma no_overlap_check:
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"
-  including no_0_dvd
   apply (clarsimp split:option.splits simp:assert_def lookupAround2_char1 not_less)
   apply (rule ccontr)
   apply (frule(1) pspace_no_overlapD')
@@ -4881,7 +4882,6 @@ lemma new_cap_addrs_def2:
   "n < 2 ^ 64
    \<Longrightarrow> new_cap_addrs (Suc n) ptr obj
    = map (\<lambda>n. ptr + (n << objBitsKO obj)) [0.e.of_nat n]"
-  including no_take_bit
   by (simp add:new_cap_addrs_def upto_enum_word unat_of_nat Fun.comp_def)
 
 lemma createTCBs_tcb_at':
@@ -4987,7 +4987,7 @@ proof -
         done
 
   show ?thesis
-  including no_take_bit using assms
+  using assms
   apply (clarsimp simp:valid_pspace'_def)
   apply (frule range_cover.aligned)
   apply (frule(3) pspace_no_overlap'_tail)
@@ -5451,7 +5451,6 @@ lemma createNewObjects_def2:
           apply (simp add:range_cover_def objSize_eq_capBits)+
          done
       show ?case
-      including no_take_bit
       apply simp
       using snoc.prems
       apply (subst upto_enum_inc_1_len)
@@ -5743,7 +5742,7 @@ lemma createNewObjects_Cons:
       case Nil thus ?case by simp
     next
       case (Cons x xs)
-      thus ?case including no_take_bit by (simp add:unat_of_nat64)
+      thus ?case by (simp add:unat_of_nat64)
     qed
 
     show ?thesis

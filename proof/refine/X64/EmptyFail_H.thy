@@ -139,8 +139,7 @@ lemma decodeCNodeInvocation_empty_fail[intro!, wp, simp]:
          apply (simp_all add: decodeCNodeInvocation_def
                          split_def cnode_invok_case_cleanup unlessE_whenE
                    cong: if_cong bool.case_cong list.case_cong)
-         apply (simp | wp | wpc | safe)+
-  done
+         by (simp | wp | wpc | safe)+
 
 lemma empty_fail_getObject_ap [intro!, wp, simp]:
   "empty_fail (getObject p :: asidpool kernel)"

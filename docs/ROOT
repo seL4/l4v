@@ -12,5 +12,7 @@
 chapter Docs
 
 session Docs = HOL +
+  sessions
+    Lib
   theories
     "Style"

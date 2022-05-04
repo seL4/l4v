@@ -494,22 +494,6 @@ where "dissociate_vcpu_tcb vr t \<equiv> do
   od
 od"
 
-
-text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
-definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where "associate_vcpu_tcb vr t \<equiv> do
-  t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-  case t_vcpu of
-    Some p \<Rightarrow> dissociate_vcpu_tcb p t
-  | _ \<Rightarrow> return ();
-  v \<leftarrow> get_vcpu vr;
-  case vcpu_tcb v of
-    Some p \<Rightarrow> dissociate_vcpu_tcb vr p
-  | _ \<Rightarrow> return ();
-  arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
-  set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
-od"
-
 text \<open>Register + context save for VCPUs\<close>
 
 definition
@@ -611,6 +595,21 @@ where
               modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
             od))
    od"
+
+text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
+definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "associate_vcpu_tcb vr t \<equiv> do
+    t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+    case t_vcpu of Some p \<Rightarrow> dissociate_vcpu_tcb p t
+                 | _ \<Rightarrow> return ();
+    v \<leftarrow> get_vcpu vr;
+    case vcpu_tcb v of Some p \<Rightarrow> dissociate_vcpu_tcb vr p
+                     | _ \<Rightarrow> return ();
+    arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
+    set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>);
+    ct \<leftarrow> gets cur_thread;
+    when (t = ct) $ vcpu_switch (Some vr)
+  od"
 
 text \<open>
   Prepare a given VCPU for removal: dissociate it, and clean up current VCPU state

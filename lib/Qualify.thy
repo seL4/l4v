@@ -25,7 +25,6 @@ structure Data = Theory_Data
   (
     type T = (theory * qualify_args) option;
     val empty = NONE;
-    val extend = I;
     fun merge ((_, _) : T * T) = NONE;
   );
 

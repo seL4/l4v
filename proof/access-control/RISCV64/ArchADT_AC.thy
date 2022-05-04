@@ -14,7 +14,7 @@ named_theorems ADT_AC_assms
 
 lemma mask_ptTranslationBits_ucast_ucast:
   "(asid && mask ptTranslationBits) = ucast (ucast asid :: 9 word)"
-  by (word_eqI simp: ptTranslationBits_def)
+  by (word_eqI_solve simp: ptTranslationBits_def)
 
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; x \<notin> kernel_mappings;

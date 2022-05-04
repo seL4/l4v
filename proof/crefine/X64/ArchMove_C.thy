@@ -154,8 +154,6 @@ lemma ucast_le_ucast_8_32:
   "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
   by (simp add: word_le_nat_alt is_up_8_32 unat_ucast_upcast)
 
-lemmas findVSpaceForASIDAssert_pd_at_wp2 = findVSpaceForASIDAssert_vs_at_wp
-
 lemma asid_shiftr_low_bits_less:
   "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x8"
   apply (rule_tac y="2 ^ 3" in order_less_le_trans)
@@ -193,13 +191,6 @@ lemma empty_fail_findVSpaceForASID[iff]:
   apply (simp add: assertE_def liftE_bindE checkPML4At_def split: if_split)
   done
 
-lemma empty_fail_findVSpaceForASIDAssert[iff]:
-  "empty_fail (findVSpaceForASIDAssert asid)"
-  apply (simp add: findVSpaceForASIDAssert_def catch_def
-                   checkPML4At_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
-  done
-
 crunch inv'[wp]: archThreadGet P
 
 (* FIXME MOVE near thm tg_sp' *)
@@ -228,18 +219,12 @@ lemma more_pageBits_inner_beauty:
   apply clarsimp
   apply (simp add: word_shift_by_3)
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size pageBits_def)
-   apply arith
+   apply (word_eqI_solve dest: test_bit_size simp: pageBits_def)
   apply (insert x)
   apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bang_eq)
-  apply (erule_tac x="n+3" in allE)
-  apply (clarsimp simp: word_ops_nth_size word_size)
-  apply (clarsimp simp: pageBits_def)
+  apply word_eqI
+  apply (erule_tac x="3+n" in allE)
+  apply (clarsimp simp: word_size pageBits_def)
   done
 
 (* FIXME x64: figure out where these are needed and adjust appropriately *)

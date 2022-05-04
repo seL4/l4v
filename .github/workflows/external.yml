@@ -17,14 +17,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, ARM_HYP, RISCV64, X64]
+        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
         manifest: default.xml
-        session: '-v'  # non-empty argument to `./run-tests` to not exclude AutoCorresSEL4
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -776,8 +776,7 @@ lemma sameObjectAs_def2:
                   split del: if_split cong: if_cong)
   apply (simp add: capRange_def isCap_simps
               split del: if_split)
-  apply fastforce
-  done
+  by fastforce
 
 lemmas sameRegionAs_def3 =
   sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master]
@@ -1187,7 +1186,6 @@ qed
 
 lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-  including no_take_bit
   apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
                     simp: capAligned_def objBits_simps field_simps)

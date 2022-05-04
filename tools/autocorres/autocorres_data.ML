@@ -35,7 +35,6 @@ structure Traces = Theory_Data (
                  Symtab.table (* func name *)
                  Symtab.table (* file *);
   val empty = Symtab.empty;
-  val extend = I;
   (* We need a deep merge due to incremental translations (which can span
    * multiple theories). snd is arbitrary. *)
   val merge = Utils.symtab_merge_with (Utils.symtab_merge_with (Utils.symtab_merge_with snd));
@@ -49,6 +48,5 @@ structure AutoCorresFunctionInfo = Theory_Data(
   type T = FunctionInfo.function_info Symtab.table
              FunctionInfo.Phasetab.table Symtab.table;
   val empty = Symtab.empty;
-  val extend = I;
   val merge = Symtab.merge (K true);
 )

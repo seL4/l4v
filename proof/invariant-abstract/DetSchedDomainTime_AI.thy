@@ -151,8 +151,6 @@ context DetSchedDomainTime_AI begin
 crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
-crunch domain_list_inv[wp]: copy_mrs "\<lambda>s. P (domain_list s)"
-
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
@@ -188,11 +186,6 @@ crunch domain_list_inv[wp]:
   "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps check_cap_inv)
 end
-
-crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
-
-crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: cap_move "\<lambda>s. P (domain_list s)"
 
@@ -259,7 +252,7 @@ crunch domain_time_inv[wp]: do_user_op "(\<lambda>s. P (domain_time s))"
 context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]:
-  get_cap, activate_thread, set_scheduler_action, tcb_sched_action
+  get_cap, activate_thread, set_scheduler_action, tcb_sched_action, thread_set_time_slice
   "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
@@ -298,8 +291,6 @@ context DetSchedDomainTime_AI begin
 
 crunch domain_time_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_time s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
-
-crunch domain_time_inv[wp]: copy_mrs "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: handle_fault "\<lambda>s. P (domain_time s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
@@ -383,9 +374,6 @@ lemma handle_event_domain_time_inv:
              apply (wp|simp|wpc)+
   done
 
-crunch domain_time_inv[wp]: send_fault_ipc, handle_call "\<lambda>s. P (domain_time s)"
-  (wp: hoare_drop_imps mapM_x_wp_inv select_wp without_preemption_wp simp: crunch_simps unless_def)
-
 end
 
 lemma next_domain_domain_time_left[wp]:
@@ -408,8 +396,6 @@ lemma schedule_choose_new_thread_domain_time_left[wp]:
   unfolding schedule_choose_new_thread_def
   by (wpsimp simp: word_gt_0)
 
-crunch valid_domain_list: schedule_choose_new_thread valid_domain_list
-
 crunch etcb_at[wp]: tcb_sched_action "etcb_at P t"
 
 lemma schedule_domain_time_left:
@@ -425,11 +411,16 @@ lemma schedule_domain_time_left:
   done
 end
 
+lemma reschedule_required_choose_new_thread[wp]:
+  "\<lbrace> \<top> \<rbrace> reschedule_required
+   \<lbrace>\<lambda>x s. scheduler_action s = choose_new_thread\<rbrace>"
+  unfolding reschedule_required_def set_scheduler_action_def
+  by (wp hoare_vcg_imp_lift | simp | wpc)+
+
 lemma reschedule_required_valid_domain_time:
   "\<lbrace> \<top> \<rbrace> reschedule_required
    \<lbrace>\<lambda>x s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread\<rbrace>"
-  unfolding reschedule_required_def set_scheduler_action_def
-  by (wp hoare_vcg_imp_lift | simp | wpc)+
+  by (wpsimp wp: hoare_drop_imp reschedule_required_choose_new_thread)
 
 (* FIXME: move to where hoare_drop_imp is, add E/R variants etc *)
 lemma hoare_false_imp:

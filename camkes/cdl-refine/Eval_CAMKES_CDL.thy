@@ -532,7 +532,7 @@ lemmas word_rel_simps_small =
   word_less_alt word_le_def word_uint_eq_iff uint_0_eq uint_1
   (* need bintrunc to reduce numerals mod word size *)
   uint_bintrunc bintrunc_numeral_simps bintrunc_1_1
-  numeral_One BIT_bin_simps BIT_special_simps
+  numeral_One
   (* evaluating word size for bintrunc -- yuck *)
   len_num0 len_num1 len_bit0 len_bit1
   arith_simps mult_1_right pred_numeral_simps numeral_plus_one

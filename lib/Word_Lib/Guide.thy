@@ -6,15 +6,28 @@
 
 (*<*)
 theory Guide
-  imports Word_Lib_Sumo Word_64
+  imports Word_Lib_Sumo Machine_Word_32 Machine_Word_64 Ancient_Numeral
 begin
 
+context semiring_bit_operations
+begin
+
+lemma bit_eq_iff:
+  \<open>a = b \<longleftrightarrow> (\<forall>n. 2 ^ n \<noteq> 0 \<longrightarrow> bit a n \<longleftrightarrow> bit b n)\<close>
+  using bit_eq_iff [of a b] by (simp add: possible_bit_def)
+
+end
+
+notation (output)  Generic_set_bit.set_bit (\<open>Generic'_set'_bit.set'_bit\<close>)
+
 hide_const (open) Generic_set_bit.set_bit
+
+no_notation bit  (infixl \<open>!!\<close> 100)
 
 (*>*)
 section \<open>A short overview over bit operations and word types\<close>
 
-subsection \<open>Basic theories and key ideas\<close>
+subsection \<open>Key principles\<close>
 
 text \<open>
   When formalizing bit operations, it is tempting to represent
@@ -33,7 +46,7 @@ text \<open>
       in @{term [source] 0} which can be represented by type \<^typ>\<open>nat\<close> but
       only support a restricted set of operations).
 
-  The most fundamental ideas are developed in theory \<^theory>\<open>HOL.Parity\<close>
+  The fundamental principles are developed in theory \<^theory>\<open>HOL.Bit_Operations\<close>
   (which is part of \<^theory>\<open>Main\<close>):
 
     \<^item> Multiplication by \<^term>\<open>2 :: int\<close> is a bit shift to the left and
@@ -53,11 +66,10 @@ text \<open>
 
       \<^item> Induction rule: @{thm [display, mode=iff] bits_induct [where ?'a = int, no_vars]}
 
-    \<^item> Characteristic properties \<^prop>\<open>bit (f x) n \<longleftrightarrow> P x n\<close>
+    \<^item> Characteristic properties @{prop [source] \<open>bit (f x) n \<longleftrightarrow> P x n\<close>}
       are available in fact collection \<^text>\<open>bit_simps\<close>.
 
-  On top of this, the following generic operations are provided
-  after import of theory \<^theory>\<open>HOL-Library.Bit_Operations\<close>:
+  On top of this, the following generic operations are provided:
 
     \<^item> Singleton \<^term>\<open>n\<close>th bit: \<^term>\<open>(2 :: int) ^ n\<close>
 
@@ -69,19 +81,19 @@ text \<open>
 
     \<^item> Truncation: @{thm take_bit_eq_mod [where ?'a = int, no_vars]}
 
-    \<^item> Negation: @{thm [mode=iff] bit_not_iff [where ?'a = int, no_vars]}
+    \<^item> Bitwise negation: @{thm [mode=iff] bit_not_iff_eq [where ?'a = int, no_vars]}
 
-    \<^item> And: @{thm [mode=iff] bit_and_iff [where ?'a = int, no_vars]}
+    \<^item> Bitwise conjunction: @{thm [mode=iff] bit_and_iff [where ?'a = int, no_vars]}
 
-    \<^item> Or: @{thm [mode=iff] bit_or_iff [where ?'a = int, no_vars]}
+    \<^item> Bitwise disjunction: @{thm [mode=iff] bit_or_iff [where ?'a = int, no_vars]}
 
-    \<^item> Xor: @{thm [mode=iff] bit_xor_iff [where ?'a = int, no_vars]}
+    \<^item> Bitwise exclusive disjunction: @{thm [mode=iff] bit_xor_iff [where ?'a = int, no_vars]}
 
-    \<^item> Set a single bit: @{thm set_bit_def [where ?'a = int, no_vars]}
+    \<^item> Setting a single bit: @{thm set_bit_def [where ?'a = int, no_vars]}
 
-    \<^item> Unset a single bit: @{thm unset_bit_def [where ?'a = int, no_vars]}
+    \<^item> Unsetting a single bit: @{thm unset_bit_def [where ?'a = int, no_vars]}
 
-    \<^item> Flip a single bit: @{thm flip_bit_def [where ?'a = int, no_vars]}
+    \<^item> Flipping a single bit: @{thm flip_bit_def [where ?'a = int, no_vars]}
 
     \<^item> Signed truncation, or modulus centered around \<^term>\<open>0::int\<close>:
         @{thm [display] signed_take_bit_def [where ?'a = int, no_vars]}
@@ -89,6 +101,16 @@ text \<open>
     \<^item> (Bounded) conversion from and to a list of bits:
         @{thm [display] horner_sum_bit_eq_take_bit [where ?'a = int, no_vars]}
 
+  Bit concatenation on \<^typ>\<open>int\<close> as given by
+    @{thm [display] concat_bit_def [no_vars]}
+  appears quite
+  technical but is the logical foundation for the quite natural bit concatenation
+  on \<^typ>\<open>'a word\<close> (see below).
+\<close>
+
+subsection \<open>Core word theory\<close>
+
+text \<open>
   Proper word types are introduced in theory \<^theory>\<open>HOL-Library.Word\<close>, with
   the following specific operations:
 
@@ -159,21 +181,25 @@ text \<open>
 
   For proofs about words the following default strategies are applicable:
 
-    \<^item> Using bit extensionality (facts \<^text>\<open>bit_eq_iff\<close>, \<^text>\<open>bit_eqI\<close>; fact
+    \<^item> Using bit extensionality (facts \<^text>\<open>bit_eq_iff\<close>, \<^text>\<open>bit_word_eqI\<close>; fact
       collection \<^text>\<open>bit_simps\<close>).
 
     \<^item> Using the @{method transfer} method.
 \<close>
 
+
 subsection \<open>More library theories\<close>
 
 text \<open>
-  Note: currently, the theories listed here are hardly separate
+  Note: currently, most theories listed here are hardly separate
   entities since they import each other in various ways.
   Always inspect them to understand what you pull in if you
   want to import one.
 
     \<^descr>[Syntax]
+
+      \<^descr>[\<^theory>\<open>Word_Lib.Syntax_Bundles\<close>]
+        Bundles to provide alternative syntax for various bit operations.
 
       \<^descr>[\<^theory>\<open>Word_Lib.Hex_Words\<close>]
         Printing word numerals as hexadecimal numerals.
@@ -191,6 +217,9 @@ text \<open>
 
       \<^descr>[\<^theory>\<open>Word_Lib.Bitwise\<close>]
         Method @{method word_bitwise} decomposes word equalities and inequalities into bit propositions.
+
+      \<^descr>[\<^theory>\<open>Word_Lib.Bitwise_Signed\<close>]
+        Method @{method word_bitwise_signed} decomposes word equalities and inequalities into bit propositions.
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_EqI\<close>]
         Method @{method word_eqI_solve} decomposes word equalities and inequalities into bit propositions.
@@ -226,18 +255,15 @@ text \<open>
 
           \<^item> @{thm [mode=iff] msb_word_iff_bit [no_vars]}
 
-      \<^descr>[\<^theory>\<open>Word_Lib.Traditional_Infix_Syntax\<close>]
+      \<^descr>[\<^theory>\<open>Word_Lib.Bit_Shifts_Infix_Syntax\<close>]
 
-        Clones of existing operations decorated with
-        traditional syntax:
+        Bit shifts decorated with infix syntax:
 
-          \<^item> @{thm test_bit_eq_bit [no_vars]}
+          \<^item> @{thm Bit_Shifts_Infix_Syntax.shiftl_def [no_vars]}
 
-          \<^item> @{thm shiftl_eq_push_bit [no_vars]}
+          \<^item> @{thm Bit_Shifts_Infix_Syntax.shiftr_def [no_vars]}
 
-          \<^item> @{thm shiftr_eq_drop_bit [no_vars]}
-
-          \<^item> @{thm sshiftr_eq [no_vars]}
+          \<^item> @{thm Bit_Shifts_Infix_Syntax.sshiftr_def [no_vars]}
 
       \<^descr>[\<^theory>\<open>Word_Lib.Next_and_Prev\<close>] \
 
@@ -281,15 +307,19 @@ text \<open>
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_32\<close>]
 
-          for 32-bit words. This theory is not part of  \<^text>\<open>Word_Lib_Sumo\<close>, because it shadows
-          names from \<^theory>\<open>Word_Lib.Word_64\<close>. They can be used together, but then will have
-          to use qualified names in applications.
+          for 32-bit words.
 
       \<^descr>[\<^theory>\<open>Word_Lib.Word_64\<close>]
 
           for 64-bit words. This theory is not part of  \<^text>\<open>Word_Lib_Sumo\<close>, because it shadows
           names from \<^theory>\<open>Word_Lib.Word_32\<close>. They can be used together, but then will have
           to use qualified names in applications.
+
+      \<^descr>[\<^theory>\<open>Word_Lib.Machine_Word_32\<close> and \<^theory>\<open>Word_Lib.Machine_Word_64\<close>]
+
+          provide lemmas for 32-bit words and 64-bit words under the same name,
+          which can help to organize applications relying on some form
+          of genericity.
 \<close>
 
 
@@ -319,7 +349,7 @@ text \<open>
     for backward compatibility: start importing this theory when
     migrating applications to Isabelle2021, and later sort out
     what you really need. You may need to include
-   \<^theory>\<open>Word_Lib.Word_32\<close> or \<^theory>\<open>Word_Lib.Word_64\<close> separately.
+   \<^theory>\<open>Word_Lib.Word_64\<close> separately.
 
   \<^descr>[\<^theory>\<open>Word_Lib.Generic_set_bit\<close>]
 
@@ -353,6 +383,36 @@ text \<open>
     Collection of operations and theorems which are kept for backward
     compatibility and not used in other theories in session \<^text>\<open>Word_Lib\<close>.
     They are used in applications of \<^text>\<open>Word_Lib\<close>, but should be migrated to there.
+\<close>
+
+section \<open>Changelog\<close>
+
+text \<open>
+  \<^descr>[Changes since AFP 2021] ~
+
+    \<^item> Theory \<^theory>\<open>Word_Lib.Ancient_Numeral\<close> is not part of \<^theory>\<open>Word_Lib.Word_Lib_Sumo\<close>
+      any longer.
+
+    \<^item> Infix syntax for \<^term>\<open>(AND)\<close>, \<^term>\<open>(OR)\<close>, \<^term>\<open>(XOR)\<close> organized in
+      syntax bundle \<^bundle>\<open>bit_operations_syntax\<close>.
+
+    \<^item> Abbreviation \<^abbrev>\<open>max_word\<close> moved from distribution into theory
+      \<^theory>\<open>Word_Lib.Legacy_Aliases\<close>.
+
+    \<^item> Operation \<^const>\<open>test_bit\<close> replaced by input abbreviation \<^abbrev>\<open>test_bit\<close>.
+
+    \<^item> Abbreviations \<^abbrev>\<open>bin_nth\<close>, \<^abbrev>\<open>bin_last\<close>, \<^abbrev>\<open>bin_rest\<close>,
+      \<^abbrev>\<open>bintrunc\<close>, \<^abbrev>\<open>sbintrunc\<close>, \<^abbrev>\<open>norm_sint\<close>,
+      \<^abbrev>\<open>bin_cat\<close> moved into theory \<^theory>\<open>Word_Lib.Legacy_Aliases\<close>.
+
+    \<^item> Operations \<^abbrev>\<open>bshiftr1\<close>,
+      \<^abbrev>\<open>setBit\<close>, \<^abbrev>\<open>clearBit\<close> moved from distribution into theory
+      \<^theory>\<open>Word_Lib.Legacy_Aliases\<close> and replaced by input abbreviations.
+
+    \<^item> Operations \<^const>\<open>shiftl1\<close>, \<^const>\<open>shiftr1\<close>, \<^const>\<open>sshiftr1\<close>
+      moved here from distribution.
+
+    \<^item> Operation \<^const>\<open>complement\<close> replaced by input abbreviation \<^abbrev>\<open>complement\<close>.
 \<close>
 
 (*<*)

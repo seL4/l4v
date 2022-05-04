@@ -36,16 +36,8 @@ lemma findVSpaceForASID_vs_at_wp:
   apply (simp add: asid_low_bits_of_def ucast_ucast_a is_down ucast_ucast_mask asid_low_bits_def)
   by fastforce
 
-lemma findVSpaceForASIDAssert_vs_at_wp:
-  "\<lbrace>(\<lambda>s. \<forall>pd. vspace_at_asid' pd asid  s \<longrightarrow> P pd s)\<rbrace>
-       findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (simp add: findVSpaceForASIDAssert_def const_def
-                   checkPTAt_def)
-  apply (rule hoare_pre, wp findVSpaceForASID_vs_at_wp)
-  apply simp
-  done
-
-crunch inv[wp]: findVSpaceForASIDAssert "P"
+crunches findVSpaceForASID, haskell_fail
+  for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma asidBits_asid_bits[simp]:
@@ -95,7 +87,7 @@ proof -
              od)" for P Q
     apply (corressimp corres: corres_gets_global_pt corres_machine_op)
      apply fastforce
-    apply (simp add: RISCV64.addrFromKPPtr_def addrFromKPPtr_def)
+    apply (simp add: addrFromKPPtr_def)
     done
 
   show ?thesis
@@ -277,9 +269,7 @@ lemma is_aligned_asid_low_bits_of_zero:
 
 lemma mask_is_asid_low_bits_of[simp]:
   "(ucast asid :: machine_word) && mask asid_low_bits = ucast (asid_low_bits_of asid)"
-  apply (simp add: asid_low_bits_of_def asid_low_bits_def)
-  apply (word_bitwise, simp add: word_size)
-  done
+  by (word_eqI_solve simp: asid_low_bits_of_def asid_low_bits_def)
 
 lemma deleteASIDPool_corres:
   assumes "base' = ucast base" "ptr' = ptr"

@@ -55,7 +55,7 @@ lemma whenE_rangeCheck_eq:
   "(rangeCheck (x :: 'a :: {linorder, integral}) y z) =
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
-  by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
+  by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
 lemma APIType_map2_CapTable[simp]:
   "(APIType_map2 ty = Structures_A.CapTableObject)
@@ -258,7 +258,6 @@ next
 
   note word_unat_power [symmetric, simp del]
   show ?thesis
-    including no_take_bit
     apply (rule corres_name_pre)
     apply clarsimp
     apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = (capability.UntypedCap d w n idx)) (cte_map slot) s'")
@@ -293,9 +292,9 @@ next
                           toInteger_nat fromInteger_nat wordBits_def)
          apply (simp add: not_le)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def ARM_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def ARM_H.fromAPIType_def)
+         apply (clarsimp simp: fromAPIType_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF _ corres_if])
              apply (rule_tac corres_split_norE)
                 prefer 2
@@ -310,14 +309,14 @@ next
                 apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def word_bits_def
                                       is_aligned_weaken)
                apply (rule whenE_throwError_corres)
-                 apply (clarsimp simp:retypeFanOutLimit_def is_cap_simps bits_of_def ucast_id)+
+                 apply (clarsimp simp:Kernel_Config.retypeFanOutLimit_def is_cap_simps bits_of_def)+
                 apply (simp add: unat_arith_simps(2) unat_2p_sub_1 word_bits_def)
                apply (rule whenE_throwError_corres)
-                 apply (clarsimp simp:retypeFanOutLimit_def is_cap_simps bits_of_def ucast_id)+
+                 apply (clarsimp simp:Kernel_Config.retypeFanOutLimit_def is_cap_simps bits_of_def)+
                 apply (simp add: unat_eq_0 word_less_nat_alt)
                apply (rule whenE_throwError_corres)
-                 apply (clarsimp simp:retypeFanOutLimit_def is_cap_simps bits_of_def ucast_id)+
-                apply (clarsimp simp:toInteger_word ucast_id unat_arith_simps(2) cap_aligned_def)
+                 apply (clarsimp simp:Kernel_Config.retypeFanOutLimit_def is_cap_simps bits_of_def)+
+                apply (clarsimp simp:toInteger_word unat_arith_simps(2) cap_aligned_def)
                 apply (subst unat_sub)
                  apply (simp add: linorder_not_less word_le_nat_alt)
                 apply (fold neq0_conv)
@@ -748,7 +747,6 @@ lemma decodeUntyped_wf[wp]:
        (UntypedCap d w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
   unfolding decodeUntypedInvocation_def
-  including no_take_bit
   apply (simp add: unlessE_def[symmetric] unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    returnOk_liftE[symmetric] Let_def cap_case_CNodeCap_True_throw
                 split del: if_split cong: if_cong list.case_cong)
@@ -789,7 +787,7 @@ lemma decodeUntyped_wf[wp]:
    apply clarsimp
    apply (drule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])+
    apply simp
-  apply (clarsimp simp: toEnum_of_nat [OF less_Suc_unat_less_bound] ucast_id)
+  apply (clarsimp simp: toEnum_of_nat [OF less_Suc_unat_less_bound])
   apply (subgoal_tac "args ! 4 \<le> 2 ^ capCNodeBits nodeCap")
    prefer 2
    apply (clarsimp simp: isCap_simps)
@@ -808,7 +806,7 @@ lemma decodeUntyped_wf[wp]:
      apply (simp add: unats_def)
     apply (simp add: unats_def)
    apply (rule inj_onI)
-   apply (clarsimp simp: toEnum_of_nat[OF less_Suc_unat_less_bound] ucast_id isCap_simps)
+   apply (clarsimp simp: toEnum_of_nat[OF less_Suc_unat_less_bound] isCap_simps)
    apply (erule(2) inj_bits, simp add: word_bits_def cte_level_bits_def)
    apply (subst Suc_unat_diff_1)
     apply (rule word_le_plus_either,simp)
@@ -932,7 +930,7 @@ lemma corres_list_all2_mapM_':
    apply simp+
   done
 
-lemmas suffix_refl = suffix_order.order.refl
+lemmas suffix_refl = suffix_order.refl
 
 lemmas corres_list_all2_mapM_
      = corres_list_all2_mapM_' [OF suffix_refl suffix_refl]
@@ -1339,7 +1337,6 @@ lemma do_ext_op_update_cdt_list_symb_exec_l':
   update_cdt_list_def set_cdt_list_def bind_def put_def get_def gets_def return_def)
   done
 
-crunch irq_node[wp]: update_cdt "\<lambda>s. P (interrupt_irq_node s)"
 crunches updateMDB, updateNewFreeIndex
   for it'[wp]: "\<lambda>s. P (ksIdleThread s)"
   and ups'[wp]: "\<lambda>s. P (gsUserPages s)"
@@ -1538,8 +1535,7 @@ shows
    apply clarsimp
    apply (erule (2) valid_dlistEn)
    apply simp
-  apply(simp only: cdt_list_relation_def valid_mdb_def2
-              del: split_paired_All split_paired_Ex split del: if_split)
+  apply(simp only: cdt_list_relation_def valid_mdb_def2)
   apply(subgoal_tac "finite_depth (cdt s)")
    prefer 2
    apply(simp add: finite_depth valid_mdb_def2[simplified,symmetric])
@@ -1834,7 +1830,7 @@ lemma n'_rtrancl_eq:
    (if p = site then p' \<noteq> site \<and> m \<turnstile> parent \<leadsto>\<^sup>+ p' \<or> p' = site
     else if m \<turnstile> p \<leadsto>\<^sup>* parent then m \<turnstile> p \<leadsto>\<^sup>* p' \<or> p' = site
     else m \<turnstile> p \<leadsto>\<^sup>* p')"
-  by (auto simp: rtrancl_eq_or_trancl n'_trancl_eq split)
+  by (auto simp: rtrancl_eq_or_trancl n'_trancl_eq)
 
 lemma mdbNext_parent_site [simp]:
   "mdbNext parent_node \<noteq> site"
@@ -2256,7 +2252,7 @@ lemma mdb_chunked_n' [simp]:
      apply (simp(no_asm) add: sameRegionAs_def3 isCap_simps)
      apply (drule valid_capI')+
      apply (drule valid_capAligned)+
-     apply (clarsimp simp: capAligned_def is_aligned_no_overflow interval_empty)
+     apply (clarsimp simp: capAligned_def is_aligned_no_overflow)
     apply clarsimp
     apply (erule disjE)
      apply simp
@@ -2716,7 +2712,6 @@ lemma no_default_zombie:
   "cap_relation (default_cap tp p sz d) cap \<Longrightarrow> \<not>isZombie cap"
   by (cases tp, auto simp: isCap_simps)
 
-crunch typ_at'[wp]: updateNewFreeIndex "\<lambda>s. P (typ_at' T p s)"
 lemmas updateNewFreeIndex_typ_ats[wp] = typ_at_lifts[OF updateNewFreeIndex_typ_at']
 
 lemma updateNewFreeIndex_valid_objs[wp]:
@@ -2806,8 +2801,6 @@ lemma insertNewCap_overlap_reserved'[wp]:
   apply (erule(2) caps_overlap_reserved'_D)
   done
 
-crunch typ_at'[wp]: insertNewCap "\<lambda>s. P (typ_at' T p s)"
-  (wp: crunch_wps)
 crunch ksArch[wp]: insertNewCap "\<lambda>s. P (ksArchState s)"
   (wp: crunch_wps)
 
@@ -2964,7 +2957,6 @@ lemma createNewCaps_range_helper:
           \<and> (\<forall>p. capClass (capfn p) = PhysicalClass
                  \<and> capUntypedPtr (capfn p) = p
                  \<and> capBits (capfn p) = (APIType_capBits tp us))\<rbrace>"
-  including no_0_dvd
   apply (simp add: createNewCaps_def toAPIType_def Arch_createNewCaps_def
                split del: if_split cong: option.case_cong)
   apply (rule hoare_grab_asm)+
@@ -3234,8 +3226,6 @@ lemmas corres_split_retype_createNewCaps
    = corres_split_deprecated [OF _ corres_retype_region_createNewCaps,
                    simplified bind_assoc, simplified ]
 declare split_paired_Ex[simp add]
-
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemma retype_region_caps_overlap_reserved:
   "\<lbrace>valid_pspace and valid_mdb and
@@ -3544,8 +3534,7 @@ lemma pspace_no_overlap_valid_untyped':
   \<Longrightarrow> valid_untyped' d ptr bits idx s"
   apply (clarsimp simp: valid_untyped'_def ko_wp_at'_def split del: if_split)
   apply (frule(1) pspace_no_overlapD')
-  apply (simp add: obj_range'_def[symmetric] is_aligned_neg_mask_eq Int_commute
-            )
+  apply (simp add: obj_range'_def[symmetric] Int_commute)
   apply (erule disjE)
    apply (drule base_member_set[simplified field_simps])
     apply (simp add: word_bits_def)
@@ -4088,10 +4077,6 @@ lemma cNodeNoOverlap:
    apply wp+
   done
 
-lemma resetChunkBits_eq[simp]:
-  "resetChunkBits = reset_chunk_bits"
-  by (simp add: resetChunkBits_def reset_chunk_bits_def)
-
 lemma reset_ineq_eq_idx_0:
   "idx \<le> 2 ^ sz \<Longrightarrow> b \<le> sz
     \<Longrightarrow> (ptr :: obj_ref) \<noteq> 0 \<Longrightarrow> is_aligned ptr sz \<Longrightarrow> sz < word_bits
@@ -4113,12 +4098,12 @@ lemma reset_ineq_eq_idx_0:
   done
 
 lemma reset_addrs_same:
-  "idx \<le> 2 ^ sz \<Longrightarrow> reset_chunk_bits \<le> sz
+  "idx \<le> 2 ^ sz \<Longrightarrow> resetChunkBits \<le> sz
     \<Longrightarrow> ptr \<noteq> 0 \<Longrightarrow> is_aligned ptr sz \<Longrightarrow> sz < word_bits
-    \<Longrightarrow> [ptr , ptr + 2 ^ reset_chunk_bits .e. getFreeRef ptr idx - 1]
-    = (map (\<lambda>i. getFreeRef ptr (i * 2 ^ reset_chunk_bits))
-        ([i\<leftarrow>[0..<2 ^ (sz - reset_chunk_bits)].
-            i * 2 ^ reset_chunk_bits < idx]))"
+    \<Longrightarrow> [ptr , ptr + 2 ^ resetChunkBits .e. getFreeRef ptr idx - 1]
+    = (map (\<lambda>i. getFreeRef ptr (i * 2 ^ resetChunkBits))
+        ([i\<leftarrow>[0..<2 ^ (sz - resetChunkBits)].
+            i * 2 ^ resetChunkBits < idx]))"
   apply (simp add: upto_enum_step_def getFreeRef_def reset_ineq_eq_idx_0)
   apply (clarsimp simp: upto_enum_word o_def unat_div simp del: upt.simps)
   apply (subst unat_of_nat_minus_1)
@@ -4132,7 +4117,7 @@ lemma reset_addrs_same:
      apply simp
     apply (rule notI)
     apply (drule order_less_le_trans[where x="a * b" for a b],
-      rule_tac m="2 ^ reset_chunk_bits" and n=idx in alignUp_ge_nat)
+      rule_tac m="2 ^ resetChunkBits" and n=idx in alignUp_ge_nat)
      apply simp+
     apply (simp add: field_simps)
     apply (simp only: mult_Suc_right[symmetric])
@@ -4164,10 +4149,6 @@ lemma updateFreeIndex_descendants_of2:
 
 crunch typ_at'[wp]: updateFreeIndex "\<lambda>s. P (typ_at' T p s)"
 
-crunch pspace_aligned'[wp]: updateFreeIndex "pspace_aligned'"
-
-crunch pspace_distinct'[wp]: updateFreeIndex "pspace_distinct'"
-
 lemma updateFreeIndex_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. P (cteCap_update (if p = slot
       then capFreeIndex_update (\<lambda>_. idx) else id) c)) p s\<rbrace>
@@ -4198,7 +4179,6 @@ lemma resetUntypedCap_corres:
      (invs' and valid_untyped_inv_wcap' ui' (Some (UntypedCap dev ptr sz idx)) and ct_active')
      (reset_untyped_cap slot)
      (resetUntypedCap (cte_map slot))"
-  including no_take_bit
   apply (rule corres_gen_asm, clarsimp)
   apply (simp add: reset_untyped_cap_def resetUntypedCap_def
                    liftE_bindE)
@@ -4213,7 +4193,7 @@ lemma resetUntypedCap_corres:
        apply (simp add: liftE_bindE bits_of_def split del: if_split)
        apply (rule corres_split_deprecated[OF _ deleteObjects_corres])
            apply (rule corres_if)
-             apply (simp add: reset_chunk_bits_def resetChunkBits_def)
+             apply simp
             apply (simp add: bits_of_def shiftL_nat)
             apply (rule corres_split_nor)
                apply (rule updateFreeIndex_corres, simp)
@@ -4225,7 +4205,7 @@ lemma resetUntypedCap_corres:
              apply (wp | simp only: unless_def)+
            apply (rule_tac F="sz < word_bits \<and> idx \<le> 2 ^ sz
                     \<and> ptr \<noteq> 0 \<and> is_aligned ptr sz
-                    \<and> reset_chunk_bits \<le> sz" in corres_gen_asm)
+                    \<and> resetChunkBits \<le> sz" in corres_gen_asm)
            apply (simp add: bits_of_def free_index_of_def mapME_x_map_simp liftE_bindE
                             reset_addrs_same[where ptr=ptr and idx=idx and sz=sz]
                             o_def rev_map
@@ -4243,24 +4223,26 @@ lemma resetUntypedCap_corres:
                    apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
                        apply (rule preemptionPoint_corres)
                       apply simp
-                     apply (simp add: getFreeRef_def getFreeIndex_def
-                                      free_index_of_def)
+                     apply (simp add: getFreeRef_def getFreeIndex_def free_index_of_def)
+                     apply clarify
                      apply (subst unat_mult_simple)
-                      apply (clarsimp )
+                      apply (subst unat_of_nat_eq)
+                       apply (rule order_less_trans[rotated],
+                              rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+                       apply (erule order_less_le_trans; simp)
+                      apply (subst unat_p2)
+                       apply (simp add: Kernel_Config.resetChunkBits_def)
                       apply (rule order_less_trans[rotated],
-                        rule_tac n=sz in power_strict_increasing, simp+)
-                      apply (rule nat_less_power_trans2, simp_all)[1]
-                      apply (simp add: unat_of_nat)
-                     apply clarsimp
-                     apply (subst unat_of_nat32)
-                      apply (erule order_less_le_trans)
-                      apply simp
+                             rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+                     apply (subst unat_of_nat_eq)
+                      apply (rule order_less_trans[rotated],
+                             rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+                      apply (erule order_less_le_trans; simp)
                      apply simp
                     apply wp+
                   apply (rule corres_machine_op)
                   apply (rule corres_Id)
-                    apply (simp add: shiftL_nat getFreeRef_def shiftl_t2n mult.commute
-                                     reset_chunk_bits_def resetChunkBits_def)
+                    apply (simp add: shiftL_nat getFreeRef_def shiftl_t2n mult.commute)
                    apply simp
                   apply wp+
                apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -4269,7 +4251,7 @@ lemma resetUntypedCap_corres:
               apply (erule aligned_add_aligned)
                apply (rule is_aligned_weaken)
                 apply (rule is_aligned_mult_triv2)
-               apply (simp add: reset_chunk_bits_def)
+               apply (simp add: Kernel_Config.resetChunkBits_def)
               apply (simp add: untyped_min_bits_def)
              apply (rule hoare_pre)
               apply simp
@@ -4296,16 +4278,20 @@ lemma resetUntypedCap_corres:
             apply (clarsimp simp add: cte_wp_at_ctes_of exI isCap_simps valid_pspace'_def)
             apply (clarsimp simp: getFreeIndex_def getFreeRef_def)
             apply (subst is_aligned_weaken[OF is_aligned_mult_triv2])
-             apply (simp add: reset_chunk_bits_def minUntypedSizeBits_def)
+             apply (simp add: Kernel_Config.resetChunkBits_def minUntypedSizeBits_def)
             apply (subst unat_mult_simple)
-             apply (clarsimp)
+             apply (subst unat_of_nat_eq)
+              apply (rule order_less_trans[rotated],
+                     rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+              apply (erule order_less_le_trans; simp)
+             apply (subst unat_p2)
+              apply (simp add: Kernel_Config.resetChunkBits_def)
              apply (rule order_less_trans[rotated],
-                    rule_tac n=sz in power_strict_increasing, simp+)
-             apply (rule nat_less_power_trans2, simp_all)[1]
-             apply (simp add: unat_of_nat)
-            apply simp
-            apply (rule order_less_imp_le, rule nat_less_power_trans2)
-             apply (simp add: unat_of_nat)
+                    rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+            apply (subst unat_of_nat_eq)
+             apply (rule order_less_trans[rotated],
+                    rule_tac n=sz in power_strict_increasing; simp add: word_bits_def)
+             apply (erule order_less_le_trans; simp)
             apply simp
            apply simp
           apply (clarsimp simp add: valid_cap_def cap_aligned_def)
@@ -4437,7 +4423,6 @@ lemma resetUntypedCap_invs_etc:
       and pspace_no_overlap' ptr sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   (is "\<lbrace>invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?asm\<rbrace>
     ?f \<lbrace>\<lambda>_. invs' and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
-  including no_0_dvd no_take_bit
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
   apply (rule hoare_vcg_seqE[rotated])
@@ -4551,14 +4536,14 @@ lemma resetUntypedCap_invs_etc:
          apply (clarsimp simp: unat_of_nat valid_cap_simps')
          apply (erule order_less_le_trans[rotated], simp)
         apply simp
-       apply (auto simp: reset_chunk_bits_def minUntypedSizeBits_def)[1]
-      apply (simp add: valid_cap_simps' reset_chunk_bits_def capAligned_def)
+       apply (auto simp: Kernel_Config.resetChunkBits_def minUntypedSizeBits_def)[1]
+      apply (simp add: valid_cap_simps' Kernel_Config.resetChunkBits_def capAligned_def)
      apply (simp add: nth_rev)
      apply (simp add: upto_enum_step_def upto_enum_word getFreeIndex_def
                       getFreeRef_def
                  del: upt.simps)
      apply (intro conjI impI, simp_all)[1]
-     apply (subgoal_tac "reset_chunk_bits < word_bits")
+     apply (subgoal_tac "resetChunkBits < word_bits")
       apply (rule word_unat.Abs_eqD[OF _ word_unat.Rep])
        apply (simp add: word_of_nat_plus Abs_fnat_hom_mult[symmetric])
       apply (simp only: unats_def word_bits_def[symmetric])
@@ -4566,7 +4551,7 @@ lemma resetUntypedCap_invs_etc:
       apply (rule less_imp_diff_less)
       apply (simp add: td_gal_lt[symmetric] power_add[symmetric])
       apply (simp only: unat_lt2p word_bits_def)
-     apply (simp add: reset_chunk_bits_def word_bits_def)
+     apply (simp add: Kernel_Config.resetChunkBits_def word_bits_def)
     apply (clarsimp simp: cte_wp_at_ctes_of getFreeRef_def
                           upto_enum_step_def upto_enum_word)
     apply (frule cte_wp_at_valid_objs_valid_cap'[OF ctes_of_cte_wpD], clarsimp+)

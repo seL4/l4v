@@ -910,8 +910,7 @@ lemma oblivious_setVMRoot_schact:
                    getSlotCap_def getCTE_def)
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
              | simp_all add: liftE_def
-                             findVSpaceForASID_def liftME_def
-                             findVSpaceForASIDAssert_def checkPTAt_def
+                             findVSpaceForASID_def liftME_def checkPTAt_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 

@@ -101,39 +101,41 @@ fun get_field ctxt s = let
     handle ERROR _ => NONE
        | Bind => NONE
 
-val read_const = Proof_Context.read_const {proper = true, strict = true}
+fun read_const ctxt (pfx : string) (name : string) = let
+    val nm = if pfx = "" then name else (pfx ^ "." ^ name)
+  in Proof_Context.read_const {proper = true, strict = true} ctxt nm end
 
-fun process_struct ctxt csenv (nm, flds) = let
+fun process_struct ctxt csenv pfx (nm, flds) = let
     val offs = map (ProgramAnalysis.offset csenv (map snd flds))
         (0 upto (length flds - 1))
-    val cons = read_const ctxt (nm ^ "." ^ nm)
+    val cons = read_const ctxt pfx (nm ^ "." ^ nm)
     val typ = dest_Const cons |> snd |> strip_type |> snd
     val sz = ProgramAnalysis.sizeof csenv (Absyn.StructTy nm)
     val algn = ProgramAnalysis.alignof csenv (Absyn.StructTy nm)
     val accs = map (fst #> prefix (nm ^ ".")
-        #> read_const ctxt) flds
+        #> read_const ctxt pfx) flds
   in (nm, (cons, typ, sz, algn, map fst flds ~~ (accs ~~ offs))) end
 
-fun structs ctxt csenv = ProgramAnalysis.get_senv csenv
-  |> map (process_struct ctxt csenv)
+fun structs ctxt csenv pfx = ProgramAnalysis.get_senv csenv
+  |> map (process_struct ctxt csenv pfx)
   |> Symtab.make
 
-fun structs_by_typ ctxt csenv = Symtab.dest (structs ctxt csenv)
+fun structs_by_typ ctxt csenv pfx = Symtab.dest (structs ctxt csenv pfx)
   |> map (fn (nm, (cons, typ, sz, algn, flds)) => (fst (dest_Type typ), (nm, cons, sz, algn, flds)))
   |> Symtab.make |> Symtab.lookup
 
-fun cons_fields ctxt csenv = structs ctxt csenv |> Symtab.dest
+fun cons_fields ctxt csenv pfx = structs ctxt csenv pfx |> Symtab.dest
   |> map (fn (_, (cons, typ, _, _, flds))
     => (fst (dest_Const cons), (fst (dest_Type typ),
            map (snd #> fst #> dest_Const #> fst) flds)))
   |> Symtab.make |> Symtab.lookup
 
-fun enums ctxt csenv = let
+fun enums ctxt csenv pfx = let
     val Absyn.CE ecenv = ProgramAnalysis.cse2ecenv csenv
   in
     #enumenv ecenv |> Symtab.dest
     |> map (fn (s, (n, _)) =>
-        (read_const ctxt s
+        (read_const ctxt pfx s
             |> dest_Const |> fst, n))
     |> Symtab.make |> Symtab.lookup
   end
@@ -169,9 +171,10 @@ type export_params = {cons_field_upds: term -> term,
          rw_global_upds: string -> string option,
          rw_globals_tab: (term * term) Symtab.table,
          structs_by_typ:
-         string -> (string * term * int * int * (string * (term * int)) list) option}
+         string -> (string * term * int * int * (string * (term * int)) list) option,
+         pfx: string (* prefix for looking up full names of constants *)}
 
-fun get_all_export_params ctxt csenv : export_params = let
+fun get_all_export_params ctxt csenv pfx : export_params = let
     (* assuming DefineGlobalsList has already run *)
     val defs = if (can (Proof_Context.get_thms ctxt) "no_global_data_defs")
       then [] else Proof_Context.get_thms ctxt "global_data_defs"
@@ -191,11 +194,12 @@ fun get_all_export_params ctxt csenv : export_params = let
     rw_global_accs = rw_global_accs,
     rw_global_upds = rw_global_upds,
     cons_field_upds = cons_field_upds ctxt csenv,
-    enums = enums ctxt csenv,
-    cons_fields = cons_fields ctxt csenv,
-    structs_by_typ = structs_by_typ ctxt csenv,
+    enums = enums ctxt csenv pfx,
+    cons_fields = cons_fields ctxt csenv pfx,
+    structs_by_typ = structs_by_typ ctxt csenv pfx,
     locals = locals ctxt,
-    local_upds = local_upds ctxt} end
+    local_upds = local_upds ctxt,
+    pfx = pfx} end
 \<close>
 
 ML \<open>
@@ -1020,7 +1024,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val ret_vals = Symtab.lookup proc_info (Long_Name.base_name p)
         |> the |> #params
         |> filter (fn (v, _) => v = HoarePackage.Out)
-        |> maps (snd #> read_const ctxt
+        |> maps (snd #> read_const ctxt (#pfx params)
          #> synthetic_updates ctxt params "rv#space#")
         |> map fst
 
@@ -1066,7 +1070,7 @@ fun emit_func_body ctxt outfile eparams name = let
     val proc_info = Hoare.get_data ctxt |> #proc_info
     val params = Symtab.lookup proc_info (name ^ "_'proc")
         |> the |> #params
-        |> map (apsnd (read_const ctxt
+        |> map (apsnd (read_const ctxt (#pfx eparams)
                 #> synthetic_updates ctxt eparams ""
                 #> map fst))
 
@@ -1094,7 +1098,7 @@ fun emit_func_body ctxt outfile eparams name = let
         handle Option => @{term "Spec S"}
          | THM _ => @{term "Spec S"}
 
-    val full_nm = read_const ctxt (name ^ "_'proc")
+    val full_nm = read_const ctxt (#pfx eparams) (name ^ "_'proc")
         |> dest_Const |> fst |> unsuffix "_'proc"
   in emit outfile "";
     emit outfile ("Function " ^ full_nm ^ " " ^ space_pad_list inputs
@@ -1110,10 +1114,10 @@ fun emit_func_body ctxt outfile eparams name = let
             | Empty => raise TERM ("emit_func_body: Empty", [body]))
   end
 
-fun emit_struct ctxt outfile csenv (nm, flds) = let
+fun emit_struct ctxt outfile csenv pfx (nm, flds) = let
     val offs = map (ProgramAnalysis.offset csenv (map snd flds))
         (0 upto (length flds - 1))
-    val full_nm = read_const ctxt (nm ^ "." ^ nm)
+    val full_nm = read_const ctxt pfx (nm ^ "." ^ nm)
         |> dest_Const |> snd |> strip_type |> snd |> dest_Type |> fst
     val thy = Proof_Context.theory_of ctxt
     val sz = ProgramAnalysis.sizeof csenv (Absyn.StructTy nm)
@@ -1148,11 +1152,11 @@ fun emit_asm_protoes ctxt outfile fs = let
     )
   in app emit_it asm_info end
 
-fun emit_C_everything ctxt csenv outfile = let
+fun emit_C_everything ctxt csenv outfile pfx = let
     val fs = ProgramAnalysis.get_functions csenv
     val structs = ProgramAnalysis.get_senv csenv
-    val params = get_all_export_params ctxt csenv
-  in app (emit_struct ctxt outfile csenv) structs;
+    val params = get_all_export_params ctxt csenv pfx
+  in app (emit_struct ctxt outfile csenv pfx) structs;
      app (emit_func_body ctxt outfile params) fs;
      emit_asm_protoes ctxt outfile fs end
 \<close>
@@ -1160,10 +1164,11 @@ fun emit_C_everything ctxt csenv outfile = let
 ML \<open>
 fun openOut_relative thy = ParseGraph.filename_relative thy #> TextIO.openOut;
 
-fun emit_C_everything_relative ctxt csenv fname = let
+(* pfx: prefix for constant lookups, usually theory where C code was loaded, e.g. "Kernel_C" *)
+fun emit_C_everything_relative ctxt csenv fname pfx = let
     val thy = Proof_Context.theory_of ctxt
     val outfile = openOut_relative thy fname
-  in emit_C_everything ctxt csenv outfile; TextIO.closeOut outfile end
+  in emit_C_everything ctxt csenv outfile pfx; TextIO.closeOut outfile end
 \<close>
 
 end

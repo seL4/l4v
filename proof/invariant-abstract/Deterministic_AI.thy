@@ -4167,8 +4167,8 @@ lemma next_slot_setD:
   (\<exists>p q. (slot \<in> descendants_of p m \<or> p = slot) \<and> q \<in> next_sib_set p t m \<and> next \<in> descendants_of q m \<union> {q})"
   apply(subst(asm) next_slot_set_def)
   apply(simp)
-  apply(induct_tac "next" slot rule: trancl.induct)
-    apply(assumption)
+  apply(induct "next" slot rule: trancl.induct)
+    apply simp
    apply(simp add: next_slot_def split: if_split_asm)
     apply(simp add: next_child_def valid_list_2_def descendants_of_def cdt_parent_defs)
     apply(case_tac "t b", simp, fastforce)

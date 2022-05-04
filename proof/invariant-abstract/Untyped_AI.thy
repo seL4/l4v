@@ -12,6 +12,8 @@ imports
   "Lib.MonadicRewrite"
 begin
 
+unbundle l4v_word_context (* because of Lib.MonadicRewrite *)
+
 context begin interpretation Arch .
 
 requalify_consts
@@ -384,8 +386,6 @@ lemma range_cover_stuff:
    range_cover (alignUp (w + ((of_nat rv)::machine_word)) bits) sz bits n"
   apply (clarsimp simp: range_cover_def)
   proof (intro conjI)
-    include no_take_bit
-
     assume not_0 : "0<n"
     assume bound : "n \<le> unat ((2::machine_word) ^ sz - of_nat rv >> bits)" "rv\<le> 2^sz"
       "sz < word_bits"
@@ -419,10 +419,8 @@ lemma range_cover_stuff:
        apply simp
       apply (subst shiftl_shiftr1)
        apply (simp_all add: word_size)
-      apply (rule bit_eqI)
-      apply (simp add: word_bits_conv shiftl_word_eq bit_and_iff bit_push_bit_iff bit_1_iff bit_mask_iff bit_exp_iff not_le)
-      apply auto
-     done
+      apply (word_eqI_solve simp: word_bits_conv)
+      done
 
     have cmp2[simp]: "alignUp (of_nat rv) bits < (2 :: machine_word) ^ sz"
       using bound cmp not_0
@@ -478,7 +476,7 @@ lemma range_cover_stuff:
      apply (subst unat_shiftl_absorb[where p = "sz - bits"])
         apply (rule order_trans[OF le_shiftr])
          apply (rule space)
-       apply (simp add: shiftr_div_2n_w word_bits_def)+
+       apply (simp add: word_bits_def power_minus_is_div)+
      apply (simp add: shiftl_t2n[symmetric] field_simps shiftr_shiftl1)
      apply (subst is_aligned_diff_neg_mask[OF is_aligned_weaken])
        apply (rule is_aligned_triv)
@@ -512,7 +510,7 @@ lemma range_cover_stuff:
       apply (subst word_of_nat_le)
        apply (subst unat_power_lower_machine)
         apply ((simp add: word_bits_def)+)[3]
-     apply (simp del: word_of_nat_eq_0_iff)
+     apply simp
      apply (erule of_nat_neq_0)
      apply (erule le_less_trans)
      apply (rule power_strict_increasing)
@@ -578,7 +576,7 @@ lemma cte_wp_at_caps_descendants_range_inI:
   apply (drule untyped_cap_descendants_range[rotated])
     apply simp+
    apply (simp add: invs_valid_pspace)
-  apply (clarsimp simp: cte_wp_at_caps_of_state usable_untyped_range.simps)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (erule disjoint_subset2[rotated])
   apply clarsimp
   apply (rule le_plus'[OF word_and_le2])
@@ -706,7 +704,6 @@ lemma inj_bits:
 lemma of_nat_shiftR:
   "a < 2 ^ word_bits \<Longrightarrow>
    unat (of_nat (shiftR a b)::machine_word) = unat ((of_nat a :: machine_word) >> b)"
-  including no_take_bit
   apply (subst shiftr_div_2n')
   apply (clarsimp simp: shiftR_nat)
   apply (subst unat_of_nat_eq[where 'a=machine_word_len])
@@ -746,7 +743,7 @@ lemma pspace_no_overlap_detype:
      \<Longrightarrow> pspace_no_overlap_range_cover ptr bits (detype {ptr .. ptr + 2 ^ bits - 1} s)"
   apply (drule(2) pspace_no_overlap_detype'[rotated])
   apply (drule valid_cap_aligned)
-  apply (clarsimp simp: cap_aligned_def is_aligned_neg_mask_eq field_simps)
+  apply (clarsimp simp: cap_aligned_def field_simps)
   done
 
 lemma zip_take_length[simp]:
@@ -812,8 +809,6 @@ lemma not_waiting_reply_slot_no_descendants:
   done
 
 
-crunch irq_node[wp]: set_thread_state "\<lambda>s. P (interrupt_irq_node s)"
-crunch irq_states[wp]: update_cdt "\<lambda>s. P (interrupt_states s)"
 crunch ups[wp]: set_cdt "\<lambda>s. P (ups_of_heap (kheap s))"
 crunch cns[wp]: set_cdt "\<lambda>s. P (cns_of_heap (kheap s))"
 
@@ -829,14 +824,6 @@ lemma list_all2_zip_split:
   apply (case_tac bs; simp)
   apply (case_tac ds; simp)
   done
-
-
-crunch irq_states[wp]: update_cdt "\<lambda>s. P (interrupt_states s)"
-
-crunch ups[wp]: set_cdt "\<lambda>s. P (ups_of_heap (kheap s))"
-
-crunch cns[wp]: set_cdt "\<lambda>s. P (cns_of_heap (kheap s))"
-
 
 lemma set_cdt_tcb_valid[wp]:
   "\<lbrace>tcb_cap_valid cap ptr\<rbrace> set_cdt m \<lbrace>\<lambda>rv. tcb_cap_valid cap ptr\<rbrace>"
@@ -1590,7 +1577,6 @@ crunch pdistinct[wp]: do_machine_op "pspace_distinct"
 crunch vmdb[wp]: do_machine_op "valid_mdb"
 
 crunch mdb[wp]: do_machine_op "\<lambda>s. P (cdt s)"
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' p s)"
 
 lemmas dmo_valid_cap[wp] = valid_cap_typ [OF do_machine_op_obj_at]
 
@@ -1786,7 +1772,7 @@ lemma set_cap_valid_mdb_simple:
   assume "reply_caps_mdb (cdt s) (caps_of_state s)"
   thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
-  apply (simp add: reply_caps_mdb_def del: split_paired_All split_paired_Ex)
+  apply (simp add: reply_caps_mdb_def del: split_paired_All)
   apply (intro allI impI conjI)
    apply (drule spec)+
    apply (erule(1) impE)
@@ -1796,7 +1782,7 @@ lemma set_cap_valid_mdb_simple:
   done
   assume "reply_masters_mdb (cdt s) (caps_of_state s)"
   thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
-   apply (simp add: reply_masters_mdb_def del: split_paired_All split_paired_Ex)
+   apply (simp add: reply_masters_mdb_def del: split_paired_All)
    apply (intro allI impI ballI)
    apply (erule exE)
    apply (elim allE impE)
@@ -1836,7 +1822,7 @@ lemma set_free_index_valid_pspace_simple:
    apply (elim allE allE impE)
      apply simp+
   apply (drule(1) pspace_no_overlap_obj_range)
-  apply (simp add: is_aligned_neg_mask_eq field_simps)
+  apply (simp add: field_simps)
   apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
           valid_ipc_buffer_cap_def split: option.split)
   apply (drule(2) tcb_cap_slot_regular)
@@ -1931,7 +1917,7 @@ lemma set_cap_caps_no_overlap:
 
 lemma caps_overlap_reserved_detype:
   "caps_overlap_reserved S s \<Longrightarrow> caps_overlap_reserved S (detype H s)"
-  apply (clarsimp simp: caps_of_state_detype caps_overlap_reserved_def )
+  apply (clarsimp simp: caps_overlap_reserved_def )
   apply (erule ranE)
   apply (clarsimp split: if_splits)
   apply (drule bspec)
@@ -1942,7 +1928,7 @@ lemma caps_overlap_reserved_detype:
 
 lemma caps_no_overlap_detype:
   "caps_no_overlap ptr sz s \<Longrightarrow> caps_no_overlap ptr sz (detype H s)"
-   apply (clarsimp simp: caps_of_state_detype caps_no_overlap_def)
+   apply (clarsimp simp: caps_no_overlap_def)
    apply (erule ranE)
    apply (clarsimp split: if_splits)
    apply (drule bspec,fastforce)
@@ -2422,8 +2408,7 @@ lemma valid_untyped_cap_inc:
    apply (rule word_of_nat_le)
    apply (simp add: unat_of_nat_eq[where 'a=machine_word_len] range_cover_unat field_simps)
    apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask[OF le_refl]])
-   apply (simp add: word_less_nat_alt
-                    unat_power_lower[where 'a=machine_word_len, folded word_bits_def])
+   apply (simp add: word_less_nat_alt)
   apply (simp add: range_cover_unat range_cover.unat_of_nat_shift shiftl_t2n field_simps)
   apply (subst add.commute)
   apply (simp add: range_cover.range_cover_compare_bound)
@@ -2613,7 +2598,7 @@ proof -
      apply (simp add: exI[where x=0])
     apply (rule exI[where x="?al"])
     apply (strengthen filter_upt_eq)
-    apply (simp add: linorder_not_less conj_ac)
+    apply (simp add: linorder_not_less conj.commute)
     apply (simp add: alignUp_ge_nat[simplified] sub1[simplified]
                      sub1[THEN order_less_imp_le, simplified]
                      power_minus_is_div[OF b] le1 le2)
@@ -2786,7 +2771,7 @@ lemma reset_untyped_cap_invs_etc:
      (simp add: cte_wp_at_caps_of_state descendants_range_def)+)
    apply (drule caps_of_state_valid_cap | clarify)+
    apply (intro conjI; clarify?; blast)[1]
-  apply (cases "dev \<or> sz < reset_chunk_bits")
+  apply (cases "dev \<or> sz < resetChunkBits")
    apply (simp add: bits_of_def)
    apply (simp add: unless_def)
    apply (rule hoare_pre)
@@ -2799,14 +2784,14 @@ lemma reset_untyped_cap_invs_etc:
                hoare_vcg_ex_lift ct_in_state_thread_state_lift)+
    apply (clarsimp simp add: bits_of_def field_simps cte_wp_at_caps_of_state
                              empty_descendants_range_in)
-  apply (cut_tac a=sz and b=reset_chunk_bits and n=idx in upt_mult_lt_prop)
+  apply (cut_tac a=sz and b=resetChunkBits and n=idx in upt_mult_lt_prop)
     apply (frule caps_of_state_valid_cap, clarsimp+)
     apply (simp add: valid_cap_def)
    apply simp
   apply (clarsimp simp: bits_of_def free_index_of_def)
   apply (rule hoare_pre, rule hoare_post_impErr,
     rule_tac P="\<lambda>i. invs and ?psp and ct_active and valid_untyped_inv_wcap ?ui
-        (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ reset_chunk_bits)))"
+        (Some (UntypedCap dev ptr sz (if i = 0 then idx else (bd - i) * 2 ^ resetChunkBits)))"
       and E="\<lambda>_. invs"
       in mapME_x_validE_nth)
      apply (rule hoare_pre)
@@ -2822,8 +2807,7 @@ lemma reset_untyped_cap_invs_etc:
                 | wp (once) ct_in_state_thread_state_lift
                 | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
                   simp add: ex_cte_cap_wp_to_def ct_in_state_def))+
-     apply (clarsimp simp: is_aligned_neg_mask_eq bits_of_def field_simps
-                           cte_wp_at_caps_of_state nth_rev)
+     apply (clarsimp simp: bits_of_def field_simps cte_wp_at_caps_of_state nth_rev)
      apply (strengthen order_trans[where z="2 ^ sz", rotated, mk_strg I E])
      apply (clarsimp split: if_split_asm)
       apply auto[1]
@@ -2839,10 +2823,10 @@ lemma get_cap_prop_known:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-lemma reset_untyped_cap_st_tcb_at:
-  "\<lbrace>invs and st_tcb_at P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
-    reset_untyped_cap slot
-  \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>, \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma reset_untyped_cap_pred_tcb_at:
+  "\<lbrace>invs and pred_tcb_at proj P t and cte_wp_at (\<lambda>cp. t \<notin> cap_range cp \<and> is_untyped_cap cp) slot\<rbrace>
+   reset_untyped_cap slot
+   \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>, \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
@@ -3414,12 +3398,6 @@ lemma cap_to_protected:
   apply auto
   done
 
-lemma valid_cap_aligned:
-  "valid_cap cap s \<Longrightarrow> cap_aligned cap"
-  by (simp add: valid_cap_def)
-
-crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
-
 (* FIXME: move *)
 lemma ge_mask_eq: "len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) && mask n = x"
   by (simp add: mask_def p2_eq_0[THEN iffD2])
@@ -3868,25 +3846,32 @@ lemmas invoke_untyp_invs[wp] =
 lemmas invoke_untyped_Q
     = invoke_untyp_invs'[THEN validE_valid, THEN hoare_conjD2[unfolded pred_conj_def]]
 
-lemma invoke_untyped_st_tcb_at[wp]:
-  "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
-         and ct_active and valid_untyped_inv ui\<rbrace>
-     invoke_untyped ui
-   \<lbrace>\<lambda>rv. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
+lemma invoke_untyped_pred_tcb_at:
+  "\<lbrace>\<lambda>s. pred_tcb_at proj Q t s \<and> invs s \<and> st_tcb_at ((Not \<circ> inactive) and (Not \<circ> idle)) t s
+        \<and> ct_active s \<and> valid_untyped_inv ui s\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_ s :: 'state_ext state. pred_tcb_at proj Q t s\<rbrace>"
   apply (rule hoare_pre, rule invoke_untyped_Q,
-    (wp init_arch_objects_wps | simp)+)
+         (wp init_arch_objects_wps | simp)+)
      apply (rule hoare_name_pre_state, clarsimp)
-     apply (wp retype_region_st_tcb_at, auto)[1]
-    apply (wp reset_untyped_cap_st_tcb_at | simp)+
+     apply (wp retype_region_st_tcb_at)
+     apply fastforce
+    apply (wp reset_untyped_cap_pred_tcb_at | simp)+
   apply (cases ui, clarsimp)
-  apply (strengthen st_tcb_weakenE[mk_strg I E], clarsimp)
   apply (frule(1) st_tcb_ex_cap[OF _ invs_iflive])
    apply (clarsimp split: Structures_A.thread_state.splits)
   apply (drule ex_nonz_cap_to_overlap,
-    ((simp add:cte_wp_at_caps_of_state
-            is_cap_simps descendants_range_def2
-            empty_descendants_range_in)+))
+         ((simp add: cte_wp_at_caps_of_state is_cap_simps descendants_range_def2
+                     empty_descendants_range_in)+))
   done
+
+lemma invoke_untyped_st_tcb_at[wp]:
+  "\<lbrace>invs and st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
+         and ct_active and valid_untyped_inv ui\<rbrace>
+   invoke_untyped ui
+   \<lbrace>\<lambda>_. \<lambda>s :: 'state_ext state. st_tcb_at P t s\<rbrace>"
+  apply (rule hoare_pre, rule invoke_untyped_pred_tcb_at)
+  by (fastforce simp: pred_tcb_at_def  obj_at_def)
 
 lemma invoked_untyp_tcb[wp]:
   "\<lbrace>invs and st_tcb_at active tptr

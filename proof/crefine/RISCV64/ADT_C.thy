@@ -11,6 +11,7 @@ imports
   "AInvs.BCorres2_AI"
 begin
 
+unbundle l4v_word_context
 
 definition
   exec_C :: "(cstate, int, strictc_errortype) body \<Rightarrow>
@@ -592,7 +593,7 @@ lemma tcb_queue_rel'_unique:
 
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> machine_word list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> machine_word list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -1189,7 +1190,7 @@ lemma cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-  using assms including no_take_bit
+  using assms
   by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
                      newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
@@ -1217,12 +1218,12 @@ lemma cDomSchedule_to_H_correct:
   done
 
 definition
-  cbitmap_L1_to_H :: "machine_word[16] \<Rightarrow> (8 word \<Rightarrow> machine_word)"
+  cbitmap_L1_to_H :: "machine_word[num_domains] \<Rightarrow> (8 word \<Rightarrow> machine_word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "machine_word[4][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> machine_word)"
+  cbitmap_L2_to_H :: "machine_word[4][num_domains] \<Rightarrow> (8 word \<times> nat \<Rightarrow> machine_word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize

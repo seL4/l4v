@@ -25,7 +25,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp
-  apply simp
+  apply (clarsimp simp: word_bits_conv)
   done
 
 crunch device_state_inv[wp]: clearExMonitor "\<lambda>ms. P (device_state ms)"

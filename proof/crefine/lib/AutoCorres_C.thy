@@ -565,7 +565,7 @@ structure AutoCorresCRefine : AUTOCORRES_CREFINE = struct
       (Scan.optional
         (Args.$$$ "where" |--
           Parse.and_list
-            (Parse.position Args.var -- (Args.$$$ "=" |-- Parse.!!! Args.embedded_inner_syntax))
+            (Parse.position Args.var -- (Args.$$$ "=" |-- Parse.!!! Parse.embedded_inner_syntax))
           -- Parse.for_fixes)
         ([],[]))
 

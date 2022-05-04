@@ -346,7 +346,8 @@ proof -
 
   ultimately show ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def
-    by (simp add: ctcb_offset_defs objBits_simps' field_simps word_plus_mono_right)
+    by (simp add: ctcb_offset_defs objBits_simps' add.commute)
+       (subst word_plus_mono_right; simp)
 qed
 
 lemma tcb_ptr_to_ctcb_ptr_in_range':
@@ -370,7 +371,6 @@ proof -
 
   ultimately show ?thesis
     unfolding ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
-    including no_take_bit
     apply -
     apply (clarsimp simp: field_simps objBits_simps' size_of_def)
     apply (drule intvlD)

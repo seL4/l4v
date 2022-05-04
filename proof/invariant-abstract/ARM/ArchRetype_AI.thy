@@ -1264,7 +1264,7 @@ lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  by (simp add: storeWord_def word_rsplit_0 | wp)+
+  by (simp add: storeWord_def word_rsplit_0 word_bits_conv | wp)+
 
 lemma clearMemory_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
@@ -1338,7 +1338,7 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+crunch pred_tcb_at[wp]: init_arch_objects "pred_tcb_at proj P t"
   (wp: crunch_wps)
 
 lemma valid_arch_mdb_detype:
@@ -1352,7 +1352,7 @@ lemmas init_arch_objects_wps
       init_arch_objects_valid_cap
       init_arch_objects_cap_table
       init_arch_objects_excap
-      init_arch_objects_st_tcb_at
+      init_arch_objects_pred_tcb_at
 
 end
 

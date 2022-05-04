@@ -78,7 +78,7 @@ lemma restrict_map_comp' [simp]:
 
 lemma nat_list_not_UNIV [simp]:
   "set (xs::nat list) \<noteq> UNIV"
-  by (metis finite'_code(1) Cardinality.finite'_def infinite_UNIV_nat)
+  by (metis UNIV_I gt_ex leD maximum_ge)
 
 (***********************************
  * End of generic Isabelle lemmas. *
@@ -574,10 +574,6 @@ lemma ko_at_tcb_at:
 abbreviation
   "type_at T \<equiv> object_at (\<lambda>ob. object_type ob = T)"
 
-lemma length_sorted_list_of_set [simp]:
-  "finite A \<Longrightarrow> length (sorted_list_of_set A) = card A"
-  by (metis sorted_list_of_set distinct_card)
-
 lemma length_used_irq_list [simp]:
   "length (used_irq_list spec) = card (used_irqs spec)"
   by (clarsimp simp: used_irq_list_def)
@@ -849,13 +845,13 @@ lemma cap_has_object_update_cap_object [simp]:
 lemma cap_object_default_cap' [simp]:
   "\<lbrakk>\<not>is_untyped obj; \<not>is_irq_node obj\<rbrakk>
   \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz dev) = obj_id"
-  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def is_irq_node_def cap_object_simps
+  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def is_irq_node_def
               split: cdl_object_type.splits cdl_object.splits)
 
 lemma cap_object_default_cap [simp]:
   "\<lbrakk>type \<noteq> UntypedType; type \<noteq> IRQNodeType\<rbrakk>
   \<Longrightarrow> cap_object (default_cap type {obj_id} sz dev) = obj_id"
-  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
+  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def
               split: cdl_object_type.splits cdl_object.splits)
 
 lemma cap_object_default_cap_frame:

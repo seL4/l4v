@@ -119,8 +119,8 @@ lemma sata_detype[Retype_AC_assms]:
 lemma word_size_bits_untyped_min_bits[Retype_AC_assms]: "word_size_bits \<le> untyped_min_bits"
   by (simp add: word_size_bits_def untyped_min_bits_def)
 
-lemma word_size_bits_reset_chunk_bits[Retype_AC_assms]: "word_size_bits \<le> reset_chunk_bits"
-  by (simp add: word_size_bits_def reset_chunk_bits_def)
+lemma word_size_bits_resetChunkBits[Retype_AC_assms]: "word_size_bits \<le> resetChunkBits"
+  by (simp add: word_size_bits_def Kernel_Config.resetChunkBits_def)
 
 lemma clas_default_cap[Retype_AC_assms]:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz dev)"
@@ -165,20 +165,19 @@ lemma copy_global_mappings_pas_refined:
        copy_global_mappings pd
        \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: copy_global_mappings_def)
-  apply (rule hoare_weaken_pre)
   apply wp
-  (* Use \<circ> to avoid wp filtering out the global_pd condition here
-     TODO: see if we can clean this up *)
+    (* Use \<circ> to avoid wp filtering out the global_pd condition here
+       TODO: see if we can clean this up *)
     apply (rule_tac Q="\<lambda>rv s. is_aligned global_pd pd_bits \<and>
                               (global_pd = (arm_global_pd \<circ> arch_state) s \<and>
                                valid_kernel_mappings s \<and> valid_arch_state s \<and>
                                valid_global_objs s \<and> valid_global_refs s \<and> pas_refined aag s)"
                  in hoare_strengthen_post)
-  apply (rule mapM_x_wp[OF _ subset_refl])
-    apply (rule hoare_seq_ext)
-     apply (unfold o_def)
-     (* Use [1] so wp doesn't filter out the global_pd condition *)
-     apply (wp store_pde_pas_refined store_pde_valid_kernel_mappings_map_global)[1]
+     apply (rule mapM_x_wp[OF _ subset_refl])
+     apply (rule hoare_seq_ext)
+      apply (unfold o_def)
+    (* Use [1] so wp doesn't filter out the global_pd condition *)
+      apply (wp store_pde_pas_refined store_pde_valid_kernel_mappings_map_global)[1]
      apply (frule subsetD[OF copy_global_mappings_index_subset])
      apply (rule hoare_gen_asm[simplified K_def pred_conj_def conj_commute])
      apply (simp add: get_pde_def)
@@ -190,7 +189,6 @@ lemma copy_global_mappings_pas_refined:
      apply (frule (1) valid_kernel_mappingsD[folded obj_at_def])
      apply (clarsimp simp: kernel_mapping_slots_def shiftr_20_less pde_ref_def
                            global_refs_def empty_table_update_from_arm_global_pts)
-     apply fastforce
     apply fastforce
    apply (rule gets_wp)
   apply (simp, blast intro: invs_aligned_pdD)
@@ -251,7 +249,7 @@ lemma freeMemory_vms:
   apply (simp add: freeMemory_def machine_op_lift_def machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
    apply (simp add: storeWord_def | wp)+
-   apply (simp add: word_rsplit_0)+
+   apply (simp add: word_rsplit_0 word_bits_conv)+
   done
 
 lemma dmo_freeMemory_vms:

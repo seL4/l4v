@@ -8,6 +8,8 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
+unbundle l4v_word_context
+
 context Arch begin
 
 global_naming RISCV64

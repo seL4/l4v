@@ -240,6 +240,15 @@ lemma st_tcb_at_tcbs_of:
   "st_tcb_at' P t s = (EX tcb. tcbs_of s t = Some tcb & P (tcbState tcb))"
   by (simp add: st_tcb_at'_def obj_at_tcbs_of)
 
+lemma tcbs_of_ko_at':
+  "\<lbrakk> tcbs_of s p = Some tcb \<rbrakk> \<Longrightarrow> ko_at' tcb p s"
+  by (simp add: obj_at_tcbs_of)
+
+lemma tcbs_of_valid_tcb':
+  "\<lbrakk> valid_objs' s; tcbs_of s p = Some tcb \<rbrakk> \<Longrightarrow> valid_tcb' tcb s"
+  by (frule tcbs_of_ko_at')
+     (drule (1) ko_at_valid_objs', auto simp: projectKOs valid_obj'_def)
+
 end
 
 context kernel_m begin
@@ -410,7 +419,6 @@ lemma lookup_fp_ccorres':
       by (simp add: cap_get_tag_def cong: if_cong)
 
     show ?case
-    including no_take_bit
     supply if_cong[cong]
     apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)
@@ -1200,6 +1208,7 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
                           (the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
                   (t_hrs_' (globals s))
            )}"
+  supply shiftl_of_Suc[simp del]
   apply (intro allI, rule conseqPre, vcg)
   apply (clarsimp simp: ptr_def)
   apply (clarsimp simp: h_t_valid_clift_Some_iff)
@@ -1210,9 +1219,9 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   apply (subst parent_update_child, erule typ_heap_simps', simp+)
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ refl])
-  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist ucast_id)
+  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist)
   apply (fold limited_and_def)
-  apply (simp add: limited_and_simps mask_def)
+  apply (simp add: limited_and_simps mask_def and_mask2 word_size)
   done
 
 
@@ -1958,7 +1967,7 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
   apply (simp add: cap_to_H_simps word_ao_dist cl_valid_cap_def ctcb_size_bits_def
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
-                   shiftr_over_or_dist word_bw_assocs mask_def)
+                   shiftr_over_or_dist word_bw_assocs mask_def shiftl_shiftr3 word_size)
   apply (cases m ; clarsimp)
   apply (cases canGrant ; clarsimp)
   done
@@ -2337,8 +2346,8 @@ proof -
              apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
              apply (rule ccorres_abstract_ksCurThread, ceqv)
              apply (rename_tac ksCurThread_x)
-             apply (simp add: maxDom_def del: Collect_const)
-               apply (ctac add: getCurDomain_ccorres_dom_')
+             apply (simp del: Collect_const)
+               apply (ctac add: getCurDomain_maxDom_ccorres_dom_')
                  apply (rename_tac curDom curDom')
                  apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
                  apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
@@ -2458,15 +2467,22 @@ proof -
                   apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
                    apply (rule ccorres_pre_threadGet)
                     apply (rename_tac destDom)
+                    (* The C does not compare domains when maxDomain is 0, since then both threads
+                       will be in the current domain. Since we can show both threads must be
+                       \<le> maxDomain, we can rewrite this test to only comparing domains even when
+                       maxDomain is 0, making the check identical to the Haskell. *)
                     apply (rule_tac C'="{s. destDom \<noteq> curDom}"
                               and Q="obj_at' ((=) destDom \<circ> tcbDomain) (hd (epQueue send_ep))
-                                       and (\<lambda>s. ksCurDomain s = curDom)"
+                                       and (\<lambda>s. ksCurDomain s = curDom \<and> curDom \<le> maxDomain
+                                                \<and> destDom \<le> maxDomain)"
                               and Q'=UNIV in ccorres_rewrite_cond_sr_Seq)
                      apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
                      apply clarsimp
                       apply (drule(1) obj_at_cslift_tcb)+
                       apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurDomain)
-                      apply (drule ctcb_relation_tcbDomain[symmetric], fastforce)
+                      apply (drule ctcb_relation_tcbDomain[symmetric])
+                      apply (case_tac "0 < maxDomain"
+                             ; solves \<open>clarsimp simp: maxDom_sgt_0_maxDomain not_less\<close>)
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R=\<top> in ccorres_cond2', blast)
                      apply (rule ccorres_split_throws)
@@ -2815,6 +2831,10 @@ proof -
                          capAligned_def objBits_simps)
    apply (simp cong: conj_cong)
    apply (clarsimp simp add: invs_ksCurDomain_maxDomain')
+   apply (rule conjI)
+    subgoal (* dest thread domain \<le> maxDomain *)
+     by (drule (1) tcbs_of_valid_tcb'[OF invs_valid_objs'], solves \<open>clarsimp simp: valid_tcb'_def\<close>)
+   apply clarsimp
    apply (rule conjI) (* isReceive on queued tcb state *)
     apply (fastforce simp: st_tcb_at_tcbs_of isBlockedOnReceive_def isReceive_def)
    apply clarsimp
@@ -3225,8 +3245,8 @@ lemma fastpath_reply_recv_ccorres:
                           |  rule ccorres_flip_Guard2, rule ccorres_Guard_True_Seq)+
                    apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
 
-                   apply (simp add: maxDom_def del: Collect_const)
-                   apply (ctac add: getCurDomain_ccorres_dom_')
+                   apply (simp del: Collect_const)
+                   apply (ctac add: getCurDomain_maxDom_ccorres_dom_')
                      apply (rename_tac curDom curDom')
                      apply (rule_tac P="curDom \<le> maxDomain" in ccorres_gen_asm)
                      apply (simp add: prio_and_dom_limit_helpers del: Collect_const)
@@ -3266,16 +3286,22 @@ lemma fastpath_reply_recv_ccorres:
                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
                     apply (rename_tac destDom)
 
+                    (* The C does not compare domains when maxDomain is 0, since then both threads
+                       will be in the current domain. Since we can show both threads must be
+                       \<le> maxDomain, we can rewrite this test to only comparing domains even when
+                       maxDomain is 0, making the check identical to the Haskell. *)
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R="obj_at' ((=) destDom \<circ> tcbDomain)
                                                   (capTCBPtr (cteCap caller_cap))
-                                        and (\<lambda>s. ksCurDomain s = curDom)"
+                                        and (\<lambda>s. ksCurDomain s = curDom \<and> curDom \<le> maxDomain
+                                                 \<and> destDom \<le> maxDomain)"
                                    in ccorres_cond2')
                       apply clarsimp
                       apply (drule(1) obj_at_cslift_tcb)+
                       apply (clarsimp simp: typ_heap_simps' rf_sr_ksCurDomain)
                       apply (drule ctcb_relation_tcbDomain[symmetric])
-                      apply (clarsimp simp: up_ucast_inj_eq[symmetric] maxDom_def)
+                      apply (case_tac "0 < maxDomain"
+                             ; solves \<open>clarsimp simp: maxDom_sgt_0_maxDomain not_less\<close>)
 
                      apply simp
                      apply (rule ccorres_split_throws)
@@ -3546,6 +3572,7 @@ lemma fastpath_reply_recv_ccorres:
                            invs_valid_pde_mappings' obj_at_tcbs_of
                     dest!: isValidVTableRootD)
      apply (frule invs_mdb')
+
      apply (clarsimp simp: cte_wp_at_ctes_of tcbSlots cte_level_bits_def
                            makeObject_cte isValidVTableRoot_def
                            ARM_HYP_H.isValidVTableRoot_def
@@ -3553,6 +3580,10 @@ lemma fastpath_reply_recv_ccorres:
                            valid_mdb'_def valid_tcb_state'_def
                            word_le_nat_alt[symmetric] length_msgRegisters)
      apply (frule ko_at_valid_ep', fastforce)
+     apply (rule conjI)
+      subgoal (* dest thread domain \<le> maxDomain *)
+       by (drule (1) tcbs_of_valid_tcb'[OF invs_valid_objs'], solves \<open>clarsimp simp: valid_tcb'_def\<close>)
+     apply clarsimp
      apply (safe del: notI disjE)[1]
        apply (simp add: isSendEP_def valid_ep'_def tcb_at_invs'
                  split: Structures_H.endpoint.split_asm)

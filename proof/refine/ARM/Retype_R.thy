@@ -108,8 +108,7 @@ lemma valid_obj_makeObject_cte [simp]:
 lemma valid_obj_makeObject_tcb [simp]:
   "valid_obj' (KOTCB makeObject) s"
   unfolding valid_obj'_def valid_tcb'_def  valid_tcb_state'_def
-  by (clarsimp simp: makeObject_tcb makeObject_cte
-                     tcb_cte_cases_def maxDomain_def numDomains_def maxPriority_def numPriorities_def minBound_word)
+  by (clarsimp simp: makeObject_tcb makeObject_cte tcb_cte_cases_def minBound_word)
 
 lemma valid_obj_makeObject_endpoint [simp]:
   "valid_obj' (KOEndpoint makeObject) s"
@@ -939,8 +938,7 @@ lemma foldr_upd_app_if': "foldr (\<lambda>p ps. ps(p := f p)) as g = (\<lambda>x
 
 lemma etcb_rel_makeObject: "etcb_relation default_etcb makeObject"
   apply (simp add: etcb_relation_def default_etcb_def)
-  apply (simp add: makeObject_tcb default_priority_def default_domain_def
-                   time_slice_def timeSlice_def)
+  apply (simp add: makeObject_tcb default_priority_def default_domain_def)
   done
 
 
@@ -1737,7 +1735,6 @@ proof -
     "image (\<lambda>n. ptr + 2 ^ obj_bits_api (APIType_map2 ty) us * n)
            {x. x \<le> of_nat n - 1} =
      set (retype_addrs ptr (APIType_map2 ty) n us)"
-    including no_take_bit
     apply (clarsimp simp: retype_addrs_def image_def Bex_def ptr_add_def
                           Collect_eq)
     apply (rule iffI)
@@ -1771,7 +1768,6 @@ proof -
   have al': "is_aligned ptr (obj_bits_api (APIType_map2 ty) us)"
      by (simp add: obj_bits_api ko)
   show ?thesis
-  including no_take_bit
   apply (simp add: when_def retype_region2_def createObjects'_def
                    createObjects_def aligned obj_bits_api[symmetric]
                    ko[symmetric] al' shiftl_t2n data_map_insert_def[symmetric]
@@ -1944,7 +1940,6 @@ proof -
   have in_new:"\<And>idx offs. \<lbrakk>idx \<le> of_nat n - 1;offs<2 ^ gbits\<rbrakk>
     \<Longrightarrow> ptr + (idx << objBitsKO ko + gbits) + (offs << objBitsKO ko)
         \<in> set (new_cap_addrs (n * 2 ^ gbits) ptr ko)"
-       including no_take_bit
       apply (insert range_cover_not_zero[OF not_0 cover] not_0)
       apply (clarsimp simp:new_cap_addrs_def image_def)
       apply (rule_tac x ="unat (2 ^ gbits * idx + offs)" in bexI)
@@ -2914,7 +2909,7 @@ proof -
       apply simp
       done
     have "ptr' + 2 ^ objBitsKO val - 1 \<le> ptr + of_nat n * 2 ^ objBitsKO val - 1"
-      using cover including no_take_bit
+      using cover
       apply (subst decomp)
       apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
@@ -3318,7 +3313,6 @@ proof -
     using cover
     by (simp add:range_cover_def word_bits_def)
   thus ?thesis
-    including no_take_bit
     apply -
     apply (insert not_0 cover ptr_in)
     apply (frule range_cover.range_cover_le_n_less[OF _ le_refl])
@@ -5251,7 +5245,6 @@ lemma corres_retype_region_createNewCaps:
                 init_arch_objects (APIType_map2 (Inr ty)) y n us x;
                 return x od)
             (createNewCaps ty y n us dev)"
-  including no_take_bit
   apply (rule_tac F="range_cover y sz
                        (obj_bits_api (APIType_map2 (Inr ty)) us) n \<and>
                      n \<noteq> 0 \<and>

@@ -452,7 +452,6 @@ end
 structure HeapInfo = Theory_Data(
   type T = HeapLiftBase.heap_lift_setup Symtab.table;
   val empty = Symtab.empty;
-  val extend = I;
   fun merge (l, r) =
     Symtab.merge (fn _ => true) (l, r);
 )

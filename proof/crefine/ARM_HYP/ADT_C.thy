@@ -614,7 +614,6 @@ lemma (in kernel_m)  carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
   assumes rel:    "carch_state_relation (ksArchState astate) (cstate)"
   shows           "carch_state_to_H cstate = ksArchState astate"
-  including no_take_bit
   apply (case_tac "ksArchState astate", simp)
   apply (rename_tac v1 v2 v3 v4 v5 v6 v7 v8)
   using rel[simplified carch_state_relation_def carch_globals_def]
@@ -664,7 +663,7 @@ lemma tcb_queue_rel'_unique:
 
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -1387,7 +1386,6 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-  including no_take_bit
   using assms
   by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
                      newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
@@ -1414,12 +1412,12 @@ lemma (in kernel_m) cDomSchedule_to_H_correct:
   done
 
 definition
-  cbitmap_L1_to_H :: "32 word[16] \<Rightarrow> (8 word \<Rightarrow> 32 word)"
+  cbitmap_L1_to_H :: "32 word[num_domains] \<Rightarrow> (domain \<Rightarrow> 32 word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "32 word[8][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+  cbitmap_L2_to_H :: "32 word[8][num_domains] \<Rightarrow> (domain \<times> nat \<Rightarrow> 32 word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize

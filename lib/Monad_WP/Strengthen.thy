@@ -238,7 +238,6 @@ structure Congs = Theory_Data
 (struct
     type T = thm list
     val empty = []
-    val extend = I
     val merge = Thm.merge_thms;
 end);
 

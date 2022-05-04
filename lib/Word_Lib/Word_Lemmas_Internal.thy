@@ -14,8 +14,27 @@ text \<open>
 \<close>
 
 theory Word_Lemmas_Internal
-imports Word_Lemmas More_Word_Operations Many_More Word_Syntax
+imports Word_Lemmas More_Word_Operations Many_More Word_Syntax Syntax_Bundles
 begin
+
+(* this bundle doesn't survive theory merges from HOL.Main, because these simp/split rules
+   are added there, so it may need to be unbundled or included locally more than once
+*)
+bundle l4v_word_context
+begin
+  declare bit_0 [simp del]
+  declare split_of_bool_asm [split del]
+end
+
+unbundle bit_operations_syntax
+unbundle bit_projection_infix_syntax
+unbundle l4v_word_context
+
+lemmas shiftl_nat_def = push_bit_eq_mult[of _ a for a::nat, folded shiftl_def]
+lemmas shiftr_nat_def = drop_bit_eq_div[of _ a for a::nat, folded shiftr_def]
+
+declare bit_simps[simp]
+lemmas bit_0_numeral[simp] = bit_0[of "numeral w" for w]
 
 lemma signed_ge_zero_scast_eq_ucast:
  "0 <=s x \<Longrightarrow> scast x = ucast x"
@@ -362,28 +381,12 @@ lemmas distinct_aligned_addresses_accumulate = aligned_mask_ranges_disjoint2[fol
 lemmas bang_big = test_bit_over
 
 lemma unat_and_mask_le:
-  fixes x::"'a::len word"
-  assumes "n < LENGTH('a)"
-  shows "unat (x && mask n) \<le> 2^n"
-proof -
-  from assms
-  have "2^n-1 \<le> (2^n :: 'a word)"
-    using word_1_le_power word_le_imp_diff_le by blast
-  then
-  have "unat (x && mask n) \<le> unat (2^n::'a word)"
-    apply (fold word_le_nat_alt)
-    apply (rule order_trans, rule word_and_le1)
-    apply (simp add: mask_eq)
-    done
-  with assms
-  show ?thesis by (simp add: unat_2tp_if)
-qed
+  "n < LENGTH('a) \<Longrightarrow> unat (x && mask n) \<le> 2^n" for x::"'a::len word"
+  by (simp add: and_mask_less' order_less_imp_le unat_less_power)
 
 lemma sign_extend_less_mask_idem:
   "\<lbrakk> w \<le> mask n; n < size w \<rbrakk> \<Longrightarrow> sign_extend n w = w"
-  apply (simp add: sign_extend_def le_mask_imp_and_mask)
-  apply (simp add: le_mask_high_bits)
-  done
+  by (simp add: sign_extend_def le_mask_imp_and_mask le_mask_high_bits)
 
 lemma word_and_le:
   "a \<le> c \<Longrightarrow> (a :: 'a :: len word) && b \<le> c"
@@ -496,10 +499,7 @@ lemma mask_to_bl_exists_True:
   apply (clarsimp simp: eq_zero_set_bl in_set_conv_nth)
   apply (subst (asm) to_bl_nth, clarsimp simp: word_size)
   apply (clarsimp simp: word_size)
-  apply (drule_tac x="LENGTH('a) - Suc i" in spec, simp)
-  apply (subst (asm) rev_nth, simp)
-  apply (subst (asm) to_bl_nth; clarsimp simp: word_size)
-  done
+  by (meson nth_mask test_bit_bl word_and_nth)
 
 lemma word_ctz_shiftr_1:
   fixes z::"'a::len word"
@@ -647,14 +647,12 @@ lemma ucast_down_0:
 
 lemma uint_minus_1_eq:
   \<open>uint (- 1 :: 'a word) = 2 ^ LENGTH('a::len) - 1\<close>
-  by transfer (simp add: take_bit_minus_one_eq_mask mask_eq_exp_minus_1)
+  by transfer (simp add: mask_eq_exp_minus_1)
 
 lemma FF_eq_minus_1:
   \<open>0xFF = (- 1 :: 8 word)\<close>
   by simp
 
-lemma shiftl_t2n':
-  "w << n = w * (2 ^ n)" for w :: "'a::len word"
-  by (simp add: shiftl_t2n)
+lemmas shiftl_t2n' = shiftl_eq_mult[where x="w::'a::len word" for w]
 
 end

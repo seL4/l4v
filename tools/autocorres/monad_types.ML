@@ -104,7 +104,6 @@ structure TSRules = Generic_Data
   type T = monad_type Symtab.table
   val empty = Symtab.empty
   val merge = Symtab.join (K merge_mt)
-  val extend = I
 )
 
 fun error_no_such_mt name = error ("autocorres: no such monad type " ^ quote name)

@@ -44,9 +44,9 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 lemma clift_foldl_hrs_mem_update:
@@ -209,7 +209,7 @@ lemma coerce_memset_to_heap_update_pte:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: replicateHider_def word_bits_def)
   done
 
 lemma objBits_eq_by_type:
@@ -392,7 +392,6 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
            doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits - 1) pstart)
         od)
        (Call clearMemory_PT_'proc)"
-  including no_take_bit
   apply (rule ccorres_gen_asm)+
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
@@ -894,7 +893,6 @@ lemma updateFreeIndex_ccorres:
                \<longrightarrow> region_actually_is_zero_bytes (capPtr cap' + of_nat idx') (capFreeIndex cap' - idx') s} hs
            (updateFreeIndex srcSlot idx') c"
   (is "_ \<Longrightarrow> ccorres dc xfdc (valid_objs' and ?cte_wp_at' and _ and _) ?P' hs ?a c")
-  including no_take_bit
   apply (rule ccorres_gen_asm)
   apply (simp add: updateFreeIndex_def getSlotCap_def updateCap_def)
   apply (rule ccorres_guard_imp2)

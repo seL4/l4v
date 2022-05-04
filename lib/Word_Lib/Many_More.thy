@@ -18,9 +18,15 @@ lemma nat_less_mult_monoish: "\<lbrakk> a < b; c < (d :: nat) \<rbrakk> \<Longri
   apply simp
   done
 
+context
+  includes bit_operations_syntax
+begin
+
 lemma if_and_helper:
   "(If x v v') AND v'' = If x (v AND v'') (v' AND v'')"
   by (rule if_distrib)
+
+end
 
 lemma eq_eqI:
   "a = b \<Longrightarrow> (a = x) = (b = x)"

@@ -130,8 +130,6 @@ where
 | "valid_invocation (InvokeArchObject i) = valid_arch_inv i"
 
 
-crunch inv [wp]: lookup_cap_and_slot P
-
 lemma sts_Restart_invs[wp]:
   "\<lbrace>st_tcb_at active t and invs and ex_nonz_cap_to t\<rbrace>
      set_thread_state t Structures_A.Restart
@@ -273,9 +271,6 @@ lemma do_ipc_transfer_emptyable[wp]:
   apply (clarsimp simp add: emptyable_def)
   apply (wp hoare_convert_imp | clarsimp)+
   done
-
-crunch emptyable[wp]: do_ipc_transfer "emptyable sl"
-
 
 lemma do_ipc_transfer_non_null_cte_wp_at2:
   fixes P
@@ -1207,8 +1202,6 @@ lemmas (in Syscall_AI) hr_ct_in_state_simple[wp]
     = ct_in_state_thread_state_lift [OF handle_reply_cur_thread
                                        handle_reply_st_tcb_at_simple]
 
-crunch (in Syscall_AI) nonz_cap_to[wp]: handle_fault_reply "ex_nonz_cap_to p :: 'state_ext state \<Rightarrow> _"
-
 crunch (in Syscall_AI) vo[wp]: handle_fault_reply "valid_objs :: 'state_ext state \<Rightarrow> _"
 
 lemmas handle_fault_reply_typ_ats[wp] =
@@ -1391,7 +1384,7 @@ lemma send_ipc_st_tcb_at_runnable:
           apply (rule conjI)
           apply (wpc
                 | wp sts_st_tcb_at_other dxo_wp_weak hoare_drop_imps
-                | clarsimp simp: if_cancel if_fun_split)+
+                | clarsimp simp: if_fun_split)+
   apply (wp get_simple_ko_wp)
   apply clarsimp
   apply (drule st_tcb_at_state_refs_ofD)

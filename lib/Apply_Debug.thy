@@ -455,7 +455,6 @@ structure Data = Generic_Data
 (
   type T = (morphism * Proof.context * static_info) option;
   val empty: T = NONE;
-  val extend = K NONE;
   fun merge _ : T = NONE;
 );
 
@@ -634,17 +633,18 @@ fun continue i_opt m_opt =
 
         fun markup_def rng =
           (Output.report
-              [Markup.markup (Markup.entity "breakpoint" ""
-               |> Markup.properties (Position.entity_properties_of true sr
-                    (Position.range_position rng))) ""]);
+              [Markup.markup (
+                  Position.make_entity_markup {def=true} sr "breakpoint"
+                                              ("", Position.range_position rng))
+                  ""]);
 
         val _ = Option.map markup_def (get_latest_range (fst st''));
         val _ = Option.map markup_def (get_breakpoint_range (fst st''));
 
         val _ =
           (Context_Position.report ctxt (Position.thread_data ())
-             (Markup.entity "breakpoint" ""
-              |> Markup.properties (Position.entity_properties_of false sr Position.none)))
+                                   (Position.make_entity_markup {def=false} sr "breakpoint"
+                                                                ("", Position.none)))
 
         val _ = maybe_trace (#trace (get_break_opts ctxt)) st'';
 

@@ -45,7 +45,7 @@ fun fix_schematics ctxt raw_st =
     val ((_, inst), ctxt2) =
       Variable.import_inst true [Thm.prop_of st'] ctxt1;
 
-    val schematic_terms = map (apsnd (Thm.cterm_of ctxt2)) inst;
+    val schematic_terms = Vars.map (K (Thm.cterm_of ctxt2)) inst;
     val schematics = (schematic_types, schematic_terms);
 
   in (Thm.instantiate schematics st', ctxt2) end

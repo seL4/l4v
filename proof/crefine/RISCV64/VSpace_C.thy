@@ -9,6 +9,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault,
@@ -48,9 +50,6 @@ end
 
 context kernel_m begin
 
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
-
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
   by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
@@ -70,7 +69,6 @@ lemma checkVPAlignment_ccorres:
            []
            (checkVPAlignment sz w)
            (Call checkVPAlignment_'proc)"
-  including no_take_bit
   apply (cinit lift: sz_' w_')
    apply (csymbr)
    apply clarsimp
@@ -278,7 +276,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -491,7 +489,6 @@ proof (induct level arbitrary: pt)
 
   case 0
   show ?case
-    including no_take_bit
     apply (simp only: ptSlot_upd_def lookupPTSlotFromLevel.simps(1))
     apply (cinitlift pt_' vptr_', simp only:)
     apply (rule ccorres_rhs_assoc)+
@@ -533,11 +530,9 @@ proof (induct level arbitrary: pt)
            of_nat ptTranslationBits * of_nat level +
            of_nat pt_bits :: machine_word) =
      ptTranslationBits + ptTranslationBits * level + pt_bits"
-    including no_take_bit
     by (simp add: bit_simps word_less_nat_alt maxPTLevel_def unat_word_ariths unat_of_nat_eq)
 
   show ?case
-    including no_take_bit
     apply (simp only: lookupPTSlotFromLevel.simps)
     apply (subst ptSlot_upd_def)
     \<comment> \<open>cinitlift will not fully eliminate pt and vptr,
@@ -1069,7 +1064,6 @@ lemma setMR_as_setRegister_ccorres:
             \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
     (asUser thread (setRegister reg val))
     (Call setMR_'proc)"
-  including no_take_bit
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
    apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
@@ -1301,7 +1295,6 @@ lemma unmapPage_ccorres:
        \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace> \<inter> \<lbrace> \<acute>pptr___unsigned_long = pptr \<rbrace>)
       hs
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
-  including no_take_bit no_0_dvd
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid___unsigned_long_' vptr_' pptr___unsigned_long_')
    apply (simp add: ignoreFailure_liftM)
@@ -1695,7 +1688,7 @@ lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simpli
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) ((unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms including no_take_bit
+  using assms
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1705,7 +1698,7 @@ lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simp
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms including no_take_bit
+  using assms
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)
 
@@ -1724,7 +1717,6 @@ proof -
     "\<And>n. n < 256 \<Longrightarrow> ?enum n = 0x800 + of_nat n * 8"
     by (auto simp: upto_enum_word_nth word_shiftl_add_distrib shiftl_t2n)
   show ?thesis
-    including no_take_bit
     apply (cinit lift: newLvl1pt_' simp: ptIndex_maxPTLevel_pptrBase ptTranslationBits_def)
      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState, rename_tac globalPT)
      apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])

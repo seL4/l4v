@@ -27,7 +27,7 @@ declare asm_semantics_respects[unfolded Let_def, simp]
 ML \<open>
 emit_C_everything_relative @{context}
   (CalculateState.get_csenv @{theory} "inf_loop.c" |> the)
-  "inf_loop_Cfuns.txt"
+  "inf_loop_Cfuns.txt" "inf_loop"
 \<close>
 
 lemma globals_list_valid:

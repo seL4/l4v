@@ -247,7 +247,6 @@ lemma decode_cnode_inv_authorised:
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
-              simp: simp_thms fst_conv snd_conv Invocations_A.cnode_invocation.simps K_def
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)

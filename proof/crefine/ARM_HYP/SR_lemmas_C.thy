@@ -499,7 +499,7 @@ declare pspace_distinctD' [intro?]
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
   assumes ks: "ksPSpace s x = Some (KOCTE cte)"
-  and     pa: "pspace_aligned' s"  (* yuck *)
+  and     pa: "pspace_aligned' s"
   and     pd: "pspace_distinct' s"
   shows   "ctes_of s x = Some cte"
 proof (rule ctes_of_eq_cte_wp_at')
@@ -534,15 +534,21 @@ lemma fst_setCTE:
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
-  (* Unpack the existential and bind x, theorems in this.  Yuck *)
-  from fst_setCTE0 [where cte = cte, OF ct] guess s' by clarsimp
+  from fst_setCTE0 [where cte = cte, OF ct]
+  obtain s' where
+    "((), s')\<in>fst (setCTE dest cte s)"
+    "s' = s\<lparr>ksPSpace := ksPSpace s'\<rparr>"
+    "dom (ksPSpace s) = dom (ksPSpace s')"
+    "(\<forall>p \<in> dom (ksPSpace s').
+       case the (ksPSpace s p) of
+         KOTCB t \<Rightarrow> \<exists>t'. ksPSpace s' p = Some (KOTCB t') \<and> tcb_no_ctes_proj t = tcb_no_ctes_proj t'
+       | KOCTE _ \<Rightarrow> \<exists>cte. ksPSpace s' p = Some (KOCTE cte)
+       | _ \<Rightarrow> ksPSpace s' p = ksPSpace s p)"
+    by clarsimp
   note thms = this
 
-  from thms have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
-    apply -
-    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
-    apply simp
-    done
+  have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
+    by (rule use_valid [OF thms(1) setCTE_ctes_of_wp]) simp
 
   show ?thesis
   proof (rule rl)
@@ -2073,7 +2079,7 @@ lemma memory_cross_over:
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x::word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
+    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute take_bit_Suc
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
   apply (simp add: add.commute word_plus_and_or_coroll2)
@@ -2481,13 +2487,21 @@ where
 
 lemma unat_scast_seL4_VCPUReg_SCTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_SCTLR) = fromEnum VCPURegSCTLR"
-  including no_take_bit
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
 
 lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
   "unat (SCAST(32 signed \<rightarrow> 32) seL4_VCPUReg_ACTLR) = fromEnum VCPURegACTLR"
-  including no_take_bit
   by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
+
+lemma numDomains_sge_1_simp:
+  "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
+  apply (simp add: word_sless_alt sint_numDomains_to_H)
+  apply (subst nat_less_as_int, simp)
+  done
+
+lemma unat_scast_numDomains:
+  "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
+  by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
 
 end
 end

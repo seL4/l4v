@@ -1082,7 +1082,7 @@ done
 
 lemma hoare_seq_ext_nobind:
   "\<lbrakk> \<lbrace>B\<rbrace> g \<lbrace>C\<rbrace>;
-     \<lbrace>A\<rbrace> f \<lbrace>\<lambda>r s. B s\<rbrace> \<rbrakk> \<Longrightarrow>
+     \<lbrace>A\<rbrace> f \<lbrace>\<lambda>_. B\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>A\<rbrace> do f; g od \<lbrace>C\<rbrace>"
   apply (clarsimp simp: valid_def bind_def Let_def split_def)
   apply fastforce
@@ -1090,13 +1090,61 @@ done
 
 lemma hoare_seq_ext_nobindE:
   "\<lbrakk> \<lbrace>B\<rbrace> g \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>;
-     \<lbrace>A\<rbrace> f \<lbrace>\<lambda>r s. B s\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
+     \<lbrace>A\<rbrace> f \<lbrace>\<lambda>_. B\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>A\<rbrace> doE f; g odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
   apply (clarsimp simp:validE_def)
   apply (simp add:bindE_def Let_def split_def bind_def lift_def)
   apply (fastforce simp add: valid_def throwError_def return_def lift_def
                   split: sum.splits)
   done
+
+lemmas hoare_seq_ext_skip'
+  = hoare_seq_ext[where B=C and C=C for C]
+
+lemma validE_eq_valid:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace> = \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by (simp add: validE_def)
+
+\<comment> \<open>For forward reasoning in Hoare proofs, these lemmas allow us to step over the
+    left-hand-side of monadic bind, while keeping the same precondition.\<close>
+
+named_theorems forward_inv_step_rules
+
+lemmas hoare_forward_inv_step_nobind[forward_inv_step_rules] =
+  hoare_seq_ext_nobind[where B=A and A=A for A, rotated]
+
+lemmas hoare_seq_ext_skip[forward_inv_step_rules] =
+  hoare_seq_ext[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemmas hoare_forward_inv_step_nobindE_valid[forward_inv_step_rules] =
+  hoare_seq_ext_nobindE[where B=A and A=A and E="\<lambda>_. C" and C="\<lambda>_. C" for A C,
+                        simplified validE_eq_valid, rotated]
+
+lemmas hoare_forward_inv_step_valid[forward_inv_step_rules] =
+  hoare_vcg_seqE[where B="\<lambda>_. A" and A=A and E="\<lambda>_. C" and C="\<lambda>_. C" for A C,
+                 simplified validE_eq_valid, rotated]
+
+lemmas hoare_forward_inv_step_nobindE[forward_inv_step_rules] =
+  hoare_seq_ext_nobindE[where B=A and A=A for A, rotated]
+
+lemmas hoare_seq_ext_skipE[forward_inv_step_rules] =
+  hoare_vcg_seqE[where B="\<lambda>_. A" and A=A for A, rotated]
+
+lemmas hoare_forward_inv_step_nobindE_validE_E[forward_inv_step_rules] =
+  hoare_forward_inv_step_nobindE[where C="\<top>\<top>", simplified validE_E_def[symmetric]]
+
+lemmas hoare_forward_inv_step_validE_E[forward_inv_step_rules] =
+  hoare_seq_ext_skipE[where C="\<top>\<top>", simplified validE_E_def[symmetric]]
+
+lemmas hoare_forward_inv_step_nobindE_validE_R[forward_inv_step_rules] =
+  hoare_forward_inv_step_nobindE[where E="\<top>\<top>", simplified validE_R_def[symmetric]]
+
+lemmas hoare_forward_inv_step_validE_R[forward_inv_step_rules] =
+  hoare_seq_ext_skipE[where E="\<top>\<top>", simplified validE_R_def[symmetric]]
+
+method forward_inv_step uses wp simp =
+  rule forward_inv_step_rules, solves \<open>wpsimp wp: wp simp: simp\<close>
+
 
 lemma hoare_chain:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>;

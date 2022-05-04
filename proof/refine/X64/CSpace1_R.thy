@@ -1496,7 +1496,7 @@ lemma ps_clear_32:
     \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   apply (simp add: ps_clear_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
-  apply (simp add: dom_def field_simps objBits_defs)
+  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -2461,15 +2461,15 @@ lemma updateCap_corres:
     apply (unfold cdt_list_relation_def)[1]
     apply (intro allI impI)
     apply (erule_tac x=c in allE)
-    apply (auto elim!: modify_map_casesE)[1]
+    subgoal by (auto elim!: modify_map_casesE)[1]
    apply (unfold revokable_relation_def)[1]
    apply (drule set_cap_caps_of_state_monad)
    apply (simp add: cte_wp_at_caps_of_state del: split_paired_All)
    apply (intro allI impI)
    apply (erule_tac x=c in allE)
    apply (erule impE[where P="\<exists>y. v = Some y" for v])
-    apply (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
-   apply (auto elim!: modify_map_casesE del: disjE)[1] (* slow *)
+    subgoal by (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
+   subgoal by (auto elim!: modify_map_casesE del: disjE)[1] (* slow *)
   apply (case_tac "ctes_of b (cte_map slot)")
    apply (simp add: modify_map_None)
   apply (simp add: modify_map_apply)
@@ -2478,10 +2478,10 @@ lemma updateCap_corres:
   apply (rule use_update_ztc_one [OF descendants_of_update_ztc])
          apply simp
         apply assumption
-       apply (auto simp: is_cap_simps isCap_simps)[1]
+       subgoal by (auto simp: is_cap_simps isCap_simps)[1]
       apply (frule(3) is_final_untyped_ptrs [OF _ _ not_sym], clarsimp+)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
-       apply (simp add: is_cap_simps, elim disjE exE, simp_all)[1]
+       subgoal by (simp add: is_cap_simps, elim disjE exE, simp_all)[1]
       apply (simp add: eq_commute)
      apply (drule cte_wp_at_norm, clarsimp)
      apply (drule(1) pspace_relation_ctes_ofI, clarsimp+)
@@ -2492,14 +2492,9 @@ lemma updateCap_corres:
     apply clarsimp
    apply (drule cte_wp_at_norm, clarsimp)
    apply (drule(1) pspace_relation_ctes_ofI, clarsimp+)
-   apply (simp add: is_cap_simps, elim disjE exE, simp_all add: isCap_simps)[1]
+   subgoal by (simp add: is_cap_simps, elim disjE exE, simp_all add: isCap_simps)[1]
   apply clarsimp
   done
-
-lemma exst_set_cap:
-  "(x,s') \<in> fst (set_cap p c s) \<Longrightarrow> exst s' = exst s"
-  by (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def
-               split: if_split_asm Structures_A.kernel_object.splits)
 
 lemma updateMDB_eqs:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2551,8 +2546,8 @@ lemma updateMDB_pspace_relation:
    apply (subst map_upd_triv[symmetric, where t="kheap s"], assumption)
    apply (erule(2) pspace_relation_update_tcbs)
    apply (case_tac tcba)
-   apply (simp add: tcb_cte_cases_def tcb_relation_def del: diff_neg_mask
-             split: if_split_asm)
+   subgoal by (simp add: tcb_cte_cases_def tcb_relation_def del: diff_neg_mask
+                    split: if_split_asm)
   apply (clarsimp simp: cte_wp_at_cases')
   apply (erule disjE)
    apply (rule pspace_dom_relatedE, assumption+)
@@ -2580,8 +2575,7 @@ lemma updateMDB_ekheap_relation:
   apply (drule(1) updateObject_cte_is_tcb_or_cte[OF _ refl, rotated])
   apply (drule_tac P="(=) s'" in use_valid [OF _ getCTE_sp], rule refl)
   apply (drule bspec, erule domI)
-  apply (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
-  done
+  by (clarsimp simp: tcb_cte_cases_def lookupAround2_char1 split: if_split_asm)
 
 lemma updateMDB_pspace_relations:
   assumes "(x, s'') \<in> fst (updateMDB p f s')"
@@ -2645,24 +2639,17 @@ lemma is_cap_revocable_eq:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
      is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_ntfn_cap c\<rbrakk>
   \<Longrightarrow> is_cap_revocable c src_cap = isCapRevocable c' src_cap'"
-  apply (clarsimp simp: isCap_simps objBits_simps bit_simps arch_is_cap_revocable_def
-                        bits_of_def is_cap_revocable_def Retype_H.isCapRevocable_def
-                        sameRegionAs_def3 isCapRevocable_def
-                 split: cap_relation_split_asm arch_cap.split_asm)
-  done
+  by (clarsimp simp: isCap_simps objBits_simps bit_simps arch_is_cap_revocable_def
+                     bits_of_def is_cap_revocable_def Retype_H.isCapRevocable_def
+                     sameRegionAs_def3 isCapRevocable_def
+               split: cap_relation_split_asm arch_cap.split_asm)
 
 lemma isMDBParentOf_prev_update [simp]:
   "isMDBParentOf (cteMDBNode_update (mdbPrev_update f) cte) cte' =
    isMDBParentOf cte cte'"
   "isMDBParentOf cte (cteMDBNode_update (mdbPrev_update f) cte') =
    isMDBParentOf cte cte'"
-   apply (cases cte)
-   apply (cases cte')
-   apply (simp add: isMDBParentOf_def)
-  apply (cases cte)
-  apply (cases cte')
-  apply (clarsimp simp: isMDBParentOf_def)
-  done
+  by (cases cte, cases cte', simp add: isMDBParentOf_def)+
 
 lemma prev_update_subtree [simp]:
   "modify_map m' x (cteMDBNode_update (mdbPrev_update f)) \<turnstile> a \<rightarrow> b = m' \<turnstile> a \<rightarrow> b"
@@ -2905,32 +2892,25 @@ lemma is_derived_eq:
   apply (clarsimp simp: is_derived_def is_derived'_def badge_derived'_def)
   apply (rule conjI)
    apply (clarsimp simp: is_cap_simps isCap_simps)
-   apply (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def)[1]
-  apply (simp add:vsCapRef_def)
-  apply (simp add:vs_cap_ref_def)
+  subgoal by (cases c, auto simp: isCap_simps cap_master_cap_def capMasterCap_def vsCapRef_def
+                                   vs_cap_ref_def)[1]
   apply (case_tac "isIRQControlCap d'")
    apply (frule(1) master_cap_relation)
-   apply (clarsimp simp: isCap_simps cap_master_cap_def
-                         is_zombie_def is_reply_cap_def is_master_reply_cap_def
-                  split: cap_relation_split_asm arch_cap.split_asm)[1]
+  subgoal by (clarsimp simp: isCap_simps cap_master_cap_def
+                        is_zombie_def is_reply_cap_def is_master_reply_cap_def
+                 split: cap_relation_split_asm arch_cap.split_asm)[1]
   apply (case_tac "isIOPortControlCap' d'")
    apply (frule(1) master_cap_relation)
-   apply (clarsimp simp: isCap_simps cap_master_cap_def is_cap_simps is_zombie_def
-                  split: cap_relation_split_asm arch_cap.split_asm)
+  subgoal by (clarsimp simp: isCap_simps cap_master_cap_def is_cap_simps is_zombie_def
+                       split: cap_relation_split_asm arch_cap.split_asm)
   apply (frule(1) master_cap_relation)
   apply (frule(1) cap_badge_relation)
   apply (frule cap_asid_cap_relation)
   apply (frule(1) capBadge_ordering_relation)
-  apply (case_tac d)
-   apply (simp_all add: isCap_simps is_cap_simps cap_master_cap_def
-                        vs_cap_ref_def vsCapRef_def capMasterCap_def
-                 split: cap_relation_split_asm arch_cap.split_asm)
-   apply fastforce
-  apply ((auto split:arch_cap.splits arch_capability.splits option.splits)[7])
-  apply (clarsimp split:option.splits arch_cap.splits arch_capability.splits)
-  apply (intro conjI|clarsimp)+
-    apply fastforce
-  done
+  by (case_tac d; simp add: isCap_simps is_cap_simps cap_master_cap_def
+                            vs_cap_ref_def vsCapRef_def capMasterCap_def
+                     split: cap_relation_split_asm arch_cap.split_asm)
+     (auto split:arch_cap.splits arch_capability.splits option.splits) (* slow *)
 end
 
 locale masterCap =
@@ -4752,7 +4732,7 @@ lemma updateCap_cte_wp_at':
         updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add:updateCap_def cte_wp_at_ctes_of)
   apply (wp setCTE_ctes_of_wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of split del: if_split)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac cte, auto split: if_split)
   done
 
@@ -5327,34 +5307,55 @@ lemma cteInsert_corres:
              apply (clarsimp simp: put_def state_relation_def)
              apply (drule updateCap_stuff)
              apply clarsimp
-             apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-             apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-             apply (drule (3) updateMDB_the_lot', simp, simp,  elim conjE)
-             apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def
-                              prev_update_modify_mdb_relation)
+             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
+             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:, elim conjE)
+             apply (drule (3) updateMDB_the_lot', simp only: no_0_modify_map, simp only:,  elim conjE)
+             apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def prev_update_modify_mdb_relation)
              apply (subgoal_tac "cte_map dest \<noteq> 0")
               prefer 2
-              apply (clarsimp simp: valid_mdb'_def
-                               valid_mdb_ctes_def no_0_def)
+              subgoal by (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
              apply (subgoal_tac "cte_map src \<noteq> 0")
               prefer 2
-              apply (clarsimp simp: valid_mdb'_def
-                               valid_mdb_ctes_def no_0_def)
+              subgoal by (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def no_0_def)
              apply (thin_tac "ksMachineState t = p" for p t)+
              apply (thin_tac "ksCurThread t = p" for p t)+
              apply (thin_tac "ksIdleThread t = p" for p t)+
              apply (thin_tac "ksReadyQueues t = p" for p t)+
              apply (thin_tac "ksSchedulerAction t = p" for p t)+
              apply (clarsimp simp: pspace_relations_def)
-
              apply (rule conjI)
-              apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+              subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+             apply (thin_tac "ready_queues t = p" for t p)+
+             apply (thin_tac "cur_domain t = p" for t p)+
+             apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+             apply (thin_tac "ksDomSchedule t = p" for t p)+
+             apply (thin_tac "ksCurDomain t = p" for t p)+
+             apply (thin_tac "ksDomainTime t = p" for t p)+
+             apply (thin_tac "idle_thread t = p" for t p)+
+             apply (thin_tac "work_units_completed t = p" for t p)+
+             apply (thin_tac "domain_index t = p" for t p)+
+             apply (thin_tac "domain_list t = p" for t p)+
+             apply (thin_tac "domain_time t = p" for t p)+
+             apply (thin_tac "ekheap t = p" for t p)+
+             apply (thin_tac "scheduler_action t = p" for t p)+
+             apply (thin_tac "ksArchState t = p" for t p)+
+             apply (thin_tac "gsCNodes t = p" for t p)+
+             apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+             apply (thin_tac "ksInterruptState t = p" for t p)+
+             apply (thin_tac "gsUserPages t = p" for t p)+
+             apply (thin_tac "pspace_relation s s'" for s s')+
+             apply (thin_tac "ekheap_relation e p" for e p)+
+             apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
+             apply (thin_tac "sched_act_relation s s'" for s s')+
+             apply (thin_tac "ready_queues_relation s s'" for s s')+
+             apply (thin_tac "ghost_relation p s s'" for p s s')+
+             apply (thin_tac "cur_thread t = p" for t p)+
+             apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
+             apply (thin_tac "ctes_of s = t" for s t)+
+             apply (thin_tac "machine_state t = s" for s t)+
              apply (rule conjI)
               defer
               apply(rule conjI)
-               apply (thin_tac "ctes_of s = t" for s t)+
-               apply (thin_tac "pspace_relation s t" for s t)+
-               apply (thin_tac "machine_state t = s" for s t)+
                apply (case_tac "srcCTE")
                apply (rename_tac src_cap' src_node)
                apply (case_tac "rv'")
@@ -5416,7 +5417,7 @@ lemma cteInsert_corres:
                  apply(case_tac "ca=src")
                   apply(simp)
                   apply(clarsimp simp: modify_map_def)
-                  apply(fastforce split: if_split_asm)
+                  subgoal by(fastforce split: if_split_asm)
                  apply(case_tac "ca = dest")
                   apply(simp)
                   apply(rule impI)
@@ -5426,8 +5427,7 @@ lemma cteInsert_corres:
                       subgoal by(simp)
                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
                     subgoal by(clarsimp)
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
+                   subgoal by(drule cte_map_inj_eq'; simp)
                   apply(erule_tac x=src in allE)+
                   subgoal by(fastforce)
                  apply(simp)
@@ -5438,8 +5438,7 @@ lemma cteInsert_corres:
                      apply(simp_all)[4]
                  apply(clarsimp simp: modify_map_def const_def)
                  apply(simp split: if_split_asm)
-                       apply(drule cte_map_inj_eq')
-                            apply(simp_all)[2]
+                       apply(drule cte_map_inj_eq'; simp)
                       apply(drule_tac p="cte_map src" in valid_mdbD1')
                         subgoal by(simp)
                        subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5448,12 +5447,9 @@ lemma cteInsert_corres:
                      apply(case_tac z)
                      apply(erule_tac x="(aa, bb)" in allE)+
                      subgoal by(fastforce)
-                    apply(drule cte_map_inj_eq')
-                         apply(simp_all)[2]
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
+                    apply(drule cte_map_inj_eq'; simp)
+                   apply(drule cte_map_inj_eq'; simp)
+                  apply(drule cte_map_inj_eq'; simp)
                  apply(erule_tac x="(aa, bb)" in allE)+
                  subgoal by(fastforce)
 
@@ -5472,20 +5468,17 @@ lemma cteInsert_corres:
                      subgoal by(simp)
                     apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
                    subgoal by(clarsimp)
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
+                  apply(drule cte_map_inj_eq'; simp)
                  apply(erule_tac x=src in allE)+
                  subgoal by(fastforce)
                 apply(simp)
                 apply(rule impI)
                 apply(subgoal_tac "cte_at ca a")
                  prefer 2
-                 apply(rule cte_at_next_slot)
-                    apply(simp_all)[4]
+                 subgoal by (rule cte_at_next_slot; simp)
                 apply(clarsimp simp: modify_map_def const_def)
                 apply(simp split: if_split_asm)
-                      apply(drule cte_map_inj_eq')
-                           apply(simp_all)[2]
+                      apply(drule cte_map_inj_eq'; simp)
                      apply(drule_tac p="cte_map src" in valid_mdbD1')
                        subgoal by(simp)
                       subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5494,17 +5487,15 @@ lemma cteInsert_corres:
                     apply(case_tac z)
                     apply(erule_tac x="(aa, bb)" in allE)+
                     subgoal by(fastforce)
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
-                 apply(drule cte_map_inj_eq')
-                      apply(simp_all)[2]
+                   apply(drule cte_map_inj_eq'; simp)
+                  apply(drule cte_map_inj_eq'; simp)
+                 apply(drule cte_map_inj_eq'; simp)
                 apply(erule_tac x="(aa, bb)" in allE)+
                 subgoal by(fastforce)
 
                apply(subgoal_tac "mdb_insert_sib (ctes_of b) (cte_map src) (maskedAsFull src_cap' c')
-         src_node (cte_map dest) capability.NullCap dest_node c'")
+                                                 src_node (cte_map dest) capability.NullCap
+                                                 dest_node c'")
                 prefer 2
                 apply(simp add: mdb_insert_sib_def)
                 apply(rule mdb_insert_sib_axioms.intro)
@@ -5517,8 +5508,7 @@ lemma cteInsert_corres:
                 apply simp
                 apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
                   apply (rule derived_sameRegionAs)
-                   apply (subst is_derived_eq[symmetric], assumption,
-                  assumption, assumption, assumption, assumption)
+                   apply (subst is_derived_eq[symmetric]; assumption)
                   apply assumption
                  subgoal by (clarsimp simp: cte_wp_at_def is_derived_def is_cap_simps cap_master_cap_simps
                                      dest!:cap_master_cap_eqDs)
@@ -5566,12 +5556,10 @@ lemma cteInsert_corres:
                 apply(simp)
                 apply(subgoal_tac "cte_at ca a")
                  prefer 2
-                 apply(rule cte_at_next_slot)
-                    apply(simp_all)[4]
+                 subgoal by (rule cte_at_next_slot; simp)
                 apply(clarsimp simp: modify_map_def const_def)
                 apply(simp split: if_split_asm)
-                      apply(drule cte_map_inj_eq')
-                           apply(simp_all)[2]
+                      apply(drule cte_map_inj_eq'; simp)
                      apply(drule_tac p="cte_map src" in valid_mdbD1')
                         apply(simp)
                       subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5617,12 +5605,10 @@ lemma cteInsert_corres:
                apply(simp)
                apply(subgoal_tac "cte_at ca a")
                 prefer 2
-                apply(rule cte_at_next_slot)
-                   apply(simp_all)[4]
+                subgoal by (rule cte_at_next_slot; simp)
                apply(clarsimp simp: modify_map_def const_def)
                apply(simp split: if_split_asm)
-                     apply(drule cte_map_inj_eq')
-                          apply(simp_all)[2]
+                     apply(drule cte_map_inj_eq'; simp)
                     apply(drule_tac p="cte_map src" in valid_mdbD1')
                        subgoal by(simp)
                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
@@ -5631,15 +5617,11 @@ lemma cteInsert_corres:
                    apply(case_tac z)
                    apply(erule_tac x="(aa, bb)" in allE)+
                    subgoal by(fastforce)
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
-                 apply(drule cte_map_inj_eq')
-                      apply(simp_all)[2]
-                apply(drule cte_map_inj_eq')
-                     apply(simp_all)[2]
+                  apply(drule cte_map_inj_eq'; simp)
+                 apply(drule cte_map_inj_eq'; simp)
+                apply(drule cte_map_inj_eq'; simp)
                apply(erule_tac x="(aa, bb)" in allE)+
                subgoal by(fastforce)
-              apply (thin_tac "ctes_of t = t'" for t t')+
               apply (clarsimp simp: modify_map_apply)
               apply (clarsimp simp: revokable_relation_def  split: if_split)
               apply (rule conjI)
@@ -5684,19 +5666,15 @@ lemma cteInsert_corres:
               apply (erule (5) cte_map_inj)
 (* FIXME *)
 
-             apply (rule setUntypedCapAsFull_corres)
-                   apply simp+
+             apply (rule setUntypedCapAsFull_corres; simp)
             apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb
-               set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
-               setUntypedCapAsFull_cte_wp_at | clarsimp simp: cte_wp_at_caps_of_state| wps)+
+                      set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
+                      setUntypedCapAsFull_cte_wp_at | clarsimp simp: cte_wp_at_caps_of_state| wps)+
          apply (case_tac rv',clarsimp simp:cte_wp_at_ctes_of maskedAsFull_def)
         apply (wp getCTE_wp' get_cap_wp)+
     apply clarsimp
     subgoal by (fastforce elim: cte_wp_at_weakenE)
    apply (clarsimp simp: cte_wp_at'_def)
-  apply (thin_tac "ctes_of s = t" for s t)+
-  apply (thin_tac "pspace_relation s t" for s t)+
-  apply (thin_tac "machine_state t = s" for s t)+
   apply (case_tac "srcCTE")
   apply (rename_tac src_cap' src_node)
   apply (case_tac "rv'")
@@ -5730,7 +5708,7 @@ lemma cteInsert_corres:
   apply (subgoal_tac "descendants_of dest (cdt a) = {}")
    prefer 2
    apply (drule mdb_insert.dest_no_descendants)
-   subgoal by (fastforce simp add: cdt_relation_def simp del: split_paired_All)
+   subgoal by (fastforce simp add: cdt_relation_def)
   apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
    prefer 2
    apply (erule mdb_insert_abs.intro)
@@ -5743,8 +5721,7 @@ lemma cteInsert_corres:
    apply (intro impI allI)
    apply (unfold const_def)
    apply (frule(4) iffD1[OF is_derived_eq])
-   apply (drule_tac src_cap' = src_cap' in
-     maskedAsFull_revokable[where a = c',symmetric])
+   apply (drule_tac src_cap' = src_cap' in maskedAsFull_revokable[where a = c',symmetric])
    apply simp
    apply (subst mdb_insert_child.descendants)
     apply (rule mdb_insert_child.intro)
@@ -5765,11 +5742,11 @@ lemma cteInsert_corres:
                           dest!:cap_master_cap_eqDs)
     apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
      prefer 2
-     apply (simp add: revokable_relation_def del: split_paired_All)
+     apply (simp add: revokable_relation_def)
      apply (erule_tac x=src in allE)
      apply (erule impE)
       apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state cap_master_cap_simps
-       split: if_splits dest!:cap_master_cap_eqDs)
+                      split: if_splits dest!:cap_master_cap_eqDs)
       subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
      subgoal by simp
     subgoal by clarsimp
@@ -5779,7 +5756,7 @@ lemma cteInsert_corres:
           prefer 2
           apply assumption
          apply (simp_all)[6]
-   apply (simp add: cdt_relation_def split: if_split del: split_paired_All)
+   apply (simp add: cdt_relation_def split: if_split)
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
@@ -5807,7 +5784,7 @@ lemma cteInsert_corres:
                         dest!:cap_master_cap_eqDs)
    apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
     subgoal by simp
-   apply (simp add: revokable_relation_def del: split_paired_All)
+   apply (simp add: revokable_relation_def)
    apply (erule_tac x=src in allE)
    apply (erule impE)
     apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
@@ -5817,9 +5794,9 @@ lemma cteInsert_corres:
   apply (frule_tac p="(aa, bb)" in in_set_cap_cte_at)
   apply (rule conjI)
    apply (clarsimp simp: descendants_of_eq')
-   subgoal by (simp add: cdt_relation_def del: split_paired_All)
+   subgoal by (simp add: cdt_relation_def)
   apply (clarsimp simp: descendants_of_eq')
-  subgoal by (simp add: cdt_relation_def del: split_paired_All)
+  subgoal by (simp add: cdt_relation_def)
   done
 
 
@@ -6823,13 +6800,22 @@ lemma cteSwap_corres:
         | rule refl | clarsimp simp: put_def simp del: fun_upd_apply )+
   apply (simp cong: option.case_cong)
   apply (drule updateCap_stuff, elim conjE, erule(1) impE)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule in_getCTE, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
+  apply (drule (2) updateMDB_the_lot')
+     apply (erule (1) impE, assumption)
+    apply (fastforce simp only: no_0_modify_map)
+   apply assumption
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule in_getCTE, elim conjE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (simp only: pspace_relations_def refl)
+  apply (rule conjI, rule TrueI)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+
@@ -6840,7 +6826,28 @@ lemma cteSwap_corres:
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "ksCurDomain t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
-  apply (clarsimp simp: cte_wp_at_ctes_of in_set_cap_cte_at_swp cong: if_cong)
+  apply (thin_tac "ready_queues t = p" for t p)+
+  apply (thin_tac "cur_domain t = p" for t p)+
+  apply (thin_tac "idle_thread t = p" for t p)+
+  apply (thin_tac "work_units_completed t = p" for t p)+
+  apply (thin_tac "domain_index t = p" for t p)+
+  apply (thin_tac "domain_list t = p" for t p)+
+  apply (thin_tac "domain_time t = p" for t p)+
+  apply (thin_tac "ekheap t = p" for t p)+
+  apply (thin_tac "scheduler_action t = p" for t p)+
+  apply (thin_tac "ksArchState t = p" for t p)+
+  apply (thin_tac "gsCNodes t = p" for t p)+
+  apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+  apply (thin_tac "ksInterruptState t = p" for t p)+
+  apply (thin_tac "ksIdleThread t = p" for t p)+
+  apply (thin_tac "gsUserPages t = p" for t p)+
+  apply (thin_tac "ekheap_relation e p" for e p)+
+  apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
+  apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
+  apply (thin_tac "sched_act_relation s s'" for s s')+
+  apply (thin_tac "ready_queues_relation s s'" for s s')+
+  apply (simp only: simp_thms no_0_modify_map)
+  apply (clarsimp simp: cte_wp_at_ctes_of cong: if_cong)
   apply (thin_tac "ctes_of x = y" for x y)+
   apply (case_tac cte1)
   apply (rename_tac src_cap src_node)
@@ -6861,24 +6868,39 @@ lemma cteSwap_corres:
      apply (erule weak_derived_sym')
     apply (erule weak_derived_sym')
    apply assumption
-  apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv X64.data_at_def)
+   subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv X64.data_at_def)
+  apply (thin_tac "ksArchState t = p" for t p)+
+  apply (thin_tac "gsCNodes t = p" for t p)+
+  apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+  apply (thin_tac "ksInterruptState t = p" for t p)+
+  apply (thin_tac "ksIdleThread t = p" for t p)+
+  apply (thin_tac "gsUserPages t = p" for t p)+
+  apply (thin_tac "ekheap_relation e p" for e p)+
+  apply (thin_tac "ksMachineState t = p" for t p)+
+  apply (thin_tac "ksCurThread t = p" for t p)+
+  apply (thin_tac "ksReadyQueues t = p" for t p)+
+  apply (thin_tac "ksSchedulerAction t = p" for t p)+
+  apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomSchedule t = p" for t p)+
+  apply (thin_tac "ksCurDomain t = p" for t p)+
+  apply (thin_tac "ksDomainTime t = p" for t p)+
+  apply (thin_tac "pspace_relation s t" for s t)+
+  apply (thin_tac "ghost_relation h s t" for h s t)+
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2
    apply (clarsimp simp add: revokable_relation_def in_set_cap_cte_at
                    simp del: split_paired_All)
    apply (drule set_cap_caps_of_state_monad)+
-   apply (thin_tac "pspace_relation s t" for s t)+
    apply (simp del: split_paired_All split: if_split)
    apply (rule conjI)
     apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
     apply (drule(1) mdb_swap.revokable)
     apply (erule_tac x="dest" in allE)
     apply (erule impE)
-     apply (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
-    apply simp
+     subgoal by (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
+    subgoal by simp
    apply (clarsimp simp del: split_paired_All)
    apply (rule conjI)
     apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
@@ -6887,19 +6909,19 @@ lemma cteSwap_corres:
      apply (simp del: split_paired_All)
      apply (erule_tac x="src" in allE)
      apply (erule impE)
-      apply (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
-      apply simp
+      subgoal by (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
+     subgoal by simp
     apply (drule caps_of_state_cte_at)+
     apply (erule (5) cte_map_inj)
    apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
    apply (drule (1) mdb_swap.revokable)
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
     prefer 2
-    apply (clarsimp simp: null_filter_def split: if_splits)
+    subgoal by (clarsimp simp: null_filter_def split: if_splits)
    apply clarsimp
    apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map src")
     apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-     apply (clarsimp simp del: split_paired_All)
+     subgoal by (clarsimp simp del: split_paired_All)
     apply (drule caps_of_state_cte_at)+
     apply (drule null_filter_caps_of_stateD)+
     apply (erule cte_map_inj, erule cte_wp_cte_at, assumption+)
@@ -6908,7 +6930,7 @@ lemma cteSwap_corres:
    apply (erule cte_map_inj, erule cte_wp_cte_at, assumption+)
   apply (subgoal_tac "no_loops (ctes_of b)")
    prefer 2
-   apply (simp add: valid_mdb_ctes_def mdb_chain_0_no_loops)
+   subgoal by (simp add: valid_mdb_ctes_def mdb_chain_0_no_loops)
   apply (subgoal_tac "mdb_swap_abs (cdt a) src dest a")
    prefer 2
    apply (erule mdb_swap_abs.intro)
@@ -6918,7 +6940,7 @@ lemma cteSwap_corres:
    apply assumption
   apply (frule mdb_swap_abs''.intro)
   apply (drule_tac t="cdt_list (a)" in mdb_swap_abs'.intro)
-   apply (simp add: mdb_swap_abs'_axioms_def)
+   subgoal by (simp add: mdb_swap_abs'_axioms_def)
   apply (thin_tac "modify_map m f p p' = t" for m f p p' t)
   apply(rule conjI)
    apply (simp add: cdt_relation_def del: split_paired_All)
@@ -6962,7 +6984,7 @@ lemma cteSwap_corres:
           apply (erule cte_wp_at_weakenE, rule TrueI)
          apply (erule (1) descendants_of_cte_at)
         apply assumption+
-     apply simp
+     subgoal by simp
     apply (subst insert_minus_eq, assumption)
     apply clarsimp
     apply (subst insert_minus_eq [where x="cte_map dest"], assumption)
@@ -6970,7 +6992,7 @@ lemma cteSwap_corres:
        apply (erule (3) inj_on_descendants_cte_map)
       apply (rule subset_refl)
      apply clarsimp
-    apply auto[1]
+    subgoal by auto
    apply clarsimp
    apply (rule conjI, clarsimp)
     apply (rule conjI, clarsimp)
@@ -7062,12 +7084,10 @@ lemma cteSwap_corres:
                         cte_map (aa, bb) = mdbPrev src_node")
      apply(clarsimp)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
+     apply(rule cte_map_inj; simp?)
      apply(erule cte_wp_at_weakenE, simp)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
+     apply(rule cte_map_inj; simp?)
      apply(erule cte_wp_at_weakenE, simp)
     apply(frule mdb_swap.m_exists)
      apply(simp)
@@ -7076,8 +7096,7 @@ lemma cteSwap_corres:
       apply(clarsimp)
      apply(simp add: valid_mdb'_def)
     apply(clarsimp)
-   apply(rule cte_at_next_slot)
-      apply(simp_all)[4]
+   subgoal by (rule cte_at_next_slot; simp)
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a) = Some dest")
    apply(simp)
    apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
@@ -7090,12 +7109,10 @@ lemma cteSwap_corres:
       apply(clarsimp)
      apply(clarsimp simp: mdb_swap.prev_dest_src)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
+     apply(rule cte_map_inj; simp?)
      apply(erule cte_wp_at_weakenE, simp)
     apply(rule conjI)
-     apply(rule cte_map_inj)
-          apply(simp_all)[6]
+     apply(rule cte_map_inj; simp?)
      apply(erule cte_wp_at_weakenE, simp)
     apply(frule mdb_swap.m_exists)
      apply(simp)
@@ -7104,8 +7121,7 @@ lemma cteSwap_corres:
       apply(clarsimp)
      apply(simp add: valid_mdb'_def)
     apply(clarsimp)
-   apply(rule cte_at_next_slot)
-      apply(simp_all)[4]
+   subgoal by (rule cte_at_next_slot; simp)
   apply(simp)
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a)")
    apply(simp)
@@ -7119,12 +7135,10 @@ lemma cteSwap_corres:
                       cte_map (aa, bb) \<noteq> mdbPrev dest_node")
     apply(clarsimp)
    apply(rule conjI)
-    apply(rule cte_map_inj)
-         apply(simp_all)[6]
+    apply(rule cte_map_inj; simp?)
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
-    apply(rule cte_map_inj)
-         apply simp_all[6]
+    apply(rule cte_map_inj; simp?)
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
     apply(frule mdb_swap.m_exists)
@@ -7134,9 +7148,8 @@ lemma cteSwap_corres:
       subgoal by (clarsimp)
      apply(simp add: valid_mdb'_def)
     apply(clarsimp)
-    apply(drule cte_map_inj_eq)
-         apply(rule cte_at_next_slot')
-            apply(simp_all)[9]
+    apply(drule cte_map_inj_eq; simp?)
+     subgoal by (rule cte_at_next_slot'; simp)
     apply(erule cte_wp_at_weakenE, simp)
    apply(frule mdb_swap.m_exists)
     apply(simp)
@@ -7145,13 +7158,10 @@ lemma cteSwap_corres:
      apply(clarsimp)
     apply(simp add: valid_mdb'_def)
    apply(clarsimp)
-   apply(drule cte_map_inj_eq)
-         apply(rule cte_at_next_slot')
-           apply(simp_all)[9]
-    apply(erule cte_wp_at_weakenE, simp)
-  apply(rule cte_at_next_slot)
-     apply(simp_all)
-     done
+   apply(drule cte_map_inj_eq; simp?)
+    subgoal by (rule cte_at_next_slot'; simp)
+   apply(erule cte_wp_at_weakenE, simp)
+  by (rule cte_at_next_slot; simp)
 
 
 lemma capSwapForDelete_corres:

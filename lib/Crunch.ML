@@ -12,7 +12,6 @@ structure CrunchTheoryData = Theory_Data
          -> string list -> local_theory -> local_theory)
         * (string list -> string list -> theory -> theory)) Symtab.table
      val empty = Symtab.empty
-     val extend = I
      val merge = Symtab.merge (fn _ => true);
    end);
 

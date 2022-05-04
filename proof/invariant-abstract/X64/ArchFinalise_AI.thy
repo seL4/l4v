@@ -94,7 +94,7 @@ lemma delete_asid_pool_invs[wp]:
 
 lemma delete_asid_invs[wp]:
   "\<lbrace>invs\<rbrace> delete_asid asid pd \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: delete_asid_def cong: option.case_cong del: set_arch_obj_simps(5))
+  apply (simp add: delete_asid_def cong: option.case_cong)
   apply (wpsimp wp: set_asid_pool_invs_unmap)
   done
 
@@ -150,11 +150,10 @@ lemma delete_asid_unmapped[wp]:
                 VSRef (ucast (asid_high_bits_of asid)) None]  \<rhd> pd) s\<rbrace>"
   apply (simp add: delete_asid_def
                    mask_asid_low_bits_ucast_ucast
-              del: set_arch_obj_simps(5)
              cong: option.case_cong)
   apply (wp set_asid_pool_unmap hoare_vcg_all_lift hoare_vcg_imp_lift hw_asid_invalidate_vs_lookup
            | wpc
-           | simp add: if_apply_def2 del: set_arch_obj_simps(5) split del: if_splits)+
+           | simp add: if_apply_def2 split del: if_split)+
   apply (intro allI conjI impI)
     apply (fastforce simp: vs_lookup_def vs_asid_refs_def up_ucast_inj_eq
                    dest!: graph_ofD vs_lookup1_rtrancl_iterations
@@ -347,7 +346,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
                       | (match conclusion in "{x} \<times> _ = {x} \<times> _" for x
                                      \<Rightarrow> \<open>fastforce simp: unat_of_bl_length\<close>))+)[11]
   apply (simp add: arch_finalise_cap_def split del: if_split)
-  apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def simp_thms)+
+  apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
 crunch typ_at_arch[wp,Finalise_AI_asms]: arch_finalise_cap, prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
@@ -510,7 +509,7 @@ lemma suspend_unlive':
       suspend t
    \<lbrace>\<lambda>rv. obj_at (Not \<circ> live) t\<rbrace>"
   apply (simp add: suspend_def set_thread_state_def set_object_def get_object_def)
-  supply hoare_vcg_if_split[wp_split del] if_splits[split del]
+  supply hoare_vcg_if_split[wp_split del] if_split[split del]
   apply (wp | simp only: obj_at_exst_update)+
      apply (simp add: obj_at_def live_def hyp_live_def)
      apply (rule_tac Q="\<lambda>_. bound_tcb_at ((=) None) t" in hoare_strengthen_post)
@@ -1234,7 +1233,6 @@ lemma replaceable_or_arch_update_pg:
   done
 
 crunch valid_cap: invalidate_page_structure_cache_asid, hw_asid_invalidate "valid_cap cap"
-crunch valid_objs[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate "valid_objs"
 crunch valid_asid_table[wp]: do_machine_op
   "\<lambda>s. valid_asid_table (x64_asid_table (arch_state s)) s"
 
@@ -1256,9 +1254,6 @@ lemma (* finalise_cap_invs *)[Finalise_AI_asms]:
      apply (wp deleting_irq_handler_invs  | simp | intro conjI impI)+
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
-
-crunch irq_node[wp, Finalise_AI_asms]: suspend "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
 
 lemma (* finalise_cap_irq_node *)[Finalise_AI_asms]:
 "\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> finalise_cap a b \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
@@ -1542,8 +1537,7 @@ lemma set_asid_pool_invs_table:
        set_asid_pool p Map.empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
                  x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def
-              del: set_asid_pool_def)
+  apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_empty_table_objs valid_ioports_lift
             valid_irq_handlers_lift set_asid_pool_empty_table_lookup
@@ -1586,20 +1580,16 @@ lemma delete_asid_pool_unmapped2:
 crunch x64_global_pml4[wp]: hw_asid_invalidate, invalidate_page_structure_cache_asid
            "\<lambda>s. P (x64_global_pml4(arch_state s))"
 
-crunch global_refs_invs[wp]: invalidate_page_structure_cache_asid
-           "\<lambda>s. P (global_refs s)"
-
 lemma page_table_pte_atE:
   "\<lbrakk> page_table_at p s; x < 2 ^ pt_bits;
              (x >> word_size_bits) << word_size_bits = x; pspace_aligned s \<rbrakk>
        \<Longrightarrow> pte_at (p + x) s"
   apply (drule page_table_pte_atI[where x="x >> word_size_bits"], simp_all)
   apply (subst mask_eq_iff_w2p[symmetric])
-   apply (simp add: pt_bits_def pageBits_def word_size bit_simps)
+   apply (simp add: pt_bits_def word_size bit_simps)
   apply (rule word_eqI)
-  apply (simp add: nth_shiftr word_size)
-  apply (drule_tac x="n+3" in word_eqD [OF less_mask_eq])
-  apply (simp add: word_size word_size_bits_def)
+  apply (clarsimp simp add: nth_shiftr)
+  apply (drule_tac x="word_size_bits + n" in word_eqD [OF less_mask_eq])
   apply (auto simp: bit_simps)
   done
 
@@ -1649,7 +1639,7 @@ lemma cap_insert_ioports_not:
   apply (simp add: cap_insert_def)
   apply (wp get_cap_wp set_cap_ioports_no_new_ioports set_untyped_cap_as_full_ioports
             set_untyped_cap_as_full_cte_wp_at
-         | wpc | simp split del: if_splits)+
+         | wpc | simp split del: if_split)+
   apply (case_tac cap; clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
   apply (case_tac x12; clarsimp)
   done

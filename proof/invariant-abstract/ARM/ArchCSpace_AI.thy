@@ -420,9 +420,6 @@ lemma tcb_cnode_index_def2 [CSpace_AI_assms]:
   apply (rule nth_equalityI)
    apply (simp add: word_bits_def)
   apply (clarsimp simp: to_bl_nth word_size word_bits_def)
-  apply (subst of_nat_ucast[where 'a=32 and 'b=3])
-   apply (simp add: is_down_def target_size_def source_size_def word_size)
-  apply (simp add: nth_ucast del: unsigned_of_nat)
   apply fastforce
   done
 

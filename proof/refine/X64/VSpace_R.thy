@@ -39,16 +39,8 @@ lemma findVSpaceForASID_vs_at_wp:
   apply (subst (asm) inv_f_f, rule inj_onI, simp)
   by fastforce
 
-lemma findVSpaceForASIDAssert_vs_at_wp:
-  "\<lbrace>(\<lambda>s. \<forall>pd. vspace_at_asid' pd asid  s \<longrightarrow> P pd s)\<rbrace>
-       findVSpaceForASIDAssert asid \<lbrace>P\<rbrace>"
-  apply (simp add: findVSpaceForASIDAssert_def const_def
-                   checkPML4At_def)
-  apply (rule hoare_pre, wp getPDE_wp findVSpaceForASID_vs_at_wp)
-  apply simp
-  done
-
-crunch inv[wp]: findVSpaceForASIDAssert "P"
+crunches findVSpaceForASID, haskell_fail
+  for inv[wp]: "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pml4:
@@ -510,7 +502,7 @@ lemma flushTable_corres:
       apply (rule subst[of "0x1FF" "-1::9 word"], simp)
       apply (rule corres_mapM_x[OF _ _ _ _ subset_refl])
          apply (frule zip_map_rel[where f=ucast and g=id, simplified])
-          apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self)
+          apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self unsigned_of_nat)
          apply (rule corres_guard_imp)
            apply (rule corres_split_deprecated[OF _ getObject_PTE_corres''])
               apply (case_tac rv; case_tac rv'; simp)

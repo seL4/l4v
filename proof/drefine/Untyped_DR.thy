@@ -1271,7 +1271,6 @@ lemma reset_untyped_cap_corres:
           and (\<lambda>s. descendants_of cref (cdt s) = {}))
      (Untyped_D.reset_untyped_cap (transform_cslot_ptr cref))
      (Retype_A.reset_untyped_cap cref)"
-  including no_take_bit
   supply if_cong[cong]
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
@@ -1321,10 +1320,10 @@ lemma reset_untyped_cap_corres:
                apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
               apply simp
              apply (wp | simp add: unless_def)+
-         apply (rule_tac F="\<not> (is_device_untyped_cap capa \<or> bits_of capa < reset_chunk_bits)
+         apply (rule_tac F="\<not> (is_device_untyped_cap capa \<or> bits_of capa < resetChunkBits)
                    \<and> (\<exists>s. s \<turnstile> capa)"
                in corres_gen_asm2)
-         apply (rule_tac x="map (\<lambda>i. free_range_of_untyped (i * 2 ^ reset_chunk_bits)
+         apply (rule_tac x="map (\<lambda>i. free_range_of_untyped (i * 2 ^ resetChunkBits)
                    (bits_of capa) (obj_ref_of capa)) xs" for xs
            in select_pick_corres_asm)
           prefer 2
@@ -1345,8 +1344,8 @@ lemma reset_untyped_cap_corres:
                     apply wp+
                   apply (clarsimp simp add: is_cap_simps cap_aligned_def bits_of_def
                                             aligned_add_aligned is_aligned_shiftl)
-                 apply (simp add: reset_chunk_bits_def)
-                apply (simp add: reset_chunk_bits_def word_bits_def)
+                 apply (simp add: Kernel_Config.resetChunkBits_def)
+                apply (simp add: Kernel_Config.resetChunkBits_def word_bits_def)
                apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
                          preemption_point_inv' set_cap_no_overlap
                          update_untyped_cap_valid_objs set_cap_idle

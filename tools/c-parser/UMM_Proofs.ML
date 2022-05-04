@@ -23,7 +23,6 @@ end
 structure UMM_Proof_Theorems = Theory_Data (
       type T = thm list Symtab.table;
       val empty = Symtab.empty
-      val extend = I
       val merge = Symtab.join (fn _ => fn (lhs, rhs) =>
         sort_distinct Thm.thm_ord (lhs @ rhs))
     )
