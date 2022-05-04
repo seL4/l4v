@@ -71,20 +71,16 @@ text \<open>The base address of the table a page table entry at p is in (assumin
 locale_abbrev table_base :: "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
   "table_base is_vspace p \<equiv> p && ~~mask (pt_bits is_vspace)"
 
-text \<open>The index within the page table that a page table entry at p addresses\<close>
-locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> 'a::len word" where
-  "table_index is_vspace p \<equiv> ucast (p && mask (pt_bits is_vspace) >> pte_bits)"
+text \<open>The index within the page table that a page table entry at p addresses. We return a
+  @{typ machine_word}, which is the slice of the provided address that represents the index in the
+  table of the specified table type.\<close>
+locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> machine_word" where
+  "table_index is_vspace p \<equiv> p && mask (pt_bits is_vspace) >> pte_bits"
 
-locale_abbrev vsroot_index :: "obj_ref \<Rightarrow> vs_index" where
-  "vsroot_index \<equiv> table_index True"
-
-locale_abbrev ptable_index :: "obj_ref \<Rightarrow> pt_index" where
-  "ptable_index \<equiv> table_index False"
-
-definition pt_pte :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte" where
-  "pt_pte pt p \<equiv> case pt of
-                   VSRootPT vs \<Rightarrow> vs (vsroot_index p)
-                 | NormalPT pt \<Rightarrow> pt (ptable_index p)"
+text \<open>Use an index computed by @{const table_index} and apply it to a page table. Bits higher than
+  the table index width will be ignored.\<close>
+definition pt_apply :: "pt \<Rightarrow> machine_word \<Rightarrow> pte" where
+  "pt_apply pt idx \<equiv> case pt of NormalPT npt \<Rightarrow> npt (ucast idx) | VSRootPT vs \<Rightarrow> vs (ucast idx)"
 
 text \<open>Extract a PTE from the page table of a specific level\<close>
 definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
@@ -92,7 +88,7 @@ definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<
       oassert (is_aligned p pte_bits);
       pt \<leftarrow> oapply (table_base is_vspace p);
       oassert (is_vspace = is_VSRootPT pt);
-      oreturn $ pt_pte pt p
+      oreturn $ pt_apply pt (table_index is_vspace p)
    }"
 
 locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> bool \<Rightarrow> obj_ref \<rightharpoonup> pte" where
@@ -103,17 +99,20 @@ text \<open>The following function takes a pointer to a PTE in kernel memory and
 locale_abbrev get_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
   "get_pte is_vspace \<equiv> gets_map (swp ptes_of is_vspace)"
 
-definition pt_upd :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> pt" where
-  "pt_upd pt p pte \<equiv> case pt of
-                       VSRootPT vs \<Rightarrow> VSRootPT (vs(vsroot_index p := pte))
-                     | NormalPT pt \<Rightarrow> NormalPT (pt(ptable_index p := pte))"
+
+text \<open>The update function that corresponds to @{const pt_apply}. Also expects an index computed
+  with @{const table_index} for the correct page table type.\<close>
+definition pt_upd :: "pt \<Rightarrow> machine_word \<Rightarrow> pte \<Rightarrow> pt" where
+  "pt_upd pt idx pte \<equiv> case pt of
+                         VSRootPT vs \<Rightarrow> VSRootPT (vs(ucast idx := pte))
+                       | NormalPT pt \<Rightarrow> NormalPT (pt(ucast idx := pte))"
 
 definition store_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "store_pte is_vspace p pte \<equiv> do
      assert (is_aligned p pte_bits);
      base \<leftarrow> return $ table_base is_vspace p;
      pt \<leftarrow> get_pt base;
-     set_pt base (pt_upd pt p pte)
+     set_pt base (pt_upd pt (table_index is_vspace p) pte)
    od"
 
 
