@@ -41,16 +41,16 @@ defs Arch_createNewCaps_def:
         | SmallPageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev 0 ARMSmallPage
         | LargePageObject \<Rightarrow>
-            createNewFrameCaps regionBase numObjects dev (ptTranslationBits False) ARMLargePage
+            createNewFrameCaps regionBase numObjects dev (ptTranslationBits NormalPT_T) ARMLargePage
         | HugePageObject \<Rightarrow>
-            createNewFrameCaps regionBase numObjects dev (ptTranslationBits False + ptTranslationBits False) ARMHugePage
+            createNewFrameCaps regionBase numObjects dev (2 * ptTranslationBits NormalPT_T) ARMHugePage
         | VSpaceObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects (ptBits True) (makeObject::pte)
-              (\<lambda>base addr. PageTableCap base True addr)
+            createNewTableCaps regionBase numObjects (ptBits VSRootPT_T) (makeObject::pte)
+              (\<lambda>base addr. PageTableCap base VSRootPT_T addr)
               (\<lambda>pts. return ())
         | PageTableObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects (ptBits False) (makeObject::pte)
-              (\<lambda>base addr. PageTableCap base False addr)
+            createNewTableCaps regionBase numObjects (ptBits NormalPT_T) (makeObject::pte)
+              (\<lambda>base addr. PageTableCap base NormalPT_T addr)
               (\<lambda>pts. return ())
         | VCPUObject \<Rightarrow> (do
             addrs \<leftarrow> createObjects regionBase numObjects (injectKO (makeObject :: vcpu)) 0;
