@@ -29,6 +29,8 @@ text \<open>
   along with capabilities for virtual memory mappings.
 \<close>
 
+datatype pt_type = VSRoot_T | Normal_T
+
 datatype arch_cap =
     ASIDPoolCap
       (acap_obj : obj_ref)
@@ -42,7 +44,7 @@ datatype arch_cap =
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | PageTableCap
       (acap_obj : obj_ref)
-      (acap_is_vspace : bool)
+      (acap_pt_type : pt_type)
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | VCPUCap
       (acap_obj : obj_ref)
@@ -135,6 +137,8 @@ datatype pt =
     VSRootPT (the_vs : "vs_index \<Rightarrow> pte")
   | NormalPT (the_pt : "pt_index \<Rightarrow> pte")
 
+definition pt_type :: "pt \<Rightarrow> pt_type" where
+  "pt_type pt \<equiv> case pt of VSRootPT _ \<Rightarrow> VSRootPT_T | NormalPT _ \<Rightarrow> NormalPT_T"
 
 subsection \<open>VCPU\<close>
 
@@ -200,17 +204,17 @@ definition vcpu_of :: "arch_kernel_obj \<rightharpoonup> vcpu" where
 definition pte_bits :: nat where
   "pte_bits = word_size_bits"
 
-definition table_size :: "bool \<Rightarrow> nat" where
-  "table_size is_toplevel = ptTranslationBits is_toplevel + pte_bits"
+definition table_size :: "pt_type \<Rightarrow> nat" where
+  "table_size pt_t = ptTranslationBits (pt_t = VSRoot_T) + pte_bits" (* FIXME AARCH64: introduce levels in Haskell, include from there *)
 
-definition pt_bits :: "bool \<Rightarrow> nat" where
-  "pt_bits is_vspace \<equiv> table_size is_vspace"
+definition pt_bits :: "pt_type \<Rightarrow> nat" where
+  "pt_bits pt_t \<equiv> table_size pt_t"
 
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
-| "arch_obj_size (PageTableCap _ is_vspace _ ) = table_size is_vspace"
+| "arch_obj_size (PageTableCap _ pt_t _ ) = table_size pt_t"
 | "arch_obj_size (VCPUCap _) = vcpuBits"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
@@ -237,7 +241,7 @@ definition untyped_max_bits :: nat where
 
 primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat" where
   "arch_kobj_size (ASIDPool _) = pageBits"
-| "arch_kobj_size (PageTable pt) = table_size (is_VSRootPT pt)"
+| "arch_kobj_size (PageTable pt) = table_size (pt_type pt)"
 | "arch_kobj_size (DataPage _ sz) = pageBitsForSize sz"
 | "arch_kobj_size (VCPU _) = vcpuBits"
 
@@ -271,8 +275,8 @@ definition arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow>
      SmallPageObj \<Rightarrow> FrameCap r vm_read_write ARMSmallPage dev None
    | LargePageObj \<Rightarrow> FrameCap r vm_read_write ARMLargePage dev None
    | HugePageObj  \<Rightarrow> FrameCap r vm_read_write ARMHugePage dev None
-   | PageTableObj \<Rightarrow> PageTableCap r False None
-   | VSpaceObj    \<Rightarrow> PageTableCap r True None
+   | PageTableObj \<Rightarrow> PageTableCap r NormalPT_T None
+   | VSpaceObj    \<Rightarrow> PageTableCap r VSRootPT_T None
    | VCPUObj      \<Rightarrow> VCPUCap r
    | ASIDPoolObj  \<Rightarrow> ASIDPoolCap r 0" (* unused, but nicer properties when defined *)
 
@@ -305,6 +309,9 @@ definition asid_pool_level :: vm_level where
 definition max_pt_level :: vm_level where
   "max_pt_level = asid_pool_level - 1"
 
+definition level_type :: "vm_level \<Rightarrow> pt_type" where
+  "level_type level \<equiv> if level = max_pt_level then VSRootPT_T else NormalPT_T"
+
 end
 
 qualify AARCH64_A (in Arch)
@@ -329,14 +336,14 @@ section "Type declarations for invariant definitions"
 
 datatype aa_type =
     AASIDPool
-  | APageTable (pt_is_vspace : bool)
+  | APageTable (a_pt_t : pt_type)
   | AVCPU
   | AUserData vmpage_size
   | ADeviceData vmpage_size
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type" where
   "aa_type ao \<equiv> case ao of
-     PageTable pt    \<Rightarrow> APageTable (is_VSRootPT pt)
+     PageTable pt    \<Rightarrow> APageTable (pt_type pt)
    | DataPage dev sz \<Rightarrow> if dev then ADeviceData sz else AUserData sz
    | ASIDPool _      \<Rightarrow> AASIDPool
    | VCPU _          \<Rightarrow> AVCPU"

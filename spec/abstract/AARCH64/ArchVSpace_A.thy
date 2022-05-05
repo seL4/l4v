@@ -226,7 +226,7 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" w
      thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
      thread_root \<leftarrow> get_cap thread_root_slot;
      (case thread_root of
-        ArchObjectCap (PageTableCap pt True (Some (asid, _))) \<Rightarrow> doE
+        ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid, _))) \<Rightarrow> doE
           pt' \<leftarrow> find_vspace_for_asid asid;
           whenE (pt \<noteq> pt') $ throwError InvalidRoot;
           liftE $ arm_context_switch pt asid
@@ -276,7 +276,7 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (pt_slot, level) \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
-     liftE $ store_pte (level = max_pt_level) pt_slot InvalidPTE;
+     liftE $ store_pte (level_type level) pt_slot InvalidPTE;
      liftE $ do_machine_op $ cleanByVA_PoU pt_slot (addrFromPPtr pt_slot);
      liftE $ invalidate_tlb_by_asid asid
    odE <catch> (K $ return ())"
@@ -319,9 +319,9 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
-     pte \<leftarrow> liftE $ get_pte (lev = max_pt_level) slot;
+     pte \<leftarrow> liftE $ get_pte (level_type lev) slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
-     liftE $ store_pte (lev = max_pt_level) slot InvalidPTE;
+     liftE $ store_pte (level_type lev) slot InvalidPTE;
      liftE $ do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      liftE $ invalidate_tlb_by_asid_va asid vptr
    odE <catch> (K $ return ())"
@@ -352,11 +352,11 @@ definition arch_finalise_cap :: "arch_cap \<Rightarrow> bool \<Rightarrow> (cap 
        delete_asid_pool b ptr;
        return (NullCap, NullCap)
      od
-   | (PageTableCap ptr True (Some (a, v)), True) \<Rightarrow> do
+   | (PageTableCap ptr VSRootPT_T (Some (a, v)), True) \<Rightarrow> do
        delete_asid a ptr;
        return (NullCap, NullCap)
      od
-   | (PageTableCap ptr False (Some (a, v)), True) \<Rightarrow> do
+   | (PageTableCap ptr NormalPT_T (Some (a, v)), True) \<Rightarrow> do
        unmap_page_table a v ptr;
        return (NullCap, NullCap)
      od
@@ -376,7 +376,7 @@ text \<open>
   the AARCH64 architecture.\<close>
 definition is_valid_vtable_root :: "cap \<Rightarrow> bool" where
   "is_valid_vtable_root c \<equiv>
-     case c of ArchObjectCap (PageTableCap _ True (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
+     case c of ArchObjectCap (PageTableCap _ VSRootPT_T (Some _)) \<Rightarrow> True | _ \<Rightarrow> False"
 
 text \<open>Make numeric value of @{const msg_align_bits} visible.\<close>
 lemmas msg_align_bits = msg_align_bits'[unfolded word_size_bits_def, simplified]

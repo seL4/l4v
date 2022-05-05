@@ -68,14 +68,14 @@ definition set_pt :: "obj_ref \<Rightarrow> pt \<Rightarrow> (unit,'z::state_ext
    od"
 
 text \<open>The base address of the table a page table entry at p is in (assuming alignment)\<close>
-locale_abbrev table_base :: "bool \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
-  "table_base is_vspace p \<equiv> p && ~~mask (pt_bits is_vspace)"
+locale_abbrev table_base :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> obj_ref" where
+  "table_base pt_t p \<equiv> p && ~~mask (pt_bits pt_t)"
 
 text \<open>The index within the page table that a page table entry at p addresses. We return a
   @{typ machine_word}, which is the slice of the provided address that represents the index in the
   table of the specified table type.\<close>
-locale_abbrev table_index :: "bool \<Rightarrow> obj_ref \<Rightarrow> machine_word" where
-  "table_index is_vspace p \<equiv> p && mask (pt_bits is_vspace) >> pte_bits"
+locale_abbrev table_index :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> machine_word" where
+  "table_index pt_t p \<equiv> p && mask (pt_bits pt_t) >> pte_bits"
 
 text \<open>Use an index computed by @{const table_index} and apply it to a page table. Bits higher than
   the table index width will be ignored.\<close>
@@ -83,21 +83,23 @@ definition pt_apply :: "pt \<Rightarrow> machine_word \<Rightarrow> pte" where
   "pt_apply pt idx \<equiv> case pt of NormalPT npt \<Rightarrow> npt (ucast idx) | VSRootPT vs \<Rightarrow> vs (ucast idx)"
 
 text \<open>Extract a PTE from the page table of a specific level\<close>
-definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
-  "level_pte_of is_vspace p \<equiv> do {
+definition level_pte_of :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rightharpoonup> pte" where
+  "level_pte_of pt_t p \<equiv> do {
       oassert (is_aligned p pte_bits);
-      pt \<leftarrow> oapply (table_base is_vspace p);
-      oassert (is_vspace = is_VSRootPT pt);
-      oreturn $ pt_apply pt (table_index is_vspace p)
+      pt \<leftarrow> oapply (table_base pt_t p);
+      oassert (pt_type pt = pt_t);
+      oreturn $ pt_apply pt (table_index pt_t p)
    }"
 
-locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> bool \<Rightarrow> obj_ref \<rightharpoonup> pte" where
-  "ptes_of s is_vspace p \<equiv> level_pte_of is_vspace p (pts_of s)"
+type_synonym ptes_of = "pt_type \<Rightarrow> obj_ref \<rightharpoonup> pte"
+
+locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> ptes_of" where
+  "ptes_of s pt_t p \<equiv> level_pte_of pt_t p (pts_of s)"
 
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
-locale_abbrev get_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
-  "get_pte is_vspace \<equiv> gets_map (swp ptes_of is_vspace)"
+locale_abbrev get_pte :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
+  "get_pte pt_t \<equiv> gets_map (swp ptes_of pt_t)"
 
 
 text \<open>The update function that corresponds to @{const pt_apply}. Also expects an index computed
@@ -107,12 +109,12 @@ definition pt_upd :: "pt \<Rightarrow> machine_word \<Rightarrow> pte \<Rightarr
                          VSRootPT vs \<Rightarrow> VSRootPT (vs(ucast idx := pte))
                        | NormalPT pt \<Rightarrow> NormalPT (pt(ucast idx := pte))"
 
-definition store_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "store_pte is_vspace p pte \<equiv> do
+definition store_pte :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "store_pte pt_t p pte \<equiv> do
      assert (is_aligned p pte_bits);
-     base \<leftarrow> return $ table_base is_vspace p;
+     base \<leftarrow> return $ table_base pt_t p;
      pt \<leftarrow> get_pt base;
-     set_pt base (pt_upd pt (table_index is_vspace p) pte)
+     set_pt base (pt_upd pt (table_index pt_t p) pte)
    od"
 
 
@@ -152,12 +154,12 @@ text \<open>
   page is reached.
 \<close>
 fun pt_walk ::
-  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> ptes_of \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "pt_walk level bot_level pt_ptr vptr = do {
      if bot_level < level
      then do {
-       pte \<leftarrow> oapply2 (level = max_pt_level) (pt_slot_offset level pt_ptr vptr);
+       pte \<leftarrow> oapply2 (level_type level) (pt_slot_offset level pt_ptr vptr);
        if is_PageTablePTE pte
          then pt_walk (level - 1) bot_level (pptr_from_pte pte) vptr
          else oreturn (level, pt_ptr)
@@ -174,15 +176,13 @@ text \<open>
   the slot may also be a @{const PageTablePTE}.
 \<close>
 definition pt_lookup_slot_from_level ::
-  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
-  where
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> ptes_of \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "pt_lookup_slot_from_level level bot_level pt_ptr vptr = do {
      (level', pt_ptr') \<leftarrow> pt_walk level bot_level pt_ptr vptr;
      oreturn (level', pt_slot_offset level' pt_ptr' vptr)
    }"
 
-definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
-  where
+definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> ptes_of \<Rightarrow> (vm_level \<times> obj_ref) option" where
   "pt_lookup_slot = pt_lookup_slot_from_level max_pt_level 0"
 
 text \<open>Returns the slot that points to @{text target_pt_ptr}\<close>
@@ -192,7 +192,7 @@ fun pt_lookup_from_level ::
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
-     pte <- liftE $ gets_the $ oapply slot o swp ptes_of (level = max_pt_level);
+     pte <- liftE $ gets_the $ oapply slot o swp ptes_of (level_type level);
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
