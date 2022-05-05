@@ -125,13 +125,13 @@ section "Basic Operations"
 definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
   "pt_bits_left level =
     (if level = asid_pool_level
-     then ptTranslationBits True + ptTranslationBits False * size max_pt_level
-     else ptTranslationBits False * size level)
+     then ptTranslationBits VSRootPT_T + ptTranslationBits NormalPT_T * size max_pt_level
+     else ptTranslationBits NormalPT_T * size level)
     + pageBits"
 
 definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word" where
   "pt_index level vptr \<equiv>
-     (vptr >> pt_bits_left level) && mask (ptTranslationBits (level = max_pt_level))"
+     (vptr >> pt_bits_left level) && mask (ptTranslationBits (level_type level))"
 
 
 locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
