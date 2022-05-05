@@ -310,6 +310,9 @@ definition max_pt_level :: vm_level where
 definition level_type :: "vm_level \<Rightarrow> pt_type" where
   "level_type level \<equiv> if level = max_pt_level then VSRootPT_T else NormalPT_T"
 
+declare [[coercion_enabled]]
+declare [[coercion level_type]]
+
 end
 
 qualify AARCH64_A (in Arch)

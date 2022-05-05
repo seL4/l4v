@@ -377,7 +377,7 @@ definition vs_lookup_target ::
      (level, slot) \<leftarrow> vs_lookup_slot bot_level asid vref;
      ptr \<leftarrow> if level = asid_pool_level
             then vspace_for_pool slot asid \<circ> asid_pools_of
-            else pte_refs_of (level_type level) slot;
+            else pte_refs_of level slot;
      oreturn (level, ptr)
   }"
 
@@ -1501,7 +1501,7 @@ lemma max_pt_bits_left[simp]:
 
 lemma pt_bits_left_plus1:
   "level \<le> max_pt_level \<Longrightarrow>
-   pt_bits_left (level + 1) = ptTranslationBits (level_type level) + pt_bits_left level"
+   pt_bits_left (level + 1) = ptTranslationBits level + pt_bits_left level"
   by (auto simp: pt_bits_left_def intro: arg_cong)
 
 lemma vref_for_level_idem:
@@ -1616,7 +1616,7 @@ lemma pte_refs_of_eqI:
   by (clarsimp simp: opt_map_def)
 
 lemma pt_index_mask_pt_bits[simp]:
-  "(pt_index level vref << pte_bits) && mask (pt_bits (level_type level)) =
+  "(pt_index level vref << pte_bits) && mask (pt_bits level) =
    pt_index level vref << pte_bits"
   by (simp add: pt_index_def pt_bits_def table_size_def shiftl_over_and_dist mask_shiftl_decompose
                 bit.conj_ac)
@@ -1627,8 +1627,8 @@ lemma table_base_offset_id:
   by (simp add: is_aligned_mask_out_add_eq mask_eq_x_eq_0[symmetric])
 
 lemma table_base_pt_slot_offset[simp]:
-  "is_aligned pt_ptr (pt_bits (level_type level)) \<Longrightarrow>
-   table_base (level_type level) (pt_slot_offset level pt_ptr vref) = pt_ptr"
+  "is_aligned pt_ptr (pt_bits level) \<Longrightarrow>
+   table_base level (pt_slot_offset level pt_ptr vref) = pt_ptr" for level::vm_level
   by (simp add: pt_slot_offset_def table_base_offset_id)
 
 lemma pt_slot_offset_0[simp]:
@@ -1640,7 +1640,7 @@ lemma pt_slot_offset_or_def:
    \<Longrightarrow> pt_slot_offset level pt_ptr vptr = pt_ptr || (pt_index level vptr << pte_bits)"
   unfolding pt_slot_offset_def
   apply (rule is_aligned_add_or, assumption)
-  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits (level_type level)")
+  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits level")
    prefer 2
    apply (simp add: pt_index_def)
    apply (rule and_mask_less', simp add: bit_simps and_mask_less')
@@ -1858,7 +1858,7 @@ lemma is_aligned_table_base_pte_bits[simp]:
   by (simp add: bit_simps is_aligned_neg_mask)
 
 lemma pt_index_bounded[simp, intro!]:
-  "pt_index level vref \<le> mask (ptTranslationBits (level_type level))"
+  "pt_index level vref \<le> mask (ptTranslationBits level)"
   by (simp add: pt_index_def word_and_le1)
 
 lemma table_index_plus:
@@ -1869,8 +1869,8 @@ lemma table_index_plus:
    by (subst word_plus_and_or_coroll; word_bitwise; simp add: word_size)+
 
 lemma pt_slot_offset_offset[simp]:
-  "is_aligned pt (pt_bits (level_type level)) \<Longrightarrow>
-   table_index (level_type level) (pt_slot_offset level pt vref) = pt_index level vref"
+  "is_aligned pt (pt_bits level) \<Longrightarrow>
+   table_index level (pt_slot_offset level pt vref) = pt_index level vref" for level::vm_level
   unfolding pt_slot_offset_def
   by (simp add: table_index_plus)
 
@@ -2043,7 +2043,7 @@ lemma vs_lookup_split:
 lemma vs_lookup_table_split_last_Some:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level < max_pt_level \<rbrakk>
    \<Longrightarrow> \<exists>p' pte. vs_lookup_table (level+1) asid vref s = Some (level+1, p')
-            \<and> ptes_of s (level_type (level+1)) (pt_slot_offset (level + 1) p' vref) = Some pte
+            \<and> ptes_of s (level+1) (pt_slot_offset (level + 1) p' vref) = Some pte
             \<and> p = pptr_from_pte pte
             \<and> is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
@@ -2175,9 +2175,10 @@ lemma is_aligned_pt_slot_offset_pte:
   by (simp add: is_aligned_add bit_simps is_aligned_weaken is_aligned_shift)
 
 lemma pt_slot_offset_pt_range:
-  "\<lbrakk> ptes_of s (level_type level) (pt_slot_offset level pt vref) = Some pte;
-     pts_of s pt = Some ptable; is_aligned pt (pt_bits (level_type level)) \<rbrakk>
+  "\<lbrakk> ptes_of s level (pt_slot_offset level pt vref) = Some pte;
+     pts_of s pt = Some ptable; is_aligned pt (pt_bits level) \<rbrakk>
    \<Longrightarrow> pte \<in> pt_range ptable"
+  for level::vm_level
   by (clarsimp simp: ptes_of_Some)
 
 lemma valid_vspace_objs_strongD:
@@ -2232,7 +2233,7 @@ lemma vs_lookup_table_is_aligned:
   "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
     level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s;
     valid_asid_table s; valid_vspace_objs s \<rbrakk>
-   \<Longrightarrow> is_aligned pt_ptr (pt_bits (level_type level'))"
+   \<Longrightarrow> is_aligned pt_ptr (pt_bits level')"
   apply (drule (5) valid_vspace_objs_strongD)
   apply (cases "level' = max_pt_level";
          fastforce dest: pspace_alignedD simp: pt_bits_def in_omonad)
@@ -2435,7 +2436,7 @@ locale_abbrev vref_for_level_idx :: "vspace_ref \<Rightarrow> machine_word \<Rig
   "vref_for_level_idx vref idx level \<equiv> vref_for_level vref (level+1) || vref_for_index idx level"
 
 lemma pt_index_vref_for_level[simp]:
-  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits level) \<rbrakk> \<Longrightarrow>
   pt_index level (vref_for_level vref (level + 1) || vref_for_index idx level) = idx"
   using pt_bits_left_bound[of "level"]
   apply (simp add: pt_index_def vref_for_level_def pt_bits_left_bound_def)
@@ -2443,9 +2444,9 @@ lemma pt_index_vref_for_level[simp]:
   by (auto simp: bit_simps pt_bits_left_def size_max_pt_level split: if_split_asm)
 
 lemma table_index_pt_slot_offset:
-  "\<lbrakk> is_aligned p (pt_bits (level_type level)); level \<le> max_pt_level;
-     idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
-   table_index (level_type level) (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
+  "\<lbrakk> level \<le> max_pt_level; is_aligned p (pt_bits level);
+     idx \<le> mask (ptTranslationBits level) \<rbrakk> \<Longrightarrow>
+   table_index level (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
   by simp
 
 lemma vs_lookup_vref_for_level_eq1:
@@ -2459,7 +2460,7 @@ lemma vs_lookup_vref_for_level_eq1:
   done
 
 lemma vref_for_level_idx[simp]:
-  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits level) \<rbrakk> \<Longrightarrow>
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
@@ -2484,7 +2485,7 @@ lemma vref_for_level_user_regionD:
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;
-     idx \<le> mask (ptTranslationBits (level_type level));
+     idx \<le> mask (ptTranslationBits level);
      level = max_pt_level \<longrightarrow> ucast idx \<notin> invalid_mapping_slots \<rbrakk> \<Longrightarrow>
    vref_for_level_idx vref idx level \<le> canonical_user"
   apply (clarsimp simp: canonical_user_def le_mask_high_bits ipa_size_def word_size split: if_split_asm)
@@ -2514,7 +2515,7 @@ lemma vref_for_level_idx_canonical_user:
 
 lemma vs_lookup_table_pt_step:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
-     pts_of s p = Some pt; is_aligned p (pt_bits (level_type level)); level \<le> max_pt_level;
+     pts_of s p = Some pt; is_aligned p (pt_bits level); level \<le> max_pt_level;
      pte \<in> pt_range pt; pte_ref pte = Some p'; pt_type pt = level_type level;
      valid_pt_range pt \<rbrakk> \<Longrightarrow>
    \<exists>vref'. vs_lookup_target level asid vref' s = Some (level, p') \<and>
@@ -2601,7 +2602,7 @@ lemma valid_vspace_objs_strong_slotD:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); vref \<in> user_region;
      level \<le> max_pt_level;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
-   \<Longrightarrow> \<exists>pte. ptes_of s (level_type level) slot = Some pte \<and> valid_pte level pte s"
+   \<Longrightarrow> \<exists>pte. ptes_of s level slot = Some pte \<and> valid_pte level pte s"
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac pt_ptr)
   apply (drule (5) valid_vspace_objs_strongD)
@@ -2621,7 +2622,7 @@ lemma pt_bits_left_inj[simp]:
 lemma pt_walk_stopped:
   "\<lbrakk> pt_walk top_level level top_ptr vref (ptes_of s) = Some (level', pt_ptr);
      level < level'; level \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> \<exists>pte. ptes_of s (level_type level') (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not> is_PageTablePTE pte"
+   \<Longrightarrow> \<exists>pte. ptes_of s level' (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not> is_PageTablePTE pte"
   apply (induct top_level arbitrary: top_ptr; clarsimp)
   apply (subst (asm) (2) pt_walk.simps)
   apply (clarsimp split: if_split_asm)
@@ -2630,7 +2631,7 @@ lemma pt_walk_stopped:
 lemma vs_lookup_table_stopped:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level', pt_ptr); level' \<noteq> level;
     level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-  \<exists>pte. ptes_of s (level_type level') (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
+  \<exists>pte. ptes_of s level' (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
   apply (frule pt_walk_min_level)
   apply (clarsimp simp: min_def split: if_split_asm)

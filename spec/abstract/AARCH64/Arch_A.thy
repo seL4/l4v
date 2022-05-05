@@ -92,9 +92,9 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
 definition perform_pg_inv_map ::
   "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "perform_pg_inv_map cap ct_slot pte slot level \<equiv> do
-     old_pte \<leftarrow> get_pte (level_type level) slot;
+     old_pte \<leftarrow> get_pte level slot;
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte (level_type level) slot pte;
+     store_pte level slot pte;
      when (old_pte \<noteq> InvalidPTE) $ do
         (asid, vaddr) \<leftarrow> assert_opt $ acap_map_data cap;
         invalidate_tlb_by_asid_va asid vaddr
@@ -150,7 +150,7 @@ definition perform_pt_inv_map ::
   "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "perform_pt_inv_map cap ct_slot pte slot level = do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte (level_type level) slot pte;
+     store_pte level slot pte;
      do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot)
    od"
 
