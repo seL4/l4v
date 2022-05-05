@@ -6916,11 +6916,6 @@ end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject
-  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
-  (wp: crunch_wps setObject_ksPSpace_only
-   simp: unless_def updateObject_default_def crunch_simps)
-
 lemma createNewCaps_1_gsCNodes_p:
   "\<lbrace>\<lambda>s. P (gsCNodes s p) \<and> p \<noteq> ptr\<rbrace> createNewCaps newType ptr 1 n dev\<lbrace>\<lambda>rv s. P (gsCNodes s p)\<rbrace>"
   apply (simp add: createNewCaps_def)

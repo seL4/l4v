@@ -7,7 +7,7 @@
 chapter "Toplevel Refinement Statement"
 
 theory Refine_C
-imports Init_C Fastpath_C CToCRefine
+imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -17,6 +17,14 @@ end
 
 context kernel_m
 begin
+
+text \<open>Assemble fastpaths\<close>
+
+lemmas fastpath_call_ccorres_callKernel
+    = monadic_rewrite_ccorres_assemble[OF fastpath_call_ccorres fastpath_callKernel_SysCall_corres]
+
+lemmas fastpath_reply_recv_ccorres_callKernel
+    = monadic_rewrite_ccorres_assemble[OF fastpath_reply_recv_ccorres fastpath_callKernel_SysReplyRecv_corres]
 
 declare liftE_handle [simp]
 
@@ -609,13 +617,13 @@ lemma ccorres_get_registers:
                         "StrictC'_register_defs")
   done
 
-
 lemma callKernel_withFastpath_corres_C:
   "corres_underlying rf_sr False True dc
            (all_invs' e)
            \<top>
            (callKernel e) (callKernel_withFastpath_C e)"
   using no_fail_callKernel [of e] callKernel_corres_C [of e]
+  supply if_split[split del]
   apply (cases "e = SyscallEvent syscall.SysCall \<or>
             e = SyscallEvent syscall.SysReplyRecv")
   apply (simp_all add: callKernel_withFastpath_C_def

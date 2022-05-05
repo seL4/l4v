@@ -8,17 +8,6 @@ theory Tcb_C
 imports Delete_C Ipc_C
 begin
 
-lemma asUser_obj_at' :
-  "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
-  including no_pre
-  apply (simp add: asUser_def)
-  apply wp
-  apply (case_tac "t=t'"; clarsimp)
-  apply (rule hoare_drop_imps)
-  apply wp
-  done
-
-
 lemma getObject_sched:
   "(x::tcb, s') \<in> fst (getObject t s) \<Longrightarrow>
   (x,s'\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) \<in> fst (getObject t (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))"

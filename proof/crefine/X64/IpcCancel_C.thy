@@ -2696,13 +2696,6 @@ lemma cancelSignal_ccorres [corres]:
          |  clarsimp simp: eq_commute
          | drule_tac x=thread in bspec)+
 
-lemma ko_at_valid_ep':
-  "\<lbrakk>ko_at' ep p s; valid_objs' s\<rbrakk> \<Longrightarrow> valid_ep' ep s"
-  apply (erule obj_atE')
-  apply (erule (1) valid_objsE')
-   apply (simp add: projectKOs valid_obj'_def)
-   done
-
 (* FIXME: MOVE *)
 lemma ccorres_pre_getEndpoint [corres_pre]:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"

@@ -181,10 +181,6 @@ lemma ccorres_pre_getIdleThread:
   apply (clarsimp simp: rf_sr_ksIdleThread)
   done
 
-
-lemma cd_wp [wp]: "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
-  by (unfold curDomain_def, wp)
-
 lemma curDomain_sp:
   "\<lbrace>P\<rbrace> curDomain \<lbrace>\<lambda>rv s. ksCurDomain s = rv \<and> P s\<rbrace>"
   apply wp
