@@ -141,13 +141,16 @@ getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
 ptBitsLeft :: Int -> Int
 ptBitsLeft level =
   (if level <= maxPTLevel
-   then ptTranslationBits False * level
-   else ptTranslationBits True + ptTranslationBits False * maxPTLevel) + pageBits
+   then ptTranslationBits NormalPT_T * level
+   else ptTranslationBits VSRootPT_T + ptTranslationBits NormalPT_T * maxPTLevel) + pageBits
+
+levelType :: Int -> PT_Type
+levelType level = if level == maxPTLevel then VSRootPT_T else NormalPT_T
 
 -- compute index into a page table from vPtr at given level
 ptIndex :: Int -> VPtr -> Word
 ptIndex level vPtr =
-    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits (level == maxPTLevel))
+    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits (levelType level))
 
 -- compute slot ptr inside the table ptPtr at given level for a vPtr
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
@@ -374,7 +377,7 @@ setVMRoot tcb = do
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {
-                    capPTisVSpace = True,
+                    capPTType = VSRootPT_T,
                     capPTMappedAddress = Just (asid, _),
                     capPTBasePtr = vspaceRoot }) -> do
                 vspaceRoot' <- findVSpaceForASID asid
@@ -453,7 +456,7 @@ getVMID asid = do
 {- Helper Functions -}
 
 isVTableRoot :: Capability -> Bool
-isVTableRoot (ArchObjectCap (PageTableCap { capPTisVSpace = True })) = True
+isVTableRoot (ArchObjectCap (PageTableCap { capPTType = VSRootPT_T })) = True
 isVTableRoot _ = False
 
 -- FIXME AARCH64: name indirection kept here for sync with C; both (C and
@@ -643,7 +646,7 @@ decodeARMPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 decodeARMVSpaceInvocation :: Word -> [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation
-decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTisVSpace = True }) =
+decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTType = VSRootPT_T }) =
     case (isVSpaceFlushLabel (invocationType label), args) of
         (True, start:end:_) -> do
             when (end <= start) $ throw $ InvalidArgument 1
@@ -741,9 +744,9 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeARMFrameInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = False }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTType = NormalPT_T }) extraCaps =
     decodeARMPageTableInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = True }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTType = VSRootPT_T }) extraCaps =
     decodeARMVSpaceInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeARMASIDControlInvocation label args cap extraCaps
@@ -774,8 +777,8 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            -- ptBits False, because it can't be a VSpace table
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits False) - 1]
+            -- ptBits NormalPT_T, because it can't be a VSpace table
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits NormalPT_T) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
