@@ -1183,12 +1183,12 @@ lemma pt_apply_pt_range[simp, intro!]:
   by (auto simp: pt_range_def)
 
 lemma pt_apply_mask:
-  "pt_apply pt (idx && mask (ptTranslationBits (pt_type pt = VSRoot_T))) = pt_apply pt idx"
+  "pt_apply pt (idx && mask (ptTranslationBits (pt_type pt))) = pt_apply pt idx"
   by (cases pt; clarsimp simp: bit_simps ucast_mask_drop)
 
 lemma pt_rangeD:
   "pte \<in> pt_range pt \<Longrightarrow>
-   \<exists>idx. idx \<le> mask (ptTranslationBits (pt_type pt = VSRoot_T)) \<and> pt_apply pt idx = pte"
+   \<exists>idx. idx \<le> mask (ptTranslationBits (pt_type pt)) \<and> pt_apply pt idx = pte"
   by (fastforce simp: pt_range_def intro!: word_and_le1 pt_apply_mask)
 
 lemma wellformed_arch_default[simp]:
@@ -1501,8 +1501,8 @@ lemma max_pt_bits_left[simp]:
 
 lemma pt_bits_left_plus1:
   "level \<le> max_pt_level \<Longrightarrow>
-   pt_bits_left (level + 1) = ptTranslationBits (level = max_pt_level) + pt_bits_left level"
-  by (clarsimp simp: pt_bits_left_def)
+   pt_bits_left (level + 1) = ptTranslationBits (level_type level) + pt_bits_left level"
+  by (auto simp: pt_bits_left_def intro: arg_cong)
 
 lemma vref_for_level_idem:
   "level' \<le> level \<Longrightarrow>
@@ -1640,7 +1640,7 @@ lemma pt_slot_offset_or_def:
    \<Longrightarrow> pt_slot_offset level pt_ptr vptr = pt_ptr || (pt_index level vptr << pte_bits)"
   unfolding pt_slot_offset_def
   apply (rule is_aligned_add_or, assumption)
-  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits (level = max_pt_level)")
+  apply (subgoal_tac "pt_index level vptr < 2 ^ ptTranslationBits (level_type level)")
    prefer 2
    apply (simp add: pt_index_def)
    apply (rule and_mask_less', simp add: bit_simps and_mask_less')
@@ -1858,11 +1858,11 @@ lemma is_aligned_table_base_pte_bits[simp]:
   by (simp add: bit_simps is_aligned_neg_mask)
 
 lemma pt_index_bounded[simp, intro!]:
-  "pt_index level vref \<le> mask (ptTranslationBits (level = max_pt_level))"
+  "pt_index level vref \<le> mask (ptTranslationBits (level_type level))"
   by (simp add: pt_index_def word_and_le1)
 
 lemma table_index_plus:
-  "\<lbrakk> is_aligned pt_ptr (pt_bits pt_t); i \<le> mask (ptTranslationBits (pt_t = VSRoot_T)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> is_aligned pt_ptr (pt_bits pt_t); i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
    table_index pt_t (pt_ptr + (i << pte_bits)) = i"
   unfolding is_aligned_mask bit_simps
   apply (cases "pt_t = VSRootPT_T \<and> config_ARM_PA_SIZE_BITS_40"; simp only:)
@@ -1884,7 +1884,7 @@ lemma pt_slot_offset_vref_id[simp]:
   by (rule vref_for_level_pt_slot_offset) (simp add: max_def)
 
 lemma table_base_plus:
-  "\<lbrakk> is_aligned pt_ptr (pt_bits pt_t); i \<le> mask (ptTranslationBits (pt_t = VSRoot_T)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> is_aligned pt_ptr (pt_bits pt_t); i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
    table_base pt_t (pt_ptr + (i << pte_bits)) = pt_ptr"
   unfolding is_aligned_mask bit_simps
   apply (cases "pt_t = VSRootPT_T \<and> config_ARM_PA_SIZE_BITS_40"; simp only:)
@@ -2101,7 +2101,7 @@ lemma pt_bits_left_bound:
   done
 
 lemma pt_bits_left_le_max_pt_level:
-  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> pt_bits_left_bound - ptTranslationBits True"
+  "level \<le> max_pt_level \<Longrightarrow> pt_bits_left level \<le> pt_bits_left_bound - ptTranslationBits VSRootPT_T"
   apply (simp add: pt_bits_left_def bit_simps pt_bits_left_bound_def)
   apply (rule conjI, clarsimp)
   apply (subgoal_tac "size level \<le> size max_pt_level")
@@ -2435,7 +2435,7 @@ locale_abbrev vref_for_level_idx :: "vspace_ref \<Rightarrow> machine_word \<Rig
   "vref_for_level_idx vref idx level \<equiv> vref_for_level vref (level+1) || vref_for_index idx level"
 
 lemma pt_index_vref_for_level[simp]:
-  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level = max_pt_level)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
   pt_index level (vref_for_level vref (level + 1) || vref_for_index idx level) = idx"
   using pt_bits_left_bound[of "level"]
   apply (simp add: pt_index_def vref_for_level_def pt_bits_left_bound_def)
@@ -2444,7 +2444,7 @@ lemma pt_index_vref_for_level[simp]:
 
 lemma table_index_pt_slot_offset:
   "\<lbrakk> is_aligned p (pt_bits (level_type level)); level \<le> max_pt_level;
-     idx \<le> mask (ptTranslationBits (level = max_pt_level)) \<rbrakk> \<Longrightarrow>
+     idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
    table_index (level_type level) (pt_slot_offset level p (vref_for_level_idx vref idx level)) = idx"
   by simp
 
@@ -2459,7 +2459,7 @@ lemma vs_lookup_vref_for_level_eq1:
   done
 
 lemma vref_for_level_idx[simp]:
-  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level = max_pt_level)) \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits (level_type level)) \<rbrakk> \<Longrightarrow>
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
   apply (simp add: vref_for_level_def pt_bits_left_def)
@@ -2484,7 +2484,7 @@ lemma vref_for_level_user_regionD:
 
 lemma vref_for_level_idx_canonical_user:
   "\<lbrakk> vref \<le> canonical_user; level \<le> max_pt_level;
-     idx \<le> mask (ptTranslationBits (level = max_pt_level));
+     idx \<le> mask (ptTranslationBits (level_type level));
      level = max_pt_level \<longrightarrow> ucast idx \<notin> invalid_mapping_slots \<rbrakk> \<Longrightarrow>
    vref_for_level_idx vref idx level \<le> canonical_user"
   apply (clarsimp simp: canonical_user_def le_mask_high_bits ipa_size_def word_size split: if_split_asm)
