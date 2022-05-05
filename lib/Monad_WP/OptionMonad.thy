@@ -201,6 +201,9 @@ definition
 definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option" where
   "oapply x \<equiv> \<lambda>s. s x"
 
+definition oapply2 :: "'a \<Rightarrow> 'b \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c option) \<Rightarrow> 'c option" where
+  "oapply2 x y \<equiv> \<lambda>s. s x y"
+
 definition oliftM :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'a) lookup \<Rightarrow> ('s,'b) lookup" where
   "oliftM f m \<equiv> do { x \<leftarrow> m; oreturn (f x) }"
 
@@ -432,6 +435,10 @@ lemma oreturn_apply[simp]:
 lemma oapply_apply[simp]:
   "oapply x s = s x"
   by (simp add: oapply_def)
+
+lemma oapply2_apply[simp]:
+  "oapply2 x y s = s x y"
+  by (simp add: oapply2_def)
 
 lemma obind_comp_dist:
   "obind f g o h = obind (f o h) (\<lambda>x. g x o h)"
