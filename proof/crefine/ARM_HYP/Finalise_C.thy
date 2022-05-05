@@ -13,11 +13,6 @@ begin
 
 declare if_split [split del]
 
-lemma empty_fail_getEndpoint:
-  "empty_fail (getEndpoint ep)"
-  unfolding getEndpoint_def
-  by (auto intro: empty_fail_getObject)
-
 definition
   "option_map2 f m = option_map f \<circ> m"
 

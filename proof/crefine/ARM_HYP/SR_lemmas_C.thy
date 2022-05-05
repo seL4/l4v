@@ -310,67 +310,6 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   unfolding cmdbnode_relation_def mdb_node_to_H_def mdb_node_lift_def cte_lift_def
   by (fastforce split: option.splits)
 
-(* MOVE --- here down doesn't really belong here, maybe in a haskell specific file?*)
-lemma tcb_cte_cases_in_range1:
-  assumes tc:"tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x tcbBlockSizeBits"
-  shows   "x \<le> y"
-proof -
-  note objBits_defs[simp]
-
-  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
-    unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
-
-  have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
-    by (rule is_aligned_no_overflow)
-
-  hence "x \<le> x + q" using qv
-    apply simp
-    apply unat_arith
-    apply simp
-    done
-
-  thus ?thesis using yq by simp
-qed
-
-lemma tcb_cte_cases_in_range2:
-  assumes tc: "tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x tcbBlockSizeBits"
-  shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
-proof -
-  note objBits_defs[simp]
-
-  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
-    unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
-
-  have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
-    apply (rule word_plus_mono_right)
-    apply (rule is_aligned_no_overflow' [OF al])
-    done
-
-  thus ?thesis using yq by (simp add: field_simps)
-qed
-
-lemmas tcbSlots =
-  tcbCTableSlot_def tcbVTableSlot_def
-  tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-
-lemma updateObject_cte_tcb:
-  assumes tc: "tcb_cte_cases (ptr - ptr') = Some (accF, updF)"
-  shows   "updateObject ctea (KOTCB tcb) ptr ptr' next =
-   (do alignCheck ptr' (objBits tcb);
-        magnitudeCheck ptr' next (objBits tcb);
-        return (KOTCB (updF (\<lambda>_. ctea) tcb))
-    od)"
-  using tc unfolding tcb_cte_cases_def
-  apply -
-  apply (clarsimp simp add: updateObject_cte Let_def
-    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
-    split: if_split_asm cong: if_cong)
-  done
-
 definition
   tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
@@ -704,10 +643,6 @@ proof -
     qed
   qed fact+
 qed
-
-lemma ctes_of_cte_at:
-  "ctes_of s p = Some x \<Longrightarrow> cte_at' p s"
-  by (simp add: cte_wp_at_ctes_of)
 
 lemma cor_map_relI:
   assumes dm: "dom am = dom am'"
