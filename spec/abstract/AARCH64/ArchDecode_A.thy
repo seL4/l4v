@@ -99,7 +99,8 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
            pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights pgsz;
-           returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte (pte,slot)
+           returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte
+                                           (pte,slot,level)
          odE
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
@@ -171,11 +172,11 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
-           old_pte \<leftarrow> liftE $ get_pte slot;
+           old_pte \<leftarrow> liftE $ get_pte (level = max_pt_level) slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p);
            cap' <- returnOk $ PageTableCap p t $ Some (asid, vaddr && ~~mask (pt_bits_left level));
-           returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
+           returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot level
          odE
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
@@ -205,11 +206,11 @@ definition vmsize_of_level :: "vm_level \<Rightarrow> vmpage_size" where
      else if level = 1 then ARMLargePage
      else ARMHugePage"
 
-definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vmpage_size \<times> paddr) option"
+definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vmpage_size \<times> paddr) option"
   where
   "lookup_frame vspace vaddr = do {
      (level, slot) \<leftarrow> pt_lookup_slot vspace vaddr;
-     pte \<leftarrow> oapply slot;
+     pte \<leftarrow> oapply2 (level = max_pt_level) slot;
      oassert (is_PagePTE pte);
      oassert (level \<le> 2);
      oreturn (vmsize_of_level level, pte_base_addr pte)
