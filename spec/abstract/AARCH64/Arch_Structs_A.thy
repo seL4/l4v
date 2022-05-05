@@ -29,8 +29,6 @@ text \<open>
   along with capabilities for virtual memory mappings.
 \<close>
 
-datatype pt_type = VSRoot_T | Normal_T
-
 datatype arch_cap =
     ASIDPoolCap
       (acap_obj : obj_ref)
@@ -121,11 +119,11 @@ lemma length_vs_index_len[simp]:
   by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
 
 lemma vs_index_ptTranslationBits:
-  "ptTranslationBits True = LENGTH(vs_index_len)"
+  "ptTranslationBits VSRootPT_T = LENGTH(vs_index_len)"
   by (simp add: ptTranslationBits_def vs_index_bits_def)
 
 lemma pt_index_ptTranslationBits:
-  "ptTranslationBits False = LENGTH(pt_index_len)"
+  "ptTranslationBits NormalPT_T = LENGTH(pt_index_len)"
   by (simp add: ptTranslationBits_def)
 
 (* This could also be a record, but we expect further alternatives to be added for SMMU *)
@@ -205,7 +203,7 @@ definition pte_bits :: nat where
   "pte_bits = word_size_bits"
 
 definition table_size :: "pt_type \<Rightarrow> nat" where
-  "table_size pt_t = ptTranslationBits (pt_t = VSRoot_T) + pte_bits" (* FIXME AARCH64: introduce levels in Haskell, include from there *)
+  "table_size pt_t = ptTranslationBits pt_t + pte_bits"
 
 definition pt_bits :: "pt_type \<Rightarrow> nat" where
   "pt_bits pt_t \<equiv> table_size pt_t"
