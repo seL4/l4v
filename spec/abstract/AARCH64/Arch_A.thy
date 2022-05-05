@@ -92,9 +92,9 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
 definition perform_pg_inv_map ::
   "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "perform_pg_inv_map cap ct_slot pte slot level \<equiv> do
-     old_pte \<leftarrow> get_pte (level = max_pt_level) slot;
+     old_pte \<leftarrow> get_pte (level_type level) slot;
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte (level = max_pt_level) slot pte;
+     store_pte (level_type level) slot pte;
      when (old_pte \<noteq> InvalidPTE) $ do
         (asid, vaddr) \<leftarrow> assert_opt $ acap_map_data cap;
         invalidate_tlb_by_asid_va asid vaddr
@@ -150,7 +150,7 @@ definition perform_pt_inv_map ::
   "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "perform_pt_inv_map cap ct_slot pte slot level = do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte (level = max_pt_level) slot pte;
+     store_pte (level_type level) slot pte;
      do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot)
    od"
 
@@ -161,9 +161,9 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
        Some (asid, vaddr) \<Rightarrow> do
          p \<leftarrow> return $ acap_obj cap;
          unmap_page_table asid vaddr p;
-         \<comment> \<open>Can only be a normal table, not vspace table, so @{term \<open>pt_bits False\<close>}\<close>
-         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits False)];
-         mapM_x (swp (store_pte (acap_is_vspace cap)) InvalidPTE) slots
+         \<comment> \<open>Can only be a normal table, not vspace table, so @{term \<open>pt_bits NormalPT_T\<close>}\<close>
+         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits NormalPT_T)];
+         mapM_x (swp (store_pte (acap_pt_type cap)) InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();
      old_cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
