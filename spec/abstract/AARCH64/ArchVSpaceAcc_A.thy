@@ -95,32 +95,22 @@ definition level_pte_of :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<
       oreturn $ pt_pte pt p
    }"
 
-(* pte from page tables of any level = map-union of all levels, since we can assume distinctness *)
-definition pte_of :: "(obj_ref \<rightharpoonup> pt) \<Rightarrow> obj_ref \<rightharpoonup> pte" where
-  "pte_of s \<equiv> swp (level_pte_of True) s ++ swp (level_pte_of False) s"
-
-locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte" where
-  "ptes_of s \<equiv> pte_of (pts_of s)"
+locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> bool \<Rightarrow> obj_ref \<rightharpoonup> pte" where
+  "ptes_of s is_vspace p \<equiv> level_pte_of is_vspace p (pts_of s)"
 
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
-locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
-  "get_pte \<equiv> gets_map ptes_of"
+locale_abbrev get_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where
+  "get_pte is_vspace \<equiv> gets_map (swp ptes_of is_vspace)"
 
 definition pt_upd :: "pt \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> pt" where
   "pt_upd pt p pte \<equiv> case pt of
                        VSRootPT vs \<Rightarrow> VSRootPT (vs(vsroot_index p := pte))
                      | NormalPT pt \<Rightarrow> NormalPT (pt(ptable_index p := pte))"
 
-(* Checks object content so that this also works when object sizes are equal between levels. *)
-definition pt_level_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<Rightarrow> bool" where
-  "pt_level_of p pts \<equiv> \<exists>pt. pts (table_base True p) = Some (VSRootPT pt)"
-
-(* Determine which level the pt object is, then update. *)
-definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "store_pte p pte \<equiv> do
+definition store_pte :: "bool \<Rightarrow> obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "store_pte is_vspace p pte \<equiv> do
      assert (is_aligned p pte_bits);
-     is_vspace \<leftarrow> gets (pt_level_of p \<circ> pts_of);
      base \<leftarrow> return $ table_base is_vspace p;
      pt \<leftarrow> get_pt base;
      set_pt base (pt_upd pt p pte)
@@ -163,12 +153,12 @@ text \<open>
   page is reached.
 \<close>
 fun pt_walk ::
-  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "pt_walk level bot_level pt_ptr vptr = do {
      if bot_level < level
      then do {
-       pte \<leftarrow> oapply (pt_slot_offset level pt_ptr vptr);
+       pte \<leftarrow> oapply2 (level = max_pt_level) (pt_slot_offset level pt_ptr vptr);
        if is_PageTablePTE pte
          then pt_walk (level - 1) bot_level (pptr_from_pte pte) vptr
          else oreturn (level, pt_ptr)
@@ -185,29 +175,29 @@ text \<open>
   the slot may also be a @{const PageTablePTE}.
 \<close>
 definition pt_lookup_slot_from_level ::
-  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "pt_lookup_slot_from_level level bot_level pt_ptr vptr = do {
      (level', pt_ptr') \<leftarrow> pt_walk level bot_level pt_ptr vptr;
      oreturn (level', pt_slot_offset level' pt_ptr' vptr)
    }"
 
-definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition pt_lookup_slot :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (bool \<Rightarrow> obj_ref \<rightharpoonup> pte) \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "pt_lookup_slot = pt_lookup_slot_from_level max_pt_level 0"
 
 text \<open>Returns the slot that points to @{text target_pt_ptr}\<close>
 fun pt_lookup_from_level ::
-  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word, 'z::state_ext) lf_monad"
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (machine_word \<times> vm_level, 'z::state_ext) lf_monad"
   where
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
-     pte <- liftE $ gets_the $ oapply slot o ptes_of;
+     pte <- liftE $ gets_the $ oapply slot o swp ptes_of (level = max_pt_level);
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
-       then returnOk slot
+       then returnOk (slot, level)
        else pt_lookup_from_level (level - 1) ptr vptr target_pt_ptr
    odE) s"
 (* We apply "s" to avoid a type variable warning, and increase in global freeindex counter,

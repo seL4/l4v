@@ -90,11 +90,11 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
    od"
 
 definition perform_pg_inv_map ::
-  "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "perform_pg_inv_map cap ct_slot pte slot \<equiv> do
-     old_pte \<leftarrow> get_pte slot;
+  "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_pg_inv_map cap ct_slot pte slot level \<equiv> do
+     old_pte \<leftarrow> get_pte (level = max_pt_level) slot;
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte slot pte;
+     store_pte (level = max_pt_level) slot pte;
      when (old_pte \<noteq> InvalidPTE) $ do
         (asid, vaddr) \<leftarrow> assert_opt $ acap_map_data cap;
         invalidate_tlb_by_asid_va asid vaddr
@@ -140,17 +140,17 @@ text \<open>
 \<close>
 definition perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "perform_page_invocation iv \<equiv> case iv of
-     PageMap cap ct_slot (pte,slot) \<Rightarrow> perform_pg_inv_map cap ct_slot pte slot
+     PageMap cap ct_slot (pte,slot,level) \<Rightarrow> perform_pg_inv_map cap ct_slot pte slot level
    | PageUnmap cap ct_slot \<Rightarrow> perform_pg_inv_unmap cap ct_slot
    | PageGetAddr ptr \<Rightarrow> perform_pg_inv_get_addr ptr
    | PageFlush type start end pstart space asid \<Rightarrow> perform_flush type start end pstart space asid"
 
 
 definition perform_pt_inv_map ::
-  "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "perform_pt_inv_map cap ct_slot pte slot = do
+  "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> vm_level \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "perform_pt_inv_map cap ct_slot pte slot level = do
      set_cap (ArchObjectCap cap) ct_slot;
-     store_pte slot pte;
+     store_pte (level = max_pt_level) slot pte;
      do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot)
    od"
 
@@ -163,7 +163,7 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
          unmap_page_table asid vaddr p;
          \<comment> \<open>Can only be a normal table, not vspace table, so @{term \<open>pt_bits False\<close>}\<close>
          slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits False)];
-         mapM_x (swp store_pte InvalidPTE) slots
+         mapM_x (swp (store_pte (acap_is_vspace cap)) InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();
      old_cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
@@ -174,7 +174,7 @@ text \<open>PageTable capabilities confer the authority to map and unmap page ta
 definition perform_page_table_invocation :: "page_table_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_page_table_invocation iv \<equiv> case iv of
-     PageTableMap cap ct_slot pte slot \<Rightarrow> perform_pt_inv_map cap ct_slot pte slot
+     PageTableMap cap ct_slot pte slot level \<Rightarrow> perform_pt_inv_map cap ct_slot pte slot level
    | PageTableUnmap cap ct_slot \<Rightarrow> perform_pt_inv_unmap cap ct_slot"
 
 text \<open>VSpace capabilities confer the authority to flush.\<close>

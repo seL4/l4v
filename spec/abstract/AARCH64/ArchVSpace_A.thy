@@ -275,8 +275,8 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
 definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
-     liftE $ store_pte pt_slot InvalidPTE;
+     (pt_slot, level) \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
+     liftE $ store_pte (level = max_pt_level) pt_slot InvalidPTE;
      liftE $ do_machine_op $ cleanByVA_PoU pt_slot (addrFromPPtr pt_slot);
      liftE $ invalidate_tlb_by_asid asid
    odE <catch> (K $ return ())"
@@ -319,9 +319,9 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
-     pte \<leftarrow> liftE $ get_pte slot;
+     pte \<leftarrow> liftE $ get_pte (lev = max_pt_level) slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
-     liftE $ store_pte slot InvalidPTE;
+     liftE $ store_pte (lev = max_pt_level) slot InvalidPTE;
      liftE $ do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      liftE $ invalidate_tlb_by_asid_va asid vptr
    odE <catch> (K $ return ())"
