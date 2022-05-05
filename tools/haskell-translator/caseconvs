@@ -2049,26 +2049,6 @@ case \x of ((a@FrameCap {}), (b@FrameCap {})) -> ((a@PageTableCap {}), (b@PageTa
   then ->5
   else ->6
 
-case \x of cap@(PageTableCap { capPTisVSpace = True }) -> _ ->  ---> let cap = \x in
-  if isPageTableCap cap \<and> capPTisVSpace cap
-  then ->1
-  else ->2
-
-case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTisVSpace = False }) -> cap@(PageTableCap { capPTisVSpace = True }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
-  if isFrameCap cap
-  then ->1
-  else if isPageTableCap cap \<and> \<not> capPTisVSpace cap
-  then ->2
-  else if isPageTableCap cap \<and> capPTisVSpace cap
-  then ->3
-  else if isASIDControlCap cap
-  then ->4
-  else if isASIDPoolCap cap
-  then ->5
-  else if isVCPUCap cap
-  then ->6
-  else undefined
-
 case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@FrameCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) -> (c@VCPUCap {}) ->  ---> let c = \x in
   if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
   then ->1
@@ -2081,6 +2061,26 @@ case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { c
   else if isASIDPoolCap c
   then ->5
   else if isVCPUCap c
+  then ->6
+  else undefined
+
+case \x of cap@(PageTableCap { capPTType = VSRootPT_T }) -> _ ->  ---> let cap = \x in
+  if isPageTableCap cap \<and> capPTType cap = VSRootPT_T
+  then ->1
+  else ->2
+
+case \x of cap@(FrameCap {}) -> cap@(PageTableCap { capPTType = NormalPT_T }) -> cap@(PageTableCap { capPTType = VSRootPT_T }) -> cap@(ASIDControlCap {}) -> cap@(ASIDPoolCap {}) -> (VCPUCap {}) ->  ---> let cap = \x in
+  if isFrameCap cap
+  then ->1
+  else if isPageTableCap cap \<and> capPTType cap = NormalPT_T
+  then ->2
+  else if isPageTableCap cap \<and> capPTType cap = VSRootPT_T
+  then ->3
+  else if isASIDControlCap cap
+  then ->4
+  else if isASIDPoolCap cap
+  then ->5
+  else if isVCPUCap cap
   then ->6
   else undefined
 

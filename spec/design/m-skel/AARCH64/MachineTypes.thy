@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-chapter "RISCV 64bit Machine Types"
+chapter "AARCH64 Machine Types"
 
 theory MachineTypes
 imports
@@ -113,6 +113,7 @@ definition
                          machine_state_rest = undefined \<rparr>"
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs CONTEXT AARCH64 ONLY \
+  PT_Type \
   VMFaultType HypFaultType vmFaultTypeFSR VMPageSize pageBits ptTranslationBits \
   pageBitsForSize \
   hcrVCPU hcrNative vgicHCREN sctlrDefault sctlrEL1VM actlrDefault gicVCPUMaxNumLR \
