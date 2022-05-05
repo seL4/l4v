@@ -903,7 +903,7 @@ def named_constructor_translation(name, map, header):
         l = l + '(' + type + ') \<Rightarrow> '
     l = l + '%s" ("%s\'_ \<lparr> %s= _' % (header, name, map[0][0])
     for n, type in map[1:]:
-        l = l + ', %s= _' % n
+        l = l + ', %s= _' % n.replace("_", "'_")
     l = l + ' \<rparr>")'
     lines.append(l)
     lines.append('where')
