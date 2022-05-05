@@ -8,7 +8,7 @@
 (* Arch generic lemmas that should be moved into theory files before CRefine *)
 
 theory Move_C
-imports CBaseRefine.Include_C
+imports Refine.Refine
 begin
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
@@ -414,15 +414,6 @@ lemma reset_name_seq_bound_helper:
   apply simp
   done
 
-schematic_goal sz8_helper:
-  "((-1) << 8 :: addr) = ?v"
-  by (simp add: shiftl_t2n)
-
-lemmas reset_name_seq_bound_helper2
-    = reset_name_seq_bound_helper[where sz=8 and v="v :: addr" for v,
-          simplified sz8_helper word_bits_def[symmetric],
-          THEN name_seq_bound_helper]
-
 (* FIXME move to lib/Eisbach_Methods *)
 (* FIXME consider printing error on solve goal apply *)
 context
@@ -470,14 +461,15 @@ lemma word_minus_1_shiftr:
   apply (simp only: uint_word_ariths uint_div uint_power_lower)
   apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
   apply (subst mod_pos_pos_trivial)
-    apply (simp add: word_less_def)
+    apply (simp add: word_less_def word_le_def)
    apply (subst uint_1[symmetric])
    apply (fastforce intro: uint_sub_lt2p)
   apply (subst int_div_sub_1, fastforce)
   apply (clarsimp simp: and_mask_dvd low_bits_zero)
   apply (subst mod_pos_pos_trivial)
-    apply (metis le_step_down_int mult_zero_left shiftr_div_2n shiftr_div_2n_w uint_0_iff
-                 uint_nonnegative word_not_simps(1))
+    apply (simp add: word_le_def)
+    apply (metis mult_zero_left neq_zero div_positive_int linorder_not_le uint_2p_alt word_div_lt_eq_0
+                 word_less_def zless2p)
    apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
   apply fastforce
   done
@@ -1350,5 +1342,139 @@ begin
   declare word_less_1[simp del]
   declare less_Suc0[iff del]
 end
+
+lemma koTypeOf_injectKO:
+  fixes v :: "'a :: pspace_storable" shows
+  "koTypeOf (injectKO v) = koType TYPE('a)"
+  apply (cut_tac v1=v in iffD2 [OF project_inject, OF refl])
+  apply (simp add: project_koType[symmetric])
+  done
+
+lemma ctes_of_cte_at:
+  "ctes_of s p = Some x \<Longrightarrow> cte_at' p s"
+  by (simp add: cte_wp_at_ctes_of)
+
+lemmas tcbSlots =
+  tcbCTableSlot_def tcbVTableSlot_def
+  tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
+
+lemma updateObject_cte_tcb:
+  assumes tc: "tcb_cte_cases (ptr - ptr') = Some (accF, updF)"
+  shows   "updateObject ctea (KOTCB tcb) ptr ptr' next =
+   (do alignCheck ptr' (objBits tcb);
+        magnitudeCheck ptr' next (objBits tcb);
+        return (KOTCB (updF (\<lambda>_. ctea) tcb))
+    od)"
+  using tc unfolding tcb_cte_cases_def
+  apply -
+  apply (clarsimp simp add: updateObject_cte Let_def
+    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
+    split: if_split_asm cong: if_cong)
+  done
+
+lemma tcb_cte_cases_in_range1:
+  assumes tc:"tcb_cte_cases (y - x) = Some v"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "x \<le> y"
+proof -
+  note objBits_defs [simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
+    unfolding tcb_cte_cases_def
+    by (simp add: diff_eq_eq split: if_split_asm)
+
+  have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
+    by (rule is_aligned_no_overflow)
+
+  hence "x \<le> x + q" using qv
+    apply simp
+    apply unat_arith
+    apply simp
+    done
+
+  thus ?thesis using yq by simp
+qed
+
+lemma tcb_cte_cases_in_range2:
+  assumes tc: "tcb_cte_cases (y - x) = Some v"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
+proof -
+  note objBits_defs [simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
+    unfolding tcb_cte_cases_def
+    by (simp add: diff_eq_eq split: if_split_asm)
+
+  have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
+    apply (rule word_plus_mono_right)
+    apply (rule is_aligned_no_overflow' [OF al])
+    done
+
+  thus ?thesis using yq by (simp add: field_simps)
+qed
+
+lemma valid_cap_cte_at':
+  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk>
+   \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
+  apply (clarsimp simp: isCap_simps valid_cap'_def)
+  apply (rule real_cte_at')
+  apply (erule spec)
+  done
+
+lemma cd_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
+  by (unfold curDomain_def, wp)
+
+lemma empty_fail_getEndpoint:
+  "empty_fail (getEndpoint ep)"
+  unfolding getEndpoint_def
+  by (auto intro: empty_fail_getObject)
+
+lemma ko_at_valid_ep':
+  "\<lbrakk>ko_at' ep p s; valid_objs' s\<rbrakk> \<Longrightarrow> valid_ep' ep s"
+  apply (erule obj_atE')
+  apply (erule (1) valid_objsE')
+   apply (simp add: projectKOs valid_obj'_def)
+   done
+
+lemma cap_case_EndpointCap_NotificationCap:
+  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
+              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
+              | _ \<Rightarrow> h)
+   = (if isEndpointCap cap
+      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
+             (capEPCanGrant cap) (capEPCanGrantReply cap)
+      else if isNotificationCap cap
+           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
+           else h)"
+  by (simp add: isCap_simps
+         split: capability.split split del: if_split)
+
+lemma asUser_obj_at':
+  "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
+  including no_pre
+  apply (simp add: asUser_def)
+  apply wpsimp
+  apply (case_tac "t=t'"; clarsimp)
+  apply (rule hoare_drop_imps)
+  apply wp
+  done
+
+(* FIXME: partial copy from SR_Lemmas since only map_to_ctes is defined.
+          All of the update_*_map_tos in SR_lemmas can be moved up. *)
+lemma update_ep_map_to_ctes:
+  fixes P :: "endpoint \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)
+
+(* FIXME: move to MonadicRewrite *)
+lemma monadic_rewrite_gets_l:
+  "(\<And>x. monadic_rewrite F E (P x) (g x) m)
+    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. P (f s) s) (gets f >>= (\<lambda>x. g x)) m"
+  by (auto simp add: monadic_rewrite_def exec_gets)
 
 end

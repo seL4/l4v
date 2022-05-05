@@ -2505,13 +2505,6 @@ lemma cancelSignal_ccorres [corres]:
          |  clarsimp simp: eq_commute
          | drule_tac x=thread in bspec)+
 
-lemma ko_at_valid_ep':
-  "\<lbrakk>ko_at' ep p s; valid_objs' s\<rbrakk> \<Longrightarrow> valid_ep' ep s"
-  apply (erule obj_atE')
-  apply (erule (1) valid_objsE')
-   apply (simp add: projectKOs valid_obj'_def)
-   done
-
 lemma cmap_relation_ep:
   "(s, s') \<in> rf_sr \<Longrightarrow>
   cmap_relation (map_to_eps (ksPSpace s)) (cslift s') Ptr (cendpoint_relation (cslift s'))"

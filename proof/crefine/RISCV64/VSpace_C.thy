@@ -849,22 +849,6 @@ lemma ccorres_abstract_known:
   apply simp
   done
 
-lemma setObject_modify:
-  fixes v :: "'a :: pspace_storable" shows
-  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
-         (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
-    \<Longrightarrow> setObject p v s
-      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
-                        assert_opt_def updateObject_default_def bind_assoc)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-  apply (simp add: simpler_modify_def)
-  done
-
 lemma ccorres_name_pre_C:
   "(\<And>s. s \<in> P' \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P {s} hs f g)
   \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs f g"

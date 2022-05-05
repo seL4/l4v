@@ -74,13 +74,6 @@ lemma ccorres_req:
   apply (clarsimp elim!: bexI [rotated])
   done
 
-lemma valid_cap_cte_at':
-  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
-  apply (clarsimp simp: isCap_simps valid_cap'_def)
-  apply (rule real_cte_at')
-  apply (erule spec)
-  done
-
 declare ucast_id [simp]
 declare resolveAddressBits.simps [simp del]
 
