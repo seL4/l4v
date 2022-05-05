@@ -319,9 +319,9 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
-     pte \<leftarrow> liftE $ get_pte (level_type lev) slot;
+     pte \<leftarrow> liftE $ get_pte lev slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
-     liftE $ store_pte (level_type lev) slot InvalidPTE;
+     liftE $ store_pte lev slot InvalidPTE;
      liftE $ do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      liftE $ invalidate_tlb_by_asid_va asid vptr
    odE <catch> (K $ return ())"

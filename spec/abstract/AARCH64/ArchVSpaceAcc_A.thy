@@ -131,7 +131,7 @@ definition pt_bits_left :: "vm_level \<Rightarrow> nat" where
 
 definition pt_index :: "vm_level \<Rightarrow> vspace_ref \<Rightarrow> machine_word" where
   "pt_index level vptr \<equiv>
-     (vptr >> pt_bits_left level) && mask (ptTranslationBits (level_type level))"
+     (vptr >> pt_bits_left level) && mask (ptTranslationBits level)"
 
 
 locale_abbrev global_pt :: "'z state \<Rightarrow> obj_ref" where
@@ -192,7 +192,7 @@ fun pt_lookup_from_level ::
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
-     pte <- liftE $ gets_the $ oapply slot o swp ptes_of (level_type level);
+     pte <- liftE $ gets_the $ oapply slot o swp ptes_of level;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr
