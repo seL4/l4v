@@ -48,6 +48,9 @@ data VMPageSize
     | ARMHugePage
     deriving (Show, Eq, Ord, Enum, Bounded)
 
+data PT_Type = VSRootPT_T | NormalPT_T
+    deriving (Show, Eq)
+
 data VMFaultType
     = ARMDataAbort
     | ARMPrefetchAbort
@@ -108,21 +111,21 @@ pageBits = 12
 -- 2^3 bytes, thus occupying one small page, apart from top-level tables which
 -- contain twice as many entries if config_ARM_PA_SIZE_BITS_40 is set.
 
-ptTranslationBits :: Bool -> Int
-ptTranslationBits isVSpace =
-    if isVSpace && config_ARM_PA_SIZE_BITS_40 then 10 else 9
+ptTranslationBits :: PT_Type -> Int
+ptTranslationBits pt_t =
+    if pt_t == VSRootPT_T && config_ARM_PA_SIZE_BITS_40 then 10 else 9
 
 pteBits :: Int
 pteBits = 3
 
-ptBits :: Bool -> Int
-ptBits isVSpace = ptTranslationBits isVSpace + pteBits
+ptBits :: PT_Type -> Int
+ptBits pt_t = ptTranslationBits pt_t + pteBits
 
--- The top-level table cannot contain frame PTEs, so isVSpace is False
+-- The top-level table cannot contain frame PTEs, so only NormalPT_T
 pageBitsForSize :: VMPageSize -> Int
 pageBitsForSize ARMSmallPage = pageBits
-pageBitsForSize ARMLargePage = pageBits + ptTranslationBits False
-pageBitsForSize ARMHugePage = pageBits + ptTranslationBits False + ptTranslationBits False
+pageBitsForSize ARMLargePage = pageBits + ptTranslationBits NormalPT_T
+pageBitsForSize ARMHugePage = pageBits + ptTranslationBits NormalPT_T + ptTranslationBits NormalPT_T
 
 vcpuBits :: Int
 vcpuBits = 12

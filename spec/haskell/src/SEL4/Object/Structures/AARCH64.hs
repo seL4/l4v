@@ -38,7 +38,7 @@ data ArchCapability
         capFMappedAddress :: Maybe (ASID, VPtr) }
     | PageTableCap {
         capPTBasePtr :: PPtr PTE,
-        capPTisVSpace :: Bool,
+        capPTType :: PT_Type,
         capPTMappedAddress :: Maybe (ASID, VPtr) }
     | VCPUCap {
         capVCPUPtr :: PPtr VCPU }

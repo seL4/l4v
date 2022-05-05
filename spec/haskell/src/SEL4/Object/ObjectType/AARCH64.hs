@@ -89,14 +89,14 @@ finaliseCap (ASIDPoolCap { capASIDBase = b, capASIDPool = ptr }) True = do
     return (NullCap, NullCap)
 
 finaliseCap (PageTableCap {
-        capPTisVSpace = True,
+        capPTType = VSRootPT_T,
         capPTMappedAddress = Just (asid, vptr),
         capPTBasePtr = pte }) True = do
     deleteASID asid pte
     return (NullCap, NullCap)
 
 finaliseCap (PageTableCap {
-        capPTisVSpace = False,
+        capPTType = NormalPT_T,
         capPTMappedAddress = Just (asid, vptr),
         capPTBasePtr = pte }) True = do
     unmapPageTable asid vptr pte
@@ -173,27 +173,27 @@ createObject t regionBase _ isDevice =
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite ARMSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
-            placeNewDataObject regionBase (ptTranslationBits False) isDevice
+            placeNewDataObject regionBase (ptTranslationBits NormalPT_T) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)})
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite ARMLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
-            placeNewDataObject regionBase (ptTranslationBits False+ptTranslationBits False) isDevice
+            placeNewDataObject regionBase (2*ptTranslationBits NormalPT_T) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMHugePage)})
             return $! FrameCap (pointerCast regionBase)
                   VMReadWrite ARMHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do
-            let ptSize = ptBits False - objBits (makeObject :: PTE)
+            let ptSize = ptBits NormalPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) False Nothing
+            return $! PageTableCap (pointerCast regionBase) NormalPT_T Nothing
         Arch.Types.VSpaceObject -> do
-            let ptSize = ptBits True - objBits (makeObject :: PTE)
+            let ptSize = ptBits VSRootPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) True Nothing
+            return $! PageTableCap (pointerCast regionBase) VSRootPT_T Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0
             return $! VCPUCap (PPtr $ fromPPtr regionBase)
@@ -230,7 +230,7 @@ asidPoolBits = 12
 
 capUntypedSize :: ArchCapability -> Word
 capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
-capUntypedSize (PageTableCap {capPTisVSpace = isVSpace}) = bit (ptBits isVSpace)
+capUntypedSize (PageTableCap {capPTType = pt_t}) = bit (ptBits pt_t)
 capUntypedSize (ASIDControlCap {}) = 0
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits

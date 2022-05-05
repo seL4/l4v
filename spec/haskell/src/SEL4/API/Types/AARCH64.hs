@@ -75,8 +75,8 @@ apiGetObjectSize NotificationObject _ = ntfnSizeBits
 apiGetObjectSize CapTableObject size = cteSizeBits + size
 
 getObjectSize :: ObjectType -> Int -> Int
-getObjectSize PageTableObject _ = ptBits False
-getObjectSize VSpaceObject _ = ptBits True
+getObjectSize PageTableObject _ = ptBits NormalPT_T
+getObjectSize VSpaceObject _ = ptBits VSRootPT_T
 getObjectSize SmallPageObject _ = pageBitsForSize ARMSmallPage
 getObjectSize LargePageObject _ = pageBitsForSize ARMLargePage
 getObjectSize HugePageObject _ = pageBitsForSize ARMHugePage
